@@ -126,12 +126,13 @@ func TestHelp(t *testing.T) {
 		"Simply type floe help [path to command] for full details.\n\nUsage:\n  floe help [command] [flags]\n") {
 		t.Errorf("floe help help = %d, %q", code, got)
 	}
-	want := "check\tCheck data files as their pages are drawn, without writing them\n" +
+	want := "archive\tArchive pages in order, stopping at the first failure: off the lists, still served (--undo gives them back)\n" +
+		"check\tCheck data files as their pages are drawn, without writing them\n" +
 		"completion\tGenerate the autocompletion script for the specified shell\n" +
 		"diagram\tDraw diagrams from specs of parts on a canvas\n" +
 		"help\tHelp about any command\n" +
 		"icons\tKeep icon sets for the icon parts of diagrams, and search them\n" +
-		"list\tList pages, newest first (updated, slug, title, linked path; tab-separated)\n" +
+		"list\tList pages, newest first (updated, slug, title, linked path; tab-separated), archived ones left out\n" +
 		"part\tList the parts, show one, make one of your own, and check yours\n" +
 		"publish\tStore a page drawn from a data file (or --link an HTML file in place) and print its URL\n" +
 		"rebuild\tDraw every stored page again with the templates, parts and themes of now\n" +

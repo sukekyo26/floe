@@ -58,6 +58,59 @@ func TestPublishThroughServer(t *testing.T) {
 	}
 }
 
+// floe archive stops at the first page not there; an archived page is off floe list, and on floe list --archived
+// with a fifth column on every line, until --undo.
+func TestArchiveThroughServer(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	run := func(want int, args ...string) string {
+		t.Helper()
+		code, out, errs := runIn(dir, env, args...)
+		if code != want {
+			t.Fatalf("floe %v = %d, %q, %q", args, code, out, errs)
+		}
+		return out + errs
+	}
+	// rows returns the lines of floe list args, each checked to have tabs tabs, by slug.
+	rows := func(tabs int, args ...string) map[string]string {
+		t.Helper()
+		by := map[string]string{}
+		for line := range strings.Lines(run(0, append([]string{"list"}, args...)...)) {
+			line = strings.TrimSuffix(line, "\n")
+			if strings.Count(line, "\t") != tabs {
+				t.Errorf("floe list %v: %q has not %d tabs", args, line, tabs)
+			}
+			by[strings.Split(line, "\t")[1]] = line
+		}
+		return by
+	}
+	run(0, "publish", "d.yaml")
+	run(0, "publish", "--link", "h.html")
+	if got := run(1, "archive", "none", "d"); got != "floe: no page \"none\" (see floe list)\n" {
+		t.Errorf("floe archive none d: %q", got)
+	}
+	if _, ok := rows(3)["d"]; !ok {
+		t.Error("floe archive went on past none")
+	}
+	run(0, "archive", "d")
+	run(0, "archive", "d")
+	if listed := rows(3); listed["d"] != "" || listed["h"] == "" {
+		t.Errorf("floe list after archive: %v", listed)
+	}
+	all := rows(4, "--archived")
+	if !strings.HasSuffix(all["d"], "\tD\t\tarchived") || !strings.HasSuffix(all["h"], "/h.html\t") {
+		t.Errorf("floe list --archived: %v", all)
+	}
+	run(0, "archive", "--undo", "d")
+	if _, ok := rows(3)["d"]; !ok {
+		t.Error("floe archive --undo left d off the list")
+	}
+	if got := run(2, "archive"); got != "floe: requires at least 1 arg(s), only received 0: run floe --help\n" {
+		t.Errorf("floe archive: %q", got)
+	}
+}
+
 // Without a server, floe stop says so, and a setting that cannot be read stops every command of the server.
 func TestServerCommandsAlone(t *testing.T) {
 	t.Parallel()
@@ -66,7 +119,7 @@ func TestServerCommandsAlone(t *testing.T) {
 	if code, out, _ := runIn("", free, "stop"); code != 0 || out != "server is not running\n" {
 		t.Errorf("floe stop = %d, %q", code, out)
 	}
-	for _, args := range [][]string{{"list"}, {"rm", "x"}, {"rebuild"}, {"serve"}, {"stop"}} {
+	for _, args := range [][]string{{"list"}, {"rm", "x"}, {"archive", "x"}, {"rebuild"}, {"serve"}, {"stop"}} {
 		code, _, errs := runIn("/", map[string]string{"HOME": "/h", "FLOE_PORT": "0x10"}, args...)
 		if code != 1 || errs != "floe: invalid FLOE_PORT \"0x10\": use a port number from 1 to 65535\n" {
 			t.Errorf("floe %v = %d, %q", args, code, errs)

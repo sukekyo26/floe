@@ -297,6 +297,28 @@ func TestLinkedData(t *testing.T) {
 	}
 }
 
+// An edit archives a page as true or false, which the list then carries; favorite and archived as anything else
+// are refused in one sentence, and a page that is not there is not found.
+func TestEditArchived(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"archived": true}), http.StatusOK, `{"slug":"d"}`)
+	want(t, e.do(t, http.MethodGet, "/api/artifacts", ""), http.StatusOK, `"archived":true`)
+	for _, body := range []map[string]any{{"archived": "yes"}, {"archived": nil}, {"archived": 1}, {"favorite": "yes"}} {
+		w := e.write(t, http.MethodPatch, "/api/artifacts/d", body)
+		if w.Code != http.StatusBadRequest || w.Body.String() != "send favorite and archived as true or false" {
+			t.Errorf("%v: answered %d %q", body, w.Code, w.Body.String())
+		}
+	}
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"archived": false}), http.StatusOK, `{"slug":"d"}`)
+	if w := e.do(t, http.MethodGet, "/api/artifacts", ""); strings.Contains(w.Body.String(), "archived") {
+		t.Errorf("given back, still listed archived: %s", w.Body.String())
+	}
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/none", map[string]any{"archived": true}), http.StatusNotFound, "not found")
+}
+
 // A page not there is 404 to remove; one that cannot be removed is told why.
 func TestRemove(t *testing.T) {
 	t.Parallel()

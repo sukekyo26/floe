@@ -27,6 +27,7 @@ floe check plan.yaml        # データファイルを確かめる（誤りを�
 floe publish plan.yaml      # ページを保存し、URL を出して開く
 floe publish --link out/index.html   # HTML のファイルをそのまま見せる
 floe list                   # ページの一覧（新しい順）
+floe archive old-plan       # ページを消さずに一覧から外す
 floe stop                   # 裏で動くサーバーを止める
 ```
 

@@ -182,9 +182,10 @@ func localTime(iso string) string {
 }
 
 func (a *app) listCmd() *cobra.Command {
-	return &cobra.Command{
+	var archived bool
+	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List pages, newest first (updated, slug, title, linked path; tab-separated)",
+		Short: "List pages, newest first (updated, slug, title, linked path; tab-separated), archived ones left out",
 		Args:  usage(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := a.client(cmd.Context(), true)
@@ -196,11 +197,24 @@ func (a *app) listCmd() *cobra.Command {
 				return err
 			}
 			for _, l := range list {
-				a.print("%s\t%s\t%s\t%s", localTime(l.UpdatedAt), l.Slug, l.Title, l.Path)
+				if l.Archived && !archived {
+					continue
+				}
+				row := fmt.Sprintf("%s\t%s\t%s\t%s", localTime(l.UpdatedAt), l.Slug, l.Title, l.Path)
+				if archived {
+					mark := ""
+					if l.Archived {
+						mark = "archived"
+					}
+					row += "\t" + mark
+				}
+				a.print("%s", row)
 			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&archived, "archived", false, "list archived pages too, with a fifth column: archived, or empty")
+	return cmd
 }
 
 func (a *app) rmCmd() *cobra.Command {
@@ -209,22 +223,42 @@ func (a *app) rmCmd() *cobra.Command {
 		Short: "Delete pages in order, stopping at the first failure (a linked file itself is left alone)",
 		Args:  usage(cobra.MinimumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := a.client(cmd.Context(), true)
-			if err != nil {
-				return err
-			}
-			for _, slug := range args {
-				err = c.do(cmd.Context(), http.MethodDelete, "/api/artifacts/"+url.PathEscape(slug), nil, nil)
-				if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
-					return usererr.New("store_no_page", slug)
-				}
-				if err != nil {
-					return err
-				}
-			}
-			return nil
+			return a.eachPage(cmd, args, http.MethodDelete, nil)
 		},
 	}
+}
+
+func (a *app) archiveCmd() *cobra.Command {
+	var undo bool
+	cmd := &cobra.Command{
+		Use:   "archive <slug>...",
+		Short: "Archive pages in order, stopping at the first failure: off the lists, still served (--undo gives them back)",
+		Args:  usage(cobra.MinimumNArgs(1)),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return a.eachPage(cmd, args, http.MethodPatch, map[string]bool{"archived": !undo})
+		},
+	}
+	cmd.Flags().BoolVar(&undo, "undo", false, "give the pages back to the list")
+	return cmd
+}
+
+// eachPage sends method with body to each page of slugs in order, stopping at the first failure, a page not there
+// told by its slug.
+func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body any) error {
+	c, err := a.client(cmd.Context(), true)
+	if err != nil {
+		return err
+	}
+	for _, slug := range slugs {
+		err = c.do(cmd.Context(), method, "/api/artifacts/"+url.PathEscape(slug), body, nil)
+		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
+			return usererr.New("store_no_page", slug)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (a *app) rebuildCmd() *cobra.Command {

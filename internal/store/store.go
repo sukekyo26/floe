@@ -64,8 +64,10 @@ type Meta struct {
 	// PublishedFrom is the project that owns a stored page; Project is only what the list shows.
 	PublishedFrom string `json:"publishedFrom,omitempty"`
 	Favorite      bool   `json:"favorite,omitempty"`
-	CreatedAt     string `json:"createdAt"`
-	UpdatedAt     string `json:"updatedAt"`
+	// Archived keeps the page off the list (floe list and the management page), served and drawn as any.
+	Archived  bool   `json:"archived,omitempty"`
+	CreatedAt string `json:"createdAt"`
+	UpdatedAt string `json:"updatedAt"`
 }
 
 // IsLink reports whether the entry is a linked file.

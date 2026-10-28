@@ -20,6 +20,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe part check` | Check the parts, looks, shared schemas and themes of your own |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
+| `floe archive <slug>...` | Take pages off the lists, keeping them (`--undo` gives them back) |
 | `floe serve` | Run the server in the foreground |
 | `floe stop` | Stop the background server |
 | `floe diagram render <spec.yaml>...` | Check diagram specs and print them as inline SVG |
@@ -58,7 +59,7 @@ Each page belongs to the project it is published from. The project is the reposi
 
 - The same slug from the same project overwrites the page. stderr says so (`updated "plan" (last published …, title "…")`). If the title changed, a warning suggests another `--slug`. The exit code stays 0.
 - A slug published from another project is refused unless `--force`. `--force` starts the page afresh: nothing of the old one is kept.
-- A republish keeps what was set on the management page (title, project, favourite), the description and the creation time. `--title` and `--description` override them.
+- A republish keeps what was set on the management page (title, project, favourite), the description and the creation time. `--title` and `--description` override them. An archived page comes back to the lists.
 
 ### Linked files
 
@@ -172,15 +173,19 @@ A mistake of a part, theme or template of your own stops `floe check`, `floe ren
 
 ## `floe list`
 
-Print the pages, newest first, as the server lists them (it is started when it is not running). Each line holds four tab-separated columns: the update time (local, `YYYY-MM-DD HH:MM`), the slug, the title and the linked path (empty for a stored page).
+Print the pages, newest first, as the server lists them (it is started when it is not running). Each line holds four tab-separated columns: the update time (local, `YYYY-MM-DD HH:MM`), the slug, the title and the linked path (empty for a stored page). Archived pages are left out; `--archived` lists them too, with a fifth column on every line: `archived`, or empty.
 
 ## `floe rm <slug>...`
 
 Delete the pages in order through the server (it is started when it is not running), stopping at the first failure (such as a page that does not exist). A linked file itself is left alone; only its registration is removed.
 
+## `floe archive <slug>...`
+
+Archive the pages in order through the server (it is started when it is not running), stopping at the first failure (such as a page that does not exist). An archived page is left off `floe list` and the management page's list, which shows it with "Archived only"; it is still served at its URL, downloaded and drawn again by `floe rebuild`. Archiving one again changes nothing. `--undo` gives the pages back to the lists, and so does publishing a page again.
+
 ## `floe serve`
 
-Run the server in the foreground on `127.0.0.1` until SIGTERM or SIGINT. `floe publish`, `floe rebuild`, `floe list` and `floe rm` start the same server in the background, so this is mainly for seeing its errors. A background server that does not start is told as `the server did not start; run "floe serve" to see the error`.
+Run the server in the foreground on `127.0.0.1` until SIGTERM or SIGINT. `floe publish`, `floe rebuild`, `floe list`, `floe rm` and `floe archive` start the same server in the background, so this is mainly for seeing its errors. A background server that does not start is told as `the server did not start; run "floe serve" to see the error`.
 
 ## `floe stop`
 
@@ -236,11 +241,11 @@ List the fetched icons whose name contains every word (case does not matter), on
 
 ## The server
 
-- `floe publish`, `floe rebuild`, `floe list` and `floe rm` start the server when it is not running, and keep using it otherwise.
+- `floe publish`, `floe rebuild`, `floe list`, `floe rm` and `floe archive` start the server when it is not running, and keep using it otherwise.
 - They ask the server to check, save, draw, list and delete pages: the server is the only one that writes the store. A publish sends the data file (and the images the server asks for), and the server checks and draws it with its own templates, parts, themes and icons.
 - After floe is reinstalled (another version, or a rebuilt binary), the next of them replaces the running server.
 - The server keeps running until `floe stop`, logout or reboot.
-- The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_ICONS_DIR` of the command that started it. A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`, so set yours in the shell's environment, where every command takes them, rather than on one command. `floe list` and `floe rm` do not draw, and take any.
+- The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_ICONS_DIR` of the command that started it. A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`, so set yours in the shell's environment, where every command takes them, rather than on one command. `floe list`, `floe rm` and `floe archive` do not draw, and take any.
 - A server serves one store (`FLOE_DIR`) on its port: while it runs, a command for another store is refused. Give that store another `FLOE_PORT`.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
 - A stored page is served as it was drawn; its CSP and sandbox are sent with it. Pages run in the sandbox, so their scripts cannot reach the management page's API.
@@ -269,7 +274,7 @@ floe: FLOE_PARTS_DIR is /tmp/t/missing, which cannot be used as a directory (no 
 ```
 
 - `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` and `FLOE_THEMES_DIR` are used by every command that draws a page or reads your own (`floe check`, `floe render`, the `template` and `part` commands, and the server, which draws), so one set that is not there stops them. Their default that is not there is none: floe draws with its own alone. A default that is there but is no directory is refused.
-- `FLOE_DIR` is used by the server (`floe serve`, and `floe publish`, `floe rebuild`, `floe list` and `floe rm`, which start it), and made when it is not there. `FLOE_ICONS_DIR` is used by the icons commands, which make it, and by the diagrams that show an icon, at the diagram.
+- `FLOE_DIR` is used by the server (`floe serve`, and `floe publish`, `floe rebuild`, `floe list`, `floe rm` and `floe archive`, which start it), and made when it is not there. `FLOE_ICONS_DIR` is used by the icons commands, which make it, and by the diagrams that show an icon, at the diagram.
 - Without `HOME` (or with one that is not an absolute path), a directory that has no other default is none: `floe check` runs with floe's templates, parts and themes alone, while a command that writes there (`floe template new`, `floe list` for `FLOE_DIR` …) asks for the variable to be set.
 - Keep `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_TEMPLATES_DIR` apart: two that are one directory, or one in the other (through a symlink too), are refused for their names before anything in them is read, a setting not there yet too. A command compares only the ones it reads, and a default only when it is there; `floe part new` and `floe template new` refuse to make what would be in, or hold, the directory of another kind.
 
