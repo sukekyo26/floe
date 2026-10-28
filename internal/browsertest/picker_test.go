@@ -63,10 +63,12 @@ func TestUIPagePicker(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, b.eval(state))
 	key(kb.ArrowDown)
 	out = append(out, b.eval(state))
-	// What is typed and reached stays while the list is fetched again.
+	// What is typed and reached stays while the list is fetched again, changed (a page given a new title), which draws the
+	// frame anew: the pages offered are made as it opens, not as the list comes.
 	key(kb.ArrowDown)
 	before := b.eval(state + " + ' ' + document.getElementById('page-pick-q').value")
-	b.eval("load()")
+	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'p9' ? { ...a, title: 'P9 anew' } : a)); load()")
+	b.until("the list to be drawn", "items.some((a) => a.title === 'P9 anew')")
 	out = append(out, strings.ReplaceAll(b.eval(state+" + ' ' + document.getElementById('page-pick-q').value"), before, "kept"))
 	// Escape closes it and gives the focus back to the title.
 	key(kb.Escape)
