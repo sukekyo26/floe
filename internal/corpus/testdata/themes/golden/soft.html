@@ -109,6 +109,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
 /* Always dark, as code in an editor is; the language stands at the right of the heading */
 :scope {
+  display: grid; grid-template-columns: minmax(0, 1fr); position: relative; --code-ground: var(--code-bg);
   margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
   background: var(--code-bg); color: var(--code-fg);
   font-family: var(--mono);
@@ -128,6 +129,24 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 /* A block, so that the code's last line break draws no empty line */
 :scope code { display: block; font: inherit; color: inherit; background: none; padding: 0; border-radius: 0; }
+/* The copy button lies over the top right of the code, whether or not a heading is above it, wherever its script
+   puts it in the part. A theme that gives the code a ground of its own sets --code-ground to it.
+   LIMIT: the button covers the right end of the code's first line; scrolling sideways shows it. */
+:scope > figcaption { grid-row: 1; }
+:scope > pre, :scope > .copy { grid-row: 2; grid-column: 1; }
+:scope .copy {
+  justify-self: end; align-self: start; display: grid; place-items: center; width: 30px; height: 30px; margin: 0.4rem; padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--code-ground); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground));
+}
+:scope .copy:hover { background: color-mix(in srgb, var(--code-fg) 12%, var(--code-ground)); }
+/* Inside the button, which the part's rounded corners would cut, in the code's colour, which the accent is too faint on */
+:scope .copy:focus-visible { outline: 2px solid var(--code-fg); outline-offset: -2px; }
+:scope .copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
+:scope .copy svg + svg, :scope .copy.copied svg:first-child { display: none; }
+:scope .copy.copied svg + svg { display: block; color: var(--code-add); }
+:scope .copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media print { :scope .copy { display: none; } }
 }
 }
 </style>
@@ -317,9 +336,153 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <tr><td>Links</td><td class="num">120</td><td><span class="bad" data-floe-part="cell">open</span></td></tr>
 </tbody>
 </table></div>
-<figure data-floe-part="code"><figcaption><span class="file">a.conf</span><span class="lang">ini</span></figcaption><pre><code>read_only = true
-</code></pre></figure>
-<figure class="zsh" data-floe-part="terminal"><figcaption>zsh</figcaption><pre><span class="run">wiki export</span><span class="out">done</span></pre></figure>
+<figure data-floe-part="code"><figcaption><span class="file">a.conf</span><span class="lang">ini</span></figcaption><pre><code data-floe-copy="">read_only = true
+</code></pre><script>(// A button over the code of the part this script is in, that copies the text of its elements marked
+// data-floe-copy, each ended by a line break. words are its words in the page's language: copy, copied, failed.
+// LIMIT: HTML reads CR and CRLF as LF, so a diff of a CRLF file is copied with LF and does not apply. Keep the text
+// in an attribute too if diffs of CRLF files come to be copied.
+function copyButton(words) {
+  const part = document.currentScript.parentElement;
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  // The press whose result shows: one pressed again before its copy ends is dropped
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  // The page's frame may not be let write the clipboard (VS Code's Simple Browser), where the copy command still
+  // writes; its event carries the text, so neither the focus nor the selection moves
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    // navigator.clipboard is missing where the page is not a secure context: that throws, not rejects
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    // In a later task than the emptying, so that the same words are read out again
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  part.append(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
+<figure class="zsh" data-floe-part="terminal"><figcaption>zsh</figcaption><pre><span class="run" data-floe-copy="">wiki export</span><span class="out">done</span></pre><script>(// A button over the code of the part this script is in, that copies the text of its elements marked
+// data-floe-copy, each ended by a line break. words are its words in the page's language: copy, copied, failed.
+// LIMIT: HTML reads CR and CRLF as LF, so a diff of a CRLF file is copied with LF and does not apply. Keep the text
+// in an attribute too if diffs of CRLF files come to be copied.
+function copyButton(words) {
+  const part = document.currentScript.parentElement;
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  // The press whose result shows: one pressed again before its copy ends is dropped
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  // The page's frame may not be let write the clipboard (VS Code's Simple Browser), where the copy command still
+  // writes; its event carries the text, so neither the focus nor the selection moves
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    // navigator.clipboard is missing where the page is not a secure context: that throws, not rejects
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    // In a later task than the emptying, so that the same words are read out again
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  part.append(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 <div class="numbered" data-floe-part="cards">
 <div class="card" data-floe-look="panel"><h3 id="one">One</h3><p>First.</p>
 </div>
@@ -332,10 +495,82 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <label><input type="radio" name="tab"/>Two</label><div data-floe-part="stack"><p>Second.</p>
 </div>
 </form>
-<figure data-floe-part="diff"><figcaption><span class="file">a.conf</span><span class="added">+1</span><span class="removed">−1</span><span class="lang">ini</span></figcaption><pre><code><span class="hunk">@@ -1 +1 @@
+<figure data-floe-part="diff"><figcaption><span class="file">a.conf</span><span class="added">+1</span><span class="removed">−1</span><span class="lang">ini</span></figcaption><pre><code data-floe-copy=""><span class="hunk">@@ -1 +1 @@
 </span><span class="del">-read_only = false
 </span><span class="add">+read_only = true
-</span></code></pre></figure>
+</span></code></pre><script>(// A button over the code of the part this script is in, that copies the text of its elements marked
+// data-floe-copy, each ended by a line break. words are its words in the page's language: copy, copied, failed.
+// LIMIT: HTML reads CR and CRLF as LF, so a diff of a CRLF file is copied with LF and does not apply. Keep the text
+// in an attribute too if diffs of CRLF files come to be copied.
+function copyButton(words) {
+  const part = document.currentScript.parentElement;
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  // The press whose result shows: one pressed again before its copy ends is dropped
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  // The page's frame may not be let write the clipboard (VS Code's Simple Browser), where the copy command still
+  // writes; its event carries the text, so neither the focus nor the selection moves
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    // navigator.clipboard is missing where the page is not a secure context: that throws, not rejects
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    // In a later task than the emptying, so that the same words are read out again
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  part.append(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 <div data-floe-part="findings"><table>
 <tbody>
 <tr><td class="level"><span class="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">a.conf:1</code><span class="status"><span class="good" data-floe-part="cell">fixed</span></span></div><div>The wiki is still open</div></td></tr>

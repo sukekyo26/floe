@@ -118,6 +118,21 @@ func TestScriptOf(t *testing.T) {
 	}
 }
 
+// The copy button's script is one script whatever its words hold, and copyButton not bound to a page is floe's
+// failure.
+func TestCopyScript(t *testing.T) {
+	t.Parallel()
+
+	got, err := copyScript(map[string]string{"copy": "</script><!--<script>", "copied": "c", "failed": "f"})
+	body := strings.TrimSuffix(strings.TrimPrefix(string(got), "<script>"), "</script>")
+	if err != nil || !wholeScript(body) || !strings.Contains(body, `"copy":"\u003c/script\u003e\u003c!--\u003cscript\u003e"`) {
+		t.Errorf("copyScript = %s, %v", got, err)
+	}
+	if _, err := copyButtonOf(); !errors.Is(err, ErrFunc) {
+		t.Errorf("copyButtonOf() = %v, want ErrFunc", err)
+	}
+}
+
 // A bar's width is its share of the longest value, and every bar is 0 wide when all the values are 0.
 func TestBarsOf(t *testing.T) {
 	t.Parallel()

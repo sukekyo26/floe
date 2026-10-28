@@ -1,6 +1,7 @@
 package kit
 
 import (
+	_ "embed" // the copy button's script
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,12 +13,42 @@ import (
 
 	"golang.org/x/net/html"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // partFuncs are the functions floe's parts draw with, besides those of page.html.
 var partFuncs = template.FuncMap{
-	"bars": barsOf, "diagram": diagramOf, "diff": diffOf, "script": scriptOf, "tree": treeOf,
+	"bars": barsOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf, "script": scriptOf,
+	"tree": treeOf,
+}
+
+// copyButtonOf holds the name of the function that draws the copy button of a part, which Part.Page binds anew in
+// the language of the page it draws.
+func copyButtonOf() (template.HTML, error) {
+	return "", fmt.Errorf("%w: copyButton: not bound to a page", ErrFunc)
+}
+
+//go:embed copy.js
+var copyJS string
+
+// copyButton returns the function copyButton of a part.html drawn in the language of c: the script that puts a
+// button over the code of the part it is in (copy.js), with its words.
+// LIMIT: the script goes into each part that copies. Put it into the page once if pages of much code come to weigh.
+func copyButton(c *i18n.Catalog) func() (template.HTML, error) {
+	words := map[string]string{"copy": c.Msg("copy_button"), "copied": c.Msg("ui_copied"), "failed": c.Msg("copy_failed")}
+	return func() (template.HTML, error) { return copyScript(words) }
+}
+
+// copyScript returns the script of copy.js called with words. json.Marshal writes <, > and & as \u escapes, so
+// that no word ends the script.
+func copyScript(words map[string]string) (template.HTML, error) {
+	b, err := json.Marshal(words)
+	if err != nil {
+		return "", fmt.Errorf("%w: copyButton: %w", ErrFunc, err)
+	}
+	//nolint:gosec // G203: floe's script, the words escaped as JSON
+	return template.HTML("<script>(" + strings.TrimSpace(copyJS) + ")(" + string(b) + ");</script>"), nil
 }
 
 // diagramOf holds the name of the function that draws the value of the part as a diagram, which draw binds

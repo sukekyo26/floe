@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "diff",
-  "description": "A diff as git diff writes it, or lines of one, in the dark of code: lines added (+) green, removed (-) red, under its file, the counts of both and its language",
+  "description": "A diff as git diff writes it, or lines of one, in the dark of code: lines added (+) green, removed (-) red, under its file, the counts of both and its language. A button over it copies the diff as written",
   "type": "object",
   "properties": {
     "lang": { "type": "string", "minLength": 1, "description": "The language, shown at the right above the diff" },

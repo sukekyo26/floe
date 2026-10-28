@@ -42,7 +42,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 | 鍵 | 中身 |
 |---|---|
 | `template` | ページを描くテンプレート（`report`、または自分のもの）。必須。 |
-| `lang` | ページの言語（`<html lang>`）。`en`・`ja`・`pt-BR` のようなタグ。必須。floe と部品が描く言葉（`risks` の見出し、図の拡大のボタン）と図の文はこれに従い、その言語の言葉が無ければ英語になる。 |
+| `lang` | ページの言語（`<html lang>`）。`en`・`ja`・`pt-BR` のようなタグ。必須。floe と部品が描く言葉（`risks` の見出し、図の拡大のボタン、コードのコピーのボタン）と図の文はこれに従い、その言語の言葉が無ければ英語になる。 |
 | `title` | ページの題。 |
 | `theme` | ページを描くテーマ（既定は `default`）。色・書体・部品の形を決める。`floe template show <テンプレート>` が `themes:` の行に並べる：`default`・`soft`・`editorial`・`ink`・`brutal`・`blueprint`・`notebook`・`swiss`・`washi`。 |
 
@@ -55,12 +55,12 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 | 部品 | 描くもの |
 |---|---|
 | `text` | Markdown（表も）。中の生の HTML は除く。囲んだコードのブロック（```` ``` ````）は断る：コードは `code`、コマンドは `terminal` に書く。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ）ので、画像は `image` に書く。 |
-| `code` | コードをそのまま、`file` と `lang` の下に。 |
-| `terminal` | コマンド（`run`）と出力（`out`）を、`shell`（`bash`・`sh`・`zsh`・`powershell`・`cmd`）のプロンプトで。プロンプトは floe が描くので、プロンプトで始まる `run`（`$ ls`）は断る。 |
+| `code` | コードをそのまま、`file` と `lang` の下に。右上のボタンでコードをコピーできる。 |
+| `terminal` | コマンド（`run`）と出力（`out`）を、`shell`（`bash`・`sh`・`zsh`・`powershell`・`cmd`）のプロンプトで。プロンプトは floe が描くので、プロンプトで始まる `run`（`$ ls`）は断る。右上のボタンで、コマンドを 1 行ずつ、プロンプトと出力を除いてコピーできる。 |
 | `table` | `columns` と `rows`。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`。 |
 | `image` | 画面の写しなどの画像。`file` と、何を写すかの `alt`（[画像](#画像)）。 |
 | `cards`・`note`・`stats`・`progress`・`steps`・`checklist` | カード、色の付いた注、大きな数、進みの棒、番号付きの手順、済めば印の付く項目。 |
-| `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff、ファイルとフォルダ、リンク。 |
+| `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |
 | `findings`・`decision`・`risks`・`matrix`・`fields` | レビューで見つけたもの、決めたこと、リスク、○・△・× の表、設定の鍵。 |
 | `timeline`・`bars`・`faq`・`glossary`・`keys` | 日付の順の出来事、値の棒、問いと答え、言葉と意味、押すキー。 |
 | `details`・`tabs` | 題の下に畳んだ部品、またはタブで 1 つずつ見せる部品。中に `text`・`code`・`terminal`・`diff`・`note`・`table`・`image` を置ける。 |

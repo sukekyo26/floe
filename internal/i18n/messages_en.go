@@ -246,6 +246,8 @@ var messagesEN = map[string]string{
 	"diagram_raw_element":      "raw SVG holds <%s>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)",
 	"diagram_icon_set":         `%s: "%s" needs its icon set in front (%s), like aws/amazon-ec2 (search with: floe icons search <word>)`,
 	"diagram_icon_unknown":     `%s: no icon "%s" (search with: floe icons search <word>)`,
+	"copy_button":              "Copy",
+	"copy_failed":              "Could not copy",
 	"diagram_zoom_hint":        "Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed",
 	"diagram_zoom_in":          "Zoom in",
 	"diagram_zoom_out":         "Zoom out",

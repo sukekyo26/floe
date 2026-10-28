@@ -12,6 +12,7 @@ import (
 	"github.com/goccy/go-yaml/ast"
 
 	"github.com/sukekyo26/floe/internal/bom"
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/rules"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -65,8 +66,14 @@ func (p *Part) Unread() []string { return slices.Clone(p.unread) }
 func (p *Part) Checks() *rules.Checks { return p.checks }
 
 // Page returns a copy of the part.html of p, parsed, in the language tag of a page, to draw, as Template.Page
-// does.
-func (p *Part) Page(lang string) (*template.Template, error) { return p.pages.copyOf(p.words, lang) }
+// does, its copyButton in that language.
+func (p *Part) Page(lang string) (*template.Template, error) {
+	page, err := p.pages.copyOf(p.words, lang)
+	if err != nil {
+		return nil, err
+	}
+	return page.Funcs(template.FuncMap{"copyButton": copyButton(i18n.New(i18n.Tag(lang)))}), nil
+}
 
 // File returns the file name of p as its mistakes name it.
 func (p *Part) File(name string) string { return path.Join(p.dir, name) }

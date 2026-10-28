@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add a button over `code`, `terminal` and `diff` that copies them: the code,
+  the commands without their prompt or output, the diff as written. It says
+  "Copied" in the page's language, and still copies where the page may not
+  write the clipboard, such as in VS Code's Simple Browser.
 - Add archiving: `floe archive <slug>...` (`--undo` to give back), "Archive"
   on the management page, one page or those selected, and `archived` in
   `PATCH /api/artifacts/{slug}` take a page off `floe list` and the management

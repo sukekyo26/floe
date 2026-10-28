@@ -42,7 +42,7 @@ Every data file holds these keys, which floe reads itself:
 | Key | What it is |
 |---|---|
 | `template` | The template that draws the page (`report`, or one of your own). Required. |
-| `lang` | The page's language (`<html lang>`), as a tag such as `en`, `ja` or `pt-BR`. Required. The words floe and the parts draw (a heading of `risks`, the zoom buttons of a diagram) and the text of a diagram follow it, English for a language they have no words of. |
+| `lang` | The page's language (`<html lang>`), as a tag such as `en`, `ja` or `pt-BR`. Required. The words floe and the parts draw (a heading of `risks`, the zoom buttons of a diagram, the copy button of code) and the text of a diagram follow it, English for a language they have no words of. |
 | `title` | The page's title. |
 | `theme` | The theme the page is drawn in (default `default`): its colours, faces and the shape of the parts. `floe template show <template>` lists the themes on its `themes:` line: `default`, `soft`, `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `swiss` and `washi`. |
 
@@ -55,12 +55,12 @@ Each part is one key naming its kind. `floe part list` lists them with a line ea
 | Part | What it draws |
 |---|---|
 | `text` | Markdown, tables included; raw HTML in it is left out. A fenced block of code (```` ``` ````) is refused: write code in `code` and commands in `terminal`. An image file named in it is not shown, only a data URI of a png, gif, jpeg or webp: write images in `image`. |
-| `code` | Code as it is, under its `file` with its `lang`. |
-| `terminal` | Commands (`run`) and what they printed (`out`), at the prompt of its `shell` (`bash`, `sh`, `zsh`, `powershell`, `cmd`). floe draws the prompt, so a `run` that starts with one (`$ ls`) is refused. |
+| `code` | Code as it is, under its `file` with its `lang`. A button over it copies the code. |
+| `terminal` | Commands (`run`) and what they printed (`out`), at the prompt of its `shell` (`bash`, `sh`, `zsh`, `powershell`, `cmd`). floe draws the prompt, so a `run` that starts with one (`$ ls`) is refused. A button over them copies the commands, a line each, without the prompt or what they printed. |
 | `table` | `columns` and `rows`; each cell is a line of Markdown, a number in quotes as it is drawn, or a pill `{ pill, tone }`. |
 | `image` | An image, such as a screenshot: its `file` and its `alt`, what it shows ([Images](#images)). |
 | `cards`, `note`, `stats`, `progress`, `steps`, `checklist` | Cards, a note in a tone, large numbers, bars of progress, numbered steps, items ticked once done. |
-| `compare`, `options`, `facts`, `diff`, `tree`, `links` | What changes before and after, options with pros and cons, names with values, a diff, files and folders, links. |
+| `compare`, `options`, `facts`, `diff`, `tree`, `links` | What changes before and after, options with pros and cons, names with values, a diff (a button over it copies the diff as written), files and folders, links. |
 | `findings`, `decision`, `risks`, `matrix`, `fields` | What a review found, a decision, risks, a table of yes / part / no, the keys of a setting. |
 | `timeline`, `bars`, `faq`, `glossary`, `keys` | Dates in order, bars of values, questions and answers, words and their meaning, keys to press. |
 | `details`, `tabs` | Parts folded under a title, or shown one at a time under tabs; they hold `text`, `code`, `terminal`, `diff`, `note`, `table` and `image`. |
