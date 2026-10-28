@@ -36,7 +36,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   while there are any; the list groups its pages by project in round cards,
   each project in a color of its own, those with the most pages first, a row's
   menu holding its edit, opening, download, archive and delete; and the bar over
-  an open page stars and archives it. Tags are given in a page's edit dialog, to those selected,
+  an open page stars and archives it, its buttons icons alone. Tags are given in a page's edit dialog, to those selected,
   or as `tags` in `PATCH /api/artifacts/{slug}`; they show under a page's
   title, are searched, and stay when the page is published again.
 - Add floe's template `report`: a header over sections, each a heading over
