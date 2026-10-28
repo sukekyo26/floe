@@ -100,7 +100,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	const empties = "['empty', 'empty-links', 'all-archived', 'empty-favorites', 'empty-archived', 'nomatch']" +
 		".filter((id) => !document.getElementById(id).hidden).map((id) => id + ':' + document.getElementById(id).querySelector('strong').textContent).join(' ')"
 	sortBy := func(v string) {
-		b.eval("(() => { const s = document.getElementById('sort'); s.value = '" + v + "'; s.dispatchEvent(new Event('change')); })()")
+		b.eval("document.getElementById('sort').click(); document.querySelector('#sort-list [data-sort=" + v + "]').click()")
 	}
 	key := func(k string) {
 		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
