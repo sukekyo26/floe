@@ -153,6 +153,7 @@
   .chip.project {
     --glyph-bg: hsl(var(--h) 85% 95%); --glyph-fg: hsl(var(--h) 55% 40%);
   }
+  .chip.tag::before { content: "#"; flex: none; color: var(--faint); font-family: var(--mono); }
   /* Not overflow: hidden, which would cut off a row's menu at the bottom: the first and last rows round their own corners */
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
   li:first-child { border-top-left-radius: 7px; border-top-right-radius: 7px; }
@@ -208,6 +209,13 @@
   .missing { color: var(--danger); }
   li:has(.missing) a.title { color: var(--muted); text-decoration: line-through; }
   .sub .made { flex: none; font: 0.72rem var(--mono); color: var(--faint); }
+  /* Above the title link's hit area, as the row's controls are */
+  .sub .tags { position: relative; z-index: 1; display: flex; flex: 0 1 auto; gap: 0.3rem; }
+  .tagpill {
+    flex: none; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0.05rem 0.45rem;
+    font-size: 0.7rem; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px;
+  }
+  .tagpill:hover { box-shadow: inset 0 0 0 1px currentColor; }
   li time { font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
   .actions { position: relative; z-index: 1; display: flex; gap: 2px; }
   /* The row's other actions. The row whose menu is open comes forward: each row's rise animation stacks the rows below over it */
@@ -383,6 +391,10 @@
       <button type="button" data-view="fav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>{{.Msg "ui_view_favorites"}}<span class="n"></span></button>
       <button type="button" data-view="archived"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg>{{.Msg "ui_view_archived"}}<span class="n"></span></button>
     </div>
+    <div id="shelf-tags">
+      <h2>{{.Msg "ui_tags"}}</h2>
+      <div class="chips" id="tags" role="group" aria-label="{{.Msg "ui_tags"}}"></div>
+    </div>
     <div id="shelf-kind">
       <h2>{{.Msg "ui_kind"}}</h2>
       <div class="tabs" role="group" aria-label="{{.Msg "ui_kind"}}">
@@ -471,6 +483,7 @@
     <span class="bulk-count" id="bulk-count" aria-live="polite"></span>
     <button type="button" class="btn" id="bulk-page">{{.Msg "ui_select_page"}}</button>
     <button type="button" class="btn" id="bulk-clear">{{.Msg "ui_clear_selection"}}</button>
+    <button type="button" class="btn" id="bulk-tag">{{.Msg "ui_tags"}}</button>
     <button type="button" class="btn" id="bulk-archive"></button>
     <button type="button" class="btn danger" id="bulk-delete"></button>
   </div>
@@ -535,6 +548,9 @@
     <label class="field"><span>{{.Msg "ui_description"}} <small>{{.Msg "ui_optional"}}</small></span>
       <input class="text" id="edit-desc" autocomplete="off">
     </label>
+    <label class="field"><span>{{.Msg "ui_tags"}} <small>{{.Msg "ui_tags_hint"}}</small></span>
+      <input class="text" id="edit-tags" autocomplete="off" list="tag-names">
+    </label>
     <p class="error" id="edit-error" hidden></p>
     <div class="dialog-actions">
       <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
@@ -542,12 +558,31 @@
     </div>
   </form>
 </dialog>
+<dialog id="tag-dialog" aria-labelledby="tag-title">
+  <form class="add" id="tag-form">
+    <div class="add-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>
+      <div>
+        <h2 id="tag-title"></h2>
+      </div>
+    </div>
+    <label class="field"><span>{{.Msg "ui_tag_name"}} <small>{{.Msg "ui_tags_hint"}}</small></span>
+      <input class="text" id="tag-name" required autocomplete="off" list="tag-names">
+    </label>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
+      <button type="button" class="btn" id="tag-remove"></button>
+      <button type="submit" class="btn primary" id="tag-add"></button>
+    </div>
+  </form>
+</dialog>
+<datalist id="tag-names"></datalist>
 <template id="row">
   <li>
     <label class="pick"><input type="checkbox" class="sel"></label>
     <div class="body">
       <a class="title"></a>
-      <span class="sub"><span class="desc"></span><span class="made"></span></span>
+      <span class="sub"><span class="tags"></span><span class="desc"></span><span class="made"></span></span>
     </div>
     <time></time>
     <div class="actions">
@@ -630,6 +665,7 @@
     return {
       tab: p.get('tab') === 'links' ? 'links' : 'pages',
       project: p.get('project') ?? '',
+      tag: p.get('tag') ?? '',
       q: p.get('q') ?? '',
       sort: Object.hasOwn(SORTS, p.get('sort')) ? p.get('sort') : 'updated',
       page: Math.max(1, Number.parseInt(p.get('page'), 10) || 1),
@@ -638,7 +674,9 @@
       archived: p.get('archived') === '1',
     };
   }
-  let { tab, project, sort, page, fav, archived } = readState(location.search);
+  let { tab, project, tag, sort, page, fav, archived } = readState(location.search);
+  // The list's state as it is now, of the same keys as readState: what the list is arranged by and the URL keeps
+  const current = () => ({ tab, fav, archived, project, tag, q: $('q').value, sort, page });
   // The selected slugs. Changing a filter or the tab clears them (so that nothing unseen is deleted); a selection across pages stays
   const selected = new Set();
   // LIMIT: changes to the list and a recovered connection are picked up by refetching every 3 s. If hundreds of entries make that heavy, push only the changes over SSE
@@ -687,12 +725,13 @@
     }
   }
 
-  // Defaults (the pages tab, all projects, no search, the first page) are left out of the URL
+  // Defaults (the pages tab, all projects and tags, no search, the first page) are left out of the URL
   function syncUrl() {
     const url = new URL(location.href);
+    const now = current();
     const state = {
-      tab: tab === 'links' ? tab : '', fav: fav ? '1' : '', archived: archived ? '1' : '', project, q: $('q').value.trim(), sort: sort === 'updated' ? '' : sort,
-      page: page > 1 ? String(page) : '',
+      tab: now.tab === 'links' ? now.tab : '', fav: now.fav ? '1' : '', archived: now.archived ? '1' : '', project: now.project, tag: now.tag,
+      q: now.q.trim(), sort: now.sort === 'updated' ? '' : now.sort, page: now.page > 1 ? String(now.page) : '',
     };
     for (const [name, value] of Object.entries(state)) {
       if (value) url.searchParams.set(name, value);
@@ -706,12 +745,13 @@
     }
   }
 
-  // Picks and orders the entries by tab, project, search and sort; shared by the list and by moving between pages in the frame
+  // Picks and orders the entries by tab, project, tag, search and sort; shared by the list and by moving between pages in the frame
   function arrange(state) {
     const q = state.q.trim().toLowerCase();
     const shown = items.filter((a) => inList(a, state)
       && (!state.project || (a.project ?? NONE) === state.project)
-      && (!q || [a.title, a.description, a.slug, a.project, a.path].join(' ').toLowerCase().includes(q)));
+      && (!state.tag || (a.tags ?? []).includes(state.tag))
+      && (!q || [a.title, a.description, a.slug, a.project, a.path, ...(a.tags ?? [])].join(' ').toLowerCase().includes(q)));
     const sorted = SORTS[state.sort] ? shown.sort(SORTS[state.sort]) : shown;
     // All of the list puts its favourites first, each group in the order picked
     if (state.fav || state.archived) return sorted;
@@ -727,7 +767,7 @@
     setTimeout(() => t.remove(), 3000);
   }
 
-  // The one place the list's filters change: view (all, the favourites or the archived), tab and project, as change has
+  // The one place the list's filters change: view (all, the favourites or the archived), tab, project and tag, as change has
   // them. A changed filter starts from the first page and leaves the selection
   function filter(change) {
     if ('view' in change) {
@@ -736,6 +776,7 @@
     }
     if ('tab' in change) tab = change.tab;
     if ('project' in change) project = change.project;
+    if ('tag' in change) tag = change.tag;
     page = 1;
     selected.clear();
   }
@@ -748,6 +789,9 @@
   const setProject = (value) => refilter({ project: value });
   const setTab = (value) => refilter({ tab: value });
   const setView = (value) => refilter({ view: value });
+  const setTag = (value) => refilter({ tag: value });
+  // The tag picked, picked again, is let go
+  const toggleTag = (value) => setTag(value === tag ? '' : value);
 
   function setSize(value) {
     size = value;
@@ -805,9 +849,9 @@
   const deleteOne = (slug) => writeOne(slug, { method: 'DELETE' }, true);
   const patchOne = (slug, body) => writeOne(slug, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
-  // Acts on every selected entry and tells how many it did, done(n), and how many failed, failed(n, the first reason). Those that failed stay selected
-  async function actOnSelected(act, done, failed) {
-    const slugs = [...selected];
+  // Acts on the selected entries (all, or the slugs of them given) and tells how many it did, done(n), and how many failed,
+  // failed(n, the first reason). Those that failed stay selected
+  async function actOnSelected(act, done, failed, slugs = [...selected]) {
     const reasons = await Promise.all(slugs.map(act));
     slugs.forEach((slug, i) => { if (!reasons[i]) selected.delete(slug); });
     const why = reasons.filter(Boolean);
@@ -831,6 +875,49 @@
     );
   }
 
+  // The names of a tags field: split at commas (Japanese ones too), trimmed, without the empty; the server drops a name the second time.
+  // LIMIT: the names the field suggests (tag-names) are matched against all of its text, so none come after the first comma. If that
+  // comes to matter, take one name at a time. A name with a comma in it, which the API can give, splits when the field is edited
+  const splitTags = (text) => text.split(/[,、]/).map((name) => name.trim()).filter(Boolean);
+
+  function openTags() {
+    $('tag-title').textContent = t('ui_tag_bulk_title', selected.size);
+    $('tag-add').textContent = t('ui_tag_add_bulk', selected.size);
+    $('tag-remove').textContent = t('ui_tag_remove_bulk', selected.size);
+    $('tag-form').reset();
+    $('tag-dialog').showModal();
+  }
+
+  // Adds the names of the tag dialog to the selected, or removes them, sending each page whose tags change them so;
+  // one that would not change is not sent and leaves the selection, as done.
+  // LIMIT: the tags sent are those the list last read with the names added or removed, so a change made elsewhere in
+  // between is lost. Only this page writes tags now; give the API adding and removing if another comes to
+  async function tagSelected(add) {
+    if (!$('tag-form').reportValidity()) return;
+    const names = [...new Set(splitTags($('tag-name').value))];
+    if (names.length === 0) return;
+    $('tag-dialog').close();
+    const next = new Map();
+    for (const slug of selected) {
+      const now = items.find((a) => a.slug === slug)?.tags ?? [];
+      const tags = add ? [...now, ...names.filter((name) => !now.includes(name))] : now.filter((name) => !names.includes(name));
+      if (tags.length !== now.length) next.set(slug, tags);
+      else selected.delete(slug);
+    }
+    const named = new Intl.ListFormat(LANG).format(names);
+    if (next.size === 0) toast(t('ui_tag_bulk_none'));
+    else {
+      await actOnSelected(
+        (slug) => patchOne(slug, { tags: next.get(slug) }),
+        (n) => t(add ? 'ui_tag_add_bulk_done' : 'ui_tag_remove_bulk_done', named, n),
+        (n, why) => t(add ? 'ui_tag_add_bulk_failed' : 'ui_tag_remove_bulk_failed', named, n, why),
+        [...next.keys()],
+      );
+    }
+    // Those that left the selection unsent are drawn so, which a list that did not change would not be
+    render();
+  }
+
   // Relative times ("3 minutes ago") advance without redrawing the list
   function refreshTimes() {
     for (const t of document.querySelectorAll('#list time')) t.textContent = ago(t.dateTime);
@@ -839,19 +926,19 @@
   // The project's hue, the dot of its chip
   const hue = (name) => [...name].reduce((h, c) => (h * 31 + c.codePointAt(0)) % 360, 7);
 
-  function chip(label, value, n, extra = '') {
+  // A button of the shelf's projects or tags, with its count: pressed when it is the one picked, pick done on a press.
+  // The label goes in as text, being a name the API was sent
+  function chip(label, n, { pressed, pick, extra = '' }) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `chip ${extra}`;
-    if (extra === 'project') b.style.setProperty('--h', hue(value));
-    b.setAttribute('aria-pressed', String(value === project));
+    b.setAttribute('aria-pressed', String(pressed));
     b.append(label);
     const count = document.createElement('span');
     count.className = 'n';
     count.textContent = n;
     b.append(count);
-    b.dataset.project = value;
-    b.addEventListener('click', () => setProject(value));
+    b.addEventListener('click', pick);
     return b;
   }
 
@@ -861,16 +948,38 @@
     // Kept as a choice even at 0, so that deleting the last entry does not jump the selection back to all
     if (project && !counts.has(project)) counts.set(project, 0);
     const names = [...counts.keys()].filter((k) => k !== NONE).sort((x, y) => x.localeCompare(y));
-    const chips = [chip(t('ui_all_projects'), '', list.length), ...names.map((name) => chip(name, name, counts.get(name), 'project'))];
-    if (counts.has(NONE)) chips.push(chip(t('ui_no_project'), NONE, counts.get(NONE), 'none'));
+    const projectChip = (label, value, n, extra) => {
+      const b = chip(label, n, { pressed: value === project, pick: () => setProject(value), extra });
+      b.dataset.project = value;
+      if (extra === 'project') b.style.setProperty('--h', hue(value));
+      return b;
+    };
+    const chips = [projectChip(t('ui_all_projects'), '', list.length), ...names.map((name) => projectChip(name, name, counts.get(name), 'project'))];
+    if (counts.has(NONE)) chips.push(projectChip(t('ui_no_project'), NONE, counts.get(NONE), 'none'));
     $('chips').replaceChildren(...chips);
     // Projects to choose between, or one chosen
     $('shelf-projects').hidden = chips.length < 3 && !project;
     return chips;
   }
 
+  // The shelf's tags by name, with how many of list have each; none shown when no page of it has one
+  function renderTags(list) {
+    const counts = new Map();
+    for (const a of list) for (const name of a.tags ?? []) counts.set(name, (counts.get(name) ?? 0) + 1);
+    // Kept as a choice even at 0, as a project is
+    if (tag && !counts.has(tag)) counts.set(tag, 0);
+    const chips = [...counts.keys()].sort((x, y) => x.localeCompare(y, LANG)).map((name) => {
+      const b = chip(name, counts.get(name), { pressed: name === tag, pick: () => toggleTag(name), extra: 'tag' });
+      b.dataset.tag = name;
+      return b;
+    });
+    $('tags').replaceChildren(...chips);
+    $('shelf-tags').hidden = chips.length === 0;
+    return chips;
+  }
+
   // The shelf's views and kinds with their counts, and the narrow screen's select of the same
-  function renderShelf(chips) {
+  function renderShelf(chips, tags) {
     const view = archived ? 'archived' : fav ? 'fav' : 'all';
     const counts = {
       all: items.filter((a) => inList(a, { tab, archived: false, fav: false })).length,
@@ -893,11 +1002,13 @@
     $('add-narrow').hidden = archived;
     // A button's own words, without its count
     const label = (b) => [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim();
-    const summary = [views.find((b) => b.dataset.view === view), !$('shelf-kind').hidden && tabs.find((b) => b.dataset.tab === tab),
-      project && chips.find((c) => c.getAttribute('aria-pressed') === 'true')].filter(Boolean)
+    const pressed = (list) => list.find((c) => c.getAttribute('aria-pressed') === 'true');
+    const summary = [views.find((b) => b.dataset.view === view), tag && pressed(tags), !$('shelf-kind').hidden && tabs.find((b) => b.dataset.tab === tab),
+      project && pressed(chips)].filter(Boolean)
       .map(label).join(' · ');
     // Groups of [value, words]. Values carry what they choose, so that a project named like a view is not taken for one
     const groups = [[t('ui_shelf'), views.map((b) => [`view:${b.dataset.view}`, b])]];
+    if (!$('shelf-tags').hidden) groups.push([t('ui_tags'), tags.map((b) => [`tag:${b.dataset.tag}`, b])]);
     if (!$('shelf-kind').hidden) groups.push([t('ui_kind'), tabs.map((b) => [`tab:${b.dataset.tab}`, b])]);
     if (!$('shelf-projects').hidden) groups.push([t('ui_project'), chips.map((c) => [`project:${c.dataset.project}`, c])]);
     const words = (b) => `${label(b)} (${b.querySelector('.n').textContent})`;
@@ -954,11 +1065,23 @@
     li.querySelector('.desc').textContent = a.description;
     li.querySelector('.desc').title = a.description;
     li.querySelector('.desc').hidden = !a.description;
+    const tags = li.querySelector('.tags');
+    tags.append(...(a.tags ?? []).map((name) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tagpill';
+      b.textContent = name;
+      b.title = name;
+      b.setAttribute('aria-label', t('ui_tag_filter_named', name));
+      b.addEventListener('click', () => setTag(name));
+      return b;
+    }));
+    tags.hidden = !a.tags?.length;
     // The creation date, which a meta.json from before it was recorded does not have
     const made = li.querySelector('.made');
     made.textContent = a.createdAt ? t(a.path ? 'ui_registered_at' : 'ui_created_at', new Date(a.createdAt).toLocaleDateString(LANG, { dateStyle: 'medium' })) : '';
     made.hidden = !a.createdAt;
-    li.querySelector('.sub').hidden = !a.description && !a.path && !a.createdAt;
+    li.querySelector('.sub').hidden = !a.description && !a.path && !a.createdAt && !a.tags?.length;
     li.querySelector('.more summary').setAttribute('aria-label', t('ui_more_named', a.title));
     // Sorted by creation, the creation time is shown
     const when = sort === 'created' && a.createdAt ? a.createdAt : a.updatedAt;
@@ -1056,6 +1179,7 @@
     editing = a;
     $('edit-target').textContent = a.path ?? `/a/${a.slug}/`;
     for (const [key, id] of Object.entries(EDIT_FIELDS)) $(id).value = a[key] ?? '';
+    $('edit-tags').value = (a.tags ?? []).join(', ');
     $('edit-name').placeholder = t(a.path ? 'ui_title_from_file' : 'ui_title_from_html');
     $('edit-error').hidden = true;
     $('edit-dialog').showModal();
@@ -1068,6 +1192,8 @@
     const changes = Object.fromEntries(Object.entries(EDIT_FIELDS)
       .filter(([key, id]) => $(id).value.trim() !== (editing[key] ?? ''))
       .map(([key, id]) => [key, $(id).value]));
+    // As opened, the tags are not sent: a name with a comma in it stays whole
+    if ($('edit-tags').value !== (editing.tags ?? []).join(', ')) changes.tags = splitTags($('edit-tags').value);
     const reason = await patchOne(editing.slug, changes);
     btn.disabled = false;
     if (reason) {
@@ -1084,8 +1210,9 @@
   function render() {
     const list = items.filter((a) => inList(a, { tab, archived, fav }));
     const chips = renderChips(list);
+    const tags = renderTags(list);
     const archivedHere = items.filter((a) => inView(a, { tab, archived: true })).length;
-    const shown = arrange({ tab, fav, archived, project, q: $('q').value, sort });
+    const shown = arrange(current());
     $('sort').value = sort;
     // Entries deleted elsewhere leave the selection
     for (const slug of selected) if (!list.some((a) => a.slug === slug)) selected.delete(slug);
@@ -1125,7 +1252,9 @@
     // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
     renderPager(shown.length, pages, start);
-    renderShelf(chips);
+    renderShelf(chips, tags);
+    // Every page's tag names, suggested where tags are written
+    $('tag-names').replaceChildren(...[...new Set(items.flatMap((a) => a.tags ?? []))].sort((x, y) => x.localeCompare(y, LANG)).map((name) => new Option(name)));
     renderBulk();
     syncUrl();
   }
@@ -1312,7 +1441,7 @@
     $('show-archived').addEventListener('click', () => setView('archived'));
     $('view-select').addEventListener('change', () => {
       const [kind, value] = $('view-select').value.split(/:(.*)/s);
-      ({ view: setView, tab: setTab, project: setProject })[kind](value);
+      ({ view: setView, tab: setTab, project: setProject, tag: toggleTag })[kind](value);
       // Back to the summary, so that choosing the same again is a change too
       $('view-select').selectedIndex = 0;
     });
@@ -1352,6 +1481,12 @@
       for (const sel of $('list').querySelectorAll('.sel')) sel.checked = false;
       renderBulk();
     });
+    $('bulk-tag').addEventListener('click', openTags);
+    $('tag-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      tagSelected(true);
+    });
+    $('tag-remove').addEventListener('click', () => tagSelected(false));
     $('bulk-archive').addEventListener('click', archiveSelected);
     $('bulk-delete').addEventListener('click', removeSelected);
     $('bulk-delete').addEventListener('blur', disarmBulk);
@@ -1368,7 +1503,7 @@
     });
     $('clear').addEventListener('click', () => {
       $('q').value = '';
-      setProject('');
+      refilter({ project: '', tag: '' });
     });
     // Not while typing or with a dialog open. Moving between rows focuses the title link, so Enter opens it
     const rowsShown = () => [...$('list').querySelectorAll(':scope > li:not(.group)')];
