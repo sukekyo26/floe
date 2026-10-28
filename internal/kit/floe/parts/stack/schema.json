@@ -8,12 +8,13 @@
     "type": "object",
     "description": "One key naming the kind of the part",
     "properties": {
-      "text": { "type": "string", "minLength": 1, "description": "Markdown" },
+      "text": { "type": "string", "minLength": 1, "description": "Markdown; an image file it names is not shown, only a data URI of a png, gif, jpeg or webp: write images in image" },
       "code": { "$ref": "floe:///parts/code.json" },
       "terminal": { "$ref": "floe:///parts/terminal.json" },
       "diff": { "$ref": "floe:///parts/diff.json" },
       "note": { "$ref": "floe:///parts/note.json" },
-      "table": { "$ref": "floe:///parts/table.json" }
+      "table": { "$ref": "floe:///parts/table.json" },
+      "image": { "$ref": "floe:///parts/image.json" }
     },
     "minProperties": 1,
     "maxProperties": 1,

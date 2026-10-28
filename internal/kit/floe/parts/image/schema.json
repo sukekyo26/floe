@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "image",
+  "description": "An image of the data file's directory, such as a screenshot, shown in the page as a data URI: a png, jpeg, gif, webp or svg file up to 1 MiB",
+  "type": "object",
+  "properties": {
+    "file": { "type": "string", "minLength": 1, "format": "image", "description": "The path of the image, relative to the data file's directory and under it" },
+    "alt": { "type": "string", "minLength": 1, "description": "What the image shows, for a screen reader and where it cannot be shown" }
+  },
+  "required": ["file", "alt"],
+  "additionalProperties": false
+}

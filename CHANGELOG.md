@@ -31,10 +31,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   page in English or Japanese, by the browser's language, that lists, edits,
   opens and downloads pages.
 - Add floe's template `report`: a header over sections, each a heading over
-  parts; and thirty-one parts a template refers to as
-  `floe:///parts/<name>.json` (`floe part list` lists them): twenty-nine that
-  a section of report takes beside Markdown `text` and `html`, from `code`,
-  `terminal` and `table` to `findings`, `decision`, `risks`, `timeline`,
+  parts; and thirty-two parts a template refers to as
+  `floe:///parts/<name>.json` (`floe part list` lists them): thirty that a
+  section of report takes beside Markdown `text` and `html`, from `code`,
+  `terminal`, `table` and `image` (an image of the data file's directory,
+  such as a screenshot) to `findings`, `decision`, `risks`, `timeline`,
   `tabs`, `diagram` and `script`, and `cell` and `stack`, which other parts
   hold.
 - Add nine themes a data file picks with `theme:` (`default`, `soft`,
@@ -48,9 +49,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add parts, looks, shared schemas and themes of your own in `FLOE_PARTS_DIR`
   and `FLOE_THEMES_DIR`, beside floe's and never named as one of them; and
   `floe part list`, `show`, `new` (the smallest part, to fill in) and `check`.
-  A mistake of a part, theme or template of your own stops every page drawn
-  until it is fixed. The directories of parts, themes and templates of your
-  own that are one, or one in the other, are refused for their settings.
+  A part's schema takes images as items of `"format": "image"`. A mistake of a
+  part, theme or template of your own stops every page drawn until it is
+  fixed. The directories of parts, themes and templates of your own that are
+  one, or one in the other, are refused for their settings.
 - Add diagrams drawn as inline SVG from a spec of parts on a canvas (frames,
   boxes, tables, icons, edges joining named parts, dots, bars, axes, circles,
   labels, lines), their text in one language or several (`{en: …, ja: …}`),

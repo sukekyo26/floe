@@ -43,8 +43,8 @@ var messagesEN = map[string]string{
 	"schema_root_drawn":         "the root of the schema is drawn whole by %s; declare the items of the page under properties, and name a part under one of them",
 	"schema_shared_declared":    "%s is read by floe itself: remove it from the schema's properties; to add a rule for it, write a check in checks.yaml",
 	"schema_shared_key":         "the schema requires %s, which floe reads from every data file itself (lang, template, theme, title) and leaves out of what the schema checks: require other items",
-	"schema_part_shared_format": "the part refers to %s, a schema of floe's that holds items of the format %s, which a part's part.html cannot draw: refer to it from the template's schema instead, and give the part items of its own",
-	"schema_part_format":        `a part's schema takes no "format": "%s": its part.html draws its items, which the checks of a format do not reach; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}`,
+	"schema_part_shared_format": "the part refers to %s, a shared schema that holds items of the format %s, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own",
+	"schema_part_format":        `a part's schema takes no "format": "%s": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}`,
 
 	// doc: the keys every data file shares
 	"doc_no_lang":  "name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)",

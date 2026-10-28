@@ -77,6 +77,7 @@ func Markdown(text string) (template.HTML, error) {
 var ErrFunc = errors.New("a function of floe failed")
 
 // convert writes text as HTML with md, the function of page.html called name.
+// LIMIT: Markdown images show only as data URIs (png, gif, jpeg, webp); refuse them if agents keep writing them.
 func convert(md goldmark.Markdown, name, text string) (string, error) {
 	var b bytes.Buffer
 	if err := md.Convert([]byte(text), &b); err != nil {

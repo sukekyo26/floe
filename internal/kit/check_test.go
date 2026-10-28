@@ -79,7 +79,7 @@ func TestCheckMistakes(t *testing.T) {
 		)},
 		{
 			"a part's schema with floe's format", with(map[string]string{"p/schema.json": `{"type": "object", "properties": {"h": {"type": "string", "format": "html"}}}`}), nil, nil,
-			`own/parts/p/schema.json: #/properties/h: a part's schema takes no "format": "html": its part.html draws its items, which the checks of a format do not reach; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}`,
+			`own/parts/p/schema.json: #/properties/h: a part's schema takes no "format": "html": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}`,
 		},
 		{
 			"escaping", with(map[string]string{"p/part.html": `<div data-floe-part="p"><a href="{{.t}}>x</a></div>`}), nil, nil,

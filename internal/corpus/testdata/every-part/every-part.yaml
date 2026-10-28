@@ -172,6 +172,7 @@ sections:
                 steps:
                   - { run: wiki export, out: done }
             - diff: { text: "+a\n-b\n" }
+            - image: { file: shots/moved.png, alt: The wiki after the move }
       - tabs:
           - title: bash
             parts:
