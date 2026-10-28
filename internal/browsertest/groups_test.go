@@ -51,16 +51,19 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	out = append(out, b.eval("String(new URLSearchParams(location.search).get('project'))"))
 
 	// The columns line up across groups whatever a row's project: the time's right and the star's left are one, the chip
-	// left of the time; a row of none has no chip.
+	// and the creation date left of the time; a row of none has no chip.
 	const columns = "(() => { const r = (slug, s) => document.querySelector(`#list li[data-slug=${slug}] ${s}`).getBoundingClientRect(); " +
 		"return [r('a1', 'time').right === r('fv', 'time').right, r('a1', '.star').left === r('n1', '.star').left, " +
-		"r('fv', '.proj').right <= r('fv', 'time').left, document.querySelector('#list li[data-slug=n1] .proj').hidden].join(' '); })()"
+		"r('fv', '.proj').right <= r('fv', '.made').left && r('fv', '.made').right <= r('fv', 'time').left, document.querySelector('#list li[data-slug=n1] .proj').hidden].join(' '); })()"
 	out = append(out, b.eval(columns))
-	// Narrow, a row's project and time go under its title, its actions where they were.
+	// Narrow, a row's project, creation date and time go under its title, on one line within the row, the date and the
+	// time whole (the project's chip cut off instead), its actions where they were.
 	b.size(390, 844, true)
-	out = append(out, b.eval("(() => { const r = (s) => document.querySelector(`#list li[data-slug=fv] ${s}`).getBoundingClientRect(); "+
+	out = append(out, b.eval("(() => { const li = document.querySelector('#list li[data-slug=fv]'), r = (s) => li.querySelector(s).getBoundingClientRect(); "+
+		"const whole = (s) => li.querySelector(s).scrollWidth <= li.querySelector(s).clientWidth; "+
 		"return [r('.proj').top >= r('.title').bottom, r('time').top >= r('.title').bottom, r('.proj').left === r('.title').left, "+
-		"r('.actions').top < r('.proj').top].join(' '); })()"))
+		"r('.actions').top < r('.proj').top, Math.abs(r('.made').top - r('time').top) < 4 && r('time').right <= r('.actions').left, "+
+		"whole('.made') && whole('time')].join(' '); })()"))
 	b.size(1440, 900, false)
 	// A heading pointed at keeps its ground, as it is not pressed; a row pointed at takes the hover's.
 	ground := func(selector string) string {
@@ -142,7 +145,7 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			"delta var(--pc4) delta 1, eps var(--pc5) eps 1, fav var(--pc0) fav 1, / var(--faint) None recorded 1",
 		"beta b1", "null",
 		"true true true true",
-		"true true true true",
+		"true true true true true true",
 		"rgb(251, 250, 248) rgb(246, 245, 241)",
 		"true",
 		"var(--faint) 0",

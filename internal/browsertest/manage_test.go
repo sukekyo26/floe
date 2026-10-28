@@ -99,7 +99,9 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out := make([]string, 0, 32)
 	out = append(out, b.eval(titles))
 	sortBy("created")
-	out = append(out, b.eval(titles)+" "+b.eval("new URLSearchParams(location.search).get('sort')"))
+	// Sorted by creation too, the time is the update's: the creation date has its own place beside it.
+	out = append(out, b.eval(titles)+" "+b.eval("new URLSearchParams(location.search).get('sort')")+" "+
+		b.eval("[...document.querySelectorAll('#list li:not(.group)')].every((li) => li.querySelector('time').dateTime === items.find((a) => a.slug === li.dataset.slug).updatedAt)"))
 	sortBy("title")
 	out = append(out, b.eval(titles))
 	// The shelf's favourites narrow to them (kept in the URL); a row's star sends the change.
@@ -219,7 +221,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// The time's tooltip lines start with the label of their format ("Created %s").
 	label := func(key string) string { return strings.Fields(msg(key, ""))[0] }
 	check(t, "extras", out, strings.Join([]string{
-		"Gamma,Beta,Alpha", "Gamma,Beta,Alpha created", "Gamma,Alpha,Beta", "Gamma 1",
+		"Gamma,Beta,Alpha", "Gamma,Beta,Alpha created true", "Gamma,Alpha,Beta", "Gamma 1",
 		`PATCH /api/artifacts/c {"favorite":false}`, label("ui_created_at") + " " + label("ui_updated_at"), "Alpha",
 		msg("ui_selected", 1), msg("ui_selected", 2), msg("ui_delete_bulk_confirm", 2),
 		"DELETE /api/artifacts/a,DELETE /api/artifacts/c", "true old", `PATCH /api/artifacts/a {"description":"new"}`, "true", "true",
@@ -356,12 +358,13 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval(stub(`[{ slug: 'c', title: 'Gamma', description: '', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'd', title: 'Delta', description: '', createdAt: at(1), updatedAt: at(8), favorite: true }]`))
 	out = append(out, b.eval(order))
-	// The creation date under the title, of a link when registered, and none without one.
+	// The creation date beside the time, left of it, of a link when registered, and none without one; nothing under the title for it.
 	date := b.eval("new Date('2026-01-01T00:00:00.000Z').toLocaleDateString(document.documentElement.lang, { dateStyle: 'medium' })")
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'o', title: 'Old', description: '', updatedAt: at(7) },
 		{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`))
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] .made').textContent"),
+	out = append(out, b.eval("(() => { const li = document.querySelector('#list li[data-slug=a]'), m = li.querySelector('.made'); "+
+		"return [m.textContent, m.parentElement.classList.contains('meta'), m.getBoundingClientRect().right <= li.querySelector('time').getBoundingClientRect().left, li.querySelector('.sub').hidden].join(' '); })()"),
 		b.eval("document.querySelector('#list li[data-slug=o] .made').hidden"))
 	b.eval("document.querySelector('.tabs [data-tab=links]').click()")
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=l] .made').textContent"))
@@ -489,7 +492,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		msg("ui_more_named", "Beta"), msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_archive") + " / " + msg("ui_delete"),
 		"false true", "Alpha", "false true", "false false true", "false true", "true", "true",
 		"true", "DELETE /api/artifacts/a", "Hcd",
-		msg("ui_created_at", date), "true", msg("ui_registered_at", date),
+		msg("ui_created_at", date) + " true true true", "true", msg("ui_registered_at", date),
 		"true true", "false", "floe:var(--pc0),p:var(--pc1)",
 		msg("ui_count_all", 1) + " true",
 		"empty-favorites", "all-archived", "archived ?archived=1", "archived ?archived=1",
