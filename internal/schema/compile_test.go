@@ -226,7 +226,7 @@ func withShared(t *testing.T, shared map[string]string) map[string]schema.Resour
 
 // CheckPart checks a Shared schema from its own root as a template's (checkNode), in its file, as a template, a
 // part or a Shared schema refers to its root alone. A format of floe's stops its walk, as a template's does, and
-// is taken where the walk reaches it: a part's rules are not its.
+// is taken where the walk reaches it.
 func TestCheckShared(t *testing.T) {
 	t.Parallel()
 

@@ -79,20 +79,24 @@ func (s *items) around(n int) (before, after string) {
 func (s *items) trim(out string) string {
 	out = strings.TrimSpace(out)
 	if rest, ok := strings.CutPrefix(out, "<!--"); ok {
-		if n, end, _, ok := s.next(rest); ok && !end {
-			out = probe(n) + out
+		if text, _, ok := strings.Cut(rest, "-->"); ok {
+			if n, end, ok := s.exact(text); ok && !end {
+				out = probe(n) + out
+			}
 		}
 	}
 	if at := strings.LastIndex(out, "<!--"); at >= 0 {
-		if n, end, rest, ok := s.next(out[at+len("<!--"):]); ok && end && rest == "-->" {
-			out += probe(n)
+		if text, ok := strings.CutSuffix(out[at+len("<!--"):], "-->"); ok {
+			if n, end, ok := s.exact(text); ok && end {
+				out += probe(n)
+			}
 		}
 	}
 	return out
 }
 
 // plain returns text without the probes and the marks of the items, as they are drawn around them: the text of a
-// mistake page.html made with an item.
+// mistake page.html or a part's part.html made with an item.
 func (s *items) plain(text string) string {
 	if len(s.html) == 0 {
 		return text
@@ -193,8 +197,8 @@ func (s *items) inAttrs(n *html.Node, probed bool) []occurrence {
 
 // probed returns the items whose probe value, an attribute of n, holds, read once through it: html/template
 // strips an item's tags, its marks among them, from an attribute's value, and leaves the probes.
-// LIMIT: an attribute page.html writes that holds the white space of a probe (\t\n, spaces, \t) is told as an
-// item put there; one an item writes is not looked at, as it is between the item's marks.
+// LIMIT: an attribute page.html or a part's part.html writes that holds the white space of a probe (\t\n, spaces,
+// \t) is told as an item put there; one an item writes is not looked at, as it is between the item's marks.
 func (s *items) probed(n *html.Node, value string) []occurrence {
 	var found []occurrence
 	for {
@@ -282,6 +286,9 @@ func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error 
 		refuse := func(key string, args ...any) { found = append(found, yamlpos.New(d.File, pos, key, args...)) }
 		if !o.exact {
 			// The end of an item started as a comment is read with its start, below.
+			// LIMIT: told at template:, whether page.html or a part's part.html put the item there: which of them did
+			// is not known without marks around a part's output too, which would refuse part.html left open as an
+			// item's is. Mark a part's output if one comes to need it told at part.html.
 			found = append(found, yamlpos.New(d.File, d.Where["template"], "draw_html_placed",
 				strings.Join(s.html[o.n], "."), o.holder))
 			break
