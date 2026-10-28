@@ -1118,10 +1118,12 @@
   // A button that opens a box over the page (popover, auto, from popovertarget): the browser opens and closes it from the button,
   // closes it on a press outside and Escape, and gives the focus back to the button. It also closes where it would be left
   // behind: when the window loses the focus (a press in the frame's page, which this page is not told of), changes its width (not
-  // its height alone, which a phone's keyboard changes) or scrolls. Pressed anywhere in it but a field (an option, a heading),
+  // its height alone, which a phone's keyboard changes) or scrolls the button from where it was as it opened (not a scroll that
+  // leaves it in place, as the tail of one before it opened does under a bar stuck to the top). Pressed anywhere in it but a field (an option, a heading),
   // the focus stays where it is, and so the keys. build fills it before it shows, focus moves in once it shows
   function menu(trigger, box, { build, focus }) {
     let width;
+    let at;
     box.addEventListener('mousedown', (e) => {
       if (!e.target.closest('input')) e.preventDefault();
     });
@@ -1136,6 +1138,7 @@
       box.style.left = `${narrow ? 16 : r.left}px`;
       box.style.width = narrow ? 'calc(100vw - 32px)' : '';
       width = innerWidth;
+      at = r;
     });
     box.addEventListener('toggle', (e) => {
       if (e.newState === 'open') focus();
@@ -1148,7 +1151,8 @@
       if (innerWidth !== width) close();
     });
     document.addEventListener('scroll', (e) => {
-      if (e.target === document) close();
+      const r = trigger.getBoundingClientRect();
+      if (e.target === document && at && (r.top !== at.top || r.left !== at.left)) close();
     });
     return close;
   }

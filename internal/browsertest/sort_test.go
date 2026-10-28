@@ -85,6 +85,18 @@ func TestUISortMenu(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the rows", "document.querySelectorAll('#list li:not(.group)').length > 0")
 	out = append(out, b.eval(state))
 
+	// Opened while the page still scrolls (the tail of a scroll before it), the sort stuck under the header bar, it stays open;
+	// the page scrolled after so that the sort moves, it closes, as it would be left behind.
+	b.eval(manyPages(60))
+	b.until("the rows", "document.querySelectorAll('#list li:not(.group)').length === 50")
+	b.eval("scrollTo(0, 600)")
+	b.until("the sort to be stuck", "scrollY === 600 && 'stuck'")
+	b.eval("scrollBy({ top: 300, behavior: 'smooth' }); document.getElementById('sort').click()")
+	b.until("the scroll to end", "scrollY === 900 && 'ended'")
+	out = append(out, b.eval("String("+open+")"))
+	b.eval("scrollTo(0, 0)")
+	out = append(out, b.until("the orders to close", "!"+open+" && 'closed'"))
+
 	check(t, "sort", out, strings.Join([]string{
 		"Recently updated / true / [Recently updated]*,Recently created,Title / sort-list / null",
 		"Recently updated / true / Recently updated*,[Recently created],Title / sort-list / null",
@@ -97,5 +109,6 @@ func TestUISortMenu(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"closed", "closed",
 		"sort",
 		"Title / false / Recently updated,Recently created,Title* /  / title",
+		"true", "closed",
 	}, "|"))
 }
