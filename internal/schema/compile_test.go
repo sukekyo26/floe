@@ -176,6 +176,10 @@ func TestCheckPartNode(t *testing.T) {
 			"html beside a $dynamicRef", `"properties": {"s": {"type": "string", "format": "html", "$dynamicRef": "#/$defs/s"}}, "$defs": {"s": {"type": "string"}}`,
 			"parts/p.json: #/properties/s: floe does not follow $dynamicRef: write a $ref\n" + html("#/properties/s"),
 		},
+		// What is past a format refused is checked as with the format taken out.
+		{"html beside a $ref to a part's root", `"properties": {"s": {"type": "string", "format": "html", "$ref": "#/$defs/n"}}, "$defs": {"n": ` + note + `}`, html("#/properties/s")},
+		{"html beside a $ref to an image", `"properties": {"s": {"type": "string", "format": "html", "$ref": "#/$defs/i"}}, "$defs": {"i": ` + img + `}`, html("#/properties/s")},
+		{"html over an image", `"properties": {"s": {"type": "object", "format": "html", "properties": {"i": ` + img + `}}}`, html("#/properties/s")},
 		{"html above a part's root", `"properties": {"s": {"format": "html", "anyOf": [` + note + `]}}`, html("#/properties/s") + "\n" + noPart("#/properties/s/anyOf/0")},
 		{"markdown", `"properties": {"s": {"type": "string", "format": "markdown"}}`, "parts/p.json: #/properties/s: a part's schema takes no \"format\": \"markdown\": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
 		{"shared", `"properties": {"s": {"$ref": "floe:///parts/shot.json"}}`, "parts/p.json: #/properties/s: the part refers to floe:///parts/shot.json, a shared schema that holds items of the format image, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own"},
