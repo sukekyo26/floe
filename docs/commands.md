@@ -59,7 +59,7 @@ Each page belongs to the project it is published from. The project is the reposi
 
 - The same slug from the same project overwrites the page. stderr says so (`updated "plan" (last published …, title "…")`). If the title changed, a warning suggests another `--slug`. The exit code stays 0.
 - A slug published from another project is refused unless `--force`. `--force` starts the page afresh: nothing of the old one is kept.
-- A republish keeps what was set on the management page (title, project, favourite), the description and the creation time. `--title` and `--description` override them. An archived page comes back to the lists.
+- A republish keeps what was set on the management page (title, project, favourite, tags), the description and the creation time. `--title` and `--description` override them. An archived page comes back to the lists.
 
 ### Linked files
 

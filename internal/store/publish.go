@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing/fstest"
@@ -373,7 +374,7 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, erro
 	return path, b, nil
 }
 
-// newMeta keeps what was set on the management page (favourite, title, project), the description and
+// newMeta keeps what was set on the management page (favourite, title, project, tags), the description and
 // createdAt from base, but not archived: a page published again comes back to the list. --title and
 // --description win.
 func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta {
@@ -393,6 +394,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		PublishedFrom: "",
 		Favorite:      base.Favorite,
 		Archived:      false,
+		Tags:          base.Tags,
 		CreatedAt:     cmp.Or(base.CreatedAt, now),
 		UpdatedAt:     now,
 	}
@@ -683,11 +685,13 @@ type Edit struct {
 	Slug        *string
 	Favorite    *bool
 	Archived    *bool
+	Tags        *[]string
 }
 
 // Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
 // the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
 // data file's title: when published (a stored page), else to the slug; clearing the project drops it.
+// Tags are kept as tagged makes them.
 // The page drawn stays as it is, its title and slug as when it was drawn.
 func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	from, ok := s.dir(slug)
@@ -706,15 +710,7 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	if m == nil {
 		return "", ErrNotFound
 	}
-	if ed.Description != nil {
-		m.Description = strings.TrimSpace(*ed.Description)
-	}
-	if ed.Favorite != nil {
-		m.Favorite = *ed.Favorite
-	}
-	if ed.Archived != nil {
-		m.Archived = *ed.Archived
-	}
+	setMarks(m, ed)
 	if ed.Project != nil {
 		// "/" is the management page's value for "no project".
 		if strings.TrimSpace(*ed.Project) == "/" {
@@ -741,6 +737,35 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 		}
 	}
 	return to, nil
+}
+
+// setMarks sets what ed changes of m that nothing refuses: its description, favourite, archived and tags.
+func setMarks(m *Meta, ed Edit) {
+	if ed.Description != nil {
+		m.Description = strings.TrimSpace(*ed.Description)
+	}
+	if ed.Favorite != nil {
+		m.Favorite = *ed.Favorite
+	}
+	if ed.Archived != nil {
+		m.Archived = *ed.Archived
+	}
+	if ed.Tags != nil {
+		m.Tags = tagged(*ed.Tags)
+	}
+}
+
+// tagged is tags as a page keeps them: each trimmed, without the empty and a name the second time, in the
+// order given; nil for none.
+func tagged(tags []string) []string {
+	var kept []string
+	for _, tag := range tags {
+		tag = strings.TrimSpace(tag)
+		if tag != "" && !slices.Contains(kept, tag) {
+			kept = append(kept, tag)
+		}
+	}
+	return kept
 }
 
 // setTitle sets the title of m, whose slug the edit renames to: an empty one gives back the page's

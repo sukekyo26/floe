@@ -397,6 +397,17 @@ var messagesEN = map[string]string{
 	"ui_unarchive_bulk_done":   "%d restored",
 	"ui_unarchive_bulk_failed": "%d could not be restored (%s) and stay selected.",
 
+	"ui_tags":             "Tags",
+	"ui_tags_hint":        "separated by commas",
+	"ui_tag_filter_named": "Show the pages tagged %s",
+	"ui_tag_bulk_title":   "Tags of the %d selected",
+	"ui_tag_find":         "Find or make a tag",
+	"ui_tag_create":       "Make “%s” a tag",
+	"ui_tag_apply":        "Apply",
+	"ui_tag_bulk_done":    "Changed the tags of %d",
+	"ui_tag_bulk_failed":  "%d could not have their tags changed (%s) and stay selected.",
+	"ui_tag_bulk_none":    "No page needed a change",
+
 	"ui_shelf":           "Lists",
 	"ui_view_all":        "All",
 	"ui_view_favorites":  "Favorites",

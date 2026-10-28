@@ -65,9 +65,11 @@ type Meta struct {
 	PublishedFrom string `json:"publishedFrom,omitempty"`
 	Favorite      bool   `json:"favorite,omitempty"`
 	// Archived keeps the page off the list (floe list and the management page), served and drawn as any.
-	Archived  bool   `json:"archived,omitempty"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
+	Archived bool `json:"archived,omitempty"`
+	// Tags are the page's tags, as tagged keeps them.
+	Tags      []string `json:"tags,omitempty"`
+	CreatedAt string   `json:"createdAt"`
+	UpdatedAt string   `json:"updatedAt"`
 }
 
 // IsLink reports whether the entry is a linked file.

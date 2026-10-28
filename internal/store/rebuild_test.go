@@ -198,14 +198,14 @@ func TestRebuildMeanwhile(t *testing.T) {
 	}{
 		{"edited", func(t *testing.T, s *store.Store, _ store.Drawing) {
 			t.Helper()
-			edit := store.Edit{Title: ptr("Kept"), Favorite: ptr(true), Archived: ptr(true), Description: ptr("about")}
+			edit := store.Edit{Title: ptr("Kept"), Favorite: ptr(true), Archived: ptr(true), Description: ptr("about"), Tags: ptr([]string{"a"})}
 			if _, err := s.Edit("d", edit); err != nil {
 				t.Fatal(err)
 			}
 		}, func(t *testing.T, s *store.Store, root, before string) {
 			t.Helper()
 			m := s.ReadMeta("d")
-			if m.Title != "Kept" || !m.Favorite || !m.Archived || m.Description != "about" {
+			if m.Title != "Kept" || !m.Favorite || !m.Archived || m.Description != "about" || !slices.Equal(m.Tags, []string{"a"}) {
 				t.Errorf("the edit was lost: %+v", m)
 			}
 			if page := read(t, filepath.Join(copyOf(t, s, root, "d"), "page.html")); page == before {

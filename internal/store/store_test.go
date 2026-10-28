@@ -278,6 +278,42 @@ func TestPublishKeepsTitle(t *testing.T) {
 	}
 }
 
+// An edit keeps tags trimmed, without the empty and the second of a name, in the order sent; an edit without them
+// (archiving too) leaves them, publishing again and renaming keep them, and none sent clears them off meta.json.
+func TestEditTags(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	want := []string{"設計", "計画"}
+	edits := []store.Edit{{Tags: ptr([]string{"設計", " 計画 ", "設計", ""})}, {Favorite: ptr(true)}, {Archived: ptr(true)}}
+	for _, ed := range edits {
+		if _, err := s.Edit("d", ed); err != nil {
+			t.Fatal(err)
+		}
+		if m := s.ReadMeta("d"); !slices.Equal(m.Tags, want) {
+			t.Errorf("%+v: tags %q, want %q", ed, m.Tags, want)
+		}
+	}
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	if m := s.ReadMeta("d"); !slices.Equal(m.Tags, want) {
+		t.Errorf("published again: tags %q", m.Tags)
+	}
+	if _, err := s.Edit("d", store.Edit{Slug: ptr("e")}); err != nil {
+		t.Fatal(err)
+	}
+	if m := s.ReadMeta("e"); m == nil || !slices.Equal(m.Tags, want) {
+		t.Errorf("renamed: %+v", m)
+	}
+	if _, err := s.Edit("e", store.Edit{Tags: ptr([]string{" "})}); err != nil {
+		t.Fatal(err)
+	}
+	if meta := read(t, filepath.Join(root, "e", "meta.json")); strings.Contains(meta, "tags") {
+		t.Errorf("cleared, meta.json still has tags: %s", meta)
+	}
+}
+
 // An edit archives a page and gives it back, its updatedAt kept, and a rename keeps it archived; publishing again,
 // a stored page or a link, gives it back to the list but keeps it a favourite.
 func TestArchive(t *testing.T) {
@@ -435,13 +471,24 @@ func TestOwners(t *testing.T) {
 	s, root := newStore(t)
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "same.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	if _, err := s.Edit("same", store.Edit{Tags: ptr([]string{"a"})}); err != nil {
+		t.Fatal(err)
+	}
 	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q"}, store.Options{})
 	if got := told(err, root); got != `floe: slug "same" was published from project p; use another --slug, or add --force to replace that page` {
 		t.Errorf("told %s", got)
 	}
 	up := store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q"}
-	if _, err = s.PrepareData(dw, up, store.Options{Force: true}); err != nil {
-		t.Errorf("--force: %v", err)
+	e, err := s.PrepareData(dw, up, store.Options{Force: true})
+	if err != nil {
+		t.Fatalf("--force: %v", err)
+	}
+	// Replaced, the page starts afresh: the tags of the one before do not stay.
+	if err = s.Save(e); err != nil {
+		t.Fatal(err)
+	}
+	if m := s.ReadMeta("same"); m.Tags != nil {
+		t.Errorf("--force kept tags %q", m.Tags)
 	}
 	home := filepath.Dir(root)
 	html := filepath.Join(home, "proj", "z.html")
