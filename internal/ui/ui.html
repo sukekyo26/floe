@@ -226,14 +226,30 @@
   .suggest [role="option"]:hover, .suggest [aria-selected="true"] { background: var(--subtle); }
   .suggest [aria-selected="true"] { color: var(--accent); }
   /* The bulk dialog's tags, a box each: on all the selected, on some (indeterminate) or on none */
-  .tag-boxes { display: grid; gap: 1px; max-height: 16rem; overflow-y: auto; margin: 0 -0.4rem; padding: 0.1rem 0.4rem; }
-  .tag-box { display: flex; align-items: center; gap: 0.6rem; padding: 0.42rem 0.5rem; border-radius: 8px; font-size: 0.86rem; cursor: pointer; }
-  .tag-box:hover { background: var(--subtle); }
-  .tag-box input { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+  /* The bulk dialog's tags, a chip each, wrapping: on all the selected (filled), on some (dashed) or on none, told by the chip's
+     mark (✓, −, +) and its look, not by its color alone. The checkbox is the chip's own, out of sight, so keys and screen readers
+     use it as any. No transition: a chip seen between two marks reads as neither */
+  .tag-boxes { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 0.4rem; max-height: 16rem; overflow-y: auto; padding: 0.2rem; }
+  .tag-box {
+    position: relative; display: inline-flex; align-items: center; gap: 0.35rem; max-width: 100%; padding: 0.28rem 0.7rem 0.28rem 0.55rem;
+    color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; font-size: 0.82rem; cursor: pointer;
+  }
+  .tag-box:hover { border-color: var(--faint); }
+  .tag-box input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+  .tag-box:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tag-box .mark { flex: none; width: 0.9rem; font: 600 0.8rem/1 var(--mono); text-align: center; }
+  .tag-box .mark::before { content: "+"; }
+  .tag-box:has(input:checked) { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .tag-box:has(input:checked) .mark::before { content: "✓"; }
+  .tag-box:has(input:indeterminate) { color: var(--accent); background: var(--accent-soft); border: 1px dashed var(--accent); }
+  .tag-box:has(input:indeterminate) .mark::before { content: "−"; }
   .tag-box .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tag-box .n { margin-left: auto; font: 0.72rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
-  .tag-new { justify-content: flex-start; width: 100%; padding: 0.42rem 0.5rem; color: var(--accent); background: none; border: 0; border-radius: 8px; font-size: 0.86rem; text-align: left; }
-  .tag-new:hover { background: var(--subtle); }
+  .tag-box .n { font: 0.68rem/1 var(--mono); opacity: 0.8; font-variant-numeric: tabular-nums; }
+  .tag-new {
+    display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.28rem 0.7rem; color: var(--accent); background: none;
+    border: 1px dashed var(--line); border-radius: 999px; font-size: 0.82rem;
+  }
+  .tag-new:hover { border-color: var(--accent); }
   li time { font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
   .actions { position: relative; z-index: 1; display: flex; gap: 2px; }
   /* The row's other actions. The row whose menu is open comes forward: each row's rise animation stacks the rows below over it */
@@ -1037,7 +1053,7 @@
     $('tag-dialog').showModal();
   }
 
-  // The boxes, the tags on the selected first, then by name; those that hold what the find field has
+  // The chips, the tags on the selected first, then by name; those that hold what the find field has
   function drawTagBoxes() {
     const { on, want, total } = tagMarks;
     const find = $('tag-find').value.trim();
@@ -1060,10 +1076,13 @@
         show();
         $('tag-apply').disabled = [...want].every(([n, w]) => w === (on.get(n) === total ? 'all' : on.get(n) ? 'some' : 'none'));
       });
+      const mark = document.createElement('span');
+      mark.className = 'mark';
+      mark.setAttribute('aria-hidden', 'true');
       const words = document.createElement('span');
       words.className = 'name';
       words.textContent = name;
-      label.append(box, words);
+      label.append(box, mark, words);
       // A tag on some tells how many
       if (on.get(name) > 0 && on.get(name) < total) {
         const n = document.createElement('span');

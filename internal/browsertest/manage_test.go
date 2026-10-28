@@ -560,9 +560,10 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 			}
 		}
 	}
-	// The tag dialog's boxes: name, mark and count
+	// The tag dialog's chips: name, state, the mark shown and count
 	const boxes = "[...document.querySelectorAll('#tag-boxes .tag-box')].map((l) => { const c = l.querySelector('input'); " +
-		"return [l.querySelector('.name').textContent, c.indeterminate ? 'some' : c.checked ? 'all' : 'none', l.querySelector('.n')?.textContent ?? ''].join(':'); }).join(',')"
+		"return [l.querySelector('.name').textContent, c.indeterminate ? 'some' : c.checked ? 'all' : 'none', " +
+		"getComputedStyle(l.querySelector('.mark'), '::before').content.replaceAll('\"', ''), l.querySelector('.n')?.textContent ?? ''].join(':'); }).join(',')"
 	const applies = "!document.getElementById('tag-apply').disabled"
 	selectOnly := func(slugs ...string) {
 		b.eval("document.getElementById('bulk-clear').click()")
@@ -627,6 +628,9 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// With keys alone: Tab to a box, Space marks it. One on some goes some, all, none and back; the others all and none.
 	b.until("the find field to have focus", "document.activeElement.id === 'tag-find'")
 	press(kb.Tab)
+	// The chip reached shows the ring of its hidden box's focus.
+	out = append(out, b.eval("document.activeElement.closest('.tag-box').querySelector('.name').textContent + ' ' + "+
+		"getComputedStyle(document.activeElement.closest('.tag-box')).outlineStyle"))
 	marks := make([]string, 0, 4)
 	for range 4 {
 		press(" ")
@@ -781,15 +785,15 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"old1:false,plan1:false false", "c 設計、実装", msg("ui_selected", 1), "ac -",
 		"other2:false,plan0:true,設計1:false,設計、実装1:false false", "false", "abcd -",
 		"設計, plan", `PATCH /api/artifacts/a {"tags":["計画","設計"]}`, `PATCH /api/artifacts/c {"title":"G2"}`,
-		msg("ui_tag_bulk_title", 3), "plan:some:2/3,設計:some:1/3,old:none:,設計、実装:none:", "false",
-		"all:true none:true some:false all:true", "plan:all:2/3,設計:none:1/3,old:all:,設計、実装:none:", "true",
+		msg("ui_tag_bulk_title", 3), "plan:some:−:2/3,設計:some:−:1/3,old:none:+:,設計、実装:none:+:", "false", "plan solid",
+		"all:true none:true some:false all:true", "plan:all:✓:2/3,設計:none:+:1/3,old:all:✓:,設計、実装:none:+:", "true",
 		`PATCH /api/artifacts/a {"tags":["plan","old"]},PATCH /api/artifacts/b {"tags":["plan","old"]},PATCH /api/artifacts/d {"tags":["old","plan"]}`, "true", "1",
 		`PATCH /api/artifacts/a {"tags":["設計","plan","old"]},PATCH /api/artifacts/c {"tags":["設計、実装","old"]}`,
-		"plan:all: false", msg("ui_tag_create", "new"), "plan:all:,new:all:,old:none:,設計:none:,設計、実装:none:", "true 0 true",
+		"plan:all:✓: false", msg("ui_tag_create", "new"), "plan:all:✓:,new:all:✓:,old:none:+:,設計:none:+:,設計、実装:none:+:", "true 0 true",
 		"true 0",
 		"old,設計,設計、実装", "plan, old, ", "設計,設計、実装",
 		"tag:plan,tag:設計,tag:設計、実装", "ab plan", "true", "abcd -",
-		"<b>x</b>1,__proto__1", "<b>x</b>,__proto__", "0", "__proto__:all:,<b>x</b>:all: 0",
+		"<b>x</b>1,__proto__1", "<b>x</b>,__proto__", "0", "__proto__:all:✓:,<b>x</b>:all:✓: 0",
 		"combobox list true listbox",
 		"<b>x</b>,plan,xa,計画,設計", "true true", "true", "under", "<b>x</b>",
 		"false false true",
