@@ -1,8 +1,8 @@
 package server
 
 import (
-	"bytes"
-	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"io"
 	"io/fs"
@@ -12,6 +12,9 @@ import (
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
+
+// LIMIT: encoding/json/v2 and jsontext are in Go 1.27 by default, under goexperiment.jsonv2, outside the Go 1
+// compatibility promise. If a release drops or changes them, import github.com/go-json-experiment/json here.
 
 const maxBody = 64 << 10
 
@@ -23,7 +26,7 @@ const MaxUpload = 32 << 20
 // jsonType is the media type of a write, and the one Accept names for a report as JSON.
 const jsonType = "application/json"
 
-// readBody reads a write from the management page or the CLI, of up to limit bytes, as JSON. Other
+// readBody reads a write from the management page or the CLI, of up to limit bytes, for decodeStrict to read. Other
 // sites and the sandboxed pages are refused by the exact Origin and by requiring JSON (which needs a
 // CORS preflight), its Content-Type read as mime reads it: one whose parameters cannot be read is refused too.
 // On refusal it has answered and returns false.
@@ -43,8 +46,8 @@ func (s *Server) readBody(w http.ResponseWriter, r *http.Request, limit int64) (
 		send(w, http.StatusRequestEntityTooLarge, "request body too large")
 		return nil, false
 	}
-	if err != nil || !json.Valid(body) {
-		send(w, http.StatusBadRequest, "cannot read the request: it is not JSON")
+	if err != nil {
+		send(w, http.StatusBadRequest, "cannot read the request")
 		return nil, false
 	}
 	return body, true
@@ -113,19 +116,16 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	sendSaved(w, entry)
 }
 
-// decodeStrict reads body, which readBody has read, as a T, refusing anything but an object (null too) and a field
-// T does not have; nil when it has answered a refusal. A field null is one not sent. One Decode reads it all, as
-// readBody's json.Valid refuses a second value.
+// decodeStrict reads body as a T as encoding/json/v2 does, the one reading of a write: refusing anything but an
+// object (null too), a mistake of its syntax, a key T does not have (of other case too) and a key sent twice; nil
+// when it has answered a refusal. A field null is one not sent.
 func decodeStrict[T any](w http.ResponseWriter, body []byte) *T {
-	if tok, err := json.NewDecoder(bytes.NewReader(body)).Token(); err != nil || tok != json.Delim('{') {
+	if jsontext.Value(body).Kind() != '{' {
 		send(w, http.StatusBadRequest, "cannot read the request: send a JSON object")
 		return nil
 	}
 	var v T
-	// LIMIT: v1 reads "Archived" as archived and a key sent twice as its last; read with json/v2 to refuse them.
-	dec := json.NewDecoder(bytes.NewReader(body))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&v); err != nil {
+	if err := jsonv2.Unmarshal(body, &v, jsonv2.RejectUnknownMembers(true)); err != nil {
 		// What encoding/json could not read: neither the management page nor the CLI sends such JSON.
 		// LIMIT: in encoding/json's English, as the protocol's refusals are. Word it if a reader comes to see it.
 		send(w, http.StatusBadRequest, protocolText("cannot read the request: "+err.Error()))

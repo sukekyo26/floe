@@ -49,6 +49,8 @@ func (e *remoteError) Report() usererr.Report {
 func (c client) do(ctx context.Context, method, path string, body, out any) error {
 	var r io.Reader
 	if body != nil {
+		// LIMIT: Marshal sends a string's bytes that are no UTF-8 as U+FFFD, a path to link then naming another file.
+		// Refuse such a path here if one comes to be linked.
 		b, err := json.Marshal(body)
 		if err != nil {
 			return fmt.Errorf("%s %s: %w", method, path, err)
