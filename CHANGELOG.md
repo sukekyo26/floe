@@ -37,7 +37,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   each project in a color of its own, those with the most pages first, a row's
   menu holding its edit, opening, download, archive and delete; and the bar over
   an open page stars and archives it with buttons of icons alone, filled in while
-  on. Tags are given in a page's edit dialog, to those selected,
+  on, and its title opens the pages of the list it was opened from, to search and
+  pick from. Tags are given in a page's edit dialog, to those selected,
   or as `tags` in `PATCH /api/artifacts/{slug}`; they show under a page's
   title, are searched, and stay when the page is published again. What is
   reached by keyboard shows one thin grey ring, and a button pressed with the

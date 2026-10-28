@@ -31,6 +31,7 @@ import (
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 
 	"github.com/sukekyo26/floe/internal/cli"
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -233,6 +234,24 @@ func (b *browser) navigate(path string) {
 		b.t.Fatalf("navigate %s: %v", path, err)
 	}
 	b.until(path+" to load", "!window.leaving && document.readyState === 'complete'")
+}
+
+// pressKey presses k as a keyboard does: its text on the key down, which a page's preventDefault then stops too
+// (chromedp.KeyEvent sends the text as an event of its own, which nothing stops). For Enter, space and the keys with no text.
+func (b *browser) pressKey(k string) {
+	b.t.Helper()
+
+	for _, e := range kb.Encode([]rune(k)[0]) {
+		if e.Type == kb.KeyChar {
+			continue
+		}
+		if e.Type == kb.KeyDown {
+			e.Text = map[string]string{kb.Enter: "\r", " ": " "}[k]
+		}
+		if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, *e); err != nil {
+			b.t.Fatal(err)
+		}
+	}
 }
 
 func (b *browser) click(x, y float64) {

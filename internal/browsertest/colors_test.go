@@ -94,6 +94,14 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		measure("the edit dialog")
 		b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.querySelector('.tabs [data-tab=links]').click()")
 		measure("the links")
+		// The frame's pages to pick from, open, one of them reached and the one open now marked.
+		b.navigate("/a/a/")
+		b.eval(stub(colorsList))
+		b.until("the title", "!document.getElementById('frame-pick').hidden")
+		b.eval("document.getElementById('frame-pick').click()")
+		b.until("the pages to pick from", "document.getElementById('page-pick').matches(':popover-open')")
+		b.eval("document.getElementById('page-pick-q').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))")
+		measure("the frame's pages to pick from")
 	}
 
 	const light = "rgb(244, 243, 240)"

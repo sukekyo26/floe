@@ -268,7 +268,6 @@ var messagesEN = map[string]string{
 
 	// ui: the management page (ui.html), which renders them itself
 	"ui_back_to_list":         "Back to the list",
-	"ui_page_nav":             "Previous and next pages",
 	"ui_download":             "Download",
 	"ui_download_named":       "Download %s",
 	"ui_open_raw":             "Open the page alone in a new tab",
@@ -295,6 +294,8 @@ var messagesEN = map[string]string{
 	"ui_empty_links":          "No links yet",
 	"ui_empty_links_hint":     "Register an HTML or data file by its absolute path with “Add a link” to show it where it is, without copying it. You can also add one with:",
 	"ui_nomatch":              "No pages match",
+	"ui_pick_page":            "Pick a page",
+	"ui_pick_search":          "Find a page",
 	"ui_clear_filters":        "Clear the filters",
 	"ui_pager":                "Pagination",
 	"ui_page_size":            "Per page",
@@ -351,10 +352,6 @@ var messagesEN = map[string]string{
 	"ui_favorited":            "Added “%s” to favorites",
 	"ui_unfavorited":          "Removed “%s” from favorites",
 	"ui_favorite_failed":      "Could not change the favorite (%s).",
-	"ui_prev_named":           "Previous: %s",
-	"ui_next_named":           "Next: %s",
-	"ui_no_prev":              "No previous page",
-	"ui_no_next":              "No next page",
 	"ui_load_failed":          "Could not load the list (%s). If the server has stopped, start it with floe serve.",
 	"ui_delete":               "Delete",
 	"ui_delete_named":         "Delete %s",

@@ -61,6 +61,16 @@ func stub(list string) string {
 })()`
 }
 
+// picker opens the frame's pages to pick from afresh (shut first, so that it is made from the list as it is now) and reads
+// them: each group's heading, then its pages' titles, the page open now marked *.
+const picker = `(() => {
+	const box = document.getElementById('page-pick');
+	if (box.matches(':popover-open')) box.hidePopover();
+	document.getElementById('frame-pick').click();
+	return [...document.querySelectorAll('#page-pick-list [role=group]')].map((g) => g.querySelector('.gh').textContent + ':' +
+		[...g.querySelectorAll('[role=option]')].map((o) => o.textContent + (o.hasAttribute('aria-current') ? '*' : '')).join(',')).join(' / ');
+})()`
+
 // manyPages is a stub of n pages, newest first, alike but for their slug and title.
 func manyPages(n int) string {
 	return stub("Array.from({ length: " + strconv.Itoa(n) + " }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))")
@@ -205,12 +215,10 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval(stub("[]"))
 	out = append(out, b.eval(empties))
 
-	// A page opened from the list steps to its neighbours in that list's order, and the logo returns to
-	// that list. An archived page opened from elsewhere steps through the archived.
+	// A page opened from the list picks from that list, in its order, and the logo returns to that list. An archived page
+	// opened from elsewhere picks from the archived.
 	b.eval("sessionStorage.setItem('artifacts.list', '?sort=title')")
-	neighbours := "document.getElementById('frame-pos').textContent && " +
-		"['frame-prev', 'frame-next'].map((id) => document.getElementById(id).getAttribute('href'))" +
-		".concat(document.getElementById('frame-pos').textContent, document.querySelector('.brand').getAttribute('href')).join(' ')"
+	neighbours := "!document.getElementById('frame-pick').hidden && " + picker + " + ' ' + document.querySelector('.brand').getAttribute('href')"
 	b.navigate("/a/b/")
 	b.eval(stub(extrasList))
 	out = append(out, b.until("the neighbours", neighbours))
@@ -239,8 +247,8 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"all-archived:" + msg("ui_pages_all_archived", 1),
 		"Zeta 1",
 		"empty:" + msg("ui_empty_pages"),
-		"/a/a/  3 / 3 /?sort=title",
-		" /a/y/ 1 / 2 /?sort=title",
+		msg("ui_group_favorites") + ":Gamma / " + msg("ui_no_project") + ":Alpha,Beta* /?sort=title",
+		"p:Zeta* / " + msg("ui_no_project") + ":Ypsilon /?sort=title",
 	}, "|"))
 }
 
@@ -487,9 +495,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.navigate("/a/b/")
 	b.eval(stub(extrasList))
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
-	// The frame steps through the list it was opened from, which starring it from the bar does not change; a page gone drops out.
-	neighbours := "document.getElementById('frame-pos').textContent && ['frame-prev', 'frame-next']" +
-		".map((id) => document.getElementById(id).getAttribute('href')).concat(document.getElementById('frame-pos').textContent).join(' ')"
+	// The frame picks from the list it was opened from, which starring it from the bar does not change; a page gone drops out.
+	neighbours := "!document.getElementById('frame-pick').hidden && " + picker
 	b.eval("sessionStorage.setItem('artifacts.list', '?fav=1')")
 	b.navigate("/a/c/")
 	b.eval(stub(extrasList))
@@ -501,7 +508,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval(stub(extrasList))
 	b.until("the neighbours", neighbours)
 	b.eval(stub(strings.Replace(extrasList, "{ slug: 'a', title: 'Alpha', description: 'old', createdAt: at(1), updatedAt: at(8) },", "", 1)))
-	out = append(out, b.until("the gone page to drop out", "document.getElementById('frame-pos').textContent !== '2 / 3' && "+neighbours))
+	out = append(out, b.until("the gone page to drop out", "!("+picker+").includes('Alpha') && "+neighbours))
 
 	check(t, "shelf", out, strings.Join([]string{
 		"HcHba", "none:heading:2:" + msg("ui_group_favorites") + msg("ui_count_all", 1) + ",none:heading:2:" + msg("ui_no_project") + msg("ui_count_all", 2),
@@ -523,7 +530,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"Zeta / true / true / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
 		msg("ui_favorite_failed", "Failed to fetch"),
 		"Beta / true / false / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
-		"  1 / 1", "false   1 / 1", "/a/c/  2 / 2",
+		msg("ui_no_project") + ":Gamma*", "false " + msg("ui_no_project") + ":Gamma*",
+		msg("ui_group_favorites") + ":Gamma / " + msg("ui_no_project") + ":Beta*",
 	}, "|"))
 }
 
@@ -559,23 +567,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	search := func(q string) {
 		b.eval("(() => { const q = document.getElementById('q'); q.value = " + js(q) + "; q.dispatchEvent(new Event('input')); })()")
 	}
-	// A key as a keyboard presses it: its text on the key down, which a page's preventDefault then stops too
-	// (chromedp.KeyEvent sends the text as an event of its own, which nothing stops).
-	press := func(k string) {
-		t.Helper()
-
-		for _, e := range kb.Encode([]rune(k)[0]) {
-			if e.Type == kb.KeyChar {
-				continue
-			}
-			if e.Type == kb.KeyDown {
-				e.Text = map[string]string{kb.Enter: "\r", " ": " "}[k]
-			}
-			if _, err := chromedp.Call(b.ctx, input.DispatchKeyEvent, *e); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
+	press := b.pressKey
 	// The tag dialog's chips: name, state, the mark shown and count
 	const boxes = "[...document.querySelectorAll('#tag-boxes .tag-box')].map((l) => { const c = l.querySelector('input'); " +
 		"return [l.querySelector('.name').textContent, c.indeterminate ? 'some' : c.checked ? 'all' : 'none', " +
