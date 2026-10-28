@@ -30,10 +30,6 @@
 @media (max-width: 640px) { .dg-tools span { display: none; } }
 /* Buttons do nothing on paper */
 @media print { .dg-tools { display: none; } }
-/* The spec as written, folded under the diagram; closed, it prints its summary alone */
-.dg-source { margin-top: 0.5rem; }
-.dg-source summary { cursor: pointer; color: var(--dg-muted); }
-.dg-source pre { margin: 0.4rem 0 0; padding: 0.6rem 0.8rem; overflow-x: auto; border: 1px solid var(--dg-line); border-radius: 8px; background: var(--dg-bg); font: 12px/1.5 var(--dg-mono); }
 .dg-tools button { min-width: 2.2rem; padding: 2px 8px; font: inherit; color: var(--dg-fg); background: var(--dg-surface); border: 1px solid var(--dg-line); border-radius: 6px; cursor: pointer; }
 .dg-tools button:hover:not(:disabled) { border-color: var(--dg-accent); color: var(--dg-accent); }
 .dg-tools button:disabled { opacity: 0.4; cursor: default; }

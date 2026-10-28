@@ -256,7 +256,6 @@ var messagesEN = map[string]string{
 	"diagram_zoom_one":         "1:1",
 	"diagram_zoom_one_label":   "Show at actual size",
 	"diagram_unknown_example":  "no example %s; use %s",
-	"diagram_source":           "The spec of this diagram",
 	"cli_wants_spec":           "a diagram spec (.yaml)",
 	"cli_unknown_part":         `unknown part "%s"; use %s`,
 	"cli_new_exists":           "there is something of this name here already: pick another name, or remove it",

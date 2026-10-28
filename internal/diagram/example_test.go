@@ -16,9 +16,9 @@ var awsIcons = iconsOf{
 	"aws/group/region": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), "aws/res/client": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
 }
 
-func drawWith(lang string, icons diagram.Icons, source string) func(d *diagram.Drawer, v any) (string, error) {
+func drawWith(lang string, icons diagram.Icons) func(d *diagram.Drawer, v any) (string, error) {
 	return func(d *diagram.Drawer, v any) (string, error) {
-		svg, err := d.Draw(v, diagram.Options{Lang: i18n.Lang(lang), Icons: icons, Seq: 1, Source: source})
+		svg, err := d.Draw(v, diagram.Options{Lang: i18n.Lang(lang), Icons: icons, Seq: 1})
 		return string(svg), err
 	}
 }
@@ -33,11 +33,11 @@ func TestExampleByName(t *testing.T) {
 	}
 	for _, e := range examples {
 		for _, lang := range []string{"en", "ja"} {
-			byName, mistakes := draw(t, "example: "+e.Name+"\n", drawWith(lang, awsIcons, ""))
+			byName, mistakes := draw(t, "example: "+e.Name+"\n", drawWith(lang, awsIcons))
 			if mistakes != "" {
 				t.Fatalf("%s in %s: %s", e.Name, lang, mistakes)
 			}
-			bySpec, _ := draw(t, string(e.Spec), drawWith(lang, awsIcons, ""))
+			bySpec, _ := draw(t, string(e.Spec), drawWith(lang, awsIcons))
 			if byName != bySpec {
 				t.Errorf("%s in %s: drawn by name differs from its spec", e.Name, lang)
 			}
@@ -64,14 +64,14 @@ func TestExampleMistakes(t *testing.T) {
 		{"example: aws\n", broken, `/i/aws/index.json:1:1: holds no version of the icons; run "floe icons fetch aws --force" to fetch them again`},
 		{"example: aws\n", lambda, `s.yaml:1:1: icon "aws/amazon-bedrock": no icon "aws/amazon-bedrock" (search with: floe icons search <word>)`},
 	} {
-		_, got := draw(t, tt.src, drawWith("en", tt.icons, ""))
+		_, got := draw(t, tt.src, drawWith("en", tt.icons))
 		if !strings.Contains(got, tt.want) {
 			t.Errorf("%q: told\n%s\nwant it to hold\n%s", tt.src, got, tt.want)
 		}
 	}
 	// What fails in reading the icons is floe's failure, not a mistake.
 	_, err := drawer(t).Draw(map[string]any{"example": "aws"}, diagram.Options{
-		Lang: "en", Icons: failing{err: errors.New("boom")}, Seq: 1, Source: "",
+		Lang: "en", Icons: failing{err: errors.New("boom")}, Seq: 1,
 	}) //nolint:err113 // the test's
 	var found usererr.List
 	if err == nil || found.Add(err) == nil {

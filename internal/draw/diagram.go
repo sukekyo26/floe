@@ -11,7 +11,6 @@ import (
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
-	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // Diagrams is the drawer of the diagrams of pages and of floe diagram: floe's part diagram's schema, compiled
@@ -30,8 +29,8 @@ var Diagrams = sync.OnceValues(func() (*diagram.Drawer, error) {
 
 // diagramOf returns the function diagram of a part.html that draws the value of it, an item of d, as written, in
 // d's language: in the box of floe's part diagram, so that its CSS is the page's whoever draws it, after the
-// script that zooms it, with its value's text when it says source: true. Its mistakes are at JSON pointers from
-// the root of the value, or of no place (icons); what fails otherwise is floe's failure.
+// script that zooms it. Its mistakes are at JSON pointers from the root of the value, or of no place (icons); what
+// fails otherwise is floe's failure.
 func (s *items) diagramOf(d *doc.Data, it schema.Item) func() (template.HTML, error) {
 	return func() (template.HTML, error) {
 		dr, err := Diagrams()
@@ -39,11 +38,7 @@ func (s *items) diagramOf(d *doc.Data, it schema.Item) func() (template.HTML, er
 			return "", fmt.Errorf("%w: diagram: %w", kit.ErrFunc, err)
 		}
 		s.diagrams++
-		o := diagram.Options{Lang: i18n.Lang(d.Lang), Icons: s.icons, Seq: s.diagrams, Source: ""}
-		if m, ok := it.Value.(map[string]any); ok && m["source"] == true && d.Root != nil {
-			_, n := yamlpos.Find(d.Root, it.At)
-			o.Source = yamlpos.Source(n)
-		}
+		o := diagram.Options{Lang: i18n.Lang(d.Lang), Icons: s.icons, Seq: s.diagrams}
 		svg, err := dr.Draw(it.Value, o)
 		var found usererr.List
 		if failed := found.Add(err); failed != nil {

@@ -1,21 +1,19 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "diagram",
-  "description": "A diagram: a canvas of width by height and the parts placed on it, drawn as inline SVG; or example, the name of a built-in one, which floe diagram example lists. source: true shows the spec as written under it",
+  "description": "A diagram: a canvas of width by height and the parts placed on it, drawn as inline SVG; or example, the name of a built-in one, which floe diagram example lists",
   "type": "object",
   "if": { "required": ["example"] },
   "then": {
     "additionalProperties": false,
     "properties": {
-      "example": { "type": "string", "minLength": 1, "description": "A kind of diagram floe diagram example lists, drawn in the page's language" },
-      "source": { "$ref": "#/$defs/source" }
+      "example": { "type": "string", "minLength": 1, "description": "A kind of diagram floe diagram example lists, drawn in the page's language" }
     }
   },
   "else": {
     "required": ["width", "height", "title", "parts"],
     "additionalProperties": false,
     "properties": {
-      "source": { "$ref": "#/$defs/source" },
       "width": { "$ref": "#/$defs/size" },
       "height": { "$ref": "#/$defs/size" },
       "title": { "$ref": "#/$defs/text", "description": "What the diagram shows, for a reader who cannot see it" },
@@ -46,7 +44,6 @@
     }
   },
   "$defs": {
-    "source": { "type": "boolean", "description": "Show the spec as written, folded under the diagram (an example's file, with its comments)" },
     "size": { "type": "number", "minimum": 1 },
     "text": {
       "description": "Text, or its words in each language by tag, English among them: {en: …, ja: …}",

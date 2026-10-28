@@ -6,4 +6,3 @@ sections:
     parts:
       - diagram: { example: nope }
       - diagram: { example: aws }
-      - diagram: { example: flow, source: true }
