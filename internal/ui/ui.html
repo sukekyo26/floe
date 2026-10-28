@@ -82,23 +82,19 @@
     max-width: calc(96rem + 32px); margin-inline: auto; padding: var(--shell-top) 16px 0; --shell-bottom: var(--shell-top);
     display: grid; grid-template-columns: 14.5rem minmax(0, 1fr); align-items: start; column-gap: 1.5rem;
   }
-  /* The room under the list is the list's own, so that the shelf's box reaches the page's end: sticky does not push the shelf
-     up from the window's bottom when the page is scrolled to its end */
+  /* The room under the list is the list's own, so that sticky does not push the shelf up at the page's end */
   .main { display: grid; gap: 0.9rem; min-width: 0; padding-bottom: 4rem; }
   .toolbar {
     position: sticky; top: var(--bar); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; padding-block: 0.75rem;
     background: color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter: blur(12px);
   }
-  /* Stuck where it sits: lower, sticky would push it down while the page can scroll, and only then. No taller than the window
-     under it, --shell-bottom above the window's bottom, so that what is low on it is reached by scrolling it, not the page. The
-     4px each side and below are a focus ring's, which the scrolling box would cut off.
-     LIMIT: a project or tag picked lower than the shelf shows, opened from the URL, is not scrolled to. If that comes to matter,
-     scroll to it once as the page opens.
-     LIMIT: the error above the shell (a list that cannot be read) moves the shelf down by its height, which then reaches below
-     the window. It shows only while the list fails to load */
+  /* Stuck where it sits (lower, sticky would push it down), and no taller than the window, so that its bottom is reached by scrolling
+     it, not the page; at least 10rem, which a very low window lets reach below. The 4px round it are a focus ring's room */
+  /* LIMIT: a project or tag picked below where the shelf shows is not scrolled to when the URL opens it; scroll to it once if that matters */
+  /* LIMIT: the load error above the shell pushes the shelf's bottom out of the window while it shows; make it overlay if that matters */
   .shelf {
     position: sticky; top: calc(var(--bar) + var(--shell-top)); display: grid; gap: 1.1rem;
-    max-height: calc(100dvh - var(--bar) - var(--shell-top) - var(--shell-bottom)); overflow-y: auto;
+    max-height: max(10rem, calc(100dvh - var(--bar) - var(--shell-top) - var(--shell-bottom))); overflow-y: auto;
     margin-inline: -4px; padding: 0.9rem 4px 4px; scrollbar-width: thin;
   }
   .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 0.7rem/1.2 var(--body); color: var(--faint); letter-spacing: 0.02em; }
@@ -335,9 +331,8 @@
   }
   .toast svg { width: 16px; height: 16px; flex: none; color: var(--good); }
   @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
-  /* While items are selected, leave room for the action bar so that it covers neither the last row nor the shelf's bottom.
-     LIMIT: the room is the bar's on one line; folded, as it is on a window under about 1300px wide (S76), it covers the shelf's
-     bottom. Fix with S76 */
+  /* While items are selected, leave room for the action bar so that it covers neither the last row nor the shelf's bottom */
+  /* LIMIT: the room is the bar's on one line; folded (a window under about 1300px wide) it covers the shelf's bottom: fix with S76 */
   .shell:has(.bulk:not([hidden])) { --shell-bottom: var(--bulk-room); }
   .shell:has(.bulk:not([hidden])) .main { padding-bottom: var(--bulk-room); }
   .bulk {

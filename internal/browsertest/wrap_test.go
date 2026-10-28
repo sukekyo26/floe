@@ -3,9 +3,6 @@ package browsertest_test
 import (
 	"strings"
 	"testing"
-
-	"github.com/chromedp/cdproto/emulation"
-	"github.com/chromedp/chromedp"
 )
 
 // wrapPage holds a path and a URL in cards, which have no place to break a line, words beside narrow
@@ -72,10 +69,7 @@ func TestUIWrap(t *testing.T) { //nolint:paralleltest // the browser tests share
 	s := newSite(t)
 	b := s.b
 	s.floe(t, "publish", s.write(t, "wrap.yaml", wrapPage), "--slug", "wrap")
-	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 390, Height: 844, DeviceScaleFactor: 1, Mobile: true}
-	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
-		t.Fatal(err)
-	}
+	b.size(390, 844, true)
 	b.navigate("/a/wrap/?raw")
 	// A phone's scrollbar is drawn over the page, so that the page is laid out 390 px wide, as measureWrap takes it.
 	if got := b.eval("innerWidth + ' ' + document.documentElement.clientWidth"); got != "390 390" {

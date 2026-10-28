@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/runtime"
@@ -236,6 +238,25 @@ func (b *browser) click(x, y float64) {
 	b.t.Helper()
 
 	if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(x, y)); err != nil {
+		b.t.Fatal(err)
+	}
+}
+
+// size gives this test's tab a window of width by height, a phone's (touch, its own viewport) when mobile; unsize gives the
+// tab Chrome's own window back. Either holds for this test's tab alone.
+func (b *browser) size(width, height int64, mobile bool) {
+	b.t.Helper()
+
+	metrics := emulation.SetDeviceMetricsOverrideParams{Width: width, Height: height, DeviceScaleFactor: 1, Mobile: mobile}
+	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
+		b.t.Fatal(err)
+	}
+}
+
+func (b *browser) unsize() {
+	b.t.Helper()
+
+	if _, err := chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}); err != nil {
 		b.t.Fatal(err)
 	}
 }
