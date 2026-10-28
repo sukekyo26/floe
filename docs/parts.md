@@ -44,7 +44,7 @@ quote/
 
 - A look alone is a directory of a `part.css` (and a `part.yaml` with its `description:` and the looks it takes), without a schema: it draws nothing, and lends its style to parts and elements that take it. floe's looks alone are `panel` and `rows`.
 - A part takes the looks of others by its `part.yaml`, `looks: [panel]`, and the looks those take in turn, each before it, which it adjusts.
-- A shared schema is a `<name>.json` the parts' schemas name (`floe:///parts/<name>.json`). floe's are `tone.json` (`accent`, `good`, `warn`, `bad`) and `any.json` (a part of any kind).
+- A shared schema is a `<name>.json` a template's or a part's schema names (`floe:///parts/<name>.json`), always at its root. floe's are `tone.json` (`accent`, `good`, `warn`, `bad`) and `any.json` (a part of any kind). Its schemas are checked as a template's are, from its own root: a part or a format of floe's it holds is drawn where `properties` and `items` reach it from there.
 
 ## The CSS layers and @scope
 
@@ -81,4 +81,4 @@ A theme of your own is a directory of these files, each left out if not needed:
 
 ## Checking
 
-`floe part check` reads every part, look, shared schema and theme of your own over floe's own, and prints every mistake of them (exit code 1): of their files, their names, the looks they take, a part that takes its own look, a path of a `checks.yaml` that its schema does not declare, and their CSS. A part is not drawn, as it has no data: `floe template check` draws the example of a template that uses it.
+`floe part check` reads every part, look, shared schema and theme of your own over floe's own, and prints every mistake of them (exit code 1): of their files, their names, the looks they take, a part that takes its own look, a path of a `checks.yaml` that its schema does not declare, the schemas of parts and shared schemas, and their CSS. A part is not drawn, as it has no data: `floe template check` draws the example of a template that uses it.

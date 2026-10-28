@@ -196,7 +196,7 @@ func TestCheckPartNode(t *testing.T) {
 			src  string
 			kind schema.Kind
 		}{
-			"p":    {`{"$schema": "https://json-schema.org/draft/2020-12/schema", ` + tt.body + `}`, schema.Part},
+			"p":      {`{"$schema": "https://json-schema.org/draft/2020-12/schema", ` + tt.body + `}`, schema.Part},
 			"shot":   {`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"s": ` + img + `}}`, schema.Shared},
 			"parted": {`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"n": ` + note + `}}`, schema.Shared},
 		} {

@@ -61,9 +61,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add parts, looks, shared schemas and themes of your own in `FLOE_PARTS_DIR`
   and `FLOE_THEMES_DIR`, beside floe's and never named as one of them; and
   `floe part list`, `show`, `new` (the smallest part, to fill in) and `check`.
-  A part's schema takes images as items of `"format": "image"`. A mistake of a
-  part, theme or template of your own stops every page drawn until it is
-  fixed. The directories of parts, themes and templates of your own that are
+  A part's schema takes images as items of `"format": "image"`. A shared
+  schema is checked from its root, whether a schema names it or not. A mistake
+  of a part, shared schema, theme or template of your own stops every page
+  drawn until it is fixed. The directories of parts, themes and templates of your own that are
   one, or one in the other, are refused for their settings.
 - Add diagrams drawn as inline SVG from a spec of parts on a canvas (frames,
   boxes, tables, icons, edges joining named parts, dots, bars, axes, circles,

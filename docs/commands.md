@@ -165,7 +165,7 @@ Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of it
 
 ## `floe part check`
 
-Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `FLOE_THEMES_DIR`, over floe's own, and print every mistake of them (exit code 1). Nothing is printed when they are right (exit code 0).
+Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `FLOE_THEMES_DIR`, over floe's own, and print every mistake of them (exit code 1), a shared schema's too, checked from its root whether a schema names it or not. Nothing is printed when they are right (exit code 0).
 
 A mistake of a part, theme or template of your own stops `floe check`, `floe render` and `floe publish` too, whether the page uses it or not: run `floe part check` and `floe template check` to see it. [parts.md](parts.md) tells what a part and a theme hold.
 

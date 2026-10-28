@@ -44,7 +44,7 @@ quote/
 
 - 見た目だけのものは、`part.css`（と、`description:` と借りる見た目を書く `part.yaml`）だけで schema の無いディレクトリです。何も描かず、借りる部品や要素にスタイルを貸します。floe の見た目だけのものは `panel` と `rows` です。
 - 部品は `part.yaml` の `looks: [panel]` でほかの見た目を借り、その見た目が借りるものも、自分より先に順に借りて、その上で整えます。
-- 共有の schema は、部品の schema が名指す `<名前>.json`（`floe:///parts/<名前>.json`）です。floe のものは `tone.json`（`accent`・`good`・`warn`・`bad`）と `any.json`（どの種類の部品でも 1 つ）です。
+- 共有の schema は、テンプレートか部品の schema が、いつもその根を名指す `<名前>.json`（`floe:///parts/<名前>.json`）です。floe のものは `tone.json`（`accent`・`good`・`warn`・`bad`）と `any.json`（どの種類の部品でも 1 つ）です。その中の schema は、テンプレートと同じく、その根から確かめます。持つ部品と floe の format は、根から `properties` と `items` で辿れる所で描きます。
 
 ## CSS の層と @scope
 
@@ -81,4 +81,4 @@ floe はページの CSS を `</head>` の前の `<style>` に、5 つのカス�
 
 ## 確かめる
 
-`floe part check` は、自分の部品・見た目・共有の schema・テーマを floe のものの上で全部読み、すべての誤りを出します（終了コード 1）。ファイル、名前、借りる見た目、自分の見た目を借りる部品、schema が宣言しない `checks.yaml` のパス、CSS の誤りです。部品はデータが無いので描きません。それを使うテンプレートの見本は `floe template check` が描きます。
+`floe part check` は、自分の部品・見た目・共有の schema・テーマを floe のものの上で全部読み、すべての誤りを出します（終了コード 1）。ファイル、名前、借りる見た目、自分の見た目を借りる部品、schema が宣言しない `checks.yaml` のパス、部品と共有の schema の schema、CSS の誤りです。部品はデータが無いので描きません。それを使うテンプレートの見本は `floe template check` が描きます。

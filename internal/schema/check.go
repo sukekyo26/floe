@@ -135,8 +135,9 @@ func (c *Compiled) checkOwn() usererr.List {
 // checkNode returns the mistakes of n, a schema of the file compiled, r what Follow reaches from the root: a
 // $dynamicRef; an item a part or a format draws that r does not reach; a $ref into a part. A part takes, of
 // Formats, image alone, a trust boundary, as the checks of the data's HTML reach the template's items alone;
-// and refers to no Shared schema holding one of Formats, image too, as decided. Either is told in place of the check of where n is, as a part holds it nowhere; r of a part goes
-// through such a format, so that what is past it is told only as it would be with the format taken out.
+// and refers to no Shared schema holding one of Formats, image too, as decided. Either is told in place of the
+// check of where n is, as a part holds it nowhere; r of a part goes through such a format, so that what is past
+// it is told only as it would be with the format taken out.
 func (c *Compiled) checkNode(n *jsonschema.Schema, r reached) usererr.List {
 	var found usererr.List
 	switch {

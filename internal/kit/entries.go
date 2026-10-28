@@ -64,7 +64,9 @@ func (k *Kit) Parts() []Entry {
 			all = append(all, Entry{Name: l.name, About: l.about, Dir: at.own(l.dir), Looks: l.Looks(), Files: nil})
 		}
 		for _, s := range at.shared {
-			all = append(all, Entry{Name: s.name, About: about(s.schema), Dir: at.own(s.file), Looks: nil, Files: copied(s.files)})
+			all = append(all, Entry{
+				Name: s.name, About: about(s.schema), Dir: at.own(s.file), Looks: nil, Files: copied(s.files),
+			})
 		}
 	}
 	return listed(all)
