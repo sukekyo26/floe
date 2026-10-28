@@ -335,6 +335,12 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// A row's menu is not cut off by the list's box: with one row, the menu reaches below it, its delete the topmost at its
 	// middle, which deletes on a second click.
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) }]`))
+	// A window tall enough for the menu below the one row, whatever the test Chrome's own window is (CI's is shorter): the
+	// width of that window, as the rest of the test sees it.
+	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 780, Height: 800, DeviceScaleFactor: 1, Mobile: false}
+	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
+		t.Fatal(err)
+	}
 	// Not scrollIntoView, which would scroll a box that cuts it off to bring it in.
 	b.eval("document.querySelector('#list > li:last-child summary').click()")
 	d := b.rect("document.querySelector('#list > li:last-child .delete')")
@@ -424,7 +430,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#list li[data-slug=p5] summary').click(); scrollTo(0, 0)")
 	// A narrow screen: one select stands for the shelf, its values telling a view from a project of that name; choosing
 	// is clicking the shelf, and an unchanged list does not rebuild it.
-	metrics := emulation.SetDeviceMetricsOverrideParams{Width: 390, Height: 844, DeviceScaleFactor: 1, Mobile: true}
+	metrics = emulation.SetDeviceMetricsOverrideParams{Width: 390, Height: 844, DeviceScaleFactor: 1, Mobile: true}
 	if _, err := chromedp.Call(b.ctx, emulation.SetDeviceMetricsOverride, metrics); err != nil {
 		t.Fatal(err)
 	}
