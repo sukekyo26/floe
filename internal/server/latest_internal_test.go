@@ -124,6 +124,32 @@ func TestLatestRebuild(t *testing.T) {
 	}
 }
 
+// A rebuild sent a field it does not take is refused alone and draws nothing; one sent none draws the page again.
+func TestLatestRebuildUnknownField(t *testing.T) {
+	t.Parallel()
+
+	s, dir := watched(t, false)
+	h := s.Handler()
+	if w := publish(t.Context(), t, h); w.Code != http.StatusCreated {
+		t.Fatalf("publish = %d %s", w.Code, w.Body)
+	}
+	before := s.cfg.Store.ReadMeta("m").Source
+	mine(t, dir, "{{.Data.n}} saved just now")
+	w := api(t.Context(), t, h, http.MethodPost, "/api/rebuild", `{"x":1}`)
+	if w.Code != http.StatusBadRequest || w.Body.String() != `cannot read the request: json: unknown field "x"` {
+		t.Errorf("rebuild {x} = %d %q", w.Code, w.Body)
+	}
+	if got := s.cfg.Store.ReadMeta("m").Source; got != before {
+		t.Errorf("rebuild {x} drew the page again: %s, was %s", got, before)
+	}
+	if w := api(t.Context(), t, h, http.MethodPost, "/api/rebuild", "{}"); w.Code != http.StatusNoContent {
+		t.Fatalf("rebuild = %d %s", w.Code, w.Body)
+	}
+	if s.cfg.Store.ReadMeta("m").Source == before {
+		t.Error("rebuild did not draw the page again")
+	}
+}
+
 // A link added right after the template is broken is refused.
 func TestLatestLink(t *testing.T) {
 	t.Parallel()
