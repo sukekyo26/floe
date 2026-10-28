@@ -161,7 +161,7 @@ func TestProtocol(t *testing.T) {
 	want(t, e.do(t, http.MethodPatch, "/api/artifacts/Bad%20slug", "x", "Origin", origin, "Content-Type", "text/plain"), http.StatusNotFound, "not found")
 	want(t, e.do(t, http.MethodGet, "/a/x/%2e%2e/y", ""), http.StatusNotFound, "not found")
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
-		`cannot read the request: json: unknown field "bogus"`)
+		`unknown object member name "bogus"`)
 	want(t, e.write(t, http.MethodPut, "/api/artifacts/x", map[string]any{
 		"file": "x.yaml", "source": []byte("a"),
 		"images": map[string][]byte{"../e.png": nil},
@@ -306,10 +306,15 @@ func TestEditArchived(t *testing.T) {
 	e.publish(t, "d", "lang: en\ntemplate: pic\n", nil)
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"archived": true}), http.StatusOK, `{"slug":"d"}`)
 	want(t, e.do(t, http.MethodGet, "/api/artifacts", ""), http.StatusOK, `"archived":true`)
-	for _, body := range []map[string]any{{"archived": "yes"}, {"archived": 1}, {"favorite": "yes"}} {
-		w := e.write(t, http.MethodPatch, "/api/artifacts/d", body)
-		if w.Code != http.StatusBadRequest || !strings.HasPrefix(w.Body.String(), "cannot read the request: json: cannot unmarshal") {
-			t.Errorf("%v: answered %d %q", body, w.Code, w.Body.String())
+	// encoding/json/v2 says "cannot" or "unable to" as the process falls: what follows the verb is told.
+	for body, told := range map[string]string{
+		`{"archived":"yes"}`: `unmarshal JSON string into Go bool within "/archived"`,
+		`{"archived":1}`:     `unmarshal JSON number into Go bool within "/archived"`,
+		`{"favorite":"yes"}`: `unmarshal JSON string into Go bool within "/favorite"`,
+	} {
+		w := e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(body))
+		if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), told) {
+			t.Errorf("%s: answered %d %q, want %q", body, w.Code, w.Body.String(), told)
 		}
 	}
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", map[string]any{"archived": false}), http.StatusOK, `{"slug":"d"}`)
@@ -362,13 +367,13 @@ func TestEditKeys(t *testing.T) {
 	}
 	for _, body := range []string{`{"archivd":true}`, `{"title":"T2","tags":["a"]}`} {
 		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(body)), http.StatusBadRequest,
-			"cannot read the request: json: unknown field")
+			"unknown object member name")
 		if got := look("d"); got != now {
 			t.Errorf("%s changed the page: %+v, want %+v", body, got, now)
 		}
 	}
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/none", json.RawMessage(`{"x":1}`)), http.StatusBadRequest,
-		`cannot read the request: json: unknown field "x"`)
+		`unknown object member name "x"`)
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(`{"slug":"e"}`)), http.StatusOK, `{"slug":"e"}`)
 	if got := look("e"); got != now {
 		t.Errorf("renamed: %+v, want %+v", got, now)
@@ -392,15 +397,72 @@ func TestNotObject(t *testing.T) {
 		{http.MethodPatch, "/api/artifacts/d"},
 		{http.MethodPost, "/api/rebuild"},
 	} {
-		for _, body := range []string{"null", "1", `"s"`, "[1]"} {
-			w := e.write(t, to.method, to.path, json.RawMessage(body))
+		for _, body := range []string{"null", "1", `"s"`, "[1]", "x", "", "   "} {
+			w := e.do(t, to.method, to.path, body, "Origin", origin, "Content-Type", "application/json")
 			if w.Code != http.StatusBadRequest || w.Body.String() != "cannot read the request: send a JSON object" {
 				t.Errorf("%s %s %s: answered %d %q", to.method, to.path, body, w.Code, w.Body.String())
 			}
 		}
 	}
-	want(t, e.do(t, http.MethodPatch, "/api/artifacts/d", "{}{}", "Origin", origin, "Content-Type", "application/json"),
-		http.StatusBadRequest, "cannot read the request: it is not JSON")
+	for body, told := range map[string]string{
+		"{}{}": "jsontext: invalid character '{' after top-level value", "{": "jsontext: unexpected EOF",
+	} {
+		want(t, e.do(t, http.MethodPatch, "/api/artifacts/d", body, "Origin", origin, "Content-Type", "application/json"),
+			http.StatusBadRequest, "cannot read the request: "+told)
+	}
+}
+
+// Every write reads keys by their case and refuses a key sent twice, in a map in it too; an edit refuses a string
+// that is no UTF-8 or holds a lone surrogate, and a publish base64 with a newline. Nothing refused is changed.
+func TestStrictKeys(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil)
+	src := `"bGFuZzogZW4KdGVtcGxhdGU6IHBpYwo="` // lang: en, template: pic
+	for _, c := range []struct{ method, path, body, told string }{
+		{http.MethodPost, "/api/artifacts", `{"Path":"/x"}`, `unknown object member name "Path"`},
+		{http.MethodPut, "/api/artifacts/e", `{"File":"e.yaml","source":` + src + `}`, `unknown object member name "File"`},
+		{http.MethodPatch, "/api/artifacts/d", `{"Archived":true}`, `unknown object member name "Archived"`},
+		{http.MethodPost, "/api/artifacts", `{"path":"/a","path":"/b"}`, `duplicate object member name "path"`},
+		{
+			http.MethodPut, "/api/artifacts/e", `{"file":"e.yaml","file":"f.yaml","source":` + src + `}`,
+			`duplicate object member name "file"`,
+		},
+		{
+			http.MethodPut, "/api/artifacts/e", `{"file":"e.yaml","source":` + src + `,"images":{"x.png":"YQ==","x.png":"Yg=="}}`,
+			`duplicate object member name "x.png" within "/images"`,
+		},
+		{http.MethodPatch, "/api/artifacts/d", `{"title":"a","title":"b"}`, `duplicate object member name "title"`},
+		// rebuild has no field: the first x is unknown before the second is seen.
+		{http.MethodPost, "/api/rebuild", `{"x":1,"x":1}`, `unknown object member name "x"`},
+		{http.MethodPost, "/api/artifacts", `{"path":"/a\ud800"}`, "invalid surrogate pair"},
+		{http.MethodPut, "/api/artifacts/e", `{"file":"e\ud800.yaml","source":` + src + `}`, "invalid surrogate pair"},
+		{http.MethodPatch, "/api/artifacts/d", `{"title":"\ud800"}`, "invalid surrogate pair"},
+		{http.MethodPost, "/api/rebuild", `{"\ud800":1}`, "invalid surrogate pair"},
+		{http.MethodPost, "/api/artifacts", "{\"path\":\"/a\xff\"}", "invalid UTF-8"},
+		{http.MethodPut, "/api/artifacts/e", "{\"file\":\"e\xff.yaml\",\"source\":" + src + "}", "invalid UTF-8"},
+		{
+			http.MethodPut, "/api/artifacts/e", "{\"file\":\"e.yaml\",\"source\":" + src + ",\"images\":{\"a\xff.png\":\"YQ==\"}}",
+			"invalid UTF-8",
+		},
+		{http.MethodPatch, "/api/artifacts/d", "{\"title\":\"a\xffb\"}", "invalid UTF-8"},
+		{http.MethodPost, "/api/rebuild", "{\"a\xff\":1}", "invalid UTF-8"},
+		{http.MethodPut, "/api/artifacts/e", `{"file":"e.yaml","source":"bGFuZzogZW4KdGVtcGxhdGU6IHBpYwo=\n"}`, `within "/source"`},
+	} {
+		w := e.do(t, c.method, c.path, c.body, "Origin", origin, "Content-Type", "application/json")
+		if w.Code != http.StatusBadRequest || !strings.HasPrefix(w.Body.String(), "cannot read the request: ") ||
+			!strings.Contains(w.Body.String(), c.told) {
+			t.Errorf("%s %s %s: answered %d %q, want %q", c.method, c.path, c.body, w.Code, w.Body.String(), c.told)
+		}
+	}
+	m := store.New(e.root)
+	if d := m.ReadMeta("d"); d.Title != "T" || d.Archived {
+		t.Errorf("refused edits changed the page: %+v", d)
+	}
+	if m.ReadMeta("e") != nil {
+		t.Error("a refused publish stored e")
+	}
 }
 
 // A page not there is 404 to remove; one that cannot be removed is told why.

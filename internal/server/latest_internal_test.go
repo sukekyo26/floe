@@ -136,7 +136,9 @@ func TestLatestRebuildUnknownField(t *testing.T) {
 	before := s.cfg.Store.ReadMeta("m").Source
 	mine(t, dir, "{{.Data.n}} saved just now")
 	w := api(t.Context(), t, h, http.MethodPost, "/api/rebuild", `{"x":1}`)
-	if w.Code != http.StatusBadRequest || w.Body.String() != `cannot read the request: json: unknown field "x"` {
+	// Told alone: the refusal of the key, nothing of a rebuild after it.
+	if w.Code != http.StatusBadRequest || !strings.HasPrefix(w.Body.String(), "cannot read the request: json: ") ||
+		!strings.HasSuffix(w.Body.String(), `unknown object member name "x"`) {
 		t.Errorf("rebuild {x} = %d %q", w.Code, w.Body)
 	}
 	if got := s.cfg.Store.ReadMeta("m").Source; got != before {
