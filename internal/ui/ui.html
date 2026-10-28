@@ -21,6 +21,8 @@
     --shadow-sm: 0 1px 2px rgb(34 33 31 / 0.06);
     --shadow: 0 1px 2px rgb(34 33 31 / 0.04), 0 10px 30px -14px rgb(34 33 31 / 0.16);
     --shadow-lg: 0 30px 80px -20px rgb(34 33 31 / 0.45);
+    /* The focus ring of all that is reached by keyboard. Off by 1px, so that it never touches a filled face (ink, danger), only the ground */
+    --ring: 2px solid var(--faint);
     --tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fbfaf8' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
     --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b6964' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
     /* The report template's faces */
@@ -48,7 +50,7 @@
   html:not(.framed) { scrollbar-gutter: stable; }
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  :focus-visible { outline: var(--ring); outline-offset: 1px; }
   button { font: inherit; color: inherit; cursor: pointer; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
@@ -167,11 +169,10 @@
   .text, .search input {
     width: 100%; min-width: 0; height: 36px; padding: 0 0.75rem; font: inherit; font-weight: 400; color: var(--fg);
     background: var(--panel); border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow-sm);
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: border-color 0.15s;
   }
   .search input { padding-inline: 2.2rem 2.5rem; border-radius: 999px; }
   input::placeholder { color: var(--faint); }
-  input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 15%, transparent); }
   .search input::-webkit-search-cancel-button { display: none; }
   .search kbd {
     position: absolute; right: 0.6rem; top: 50%; translate: 0 -50%; font: 0.7rem/1 var(--mono); color: var(--faint);
@@ -230,7 +231,7 @@
   li:has(.sel:checked) { background: var(--sel); }
   /* A row reached by keyboard is outlined as a whole, without an outline on the title itself */
   a.title:focus-visible { outline: none; }
-  li:has(a.title:focus-visible) { box-shadow: inset 0 0 0 2px var(--ink); }
+  li:has(a.title:focus-visible) { outline: var(--ring); outline-offset: -2px; }
   li:has(a.title:focus-visible)::before { opacity: 1; }
   /* Under the title: the description (and, for a link, its path after it), cut off where it does not fit */
   .body { display: grid; gap: 0.05rem; min-width: 0; }
@@ -271,7 +272,7 @@
   }
   .tag-box:hover { border-color: var(--faint); }
   .tag-box input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
-  .tag-box:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .tag-box:has(input:focus-visible) { outline: var(--ring); outline-offset: 1px; }
   .tag-box .mark { flex: none; width: 0.9rem; font: 600 0.8rem/1 var(--mono); text-align: center; }
   .tag-box .mark::before { content: "+"; }
   .tag-box:has(input:checked) { color: var(--on-ink); background: var(--ink); border-color: var(--ink); }
