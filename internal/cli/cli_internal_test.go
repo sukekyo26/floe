@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json/jsontext"
 	"io"
 	"reflect"
 	"strings"
@@ -44,6 +45,10 @@ func TestEncode(t *testing.T) {
 				t.Errorf("%s.%s: no place in sentAt", typ.Name(), name)
 			}
 		}
+	}
+	// Another syntax encoding/json/v2 tells is floe's failure: the body floe made is wrong.
+	if _, err := encode(jsontext.Value(`{"a":1,"a":2}`), sentAt); err == nil || usererr.Tell(english, err).Failure == "" {
+		t.Errorf("a key twice told %v, want floe's failure", err)
 	}
 	bad := "a\xffb"
 	for body, at := range map[any]string{
