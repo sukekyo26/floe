@@ -38,9 +38,9 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	// The groups and their rows: a heading as its color and words, a row as its slug and color.
 	out = append(out, b.eval("[...document.getElementById('list').children].map((li) => li.classList.contains('group') ? "+
 		"'\\n' + li.style.getPropertyValue('--c') + ' ' + li.textContent : li.dataset.slug + ':' + li.style.getPropertyValue('--c')).join(' ')"))
-	// The shelf's projects: name, color, share of the list and count.
+	// The shelf's projects: name, color, title and count.
 	out = append(out, b.eval("[...document.querySelectorAll('#chips .chip')].map((c) => [c.dataset.project, c.style.getPropertyValue('--c'), "+
-		"c.querySelector('.share').style.getPropertyValue('--share'), c.querySelector('.n').textContent].join(' ')).join(', ')"))
+		"c.title, c.querySelector('.n').textContent].join(' ')).join(', ')"))
 	// A project picked, picked again, is let go.
 	pick := "[...document.querySelectorAll('#chips .chip')].find((c) => c.dataset.project === 'beta').click()"
 	b.eval(pick)
@@ -75,16 +75,46 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.eval("document.querySelector('.views [data-view=fav]').click()")
 	out = append(out, b.eval("getComputedStyle(document.getElementById('empty-favorites')).backgroundColor === getComputedStyle(document.documentElement).getPropertyValue('--panel').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`)"))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
-	// A project picked whose last entry is gone stays on the shelf, of the faint color, with no share.
+	// A project picked whose last entry is gone stays on the shelf, of the faint color.
 	b.eval("setProject('gone')")
 	out = append(out, b.eval("(() => { const c = document.querySelector('#chips .chip[data-project=gone]'); "+
-		"return [c.style.getPropertyValue('--c'), c.querySelector('.share').style.getPropertyValue('--share'), c.querySelector('.n').textContent].join(' '); })()"))
+		"return [c.style.getPropertyValue('--c'), c.querySelector('.n').textContent].join(' '); })()"))
 	b.eval("setProject('')")
-	// The shelf's bars sit in one place whatever their counts, of one, two and three digits.
-	b.eval(stub("[['one', 1], ['two', 12], ['three', 123]].flatMap(([p, n]) => Array.from({ length: n }, (_, i) => " +
-		"({ slug: `${p}${i}`, title: `${p}${i}`, description: '', project: p, createdAt: at(1), updatedAt: at(1) })))"))
-	out = append(out, b.eval("(() => { const bars = [...document.querySelectorAll('#chips .share')].map((s) => s.getBoundingClientRect()); "+
-		"return [bars.length, bars.every((r) => Math.abs(r.left - bars[0].left) <= 0.5 && Math.abs(r.right - bars[0].right) <= 0.5)].join(' '); })()"))
+	// The shelf's counts line up whatever their digits, one, two or three; and long names, a project's or a tag's,
+	// English or Japanese, stay on one line, cut off, whole as the title, on the shelf and in a heading, its count unsplit.
+	const long, longJa = "floe-management-page-redesign-experiments", "管理ページの見た目を作り直すための試しの長いプロジェクトの名前"
+	// A list of projects of n entries each, each entry's tag its project's name and -tag.
+	projects := func(ns string) string {
+		return stub("[" + ns + "].flatMap(([p, n]) => Array.from({ length: n }, (_, i) => ({ slug: `${p.length}-${i}`, title: `${p}${i}`, " +
+			"description: '', project: p, tags: i ? [] : [p + '-tag'], createdAt: at(1), updatedAt: at(1) })))")
+	}
+	b.eval(projects("['one', 1], ['two', 12], ['three', 123]"))
+	out = append(out, b.eval("(() => { const n = [...document.querySelectorAll('#chips .n')].map((e) => e.getBoundingClientRect()); "+
+		"return [n.length, n.every((r) => Math.abs(r.left - n[0].left) <= 0.5 && Math.abs(r.right - n[0].right) <= 0.5)].join(' '); })()"))
+	b.eval(projects("['one', 1], [" + js(long) + ", 1], [" + js(longJa) + ", 1]"))
+	oneLine := "(() => { const one = (sel, short) => { const e = document.querySelector(sel), s = document.querySelector(short); " +
+		"return Math.abs(e.getBoundingClientRect().height - s.getBoundingClientRect().height) <= 0.5 && e.querySelector('.name').scrollWidth > e.querySelector('.name').clientWidth " +
+		"&& (e.title || e.firstChild.title) !== ''; }; const heading = (name) => [...document.querySelectorAll('#list li.group')].find((li) => li.textContent.startsWith(name)); " +
+		"const h = heading(" + js(longJa) + "), n = h.querySelector('.n'); " +
+		"return [one('#chips .chip[data-project=' + JSON.stringify(" + js(long) + ") + ']', '#chips .chip[data-project=one]'), " +
+		"one('#chips .chip[data-project=' + JSON.stringify(" + js(longJa) + ") + ']', '#chips .chip[data-project=one]'), " +
+		"one('#tags .chip[data-tag=' + JSON.stringify(" + js(long+"-tag") + ") + ']', '#tags .chip[data-tag=one-tag]'), " +
+		"h.firstChild.title === " + js(longJa) + ", n.getClientRects().length === 1 && n.getBoundingClientRect().height < 1.5 * parseFloat(getComputedStyle(n).fontSize)].join(' '); })()"
+	out = append(out, b.eval(oneLine))
+	b.size(390, 844, true)
+	out = append(out, b.eval("(() => { const h = [...document.querySelectorAll('#list li.group')].find((li) => li.textContent.startsWith("+js(longJa)+")); "+
+		"const s = [...document.querySelectorAll('#list li.group')].find((li) => li.textContent.startsWith('one')); const n = h.querySelector('.n'); "+
+		"return [Math.abs(h.getBoundingClientRect().height - s.getBoundingClientRect().height) <= 0.5, n.getClientRects().length === 1 && "+
+		"n.getBoundingClientRect().height < 1.5 * parseFloat(getComputedStyle(n).fontSize)].join(' '); })()"))
+	// The whole window's width, however wide: the shelf at the left edge under the logo, the list to the bar's right end.
+	for _, width := range []int64{1920, 2560} {
+		b.size(width, 900, false)
+		out = append(out, b.eval("(() => { const shelf = document.querySelector('.shelf .views button').getBoundingClientRect(), "+
+			"list = document.querySelector('.panel').getBoundingClientRect(), logo = document.querySelector('.brand').getBoundingClientRect(), "+
+			"end = document.getElementById('server').getBoundingClientRect(); "+
+			"return [shelf.left, logo.left, document.body.getBoundingClientRect().right - list.right, document.body.getBoundingClientRect().right - end.right >= 16].join(' '); })()"))
+	}
+	b.size(1440, 900, false)
 
 	// The frame steps through the groups as the list has them: the favourite, then alpha's.
 	b.eval("sessionStorage.setItem('artifacts.list', '')")
@@ -105,15 +135,16 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			h("var(--pc5)", "eps", 1) + " e1:var(--pc5) " +
 			h("var(--pc0)", "fav", 1) + " f2:var(--pc0) " +
 			h("var(--faint)", "None recorded", 1) + " n1:var(--faint)",
-		"alpha var(--pc0) 30% 3, beta var(--pc1) 10% 1, gamma var(--pc2) 10% 1, a project of a long name var(--pc3) 10% 1, " +
-			"delta var(--pc4) 10% 1, eps var(--pc5) 10% 1, fav var(--pc0) 10% 1, / var(--faint) 10% 1",
+		"alpha var(--pc0) alpha 3, beta var(--pc1) beta 1, gamma var(--pc2) gamma 1, a project of a long name var(--pc3) a project of a long name 1, " +
+			"delta var(--pc4) delta 1, eps var(--pc5) eps 1, fav var(--pc0) fav 1, / var(--faint) None recorded 1",
 		"beta b1", "null",
 		"true true true true",
 		"true true true true",
 		"rgb(251, 250, 248) rgb(246, 245, 241)",
 		"true",
-		"var(--faint) 0% 0",
-		"3 true",
+		"var(--faint) 0",
+		"3 true", "true true true true true", "true true",
+		"16 16 16 true", "16 16 16 true",
 		" /a/a1/ 1 / 10",
 	}, "|"))
 }

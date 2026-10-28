@@ -831,7 +831,7 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 }
 
 // TestUIShelfScrolls holds the shelf to the window under it, scrolling in itself when taller, where it sits however far the
-// page scrolls, clear of the bulk bar, with room for its focus rings, its long names folded; and a shelf that fits passes the
+// page scrolls, clear of the bulk bar, with room for its focus rings, its long names on one line, cut off; and a shelf that fits passes the
 // wheel to the page.
 func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -874,9 +874,11 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.eval("document.querySelector('.shelf').scrollTop = 1e6")
 	out = append(out, b.eval("(() => { "+near+" const a = document.getElementById('add-open').getBoundingClientRect(); "+
 		"return [a.bottom <= innerHeight - shell, r.bottom - a.bottom >= 3.5].join(' '); })()"))
-	// The focus ring's room each side, and a long name folded, not scrolling sideways.
+	// The focus ring's room each side, and a long name on one line, cut off, not scrolling sideways.
 	out = append(out, b.eval("(() => { "+near+" const a = document.querySelector('.views button').getBoundingClientRect(); "+
-		"return [a.left - r.left >= 4, r.left + shelf.clientWidth - a.right >= 4, shelf.scrollWidth === shelf.clientWidth].join(' '); })()"))
+		"const long = document.querySelector('#tags .chip .name'); "+
+		"return [a.left - r.left >= 4, r.left + shelf.clientWidth - a.right >= 4, shelf.scrollWidth === shelf.clientWidth, "+
+		"long.scrollWidth > long.clientWidth && long.getClientRects().length === 1].join(' '); })()"))
 	// Pointed at, the shelf is laid out again (its right room 4.01px) for Chrome to draw its thumb; nothing in it moves.
 	hover := "document.querySelector('.views button').getBoundingClientRect().right + ' ' + getComputedStyle(document.querySelector('.shelf')).paddingRight"
 	b.point(800, 300)
@@ -901,7 +903,7 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	wheel()
 	out = append(out, b.until("the page to scroll", "scrollY > 0 && 'scrolled'"))
 	check(t, "shelf scrolls", out, strings.Join([]string{
-		"true true true true", "true true", "page at 0", "true true", "true true true", "238 4px / 238 4.01px / 238 4px", "true", "true", "true true", "scrolled",
+		"true true true true", "true true", "page at 0", "true true", "true true true true", "238 4px / 238 4.01px / 238 4px", "true", "true", "true true", "scrolled",
 	}, "|"))
 }
 
