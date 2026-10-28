@@ -176,7 +176,8 @@
   .chip.project::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
   /* Its share of the list */
   .chip .share { flex: none; width: 2.75rem; height: 4px; margin-left: auto; border-radius: 2px; background: linear-gradient(var(--c), var(--c)) no-repeat 0 0 / var(--share) 100% var(--line); }
-  .chip .share + .n { margin-left: 0; }
+  /* Three digits' room, right-aligned, so that every bar sits in one place whatever the count */
+  .chip .share + .n { flex: none; min-width: 3ch; margin-left: 0; text-align: right; }
   .count { flex: none; font: 0.74rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
   .chip.tag::before { content: "#"; flex: none; color: var(--faint); font-family: var(--mono); }
   /* Each group a card: its heading rounds the top, its last row the bottom. Not overflow: hidden on a box round them, which
