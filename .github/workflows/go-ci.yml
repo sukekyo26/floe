@@ -2,13 +2,13 @@ name: Go CI
 
 on:
   # Topic branches are covered by pull_request, which also fires on every push
-  # to an open PR (synchronize). develop pushes re-validate the integrated state
-  # after a squash merge; main stays PR-only because the develop -> main release
-  # PR reruns the suite.
+  # to an open PR (synchronize), into any base: develop, main, and the parent
+  # branch of a feature split over several PRs, whatever its name. develop
+  # pushes re-validate the integrated state after a squash merge; main stays
+  # PR-only because the develop -> main release PR reruns the suite.
   push:
     branches: [develop]
   pull_request:
-    branches: [develop, main]
   schedule:
     # Weekly so govulncheck catches newly published advisories with no commit
     # to trigger a run.
