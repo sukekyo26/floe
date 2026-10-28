@@ -217,12 +217,13 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		msg("ui_selected", 1), msg("ui_selected", 2), msg("ui_delete_bulk_confirm", 2),
 		"DELETE /api/artifacts/a,DELETE /api/artifacts/c", "true old", `PATCH /api/artifacts/a {"description":"new"}`, "true", "true",
 		"copy /tmp/x/l.html", "true", "Missing", `POST /api/artifacts {"path":"/tmp/x/n.html","description":"a link"}`,
-		"3 2 " + msg("ui_all_projects") + "3 " + msg("ui_no_project") + "3 true 3 1 2 " + msg("ui_count_all", 3) + " Gamma,Alpha,Beta ",
+		"3 2 " + msg("ui_no_project") + "3 true 3 1 2 " + msg("ui_count_all", 3) + " Gamma,Alpha,Beta ",
 		msg("ui_archive") + " / " + msg("ui_archive_named", "Gamma") + " / " + msg("ui_archive"),
 		`PATCH /api/artifacts/c {"archived":true}`, "true",
-		"2 1 " + msg("ui_all_projects") + "2 p1 " + msg("ui_no_project") + "1 false 3 1 2 " + msg("ui_count_all", 2) + " Ypsilon,Zeta 1",
-		msg("ui_unarchive") + " / " + msg("ui_unarchive_named", "Ypsilon") + " / " + msg("ui_unarchive"),
-		`PATCH /api/artifacts/y {"archived":false}`, msg("ui_unarchive"),
+		// The archived, by project: p's Zeta, then Ypsilon of none; two projects, so the shelf shows them.
+		"2 1 p1 " + msg("ui_no_project") + "1 false 3 1 2 " + msg("ui_count_all", 2) + " Zeta,Ypsilon 1",
+		msg("ui_unarchive") + " / " + msg("ui_unarchive_named", "Zeta") + " / " + msg("ui_unarchive"),
+		`PATCH /api/artifacts/z {"archived":false}`, msg("ui_unarchive"),
 		`PATCH /api/artifacts/y {"archived":false},PATCH /api/artifacts/z {"archived":false}`,
 		"empty-archived:" + msg("ui_links_none_archived") + " true", "false",
 		msg("ui_favorite_failed", "Failed to fetch"), "true",
@@ -271,7 +272,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	}
 
 	out := make([]string, 0, 40)
-	// All of the list heads its favourites and the others; a heading is no row for a screen reader.
+	// All of the list heads its favourites and its projects, with how many each has; a heading is no row for a screen reader.
 	out = append(out, b.eval(order), b.eval("[...document.querySelectorAll('#list li.group')].map((li) => "+
 		"[li.getAttribute('role'), li.firstChild.getAttribute('role'), li.firstChild.getAttribute('aria-level'), li.textContent].join(':')).join(',')"))
 	b.eval("document.querySelector('.views [data-view=fav]').click()")
@@ -344,7 +345,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("calls.length = 0; document.querySelector('#list > li:last-child .delete').click(); document.querySelector('#list > li:last-child .delete').click()")
 	out = append(out, b.until("the delete", "calls.join(',')"))
 	b.eval("scrollTo(0, 0)")
-	// Only favourites, or none: no headings.
+	// Only favourites: their project's heading, in the favourites' list as in all of it.
 	b.eval(stub(`[{ slug: 'c', title: 'Gamma', description: '', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'd', title: 'Delta', description: '', createdAt: at(1), updatedAt: at(8), favorite: true }]`))
 	out = append(out, b.eval(order))
@@ -364,10 +365,10 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("setProject('p')")
 	out = append(out, b.eval("document.getElementById('shelf-projects').hidden"))
 	b.eval("setProject('')")
-	// A project's dot is of its name's hue, the values measured on develop before chip took tags too; all has none.
+	// A project's dot is of its color by projectOrder: as many each, by name.
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'b', title: 'Beta', description: '', project: 'floe', createdAt: at(1), updatedAt: at(7) }]`))
-	out = append(out, b.eval("[...document.querySelectorAll('#chips .chip')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--h')).join(',')"))
+	out = append(out, b.eval("[...document.querySelectorAll('#chips .chip')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c')).join(',')"))
 	// The favourites count their own: their count, their projects, and none shown when there are none.
 	b.eval(stub(`[{ slug: 'c', title: 'Gamma', description: '', project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'b', title: 'Beta', description: '', project: 'q', createdAt: at(1), updatedAt: at(8) }]`))
@@ -414,7 +415,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('.views [data-view=all]').click(); document.querySelector('.tabs [data-tab=pages]').click()")
 	// 50 rows a page unless the viewer chose otherwise.
 	b.eval(manyPages(60))
-	out = append(out, b.eval("document.querySelectorAll('#list li').length + ' ' + document.getElementById('pageno').textContent"))
+	out = append(out, b.eval("document.querySelectorAll('#list li:not(.group)').length + ' ' + document.getElementById('pageno').textContent"))
 	// An open menu passes under the bars stuck at the top as the page scrolls, not over them.
 	b.eval("document.querySelector('#list li[data-slug=p5] summary').click()")
 	out = append(out, b.eval(`(() => {
@@ -478,21 +479,21 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the gone page to drop out", "document.getElementById('frame-pos').textContent !== '2 / 3' && "+neighbours))
 
 	check(t, "shelf", out, strings.Join([]string{
-		"HcHba", "none:heading:2:" + msg("ui_group_favorites") + ",none:heading:2:" + msg("ui_group_others"),
-		"c fav ?fav=1", "zy archived ?archived=1",
+		"HcHba", "none:heading:2:" + msg("ui_group_favorites") + msg("ui_count_all", 1) + ",none:heading:2:" + msg("ui_no_project") + msg("ui_count_all", 2),
+		"Hc fav ?fav=1", "HzHy archived ?archived=1",
 		"Beta", msg("ui_selected", 3),
 		"00010", "shown", "shown", "shown", "0",
 		msg("ui_more_named", "Beta"), msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_delete"),
 		"false true", "Alpha", "false true", "false false true", "false true", "true", "true",
-		"true", "DELETE /api/artifacts/a", "cd",
+		"true", "DELETE /api/artifacts/a", "Hcd",
 		msg("ui_created_at", date), "true", msg("ui_registered_at", date),
-		"true true", "false", ":,floe:99,p:329",
+		"true true", "false", "floe:var(--pc0),p:var(--pc1)",
 		msg("ui_count_all", 1) + " true",
 		"empty-favorites", "all-archived", "archived ?archived=1", "archived ?archived=1",
 		"true false", "?tab=links true 1 New", "true",
 		"50 1 / 2", "true",
 		"none block", msg("ui_view_all") + " (" + msg("ui_count_all", 3) + ")",
-		`,view:all,view:fav,view:archived,project:,project:a<b&"c,project:archived,project:p`, "true", "p (1)", `a<b&"c`,
+		`,view:all,view:fav,view:archived,project:a<b&"c,project:archived,project:p`, "true", "p (1)", `a<b&"c`,
 		"all ?project=archived", "0",
 		"Zeta / false / true / " + msg("ui_unarchive"), `PATCH /api/artifacts/z {"archived":false}`,
 		msg("ui_favorite_failed", "Failed to fetch"),
