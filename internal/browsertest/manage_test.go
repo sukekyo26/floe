@@ -653,7 +653,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 
 	// The tags fields suggest the names of every page, as a combobox, with the keyboard alone or the mouse.
 	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['設計', 'plan'], createdAt: at(1), updatedAt: at(9) },
-		{ slug: 'b', title: 'Beta', description: '', tags: ['計画', '<b>x</b>'], createdAt: at(1), updatedAt: at(8), archived: true }]`))
+		{ slug: 'b', title: 'Beta', description: '', tags: ['計画', '<b>x</b>', 'xa'], createdAt: at(1), updatedAt: at(8), archived: true }]`))
 	// A key as a keyboard presses it: its text on the key down, which a page's preventDefault then stops too
 	// (chromedp.KeyEvent sends the text as an event of its own, which nothing stops).
 	press := func(k string) {
@@ -695,6 +695,8 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// The name between the commas around the caret: those holding it, starting with it first, but none the field has.
 	write("計")
 	out = append(out, b.eval(names))
+	write("x")
+	out = append(out, b.eval(names))
 	write("計画, ")
 	out = append(out, b.eval(names))
 	// ↓↓↓ and Enter put the third in, a comma after it for the next, sending nothing.
@@ -713,12 +715,18 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// A click puts a name in, the field keeping its focus.
 	r := b.rect(box + ".querySelector('[role=option]:last-child')")
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
-	out = append(out, b.until("the name clicked", "document.getElementById('edit-tags').value.includes('plan') && document.getElementById('edit-tags').value"),
+	out = append(out, b.until("the name clicked", "document.getElementById('edit-tags').value.includes('設計') && document.getElementById('edit-tags').value"),
 		b.eval("document.activeElement.id"))
 	press(kb.ArrowDown)
 	press(kb.Escape)
 	press(kb.Escape)
 	out = append(out, b.eval("document.getElementById('edit-dialog').open"))
+	// Opened as its dialog opens, the names go under the field once the dialog stops moving.
+	b.eval("document.getElementById('bulk-tag').click(); document.getElementById('tag-name').focus(); " +
+		"document.getElementById('tag-name').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }))")
+	out = append(out, b.until("the names under the moving field", "document.getElementById('tag-dialog').getAnimations().length === 0 && (() => { "+
+		"const f = document.getElementById('tag-name').getBoundingClientRect(); const r = document.getElementById('tag-name-names').getBoundingClientRect(); "+
+		"return Math.abs(r.top - f.bottom - 4) < 0.5 && Math.abs(r.left - f.left) < 0.5 && 'under'; })()"))
 
 	check(t, "tags", out, strings.Join([]string{
 		"plan2:false,設計1:false,設計、実装1:false false", "abcd -",
@@ -736,13 +744,13 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"tag:plan,tag:設計,tag:設計、実装", "ab plan", "true", "abcd -",
 		"<b>x</b>1,__proto__1", "<b>x</b>,__proto__", "0",
 		"combobox list true listbox / combobox list true listbox", "false false",
-		"<b>x</b>,plan,計画,設計", "true true", "true", "under", "<b>x</b>",
+		"<b>x</b>,plan,xa,計画,設計", "true true", "true", "under", "<b>x</b>",
 		"false false true",
-		"計画,設計", "<b>x</b>,plan,設計",
-		"計画, 設計, ", "false false", "true 0",
+		"計画,設計", "xa,<b>x</b>", "<b>x</b>,plan,xa,設計",
+		"計画, xa, ", "false false", "true 0",
 		"true true <b>x</b>",
-		"計画, 設計, plan, ", "edit-tags",
-		"false",
+		"計画, xa, 設計, ", "edit-tags",
+		"false", "under",
 	}, "|"))
 }
 
