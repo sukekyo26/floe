@@ -1119,6 +1119,7 @@
       }
       rows.push(row(a, i));
     });
+    // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
     renderPager(shown.length, pages, start);
     renderShelf(chips);
