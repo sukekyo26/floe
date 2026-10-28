@@ -73,13 +73,13 @@ func TestHTMLItems(t *testing.T) {
 		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), "<tr><td>x</td></tr>", ""},
 		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), `<tr><td>x</td></tr><meta http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{htmlPage("<svg><foreignObject>{{.Data.h}}</foreignObject></svg><p>after</p>"), `<meta http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
-		{htmlPage("<textarea>{{.Data.h}}</textarea>"), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <textarea>, where HTML does not work: put it where elements go, or give the item another format"},
-		{htmlPage("<xmp>{{.Data.h}}</xmp>"), "</xmp>x", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <xmp>, where HTML does not work: put it where elements go, or give the item another format"},
-		{htmlPage(`<div>{{.Data.h | printf "%s"}}</div>`), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <div>, where HTML does not work: put it where elements go, or give the item another format"},
+		{htmlPage("<textarea>{{.Data.h}}</textarea>"), "<b>x</b>", "d.yaml:2:11: page.html, or the part.html of a part holding it, puts the item h of format html in a text or an attribute of <textarea>, where HTML does not work: put it, or the part holding it, where elements go, or give the item another format"},
+		{htmlPage("<xmp>{{.Data.h}}</xmp>"), "</xmp>x", "d.yaml:2:11: page.html, or the part.html of a part holding it, puts the item h of format html in a text or an attribute of <xmp>, where HTML does not work: put it, or the part holding it, where elements go, or give the item another format"},
+		{htmlPage(`<div>{{.Data.h | printf "%s"}}</div>`), "<b>x</b>", "d.yaml:2:11: page.html, or the part.html of a part holding it, puts the item h of format html in a text or an attribute of <div>, where HTML does not work: put it, or the part holding it, where elements go, or give the item another format"},
 		{htmlPage("<div>{{.Data.h}}</div><div>{{.Data.h}}</div>"), "<b>x</b>", ""},
-		{htmlPage(`<a href="{{.Data.h}}">a</a>`), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <a>, where HTML does not work: put it where elements go, or give the item another format"},
-		{htmlPage(`<div title="{{.Data.h}}">a</div>`), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <div>, where HTML does not work: put it where elements go, or give the item another format"},
-		{htmlPage("<script>var h = {{.Data.h}};</script>"), "<b>x</b>", "d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <script>, where HTML does not work: put it where elements go, or give the item another format"},
+		{htmlPage(`<a href="{{.Data.h}}">a</a>`), "<b>x</b>", "d.yaml:2:11: page.html, or the part.html of a part holding it, puts the item h of format html in a text or an attribute of <a>, where HTML does not work: put it, or the part holding it, where elements go, or give the item another format"},
+		{htmlPage(`<div title="{{.Data.h}}">a</div>`), "<b>x</b>", "d.yaml:2:11: page.html, or the part.html of a part holding it, puts the item h of format html in a text or an attribute of <div>, where HTML does not work: put it, or the part holding it, where elements go, or give the item another format"},
+		{htmlPage("<script>var h = {{.Data.h}};</script>"), "<b>x</b>", "d.yaml:2:11: page.html, or the part.html of a part holding it, puts the item h of format html in a text or an attribute of <script>, where HTML does not work: put it, or the part holding it, where elements go, or give the item another format"},
 		{section, "a\n</p x=", "d.yaml:3:4: HTML changes the page around it at </p x=: close in it each element and comment it opens, and close no element it did not open"},
 		{section, `<meta name="referrer" content="no-referrer">`, `d.yaml:2:11: the page drawn from this file has <meta name="referrer" content="no-referr…, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{section, `<meta name="VIEWPORT" content="width=device-width">`, ""},
@@ -115,7 +115,7 @@ func TestHTMLItemsInOrder(t *testing.T) {
 	}
 	k = ownKit(t, nil, mine(strings.Replace(htmlPage("<div>{{.Data.h}}</div>"), "{{.Title}}", "{{.Data.h}}", 1), htmlSchema, nil))
 	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nh: <b>x</b>\n", none),
-		"d.yaml:2:11: page.html puts the item h of format html in a text or an attribute of <title>, where HTML does not work: put it where elements go, or give the item another format"; got != want {
+		"d.yaml:2:11: page.html, or the part.html of a part holding it, puts the item h of format html in a text or an attribute of <title>, where HTML does not work: put it, or the part holding it, where elements go, or give the item another format"; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 	k = ownKit(t, nil, mine(htmlPage("<div>{{.Data.h}}</div><div>{{.Data.g}}</div>"), htmlSchema, nil))
@@ -134,6 +134,68 @@ func TestHTMLItemInFunction(t *testing.T) {
 	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nh: <b>x</b>\n", none),
 		"templates/mine/page.html:4:8: num takes a number, not <b>x</b> (template.HTML)"; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// placed is the mistake of the item at of format html put where HTML does not work, in the element in.
+func placed(at, in string) string {
+	return "d.yaml:2:11: page.html, or the part.html of a part holding it, puts the item " + at + " of format html in a text or an attribute of " + in + ", where HTML does not work: put it, or the part holding it, where elements go, or give the item another format"
+}
+
+// changes is the mistake of an item of format html at pos that changes the page around it at where.
+func changes(pos, where string) string {
+	return "d.yaml:" + pos + ": HTML changes the page around it at " + where + ": close in it each element and comment it opens, and close no element it did not open"
+}
+
+// A part's schema takes floe's formats as a template's does: its items of format html are checked in the page
+// drawn as a template's are, at their place in the part's value, though the part's part.html begins or ends with
+// one, the part is in another part, or the item is white space alone; Markdown is drawn as markdown draws it.
+func TestPartHTMLItems(t *testing.T) {
+	t.Parallel()
+
+	const head = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": `
+	partFiles := func(name, schema, page string) map[string]string {
+		return map[string]string{name + "/schema.json": head + schema + "}", name + "/part.html": page, name + "/part.css": ""}
+	}
+	parts := func(ph, po string) map[string]string {
+		all := partFiles("ph", `{"h": {"type": "string", "format": "html"}, "md": {"type": "string", "format": "markdown"}}`, ph)
+		for k, v := range partFiles("po", `{"in": {"$ref": "floe:///parts/ph.json"}}`, po) {
+			all[k] = v
+		}
+		return all
+	}
+	schema := head + `{"p": {"$ref": "floe:///parts/ph.json"}, "o": {"$ref": "floe:///parts/po.json"}}}`
+	whole := `<div data-floe-part="ph">{{.h}}<section>{{.md}}</section></div>`
+	for _, tt := range []struct {
+		name, ph, po, body, data, want, drawn string
+	}{
+		{"drawn", whole, "{{.in}}", "{{.Data.p}}<p>after</p>", `p: {h: "<b>ok</b>", md: "**bold** <i>raw</i>"}`, "", "<b>ok</b><section><p><strong>bold</strong> "},
+		{"a style", whole, "{{.in}}", "{{.Data.p}}<p>after</p>", `p: {h: "<style>p{}</style>"}`, "d.yaml:2:11: the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css", ""},
+		{"left open", whole, "{{.in}}", "{{.Data.p}}<p>after</p>", `p: {h: "<b>x"}`, changes("3:8", "<b>"), ""},
+		{"only the item, an element after", "{{.h}}", "{{.in}}", "<div>{{.Data.p}}<p>after</p></div>", `p: {h: "<b>ok</b>"}`, "", "<div><b>ok</b><p>after</p></div>"},
+		{"only the item, text after", "{{.h}}", "{{.in}}", "<div>{{.Data.p}}after</div>", `p: {h: "<b>ok</b>"}`, "", "<div><b>ok</b>after</div>"},
+		{"only the item, in formatting", "{{.h}}", "{{.in}}", "<b>{{.Data.p}}</b>", `p: {h: "<b>ok</b>"}`, "", "<b><b>ok</b></b>"},
+		{"the item last", "<p>a</p>{{.h}}", "{{.in}}", "<div>{{.Data.p}}<p>after</p></div>", `p: {h: "<b>ok</b>"}`, "", "<div><p>a</p><b>ok</b><p>after</p></div>"},
+		{"only the item, left open", "{{.h}}", "{{.in}}", "<div>{{.Data.p}}<p>after</p></div>", `p: {h: "<b>x"}`, changes("3:8", "<b>"), ""},
+		{"in a part in a part", "{{.h}}", "{{.in}}", "<div>{{.Data.o}}<p>after</p></div>", `o: {in: {h: "<b>ok</b>"}}`, "", "<div><b>ok</b><p>after</p></div>"},
+		{"in a part in a part, left open", "{{.h}}", "{{.in}}", "<div>{{.Data.o}}<p>after</p></div>", `o: {in: {h: "<b>x"}}`, changes("3:13", "<b>"), ""},
+		{"white space alone", "{{.h}}", "{{.in}}", "<div>a{{.Data.p}}b</div>", `p: {h: "  "}`, "", "<div>a  b</div>"},
+		{"in an attribute by part.html", `<div data-floe-part="ph" title="{{.h}}">x</div>`, "{{.in}}", "{{.Data.p}}", `p: {h: "<b>x</b>"}`, placed("p.h", "<div>"), ""},
+		{"in an attribute by page.html", whole, "{{.in}}", `<p title="{{.Data.p}}">x</p>`, `p: {h: "<b>x</b>"}`, placed("p.h", "<p>"), ""},
+		{"in a function", `<div data-floe-part="ph">{{num .h}}</div>`, "{{.in}}", "{{.Data.p}}", `p: {h: "<b>x</b>"}`, "d.yaml:3:4: num takes a number, not <b>x</b> (template.HTML)", ""},
+	} {
+		k := ownKit(t, parts(tt.ph, tt.po), mine(htmlPage(tt.body), schema, nil))
+		page, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\n"+tt.data+"\n"), none)
+		got := ""
+		if err != nil {
+			got = told(err)
+		}
+		if got != tt.want {
+			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+		if err == nil && !bytes.Contains(page, []byte(tt.drawn)) {
+			t.Errorf("%s: the page does not hold %q\n%s", tt.name, tt.drawn, page)
+		}
 	}
 }
 

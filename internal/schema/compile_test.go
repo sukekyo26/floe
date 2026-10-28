@@ -98,15 +98,14 @@ func TestCompile(t *testing.T) {
 	}
 }
 
-// CheckPart refuses one of floe's formats in a part, or in a Shared schema it refers to, in the file it is
-// written in.
+// CheckPart takes floe's formats in a part, and a Shared schema holding them it refers to, as a template does.
 func TestCheckPart(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ name, want string }{
 		{"note", ""},
-		{"html", "parts/html.json: #/properties/body: a part's schema takes no \"format\": \"html\": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
-		{"stack", "parts/stack.json: #/$defs/item: the part refers to floe:///parts/any.json, a shared schema that holds items of the format markdown, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own"},
+		{"html", ""},
+		{"stack", ""},
 	} {
 		if got := told(checkPart("floe:///parts/"+tt.name+".json", resources(t))); got != tt.want {
 			t.Errorf("CheckPart(%s) told\n%s\nwant\n%s", tt.name, got, tt.want)
@@ -114,10 +113,9 @@ func TestCheckPart(t *testing.T) {
 	}
 }
 
-// CheckPart runs on each schema of a part what checks a template's (checkNode), with a part's rules in place of
-// the checks of where a schema is that they overlap: it takes a part's image where a walk from its root reaches
-// it, and refuses one elsewhere, a $ref to a part's root a walk does not reach, a $dynamicRef, one of floe's
-// formats but image, and one in a Shared schema the part refers to.
+// CheckPart runs on each schema of a part what checks a template's (checkNode): it takes floe's formats where a
+// walk from the part's root reaches them, and a Shared schema holding them, and refuses one elsewhere, a $ref to
+// a part's root a walk does not reach, and a $dynamicRef.
 func TestCheckPartNode(t *testing.T) {
 	t.Parallel()
 
@@ -130,10 +128,10 @@ func TestCheckPartNode(t *testing.T) {
 		return "parts/p.json: " + at + ": the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"
 	}
 	html := func(at string) string {
-		return "parts/p.json: " + at + `: a part's schema takes no "format": "html": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare "type": "string" alone and draw it with {{markdown .<name>}}`
+		return "parts/p.json: " + at + ": the format html marks an item to draw; declare it under properties or items, which floe follows"
 	}
-	shot := func(at string) string {
-		return "parts/p.json: " + at + ": the part refers to floe:///parts/shot.json, a shared schema that holds items of the format image, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own"
+	notFollowed := func(at, ref string) string {
+		return "parts/p.json: " + at + ": " + ref + " " + unfollowed
 	}
 	for _, tt := range []struct{ name, body, want string }{
 		{"properties", `"properties": {"s": ` + img + `}`, ""},
@@ -159,37 +157,32 @@ func TestCheckPartNode(t *testing.T) {
 		{"part's root in anyOf", `"properties": {"n": {"anyOf": [` + note + `]}}`, noPart("#/properties/n/anyOf/0")},
 		{"part's root in additionalProperties", `"additionalProperties": ` + note, noPart("#/additionalProperties")},
 		{"$dynamicRef", `"properties": {"s": {"$dynamicRef": "#/$defs/s"}}, "$defs": {"s": {"type": "string"}}`, "parts/p.json: #/properties/s: floe does not follow $dynamicRef: write a $ref"},
-		// A part's rule is told in place of where to move what a part holds nowhere; the other checks run.
+		{"html", `"properties": {"s": {"type": "string", "format": "html"}}`, ""},
+		{"markdown", `"properties": {"s": {"type": "string", "format": "markdown"}}`, ""},
+		{"a shared one with an image", `"properties": {"s": {"$ref": "floe:///parts/shot.json"}}`, ""},
 		{"html in anyOf", `"properties": {"s": {"anyOf": [{"type": "string", "format": "html"}]}}`, html("#/properties/s/anyOf/0")},
-		{"shared in anyOf", `"properties": {"s": {"anyOf": [{"$ref": "floe:///parts/shot.json"}]}}`, shot("#/properties/s/anyOf/0")},
-		{"html beside a part's root", `"properties": {"s": {"type": "string", "format": "html", "$ref": "floe:///parts/note.json"}}`, html("#/properties/s")},
+		{"a shared one in anyOf", `"properties": {"s": {"anyOf": [{"$ref": "floe:///parts/shot.json"}]}}`, notFollowed("#/properties/s/anyOf/0", "floe:///parts/shot.json")},
+		// A format stops the walk at its schema: the $ref beside it is not followed.
+		{"html beside a part's root", `"properties": {"s": {"type": "string", "format": "html", "$ref": "floe:///parts/note.json"}}`, noPart("#/properties/s")},
 		{
 			"html beside a part's root in anyOf", `"properties": {"s": {"anyOf": [{"type": "string", "format": "html", "$ref": "floe:///parts/note.json"}]}}`,
 			html("#/properties/s/anyOf/0") + "\n" + noPart("#/properties/s/anyOf/0"),
 		},
 		{
 			"html beside a $ref into a part", `"properties": {"s": {"type": "string", "format": "html", "$ref": "floe:///parts/note.json#/properties/text"}}`,
-			html("#/properties/s") + "\n" + "parts/p.json: #/properties/s: floe:///parts/note.json#/properties/text points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, floe:///parts/note.json",
+			"parts/p.json: #/properties/s: floe:///parts/note.json#/properties/text points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, floe:///parts/note.json",
 		},
-		{"html beside a shared one", `"properties": {"s": {"type": "string", "format": "html", "$ref": "floe:///parts/shot.json"}}`, html("#/properties/s") + "\n" + shot("#/properties/s")},
+		{"html beside a shared one", `"properties": {"s": {"type": "string", "format": "html", "$ref": "floe:///parts/shot.json"}}`, notFollowed("#/properties/s", "floe:///parts/shot.json")},
 		{
 			"html beside a $dynamicRef", `"properties": {"s": {"type": "string", "format": "html", "$dynamicRef": "#/$defs/s"}}, "$defs": {"s": {"type": "string"}}`,
-			"parts/p.json: #/properties/s: floe does not follow $dynamicRef: write a $ref\n" + html("#/properties/s"),
+			"parts/p.json: #/properties/s: floe does not follow $dynamicRef: write a $ref",
 		},
-		// What is past a format refused is checked as with the format taken out.
-		{"html beside a $ref to a part's root", `"properties": {"s": {"type": "string", "format": "html", "$ref": "#/$defs/n"}}, "$defs": {"n": ` + note + `}`, html("#/properties/s")},
-		{"html beside a $ref to an image", `"properties": {"s": {"type": "string", "format": "html", "$ref": "#/$defs/i"}}, "$defs": {"i": ` + img + `}`, html("#/properties/s")},
-		{"html over an image", `"properties": {"s": {"type": "object", "format": "html", "properties": {"i": ` + img + `}}}`, html("#/properties/s")},
-		{"html above a part's root", `"properties": {"s": {"format": "html", "anyOf": [` + note + `]}}`, html("#/properties/s") + "\n" + noPart("#/properties/s/anyOf/0")},
-		{"markdown", `"properties": {"s": {"type": "string", "format": "markdown"}}`, "parts/p.json: #/properties/s: a part's schema takes no \"format\": \"markdown\": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
-		{"shared", `"properties": {"s": {"$ref": "floe:///parts/shot.json"}}`, "parts/p.json: #/properties/s: the part refers to floe:///parts/shot.json, a shared schema that holds items of the format image, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own"},
-		// An image stops a part's walk too: the $ref beside it is not followed. A shared schema holding a format is
-		// told by the part's rule alone, in place of where the $ref is.
-		{"image beside a shared one", `"properties": {"s": {"type": "string", "format": "image", "$ref": "floe:///parts/shot.json"}}`, shot("#/properties/s")},
-		{
-			"image beside a shared one with a part", `"properties": {"s": {"type": "string", "format": "image", "$ref": "floe:///parts/parted.json"}}`,
-			"parts/p.json: #/properties/s: floe:///parts/parted.json " + unfollowed,
-		},
+		{"html beside a $ref to a part's root", `"properties": {"s": {"type": "string", "format": "html", "$ref": "#/$defs/n"}}, "$defs": {"n": ` + note + `}`, noPart("#/$defs/n") + "\n" + notFollowed("#/properties/s", "#/$defs/n")},
+		{"html beside a $ref to an image", `"properties": {"s": {"type": "string", "format": "html", "$ref": "#/$defs/i"}}, "$defs": {"i": ` + img + `}`, unreached("#/$defs/i") + "\n" + notFollowed("#/properties/s", "#/$defs/i")},
+		{"html over an image", `"properties": {"s": {"type": "object", "format": "html", "properties": {"i": ` + img + `}}}`, unreached("#/properties/s/properties/i")},
+		{"html above a part's root", `"properties": {"s": {"format": "html", "anyOf": [` + note + `]}}`, noPart("#/properties/s/anyOf/0")},
+		{"image beside a shared one", `"properties": {"s": {"type": "string", "format": "image", "$ref": "floe:///parts/shot.json"}}`, notFollowed("#/properties/s", "floe:///parts/shot.json")},
+		{"image beside a shared one with a part", `"properties": {"s": {"type": "string", "format": "image", "$ref": "floe:///parts/parted.json"}}`, notFollowed("#/properties/s", "floe:///parts/parted.json")},
 	} {
 		res := resources(t)
 		for name, r := range map[string]struct {
