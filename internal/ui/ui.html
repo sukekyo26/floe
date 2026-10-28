@@ -81,6 +81,7 @@
 
   /* The frame: the iframe fills the space under the header bar. A page without a background of its own shows on the browser's default white */
   .framed body { height: 100dvh; display: flex; flex-direction: column; }
+  /* No color-scheme here or on the root: Chrome hands an iframe's to the page in it as its prefers-color-scheme, the OS's without one */
   .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; }
   .notfound { flex: 1; align-content: center; }
 
