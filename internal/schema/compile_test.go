@@ -64,12 +64,12 @@ func TestCompile(t *testing.T) {
 		{"xtype", `{` + head + `, "x": {"type": 3}, "properties": {"s": {"$ref": "#/x"}}}`, "schema.json: #/x/type: 'anyOf' failed"},
 		{"pctmeta", `{` + head + `, "properties": {"項目": {"type": 3}, "a/b~c": {"minLength": "x"}}}`, "schema.json: #/properties/a~1b~0c/minLength: got string, want integer\nschema.json: #/properties/項目/type: 'anyOf' failed"},
 		{"pct", `{` + head + `, "allOf": [{"properties": {"項目": ` + N + `}}], "patternProperties": {"a/b~c": {"type":"string","format": "html"}}}`, "schema.json: #/allOf/0/properties/項目: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn\nschema.json: #/patternProperties/a~1b~0c: the format html marks an item to draw; declare it under properties or items, which floe follows"},
-		{"twopaths", `{` + head + `, "properties": {"a": {"$ref": "#/$defs/p"}}, "allOf": [{"properties": {"b": {"$ref": "#/$defs/p"}}}], "$defs": {"p": ` + N + `}}`, "schema.json: #/allOf/0/properties/b: #/$defs/p holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows"},
-		{"defsallof", `{` + head + `, "$defs": {"p": ` + N + `}, "allOf": [{"properties": {"b": {"$ref": "#/$defs/p"}}}]}`, "schema.json: #/$defs/p: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn\nschema.json: #/allOf/0/properties/b: #/$defs/p holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows"},
-		{"chain", `{` + head + `, "allOf": [{"$ref": "#/$defs/q"}], "$defs": {"q": {"properties": {"b": {"$ref": "#/$defs/p"}}}, "p": ` + N + `}}`, "schema.json: #/$defs/p: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn\nschema.json: #/$defs/q/properties/b: #/$defs/p holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows\nschema.json: #/allOf/0: #/$defs/q holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows"},
-		{"allofany", `{` + head + `, "allOf": [{"$ref": "floe:///parts/any.json"}]}`, "schema.json: #/allOf/0: floe:///parts/any.json holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows"},
+		{"twopaths", `{` + head + `, "properties": {"a": {"$ref": "#/$defs/p"}}, "allOf": [{"properties": {"b": {"$ref": "#/$defs/p"}}}], "$defs": {"p": ` + N + `}}`, "schema.json: #/allOf/0/properties/b: #/$defs/p holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref"},
+		{"defsallof", `{` + head + `, "$defs": {"p": ` + N + `}, "allOf": [{"properties": {"b": {"$ref": "#/$defs/p"}}}]}`, "schema.json: #/$defs/p: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn\nschema.json: #/allOf/0/properties/b: #/$defs/p holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref"},
+		{"chain", `{` + head + `, "allOf": [{"$ref": "#/$defs/q"}], "$defs": {"q": {"properties": {"b": {"$ref": "#/$defs/p"}}}, "p": ` + N + `}}`, "schema.json: #/$defs/p: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn\nschema.json: #/$defs/q/properties/b: #/$defs/p holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref\nschema.json: #/allOf/0: #/$defs/q holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref"},
+		{"allofany", `{` + head + `, "allOf": [{"$ref": "floe:///parts/any.json"}]}`, "schema.json: #/allOf/0: floe:///parts/any.json holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref"},
 		{"leak", `{` + head + `, "properties": {"a": {"$ref": "#/$defs/w"}}, "$defs": {"w": {"allOf": [{"properties": {"x": ` + N + `}}]}}}`, "schema.json: #/$defs/w/allOf/0/properties/x: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"},
-		{"aw", `{` + head + `, "properties": {"a": {"$ref": "#/$defs/w"}}, "allOf": [{"$ref": "#/$defs/w"}], "$defs": {"w": {"properties": {"x": ` + N + `}, "allOf": [{"properties": {"y": ` + N + `}}]}}}`, "schema.json: #/$defs/w/allOf/0/properties/y: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn\nschema.json: #/allOf/0: #/$defs/w holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows"},
+		{"aw", `{` + head + `, "properties": {"a": {"$ref": "#/$defs/w"}}, "allOf": [{"$ref": "#/$defs/w"}], "$defs": {"w": {"properties": {"x": ` + N + `}, "allOf": [{"properties": {"y": ` + N + `}}]}}}`, "schema.json: #/$defs/w/allOf/0/properties/y: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn\nschema.json: #/allOf/0: #/$defs/w holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref"},
 		{"samename", `{` + head + `, "$ref": "#/$defs/base", "properties": {"p": {"type": "string"}}, "$defs": {"base": {"properties": {"p": ` + N + `}}}}`, "schema.json: #/$defs/base/properties/p: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"},
 		{"refnotefmt", `{` + head + `, "properties": {"s": {"$ref": "floe:///parts/note.json", "format": "markdown"}}}`, "schema.json: #/properties/s: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"},
 		{"metaref", `{` + head + `, "properties": {"m": {"$ref": "https://json-schema.org/draft/2020-12/schema"}}}`, "schema.json: #/properties/m: https://json-schema.org/draft/2020-12/schema: a schema refers to no other file or URL; write what a $ref refers to in its own file"},
@@ -149,11 +149,11 @@ func TestCheckPartNode(t *testing.T) {
 		{"prefixItems", `"properties": {"s": {"type": "array", "prefixItems": [` + img + `]}}`, unreached("#/properties/s/prefixItems/0")},
 		{
 			"$ref reached and not", `"properties": {"a": {"$ref": "#/$defs/i"}, "b": {"anyOf": [{"$ref": "#/$defs/i"}]}}, "$defs": {"i": ` + img + `}`,
-			"parts/p.json: #/properties/b/anyOf/0: #/$defs/i holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows",
+			"parts/p.json: #/properties/b/anyOf/0: #/$defs/i holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref",
 		},
 		{
 			"$ref to a part", `"properties": {"a": {"anyOf": [{"$ref": "#/$defs/n"}]}}, "$defs": {"n": {"$ref": "floe:///parts/note.json"}}`,
-			noPart("#/$defs/n") + "\n" + "parts/p.json: #/properties/a/anyOf/0: #/$defs/n holds parts or items of floe's formats, which floe draws; refer to it under properties or items, which floe follows",
+			noPart("#/$defs/n") + "\n" + "parts/p.json: #/properties/a/anyOf/0: #/$defs/n holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref",
 		},
 		{"part's root", `"properties": {"n": ` + note + `}`, ""},
 		{"part's root in anyOf", `"properties": {"n": {"anyOf": [` + note + `]}}`, noPart("#/properties/n/anyOf/0")},
@@ -183,14 +183,22 @@ func TestCheckPartNode(t *testing.T) {
 		{"html above a part's root", `"properties": {"s": {"format": "html", "anyOf": [` + note + `]}}`, html("#/properties/s") + "\n" + noPart("#/properties/s/anyOf/0")},
 		{"markdown", `"properties": {"s": {"type": "string", "format": "markdown"}}`, "parts/p.json: #/properties/s: a part's schema takes no \"format\": \"markdown\": of floe's formats, a part takes image alone; declare the item in the template's schema instead, or, for Markdown, declare \"type\": \"string\" alone and draw it with {{markdown .<name>}}"},
 		{"shared", `"properties": {"s": {"$ref": "floe:///parts/shot.json"}}`, "parts/p.json: #/properties/s: the part refers to floe:///parts/shot.json, a shared schema that holds items of the format image, which a part takes from no shared schema: refer to it from the template's schema instead, and give the part items of its own"},
+		// An image stops a part's walk too: the $ref beside it is not followed. A shared schema holding a format is
+		// told by the part's rule alone, in place of where the $ref is.
+		{"image beside a shared one", `"properties": {"s": {"type": "string", "format": "image", "$ref": "floe:///parts/shot.json"}}`, shot("#/properties/s")},
+		{
+			"image beside a shared one with a part", `"properties": {"s": {"type": "string", "format": "image", "$ref": "floe:///parts/parted.json"}}`,
+			"parts/p.json: #/properties/s: floe:///parts/parted.json " + unfollowed,
+		},
 	} {
 		res := resources(t)
 		for name, r := range map[string]struct {
 			src  string
 			kind schema.Kind
 		}{
-			"p":    {`{"$schema": "https://json-schema.org/draft/2020-12/schema", ` + tt.body + `}`, schema.Part},
-			"shot": {`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"s": ` + img + `}}`, schema.Shared},
+			"p":      {`{"$schema": "https://json-schema.org/draft/2020-12/schema", ` + tt.body + `}`, schema.Part},
+			"shot":   {`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"s": ` + img + `}}`, schema.Shared},
+			"parted": {`{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"n": ` + note + `}}`, schema.Shared},
 		} {
 			got, err := schema.NewResource("floe:///parts/"+name+".json", "parts/"+name+".json", []byte(r.src), r.kind)
 			if err != nil {
@@ -200,6 +208,84 @@ func TestCheckPartNode(t *testing.T) {
 		}
 		if got := told(checkPart("floe:///parts/p.json", res)); got != tt.want {
 			t.Errorf("%s: CheckPart told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+	}
+}
+
+// unfollowed is the end of the mistake of a $ref floe does not follow to parts or formats.
+const unfollowed = "holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref"
+
+// withShared returns resources(t) with the Shared schemas named in shared, each the body of a schema.
+func withShared(t *testing.T, shared map[string]string) map[string]schema.Resource {
+	t.Helper()
+
+	res := resources(t)
+	for name, body := range shared {
+		src := `{"$schema": "https://json-schema.org/draft/2020-12/schema", ` + body + `}`
+		r, err := schema.NewResource("floe:///parts/"+name+".json", "parts/"+name+".json", []byte(src), schema.Shared)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res["floe:///parts/"+name+".json"] = r
+	}
+	return res
+}
+
+// CheckPart checks a Shared schema from its own root as a template's (checkNode), in its file, as a template, a
+// part or a Shared schema refers to its root alone. A format of floe's stops its walk, as a template's does, and
+// is taken where the walk reaches it: a part's rules are not its.
+func TestCheckShared(t *testing.T) {
+	t.Parallel()
+
+	noPart := func(at string) string {
+		return "parts/sh.json: " + at + ": the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"
+	}
+	into := "parts/sh.json: #/properties/a: floe:///parts/note.json#/properties/title points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, floe:///parts/note.json"
+	dynamic := "parts/sh.json: #/properties/z: floe does not follow $dynamicRef: write a $ref"
+	for _, tt := range []struct{ name, body, want string }{
+		{"a part in anyOf", `"properties": {"m": {"anyOf": [` + N + `]}}`, noPart("#/properties/m/anyOf/0")},
+		{"$dynamicRef", `"$defs": {"m": {"type": "string"}}, "properties": {"z": {"$dynamicRef": "#/$defs/m"}}`, dynamic},
+		{"html in anyOf", `"properties": {"m": {"anyOf": [{"type": "string", "format": "html"}]}}`, "parts/sh.json: #/properties/m/anyOf/0: the format html marks an item to draw; declare it under properties or items, which floe follows"},
+		{"into a part", `"properties": {"a": {"$ref": "floe:///parts/note.json#/properties/title"}}`, into},
+		{"a part past html", `"$defs": {"h": {"type": "object", "format": "html", "properties": {"x": ` + N + `}}}, "properties": {"m": {"$ref": "#/$defs/h"}}`, noPart("#/$defs/h/properties/x")},
+		{
+			"three", `"$defs": {"m": {"type": "string"}}, "properties": {"z": {"$dynamicRef": "#/$defs/m"}, "m": {"anyOf": [` + N + `]}, "a": {"$ref": "floe:///parts/note.json#/properties/title"}}`,
+			lines(into, noPart("#/properties/m/anyOf/0"), dynamic),
+		},
+		{"a part and html reached", `"properties": {"m": ` + N + `, "h": {"type": "string", "format": "html"}}`, ""},
+		{"markdown at the root", `"type": "string", "format": "markdown"`, ""},
+		{"a part at the root", `"$ref": "floe:///parts/note.json"`, ""},
+		{"itself under a property", `"type": "object", "properties": {"c": {"$ref": "floe:///parts/sh.json"}}`, ""},
+		{"itself under items", `"type": "object", "properties": {"n": ` + N + `, "kids": {"type": "array", "items": {"$ref": "floe:///parts/sh.json"}}}`, ""},
+	} {
+		if got := told(checkPart("floe:///parts/sh.json", withShared(t, map[string]string{"sh": tt.body}))); got != tt.want {
+			t.Errorf("%s: CheckPart told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+	}
+}
+
+// A $ref beside a format of floe's is not followed, as the format draws the value whole: one to a Shared schema
+// holding parts or formats is told at the $ref, as nothing else checks what is past it from there.
+func TestCompileBesideFormat(t *testing.T) {
+	t.Parallel()
+
+	res := withShared(t, map[string]string{"sh": `"properties": {"m": ` + N + `}`, "plain": `"type": "string"`, "list": `"type": "array", "items": ` + N})
+	for _, tt := range []struct{ name, body, want string }{
+		{"html", `"properties": {"s": {"type": "string", "format": "html", "$ref": "floe:///parts/sh.json"}}`, "schema.json: #/properties/s: floe:///parts/sh.json " + unfollowed},
+		{"image", `"properties": {"s": {"type": "string", "format": "image", "$ref": "floe:///parts/sh.json"}}`, "schema.json: #/properties/s: floe:///parts/sh.json " + unfollowed},
+		{"nothing past it", `"properties": {"s": {"type": "string", "format": "html", "$ref": "floe:///parts/plain.json"}}`, ""},
+		// LIMIT: one cause told twice, at the $ref and at the part past it.
+		{
+			"its own $defs", `"$defs": {"x": {"properties": {"m": ` + N + `}}}, "properties": {"s": {"type": "string", "format": "html", "$ref": "#/$defs/x"}}`,
+			lines("schema.json: #/$defs/x/properties/m: the part note draws no item here: floe draws what properties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn", "schema.json: #/properties/s: #/$defs/x "+unfollowed),
+		},
+		// LIMIT: a property or items beside a $ref to a Shared schema hides the Shared schema's, unsaid.
+		{"a property hiding the shared one's", `"properties": {"s": {"$ref": "floe:///parts/sh.json", "properties": {"m": {"type": "string"}}}}`, ""},
+		{"items hiding the shared one's", `"properties": {"s": {"$ref": "floe:///parts/list.json", "items": {"type": "object"}}}`, ""},
+	} {
+		_, err := schema.Compile(template, "schema.json", []byte("{"+head+", "+tt.body+"}"), res)
+		if got := told(err); got != tt.want {
+			t.Errorf("%s: Compile told\n%s\nwant\n%s", tt.name, got, tt.want)
 		}
 	}
 }

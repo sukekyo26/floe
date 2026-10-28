@@ -112,10 +112,13 @@ func (c *Compiled) checkTemplate() error {
 }
 
 // checkOwn returns the mistakes checkNode tells of each schema of the file compiled, and of each $ref, through
-// the Shared schemas it refers to too, to a schema floe does not hold.
-// LIMIT: checkNode does not run in a Shared schema, whose items a walk reaches as the file referring to it
-// places them; a $dynamicRef or an item it does not reach there is let through. Walk them from where they are
-// referred to, and tell them in the Shared schema's file, if one of one's own comes to need it.
+// the Shared schemas it refers to too, to a schema floe does not hold. A Shared schema is checked from its own
+// root (CheckPart), not from what refers to it, which refers to its root alone (intoMistake); a $ref to it a
+// walk does not follow is told where it is (unreachedRef).
+// LIMIT: a property or items declared beside a $ref to a Shared schema hides the Shared schema's property of
+// its name or its items, whose parts or formats are then not drawn there, unsaid; a value is refused by the two
+// schemas together, or drawn as written, which shows. Tell it at the property or items if one of one's own comes
+// to need it.
 // LIMIT: one cause may be told twice or more, at the $ref a walk does not reach and at the part or format past
 // it; both are true, at other places. Tell it once if that comes to mislead.
 func (c *Compiled) checkOwn() usererr.List {
@@ -133,9 +136,9 @@ func (c *Compiled) checkOwn() usererr.List {
 // checkNode returns the mistakes of n, a schema of the file compiled, r what Follow reaches from the root: a
 // $dynamicRef; an item a part or a format draws that r does not reach; a $ref into a part. A part takes, of
 // Formats, image alone, a trust boundary, as the checks of the data's HTML reach the template's items alone;
-// and refers to no Shared schema holding one of Formats, image too, of which no walk from the part's root is
-// checked. Either is told in place of the check of where n is, as a part holds it nowhere; r of a part goes
-// through such a format, so that what is past it is told only as it would be with the format taken out.
+// and refers to no Shared schema holding one of Formats, image too, as decided. Either is told in place of the
+// check of where n is, as a part holds it nowhere; r of a part goes through such a format, so that what is past
+// it is told only as it would be with the format taken out.
 func (c *Compiled) checkNode(n *jsonschema.Schema, r reached) usererr.List {
 	var found usererr.List
 	switch {
@@ -187,10 +190,11 @@ func (c *Compiled) sharedFormat(n *jsonschema.Schema) *usererr.Error {
 	return nil
 }
 
-// unreachedRef refuses n, a $ref Follow goes through, if r, what Follow reaches from the root, does not pass n
-// while what n refers to holds parts or formats: items floe would not draw; nil else.
+// unreachedRef refuses n, a $ref Follow goes through, if r, what Follow reaches from the root, does not pass n,
+// or a format of n stops it before the $ref, while what n refers to holds parts or formats: items floe would not
+// draw; nil else.
 func (c *Compiled) unreachedRef(n *jsonschema.Schema, r reached) *usererr.Error {
-	if c.followed(n, n.Ref) && !r.passed[n] && c.followFrom(n.Ref).stops() {
+	if c.followed(n, n.Ref) && (!r.passed[n] || stopFormat(n, c.part) != "") && c.followFrom(n.Ref).stops() {
 		return c.mistake(n, "schema_ref_unreached", c.written(n.Ref.Location))
 	}
 	return nil
@@ -258,7 +262,8 @@ func requiredOf(s *jsonschema.Schema) []string {
 	return required
 }
 
-// CheckPart refuses, in the part compiled (CompilePart), where it is written, what checkOwn refuses of a part.
+// CheckPart refuses, in the part or the Shared schema compiled (CompilePart), where it is written, what checkOwn
+// refuses of it: a Shared schema is checked as a template's is, from its root.
 func (c *Compiled) CheckPart() error {
 	return c.checkOwn().Sorted().Err()
 }
