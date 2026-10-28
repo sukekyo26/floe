@@ -679,6 +679,11 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	press(kb.ArrowDown)
 	press(kb.Enter)
 	out = append(out, b.eval("document.getElementById('edit-tags').value"))
+	// Pressed after a name begun, the names are of what is begun where the caret lands, after focus put it at the start.
+	b.eval("document.getElementById('edit-tags').blur(); document.getElementById('edit-tags').value = 'plan, 設'")
+	b.click(r.X+r.Width-8, r.Y+r.Height/2)
+	out = append(out, b.until("the names where pressed", "document.getElementById('edit-tags-names').matches(':popover-open') && "+
+		"[...document.querySelectorAll('#edit-tags-names [role=option]')].map((o) => o.textContent).join(',')"))
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
 	pick("plan")
 
@@ -781,7 +786,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		`PATCH /api/artifacts/a {"tags":["設計","plan","old"]},PATCH /api/artifacts/c {"tags":["設計、実装","old"]}`,
 		"plan:all: false", msg("ui_tag_create", "new"), "plan:all:,new:all:,old:none:,設計:none:,設計、実装:none:", "true 0 true",
 		"true 0",
-		"old,設計,設計、実装", "plan, old, ",
+		"old,設計,設計、実装", "plan, old, ", "設計,設計、実装",
 		"tag:plan,tag:設計,tag:設計、実装", "ab plan", "true", "abcd -",
 		"<b>x</b>1,__proto__1", "<b>x</b>,__proto__", "0", "__proto__:all:,<b>x</b>:all: 0",
 		"combobox list true listbox",
