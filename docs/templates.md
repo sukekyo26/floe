@@ -141,7 +141,7 @@ A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Wr
 
 An item of `"format": "markdown"` is Markdown text: `{{.Data.text}}` draws it as HTML.
 
-An item of `"format": "html"` goes in as it is. It leaves no element open nor closes one of the page around it, as a browser reads the page drawn, refused at the item: write each element whole.
+An item of `"format": "html"` goes in as it is, a template's or a part's alike. It leaves no element open nor closes one of the page around it, as a browser reads the page drawn, refused at the item: write each element whole. `page.html`, or the `part.html` of a part holding it, puts it where elements go, not in a text or an attribute (`<title>`, `title="…"`), where HTML does not work.
 
 An item of `"format": "image"` is the path of an image, relative to the data file's directory and under it ([Images](#images)).
 

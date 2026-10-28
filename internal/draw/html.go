@@ -253,10 +253,10 @@ func (s *items) next(text string) (n int, end bool, rest string, ok bool) {
 }
 
 // check refuses each item of format html of d that changes the page tree, drawn, around it, at the item, and an
-// item page.html or a part's part.html puts where HTML does not work (a mark of it is not a comment of its own), at d's template:.
-// They are looked at in the order of the page; past the first that changed the page, which the others are read
-// in, none is. It refuses at the item a name of a part its elements give that the page would be refused for
-// (checkNames).
+// item page.html or a part's part.html puts where HTML does not work (a mark of it is not a comment of its own),
+// at d's template:. They are looked at in the order of the page; past the first that changed the page, which the
+// others are read in, none is. It refuses at the item a name of a part its elements give that the page would be
+// refused for (checkNames).
 // LIMIT: the marks and the probe show the tree and the formatting rebuilt in body text alone: the form an item
 // left open and the attributes it adds to body or html are not checked; check them in the browser (B12).
 // page.html puts an item where elements go; between html and head, the probe is dropped and a right item is
