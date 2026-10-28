@@ -56,13 +56,13 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		"return [r('a1', 'time').right === r('fv', 'time').right, r('a1', '.star').left === r('n1', '.star').left, " +
 		"r('fv', '.proj').right <= r('fv', '.made').left && r('fv', '.made').right <= r('fv', 'time').left, document.querySelector('#list li[data-slug=n1] .proj').hidden].join(' '); })()"
 	out = append(out, b.eval(columns))
-	// Narrow, a row's project, creation date and time go under its title, on one line within the row, the date and the
-	// time whole (the project's chip cut off instead), its actions where they were.
+	// Narrow, a row's project, creation date and time go under its title, within the row (wrapping where they do not fit
+	// on one line), the date and the time whole, the project's chip not squeezed away, its actions where they were.
 	b.size(390, 844, true)
 	out = append(out, b.eval("(() => { const li = document.querySelector('#list li[data-slug=fv]'), r = (s) => li.querySelector(s).getBoundingClientRect(); "+
 		"const whole = (s) => li.querySelector(s).scrollWidth <= li.querySelector(s).clientWidth; "+
 		"return [r('.proj').top >= r('.title').bottom, r('time').top >= r('.title').bottom, r('.proj').left === r('.title').left, "+
-		"r('.actions').top < r('.proj').top, Math.abs(r('.made').top - r('time').top) < 4 && r('time').right <= r('.actions').left, "+
+		"r('.actions').top < r('.proj').top, r('.made').right <= r('.actions').left && r('time').right <= r('.actions').left && r('.proj').width >= 48, "+
 		"whole('.made') && whole('time')].join(' '); })()"))
 	b.size(1440, 900, false)
 	// A heading pointed at keeps its ground, as it is not pressed; a row pointed at takes the hover's.
