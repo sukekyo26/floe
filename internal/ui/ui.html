@@ -15,6 +15,8 @@
     --fg: #22211f; --muted: #615f5a; --faint: #6b6964; --line: #e3e1dc;
     --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00;
     --danger: #b8332b; --danger-soft: #f8e3e1; --on-danger: #fff;
+    /* The projects' colors, by projectOrder */
+    --pc0: #e5533d; --pc1: #2f6bff; --pc2: #16a37a; --pc3: #b04fd6; --pc4: #d99a00; --pc5: #0f9bb5;
     --scrim: rgb(34 33 31 / 0.4);
     --shadow-sm: 0 1px 2px rgb(34 33 31 / 0.06);
     --shadow: 0 1px 2px rgb(34 33 31 / 0.04), 0 10px 30px -14px rgb(34 33 31 / 0.16);
@@ -85,9 +87,10 @@
   .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; }
   .notfound { flex: 1; align-content: center; }
 
-  /* The shelf on the left picks which list the right shows; on a narrow screen a select at the top stands in for it */
+  /* The shelf on the left picks which list the right shows; on a narrow screen a select at the top stands in for it. The whole
+     window's width, as the header bar's: the shelf under the logo, the list out to the bar's right end */
   .shell {
-    max-width: calc(96rem + 32px); margin-inline: auto; padding: var(--shell-top) 16px 0; --shell-bottom: var(--shell-top);
+    padding: var(--shell-top) 16px 0; --shell-bottom: var(--shell-top);
     display: grid; grid-template-columns: 14.5rem minmax(0, 1fr); align-items: start; column-gap: 1.5rem;
   }
   /* The room under the list is the list's own, so that sticky does not push the shelf up at the page's end */
@@ -101,7 +104,7 @@
   /* LIMIT: a project or tag picked below where the shelf shows is not scrolled to when the URL opens it; scroll to it once if that matters */
   /* LIMIT: the load error above the shell pushes the shelf's bottom out of the window while it shows; make it overlay if that matters */
   .shelf {
-    position: sticky; top: calc(var(--bar) + var(--shell-top)); display: grid; gap: 1.1rem;
+    position: sticky; top: calc(var(--bar) + var(--shell-top)); display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem;
     max-height: max(10rem, calc(100dvh - var(--bar) - var(--shell-top) - var(--shell-bottom))); overflow-y: auto;
     margin-inline: -4px; padding: 0.9rem 4px 4px;
   }
@@ -114,7 +117,8 @@
     .shelf:not(:hover, :focus-within) { scrollbar-color: transparent transparent; }
   }
   .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 0.7rem/1.2 var(--body); color: var(--faint); letter-spacing: 0.02em; }
-  .shelf .views, .shelf .chips, .shelf .tabs { display: grid; gap: 2px; }
+  /* minmax(0, …): no wider than the shelf, so that a long name is cut off rather than widening it */
+  .shelf .views, .shelf .chips, .shelf .tabs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .shelf .views button, .shelf .chip, .shelf .tabs button {
     display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: 8px;
     background: none; color: var(--muted); font-size: 0.86rem; font-weight: 500; text-align: left; overflow-wrap: anywhere;
@@ -170,27 +174,30 @@
   }
   .search input:focus + kbd { display: none; }
 
-  .chip.project::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--glyph-fg); }
+  /* A project's dot, of its color (--c) */
+  .chip.project::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+  /* A project's or tag's name on one line, cut off where it does not fit (the button's title has it whole); its count three
+     digits' room, right-aligned, so that the counts line up */
+  .chip .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip .n { flex: none; min-width: 3ch; text-align: right; }
   .count { flex: none; font: 0.74rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
-
-  /* var(--h) resolves where it is declared, so colors are built on the element that has --h */
-  .chip.project {
-    --glyph-bg: hsl(var(--h) 85% 95%); --glyph-fg: hsl(var(--h) 55% 40%);
-  }
   .chip.tag::before { content: "#"; flex: none; color: var(--faint); font-family: var(--mono); }
-  /* Not overflow: hidden, which would cut off a row's menu at the bottom: the first and last rows round their own corners */
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
-  li:first-child { border-top-left-radius: 7px; border-top-right-radius: 7px; }
-  li:last-child { border-bottom-left-radius: 7px; border-bottom-right-radius: 7px; }
-  /* Rows share columns through subgrid, so times and actions line up from row to row */
+  /* Each group a card: its heading rounds the top, its last row the bottom. Not overflow: hidden on a box round them, which
+     would cut off a row's menu at the bottom */
+  .panel > .state { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+  /* Rows share columns through subgrid, so times and actions line up from row to row, and from group to group */
   ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; }
   li {
     position: relative; grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; column-gap: 0.85rem;
     min-height: 3.1rem; padding: 0.45rem 0.6rem 0.45rem 0.85rem; transition: background-color 0.15s;
+    background: var(--panel); border-inline: 1px solid var(--line);
     animation: rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 16ms);
   }
   li + li { border-top: 1px solid var(--line); }
-  li:hover { background: var(--hover); }
+  li.group:not(:first-child) { margin-top: 1.1rem; }
+  li:is(:has(+ li.group), :last-child) { border-bottom: 1px solid var(--line); border-radius: 0 0 8px 8px; }
+  /* A heading is not pressed, so it is not pointed out */
+  li:not(.group):hover { background: var(--hover); }
   li::before {
     content: ""; position: absolute; left: 0; top: 0.55rem; bottom: 0.55rem; width: 2px; border-radius: 0 2px 2px 0;
     background: var(--ink); opacity: 0; transition: opacity 0.15s;
@@ -199,10 +206,15 @@
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
   /* A group's heading: a block, so that its text does not widen the rows' first column */
   li.group {
-    display: block; min-height: 0; padding: 0.55rem 0.85rem 0.35rem; font: 650 0.72rem/1.2 var(--body); color: var(--faint);
-    background: var(--subtle); animation: none;
+    display: block; min-height: 0; padding: 0.7rem 0.85rem 0.5rem; font: 700 0.78rem/1.2 var(--body); color: var(--fg); animation: none;
+    border-top: 1px solid var(--line); border-radius: 8px 8px 0 0;
   }
   li.group::before { content: none; }
+  /* Its dot, of the group's color (--c), its name on one line (whole as the title) and its count, never split */
+  li.group > div { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+  li.group > div::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  li.group .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  li.group .n { flex: none; white-space: nowrap; font: 500 0.72rem/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
   /* The checkbox sits above the row link's hit area; the label widens what can be clicked */
   .pick { position: relative; z-index: 1; display: grid; place-items: center; width: 22px; height: 30px; margin-right: -0.35rem; cursor: pointer; }
   .sel {
@@ -222,6 +234,8 @@
   /* The whole row is the link's hit area; only the controls sit above it */
   a.title { justify-self: start; max-width: 100%; color: var(--fg); font-weight: 600; text-decoration: none; scroll-margin-block: 10rem 5rem; }
   a.title::after { content: ""; position: absolute; inset: 0; }
+  /* The dot of the row's project (--c), before its title: ::after is the hit area */
+  a.title::before { content: ""; display: inline-block; width: 7px; height: 7px; margin: 0 0.5rem 0.1em 0; border-radius: 50%; background: var(--c); vertical-align: middle; }
   .sub { display: flex; align-items: baseline; gap: 0.65rem; min-width: 0; }
   .desc { flex: 0 1 auto; color: var(--muted); font-size: 0.76rem; }
   .sub .path { flex: 0 1 auto; font: 0.72rem var(--mono); color: var(--faint); }
@@ -268,6 +282,12 @@
     border: 1px dashed var(--line); border-radius: 999px; font-size: 0.82rem;
   }
   .tag-new:hover { border-color: var(--ink); }
+  /* The row's project, as a chip of its color, and its time: one column, so that rows line up whatever their project */
+  .meta { display: flex; align-items: center; justify-content: flex-end; gap: 0.6rem; min-width: 0; }
+  .proj {
+    max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0.05rem 0.5rem; border-radius: 999px;
+    font-size: 0.7rem; font-weight: 600; color: color-mix(in srgb, var(--c) 55%, var(--fg)); background: color-mix(in srgb, var(--c) 14%, var(--panel));
+  }
   li time { font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
   .actions { position: relative; z-index: 1; display: flex; gap: 2px; }
   /* The row's other actions. The row whose menu is open comes forward: each row's rise animation stacks the rows below over it */
@@ -396,7 +416,7 @@
     #view-select { display: block; flex: 1 0 100%; }
     #add-narrow { display: inline-flex; }
   }
-  /* On narrow screens, the time moves to a second line */
+  /* On narrow screens, the project and the time move to a second line */
   @media (max-width: 40rem) {
     .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
     .frame-title { display: none; }
@@ -404,7 +424,7 @@
     li { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 0.3rem; column-gap: 0.6rem; }
     .pick { grid-column: 1; grid-row: 1 / 3; }
     .body { grid-column: 2; grid-row: 1; }
-    li time { grid-column: 2; grid-row: 2; text-align: left; }
+    .meta { grid-column: 2; grid-row: 2; justify-content: flex-start; }
     .actions { grid-column: 3; grid-row: 1 / 3; }
     .bulk { left: 16px; right: 16px; translate: none; flex-wrap: wrap; }
   }
@@ -642,7 +662,7 @@
       <a class="title"></a>
       <span class="sub"><span class="tags"></span><span class="desc"></span><span class="made"></span></span>
     </div>
-    <time></time>
+    <span class="meta"><span class="proj"></span><time></time></span>
     <div class="actions">
       <button type="button" class="icon-btn star">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
@@ -804,17 +824,38 @@
   }
 
   // Picks and orders the entries by tab, project, tag, search and sort; shared by the list and by moving between pages in the frame
-  function arrange(state) {
+  function arrange(state, ranks = projectOrder()) {
     const q = state.q.trim().toLowerCase();
     const shown = items.filter((a) => inList(a, state)
       && (!state.project || (a.project ?? NONE) === state.project)
       && (!state.tag || (a.tags ?? []).includes(state.tag))
       && (!q || [a.title, a.description, a.slug, a.project, a.path, ...(a.tags ?? [])].join(' ').toLowerCase().includes(q)));
     const sorted = SORTS[state.sort] ? shown.sort(SORTS[state.sort]) : shown;
-    // All of the list puts its favourites first, each group in the order picked
-    if (state.fav || state.archived) return sorted;
-    return [...sorted.filter((a) => a.favorite), ...sorted.filter((a) => !a.favorite)];
+    // Group by group, each in the order picked (sort is stable): the favourites first, then the projects as projectOrder
+    // has them, those without one last
+    const rank = new Map(sorted.map((a) => {
+      const g = group(a, state);
+      return [a, g === null ? -1 : ranks.get(g) ?? ranks.size];
+    }));
+    return sorted.sort((x, y) => rank.get(x) - rank.get(y));
   }
+
+  // The group an entry is listed under: the favourites (null) in all of the list, else its project. A project's name is a
+  // string, NONE too, so none is taken for the favourites
+  const group = (a, state) => (!state.fav && !state.archived && a.favorite ? null : a.project ?? NONE);
+
+  // The projects of every entry (both kinds, archived or not), most entries first, then by name, each to its place: the
+  // order of the groups and of the projects' colors, which no filter changes
+  function projectOrder() {
+    const counts = new Map();
+    for (const a of items) if (a.project) counts.set(a.project, (counts.get(a.project) ?? 0) + 1);
+    return new Map([...counts.keys()].sort((x, y) => counts.get(y) - counts.get(x) || x.localeCompare(y)).map((name, i) => [name, i]));
+  }
+
+  // A project's color: one of six, by its place in projectOrder; the faint one for none, and for one no entry has any more
+  // (picked, its last entry gone)
+  // LIMIT: from the seventh project on the colors repeat; let the viewer pick them if projects come to be that many
+  const projectColor = (name, ranks) => (ranks.has(name) ? `var(--pc${ranks.get(name) % 6})` : 'var(--faint)');
 
   function toast(msg) {
     const t = document.createElement('div');
@@ -850,6 +891,8 @@
   const setTag = (value) => refilter({ tag: value });
   // The tag picked, picked again, is let go
   const toggleTag = (value) => setTag(value === tag ? '' : value);
+  // The project picked, picked again, is let go, as a tag is
+  const toggleProject = (value) => setProject(value === project ? '' : value);
 
   function setSize(value) {
     size = value;
@@ -1172,17 +1215,18 @@
     for (const t of document.querySelectorAll('#list time')) t.textContent = ago(t.dateTime);
   }
 
-  // The project's hue, the dot of its chip
-  const hue = (name) => [...name].reduce((h, c) => (h * 31 + c.codePointAt(0)) % 360, 7);
-
   // A button of the shelf's projects or tags, with its count: pressed when it is the one picked, pick done on a press.
-  // The label goes in as text, being a name the API was sent
+  // The label goes in as text, being a name the API was sent, on one line, and whole as the title
   function chip(label, n, { pressed, pick, extra = '' }) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `chip ${extra}`;
+    b.title = label;
     b.setAttribute('aria-pressed', String(pressed));
-    b.append(label);
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = label;
+    b.append(name);
     const count = document.createElement('span');
     count.className = 'n';
     count.textContent = n;
@@ -1191,23 +1235,27 @@
     return b;
   }
 
-  function renderChips(list) {
+  // The shelf's projects of list, in the order of ranks (projectOrder)
+  function renderChips(list, ranks) {
     const counts = new Map();
     for (const a of list) counts.set(a.project ?? NONE, (counts.get(a.project ?? NONE) ?? 0) + 1);
     // Kept as a choice even at 0, so that deleting the last entry does not jump the selection back to all
     if (project && !counts.has(project)) counts.set(project, 0);
-    const names = [...counts.keys()].filter((k) => k !== NONE).sort((x, y) => x.localeCompare(y));
-    const projectChip = (label, value, n, extra) => {
-      const b = chip(label, n, { pressed: value === project, pick: () => setProject(value), extra });
+    const names = [...ranks.keys()].filter((name) => counts.has(name));
+    // A project dropped from every entry but still picked comes after those in the order
+    if (project && project !== NONE && !names.includes(project)) names.push(project);
+    // Its dot and its count
+    const projectChip = (label, value, n) => {
+      const b = chip(label, n, { pressed: value === project, pick: () => toggleProject(value), extra: 'project' });
       b.dataset.project = value;
-      if (extra === 'project') b.style.setProperty('--h', hue(value));
+      b.style.setProperty('--c', projectColor(value, ranks));
       return b;
     };
-    const chips = [projectChip(t('ui_all_projects'), '', list.length), ...names.map((name) => projectChip(name, name, counts.get(name), 'project'))];
-    if (counts.has(NONE)) chips.push(projectChip(t('ui_no_project'), NONE, counts.get(NONE), 'none'));
+    const chips = names.map((name) => projectChip(name, name, counts.get(name)));
+    if (counts.has(NONE)) chips.push(projectChip(t('ui_no_project'), NONE, counts.get(NONE)));
     $('chips').replaceChildren(...chips);
     // Projects to choose between, or one chosen
-    $('shelf-projects').hidden = chips.length < 3 && !project;
+    $('shelf-projects').hidden = chips.length < 2 && !project;
     return chips;
   }
 
@@ -1249,8 +1297,9 @@
     // A link added is not archived, so it is added from the lists it goes on
     $('add-open').hidden = archived;
     $('add-narrow').hidden = archived;
-    // A button's own words, without its count
-    const label = (b) => [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim();
+    // A button's own words, without its count: a chip's name, or the text of the others
+    const label = (b) => b.querySelector('.name')?.textContent
+      ?? [...b.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent).join('').trim();
     const pressed = (list) => list.find((c) => c.getAttribute('aria-pressed') === 'true');
     const summary = [views.find((b) => b.dataset.view === view), tag && pressed(tags), !$('shelf-kind').hidden && tabs.find((b) => b.dataset.tab === tab),
       project && pressed(chips)].filter(Boolean)
@@ -1295,10 +1344,16 @@
     $('next').disabled = page >= pages;
   }
 
-  function row(a, i) {
+  // A row of a, i-th on the page, its dot and project chip of its project's color by ranks (projectOrder)
+  function row(a, i, ranks) {
     const li = $('row').content.firstElementChild.cloneNode(true);
     li.style.setProperty('--i', i);
+    li.style.setProperty('--c', projectColor(a.project ?? NONE, ranks));
     li.dataset.slug = a.slug;
+    const proj = li.querySelector('.proj');
+    proj.textContent = a.project ?? '';
+    proj.title = a.project ?? '';
+    proj.hidden = !a.project;
     const sel = li.querySelector('.sel');
     sel.checked = selected.has(a.slug);
     sel.setAttribute('aria-label', t('ui_select_named', a.title));
@@ -1459,10 +1514,12 @@
 
   function render() {
     const list = items.filter((a) => inList(a, { tab, archived, fav }));
-    const chips = renderChips(list);
+    const ranks = projectOrder();
+    const chips = renderChips(list, ranks);
     const tags = renderTags(list);
     const archivedHere = items.filter((a) => inView(a, { tab, archived: true })).length;
-    const shown = arrange(current());
+    const state = current();
+    const shown = arrange(state, ranks);
     $('sort').value = sort;
     // Entries deleted elsewhere leave the selection
     for (const slug of selected) if (!list.some((a) => a.slug === slug)) selected.delete(slug);
@@ -1482,22 +1539,34 @@
     const pages = Math.max(1, Math.ceil(shown.length / size));
     page = Math.min(page, pages);
     const start = (page - 1) * size;
-    // All of the list heads its favourites and the others, where both are in it; a heading is no row (role none)
-    const grouped = all && shown.some((a) => a.favorite) && shown.some((a) => !a.favorite);
+    // Each group is headed, a page that starts within one too: its dot, its name and how many it has in all. A heading is
+    // no row (role none)
+    const groups = shown.map((a) => group(a, state));
+    const sizes = new Map();
+    for (const g of groups) sizes.set(g, (sizes.get(g) ?? 0) + 1);
     const rows = [];
-    shown.slice(start, start + size).forEach((a, i, slice) => {
-      if (grouped && (i === 0 || slice[i - 1].favorite !== a.favorite)) {
+    shown.slice(start, start + size).forEach((a, i) => {
+      const g = groups[start + i];
+      if (i === 0 || groups[start + i - 1] !== g) {
         const li = document.createElement('li');
         li.className = 'group';
         li.setAttribute('role', 'none');
+        li.style.setProperty('--c', g === null ? 'var(--star)' : projectColor(g, ranks));
         const heading = document.createElement('div');
         heading.setAttribute('role', 'heading');
         heading.setAttribute('aria-level', '2');
-        heading.textContent = t(a.favorite ? 'ui_group_favorites' : 'ui_group_others');
+        const count = document.createElement('span');
+        count.className = 'n';
+        count.textContent = t('ui_count_all', sizes.get(g));
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = g === null ? t('ui_group_favorites') : g === NONE ? t('ui_no_project') : g;
+        heading.title = name.textContent;
+        heading.append(name, count);
         li.append(heading);
         rows.push(li);
       }
-      rows.push(row(a, i));
+      rows.push(row(a, i, ranks));
     });
     // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
@@ -1507,7 +1576,8 @@
     syncUrl();
   }
 
-  // Previous and next follow the list the page was opened from (kept for the tab); if the page is not in it, all entries of the same kind by update time
+  // Previous and next follow the list the page was opened from (kept for the tab), in its groups' order (arrange); if the page
+  // is not in it, all entries of the same kind and archived or not, unfiltered, in their groups by update time
   // The order the frame steps through: that of the list when the page was first found, so that starring or archiving it
   // from the bar does not move it. A page gone since drops out
   let frameOrder;
@@ -1689,7 +1759,7 @@
     $('show-archived').addEventListener('click', () => setView('archived'));
     $('view-select').addEventListener('change', () => {
       const [kind, value] = $('view-select').value.split(/:(.*)/s);
-      ({ view: setView, tab: setTab, project: setProject, tag: toggleTag })[kind](value);
+      ({ view: setView, tab: setTab, project: toggleProject, tag: toggleTag })[kind](value);
       // Back to the summary, so that choosing the same again is a change too
       $('view-select').selectedIndex = 0;
     });
