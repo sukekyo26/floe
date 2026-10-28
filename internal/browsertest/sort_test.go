@@ -30,9 +30,10 @@ func TestUISortMenu(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	open := "document.getElementById('sort-menu').matches(':popover-open')"
 	opened := open + " && document.activeElement.id === 'sort-list'"
-	// The sort's name and its state, the orders (the one reached in [ ], the one now marked *), the focus, the URL's order.
+	// The sort's name and its state, the orders (the one reached in [ ], the one selected, the order now, *), the focus, the
+	// URL's order.
 	state := `[document.getElementById('sort').textContent, document.getElementById('sort').getAttribute('aria-expanded'),
-		[...document.querySelectorAll('#sort-list [role=option]')].map((o) => (o.getAttribute('aria-selected') === 'true' ? '[' + o.textContent + ']' : o.textContent) + (o.hasAttribute('aria-current') ? '*' : '')).join(','),
+		[...document.querySelectorAll('#sort-list [role=option]')].map((o) => (o.classList.contains('reached') ? '[' + o.textContent + ']' : o.textContent) + (o.getAttribute('aria-selected') === 'true' ? '*' : '')).join(','),
 		document.activeElement.id, String(new URLSearchParams(location.search).get('sort'))].join(' / ')`
 	titles := "[...document.querySelectorAll('#list li:not(.group) a.title')].map((a) => a.textContent).join(',')"
 	b.navigate("/")
@@ -69,10 +70,7 @@ func TestUISortMenu(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, b.until("the orders to close", "!"+open+" && 'closed'"))
 	press("#sort")
 	b.until("the orders to open", opened)
-	press(".brand")
-	b.eval("document.activeElement.blur()")
-	r := b.rect("document.getElementById('count')")
-	b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	press("#count")
 	out = append(out, b.until("the orders to close", "!"+open+" && 'closed'"))
 	// ↓ on the sort does not move to a row of the list (it scrolls the page, as the browser does, which would close orders
 	// opened after it; so last).
@@ -96,6 +94,13 @@ func TestUISortMenu(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, b.eval("String("+open+")"))
 	b.eval("scrollTo(0, 0)")
 	out = append(out, b.until("the orders to close", "!"+open+" && 'closed'"))
+	// An opening stopped on the way (beforetoggle cancelled) leaves the sort saying it is shut.
+	b.eval("document.getElementById('sort-menu').addEventListener('beforetoggle', (e) => e.preventDefault(), { once: true }); document.getElementById('sort').click()")
+	out = append(out, b.eval("["+open+", document.getElementById('sort').getAttribute('aria-expanded')].join(' ')"))
+	// On the sort, the list's other keys still work: → turns the page.
+	b.eval("document.getElementById('sort').focus()")
+	key(kb.ArrowRight)
+	out = append(out, b.until("the next page", "new URLSearchParams(location.search).get('page')"))
 
 	check(t, "sort", out, strings.Join([]string{
 		"Recently updated / true / [Recently updated]*,Recently created,Title / sort-list / null",
@@ -109,6 +114,6 @@ func TestUISortMenu(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"closed", "closed",
 		"sort",
 		"Title / false / Recently updated,Recently created,Title* /  / title",
-		"true", "closed",
+		"true", "closed", "false false", "2",
 	}, "|"))
 }
