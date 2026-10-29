@@ -1,18 +1,16 @@
-// A button over the code of the part this script is in, that copies the text of its elements marked
-// data-floe-copy, each ended by a line break. words are its words in the page's language: copy, copied, failed.
-// LIMIT: HTML reads CR and CRLF as LF, so a diff of a CRLF file is copied with LF and does not apply. Keep the text
-// in an attribute too if diffs of CRLF files come to be copied.
+// A button in the part this script is in, that copies the text of its elements marked data-floe-copy, each ended
+// by a line break. words are its words in the page's language: copy, copied, failed.
 function copyButton(words) {
-  const part = document.currentScript.parentElement;
+  const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
     `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'copy';
+  button.className = 'floe-copy';
   button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
   const status = document.createElement('span');
-  status.className = 'copy-status';
+  status.className = 'floe-copy-status';
   status.setAttribute('role', 'status');
   let timer;
   // The press whose result shows: one pressed again before its copy ends is dropped
@@ -69,5 +67,5 @@ function copyButton(words) {
     }, 1500);
   });
   show(words.copy, false);
-  part.append(button, status);
+  document.currentScript.after(button, status);
 }

@@ -12,7 +12,6 @@ import (
 	"github.com/goccy/go-yaml/ast"
 
 	"github.com/sukekyo26/floe/internal/bom"
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/rules"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -72,7 +71,7 @@ func (p *Part) Page(lang string) (*template.Template, error) {
 	if err != nil {
 		return nil, err
 	}
-	return page.Funcs(template.FuncMap{"copyButton": copyButton(i18n.New(i18n.Tag(lang)))}), nil
+	return page.Funcs(template.FuncMap{"copyButton": copyButton(lang)}), nil
 }
 
 // File returns the file name of p as its mistakes name it.

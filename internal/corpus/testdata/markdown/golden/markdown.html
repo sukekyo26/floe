@@ -30,6 +30,23 @@ pre code { font-size: inherit; background: none; padding: 0; }
 blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
 blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
+   (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
+   what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
+   holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
+   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone */
+.floe-copy {
+  position: relative; z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--code-ground, var(--code-bg)); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground, var(--code-bg)));
+}
+.floe-copy:hover { background: color-mix(in srgb, var(--code-fg) 12%, var(--code-ground, var(--code-bg))); }
+.floe-copy:focus-visible { outline: 2px solid var(--code-fg); outline-offset: -2px; }
+.floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
+.floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
+.floe-copy.copied svg + svg { display: block; color: var(--code-add); }
+.floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media print { .floe-copy { display: none; } }
 }
 </style>
 <style>
@@ -75,7 +92,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope ([data-floe-part="code"]) to (:scope [data-floe-part] > *) {
 /* Always dark, as code in an editor is; the language stands at the right of the heading */
 :scope {
-  display: grid; grid-template-columns: minmax(0, 1fr); position: relative; --code-ground: var(--code-bg);
+  display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
   margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
   background: var(--code-bg); color: var(--code-fg);
   font-family: var(--mono);
@@ -95,24 +112,12 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 /* A block, so that the code's last line break draws no empty line */
 :scope code { display: block; font: inherit; color: inherit; background: none; padding: 0; border-radius: 0; }
-/* The copy button lies over the top right of the code, whether or not a heading is above it, wherever its script
-   puts it in the part. A theme that gives the code a ground of its own sets --code-ground to it.
+/* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
+   it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
    LIMIT: the button covers the right end of the code's first line; scrolling sideways shows it. */
 :scope > figcaption { grid-row: 1; }
-:scope > pre, :scope > .copy { grid-row: 2; grid-column: 1; }
-:scope .copy {
-  justify-self: end; align-self: start; display: grid; place-items: center; width: 30px; height: 30px; margin: 0.4rem; padding: 0;
-  border: 0; border-radius: 999px; cursor: pointer;
-  background: var(--code-ground); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground));
-}
-:scope .copy:hover { background: color-mix(in srgb, var(--code-fg) 12%, var(--code-ground)); }
-/* Inside the button, which the part's rounded corners would cut, in the code's colour, which the accent is too faint on */
-:scope .copy:focus-visible { outline: 2px solid var(--code-fg); outline-offset: -2px; }
-:scope .copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
-:scope .copy svg + svg, :scope .copy.copied svg:first-child { display: none; }
-:scope .copy.copied svg + svg { display: block; color: var(--code-add); }
-:scope .copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-@media print { :scope .copy { display: none; } }
+:scope > pre, :scope > .floe-copy { grid-row: 2; grid-column: 1; }
+:scope > .floe-copy { justify-self: end; align-self: start; margin: 0.4rem; }
 }
 }
 </style>
@@ -271,24 +276,19 @@ over two lines.</p>
 <p>Text with <!-- raw HTML omitted -->Ctrl<!-- raw HTML omitted --> and an escaped *star*, &amp; &lt; &gt; &#34; &#39;.</p>
 
 <figure data-floe-part="code"><figcaption><span class="lang">go</span></figcaption><pre><code data-floe-copy="">func main() { fmt.Println(&#34;&lt;hi&gt;&#34;) }
-</code></pre><script>(// A button over the code of the part this script is in, that copies the text of its elements marked
-// data-floe-copy, each ended by a line break. words are its words in the page's language: copy, copied, failed.
-// LIMIT: HTML reads CR and CRLF as LF, so a diff of a CRLF file is copied with LF and does not apply. Keep the text
-// in an attribute too if diffs of CRLF files come to be copied.
-function copyButton(words) {
-  const part = document.currentScript.parentElement;
+</code></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
     `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'copy';
+  button.className = 'floe-copy';
   button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
   const status = document.createElement('span');
-  status.className = 'copy-status';
+  status.className = 'floe-copy-status';
   status.setAttribute('role', 'status');
   let timer;
-  // The press whose result shows: one pressed again before its copy ends is dropped
   let presses = 0;
   const show = (label, copied) => {
     button.classList.toggle('copied', copied);
@@ -299,8 +299,6 @@ function copyButton(words) {
     [...part.querySelectorAll('[data-floe-copy]')]
       .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
       .join('');
-  // The page's frame may not be let write the clipboard (VS Code's Simple Browser), where the copy command still
-  // writes; its event carries the text, so neither the focus nor the selection moves
   const command = (s) => {
     const put = (e) => {
       e.clipboardData.setData('text/plain', s);
@@ -321,7 +319,6 @@ function copyButton(words) {
     show(words.copy, false);
     status.textContent = '';
     const s = text();
-    // navigator.clipboard is missing where the page is not a secure context: that throws, not rejects
     let ok;
     try {
       await navigator.clipboard.writeText(s);
@@ -332,7 +329,6 @@ function copyButton(words) {
     if (press !== presses) return;
     const label = ok ? words.copied : words.failed;
     show(label, ok);
-    // In a later task than the emptying, so that the same words are read out again
     setTimeout(() => {
       status.textContent = label;
     }, 0);
@@ -342,7 +338,7 @@ function copyButton(words) {
     }, 1500);
   });
   show(words.copy, false);
-  part.append(button, status);
+  document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 <div data-floe-part="table"><table>
 <thead><tr><th scope="col"><code>code</code> in a title</th><th scope="col">Link</th></tr></thead>
