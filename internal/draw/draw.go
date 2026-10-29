@@ -32,11 +32,12 @@ import (
 // looked up in icons (nil for none kept): each part and item of a format from the inner ones out, then
 // page.html. The mistakes of the items are told together, a part
 // holding one that failed left undrawn. It checks the page drawn, its items of format html first (items.check),
-// and returns it as the parser read it, with its styles in its head and its headings given ids, written anew.
+// and returns it as the parser read it, with its styles in its head and its headings given ids, written anew,
+// and the warnings of its items.
 func Page(
 	k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[string]any, title string,
 	images fs.FS, imagesDir string, icons diagram.Icons,
-) ([]byte, error) {
+) ([]byte, []*usererr.Error, error) {
 	s := newItems(images, imagesDir, icons)
 	holds := map[string][]string{}
 	var found usererr.List
@@ -58,22 +59,22 @@ func Page(
 		return drawn, nil
 	})
 	if err != nil {
-		return nil, err //nolint:wrapcheck // floe's failure
+		return nil, nil, err //nolint:wrapcheck // floe's failure
 	}
 	if found != nil {
-		return nil, found.Sorted().Err()
+		return nil, nil, found.Sorted().Err()
 	}
 	page, err := t.Page(d.Lang)
 	if err != nil {
-		return nil, err //nolint:wrapcheck // floe's failure, which says what failed
+		return nil, nil, err //nolint:wrapcheck // floe's failure, which says what failed
 	}
 	var b bytes.Buffer
 	if err = page.Execute(&b, map[string]any{"Title": title, "Lang": d.Lang, "Data": data, "Calc": calc}); err != nil {
-		return nil, s.pageMistakes(t, err)
+		return nil, nil, s.pageMistakes(t, err)
 	}
 	tree, named, err := readPage(k, d, s, b.Bytes())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for name, parts := range holds {
 		named.uses[name] = append(named.uses[name], parts...)
@@ -83,7 +84,7 @@ func Page(
 	}
 	sheets, err := pageStyle(k, theme, named, t.CSS())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	withStyles(tree, sheets)
 	withHeadingIDs(tree)
@@ -92,9 +93,9 @@ func Page(
 	// other inputs, or drops a nested one. Write the forms apart if a template comes to rely on them (the CSP's
 	// form-action 'none' sends none anyway).
 	if err := html.Render(&out, tree); err != nil {
-		return nil, fmt.Errorf("draw: write the page: %w", err)
+		return nil, nil, fmt.Errorf("draw: write the page: %w", err)
 	}
-	return out.Bytes(), nil
+	return out.Bytes(), s.warnings, nil
 }
 
 // readPage reads src, the page drawn from d with the items s, as a browser does, checks its items of format
@@ -202,11 +203,15 @@ func (s *items) pageMistakes(t *kit.Template, err error) error {
 	return mistakes.Err()
 }
 
-// drawItem draws it, an item of d, ready as Walk made it: a part's by its part.html (drawPart); one of a format
+// drawItem draws it, an item of d, ready as Walk made it: a part's by its part.html (drawPart), a fence in a text
+// part noted as a warning in s; one of a format
 // of floe's from its text, refused at the item for another value: markdown as markdown draws it, html marked for
 // s to check in the page drawn, an image as the data URI of the file it names, read by s.
 func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any, error) {
 	if it.Part != "" {
+		if text, ok := it.Value.(string); ok && it.Part == kit.TextPart && kit.Fenced(text) {
+			s.warnings = append(s.warnings, yamlpos.New(d.File, d.PosOf(it.At), "draw_text_fence"))
+		}
 		return drawPart(k, d, it, ready, s)
 	}
 	text, ok := it.Value.(string)

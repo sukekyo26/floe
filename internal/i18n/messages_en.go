@@ -130,6 +130,7 @@ var messagesEN = map[string]string{
 	"draw_zgotmplz":     "the page drawn from this file has ZgotmplZ in %s: html/template wrote it for a value it does not take there; change the value, or where the template puts it",
 	"draw_meta":         "the page drawn from this file has %s, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out",
 	"draw_noscript":     "the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out",
+	"draw_text_fence":   "write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button",
 	"draw_not_text":     "an item of format %s takes text: write it as text, in quotes where YAML would read a number, true, false or null",
 	"draw_html_whole":   "HTML changes the page around it at %s: close in it each element and comment it opens, and close no element it did not open",
 	"draw_page_cut":     "the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html, a part.html or an item of format html)",

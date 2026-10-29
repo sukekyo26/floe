@@ -27,6 +27,7 @@ func served(t *testing.T) (env map[string]string, dir string) {
 		"home/p/img/a.png":           "\x89PNG\r\n\x1a\n0000",
 		"home/p/gone.yaml":           "lang: en\ntemplate: pic\ni: [img/none.png]\n",
 		"home/p/h.html":              "<title>H</title>",
+		"home/p/w.yaml":              "lang: en\ntemplate: report\nsections:\n  - parts:\n      - text: \"```\\ncode\\n```\"\n",
 	})
 	return s.Env, filepath.Join(s.Dir, "home", "p")
 }
@@ -47,6 +48,8 @@ func TestPublishThroughServer(t *testing.T) {
 		{[]string{"publish", "d.yaml", "--title", "Kept"}, 0, url + "/a/d/\n", `updated "d" (last published `},
 		{[]string{"publish", "gone.yaml"}, 1, "", "img/none.png: no such file or directory\n"},
 		{[]string{"publish", "--link", "h.html"}, 0, url + "/a/h/\n", ""},
+		{[]string{"publish", "w.yaml"}, 0, url + "/a/w/\n", "w.yaml:5:15: warning: write code in a code part"},
+		{[]string{"publish", "--link", "w.yaml", "--slug", "wl"}, 0, url + "/a/wl/\n", "w.yaml:5:15: warning: write code in a code part"},
 		{[]string{"publish", "--link", "h.html", "--theme", "ink"}, 1, "", "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is\n"},
 		{[]string{"list"}, 0, "\th\tH\t", ""},
 		{[]string{"rebuild"}, 0, "", ""},

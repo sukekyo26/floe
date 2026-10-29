@@ -132,6 +132,8 @@ type Entry struct {
 	Images map[string][]byte
 	// Prev is the entry this one overwrites, nil for a new slug.
 	Prev *Meta
+	// Warnings are those of the page drawn, which Save does not keep.
+	Warnings []*usererr.Error
 
 	// What settle builds Meta from, with the link's path, the data's title: and the theme of the Meta
 	// it replaces: the publish's options and the project published from.
@@ -205,7 +207,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	}
 	images := &recorder{fsys: sent, names: nil, seen: map[string]bool{}}
 	o := tmpl.Options{Theme: opts.theme(), Untitled: *opts.Slug, Images: images, ImagesDir: "", Icons: dw.Icons}
-	page, drawErr := tmpl.Draw(dw.Kit, up.File, up.Source, o)
+	page, warnings, drawErr := tmpl.Draw(dw.Kit, up.File, up.Source, o)
 	var mistakes usererr.List
 	if failed := mistakes.Add(drawErr); failed != nil {
 		return nil, failed
@@ -226,6 +228,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 		return nil, err
 	}
 	e.Page = page
+	e.Warnings = warnings
 	e.Images = map[string][]byte{}
 	for _, name := range images.names {
 		if b, ok := up.Images[name]; ok {
@@ -258,7 +261,7 @@ func imagesApart(file string, images map[string][]byte) error {
 func (s *Store) storedPage(file string, src []byte, opts Options, from string) (*Entry, error) {
 	e := &Entry{
 		Slug: *opts.Slug, Meta: seedMeta("", file, src, opts.theme()), Source: src, Page: nil, Images: nil,
-		Prev: nil, opts: opts, from: from, named: "",
+		Prev: nil, Warnings: nil, opts: opts, from: from, named: "",
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, err
@@ -284,6 +287,7 @@ func (s *Store) PrepareLink(
 		return nil, err
 	}
 	var data []byte
+	var warnings []*usererr.Error
 	if files.IsDataFile(path) {
 		if dw.Err != nil {
 			return nil, dw.Err
@@ -291,7 +295,7 @@ func (s *Store) PrepareLink(
 		data = src
 		images := files.NewRoot(filepath.Dir(path))
 		o := tmpl.Options{Theme: opts.theme(), Untitled: slug, Images: images, ImagesDir: "", Icons: dw.Icons}
-		_, err = tmpl.Draw(dw.Kit, path, src, o)
+		_, warnings, err = tmpl.Draw(dw.Kit, path, src, o)
 		_ = images.Close() //nolint:errcheck // only read from
 		if err != nil {
 			return nil, err //nolint:wrapcheck // mistakes at their places, for the caller to show
@@ -303,7 +307,7 @@ func (s *Store) PrepareLink(
 	}
 	e := &Entry{
 		Slug: slug, Meta: seedMeta(path, path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
-		opts: opts, from: project.Name(ctx, filepath.Dir(path)), named: named,
+		Warnings: warnings, opts: opts, from: project.Name(ctx, filepath.Dir(path)), named: named,
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, err

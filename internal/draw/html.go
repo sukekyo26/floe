@@ -41,6 +41,7 @@ type items struct {
 	read      map[string]image
 	icons     diagram.Icons
 	diagrams  int
+	warnings  []*usererr.Error // of the items drawn
 }
 
 // image is an image read, or its mistake.
@@ -55,7 +56,7 @@ type image struct {
 func newItems(images fs.FS, imagesDir string, icons diagram.Icons) *items {
 	return &items{
 		secret: strings.ToLower(rand.Text()), html: nil, texts: nil, images: images, imagesDir: imagesDir,
-		read: map[string]image{}, icons: icons, diagrams: 0,
+		read: map[string]image{}, icons: icons, diagrams: 0, warnings: nil,
 	}
 }
 

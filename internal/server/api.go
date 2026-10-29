@@ -112,7 +112,7 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 		refuse(w, r, err)
 		return
 	}
-	sendSaved(w, entry)
+	sendSaved(w, r, entry)
 }
 
 // decodeStrict reads body as a T as encoding/json/v2 does, the one reading of a write: refusing anything but an
@@ -147,11 +147,13 @@ type Upload struct {
 	Force       bool              `json:"force"`
 }
 
-// Saved is a page a publish or an added link stored, and what it replaced (nil for a new slug).
+// Saved is a page a publish or an added link stored, what it replaced (nil for a new slug), and the warnings of
+// the page drawn, told in the reader's language.
 type Saved struct {
-	Slug  string     `json:"slug"`
-	Title string     `json:"title"`
-	Prev  *SavedPrev `json:"prev"`
+	Slug     string         `json:"slug"`
+	Title    string         `json:"title"`
+	Prev     *SavedPrev     `json:"prev"`
+	Warnings []usererr.Told `json:"warnings,omitempty"`
 }
 
 // SavedPrev is the page a publish replaced.
@@ -165,8 +167,8 @@ type ImagesNeeded struct {
 	Images []string `json:"images"`
 }
 
-// sendSaved answers the entry a write saved: 201 for a new slug, 200 for one replaced.
-func sendSaved(w http.ResponseWriter, entry *store.Entry) {
+// sendSaved answers the entry a write of r saved: 201 for a new slug, 200 for one replaced.
+func sendSaved(w http.ResponseWriter, r *http.Request, entry *store.Entry) {
 	status := http.StatusOK
 	var prev *SavedPrev
 	if entry.Prev == nil {
@@ -174,7 +176,8 @@ func sendSaved(w http.ResponseWriter, entry *store.Entry) {
 	} else {
 		prev = &SavedPrev{Title: entry.Prev.Title, UpdatedAt: entry.Prev.UpdatedAt}
 	}
-	sendJSON(w, status, Saved{Slug: entry.Slug, Title: entry.Meta.Title, Prev: prev})
+	warnings := usererr.Warn(catalog(r), entry.Warnings)
+	sendJSON(w, status, Saved{Slug: entry.Slug, Title: entry.Meta.Title, Prev: prev, Warnings: warnings})
 }
 
 // save stores the data file the CLI sends as the page slug: 201 for a new slug, 200 for one replaced,
@@ -216,7 +219,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		refuse(w, r, err)
 		return
 	}
-	sendSaved(w, entry)
+	sendSaved(w, r, entry)
 }
 
 // rebuild draws every stored page again with the drawing of now (store.Rebuild): 204, or its mistakes.

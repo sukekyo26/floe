@@ -130,15 +130,24 @@ func replaced(n *html.Node) string {
 	return strings.ReplaceAll(tag[:strings.IndexByte(tag, '>')+1], "\n", " ")
 }
 
-// names are the names of the parts of a Kit, and of its parts and looks, each sorted.
+// names are the names of the parts and looks of a Kit, all of them, and those a mistake offers: the parts and the
+// looks without a part of no CSS (text, script), which gives a box no style. Each is sorted.
 type names struct {
-	parts, all []string
+	all, parts, offered []string
 }
 
 // namesIn returns the names of k.
 func namesIn(k *kit.Kit) names {
 	parts, looks, _, _ := k.Names()
-	return names{parts: parts, all: slices.Sorted(slices.Values(slices.Concat(parts, looks)))}
+	styled := slices.DeleteFunc(slices.Clone(parts), func(name string) bool {
+		p, _ := k.Part(name)
+		return len(p.CSS()) == 0
+	})
+	return names{
+		all:     slices.Sorted(slices.Values(slices.Concat(parts, looks))),
+		parts:   styled,
+		offered: slices.Sorted(slices.Values(slices.Concat(styled, looks))),
+	}
 }
 
 // checkNames refuses, by refuse, the element n's data-floe-part that names no part (empty: the boundary of the
@@ -170,7 +179,7 @@ func checkNames(
 	if value, ok := attrOf(n, "data-floe-look"); ok {
 		for _, name := range fields(value) {
 			if !slices.Contains(ns.all, name) {
-				refuse("draw_part_unknown", name, strings.Join(ns.all, ", "))
+				refuse("draw_part_unknown", name, strings.Join(ns.offered, ", "))
 				continue
 			}
 			taken[name] = true

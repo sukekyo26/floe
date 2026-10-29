@@ -224,10 +224,12 @@ type Told struct {
 	Text   string `json:"text"`
 }
 
-// Report is an error as told: the user's mistakes, or what floe failed at, never both.
+// Report is an error as told: the user's mistakes, or what floe failed at, never both; and the warnings of what
+// was drawn, with the mistakes or alone. Render tells a failure alone, its warnings left out.
 type Report struct {
 	Mistakes []Told `json:"mistakes,omitempty"`
 	Failure  string `json:"failure,omitempty"`
+	Warnings []Told `json:"warnings,omitempty"`
 }
 
 // Tell words err in the language of c: its mistakes, as List.Add takes them, in the order given, each told
@@ -242,21 +244,34 @@ func Tell(c *i18n.Catalog, err error) Report {
 	}
 	var all List
 	if failed := all.Add(err); failed != nil {
-		return Report{Mistakes: nil, Failure: cmp.Or(failed.Error(), fmt.Sprintf("%T", failed))}
+		return Report{Mistakes: nil, Failure: cmp.Or(failed.Error(), fmt.Sprintf("%T", failed)), Warnings: nil}
 	}
 	if len(all) == 0 {
-		return Report{Mistakes: nil, Failure: fmt.Sprintf("%T with no mistake", err)}
+		return Report{Mistakes: nil, Failure: fmt.Sprintf("%T with no mistake", err), Warnings: nil}
 	}
-	r := Report{Mistakes: make([]Told, 0, len(all)), Failure: ""}
+	return Report{Mistakes: worded(c, all), Failure: "", Warnings: nil}
+}
+
+// Warn words warnings, advice on what was drawn, in the language of c as Tell words mistakes: in the order Sorted
+// gives a copy of them, each told once. A warning is an *Error carried apart from the error, never in it: not in
+// a List, which is one.
+func Warn(c *i18n.Catalog, warnings []*Error) []Told {
+	return worded(c, List(slices.Clone(warnings)).Sorted())
+}
+
+// worded words l in the language of c, in order, each told once: one worded at the same place as one before it is
+// left out, wherever it was made.
+func worded(c *i18n.Catalog, l List) []Told {
+	all := make([]Told, 0, len(l))
 	told := map[Told]bool{}
-	for _, e := range all {
+	for _, e := range l {
 		t := Told{File: e.file, Line: e.line, Column: e.column, At: e.at, Text: c.Msg(e.Key, e.Args...)}
 		if !told[t] {
 			told[t] = true
-			r.Mistakes = append(r.Mistakes, t)
+			all = append(all, t)
 		}
 	}
-	return r
+	return all
 }
 
 // reporter is an error that carries a report told already.
@@ -266,24 +281,29 @@ type reporter interface {
 }
 
 // Render lays r out, the only place that does: each mistake on a line, after where it is,
-// file:line:column, or as much of it as it has; name before each that is not at a place, and before
-// floe's failure. The command line names floe so; a page in the browser names nothing ("").
+// file:line:column, or as much of it as it has, then each warning so, its text after "warning: "; name before
+// each that is not at a place, and before floe's failure, which is told alone. The command line names floe so;
+// a page in the browser names nothing ("").
 func (r Report) Render(name string) string {
 	if r.Failure != "" {
 		return name + r.Failure
 	}
-	lines := make([]string, len(r.Mistakes))
-	for i, t := range r.Mistakes {
-		lines[i] = t.line()
-		if t.File == "" {
-			lines[i] = name + lines[i]
-		}
+	lines := make([]string, 0, len(r.Mistakes)+len(r.Warnings))
+	for _, t := range r.Mistakes {
+		lines = append(lines, t.line(name))
+	}
+	for _, t := range r.Warnings {
+		// LIMIT: the word is English, as only the command line lays warnings out; take it from the catalog if a
+		// page comes to show them.
+		t.Text = "warning: " + t.Text
+		lines = append(lines, t.line(name))
 	}
 	return strings.Join(lines, "\n")
 }
 
-// line lays t out after where it is: file:line:column, or as much of it as it has, then a JSON pointer.
-func (t Told) line() string {
+// line lays t out after where it is: file:line:column, or as much of it as it has, then a JSON pointer; after
+// name when it is at no file.
+func (t Told) line(name string) string {
 	var where []string
 	switch {
 	case t.File == "":
@@ -297,5 +317,9 @@ func (t Told) line() string {
 	if t.At != "" {
 		where = append(where, t.At)
 	}
-	return strings.Join(append(where, t.Text), ": ")
+	line := strings.Join(append(where, t.Text), ": ")
+	if t.File == "" {
+		return name + line
+	}
+	return line
 }

@@ -1,0 +1,20 @@
+lang: en
+template: report
+title: Warnings
+sections:
+  - heading: A fence in text
+    parts:
+      - text: |
+          Run this:
+
+          ```sh
+          ls
+          ```
+      - text: "```x``` is code in a line, which is no fence"
+      - details:
+          title: In details
+          parts:
+            - text: |
+                ~~~
+                in details
+                ~~~

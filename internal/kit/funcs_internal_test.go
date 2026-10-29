@@ -26,3 +26,24 @@ func TestMarkdown(t *testing.T) {
 		}
 	}
 }
+
+// Fenced finds a fenced code block as goldmark reads it, in a list or a quote and unclosed too, and no code in a
+// line, in a table or indented.
+func TestFenced(t *testing.T) {
+	t.Parallel()
+
+	for src, want := range map[string]bool{
+		"Run this:\n\n```sh\nls\n```\n":                true,
+		"- item\n\n  ~~~\n  nested in a list\n  ~~~\n": true,
+		"> quote\n>\n> ```\n> q\n> ```\n":              true,
+		"```\nunclosed fence":                          true,
+		"```x``` is inline code, not a fence":          false,
+		"Para.\n\n    ```\n    indented four\n":        false,
+		"- item\n\n      indented in list\n":           false,
+		"| a |\n|---|\n| `x` |\n":                      false,
+	} {
+		if got := Fenced(src); got != want {
+			t.Errorf("Fenced(%q) = %v, want %v", src, got, want)
+		}
+	}
+}

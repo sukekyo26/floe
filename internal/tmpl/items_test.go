@@ -67,7 +67,7 @@ func TestHTMLItems(t *testing.T) {
 		{section, `<svg><title><meta http-equiv="refresh" content="0"></title></svg>`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{section, "<style>p{}</style>", "d.yaml:2:11: the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css"},
 		{section, "<noscript><p>x</p></noscript>", "d.yaml:2:11: the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out"},
-		{section, `<span data-floe-part="nope">x</span>`, "d.yaml:3:4: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree"},
+		{section, `<span data-floe-part="nope">x</span>`, "d.yaml:3:4: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, note, options, progress, risks, stack, stats, steps, table, tabs, terminal, timeline, tree"},
 		{htmlPage("<p>{{.Data.h}}</p>"), "<table><tr><td>x</td></tr></table>", "d.yaml:3:4: HTML changes the page around it at </p>: close in it each element and comment it opens, and close no element it did not open"},
 		{htmlPage("<p><b>{{.Data.t}}</p><div>{{.Data.h}}</div>"), "plain", ""},
 		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), "<tr><td>x</td></tr>", ""},
@@ -88,7 +88,7 @@ func TestHTMLItems(t *testing.T) {
 	} {
 		k := ownKit(t, nil, mine(tt.page, htmlSchema, nil))
 		data := "lang: en\ntemplate: mine\nh: " + quoted(tt.h) + "\nt: t\n"
-		page, err := tmpl.Draw(k, "d.yaml", []byte(data), none)
+		page, _, err := tmpl.Draw(k, "d.yaml", []byte(data), none)
 		got := ""
 		if err != nil {
 			got = told(err)
@@ -186,7 +186,7 @@ func TestPartHTMLItems(t *testing.T) {
 		{"in a function", `<div data-floe-part="ph">{{num .h}}</div>`, "{{.in}}", "{{.Data.p}}", `p: {h: "<b>x</b>"}`, "d.yaml:3:5: num takes a number, not <b>x</b> (template.HTML)", ""},
 	} {
 		k := ownKit(t, parts(tt.ph, tt.po), mine(htmlPage(tt.body), schema, nil))
-		page, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\n"+tt.data+"\n"), none)
+		page, _, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\n"+tt.data+"\n"), none)
 		got := ""
 		if err != nil {
 			got = told(err)
@@ -251,19 +251,19 @@ func TestImageItems(t *testing.T) {
 	images := files.NewRoot(dir)
 	t.Cleanup(func() { _ = images.Close() })
 	o := tmpl.Options{Theme: "", Untitled: "", Images: images, ImagesDir: ""}
-	page, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni: [ok.png, ok.svg, .hidden.png, in.png, sub/in.png]\n"), o)
+	page, _, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni: [ok.png, ok.svg, .hidden.png, in.png, sub/in.png]\n"), o)
 	if err != nil {
 		t.Fatalf("told\n%s", told(err))
 	}
 	if !bytes.Contains(page, []byte(`src="data:image/png;base64,iVBORw0KGgowMDAw`)) || !bytes.Contains(page, []byte(`src="data:image/svg+xml;base64,`)) {
 		t.Errorf("no data URI in\n%s", page)
 	}
-	_, err = tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\ni: [./ok.png]\n"), o)
+	_, _, err = tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\ni: [./ok.png]\n"), o)
 	if got, want := told(err), "d.yaml:3:5: \"./ok.png\" is not a path floe reads under the directory of d.yaml: write it relative to that directory, with one / between names, without ./ (write pic.png for ./pic.png), .., or a / at either end"; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 	data := "lang: en\ntemplate: mine\ni:\n  - missing.png\n  - missing.png\n  - esc.png\n  - dir.png\n  - fifo.png\n  - x.bmp\n  - ./ok.png\n  - ../ok.png\n  - large.png\n"
-	_, err = tmpl.Draw(k, "x/d.yaml", []byte(data), o)
+	_, _, err = tmpl.Draw(k, "x/d.yaml", []byte(data), o)
 	if got, want := told(err), lines(
 		"x/missing.png: no such file or directory",
 		"x/esc.png: path escapes from parent",
@@ -295,11 +295,11 @@ func TestImagesDirUnreadable(t *testing.T) {
 	images := files.NewRoot(dir)
 	t.Cleanup(func() { _ = images.Close() })
 	o := tmpl.Options{Theme: "", Untitled: "", Images: images, ImagesDir: ""}
-	_, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni: [a.png, b.png]\n"), o)
+	_, _, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni: [a.png, b.png]\n"), o)
 	if got, want := told(err), "x: permission denied"; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
-	if _, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni: []\n"), o); err != nil {
+	if _, _, err := tmpl.Draw(k, "x/d.yaml", []byte("lang: en\ntemplate: mine\ni: []\n"), o); err != nil {
 		t.Errorf("a page of no image: told\n%s", told(err))
 	}
 }
@@ -344,7 +344,7 @@ func TestSelectText(t *testing.T) {
 		{"<svg><select><xmp>x</xmp></select></svg>", ""},
 	} {
 		k := ownKit(t, nil, mine(section, htmlSchema, nil))
-		_, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nh: "+quoted(tt.h)+"\nt: t\n"), none)
+		_, _, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nh: "+quoted(tt.h)+"\nt: t\n"), none)
 		got := ""
 		if err != nil {
 			got = told(err)

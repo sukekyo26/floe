@@ -35,7 +35,7 @@ func TestDrawExamples(t *testing.T) {
 	for _, name := range templates {
 		tpl, _ := k.Template(name)
 		for _, theme := range themes {
-			if _, err := tmpl.Draw(k, name+".yaml", tpl.Example(), tmpl.Options{Theme: theme, Untitled: "", ImagesDir: ""}); err != nil {
+			if _, _, err := tmpl.Draw(k, name+".yaml", tpl.Example(), tmpl.Options{Theme: theme, Untitled: "", ImagesDir: ""}); err != nil {
 				t.Errorf("%s in %s: %s", name, theme, told(err))
 			}
 		}
@@ -50,11 +50,11 @@ func TestDrawTwiceSame(t *testing.T) {
 	k := floeKit(t)
 	tpl, _ := k.Template("report")
 	o := tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""}
-	first, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
+	first, _, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	second, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
+	second, _, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
 	if err != nil {
 		t.Fatal(told(err))
 	}
