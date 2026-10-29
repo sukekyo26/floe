@@ -29,4 +29,4 @@ h2 { font-size: 1.15rem; }
 .state { font-size: 0.8rem; font-weight: 700; padding: 0.05rem 0.6rem; border-radius: 99px; white-space: nowrap; background: var(--accent-soft); color: var(--accent); }
 .state.done { background: var(--good-soft); color: var(--good); }
 .state.todo { background: var(--warn-soft); color: var(--warn); }
-.ref { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); }
+.ref { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
