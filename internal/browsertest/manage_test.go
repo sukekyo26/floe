@@ -303,6 +303,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.activeElement.textContent"))
 	b.eval("document.getElementById('bulk-page').click()")
 	out = append(out, b.eval("document.getElementById('bulk-count').textContent"))
+	// Shown before they hide, as on a slow machine, which clears the rows long after it selected them.
+	b.until("the selected rows' actions to show", "getComputedStyle(document.querySelector('#list li[data-slug=a] .more')).opacity === '1'")
 	b.eval("document.getElementById('bulk-clear').click(); document.activeElement.blur()")
 	// With a mouse, a row's actions show only where pointed at, reached by keyboard or selected; a pressed star always.
 	out = append(out, opacity("a", ".star")+opacity("a", ".more")+opacity("c", ".star")+opacity("c", ".more"))
