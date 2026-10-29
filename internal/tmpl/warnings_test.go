@@ -91,29 +91,25 @@ func TestWarnFenceInMore(t *testing.T) {
 	}
 }
 
-// A fence in the text of a step, in floe's templates whose example has steps, is warned of at the value.
+// A fence in the text of a step of runbook, in its steps and in its rollback, is warned of at the value.
 func TestWarnFenceInSteps(t *testing.T) {
 	t.Parallel()
 
 	k := floeKit(t)
-	_, _, _, templates := k.Names()
-	checked := 0
-	for _, name := range templates {
-		tp, _ := k.Template(name)
-		lines := strings.Split(string(tp.Example()), "\n")
-		at := slices.Index(lines, "steps:")
-		if at < 0 {
-			continue
-		}
-		checked++
-		lines = slices.Insert(lines, at+1, "  - { title: t, text: \"```\\nls\\n```\" }")
-		_, warnings, err := tmpl.Draw(k, "d.yaml", []byte(strings.Join(lines, "\n")), none)
-		if want := fmt.Sprintf("d.yaml:%d:23: warning: %s", at+2, fence); err != nil || laid(warnings) != want {
-			t.Errorf("%s: %s\nwant\n%s\n%s", name, laid(warnings), want, told(err))
-		}
+	tp, _ := k.Template("runbook")
+	lines := strings.Split(string(tp.Example()), "\n")
+	step := "  - { title: t, text: \"```\\nls\\n```\" }"
+	steps, back := slices.Index(lines, "steps:"), slices.Index(lines, "rollback:")
+	if steps < 0 || back < steps {
+		t.Fatal("runbook's example has no steps, or no rollback after them")
 	}
-	if checked == 0 {
-		t.Error("no example of floe's templates has steps")
+	// The rollback's goes in first, so that steps' leaves the line of rollback: one further down.
+	lines = slices.Insert(lines, back+1, step)
+	lines = slices.Insert(lines, steps+1, step)
+	_, warnings, err := tmpl.Draw(k, "d.yaml", []byte(strings.Join(lines, "\n")), none)
+	want := fmt.Sprintf("d.yaml:%d:23: warning: %s\nd.yaml:%d:23: warning: %s", steps+2, fence, back+3, fence)
+	if err != nil || laid(warnings) != want {
+		t.Errorf("%s\nwant\n%s\n%s", laid(warnings), want, told(err))
 	}
 }
 
