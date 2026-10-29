@@ -3,9 +3,11 @@ package kit
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -146,7 +148,8 @@ func TestCopyButton(t *testing.T) {
 	}
 }
 
-// A bar's width is its share of the longest value, and every bar is 0 wide when all the values are 0.
+// A bar's width is its share of the longest value, and every bar is 0 wide when all the values are 0; a value below
+// 0, which would make a width CSS drops, is refused, and -0 is 0 wide.
 func TestBarsOf(t *testing.T) {
 	t.Parallel()
 
@@ -157,6 +160,10 @@ func TestBarsOf(t *testing.T) {
 	}{
 		{[]any{1, 4, 2.5}, "25 100 62.5"},
 		{[]any{0, 0}, "0 0"},
+		{[]any{math.Copysign(0, -1), 4}, "0 100"},
+		{[]any{3, -2}, "bars takes a number of 0 or more, not -2"},
+		{[]any{3, -0.5}, "bars takes a number of 0 or more, not -0.5"},
+		{[]any{3, "x"}, "bars takes a number, not x (string)"},
 	} {
 		items := make([]any, 0, len(c.values))
 		for _, v := range c.values {
@@ -167,8 +174,12 @@ func TestBarsOf(t *testing.T) {
 		for _, b := range bars {
 			widths = append(widths, fmt.Sprint(b.Width))
 		}
-		if got := strings.Join(widths, " "); err != nil || got != c.want {
-			t.Errorf("barsOf(%v) = %q, %v; want %q", c.values, got, err, c.want)
+		got := strings.Join(widths, " ")
+		if err != nil {
+			got = usererr.Tell(i18n.EnglishCatalog(), err).Render("")
+		}
+		if got != c.want {
+			t.Errorf("barsOf(%v) = %q; want %q", c.values, got, c.want)
 		}
 	}
 }

@@ -79,6 +79,7 @@ var messagesEN = map[string]string{
 	"kit_bad_name":               "floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it",
 	"kit_name_theme_file":        "%s names a file of every theme (%[1]s.css), which a theme's CSS for this part would be read as: give it another name",
 	"kit_asset_unknown":          `assets/ has no "%s": name a file under it, as a path from assets/ like img/logo.svg`,
+	"kit_below_zero":             "%s takes a number of 0 or more, not %s",
 	"kit_example_name":           "example.yaml names the template %s; name it %s, after the template's directory",
 	"kit_for_undeclared":         "for %s: the schema allows no %s there; write a path of keys its schema declares",
 	"kit_not_number":             "%s takes a number, not %s",
