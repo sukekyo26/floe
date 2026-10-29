@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+</head>
+<body>
+<header class="slide cover" data-floe-look="band">
+<h1>{{.Title}}</h1>
+{{- with .Data.subtitle}}<p class="subtitle">{{markdownLine .}}</p>{{end}}
+<p class="hint">{{word "hint"}}</p>
+</header>
+{{- /* The number of a slide is the list's counter, and the count of them each slide's data-total, which CSS reads */}}
+{{- $total := len .Data.slides}}
+<ol class="slides">
+{{- range .Data.slides}}
+<li class="slide{{if not .parts}} divider{{end}}" data-total="{{$total}}"{{if not .parts}} data-floe-look="band"{{end}}>
+<h2>{{markdownLine .heading}}</h2>
+{{- with .parts}}
+<div class="content">
+{{- range .}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</div>
+{{- end}}
+</li>
+{{- end}}
+</ol>
+</body>
+</html>

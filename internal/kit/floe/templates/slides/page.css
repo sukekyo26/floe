@@ -1,0 +1,29 @@
+/* The colours and faces are the theme's palette; the page lays them out: a cover on the band, then each slide as
+   tall as the screen, stopped at by the scroll, its number and the count in the corner; a slide of a heading alone is
+   on the band too.
+   LIMIT: a slide taller than the screen scrolls inside itself; its parts are not made to fit, nor drawn larger (the
+   browser's zoom does that)
+   LIMIT: a slide taller than a page in print runs over several, its number on the last alone
+   LIMIT: the stop at each slide, a page a slide in print and the numbers are not tested; they were looked at when the
+   template was made */
+:scope { scroll-snap-type: y mandatory; }
+body { margin: 0; font-size: 16px; line-height: 1.6; }
+.slide { box-sizing: border-box; min-height: 100svh; scroll-snap-align: start; position: relative; display: flex; flex-direction: column; justify-content: center; gap: 4svh; padding: 6svh 8vw; border-bottom: 1px solid var(--line); }
+.cover { gap: 1.5rem; }
+.cover h1 { font-size: clamp(2.2rem, 6vw, 4.5rem); line-height: 1.2; max-width: 20ch; }
+.subtitle { font-size: clamp(1.1rem, 2.2vw, 1.7rem); max-width: none; }
+.hint { position: absolute; bottom: 3svh; left: 8vw; font-size: 0.9rem; }
+/* Off base's list: the slides fill the width, one under the next, numbered by a counter of their own */
+.slides { list-style: none; padding: 0; margin: 0; max-width: none; display: block; counter-reset: floe-slide; }
+.slides > li { counter-increment: floe-slide; }
+.slides > li::after { content: counter(floe-slide) " / " attr(data-total); content: counter(floe-slide) " / " attr(data-total) / ""; position: absolute; right: 3vw; bottom: 3svh; font-family: var(--mono); color: var(--muted); font-size: 1rem; }
+.slides > li.divider::after { color: inherit; }
+.slide h2 { font-size: clamp(1.7rem, 4vw, 3rem); line-height: 1.25; }
+.divider h2 { font-size: clamp(2rem, 5vw, 3.6rem); }
+.content { display: grid; gap: 1rem; }
+@media print {
+  @page { size: landscape; margin: 0; }
+  :scope { scroll-snap-type: none; }
+  .slide { min-height: 100vh; break-after: page; border: none; }
+  .hint { display: none; }
+}

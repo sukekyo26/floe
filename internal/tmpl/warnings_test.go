@@ -113,6 +113,24 @@ func TestWarnFenceInSteps(t *testing.T) {
 	}
 }
 
+// A fence in a text part of a slide is warned of at the value.
+func TestWarnFenceInSlides(t *testing.T) {
+	t.Parallel()
+
+	k := floeKit(t)
+	tp, _ := k.Template("slides")
+	lines := strings.Split(string(tp.Example()), "\n")
+	at := slices.Index(lines, "    parts:")
+	if at < 0 {
+		t.Fatal("slides' example has no slide of parts")
+	}
+	lines = slices.Insert(lines, at+1, "      - text: \"```\\nls\\n```\"")
+	_, warnings, err := tmpl.Draw(k, "d.yaml", []byte(strings.Join(lines, "\n")), none)
+	if want := fmt.Sprintf("d.yaml:%d:15: warning: %s", at+2, fence); err != nil || laid(warnings) != want {
+		t.Errorf("%s\nwant\n%s\n%s", laid(warnings), want, told(err))
+	}
+}
+
 const fence = "this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button"
 
 // laid lays warnings out as the command line does.
