@@ -5,7 +5,7 @@ closes.yaml:7:15: HTML changes the page around it at </section>: close in it eac
 comment.yaml:7:15: HTML changes the page around it at <!--: close in it each element and comment it opens, and close no element it did not open
 cut.yaml:7:15: HTML changes the page around it at </b: close in it each element and comment it opens, and close no element it did not open
 meta.yaml:1:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out
-name.yaml:7:15: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
+name.yaml:7:15: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, text, timeline, tree
 noscript.yaml:1:11: the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out
 number.yaml:7:15: got number, want string
 open.yaml:7:15: HTML changes the page around it at <b>: close in it each element and comment it opens, and close no element it did not open
@@ -30,7 +30,7 @@ meta.yaml:1:11: the page drawn from this file has <meta http-equiv="refresh" con
 $ floe render --out-dir $TMP/pages/name.yaml name.yaml
 exit 1
 --- stderr
-name.yaml:7:15: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
+name.yaml:7:15: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, text, timeline, tree
 $ floe render --out-dir $TMP/pages/noscript.yaml noscript.yaml
 exit 1
 --- stderr
@@ -58,7 +58,7 @@ closes.yaml:7:15: HTML changes the page around it at </section>: close in it eac
 comment.yaml:7:15: HTML changes the page around it at <!--: close in it each element and comment it opens, and close no element it did not open
 cut.yaml:7:15: HTML changes the page around it at </b: close in it each element and comment it opens, and close no element it did not open
 meta.yaml:1:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out
-name.yaml:7:15: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, timeline, tree
+name.yaml:7:15: the page drawn from this file names the part nope, which there is none of; use bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, note, options, progress, risks, script, stack, stats, steps, table, tabs, terminal, text, timeline, tree
 noscript.yaml:1:11: the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out
 number.yaml:7:15: got number, want string
 open.yaml:7:15: HTML changes the page around it at <b>: close in it each element and comment it opens, and close no element it did not open

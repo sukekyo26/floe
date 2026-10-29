@@ -143,7 +143,9 @@ func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing) ([
 	images := files.NewRoot(filepath.Dir(file))
 	defer images.Close() //nolint:errcheck // only read from
 	o := tmpl.Options{Theme: m.Theme, Untitled: slug, Images: images, ImagesDir: "", Icons: drawing.Icons}
-	return tmpl.Draw(drawing.Kit, file, src, o) //nolint:wrapcheck // its mistakes, or what failed
+	// Its warnings are the writer's, whom publish and check tell; one who opens the page cannot mend them.
+	page, _, err := tmpl.Draw(drawing.Kit, file, src, o)
+	return page, err //nolint:wrapcheck // its mistakes, or what failed
 }
 
 // servePage answers /a/{slug}/{rest...}. The page URL itself is the frame (the management page with the page's

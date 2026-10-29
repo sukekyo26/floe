@@ -37,7 +37,8 @@
             "circle": { "$ref": "#/$defs/circle" },
             "label": { "$ref": "#/$defs/label" },
             "line": { "$ref": "#/$defs/line" },
-            "raw": { "$ref": "#/$defs/raw" }
+            "raw": { "$ref": "#/$defs/raw" },
+            "tree": { "$ref": "#/$defs/tree" }
           }
         }
       }
@@ -57,7 +58,7 @@
     "side": { "enum": ["top", "right", "bottom", "left"] },
     "origin": { "enum": ["left", "centre"], "description": "What x is: the left edge (the default) or the centre" },
     "end": {
-      "description": "The name of a part or a named row, or a point [x, y]",
+      "description": "The name of a part, a named row or a node, or a point [x, y]",
       "type": ["string", "array"],
       "minLength": 1,
       "prefixItems": [{ "type": "number" }, { "type": "number" }],
@@ -237,6 +238,25 @@
       "properties": {
         "x1": { "type": "number" }, "y1": { "type": "number" }, "x2": { "type": "number" }, "y2": { "type": "number" },
         "kind": { "enum": ["line", "lifeline", "divider"] }
+      }
+    },
+    "tree": {
+      "type": "object",
+      "description": "A tree of boxes, its root's centre at x and top at y: floe places each node under its parent and draws the edges",
+      "required": ["x", "y", "root"],
+      "additionalProperties": false,
+      "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "root": { "$ref": "#/$defs/node" } }
+    },
+    "node": {
+      "type": "object",
+      "required": ["rows"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "rows": { "$ref": "#/$defs/box/properties/rows" },
+        "tone": { "$ref": "#/$defs/tone" },
+        "shape": { "$ref": "#/$defs/box/properties/shape" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } }
       }
     },
     "raw": {

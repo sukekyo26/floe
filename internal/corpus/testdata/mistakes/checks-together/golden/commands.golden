@@ -4,11 +4,9 @@ exit 1
 parts.yaml:8:46: write as many cells in each row as there are columns
 parts.yaml:9:46: write as many cells in each row as there are columns
 parts.yaml:10:37: write done no greater than of, the whole ("5")
-parts.yaml:11:15: write code in a code part and commands in a terminal part, which show them under their file or prompt
 $ floe render --out-dir $TMP/pages/parts.yaml parts.yaml
 exit 1
 --- stderr
 parts.yaml:8:46: write as many cells in each row as there are columns
 parts.yaml:9:46: write as many cells in each row as there are columns
 parts.yaml:10:37: write done no greater than of, the whole ("5")
-parts.yaml:11:15: write code in a code part and commands in a terminal part, which show them under their file or prompt

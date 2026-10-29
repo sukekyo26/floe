@@ -1,0 +1,51 @@
+# Gantt chart: the plan of one version of an app, week by week, and which task waits for which.
+# A bar is how long a task takes, and an arrow leads from a task to one that waits for it.
+#
+# Grid: day d of the plan starts at x = 200 + 16d (a week is 112), day 0 being the first day of the
+# first week; the axis has a tick at the start of each week and at the end of the last, with no
+# text, and each week's name is a label in the middle of its week, 17 below the axis. A task is a
+# bar from the start of the day it starts to the start of the day after it ends. Tasks stand in rows
+# at y = 44 + 36n, their names at x = 16; a name is at most 184 wide in either language as floe
+# diagram inspect measures it (5 of room each side included, from x = 11), so that it ends before
+# the bars at x = 200. A task that waits for another is joined to it by name, from the right of the
+# one before to the left of the next (fromSide: right, toSide: left), and the edge bends halfway
+# between them, at x = 200 + 8(a + b) for the day a the one before is over and the day b the next
+# starts. So a task leaves one free day after the last task it waits for (b=a+1): a + b is then odd,
+# never a multiple of 14, and the bend never lies on a week's line; for an edge from an earlier
+# task, keep a + b off the multiples of 14 too. A task with two or more edges out shares their first
+# run, and the edges into one task join on the way. The release is a dot on a row of its own, which
+# an edge reaches at its centre, so the edges into it have no arrow (end: none), as the dot would
+# hide it; its x is not on a week's line either.
+width: 920
+height: 330
+title: { en: "The plan of one version of an app, week by week", ja: "あるアプリの 1 つの版の開発の予定（週ごと）" }
+parts:
+  - axis: { x1: 200, x2: 872, y: 294, ticks: [[200, ""], [312, ""], [424, ""], [536, ""], [648, ""], [760, ""], [872, ""]], grid: 26 }
+  - label: { text: { en: "Week 1", ja: "1 週目" }, x: 256, y: 311, plain: true }
+  - label: { text: { en: "Week 2", ja: "2 週目" }, x: 368, y: 311, plain: true }
+  - label: { text: { en: "Week 3", ja: "3 週目" }, x: 480, y: 311, plain: true }
+  - label: { text: { en: "Week 4", ja: "4 週目" }, x: 592, y: 311, plain: true }
+  - label: { text: { en: "Week 5", ja: "5 週目" }, x: 704, y: 311, plain: true }
+  - label: { text: { en: "Week 6", ja: "6 週目" }, x: 816, y: 311, plain: true }
+  - label: { text: { en: Decide what to build, ja: "作るものを決める" }, x: 16, y: 44, anchor: start }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44, tone: accent }
+  - label: { text: { en: Design the screens, ja: "画面を設計する" }, x: 16, y: 80, anchor: start }
+  - bar: { name: design, x1: 312, x2: 408, y: 80, tone: accent }
+  - label: { text: { en: Build the screens, ja: "画面を作る" }, x: 16, y: 116, anchor: start }
+  - bar: { name: screens, x1: 424, x2: 648, y: 116, tone: accent }
+  - label: { text: { en: Build the API, ja: "API を作る" }, x: 16, y: 152, anchor: start }
+  - bar: { name: api, x1: 312, x2: 536, y: 152, tone: accent }
+  - label: { text: { en: Test, ja: "テストする" }, x: 16, y: 188, anchor: start }
+  - bar: { name: test, x1: 664, x2: 760, y: 188, tone: accent }
+  - label: { text: { en: Write the help, ja: "ヘルプを書く" }, x: 16, y: 224, anchor: start }
+  - bar: { name: help, x1: 552, x2: 744, y: 224, tone: accent }
+  - label: { text: { en: Release, ja: "リリース" }, x: 16, y: 260, anchor: start }
+  - dot: { name: release, cx: 792, cy: 260 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+  - edge: { from: design, fromSide: right, to: screens, toSide: left }
+  - edge: { from: decide, fromSide: right, to: api, toSide: left }
+  - edge: { from: api, fromSide: right, to: test, toSide: left }
+  - edge: { from: screens, fromSide: right, to: test, toSide: left }
+  - edge: { from: api, fromSide: right, to: help, toSide: left }
+  - edge: { from: test, fromSide: right, to: release, end: none }
+  - edge: { from: help, fromSide: right, to: release, end: none }

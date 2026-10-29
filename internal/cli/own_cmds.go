@@ -123,7 +123,8 @@ is written over: with anything of that name there, nothing is made.`,
 		Long: `Read the templates under FLOE_TEMPLATES_DIR (else floe/templates under XDG_CONFIG_HOME,
 or ~/.config) with the parts and themes of your own, as floe part check does, then draw the
 example.yaml of each template of your own as floe check draws a data file. Every mistake is
-printed; the exit code is 1 when there is one, and nothing is printed when they are right.`,
+printed, and then the warnings of the examples drawn; the exit code is 1 when there is a
+mistake, and nothing is printed when they are right and have no warning.`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return a.checkTemplates()
@@ -146,7 +147,8 @@ func (a *app) checkTemplates() error {
 		file := t.File("example.yaml")
 		images := files.NewRoot(t.File("."))
 		o := tmpl.Options{Theme: "", Untitled: name, Images: images, ImagesDir: "", Icons: store}
-		_, err := tmpl.Draw(k, file, t.Example(), o)
+		_, warnings, err := tmpl.Draw(k, file, t.Example(), o)
+		a.warnings = append(a.warnings, warnings...)
 		_ = images.Close() //nolint:errcheck // only read from
 		if failed := found.Add(err); failed != nil {
 			return failed

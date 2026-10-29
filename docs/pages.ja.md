@@ -33,7 +33,7 @@ sections:
 ```
 
 ```sh
-floe check plan.yaml     # 誤りを出すか、何も出さない
+floe check plan.yaml     # 誤りと警告を出すか、何も出さない
 floe publish plan.yaml   # ページを保存し、URL を出す
 ```
 
@@ -60,7 +60,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 | 部品 | 描くもの |
 |---|---|
-| `text` | Markdown（表も）。中の生の HTML は除く。囲んだコードのブロック（```` ``` ````）は断る：コードは `code`、コマンドは `terminal` に書く。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ）ので、画像は `image` に書く。 |
+| `text` | Markdown（表も）。中の生の HTML は除く。囲んだコードのブロック（```` ``` ````）はただのコードとして描き、警告する：コードは `code`、コマンドは `terminal` に書く。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ）ので、画像は `image` に書く。 |
 | `code` | コードをそのまま、`file` と `lang` の下に。右上のボタンでコードをコピーできる。 |
 | `terminal` | コマンド（`run`）と出力（`out`）を、`shell`（`bash`・`sh`・`zsh`・`powershell`・`cmd`）のプロンプトで。プロンプトは floe が描くので、プロンプトで始まる `run`（`$ ls`）は断る。右上のボタンで、コマンドを 1 行ずつ、プロンプトと出力を除いてコピーできる。 |
 | `table` | `columns` と `rows`。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`。 |
@@ -119,13 +119,14 @@ Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書�
 | `box` | `x` `y`、`rows`、`w` `h`（省けば行に要る大きさ）、`name`、`origin`（`left`。`x` を真ん中にするなら `centre`）、`tone`、`shape`（`rect`。`pill`、判断の `hex`、`state`）。行は文か `[文, 形]` で、形は `main`・`sub`・`main code`・`sub code`。形が無ければ最初の行が `main`、残りが `sub`。 |
 | `table` | `x` `y`、`title`、`rows`、`w`、`name`、`origin`、`tone`。行は `[名前]`、`[名前, 型]`、区切りの `---`、または線が行に着く `{ name, cells: [名前, 型] }`。 |
 | `icon` | `x` `y`（左上）、`icon`、`label`（アイコンの下）、`size`（48）、`name`。`icon` はセットとその中の名前で `aws/amazon-ec2` のように書く（`floe icons search` で探す）。 |
-| `edge` | `from` と `to`（部品か名前付きの行の `name`、または点 `[x, y]`）、`fromSide` と `toSide`（`top`・`right`・`bottom`・`left`）、`via`（曲がる点）、`straight`（直角でなく点から点へ）、`label` と `at: [x, y]`、`dashed`、`bold`、`tone`、`start`（`none`）、`end`（`arrow`）、`crossing`。端は `arrow`・`triangle`・`diamond`・`odiamond`・`one`・`many`・`zero-one`・`zero-many`・`none`。`crossing: true` でこの線はほかと交われる。 |
+| `edge` | `from` と `to`（部品・名前付きの行・`tree` の節の `name`、または点 `[x, y]`）、`fromSide` と `toSide`（`top`・`right`・`bottom`・`left`）、`via`（曲がる点）、`straight`（直角でなく点から点へ）、`label` と `at: [x, y]`、`dashed`、`bold`、`tone`、`start`（`none`）、`end`（`arrow`）、`crossing`。端は `arrow`・`triangle`・`diamond`・`odiamond`・`one`・`many`・`zero-one`・`zero-many`・`none`。`crossing: true` でこの線はほかと交われる。 |
 | `dot` | `cx` `cy`、`r`（7）、`name`、`tone`、`hollow`。線は中心まで届いてよい。 |
 | `bar` | `x1` `x2` `y`、`name`、`tone`、`label`（棒の右）。 |
 | `axis` | `x1` `x2` `y`、`ticks: [[x, 文], ...]`、`grid`（格子の線の上端）。 |
 | `circle` | `cx` `cy` `r`、`name`、`tone`。円どうしは重なってよい。 |
 | `label` | `text`、`x` `y`、`anchor`（`middle`。`start`・`end`）、`plain`（背景なし）、`strong`、`in`（ベン図で、内側に置く円の名前。ほかの円の外。`x` と `y` を省けば floe が置く）。 |
 | `line` | `x1` `y1` `x2` `y2`、`kind`（`line`。`lifeline`・`divider`）。ほかの部品と交わってよいが、キャンバスから出ない。 |
+| `tree` | `x` `y`（根の中心と上）、`root`：節。節は `box` と同じ `rows`・`name`・`tone`・`shape` と、子の節を並べた `children` を持つ。floe が各節を親の下に置き（子は横に並べ、深さごとに 1 段にそろえる）、親から子へ線を引く。節の `name` は、手で書いた線の端にできる。 |
 | `raw` | `svg`：どの部品でも描けない SVG。SVG の要素だけで（script や `foreignObject` は無し）、配置も確かめもしない。 |
 
 `via` も辺も無い線は、相手に向いた辺から、直角に、曲がり 2 つまでで進みます。別の道にするには `via` か辺を書きます。
@@ -163,6 +164,17 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 - 形の誤り（`additional properties 'x' not allowed`・`missing property 'x'`・`got string, want array`）は、テンプレートか部品の schema がデータを断ったものです。`floe template show <テンプレート>` と `floe part show <部品>` が、取るものを出します。
 - 自分の部品・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check` と `floe template check` が並べます。
 - 同じ誤りは、何か所から指されても 1 回だけ言います。
+
+### 警告
+
+描いたページに警告が付くことがあります。より良い書き方の勧めで、ページは描かれ、終了コードも変わりません（誤りが無ければ 0）。`floe check`・`floe render`・`floe template check`・`floe publish` が、誤りの後に出します:
+
+```text
+plan.yaml:12:15: warning: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
+```
+
+- `text` の部品（節の中、`details`・`tabs` の中も）の、囲んだコードのブロックを警告します。コードは `code` に、コマンドは `terminal` に書きます。
+- 誤りのあるファイルは描かないので、その警告は誤りを直した後に出ます。ほかの描けたファイルの警告は、誤りと一緒に出します。
 
 ## 確かめと公開
 

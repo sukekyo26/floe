@@ -219,7 +219,10 @@ func (l *layout) addEdge(e *edge, at string) {
 			segs = append(segs, seg{pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1]})
 		}
 	}
-	who := "edge " + fromWho + "→" + toWho
+	who := e.who
+	if who == "" {
+		who = "edge " + fromWho + "→" + toWho
+	}
 	if len(segs) == 0 {
 		l.problem(at, "diagram_edge_nowhere", who)
 		return

@@ -1,0 +1,28 @@
+frame "Do now" 80,40 400x180
+frame "Plan it" 480,40 400x180
+frame "When there is time" 80,220 400x180
+frame "Do not do" 480,220 400x180
+dot 110,100 103,93 14x14
+dot 110,152 103,145 14x14
+dot 510,100 503,93 14x14
+dot 510,152 503,145 14x14
+dot 110,280 103,273 14x14
+dot 110,332 103,325 14x14
+dot 510,280 503,273 14x14
+dot 510,332 503,325 14x14
+dot 90,460 83,453 14x14
+dot 270,460 263,453 14x14
+edge [60,420]→[60,40] M60,420 V40
+edge [60,420]→[880,420] M60,420 H880
+label "More value" 19,7 82x18
+label "More effort" 795.8,431 89.2x18
+label "Dark mode" 117,91 82x18
+label "Share a note by a link" 117,143 168.4x18
+label "Use it offline" 517,91 110.8x18
+label "Sync between devices" 517,143 154x18
+label "Export to PDF" 117,271 103.6x18
+label "Choose the font" 117,323 118x18
+label "Write by hand" 517,271 106x18
+label "Chat in the app" 517,323 154x18
+label "Asked for by users" 97,451 139.6x18
+label "Our own idea" 277,451 96.4x18

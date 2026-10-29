@@ -16,6 +16,9 @@ import (
 type app struct {
 	env Env
 	out io.Writer
+	// The warnings of the pages drawn here, and those the server told of the pages it drew: Run tells them.
+	warnings []*usererr.Error
+	told     []usererr.Told
 }
 
 // print writes a line to the command's output.
