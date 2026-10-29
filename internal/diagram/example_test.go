@@ -57,7 +57,7 @@ func TestExampleMistakes(t *testing.T) {
 		want  string
 	}{
 		// The comment puts the mistake on the second line, so that its line and column are of the value.
-		{"# c\nexample: nope\n", nil, "s.yaml:2:10: no example nope; use architecture, aws, class, er, flow, git, sequence, state, swimlane, timeline, venn"},
+		{"# c\nexample: nope\n", nil, "s.yaml:2:10: no example nope; use architecture, aws, class, er, flow, git, quadrant, sequence, state, swimlane, timeline, venn"},
 		// A diagram shows no spec.
 		{"example: flow\nsource: true\n", nil, "additional properties 'source' not allowed"},
 		{"source: true\nwidth: 200\nheight: 80\ntitle: t\nparts: []\n", nil, "additional properties 'source' not allowed"},

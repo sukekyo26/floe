@@ -8,6 +8,8 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：図の例 `quadrant`（`floe diagram example quadrant`）。2 つの軸で項目を
+  4 つの領域に分ける図で、ノートのアプリの機能の候補を、価値と手間で置く。
 - 追加：図の例 `swimlane`（`floe diagram example swimlane`）。流れを、する人ごとの
   レーンに分けた図で、ユーザー・アーキテクト・エンジニアの 1 つの PR の流れを描く。
 - 追加：`code`・`terminal`・`diff` の右上に、中身をコピーするボタン。写すのはコード、

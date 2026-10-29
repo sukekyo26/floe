@@ -106,8 +106,8 @@ func TestExamples(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(examples) != 11 {
-		t.Errorf("%d examples, want 11", len(examples))
+	if len(examples) != 12 {
+		t.Errorf("%d examples, want 12", len(examples))
 	}
 	store := iconsOf{}
 	for _, name := range []string{"aws/aws-lambda", "aws/amazon-bedrock", "aws/group/aws-cloud-logo", "aws/group/region", "aws/res/client"} {
