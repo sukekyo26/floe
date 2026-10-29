@@ -112,6 +112,8 @@ type Item struct {
 // ready: the Items in it replaced by what fn returned for them. It returns values made ready so, each item
 // the schema declares but values leave out made nil, so that a template can test it under missingkey=error.
 // It is the one walk of values: what floe checks of the items and what it draws both come from it.
+// LIMIT: an object's value written whole ({{.x}}) shows Go's map as text, unchecked; the docs range over any.json's.
+// Pass any.json's value as its one part drawn if templates come to need it.
 func (c *Compiled) Walk(values any, fn func(it Item, ready any) (any, error)) (any, error) {
 	w := &walk{c: c, fn: fn, holds: map[*jsonschema.Schema][]string{}}
 	return w.step(c.Follow(c.Root), values, nil)

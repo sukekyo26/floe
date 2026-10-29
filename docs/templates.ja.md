@@ -93,17 +93,22 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 `page.html` は項目を置きたい所に置きます（`{{.Data.risks}}`）。floe は部品の schema と checks で確かめ（誤りはデータファイルの行と列で言う）、HTML で描きます。
 
-種類を名指す鍵 1 つの部品を、種類によらず並べるリストは、report の節と同じく `any.json` を指します。
+種類を名指す鍵 1 つの部品は、種類によらず `any.json` を指します。そのリストは、report の節と同じく、`items` で `any.json` を指します。テンプレートの根の schema では、次のとおりです。
 
 ```json
+"part":  { "$ref": "floe:///parts/any.json" },
 "parts": { "type": "array", "items": { "$ref": "floe:///parts/any.json" } }
 ```
 
-部品は描いた形で `page.html` に来て、ほかの鍵は nil なので、種類によらず 1 行で並べられます。
+その値は、全部の種類の map で `page.html` に来ます。書いた種類には描いた部品が入り、ほかは nil です。`{{.Data.part}}` と書くと map を字で書く（`map[bars:<nil> …]`）ので、range で回します。項目を省いたときは、range は何もしません。
 
 ```html
-{{range .parts}}{{range .}}{{with .}}{{.}}{{end}}{{end}}{{end}}
+{{range .Data.part}}{{.}}{{end}}
+{{range .Data.parts}}{{range .}}{{.}}{{end}}{{end}}
+{{with .Data.part}}{{with .note}}<aside>{{.}}</aside>{{end}}{{end}}
 ```
+
+最後の行は、部品が note のときだけ描きます。このように、種類より先に項目を確かめます。`{{.Data.part.note}}` は、項目を省くと失敗します。
 
 ### 借りられる見た目
 
