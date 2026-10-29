@@ -479,8 +479,8 @@ func TestCopyRoom(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		out = append(out, name+": "+b.eval(measureRoom))
 		want = append(want, name+": code ok, code ok, terminal ok, diff ok, code short, diff short reaches")
 	}
-	print := emulation.SetEmulatedMediaParams{Media: "print"}
-	if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, print); err != nil {
+	printed := emulation.SetEmulatedMediaParams{Media: "print"}
+	if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, printed); err != nil {
 		t.Fatal(err)
 	}
 	out = append(out, "printed: "+b.eval("[...new Set([...document.querySelectorAll('pre > *')].map((e) => getComputedStyle(e).paddingRight))].join(' ')"))
