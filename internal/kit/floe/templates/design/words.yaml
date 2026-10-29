@@ -1,0 +1,24 @@
+en:
+  conclusion: Conclusion
+  undecided: Undecided
+  background: Background
+  goals: Goals
+  non_goals: Non-goals
+  decisions: Options
+  decided: Decided
+  impact: Impact
+  impact_what: Area
+  impact_text: Effect
+  contents: Contents
+ja:
+  conclusion: 結論
+  undecided: 未決
+  background: 背景
+  goals: 目的
+  non_goals: やらないこと
+  decisions: 案と比べ
+  decided: 決めたこと
+  impact: 影響の範囲
+  impact_what: 範囲
+  impact_text: 影響
+  contents: 目次

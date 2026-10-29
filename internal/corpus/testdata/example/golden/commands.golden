@@ -1,6 +1,15 @@
-$ floe check example.yaml
+$ floe check design.yaml report.yaml
 exit 0
-$ floe render --out-dir $TMP/pages/example.yaml example.yaml
+$ floe render --out-dir $TMP/pages/design.yaml design.yaml
 exit 0
 --- stdout
-$TMP/pages/example.yaml/example.html
+$TMP/pages/design.yaml/design.html
+$ floe render --out-dir $TMP/pages/report.yaml report.yaml
+exit 0
+--- stdout
+$TMP/pages/report.yaml/report.html
+$ floe render --out-dir $TMP/together design.yaml report.yaml
+exit 0
+--- stdout
+$TMP/together/design.html
+$TMP/together/report.html

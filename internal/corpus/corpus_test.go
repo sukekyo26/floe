@@ -389,17 +389,21 @@ func firstDiff(got, want []byte) (int, string, string, bool) {
 	return 0, "", "", false
 }
 
-// The sample example is the example.yaml of floe's report, as it is: its page is the one develop drew of it.
-func TestExampleIsReport(t *testing.T) {
+// The sample example holds the example.yaml of each of floe's templates as it is, as <name>.yaml: its pages
+// are the ones develop drew of them.
+func TestExamplesAreFloes(t *testing.T) {
 	t.Parallel()
 
 	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, _ := k.Template("report")
-	b, err := os.ReadFile(filepath.Join("testdata", "example", "example.yaml"))
-	if err != nil || !bytes.Equal(b, report.Example()) {
-		t.Errorf("testdata/example/example.yaml is not report's example.yaml (%v): copy it again", err)
+	_, _, _, templates := k.Names()
+	for _, name := range templates {
+		tpl, _ := k.Template(name)
+		b, err := os.ReadFile(filepath.Join("testdata", "example", name+".yaml"))
+		if err != nil || !bytes.Equal(b, tpl.Example()) {
+			t.Errorf("testdata/example/%s.yaml is not %s's example.yaml (%v): copy it again", name, name, err)
+		}
 	}
 }

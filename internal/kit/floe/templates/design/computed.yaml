@@ -1,0 +1,2 @@
+# The title of each decision's option taken, nil for one undecided
+picks: map(decisions ?? [], first(filter(.options, .pick != nil))?.title)
