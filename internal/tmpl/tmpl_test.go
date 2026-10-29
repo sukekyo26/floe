@@ -2,6 +2,8 @@ package tmpl_test
 
 import (
 	"bytes"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -164,6 +166,48 @@ func drawPostmortem(t *testing.T, data string) []byte {
 
 	src := "template: postmortem\ntitle: x\nsummary: s\ntimeline: [{date: '10:42', title: t}]\ncause: c\n" + data
 	page, _, err := tmpl.Draw(floeKit(t), "pm.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	return page
+}
+
+// runbook draws a step of its rollback as one of its steps, its owner badge beside the heading, which takes its id
+// from the title alone; what is left out has no section.
+func TestDrawRunbook(t *testing.T) {
+	t.Parallel()
+
+	step := "{title: Restart, who: Ops, text: t, run: {steps: [{run: ls}]}, if_fails: f}"
+	ids := regexp.MustCompile(` id="[^"]*"`)
+	for _, tt := range []struct{ lang, fails string }{{"en", "If it fails"}, {"ja", "失敗したら"}} {
+		page := drawRunbook(t, "lang: "+tt.lang+"\nneeds: [n]\ncaution: c\nsteps: ["+step+"]\nrollback: ["+step+"]\n")
+		lists := strings.Split(string(page), `<ol class="steps">`)
+		if len(lists) != 3 {
+			t.Fatalf("%s: %d lists of steps, want 2", tt.lang, len(lists)-1)
+		}
+		steps, back := lists[1][:strings.Index(lists[1], "</ol>")], lists[2][:strings.Index(lists[2], "</ol>")]
+		if ids.ReplaceAllString(steps, "") != ids.ReplaceAllString(back, "") {
+			t.Errorf("%s: a step of the rollback\n%s\nis not drawn as one of the steps\n%s", tt.lang, back, steps)
+		}
+		for _, want := range []string{`<h3 id="restart">Restart</h3><span class="who">Ops</span>`, `<b>` + tt.fails + `</b>`, `class="needs"`, `class="caution"`} {
+			if !strings.Contains(steps+string(page), want) {
+				t.Errorf("%s draws no %s", tt.lang, want)
+			}
+		}
+	}
+	page := drawRunbook(t, "lang: en\nsteps: [{title: t}]\n")
+	for _, not := range []string{`class="rollback"`, `class="needs"`, `class="caution"`, `class="who"`, `class="fails"`} {
+		if bytes.Contains(page, []byte(not)) {
+			t.Errorf("left out, %s is drawn", not)
+		}
+	}
+}
+
+// drawRunbook draws a runbook of data.
+func drawRunbook(t *testing.T, data string) []byte {
+	t.Helper()
+
+	page, _, err := tmpl.Draw(floeKit(t), "rb.yaml", []byte("template: runbook\ntitle: x\n"+data), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
 	if err != nil {
 		t.Fatal(told(err))
 	}

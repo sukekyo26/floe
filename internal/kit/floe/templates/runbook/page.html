@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+</head>
+<body>
+<div class="column">
+<header>
+<p class="kind"><span class="name">{{word "kind"}}</span>{{with .Data.owner}} <span>{{word "owner"}}: {{.}}</span>{{end}}{{with .Data.updated}} <span>{{word "updated"}}: {{.}}</span>{{end}}</p>
+<h1>{{.Title}}</h1>
+{{- with .Data.summary}}<p class="summary">{{markdownLine .}}</p>{{end}}
+</header>
+{{- with .Data.needs}}
+<section class="needs" data-floe-look="panel"><h2>{{word "needs"}}</h2><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
+{{- end}}
+{{- with .Data.caution}}<p class="caution">{{markdownLine .}}</p>{{end}}
+<section><h2>{{word "steps"}}</h2>{{template "procedure" .Data.steps}}</section>
+{{- with .Data.rollback}}
+<section class="rollback"><h2>{{word "rollback"}}</h2>{{template "procedure" .}}</section>
+{{- end}}
+{{- range $m := .Data.more}}
+<section><h2>{{$m.heading}}</h2>
+{{- range $m.parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</section>
+{{- end}}
+</div>
+</body>
+</html>
+{{- /* steps and rollback are steps of one shape, drawn here */}}
+{{- define "procedure"}}<ol class="steps">
+{{- range .}}
+<li><div class="head"><h3>{{markdownLine .title}}</h3>{{with .who}}<span class="who">{{.}}</span>{{end}}</div>
+{{- with .text}}{{.}}{{end}}
+{{- with .run}}{{.}}{{end}}
+{{- with .if_fails}}<p class="fails"><b>{{word "if_fails"}}</b> {{markdownLine .}}</p>{{end}}</li>
+{{- end}}
+</ol>{{end}}
