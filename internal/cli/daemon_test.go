@@ -81,15 +81,8 @@ func copySelf(dir string) (string, error) {
 func freePort(t *testing.T) int {
 	t.Helper()
 
-	return pick(t, 20000, 32767)
-}
-
-// pick holds a port from lo to hi (both in) that no other test holds and nothing listens on.
-func pick(t *testing.T, lo, hi int) int {
-	t.Helper()
-
 	for range 100 {
-		if port := lo + rand.IntN(hi-lo+1); hold(t, port) { //nolint:gosec // G404: a port to try, no secret
+		if port := 20000 + rand.IntN(12768); hold(t, port) { //nolint:gosec // G404: a port to try, no secret
 			return port
 		}
 	}
@@ -105,17 +98,23 @@ func hold(t *testing.T, port int) bool {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//nolint:gosec // G115: a descriptor fits an int
-	if unix.Flock(int(lock.Fd()), unix.LOCK_EX|unix.LOCK_NB) != nil || !free(t, port) {
+	fd := int(lock.Fd()) //nolint:gosec // G115: a descriptor fits an int
+	if unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB) != nil {
 		_ = lock.Close() //nolint:errcheck // nothing written
 		return false
 	}
-	t.Cleanup(func() { _ = lock.Close() }) //nolint:errcheck // as above; closing it lets the lock go
+	// Closing it lets the lock go, however the test ends from here.
+	t.Cleanup(func() { _ = lock.Close() }) //nolint:errcheck // as above
+	if !free(t, port) {
+		_ = lock.Close() //nolint:errcheck // as above; the cleanup's close then does nothing
+		return false
+	}
 	return true
 }
 
 // portLocks is the directory of the locks of the ports, one per user: another's, made 0o700, could not be opened.
 // A lock's file stays: removing it would let another process lock a new file of the same name beside it.
+// LIMIT: up to 12768 empty files gather in it, one per port tried; remove the directory when no test runs if they come to matter.
 func portLocks(t *testing.T) string {
 	t.Helper()
 
@@ -163,8 +162,9 @@ func newDenvOn(t *testing.T, port int) *denv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e := &denv{tmp: tmp, port: strconv.Itoa(port), vars: map[string]string{
-		"HOME": filepath.Join(tmp, "home"), "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": strconv.Itoa(port), "BROWSER": "true",
+	p := strconv.Itoa(port)
+	e := &denv{tmp: tmp, port: p, vars: map[string]string{
+		"HOME": filepath.Join(tmp, "home"), "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": p, "BROWSER": "true",
 	}}
 	if err := os.MkdirAll(e.vars["HOME"], 0o700); err != nil {
 		t.Fatal(err)
@@ -248,8 +248,8 @@ func wantRun(t *testing.T, what string, got result, code int, stdout, stderr str
 	}
 }
 
-// A port another test holds is not held again though nothing listens on it: in this process, as in another, whose
-// lock of the port's file is the same.
+// A port another test holds is not held again though nothing listens on it. The test holds it twice in one process;
+// another process is refused alike, as flock locks a file opened, not a process.
 func TestHoldSkipsHeld(t *testing.T) {
 	t.Parallel()
 
@@ -343,6 +343,7 @@ func TestPublishToAnotherServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = ln.Close() }) //nolint:errcheck // closed by srv.Close too, when it serves
 	addr, ok := ln.Addr().(*net.TCPAddr)
 	if !ok {
 		t.Fatalf("a TCP listener on %v", ln.Addr())
