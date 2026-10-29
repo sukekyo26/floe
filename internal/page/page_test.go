@@ -88,3 +88,15 @@ func TestRefused(t *testing.T) {
 		}
 	}
 }
+
+// A script of floe's drops the lines that are a comment alone, and its argument cannot end it.
+func TestScript(t *testing.T) {
+	t.Parallel()
+
+	js := "// a note\nfunction (w) {\n  // why\n  return w; // kept\n}\n"
+	got, err := page.Script(js, map[string]string{"t": "</script><!--"})
+	want := `<script>(function (w) {` + "\n" + `  return w; // kept` + "\n" + `})({"t":"\u003c/script\u003e\u003c!--"});</script>`
+	if err != nil || got != want {
+		t.Errorf("Script = %s, %v\nwant %s", got, err, want)
+	}
+}

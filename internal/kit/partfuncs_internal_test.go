@@ -118,15 +118,28 @@ func TestScriptOf(t *testing.T) {
 	}
 }
 
-// The copy button's script is one script whatever its words hold, and copyButton not bound to a page is floe's
-// failure.
-func TestCopyScript(t *testing.T) {
+// The copy button's script is in the page's language, English for one without a catalog, the same script for one
+// language however often it is drawn, and one script read whole; copyButton not bound to a page is floe's failure.
+func TestCopyButton(t *testing.T) {
 	t.Parallel()
 
-	got, err := copyScript(map[string]string{"copy": "</script><!--<script>", "copied": "c", "failed": "f"})
-	body := strings.TrimSuffix(strings.TrimPrefix(string(got), "<script>"), "</script>")
-	if err != nil || !wholeScript(body) || !strings.Contains(body, `"copy":"\u003c/script\u003e\u003c!--\u003cscript\u003e"`) {
-		t.Errorf("copyScript = %s, %v", got, err)
+	draw := func(tag string) string {
+		got, err := copyButton(tag)()
+		if err != nil {
+			t.Fatalf("%s: copyButton = %v", tag, err)
+		}
+		return string(got)
+	}
+	ja, en := draw("ja"), draw("en")
+	if !strings.Contains(ja, `"copied":"コピーしました","copy":"コピー","failed":"コピーできませんでした"`) ||
+		!strings.Contains(en, `"copied":"Copied","copy":"Copy","failed":"Could not copy"`) {
+		t.Errorf("copyButton words:\n ja %s\n en %s", ja[len(ja)-120:], en[len(en)-120:])
+	}
+	if draw("JA_jp") != ja || draw("pt-BR") != en {
+		t.Error("copyButton does not fall back as the catalog does: ja-JP to ja, pt-BR to en")
+	}
+	if body := strings.TrimSuffix(strings.TrimPrefix(ja, "<script>"), "</script>"); !wholeScript(body) || strings.Contains(body, "//") {
+		t.Errorf("copyButton is not one script without its comments: %s", ja)
 	}
 	if _, err := copyButtonOf(); !errors.Is(err, ErrFunc) {
 		t.Errorf("copyButtonOf() = %v, want ErrFunc", err)

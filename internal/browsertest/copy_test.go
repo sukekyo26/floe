@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	cdpbrowser "github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/emulation"
@@ -17,10 +19,10 @@ import (
 )
 
 // copyPage is a page of lang with a part of each kind that copies: code ending in a line break, a terminal whose
-// last command ends in one, and a diff that does not. Its script reports the copy button of the code, as the
+// last command ends in one, and a diff that does not, whose head's faded line runs under the copy button. Its script reports the copy button of the code, as the
 // center of its box, its status, and whether it has the focus and shows it, to a frame around it.
 const copyPage = `template: report
-lang: %s
+lang: %[1]s
 title: Copy
 sections:
   - heading: Copy
@@ -32,27 +34,30 @@ sections:
             - { run: go test ./..., out: ok }
             - { run: "git commit \\\n  -m \"fix\"" }
             - { run: "echo one\n" }
-      - diff: { file: a.go, text: "@@ -1,2 +1,2 @@\n package a\n-var x = 1\n+var x = 2" }
+      - diff: { file: a.go, text: "diff --git a/%[2]s b/%[2]s\n@@ -1,2 +1,2 @@\n package a\n-var x = 1\n+var x = 2" }
       - html: |
           <script>
           document.addEventListener('pointerover', () => parent.postMessage('over', '*'));
           setInterval(() => {
-            const button = document.querySelector('[data-floe-part=code] .copy');
+            const button = document.querySelector('[data-floe-part=code] .floe-copy');
             const r = button.getBoundingClientRect();
             parent.postMessage(JSON.stringify({
               x: r.x + r.width / 2, y: r.y + r.height / 2,
-              status: document.querySelector('[data-floe-part=code] .copy-status').textContent,
+              status: document.querySelector('[data-floe-part=code] .floe-copy-status').textContent,
               focused: document.activeElement === button, shown: button.matches(':focus-visible'),
             }), '*');
           }, 100);
           </script>
 `
 
+// longPath is the path of the diff of copyPage, long enough that its line runs under the button.
+var longPath = strings.Repeat("internal/kit/floe/parts/", 8) + "part.html"
+
 // copied is what the button of each part copies.
 var copied = map[string]string{
 	"code":     "package main\n\nfunc main() {}\n",
 	"terminal": "go test ./...\ngit commit \\\n  -m \"fix\"\necho one\n",
-	"diff":     "@@ -1,2 +1,2 @@\n package a\n-var x = 1\n+var x = 2\n",
+	"diff":     "diff --git a/" + longPath + " b/" + longPath + "\n@@ -1,2 +1,2 @@\n package a\n-var x = 1\n+var x = 2\n",
 }
 
 // copySite is a site with the page of copyPage in lang published as copy, whose tab may read the clipboard on
@@ -61,7 +66,7 @@ func copySite(t *testing.T, lang string) *site {
 	t.Helper()
 
 	s := newSite(t)
-	s.floe(t, "publish", s.write(t, "copy.yaml", fmt.Sprintf(copyPage, lang)), "--slug", "copy")
+	s.floe(t, "publish", s.write(t, "copy.yaml", fmt.Sprintf(copyPage, lang, longPath)), "--slug", "copy")
 	id := chromedp.FromContext(s.b.ctx).BrowserContextID
 	for _, name := range []string{"clipboard-read", "clipboard-write"} {
 		grant := cdpbrowser.SetPermissionParams{
@@ -91,12 +96,12 @@ func (s *site) clip(t *testing.T, press func()) string {
 
 // button is the copy button of part on the page shown.
 func button(part string) string {
-	return "document.querySelector('[data-floe-part=" + part + "] .copy')"
+	return "document.querySelector('[data-floe-part=" + part + "] .floe-copy')"
 }
 
 // status is the status of the copy button of part on the page shown.
 func status(part string) string {
-	return "document.querySelector('[data-floe-part=" + part + "] .copy-status').textContent"
+	return "document.querySelector('[data-floe-part=" + part + "] .floe-copy-status').textContent"
 }
 
 // pressButton clicks the copy button of part on the page shown, as a mouse does.
@@ -179,7 +184,7 @@ func TestUICopyRaw(t *testing.T) { //nolint:paralleltest // the browser tests sh
 				b.pressKey(kb.Tab)
 			}
 			look = b.eval(`(() => {
-				const button = ` + button(part) + `, part = button.parentElement, pre = part.querySelector('pre');
+				const button = ` + button(part) + `, part = button.closest('[data-floe-part]'), pre = part.querySelector('pre');
 				const style = getComputedStyle(button), ground = getComputedStyle(pre).backgroundColor;
 				const inside = (a, b) => a.left >= b.left && a.right <= b.right && a.top >= b.top && a.bottom <= b.bottom;
 				return [
@@ -187,6 +192,7 @@ func TestUICopyRaw(t *testing.T) { //nolint:paralleltest // the browser tests sh
 					style.outlineStyle, style.outlineColor === getComputedStyle(pre).color, parseFloat(style.outlineOffset) < 0,
 					style.backgroundColor === (ground === 'rgba(0, 0, 0, 0)' ? getComputedStyle(part).backgroundColor : ground),
 					inside(button.getBoundingClientRect(), pre.getBoundingClientRect()), button.getAttribute('aria-label'),
+					button.contains(document.elementFromPoint(...(({ x, y, width, height }) => [x + width / 2, y + height / 2])(button.getBoundingClientRect()))),
 				].join();
 			})()`)
 			b.pressKey(kb.Enter)
@@ -195,36 +201,55 @@ func TestUICopyRaw(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		if got != copied[part] {
 			t.Errorf("%s by the keyboard copies %q, want %q", part, got, copied[part])
 		}
-		if want := "true,solid,true,true,true,true,Copy"; look != want {
-			t.Errorf("%s: the focused button is %s, want %s (focus shown, ring, its colour the code's, inside, ground the code's, in the code, label)", part, look, want)
+		if want := "true,solid,true,true,true,true,Copy,true"; look != want {
+			t.Errorf("%s: the focused button is %s, want %s (focus shown, ring, its colour the code's, inside, ground the code's, in the code, label, on top)", part, look, want)
 		}
 	}
 
-	// After 1.5 seconds the button is as before; a second press starts the 1.5 seconds again.
+	// After 1.5 seconds the button is as before.
 	b.navigate("/a/copy/?raw")
 	b.pressButton("code")
 	b.until("the copy", status("code")+" === 'Copied' && "+button("code")+".classList.contains('copied')")
 	b.until("the button to come back", status("code")+" === '' && "+button("code")+".getAttribute('aria-label') === 'Copy' && "+
 		button("code")+".title === 'Copy' && !"+button("code")+".classList.contains('copied')")
+
+	// A second press starts the 1.5 seconds again: it comes back no sooner than 1.5 s after the second press, on the
+	// page's clock (a timer never fires early).
+	b.navigate("/a/copy/?raw")
+	b.eval(watch)
 	b.pressButton("code")
-	time.Sleep(time.Second)
+	b.until("the copy", status("code")+" === 'Copied'")
 	b.pressButton("code")
-	time.Sleep(800 * time.Millisecond)
-	if got := b.eval(status("code")); got != "Copied" {
-		t.Errorf("0.8 s after a second press, 1.8 s after the first, the status is %q, want Copied", got)
+	back := b.until("the button to come back after the second press", `(() => {
+		const p = log.filter((e) => e[0] === 'press').at(-1)[1], after = log.filter((e) => e[1] > p);
+		const back = after.slice(after.findIndex((e) => e[0] === 'Copied') + 1).find((e) => e[0] === '');
+		return back && after.some((e) => e[0] === 'Copied') ? String(back[1] - p) : '';
+	})()`)
+	if ms, err := strconv.ParseFloat(back, 64); err != nil || ms < 1499 {
+		t.Errorf("the button came back %s ms after a second press, want 1500 or more", back)
 	}
 
-	// A press whose copy ends after a later press's shows nothing: the later one's 1.5 seconds hold.
+	// A press whose copy ends after a later press's shows nothing.
 	b.navigate("/a/copy/?raw")
-	b.eval("{ let n = 0; navigator.clipboard.writeText = () => new Promise((done) => setTimeout(done, n++ === 0 ? 2000 : 0)); }")
+	b.eval(watch)
+	b.eval("{ let n = 0; navigator.clipboard.writeText = () => new Promise((done) => setTimeout(() => { log.push(['written', performance.now()]); done(); }, n++ === 0 ? 1000 : 0)); }")
 	b.pressButton("code")
-	time.Sleep(100 * time.Millisecond)
 	b.pressButton("code")
-	time.Sleep(2400 * time.Millisecond)
-	if got := b.eval(status("code") + " + '|' + " + button("code") + ".getAttribute('aria-label')"); got != "|Copy" {
-		t.Errorf("2.5 s after a press whose copy took 2 s, and 2.4 s after a second, the status and label are %q, want |Copy", got)
+	last := b.until("the first copy to end", "log.filter((e) => e[0] === 'written').length === 2 && String(log.filter((e) => e[0] === 'written')[1][1])")
+	b.until("a moment after it", "performance.now() - "+last+" > 200")
+	if got := b.eval("log.filter((e) => e[1] > " + last + " && e[0] !== '').map((e) => e[0]).join()"); got != "" {
+		t.Errorf("after the first press's copy ended, the status changed to %q, want nothing", got)
 	}
 }
+
+// watch records each press of the copy button of the code and each change of its status, with the page's clock, in
+// window.log.
+var watch = `(() => {
+	window.log = [];
+	const button = ` + button("code") + `, status = button.parentElement.querySelector('.floe-copy-status');
+	button.addEventListener('click', () => log.push(['press', performance.now()]), true);
+	new MutationObserver(() => log.push([status.textContent, performance.now()])).observe(status, { childList: true, characterData: true, subtree: true });
+})()`
 
 // TestUICopyFrame presses the copy button of code in the frame of the management page, which lets the page write
 // the clipboard.
@@ -287,7 +312,7 @@ func TestUICopyNoClipboard(t *testing.T) { //nolint:paralleltest // the browser 
 func TestUICopyFile(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := copySite(t, "en")
 	b := s.b
-	file := s.write(t, "file/copy.yaml", fmt.Sprintf(copyPage, "en"))
+	file := s.write(t, "file/copy.yaml", fmt.Sprintf(copyPage, "en", longPath))
 	s.floe(t, "render", file)
 	got := s.clip(t, func() {
 		b.navigate("file://" + strings.TrimSuffix(file, ".yaml") + ".html")
@@ -328,5 +353,54 @@ func TestUICopyWords(t *testing.T) { //nolint:paralleltest // the browser tests 
 	got := b.until("the copy", status("code"))
 	if label != "コピー" || got != "コピーしました" {
 		t.Errorf("the label is %q and the status %q, want コピー and コピーしました", label, got)
+	}
+}
+
+// snipKit is a part of one's own, snip, that does not take code's look and puts its copy button in a box of its
+// own, and a template that places it.
+var snipKit = map[string]string{
+	"parts/snip/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+	"parts/snip/part.html":   `<div data-floe-part="snip"><p><code data-floe-copy>x</code><span>{{copyButton}}</span></p></div>`,
+	"parts/snip/part.css":    "",
+	"templates/snips/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +
+		"<title>{{.Title}}</title></head>\n<body>\n{{.Data.snip}}\n</body></html>\n",
+	"templates/snips/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"snip": {"$ref": "floe:///parts/snip.json"}}}`,
+	"templates/snips/example.yaml": "lang: en\ntemplate: snips\nsnip: {}\n",
+}
+
+// TestUICopyOwnPart presses the copy button a part of one's own draws: it looks as in floe's parts, one icon and its
+// status out of sight, and copies the part's marked text from inside a box of its own.
+func TestUICopyOwnPart(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := copySite(t, "en")
+	b := s.b
+	for name, text := range snipKit {
+		at := filepath.Join(s.Dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(at), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(at, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.floe(t, "publish", s.write(t, "snip.yaml", "lang: en\ntemplate: snips\ntitle: Snip\nsnip: {}\n"), "--slug", "snip")
+	var look string
+	got := s.clip(t, func() {
+		b.navigate("/a/snip/?raw")
+		b.until("the copy button", button("snip"))
+		look = b.eval(`(() => {
+			const button = ` + button("snip") + `, r = button.getBoundingClientRect();
+			const status = document.querySelector('.floe-copy-status').getBoundingClientRect();
+			const icons = [...button.querySelectorAll('svg')].filter((i) => getComputedStyle(i).display !== 'none').length;
+			return [Math.round(r.width), Math.round(r.height), icons, status.width <= 1 && status.height <= 1].join();
+		})()`)
+		b.pressButton("snip")
+		b.until("the copy", status("snip")+" === 'Copied'")
+	})
+	if want := "30,30,1,true"; look != want {
+		t.Errorf("the button of snip is %s, want %s (30 px wide and high, one icon, its status out of sight)", look, want)
+	}
+	if got != "x\n" {
+		t.Errorf("copies %q, want %q", got, "x\n")
 	}
 }
