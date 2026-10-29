@@ -8,6 +8,9 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：図の部品 `tree`。木の節と子だけを書けば、floe が各節を親の下に置き、
+  線を引く。あわせて図の例 `org`（`floe diagram example org`）。ある会社の
+  部署を `tree` で描く。
 - 追加：図の例 `gantt`（`floe diagram example gantt`）。作業の期間を棒で、
   待つつながりを矢印で描く図で、あるアプリの 1 つの版の 6 週間の予定を置く。
 - 追加：図の例 `quadrant`（`floe diagram example quadrant`）。2 つの軸で項目を
