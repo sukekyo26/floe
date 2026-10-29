@@ -406,7 +406,7 @@ func TestUICopyOwnPart(t *testing.T) { //nolint:paralleltest // the browser test
 }
 
 // roomPage holds what lies under a copy button: long lines of code (with a heading and without), of a terminal and of a
-// diff, and short ones of code and of a diff.
+// diff, and short ones of code, of a diff and of a terminal.
 const roomPage = `template: report
 lang: en
 title: Room
@@ -431,6 +431,10 @@ sections:
           text: |
             -echo old
             +echo new
+      - terminal:
+          steps:
+            - run: echo short
+              out: short
 `
 
 // measureRoom reads, for each part with a copy button, its code scrolled to the end: how far left of the button the
@@ -448,7 +452,7 @@ const measureRoom = `(() => {
   };
   return [...document.querySelectorAll('[data-floe-part]:has(> .floe-copy)')].map((part) => {
     const pre = part.querySelector('pre'), button = part.querySelector('.floe-copy').getBoundingClientRect();
-    if (pre.scrollWidth === pre.clientWidth) {
+    if (pre.scrollWidth - pre.clientWidth <= 1) {
       const line = pre.querySelector('code > span:last-child');
       const edge = pre.getBoundingClientRect().left + pre.clientLeft + pre.clientWidth;
       return part.dataset.floePart + ' short' + (line ? ' ' + (Math.abs(line.getBoundingClientRect().right - edge) < 0.5 ? 'reaches' : 'stops short') : '');
@@ -460,8 +464,8 @@ const measureRoom = `(() => {
 })()`
 
 // TestCopyRoom scrolls each long line of code, a terminal and a diff to its end: it ends left of the copy button, in
-// every theme; a short one does not scroll, a short diff's line still reaching the right edge. Printed, with no button,
-// a line keeps no room after it.
+// every theme; a short one does not scroll (within a pixel, which rounding a rem may take), a short diff's line still
+// reaching the right edge. Printed, with no button, a line keeps the code's own padding after it, 1.1rem.
 func TestCopyRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -477,13 +481,14 @@ func TestCopyRoom(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		s.floe(t, "publish", file, "--slug", "room-"+name, "--theme", name)
 		b.navigate("/a/room-" + name + "/?raw")
 		out = append(out, name+": "+b.eval(measureRoom))
-		want = append(want, name+": code ok, code ok, terminal ok, diff ok, code short, diff short reaches")
+		want = append(want, name+": code ok, code ok, terminal ok, diff ok, code short, diff short reaches, terminal short")
 	}
 	printed := emulation.SetEmulatedMediaParams{Media: "print"}
 	if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, printed); err != nil {
 		t.Fatal(err)
 	}
-	out = append(out, "printed: "+b.eval("[...new Set([...document.querySelectorAll('pre > *')].map((e) => getComputedStyle(e).paddingRight))].join(' ')"))
-	want = append(want, "printed: 0px")
+	out = append(out, "printed: "+b.eval("[...new Set([...document.querySelectorAll('[data-floe-part=code] pre > *, [data-floe-part=terminal] pre > *, [data-floe-part=diff] code > span')]"+
+		".map((e) => getComputedStyle(e).paddingRight))].join(' ')"))
+	want = append(want, "printed: 17.6px")
 	check(t, "room", out, strings.Join(want, "|"))
 }
