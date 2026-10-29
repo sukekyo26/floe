@@ -97,7 +97,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `floe part list`, `show`, `new` (the smallest part, to fill in) and `check`.
   A part's schema takes floe's formats (`html`, `markdown`, `image`) as a
   template's does, and a shared schema holding them. A shared schema is
-  checked from its root, whether a schema names it or not. A mistake
+  checked from its root, whether a schema names it or not. A part's
+  `part.html` may call the functions floe's parts draw with (`copyButton`,
+  `bars`, `diff`, `tree`, `diagram`, `script`); `bars` refuses a value that is
+  not a number or is below 0. A mistake
   of a part, shared schema, theme or template of your own stops every page
   drawn until it is fixed. The directories of parts, themes and templates of
   your own that are one, or one in the other, are refused for their settings.

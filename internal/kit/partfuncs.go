@@ -100,6 +100,11 @@ func barsOf(items []any) ([]bar, error) {
 		if err != nil {
 			return nil, err
 		}
+		// Its width is its share of the longest: one below 0 would be no width, which CSS drops, drawing the bar whole.
+		if n < 0 {
+			return nil, usererr.New("kit_below_zero", "bars", fmt.Sprint(m["value"]))
+		}
+		n = max(n, 0) // -0, which n < 0 lets through, as 0
 		longest = max(longest, n)
 		bars = append(bars, bar{Label: stringOf(m["label"]), Tone: stringOf(m["tone"]), Value: m["value"], Width: n})
 	}

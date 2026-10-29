@@ -70,6 +70,8 @@ floe の主要な変更を記録します。フォーマットは
   `new`（埋めて使う最小の部品）・`check`。部品の schema は、テンプレートと同じく floe の
   format（`html`・`markdown`・`image`）と、それを持つ共有の schema を取れる。
   共有の schema は、どれかの schema が名指すかによらず、その根から確かめる。
+  部品の `part.html` は、floe の部品が使う関数（`copyButton`・`bars`・`diff`・`tree`・
+  `diagram`・`script`）を呼べる。`bars` は、数でないか 0 より小さい値を断る。
   自分の部品・共有の schema・テーマ・テンプレートに誤りがあると、直すまでどのページも描かない。
   部品・テーマ・テンプレートの置き場所が同じか、一方がもう一方の中にあれば、その設定を断る。
 - 追加：キャンバスに部品（frame・box・table・icon・名前でつなぐ edge・dot・bar・axis・
