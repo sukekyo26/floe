@@ -7,7 +7,7 @@ title: Checkout redesign
 date: 2030-05-14 18:00
 from: Mina
 to: Kenji
-summary: The card form is done; the address form waits on one decision, and the tax rules on the finance team.
+summary: The card form is done; the address form waits on one decision, and the tax rules (`tax_rules`) on the finance team.
 asks:
   - question: Ask for a phone number at checkout?
     options: [Always, Only for delivery, Never]

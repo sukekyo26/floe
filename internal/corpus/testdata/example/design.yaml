@@ -31,7 +31,7 @@ decisions:
       - title: A message broker
         pros: ['Made for this, and scales further']
         cons: ['A new service to run, watch and back up']
-  - question: How to try again
+  - question: How to try a failed `send` again
     options:
       - title: Back off exponentially
         text: 1 minute, then 2, 4 and on, up to a day.
