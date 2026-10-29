@@ -1,9 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "slides",
-  "description": "Slides to show one at a time, each as tall as the screen: a cover of the title, then slides of a heading over parts, a slide of a heading alone standing between parts of the talk.",
+  "description": "Slides to show one at a time, each as large as the screen: down, one under the next and moved by the scroll, or across, side by side and moved by the ← and → keys or a swipe; a cover of the title, then slides of a heading over parts, a slide of a heading alone standing between parts of the talk.",
   "type": "object",
   "properties": {
+    "direction": {
+      "enum": [
+        "down",
+        "across"
+      ],
+      "description": "How the slides are laid out and moved: down (when left out), one under the next, moved by the scroll; across, side by side, moved by the ← and → keys or a swipe"
+    },
     "subtitle": {
       "type": "string",
       "minLength": 1,

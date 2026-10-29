@@ -278,13 +278,13 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: a cover on the band, then each slide as
-   tall as the screen, stopped at by the scroll, its number and the count in the corner; a slide of a heading alone is
-   on the band too.
+   large as the screen, stopped at by the scroll, down or across, its number and the count in the corner; a slide of a
+   heading alone is on the band too.
    LIMIT: a slide taller than the screen scrolls inside itself; its parts are not made to fit, nor drawn larger (the
    browser's zoom does that)
    LIMIT: a slide taller than a page in print runs over several, its number on the last alone
-   LIMIT: the stop at each slide, a page a slide in print and the numbers are not tested; they were looked at when the
-   template was made */
+   LIMIT: the stop at each slide down, a page a slide in print and the numbers are not tested, nor the keys across in a
+   frame or without the window's focus (the test gives its tab that focus); they were looked at when the template was made */
 :scope { scroll-snap-type: y mandatory; }
 body { margin: 0; font-size: 16px; line-height: 1.6; }
 /* The pad under a slide holds the number and the hint, set 3svh above its bottom */
@@ -294,13 +294,34 @@ body { margin: 0; font-size: 16px; line-height: 1.6; }
 .subtitle { font-size: clamp(1.1rem, 2.2vw, 1.7rem); max-width: none; }
 .hint { position: absolute; bottom: 3svh; left: 8vw; font-size: 0.9rem; }
 /* Off base's list: the slides fill the width, one under the next, numbered by a counter of their own */
-.slides { list-style: none; padding: 0; margin: 0; max-width: none; display: block; counter-reset: floe-slide; }
+.slides { list-style: none; padding: 0; margin: 0; max-width: none; display: block; gap: 0; counter-reset: floe-slide; }
 .slides > li { counter-increment: floe-slide; }
 .slides > li::after { content: counter(floe-slide) " / " attr(data-total); content: counter(floe-slide) " / " attr(data-total) / ""; position: absolute; right: 3vw; bottom: 3svh; font-family: var(--mono); color: var(--muted); font-size: 1rem; }
 .slides > li.divider::after { color: inherit; }
 .slide h2 { font-size: clamp(1.7rem, 4vw, 3rem); line-height: 1.25; }
 .divider h2 { font-size: clamp(2rem, 5vw, 3.6rem); }
 .content { display: grid; gap: 1rem; }
+/* Across, on a screen: the cover and the slides side by side, each as wide and as tall as the screen and kept from
+   shrinking, stopped at by the scroll sideways; a slide taller than the screen scrolls down inside itself.
+   LIMIT: a mouse's wheel scrolls down, not across; the ← and → keys, a swipe, Shift and the wheel, or a trackpad move
+   the slides
+   LIMIT: in the frame of the management page or of VS Code, ← and → reach the slides once the frame is clicked
+   LIMIT: a swipe or a sideways scroll over a part that scrolls sideways (a wide table, pre, a diagram) moves the part
+   first, and so do ← and → once that part is clicked
+   LIMIT: in a slide that scrolls inside itself, the number and the hint move with it, out of the screen
+   LIMIT: Page Down, Page Up, Space, Home and End, which a presenter's clicker sends, do not move the slides across
+   LIMIT: a key pressed again while a slide still moves is lost in its move; it moves a slide at a time
+   LIMIT: a browser that computes overflow-x: clip beside auto as hidden lets a script, a find or a focus shift a slide
+   sideways */
+@media screen {
+  /* No bar, which would take its height from the slides as tall as the screen; no going back by a swipe off the edge */
+  :scope[data-direction="across"] { scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: none; }
+  :scope[data-direction="across"] body, :scope[data-direction="across"] main, :scope[data-direction="across"] .slides { display: flex; }
+  :scope[data-direction="across"] .slide {
+    flex: none; width: 100vw; height: 100svh; min-height: 0; overflow-x: clip; overflow-y: auto; justify-content: safe center;
+    border-bottom: none; border-right: 1px solid var(--line);
+  }
+}
 @media print {
   @page { size: landscape; margin: 0; }
   :scope { scroll-snap-type: none; }
