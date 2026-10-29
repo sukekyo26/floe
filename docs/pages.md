@@ -33,7 +33,7 @@ sections:
 ```
 
 ```sh
-floe check plan.yaml     # prints its mistakes, or nothing
+floe check plan.yaml     # prints its mistakes and warnings, or nothing
 floe publish plan.yaml   # stores the page and prints its URL
 ```
 
@@ -54,7 +54,7 @@ Each part is one key naming its kind. `floe part list` lists them with a line ea
 
 | Part | What it draws |
 |---|---|
-| `text` | Markdown, tables included; raw HTML in it is left out. A fenced block of code (```` ``` ````) is refused: write code in `code` and commands in `terminal`. An image file named in it is not shown, only a data URI of a png, gif, jpeg or webp: write images in `image`. |
+| `text` | Markdown, tables included; raw HTML in it is left out. A fenced block of code (```` ``` ````) is drawn as plain code and warned of: write code in `code` and commands in `terminal`. An image file named in it is not shown, only a data URI of a png, gif, jpeg or webp: write images in `image`. |
 | `code` | Code as it is, under its `file` with its `lang`. A button over it copies the code. |
 | `terminal` | Commands (`run`) and what they printed (`out`), at the prompt of its `shell` (`bash`, `sh`, `zsh`, `powershell`, `cmd`). floe draws the prompt, so a `run` that starts with one (`$ ls`) is refused. A button over them copies the commands, a line each, without the prompt or what they printed. |
 | `table` | `columns` and `rows`; each cell is a line of Markdown, a number in quotes as it is drawn, or a pill `{ pill, tone }`. |
@@ -158,6 +158,17 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 - A mistake of the shape (`additional properties 'x' not allowed`, `missing property 'x'`, `got string, want array`) is the template's or the part's schema refusing the data: `floe template show <template>` and `floe part show <part>` print what they take.
 - A mistake of a part, theme or template of your own stops every page, whether it uses that one or not: the mistake is told at its own file (`~/.config/floe/parts/quote/schema.json:2:1: …`). `floe part check` and `floe template check` list them.
 - A mistake told once is not told again, even if many places name it.
+
+### Warnings
+
+A page drawn may have warnings: advice on a better way to write it, which leaves the page drawn and the exit code as it is (0 when there is no mistake). They are printed after the mistakes, by `floe check`, `floe render`, `floe template check` and `floe publish`:
+
+```text
+plan.yaml:12:15: warning: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
+```
+
+- A fenced block of code in a `text` part, in a section or in `details` and `tabs`, is warned of: write it in `code`, or a command in `terminal`.
+- A file with a mistake is not drawn, so its warnings come once its mistakes are fixed. Those of the other files drawn are told with the mistakes.
 
 ## Checking and publishing
 

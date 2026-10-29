@@ -168,12 +168,12 @@ ja:
 schema では言えない項目どうしの関係を、リストの各項目に、またはデータファイル全体に 1 回、確かめます。
 
 ```yaml
-# リストへの鍵のパス（sections.parts は各節の部品）
-- for: sections.parts
+# リストへの鍵のパス（sections は各節）
+- for: sections
   # 外れたときに指す、項目の鍵（任意）
-  field: text
-  expr: item.text == nil || !(item.text matches "(?m)^```")
-  message: write code in a code part
+  field: heading
+  expr: item.heading != nil || len(item.parts ?? []) < 2
+  message: give a section of more than one part a heading
 ```
 
 - `for` の途中のリストは 1 つずつ辿ります。`sections.parts` は各節の部品を確かめ、外れたものはその項目で言います。

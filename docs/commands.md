@@ -36,7 +36,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 
 ## `floe publish <data.yaml>` / `floe publish --link <file>`
 
-Draw the page of a data file with the template it names, store the page as it was drawn, and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout. If the server is not running, it is started in the background first. A new slug is also opened in the browser (`$BROWSER`, else `open`, `wslview` or `xdg-open`); a republished one is not, because the open tab reloads itself.
+Draw the page of a data file with the template it names, store the page as it was drawn, and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout, and the warnings of the page drawn on stderr, as `floe check` prints them. If the server is not running, it is started in the background first. A new slug is also opened in the browser (`$BROWSER`, else `open`, `wslview` or `xdg-open`); a republished one is not, because the open tab reloads itself.
 
 Pages are drawn from data files (`.yaml`, `.yml`); [pages.md](pages.md) tells how to write one. The data file is copied to `<slug>/source-<id>/data.yaml` under `FLOE_DIR`, with the images it shows at the paths it names them by; take it back from there if the original is lost. Each publish writes a new copy and then removes the one before, so a publish that fails leaves the page as it was. A relative path is resolved against the working directory.
 
@@ -88,7 +88,8 @@ A linked data file is drawn each time its page is opened, with `--theme` as give
 Check each data file as its page is drawn: its YAML, its template and theme, the template's schema, its checks and computed values, and the page drawn. A relative path is resolved against the working directory.
 
 - The mistakes of every file are printed as `file:line:column: message`, in the order the files were given (exit code 1): every mistake of a stage of the checks at once, a stage running only when the one before it has none. [pages.md](pages.md#reading-mistakes) tells how to read them.
-- Nothing is printed when every file is right (exit code 0).
+- The warnings of the pages drawn, advice on a better way to write them, are printed after the mistakes as `file:line:column: warning: message`; they leave the exit code as it is. [pages.md](pages.md#warnings) tells them.
+- Nothing is printed when every file is right and has no warning (exit code 0).
 - Nothing is written, and the server is not started, so a repository's CI can run it over its data files.
 - A file that is not a data file (`.yaml`, `.yml`) is refused.
 - A data file named twice (by two globs, through a symlinked directory, or in another case on macOS) is checked once, and told by the path it was first given as.
@@ -106,9 +107,10 @@ floe render --check docs/*.yaml            # in CI: fails when a page was not wr
 | Flag | Description |
 |---|---|
 | `--out-dir <dir>` | Write the pages in this directory, made when missing, instead of beside each data file. |
-| `--check` | Write nothing: print each page that is missing or is not what its data file draws (exit code 1), or nothing when every page is (exit code 0). |
+| `--check` | Write nothing: print each page that is missing or is not what its data file draws (exit code 1), or, when every page is, only the warnings of the pages drawn (exit code 0). |
 
 - A page is written only when it changes, and its path is printed; running it again does nothing.
+- The warnings of the pages drawn are printed on stderr as `floe check` prints them; they leave the exit code as it is.
 - A page there is written over: keep the pages in version control to get one back.
 - The mistakes are printed as `floe check` prints them, and nothing is written until all are fixed (exit code 1). Nothing is written either when two data files would write the same page (`a/spec.yaml` and `b/spec.yaml` with one `--out-dir`, or `spec.yaml` and `spec.yml`).
 - Nothing is published, and the server is not started.
@@ -144,7 +146,7 @@ Make the template `<name>` in `FLOE_TEMPLATES_DIR`: a `page.html`, a `schema.jso
 
 Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own, as `floe part check` does, then draw the `example.yaml` of each template of your own as `floe check` draws a data file.
 
-- The mistakes are printed (exit code 1): those of the files, and the examples drawn once the files have none. Nothing is printed when they are right (exit code 0).
+- The mistakes are printed (exit code 1): those of the files, and the examples drawn once the files have none; then the warnings of the examples drawn. Nothing is printed when they are right and have no warning (exit code 0).
 - A file floe does not read in a template (a `template.yaml`, say) is refused: a template holds `page.html`, `schema.json` and `example.yaml`, and `page.css`, `computed.yaml`, `checks.yaml`, `words.yaml` and `assets/` if it likes.
 
 [templates.md](templates.md) tells what each file holds.

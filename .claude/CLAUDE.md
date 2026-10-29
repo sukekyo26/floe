@@ -14,6 +14,8 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **floe 自身の仕組みの確かめ**：floe が置いた印や、floe がスタイルを入れる所など、floe の仕組みが前提にするものを確かめる
 - **ライブラリの黙った読み違い**：ライブラリが誤りを出さずに、書いたのと違う値を読む所（YAML の 2 つ目の文書、`#` で値が切れる、`{a, b: 1}`、文字でない鍵、`.inf`・`.nan`、YAML 1.2 と読みが違う数（`017`・`1e3` など）、schema の JSON の 1 つの object の中の同じ鍵、html/template が値を誤りなしに `ZgotmplZ` に置き換える所、ファイルの先頭のほかの BOM（YAML と schema の JSON。引用符の中も）、YAML の UTF-8 でないバイト列、schema の JSON の文字列の中の孤立したサロゲートと UTF-8 でない字（U+FFFD と読む）、API の書き込みの本文の、大文字小文字だけが違う鍵・同じ鍵の 2 つ目・文字列の中の孤立したサロゲートと UTF-8 でない字）を断る
 
+- **警告**：上の 4 つは断る検査で、警告はその外にある。警告にしてよいのは、ページが崩れず、より良い書き方を勧めるだけのもの（勧め）だけで、直さないと困るもの（崩れる、誤った値になる、写すと動かない）は断る。警告は、勧めのとおりに直せる所にだけ出し、終了コードを変えない。見つけるのも断る検査と同じく本物のパーサやライブラリで（Markdown は goldmark の木で）、正規表現で読まない。今の警告は、部品 text の値の中のコードの囲み（`draw_text_fence`）だけで、見るのは `draw.drawItem` の 1 か所
+
 ## 作りの決まり
 
 - **使えない自分のものは止める**：描かずに分かる誤りで使えない自分の部品・テーマ・テンプレートが 1 つでもあれば、その出力を止めて理由を並べる。使った所だけで断る仕組みは作らない
@@ -35,6 +37,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **schema の JSON は schema だけが読む**：schema.json などの JSON のバイト列を読むのは `schema` の `read` だけ。`schema` の外からは、バイト列を `Compile`・`NewResource` に渡す。構文の誤り（jsontext の言葉で）と、ライブラリが黙って読み違えるもの（1 つの object の中の同じ鍵、先頭のほかの BOM、文字列の中の孤立したサロゲートと UTF-8 でない字、値の後ろの 2 つ目の値）は、`read` が値にする前に断る（ライブラリは後の値や U+FFFD で読むので、構文の誤りと同じく読む所で断る）。jsonschema を import できるのは `internal/schema` だけ（depguard の規則 `jsonschema-in-schema`）
 - **段 1 は読むと確かめるに分ける**：kit の `read` は値を作るのに要ることだけ（ファイルを読む、YAML・JSON・HTML を値にする、schema をコンパイルする）をし、値の後の決まり（CSS の形、部品の schema、エスケープ、見た目の名前など）は確かめる関数 `check` が持つ。kit の外で Kit を作れるのは、read と check を通す `Load` と、floe のものを読む `Floe()` だけで、確かめていない自分のもので描くことは、型で起きない。実行のときは floe のものを読むだけで確かめず、同じ確かめをテストで floe のものに走らせる。例外：後で一緒にコンパイルするものの読み方を変える入力は、値を作るのに要る確かめとして読む所で断る（確かめる関数に置くと、その前のコンパイルが別の誤りで失敗し、原因が言われない）。floe のものも、実行のときに同じ確かめを通る。今これに当たるのは、部品と共有の schema の `$schema` と `$id`（`schema.NewResource`）だけ
 - **読んだ Kit は変えない**：`Kit` は欄を外へ出さず、`[]byte` も写しを返す。自分のものを重ねるときは、土台を書き換えずに新しい `Kit` を作る（`Floe()` の値をプロセス全体で共有するため）。描くときは、`Template.Page`・`Part.Page` が返す写しを Execute する（Execute は html/template にエスケープの結果を書き込み、その後は写しを作れない）
+- **部品 text はコードの部品と並ぶ Markdown**：部品の並び（any.json と stack）の Markdown は floe の部品 text で、Go はその名前を `kit.TextPart` 1 つで持つ。テンプレートや部品の自分の Markdown の欄は部品 text にしない
 - **Markdown は kit だけが読む**：goldmark を import できるのは `internal/kit` だけ（depguard の規則 `goldmark-in-kit`）。生の HTML を出さない `markdown` を、どこも通る
 - **写すボタンは `copyButton` 1 つ**：部品の中身をクリップボードに写すボタンは、part.html の `{{copyButton}}`（`kit/copy.js`）1 つが描き、写す要素は part.html が `data-floe-copy` で決める（部品は `{{copyButton}}` の script の `closest('[data-floe-part]')`）。写すのは印の要素の字を、どれも改行で終えて並べたもの。ボタンの形は floe の base（`.floe-copy`）1 か所で、どの部品から呼んでも同じに見える。置き場所だけを部品の CSS が決める。言葉は `Part.Page` がページの言語で縛り、script は言語ごとに 1 回だけ作る。書くのは `writeText` で、断られたら `copy` の出来事と `execCommand('copy')` に落とす（VS Code の Simple Browser は枠に `clipboard-write` を渡さない）。部品ごとに script・ボタン・言葉・ボタンの形を書かない
 - **floe の script は `page.Script` 1 つで組み立てる**：ページに入れる floe の script（図の拡大、写すボタン）は、`page.Script` が関数と JSON の引数から組み立て、コメントだけの行を落とす
@@ -71,6 +74,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **テンプレートの誤りの場所**：text/template の文の頭（実行の `name:行:列: `、構文の `name:行: `）を読むのは `textpos.OfTemplate` だけで、読んだ場所は `Line`・`Column` に入れ、文に残さない。構文の誤りは列を付けず、行の中の CR だけの改行の後は言えない（`LIMIT:`）。ライブラリが言うバイトの位置は `len(src)` より前だけを場所にする（例外は構文の誤りの行の頭で、src が空でなければ終わりも受ける）。html/template のエスケープの誤りは Node の位置を先に使い、Node が無ければ `Error.Line` を text/template の行として `textpos.TemplateLine` で写す
 - **CLI の誤り**：コマンド行の誤りは、cobra の文に `cli_usage` で「run floe --help」を添える（cobra の文は直し方を言わない）
 - **読めない・書けない誤り**：floe がユーザーのために使うパス（コマンド行で渡したパス、設定のディレクトリ、既定のディレクトリ）の下のファイルを読めなければ `usererr.CannotRead`（システムの文のまま、そのパスに置く。`gone.yaml: no such file or directory`）、書けなければ `usererr.CannotWrite`（`cannot_write`：書けないことと確かめる所を言い、括弧の中にシステムの文を残して、そのパスに置く。ユーザーが決めた。書けない理由はディレクトリ・権限・名前の長さなどで、システムの文だけでは何を直すかが分からない）で言う。ふつうのファイルでもディレクトリでもないもの（FIFO・デバイスなど）は、`CannotRead` が `usererr.ErrNotFile` を見て `kit_not_file` で言う。呼び出し元は言い換えず、`CannotRead` に渡す
+- **警告の出し方**：警告も `*usererr.Error` で作り、誤りと同じ関数で場所を付ける。`error` にも、`error` である `usererr.List` にも入れず、`[]*usererr.Error` の別の返り値で運ぶ（`tmpl.Draw` から `store.Entry`・`server.Saved` まで）。言葉にするのは `usererr.Warn`（並べて 1 回だけ言う）、並べるのは `Report.Render`（誤りの後に、頭に `warning: ` を付けて。floe の失敗のときは失敗だけ）。描けなかった入力の警告は無く、ほかの入力の誤りがあっても、描けた入力の警告は誤りと一緒に出す。CLI は警告を `Run` の出口で 1 回出す（手元の警告は `Warn` を 1 回だけ呼ぶ）。rebuild とページを開くときの描きは、警告を捨てる
 - **出す**：誤りを言葉にするのは `usererr.Tell`、並べるのは `Report.Render` だけ。目録の鍵は、それを使うコードと同じ PR で、英語と日本語の両方に入れる
 
 ## floe の不具合や困ったことは、ユーザーに伝える

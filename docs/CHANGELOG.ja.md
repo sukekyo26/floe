@@ -8,6 +8,13 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：警告。ページのより良い書き方の勧めで、`floe check`・`floe render`・
+  `floe template check`・`floe publish` が、誤りの後に
+  `file:line:column: warning: message` で出す。ページは描き、終了コードも
+  変えない。最初の警告は、`text` の部品（節の中、`details`・`tabs` の中も）の
+  囲んだコードのブロックで、ただのコードとして描き、`code` か `terminal` に
+  書くよう勧める。`text` は部品の 1 つになったので、自分の部品に `text` という
+  名前があると断る。
 - 追加：図の部品 `tree`。木の節と子だけを書けば、floe が各節を親の下に置き、
   線を引く。あわせて図の例 `org`（`floe diagram example org`）。ある会社の
   部署を `tree` で描く。

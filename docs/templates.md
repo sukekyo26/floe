@@ -168,12 +168,12 @@ Each key is a language tag. `{{word "status_doing"}}` draws the word in the page
 Relations between items that a schema cannot say, each checked on every item of a list, or once on the whole data file:
 
 ```yaml
-# a path of keys to a list (sections.parts: the parts of every section)
-- for: sections.parts
+# a path of keys to a list (sections: every section)
+- for: sections
   # the item's key to point at when it fails (optional)
-  field: text
-  expr: item.text == nil || !(item.text matches "(?m)^```")
-  message: write code in a code part
+  field: heading
+  expr: item.heading != nil || len(item.parts ?? []) < 2
+  message: give a section of more than one part a heading
 ```
 
 - A list on the way of `for` is gone through item by item: `sections.parts` checks the parts of every section, and a failure is reported at its item.
