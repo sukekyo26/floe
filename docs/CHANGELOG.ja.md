@@ -8,6 +8,8 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：図の例 `gantt`（`floe diagram example gantt`）。作業の期間を棒で、
+  待つつながりを矢印で描く図で、あるアプリの 1 つの版の 6 週間の予定を置く。
 - 追加：図の例 `quadrant`（`floe diagram example quadrant`）。2 つの軸で項目を
   4 つの領域に分ける図で、ノートのアプリの機能の候補を、価値と手間で置く。
 - 追加：図の例 `swimlane`（`floe diagram example swimlane`）。流れを、する人ごとの

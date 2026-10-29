@@ -1,0 +1,28 @@
+bar "decide" 200,37 96x14
+bar "design" 312,73 96x14
+bar "screens" 424,109 224x14
+bar "api" 312,145 224x14
+bar "test" 664,181 96x14
+bar "help" 552,217 192x14
+dot 792,260 785,253 14x14
+edge decide→design M296,44 H304 V80 H312
+edge design→screens M408,80 H416 V116 H424
+edge decide→api M296,44 H304 V152 H312
+edge api→test M536,152 H600 V188 H664
+edge screens→test M648,116 H656 V188 H664
+edge api→help M536,152 H544 V224 H552
+edge test→release M760,188 H792 V260
+edge help→release M744,224 H792 V260
+label "Week 1" 173.4,302 53.2x18
+label "Week 2" 285.4,302 53.2x18
+label "Week 3" 397.4,302 53.2x18
+label "Week 4" 509.4,302 53.2x18
+label "Week 5" 621.4,302 53.2x18
+label "Week 6" 733.4,302 53.2x18
+label "Decide what to build" 11,35 154x18
+label "Design the screens" 11,71 139.6x18
+label "Build the screens" 11,107 132.4x18
+label "Build the API" 11,143 103.6x18
+label "Test" 11,179 70x18
+label "Write the help" 11,215 110.8x18
+label "Release" 11,251 60.4x18

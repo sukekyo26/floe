@@ -213,7 +213,7 @@ Check each spec as `floe diagram render` does, and print, a line each, where eac
 
 ## `floe diagram example [kind]`
 
-Without a kind, list the built-in examples, one per kind of diagram (architecture, AWS architecture, class, ER, flow, Git branches, quadrant, sequence, state, swimlane, timeline, Venn): each line holds the kind and a summary, tab-separated. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks. Its text is written in English and Japanese (`{en: …, ja: …}`), as a spec may write it. The AWS example draws AWS icons, so render it after `floe icons fetch aws`.
+Without a kind, list the built-in examples, one per kind of diagram (architecture, AWS architecture, class, ER, flow, Gantt chart, Git branches, quadrant, sequence, state, swimlane, timeline, Venn): each line holds the kind and a summary, tab-separated. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks. Its text is written in English and Japanese (`{en: …, ja: …}`), as a spec may write it. The AWS example draws AWS icons, so render it after `floe icons fetch aws`.
 
 ---
 
