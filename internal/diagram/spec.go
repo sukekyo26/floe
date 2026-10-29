@@ -80,6 +80,21 @@ type part struct {
 	Label  *label  `json:"label"`
 	Line   *line   `json:"line"`
 	Raw    *raw    `json:"raw"`
+	Tree   *tree   `json:"tree,omitempty"` // omitted, so that the ids of a spec without it stay
+}
+
+type tree struct {
+	X    float64 `json:"x"`
+	Y    float64 `json:"y"`
+	Root node    `json:"root"`
+}
+
+type node struct {
+	Name     string `json:"name"`
+	Rows     []row  `json:"rows"`
+	Tone     string `json:"tone"`
+	Shape    string `json:"shape"`
+	Children []node `json:"children"`
 }
 
 type frame struct {
@@ -177,7 +192,7 @@ type icon struct {
 	Size  float64 `json:"size"`
 }
 
-// end is an edge's end: the name of a part or a named row, or a point.
+// end is an edge's end: the name of a part, a named row or a node, or a point.
 type end struct {
 	Name  string
 	Point *[2]float64

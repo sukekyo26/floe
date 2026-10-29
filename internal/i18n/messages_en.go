@@ -229,8 +229,8 @@ var messagesEN = map[string]string{
 	"icons_already":            "%s icons %s are already in %s (add --force to fetch them again)",
 
 	// diagram: the parts' names, layout and raw SVG of a diagram, and its zoom toolbar
-	"diagram_name_used":        `the name "%s" is given before: give each part and row its own name`,
-	"diagram_name_unknown":     `edge: no part or row named "%s"`,
+	"diagram_name_used":        `the name "%s" is given before: give each part, row and node its own name`,
+	"diagram_name_unknown":     `edge: no part, row or node named "%s"`,
 	"diagram_end_kind":         `edge: "%s" is a %s, which no edge can end at: end it at a box, a table or its named row, an icon, a frame, a bar, a dot or a point`,
 	"diagram_end_side":         `edge: %s has no side %s: write the side of a box, a table, an icon, a frame or a bar, left or right of a row, and none for a dot or a point`,
 	"diagram_too_narrow":       `%s: "%s"%s needs w: %s or more`,
