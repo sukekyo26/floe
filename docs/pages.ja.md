@@ -1,10 +1,10 @@
 # ページを書く
 
-floe がページを描く元の YAML、データファイルの書き方です。floe のテンプレート `report`・`design`・`handoff`・`adr`・`postmortem` でページを書くには、これだけで足ります。自分のテンプレートの作り方は [templates.ja.md](templates.ja.md)、コマンドとフラグは [commands.ja.md](commands.ja.md) にあります。
+floe がページを描く元の YAML、データファイルの書き方です。floe のテンプレート `report`・`design`・`handoff`・`adr`・`postmortem`・`runbook` でページを書くには、これだけで足ります。自分のテンプレートの作り方は [templates.ja.md](templates.ja.md)、コマンドとフラグは [commands.ja.md](commands.ja.md) にあります。
 
 ## データファイル
 
-データファイルはテンプレートを名指し、テンプレートがそのデータからページを描きます。floe のテンプレートは、見出しの下に節を並べ、節ごとに見出しと部品を置く `report`、設計書の `design`、引き継ぎと状況の知らせの `handoff`、決めたことの記録の `adr`、障害の振り返りの `postmortem` です。
+データファイルはテンプレートを名指し、テンプレートがそのデータからページを描きます。floe のテンプレートは、見出しの下に節を並べ、節ごとに見出しと部品を置く `report`、設計書の `design`、引き継ぎと状況の知らせの `handoff`、決めたことの記録の `adr`、障害の振り返りの `postmortem`、手順書の `runbook` です。
 
 ```yaml
 template: report
@@ -41,7 +41,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 | 鍵 | 中身 |
 |---|---|
-| `template` | ページを描くテンプレート（`report`・`design`・`handoff`・`adr`・`postmortem`、または自分のもの）。必須。 |
+| `template` | ページを描くテンプレート（`report`・`design`・`handoff`・`adr`・`postmortem`・`runbook`、または自分のもの）。必須。 |
 | `lang` | ページの言語（`<html lang>`）。`en`・`ja`・`pt-BR` のようなタグ。必須。floe と部品が描く言葉（`risks` の見出し、図の拡大のボタン、コードのコピーのボタン）と図の文はこれに従い、その言語の言葉が無ければ英語になる。 |
 | `title` | ページの題。 |
 | `theme` | ページを描くテーマ（既定は `default`）。色・書体・部品の形を決める。`floe template show <テンプレート>` が `themes:` の行に並べる：`default`・`soft`・`editorial`・`ink`・`brutal`・`blueprint`・`notebook`・`swiss`・`washi`。 |
@@ -55,6 +55,8 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 `adr` は、1 つの決めたことを紙 1 枚に書く記録です。`status`（`proposed`・`accepted`・`rejected`・`deprecated`・`superseded`。題の下の判子）・`context`・`decision`（Markdown）が必須で、`status` が `superseded` の記録は、置き換えた記録を `superseded_by`（`[ADR 0012](/a/adr-0012/)`）に書きます。`number`・`date`・`deciders` が頭に出て、`alternatives` は選ばなかった案（`title` と `why`）、`consequences` は良くなること（`good`）と引き受けること（`bad`）の行、`more` は report と同じ自分の節です。`number`・`date`・`deciders`・`more` の見出しは書いたままの字で、`superseded_by` とほかの行は Markdown の 1 行です。
 
 `postmortem` は、人を責めずに書く障害の振り返りです。`summary`（Markdown の 1 行。アクセントの色で塗った帯の中）・`timeline`・`cause`（Markdown）が必須です。`date`・`severity`（`high`・`medium`・`low`。帯の中の札で、赤は `high` だけ）・`authors` が頭に出て、`effects` は影響（部品 `facts` と同じ `name` と `value`）、`timeline` は部品 `timeline` の値（書いた順に描き、`date` は `10:42` のような書いたままの字）、`lessons` はうまくいったこと（`good`）・まずかったこと（`bad`）・運が良かったこと（`lucky`）の行、`actions` は `what`（Markdown の 1 行）・`owner`・`state`（`todo`・`doing`・`done`。札）・`ref`（チケットなど）の行、`more` は report と同じ自分の節です。`date`・`authors`・`owner`・`ref`・`more` の見出しは書いたままの字です。
+
+`runbook` は、何度も行う作業を、打つコマンドと一緒に残す手順書です。必須は `steps` と、各手順の `title`（`rollback` の手順も）だけで、1 つずつ `title`（Markdown の 1 行）・`who`（読む人のほかが行うとき。題の横の札）・`text`（部品 `text`。囲んだコードは警告するので、コマンドは `run` に書く）・`run`（部品 `terminal` の値。写すボタン付き）・`if_fails`（Markdown の 1 行。書いたとおりにいかなかったときにすること）を書きます。`rollback` は同じ形の手順で、戻し方を別の枠に描きます。`summary`（Markdown の 1 行）・`owner`・`updated`（最後に直した日。書いたままの字）が頭に出て、`needs` は始める前に確かめること（Markdown の 1 行ずつ）、`caution` は作業の間にしてはいけないこと（Markdown の 1 行。手順の前）、`more` は report と同じ自分の節です。
 
 ## 部品
 
@@ -175,7 +177,7 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 plan.yaml:12:15: warning: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
 ```
 
-- `text` の部品（report の節と、design・handoff・adr・postmortem の `more` の中、`details`・`tabs` の中も）の、囲んだコードのブロックを警告します。コードは `code` に、コマンドは `terminal` に書きます。
+- `text` の部品（report の節、design・handoff・adr・postmortem・runbook の `more` の中、runbook の手順の `text`、`details`・`tabs` の中も）の、囲んだコードのブロックを警告します。コードは `code` に、コマンドは `terminal` に書きます。
 - 誤りのあるファイルは描かないので、その警告は誤りを直した後に出ます。ほかの描けたファイルの警告は、誤りと一緒に出します。
 
 ## 確かめと公開

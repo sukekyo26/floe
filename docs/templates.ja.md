@@ -1,6 +1,6 @@
 # テンプレート
 
-自分のテンプレート（データファイルを描き入れるページ）の作り方です。データファイルは `template:` でテンプレートを名指します（書き方は [pages.ja.md](pages.ja.md)）。floe のテンプレートは `report`・`design`・`handoff`・`adr`・`postmortem` です（`floe template list` が並べます）。自分の部品やテーマの作り方は [parts.ja.md](parts.ja.md) にあります。
+自分のテンプレート（データファイルを描き入れるページ）の作り方です。データファイルは `template:` でテンプレートを名指します（書き方は [pages.ja.md](pages.ja.md)）。floe のテンプレートは `report`・`design`・`handoff`・`adr`・`postmortem`・`runbook` です（`floe template list` が並べます）。自分の部品やテーマの作り方は [parts.ja.md](parts.ja.md) にあります。
 
 ## テンプレートの置き場所
 
@@ -116,7 +116,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ### 借りられる見た目
 
-`<section data-floe-look="panel">` は、テンプレートの要素を、どのテーマでもパネル（ほとんどの部品を描く箱）で描きます。`rows`・`cards`・`table` なら、その見た目を借ります。`band` は、design の結論や handoff の頭のような、アクセントの色で塗った帯で、中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。決まりは [parts.ja.md](parts.ja.md#見た目を借りる) にあります。
+`<section data-floe-look="panel">` は、テンプレートの要素を、どのテーマでもパネル（ほとんどの部品を描く箱）で描きます。`rows`・`cards`・`table` なら、その見た目を借ります。`band` は、design の結論や handoff の頭のような、アクセントの色で塗った帯で、中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。`<ol>` に `numbered` を付けると、項目に丸い番号を付けて線でつなぎます（runbook の手順のように）。決まりは [parts.ja.md](parts.ja.md#見た目を借りる) にあります。
 
 ## パレット
 

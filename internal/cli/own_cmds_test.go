@@ -157,7 +157,7 @@ func TestListShow(t *testing.T) {
 		{[]string{"part", "show", "rows"}, 0, func(out string) bool {
 			return out == "rows: Rows in a panel, a rule between each and the next; take it by looks or data-floe-look\nwhere: floe\nlooks: panel\n"
 		}, ""},
-		{[]string{"part", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown part "nope"; use any, band, bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, mine, note, options, panel, progress, risks, rows, script, stack, stats, steps, table, tabs, terminal, text, timeline, tone, tree` + "\n"},
+		{[]string{"part", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown part "nope"; use any, band, bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, mine, note, numbered, options, panel, progress, risks, rows, script, stack, stats, steps, table, tabs, terminal, text, timeline, tone, tree` + "\n"},
 		{[]string{"template", "list"}, 0, func(out string) bool {
 			return strings.HasPrefix(out, "adr\tfloe\tA decision record") &&
 				strings.Contains(out, "\nmemo\t"+filepath.Join(templates, "memo")+"\ta b c\npostmortem\tfloe\tAn incident review")
@@ -166,7 +166,7 @@ func TestListShow(t *testing.T) {
 			return out == "memo: a b c\nwhere: "+filepath.Join(templates, "memo")+"\nthemes: blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi\n"+
 				"schema.json:\n"+schema+"\nexample.yaml:\ntemplate: memo\nlang: en\n"
 		}, ""},
-		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, memo, postmortem, report` + "\n"},
+		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, memo, postmortem, report, runbook` + "\n"},
 	} {
 		if code, stdout, stderr := runEnv(dir, env, tt.args...); code != tt.code || !tt.out(stdout) || stderr != tt.errs {
 			t.Errorf("floe %v = %d, %q, %q; want %d, %q", tt.args, code, stdout, stderr, tt.code, tt.errs)

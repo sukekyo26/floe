@@ -1,0 +1,61 @@
+# A runbook: only steps is required, each a title over what to do; commands go in run, as at a terminal, and what to
+# do when a step fails in if_fails. What to check first goes in needs, how to undo it in rollback, and sections of
+# your own, each a heading over parts as in report, in more.
+template: runbook
+lang: en
+title: Issue and deploy a new certificate for the payment gateway
+summary: 'Replace the TLS certificate of the gateway''s internal endpoint before it expires, or at once when it has. Takes about 20 minutes; checkout keeps working throughout.'
+owner: Platform team
+updated: 2030-05-16
+needs:
+  - 'You can run `kubectl` against the `payments` cluster'
+  - 'You hold the `cert-issuer` role in the vault'
+  - 'The on-call engineer of the payments team knows you are starting'
+caution: 'Do not delete the old secret until checkout works on the new one; the gateway cannot start without a certificate.'
+steps:
+  - title: Issue the certificate
+    run:
+      shell: bash
+      steps:
+        - run: vault write -format=json pki/issue/gateway common_name=gateway.internal ttl=8760h > cert.json
+        - run: jq -r .data.certificate cert.json > cert.pem && jq -r .data.private_key cert.json > key.pem
+        - run: jq -r .data.expiration cert.json
+          out: '1936688400'
+    if_fails: 'A `permission denied` means the role is missing; ask the platform team for `cert-issuer`.'
+  - title: Store it as a new secret
+    text: 'Name it with today''s date, so the old one stays until the end.'
+    run:
+      shell: bash
+      steps:
+        - run: kubectl -n payments create secret tls gateway-tls-20300516 --cert=cert.pem --key=key.pem
+          out: secret/gateway-tls-20300516 created
+  - title: Point the gateway at the new secret
+    run:
+      shell: bash
+      steps:
+        - run: kubectl -n payments set volume deploy/gateway --add --name=tls --secret-name=gateway-tls-20300516 --overwrite
+        - run: kubectl -n payments rollout status deploy/gateway
+          out: deployment "gateway" successfully rolled out
+    if_fails: Roll back at once (below), then page the on-call engineer.
+  - title: Check that checkout works
+    who: Payments on-call
+    text: 'Place a test order on the staging shop and watch the checkout error rate on the dashboard for five minutes.'
+  - title: Delete the old secret
+    run:
+      shell: bash
+      steps:
+        - run: kubectl -n payments delete secret gateway-tls-20290514
+rollback:
+  - title: Point the gateway back at the old secret
+    run:
+      shell: bash
+      steps:
+        - run: kubectl -n payments rollout undo deploy/gateway
+          out: deployment.apps/gateway rolled back
+  - title: Tell the on-call engineer
+    text: Say which step failed and what it printed.
+more:
+  - heading: Related
+    parts:
+      - links:
+          - { title: 'Postmortem: checkout failed for 47 minutes', url: /a/postmortem-certs/, text: The incident that led to this runbook }
