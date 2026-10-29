@@ -151,15 +151,19 @@ blockquote > * + * { margin-top: 0.6rem; }
 :scope code { display: block; font: inherit; color: inherit; background: none; padding: 0; border-radius: 0; }
 /* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
    it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
-   Each box in the code is as wide as its longest line and keeps the button's room after it: scrolled to the end, a
-   line ends left of the button; a short one fills the code as before.
+   Where it draws the button, each box in the code is as wide as its longest line and keeps the button's room after it:
+   scrolled to the end, a line ends left of the button; a short one fills the code as before. Printed, with no button,
+   the room is the code's own padding again.
    LIMIT: before it is scrolled to the end, a long first line runs under the button; scroll it to read that part. Leaving
-   it clear would push the code down by a line, short code too. */
+   it clear would push the code down by a line, short code too.
+   LIMIT: the room is kept after the longest line, though the button covers the first line alone: code whose longest
+   line comes within it (about 43px) of the width scrolls though no line would run under the button, as CSS cannot pad
+   the first line alone. If that comes to matter, give the button a line of its own above the code. */
 :scope > figcaption { grid-row: 1; }
 :scope > pre, :scope > .floe-copy { grid-row: 2; grid-column: 1; }
 :scope > .floe-copy { justify-self: end; align-self: start; margin: var(--floe-copy-gap); }
-:scope > pre { padding-inline-end: 0; }
-:scope > pre > * { width: max-content; min-width: 100%; padding-inline-end: var(--floe-copy-room); }
+:scope:has(> .floe-copy) > pre { padding-inline-end: 0; }
+:scope:has(> .floe-copy) > pre > * { width: max-content; min-width: 100%; padding-inline-end: max(1.1rem, var(--floe-copy-room)); }
 }
 }
 </style>
@@ -169,8 +173,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls: the code is as
    wide as that line (code's part.css), the button's room inside each line's face rather than after the code */
 :scope pre { padding-inline: 0; }
-:scope pre > code { padding-inline-end: 0; }
-:scope code > span { display: block; padding-inline: 1.1rem var(--floe-copy-room); }
+/* Over code's room after the code, as specific as its rule and after it */
+:scope:has(> .floe-copy) pre > code { padding-inline-end: 0; }
+:scope code > span { display: block; padding-inline: 1.1rem; }
+:scope:has(> .floe-copy) code > span { padding-inline-end: max(1.1rem, var(--floe-copy-room)); }
 :scope .add { background: color-mix(in srgb, var(--code-add) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add); }
 :scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
 :scope .hunk { color: var(--code-prompt); }
