@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "postmortem",
+  "description": "An incident review, blameless: a summary on a band with its severity, the impact, a timeline, the cause, what went well, badly and by luck, and the actions with their owners and states.",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "minLength": 1,
+      "description": "When the incident happened"
+    },
+    "severity": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "description": "How severe it was, a badge on the band; red is for high alone"
+    },
+    "authors": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Who wrote the review"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What happened, on the band; a line of Markdown"
+    },
+    "effects": {
+      "$ref": "floe:///parts/facts.json",
+      "description": "The impact, a name and a value each, such as how long it lasted and what was lost"
+    },
+    "timeline": {
+      "$ref": "floe:///parts/timeline.json",
+      "description": "What happened when, drawn in the order written; each date is text as written, such as 10:42 or 2030-05-14 10:42"
+    },
+    "cause": {
+      "type": "string",
+      "minLength": 1,
+      "format": "markdown",
+      "description": "The cause in the system, and what let it spread"
+    },
+    "lessons": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "good": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What went well; a line of Markdown"
+          }
+        },
+        "bad": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What went badly; a line of Markdown"
+          }
+        },
+        "lucky": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Where it got lucky; a line of Markdown"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "description": "What is done so it does not happen again",
+      "items": {
+        "type": "object",
+        "properties": {
+          "what": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A line of Markdown"
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The team or person who does it"
+          },
+          "state": {
+            "enum": [
+              "todo",
+              "doing",
+              "done"
+            ],
+            "description": "A badge; left out, none"
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A ticket or the like, after what in a faint face"
+          }
+        },
+        "required": [
+          "what"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "more": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Sections of your own after the rest, each a heading over parts, as report's",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "floe:///parts/any.json"
+            }
+          }
+        },
+        "required": [
+          "heading"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "summary",
+    "timeline",
+    "cause"
+  ],
+  "additionalProperties": false
+}

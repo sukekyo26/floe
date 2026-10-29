@@ -1,0 +1,40 @@
+en:
+  kind: Incident review
+  severity_high: High
+  severity_medium: Medium
+  severity_low: Low
+  authors: 'Written by'
+  impact: Impact
+  timeline: Timeline
+  cause: Cause
+  lessons: Lessons
+  good: Went well
+  bad: Went badly
+  lucky: Got lucky
+  actions: Actions
+  action: Action
+  owner: Owner
+  state: State
+  state_todo: To do
+  state_doing: In progress
+  state_done: Done
+ja:
+  kind: 障害の振り返り
+  severity_high: 重大
+  severity_medium: 中程度
+  severity_low: 軽微
+  authors: 書いた人
+  impact: 影響
+  timeline: 時系列
+  cause: 原因
+  lessons: 分かったこと
+  good: うまくいったこと
+  bad: まずかったこと
+  lucky: 運が良かったこと
+  actions: 対策
+  action: 対策
+  owner: 担当
+  state: 状態
+  state_todo: これから
+  state_doing: 作業中
+  state_done: 済み

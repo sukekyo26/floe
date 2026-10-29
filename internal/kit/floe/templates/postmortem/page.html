@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+</head>
+<body>
+<header class="band" data-floe-look="band">
+<div class="column">
+<p class="kind">{{word "kind"}}{{with .Data.date}} <span class="date">{{.}}</span>{{end}}{{with .Data.severity}} <span class="severity {{.}}">{{word (printf "severity_%s" .)}}</span>{{end}}</p>
+<h1>{{.Title}}</h1>
+<p class="summary">{{markdownLine .Data.summary}}</p>
+{{- with .Data.authors}}<p class="authors">{{word "authors"}}: {{.}}</p>{{end}}
+</div>
+</header>
+<main class="column">
+{{- with .Data.effects}}
+<section><h2>{{word "impact"}}</h2>{{.}}</section>
+{{- end}}
+<div class="split">
+{{- /* LIMIT: the timeline is drawn in the order written; a time out of order or mistyped is not refused */}}
+<section><h2>{{word "timeline"}}</h2>{{.Data.timeline}}</section>
+<div class="side">
+<section class="cause"><h2>{{word "cause"}}</h2>{{.Data.cause}}</section>
+{{- with .Data.lessons}}
+<section><h2>{{word "lessons"}}</h2><div class="lessons">
+{{- with .good}}<div class="good"><h3>{{word "good"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
+{{- with .bad}}<div class="bad"><h3>{{word "bad"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
+{{- with .lucky}}<div class="lucky"><h3>{{word "lucky"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
+</div></section>
+{{- end}}
+{{- with .Data.actions}}
+<section><h2>{{word "actions"}}</h2><div data-floe-look="table"><table>
+<thead><tr><th>{{word "action"}}</th><th>{{word "owner"}}</th><th>{{word "state"}}</th></tr></thead>
+<tbody>
+{{- range .}}
+<tr><td>{{markdownLine .what}}{{with .ref}} <span class="ref">{{.}}</span>{{end}}</td><td>{{.owner}}</td><td>{{with .state}}<span class="state {{.}}">{{word (printf "state_%s" .)}}</span>{{end}}</td></tr>
+{{- end}}
+</tbody>
+</table></div></section>
+{{- end}}
+</div>
+</div>
+{{- range $m := .Data.more}}
+<section><h2>{{$m.heading}}</h2>
+{{- range $m.parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</section>
+{{- end}}
+</main>
+</body>
+</html>

@@ -1,0 +1,39 @@
+# An incident review: the summary, the timeline and the cause are required. The impact goes in effects, a name and
+# a value each; what went well, badly and by luck in lessons; what is done next in actions; and sections of your own,
+# each a heading over parts as in report, in more.
+template: postmortem
+lang: en
+title: Checkout failed for 47 minutes after a certificate expired
+date: 2030-05-14
+severity: high
+authors: Payments team
+summary: 'The certificate of the payment gateway''s internal endpoint expired at 10:42 UTC, so `POST /checkout` failed; every customer saw it until a new one was issued. See the [runbook](/a/runbook-certs/).'
+effects:
+  - { name: Duration, value: 47 minutes }
+  - { name: Failed checkouts, value: 'about 3,100' }
+  - { name: Customers affected, value: 'all, in every region' }
+  - { name: Data lost, value: none }
+timeline:
+  - { date: '2030-05-14 10:42', title: The certificate expires, tone: bad }
+  - { date: '10:44', title: Checkout errors cross the alert threshold, text: 'The on-call engineer is paged.' }
+  - { date: '10:58', title: Cause found, text: 'TLS handshake failures in the gateway''s logs point at the certificate.', tone: warn }
+  - { date: '11:21', title: A new certificate is issued and deployed }
+  - { date: '11:29', title: Checkout recovers, tone: good }
+  - { date: '2030-05-15 09:00', title: Review held }
+cause: |
+  The certificate was issued by hand two years ago and was not in the renewal job's list, so nothing renewed it.
+
+  The expiry alert existed but went to a mailbox no one reads since the team was reorganised.
+lessons:
+  good: [The alert on checkout errors paged within two minutes, The gateway's logs named the failing handshake]
+  bad: [Nothing listed the certificates issued by hand, The expiry warning went to a dead mailbox]
+  lucky: [It happened on a weekday morning with the whole team at work]
+actions:
+  - { what: Put every certificate under the renewal job, owner: Platform team, state: doing, ref: OPS-412 }
+  - { what: Send expiry warnings to the on-call rota, owner: Payments team, state: done, ref: OPS-413 }
+  - { what: 'Alert 14 days before any certificate expires, from [the inventory](/a/cert-inventory/)', owner: Platform team, state: todo }
+more:
+  - heading: Related
+    parts:
+      - links:
+          - { title: Certificate runbook, url: /a/runbook-certs/, text: How to issue and deploy a certificate }

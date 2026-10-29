@@ -98,6 +98,43 @@ func TestDrawAdrStates(t *testing.T) {
 	}
 }
 
+// postmortem draws each severity and each state of an action in its own class and word; one left out has no badge.
+func TestDrawPostmortem(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ lang, level, levelWord, state, stateWord string }{
+		{"en", "high", "High", "todo", "To do"},
+		{"en", "medium", "Medium", "doing", "In progress"},
+		{"en", "low", "Low", "done", "Done"},
+		{"ja", "high", "重大", "todo", "これから"},
+		{"ja", "medium", "中程度", "doing", "作業中"},
+		{"ja", "low", "軽微", "done", "済み"},
+		{"en", "", "", "", ""},
+	} {
+		src := "template: postmortem\nlang: " + tt.lang + "\ntitle: x\nsummary: s\ntimeline: [{date: '10:42', title: t}]\ncause: c\n"
+		if tt.level != "" {
+			src += "severity: " + tt.level + "\nactions: [{what: w, state: " + tt.state + "}]\n"
+		} else {
+			src += "actions: [{what: w}]\n"
+		}
+		page, _, err := tmpl.Draw(floeKit(t), "pm.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+		if err != nil {
+			t.Fatal(told(err))
+		}
+		if tt.level == "" {
+			if bytes.Contains(page, []byte(`class="severity`)) || bytes.Contains(page, []byte(`class="state`)) {
+				t.Error("a severity or a state left out is drawn")
+			}
+			continue
+		}
+		for _, want := range []string{`<span class="severity ` + tt.level + `">` + tt.levelWord + `</span>`, `<span class="state ` + tt.state + `">` + tt.stateWord + `</span>`} {
+			if !bytes.Contains(page, []byte(want)) {
+				t.Errorf("%s %s %s draws no %s", tt.lang, tt.level, tt.state, want)
+			}
+		}
+	}
+}
+
 // The example.yaml of each of floe's templates is drawn with every theme of floe. Pages drawn as develop drew
 // them are internal/corpus's.
 func TestDrawExamples(t *testing.T) {
