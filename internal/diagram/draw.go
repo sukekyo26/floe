@@ -3,7 +3,6 @@ package diagram
 import (
 	"cmp"
 	_ "embed" // the template and the zoom script
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -14,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -274,12 +274,7 @@ var Script = sync.OnceValues(func() (string, error) {
 			words[lang][k] = c.Msg(k)
 		}
 	}
-	// json.Marshal writes <, > and & as \u escapes, so the words cannot end the script.
-	b, err := json.Marshal(words)
-	if err != nil {
-		return "", fmt.Errorf("diagram: write the zoom words: %w", err)
-	}
-	return "<script>(" + strings.TrimSpace(zoomJS) + ")(" + string(b) + ");</script>", nil
+	return page.Script(zoomJS, words)
 })
 
 var zoomKeys = []string{

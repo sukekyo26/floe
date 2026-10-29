@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "terminal",
-  "description": "Commands as typed at a terminal, each with what it printed; floe draws the prompt, which a copy leaves out",
+  "description": "Commands as typed at a terminal, each with what it printed; floe draws the prompt, which a copy leaves out. A button over them copies the commands, a line each, without what they printed",
   "type": "object",
   "properties": {
     "shell": {

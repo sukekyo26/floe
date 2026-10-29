@@ -8,6 +8,9 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：`code`・`terminal`・`diff` の右上に、中身をコピーするボタン。写すのはコード、
+  プロンプトと出力を除いたコマンド、書いたままの diff。押すとページの言語で「コピーしました」
+  と言い、ページがクリップボードに書けない所（VS Code の Simple Browser など）でも写す。
 - 追加：アーカイブ。`floe archive <slug>...`（`--undo` で戻す）、管理ページの
   「アーカイブ」（1 枚でも、選んだものまとめてでも）、`PATCH /api/artifacts/{slug}` の
   `archived` で、ページを消さずに `floe list` と管理ページの一覧から外す。URL では今までどおり
@@ -38,7 +41,8 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：データファイルが `theme:` で選ぶ 9 つのテーマ（`default`・`soft`・`editorial`・
   `ink`・`brutal`・`blueprint`・`notebook`・`swiss`・`washi`）。どれも CSS の変数のパレットと
   部品の形を持つ。`default` と、その色を使うテーマ（`soft`・`editorial`）のページの地は、管理
-  ページと同じ暖かい灰色で、字の色も管理ページと同じ、線も同じ暖かさ。
+  ページと同じ暖かい灰色で、字の色も管理ページと同じ、線も同じ暖かさ。terminal のプロンプト、
+  code の言語の札、diff の hunk の頭は黄緑。
 - 追加：`FLOE_TEMPLATES_DIR` の自分のテンプレート（`page.html`・`schema.json`・
   `example.yaml`、要るなら `page.css`・`checks.yaml`・`computed.yaml`・`words.yaml`・
   `assets/`）と、`floe template list`・`show`・`new`（埋めて使う最小のテンプレート）・`check`。

@@ -1,6 +1,7 @@
 package kit
 
 import (
+	_ "embed" // the copy button's script
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,15 +10,67 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"golang.org/x/net/html"
 
+	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // partFuncs are the functions floe's parts draw with, besides those of page.html.
 var partFuncs = template.FuncMap{
-	"bars": barsOf, "diagram": diagramOf, "diff": diffOf, "script": scriptOf, "tree": treeOf,
+	"bars": barsOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf, "script": scriptOf,
+	"tree": treeOf,
+}
+
+// copyButtonOf holds the name of the function that draws the copy button of a part, which Part.Page binds anew in
+// the language of the page it draws.
+func copyButtonOf() (template.HTML, error) {
+	return "", fmt.Errorf("%w: copyButton: not bound to a page", ErrFunc)
+}
+
+//go:embed copy.js
+var copyJS string
+
+// copyScripts are the scripts of copy.js, that put a button over the code of the part they are in, by the languages
+// with a catalog, each with its words.
+// LIMIT: the script goes into each part that copies. Put it into the page once if pages of much code come to weigh.
+// LIMIT: HTML reads CR and CRLF as LF, so a diff of a CRLF file is copied with LF and does not apply. Keep the text in
+// an attribute too if diffs of CRLF files come to be copied.
+// LIMIT: the copy command is called after writeText is refused, not in the click itself; Chromium lets it copy then
+// (the click's activation lasts), Firefox is not tried. Call it in the click where a browser comes to refuse it.
+var copyScripts = sync.OnceValues(func() (map[i18n.Lang]template.HTML, error) {
+	scripts := map[i18n.Lang]template.HTML{}
+	for _, lang := range i18n.Langs() {
+		c := i18n.New(lang)
+		words := map[string]string{"copy": c.Msg("copy_button"), "copied": c.Msg("ui_copied"), "failed": c.Msg("copy_failed")}
+		script, err := page.Script(copyJS, words)
+		if err != nil {
+			return nil, fmt.Errorf("%w: copyButton: %w", ErrFunc, err)
+		}
+		//nolint:gosec // G203: floe's script, its words escaped as JSON
+		scripts[lang] = template.HTML(script)
+	}
+	return scripts, nil
+})
+
+// copyButton returns the function copyButton of a part.html drawn in a page of the language tag: the script of
+// copyScripts in the first of the tag's fallbacks with a catalog, English at the last.
+func copyButton(tag string) func() (template.HTML, error) {
+	return func() (template.HTML, error) {
+		scripts, err := copyScripts()
+		if err != nil {
+			return "", err
+		}
+		for _, lang := range i18n.Fallbacks(i18n.Tag(tag)) {
+			if script, ok := scripts[lang]; ok {
+				return script, nil
+			}
+		}
+		return "", fmt.Errorf("%w: copyButton: no script in English", ErrFunc)
+	}
 }
 
 // diagramOf holds the name of the function that draws the value of the part as a diagram, which draw binds
