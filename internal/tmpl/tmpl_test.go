@@ -243,6 +243,10 @@ func TestDrawSlides(t *testing.T) {
 			}
 		}
 	}
+	page, _, err := tmpl.Draw(floeKit(t), "sl.yaml", []byte("template: slides\nlang: en\ntitle: x\nslides: [{heading: a}]\n"), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+	if want := `<li class="slide divider" data-total="1" data-floe-look="band">`; err != nil || !bytes.Contains(page, []byte(want)) {
+		t.Errorf("one slide draws no %s\n%s", want, told(err))
+	}
 }
 
 // The example.yaml of each of floe's templates is drawn with every theme of floe. Pages drawn as develop drew
