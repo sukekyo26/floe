@@ -109,8 +109,9 @@ func newLayout(s *spec, opts Options) *layout {
 	b, _ := json.Marshal(s) //nolint:errcheck,errchkjson // read from JSON, it writes as JSON
 	sum := sha256.Sum256(b)
 	l.id = "dg" + strconv.Itoa(opts.Seq) + "-" + hex.EncodeToString(sum[:3])
-	for i, p := range s.Parts {
-		l.name(i, p)
+	items := expand(s.Parts)
+	for _, it := range items {
+		l.name(it.at, it.p)
 	}
 	for _, p := range s.Parts {
 		if lb := p.Label; lb != nil && lb.In != nil && lb.X == nil {
@@ -119,15 +120,14 @@ func newLayout(s *spec, opts Options) *layout {
 			l.stacks[regionKey(lb.In)] = st
 		}
 	}
-	for i, p := range s.Parts {
-		l.add(i, p)
+	for _, it := range items {
+		l.add(it.at, it.p)
 	}
 	return l
 }
 
-// name keeps the name of the part at i, refusing one used before.
-func (l *layout) name(i int, p part) {
-	at := pointer(i)
+// name keeps the name of the part at at, refusing one used before.
+func (l *layout) name(at string, p part) {
 	keep := func(name string, t target) bool {
 		if name == "" {
 			return false
@@ -166,8 +166,7 @@ func (l *layout) name(i int, p part) {
 	}
 }
 
-func (l *layout) add(i int, p part) {
-	at := pointer(i)
+func (l *layout) add(at string, p part) {
 	switch {
 	case p.Frame != nil:
 		l.addFrame(p.Frame, at)

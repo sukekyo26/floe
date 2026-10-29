@@ -1,7 +1,7 @@
 template: report
 lang: ja
 title: 図の例
-lead: floe diagram example の 13 種を、名前で描く（floe-diagram-examples の参照の形）。
+lead: floe diagram example の 14 種を、名前で描く（floe-diagram-examples の参照の形）。
 sections:
   - heading: architecture
     parts:
@@ -24,6 +24,9 @@ sections:
   - heading: git
     parts:
       - diagram: { example: git }
+  - heading: org
+    parts:
+      - diagram: { example: org }
   - heading: quadrant
     parts:
       - diagram: { example: quadrant }
