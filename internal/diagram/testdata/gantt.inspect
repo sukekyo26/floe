@@ -13,12 +13,19 @@ edge screens→test M648,116 H656 V188 H664
 edge api→help M536,152 H544 V224 H552
 edge test→release M760,188 H792 V260
 edge help→release M744,224 H792 V260
-label "Week 1" 173.4,302 53.2x18
-label "Week 2" 285.4,302 53.2x18
-label "Week 3" 397.4,302 53.2x18
-label "Week 4" 509.4,302 53.2x18
-label "Week 5" 621.4,302 53.2x18
-label "Week 6" 733.4,302 53.2x18
+label "" 195,302 10x18
+label "" 307,302 10x18
+label "" 419,302 10x18
+label "" 531,302 10x18
+label "" 643,302 10x18
+label "" 755,302 10x18
+label "" 867,302 10x18
+label "Week 1" 229.4,302 53.2x18
+label "Week 2" 341.4,302 53.2x18
+label "Week 3" 453.4,302 53.2x18
+label "Week 4" 565.4,302 53.2x18
+label "Week 5" 677.4,302 53.2x18
+label "Week 6" 789.4,302 53.2x18
 label "Decide what to build" 11,35 154x18
 label "Design the screens" 11,71 139.6x18
 label "Build the screens" 11,107 132.4x18
