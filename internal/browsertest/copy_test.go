@@ -390,15 +390,15 @@ func TestUICopyOwnPart(t *testing.T) { //nolint:paralleltest // the browser test
 		b.until("the copy button", button("snip"))
 		look = b.eval(`(() => {
 			const button = ` + button("snip") + `, r = button.getBoundingClientRect();
-			const status = document.querySelector('.floe-copy-status').getBoundingClientRect();
 			const icons = [...button.querySelectorAll('svg')].filter((i) => getComputedStyle(i).display !== 'none').length;
-			return [Math.round(r.width), Math.round(r.height), icons, status.width <= 1 && status.height <= 1].join();
+			return [Math.round(r.width), Math.round(r.height), icons].join();
 		})()`)
 		b.pressButton("snip")
 		b.until("the copy", status("snip")+" === 'Copied'")
+		look += "," + b.eval("(({ width, height }) => width <= 1 && height <= 1)(document.querySelector('.floe-copy-status').getBoundingClientRect())")
 	})
 	if want := "30,30,1,true"; look != want {
-		t.Errorf("the button of snip is %s, want %s (30 px wide and high, one icon, its status out of sight)", look, want)
+		t.Errorf("the button of snip is %s, want %s (30 px wide and high, one icon, its status out of sight once it speaks)", look, want)
 	}
 	if got != "x\n" {
 		t.Errorf("copies %q, want %q", got, "x\n")
