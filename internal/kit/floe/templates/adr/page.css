@@ -1,0 +1,30 @@
+/* The colours and faces are the theme's palette; the page lays them out: one record on a sheet, the panel of the
+   theme, in a column as wide as prose and a little more.
+   LIMIT: the consequences sit side by side while each has 14rem; a width where they wrap is not looked at */
+body { margin: 0; padding-block: 2.5rem 4rem; font-size: 16px; line-height: 1.85; }
+.column { max-width: calc(var(--text-width) + 6rem + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+article { padding: clamp(1.25rem, 5vw, 3rem); display: grid; gap: 1.8rem; }
+header { display: grid; gap: 0.4rem; justify-items: start; border-bottom: 3px double var(--line); padding-bottom: 1.4rem; }
+.kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; gap: 0.8rem; }
+h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
+/* LIMIT: the contrast test measures the badge of the example's state alone; the others were measured once, in every
+   theme, when they were made */
+.status { font-weight: 800; letter-spacing: 0.15em; padding: 0.05rem 0.8rem; border: 2px solid currentColor; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+.status.accepted { background: var(--good-soft); color: var(--good); }
+.status.proposed { background: var(--warn-soft); color: var(--warn); }
+.status.rejected { background: var(--bad-soft); color: var(--bad); }
+.superseded-by { background: var(--warn-soft); color: var(--warn); padding: 0.3rem 0.8rem; border-radius: 6px; }
+.superseded-by a { color: inherit; }
+.deciders { color: var(--muted); font-size: 0.9rem; }
+section { display: grid; gap: 0.6rem; }
+article > *, section > * { min-width: 0; }
+h2 { font-size: 1.1rem; }
+.decision { border-left: 4px solid var(--accent); padding-left: 1.1rem; }
+.alternatives { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
+.alternatives li { border: 1px dashed var(--line); border-radius: 6px; padding: 0.5rem 0.9rem; }
+.alternatives .title { font-weight: 700; }
+.title, .why { display: block; }
+.consequences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: 1rem; }
+.consequences h3 { border-left: 4px solid; padding-left: 0.6rem; }
+.good h3 { border-color: var(--good); }
+.bad h3 { border-color: var(--bad); }

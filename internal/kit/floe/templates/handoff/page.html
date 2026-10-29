@@ -61,7 +61,7 @@
 {{- with .Data.notes}}
 <section class="notes"><h2 id="notes">{{word "notes"}}</h2><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
 {{- end}}
-{{- /* LIMIT: a fenced block in text is not warned of until floe has warnings */}}
+{{- /* LIMIT: a fenced block in a text part of more is drawn as plain Markdown code, not as the code part, and nothing says so until floe has warnings */}}
 {{- range $m := .Data.more}}
 <section><h2>{{$m.heading}}</h2>
 {{- range $m.parts}}{{range .}}{{with .}}

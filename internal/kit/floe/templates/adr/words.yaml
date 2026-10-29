@@ -1,0 +1,30 @@
+en:
+  kind: Decision record
+  status_proposed: Proposed
+  status_accepted: Accepted
+  status_rejected: Rejected
+  status_deprecated: Deprecated
+  status_superseded: Superseded
+  superseded_by: 'Superseded by'
+  deciders: 'Decided by'
+  context: Context
+  decision: Decision
+  alternatives: Options set aside
+  consequences: Consequences
+  good: Gains
+  bad: Costs
+ja:
+  kind: 決めたことの記録
+  status_proposed: 提案
+  status_accepted: 採用
+  status_rejected: 却下
+  status_deprecated: 廃止
+  status_superseded: 置き換え済み
+  superseded_by: 置き換えた記録
+  deciders: 決めた人
+  context: 背景
+  decision: 決めたこと
+  alternatives: 選ばなかった案
+  consequences: 結果
+  good: 良くなること
+  bad: 引き受けること

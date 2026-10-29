@@ -64,6 +64,40 @@ func TestDrawHandoffHands(t *testing.T) {
 	}
 }
 
+// adr stamps each state in its own class and word, and shows the record that superseded it only when it is one.
+func TestDrawAdrStates(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ lang, state, word, by string }{
+		{"en", "proposed", "Proposed", ""},
+		{"en", "accepted", "Accepted", ""},
+		{"en", "rejected", "Rejected", ""},
+		{"en", "deprecated", "Deprecated", ""},
+		{"en", "superseded", "Superseded", "Superseded by"},
+		{"ja", "proposed", "提案", ""},
+		{"ja", "accepted", "採用", ""},
+		{"ja", "rejected", "却下", ""},
+		{"ja", "deprecated", "廃止", ""},
+		{"ja", "superseded", "置き換え済み", "置き換えた記録"},
+	} {
+		src := "template: adr\nlang: " + tt.lang + "\ntitle: x\nstatus: " + tt.state + "\ncontext: c\ndecision: d\n"
+		if tt.by != "" {
+			src += "superseded_by: ADR 0012\n"
+		}
+		page, err := tmpl.Draw(floeKit(t), "adr.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+		if err != nil {
+			t.Fatal(told(err))
+		}
+		if want := `<p class="status ` + tt.state + `">` + tt.word + `</p>`; !bytes.Contains(page, []byte(want)) {
+			t.Errorf("%s %s draws no %s", tt.lang, tt.state, want)
+		}
+		by := `<p class="superseded-by">` + tt.by + `: `
+		if got := bytes.Contains(page, []byte(`class="superseded-by"`)); got != (tt.by != "") || got && !bytes.Contains(page, []byte(by)) {
+			t.Errorf("%s %s: the record superseding it drawn = %v, want %v as %s", tt.lang, tt.state, got, tt.by != "", by)
+		}
+	}
+}
+
 // The example.yaml of each of floe's templates is drawn with every theme of floe. Pages drawn as develop drew
 // them are internal/corpus's.
 func TestDrawExamples(t *testing.T) {
