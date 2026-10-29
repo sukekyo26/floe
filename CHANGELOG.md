@@ -45,6 +45,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   question over the part `options` (the option marked with `pick` is put at
   the top of the page, one without is shown as undecided), what is decided
   without options, what it touches, and sections of your own as in `report`.
+- Add a copy button over the top right of `code`, `terminal` and `diff`: it
+  copies the code as written, a terminal's commands without their prompt and
+  output, and a diff as written, and says it copied. Scrolled to its end, a
+  long line ends left of the button.
 - Add warnings: advice on a better way to write a page, which `floe check`,
   `floe render`, `floe template check` and `floe publish` print after the
   mistakes as `file:line:column: warning: message`, leaving the page drawn and
@@ -132,7 +136,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `floe part list`, `show`, `new` (the smallest part, to fill in) and `check`.
   A part's schema takes floe's formats (`html`, `markdown`, `image`) as a
   template's does, and a shared schema holding them. A shared schema is
-  checked from its root, whether a schema names it or not. A mistake
+  checked from its root, whether a schema names it or not. A part's
+  `part.html` may call the functions floe's parts draw with (`copyButton`,
+  `bars`, `diff`, `tree`, `diagram`, `script`); `bars` refuses a value that is
+  not a number or is below 0. A mistake
   of a part, shared schema, theme or template of your own stops every page
   drawn until it is fixed. The directories of parts, themes and templates of
   your own that are one, or one in the other, are refused for their settings.

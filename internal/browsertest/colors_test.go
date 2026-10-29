@@ -53,6 +53,8 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 
 	out := make([]string, 0, 16)
 	for _, scheme := range []string{"dark", "light"} {
+		// The server's list for the pages first, the list stubbed after.
+		b.unstub()
 		media(scheme)
 		// Light whatever the OS prefers: the list, a page's frame and a missing page's; the page in the frame reads the
 		// OS's preference.
@@ -64,8 +66,9 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 
 		// Every text and field: a list with all it can show, its menus open, two rows selected, the bulk delete armed and
 		// an error; the links; the edit dialog; the bulk tags dialog with a tag on all, some and none.
+		b.navigate("about:blank")
+		b.stub(colorsList)
 		b.navigate("/")
-		b.eval(stub(colorsList))
 		b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click(); " +
 			"document.getElementById('bulk-delete').click(); showError('failed'); document.getElementById('q').value = ''")
 		measure := func(where string) {
@@ -102,7 +105,6 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.eval("document.getElementById('sort-menu').hidePopover()")
 		// The frame's pages to pick from, open, one of them reached and the one open now marked.
 		b.navigate("/a/a/")
-		b.eval(stub(colorsList))
 		b.until("the title", "!document.getElementById('frame-pick').hidden")
 		b.eval("document.getElementById('frame-pick').click()")
 		b.until("the pages to pick from", "document.getElementById('page-pick').matches(':popover-open')")

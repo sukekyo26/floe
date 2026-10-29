@@ -33,6 +33,9 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：floe のテンプレート `design`。結論を先に出す設計書で、必須の背景と目的に、
   やらないこと、判断（問いと部品 `options` の案。`pick` を付けた案がページの一番上に出て、
   無いものは未決と出る）、案を比べずに決めたこと、影響の範囲、report と同じ形の自分の節を続ける。
+- 追加：`code`・`terminal`・`diff` の右上に、中身を写すボタン。code は書いたまま、
+  terminal はプロンプトと出力を除いたコマンドだけ、diff は書いたままを写し、
+  写したことを示す。長い行は、右端までスクロールすると、終わりがボタンの左に出る。
 - 追加：警告。ページのより良い書き方の勧めで、`floe check`・`floe render`・
   `floe template check`・`floe publish` が、誤りの後に
   `file:line:column: warning: message` で出す。ページは描き、終了コードも
@@ -93,6 +96,8 @@ floe の主要な変更を記録します。フォーマットは
   `new`（埋めて使う最小の部品）・`check`。部品の schema は、テンプレートと同じく floe の
   format（`html`・`markdown`・`image`）と、それを持つ共有の schema を取れる。
   共有の schema は、どれかの schema が名指すかによらず、その根から確かめる。
+  部品の `part.html` は、floe の部品が使う関数（`copyButton`・`bars`・`diff`・`tree`・
+  `diagram`・`script`）を呼べる。`bars` は、数でないか 0 より小さい値を断る。
   自分の部品・共有の schema・テーマ・テンプレートに誤りがあると、直すまでどのページも描かない。
   部品・テーマ・テンプレートの置き場所が同じか、一方がもう一方の中にあれば、その設定を断る。
 - 追加：キャンバスに部品（frame・box・table・icon・名前でつなぐ edge・dot・bar・axis・

@@ -152,8 +152,8 @@ func (b *browser) frameReport(what, until string) report {
 func (b *browser) pressInFrame(frame string) report {
 	b.t.Helper()
 
-	box := b.rect(frame)
 	r := b.frameReport("the page in the frame", "(r) => true")
+	box := b.rect(frame) // once its page reports: the frame is hidden until the list comes
 	b.hover(box.X+r.X, box.Y+r.Y)
 	b.click(box.X+r.X, box.Y+r.Y)
 	return b.frameReport("the copy in the frame", "(r) => r.status !== ''")
@@ -403,4 +403,92 @@ func TestUICopyOwnPart(t *testing.T) { //nolint:paralleltest // the browser test
 	if got != "x\n" {
 		t.Errorf("copies %q, want %q", got, "x\n")
 	}
+}
+
+// roomPage holds what lies under a copy button: long lines of code (with a heading and without), of a terminal and of a
+// diff, and short ones of code, of a diff and of a terminal.
+const roomPage = `template: report
+lang: en
+title: Room
+sections:
+  - heading: Parts
+    parts:
+      - code: { lang: sh, text: "%[1]s\nls -la" }
+      - code: { text: "%[1]s" }
+      - terminal:
+          shell: bash
+          steps:
+            - run: "%[1]s"
+            - run: echo short
+      - diff:
+          file: deploy.sh
+          text: |
+            -kubectl apply -f gateway.yaml
+            +%[1]s
+      - code: { lang: sh, text: echo short }
+      - diff:
+          file: short.sh
+          text: |
+            -echo old
+            +echo new
+      - terminal:
+          steps:
+            - run: echo short
+              out: short
+`
+
+// measureRoom reads, for each part with a copy button, its code scrolled to the end: how far left of the button the
+// text ends ("ok" when it does, else how far under it), or for a short one, whether it scrolls and whether a diff's line
+// reaches the code's right edge; then the room a box keeps after its line.
+const measureRoom = `(() => {
+  const textEnd = (pre) => {
+    const w = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT);
+    let end = -Infinity;
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      const r = document.createRange(); r.selectNodeContents(n);
+      for (const x of r.getClientRects()) if (x.width > 0) end = Math.max(end, x.right);
+    }
+    return end;
+  };
+  return [...document.querySelectorAll('[data-floe-part]:has(> .floe-copy)')].map((part) => {
+    const pre = part.querySelector('pre'), button = part.querySelector('.floe-copy').getBoundingClientRect();
+    if (pre.scrollWidth - pre.clientWidth <= 1) {
+      const line = pre.querySelector('code > span:last-child');
+      const edge = pre.getBoundingClientRect().left + pre.clientLeft + pre.clientWidth;
+      return part.dataset.floePart + ' short' + (line ? ' ' + (Math.abs(line.getBoundingClientRect().right - edge) < 0.5 ? 'reaches' : 'stops short') : '');
+    }
+    pre.scrollLeft = pre.scrollWidth;
+    const clear = button.left - textEnd(pre);
+    return part.dataset.floePart + ' ' + (clear > 0 ? 'ok' : 'under by ' + Math.round(-clear));
+  }).join(', ');
+})()`
+
+// TestCopyRoom scrolls each long line of code, a terminal and a diff to its end: it ends left of the copy button, in
+// every theme; a short one does not scroll (within a pixel, which rounding a rem may take), a short diff's line still
+// reaching the right edge. Printed, with no button, a line keeps the code's own padding after it, 1.1rem.
+func TestCopyRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	themes, err := os.ReadDir("../kit/floe/themes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := s.write(t, "room.yaml", fmt.Sprintf(roomPage, "kubectl -n payments set volume deploy/gateway --add --name=tls --secret-name=gateway-tls-20300516 --overwrite"))
+	b.size(900, 900, false)
+	out, want := make([]string, 0, len(themes)+1), make([]string, 0, len(themes)+1)
+	for _, theme := range themes {
+		name := theme.Name()
+		s.floe(t, "publish", file, "--slug", "room-"+name, "--theme", name)
+		b.navigate("/a/room-" + name + "/?raw")
+		out = append(out, name+": "+b.eval(measureRoom))
+		want = append(want, name+": code ok, code ok, terminal ok, diff ok, code short, diff short reaches, terminal short")
+	}
+	printed := emulation.SetEmulatedMediaParams{Media: "print"}
+	if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, printed); err != nil {
+		t.Fatal(err)
+	}
+	out = append(out, "printed: "+b.eval("[...new Set([...document.querySelectorAll('[data-floe-part=code] pre > *, [data-floe-part=terminal] pre > *, [data-floe-part=diff] code > span')]"+
+		".map((e) => getComputedStyle(e).paddingRight))].join(' ')"))
+	want = append(want, "printed: 17.6px")
+	check(t, "room", out, strings.Join(want, "|"))
 }

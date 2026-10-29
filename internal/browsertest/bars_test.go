@@ -66,10 +66,11 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		return shown.every((r) => r.left >= bar.left - 0.5 && r.right <= bar.right + 0.5) && document.documentElement.scrollWidth <= width;
 	})(%d)`
 	all := strings.Join([]string{msg("ui_select_page"), msg("ui_tags"), msg("ui_archive"), msg("ui_delete"), msg("ui_clear_selection")}, "/")
+	b.navigate("about:blank")
+	b.stub(barsList)
 	for _, width := range []int64{320, 390, 660, 700, 768, 1000, 1100, 1440} {
 		b.navigate("/")
 		b.size(width, 900, width < 500)
-		b.eval(stub(barsList))
 		fit := b.eval(fmt.Sprintf(fits, width))
 		before := b.eval(first)
 		b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click()")
@@ -93,7 +94,6 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// Narrow, the header bar is two lines, the search the second; scrolled, the bar over the list sits right under it.
 	b.navigate("/")
 	b.size(390, 844, true)
-	b.eval(stub(barsList))
 	b.eval("scrollTo(0, 400)")
 	b.until("the page to scroll", "scrollY === 400")
 	out = append(out, b.eval("(() => { const bar = document.querySelector('.bar').getBoundingClientRect(), q = document.getElementById('search').getBoundingClientRect(), "+

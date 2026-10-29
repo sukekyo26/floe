@@ -32,9 +32,9 @@ const groupsList = `[
 func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
+	b.stub(groupsList)
 	b.navigate("/")
 	b.size(1440, 900, false)
-	b.eval(stub(groupsList))
 
 	out := make([]string, 0, 16)
 	// The groups and their rows: a heading as its color and words, a row as its slug and color.
@@ -78,7 +78,7 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.point(0, 0)
 
 	// An empty list keeps the box the list had.
-	b.eval(stub(`[{ slug: 'x', title: 'X', description: '', createdAt: at(1), updatedAt: at(1) }]`))
+	b.stub(`[{ slug: 'x', title: 'X', description: '', createdAt: at(1), updatedAt: at(1) }]`)
 	b.eval("document.querySelector('.views [data-view=fav]').click()")
 	out = append(out, b.eval("getComputedStyle(document.getElementById('empty-favorites')).backgroundColor === getComputedStyle(document.documentElement).getPropertyValue('--panel').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`)"))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
@@ -92,13 +92,13 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	const long, longJa = "floe-management-page-redesign-experiments", "管理ページの見た目を作り直すための試しの長いプロジェクトの名前"
 	// A list of projects of n entries each, each entry's tag its project's name and -tag.
 	projects := func(ns string) string {
-		return stub("[" + ns + "].flatMap(([p, n]) => Array.from({ length: n }, (_, i) => ({ slug: `${p.length}-${i}`, title: `${p}${i}`, " +
-			"description: '', project: p, tags: i ? [] : [p + '-tag'], createdAt: at(1), updatedAt: at(1) })))")
+		return "[" + ns + "].flatMap(([p, n]) => Array.from({ length: n }, (_, i) => ({ slug: `${p.length}-${i}`, title: `${p}${i}`, " +
+			"description: '', project: p, tags: i ? [] : [p + '-tag'], createdAt: at(1), updatedAt: at(1) })))"
 	}
-	b.eval(projects("['one', 1], ['two', 12], ['three', 123]"))
+	b.stub(projects("['one', 1], ['two', 12], ['three', 123]"))
 	out = append(out, b.eval("(() => { const n = [...document.querySelectorAll('#chips .n')].map((e) => e.getBoundingClientRect()); "+
 		"return [n.length, n.every((r) => Math.abs(r.left - n[0].left) <= 0.5 && Math.abs(r.right - n[0].right) <= 0.5)].join(' '); })()"))
-	b.eval(projects("['one', 1], [" + js(long) + ", 1], [" + js(longJa) + ", 1]"))
+	b.stub(projects("['one', 1], [" + js(long) + ", 1], [" + js(longJa) + ", 1]"))
 	oneLine := "(() => { const one = (sel, short) => { const e = document.querySelector(sel), s = document.querySelector(short); " +
 		"return Math.abs(e.getBoundingClientRect().height - s.getBoundingClientRect().height) <= 0.5 && e.querySelector('.name').scrollWidth > e.querySelector('.name').clientWidth " +
 		"&& (e.title || e.firstChild.title) !== ''; }; const heading = (name) => [...document.querySelectorAll('#list li.group')].find((li) => li.textContent.startsWith(name)); " +
@@ -125,8 +125,8 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 
 	// The frame picks from the groups as the list has them: the favourite, then alpha's, and the others.
 	b.eval("sessionStorage.setItem('artifacts.list', '')")
+	b.stub(groupsList)
 	b.navigate("/a/a2/")
-	b.eval(stub(groupsList))
 	out = append(out, b.until("the pages to pick from", "!document.getElementById('frame-pick').hidden && "+picker))
 
 	// A heading as the list draws it: its color, then its name and count with nothing between.
@@ -168,10 +168,11 @@ func uiRowColumns(t *testing.T, lang i18n.Lang, _ func(string, ...any) string) {
 
 	s := newSite(t)
 	b := newBrowser(t, s.Base, lang)
+	rows := `[[2, 'p'], [12, 'p'], [180, 'a project of a long name'], [780, 'p'], [4320, 'p'], [480000, 'p'], [1100000, 'p'], [5, undefined]].map(([m, p], i) => ({
+		slug: 'r' + i, title: 'R' + i, description: '', project: p, createdAt: at(1), updatedAt: new Date(Date.now() - m * 60000).toISOString() }))`
+	b.stub(rows)
 	b.navigate("/")
 	b.size(1440, 900, false)
-	b.eval(stub(`[[2, 'p'], [12, 'p'], [180, 'a project of a long name'], [780, 'p'], [4320, 'p'], [480000, 'p'], [1100000, 'p'], [5, undefined]].map(([m, p], i) => ({
-		slug: 'r' + i, title: 'R' + i, description: '', project: p, createdAt: at(1), updatedAt: new Date(Date.now() - m * 60000).toISOString() }))`))
 	out := b.eval(`(() => {
 		const rows = [...document.querySelectorAll('#list li:not(.group)')], r = (li, s) => li.querySelector(s).getBoundingClientRect();
 		const same = (f, of = rows) => of.every((li) => Math.abs(f(li) - f(of[0])) <= 0.5);

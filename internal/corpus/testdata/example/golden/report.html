@@ -34,9 +34,12 @@ blockquote > * + * { margin-top: 0.6rem; }
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
    what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
    holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
-   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone */
+   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone. Its size,
+   the room a part leaves around it and what text keeps clear of it at its right are here alone: a part that lies text
+   under it keeps --floe-copy-room after its longest line, as code does */
+:root { --floe-copy-size: 30px; --floe-copy-gap: 0.4rem; --floe-copy-room: calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap)); }
 .floe-copy {
-  position: relative; z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
+  position: relative; z-index: 1; display: grid; place-items: center; width: var(--floe-copy-size); height: var(--floe-copy-size); padding: 0;
   border: 0; border-radius: 999px; cursor: pointer;
   background: var(--code-ground, var(--code-bg)); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground, var(--code-bg)));
 }
@@ -46,7 +49,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
 .floe-copy.copied svg + svg { display: block; color: var(--code-add); }
 .floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-@media print { .floe-copy { display: none; } }
+@media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
 }
 </style>
 <style>
@@ -150,10 +153,19 @@ blockquote > * + * { margin-top: 0.6rem; }
 :scope code { display: block; font: inherit; color: inherit; background: none; padding: 0; border-radius: 0; }
 /* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
    it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
-   LIMIT: the button covers the right end of the code's first line; scrolling sideways shows it. */
+   Where it draws the button, each box in the code is as wide as its longest line and keeps the button's room after it:
+   scrolled to the end, a line ends left of the button; a short one fills the code as before. Printed, with no button,
+   the room is the code's own padding again.
+   LIMIT: before it is scrolled to the end, a long first line runs under the button; scroll it to read that part. Leaving
+   it clear would push the code down by a line, short code too.
+   LIMIT: the room is kept after the longest line, though the button covers the first line alone: code whose longest
+   line comes within it (about 43px) of the width scrolls though no line would run under the button, as CSS cannot pad
+   the first line alone. If that comes to matter, give the button a line of its own above the code. */
 :scope > figcaption { grid-row: 1; }
 :scope > pre, :scope > .floe-copy { grid-row: 2; grid-column: 1; }
-:scope > .floe-copy { justify-self: end; align-self: start; margin: 0.4rem; }
+:scope > .floe-copy { justify-self: end; align-self: start; margin: var(--floe-copy-gap); }
+:scope:has(> .floe-copy) > pre { padding-inline-end: 0; }
+:scope:has(> .floe-copy) > pre > * { width: max-content; min-width: 100%; padding-inline-end: max(1.1rem, var(--floe-copy-room)); }
 }
 }
 </style>

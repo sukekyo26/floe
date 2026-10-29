@@ -48,6 +48,8 @@ func (t *Theme) Unread() []string { return slices.Clone(t.unread) }
 // readThemes reads into k the themes of d, each a directory: base.css, palette.css, and a file of CSS for a
 // part or a look of k, named so. A file of another name is not read.
 func (k *Kit) readThemes(d Dir) error {
+	// LIMIT: a file right in the directory of themes is not read, and nothing says so; refuse one if a theme's files
+	// put there come to go unseen.
 	dirs, err := entries(d, ".", true)
 	if err != nil {
 		return err
@@ -160,6 +162,8 @@ const templatesURL = "floe://templates/"
 // readTemplates reads into k the templates of d, each a directory, their schemas compiled with the resources
 // of k when partsRead: one would be told missing when a part could not be read.
 func (k *Kit) readTemplates(d Dir, partsRead bool) error {
+	// LIMIT: a file right in the directory of templates is not read, and nothing says so until a page names the template
+	// it was meant for (unknown template); refuse one if that comes to cost more than a README of a repository there.
 	dirs, err := entries(d, ".", true)
 	if err != nil {
 		return err

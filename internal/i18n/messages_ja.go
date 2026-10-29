@@ -73,6 +73,7 @@ var messagesJA = map[string]string{
 	"kit_bad_name":               "floe はこの名前を扱いません。小文字・数字・-・_ で、小文字か数字で始まる名前に変えてください",
 	"kit_name_theme_file":        "%s はどのテーマにもあるファイル（%[1]s.css）の名前で、テーマのこの部品の CSS がそれとして読まれます。別の名前にしてください",
 	"kit_asset_unknown":          "assets/ に「%s」がありません。assets/ からのパス（img/logo.svg など）でその下のファイルを名指してください",
+	"kit_below_zero":             "%s は 0 以上の数を取ります。%s は 0 より小さい数です",
 	"kit_example_name":           "example.yaml がテンプレート %s を名指しています。テンプレートのディレクトリの名前 %s にしてください",
 	"kit_for_undeclared":         "for %s：schema はそこに %s を許しません。schema が宣言する鍵の道を書いてください",
 	"kit_not_number":             "%s は数を取ります。%s は数ではありません",

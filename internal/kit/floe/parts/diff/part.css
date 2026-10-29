@@ -1,7 +1,10 @@
-/* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls */
+/* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls: the code is as
+   wide as that line (code's part.css), the button's room inside each line's face rather than after the code */
 :scope pre { padding-inline: 0; }
-:scope code { display: grid; grid-template-columns: minmax(100%, max-content); }
-:scope code > span { padding-inline: 1.1rem; }
+/* Over code's room after the code, as specific as its rule and after it */
+:scope:has(> .floe-copy) pre > code { padding-inline-end: 0; }
+:scope code > span { display: block; padding-inline: 1.1rem; }
+:scope:has(> .floe-copy) code > span { padding-inline-end: max(1.1rem, var(--floe-copy-room)); }
 :scope .add { background: color-mix(in srgb, var(--code-add) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add); }
 :scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
 :scope .hunk { color: var(--code-prompt); }

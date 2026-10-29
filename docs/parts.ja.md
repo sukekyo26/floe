@@ -4,8 +4,8 @@
 
 ## 部品とテーマの置き場所
 
-- 自分の部品・見た目・共有の schema は `FLOE_PARTS_DIR`（既定は `$XDG_CONFIG_HOME/floe/parts`、無ければ `~/.config/floe/parts`）に置きます。部品と見た目はディレクトリ、共有の schema はその隣のファイル `<名前>.json` です。
-- 自分のテーマは `FLOE_THEMES_DIR`（既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes`）に、1 つずつディレクトリで置きます。
+- 自分の部品・見た目・共有の schema は `FLOE_PARTS_DIR`（既定は `$XDG_CONFIG_HOME/floe/parts`、無ければ `~/.config/floe/parts`）に置きます。部品と見た目はディレクトリ、共有の schema はその隣のファイル `<名前>.json` です。直下のほかのファイルは読まず、何も言いません。部品のファイルは、その名前のディレクトリの中に置いてください。
+- 自分のテーマは `FLOE_THEMES_DIR`（既定は `$XDG_CONFIG_HOME/floe/themes`、無ければ `~/.config/floe/themes`）に、1 つずつディレクトリで置きます。直下のファイルは読まず、何も言いません。テーマのファイルは、その名前のディレクトリの中に置いてください。
 - 名前は英小文字・数字・`-`・`_` で、英小文字か数字で始めます。floe の部品・見た目・共有の schema・テーマが持つ名前は断ります。自分のものは floe のものと並べて置き、置き換えることはありません。部品と見た目には、テーマがどのページにも入れるファイルの名前 `base`・`palette` も付けません。
 - その中のディレクトリはシンボリックリンクにできません。ファイルはできます。
 
@@ -15,7 +15,7 @@ floe part check         # 自分の部品・見た目・共有の schema・テ�
 floe part show quote    # 見た目・schema・checks を出す
 ```
 
-自分の部品・テーマ・テンプレートに誤りが 1 つあると、使うかどうかによらず、どのページの描き（`floe check`・`floe render`・`floe publish`）も止めます。見落とさないためです。`floe part check` と `floe template check` が全部を並べます。
+自分の部品・テーマ・テンプレートに誤りが 1 つあると、使うかどうかによらず、どのページの描き（`floe check`・`floe render`・`floe publish`）も止めます。見落とさないためです。`floe part check` と `floe template check` が全部を並べます。書いている間は、別の置き場所で作り、確かめてから移してください（[templates.ja.md](templates.ja.md#別の置き場所で作る)）。`FLOE_PARTS_DIR` か `FLOE_THEMES_DIR` をそこに向け、`floe part check` で確かめます。
 
 ## 部品のファイル
 
@@ -37,6 +37,13 @@ quote/
 - schema は、floe の部品と同じく `"$ref": "floe:///parts/quote.json"` で名指します。部品の schema も、floe の部品と共有の schema をこう名指します。
 - 部品の要素は箱で、`data-floe-part="quote"` で自分を名乗ります。
 - `part.html` は項目を `.` で見て、テンプレートの `page.html` と同じ関数を使えます（`asset` は除く。[templates.ja.md](templates.ja.md#pagehtml)）。
+- floe の部品が描くのに使う関数も使えます。floe のリポジトリ（https://github.com/sukekyo26/floe/tree/develop/internal/kit/floe/parts）の floe の部品の `part.html` が、使い方の見本です。
+  - `{{copyButton}}` は、写すボタンをページの言語で描きます。部品の箱の直下に置きます（`<figure data-floe-part="quote">…{{copyButton}}</figure>`）。写す範囲は、ボタンから上へ一番近い部品の箱で決まるので、自分の部品の中の部品の箱に置くと、自分のでなくその部品の中身を写します。部品の中の `data-floe-copy` を付けた要素の字を、どれも改行で終えて並べて写します（code は `<code>`、terminal はコマンドの 1 つずつに付けます）。見た目は floe のもので、置き場所と字の逃がし方は、code と同じく部品の CSS が書きます。部品の箱に `isolation: isolate`（ボタンをページの外の物の下に置くため）、ボタンのまわりに `margin: var(--floe-copy-gap)`、ボタンの下を字が通るなら、`:scope:has(> .floe-copy)` の中で、一番長い行の後ろに `padding-inline-end: var(--floe-copy-room)`（右端までスクロールすると、行の終わりがボタンの左に出る）。`--floe-copy-size`（ボタンの大きさ）・`--floe-copy-gap`・`--floe-copy-room` は floe がページの根に置き、部品には当てません。
+  - `{{diagram}}` は引数を取らず、部品の値の全体を図として描きます。値は、部品 `diagram` と同じ spec そのものでなければならず、横に別の鍵（`caption` など）を置くと、図の schema が断ります。
+  - `{{script .js .data}}` は、要素と、関数 `.js` をそれと `.data` で呼ぶ script を描きます。部品 `script` と同じです。
+  - `{{$d := diff .text}}` は、`git diff` が書く形の diff を読みます。`$d.Lines` はそれぞれ `.Kind` と `.Text` を持ち、`$d.Added` と `$d.Removed` は `add` と `del` の行の数です。`.Kind` は、`@@` で始まる行が `hunk`。`\` で始まる行（hunk の中も）、hunk の外の `--- `・`+++ ` で始まる行、`+`・`-`・空白のどれでも始まらない行（`diff --git`・`index` など。hunk も終える）が `meta`。それ以外の `+`・`-` で始まる行が、hunk の外でも `add`・`del`。空白で始まる行と空の行が `""` です。
+  - `{{range bars .}}` は、`label`・`value`・`tone` を持つ項目の並びを読みます。`value` が数でないか、0 より小さければ誤りで、部品の値の位置で言います。それぞれ `.Label`・`.Tone`・書いたままの `.Value`・`.Width`（一番大きい値に対する割合を百分率で）で来ます。誤りを値そのものの位置で言いたいときは、部品 `bars` と同じく、部品の schema に `"type": "number"` と `"minimum": 0` の両方を書いて断ってください（`minimum` だけでは、数でない値は `bars` まで来ます）。
+  - `{{range tree .}}` は、`path`（フォルダは `/` で終える）・`note`・`change` を持つ項目の並びを読み、パスが名指すフォルダに入れ子にします（並びに無いフォルダも作ります）。それぞれ `.Name`・`.Note`・`.Change`・`.Dir`（フォルダか）・`.Children` で来ます。
 - 部品の schema は、テンプレートと同じく floe の `format`（`html`・`markdown`・`image`）を取ります。floe が辿る `properties` か `items` の下か、根で宣言します。format を持つ共有の schema も取ります。その項目は `part.html` に描いたものが来ます（`html` は書いたとおり、`markdown` は HTML に、`image` は data URI に。`<img src="{{.file}}" alt="{{.alt}}">`）。`{{.h}}` と書き、関数（`markdown`・`markdownLine`・`printf`・`slice`・`eq` など）に渡したり、`<script>` の中に置いたりしません（書いた字でなく HTML なので、そこでは正しく動きません）。`html` の項目は、テンプレートの項目と同じく描いたページで確かめます（[templates.ja.md](templates.ja.md)）。format の無い文字を Markdown で描くのは `{{markdown .text}}` です。`any.json` の値は、描いた 1 つでなく、全部の種類の map で来ます（[見た目と共有の schema](#見た目と共有の-schema)）。
 - `floe part show <名前>` は、floe の部品も含めて取るものを出します。合うものを floe の部品から写してください。
 

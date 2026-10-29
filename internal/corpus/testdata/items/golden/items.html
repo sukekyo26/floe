@@ -34,9 +34,12 @@ blockquote > * + * { margin-top: 0.6rem; }
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
    what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
    holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
-   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone */
+   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone. Its size,
+   the room a part leaves around it and what text keeps clear of it at its right are here alone: a part that lies text
+   under it keeps --floe-copy-room after its longest line, as code does */
+:root { --floe-copy-size: 30px; --floe-copy-gap: 0.4rem; --floe-copy-room: calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap)); }
 .floe-copy {
-  position: relative; z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
+  position: relative; z-index: 1; display: grid; place-items: center; width: var(--floe-copy-size); height: var(--floe-copy-size); padding: 0;
   border: 0; border-radius: 999px; cursor: pointer;
   background: var(--code-ground, var(--code-bg)); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground, var(--code-bg)));
 }
@@ -46,7 +49,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
 .floe-copy.copied svg + svg { display: block; color: var(--code-add); }
 .floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-@media print { .floe-copy { display: none; } }
+@media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
 }
 </style>
 <style>

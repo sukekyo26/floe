@@ -4,7 +4,7 @@ How to make a template of your own: the page a data file is drawn into. A data f
 
 ## Where templates are
 
-A template of your own is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`), named after the template. One of the name of floe's template hides it.
+A template of your own is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`), named after the template. One of the name of floe's template hides it. A file right in `FLOE_TEMPLATES_DIR` is not read, and nothing says so: put a template's files in its directory.
 
 ```sh
 floe template new memo     # makes the smallest template, memo, to fill in
@@ -12,7 +12,28 @@ floe template check        # checks every template of your own, drawing its exam
 floe template show memo    # prints its themes, schema, checks and example
 ```
 
-A mistake of a template of your own stops every page, whether it is drawn with that template or not (a page of `report` too), until it is fixed; `floe template check` lists them all. A published page is drawn with the server's templates ([commands.md](commands.md#the-server)); after you change one, `floe rebuild` draws the stored pages again with it.
+A mistake of a template, part or theme of your own stops every page, whether it is drawn with that one or not (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike. `floe template check` lists them all. A published page is drawn with the server's templates ([commands.md](commands.md#the-server)); after you change one, `floe rebuild` draws the stored pages again with it.
+
+### Make one in another directory
+
+The server reads your templates again as soon as you save one, so a template half written stops the server's pages for everyone who uses it. Write a new template in another directory, and move it in once it is checked:
+
+```sh
+export FLOE_TEMPLATES_DIR=~/.config/floe/staging-templates
+mkdir -p "$FLOE_TEMPLATES_DIR"
+floe template new memo                      # made ~/.config/floe/staging-templates/memo
+floe template check                         # mend memo until it tells no mistake
+floe render --out-dir /tmp/memo notes.yaml  # a data file of template: memo; open /tmp/memo/notes.html
+unset FLOE_TEMPLATES_DIR
+mkdir -p ~/.config/floe/templates
+mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
+```
+
+- `floe template check` and `floe render` draw without the server. Do not `floe publish` while the variable is set: a server running refuses it, as it draws with the directories it was started with, and with none running, the publish starts one on the other directory.
+- Make `~/.config/floe/templates` before the `mv`: with none there, `mv` would rename `memo` to `templates` itself, its files right in the directory of templates, where floe reads none and says nothing until a page names `memo`.
+- Keep the other directory on the file system of your templates, so that `mv` puts the template in at once rather than a copy the server reads half made.
+- To change a template you have, copy it to the other directory, change and check it there, and move it back in place of the old one.
+- Parts are made the same way, with `FLOE_PARTS_DIR`, `floe part new` and `floe part check`. A theme has no `new`: make its directory in `FLOE_THEMES_DIR` by hand ([parts.md](parts.md#themes)) and check it with `floe part check`.
 
 ## Files
 
