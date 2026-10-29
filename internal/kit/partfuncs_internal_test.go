@@ -149,27 +149,29 @@ func TestCopyButton(t *testing.T) {
 }
 
 // A bar's width is its share of the longest value, and every bar is 0 wide when all the values are 0; a value below
-// 0, which would make a width CSS drops, is refused, and -0 is 0 wide.
+// 0, which would make a width CSS drops, is refused, and -0 is 0 wide. An item not written as keys and values is
+// refused, told by its number.
 func TestBarsOf(t *testing.T) {
 	t.Parallel()
 
 	item := func(v any) any { return map[string]any{"label": "x", "value": v} }
+	notItem := "bars takes items written as keys and values (label, value, tone); item 2 is not"
 	for _, c := range []struct {
-		values []any
-		want   string
+		items []any
+		want  string
 	}{
-		{[]any{1, 4, 2.5}, "25 100 62.5"},
-		{[]any{0, 0}, "0 0"},
-		{[]any{math.Copysign(0, -1), 4}, "0 100"},
-		{[]any{3, -2}, "bars takes a number of 0 or more, not -2"},
-		{[]any{3, -0.5}, "bars takes a number of 0 or more, not -0.5"},
-		{[]any{3, "x"}, "bars takes a number, not x (string)"},
+		{[]any{item(1), item(4), item(2.5)}, "25 100 62.5"},
+		{[]any{item(0), item(0)}, "0 0"},
+		{[]any{item(math.Copysign(0, -1)), item(4)}, "0 100"},
+		{[]any{item(3), item(-2)}, "bars takes a number of 0 or more, not -2"},
+		{[]any{item(3), item(-0.5)}, "bars takes a number of 0 or more, not -0.5"},
+		{[]any{item(3), item("x")}, "bars takes a number, not x (string)"},
+		{[]any{item(1), 3}, notItem},
+		{[]any{item(1), ""}, notItem},
+		{[]any{item(1), nil}, notItem},
+		{[]any{item(1), []any{1, 2}}, notItem},
 	} {
-		items := make([]any, 0, len(c.values))
-		for _, v := range c.values {
-			items = append(items, item(v))
-		}
-		bars, err := barsOf(items)
+		bars, err := barsOf(c.items)
 		widths := make([]string, 0, len(bars))
 		for _, b := range bars {
 			widths = append(widths, fmt.Sprint(b.Width))
@@ -179,7 +181,7 @@ func TestBarsOf(t *testing.T) {
 			got = usererr.Tell(i18n.EnglishCatalog(), err).Render("")
 		}
 		if got != c.want {
-			t.Errorf("barsOf(%v) = %q; want %q", c.values, got, c.want)
+			t.Errorf("barsOf(%v) = %q; want %q", c.items, got, c.want)
 		}
 	}
 }
