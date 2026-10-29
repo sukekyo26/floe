@@ -64,6 +64,31 @@ func TestDrawHandoffHands(t *testing.T) {
 	}
 }
 
+// adr stamps each state in its own class and word, and shows the record that superseded it only when it is one.
+func TestDrawAdrStates(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ state, word string }{
+		{"proposed", "Proposed"}, {"accepted", "Accepted"}, {"rejected", "Rejected"},
+		{"deprecated", "Deprecated"}, {"superseded", "Superseded"},
+	} {
+		src := "template: adr\nlang: en\ntitle: x\nstatus: " + tt.state + "\ncontext: c\ndecision: d\n"
+		if tt.state == "superseded" {
+			src += "superseded_by: ADR 0012\n"
+		}
+		page, err := tmpl.Draw(floeKit(t), "adr.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+		if err != nil {
+			t.Fatal(told(err))
+		}
+		if want := `<p class="status ` + tt.state + `">` + tt.word + `</p>`; !bytes.Contains(page, []byte(want)) {
+			t.Errorf("%s draws no %s", tt.state, want)
+		}
+		if got := bytes.Contains(page, []byte(`class="superseded"`)); got != (tt.state == "superseded") {
+			t.Errorf("%s: the record superseding it drawn = %v", tt.state, got)
+		}
+	}
+}
+
 // The example.yaml of each of floe's templates is drawn with every theme of floe. Pages drawn as develop drew
 // them are internal/corpus's.
 func TestDrawExamples(t *testing.T) {
