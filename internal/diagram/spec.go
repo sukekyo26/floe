@@ -221,6 +221,7 @@ type edge struct {
 	Start    *string      `json:"start"`
 	End      *string      `json:"end"`
 	Crossing bool         `json:"crossing"`
+	who      string       // its words in mistakes and inspect, for an edge a tree draws; else made from its ends
 }
 
 type dot struct {

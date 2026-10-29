@@ -206,7 +206,7 @@ func pathData(pts [][2]float64) string {
 	return b.String()
 }
 
-func (l *layout) addEdge(e *edge, at, who string) {
+func (l *layout) addEdge(e *edge, at string) {
 	from, fromWho, okFrom := l.endOf(at, e.From, e.FromSide, l.centre(e.To))
 	to, toWho, okTo := l.endOf(at, e.To, e.ToSide, l.centre(e.From))
 	if !okFrom || !okTo {
@@ -219,6 +219,7 @@ func (l *layout) addEdge(e *edge, at, who string) {
 			segs = append(segs, seg{pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1]})
 		}
 	}
+	who := e.who
 	if who == "" {
 		who = "edge " + fromWho + "→" + toWho
 	}

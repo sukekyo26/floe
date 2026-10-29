@@ -121,7 +121,7 @@ func newLayout(s *spec, opts Options) *layout {
 		}
 	}
 	for _, it := range items {
-		l.add(it.at, it.p, it.who)
+		l.add(it.at, it.p)
 	}
 	return l
 }
@@ -166,7 +166,7 @@ func (l *layout) name(at string, p part) {
 	}
 }
 
-func (l *layout) add(at string, p part, who string) {
+func (l *layout) add(at string, p part) {
 	switch {
 	case p.Frame != nil:
 		l.addFrame(p.Frame, at)
@@ -177,7 +177,7 @@ func (l *layout) add(at string, p part, who string) {
 	case p.Table != nil:
 		l.addTable(p.Table, at)
 	case p.Edge != nil:
-		l.addEdge(p.Edge, at, who)
+		l.addEdge(p.Edge, at)
 	case p.Dot != nil:
 		l.addDot(p.Dot, at)
 	case p.Bar != nil:
