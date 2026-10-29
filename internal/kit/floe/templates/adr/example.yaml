@@ -1,0 +1,32 @@
+# A decision record: its status, context and decision are required; a record superseded names the one that
+# superseded it in superseded_by. Options set aside go in alternatives, what it gains and costs in consequences,
+# and sections of your own, each a heading over parts as in report, in more.
+template: adr
+lang: en
+title: Keep sessions in the database, not in memory
+number: ADR 0007
+date: 2030-03-02
+status: superseded
+superseded_by: '[ADR 0012](/a/adr-0012/): sessions in the cache cluster'
+deciders: Platform team
+context: |
+  The web app keeps each user's session in the memory of the server that made it. With a second server behind the
+  load balancer, a user sent to the other server is logged out ([incident 42](/a/incident-42/)).
+decision: |
+  Keep sessions in a `sessions` table in the database we have, as [the database guide](/a/database-guide/) asks:
+  every server reads the same sessions, and a server going down logs nobody out.
+alternatives:
+  - { title: Sticky sessions at the load balancer, why: A server going down still logs its users out }
+  - { title: A cache cluster for sessions, why: 'A new service to run, for **two** servers' }
+consequences:
+  good:
+    - Any server answers any request
+    - Sessions outlive a deploy
+  bad:
+    - One read of the database on every request
+    - Old sessions need a job to remove them
+more:
+  - heading: Related records
+    parts:
+      - links:
+          - { title: ADR 0003, url: /a/adr-0003/, text: Run two web servers behind the load balancer }

@@ -1,0 +1,621 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; img-src data: blob:; media-src data: blob:; style-src &#39;unsafe-inline&#39; https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src &#39;unsafe-inline&#39; https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action &#39;none&#39;; base-uri &#39;none&#39;; connect-src &#39;none&#39;"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Issue and deploy a new certificate for the payment gateway</title>
+<style>
+@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.base {
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways instead, as a table does, keeps its words whole.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line, still overflows. Give such a part a layout for narrow screens, as
+   keys has */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+p, ul, ol { margin: 0; max-width: var(--text-width); }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
+pre {
+  margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+pre code { font-size: inherit; background: none; padding: 0; }
+blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
+   (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
+   what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
+   holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
+   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone. Its size,
+   the room a part leaves around it and what text keeps clear of it at its right are here alone: a part that lies text
+   under it keeps --floe-copy-room after its longest line, as code does */
+:root { --floe-copy-size: 30px; --floe-copy-gap: 0.4rem; --floe-copy-room: calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap)); }
+.floe-copy {
+  position: relative; z-index: 1; display: grid; place-items: center; width: var(--floe-copy-size); height: var(--floe-copy-size); padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--code-ground, var(--code-bg)); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground, var(--code-bg)));
+}
+.floe-copy:hover { background: color-mix(in srgb, var(--code-fg) 12%, var(--code-ground, var(--code-bg))); }
+.floe-copy:focus-visible { outline: 2px solid var(--code-fg); outline-offset: -2px; }
+.floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
+.floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
+.floe-copy.copied svg + svg { display: block; color: var(--code-add); }
+.floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
+}
+</style>
+<style>
+@layer floe.palette {
+/* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
+:root {
+  --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --accent: #1d6670; --accent-soft: #dcebec;
+  --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
+  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #b5e05a; --code-add: #6fcf97; --code-del: #f2b8b5;
+  /* The page's ground, a pattern too, and the rule between its sections */
+  --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
+  /* Its panels' quiet ground, which holds faces of the surface */
+  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
+  /* The column a template centres its page in: its width, without the pad each side of it */
+  --page-width: 96rem; --page-pad: 16px;
+  color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="links"]) to (:scope [data-floe-part] > *) {
+/* Each card is numbered by its place, as the steps of a plan are */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
+.card {
+  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+}
+:scope.numbered > .card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
+}
+.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="links"]) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
+:scope { list-style: none; margin: 0; padding: 0; max-width: none; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
+:scope > li { position: relative; gap: 0.1rem; padding-block: 0.9rem; padding-left: 3.7rem; }
+:scope > li::before {
+  content: ""; position: absolute; left: 1.1rem; top: 0.95rem; display: block; width: 1.9rem; height: 1.9rem;
+  border-radius: 9px; background: var(--accent-soft);
+}
+:scope a { font-weight: 700; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+:scope a::before {
+  content: ""; position: absolute; left: calc(1.1rem + 0.45rem); top: calc(0.95rem + 0.45rem); width: 1rem; height: 1rem;
+  background: var(--accent); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+:scope a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+:scope > li:hover a { text-decoration-thickness: 2px; }
+:scope a:focus-visible { outline: none; }
+:scope > li:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope .url {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted);
+  font-family: var(--mono);
+}
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="numbered"]) to (:scope [data-floe-part] > *) {
+/* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
+   rings and lines of its own states */
+:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; max-width: none; }
+:scope > li { position: relative; counter-increment: floe-step; display: grid; gap: 0.15rem; padding: 0.2rem 0 1.3rem 3rem; min-height: 2rem; }
+:scope > li:last-child { padding-bottom: 0.2rem; }
+:scope > li::before {
+  content: counter(floe-step); position: absolute; left: 0; top: 0; display: grid; place-items: center;
+  width: 2rem; height: 2rem; border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
+}
+:scope > li:not(:last-child)::after {
+  content: ""; position: absolute; left: calc(1rem - 1px); top: 2.35rem; bottom: 0.35rem; width: 2px; border-radius: 1px;
+  background: var(--line);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+/* Always dark, as code in an editor is; the language stands at the right of the heading */
+:scope {
+  display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
+  margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
+  background: var(--code-bg); color: var(--code-fg);
+  font-family: var(--mono);
+}
+:scope figcaption {
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1.1rem; font-size: 0.78rem;
+  background: color-mix(in srgb, var(--code-fg) 5%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
+}
+:scope pre {
+  margin: 0; padding: 0.95rem 1.1rem; overflow-x: auto; background: none; border: 0; border-radius: 0; color: inherit;
+  font-family: inherit; font-size: 0.875rem; line-height: 1.65; tab-size: 4;
+}
+:scope .file { opacity: 0.85; }
+:scope .lang {
+  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: 5px;
+  background: var(--code-prompt); color: var(--code-bg);
+}
+/* A block, so that the code's last line break draws no empty line */
+:scope code { display: block; font: inherit; color: inherit; background: none; padding: 0; border-radius: 0; }
+/* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
+   it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
+   Where it draws the button, each box in the code is as wide as its longest line and keeps the button's room after it:
+   scrolled to the end, a line ends left of the button; a short one fills the code as before. Printed, with no button,
+   the room is the code's own padding again.
+   LIMIT: before it is scrolled to the end, a long first line runs under the button; scroll it to read that part. Leaving
+   it clear would push the code down by a line, short code too.
+   LIMIT: the room is kept after the longest line, though the button covers the first line alone: code whose longest
+   line comes within it (about 43px) of the width scrolls though no line would run under the button, as CSS cannot pad
+   the first line alone. If that comes to matter, give the button a line of its own above the code. */
+:scope > figcaption { grid-row: 1; }
+:scope > pre, :scope > .floe-copy { grid-row: 2; grid-column: 1; }
+:scope > .floe-copy { justify-self: end; align-self: start; margin: var(--floe-copy-gap); }
+:scope:has(> .floe-copy) > pre { padding-inline-end: 0; }
+:scope:has(> .floe-copy) > pre > * { width: max-content; min-width: 100%; padding-inline-end: max(1.1rem, var(--floe-copy-room)); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
+:scope figcaption { opacity: 0.85; }
+:scope :is(.run, .out) { display: block; }
+:scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
+:scope .run::before { content: "$ "; color: var(--code-prompt); }
+:scope.zsh .run::before { content: "% "; }
+:scope.powershell .run::before { content: "PS> "; }
+:scope.cmd .run::before { content: "> "; }
+:scope .out { opacity: 0.7; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
+blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="links"]) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border-radius: 20px; padding: 0.75rem; gap: 0.75rem; }
+/* A tile of the surface on the panel of the cards */
+.card { background: var(--surface); border-radius: 14px; }
+:scope.numbered > .card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+:scope { border-radius: 18px; box-shadow: none; padding: 6px; --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); }
+:scope figcaption { background: none; border: 0; padding: 0.3rem 0.6rem 0.5rem; }
+:scope pre { background: var(--code-ground); border-radius: 12px; }
+:scope .lang { border-radius: 6px; }
+}
+}
+</style>
+<style>
+@layer floe.page {
+@scope (:root) to ([data-floe-part] > *) {
+/* The colours and faces are the theme's palette; the page lays them out: what to check, a caution, the steps numbered
+   under a line to the next (the look numbered), and how to roll back, in one column as wide as prose and the numbers */
+body { margin: 0; padding-block: 2.5rem 4rem; font-size: 16px; line-height: 1.75; }
+.column { max-width: calc(var(--text-width) + 3rem + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); display: grid; gap: 2rem; }
+header { display: grid; gap: 0.4rem; justify-items: start; }
+.kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; }
+.kind .name { color: var(--accent); font-weight: 700; }
+h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
+.summary { font-size: 1.05rem; }
+section { display: grid; gap: 0.8rem; }
+h2 { font-size: 1.15rem; }
+.needs { padding: 1rem 1.3rem; }
+.caution { background: var(--warn-soft); color: var(--warn); font-weight: 700; padding: 0.6rem 1rem; border-radius: 6px; max-width: none; }
+.caution a { color: inherit; }
+.steps > li { gap: 0.6rem; }
+/* Over the look numbered's rings, as floe.page comes after floe.looks */
+.steps > li::before { background: var(--accent); color: var(--on-fill); box-shadow: none; }
+.steps .head { display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: baseline; }
+.steps h3 { font-size: 1.1rem; }
+.who { font-size: 0.75rem; font-weight: 700; padding: 0 0.6rem; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.fails { border-left: 4px solid var(--bad); background: var(--bad-soft); padding: 0.4rem 0.8rem; border-radius: 0 6px 6px 0; max-width: none; }
+.fails b { color: var(--bad); margin-right: 0.4rem; }
+.fails a { color: inherit; }
+.rollback { border: 2px dashed var(--bad); border-radius: 10px; padding: 1rem 1.3rem; }
+.rollback h2 { color: var(--bad); }
+.rollback .steps > li::before { background: var(--bad); }
+}
+}
+</style>
+</head>
+<body>
+<div class="column">
+<header>
+<p class="kind"><span class="name">Runbook</span> <span>Owner: Platform team</span> <span>Updated: 2030-05-16</span></p>
+<h1 id="issue-and-deploy-a-new-certificate-for-the-payment-gateway">Issue and deploy a new certificate for the payment gateway</h1><p class="summary">Replace the TLS certificate of the gateway&#39;s internal endpoint before it expires, or at once when it has. Takes about 20 minutes; checkout keeps working throughout.</p>
+</header>
+<section class="needs" data-floe-look="panel"><h2 id="before-you-start">Before you start</h2><ul><li>You can run <code>kubectl</code> against the <code>payments</code> cluster</li><li>You hold the <code>cert-issuer</code> role in the vault</li><li>The on-call engineer of the payments team knows you are starting</li></ul></section><p class="caution">Do not delete the old secret until checkout works on the new one; the gateway cannot start without a certificate.</p>
+<section><h2 id="steps">Steps</h2><ol class="steps" data-floe-look="numbered">
+<li><div class="head"><h3 id="issue-the-certificate">Issue the certificate</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">vault write -format=json pki/issue/gateway common_name=gateway.internal ttl=8760h &gt; cert.json</span><span class="run" data-floe-copy="">jq -r .data.certificate cert.json &gt; cert.pem &amp;&amp; jq -r .data.private_key cert.json &gt; key.pem</span><span class="run" data-floe-copy="">jq -r .data.expiration cert.json</span><span class="out">1936688400</span></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><p class="fails"><b>If it fails</b> A <code>permission denied</code> means the role is missing; ask the platform team for <code>cert-issuer</code>.</p></li>
+<li><div class="head"><h3 id="store-it-as-a-new-secret">Store it as a new secret</h3></div><p>Name it with today&#39;s date, so the old one stays until the end.</p><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments create secret tls gateway-tls-20300516 --cert=cert.pem --key=key.pem</span><span class="out">secret/gateway-tls-20300516 created</span></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></li>
+<li><div class="head"><h3 id="point-the-gateway-at-the-new-secret">Point the gateway at the new secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments set volume deploy/gateway --add --name=tls --secret-name=gateway-tls-20300516 --overwrite</span><span class="run" data-floe-copy="">kubectl -n payments rollout status deploy/gateway</span><span class="out">deployment &#34;gateway&#34; successfully rolled out</span></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><p class="fails"><b>If it fails</b> Roll back at once (below), then page the on-call engineer.</p></li>
+<li><div class="head"><h3 id="check-that-checkout-works">Check that checkout works</h3><span class="who">Payments on-call</span></div><p>Place a test order on the staging shop and watch the checkout error rate on the dashboard for five minutes.</p></li>
+<li><div class="head"><h3 id="delete-the-old-secret">Delete the old secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments delete secret gateway-tls-20290514</span></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></li>
+</ol></section>
+<section class="rollback"><h2 id="roll-back">Roll back</h2><ol class="steps" data-floe-look="numbered">
+<li><div class="head"><h3 id="point-the-gateway-back-at-the-old-secret">Point the gateway back at the old secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments rollout undo deploy/gateway</span><span class="out">deployment.apps/gateway rolled back</span></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></li>
+<li><div class="head"><h3 id="tell-the-on-call-engineer">Tell the on-call engineer</h3></div><p>Say which step failed and what it printed.</p></li>
+</ol></section>
+<section><h2 id="related">Related</h2>
+<ul data-floe-part="links">
+<li class="card" data-floe-look="panel"><a href="/a/postmortem-certs/">Postmortem: checkout failed for 47 minutes</a><p>The incident that led to this runbook</p><span class="url">/a/postmortem-certs/</span></li>
+</ul>
+</section>
+</div>
+
+
+</body></html>

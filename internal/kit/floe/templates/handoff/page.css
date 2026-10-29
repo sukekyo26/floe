@@ -1,0 +1,46 @@
+/* The colours and faces are the theme's palette; the page lays them out: a band of the counts, what to decide, and
+   a board of what is done, in progress and next, each in the column every template centres its page in.
+   LIMIT: the board puts its sections side by side while each has 16rem; a width where they wrap is not looked at */
+body { margin: 0; font-size: 16px; line-height: 1.7; padding-block: 0 4rem; }
+.column { max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+.band { padding-block: 1.8rem 1.6rem; }
+.band .column { display: grid; gap: 0.5rem; justify-items: start; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
+.when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; max-width: none; }
+.kind { border: 1px solid currentColor; border-radius: 4px; padding: 0 0.6rem; font-size: 0.85rem; font-weight: 700; }
+.date { font-family: var(--mono); }
+.counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; max-width: none; }
+.counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: 8px; }
+.counts a { text-decoration: none; }
+.counts li > a, .counts li:not(:has(a)) { display: grid; padding: 0.5rem 1rem; font-size: 0.85rem; }
+.counts b { font-family: var(--mono); font-size: 2rem; line-height: 1.1; }
+.counts li.hot { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-soft); }
+main { display: grid; gap: 2rem; padding-block: 2rem; }
+main h2 { font-size: 1.15rem; }
+.asks { padding: 1.2rem 1.4rem; border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
+.asks h2 { color: var(--warn); font-size: 1.3rem; }
+/* Q1, Q2 … are the list's own numbers: each li stays a list item, its layout inside it. The name is the page's
+   alone, as a counter style is not held by @scope.
+   LIMIT: up to Q99 fits the pad; a hundredth question spills left of it */
+@counter-style floe-handoff-q { system: extends decimal; prefix: "Q"; suffix: " "; }
+.asks ol { list-style-type: floe-handoff-q; padding-left: 3rem; gap: 1.1rem; max-width: none; }
+.asks ol > li::marker { color: var(--warn); font-family: var(--mono); font-weight: 700; }
+.ask { display: grid; gap: 0.35rem; }
+.question { font-weight: 700; font-size: 1.05rem; }
+.options { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: none; }
+.options li { border: 1px solid var(--line); border-radius: 999px; padding: 0 0.8rem; background: var(--surface); }
+.why, .by { color: var(--muted); font-size: 0.92rem; }
+/* As many columns as the sections written, side by side while each has 16rem */
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
+.board section { padding: 1rem 1.2rem; display: grid; gap: 0.6rem; }
+.board ul, .board ol { max-width: none; gap: 0.6rem; }
+.done, .doing { list-style: none; padding: 0; }
+.done li::before { content: "✓"; color: var(--good); font-weight: 800; margin-right: 0.45rem; }
+.ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }
+.doing li { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.6rem; align-items: baseline; }
+.doing .what, .doing .where { grid-column: 1 / -1; }
+.state { justify-self: start; font-size: 0.78rem; font-weight: 600; padding: 0 0.6rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.state.waiting { background: var(--warn-soft); color: var(--warn); }
+.state.blocked { background: var(--bad-soft); color: var(--bad); }
+.notes { display: grid; gap: 0.6rem; }
+main > section:not(.asks):not(.notes) { display: grid; gap: 1rem; }

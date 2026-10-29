@@ -1,0 +1,33 @@
+# Slides: only slides is required, each a heading over parts as in report; a slide of a heading alone stands between
+# parts of the talk. The title is the cover, and subtitle the line under it. Write direction: across to lay the
+# slides side by side, moved by the ← and → keys.
+template: slides
+lang: en
+title: What the certificate outage taught us
+subtitle: 'Payments team · review of 2030-05-14 · [the postmortem](/a/postmortem-certs/)'
+slides:
+  - heading: Checkout failed for 47 minutes
+    parts:
+      - stats:
+          - { label: Duration, value: '47', unit: min }
+          - { label: Failed checkouts, value: '3,100', note: about }
+          - { label: Data lost, value: none, tone: good }
+  - heading: A certificate issued by hand expired
+    parts:
+      - text: |
+          It was not in the renewal job's list, and its expiry warning went to a mailbox no one reads.
+      - timeline:
+          - { date: '10:42', title: The certificate expires, tone: bad }
+          - { date: '10:58', title: Cause found, tone: warn }
+          - { date: '11:29', title: Checkout recovers, tone: good }
+  - heading: 'What changes in the [certificate inventory](/a/cert-inventory/) and `alerts.yaml`'
+  - heading: Three actions, one done
+    parts:
+      - steps:
+          - { title: Send expiry warnings to the on-call rota, state: done }
+          - { title: Put every certificate under the renewal job, state: doing }
+          - { title: Alert 14 days before any certificate expires }
+  - heading: 'Next time: the `runbook-certs` runbook'
+    parts:
+      - links:
+          - { title: Issue and deploy a new certificate, url: /a/runbook-certs/, text: Twenty minutes; checkout keeps working throughout }

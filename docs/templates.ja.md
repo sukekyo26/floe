@@ -1,6 +1,6 @@
 # テンプレート
 
-自分のテンプレート（データファイルを描き入れるページ）の作り方です。データファイルは `template:` でテンプレートを名指します（書き方は [pages.ja.md](pages.ja.md)）。floe のテンプレートは `report` です。自分の部品やテーマの作り方は [parts.ja.md](parts.ja.md) にあります。
+自分のテンプレート（データファイルを描き入れるページ）の作り方です。データファイルは `template:` でテンプレートを名指します（書き方は [pages.ja.md](pages.ja.md)）。floe のテンプレートは `report`・`design`・`handoff`・`adr`・`postmortem`・`runbook`・`slides` です（`floe template list` が並べます）。自分の部品やテーマの作り方は [parts.ja.md](parts.ja.md) にあります。
 
 ## テンプレートの置き場所
 
@@ -95,11 +95,13 @@ memo/
 - どのブロックも閉じない `}` と `@import` は、その行で断ります。Google Fonts のようなスタイルシートは `page.html` の `<link>` で読みます。
 - パレットの変数（`var(--muted)`）で描くと、データファイルが選んだテーマに従います。
 
-たとえば `report` の `page.css`：
+たとえば `report` の `page.css` は、floe のテンプレートがどれも使う列で、ページを中央にそろえます：
 
 ```css
-:scope { --page-width: 96rem; }
-main { max-width: var(--page-width); margin-inline: auto; display: grid; gap: 2.5rem; }
+main {
+  max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad);
+  display: grid; gap: 2.5rem;
+}
 section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 .lead { color: var(--muted); font-size: 1.05rem; }
 ```
@@ -135,7 +137,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ### 借りられる見た目
 
-`<section data-floe-look="panel">` は、テンプレートの要素を、どのテーマでもパネル（ほとんどの部品を描く箱）で描きます。`rows`・`cards`・`table` なら、その見た目を借ります。決まりは [parts.ja.md](parts.ja.md#見た目を借りる) にあります。
+`<section data-floe-look="panel">` は、テンプレートの要素を、どのテーマでもパネル（ほとんどの部品を描く箱）で描きます。`rows`・`cards`・`table` なら、その見た目を借ります。`band` は、design の結論や handoff の頭のような、アクセントの色で塗った帯で、中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。`<ol>` に `numbered` を付けると、項目に丸い番号を付けて線でつなぎます（runbook の手順のように）。決まりは [parts.ja.md](parts.ja.md#見た目を借りる) にあります。
 
 ## パレット
 
@@ -156,6 +158,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | `--page-bg` | ページ全体の地。方眼のような模様も（既定は `--bg`） |
 | `--rule` | 節の間のような、ページを横切る線の `border` |
 | `--text-width` | 文の幅の上限。テンプレートが `:scope` で決める |
+| `--page-width`・`--page-pad` | ページを中央にそろえる列の幅と、その左右の余白。余白は箱の内側なので、列は `max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad)` |
 
 floe の土台は、ページの根にこれらで地・色・書体を描きます（`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`）。`page.css` は `:scope` でこれを変えられます。自分のテーマも変えられます（[parts.ja.md](parts.ja.md#テーマ)）。
 

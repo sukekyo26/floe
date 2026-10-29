@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "runbook",
+  "description": "A runbook: what to check before starting, steps in order with the commands to run and what to do if one fails, and how to roll back.",
+  "type": "object",
+  "properties": {
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the procedure does and when to use it; a line of Markdown"
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The team or person who keeps it"
+    },
+    "updated": {
+      "type": "string",
+      "minLength": 1,
+      "description": "When it was last updated, as written"
+    },
+    "needs": {
+      "type": "array",
+      "minItems": 1,
+      "description": "What to check before starting",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "description": "A line of Markdown"
+      }
+    },
+    "caution": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What must not be done while it runs, above the steps; a line of Markdown"
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The steps in order",
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "rollback": {
+      "type": "array",
+      "minItems": 1,
+      "description": "How to undo it, steps in order as in steps",
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "more": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Sections of your own after the rest, each a heading over parts, as report's",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "floe:///parts/any.json"
+            }
+          }
+        },
+        "required": [
+          "heading"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "steps"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "step": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A line of Markdown"
+        },
+        "who": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Who does it, when not the reader"
+        },
+        "text": {
+          "$ref": "floe:///parts/text.json",
+          "description": "What to do or know; commands go in run"
+        },
+        "run": {
+          "$ref": "floe:///parts/terminal.json",
+          "description": "The commands to run, with what they print when it goes well"
+        },
+        "if_fails": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What to do when it does not go as shown; a line of Markdown"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
