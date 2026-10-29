@@ -66,8 +66,7 @@ func (l *layout) checkEdges() {
 }
 
 // checkCrossings reports edges crossing like an X, unless one of them allows it.
-// LIMIT: edges running one stretch together are not refused: one may overlap them on purpose (a ↔, a
-// shared line as in the example class).
+// LIMIT: edges overlapping along a stretch pass (a ↔ drawn on purpose); refuse them if accidental overlaps mislead.
 func (l *layout) checkCrossings() {
 	for i, a := range l.paths {
 		for _, b := range l.paths[i+1:] {
