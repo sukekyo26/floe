@@ -47,8 +47,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   without options, what it touches, and sections of your own as in `report`.
 - Add a copy button over the top right of `code`, `terminal` and `diff`: it
   copies the code as written, a terminal's commands without their prompt and
-  output, and a diff as written, and says it copied. Scrolled to its end, a
-  long line ends left of the button.
+  output, and a diff as written, and says it copied, in the page's language.
+  It copies where the page may not write to the clipboard too (VS Code's
+  Simple Browser and the like). Scrolled to its end, a long line ends left of
+  the button.
 - Add warnings: advice on a better way to write a page, which `floe check`,
   `floe render`, `floe template check` and `floe publish` print after the
   mistakes as `file:line:column: warning: message`, leaving the page drawn and
