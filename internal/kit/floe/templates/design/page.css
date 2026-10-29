@@ -14,7 +14,7 @@ h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .verdict ol { max-width: none; gap: 0.7rem; }
 .verdict li { display: grid; gap: 0.1rem; }
 .verdict .question { font-size: 0.9rem; }
-.verdict strong { font-size: 1.4rem; line-height: 1.4; }
+.verdict .pick { font-size: 1.4rem; line-height: 1.4; }
 .verdict .undecided { opacity: 0.8; }
 .verdict code { background: color-mix(in srgb, var(--on-fill) 20%, transparent); color: inherit; }
 .verdict a { color: inherit; }
@@ -23,7 +23,7 @@ main { display: grid; gap: 2.2rem; align-content: start; }
 main > *, section > * { min-width: 0; }
 main section { display: grid; gap: 0.8rem; }
 main h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px solid var(--accent); }
-h3 { margin-top: 0.4rem; }
+.decision .question { margin-top: 0.4rem; font-family: var(--display); font-weight: 700; font-size: 1.05rem; }
 .non-goals { color: var(--muted); }
 .decided { list-style: none; padding: 0; gap: 0; max-width: none; }
 .decided li { padding: 0.6rem 1rem; }

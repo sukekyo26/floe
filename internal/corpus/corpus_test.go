@@ -389,8 +389,8 @@ func firstDiff(got, want []byte) (int, string, string, bool) {
 	return 0, "", "", false
 }
 
-// The sample example holds the example.yaml of each of floe's templates as it is, as <name>.yaml: its pages
-// are the ones develop drew of them.
+// The sample example holds the example.yaml of each of floe's templates as it is, as <name>.yaml, and no other
+// data file: its pages are the ones develop drew of them.
 func TestExamplesAreFloes(t *testing.T) {
 	t.Parallel()
 
@@ -404,6 +404,15 @@ func TestExamplesAreFloes(t *testing.T) {
 		b, err := os.ReadFile(filepath.Join("testdata", "example", name+".yaml"))
 		if err != nil || !bytes.Equal(b, tpl.Example()) {
 			t.Errorf("testdata/example/%s.yaml is not %s's example.yaml (%v): copy it again", name, name, err)
+		}
+	}
+	found, err := filepath.Glob(filepath.Join("testdata", "example", "*.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range found {
+		if name := strings.TrimSuffix(filepath.Base(file), ".yaml"); !slices.Contains(templates, name) {
+			t.Errorf("%s is the example of no template of floe's: remove it", file)
 		}
 	}
 }

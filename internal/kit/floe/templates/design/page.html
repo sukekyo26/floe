@@ -28,7 +28,7 @@
 <ol>
 {{- range $i, $d := .}}
 <li><span class="question">{{markdownLine $d.question}}</span>
-{{- with index $.Calc.picks $i}}<strong>{{.}}</strong>{{else}}<strong class="undecided">{{word "undecided"}}</strong>{{end}}
+{{- with index $.Calc.picks $i}}<strong class="pick">{{.}}</strong>{{else}}<strong class="pick undecided">{{word "undecided"}}</strong>{{end}}
 {{- with $d.why}}<span class="why">{{markdownLine .}}</span>{{end}}</li>
 {{- end}}
 </ol>
@@ -44,9 +44,12 @@
 {{- end}}
 {{- with .Data.decisions}}
 <section><h2 id="decisions">{{word "decisions"}}</h2>
-{{- range .}}
-<h3>{{markdownLine .question}}</h3>
-{{.options}}
+{{- /* The question is no heading: options draws its options as h3, which would sit beside it. A section named by it holds
+   them together instead */}}
+{{- range $i, $d := .}}
+<section class="decision" aria-labelledby="question-{{$i}}"><p class="question" id="question-{{$i}}">{{markdownLine $d.question}}</p>
+{{$d.options}}
+</section>
 {{- end}}
 </section>
 {{- end}}

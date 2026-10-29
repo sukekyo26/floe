@@ -48,7 +48,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 ほかはテンプレートのものです。`report` は `eyebrow`（題の上の短い行）、`lead`（題の下の 1〜2 文）、`sections`（`heading` と `parts` の組の並び）を取ります。`floe template show <テンプレート>` が、テンプレートが取るものと、書き始めの見本を出します。
 
-`design` は、結論を先に出す設計書です。`background`（Markdown）と `goals` が必須で、`status`・`owner`・`date`・`summary` が頭に、`non_goals`・`decisions`・`decided`・`impact`・`more` を続けられます。判断（`decisions`）は 1 つずつ `question` と、その `options`（部品 `options`）と `why` で、`pick` を付けた案が、問いと一緒にページの一番上に出ます。`pick` の無い判断は未決と出ます。`decided` は案を比べずに決めたこと、`impact` は `what` と `text` の行、`more` は report と同じ `heading` と `parts` の自分の節で、囲んだコードのブロックを断りません。`status`・`owner`・`date`・`more` の見出しのほかの字は、Markdown の 1 行です。
+`design` は、結論を先に出す設計書です。`background`（Markdown）と `goals` が必須で、`status`・`owner`・`date`・`summary` が頭に、`non_goals`・`decisions`・`decided`・`impact`・`more` を続けられます。判断（`decisions`）は 1 つずつ `question` と、その `options`（部品 `options`）と `why` で、`pick` を付けた案が、問いと一緒にページの一番上に出ます。`pick` の無い判断は未決と出ます。`decided` は案を比べずに決めたこと、`impact` は `what` と `text` の行、`more` は report と同じ `heading` と `parts` の自分の節で、囲んだコードのブロックを断りません。`background` は Markdown、`summary`・`goals`・`non_goals`・`decided` の各項目・`question`・`why`・影響の範囲の `what` と `text` は Markdown の 1 行、`status`・`owner`・`date`・`more` の見出し・案の `title` と `pick` は、書いたままの字です。
 
 ## 部品
 

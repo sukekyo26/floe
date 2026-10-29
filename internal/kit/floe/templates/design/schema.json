@@ -18,7 +18,7 @@
         "type": "object",
         "properties": {
           "question": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
-          "why": { "type": "string", "minLength": 1, "description": "Why the option taken, under it at the top; a line of Markdown" },
+          "why": { "type": "string", "minLength": 1, "description": "Why the option taken, or why it is undecided, under it at the top; a line of Markdown" },
           "options": { "$ref": "floe:///parts/options.json" }
         },
         "required": ["question", "options"],

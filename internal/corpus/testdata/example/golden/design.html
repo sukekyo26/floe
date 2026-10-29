@@ -286,7 +286,7 @@ h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .verdict ol { max-width: none; gap: 0.7rem; }
 .verdict li { display: grid; gap: 0.1rem; }
 .verdict .question { font-size: 0.9rem; }
-.verdict strong { font-size: 1.4rem; line-height: 1.4; }
+.verdict .pick { font-size: 1.4rem; line-height: 1.4; }
 .verdict .undecided { opacity: 0.8; }
 .verdict code { background: color-mix(in srgb, var(--on-fill) 20%, transparent); color: inherit; }
 .verdict a { color: inherit; }
@@ -295,7 +295,7 @@ main { display: grid; gap: 2.2rem; align-content: start; }
 main > *, section > * { min-width: 0; }
 main section { display: grid; gap: 0.8rem; }
 main h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px solid var(--accent); }
-h3 { margin-top: 0.4rem; }
+.decision .question { margin-top: 0.4rem; font-family: var(--display); font-weight: 700; font-size: 1.05rem; }
 .non-goals { color: var(--muted); }
 .decided { list-style: none; padding: 0; gap: 0; max-width: none; }
 .decided li { padding: 0.6rem 1rem; }
@@ -324,8 +324,8 @@ aside a { text-decoration: none; }
 <div class="column">
 <h2 id="conclusion">Conclusion</h2>
 <ol>
-<li><span class="question">Which queue</span><strong>A table in the database we have</strong><span class="why">It needs no new service to run, and the load is well within what the database takes</span></li>
-<li><span class="question">How to try again</span><strong class="undecided">Undecided</strong></li>
+<li><span class="question">Which queue</span><strong class="pick">A table in the database we have</strong><span class="why">It needs no new service to run, and the load is well within what the database takes</span></li>
+<li><span class="question">How to try again</span><strong class="pick undecided">Undecided</strong></li>
 </ol>
 </div>
 </section>
@@ -338,18 +338,20 @@ page answers. When the mail provider is slow, so is the page, and a provider out
 <section><h2 id="goals">Goals</h2><ul><li>A page answers without waiting for any notification</li><li>A notification that fails is tried again, and none is lost</li><li>Email, push and chat go out the same way</li></ul></section>
 <section><h2 id="non-goals">Non-goals</h2><ul class="non-goals"><li>Changing what the notifications say</li><li>A user&#39;s settings of which notifications they get</li></ul></section>
 <section><h2 id="decisions">Options</h2>
-<h3 id="which-queue">Which queue</h3>
+<section class="decision" aria-labelledby="question-0"><p class="question" id="question-0">Which queue</p>
 <div class="numbered" data-floe-part="options">
 <div class="card option pick" data-floe-look="panel"><h3 id="a-table-in-the-database-we-have">A table in the database we have <span data-floe-part="cell">Recommended</span></h3><ul><li class="pro">No new service to run or watch</li><li class="pro">Written in the same transaction as the comment</li><li class="con">Polling adds load to the database</li></ul></div>
 <div class="card option" data-floe-look="panel"><h3 id="a-message-broker">A message broker</h3><ul><li class="pro">Made for this, and scales further</li><li class="con">A new service to run, watch and back up</li></ul></div>
 </div>
-<h3 id="how-to-try-again">How to try again</h3>
+</section>
+<section class="decision" aria-labelledby="question-1"><p class="question" id="question-1">How to try again</p>
 <div class="numbered" data-floe-part="options">
 <div class="card option" data-floe-look="panel"><h3 id="back-off-exponentially">Back off exponentially</h3><p>1 minute, then 2, 4 and on, up to a day.</p>
 </div>
 <div class="card option" data-floe-look="panel"><h3 id="a-fixed-delay">A fixed delay</h3><p>Every 5 minutes, up to 50 times.</p>
 </div>
 </div>
+</section>
 </section>
 <section><h2 id="decided">Decided</h2><ul data-floe-look="rows" class="decided"><li>A notification is written to the queue in the same transaction as what causes it</li><li>Workers take at most <code>20</code> notifications at a time</li><li>A notification still failing after a day is kept, marked <strong>dead</strong>, for a person to look at</li></ul></section>
 <section><h2 id="impact">Impact</h2>
