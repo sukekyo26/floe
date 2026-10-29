@@ -1,6 +1,8 @@
 package tmpl_test
 
 import (
+	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -59,6 +61,26 @@ func TestFloeExamplesWarnNot(t *testing.T) {
 		tp, _ := k.Template(name)
 		if _, warnings, err := tmpl.Draw(k, name+"/example.yaml", tp.Example(), none); err != nil || warnings != nil {
 			t.Errorf("%s: %s\n%s", name, laid(warnings), told(err))
+		}
+	}
+}
+
+// A fence in a text part of more, in floe's templates that have it, is warned of at the value.
+func TestWarnFenceInMore(t *testing.T) {
+	t.Parallel()
+
+	k := floeKit(t)
+	for _, name := range []string{"adr", "design", "handoff"} {
+		tp, _ := k.Template(name)
+		lines := strings.Split(string(tp.Example()), "\n")
+		at := slices.Index(lines, "more:")
+		if at < 0 {
+			t.Fatalf("%s: its example has no more", name)
+		}
+		lines = slices.Insert(lines, at+1, "  - heading: h", "    parts:", "      - text: \"```\\nls\\n```\"")
+		_, warnings, err := tmpl.Draw(k, "d.yaml", []byte(strings.Join(lines, "\n")), none)
+		if want := fmt.Sprintf("d.yaml:%d:15: warning: %s", at+4, fence); err != nil || laid(warnings) != want {
+			t.Errorf("%s: %s\nwant\n%s\n%s", name, laid(warnings), want, told(err))
 		}
 	}
 }
