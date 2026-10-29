@@ -88,6 +88,8 @@ blockquote > * + * { margin-top: 0.6rem; }
    LIMIT: a part with no ground of its own (a pill, links without a panel) is drawn in that colour on the accent; give it a
    panel, or keep it out of the band */
 :scope [data-floe-part] { color: var(--fg); }
+/* The band's text reads only on its ground, which print leaves out unless asked to keep it */
+@media print { :scope { print-color-adjust: exact; } }
 }
 }
 </style>

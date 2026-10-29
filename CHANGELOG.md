@@ -10,8 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Add floe's template `slides`, slides to show one at a time: a cover of the
   title on a band, then slides as tall as the screen, each a heading over
-  parts as in `report`, stopped at one by one by the scroll and numbered in
-  the corner; a slide of a heading alone stands between parts of the talk, and
+  parts as in `report`, where the scroll stops at each one, numbered in the
+  corner; a slide of a heading alone stands between parts of the talk, and
   in print each slide is a page.
 - Add floe's look `numbered`, the items of a list numbered in rings with a
   line joining each to the next: the part `steps` takes it, and a template
@@ -50,10 +50,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   the exit code as it is. The first is a fenced block of code in a `text` part,
   in a section (report's, `more` of design, handoff, adr, postmortem and
   runbook, runbook's `text` of a step, and a slide of slides) or in `details`
-  and `tabs`: it is
-  drawn as plain code, and the warning says to write it in `code` or
-  `terminal`. `text` is a part of its own, so a part of your own named `text`
-  is refused.
+  and `tabs`: it is drawn as plain code, and the warning says to write it in
+  `code` or `terminal`. `text` is a part of its own, so a part of your own
+  named `text` is refused.
 - Add the diagram part `tree`: write the nodes of a tree and their children,
   and floe places each under its parent and draws the edges; and the diagram
   example `org` (`floe diagram example org`), the departments of a company
