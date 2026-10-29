@@ -7,8 +7,8 @@ import (
 )
 
 // check reports the layout's mistakes: text too wide or tall for its box or frame (as it was laid out), parts
-// (edges, lines and axes too) sticking out of the canvas, overlapping (frame headings too), straddling the edge
-// of a frame, edges running through boxes, labels or frame headings, and edges crossing. A frame's own box is
+// (edges, lines and axes too) sticking out of the canvas, overlapping (frame headings too), boxes and marks straddling
+// the edge of a frame, edges running through boxes, labels or frame headings, and edges crossing. A frame's own box is
 // compared with no other frame's, and a frame's heading is not kept within the frame's height or the canvas (its
 // width is, by addFrame): frames may cross on purpose (a group over two columns, bands that cross), and on the
 // page a heading out of its frame shows below it, one out of the canvas cut short or gone. A frame's icon is a
@@ -21,6 +21,7 @@ func (l *layout) check() {
 
 // checkPlacement reports parts sticking out of the canvas; boxes (a frame's icon among them), marks, labels and
 // frame headings overlapping; and boxes and marks straddling a frame. Frames are not compared with one another.
+// LIMIT: labels are not kept off a frame's edge, where an edge's label may sit; compare label parts if one strays.
 func (l *layout) checkPlacement() {
 	canvas := rect{0, 0, l.s.Width, l.s.Height, "", ""}
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
