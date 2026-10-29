@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the diagram example `swimlane` (`floe diagram example swimlane`): a
+  flow split into a lane for each who acts, here one pull request between the
+  user, the architect and the engineer.
 - Add a button over `code`, `terminal` and `diff` that copies them: the code,
   the commands without their prompt or output, the diff as written. It says
   "Copied" in the page's language, and still copies where the page may not

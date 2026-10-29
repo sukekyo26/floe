@@ -1,0 +1,39 @@
+# Swimlane: one pull request of floe, from the architect's request to the merge. Each lane is
+# whose step it is, and a step's edge goes to the next step.
+#
+# Grid: lanes are frames 236 wide (centres x = 130, 380, 630; "Answer" is 12 left, for the labels
+# beside it); steps at y = 48 + 76n, boxes 52 tall and as wide as their text, but the steps from
+# "Check CI" on are 40 lower, for the label of the edge that reaches it. An edge to a step lower
+# down in another lane is an L: it leaves the bottom of the box and reaches the side of the next
+# (fromSide, toSide). The one into "Check CI" is a Z into its top instead, as its side holds the
+# edge to the user. Steps side by side on a row are joined straight across; a pair of opposite
+# edges is two lines, 8 above and below the middle. Each label sits inside one lane (at).
+width: 760
+height: 784
+title: { en: "One pull request: the user, the architect and the engineer", ja: "1 つの PR：ユーザー・アーキテクト・エンジニア" }
+parts:
+  - frame: { x: 12, y: 12, w: 236, h: 760, label: { en: User, ja: "ユーザー" } }
+  - frame: { x: 262, y: 12, w: 236, h: 760, label: { en: Architect, ja: "アーキテクト" }, accent: true }
+  - frame: { x: 512, y: 12, w: 236, h: 760, label: { en: Engineer, ja: "エンジニア" } }
+  - box: { name: order, x: 380, origin: centre, y: 48, h: 52, tone: accent, rows: [{ en: Send the task, ja: "指示を送る" }, { en: step 1, ja: "段 1" }] }
+  - box: { name: design, x: 630, origin: centre, y: 124, h: 52, rows: [{ en: Write the design, ja: "設計を書く" }, { en: "step 2, no code yet", ja: "段 2・コードは書かない" }] }
+  - box: { name: dreview, x: 380, origin: centre, y: 200, h: 52, rows: [{ en: Review the design, ja: "設計レビュー" }, { en: "step 2, medium then low", ja: "段 2・medium → low" }] }
+  - box: { name: answer, x: 118, origin: centre, y: 200, h: 52, rows: [{ en: Answer, ja: "判断に答える" }, { en: design choices, ja: "作りを変える点" }] }
+  - box: { name: build, x: 630, origin: centre, y: 276, h: 52, rows: [{ en: "Build, test, open the PR", ja: "実装・テスト・PR" }, { en: "step 3, just ci", ja: "段 3・just ci" }] }
+  - box: { name: review, x: 380, origin: centre, y: 352, h: 52, rows: [{ en: Review the code, ja: "実装レビュー" }, { en: "step 4, medium", ja: "段 4・medium" }] }
+  - box: { name: fix, x: 630, origin: centre, y: 428, h: 52, rows: [{ en: Fix and push, ja: "直して push" }, { en: step 5, ja: "段 5" }] }
+  - box: { name: ready, x: 380, origin: centre, y: 504, h: 52, rows: [{ en: Review the fixes, ja: "直しのレビュー" }, { en: "step 5, low", ja: "段 5・low" }] }
+  - box: { name: ci, x: 630, origin: centre, y: 620, h: 52, rows: [{ en: Check CI, ja: "CI を確かめる" }, { en: step 6, ja: "段 6" }] }
+  - box: { name: ok, x: 130, origin: centre, y: 620, h: 52, tone: good, rows: [{ en: Agree to merge, ja: "マージを了承" }] }
+  - box: { name: merge, x: 630, origin: centre, y: 696, h: 52, tone: good, rows: [{ en: Merge, ja: "マージ" }, { en: mark the plan done, ja: "計画に（完了）" }] }
+  - edge: { from: order, to: design, fromSide: bottom, toSide: left }
+  - edge: { from: design, to: dreview, fromSide: bottom, toSide: right }
+  - edge: { from: [280, 218], to: [186, 218], label: { en: ask, ja: "聞く" }, at: [217, 204] }
+  - edge: { from: [186, 234], to: [280, 234], label: { en: answer, ja: "答える" }, at: [217, 248] }
+  - edge: { from: dreview, to: build, fromSide: bottom, toSide: left, label: OK, at: [449, 302] }
+  - edge: { from: build, to: review, fromSide: bottom, toSide: right }
+  - edge: { from: review, to: fix, fromSide: bottom, toSide: left, label: { en: findings, ja: "指摘" }, at: [460, 454] }
+  - edge: { from: fix, to: ready, fromSide: bottom, toSide: right }
+  - edge: { from: ready, to: ci, fromSide: bottom, toSide: top, label: { en: ready to merge, ja: "マージしてよい" }, at: [438, 588] }
+  - edge: { from: ci, to: ok, label: { en: ask, ja: "聞く" }, at: [539, 646] }
+  - edge: { from: ok, to: merge, fromSide: bottom, toSide: left }
