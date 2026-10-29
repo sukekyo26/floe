@@ -1,4 +1,6 @@
 en:
-  hint: Scroll for the next slide
+  hint_down: Scroll for the next slide
+  hint_across: Press → or swipe for the next slide
 ja:
-  hint: スクロールで次へ
+  hint_down: スクロールで次へ
+  hint_across: → かなぞりで次へ

@@ -226,8 +226,18 @@ func TestDrawSlides(t *testing.T) {
 	t.Parallel()
 
 	slide := regexp.MustCompile(`<li class="slide[^"]*"[^>]*>`)
-	for _, tt := range []struct{ lang, hint string }{{"en", "Scroll for the next slide"}, {"ja", "スクロールで次へ"}} {
-		src := "template: slides\nlang: " + tt.lang + "\ntitle: x\nslides:\n  - {heading: a, parts: [{text: t}]}\n  - {heading: b}\n  - {heading: c, parts: [{text: u}]}\n"
+	for _, tt := range []struct{ lang, direction, html, hint string }{
+		{"en", "", `<html lang="en">`, "Scroll for the next slide"},
+		{"ja", "", `<html lang="ja">`, "スクロールで次へ"},
+		{"en", "down", `<html lang="en" data-direction="down">`, "Scroll for the next slide"},
+		{"en", "across", `<html lang="en" data-direction="across">`, "Press → or swipe for the next slide"},
+		{"ja", "across", `<html lang="ja" data-direction="across">`, "→ かなぞりで次へ"},
+	} {
+		src := "template: slides\nlang: " + tt.lang + "\ntitle: x\n"
+		if tt.direction != "" {
+			src += "direction: " + tt.direction + "\n"
+		}
+		src += "slides:\n  - {heading: a, parts: [{text: t}]}\n  - {heading: b}\n  - {heading: c, parts: [{text: u}]}\n"
 		page, _, err := tmpl.Draw(floeKit(t), "sl.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
 		if err != nil {
 			t.Fatal(told(err))
@@ -235,11 +245,11 @@ func TestDrawSlides(t *testing.T) {
 		got := strings.Join(slide.FindAllString(string(page), -1), "\n")
 		want := `<li class="slide" data-total="3">` + "\n" + `<li class="slide divider" data-total="3" data-floe-look="band">` + "\n" + `<li class="slide" data-total="3">`
 		if got != want {
-			t.Errorf("%s: slides\n%s\nwant\n%s", tt.lang, got, want)
+			t.Errorf("%s %s: slides\n%s\nwant\n%s", tt.lang, tt.direction, got, want)
 		}
-		for _, want := range []string{`<header class="slide cover" data-floe-look="band">`, `<p class="hint">` + tt.hint + `</p>`} {
+		for _, want := range []string{tt.html, `<header class="slide cover" data-floe-look="band">`, `<p class="hint">` + tt.hint + `</p>`} {
 			if !bytes.Contains(page, []byte(want)) {
-				t.Errorf("%s draws no %s", tt.lang, want)
+				t.Errorf("%s %s draws no %s", tt.lang, tt.direction, want)
 			}
 		}
 	}
@@ -249,7 +259,8 @@ func TestDrawSlides(t *testing.T) {
 	}
 }
 
-// slides refuses empty parts, a slide without a heading and a key of its own it does not know, by its schema.
+// slides refuses empty parts, a slide without a heading, a key of its own it does not know and a direction of
+// none of its own, by its schema.
 func TestSlidesRefused(t *testing.T) {
 	t.Parallel()
 
@@ -257,6 +268,7 @@ func TestSlidesRefused(t *testing.T) {
 		{"slides: [{heading: h, parts: []}]\n", "sl.yaml:4:30: minItems: got 0, want 1"},
 		{"slides: [{parts: [{text: t}]}]\n", "sl.yaml:4:11: missing property 'heading'"},
 		{"author: a\nslides: [{heading: h}]\n", "sl.yaml:1:1: additional properties 'author' not allowed"},
+		{"direction: sideways\nslides: [{heading: h}]\n", "sl.yaml:4:12: value must be one of 'down', 'across'"},
 	} {
 		_, _, err := tmpl.Draw(floeKit(t), "sl.yaml", []byte("template: slides\nlang: en\ntitle: x\n"+tt.data), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
 		if got := told(err); got != tt.want {
