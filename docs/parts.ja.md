@@ -37,6 +37,11 @@ quote/
 - schema は、floe の部品と同じく `"$ref": "floe:///parts/quote.json"` で名指します。部品の schema も、floe の部品と共有の schema をこう名指します。
 - 部品の要素は箱で、`data-floe-part="quote"` で自分を名乗ります。
 - `part.html` は項目を `.` で見て、テンプレートの `page.html` と同じ関数を使えます（`asset` は除く。[templates.ja.md](templates.ja.md#pagehtml)）。
+- floe の部品の関数も使えます。使い方の見本は、floe の部品の `part.html`（floe のソースの `internal/kit/floe/parts/<名前>/part.html`）です。`copyButton` は `code`・`terminal`・`diff`、ほかは同じ名前の部品が使っています。
+  - `{{copyButton}}` は、写すボタンをページの言語で描きます。部品の中の `data-floe-copy` を付けた要素の字を、どれも改行で終えて並べて写します（code は `<code>`、terminal はコマンドの 1 つずつに付けます）。ボタンの見た目は floe のもので、置き場所を部品の CSS で決めます。ボタンの下を通る字は、code と同じく一番長い行の後ろに `--floe-copy-room` の余白を取り、右端までスクロールすると終わりがボタンの左に出るようにします。`--floe-copy-size` と `--floe-copy-gap` は、ボタンの大きさとまわりの間です。
+  - `{{diagram}}` は、項目を図として描きます。spec は部品 `diagram` と同じです。
+  - `{{script .js .data}}` は、要素と、それと `.data` で関数 `.js` を呼ぶ script を描きます。部品 `script` と同じです。
+  - `diff .text` は `git diff` が書く形の diff を行と数に読み、`bars .` はラベルと値の並びのそれぞれに幅を付け、`tree .` はパスの並びを、それが名指すフォルダに入れ子にします。
 - 部品の schema は、テンプレートと同じく floe の `format`（`html`・`markdown`・`image`）を取ります。floe が辿る `properties` か `items` の下か、根で宣言します。format を持つ共有の schema も取ります。その項目は `part.html` に描いたものが来ます（`html` は書いたとおり、`markdown` は HTML に、`image` は data URI に。`<img src="{{.file}}" alt="{{.alt}}">`）。`{{.h}}` と書き、関数（`markdown`・`markdownLine`・`printf`・`slice`・`eq` など）に渡したり、`<script>` の中に置いたりしません（書いた字でなく HTML なので、そこでは正しく動きません）。`html` の項目は、テンプレートの項目と同じく描いたページで確かめます（[templates.ja.md](templates.ja.md)）。format の無い文字を Markdown で描くのは `{{markdown .text}}` です。`any.json` の値は、描いた 1 つでなく、全部の種類の map で来ます（[見た目と共有の schema](#見た目と共有の-schema)）。
 - `floe part show <名前>` は、floe の部品も含めて取るものを出します。合うものを floe の部品から写してください。
 
