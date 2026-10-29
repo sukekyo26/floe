@@ -85,7 +85,8 @@ func (c client) do(ctx context.Context, method, path string, body, out any) erro
 	if res.StatusCode >= http.StatusMultipleChoices {
 		// A refusal without a reason still says what the server answered.
 		message := cmp.Or(strings.TrimSpace(string(b)), strconv.Itoa(res.StatusCode)+" "+http.StatusText(res.StatusCode))
-		e := &remoteError{status: res.StatusCode, report: usererr.Report{Mistakes: nil, Failure: message}, body: b}
+		failed := usererr.Report{Mistakes: nil, Failure: message, Warnings: nil}
+		e := &remoteError{status: res.StatusCode, report: failed, body: b}
 		var told usererr.Report
 		if strings.HasPrefix(res.Header.Get("Content-Type"), "application/json") && json.Unmarshal(b, &told) == nil &&
 			(len(told.Mistakes) > 0 || told.Failure != "") {

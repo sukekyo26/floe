@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	gmtext "github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 )
 
@@ -70,6 +72,27 @@ func markdownHTML(text string) (template.HTML, error) {
 // Markdown writes text, an item of format markdown, as HTML, as markdown in page.html does.
 func Markdown(text string) (template.HTML, error) {
 	return markdownHTML(text)
+}
+
+// TextPart is the part of Markdown that stands among other parts (any.json, stack), where a code part can stand
+// beside it: the one whose fences are warned of.
+// LIMIT: text is warned of wherever a schema names it, with no code part beside too; mark its places if that misleads.
+const TextPart = "text"
+
+// Fenced returns the line in text, Markdown, of its first fenced code block as markdown reads it, from 1; 0 for none.
+// LIMIT: text's Markdown is read twice, to draw it and to find fences; return both from one read if that weighs.
+func Fenced(text string) int {
+	src := []byte(text)
+	line := 0
+	doc := markdown.Parser().Parse(gmtext.NewReader(src))
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) { //nolint:errcheck // fn fails nothing
+		if entering && n.Kind() == ast.KindFencedCodeBlock {
+			line = bytes.Count(src[:max(n.Pos(), 0)], []byte("\n")) + 1
+			return ast.WalkStop, nil
+		}
+		return ast.WalkContinue, nil
+	})
+	return line
 }
 
 // ErrFunc marks floe's own failure in a function of page.html or part.html: text/template wraps what a function

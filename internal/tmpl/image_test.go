@@ -61,7 +61,7 @@ sections:
           parts:
             - image: { file: shots/a.png, alt: Folded }
 `
-	page, err := tmpl.Draw(floeKit(t), "d.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "x", Images: images, ImagesDir: ""})
+	page, _, err := tmpl.Draw(floeKit(t), "d.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "x", Images: images, ImagesDir: ""})
 	if err != nil {
 		t.Fatalf("told\n%s", told(err))
 	}
@@ -143,7 +143,7 @@ func TestOwnPartImages(t *testing.T) {
 	_, images := imagesIn(t, map[string][]byte{"a.png": png})
 	o := tmpl.Options{Theme: "", Untitled: "x", Images: images, ImagesDir: ""}
 
-	page, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nshots: { one: a.png, many: [a.png, a.png] }\nshot: a.png\n"), o)
+	page, _, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nshots: { one: a.png, many: [a.png, a.png] }\nshot: a.png\n"), o)
 	if err != nil {
 		t.Fatalf("told\n%s", told(err))
 	}
@@ -191,7 +191,7 @@ func TestImageReadOnce(t *testing.T) {
 
 	images := &counted{StatFS: fstest.MapFS{"a.png": &fstest.MapFile{Data: png}}, opens: map[string]int{}, stats: map[string]int{}}
 	src := "lang: en\ntemplate: report\nsections:\n  - parts:\n      - image: { file: a.png, alt: a }\n      - image: { file: a.png, alt: b }\n"
-	if _, err := tmpl.Draw(floeKit(t), "d.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "x", Images: images, ImagesDir: ""}); err != nil {
+	if _, _, err := tmpl.Draw(floeKit(t), "d.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "x", Images: images, ImagesDir: ""}); err != nil {
 		t.Fatalf("told\n%s", told(err))
 	}
 	if images.opens["a.png"] != 1 || images.stats["a.png"] != 1 {

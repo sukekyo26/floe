@@ -95,6 +95,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 `page.html` は項目を置きたい所に置きます（`{{.Data.risks}}`）。floe は部品の schema と checks で確かめ（誤りはデータファイルの行と列で言う）、HTML で描きます。
 
+部品 `text` は、ほかの部品と並び、横に `code`・`terminal` を置ける所の Markdown です。floe は中の囲んだコードのブロックを警告し、`code` に書くよう勧めます。code の部品を置かない、ただの Markdown の欄は、`{"type": "string", "format": "markdown"}` にします。
+
 種類を名指す鍵 1 つの部品は、種類によらず `any.json` を指します。そのリストは、report の節と同じく、`items` で `any.json` を指します。テンプレートの根の schema では、次のとおりです。
 
 ```json
@@ -171,12 +173,12 @@ ja:
 schema では言えない項目どうしの関係を、リストの各項目に、またはデータファイル全体に 1 回、確かめます。
 
 ```yaml
-# リストへの鍵のパス（sections.parts は各節の部品）
-- for: sections.parts
+# リストへの鍵のパス（sections は各節）
+- for: sections
   # 外れたときに指す、項目の鍵（任意）
-  field: text
-  expr: item.text == nil || !(item.text matches "(?m)^```")
-  message: write code in a code part
+  field: heading
+  expr: item.heading != nil || len(item.parts ?? []) < 2
+  message: give a section of more than one part a heading
 ```
 
 - `for` の途中のリストは 1 つずつ辿ります。`sections.parts` は各節の部品を確かめ、外れたものはその項目で言います。

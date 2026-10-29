@@ -30,7 +30,7 @@ func TestDrawHandoffDateAlone(t *testing.T) {
 	t.Parallel()
 
 	src := []byte("template: handoff\nlang: en\ntitle: Quiet day\ndate: 2030-05-14\n")
-	page, err := tmpl.Draw(floeKit(t), "handoff.yaml", src, tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+	page, _, err := tmpl.Draw(floeKit(t), "handoff.yaml", src, tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
 	if err != nil {
 		t.Fatal(told(err))
 	}
@@ -54,7 +54,7 @@ func TestDrawHandoffHands(t *testing.T) {
 		{"to: Kenji\n", `<span class="hands">Kenji</span>`},
 	} {
 		src := []byte("template: handoff\nlang: en\ntitle: x\ndate: 2030-05-14\n" + tt.hands)
-		page, err := tmpl.Draw(floeKit(t), "handoff.yaml", src, tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+		page, _, err := tmpl.Draw(floeKit(t), "handoff.yaml", src, tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
 		if err != nil {
 			t.Fatal(told(err))
 		}
@@ -84,7 +84,7 @@ func TestDrawAdrStates(t *testing.T) {
 		if tt.by != "" {
 			src += "superseded_by: ADR 0012\n"
 		}
-		page, err := tmpl.Draw(floeKit(t), "adr.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+		page, _, err := tmpl.Draw(floeKit(t), "adr.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
 		if err != nil {
 			t.Fatal(told(err))
 		}
@@ -108,7 +108,7 @@ func TestDrawExamples(t *testing.T) {
 	for _, name := range templates {
 		tpl, _ := k.Template(name)
 		for _, theme := range themes {
-			if _, err := tmpl.Draw(k, name+".yaml", tpl.Example(), tmpl.Options{Theme: theme, Untitled: "", ImagesDir: ""}); err != nil {
+			if _, _, err := tmpl.Draw(k, name+".yaml", tpl.Example(), tmpl.Options{Theme: theme, Untitled: "", ImagesDir: ""}); err != nil {
 				t.Errorf("%s in %s: %s", name, theme, told(err))
 			}
 		}
@@ -123,11 +123,11 @@ func TestDrawTwiceSame(t *testing.T) {
 	k := floeKit(t)
 	tpl, _ := k.Template("report")
 	o := tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""}
-	first, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
+	first, _, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	second, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
+	second, _, err := tmpl.Draw(k, "report.yaml", tpl.Example(), o)
 	if err != nil {
 		t.Fatal(told(err))
 	}

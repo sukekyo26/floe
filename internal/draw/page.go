@@ -131,6 +131,7 @@ func replaced(n *html.Node) string {
 }
 
 // names are the names of the parts of a Kit, and of its parts and looks, each sorted.
+// LIMIT: a name that is none is offered text and script too, which draw no element; leave them out if that misleads.
 type names struct {
 	parts, all []string
 }

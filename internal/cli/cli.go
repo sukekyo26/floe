@@ -50,7 +50,7 @@ func usageOf(err error) usageError {
 // Run executes floe with args and returns the process exit code. The exit code is decided here only.
 func Run(args []string, env Env) int {
 	out := &written{w: env.Stdout, err: nil}
-	root := newRoot(env, out)
+	root, a := newRoot(env, out)
 	root.SetArgs(args)
 	root.SetOut(out)
 	root.SetErr(env.Stderr)
@@ -61,11 +61,24 @@ func Run(args []string, env Env) int {
 	if err == nil && out.err != nil {
 		err = out.err
 	}
+	// SilenceErrors leaves printing to this single boundary, which tells err in English, and the warnings of the
+	// pages drawn after its mistakes; after floe's failure, none. Warn is called once, so that a warning of a
+	// file given twice is told once.
+	r := usererr.Report{Mistakes: nil, Failure: "", Warnings: nil}
+	if err != nil {
+		r = usererr.Tell(english, err)
+	}
+	if r.Failure == "" {
+		// A refusal of the server may carry the warnings of the page it drew.
+		r.Warnings = slices.Concat(r.Warnings, usererr.Warn(english, a.warnings), a.told)
+	}
 	if err == nil {
+		if len(r.Warnings) > 0 {
+			_, _ = fmt.Fprintln(env.Stderr, r.Render(named)) //nolint:errcheck // nowhere left to report
+		}
 		return exitOK
 	}
-	// SilenceErrors leaves printing to this single boundary, which tells err in English.
-	_, _ = fmt.Fprintln(env.Stderr, usererr.Tell(english, err).Render(named)) //nolint:errcheck // nowhere left to report
+	_, _ = fmt.Fprintln(env.Stderr, r.Render(named)) //nolint:errcheck // nowhere left to report
 	if errors.As(err, new(usageError)) {
 		return exitUsage
 	}
@@ -103,8 +116,8 @@ var english = i18n.EnglishCatalog()
 // named is floe's name before each mistake the command line tells.
 const named = "floe: "
 
-// newRoot returns the command tree, writing to out.
-func newRoot(env Env, out io.Writer) *cobra.Command {
+// newRoot returns the command tree, writing to out, and the app its commands run in, which holds their warnings.
+func newRoot(env Env, out io.Writer) (*cobra.Command, *app) {
 	root := &cobra.Command{
 		Use:           "floe",
 		Short:         "Serve agent-written HTML pages on a local server",
@@ -126,7 +139,7 @@ func newRoot(env Env, out io.Writer) *cobra.Command {
 			return err //nolint:wrapcheck // a stdout write error needs no extra context
 		},
 	})
-	a := &app{env: env, out: out}
+	a := &app{env: env, out: out, warnings: nil, told: nil}
 	root.AddCommand(
 		a.archiveCmd(), a.checkCmd(), a.diagramCmd(), a.iconsCmd(), a.listCmd(), a.partCmd(), a.publishCmd(), a.rebuildCmd(),
 		a.renderCmd(), a.rmCmd(), a.serveCmd(), a.stopCmd(), a.templateCmd(),
@@ -156,7 +169,7 @@ func newRoot(env Env, out io.Writer) *cobra.Command {
 		}
 	}
 	wrap(root)
-	return root
+	return root, a
 }
 
 // readable refuses args, a command line, that floe cannot read, before cobra runs it: cobra answers --help

@@ -106,8 +106,8 @@ func TestExamples(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(examples) != 10 {
-		t.Errorf("%d examples, want 10", len(examples))
+	if len(examples) != 14 {
+		t.Errorf("%d examples, want 14", len(examples))
 	}
 	store := iconsOf{}
 	for _, name := range []string{"aws/aws-lambda", "aws/amazon-bedrock", "aws/group/aws-cloud-logo", "aws/group/region", "aws/res/client"} {
@@ -196,8 +196,8 @@ func TestLayoutMistakes(t *testing.T) {
 			"  - box: { x: 20, y: 20, rows: [{ en: A, ja: あ }] }\n  - box: { name: b, x: 30, y: 30, rows: [{ en: B, ja: い }] }",
 			`s.yaml:5:5: box "A" overlaps box "b"`,
 		},
-		{"  - box: { name: a, x: 20, y: 20, rows: [A] }\n  - box: { name: a, x: 200, y: 20, rows: [B] }", `s.yaml:6:5: the name "a" is given before: give each part and row its own name`},
-		{"  - edge: { from: chek, to: [10, 10] }", `s.yaml:5:5: edge: no part or row named "chek"`},
+		{"  - box: { name: a, x: 20, y: 20, rows: [A] }\n  - box: { name: a, x: 200, y: 20, rows: [B] }", `s.yaml:6:5: the name "a" is given before: give each part, row and node its own name`},
+		{"  - edge: { from: chek, to: [10, 10] }", `s.yaml:5:5: edge: no part, row or node named "chek"`},
 		{
 			"  - circle: { name: c, cx: 100, cy: 100, r: 50 }\n  - edge: { from: c, to: [300, 10] }",
 			`s.yaml:6:5: edge: "c" is a circle, which no edge can end at: end it at a box, a table or its named row, an icon, a frame, a bar, a dot or a point`,
@@ -259,7 +259,7 @@ func TestLayoutMistakes(t *testing.T) {
 		},
 		{
 			"  - circle: { name: c, cx: 100, cy: 100, r: 60 }\n  - circle: { name: c, cx: 300, cy: 100, r: 5 }\n  - label: { text: x, in: [c] }",
-			`s.yaml:6:5: the name "c" is given before: give each part and row its own name`,
+			`s.yaml:6:5: the name "c" is given before: give each part, row and node its own name`,
 		},
 		{"  - icon: { icon: aws/amazon-ec2, x: 10, y: 10 }", `s.yaml:5:5: icon "aws/amazon-ec2": no icon "aws/amazon-ec2" (search with: floe icons search <word>)`},
 	} {

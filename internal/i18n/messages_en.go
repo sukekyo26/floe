@@ -130,6 +130,7 @@ var messagesEN = map[string]string{
 	"draw_zgotmplz":     "the page drawn from this file has ZgotmplZ in %s: html/template wrote it for a value it does not take there; change the value, or where the template puts it",
 	"draw_meta":         "the page drawn from this file has %s, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out",
 	"draw_noscript":     "the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out",
+	"draw_text_fence":   "this text holds a fenced block of code on its line %d, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button",
 	"draw_not_text":     "an item of format %s takes text: write it as text, in quotes where YAML would read a number, true, false or null",
 	"draw_html_whole":   "HTML changes the page around it at %s: close in it each element and comment it opens, and close no element it did not open",
 	"draw_page_cut":     "the page drawn was cut short: HTML's reader leaves out the rest of a page past a <template> inside an <svg> or a <math>; take the <template> out of it (page.html, a part.html or an item of format html)",
@@ -229,8 +230,8 @@ var messagesEN = map[string]string{
 	"icons_already":            "%s icons %s are already in %s (add --force to fetch them again)",
 
 	// diagram: the parts' names, layout and raw SVG of a diagram, and its zoom toolbar
-	"diagram_name_used":        `the name "%s" is given before: give each part and row its own name`,
-	"diagram_name_unknown":     `edge: no part or row named "%s"`,
+	"diagram_name_used":        `the name "%s" is given before: give each part, row and node its own name`,
+	"diagram_name_unknown":     `edge: no part, row or node named "%s"`,
 	"diagram_end_kind":         `edge: "%s" is a %s, which no edge can end at: end it at a box, a table or its named row, an icon, a frame, a bar, a dot or a point`,
 	"diagram_end_side":         `edge: %s has no side %s: write the side of a box, a table, an icon, a frame or a bar, left or right of a row, and none for a dot or a point`,
 	"diagram_too_narrow":       `%s: "%s"%s needs w: %s or more`,

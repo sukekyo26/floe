@@ -33,7 +33,7 @@ sections:
 ```
 
 ```sh
-floe check plan.yaml     # prints its mistakes, or nothing
+floe check plan.yaml     # prints its mistakes and warnings, or nothing
 floe publish plan.yaml   # stores the page and prints its URL
 ```
 
@@ -48,7 +48,7 @@ Every data file holds these keys, which floe reads itself:
 
 The rest is the template's: `report` takes `eyebrow` (a short line above the title), `lead` (a sentence or two under the title) and `sections`, each a `heading` and `parts`. `floe template show <template>` prints what a template takes and an example to start from.
 
-`design` takes a design document, its conclusion first. `background` (Markdown) and `goals` are required; `status`, `owner`, `date` and `summary` head the page; `non_goals`, `decisions`, `decided`, `impact` and `more` may follow. Each decision is a `question` over its `options` (the part `options`) and a `why`: the option marked with `pick` is put at the top of the page, under the question, and a decision without one is shown as undecided. `decided` is what is decided without weighing options; `impact` is rows of `what` and `text`; `more` is sections of your own, each a `heading` over `parts` as in report, where a fenced block of code is not refused. `background` is Markdown; `summary`, each of `goals`, `non_goals` and `decided`, a `question`, a `why`, and an impact's `what` and `text` are a line of Markdown each; `status`, `owner`, `date`, a heading of `more`, and an option's `title` and `pick` are plain text, as written.
+`design` takes a design document, its conclusion first. `background` (Markdown) and `goals` are required; `status`, `owner`, `date` and `summary` head the page; `non_goals`, `decisions`, `decided`, `impact` and `more` may follow. Each decision is a `question` over its `options` (the part `options`) and a `why`: the option marked with `pick` is put at the top of the page, under the question, and a decision without one is shown as undecided. `decided` is what is decided without weighing options; `impact` is rows of `what` and `text`; `more` is sections of your own, each a `heading` over `parts` as in report. `background` is Markdown; `summary`, each of `goals`, `non_goals` and `decided`, a `question`, a `why`, and an impact's `what` and `text` are a line of Markdown each; `status`, `owner`, `date`, a heading of `more`, and an option's `title` and `pick` are plain text, as written.
 
 `handoff` takes a handoff of work or a status update, what to decide first. Only `date` is required; `from`, `to` and `summary` head the page, over counts of what is done, in progress, to decide and next. `asks` is what the reader is to decide, each a `question` with `options`, a `recommend`, a `why` and who decides it (`by`), numbered Q1, Q2 and on; `done` is rows of `what` and a `ref` (a pull request or a ticket); `doing` is rows of `who`, `what`, `where` (how far) and a `state` (`doing`, `waiting` or `blocked`); `next` and `notes` (what to watch out for) are lines; `more` is sections of your own as in report. `date`, `from`, `to`, `by`, `ref`, `who` and a heading of `more` are plain text, as written; each other line is a line of Markdown.
 
@@ -60,7 +60,7 @@ Each part is one key naming its kind. `floe part list` lists them with a line ea
 
 | Part | What it draws |
 |---|---|
-| `text` | Markdown, tables included; raw HTML in it is left out. A fenced block of code (```` ``` ````) is refused: write code in `code` and commands in `terminal`. An image file named in it is not shown, only a data URI of a png, gif, jpeg or webp: write images in `image`. |
+| `text` | Markdown, tables included; raw HTML in it is left out. A fenced block of code (```` ``` ````) is drawn as plain code and warned of: write code in `code` and commands in `terminal`. An image file named in it is not shown, only a data URI of a png, gif, jpeg or webp: write images in `image`. |
 | `code` | Code as it is, under its `file` with its `lang`. A button over it copies the code. |
 | `terminal` | Commands (`run`) and what they printed (`out`), at the prompt of its `shell` (`bash`, `sh`, `zsh`, `powershell`, `cmd`). floe draws the prompt, so a `run` that starts with one (`$ ls`) is refused. A button over them copies the commands, a line each, without the prompt or what they printed. |
 | `table` | `columns` and `rows`; each cell is a line of Markdown, a number in quotes as it is drawn, or a pill `{ pill, tone }`. |
@@ -119,13 +119,14 @@ A `diagram` part is a spec written in place: a canvas and the parts placed on it
 | `box` | `x` `y`, `rows`, `w` `h` (as large as the rows need when left out), `name`, `origin` (`left`; `centre` for an `x` at the middle), `tone`, `shape` (`rect`; `pill`, `hex` for a decision, `state`). A row is text, or `[text, style]` with the style `main`, `sub`, `main code` or `sub code`; without a style the first row is `main` and the rest `sub`. |
 | `table` | `x` `y`, `title`, `rows`, `w`, `name`, `origin`, `tone`. A row is `[name]`, `[name, type]`, `---` for a separator, or `{ name, cells: [name, type] }` for a row an edge can end at. |
 | `icon` | `x` `y` (the top left), `icon`, `label` (below the icon), `size` (48), `name`. `icon` is the icon's set and its name in the set, like `aws/amazon-ec2` (see `floe icons search`). |
-| `edge` | `from` and `to`, each the `name` of a part or a named row, or a point `[x, y]`; `fromSide` and `toSide` (`top`, `right`, `bottom`, `left`), `via` (points to turn at), `straight` (point to point, not right-angled), `label` with `at: [x, y]`, `dashed`, `bold`, `tone`, `start` (`none`), `end` (`arrow`), `crossing`. The ends are `arrow`, `triangle`, `diamond`, `odiamond`, `one`, `many`, `zero-one`, `zero-many` or `none`. `crossing: true` lets this edge cross others. |
+| `edge` | `from` and `to`, each the `name` of a part, a named row or a node of a `tree`, or a point `[x, y]`; `fromSide` and `toSide` (`top`, `right`, `bottom`, `left`), `via` (points to turn at), `straight` (point to point, not right-angled), `label` with `at: [x, y]`, `dashed`, `bold`, `tone`, `start` (`none`), `end` (`arrow`), `crossing`. The ends are `arrow`, `triangle`, `diamond`, `odiamond`, `one`, `many`, `zero-one`, `zero-many` or `none`. `crossing: true` lets this edge cross others. |
 | `dot` | `cx` `cy`, `r` (7), `name`, `tone`, `hollow`. Edges may reach its centre. |
 | `bar` | `x1` `x2` `y`, `name`, `tone`, `label` (right of the bar). |
 | `axis` | `x1` `x2` `y`, `ticks: [[x, text], ...]`, `grid` (the top of the grid lines). |
 | `circle` | `cx` `cy` `r`, `name`, `tone`. Circles may overlap. |
 | `label` | `text`, `x` `y`, `anchor` (`middle`; `start`, `end`), `plain` (no background), `strong`, `in` (the names of the circles of a Venn diagram it sits inside, outside the others; without `x` and `y`, floe places it). |
 | `line` | `x1` `y1` `x2` `y2`, `kind` (`line`; `lifeline`, `divider`). It may cross other parts, but not leave the canvas. |
+| `tree` | `x` `y` (the root's centre and top), `root`: a node of `rows`, `name`, `tone`, `shape` as a `box` has them, and `children`, nodes too. floe places each node under its parent, the children side by side and each depth in one row, and draws an edge down from each node to each child. A node's `name` can be the end of an edge written by hand. |
 | `raw` | `svg`: SVG that no part can draw, of SVG's elements alone (no script or `foreignObject`), not laid out or checked. |
 
 An edge without `via` and sides runs right-angled from the side of one end facing the other, with two turns at most; give `via` or a side to take another way.
@@ -163,6 +164,17 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 - A mistake of the shape (`additional properties 'x' not allowed`, `missing property 'x'`, `got string, want array`) is the template's or the part's schema refusing the data: `floe template show <template>` and `floe part show <part>` print what they take.
 - A mistake of a part, theme or template of your own stops every page, whether it uses that one or not: the mistake is told at its own file (`~/.config/floe/parts/quote/schema.json:2:1: …`). `floe part check` and `floe template check` list them.
 - A mistake told once is not told again, even if many places name it.
+
+### Warnings
+
+A page drawn may have warnings: advice on a better way to write it, which leaves the page drawn and the exit code as it is (0 when there is no mistake). They are printed after the mistakes, by `floe check`, `floe render`, `floe template check` and `floe publish`:
+
+```text
+plan.yaml:12:15: warning: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
+```
+
+- A fenced block of code in a `text` part, in a section (report's, and `more` of design, handoff and adr) or in `details` and `tabs`, is warned of: write it in `code`, or a command in `terminal`.
+- A file with a mistake is not drawn, so its warnings come once its mistakes are fixed. Those of the other files drawn are told with the mistakes.
 
 ## Checking and publishing
 

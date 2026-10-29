@@ -41,7 +41,7 @@ func ownKit(t *testing.T, parts, templates map[string]string) *kit.Kit {
 // for none.
 func drawn(t *testing.T, k *kit.Kit, src string, o tmpl.Options) string {
 	t.Helper()
-	if _, err := tmpl.Draw(k, "d.yaml", []byte(src), o); err != nil {
+	if _, _, err := tmpl.Draw(k, "d.yaml", []byte(src), o); err != nil {
 		return told(err)
 	}
 	return ""
@@ -72,23 +72,25 @@ func TestStageFour(t *testing.T) {
 	report := "lang: ja\ntemplate: report\ntitle: t\nsections:\n  - heading: a\n    parts:\n" +
 		"      - table: {columns: [{title: x}], rows: [[a, b]]}\n" +
 		"      - table: {columns: [{title: x}], rows: [[a, b]]}\n" +
-		"      - progress: [{label: p, done: 5, of: 3}]\n" +
-		"      - text: \"```\\ncode\\n```\"\n"
+		"      - progress: [{label: p, done: 5, of: 3}]\n"
 	if got, want := drawn(t, floeKit(t), report, none), lines(
 		"d.yaml:7:46: write as many cells in each row as there are columns",
 		"d.yaml:8:46: write as many cells in each row as there are columns",
 		`d.yaml:9:37: write done no greater than of, the whole ("5")`,
-		"d.yaml:10:15: write code in a code part and commands in a terminal part, which show them under their file or prompt",
 	); got != want {
 		t.Errorf("report told\n%s\nwant\n%s", got, want)
 	}
 
-	k := ownKit(t, nil, mine(minePage, mineSchema, map[string]string{
+	schema := `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"n": {}, "items": {"type": "array"}, "t": {"$ref": "floe:///parts/table.json"}}}`
+	k := ownKit(t, nil, mine(minePage, schema, map[string]string{
 		"checks.yaml":   "- expr: len(doc.items) > 0\n  message: write an item\n",
 		"computed.yaml": "less: n - 1\n",
 	}))
-	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nn: abc\nitems: []\n", none), lines(
+	data := "lang: en\ntemplate: mine\nn: abc\nitems: []\nt: {columns: [{title: x}], rows: [[a, b]]}\n"
+	if got, want := drawn(t, k, data, none), lines(
 		"d.yaml: write an item",
+		"d.yaml:5:34: write as many cells in each row as there are columns",
 		"templates/mine/computed.yaml:1:9: less cannot be computed from d.yaml: invalid operation: string - int",
 	); got != want {
 		t.Errorf("own told\n%s\nwant\n%s", got, want)
@@ -306,7 +308,7 @@ func TestEmptyHeadingID(t *testing.T) {
 	t.Parallel()
 
 	page := "<!doctype html>\n<html><head><title>t</title></head><body><h2 id=\"\">Plan</h2></body></html>\n"
-	out, err := tmpl.Draw(ownKit(t, nil, mine(page, mineSchema, nil)), "d.yaml", []byte("lang: en\ntemplate: mine\n"), none)
+	out, _, err := tmpl.Draw(ownKit(t, nil, mine(page, mineSchema, nil)), "d.yaml", []byte("lang: en\ntemplate: mine\n"), none)
 	if err != nil || !strings.Contains(string(out), `<h2 id="plan">Plan</h2>`) {
 		t.Errorf("drawn %q, %v", out, err)
 	}
@@ -326,7 +328,7 @@ func TestPaletteInItsLayer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("kit.Load: %s", told(err))
 	}
-	page, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\ntheme: t\n"), none)
+	page, _, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\ntheme: t\n"), none)
 	if err != nil {
 		t.Fatal(told(err))
 	}
@@ -341,7 +343,7 @@ func TestComputedNamedInJapanese(t *testing.T) {
 
 	page := strings.Replace(minePage, "{{with .Data.note}}{{.}}{{end}}", "<p>{{.Calc.合計}}</p>", 1)
 	k := ownKit(t, nil, mine(page, mineSchema, map[string]string{"computed.yaml": "合計: 1 + 2\n"}))
-	got, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\n"), none)
+	got, _, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\n"), none)
 	if err != nil || !strings.Contains(string(got), "<p>3</p>") {
 		t.Errorf("drew %s, %v; want <p>3</p>", got, told(err))
 	}
@@ -393,7 +395,7 @@ func TestPageCutShort(t *testing.T) {
 		k := ownKit(t, part, mine(page, schema, nil))
 		h := cmp.Or(tt.h, "<svg><foreignObject><template>x</template></foreignObject></svg>")
 		data := "lang: en\ntemplate: mine\nt: {}\nh: " + strconv.Quote(h) + "\n"
-		out, err := tmpl.Draw(k, "d.yaml", []byte(data), none)
+		out, _, err := tmpl.Draw(k, "d.yaml", []byte(data), none)
 		got := ""
 		if err != nil {
 			got = told(err)

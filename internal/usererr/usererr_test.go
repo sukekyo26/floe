@@ -1,6 +1,7 @@
 package usererr_test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -188,5 +189,72 @@ func TestPlaced(t *testing.T) {
 	const want = "a.yaml:2:1: a\nfloe: no icons\nb.yaml:2:1: b"
 	if got := usererr.Tell(i18n.EnglishCatalog(), l).Render("floe: "); got != want {
 		t.Errorf("Tell = %q, want %q", got, want)
+	}
+}
+
+// Warn tells warnings as Tell tells mistakes, sorted and once each, without sorting the List given; Render lays
+// them out after the mistakes, after "warning: ", which the text itself does not hold, and a failure alone.
+func TestWarn(t *testing.T) {
+	t.Parallel()
+
+	c := i18n.EnglishCatalog()
+	l := usererr.List{
+		usererr.NewAt("b.yaml", 2, 1, "library", "second"),
+		usererr.NewAt("b.yaml", 1, 3, "library", "first"),
+		usererr.NewAt("b.yaml", 2, 1, "library", "second"),
+	}
+	warnings := usererr.Warn(c, l)
+	if got := fmt.Sprint(warnings); got != "[{b.yaml 1 3  first} {b.yaml 2 1  second}]" {
+		t.Errorf("Warn = %s", got)
+	}
+	if l[0].Line() != 2 {
+		t.Error("Warn sorted the List it was given")
+	}
+	r := usererr.Tell(c, usererr.NewAt("a.yaml", 1, 1, "library", "mistake"))
+	r.Warnings = warnings
+	want := "a.yaml:1:1: mistake\nb.yaml:1:3: warning: first\nb.yaml:2:1: warning: second"
+	if got := r.Render("floe: "); got != want {
+		t.Errorf("Render = %q, want %q", got, want)
+	}
+	failed := usererr.Report{Mistakes: nil, Failure: "broken", Warnings: warnings}
+	if got := failed.Render("floe: "); got != "floe: broken" {
+		t.Errorf("Render of a failure = %q", got)
+	}
+	b, err := json.Marshal(usererr.Report{Mistakes: nil, Failure: "", Warnings: warnings[:1]})
+	if want := `{"warnings":[{"file":"b.yaml","line":1,"column":3,"text":"first"}]}`; err != nil || string(b) != want {
+		t.Errorf("JSON = %s, %v; want %s", b, err, want)
+	}
+	if b, err := json.Marshal(usererr.Tell(c, usererr.New("library", "x"))); err != nil || strings.Contains(string(b), "warnings") {
+		t.Errorf("JSON of no warnings = %s, %v", b, err)
+	}
+}
+
+// An error with the warnings of the page drawn before it is told with them after its mistakes, and a failure alone.
+func TestWithWarnings(t *testing.T) {
+	t.Parallel()
+
+	c := i18n.EnglishCatalog()
+	warnings := []*usererr.Error{usererr.NewAt("w.yaml", 5, 15, "library", "advice")}
+	if usererr.WithWarnings(nil, warnings) != nil {
+		t.Error("WithWarnings(nil) is an error")
+	}
+	err := fmt.Errorf("saved: %w", usererr.WithWarnings(usererr.New("library", "taken"), warnings))
+	if got, want := usererr.Tell(c, err).Render("floe: "), "floe: taken\nw.yaml:5:15: warning: advice"; got != want {
+		t.Errorf("told %q, want %q", got, want)
+	}
+	failed := usererr.WithWarnings(errors.New("disk"), warnings)
+	if got := usererr.Tell(c, failed); got.Failure != "disk" || got.Warnings != nil {
+		t.Errorf("a failure told %+v", got)
+	}
+}
+
+// A refusal with warnings given to a List is floe's failure, told so, not mistakes that lose its warnings.
+func TestAddWarned(t *testing.T) {
+	t.Parallel()
+
+	warned := usererr.WithWarnings(usererr.New("library", "taken"), []*usererr.Error{usererr.New("library", "advice")})
+	r := usererr.Tell(i18n.EnglishCatalog(), usererr.Collect(warned))
+	if want := "usererr: a refusal with warnings is collected as mistakes, which would lose them: taken"; r.Failure != want {
+		t.Errorf("told %+v, want the failure %q", r, want)
 	}
 }

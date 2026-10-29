@@ -25,7 +25,7 @@ release's `SHA256SUMS`.
 ```sh
 floe template list          # floe's templates (report, design, handoff, adr) and your own
 floe template show report   # what a data file of report holds, and an example
-floe check plan.yaml        # check a data file: prints its mistakes, or nothing
+floe check plan.yaml        # check a data file: prints its mistakes and warnings, or nothing
 floe publish plan.yaml      # store its page, print the URL and open it
 floe publish --link out/index.html   # show an HTML file as it is
 floe list                   # pages, newest first

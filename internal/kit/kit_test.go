@@ -45,7 +45,7 @@ func TestFloe(t *testing.T) {
 		t.Error("Floe read floe's own twice")
 	}
 	parts, looks, themes, templates := k.Names()
-	if len(parts) != 32 || !slices.Equal(looks, []string{"band", "panel", "rows"}) || len(themes) != 9 ||
+	if len(parts) != 33 || !slices.Equal(looks, []string{"band", "panel", "rows"}) || len(themes) != 9 ||
 		!slices.Equal(templates, []string{"adr", "design", "handoff", "report"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}
@@ -91,14 +91,15 @@ func TestFloeReport(t *testing.T) {
 	t.Parallel()
 
 	r, ok := floe(t).Template("report")
-	if !ok || r.Schema() == nil || r.Checks() == nil || page(t, r, "en") == nil || r.Example() == nil {
+	// report has no checks.yaml: a fence in a text part is warned of as it is drawn.
+	if !ok || r.Schema() == nil || r.Checks() != nil || page(t, r, "en") == nil || r.Example() == nil {
 		t.Fatalf("report = %+v", r)
 	}
 	d, err := doc.Read("example.yaml", r.Example(), "")
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	if err := usererr.Collect(r.Schema().Validate(d), r.Checks().Run(d, nil)); err != nil {
+	if err := r.Schema().Validate(d); err != nil {
 		t.Error(told(err))
 	}
 }

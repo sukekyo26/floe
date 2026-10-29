@@ -21,8 +21,10 @@ func (a *app) checkCmd() *cobra.Command {
 		Short: "Check data files as their pages are drawn, without writing them",
 		Long: `Check each data file as floe draws its page: its YAML, its template and theme, the template's
 schema, its checks and computed values, and the page drawn. Every mistake of every file is
-printed as file:line:column: message, and the exit code is 1 when there is one. Nothing is
-written, and nothing is printed when the files are right.`,
+printed as file:line:column: message, and the exit code is 1 when there is one. A page drawn
+may have warnings, advice on a better way to write it, printed after the mistakes as
+file:line:column: warning: message; they leave the exit code as it is. Nothing is written,
+and nothing is printed when the files are right and have no warning.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return a.check(args)
@@ -38,7 +40,8 @@ func (a *app) check(paths []string) error {
 	store := a.iconStore()
 	var found usererr.List
 	for _, p := range a.args(paths, "cli_wants_data") {
-		_, err := drawFile(k, store, p)
+		_, warnings, err := drawFile(k, store, p)
+		a.warnings = append(a.warnings, warnings...)
 		if failed := found.Add(err); failed != nil {
 			return failed
 		}
@@ -47,19 +50,20 @@ func (a *app) check(paths []string) error {
 }
 
 // drawFile draws the page of the data file p with k and the icons of store, titled, without a title:, by the
-// slug of its name, else, for a name without a letter a slug takes, by the name itself; or returns its mistakes.
-func drawFile(k *kit.Kit, store diagram.Icons, p arg) ([]byte, error) {
+// slug of its name, else, for a name without a letter a slug takes, by the name itself, with its warnings; or
+// returns its mistakes.
+func drawFile(k *kit.Kit, store diagram.Icons, p arg) ([]byte, []*usererr.Error, error) {
 	// An empty path has no name to check; one that is nowhere has, and is told with it.
 	if p.name == "" {
-		return nil, p.err
+		return nil, nil, p.err
 	}
 	notData := nameMistake(p.name)
 	if notData != nil || p.err != nil {
-		return nil, usererr.Collect(notData, p.err) //nolint:wrapcheck // mistakes for the user as they are
+		return nil, nil, usererr.Collect(notData, p.err) //nolint:wrapcheck // mistakes for the user as they are
 	}
 	src, err := p.read()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	untitled := cmp.Or(files.SlugFromFile(p.name), baseName(p.name))
 	images := files.NewRoot(dirs.Dir(p.abs))

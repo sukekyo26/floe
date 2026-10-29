@@ -20,6 +20,23 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：floe のテンプレート `design`。結論を先に出す設計書で、必須の背景と目的に、
   やらないこと、判断（問いと部品 `options` の案。`pick` を付けた案がページの一番上に出て、
   無いものは未決と出る）、案を比べずに決めたこと、影響の範囲、report と同じ形の自分の節を続ける。
+- 追加：警告。ページのより良い書き方の勧めで、`floe check`・`floe render`・
+  `floe template check`・`floe publish` が、誤りの後に
+  `file:line:column: warning: message` で出す。ページは描き、終了コードも
+  変えない。最初の警告は、`text` の部品（report の節と、design・handoff・adr の `more` の中、
+  `details`・`tabs` の中も）の
+  囲んだコードのブロックで、ただのコードとして描き、`code` か `terminal` に
+  書くよう勧める。`text` は部品の 1 つになったので、自分の部品に `text` という
+  名前があると断る。
+- 追加：図の部品 `tree`。木の節と子だけを書けば、floe が各節を親の下に置き、
+  線を引く。あわせて図の例 `org`（`floe diagram example org`）。ある会社の
+  部署を `tree` で描く。
+- 追加：図の例 `gantt`（`floe diagram example gantt`）。作業の期間を棒で、
+  待つつながりを矢印で描く図で、あるアプリの 1 つの版の 6 週間の予定を置く。
+- 追加：図の例 `quadrant`（`floe diagram example quadrant`）。2 つの軸で項目を
+  4 つの領域に分ける図で、ノートのアプリの機能の候補を、価値と手間で置く。
+- 追加：図の例 `swimlane`（`floe diagram example swimlane`）。流れを、する人ごとの
+  レーンに分けた図で、ユーザー・アーキテクト・エンジニアの 1 つの PR の流れを描く。
 - 追加：`code`・`terminal`・`diff` の右上に、中身をコピーするボタン。写すのはコード、
   プロンプトと出力を除いたコマンド、書いたままの diff。押すとページの言語で「コピーしました」
   と言い、ページがクリップボードに書けない所（VS Code の Simple Browser など）でも写す。

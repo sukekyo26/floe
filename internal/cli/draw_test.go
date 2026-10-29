@@ -50,6 +50,32 @@ func TestCheck(t *testing.T) {
 	}
 }
 
+// floe check and render tell the warnings of the pages drawn, once each and after the mistakes of the others, and
+// end well without a mistake.
+func TestWarnings(t *testing.T) {
+	t.Parallel()
+
+	fenced := "lang: en\ntemplate: report\nsections:\n  - parts:\n      - text: \"```\\ncode\\n```\"\n"
+	warning := "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button\n"
+	dir := write(t, map[string]string{"w.yaml": fenced, "b.yaml": "lang: en\ntemplate: reprot\n"})
+	for _, tt := range []struct {
+		args []string
+		code int
+		errs string
+	}{
+		{[]string{"check", "w.yaml", "./w.yaml"}, 0, warning},
+		{[]string{"check", "b.yaml", "w.yaml"}, 1, `b.yaml:2:11: unknown template "reprot"; use adr, design, handoff, report` + "\n" + warning},
+		{[]string{"render", "w.yaml"}, 0, warning},
+	} {
+		if code, _, errs := run(dir, tt.args...); code != tt.code || errs != tt.errs {
+			t.Errorf("floe %v = %d, %q; want %d, %q", tt.args, code, errs, tt.code, tt.errs)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "w.html")); err != nil {
+		t.Errorf("floe render wrote no page: %v", err)
+	}
+}
+
 // floe render writes each page that changes and prints its path; --check tells those missing or not drawn.
 func TestRender(t *testing.T) {
 	t.Parallel()
