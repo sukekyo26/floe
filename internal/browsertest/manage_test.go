@@ -284,9 +284,6 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	}
 	const order = "[...document.getElementById('list').children].map((li) => li.classList.contains('group') ? 'H' : li.dataset.slug).join('')"
 	const views = "[...document.querySelectorAll('.views button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.view).join('') + ' ' + location.search"
-	opacity := func(slug, part string) string {
-		return b.settled("getComputedStyle(document.querySelector('#list li[data-slug=" + slug + "] " + part + "')).opacity")
-	}
 
 	out := make([]string, 0, 40)
 	// All of the list heads its favourites and its projects, with how many each has; a heading is no row for a screen reader.
@@ -307,7 +304,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.until("the selected rows' actions to show", "getComputedStyle(document.querySelector('#list li[data-slug=a] .more')).opacity === '1'")
 	b.eval("document.getElementById('bulk-clear').click(); document.activeElement.blur()")
 	// With a mouse, a row's actions show only where pointed at, reached by keyboard or selected; a pressed star always.
-	out = append(out, opacity("a", ".star")+opacity("a", ".more")+opacity("c", ".star")+opacity("c", ".more"))
+	out = append(out, b.settled("['a', 'c'].map((slug) => ['.star', '.more'].map((part) => "+
+		"getComputedStyle(document.querySelector(`#list li[data-slug=${slug}] ${part}`)).opacity).join('')).join('')"))
 	r := b.rect("document.querySelector('#list li[data-slug=a] .body')")
 	b.point(r.X+r.Width/2, r.Y+r.Height/2)
 	out = append(out, b.until("the pointed row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=a] .more')).opacity === '1' && 'shown'"))
