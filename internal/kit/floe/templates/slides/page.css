@@ -4,8 +4,8 @@
    LIMIT: a slide taller than the screen scrolls inside itself; its parts are not made to fit, nor drawn larger (the
    browser's zoom does that)
    LIMIT: a slide taller than a page in print runs over several, its number on the last alone
-   LIMIT: the stop at each slide down, a page a slide in print and the numbers are not tested; they were looked at when
-   the template was made */
+   LIMIT: the stop at each slide down, a page a slide in print and the numbers are not tested, nor the keys across in a
+   frame or without the window's focus (the test gives its tab that focus); they were looked at when the template was made */
 :scope { scroll-snap-type: y mandatory; }
 body { margin: 0; font-size: 16px; line-height: 1.6; }
 /* The pad under a slide holds the number and the hint, set 3svh above its bottom */
@@ -27,7 +27,8 @@ body { margin: 0; font-size: 16px; line-height: 1.6; }
    LIMIT: a mouse's wheel scrolls down, not across; the ← and → keys, a swipe, Shift and the wheel, or a trackpad move
    the slides
    LIMIT: in the frame of the management page or of VS Code, ← and → reach the slides once the frame is clicked
-   LIMIT: a swipe or a sideways scroll over a part that scrolls sideways (a wide table, pre, a diagram) moves the part first
+   LIMIT: a swipe or a sideways scroll over a part that scrolls sideways (a wide table, pre, a diagram) moves the part
+   first, and so do ← and → once that part is clicked
    LIMIT: in a slide that scrolls inside itself, the number and the hint move with it, out of the screen
    LIMIT: Page Down, Page Up, Space, Home and End, which a presenter's clicker sends, do not move the slides across
    LIMIT: a key pressed again while a slide still moves is lost in its move; it moves a slide at a time

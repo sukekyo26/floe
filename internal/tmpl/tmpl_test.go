@@ -230,8 +230,8 @@ func TestDrawSlides(t *testing.T) {
 		{"en", "", `<html lang="en">`, "Scroll for the next slide"},
 		{"ja", "", `<html lang="ja">`, "スクロールで次へ"},
 		{"en", "down", `<html lang="en" data-direction="down">`, "Scroll for the next slide"},
-		{"en", "across", `<html lang="en" data-direction="across">`, "Press → or swipe for the next slide"},
-		{"ja", "across", `<html lang="ja" data-direction="across">`, "→ かなぞりで次へ"},
+		{"en", "across", `<html lang="en" data-direction="across">`, "Click, then → for the next slide; on a phone, swipe"},
+		{"ja", "across", `<html lang="ja" data-direction="across">`, "クリックして → で次へ。スマホはなぞる"},
 	} {
 		src := "template: slides\nlang: " + tt.lang + "\ntitle: x\n"
 		if tt.direction != "" {

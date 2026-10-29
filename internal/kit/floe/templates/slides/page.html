@@ -9,7 +9,7 @@
 <header class="slide cover" data-floe-look="band">
 <h1>{{.Title}}</h1>
 {{- with .Data.subtitle}}<p class="subtitle">{{markdownLine .}}</p>{{end}}
-<p class="hint">{{with .Data.direction}}{{word (printf "hint_%s" .)}}{{else}}{{word "hint_down"}}{{end}}</p>
+<p class="hint">{{if eq (or .Data.direction "down") "across"}}{{word "hint_across"}}{{else}}{{word "hint_down"}}{{end}}</p>
 </header>
 {{- /* The number of a slide is the list's counter, and the count of them each slide's data-total, which CSS reads.
    role="list" keeps it a list to Safari and VoiceOver, which drop the list of one without its marks.
