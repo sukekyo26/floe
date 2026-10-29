@@ -37,7 +37,7 @@ func TestCheck(t *testing.T) {
 	}
 	code, _, stderr := run(dir, "check", "b.yaml", "a.yaml", "page.html", "", "gone.yaml", "c.yaml")
 	want := []string{
-		`b.yaml:2:11: unknown template "reprot"; use design, report`,
+		`b.yaml:2:11: unknown template "reprot"; use design, handoff, report`,
 		"floe: page.html is not a data file (.yaml or .yml)",
 		"floe: argument 4 is an empty path; give a data file (.yaml or .yml), and check that a variable written for it is set",
 		"gone.yaml: no such file or directory",

@@ -1,0 +1,48 @@
+# A handoff: only the date is required. What the reader is to decide goes in asks, first on the page; what is done,
+# in progress and next go in done, doing and next, side by side. Sections of your own, each a heading over parts as
+# in report, go in more.
+template: handoff
+lang: en
+title: Checkout redesign
+date: 2030-05-14 18:00
+from: Mina
+to: Kenji
+summary: The card form is done; the address form waits on one decision, and the tax rules on the finance team.
+asks:
+  - question: Ask for a phone number at checkout?
+    options: [Always, Only for delivery, Never]
+    recommend: Only for delivery
+    why: Couriers call when they cannot find the door; nobody else uses it
+    by: Product
+  - question: Ship the new checkout behind a flag, or to everyone at once?
+    by: Engineering lead
+done:
+  - { what: 'Card form validation, with the error under each field', ref: '#412' }
+  - { what: Saved cards shown first, ref: '#415' }
+  - { what: 'A test for every **declined** card code' }
+doing:
+  - who: Mina
+    what: Address form
+    where: Half the fields; the postcode lookup is next
+    state: doing
+  - who: Sam
+    what: Tax rules for the new regions
+    where: Waiting on the finance team's table
+    state: waiting
+  - who: Kenji
+    what: Payment errors in the staging environment
+    where: The test card provider is down since noon
+    state: blocked
+next:
+  - Finish the address form and its postcode lookup
+  - Put the tax table in once finance sends it
+  - Run the whole checkout on staging when the provider is back
+notes:
+  - 'Staging uses the **test** card provider: real cards are refused there'
+  - The design for the address form changed on Monday; use the newest file
+more:
+  - heading: Links
+    parts:
+      - links:
+          - { title: Checkout designs, url: docs/checkout-designs.html, text: The newest screens }
+          - { title: Release checklist, url: docs/release-checklist.html, text: What to check before shipping }

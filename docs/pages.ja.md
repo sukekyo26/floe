@@ -1,10 +1,10 @@
 # ページを書く
 
-floe がページを描く元の YAML、データファイルの書き方です。floe のテンプレート `report` と `design` でページを書くには、これだけで足ります。自分のテンプレートの作り方は [templates.ja.md](templates.ja.md)、コマンドとフラグは [commands.ja.md](commands.ja.md) にあります。
+floe がページを描く元の YAML、データファイルの書き方です。floe のテンプレート `report`・`design`・`handoff` でページを書くには、これだけで足ります。自分のテンプレートの作り方は [templates.ja.md](templates.ja.md)、コマンドとフラグは [commands.ja.md](commands.ja.md) にあります。
 
 ## データファイル
 
-データファイルはテンプレートを名指し、テンプレートがそのデータからページを描きます。floe のテンプレートは、見出しの下に節を並べ、節ごとに見出しと部品を置く `report` と、設計書の `design` です。
+データファイルはテンプレートを名指し、テンプレートがそのデータからページを描きます。floe のテンプレートは、見出しの下に節を並べ、節ごとに見出しと部品を置く `report`、設計書の `design`、引き継ぎと状況の知らせの `handoff` です。
 
 ```yaml
 template: report
@@ -41,7 +41,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 | 鍵 | 中身 |
 |---|---|
-| `template` | ページを描くテンプレート（`report`・`design`、または自分のもの）。必須。 |
+| `template` | ページを描くテンプレート（`report`・`design`・`handoff`、または自分のもの）。必須。 |
 | `lang` | ページの言語（`<html lang>`）。`en`・`ja`・`pt-BR` のようなタグ。必須。floe と部品が描く言葉（`risks` の見出し、図の拡大のボタン、コードのコピーのボタン）と図の文はこれに従い、その言語の言葉が無ければ英語になる。 |
 | `title` | ページの題。 |
 | `theme` | ページを描くテーマ（既定は `default`）。色・書体・部品の形を決める。`floe template show <テンプレート>` が `themes:` の行に並べる：`default`・`soft`・`editorial`・`ink`・`brutal`・`blueprint`・`notebook`・`swiss`・`washi`。 |
@@ -49,6 +49,8 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 ほかはテンプレートのものです。`report` は `eyebrow`（題の上の短い行）、`lead`（題の下の 1〜2 文）、`sections`（`heading` と `parts` の組の並び）を取ります。`floe template show <テンプレート>` が、テンプレートが取るものと、書き始めの見本を出します。
 
 `design` は、結論を先に出す設計書です。`background`（Markdown）と `goals` が必須で、`status`・`owner`・`date`・`summary` が頭に、`non_goals`・`decisions`・`decided`・`impact`・`more` を続けられます。判断（`decisions`）は 1 つずつ `question` と、その `options`（部品 `options`）と `why` で、`pick` を付けた案が、問いと一緒にページの一番上に出ます。`pick` の無い判断は未決と出ます。`decided` は案を比べずに決めたこと、`impact` は `what` と `text` の行、`more` は report と同じ `heading` と `parts` の自分の節で、囲んだコードのブロックを断りません。`background` は Markdown、`summary`・`goals`・`non_goals`・`decided` の各項目・`question`・`why`・影響の範囲の `what` と `text` は Markdown の 1 行、`status`・`owner`・`date`・`more` の見出し・案の `title` と `pick` は、書いたままの字です。
+
+`handoff` は、決めてほしいことを先に出す、作業の引き継ぎと状況の知らせです。必須は `date` だけで、`from`・`to`・`summary` が頭に、その下に終えた・進行中・決めてほしい・次にやるの数が出ます。`asks` は決めてほしいことで、1 つずつ `question` と `options`・`recommend`・`why`・決める人（`by`）を書き、Q1・Q2 と番号が付きます。`done` は `what` と `ref`（PR やチケット）の行、`doing` は `who`・`what`・`where`（どこまで）・`state`（`doing`・`waiting`・`blocked`）の行、`next` と `notes`（気を付けること）は行、`more` は report と同じ自分の節です。`date`・`from`・`to`・`by`・`ref`・`who`・`more` の見出しは書いたままの字で、ほかの行は Markdown の 1 行です。
 
 ## 部品
 

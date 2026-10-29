@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add floe's template `handoff`, a handoff of work or a status update with
+  what to decide first: the date, who hands to whom, counts of what is done,
+  in progress, to decide and next, questions numbered Q1, Q2 with their
+  options and a recommendation, who is doing what and whether they wait or are
+  blocked, what is next and what to watch out for.
 - Add floe's template `design`, a design document with its conclusion first:
   the background and goals it needs, then the non-goals, decisions each a
   question over the part `options` (the option marked with `pick` is put at

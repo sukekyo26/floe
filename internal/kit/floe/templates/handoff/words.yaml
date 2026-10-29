@@ -1,0 +1,24 @@
+en:
+  kind: Handoff
+  asks: To decide
+  done: Done
+  doing: In progress
+  next: Next
+  notes: Watch out for
+  state_doing: Working
+  state_waiting: Waiting
+  state_blocked: Blocked
+  recommend: 'Recommended:'
+  by: 'Who decides:'
+ja:
+  kind: 引き継ぎ
+  asks: 決めてほしいこと
+  done: 終えたこと
+  doing: 進行中
+  next: 次にやること
+  notes: 気を付けること
+  state_doing: 作業中
+  state_waiting: 答え待ち
+  state_blocked: 止まっている
+  recommend: 勧め：
+  by: 決める人：

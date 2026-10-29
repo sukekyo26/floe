@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+</head>
+<body>
+{{- /* A count is counted inside its with: a list left out is nil, which len refuses. Its link goes to an id of the
+   page's own, which floe keeps */}}
+<header class="band">
+<div class="column">
+<p class="when"><span class="kind">{{word "kind"}}</span><span class="date">{{.Data.date}}</span>
+{{- if and .Data.from .Data.to}}<span class="hands">{{.Data.from}} → {{.Data.to}}</span>{{else}}{{with or .Data.from .Data.to}}<span class="hands">{{.}}</span>{{end}}{{end}}</p>
+<h1>{{.Title}}</h1>
+{{- with .Data.summary}}
+<p class="summary">{{markdownLine .}}</p>
+{{- end}}
+<ul class="counts">
+<li>{{with .Data.done}}<a href="#done"><b>{{len .}}</b> {{word "done"}}</a>{{else}}<b>0</b> {{word "done"}}{{end}}</li>
+<li>{{with .Data.doing}}<a href="#doing"><b>{{len .}}</b> {{word "doing"}}</a>{{else}}<b>0</b> {{word "doing"}}{{end}}</li>
+<li{{if .Data.asks}} class="hot"{{end}}>{{with .Data.asks}}<a href="#asks"><b>{{len .}}</b> {{word "asks"}}</a>{{else}}<b>0</b> {{word "asks"}}{{end}}</li>
+<li>{{with .Data.next}}<a href="#next"><b>{{len .}}</b> {{word "next"}}</a>{{else}}<b>0</b> {{word "next"}}{{end}}</li>
+</ul>
+</div>
+</header>
+<main class="column">
+{{- with .Data.asks}}
+<section class="asks" data-floe-look="panel"><h2 id="asks">{{word "asks"}}</h2>
+<ol>
+{{- range .}}
+<li><div class="ask"><p class="question">{{markdownLine .question}}</p>
+{{- with .options}}<ul class="options">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul>{{end}}
+{{- /* LIMIT: a recommendation that is none of the options is not told of; it is shown on a line of its own */}}
+{{- with .recommend}}<p class="recommend"><b>{{word "recommend"}}</b> {{markdownLine .}}</p>{{end}}
+{{- with .why}}<p class="why">{{markdownLine .}}</p>{{end}}
+{{- with .by}}<p class="by">{{word "by"}} {{.}}</p>{{end}}</div></li>
+{{- end}}
+</ol>
+</section>
+{{- end}}
+{{- if or .Data.done .Data.doing .Data.next}}
+<div class="board">
+{{- with .Data.done}}
+<section data-floe-look="panel"><h2 id="done">{{word "done"}}</h2>
+<ul class="done">{{range .}}<li>{{markdownLine .what}}{{with .ref}}<span class="ref">{{.}}</span>{{end}}</li>{{end}}</ul>
+</section>
+{{- end}}
+{{- with .Data.doing}}
+<section data-floe-look="panel"><h2 id="doing">{{word "doing"}}</h2>
+<ul class="doing">{{range .}}<li><b class="who">{{.who}}</b>{{with .state}}<span class="state {{.}}">{{word (printf "state_%s" .)}}</span>{{end}}<span class="what">{{markdownLine .what}}</span>{{with .where}}<span class="where">{{markdownLine .}}</span>{{end}}</li>{{end}}</ul>
+</section>
+{{- end}}
+{{- with .Data.next}}
+<section data-floe-look="panel"><h2 id="next">{{word "next"}}</h2>
+<ol class="next">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ol>
+</section>
+{{- end}}
+</div>
+{{- end}}
+{{- with .Data.notes}}
+<section class="notes"><h2 id="notes">{{word "notes"}}</h2><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
+{{- end}}
+{{- /* LIMIT: a fenced block in text is not warned of until floe has warnings */}}
+{{- range $m := .Data.more}}
+<section><h2>{{$m.heading}}</h2>
+{{- range $m.parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</section>
+{{- end}}
+</main>
+</body>
+</html>

@@ -4,6 +4,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/kit"
 )
 
 // measureContrast is the script that measures, on the page, the contrast of every text shown against the
@@ -87,9 +89,10 @@ const measureContrast = `(() => {
   return [...low].join('\n');
 })()`
 
-// TestUIContrast draws the sample of every part (the corpus's every-part) in every theme of floe's, and measures
-// the contrast of every text shown against the ground under it, as measureContrast does: the parts, the themes
-// and their palettes together draw nothing that cannot be read.
+// TestUIContrast draws the sample of every part (the corpus's every-part) and the example of every template of
+// floe's in every theme of floe's, and measures the contrast of every text shown against the ground under it, as
+// measureContrast does: the parts, the templates, the themes and their palettes together draw nothing that cannot
+// be read.
 func TestUIContrast(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -97,10 +100,11 @@ func TestUIContrast(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if err != nil {
 		t.Fatal(err)
 	}
-	themes, err := os.ReadDir("../kit/floe/themes")
+	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
 	}
+	_, _, themes, templates := k.Names()
 	file := s.write(t, "every-part.yaml", string(src))
 	// The image its part image shows, beside it.
 	shot, err := os.ReadFile("../corpus/testdata/every-part/shots/moved.png")
@@ -108,14 +112,26 @@ func TestUIContrast(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	s.write(t, "shots/moved.png", string(shot))
-	for _, theme := range themes {
-		name := theme.Name()
+	for _, name := range themes {
 		slug := "parts-" + name
 		s.floe(t, "publish", file, "--slug", slug, "--theme", name)
 		b.navigate("/a/" + slug + "/?raw")
 		b.until("the parts", "!!document.querySelector('[data-floe-part=bars]')")
 		if low := b.eval(measureContrast); low != "" {
 			t.Errorf("%s draws text that cannot be read:\n%s", name, strings.ReplaceAll(low, "\n", "\n  "))
+		}
+	}
+	for _, tmpl := range templates {
+		tpl, _ := k.Template(tmpl)
+		example := s.write(t, tmpl+".yaml", string(tpl.Example()))
+		for _, name := range themes {
+			slug := "template-" + tmpl + "-" + name
+			s.floe(t, "publish", example, "--slug", slug, "--theme", name)
+			b.navigate("/a/" + slug + "/?raw")
+			b.until("the page", "!!document.querySelector('h1')")
+			if low := b.eval(measureContrast); low != "" {
+				t.Errorf("%s in %s draws text that cannot be read:\n%s", tmpl, name, strings.ReplaceAll(low, "\n", "\n  "))
+			}
 		}
 	}
 }

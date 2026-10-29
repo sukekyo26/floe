@@ -25,6 +25,45 @@ func told(err error) string {
 	return usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: ")
 }
 
+// handoff draws from its date alone: each count of a list left out is 0, and the sections left out are not drawn.
+func TestDrawHandoffDateAlone(t *testing.T) {
+	t.Parallel()
+
+	src := []byte("template: handoff\nlang: en\ntitle: Quiet day\ndate: 2030-05-14\n")
+	page, err := tmpl.Draw(floeKit(t), "handoff.yaml", src, tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	for _, id := range []string{"asks", "done", "doing", "next", "notes"} {
+		if bytes.Contains(page, []byte(`id="`+id+`"`)) {
+			t.Errorf("the section %s, left out, is drawn", id)
+		}
+	}
+	if n := bytes.Count(page, []byte("<b>0</b> ")); n != 4 {
+		t.Errorf("%d counts of 0 apart from their words, want 4", n)
+	}
+}
+
+// handoff's arrow stands between the one who hands over and the one who takes, and only when both are written.
+func TestDrawHandoffHands(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ hands, want string }{
+		{"from: Mina\nto: Kenji\n", `<span class="hands">Mina → Kenji</span>`},
+		{"from: Mina\n", `<span class="hands">Mina</span>`},
+		{"to: Kenji\n", `<span class="hands">Kenji</span>`},
+	} {
+		src := []byte("template: handoff\nlang: en\ntitle: x\ndate: 2030-05-14\n" + tt.hands)
+		page, err := tmpl.Draw(floeKit(t), "handoff.yaml", src, tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+		if err != nil {
+			t.Fatal(told(err))
+		}
+		if !bytes.Contains(page, []byte(tt.want)) {
+			t.Errorf("%q draws no %s", tt.hands, tt.want)
+		}
+	}
+}
+
 // The example.yaml of each of floe's templates is drawn with every theme of floe. Pages drawn as develop drew
 // them are internal/corpus's.
 func TestDrawExamples(t *testing.T) {

@@ -1,0 +1,254 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; img-src data: blob:; media-src data: blob:; style-src &#39;unsafe-inline&#39; https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src &#39;unsafe-inline&#39; https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action &#39;none&#39;; base-uri &#39;none&#39;; connect-src &#39;none&#39;"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Checkout redesign</title>
+<style>
+@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.base {
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways instead, as a table does, keeps its words whole.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line, still overflows. Give such a part a layout for narrow screens, as
+   keys has */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+p, ul, ol { margin: 0; max-width: var(--text-width); }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
+pre {
+  margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+pre code { font-size: inherit; background: none; padding: 0; }
+blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
+   (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
+   what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
+   holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
+   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone */
+.floe-copy {
+  position: relative; z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--code-ground, var(--code-bg)); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground, var(--code-bg)));
+}
+.floe-copy:hover { background: color-mix(in srgb, var(--code-fg) 12%, var(--code-ground, var(--code-bg))); }
+.floe-copy:focus-visible { outline: 2px solid var(--code-fg); outline-offset: -2px; }
+.floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
+.floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
+.floe-copy.copied svg + svg { display: block; color: var(--code-add); }
+.floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media print { .floe-copy { display: none; } }
+}
+</style>
+<style>
+@layer floe.palette {
+/* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
+:root {
+  --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --accent: #1d6670; --accent-soft: #dcebec;
+  --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
+  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #b5e05a; --code-add: #6fcf97; --code-del: #f2b8b5;
+  /* The page's ground, a pattern too, and the rule between its sections */
+  --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
+  /* Its panels' quiet ground, which holds faces of the surface */
+  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
+  /* The column a template centres its page in: its width, without the pad each side of it */
+  --page-width: 96rem; --page-pad: 16px;
+  color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="links"]) to (:scope [data-floe-part] > *) {
+/* Each card is numbered by its place, as the steps of a plan are */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
+.card {
+  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+}
+:scope.numbered > .card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
+}
+.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="links"]) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
+:scope { list-style: none; margin: 0; padding: 0; max-width: none; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
+:scope > li { position: relative; gap: 0.1rem; padding-block: 0.9rem; padding-left: 3.7rem; }
+:scope > li::before {
+  content: ""; position: absolute; left: 1.1rem; top: 0.95rem; display: block; width: 1.9rem; height: 1.9rem;
+  border-radius: 9px; background: var(--accent-soft);
+}
+:scope a { font-weight: 700; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+:scope a::before {
+  content: ""; position: absolute; left: calc(1.1rem + 0.45rem); top: calc(0.95rem + 0.45rem); width: 1rem; height: 1rem;
+  background: var(--accent); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+:scope a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+:scope > li:hover a { text-decoration-thickness: 2px; }
+:scope a:focus-visible { outline: none; }
+:scope > li:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope .url {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted);
+  font-family: var(--mono);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
+blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="links"]) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border-radius: 20px; padding: 0.75rem; gap: 0.75rem; }
+/* A tile of the surface on the panel of the cards */
+.card { background: var(--surface); border-radius: 14px; }
+:scope.numbered > .card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
+}
+}
+}
+</style>
+<style>
+@layer floe.page {
+@scope (:root) to ([data-floe-part] > *) {
+/* The colours and faces are the theme's palette; the page lays them out: a band of the counts, what to decide, and
+   a board of what is done, in progress and next, each in the column every template centres its page in.
+   LIMIT: the board puts its sections side by side while each has 16rem; a width where they wrap is not looked at */
+body { margin: 0; font-size: 16px; line-height: 1.7; padding-block: 0 4rem; }
+.column { max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+.band { background: var(--accent); color: var(--on-fill); padding-block: 1.8rem 1.6rem; }
+.band .column { display: grid; gap: 0.5rem; justify-items: start; }
+.band a { color: inherit; }
+.band code { background: color-mix(in srgb, var(--on-fill) 20%, transparent); color: inherit; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
+.when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; max-width: none; }
+.kind { border: 1px solid currentColor; border-radius: 4px; padding: 0 0.6rem; font-size: 0.85rem; font-weight: 700; }
+.date { font-family: var(--mono); }
+.counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; max-width: none; }
+.counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: 8px; }
+.counts a { text-decoration: none; }
+.counts li > a, .counts li:not(:has(a)) { display: grid; padding: 0.5rem 1rem; font-size: 0.85rem; }
+.counts b { font-family: var(--mono); font-size: 2rem; line-height: 1.1; }
+.counts li.hot { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-soft); }
+main { display: grid; gap: 2rem; padding-block: 2rem; }
+main > *, section > * { min-width: 0; }
+main h2 { font-size: 1.15rem; }
+.asks { padding: 1.2rem 1.4rem; border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
+.asks h2 { color: var(--warn); font-size: 1.3rem; }
+/* Q1, Q2 … are the list's own numbers: each li stays a list item, its layout inside it. The name is the page's
+   alone, as a counter style is not held by @scope.
+   LIMIT: up to Q99 fits the pad; a hundredth question spills left of it */
+@counter-style floe-handoff-q { system: extends decimal; prefix: "Q"; suffix: " "; }
+.asks ol { list-style-type: floe-handoff-q; padding-left: 3rem; gap: 1.1rem; max-width: none; }
+.asks ol > li::marker { color: var(--warn); font-family: var(--mono); font-weight: 700; }
+.ask { display: grid; gap: 0.35rem; }
+.question { font-weight: 700; font-size: 1.05rem; }
+.options { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: none; }
+.options li { border: 1px solid var(--line); border-radius: 999px; padding: 0 0.8rem; background: var(--surface); }
+.why, .by { color: var(--muted); font-size: 0.92rem; }
+/* As many columns as the sections written, side by side while each has 16rem */
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
+.board section { padding: 1rem 1.2rem; display: grid; gap: 0.6rem; }
+.board ul, .board ol { max-width: none; gap: 0.6rem; }
+.done, .doing { list-style: none; padding: 0; }
+.done li::before { content: "✓"; color: var(--good); font-weight: 800; margin-right: 0.45rem; }
+.ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }
+.doing li { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.6rem; align-items: baseline; }
+.doing .what, .doing .where { grid-column: 1 / -1; }
+.state { justify-self: start; font-size: 0.78rem; font-weight: 600; padding: 0 0.6rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.state.waiting { background: var(--warn-soft); color: var(--warn); }
+.state.blocked { background: var(--bad-soft); color: var(--bad); }
+.notes { display: grid; gap: 0.6rem; }
+main > section:not(.asks):not(.notes) { display: grid; gap: 1rem; }
+}
+}
+</style>
+</head>
+<body>
+<header class="band">
+<div class="column">
+<p class="when"><span class="kind">Handoff</span><span class="date">2030-05-14 18:00</span><span class="hands">Mina → Kenji</span></p>
+<h1 id="checkout-redesign">Checkout redesign</h1>
+<p class="summary">The card form is done; the address form waits on one decision, and the tax rules on the finance team.</p>
+<ul class="counts">
+<li><a href="#done"><b>3</b> Done</a></li>
+<li><a href="#doing"><b>3</b> In progress</a></li>
+<li class="hot"><a href="#asks"><b>2</b> To decide</a></li>
+<li><a href="#next"><b>3</b> Next</a></li>
+</ul>
+</div>
+</header>
+<main class="column">
+<section class="asks" data-floe-look="panel"><h2 id="asks">To decide</h2>
+<ol>
+<li><div class="ask"><p class="question">Ask for a phone number at checkout?</p><ul class="options"><li>Always</li><li>Only for delivery</li><li>Never</li></ul><p class="recommend"><b>Recommended:</b> Only for delivery</p><p class="why">Couriers call when they cannot find the door; nobody else uses it</p><p class="by">Who decides: Product</p></div></li>
+<li><div class="ask"><p class="question">Ship the new checkout behind a flag, or to everyone at once?</p><p class="by">Who decides: Engineering lead</p></div></li>
+</ol>
+</section>
+<div class="board">
+<section data-floe-look="panel"><h2 id="done">Done</h2>
+<ul class="done"><li>Card form validation, with the error under each field<span class="ref">#412</span></li><li>Saved cards shown first<span class="ref">#415</span></li><li>A test for every <strong>declined</strong> card code</li></ul>
+</section>
+<section data-floe-look="panel"><h2 id="doing">In progress</h2>
+<ul class="doing"><li><b class="who">Mina</b><span class="state doing">Working</span><span class="what">Address form</span><span class="where">Half the fields; the postcode lookup is next</span></li><li><b class="who">Sam</b><span class="state waiting">Waiting</span><span class="what">Tax rules for the new regions</span><span class="where">Waiting on the finance team&#39;s table</span></li><li><b class="who">Kenji</b><span class="state blocked">Blocked</span><span class="what">Payment errors in the staging environment</span><span class="where">The test card provider is down since noon</span></li></ul>
+</section>
+<section data-floe-look="panel"><h2 id="next">Next</h2>
+<ol class="next"><li>Finish the address form and its postcode lookup</li><li>Put the tax table in once finance sends it</li><li>Run the whole checkout on staging when the provider is back</li></ol>
+</section>
+</div>
+<section class="notes"><h2 id="notes">Watch out for</h2><ul><li>Staging uses the <strong>test</strong> card provider: real cards are refused there</li><li>The design for the address form changed on Monday; use the newest file</li></ul></section>
+<section><h2 id="links">Links</h2>
+<ul data-floe-part="links">
+<li class="card" data-floe-look="panel"><a href="docs/checkout-designs.html">Checkout designs</a><p>The newest screens</p><span class="url">docs/checkout-designs.html</span></li>
+<li class="card" data-floe-look="panel"><a href="docs/release-checklist.html">Release checklist</a><p>What to check before shipping</p><span class="url">docs/release-checklist.html</span></li>
+</ul>
+</section>
+</main>
+
+
+</body></html>
