@@ -29,6 +29,7 @@ import (
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
@@ -85,6 +86,8 @@ type browser struct {
 	t    *testing.T
 	ctx  context.Context
 	base string
+	// faked is the script (*browser).stub added to every page this tab opens, "" for none.
+	faked page.ScriptIdentifier
 }
 
 // The tests share one Chrome and run one after another. Started per test and in parallel, six Chromes on a

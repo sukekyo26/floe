@@ -82,8 +82,8 @@ const ringOf = `(() => {
 func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
+	b.stub(colorsList)
 	b.navigate("/")
-	b.eval(stub(colorsList))
 	b.until("the rows", "document.querySelectorAll('#list li:not(.group)').length > 0")
 
 	// Pressed with the mouse: no outline, and the shadow it has without the focus.

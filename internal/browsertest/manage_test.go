@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/chromedp/cdproto/input"
+	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
@@ -40,14 +42,24 @@ const extrasList = `[
 	{ slug: 'k', title: 'Kept', description: '', path: '/tmp/x/k.html', createdAt: at(1), updatedAt: at(1), archived: true },
 ]`
 
-// stub answers list, a JavaScript array at(day) may build, for the list, and records the writes in window.calls.
-func stub(list string) string {
+// fake is the script that answers list, a JavaScript array at(day) may build, for the management page's list, counting
+// its reads in window.gets, and records the writes in window.calls. The list is made first, so that a mistake in it
+// fails wherever the script runs; it fakes nothing but a management page (/ and /a/<slug>/, as ui.html takes a link for
+// one), not a page shown in its frame.
+func fake(list string) string {
 	return `(() => {
-	window.calls = [];
 	const at = (d) => ` + "`2026-01-0${d}T00:00:00.000Z`" + `;
-	window.list = JSON.stringify(` + list + `);
+	const made = JSON.stringify(` + list + `);
+	if (!/^\/(a\/[^/]+\/?)?$/.test(location.pathname) || new URLSearchParams(location.search).has('raw')) return;
+	window.faked = true;
+	window.gets ||= 0;
+	window.calls = [];
+	window.list = made;
 	window.fetch = (url, init = {}) => {
-		if (!init.method) return Promise.resolve(new Response(window.list));
+		if (!init.method) {
+			window.gets++;
+			return Promise.resolve(new Response(window.list));
+		}
 		if (window.failWrites) return Promise.reject(new TypeError('Failed to fetch'));
 		calls.push([init.method, url, init.body].filter(Boolean).join(' '));
 		if (init.method === 'POST') return Promise.resolve(new Response('{"slug":"n"}', { status: 201 }));
@@ -57,8 +69,67 @@ func stub(list string) string {
 		calls.push(` + "`copy ${text}`" + `);
 		return Promise.resolve();
 	};
-	return load();
 })()`
+}
+
+// stub answers list (see fake) in every management page this tab opens from now on, by a script run before the page's
+// own, so that each of its loads (the first, each poll, one after a move to another page) is answered so; and in the
+// page open now, drawn with it. The first stub, and the first after unstub, comes on a blank tab, before the page it
+// fakes opens: a page open has sent its own load already, whose answer would draw over the stub's.
+func (b *browser) stub(list string) {
+	b.t.Helper()
+
+	script := fake(list)
+	if b.faked == "" {
+		if at := b.eval("location.href"); at != "about:blank" {
+			b.t.Fatalf("the first stub comes on a blank tab, before the page it fakes opens: navigate to about:blank first, not on %s", at)
+		}
+		b.eval(script)
+		b.faked = b.addScript(script)
+		return
+	}
+	// The new script is added before the old one goes, so that a page opened in between takes one of them.
+	old := b.faked
+	b.faked = b.addScript(script)
+	b.removeScript(old)
+	b.until("the page to load", "document.readyState === 'complete'")
+	if b.eval("window.faked === true") != "true" {
+		b.t.Fatal("this page was opened before the first stub: stub on a blank tab before opening it")
+	}
+	got := b.eval(script + "; (async () => { const n = window.gets; await load(); " +
+		"return window.gets > n || 'not read: ' + document.getElementById('error').textContent; })()")
+	if got != "true" {
+		b.t.Fatalf("the page did not load the list stubbed: %s", got)
+	}
+}
+
+// unstub gives the pages this tab opens from now on the server's list again.
+func (b *browser) unstub() {
+	b.t.Helper()
+
+	if b.faked == "" {
+		return
+	}
+	b.removeScript(b.faked)
+	b.faked = ""
+}
+
+func (b *browser) addScript(script string) page.ScriptIdentifier {
+	b.t.Helper()
+
+	added, err := chromedp.Call(b.ctx, page.AddScriptToEvaluateOnNewDocument, page.AddScriptToEvaluateOnNewDocumentParams{Source: script})
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	return added.Identifier
+}
+
+func (b *browser) removeScript(id page.ScriptIdentifier) {
+	b.t.Helper()
+
+	if _, err := chromedp.Call(b.ctx, page.RemoveScriptToEvaluateOnNewDocument, page.RemoveScriptToEvaluateOnNewDocumentParams{Identifier: id}); err != nil {
+		b.t.Fatal(err)
+	}
 }
 
 // picker opens the frame's pages to pick from afresh (shut first, so that it is made from the list as it is now) and reads
@@ -71,9 +142,9 @@ const picker = `(() => {
 		[...g.querySelectorAll('[role=option]')].map((o) => o.textContent + (o.hasAttribute('aria-current') ? '*' : '')).join(',')).join(' / ');
 })()`
 
-// manyPages is a stub of n pages, newest first, alike but for their slug and title.
+// manyPages is a list of n pages to stub, newest first, alike but for their slug and title.
 func manyPages(n int) string {
-	return stub("Array.from({ length: " + strconv.Itoa(n) + " }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))")
+	return "Array.from({ length: " + strconv.Itoa(n) + " }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))"
 }
 
 // TestUIExtras sorts, filters favourites and the archived, counts each list, moves by keyboard, deletes and
@@ -87,8 +158,8 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	t.Helper()
 
 	b := newBrowser(t, servetest.Start(t, nil).Base, lang)
+	b.stub(extrasList)
 	b.navigate("/")
-	b.eval(stub(extrasList))
 	const titles = "[...document.querySelectorAll('#list .title')].map((a) => a.textContent).join(',')"
 	// What the list counts, and the archived in the URL: the kinds, the project chips and whether they show, the views,
 	// the count and the titles.
@@ -196,7 +267,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("calls.splice(0).sort().join(',')"))
 	// Empty lists: no archived link; all pages archived, which leads to them; nothing at all.
 	b.eval("document.querySelector('.tabs [data-tab=links]').click()")
-	b.eval(stub(`[{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`))
+	b.stub(`[{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`)
 	// A link is added from the list it goes on, not from the archived.
 	out = append(out, b.eval(empties)+" "+b.eval("document.getElementById('add-open').hidden"))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
@@ -207,23 +278,23 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("window.failWrites = false; document.querySelector('#list li:not(.group) .star').click()")
 	out = append(out, b.until("the error to clear", "document.getElementById('error').hidden"))
 	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
-	b.eval(stub(`[{ slug: 'z', title: 'Zeta', description: '', createdAt: at(2), updatedAt: at(6), archived: true }]`))
+	b.stub(`[{ slug: 'z', title: 'Zeta', description: '', createdAt: at(2), updatedAt: at(6), archived: true }]`)
 	out = append(out, b.eval(empties))
 	b.eval("document.getElementById('show-archived').click()")
 	out = append(out, b.eval(titles+" + ' ' + new URLSearchParams(location.search).get('archived')"))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
-	b.eval(stub("[]"))
+	b.stub("[]")
 	out = append(out, b.eval(empties))
 
 	// A page opened from the list picks from that list, in its order, and the logo returns to that list. An archived page
 	// opened from elsewhere picks from the archived.
 	b.eval("sessionStorage.setItem('artifacts.list', '?sort=title')")
 	neighbours := "!document.getElementById('frame-pick').hidden && " + picker + " + ' ' + document.querySelector('.brand').getAttribute('href')"
+	b.stub(extrasList)
 	b.navigate("/a/b/")
-	b.eval(stub(extrasList))
 	out = append(out, b.until("the neighbours", neighbours))
+	b.stub(extrasList)
 	b.navigate("/a/z/")
-	b.eval(stub(extrasList))
 	out = append(out, b.until("the archived neighbours", neighbours))
 
 	// The time's tooltip lines start with the label of their format ("Created %s").
@@ -273,12 +344,13 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	t.Helper()
 
 	b := newBrowser(t, servetest.Start(t, nil).Base, lang)
+	b.stub(extrasList)
 	b.navigate("/")
 	if b.eval("matchMedia('(hover: hover)').matches") != "true" {
 		t.Fatal("Chrome does not take the screen for one with a mouse: the flag blink-settings of startChrome no longer works")
 	}
 	b.point(0, 0)
-	b.eval(stub(extrasList))
+	b.stub(extrasList)
 	key := func(k string) {
 		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
 	}
@@ -351,7 +423,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"String(document.activeElement === document.querySelector('#list li[data-slug=b] summary'))"))
 	// A row's menu is not cut off by the list's box: with one row, the menu reaches below it, its delete the topmost at its
 	// middle, which deletes on a second click.
-	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) }]`))
+	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) }]`)
 	// A window tall enough for the menu below the one row, whatever the test Chrome's own window is (CI's is shorter): the
 	// width of that window, as the rest of the test sees it.
 	b.size(780, 800, false)
@@ -363,14 +435,14 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the delete", "calls.join(',')"))
 	b.eval("scrollTo(0, 0)")
 	// Only favourites: their project's heading, in the favourites' list as in all of it.
-	b.eval(stub(`[{ slug: 'c', title: 'Gamma', description: '', createdAt: at(1), updatedAt: at(9), favorite: true },
-		{ slug: 'd', title: 'Delta', description: '', createdAt: at(1), updatedAt: at(8), favorite: true }]`))
+	b.stub(`[{ slug: 'c', title: 'Gamma', description: '', createdAt: at(1), updatedAt: at(9), favorite: true },
+		{ slug: 'd', title: 'Delta', description: '', createdAt: at(1), updatedAt: at(8), favorite: true }]`)
 	out = append(out, b.eval(order))
 	// The creation date beside the time, left of it, of a link when registered, and none without one; nothing under the title for it.
 	date := b.eval("new Date('2026-01-01T00:00:00.000Z').toLocaleDateString(document.documentElement.lang, { dateStyle: 'medium' })")
-	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) },
+	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'o', title: 'Old', description: '', updatedAt: at(7) },
-		{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`))
+		{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`)
 	out = append(out, b.eval("(() => { const li = document.querySelector('#list li[data-slug=a]'), m = li.querySelector('.made'); "+
 		"return [m.textContent, m.parentElement.classList.contains('meta'), m.getBoundingClientRect().right <= li.querySelector('time').getBoundingClientRect().left, li.querySelector('.sub').hidden].join(' '); })()"),
 		b.eval("document.querySelector('#list li[data-slug=o] .made').hidden"))
@@ -378,35 +450,35 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=l] .made').textContent"))
 	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
 	// The kinds show with a link, the projects with two or one chosen.
-	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`))
+	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`)
 	out = append(out, b.eval("[document.getElementById('kinds').hidden, document.getElementById('shelf-projects').hidden].join(' ')"))
 	b.eval("setProject('p')")
 	out = append(out, b.eval("document.getElementById('shelf-projects').hidden"))
 	b.eval("setProject('')")
 	// A project's dot is of its color by projectOrder: as many each, by name.
-	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
-		{ slug: 'b', title: 'Beta', description: '', project: 'floe', createdAt: at(1), updatedAt: at(7) }]`))
+	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
+		{ slug: 'b', title: 'Beta', description: '', project: 'floe', createdAt: at(1), updatedAt: at(7) }]`)
 	out = append(out, b.eval("[...document.querySelectorAll('#chips .chip')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c')).join(',')"))
 	// The favourites count their own: their count, their projects, and none shown when there are none.
-	b.eval(stub(`[{ slug: 'c', title: 'Gamma', description: '', project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
-		{ slug: 'b', title: 'Beta', description: '', project: 'q', createdAt: at(1), updatedAt: at(8) }]`))
+	b.stub(`[{ slug: 'c', title: 'Gamma', description: '', project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
+		{ slug: 'b', title: 'Beta', description: '', project: 'q', createdAt: at(1), updatedAt: at(8) }]`)
 	b.eval("document.querySelector('.views [data-view=fav]').click()")
 	out = append(out, b.eval("[document.getElementById('count').textContent, document.getElementById('shelf-projects').hidden].join(' ')"))
 	const empties = "['empty', 'empty-links', 'all-archived', 'empty-favorites', 'empty-archived', 'nomatch']" +
 		".filter((id) => !document.getElementById(id).hidden).join(' ')"
-	b.eval(stub(`[{ slug: 'z', title: 'Zeta', description: '', createdAt: at(1), updatedAt: at(6), favorite: true, archived: true }]`))
+	b.stub(`[{ slug: 'z', title: 'Zeta', description: '', createdAt: at(1), updatedAt: at(6), favorite: true, archived: true }]`)
 	out = append(out, b.eval(empties))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	out = append(out, b.eval(empties))
 	b.eval("document.getElementById('show-archived').click()")
 	out = append(out, b.eval(views))
+	b.stub(extrasList)
 	b.navigate("/?fav=1&archived=1")
-	b.eval(stub(extrasList))
 	out = append(out, b.eval(views))
 	// A link is added from any list but the archived, the first one too, and then shown on the links' list, unfiltered by a
 	// project or a search it may not match, drawn once.
 	b.eval("document.querySelector('.views [data-view=all]').click()")
-	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`))
+	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`)
 	out = append(out, b.eval("[document.getElementById('kinds').hidden, document.getElementById('add-open').hidden].join(' ')"))
 	b.eval("setProject('p'); (() => { const q = document.getElementById('q'); q.value = 'Al'; q.dispatchEvent(new Event('input')); })()")
 	b.eval(`(() => {
@@ -432,7 +504,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.getElementById('add-open').hidden"))
 	b.eval("document.querySelector('.views [data-view=all]').click(); document.querySelector('.tabs [data-tab=pages]').click()")
 	// 50 rows a page unless the viewer chose otherwise.
-	b.eval(manyPages(60))
+	b.stub(manyPages(60))
 	out = append(out, b.eval("document.querySelectorAll('#list li:not(.group)').length + ' ' + document.getElementById('pageno').textContent"))
 	// An open menu passes under the bars stuck at the top as the page scrolls, not over them.
 	b.eval("document.querySelector('#list li[data-slug=p5] summary').click()")
@@ -446,9 +518,9 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// A narrow screen: the shelf is one row of its buttons, scrolled sideways rather than wrapped, its h2 and add link out of
 	// sight; a view and a project of that name are told apart, pressed as the wide shelf's are.
 	b.size(390, 844, true)
-	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'archived', createdAt: at(1), updatedAt: at(8) },
+	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'archived', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'b', title: 'Beta', description: '', project: 'p', createdAt: at(1), updatedAt: at(7) },
-		{ slug: 'c', title: 'Gamma', description: '', project: 'a<b&"c', createdAt: at(1), updatedAt: at(6) }]`))
+		{ slug: 'c', title: 'Gamma', description: '', project: 'a<b&"c', createdAt: at(1), updatedAt: at(6) }]`)
 	out = append(out, b.eval("(() => { const s = document.querySelector('.shelf'); return [getComputedStyle(s).display, getComputedStyle(s).position, "+
 		"s.scrollWidth > s.clientWidth, document.documentElement.scrollWidth === document.documentElement.clientWidth].join(' '); })()"),
 		b.eval("[...document.querySelectorAll('.shelf button, .shelf h2')].filter((e) => e.offsetParent).map((e) => e.dataset.view ?? e.dataset.project ?? e.tagName).join(',')"))
@@ -470,8 +542,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"document.getElementById('frame-star').title, document.getElementById('frame-archive').getAttribute('aria-pressed'), " +
 		"document.getElementById('frame-archive').getAttribute('aria-label'), document.getElementById('frame-archive').title, " +
 		"JSON.stringify(document.getElementById('frame-archive').textContent.trim())].join(' / ')"
+	b.stub(extrasList)
 	b.navigate("/a/z/")
-	b.eval(stub(extrasList))
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
 	// Pressed, the archive is filled in its own color, seen on the bar's ground and on the hover's at 3:1 or more (WCAG's
 	// for a mark that is not text).
@@ -492,22 +564,22 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("window.failWrites = true; document.getElementById('frame-star').click()")
 	out = append(out, b.until("the failure to show", "!document.getElementById('error').hidden && document.getElementById('error').offsetHeight > 0 && "+
 		"document.getElementById('error').textContent"))
+	b.stub(extrasList)
 	b.navigate("/a/b/")
-	b.eval(stub(extrasList))
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
 	// The frame picks from the list it was opened from, which starring it from the bar does not change; a page gone drops out.
 	neighbours := "!document.getElementById('frame-pick').hidden && " + picker
 	b.eval("sessionStorage.setItem('artifacts.list', '?fav=1')")
+	b.stub(extrasList)
 	b.navigate("/a/c/")
-	b.eval(stub(extrasList))
 	out = append(out, b.until("the favourites' neighbours", neighbours))
-	b.eval(stub(strings.Replace(extrasList, "updatedAt: at(7), favorite: true", "updatedAt: at(7)", 1)))
+	b.stub(strings.Replace(extrasList, "updatedAt: at(7), favorite: true", "updatedAt: at(7)", 1))
 	out = append(out, b.eval("document.getElementById('frame-star').getAttribute('aria-pressed') + ' ' + ("+neighbours+")"))
 	b.eval("sessionStorage.setItem('artifacts.list', '')")
+	b.stub(extrasList)
 	b.navigate("/a/b/")
-	b.eval(stub(extrasList))
 	b.until("the neighbours", neighbours)
-	b.eval(stub(strings.Replace(extrasList, "{ slug: 'a', title: 'Alpha', description: 'old', createdAt: at(1), updatedAt: at(8) },", "", 1)))
+	b.stub(strings.Replace(extrasList, "{ slug: 'a', title: 'Alpha', description: 'old', createdAt: at(1), updatedAt: at(8) },", "", 1))
 	out = append(out, b.until("the gone page to drop out", "!("+picker+").includes('Alpha') && "+neighbours))
 
 	check(t, "shelf", out, strings.Join([]string{
@@ -556,8 +628,8 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	t.Helper()
 
 	b := newBrowser(t, servetest.Start(t, nil).Base, lang)
+	b.stub(tagsList)
 	b.navigate("/")
-	b.eval(stub(tagsList))
 	const rows = "[...document.querySelectorAll('#list li:not(.group)')].map((li) => li.dataset.slug).join('') + ' ' + (new URLSearchParams(location.search).get('tag') ?? '-')"
 	const shelf = "[...document.querySelectorAll('#tags .chip')].map((c) => c.textContent + ':' + c.getAttribute('aria-pressed')).join(',') + ' ' + document.getElementById('shelf-tags').hidden"
 	// Presses the shelf's tag plan, which picks it or lets it go.
@@ -591,8 +663,8 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// Picked, the rows are its pages, as when the URL has it; picked again it is let go.
 	pickPlan()
 	out = append(out, b.eval(rows), b.eval(shelf))
+	b.stub(tagsList)
 	b.navigate("/?tag=plan")
-	b.eval(stub(tagsList))
 	out = append(out, b.eval(rows))
 	pickPlan()
 	out = append(out, b.eval(rows))
@@ -612,11 +684,11 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	search("")
 	// A tag picked stays at 0, until the filters are cleared.
 	pickPlan()
-	b.eval(stub(strings.ReplaceAll(tagsList, "'plan'", "'other'")))
+	b.stub(strings.ReplaceAll(tagsList, "'plan'", "'other'"))
 	out = append(out, b.eval(shelf), b.eval("document.getElementById('nomatch').hidden"))
 	b.eval("document.getElementById('clear').click()")
 	out = append(out, b.eval(rows))
-	b.eval(stub(tagsList))
+	b.stub(tagsList)
 
 	// The edit dialog sends the tags written, split at commas; as opened, none, so that a name with a comma stays whole.
 	b.eval("document.querySelector('#list li[data-slug=a] .edit').click()")
@@ -681,7 +753,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		box("old") + ".click(); document.getElementById('tag-apply').click()")
 	out = append(out, b.until("the gone page to drop", "document.getElementById('bulk').hidden && "+
 		"[document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_bulk_none"))+"), calls.length].join(' ')"))
-	b.eval(stub(tagsList))
+	b.stub(tagsList)
 	// Narrowed to a tag, the edit dialog's field holds it whole: pressed, the field offers the other names (reported by the user).
 	pickPlan()
 	b.eval("document.querySelector('#list li[data-slug=b] .edit').click()")
@@ -714,7 +786,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.unsize()
 
 	// A tag's name goes in as text, wherever it shows, and counts as any.
-	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['<b>x</b>', '__proto__'], createdAt: at(1), updatedAt: at(9) }]`))
+	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['<b>x</b>', '__proto__'], createdAt: at(1), updatedAt: at(9) }]`)
 	out = append(out, b.eval("[...document.querySelectorAll('#tags .chip')].map((c) => c.textContent).sort().join(',')"),
 		b.eval("[...document.querySelectorAll('#list .tagpill')].map((p) => p.textContent).join(',')"),
 		b.eval("document.querySelectorAll('.shelf b, #list b').length"))
@@ -724,8 +796,8 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.getElementById('bulk-clear').click()")
 
 	// The tags fields suggest the names of every page, as a combobox, with the keyboard alone or the mouse.
-	b.eval(stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['設計', 'plan'], createdAt: at(1), updatedAt: at(9) },
-		{ slug: 'b', title: 'Beta', description: '', tags: ['計画', '<b>x</b>', 'xa'], createdAt: at(1), updatedAt: at(8), archived: true }]`))
+	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', tags: ['設計', 'plan'], createdAt: at(1), updatedAt: at(9) },
+		{ slug: 'b', title: 'Beta', description: '', tags: ['計画', '<b>x</b>', 'xa'], createdAt: at(1), updatedAt: at(8), archived: true }]`)
 	write := func(v string) {
 		b.eval("(() => { const f = document.getElementById('edit-tags'); f.value = " + js(v) + "; f.setSelectionRange(f.value.length, f.value.length); f.dispatchEvent(new Event('input')); })()")
 	}
@@ -815,6 +887,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
+	b.stub(manyPages(60))
 	b.navigate("/")
 	// The test Chrome's own window is near the width that hides the shelf. The size holds for this test's tab alone.
 	b.size(1440, 900, false)
@@ -827,14 +900,14 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 
 	out := make([]string, 0, 6)
-	b.eval(manyPages(60))
+	b.stub(manyPages(60))
 	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval("document.querySelector('.shelf').getBoundingClientRect().height > 0"))
 	long := place(".shell", "top")
 	b.eval("scrollTo(0, 300)")
 	b.until("the page to scroll", "scrollY === 300")
 	scrolled := place(".bar", "bottom")
 	b.eval("scrollTo(0, 0)")
-	b.eval(manyPages(1))
+	b.stub(manyPages(1))
 	short := place(".shell", "top")
 	// Each the shelf's top and where it sits, alike.
 	for _, p := range []string{long, scrolled, short} {
@@ -852,6 +925,10 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
+	// Thirty projects and a tag of a long name with nowhere to break, on a list long enough to scroll.
+	const shelfList = "Array.from({ length: 60 }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', project: `project${i % 30}`, " +
+		"tags: i ? [] : ['averylongtagnamewithoutanyspacesorhyphens'], createdAt: at(1), updatedAt: at(1) }))"
+	b.stub(shelfList)
 	b.navigate("/")
 	// A real wheel over the shelf's middle.
 	wheel := func() {
@@ -869,9 +946,7 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 		"const shelf = document.querySelector('.shelf'); const r = shelf.getBoundingClientRect(); " +
 		"const shell = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop);"
 	b.size(1440, 600, false)
-	// Thirty projects and a tag of a long name with nowhere to break, on a list long enough to scroll.
-	b.eval(stub("Array.from({ length: 60 }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', project: `project${i % 30}`, " +
-		"tags: i ? [] : ['averylongtagnamewithoutanyspacesorhyphens'], createdAt: at(1), updatedAt: at(1) }))"))
+	b.stub(shelfList)
 	out := make([]string, 0, 10)
 	// Where #226 put it, down to the window's bottom less the room above it, scrolling in itself.
 	edges := b.eval("(() => { " + near + " return [r.top, r.bottom].join(' '); })()")
@@ -916,7 +991,7 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.eval("document.getElementById('bulk-clear').click()")
 	// A shelf that fits does not scroll, and passes the wheel to the page.
 	b.size(1440, 900, false)
-	b.eval(manyPages(60))
+	b.stub(manyPages(60))
 	out = append(out, b.eval("(() => { "+near+" return [shelf.scrollHeight === shelf.clientHeight, document.documentElement.scrollHeight > innerHeight].join(' '); })()"))
 	wheel()
 	out = append(out, b.until("the page to scroll", "scrollY > 0 && 'scrolled'"))
@@ -931,6 +1006,7 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 	s := newSite(t)
 	b := s.b
 	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
+	b.stub(manyPages(60))
 	b.navigate("/")
 	sb := b.eval(`(() => {
 		const d = Object.assign(document.createElement('div'), { style: 'overflow: scroll; width: 100px; height: 100px; position: absolute' });
@@ -956,15 +1032,17 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 		".concat(document.querySelector('.panel').getBoundingClientRect().right).join(' ')"
 	out := make([]string, 0, 8)
 	b.size(1800, 900, false)
-	b.eval(manyPages(60))
+	b.stub(manyPages(60))
 	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"))
 	long := b.eval(where)
-	b.eval(manyPages(1))
+	b.stub(manyPages(1))
 	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval(where+" === "+js(long)), b.eval(room))
 	// The room is on the right alone.
 	b.size(1200, 900, false)
-	b.eval(manyPages(1))
+	b.stub(manyPages(1))
 	out = append(out, b.eval(where))
+	// The server's list for the frames: p is a page of the store.
+	b.unstub()
 	for _, path := range []string{"/a/p/", "/a/none/"} {
 		b.navigate(path)
 		out = append(out, b.eval(room))
@@ -974,4 +1052,28 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 	out = append(out, b.eval("document.getElementById('frame-download').getAttribute('href')"))
 	// The scrollbar is the management page's own, 10px wide.
 	check(t, "scrollbar", out, strings.Join([]string{"true", "false", "true", "10", fmt.Sprintf("16 272 %d", 1200-16-width), "0", "0", "/api/artifacts/x%3Fy/download"}, "|"))
+}
+
+// TestUIStubSlowServer keeps the list stubbed though the server's answer comes late: none of the page's loads, the first
+// or a poll, reaches the server, so that its list is never drawn, not even for a moment before a poll draws the stub's
+// again.
+func TestUIStubSlowServer(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "real.yaml", "Real", "<p>r</p>"), "--slug", "real")
+	// The list's answer alone, slower than a poll: the page itself comes at once.
+	slow := network.EmulateNetworkConditionsByRuleParams{MatchedNetworkConditions: []*network.Conditions{
+		{URLPattern: s.Base + "/api/artifacts", Latency: 3500, DownloadThroughput: -1, UploadThroughput: -1},
+	}}
+	if _, err := chromedp.Call(b.ctx, network.EmulateNetworkConditionsByRule, slow); err != nil {
+		t.Fatal(err)
+	}
+	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(1) }]`)
+	b.navigate("/")
+	b.eval("window.seen = new Set([...document.querySelectorAll('#list .title')].map((a) => a.textContent)); " +
+		"new MutationObserver(() => { for (const a of document.querySelectorAll('#list .title')) seen.add(a.textContent); })" +
+		".observe(document.getElementById('list'), { childList: true, subtree: true })")
+	// The first load and two polls: past when the server's answer would have come.
+	b.until("two polls", "window.gets >= 3")
+	check(t, "titles drawn", []string{b.eval("[...seen].join(',')")}, "Alpha")
 }
