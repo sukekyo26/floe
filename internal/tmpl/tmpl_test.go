@@ -249,6 +249,22 @@ func TestDrawSlides(t *testing.T) {
 	}
 }
 
+// slides refuses empty parts, a slide without a heading and a key of its own it does not know, by its schema.
+func TestSlidesRefused(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ data, want string }{
+		{"slides: [{heading: h, parts: []}]\n", "sl.yaml:4:30: minItems: got 0, want 1"},
+		{"slides: [{parts: [{text: t}]}]\n", "sl.yaml:4:11: missing property 'heading'"},
+		{"author: a\nslides: [{heading: h}]\n", "sl.yaml:1:1: additional properties 'author' not allowed"},
+	} {
+		_, _, err := tmpl.Draw(floeKit(t), "sl.yaml", []byte("template: slides\nlang: en\ntitle: x\n"+tt.data), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+		if got := told(err); got != tt.want {
+			t.Errorf("%q: %s, want %s", tt.data, got, tt.want)
+		}
+	}
+}
+
 // The example.yaml of each of floe's templates is drawn with every theme of floe. Pages drawn as develop drew
 // them are internal/corpus's.
 func TestDrawExamples(t *testing.T) {

@@ -11,11 +11,14 @@
 {{- with .Data.subtitle}}<p class="subtitle">{{markdownLine .}}</p>{{end}}
 <p class="hint">{{word "hint"}}</p>
 </header>
-{{- /* The number of a slide is the list's counter, and the count of them each slide's data-total, which CSS reads */}}
+{{- /* The number of a slide is the list's counter, and the count of them each slide's data-total, which CSS reads.
+   role="list" keeps it a list to Safari and VoiceOver, which drop the list of one without its marks.
+   LIMIT: the slides are moved by the scroll alone, not by the ← and → keys, which would need a script */}}
 {{- $total := len .Data.slides}}
-<ol class="slides">
-{{- range .Data.slides}}
-<li class="slide{{if not .parts}} divider{{end}}" data-total="{{$total}}"{{if not .parts}} data-floe-look="band"{{end}}>
+<main>
+<ol class="slides" role="list">
+{{- range .Data.slides}}{{$divider := not .parts}}
+<li class="slide{{if $divider}} divider{{end}}" data-total="{{$total}}"{{if $divider}} data-floe-look="band"{{end}}>
 <h2>{{markdownLine .heading}}</h2>
 {{- with .parts}}
 <div class="content">
@@ -26,5 +29,6 @@
 </li>
 {{- end}}
 </ol>
+</main>
 </body>
 </html>

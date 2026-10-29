@@ -8,7 +8,8 @@
    template was made */
 :scope { scroll-snap-type: y mandatory; }
 body { margin: 0; font-size: 16px; line-height: 1.6; }
-.slide { box-sizing: border-box; min-height: 100svh; scroll-snap-align: start; position: relative; display: flex; flex-direction: column; justify-content: center; gap: 4svh; padding: 6svh 8vw; border-bottom: 1px solid var(--line); }
+/* The pad under a slide holds the number and the hint, set 3svh above its bottom */
+.slide { box-sizing: border-box; min-height: 100svh; scroll-snap-align: start; position: relative; display: flex; flex-direction: column; justify-content: center; gap: 4svh; padding: 6svh 8vw calc(3svh + 2.5rem); border-bottom: 1px solid var(--line); }
 .cover { gap: 1.5rem; }
 .cover h1 { font-size: clamp(2.2rem, 6vw, 4.5rem); line-height: 1.2; max-width: 20ch; }
 .subtitle { font-size: clamp(1.1rem, 2.2vw, 1.7rem); max-width: none; }

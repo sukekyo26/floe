@@ -118,7 +118,10 @@ func TestWarnFenceInSlides(t *testing.T) {
 	t.Parallel()
 
 	k := floeKit(t)
-	tp, _ := k.Template("slides")
+	tp, ok := k.Template("slides")
+	if !ok {
+		t.Fatal("floe has no template slides")
+	}
 	lines := strings.Split(string(tp.Example()), "\n")
 	at := slices.Index(lines, "    parts:")
 	if at < 0 {
