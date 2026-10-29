@@ -76,6 +76,7 @@ var messagesJA = map[string]string{
 	"kit_example_name":           "example.yaml がテンプレート %s を名指しています。テンプレートのディレクトリの名前 %s にしてください",
 	"kit_for_undeclared":         "for %s：schema はそこに %s を許しません。schema が宣言する鍵の道を書いてください",
 	"kit_not_number":             "%s は数を取ります。%s は数ではありません",
+	"kit_below_zero":             "%s は 0 以上の数を取ります。%s は 0 より小さい数です",
 	"kit_num_digits":             "num だけか、num と 1 以上の有効数字の桁数を数の前に書いてください（num 3 のように）",
 	"kit_part_yaml":              "part.yaml はキーと値で書いてください。looks: に部品が借りる見た目のリスト（looks: [panel]）、見た目だけの部品なら description: にその説明です",
 	"kit_part_yaml_key":          "%s は part.yaml のキーではありません。looks: に部品が借りる見た目のリスト（looks: [panel]）、見た目だけの部品なら description: にその説明を書いてください",

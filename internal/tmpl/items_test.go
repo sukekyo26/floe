@@ -454,3 +454,27 @@ func TestZgotmplZ(t *testing.T) {
 		}
 	}
 }
+
+// A value of a part of one's own that bars refuses, below 0 or not a number, is told at the part's value: bars knows
+// only what it is given, not where that is in the part's value.
+func TestPartBarsRefused(t *testing.T) {
+	t.Parallel()
+
+	const head = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": `
+	parts := map[string]string{
+		"pb/schema.json": head + `{"items": {"type": "array"}}}`,
+		"pb/part.html":   `<div data-floe-part="pb">{{range bars .items}}<p style="width: {{.Width}}%">{{.Label}}</p>{{end}}</div>`,
+		"pb/part.css":    "",
+	}
+	k := ownKit(t, parts, mine(htmlPage("{{.Data.b}}"), head+`{"b": {"$ref": "floe:///parts/pb.json"}}}`, nil))
+	for _, tt := range []struct{ value, want string }{
+		{"-2", "d.yaml:4:3: bars takes a number of 0 or more, not -2"},
+		{"x", "d.yaml:4:3: bars takes a number, not x (string)"},
+		{"0", ""},
+	} {
+		data := "lang: en\ntemplate: mine\nb:\n  items:\n    - {label: a, value: 3}\n    - {label: b, value: " + tt.value + "}\n"
+		if got := drawn(t, k, data, none); got != tt.want {
+			t.Errorf("value %s: told %q, want %q", tt.value, got, tt.want)
+		}
+	}
+}
