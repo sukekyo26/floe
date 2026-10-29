@@ -48,7 +48,8 @@ func (t *Theme) Unread() []string { return slices.Clone(t.unread) }
 // readThemes reads into k the themes of d, each a directory: base.css, palette.css, and a file of CSS for a
 // part or a look of k, named so. A file of another name is not read.
 func (k *Kit) readThemes(d Dir) error {
-	// LIMIT: a file right in the directory of themes is not read, and nothing says so; refuse one if a theme's files put there come to go unseen.
+	// LIMIT: a file right in the directory of themes is not read, and nothing says so; refuse one if a theme's files
+	// put there come to go unseen.
 	dirs, err := entries(d, ".", true)
 	if err != nil {
 		return err
