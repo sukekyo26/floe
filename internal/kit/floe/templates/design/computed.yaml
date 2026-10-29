@@ -1,2 +1,3 @@
-# The title of each decision's option taken, nil for one undecided
+# The title of each decision's option taken, nil for one undecided.
+# LIMIT: of two options marked, the first is taken; the page shows both marks, which a reader sees
 picks: map(decisions ?? [], first(filter(.options, .pick != nil))?.title)
