@@ -4,7 +4,7 @@
 
 ## テンプレートの置き場所
 
-自分のテンプレートは、`FLOE_TEMPLATES_DIR`（既定は `$XDG_CONFIG_HOME/floe/templates`、無ければ `~/.config/floe/templates`）の中の、テンプレートの名前のディレクトリです。floe のテンプレートと同じ名前なら、floe のものを隠します。
+自分のテンプレートは、`FLOE_TEMPLATES_DIR`（既定は `$XDG_CONFIG_HOME/floe/templates`、無ければ `~/.config/floe/templates`）の中の、テンプレートの名前のディレクトリです。floe のテンプレートと同じ名前なら、floe のものを隠します。`FLOE_TEMPLATES_DIR` の直下のファイルは読まず、何も言いません。テンプレートのファイルは、その名前のディレクトリの中に置いてください。
 
 ```sh
 floe template new memo     # 埋めて使う最小のテンプレート memo を作る
@@ -30,7 +30,7 @@ mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
 ```
 
 - `floe template check` と `floe render` は、サーバーを使わずに描きます。変数を設定したまま `floe publish` しないでください。動いているサーバーは、起こしたときの置き場所で描くので断り、動いていなければ、publish が別の置き場所でサーバーを起こします。
-- `mv` の前に `~/.config/floe/templates` を作ってください。無いと、`mv` が `memo` の名前を `templates` に変えます。
+- `mv` の前に `~/.config/floe/templates` を作ってください。無いと、`mv` が `memo` の名前を `templates` に変え、そのファイルがテンプレートの置き場所の直下に並びます。floe は直下のファイルを読まず、ページが `memo` を名指すまで何も言いません。
 - 別の置き場所は、テンプレートと同じファイルシステムに置いてください。`mv` が 1 回で入れ替え、サーバーが写しかけを読むことがありません。
 - 今あるテンプレートを変えるときも、別の置き場所に写して直し、確かめてから、古いものと入れ替えます。
 - 部品も同じに作ります。`FLOE_PARTS_DIR` と、`floe part new`・`floe part check` を使います。テーマには `new` が無いので、`FLOE_THEMES_DIR` の中にディレクトリを手で作り（[parts.ja.md](parts.ja.md#テーマ)）、`floe part check` で確かめます。

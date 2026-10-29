@@ -117,6 +117,8 @@ func (k *Kit) readParts(d Dir) error {
 	if err != nil {
 		return err
 	}
+	// LIMIT: a file right in the directory of parts but a <name>.json is not read, and nothing says so; refuse one if a
+	// part's files put there come to go unseen.
 	files, err := entries(d, ".", false)
 	if err != nil {
 		return err
