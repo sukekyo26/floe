@@ -69,8 +69,11 @@ func TestDrawAdrStates(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ state, word string }{
-		{"proposed", "Proposed"}, {"accepted", "Accepted"}, {"rejected", "Rejected"},
-		{"deprecated", "Deprecated"}, {"superseded", "Superseded"},
+		{"proposed", "Proposed"},
+		{"accepted", "Accepted"},
+		{"rejected", "Rejected"},
+		{"deprecated", "Deprecated"},
+		{"superseded", "Superseded"},
 	} {
 		src := "template: adr\nlang: en\ntitle: x\nstatus: " + tt.state + "\ncontext: c\ndecision: d\n"
 		if tt.state == "superseded" {
