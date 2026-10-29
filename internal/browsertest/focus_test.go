@@ -127,7 +127,7 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 				t.Fatal(err)
 			}
 			if b.eval("String(document.activeElement.matches("+js(sel)+"))") == "true" {
-				return sel + ": " + b.eval(ringOf)
+				return sel + ": " + b.settled(ringOf)
 			}
 		}
 		t.Fatalf("Tab does not reach %s", sel)
@@ -151,7 +151,7 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 		t.Fatal(err)
 	}
 	b.until("the delete to be armed", "document.getElementById('bulk-delete').classList.contains('armed')")
-	out = append(out, "#bulk-delete.armed: "+b.eval(ringOf))
+	out = append(out, "#bulk-delete.armed: "+b.settled(ringOf))
 	b.eval("document.getElementById('bulk-clear').click()")
 	b.eval("document.querySelector('#list li:not(.group) .sel').click()")
 	b.eval("document.getElementById('bulk-tag').click()")

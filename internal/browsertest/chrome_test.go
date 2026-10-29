@@ -220,6 +220,30 @@ func (b *browser) until(what, expr string) string {
 	return ""
 }
 
+// still waits until none of the page's transitions and animations runs: a style read while one runs is between two
+// states, as a slow machine reads it. It waits for the whole document's, as an inherited style (an icon's fill of
+// currentColor) moves with its ancestor's motion, not its own. One that ended and holds its last frame (fill: both, as a
+// row's rise) and one without end (the server's pulse) do not count.
+// LIMIT: a motion that starts between the wait and the read (the list redrawn every 3 seconds, a toast) is not waited
+// for: still holds while the test changes nothing. A frame's document is not waited for; wait in it where a test comes
+// to read styles inside the frame.
+func (b *browser) still() {
+	b.t.Helper()
+
+	b.until("the page's motions to end", "!document.getAnimations().some((a) => a.playState === 'running' && "+
+		"a.effect.getComputedTiming().endTime !== Infinity)")
+}
+
+// settled returns JavaScript's String() of expr once the page is still: a style that moves, read without knowing the
+// value to expect. expr is evaluated once, after the wait, so that a missing element or a mistake in it fails there at
+// once.
+func (b *browser) settled(expr string) string {
+	b.t.Helper()
+
+	b.still()
+	return b.eval(expr)
+}
+
 // navigate loads the path, or a URL, and waits until it is loaded. The old document is marked, because the URL
 // cannot tell them apart (the current URL may equal the destination).
 func (b *browser) navigate(path string) {

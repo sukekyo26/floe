@@ -71,8 +71,8 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	ground := func(selector string) string {
 		r := b.rect("document.querySelector('" + selector + "')")
 		b.point(r.X+r.Width/2, r.Y+r.Height/2)
-		return b.until("the pointer on "+selector, "document.querySelector('"+selector+":hover') && "+
-			"new Promise((done) => setTimeout(done, 300)).then(() => getComputedStyle(document.querySelector('"+selector+"')).backgroundColor)")
+		b.until("the pointer on "+selector, "document.querySelector('"+selector+":hover')")
+		return b.settled("getComputedStyle(document.querySelector('" + selector + "')).backgroundColor")
 	}
 	out = append(out, ground("#list li.group")+" "+ground("#list li[data-slug=a1]"))
 	b.point(0, 0)

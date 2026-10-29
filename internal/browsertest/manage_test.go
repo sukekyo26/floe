@@ -285,7 +285,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	const order = "[...document.getElementById('list').children].map((li) => li.classList.contains('group') ? 'H' : li.dataset.slug).join('')"
 	const views = "[...document.querySelectorAll('.views button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.view).join('') + ' ' + location.search"
 	opacity := func(slug, part string) string {
-		return b.eval("getComputedStyle(document.querySelector('#list li[data-slug=" + slug + "] " + part + "')).opacity")
+		return b.settled("getComputedStyle(document.querySelector('#list li[data-slug=" + slug + "] " + part + "')).opacity")
 	}
 
 	out := make([]string, 0, 40)
@@ -477,7 +477,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
 	// Pressed, the archive is filled in its own color, seen on the bar's ground and on the hover's at 3:1 or more (WCAG's
 	// for a mark that is not text).
-	out = append(out, b.eval(`(() => {
+	out = append(out, b.settled(`(() => {
 		const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
 		const hex = (v) => v.trim().slice(1).match(/../g).map((x) => parseInt(x, 16));
 		const lum = (c) => { const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
@@ -688,7 +688,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	pickPlan()
 	b.eval("document.querySelector('#list li[data-slug=b] .edit').click()")
 	// The test's window is low enough to hide the field under the dialog's fold.
-	b.until("the edit dialog to stop moving", "document.getElementById('edit-dialog').getAnimations().length === 0")
+	b.still()
 	b.eval("document.getElementById('edit-tags').scrollIntoView({ block: 'center' })")
 	r := b.rect("document.getElementById('edit-tags')")
 	b.click(r.X+r.Width-8, r.Y+r.Height/2)
@@ -780,7 +780,8 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.getElementById('edit-dialog').open"))
 	// Opened as its dialog opens, the names go under the field once the dialog stops moving.
 	b.eval("document.querySelector('#list li[data-slug=a] .edit').click(); document.getElementById('edit-tags').value = ''; document.getElementById('edit-tags').focus()")
-	out = append(out, b.until("the names under the moving field", "document.getElementById('edit-dialog').getAnimations().length === 0 && (() => { "+
+	b.still()
+	out = append(out, b.until("the names under the moving field", "(() => { "+
 		"const f = document.getElementById('edit-tags').getBoundingClientRect(); const r = document.getElementById('edit-tags-names').getBoundingClientRect(); "+
 		"return Math.abs(r.top - f.bottom - 4) < 0.5 && Math.abs(r.left - f.left) < 0.5 && 'under'; })()"))
 
