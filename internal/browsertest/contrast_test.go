@@ -100,10 +100,11 @@ func TestUIContrast(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if err != nil {
 		t.Fatal(err)
 	}
-	themes, err := os.ReadDir("../kit/floe/themes")
+	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
 	}
+	_, _, themes, templates := k.Names()
 	file := s.write(t, "every-part.yaml", string(src))
 	// The image its part image shows, beside it.
 	shot, err := os.ReadFile("../corpus/testdata/every-part/shots/moved.png")
@@ -111,8 +112,7 @@ func TestUIContrast(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	s.write(t, "shots/moved.png", string(shot))
-	for _, theme := range themes {
-		name := theme.Name()
+	for _, name := range themes {
 		slug := "parts-" + name
 		s.floe(t, "publish", file, "--slug", slug, "--theme", name)
 		b.navigate("/a/" + slug + "/?raw")
@@ -121,16 +121,10 @@ func TestUIContrast(t *testing.T) { //nolint:paralleltest // the browser tests s
 			t.Errorf("%s draws text that cannot be read:\n%s", name, strings.ReplaceAll(low, "\n", "\n  "))
 		}
 	}
-	k, err := kit.Floe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, _, _, templates := k.Names()
 	for _, tmpl := range templates {
 		tpl, _ := k.Template(tmpl)
 		example := s.write(t, tmpl+".yaml", string(tpl.Example()))
-		for _, theme := range themes {
-			name := theme.Name()
+		for _, name := range themes {
 			slug := "template-" + tmpl + "-" + name
 			s.floe(t, "publish", example, "--slug", slug, "--theme", name)
 			b.navigate("/a/" + slug + "/?raw")

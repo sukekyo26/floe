@@ -11,16 +11,16 @@
 <header class="band">
 <div class="column">
 <p class="when"><span class="kind">{{word "kind"}}</span><span class="date">{{.Data.date}}</span>
-{{- if or .Data.from .Data.to}}<span class="hands">{{with .Data.from}}{{.}}{{end}} → {{with .Data.to}}{{.}}{{end}}</span>{{end}}</p>
+{{- if and .Data.from .Data.to}}<span class="hands">{{.Data.from}} → {{.Data.to}}</span>{{else}}{{with or .Data.from .Data.to}}<span class="hands">{{.}}</span>{{end}}{{end}}</p>
 <h1>{{.Title}}</h1>
 {{- with .Data.summary}}
 <p class="summary">{{markdownLine .}}</p>
 {{- end}}
 <ul class="counts">
-<li>{{with .Data.done}}<a href="#done"><b>{{len .}}</b>{{word "done"}}</a>{{else}}<b>0</b>{{word "done"}}{{end}}</li>
-<li>{{with .Data.doing}}<a href="#doing"><b>{{len .}}</b>{{word "doing"}}</a>{{else}}<b>0</b>{{word "doing"}}{{end}}</li>
-<li{{if .Data.asks}} class="hot"{{end}}>{{with .Data.asks}}<a href="#asks"><b>{{len .}}</b>{{word "asks"}}</a>{{else}}<b>0</b>{{word "asks"}}{{end}}</li>
-<li>{{with .Data.next}}<a href="#next"><b>{{len .}}</b>{{word "next"}}</a>{{else}}<b>0</b>{{word "next"}}{{end}}</li>
+<li>{{with .Data.done}}<a href="#done"><b>{{len .}}</b> {{word "done"}}</a>{{else}}<b>0</b> {{word "done"}}{{end}}</li>
+<li>{{with .Data.doing}}<a href="#doing"><b>{{len .}}</b> {{word "doing"}}</a>{{else}}<b>0</b> {{word "doing"}}{{end}}</li>
+<li{{if .Data.asks}} class="hot"{{end}}>{{with .Data.asks}}<a href="#asks"><b>{{len .}}</b> {{word "asks"}}</a>{{else}}<b>0</b> {{word "asks"}}{{end}}</li>
+<li>{{with .Data.next}}<a href="#next"><b>{{len .}}</b> {{word "next"}}</a>{{else}}<b>0</b> {{word "next"}}{{end}}</li>
 </ul>
 </div>
 </header>
@@ -62,8 +62,8 @@
 <section class="notes"><h2 id="notes">{{word "notes"}}</h2><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
 {{- end}}
 {{- /* LIMIT: a fenced block in text is not warned of until floe has warnings */}}
-{{- range $i, $m := .Data.more}}
-<section><h2 id="more-{{$i}}">{{$m.heading}}</h2>
+{{- range $m := .Data.more}}
+<section><h2>{{$m.heading}}</h2>
 {{- range $m.parts}}{{range .}}{{with .}}
 {{.}}{{end}}{{end}}{{end}}
 </section>

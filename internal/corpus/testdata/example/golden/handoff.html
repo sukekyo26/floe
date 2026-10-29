@@ -158,12 +158,12 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope (:root) to ([data-floe-part] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: a band of the counts, what to decide, and
    a board of what is done, in progress and next, each in the column every template centres its page in.
-   LIMIT: the board falls to one column under 800px; a width just over it is not looked at */
+   LIMIT: the board puts its sections side by side while each has 16rem; a width where they wrap is not looked at */
 body { margin: 0; font-size: 16px; line-height: 1.7; padding-block: 0 4rem; }
 .column { max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
 .band { background: var(--accent); color: var(--on-fill); padding-block: 1.8rem 1.6rem; }
 .band .column { display: grid; gap: 0.5rem; justify-items: start; }
-.band a { color: inherit; text-decoration: none; }
+.band a { color: inherit; }
 .band code { background: color-mix(in srgb, var(--on-fill) 20%, transparent); color: inherit; }
 h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; max-width: none; }
@@ -171,6 +171,7 @@ h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .date { font-family: var(--mono); }
 .counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; max-width: none; }
 .counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: 8px; }
+.counts a { text-decoration: none; }
 .counts li > a, .counts li:not(:has(a)) { display: grid; padding: 0.5rem 1rem; font-size: 0.85rem; }
 .counts b { font-family: var(--mono); font-size: 2rem; line-height: 1.1; }
 .counts li.hot { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-soft); }
@@ -180,16 +181,18 @@ main h2 { font-size: 1.15rem; }
 .asks { padding: 1.2rem 1.4rem; border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
 .asks h2 { color: var(--warn); font-size: 1.3rem; }
 /* Q1, Q2 … are the list's own numbers: each li stays a list item, its layout inside it. The name is the page's
-   alone, as a counter style is not held by @scope */
+   alone, as a counter style is not held by @scope.
+   LIMIT: up to Q99 fits the pad; a hundredth question spills left of it */
 @counter-style floe-handoff-q { system: extends decimal; prefix: "Q"; suffix: " "; }
-.asks ol { list-style-type: floe-handoff-q; padding-left: 2.6rem; gap: 1.1rem; max-width: none; }
+.asks ol { list-style-type: floe-handoff-q; padding-left: 3rem; gap: 1.1rem; max-width: none; }
 .asks ol > li::marker { color: var(--warn); font-family: var(--mono); font-weight: 700; }
 .ask { display: grid; gap: 0.35rem; }
 .question { font-weight: 700; font-size: 1.05rem; }
 .options { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: none; }
 .options li { border: 1px solid var(--line); border-radius: 999px; padding: 0 0.8rem; background: var(--surface); }
 .why, .by { color: var(--muted); font-size: 0.92rem; }
-.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+/* As many columns as the sections written, side by side while each has 16rem */
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
 .board section { padding: 1rem 1.2rem; display: grid; gap: 0.6rem; }
 .board ul, .board ol { max-width: none; gap: 0.6rem; }
 .done, .doing { list-style: none; padding: 0; }
@@ -202,7 +205,6 @@ main h2 { font-size: 1.15rem; }
 .state.blocked { background: var(--bad-soft); color: var(--bad); }
 .notes { display: grid; gap: 0.6rem; }
 main > section:not(.asks):not(.notes) { display: grid; gap: 1rem; }
-@media (max-width: 800px) { .board { grid-template-columns: 1fr; } }
 }
 }
 </style>
@@ -214,10 +216,10 @@ main > section:not(.asks):not(.notes) { display: grid; gap: 1rem; }
 <h1 id="checkout-redesign">Checkout redesign</h1>
 <p class="summary">The card form is done; the address form waits on one decision, and the tax rules on the finance team.</p>
 <ul class="counts">
-<li><a href="#done"><b>3</b>Done</a></li>
-<li><a href="#doing"><b>3</b>In progress</a></li>
-<li class="hot"><a href="#asks"><b>2</b>To decide</a></li>
-<li><a href="#next"><b>3</b>Next</a></li>
+<li><a href="#done"><b>3</b> Done</a></li>
+<li><a href="#doing"><b>3</b> In progress</a></li>
+<li class="hot"><a href="#asks"><b>2</b> To decide</a></li>
+<li><a href="#next"><b>3</b> Next</a></li>
 </ul>
 </div>
 </header>
@@ -240,7 +242,7 @@ main > section:not(.asks):not(.notes) { display: grid; gap: 1rem; }
 </section>
 </div>
 <section class="notes"><h2 id="notes">Watch out for</h2><ul><li>Staging uses the <strong>test</strong> card provider: real cards are refused there</li><li>The design for the address form changed on Monday; use the newest file</li></ul></section>
-<section><h2 id="more-0">Links</h2>
+<section><h2 id="links">Links</h2>
 <ul data-floe-part="links">
 <li class="card" data-floe-look="panel"><a href="docs/checkout-designs.html">Checkout designs</a><p>The newest screens</p><span class="url">docs/checkout-designs.html</span></li>
 <li class="card" data-floe-look="panel"><a href="docs/release-checklist.html">Release checklist</a><p>What to check before shipping</p><span class="url">docs/release-checklist.html</span></li>
