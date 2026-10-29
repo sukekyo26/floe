@@ -23,7 +23,8 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：警告。ページのより良い書き方の勧めで、`floe check`・`floe render`・
   `floe template check`・`floe publish` が、誤りの後に
   `file:line:column: warning: message` で出す。ページは描き、終了コードも
-  変えない。最初の警告は、`text` の部品（節の中、`details`・`tabs` の中も）の
+  変えない。最初の警告は、`text` の部品（report の節と、design・handoff・adr の `more` の中、
+  `details`・`tabs` の中も）の
   囲んだコードのブロックで、ただのコードとして描き、`code` か `terminal` に
   書くよう勧める。`text` は部品の 1 つになったので、自分の部品に `text` という
   名前があると断る。

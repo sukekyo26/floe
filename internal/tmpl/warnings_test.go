@@ -65,23 +65,29 @@ func TestFloeExamplesWarnNot(t *testing.T) {
 	}
 }
 
-// A fence in a text part of more, in floe's templates that have it, is warned of at the value.
+// A fence in a text part of more, in floe's templates whose example has it, is warned of at the value.
 func TestWarnFenceInMore(t *testing.T) {
 	t.Parallel()
 
 	k := floeKit(t)
-	for _, name := range []string{"adr", "design", "handoff"} {
+	_, _, _, templates := k.Names()
+	checked := 0
+	for _, name := range templates {
 		tp, _ := k.Template(name)
 		lines := strings.Split(string(tp.Example()), "\n")
 		at := slices.Index(lines, "more:")
 		if at < 0 {
-			t.Fatalf("%s: its example has no more", name)
+			continue
 		}
+		checked++
 		lines = slices.Insert(lines, at+1, "  - heading: h", "    parts:", "      - text: \"```\\nls\\n```\"")
 		_, warnings, err := tmpl.Draw(k, "d.yaml", []byte(strings.Join(lines, "\n")), none)
 		if want := fmt.Sprintf("d.yaml:%d:15: warning: %s", at+4, fence); err != nil || laid(warnings) != want {
 			t.Errorf("%s: %s\nwant\n%s\n%s", name, laid(warnings), want, told(err))
 		}
+	}
+	if checked == 0 {
+		t.Error("no example of floe's templates has more")
 	}
 }
 
