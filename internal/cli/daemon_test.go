@@ -343,7 +343,11 @@ func TestPublishToAnotherServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	o := newDenvOn(t, ln.Addr().(*net.TCPAddr).Port) //nolint:forcetypeassert // a TCP listener's
+	addr, ok := ln.Addr().(*net.TCPAddr)
+	if !ok {
+		t.Fatalf("a TCP listener on %v", ln.Addr())
+	}
+	o := newDenvOn(t, addr.Port)
 	srv := &http.Server{Handler: http.NotFoundHandler(), ReadHeaderTimeout: time.Second}
 	go func() { _ = srv.Serve(ln) }() //nolint:errcheck // closed by the cleanup
 	t.Cleanup(func() { _ = srv.Close() })
