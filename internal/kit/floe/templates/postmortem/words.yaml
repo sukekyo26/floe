@@ -3,7 +3,7 @@ en:
   severity_high: High
   severity_medium: Medium
   severity_low: Low
-  authors: 'Written by'
+  authors: Authors
   impact: Impact
   timeline: Timeline
   cause: Cause

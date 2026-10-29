@@ -31,11 +31,13 @@
 </div></section>
 {{- end}}
 {{- with .Data.actions}}
+{{- /* An owner or a state column is drawn only when an action has one */}}
+{{- $owner := false}}{{$state := false}}{{range .}}{{if .owner}}{{$owner = true}}{{end}}{{if .state}}{{$state = true}}{{end}}{{end}}
 <section><h2>{{word "actions"}}</h2><div data-floe-look="table"><table>
-<thead><tr><th>{{word "action"}}</th><th>{{word "owner"}}</th><th>{{word "state"}}</th></tr></thead>
+<thead><tr><th>{{word "action"}}</th>{{if $owner}}<th>{{word "owner"}}</th>{{end}}{{if $state}}<th>{{word "state"}}</th>{{end}}</tr></thead>
 <tbody>
 {{- range .}}
-<tr><td>{{markdownLine .what}}{{with .ref}} <span class="ref">{{.}}</span>{{end}}</td><td>{{.owner}}</td><td>{{with .state}}<span class="state {{.}}">{{word (printf "state_%s" .)}}</span>{{end}}</td></tr>
+<tr><td>{{markdownLine .what}}{{with .ref}}<span class="ref">{{.}}</span>{{end}}</td>{{if $owner}}<td>{{.owner}}</td>{{end}}{{if $state}}<td>{{with .state}}<span class="state {{.}}">{{word (printf "state_%s" .)}}</span>{{end}}</td>{{end}}</tr>
 {{- end}}
 </tbody>
 </table></div></section>
