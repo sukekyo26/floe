@@ -43,7 +43,7 @@ const (
 
 func drawPage(t *testing.T, k *kit.Kit, src string, o tmpl.Options) string {
 	t.Helper()
-	page, err := tmpl.Draw(k, "d.yaml", []byte(src), o)
+	page, _, err := tmpl.Draw(k, "d.yaml", []byte(src), o)
 	if err != nil {
 		t.Fatalf("Draw: %s", told(err))
 	}
@@ -133,7 +133,7 @@ func TestDiagramFailure(t *testing.T) {
 
 	o := none
 	o.Icons = someIcons{failed: errors.New("boom")} //nolint:err113 // a failure of the test's
-	_, err := tmpl.Draw(floeKit(t), "d.yaml", []byte(diagramPage("en", iconSpec)), o)
+	_, _, err := tmpl.Draw(floeKit(t), "d.yaml", []byte(diagramPage("en", iconSpec)), o)
 	var found usererr.List
 	if !errors.Is(err, kit.ErrFunc) || found.Add(err) == nil {
 		t.Errorf("Draw = %v, want floe's failure", err)

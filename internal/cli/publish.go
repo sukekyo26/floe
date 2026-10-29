@@ -36,7 +36,8 @@ store it as drawn and print its URL. The same slug from the same project overwri
 published from another project is refused unless --force. A page is in the language its data names
 (lang:), and in the theme its data names (theme:, else default), unless --theme names another. A new
 slug is also opened in the browser ($BROWSER, open, wslview, xdg-open). The page stays as it was
-drawn: floe rebuild draws the stored pages again with the templates of now.
+drawn: floe rebuild draws the stored pages again with the templates of now. The warnings of the page
+drawn, advice on a better way to write it, are printed as file:line:column: warning: message.
 
 --link registers a file in place instead of storing a page. An HTML file is shown as it is, and the
 files under its directory are served for its relative references. A data file is drawn each time
@@ -90,6 +91,7 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	if err != nil {
 		return err //nolint:wrapcheck // usererrs for the user as they are
 	}
+	a.told = append(a.told, saved.Warnings...)
 	port, err := a.port()
 	if err != nil {
 		return err

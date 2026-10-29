@@ -33,7 +33,7 @@ sections:
 ```
 
 ```sh
-floe check plan.yaml     # 誤りを出すか、何も出さない
+floe check plan.yaml     # 誤りと警告を出すか、何も出さない
 floe publish plan.yaml   # ページを保存し、URL を出す
 ```
 
@@ -54,7 +54,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 | 部品 | 描くもの |
 |---|---|
-| `text` | Markdown（表も）。中の生の HTML は除く。囲んだコードのブロック（```` ``` ````）は断る：コードは `code`、コマンドは `terminal` に書く。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ）ので、画像は `image` に書く。 |
+| `text` | Markdown（表も）。中の生の HTML は除く。囲んだコードのブロック（```` ``` ````）はただのコードとして描き、警告する：コードは `code`、コマンドは `terminal` に書く。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ）ので、画像は `image` に書く。 |
 | `code` | コードをそのまま、`file` と `lang` の下に。右上のボタンでコードをコピーできる。 |
 | `terminal` | コマンド（`run`）と出力（`out`）を、`shell`（`bash`・`sh`・`zsh`・`powershell`・`cmd`）のプロンプトで。プロンプトは floe が描くので、プロンプトで始まる `run`（`$ ls`）は断る。右上のボタンで、コマンドを 1 行ずつ、プロンプトと出力を除いてコピーできる。 |
 | `table` | `columns` と `rows`。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`。 |
@@ -158,6 +158,17 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 - 形の誤り（`additional properties 'x' not allowed`・`missing property 'x'`・`got string, want array`）は、テンプレートか部品の schema がデータを断ったものです。`floe template show <テンプレート>` と `floe part show <部品>` が、取るものを出します。
 - 自分の部品・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check` と `floe template check` が並べます。
 - 同じ誤りは、何か所から指されても 1 回だけ言います。
+
+### 警告
+
+描いたページに警告が付くことがあります。より良い書き方の勧めで、ページは描かれ、終了コードも変わりません（誤りが無ければ 0）。`floe check`・`floe render`・`floe template check`・`floe publish` が、誤りの後に出します:
+
+```text
+plan.yaml:12:15: warning: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
+```
+
+- `text` の部品（節の中、`details`・`tabs` の中も）の、囲んだコードのブロックを警告します。コードは `code` に、コマンドは `terminal` に書きます。
+- 誤りのあるファイルは描かないので、その警告は誤りを直した後に出ます。ほかの描けたファイルの警告は、誤りと一緒に出します。
 
 ## 確かめと公開
 

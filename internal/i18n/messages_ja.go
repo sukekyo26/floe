@@ -124,6 +124,7 @@ var messagesJA = map[string]string{
 	"draw_zgotmplz":     "このファイルを描いたページの %s に ZgotmplZ があります。html/template が、そこに置けない値の代わりに書いたものです。値か、テンプレートが値を置く所を変えてください",
 	"draw_meta":         "このファイルを描いたページに %s があります。page.html、部品の part.html、format html の項目のどれかが書いています。floe が描くのは静的なページで、<meta> は charset と viewport のものだけを受けるので、書かないでください",
 	"draw_noscript":     "このファイルを描いたページに <noscript> があります。page.html、部品の part.html、format html の項目のどれかが書いています。floe はその中を確かめられず、スクリプトを切ると中が働くので、書かないでください",
+	"draw_text_fence":   "この text の %d 行目に囲んだコードのブロックがあり、ただのコードとして描かれます。コードは code 部品に、コマンドは terminal 部品に書いてください。ファイル名やプロンプトの下に、写すボタン付きで描かれます",
 	"draw_not_text":     "format %s の項目は文字です。文字で書いてください。YAML が数・true・false・null と読むものは引用符で囲んでください",
 	"draw_html_whole":   "HTML が %s で周りのページを変えています。開いた要素とコメントは項目の中で閉じ、開いていない要素は閉じないでください",
 	"draw_page_cut":     "描いたページが途中で切れました。HTML の読み手は <svg> か <math> の中の <template> から後ろを読みません。その <template> を外に出してください（page.html・部品の part.html・format html の項目のどれか）",

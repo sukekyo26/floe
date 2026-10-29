@@ -29,32 +29,33 @@ type Options struct {
 
 // Draw draws the data file src, file in its mistakes, with the templates, parts and themes of k, as a page:
 // the data read, with the names of its template and theme; then checked against the template's schema; then
-// its checks, its parts' checks for each item they draw, and its computed values; then drawn (draw.Page).
-func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, error) {
+// its checks, its parts' checks for each item they draw, and its computed values; then drawn (draw.Page), with
+// the warnings of the page drawn.
+func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, []*usererr.Error, error) {
 	d, err := doc.Read(file, src, o.Theme)
 	var found usererr.List
 	if failed := found.Add(err); failed != nil {
-		return nil, failed
+		return nil, nil, failed
 	}
 	if d == nil {
-		return nil, err //nolint:wrapcheck // mistakes of the YAML
+		return nil, nil, err //nolint:wrapcheck // mistakes of the YAML
 	}
 	t, theme := pick(k, d, &found)
 	if t == nil {
-		return nil, found.Sorted().Err()
+		return nil, nil, found.Sorted().Err()
 	}
 	if t.Schema() == nil {
-		return nil, fmt.Errorf("tmpl: the template %s has no schema", t.Name()) //nolint:err113 // floe's own mistake
+		return nil, nil, fmt.Errorf("tmpl: the template %s has no schema", t.Name()) //nolint:err113 // floe's own mistake
 	}
 	if failed := found.Add(t.Schema().Validate(d)); failed != nil {
-		return nil, failed //nolint:wrapcheck // floe's failure, which says what failed
+		return nil, nil, failed //nolint:wrapcheck // floe's failure, which says what failed
 	}
 	if found != nil {
-		return nil, found.Sorted().Err()
+		return nil, nil, found.Sorted().Err()
 	}
 	calc, err := run(k, t, d)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	//nolint:wrapcheck // mistakes of the page, or floe's failure
 	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.Images, o.ImagesDir, o.Icons)

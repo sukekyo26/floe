@@ -8,7 +8,7 @@
     "type": "object",
     "description": "One key naming the kind of the part",
     "properties": {
-      "text": { "type": "string", "minLength": 1, "description": "Markdown; an image file it names is not shown, only a data URI of a png, gif, jpeg or webp: write images in image" },
+      "text": { "$ref": "floe:///parts/text.json", "minLength": 1 },
       "code": { "$ref": "floe:///parts/code.json" },
       "terminal": { "$ref": "floe:///parts/terminal.json" },
       "diff": { "$ref": "floe:///parts/diff.json" },

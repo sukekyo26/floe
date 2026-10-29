@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add warnings: advice on a better way to write a page, which `floe check`,
+  `floe render`, `floe template check` and `floe publish` print after the
+  mistakes as `file:line:column: warning: message`, leaving the page drawn and
+  the exit code as it is. The first is a fenced block of code in a `text` part,
+  in a section or in `details` and `tabs`: it is drawn as plain code, and the
+  warning says to write it in `code` or `terminal`. `text` is a part of its own,
+  so a part of your own named `text` is refused.
 - Add the diagram part `tree`: write the nodes of a tree and their children,
   and floe places each under its parent and draws the edges; and the diagram
   example `org` (`floe diagram example org`), the departments of a company
