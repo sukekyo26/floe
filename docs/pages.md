@@ -1,10 +1,10 @@
 # Writing pages
 
-How to write a data file, the YAML that floe draws a page from. This is all you need to write pages with floe's templates `report`, `design`, `handoff` and `adr`; [templates.md](templates.md) tells how to make a template of your own, and [commands.md](commands.md) tells every command and flag.
+How to write a data file, the YAML that floe draws a page from. This is all you need to write pages with floe's templates `report`, `design`, `handoff`, `adr` and `postmortem`; [templates.md](templates.md) tells how to make a template of your own, and [commands.md](commands.md) tells every command and flag.
 
 ## A data file
 
-A data file names a template, and the template draws the page from its data. floe's templates are `report`, a header over sections, each a heading over parts, `design`, a design document, `handoff`, a handoff or a status update, and `adr`, a decision record.
+A data file names a template, and the template draws the page from its data. floe's templates are `report`, a header over sections, each a heading over parts, `design`, a design document, `handoff`, a handoff or a status update, `adr`, a decision record, and `postmortem`, an incident review.
 
 ```yaml
 template: report
@@ -41,7 +41,7 @@ Every data file holds these keys, which floe reads itself:
 
 | Key | What it is |
 |---|---|
-| `template` | The template that draws the page (`report`, `design`, `handoff`, `adr`, or one of your own). Required. |
+| `template` | The template that draws the page (`report`, `design`, `handoff`, `adr`, `postmortem`, or one of your own). Required. |
 | `lang` | The page's language (`<html lang>`), as a tag such as `en`, `ja` or `pt-BR`. Required. The words floe and the parts draw (a heading of `risks`, the zoom buttons of a diagram, the copy button of code) and the text of a diagram follow it, English for a language they have no words of. |
 | `title` | The page's title. |
 | `theme` | The theme the page is drawn in (default `default`): its colours, faces and the shape of the parts. `floe template show <template>` lists the themes on its `themes:` line: `default`, `soft`, `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `swiss` and `washi`. |
@@ -53,6 +53,8 @@ The rest is the template's: `report` takes `eyebrow` (a short line above the tit
 `handoff` takes a handoff of work or a status update, what to decide first. Only `date` is required; `from`, `to` and `summary` head the page, over counts of what is done, in progress, to decide and next. `asks` is what the reader is to decide, each a `question` with `options`, a `recommend`, a `why` and who decides it (`by`), numbered Q1, Q2 and on; `done` is rows of `what` and a `ref` (a pull request or a ticket); `doing` is rows of `who`, `what`, `where` (how far) and a `state` (`doing`, `waiting` or `blocked`); `next` and `notes` (what to watch out for) are lines; `more` is sections of your own as in report. `date`, `from`, `to`, `by`, `ref`, `who` and a heading of `more` are plain text, as written; each other line is a line of Markdown.
 
 `adr` takes a decision record, one decision on a sheet. `status` (`proposed`, `accepted`, `rejected`, `deprecated` or `superseded`, stamped under the title), `context` and `decision` (Markdown) are required; a record whose status is `superseded` names the one that superseded it in `superseded_by` (`[ADR 0012](/a/adr-0012/)`). `number`, `date` and `deciders` head the page; `alternatives` are the options set aside, each a `title` and `why`; `consequences` holds `good` and `bad`, lines of what it gains and costs; `more` is sections of your own as in report. `number`, `date`, `deciders` and a heading of `more` are plain text, as written; `superseded_by` and each other line are a line of Markdown.
+
+`postmortem` takes an incident review, written without blame. `summary` (a line of Markdown, on a band filled with the accent), `timeline` and `cause` (Markdown) are required. `date`, `severity` (`high`, `medium` or `low`, a badge on the band, red for `high` alone) and `authors` head the page; `effects` is the impact, a `name` and `value` each as in the part `facts`; `timeline` is the part `timeline`'s value, drawn in the order written, each `date` plain text such as `10:42`; `lessons` holds `good`, `bad` and `lucky`, lines of what went well, badly and by luck; `actions` are rows of `what` (a line of Markdown), `owner`, `state` (`todo`, `doing` or `done`, a badge) and `ref`, such as a ticket; `more` is sections of your own as in report. `date`, `authors`, `owner`, `ref` and a heading of `more` are plain text, as written.
 
 ## Parts
 
@@ -173,7 +175,7 @@ A page drawn may have warnings: advice on a better way to write it, which leaves
 plan.yaml:12:15: warning: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
 ```
 
-- A fenced block of code in a `text` part, in a section (report's, and `more` of design, handoff and adr) or in `details` and `tabs`, is warned of: write it in `code`, or a command in `terminal`.
+- A fenced block of code in a `text` part, in a section (report's, and `more` of design, handoff, adr and postmortem) or in `details` and `tabs`, is warned of: write it in `code`, or a command in `terminal`.
 - A file with a mistake is not drawn, so its warnings come once its mistakes are fixed. Those of the other files drawn are told with the mistakes.
 
 ## Checking and publishing

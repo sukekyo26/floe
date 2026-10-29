@@ -1,6 +1,6 @@
 # Templates
 
-How to make a template of your own: the page a data file is drawn into. A data file names its template with `template:` ([pages.md](pages.md) tells how to write one); floe's templates are `report`, `design`, `handoff` and `adr` (`floe template list` lists them). To make a part or a theme of your own, see [parts.md](parts.md).
+How to make a template of your own: the page a data file is drawn into. A data file names its template with `template:` ([pages.md](pages.md) tells how to write one); floe's templates are `report`, `design`, `handoff`, `adr` and `postmortem` (`floe template list` lists them). To make a part or a theme of your own, see [parts.md](parts.md).
 
 ## Where templates are
 
