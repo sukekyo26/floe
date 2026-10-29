@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+</head>
+<body>
+<header class="slide cover" data-floe-look="band">
+<h1>{{.Title}}</h1>
+{{- with .Data.subtitle}}<p class="subtitle">{{markdownLine .}}</p>{{end}}
+<p class="hint">{{word "hint"}}</p>
+</header>
+{{- /* The number of a slide is the list's counter, and the count of them each slide's data-total, which CSS reads.
+   role="list" keeps it a list to Safari and VoiceOver, which drop the list of one without its marks.
+   LIMIT: the slides are moved by the scroll alone, not by the ← and → keys, which would need a script */}}
+{{- $total := len .Data.slides}}
+<main>
+<ol class="slides" role="list">
+{{- range .Data.slides}}{{$divider := not .parts}}
+<li class="slide{{if $divider}} divider{{end}}" data-total="{{$total}}"{{if $divider}} data-floe-look="band"{{end}}>
+<h2>{{markdownLine .heading}}</h2>
+{{- with .parts}}
+<div class="content">
+{{- range .}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</div>
+{{- end}}
+</li>
+{{- end}}
+</ol>
+</main>
+</body>
+</html>

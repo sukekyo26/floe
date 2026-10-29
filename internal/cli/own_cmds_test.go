@@ -166,7 +166,7 @@ func TestListShow(t *testing.T) {
 			return out == "memo: a b c\nwhere: "+filepath.Join(templates, "memo")+"\nthemes: blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi\n"+
 				"schema.json:\n"+schema+"\nexample.yaml:\ntemplate: memo\nlang: en\n"
 		}, ""},
-		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, memo, postmortem, report, runbook` + "\n"},
+		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, memo, postmortem, report, runbook, slides` + "\n"},
 	} {
 		if code, stdout, stderr := runEnv(dir, env, tt.args...); code != tt.code || !tt.out(stdout) || stderr != tt.errs {
 			t.Errorf("floe %v = %d, %q, %q; want %d, %q", tt.args, code, stdout, stderr, tt.code, tt.errs)

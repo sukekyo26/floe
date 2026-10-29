@@ -46,7 +46,7 @@ func TestFloe(t *testing.T) {
 	}
 	parts, looks, themes, templates := k.Names()
 	if len(parts) != 33 || !slices.Equal(looks, []string{"band", "numbered", "panel", "rows"}) || len(themes) != 9 ||
-		!slices.Equal(templates, []string{"adr", "design", "handoff", "postmortem", "report", "runbook"}) {
+		!slices.Equal(templates, []string{"adr", "design", "handoff", "postmortem", "report", "runbook", "slides"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}
 	for _, name := range parts {

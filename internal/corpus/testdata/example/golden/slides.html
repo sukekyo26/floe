@@ -1,0 +1,367 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; img-src data: blob:; media-src data: blob:; style-src &#39;unsafe-inline&#39; https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src &#39;unsafe-inline&#39; https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action &#39;none&#39;; base-uri &#39;none&#39;; connect-src &#39;none&#39;"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>What the certificate outage taught us</title>
+<style>
+@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.base {
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways instead, as a table does, keeps its words whole.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line, still overflows. Give such a part a layout for narrow screens, as
+   keys has */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+p, ul, ol { margin: 0; max-width: var(--text-width); }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
+pre {
+  margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+pre code { font-size: inherit; background: none; padding: 0; }
+blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
+   (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
+   what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
+   holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
+   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone */
+.floe-copy {
+  position: relative; z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--code-ground, var(--code-bg)); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground, var(--code-bg)));
+}
+.floe-copy:hover { background: color-mix(in srgb, var(--code-fg) 12%, var(--code-ground, var(--code-bg))); }
+.floe-copy:focus-visible { outline: 2px solid var(--code-fg); outline-offset: -2px; }
+.floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
+.floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
+.floe-copy.copied svg + svg { display: block; color: var(--code-add); }
+.floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media print { .floe-copy { display: none; } }
+}
+</style>
+<style>
+@layer floe.palette {
+/* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
+:root {
+  --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --accent: #1d6670; --accent-soft: #dcebec;
+  --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
+  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #b5e05a; --code-add: #6fcf97; --code-del: #f2b8b5;
+  /* The page's ground, a pattern too, and the rule between its sections */
+  --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
+  /* Its panels' quiet ground, which holds faces of the surface */
+  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
+  /* The column a template centres its page in: its width, without the pad each side of it */
+  --page-width: 96rem; --page-pad: 16px;
+  color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="band"]) to (:scope [data-floe-part] > *) {
+/* A band filled with the accent: its text, links, code and focus ring in the colour on a fill, as the accent's
+   text and the soft ground of code would sink into it.
+   LIMIT: the focus ring is not measured by a test; it was looked at in photos, in default and brutal, when the look was made */
+:scope { background: var(--accent); color: var(--on-fill); }
+:scope a { color: inherit; }
+:scope :not(pre) > code { background: none; border: 1px solid color-mix(in srgb, var(--on-fill) 55%, transparent); color: inherit; }
+:scope :focus-visible { outline-color: var(--on-fill); }
+/* A part in the band draws on its own ground, in the page's text colour, which it would otherwise take from the band.
+   LIMIT: a part with no ground of its own (a pill, links without a panel) is drawn in that colour on the accent; give it a
+   panel, or keep it out of the band */
+:scope [data-floe-part] { color: var(--fg); }
+/* The band's text reads only on its ground, which print leaves out unless asked to keep it */
+@media print { :scope { print-color-adjust: exact; } }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="steps"], [data-floe-part="timeline"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="links"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+/* Each card is numbered by its place, as the steps of a plan are */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
+.card {
+  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+}
+:scope.numbered > .card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
+}
+.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="links"]) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
+:scope { list-style: none; margin: 0; padding: 0; max-width: none; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
+:scope > li { position: relative; gap: 0.1rem; padding-block: 0.9rem; padding-left: 3.7rem; }
+:scope > li::before {
+  content: ""; position: absolute; left: 1.1rem; top: 0.95rem; display: block; width: 1.9rem; height: 1.9rem;
+  border-radius: 9px; background: var(--accent-soft);
+}
+:scope a { font-weight: 700; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+:scope a::before {
+  content: ""; position: absolute; left: calc(1.1rem + 0.45rem); top: calc(0.95rem + 0.45rem); width: 1rem; height: 1rem;
+  background: var(--accent); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+:scope a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+:scope > li:hover a { text-decoration-thickness: 2px; }
+:scope a:focus-visible { outline: none; }
+:scope > li:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope .url {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted);
+  font-family: var(--mono);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, unnumbered */
+:scope { margin: 0; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+:scope > div { gap: 0.15rem; }
+.stat dt { font-size: 0.85rem; color: var(--muted); }
+.stat dd { margin: 0; }
+.stat .value {
+  font-family: var(--mono);
+  font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
+}
+.stat .unit { margin-left: 0.3em; font-size: 0.5em; font-weight: 400; color: var(--muted); }
+.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+.stat.accent .note { color: var(--accent); }
+.stat.good .note { color: var(--good); }
+.stat.warn .note { color: var(--warn); }
+.stat.bad .note { color: var(--bad); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="steps"]) to (:scope [data-floe-part] > *) {
+/* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
+   rings and lines of its own states */
+:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; max-width: none; }
+:scope > li { position: relative; counter-increment: floe-step; display: grid; gap: 0.15rem; padding: 0.2rem 0 1.3rem 3rem; min-height: 2rem; }
+:scope > li:last-child { padding-bottom: 0.2rem; }
+:scope > li::before {
+  content: counter(floe-step); position: absolute; left: 0; top: 0; display: grid; place-items: center;
+  width: 2rem; height: 2rem; border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
+}
+:scope > li:not(:last-child)::after {
+  content: ""; position: absolute; left: calc(1rem - 1px); top: 2.35rem; bottom: 0.35rem; width: 2px; border-radius: 1px;
+  background: var(--line);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="steps"]) to (:scope [data-floe-part] > *) {
+/* The number and the line to the next are the look numbered's; here a step's mark turns a tick once done, its line
+   coloured, and a ring while being done */
+:scope { margin: 0; padding: 1.1rem 1.3rem; }
+:scope > li.done::before { content: "✓"; background: var(--good); color: var(--on-fill); box-shadow: none; }
+:scope > li.done::after { background: var(--good); }
+:scope > li.doing::before { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+:scope > li > strong { line-height: 1.6; }
+:scope > li > :not(strong) { margin: 0; max-width: var(--text-width); color: var(--muted); font-size: 0.92rem; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="timeline"]) to (:scope [data-floe-part] > *) {
+/* The date at the left of a dot on a line that runs down to the next */
+:scope { list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; max-width: none; }
+:scope > li { position: relative; display: grid; grid-template-columns: 7rem minmax(0, 1fr); column-gap: 2rem; padding-bottom: 1.1rem; }
+:scope > li:last-child { padding-bottom: 0; }
+:scope > li::before {
+  content: ""; position: absolute; left: calc(7rem + 0.65rem); top: 0.55rem; width: 0.7rem; height: 0.7rem; border-radius: 50%;
+  background: var(--accent);
+}
+:scope > li:not(:last-child)::after {
+  content: ""; position: absolute; left: calc(7rem + 1rem - 1px); top: 1.5rem; bottom: 0.2rem; width: 2px; background: var(--line);
+}
+:scope > li.good::before { background: var(--good); }
+:scope > li.warn::before { background: var(--warn); }
+:scope > li.bad::before { background: var(--bad); }
+:scope .date {
+  text-align: right; font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+}
+:scope li > div { display: grid; gap: 0.15rem; }
+:scope li > div > :not(strong) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+@media (max-width: 36rem) {
+  :scope > li { grid-template-columns: minmax(0, 1fr); padding-left: 1.6rem; }
+  :scope > li::before { left: 0; }
+  :scope > li:not(:last-child)::after { left: calc(0.35rem - 1px); }
+  :scope .date { text-align: left; }
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
+/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
+blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="steps"], [data-floe-part="timeline"]) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="links"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border-radius: 20px; padding: 0.75rem; gap: 0.75rem; }
+/* A tile of the surface on the panel of the cards */
+.card { background: var(--surface); border-radius: 14px; }
+:scope.numbered > .card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
+}
+}
+}
+</style>
+<style>
+@layer floe.page {
+@scope (:root) to ([data-floe-part] > *) {
+/* The colours and faces are the theme's palette; the page lays them out: a cover on the band, then each slide as
+   tall as the screen, stopped at by the scroll, its number and the count in the corner; a slide of a heading alone is
+   on the band too.
+   LIMIT: a slide taller than the screen scrolls inside itself; its parts are not made to fit, nor drawn larger (the
+   browser's zoom does that)
+   LIMIT: a slide taller than a page in print runs over several, its number on the last alone
+   LIMIT: the stop at each slide, a page a slide in print and the numbers are not tested; they were looked at when the
+   template was made */
+:scope { scroll-snap-type: y mandatory; }
+body { margin: 0; font-size: 16px; line-height: 1.6; }
+/* The pad under a slide holds the number and the hint, set 3svh above its bottom */
+.slide { box-sizing: border-box; min-height: 100svh; scroll-snap-align: start; position: relative; display: flex; flex-direction: column; justify-content: center; gap: 4svh; padding: 6svh 8vw calc(3svh + 2.5rem); border-bottom: 1px solid var(--line); }
+.cover { gap: 1.5rem; }
+.cover h1 { font-size: clamp(2.2rem, 6vw, 4.5rem); line-height: 1.2; max-width: 20ch; }
+.subtitle { font-size: clamp(1.1rem, 2.2vw, 1.7rem); max-width: none; }
+.hint { position: absolute; bottom: 3svh; left: 8vw; font-size: 0.9rem; }
+/* Off base's list: the slides fill the width, one under the next, numbered by a counter of their own */
+.slides { list-style: none; padding: 0; margin: 0; max-width: none; display: block; counter-reset: floe-slide; }
+.slides > li { counter-increment: floe-slide; }
+.slides > li::after { content: counter(floe-slide) " / " attr(data-total); content: counter(floe-slide) " / " attr(data-total) / ""; position: absolute; right: 3vw; bottom: 3svh; font-family: var(--mono); color: var(--muted); font-size: 1rem; }
+.slides > li.divider::after { color: inherit; }
+.slide h2 { font-size: clamp(1.7rem, 4vw, 3rem); line-height: 1.25; }
+.divider h2 { font-size: clamp(2rem, 5vw, 3.6rem); }
+.content { display: grid; gap: 1rem; }
+@media print {
+  @page { size: landscape; margin: 0; }
+  :scope { scroll-snap-type: none; }
+  .slide { min-height: 100vh; break-after: page; border: none; }
+  .hint { display: none; }
+}
+}
+}
+</style>
+</head>
+<body>
+<header class="slide cover" data-floe-look="band">
+<h1 id="what-the-certificate-outage-taught-us">What the certificate outage taught us</h1><p class="subtitle">Payments team · review of 2030-05-14 · <a href="/a/postmortem-certs/">the postmortem</a></p>
+<p class="hint">Scroll for the next slide</p>
+</header>
+<main>
+<ol class="slides" role="list">
+<li class="slide" data-total="5">
+<h2 id="checkout-failed-for-47-minutes">Checkout failed for 47 minutes</h2>
+<div class="content">
+<dl data-floe-part="stats">
+<div class="card stat" data-floe-look="panel"><dt>Duration</dt><dd class="value">47<span class="unit">min</span></dd></div>
+<div class="card stat" data-floe-look="panel"><dt>Failed checkouts</dt><dd class="value">3,100</dd><dd class="note">about</dd></div>
+<div class="card stat good" data-floe-look="panel"><dt>Data lost</dt><dd class="value">none</dd></div>
+</dl>
+</div>
+</li>
+<li class="slide" data-total="5">
+<h2 id="a-certificate-issued-by-hand-expired">A certificate issued by hand expired</h2>
+<div class="content">
+<p>It was not in the renewal job&#39;s list, and its expiry warning went to a mailbox no one reads.</p>
+<ol data-floe-part="timeline">
+<li class="bad"><span class="date">10:42</span><div><strong>The certificate expires</strong></div></li>
+<li class="warn"><span class="date">10:58</span><div><strong>Cause found</strong></div></li>
+<li class="good"><span class="date">11:29</span><div><strong>Checkout recovers</strong></div></li>
+</ol>
+</div>
+</li>
+<li class="slide divider" data-total="5" data-floe-look="band">
+<h2 id="what-changes-in-the-certificate-inventory-and-alertsyaml">What changes in the <a href="/a/cert-inventory/">certificate inventory</a> and <code>alerts.yaml</code></h2>
+</li>
+<li class="slide" data-total="5">
+<h2 id="three-actions-one-done">Three actions, one done</h2>
+<div class="content">
+<ol data-floe-part="steps">
+<li class="done"><strong>Send expiry warnings to the on-call rota</strong></li>
+<li class="doing" aria-current="step"><strong>Put every certificate under the renewal job</strong></li>
+<li class="todo"><strong>Alert 14 days before any certificate expires</strong></li>
+</ol>
+</div>
+</li>
+<li class="slide" data-total="5">
+<h2 id="next-time-the-runbook-certs-runbook">Next time: the <code>runbook-certs</code> runbook</h2>
+<div class="content">
+<ul data-floe-part="links">
+<li class="card" data-floe-look="panel"><a href="/a/runbook-certs/">Issue and deploy a new certificate</a><p>Twenty minutes; checkout keeps working throughout</p><span class="url">/a/runbook-certs/</span></li>
+</ul>
+</div>
+</li>
+</ol>
+</main>
+
+
+</body></html>

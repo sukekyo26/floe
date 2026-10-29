@@ -220,6 +220,51 @@ func drawRunbook(t *testing.T, data string) []byte {
 	return page
 }
 
+// slides draws a slide without parts as a divider on the band, the cover on the band too, each slide with the count
+// of them, and the hint in the page's language.
+func TestDrawSlides(t *testing.T) {
+	t.Parallel()
+
+	slide := regexp.MustCompile(`<li class="slide[^"]*"[^>]*>`)
+	for _, tt := range []struct{ lang, hint string }{{"en", "Scroll for the next slide"}, {"ja", "スクロールで次へ"}} {
+		src := "template: slides\nlang: " + tt.lang + "\ntitle: x\nslides:\n  - {heading: a, parts: [{text: t}]}\n  - {heading: b}\n  - {heading: c, parts: [{text: u}]}\n"
+		page, _, err := tmpl.Draw(floeKit(t), "sl.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+		if err != nil {
+			t.Fatal(told(err))
+		}
+		got := strings.Join(slide.FindAllString(string(page), -1), "\n")
+		want := `<li class="slide" data-total="3">` + "\n" + `<li class="slide divider" data-total="3" data-floe-look="band">` + "\n" + `<li class="slide" data-total="3">`
+		if got != want {
+			t.Errorf("%s: slides\n%s\nwant\n%s", tt.lang, got, want)
+		}
+		for _, want := range []string{`<header class="slide cover" data-floe-look="band">`, `<p class="hint">` + tt.hint + `</p>`} {
+			if !bytes.Contains(page, []byte(want)) {
+				t.Errorf("%s draws no %s", tt.lang, want)
+			}
+		}
+	}
+	page, _, err := tmpl.Draw(floeKit(t), "sl.yaml", []byte("template: slides\nlang: en\ntitle: x\nslides: [{heading: a}]\n"), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+	if want := `<li class="slide divider" data-total="1" data-floe-look="band">`; err != nil || !bytes.Contains(page, []byte(want)) {
+		t.Errorf("one slide draws no %s\n%s", want, told(err))
+	}
+}
+
+// slides refuses empty parts, a slide without a heading and a key of its own it does not know, by its schema.
+func TestSlidesRefused(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ data, want string }{
+		{"slides: [{heading: h, parts: []}]\n", "sl.yaml:4:30: minItems: got 0, want 1"},
+		{"slides: [{parts: [{text: t}]}]\n", "sl.yaml:4:11: missing property 'heading'"},
+		{"author: a\nslides: [{heading: h}]\n", "sl.yaml:1:1: additional properties 'author' not allowed"},
+	} {
+		_, _, err := tmpl.Draw(floeKit(t), "sl.yaml", []byte("template: slides\nlang: en\ntitle: x\n"+tt.data), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+		if got := told(err); got != tt.want {
+			t.Errorf("%q: %s, want %s", tt.data, got, tt.want)
+		}
+	}
+}
+
 // The example.yaml of each of floe's templates is drawn with every theme of floe. Pages drawn as develop drew
 // them are internal/corpus's.
 func TestDrawExamples(t *testing.T) {

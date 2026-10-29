@@ -8,6 +8,9 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：floe のテンプレート `slides`。1 枚ずつ見せるスライドで、帯の表紙の後に、画面の高さの枚
+  （見出しと report と同じ部品）を並べ、スクロールで 1 枚ずつ止めて右下に何枚目かを出す。見出しだけの枚は
+  話の区切りになり、印刷すると 1 枚が 1 ページになる。
 - 追加：floe の見た目 `numbered`。リストの項目に丸い番号を付け、次の項目へ線でつなぐ。部品 `steps`
   が借り、テンプレートは `<ol>` に `data-floe-look="numbered"` で借りる（runbook の手順もこれを借りる）。
 - 追加：floe のテンプレート `runbook`。打つコマンドと一緒に残す手順書で、始める前に確かめること、
@@ -33,8 +36,8 @@ floe の主要な変更を記録します。フォーマットは
   `floe template check`・`floe publish` が、誤りの後に
   `file:line:column: warning: message` で出す。ページは描き、終了コードも
   変えない。最初の警告は、`text` の部品（report の節と、design・handoff・adr・
-  postmortem・runbook の `more` の中、runbook の手順の `text`、`details`・`tabs` の
-  中も）の囲んだコードのブロックで、ただのコードとして描き、`code` か `terminal` に
+  postmortem・runbook の `more` の中、runbook の手順の `text`、slides の枚、
+  `details`・`tabs` の中も）の囲んだコードのブロックで、ただのコードとして描き、`code` か `terminal` に
   書くよう勧める。`text` は部品の 1 つになったので、自分の部品に `text` という
   名前があると断る。
 - 追加：図の部品 `tree`。木の節と子だけを書けば、floe が各節を親の下に置き、
