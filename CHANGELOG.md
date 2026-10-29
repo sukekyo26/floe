@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the diagram example `gantt` (`floe diagram example gantt`): bars for
+  how long tasks take and arrows for which task waits for which, here the
+  plan of one version of an app over six weeks.
 - Add the diagram example `quadrant` (`floe diagram example quadrant`):
   two axes that split items into four areas, here a notes app's feature
   ideas by their value and the effort they take.
