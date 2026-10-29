@@ -8,6 +8,9 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：`code`・`terminal`・`diff` の右上に、中身を写すボタン。code は書いたまま、
+  terminal はプロンプトと出力を除いたコマンドだけ、diff は書いたままを写し、
+  写したことを示す。長い行は、右端までスクロールすると、終わりがボタンの左に出る。
 - 追加：警告。ページのより良い書き方の勧めで、`floe check`・`floe render`・
   `floe template check`・`floe publish` が、誤りの後に
   `file:line:column: warning: message` で出す。ページは描き、終了コードも
