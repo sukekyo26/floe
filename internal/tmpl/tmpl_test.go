@@ -25,6 +25,25 @@ func told(err error) string {
 	return usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: ")
 }
 
+// handoff draws from its date alone: each count of a list left out is 0, and the sections left out are not drawn.
+func TestDrawHandoffDateAlone(t *testing.T) {
+	t.Parallel()
+
+	src := []byte("template: handoff\nlang: en\ntitle: Quiet day\ndate: 2030-05-14\n")
+	page, err := tmpl.Draw(floeKit(t), "handoff.yaml", src, tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	for _, id := range []string{"asks", "done", "doing", "next", "notes"} {
+		if bytes.Contains(page, []byte(`id="`+id+`"`)) {
+			t.Errorf("the section %s, left out, is drawn", id)
+		}
+	}
+	if n := bytes.Count(page, []byte("<b>0</b>")); n != 4 {
+		t.Errorf("%d counts of 0, want 4", n)
+	}
+}
+
 // The example.yaml of each of floe's templates is drawn with every theme of floe. Pages drawn as develop drew
 // them are internal/corpus's.
 func TestDrawExamples(t *testing.T) {
