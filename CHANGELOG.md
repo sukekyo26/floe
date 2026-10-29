@@ -12,7 +12,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   title on a band, then slides as tall as the screen, each a heading over
   parts as in `report`, where the scroll stops at each one, numbered in the
   corner; a slide of a heading alone stands between parts of the talk, and
-  in print each slide is a page.
+  in print each slide is a page. With `direction: across` the slides stand
+  side by side instead, moved by the ← and → keys or a swipe.
 - Add floe's look `numbered`, the items of a list numbered in rings with a
   line joining each to the next: the part `steps` takes it, and a template
   takes it with `data-floe-look="numbered"` on an `<ol>`, as runbook's steps
