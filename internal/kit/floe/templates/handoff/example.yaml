@@ -44,5 +44,5 @@ more:
   - heading: Links
     parts:
       - links:
-          - { title: Checkout designs, url: 'https://example.com/designs/checkout', text: The newest screens }
-          - { title: Release checklist, url: 'https://example.com/wiki/release', text: What to check before shipping }
+          - { title: Checkout designs, url: docs/checkout-designs.html, text: The newest screens }
+          - { title: Release checklist, url: docs/release-checklist.html, text: What to check before shipping }
