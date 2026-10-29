@@ -289,7 +289,7 @@ h1 { font-size: clamp(1.5rem, 4vw, 2.1rem); line-height: 1.35; }
 .authors { font-size: 0.9rem; }
 main { display: grid; gap: 2.2rem; padding-top: 2rem; }
 section { display: grid; gap: 0.7rem; align-content: start; }
-section > * { min-width: 0; }
+main > *, section > *, .side > * { min-width: 0; }
 h2 { font-size: 1.15rem; }
 .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr)); gap: 2.5rem; align-items: start; }
 .side { display: grid; gap: 2rem; }
@@ -302,7 +302,7 @@ h2 { font-size: 1.15rem; }
 .state { font-size: 0.8rem; font-weight: 700; padding: 0.05rem 0.6rem; border-radius: 99px; white-space: nowrap; background: var(--accent-soft); color: var(--accent); }
 .state.done { background: var(--good-soft); color: var(--good); }
 .state.todo { background: var(--warn-soft); color: var(--warn); }
-.ref { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+.ref { display: block; font-family: var(--mono); font-size: 0.85rem; color: var(--muted); }
 }
 }
 </style>
@@ -312,7 +312,7 @@ h2 { font-size: 1.15rem; }
 <div class="column">
 <p class="kind">Incident review <span class="date">2030-05-14</span> <span class="severity high">High</span></p>
 <h1 id="checkout-failed-for-47-minutes-after-a-certificate-expired">Checkout failed for 47 minutes after a certificate expired</h1>
-<p class="summary">The certificate of the payment gateway&#39;s internal endpoint expired at 10:42 UTC, so <code>POST /checkout</code> failed; every customer saw it until a new one was issued. See the <a href="/a/runbook-certs/">runbook</a>.</p><p class="authors">Written by: Payments team</p>
+<p class="summary">The certificate of the payment gateway&#39;s internal endpoint expired at 10:42 UTC, so <code>POST /checkout</code> failed; every customer saw it until a new one was issued. See the <a href="/a/runbook-certs/">runbook</a>.</p><p class="authors">Authors: Payments team</p>
 </div>
 </header>
 <main class="column">
@@ -342,8 +342,8 @@ h2 { font-size: 1.15rem; }
 <section><h2 id="actions">Actions</h2><div data-floe-look="table"><table>
 <thead><tr><th>Action</th><th>Owner</th><th>State</th></tr></thead>
 <tbody>
-<tr><td>Put every certificate under the renewal job <span class="ref">OPS-412</span></td><td>Platform team</td><td><span class="state doing">In progress</span></td></tr>
-<tr><td>Send expiry warnings to the on-call rota <span class="ref">OPS-413</span></td><td>Payments team</td><td><span class="state done">Done</span></td></tr>
+<tr><td>Put every certificate under the renewal job<span class="ref">OPS-412</span></td><td>Platform team</td><td><span class="state doing">In progress</span></td></tr>
+<tr><td>Send expiry warnings to the on-call rota<span class="ref">OPS-413</span></td><td>Payments team</td><td><span class="state done">Done</span></td></tr>
 <tr><td>Alert 14 days before any certificate expires, from <a href="/a/cert-inventory/">the inventory</a></td><td>Platform team</td><td><span class="state todo">To do</span></td></tr>
 </tbody>
 </table></div></section>

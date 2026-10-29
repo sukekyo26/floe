@@ -128,12 +128,21 @@ func TestDrawPostmortemLeftOut(t *testing.T) {
 		name, data string
 		want, not  []string
 	}{
-		{"no severity", "lang: en\nactions: [{what: w, state: done}]\n",
-			[]string{`<th>State</th>`, `<span class="state done">`}, []string{`class="severity`, `<th>Owner</th>`}},
-		{"no state", "lang: en\nseverity: low\nactions: [{what: w, owner: o}]\n",
-			[]string{`<span class="severity low">`, `<th>Owner</th>`, `<td>o</td>`}, []string{`class="state`, `<th>State</th>`}},
-		{"some states", "lang: ja\nactions: [{what: a, state: done}, {what: b}]\n",
-			[]string{`<th>状態</th>`, `<td><span class="state done">済み</span></td>`, `<td>b</td><td></td>`}, []string{`<th>担当</th>`}},
+		{
+			"no severity", "lang: en\nactions: [{what: w, state: done}]\n",
+			[]string{`<th>State</th>`, `<span class="state done">`},
+			[]string{`class="severity`, `<th>Owner</th>`},
+		},
+		{
+			"no state", "lang: en\nseverity: low\nactions: [{what: w, owner: o}]\n",
+			[]string{`<span class="severity low">`, `<th>Owner</th>`, `<td>o</td>`},
+			[]string{`class="state`, `<th>State</th>`},
+		},
+		{
+			"some states", "lang: ja\nactions: [{what: a, state: done}, {what: b}]\n",
+			[]string{`<th>状態</th>`, `<td><span class="state done">済み</span></td>`, `<td>b</td><td></td>`},
+			[]string{`<th>担当</th>`},
+		},
 	} {
 		page := drawPostmortem(t, tt.data)
 		for _, want := range tt.want {
