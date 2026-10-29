@@ -15,7 +15,7 @@ floe part check         # checks every part, look, shared schema and theme of yo
 floe part show quote    # prints its looks, schema and checks
 ```
 
-A mistake of a part, theme or template of your own stops every page drawn (`floe check`, `floe render`, `floe publish`), whether it uses that one or not, so that none goes unseen: `floe part check` and `floe template check` list them all.
+A mistake of a part, theme or template of your own stops every page drawn (`floe check`, `floe render`, `floe publish`), whether it uses that one or not, so that none goes unseen: `floe part check` and `floe template check` list them all. While you write one, make it in another directory and move it in once it is checked, as [templates.md](templates.md#make-one-in-another-directory) tells: set `FLOE_PARTS_DIR` or `FLOE_THEMES_DIR` to it and run `floe part check`.
 
 ## A part's files
 

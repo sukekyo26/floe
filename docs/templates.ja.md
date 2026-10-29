@@ -12,7 +12,28 @@ floe template check        # 自分のテンプレートを全部、example.yaml
 floe template show memo    # テーマ・schema・checks・見本を出す
 ```
 
-自分のテンプレートに誤りがあると、そのテンプレートで描くかどうかによらず（`report` のページも）、直すまでどのページも止めます。`floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（[commands.ja.md](commands.ja.md#サーバー)）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。
+自分のテンプレート・部品・テーマに誤りが 1 つあると、そのテンプレートで描くかどうかによらず（`report` のページも）、直すまでどのページも止めます。`floe check`・`floe render` も、サーバーの publish とリンクしたページもです。`floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（[commands.ja.md](commands.ja.md#サーバー)）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。
+
+### 別の置き場所で作る
+
+サーバーは、テンプレートを保存するとすぐ読み直すので、書きかけのテンプレートは、同じサーバーを使う人みんなのページを止めます。新しいテンプレートは別の置き場所で書き、確かめてから移してください。
+
+```sh
+export FLOE_TEMPLATES_DIR=~/.config/floe/staging-templates
+mkdir -p "$FLOE_TEMPLATES_DIR"
+floe template new memo                      # ~/.config/floe/staging-templates/memo を作る
+floe template check                         # 誤りが無くなるまで memo を直す
+floe render --out-dir /tmp/memo notes.yaml  # template: memo のデータファイル。/tmp/memo/notes.html を開く
+unset FLOE_TEMPLATES_DIR
+mkdir -p ~/.config/floe/templates
+mv ~/.config/floe/staging-templates/memo ~/.config/floe/templates/
+```
+
+- `floe template check` と `floe render` は、サーバーを使わずに描きます。変数を設定したまま `floe publish` しないでください。動いているサーバーは、起こしたときの置き場所で描くので断り、動いていなければ、publish が別の置き場所でサーバーを起こします。
+- `mv` の前に `~/.config/floe/templates` を作ってください。無いと、`mv` が `memo` の名前を `templates` に変えます。
+- 別の置き場所は、テンプレートと同じファイルシステムに置いてください。`mv` が 1 回で入れ替え、サーバーが写しかけを読むことがありません。
+- 今あるテンプレートを変えるときも、別の置き場所に写して直し、確かめてから、古いものと入れ替えます。
+- 部品も同じに作ります。`FLOE_PARTS_DIR` と、`floe part new`・`floe part check` を使います。テーマには `new` が無いので、`FLOE_THEMES_DIR` の中にディレクトリを手で作り（[parts.ja.md](parts.ja.md#テーマ)）、`floe part check` で確かめます。
 
 ## ファイル
 
