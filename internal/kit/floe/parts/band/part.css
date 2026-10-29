@@ -1,0 +1,13 @@
+/* A band filled with the accent: its text, links, code and focus ring in the colour on a fill, as the accent's
+   text and the soft ground of code would sink into it.
+   LIMIT: the focus ring is not measured by a test; it was looked at in photos, in default and brutal, when the look was made */
+:scope { background: var(--accent); color: var(--on-fill); }
+:scope a { color: inherit; }
+:scope :not(pre) > code { background: none; border: 1px solid color-mix(in srgb, var(--on-fill) 55%, transparent); color: inherit; }
+:scope :focus-visible { outline-color: var(--on-fill); }
+/* A part in the band draws on its own ground, in the page's text colour, which it would otherwise take from the band.
+   LIMIT: a part with no ground of its own (a pill, links without a panel) is drawn in that colour on the accent; give it a
+   panel, or keep it out of the band */
+:scope [data-floe-part] { color: var(--fg); }
+/* The band's text reads only on its ground, which print leaves out unless asked to keep it */
+@media print { :scope { print-color-adjust: exact; } }

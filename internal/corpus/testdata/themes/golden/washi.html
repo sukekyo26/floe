@@ -71,6 +71,8 @@ blockquote > * + * { margin-top: 0.6rem; }
   --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
   /* How wide prose grows, which a template sets for its page on :scope */
   --text-width: 56rem;
+  /* The column a template centres its page in: its width, without the pad each side of it */
+  --page-width: 96rem; --page-pad: 16px;
   color-scheme: light;
 }
 }
@@ -433,15 +435,13 @@ blockquote {
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *) {
 /* The colours and faces are the theme's palette; the page lays them out */
-:scope {
-  /* The width of the whole body; that of prose is the palette's */
-  --page-width: 96rem;
-}
 body {
-  margin: 0; font-size: 16px; line-height: 1.85; padding-inline: 16px; padding-block: 2.5rem 4rem;
+  margin: 0; font-size: 16px; line-height: 1.85; padding-block: 2.5rem 4rem;
 }
-main { max-width: var(--page-width); margin-inline: auto; display: grid; gap: 2.5rem; }
-main > *, section > * { min-width: 0; }
+main {
+  max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad);
+  display: grid; gap: 2.5rem;
+}
 h1 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: 0.01em; }
 h2 { font-size: 1.4rem; }
 header { display: grid; gap: 0.7rem; }

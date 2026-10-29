@@ -1,0 +1,54 @@
+# A design: the background and goals are what it needs; options weighed go in decisions, each option taken marked
+# with pick, which heads the page, and what is decided without weighing options in decided. Sections of your own,
+# each a heading over parts as in report, go in more.
+template: design
+lang: en
+title: Send notifications through a queue
+status: In review
+owner: Platform team
+date: 2030-05-14
+summary: Notifications leave the web request and go out from a queue, so that a slow mail server never slows a page.
+background: |
+  Today a notification is sent **inside the web request** that causes it: saving a comment sends its email before the
+  page answers. When the mail provider is slow, so is the page, and a provider outage turns into failed saves.
+
+  Last month 2% of comment saves took over five seconds, all of them waiting on the mail provider.
+goals:
+  - A page answers without waiting for any notification
+  - A notification that fails is tried again, and none is lost
+  - Email, push and chat go out the same way
+non_goals:
+  - Changing what the notifications say
+  - A user's settings of which notifications they get
+decisions:
+  - question: Which queue
+    why: It needs no new service to run, and the load is well within what the database takes
+    options:
+      - title: A table in the database we have
+        pick: Recommended
+        pros: ['No new service to run or watch', 'Written in the same transaction as the comment']
+        cons: ['Polling adds load to the database']
+      - title: A message broker
+        pros: ['Made for this, and scales further']
+        cons: ['A new service to run, watch and back up']
+  - question: How to try a failed `send` again
+    options:
+      - title: Back off exponentially
+        text: 1 minute, then 2, 4 and on, up to a day.
+      - title: A fixed delay
+        text: Every 5 minutes, up to 50 times.
+decided:
+  - A notification is written to the queue in the same transaction as what causes it
+  - Workers take at most `20` notifications at a time
+  - A notification still failing after a day is kept, marked **dead**, for a person to look at
+impact:
+  - { what: Web app, text: Writes to the queue instead of sending; answers faster }
+  - { what: Database, text: 'A new table `notifications`, polled by the workers' }
+  - { what: Operations, text: Two worker processes to deploy and watch }
+more:
+  - heading: Rollout
+    parts:
+      - steps:
+          - { title: Write to the queue and send in the request, text: 'Both ways for a week, comparing what goes out.' }
+          - { title: Send from the workers only }
+          - { title: Remove the sending from the web app }

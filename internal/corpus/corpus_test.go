@@ -389,17 +389,30 @@ func firstDiff(got, want []byte) (int, string, string, bool) {
 	return 0, "", "", false
 }
 
-// The sample example is the example.yaml of floe's report, as it is: its page is the one develop drew of it.
-func TestExampleIsReport(t *testing.T) {
+// The sample example holds the example.yaml of each of floe's templates as it is, as <name>.yaml, and no other
+// data file: its pages are the ones develop drew of them.
+func TestExamplesAreFloes(t *testing.T) {
 	t.Parallel()
 
 	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, _ := k.Template("report")
-	b, err := os.ReadFile(filepath.Join("testdata", "example", "example.yaml"))
-	if err != nil || !bytes.Equal(b, report.Example()) {
-		t.Errorf("testdata/example/example.yaml is not report's example.yaml (%v): copy it again", err)
+	_, _, _, templates := k.Names()
+	for _, name := range templates {
+		tpl, _ := k.Template(name)
+		b, readErr := os.ReadFile(filepath.Join("testdata", "example", name+".yaml"))
+		if readErr != nil || !bytes.Equal(b, tpl.Example()) {
+			t.Errorf("testdata/example/%s.yaml is not %s's example.yaml (%v): copy it again", name, name, readErr)
+		}
+	}
+	found, err := filepath.Glob(filepath.Join("testdata", "example", "*.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range found {
+		if name := strings.TrimSuffix(filepath.Base(file), ".yaml"); !slices.Contains(templates, name) {
+			t.Errorf("%s is the example of no template of floe's: remove it", file)
+		}
 	}
 }
