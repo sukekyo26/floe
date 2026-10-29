@@ -12,9 +12,9 @@ dot 510,280 503,273 14x14
 dot 510,332 503,325 14x14
 dot 90,460 83,453 14x14
 dot 270,460 263,453 14x14
-edge [60,400]→[60,40] M60,400 V40
-edge [80,420]→[880,420] M80,420 H880
-label "More value" 19,13 82x18
+edge [60,420]→[60,40] M60,420 V40
+edge [60,420]→[880,420] M60,420 H880
+label "More value" 19,7 82x18
 label "More effort" 795.8,431 89.2x18
 label "Dark mode" 117,91 82x18
 label "Share a note by a link" 117,143 168.4x18
