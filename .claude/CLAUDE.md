@@ -57,6 +57,11 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **ブラウザのテストは `internal/browsertest` に置く**：Chrome は 1 つを起こし、全部のテストが順に使う。サーバーは `internal/servetest` で本当のポートに起こし、publish は CLI（`cli.Run`）で行う。管理ページの動きと見た目でブラウザで確かめない所は、そのパッケージの `LIMIT:` にある
 - **動くスタイルは止まってから読む**：ブラウザのテストで、transition・animation のかかる性質の値を、期待を知らずに読んで記録するときは `settled` で読み、動きが止まるのを待つだけのときは `still` で待つ（どちらも、ページ全体の終わりのある動きを待つ）。期待の値まで待つ読みは `until` のまま。決まった時間の sleep で動きを待たない
 - **Chrome は版を決めて入れる**：テストは `FLOE_CHROME`、無ければ PATH で Chrome を探し、手元で見つからなければ飛ばす。CI では、版を決めた Chrome for Testing を `FLOE_CHROME` で渡し、無ければ落とす。版は go-ci.yml の `CHROME_VERSION` 1 か所で、上げるのは手で
+- **組み込みのテンプレートは汎用**：floe の組み込みのテンプレートは、どのプロジェクトでも使う一般的な文書の形にする。floe の開発の流れだけの段は決まった段にせず、任意の節に書かせる。見本（example.yaml）の中身も一般的な題材にする。必須は、その文書が成り立たない段だけにする
+- **組み込みは schema だけで断る**：組み込みのテンプレートは checks.yaml を持たず、断るのは schema（必須・型・知らない鍵・空の字）だけ。見れば分かる誤り（判断に推しが 2 つ、など）は `LIMIT:` にする。例外は、前からある report の checks.yaml（節の直下の text の中のコードの囲みを断る）だけで、floe に警告の仕組みができたら、その PR で警告に替えて外す
+- **本文の列は 1 つの書き方**：どのテンプレートも、本文の列を `max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad)` で書く。`--page-width` と `--page-pad` はパレットの 1 か所だけに置く。1 列のページは max-width の幅だけを `--text-width` から決める
+- **目次の id はテンプレートが付ける**：テンプレートが自分の段へリンクするときは、page.html が言語によらない決まった id を見出しに付ける。floe が見出しの字から作る id に頼らない
+- **組み込みの言葉はそろえる**：floe の words.yaml は、どれも en を持ち、どの言語も en と同じ鍵を持つ（テストが floe の下の words.yaml を全部探して確かめる）
 
 決まりは、それを入れた PR がこのファイルに足す。
 

@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add floe's template `design`, a design document with its conclusion first:
+  the background and goals it needs, then the non-goals, decisions each a
+  question over the part `options` (the option marked with `pick` is put at
+  the top of the page, one without is shown as undecided), what is decided
+  without options, what it touches, and sections of your own as in `report`.
 - Add a button over `code`, `terminal` and `diff` that copies them: the code,
   the commands without their prompt or output, the diff as written. It says
   "Copied" in the page's language, and still copies where the page may not
