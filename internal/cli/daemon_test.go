@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/sukekyo26/floe/internal/cli"
 	"github.com/sukekyo26/floe/internal/daemon"
 	"github.com/sukekyo26/floe/internal/server"
@@ -67,34 +69,75 @@ func copySelf(dir string) (string, error) {
 	return bin, os.WriteFile(bin, append(b, 0), 0o700) //nolint:wrapcheck // as above
 }
 
-// handedOut are the ports given to the tests running now, so that two never share one.
-var handedOut sync.Map
-
-// freePort returns a port free now and given to no other test running now, below the ports the system gives
-// out for :0, for a server a publish starts on it later.
+// freePort returns a port free now and held for this test alone on this machine, below the ports the system gives
+// out for :0, for a server a publish starts on it later: a lock of the port's file, which another test, in this
+// process or another (a just ci of another worktree), cannot take until this one ends.
 // LIMIT: a system set to give out ports from below 32768 may still give it; read its range if a CI comes to.
+// LIMIT: a program other than these tests may take the port between its check here and the publish's bind, or while
+// TestRestartOnAnotherBuild replaces the server; take the port from the publish if that comes to happen.
+// LIMIT: what took a port of these tests on a CI runner once (a run of 2026-10-27, which runs one process of them) is
+// not known; narrow it down by the line and the port if it fails again.
+// LIMIT: tests of another TMPDIR do not see the locks; give them one if two such runs share a machine.
 func freePort(t *testing.T) int {
 	t.Helper()
 
 	for range 100 {
-		port := 20000 + rand.IntN(12768) //nolint:gosec // G404: a port to try, no secret
-		if _, taken := handedOut.LoadOrStore(port, true); taken {
-			continue
+		if port := 20000 + rand.IntN(12768); hold(t, port) { //nolint:gosec // G404: a port to try, no secret
+			return port
 		}
-		var lc net.ListenConfig
-		ln, err := lc.Listen(t.Context(), "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
-		if err != nil {
-			handedOut.Delete(port)
-			continue
-		}
-		t.Cleanup(func() { handedOut.Delete(port) })
-		if ln.Close() != nil {
-			t.Fatal("no free port")
-		}
-		return port
 	}
 	t.Fatal("no free port")
 	return 0
+}
+
+// hold locks port for t until it ends, when no other test holds it and nothing listens on it.
+func hold(t *testing.T, port int) bool {
+	t.Helper()
+
+	lock, err := os.OpenFile(filepath.Join(portLocks(t), strconv.Itoa(port)), os.O_RDONLY|os.O_CREATE, 0o600) //nolint:gosec // G304: the tests' own
+	if err != nil {
+		t.Fatal(err)
+	}
+	fd := int(lock.Fd()) //nolint:gosec // G115: a descriptor fits an int
+	if unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB) != nil {
+		_ = lock.Close() //nolint:errcheck // nothing written
+		return false
+	}
+	// Closing it lets the lock go, however the test ends from here.
+	t.Cleanup(func() { _ = lock.Close() }) //nolint:errcheck // as above
+	if !free(t, port) {
+		_ = lock.Close() //nolint:errcheck // as above; the cleanup's close then does nothing
+		return false
+	}
+	return true
+}
+
+// portLocks is the directory of the locks of the ports, one per user: another's, made 0o700, could not be opened.
+// A lock's file stays: removing it would let another process lock a new file of the same name beside it.
+// LIMIT: up to 12768 empty files gather in it, one per port tried; remove the directory when no test runs if they come to matter.
+func portLocks(t *testing.T) string {
+	t.Helper()
+
+	dir := filepath.Join(os.TempDir(), "floe-test-ports-"+strconv.Itoa(os.Getuid()))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+// free is whether nothing listens on port now.
+func free(t *testing.T, port int) bool {
+	t.Helper()
+
+	var lc net.ListenConfig
+	ln, err := lc.Listen(t.Context(), "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
+	if err != nil {
+		return false
+	}
+	if ln.Close() != nil {
+		t.Fatal("no free port")
+	}
+	return true
 }
 
 // denv is a store, a home and a free port in a temporary directory, with the server a publish starts there
@@ -108,13 +151,20 @@ type denv struct {
 func newDenv(t *testing.T) *denv {
 	t.Helper()
 
+	return newDenvOn(t, freePort(t))
+}
+
+// newDenvOn is newDenv on port, which the test holds.
+func newDenvOn(t *testing.T, port int) *denv {
+	t.Helper()
+
 	tmp, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	port := strconv.Itoa(freePort(t))
-	e := &denv{tmp: tmp, port: port, vars: map[string]string{
-		"HOME": filepath.Join(tmp, "home"), "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": port, "BROWSER": "true",
+	p := strconv.Itoa(port)
+	e := &denv{tmp: tmp, port: p, vars: map[string]string{
+		"HOME": filepath.Join(tmp, "home"), "FLOE_DIR": filepath.Join(tmp, "store"), "FLOE_PORT": p, "BROWSER": "true",
 	}}
 	if err := os.MkdirAll(e.vars["HOME"], 0o700); err != nil {
 		t.Fatal(err)
@@ -198,6 +248,17 @@ func wantRun(t *testing.T, what string, got result, code int, stdout, stderr str
 	}
 }
 
+// A port another test holds is not held again though nothing listens on it. The test holds it twice in one process;
+// another process is refused alike, as flock locks a file opened, not a process.
+func TestHoldSkipsHeld(t *testing.T) {
+	t.Parallel()
+
+	port := freePort(t)
+	if hold(t, port) {
+		t.Errorf("port %d, held by this test, was held again", port)
+	}
+}
+
 // A publish starts the server, one of another build replaces it once, and two racing to replace it both succeed.
 func TestRestartOnAnotherBuild(t *testing.T) {
 	t.Parallel()
@@ -276,12 +337,18 @@ func TestPublishToAnotherServer(t *testing.T) {
 	}
 	e.vars["FLOE_DIR"] = filepath.Join(e.tmp, "store")
 
-	o := newDenv(t)
+	// Another program on a port: one the system picks and this test holds, so that no other can take it.
 	var lc net.ListenConfig
-	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:"+o.port)
+	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = ln.Close() }) //nolint:errcheck // closed by srv.Close too, when it serves
+	addr, ok := ln.Addr().(*net.TCPAddr)
+	if !ok {
+		t.Fatalf("a TCP listener on %v", ln.Addr())
+	}
+	o := newDenvOn(t, addr.Port)
 	srv := &http.Server{Handler: http.NotFoundHandler(), ReadHeaderTimeout: time.Second}
 	go func() { _ = srv.Serve(ln) }() //nolint:errcheck // closed by the cleanup
 	t.Cleanup(func() { _ = srv.Close() })
