@@ -87,14 +87,17 @@ type bar struct {
 	Width       float64
 }
 
-// barsOf gives each of the items of a bars part, each a label and a value no less than 0, its width.
+// barsOf gives each of the items of a bars part, each written as keys and values, a label and a value no less
+// than 0, its width.
 func barsOf(items []any) ([]bar, error) {
 	bars := make([]bar, 0, len(items))
 	longest := 0.0
-	for _, item := range items {
+	// LIMIT: i counts in the list given to bars, which a part.html may call twice or give a list under its value;
+	// say where the list is if one misleads.
+	for i, item := range items {
 		m, ok := item.(map[string]any)
 		if !ok {
-			continue
+			return nil, usererr.New("kit_bar_item", "bars", i+1)
 		}
 		n, err := float("bars", m["value"])
 		if err != nil {

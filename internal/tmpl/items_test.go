@@ -455,8 +455,8 @@ func TestZgotmplZ(t *testing.T) {
 	}
 }
 
-// A value of a part of one's own that bars refuses, below 0 or not a number, is told at the part's value: bars knows
-// only what it is given, not where that is in the part's value.
+// An item of a part of one's own that bars refuses, one not written as keys and values or a value below 0 or not a
+// number, is told at the part's value: bars knows only what it is given, not where that is in the part's value.
 func TestPartBarsRefused(t *testing.T) {
 	t.Parallel()
 
@@ -467,14 +467,15 @@ func TestPartBarsRefused(t *testing.T) {
 		"pb/part.css":    "",
 	}
 	k := ownKit(t, parts, mine(htmlPage("{{.Data.b}}"), head+`{"b": {"$ref": "floe:///parts/pb.json"}}}`, nil))
-	for _, tt := range []struct{ value, want string }{
-		{"-2", "d.yaml:4:3: bars takes a number of 0 or more, not -2"},
-		{"x", "d.yaml:4:3: bars takes a number, not x (string)"},
-		{"0", ""},
+	for _, tt := range []struct{ item, want string }{
+		{"{label: b, value: -2}", "d.yaml:4:3: bars takes a number of 0 or more, not -2"},
+		{"{label: b, value: x}", "d.yaml:4:3: bars takes a number, not x (string)"},
+		{"{label: b, value: 0}", ""},
+		{"3", "d.yaml:4:3: bars takes items written as keys and values (label, value, tone); item 2 is not"},
 	} {
-		data := "lang: en\ntemplate: mine\nb:\n  items:\n    - {label: a, value: 3}\n    - {label: b, value: " + tt.value + "}\n"
+		data := "lang: en\ntemplate: mine\nb:\n  items:\n    - {label: a, value: 3}\n    - " + tt.item + "\n"
 		if got := drawn(t, k, data, none); got != tt.want {
-			t.Errorf("value %s: told %q, want %q", tt.value, got, tt.want)
+			t.Errorf("item %s: told %q, want %q", tt.item, got, tt.want)
 		}
 	}
 }
