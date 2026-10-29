@@ -98,6 +98,78 @@ func TestDrawAdrStates(t *testing.T) {
 	}
 }
 
+// postmortem draws each severity and each state of an action in its own class and word.
+func TestDrawPostmortem(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ lang, level, levelWord, state, stateWord string }{
+		{"en", "high", "High", "todo", "To do"},
+		{"en", "medium", "Medium", "doing", "In progress"},
+		{"en", "low", "Low", "done", "Done"},
+		{"ja", "high", "重大", "todo", "これから"},
+		{"ja", "medium", "中程度", "doing", "作業中"},
+		{"ja", "low", "軽微", "done", "済み"},
+	} {
+		page := drawPostmortem(t, "lang: "+tt.lang+"\nseverity: "+tt.level+"\nactions: [{what: w, state: "+tt.state+"}]\n")
+		for _, want := range []string{`<span class="severity ` + tt.level + `">` + tt.levelWord + `</span>`, `<span class="state ` + tt.state + `">` + tt.stateWord + `</span>`} {
+			if !bytes.Contains(page, []byte(want)) {
+				t.Errorf("%s %s %s draws no %s", tt.lang, tt.level, tt.state, want)
+			}
+		}
+	}
+}
+
+// postmortem draws no badge for a severity left out, and the owner and state columns of its actions only when an
+// action has one; an action without a state has an empty cell.
+func TestDrawPostmortemLeftOut(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name, data string
+		want, not  []string
+	}{
+		{
+			"no severity", "lang: en\nactions: [{what: w, state: done}]\n",
+			[]string{`<th>State</th>`, `<span class="state done">`},
+			[]string{`class="severity`, `<th>Owner</th>`},
+		},
+		{
+			"no state", "lang: en\nseverity: low\nactions: [{what: w, owner: o}]\n",
+			[]string{`<span class="severity low">`, `<th>Owner</th>`, `<td>o</td>`},
+			[]string{`class="state`, `<th>State</th>`},
+		},
+		{
+			"some states", "lang: ja\nactions: [{what: a, state: done}, {what: b}]\n",
+			[]string{`<th>状態</th>`, `<td><span class="state done">済み</span></td>`, `<td>b</td><td></td>`},
+			[]string{`<th>担当</th>`},
+		},
+	} {
+		page := drawPostmortem(t, tt.data)
+		for _, want := range tt.want {
+			if !bytes.Contains(page, []byte(want)) {
+				t.Errorf("%s draws no %s", tt.name, want)
+			}
+		}
+		for _, not := range tt.not {
+			if bytes.Contains(page, []byte(not)) {
+				t.Errorf("%s draws %s", tt.name, not)
+			}
+		}
+	}
+}
+
+// drawPostmortem draws a postmortem of the required keys and data.
+func drawPostmortem(t *testing.T, data string) []byte {
+	t.Helper()
+
+	src := "template: postmortem\ntitle: x\nsummary: s\ntimeline: [{date: '10:42', title: t}]\ncause: c\n" + data
+	page, _, err := tmpl.Draw(floeKit(t), "pm.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	return page
+}
+
 // The example.yaml of each of floe's templates is drawn with every theme of floe. Pages drawn as develop drew
 // them are internal/corpus's.
 func TestDrawExamples(t *testing.T) {

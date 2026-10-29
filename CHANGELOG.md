@@ -8,9 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add floe's template `postmortem`, an incident review written without blame:
+  a summary on a band with its severity (high, medium or low, red for high
+  alone), the impact, a timeline drawn with the part `timeline`, the cause,
+  what went well, badly and by luck, and the actions with their owners and
+  states (to do, in progress, done).
 - Add floe's look `band`, a band filled with the accent whose text, links,
   code and focus ring are in the colour on a fill: a template takes it with
-  `data-floe-look="band"`, as design's conclusion and handoff's head do.
+  `data-floe-look="band"`, as design's conclusion and the heads of handoff and
+  postmortem do.
 - Add floe's template `adr`, a decision record on a sheet: its status stamped
   under the title (proposed, accepted, rejected, deprecated or superseded, a
   superseded record naming the one that superseded it), the context, the
@@ -29,8 +35,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `floe render`, `floe template check` and `floe publish` print after the
   mistakes as `file:line:column: warning: message`, leaving the page drawn and
   the exit code as it is. The first is a fenced block of code in a `text` part,
-  in a section (report's, and `more` of design, handoff and adr) or in
-  `details` and `tabs`: it is drawn as plain code, and the
+  in a section (report's, and `more` of design, handoff, adr and postmortem) or
+  in `details` and `tabs`: it is drawn as plain code, and the
   warning says to write it in `code` or `terminal`. `text` is a part of its own,
   so a part of your own named `text` is refused.
 - Add the diagram part `tree`: write the nodes of a tree and their children,
