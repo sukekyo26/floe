@@ -1,8 +1,7 @@
 /* The colours and faces are the theme's palette; the page lays them out: what to check, a caution, the steps numbered
-   under a line to the next, and how to roll back, in one column as wide as prose and the numbers.
-   LIMIT: the numbers shrink under 30rem; a width just around it is not looked at */
+   under a line to the next (the look numbered), and how to roll back, in one column as wide as prose and the numbers */
 body { margin: 0; padding-block: 2.5rem 4rem; font-size: 16px; line-height: 1.75; }
-.column { max-width: calc(var(--text-width) + 4rem + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); display: grid; gap: 2rem; }
+.column { max-width: calc(var(--text-width) + 3rem + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); display: grid; gap: 2rem; }
 header { display: grid; gap: 0.4rem; justify-items: start; }
 .kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; }
 .kind .name { color: var(--accent); font-weight: 700; }
@@ -13,27 +12,14 @@ h2 { font-size: 1.15rem; }
 .needs { padding: 1rem 1.3rem; }
 .caution { background: var(--warn-soft); color: var(--warn); font-weight: 700; padding: 0.6rem 1rem; border-radius: 6px; max-width: none; }
 .caution a { color: inherit; }
-.steps { list-style: none; padding: 0; gap: 0; counter-reset: step; max-width: none; }
-.steps > li { counter-increment: step; position: relative; padding: 0 0 1.8rem 4rem; display: grid; gap: 0.6rem; }
-.steps > li > * { min-width: 0; }
-.steps > li::before {
-  content: counter(step); position: absolute; left: 0; top: -0.15rem; width: 2.6rem; height: 2.6rem; display: grid; place-items: center;
-  border-radius: 50%; background: var(--accent); color: var(--on-fill); font-weight: 800; font-size: 1.1rem; font-family: var(--mono);
-}
-.steps > li:not(:last-child)::after { content: ""; position: absolute; left: 1.25rem; top: 2.7rem; bottom: 0.3rem; width: 2px; background: var(--line); }
+.steps > li { gap: 0.6rem; }
+.steps > li::before { background: var(--accent); color: var(--on-fill); box-shadow: none; }
 .steps .head { display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: baseline; }
 .steps h3 { font-size: 1.1rem; }
 .who { font-size: 0.75rem; font-weight: 700; padding: 0 0.6rem; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
 .fails { border-left: 4px solid var(--bad); background: var(--bad-soft); padding: 0.4rem 0.8rem; border-radius: 0 6px 6px 0; max-width: none; }
 .fails b { color: var(--bad); margin-right: 0.4rem; }
 .fails a { color: inherit; }
-.rollback { border: 2px dashed var(--bad); border-radius: 10px; padding: 1rem 1.3rem 0; }
+.rollback { border: 2px dashed var(--bad); border-radius: 10px; padding: 1rem 1.3rem; }
 .rollback h2 { color: var(--bad); }
 .rollback .steps > li::before { background: var(--bad); }
-/* On a narrow screen the numbers shrink, to leave the commands their width */
-@media (max-width: 30rem) {
-  .steps > li { padding-left: 2.6rem; }
-  .steps > li::before { width: 1.9rem; height: 1.9rem; font-size: 0.95rem; top: 0; }
-  .steps > li:not(:last-child)::after { left: 0.9rem; top: 2.1rem; }
-  .rollback { padding-inline: 0.8rem; }
-}

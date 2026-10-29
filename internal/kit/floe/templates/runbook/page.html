@@ -30,7 +30,7 @@
 </body>
 </html>
 {{- /* steps and rollback are steps of one shape, drawn here */}}
-{{- define "procedure"}}<ol class="steps">
+{{- define "procedure"}}<ol class="steps" data-floe-look="numbered">
 {{- range .}}
 <li><div class="head"><h3>{{markdownLine .title}}</h3>{{with .who}}<span class="who">{{.}}</span>{{end}}</div>
 {{- with .text}}{{.}}{{end}}

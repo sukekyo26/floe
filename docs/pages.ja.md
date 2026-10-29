@@ -56,7 +56,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 `postmortem` は、人を責めずに書く障害の振り返りです。`summary`（Markdown の 1 行。アクセントの色で塗った帯の中）・`timeline`・`cause`（Markdown）が必須です。`date`・`severity`（`high`・`medium`・`low`。帯の中の札で、赤は `high` だけ）・`authors` が頭に出て、`effects` は影響（部品 `facts` と同じ `name` と `value`）、`timeline` は部品 `timeline` の値（書いた順に描き、`date` は `10:42` のような書いたままの字）、`lessons` はうまくいったこと（`good`）・まずかったこと（`bad`）・運が良かったこと（`lucky`）の行、`actions` は `what`（Markdown の 1 行）・`owner`・`state`（`todo`・`doing`・`done`。札）・`ref`（チケットなど）の行、`more` は report と同じ自分の節です。`date`・`authors`・`owner`・`ref`・`more` の見出しは書いたままの字です。
 
-`runbook` は、何度も行う作業を、打つコマンドと一緒に残す手順書です。必須は `steps` だけで、1 つずつ `title`（Markdown の 1 行）・`who`（読む人のほかが行うとき。題の横の札）・`text`（部品 `text`。囲んだコードは警告するので、コマンドは `run` に書く）・`run`（部品 `terminal` の値。写すボタン付き）・`if_fails`（Markdown の 1 行。書いたとおりにいかなかったときにすること）を書きます。`rollback` は同じ形の手順で、戻し方を別の枠に描きます。`summary`（Markdown の 1 行）・`owner`・`updated`（書いたままの字）が頭に出て、`needs` は始める前に確かめること（Markdown の 1 行ずつ）、`caution` は作業の間にしてはいけないこと（Markdown の 1 行。手順の前）、`more` は report と同じ自分の節です。
+`runbook` は、何度も行う作業を、打つコマンドと一緒に残す手順書です。必須は `steps` と、各手順の `title`（`rollback` の手順も）だけで、1 つずつ `title`（Markdown の 1 行）・`who`（読む人のほかが行うとき。題の横の札）・`text`（部品 `text`。囲んだコードは警告するので、コマンドは `run` に書く）・`run`（部品 `terminal` の値。写すボタン付き）・`if_fails`（Markdown の 1 行。書いたとおりにいかなかったときにすること）を書きます。`rollback` は同じ形の手順で、戻し方を別の枠に描きます。`summary`（Markdown の 1 行）・`owner`・`updated`（最後に直した日。書いたままの字）が頭に出て、`needs` は始める前に確かめること（Markdown の 1 行ずつ）、`caution` は作業の間にしてはいけないこと（Markdown の 1 行。手順の前）、`more` は report と同じ自分の節です。
 
 ## 部品
 

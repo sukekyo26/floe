@@ -17,7 +17,7 @@
     "updated": {
       "type": "string",
       "minLength": 1,
-      "description": "When it was last run or checked, as written"
+      "description": "When it was last updated, as written"
     },
     "needs": {
       "type": "array",

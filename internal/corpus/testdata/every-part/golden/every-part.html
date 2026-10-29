@@ -583,11 +583,9 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="steps"]) to (:scope [data-floe-part] > *) {
-/* A step's mark is its number, a tick once done; a line joins it to the next, coloured once it is done */
-:scope {
-  list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; counter-reset: floe-step;
-  max-width: none;
-}
+/* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
+   rings and lines of its own states */
+:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; max-width: none; }
 :scope > li { position: relative; counter-increment: floe-step; display: grid; gap: 0.15rem; padding: 0.2rem 0 1.3rem 3rem; min-height: 2rem; }
 :scope > li:last-child { padding-bottom: 0.2rem; }
 :scope > li::before {
@@ -599,6 +597,14 @@ blockquote > * + * { margin-top: 0.6rem; }
   content: ""; position: absolute; left: calc(1rem - 1px); top: 2.35rem; bottom: 0.35rem; width: 2px; border-radius: 1px;
   background: var(--line);
 }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="steps"]) to (:scope [data-floe-part] > *) {
+/* A step's mark is its number, a tick once done; a line joins it to the next, coloured once it is done */
+:scope { margin: 0; padding: 1.1rem 1.3rem; }
 :scope > li.done::before { content: "✓"; background: var(--good); color: var(--on-fill); box-shadow: none; }
 :scope > li.done::after { background: var(--good); }
 :scope > li.doing::before { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }

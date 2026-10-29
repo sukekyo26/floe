@@ -127,6 +127,26 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 </style>
 <style>
+@layer floe.looks {
+@scope ([data-floe-look~="numbered"]) to (:scope [data-floe-part] > *) {
+/* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
+   rings and lines of its own states */
+:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; max-width: none; }
+:scope > li { position: relative; counter-increment: floe-step; display: grid; gap: 0.15rem; padding: 0.2rem 0 1.3rem 3rem; min-height: 2rem; }
+:scope > li:last-child { padding-bottom: 0.2rem; }
+:scope > li::before {
+  content: counter(floe-step); position: absolute; left: 0; top: 0; display: grid; place-items: center;
+  width: 2rem; height: 2rem; border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
+}
+:scope > li:not(:last-child)::after {
+  content: ""; position: absolute; left: calc(1rem - 1px); top: 2.35rem; bottom: 0.35rem; width: 2px; border-radius: 1px;
+  background: var(--line);
+}
+}
+}
+</style>
+<style>
 @layer floe.parts {
 @scope ([data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
 /* Always dark, as code in an editor is; the language stands at the right of the heading */
@@ -216,10 +236,9 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: what to check, a caution, the steps numbered
-   under a line to the next, and how to roll back, in one column as wide as prose and the numbers.
-   LIMIT: the numbers shrink under 30rem; a width just around it is not looked at */
+   under a line to the next (the look numbered), and how to roll back, in one column as wide as prose and the numbers */
 body { margin: 0; padding-block: 2.5rem 4rem; font-size: 16px; line-height: 1.75; }
-.column { max-width: calc(var(--text-width) + 4rem + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); display: grid; gap: 2rem; }
+.column { max-width: calc(var(--text-width) + 3rem + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); display: grid; gap: 2rem; }
 header { display: grid; gap: 0.4rem; justify-items: start; }
 .kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; }
 .kind .name { color: var(--accent); font-weight: 700; }
@@ -230,30 +249,17 @@ h2 { font-size: 1.15rem; }
 .needs { padding: 1rem 1.3rem; }
 .caution { background: var(--warn-soft); color: var(--warn); font-weight: 700; padding: 0.6rem 1rem; border-radius: 6px; max-width: none; }
 .caution a { color: inherit; }
-.steps { list-style: none; padding: 0; gap: 0; counter-reset: step; max-width: none; }
-.steps > li { counter-increment: step; position: relative; padding: 0 0 1.8rem 4rem; display: grid; gap: 0.6rem; }
-.steps > li > * { min-width: 0; }
-.steps > li::before {
-  content: counter(step); position: absolute; left: 0; top: -0.15rem; width: 2.6rem; height: 2.6rem; display: grid; place-items: center;
-  border-radius: 50%; background: var(--accent); color: var(--on-fill); font-weight: 800; font-size: 1.1rem; font-family: var(--mono);
-}
-.steps > li:not(:last-child)::after { content: ""; position: absolute; left: 1.25rem; top: 2.7rem; bottom: 0.3rem; width: 2px; background: var(--line); }
+.steps > li { gap: 0.6rem; }
+.steps > li::before { background: var(--accent); color: var(--on-fill); box-shadow: none; }
 .steps .head { display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: baseline; }
 .steps h3 { font-size: 1.1rem; }
 .who { font-size: 0.75rem; font-weight: 700; padding: 0 0.6rem; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
 .fails { border-left: 4px solid var(--bad); background: var(--bad-soft); padding: 0.4rem 0.8rem; border-radius: 0 6px 6px 0; max-width: none; }
 .fails b { color: var(--bad); margin-right: 0.4rem; }
 .fails a { color: inherit; }
-.rollback { border: 2px dashed var(--bad); border-radius: 10px; padding: 1rem 1.3rem 0; }
+.rollback { border: 2px dashed var(--bad); border-radius: 10px; padding: 1rem 1.3rem; }
 .rollback h2 { color: var(--bad); }
 .rollback .steps > li::before { background: var(--bad); }
-/* On a narrow screen the numbers shrink, to leave the commands their width */
-@media (max-width: 30rem) {
-  .steps > li { padding-left: 2.6rem; }
-  .steps > li::before { width: 1.9rem; height: 1.9rem; font-size: 0.95rem; top: 0; }
-  .steps > li:not(:last-child)::after { left: 0.9rem; top: 2.1rem; }
-  .rollback { padding-inline: 0.8rem; }
-}
 }
 }
 </style>
@@ -265,7 +271,7 @@ h2 { font-size: 1.15rem; }
 <h1 id="issue-and-deploy-a-new-certificate-for-the-payment-gateway">Issue and deploy a new certificate for the payment gateway</h1><p class="summary">Replace the TLS certificate of the gateway&#39;s internal endpoint before it expires, or at once when it has. Takes about 20 minutes; checkout keeps working throughout.</p>
 </header>
 <section class="needs" data-floe-look="panel"><h2 id="before-you-start">Before you start</h2><ul><li>You can run <code>kubectl</code> against the <code>payments</code> cluster</li><li>You hold the <code>cert-issuer</code> role in the vault</li><li>The on-call engineer of the payments team knows you are starting</li></ul></section><p class="caution">Do not delete the old secret until checkout works on the new one; the gateway cannot start without a certificate.</p>
-<section><h2 id="steps">Steps</h2><ol class="steps">
+<section><h2 id="steps">Steps</h2><ol class="steps" data-floe-look="numbered">
 <li><div class="head"><h3 id="issue-the-certificate">Issue the certificate</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">vault write -format=json pki/issue/gateway common_name=gateway.internal ttl=8760h &gt; cert.json</span><span class="run" data-floe-copy="">jq -r .data.certificate cert.json &gt; cert.pem &amp;&amp; jq -r .data.private_key cert.json &gt; key.pem</span><span class="run" data-floe-copy="">jq -r .data.expiration cert.json</span><span class="out">1936688400</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
@@ -524,7 +530,7 @@ h2 { font-size: 1.15rem; }
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></li>
 </ol></section>
-<section class="rollback"><h2 id="roll-back">Roll back</h2><ol class="steps">
+<section class="rollback"><h2 id="roll-back">Roll back</h2><ol class="steps" data-floe-look="numbered">
 <li><div class="head"><h3 id="point-the-gateway-back-at-the-old-secret">Point the gateway back at the old secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments rollout undo deploy/gateway</span><span class="out">deployment.apps/gateway rolled back</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>

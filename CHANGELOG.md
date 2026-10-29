@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add floe's look `numbered`, the items of a list numbered in rings with a
+  line joining each to the next: the part `steps` takes it, and a template
+  takes it with `data-floe-look="numbered"` on an `<ol>`, as runbook's steps
+  do.
 - Add floe's template `runbook`, steps to follow with the commands to run:
   what to check before starting, a caution, the steps numbered under a line
   to the next, each with who does it, the commands with a copy button and
@@ -41,8 +45,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   the exit code as it is. The first is a fenced block of code in a `text` part,
   in a section (report's, `more` of design, handoff, adr, postmortem and
   runbook, and runbook's `text` of a step) or in `details` and `tabs`: it is
-  drawn as plain code, and the warning says to write it in `code` or `terminal`. `text` is a part of its own,
-  so a part of your own named `text` is refused.
+  drawn as plain code, and the warning says to write it in `code` or
+  `terminal`. `text` is a part of its own, so a part of your own named `text`
+  is refused.
 - Add the diagram part `tree`: write the nodes of a tree and their children,
   and floe places each under its parent and draws the edges; and the diagram
   example `org` (`floe diagram example org`), the departments of a company

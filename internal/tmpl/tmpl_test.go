@@ -181,7 +181,7 @@ func TestDrawRunbook(t *testing.T) {
 	ids := regexp.MustCompile(` id="[^"]*"`)
 	for _, tt := range []struct{ lang, fails string }{{"en", "If it fails"}, {"ja", "失敗したら"}} {
 		page := drawRunbook(t, "lang: "+tt.lang+"\nneeds: [n]\ncaution: c\nsteps: ["+step+"]\nrollback: ["+step+"]\n")
-		lists := strings.Split(string(page), `<ol class="steps">`)
+		lists := strings.Split(string(page), `<ol class="steps" data-floe-look="numbered">`)
 		if len(lists) != 3 {
 			t.Fatalf("%s: %d lists of steps, want 2", tt.lang, len(lists)-1)
 		}
@@ -190,8 +190,13 @@ func TestDrawRunbook(t *testing.T) {
 		if ids.ReplaceAllString(steps, "") != ids.ReplaceAllString(back, "") {
 			t.Errorf("%s: a step of the rollback\n%s\nis not drawn as one of the steps\n%s", tt.lang, back, steps)
 		}
-		for _, want := range []string{`<h3 id="restart">Restart</h3><span class="who">Ops</span>`, `<b>` + tt.fails + `</b>`, `class="needs"`, `class="caution"`} {
-			if !strings.Contains(steps+string(page), want) {
+		for _, want := range []string{`<h3 id="restart">Restart</h3><span class="who">Ops</span>`, `<b>` + tt.fails + `</b>`} {
+			if !strings.Contains(steps, want) {
+				t.Errorf("%s draws no %s", tt.lang, want)
+			}
+		}
+		for _, want := range []string{`class="needs"`, `class="caution"`} {
+			if !bytes.Contains(page, []byte(want)) {
 				t.Errorf("%s draws no %s", tt.lang, want)
 			}
 		}
