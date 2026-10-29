@@ -93,6 +93,8 @@ A part draws an item of the data: `floe part list` lists them, and `floe part sh
 
 `page.html` puts the item where it goes, `{{.Data.risks}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML.
 
+The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
+
 A part of any kind, one key naming its kind, refers to `any.json`; a list of them, as report's sections do, refers to it as its items. In a template's root schema:
 
 ```json

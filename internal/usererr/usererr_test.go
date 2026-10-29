@@ -228,3 +228,22 @@ func TestWarn(t *testing.T) {
 		t.Errorf("JSON of no warnings = %s, %v", b, err)
 	}
 }
+
+// An error with the warnings of the page drawn before it is told with them after its mistakes, and a failure alone.
+func TestWithWarnings(t *testing.T) {
+	t.Parallel()
+
+	c := i18n.EnglishCatalog()
+	warnings := []*usererr.Error{usererr.NewAt("w.yaml", 5, 15, "library", "advice")}
+	if usererr.WithWarnings(nil, warnings) != nil {
+		t.Error("WithWarnings(nil) is an error")
+	}
+	err := fmt.Errorf("saved: %w", usererr.WithWarnings(usererr.New("library", "taken"), warnings))
+	if got, want := usererr.Tell(c, err).Render("floe: "), "floe: taken\nw.yaml:5:15: warning: advice"; got != want {
+		t.Errorf("told %q, want %q", got, want)
+	}
+	failed := usererr.WithWarnings(errors.New("disk"), warnings)
+	if got := usererr.Tell(c, failed); got.Failure != "disk" || got.Warnings != nil {
+		t.Errorf("a failure told %+v", got)
+	}
+}

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "text",
-  "description": "Markdown; raw HTML in it is left out. Code goes in code and commands in terminal, short code in a sentence as `code`; an image file Markdown names is not shown, only a data URI of a png, gif, jpeg or webp: write images in image",
+  "description": "Markdown among other parts, where code and terminal can stand beside it: a field of plain Markdown is {\"type\": \"string\", \"format\": \"markdown\"} instead. Raw HTML in it is left out. Code goes in code and commands in terminal, short code in a sentence as `code`; an image file Markdown names is not shown, only a data URI of a png, gif, jpeg or webp: write images in image",
   "type": "string",
   "format": "markdown"
 }

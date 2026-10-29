@@ -225,7 +225,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	}
 	e, err := s.storedPage(up.File, up.Source, opts, up.Project)
 	if err != nil {
-		return nil, err
+		return nil, usererr.WithWarnings(err, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
 	}
 	e.Page = page
 	e.Warnings = warnings
@@ -236,7 +236,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 		}
 	}
 	if err := imagesApart(up.File, e.Images); err != nil {
-		return nil, err
+		return nil, usererr.WithWarnings(err, warnings) //nolint:wrapcheck // as above
 	}
 	return e, nil
 }
@@ -310,7 +310,7 @@ func (s *Store) PrepareLink(
 		Warnings: warnings, opts: opts, from: project.Name(ctx, filepath.Dir(path)), named: named,
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
-		return nil, err
+		return nil, usererr.WithWarnings(err, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
 	}
 	return e, nil
 }

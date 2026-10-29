@@ -66,6 +66,8 @@ func refuse(w http.ResponseWriter, r *http.Request, err error) {
 		status = http.StatusInternalServerError
 	}
 	if r.Header.Get("Accept") != jsonType {
+		// The management page shows no warnings: they are the writer's, whom the command line tells.
+		report.Warnings = nil
 		sendBytes(w, status, textType, []byte(report.Render("")))
 		return
 	}
@@ -106,7 +108,7 @@ func (s *Server) addLink(w http.ResponseWriter, r *http.Request) {
 	// with the other mistakes.
 	entry, err := s.cfg.Store.PrepareLink(r.Context(), drawing, in.Path, opts, "", s.cfg.Home)
 	if err == nil {
-		err = s.cfg.Store.Save(entry)
+		err = usererr.WithWarnings(s.cfg.Store.Save(entry), entry.Warnings)
 	}
 	if err != nil {
 		refuse(w, r, err)
@@ -213,7 +215,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err == nil {
-		err = s.cfg.Store.Save(entry)
+		err = usererr.WithWarnings(s.cfg.Store.Save(entry), entry.Warnings)
 	}
 	if err != nil {
 		refuse(w, r, err)

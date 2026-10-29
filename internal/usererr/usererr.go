@@ -239,6 +239,13 @@ type Report struct {
 // not into fmt.Errorf. An error that carries a report told already (the server's, to the command line) is told as
 // it is.
 func Tell(c *i18n.Catalog, err error) Report {
+	if w, ok := errors.AsType[*warned](err); ok {
+		r := Tell(c, w.err)
+		if r.Failure == "" {
+			r.Warnings = append(r.Warnings, Warn(c, w.warnings)...)
+		}
+		return r
+	}
 	if reported, ok := errors.AsType[reporter](err); ok {
 		return reported.Report()
 	}
@@ -272,6 +279,25 @@ func worded(c *i18n.Catalog, l List) []Told {
 		}
 	}
 	return all
+}
+
+// warned is an error made after a page was drawn, with the warnings of that page.
+type warned struct {
+	err      error
+	warnings []*Error
+}
+
+func (w *warned) Error() string { return w.err.Error() }
+
+func (w *warned) Unwrap() error { return w.err }
+
+// WithWarnings returns err, made after a page was drawn, with the warnings of that page, which Tell tells after its
+// mistakes, so that a refusal after the drawing does not lose them; err itself without warnings, nil for none.
+func WithWarnings(err error, warnings []*Error) error {
+	if err == nil || len(warnings) == 0 {
+		return err
+	}
+	return &warned{err: err, warnings: warnings}
 }
 
 // reporter is an error that carries a report told already.

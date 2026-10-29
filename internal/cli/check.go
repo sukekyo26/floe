@@ -52,7 +52,7 @@ func (a *app) check(paths []string) error {
 // drawFile draws the page of the data file p with k and the icons of store, titled, without a title:, by the
 // slug of its name, else, for a name without a letter a slug takes, by the name itself, with its warnings; or
 // returns its mistakes.
-func drawFile(k *kit.Kit, store diagram.Icons, p arg) ([]byte, usererr.List, error) {
+func drawFile(k *kit.Kit, store diagram.Icons, p arg) ([]byte, []*usererr.Error, error) {
 	// An empty path has no name to check; one that is nowhere has, and is told with it.
 	if p.name == "" {
 		return nil, nil, p.err

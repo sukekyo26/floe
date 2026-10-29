@@ -28,6 +28,7 @@ func served(t *testing.T) (env map[string]string, dir string) {
 		"home/p/gone.yaml":           "lang: en\ntemplate: pic\ni: [img/none.png]\n",
 		"home/p/h.html":              "<title>H</title>",
 		"home/p/w.yaml":              "lang: en\ntemplate: report\nsections:\n  - parts:\n      - text: \"```\\ncode\\n```\"\n",
+		"home/q/w.yaml":              "lang: en\ntemplate: report\nsections:\n  - parts:\n      - text: \"```\\ncode\\n```\"\n",
 	})
 	return s.Env, filepath.Join(s.Dir, "home", "p")
 }
@@ -63,6 +64,11 @@ func TestPublishThroughServer(t *testing.T) {
 	}
 	if code, out, _ := runIn(dir, env, "list"); code != 0 || strings.Contains(out, "\td\t") {
 		t.Errorf("floe list after rm = %d, %q", code, out)
+	}
+	// Refused after it was drawn, as w is another project's, a page keeps its warnings.
+	code, _, errs := runIn(filepath.Join(filepath.Dir(dir), "q"), env, "publish", "w.yaml")
+	if code != 1 || !strings.Contains(errs, "w.yaml:5:15: warning: write code in a code part") {
+		t.Errorf("floe publish of another project's slug = %d, %q", code, errs)
 	}
 }
 

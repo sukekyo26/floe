@@ -69,7 +69,8 @@ func Run(args []string, env Env) int {
 		r = usererr.Tell(english, err)
 	}
 	if r.Failure == "" {
-		r.Warnings = append(usererr.Warn(english, a.warnings), a.told...)
+		// A refusal of the server may carry the warnings of the page it drew.
+		r.Warnings = slices.Concat(r.Warnings, usererr.Warn(english, a.warnings), a.told)
 	}
 	if err == nil {
 		if len(r.Warnings) > 0 {
