@@ -139,11 +139,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   checked from its root, whether a schema names it or not. A part's
   `part.html` may call the functions floe's parts draw with (`copyButton`,
   `bars`, `diff`, `tree`, `diagram`, `script`); `bars` refuses an item not
-  written as keys and values, and a value that is not a number or is below
-  0. A mistake
-  of a part, shared schema, theme or template of your own stops every page
-  drawn until it is fixed. The directories of parts, themes and templates of
-  your own that are one, or one in the other, are refused for their settings.
+  written as keys and values, and a value that is not a number or is below 0.
+  A mistake of a part, shared schema, theme or template of your own stops
+  every page drawn until it is fixed. The directories of parts, themes and
+  templates of your own that are one, or one in the other, are refused for
+  their settings.
 - Add diagrams drawn as inline SVG from a spec of parts on a canvas (frames,
   boxes, tables, icons, edges joining named parts, dots, bars, axes, circles,
   labels, lines), their text in one language or several (`{en: …, ja: …}`),
