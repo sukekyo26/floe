@@ -1,0 +1,42 @@
+# Quadrant: ideas for a notes app's features, by how much they are worth and how much work they take.
+# Two axes split the ideas into four areas, and the area names what to do with them.
+#
+# Grid: the areas are frames 400 x 180 (x = 80, 480; y = 40, 220), their name inside the top left.
+# An idea is a dot 30 in from the left of its area and 60 + 52n down from its top, its label 12
+# right of the dot and at most 358 wide in either language as floe diagram inspect measures it (5 of
+# room each side included), so that it stays inside the area. Where an idea stands within its area
+# means nothing: the ideas of an area stand in one column. The dot's tone is where the idea came
+# from (accent, or none), as the legend under the axes tells. The axes are edges with no box at
+# their ends; the vertical one's name stands above it, as a label is not turned.
+width: 900
+height: 480
+title: { en: "Feature ideas for a notes app: value by effort", ja: "ノートのアプリの機能の候補：価値 × 手間" }
+parts:
+  - frame: { x: 80, y: 40, w: 400, h: 180, square: true, label: { en: Do now, ja: "すぐやる" } }
+  - frame: { x: 480, y: 40, w: 400, h: 180, square: true, label: { en: Plan it, ja: "計画してやる" } }
+  - frame: { x: 80, y: 220, w: 400, h: 180, square: true, label: { en: When there is time, ja: "手が空いたら" } }
+  - frame: { x: 480, y: 220, w: 400, h: 180, square: true, label: { en: Do not do, ja: "やらない" } }
+  - edge: { from: [60, 400], to: [60, 40] }
+  - label: { text: { en: More value, ja: "価値が高い" }, x: 60, y: 22 }
+  - edge: { from: [80, 420], to: [880, 420] }
+  - label: { text: { en: More effort, ja: "手間が大きい" }, x: 880, y: 440, anchor: end }
+  - dot: { cx: 110, cy: 100, tone: accent }
+  - label: { text: { en: Dark mode, ja: "ダークモード" }, x: 122, y: 100, anchor: start }
+  - dot: { cx: 110, cy: 152, tone: accent }
+  - label: { text: { en: Share a note by a link, ja: "ノートをリンクで共有する" }, x: 122, y: 152, anchor: start }
+  - dot: { cx: 510, cy: 100, tone: accent }
+  - label: { text: { en: Use it offline, ja: "オフラインで使う" }, x: 522, y: 100, anchor: start }
+  - dot: { cx: 510, cy: 152, }
+  - label: { text: { en: Sync between devices, ja: "端末の間で同期する" }, x: 522, y: 152, anchor: start }
+  - dot: { cx: 110, cy: 280, tone: accent }
+  - label: { text: { en: Export to PDF, ja: "PDF に書き出す" }, x: 122, y: 280, anchor: start }
+  - dot: { cx: 110, cy: 332, }
+  - label: { text: { en: Choose the font, ja: "字体を選ぶ" }, x: 122, y: 332, anchor: start }
+  - dot: { cx: 510, cy: 280, }
+  - label: { text: { en: Write by hand, ja: "手書きで入力する" }, x: 522, y: 280, anchor: start }
+  - dot: { cx: 510, cy: 332, tone: accent }
+  - label: { text: { en: Chat in the app, ja: "アプリの中でチャットする" }, x: 522, y: 332, anchor: start }
+  - dot: { cx: 90, cy: 460, tone: accent }
+  - label: { text: { en: Asked for by users, ja: "使う人の要望" }, x: 102, y: 460, anchor: start }
+  - dot: { cx: 270, cy: 460, }
+  - label: { text: { en: Our own idea, ja: "作る側の案" }, x: 282, y: 460, anchor: start }

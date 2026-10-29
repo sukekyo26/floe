@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the diagram example `quadrant` (`floe diagram example quadrant`):
+  two axes that split items into four areas, here a notes app's feature
+  ideas by their value and the effort they take.
 - Add the diagram example `swimlane` (`floe diagram example swimlane`): a
   flow split into a lane for each who acts, here one pull request between the
   user, the architect and the engineer.
