@@ -152,8 +152,8 @@ func (b *browser) frameReport(what, until string) report {
 func (b *browser) pressInFrame(frame string) report {
 	b.t.Helper()
 
-	box := b.rect(frame)
 	r := b.frameReport("the page in the frame", "(r) => true")
+	box := b.rect(frame) // once its page reports: the frame is hidden until the list comes
 	b.hover(box.X+r.X, box.Y+r.Y)
 	b.click(box.X+r.X, box.Y+r.Y)
 	return b.frameReport("the copy in the frame", "(r) => r.status !== ''")

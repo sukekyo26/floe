@@ -39,8 +39,9 @@ func TestUIPagePicker(t *testing.T) { //nolint:paralleltest // the browser tests
 	// Leaving the page, as Enter on a page would, is told at once: beforeunload runs as location is set.
 	b.navigate("/")
 	b.eval("sessionStorage.setItem('artifacts.list', '')")
+	b.navigate("about:blank")
+	b.stub(colorsList)
 	b.navigate("/a/a/")
-	b.eval(stub(colorsList))
 	b.until("the title", "!document.getElementById('frame-pick').hidden")
 	b.eval("addEventListener('beforeunload', () => { window.left = true; })")
 
@@ -113,7 +114,6 @@ func TestUIPagePicker(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.pressKey(kb.Enter)
 	out = append(out, b.until("the page to open", "location.pathname === '/a/b/' && location.pathname"))
 	// A press in the page under the bar, which this page is not told of, closes it too. Last, as the focus then is in that page
-	b.eval(stub(colorsList))
 	b.until("the title", "!document.getElementById('frame-pick').hidden")
 	press("#frame-pick")
 	b.until("the pages to open", opened)

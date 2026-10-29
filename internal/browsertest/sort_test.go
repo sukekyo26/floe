@@ -36,8 +36,8 @@ func TestUISortMenu(t *testing.T) { //nolint:paralleltest // the browser tests s
 		[...document.querySelectorAll('#sort-list [role=option]')].map((o) => (o.classList.contains('reached') ? '[' + o.textContent + ']' : o.textContent) + (o.getAttribute('aria-selected') === 'true' ? '*' : '')).join(','),
 		document.activeElement.id, String(new URLSearchParams(location.search).get('sort'))].join(' / ')`
 	titles := "[...document.querySelectorAll('#list li:not(.group) a.title')].map((a) => a.textContent).join(',')"
+	b.stub(extrasList)
 	b.navigate("/")
-	b.eval(stub(extrasList))
 	b.until("the rows", "document.querySelectorAll('#list li:not(.group)').length > 0")
 
 	out := make([]string, 0, 16)
@@ -79,13 +79,12 @@ func TestUISortMenu(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, b.eval("document.activeElement.id"))
 	// An order in the URL is the one the sort names and marks.
 	b.navigate("/?sort=title")
-	b.eval(stub(extrasList))
 	b.until("the rows", "document.querySelectorAll('#list li:not(.group)').length > 0")
 	out = append(out, b.eval(state))
 
 	// Opened while the page still scrolls (the tail of a scroll before it), the sort stuck under the header bar, it stays open;
 	// the page scrolled after so that the sort moves, it closes, as it would be left behind.
-	b.eval(manyPages(60))
+	b.stub(manyPages(60))
 	b.until("the rows", "document.querySelectorAll('#list li:not(.group)').length === 50")
 	b.eval("scrollTo(0, 600)")
 	b.until("the sort to be stuck", "scrollY === 600 && 'stuck'")
