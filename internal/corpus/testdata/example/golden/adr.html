@@ -171,9 +171,8 @@ h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
 .status.accepted { background: var(--good-soft); color: var(--good); }
 .status.proposed { background: var(--warn-soft); color: var(--warn); }
 .status.rejected { background: var(--bad-soft); color: var(--bad); }
-.status.deprecated, .status.superseded { background: var(--surface); color: var(--muted); }
-.superseded { background: var(--warn-soft); color: var(--warn); padding: 0.3rem 0.8rem; border-radius: 6px; }
-.superseded a { color: inherit; }
+.superseded-by { background: var(--warn-soft); color: var(--warn); padding: 0.3rem 0.8rem; border-radius: 6px; }
+.superseded-by a { color: inherit; }
 .deciders { color: var(--muted); font-size: 0.9rem; }
 section { display: grid; gap: 0.6rem; }
 article > *, section > * { min-width: 0; }
@@ -181,8 +180,8 @@ h2 { font-size: 1.1rem; }
 .decision { border-left: 4px solid var(--accent); padding-left: 1.1rem; }
 .alternatives { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
 .alternatives li { border: 1px dashed var(--line); border-radius: 6px; padding: 0.5rem 0.9rem; }
-.alternatives s { color: var(--muted); font-weight: 700; }
-.why { display: block; }
+.alternatives .title { font-weight: 700; }
+.title, .why { display: block; }
 .consequences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: 1rem; }
 .consequences h3 { border-left: 4px solid; padding-left: 0.6rem; }
 .good h3 { border-color: var(--good); }
@@ -197,7 +196,7 @@ h2 { font-size: 1.1rem; }
 <header>
 <p class="kind">Decision record <span class="number">ADR 0007</span> <span class="date">2030-03-02</span></p>
 <h1 id="keep-sessions-in-the-database-not-in-memory">Keep sessions in the database, not in memory</h1>
-<p class="status superseded">Superseded</p><p class="superseded">Superseded by: <a href="/a/adr-0012/">ADR 0012</a>: sessions in the cache cluster</p><p class="deciders">Decided by: Platform team</p>
+<p class="status superseded">Superseded</p><p class="superseded-by">Superseded by: <a href="/a/adr-0012/">ADR 0012</a>: sessions in the cache cluster</p><p class="deciders">Decided by: Platform team</p>
 </header>
 <section><h2 id="context">Context</h2><p>The web app keeps each user&#39;s session in the memory of the server that made it. With a second server behind the
 load balancer, a user sent to the other server is logged out (<a href="/a/incident-42/">incident 42</a>).</p>
@@ -205,7 +204,7 @@ load balancer, a user sent to the other server is logged out (<a href="/a/incide
 <section class="decision"><h2 id="decision">Decision</h2><p>Keep sessions in a <code>sessions</code> table in the database we have, as <a href="/a/database-guide/">the database guide</a> asks:
 every server reads the same sessions, and a server going down logs nobody out.</p>
 </section>
-<section><h2 id="options-set-aside">Options set aside</h2><ul class="alternatives"><li><s>Sticky sessions at the load balancer</s> <span class="why">A server going down still logs its users out</span></li><li><s>A cache cluster for sessions</s> <span class="why">A new service to run, for <strong>two</strong> servers</span></li></ul></section>
+<section><h2 id="options-set-aside">Options set aside</h2><ul class="alternatives"><li><span class="title">Sticky sessions at the load balancer</span> <span class="why">A server going down still logs its users out</span></li><li><span class="title">A cache cluster for sessions</span> <span class="why">A new service to run, for <strong>two</strong> servers</span></li></ul></section>
 <section><h2 id="consequences">Consequences</h2><div class="consequences"><div class="good"><h3 id="gains">Gains</h3><ul><li>Any server answers any request</li><li>Sessions outlive a deploy</li></ul></div><div class="bad"><h3 id="costs">Costs</h3><ul><li>One read of the database on every request</li><li>Old sessions need a job to remove them</li></ul></div>
 </div></section>
 <section><h2 id="related-records">Related records</h2>
