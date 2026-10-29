@@ -52,7 +52,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 `handoff` は、決めてほしいことを先に出す、作業の引き継ぎと状況の知らせです。必須は `date` だけで、`from`・`to`・`summary` が頭に、その下に終えた・進行中・決めてほしい・次にやるの数が出ます。`asks` は決めてほしいことで、1 つずつ `question` と `options`・`recommend`・`why`・決める人（`by`）を書き、Q1・Q2 と番号が付きます。`done` は `what` と `ref`（PR やチケット）の行、`doing` は `who`・`what`・`where`（どこまで）・`state`（`doing`・`waiting`・`blocked`）の行、`next` と `notes`（気を付けること）は行、`more` は report と同じ自分の節です。`date`・`from`・`to`・`by`・`ref`・`who`・`more` の見出しは書いたままの字で、ほかの行は Markdown の 1 行です。
 
-`adr` は、1 つの決めたことを紙 1 枚に書く記録です。`status`（`proposed`・`accepted`・`rejected`・`deprecated`・`superseded`。題の下の判子）・`context`・`decision`（Markdown）が必須で、`status` が `superseded` の記録は、置き換えた記録を `superseded_by`（`[ADR 0012](/a/adr-0012/)`）に書きます。ほかの状態では `superseded_by` を書けません。`number`・`date`・`deciders` が頭に出て、`alternatives` は選ばなかった案（`title` と `why`）、`consequences` は良くなること（`good`）と引き受けること（`bad`）の行、`more` は report と同じ自分の節です。`number`・`date`・`deciders`・`more` の見出しは書いたままの字で、`superseded_by` とほかの行は Markdown の 1 行です。
+`adr` は、1 つの決めたことを紙 1 枚に書く記録です。`status`（`proposed`・`accepted`・`rejected`・`deprecated`・`superseded`。題の下の判子）・`context`・`decision`（Markdown）が必須で、`status` が `superseded` の記録は、置き換えた記録を `superseded_by`（`[ADR 0012](/a/adr-0012/)`）に書きます。`number`・`date`・`deciders` が頭に出て、`alternatives` は選ばなかった案（`title` と `why`）、`consequences` は良くなること（`good`）と引き受けること（`bad`）の行、`more` は report と同じ自分の節です。`number`・`date`・`deciders`・`more` の見出しは書いたままの字で、`superseded_by` とほかの行は Markdown の 1 行です。
 
 ## 部品
 

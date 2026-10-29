@@ -12,13 +12,14 @@
 <p class="kind">{{word "kind"}}{{with .Data.number}} <span class="number">{{.}}</span>{{end}}{{with .Data.date}} <span class="date">{{.}}</span>{{end}}</p>
 <h1>{{.Title}}</h1>
 <p class="status {{.Data.status}}">{{word (printf "status_%s" .Data.status)}}</p>
-{{- with .Data.superseded_by}}<p class="superseded">{{word "superseded_by"}}: {{markdownLine .}}</p>{{end}}
+{{- /* LIMIT: superseded_by under another status is not refused, as the library's words would name status alone; the band it draws shows it */}}
+{{- with .Data.superseded_by}}<p class="superseded-by">{{word "superseded_by"}}: {{markdownLine .}}</p>{{end}}
 {{- with .Data.deciders}}<p class="deciders">{{word "deciders"}}: {{.}}</p>{{end}}
 </header>
 <section><h2>{{word "context"}}</h2>{{.Data.context}}</section>
 <section class="decision"><h2>{{word "decision"}}</h2>{{.Data.decision}}</section>
 {{- with .Data.alternatives}}
-<section><h2>{{word "alternatives"}}</h2><ul class="alternatives">{{range .}}<li><s>{{markdownLine .title}}</s> <span class="why">{{markdownLine .why}}</span></li>{{end}}</ul></section>
+<section><h2>{{word "alternatives"}}</h2><ul class="alternatives">{{range .}}<li><span class="title">{{markdownLine .title}}</span> <span class="why">{{markdownLine .why}}</span></li>{{end}}</ul></section>
 {{- end}}
 {{- with .Data.consequences}}
 <section><h2>{{word "consequences"}}</h2><div class="consequences">
@@ -26,7 +27,7 @@
 {{- with .bad}}<div class="bad"><h3>{{word "bad"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
 </div></section>
 {{- end}}
-{{- /* LIMIT: a fenced block in text is not warned of until floe has warnings */}}
+{{- /* LIMIT: a fenced block in a text part of more is drawn as plain Markdown code, not as the code part, and nothing says so until floe has warnings */}}
 {{- range $m := .Data.more}}
 <section><h2>{{$m.heading}}</h2>
 {{- range $m.parts}}{{range .}}{{with .}}

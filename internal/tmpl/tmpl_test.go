@@ -68,15 +68,20 @@ func TestDrawHandoffHands(t *testing.T) {
 func TestDrawAdrStates(t *testing.T) {
 	t.Parallel()
 
-	for _, tt := range []struct{ state, word string }{
-		{"proposed", "Proposed"},
-		{"accepted", "Accepted"},
-		{"rejected", "Rejected"},
-		{"deprecated", "Deprecated"},
-		{"superseded", "Superseded"},
+	for _, tt := range []struct{ lang, state, word, by string }{
+		{"en", "proposed", "Proposed", ""},
+		{"en", "accepted", "Accepted", ""},
+		{"en", "rejected", "Rejected", ""},
+		{"en", "deprecated", "Deprecated", ""},
+		{"en", "superseded", "Superseded", "Superseded by"},
+		{"ja", "proposed", "提案", ""},
+		{"ja", "accepted", "採用", ""},
+		{"ja", "rejected", "却下", ""},
+		{"ja", "deprecated", "廃止", ""},
+		{"ja", "superseded", "置き換え済み", "置き換えた記録"},
 	} {
-		src := "template: adr\nlang: en\ntitle: x\nstatus: " + tt.state + "\ncontext: c\ndecision: d\n"
-		if tt.state == "superseded" {
+		src := "template: adr\nlang: " + tt.lang + "\ntitle: x\nstatus: " + tt.state + "\ncontext: c\ndecision: d\n"
+		if tt.by != "" {
 			src += "superseded_by: ADR 0012\n"
 		}
 		page, err := tmpl.Draw(floeKit(t), "adr.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
@@ -84,10 +89,11 @@ func TestDrawAdrStates(t *testing.T) {
 			t.Fatal(told(err))
 		}
 		if want := `<p class="status ` + tt.state + `">` + tt.word + `</p>`; !bytes.Contains(page, []byte(want)) {
-			t.Errorf("%s draws no %s", tt.state, want)
+			t.Errorf("%s %s draws no %s", tt.lang, tt.state, want)
 		}
-		if got := bytes.Contains(page, []byte(`class="superseded"`)); got != (tt.state == "superseded") {
-			t.Errorf("%s: the record superseding it drawn = %v", tt.state, got)
+		by := `<p class="superseded-by">` + tt.by + `: `
+		if got := bytes.Contains(page, []byte(`class="superseded-by"`)); got != (tt.by != "") || got && !bytes.Contains(page, []byte(by)) {
+			t.Errorf("%s %s: the record superseding it drawn = %v, want %v as %s", tt.lang, tt.state, got, tt.by != "", by)
 		}
 	}
 }

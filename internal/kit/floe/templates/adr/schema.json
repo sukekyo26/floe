@@ -141,14 +141,5 @@
       "superseded_by"
     ]
   },
-  "dependentSchemas": {
-    "superseded_by": {
-      "properties": {
-        "status": {
-          "const": "superseded"
-        }
-      }
-    }
-  },
   "additionalProperties": false
 }
