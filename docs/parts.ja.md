@@ -37,7 +37,7 @@ quote/
 - schema は、floe の部品と同じく `"$ref": "floe:///parts/quote.json"` で名指します。部品の schema も、floe の部品と共有の schema をこう名指します。
 - 部品の要素は箱で、`data-floe-part="quote"` で自分を名乗ります。
 - `part.html` は項目を `.` で見て、テンプレートの `page.html` と同じ関数を使えます（`asset` は除く。[templates.ja.md](templates.ja.md#pagehtml)）。
-- 部品の schema は、テンプレートと同じく floe の `format`（`html`・`markdown`・`image`）を取ります。floe が辿る `properties` か `items` の下か、根で宣言します。format を持つ共有の schema（`any.json`）も取ります。その項目は `part.html` に描いたものが来ます（`html` は書いたとおり、`markdown` は HTML に、`image` は data URI に。`<img src="{{.file}}" alt="{{.alt}}">`）。`{{.h}}` と書き、関数（`markdown`・`markdownLine`・`printf`・`slice`・`eq` など）に渡したり、`<script>` の中に置いたりしません（書いた字でなく HTML なので、そこでは正しく動きません）。`html` の項目は、テンプレートの項目と同じく描いたページで確かめます（[templates.ja.md](templates.ja.md)）。format の無い文字を Markdown で描くのは `{{markdown .text}}` です。
+- 部品の schema は、テンプレートと同じく floe の `format`（`html`・`markdown`・`image`）を取ります。floe が辿る `properties` か `items` の下か、根で宣言します。format を持つ共有の schema も取ります。その項目は `part.html` に描いたものが来ます（`html` は書いたとおり、`markdown` は HTML に、`image` は data URI に。`<img src="{{.file}}" alt="{{.alt}}">`）。`{{.h}}` と書き、関数（`markdown`・`markdownLine`・`printf`・`slice`・`eq` など）に渡したり、`<script>` の中に置いたりしません（書いた字でなく HTML なので、そこでは正しく動きません）。`html` の項目は、テンプレートの項目と同じく描いたページで確かめます（[templates.ja.md](templates.ja.md)）。format の無い文字を Markdown で描くのは `{{markdown .text}}` です。`any.json` の値は、描いた 1 つでなく、全部の種類の map で来ます（[見た目と共有の schema](#見た目と共有の-schema)）。
 - `floe part show <名前>` は、floe の部品も含めて取るものを出します。合うものを floe の部品から写してください。
 
 ## 見た目と共有の schema
@@ -45,6 +45,7 @@ quote/
 - 見た目だけのものは、`part.css`（と、`description:` と借りる見た目を書く `part.yaml`）だけで schema の無いディレクトリです。何も描かず、借りる部品や要素にスタイルを貸します。floe の見た目だけのものは `panel` と `rows` です。
 - 部品は `part.yaml` の `looks: [panel]` でほかの見た目を借り、その見た目が借りるものも、自分より先に順に借りて、その上で整えます。
 - 共有の schema は、テンプレートか部品の schema が、いつもその根を名指す `<名前>.json`（`floe:///parts/<名前>.json`）です。floe のものは `tone.json`（`accent`・`good`・`warn`・`bad`）と `any.json`（どの種類の部品でも 1 つ）です。その中の schema は、テンプレートと同じく、その根から確かめます。持つ部品と floe の format は、根から `properties` と `items` で辿れる所で、テンプレートから指しても部品から指しても描きます。
+- `any.json` の値は、テンプレートの `page.html` と同じく、全部の種類の map で `part.html` に来ます。書いた種類には描いた部品が入り、ほかは nil です。`{{.x}}` と書くと map を字で書くので、`{{range .x}}{{.}}{{end}}` で描きます。schema の根が `any.json` なら `{{range .}}{{.}}{{end}}` です（1 つの種類だけを描く書き方は [templates.ja.md](templates.ja.md#テンプレートの中の部品)）。
 
 ## CSS の層と @scope
 

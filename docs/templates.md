@@ -93,17 +93,22 @@ A part draws an item of the data: `floe part list` lists them, and `floe part sh
 
 `page.html` puts the item where it goes, `{{.Data.risks}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML.
 
-A list of parts of any kind, each one key naming its kind, refers to `any.json`, as report's sections do:
+A part of any kind, one key naming its kind, refers to `any.json`; a list of them, as report's sections do, refers to it as its items. In a template's root schema:
 
 ```json
+"part":  { "$ref": "floe:///parts/any.json" },
 "parts": { "type": "array", "items": { "$ref": "floe:///parts/any.json" } }
 ```
 
-Each part comes to `page.html` drawn, its other keys nil, so one line draws a list of them whatever their kinds:
+Such a value comes to `page.html` as a map of every kind: the kind written holds the part drawn, the others nil. `{{.Data.part}}` writes the map as text (`map[bars:<nil> …]`): range over it instead, which does nothing for an item left out:
 
 ```html
-{{range .parts}}{{range .}}{{with .}}{{.}}{{end}}{{end}}{{end}}
+{{range .Data.part}}{{.}}{{end}}
+{{range .Data.parts}}{{range .}}{{.}}{{end}}{{end}}
+{{with .Data.part}}{{with .note}}<aside>{{.}}</aside>{{end}}{{end}}
 ```
+
+The last draws the part only when it is a note. Test the item before its kind, as here: `{{.Data.part.note}}` fails when the item is left out.
 
 ### Looks to borrow
 
