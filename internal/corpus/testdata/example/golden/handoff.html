@@ -76,6 +76,19 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.looks {
+@scope ([data-floe-look~="band"]) to (:scope [data-floe-part] > *) {
+/* A band filled with the accent: its text, links, code and focus ring in the colour on a fill, as the accent's
+   text and the soft ground of code would sink into it.
+   LIMIT: the focus ring is not measured by a test; it was looked at in photos, in default and brutal, when the look was made */
+:scope { background: var(--accent); color: var(--on-fill); }
+:scope a { color: inherit; }
+:scope code { background: none; border: 1px solid color-mix(in srgb, var(--on-fill) 55%, transparent); color: inherit; }
+:scope :focus-visible { outline-color: var(--on-fill); }
+}
+}
+</style>
+<style>
+@layer floe.looks {
 @scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
 :scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
@@ -161,10 +174,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
    LIMIT: the board puts its sections side by side while each has 16rem; a width where they wrap is not looked at */
 body { margin: 0; font-size: 16px; line-height: 1.7; padding-block: 0 4rem; }
 .column { max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
-.band { background: var(--accent); color: var(--on-fill); padding-block: 1.8rem 1.6rem; }
+.band { padding-block: 1.8rem 1.6rem; }
 .band .column { display: grid; gap: 0.5rem; justify-items: start; }
-.band a { color: inherit; }
-.band code { background: color-mix(in srgb, var(--on-fill) 20%, transparent); color: inherit; }
 h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; max-width: none; }
 .kind { border: 1px solid currentColor; border-radius: 4px; padding: 0 0.6rem; font-size: 0.85rem; font-weight: 700; }
@@ -210,11 +221,11 @@ main > section:not(.asks):not(.notes) { display: grid; gap: 1rem; }
 </style>
 </head>
 <body>
-<header class="band">
+<header class="band" data-floe-look="band">
 <div class="column">
 <p class="when"><span class="kind">Handoff</span><span class="date">2030-05-14 18:00</span><span class="hands">Mina → Kenji</span></p>
 <h1 id="checkout-redesign">Checkout redesign</h1>
-<p class="summary">The card form is done; the address form waits on one decision, and the tax rules on the finance team.</p>
+<p class="summary">The card form is done; the address form waits on one decision, and the tax rules (<code>tax_rules</code>) on the finance team.</p>
 <ul class="counts">
 <li><a href="#done"><b>3</b> Done</a></li>
 <li><a href="#doing"><b>3</b> In progress</a></li>

@@ -114,7 +114,7 @@ The last draws the part only when it is a note. Test the item before its kind, a
 
 ### Looks to borrow
 
-`<section data-floe-look="panel">` draws an element of the template as a panel, the box most parts are drawn in, in every theme; `rows`, `cards` or `table` borrow those looks. [parts.md](parts.md#borrowing-a-look) tells the rules.
+`<section data-floe-look="panel">` draws an element of the template as a panel, the box most parts are drawn in, in every theme; `rows`, `cards` or `table` borrow those looks, and `band` draws a band filled with the accent, its text, links, code and focus ring in the colour on a fill, as design's conclusion and handoff's head are. [parts.md](parts.md#borrowing-a-look) tells the rules.
 
 ## The palette
 

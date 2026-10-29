@@ -8,7 +8,7 @@
 <body>
 {{- /* A count is counted inside its with: a list left out is nil, which len refuses. Its link goes to an id of the
    page's own, which floe keeps */}}
-<header class="band">
+<header class="band" data-floe-look="band">
 <div class="column">
 <p class="when"><span class="kind">{{word "kind"}}</span><span class="date">{{.Data.date}}</span>
 {{- if and .Data.from .Data.to}}<span class="hands">{{.Data.from}} → {{.Data.to}}</span>{{else}}{{with or .Data.from .Data.to}}<span class="hands">{{.}}</span>{{end}}{{end}}</p>

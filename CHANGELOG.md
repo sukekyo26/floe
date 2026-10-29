@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add floe's look `band`, a band filled with the accent whose text, links,
+  code and focus ring are in the colour on a fill: a template takes it with
+  `data-floe-look="band"`, as design's conclusion and handoff's head do.
 - Add floe's template `adr`, a decision record on a sheet: its status stamped
   under the title (proposed, accepted, rejected, deprecated or superseded, a
   superseded record naming the one that superseded it), the context, the

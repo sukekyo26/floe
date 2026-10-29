@@ -75,6 +75,19 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 </style>
 <style>
+@layer floe.looks {
+@scope ([data-floe-look~="band"]) to (:scope [data-floe-part] > *) {
+/* A band filled with the accent: its text, links, code and focus ring in the colour on a fill, as the accent's
+   text and the soft ground of code would sink into it.
+   LIMIT: the focus ring is not measured by a test; it was looked at in photos, in default and brutal, when the look was made */
+:scope { background: var(--accent); color: var(--on-fill); }
+:scope a { color: inherit; }
+:scope code { background: none; border: 1px solid color-mix(in srgb, var(--on-fill) 55%, transparent); color: inherit; }
+:scope :focus-visible { outline-color: var(--on-fill); }
+}
+}
+</style>
+<style>
 @layer floe.parts {
 @scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
 /* A pill: a short status in the colour of its tone */
@@ -281,15 +294,13 @@ h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .byline { display: flex; flex-wrap: wrap; gap: 0 1rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
 .status { border: 2px solid var(--accent); color: var(--accent); font-weight: 800; padding: 0 0.7rem; border-radius: 4px; }
 .summary { color: var(--muted); font-size: 1.05rem; }
-.verdict { background: var(--accent); color: var(--on-fill); padding-block: 1.4rem 1.6rem; }
+.verdict { padding-block: 1.4rem 1.6rem; }
 .verdict h2 { font-size: 0.8rem; letter-spacing: 0.15em; margin-bottom: 0.4rem; }
 .verdict ol { max-width: none; gap: 0.7rem; }
 .verdict li { display: grid; gap: 0.1rem; }
 .verdict .question { font-size: 0.9rem; }
 .verdict .pick { font-size: 1.4rem; line-height: 1.4; }
 .verdict .undecided { opacity: 0.8; }
-.verdict code { background: color-mix(in srgb, var(--on-fill) 20%, transparent); color: inherit; }
-.verdict a { color: inherit; }
 .body { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 2.5rem; padding-block: 2rem; }
 main { display: grid; gap: 2.2rem; align-content: start; }
 main > *, section > * { min-width: 0; }
@@ -320,12 +331,12 @@ aside a { text-decoration: none; }
 <p class="summary">Notifications leave the web request and go out from a queue, so that a slow mail server never slows a page.</p>
 </div>
 </header>
-<section class="verdict" aria-labelledby="conclusion">
+<section class="verdict" data-floe-look="band" aria-labelledby="conclusion">
 <div class="column">
 <h2 id="conclusion">Conclusion</h2>
 <ol>
 <li><span class="question">Which queue</span><strong class="pick">A table in the database we have</strong><span class="why">It needs no new service to run, and the load is well within what the database takes</span></li>
-<li><span class="question">How to try again</span><strong class="pick undecided">Undecided</strong></li>
+<li><span class="question">How to try a failed <code>send</code> again</span><strong class="pick undecided">Undecided</strong></li>
 </ol>
 </div>
 </section>
@@ -344,7 +355,7 @@ page answers. When the mail provider is slow, so is the page, and a provider out
 <div class="card option" data-floe-look="panel"><h3 id="a-message-broker">A message broker</h3><ul><li class="pro">Made for this, and scales further</li><li class="con">A new service to run, watch and back up</li></ul></div>
 </div>
 </section>
-<section class="decision" aria-labelledby="question-1"><p class="question" id="question-1">How to try again</p>
+<section class="decision" aria-labelledby="question-1"><p class="question" id="question-1">How to try a failed <code>send</code> again</p>
 <div class="numbered" data-floe-part="options">
 <div class="card option" data-floe-look="panel"><h3 id="back-off-exponentially">Back off exponentially</h3><p>1 minute, then 2, 4 and on, up to a day.</p>
 </div>
