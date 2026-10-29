@@ -42,15 +42,18 @@ const extrasList = `[
 	{ slug: 'k', title: 'Kept', description: '', path: '/tmp/x/k.html', createdAt: at(1), updatedAt: at(1), archived: true },
 ]`
 
+// managementPage tells whether the document is a management page (/ and /a/<slug>/, not a page shown in its frame), which
+// stub fakes. It is ui.html's own test of a link the frame leaves for (leaveFrame): change the two together.
+const managementPage = "/^\\/(a\\/[^/]+\\/?)?$/.test(location.pathname) && !new URLSearchParams(location.search).has('raw')"
+
 // fake is the script that answers list, a JavaScript array at(day) may build, for the management page's list, counting
 // its reads in window.gets, and records the writes in window.calls. The list is made first, so that a mistake in it
-// fails wherever the script runs; it fakes nothing but a management page (/ and /a/<slug>/, as ui.html takes a link for
-// one), not a page shown in its frame.
+// fails wherever the script runs; it fakes nothing but a management page.
 func fake(list string) string {
 	return `(() => {
 	const at = (d) => ` + "`2026-01-0${d}T00:00:00.000Z`" + `;
 	const made = JSON.stringify(` + list + `);
-	if (!/^\/(a\/[^/]+\/?)?$/.test(location.pathname) || new URLSearchParams(location.search).has('raw')) return;
+	if (!(` + managementPage + `)) return;
 	window.faked = true;
 	window.gets ||= 0;
 	window.calls = [];
@@ -73,9 +76,10 @@ func fake(list string) string {
 }
 
 // stub answers list (see fake) in every management page this tab opens from now on, by a script run before the page's
-// own, so that each of its loads (the first, each poll, one after a move to another page) is answered so; and in the
-// page open now, drawn with it. The first stub, and the first after unstub, comes on a blank tab, before the page it
-// fakes opens: a page open has sent its own load already, whose answer would draw over the stub's.
+// own, so that each of its loads (the first, each poll, one after a move to another page) is answered so; navigate
+// waits for such a page to draw it. A stub after the first also draws the management page open now with list. The first
+// stub, and the first after unstub, comes on a blank tab, before the page it fakes opens: a page open has sent its own
+// load already, whose answer would draw over the stub's.
 func (b *browser) stub(list string) {
 	b.t.Helper()
 
@@ -93,10 +97,22 @@ func (b *browser) stub(list string) {
 	b.faked = b.addScript(script)
 	b.removeScript(old)
 	b.until("the page to load", "document.readyState === 'complete'")
+	if b.eval(managementPage) != "true" {
+		return // no management page open: the next one opened takes list
+	}
 	if b.eval("window.faked === true") != "true" {
 		b.t.Fatal("this page was opened before the first stub: stub on a blank tab before opening it")
 	}
-	got := b.eval(script + "; (async () => { const n = window.gets; await load(); " +
+	b.eval(script)
+	b.loadStubbed()
+}
+
+// loadStubbed waits until the management page open, faked, has read the list stubbed and drawn it: its own load may
+// still be on the way after the page is loaded.
+func (b *browser) loadStubbed() {
+	b.t.Helper()
+
+	got := b.eval("(async () => { const n = window.gets; await load(); " +
 		"return window.gets > n || 'not read: ' + document.getElementById('error').textContent; })()")
 	if got != "true" {
 		b.t.Fatalf("the page did not load the list stubbed: %s", got)
@@ -293,7 +309,6 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.stub(extrasList)
 	b.navigate("/a/b/")
 	out = append(out, b.until("the neighbours", neighbours))
-	b.stub(extrasList)
 	b.navigate("/a/z/")
 	out = append(out, b.until("the archived neighbours", neighbours))
 
@@ -350,7 +365,6 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		t.Fatal("Chrome does not take the screen for one with a mouse: the flag blink-settings of startChrome no longer works")
 	}
 	b.point(0, 0)
-	b.stub(extrasList)
 	key := func(k string) {
 		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
 	}
@@ -564,13 +578,11 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("window.failWrites = true; document.getElementById('frame-star').click()")
 	out = append(out, b.until("the failure to show", "!document.getElementById('error').hidden && document.getElementById('error').offsetHeight > 0 && "+
 		"document.getElementById('error').textContent"))
-	b.stub(extrasList)
 	b.navigate("/a/b/")
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
 	// The frame picks from the list it was opened from, which starring it from the bar does not change; a page gone drops out.
 	neighbours := "!document.getElementById('frame-pick').hidden && " + picker
 	b.eval("sessionStorage.setItem('artifacts.list', '?fav=1')")
-	b.stub(extrasList)
 	b.navigate("/a/c/")
 	out = append(out, b.until("the favourites' neighbours", neighbours))
 	b.stub(strings.Replace(extrasList, "updatedAt: at(7), favorite: true", "updatedAt: at(7)", 1))
@@ -663,7 +675,6 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// Picked, the rows are its pages, as when the URL has it; picked again it is let go.
 	pickPlan()
 	out = append(out, b.eval(rows), b.eval(shelf))
-	b.stub(tagsList)
 	b.navigate("/?tag=plan")
 	out = append(out, b.eval(rows))
 	pickPlan()
@@ -900,7 +911,6 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 
 	out := make([]string, 0, 6)
-	b.stub(manyPages(60))
 	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval("document.querySelector('.shelf').getBoundingClientRect().height > 0"))
 	long := place(".shell", "top")
 	b.eval("scrollTo(0, 300)")
@@ -946,7 +956,6 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 		"const shelf = document.querySelector('.shelf'); const r = shelf.getBoundingClientRect(); " +
 		"const shell = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop);"
 	b.size(1440, 600, false)
-	b.stub(shelfList)
 	out := make([]string, 0, 10)
 	// Where #226 put it, down to the window's bottom less the room above it, scrolling in itself.
 	edges := b.eval("(() => { " + near + " return [r.top, r.bottom].join(' '); })()")
@@ -1032,14 +1041,12 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 		".concat(document.querySelector('.panel').getBoundingClientRect().right).join(' ')"
 	out := make([]string, 0, 8)
 	b.size(1800, 900, false)
-	b.stub(manyPages(60))
 	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"))
 	long := b.eval(where)
 	b.stub(manyPages(1))
 	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval(where+" === "+js(long)), b.eval(room))
 	// The room is on the right alone.
 	b.size(1200, 900, false)
-	b.stub(manyPages(1))
 	out = append(out, b.eval(where))
 	// The server's list for the frames: p is a page of the store.
 	b.unstub()
@@ -1073,7 +1080,7 @@ func TestUIStubSlowServer(t *testing.T) { //nolint:paralleltest // the browser t
 	b.eval("window.seen = new Set([...document.querySelectorAll('#list .title')].map((a) => a.textContent)); " +
 		"new MutationObserver(() => { for (const a of document.querySelectorAll('#list .title')) seen.add(a.textContent); })" +
 		".observe(document.getElementById('list'), { childList: true, subtree: true })")
-	// The first load and two polls: past when the server's answer would have come.
-	b.until("two polls", "window.gets >= 3")
+	// Past when the server's answer would have come, a poll between: the page's clock, from its start.
+	b.until("the server's answer to be late", "performance.now() > 5000 && window.gets >= 3")
 	check(t, "titles drawn", []string{b.eval("[...seen].join(',')")}, "Alpha")
 }

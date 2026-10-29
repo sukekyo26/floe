@@ -260,6 +260,9 @@ func (b *browser) navigate(path string) {
 		b.t.Fatalf("navigate %s: %v", path, err)
 	}
 	b.until(path+" to load", "!window.leaving && document.readyState === 'complete'")
+	if b.faked != "" && b.eval("window.faked === true") == "true" {
+		b.loadStubbed()
+	}
 }
 
 // pressKey presses k as a keyboard does: its text on the key down, which a page's preventDefault then stops too

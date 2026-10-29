@@ -104,7 +104,6 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		measure("the sort's orders")
 		b.eval("document.getElementById('sort-menu').hidePopover()")
 		// The frame's pages to pick from, open, one of them reached and the one open now marked.
-		b.stub(colorsList)
 		b.navigate("/a/a/")
 		b.until("the title", "!document.getElementById('frame-pick').hidden")
 		b.eval("document.getElementById('frame-pick').click()")

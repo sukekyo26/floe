@@ -35,7 +35,6 @@ func TestUIGroups(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.stub(groupsList)
 	b.navigate("/")
 	b.size(1440, 900, false)
-	b.stub(groupsList)
 
 	out := make([]string, 0, 16)
 	// The groups and their rows: a heading as its color and words, a row as its slug and color.
@@ -174,7 +173,6 @@ func uiRowColumns(t *testing.T, lang i18n.Lang, _ func(string, ...any) string) {
 	b.stub(rows)
 	b.navigate("/")
 	b.size(1440, 900, false)
-	b.stub(rows)
 	out := b.eval(`(() => {
 		const rows = [...document.querySelectorAll('#list li:not(.group)')], r = (li, s) => li.querySelector(s).getBoundingClientRect();
 		const same = (f, of = rows) => of.every((li) => Math.abs(f(li) - f(of[0])) <= 0.5);

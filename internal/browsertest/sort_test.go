@@ -78,7 +78,6 @@ func TestUISortMenu(t *testing.T) { //nolint:paralleltest // the browser tests s
 	key(kb.ArrowDown)
 	out = append(out, b.eval("document.activeElement.id"))
 	// An order in the URL is the one the sort names and marks.
-	b.stub(extrasList)
 	b.navigate("/?sort=title")
 	b.until("the rows", "document.querySelectorAll('#list li:not(.group)').length > 0")
 	out = append(out, b.eval(state))
