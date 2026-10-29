@@ -224,9 +224,8 @@ func (b *browser) until(what, expr string) string {
 // states, as a slow machine reads it. It waits for the whole document's, as an inherited style (an icon's fill of
 // currentColor) moves with its ancestor's motion, not its own. One that ended and holds its last frame (fill: both, as a
 // row's rise) and one without end (the server's pulse) do not count.
-// LIMIT: a motion that starts between the wait and the read (the list redrawn every 3 seconds, a toast) is not waited
-// for: still holds while the test changes nothing. A frame's document is not waited for; wait in it where a test comes
-// to read styles inside the frame.
+// LIMIT: a motion that starts between the wait and the read (the list redrawn, a toast) is not waited for; change nothing between them.
+// LIMIT: a frame's document is not waited for; wait in it when a test comes to read styles inside the frame.
 func (b *browser) still() {
 	b.t.Helper()
 
