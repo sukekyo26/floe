@@ -120,12 +120,17 @@ func (e *Error) Error() string {
 type List []*Error
 
 // Add adds err to l: an Error or a List; a nil *Error, which a function returning *Error gives for none,
-// is left out, in a List too. Any other error is a failure, not a mistake, and is returned for the caller to stop at.
+// is left out, in a List too. Any other error is a failure, not a mistake, and is returned for the caller to stop at;
+// so is a refusal with warnings (WithWarnings), as a List would lose them, and it is told as floe's failure.
 func (l *List) Add(err error) error {
 	var more List
 	var one *Error
 	switch {
 	case err == nil:
+	case errors.As(err, new(*warned)):
+		// %v, not %w: floe's own mistake, told as a failure, not as the refusal.
+		const lost = "usererr: a refusal with warnings is collected as mistakes, which would lose them"
+		return fmt.Errorf("%s: %v", lost, err) //nolint:errorlint,err113
 	case errors.As(err, &more):
 		for _, e := range more {
 			if e != nil {
@@ -319,8 +324,7 @@ func (r Report) Render(name string) string {
 		lines = append(lines, t.line(name))
 	}
 	for _, t := range r.Warnings {
-		// LIMIT: the word is English, as only the command line lays warnings out; take it from the catalog if a
-		// page comes to show them.
+		// LIMIT: the word is English, as the command line alone lays warnings out; take it from the catalog for a page.
 		t.Text = "warning: " + t.Text
 		lines = append(lines, t.line(name))
 	}

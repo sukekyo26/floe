@@ -247,3 +247,14 @@ func TestWithWarnings(t *testing.T) {
 		t.Errorf("a failure told %+v", got)
 	}
 }
+
+// A refusal with warnings given to a List is floe's failure, told so, not mistakes that lose its warnings.
+func TestAddWarned(t *testing.T) {
+	t.Parallel()
+
+	warned := usererr.WithWarnings(usererr.New("library", "taken"), []*usererr.Error{usererr.New("library", "advice")})
+	r := usererr.Tell(i18n.EnglishCatalog(), usererr.Collect(warned))
+	if want := "usererr: a refusal with warnings is collected as mistakes, which would lose them: taken"; r.Failure != want {
+		t.Errorf("told %+v, want the failure %q", r, want)
+	}
+}

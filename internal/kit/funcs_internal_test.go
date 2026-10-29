@@ -27,23 +27,24 @@ func TestMarkdown(t *testing.T) {
 	}
 }
 
-// Markdown finds a fenced code block as goldmark reads it, in a list or a quote and unclosed too, and no code in a
-// line, in a table or indented.
+// Fenced finds the line of the first fenced code block as goldmark reads it, in a list or a quote and unclosed too,
+// and no code in a line, in a table or indented.
 func TestFenced(t *testing.T) {
 	t.Parallel()
 
-	for src, want := range map[string]bool{
-		"Run this:\n\n```sh\nls\n```\n":                true,
-		"- item\n\n  ~~~\n  nested in a list\n  ~~~\n": true,
-		"> quote\n>\n> ```\n> q\n> ```\n":              true,
-		"```\nunclosed fence":                          true,
-		"```x``` is inline code, not a fence":          false,
-		"Para.\n\n    ```\n    indented four\n":        false,
-		"- item\n\n      indented in list\n":           false,
-		"| a |\n|---|\n| `x` |\n":                      false,
+	for src, want := range map[string]int{
+		"Run this:\n\n```sh\nls\n```\n":                3,
+		"- item\n\n  ~~~\n  nested in a list\n  ~~~\n": 3,
+		"> quote\n>\n> ```\n> q\n> ```\n":              3,
+		"```\n```\n\n```go\nx\n```":                    1,
+		"```\nunclosed fence":                          1,
+		"```x``` is inline code, not a fence":          0,
+		"Para.\n\n    ```\n    indented four\n":        0,
+		"- item\n\n      indented in list\n":           0,
+		"| a |\n|---|\n| `x` |\n":                      0,
 	} {
-		if _, got, err := Markdown(src); err != nil || got != want {
-			t.Errorf("Markdown(%q) fenced %v, %v; want %v", src, got, err, want)
+		if got := Fenced(src); got != want {
+			t.Errorf("Fenced(%q) = %d, want %d", src, got, want)
 		}
 	}
 }

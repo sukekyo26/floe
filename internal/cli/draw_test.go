@@ -56,7 +56,7 @@ func TestWarnings(t *testing.T) {
 	t.Parallel()
 
 	fenced := "lang: en\ntemplate: report\nsections:\n  - parts:\n      - text: \"```\\ncode\\n```\"\n"
-	warning := "w.yaml:5:15: warning: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button\n"
+	warning := "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button\n"
 	dir := write(t, map[string]string{"w.yaml": fenced, "b.yaml": "lang: en\ntemplate: reprot\n"})
 	for _, tt := range []struct {
 		args []string

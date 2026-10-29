@@ -131,8 +131,7 @@ func replaced(n *html.Node) string {
 }
 
 // names are the names of the parts of a Kit, and of its parts and looks, each sorted.
-// LIMIT: the parts offered for a name that is none hold text and script, which draw no element; leave out those of
-// no element if one is offered and misleads (a part of no CSS may still be a box).
+// LIMIT: a name that is none is offered text and script too, which draw no element; leave them out if that misleads.
 type names struct {
 	parts, all []string
 }

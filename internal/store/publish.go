@@ -216,7 +216,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	// for this put sends the images the first asked (a map, not nil): publish again. Ask again if that comes to matter.
 	if up.Images == nil && len(images.names) > 0 {
 		if _, refused := s.storedPage(up.File, nil, opts, up.Project); refused != nil {
-			return nil, refused
+			return nil, usererr.WithWarnings(refused, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
 		}
 		return nil, &NeedImages{Names: images.names}
 	}

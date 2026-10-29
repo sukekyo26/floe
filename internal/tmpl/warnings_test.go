@@ -63,7 +63,7 @@ func TestFloeExamplesWarnNot(t *testing.T) {
 	}
 }
 
-const fence = "write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button"
+const fence = "this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button"
 
 // laid lays warnings out as the command line does.
 func laid(warnings []*usererr.Error) string {

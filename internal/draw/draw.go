@@ -180,11 +180,6 @@ func node(typ html.NodeType, a atom.Atom, data string) *html.Node {
 	}
 }
 
-// pathKey is the path at as one map key: its steps each quoted, so that no two paths are one key.
-func pathKey(at []string) string {
-	return fmt.Sprintf("%q", at)
-}
-
 // atOrUnder reports whether the path at is the path of, or under it.
 func atOrUnder(at, of []string) bool {
 	return len(at) >= len(of) && slices.Equal(at[:len(of)], of)
@@ -214,9 +209,10 @@ func (s *items) pageMistakes(t *kit.Template, err error) error {
 // s to check in the page drawn, an image as the data URI of the file it names, read by s.
 func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any, error) {
 	if it.Part != "" {
-		// The text part's root is its item of format markdown, drawn before it at the same path.
-		if it.Part == kit.TextPart && s.fenced[pathKey(it.At)] {
-			s.warnings = append(s.warnings, yamlpos.New(d.File, d.PosOf(it.At), "draw_text_fence"))
+		if text, ok := it.Value.(string); ok && it.Part == kit.TextPart {
+			if line := kit.Fenced(text); line > 0 {
+				s.warnings = append(s.warnings, yamlpos.New(d.File, d.PosOf(it.At), "draw_text_fence", line))
+			}
 		}
 		return drawPart(k, d, it, ready, s)
 	}
@@ -227,9 +223,7 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 	}
 	switch it.Format {
 	case "markdown":
-		html, fenced, err := kit.Markdown(text)
-		s.fenced[pathKey(it.At)] = fenced
-		return html, err //nolint:wrapcheck // goldmark fails only to write, and a buffer does not
+		return kit.Markdown(text) //nolint:wrapcheck // goldmark fails only to write, and a buffer does not
 	case "html":
 		return s.marked(it.At, text), nil
 	case "image":
