@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+</head>
+<body>
+{{- /* The contents link to ids of the page's own, which floe keeps, not to those it makes of a heading's text in the page's language */}}
+<header class="head">
+<div class="column">
+{{- if or .Data.owner .Data.date}}
+<p class="byline">{{with .Data.owner}}<span>{{.}}</span>{{end}}{{with .Data.date}}<span>{{.}}</span>{{end}}</p>
+{{- end}}
+<h1>{{.Title}}</h1>
+{{- with .Data.status}}
+<p class="status">{{.}}</p>
+{{- end}}
+{{- with .Data.summary}}
+<p class="summary">{{markdownLine .}}</p>
+{{- end}}
+</div>
+</header>
+{{- with .Data.decisions}}
+<section class="verdict" aria-labelledby="conclusion">
+<div class="column">
+<h2 id="conclusion">{{word "conclusion"}}</h2>
+<ol>
+{{- range $i, $d := .}}
+<li><span class="question">{{markdownLine $d.question}}</span>
+{{- with index $.Calc.picks $i}}<strong class="pick">{{.}}</strong>{{else}}<strong class="pick undecided">{{word "undecided"}}</strong>{{end}}
+{{- with $d.why}}<span class="why">{{markdownLine .}}</span>{{end}}</li>
+{{- end}}
+</ol>
+</div>
+</section>
+{{- end}}
+<div class="column body">
+<main>
+<section><h2 id="background">{{word "background"}}</h2>{{.Data.background}}</section>
+<section><h2 id="goals">{{word "goals"}}</h2><ul>{{range .Data.goals}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
+{{- with .Data.non_goals}}
+<section><h2 id="non-goals">{{word "non_goals"}}</h2><ul class="non-goals">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
+{{- end}}
+{{- with .Data.decisions}}
+<section><h2 id="decisions">{{word "decisions"}}</h2>
+{{- /* The question is no heading: options draws its options as h3, which would sit beside it. A section named by it holds
+   them together instead */}}
+{{- range $i, $d := .}}
+<section class="decision" aria-labelledby="question-{{$i}}"><p class="question" id="question-{{$i}}">{{markdownLine $d.question}}</p>
+{{$d.options}}
+</section>
+{{- end}}
+</section>
+{{- end}}
+{{- with .Data.decided}}
+<section><h2 id="decided">{{word "decided"}}</h2><ul data-floe-look="rows" class="decided">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
+{{- end}}
+{{- with .Data.impact}}
+<section><h2 id="impact">{{word "impact"}}</h2>
+<div data-floe-look="table"><table>
+<thead><tr><th scope="col">{{word "impact_what"}}</th><th scope="col">{{word "impact_text"}}</th></tr></thead>
+<tbody>
+{{- range .}}
+<tr><td>{{markdownLine .what}}</td><td>{{markdownLine .text}}</td></tr>
+{{- end}}
+</tbody>
+</table></div>
+</section>
+{{- end}}
+{{- /* LIMIT: a fenced block in text is not warned of until floe has warnings */}}
+{{- range $i, $m := .Data.more}}
+<section><h2 id="more-{{$i}}">{{$m.heading}}</h2>
+{{- range $m.parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</section>
+{{- end}}
+</main>
+<aside data-floe-look="panel">
+<nav aria-labelledby="contents"><h2 id="contents">{{word "contents"}}</h2>
+<ul>
+<li><a href="#background">{{word "background"}}</a></li>
+<li><a href="#goals">{{word "goals"}}</a></li>
+{{- if .Data.non_goals}}<li><a href="#non-goals">{{word "non_goals"}}</a></li>{{end}}
+{{- if .Data.decisions}}<li><a href="#decisions">{{word "decisions"}}</a></li>{{end}}
+{{- if .Data.decided}}<li><a href="#decided">{{word "decided"}}</a></li>{{end}}
+{{- if .Data.impact}}<li><a href="#impact">{{word "impact"}}</a></li>{{end}}
+{{- range $i, $m := .Data.more}}<li><a href="#more-{{$i}}">{{$m.heading}}</a></li>{{end}}
+</ul>
+</nav>
+</aside>
+</div>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Templates
 
-How to make a template of your own: the page a data file is drawn into. A data file names its template with `template:` ([pages.md](pages.md) tells how to write one); floe's template is `report`. To make a part or a theme of your own, see [parts.md](parts.md).
+How to make a template of your own: the page a data file is drawn into. A data file names its template with `template:` ([pages.md](pages.md) tells how to write one); floe's templates are `report` and `design` (`floe template list` lists them). To make a part or a theme of your own, see [parts.md](parts.md).
 
 ## Where templates are
 
@@ -74,11 +74,13 @@ It sees:
 - A `}` that closes no block, and an `@import`, are refused at their line: load a stylesheet, such as Google Fonts, with a `<link>` in `page.html`.
 - Draw with the palette's variables (`var(--muted)`), so that the page follows the theme the data file picks.
 
-`report`'s `page.css`, for one:
+`report`'s `page.css`, for one, centres its page in the column every floe template uses:
 
 ```css
-:scope { --page-width: 96rem; }
-main { max-width: var(--page-width); margin-inline: auto; display: grid; gap: 2.5rem; }
+main {
+  max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad);
+  display: grid; gap: 2.5rem;
+}
 section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 .lead { color: var(--muted); font-size: 1.05rem; }
 ```
@@ -133,6 +135,7 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--page-bg` | The whole page's ground, a pattern such as squares too (`--bg` by default) |
 | `--rule` | The `border` of a rule across the page, such as between sections |
 | `--text-width` | How wide prose grows, which a template sets for its page on `:scope` |
+| `--page-width`・`--page-pad` | The column a page is centred in: its width, and the pad each side of it. As the pad is inside the box, the column is `max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad)` |
 
 floe's base draws the page's ground, colour and face on its root with them (`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`), which `page.css` may set otherwise on `:scope`. A theme of your own may set them too ([parts.md](parts.md#themes)).
 

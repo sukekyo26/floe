@@ -1,0 +1,37 @@
+/* The colours and faces are the theme's palette; the page lays them out: a head, a band of the conclusion, and the
+   body beside its contents, each in the column every template centres its page in.
+   LIMIT: the body falls to one column under 800px; a width just over it is not looked at */
+body { margin: 0; font-size: 16px; line-height: 1.8; padding-block: 0 4rem; }
+.column { max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+.head { padding-block: 2.5rem 1.6rem; border-bottom: var(--rule); }
+.head .column { display: grid; gap: 0.5rem; justify-items: start; }
+h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
+.byline { display: flex; flex-wrap: wrap; gap: 0 1rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+.status { border: 2px solid var(--accent); color: var(--accent); font-weight: 800; padding: 0 0.7rem; border-radius: 4px; }
+.summary { color: var(--muted); font-size: 1.05rem; }
+.verdict { background: var(--accent); color: var(--on-fill); padding-block: 1.4rem 1.6rem; }
+.verdict h2 { font-size: 0.8rem; letter-spacing: 0.15em; margin-bottom: 0.4rem; }
+.verdict ol { max-width: none; gap: 0.7rem; }
+.verdict li { display: grid; gap: 0.1rem; }
+.verdict .question { font-size: 0.9rem; }
+.verdict .pick { font-size: 1.4rem; line-height: 1.4; }
+.verdict .undecided { opacity: 0.8; }
+.verdict code { background: color-mix(in srgb, var(--on-fill) 20%, transparent); color: inherit; }
+.verdict a { color: inherit; }
+.body { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 2.5rem; padding-block: 2rem; }
+main { display: grid; gap: 2.2rem; align-content: start; }
+main > *, section > * { min-width: 0; }
+main section { display: grid; gap: 0.8rem; }
+main h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px solid var(--accent); }
+.decision .question { margin-top: 0.4rem; font-family: var(--display); font-weight: 700; font-size: 1.05rem; }
+.non-goals { color: var(--muted); }
+.decided { list-style: none; padding: 0; gap: 0; max-width: none; }
+.decided li { padding: 0.6rem 1rem; }
+aside { position: sticky; top: 1rem; align-self: start; padding: 1rem 1.2rem; }
+aside h2 { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
+aside ul { list-style: none; padding: 0; gap: 0.15rem; }
+aside a { text-decoration: none; }
+@media (max-width: 800px) {
+  .body { grid-template-columns: 1fr; }
+  aside { position: static; grid-row: 1; }
+}
