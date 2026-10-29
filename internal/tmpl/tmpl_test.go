@@ -185,7 +185,8 @@ func TestDrawRunbook(t *testing.T) {
 		if len(lists) != 3 {
 			t.Fatalf("%s: %d lists of steps, want 2", tt.lang, len(lists)-1)
 		}
-		steps, back := lists[1][:strings.Index(lists[1], "</ol>")], lists[2][:strings.Index(lists[2], "</ol>")]
+		steps, _, _ := strings.Cut(lists[1], "</ol>")
+		back, _, _ := strings.Cut(lists[2], "</ol>")
 		if ids.ReplaceAllString(steps, "") != ids.ReplaceAllString(back, "") {
 			t.Errorf("%s: a step of the rollback\n%s\nis not drawn as one of the steps\n%s", tt.lang, back, steps)
 		}
