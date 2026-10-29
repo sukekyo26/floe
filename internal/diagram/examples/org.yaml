@@ -1,0 +1,31 @@
+# Organisation chart: the departments of a company, drawn with the part tree from who reports to whom.
+# A node is a box, and an edge leads down from it to each of its children.
+#
+# Grid: the root's centre is at x = 480 and its top at y = 20, and the part tree places the rest:
+# children side by side 24 apart and centred under their parent, each depth in one row 40 below its
+# tallest node, and an edge down from each node to each child. Write each node's rows and children
+# alone; give a node a name to end an edge of your own at it.
+width: 960
+height: 300
+title: { en: "The departments of a company", ja: "ある会社の部署" }
+parts:
+  - tree:
+      x: 480
+      y: 20
+      root:
+        rows: [{ en: Chief executive, ja: "社長" }]
+        tone: accent
+        children:
+          - rows: [{ en: Engineering, ja: "開発部" }]
+            children:
+              - rows: [{ en: Apps, ja: "アプリ" }]
+              - rows: [{ en: Servers, ja: "サーバー" }]
+              - rows: [{ en: Quality, ja: "品質" }]
+          - rows: [{ en: Sales, ja: "営業部" }]
+            children:
+              - rows: [{ en: Home market, ja: "国内" }]
+              - rows: [{ en: Overseas, ja: "海外" }]
+          - rows: [{ en: Administration, ja: "管理部" }]
+            children:
+              - rows: [{ en: People, ja: "人事" }]
+              - rows: [{ en: Accounts, ja: "経理" }]

@@ -8,6 +8,19 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the diagram part `tree`: write the nodes of a tree and their children,
+  and floe places each under its parent and draws the edges; and the diagram
+  example `org` (`floe diagram example org`), the departments of a company
+  drawn with it.
+- Add the diagram example `gantt` (`floe diagram example gantt`): bars for
+  how long tasks take and arrows for which task waits for which, here the
+  plan of one version of an app over six weeks.
+- Add the diagram example `quadrant` (`floe diagram example quadrant`):
+  two axes that split items into four areas, here a notes app's feature
+  ideas by their value and the effort they take.
+- Add the diagram example `swimlane` (`floe diagram example swimlane`): a
+  flow split into a lane for each who acts, here one pull request between the
+  user, the architect and the engineer.
 - Add a button over `code`, `terminal` and `diff` that copies them: the code,
   the commands without their prompt or output, the diff as written. It says
   "Copied" in the page's language, and still copies where the page may not

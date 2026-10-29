@@ -218,8 +218,8 @@ var messagesJA = map[string]string{
 	"icons_already":            "%s のアイコン %s はすでに %s にあります（取り直すなら --force を付けてください）",
 
 	// diagram
-	"diagram_name_used":        "名前「%s」は前にも付いています。部品と行にはそれぞれ別の名前を付けてください",
-	"diagram_name_unknown":     "edge: 「%s」という名前の部品も行もありません",
+	"diagram_name_used":        "名前「%s」は前にも付いています。部品・行・節にはそれぞれ別の名前を付けてください",
+	"diagram_name_unknown":     "edge: 「%s」という名前の部品も行も節もありません",
 	"diagram_end_kind":         "edge: 「%s」は %s で、線の端にできません。box・table かその名前の付いた行・icon・frame・bar・dot・点で終えてください",
 	"diagram_end_side":         "edge: %s に辺 %s はありません。辺は box・table・icon・frame・bar に、行には left か right を書き、dot と点には書かないでください",
 	"diagram_too_narrow":       "%s: 「%s」%sには w: %s 以上が要ります",
