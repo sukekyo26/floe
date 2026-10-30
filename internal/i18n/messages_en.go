@@ -362,7 +362,7 @@ var messagesEN = map[string]string{
 	"ui_updated_at":                  "Updated %s",
 	"ui_file_missing":                "%s (file not found)",
 	"ui_folder_empty":                "No HTML files or folders here",
-	"ui_folder_more":                 "%d entries here; the first %d are shown, folders by name and then pages by name",
+	"ui_folder_more":                 "%d entries here; %d are shown (folders, then pages, each by name)",
 	"ui_folder_failed":               "Cannot read this folder (%s)",
 	"ui_copy_path":                   "Copy the path",
 	"ui_copy_path_named":             "Copy the path of %s",

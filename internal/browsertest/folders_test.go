@@ -120,8 +120,10 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Added from the dialog, a folder is opened.
 	s.write(t, "more/m.html", "<title>m</title>")
 	b.navigate("/?tab=links")
-	b.eval(`document.getElementById('add-folder').click();
-		document.getElementById('add-path').value = ` + js(filepath.Join(s.Env["HOME"], "more")) + `;
+	// Opened for a folder, the dialog shows the folder's icon in place of the link's.
+	b.eval("document.getElementById('add-folder').click()")
+	out = append(out, b.eval("['add-icon-link', 'add-icon-folder'].map((id) => getComputedStyle(document.getElementById(id)).display).join()"))
+	b.eval(`document.getElementById('add-path').value = ` + js(filepath.Join(s.Env["HOME"], "more")) + `;
 		document.getElementById('add').requestSubmit()`)
 	out = append(out, b.until("the folder added", rows+".includes('m.html') && new URLSearchParams(location.search).get('tab') + ' ' + "+opens),
 		b.eval("document.getElementById('add-title').textContent"))
@@ -131,5 +133,5 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"a,b:c-,odd.html,assets+,big+,guide+,index.html|docs,docs:a,b:c|big|a,b:c-,odd.html,assets+,big+,guide+,index.html,new.html|"+
 		"docs / guide/setup.html|/a/docs/guide/setup.html#end|true,true,true|none yet|"+
 		"?file=guide%2Fsetup.html#top|the page at #end|guide/setup.html*,guide/start.html|rgb(1, 2, 3)|docs / big/p1000.html|tree rows 0|"+
-		"folders more|Add a folder")
+		"none,block|folders more|Add a folder")
 }

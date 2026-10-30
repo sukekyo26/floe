@@ -351,7 +351,7 @@ var messagesJA = map[string]string{
 	"ui_updated_at":                  "更新 %s",
 	"ui_file_missing":                "%s（ファイルが見つかりません）",
 	"ui_folder_empty":                "HTML ファイルもフォルダもありません",
-	"ui_folder_more":                 "%d 項目のうち、フォルダを名前の順に、次にページを名前の順に並べた最初の %d 項目だけ表示しています",
+	"ui_folder_more":                 "%d 項目のうち %d 項目を表示しています（フォルダ、ページの順に、それぞれ名前の順）",
 	"ui_folder_failed":               "このフォルダを読めません（%s）",
 	"ui_copy_path":                   "パスをコピー",
 	"ui_copy_path_named":             "%s のパスをコピー",

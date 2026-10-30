@@ -363,7 +363,8 @@
   li.tree button.title::after { content: ""; position: absolute; inset: 0; }
   li.tree button.title:focus-visible { outline: none; }
   li:has(button.title:focus-visible) { outline: var(--ring); outline-offset: -2px; }
-  li.tree.note .body { color: var(--muted); font-size: 0.8rem; }
+  /* Under the names of its directory: past the fold's room */
+  li.tree.note .body { padding-left: calc((var(--d) - 1) * 1.1rem + 0.2rem + 14px + 0.35rem); color: var(--muted); font-size: 0.8rem; }
   .crumb { color: var(--muted); font-weight: 500; }
   /* The row's other actions. The row whose menu is open comes forward: each row's rise animation stacks the rows below over it */
   li:has(.more[open]) { z-index: 3; }
@@ -1677,8 +1678,7 @@
     };
     const note = (text) => {
       const li = tree(['note']);
-      li.querySelector('.body').innerHTML = '<span><span class="fold none"></span></span>';
-      li.querySelector('.body > span').append(text);
+      li.querySelector('.body').textContent = text;
       li.querySelector('.actions').replaceChildren();
       return li;
     };
@@ -2215,8 +2215,9 @@
       $('add-path-label').textContent = t(folder ? 'ui_add_folder_path' : 'ui_add_path');
       $('add-path').placeholder = folder ? '/home/you/project/docs' : '/home/you/project/coverage/index.html';
       $('add-slug').placeholder = t(folder ? 'ui_add_folder_slug_placeholder' : 'ui_add_slug_placeholder');
-      $('add-icon-link').hidden = folder;
-      $('add-icon-folder').hidden = !folder;
+      // An svg has no hidden property: its attribute hides it
+      $('add-icon-link').toggleAttribute('hidden', folder);
+      $('add-icon-folder').toggleAttribute('hidden', !folder);
       $('add-error').hidden = true;
       $('add-dialog').showModal();
     };
