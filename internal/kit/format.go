@@ -125,6 +125,10 @@ func float(fn string, v any) (float64, error) {
 	if f, ok := v.(float64); ok {
 		return f, nil
 	}
+	// An item of the schema not written comes as nil, as null does.
+	if v == nil {
+		return 0, usererr.New("kit_number_missing", fn)
+	}
 	return 0, usererr.New("kit_not_number", fn, fmt.Sprintf("%v (%T)", v, v))
 }
 

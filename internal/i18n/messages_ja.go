@@ -79,6 +79,7 @@ var messagesJA = map[string]string{
 	"kit_for_undeclared":         "for %s：schema はそこに %s を許しません。schema が宣言する鍵の道を書いてください",
 	"kit_not_number":             "%s は数を取ります。%s は数ではありません",
 	"kit_num_digits":             "num だけか、num と 1 以上の有効数字の桁数を数の前に書いてください（num 3 のように）",
+	"kit_number_missing":         "%s は数を取ります。数が書かれていないか、null です",
 	"kit_part_yaml":              "part.yaml はキーと値で書いてください。looks: に部品が借りる見た目のリスト（looks: [panel]）、見た目だけの部品なら description: にその説明です",
 	"kit_part_yaml_key":          "%s は part.yaml のキーではありません。looks: に部品が借りる見た目のリスト（looks: [panel]）、見た目だけの部品なら description: にその説明を書いてください",
 	"kit_part_yaml_looks":        "looks: は部品か見た目の名前のリストで、名前を文字列で書いてください。YAML が数・true・false・null と読むものは引用符で囲みます（looks: [panel]）",

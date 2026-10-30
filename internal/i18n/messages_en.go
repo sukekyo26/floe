@@ -85,6 +85,7 @@ var messagesEN = map[string]string{
 	"kit_for_undeclared":         "for %s: the schema allows no %s there; write a path of keys its schema declares",
 	"kit_not_number":             "%s takes a number, not %s",
 	"kit_num_digits":             "write num, or num and a count of significant digits from 1 before the number, like num 3",
+	"kit_number_missing":         "%s takes a number; none is written, or it is null",
 	"kit_part_yaml":              "write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
 	"kit_part_yaml_key":          "%s is not a key of part.yaml; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
 	"kit_part_yaml_looks":        "write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
