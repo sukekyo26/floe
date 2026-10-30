@@ -166,8 +166,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   hold. A part draws no heading, as it knows not the level it is put at: the
   titles of `options` and `decision` are not headings, so that the headings of
   a page keep their levels wherever the parts are.
-- Add nine themes a data file picks with `theme:` (`default`, `soft`,
-  `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `swiss` and `washi`),
+- Add ten themes a data file picks with `theme:` (`default`, `soft`,
+  `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `retro`, `swiss` and
+  `washi`),
   each a palette of CSS variables and the shape of the parts. Pages in
   `default`, and in the themes that take its colours (`soft`, `editorial`), have
   the warm grey ground and text of the management page, with lines of the same
