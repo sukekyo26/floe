@@ -274,20 +274,23 @@ func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error 
 			// LIMIT: told at template:, whether page.html or a part's part.html put the item there: which of them did
 			// is not known without marks around a part's output too, which would refuse part.html left open as an
 			// item's is. Mark a part's output if one comes to need it told at part.html.
-			found = append(found, yamlpos.New(d.File, d.Where["template"], "draw_html_placed",
-				strings.Join(s.html[o.n], "."), o.holder))
+			found = append(found, s.named(d, marks, o.n, yamlpos.New(d.File, d.Where["template"], "draw_html_placed",
+				strings.Join(s.html[o.n], "."), o.holder)))
 			break
+		}
+		whole := func(where string) *usererr.Error {
+			return s.named(d, marks, o.n, yamlpos.New(d.File, pos, "draw_html_whole", where))
 		}
 		end := slices.IndexFunc(marks[i+1:], func(p occurrence) bool { return p.n == o.n && p.end })
 		if end < 0 {
-			refuse("draw_html_whole", unfinished(s.texts[o.n]))
+			found = append(found, whole(unfinished(s.texts[o.n])))
 			break
 		}
 		if e := marks[i+1+end]; !e.exact {
-			refuse("draw_html_whole", e.holder)
+			found = append(found, whole(e.holder))
 			break
 		} else if where := changed(o.n, o.node, e.node); where != "" {
-			refuse("draw_html_whole", where)
+			found = append(found, whole(where))
 			break
 		}
 		for n := o.node.NextSibling; n != marks[i+1+end].node; n = n.NextSibling {
@@ -298,6 +301,64 @@ func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error 
 		}
 	}
 	return found.Err()
+}
+
+// named returns the mistake of an item that changed the page, told: the elements an item leaves open, as reread
+// says, at that item, for each item whose marks the parser moved (moved), the item n check refused first, then the
+// others in the page's order; told when none says one. Marks that stayed in place are read by check alone. It names
+// alone: the page is refused whichever it returns.
+func (s *items) named(d *doc.Data, marks []occurrence, n int, told *usererr.Error) *usererr.Error {
+	var starts []occurrence
+	for i, o := range marks {
+		named := slices.ContainsFunc(starts, func(p occurrence) bool { return p.n == o.n })
+		if o.exact && !o.end && !named && moved(marks, i) {
+			if o.n == n {
+				starts = slices.Insert(starts, 0, o)
+			} else {
+				starts = append(starts, o)
+			}
+		}
+	}
+	for _, o := range starts {
+		if where := s.reread(o); where != "" {
+			return yamlpos.New(d.File, d.PosOf(s.html[o.n]), "draw_html_whole", where)
+		}
+	}
+	return told
+}
+
+// moved reports whether the parser moved the marks of the item marks[i] starts, a comment of its own: an end of it is
+// before it, or none, a comment of its own, after it, as a table puts what an item left open before it.
+func moved(marks []occurrence, i int) bool {
+	n := marks[i].n
+	return slices.ContainsFunc(marks[:i], func(p occurrence) bool { return p.n == n && p.end }) ||
+		!slices.ContainsFunc(marks[i+1:], func(p occurrence) bool { return p.n == n && p.end && p.exact })
+}
+
+// reread reads the text of the item that start, a comment of its own, starts, alone, as the parser reads HTML in the
+// element the page put start in, a comment of the secret after it, and returns the elements that hold that comment,
+// outside in, or the one whose text does: those the item leaves open; "" for none, or when it is not found.
+func (s *items) reread(start occurrence) string {
+	at := s.secret + "q"
+	nodes, err := html.ParseFragment(strings.NewReader(s.texts[start.n]+"<!--"+at+"-->"), start.node.Parent)
+	if err != nil {
+		return ""
+	}
+	for _, top := range nodes {
+		for n := range top.Descendants() {
+			switch {
+			case n.Type == html.CommentNode && n.Data == at:
+				var open []string
+				for p := n.Parent; p != nil; p = p.Parent {
+					open = append([]string{"<" + p.Data + ">"}, open...)
+				}
+				return strings.Join(open, " ")
+			case n.Type == html.TextNode && strings.Contains(n.Data, at) && n.Parent != nil:
+				return "<" + n.Parent.Data + ">"
+			}
+		}
+	}
+	return ""
 }
 
 // unfinished returns where text, read alone, ends in a tag it does not finish: what is past the last token a

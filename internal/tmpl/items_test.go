@@ -85,6 +85,13 @@ func TestHTMLItems(t *testing.T) {
 		{htmlPage("<table><tbody>{{.Data.h}}x</tbody></table>"), "<td>x</td>", changes("3:4", "<tr>")},
 		{htmlPage("<table>{{.Data.h}}x</table>"), "<tr><td>x</td></tr>", changes("3:4", "<tbody>")},
 		{htmlPage("<table><tr>{{.Data.h}}x</tr></table>"), "<tr><td>x</td></tr>", changes("3:4", "</tr>")},
+		// What an item leaves open in a table, the parser puts before it with the item's end: named by reading the item
+		// again in the element its start is in.
+		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), "<b>x", changes("3:4", "<b>")},
+		{htmlPage("<table><tbody><tr>{{.Data.h}}</tr></tbody></table>"), "<b><i>x", changes("3:4", "<b> <i>")},
+		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), "<textarea>x", changes("3:4", "<textarea>")},
+		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), "<!--x", changes("3:4", "<!--")},
+		{htmlPage("<svg>{{.Data.h}}</svg>"), "<b>x", changes("3:4", "<b> </svg>")},
 		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), `<tr><td>x</td></tr><meta http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{htmlPage("<svg><foreignObject>{{.Data.h}}</foreignObject></svg><p>after</p>"), `<meta http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{htmlPage("<textarea>{{.Data.h}}</textarea>"), "<b>x</b>", "d.yaml:2:11: page.html, or the part.html of a part holding it, puts the item h of format html in a text or an attribute of <textarea>, where HTML does not work: put it, or the part holding it, where elements go, or give the item another format"},
@@ -136,6 +143,19 @@ func TestHTMLItemsInOrder(t *testing.T) {
 	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nh: <b>x</b>\ng: a</b\n", none),
 		"d.yaml:4:4: HTML changes the page around it at </b: close in it each element and comment it opens, and close no element it did not open"; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+	// In a table, what an item leaves open is put before it with its end, and with the starts of items after it: the
+	// item that left it open is named, however many items, or copies of one, the table holds.
+	for _, tt := range []struct{ page, data, want string }{
+		{"<table><tbody>{{.Data.h}}</tbody></table><p>{{.Data.g}}</p>", "h: <textarea>x\ng: ok\n", changes("3:4", "<textarea>")},
+		{"<table><tbody>{{.Data.h}}{{.Data.g}}</tbody></table>", "h: <b>x\ng: <tr><td>ok</td></tr>\n", changes("3:4", "<b>")},
+		{"<table><tbody>{{.Data.h}}{{.Data.h}}</tbody></table>", "h: <textarea>x\ng: ok\n", changes("3:4", "<textarea>")},
+		{"<table><tbody>{{.Data.h}}</tbody></table><div>{{.Data.h}}</div>", "h: <b>x\ng: ok\n", changes("3:4", "<b>")},
+	} {
+		k = ownKit(t, nil, mine(htmlPage(tt.page), htmlSchema, nil))
+		if got := drawn(t, k, "lang: en\ntemplate: mine\n"+tt.data, none); got != tt.want {
+			t.Errorf("%s with %q: told\n%s\nwant\n%s", tt.page, tt.data, got, tt.want)
+		}
 	}
 }
 
