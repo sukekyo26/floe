@@ -71,7 +71,7 @@ floe はページの CSS を `</head>` の前の `<style>` に、5 つのカス�
 ## 見た目を借りる
 
 - 部品の箱でない要素は `data-floe-look` で見た目を借ります。`<section data-floe-look="panel">` はどのテーマでもパネルです。その見た目は部品とテンプレートより下の `floe.looks` に入るので、中に置かれた部品やテンプレートが整えられます。
-- floe の部品もこうして見た目を借ります。`compare`・`fields`・`findings`・`matrix`・`risks` は table の、`stats`・`options`・`facts`・`links`・`decision` は cards の、`diff`・`terminal` は code の、`checklist`・`faq`・`glossary`・`keys` は `rows` の、ほかのパネルに描く部品は `panel` の見た目を借ります。テーマのある見た目へのルールは、それを借りる部品を全部描きます。
+- floe の部品もこうして見た目を借ります。`compare`・`fields`・`findings`・`matrix`・`risks` は table の、`stats`・`options`・`facts`・`links`・`decision` は cards の、`diff`・`terminal` は code の、`checklist`・`entries`・`faq`・`glossary`・`keys` は `rows` の、ほかのパネルに描く部品は `panel` の見た目を借ります。テーマのある見た目へのルールは、それを借りる部品を全部描きます。
 
 ## テーマ
 
