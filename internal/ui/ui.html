@@ -249,9 +249,9 @@
   li:is(:has(+ li.group), :has(+ li.folder), :last-child) { border-radius: 0 0 20px 20px; box-shadow: 0 1px 0 var(--line); }
   /* A heading is not pressed, so it is not pointed out */
   li:not(.group):hover { background: var(--hover); }
-  /* A folder's row is the heading of its tree: its own ground, its title larger than the tree's names */
-  li.folder { background: var(--subtle); }
-  li.folder a.title { font-size: 0.98rem; font-weight: 700; }
+  /* A folder's row is the heading of its tree, on the rows' ground: its title larger and heavier than the tree's names, which
+     step in under it */
+  li.folder a.title { font-size: 1rem; font-weight: 750; }
   /* Without groups, the list's first row rounds its top as a group's heading does */
   #list > li.folder:first-child { border-radius: 20px 20px 0 0; }
   li.folder + li.folder, li.tree + li.folder { margin-top: 0.6rem; border-radius: 20px 20px 0 0; border-top: 0; }
