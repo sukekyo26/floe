@@ -44,7 +44,10 @@ func At(src []byte, line, column int) int {
 	}
 	at := 0
 	for range line - 1 {
-		if at = NextLine(src, at); at == len(src) && (at == 0 || !breaks(src, at-1)) {
+		if at == len(src) {
+			return -1
+		}
+		if at = NextLine(src, at); at == len(src) && !breaks(src, at-1) {
 			return -1
 		}
 	}

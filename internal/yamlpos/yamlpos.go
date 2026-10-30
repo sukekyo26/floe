@@ -239,19 +239,21 @@ func document(file string, src []byte) (ast.Node, error) {
 // but goccy/go-yaml counts it into the indentation, reading the lines after it a space short and dropping
 // those it then reads as comments, or failing at one of them. A text it reads right (of one line) is refused
 // alike, as the mending (|2) is one. A tab with no space before it goccy/go-yaml refuses itself.
+// It runs before the parser, whose mistake past such a text is the misreading's, at another line.
 // LIMIT: past a text refused, goccy/go-yaml may read a | in what YAML 1.2 reads as its text as a header, which
 // is refused too; read it otherwise if that comes to mislead.
+// LIMIT: a header goccy/go-yaml places off (after a tab before it, a quoted text over CRLF lines) is not judged.
+// LIMIT: At counts each header from src's start; go on from the one before if a file of many comes to be slow.
 func blockTabs(file string, src []byte, tks token.Tokens) error {
 	var found usererr.List
 	for _, t := range tks {
 		if t.Type != token.LiteralType && t.Type != token.FoldedType || strings.ContainsAny(t.Value, "123456789") {
 			continue
 		}
-		// Where goccy/go-yaml's line and column put the header: its Offset counts runes, and drifts.
+		// Where goccy/go-yaml's line and column put the header: its Offset counts runes, and drifts more.
 		at := textpos.At(src, t.Position.Line, t.Position.Column)
 		if at < 0 || !bytes.HasPrefix(src[at:], []byte(t.Value)) {
-			return fmt.Errorf("yamlpos: %s: no %q at %d:%d, where goccy/go-yaml puts it", //nolint:err113 // floe's own
-				file, t.Value, t.Position.Line, t.Position.Column)
+			continue
 		}
 		for line := textpos.NextLine(src, at); line < len(src); line = textpos.NextLine(src, line) {
 			spaces := len(src[line:]) - len(bytes.TrimLeft(src[line:], " "))

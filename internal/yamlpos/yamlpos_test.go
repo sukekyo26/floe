@@ -251,6 +251,12 @@ func TestParseBlockTabs(t *testing.T) {
 		{"a tab alone past the first line", "c: |\n  x\n  \t\n", ""},
 		{"no tab", "c: |\n  x\n  # h\n", ""},
 		{"no spaces before the tab", "c: |\n\tx\n", "a.yaml:2:1: found a tab character where an indentation space is expected"},
+		// LIMIT: a header goccy/go-yaml places off is not judged, and does not stop the file.
+		{"a tab before the header", "a:\t|\n  z\n", ""},
+		{"a tab before the header of an item", "- \t|\n  z\n", ""},
+		{"after quotes over CRLF lines", "a: 'x\r\n  y'\r\nb: |\r\n  z\r\n", ""},
+		// goccy/go-yaml's own mistake, as on a file without the check.
+		{"after a tab in double quotes", "a: \"\tx\"\nb: |\n  z\n", "a.yaml:1:9: value is not allowed in this context. map key-value is pre-defined"},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
 		if got := told(err); got != tt.want {

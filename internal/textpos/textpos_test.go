@@ -45,7 +45,7 @@ func TestOf(t *testing.T) {
 func TestAt(t *testing.T) {
 	t.Parallel()
 
-	for _, src := range []string{"abc", "a\nb", "a\r\nb", "a\rb", "日本x\ny", "a\r\n\rb\nc", "ab\r", "\xff\xfex\n"} {
+	for _, src := range []string{"abc", "a\nb", "a\r\nb", "a\rb", "日本x\ny", "a\r\n\rb\nc", "ab\r", "\xff\xfex\n", "a\n", "", "a\r\n"} {
 		for at := range len(src) + 1 {
 			if at < len(src) && !utf8.RuneStart(src[at]) {
 				continue
@@ -59,7 +59,7 @@ func TestAt(t *testing.T) {
 	for _, tt := range []struct {
 		src          string
 		line, column int
-	}{{"ab\ncd", 3, 1}, {"ab\ncd", 1, 4}, {"ab\ncd", 0, 1}, {"ab\ncd", 1, 0}, {"日本", 1, 4}} {
+	}{{"ab\ncd", 3, 1}, {"ab\ncd", 1, 4}, {"ab\ncd", 0, 1}, {"ab\ncd", 1, 0}, {"日本", 1, 4}, {"a\n", 3, 1}, {"a\n", 5, 1}, {"a\r\n", 3, 1}, {"", 2, 1}} {
 		if got := textpos.At([]byte(tt.src), tt.line, tt.column); got != -1 {
 			t.Errorf("At(%q, %d, %d) = %d, want -1", tt.src, tt.line, tt.column, got)
 		}
