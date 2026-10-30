@@ -34,6 +34,7 @@ func probe(n int) string {
 // read once, and the icons of the diagrams, counted so that the ids of each differ.
 type items struct {
 	secret    string     // of the marks, in lower case as a parser makes tag and attribute names
+	edge      string     // the text of the comment drawn outside each probe: the secret and a letter, no mark
 	html      [][]string // the path of each item of format html, by its number
 	texts     []string   // its text
 	images    fs.FS      // the data's images, nil for none
@@ -54,8 +55,9 @@ type image struct {
 // under imagesDir ("" for the data file's directory), and whose diagrams show the icons of icons (nil for none
 // kept).
 func newItems(images fs.FS, imagesDir string, icons diagram.Icons) *items {
+	secret := strings.ToLower(rand.Text())
 	return &items{
-		secret: strings.ToLower(rand.Text()), html: nil, texts: nil, images: images, imagesDir: imagesDir,
+		secret: secret, edge: secret + "p", html: nil, texts: nil, images: images, imagesDir: imagesDir,
 		read: map[string]image{}, icons: icons, diagrams: 0, warnings: nil,
 	}
 }
@@ -73,17 +75,12 @@ func (s *items) marked(at []string, text string) template.HTML {
 // and an edge, a comment of the secret, so that it is a text of its own: text page.html writes beside it is no
 // part of it, which the parser would move with it out of a table. A part's output trimmed keeps it too.
 func (s *items) around(n int) (before, after string) {
-	edge := "<!--" + s.edge() + "-->"
+	edge := "<!--" + s.edge + "-->"
 	return edge + probe(n) + "<!--" + s.mark(n, "s") + "-->", "<!--" + s.mark(n, "e") + "-->" + probe(n) + edge
 }
 
-// edge is the text of the comment drawn outside each probe: the secret and a letter, no mark of an item.
-func (s *items) edge() string {
-	return s.secret + "p"
-}
-
-// plain returns text without the probes and the marks of the items, as they are drawn around them: the text of a
-// mistake page.html or a part's part.html made with an item.
+// plain returns text without the probes, the marks and the edges of the items, as they are drawn around them: the
+// text of a mistake page.html or a part's part.html made with an item.
 func (s *items) plain(text string) string {
 	if len(s.html) == 0 {
 		return text
@@ -367,7 +364,7 @@ func (s *items) unmark(tree *html.Node) {
 		}
 		i, end, ok := s.exact(n.Data)
 		switch {
-		case n.Data == s.edge():
+		case n.Data == s.edge:
 		case !ok:
 			continue
 		case end:
