@@ -165,7 +165,7 @@ func TestBarsOf(t *testing.T) {
 		{[]any{item(math.Copysign(0, -1)), item(4)}, "0 100"},
 		{[]any{item(3), item(-2)}, "bars takes a number of 0 or more, not -2"},
 		{[]any{item(3), item(-0.5)}, "bars takes a number of 0 or more, not -0.5"},
-		{[]any{item(3), item("x")}, "bars takes a number, not x (string)"},
+		{[]any{item(3), item("x")}, `bars takes a number, not "x"`},
 		{[]any{item(3), item(nil)}, "bars takes a number; none is written, or it is null"},
 		{[]any{item(3), map[string]any{"label": "x"}}, "bars takes a number; none is written, or it is null"},
 		{[]any{item(1), 3}, notItem},
