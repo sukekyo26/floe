@@ -51,6 +51,9 @@ type Server struct {
 	every time.Duration
 	// id is this server's, new each start: in each version, so that a tab open across a restart reloads.
 	id string
+	// stopping is done when the server stops: asked to (/api/stop, which calls halt), or by Serve's ctx.
+	stopping context.Context
+	halt     context.CancelFunc
 
 	// looking lets one look run at a time (look).
 	looking sync.Mutex
@@ -66,9 +69,11 @@ type Server struct {
 func New(cfg Config) *Server {
 	s := &Server{
 		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, id: rand.Text()[:8],
-		looking: sync.Mutex{}, mu: sync.Mutex{}, drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "",
+		stopping: nil, halt: nil, looking: sync.Mutex{}, mu: sync.Mutex{},
+		drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "",
 		fresh: false,
 	}
+	s.stopping, s.halt = context.WithCancel(context.Background())
 	// Requests under another name are refused against DNS rebinding.
 	for _, h := range []string{"localhost", "127.0.0.1"} {
 		host := net.JoinHostPort(h, strconv.Itoa(cfg.Port))
@@ -137,6 +142,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PATCH /api/artifacts/{slug}", s.edit)
 	mux.HandleFunc("DELETE /api/artifacts/{slug}", s.remove)
 	mux.HandleFunc("POST /api/rebuild", s.rebuild)
+	mux.HandleFunc("POST /api/stop", s.stop)
 	mux.HandleFunc("GET /api/artifacts/{slug}/download", s.download)
 	mux.HandleFunc("GET /api/events/{slug}", s.watch)
 	mux.HandleFunc("GET /api/events/{slug}/{rest...}", s.watch)
@@ -278,7 +284,8 @@ func (*Server) redirect(w http.ResponseWriter, r *http.Request) {
 	send(w, http.StatusMovedPermanently, "")
 }
 
-// Serve serves on ln until ctx is done, watching the drawing every s.every until then.
+// Serve serves on ln until ctx is done or the server is asked to stop, then stops once the requests under way are
+// done, watching the drawing every s.every until then.
 func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	// The watching ends however serving does.
 	ctx, cancel := context.WithCancel(ctx)
@@ -286,7 +293,8 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	srv := &http.Server{
 		Handler:           s.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
-		BaseContext:       func(net.Listener) context.Context { return ctx },
+		// Not ctx: the requests Shutdown waits for go on once it is done (a link's git).
+		BaseContext: func(net.Listener) context.Context { return context.WithoutCancel(ctx) },
 	}
 	go s.watchDrawing(ctx)
 	errc := make(chan error, 1)
@@ -295,9 +303,19 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	case err := <-errc:
 		return fmt.Errorf("serve: %w", err)
 	case <-ctx.Done():
+	case <-s.stopping.Done():
 	}
-	if err := srv.Close(); err != nil {
-		return fmt.Errorf("close: %w", err)
+	// The watching ends, and the event streams, which Shutdown would wait for otherwise.
+	cancel()
+	s.halt()
+	// LIMIT: a request still running after 10 s is cut off, and a connection opened but sent nothing (a browser's
+	// preconnect) is waited for 5 s. Wait longer if a save comes to take that.
+	done, stop := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+	defer stop()
+	if err := srv.Shutdown(done); err != nil {
+		if err = srv.Close(); err != nil {
+			return fmt.Errorf("close: %w", err)
+		}
 	}
 	if err := <-errc; !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("serve: %w", err)

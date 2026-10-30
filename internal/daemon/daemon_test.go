@@ -7,8 +7,11 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/sukekyo26/floe/internal/daemon"
+	"github.com/sukekyo26/floe/internal/server"
+	"github.com/sukekyo26/floe/internal/servetest"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -103,5 +106,46 @@ func TestCannotListenWhy(t *testing.T) {
 		if ok := errors.As(err, &ue); ok != (c.key != "") || ok && ue.Key != c.key {
 			t.Errorf("CannotListen(%v) = %#v, want %q", c.err, err, c.key)
 		}
+	}
+}
+
+// Stop names the server it saw: one of another pid (started after it) refuses with 409 and goes on, one of that
+// pid stops; the body names it either way.
+func TestStopNamesTheServer(t *testing.T) {
+	t.Parallel()
+
+	const told = 4242
+	for _, c := range []struct {
+		name    string
+		pid     int
+		answers bool
+	}{{"another", 7, true}, {"that one", told, false}} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			var lc net.ListenConfig
+			ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatal(err)
+			}
+			addr, ok := ln.Addr().(*net.TCPAddr)
+			if !ok {
+				t.Fatalf("a TCP listener on %v", ln.Addr())
+			}
+			bodies := servetest.Fake{PID: told, Linger: 100 * time.Millisecond}.Serve(t, ln) //nolint:exhaustruct // the rest unset
+
+			//nolint:exhaustruct // the rest of the health is not read
+			saw := daemon.Status{State: daemon.Ours, Health: server.Health{App: server.App, PID: c.pid}}
+			p, err := daemon.Stop(t.Context(), addr.Port, saw)
+			if err != nil {
+				t.Errorf("Stop = %v", err)
+			}
+			if got, want := strings.Join(bodies(), " "), `{"pid":`+strconv.Itoa(c.pid)+`}`; got != want {
+				t.Errorf("bodies = %s, want %s", got, want)
+			}
+			if (p.State == daemon.Ours) != c.answers {
+				t.Errorf("after Stop the server answers: %v, want %v", p.State == daemon.Ours, c.answers)
+			}
+		})
 	}
 }

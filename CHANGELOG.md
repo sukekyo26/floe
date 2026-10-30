@@ -111,7 +111,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `list`, `rm` and `archive` too) and cannot use the one on the port (of
   another store, drawing with other directories, outdated and not stopping, or
   a port that does not answer) is refused with what to do, then to run that
-  command again; `floe stop` returns once the server is gone.
+  command again; `floe stop` returns once the server is gone. A server is
+  stopped by asking it (not by a signal to the pid it tells, which may be
+  another process), and it stops once the requests under way are done.
 - Add `floe check` and `floe render`: check data files without writing them,
   and write each page to an HTML file that opens without floe (`--check` for
   CI), the mistakes printed as `file:line:column: message`, every one of a
