@@ -126,13 +126,20 @@ func TestHTMLItemsInOrder(t *testing.T) {
 }
 
 // A mistake page.html makes with an item of format html, as a function's, tells the item without the marks and
-// the probes floe draws around it.
+// the probes floe draws around it, the item alone, quoted as a text, or in a map.
 func TestHTMLItemInFunction(t *testing.T) {
 	t.Parallel()
 
 	k := ownKit(t, nil, mine(htmlPage("<div>{{num .Data.h}}</div>"), htmlSchema, nil))
 	if got, want := drawn(t, k, "lang: en\ntemplate: mine\nh: <b>x</b>\n", none),
-		"templates/mine/page.html:4:8: num takes a number, not <b>x</b> (template.HTML)"; got != want {
+		`templates/mine/page.html:4:8: num takes a number, not "<b>x</b>"`; got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+	schema := `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"o": {"type": "object", "properties": {"h": {"type": "string", "format": "html"}}}}}`
+	k = ownKit(t, nil, mine(htmlPage("<div>{{.Data.o.h}}</div><div>{{num .Data.o}}</div>"), schema, nil))
+	if got, want := drawn(t, k, "lang: en\ntemplate: mine\no: {h: <b>x</b>}\n", none),
+		"templates/mine/page.html:4:32: num takes a number, not map[h:<b>x</b>]"; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 }
