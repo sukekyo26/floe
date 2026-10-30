@@ -176,7 +176,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `default`, and in the themes that take its colours (`soft`, `editorial`), have
   the warm grey ground and text of the management page, with lines of the same
   warmth, and a terminal's prompt, the language of code and a diff's hunk heads
-  in yellow-green.
+  in yellow-green. A quote in a part (a note, a step, a card, details or tabs)
+  is drawn as floe's, a rule at its left, not in the theme's shape of the
+  page's quotes; and on paper, where every tab shows under its title, no
+  theme fills the title of the tab picked on the screen.
 - Add templates of your own in `FLOE_TEMPLATES_DIR`: `page.html`,
   `schema.json` and `example.yaml`, and `page.css`, `checks.yaml`,
   `computed.yaml`, `words.yaml` and `assets/` if they like; and
@@ -194,6 +197,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   text/template's mistake of running a `part.html` (a key its schema does not
   declare) is told at its line and column, as one of a `page.html` is; a
   function refusing a value (`num`, `bars`) is told at the value.
+  A theme's `base.css` reaches the page as a template's `page.css` does, not
+  what a part holds, and under the template's `page.css` and the looks.
   A mistake of a part, shared schema, theme or template of your own stops
   every page drawn until it is fixed. The directories of parts, themes and
   templates of your own that are one, or one in the other, are refused for

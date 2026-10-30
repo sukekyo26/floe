@@ -121,7 +121,9 @@ floe の主要な変更を記録します。フォーマットは
   すりガラスの面と紫の差し色、丸い角。`app` は、青みの灰の地から白いカードを柔らかい影で浮かせ、
   欧文は Windows・Android のアプリの字、差し色はラズベリー。`default` と、その色を使うテーマ（`soft`・`editorial`）のページの地は、管理
   ページと同じ暖かい灰色で、字の色も管理ページと同じ、線も同じ暖かさ。terminal のプロンプト、
-  code の言語の札、diff の hunk の頭は黄緑。
+  code の言語の札、diff の hunk の頭は黄緑。部品の中（注意・手順・カード・details・tabs）の
+  引用は、テーマのページの引用の形でなく、floe の引用（左の線）で描く。全部のタブを題の下に
+  出す印刷では、画面で選んだタブの題をどのテーマも塗らない。
 - 追加：`FLOE_TEMPLATES_DIR` の自分のテンプレート（`page.html`・`schema.json`・
   `example.yaml`、要るなら `page.css`・`checks.yaml`・`computed.yaml`・`words.yaml`・
   `assets/`）と、`floe template list`・`show`・`new`（埋めて使う最小のテンプレート。
@@ -136,6 +138,8 @@ floe の主要な変更を記録します。フォーマットは
   数でないか 0 より小さい値を断る。`part.html` を走らせた text/template の誤り（schema が
   宣言していない鍵など）は、`page.html` と同じくその行と列で言い、関数が値を断る誤り
   （`num`・`bars`）は、その値の位置で言う。
+  テーマの `base.css` は、テンプレートの `page.css` と同じくページに当たり、部品の中には当たらず、
+  テンプレートの `page.css` と見た目の下に入る。
   自分の部品・共有の schema・テーマ・テンプレートに誤りがあると、直すまでどのページも描かない。
   部品・テーマ・テンプレートの置き場所が同じか、一方がもう一方の中にあれば、その設定を断る。
 - 追加：キャンバスに部品（frame・box・table・icon・名前でつなぐ edge・dot・bar・axis・

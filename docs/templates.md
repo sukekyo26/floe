@@ -89,7 +89,7 @@ It sees:
 
 ## page.css
 
-`page.css` lays the page out around the parts: their places, the page's width, its header. It goes into a layer under the parts' styles and the theme's, so it does not restyle a part.
+`page.css` lays the page out around the parts: their places, the page's width, its header. It goes into a layer under the parts' styles and the theme's files of them, so it does not restyle a part, and over the theme's `base.css`.
 
 - floe puts it in `@scope (:root) to ([data-floe-part] > *)`: it reaches a part's box, so that it places the part, but not what the part holds.
 - Its root is `:scope`. Write the page's variables on `:scope`, not on `:root` or `html`, which are outside the scope.
