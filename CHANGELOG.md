@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add printing every ground of a page as the screen draws it, the page's own
+  too, so that a light text on a fill is not lost on white paper; and the CSS
+  variables `--face` and `--on-face`, which a face filling itself with a colour
+  (a band, swiss's bad note, a quote in ink, code) sets to its ground and its
+  text's colour, for floe's base to draw the links, a line's code and the focus
+  ring in it in that colour.
 - Add floe's template `slides`, slides to show one at a time: a cover of the
   title on a band, then slides as tall as the screen, each a heading over
   parts as in `report`, where the scroll stops at each one, numbered in the
