@@ -65,15 +65,13 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, []*usererr.Er
 // them: the theme given or written, else the default. It adds to found a template left out, empty or naming
 // none, but one doc.Read refused, which it told; and a theme that is none: at d's theme:, or, given, at no
 // place, as no line of d names it. The template is nil when it is none.
-// LIMIT: a theme left out has line 0 too, which would be told at no place; none fails, as the default theme always
-// is. Tell the two apart if one left out can fail.
 func pick(k *kit.Kit, d *doc.Data, found *usererr.List) (*kit.Template, string) {
 	_, _, themes, templates := k.Names()
 	theme := cmp.Or(d.Theme, kit.DefaultTheme)
 	if _, ok := k.Theme(theme); !ok {
 		bad := usererr.New("tmpl_unknown_theme", theme, strings.Join(themes, ", "))
-		if at := d.Where["theme"]; at.Line != 0 {
-			bad = yamlpos.New(d.File, at, "tmpl_unknown_theme", theme, strings.Join(themes, ", "))
+		if !d.ThemeGiven {
+			bad = yamlpos.New(d.File, d.Where["theme"], "tmpl_unknown_theme", theme, strings.Join(themes, ", "))
 		}
 		*found = append(*found, bad)
 	}

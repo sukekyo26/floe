@@ -49,13 +49,13 @@ func TestRead(t *testing.T) {
 		d.Where["title"] != (yamlpos.Pos{Line: 5, Column: 8}) {
 		t.Errorf("Read of a theme left empty and a title ~ = %+v", d)
 	}
-	// A theme given is read as one written, trimmed and on no line; one of spaces is none given.
+	// A theme given is read as one written, trimmed, and noted as given; one of spaces is none given.
 	d, err = doc.Read("a.yaml", []byte("lang: ja\ntheme: ink\n"), " soft ")
-	if err != nil || d.Theme != "soft" || d.Values["theme"] != "soft" || d.Where["theme"] != (yamlpos.Pos{}) {
+	if err != nil || d.Theme != "soft" || d.Values["theme"] != "soft" || !d.ThemeGiven {
 		t.Errorf("Read with a theme given = %+v, %v", d, err)
 	}
 	d, err = doc.Read("a.yaml", []byte("lang: ja\ntheme: ' ink '\n"), " ")
-	if err != nil || d.Theme != "ink" || d.Values["theme"] != "ink" || d.Where["theme"] != (yamlpos.Pos{Line: 2, Column: 8}) {
+	if err != nil || d.Theme != "ink" || d.ThemeGiven || d.Values["theme"] != "ink" || d.Where["theme"] != (yamlpos.Pos{Line: 2, Column: 8}) {
 		t.Errorf("Read with spaces given = %+v, %v", d, err)
 	}
 	// So is one empty or of spaces.

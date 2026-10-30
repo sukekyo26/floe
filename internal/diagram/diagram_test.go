@@ -8,8 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/goccy/go-yaml/ast"
-
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -55,17 +53,12 @@ var lambda = iconsOf{"aws/aws-lambda": []byte(`<svg xmlns="http://www.w3.org/200
 // draw reads src, a spec in s.yaml, and draws it with how, its mistakes told at their lines and columns.
 func draw(t *testing.T, src string, how func(d *diagram.Drawer, v any) (string, error)) (string, string) {
 	t.Helper()
-	root, err := yamlpos.Parse("s.yaml", []byte(src))
+	root, v, err := yamlpos.ParseMap("s.yaml", []byte(src))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var v any
-	if err = yamlpos.Decode("s.yaml", root, &v); err != nil {
-		t.Fatal(err)
-	}
 	out, err := how(drawer(t), doc.Ints(v))
-	top, _ := root.(*ast.MappingNode) //nolint:errcheck // nil but for keys and values, a spec of none
-	if err = yamlpos.Place(err, "s.yaml", top, nil); err != nil {
+	if err = yamlpos.Place(err, "s.yaml", root, nil); err != nil {
 		return "", usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: ")
 	}
 	return out, ""
@@ -312,12 +305,9 @@ func TestLayoutMistakes(t *testing.T) {
 	missing := usererr.NewWhole("icons_not_fetched", "AWS", "/x/aws", "aws", "14MB", "aws.amazon.com")
 	none := failing{missing}
 	src := head + "  - icon: { icon: aws/a, x: 10, y: 10 }\n  - icon: { icon: aws/b, x: 100, y: 10 }\n"
-	root, _ := yamlpos.Parse("s.yaml", []byte(src)) //nolint:errcheck // read just above
-	var v any
-	_ = yamlpos.Decode("s.yaml", root, &v) //nolint:errcheck // as above
+	root, v, _ := yamlpos.ParseMap("s.yaml", []byte(src)) //nolint:errcheck // read just above
 	_, err := drawer(t).Draw(doc.Ints(v), diagram.Options{Lang: "en", Icons: none, Seq: 1})
-	top, _ := root.(*ast.MappingNode) //nolint:errcheck // keys and values just above
-	r := usererr.Tell(i18n.EnglishCatalog(), yamlpos.Place(err, "s.yaml", top, nil))
+	r := usererr.Tell(i18n.EnglishCatalog(), yamlpos.Place(err, "s.yaml", root, nil))
 	if len(r.Mistakes) != 1 || r.Mistakes[0].File != "" {
 		t.Errorf("icons not fetched = %q, want it once, at no place", r.Render("floe: "))
 	}

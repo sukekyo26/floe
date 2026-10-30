@@ -81,10 +81,10 @@ func OfValue(key, value ast.Node) Pos {
 	return Of(value)
 }
 
-// Find follows at, keys of mappings and indexes of sequences, from root. It returns the key node of the last
+// find follows at, keys of mappings and indexes of sequences, from root. It returns the key node of the last
 // step (the - of an entry of a block sequence; nil at root or in a flow sequence) and its value node. It
 // stops at the last node it can reach.
-func Find(root ast.Node, at []string) (key, value ast.Node) {
+func find(root ast.Node, at []string) (key, value ast.Node) {
 	value = root
 	for _, step := range at {
 		switch n := value.(type) {
@@ -112,12 +112,12 @@ func Find(root ast.Node, at []string) (key, value ast.Node) {
 }
 
 // Locate returns where the value at the path at is written under root, and its node: OfValue of the last value
-// Find reaches. When it reaches none under root (at is empty, its first key is not written, or root is nil, a file
+// find reaches. When it reaches none under root (at is empty, its first key is not written, or root is nil, a file
 // of nothing), it returns no line and no node: the mistake is placed at the file alone, as at the first key it
 // would read as that key's.
 func Locate(root *ast.MappingNode, at []string) (Pos, ast.Node) {
 	if root != nil {
-		if key, value := Find(root, at); value != ast.Node(root) {
+		if key, value := find(root, at); value != ast.Node(root) {
 			return OfValue(key, value), value
 		}
 	}
@@ -144,6 +144,26 @@ func library(file string, err error) error {
 
 // ErrEmpty is returned by Parse for a file without a document, for the caller to word.
 var ErrEmpty = errors.New("no YAML document")
+
+// ParseMap reads src as Parse does, and its values into a map as Decode does: goccy/go-yaml refuses a top that is
+// not keys and values (library). A file without a document reads as {} under a root of nil, for the schema to tell
+// what it lacks.
+func ParseMap(file string, src []byte) (*ast.MappingNode, map[string]any, error) {
+	values := map[string]any{}
+	body, err := Parse(file, src)
+	switch {
+	case errors.Is(err, ErrEmpty):
+		return nil, values, nil
+	case err != nil:
+		return nil, nil, err
+	}
+	if err = Decode(file, body, &values); err != nil {
+		return nil, nil, err
+	}
+	// goccy/go-yaml read the values into a map: the top is keys and values.
+	root, _ := body.(*ast.MappingNode) //nolint:errcheck // see above
+	return root, values, nil
+}
 
 // Decode reads the values of n, a node Parse returned, into v. Its mistake is goccy/go-yaml's (library).
 func Decode(file string, n ast.Node, v any) error {

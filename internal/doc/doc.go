@@ -3,7 +3,6 @@
 package doc
 
 import (
-	"errors"
 	"math"
 	"strings"
 
@@ -18,10 +17,11 @@ import (
 type Data struct {
 	File                         string
 	Lang, Template, Theme, Title string           // "" for one left out or refused; each trimmed of spaces
+	ThemeGiven                   bool             // the theme given to draw with, in Theme, not written in the file
 	Values                       map[string]any   // as written, the shared keys too but those that name none
 	Root                         *ast.MappingNode // nil for an empty file
 	// where each shared key is written: its value, its key when the value is left out; line 0, the file alone,
-	// for one left out, and for a theme given
+	// for one left out
 	Where map[string]yamlpos.Pos
 }
 
@@ -44,32 +44,21 @@ var Shared = []string{"lang", "template", "theme", "title"}
 // data's: theme: is then neither read nor refused, and Values holds the theme given, read as one written, so
 // that every layer sees the theme the page is drawn with.
 func Read(file string, src []byte, theme string) (*Data, error) {
-	body, err := yamlpos.Parse(file, src)
-	switch {
-	case errors.Is(err, yamlpos.ErrEmpty):
-		body = nil
-	case err != nil:
+	root, values, err := yamlpos.ParseMap(file, src)
+	if err != nil {
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
 	}
-	values := map[string]any{}
-	if body != nil {
-		if err = yamlpos.Decode(file, body, &values); err != nil {
-			return nil, err //nolint:wrapcheck // goccy's mistake at its place
-		}
-		Ints(values)
-	}
-	// goccy/go-yaml read the values into a map: the top is keys and values, or there is none.
-	root, _ := body.(*ast.MappingNode) //nolint:errcheck // see above
-	d := &Data{
-		File: file, Lang: "", Template: "", Theme: "", Title: "", Values: values, Root: root,
-		Where: map[string]yamlpos.Pos{},
-	}
+	Ints(values)
 	// A theme given is read as one written, spaces naming none.
 	given := strings.TrimSpace(theme) != ""
+	d := &Data{
+		File: file, Lang: "", Template: "", Theme: "", Title: "", ThemeGiven: given, Values: values, Root: root,
+		Where: map[string]yamlpos.Pos{},
+	}
 	if given {
 		values["theme"] = theme
 	}
-	return d, d.readShared(given)
+	return d, d.readShared()
 }
 
 // Ints turns the whole numbers in v that fit into int, in place, and returns v, so that every layer sees one type of
@@ -114,7 +103,7 @@ func sharedMistake(key string, v any, ok bool) string {
 // readShared reads the keys every template shares from d.Values into d, leaving them in d.Values as written but
 // those null, empty or of spaces, which are none written, and notes where each is written; theme: is not read
 // with a theme given, which d takes.
-func (d *Data) readShared(themeGiven bool) error {
+func (d *Data) readShared() error {
 	top := d.PosOf(nil)
 	pairs := map[string]*ast.MappingValueNode{}
 	if d.Root != nil {
@@ -147,9 +136,6 @@ func (d *Data) readShared(themeGiven bool) error {
 			*to[key] = strings.TrimSpace(s)
 			d.Values[key] = *to[key]
 		}
-	}
-	if themeGiven {
-		d.Where["theme"] = yamlpos.Pos{Line: 0, Column: 0} // no line of d names it
 	}
 	// Read once as every lookup of it and the page's <html lang> take it: BCP 47 in lower case, JA and ja_JP ja's.
 	d.Lang = string(i18n.Tag(d.Lang))
