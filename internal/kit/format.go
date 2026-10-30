@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -129,7 +130,15 @@ func float(fn string, v any) (float64, error) {
 	if v == nil {
 		return 0, usererr.New("kit_number_missing", fn)
 	}
-	return 0, usererr.New("kit_not_number", fn, fmt.Sprintf("%v (%T)", v, v))
+	// A text is quoted, to tell "3" from 3 and show an empty one, but not escaped: the marks floe draws around an
+	// item of format html stay as they are, for draw to take out.
+	// LIMIT: a map, a list, a date and the like are written as fmt writes them, a " in a text is not escaped, a byte
+	// that index takes out of a text is written as its number (not 97), and an image's data URI is written whole.
+	// Write them otherwise if one of them comes to mislead
+	if r := reflect.ValueOf(v); r.Kind() == reflect.String {
+		return 0, usererr.New("kit_not_number", fn, `"`+r.String()+`"`)
+	}
+	return 0, usererr.New("kit_not_number", fn, fmt.Sprint(v))
 }
 
 // roundWhole rounds i to digits significant digits, half away from zero.
