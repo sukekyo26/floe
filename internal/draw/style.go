@@ -27,7 +27,7 @@ import (
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
-// LIMIT: a theme's style of a look wins over what a part taking it adjusts of it (brutal's panel margin over a step's); put it after the look's own if a part needs its own.
+// LIMIT: a theme's file of a look wins over a part's adjustment of it; move it after the look's if a part needs its own.
 func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) {
 	themed, ok := k.Theme(theme)
 	base, okBase := k.Theme(kit.DefaultTheme)
