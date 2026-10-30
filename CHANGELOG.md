@@ -157,6 +157,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   `part.html` may call the functions floe's parts draw with (`copyButton`,
   `bars`, `diff`, `tree`, `diagram`, `script`); `bars` refuses an item not
   written as keys and values, and a value that is not a number or is below 0.
+  text/template's mistake of running a `part.html` (a key its schema does not
+  declare) is told at its line and column, as one of a `page.html` is; a
+  function refusing a value (`num`, `bars`) is told at the value.
   A mistake of a part, shared schema, theme or template of your own stops
   every page drawn until it is fixed. The directories of parts, themes and
   templates of your own that are one, or one in the other, are refused for

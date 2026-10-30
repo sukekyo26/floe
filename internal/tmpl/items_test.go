@@ -455,6 +455,55 @@ func TestZgotmplZ(t *testing.T) {
 	}
 }
 
+// text/template's mistake of running a part.html is told at its line and column in part.html, once however many
+// values bring it, in a {{define}} too; a function's refusing a value stays at the value.
+func TestPartExecPlaced(t *testing.T) {
+	t.Parallel()
+
+	const head = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": `
+	for _, tt := range []struct{ schema, html, page, data, want string }{
+		{
+			head + `{"t": {}}}`, "<div data-floe-part=\"pb\">\n{{range .x}}{{.}}{{end}}</div>", "{{.Data.b}}", "b: {t: y}",
+			`parts/pb/part.html:2:9: executing "part.html" at <.x>: map has no entry for key "x"`,
+		},
+		{
+			head + `{"t": {}}}`, `<div data-floe-part="pb">{{.t.u}}</div>`, "{{.Data.b}}", "b: {t: y}",
+			`parts/pb/part.html:1:30: executing "part.html" at <.t.u>: can't evaluate field u in type interface {}`,
+		},
+		{
+			head + `{"t": {}}}`, `<div data-floe-part="pb">{{range .t}}{{.}}{{end}}</div>`, "{{.Data.b}}", "b: {t: y}",
+			`parts/pb/part.html:1:34: executing "part.html" at <.t>: range can't iterate over y`,
+		},
+		{
+			head + `{"t": {}}}`, `<div data-floe-part="pb">{{index .t 5}}</div>`, "{{.Data.b}}", "b: {t: [1]}",
+			`parts/pb/part.html:1:28: executing "part.html" at <index .t 5>: error calling index: index out of range: 5`,
+		},
+		{
+			head + `{"t": {}}}`, `<div data-floe-part="pb">{{num .t}}</div>`, "{{.Data.b}}", "b: {t: y}",
+			`d.yaml:3:5: num takes a number, not y (string)`,
+		},
+		{
+			head + `{"t": {}}}`, "<div data-floe-part=\"pb\">\n  {{range .x}}{{end}}</div>", "{{.Data.b}}{{.Data.c}}", "b: {t: y}\nc: {t: z}",
+			`parts/pb/part.html:2:11: executing "part.html" at <.x>: map has no entry for key "x"`,
+		},
+		{
+			head + `{"t": {}}}`, "{{define \"row\"}}\n<p>{{.x}}</p>{{end}}<div data-floe-part=\"pb\">{{template \"row\" .}}</div>", "{{.Data.b}}", "b: {t: y}",
+			`parts/pb/part.html:2:6: executing "row" at <.x>: map has no entry for key "x"`,
+		},
+		{
+			`{"$schema": "https://json-schema.org/draft/2020-12/schema", "$ref": "floe:///parts/any.json"}`,
+			`<div data-floe-part="pb">{{range .x}}{{.}}{{end}}</div>`, "{{.Data.b}}", "b: {note: {title: AB, text: y}}",
+			`parts/pb/part.html:1:34: executing "part.html" at <.x>: map has no entry for key "x"`,
+		},
+	} {
+		parts := map[string]string{"pb/schema.json": tt.schema, "pb/part.html": tt.html, "pb/part.css": ""}
+		k := ownKit(t, parts, mine(htmlPage(tt.page), head+`{"b": {"$ref": "floe:///parts/pb.json"}, "c": {"$ref": "floe:///parts/pb.json"}}}`, nil))
+		if got := drawn(t, k, "lang: en\ntemplate: mine\n"+tt.data+"\n", none); got != tt.want {
+			t.Errorf("%s: told %q, want %q", tt.html, got, tt.want)
+		}
+	}
+}
+
 // An item of a part of one's own that bars refuses, one not written as keys and values or a value below 0, not a
 // number or missing, is told at the part's value: bars knows only what it is given, not where that is in the part's value.
 func TestPartBarsRefused(t *testing.T) {
