@@ -160,14 +160,19 @@ func Ensure(ctx context.Context, s Server) error {
 
 // replace stops p, a server of another build, and returns what serves the port once it is gone.
 func (s Server) replace(ctx context.Context, p Status) (Status, error) {
+	return Stop(ctx, s.Port, p)
+}
+
+// Stop stops p, the server of floe on port, and returns what serves the port once it is gone.
+func Stop(ctx context.Context, port int, p Status) (Status, error) {
 	old := p.Health.PID
-	if err := Terminate(old); err != nil {
+	if err := terminate(old); err != nil {
 		return p, err
 	}
 	// Wait for that server only: a concurrent command may have started the new one already.
-	p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
+	p = waitWhile(ctx, "http://"+Addr(port), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
 	if p.State == Ours && p.Health.PID == old {
-		return p, usererr.New("daemon_outdated_alive", old)
+		return p, usererr.New("daemon_kept_answering", port, old)
 	}
 	return p, nil
 }
@@ -325,8 +330,8 @@ func start(ctx context.Context, s Server) (bool, error) {
 	return true, nil
 }
 
-// Terminate sends SIGTERM to pid. A process that has exited already counts as stopped.
-func Terminate(pid int) error {
+// terminate sends SIGTERM to pid. A process that has exited already counts as stopped.
+func terminate(pid int) error {
 	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil && !errors.Is(err, syscall.ESRCH) {
 		return fmt.Errorf("stop the server (pid %d): %w", pid, err)
 	}

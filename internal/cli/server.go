@@ -198,7 +198,7 @@ func writable(dir string) error {
 	return os.Remove(f.Name()) //nolint:wrapcheck // as above
 }
 
-// listen takes the listener the publish that started this server bound for it, or binds the port.
+// listen takes the listener the command that started this server bound for it, or binds the port.
 func (a *app) listen(port int) (net.Listener, error) {
 	if ln, err := daemon.Handed(a.getenv, port); ln != nil || err != nil {
 		// Taken once: a floe run from here binds its own.
@@ -227,9 +227,7 @@ func (a *app) stopCmd() *cobra.Command {
 				a.print("%s", english.Msg("cli_not_running"))
 				return nil
 			}
-			// LIMIT: returns once SIGTERM is sent; a command run at once may still find the server and be refused
-			// alike. Wait for it to go here if that comes to matter.
-			if err := daemon.Terminate(p.Health.PID); err != nil {
+			if _, err := daemon.Stop(cmd.Context(), port, p); err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}
 			a.print("%s", english.Msg("cli_stopped", p.Health.PID))

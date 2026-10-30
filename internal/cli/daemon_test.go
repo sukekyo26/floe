@@ -291,7 +291,7 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 // A publish or a rebuild that means other parts, themes or icons than the server's is refused, from another build
 // too, which would replace the server, and told to run the command again; listing and removing draw nothing and
 // take it as it is. With no place for the icons,
-// the command and the server both mean none, and a publish again is no other.
+// the command and the server both mean none, and a second publish is no other.
 func TestPublishOtherDirs(t *testing.T) {
 	t.Parallel()
 
@@ -339,8 +339,9 @@ func TestPublishToAnotherServer(t *testing.T) {
 	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", "")
 	e.vars["FLOE_DIR"] = filepath.Join(e.tmp, "other")
 	otherStore := "floe: the server on port " + e.port + " serves " + filepath.Join(e.tmp, "store") +
-		`; set FLOE_PORT to another port to run a server of your own beside it, or run "floe stop" (which stops` +
-		` that server) and run this command again` + "\n"
+		`; to run a server of your own beside it, set FLOE_PORT to another port in the shell's environment, where` +
+		` every command for your store takes it, or run "floe stop" (which stops that server) and run this command` +
+		" again\n"
 	for _, args := range [][]string{{"publish", "page.yaml"}, {"rebuild"}, {"list"}} {
 		wantRun(t, args[0]+" to another store", e.run(args...), 1, "", otherStore)
 	}
@@ -349,18 +350,9 @@ func TestPublishToAnotherServer(t *testing.T) {
 	}
 	e.vars["FLOE_DIR"] = filepath.Join(e.tmp, "store")
 
-	// Another program on a port: one the system picks and this test holds, so that no other can take it.
-	var lc net.ListenConfig
-	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = ln.Close() }) //nolint:errcheck // closed by srv.Close too, when it serves
-	addr, ok := ln.Addr().(*net.TCPAddr)
-	if !ok {
-		t.Fatalf("a TCP listener on %v", ln.Addr())
-	}
-	o := newDenvOn(t, addr.Port)
+	// Another program on a port.
+	ln, port := holdPort(t)
+	o := newDenvOn(t, port)
 	srv := &http.Server{Handler: http.NotFoundHandler(), ReadHeaderTimeout: time.Second}
 	go func() { _ = srv.Serve(ln) }() //nolint:errcheck // closed by the cleanup
 	t.Cleanup(func() { _ = srv.Close() })
@@ -370,22 +362,44 @@ func TestPublishToAnotherServer(t *testing.T) {
 		"floe: port "+o.port+" is in use; stop that program (floe stop, if it is floe's server) or set FLOE_PORT")
 }
 
-// A port held by a program that never answers is refused, and the command is told to run again. Apart from the
-// others, as the probes and the waits take seconds.
-func TestSilentPort(t *testing.T) {
-	t.Parallel()
+// holdPort listens on a port the system picks, held until the test ends so that no other can take it, and
+// answers nothing until the test serves it.
+func holdPort(t *testing.T) (net.Listener, int) {
+	t.Helper()
 
 	var lc net.ListenConfig
 	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = ln.Close() }) //nolint:errcheck // nothing to do
+	t.Cleanup(func() { _ = ln.Close() }) //nolint:errcheck // closed by a server's Close too, when one serves it
 	addr, ok := ln.Addr().(*net.TCPAddr)
 	if !ok {
 		t.Fatalf("a TCP listener on %v", ln.Addr())
 	}
-	e := newDenvOn(t, addr.Port)
+	return ln, addr.Port
+}
+
+// floe stop returns once the server is gone, so that a command right after starts its own.
+func TestStopWaits(t *testing.T) {
+	t.Parallel()
+
+	e := newDenv(t)
+	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", "")
+	first, _ := e.health(t.Context())
+	wantRun(t, "stop", e.run("stop"), 0, "stopped server (pid "+strconv.Itoa(first.PID)+")\n", "")
+	if h, up := e.health(t.Context()); up {
+		t.Errorf("the server (pid %d) still answers after floe stop", h.PID)
+	}
+}
+
+// A port held by a program that never answers is refused, and the command is told to run again. Apart from the
+// others, as the probes and the waits take seconds.
+func TestSilentPort(t *testing.T) {
+	t.Parallel()
+
+	_, port := holdPort(t)
+	e := newDenvOn(t, port)
 	wantRun(t, "list", e.run("list"), 1, "", "floe: port "+e.port+" is in use, and nothing answers there: a server"+
 		" another floe command started may still be starting, or another program holds it; run this command again,"+
 		" or set FLOE_PORT to a free port\n")
