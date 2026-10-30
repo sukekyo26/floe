@@ -251,7 +251,8 @@ func (s *items) next(text string) (n int, end bool, rest string, ok bool) {
 // refused.
 // LIMIT: in a table, tbody, thead, tfoot, tr or colgroup, the parser's foster parenting decides. Refused: what is
 // not of that place (rows straight in a table, read into a tbody of their own; cells in a tbody; rows in a tr;
-// text in a colgroup), and formatting left open at the item's end. Drawn moved, unchecked by the marks and the
+// text in a colgroup), and formatting left open at the item's end, put before the table with the item's end and
+// named by named. Drawn moved, unchecked by the marks and the
 // probe but for what checkPage refuses in the whole page: the item's text and elements that are no part of a
 // table, and text page.html writes beside the item, put before the table, and formatting left open before its
 // rows or misnested (<b><i>x</b>), rebuilt in what page.html writes after the table. A name of a part moved out
@@ -307,6 +308,9 @@ func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error 
 // says, at that item, for each item whose marks the parser moved (moved), the item n check refused first, then the
 // others in the page's order; told when none says one. Marks that stayed in place are read by check alone. It names
 // alone: the page is refused whichever it returns.
+// LIMIT: an item is read again in the element its start is in, as the parser put it, alone: not in the elements
+// above it, nor the formatting page.html left open. Where they would change its reading, it may name none, and the
+// mistake check read is told.
 func (s *items) named(d *doc.Data, marks []occurrence, n int, told *usererr.Error) *usererr.Error {
 	var starts []occurrence
 	for i, o := range marks {
