@@ -28,6 +28,7 @@ floe template show report   # report's files: what a data file holds and an exam
 floe check plan.yaml        # check a data file: prints its mistakes and warnings, or nothing
 floe publish plan.yaml      # store its page, print the URL and open it
 floe publish --link out/index.html   # show an HTML file as it is
+floe publish --link docs             # list the HTML files under a folder
 floe list                   # pages, newest first
 floe archive old-plan       # take a page off the lists, keeping it
 floe stop                   # stop the background server

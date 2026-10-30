@@ -5,7 +5,8 @@
 // LIMIT: the management page against a real server (its list, delete and its error text, the connection's dot, add and its
 // refusals, pages) is not checked in a browser, only against a stubbed list (TestUIExtras); port develop's TestUIManage in a PR that
 // changes those.
-// LIMIT: a frame URL's #part (written by the frame, kept on reload and Back) is not checked in a browser; port develop's TestUIFrameHash in a PR that changes leaveFrame or the frame's hash handling.
+// LIMIT: a frame URL's #part is checked in a browser for a folder's page only (TestUIFolders: written by the frame, and
+// followed from the address bar), not kept on reload and Back; port develop's TestUIFrameHash in a PR that changes leaveFrame.
 // LIMIT: the diagram's zoom, pan and keys are not checked in a browser; port develop's TestUIZoom in a PR that changes zoom.js.
 package browsertest_test
 

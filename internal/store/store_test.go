@@ -2,7 +2,10 @@ package store_test
 
 import (
 	"errors"
+	"fmt"
+	"maps"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -597,5 +600,163 @@ func TestConflict(t *testing.T) {
 	}
 	if err := s.Remove("none"); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("Remove of no page = %v", err)
+	}
+}
+
+// A folder is linked as itself: its name, extension and all, names it; it stays a folder when linked again, so that it
+// serves only what is under it; and its directories are read when they are asked for, not when it is listed.
+func TestPrepareLinkFolder(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	home := filepath.Dir(root)
+	proj := filepath.Join(home, "proj")
+	for name, text := range map[string]string{
+		"docs/index.html":       "<title>i</title>",
+		"docs/guide/setup.html": "s",
+		"sibling.html":          "beside the folder",
+		"config.yml/a.html":     "a folder named as a data file",
+	} {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(proj, name)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(proj, name), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	dw := picKit(t, "", "")
+	link := func(file, cwd string, o store.Options) *store.Entry {
+		t.Helper()
+		e, err := s.PrepareLink(t.Context(), dw, file, o, cwd, home)
+		if err != nil {
+			t.Fatal(told(err, root))
+		}
+		if err = s.Save(e); err != nil {
+			t.Fatal(err)
+		}
+		return e
+	}
+	for _, again := range []string{"docs", filepath.Join(proj, "docs") + "/", "."} {
+		cwd := proj
+		if again == "." {
+			cwd = filepath.Join(proj, "docs")
+		}
+		if e := link(again, cwd, store.Options{}); e.Slug != "docs" {
+			t.Errorf("link %q: slug %s, want docs", again, e.Slug)
+		}
+		m := s.ReadMeta("docs")
+		if !m.Folder || m.Path != filepath.Join(proj, "docs") {
+			t.Fatalf("meta.json after linking %q = %+v, want the folder", again, m)
+		}
+		if file, ok := s.File("docs", m, "../sibling.html"); ok {
+			t.Errorf("the folder serves %s beside it", file)
+		}
+		if file, ok := s.File("docs", m, ""); ok {
+			t.Errorf("the folder serves %s as its page", file)
+		}
+		if file, ok := s.File("docs", m, "guide/setup.html"); !ok || file != filepath.Join(proj, "docs/guide/setup.html") {
+			t.Errorf("File(guide/setup.html) = %s, %v", file, ok)
+		}
+	}
+	if e := link("config.yml", proj, store.Options{}); e.Slug != "config-yml" || !e.Meta.Folder || e.Meta.IsData() {
+		t.Errorf("config.yml: slug %s, %+v", e.Slug, e.Meta)
+	}
+	_, err := s.PrepareLink(t.Context(), dw, "config.yml", store.Options{Theme: ptr("ink")}, proj, home)
+	if got := told(err, root); got != "floe: --theme picks the theme of a page drawn from a data file: a linked file is shown as it is" {
+		t.Errorf("a folder with --theme: told %s", got)
+	}
+
+	list, err := s.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, l := range list {
+		got[l.Slug] = fmt.Sprintf("%s missing=%v", l.Title, *l.Missing)
+	}
+	if want := map[string]string{"docs": "docs missing=false", "config-yml": "config.yml missing=false"}; !maps.Equal(got, want) {
+		t.Errorf("List = %v, want %v", got, want)
+	}
+
+	top, err := s.Pages("docs", "")
+	if err != nil || !slices.Equal(top.Dirs, []string{"guide"}) || len(top.Pages) != 1 || top.Pages[0].File != "index.html" ||
+		top.Pages[0].Modified.IsZero() {
+		t.Errorf("Pages(docs) = %+v, %v", top, err)
+	}
+	if err = os.WriteFile(filepath.Join(proj, "docs/guide/new.html"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Rename(filepath.Join(proj, "docs/guide/setup.html"), filepath.Join(proj, "docs/guide/start.html")); err != nil {
+		t.Fatal(err)
+	}
+	guide, err := s.Pages("docs", "guide")
+	if err != nil || len(guide.Pages) != 2 || guide.Pages[0].File != "guide/new.html" || guide.Pages[1].File != "guide/start.html" {
+		t.Errorf("Pages(docs, guide) after a change = %+v, %v", guide, err)
+	}
+	for _, c := range []struct{ slug, dir string }{{"docs", ".."}, {"docs", "nope"}, {"nope", ""}} {
+		if _, got := s.Pages(c.slug, c.dir); !errors.Is(got, store.ErrNotFound) {
+			t.Errorf("Pages(%s, %q) = %v, want ErrNotFound", c.slug, c.dir, got)
+		}
+	}
+	if err = os.RemoveAll(filepath.Join(proj, "docs")); err != nil {
+		t.Fatal(err)
+	}
+	list, err = s.List()
+	if err != nil || !*list[slices.IndexFunc(list, func(l store.Listed) bool { return l.Slug == "docs" })].Missing {
+		t.Errorf("a folder gone is not missing (%v)", err)
+	}
+}
+
+// A folder in a repository is named by its project and where it is in it, and titled by the latter, so that folders of
+// one name in two repositories differ by their URL; outside one, by its name alone. A file's link keeps its own naming.
+func TestFolderNames(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	home := filepath.Dir(root)
+	for _, d := range []string{"api-docs/docs/v1", "design-notes/docs", "handbook", "api-docs/specs"} {
+		if err := os.MkdirAll(filepath.Join(home, d), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, repo := range []string{"api-docs", "design-notes"} {
+		cmd := exec.CommandContext(t.Context(), "git", "init", "-q")
+		cmd.Dir = filepath.Join(home, repo)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git init: %v %s", err, out)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(home, "api-docs/specs/index.html"), []byte("<title>Specs</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	dw := picKit(t, "", "")
+	linked := []string{"api-docs/docs", "design-notes/docs", "api-docs/docs/v1", "api-docs", "handbook", "api-docs/specs/index.html"}
+	got := make([]string, 0, len(linked))
+	for _, file := range linked {
+		e, err := s.PrepareLink(t.Context(), dw, filepath.Join(home, file), store.Options{}, "", home)
+		if err != nil {
+			t.Fatal(told(err, root))
+		}
+		if err = s.Save(e); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, e.Slug)
+	}
+	list, err := s.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	titles := map[string]string{}
+	for _, l := range list {
+		titles[l.Slug] = l.Title
+	}
+	if want := []string{"api-docs-docs", "design-notes-docs", "api-docs-docs-v1", "api-docs", "handbook", "specs"}; !slices.Equal(got, want) {
+		t.Errorf("slugs = %q, want %q", got, want)
+	}
+	if want := map[string]string{
+		"api-docs-docs": "docs", "design-notes-docs": "docs", "api-docs-docs-v1": "docs/v1", "api-docs": "api-docs",
+		"handbook": "handbook", "specs": "Specs",
+	}; !maps.Equal(titles, want) {
+		t.Errorf("titles = %v, want %v", titles, want)
 	}
 }

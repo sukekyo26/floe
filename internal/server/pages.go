@@ -82,7 +82,7 @@ func (s *Server) version(slug string, m *store.Meta, rest string) string {
 	if !ok {
 		return ""
 	}
-	if rest == "" && files.IsDataFile(m.Path) {
+	if rest == "" && m.IsData() {
 		_, gen := s.now()
 		return s.id + "." + strconv.Itoa(gen) + "." + files.Mark(file) + "." + m.UpdatedAt
 	}
@@ -102,7 +102,7 @@ func (s *Server) content(
 	if !ok {
 		return none, errNoPage
 	}
-	if m.IsLink() && rest == "" && files.IsDataFile(m.Path) {
+	if rest == "" && m.IsData() {
 		page, err := drawLink(slug, m, file, drawing())
 		if err != nil {
 			return served{body: io.NopCloser(bytes.NewReader(mistakesPage(c, slug, err))), typ: htmlType, drawn: true}, err
@@ -150,19 +150,15 @@ func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing) ([
 
 // servePage answers /a/{slug}/{rest...}. The page URL itself is the frame (the management page with the page's
 // header), whose iframe loads the page from ?raw; a missing page gets the frame with 404, which shows the way back.
+// A folder's page at file is framed at ?file=, its iframe loading file under the folder; a folder's URL itself
+// leads to the list with the folder open.
 // ?raw and the files under a link's directory are the page and its files. Its version is taken from the meta.json
 // its content is served by, before the content: a change in between costs one extra reload, not a miss. A stored
 // page whose copy a publish removed after its meta.json was read is read once more.
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	slug, rest := r.PathValue("slug"), r.PathValue("rest")
 	if rest == "" && !r.URL.Query().Has("raw") {
-		status := http.StatusNotFound
-		if m := s.cfg.Store.ReadMeta(slug); m != nil {
-			if _, ok := s.cfg.Store.File(slug, m, ""); ok {
-				status = http.StatusOK
-			}
-		}
-		sendUI(w, r, status, slug)
+		s.frame(w, r, slug)
 		return
 	}
 	var version string
@@ -197,6 +193,27 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		tail = servedScript(slug, rest, version)
 	}
 	stream(w, got.typ, got.body, tail)
+}
+
+// frame answers the frame of slug, 404 when there is no page to frame. A folder has no page of its own: its URL is the
+// list with it open, where publish's URL leads.
+func (s *Server) frame(w http.ResponseWriter, r *http.Request, slug string) {
+	status := http.StatusNotFound
+	if m := s.cfg.Store.ReadMeta(slug); m != nil {
+		file := r.URL.Query().Get("file")
+		if m.Folder && file == "" {
+			to := "/?tab=folders&open=" + url.QueryEscape(slug)
+			if m.Archived {
+				to += "&archived=1"
+			}
+			http.Redirect(w, r, to, http.StatusSeeOther)
+			return
+		}
+		if _, ok := s.cfg.Store.File(slug, m, file); ok && (file == "" || m.Folder) {
+			status = http.StatusOK
+		}
+	}
+	sendUI(w, r, status, slug)
 }
 
 // download answers the page of slug as a file, as it was linked or drawn, a page floe drew with its CSP in it
