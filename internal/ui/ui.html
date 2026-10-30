@@ -2334,6 +2334,8 @@
       renderSide(a);
     } else {
       for (const id of ['side', 'side-grip', 'side-show']) $(id).hidden = true;
+      // Without the tree the bar picks again, should the page come back
+      $('frame-pick').disabled = false;
       document.documentElement.style.setProperty('--side', '0px');
     }
     if (found) {

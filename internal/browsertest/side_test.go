@@ -2,6 +2,7 @@ package browsertest_test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -154,6 +155,19 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the window narrowed", "document.getElementById('side-grip').getAttribute('aria-valuenow') === '350'")
 	key(kb.ArrowLeft)
 	out = append(out, b.eval("document.getElementById('side-grip').getAttribute('aria-valuenow')"))
+	// The folder gone, the tree goes, and the bar's pick is pressable again once the page is back.
+	b.navigate("/a/docs/?file=guide%2Fsetup.html")
+	b.until("the tree", "document.getElementById('frame-pick').disabled")
+	docs := filepath.Join(s.Env["HOME"], "docs")
+	if err := os.Rename(docs, docs+"-moved"); err != nil {
+		t.Fatal(err)
+	}
+	out = append(out, b.until("the folder gone", "document.getElementById('side').hidden && 'disabled ' + document.getElementById('frame-pick').disabled"))
+	if err := os.Rename(docs+"-moved", docs); err != nil {
+		t.Fatal(err)
+	}
+	b.eval("document.getElementById('side-hide').click()")
+	out = append(out, b.until("the folder back", "!document.getElementById('frame-pick').hidden && 'disabled ' + document.getElementById('frame-pick').disabled"))
 	// A folder's page not found has no tree, whatever the window does.
 	b.navigate("/a/docs/?file=nope.html")
 	b.until("the frame", "!document.getElementById('notfound').hidden")
@@ -173,5 +187,5 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 		"api+,guide-,deep-,x.html,setup.html*,start.html,index.html 300/160/480 300px|docs / guide/start.html|"+
 		"side-hide: "+ring+"|side-grip: "+ring+"|none,none,none|"+
 		"false,false,true,true,true|true,false,false,true,true 0px|true|true|"+
-		"guide/setup.html,guide/start.html|api Docs anew|Docs again|334|false,false,false,false,true")
+		"guide/setup.html,guide/start.html|api Docs anew|Docs again|334|disabled false|disabled false|false,false,false,false,true")
 }
