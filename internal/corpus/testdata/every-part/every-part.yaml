@@ -22,7 +22,10 @@ sections:
             - { what: Address, before: wiki.example.com, after: wiki.example.com }
   - heading: Steps
     parts:
-      - text: The pages move over **one weekend**; the old wiki stays readable until the new one opens.
+      - text: |
+          The pages move over **one weekend**; the old wiki stays readable until the new one opens.
+
+          > Read-only means read-only: [the freeze](https://example.com/freeze) covers `comments` too.
       - steps:
           - { title: Freeze edits on the old wiki, text: On **Friday evening**., state: done }
           - { title: Copy the pages and check the links, state: doing }
@@ -60,7 +63,7 @@ sections:
             - title: Risk
             - title: Likelihood
             - { title: Pages, num: true }
-            - title: What we do
+            - title: What we do ([`linkcheck`](https://example.com/linkcheck))
             - title: State
           rows:
             - [Broken links, High, '120', A link check after the copy, { pill: watching, tone: warn }]
@@ -72,7 +75,7 @@ sections:
           title: Heads up
           text: Anyone editing during the freeze loses their changes.
       - note: { text: The new host is ready., tone: accent }
-      - note: { text: Attachments over 1 MB failed., tone: bad }
+      - note: { text: 'Attachments over 1 MB failed; [the list](https://example.com/failed) names each, and `retry.sh` sends them again.', tone: bad }
       - note: { text: The banner goes up on Friday. }
   - heading: Progress
     parts:
