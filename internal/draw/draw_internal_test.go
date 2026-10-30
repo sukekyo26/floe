@@ -84,7 +84,7 @@ func TestCutOffPage(t *testing.T) {
 
 	for _, page := range []string{
 		"<!doctype html><html><head><title>t</title></head><body></body></html>", "<!-- c --> <!DOCTYPE html>\n<p>x",
-		`<!doctype html><html><head><meta charset="utf-8"><title>t</title></head><body></body></html>`,
+		"<!doctype html><html><head>\n<meta charset=\"utf-8\">\n<title>t</title>\n</head><body></body></html>",
 		`<!doctype html><html><head><title>t</title><meta charset="shift_jis"></head><body></body></html>`,
 		`<!doctype html><html><head><meta charset="utf-8"></head><body><p>x<meta charset="utf-8"></p>` +
 			`<template><meta charset="utf-8"></template></body></html>`,
@@ -106,6 +106,9 @@ func TestCutOffPage(t *testing.T) {
 		}
 		if charsets != 1 {
 			t.Errorf("%q: %d charsets in %q, want 1", page, charsets, got)
+		}
+		if bytes.Contains(got, []byte("\n\n")) {
+			t.Errorf("%q: an empty line where a charset was: %q", page, got)
 		}
 		charset, csp := head.FirstChild, head.FirstChild.NextSibling
 		if v, _ := attrOf(charset, "charset"); v != "utf-8" {

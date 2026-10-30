@@ -3,7 +3,7 @@ package draw
 import (
 	"bytes"
 	"fmt"
-	"slices"
+	"strings"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
@@ -30,13 +30,23 @@ func CutOff(connect string) string {
 // head, read as a browser reads it, since a <meta> binds only what comes after it. Nothing connects. A page
 // floe draws is UTF-8, and a page holds one charset: the page's own go, wherever, and floe's goes first, so that
 // the CSP does not push it out of the bytes a browser reads for it. The parser always makes a head.
+// LIMIT: a page the server answers keeps page.html's charsets, its header's utf-8 overriding; take them in tmpl.Draw
 func CutOffPage(src []byte) ([]byte, error) {
 	tree, _ := html.Parse(bytes.NewReader(src)) //nolint:errcheck // a bytes.Reader fails no read, Parse's one error
-	// Collected first: taking a node out stops the walk at it.
-	for _, n := range slices.Collect(tree.Descendants()) {
+	// Taken out after the walk, which stops at a node taken out.
+	var charsets []*html.Node
+	for n := range tree.Descendants() {
 		if _, ok := attrOf(n, "charset"); ok && n.Type == html.ElementNode && n.Namespace == "" && n.DataAtom == atom.Meta {
-			n.Parent.RemoveChild(n)
+			charsets = append(charsets, n)
 		}
+	}
+	for _, n := range charsets {
+		// The spaces after one in the head show nothing, and would leave an empty line.
+		if t := n.NextSibling; n.Parent.DataAtom == atom.Head && t != nil && t.Type == html.TextNode &&
+			strings.TrimLeft(t.Data, " \t\n\f\r") == "" {
+			n.Parent.RemoveChild(t)
+		}
+		n.Parent.RemoveChild(n)
 	}
 	head := page.First(tree, atom.Head)
 	first := head.FirstChild
