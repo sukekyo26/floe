@@ -73,10 +73,11 @@ sections:
       - note:
           tone: warn
           title: Heads up
-          text: Anyone editing during the freeze loses their changes.
-      - note: { text: The new host is ready., tone: accent }
+          text: Anyone editing during the freeze loses their changes; [the plan](https://example.com/plan) and `freeze.sh` say when.
+      - note: { text: 'The new host is ready; [the host](https://example.com/host) and `host.sh`.', tone: accent }
       - note: { text: 'Attachments over 1 MB failed; [the list](https://example.com/failed) names each, and `retry.sh` sends them again.', tone: bad }
-      - note: { text: The banner goes up on Friday. }
+      - note: { text: 'The banner goes up on Friday; [the banner](https://example.com/banner) and `banner.sh`.' }
+      - text: '> A quote with [a link](https://example.com/quote) and `quote.sh`.'
   - heading: Progress
     parts:
       - bars:
@@ -183,7 +184,7 @@ sections:
           - title: PowerShell
             parts:
               - code: { lang: powershell, text: "$env:WIKI = 'new'" }
-              - note: { text: Run it in a new window., tone: good }
+              - note: { text: 'Run it in a new window; [the steps](https://example.com/steps) and `run.sh`.', tone: good }
               - table:
                   columns: [{ title: Shell }, { title: Lines, num: true }]
                   rows: [[PowerShell, '1']]
