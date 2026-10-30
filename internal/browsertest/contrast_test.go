@@ -73,9 +73,9 @@ const colours = `
 // each ground on its own rather than the group, and a diagram's text, in SVG, is not measured. aurora's text on its
 // wash and its glass is so measured on --bg alone: its palette was worked out by hand on the darkest colour of the
 // wash. Measuring each colour of a gradient would need oklab() and oklch() read (Chrome keeps color-mix(in oklab …)
-// so), the layers of one element laid over one another and over its own background-color, and would fail
-// notebook's rules (muted 4.16 on them). Measure them if a theme comes to put text on such a ground darker than
-// its palette allows for.
+// so) and the layers of one element laid over one another and over its own background-color, and would take the
+// lines of a pattern (notebook's rules) as a ground of the text over them. Measure them if a theme comes to put
+// text on such a ground darker than its palette allows for.
 const measureContrast = `(() => {` + colours + `
   const low = new Set();
   const measure = (e, s, under, what, text) => {
