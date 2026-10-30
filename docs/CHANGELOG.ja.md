@@ -8,6 +8,10 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：`floe theme list` と `floe theme show`。`floe part show`・`floe template show`・
+  `floe theme show` は、部品・見た目・共有の schema・テンプレート・テーマが読むファイルを全部、
+  並べた `files:` の行の後に、1 つずつ `==> 名前 <==` の下に書いたとおりに出す。ファイル名を足すと、
+  そのファイルだけをそのまま出す（`floe part show code part.html`）。
 - 追加：floe のテンプレート `slides`。1 枚ずつ見せるスライドで、帯の表紙の後に、画面の高さの枚
   （見出しと report と同じ部品）を並べ、スクロールで 1 枚ずつ止めて右下に何枚目かを出す。見出しだけの枚は
   話の区切りになり、印刷すると 1 枚が 1 ページになる。`direction: across` と書くと枚を横に並べ、← → のキーや

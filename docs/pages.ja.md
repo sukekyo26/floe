@@ -62,7 +62,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 ## 部品
 
-部品は、種類を名指す鍵 1 つで書きます。`floe part list` が 1 行ずつ並べ、`floe part show <名前>` が取るもの（schema を書いたとおり）を出します。`report` が節の中に取る部品：
+部品は、種類を名指す鍵 1 つで書きます。`floe part list` が 1 行ずつ並べ、`floe part show <名前> schema.json` が取るもの（schema を書いたとおり）を出します。`report` が節の中に取る部品：
 
 | 部品 | 描くもの |
 |---|---|
@@ -117,7 +117,7 @@ Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書�
 
 - ほかの鍵の代わりに `example: <種類>` を書くと、組み込みの見本を描きます（`floe diagram example` が並べる）。ページは図だけを見せ、spec は見せません。見本の spec を読む・写すときは、`floe diagram example <種類>` で出します。
 - 文（`title`・行・ラベル）は、文か、言語ごとの言葉（英語を含む）です：`{ en: Store, ja: 保存先 }`。ページは `lang:` の言葉を描き、spec は書いた言語ごとに並べて確かめます。
-- 部品は、種類を名指す鍵 1 つで書きます。`floe part show diagram` がすべての鍵を出し、`floe diagram example <種類>` が種類ごとの spec を、格子を説明するコメント付きで出します。
+- 部品は、種類を名指す鍵 1 つで書きます。`floe part show diagram schema.json` がすべての鍵を出し、`floe diagram example <種類>` が種類ごとの spec を、格子を説明するコメント付きで出します。
 
 | 部品 | 鍵 |
 |---|---|
@@ -167,7 +167,7 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 ```
 
 - `file:line:column:` が誤りの場所です。変える値か、それを持つ鍵を指します。言われた誤りを全部直してから、`floe check` をもう一度走らせます。次の段の誤りが出ることがあります。
-- 形の誤り（`additional properties 'x' not allowed`・`missing property 'x'`・`got string, want array`）は、テンプレートか部品の schema がデータを断ったものです。`floe template show <テンプレート>` と `floe part show <部品>` が、取るものを出します。
+- 形の誤り（`additional properties 'x' not allowed`・`missing property 'x'`・`got string, want array`）は、テンプレートか部品の schema がデータを断ったものです。`floe template show <テンプレート> schema.json` と `floe part show <部品> schema.json` が、取るものを出します。
 - 自分の部品・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check` と `floe template check` が並べます。
 - 同じ誤りは、何か所から指されても 1 回だけ言います。
 

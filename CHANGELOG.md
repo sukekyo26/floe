@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `floe theme list` and `floe theme show`. `floe part show`,
+  `floe template show` and `floe theme show` print every file a part, a look,
+  a shared schema, a template or a theme reads, as written, each under
+  `==> name <==` after a `files:` line naming them; with a file named after,
+  that file alone, as it is (`floe part show code part.html`).
 - Add floe's template `slides`, slides to show one at a time: a cover of the
   title on a band, then slides as tall as the screen, each a heading over
   parts as in `report`, where the scroll stops at each one, numbered in the

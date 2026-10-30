@@ -11,13 +11,15 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe render <data.yaml>...` | Write the page of each data file to an HTML file, to keep in a repository |
 | `floe rebuild` | Draw every stored page again with the templates, parts and themes of now |
 | `floe template list` | List the templates |
-| `floe template show <name>` | Show a template: its themes, and its schema, checks and example as written |
+| `floe template show <name> [file]` | Show a template: its themes and every file it reads as written, or one of them |
 | `floe template new <name>` | Make the smallest template of your own, to fill in |
 | `floe template check` | Check the templates of your own |
 | `floe part list` | List the parts, looks and shared schemas |
-| `floe part show <name>` | Show a part, look or shared schema, and its schema and checks as written |
+| `floe part show <name> [file]` | Show a part, look or shared schema and every file it reads as written, or one of them |
 | `floe part new <name>` | Make the smallest part of your own, to fill in |
 | `floe part check` | Check the parts, looks, shared schemas and themes of your own |
+| `floe theme list` | List the themes |
+| `floe theme show <name> [file]` | Show a theme and every file it reads as written, or one of them |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe archive <slug>...` | Take pages off the lists, keeping them (`--undo` gives them back) |
@@ -133,7 +135,10 @@ Print the templates, floe's and your own, one per line in three tab-separated co
 
 ## `floe template show <name>`
 
-Print a template, to read before writing a data file of it: its description, where it is, the themes a data file may pick (`themes:`), and, as written, its `schema.json`, its `checks.yaml` and its `example.yaml` to start a data file from.
+Print a template, to read before writing a data file of it: its description, where it is, the themes a data file may pick (`themes:`), the files it reads (`files:`), and each of them as written under `==> file <==`: first what a data file may hold (`schema.json`, `checks.yaml`, `computed.yaml`) and its `example.yaml` to start one from, then `page.html`, `page.css` and `words.yaml`. Its `assets/`, images, are not printed.
+
+- With a file named after (`floe template show report example.yaml`), it prints that file alone, as it is. A file it does not read is refused with the files it does.
+- When the output is long, read the `files:` line first, then the file you need.
 
 ## `floe template new <name>`
 
@@ -157,7 +162,10 @@ Print the parts, looks and shared schemas, floe's and your own, one per line in 
 
 ## `floe part show <name>`
 
-Print a part, a look or a shared schema: its description, where it is, the looks it takes, and the files that say what a data file may hold of it, as written (the `schema.json` and `checks.yaml` of a part, the `<name>.json` of a shared schema).
+Print a part, a look or a shared schema: its description, where it is, the looks it takes, the files it reads (`files:`), and each of them as written under `==> file <==`: `schema.json`, `checks.yaml`, `part.yaml`, `part.html`, `part.css` and `words.yaml` of a part, `part.yaml` and `part.css` of a look, `<name>.json` of a shared schema. The CSS of the looks it takes is the looks' own: `floe part show panel` prints it.
+
+- With a file named after (`floe part show code part.html`), it prints that file alone, as it is: floe's parts show how `part.html` uses `{{copyButton}}` and the other functions. A file it does not read is refused with the files it does.
+- When the output is long, read the `files:` line first, then the file you need.
 
 ## `floe part new <name>`
 
@@ -170,6 +178,17 @@ Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of it
 Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `FLOE_THEMES_DIR`, over floe's own, and print every mistake of them (exit code 1), a shared schema's too, checked from its root whether a schema names it or not. Nothing is printed when they are right (exit code 0).
 
 A mistake of a part, shared schema, theme or template of your own stops `floe check`, `floe render` and `floe publish` too, whether the page uses it or not: run `floe part check` and `floe template check` to see it. [parts.md](parts.md) tells what a part and a theme hold.
+
+## `floe theme list`
+
+Print the themes, floe's and your own, one per line in the three tab-separated columns of `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own) and an empty description, as a theme has none.
+
+## `floe theme show <name> [file]`
+
+Print a theme: its name, where it is, the files it reads (`files:`), and each of them as written under `==> file <==`: `palette.css`, `base.css`, then the CSS it gives each part or look, by name.
+
+- With a file named after (`floe theme show ink note.css`), it prints that file alone, as it is. A file it does not read is refused with the files it does.
+- When the output is long, read the `files:` line first, then the file you need.
 
 ---
 
