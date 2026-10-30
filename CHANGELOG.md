@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the line and column of a mistake about a value of a YAML file at the
+  value's first character, though floe's YAML library places it off after a
+  tab, after a value with spaces at its line's end, and after a comment or
+  quotes over CRLF lines.
 - Add a table's columns written as their titles alone (`columns: [Risk, Owner]`),
   an object `{ title, num, pills }` only for a column holding more; and a
   column's `pills`, words with their tones (`{ done: good, open: bad }`), for a

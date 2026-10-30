@@ -194,13 +194,18 @@ func document(file string, src []byte) (ast.Node, error) {
 	// Read once, for blockTabs, the parser and dropped: the parser changes its nodes, not the tokens' types
 	// and places, which dropped reads after it.
 	tks := lexer.Tokenize(string(src))
+	begins := starts(src, tks)
 	if err := blockTabs(file, src, tks); err != nil {
 		return nil, err
 	}
 	doc, err := parser.Parse(tks, 0)
 	if err != nil {
+		// LIMIT: goccy/go-yaml's own mistake keeps its place, which drifts as starts tells: its words hold places
+		// it counts (already defined at [3:1]), which the place would be counted otherwise than.
 		return nil, library(file, err)
 	}
+	// After the parser, which reads goccy/go-yaml's columns to tell the indentation.
+	mend(src, tks, begins)
 	var body ast.Node
 	var head *Pos // a directive heads the document after it
 	for _, d := range doc.Docs {
@@ -269,6 +274,46 @@ func blockTabs(file string, src []byte, tks token.Tokens) error {
 		}
 	}
 	return found.Sorted().Err()
+}
+
+// starts returns the byte of src each of tks begins at, or nil when the text of one is not there: goccy/go-yaml's
+// own lines and columns drift (a tab it does not count, the spaces it drops after a plain value, a CRLF in a
+// comment or in quotes counted twice). A token's Origin is the spaces and line breaks before it and the text it
+// read; nothing else is between tokens but the spaces and tabs before a line break that goccy/go-yaml leaves out
+// of a plain value's Origin, which are passed only where the text goes on otherwise. A token without text (an
+// empty block) begins where the next one does, as goccy/go-yaml places it too.
+// LIMIT: a file with a token whose Origin is not its text keeps goccy/go-yaml's places: the hex digits of \x, \u
+// and \U in double quotes left out, or a tab in { } that goccy/go-yaml makes no token of the : after (which it
+// refuses too, keeping its places as for any of its mistakes).
+func starts(src []byte, tks token.Tokens) []int {
+	begins := make([]int, len(tks))
+	c := 0
+	for i, t := range tks {
+		c = len(src) - len(bytes.TrimLeft(src[c:], " \t\r\n"))
+		begins[i] = c
+		text := strings.TrimLeft(t.Origin, " \t\r\n")
+		for j := 0; j < len(text); {
+			if c < len(src) && src[c] == text[j] {
+				c, j = c+1, j+1
+				continue
+			}
+			end := len(src) - len(bytes.TrimLeft(src[c:], " \t"))
+			if end == c || end < len(src) && src[end] != '\n' && src[end] != '\r' {
+				return nil
+			}
+			c = end
+		}
+	}
+	return begins
+}
+
+// mend writes over the line and column of each of tks at the byte of src it begins at, none for no begins.
+// LIMIT: a token the parser makes, copying a place (a null left out, the value of a tag), keeps goccy/go-yaml's
+// place; OfValue tells a null left out at its key, and floe refuses tags.
+func mend(src []byte, tks token.Tokens, begins []int) {
+	for i, p := range textpos.Each(src, begins) {
+		tks[i].Position.Line, tks[i].Position.Column = p.Line, p.Column
+	}
 }
 
 // startOf returns where d starts: at its ---, or at at without one.
@@ -415,6 +460,8 @@ func (w *walk) cut(n ast.Node) bool {
 
 // lastLine returns the line the text of tk ends on, which a plain value written over lines does after
 // the line it begins on.
+// LIMIT: a CR alone ending a line is not counted, so a comment cutting such a value is not caught; count the
+// lines as textpos does if one comes to matter.
 func lastLine(tk *token.Token) int {
 	return tk.Position.Line + strings.Count(strings.TrimSpace(tk.Origin), "\n")
 }
