@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/sukekyo26/floe/internal/kit"
+	"github.com/sukekyo26/floe/internal/link"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
 )
@@ -302,6 +304,62 @@ func TestLinkedData(t *testing.T) {
 	if plain.Body.String() != "<title>h</title><p>x</p>" {
 		t.Errorf("a linked HTML file downloaded as %q", plain.Body)
 	}
+}
+
+// A folder is linked as a link is; its URL leads to the list with it open, its pages are framed at ?file= and served
+// under it as a linked file's directory is, and its directories are listed one at a time.
+func TestFolder(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	docs := filepath.Join(e.home, "proj", "docs")
+	writeFiles(t, filepath.Dir(docs), map[string]string{
+		"docs/index.html": "<title>i</title>", "docs/guide/setup.html": "<p>s</p>", "docs/s.css": "p{}", "docs/.git/config": "x",
+		"sibling.html": "beside",
+	})
+	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: docs}), http.StatusCreated, `"slug":"docs","title":"","prev":null,"folder":true}`) //nolint:exhaustruct // the rest not given
+	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/?tab=folders&open=docs" {
+		t.Errorf("GET /a/docs/ = %d to %q, want 303 to the list with it open", w.Code, w.Header().Get("Location"))
+	}
+	// The frame of a page the server found says so, for the frame to show it whatever its directory's list holds.
+	want(t, e.do(t, http.MethodGet, "/a/docs/?file=guide%2Fsetup.html", ""), http.StatusOK, `data-slug="docs" data-served>`)
+	want(t, e.do(t, http.MethodGet, "/a/docs/?file=nope.html", ""), http.StatusNotFound, `data-slug="docs">`)
+	for target, status := range map[string]int{
+		"/a/docs/?file=guide%2Fsetup.html": http.StatusOK, "/a/docs/?file=guide/setup.html": http.StatusOK,
+		"/a/docs/?file=..%2Fsibling.html": http.StatusNotFound, "/a/docs/?file=.git%2Fconfig": http.StatusNotFound,
+		"/a/docs/?file=%252e%252e%2Fsibling.html": http.StatusNotFound, "/a/docs/?file=nope.html": http.StatusNotFound,
+		"/a/docs/?file=guide": http.StatusNotFound,
+	} {
+		want(t, e.do(t, http.MethodGet, target, ""), status, `class="framed" data-slug="docs"`)
+	}
+	page := e.do(t, http.MethodGet, "/a/docs/guide/setup.html", "")
+	want(t, page, http.StatusOK, "<p>s</p>")
+	if got := page.Header().Get("Content-Security-Policy"); !strings.HasPrefix(got, "sandbox allow-scripts") {
+		t.Errorf("a folder's page is served with CSP %q", got)
+	}
+	want(t, e.do(t, http.MethodGet, "/a/docs/s.css", ""), http.StatusOK, "p{}")
+	for _, target := range []string{
+		"/a/docs/?raw", "/api/artifacts/docs/download", "/a/docs/.git/config", "/api/artifacts/docs/pages?dir=..",
+		"/api/artifacts/docs/pages?dir=.git", "/api/artifacts/docs/pages?dir=nope", "/api/artifacts/none/pages",
+	} {
+		want(t, e.do(t, http.MethodGet, target, ""), http.StatusNotFound, "not found")
+	}
+	top := e.do(t, http.MethodGet, "/api/artifacts/docs/pages", "")
+	var l link.Listing
+	if err := json.Unmarshal(top.Body.Bytes(), &l); err != nil || top.Code != http.StatusOK || !slices.Equal(l.Dirs, []string{"guide"}) ||
+		len(l.Pages) != 1 || l.Pages[0].File != "index.html" || l.More != 0 {
+		t.Errorf("pages of the top = %d %s", top.Code, top.Body)
+	}
+	want(t, e.do(t, http.MethodGet, "/api/artifacts/docs/pages?dir=guide", ""), http.StatusOK, `{"dirs":[],"pages":[{"file":"guide/setup.html","updatedAt":"`)
+	// An archived folder's URL leads to the archived list.
+	want(t, e.write(t, http.MethodPatch, "/api/artifacts/docs", map[string]any{"archived": true}), http.StatusOK, `"slug":"docs"`)
+	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Header().Get("Location") != "/?tab=folders&open=docs&archived=1" {
+		t.Errorf("GET /a/docs/ archived leads to %q", w.Header().Get("Location"))
+	}
+	// A file's link has no directories to list.
+	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: filepath.Join(e.home, "proj", "sibling.html")}), http.StatusCreated, `"slug":"sibling"`) //nolint:exhaustruct // the rest not given
+	want(t, e.do(t, http.MethodGet, "/api/artifacts/sibling/pages", ""), http.StatusNotFound, "not found")
+	want(t, e.do(t, http.MethodGet, "/a/sibling/?file=sibling.html", ""), http.StatusNotFound, `data-slug="sibling"`)
 }
 
 // An edit archives a page as true or false, which the list then carries; favorite and archived null are not

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{.Lang}}"{{with .Framed}} class="framed" data-slug="{{.}}"{{end}}>
+<html lang="{{.Lang}}"{{with .Framed}} class="framed" data-slug="{{.}}"{{end}}{{if .Served}} data-served{{end}}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -182,6 +182,7 @@
   .shelf [aria-pressed="true"] svg, .shelf [aria-pressed="true"] .n { color: var(--on-ink); }
   .shelf .add-link { display: flex; align-items: center; gap: 0.45rem; margin-left: 0.65rem; padding: 0; font-size: 0.82rem; }
   .shelf .add-link svg { width: 14px; height: 14px; }
+  .shelf .adds { display: grid; gap: 0.6rem; justify-items: start; }
   #add-narrow { display: none; }
   .tabs { display: inline-flex; flex: none; gap: 2px; padding: 3px; background: var(--subtle); border: 1px solid var(--line); border-radius: 999px; }
   .tabs button {
@@ -195,6 +196,7 @@
     font: 500 0.68rem/1.3 var(--mono); color: var(--muted); background: var(--line); font-variant-numeric: tabular-nums;
   }
   .tabs button[aria-pressed="true"] .n { color: var(--fg); background: var(--sel); }
+  .tabs button > svg { flex: none; width: 15px; height: 15px; margin-right: -0.2rem; }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; height: 36px; padding: 0 0.95rem;
@@ -244,15 +246,24 @@
   }
   li + li { border-top: 1px solid var(--line); }
   li.group:not(:first-child) { margin-top: 1.1rem; }
-  li:is(:has(+ li.group), :last-child) { border-radius: 0 0 20px 20px; box-shadow: 0 1px 0 var(--line); }
+  li:is(:has(+ li.group), :has(+ li.folder), :last-child) { border-radius: 0 0 20px 20px; box-shadow: 0 1px 0 var(--line); }
   /* A heading is not pressed, so it is not pointed out */
   li:not(.group):hover { background: var(--hover); }
+  /* A folder's row is the heading of its tree, on the rows' ground: its title larger and heavier than the tree's names, which
+     step in under it */
+  li.folder a.title { font-size: 1rem; font-weight: 750; }
+  /* Without groups, the list's first row rounds its top as a group's heading does */
+  #list > li.folder:first-child { border-radius: 20px 20px 0 0; }
+  li.folder + li.folder, li.tree + li.folder { margin-top: 0.6rem; border-radius: 20px 20px 0 0; border-top: 0; }
+  /* A folder closed is its block whole */
+  #list > li.folder:is(:has(+ li.folder), :last-child) { border-radius: 20px; }
   li::before {
     content: ""; position: absolute; left: 0; top: 0.55rem; bottom: 0.55rem; width: 2px; border-radius: 0 2px 2px 0;
     background: var(--ink); opacity: 0; transition: opacity 0.15s;
   }
   li:hover::before { opacity: 1; }
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
+  li.kept { animation: none; }
   /* A group's heading: a block, so that its text does not widen the rows' first column */
   li.group {
     display: block; min-height: 0; padding: 14px 18px 10px; font: 700 0.75rem/1.2 var(--mono); color: var(--fg); animation: none;
@@ -344,6 +355,26 @@
   }
   li time { font: 0.72rem/1 var(--mono); color: var(--faint); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
   .actions { position: relative; z-index: 1; display: flex; gap: 2px; }
+  /* A folder's row opens a tree of its directories under it (--d deep), each row a directory or a page of it */
+  .fold { display: inline-block; width: 14px; height: 14px; margin-right: 0.35rem; vertical-align: -2px; color: var(--muted); transition: transform 0.15s; }
+  [aria-expanded="true"] > .fold { transform: rotate(90deg); }
+  /* A tree's rows are short, many as they may be; each holds the fold's room, empty for a page, so that the names of a
+     directory's directories and pages line up, a step (the fold's width) right of the directory's own */
+  li.tree { min-height: 1.75rem; padding-block: 0.1rem; }
+  /* A step in is the fold's width and a little: deep in, a title still has room */
+  li.tree .body { padding-left: calc((var(--d) - 1) * 1.1rem + 0.2rem); }
+  li.tree .title { font-size: 0.85rem; font-weight: 500; }
+  li.tree .fold.none { visibility: hidden; }
+  li.tree .icon-btn { width: 26px; height: 26px; }
+  .kind { display: inline-block; width: 16px; height: 16px; margin-right: 0.4rem; vertical-align: -3px; color: var(--muted); }
+  li.tree .title::before { content: none; }
+  li.tree button.title { justify-self: start; max-width: 100%; padding: 0; border: 0; background: none; color: var(--fg); font-weight: 700; text-align: left; cursor: pointer; }
+  li.tree button.title::after { content: ""; position: absolute; inset: 0; }
+  li.tree button.title:focus-visible { outline: none; }
+  li:has(button.title:focus-visible) { outline: var(--ring); outline-offset: -2px; }
+  /* Under the names of its directory: past the fold's room */
+  li.tree.note .body { padding-left: calc((var(--d) - 1) * 1.1rem + 0.2rem + 14px + 0.35rem); color: var(--muted); font-size: 0.8rem; }
+  .crumb { color: var(--muted); font-weight: 500; }
   /* The row's other actions. The row whose menu is open comes forward: each row's rise animation stacks the rows below over it */
   li:has(.more[open]) { z-index: 3; }
   .more { position: relative; }
@@ -440,6 +471,11 @@
   /* A bar too narrow for the kinds' counts, the sort and the add button side by side drops the counts */
   @container bar (max-width: 27rem) {
     .tabs .n { display: none; }
+  }
+  /* A bar too narrow for the kinds' words beside the sort shows their icons alone, the words left for screen readers */
+  @container bar (max-width: 36rem) {
+    .tabs .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .tabs button > svg { margin-right: 0; }
   }
   @container bar (max-width: 46rem) {
     .bulk .btn:not(.armed) .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -583,13 +619,17 @@
       <h2>{{.Msg "ui_project"}}</h2>
       <div class="chips" id="chips" role="group" aria-label="{{.Msg "ui_project"}}"></div>
     </div>
-    <button type="button" class="link-btn add-link" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button>
+    <div class="adds">
+    <button type="button" class="link-btn add-link" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>{{.Msg "ui_add_link"}}</button>
+    <button type="button" class="link-btn add-link" id="add-folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>{{.Msg "ui_add_folder"}}</button>
+    </div>
   </nav>
   <div class="main">
   <div class="toolbar">
       <div class="tabs" id="kinds" role="group" aria-label="{{.Msg "ui_kind"}}">
-        <button type="button" data-tab="pages">{{.Msg "ui_tab_pages"}}<span class="n"></span></button>
-        <button type="button" data-tab="links">{{.Msg "ui_tab_links"}}<span class="n"></span></button>
+        <button type="button" data-tab="pages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg><span class="label">{{.Msg "ui_tab_pages"}}</span><span class="n"></span></button>
+        <button type="button" data-tab="links"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span class="label">{{.Msg "ui_tab_links"}}</span><span class="n"></span></button>
+        <button type="button" data-tab="folders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg><span class="label">{{.Msg "ui_tab_folders"}}</span><span class="n"></span></button>
       </div>
       <!-- The sort: a button named by what it is and the order now, which opens the orders to pick from -->
       <span class="sort"><span class="sr-only" id="sort-label">{{.Msg "ui_sort"}}</span>
@@ -620,6 +660,12 @@
       <strong>{{.Msg "ui_empty_links"}}</strong>
       <p>{{.Msg "ui_empty_links_hint"}}</p>
       <p><code>floe publish &lt;file.html&gt; --link</code></p>
+    </div>
+    <div class="state" id="empty-folders" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>
+      <strong>{{.Msg "ui_empty_folders"}}</strong>
+      <p>{{.Msg "ui_empty_folders_hint"}}</p>
+      <p><code>floe publish --link &lt;folder&gt;</code></p>
     </div>
     <div class="state" id="all-archived" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg>
@@ -674,13 +720,13 @@
 <dialog id="add-dialog" aria-labelledby="add-title">
   <form class="add" id="add">
     <div class="add-head">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+      <svg id="add-icon-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" id="add-icon-folder" hidden><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>
       <div>
         <h2 id="add-title">{{.Msg "ui_add_link"}}</h2>
-        <p class="lead">{{.Msg "ui_add_lead"}}</p>
+        <p class="lead" id="add-lead">{{.Msg "ui_add_lead"}}</p>
       </div>
     </div>
-    <label class="field">{{.Msg "ui_add_path"}}
+    <label class="field"><span id="add-path-label">{{.Msg "ui_add_path"}}</span>
       <input class="text path" id="add-path" required autofocus autocomplete="off" spellcheck="false"
         placeholder="/home/you/project/coverage/index.html">
     </label>
@@ -750,6 +796,17 @@
     </div>
   </form>
 </dialog>
+<template id="tree-row">
+  <li class="tree">
+    <span></span>
+    <div class="body"><a class="title"></a></div>
+    <span class="meta"><span></span><span></span><time></time></span>
+    <div class="actions">
+      <a class="icon-btn open" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a>
+      <button type="button" class="icon-btn copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></button>
+    </div>
+  </li>
+</template>
 <template id="row">
   <li>
     <label class="pick"><input type="checkbox" class="sel"></label>
@@ -801,18 +858,20 @@
     const to = typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
     if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) location.href = to.href;
     const hash = e.data?.artifactHash;
-    if (typeof hash === 'string' && (hash === '' || hash.startsWith('#')) && e.data.artifactPath === location.pathname) {
+    if (typeof hash === 'string' && (hash === '' || hash.startsWith('#')) && e.data.artifactPath === new URL(frameSrc, location.href).pathname) {
       history.replaceState(history.state, '', location.pathname + location.search + hash);
     }
   });
   // The frame's own fragment changed (the address bar, Back): the page moves to that part, in
   // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo.
-  // No fragment is the empty one, which moves to the top of the page: ?raw alone would load the page again
+  // No fragment is the empty one, which moves to the top of the page: the page's URL alone would load it again
   if (framed) addEventListener('hashchange', () => {
-    if ($('frame').hasAttribute('src')) $('frame').contentWindow.location.replace('?raw' + (location.hash || '#'));
+    if ($('frame').hasAttribute('src')) $('frame').contentWindow.location.replace(frameSrc + (location.hash || '#'));
   });
   // Stored pages (pages) and links registered by absolute path (links) are on separate tabs
-  const inTab = (a, t = tab) => Boolean(a.path) === (t === 'links');
+  // Its tab: a folder's link, any other link (by absolute path), or a stored page
+  const kindOf = (a) => (a.folder ? 'folders' : a.path ? 'links' : 'pages');
+  const inTab = (a, t = tab) => kindOf(a) === t;
   // The entries of a list: of its tab, and archived or not as it is. Every count and list goes through this, so that the archived stay off the rest
   const inView = (a, state) => inTab(a, state.tab) && Boolean(a.archived) === state.archived;
   // The entries of the list shown: inView, and the favourites only when they are what is looked at
@@ -834,7 +893,7 @@
   function readState(search) {
     const p = new URLSearchParams(search);
     return {
-      tab: p.get('tab') === 'links' ? 'links' : 'pages',
+      tab: ['links', 'folders'].includes(p.get('tab')) ? p.get('tab') : 'pages',
       project: p.get('project') ?? '',
       tag: p.get('tag') ?? '',
       q: p.get('q') ?? '',
@@ -843,9 +902,39 @@
       // One of all, the favourites and the archived is looked at: with both in the URL, the archived
       fav: p.get('fav') === '1' && p.get('archived') !== '1',
       archived: p.get('archived') === '1',
+      // A folder's URL (/a/{slug}/) leads here with open= to open it: taken once into what is kept, and left out of the URL
+      open: p.getAll('open'),
     };
   }
   let { tab, project, tag, sort, page, fav, archived } = readState(location.search);
+  // The folders and the directories of them open in the list, as slug or slug:path (a slug has no colon), kept in the
+  // browser and not in the URL, which would grow with each one; without storage, all are closed at first
+  const OPEN_KEY = 'list.open';
+  const opened = new Set(readState(location.search).open);
+  try {
+    const kept = JSON.parse(localStorage.getItem(OPEN_KEY));
+    if (Array.isArray(kept)) for (const key of kept) if (typeof key === 'string') opened.add(key);
+  } catch {
+    // Storage is unavailable, or what it holds is not ours
+  }
+  function keepOpen() {
+    try {
+      localStorage.setItem(OPEN_KEY, JSON.stringify([...opened]));
+    } catch {
+      // Storage is unavailable: what is open is not kept
+    }
+  }
+  keepOpen();
+  const openKey = (slug, dir) => (dir ? `${slug}:${dir}` : slug);
+  // The directories read of the folders open (GET /api/artifacts/{slug}/pages), by openKey: an Error for one that could not be read
+  const listings = new Map();
+  // The page of a folder the frame shows (?file=), its path under the folder; '' for any other page
+  const FILE = framed ? new URLSearchParams(location.search).get('file') ?? '' : '';
+  // What the iframe loads: the page at ?raw, a folder's page at its path under the folder
+  const frameSrc = FILE ? FILE.split('/').map(encodeURIComponent).join('/') : '?raw';
+  // The frame URL of an entry, or of a folder's page (file)
+  const pageHref = (x) => (x.file ? `/a/${x.slug}/?file=${encodeURIComponent(x.file)}` : `/a/${x.slug}/`);
+  const isFramed = (x) => x.slug === framed && (x.file ?? '') === FILE;
   // The list's state as it is now, of the same keys as readState: what the list is arranged by and the URL keeps
   const current = () => ({ tab, fav, archived, project, tag, q: $('q').value, sort, page });
   // The selected slugs. Changing a filter or the tab clears them (so that nothing unseen is deleted); a selection across pages stays
@@ -901,13 +990,14 @@
     const url = new URL(location.href);
     const now = current();
     const state = {
-      tab: now.tab === 'links' ? now.tab : '', fav: now.fav ? '1' : '', archived: now.archived ? '1' : '', project: now.project, tag: now.tag,
+      tab: now.tab === 'pages' ? '' : now.tab, fav: now.fav ? '1' : '', archived: now.archived ? '1' : '', project: now.project, tag: now.tag,
       q: now.q.trim(), sort: now.sort === 'updated' ? '' : now.sort, page: now.page > 1 ? String(now.page) : '',
     };
     for (const [name, value] of Object.entries(state)) {
       if (value) url.searchParams.set(name, value);
       else url.searchParams.delete(name);
     }
+    url.searchParams.delete('open');
     history.replaceState(null, '', url);
     try {
       sessionStorage.setItem(LIST_KEY, url.search);
@@ -928,6 +1018,7 @@
       && (!state.tag || (a.tags ?? []).includes(state.tag))
       && matches(a, q));
     const sorted = SORTS[state.sort] ? shown.sort(SORTS[state.sort]) : shown;
+    if (!grouped(state)) return sorted;
     // Group by group, each in the order picked (sort is stable): the favourites first, then the projects as projectOrder
     // has them, those without one last
     const rank = new Map(sorted.map((a) => {
@@ -937,6 +1028,8 @@
     return sorted.sort((x, y) => rank.get(x) - rank.get(y));
   }
 
+  // The folders' tab has no groups: each folder heads its own tree, in the order picked
+  const grouped = (state) => state.tab !== 'folders';
   // The group an entry is listed under: the favourites (null) in all of the list, else its project. A project's name is a
   // string, NONE too, so none is taken for the favourites
   const group = (a, state) => (!state.fav && !state.archived && a.favorite ? null : a.project ?? NONE);
@@ -1020,7 +1113,7 @@
 
   // Removing a link leaves its file alone, so it says unregister (ui_unlink_*) rather than delete (ui_delete_*)
   const kind = (a) => (a.path ? 'unlink' : 'delete');
-  const tabKind = () => (tab === 'links' ? 'unlink' : 'delete');
+  const tabKind = () => (tab === 'pages' ? 'delete' : 'unlink');
 
   // A button that acts on the second click. The first click arms it and returns true; losing focus disarms it
   function arm(btn, armedLabel) {
@@ -1468,6 +1561,11 @@
     // A link added is not archived, so it is added from the lists it goes on
     $('add-open').hidden = archived;
     $('add-narrow').hidden = archived;
+    $('add-folder').hidden = archived;
+    // The bar's one button adds what the tab lists: a folder on the folders' tab, else a link
+    const what = tab === 'folders' ? 'ui_add_folder' : 'ui_add_link';
+    $('add-narrow').title = t(what);
+    $('add-narrow').setAttribute('aria-label', t(what));
   }
 
   // If everything fits in the smallest page size, changing the size changes nothing, so the whole pager is hidden
@@ -1491,6 +1589,7 @@
   function row(a, i, ranks) {
     const li = $('row').content.firstElementChild.cloneNode(true);
     li.style.setProperty('--i', i);
+    li.dataset.key = `entry:${a.slug}`;
     li.style.setProperty('--c', projectColor(a.project ?? NONE, ranks));
     li.dataset.slug = a.slug;
     const proj = li.querySelector('.proj');
@@ -1562,6 +1661,21 @@
     dl.href = `/api/artifacts/${a.slug}/download`;
     dl.download = `${a.slug}.html`;
     dl.setAttribute('aria-label', t('ui_download_named', a.title));
+    if (a.folder) {
+      // On the folders' tab a folder's row heads its tree, whose rows are its pages
+      li.classList.add('folder');
+      // A folder's title opens and closes its tree; its URL leads to the list with it open, for a new tab
+      link.setAttribute('aria-expanded', String(opened.has(a.slug)));
+      link.insertAdjacentHTML('afterbegin', '<span class="fold"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 6 6 6-6 6\"/></svg></span><svg class=\"kind\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z\"/></svg>');
+      link.addEventListener('click', (e) => {
+        if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        toggleOpen(a.slug, '');
+      });
+      // A folder has no page of its own to open alone or download
+      open.hidden = true;
+      dl.hidden = true;
+    }
     if (a.missing) {
       link.removeAttribute('href');
       // Without href it cannot take focus and ↑↓ would stop before this row, so scripts can still move to it
@@ -1578,6 +1692,169 @@
     del.addEventListener('click', () => remove(a, del));
     del.addEventListener('blur', () => disarm(a, del));
     return li;
+  }
+
+  // The rows of the directory dir of the folder a, depth d deep, and of its directories open: what was read of them, a
+  // directory not read yet left out until it is
+  function treeRows(a, dir, d, rows) {
+    const l = listings.get(openKey(a.slug, dir));
+    if (l === undefined) return;
+    const tree = (cls, key) => {
+      const li = $('tree-row').content.firstElementChild.cloneNode(true);
+      li.classList.add(...cls);
+      li.style.setProperty('--d', d);
+      li.dataset.d = d;
+      li.dataset.slug = a.slug;
+      li.dataset.key = key;
+      return li;
+    };
+    const note = (text) => {
+      const li = tree(['note'], `note:${openKey(a.slug, dir)}`);
+      li.querySelector('.body').textContent = text;
+      li.querySelector('.actions').replaceChildren();
+      return li;
+    };
+    if (l instanceof Error) {
+      rows.push(note(t('ui_folder_failed', l.message)));
+      return;
+    }
+    for (const name of l.dirs) {
+      const path = dir ? `${dir}/${name}` : name;
+      const li = tree(['dir'], `dir:${openKey(a.slug, path)}`);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'title';
+      btn.setAttribute('aria-expanded', String(opened.has(openKey(a.slug, path))));
+      btn.innerHTML = '<span class="fold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>';
+      btn.append(name);
+      btn.title = path;
+      btn.addEventListener('click', () => toggleOpen(a.slug, path));
+      li.querySelector('.title').replaceWith(btn);
+      li.querySelector('.actions').replaceChildren();
+      rows.push(li);
+      if (opened.has(openKey(a.slug, path))) treeRows(a, path, d + 1, rows);
+    }
+    for (const p of l.pages) {
+      const li = tree(['page'], `page:${openKey(a.slug, p.file)}`);
+      const name = p.file.slice(p.file.lastIndexOf('/') + 1);
+      const link = li.querySelector('.title');
+      link.href = pageHref({ slug: a.slug, file: p.file });
+      link.innerHTML = '<span class="fold none"></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>';
+      link.append(name);
+      link.title = p.file;
+      const time = li.querySelector('time');
+      time.dateTime = p.updatedAt;
+      time.textContent = ago(p.updatedAt);
+      time.title = t('ui_updated_at', fmt(p.updatedAt));
+      const open = li.querySelector('.open');
+      open.href = `/a/${a.slug}/${p.file.split('/').map(encodeURIComponent).join('/')}`;
+      open.setAttribute('aria-label', t('ui_open_raw_named', name));
+      open.title = t('ui_open_raw');
+      const copy = li.querySelector('.copy');
+      copy.setAttribute('aria-label', t('ui_copy_path_named', name));
+      copy.title = t('ui_copy_path');
+      copy.addEventListener('click', () => copyPath(`${a.path}/${p.file}`, copy));
+      rows.push(li);
+    }
+    const shown = l.dirs.length + l.pages.length;
+    if (l.more) rows.push(note(t('ui_folder_more', shown + l.more, shown)));
+    else if (shown === 0) rows.push(note(t('ui_folder_empty')));
+  }
+
+  // GET /api/artifacts/{slug}/pages of dir: null for one that is not there (any more)
+  async function readListing(slug, dir) {
+    const res = await api(`/api/artifacts/${encodeURIComponent(slug)}/pages?dir=${encodeURIComponent(dir)}`);
+    if (res.status === 404) return null;
+    if (!res.ok) return new Error(t('ui_http_error', await res.text(), res.status));
+    return res.json();
+  }
+
+  // Reads again the directories open of the folders listed, each under folders and directories open: whether any changed.
+  // One gone leaves what is open, and the URL
+  // LIMIT: each directory open is read every 3 s with the list. Send a mark of each, to read it only once changed, if many open are heavy
+  // The last call's answers win: an earlier one, slower, would take away what was opened since
+  let openReads = 0;
+  async function readOpen() {
+    const n = ++openReads;
+    const before = JSON.stringify([...listings]);
+    // A folder no longer registered leaves what is kept
+    const was = opened.size;
+    for (const key of [...opened]) if (!items.some((x) => x.folder && x.slug === key.split(/:(.*)/s)[0])) opened.delete(key);
+    if (opened.size !== was) keepOpen();
+    const shown = (key) => {
+      const [slug, dir = ''] = key.split(/:(.*)/s);
+      const a = items.find((x) => x.slug === slug);
+      if (!a?.folder || a.missing || !opened.has(slug)) return false;
+      const parts = dir ? dir.split('/') : [];
+      return parts.slice(0, -1).every((_, i) => opened.has(openKey(slug, parts.slice(0, i + 1).join('/'))));
+    };
+    const keys = [...opened].filter(shown);
+    const read = await Promise.all(keys.map((key) => {
+      const [slug, dir = ''] = key.split(/:(.*)/s);
+      return readListing(slug, dir);
+    }));
+    if (n !== openReads) return false;
+    listings.clear();
+    keys.forEach((key, i) => {
+      if (read[i] === null) opened.delete(key);
+      else listings.set(key, read[i]);
+    });
+    if (read.includes(null)) keepOpen();
+    return JSON.stringify([...listings]) !== before;
+  }
+
+  // Opens or closes the directory dir ('' for the top) of the folder slug; closed, what is open under it closes too. Only
+  // the rows under it are added or taken away: the others, and the focus, stay as they are
+  async function toggleOpen(slug, dir) {
+    const key = openKey(slug, dir);
+    // The row of the folder or the directory as it is drawn now, which a redraw meanwhile makes anew
+    const at = () => [...$('list').children].find((li) => li.dataset.key === (dir ? `dir:${key}` : `entry:${slug}`));
+    const under = (li) => {
+      while (li.nextElementSibling?.classList.contains('tree') && li.nextElementSibling.dataset.slug === slug &&
+        Number(li.nextElementSibling.dataset.d) > Number(li.dataset.d ?? 0)) li.nextElementSibling.remove();
+    };
+    const expand = (li, open) => li?.querySelector('.title').setAttribute('aria-expanded', String(open));
+    if (opened.has(key)) {
+      for (const k of [...opened]) {
+        if (k === key || k.startsWith(dir ? `${key}/` : `${slug}:`)) {
+          opened.delete(k);
+          listings.delete(k);
+        }
+      }
+      keepOpen();
+      const li = at();
+      if (li) under(li);
+      expand(li, false);
+      return;
+    }
+    opened.add(key);
+    keepOpen();
+    expand(at(), true);
+    // A read of all open begun before this one would draw them without it
+    openReads++;
+    let l;
+    try {
+      l = await readListing(slug, dir);
+    } catch (e) {
+      showError(t('ui_load_failed', e.message));
+      return;
+    }
+    // Closed while it was read
+    if (!opened.has(key)) return;
+    if (l === null) {
+      opened.delete(key);
+      keepOpen();
+      expand(at(), false);
+      return;
+    }
+    listings.set(key, l);
+    const li = at();
+    const a = items.find((x) => x.slug === slug);
+    if (!li || !a) return;
+    const rows = [];
+    treeRows(a, dir, Number(li.dataset.d ?? 0) + 1, rows);
+    under(li);
+    li.after(...rows);
   }
 
   async function toggleFavorite(a) {
@@ -1652,6 +1929,12 @@
     $('edit-dialog').close();
   }
 
+  // What a tab says when all of it is archived, and when none is
+  const ARCHIVED = {
+    pages: ['ui_pages_all_archived', 'ui_pages_none_archived'],
+    links: ['ui_links_all_archived', 'ui_links_none_archived'],
+    folders: ['ui_folders_all_archived', 'ui_folders_none_archived'],
+  };
   function render() {
     const list = items.filter((a) => inList(a, { tab, archived, fav }));
     const ranks = projectOrder();
@@ -1670,11 +1953,12 @@
     const all = !archived && !fav;
     $('empty').hidden = !(empty && all && !archivedHere && tab === 'pages');
     $('empty-links').hidden = !(empty && all && !archivedHere && tab === 'links');
+    $('empty-folders').hidden = !(empty && all && !archivedHere && tab === 'folders');
     $('all-archived').hidden = !(empty && all && archivedHere);
     $('empty-favorites').hidden = !(empty && fav);
-    $('all-archived').querySelector('strong').textContent = t(tab === 'links' ? 'ui_links_all_archived' : 'ui_pages_all_archived', archivedHere);
+    $('all-archived').querySelector('strong').textContent = t(ARCHIVED[tab][0], archivedHere);
     $('empty-archived').hidden = !(empty && archived);
-    $('empty-archived').querySelector('strong').textContent = t(tab === 'links' ? 'ui_links_none_archived' : 'ui_pages_none_archived');
+    $('empty-archived').querySelector('strong').textContent = t(ARCHIVED[tab][1]);
     $('nomatch').hidden = list.length === 0 || shown.length > 0;
     // If deleting empties the last page, go back to the last one left
     const pages = Math.max(1, Math.ceil(shown.length / size));
@@ -1686,11 +1970,14 @@
     const sizes = new Map();
     for (const g of groups) sizes.set(g, (sizes.get(g) ?? 0) + 1);
     const rows = [];
+    // Rows drawn already are drawn anew in place, without rising in again: only a row new to the list rises in
+    const had = new Set([...$('list').children].map((li) => li.dataset.key));
     shown.slice(start, start + size).forEach((a, i) => {
       const g = groups[start + i];
-      if (i === 0 || groups[start + i - 1] !== g) {
+      if (grouped(state) && (i === 0 || groups[start + i - 1] !== g)) {
         const li = document.createElement('li');
         li.className = 'group';
+        li.dataset.key = `group:${JSON.stringify(g)}`;
         li.setAttribute('role', 'none');
         li.style.setProperty('--c', groupColor(g, ranks));
         const heading = document.createElement('div');
@@ -1708,7 +1995,9 @@
         rows.push(li);
       }
       rows.push(row(a, i, ranks));
+      if (a.folder && !a.missing && opened.has(a.slug)) treeRows(a, '', 1, rows);
     });
+    for (const li of rows) li.classList.toggle('kept', had.has(li.dataset.key));
     // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
     renderPager(shown.length, pages, start);
@@ -1732,6 +2021,9 @@
   // state it was arranged by (for its groups). A page gone since drops out
   let frameOrder;
   let frameState;
+  // The directory of the folder's page framed, as read (GET /api/artifacts/{slug}/pages): what its pages to pick from are; null
+  // when it is gone, undefined until read
+  let fileListing;
 
   // Fixes the frame's order and state once, as the page a is first found
   function fixFrameOrder(a) {
@@ -1740,13 +2032,16 @@
     frameState = readState(savedList());
     let first = openable(frameState);
     if (!first.some((x) => x.slug === a.slug)) {
-      frameState = { ...readState(''), tab: a.path ? 'links' : 'pages', archived: Boolean(a.archived) };
+      frameState = { ...readState(''), tab: kindOf(a), archived: Boolean(a.archived) };
       first = openable(frameState);
     }
     frameOrder = first.map((x) => x.slug);
   }
 
-  const framePages = () => frameOrder.map((slug) => items.find((x) => x.slug === slug)).filter((x) => x && !x.missing);
+  // A folder's page picks from the pages of its directory, by name
+  const framePages = () => (FILE
+    ? (fileListing?.pages ?? []).map((p) => ({ ...items.find((x) => x.slug === framed), file: p.file, title: p.file }))
+    : frameOrder.map((slug) => items.find((x) => x.slug === slug)).filter((x) => x && !x.missing));
 
   // The sort's orders to pick from, opened from the sort: the focus on the list, the order now reached and selected (render
   // selects it); picked, the list is sorted by it, as the select it replaces did
@@ -1769,6 +2064,7 @@
 
   // The frame's pages to pick from, opened from its title: made as it opens (not as the list is fetched again, which would undo
   // what is typed and reached), searched as the list is, in the list's groups
+  const FOLDER = Symbol('folder');
   function pagePicker() {
     const box = $('page-pick');
     const q = $('page-pick-q');
@@ -1778,8 +2074,8 @@
     const options = () => [...list.querySelectorAll('[role="option"]')];
     // The page open now is not opened again
     const go = (x) => {
-      if (x.slug === framed) box.hidePopover();
-      else location.href = `/a/${x.slug}/`;
+      if (isFramed(x)) box.hidePopover();
+      else location.href = pageHref(x);
     };
     const fill = () => {
       const ranks = projectOrder();
@@ -1787,7 +2083,8 @@
       shown = pages.filter((x) => matches(x, typed));
       const groups = [];
       for (const x of shown) {
-        const g = group(x, frameState);
+        // A folder's pages are its own group, under its title
+        const g = x.file ? FOLDER : group(x, frameState);
         if (groups.at(-1)?.g !== g) groups.push({ g, pages: [] });
         groups.at(-1).pages.push(x);
       }
@@ -1796,19 +2093,19 @@
         const el = document.createElement('div');
         el.setAttribute('role', 'group');
         el.setAttribute('aria-labelledby', `page-pick-g${n}`);
-        el.style.setProperty('--c', groupColor(g, ranks));
+        el.style.setProperty('--c', g === FOLDER ? projectColor(inGroup[0].project ?? NONE, ranks) : groupColor(g, ranks));
         const heading = document.createElement('div');
         heading.className = 'gh';
         heading.id = `page-pick-g${n}`;
-        heading.textContent = groupName(g);
+        heading.textContent = g === FOLDER ? items.find((x) => x.slug === framed)?.title : groupName(g);
         el.append(heading, ...inGroup.map((x) => {
           // A link, so that a middle or modified click opens it in a new tab as the browser does; a plain one goes here
           const option = document.createElement('a');
           option.id = `page-pick-${i++}`;
-          option.href = `/a/${x.slug}/`;
+          option.href = pageHref(x);
           option.tabIndex = -1;
           option.setAttribute('role', 'option');
-          if (x.slug === framed) option.setAttribute('aria-current', 'page');
+          if (isFramed(x)) option.setAttribute('aria-current', 'page');
           option.innerHTML = '<span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
           option.firstChild.textContent = x.title;
           option.addEventListener('click', (e) => {
@@ -1827,7 +2124,7 @@
         pages = framePages();
         q.value = '';
         fill();
-        mark(shown.findIndex((x) => x.slug === framed));
+        mark(shown.findIndex(isFramed));
       },
       focus: () => q.focus(),
     });
@@ -1841,20 +2138,31 @@
 
   function renderFrame() {
     const a = items.find((x) => x.slug === framed);
-    const found = Boolean(a && !a.missing);
-    document.title = `${a?.title ?? framed} · floe`;
+    // A folder's page is there when the server served its frame (its directory's list may leave it out, cut at its bound);
+    // ?file= of any other entry is no page
+    const found = Boolean(a && !a.missing && (a.folder ? document.documentElement.hasAttribute('data-served') : !FILE));
+    const name = FILE || a?.title;
+    document.title = `${name ?? framed} · floe`;
     document.querySelector('.frame-actions').hidden = !found;
     $('notfound').hidden = found;
     $('notfound-detail').textContent = a?.missing
       ? t('ui_link_missing', a.path)
       : t('ui_not_found_detail');
     $('frame').hidden = !found;
-    $('frame').title = a?.title ?? framed;
+    $('frame').title = name ?? framed;
     $('frame-pick').hidden = !found;
     // A page gone while its pages to pick from are open closes them, the button that opened them hidden
     if (!found && $('page-pick').matches(':popover-open')) $('page-pick').hidePopover();
-    $('frame-title').textContent = found ? a.title : '';
+    $('frame-title').textContent = found ? name : '';
+    if (found && FILE) {
+      const crumb = document.createElement('span');
+      crumb.className = 'crumb';
+      crumb.textContent = `${a.title} / `;
+      $('frame-title').prepend(crumb);
+    }
     $('frame-archived').hidden = !(found && a.archived);
+    // A folder's page has no star, archive or download of its own: its folder's row does
+    for (const id of ['frame-star', 'frame-archive', 'frame-download']) $(id).hidden = Boolean(FILE);
     if (found) {
       toggle($('frame-star'), a.favorite, t('ui_favorite'));
       $('frame-star').onclick = () => toggleFavorite(a);
@@ -1862,12 +2170,12 @@
       $('frame-archive').onclick = () => toggleArchived(a);
     }
     if (found) {
-      fixFrameOrder(a);
+      if (!FILE) fixFrameOrder(a);
       document.querySelector('.brand').href = `/${savedList()}`;
     }
     // Load only once found (so a missing page's 404 never flashes). Once loaded, src stays, keeping navigation inside the iframe.
     // The fragment goes with it, so that /a/<slug>/#part opens at that part of the page
-    if (found && !$('frame').hasAttribute('src')) $('frame').src = '?raw' + location.hash;
+    if (found && !$('frame').hasAttribute('src')) $('frame').src = frameSrc + location.hash;
   }
 
   function disarm(a, btn) {
@@ -1905,6 +2213,13 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       text = await res.text();
       if (text !== drawn) items = JSON.parse(text);
+      // The list redrawn when what is open of the folders changed, the frame when the directory of its page did
+      if (framed && FILE) {
+        const l = await readListing(framed, FILE.includes('/') ? FILE.slice(0, FILE.lastIndexOf('/')) : '');
+        const was = JSON.stringify(fileListing);
+        fileListing = l instanceof Error ? undefined : l;
+        if (JSON.stringify(fileListing) !== was) drawn = '';
+      } else if (!framed && await readOpen()) drawn = '';
     } catch (e) {
       loadFailed = true;
       showError(t('ui_load_failed', e.message));
@@ -1940,13 +2255,17 @@
       });
       // The server answers with the reasons as text, a line each
       if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
-      const { slug } = await res.json();
+      const { slug, folder } = await res.json();
       $('add').reset();
       $('add-dialog').close();
-      toast(t('ui_link_added', slug));
+      toast(t(folder ? 'ui_folder_added' : 'ui_link_added', slug));
       // To the list the link went on, unfiltered, drawn once with it
       $('q').value = '';
-      filter({ view: 'all', tab: 'links', project: '' });
+      if (folder) {
+        opened.add(slug);
+        keepOpen();
+      }
+      filter({ view: 'all', tab: folder ? 'folders' : 'links', project: '' });
       drawn = '';
       await load();
     } catch (err) {
@@ -1961,6 +2280,7 @@
     // The slug as the server read it from the URL, unescaped: escaped again to make one
     $('frame-download').href = `/api/artifacts/${encodeURIComponent(framed)}/download`;
     $('frame-download').download = `${framed}.html`;
+    $('frame-open').href = frameSrc;
     // The page alone in full, as the browser reads the bar's link to it: a link on paper cannot be followed
     $('print-raw').href = $('print-raw').textContent = $('frame-open').href;
     pagePicker();
@@ -1969,12 +2289,22 @@
     $('search').hidden = false;
     $('q').value = readState(location.search).q;
     $('add').addEventListener('submit', add);
-    const openAdd = () => {
+    // One dialog adds both: the server tells a folder from a file by the path. Opened for a folder, it is named and told so
+    const openAdd = (folder) => {
+      $('add-title').textContent = t(folder ? 'ui_add_folder' : 'ui_add_link');
+      $('add-lead').textContent = t(folder ? 'ui_add_folder_lead' : 'ui_add_lead');
+      $('add-path-label').textContent = t(folder ? 'ui_add_folder_path' : 'ui_add_path');
+      $('add-path').placeholder = folder ? '/home/you/project/docs' : '/home/you/project/coverage/index.html';
+      $('add-slug').placeholder = t(folder ? 'ui_add_folder_slug_placeholder' : 'ui_add_slug_placeholder');
+      // An svg has no hidden property: its attribute hides it
+      $('add-icon-link').toggleAttribute('hidden', folder);
+      $('add-icon-folder').toggleAttribute('hidden', !folder);
       $('add-error').hidden = true;
       $('add-dialog').showModal();
     };
-    $('add-open').addEventListener('click', openAdd);
-    $('add-narrow').addEventListener('click', openAdd);
+    $('add-open').addEventListener('click', () => openAdd(false));
+    $('add-folder').addEventListener('click', () => openAdd(true));
+    $('add-narrow').addEventListener('click', () => openAdd(tab === 'folders'));
     $('edit').addEventListener('submit', saveEdit);
     for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
     // A click on the backdrop (the dialog itself) closes it; the form fills the dialog, so clicks inside never land here
@@ -2003,7 +2333,7 @@
     });
     // The edit dialog closed, focus goes back to its row's menu button rather than to the closed menu's item
     $('edit-dialog').addEventListener('close', () => {
-      const row = [...$('list').querySelectorAll(':scope > li:not(.group)')].find((li) => li.dataset.slug === editing?.slug);
+      const row = [...$('list').querySelectorAll(':scope > li:not(.group, .tree)')].find((li) => li.dataset.slug === editing?.slug);
       row?.querySelector('summary').focus();
     });
     document.addEventListener('click', (e) => closeMenus(e.target.closest('.more')));
@@ -2011,7 +2341,7 @@
     sortMenu();
     $('bulk-page').addEventListener('click', () => {
       for (const sel of $('list').querySelectorAll('.sel')) sel.checked = true;
-      for (const li of $('list').querySelectorAll(':scope > li:not(.group)')) selected.add(li.dataset.slug);
+      for (const li of $('list').querySelectorAll(':scope > li:not(.group, .tree)')) selected.add(li.dataset.slug);
       renderBulk();
     });
     $('bulk-clear').addEventListener('click', () => {
@@ -2052,7 +2382,8 @@
       refilter({ project: '', tag: '' });
     });
     // Not while typing or with a dialog open. Moving between rows focuses the title link, so Enter opens it
-    const rowsShown = () => [...$('list').querySelectorAll(':scope > li:not(.group)')];
+    // A tree's note (empty, cut, unread) has nothing to focus, and is passed over
+    const rowsShown = () => [...$('list').querySelectorAll(':scope > li:not(.group)')].filter((li) => li.querySelector('.title'));
     const currentRow = () => rowsShown().find((li) => li.contains(document.activeElement));
     const moveRow = (step) => {
       const rows = rowsShown();
@@ -2065,8 +2396,8 @@
       '/': () => $('q').focus(),
       ArrowDown: () => moveRow(1),
       ArrowUp: () => moveRow(-1),
-      x: () => currentRow()?.querySelector('.sel').click(),
-      f: () => currentRow()?.querySelector('.star').click(),
+      x: () => currentRow()?.querySelector('.sel')?.click(),
+      f: () => currentRow()?.querySelector('.star')?.click(),
       ArrowLeft: () => !$('prev').disabled && goPage(page - 1),
       ArrowRight: () => !$('next').disabled && goPage(page + 1),
     };

@@ -59,6 +59,10 @@ func fake(list string) string {
 	window.calls = [];
 	window.list = made;
 	window.fetch = (url, init = {}) => {
+		// A folder's directory: one directory, one page and more left out, so that each kind of its rows shows
+		if (!init.method && String(url).includes('/pages')) {
+			return Promise.resolve(new Response('{"dirs":["guide"],"pages":[{"file":"index.html","updatedAt":"' + at(3) + '"}],"more":1200}'));
+		}
 		if (!init.method) {
 			window.gets++;
 			return Promise.resolve(new Response(window.list));
@@ -320,11 +324,11 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		msg("ui_selected", 1), msg("ui_selected", 2), msg("ui_delete_bulk_confirm", 2),
 		"DELETE /api/artifacts/a,DELETE /api/artifacts/c", "true old", `PATCH /api/artifacts/a {"description":"new"}`, "true", "true",
 		"copy /tmp/x/l.html", "true", "Missing", `POST /api/artifacts {"path":"/tmp/x/n.html","description":"a link"}`,
-		"3 2 " + msg("ui_no_project") + "3 true 3 1 2 " + msg("ui_count_all", 3) + " Gamma,Alpha,Beta ",
+		"3 2 0 " + msg("ui_no_project") + "3 true 3 1 2 " + msg("ui_count_all", 3) + " Gamma,Alpha,Beta ",
 		msg("ui_archive") + " / " + msg("ui_archive_named", "Gamma") + " / " + msg("ui_archive"),
 		`PATCH /api/artifacts/c {"archived":true}`, "0", "true",
 		// The archived, by project: p's Zeta, then Ypsilon of none; two projects, so the shelf shows them.
-		"2 1 p1 " + msg("ui_no_project") + "1 false 3 1 2 " + msg("ui_count_all", 2) + " Zeta,Ypsilon 1",
+		"2 1 0 p1 " + msg("ui_no_project") + "1 false 3 1 2 " + msg("ui_count_all", 2) + " Zeta,Ypsilon 1",
 		msg("ui_unarchive") + " / " + msg("ui_unarchive_named", "Zeta") + " / " + msg("ui_unarchive"),
 		`PATCH /api/artifacts/z {"archived":false}`, "true", msg("ui_unarchive"),
 		`PATCH /api/artifacts/y {"archived":false},PATCH /api/artifacts/z {"archived":false}`,

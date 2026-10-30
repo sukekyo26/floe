@@ -153,9 +153,11 @@ type Upload struct {
 // Saved is a page a publish or an added link stored, what it replaced (nil for a new slug), and the warnings of
 // the page drawn, told in the reader's language.
 type Saved struct {
-	Slug     string         `json:"slug"`
-	Title    string         `json:"title"`
-	Prev     *SavedPrev     `json:"prev"`
+	Slug  string     `json:"slug"`
+	Title string     `json:"title"`
+	Prev  *SavedPrev `json:"prev"`
+	// Folder tells a folder's link, which the management page opens once added.
+	Folder   bool           `json:"folder,omitempty"`
 	Warnings []usererr.Told `json:"warnings,omitempty"`
 }
 
@@ -180,7 +182,9 @@ func sendSaved(w http.ResponseWriter, r *http.Request, entry *store.Entry) {
 		prev = &SavedPrev{Title: entry.Prev.Title, UpdatedAt: entry.Prev.UpdatedAt}
 	}
 	warnings := usererr.Warn(catalog(r), entry.Warnings)
-	sendJSON(w, status, Saved{Slug: entry.Slug, Title: entry.Meta.Title, Prev: prev, Warnings: warnings})
+	sendJSON(w, status, Saved{
+		Slug: entry.Slug, Title: entry.Meta.Title, Prev: prev, Folder: entry.Meta.Folder, Warnings: warnings,
+	})
 }
 
 // save stores the data file the CLI sends as the page slug: 201 for a new slug, 200 for one replaced,

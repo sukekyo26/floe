@@ -144,6 +144,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/rebuild", s.rebuild)
 	mux.HandleFunc("POST /api/stop", s.stop)
 	mux.HandleFunc("GET /api/artifacts/{slug}/download", s.download)
+	mux.HandleFunc("GET /api/artifacts/{slug}/pages", s.pages)
 	mux.HandleFunc("GET /api/events/{slug}", s.watch)
 	mux.HandleFunc("GET /api/events/{slug}/{rest...}", s.watch)
 	mux.HandleFunc("GET /a/{slug}", s.redirect)
@@ -225,7 +226,8 @@ func serveUI(w http.ResponseWriter, r *http.Request) {
 // sendUI answers with the management page in the reader's language: the frame around the page framed, a slug, or
 // the list for "".
 func sendUI(w http.ResponseWriter, r *http.Request, status int, framed string) {
-	page, err := ui.Page(catalog(r), framed)
+	// A folder's page is framed by what the server serves, which a list of its directory cut at its bound may leave out
+	page, err := ui.Page(catalog(r), framed, framed != "" && status == http.StatusOK && r.URL.Query().Get("file") != "")
 	if err != nil {
 		refuse(w, r, err)
 		return
@@ -267,6 +269,21 @@ func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, list)
+}
+
+// pages answers the directory ?dir= ("" for the top) of the folder slug links, which the management page reads
+// when it is opened.
+func (s *Server) pages(w http.ResponseWriter, r *http.Request) {
+	l, err := s.cfg.Store.Pages(r.PathValue("slug"), r.URL.Query().Get("dir"))
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, l)
 }
 
 func (*Server) redirect(w http.ResponseWriter, r *http.Request) {
