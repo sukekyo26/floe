@@ -76,6 +76,9 @@
   .frame-title > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .frame-title > svg { flex: none; width: 16px; height: 16px; color: var(--faint); }
   .frame-title:hover, .frame-title[aria-expanded="true"] { background: var(--subtle); }
+  /* Beside the folder's tree, the title picks nothing: no chevron, no hover, the words as they are */
+  .frame-title:disabled { cursor: default; background: none; color: inherit; }
+  .frame-title:disabled > svg { display: none; }
   /* A box opened over the page from a button (menu): the frame's pages to pick from. Its options are reached by keys from the
      field or the list that has the focus (aria-activedescendant), the one reached on --sel, the current one in bold and ticked */
   /* LIMIT: it is put under its button's left edge; a button near the window's right edge would push it out, so align it to the
@@ -128,7 +131,7 @@
     background: var(--panel); border-right: 1px solid var(--line); font-size: 0.84rem;
   }
   .side.over { box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); width: min(80vw, var(--side-width)); }
-  .side-head { position: sticky; top: 0; display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.1rem 0.45rem 0.5rem; background: var(--panel); }
+  .side-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.1rem 0.45rem 0.5rem; background: var(--panel); }
   .side-head span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 0.72rem/1.2 var(--mono); letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
   .side :is(a, button.dir) {
     display: block; width: 100%; padding: 0.22rem 0.5rem 0.22rem calc(0.3rem + var(--d) * 1.1rem); border: 0; border-radius: 6px; background: none;
@@ -2210,10 +2213,11 @@
     $('side-grip').setAttribute('aria-valuemin', String(SIDE_MIN));
     $('side-grip').setAttribute('aria-valuemax', String(sideMax()));
     $('side-show').hidden = open;
-    // The tree beside the page lists its pages: the bar's pages to pick from come back with it hidden, or over the page
-    const pick = open && !sideNarrow.matches;
-    $('frame-pick').hidden = pick;
-    if (pick && $('page-pick').matches(':popover-open')) $('page-pick').hidePopover();
+    // The tree beside the page lists its pages: the bar keeps the page's title but picks nothing while it shows, and picks
+    // again with it hidden, or over the page
+    const tree = open && !sideNarrow.matches;
+    $('frame-pick').disabled = tree;
+    if (tree && $('page-pick').matches(':popover-open')) $('page-pick').hidePopover();
   }
   function keepSide() {
     if (sideNarrow.matches) return;

@@ -33,7 +33,7 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	state := `[[...document.querySelectorAll('#side-tree > *')].map((e) => e.textContent + (e.getAttribute('aria-expanded') === 'true' ? '-' : e.getAttribute('aria-expanded') ? '+' : '') + (e.getAttribute('aria-current') ? '*' : '')).join(','),
 		['aria-valuenow', 'aria-valuemin', 'aria-valuemax'].map((a) => document.getElementById('side-grip').getAttribute(a)).join('/'),
 		getComputedStyle(document.getElementById('frame')).marginLeft].join(' ')`
-	shown := "[!document.getElementById('side').hidden, !document.getElementById('side-grip').hidden, !document.getElementById('side-show').hidden, document.getElementById('side').classList.contains('over'), !document.getElementById('frame-pick').hidden].join()"
+	shown := "[!document.getElementById('side').hidden, !document.getElementById('side-grip').hidden, !document.getElementById('side-show').hidden, document.getElementById('side').classList.contains('over'), !document.getElementById('frame-pick').disabled].join()"
 	kept := "localStorage.getItem('frame.side')"
 	key := func(k string) {
 		t.Helper()

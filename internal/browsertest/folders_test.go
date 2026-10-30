@@ -98,7 +98,8 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"location.hash === '#top' && window.at === '#top') && location.search + location.hash"))
 	b.eval("location.hash = '#end'")
 	out = append(out, b.until("the part in the page", "window.at === '#end' && 'the page at #end'"))
-	b.eval("document.getElementById('frame-pick').click()")
+	// The bar picks among the pages with the folder's tree hidden: beside it, the tree lists them.
+	b.eval("document.getElementById('side-hide').click(); document.getElementById('frame-pick').click()")
 	out = append(out, b.until("the pages to pick", "[...document.querySelectorAll('#page-pick-list [role=option]')].map((o) => o.textContent + (o.getAttribute('aria-current') ? '*' : '')).join(',')"))
 	b.navigate("/a/docs/guide/setup.html")
 	out = append(out, b.eval("getComputedStyle(document.querySelector('h1')).color"))
