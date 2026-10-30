@@ -21,13 +21,16 @@
 {{- with .heading}}
 <h2>{{.}}</h2>
 {{- end}}
-{{- template "parts" .parts}}
+{{- range .parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
 {{- /* LIMIT: subsections are one level, drawn after the section's parts. For a deeper level or parts after them, draw a
-   section by a define that takes its level */}}
+   section by a defined template that takes its level, and place its mistakes at page.html's lines, as draw does those
+   of page.html */}}
 {{- range .sections}}
 <section class="sub">
 <h3>{{.heading}}</h3>
-{{- template "parts" .parts}}
+{{- range .parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
 </section>
 {{- end}}
 </section>
@@ -35,5 +38,3 @@
 </main>
 </body>
 </html>
-{{- define "parts"}}{{range .}}{{range .}}{{with .}}
-{{.}}{{end}}{{end}}{{end}}{{end}}

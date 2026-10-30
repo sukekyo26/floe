@@ -12,9 +12,9 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"golang.org/x/net/html"
-	"golang.org/x/net/html/atom"
 
 	"github.com/sukekyo26/floe/internal/cli"
+	"github.com/sukekyo26/floe/internal/draw"
 )
 
 // everyPart is the sample of every part, which the browser's test of the colours draws in every theme: what it
@@ -23,9 +23,6 @@ const everyPart = "testdata/every-part"
 
 // floeParts are floe's parts, as kit embeds them.
 const floeParts = "../kit/floe/parts"
-
-// headings are the elements of a heading, which no part draws.
-var headings = []atom.Atom{atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6}
 
 // tones are the classes a part draws a tone in, and "" for one left out.
 var tones = []string{"accent", "good", "warn", "bad", ""}
@@ -69,7 +66,7 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 	// LIMIT: what every-part's values leave out of a part (a branch of an if) is not seen, nor a heading told from one a
 	// part's Markdown draws: every-part writes no heading in a part's Markdown (to write one, skip what markdown draws).
 	for n := range doc.Descendants() {
-		if !slices.Contains(headings, n.DataAtom) {
+		if !slices.Contains(draw.Headings, n.DataAtom) {
 			continue
 		}
 		for a := n.Parent; a != nil; a = a.Parent {

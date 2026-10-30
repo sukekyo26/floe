@@ -295,7 +295,7 @@ func TestDrawReportSubsections(t *testing.T) {
 	}
 }
 
-// report refuses, by its schema, a subsection without a heading or with an empty one, a subsection's subsections or
+// report refuses, by its schema, no subsections written as [], a subsection without a heading or with an empty one, a subsection's subsections or
 // keys it does not know, and subsections of a section with no heading or an empty one: an h3 would stand under the h1.
 func TestReportRefused(t *testing.T) {
 	t.Parallel()
@@ -304,6 +304,7 @@ func TestReportRefused(t *testing.T) {
 		{"sections: [{heading: a, sections: [{parts: [{text: t}]}]}]\n", "r.yaml:4:37: missing property 'heading'"},
 		{"sections: [{heading: a, sections: [{heading: ''}]}]\n", "r.yaml:4:46: minLength: got 0, want 1"},
 		{"sections: [{heading: a, sections: [{heading: b, sections: []}]}]\n", "r.yaml:4:37: additional properties 'sections' not allowed"},
+		{"sections: [{heading: a, sections: []}]\n", "r.yaml:4:35: minItems: got 0, want 1"},
 		{"sections: [{heading: a, sections: [{heading: b, look: c}]}]\n", "r.yaml:4:37: additional properties 'look' not allowed"},
 		{"sections: [{sections: [{heading: b}]}]\n", "r.yaml:4:13: properties 'heading' required, if 'sections' exists"},
 		{"sections: [{heading: '', sections: [{heading: b}]}]\n", "r.yaml:4:22: minLength: got 0, want 1"},

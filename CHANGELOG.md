@@ -78,8 +78,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   the background and goals it needs, then the non-goals, decisions each a
   question over the part `options` (the option marked with `pick` is put at
   the top of the page, one without is shown as undecided), what is decided
-  without options, what it touches, and sections of your own, each a heading over parts. Each
-  decision's question is a heading over its options.
+  without options, what it touches, and sections of your own, each a heading
+  over parts. Each decision's question is a heading over its options.
 - Add a copy button over the top right of `code`, `terminal` and `diff`: it
   copies the code as written, a terminal's commands without their prompt and
   output, and a diff as written, and says it copied, in the page's language.

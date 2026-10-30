@@ -4,7 +4,7 @@ How to write a data file, the YAML that floe draws a page from. This is all you 
 
 ## A data file
 
-A data file names a template, and the template draws the page from its data. floe's templates are `report`, a header over sections, each a heading over parts, `design`, a design document, `handoff`, a handoff or a status update, `adr`, a decision record, `postmortem`, an incident review, `runbook`, steps to follow, and `slides`, slides to show one at a time.
+A data file names a template, and the template draws the page from its data. floe's templates are `report`, a header over sections, each a heading over parts and then subsections of a heading over parts, `design`, a design document, `handoff`, a handoff or a status update, `adr`, a decision record, `postmortem`, an incident review, `runbook`, steps to follow, and `slides`, slides to show one at a time.
 
 ```yaml
 template: report
