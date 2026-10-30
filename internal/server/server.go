@@ -144,6 +144,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/rebuild", s.rebuild)
 	mux.HandleFunc("POST /api/stop", s.stop)
 	mux.HandleFunc("GET /api/artifacts/{slug}/download", s.download)
+	mux.HandleFunc("GET /api/artifacts/{slug}/pages", s.pages)
 	mux.HandleFunc("GET /api/events/{slug}", s.watch)
 	mux.HandleFunc("GET /api/events/{slug}/{rest...}", s.watch)
 	mux.HandleFunc("GET /a/{slug}", s.redirect)
@@ -267,6 +268,21 @@ func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, list)
+}
+
+// pages answers the directory ?dir= ("" for the top) of the folder slug links, which the management page reads
+// when it is opened.
+func (s *Server) pages(w http.ResponseWriter, r *http.Request) {
+	l, err := s.cfg.Store.Pages(r.PathValue("slug"), r.URL.Query().Get("dir"))
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, l)
 }
 
 func (*Server) redirect(w http.ResponseWriter, r *http.Request) {

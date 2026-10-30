@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -64,6 +65,8 @@ type Meta struct {
 	// PublishedFrom is the project that owns a stored page; Project is only what the list shows.
 	PublishedFrom string `json:"publishedFrom,omitempty"`
 	Favorite      bool   `json:"favorite,omitempty"`
+	// Folder marks a link of a folder, which serves the files under it and lists its pages a directory at a time.
+	Folder bool `json:"folder,omitempty"`
 	// Archived keeps the page off the list (floe list and the management page), served and drawn as any.
 	Archived bool `json:"archived,omitempty"`
 	// Tags are the page's tags, as tagged keeps them.
@@ -72,9 +75,15 @@ type Meta struct {
 	UpdatedAt string   `json:"updatedAt"`
 }
 
-// IsLink reports whether the entry is a linked file.
+// IsLink reports whether the entry is a linked file or folder.
 func (m *Meta) IsLink() bool {
 	return m.Path != ""
+}
+
+// IsData reports whether the entry is a linked data file, drawn each time it is opened: by what it is, so that a
+// folder named config.yml is none.
+func (m *Meta) IsData() bool {
+	return m.IsLink() && !m.Folder && files.IsDataFile(m.Path)
 }
 
 // Drawing is what pages are drawn with: the templates, parts and themes, and the icons of the diagrams; or, with
@@ -164,17 +173,17 @@ func (s *Store) WriteMeta(slug string, m *Meta) error {
 }
 
 // File returns the file to serve for rest under slug, when it is there as a regular file: a stored page has its
-// page drawn only, a link its registered file and the files under its directory (see link.Resolve). A linked data
-// file has its own file only: the images of its page are in the page.
+// page drawn only, a link its registered file and the files under its directory, a folder the files under it (see
+// link.Resolve). A linked data file has its own file only: the images of its page are in the page.
 func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 	if _, ok := s.dir(slug); !ok {
 		return "", false
 	}
 	if m.IsLink() {
-		if rest != "" && files.IsDataFile(m.Path) {
+		if rest != "" && m.IsData() {
 			return "", false
 		}
-		return link.Resolve(m.Path, rest)
+		return link.Resolve(m.Path, m.Folder, rest)
 	}
 	dir, ok := s.copyDir(slug, m)
 	if !ok || rest != "" {
@@ -240,11 +249,23 @@ func (s *Store) listed(slug string, m *Meta) Listed {
 	if !m.IsLink() {
 		return l
 	}
+	// What is in a folder is listed when it is opened (Pages): the list is read every few seconds.
+	if m.Folder {
+		// Named in its repository (acme/docs); a folder outside one is its project itself.
+		if name := filepath.Base(m.Path); l.Title == "" && m.Project != "" && m.Project != name {
+			l.Title = path.Join(m.Project, name)
+		} else if l.Title == "" {
+			l.Title = name
+		}
+		missing := !isDir(m.Path)
+		l.Missing = &missing
+		return l
+	}
 	// A file that is not served is not read either (the same check as File).
 	title, readable := "", false
 	file, ok := s.File(slug, m, "")
 	if ok {
-		title, readable = s.linkTitle(file, files.IsDataFile(m.Path))
+		title, readable = s.linkTitle(file, m.IsData())
 	}
 	if l.Title == "" {
 		l.Title = cmp.Or(title, slug)
@@ -255,6 +276,50 @@ func (s *Store) listed(slug string, m *Meta) Listed {
 	missing := !readable
 	l.Missing = &missing
 	return l
+}
+
+// isDir reports whether dir is a directory by its real path, as a folder's link serves it.
+func isDir(dir string) bool {
+	resolved, err := filepath.EvalSymlinks(dir)
+	if err != nil || resolved != dir {
+		return false
+	}
+	fi, err := os.Stat(dir)
+	return err == nil && fi.IsDir()
+}
+
+// Listing is a directory of a folder's link, as GET /api/artifacts/{slug}/pages answers it (see link.Dir).
+type Listing struct {
+	Dirs  []string `json:"dirs"`
+	Pages []Page   `json:"pages"`
+	More  int      `json:"more"`
+}
+
+// Page is a page of a folder: its path under the folder and when it changed.
+type Page struct {
+	File      string `json:"file"`
+	UpdatedAt string `json:"updatedAt"`
+}
+
+// Pages lists the directory dir ("" for the top) of the folder slug links, as link.Dir does: ErrNotFound for a slug
+// that is no folder's link or a directory that is none of it.
+func (s *Store) Pages(slug, dir string) (Listing, error) {
+	m := s.ReadMeta(slug)
+	if _, ok := s.dir(slug); !ok || m == nil || !m.Folder {
+		return Listing{}, ErrNotFound
+	}
+	l, err := link.Dir(m.Path, dir)
+	if errors.Is(err, link.ErrNoDir) {
+		return Listing{}, ErrNotFound
+	}
+	if err != nil {
+		return Listing{}, usererr.CannotRead(m.Path, err) //nolint:wrapcheck // the system's words, at the folder
+	}
+	out := Listing{Dirs: append([]string{}, l.Dirs...), Pages: []Page{}, More: l.More}
+	for _, p := range l.Pages {
+		out.Pages = append(out.Pages, Page{File: p.File, UpdatedAt: p.Modified.UTC().Format(isoMillis)})
+	}
+	return out, nil
 }
 
 // modTime is the mtime of file, or "" when it cannot be read.

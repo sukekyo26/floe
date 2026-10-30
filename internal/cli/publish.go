@@ -29,8 +29,8 @@ func (a *app) publishCmd() *cobra.Command {
 	var link bool
 	var slug, title, description, theme string
 	cmd := &cobra.Command{
-		Use:   "publish <data.yaml> | --link <file.html>",
-		Short: "Store a page drawn from a data file (or --link an HTML file in place) and print its URL",
+		Use:   "publish <data.yaml> | --link <file.html|folder>",
+		Short: "Store a page drawn from a data file (or --link an HTML file or a folder in place) and print its URL",
 		Long: `Draw a page from a data file (.yaml, .yml) with the template it names (template: report),
 store it as drawn and print its URL. The same slug from the same project overwrites it, and a slug
 published from another project is refused unless --force. A page is in the language its data names
@@ -42,8 +42,10 @@ drawn, advice on a better way to write it, are printed as file:line:column: warn
 --link registers a file in place instead of storing a page. An HTML file is shown as it is, and the
 files under its directory are served for its relative references. A data file is drawn each time
 its page is opened, and saving it, a part, theme or template of one's own, or fetching icons
-reloads the open tab; saving an image it shows does not. The same slug for another file is
-refused unless --force.`,
+reloads the open tab; saving an image it shows does not. A folder is listed on the management page,
+a directory at a time as it is opened, with the HTML files under it (none under a name starting with
+a dot), each shown as a linked HTML file is. The same slug for another file is refused unless
+--force.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()
@@ -59,7 +61,7 @@ refused unless --force.`,
 		},
 	}
 	f := cmd.Flags()
-	f.BoolVar(&link, "link", false, "register the file in place: HTML shown as it is, a data file drawn when opened")
+	f.BoolVar(&link, "link", false, "register the file or folder in place: HTML shown as it is, a data file drawn when opened, a folder's HTML files listed")
 	f.StringVar(&slug, "slug", "", "the URL name (default: from the file name)")
 	f.StringVar(&title, "title", "",
 		"the title in the list (default: the data file's title:, or a link's <title> or <h1>)")

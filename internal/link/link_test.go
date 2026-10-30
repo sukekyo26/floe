@@ -2,8 +2,10 @@ package link_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -103,7 +105,7 @@ func TestResolve(t *testing.T) {
 		{"nope.css", ""},
 	}
 	for _, tt := range tests {
-		got, ok := link.Resolve(registered, tt.rest)
+		got, ok := link.Resolve(registered, false, tt.rest)
 		want := ""
 		if tt.want != "" {
 			want = filepath.Join(dir, tt.want)
@@ -114,6 +116,123 @@ func TestResolve(t *testing.T) {
 	}
 }
 
+func TestResolveFolder(t *testing.T) {
+	t.Parallel()
+
+	registered := site(t)
+	folder := filepath.Join(filepath.Dir(registered), "sub")
+	write(t, filepath.Join(filepath.Dir(registered), "sibling.html"), "beside the folder")
+	tests := []struct {
+		rest string
+		want string // under the site, "" when refused
+	}{
+		{"", ""},
+		{"p.html", "sub/p.html"},
+		{"../sibling.html", ""},
+		{"../index.html", ""},
+		{".git/config", ""},
+		{"p.html/", ""},
+	}
+	for _, tt := range tests {
+		got, ok := link.Resolve(folder, true, tt.rest)
+		want := ""
+		if tt.want != "" {
+			want = filepath.Join(filepath.Dir(registered), tt.want)
+		}
+		if got != want || ok != (want != "") {
+			t.Errorf("Resolve(folder, %q) = %q, %v; want %q", tt.rest, got, ok, want)
+		}
+	}
+}
+
+// TestDir lists one directory of a folder at a time, as Resolve would serve it.
+func TestDir(t *testing.T) {
+	t.Parallel()
+
+	tmp := realTemp(t)
+	folder := filepath.Join(tmp, "docs")
+	for path, body := range map[string]string{
+		"index.html":        "top",
+		"README.HTM":        "upper case",
+		"notes.yaml":        "not a page",
+		"style.css":         "not a page",
+		".drafts/a.html":    "hidden",
+		".x.html":           "hidden",
+		"guide/setup.html":  "in a directory",
+		"guide/deep/x.html": "deeper",
+		"a,b:c/odd.html":    "an odd name",
+		"assets/logo.svg":   "no page",
+	} {
+		write(t, filepath.Join(folder, path), body)
+	}
+	write(t, filepath.Join(tmp, "secret.html"), "outside")
+	symlink(t, filepath.Join(tmp, "secret.html"), filepath.Join(folder, "out.html"))
+	symlink(t, filepath.Join(folder, "index.html"), filepath.Join(folder, "in.html"))
+	symlink(t, filepath.Join(folder, "guide"), filepath.Join(folder, "linked-dir"))
+	mkfifo(t, filepath.Join(folder, "pipe.html"))
+
+	got, err := link.Dir(folder, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := func(l link.Listing) []string {
+		var out []string
+		for _, p := range l.Pages {
+			out = append(out, p.File)
+		}
+		return out
+	}
+	if want := []string{"a,b:c", "assets", "guide"}; !slices.Equal(got.Dirs, want) || got.More != 0 {
+		t.Errorf("Dir(top).Dirs = %q, more %d; want %q", got.Dirs, got.More, want)
+	}
+	if want := []string{"README.HTM", "in.html", "index.html"}; !slices.Equal(files(got), want) {
+		t.Errorf("Dir(top).Pages = %q, want %q", files(got), want)
+	}
+	if got.Pages[0].Modified.IsZero() {
+		t.Error("a page's time is not given")
+	}
+	for dir, want := range map[string][]string{"guide": {"guide/setup.html"}, "a,b:c": {"a,b:c/odd.html"}} {
+		l, err := link.Dir(folder, dir)
+		if err != nil || !slices.Equal(files(l), want) {
+			t.Errorf("Dir(%q) = %q, %v; want %q", dir, files(l), err, want)
+		}
+	}
+	for _, dir := range []string{"..", ".drafts", "guide/../..", "nope", "index.html", "guide/", "/guide"} {
+		if _, err := link.Dir(folder, dir); !errors.Is(err, link.ErrNoDir) {
+			t.Errorf("Dir(%q) = %v, want ErrNoDir", dir, err)
+		}
+	}
+	if err := os.Rename(folder, folder+"-moved"); err != nil {
+		t.Fatal(err)
+	}
+	symlink(t, folder+"-moved", folder)
+	if _, err := link.Dir(folder, ""); !errors.Is(err, link.ErrNoDir) {
+		t.Errorf("Dir of a folder that became a symlink = %v, want ErrNoDir", err)
+	}
+}
+
+func TestDirKeepsTheFirstByName(t *testing.T) {
+	t.Parallel()
+
+	folder := filepath.Join(realTemp(t), "big")
+	for i := range link.MaxListed + 4 {
+		write(t, filepath.Join(folder, fmt.Sprintf("p%04d.html", i)), "")
+	}
+	for _, d := range []string{"a", "b"} {
+		if err := os.Mkdir(filepath.Join(folder, d), 0o750); err != nil {
+			t.Fatal(err)
+		}
+	}
+	l, err := link.Dir(folder, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(l.Dirs) != 2 || len(l.Pages) != link.MaxListed-2 || l.More != 6 || l.Pages[0].File != "p0000.html" {
+		t.Errorf("Dir = %d dirs, %d pages (first %q), more %d; want 2, %d, p0000.html, 6",
+			len(l.Dirs), len(l.Pages), l.Pages[0].File, l.More, link.MaxListed-2)
+	}
+}
+
 func TestResolveRefusesARegisteredPathThatIsNoLongerReal(t *testing.T) {
 	t.Parallel()
 
@@ -121,12 +240,12 @@ func TestResolveRefusesARegisteredPathThatIsNoLongerReal(t *testing.T) {
 	if err := os.Remove(registered); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := link.Resolve(registered, ""); ok {
+	if _, ok := link.Resolve(registered, false, ""); ok {
 		t.Error("a registered file that is gone is served")
 	}
 	symlink(t, filepath.Join(filepath.Dir(registered), "s.css"), registered)
 	for _, rest := range []string{"", "s.css"} {
-		if got, ok := link.Resolve(registered, rest); ok {
+		if got, ok := link.Resolve(registered, false, rest); ok {
 			t.Errorf("Resolve(%q) = %q after the registered file became a symlink", rest, got)
 		}
 	}
@@ -144,7 +263,7 @@ func FuzzResolve(f *testing.F) {
 		f.Add(seed)
 	}
 	f.Fuzz(func(t *testing.T, rest string) {
-		got, ok := link.Resolve(registered, rest)
+		got, ok := link.Resolve(registered, false, rest)
 		if !ok {
 			return
 		}
@@ -172,8 +291,10 @@ func TestCheck(t *testing.T) {
 	for _, path := range []string{"top.html", ".top.html", ".secret/x.html", "proj/.agents/doc.html", "proj/page.txt", "proj/ok.HTM", "proj/spec.YML"} {
 		write(t, filepath.Join(realHome, path), "<p>x</p>")
 	}
-	if err := os.Mkdir(filepath.Join(realHome, "proj", "dir.html"), 0o750); err != nil {
-		t.Fatal(err)
+	for _, dir := range []string{"proj/dir.html", ".secret/sub"} {
+		if err := os.MkdirAll(filepath.Join(realHome, dir), 0o750); err != nil {
+			t.Fatal(err)
+		}
 	}
 	mkfifo(t, filepath.Join(realHome, "proj", "pipe.html"))
 	// $HOME is a symlink: the real paths under it must still meet the home checks.
@@ -204,13 +325,19 @@ func TestCheck(t *testing.T) {
 		{".secret/x.html", "is under a hidden directory of your home"},
 		{"top.html", "would expose all of " + realHome},
 		{".top.html", "would expose all of " + realHome},
-		{"proj/page.txt", "is not a regular HTML file (.html, .htm) or data file"},
-		{"proj/dir.html", "is not a regular HTML file (.html, .htm) or data file"},
-		{"proj/pipe.html", "is not a regular HTML file (.html, .htm) or data file"},
-		{"proj/missing.html", "is not a regular HTML file (.html, .htm) or data file"},
+		{"proj/page.txt", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
+		{"proj/pipe.html", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
+		{"proj/missing.html", "is not a regular HTML file (.html, .htm), data file (.yaml, .yml) or folder"},
+		// A folder is checked as the directory it exposes: its own.
+		{"proj", ""},
+		{"proj/dir.html", ""},
+		{"proj/.agents", ""},
+		{"", "would expose all of " + realHome},
+		{".secret", "is under a hidden directory of your home"},
+		{".secret/sub", "is under a hidden directory of your home"},
 	}
 	for _, tt := range tests {
-		err := link.Check(filepath.Join(realHome, tt.path), home)
+		err := link.Check(filepath.Clean(filepath.Join(realHome, tt.path)), home)
 		if tt.want == "" {
 			if err != nil {
 				t.Errorf("Check(%s) = %v, want it allowed", tt.path, err)
