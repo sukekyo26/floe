@@ -166,11 +166,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   hold. A part draws no heading, as it knows not the level it is put at: the
   titles of `options` and `decision` are not headings, so that the headings of
   a page keep their levels wherever the parts are.
-- Add eleven themes a data file picks with `theme:` (`default`, `soft`,
+- Add twelve themes a data file picks with `theme:` (`default`, `soft`,
   `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `retro`, `swiss`,
-  `washi` and `aurora`), each a palette of CSS variables and the shape of the
-  parts. `aurora` lays faces of frosted white glass on a wash of lavender,
-  peach and mint, with a violet accent and round corners. Pages in
+  `washi`, `aurora` and `app`), each a palette of CSS variables and the shape
+  of the parts. `aurora` lays faces of frosted white glass on a wash of
+  lavender, peach and mint, with a violet accent and round corners. `app`
+  raises white cards from a cool grey ground with soft shadows, its Latin in
+  the UI face of Windows or Android, with a raspberry accent. Pages in
   `default`, and in the themes that take its colours (`soft`, `editorial`), have
   the warm grey ground and text of the management page, with lines of the same
   warmth, and a terminal's prompt, the language of code and a diff's hunk heads

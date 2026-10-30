@@ -156,7 +156,7 @@ func TestListShow(t *testing.T) {
 		}
 		return strings.TrimSuffix(string(b), "\n")
 	}
-	allThemes := "aurora, blueprint, brutal, default, editorial, empty, ink, mine, notebook, retro, soft, swiss, washi"
+	allThemes := "app, aurora, blueprint, brutal, default, editorial, empty, ink, mine, notebook, retro, soft, swiss, washi"
 	for _, tt := range []struct {
 		args []string
 		code int
@@ -202,7 +202,7 @@ func TestListShow(t *testing.T) {
 		{[]string{"template", "show", "memo", "computed.yaml"}, 0, func(out string) bool { return out == "n: 1\n" }, ""},
 		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, memo, postmortem, report, runbook, slides` + "\n"},
 		{[]string{"theme", "list"}, 0, func(out string) bool {
-			return strings.HasPrefix(out, "aurora\tfloe\t\n") && strings.Contains(out, "\nmine\t"+filepath.Join(themes, "mine")+"\t\n")
+			return strings.HasPrefix(out, "app\tfloe\t\n") && strings.Contains(out, "\nmine\t"+filepath.Join(themes, "mine")+"\t\n")
 		}, ""},
 		{[]string{"theme", "show", "mine"}, 0, func(out string) bool {
 			return out == "mine\nwhere: "+filepath.Join(themes, "mine")+"\nfiles: palette.css, base.css, code.css\n"+

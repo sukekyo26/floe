@@ -1,0 +1,3 @@
+:scope > label { border-radius: 999px; }
+/* On screen alone: on paper every tab shows under its title, which tabs' own print takes off its ground */
+@media screen { :scope > label:has(:checked) { background: var(--accent); color: var(--on-fill); } }

@@ -115,10 +115,11 @@ floe の主要な変更を記録します。フォーマットは
   `findings`・`decision`・`entries`・`timeline`・`tabs`・`diagram`・`script` まで）、`cell` と `stack` はほかの部品が中に持つもの。
   部品は、自分が置かれる段を知らないので見出しを描かない。`options` と `decision` の題も見出しでなく、
   部品をどこに置いてもページの見出しの段が崩れない。
-- 追加：データファイルが `theme:` で選ぶ 11 のテーマ（`default`・`soft`・`editorial`・
-  `ink`・`brutal`・`blueprint`・`notebook`・`retro`・`swiss`・`washi`・`aurora`）。どれも CSS の変数の
-  パレットと部品の形を持つ。`aurora` は、ラベンダー・桃・ミントのぼかしの地に、白いすりガラスの
-  面と紫の差し色、丸い角。`default` と、その色を使うテーマ（`soft`・`editorial`）のページの地は、管理
+- 追加：データファイルが `theme:` で選ぶ 12 のテーマ（`default`・`soft`・`editorial`・
+  `ink`・`brutal`・`blueprint`・`notebook`・`retro`・`swiss`・`washi`・`aurora`・`app`）。どれも
+  CSS の変数のパレットと部品の形を持つ。`aurora` は、ラベンダー・桃・ミントのぼかしの地に、白い
+  すりガラスの面と紫の差し色、丸い角。`app` は、青みの灰の地から白いカードを柔らかい影で浮かせ、
+  欧文は Windows・Android のアプリの字、差し色はラズベリー。`default` と、その色を使うテーマ（`soft`・`editorial`）のページの地は、管理
   ページと同じ暖かい灰色で、字の色も管理ページと同じ、線も同じ暖かさ。terminal のプロンプト、
   code の言語の札、diff の hunk の頭は黄緑。
 - 追加：`FLOE_TEMPLATES_DIR` の自分のテンプレート（`page.html`・`schema.json`・
