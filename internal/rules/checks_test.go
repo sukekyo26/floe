@@ -81,6 +81,8 @@ func TestReadChecks(t *testing.T) {
 		{"a no-break space before a quote", "- expr: \u00a0'\n  message: m\n", "t1/checks.yaml:1:11: literal not terminated"},
 		{"an ideographic space before a quote", "- expr: \u3000'x\n  message: m\n", "t1/checks.yaml:1:12: literal not terminated"},
 		{"> block", "- expr: >\n    doc.a < 1 &&\n    doc.b <\n  message: m\n", "t1/checks.yaml:1:9: unexpected token EOF"},
+		{"spaces after it", "- expr:   zzz < 1   \n  message: m\n", "t1/checks.yaml:1:11: unknown name zzz"},
+		{"a tab before it", "- expr:\tdoc.a <\n  message: m\n", "t1/checks.yaml:1:15: unexpected token EOF"},
 	} {
 		if got := runChecks(t, tt.src, ""); got != tt.want {
 			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)

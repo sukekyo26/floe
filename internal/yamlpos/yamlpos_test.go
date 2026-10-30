@@ -255,6 +255,8 @@ func TestParseBlockTabs(t *testing.T) {
 		{"a tab before the header", "a:\t|\n  z\n", ""},
 		{"a tab before the header of an item", "- \t|\n  z\n", ""},
 		{"after quotes over CRLF lines", "a: 'x\r\n  y'\r\nb: |\r\n  z\r\n", ""},
+		// A file whose places are not mended (\x) is judged at goccy/go-yaml's.
+		{"after \\x", "a: \"\\x41\"\nb: |\n  \tx\n  y\n", "a.yaml:3:3: " + tab},
 		// goccy/go-yaml's own mistake, as on a file without the check.
 		{"after a tab in double quotes", "a: \"\tx\"\nb: |\n  z\n", "a.yaml:1:9: value is not allowed in this context. map key-value is pre-defined"},
 	} {
@@ -314,6 +316,61 @@ func TestOfValue(t *testing.T) {
 		}
 		if got := yamlpos.OfValue(yamlpos.Find(body, []string{"a"})); got != want {
 			t.Errorf("OfValue of %q = %v, want %v", src, got, want)
+		}
+	}
+}
+
+// A value is placed at its first character as textpos counts it, though goccy/go-yaml places it off: after a
+// tab, which it does not count; with spaces after it at a line's end, which it adds; after a comment or quotes
+// over CRLF lines, which it counts twice. Its places are kept for a file whose text Origin does not hold (the
+// hex digits of \x), as for its own mistakes.
+func TestParsePlaces(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name, src string
+		at        []string
+		want      yamlpos.Pos
+	}{
+		// goccy/go-yaml places these off.
+		{"spaces after it", "- expr:   zzz < 1   \n", []string{"0", "expr"}, yamlpos.Pos{Line: 1, Column: 11}},
+		{"a tab before it", "a:\tx\n", []string{"a"}, yamlpos.Pos{Line: 1, Column: 4}},
+		{"two tabs before it", "a:\t\tx\n", []string{"a"}, yamlpos.Pos{Line: 1, Column: 5}},
+		{"after a tab in a line", "a: [1,\tb]\n", []string{"a", "1"}, yamlpos.Pos{Line: 1, Column: 8}},
+		{"after a comment over CRLF", "# c\r\nb: 1\r\n", []string{"b"}, yamlpos.Pos{Line: 2, Column: 4}},
+		{"after quotes over CRLF", "a: \"x\r\n  y\"\r\nb: 1\r\n", []string{"b"}, yamlpos.Pos{Line: 3, Column: 4}},
+		{"after spaces kept at a block's line end", "a: |\n  x  \n  y\nb:\t1\n", []string{"b"}, yamlpos.Pos{Line: 4, Column: 4}},
+		{"after spaces kept at a comment's end", "a: 'x' # c  \nb:\t2\n", []string{"b"}, yamlpos.Pos{Line: 2, Column: 4}},
+		// goccy/go-yaml places these right too.
+		{"after an escaped line break", "a: \"x\\\n  y\"\nb: 1\n", []string{"b"}, yamlpos.Pos{Line: 3, Column: 4}},
+		{"CR alone", "a: x\rb: 1\r", []string{"b"}, yamlpos.Pos{Line: 2, Column: 4}},
+		{"a block over CR alone", "a: |\r  x\rb: 1\r", []string{"b"}, yamlpos.Pos{Line: 3, Column: 4}},
+		{"after an empty block", "a: |\nb: 1\n", []string{"b"}, yamlpos.Pos{Line: 2, Column: 4}},
+		// LIMIT: Origin holds no hex digits of \x: the file keeps goccy/go-yaml's places.
+		{"before \\x", "a:\t\"\\x41\"\nb:\t1\n", []string{"a"}, yamlpos.Pos{Line: 1, Column: 3}},
+		{"after \\x", "a:\t\"\\x41\"\nb:\t1\n", []string{"b"}, yamlpos.Pos{Line: 2, Column: 3}},
+	} {
+		body, err := yamlpos.Parse("a.yaml", []byte(tt.src))
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if got := yamlpos.OfValue(yamlpos.Find(body, tt.at)); got != tt.want {
+			t.Errorf("%s: %q at %v, want %v", tt.name, tt.src, got, tt.want)
+		}
+	}
+	// An empty block is placed as the --- after it, not read as text after a second document.
+	if _, err := yamlpos.Parse("a.yaml", []byte("# c\r\na: |\r\n---\r\n")); err != nil {
+		t.Errorf("an empty block before ---: %v", err)
+	}
+	// goccy/go-yaml's own mistakes keep its places, which its words count too.
+	for src, want := range map[string]string{
+		"a: \"x\t\n\ty\"\n":        "a.yaml:2:1: tab character cannot be used for indentation in double-quoted text",
+		"a:\n\t- x\n":              "a.yaml:2:1: found character '\t' that cannot start any token",
+		"a: \"\\q\"\n":             "a.yaml:1:6: found unknown escape character 'q'",
+		"# c\r\na: 1\r\na: 2\r\n": `a.yaml:4:1: mapping key "a" already defined at [3:1]`,
+	} {
+		if _, err := yamlpos.Parse("a.yaml", []byte(src)); told(err) != want {
+			t.Errorf("Parse(%q) told\n%s\nwant\n%s", src, told(err), want)
 		}
 	}
 }
