@@ -31,7 +31,7 @@ type Part struct {
 	pageSrc []byte
 	unread  []string         // the files of its directory it does not read, for the check of what it holds
 	schema  *schema.Compiled // its schema as a root
-	files   []Source         // schema.json and checks.yaml as read, for floe part show
+	files   []Source         // the files of partFiles it read, for floe part show
 }
 
 // taken is a look a part or a look takes, and where its part.yaml names it.
@@ -89,6 +89,7 @@ type Look struct {
 	css    []byte
 	hasCSS bool
 	unread []string // the files of its directory it does not read, part.html, checks.yaml and words.yaml too
+	files  []Source // the files of lookFiles it read, for floe part show
 }
 
 // Name returns the name of l.
@@ -279,12 +280,20 @@ func (k *Kit) readShared(d Dir, name string) error {
 		return err //nolint:wrapcheck // its mistakes, or floe's failure
 	}
 	k.resources[r.URL] = r
-	k.shared[name] = &shared{name: name, file: r.File, schema: nil, files: sources(Source{name + ".json", src})}
+	files := []Source{{Name: name + ".json", Text: bom.Trim(src)}}
+	k.shared[name] = &shared{name: name, file: r.File, schema: nil, files: files}
 	return nil
 }
 
+// The files a part and a look read, in the order floe part show prints them: what a data file may hold first.
+var (
+	partFiles = []string{"schema.json", "checks.yaml", "part.yaml", "part.html", "part.css", "words.yaml"}
+	lookFiles = []string{"part.yaml", "part.css"}
+)
+
 // readPart reads into k the part or look of d named name, its directory.
 func (k *Kit) readPart(d Dir, name string) error {
+	d = d.recording()
 	dir := path.Join(d.Name, name)
 	schemaSrc, isPart, err := readFile(d, name, "schema.json")
 	if err != nil {
@@ -297,11 +306,14 @@ func (k *Kit) readPart(d Dir, name string) error {
 	looks, about, yamlErr := readPartYAML(d, name, !isPart)
 	if !isPart {
 		if yamlErr == nil {
-			unread, failed := unreadIn(d, name, "part.css", "part.yaml")
+			unread, failed := unreadIn(d, name, lookFiles...)
 			if failed != nil {
 				return failed
 			}
-			k.looks[name] = &Look{name: name, dir: dir, about: about, looks: looks, css: css, hasCSS: hasCSS, unread: unread}
+			k.looks[name] = &Look{
+				name: name, dir: dir, about: about, looks: looks, css: css, hasCSS: hasCSS, unread: unread,
+				files: inOrder(lookFiles, d),
+			}
 		}
 		return yamlErr
 	}
@@ -313,7 +325,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
-	checks, checksSrc, err := readChecks(d, name)
+	checks, err := readChecks(d, name)
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
@@ -329,14 +341,14 @@ func (k *Kit) readPart(d Dir, name string) error {
 		return found.Sorted().Err()
 	}
 	k.resources[r.URL] = r
-	unread, err := unreadIn(d, name, "schema.json", "part.html", "part.css", "part.yaml", "checks.yaml", "words.yaml")
+	unread, err := unreadIn(d, name, partFiles...)
 	if err != nil {
 		return err
 	}
 	k.parts[name] = &Part{
 		name: name, dir: dir, looks: looks, css: css, hasCSS: hasCSS, checks: checks, words: w, pages: ps,
 		pageSrc: pageSrc, unread: unread, schema: nil,
-		files: sources(Source{"schema.json", schemaSrc}, Source{"checks.yaml", checksSrc}),
+		files: inOrder(partFiles, d),
 	}
 	return nil
 }

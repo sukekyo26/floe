@@ -120,23 +120,43 @@ func TestNewRefused(t *testing.T) {
 	}
 }
 
-// floe part list and template list print floe's and one's own a line each, the description on one line; show
-// prints the files that say what a data file may hold, as written, and refuses a name there is not.
+// floe part list, template list and theme list print floe's and one's own a line each, the description on one line;
+// show prints the files it reads, as written, under a line naming them, or the file named after alone, as it is; and
+// refuses a name there is not.
 func TestListShow(t *testing.T) {
 	t.Parallel()
 
 	const schema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "description": "a\n\tb   c", "type": "object"}`
+	const page = "<!doctype html><html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body></body></html>"
 	dir := write(t, map[string]string{
-		"parts/mine/schema.json":      schema,
-		"parts/mine/checks.yaml":      "- expr: true\n  message: m\n",
-		"parts/mine/part.html":        ownPage,
-		"parts/mine/part.css":         "",
-		"templates/memo/page.html":    "<!doctype html><html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body></body></html>",
-		"templates/memo/schema.json":  schema,
-		"templates/memo/example.yaml": "template: memo\nlang: en\n",
+		"parts/mine/schema.json":       schema,
+		"parts/mine/checks.yaml":       "- expr: true\n  message: m\n",
+		"parts/mine/part.yaml":         "looks: [panel]\n",
+		"parts/mine/part.html":         ownPage,
+		"parts/mine/part.css":          "",
+		"parts/mine/words.yaml":        "en: {w: x}\n",
+		"templates/memo/page.html":     page,
+		"templates/memo/page.css":      "p { color: red; }\n",
+		"templates/memo/schema.json":   schema,
+		"templates/memo/computed.yaml": "n: 1\n",
+		"templates/memo/example.yaml":  "template: memo\nlang: en\n",
+		"themes/mine/palette.css":      ":root { --accent: red; }\n",
+		"themes/mine/code.css":         ":scope { color: red; }\n",
+		"themes/mine/base.css":         "body { margin: 0; }\n",
 	})
-	parts, templates := filepath.Join(dir, "parts"), filepath.Join(dir, "templates")
-	env := map[string]string{"FLOE_PARTS_DIR": parts, "FLOE_TEMPLATES_DIR": templates}
+	if err := os.Mkdir(filepath.Join(dir, "themes", "empty"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	parts, templates, themes := filepath.Join(dir, "parts"), filepath.Join(dir, "templates"), filepath.Join(dir, "themes")
+	env := map[string]string{"FLOE_PARTS_DIR": parts, "FLOE_TEMPLATES_DIR": templates, "FLOE_THEMES_DIR": themes}
+	floeFile := func(name string) string {
+		b, err := os.ReadFile(filepath.Join("..", "kit", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.TrimSuffix(string(b), "\n")
+	}
+	allThemes := "blueprint, brutal, default, editorial, empty, ink, mine, notebook, soft, swiss, washi"
 	for _, tt := range []struct {
 		args []string
 		code int
@@ -149,13 +169,24 @@ func TestListShow(t *testing.T) {
 				strings.Contains(out, "\npanel\tfloe\tA box most parts are drawn in")
 		}, ""},
 		{[]string{"part", "show", "mine"}, 0, func(out string) bool {
-			return out == "mine: a b c\nwhere: "+filepath.Join(parts, "mine")+"\nschema.json:\n"+schema+"\nchecks.yaml:\n- expr: true\n  message: m\n"
+			return out == "mine: a b c\nwhere: "+filepath.Join(parts, "mine")+"\nlooks: panel\n"+
+				"files: schema.json, checks.yaml, part.yaml, part.html, part.css, words.yaml\n"+
+				"==> schema.json <==\n"+schema+"\n==> checks.yaml <==\n- expr: true\n  message: m\n==> part.yaml <==\nlooks: [panel]\n"+
+				"==> part.html <==\n"+ownPage+"\n==> part.css <==\n\n==> words.yaml <==\nen: {w: x}\n"
 		}, ""},
+		{[]string{"part", "show", "mine", "part.html"}, 0, func(out string) bool { return out == ownPage }, ""},
+		{[]string{"part", "show", "mine", "part.css"}, 0, func(out string) bool { return out == "" }, ""},
+		{
+			[]string{"part", "show", "mine", "nope.css"},
+			1, func(out string) bool { return out == "" },
+			`floe: mine has no file "nope.css" (its files: schema.json, checks.yaml, part.yaml, part.html, part.css, words.yaml)` + "\n",
+		},
 		{[]string{"part", "show", "tone"}, 0, func(out string) bool {
-			return strings.HasPrefix(out, "tone: The colour of a part: accent, good, warn or bad, from the theme's colour variables\nwhere: floe\ntone.json:\n{\n")
+			return strings.HasPrefix(out, "tone: The colour of a part: accent, good, warn or bad, from the theme's colour variables\nwhere: floe\nfiles: tone.json\n==> tone.json <==\n{\n")
 		}, ""},
 		{[]string{"part", "show", "rows"}, 0, func(out string) bool {
-			return out == "rows: Rows in a panel, a rule between each and the next; take it by looks or data-floe-look\nwhere: floe\nlooks: panel\n"
+			return out == "rows: Rows in a panel, a rule between each and the next; take it by looks or data-floe-look\nwhere: floe\nlooks: panel\n"+
+				"files: part.yaml, part.css\n==> part.yaml <==\n"+floeFile("floe/parts/rows/part.yaml")+"\n==> part.css <==\n"+floeFile("floe/parts/rows/part.css")+"\n"
 		}, ""},
 		{[]string{"part", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown part "nope"; use any, band, bars, cards, cell, checklist, code, compare, decision, details, diagram, diff, facts, faq, fields, findings, glossary, image, keys, links, matrix, mine, note, numbered, options, panel, progress, risks, rows, script, stack, stats, steps, table, tabs, terminal, text, timeline, tone, tree` + "\n"},
 		{[]string{"template", "list"}, 0, func(out string) bool {
@@ -163,10 +194,24 @@ func TestListShow(t *testing.T) {
 				strings.Contains(out, "\nmemo\t"+filepath.Join(templates, "memo")+"\ta b c\npostmortem\tfloe\tAn incident review")
 		}, ""},
 		{[]string{"template", "show", "memo"}, 0, func(out string) bool {
-			return out == "memo: a b c\nwhere: "+filepath.Join(templates, "memo")+"\nthemes: blueprint, brutal, default, editorial, ink, notebook, soft, swiss, washi\n"+
-				"schema.json:\n"+schema+"\nexample.yaml:\ntemplate: memo\nlang: en\n"
+			return out == "memo: a b c\nwhere: "+filepath.Join(templates, "memo")+"\nthemes: "+allThemes+"\n"+
+				"files: schema.json, computed.yaml, example.yaml, page.html, page.css\n"+
+				"==> schema.json <==\n"+schema+"\n==> computed.yaml <==\nn: 1\n==> example.yaml <==\ntemplate: memo\nlang: en\n"+
+				"==> page.html <==\n"+page+"\n==> page.css <==\np { color: red; }\n"
 		}, ""},
+		{[]string{"template", "show", "memo", "computed.yaml"}, 0, func(out string) bool { return out == "n: 1\n" }, ""},
 		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, memo, postmortem, report, runbook, slides` + "\n"},
+		{[]string{"theme", "list"}, 0, func(out string) bool {
+			return strings.HasPrefix(out, "blueprint\tfloe\t\n") && strings.Contains(out, "\nmine\t"+filepath.Join(themes, "mine")+"\t\n")
+		}, ""},
+		{[]string{"theme", "show", "mine"}, 0, func(out string) bool {
+			return out == "mine\nwhere: "+filepath.Join(themes, "mine")+"\nfiles: palette.css, base.css, code.css\n"+
+				"==> palette.css <==\n:root { --accent: red; }\n==> base.css <==\nbody { margin: 0; }\n==> code.css <==\n:scope { color: red; }\n"
+		}, ""},
+		{[]string{"theme", "show", "mine", "code.css"}, 0, func(out string) bool { return out == ":scope { color: red; }\n" }, ""},
+		{[]string{"theme", "show", "empty"}, 0, func(out string) bool { return out == "empty\nwhere: "+filepath.Join(themes, "empty")+"\n" }, ""},
+		{[]string{"theme", "show", "empty", "x.css"}, 1, func(out string) bool { return out == "" }, `floe: empty has no file "x.css" (its files: )` + "\n"},
+		{[]string{"theme", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: there is no theme "nope"; use ` + allThemes + "\n"},
 	} {
 		if code, stdout, stderr := runEnv(dir, env, tt.args...); code != tt.code || !tt.out(stdout) || stderr != tt.errs {
 			t.Errorf("floe %v = %d, %q, %q; want %d, %q", tt.args, code, stdout, stderr, tt.code, tt.errs)

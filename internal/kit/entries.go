@@ -15,12 +15,14 @@ type Source struct {
 	Text []byte
 }
 
-// sources returns files but those not read (a nil Text), each without the byte order mark at its start, as it
-// shows.
-func sources(files ...Source) []Source {
-	files = slices.DeleteFunc(files, func(s Source) bool { return s.Text == nil })
-	for i := range files {
-		files[i].Text = bom.Trim(files[i].Text)
+// inOrder returns the files of names that d read (recording), in that order, each without the byte order mark at
+// its start, as show prints them.
+func inOrder(names []string, d Dir) []Source {
+	var files []Source
+	for _, name := range names {
+		if src, ok := d.read[name]; ok {
+			files = append(files, Source{Name: name, Text: bom.Trim(src)})
+		}
 	}
 	return files
 }
@@ -48,7 +50,7 @@ type Entry struct {
 	About string   // its description, on one line
 	Dir   string   // its directory (a shared schema's file) when it is one's own, "" for floe's
 	Looks []string // the looks it takes
-	Files []Source // what says what a data file may hold, and its example
+	Files []Source // the files it reads, as written, in the order show prints them
 }
 
 // Parts returns the parts, looks and shared schemas of k and its base, by name.
@@ -61,7 +63,7 @@ func (k *Kit) Parts() []Entry {
 			})
 		}
 		for _, l := range at.looks {
-			all = append(all, Entry{Name: l.name, About: l.about, Dir: at.own(l.dir), Looks: l.Looks(), Files: nil})
+			all = append(all, Entry{Name: l.name, About: l.about, Dir: at.own(l.dir), Looks: l.Looks(), Files: copied(l.files)})
 		}
 		for _, s := range at.shared {
 			all = append(all, Entry{
@@ -83,6 +85,17 @@ func (k *Kit) Templates() []Entry {
 					Name: t.name, About: about(t.schema), Dir: at.own(t.dir), Looks: nil, Files: copied(t.files),
 				})
 			}
+		}
+	}
+	return listed(all)
+}
+
+// Themes returns the themes of k and its base, by name. One's own never has a name of the base's.
+func (k *Kit) Themes() []Entry {
+	var all []Entry
+	for at := k; at != nil; at = at.base {
+		for _, t := range at.themes {
+			all = append(all, Entry{Name: t.name, About: "", Dir: at.own(t.dir), Looks: nil, Files: copied(t.files)})
 		}
 	}
 	return listed(all)

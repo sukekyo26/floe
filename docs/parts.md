@@ -12,7 +12,7 @@ How to make a part, a look or a theme of your own. A part draws an item of a dat
 ```sh
 floe part new quote     # makes the smallest part, quote, to fill in
 floe part check         # checks every part, look, shared schema and theme of your own
-floe part show quote    # prints its looks, schema and checks
+floe part show quote    # prints its looks and every file it reads
 ```
 
 A mistake of a part, theme or template of your own stops every page drawn (`floe check`, `floe render`, `floe publish`), whether it uses that one or not, so that none goes unseen: `floe part check` and `floe template check` list them all. While you write one, make it in another directory and move it in once it is checked, as [templates.md](templates.md#make-one-in-another-directory) tells: set `FLOE_PARTS_DIR` or `FLOE_THEMES_DIR` to it and run `floe part check`.
@@ -37,7 +37,7 @@ quote/
 - A schema names it as floe's are named, `"$ref": "floe:///parts/quote.json"`; its own schema names floe's parts and the shared schemas so too.
 - Its element is its box, which names it: `data-floe-part="quote"`.
 - `part.html` sees the item as `.`, and the functions of a template's `page.html` but `asset` ([templates.md](templates.md#pagehtml)).
-- It has the functions floe's parts draw with too. floe's parts, in floe's repository (https://github.com/sukekyo26/floe/tree/develop/internal/kit/floe/parts), show them in their `part.html`:
+- It has the functions floe's parts draw with too. floe's parts show them in their `part.html`, which `floe part show <name> part.html` prints (`floe part show code part.html`):
   - `{{copyButton}}` draws the copy button, in the page's language. Put it right under the part's box (`<figure data-floe-part="quote">…{{copyButton}}</figure>`): what it copies is found from the button up, by the nearest box of a part, so that in the box of a part inside yours it copies that part's, not yours. It copies the text of each element of the part marked `data-floe-copy`, each ending in a line break (code marks its `<code>`; a terminal, each command). Its look is floe's; the part's CSS places it and keeps text clear of it, as code's does: `isolation: isolate` on the part's box, so that the button stays under the page outside; `margin: var(--floe-copy-gap)` around it; and, where text lies under it, `padding-inline-end: var(--floe-copy-room)` after the longest line, under `:scope:has(> .floe-copy)`, so that a line scrolled to its end ends left of the button. floe sets `--floe-copy-size` (the button's size), `--floe-copy-gap` and `--floe-copy-room` on the page's root, and applies none of them to a part.
   - `{{diagram}}` takes nothing and draws the part's whole value as a diagram. The value is a spec as the part `diagram` takes it, nothing else: a key beside the spec (a `caption`) is refused by the diagram's schema.
   - `{{script .js .data}}` draws an element, and a script that calls `.js`, a function, with it and `.data`, as the part `script` does.
@@ -45,7 +45,7 @@ quote/
   - `{{range bars .}}` reads a list of items, each written as keys and values: `label`, `value` and `tone`. Each comes as `.Label`, `.Tone`, `.Value` as written and `.Width`, its value as a percentage of the largest. An item not written as keys and values is a mistake, told at the part's value with which item it is; so is a `value` that is not a number or is below 0, told with the value, and one not written or null, told as missing. To have such a mistake told at the item or the value itself, give the list in the part's schema the items `bars` takes, as the part `bars` does: `"items": {"type": "object", "properties": {"label": {"type": "string", "minLength": 1}, "value": {"type": "number", "minimum": 0}, "tone": {"$ref": "floe:///parts/tone.json"}}, "required": ["label", "value"], "additionalProperties": false}` (`minimum` alone lets a value that is not a number through to `bars`). Put it in the schema of the list `part.html` gives to `bars`: for `bars .items`, under `properties.items`, as `properties.items.items`; at the root it checks nothing of the list.
   - `{{range tree .}}` reads a list of items of `path` (a folder's ending in `/`), `note` and `change`, and nests them into the folders the paths name, a folder not listed of its own too: each comes as `.Name`, `.Note`, `.Change`, `.Dir` (a folder) and `.Children`.
 - Its schema takes floe's `format`s as a template's does (`html`, `markdown`, `image`), declared under `properties` or `items`, where floe follows, or as the root, and a shared schema that holds them. Such an item comes to `part.html` drawn: `html` as written, `markdown` as HTML, `image` as a data URI (`<img src="{{.file}}" alt="{{.alt}}">`). Write it as `{{.h}}`: do not pass it to a function (`markdown`, `markdownLine`, `printf`, `slice`, `eq`, …) nor put it in a `<script>`, as it is HTML, not the text written, and does not work there. An item of `html` is checked in the page drawn as a template's is ([templates.md](templates.md)). A plain string drawn as Markdown is `{{markdown .text}}`. A value of `any.json` does not come drawn as one item but as a map of every kind ([Looks and shared schemas](#looks-and-shared-schemas)).
-- `floe part show <name>` prints what one takes, floe's too: copy from floe's parts what fits.
+- `floe part show <name>` prints every file one reads, floe's too, under a `files:` line naming them; `floe part show <name> <file>` prints one of them alone: copy from floe's parts what fits.
 
 ## Looks and shared schemas
 
@@ -75,7 +75,7 @@ As in `page.css`, a `}` that closes no block and an `@import` are refused at the
 
 ## Themes
 
-A theme of your own is a directory of these files, each left out if not needed:
+A theme of your own is a directory of these files, each left out if not needed. `floe theme list` lists the themes, and `floe theme show <name>` prints the files one reads, floe's too (`floe theme show ink palette.css`):
 
 | File | What it holds |
 |---|---|

@@ -40,6 +40,14 @@ type Kit struct {
 type Dir struct {
 	FS   fs.FS
 	Name string
+	read map[string][]byte // the files readFile read, by name, when the Dir is recording
+}
+
+// recording returns d writing down the files readFile reads of it, as they are, for floe part show and the
+// others: a reader of one part, template or theme reads through its own.
+func (d Dir) recording() Dir {
+	d.read = map[string][]byte{}
+	return d
 }
 
 // Sources are the directories of parts (and the schemas they share), themes and templates, each with a nil
@@ -59,7 +67,7 @@ var floe = sync.OnceValues(func() (*Kit, error) {
 		if err != nil {
 			return nil, fmt.Errorf("kit: floe's %s: %w", dir, err)
 		}
-		*to = Dir{FS: files, Name: dir}
+		*to = Dir{FS: files, Name: dir, read: nil}
 	}
 	k, err := read(nil, src)
 	if err != nil {
@@ -240,6 +248,9 @@ func readFile(d Dir, dir, name string) ([]byte, bool, error) {
 	case err != nil:
 		return nil, false, usererr.CannotRead(at, err)
 	}
+	if d.read != nil {
+		d.read[name] = src
+	}
 	return src, true, nil
 }
 
@@ -277,14 +288,13 @@ func partFuncsAll() template.FuncMap {
 	return fns
 }
 
-// readChecks reads the checks.yaml of the directory dir of d, nil without one, and returns its text too.
-func readChecks(d Dir, dir string) (*rules.Checks, []byte, error) {
+// readChecks reads the checks.yaml of the directory dir of d, nil without one.
+func readChecks(d Dir, dir string) (*rules.Checks, error) {
 	src, ok, err := readFile(d, dir, "checks.yaml")
 	if !ok || err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	c, err := rules.ReadChecks(path.Join(d.Name, dir, "checks.yaml"), src)
-	return c, src, err //nolint:wrapcheck // its mistakes
+	return rules.ReadChecks(path.Join(d.Name, dir, "checks.yaml"), src) //nolint:wrapcheck // its mistakes
 }
 
 // readWordsIn reads the words.yaml of the directory dir of d, none without one.

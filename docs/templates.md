@@ -9,7 +9,7 @@ A template of your own is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CON
 ```sh
 floe template new memo     # makes the smallest template, memo, to fill in
 floe template check        # checks every template of your own, drawing its example.yaml
-floe template show memo    # prints its themes, schema, checks and example
+floe template show memo    # prints its themes and every file it reads, its schema and example first
 ```
 
 A mistake of a template, part or theme of your own stops every page, whether it is drawn with that one or not (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike. `floe template check` lists them all. A published page is drawn with the server's templates ([commands.md](commands.md#the-server)); after you change one, `floe rebuild` draws the stored pages again with it.
