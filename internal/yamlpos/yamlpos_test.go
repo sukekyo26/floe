@@ -211,6 +211,60 @@ func TestParseMarksAndUTF8(t *testing.T) {
 	}
 }
 
+// A | or > text without an indentation indicator whose first line not of spaces alone begins with spaces and a
+// tab is refused at the tab, each of a file, whatever its line breaks and what comes before it: goccy/go-yaml
+// counts the tab into the indentation, reading the lines after it otherwise than YAML 1.2 (dropping the "# h"
+// below, or a space of "y"), or failing at one of them. A text of one line, which it reads right, is refused
+// alike. With an indicator, a tab past the first line, or a tab without spaces before it, it passes or is
+// goccy/go-yaml's to tell.
+func TestParseBlockTabs(t *testing.T) {
+	t.Parallel()
+
+	tab := i18n.EnglishCatalog().Msg("yaml_block_tab")
+	for _, tt := range []struct{ name, src, want string }{
+		{"a line after it", "c: |\n  \tx\n  b\n", "a.yaml:2:3: " + tab},
+		{"a comment after it", "c: |\n  \tx\n  # h\n", "a.yaml:2:3: " + tab},
+		{"a deeper line after it", "c: |\n  \tx\n     y\n", "a.yaml:2:3: " + tab},
+		{"one line", "c: |\n  \tx\n", "a.yaml:2:3: " + tab},
+		{"one line, a key after it", "c: |\n  \tx\nd: 1\n", "a.yaml:2:3: " + tab},
+		{"folded", "c: >\n  \tx\n  # h\n", "a.yaml:2:3: " + tab},
+		{"strip", "c: |-\n  \tx\n  # h\n", "a.yaml:2:3: " + tab},
+		{"keep", "c: |+\n  \tx\n", "a.yaml:2:3: " + tab},
+		{"a comment on the header", "c: | # n\n  \tx\n  # h\n", "a.yaml:2:3: " + tab},
+		{"an empty line first", "c: |\n\n  \tx\n  # h\n", "a.yaml:3:3: " + tab},
+		{"nested", "a:\n  c: |\n    \tx\n    # h\n", "a.yaml:3:5: " + tab},
+		{"an item", "- |\n  \tx\n  # h\n", "a.yaml:2:3: " + tab},
+		{"a key of an item", "a:\n  - c: |\n      \tx\n      # h\n", "a.yaml:3:7: " + tab},
+		{"a tab alone", "c: |\n  \t\n  b\n", "a.yaml:2:3: " + tab},
+		{"a space after the tab", "c: |\n \t \n  b\n", "a.yaml:2:2: " + tab},
+		{"as deep as its key", "x:\n  a: |\n  \t# note\n  b: 1\n", "a.yaml:3:3: " + tab},
+		{"CRLF", "c: |\r\n  \tx\r\n  # h\r\n", "a.yaml:2:3: " + tab},
+		{"CR alone", "a: 1\rb: 2\rc: |\r  \tx\r  # h\r", "a.yaml:4:3: " + tab},
+		{"line breaks mixed", "a: 1\rb: 2\r\nc: |\n  \tx\r  # h\n", "a.yaml:4:3: " + tab},
+		{"after Japanese", "t: あ\nc: |\n  \tx\n  # h\n", "a.yaml:3:3: " + tab},
+		{"after a text read right", "a: |\n  x\nb: |\n  \tz\n  # h\n", "a.yaml:4:3: " + tab},
+		{"two", "c: |\n  \tx\nd: >\n  \ty\n", "a.yaml:2:3: " + tab + "\na.yaml:4:3: " + tab},
+		{"an indicator", "c: |2\n  \tx\n  # h\n", ""},
+		{"an indicator, strip", "c: |-2\n  \tx\n  # h\n", ""},
+		{"strip, an indicator", "c: |2-\n  \tx\n  # h\n", ""},
+		{"a tab past the first line", "c: |\n  x\n  \ty\n", ""},
+		{"a tab alone past the first line", "c: |\n  x\n  \t\n", ""},
+		{"no tab", "c: |\n  x\n  # h\n", ""},
+		{"no spaces before the tab", "c: |\n\tx\n", "a.yaml:2:1: found a tab character where an indentation space is expected"},
+		// LIMIT: a header goccy/go-yaml places off is not judged, and does not stop the file.
+		{"a tab before the header", "a:\t|\n  z\n", ""},
+		{"a tab before the header of an item", "- \t|\n  z\n", ""},
+		{"after quotes over CRLF lines", "a: 'x\r\n  y'\r\nb: |\r\n  z\r\n", ""},
+		// goccy/go-yaml's own mistake, as on a file without the check.
+		{"after a tab in double quotes", "a: \"\tx\"\nb: |\n  z\n", "a.yaml:1:9: value is not allowed in this context. map key-value is pre-defined"},
+	} {
+		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
+		if got := told(err); got != tt.want {
+			t.Errorf("%s: Parse(%q) told\n%s\nwant\n%s", tt.name, tt.src, got, tt.want)
+		}
+	}
+}
+
 // Find follows keys and indexes to a value and its key, the - of an entry of a block sequence, and stops at the
 // last node it reaches.
 func TestFind(t *testing.T) {

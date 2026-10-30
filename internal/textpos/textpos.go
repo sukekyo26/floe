@@ -28,13 +28,52 @@ func Each(src []byte, ats []int) []Place {
 	line, start, i := 1, 0, 0
 	for _, at := range ats {
 		for ; i < at; i++ {
-			if src[i] == '\n' || src[i] == '\r' && (i+1 >= len(src) || src[i+1] != '\n') {
+			if breaks(src, i) {
 				line, start = line+1, i+1
 			}
 		}
 		places = append(places, Place{Line: line, Column: utf8.RuneCount(src[start:at]) + 1})
 	}
 	return places
+}
+
+// At returns the byte of src at line and column, as Of counts them (Of's inverse), its end too; -1 for none.
+func At(src []byte, line, column int) int {
+	if line < 1 || column < 1 {
+		return -1
+	}
+	at := 0
+	for range line - 1 {
+		if at == len(src) {
+			return -1
+		}
+		if at = NextLine(src, at); at == len(src) && !breaks(src, at-1) {
+			return -1
+		}
+	}
+	for range column - 1 {
+		if at == len(src) || breaks(src, at) {
+			return -1
+		}
+		_, size := utf8.DecodeRune(src[at:])
+		at += size
+	}
+	return at
+}
+
+// NextLine returns where the line after the one at is on starts, as Of counts lines, or len(src).
+func NextLine(src []byte, at int) int {
+	for i := at; i < len(src); i++ {
+		if breaks(src, i) {
+			return i + 1
+		}
+	}
+	return len(src)
+}
+
+// breaks reports whether src[i] ends a line: a LF, the LF of a CRLF, or a CR alone.
+func breaks(src []byte, i int) bool {
+	return src[i] == '\n' || src[i] == '\r' && (i+1 >= len(src) || src[i+1] != '\n')
 }
 
 // Ending returns the line and the column of the character that ends at the byte offset of src: the place
