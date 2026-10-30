@@ -21,20 +21,20 @@ var linkable = regexp.MustCompile(`(?i)\.(html?|ya?ml)$`)
 // also serves the files under its directory (a folder's own), so the exposure is kept to that directory: one
 // that is / or the home directory would expose all of it, and the hidden directories right under home
 // (~/.ssh, ~/.config) hold settings and keys. Hidden directories inside a project (.agents, .github) are
-// fine; Resolve never serves the dot paths under them.
-func Check(path, home string) error {
+// fine; Resolve never serves the dot paths under them. It reports whether path is a folder.
+func Check(path, home string) (bool, error) {
 	// The checks compare strings, so a relative path, a path through a symlink (~/proj -> ~/.ssh) or one
 	// with .. would slip past them. EvalSymlinks keeps a relative path relative, hence IsAbs.
 	if resolved, err := filepath.EvalSymlinks(path); !filepath.IsAbs(path) || err == nil && resolved != path {
-		return usererr.New("link_not_real", path)
+		return false, usererr.New("link_not_real", path)
 	}
 	// A FIFO named .html would block its reader, so only regular files pass, and folders.
 	fi, err := os.Stat(path)
 	folder := err == nil && fi.IsDir()
 	if !folder && (!linkable.MatchString(path) || err != nil || !fi.Mode().IsRegular()) {
-		return usererr.New("link_not_linkable", path)
+		return false, usererr.New("link_not_linkable", path)
 	}
-	return exposes(path, home, folder)
+	return folder, exposes(path, home, folder)
 }
 
 // exposes refuses the real path, a folder or a file, whose served directory would expose too much of home.
@@ -60,9 +60,11 @@ func exposes(path, home string, folder bool) error {
 	return nil
 }
 
-// exposedDir reports whether serving the files under dir would expose too much: / or home itself.
+// exposedDir reports whether serving the files under dir would expose too much: /, home, or a directory home is
+// under (/home, /Users), which would serve every home's files.
 func exposedDir(dir, home string) bool {
-	return dir == string(filepath.Separator) || dir == home
+	sep := string(filepath.Separator)
+	return dir == sep || dir == home || strings.HasPrefix(home, dir+sep)
 }
 
 // realDir returns the real path of dir. A dir that cannot be resolved (missing, empty and so ".", or
@@ -108,6 +110,16 @@ func isReal(path string) bool {
 	return err == nil && resolved == path
 }
 
+// IsFolder reports whether the folder registered as the real path folder is still there to serve: a directory, by
+// its real path, as Resolve and Dir take it.
+func IsFolder(folder string) bool {
+	if !isReal(folder) {
+		return false
+	}
+	fi, err := os.Stat(folder)
+	return err == nil && fi.IsDir()
+}
+
 // within returns the real path of rest under the real directory base, with what the system says of it, when it
 // is a directory (dir) or a regular file (else): the one gate of what a link serves and lists. It refuses empty
 // and dot elements (.git, .env, ..) and anything whose real path leaves base.
@@ -135,18 +147,18 @@ const MaxListed = 1000
 // ErrNoDir is Dir's for a directory that is not one of the folder's: gone, or refused by within.
 var ErrNoDir = errors.New("no such directory in the folder")
 
-// Listing is what Dir gives of a directory of a folder: its directories, then its pages, by name and MaxListed
-// of them in all; More tells how many were left out.
+// Listing is what Dir gives of a directory of a folder, as GET /api/artifacts/{slug}/pages answers it: its
+// directories by name, then its pages by name, MaxListed of them in all; More tells how many were left out.
 type Listing struct {
-	Dirs  []string
-	Pages []Page
-	More  int
+	Dirs  []string `json:"dirs"`
+	Pages []Page   `json:"pages"`
+	More  int      `json:"more"`
 }
 
 // Page is a page of a folder: its path under the folder, as rest, and when it changed.
 type Page struct {
-	File     string
-	Modified time.Time
+	File     string    `json:"file"`
+	Modified time.Time `json:"updatedAt"`
 }
 
 var pageName = regexp.MustCompile(`(?i)\.html?$`)
@@ -157,7 +169,7 @@ var pageName = regexp.MustCompile(`(?i)\.html?$`)
 // LIMIT: os.ReadDir reads the whole directory, which MaxListed does not bound. Read it in parts (ReadDir(n), in
 // the directory's own order) if a directory of hundreds of thousands of names comes up.
 func Dir(folder, dir string) (Listing, error) {
-	var l Listing
+	l := Listing{Dirs: []string{}, Pages: []Page{}, More: 0}
 	if !isReal(folder) {
 		return l, ErrNoDir
 	}
@@ -173,7 +185,7 @@ func Dir(folder, dir string) (Listing, error) {
 	if err != nil {
 		return l, err //nolint:wrapcheck // the system's *fs.PathError, for the caller to tell at the folder
 	}
-	var pages []Page
+	pages := []Page{}
 	for _, e := range entries {
 		name := e.Name()
 		switch {
@@ -181,8 +193,14 @@ func Dir(folder, dir string) (Listing, error) {
 		// A symlink to a directory is no directory here: followed, it could lead round in a loop.
 		case e.IsDir():
 			l.Dirs = append(l.Dirs, name)
-		case pageName.MatchString(name):
+		case !pageName.MatchString(name):
+		// What path holds is under the folder already: only a symlink may lead out, or to what is no regular file.
+		case e.Type()&fs.ModeSymlink != 0:
 			if _, fi, ok := within(folder, prefix+name, false); ok {
+				pages = append(pages, Page{File: prefix + name, Modified: fi.ModTime()})
+			}
+		case e.Type().IsRegular():
+			if fi, err := e.Info(); err == nil {
 				pages = append(pages, Page{File: prefix + name, Modified: fi.ModTime()})
 			}
 		}

@@ -303,18 +303,25 @@ func TestCheck(t *testing.T) {
 	symlink(t, filepath.Join(realHome, ".secret"), filepath.Join(realHome, "proj", "alias"))
 	// So is one with .., which the string checks would misread too.
 	for _, p := range []string{realHome + "/proj/alias/x.html", realHome + "/proj/../top.html", ".secret/x.html", "top.html"} {
-		if err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "is not its absolute real path") {
+		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "is not its absolute real path") {
 			t.Errorf("Check(%s) = %v, want it refused as not real", p, err)
 		}
 	}
 	// A home that cannot be resolved leaves the real one unknown, so nothing passes.
 	for _, h := range []string{"", filepath.Join(tmp, "no-such-home"), filepath.Join(realHome, "top.html")} {
-		if err := link.Check(filepath.Join(realHome, "proj", "ok.HTM"), h); err == nil ||
+		if _, err := link.Check(filepath.Join(realHome, "proj", "ok.HTM"), h); err == nil ||
 			!strings.Contains(err.Error(), "cannot resolve the home directory") {
 			t.Errorf("Check with home %q = %v, want it refused", h, err)
 		}
 	}
 
+	// What home is under would serve every home's files: refused for a folder, and for a file in it.
+	write(t, filepath.Join(tmp, "beside.html"), "<p>x</p>")
+	for _, p := range []string{tmp, filepath.Join(tmp, "beside.html")} {
+		if _, err := link.Check(p, home); err == nil || !strings.Contains(err.Error(), "would expose all of "+tmp) {
+			t.Errorf("Check(%s) = %v, want it refused as exposing %s", p, err, tmp)
+		}
+	}
 	tests := []struct {
 		path string
 		want string // a part of the message, "" when allowed
@@ -337,7 +344,7 @@ func TestCheck(t *testing.T) {
 		{".secret/sub", "is under a hidden directory of your home"},
 	}
 	for _, tt := range tests {
-		err := link.Check(filepath.Clean(filepath.Join(realHome, tt.path)), home)
+		_, err := link.Check(filepath.Clean(filepath.Join(realHome, tt.path)), home)
 		if tt.want == "" {
 			if err != nil {
 				t.Errorf("Check(%s) = %v, want it allowed", tt.path, err)

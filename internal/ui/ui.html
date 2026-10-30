@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{.Lang}}"{{with .Framed}} class="framed" data-slug="{{.}}"{{end}}>
+<html lang="{{.Lang}}"{{with .Framed}} class="framed" data-slug="{{.}}"{{end}}{{if .Served}} data-served{{end}}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -349,9 +349,15 @@
   /* A folder's row opens a tree of its directories under it (--d deep), each row a directory or a page of it */
   .fold { display: inline-block; width: 14px; height: 14px; margin-right: 0.35rem; vertical-align: -2px; color: var(--muted); transition: transform 0.15s; }
   [aria-expanded="true"] > .fold { transform: rotate(90deg); }
-  li.tree { min-height: 2.3rem; padding-block: 0.2rem; }
-  li.tree .body { padding-left: calc(var(--d) * 1.25rem); }
-  li.tree .title { font: 500 0.85rem var(--mono); }
+  /* A tree's rows are short, many as they may be; each holds the fold's room, empty for a page, so that the names of a
+     directory's directories and pages line up, a step (the fold's width) right of the directory's own */
+  li.tree { min-height: 1.75rem; padding-block: 0.1rem; }
+  /* A step in is the fold's width and a little: deep in, a title still has room */
+  li.tree .body { padding-left: calc((var(--d) - 1) * 1.1rem + 0.2rem); }
+  li.tree .title { font-size: 0.85rem; font-weight: 500; }
+  li.tree .fold.none { visibility: hidden; }
+  li.tree .icon-btn { width: 26px; height: 26px; }
+  .kind { display: inline-block; width: 16px; height: 16px; margin-right: 0.4rem; vertical-align: -3px; color: var(--muted); }
   li.tree .title::before { content: none; }
   li.tree button.title { justify-self: start; max-width: 100%; padding: 0; border: 0; background: none; color: var(--fg); font-weight: 700; text-align: left; cursor: pointer; }
   li.tree button.title::after { content: ""; position: absolute; inset: 0; }
@@ -1671,7 +1677,8 @@
     };
     const note = (text) => {
       const li = tree(['note']);
-      li.querySelector('.body').textContent = text;
+      li.querySelector('.body').innerHTML = '<span><span class="fold none"></span></span>';
+      li.querySelector('.body > span').append(text);
       li.querySelector('.actions').replaceChildren();
       return li;
     };
@@ -1686,8 +1693,8 @@
       btn.type = 'button';
       btn.className = 'title';
       btn.setAttribute('aria-expanded', String(opened.has(openKey(a.slug, path))));
-      btn.innerHTML = '<span class="fold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>';
-      btn.append(`${name}/`);
+      btn.innerHTML = '<span class="fold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>';
+      btn.append(name);
       btn.title = path;
       btn.addEventListener('click', () => toggleOpen(a.slug, path));
       li.querySelector('.title').replaceWith(btn);
@@ -1700,7 +1707,8 @@
       const name = p.file.slice(p.file.lastIndexOf('/') + 1);
       const link = li.querySelector('.title');
       link.href = pageHref({ slug: a.slug, file: p.file });
-      link.textContent = name;
+      link.innerHTML = '<span class="fold none"></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>';
+      link.append(name);
       link.title = p.file;
       const time = li.querySelector('time');
       time.dateTime = p.updatedAt;
@@ -1732,7 +1740,10 @@
   // Reads again the directories open of the folders listed, each under folders and directories open: whether any changed.
   // One gone leaves what is open, and the URL
   // LIMIT: each directory open is read every 3 s with the list. Send a mark of each, to read it only once changed, if many open are heavy
+  // The last call's answers win: an earlier one, slower, would take away what was opened since
+  let openReads = 0;
   async function readOpen() {
+    const n = ++openReads;
     const before = JSON.stringify([...listings]);
     const shown = (key) => {
       const [slug, dir = ''] = key.split(/:(.*)/s);
@@ -1746,6 +1757,7 @@
       const [slug, dir = ''] = key.split(/:(.*)/s);
       return readListing(slug, dir);
     }));
+    if (n !== openReads) return false;
     listings.clear();
     keys.forEach((key, i) => {
       if (read[i] === null) opened.delete(key);
@@ -2048,8 +2060,9 @@
 
   function renderFrame() {
     const a = items.find((x) => x.slug === framed);
-    // A folder's page is there when its directory lists it; ?file= of any other entry is no page
-    const found = Boolean(a && !a.missing && (a.folder ? fileListing?.pages.some((p) => p.file === FILE) : !FILE));
+    // A folder's page is there when the server served its frame (its directory's list may leave it out, cut at its bound);
+    // ?file= of any other entry is no page
+    const found = Boolean(a && !a.missing && (a.folder ? document.documentElement.hasAttribute('data-served') : !FILE));
     const name = FILE || a?.title;
     document.title = `${name ?? framed} · floe`;
     document.querySelector('.frame-actions').hidden = !found;
@@ -2287,7 +2300,8 @@
       refilter({ project: '', tag: '' });
     });
     // Not while typing or with a dialog open. Moving between rows focuses the title link, so Enter opens it
-    const rowsShown = () => [...$('list').querySelectorAll(':scope > li:not(.group)')];
+    // A tree's note (empty, cut, unread) has nothing to focus, and is passed over
+    const rowsShown = () => [...$('list').querySelectorAll(':scope > li:not(.group)')].filter((li) => li.querySelector('.title'));
     const currentRow = () => rowsShown().find((li) => li.contains(document.activeElement));
     const moveRow = (step) => {
       const rows = rowsShown();

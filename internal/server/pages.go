@@ -158,19 +158,7 @@ func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing) ([
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	slug, rest := r.PathValue("slug"), r.PathValue("rest")
 	if rest == "" && !r.URL.Query().Has("raw") {
-		status := http.StatusNotFound
-		if m := s.cfg.Store.ReadMeta(slug); m != nil {
-			file := r.URL.Query().Get("file")
-			// A folder has no page of its own: its URL is the list with it open, where publish's URL leads.
-			if m.Folder && file == "" {
-				http.Redirect(w, r, "/?tab=folders&open="+url.QueryEscape(slug), http.StatusSeeOther)
-				return
-			}
-			if _, ok := s.cfg.Store.File(slug, m, file); ok && (file == "" || m.Folder) {
-				status = http.StatusOK
-			}
-		}
-		sendUI(w, r, status, slug)
+		s.frame(w, r, slug)
 		return
 	}
 	var version string
@@ -205,6 +193,27 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		tail = servedScript(slug, rest, version)
 	}
 	stream(w, got.typ, got.body, tail)
+}
+
+// frame answers the frame of slug, 404 when there is no page to frame. A folder has no page of its own: its URL is the
+// list with it open, where publish's URL leads.
+func (s *Server) frame(w http.ResponseWriter, r *http.Request, slug string) {
+	status := http.StatusNotFound
+	if m := s.cfg.Store.ReadMeta(slug); m != nil {
+		file := r.URL.Query().Get("file")
+		if m.Folder && file == "" {
+			to := "/?tab=folders&open=" + url.QueryEscape(slug)
+			if m.Archived {
+				to += "&archived=1"
+			}
+			http.Redirect(w, r, to, http.StatusSeeOther)
+			return
+		}
+		if _, ok := s.cfg.Store.File(slug, m, file); ok && (file == "" || m.Folder) {
+			status = http.StatusOK
+		}
+	}
+	sendUI(w, r, status, slug)
 }
 
 // download answers the page of slug as a file, as it was linked or drawn, a page floe drew with its CSP in it

@@ -226,7 +226,8 @@ func serveUI(w http.ResponseWriter, r *http.Request) {
 // sendUI answers with the management page in the reader's language: the frame around the page framed, a slug, or
 // the list for "".
 func sendUI(w http.ResponseWriter, r *http.Request, status int, framed string) {
-	page, err := ui.Page(catalog(r), framed)
+	// A folder's page is framed by what the server serves, which a list of its directory cut at its bound may leave out
+	page, err := ui.Page(catalog(r), framed, framed != "" && status == http.StatusOK && r.URL.Query().Get("file") != "")
 	if err != nil {
 		refuse(w, r, err)
 		return
