@@ -128,11 +128,14 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		document.getElementById('add').requestSubmit()`)
 	out = append(out, b.until("the folder added", rows+".includes('m.html') && new URLSearchParams(location.search).get('tab') + ' ' + "+opens),
 		b.eval("document.getElementById('add-title').textContent"))
+	// Once the rows have risen in, every folder's heading and every row of the tree shows whole.
+	b.still()
+	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].map((li) => li.className.split(' ')[0] + ':' + getComputedStyle(li).opacity).join(',')"))
 
 	check(t, "folders", out, "?tab=folders&open=docs|a,b:c+,assets+,big+,guide+,index.html|0 groups, 1 folder|docs,docs:guide,docs:a,b:c|"+
 		"a,b:c-,odd.html,assets+,big+,guide-,deep+,setup.html,start.html,index.html|.,a,b:c,guide|"+
 		"a,b:c-,odd.html,assets+,big+,guide+,index.html|docs,docs:a,b:c|big|a,b:c-,odd.html,assets+,big+,guide+,index.html,new.html|"+
 		"docs / guide/setup.html|/a/docs/guide/setup.html#end|true,true,true|none yet|"+
 		"?file=guide%2Fsetup.html#top|the page at #end|guide/setup.html*,guide/start.html|rgb(1, 2, 3)|docs / big/p1000.html|tree rows 0|"+
-		"none,block|folders more|Add a folder")
+		"none,block|folders more|Add a folder|folder:1,tree:1,folder:1")
 }
