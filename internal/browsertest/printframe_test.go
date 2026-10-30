@@ -45,7 +45,8 @@ func TestUIPrintFrame(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.eval("document.getElementById('frame-pick').click()")
 		b.until("the pages to pick from", "document.getElementById('page-pick').matches(':popover-open')")
 		media("print")
-		got := []string{b.eval(printed)}
+		got := make([]string, 0, 6)
+		got = append(got, b.eval(printed))
 		media("")
 		got = append(got, b.eval(printed))
 		b.navigate("/a/none/")

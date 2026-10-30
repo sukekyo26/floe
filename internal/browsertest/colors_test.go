@@ -111,8 +111,8 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.eval("document.getElementById('page-pick-q').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))")
 		measure("the frame's pages to pick from")
 		// What a frame prints: the note naming the page alone, with the error under a failed read, and a missing page's.
-		print := []*emulation.MediaFeature{{Name: "prefers-color-scheme", Value: scheme}, {Name: "prefers-reduced-motion", Value: "reduce"}}
-		if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, emulation.SetEmulatedMediaParams{Media: "print", Features: print}); err != nil {
+		features := []*emulation.MediaFeature{{Name: "prefers-color-scheme", Value: scheme}, {Name: "prefers-reduced-motion", Value: "reduce"}}
+		if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, emulation.SetEmulatedMediaParams{Media: "print", Features: features}); err != nil {
 			t.Fatal(err)
 		}
 		b.eval("document.getElementById('page-pick').hidePopover(); showError('failed')")
