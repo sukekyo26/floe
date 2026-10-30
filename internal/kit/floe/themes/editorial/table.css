@@ -1,5 +1,3 @@
 /* Set as a report in print: rules and thin frames instead of faces and shadows */
 :scope { padding-inline: 0.4rem; }
 :scope thead th { background: none; color: var(--fg); font-weight: 700; border-bottom: 2px solid var(--fg); }
-:scope tbody tr:nth-child(even) td { background: none; }
-:scope tbody tr + tr td { border-top: 1px solid var(--line); }

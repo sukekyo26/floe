@@ -1,6 +1,6 @@
 /* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
    rings and lines of its own states */
-:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; max-width: none; }
+:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; }
 :scope > li { position: relative; counter-increment: floe-step; display: grid; gap: 0.15rem; padding: 0.2rem 0 1.3rem 3rem; min-height: 2rem; }
 :scope > li:last-child { padding-bottom: 0.2rem; }
 :scope > li::before {

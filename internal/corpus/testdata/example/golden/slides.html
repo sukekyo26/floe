@@ -19,7 +19,7 @@
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
-p, ul, ol { margin: 0; max-width: var(--text-width); }
+p, ul, ol { margin: 0; }
 ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 /* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
    --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
@@ -36,7 +36,7 @@ pre {
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
-blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
+blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
@@ -148,7 +148,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts {
 @scope ([data-floe-part="links"]) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
-:scope { list-style: none; margin: 0; padding: 0; max-width: none; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
+:scope { list-style: none; margin: 0; padding: 0; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
 :scope > li { position: relative; gap: 0.1rem; padding-block: 0.9rem; padding-left: 3.7rem; }
 :scope > li::before {
   content: ""; position: absolute; left: 1.1rem; top: 0.95rem; display: block; width: 1.9rem; height: 1.9rem;
@@ -196,7 +196,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="steps"]) to (:scope [data-floe-part] > *) {
 /* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
    rings and lines of its own states */
-:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; max-width: none; }
+:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; }
 :scope > li { position: relative; counter-increment: floe-step; display: grid; gap: 0.15rem; padding: 0.2rem 0 1.3rem 3rem; min-height: 2rem; }
 :scope > li:last-child { padding-bottom: 0.2rem; }
 :scope > li::before {
@@ -221,7 +221,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope > li.done::after { background: var(--good); }
 :scope > li.doing::before { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 :scope > li > strong { line-height: 1.6; }
-:scope > li > :not(strong) { margin: 0; max-width: var(--text-width); color: var(--muted); font-size: 0.92rem; }
+:scope > li > :not(strong) { margin: 0; color: var(--muted); font-size: 0.92rem; }
 }
 }
 </style>
@@ -229,7 +229,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts {
 @scope ([data-floe-part="timeline"]) to (:scope [data-floe-part] > *) {
 /* The date at the left of a dot on a line that runs down to the next */
-:scope { list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; max-width: none; }
+:scope { list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; }
 :scope > li { position: relative; display: grid; grid-template-columns: 7rem minmax(0, 1fr); column-gap: 2rem; padding-bottom: 1.1rem; }
 :scope > li:last-child { padding-bottom: 0; }
 :scope > li::before {
@@ -301,10 +301,10 @@ body { margin: 0; font-size: 16px; line-height: 1.6; }
 .slide { box-sizing: border-box; min-height: 100svh; scroll-snap-align: start; position: relative; display: flex; flex-direction: column; justify-content: center; gap: 4svh; padding: 6svh 8vw calc(3svh + 2.5rem); border-bottom: 1px solid var(--line); }
 .cover { gap: 1.5rem; }
 .cover h1 { font-size: clamp(2.2rem, 6vw, 4.5rem); line-height: 1.2; max-width: 20ch; }
-.subtitle { font-size: clamp(1.1rem, 2.2vw, 1.7rem); max-width: none; }
+.subtitle { font-size: clamp(1.1rem, 2.2vw, 1.7rem); }
 .hint { position: absolute; bottom: 3svh; left: 8vw; font-size: 0.9rem; }
 /* Off base's list: the slides fill the width, one under the next, numbered by a counter of their own */
-.slides { list-style: none; padding: 0; margin: 0; max-width: none; display: block; gap: 0; counter-reset: floe-slide; }
+.slides { list-style: none; padding: 0; margin: 0; display: block; gap: 0; counter-reset: floe-slide; }
 .slides > li { counter-increment: floe-slide; }
 .slides > li::after { content: counter(floe-slide) " / " attr(data-total); content: counter(floe-slide) " / " attr(data-total) / ""; position: absolute; right: 3vw; bottom: 3svh; font-family: var(--mono); color: var(--muted); font-size: 1rem; }
 .slides > li.divider::after { color: inherit; }

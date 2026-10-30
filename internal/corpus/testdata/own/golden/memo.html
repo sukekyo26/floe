@@ -19,7 +19,7 @@
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
-p, ul, ol { margin: 0; max-width: var(--text-width); }
+p, ul, ol { margin: 0; }
 ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 /* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
    --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
@@ -36,7 +36,7 @@ pre {
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
-blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
+blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground

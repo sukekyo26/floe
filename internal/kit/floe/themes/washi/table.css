@@ -1,5 +1,3 @@
-:scope { border: 0; padding-inline: 1.4rem; }
+:scope { border: 0; padding-inline: 1.4rem; --table-rule: 1px solid var(--washi-hair); }
 :scope table { border-top: 4px double var(--fg); border-bottom: 4px double var(--fg); }
 :scope thead th { background: none; color: var(--fg); font-size: 0.9rem; letter-spacing: 0.1em; border-bottom: 1px solid var(--fg); }
-:scope tbody tr:nth-child(even) td { background: none; }
-:scope tbody tr + tr td { border-top: 1px solid var(--washi-hair); }

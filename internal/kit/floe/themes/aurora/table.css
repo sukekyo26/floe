@@ -1,2 +1,3 @@
 :scope thead th { background: none; color: var(--accent); }
 :scope tbody tr:nth-child(even) td { background: rgb(255 255 255 / 0.45); }
+:scope { --table-rule: none; }
