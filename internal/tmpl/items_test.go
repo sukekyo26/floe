@@ -157,6 +157,7 @@ func TestHTMLItemsInOrder(t *testing.T) {
 		{"<div>{{.Data.h}}</div><table><tbody>{{.Data.g}}</tbody></table>", "h: </div>x\ng: <b>y\n", changes("3:4", "</div>")},
 		{"<textarea>{{.Data.h}}</textarea><table><tbody>{{.Data.g}}</tbody></table>", "h: ok\ng: <b>y\n", placed("h", "<textarea>")},
 		{"<textarea>{{.Data.h}}</textarea><div>{{.Data.h}}</div>", "h: <b>x\ng: ok\n", placed("h", "<textarea>")},
+		{"<textarea>{{.Data.h}}</textarea><table><tbody>{{.Data.h}}</tbody></table>", "h: <b>x\ng: ok\n", placed("h", "<textarea>")},
 		{"<svg>{{.Data.h}}</svg><textarea>{{.Data.h}}</textarea><svg>{{.Data.h}}</svg>", "h: <b>x\ng: ok\n", changes("3:4", "<b> </svg>")},
 		{"<table><tbody>{{.Data.h}}</tbody></table>", "h: <b><textarea>x\ng: ok\n", changes("3:4", "<b> <textarea>")},
 	} {
