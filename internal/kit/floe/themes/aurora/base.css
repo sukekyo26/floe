@@ -1,0 +1,4 @@
+/* Frosted glass over a dawn sky: faces of clouded white with a bright edge and a violet shadow, every corner round.
+   A quote is of the surface, not the glass: in a band the glass would let the accent through, where its links sink */
+blockquote > * { --face: initial; --on-face: initial; }
+blockquote { border: 1px solid var(--aurora-edge); border-radius: 20px; padding: 1rem 1.4rem; color: var(--fg); background: var(--surface); }
