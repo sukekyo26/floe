@@ -105,40 +105,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
-}
-}
-</style>
-<style>
-@layer floe.looks {
-@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="cards"]) to (:scope [data-floe-part] > *) {
-/* Each card is numbered by its place, as the steps of a plan are */
-:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
-.card {
-  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
-}
-:scope.numbered > .card::before {
-  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
-  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
-}
-.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
-.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
-}
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
 /* A pill: a short status in the colour of its tone */
 :scope {
@@ -229,6 +195,22 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
 /* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns */
 :scope {
   overflow-x: auto;
@@ -297,6 +279,41 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
+@scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
+/* Each card is numbered by its place, as the steps of a plan are */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
+.card {
+  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+}
+:scope.numbered > .card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
+}
+.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
+/* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
+.option.pick { outline: 2px solid var(--accent); outline-offset: -1px; }
+.option h3 > span { margin-left: 0.4rem; vertical-align: 0.1em; }
+/* The pros and cons alone, not a list in the text */
+.option .points { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
+/* The mark hangs at the left, so that a line of text and code flows as one */
+.option .points > li { position: relative; padding-left: 1.45rem; }
+.option .points > li::before { position: absolute; left: 0.1rem; font-weight: 800; }
+.option li.pro { color: var(--fg); }
+.option li.pro::before { content: "+"; color: var(--good); }
+.option li.con::before { content: "−"; color: var(--bad); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
 @scope ([data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
 /* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
 :scope figcaption { opacity: 0.85; }
@@ -359,38 +376,6 @@ blockquote::before {
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
-:scope {
-  background: var(--bp-squares), var(--surface); border-radius: 0;
-  box-shadow: none; border: 1.5px solid var(--accent);
-}
-}
-}
-</style>
-<style>
-@layer floe.looks {
-@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
-:scope {
-  background: var(--bp-squares), var(--surface); border-radius: 0;
-  box-shadow: none; border: 1.5px solid var(--accent);
-}
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="cards"]) to (:scope [data-floe-part] > *) {
-:scope.numbered > .card::before {
-  content: "FIG. " counter(floe-card, decimal-leading-zero); content: "FIG. " counter(floe-card, decimal-leading-zero) / "";
-  display: block; width: auto; height: auto; background: none; color: var(--accent);
-  font-family: var(--mono); font-size: 0.7rem; font-weight: 400; letter-spacing: 0.12em;
-}
-.card h3 { color: var(--accent); }
-}
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
 :scope {
   display: inline-flex; align-items: center; gap: 0.45em; border-radius: 0; background: none; border: 1.5px solid currentColor;
@@ -409,6 +394,26 @@ blockquote::before {
   background: none; border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 40%, transparent); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
 }
 :scope .lang { border-radius: 0; background: none; border: 1.5px solid var(--code-prompt); color: var(--code-prompt); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+:scope {
+  background: var(--bp-squares), var(--surface); border-radius: 0;
+  box-shadow: none; border: 1.5px solid var(--accent);
+}
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+:scope {
+  background: var(--bp-squares), var(--surface); border-radius: 0;
+  box-shadow: none; border: 1.5px solid var(--accent);
+}
 }
 }
 </style>
@@ -440,6 +445,18 @@ blockquote::before {
 :scope.warn::before { background: none; color: var(--warn); }
 :scope.bad::before { background: none; color: var(--bad); }
 .title { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
+:scope.numbered > .card::before {
+  content: "FIG. " counter(floe-card, decimal-leading-zero); content: "FIG. " counter(floe-card, decimal-leading-zero) / "";
+  display: block; width: auto; height: auto; background: none; color: var(--accent);
+  font-family: var(--mono); font-size: 0.7rem; font-weight: 400; letter-spacing: 0.12em;
+}
+.card h3 { color: var(--accent); }
 }
 }
 </style>
@@ -625,10 +642,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
-<div class="numbered" data-floe-part="cards">
-<div class="card" data-floe-look="panel"><h3 id="one">One</h3><p>First.</p>
+<div class="numbered" data-floe-part="options">
+<div class="card option" data-floe-look="panel"><h3 id="one">One</h3><p>First.</p>
 </div>
-<div class="card" data-floe-look="panel"><h3 id="two">Two</h3><p>Second.</p>
+<div class="card option" data-floe-look="panel"><h3 id="two">Two</h3><p>Second.</p>
 </div>
 </div>
 <form data-floe-part="tabs">

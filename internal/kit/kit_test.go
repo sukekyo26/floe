@@ -36,7 +36,7 @@ func floe(t *testing.T) *kit.Kit {
 	return k
 }
 
-// floe's own read without a mistake, once a process: 30 parts, 2 looks, 9 themes and 4 templates.
+// floe's own read without a mistake, once a process: 30 parts, 5 looks, 9 themes and 7 templates.
 func TestFloe(t *testing.T) {
 	t.Parallel()
 
@@ -45,7 +45,7 @@ func TestFloe(t *testing.T) {
 		t.Error("Floe read floe's own twice")
 	}
 	parts, looks, themes, templates := k.Names()
-	if len(parts) != 34 || !slices.Equal(looks, []string{"band", "numbered", "panel", "rows"}) || len(themes) != 9 ||
+	if len(parts) != 30 || !slices.Equal(looks, []string{"band", "cards", "numbered", "panel", "rows"}) || len(themes) != 9 ||
 		!slices.Equal(templates, []string{"adr", "design", "handoff", "postmortem", "report", "runbook", "slides"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}
@@ -55,7 +55,7 @@ func TestFloe(t *testing.T) {
 			t.Errorf("the part %s has no page or no CSS", name)
 		}
 	}
-	for _, name := range []string{"matrix", "progress", "table", "terminal", "tree"} {
+	for _, name := range []string{"progress", "table", "terminal", "tree"} {
 		if p, _ := k.Part(name); p.Checks() == nil {
 			t.Errorf("the part %s has no checks", name)
 		}
@@ -153,10 +153,11 @@ func TestFloeReport(t *testing.T) {
 func TestPartWords(t *testing.T) {
 	t.Parallel()
 
-	p, _ := floe(t).Part("matrix")
-	for lang, want := range map[string]string{"ja-jp": "できる", "en": "Yes", "fr": "Yes", "ja": "できる"} {
+	p, _ := floe(t).Part("fields")
+	for lang, want := range map[string]string{"ja-jp": ">必須<", "en": ">required<", "fr": ">required<", "ja": ">必須<"} {
 		var b strings.Builder
-		data := map[string]any{"columns": []any{"a"}, "rows": []any{map[string]any{"what": "x", "cells": []any{"yes"}}}}
+		// Every key of the schema, as Walk hands an item, left out ones nil.
+		data := []any{map[string]any{"name": "x", "required": true, "type": nil, "default": nil, "text": nil}}
 		if err := page(t, p, lang).Execute(&b, data); err != nil || !strings.Contains(b.String(), want) {
 			t.Errorf("%s: %v, %q holds no %s", lang, err, b.String(), want)
 		}

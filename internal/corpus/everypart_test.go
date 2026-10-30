@@ -94,11 +94,8 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 		enums := map[string][]string{}
 		p.enumsOf(p.schema, "", enums, true, map[string]bool{})
 		for _, path := range slices.Sorted(maps.Keys(enums)) {
-			// One may be written short, for the object it is a key of (matrix's cells: [yes], for { mark: yes }); but
-			// not for the part's own data, which a list of words would meet.
-			parent := path[:max(0, strings.LastIndex(path, "."))]
 			for _, v := range enums[path] {
-				if !written[name][path+"="+v] && (parent == "" || !written[name][parent+"="+v]) {
+				if !written[name][path+"="+v] {
 					t.Errorf("every-part draws %s with no %s: %s", name, strings.TrimPrefix(path, "."), v)
 				}
 			}
@@ -319,7 +316,7 @@ func readOccurrences(v any, parts map[string]*part, written map[string]map[strin
 }
 
 // valuesIn returns each string written in v, the data of a part at path, as path=value, path the keys it
-// is written at from the part's (rows.cells.mark), but in the lists of the parts it holds.
+// is written at from the part's (steps' state, a.b for b in an object a), but in the lists of the parts it holds.
 func valuesIn(v any, path string) map[string]bool {
 	found := map[string]bool{}
 	switch v := v.(type) {

@@ -13,7 +13,7 @@ sections:
           rows: [[Pages, '1,840', done], [Links, '120', open]]
       - code: { file: a.conf, lang: ini, text: "read_only = true\n" }
       - terminal: { shell: zsh, steps: [{ run: wiki export, out: done }] }
-      - cards: [{ title: One, text: First. }, { title: Two, text: Second. }]
+      - options: [{ title: One, text: First. }, { title: Two, text: Second. }]
       - tabs:
           - title: One
             parts:

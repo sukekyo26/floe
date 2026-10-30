@@ -112,10 +112,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 A part draws an item of the data: `floe part list` lists them, and `floe part show <name>` prints what one takes. The schema names it with `$ref`, under `properties` or `items`:
 
 ```json
-"risks": { "$ref": "floe:///parts/risks.json", "description": "What may go wrong" }
+"findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }
 ```
 
-`page.html` puts the item where it goes, `{{.Data.risks}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML.
+`page.html` puts the item where it goes, `{{.Data.findings}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML.
 
 The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
 
@@ -138,7 +138,7 @@ The last draws the part only when it is a note. Test the item before its kind, a
 
 ### Looks to borrow
 
-`<section data-floe-look="panel">` draws an element of the template as a panel, the box most parts are drawn in, in every theme; `rows`, `cards` or `table` borrow those looks, and `band` draws a band filled with the accent, its text, links, code and focus ring in the colour on a fill, as design's conclusion and handoff's head are, and `numbered` on an `<ol>` numbers its items in rings joined by a line, as runbook's steps are. [parts.md](parts.md#borrowing-a-look) tells the rules.
+`<section data-floe-look="panel">` draws an element of the template as a panel, the box most parts are drawn in, in every theme; `rows`, `cards` or `table` borrow those looks (`cards` lays out its children of `class="card"`, each a panel by `data-floe-look="panel"`, and numbers them by their place when it has `class="numbered"`, as options does), and `band` draws a band filled with the accent, its text, links, code and focus ring in the colour on a fill, as design's conclusion and handoff's head are, and `numbered` on an `<ol>` numbers its items in rings joined by a line, as runbook's steps are. [parts.md](parts.md#borrowing-a-look) tells the rules.
 
 ## The palette
 

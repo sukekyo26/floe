@@ -44,7 +44,7 @@ sections:
             banner = "This wiki has moved to the new host."
   - heading: Who does what
     parts:
-      - cards:
+      - options:
           - title: Copy
             text: Copies the pages on **Saturday** and keeps a list of what failed.
           - title: Links

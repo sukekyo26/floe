@@ -88,7 +88,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="bars"], [data-floe-part="checklist"], [data-floe-part="compare"], [data-floe-part="details"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="glossary"], [data-floe-part="keys"], [data-floe-part="matrix"], [data-floe-part="progress"], [data-floe-part="risks"], [data-floe-part="steps"], [data-floe-part="table"], [data-floe-part="timeline"], [data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="bars"], [data-floe-part="checklist"], [data-floe-part="compare"], [data-floe-part="details"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="keys"], [data-floe-part="progress"], [data-floe-part="steps"], [data-floe-part="table"], [data-floe-part="timeline"], [data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
 :scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
 }
@@ -123,24 +123,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="cards"], [data-floe-part="decision"], [data-floe-part="facts"], [data-floe-part="links"], [data-floe-part="options"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
-/* Each card is numbered by its place, as the steps of a plan are */
-:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
-.card {
-  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
-}
-:scope.numbered > .card::before {
-  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
-  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
-}
-.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
-.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
-}
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
 /* A pill: a short status in the colour of its tone */
 :scope {
@@ -156,7 +138,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="checklist"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="glossary"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="checklist"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
 /* Rows in a panel, a rule between each and the next */
 :scope > * + * { border-top: 1px solid var(--line); }
 }
@@ -242,7 +224,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="compare"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="matrix"], [data-floe-part="risks"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="compare"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
 /* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns */
 :scope {
   overflow-x: auto;
@@ -275,6 +257,24 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* Underlined, in the head's own colour, which a theme may fill */
 :scope thead th.after { text-decoration: underline 2px; text-underline-offset: 0.3em; }
 :scope tr.same td { color: var(--muted); font-weight: 400; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="decision"], [data-floe-part="facts"], [data-floe-part="links"], [data-floe-part="options"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+/* Each card is numbered by its place, as the steps of a plan are */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
+.card {
+  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+}
+:scope.numbered > .card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
+}
+.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
 }
 }
 </style>
@@ -480,21 +480,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="glossary"]) to (:scope [data-floe-part] > *) {
-/* A word at the left of what it means, the meaning under it on a narrow screen */
-:scope { margin: 0; display: grid; }
-:scope > div { display: grid; grid-template-columns: minmax(8rem, 14rem) minmax(0, 1fr); gap: 0.2rem 1.5rem; padding: 0.75rem 1.2rem; }
-:scope dt { font-weight: 700; }
-:scope dd { margin: 0; display: grid; gap: 0.4rem; color: var(--muted); }
-:scope dd > * { margin: 0; }
-@media (max-width: 36rem) {
-  :scope > div { grid-template-columns: minmax(0, 1fr); }
-}
-}
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
 /* Keycaps at the left of what they do, over it on a narrow screen */
 :scope { margin: 0; display: grid; }
@@ -540,32 +525,15 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="matrix"]) to (:scope [data-floe-part] > *) {
-/* In the table's look; a cell's mark is drawn by the style, its word kept for a screen reader */
-:scope :is(th, td):not(:first-child) { min-width: 5em; text-align: center; }
-:scope td.what { font-weight: 600; }
-:scope .mark { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; font-weight: 800; line-height: 1; vertical-align: middle; }
-:scope .mark > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-:scope .yes .mark { background: var(--good-soft); color: var(--good); }
-:scope .part .mark { background: var(--warn-soft); color: var(--warn); }
-:scope .no .mark { background: var(--bad-soft); color: var(--bad); }
-:scope .yes .mark::before { content: "✓"; content: "✓" / ""; }
-:scope .part .mark::before { content: "△"; content: "△" / ""; font-size: 0.8em; }
-:scope .no .mark::before { content: "×"; content: "×" / ""; }
-:scope small { display: block; font-size: 0.75rem; color: var(--muted); }
-}
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
 /* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
 .option.pick { outline: 2px solid var(--accent); outline-offset: -1px; }
 .option h3 > span { margin-left: 0.4rem; vertical-align: 0.1em; }
-.option ul { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
+/* The pros and cons alone, not a list in the text */
+.option .points { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
 /* The mark hangs at the left, so that a line of text and code flows as one */
-.option li { position: relative; padding-left: 1.45rem; }
-.option li::before { position: absolute; left: 0.1rem; font-weight: 800; }
+.option .points > li { position: relative; padding-left: 1.45rem; }
+.option .points > li::before { position: absolute; left: 0.1rem; font-weight: 800; }
 .option li.pro { color: var(--fg); }
 .option li.pro::before { content: "+"; color: var(--good); }
 .option li.con::before { content: "−"; color: var(--bad); }
@@ -595,26 +563,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 .bar progress::-webkit-progress-bar { background: none; }
 .bar progress::-webkit-progress-value { background: currentColor; border-radius: 999px; }
 .bar progress::-moz-progress-bar { background: currentColor; border-radius: 999px; }
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="risks"]) to (:scope [data-floe-part] > *) {
-/* In the table's look; a level is three bars filled one, two or all, in the colour of the risk */
-:scope td.what { font-weight: 600; }
-:scope td:is(.low, .mid, .high) { min-width: 6.5em; white-space: nowrap; }
-:scope .level { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
-:scope .level::before {
-  content: ""; width: 2.4rem; height: 0.5rem; border-radius: 2px; color: var(--good);
-  background: linear-gradient(currentColor, currentColor) left / 30% 100% no-repeat,
-    color-mix(in srgb, var(--line) 70%, var(--surface));
-  mask: repeating-linear-gradient(to right, #000 0 30%, transparent 30% 35%);
-}
-:scope .mid .level::before { background-size: 65% 100%, auto; }
-:scope .high .level::before { background-size: 100% 100%, auto; }
-:scope tr.warn .level::before { color: var(--warn); }
-:scope tr.bad .level::before { color: var(--bad); }
 }
 }
 </style>
@@ -768,7 +716,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="bars"], [data-floe-part="checklist"], [data-floe-part="compare"], [data-floe-part="details"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="glossary"], [data-floe-part="keys"], [data-floe-part="matrix"], [data-floe-part="progress"], [data-floe-part="risks"], [data-floe-part="steps"], [data-floe-part="table"], [data-floe-part="timeline"], [data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="bars"], [data-floe-part="checklist"], [data-floe-part="compare"], [data-floe-part="details"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="keys"], [data-floe-part="progress"], [data-floe-part="steps"], [data-floe-part="table"], [data-floe-part="timeline"], [data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
 }
 }
@@ -789,19 +737,6 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="cards"], [data-floe-part="decision"], [data-floe-part="facts"], [data-floe-part="links"], [data-floe-part="options"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border-radius: 20px; padding: 0.75rem; gap: 0.75rem; }
-/* A tile of the surface on the panel of the cards */
-.card { background: var(--surface); border-radius: 14px; }
-:scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
-  font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
-}
-}
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
 :scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
 :scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
@@ -810,7 +745,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="checklist"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="glossary"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="checklist"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
 :scope { padding: 6px; }
 :scope > * { background: var(--surface); }
 :scope > :first-child { border-radius: 14px 14px 0 0; }
@@ -831,7 +766,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="compare"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="matrix"], [data-floe-part="risks"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="compare"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
 :scope { padding: 6px; }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope thead th { background: none; padding-block: 0.6rem 0.5rem; }
@@ -841,6 +776,19 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope tbody tr:first-child td:last-child { border-top-right-radius: 14px; }
 :scope tbody tr:last-child td:first-child { border-bottom-left-radius: 14px; }
 :scope tbody tr:last-child td:last-child { border-bottom-right-radius: 14px; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="decision"], [data-floe-part="facts"], [data-floe-part="links"], [data-floe-part="options"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border-radius: 20px; padding: 0.75rem; gap: 0.75rem; }
+/* A tile of the surface on the panel of the cards */
+.card { background: var(--surface); border-radius: 14px; }
+:scope.numbered > .card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
+}
 }
 }
 </style>
@@ -1391,17 +1339,6 @@ banner = &#34;This wiki has moved to the new host.&#34;
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 </section>
 <section>
-<h2 id="who-does-what">Who does what</h2>
-<div class="numbered" data-floe-part="cards">
-<div class="card" data-floe-look="panel"><h3 id="copy">Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>
-</div>
-<div class="card" data-floe-look="panel"><h3 id="links">Links</h3><p>Runs the link check and fixes what it finds.</p>
-</div>
-<div class="card" data-floe-look="panel"><h3 id="bookmarks">Bookmarks</h3><p>Sends the new address to the team on Monday morning.</p>
-</div>
-</div>
-</section>
-<section>
 <h2 id="risks">Risks</h2>
 <div data-floe-part="table"><table>
 <thead><tr><th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col" class="num">Pages</th><th scope="col">What we do (<a href="https://example.com/linkcheck">a check</a>, <code>linkcheck</code>)</th><th scope="col">State</th></tr></thead>
@@ -1475,26 +1412,16 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <h2 id="choices">Choices</h2>
 <div class="numbered" data-floe-part="options">
 <div class="card option pick" data-floe-look="panel"><h3 id="copy-in-one-go">Copy in one go <span data-floe-part="cell">Recommended</span></h3><p>Two days of read-only.</p>
-<ul><li class="pro">Simple</li><li class="con">Longer freeze</li></ul></div>
-<div class="card option" data-floe-look="panel"><h3 id="copy-by-space">Copy by space</h3><ul><li class="pro">Short freezes</li><li class="con">Links break between spaces</li><li class="con">Twice the work</li></ul></div>
+<ul class="points"><li class="pro">Simple</li><li class="con">Longer freeze</li></ul></div>
+<div class="card option" data-floe-look="panel"><h3 id="copy-by-space">Copy by space</h3><p>Each space is copied apart:</p>
+<ul>
+<li>Docs first</li>
+<li>Then the rest</li>
+</ul>
+<ul class="points"><li class="pro">Short freezes</li><li class="con">Links break between spaces</li><li class="con">Twice the work</li></ul></div>
 </div>
 <div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span class="good" data-floe-part="cell">decided</span><span>2030-03-28</span></p><h3 id="the-wiki-moves-to-the-new-host">The wiki moves to the new host</h3><p>The old server is out of support in <strong>May</strong>.</p>
 <p class="set-aside">Set aside</p><ul><li>Stay on the old server</li><li>Move to a hosted wiki</li></ul></div></div>
-<div data-floe-part="risks"><table>
-<thead><tr><th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col">Impact</th><th scope="col">What we do</th></tr></thead>
-<tbody>
-<tr class="bad"><td class="what">Broken links</td><td class="high"><span class="level">High</span></td><td class="mid"><span class="level">Medium</span></td><td>A link check after the copy</td></tr>
-<tr class="warn"><td class="what">Lost attachments</td><td class="low"><span class="level">Low</span></td><td class="high"><span class="level">High</span></td><td></td></tr>
-<tr class="good"><td class="what">Slow search</td><td class="mid"><span class="level">Medium</span></td><td class="low"><span class="level">Low</span></td><td></td></tr>
-</tbody>
-</table></div>
-<div data-floe-part="matrix"><table>
-<thead><tr><th></th><th scope="col">Old wiki</th><th scope="col">New host</th></tr></thead>
-<tbody>
-<tr><td class="what">Search</td><td class="yes"><span class="mark"><span>Yes</span></span></td><td class="part"><span class="mark"><span>Partly</span></span><small>rebuilt Sunday</small></td></tr>
-<tr><td class="what">Single sign-on</td><td class="no"><span class="mark"><span>No</span></span></td><td class="yes"><span class="mark"><span>Yes</span></span></td></tr>
-</tbody>
-</table></div>
 </section>
 <section>
 <h2 id="reference">Reference</h2>
@@ -1509,12 +1436,6 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <tr><td class="name"><code>port</code><span class="type">number</span></td><td><span class="default">Default: <code>8080</code></span></td></tr>
 </tbody>
 </table></div>
-<dl data-floe-part="glossary">
-<div><dt>Freeze</dt><dd><p>The days when the old wiki is <strong>read-only</strong>.</p>
-</dd></div>
-<div><dt>Host</dt><dd><p>Where the wiki runs.</p>
-</dd></div>
-</dl>
 <dl data-floe-part="entries">
 <div><dt><code>export</code></dt><dd class="tags"><span>Runs nightly</span><span><code>wiki.conf</code></span><span><span data-floe-part="cell">on track</span></span><span><span class="good" data-floe-part="cell">done</span></span></dd><dd class="text"><p>Writes every page as Markdown, with its history, into <code>pages/</code>.</p>
 <ul>

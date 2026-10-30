@@ -16,7 +16,7 @@ import (
 // parts that place it (those whose boxes hold its box), which adjust it; then the theme's: its base.css, and
 // its style of each of those parts in the same order. Within the layer the more specific rule wins, else the
 // later.
-// An element that takes a look without being a part's box (a card of cards) has it a layer under the
+// An element that takes a look without being a part's box (a card of options) has it a layer under the
 // template's and the parts', floe.looks: the part it is in, or the template it is the template's own of,
 // adjusts it whatever the selectors, as a part does the looks it takes, where the nearer scope would win
 // otherwise.

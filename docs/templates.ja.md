@@ -112,10 +112,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 部品はデータの項目を描きます。`floe part list` が並べ、`floe part show <名前>` が取るものを出します。schema は `properties` か `items` の下で、`$ref` で名指します。
 
 ```json
-"risks": { "$ref": "floe:///parts/risks.json", "description": "What may go wrong" }
+"findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }
 ```
 
-`page.html` は項目を置きたい所に置きます（`{{.Data.risks}}`）。floe は部品の schema と checks で確かめ（誤りはデータファイルの行と列で言う）、HTML で描きます。
+`page.html` は項目を置きたい所に置きます（`{{.Data.findings}}`）。floe は部品の schema と checks で確かめ（誤りはデータファイルの行と列で言う）、HTML で描きます。
 
 部品 `text` は、ほかの部品と並び、横に `code`・`terminal` を置ける所の Markdown です。floe は中の囲んだコードのブロックを警告し、`code` に書くよう勧めます。code の部品を置かない、ただの Markdown の欄は、`{"type": "string", "format": "markdown"}` にします。
 
@@ -138,7 +138,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ### 借りられる見た目
 
-`<section data-floe-look="panel">` は、テンプレートの要素を、どのテーマでもパネル（ほとんどの部品を描く箱）で描きます。`rows`・`cards`・`table` なら、その見た目を借ります。`band` は、design の結論や handoff の頭のような、アクセントの色で塗った帯で、中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。`<ol>` に `numbered` を付けると、項目に丸い番号を付けて線でつなぎます（runbook の手順のように）。決まりは [parts.ja.md](parts.ja.md#見た目を借りる) にあります。
+`<section data-floe-look="panel">` は、テンプレートの要素を、どのテーマでもパネル（ほとんどの部品を描く箱）で描きます。`rows`・`cards`・`table` なら、その見た目を借ります（`cards` は `class="card"` の子を横に並べ、子はそれぞれ `data-floe-look="panel"` でパネルにします。`class="numbered"` を付けると、場所の番号を付けます。options と同じです）。`band` は、design の結論や handoff の頭のような、アクセントの色で塗った帯で、中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。`<ol>` に `numbered` を付けると、項目に丸い番号を付けて線でつなぎます（runbook の手順のように）。決まりは [parts.ja.md](parts.ja.md#見た目を借りる) にあります。
 
 ## パレット
 
