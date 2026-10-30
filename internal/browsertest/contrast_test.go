@@ -109,15 +109,18 @@ const measureContrast = `(() => {` + colours + `
 // in turn, and takes the outline that the
 // focus changes, on the element or around it. Under it is the ground of the element on top at 12 points along the
 // middle of its line (a quarter, a half and three quarters of each side), the colour of that element's border where
-// the point is on one; a point that a box around clips (at its padding box, as overflow clips) is left out, and one
-// off the screen too. It returns one line for each ring below 3:1, as WCAG asks of what is not text, at more than half
-// of its points: a ring that crosses what lies beside it (the frame of a line's code next to a link) is still seen on
-// the rest; one for each ring that boxes around clip at more than half of its points; and one for each element whose
+// the point is on one; a point off the screen is left out, and one that a box around clips (at its padding box, as
+// overflow clips; a box of its own, not an inline element's or one inside an svg). It returns one line for each ring
+// below 3:1, as WCAG asks of what is not text, at more than half of its points on the screen: a ring that crosses what
+// lies beside it (the frame of a line's code next to a link) is still seen on the rest; one for each ring that boxes
+// around clip at more than half of its points on the screen, and each with none on it; and one for each element whose
 // focus draws no ring, on it or around it. The page's tab must have the focus (SetFocusEmulationEnabled) for a focus to
 // be :focus-visible.
 // LIMIT: a ring 2px wide over two grounds is measured on the one under the middle of its line (the edge of the
 // border 3px wide under brutal's heading of code is not), and one low at fewer than half its points passes. The round
-// corners of a box clipping a ring are not seen, nor a scrollbar under a ring, which the test's Chrome hides.
+// corners of a box clipping a ring are not seen, nor a scrollbar under a ring, which the test's Chrome hides. A box
+// with overflow counts as clipping what is in it though it is not the containing block of one placed absolutely, and an
+// outline an element draws without the focus (washi's .card) counts as its ring.
 const measureRings = `(() => {` + colours + `
   const low = new Set();
   const outline = (e) => { const s = getComputedStyle(e); return s.outlineStyle + s.outlineWidth + s.outlineColor + s.outlineOffset; };
@@ -132,36 +135,44 @@ const measureRings = `(() => {` + colours + `
       : x < b.left + parseFloat(s.borderLeftWidth) ? 'Left' : x >= b.right - parseFloat(s.borderRightWidth) ? 'Right' : null;
     return side && s['border' + side + 'Style'] !== 'none' ? over(faded(s['border' + side + 'Color'], g.opacity), g.colour) : g.colour;
   };
+  // Whether r draws a ring that can be seen at all.
+  const draws = (r) => { const s = getComputedStyle(r); return s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0 && ground(r).opacity > 0; };
   const measure = (e, r) => {
     const s = getComputedStyle(r);
-    if (s.outlineStyle === 'none' || parseFloat(s.outlineWidth) === 0 || ground(r).opacity === 0) return;
     r.scrollIntoView({ block: 'center', inline: 'center' });
     const b = r.getBoundingClientRect(), d = parseFloat(s.outlineOffset) + parseFloat(s.outlineWidth) / 2;
     const clips = [];
     for (let a = r.parentElement; a && a !== document.documentElement; a = a.parentElement) {
       const t = getComputedStyle(a);
-      if (t.overflowX === 'visible' && t.overflowY === 'visible') continue;
+      // One with no box of its own (inline, inside an svg) clips nothing
+      if ((t.overflowX === 'visible' && t.overflowY === 'visible') || t.display === 'inline' || a.ownerSVGElement) continue;
       // overflow clips at the padding box, inside the border and the scrollbar
       const c = a.getBoundingClientRect(), left = c.left + a.clientLeft, top = c.top + a.clientTop;
       clips.push({ left, top, right: left + a.clientWidth, bottom: top + a.clientHeight });
     }
     const xs = [0.25, 0.5, 0.75].map((f) => b.left + f * b.width), ys = [0.25, 0.5, 0.75].map((f) => b.top + f * b.height);
     const read = [];
-    let clipped = 0;
+    let shown = 0, clipped = 0;
     for (const [x, y] of xs.flatMap((x) => [[x, b.top - d], [x, b.bottom + d]]).concat(ys.flatMap((y) => [[b.left - d, y], [b.right + d, y]]))) {
       if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+      shown++;
       if (clips.some((c) => x < c.left || x >= c.right || y < c.top || y >= c.bottom)) { clipped++; continue; }
       const bg = under(x, y), ring = over(faded(s.outlineColor, 1), bg);
       read.push({ bg, ring, q: ratio(ring, bg) });
     }
-    if (clipped * 2 > 12) {
-      low.add(name(e) + (r === e ? '' : ' (its ring on ' + name(r) + ')') + ': ring clipped at ' + clipped + ' of 12 points');
+    const which = name(e) + (r === e ? '' : ' (its ring on ' + name(r) + ')');
+    if (shown === 0) {
+      low.add(which + ': ring off the screen at every point');
+      return;
+    }
+    if (clipped * 2 > shown) {
+      low.add(which + ': ring clipped at ' + clipped + ' of ' + shown + ' points');
       return;
     }
     const lows = read.filter((p) => p.q < 3).sort((p, q) => p.q - q.q);
     if (lows.length * 2 > read.length) {
       const p = lows[0];
-      low.add(name(e) + (r === e ? '' : ' (its ring on ' + name(r) + ')') + ': ring ' + hex(p.ring) + ' on ' + hex(p.bg) + ' ' + p.q.toFixed(2) + ', ' + lows.length + ' of ' + read.length + ' points');
+      low.add(which + ': ring ' + hex(p.ring) + ' on ' + hex(p.bg) + ' ' + p.q.toFixed(2) + ', ' + lows.length + ' of ' + read.length + ' points');
     }
   };
   eachTab(() => {
@@ -172,7 +183,7 @@ const measureRings = `(() => {` + colours + `
       for (let r = e; r && r !== document.documentElement; r = r.parentElement) before.push([r, outline(r)]);
       e.focus({ preventScroll: true });
       if (document.activeElement !== e) continue;
-      const rings = before.filter(([r, was]) => (r === e && getComputedStyle(r).outlineStyle !== 'none') || (r !== e && outline(r) !== was));
+      const rings = before.filter(([r, was]) => (r === e || outline(r) !== was) && draws(r));
       if (rings.length === 0) low.add(name(e) + ': no ring');
       for (const [r] of rings) measure(e, r);
       e.blur();
@@ -181,8 +192,9 @@ const measureRings = `(() => {` + colours + `
   return [...low].join('\n');
 })()`
 
-// TestRings measures rings that measureRings tells of: one that the box it is in clips at its padding box, its
-// border around, and a focus that draws no ring.
+// TestRings measures rings as measureRings does: one that the box it is in clips at its padding box, its border
+// around; a focus that draws no ring, or one of no width; one whose points off the screen are not counted as clipped;
+// one clipped at no more than half its points, measured on the rest; and one with every point off the screen.
 func TestRings(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -192,7 +204,9 @@ func TestRings(t *testing.T) { //nolint:paralleltest // the browser tests share 
 	s.floe(t, "publish", s.write(t, "rings.yaml", "lang: en\ntemplate: report\ntitle: Rings\nsections: []\n"), "--slug", "rings")
 	b.navigate("/a/rings/?raw")
 	b.until("the page", "!!document.querySelector('h1')")
-	// The middle of the clipped ring's line, 1px off the button, lies on its box's border, 4px wide.
+	// The middle of the clipped ring's line, 1px off the button, lies on its box's border, 4px wide. The tall one's points
+	// are off the screen but one, which its box clips; the wide one's box clips half its points, its sides; the huge one's
+	// are all off the screen. The link's span, inline, has no box to clip it.
 	b.eval(`(() => {
 	  const box = document.createElement('div');
 	  Object.assign(box.style, { overflow: 'hidden', border: '4px solid black', width: '200px', margin: '40px' });
@@ -203,10 +217,37 @@ func TestRings(t *testing.T) { //nolint:paralleltest // the browser tests share 
 	  const ringless = document.createElement('button');
 	  ringless.className = 'ringless';
 	  ringless.style.outline = 'none';
-	  document.body.append(box, ringless);
+	  const thin = document.createElement('button');
+	  thin.className = 'thin';
+	  thin.style.outline = 'solid 0';
+	  const narrow = document.createElement('div');
+	  Object.assign(narrow.style, { overflow: 'hidden', width: '200px' });
+	  const tall = document.createElement('button');
+	  tall.className = 'tall';
+	  Object.assign(tall.style, { display: 'block', width: '100%', height: 3 * innerHeight + 'px', outline: '2px solid black', outlineOffset: '1px' });
+	  narrow.append(tall);
+	  const half = document.createElement('div');
+	  Object.assign(half.style, { overflow: 'hidden', width: '200px', padding: '8px 0' });
+	  const wide = document.createElement('button');
+	  wide.className = 'wide';
+	  Object.assign(wide.style, { display: 'block', width: '300px', outline: '2px solid #f4f4f4', outlineOffset: '1px' });
+	  half.append(wide);
+	  const huge = document.createElement('button');
+	  huge.className = 'huge';
+	  Object.assign(huge.style, { display: 'block', width: 3 * innerWidth + 'px', height: 3 * innerHeight + 'px', outline: '2px solid black' });
+	  const span = document.createElement('span');
+	  span.style.overflow = 'hidden';
+	  const link = document.createElement('a');
+	  link.className = 'inline';
+	  link.href = '#';
+	  link.textContent = 'inline';
+	  span.append(link);
+	  document.body.append(box, ringless, thin, narrow, half, huge, span);
 	  return '';
 	})()`)
-	if got, want := b.eval(measureRings), "button.clipped: ring clipped at 12 of 12 points\nbutton.ringless: no ring"; got != want {
+	if got, want := b.eval(measureRings), "button.clipped: ring clipped at 12 of 12 points\nbutton.ringless: no ring\nbutton.thin: no ring\n"+
+		"button.tall: ring clipped at 1 of 1 points\n"+
+		"button.wide: ring #f4f4f4 on #f4f3f0 1.01, 6 of 6 points\nbutton.huge: ring off the screen at every point"; got != want {
 		t.Errorf("measured %q, want %q", got, want)
 	}
 }

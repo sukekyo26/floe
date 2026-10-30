@@ -193,9 +193,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* A scrolling block's ring on the part's root, inside its edge: the root, round, clips what lies outside the block, and
    the root's own ring lies over the block, its edges and its scrollbar, round at the root's corners. A copy button lies
    inside the root by --floe-copy-gap, clear of it.
-   LIMIT: text faded by opacity (a heading, a terminal's output, a diff's lines outside a hunk) draws over the ring where
-   it scrolls under its 2px, as Chrome paints such a child after its parent's outline; fade it by its colour if that
-   comes to hide the ring. */
+   LIMIT: what is faded by opacity (a terminal's heading, along the root's top edge; a heading's file name, a terminal's
+   output and a diff's lines outside a hunk, where they scroll under its edges) draws over the ring, as Chrome paints
+   such a child after its parent's outline: the ring shows through their faint ground, their text over it. Fade them by
+   their colour if that comes to hide the ring. */
 :scope > pre:focus-visible { outline: none; }
 :scope:has(> pre:focus-visible) { outline: 2px solid var(--on-face); outline-offset: -2px; }
 }
