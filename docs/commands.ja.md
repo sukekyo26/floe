@@ -206,7 +206,7 @@ floe と自分の部品・見た目・共有の schema を 1 行ずつ、タブ�
 
 ## `floe serve`
 
-サーバーを `127.0.0.1` で、SIGTERM か SIGINT まで前面で動かします。`floe publish`・`floe rebuild`・`floe list`・`floe rm`・`floe archive` は同じサーバーを裏で起こすので、これは主にサーバーの誤りを見るためのものです。裏のサーバーが起きなければ、`the server did not start; run "floe serve" to see the error` と言います。
+サーバーを `127.0.0.1` で、SIGTERM・SIGINT か `floe stop` まで前面で動かします。途中の要求を終えてから（長くて 10 秒）止まり、2 回目のシグナルではすぐ終わります。`floe publish`・`floe rebuild`・`floe list`・`floe rm`・`floe archive` は同じサーバーを裏で起こすので、これは主にサーバーの誤りを見るためのものです。裏のサーバーが起きなければ、`the server did not start; run "floe serve" to see the error` と言います。
 
 ## `floe stop`
 

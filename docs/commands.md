@@ -206,7 +206,7 @@ Archive the pages in order through the server (it is started when it is not runn
 
 ## `floe serve`
 
-Run the server in the foreground on `127.0.0.1` until SIGTERM or SIGINT. `floe publish`, `floe rebuild`, `floe list`, `floe rm` and `floe archive` start the same server in the background, so this is mainly for seeing its errors. A background server that does not start is told as `the server did not start; run "floe serve" to see the error`.
+Run the server in the foreground on `127.0.0.1` until SIGTERM, SIGINT or `floe stop`; it stops once the requests under way are done (10 seconds at most), and a second signal ends it at once. `floe publish`, `floe rebuild`, `floe list`, `floe rm` and `floe archive` start the same server in the background, so this is mainly for seeing its errors. A background server that does not start is told as `the server did not start; run "floe serve" to see the error`.
 
 ## `floe stop`
 
