@@ -151,6 +151,16 @@ func TestHTMLItemsInOrder(t *testing.T) {
 		{"<table><tbody>{{.Data.h}}{{.Data.g}}</tbody></table>", "h: <b>x\ng: <tr><td>ok</td></tr>\n", changes("3:4", "<b>")},
 		{"<table><tbody>{{.Data.h}}{{.Data.h}}</tbody></table>", "h: <textarea>x\ng: ok\n", changes("3:4", "<textarea>")},
 		{"<table><tbody>{{.Data.h}}</tbody></table><div>{{.Data.h}}</div>", "h: <b>x\ng: ok\n", changes("3:4", "<b>")},
+		// What the page read in place is told as read: an item drawn twice, its copies each in place; an item that changed
+		// the page before what another item moved; one page.html puts in a text.
+		{"<svg>{{.Data.h}}</svg><div>{{.Data.h}}</div>", "h: <b>x\ng: ok\n", changes("3:4", "<b> </svg>")},
+		{"<div>{{.Data.h}}</div><table><tbody>{{.Data.g}}</tbody></table>", "h: </div>x\ng: <b>y\n", changes("3:4", "</div>")},
+		{
+			"<textarea>{{.Data.h}}</textarea><table><tbody>{{.Data.g}}</tbody></table>", "h: ok\ng: <b>y\n",
+			"d.yaml:2:11: page.html, or the part.html of a part holding it, puts the item h of format html in a text or an " +
+				"attribute of <textarea>, where HTML does not work: put it, or the part holding it, where elements go, or give " +
+				"the item another format",
+		},
 	} {
 		k = ownKit(t, nil, mine(htmlPage(tt.page), htmlSchema, nil))
 		if got := drawn(t, k, "lang: en\ntemplate: mine\n"+tt.data, none); got != tt.want {
