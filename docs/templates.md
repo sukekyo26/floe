@@ -53,7 +53,7 @@ A file of another name is refused. `example.yaml` names the template of its dire
 
 ## page.html
 
-`page.html` is a Go [html/template](https://pkg.go.dev/html/template), which escapes what it inserts. `floe template new` writes this one, the smallest floe takes with a viewport `<meta>`: without the viewport, a phone draws a page opened by itself 980px wide and shrinks it. Its charset floe gives.
+`page.html` is a Go [html/template](https://pkg.go.dev/html/template), which escapes what it inserts. `floe template new` writes this one, the smallest floe takes with a viewport `<meta>`: without the viewport, a phone draws a page opened by itself 980px wide and shrinks it. floe adds the charset when it draws the page; do not write one.
 
 ```html
 <!doctype html>

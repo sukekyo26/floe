@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// floe part new and template new write the smallest part and template that part check and template check take,
+// floe part new and template new write a part and a template to fill in, which part check and template check take,
 // of any name floe takes, YAML's null, true and 017 too, and one as long as a file's name may be; once there, a name is refused and nothing changes.
 func TestNew(t *testing.T) {
 	t.Parallel()

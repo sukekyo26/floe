@@ -53,7 +53,7 @@ memo/
 
 ## page.html
 
-`page.html` は Go の [html/template](https://pkg.go.dev/html/template) で、入れるものをエスケープします。`floe template new` は次のものを書きます。floe が受ける最小のものに viewport の `<meta>` を足したもので、viewport が無いと、スマホは直に開いたページを 980px の幅で描いて縮めます。charset は floe が補います。
+`page.html` は Go の [html/template](https://pkg.go.dev/html/template) で、入れるものをエスケープします。`floe template new` は次のものを書きます。floe が受ける最小のものに viewport の `<meta>` を足したもので、viewport が無いと、スマホは直に開いたページを 980px の幅で描いて縮めます。charset は floe がページを描くときに足すので、書かないでください。
 
 ```html
 <!doctype html>
