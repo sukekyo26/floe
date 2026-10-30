@@ -5,8 +5,8 @@
   --good: #2c7730; --good-soft: #def0df; --warn: #995b00; --warn-soft: #fbebd0; --bad: #c22727; --bad-soft: #fbe0e0;
   --font: "Hiragino Maru Gothic ProN", "Zen Maru Gothic", "BIZ UDPGothic", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
   --code-bg: #2e2c27; --code-fg: #f4f0e4; --code-prompt: #f6e27a;
-  /* The rules of its paper, in the pen, in chalk on the blackboard: mixed with white, not seen through, as the
-     yellow of the ground would turn them grey-green */
+  /* The rules of its paper, in the pen: mixed with white, not seen through, as the yellow of the ground would turn
+     them grey-green */
   --nb-rule: color-mix(in srgb, var(--accent) 18%, white);
   --page-bg: repeating-linear-gradient(transparent 0 29px, var(--nb-rule) 29px 30px), var(--bg);
   --rule: 2px dashed var(--muted);
