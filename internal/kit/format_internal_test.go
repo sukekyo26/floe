@@ -44,15 +44,18 @@ func TestFormat(t *testing.T) {
 		}
 	}
 	for _, tt := range []struct{ src, want string }{
-		{`{{"12" | num}}`, "num takes a number, not 12 (string)"},
-		{`{{1 | num 0}}`, "write num, or num and a count of significant digits from 1 before the number"},
-		{`{{1 | num 1 2}}`, "write num, or num and a count of significant digits from 1 before the number"},
-		{`{{true | bytes}}`, "bytes takes a number, not true (bool)"},
+		{`{{"12" | num}}`, `num takes a number, not "12"`},
+		{`{{"" | num}}`, `num takes a number, not ""`},
+		{`{{num 1i}}`, "num takes a number, not (0+1i)"},
+		{`{{1 | num 0}}`, "write num, or num and a count of significant digits from 1 before the number, like num 3"},
+		{`{{1 | num 1 2}}`, "write num, or num and a count of significant digits from 1 before the number, like num 3"},
+		{`{{true | bytes}}`, "bytes takes a number, not true"},
 		{`{{num nil}}`, "num takes a number; none is written, or it is null"},
 		{`{{bytes nil}}`, "bytes takes a number; none is written, or it is null"},
 	} {
 		page := template.Must(template.New("t").Funcs(funcs).Parse(tt.src))
-		if err := page.Execute(&strings.Builder{}, nil); err == nil || !strings.Contains(err.Error(), tt.want) {
+		// The mistake ends the error, after html/template's words
+		if err := page.Execute(&strings.Builder{}, nil); err == nil || !strings.HasSuffix(err.Error(), tt.want) {
 			t.Errorf("%s = %v, want %s", tt.src, err, tt.want)
 		}
 	}
