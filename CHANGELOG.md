@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add a note the management page prints of a page's frame, in place of the
+  one screen of the page an iframe prints: it names the page alone, at its
+  URL, to open and print there.
 - Add printing every ground of a page as the screen draws it, the page's own
   too, so that a light text on a fill is not lost on white paper; and the CSS
   variables `--face` and `--on-face`, which a face filling itself with a colour
