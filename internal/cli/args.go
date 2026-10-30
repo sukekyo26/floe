@@ -26,6 +26,11 @@ func (a *app) print(format string, args ...any) {
 	_, _ = fmt.Fprintf(a.out, format+"\n", args...) //nolint:errcheck // Run tells what a write failed at
 }
 
+// write writes b to the command's output as it is.
+func (a *app) write(b []byte) {
+	_, _ = a.out.Write(b) //nolint:errcheck // Run tells what a write failed at
+}
+
 // getenv is the value of the environment variable key, "" when it is not set.
 func (a *app) getenv(key string) string {
 	if a.env.Getenv == nil {

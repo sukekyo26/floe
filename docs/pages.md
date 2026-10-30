@@ -62,7 +62,7 @@ The rest is the template's: `report` takes `eyebrow` (a short line above the tit
 
 ## Parts
 
-Each part is one key naming its kind. `floe part list` lists them with a line each, and `floe part show <name>` prints what one takes (its schema, as written). The parts `report` takes in a section:
+Each part is one key naming its kind. `floe part list` lists them with a line each, and `floe part show <name> schema.json` prints what one takes (its schema, as written). The parts `report` takes in a section:
 
 | Part | What it draws |
 |---|---|
@@ -117,7 +117,7 @@ A `diagram` part is a spec written in place: a canvas and the parts placed on it
 
 - `example: <kind>` in place of the rest draws a built-in example (`floe diagram example` lists them). The page shows the diagram, not its spec: to read or copy an example's spec, print it with `floe diagram example <kind>`.
 - Text (a `title`, a row, a label) is text, or its words in each language, English among them: `{ en: Store, ja: 保存先 }`. The page draws the words of its `lang:`, and the spec is laid out and checked once for every language it is written in.
-- Each part is one key naming its kind. `floe part show diagram` prints every key; `floe diagram example <kind>` prints a spec of each kind, its comments explaining its grid.
+- Each part is one key naming its kind. `floe part show diagram schema.json` prints every key; `floe diagram example <kind>` prints a spec of each kind, its comments explaining its grid.
 
 | Part | Keys |
 |---|---|
@@ -167,7 +167,7 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 ```
 
 - `file:line:column:` is where the mistake is: the value to change, or the key that holds it. Fix every mistake told, then run `floe check` again: it may tell those of the next stage.
-- A mistake of the shape (`additional properties 'x' not allowed`, `missing property 'x'`, `got string, want array`) is the template's or the part's schema refusing the data: `floe template show <template>` and `floe part show <part>` print what they take.
+- A mistake of the shape (`additional properties 'x' not allowed`, `missing property 'x'`, `got string, want array`) is the template's or the part's schema refusing the data: `floe template show <template> schema.json` and `floe part show <part> schema.json` print what they take.
 - A mistake of a part, theme or template of your own stops every page, whether it uses that one or not: the mistake is told at its own file (`~/.config/floe/parts/quote/schema.json:2:1: …`). `floe part check` and `floe template check` list them.
 - A mistake told once is not told again, even if many places name it.
 

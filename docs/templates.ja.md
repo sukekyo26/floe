@@ -9,7 +9,7 @@
 ```sh
 floe template new memo     # 埋めて使う最小のテンプレート memo を作る
 floe template check        # 自分のテンプレートを全部、example.yaml を描いて確かめる
-floe template show memo    # テーマ・schema・checks・見本を出す
+floe template show memo    # テーマと、読むファイルを全部出す（schema と見本が先）
 ```
 
 自分のテンプレート・部品・テーマに誤りが 1 つあると、そのテンプレートで描くかどうかによらず（`report` のページも）、直すまでどのページも止めます。`floe check`・`floe render` も、サーバーの publish とリンクしたページもです。`floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（[commands.ja.md](commands.ja.md#サーバー)）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。

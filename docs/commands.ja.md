@@ -11,13 +11,15 @@
 | `floe render <data.yaml>...` | 各データファイルのページを、リポジトリに置く HTML のファイルに書く |
 | `floe rebuild` | 保存したページを、今のテンプレート・部品・テーマで描き直す |
 | `floe template list` | テンプレートを並べる |
-| `floe template show <名前>` | テンプレートのテーマと、schema・checks・見本を書いたとおりに出す |
+| `floe template show <名前> [ファイル]` | テンプレートのテーマと、読むファイルを全部、書いたとおりに出す。ファイル名を足すとそれだけ |
 | `floe template new <名前>` | 埋めて使う最小の自分のテンプレートを作る |
 | `floe template check` | 自分のテンプレートを確かめる |
 | `floe part list` | 部品・見た目・共有の schema を並べる |
-| `floe part show <名前>` | 部品・見た目・共有の schema と、その schema と checks を書いたとおりに出す |
+| `floe part show <名前> [ファイル]` | 部品・見た目・共有の schema と、読むファイルを全部、書いたとおりに出す。ファイル名を足すとそれだけ |
 | `floe part new <名前>` | 埋めて使う最小の自分の部品を作る |
 | `floe part check` | 自分の部品・見た目・共有の schema・テーマを確かめる |
+| `floe theme list` | テーマを並べる |
+| `floe theme show <名前> [ファイル]` | テーマと、読むファイルを全部、書いたとおりに出す。ファイル名を足すとそれだけ |
 | `floe list` | ページを新しい順に並べる |
 | `floe rm <slug>...` | ページを消す |
 | `floe archive <slug>...` | ページを消さずに一覧から外す（`--undo` で戻す） |
@@ -133,7 +135,10 @@ floe と自分のテンプレートを 1 行ずつ、タブで区切った 3 列
 
 ## `floe template show <名前>`
 
-データファイルを書く前に読むテンプレートを出します。説明、場所、データファイルが選べるテーマ（`themes:`）と、書いたとおりの `schema.json`・`checks.yaml`、書き始めの `example.yaml` です。
+データファイルを書く前に読むテンプレートを出します。説明、場所、データファイルが選べるテーマ（`themes:`）、読むファイルの並び（`files:`）と、そのファイルを 1 つずつ `==> ファイル <==` の下に書いたとおりに。先にデータファイルが書けるもの（`schema.json`・`checks.yaml`・`computed.yaml`）と書き始めの `example.yaml`、後に `page.html`・`page.css`・`words.yaml` です。`assets/` の画像は出しません。
+
+- ファイル名を足すと（`floe template show report example.yaml`）、そのファイルだけを、先頭の BOM を除いて書いたとおりに出します。読まないファイルの名前は、読むファイルの並びを言って断ります。
+- 出力が長いときは、まず `files:` の行を見て、要るファイルを名前で読んでください。
 
 ## `floe template new <名前>`
 
@@ -157,7 +162,10 @@ floe と自分の部品・見た目・共有の schema を 1 行ずつ、タブ�
 
 ## `floe part show <名前>`
 
-部品・見た目・共有の schema を出します。説明、場所、借りる見た目と、データファイルが書けるものを言うファイルを書いたとおりに（部品なら `schema.json` と `checks.yaml`、共有の schema なら `<名前>.json`）。
+部品・見た目・共有の schema を出します。説明、場所、借りる見た目、読むファイルの並び（`files:`）と、そのファイルを 1 つずつ `==> ファイル <==` の下に書いたとおりに（部品なら `schema.json`・`checks.yaml`・`part.yaml`・`part.html`・`part.css`・`words.yaml`、見た目なら `part.yaml`・`part.css`、共有の schema なら `<名前>.json`）。借りる見た目の CSS は、その見た目のもので、`floe part show panel` が出します。
+
+- ファイル名を足すと（`floe part show code part.html`）、そのファイルだけを、先頭の BOM を除いて書いたとおりに出します。floe の部品の `part.html` で、`{{copyButton}}` などの関数の使い方が分かります。読まないファイルの名前は、読むファイルの並びを言って断ります。
+- 出力が長いときは、まず `files:` の行を見て、要るファイルを名前で読んでください。
 
 ## `floe part new <名前>`
 
@@ -170,6 +178,17 @@ floe と自分の部品・見た目・共有の schema を 1 行ずつ、タブ�
 `FLOE_PARTS_DIR` の部品・見た目・共有の schema と `FLOE_THEMES_DIR` のテーマを floe のものの上で読み、すべての誤りを出します（終了コード 1）。共有の schema は、どれかの schema が名指すかによらず、その根から確かめます。正しければ何も出しません（終了コード 0）。
 
 自分の部品・共有の schema・テーマ・テンプレートの誤りは、ページが使うかどうかによらず、`floe check`・`floe render`・`floe publish` も止めます。`floe part check` と `floe template check` で見てください。部品とテーマの中身は [parts.ja.md](parts.ja.md) にあります。
+
+## `floe theme list`
+
+テーマを、floe のものも自分のものも 1 行に 1 つずつ、`floe part list` と同じタブ区切りの 3 列で出します。名前、場所（`floe` か、自分のテーマのディレクトリ）と、空の説明（テーマは説明を持ちません）です。
+
+## `floe theme show <名前> [ファイル]`
+
+テーマを出します。名前、場所、読むファイルの並び（`files:`）と、そのファイルを 1 つずつ `==> ファイル <==` の下に書いたとおりに。`palette.css`・`base.css`、その後に部品か見た目ごとの CSS を名前の順で。
+
+- ファイル名を足すと（`floe theme show ink note.css`）、そのファイルだけを、先頭の BOM を除いて書いたとおりに出します。読まないファイルの名前は、読むファイルの並びを言って断ります。
+- 出力が長いときは、まず `files:` の行を見て、要るファイルを名前で読んでください。
 
 ---
 

@@ -293,6 +293,8 @@ func TestOwnStops(t *testing.T) {
 		{"template", "list"},
 		{"template", "show", "report"},
 		{"template", "new", "x"},
+		{"theme", "list"},
+		{"theme", "show", "ink"},
 	} {
 		if code, stdout, stderr := runEnv(dir, env, args...); code != 1 || stdout != "" || stderr != want {
 			t.Errorf("floe %v = %d, %q, %q; want 1, %q", args, code, stdout, stderr, want)

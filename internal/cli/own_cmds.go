@@ -33,18 +33,21 @@ is (floe, or its directory of your own) and its description, tab-separated.`,
 			return nil
 		},
 	}, &cobra.Command{
-		Use:   "show <name>",
-		Short: "Show a part, look or shared schema, and its schema and checks as written",
-		Long: `Show a part, a look or a shared schema: its description, where it is, the looks it takes, and the
-files that say what a data file may hold of it, as written (schema.json and checks.yaml of a part,
-<name>.json of a shared schema).`,
-		Args: cobra.ExactArgs(1),
+		Use:   "show <name> [file]",
+		Short: "Show a part, look or shared schema and every file it reads, or one of them",
+		Long: `Show a part, a look or a shared schema: its description, where it is, the looks it takes, the
+files it reads (files:), and each of them as written under ==> file <==: schema.json, checks.yaml,
+part.yaml, part.html, part.css and words.yaml of a part, part.yaml and part.css of a look, <name>.json
+of a shared schema. With a file named after, print that file alone, as written but the byte order
+mark at its start. When the output is long, read the files: line first, then the file you need:
+floe part show code part.html.`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			k, err := a.kit(false)
 			if err != nil {
 				return err
 			}
-			return a.show(k.Parts(), args[0], "cli_unknown_part", nil)
+			return a.show(k.Parts(), args, "cli_unknown_part", nil)
 		},
 	}, &cobra.Command{
 		Use:   "new <name>",
@@ -93,19 +96,22 @@ directory of your own) and its description, tab-separated. One of your own hides
 			return nil
 		},
 	}, &cobra.Command{
-		Use:   "show <name>",
-		Short: "Show a template: the themes, and its schema, checks and example as written",
-		Long: `Show a template: its description, where it is, the themes a data file may pick, and as written
-the files that say what a data file of it may hold (schema.json, checks.yaml) and its example.yaml
-to start one from.`,
-		Args: cobra.ExactArgs(1),
+		Use:   "show <name> [file]",
+		Short: "Show a template, the themes and every file it reads, or one of them",
+		Long: `Show a template: its description, where it is, the themes a data file may pick, the files it
+reads (files:), and each of them as written under ==> file <==: first what a data file of it may hold
+(schema.json, checks.yaml, computed.yaml) and its example.yaml to start one from, then page.html,
+page.css and words.yaml. With a file named after, print that file alone, as written but the byte
+order mark at its start. When the output is long, read the files: line first, then the file you
+need: floe template show report example.yaml.`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			k, err := a.kit(true)
 			if err != nil {
 				return err
 			}
 			_, _, themes, _ := k.Names()
-			return a.show(k.Templates(), args[0], "tmpl_unknown", themes)
+			return a.show(k.Templates(), args, "tmpl_unknown", themes)
 		},
 	}, &cobra.Command{
 		Use:   "new <name>",
@@ -128,6 +134,45 @@ mistake, and nothing is printed when they are right and have no warning.`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return a.checkTemplates()
+		},
+	})
+	return cmd
+}
+
+func (a *app) themeCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "theme",
+		Short: "List the themes and show one",
+		Args:  cobra.NoArgs,
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use:   "list",
+		Short: "List the themes (name, where, and an empty description; tab-separated)",
+		Long: `List the themes, floe's and your own, one per line, as floe part list does: its name, where it is
+(floe, or its directory of your own) and an empty description, as a theme has none, tab-separated.`,
+		Args: cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			k, err := a.kit(false)
+			if err != nil {
+				return err
+			}
+			a.list(k.Themes())
+			return nil
+		},
+	}, &cobra.Command{
+		Use:   "show <name> [file]",
+		Short: "Show a theme and every file it reads, or one of them",
+		Long: `Show a theme: its name, where it is, the files it reads (files:), and each of them as written
+under ==> file <==: palette.css, base.css, then the CSS of each part or look it gives. With a file
+named after, print that file alone, as written but the byte order mark at its start. When the output
+is long, read the files: line first, then the file you need: floe theme show ink note.css.`,
+		Args: cobra.RangeArgs(1, 2),
+		RunE: func(_ *cobra.Command, args []string) error {
+			k, err := a.kit(false)
+			if err != nil {
+				return err
+			}
+			return a.show(k.Themes(), args, "tmpl_unknown_theme", nil)
 		},
 	})
 	return cmd
@@ -164,19 +209,36 @@ func (a *app) list(entries []kit.Entry) {
 	}
 }
 
-// show prints the entry of entries named name, or refuses the name by unknown with the names there are; a
-// template's with the themes a data file may pick.
-func (a *app) show(entries []kit.Entry, name, unknown string, themes []string) error {
-	i := slices.IndexFunc(entries, func(e kit.Entry) bool { return e.Name == name })
+// show prints the entry of entries named args[0] and its files, or the file args[1] of it alone, as written but a
+// byte order mark at its start; or refuses the name by unknown with the names there are. A template's comes with
+// the themes a data file may pick.
+func (a *app) show(entries []kit.Entry, args []string, unknown string, themes []string) error {
+	i := slices.IndexFunc(entries, func(e kit.Entry) bool { return e.Name == args[0] })
 	if i < 0 {
 		names := make([]string, len(entries))
 		for i, e := range entries {
 			names[i] = e.Name
 		}
-		return usererr.New(unknown, name, strings.Join(names, ", "))
+		return usererr.New(unknown, args[0], strings.Join(names, ", "))
 	}
 	e := entries[i]
-	a.print("%s: %s", e.Name, e.About)
+	files := make([]string, len(e.Files))
+	for i, f := range e.Files {
+		files[i] = f.Name
+	}
+	if len(args) == 2 {
+		j := slices.Index(files, args[1])
+		if j < 0 {
+			return usererr.New("cli_unknown_file", e.Name, args[1], strings.Join(files, ", "))
+		}
+		a.write(e.Files[j].Text)
+		return nil
+	}
+	if e.About == "" {
+		a.print("%s", e.Name)
+	} else {
+		a.print("%s: %s", e.Name, e.About)
+	}
 	a.print("%s", english.Msg("cli_where", where(e)))
 	if len(e.Looks) > 0 {
 		a.print("%s", english.Msg("cli_looks", strings.Join(e.Looks, ", ")))
@@ -184,8 +246,11 @@ func (a *app) show(entries []kit.Entry, name, unknown string, themes []string) e
 	if themes != nil {
 		a.print("%s", english.Msg("cli_themes", strings.Join(themes, ", ")))
 	}
+	if len(files) > 0 {
+		a.print("%s", english.Msg("cli_files", strings.Join(files, ", ")))
+	}
 	for _, f := range e.Files {
-		a.print("%s:", f.Name)
+		a.print("==> %s <==", f.Name)
 		a.print("%s", strings.TrimSuffix(string(f.Text), "\n"))
 	}
 	return nil
