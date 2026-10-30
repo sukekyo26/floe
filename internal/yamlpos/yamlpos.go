@@ -206,7 +206,7 @@ func document(file string, src []byte) (ast.Node, error) {
 	}
 	// After the parser, which reads goccy/go-yaml's columns to tell the indentation.
 	if begins != nil {
-		place(src, tks, begins)
+		mend(src, tks, begins)
 	}
 	var body ast.Node
 	var head *Pos // a directive heads the document after it
@@ -310,10 +310,10 @@ func starts(src []byte, tks token.Tokens) []int {
 	return begins
 }
 
-// place writes over the line and column of each of tks at the byte of src it begins at.
+// mend writes over the line and column of each of tks at the byte of src it begins at.
 // LIMIT: a token the parser makes, copying a place (a null left out, the value of a tag), keeps goccy/go-yaml's
 // place; OfValue tells a null left out at its key, and floe refuses tags.
-func place(src []byte, tks token.Tokens, begins []int) {
+func mend(src []byte, tks token.Tokens, begins []int) {
 	for i, p := range textpos.Each(src, begins) {
 		tks[i].Position.Line, tks[i].Position.Column = p.Line, p.Column
 	}

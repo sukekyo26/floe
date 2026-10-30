@@ -364,9 +364,9 @@ func TestParsePlaces(t *testing.T) {
 	}
 	// goccy/go-yaml's own mistakes keep its places, which its words count too.
 	for src, want := range map[string]string{
-		"a: \"x\t\n\ty\"\n":        "a.yaml:2:1: tab character cannot be used for indentation in double-quoted text",
-		"a:\n\t- x\n":              "a.yaml:2:1: found character '\t' that cannot start any token",
-		"a: \"\\q\"\n":             "a.yaml:1:6: found unknown escape character 'q'",
+		"a: \"x\t\n\ty\"\n":       "a.yaml:2:1: tab character cannot be used for indentation in double-quoted text",
+		"a:\n\t- x\n":             "a.yaml:2:1: found character '\t' that cannot start any token",
+		"a: \"\\q\"\n":            "a.yaml:1:6: found unknown escape character 'q'",
 		"# c\r\na: 1\r\na: 2\r\n": `a.yaml:4:1: mapping key "a" already defined at [3:1]`,
 	} {
 		if _, err := yamlpos.Parse("a.yaml", []byte(src)); told(err) != want {

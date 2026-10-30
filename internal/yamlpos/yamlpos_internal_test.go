@@ -35,11 +35,12 @@ func TestStarts(t *testing.T) {
 func TestStartsFloe(t *testing.T) {
 	t.Parallel()
 
-	err := filepath.WalkDir("../kit/floe", func(path string, d fs.DirEntry, err error) error {
+	floe := os.DirFS("../kit/floe")
+	err := fs.WalkDir(floe, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || filepath.Ext(path) != ".yaml" {
 			return err
 		}
-		src, err := os.ReadFile(path)
+		src, err := fs.ReadFile(floe, path)
 		if err != nil {
 			return err
 		}
