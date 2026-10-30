@@ -221,3 +221,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   from sending what it holds out, on the server and in a page `floe render`
   writes or a download gives. Such a page holds one charset, floe's, first in
   its head, in place of those `page.html` writes.
+- Add a folder as a link (`floe publish --link <folder>`, or “Add a folder” on
+  the management page): one row of a new Folders tab, which opens a tree of the
+  folder's directories and HTML files, reading only what is opened, and frames
+  each page under the folder's title with the pages of its directory to pick
+  from. Names starting with a dot are left out; one directory shows its first
+  1000 entries. The tabs show an icon before their names, alone on a narrow
+  screen.

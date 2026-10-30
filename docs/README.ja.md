@@ -27,6 +27,7 @@ floe template show report   # report のファイル。データファイルに�
 floe check plan.yaml        # データファイルを確かめる（誤りと警告を出すか、何も出さない）
 floe publish plan.yaml      # ページを保存し、URL を出して開く
 floe publish --link out/index.html   # HTML のファイルをそのまま見せる
+floe publish --link docs             # フォルダの下の HTML を並べる
 floe list                   # ページの一覧（新しい順）
 floe archive old-plan       # ページを消さずに一覧から外す
 floe stop                   # 裏で動くサーバーを止める
