@@ -277,6 +277,7 @@ var messagesEN = map[string]string{
 	"ui_download":             "Download",
 	"ui_download_named":       "Download %s",
 	"ui_open_raw":             "Open the page alone in a new tab",
+	"ui_print_alone":          "This frame prints only one screen of the page. To print all of it, open the page alone with “%s” (↗ in the bar) and print it there:",
 	"ui_open_raw_named":       "Open %s alone in a new tab",
 	"ui_server_up":            "Connected to the server (%s)",
 	"ui_server_down":          "Cannot reach the server",
