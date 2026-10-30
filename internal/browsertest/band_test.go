@@ -34,18 +34,19 @@ var bandParts = bandText +
 	"code: { file: a.conf, text: \"wide" + strings.Repeat(" wide", 60) + "\\n\" }\n"
 
 // measureBand returns a line for each thing the band draws wrong: a part in it not in the page's text colour, a
-// line's code without its frame, or code in a fenced block with one.
-const measureBand = `(() => {
+// line's code without its frame (a shadow every code has, seen only in a face), or code in a fenced block with one.
+const measureBand = `(() => {` + colours + `
   const out = [];
+  const framed = (e) => { const c = getComputedStyle(e).boxShadow.match(/^(rgba?\([^)]*\)|color\([^)]*\))/); return c !== null && rgba(c[1])[3] > 0; };
   const probe = document.body.appendChild(document.createElement('p'));
   const want = getComputedStyle(probe).color;
   probe.remove();
   const note = document.querySelector('[data-floe-part="note"]');
   if (note && getComputedStyle(note).color !== want) out.push('note: colour ' + getComputedStyle(note).color + ', want ' + want);
   const line = document.querySelector('header > p > code');
-  if (getComputedStyle(line).boxShadow === 'none') out.push('a line\'s code: no frame');
+  if (!framed(line)) out.push('a line\'s code: no frame, ' + getComputedStyle(line).boxShadow);
   const fenced = document.querySelector('header > pre > code');
-  if (getComputedStyle(fenced).boxShadow !== 'none') out.push('fenced code: frame ' + getComputedStyle(fenced).boxShadow);
+  if (framed(fenced)) out.push('fenced code: frame ' + getComputedStyle(fenced).boxShadow);
   return out.join('\n');
 })()`
 

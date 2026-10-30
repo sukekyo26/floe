@@ -12,7 +12,8 @@ import (
 )
 
 // colours begins the scripts that measure colours on the page: a computed colour read, laid over another, and
-// the contrast of two; the ground of an element; and the name of an element, its part's first, to tell it by.
+// the contrast of two; the ground of an element; the name of an element, its part's first, to tell it by; and a
+// walk of the page with every details open and each tab picked in turn.
 const colours = `
   // A computed colour, rgb(), rgba() or color(srgb …), as [r, g, b] of 255 and its alpha.
   const rgba = (colour) => {
@@ -46,6 +47,16 @@ const colours = `
   const name = (e) => {
     const part = e.closest('[data-floe-part]');
     return (part ? part.dataset.floePart + ' ' : '') + e.tagName.toLowerCase() + [...e.classList].map((c) => '.' + c).join('');
+  };
+  // Opens every details, then picks the tabs of every tabs in turn, the first of each, then the second, and calls f
+  // with each pick, so that what a tab hides is drawn once.
+  const eachTab = (f) => {
+    for (const d of document.querySelectorAll('details')) d.open = true;
+    const tabs = [...document.querySelectorAll('[data-floe-part=tabs]')].map((t) => [...t.querySelectorAll('input[type=radio]')]);
+    for (let i = 0; i < Math.max(1, ...tabs.map((g) => g.length)); i++) {
+      for (const g of tabs) if (g[i]) g[i].checked = true;
+      f();
+    }
   };
   const hex = (c) => '#' + c.slice(0, 3).map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
 `
@@ -88,18 +99,14 @@ const measureContrast = `(() => {` + colours + `
     }
   };
   measureAll();
-  for (const d of document.querySelectorAll('details')) d.open = true;
-  const tabs = [...document.querySelectorAll('[data-floe-part=tabs]')].map((t) => [...t.querySelectorAll('input[type=radio]')]);
-  for (let i = 0; i < Math.max(1, ...tabs.map((g) => g.length)); i++) {
-    for (const g of tabs) if (g[i]) g[i].checked = true;
-    measureAll();
-  }
+  eachTab(measureAll);
   return [...low].join('\n');
 })()`
 
 // measureRings is the script that measures, on the page, the contrast of every focus ring against the ground under
-// it: it focuses in turn each element a key reaches (a link, a summary, a button, an input, one with a tabindex) and
-// each box that scrolls, which Chrome lets a key reach too, with every details open, and takes the outline that the
+// it: it focuses in turn each element a key reaches (a link, a summary, a button, an input, one with a tabindex not
+// below 0) and each box that scrolls, which Chrome lets a key reach too, with every details open and each tab picked
+// in turn, and takes the outline that the
 // focus changes, on the element or around it. Under it is the ground of the element on top at 12 points along the
 // middle of its line (a quarter, a half and three quarters of each side), the colour of that element's border where
 // the point is on one; a point that a box around clips is left out. It returns one line for each ring below 3:1, as
@@ -147,17 +154,18 @@ const measureRings = `(() => {` + colours + `
       low.add(name(e) + (r === e ? '' : ' (its ring on ' + name(r) + ')') + ': ring ' + hex(p.ring) + ' on ' + hex(p.bg) + ' ' + p.q.toFixed(2) + ', ' + lows.length + ' of ' + read.length + ' points');
     }
   };
-  for (const d of document.querySelectorAll('details')) d.open = true;
-  grounds.clear();
-  for (const e of [...document.body.querySelectorAll('*')].filter((e) => e.matches('a[href], summary, button, input, [tabindex]') || scrolls(e))) {
-    if (e.getClientRects().length === 0) continue;
-    const before = [];
-    for (let r = e; r && r !== document.documentElement; r = r.parentElement) before.push([r, outline(r)]);
-    e.focus({ preventScroll: true });
-    if (document.activeElement !== e) continue;
-    for (const [r, was] of before) if (r === e || outline(r) !== was) measure(e, r);
-    e.blur();
-  }
+  eachTab(() => {
+    grounds.clear();
+    for (const e of [...document.body.querySelectorAll('*')].filter((e) => e.matches('a[href], summary, button, input, [tabindex]:not([tabindex^="-"])') || scrolls(e))) {
+      if (e.getClientRects().length === 0) continue;
+      const before = [];
+      for (let r = e; r && r !== document.documentElement; r = r.parentElement) before.push([r, outline(r)]);
+      e.focus({ preventScroll: true });
+      if (document.activeElement !== e) continue;
+      for (const [r, was] of before) if (r === e || outline(r) !== was) measure(e, r);
+      e.blur();
+    }
+  });
   return [...low].join('\n');
 })()`
 

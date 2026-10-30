@@ -11,6 +11,7 @@ h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .date { font-family: var(--mono); }
 .counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; max-width: none; }
 .counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: 8px; }
+/* Not a face (base.css): a link fills its box, so its ring is outside it, on the band */
 .counts a { color: inherit; text-decoration: none; }
 .counts li > a, .counts li:not(:has(a)) { display: grid; padding: 0.5rem 1rem; font-size: 0.85rem; }
 .counts b { font-family: var(--mono); font-size: 2rem; line-height: 1.1; }
