@@ -21,4 +21,4 @@
 :scope.warn .title { color: var(--warn); }
 :scope.bad .title { color: var(--bad); }
 :scope > .title + * { margin-top: 0.1rem; }
-:scope code { background: var(--surface); }
+:scope code { background: var(--face, var(--surface)); }

@@ -1,8 +1,6 @@
 /* Ink and paper: a table's heading in ink, states filled with their colour, frames drawn sharp */
 /* The panel's thin frame, not the ink's */
 :scope { border: 1px solid var(--line); }
-:scope thead th { background: var(--fg); color: var(--bg); }
+:scope thead th { --face: var(--fg); --on-face: var(--bg); background: var(--face); color: var(--on-face); }
 :scope tbody tr:nth-child(even) td { background: none; }
 :scope tbody tr + tr td { border-top: 1px solid var(--line); }
-:scope thead :is(code, a) { color: inherit; }
-:scope thead code { background: color-mix(in srgb, currentColor 15%, transparent); }

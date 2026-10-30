@@ -6,10 +6,9 @@
   display: block; width: auto; height: auto; background: none; color: inherit; font-size: 2.4rem; font-weight: 900; line-height: 1;
 }
 /* Plain cards and options take the primary faces in turn; numbers, facts and links stay on the surface */
-:scope.numbered > .card { background: var(--brutal-yellow); color: var(--brutal-ink); }
-:scope.numbered > .card:nth-child(3n + 2) { background: var(--brutal-blue); }
-:scope.numbered > .card:nth-child(3n) { background: var(--brutal-pink); }
+:scope.numbered > .card { --face: var(--brutal-yellow); --on-face: var(--brutal-ink); background: var(--face); color: var(--on-face); }
+:scope.numbered > .card:nth-child(3n + 2) { --face: var(--brutal-blue); }
+:scope.numbered > .card:nth-child(3n) { --face: var(--brutal-pink); }
 :scope.numbered > .card :is(p, ul, ol, li, a) { font-weight: 600; }
 /* Every text on a primary face is in its ink, marks and pills among them, whose colours are for the surface */
 :scope.numbered > .card *, :scope.numbered > .card ::before { color: var(--brutal-ink); }
-:scope.numbered > .card :not(pre) > code { background: color-mix(in srgb, currentColor 10%, transparent); }

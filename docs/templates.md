@@ -160,7 +160,9 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--text-width` | How wide prose grows, which a template sets for its page on `:scope` |
 | `--page-width`・`--page-pad` | The column a page is centred in: its width, and the pad each side of it. As the pad is inside the box, the column is `max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad)` |
 
-floe's base draws the page's ground, colour and face on its root with them (`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`), which `page.css` may set otherwise on `:scope`. A theme of your own may set them too ([parts.md](parts.md#themes)).
+floe's base draws the page's ground, colour and face on its root with them (`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`), which `page.css` may set otherwise on `:scope`. A theme of your own may set them too ([parts.md](parts.md#themes)). In print, every ground is kept as the screen draws it.
+
+An element that fills itself with a colour and holds text, as a band or a filled note, sets `--face` to its ground and `--on-face` to its text's colour, and paints itself with them (`background: var(--face); color: var(--on-face)`): floe's base then draws the links, a line's code (framed, on no ground of its own) and the focus ring in it in `--on-face`, where the accent would sink into the fill. What a part holds starts afresh, on the part's own ground. An element that paints a light ground of its own, as a quote on a panel, starts afresh what it holds too (`blockquote > * { --face: initial; --on-face: initial; }`), and a colour set on no ground of its own is written `var(--on-face, …)`, so as to read in a face.
 
 ## schema.json
 
