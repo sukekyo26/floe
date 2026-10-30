@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The app theme</title>
 <style>
-@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -101,6 +101,15 @@ blockquote > * + * { margin-top: 0.6rem; }
   --shadow: rgb(26 34 51 / 0.14);
   /* How a card is raised from the ground: a close shadow and a soft wide one */
   --app-raise: 0 1px 2px color-mix(in srgb, var(--shadow) 60%, transparent), 0 6px 16px -4px var(--shadow);
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *) {
+/* An app's screen: white cards raised from a cool ground by soft shadows, with no frame. A quote is ruled in the accent,
+   on no ground of its own, so that in a note or a card it makes no white box in the white */
+blockquote { border-left: 4px solid var(--on-face, var(--accent)); padding: 0.2rem 0 0.2rem 1.1rem; color: var(--on-face, var(--fg)); }
 }
 }
 </style>
@@ -358,13 +367,6 @@ blockquote > * + * { margin-top: 0.6rem; }
   :scope > div { display: grid; order: 0; }
 }
 }
-}
-</style>
-<style>
-@layer floe.parts {
-/* An app's screen: white cards raised from a cool ground by soft shadows, with no frame. A quote is ruled in the accent,
-   on no ground of its own, so that in a note or a card it makes no white box in the white */
-blockquote { border-left: 4px solid var(--on-face, var(--accent)); padding: 0.2rem 0 0.2rem 1.1rem; color: var(--on-face, var(--fg)); }
 }
 </style>
 <style>

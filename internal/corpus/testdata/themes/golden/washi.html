@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The washi theme</title>
 <style>
-@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -99,6 +99,22 @@ blockquote > * + * { margin-top: 0.6rem; }
   /* The vermilion of its marks (seals, the tab picked, the rules of code and quotes), kept apart from --bad,
      which a template may set otherwise, and the hairlines of its tables, in the ink */
   --washi-shu: #c13b23; --washi-hair: color-mix(in srgb, var(--fg) 18%, transparent);
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *) {
+/* Sumi and vermilion printed on washi, in a Mincho face: tables closed by double rules, states and notes as
+   seals, cards marked with a seal of their number in kanji, and quotes ruled in vermilion */
+blockquote > * { --face: initial; --on-face: initial; }
+blockquote {
+  background: var(--surface); color: var(--fg); border-radius: 0; box-shadow: none;
+}
+blockquote {
+  padding: 1.3rem 1.8rem; border: 0; border-left: 3px solid var(--washi-shu); font-size: 1.15rem; line-height: 2;
+  letter-spacing: 0.08em;
+}
 }
 }
 </style>
@@ -360,20 +376,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-/* Sumi and vermilion printed on washi, in a Mincho face: tables closed by double rules, states and notes as
-   seals, cards marked with a seal of their number in kanji, and quotes ruled in vermilion */
-blockquote > * { --face: initial; --on-face: initial; }
-blockquote {
-  background: var(--surface); color: var(--fg); border-radius: 0; box-shadow: none;
-}
-blockquote {
-  padding: 1.3rem 1.8rem; border: 0; border-left: 3px solid var(--washi-shu); font-size: 1.15rem; line-height: 2;
-  letter-spacing: 0.08em;
-}
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
 :scope, :scope:is(.good, .warn, .bad) {
   background: none; border: 2px solid currentColor; border-radius: 3px;
@@ -466,7 +468,8 @@ blockquote {
 @layer floe.parts {
 @scope ([data-floe-part="tabs"]) to (:scope [data-floe-part] > *) {
 :scope > label { border-radius: 0; }
-:scope > label:has(:checked) { background: none; color: var(--fg); box-shadow: inset 0 -2px 0 var(--washi-shu); }
+/* On screen alone: on paper every tab shows under its title, which tabs' own print takes off its ground */
+@media screen { :scope > label:has(:checked) { background: none; color: var(--fg); box-shadow: inset 0 -2px 0 var(--washi-shu); } }
 }
 }
 </style>

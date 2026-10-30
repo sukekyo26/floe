@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The notebook theme</title>
 <style>
-@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -109,6 +109,16 @@ blockquote > * + * { margin-top: 0.6rem; }
   --nb-stick-1: #fff1a6; --nb-stick-2: #ffd2e1; --nb-stick-3: #cfe8ff;
   --nb-stick-ink: #2b2a26; --nb-stick-shadow: rgb(40 30 10 / 0.45);
   --nb-hand: 14px 6px 12px 8px / 8px 12px 6px 14px;
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *) {
+/* Scraps of a handwritten notebook: ruled paper, marker strokes for states, sticky notes for cards and
+   frames drawn round by hand, in a rounded face */
+blockquote { border: 0; padding: 0; color: var(--on-face, var(--fg)); font-size: 1.15rem; font-weight: 700; }
+blockquote > p { display: inline; background: linear-gradient(transparent 62%, var(--face, var(--nb-yellow)) 62%); }
 }
 }
 </style>
@@ -370,14 +380,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-/* Scraps of a handwritten notebook: ruled paper, marker strokes for states, sticky notes for cards and
-   frames drawn round by hand, in a rounded face */
-blockquote { border: 0; padding: 0; color: var(--on-face, var(--fg)); font-size: 1.15rem; font-weight: 700; }
-blockquote > p { display: inline; background: linear-gradient(transparent 62%, var(--face, var(--nb-yellow)) 62%); }
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
 :scope {
   background: var(--nb-blue); color: var(--fg); border-radius: 3px 10px 4px 12px; transform: rotate(-1.5deg); font-weight: 700;
@@ -471,7 +473,8 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="tabs"]) to (:scope [data-floe-part] > *) {
-:scope > label:has(:checked) { background: var(--nb-yellow); color: var(--fg); border-radius: 3px 10px 4px 12px; }
+/* On screen alone: on paper every tab shows under its title, which tabs' own print takes off its ground */
+@media screen { :scope > label:has(:checked) { background: var(--nb-yellow); color: var(--fg); border-radius: 3px 10px 4px 12px; } }
 }
 }
 </style>

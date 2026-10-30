@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The editorial theme</title>
 <style>
-@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -83,6 +83,13 @@ blockquote > * + * { margin-top: 0.6rem; }
   /* The column a template centres its page in: its width, without the pad each side of it */
   --page-width: 96rem; --page-pad: 16px;
   color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *) {
+blockquote { padding-left: 1.4rem; border-left: 3px solid var(--accent); color: var(--on-face, var(--fg)); font-size: 1.1rem; }
 }
 }
 </style>
@@ -340,11 +347,6 @@ blockquote > * + * { margin-top: 0.6rem; }
   :scope > div { display: grid; order: 0; }
 }
 }
-}
-</style>
-<style>
-@layer floe.parts {
-blockquote { padding-left: 1.4rem; border-left: 3px solid var(--accent); color: var(--on-face, var(--fg)); font-size: 1.1rem; }
 }
 </style>
 <style>

@@ -1,8 +1,6 @@
 package browsertest_test
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -48,15 +46,7 @@ const measureDiagrams = `(() => {
 func TestUIDiagram(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
-	for name, text := range diagramKit {
-		at := filepath.Join(s.Dir, filepath.FromSlash(name))
-		if err := os.MkdirAll(filepath.Dir(at), 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(at, []byte(text), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
+	s.own(t, diagramKit)
 	s.floe(t, "publish", s.write(t, "diagrams.yaml", diagramPage), "--slug", "diagrams")
 	for _, size := range []struct {
 		width, height int64

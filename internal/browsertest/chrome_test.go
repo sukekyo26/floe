@@ -404,6 +404,21 @@ func (s *site) write(t *testing.T, rel, text string) string {
 	return file
 }
 
+// own writes files (paths under the server's directory, slash-separated), parts, themes and templates of one's own.
+func (s *site) own(t *testing.T, files map[string]string) {
+	t.Helper()
+
+	for name, text := range files {
+		at := filepath.Join(s.Dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(at), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(at, []byte(text), 0o600); err != nil { //nolint:gosec // G703: a path the test names
+			t.Fatal(err)
+		}
+	}
+}
+
 // page writes a data file for the report template under home titled title ("" for none), with html as its one
 // part when there is some, and returns its path.
 func (s *site) page(t *testing.T, rel, title, html string) string {

@@ -11,11 +11,15 @@ import (
 
 // pageStyle returns the CSS of each <style> of a page drawn in the theme named so, whose elements name what n
 // holds, with own, its template's page.css. Each is a layer: floe's base.css, under the palettes (the default theme's,
-// then the theme's), the looks, the template's own and the parts'. The parts' are the style of each part the
-// page names a box of, and of each look the page or those parts take, before the parts that take it and the
-// parts that place it (those whose boxes hold its box), which adjust it; then the theme's: its base.css, and
-// its style of each of those parts in the same order. Within the layer the more specific rule wins, else the
-// later.
+// then the theme's), the theme's base.css, the looks, the template's own and the parts'. The theme's base.css
+// reaches what the template's does, the page short of what the parts hold, so that the template, the looks and the
+// parts each win over it, and a part draws what it holds from floe's base alone. The parts' are the style of
+// each part the page names a box of, and of each look the page or those parts take, before the parts that take it
+// and the parts that place it (those whose boxes hold its box), which adjust it; then the theme's style of each of
+// those parts in the same order, which wins over theirs, their @media print too.
+// LIMIT: a theme's style of a look so wins over what a part that takes it adjusts of it (brutal's margin of a
+// panel over a step's). Put the theme's after the look's own, before the parts', if a part comes to need its own.
+// Within the layer the more specific rule wins, else the later.
 // An element that takes a look without being a part's box (a card of options) has it a layer under the
 // template's and the parts', floe.looks: the part it is in, or the template it is the template's own of,
 // adjusts it whatever the selectors, as a part does the looks it takes, where the nearer scope would win
@@ -40,7 +44,7 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 	write := func(body string) {
 		sheets = append(sheets, "\n"+styleEnd.ReplaceAllString(body, `<\/$1`))
 	}
-	write("@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n" +
+	write("@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n" +
 		string(k.BaseCSS()) + "}\n")
 	sheet := func(layer string, css []byte) {
 		if len(css) != 0 {
@@ -51,6 +55,7 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 	if theme != kit.DefaultTheme {
 		sheet("floe.palette", themed.Palette())
 	}
+	sheet("floe.theme", pageScoped(themed.Base()))
 	names := inOrder(k, slices.Concat(n.boxes, n.looks), n.uses)
 	// Each style goes to the boxes that have its look, and to the other elements that take it, a layer under.
 	styled := func(name string, css []byte) {
@@ -60,14 +65,19 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 	for _, name := range names {
 		styled(name, cssOf(k, name))
 	}
-	sheet("floe.parts", themed.Base())
 	for _, name := range names {
 		styled(name, themed.CSS(name))
 	}
-	if len(own) != 0 {
-		sheet("floe.page", []byte("@scope (:root) to ([data-floe-part] > *) {\n"+string(own)+"}\n"))
-	}
+	sheet("floe.page", pageScoped(own))
 	return sheets, nil
+}
+
+// pageScoped is css reaching the page short of what the parts hold, or nil when css is empty.
+func pageScoped(css []byte) []byte {
+	if len(css) == 0 {
+		return nil
+	}
+	return []byte("@scope (:root) to ([data-floe-part] > *) {\n" + string(css) + "}\n")
 }
 
 // styleEnd finds </style, of either case, which HTML reads as the end of a <style>. Written <\/style it is
