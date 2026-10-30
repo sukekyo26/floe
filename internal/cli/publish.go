@@ -41,8 +41,9 @@ drawn, advice on a better way to write it, are printed as file:line:column: warn
 
 --link registers a file in place instead of storing a page. An HTML file is shown as it is, and the
 files under its directory are served for its relative references. A data file is drawn each time
-its page is opened, and saving it, or a part, theme or template of one's own, reloads the open tab.
-The same slug for another file is refused unless --force.`,
+its page is opened, and saving it, a part, theme or template of one's own, or fetching icons
+reloads the open tab; saving an image it shows does not. The same slug for another file is
+refused unless --force.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()
