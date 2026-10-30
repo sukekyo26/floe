@@ -63,7 +63,7 @@ floe puts a page's CSS into `<style>`s before its `</head>`, in six cascade laye
 1. `floe.palette`: the palettes, floe's `default` and then the theme's.
 2. `floe.base`: floe's base, the page's ground, colour and face on its root, and text, lists, links, code and quotes.
 3. `floe.theme`: the theme's `base.css`, scoped as the template's `page.css` is: it reaches the page and the boxes of the parts, not what they hold, which a part draws from floe's base. Its root is `:scope`; `:root` and `html` are outside the scope, and a rule for what a part holds (`table th`) goes in the theme's file of that part.
-4. `floe.looks`: the looks of elements that take one without being a part's box (`data-floe-look`). A layer of their own, so that the template or part that borrows a look adjusts it whatever the selectors and however near its scope, and the theme's `base.css` wins over none of it, however written.
+4. `floe.looks`: the looks of elements that take one without being a part's box (`data-floe-look`). A layer of their own, so that the template or part that borrows a look adjusts it whatever the selectors and however near its scope, and the theme's `base.css` wins over none of it, unless with `!important` (which turns the order of the layers round, and which floe does not refuse).
 5. `floe.page`: the template's `page.css`.
 6. `floe.parts`: the parts' style, each part after the looks it takes, then the theme's files of the parts. A theme's file wins over its part's `part.css`, its `@media print` too: a theme that fills a state print leaves out, such as the tab picked, writes it in `@media screen`.
 

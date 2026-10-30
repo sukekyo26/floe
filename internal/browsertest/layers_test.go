@@ -70,8 +70,8 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`)
 	check(t, "layers", []string{got}, "rgb(246, 232, 210) | 13.6px | 7px | rgb(255, 0, 0) | rgb(0, 0, 2) | held | true")
 	// The template's own element that takes the panel's look has it under the template's CSS, which adjusts it by the
-	// layer, though its selector (section) is the less specific and its scope the farther: its background, the corners
-	// of default's panel.
+	// layer, though it would lose by its selector (section), the less specific: its background, the corners of
+	// default's panel.
 	got = b.eval(`(() => { const s = getComputedStyle(document.querySelector('section')); return s.backgroundColor + ' ' + s.borderTopLeftRadius })()`)
 	check(t, "a look of the template's own", []string{got}, "rgb(0, 0, 4) 20px")
 
