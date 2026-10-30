@@ -140,6 +140,18 @@ sections:
       - glossary:
           - { term: Freeze, text: The days when the old wiki is **read-only**. }
           - { term: Host, text: Where the wiki runs. }
+      - entries:
+          - title: '`export`'
+            tags: [Runs nightly, '`wiki.conf`', { pill: on track }, { pill: done, tone: good }]
+            text: |
+              Writes every page as Markdown, with its history, into `pages/`.
+
+              - Pages under **drafts** are left out
+              - Images go to `pages/images/`
+          - title: Search index
+            tags: [{ pill: by hand, tone: warn }, { pill: blocked, tone: bad }, { pill: next, tone: accent }]
+            text: Rebuilt by hand after the copy; [the steps](https://example.com/steps).
+          - title: Old links
       - keys:
           - { keys: [Ctrl, K], text: Search the wiki }
           - { keys: [g, h], text: Go home }
@@ -177,6 +189,8 @@ sections:
                 steps:
                   - { run: wiki export, out: done }
             - diff: { text: "+a\n-b\n" }
+            - entries:
+                - { title: Copied, tags: [412 pages], text: Every page but the drafts. }
             - image: { file: shots/moved.png, alt: The wiki after the move }
       - tabs:
           - title: bash

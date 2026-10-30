@@ -1,0 +1,5 @@
+<div data-floe-part="entries">
+{{- range .}}
+<div><p class="title">{{markdownLine .title}}</p>{{with .tags}}<p class="tags">{{range .}}<span>{{.}}</span>{{end}}</p>{{end}}{{with .text}}<div class="text">{{markdown .}}</div>{{end}}</div>
+{{- end}}
+</div>

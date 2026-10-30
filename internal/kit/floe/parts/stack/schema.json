@@ -14,6 +14,7 @@
       "diff": { "$ref": "floe:///parts/diff.json" },
       "note": { "$ref": "floe:///parts/note.json" },
       "table": { "$ref": "floe:///parts/table.json" },
+      "entries": { "$ref": "floe:///parts/entries.json" },
       "image": { "$ref": "floe:///parts/image.json" }
     },
     "minProperties": 1,

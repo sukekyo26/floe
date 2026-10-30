@@ -1,0 +1,8 @@
+/* A heading, its tags on the line under it, then its text the full width */
+:scope > div { display: grid; gap: 0.35rem; padding: 0.75rem 1.2rem; }
+:scope p { margin: 0; }
+:scope .title { font-weight: 700; }
+/* Spaced, not parted by a character, which a wrapped line would begin with */
+:scope .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.9rem; font-size: 0.85rem; color: var(--muted); }
+:scope .text { display: grid; gap: 0.35rem; }
+:scope .text > * { margin: 0; }

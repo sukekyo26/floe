@@ -31,6 +31,7 @@
     "bars": { "$ref": "floe:///parts/bars.json" },
     "faq": { "$ref": "floe:///parts/faq.json" },
     "glossary": { "$ref": "floe:///parts/glossary.json" },
+    "entries": { "$ref": "floe:///parts/entries.json" },
     "keys": { "$ref": "floe:///parts/keys.json" },
     "tabs": { "$ref": "floe:///parts/tabs.json" },
     "html": { "type": "string", "format": "html", "description": "HTML that goes in as it is" },
