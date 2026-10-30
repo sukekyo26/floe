@@ -25,3 +25,15 @@ sections:
       - findings:
           - { level: must, at: a.conf:1, text: The wiki is still open, status: { pill: fixed, tone: good } }
           - { level: nit, text: Two pages share a title }
+      - stats:
+          - { label: Pages, value: '1,840' }
+          - { label: Broken links, value: '120', tone: good }
+      - facts:
+          - { name: Owner, value: The platform team }
+          - { name: State, value: { pill: on track, tone: good } }
+      - links:
+          - { title: Migration guide, url: 'https://example.com/guide', text: How the copy works }
+      - decision:
+          title: The wiki moves to the new host
+          status: { pill: decided, tone: good }
+          text: The old server is out of support in **May**.

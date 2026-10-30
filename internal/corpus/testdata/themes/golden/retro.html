@@ -172,6 +172,56 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
+@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="decision"], [data-floe-part="facts"], [data-floe-part="links"], [data-floe-part="options"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+/* Each card is numbered by its place, as the steps of a plan are */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
+.card {
+  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+}
+:scope.numbered > .card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
+}
+/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
+.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
+.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="decision"]) to (:scope [data-floe-part] > *) {
+/* A card of its own, unnumbered, its title large */
+:scope { grid-template-columns: minmax(0, 1fr); }
+:scope > div { gap: 0.5rem; }
+:scope .title { font-size: 1.25rem; line-height: 1.45; }
+:scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: 0.82rem; }
+:scope .set-aside { margin-top: 0.3rem; font-size: 0.8rem; font-weight: 600; }
+:scope ul { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
+:scope li { position: relative; padding-left: 1.45rem; }
+:scope li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
 @scope ([data-floe-part="diff"]) to (:scope [data-floe-part] > *) {
 /* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls: the code is as
    wide as that line (code's part.css), the button's room inside each line's face rather than after the code */
@@ -192,17 +242,12 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
-}
-}
-</style>
-<style>
-@layer floe.looks {
-@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+@scope ([data-floe-part="facts"]) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, unnumbered */
+:scope { margin: 0; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem; }
+:scope > div { gap: 0.1rem; padding-block: 0.8rem; }
+:scope dt { font-size: 0.8rem; color: var(--muted); }
+:scope dd { margin: 0; font-weight: 600; }
 }
 }
 </style>
@@ -247,6 +292,32 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
+@scope ([data-floe-part="links"]) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
+:scope { list-style: none; margin: 0; padding: 0; max-width: none; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
+:scope > li { position: relative; gap: 0.1rem; padding-block: 0.9rem; padding-left: 3.7rem; }
+:scope > li::before {
+  content: ""; position: absolute; left: 1.1rem; top: 0.95rem; display: block; width: 1.9rem; height: 1.9rem;
+  border-radius: 9px; background: var(--accent-soft);
+}
+:scope a { font-weight: 700; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+:scope a::before {
+  content: ""; position: absolute; left: calc(1.1rem + 0.45rem); top: calc(0.95rem + 0.45rem); width: 1rem; height: 1rem;
+  background: var(--accent); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+:scope a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+:scope > li:hover a { text-decoration-thickness: 2px; }
+:scope a:focus-visible { outline: none; }
+:scope > li:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope .url {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted);
+  font-family: var(--mono);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts {
 @scope ([data-floe-part="note"]) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
 :scope {
@@ -272,25 +343,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 :scope.bad .title { color: var(--bad); }
 :scope > .title + * { margin-top: 0.1rem; }
 :scope code { background: var(--face, var(--surface)); }
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
-/* Each card is numbered by its place, as the steps of a plan are */
-:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
-.card {
-  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
-}
-:scope.numbered > .card::before {
-  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
-  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
-}
-/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
-.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
-.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
 }
 }
 </style>
@@ -337,6 +389,27 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
+@scope ([data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, unnumbered */
+:scope { margin: 0; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+:scope > div { gap: 0.15rem; }
+.stat dt { font-size: 0.85rem; color: var(--muted); }
+.stat dd { margin: 0; }
+.stat .value {
+  font-family: var(--mono);
+  font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
+}
+.stat .unit { margin-left: 0.3em; font-size: 0.5em; font-weight: 400; color: var(--muted); }
+.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+.stat.accent .note { color: var(--accent); }
+.stat.good .note { color: var(--good); }
+.stat.warn .note { color: var(--warn); }
+.stat.bad .note { color: var(--bad); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
 @scope ([data-floe-part="tabs"]) to (:scope [data-floe-part] > *) {
 /* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows */
 :scope { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0; }
@@ -360,10 +433,11 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 /* The seventies: three stripes of orange, mustard and olive under headings and on the faces, round fat corners */
-/* The stripes go under the page's own headings alone (the template's, and a text's Markdown, as text draws no box),
-   not those in a part or a look (a band, where the orange would sink into the accent, a panel, details); they are a
-   box of their own under the heading, not its ground, so that its text stays on the page's */
-h2:not(:where([data-floe-part], [data-floe-look]) h2)::after {
+/* The stripes go under the page's own headings (the template's, those in its panels, and a text's Markdown, as text
+   draws no box), not those in a part, on a band, where the orange would sink into the accent, or in an aside, as
+   design's contents; they are a box of their own under the heading, not its ground, so that its text stays on the
+   page's */
+h2:not(:where([data-floe-part], [data-floe-look~="band"], aside) h2)::after {
   content: ""; display: block; width: 4.5rem; height: 9px; margin-top: 0.7rem; background: var(--retro-stripes);
 }
 blockquote > * { --face: initial; --on-face: initial; }
@@ -380,7 +454,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
-:scope { border-radius: 22px; box-shadow: none; border: 2px solid var(--fg); }
+:scope { border-radius: 22px; box-shadow: none; }
 }
 }
 </style>
@@ -400,6 +474,18 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 </style>
 <style>
 @layer floe.parts {
+@scope ([data-floe-part="decision"], [data-floe-part="facts"], [data-floe-part="links"], [data-floe-part="options"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+/* A card is a round face in a brown frame, its top in the three stripes, clear of its text over the padding a part
+   sets its cards (facts, links) */
+:scope > .card { border: 2px solid var(--fg); border-radius: 22px; padding-top: 1.6rem; background: var(--surface);
+  /* The stripes as shadows inside its top, which keep to its round corners and stay off the ground of its text */
+  box-shadow: inset 0 4px var(--retro-orange), inset 0 8px var(--retro-mustard), inset 0 12px var(--retro-olive); }
+:scope.numbered > .card::before { border-radius: 50%; background: var(--fg); color: var(--surface); font-family: var(--display); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
 @scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
 :scope thead th { background: none; color: var(--fg); font-family: var(--display); font-size: 0.95rem; border-bottom: 2px solid var(--fg); }
 :scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--accent-soft) 45%, var(--surface)); }
@@ -409,19 +495,12 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="note"]) to (:scope [data-floe-part] > *) {
-:scope { border: 2px solid var(--fg); border-radius: 22px; }
-:scope::before { border: 2px solid var(--fg); }
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
-/* A card is a round face in a brown frame, its top in the three stripes */
-.card { border: 2px solid var(--fg); border-radius: 22px; padding-top: 1.6rem; background: var(--surface);
-  /* The stripes as shadows inside its top, which keep to its round corners and stay off the ground of its text */
-  box-shadow: inset 0 4px var(--retro-orange), inset 0 8px var(--retro-mustard), inset 0 12px var(--retro-olive); }
-:scope.numbered > .card::before { border-radius: 50%; background: var(--fg); color: var(--surface); font-family: var(--display); }
+:scope { border: 2px solid var(--accent); border-radius: 22px; }
+:scope.good { border-color: var(--good); }
+:scope.warn { border-color: var(--warn); }
+:scope.bad { border-color: var(--bad); }
+/* A pseudo-element is no element of * { box-sizing: border-box }: its frame stays within the mark's size */
+:scope::before { box-sizing: border-box; border: 2px solid var(--fg); }
 }
 }
 </style>
@@ -684,6 +763,19 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <tr><td class="level"><span class="nit" data-floe-part="cell">nit</span></td><td><div>Two pages share a title</div></td></tr>
 </tbody>
 </table></div>
+<dl data-floe-part="stats">
+<div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value">1,840</dd></div>
+<div class="card stat good" data-floe-look="panel"><dt>Broken links</dt><dd class="value">120</dd></div>
+</dl>
+<dl data-floe-part="facts">
+<div class="card" data-floe-look="panel"><dt>Owner</dt><dd>The platform team</dd></div>
+<div class="card" data-floe-look="panel"><dt>State</dt><dd><span class="good" data-floe-part="cell">on track</span></dd></div>
+</dl>
+<ul data-floe-part="links">
+<li class="card" data-floe-look="panel"><a href="https://example.com/guide">Migration guide</a><p>How the copy works</p><span class="url">https://example.com/guide</span></li>
+</ul>
+<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span class="good" data-floe-part="cell">decided</span></p><div class="title">The wiki moves to the new host</div><p>The old server is out of support in <strong>May</strong>.</p>
+</div></div>
 </section>
 </main>
 

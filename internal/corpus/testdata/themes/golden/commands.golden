@@ -1,4 +1,4 @@
-$ floe check blueprint.yaml brutal.yaml default.yaml editorial.yaml ink.yaml notebook.yaml retro.yaml soft.yaml swiss.yaml washi.yaml
+$ floe check blueprint.yaml brutal.yaml default.yaml editorial.yaml ink.yaml notebook.yaml retro-adr.yaml retro.yaml soft.yaml swiss.yaml washi.yaml
 exit 0
 $ floe render --out-dir $TMP/pages/blueprint.yaml blueprint.yaml
 exit 0
@@ -24,6 +24,10 @@ $ floe render --out-dir $TMP/pages/notebook.yaml notebook.yaml
 exit 0
 --- stdout
 $TMP/pages/notebook.yaml/notebook.html
+$ floe render --out-dir $TMP/pages/retro-adr.yaml retro-adr.yaml
+exit 0
+--- stdout
+$TMP/pages/retro-adr.yaml/retro-adr.html
 $ floe render --out-dir $TMP/pages/retro.yaml retro.yaml
 exit 0
 --- stdout
@@ -40,7 +44,7 @@ $ floe render --out-dir $TMP/pages/washi.yaml washi.yaml
 exit 0
 --- stdout
 $TMP/pages/washi.yaml/washi.html
-$ floe render --out-dir $TMP/together blueprint.yaml brutal.yaml default.yaml editorial.yaml ink.yaml notebook.yaml retro.yaml soft.yaml swiss.yaml washi.yaml
+$ floe render --out-dir $TMP/together blueprint.yaml brutal.yaml default.yaml editorial.yaml ink.yaml notebook.yaml retro-adr.yaml retro.yaml soft.yaml swiss.yaml washi.yaml
 exit 0
 --- stdout
 $TMP/together/blueprint.html
@@ -49,6 +53,7 @@ $TMP/together/default.html
 $TMP/together/editorial.html
 $TMP/together/ink.html
 $TMP/together/notebook.html
+$TMP/together/retro-adr.html
 $TMP/together/retro.html
 $TMP/together/soft.html
 $TMP/together/swiss.html
