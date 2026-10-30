@@ -1,0 +1,11 @@
+/* The seventies: brown on a tan ground, stripes of orange, mustard and olive, round fat corners, a serif heading */
+:root {
+  --bg: #f1e2c4; --surface: #fbf3e2; --fg: #3a2414; --muted: #6b5340; --line: #dcc6a0;
+  --accent: #a3401a; --accent-soft: #f7dcc8;
+  --good: #556316; --good-soft: #e8ecc8; --warn: #8a5800; --warn-soft: #f8e4b8; --bad: #a82418; --bad-soft: #f6d8d2;
+  --display: Georgia, "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  --code-bg: #3a2414; --code-fg: #fbf3e2; --code-prompt: var(--retro-mustard);
+  /* Its three stripes, an ornament alone, apart from the tones */
+  --retro-orange: #d9622b; --retro-mustard: #e8a33d; --retro-olive: #6b7a2a;
+  --retro-stripes: linear-gradient(var(--retro-orange) 0 33.3%, var(--retro-mustard) 33.3% 66.6%, var(--retro-olive) 66.6% 100%);
+}

@@ -1,0 +1,184 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; img-src data: blob:; media-src data: blob:; style-src &#39;unsafe-inline&#39; https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; script-src &#39;unsafe-inline&#39; https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; form-action &#39;none&#39;; base-uri &#39;none&#39;; connect-src &#39;none&#39;"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>The retro theme in a record</title>
+<style>
+@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.base {
+/* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
+   template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
+* { box-sizing: border-box; }
+/* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
+   that scrolls sideways instead, as a table does, keeps its words whole.
+   LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
+   label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
+   diff's counts do; a pill (cell), kept on one line, still overflows. Give such a part a layout for narrow screens, as
+   keys has */
+/* Print keeps every ground, the page's too, as the screen draws it: a light text on a fill would be lost on white
+   paper. The prefixed name is for a Chromium before 136, as a VS Code's may be.
+   LIMIT: no test fails without the prefixed name, as the Chrome of the tests reads both */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
+h3 { font-size: 1.05rem; }
+p, ul, ol { margin: 0; max-width: var(--text-width); }
+ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
+/* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
+   --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
+   its own) and the focus ring in it take them, as the accent and its soft ground would sink into the fill. What a part
+   holds draws on the part's own ground, without them; the part's box stays in the face, its ring too. An element that
+   paints a light ground of its own does the same with what it holds, and one that sets a colour on no ground of its
+   own writes it as var(--on-face, …) */
+:where([data-floe-part]) > * { --face: initial; --on-face: initial; }
+a { color: var(--on-face, var(--accent)); }
+:focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: 4px; }
+pre {
+  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+}
+pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
+blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
+blockquote > * + * { margin-top: 0.6rem; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
+   (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
+   what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
+   holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
+   inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone. Its size,
+   the room a part leaves around it and what text keeps clear of it at its right are here alone: a part that lies text
+   under it keeps --floe-copy-room after its longest line, as code does */
+:root { --floe-copy-size: 30px; --floe-copy-gap: 0.4rem; --floe-copy-room: calc(var(--floe-copy-size) + 2 * var(--floe-copy-gap)); }
+.floe-copy {
+  position: relative; z-index: 1; display: grid; place-items: center; width: var(--floe-copy-size); height: var(--floe-copy-size); padding: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--code-ground, var(--code-bg)); color: color-mix(in srgb, var(--code-fg) 70%, var(--code-ground, var(--code-bg)));
+}
+.floe-copy:hover { background: color-mix(in srgb, var(--code-fg) 12%, var(--code-ground, var(--code-bg))); }
+.floe-copy:focus-visible { outline: 2px solid var(--code-fg); outline-offset: -2px; }
+.floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
+.floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
+.floe-copy.copied svg + svg { display: block; color: var(--code-add); }
+.floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
+}
+</style>
+<style>
+@layer floe.palette {
+/* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
+:root {
+  --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --accent: #1d6670; --accent-soft: #dcebec;
+  --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
+  --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font);
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  --code-bg: #1b2120; --code-fg: #e2e9e7; --code-prompt: #b5e05a; --code-add: #6fcf97; --code-del: #f2b8b5;
+  /* The page's ground, a pattern too, and the rule between its sections */
+  --page-bg: var(--bg); --rule: 1px solid var(--line);
+  /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
+  --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
+  /* Its panels' quiet ground, which holds faces of the surface */
+  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* How wide prose grows, which a template sets for its page on :scope */
+  --text-width: 56rem;
+  /* The column a template centres its page in: its width, without the pad each side of it */
+  --page-width: 96rem; --page-pad: 16px;
+  color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.palette {
+/* The seventies: brown on a tan ground, stripes of orange, mustard and olive, round fat corners, a serif heading */
+:root {
+  --bg: #f1e2c4; --surface: #fbf3e2; --fg: #3a2414; --muted: #6b5340; --line: #dcc6a0;
+  --accent: #a3401a; --accent-soft: #f7dcc8;
+  --good: #556316; --good-soft: #e8ecc8; --warn: #8a5800; --warn-soft: #f8e4b8; --bad: #a82418; --bad-soft: #f6d8d2;
+  --display: Georgia, "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  --code-bg: #3a2414; --code-fg: #fbf3e2; --code-prompt: var(--retro-mustard);
+  /* Its three stripes, an ornament alone, apart from the tones */
+  --retro-orange: #d9622b; --retro-mustard: #e8a33d; --retro-olive: #6b7a2a;
+  --retro-stripes: linear-gradient(var(--retro-orange) 0 33.3%, var(--retro-mustard) 33.3% 66.6%, var(--retro-olive) 66.6% 100%);
+}
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+/* The seventies: three stripes of orange, mustard and olive under headings and on the faces, round fat corners */
+/* The stripes go under the page's own headings (the template's, those in its panels, and a text's Markdown, as text
+   draws no box), not those in a part, on a band, where the orange would sink into the accent, or in an aside, as
+   design's contents; they are a box of their own under the heading, not its ground, so that its text stays on the
+   page's */
+h2:not(:where([data-floe-part], [data-floe-look~="band"], aside) h2)::after {
+  content: ""; display: block; width: 4.5rem; height: 9px; margin-top: 0.7rem; background: var(--retro-stripes);
+}
+blockquote > * { --face: initial; --on-face: initial; }
+blockquote { background: var(--surface); border: 0; border-radius: 22px; padding: 1rem 1.4rem; color: var(--fg); border-left: 9px solid var(--retro-mustard); }
+}
+</style>
+<style>
+@layer floe.looks {
+@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+:scope { border: 2px solid var(--fg); border-radius: 22px; box-shadow: none; }
+}
+}
+</style>
+<style>
+@layer floe.page {
+@scope (:root) to ([data-floe-part] > *) {
+/* The colours and faces are the theme's palette; the page lays them out: one record on a sheet, the panel of the
+   theme, in a column as wide as prose and a little more.
+   LIMIT: the consequences sit side by side while each has 14rem; a width where they wrap is not looked at */
+body { margin: 0; padding-block: 2.5rem 4rem; font-size: 16px; line-height: 1.85; }
+.column { max-width: calc(var(--text-width) + 6rem + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+article { padding: clamp(1.25rem, 5vw, 3rem); display: grid; gap: 1.8rem; }
+header { display: grid; gap: 0.4rem; justify-items: start; border-bottom: 3px double var(--line); padding-bottom: 1.4rem; }
+.kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; gap: 0.8rem; }
+h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
+/* LIMIT: the contrast test measures the badge of the example's state alone; the others were measured once, in every
+   theme, when they were made */
+.status { font-weight: 800; letter-spacing: 0.15em; padding: 0.05rem 0.8rem; border: 2px solid currentColor; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+.status.accepted { background: var(--good-soft); color: var(--good); }
+.status.proposed { background: var(--warn-soft); color: var(--warn); }
+.status.rejected { background: var(--bad-soft); color: var(--bad); }
+.superseded-by { --face: var(--warn-soft); --on-face: var(--warn); background: var(--face); color: var(--on-face); padding: 0.3rem 0.8rem; border-radius: 6px; }
+.deciders { color: var(--muted); font-size: 0.9rem; }
+section { display: grid; gap: 0.6rem; }
+h2 { font-size: 1.1rem; }
+.decision { border-left: 4px solid var(--accent); padding-left: 1.1rem; }
+.alternatives { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
+.alternatives li { border: 1px dashed var(--line); border-radius: 6px; padding: 0.5rem 0.9rem; }
+.alternatives .title { font-weight: 700; }
+.alternatives :is(.title, .why) { display: block; }
+.consequences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: 1rem; }
+.consequences h3 { border-left: 4px solid; padding-left: 0.6rem; }
+.good h3 { border-color: var(--good); }
+.bad h3 { border-color: var(--bad); }
+}
+}
+</style>
+</head>
+<body>
+<div class="column">
+<article data-floe-look="panel">
+<header>
+<p class="kind">Decision record</p>
+<h1 id="the-retro-theme-in-a-record">The retro theme in a record</h1>
+<p class="status accepted">Accepted</p>
+</header>
+<section><h2 id="context">Context</h2><p>A page drawn in a panel, its headings with the stripes.</p>
+</section>
+<section class="decision"><h2 id="decision">Decision</h2><p>Keep sessions in the database.</p>
+</section>
+</article>
+</div>
+
+
+</body></html>

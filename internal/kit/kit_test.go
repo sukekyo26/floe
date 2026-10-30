@@ -45,7 +45,7 @@ func TestFloe(t *testing.T) {
 		t.Error("Floe read floe's own twice")
 	}
 	parts, looks, themes, templates := k.Names()
-	if len(parts) != 30 || !slices.Equal(looks, []string{"band", "cards", "numbered", "panel", "rows"}) || len(themes) != 9 ||
+	if len(parts) != 30 || !slices.Equal(looks, []string{"band", "cards", "numbered", "panel", "rows"}) || len(themes) != 10 ||
 		!slices.Equal(templates, []string{"adr", "design", "handoff", "postmortem", "report", "runbook", "slides"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}

@@ -1,0 +1,6 @@
+:scope { border: 2px solid var(--accent); border-radius: 22px; }
+:scope.good { border-color: var(--good); }
+:scope.warn { border-color: var(--warn); }
+:scope.bad { border-color: var(--bad); }
+/* A pseudo-element is no element of * { box-sizing: border-box }: its frame stays within the mark's size */
+:scope::before { box-sizing: border-box; border: 2px solid var(--fg); }
