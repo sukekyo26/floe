@@ -2,8 +2,9 @@ package kit
 
 import "fmt"
 
-// The files of the smallest part and template Load takes, but those naming them. A template's page keeps its
-// language and title, without which a page reads as broken.
+// The files of the smallest part and template Load takes, but those naming them, to fill in. A template's page
+// keeps its language and title, without which a page reads as broken, and a viewport, without which a phone draws
+// the page opened by itself 980px wide and shrinks it. No charset: floe adds it as it draws the page.
 const (
 	skeletonSchema = `{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -13,6 +14,7 @@ const (
 	skeletonPage = `<!doctype html>
 <html lang="{{.Lang}}">
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}}</title>
 </head>
 <body>

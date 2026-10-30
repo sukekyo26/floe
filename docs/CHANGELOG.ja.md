@@ -98,7 +98,8 @@ floe の主要な変更を記録します。フォーマットは
   code の言語の札、diff の hunk の頭は黄緑。
 - 追加：`FLOE_TEMPLATES_DIR` の自分のテンプレート（`page.html`・`schema.json`・
   `example.yaml`、要るなら `page.css`・`checks.yaml`・`computed.yaml`・`words.yaml`・
-  `assets/`）と、`floe template list`・`show`・`new`（埋めて使う最小のテンプレート）・`check`。
+  `assets/`）と、`floe template list`・`show`・`new`（埋めて使う最小のテンプレート。
+  `page.html` はスマホのための viewport を持つ）・`check`。
 - 追加：`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` の自分の部品・見た目・共有の schema・テーマ
   （floe のものと並べて置き、floe のものと同じ名前は付けない）と、`floe part list`・`show`・
   `new`（埋めて使う最小の部品）・`check`。部品の schema は、テンプレートと同じく floe の

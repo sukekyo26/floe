@@ -7,7 +7,7 @@ How to make a template of your own: the page a data file is drawn into. A data f
 A template of your own is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CONFIG_HOME/floe/templates`, else `~/.config/floe/templates`), named after the template. One of the name of floe's template hides it. A file right in `FLOE_TEMPLATES_DIR` is not read, and nothing says so: put a template's files in its directory.
 
 ```sh
-floe template new memo     # makes the smallest template, memo, to fill in
+floe template new memo     # makes a template, memo, to fill in
 floe template check        # checks every template of your own, drawing its example.yaml
 floe template show memo    # prints its themes and every file it reads, its schema and example first
 ```
@@ -53,12 +53,13 @@ A file of another name is refused. `example.yaml` names the template of its dire
 
 ## page.html
 
-`page.html` is a Go [html/template](https://pkg.go.dev/html/template), which escapes what it inserts. `floe template new` writes the smallest one:
+`page.html` is a Go [html/template](https://pkg.go.dev/html/template), which escapes what it inserts. `floe template new` writes this one, the smallest floe takes with a viewport `<meta>`: without the viewport, a phone draws a page opened by itself 980px wide and shrinks it. floe adds the charset when it draws the page; do not write one.
 
 ```html
 <!doctype html>
 <html lang="{{.Lang}}">
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}}</title>
 </head>
 <body>
