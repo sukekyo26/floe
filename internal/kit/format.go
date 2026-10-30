@@ -132,9 +132,9 @@ func float(fn string, v any) (float64, error) {
 	}
 	// A text is quoted, to tell "3" from 3 and show an empty one, but not escaped: the marks floe draws around an
 	// item of format html stay as they are, for draw to take out.
-	// LIMIT: a number of a kind not taken ({{num 'a'}}'s int32, index's uint8) reads "not 97"; take the kind if data has it
+	// LIMIT: a number of a kind not taken ({{num 'a'}}'s int32, index's uint8) reads "not 97"; take it if data has it
 	// LIMIT: a map, a list, a date and the like are written as fmt writes them; write them otherwise if one misleads
-	// LIMIT: a " in a text is not escaped and a markdown item's last newline wraps the closing "; escape them if it misleads
+	// LIMIT: a " in a text is not escaped and a markdown item's last newline wraps the closing "; escape if it misleads
 	// LIMIT: an image's data URI is written whole; cut it short if a long one hides the mistake
 	if r := reflect.ValueOf(v); r.Kind() == reflect.String {
 		return 0, usererr.New("kit_not_number", fn, `"`+r.String()+`"`)
