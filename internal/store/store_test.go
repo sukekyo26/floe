@@ -730,8 +730,9 @@ func TestFolderNames(t *testing.T) {
 		t.Fatal(err)
 	}
 	dw := picKit(t, "", "")
-	got := []string{}
-	for _, file := range []string{"api-docs/docs", "design-notes/docs", "api-docs/docs/v1", "api-docs", "handbook", "api-docs/specs/index.html"} {
+	linked := []string{"api-docs/docs", "design-notes/docs", "api-docs/docs/v1", "api-docs", "handbook", "api-docs/specs/index.html"}
+	got := make([]string, 0, len(linked))
+	for _, file := range linked {
 		e, err := s.PrepareLink(t.Context(), dw, filepath.Join(home, file), store.Options{}, "", home)
 		if err != nil {
 			t.Fatal(told(err, root))
@@ -752,8 +753,10 @@ func TestFolderNames(t *testing.T) {
 	if want := []string{"api-docs-docs", "design-notes-docs", "api-docs-docs-v1", "api-docs", "handbook", "specs"}; !slices.Equal(got, want) {
 		t.Errorf("slugs = %q, want %q", got, want)
 	}
-	if want := map[string]string{"api-docs-docs": "docs", "design-notes-docs": "docs", "api-docs-docs-v1": "docs/v1", "api-docs": "api-docs",
-		"handbook": "handbook", "specs": "Specs"}; !maps.Equal(titles, want) {
+	if want := map[string]string{
+		"api-docs-docs": "docs", "design-notes-docs": "docs", "api-docs-docs-v1": "docs/v1", "api-docs": "api-docs",
+		"handbook": "handbook", "specs": "Specs",
+	}; !maps.Equal(titles, want) {
 		t.Errorf("titles = %v, want %v", titles, want)
 	}
 }
