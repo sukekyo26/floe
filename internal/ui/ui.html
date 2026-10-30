@@ -249,6 +249,10 @@
   li:is(:has(+ li.group), :last-child) { border-radius: 0 0 20px 20px; box-shadow: 0 1px 0 var(--line); }
   /* A heading is not pressed, so it is not pointed out */
   li:not(.group):hover { background: var(--hover); }
+  /* A folder's row is the heading of its tree: its own ground, its title larger than the tree's names */
+  li.folder { background: var(--subtle); }
+  li.folder a.title { font-size: 0.98rem; font-weight: 700; }
+  li.folder a.title::before { content: none; }
   li::before {
     content: ""; position: absolute; left: 0; top: 0.55rem; bottom: 0.55rem; width: 2px; border-radius: 0 2px 2px 0;
     background: var(--ink); opacity: 0; transition: opacity 0.15s;
@@ -1634,9 +1638,11 @@
     dl.download = `${a.slug}.html`;
     dl.setAttribute('aria-label', t('ui_download_named', a.title));
     if (a.folder) {
+      // On the folders' tab a folder's row heads its tree, whose rows are its pages
+      li.classList.add('folder');
       // A folder's title opens and closes its tree; its URL leads to the list with it open, for a new tab
       link.setAttribute('aria-expanded', String(opened.has(a.slug)));
-      link.insertAdjacentHTML('afterbegin', '<span class="fold"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 6 6 6-6 6\"/></svg></span>');
+      link.insertAdjacentHTML('afterbegin', '<span class="fold"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 6 6 6-6 6\"/></svg></span><svg class=\"kind\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z\"/></svg>');
       link.addEventListener('click', (e) => {
         if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
