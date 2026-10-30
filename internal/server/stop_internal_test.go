@@ -21,7 +21,7 @@ func serving(ctx context.Context, t *testing.T, s *Server) (string, <-chan error
 	t.Helper()
 
 	var lc net.ListenConfig
-	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+	ln, err := lc.Listen(ctx, "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,11 +36,11 @@ func serving(ctx context.Context, t *testing.T, s *Server) (string, <-chan error
 // which Shutdown waits 5 s for.
 var client = &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
 
-// post sends body to path on addr as the CLI does.
-func post(t *testing.T, addr, path, body string) *http.Response {
+// askStop sends body to /api/stop on addr as floe does, and returns the status answered.
+func askStop(t *testing.T, addr, body string) int {
 	t.Helper()
 
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://"+addr+path, strings.NewReader(body))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://"+addr+"/api/stop", strings.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func post(t *testing.T, addr, path, body string) *http.Response {
 		t.Fatal(err)
 	}
 	_ = res.Body.Close()
-	return res
+	return res.StatusCode
 }
 
 // ended waits for Serve's result, for 2 s at most.
@@ -83,8 +83,8 @@ func TestStop(t *testing.T) {
 		{`{"x": 1}`, http.StatusBadRequest},
 		{`{"pid": "` + strconv.Itoa(os.Getpid()) + `"}`, http.StatusBadRequest},
 	} {
-		if res := post(t, addr, "/api/stop", c.body); res.StatusCode != c.want {
-			t.Errorf("stop %s = %d, want %d", c.body, res.StatusCode, c.want)
+		if code := askStop(t, addr, c.body); code != c.want {
+			t.Errorf("stop %s = %d, want %d", c.body, code, c.want)
 		}
 	}
 	for _, origin := range []string{"null", "http://example.com"} {
@@ -109,8 +109,8 @@ func TestStop(t *testing.T) {
 		t.Fatalf("Serve ended unasked: %v", err)
 	default:
 	}
-	if res := post(t, addr, "/api/stop", `{"pid": `+strconv.Itoa(os.Getpid())+`}`); res.StatusCode != http.StatusNoContent {
-		t.Errorf("stop of its own pid = %d, want 204", res.StatusCode)
+	if code := askStop(t, addr, `{"pid": `+strconv.Itoa(os.Getpid())+`}`); code != http.StatusNoContent {
+		t.Errorf("stop of its own pid = %d, want 204", code)
 	}
 	ended(t, done)
 }
@@ -160,8 +160,8 @@ func TestStopFinishesRequests(t *testing.T) {
 			// LIMIT: the server is given 100 ms to take the request up; nothing tells it has.
 			time.Sleep(100 * time.Millisecond)
 			if how == "asked" {
-				if res := post(t, addr, "/api/stop", `{"pid": `+strconv.Itoa(os.Getpid())+`}`); res.StatusCode != http.StatusNoContent {
-					t.Fatalf("stop = %d", res.StatusCode)
+				if code := askStop(t, addr, `{"pid": `+strconv.Itoa(os.Getpid())+`}`); code != http.StatusNoContent {
+					t.Fatalf("stop = %d", code)
 				}
 			} else {
 				cancel()
@@ -173,8 +173,11 @@ func TestStopFinishesRequests(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			b, _ := io.ReadAll(res.Body)
+			b, err := io.ReadAll(res.Body)
 			_ = res.Body.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
 			if res.StatusCode != http.StatusCreated {
 				t.Fatalf("link = %d %s", res.StatusCode, b)
 			}
@@ -205,8 +208,8 @@ func TestStopEndsStreams(t *testing.T) {
 	if _, err = bufio.NewReader(res.Body).ReadString('\n'); err != nil {
 		t.Fatal(err)
 	}
-	if res := post(t, addr, "/api/stop", `{"pid": `+strconv.Itoa(os.Getpid())+`}`); res.StatusCode != http.StatusNoContent {
-		t.Fatalf("stop = %d", res.StatusCode)
+	if code := askStop(t, addr, `{"pid": `+strconv.Itoa(os.Getpid())+`}`); code != http.StatusNoContent {
+		t.Fatalf("stop = %d", code)
 	}
 	ended(t, done)
 }

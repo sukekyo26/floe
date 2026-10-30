@@ -140,10 +140,10 @@ func TestStopNamesTheServer(t *testing.T) {
 			srv := &http.Server{ReadHeaderTimeout: time.Second}
 			srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != "/api/stop" {
-					_, _ = w.Write(health)
+					_, _ = w.Write(health) //nolint:errcheck // a test's answer
 					return
 				}
-				b, _ := io.ReadAll(r.Body)
+				b, _ := io.ReadAll(r.Body) //nolint:errcheck // a short body, compared below
 				mu.Lock()
 				bodies = append(bodies, string(b))
 				mu.Unlock()
@@ -154,14 +154,19 @@ func TestStopNamesTheServer(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 				go func() {
 					time.Sleep(100 * time.Millisecond)
-					_ = srv.Close()
+					_ = srv.Close() //nolint:errcheck // nothing to do
 				}()
 			})
-			go func() { _ = srv.Serve(ln) }()
-			t.Cleanup(func() { _ = srv.Close() })
-			port := ln.Addr().(*net.TCPAddr).Port //nolint:forcetypeassert // a TCP listener
+			go func() { _ = srv.Serve(ln) }()     //nolint:errcheck // closed below
+			t.Cleanup(func() { _ = srv.Close() }) //nolint:errcheck // nothing to do
+			addr, ok := ln.Addr().(*net.TCPAddr)
+			if !ok {
+				t.Fatalf("a TCP listener on %v", ln.Addr())
+			}
+			port := addr.Port
 
-			saw := daemon.Status{State: daemon.Ours, Health: server.Health{App: server.App, PID: c.pid}} //nolint:exhaustruct // the rest unread
+			//nolint:exhaustruct // the rest of the health is not read
+			saw := daemon.Status{State: daemon.Ours, Health: server.Health{App: server.App, PID: c.pid}}
 			if _, err := daemon.Stop(t.Context(), port, saw); err != nil {
 				t.Errorf("Stop = %v", err)
 			}
