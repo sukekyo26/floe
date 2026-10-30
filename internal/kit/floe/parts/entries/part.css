@@ -1,0 +1,18 @@
+/* A heading, its tags on the line under it, then its text the full width, which a wide block in it (code, a table)
+   does not widen past the panel.
+   LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
+   if pages come to put code in entries */
+:scope { margin: 0; display: grid; }
+:scope > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; padding: 0.75rem 1.2rem; }
+:scope dt { font-weight: 700; }
+:scope dd { margin: 0; }
+/* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
+   them, which stays as large as in a table's cell */
+:scope .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.9rem; font-size: 0.85rem; color: var(--muted); }
+:scope .tags > span { min-width: 0; }
+:scope .tags code { font-size: 0.86rem; }
+:scope .text { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; }
+@media (max-width: 36rem) {
+  /* A long pill wraps rather than overflow the panel */
+  :scope .tags [data-floe-part] { white-space: normal; }
+}

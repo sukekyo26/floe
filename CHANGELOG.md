@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the part `entries`: records one under another, each a heading, its tags
+  (a line of Markdown or a pill, as a table's cells) on the line under it, and
+  Markdown text the full width, for rows whose names are short and whose rest
+  is long. It goes where parts go, and in `details` and `tabs` too.
 - Add the refusal of a `|` or `>` text whose first line not of spaces begins
   with spaces and a tab (a tab alone too), which floe's YAML library counts
   into the indentation, dropping or shortening the lines after it.

@@ -7,7 +7,8 @@ import (
 
 // wrapPage holds a path and a URL in cards, which have no place to break a line, words beside narrow
 // columns (keys' text beside its keycaps, the language of code and the counts of a diff beside a long file
-// name) and a path in a table and in a tree's note, which scroll instead.
+// name), a path in a table and in a tree's note, which scroll instead, and entries with a long path, a long pill
+// and a long line of code in its text.
 const wrapPage = `template: report
 lang: en
 title: Wrap
@@ -27,6 +28,19 @@ sections:
             - ['` + "`internal/kit/floe/parts/findings/part_internal_test.go`" + `', a test of the findings]
       - tree:
           - { path: internal/kit/floe/parts/, note: internal/kit/floe/parts/findings/part_internal_test.go }
+      - entries:
+          - title: '` + "`internal/kit/floe/parts/findings/part_internal_test.go`" + `'
+            tags: ['` + "`internal/kit/floe/parts/findings/part.html`" + `', { pill: blocked until the platform team reviews the export, tone: warn }]
+            text: |
+              The whole command:
+
+              ` + "```" + `
+              floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml
+              ` + "```" + `
+
+              | name | kind | where | what | state | owner |
+              | --- | --- | --- | --- | --- | --- |
+              | export | nightly | wiki.conf | writes pages | running | platform |
 `
 
 // measureWrap returns one line for a page wider than 390 px, one for each part's box, or a box in it, that is wider

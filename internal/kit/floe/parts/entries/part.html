@@ -1,0 +1,5 @@
+<dl data-floe-part="entries">
+{{- range .}}
+<div><dt>{{markdownLine .title}}</dt>{{with .tags}}<dd class="tags">{{range .}}<span>{{.}}</span>{{end}}</dd>{{end}}{{with .text}}<dd class="text">{{markdown .}}</dd>{{end}}</div>
+{{- end}}
+</dl>
