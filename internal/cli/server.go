@@ -227,6 +227,8 @@ func (a *app) stopCmd() *cobra.Command {
 				a.print("%s", english.Msg("cli_not_running"))
 				return nil
 			}
+			// LIMIT: returns once SIGTERM is sent; a command run at once may still find the server and be refused
+			// alike. Wait for it to go here if that comes to matter.
 			if err := daemon.Terminate(p.Health.PID); err != nil {
 				return err //nolint:wrapcheck // already says what failed
 			}

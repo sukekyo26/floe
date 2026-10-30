@@ -41,7 +41,7 @@ type Status struct {
 }
 
 // Build identifies the running binary by version, mtime and size, so that reinstalling floe makes
-// the next publish restart the server.
+// the next command that uses the server restart it.
 func Build() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -196,7 +196,7 @@ func sameDir(a, b string) bool {
 
 // sameOrUnread reports whether the directories a and b of templates or icons draw alike: one directory, or
 // two that cannot be read, neither holding anything to draw with.
-// LIMIT: one made readable later draws pages unchecked until the next publish tells the two apart; watch
+// LIMIT: one made readable later draws pages unchecked until the next command that draws tells the two apart; watch
 // the directories if that comes to matter.
 func sameOrUnread(a, b string) bool {
 	if sameDir(a, b) {
@@ -210,7 +210,7 @@ func sameOrUnread(a, b string) bool {
 // startAndWait starts a server on the port, p being Down, and waits for one to answer there.
 func startAndWait(ctx context.Context, s Server, p Status) (Status, error) {
 	started := false
-	// Twice at most: the port another publish bound comes free, if its server fails, while this one
+	// Twice at most: the port another command bound comes free, if its server fails, while this one
 	// waits for it.
 	for try := 0; try < 2 && p.State == Down && !started; try++ {
 		var err error
@@ -219,20 +219,20 @@ func startAndWait(ctx context.Context, s Server, p Status) (Status, error) {
 		}
 		p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Down })
 	}
-	// Bound, but none answers: another publish's server still starting, or a program that does not.
+	// Bound, but none answers: another command's server still starting, or a program that does not.
 	if p.State == Down && !started {
 		return p, usererr.New("daemon_port_silent", s.Port)
 	}
 	return p, nil
 }
 
-// ListenerEnv tells "floe serve" the file descriptor of the listener the publish that started it bound.
+// ListenerEnv tells "floe serve" the file descriptor of the listener the command that started it bound.
 const ListenerEnv = "FLOE_SERVE_LISTENER"
 
 // listenerFD is the descriptor a started server takes its listener at: the first of cmd.ExtraFiles.
 const listenerFD = 3
 
-// errLowFD is a descriptor below those a publish hands down.
+// errLowFD is a descriptor below those a command hands down.
 var errLowFD = errors.New("not a descriptor handed down")
 
 // ErrHandedAddr is a listener handed down on another address than the server's.
@@ -260,7 +260,7 @@ func Listen(port int) (*net.TCPListener, error) {
 	return net.ListenTCP("tcp", addr) //nolint:wrapcheck // as above
 }
 
-// Handed returns the listener the publish that started this server bound on port, in the variables
+// Handed returns the listener the command that started this server bound on port, in the variables
 // getenv reads, or nil when none was handed down.
 func Handed(getenv func(string) string, port int) (net.Listener, error) {
 	v := getenv(ListenerEnv)
@@ -278,7 +278,7 @@ func Handed(getenv func(string) string, port int) (net.Listener, error) {
 	if fd < listenerFD {
 		return nil, refuse(errLowFD)
 	}
-	f := os.NewFile(uintptr(fd), "listener") //nolint:gosec // G115: a descriptor the publish wrote
+	f := os.NewFile(uintptr(fd), "listener") //nolint:gosec // G115: a descriptor the command wrote
 	defer f.Close()                          //nolint:errcheck // the listener holds its own copy
 	ln, err := net.FileListener(f)
 	if err != nil {
@@ -292,8 +292,8 @@ func Handed(getenv func(string) string, port int) (net.Listener, error) {
 }
 
 // start binds the port, then runs "floe serve" on it in a session of its own, so that it outlives the
-// publish and its terminal (and ctx: the server must not be killed when the publish ends), and
-// reports whether it did. A publish that cannot bind the port starts nothing: another publish's
+// command and its terminal (and ctx: the server must not be killed when the command ends), and
+// reports whether it did. A command that cannot bind the port starts nothing: another command's
 // server has it already (or another program), and a second server, slow to start, would otherwise
 // take the port once that one stops.
 func start(ctx context.Context, s Server) (bool, error) {

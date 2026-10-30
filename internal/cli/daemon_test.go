@@ -288,8 +288,9 @@ func TestRestartOnAnotherBuild(t *testing.T) {
 	}
 }
 
-// A publish that means other parts, themes or icons than the server's is refused, from another build too, which
-// would replace the server; listing and removing draw nothing and take it as it is. With no place for the icons,
+// A publish or a rebuild that means other parts, themes or icons than the server's is refused, from another build
+// too, which would replace the server, and told to run the command again; listing and removing draw nothing and
+// take it as it is. With no place for the icons,
 // the command and the server both mean none, and a publish again is no other.
 func TestPublishOtherDirs(t *testing.T) {
 	t.Parallel()
@@ -298,12 +299,19 @@ func TestPublishOtherDirs(t *testing.T) {
 	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", "")
 	first, _ := e.health(t.Context())
 	refused := "floe: the server on port " + e.port + " draws pages with the templates of " + first.Templates
+	again := `; move yours where the server reads them, or run "floe stop" and run this command again` + "\n"
 	for key, dir := range map[string]string{"FLOE_ICONS_DIR": "other-icons", "FLOE_THEMES_DIR": "other-themes", "FLOE_PARTS_DIR": "other-parts"} {
 		e.vars[key] = filepath.Join(e.tmp, dir)
 		if err := os.Mkdir(e.vars[key], 0o700); err != nil {
 			t.Fatal(err)
 		}
-		wantRun(t, "publish with "+dir, e.run("publish", "page.yaml"), 1, "", refused)
+		for _, args := range [][]string{{"publish", "page.yaml"}, {"rebuild"}} {
+			r := e.run(args...)
+			wantRun(t, args[0]+" with "+dir, r, 1, "", refused)
+			if !strings.HasSuffix(r.stderr, again) {
+				t.Errorf("%s with %s = %q, want it to end in %q", args[0], dir, r.stderr, again)
+			}
+		}
 		wantRun(t, "publish with "+dir+" from another build", e.exe(t, otherBuild, "publish", "page.yaml"), 1, "", refused)
 		if r := e.run("list"); r.code != 0 || !strings.Contains(r.stdout, "\tpage\t") {
 			t.Errorf("list with %s = %+v", dir, r)
@@ -323,15 +331,19 @@ func TestPublishOtherDirs(t *testing.T) {
 	wantRun(t, "again", n.run("publish", "page.yaml"), 0, n.base()+"/a/page/\n", "updated")
 }
 
-// A publish to a server of another store, or to a port another program holds, is refused.
+// A command to a server of another store, or to a port another program holds, is refused.
 func TestPublishToAnotherServer(t *testing.T) {
 	t.Parallel()
 
 	e := newDenv(t)
 	wantRun(t, "publish", e.run("publish", "page.yaml"), 0, e.base()+"/a/page/\n", "")
 	e.vars["FLOE_DIR"] = filepath.Join(e.tmp, "other")
-	wantRun(t, "another store", e.run("publish", "page.yaml"), 1, "", "floe: the server on port "+e.port+
-		" serves "+filepath.Join(e.tmp, "store")+`; run "floe stop" and publish again`)
+	otherStore := "floe: the server on port " + e.port + " serves " + filepath.Join(e.tmp, "store") +
+		`; set FLOE_PORT to another port to run a server of your own beside it, or run "floe stop" (which stops` +
+		` that server) and run this command again` + "\n"
+	for _, args := range [][]string{{"publish", "page.yaml"}, {"rebuild"}, {"list"}} {
+		wantRun(t, args[0]+" to another store", e.run(args...), 1, "", otherStore)
+	}
 	if _, err := os.Stat(filepath.Join(e.tmp, "other", "page")); err == nil {
 		t.Error("a failed publish left the page in the store")
 	}
@@ -356,4 +368,25 @@ func TestPublishToAnotherServer(t *testing.T) {
 		"floe: port "+o.port+" is used by another program; set FLOE_PORT to a free port")
 	wantRun(t, "serve on a busy port", o.run("serve"), 1, "",
 		"floe: port "+o.port+" is in use; stop that program (floe stop, if it is floe's server) or set FLOE_PORT")
+}
+
+// A port held by a program that never answers is refused, and the command is told to run again. Apart from the
+// others, as the probes and the waits take seconds.
+func TestSilentPort(t *testing.T) {
+	t.Parallel()
+
+	var lc net.ListenConfig
+	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ln.Close() }) //nolint:errcheck // nothing to do
+	addr, ok := ln.Addr().(*net.TCPAddr)
+	if !ok {
+		t.Fatalf("a TCP listener on %v", ln.Addr())
+	}
+	e := newDenvOn(t, addr.Port)
+	wantRun(t, "list", e.run("list"), 1, "", "floe: port "+e.port+" is in use, and nothing answers there: a server"+
+		" another floe command started may still be starting, or another program holds it; run this command again,"+
+		" or set FLOE_PORT to a free port\n")
 }
