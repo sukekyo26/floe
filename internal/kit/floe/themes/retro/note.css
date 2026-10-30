@@ -1,0 +1,2 @@
+:scope { border: 2px solid var(--fg); border-radius: 22px; }
+:scope::before { border: 2px solid var(--fg); }

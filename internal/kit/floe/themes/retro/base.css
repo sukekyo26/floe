@@ -1,0 +1,9 @@
+/* The seventies: three stripes of orange, mustard and olive under headings and on the faces, round fat corners */
+/* The stripes go under the page's own headings alone (the template's, and a text's Markdown, as text draws no box),
+   not those in a part or a look (a band, where the orange would sink into the accent, a panel, details); they are a
+   box of their own under the heading, not its ground, so that its text stays on the page's */
+h2:not(:where([data-floe-part], [data-floe-look]) h2)::after {
+  content: ""; display: block; width: 4.5rem; height: 9px; margin-top: 0.7rem; background: var(--retro-stripes);
+}
+blockquote > * { --face: initial; --on-face: initial; }
+blockquote { background: var(--surface); border: 0; border-radius: 22px; padding: 1rem 1.4rem; color: var(--fg); border-left: 9px solid var(--retro-mustard); }

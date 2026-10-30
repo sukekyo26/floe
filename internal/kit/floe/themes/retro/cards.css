@@ -1,0 +1,5 @@
+/* A card is a round face in a brown frame, its top in the three stripes */
+.card { border: 2px solid var(--fg); border-radius: 22px; padding-top: 1.6rem; background: var(--surface);
+  /* The stripes as shadows inside its top, which keep to its round corners and stay off the ground of its text */
+  box-shadow: inset 0 4px var(--retro-orange), inset 0 8px var(--retro-mustard), inset 0 12px var(--retro-olive); }
+:scope.numbered > .card::before { border-radius: 50%; background: var(--fg); color: var(--surface); font-family: var(--display); }
