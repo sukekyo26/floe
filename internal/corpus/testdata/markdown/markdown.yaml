@@ -32,5 +32,5 @@ sections:
           Text with <kbd>Ctrl</kbd> and an escaped \*star\*, & < > " '.
       - code: { lang: go, text: "func main() { fmt.Println(\"<hi>\") }\n" }
       - table:
-          columns: [{ title: '`code` in a title' }, { title: Link }]
+          columns: ['`code` in a title', Link]
           rows: [['**bold** cell', '[a](https://example.com/)'], ['a | pipe', { pill: 'a: pill' }]]

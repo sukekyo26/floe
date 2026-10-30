@@ -1,0 +1,11 @@
+# A column's pills: each word a tone of the theme's, and at least one word.
+lang: en
+template: report
+title: Pills
+sections:
+  - heading: a
+    parts:
+      - table: {columns: [{title: x, pills: {done: red}}], rows: [[done]]}
+      - table: {columns: [{title: x, pills: {}}], rows: [[done]]}
+      - table: {columns: [{title: x, pills: {'': good}}], rows: [[done]]}
+      - table: {columns: [x], rows: [[done]], pills: {done: good}}

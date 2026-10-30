@@ -187,3 +187,34 @@ func TestFloePartExecPlaced(t *testing.T) {
 		t.Errorf("told %q, want %q", got, want)
 	}
 }
+
+// written gives a part.html its value as written, not ready: a cell of a table's pills column is matched by the word
+// written, while the other cells are drawn as ready holds them.
+func TestWritten(t *testing.T) {
+	t.Parallel()
+
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := doc.Read("d.yaml", []byte("lang: en\nb: x\n"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	column := map[string]any{"title": "a", "pills": map[string]any{"x": "good"}}
+	value := map[string]any{"columns": []any{column}, "rows": []any{[]any{"x"}, []any{"y"}}}
+	ready := map[string]any{
+		"columns": []any{map[string]any{"title": "a", "num": nil, "pills": map[string]any{"x": "good"}}},
+		"rows":    []any{[]any{template.HTML("drawn x")}, []any{template.HTML("drawn y")}},
+	}
+	it := schema.Item{At: []string{"b"}, Part: "table", Holds: []string{"cell"}, Format: "", Value: value}
+	got, err := drawPart(k, d, it, ready, newItems(nil, "", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`<td><span class="good" data-floe-part="cell">x</span></td>`, `<td>drawn y</td>`} {
+		if !strings.Contains(fmt.Sprint(got), want) {
+			t.Errorf("drew %s, want it to hold %s", got, want)
+		}
+	}
+}

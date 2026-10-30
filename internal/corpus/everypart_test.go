@@ -68,6 +68,11 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 	parts := readParts(t)
 	written := map[string]map[string]bool{} // path=value of each part's data, by the part's name
 	readOccurrences(data, parts, written)
+	for _, tone := range tones[:len(tones)-1] {
+		if !pillsDrawn(doc)[tone] {
+			t.Errorf("every-part draws no word of a table's pills column in tone %q", tone)
+		}
+	}
 	for _, name := range slices.Sorted(maps.Keys(parts)) {
 		p := parts[name]
 		if p.schema == nil || p.css == "" || name == "diagram" {
@@ -189,6 +194,10 @@ func (p *part) takesTone(s map[string]any, root bool, seen map[string]bool) bool
 		return false
 	}
 	for _, h := range hs {
+		// A column's pills take tones it draws as pills, cell's boxes: told of by pillsDrawn.
+		if h.key == "pills" {
+			continue
+		}
 		if p.takesTone(h.schema, false, seen) {
 			return true
 		}
@@ -352,4 +361,49 @@ func TestPartWalkEndsOnSelfReference(t *testing.T) {
 	if !p.takesTone(schema, true, map[string]bool{}) || !slices.Equal(enums[".kind"], []string{"leaf", "branch"}) {
 		t.Errorf("enums %v", enums)
 	}
+}
+
+// pillsDrawn returns the tones of the pills in the column Urgency of every-part's tables. Its one cell written
+// { pill, tone } is warn, as its words mid are, so that the other tones come of the column's pills alone.
+func pillsDrawn(doc *html.Node) map[string]bool {
+	found := map[string]bool{}
+	for n := range doc.Descendants() {
+		if nodeAttr(n, "data-floe-part") != "table" {
+			continue
+		}
+		column, at := -1, 0 // the column Urgency's place, and the place of the next cell of the row
+		for e := range n.Descendants() {
+			switch {
+			case e.Type != html.ElementNode:
+			case e.Data == "tr":
+				at = 0
+			case e.Data == "th":
+				if textOf(e) == "Urgency" {
+					column = at
+				}
+				at++
+			case e.Data == "td":
+				if at == column {
+					for c := range e.Descendants() {
+						if nodeAttr(c, "data-floe-part") == "cell" {
+							found[nodeAttr(c, "class")] = true
+						}
+					}
+				}
+				at++
+			}
+		}
+	}
+	return found
+}
+
+// textOf returns the text n holds.
+func textOf(n *html.Node) string {
+	var b strings.Builder
+	for c := range n.Descendants() {
+		if c.Type == html.TextNode {
+			b.WriteString(c.Data)
+		}
+	}
+	return b.String()
 }
