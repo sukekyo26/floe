@@ -21,7 +21,8 @@ func (a *app) checkCmd() *cobra.Command {
 		Short: "Check data files as their pages are drawn, without writing them",
 		Long: `Check each data file as floe draws its page: its YAML, its template and theme, the template's
 schema, its checks and computed values, and the page drawn. Every mistake of every file is
-printed as file:line:column: message, and the exit code is 1 when there is one. A page drawn
+printed as file:line:column: message (file: message for one of the whole file, such as a key it
+lacks at the top), and the exit code is 1 when there is one. A page drawn
 may have warnings, advice on a better way to write it, printed after the mistakes as
 file:line:column: warning: message; they leave the exit code as it is. Nothing is written,
 and nothing is printed when the files are right and have no warning.`,

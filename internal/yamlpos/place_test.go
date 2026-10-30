@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/goccy/go-yaml/ast"
+
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -14,10 +16,11 @@ import (
 func TestPlace(t *testing.T) {
 	t.Parallel()
 
-	root, err := yamlpos.Parse("d.yaml", []byte("top: 1\ndiagram:\n  parts:\n    - box: { x: 1 }\n  a/b: 2\n"))
+	body, err := yamlpos.Parse("d.yaml", []byte("top: 1\ndiagram:\n  parts:\n    - box: { x: 1 }\n  a/b: 2\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	root, _ := body.(*ast.MappingNode) //nolint:errcheck // keys and values just above
 	err = usererr.Collect(
 		usererr.NewIn("", "#/parts/0/box/x", "library", "bad x"),
 		usererr.NewIn("", "#/a~1b", "library", "bad a/b"),
@@ -40,7 +43,7 @@ func TestPlace(t *testing.T) {
 	if want := "d.yaml:4:17: first\nd.yaml:5:8: second"; got != want {
 		t.Errorf("Place of pointers out of the lines' order = %q, want %q", got, want)
 	}
-	if got := usererr.Tell(i18n.EnglishCatalog(), yamlpos.Place(list[:1], "e.yaml", nil, nil)).Render(""); got != "e.yaml:1:1: second" {
+	if got := usererr.Tell(i18n.EnglishCatalog(), yamlpos.Place(list[:1], "e.yaml", nil, nil)).Render(""); got != "e.yaml: second" {
 		t.Errorf("Place under no root = %q", got)
 	}
 	failure := errors.New("floe's own")

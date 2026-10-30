@@ -10,10 +10,11 @@ import (
 )
 
 // Place returns err with each mistake of no file at a JSON pointer (usererr.Error's At) placed in file instead: at
-// the line and column of the value the pointer leads to from prefix under root (the top of the file for a root of
-// nil, a file of nothing), its pointer dropped, and the mistakes Sorted. A mistake with a file of its own, or
+// the line and column of the value the pointer leads to from prefix under root, as Locate places it (the file
+// alone when it leads to no value written under root, or root is nil, a file of nothing), its pointer dropped, and
+// the mistakes Sorted. A mistake with a file of its own, or
 // with no pointer (of the whole output), is kept as it is; a failure is returned as it is.
-func Place(err error, file string, root ast.Node, prefix []string) error {
+func Place(err error, file string, root *ast.MappingNode, prefix []string) error {
 	var found usererr.List
 	if failed := found.Add(err); failed != nil {
 		return failed
@@ -22,10 +23,7 @@ func Place(err error, file string, root ast.Node, prefix []string) error {
 		if e.File() != "" || e.At() == "" {
 			continue
 		}
-		at := Pos{Line: 1, Column: 1} // a file of nothing
-		if root != nil {
-			at = OfValue(Find(root, slices.Concat(prefix, steps(e.At()))))
-		}
+		at, _ := Locate(root, slices.Concat(prefix, steps(e.At())))
 		found[i] = e.PlacedAt(file, at.Line, at.Column)
 	}
 	return found.Sorted().Err()

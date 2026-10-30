@@ -36,7 +36,8 @@ into a page, their text in the language of --lang (en when left out). A spec is 
 the diagram's schema, then laid out once for every language its text is written in and checked:
 overflowing text, overlaps, edges through boxes, crossings … (frames may cross one another, and a
 frame's label is held to the frame's width, not its height or the canvas). Every mistake of every
-spec is printed as file:line:column: message, and nothing is drawn until all are fixed.
+spec is printed as file:line:column: message (file: message for one of the whole spec, such as a
+key it lacks), and nothing is drawn until all are fixed.
 An icon part takes the icons that floe icons fetch <set> keeps.
 
 The fragment starts with the diagrams' style and the script that zooms them (once per page is
@@ -139,17 +140,10 @@ func diagramOf(
 	if err != nil {
 		return "", err
 	}
-	// A file of nothing is a spec of nothing, as a data file of nothing is: the schema tells what it lacks.
-	var v any = map[string]any{}
-	root, err := yamlpos.Parse(p.name, src)
-	switch {
-	case errors.Is(err, yamlpos.ErrEmpty):
-	case err != nil:
+	// Read as doc.Read reads a data file: a file of nothing is a spec of nothing, whose lacks the schema tells.
+	root, v, err := yamlpos.ParseMap(p.name, src)
+	if err != nil {
 		return "", err //nolint:wrapcheck // a mistake at its line and column
-	default:
-		if err = yamlpos.Decode(p.name, root, &v); err != nil {
-			return "", err //nolint:wrapcheck // as above
-		}
 	}
 	got, err := with(d, doc.Ints(v), o)
 	return got, yamlpos.Place(err, p.name, root, nil) //nolint:wrapcheck // mistakes placed

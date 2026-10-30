@@ -71,7 +71,7 @@ func words(e *jsonschema.ValidationError) string {
 }
 
 // placeOf returns where the mistake e is written in d: the value at its InstanceLocation, or for a property
-// name, as placeOfName finds it; the top of the file without a node.
+// name, as placeOfName finds it; the file alone, with no line, where yamlpos.Locate gives none.
 func placeOf(d *doc.Data, e *jsonschema.ValidationError) yamlpos.Pos {
 	if pn, ok := e.ErrorKind.(*kind.PropertyNames); ok && d.Root != nil {
 		return placeOfName(d.Root, len(e.InstanceLocation), pn.Property)
@@ -80,11 +80,11 @@ func placeOf(d *doc.Data, e *jsonschema.ValidationError) yamlpos.Pos {
 }
 
 // placeOfName returns where a property name the schema refuses is: the key name of the one object at depth
-// in root that has it, or the top of the file when there are none or more. The keys every data file shares are not
-// values the schema checks.
+// in root that has it, or the file alone (yamlpos.Locate of root) when there are none or more. The keys every data
+// file shares are not values the schema checks.
 // LIMIT: jsonschema v6.0.3 shares the slice of InstanceLocation with later checks, which change what it holds
 // (upstream #276, #269): only its length is right. Go back to the library's place once it is fixed; the
-// mistakes told at the top of the file then move, and the golden files change.
+// mistakes told at the file alone then move, and the golden files change.
 func placeOfName(root *ast.MappingNode, depth int, name string) yamlpos.Pos {
 	var found []*ast.MappingValueNode
 	var walk func(n ast.Node, depth int, top bool)
@@ -113,5 +113,6 @@ func placeOfName(root *ast.MappingNode, depth int, name string) yamlpos.Pos {
 	if len(found) == 1 {
 		return yamlpos.Of(yamlpos.KeyOf(found[0]))
 	}
-	return yamlpos.Pos{Line: 1, Column: 1}
+	pos, _ := yamlpos.Locate(root, nil)
+	return pos
 }

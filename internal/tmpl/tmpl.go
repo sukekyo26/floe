@@ -70,8 +70,8 @@ func pick(k *kit.Kit, d *doc.Data, found *usererr.List) (*kit.Template, string) 
 	theme := cmp.Or(d.Theme, kit.DefaultTheme)
 	if _, ok := k.Theme(theme); !ok {
 		bad := usererr.New("tmpl_unknown_theme", theme, strings.Join(themes, ", "))
-		if at := d.Where["theme"]; at.Line != 0 {
-			bad = yamlpos.New(d.File, at, "tmpl_unknown_theme", theme, strings.Join(themes, ", "))
+		if !d.ThemeGiven {
+			bad = yamlpos.New(d.File, d.Where["theme"], "tmpl_unknown_theme", theme, strings.Join(themes, ", "))
 		}
 		*found = append(*found, bad)
 	}

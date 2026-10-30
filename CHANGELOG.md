@@ -134,8 +134,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   another process), and it stops once the requests under way are done.
 - Add `floe check` and `floe render`: check data files without writing them,
   and write each page to an HTML file that opens without floe (`--check` for
-  CI), the mistakes printed as `file:line:column: message`, every one of a
-  stage of the checks at once.
+  CI), the mistakes printed as `file:line:column: message` (`file: message`
+  for one of the whole file, such as a key it lacks at the top), every one of
+  a stage of the checks at once.
 - Add `floe rebuild`, which draws every stored page again with the templates,
   parts and themes of now, keeping the page it had where it no longer draws.
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, and a management
