@@ -5,6 +5,7 @@ import (
 	"io"
 	"testing"
 	"text/template"
+	"unicode/utf8"
 
 	"github.com/sukekyo26/floe/internal/textpos"
 )
@@ -35,6 +36,40 @@ func TestOf(t *testing.T) {
 	} {
 		if line, column := textpos.Of([]byte(tt.src), tt.at); line != tt.line || column != tt.column {
 			t.Errorf("Of(%q, %d) = %d:%d, want %d:%d", tt.src, tt.at, line, column, tt.line, tt.column)
+		}
+	}
+}
+
+// At is Of's inverse, at every character of src and its end, whatever its line breaks; -1 past src's lines or a
+// line's end. NextLine is where the line after an offset's starts, as Of counts lines.
+func TestAt(t *testing.T) {
+	t.Parallel()
+
+	for _, src := range []string{"abc", "a\nb", "a\r\nb", "a\rb", "日本x\ny", "a\r\n\rb\nc", "ab\r", "\xff\xfex\n"} {
+		for at := range len(src) + 1 {
+			if at < len(src) && !utf8.RuneStart(src[at]) {
+				continue
+			}
+			line, column := textpos.Of([]byte(src), at)
+			if got := textpos.At([]byte(src), line, column); got != at {
+				t.Errorf("At(%q, %d, %d) = %d, want %d", src, line, column, got, at)
+			}
+		}
+	}
+	for _, tt := range []struct {
+		src          string
+		line, column int
+	}{{"ab\ncd", 3, 1}, {"ab\ncd", 1, 4}, {"ab\ncd", 0, 1}, {"ab\ncd", 1, 0}, {"日本", 1, 4}} {
+		if got := textpos.At([]byte(tt.src), tt.line, tt.column); got != -1 {
+			t.Errorf("At(%q, %d, %d) = %d, want -1", tt.src, tt.line, tt.column, got)
+		}
+	}
+	for _, tt := range []struct {
+		src      string
+		at, next int
+	}{{"a\nb", 0, 2}, {"a\r\nb", 0, 3}, {"a\r\nb", 1, 3}, {"a\rb", 0, 2}, {"ab", 0, 2}, {"a\nb", 2, 3}, {"日\nb", 0, 4}} {
+		if got := textpos.NextLine([]byte(tt.src), tt.at); got != tt.next {
+			t.Errorf("NextLine(%q, %d) = %d, want %d", tt.src, tt.at, got, tt.next)
 		}
 	}
 }
