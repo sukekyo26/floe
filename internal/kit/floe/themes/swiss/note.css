@@ -7,8 +7,9 @@
 /* Its red is read on the surface alone: on the warning's grey the mark is black */
 :scope:is(.good, .warn)::before { color: var(--fg); }
 :scope.warn { background: color-mix(in srgb, var(--fg) 7%, transparent); }
-:scope.bad { background: var(--bad); color: var(--on-fill); border: 0; border-radius: 0; padding-left: 2.6rem; }
+/* The bad one a face (base.css) on the part's root, set on what it holds too, which base.css starts afresh */
+:scope.bad, :scope.bad > * { --face: var(--bad); --on-face: var(--on-fill); }
+:scope.bad { background: var(--face); color: var(--on-face); border: 0; border-radius: 0; padding-left: 2.6rem; }
 :scope.bad::before { left: 0.6rem; background: none; color: var(--on-fill); font-weight: 900; }
-:scope.bad .title, :scope.bad a, :scope.bad code { color: var(--on-fill); }
-:scope.bad code { background: color-mix(in srgb, var(--on-fill) 20%, transparent); }
+:scope.bad .title { color: var(--on-face); }
 .title, :scope:is(.good, .warn) .title { color: var(--fg); font-weight: 900; }

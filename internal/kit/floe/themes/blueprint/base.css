@@ -1,5 +1,6 @@
 /* A drawing on squared paper in blue ink: every cell ruled, labels in capitals of a fixed width, notes as
    dashed callouts and cards with their figure numbers */
+blockquote > * { --face: initial; --on-face: initial; }
 blockquote {
   background: var(--bp-squares), var(--surface); border-radius: 0;
   box-shadow: none;

@@ -101,12 +101,14 @@ const measureContrast = `(() => {` + colours + `
 // each box that scrolls, which Chrome lets a key reach too, with every details open, and takes the outline that the
 // focus changes, on the element or around it. Under it is the ground of the element on top at 12 points along the
 // middle of its line (a quarter, a half and three quarters of each side), the colour of that element's border where
-// the point is on one; a point that a box around clips is left out. It returns one line for each ring below 3:1 at
-// one of its points, as WCAG asks of what is not text. The page's tab must have the focus (SetFocusEmulationEnabled)
+// the point is on one; a point that a box around clips is left out. It returns one line for each ring below 3:1, as
+// WCAG asks of what is not text, at more than half of its points: a ring that crosses what lies beside it (the frame
+// of a line's code next to a link) is still seen on the rest. The page's tab must have the focus (SetFocusEmulationEnabled)
 // for a focus to be :focus-visible.
-// LIMIT: a ring 2px wide over two grounds is measured on the one under the middle of its line (the edge of a border
-// 3px wide, as brutal's under code's heading, is not), and a ring every point of which a box clips is measured
-// nowhere: the scrolling code of the part code with no heading draws no ring in themes with no padding round it.
+// LIMIT: a ring 2px wide over two grounds is measured on the one under the middle of its line (the edge of the
+// border 3px wide under brutal's heading of code is not), one low at fewer than half its points passes, and a ring
+// every point of which a box clips is measured nowhere: the scrolling code of the part code with no heading draws no
+// ring in themes with no padding round it.
 const measureRings = `(() => {` + colours + `
   const low = new Set();
   const outline = (e) => { const s = getComputedStyle(e); return s.outlineStyle + s.outlineWidth + s.outlineColor + s.outlineOffset; };
@@ -132,10 +134,16 @@ const measureRings = `(() => {` + colours + `
       if (t.overflowX !== 'visible' || t.overflowY !== 'visible') clips.push(a.getBoundingClientRect());
     }
     const xs = [0.25, 0.5, 0.75].map((f) => b.left + f * b.width), ys = [0.25, 0.5, 0.75].map((f) => b.top + f * b.height);
+    const read = [];
     for (const [x, y] of xs.flatMap((x) => [[x, b.top - d], [x, b.bottom + d]]).concat(ys.flatMap((y) => [[b.left - d, y], [b.right + d, y]]))) {
       if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight || clips.some((c) => x < c.left || x >= c.right || y < c.top || y >= c.bottom)) continue;
-      const bg = under(x, y), ring = over(faded(s.outlineColor, 1), bg), q = ratio(ring, bg);
-      if (q < 3) low.add(name(e) + (r === e ? '' : ' (its ring on ' + name(r) + ')') + ': ring ' + hex(ring) + ' on ' + hex(bg) + ' ' + q.toFixed(2));
+      const bg = under(x, y), ring = over(faded(s.outlineColor, 1), bg);
+      read.push({ bg, ring, q: ratio(ring, bg) });
+    }
+    const lows = read.filter((p) => p.q < 3).sort((p, q) => p.q - q.q);
+    if (lows.length * 2 > read.length) {
+      const p = lows[0];
+      low.add(name(e) + (r === e ? '' : ' (its ring on ' + name(r) + ')') + ': ring ' + hex(p.ring) + ' on ' + hex(p.bg) + ' ' + p.q.toFixed(2) + ', ' + lows.length + ' of ' + read.length + ' points');
     }
   };
   for (const d of document.querySelectorAll('details')) d.open = true;

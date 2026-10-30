@@ -1,4 +1,4 @@
 /* Red and black in print: heavy black rules, no corner rounded, large numbers, and states told by shape
    (● ✓ ▲ ×) as well as by colour; a danger is a band of red */
-blockquote { border: 0; padding: 0; color: var(--fg); font-size: 1.6rem; font-weight: 900; line-height: 1.45; }
-blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-height: 0.7; color: var(--accent); }
+blockquote { border: 0; padding: 0; color: var(--on-face, var(--fg)); font-size: 1.6rem; font-weight: 900; line-height: 1.45; }
+blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-height: 0.7; color: var(--on-face, var(--accent)); }
