@@ -251,12 +251,15 @@ var messagesJA = map[string]string{
 	"diagram_unknown_example":  "例 %s はありません。%s を使ってください",
 	"cli_wants_spec":           "図の spec（.yaml）",
 	"cli_unknown_part":         `部品 "%s" はありません。%s から選んでください`,
+	"cli_unknown_file":         `%s にファイル "%s" はありません。%s から選んでください`,
+	"cli_no_files":             "%s にファイルはありません",
 	"cli_new_exists":           "ここにはこの名前のものがもうあります。別の名前にするか、それを消してください",
 	"cli_new_no_dir":           "HOME が絶対パスでないので、既定のディレクトリがありません。%s に絶対パスを設定してください",
 	"cli_made":                 "%s を作りました",
 	"cli_where":                "場所: %s",
 	"cli_looks":                "見た目: %s",
 	"cli_themes":               "テーマ: %s",
+	"cli_files":                "ファイル: %s",
 	"diagram_edge_nowhere":     "%sは始まりと終わりが同じ所です。片方の端に別の部品か点を書いてください",
 
 	// ui

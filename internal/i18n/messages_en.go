@@ -262,12 +262,15 @@ var messagesEN = map[string]string{
 	"diagram_unknown_example":  "no example %s; use %s",
 	"cli_wants_spec":           "a diagram spec (.yaml)",
 	"cli_unknown_part":         `unknown part "%s"; use %s`,
+	"cli_unknown_file":         `%s has no file "%s"; use %s`,
+	"cli_no_files":             "%s has no files",
 	"cli_new_exists":           "there is something of this name here already: pick another name, or remove it",
 	"cli_new_no_dir":           "there is no default directory, as HOME is not an absolute path; set %s to an absolute path",
 	"cli_made":                 "made %s",
 	"cli_where":                "where: %s",
 	"cli_looks":                "looks: %s",
 	"cli_themes":               "themes: %s",
+	"cli_files":                "files: %s",
 	"diagram_edge_nowhere":     "%s starts where it ends: end it at another part or point",
 
 	// ui: the management page (ui.html), which renders them itself

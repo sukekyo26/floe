@@ -76,13 +76,58 @@ func TestEntriesCopied(t *testing.T) {
 	t.Parallel()
 
 	k := floe(t)
-	for _, entries := range []func() []kit.Entry{k.Parts, k.Templates} {
+	for _, entries := range []func() []kit.Entry{k.Parts, k.Templates, k.Themes} {
 		first := entries()
 		i := slices.IndexFunc(first, func(e kit.Entry) bool { return len(e.Files) > 0 })
+		was := first[i].Files[0].Text[0]
 		first[i].Files[0].Text[0] = 'X'
-		if again := entries()[i].Files[0].Text[0]; again != '{' {
+		if again := entries()[i].Files[0].Text[0]; again != was {
 			t.Errorf("%s: writing the text returned changed the kit: %q", first[i].Name, again)
 		}
+	}
+}
+
+// Each part, look, shared schema, template and theme shows the files it read, in the order show prints them, an
+// empty file too.
+func TestEntryFiles(t *testing.T) {
+	t.Parallel()
+
+	k := floe(t)
+	names := func(entries []kit.Entry, name string) string {
+		i := slices.IndexFunc(entries, func(e kit.Entry) bool { return e.Name == name })
+		var files []string
+		for _, f := range entries[i].Files {
+			files = append(files, f.Name)
+		}
+		return strings.Join(files, ", ")
+	}
+	for _, tt := range []struct {
+		entries    func() []kit.Entry
+		name, want string
+	}{
+		{k.Parts, "code", "schema.json, part.html, part.css"},
+		{k.Parts, "bars", "schema.json, part.yaml, part.html, part.css"},
+		{k.Parts, "panel", "part.yaml, part.css"},
+		{k.Parts, "tone", "tone.json"},
+		{k.Templates, "design", "schema.json, computed.yaml, example.yaml, page.html, page.css, words.yaml"},
+		{k.Themes, "ink", "palette.css, base.css, cards.css, cell.css, code.css, note.css, panel.css, table.css"},
+	} {
+		if got := names(tt.entries(), tt.name); got != tt.want {
+			t.Errorf("%s shows %s, want %s", tt.name, got, tt.want)
+		}
+	}
+
+	own, err := kit.Load(k, kit.Sources{Parts: kit.Dir{FS: fstest.MapFS{
+		"mine/schema.json": {Data: []byte(partSchema)},
+		"mine/checks.yaml": {Data: nil},
+		"mine/part.html":   {Data: []byte(`<div data-floe-part="mine">{{.t}}</div>`)},
+		"mine/part.css":    {Data: []byte{}},
+	}, Name: "own/parts"}})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if got := names(own.Parts(), "mine"); got != "schema.json, checks.yaml, part.html, part.css" {
+		t.Errorf("mine shows %s, want its empty checks.yaml too", got)
 	}
 }
 
@@ -609,6 +654,7 @@ func TestReadMarks(t *testing.T) {
 	}
 	own := part("mine/part.html", mark+`<div data-floe-part="mine">{{.t}}</div>`)
 	own.Templates = template("memo/example.yaml", mark+"lang: en\n").Templates
+	own.Themes = kit.Dir{FS: fstest.MapFS{"mine/palette.css": {Data: []byte(mark + ":root {}\n")}}, Name: "own/themes"}
 	k, err := kit.Read(floe(t), own)
 	if err != nil {
 		t.Fatal(told(err))
@@ -618,7 +664,7 @@ func TestReadMarks(t *testing.T) {
 	if bytes.HasPrefix(p.PageSource(), []byte(mark)) || !bytes.HasPrefix(m.Example(), []byte(mark)) {
 		t.Errorf("part.html %q, example.yaml %q: want the one without its mark, the other as written", p.PageSource(), m.Example())
 	}
-	for _, e := range k.Templates() {
+	for _, e := range slices.Concat(k.Parts(), k.Templates(), k.Themes()) {
 		for _, f := range e.Files {
 			if bytes.Contains(f.Text, []byte(mark)) {
 				t.Errorf("%s shows %s with a mark: %q", e.Name, f.Name, f.Text)

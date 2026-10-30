@@ -28,6 +28,7 @@ type Theme struct {
 	palette  []byte            // palette.css, nil for none
 	partsCSS map[string][]byte // <part or look>.css by its name
 	unread   []string          // the files of its directory it does not read: of no part or look of the Kit
+	files    []Source          // the files it read, palette.css and base.css first, for floe theme show
 }
 
 // Name returns the name of t.
@@ -73,7 +74,9 @@ func (k *Kit) readThemes(d Dir) error {
 func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 	t := &Theme{
 		name: name, dir: path.Join(d.Name, name), base: nil, palette: nil, partsCSS: map[string][]byte{}, unread: nil,
+		files: nil,
 	}
+	d = d.recording()
 	all, err := entries(d, name, false)
 	if err != nil {
 		return nil, err
@@ -101,7 +104,20 @@ func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 	if t.unread, err = unreadIn(d, name, read...); err != nil {
 		return nil, err
 	}
+	slices.SortStableFunc(read, func(a, b string) int { return themeRank(a) - themeRank(b) })
+	t.files = inOrder(read, d)
 	return t, nil
+}
+
+// themeRank places palette.css and base.css before the CSS of the parts, as floe theme show prints them.
+func themeRank(file string) int {
+	switch file {
+	case "palette.css":
+		return 0
+	case "base.css":
+		return 1
+	}
+	return 2
 }
 
 // Template is a template read: page.html and the schema of its data, and what goes with them.
@@ -119,7 +135,7 @@ type Template struct {
 	hasSchema bool
 	unread    []string
 	assets    map[string]func() (template.URL, error) // by the path under assets/, read once when named
-	files     []Source                                // schema.json, checks.yaml and example.yaml as read
+	files     []Source                                // the files of templateFiles it read, for floe template show
 }
 
 // Name returns the name of t.
@@ -181,8 +197,15 @@ func (k *Kit) readTemplates(d Dir, partsRead bool) error {
 	return found.Sorted().Err()
 }
 
+// templateFiles are the files a template reads, in the order floe template show prints them: what a data file
+// may hold and its example first. assets/, its images, is not printed.
+var templateFiles = []string{
+	"schema.json", "checks.yaml", "computed.yaml", "example.yaml", "page.html", "page.css", "words.yaml", "assets/",
+}
+
 // readTemplate reads into k the template of d named name, its directory, its schema compiled when partsRead.
 func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
+	d = d.recording()
 	t := &Template{
 		name: name, dir: path.Join(d.Name, name), schema: nil, css: nil, checks: nil, computed: nil, words: nil, pages: nil,
 		pageSrc: nil, example: nil, hasSchema: false, unread: nil, assets: nil, files: nil,
@@ -209,54 +232,47 @@ func (k *Kit) readTemplate(d Dir, name string, partsRead bool) error {
 	if t.example, _, err = readFile(d, name, "example.yaml"); err != nil {
 		return err
 	}
-	var checksSrc, schemaSrc []byte
-	t.checks, checksSrc, err = readChecks(d, name)
+	t.checks, err = readChecks(d, name)
 	if failed := found.Add(err); failed != nil {
 		return failed
 	}
 	if partsRead {
-		schemaSrc, err = k.compileTemplate(d, t)
+		err = k.compileTemplate(d, t)
 		if failed := found.Add(err); failed != nil {
 			return failed
 		}
 	}
-	t.files = sources(
-		Source{"schema.json", schemaSrc}, Source{"checks.yaml", checksSrc}, Source{"example.yaml", t.example},
-	)
 	if found != nil {
 		return found.Sorted().Err()
 	}
-	read := []string{
-		"page.html", "page.css", "schema.json", "computed.yaml", "checks.yaml", "words.yaml", "example.yaml", "assets/",
-	}
-	if t.unread, err = unreadIn(d, name, read...); err != nil {
+	if t.unread, err = unreadIn(d, name, templateFiles...); err != nil {
 		return err
 	}
+	t.files = inOrder(templateFiles, d)
 	k.templates[name] = t
 	return nil
 }
 
 // compileTemplate compiles the schema.json of t, in d, with the resources of k, and reads its computed.yaml,
-// whose expressions see the items the schema declares at its top; none without a schema.json. It returns the
-// text of schema.json.
-func (k *Kit) compileTemplate(d Dir, t *Template) ([]byte, error) {
+// whose expressions see the items the schema declares at its top; none without a schema.json.
+func (k *Kit) compileTemplate(d Dir, t *Template) error {
 	src, ok, err := readFile(d, t.name, "schema.json")
 	if !ok || err != nil {
-		return nil, err
+		return err
 	}
 	t.hasSchema = true
 	c, err := schema.Compile(templatesURL+t.name+"/schema.json", path.Join(t.dir, "schema.json"), src, k.Resources())
 	if err != nil {
-		return src, err //nolint:wrapcheck // its mistakes, or floe's failure
+		return err //nolint:wrapcheck // its mistakes, or floe's failure
 	}
 	t.schema = c
 	computed, ok, err := readFile(d, t.name, "computed.yaml")
 	if !ok || err != nil {
-		return src, err
+		return err
 	}
 	names := slices.Sorted(maps.Keys(c.Follow(c.Root).Props))
 	t.computed, err = rules.ReadComputed(path.Join(t.dir, "computed.yaml"), computed, names)
-	return src, err //nolint:wrapcheck // its mistakes, or floe's failure
+	return err //nolint:wrapcheck // its mistakes, or floe's failure
 }
 
 // asset returns the image of the assets of t at the path name under assets/, as a data URI, read the first
@@ -299,7 +315,7 @@ type assetsOf struct {
 
 // walk checks the files of the directory at under the assets, then those of its directories.
 func (a *assetsOf) walk(at string) error {
-	d := Dir{FS: a.files, Name: a.dir}
+	d := Dir{FS: a.files, Name: a.dir, read: nil}
 	names, err := entries(d, at, false)
 	if failed := a.found.Add(err); failed != nil {
 		return failed
