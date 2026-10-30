@@ -96,7 +96,7 @@ func (a *app) publish(ctx context.Context, file string, link bool, opts store.Op
 	if err != nil {
 		return err
 	}
-	u := "http://" + daemon.Addr(port) + "/a/" + saved.Slug + "/"
+	u := daemon.Base(port) + "/a/" + saved.Slug + "/"
 	// A republish does not open another tab; the open one reloads itself.
 	if saved.Prev == nil {
 		daemon.OpenBrowser(ctx, a.getenv("BROWSER"), u)

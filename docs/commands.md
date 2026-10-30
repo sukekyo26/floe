@@ -210,7 +210,7 @@ Run the server in the foreground on `127.0.0.1` until SIGTERM or SIGINT. `floe p
 
 ## `floe stop`
 
-Stop the background server. Without one, it prints `server is not running` and exits 0.
+Stop the background server, and return once it is gone, so that a command right after starts its own. Without one, it prints `server is not running` and exits 0.
 
 ---
 
