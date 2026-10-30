@@ -74,7 +74,7 @@ func TestUIPrintFrame(t *testing.T) { //nolint:paralleltest // the browser tests
 		note := " | " + words + " | " + raw
 		check(t, "print "+string(lang), got, "bar:false frame:false pick:false error:false notfound:false note:true"+note+"|"+
 			"bar:true frame:true pick:true error:false notfound:false note:false"+note+"|"+
-			"bar:false frame:false pick:false error:false notfound:true note:false"+note+"|"+
+			"bar:false frame:false pick:false error:false notfound:true note:false | "+words+" | "+s.Base+"/a/none/?raw|"+
 			"bar:true frame:false pick:false error:false notfound:false note:false | "+words+" | |"+
 			"bar:false frame:false pick:false error:false notfound:false note:true"+note+"|"+
 			"bar:false frame:false pick:false error:true notfound:false note:true"+note)
