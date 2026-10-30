@@ -1,0 +1,2 @@
+/* Its glass is opaque in a band: the parts in it draw on their own ground, which would let the accent through */
+:scope { --aurora-glass: var(--surface); --aurora-tint: 100%; }

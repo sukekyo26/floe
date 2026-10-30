@@ -2,5 +2,6 @@
 :scope { --face: var(--accent); --on-face: var(--on-fill); background: var(--face); color: var(--on-face); }
 /* A part in the band draws on its own ground, in the page's text colour, which it would otherwise take from the band.
    LIMIT: a part with no ground of its own (a pill, links without a panel) is drawn in that colour on the accent; give it a
-   panel, or keep it out of the band */
+   panel, or keep it out of the band. A theme whose faces let what is under them through (aurora's glass) lets the accent
+   through them too, where the text sinks: such a theme makes its faces opaque in a band, in its band.css, as aurora does */
 :scope [data-floe-part] { color: var(--fg); }

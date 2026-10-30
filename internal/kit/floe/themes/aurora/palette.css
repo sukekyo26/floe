@@ -2,10 +2,10 @@
 :root {
   --bg: #f3f0fa; --surface: #fdfcff; --fg: #231d38; --muted: #554e70; --line: #ddd6ee;
   --accent: #6234c8; --accent-soft: #ebe3ff;
-  --good: #187247; --good-soft: #daf3e6; --warn: #8f5600; --warn-soft: #fbead0; --bad: #b4234a; --bad-soft: #fde1e8;
+  --good: #156a42; --good-soft: #daf3e6; --warn: #844f00; --warn-soft: #fbead0; --bad: #ab2146; --bad-soft: #fde1e8;
   --code-bg: #241c3d; --code-fg: #ece8fb; --code-prompt: #c6a8ff;
   /* The wash, placed on the whole document: lavender at its top, peach at a fifth of its height, mint at its foot.
-     Its colours keep --muted and --accent at 4.5:1 on them, which the tests measure on --bg alone */
+     Its colours keep --muted, --accent and the tones at 4.5:1 on them, which the tests measure on --bg alone */
   --page-bg:
     radial-gradient(60rem 40rem at 0% 0%, #e0d2ff 0, transparent 70%),
     radial-gradient(50rem 36rem at 100% 20%, #ffd3c2 0, transparent 70%),
@@ -13,6 +13,7 @@
     var(--bg);
   --rule: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
   --shadow: rgb(80 50 160 / 0.18);
-  /* Its glass: a clouded white over the wash, and the light at its edge */
-  --aurora-glass: rgb(255 255 255 / 0.6); --aurora-edge: rgb(255 255 255 / 0.85);
+  /* Its glass: a clouded white over the wash, how much of its tone a note's glass holds, and the light at its edge.
+     band.css makes them opaque in a band, whose accent they would let through */
+  --aurora-glass: rgb(255 255 255 / 0.6); --aurora-tint: 70%; --aurora-edge: rgb(255 255 255 / 0.85);
 }
