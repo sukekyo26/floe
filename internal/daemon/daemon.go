@@ -188,7 +188,8 @@ func Stop(ctx context.Context, port int, p Status) (Status, error) {
 	case p.State != Ours || p.Health.PID != old:
 		return p, nil
 	case err != nil:
-		return p, usererr.LibraryWith("daemon_stop_failed", err, port, old)
+		// Why it was not asked, in net/http's words, after what to do.
+		return p, usererr.Collect(usererr.New("daemon_kept_answering", port, old), usererr.Library(err))
 	default:
 		return p, usererr.New("daemon_kept_answering", port, old)
 	}

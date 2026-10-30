@@ -405,7 +405,7 @@ func TestStopAnother(t *testing.T) {
 }
 
 // A server that does not take the request (of a build without it) or answers on after it is told with its port and
-// pid, and floe stop fails; one the request to which fails is told with net/http's words.
+// pid, and floe stop fails; why a request to stop failed follows, in net/http's words.
 func TestStopKeptAnswering(t *testing.T) {
 	t.Parallel()
 
@@ -424,10 +424,8 @@ func TestStopKeptAnswering(t *testing.T) {
 			func(port string) string { return "floe: the server on port " + port + " " + still }},
 		{"no answer", servetest.Fake{PID: 4242, Hang: true, Keeps: true}, false, //nolint:exhaustruct // the rest unset
 			func(port string) string {
-				return "floe: the server on port " + port + " is still running, and asking it to stop failed (Post" +
-					` "http://127.0.0.1:` + port + `/api/stop": context deadline exceeded); stop it yourself (the` +
-					" process 4242, if it runs on this machine), and the next floe command that uses the server starts" +
-					" its own\n"
+				return "floe: the server on port " + port + " " + still +
+					`floe: Post "http://127.0.0.1:` + port + `/api/stop": context deadline exceeded` + "\n"
 			}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
