@@ -21,7 +21,7 @@ h2 { font-size: 1.1rem; }
 .alternatives { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
 .alternatives li { border: 1px dashed var(--line); border-radius: 6px; padding: 0.5rem 0.9rem; }
 .alternatives .title { font-weight: 700; }
-.title, .why { display: block; }
+.alternatives :is(.title, .why) { display: block; }
 .consequences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: 1rem; }
 .consequences h3 { border-left: 4px solid; padding-left: 0.6rem; }
 .good h3 { border-color: var(--good); }

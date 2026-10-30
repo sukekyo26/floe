@@ -1,6 +1,6 @@
 <div class="numbered" data-floe-part="options">
 {{- range .}}
-<div class="card option{{if .pick}} pick{{end}}" data-floe-look="panel"><h3>{{.title}}{{with .pick}} <span data-floe-part="cell">{{.}}</span>{{end}}</h3>{{with .text}}{{markdown .}}{{end}}
+<div class="card option{{if .pick}} pick{{end}}" data-floe-look="panel"><div class="title">{{.title}}{{with .pick}} <span data-floe-part="cell">{{.}}</span>{{end}}</div>{{with .text}}{{markdown .}}{{end}}
 {{- if or .pros .cons}}<ul class="points">{{range .pros}}<li class="pro">{{markdownLine .}}</li>{{end}}{{range .cons}}<li class="con">{{markdownLine .}}</li>{{end}}</ul>{{end}}</div>
 {{- end}}
 </div>

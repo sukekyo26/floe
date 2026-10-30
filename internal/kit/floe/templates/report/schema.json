@@ -11,15 +11,33 @@
       "items": {
         "type": "object",
         "properties": {
-          "heading": { "type": "string" },
-          "parts": {
+          "heading": { "type": "string", "minLength": 1 },
+          "parts": { "$ref": "#/$defs/parts" },
+          "sections": {
             "type": "array",
-            "items": { "$ref": "floe:///parts/any.json" }
+            "minItems": 1,
+            "description": "Subsections drawn after the section's parts, each a heading over parts, one level only",
+            "items": {
+              "type": "object",
+              "properties": {
+                "heading": { "type": "string", "minLength": 1 },
+                "parts": { "$ref": "#/$defs/parts" }
+              },
+              "required": ["heading"],
+              "additionalProperties": false
+            }
           }
         },
+        "dependentRequired": { "sections": ["heading"] },
         "additionalProperties": false
       }
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "parts": {
+      "type": "array",
+      "items": { "$ref": "floe:///parts/any.json" }
+    }
+  }
 }

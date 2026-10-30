@@ -44,10 +44,8 @@
 {{- end}}
 {{- with .Data.decisions}}
 <section><h2 id="decisions">{{word "decisions"}}</h2>
-{{- /* The question is no heading: options draws its options as h3, which would sit beside it. A section named by it holds
-   them together instead */}}
 {{- range $i, $d := .}}
-<section class="decision" aria-labelledby="question-{{$i}}"><p class="question" id="question-{{$i}}">{{markdownLine $d.question}}</p>
+<section class="decision" aria-labelledby="question-{{$i}}"><h3 id="question-{{$i}}">{{markdownLine $d.question}}</h3>
 {{$d.options}}
 </section>
 {{- end}}

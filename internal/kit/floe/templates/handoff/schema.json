@@ -54,7 +54,7 @@
     "notes": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "What the reader should watch out for; a line of Markdown" } },
     "more": {
       "type": "array", "minItems": 1,
-      "description": "Sections of your own after the rest, each a heading over parts, as report's",
+      "description": "Sections of your own after the rest, each a heading over parts",
       "items": {
         "type": "object",
         "properties": {

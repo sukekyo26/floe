@@ -78,7 +78,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   the background and goals it needs, then the non-goals, decisions each a
   question over the part `options` (the option marked with `pick` is put at
   the top of the page, one without is shown as undecided), what is decided
-  without options, what it touches, and sections of your own as in `report`.
+  without options, what it touches, and sections of your own, each a heading
+  over parts. Each decision's question is a heading over its options.
 - Add a copy button over the top right of `code`, `terminal` and `diff`: it
   copies the code as written, a terminal's commands without their prompt and
   output, and a diff as written, and says it copied, in the page's language.
@@ -154,13 +155,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   reached by keyboard shows one thin grey ring, and a button pressed with the
   mouse shows none.
 - Add floe's template `report`: a header over sections, each a heading over
-  parts; and thirty parts a template refers to as
+  parts and then subsections, one level of a heading (an `<h3>`) over parts (a
+  heading, when written, is not empty, and a section with subsections has
+  one); and thirty parts a template refers to as
   `floe:///parts/<name>.json` (`floe part list` lists them): twenty-eight that a
   section of report takes beside Markdown `text` and `html`, from `code`,
   `terminal`, `table` and `image` (an image of the data file's directory,
   such as a screenshot) to `findings`, `decision`, `entries`, `timeline`,
   `tabs`, `diagram` and `script`, and `cell` and `stack`, which other parts
-  hold.
+  hold. A part draws no heading, as it knows not the level it is put at: the
+  titles of `options` and `decision` are not headings, so that the headings of
+  a page keep their levels wherever the parts are.
 - Add nine themes a data file picks with `theme:` (`default`, `soft`,
   `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `swiss` and `washi`),
   each a palette of CSS variables and the shape of the parts. Pages in

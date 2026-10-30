@@ -1,5 +1,6 @@
-# A report: a heading and parts per section. Text is Markdown; code and commands go in code and
-# terminal, which draws the prompt; numbers, steps and what changes go in stats, steps and compare;
+# A report: a heading and parts per section, and subsections of a heading and parts after them. Text is
+# Markdown; code and commands go in code and terminal, which draws the prompt; numbers, steps and what
+# changes go in stats, steps and compare;
 # a table's cells are lines of Markdown, numbers in quotes, or pills; html goes in as it is; a script is a
 # function the page calls with an element to draw in and its data; a diagram is checked for overlaps
 # and overflowing text (frames may cross, and a frame's label is held to the frame's width, not its
@@ -36,12 +37,16 @@ sections:
             - run: wiki export --all --out pages/
               out: 1840 pages written to pages/
             - run: linkcheck pages/
-      - code:
-          file: old-wiki.conf
-          text: |
-            # Read-only from Friday evening
-            read_only = true
-            banner = "This wiki has moved to the new host."
+    sections:
+      - heading: The old wiki
+        parts:
+          - text: It answers until the new one opens, with edits turned off.
+          - code:
+              file: old-wiki.conf
+              text: |
+                # Read-only from Friday evening
+                read_only = true
+                banner = "This wiki has moved to the new host."
   - heading: Who does what
     parts:
       - options:

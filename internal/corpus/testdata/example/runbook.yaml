@@ -1,6 +1,6 @@
 # A runbook: only steps is required, each a title over what to do; commands go in run, as at a terminal, and what to
 # do when a step fails in if_fails. What to check first goes in needs, how to undo it in rollback, and sections of
-# your own, each a heading over parts as in report, in more.
+# your own, each a heading over parts, in more.
 template: runbook
 lang: en
 title: Issue and deploy a new certificate for the payment gateway

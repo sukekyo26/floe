@@ -1,4 +1,4 @@
-# Slides: only slides is required, each a heading over parts as in report; a slide of a heading alone stands between
+# Slides: only slides is required, each a heading over parts; a slide of a heading alone stands between
 # parts of the talk. The title is the cover, and subtitle the line under it. Write direction: across to lay the
 # slides side by side, moved by the ← and → keys.
 template: slides

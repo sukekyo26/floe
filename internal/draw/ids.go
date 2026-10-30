@@ -24,7 +24,8 @@ func headingID(text string) string {
 	return strings.Join(strings.Fields(kept), "-")
 }
 
-var headings = []atom.Atom{atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6}
+// Headings are the elements of a heading.
+var Headings = []atom.Atom{atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6}
 
 // withHeadingIDs gives each heading of HTML in tree without an id, or with an empty one, which names nothing,
 // the id headingID makes of its text, but what a part draws in it (data-floe-part), in the order of the page,
@@ -54,7 +55,7 @@ func headingsOf(tree *html.Node) ([]*html.Node, map[string]bool) {
 		if n.Type != html.ElementNode {
 			continue
 		}
-		if n.Namespace == "" && slices.Contains(headings, n.DataAtom) {
+		if n.Namespace == "" && slices.Contains(Headings, n.DataAtom) {
 			found = append(found, n)
 		}
 		named := n.Namespace == "" && n.DataAtom == atom.A

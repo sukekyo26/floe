@@ -14,6 +14,7 @@ import (
 	"golang.org/x/net/html"
 
 	"github.com/sukekyo26/floe/internal/cli"
+	"github.com/sukekyo26/floe/internal/draw"
 )
 
 // everyPart is the sample of every part, which the browser's test of the colours draws in every theme: what it
@@ -29,7 +30,8 @@ var tones = []string{"accent", "good", "warn", "bad", ""}
 // The sample of every part draws every part of floe's but a look (one of no schema), one of no style and the
 // diagram, each
 // part that takes a tone in every tone and in none (an element of the same kind as one drawn in a tone, without
-// one), and every value of each enum of a part's schema (findings' level, steps' state) in its data.
+// one), and every value of each enum of a part's schema (findings' level, steps' state) in its data. No part draws a
+// heading, as a part knows not the level it is put at.
 func TestEveryPartDrawsEveryPart(t *testing.T) {
 	t.Parallel()
 
@@ -59,6 +61,19 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 				drawn[name] = &drawnTones{found: map[string]bool{}, toned: map[string]bool{}, plain: map[string]bool{}}
 			}
 			drawn[name].read(n)
+		}
+	}
+	// LIMIT: what every-part's values leave out of a part (a branch of an if) is not seen, nor a heading told from one a
+	// part's Markdown draws: every-part writes no heading in a part's Markdown (to write one, skip what markdown draws).
+	for n := range doc.Descendants() {
+		if !slices.Contains(draw.Headings, n.DataAtom) {
+			continue
+		}
+		for a := n.Parent; a != nil; a = a.Parent {
+			if name := nodeAttr(a, "data-floe-part"); name != "" {
+				t.Errorf("every-part draws a heading <%s> in the part %s", n.Data, name)
+				break
+			}
 		}
 	}
 	var data any

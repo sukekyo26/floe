@@ -277,6 +277,46 @@ func TestSlidesRefused(t *testing.T) {
 	}
 }
 
+// report draws a section's subsections after its parts, each a section of an h3, and a section with no heading.
+func TestDrawReportSubsections(t *testing.T) {
+	t.Parallel()
+
+	src := "template: report\nlang: en\ntitle: x\nsections:\n" +
+		"  - {heading: a, parts: [{text: t}], sections: [{heading: b, parts: [{text: u}]}, {heading: c}]}\n" +
+		"  - {parts: [{text: v}]}\n"
+	page, _, err := tmpl.Draw(floeKit(t), "r.yaml", []byte(src), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	got := strings.Join(regexp.MustCompile(`<section[^>]*>|<h[23][^>]*>[^<]*|<p>[^<]*`).FindAllString(string(page), -1), "\n")
+	want := "<section>\n<h2 id=\"a\">a\n<p>t\n<section class=\"sub\">\n<h3 id=\"b\">b\n<p>u\n<section class=\"sub\">\n<h3 id=\"c\">c\n<section>\n<p>v"
+	if got != want {
+		t.Errorf("sections\n%s\nwant\n%s", got, want)
+	}
+}
+
+// report refuses, by its schema, no subsections written as [], a subsection without a heading or with an empty one, a subsection's subsections or
+// keys it does not know, and subsections of a section with no heading or an empty one: an h3 would stand under the h1.
+func TestReportRefused(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct{ data, want string }{
+		{"sections: [{heading: a, sections: [{parts: [{text: t}]}]}]\n", "r.yaml:4:37: missing property 'heading'"},
+		{"sections: [{heading: a, sections: [{heading: ''}]}]\n", "r.yaml:4:46: minLength: got 0, want 1"},
+		{"sections: [{heading: a, sections: [{heading: b, sections: []}]}]\n", "r.yaml:4:37: additional properties 'sections' not allowed"},
+		{"sections: [{heading: a, sections: []}]\n", "r.yaml:4:35: minItems: got 0, want 1"},
+		{"sections: [{heading: a, sections: [{heading: b, look: c}]}]\n", "r.yaml:4:37: additional properties 'look' not allowed"},
+		{"sections: [{sections: [{heading: b}]}]\n", "r.yaml:4:13: properties 'heading' required, if 'sections' exists"},
+		{"sections: [{heading: '', sections: [{heading: b}]}]\n", "r.yaml:4:22: minLength: got 0, want 1"},
+		{"sections: [{heading: '', parts: [{text: t}]}]\n", "r.yaml:4:22: minLength: got 0, want 1"},
+	} {
+		_, _, err := tmpl.Draw(floeKit(t), "r.yaml", []byte("template: report\nlang: en\ntitle: x\n"+tt.data), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})
+		if got := told(err); got != tt.want {
+			t.Errorf("%q: %s, want %s", tt.data, got, tt.want)
+		}
+	}
+}
+
 // The example.yaml of each of floe's templates is drawn with every theme of floe. Pages drawn as develop drew
 // them are internal/corpus's.
 func TestDrawExamples(t *testing.T) {

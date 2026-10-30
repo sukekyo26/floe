@@ -1,6 +1,6 @@
 # A decision record: its status, context and decision are required; a record superseded names the one that
 # superseded it in superseded_by. Options set aside go in alternatives, what it gains and costs in consequences,
-# and sections of your own, each a heading over parts as in report, in more.
+# and sections of your own, each a heading over parts, in more.
 template: adr
 lang: en
 title: Keep sessions in the database, not in memory

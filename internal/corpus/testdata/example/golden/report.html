@@ -357,7 +357,8 @@ blockquote > * + * { margin-top: 0.6rem; }
   display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
-.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
+.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
 .card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
 }
 }
@@ -367,7 +368,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
 /* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
 .option.pick { outline: 2px solid var(--accent); outline-offset: -1px; }
-.option h3 > span { margin-left: 0.4rem; vertical-align: 0.1em; }
+.option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
 /* The pros and cons alone, not a list in the text */
 .option .points { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
 /* The mark hangs at the left, so that a line of text and code flows as one */
@@ -549,6 +550,8 @@ h2 { font-size: 1.4rem; }
 header { display: grid; gap: 0.7rem; }
 section { display: grid; gap: 1rem; }
 section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
+.sub { margin-top: 0.5rem; }
+.sub > h3 { font-size: 1.15rem; }
 .eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .lead { color: var(--muted); font-size: 1.05rem; }
 .muted { color: var(--muted); }
@@ -652,6 +655,9 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
+<section class="sub">
+<h3 id="the-old-wiki">The old wiki</h3>
+<p>It answers until the new one opens, with edits turned off.</p>
 <figure data-floe-part="code"><figcaption><span class="file">old-wiki.conf</span></figcaption><pre><code data-floe-copy=""># Read-only from Friday evening
 read_only = true
 banner = &#34;This wiki has moved to the new host.&#34;
@@ -720,14 +726,15 @@ banner = &#34;This wiki has moved to the new host.&#34;
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 </section>
+</section>
 <section>
 <h2 id="who-does-what">Who does what</h2>
 <div class="numbered" data-floe-part="options">
-<div class="card option" data-floe-look="panel"><h3 id="copy">Copy</h3><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>
+<div class="card option" data-floe-look="panel"><div class="title">Copy</div><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>
 </div>
-<div class="card option" data-floe-look="panel"><h3 id="links">Links</h3><p>Runs the link check and fixes what it finds.</p>
+<div class="card option" data-floe-look="panel"><div class="title">Links</div><p>Runs the link check and fixes what it finds.</p>
 </div>
-<div class="card option" data-floe-look="panel"><h3 id="bookmarks">Bookmarks</h3><p>Sends the new address to the team on Monday morning.</p>
+<div class="card option" data-floe-look="panel"><div class="title">Bookmarks</div><p>Sends the new address to the team on Monday morning.</p>
 </div>
 </div>
 </section>
