@@ -20,3 +20,26 @@ sections:
           title: Lambda
           parts:
             - icon: { icon: aws/res/aws-lambda, x: 76, y: 20, label: AWS Lambda }
+  - heading: タブと折りたたみ
+    parts:
+      - tabs:
+          - title: 表
+            parts:
+              - table: { columns: [前, 後], rows: [[古いサーバー, 新しいホスト]] }
+          - title: 図
+            parts:
+              - diagram:
+                  width: 200
+                  height: 80
+                  title: タブの中の図
+                  parts:
+                    - box: { x: 20, y: 14, w: 160, h: 52, rows: [新しいホスト] }
+      - details:
+          title: 畳んだ図
+          parts:
+            - diagram:
+                width: 200
+                height: 80
+                title: 折りたたみの中の図
+                parts:
+                  - box: { x: 20, y: 14, w: 160, h: 52, rows: [古いサーバー] }

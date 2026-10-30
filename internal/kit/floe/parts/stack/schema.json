@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "stack",
   "description": "Parts one under another, as details and tabs hold them",
+  "$comment": "Never tabs: tabs draws a form, and the parser drops a form inside a form, joining the radios of both tabs into one group",
   "type": "array",
   "minItems": 1,
   "items": {
@@ -15,7 +16,8 @@
       "note": { "$ref": "floe:///parts/note.json" },
       "table": { "$ref": "floe:///parts/table.json" },
       "entries": { "$ref": "floe:///parts/entries.json" },
-      "image": { "$ref": "floe:///parts/image.json" }
+      "image": { "$ref": "floe:///parts/image.json" },
+      "diagram": { "$ref": "floe:///parts/diagram.json", "description": "A diagram drawn as inline SVG, checked for overlaps and overflowing text (frames may cross, and a frame's label is held to the frame's width, not its height or the canvas): width, height, title and parts, or example: <kind>, a built-in one floe diagram example lists" }
     },
     "minProperties": 1,
     "maxProperties": 1,

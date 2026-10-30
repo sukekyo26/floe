@@ -70,3 +70,67 @@ func TestUIDiagram(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		}
 	}
 }
+
+const tabsPage = `template: report
+lang: en
+title: Tabs
+sections:
+  - heading: Tabs
+    parts:
+      - tabs:
+          - title: Table
+            parts:
+              - table: { columns: [A], rows: [[a]] }
+          - title: Diagram
+            parts:
+              - diagram: { width: 600, height: 200, title: d, parts: [ { box: { x: 20, y: 40, w: 160, h: 60, rows: [one] } } ] }
+      - details:
+          title: Folded
+          parts:
+            - diagram: { width: 600, height: 200, title: e, parts: [ { box: { x: 20, y: 40, w: 160, h: 60, rows: [two] } } ] }
+`
+
+// folded tells the diagram in the part named (tabs or details): its viewBox, its frame's size, and whether it is fitted
+// (the button that fits it disabled) and zoomed.
+func folded(part string) string {
+	return `(() => {
+  const w = document.querySelector('[data-floe-part=` + part + `] .dg-wrap');
+  const fit = w.previousElementSibling.querySelector('[data-zoom=fit]');
+  return w.querySelector('svg').getAttribute('viewBox') + ' ' + (w.clientWidth > 0 && w.clientHeight > 0 ? 'sized' : 'unsized') +
+    (fit.disabled ? ' fitted' : '') + (w.classList.contains('zoomed') ? ' zoomed' : '');
+})()`
+}
+
+// frames waits for two frames, after which a ResizeObserver has told what changed before it.
+const frames = "new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(1))))"
+
+// TestUIDiagramInTabs draws a diagram in a tab not chosen: hidden, it keeps the viewBox written; printed, it shows
+// whole though its tab is not chosen; its tab chosen, it fits its frame. A diagram in details fits its frame when
+// the details open.
+func TestUIDiagramInTabs(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.write(t, "tabs.yaml", tabsPage), "--slug", "tabs")
+	b.navigate("/a/tabs/?raw")
+	b.until("the toolbars", "document.querySelectorAll('.dg-tools').length === 2")
+	if got := b.eval(folded("tabs")); got != "0 0 600 200 unsized" {
+		t.Errorf("hidden: %s, want 0 0 600 200 unsized", got)
+	}
+	b.media("print")
+	b.eval(`dispatchEvent(new Event('beforeprint')), 1`)
+	b.still()
+	if got := b.eval(folded("tabs")); !strings.HasPrefix(got, "0 0 600 200 sized") {
+		t.Errorf("printed: %s, want 0 0 600 200 sized", got)
+	}
+	b.media("")
+	// Hidden again before its tab is chosen, as after a print: the size it had printing is not the one it had last
+	b.eval(`dispatchEvent(new Event('afterprint')), ` + frames)
+	b.eval(`document.querySelectorAll('[data-floe-part=tabs] input')[1].click(), 1`)
+	// The frame is measured when its ResizeObserver tells it, after the tab shows
+	b.until("the diagram in the tab fitted", folded("tabs")+".endsWith(' sized fitted')")
+	b.eval(`document.querySelector('[data-floe-part=details]').open = true, 1`)
+	b.until("the diagram in details fitted", folded("details")+".endsWith(' sized fitted')")
+	if got := b.eval(folded("details")); strings.HasPrefix(got, "0 0 600 200") {
+		t.Errorf("opened: %s, want the viewBox of the frame's ratio", got)
+	}
+}

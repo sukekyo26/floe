@@ -15,6 +15,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/cli"
 	"github.com/sukekyo26/floe/internal/draw"
+	"github.com/sukekyo26/floe/internal/kit"
 )
 
 // everyPart is the sample of every part, which the browser's test of the colours draws in every theme: what it
@@ -30,8 +31,8 @@ var tones = []string{"accent", "good", "warn", "bad", ""}
 // The sample of every part draws every part of floe's but a look (one of no schema), one of no style and the
 // diagram, each
 // part that takes a tone in every tone and in none (an element of the same kind as one drawn in a tone, without
-// one), and every value of each enum of a part's schema (findings' level, steps' state) in its data. No part draws a
-// heading, as a part knows not the level it is put at.
+// one), and every value of each enum of a part's schema (findings' level, steps' state) in its data, and every part
+// stack takes in details or tabs. No part draws a heading, as a part knows not the level it is put at.
 func TestEveryPartDrawsEveryPart(t *testing.T) {
 	t.Parallel()
 
@@ -81,6 +82,26 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 		t.Fatal(err)
 	}
 	parts := readParts(t)
+	// Every part stack takes is drawn in one of every-part's stacks, so that its part.html leaves none out: but text,
+	// which draws its Markdown with no box to tell it by, and the diagram, whose samples are diagram/'s.
+	inStack := map[string]bool{}
+	for n := range doc.Descendants() {
+		if nodeAttr(n, "data-floe-part") == "stack" {
+			for c := range n.ChildNodes() {
+				inStack[nodeAttr(c, "data-floe-part")] = true
+			}
+		}
+	}
+	items, ok := parts["stack"].schema["items"].(map[string]any)
+	takes, ok2 := items["properties"].(map[string]any)
+	if !ok || !ok2 || len(takes) == 0 {
+		t.Fatal("stack's schema names no part under items.properties")
+	}
+	for _, name := range slices.Sorted(maps.Keys(takes)) {
+		if name != kit.TextPart && name != "diagram" && !inStack[name] {
+			t.Errorf("every-part draws no %s in details or tabs", name)
+		}
+	}
 	written := map[string]map[string]bool{} // path=value of each part's data, by the part's name
 	readOccurrences(data, parts, written)
 	for _, tone := range tones[:len(tones)-1] {

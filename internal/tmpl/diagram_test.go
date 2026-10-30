@@ -127,6 +127,30 @@ func TestDiagramMistakes(t *testing.T) {
 	}
 }
 
+// A diagram in details or tabs is drawn in their stack, its layout's mistakes told under its value there.
+func TestDiagramInStack(t *testing.T) {
+	t.Parallel()
+
+	k := floeKit(t)
+	head := "template: report\nlang: en\ntitle: x\nsections:\n  - parts:\n"
+	box := func(w string) string {
+		return "{width: 300, height: 100, title: p, parts: [{box: {x: 20, y: 20, w: " + w + ", h: 50, rows: [pic]}}]}"
+	}
+	src := head + "      - details: {title: d, parts: [{diagram: " + box("120") + "}]}\n" +
+		"      - tabs: [{title: a, parts: [{text: t}]}, {title: b, parts: [{diagram: " + box("120") + "}]}]\n"
+	page, _, err := tmpl.Draw(k, "d.yaml", []byte(src), none)
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if got := strings.Count(string(page), `<div data-floe-part="stack"><div data-floe-part="diagram">`); got != 2 {
+		t.Errorf("draws %d diagrams in a stack, want 2", got)
+	}
+	bad := head + "      - details: {title: d, parts: [{diagram: " + box("400") + "}]}\n"
+	if got, want := drawn(t, k, bad, none), `d.yaml:6:92: box "pic" sticks out of the 300x100 canvas`; got != want {
+		t.Errorf("told %s, want %s", got, want)
+	}
+}
+
 // What fails in drawing a diagram that is no mistake is floe's failure, not one told at the diagram.
 func TestDiagramFailure(t *testing.T) {
 	t.Parallel()
