@@ -266,7 +266,7 @@ var messagesJA = map[string]string{
 	"ui_download":             "ダウンロード",
 	"ui_download_named":       "%s をダウンロード",
 	"ui_open_raw":             "ページだけを新しいタブで開く",
-	"ui_print_alone":          "この枠の中のページは、1 画面分しか印刷されません。全部を印刷するには、上のバーの ↗「%s」でページだけを開いて、そこで印刷してください：",
+	"ui_print_alone":          "この枠の中のページは、1 画面分しか印刷されません。全部を印刷するには、次の URL でページだけを開いて、そこで印刷してください（上のバーの ↗「%s」でも開けます）：",
 	"ui_open_raw_named":       "%s だけを新しいタブで開く",
 	"ui_server_up":            "サーバー（%s）に接続中",
 	"ui_server_down":          "サーバーに接続できません",

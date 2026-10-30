@@ -3,9 +3,6 @@ package browsertest_test
 import (
 	"testing"
 
-	"github.com/chromedp/cdproto/emulation"
-	"github.com/chromedp/chromedp"
-
 	"github.com/sukekyo26/floe/internal/i18n"
 )
 
@@ -31,45 +28,38 @@ func TestUIPrintFrame(t *testing.T) { //nolint:paralleltest // the browser tests
 		c := i18n.New(lang)
 		words := c.Msg("ui_print_alone", c.Msg("ui_open_raw"))
 		raw := s.Base + "/a/p/?raw"
-		media := func(m string) {
-			t.Helper()
-
-			if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, emulation.SetEmulatedMediaParams{Media: m}); err != nil {
-				t.Fatal(err)
-			}
-		}
 
 		b.navigate("/a/p/")
 		b.until("the frame", "!document.getElementById('frame').hidden")
 		// The pages to pick from, open, as Ctrl+P may find them
 		b.eval("document.getElementById('frame-pick').click()")
 		b.until("the pages to pick from", "document.getElementById('page-pick').matches(':popover-open')")
-		media("print")
+		b.media("print")
 		got := make([]string, 0, 6)
 		got = append(got, b.eval(printed))
-		media("")
+		b.media("")
 		got = append(got, b.eval(printed))
 		b.navigate("/a/none/")
 		b.until("the missing page", "!document.getElementById('notfound').hidden")
-		media("print")
+		b.media("print")
 		got = append(got, b.eval(printed))
 		b.navigate("/")
 		got = append(got, b.eval(printed))
-		media("")
+		b.media("")
 
 		// A list never read, then one whose read fails.
 		pending := b.addScript("if (" + managementPage + ") window.fetch = () => new Promise(() => {})")
 		b.navigate("/a/p/")
-		media("print")
+		b.media("print")
 		got = append(got, b.eval(printed))
-		media("")
+		b.media("")
 		b.removeScript(pending)
 		failing := b.addScript("if (" + managementPage + ") window.fetch = () => Promise.reject(new TypeError('Failed to fetch'))")
 		b.navigate("/a/p/")
 		b.until("the error", "!document.getElementById('error').hidden")
-		media("print")
+		b.media("print")
 		got = append(got, b.eval(printed))
-		media("")
+		b.media("")
 		b.removeScript(failing)
 
 		note := " | " + words + " | " + raw

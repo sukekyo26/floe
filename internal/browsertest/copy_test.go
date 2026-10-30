@@ -483,10 +483,7 @@ func TestCopyRoom(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		out = append(out, name+": "+b.eval(measureRoom))
 		want = append(want, name+": code ok, code ok, terminal ok, diff ok, code short, diff short reaches, terminal short")
 	}
-	printed := emulation.SetEmulatedMediaParams{Media: "print"}
-	if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, printed); err != nil {
-		t.Fatal(err)
-	}
+	b.media("print")
 	out = append(out, "printed: "+b.eval("[...new Set([...document.querySelectorAll('[data-floe-part=code] pre > *, [data-floe-part=terminal] pre > *, [data-floe-part=diff] code > span')]"+
 		".map((e) => getComputedStyle(e).paddingRight))].join(' ')"))
 	want = append(want, "printed: 17.6px")

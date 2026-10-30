@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/chromedp/cdproto/emulation"
-	"github.com/chromedp/chromedp"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 )
@@ -33,10 +32,7 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	s := newSite(t)
 	b := newBrowser(t, s.Base, lang)
 	// No motion: a row rising in moves while it does.
-	features := []*emulation.MediaFeature{{Name: "prefers-reduced-motion", Value: "reduce"}}
-	if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, emulation.SetEmulatedMediaParams{Features: features}); err != nil {
-		t.Fatal(err)
-	}
+	b.media("", &emulation.MediaFeature{Name: "prefers-reduced-motion", Value: "reduce"})
 	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
 
 	out, want := make([]string, 0, 32), make([]string, 0, 32)

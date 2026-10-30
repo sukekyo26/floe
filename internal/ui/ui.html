@@ -663,7 +663,7 @@
 </main>
 <!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
 <iframe class="frame" id="frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
-<p class="print-alone" id="print-alone"><span id="print-alone-text">{{.Msg "ui_print_alone" (.Msg "ui_open_raw")}}</span> <a id="print-raw" href="?raw"></a></p>
+<p class="print-alone" id="print-alone"><span id="print-alone-text">{{.Msg "ui_print_alone" (.Msg "ui_open_raw")}}</span> <a id="print-raw"></a></p>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="state notfound" id="notfound" hidden>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>
@@ -1961,8 +1961,8 @@
     // The slug as the server read it from the URL, unescaped: escaped again to make one
     $('frame-download').href = `/api/artifacts/${encodeURIComponent(framed)}/download`;
     $('frame-download').download = `${framed}.html`;
-    // The page alone in full, as the browser reads the link: a link on paper cannot be followed
-    $('print-raw').textContent = $('print-raw').href;
+    // The page alone in full, as the browser reads the bar's link to it: a link on paper cannot be followed
+    $('print-raw').href = $('print-raw').textContent = $('frame-open').href;
     pagePicker();
   } else {
     $('manage').hidden = false;

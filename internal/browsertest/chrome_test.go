@@ -291,6 +291,16 @@ func (b *browser) click(x, y float64) {
 	}
 }
 
+// media draws this test's tab for the medium ("print", or "" for the screen) with the features (prefers-color-scheme
+// and the like), as a browser would; a call takes the place of the one before.
+func (b *browser) media(medium string, features ...*emulation.MediaFeature) {
+	b.t.Helper()
+
+	if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, emulation.SetEmulatedMediaParams{Media: medium, Features: features}); err != nil {
+		b.t.Fatal(err)
+	}
+}
+
 // size gives this test's tab a window of width by height, a phone's (touch, its own viewport) when mobile; unsize gives the
 // tab Chrome's own window back. Either holds for this test's tab alone.
 func (b *browser) size(width, height int64, mobile bool) {
