@@ -156,10 +156,12 @@ func (a *app) serveCmd() *cobra.Command {
 	}
 }
 
-// serve runs until SIGTERM or SIGINT ("floe stop" sends SIGTERM).
+// serve runs until SIGTERM or SIGINT, or "floe stop" asks the server to stop. A second signal, while the requests
+// under way are finished, ends the process at once.
 func (a *app) serve(ctx context.Context) error {
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
+	context.AfterFunc(ctx, stop)
 	cfg, at, err := a.serverConfig()
 	if err != nil {
 		return err

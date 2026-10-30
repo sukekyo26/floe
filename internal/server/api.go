@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"mime"
 	"net/http"
+	"os"
 
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -237,6 +238,33 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Stop is the request to stop the server whose pid is PID, as floe stop and the replacing of a server of another
+// build send it, naming the server they saw: one started after it is not stopped.
+type Stop struct {
+	PID int `json:"pid"`
+}
+
+// stop answers 204 to a Stop that names this server, then ends Serve once the requests under way are done; one
+// naming another is 409, for the server a command saw may be gone and this one started after it.
+func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok {
+		return
+	}
+	in := decodeStrict[Stop](w, body)
+	if in == nil {
+		return
+	}
+	if in.PID != os.Getpid() {
+		send(w, http.StatusConflict, "another server: not the pid asked to stop")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+	_ = http.NewResponseController(w).Flush() //nolint:errcheck // the client hung up: it waits for the server to go
+	s.halt()
 }
 
 // Edit is a change of a page, as the management page and floe archive send it: store.Edit with its keys, which

@@ -327,6 +327,8 @@ func (s *Server) watch(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-r.Context().Done():
 			return
+		case <-s.stopping:
+			return
 		case <-ticker.C:
 		}
 	}

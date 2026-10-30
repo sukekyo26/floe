@@ -1,7 +1,6 @@
 package cli_test
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -382,47 +381,33 @@ func holdPort(t *testing.T) (net.Listener, int) {
 	return ln, addr.Port
 }
 
-// fakeServer answers on ln the health of a server of floe whose pid is a child process of this test, and stops
-// answering linger after that child exits: SIGTERM ends the child, or not when it ignores it. It runs no floe, so
-// that floe stop's waiting is seen whatever a real server's speed.
-func fakeServer(t *testing.T, ln net.Listener, ignoreTerm bool, linger time.Duration) int {
+// fakeServer answers on ln the health of a server of floe of pid, and /api/stop with answer. After a 204 it stops
+// answering linger later, or never when keeps. It runs no floe, so that floe stop's waiting is seen whatever a real
+// server's speed.
+func fakeServer(t *testing.T, ln net.Listener, pid, answer int, keeps bool, linger time.Duration) {
 	t.Helper()
 
-	// The child tells when it ignores SIGTERM, which it must before floe stop sends it.
-	child := exec.CommandContext(context.WithoutCancel(t.Context()), "sh", "-c", `echo ready; exec sleep 30`)
-	if ignoreTerm {
-		child = exec.CommandContext(context.WithoutCancel(t.Context()), "sh", "-c", `trap "" TERM; echo ready; exec sleep 30`)
-	}
-	out, err := child.StdoutPipe()
+	body, err := json.Marshal(server.Health{App: server.App, PID: pid})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = child.Start(); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = bufio.NewReader(out).ReadString('\n'); err != nil {
-		t.Fatal(err)
-	}
-	body, err := json.Marshal(server.Health{App: server.App, PID: child.Process.Pid})
-	if err != nil {
-		t.Fatal(err)
-	}
-	srv := &http.Server{
-		Handler:           http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write(body) }), //nolint:errcheck // a test's answer
-		ReadHeaderTimeout: time.Second,
-	}
-	go func() { _ = srv.Serve(ln) }() //nolint:errcheck // closed below
-	go func() {
-		_ = child.Wait() //nolint:errcheck // killed at the end, or stopped by the test
-		time.Sleep(linger)
-		_ = srv.Close() //nolint:errcheck // nothing to do
-	}()
-	// Before the cleanup of the denv on ln, which would stop a server still answering.
-	t.Cleanup(func() {
-		_ = child.Process.Kill() //nolint:errcheck // gone already, when stopped
-		_ = srv.Close()          //nolint:errcheck // nothing to do
+	srv := &http.Server{ReadHeaderTimeout: time.Second}
+	srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/stop" {
+			_, _ = w.Write(body) //nolint:errcheck // a test's answer
+			return
+		}
+		w.WriteHeader(answer)
+		if answer == http.StatusNoContent && !keeps {
+			go func() {
+				time.Sleep(linger)
+				_ = srv.Close() //nolint:errcheck // nothing to do
+			}()
+		}
 	})
-	return child.Process.Pid
+	go func() { _ = srv.Serve(ln) }() //nolint:errcheck // closed below
+	// Before the cleanup of the denv on ln, which would stop a server still answering.
+	t.Cleanup(func() { _ = srv.Close() }) //nolint:errcheck // nothing to do
 }
 
 // floe stop returns once the server no longer answers, so that a command right after starts its own.
@@ -431,23 +416,61 @@ func TestStopWaits(t *testing.T) {
 
 	ln, port := holdPort(t)
 	e := newDenvOn(t, port)
-	pid := fakeServer(t, ln, false, 300*time.Millisecond)
-	wantRun(t, "stop", e.run("stop"), 0, "stopped server (pid "+strconv.Itoa(pid)+")\n", "")
+	fakeServer(t, ln, 4242, http.StatusNoContent, false, 300*time.Millisecond)
+	wantRun(t, "stop", e.run("stop"), 0, "stopped server (pid 4242)\n", "")
 	if _, up := e.health(t.Context()); up {
 		t.Error("the server still answers after floe stop")
 	}
 }
 
-// A server that does not stop on SIGTERM is told with its port and pid, and floe stop fails.
+// A server that does not take the request (of a build without it) or answers on after it is told with its port and
+// pid, and floe stop fails.
 func TestStopKeptAnswering(t *testing.T) {
 	t.Parallel()
 
+	for _, c := range []struct {
+		name   string
+		answer int
+	}{{"no request", http.StatusNotFound}, {"answers on", http.StatusNoContent}} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			ln, port := holdPort(t)
+			e := newDenvOn(t, port)
+			fakeServer(t, ln, 4242, c.answer, true, 0)
+			wantRun(t, "stop", e.run("stop"), 1, "", "floe: the server on port "+e.port+" is still running; stop it"+
+				" yourself (the process 4242, if it runs on this machine), and the next floe command that uses the"+
+				" server starts its own\n")
+		})
+	}
+}
+
+// floe stop signals no process: one whose pid a server tells goes on running.
+func TestStopSendsNoSignal(t *testing.T) {
+	t.Parallel()
+
+	child := exec.CommandContext(context.WithoutCancel(t.Context()), "sleep", "30")
+	if err := child.Start(); err != nil {
+		t.Fatal(err)
+	}
+	// Reaped as it ends, so that one ended reads as gone, not as a zombie.
+	ended := make(chan struct{})
+	go func() {
+		_ = child.Wait() //nolint:errcheck // ended either way
+		close(ended)
+	}()
+	t.Cleanup(func() { _ = child.Process.Kill() }) //nolint:errcheck // gone already, when stopped
 	ln, port := holdPort(t)
 	e := newDenvOn(t, port)
-	pid := fakeServer(t, ln, true, 0)
-	wantRun(t, "stop", e.run("stop"), 1, "", "floe: the server on port "+e.port+" did not stop when asked to; stop it"+
-		" yourself (the process "+strconv.Itoa(pid)+", if it runs on this machine), and the next floe command that uses"+
-		" the server starts its own\n")
+	fakeServer(t, ln, child.Process.Pid, http.StatusNotFound, true, 0)
+	if r := e.run("stop"); r.code != 1 {
+		t.Errorf("stop = %+v", r)
+	}
+	select {
+	case <-ended:
+		t.Error("the process the server told was stopped")
+	case <-time.After(100 * time.Millisecond):
+	}
 }
 
 // A port held by a program that never answers is refused, and the command is told to run again. Apart from the

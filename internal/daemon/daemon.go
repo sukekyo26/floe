@@ -3,10 +3,13 @@
 package daemon
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -17,6 +20,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/version"
@@ -164,13 +168,17 @@ func Ensure(ctx context.Context, s Server) error {
 	}
 }
 
-// Stop stops p, the server of floe on port, and returns what serves the port once it is gone.
-// LIMIT: the pid is the one p's health tells, signalled as a process of this machine; a server in a container
-// whose port is handed out tells one of its own. Check it is a process of floe here if that comes to matter.
+// Stop asks p, the server of floe on port, to stop, and returns what serves the port once it is gone.
+// LIMIT: it returns once the port is free, while the old process may finish the requests under way (10 s at most,
+// under the store's lock). A server in a container whose port is handed out stops, but the container's proxy may
+// keep the port bound, and the next command is told the port is silent. Two servers of other namespaces may tell
+// one pid. Give the health an id of each start if waiting for the process or telling them apart comes to matter.
 func Stop(ctx context.Context, port int, p Status) (Status, error) {
 	old := p.Health.PID
-	if err := terminate(old); err != nil {
-		return p, err
+	// 409 is another server's (this one gone already); no answer, one gone as it answered. The wait tells both.
+	code, err := ask(ctx, Base(port), old)
+	if err == nil && code != http.StatusNoContent && code != http.StatusConflict {
+		return p, usererr.New("daemon_kept_answering", port, old)
 	}
 	// Wait for that server only: a concurrent command may have started the new one already.
 	p = waitWhile(ctx, Base(port), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
@@ -178,6 +186,46 @@ func Stop(ctx context.Context, port int, p Status) (Status, error) {
 		return p, usererr.New("daemon_kept_answering", port, old)
 	}
 	return p, nil
+}
+
+// ask asks the server at base to stop, naming it by pid, and returns the status it answered with.
+func ask(ctx context.Context, base string, pid int) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	body, err := jsonv2.Marshal(server.Stop{PID: pid})
+	if err != nil {
+		return 0, fmt.Errorf("ask the server to stop: %w", err)
+	}
+	req, err := Request(ctx, base, http.MethodPost, "/api/stop", body)
+	if err != nil {
+		return 0, err
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("ask the server to stop: %w", err)
+	}
+	_ = res.Body.Close() //nolint:errcheck // read-only
+	return res.StatusCode, nil
+}
+
+// Request is a request to the server at base as the server takes one of floe's own: Origin base, and body (nil for
+// none) as JSON. Accept is JSON for its refusals, in English as the command line speaks.
+func Request(ctx context.Context, base, method, path string, body []byte) (*http.Request, error) {
+	var r io.Reader = http.NoBody
+	if body != nil {
+		r = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, base+path, r)
+	if err != nil {
+		return nil, fmt.Errorf("%s %s: %w", method, path, err)
+	}
+	req.Header.Set("Origin", base)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept-Language", string(i18n.English))
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	return req, nil
 }
 
 // otherDirs refuses p, a server of floe that serves the root of s, when it draws with other directories
@@ -331,14 +379,6 @@ func start(ctx context.Context, s Server) (bool, error) {
 	}
 	go func() { _ = cmd.Wait() }() //nolint:errcheck // reaps the server if it exits before we do
 	return true, nil
-}
-
-// terminate sends SIGTERM to pid. A process that has exited already counts as stopped.
-func terminate(pid int) error {
-	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil && !errors.Is(err, syscall.ESRCH) {
-		return fmt.Errorf("stop the server (pid %d): %w", pid, err)
-	}
-	return nil
 }
 
 // OpenBrowser opens url with $BROWSER (devcontainers point it at the host's browser), macOS's open,

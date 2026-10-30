@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"encoding/json"
@@ -14,9 +13,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sukekyo26/floe/internal/daemon"
 	"github.com/sukekyo26/floe/internal/dirs"
 	"github.com/sukekyo26/floe/internal/files"
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -50,26 +49,20 @@ func (e *remoteError) Report() usererr.Report {
 // in JSON for the user's mistakes and floe's failures, or as text for the protocol's (a forbidden origin, a body
 // it cannot read), which the client sent wrong.
 func (c client) do(ctx context.Context, method, path string, body, out any) error {
-	var r io.Reader
+	var sent []byte
 	if body != nil {
-		b, err := encode(body, sentAt)
+		var err error
+		sent, err = encode(body, sentAt)
 		if _, mistake := errors.AsType[*usererr.Error](err); mistake {
 			return err
 		}
 		if err != nil {
 			return fmt.Errorf("%s %s: %w", method, path, err)
 		}
-		r = bytes.NewReader(b)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, c.base+path, r)
+	req, err := daemon.Request(ctx, c.base, method, path, sent)
 	if err != nil {
-		return fmt.Errorf("%s %s: %w", method, path, err)
-	}
-	req.Header.Set("Origin", c.base)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Accept-Language", string(i18n.English))
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		return err //nolint:wrapcheck // already says what it sent
 	}
 	// No time limit: the server checks and saves the page before it answers, and a wait given up on
 	// would tell a publish failed that the server goes on to save. Ctrl-C stops it.
