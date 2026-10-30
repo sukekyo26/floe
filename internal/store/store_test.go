@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -703,5 +704,56 @@ func TestPrepareLinkFolder(t *testing.T) {
 	list, err = s.List()
 	if err != nil || !*list[slices.IndexFunc(list, func(l store.Listed) bool { return l.Slug == "docs" })].Missing {
 		t.Errorf("a folder gone is not missing (%v)", err)
+	}
+}
+
+// A folder in a repository is named by its project and where it is in it, and titled by the latter, so that folders of
+// one name in two repositories differ by their URL; outside one, by its name alone. A file's link keeps its own naming.
+func TestFolderNames(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	home := filepath.Dir(root)
+	for _, d := range []string{"api-docs/docs/v1", "design-notes/docs", "handbook", "api-docs/specs"} {
+		if err := os.MkdirAll(filepath.Join(home, d), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, repo := range []string{"api-docs", "design-notes"} {
+		cmd := exec.CommandContext(t.Context(), "git", "init", "-q")
+		cmd.Dir = filepath.Join(home, repo)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git init: %v %s", err, out)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(home, "api-docs/specs/index.html"), []byte("<title>Specs</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	dw := picKit(t, "", "")
+	got := []string{}
+	for _, file := range []string{"api-docs/docs", "design-notes/docs", "api-docs/docs/v1", "api-docs", "handbook", "api-docs/specs/index.html"} {
+		e, err := s.PrepareLink(t.Context(), dw, filepath.Join(home, file), store.Options{}, "", home)
+		if err != nil {
+			t.Fatal(told(err, root))
+		}
+		if err = s.Save(e); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, e.Slug)
+	}
+	list, err := s.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	titles := map[string]string{}
+	for _, l := range list {
+		titles[l.Slug] = l.Title
+	}
+	if want := []string{"api-docs-docs", "design-notes-docs", "api-docs-docs-v1", "api-docs", "handbook", "specs"}; !slices.Equal(got, want) {
+		t.Errorf("slugs = %q, want %q", got, want)
+	}
+	if want := map[string]string{"api-docs-docs": "docs", "design-notes-docs": "docs", "api-docs-docs-v1": "docs/v1", "api-docs": "api-docs",
+		"handbook": "handbook", "specs": "Specs"}; !maps.Equal(titles, want) {
+		t.Errorf("titles = %v, want %v", titles, want)
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -55,7 +54,8 @@ type Meta struct {
 	TitleEdited bool   `json:"titleEdited,omitempty"`
 	Description string `json:"description"`
 	// Theme is the theme a data file is drawn with over the data's (floe publish --theme), and DataTitle
-	// its title: when published, which clearing the title on the management page gives back.
+	// its title: when published, which clearing the title on the management page gives back; of a folder, where it is
+	// in its repository when linked (docs/v1), else its name.
 	Theme     string `json:"theme,omitempty"`
 	DataTitle string `json:"dataTitle,omitempty"`
 	// Source is the directory of a stored page's copy, under its own; a new one each publish and rebuild.
@@ -251,12 +251,8 @@ func (s *Store) listed(slug string, m *Meta) Listed {
 	}
 	// What is in a folder is listed when it is opened (Pages): the list is read every few seconds.
 	if m.Folder {
-		// Named in its repository (acme/docs); a folder outside one is its project itself.
-		if name := filepath.Base(m.Path); l.Title == "" && m.Project != "" && m.Project != name {
-			l.Title = path.Join(m.Project, name)
-		} else if l.Title == "" {
-			l.Title = name
-		}
+		// Where it is in its repository (docs, docs/v1), else its name: its project heads its group
+		l.Title = cmp.Or(l.Title, m.DataTitle, filepath.Base(m.Path))
 		missing := !link.IsFolder(m.Path)
 		l.Missing = &missing
 		return l

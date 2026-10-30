@@ -34,6 +34,19 @@ func Name(ctx context.Context, dir string) string {
 	return base(dir)
 }
 
+// Within returns where dir is in its repository, slash-separated from the repository's root ("docs", "docs/v1"): "" at
+// its root, outside one, and for none.
+func Within(ctx context.Context, dir string) string {
+	if dir == "" {
+		return ""
+	}
+	prefix, err := git(ctx, dir, "rev-parse", "--show-prefix")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSuffix(prefix, "/")
+}
+
 func base(dir string) string {
 	if name := filepath.Base(dir); name != string(filepath.Separator) && name != "." {
 		return name

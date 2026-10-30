@@ -29,15 +29,9 @@ import (
 
 var indexRe = regexp.MustCompile(`(?i)^index\.html?$`)
 
-// linkName is the slug a link to file from cwd is named after: a folder's name, extension and all; index.html does
-// not name anything, so it takes the name of its directory instead.
-func linkName(file, cwd string, folder bool) string {
-	if folder {
-		if abs, ok := dirs.Under(cwd, file); ok {
-			file = abs
-		}
-		return files.Slug(filepath.Base(filepath.Clean(file)))
-	}
+// linkName is the slug a link to file from cwd is named after: index.html does not name anything, so it takes the
+// name of its directory instead.
+func linkName(file, cwd string) string {
 	if !indexRe.MatchString(filepath.Base(file)) {
 		return files.SlugFromFile(file)
 	}
@@ -289,7 +283,24 @@ func (s *Store) PrepareLink(
 	if err = usererr.Collect(err, linkErr); err != nil {
 		return nil, err
 	}
-	slug, err := s.linkSlug(file, path, opts, cwd, folder)
+	dir := filepath.Dir(path)
+	if folder {
+		dir = path
+	}
+	from := project.Name(ctx, dir)
+	// A folder is named by its project and where it is in it (api-docs/docs is api-docs-docs, its title docs), as
+	// folders of one name (docs) in several repositories are common; outside a repository its project is its name.
+	within, named := "", ""
+	if folder {
+		within = project.Within(ctx, path)
+		named = files.Slug(from + "-" + within)
+		if within == "" {
+			named = files.Slug(cmp.Or(from, filepath.Base(path)))
+		}
+	} else if opts.Slug == nil {
+		named = linkName(file, cwd)
+	}
+	slug, err := s.linkSlug(named, path, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -308,19 +319,18 @@ func (s *Store) PrepareLink(
 			return nil, err //nolint:wrapcheck // mistakes at their places, for the caller to show
 		}
 	}
-	named := ""
-	if opts.Slug == nil {
-		named = linkName(file, cwd, folder)
-	}
-	dir := filepath.Dir(path)
-	if folder {
-		dir = path
+	if opts.Slug != nil {
+		named = ""
 	}
 	e := &Entry{
 		Slug: slug, Meta: seedMeta(path, path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
-		Warnings: warnings, opts: opts, from: project.Name(ctx, dir), named: named,
+		Warnings: warnings, opts: opts, from: from, named: named,
 	}
 	e.Meta.Folder = folder
+	// A folder's own title, as a data file's title: is: where it is in its repository, else its name
+	if folder {
+		e.Meta.DataTitle = cmp.Or(within, filepath.Base(path))
+	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, usererr.WithWarnings(err, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
 	}
@@ -435,14 +445,14 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 	return m
 }
 
-// linkSlug is the slug of a link to path, given as file from cwd: the one given, which Accept checked,
-// else the slug of the link to path, else one free made of file's name.
-func (s *Store) linkSlug(file, path string, opts Options, cwd string, folder bool) (string, error) {
+// linkSlug is the slug of a link to path: the one given, which Accept checked, else the slug of the link to path,
+// else one free made of named.
+func (s *Store) linkSlug(named, path string, opts Options) (string, error) {
 	if opts.Slug != nil {
 		return *opts.Slug, nil
 	}
 	// Named after the given file, not the symlink's target.
-	slug := s.freeSlug(linkName(file, cwd, folder), path)
+	slug := s.freeSlug(named, path)
 	if mistake := slugMistake(slug); mistake != nil {
 		return "", mistake
 	}

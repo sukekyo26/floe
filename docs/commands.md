@@ -90,6 +90,7 @@ A linked folder is one row of the management page's Folders tab. Its URL (`/a/<s
 - One directory shows at most 1000 entries, the first by name; the row under them says how many there are.
 - A page of the folder opens in the frame (`/a/<slug>/?file=<path>`) under the folder's title, where the pages of its directory can be picked. Its title is its file's name, and nothing of it is read to list it.
 - What is added, removed or renamed in the folder shows when the list is next read. The folder has the row's favourite, archive, tags and title; its pages have none of their own.
+- A folder in a repository is titled by where it is in it (`docs`, `docs/v1`), and without `--slug` named by its project and that (`api-docs-docs`), so that folders of one name in several repositories differ by their URL; a folder outside one is titled and named by its name (`handbook`).
 - A folder is linked by the same rules as a file's directory: not `/` nor your home, nor a hidden directory right under your home. `--theme` is refused.
 
 ---
