@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/chromedp/chromedp"
@@ -13,8 +14,10 @@ import (
 )
 
 // TestUIFolders opens a linked folder's tree in the list: its URL leads to the list with it open, a directory is read
-// only once opened, what is open stays in the URL across a reload (a name with , and : too) and closes with its parent,
-// a page added shows at the next poll, and a folder gone says so. A page of it opens in the frame under the folder's
+// only once opened, what is open is kept in the browser across a reload and not in the URL (a name with , and : too),
+// what is no longer there leaves what is kept, and it closes with its parent; opened and closed, only the rows under it
+// are added or taken away, the others the same elements and not rising in again; a page added shows at the next poll,
+// and a folder gone says so. A page of it opens in the frame under the folder's
 // title, its CSS served beside it, a move to a part of it written into the frame's URL, its pages to pick from those of
 // its directory. A folder added from the dialog is opened.
 func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -48,16 +51,18 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}).join(',')`
 	read := `performance.getEntriesByType('resource').map((e) => new URL(e.name)).filter((u) => u.pathname.endsWith('/pages'))
 		.map((u) => u.searchParams.get('dir') || '.').filter((d, i, all) => all.indexOf(d) === i).sort().join(',')`
-	opens := "new URLSearchParams(location.search).getAll('open').join(',')"
+	opens := "localStorage.getItem('list.open') + ' ' + location.search"
 	click := func(name string) {
 		t.Helper()
 
 		b.eval(`[...document.querySelectorAll('#list li.tree button.title')].find((x) => x.textContent === ` + js(name) + `).click()`)
 	}
 
-	out := make([]string, 0, 16)
+	out := make([]string, 0, 24)
+	b.navigate("/")
+	b.eval("localStorage.removeItem('list.open')")
 	b.navigate("/a/docs/")
-	out = append(out, b.until("the folder open", "location.pathname === '/' && document.querySelectorAll('#list li.tree').length > 0 && location.search"))
+	out = append(out, b.until("the folder open", "location.pathname === '/' && document.querySelectorAll('#list li.tree').length > 0 && "+opens))
 	// The folders' tab has no project groups: each folder heads its tree.
 	out = append(out, b.eval(rows), b.eval("document.querySelectorAll('#list li.group').length + ' groups, ' + document.querySelectorAll('#list li.folder').length + ' folder'"))
 	click("guide")
@@ -65,9 +70,31 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	click("a,b:c")
 	b.until("a,b:c open", rows+".includes('odd.html')")
 	out = append(out, b.eval(opens))
-	// Reloaded, what was open is again, read once each; the directory under guide, never opened, is not read.
-	b.navigate(b.eval("location.pathname + location.search"))
-	out = append(out, b.until("the tree again", rows+".includes('odd.html') && "+rows), b.eval(read))
+	// Reloaded, what was open is again, read once each; the directory under guide, never opened, is not read. A folder
+	// not registered and a directory not there leave what is kept.
+	// Written where no list is drawn, which would keep what it has over it
+	back := b.eval("location.pathname + location.search")
+	b.navigate("/api/artifacts")
+	b.eval("localStorage.setItem('list.open', JSON.stringify([...JSON.parse(localStorage.getItem('list.open')), 'gone', 'docs:nope']))")
+	b.navigate(back)
+	out = append(out, b.until("the tree again", rows+".includes('odd.html') && "+rows),
+		b.until("the keys gone", "!localStorage.getItem('list.open').includes('nope') && "+opens), b.eval(read))
+	// Closed and opened again, the rows under guide go and come, the others the same elements, the focus where it was;
+	// only the rows added rise in, and a redraw raises none.
+	b.still()
+	b.eval(`window.marked = [...document.querySelectorAll('#list > li')]; window.rose = [];
+		document.getElementById('list').addEventListener('animationstart', (e) => rose.push(e.target.dataset.key));
+		[...document.querySelectorAll('#list li.tree button.title')].find((x) => x.textContent === 'guide').focus()`)
+	click("guide")
+	b.until("guide closed", "!"+rows+".includes('setup')")
+	out = append(out, b.eval("marked.filter((li) => !li.isConnected).map((li) => li.dataset.key).join(',') + ' gone, focus ' + document.activeElement.textContent"))
+	click("guide")
+	b.until("guide open", "rose.length > 0")
+	b.still()
+	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].filter((li) => !marked.includes(li)).map((li) => li.dataset.key).join(',') + ' new, rose ' + rose.join(',')"))
+	b.eval("rose = []; render()")
+	b.still()
+	out = append(out, b.eval("'redrawn, rose ' + rose.length"))
 	// Closed, guide's rows go, and it leaves the URL.
 	click("guide")
 	out = append(out, b.until("guide closed", "!"+rows+".includes('setup') && "+rows), b.eval(opens))
@@ -133,10 +160,12 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.still()
 	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].map((li) => li.className.split(' ')[0] + ':' + getComputedStyle(li).opacity).join(',')"))
 
-	check(t, "folders", out, "?tab=folders&open=docs|a,b:c+,assets+,big+,guide+,index.html|0 groups, 1 folder|docs,docs:guide,docs:a,b:c|"+
-		"a,b:c-,odd.html,assets+,big+,guide-,deep+,setup.html,start.html,index.html|.,a,b:c,guide|"+
-		"a,b:c-,odd.html,assets+,big+,guide+,index.html|docs,docs:a,b:c|big|a,b:c-,odd.html,assets+,big+,guide+,index.html,new.html|"+
+	guide := "dir:docs:guide/deep,page:docs:guide/setup.html,page:docs:guide/start.html"
+	check(t, "folders", out, `["docs"] ?tab=folders|a,b:c+,assets+,big+,guide+,index.html|0 groups, 1 folder|["docs","docs:guide","docs:a,b:c"] ?tab=folders|`+
+		"a,b:c-,odd.html,assets+,big+,guide-,deep+,setup.html,start.html,index.html|"+`["docs","docs:guide","docs:a,b:c"] ?tab=folders|.,a,b:c,guide|`+
+		guide+" gone, focus guide|"+guide+" new, rose "+guide+"|redrawn, rose 0|"+
+		`a,b:c-,odd.html,assets+,big+,guide+,index.html|["docs","docs:a,b:c"] ?tab=folders|big|`+"a,b:c-,odd.html,assets+,big+,guide+,index.html,new.html|"+
 		"docs / guide/setup.html|/a/docs/guide/setup.html#end|true,true,true|none yet|"+
 		"?file=guide%2Fsetup.html#top|the page at #end|guide/setup.html*,guide/start.html|rgb(1, 2, 3)|docs / big/p1000.html|tree rows 0|"+
-		"none,block|folders more|Add a folder|folder:1,tree:1,folder:1")
+		"none,block|"+`folders ["docs","docs:a,b:c","more"] ?tab=folders|Add a folder|`+"folder:1,tree:1,folder:1"+strings.Repeat(",tree:1", 7))
 }

@@ -87,9 +87,11 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, b.eval(shown))
 	b.eval("document.getElementById('side-show').click()")
 	out = append(out, b.until("the tree again", "!document.getElementById('side').hidden && "+state+" + ' ' + document.activeElement.id"))
-	// A directory of the tree opened, and a page of it opened from it.
+	// A directory of the tree opened, and a page of it opened from it. Only the rows under it are added, the others the same elements.
+	b.eval("window.marked = [...document.querySelectorAll('#side-tree > *')]")
 	b.eval("[...document.querySelectorAll('#side-tree button.dir')].find((d) => d.textContent === 'deep').click()")
-	out = append(out, b.until("deep open", "document.querySelector('#side-tree [title=\"guide/deep/x.html\"]') && "+state))
+	out = append(out, b.until("deep open", "document.querySelector('#side-tree [title=\"guide/deep/x.html\"]') && "+state),
+		b.eval("marked.every((e) => e.isConnected) + ' ' + [...document.querySelectorAll('#side-tree > *')].filter((e) => !marked.includes(e)).map((e) => e.title).join(',')"))
 	b.eval("document.querySelector('#side-tree [title=\"guide/start.html\"]').click()")
 	out = append(out, b.until("the page picked", "location.search === '?file=guide%2Fstart.html' && document.getElementById('frame-title').textContent"))
 
@@ -131,8 +133,12 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	// The page's directory is read however the tree is: closed in the tree, the bar still picks among its pages.
 	b.navigate("/a/docs/?file=guide%2Fsetup.html")
 	b.until("the tree", "document.querySelector('#side-tree [aria-current]')")
+	// Closed, only the rows under it go, the focus where it was.
+	b.eval(`window.marked = [...document.querySelectorAll('#side-tree > *')];
+		[...document.querySelectorAll('#side-tree button.dir')].find((d) => d.textContent === 'guide').focus()`)
 	b.eval("[...document.querySelectorAll('#side-tree button.dir')].find((d) => d.textContent === 'guide').click()")
 	b.until("guide closed", "!document.querySelector('#side-tree [aria-current]')")
+	out = append(out, b.eval("marked.filter((e) => !e.isConnected).map((e) => e.title).join(',') + ' gone, focus ' + document.activeElement.title"))
 	b.eval("document.getElementById('side-hide').click()")
 	b.eval("load()")
 	b.eval("document.getElementById('frame-pick').click()")
@@ -184,8 +190,8 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 		"api+,guide-,deep+,setup.html*,start.html,index.html 480/160/480 480px|"+
 		"false,false,true,false,true 0px side-show|{\"width\":300,\"open\":false}|false,false,true,false,true|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 300/160/480 300px side-hide|"+
-		"api+,guide-,deep-,x.html,setup.html*,start.html,index.html 300/160/480 300px|docs / guide/start.html|"+
+		"api+,guide-,deep-,x.html,setup.html*,start.html,index.html 300/160/480 300px|true guide/deep/x.html|docs / guide/start.html|"+
 		"side-hide: "+ring+"|side-grip: "+ring+"|none,none,none|"+
-		"false,false,true,true,true|true,false,false,true,true 0px|true|true|"+
+		"false,false,true,true,true|true,false,false,true,true 0px|true|true|guide/deep,guide/setup.html,guide/start.html gone, focus guide|"+
 		"guide/setup.html,guide/start.html|api Docs anew|Docs again|334|disabled false|disabled false|false,false,false,false,true")
 }

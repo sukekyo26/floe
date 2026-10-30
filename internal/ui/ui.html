@@ -291,6 +291,7 @@
   }
   li:hover::before { opacity: 1; }
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
+  li.kept { animation: none; }
   /* A group's heading: a block, so that its text does not widen the rows' first column */
   li.group {
     display: block; min-height: 0; padding: 14px 18px 10px; font: 700 0.75rem/1.2 var(--mono); color: var(--fg); animation: none;
@@ -935,13 +936,29 @@
       // One of all, the favourites and the archived is looked at: with both in the URL, the archived
       fav: p.get('fav') === '1' && p.get('archived') !== '1',
       archived: p.get('archived') === '1',
+      // A folder's URL (/a/{slug}/) leads here with open= to open it: taken once into what is kept, and left out of the URL
       open: p.getAll('open'),
     };
   }
   let { tab, project, tag, sort, page, fav, archived } = readState(location.search);
-  // The folders and the directories of them open in the list, as slug or slug:path (a slug has no colon), each its own
-  // open= in the URL, which encodes what a name may hold
+  // The folders and the directories of them open in the list, as slug or slug:path (a slug has no colon), kept in the
+  // browser and not in the URL, which would grow with each one; without storage, all are closed at first
+  const OPEN_KEY = 'list.open';
   const opened = new Set(readState(location.search).open);
+  try {
+    const kept = JSON.parse(localStorage.getItem(OPEN_KEY));
+    if (Array.isArray(kept)) for (const key of kept) if (typeof key === 'string') opened.add(key);
+  } catch {
+    // Storage is unavailable, or what it holds is not ours
+  }
+  function keepOpen() {
+    try {
+      localStorage.setItem(OPEN_KEY, JSON.stringify([...opened]));
+    } catch {
+      // Storage is unavailable: what is open is not kept
+    }
+  }
+  keepOpen();
   const openKey = (slug, dir) => (dir ? `${slug}:${dir}` : slug);
   // The directories read of the folders open (GET /api/artifacts/{slug}/pages), by openKey: an Error for one that could not be read
   const listings = new Map();
@@ -1015,7 +1032,6 @@
       else url.searchParams.delete(name);
     }
     url.searchParams.delete('open');
-    for (const key of opened) url.searchParams.append('open', key);
     history.replaceState(null, '', url);
     try {
       sessionStorage.setItem(LIST_KEY, url.search);
@@ -1607,6 +1623,7 @@
   function row(a, i, ranks) {
     const li = $('row').content.firstElementChild.cloneNode(true);
     li.style.setProperty('--i', i);
+    li.dataset.key = `entry:${a.slug}`;
     li.style.setProperty('--c', projectColor(a.project ?? NONE, ranks));
     li.dataset.slug = a.slug;
     const proj = li.querySelector('.proj');
@@ -1723,22 +1740,24 @@
     return shown === 0 ? t('ui_folder_empty') : '';
   }
   // A tree's directories as read, compared to tell a change: an Error by its words, which JSON gives none of
-  const sameListings = (m) => JSON.stringify([...m], (_, v) => (v instanceof Error ? `Error ${v.message}` : v));
+  const sameListings = (m) => JSON.stringify([...m].sort(([x], [y]) => (x < y ? -1 : Number(x > y))), (_, v) => (v instanceof Error ? `Error ${v.message}` : v));
 
   // The rows of the directory dir of the folder a, depth d deep, and of its directories open: what was read of them, a
   // directory not read yet left out until it is
   function treeRows(a, dir, d, rows) {
     const l = listings.get(openKey(a.slug, dir));
     if (l === undefined) return;
-    const tree = (cls) => {
+    const tree = (cls, key) => {
       const li = $('tree-row').content.firstElementChild.cloneNode(true);
       li.classList.add(...cls);
       li.style.setProperty('--d', d);
+      li.dataset.d = d;
       li.dataset.slug = a.slug;
+      li.dataset.key = key;
       return li;
     };
     const note = (text) => {
-      const li = tree(['note']);
+      const li = tree(['note'], `note:${openKey(a.slug, dir)}`);
       li.querySelector('.body').textContent = text;
       li.querySelector('.actions').replaceChildren();
       return li;
@@ -1749,7 +1768,7 @@
     }
     for (const name of l.dirs) {
       const path = dir ? `${dir}/${name}` : name;
-      const li = tree(['dir']);
+      const li = tree(['dir'], `dir:${openKey(a.slug, path)}`);
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'title';
@@ -1764,7 +1783,7 @@
       if (opened.has(openKey(a.slug, path))) treeRows(a, path, d + 1, rows);
     }
     for (const p of l.pages) {
-      const li = tree(['page']);
+      const li = tree(['page'], `page:${openKey(a.slug, p.file)}`);
       const name = baseName(p.file);
       const link = li.querySelector('.title');
       link.href = pageHref({ slug: a.slug, file: p.file });
@@ -1805,6 +1824,10 @@
   async function readOpen() {
     const n = ++openReads;
     const before = sameListings(listings);
+    // A folder no longer registered leaves what is kept
+    const was = opened.size;
+    for (const key of [...opened]) if (!items.some((x) => x.folder && x.slug === key.split(/:(.*)/s)[0])) opened.delete(key);
+    if (opened.size !== was) keepOpen();
     const shown = (key) => {
       const [slug, dir = ''] = key.split(/:(.*)/s);
       const a = items.find((x) => x.slug === slug);
@@ -1823,24 +1846,62 @@
       if (read[i] === null) opened.delete(key);
       else listings.set(key, read[i]);
     });
+    if (read.includes(null)) keepOpen();
     return sameListings(listings) !== before;
   }
 
-  // Opens or closes the directory dir ('' for the top) of the folder slug; closed, what is open under it closes too
+  // Opens or closes the directory dir ('' for the top) of the folder slug; closed, what is open under it closes too. Only
+  // the rows under it are added or taken away: the others, and the focus, stay as they are
   async function toggleOpen(slug, dir) {
     const key = openKey(slug, dir);
+    // The row of the folder or the directory as it is drawn now, which a redraw meanwhile makes anew
+    const at = () => [...$('list').children].find((li) => li.dataset.key === (dir ? `dir:${key}` : `entry:${slug}`));
+    const under = (li) => {
+      while (li.nextElementSibling?.classList.contains('tree') && li.nextElementSibling.dataset.slug === slug &&
+        Number(li.nextElementSibling.dataset.d) > Number(li.dataset.d ?? 0)) li.nextElementSibling.remove();
+    };
+    const expand = (li, open) => li?.querySelector('.title').setAttribute('aria-expanded', String(open));
     if (opened.has(key)) {
-      for (const k of [...opened]) if (k === key || k.startsWith(dir ? `${key}/` : `${slug}:`)) opened.delete(k);
-      render();
+      for (const k of [...opened]) {
+        if (k === key || k.startsWith(dir ? `${key}/` : `${slug}:`)) {
+          opened.delete(k);
+          listings.delete(k);
+        }
+      }
+      keepOpen();
+      const li = at();
+      if (li) under(li);
+      expand(li, false);
       return;
     }
     opened.add(key);
+    keepOpen();
+    expand(at(), true);
+    // A read of all open begun before this one would draw them without it
+    openReads++;
+    let l;
     try {
-      await readOpen();
+      l = await readListing(slug, dir);
     } catch (e) {
       showError(t('ui_load_failed', e.message));
+      return;
     }
-    render();
+    // Closed while it was read
+    if (!opened.has(key)) return;
+    if (l === null) {
+      opened.delete(key);
+      keepOpen();
+      expand(at(), false);
+      return;
+    }
+    listings.set(key, l);
+    const li = at();
+    const a = items.find((x) => x.slug === slug);
+    if (!li || !a) return;
+    const rows = [];
+    treeRows(a, dir, Number(li.dataset.d ?? 0) + 1, rows);
+    under(li);
+    li.after(...rows);
   }
 
   async function toggleFavorite(a) {
@@ -1956,11 +2017,14 @@
     const sizes = new Map();
     for (const g of groups) sizes.set(g, (sizes.get(g) ?? 0) + 1);
     const rows = [];
+    // Rows drawn already are drawn anew in place, without rising in again: only a row new to the list rises in
+    const had = new Set([...$('list').children].map((li) => li.dataset.key));
     shown.slice(start, start + size).forEach((a, i) => {
       const g = groups[start + i];
       if (grouped(state) && (i === 0 || groups[start + i - 1] !== g)) {
         const li = document.createElement('li');
         li.className = 'group';
+        li.dataset.key = `group:${JSON.stringify(g)}`;
         li.setAttribute('role', 'none');
         li.style.setProperty('--c', groupColor(g, ranks));
         const heading = document.createElement('div');
@@ -1980,6 +2044,7 @@
       rows.push(row(a, i, ranks));
       if (a.folder && !a.missing && opened.has(a.slug)) treeRows(a, '', 1, rows);
     });
+    for (const li of rows) li.classList.toggle('kept', had.has(li.dataset.key));
     // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
     renderPager(shown.length, pages, start);
@@ -2153,11 +2218,8 @@
     fileListing = l instanceof Error ? undefined : l;
   }
 
-  // The side's tree of the folder a, as read. A row with the focus has it again once drawn anew
-  function renderSide(a) {
-    $('side-title').textContent = a.title;
-    $('side').setAttribute('aria-label', a.title);
-    const focused = $('side-tree').contains(document.activeElement) ? document.activeElement.title : null;
+  // The side's rows of the directory dir, d deep, and of its directories open, as read
+  function sideRows(dir, d) {
     const rows = [];
     const walk = (dir, d) => {
       const l = sideListings.get(dir);
@@ -2170,6 +2232,7 @@
           btn.type = 'button';
           btn.className = 'dir';
           btn.style.setProperty('--d', d);
+          btn.dataset.d = d;
           btn.setAttribute('aria-expanded', String(sideOpen.has(path)));
           btn.innerHTML = DIR_HEAD;
           btn.append(name);
@@ -2182,6 +2245,7 @@
           const link = document.createElement('a');
           link.href = pageHref({ slug: framed, file: p.file });
           link.style.setProperty('--d', d);
+          link.dataset.d = d;
           link.innerHTML = PAGE_HEAD;
           link.append(baseName(p.file));
           link.title = p.file;
@@ -2194,11 +2258,25 @@
         const p = document.createElement('p');
         p.className = 'note';
         p.style.setProperty('--d', d);
+        p.dataset.d = d;
         p.textContent = note;
         rows.push(p);
       }
     };
-    walk('', 0);
+    walk(dir, d);
+    return rows;
+  }
+
+  function sideTitle(a) {
+    $('side-title').textContent = a.title;
+    $('side').setAttribute('aria-label', a.title);
+  }
+
+  // The side's tree of the folder a, as read. A row with the focus has it again once drawn anew
+  function renderSide(a) {
+    sideTitle(a);
+    const focused = $('side-tree').contains(document.activeElement) ? document.activeElement.title : null;
+    const rows = sideRows('', 0);
     $('side-tree').replaceChildren(...rows);
     if (focused !== null) [...$('side-tree').querySelectorAll('[title]')].find((e) => e.title === focused)?.focus();
     if (!sideShown && rows.length && !$('side').hidden) {
@@ -2207,21 +2285,52 @@
     }
   }
 
-  // Opens or closes the directory path of the side's tree; closed, what is open under it closes too. Drawn with the
-  // folder as it is now, its title perhaps changed since
+  // Opens or closes the directory path of the side's tree; closed, what is open under it closes too. Only the rows under
+  // it are added or taken away, as the list's (toggleOpen). The title is the folder's of now, perhaps changed since
   async function toggleSide(path) {
+    const at = () => [...$('side-tree').children].find((e) => e.classList.contains('dir') && e.title === path);
+    const under = (btn) => {
+      while (btn.nextElementSibling && Number(btn.nextElementSibling.dataset.d) > Number(btn.dataset.d)) btn.nextElementSibling.remove();
+    };
+    const title = () => {
+      const a = items.find((x) => x.slug === framed);
+      if (a) sideTitle(a);
+    };
     if (sideOpen.has(path)) {
-      for (const k of [...sideOpen]) if (k === path || k.startsWith(`${path}/`)) sideOpen.delete(k);
-    } else {
-      sideOpen.add(path);
-      try {
-        await readSide();
-      } catch (e) {
-        showError(t('ui_load_failed', e.message));
+      for (const k of [...sideOpen]) {
+        if (k === path || k.startsWith(`${path}/`)) {
+          sideOpen.delete(k);
+          // The page's own directory is read whatever is open, for the pages to pick from
+          if (k !== dirOf(FILE)) sideListings.delete(k);
+        }
       }
+      const btn = at();
+      if (btn) {
+        under(btn);
+        btn.setAttribute('aria-expanded', 'false');
+      }
+      title();
+      return;
     }
-    const a = items.find((x) => x.slug === framed);
-    if (a) renderSide(a);
+    sideOpen.add(path);
+    at()?.setAttribute('aria-expanded', 'true');
+    // A read of all open begun before this one would draw them without it
+    sideReads++;
+    let l;
+    try {
+      l = await readListing(framed, path);
+    } catch (e) {
+      showError(t('ui_load_failed', e.message));
+      return;
+    }
+    // Closed while it was read; one gone for now stays open, as readSide's
+    if (!sideOpen.has(path) || l === null) return;
+    sideListings.set(path, l);
+    const btn = at();
+    if (!btn) return;
+    under(btn);
+    btn.after(...sideRows(path, Number(btn.dataset.d) + 1));
+    title();
   }
 
   // Whether the tree was drawn once: the page open now is scrolled into sight then, not at each redraw
@@ -2435,7 +2544,10 @@
       toast(t(folder ? 'ui_folder_added' : 'ui_link_added', slug));
       // To the list the link went on, unfiltered, drawn once with it
       $('q').value = '';
-      if (folder) opened.add(slug);
+      if (folder) {
+        opened.add(slug);
+        keepOpen();
+      }
       filter({ view: 'all', tab: folder ? 'folders' : 'links', project: '' });
       drawn = '';
       await load();
