@@ -68,6 +68,26 @@ func TestName(t *testing.T) {
 	}
 }
 
+func TestWithin(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	repo := filepath.Join(tmp, "repo")
+	deep := filepath.Join(repo, "docs", "v1")
+	outside := filepath.Join(tmp, "outside")
+	for _, d := range []string{deep, outside} {
+		if err := os.MkdirAll(d, 0o750); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run(t, repo, "init", "-q")
+	for dir, want := range map[string]string{repo: "", filepath.Join(repo, "docs"): "docs", deep: "docs/v1", outside: "", "": ""} {
+		if got := project.Within(t.Context(), dir); got != want {
+			t.Errorf("Within(%q) = %q, want %q", dir, got, want)
+		}
+	}
+}
+
 // No directory names no project: git is not run in the process's working directory, here this repository.
 func TestNameOfNoDir(t *testing.T) {
 	t.Parallel()

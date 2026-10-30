@@ -29,8 +29,8 @@ import (
 
 var indexRe = regexp.MustCompile(`(?i)^index\.html?$`)
 
-// linkName is the slug a link to file from cwd is named after: index.html does not name anything, so it takes
-// the name of its directory instead.
+// linkName is the slug a link to file from cwd is named after: index.html does not name anything, so it takes the
+// name of its directory instead.
 func linkName(file, cwd string) string {
 	if !indexRe.MatchString(filepath.Base(file)) {
 		return files.SlugFromFile(file)
@@ -272,23 +272,41 @@ func (s *Store) storedPage(file string, src []byte, opts Options, from string) (
 // PrepareLink checks a link to file and builds what Save writes, without writing anything. cwd resolves
 // a relative file, "" for none to resolve it in: a relative file is then refused, with the other mistakes
 // of the options. home bounds what may be linked (link.Check). The project of a link is that of its
-// directory. A data file linked is drawn with dw once, as it is when opened, its images under its real
+// directory, a folder's its own.
+// A data file linked is drawn with dw once, as it is when opened, its images under its real
 // directory, to be refused for its mistakes.
 func (s *Store) PrepareLink(
 	ctx context.Context, dw Drawing, file string, opts Options, cwd, home string,
 ) (*Entry, error) {
 	opts, err := Accept(file, true, opts)
-	path, src, linkErr := readLink(file, opts, cwd, home)
+	path, src, folder, linkErr := readLink(file, opts, cwd, home)
 	if err = usererr.Collect(err, linkErr); err != nil {
 		return nil, err
 	}
-	slug, err := s.linkSlug(file, path, opts, cwd)
+	dir := filepath.Dir(path)
+	if folder {
+		dir = path
+	}
+	from := project.Name(ctx, dir)
+	// A folder is named by its project and where it is in it (api-docs/docs is api-docs-docs, its title docs), as
+	// folders of one name (docs) in several repositories are common; outside a repository its project is its name.
+	within, named := "", ""
+	if folder {
+		within = project.Within(ctx, path)
+		named = files.Slug(from + "-" + within)
+		if within == "" {
+			named = files.Slug(cmp.Or(from, filepath.Base(path)))
+		}
+	} else if opts.Slug == nil {
+		named = linkName(file, cwd)
+	}
+	slug, err := s.linkSlug(named, path, opts)
 	if err != nil {
 		return nil, err
 	}
 	var data []byte
 	var warnings []*usererr.Error
-	if files.IsDataFile(path) {
+	if !folder && files.IsDataFile(path) {
 		if dw.Err != nil {
 			return nil, dw.Err
 		}
@@ -301,13 +319,18 @@ func (s *Store) PrepareLink(
 			return nil, err //nolint:wrapcheck // mistakes at their places, for the caller to show
 		}
 	}
-	named := ""
-	if opts.Slug == nil {
-		named = linkName(file, cwd)
+	if opts.Slug != nil {
+		named = ""
 	}
 	e := &Entry{
 		Slug: slug, Meta: seedMeta(path, path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
-		Warnings: warnings, opts: opts, from: project.Name(ctx, filepath.Dir(path)), named: named,
+		Warnings: warnings, opts: opts, from: from, named: named,
+	}
+	e.Meta.Folder = folder
+	// A folder's own title, as a data file's title: is: where it is in its repository, its repository's name at its
+	// root, else its name
+	if folder {
+		e.Meta.DataTitle = cmp.Or(within, from, filepath.Base(path))
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, usererr.WithWarnings(err, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings
@@ -344,38 +367,46 @@ func (e *Entry) settle(prev *Meta) error {
 	}
 	e.Meta = newMeta(e.opts, was.Path, e.from, base, was.DataTitle, e.Slug)
 	e.Meta.Theme = was.Theme
+	// A folder's link lost its folder would serve its parent's files.
+	e.Meta.Folder = was.Folder
 	e.Prev = prev
 	return nil
 }
 
-// readLink returns the real path of the linked file and its content. A link is checked and stored by
+// readLink returns the real path of the linked file and its content, or of the linked folder (true), whose files
+// are not read. A link is checked and stored by
 // its real path: a symlink would otherwise reach into a hidden directory. It is of the kind of its real
 // file, whatever the name of a symlink to it says: HTML is shown as it is, in its own look, so it takes
 // no theme.
-func readLink(file string, opts Options, cwd, home string) (string, []byte, error) {
+func readLink(file string, opts Options, cwd, home string) (string, []byte, bool, error) {
 	if file == "" {
-		return "", nil, usererr.New("store_link_empty")
+		return "", nil, false, usererr.New("store_link_empty")
 	}
 	// The API gives no cwd: a relative link from it is the sender's mistake.
 	abs, ok := dirs.Under(cwd, file)
 	if !ok {
-		return "", nil, usererr.New("store_link_relative", file)
+		return "", nil, false, usererr.New("store_link_relative", file)
 	}
 	path, err := filepath.EvalSymlinks(abs)
 	if err != nil {
-		return "", nil, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
+		return "", nil, false, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
 	}
-	if err = link.Check(path, home); err != nil {
-		return "", nil, err //nolint:wrapcheck // a usererr for the caller to show
+	folder, err := link.Check(path, home)
+	if err != nil {
+		return "", nil, false, err //nolint:wrapcheck // a usererr for the caller to show
 	}
-	if !files.IsDataFile(path) && opts.theme() != "" {
-		return "", nil, usererr.New("store_theme_link")
+	// A folder named config.yml is no data file.
+	if (folder || !files.IsDataFile(path)) && opts.theme() != "" {
+		return "", nil, false, usererr.New("store_theme_link")
+	}
+	if folder {
+		return path, nil, true, nil
 	}
 	b, _, err := files.Read(path)
 	if err != nil {
-		return "", nil, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
+		return "", nil, false, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
 	}
-	return path, b, nil
+	return path, b, false, nil
 }
 
 // newMeta keeps what was set on the management page (favourite, title, project, tags), the description and
@@ -397,6 +428,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",
 		Favorite:      base.Favorite,
+		Folder:        false,
 		Archived:      false,
 		Tags:          base.Tags,
 		CreatedAt:     cmp.Or(base.CreatedAt, now),
@@ -414,14 +446,14 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 	return m
 }
 
-// linkSlug is the slug of a link to path, given as file from cwd: the one given, which Accept checked,
-// else the slug of the link to path, else one free made of file's name.
-func (s *Store) linkSlug(file, path string, opts Options, cwd string) (string, error) {
+// linkSlug is the slug of a link to path: the one given, which Accept checked, else the slug of the link to path,
+// else one free made of named.
+func (s *Store) linkSlug(named, path string, opts Options) (string, error) {
 	if opts.Slug != nil {
 		return *opts.Slug, nil
 	}
 	// Named after the given file, not the symlink's target.
-	slug := s.freeSlug(linkName(file, cwd), path)
+	slug := s.freeSlug(named, path)
 	if mistake := slugMistake(slug); mistake != nil {
 		return "", mistake
 	}

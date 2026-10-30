@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -99,6 +100,17 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.eval("document.getElementById('sort-list').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))")
 		measure("the sort's orders")
 		b.eval("document.getElementById('sort-menu').hidePopover()")
+		// A folder open, its rows of each kind, and one of its pages in the frame under its title: the folder is the server's
+		// too, which frames the page it finds.
+		s.write(t, "f/index.html", "<p>f</p>")
+		s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "f"), "--slug", "f", "--force")
+		b.stub(colorsList[:strings.LastIndex(colorsList, "]")] + "{ slug: 'f', title: 'Folder', description: '', path: '/tmp/x/f', folder: true, createdAt: at(1), updatedAt: at(1) }]")
+		b.navigate("/?tab=folders&open=f")
+		b.until("the folder open", "document.querySelectorAll('#list li.tree').length === 3")
+		measure("the folders")
+		b.navigate("/a/f/?file=index.html")
+		b.until("the folder's page", "!document.getElementById('frame').hidden")
+		measure("a folder's page in the frame")
 		// The frame's pages to pick from, open, one of them reached and the one open now marked.
 		b.navigate("/a/a/")
 		b.until("the title", "!document.getElementById('frame-pick').hidden")

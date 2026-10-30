@@ -54,7 +54,8 @@ type Meta struct {
 	TitleEdited bool   `json:"titleEdited,omitempty"`
 	Description string `json:"description"`
 	// Theme is the theme a data file is drawn with over the data's (floe publish --theme), and DataTitle
-	// its title: when published, which clearing the title on the management page gives back.
+	// its title: when published, which clearing the title on the management page gives back; of a folder, where it is
+	// in its repository when linked (docs/v1), else its name.
 	Theme     string `json:"theme,omitempty"`
 	DataTitle string `json:"dataTitle,omitempty"`
 	// Source is the directory of a stored page's copy, under its own; a new one each publish and rebuild.
@@ -64,6 +65,8 @@ type Meta struct {
 	// PublishedFrom is the project that owns a stored page; Project is only what the list shows.
 	PublishedFrom string `json:"publishedFrom,omitempty"`
 	Favorite      bool   `json:"favorite,omitempty"`
+	// Folder marks a link of a folder, which serves the files under it and lists its pages a directory at a time.
+	Folder bool `json:"folder,omitempty"`
 	// Archived keeps the page off the list (floe list and the management page), served and drawn as any.
 	Archived bool `json:"archived,omitempty"`
 	// Tags are the page's tags, as tagged keeps them.
@@ -72,9 +75,15 @@ type Meta struct {
 	UpdatedAt string   `json:"updatedAt"`
 }
 
-// IsLink reports whether the entry is a linked file.
+// IsLink reports whether the entry is a linked file or folder.
 func (m *Meta) IsLink() bool {
 	return m.Path != ""
+}
+
+// IsData reports whether the entry is a linked data file, drawn each time it is opened: by what it is, so that a
+// folder named config.yml is none.
+func (m *Meta) IsData() bool {
+	return m.IsLink() && !m.Folder && files.IsDataFile(m.Path)
 }
 
 // Drawing is what pages are drawn with: the templates, parts and themes, and the icons of the diagrams; or, with
@@ -164,17 +173,17 @@ func (s *Store) WriteMeta(slug string, m *Meta) error {
 }
 
 // File returns the file to serve for rest under slug, when it is there as a regular file: a stored page has its
-// page drawn only, a link its registered file and the files under its directory (see link.Resolve). A linked data
-// file has its own file only: the images of its page are in the page.
+// page drawn only, a link its registered file and the files under its directory, a folder the files under it (see
+// link.Resolve). A linked data file has its own file only: the images of its page are in the page.
 func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 	if _, ok := s.dir(slug); !ok {
 		return "", false
 	}
 	if m.IsLink() {
-		if rest != "" && files.IsDataFile(m.Path) {
+		if rest != "" && m.IsData() {
 			return "", false
 		}
-		return link.Resolve(m.Path, rest)
+		return link.Resolve(m.Path, m.Folder, rest)
 	}
 	dir, ok := s.copyDir(slug, m)
 	if !ok || rest != "" {
@@ -240,11 +249,19 @@ func (s *Store) listed(slug string, m *Meta) Listed {
 	if !m.IsLink() {
 		return l
 	}
+	// What is in a folder is listed when it is opened (Pages): the list is read every few seconds.
+	if m.Folder {
+		// Where it is in its repository (docs, docs/v1), else its name: its project heads its group
+		l.Title = cmp.Or(l.Title, m.DataTitle, filepath.Base(m.Path))
+		missing := !link.IsFolder(m.Path)
+		l.Missing = &missing
+		return l
+	}
 	// A file that is not served is not read either (the same check as File).
 	title, readable := "", false
 	file, ok := s.File(slug, m, "")
 	if ok {
-		title, readable = s.linkTitle(file, files.IsDataFile(m.Path))
+		title, readable = s.linkTitle(file, m.IsData())
 	}
 	if l.Title == "" {
 		l.Title = cmp.Or(title, slug)
@@ -255,6 +272,23 @@ func (s *Store) listed(slug string, m *Meta) Listed {
 	missing := !readable
 	l.Missing = &missing
 	return l
+}
+
+// Pages lists the directory dir ("" for the top) of the folder slug links, as link.Dir does: ErrNotFound for a slug
+// that is no folder's link or a directory that is none of it.
+func (s *Store) Pages(slug, dir string) (link.Listing, error) {
+	m := s.ReadMeta(slug)
+	if m == nil || !m.Folder {
+		return link.Listing{}, ErrNotFound
+	}
+	l, err := link.Dir(m.Path, dir)
+	if errors.Is(err, link.ErrNoDir) {
+		return l, ErrNotFound
+	}
+	if err != nil {
+		return l, usererr.CannotRead(m.Path, err) //nolint:wrapcheck // the system's words, at the folder
+	}
+	return l, nil
 }
 
 // modTime is the mtime of file, or "" when it cannot be read.

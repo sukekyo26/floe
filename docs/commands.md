@@ -6,7 +6,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 
 | Command | Purpose |
 |---|---|
-| `floe publish <data.yaml>` | Store the page drawn from a data file (or `--link` a file in place) and print its URL |
+| `floe publish <data.yaml>` | Store the page drawn from a data file (or `--link` a file or a folder in place) and print its URL |
 | `floe check <data.yaml>...` | Check data files as their pages are drawn, without writing them |
 | `floe render <data.yaml>...` | Write the page of each data file to an HTML file, to keep in a repository |
 | `floe rebuild` | Draw every stored page again with the templates, parts and themes of now |
@@ -36,7 +36,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 
 ---
 
-## `floe publish <data.yaml>` / `floe publish --link <file>`
+## `floe publish <data.yaml>` / `floe publish --link <file|folder>`
 
 Draw the page of a data file with the template it names, store the page as it was drawn, and print its URL (`http://127.0.0.1:7325/a/<slug>/`) on stdout, and the warnings of the page drawn on stderr, as `floe check` prints them. If the server is not running, it is started in the background first. A new slug is also opened in the browser (`$BROWSER`, else `open`, `wslview` or `xdg-open`); a republished one is not, because the open tab reloads itself.
 
@@ -48,7 +48,7 @@ The stored page stays as it was drawn: changing the template, a part or a theme 
 
 | Flag | Description |
 |---|---|
-| `--link` | Register the file in place: an HTML file is shown as it is, a data file is drawn each time its page is opened (see [Linked files](#linked-files)). |
+| `--link` | Register the file or folder in place: an HTML file is shown as it is, a data file is drawn each time its page is opened, a folder lists the HTML files under it (see [Linked files](#linked-files)). |
 | `--slug <name>` | The URL name: 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit. Defaults to the file name; a linked `index.html` takes the name of its directory. |
 | `--title <text>` | The title in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. |
 | `--description <text>` | A description shown in the list. |
@@ -67,7 +67,7 @@ Each page belongs to the project it is published from. The project is the reposi
 
 `--link` registers a file where it is, instead of storing a page.
 
-- Only a regular `.html` or `.htm` file, or a data file (`.yaml`, `.yml`), can be linked.
+- Only a regular `.html` or `.htm` file, a data file (`.yaml`, `.yml`) or a folder can be linked.
 - A file in a hidden directory right under your home (settings and keys live there) is refused.
 - A file directly under `/` or under your home itself is refused, because the whole directory would be served.
 - A link without `--slug` reuses the slug of the same file, else takes the first free one of `name`, `name-2`, `name-3` …
@@ -82,6 +82,16 @@ A linked data file is drawn each time its page is opened, with `--theme` as give
 - When it has mistakes, the tab shows them instead of the page, and comes back to the page once they are fixed and saved.
 - Nothing of its directory is served: its images are in its page. Its download is the page drawn, its CSP kept in a `<meta>`.
 - Its title in the list is its `title:`, read each time.
+
+A linked folder is one row of the management page's Folders tab. Its URL (`/a/<slug>/`) opens that tab with the folder open:
+
+- Opening the row shows what is directly in the folder: its directories, then its HTML files (`.html`, `.htm`), by name. A directory opens the same way, and only what is open is read, so a folder of thousands of files costs only the directories opened. What is open is kept in the browser across a reload, not in the URL.
+- Names starting with a dot (`.git`, `.drafts`) are left out, and so are symlinks that lead out of the folder and anything but regular files and directories. A symlink to a directory is not opened. The files under the folder are served as a linked HTML file's are, by the same rules.
+- One directory shows at most 1000 entries, the first by name; the row under them says how many there are.
+- A page of the folder opens in the frame (`/a/<slug>/?file=<path>`) under the folder's title, with the folder's tree on its left, open where the page is. Drag the tree's edge, or use ← → Home End on it, to widen or narrow it (160 px up to 480 px or half the window), and hide it with the button at its head; the browser keeps its width and whether it shows. With the tree hidden, or on a narrow screen (where it opens over the page), the bar picks among the pages of the page's directory. A page's title is its file's name, and nothing of it is read to list it.
+- What is added, removed or renamed in the folder shows when the list is next read. The folder has the row's favourite, archive, tags and title; its pages have none of their own.
+- A folder in a repository is titled by where it is in it (`docs`, `docs/v1`), and without `--slug` named by its project and that (`api-docs-docs`), so that folders of one name in several repositories differ by their URL; a folder outside one is titled and named by its name (`handbook`).
+- A folder is linked by the same rules as a file's directory: not `/` nor your home, nor a hidden directory right under your home. `--theme` is refused.
 
 ---
 
