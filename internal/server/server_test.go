@@ -317,7 +317,7 @@ func TestFolder(t *testing.T) {
 		"sibling.html": "beside",
 	})
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: docs}), http.StatusCreated, `"slug":"docs","title":"","prev":null,"folder":true}`) //nolint:exhaustruct // the rest not given
-	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/?tab=links&open=docs" {
+	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/?tab=folders&open=docs" {
 		t.Errorf("GET /a/docs/ = %d to %q, want 303 to the list with it open", w.Code, w.Header().Get("Location"))
 	}
 	for target, status := range map[string]int{
@@ -334,8 +334,10 @@ func TestFolder(t *testing.T) {
 		t.Errorf("a folder's page is served with CSP %q", got)
 	}
 	want(t, e.do(t, http.MethodGet, "/a/docs/s.css", ""), http.StatusOK, "p{}")
-	for _, target := range []string{"/a/docs/?raw", "/api/artifacts/docs/download", "/a/docs/.git/config", "/api/artifacts/docs/pages?dir=..",
-		"/api/artifacts/docs/pages?dir=.git", "/api/artifacts/docs/pages?dir=nope", "/api/artifacts/none/pages"} {
+	for _, target := range []string{
+		"/a/docs/?raw", "/api/artifacts/docs/download", "/a/docs/.git/config", "/api/artifacts/docs/pages?dir=..",
+		"/api/artifacts/docs/pages?dir=.git", "/api/artifacts/docs/pages?dir=nope", "/api/artifacts/none/pages",
+	} {
 		want(t, e.do(t, http.MethodGet, target, ""), http.StatusNotFound, "not found")
 	}
 	top := e.do(t, http.MethodGet, "/api/artifacts/docs/pages", "")

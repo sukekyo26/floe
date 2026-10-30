@@ -278,7 +278,8 @@ func (s *Store) storedPage(file string, src []byte, opts Options, from string) (
 // PrepareLink checks a link to file and builds what Save writes, without writing anything. cwd resolves
 // a relative file, "" for none to resolve it in: a relative file is then refused, with the other mistakes
 // of the options. home bounds what may be linked (link.Check). The project of a link is that of its
-// directory, a folder's its own. A data file linked is drawn with dw once, as it is when opened, its images under its real
+// directory, a folder's its own.
+// A data file linked is drawn with dw once, as it is when opened, its images under its real
 // directory, to be refused for its mistakes.
 func (s *Store) PrepareLink(
 	ctx context.Context, dw Drawing, file string, opts Options, cwd, home string,
@@ -420,6 +421,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		ProjectEdited: base.ProjectEdited,
 		PublishedFrom: "",
 		Favorite:      base.Favorite,
+		Folder:        false,
 		Archived:      false,
 		Tags:          base.Tags,
 		CreatedAt:     cmp.Or(base.CreatedAt, now),

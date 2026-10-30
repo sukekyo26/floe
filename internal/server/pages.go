@@ -163,7 +163,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 			file := r.URL.Query().Get("file")
 			// A folder has no page of its own: its URL is the list with it open, where publish's URL leads.
 			if m.Folder && file == "" {
-				http.Redirect(w, r, "/?tab=links&open="+url.QueryEscape(slug), http.StatusSeeOther)
+				http.Redirect(w, r, "/?tab=folders&open="+url.QueryEscape(slug), http.StatusSeeOther)
 				return
 			}
 			if _, ok := s.cfg.Store.File(slug, m, file); ok && (file == "" || m.Folder) {

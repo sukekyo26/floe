@@ -176,7 +176,7 @@ func TestDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	files := func(l link.Listing) []string {
-		var out []string
+		out := make([]string, 0, len(l.Pages))
 		for _, p := range l.Pages {
 			out = append(out, p.File)
 		}

@@ -682,10 +682,10 @@ func TestPrepareLinkFolder(t *testing.T) {
 		top.Pages[0].UpdatedAt == "" {
 		t.Errorf("Pages(docs) = %+v, %v", top, err)
 	}
-	if err := os.WriteFile(filepath.Join(proj, "docs/guide/new.html"), nil, 0o600); err != nil {
+	if err = os.WriteFile(filepath.Join(proj, "docs/guide/new.html"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Rename(filepath.Join(proj, "docs/guide/setup.html"), filepath.Join(proj, "docs/guide/start.html")); err != nil {
+	if err = os.Rename(filepath.Join(proj, "docs/guide/setup.html"), filepath.Join(proj, "docs/guide/start.html")); err != nil {
 		t.Fatal(err)
 	}
 	guide, err := s.Pages("docs", "guide")
@@ -693,14 +693,15 @@ func TestPrepareLinkFolder(t *testing.T) {
 		t.Errorf("Pages(docs, guide) after a change = %+v, %v", guide, err)
 	}
 	for _, c := range []struct{ slug, dir string }{{"docs", ".."}, {"docs", "nope"}, {"nope", ""}} {
-		if _, err := s.Pages(c.slug, c.dir); !errors.Is(err, store.ErrNotFound) {
-			t.Errorf("Pages(%s, %q) = %v, want ErrNotFound", c.slug, c.dir, err)
+		if _, got := s.Pages(c.slug, c.dir); !errors.Is(got, store.ErrNotFound) {
+			t.Errorf("Pages(%s, %q) = %v, want ErrNotFound", c.slug, c.dir, got)
 		}
 	}
-	if err := os.RemoveAll(filepath.Join(proj, "docs")); err != nil {
+	if err = os.RemoveAll(filepath.Join(proj, "docs")); err != nil {
 		t.Fatal(err)
 	}
-	if list, _ := s.List(); !*list[slices.IndexFunc(list, func(l store.Listed) bool { return l.Slug == "docs" })].Missing {
-		t.Error("a folder gone is not missing")
+	list, err = s.List()
+	if err != nil || !*list[slices.IndexFunc(list, func(l store.Listed) bool { return l.Slug == "docs" })].Missing {
+		t.Errorf("a folder gone is not missing (%v)", err)
 	}
 }

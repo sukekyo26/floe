@@ -99,6 +99,14 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.eval("document.getElementById('sort-list').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))")
 		measure("the sort's orders")
 		b.eval("document.getElementById('sort-menu').hidePopover()")
+		// A folder open, its rows of each kind, and one of its pages in the frame under its title.
+		b.stub(colorsList[:strings.LastIndex(colorsList, "]")] + "{ slug: 'f', title: 'Folder', description: '', path: '/tmp/x/f', folder: true, createdAt: at(1), updatedAt: at(1) }]")
+		b.navigate("/?tab=folders&open=f")
+		b.until("the folder open", "document.querySelectorAll('#list li.tree').length === 3")
+		measure("the folders")
+		b.navigate("/a/f/?file=index.html")
+		b.until("the folder's page", "!document.getElementById('frame-pick').hidden")
+		measure("a folder's page in the frame")
 		// The frame's pages to pick from, open, one of them reached and the one open now marked.
 		b.navigate("/a/a/")
 		b.until("the title", "!document.getElementById('frame-pick').hidden")

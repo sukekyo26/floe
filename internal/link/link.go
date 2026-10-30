@@ -34,6 +34,11 @@ func Check(path, home string) error {
 	if !folder && (!linkable.MatchString(path) || err != nil || !fi.Mode().IsRegular()) {
 		return usererr.New("link_not_linkable", path)
 	}
+	return exposes(path, home, folder)
+}
+
+// exposes refuses the real path, a folder or a file, whose served directory would expose too much of home.
+func exposes(path, home string, folder bool) error {
 	// path is real, so home must be too, or a symlinked $HOME would hide its hidden directories.
 	resolvedHome, ok := realDir(home)
 	if !ok {
@@ -78,7 +83,7 @@ func realDir(dir string) (string, bool) {
 // aA.html. It refuses a registered path that is no longer real (a symlink swapped in later would bypass the
 // checks made at registration), and what within refuses.
 func Resolve(registered string, folder bool, rest string) (string, bool) {
-	if !real(registered) {
+	if !isReal(registered) {
 		return "", false
 	}
 	if rest == "" {
@@ -97,8 +102,8 @@ func Resolve(registered string, folder bool, rest string) (string, bool) {
 	return file, ok
 }
 
-// real reports whether path is its own real path.
-func real(path string) bool {
+// isReal reports whether path is its own real path.
+func isReal(path string) bool {
 	resolved, err := filepath.EvalSymlinks(path)
 	return err == nil && resolved == path
 }
@@ -153,7 +158,7 @@ var pageName = regexp.MustCompile(`(?i)\.html?$`)
 // the directory's own order) if a directory of hundreds of thousands of names comes up.
 func Dir(folder, dir string) (Listing, error) {
 	var l Listing
-	if !real(folder) {
+	if !isReal(folder) {
 		return l, ErrNoDir
 	}
 	path, prefix := folder, ""

@@ -61,7 +61,8 @@ a dot), each shown as a linked HTML file is. The same slug for another file is r
 		},
 	}
 	f := cmd.Flags()
-	f.BoolVar(&link, "link", false, "register the file or folder in place: HTML shown as it is, a data file drawn when opened, a folder's HTML files listed")
+	f.BoolVar(&link, "link", false,
+		"register the file or folder in place: HTML shown as it is, a data file drawn when opened, a folder's HTML listed")
 	f.StringVar(&slug, "slug", "", "the URL name (default: from the file name)")
 	f.StringVar(&title, "title", "",
 		"the title in the list (default: the data file's title:, or a link's <title> or <h1>)")
