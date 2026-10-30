@@ -176,8 +176,11 @@ func TestListShow(t *testing.T) {
 		}, ""},
 		{[]string{"part", "show", "mine", "part.html"}, 0, func(out string) bool { return out == ownPage }, ""},
 		{[]string{"part", "show", "mine", "part.css"}, 0, func(out string) bool { return out == "" }, ""},
-		{[]string{"part", "show", "mine", "nope.css"}, 1, func(out string) bool { return out == "" },
-			`floe: mine has no file "nope.css"; use schema.json, checks.yaml, part.yaml, part.html, part.css, words.yaml` + "\n"},
+		{
+			[]string{"part", "show", "mine", "nope.css"},
+			1, func(out string) bool { return out == "" },
+			`floe: mine has no file "nope.css"; use schema.json, checks.yaml, part.yaml, part.html, part.css, words.yaml` + "\n",
+		},
 		{[]string{"part", "show", "tone"}, 0, func(out string) bool {
 			return strings.HasPrefix(out, "tone: The colour of a part: accent, good, warn or bad, from the theme's colour variables\nwhere: floe\nfiles: tone.json\n==> tone.json <==\n{\n")
 		}, ""},

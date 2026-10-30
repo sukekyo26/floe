@@ -280,7 +280,8 @@ func (k *Kit) readShared(d Dir, name string) error {
 		return err //nolint:wrapcheck // its mistakes, or floe's failure
 	}
 	k.resources[r.URL] = r
-	k.shared[name] = &shared{name: name, file: r.File, schema: nil, files: []Source{{Name: name + ".json", Text: bom.Trim(src)}}}
+	files := []Source{{Name: name + ".json", Text: bom.Trim(src)}}
+	k.shared[name] = &shared{name: name, file: r.File, schema: nil, files: files}
 	return nil
 }
 

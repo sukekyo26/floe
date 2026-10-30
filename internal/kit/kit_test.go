@@ -95,7 +95,7 @@ func TestEntryFiles(t *testing.T) {
 	k := floe(t)
 	names := func(entries []kit.Entry, name string) string {
 		i := slices.IndexFunc(entries, func(e kit.Entry) bool { return e.Name == name })
-		var files []string
+		files := make([]string, 0, len(entries[i].Files))
 		for _, f := range entries[i].Files {
 			files = append(files, f.Name)
 		}
