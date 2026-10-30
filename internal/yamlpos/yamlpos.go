@@ -205,9 +205,7 @@ func document(file string, src []byte) (ast.Node, error) {
 		return nil, library(file, err)
 	}
 	// After the parser, which reads goccy/go-yaml's columns to tell the indentation.
-	if begins != nil {
-		mend(src, tks, begins)
-	}
+	mend(src, tks, begins)
 	var body ast.Node
 	var head *Pos // a directive heads the document after it
 	for _, d := range doc.Docs {
@@ -284,15 +282,14 @@ func blockTabs(file string, src []byte, tks token.Tokens) error {
 // read; nothing else is between tokens but the spaces and tabs before a line break that goccy/go-yaml leaves out
 // of a plain value's Origin, which are passed only where the text goes on otherwise. A token without text (an
 // empty block) begins where the next one does, as goccy/go-yaml places it too.
-// LIMIT: goccy/go-yaml keeps no hex digits of \x, \u and \U in double quotes in Origin: a file of one keeps
-// goccy/go-yaml's places.
+// LIMIT: a file with a token whose Origin is not its text keeps goccy/go-yaml's places: the hex digits of \x, \u
+// and \U in double quotes left out, or a tab in { } that goccy/go-yaml makes no token of the : after (which it
+// refuses too, keeping its places as for any of its mistakes).
 func starts(src []byte, tks token.Tokens) []int {
 	begins := make([]int, len(tks))
 	c := 0
 	for i, t := range tks {
-		for c < len(src) && strings.IndexByte(" \t\r\n", src[c]) >= 0 {
-			c++
-		}
+		c = len(src) - len(bytes.TrimLeft(src[c:], " \t\r\n"))
 		begins[i] = c
 		text := strings.TrimLeft(t.Origin, " \t\r\n")
 		for j := 0; j < len(text); {
@@ -310,7 +307,7 @@ func starts(src []byte, tks token.Tokens) []int {
 	return begins
 }
 
-// mend writes over the line and column of each of tks at the byte of src it begins at.
+// mend writes over the line and column of each of tks at the byte of src it begins at, none for no begins.
 // LIMIT: a token the parser makes, copying a place (a null left out, the value of a tag), keeps goccy/go-yaml's
 // place; OfValue tells a null left out at its key, and floe refuses tags.
 func mend(src []byte, tks token.Tokens, begins []int) {

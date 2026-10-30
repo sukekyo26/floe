@@ -368,6 +368,8 @@ func TestParsePlaces(t *testing.T) {
 		"a:\n\t- x\n":             "a.yaml:2:1: found character '\t' that cannot start any token",
 		"a: \"\\q\"\n":            "a.yaml:1:6: found unknown escape character 'q'",
 		"# c\r\na: 1\r\na: 2\r\n": `a.yaml:4:1: mapping key "a" already defined at [3:1]`,
+		// A tab in { } whose Origin is not its text, as for \x.
+		"{a: 1,\tb:\t2}\n": "a.yaml:1:8: tab character cannot use as a map key directly",
 	} {
 		if _, err := yamlpos.Parse("a.yaml", []byte(src)); told(err) != want {
 			t.Errorf("Parse(%q) told\n%s\nwant\n%s", src, told(err), want)
