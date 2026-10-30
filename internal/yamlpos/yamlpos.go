@@ -3,6 +3,7 @@
 package yamlpos
 
 import (
+	"bytes"
 	"cmp"
 	"errors"
 	"fmt"
@@ -190,7 +191,13 @@ func document(file string, src []byte) (ast.Node, error) {
 	if err := usererr.Collect(bom.Refuse(file, src).Err(), notUTF8(file, src)); err != nil {
 		return nil, err //nolint:wrapcheck // the mistakes of src
 	}
-	doc, err := parser.ParseBytes(src, 0)
+	// Read once, for blockTabs, the parser and dropped: the parser changes its nodes, not the tokens' types
+	// and places, which dropped reads after it.
+	tks := lexer.Tokenize(string(src))
+	if err := blockTabs(file, src, tks); err != nil {
+		return nil, err
+	}
+	doc, err := parser.Parse(tks, 0)
 	if err != nil {
 		return nil, library(file, err)
 	}
@@ -206,7 +213,7 @@ func document(file string, src []byte) (ast.Node, error) {
 			// An empty document: --- at the end, or one goccy/go-yaml left empty after a second ---,
 			// dropping what followed.
 			if d.Start != nil {
-				if at, ok := dropped(src, d.Start.Position); ok {
+				if at, ok := dropped(tks, d.Start.Position); ok {
 					return nil, New(file, at, "yaml_documents")
 				}
 			}
@@ -225,6 +232,41 @@ func document(file string, src []byte) (ast.Node, error) {
 		return nil, ErrEmpty
 	}
 	return body, nil
+}
+
+// blockTabs refuses each | or > text of tks without an indentation indicator whose first line not of spaces
+// alone begins with spaces and a tab, a tab alone too: YAML 1.2 indents with spaces alone, the tab being text,
+// but goccy/go-yaml counts it into the indentation, reading the lines after it a space short and dropping
+// those it then reads as comments, or failing at one of them. A text it reads right (of one line) is refused
+// alike, as the mending (|2) is one. A tab with no space before it goccy/go-yaml refuses itself.
+// LIMIT: past a text refused, goccy/go-yaml may read a | in what YAML 1.2 reads as its text as a header, which
+// is refused too; read it otherwise if that comes to mislead.
+func blockTabs(file string, src []byte, tks token.Tokens) error {
+	var found usererr.List
+	for _, t := range tks {
+		if t.Type != token.LiteralType && t.Type != token.FoldedType || strings.ContainsAny(t.Value, "123456789") {
+			continue
+		}
+		// Where goccy/go-yaml's line and column put the header: its Offset counts runes, and drifts.
+		at := textpos.At(src, t.Position.Line, t.Position.Column)
+		if at < 0 || !bytes.HasPrefix(src[at:], []byte(t.Value)) {
+			return fmt.Errorf("yamlpos: %s: no %q at %d:%d, where goccy/go-yaml puts it", //nolint:err113 // floe's own
+				file, t.Value, t.Position.Line, t.Position.Column)
+		}
+		for line := textpos.NextLine(src, at); line < len(src); line = textpos.NextLine(src, line) {
+			spaces := len(src[line:]) - len(bytes.TrimLeft(src[line:], " "))
+			end := line + spaces
+			if end == len(src) || src[end] == '\n' || src[end] == '\r' {
+				continue
+			}
+			if spaces > 0 && src[end] == '\t' {
+				l, c := textpos.Of(src, end)
+				found = append(found, usererr.NewAt(file, l, c, "yaml_block_tab"))
+			}
+			break
+		}
+	}
+	return found.Sorted().Err()
 }
 
 // startOf returns where d starts: at its ---, or at at without one.
@@ -254,8 +296,8 @@ func notUTF8(file string, src []byte) error {
 
 // dropped finds text after the --- at start, which goccy/go-yaml reads as an empty document and
 // loses: a second --- with text after it. ok is false when only comments and ... follow.
-func dropped(src []byte, start *token.Position) (Pos, bool) {
-	for _, t := range lexer.Tokenize(string(src)) {
+func dropped(tks token.Tokens, start *token.Position) (Pos, bool) {
+	for _, t := range tks {
 		p := t.Position
 		if p.Line < start.Line || p.Line == start.Line && p.Column <= start.Column {
 			continue
