@@ -109,11 +109,6 @@ func (a *app) drawing() (store.Drawing, error) {
 	return store.Drawing{Kit: k, Icons: a.iconStore(), Err: nil}, nil
 }
 
-// base is the address of the server of cfg.
-func base(cfg server.Config) string {
-	return "http://" + daemon.Addr(cfg.Port)
-}
-
 // client makes sure the server of this store runs, of this build, and returns what calls it. anyDirs
 // takes a server that draws with other directories than this command's, for one that draws nothing.
 func (a *app) client(ctx context.Context, anyDirs bool) (client, error) {
@@ -132,7 +127,7 @@ func (a *app) client(ctx context.Context, anyDirs bool) (client, error) {
 	if err != nil {
 		return client{}, err //nolint:wrapcheck // the message is for the user as is
 	}
-	return client{base: base(cfg)}, nil
+	return client{base: daemon.Base(cfg.Port)}, nil
 }
 
 // serverEnv is the environment of a server that a command starts: the process's, with the settings this command
@@ -181,7 +176,7 @@ func (a *app) serve(ctx context.Context) error {
 		return err
 	}
 	srv := server.New(cfg)
-	a.print("%s", english.Msg("cli_serving", root, base(cfg)))
+	a.print("%s", english.Msg("cli_serving", root, daemon.Base(cfg.Port)))
 	return srv.Serve(ctx, ln) //nolint:wrapcheck // already says what failed
 }
 
@@ -222,7 +217,9 @@ func (a *app) stopCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			p := daemon.Probe(cmd.Context(), "http://"+daemon.Addr(port))
+			// LIMIT: a server still starting holds the port but does not answer yet, and is told not running; it comes
+			// up after. Wait while the port is bound if that comes to matter.
+			p := daemon.Probe(cmd.Context(), daemon.Base(port))
 			if p.State != daemon.Ours {
 				a.print("%s", english.Msg("cli_not_running"))
 				return nil

@@ -88,7 +88,12 @@ func waitWhile(ctx context.Context, base string, p Status, cond func(Status) boo
 			return p
 		case <-time.After(20 * time.Millisecond):
 		}
-		p = Probe(ctx, base)
+		q := Probe(ctx, base)
+		// A probe the deadline cut short reads as Down, and tells nothing of the server.
+		if ctx.Err() != nil {
+			return p
+		}
+		p = q
 	}
 	return p
 }
@@ -111,8 +116,9 @@ type Server struct {
 	Env []string
 }
 
-func (s Server) base() string {
-	return "http://" + Addr(s.Port)
+// Base is the URL a server of floe serves at, on port.
+func Base(port int) string {
+	return "http://" + Addr(port)
 }
 
 // Addr is the address a server of floe serves on, on port.
@@ -123,7 +129,7 @@ func Addr(port int) string {
 // Ensure makes sure a server of this build serves the root on the port, starting one or replacing an
 // outdated one as needed.
 func Ensure(ctx context.Context, s Server) error {
-	p := Probe(ctx, s.base())
+	p := Probe(ctx, Base(s.Port))
 	outdated := p.State == Ours && sameDir(p.Health.Root, s.Root) && p.Health.Build != s.Build
 	// One of other directories is refused before it is replaced, which would draw others' pages with these,
 	// whatever the command.
@@ -134,7 +140,7 @@ func Ensure(ctx context.Context, s Server) error {
 	}
 	if outdated {
 		var err error
-		if p, err = s.replace(ctx, p); err != nil {
+		if p, err = Stop(ctx, s.Port, p); err != nil {
 			return err
 		}
 	}
@@ -158,19 +164,16 @@ func Ensure(ctx context.Context, s Server) error {
 	}
 }
 
-// replace stops p, a server of another build, and returns what serves the port once it is gone.
-func (s Server) replace(ctx context.Context, p Status) (Status, error) {
-	return Stop(ctx, s.Port, p)
-}
-
 // Stop stops p, the server of floe on port, and returns what serves the port once it is gone.
+// LIMIT: the pid is the one p's health tells, signalled as a process of this machine; a server in a container
+// whose port is handed out tells one of its own. Check it is a process of floe here if that comes to matter.
 func Stop(ctx context.Context, port int, p Status) (Status, error) {
 	old := p.Health.PID
 	if err := terminate(old); err != nil {
 		return p, err
 	}
 	// Wait for that server only: a concurrent command may have started the new one already.
-	p = waitWhile(ctx, "http://"+Addr(port), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
+	p = waitWhile(ctx, Base(port), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
 	if p.State == Ours && p.Health.PID == old {
 		return p, usererr.New("daemon_kept_answering", port, old)
 	}
@@ -222,7 +225,7 @@ func startAndWait(ctx context.Context, s Server, p Status) (Status, error) {
 		if started, err = start(ctx, s); err != nil {
 			return p, err
 		}
-		p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Down })
+		p = waitWhile(ctx, Base(s.Port), p, func(q Status) bool { return q.State == Down })
 	}
 	// Bound, but none answers: another command's server still starting, or a program that does not.
 	if p.State == Down && !started {

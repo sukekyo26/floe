@@ -181,7 +181,7 @@ var messagesEN = map[string]string{
 	"store_image_under_image": `the image "%[1]s" is under "%[2]s", which is an image too, and a stored page cannot keep both: rename one of them`,
 	"store_rebuild_kept":      `page "%s" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
 
-	"daemon_kept_answering": "the server on port %d did not stop when asked to; stop it yourself (the process %d, if it runs on this machine), and run this command again",
+	"daemon_kept_answering": "the server on port %d did not stop when asked to; stop it yourself (the process %d, if it runs on this machine), and the next floe command that uses the server starts its own",
 	"daemon_port_taken":     "port %d is used by another program; set FLOE_PORT to a free port",
 	"daemon_port_in_use":    "port %d is in use; stop that program (floe stop, if it is floe's server) or set FLOE_PORT",
 	"daemon_cannot_listen":  "cannot listen on 127.0.0.1:%d (permission denied); set FLOE_PORT to another port",
