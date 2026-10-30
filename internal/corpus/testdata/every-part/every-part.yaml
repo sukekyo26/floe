@@ -61,16 +61,33 @@ sections:
     parts:
       - table:
           columns:
-            - title: Risk
-            - title: Likelihood
+            - Risk
+            - Likelihood
             - { title: Pages, num: true }
-            - title: What we do ([a check](https://example.com/linkcheck), `linkcheck`)
-            - title: State
+            - What we do ([a check](https://example.com/linkcheck), `linkcheck`)
+            - State
           rows:
             - [Broken links, High, '120', A link check after the copy, { pill: watching, tone: warn }]
             - [Lost attachments, Low, '8', Keep the old host for **a month**, { pill: covered, tone: good }]
             - [Slow search, Unknown, "-", Rebuild the index on `Sunday`, { pill: open }]
             - [New host, Low, '0', Nothing, { pill: ready, tone: accent }]
+      - table:
+          columns:
+            - Change
+            - { title: Size, num: true }
+            - Note
+            - { title: Urgency, pills: { mid: warn, high: bad, '**done**': good, 'A&B': accent } }
+          rows:
+            - [A word of the column, '1', mid, mid]
+            - [Its pill as an object, '2', a note, { pill: mid, tone: warn }]
+            - [Holding a word, mid, mid-week, middle]
+            - [After a space, '3', high, ' high']
+            - [Its tone, '6', a note, high]
+            - [Changed by Markdown and HTML, '4', '**done**', '**done**']
+            - [An ampersand, '5', 'A&B', 'A&B']
+      - table:
+          columns: [Another table]
+          rows: [[mid]]
       - note:
           tone: warn
           title: Heads up
@@ -187,7 +204,7 @@ sections:
               - code: { lang: powershell, text: "$env:WIKI = 'new'" }
               - note: { text: 'Run it in a new window; [the steps](https://example.com/steps) and `run.sh`.', tone: good }
               - table:
-                  columns: [{ title: Shell }, { title: Lines, num: true }]
+                  columns: [Shell, { title: Lines, num: true }]
                   rows: [[PowerShell, '1']]
       - html: <details><summary>What the freeze covers</summary><p>Edits, <span class="good" data-floe-part="cell">comments</span> and uploads.</p></details>
       - script:

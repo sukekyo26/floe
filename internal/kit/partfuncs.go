@@ -22,7 +22,7 @@ import (
 // partFuncs are the functions floe's parts draw with, besides those of page.html.
 var partFuncs = template.FuncMap{
 	"bars": barsOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf, "script": scriptOf,
-	"tree": treeOf,
+	"tree": treeOf, "written": writtenOf,
 }
 
 // copyButtonOf holds the name of the function that draws the copy button of a part, which Part.Page binds anew in
@@ -71,6 +71,12 @@ func copyButton(tag string) func() (template.HTML, error) {
 		}
 		return "", fmt.Errorf("%w: copyButton: no script in English", ErrFunc)
 	}
+}
+
+// writtenOf holds the name of the function that returns the value of the part as written, which draw binds
+// anew for each part it draws: its parts and formats not drawn, and no nil for a key left out.
+func writtenOf() (any, error) {
+	return nil, fmt.Errorf("%w: written: not bound to a page", ErrFunc)
 }
 
 // diagramOf holds the name of the function that draws the value of the part as a diagram, which draw binds

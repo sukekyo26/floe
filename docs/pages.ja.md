@@ -23,12 +23,9 @@ sections:
           steps:
             - { run: wiki export --out pages/, out: 1840 pages written }
       - table:
-          columns:
-            - title: リスク
-            - { title: ページ, num: true }
-            - title: 状態
+          columns: [リスク, { title: ページ, num: true }, { title: 状態, pills: { 見張り中: warn, 済: good } }]
           rows:
-            - [リンク切れ, '120', { pill: 見張り中, tone: warn }]
+            - [リンク切れ, '120', 見張り中]
       - note: { tone: warn, text: 止めている間の編集は失われる。 }
 ```
 
@@ -69,7 +66,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 | `text` | Markdown（表も）。中の生の HTML は除く。囲んだコードのブロック（```` ``` ````）はただのコードとして描き、警告する：コードは `code`、コマンドは `terminal` に書く。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ）ので、画像は `image` に書く。 |
 | `code` | コードをそのまま、`file` と `lang` の下に。右上のボタンでコードをコピーできる。 |
 | `terminal` | コマンド（`run`）と出力（`out`）を、`shell`（`bash`・`sh`・`zsh`・`powershell`・`cmd`）のプロンプトで。プロンプトは floe が描くので、プロンプトで始まる `run`（`$ ls`）は断る。右上のボタンで、コマンドを 1 行ずつ、プロンプトと出力を除いてコピーできる。 |
-| `table` | `columns` と `rows`。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`。 |
+| `table` | `columns` と `rows`。列は題の字か `{ title, num, pills }`。`num: true` は数の列、`pills` は言葉とその色（`{ 済: good }`）で、その列の升が言葉と丸ごと同じなら、その pill で描く。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`（引用符で囲まず、オブジェクトのまま書く）。 |
 | `image` | 画面の写しなどの画像。`file` と、何を写すかの `alt`（[画像](#画像)）。 |
 | `cards`・`note`・`stats`・`progress`・`steps`・`checklist` | カード、色の付いた注、大きな数、進みの棒、番号付きの手順、済めば印の付く項目。 |
 | `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |

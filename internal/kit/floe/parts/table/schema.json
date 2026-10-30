@@ -1,17 +1,25 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "table",
-  "description": "A table; each cell is a line of Markdown (code, bold, links), a number in quotes as it is drawn, or a pill",
+  "description": "A table; each cell is a line of Markdown (code, bold, links), a number in quotes as it is drawn, a word of its column's pills, drawn as that pill, or a pill",
   "type": "object",
   "properties": {
     "columns": {
       "type": "array",
       "minItems": 1,
       "items": {
-        "type": "object",
+        "type": ["string", "object"],
+        "description": "Its title, a line of Markdown; or { title, num, pills } for a column holding more than its title",
         "properties": {
           "title": { "type": "string", "description": "A line of Markdown" },
-          "num": { "type": "boolean", "description": "Numbers: aligned right, in a fixed-width font" }
+          "num": { "type": "boolean", "description": "Numbers: aligned right, in a fixed-width font" },
+          "pills": {
+            "type": "object",
+            "description": "Words drawn as pills in this column, each with its tone: a cell that is one of them, whole, as { 'Done': good }",
+            "minProperties": 1,
+            "propertyNames": { "minLength": 1 },
+            "additionalProperties": { "$ref": "floe:///parts/tone.json" }
+          }
         },
         "required": ["title"],
         "additionalProperties": false

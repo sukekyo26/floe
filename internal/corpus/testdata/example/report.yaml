@@ -79,15 +79,15 @@ sections:
     parts:
       - table:
           columns:
-            - title: Risk
-            - title: Likelihood
+            - Risk
+            - Likelihood
             - { title: Pages, num: true }
-            - title: What we do
-            - title: State
+            - What we do
+            - { title: State, pills: { watching: warn, covered: good, open: accent } }
           rows:
-            - [Broken links, High, '120', A link check after the copy, { pill: watching, tone: warn }]
-            - [Lost attachments, Low, '8', Keep the old host for **a month**, { pill: covered, tone: good }]
-            - [Slow search, Unknown, "-", Rebuild the index on `Sunday`, { pill: open }]
+            - [Broken links, High, '120', A link check after the copy, watching]
+            - [Lost attachments, Low, '8', Keep the old host for **a month**, covered]
+            - [Slow search, Unknown, "-", Rebuild the index on `Sunday`, open]
       - note:
           tone: warn
           title: Heads up

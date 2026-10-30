@@ -231,15 +231,19 @@ type drawnTones struct {
 	found, toned, plain map[string]bool
 }
 
-// read reads the box n and the elements it holds but the parts it holds, whose tones are theirs.
+// read reads the box n and the elements it holds but the parts it holds, whose tones are theirs; but a pill it
+// holds, cell's box, is read too, as a part draws the tones it takes as pills (table's pills of a column).
 func (d *drawnTones) read(n *html.Node) {
 	elements := []*html.Node{n}
 	var hold func(*html.Node)
 	hold = func(p *html.Node) {
 		for c := p.FirstChild; c != nil; c = c.NextSibling {
-			if nodeAttr(c, "data-floe-part") == "" {
+			switch nodeAttr(c, "data-floe-part") {
+			case "":
 				elements = append(elements, c)
 				hold(c)
+			case "cell":
+				elements = append(elements, c)
 			}
 		}
 	}

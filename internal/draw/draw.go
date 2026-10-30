@@ -251,7 +251,7 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 		return nil, err //nolint:wrapcheck // floe's failure, which says what failed
 	}
 	// Walk's ready holds the keys a schema declares and the value leaves out, as nil: not the spec written.
-	page.Funcs(template.FuncMap{"diagram": s.diagramOf(d, it)})
+	page.Funcs(template.FuncMap{"diagram": s.diagramOf(d, it), "written": func() any { return it.Value }})
 	var b bytes.Buffer
 	if err := page.Execute(&b, ready); err != nil {
 		mistakes, line, column, failed := executed(err, "part.html", p.File("part.html"), p.PageSource())

@@ -1,9 +1,14 @@
 <div data-floe-part="table"><table>
-<thead><tr>{{range .columns}}<th scope="col"{{if .num}} class="num"{{end}}>{{markdownLine .title}}</th>{{end}}</tr></thead>
+<thead><tr>{{range .columns}}{{if eq (printf "%T" .) "string"}}<th scope="col">{{markdownLine .}}</th>{{else}}<th scope="col"{{if .num}} class="num"{{end}}>{{markdownLine .title}}</th>{{end}}{{end}}</tr></thead>
 <tbody>
-{{- range .rows}}
-<tr>{{range $i, $cell := .}}<td{{if (index $.columns $i).num}} class="num"{{end}}>
-{{- $cell -}}
+{{- /* The pills of a column are found by the cell as written: . holds the cells as cell drew them */}}
+{{- $rows := (written).rows}}
+{{- range $r, $row := .rows}}
+<tr>{{range $i, $cell := $row}}{{$col := index $.columns $i}}{{$word := index $rows $r $i}}{{$tone := ""}}
+{{- if ne (printf "%T" $col) "string"}}{{with $col.pills}}{{if eq (printf "%T" $word) "string"}}{{$tone = index . $word}}{{end}}{{end}}{{end -}}
+<td{{if and (ne (printf "%T" $col) "string") $col.num}} class="num"{{end}}>
+{{- /* The pill as cell's part.html draws one */}}
+{{- if $tone}}<span class="{{$tone}}" data-floe-part="cell">{{$word}}</span>{{else}}{{$cell}}{{end -}}
 </td>{{end}}</tr>
 {{- end}}
 </tbody>
