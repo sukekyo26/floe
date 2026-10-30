@@ -189,7 +189,7 @@ func atOrUnder(at, of []string) bool {
 // that cannot be read) told there; one of page.html, or of no file, at its line and column in it; or floe's
 // failure.
 func (s *items) pageMistakes(t *kit.Template, err error) error {
-	mistakes, line, column, failed := executed(err, "page.html", t.PageSource())
+	mistakes, line, column, failed := executed(err, "page.html", t.File("page.html"), t.PageSource())
 	if failed != nil {
 		return failed
 	}
@@ -254,7 +254,7 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 	page.Funcs(template.FuncMap{"diagram": s.diagramOf(d, it)})
 	var b bytes.Buffer
 	if err := page.Execute(&b, ready); err != nil {
-		mistakes, line, column, failed := executed(err, "part.html", p.PageSource())
+		mistakes, line, column, failed := executed(err, "part.html", p.File("part.html"), p.PageSource())
 		if failed != nil {
 			return nil, failed
 		}
@@ -262,8 +262,11 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 			e.Args = s.plainArgs(e.Args)
 			switch {
 			case e.File() == p.File("part.html") && line > 0:
-				// One part.html tells of itself (a word its words.yaml has not): at its line and column, told
-				// once whatever uses the part.
+				// One part.html tells of itself (a word its words.yaml has not, text/template's mistake of running
+				// it): at its line and column, told once whatever uses the part.
+				// LIMIT: a mistake a value brings (ranging over text, an index out of range), of floe's parts too, is
+				// told at part.html, not the value; the part's schema giving the value its shape has it told at the
+				// item. Tell both if one misleads.
 				mistakes[i] = e.PlacedAt(e.File(), line, column)
 			case e.File() == "" && e.At() == "":
 				// At the value drawn: a part of floe's is no file one can fix, and the value tells why. One of
@@ -278,11 +281,12 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 	return template.HTML(s.trim(b.String())), nil //nolint:gosec // G203: drawn by html/template
 }
 
-// executed returns the mistakes err of executing the template name, whose text is src (nil when where it is
-// in the text is not asked): the usererr.Error or the usererr.List it wraps, copies, or text/template's words
-// without their head, and where the head says it is in src (textpos.OfTemplate), a line of 0 for none; or
-// floe's failure, an error of no execution.
-func executed(err error, name string, src []byte) (mistakes usererr.List, line, column int, failed error) {
+// executed returns the mistakes err of executing the template name, the file file whose text is src (nil when
+// where it is in the text is not asked): the usererr.Error or the usererr.List it wraps, copies, or
+// text/template's words without their head, a mistake of file when the head says where in src it is; and where
+// the head says it is in src (textpos.OfTemplate), a line of 0 for none; or floe's failure, an error of no
+// execution.
+func executed(err error, name, file string, src []byte) (mistakes usererr.List, line, column int, failed error) {
 	var ee ttemplate.ExecError
 	if !errors.As(err, &ee) || errors.Is(err, kit.ErrFunc) {
 		return nil, 0, 0, fmt.Errorf("draw with %s: %w", name, err)
@@ -290,7 +294,10 @@ func executed(err error, name string, src []byte) (mistakes usererr.List, line, 
 	line, column, rest := textpos.OfTemplate(src, ee.Error(), name)
 	var inner usererr.List
 	if inner.Add(ee.Err) != nil || inner == nil {
-		return usererr.List{usererr.LibraryAt("", 0, 0, rest)}, line, column, nil
+		if line == 0 {
+			file = "" // told where a mistake of no file is
+		}
+		return usererr.List{usererr.LibraryAt(file, 0, 0, rest)}, line, column, nil
 	}
 	mistakes = make(usererr.List, len(inner))
 	for i, e := range inner {
