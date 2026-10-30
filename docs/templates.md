@@ -158,7 +158,7 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--code-add`, `--code-del` | A diff's lines added and removed |
 | `--page-bg` | The whole page's ground, a pattern such as squares too (`--bg` by default) |
 | `--rule` | The `border` of a rule across the page, such as between sections |
-| `--text-width` | How wide prose grows, which a template sets for its page on `:scope`; text in a part's box reads to the box's width instead, but for the part `text`, in `details` and `tabs` too |
+| `--text-width` | The width of a page of one column, from which a template sets its column (as `adr` and `runbook` do), and of a note. Text itself takes the width of the column or the box it is in |
 | `--page-width`・`--page-pad` | The column a page is centred in: its width, and the pad each side of it. As the pad is inside the box, the column is `max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad)` |
 
 floe's base draws the page's ground, colour and face on its root with them (`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`), which `page.css` may set otherwise on `:scope`. A theme of your own may set them too ([parts.md](parts.md#themes)). In print, every ground is kept as the screen draws it.

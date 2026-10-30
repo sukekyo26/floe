@@ -12,10 +12,10 @@ body { margin: 0; font-size: 16px; line-height: 1.6; }
 .slide { box-sizing: border-box; min-height: 100svh; scroll-snap-align: start; position: relative; display: flex; flex-direction: column; justify-content: center; gap: 4svh; padding: 6svh 8vw calc(3svh + 2.5rem); border-bottom: 1px solid var(--line); }
 .cover { gap: 1.5rem; }
 .cover h1 { font-size: clamp(2.2rem, 6vw, 4.5rem); line-height: 1.2; max-width: 20ch; }
-.subtitle { font-size: clamp(1.1rem, 2.2vw, 1.7rem); max-width: none; }
+.subtitle { font-size: clamp(1.1rem, 2.2vw, 1.7rem); }
 .hint { position: absolute; bottom: 3svh; left: 8vw; font-size: 0.9rem; }
 /* Off base's list: the slides fill the width, one under the next, numbered by a counter of their own */
-.slides { list-style: none; padding: 0; margin: 0; max-width: none; display: block; gap: 0; counter-reset: floe-slide; }
+.slides { list-style: none; padding: 0; margin: 0; display: block; gap: 0; counter-reset: floe-slide; }
 .slides > li { counter-increment: floe-slide; }
 .slides > li::after { content: counter(floe-slide) " / " attr(data-total); content: counter(floe-slide) " / " attr(data-total) / ""; position: absolute; right: 3vw; bottom: 3svh; font-family: var(--mono); color: var(--muted); font-size: 1rem; }
 .slides > li.divider::after { color: inherit; }

@@ -158,7 +158,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | `--code-add`・`--code-del` | diff の足した行と消した行 |
 | `--page-bg` | ページ全体の地。方眼のような模様も（既定は `--bg`） |
 | `--rule` | 節の間のような、ページを横切る線の `border` |
-| `--text-width` | 文の幅の上限。テンプレートが `:scope` で決める。部品の箱の中の文は、箱の幅まで使う（部品 `text` は、`details`・`tabs` の中も、この上限のまま） |
+| `--text-width` | 1 列のページの幅。テンプレートが列の幅をここから決める（`adr`・`runbook` のように）。部品 note の幅にも使う。文そのものは、入っている列か箱の幅まで使う |
 | `--page-width`・`--page-pad` | ページを中央にそろえる列の幅と、その左右の余白。余白は箱の内側なので、列は `max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad)` |
 
 floe の土台は、ページの根にこれらで地・色・書体を描きます（`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`）。`page.css` は `:scope` でこれを変えられます。自分のテーマも変えられます（[parts.ja.md](parts.ja.md#テーマ)）。印刷でも、どの地も画面のとおりに出ます。

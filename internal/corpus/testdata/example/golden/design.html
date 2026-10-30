@@ -19,7 +19,7 @@
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
-p, ul, ol { margin: 0; max-width: var(--text-width); }
+p, ul, ol { margin: 0; }
 ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 /* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
    --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
@@ -36,11 +36,8 @@ pre {
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
-blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
+blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
-/* Text in a part's box reads to the box's width, which the part sets; the page's own text, the part text, keeps
-   --text-width, folded in details or tabs too */
-:where([data-floe-part]:not([data-floe-part=stack], [data-floe-part=details], [data-floe-part=tabs])) :is(p, ul, ol, blockquote) { max-width: none; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
@@ -192,7 +189,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="steps"]) to (:scope [data-floe-part] > *) {
 /* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
    rings and lines of its own states */
-:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; max-width: none; }
+:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; }
 :scope > li { position: relative; counter-increment: floe-step; display: grid; gap: 0.15rem; padding: 0.2rem 0 1.3rem 3rem; min-height: 2rem; }
 :scope > li:last-child { padding-bottom: 0.2rem; }
 :scope > li::before {
@@ -323,7 +320,7 @@ h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .summary { color: var(--muted); font-size: 1.05rem; }
 .verdict { padding-block: 1.4rem 1.6rem; }
 .verdict h2 { font-size: 0.8rem; letter-spacing: 0.15em; margin-bottom: 0.4rem; }
-.verdict ol { max-width: none; gap: 0.7rem; }
+.verdict ol { gap: 0.7rem; }
 .verdict li { display: grid; gap: 0.1rem; }
 .verdict .question { font-size: 0.9rem; }
 .verdict .pick { font-size: 1.4rem; line-height: 1.4; }
@@ -333,9 +330,9 @@ main { display: grid; gap: 2.2rem; align-content: start; }
 main section { display: grid; gap: 0.8rem; }
 main h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px solid var(--accent); }
 /* The question is set as the text around it is, not as the headings are */
-.decision > h3 { margin-top: 0.4rem; max-width: var(--text-width); font-size: 1.05rem; line-height: inherit; text-wrap: wrap; }
+.decision > h3 { margin-top: 0.4rem; font-size: 1.05rem; line-height: inherit; text-wrap: wrap; }
 .non-goals { color: var(--muted); }
-.decided { list-style: none; padding: 0; gap: 0; max-width: none; }
+.decided { list-style: none; padding: 0; gap: 0; }
 .decided li { padding: 0.6rem 1rem; }
 aside { position: sticky; top: 1rem; align-self: start; padding: 1rem 1.2rem; }
 aside h2 { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
