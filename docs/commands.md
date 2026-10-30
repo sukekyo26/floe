@@ -137,7 +137,7 @@ Print the templates, floe's and your own, one per line in three tab-separated co
 
 Print a template, to read before writing a data file of it: its description, where it is, the themes a data file may pick (`themes:`), the files it reads (`files:`), and each of them as written under `==> file <==`: first what a data file may hold (`schema.json`, `checks.yaml`, `computed.yaml`) and its `example.yaml` to start one from, then `page.html`, `page.css` and `words.yaml`. Its `assets/`, images, are not printed.
 
-- With a file named after (`floe template show report example.yaml`), it prints that file alone, as it is. A file it does not read is refused with the files it does.
+- With a file named after (`floe template show report example.yaml`), it prints that file alone, as written but the byte order mark at its start. A file it does not read is refused with the files it does.
 - When the output is long, read the `files:` line first, then the file you need.
 
 ## `floe template new <name>`
@@ -164,7 +164,7 @@ Print the parts, looks and shared schemas, floe's and your own, one per line in 
 
 Print a part, a look or a shared schema: its description, where it is, the looks it takes, the files it reads (`files:`), and each of them as written under `==> file <==`: `schema.json`, `checks.yaml`, `part.yaml`, `part.html`, `part.css` and `words.yaml` of a part, `part.yaml` and `part.css` of a look, `<name>.json` of a shared schema. The CSS of the looks it takes is the looks' own: `floe part show panel` prints it.
 
-- With a file named after (`floe part show code part.html`), it prints that file alone, as it is: floe's parts show how `part.html` uses `{{copyButton}}` and the other functions. A file it does not read is refused with the files it does.
+- With a file named after (`floe part show code part.html`), it prints that file alone, as written but the byte order mark at its start: floe's parts show how `part.html` uses `{{copyButton}}` and the other functions. A file it does not read is refused with the files it does.
 - When the output is long, read the `files:` line first, then the file you need.
 
 ## `floe part new <name>`
@@ -187,7 +187,7 @@ Print the themes, floe's and your own, one per line in the three tab-separated c
 
 Print a theme: its name, where it is, the files it reads (`files:`), and each of them as written under `==> file <==`: `palette.css`, `base.css`, then the CSS it gives each part or look, by name.
 
-- With a file named after (`floe theme show ink note.css`), it prints that file alone, as it is. A file it does not read is refused with the files it does.
+- With a file named after (`floe theme show ink note.css`), it prints that file alone, as written but the byte order mark at its start. A file it does not read is refused with the files it does.
 - When the output is long, read the `files:` line first, then the file you need.
 
 ---

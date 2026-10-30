@@ -179,7 +179,7 @@ func TestListShow(t *testing.T) {
 		{
 			[]string{"part", "show", "mine", "nope.css"},
 			1, func(out string) bool { return out == "" },
-			`floe: mine has no file "nope.css"; use schema.json, checks.yaml, part.yaml, part.html, part.css, words.yaml` + "\n",
+			`floe: mine has no file "nope.css" (its files: schema.json, checks.yaml, part.yaml, part.html, part.css, words.yaml)` + "\n",
 		},
 		{[]string{"part", "show", "tone"}, 0, func(out string) bool {
 			return strings.HasPrefix(out, "tone: The colour of a part: accent, good, warn or bad, from the theme's colour variables\nwhere: floe\nfiles: tone.json\n==> tone.json <==\n{\n")
@@ -210,7 +210,7 @@ func TestListShow(t *testing.T) {
 		}, ""},
 		{[]string{"theme", "show", "mine", "code.css"}, 0, func(out string) bool { return out == ":scope { color: red; }\n" }, ""},
 		{[]string{"theme", "show", "empty"}, 0, func(out string) bool { return out == "empty\nwhere: "+filepath.Join(themes, "empty")+"\n" }, ""},
-		{[]string{"theme", "show", "empty", "x.css"}, 1, func(out string) bool { return out == "" }, "floe: empty has no files\n"},
+		{[]string{"theme", "show", "empty", "x.css"}, 1, func(out string) bool { return out == "" }, `floe: empty has no file "x.css" (its files: )` + "\n"},
 		{[]string{"theme", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: there is no theme "nope"; use ` + allThemes + "\n"},
 	} {
 		if code, stdout, stderr := runEnv(dir, env, tt.args...); code != tt.code || !tt.out(stdout) || stderr != tt.errs {
