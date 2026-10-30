@@ -110,6 +110,16 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.until("the pages to pick from", "document.getElementById('page-pick').matches(':popover-open')")
 		b.eval("document.getElementById('page-pick-q').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))")
 		measure("the frame's pages to pick from")
+		// What a frame prints: the note naming the page alone, with the error under a failed read, and a missing page's.
+		print := []*emulation.MediaFeature{{Name: "prefers-color-scheme", Value: scheme}, {Name: "prefers-reduced-motion", Value: "reduce"}}
+		if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, emulation.SetEmulatedMediaParams{Media: "print", Features: print}); err != nil {
+			t.Fatal(err)
+		}
+		b.eval("document.getElementById('page-pick').hidePopover(); showError('failed')")
+		measure("the frame printed")
+		b.navigate("/a/none/")
+		measure("a missing page's frame printed")
+		media(scheme)
 	}
 
 	const light = "rgb(244, 243, 240)"
