@@ -139,8 +139,8 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：キャンバスに部品（frame・box・table・icon・名前でつなぐ edge・dot・bar・axis・
   circle・label・line）を置く spec から inline SVG で描く図。文は 1 つの言語でも、
   いくつかの言語でも（`{en: …, ja: …}`）書け、描く前に、どの言語でも字のはみ出し・重なり・
-  箱を通る線・交差を確かめる。データファイルの `diagram` の部品か、`floe diagram render`・
-  `inspect`・`example` で使う。
+  箱を通る線・交差を確かめる。データファイルの `diagram` の部品（節にも、`details`・`tabs` の
+  中にも置ける）か、`floe diagram render`・`inspect`・`example` で使う。
 - 追加：`floe icons fetch` と `floe icons search`。図の `icon` の部品が使う AWS
   Architecture Icons を手元に置く。
 - 追加：データファイルから描いたページのスクリプトが、ページの中身を外へ送れないようにする

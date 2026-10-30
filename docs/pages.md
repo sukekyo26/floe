@@ -73,7 +73,7 @@ Each part is one key naming its kind. `floe part list` lists them with a line ea
 | `compare`, `options`, `facts`, `diff`, `tree`, `links` | What changes before and after, options with pros and cons, names with values, a diff (a button over it copies the diff as written), files and folders, links. |
 | `findings`, `decision`, `fields` | What a review found, a decision, the keys of a setting. |
 | `timeline`, `bars`, `faq`, `keys` | Dates in order, bars of values, questions and answers, keys to press. |
-| `details`, `tabs` | Parts folded under a title, or shown one at a time under tabs; they hold `text`, `code`, `terminal`, `diff`, `note`, `table` and `image`. |
+| `details`, `tabs` | Parts folded under a title, or shown one at a time under tabs; they hold `text`, `code`, `terminal`, `diff`, `note`, `table`, `entries`, `image` and `diagram`. |
 | `diagram` | A diagram, checked and drawn as inline SVG ([Diagrams](#diagrams)). |
 | `script` | Something that moves ([Scripts and HTML](#scripts-and-html)). |
 | `html` | HTML that goes in as it is ([Scripts and HTML](#scripts-and-html)). |
@@ -99,7 +99,7 @@ An image file Markdown names (`![x](shots/list.png)`) is drawn as written, and t
 
 ## Diagrams
 
-A `diagram` part is a spec written in place: a canvas and the parts placed on it at absolute coordinates (the top left is 0, 0). It is checked before the page is drawn, its mistakes at the data file's lines and columns, and drawn as inline SVG that zooms. `floe diagram render` draws a spec of a file of its own the same way ([commands.md](commands.md#floe-diagram-render-specyaml)).
+A `diagram` part, in a section or in `details` and `tabs`, is a spec written in place: a canvas and the parts placed on it at absolute coordinates (the top left is 0, 0). It is checked before the page is drawn, its mistakes at the data file's lines and columns, and drawn as inline SVG that zooms. `floe diagram render` draws a spec of a file of its own the same way ([commands.md](commands.md#floe-diagram-render-specyaml)).
 
 ```yaml
 - diagram:

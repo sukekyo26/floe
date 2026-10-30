@@ -73,7 +73,7 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 | `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |
 | `findings`・`decision`・`fields` | レビューで見つけたもの、決めたこと、設定の鍵。 |
 | `timeline`・`bars`・`faq`・`keys` | 日付の順の出来事、値の棒、問いと答え、押すキー。 |
-| `details`・`tabs` | 題の下に畳んだ部品、またはタブで 1 つずつ見せる部品。中に `text`・`code`・`terminal`・`diff`・`note`・`table`・`image` を置ける。 |
+| `details`・`tabs` | 題の下に畳んだ部品、またはタブで 1 つずつ見せる部品。中に `text`・`code`・`terminal`・`diff`・`note`・`table`・`entries`・`image`・`diagram` を置ける。 |
 | `diagram` | 確かめてから inline SVG で描く図（[図](#図)）。 |
 | `script` | 動くもの（[スクリプトと HTML](#スクリプトと-html)）。 |
 | `html` | そのまま入る HTML（[スクリプトと HTML](#スクリプトと-html)）。 |
@@ -99,7 +99,7 @@ Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書�
 
 ## 図
 
-`diagram` の部品は、その場に書く spec です。キャンバスと、その上に絶対座標（左上が 0, 0）で置く部品から成ります。ページを描く前に確かめ（誤りはデータファイルの行と列で言う）、拡大できる inline SVG で描きます。`floe diagram render` は、ファイルに書いた spec を同じように描きます（[commands.ja.md](commands.ja.md#floe-diagram-render-specyaml)）。
+`diagram` の部品は、節にも `details`・`tabs` の中にも置ける、その場に書く spec です。キャンバスと、その上に絶対座標（左上が 0, 0）で置く部品から成ります。ページを描く前に確かめ（誤りはデータファイルの行と列で言う）、拡大できる inline SVG で描きます。`floe diagram render` は、ファイルに書いた spec を同じように描きます（[commands.ja.md](commands.ja.md#floe-diagram-render-specyaml)）。
 
 ```yaml
 - diagram:
