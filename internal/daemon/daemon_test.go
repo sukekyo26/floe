@@ -1,20 +1,17 @@
 package daemon_test
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
 	"net"
-	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/sukekyo26/floe/internal/daemon"
 	"github.com/sukekyo26/floe/internal/server"
+	"github.com/sukekyo26/floe/internal/servetest"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -131,52 +128,22 @@ func TestStopNamesTheServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			health, err := json.Marshal(server.Health{App: server.App, PID: told})
-			if err != nil {
-				t.Fatal(err)
-			}
-			var mu sync.Mutex
-			var bodies []string
-			srv := &http.Server{ReadHeaderTimeout: time.Second}
-			srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != "/api/stop" {
-					_, _ = w.Write(health) //nolint:errcheck // a test's answer
-					return
-				}
-				b, _ := io.ReadAll(r.Body) //nolint:errcheck // a short body, compared below
-				mu.Lock()
-				bodies = append(bodies, string(b))
-				mu.Unlock()
-				if string(b) != `{"pid":`+strconv.Itoa(told)+`}` {
-					w.WriteHeader(http.StatusConflict)
-					return
-				}
-				w.WriteHeader(http.StatusNoContent)
-				go func() {
-					time.Sleep(100 * time.Millisecond)
-					_ = srv.Close() //nolint:errcheck // nothing to do
-				}()
-			})
-			go func() { _ = srv.Serve(ln) }()     //nolint:errcheck // closed below
-			t.Cleanup(func() { _ = srv.Close() }) //nolint:errcheck // nothing to do
 			addr, ok := ln.Addr().(*net.TCPAddr)
 			if !ok {
 				t.Fatalf("a TCP listener on %v", ln.Addr())
 			}
-			port := addr.Port
+			bodies := servetest.Fake{PID: told, Linger: 100 * time.Millisecond}.Serve(t, ln) //nolint:exhaustruct // the rest unset
 
 			//nolint:exhaustruct // the rest of the health is not read
 			saw := daemon.Status{State: daemon.Ours, Health: server.Health{App: server.App, PID: c.pid}}
-			if _, err := daemon.Stop(t.Context(), port, saw); err != nil {
+			p, err := daemon.Stop(t.Context(), addr.Port, saw)
+			if err != nil {
 				t.Errorf("Stop = %v", err)
 			}
-			mu.Lock()
-			got := strings.Join(bodies, " ")
-			mu.Unlock()
-			if want := `{"pid":` + strconv.Itoa(c.pid) + `}`; got != want {
+			if got, want := strings.Join(bodies(), " "), `{"pid":`+strconv.Itoa(c.pid)+`}`; got != want {
 				t.Errorf("bodies = %s, want %s", got, want)
 			}
-			if p := daemon.Probe(t.Context(), daemon.Base(port)); (p.State == daemon.Ours) != c.answers {
+			if (p.State == daemon.Ours) != c.answers {
 				t.Errorf("after Stop the server answers: %v, want %v", p.State == daemon.Ours, c.answers)
 			}
 		})

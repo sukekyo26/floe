@@ -3,7 +3,6 @@ package cli_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"math/rand/v2"
 	"net"
@@ -22,6 +21,7 @@ import (
 	"github.com/sukekyo26/floe/internal/cli"
 	"github.com/sukekyo26/floe/internal/daemon"
 	"github.com/sukekyo26/floe/internal/server"
+	"github.com/sukekyo26/floe/internal/servetest"
 )
 
 // asCLI makes the test binary run as floe, so that the server a publish starts (os.Executable() serve) is this
@@ -381,69 +381,63 @@ func holdPort(t *testing.T) (net.Listener, int) {
 	return ln, addr.Port
 }
 
-// fakeServer answers on ln the health of a server of floe of pid, and /api/stop with answer. After a 204 it stops
-// answering linger later, or never when keeps. It runs no floe, so that floe stop's waiting is seen whatever a real
-// server's speed.
-func fakeServer(t *testing.T, ln net.Listener, pid, answer int, keeps bool, linger time.Duration) {
-	t.Helper()
-
-	body, err := json.Marshal(server.Health{App: server.App, PID: pid})
-	if err != nil {
-		t.Fatal(err)
-	}
-	srv := &http.Server{ReadHeaderTimeout: time.Second}
-	srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/stop" {
-			_, _ = w.Write(body) //nolint:errcheck // a test's answer
-			return
-		}
-		w.WriteHeader(answer)
-		if answer == http.StatusNoContent && !keeps {
-			go func() {
-				time.Sleep(linger)
-				_ = srv.Close() //nolint:errcheck // nothing to do
-			}()
-		}
-	})
-	go func() { _ = srv.Serve(ln) }() //nolint:errcheck // closed below
-	// Before the cleanup of the denv on ln, which would stop a server still answering.
-	t.Cleanup(func() { _ = srv.Close() }) //nolint:errcheck // nothing to do
-}
-
 // floe stop returns once the server no longer answers, so that a command right after starts its own.
 func TestStopWaits(t *testing.T) {
 	t.Parallel()
 
 	ln, port := holdPort(t)
 	e := newDenvOn(t, port)
-	fakeServer(t, ln, 4242, http.StatusNoContent, false, 300*time.Millisecond)
+	servetest.Fake{PID: 4242, Linger: 300 * time.Millisecond}.Serve(t, ln) //nolint:exhaustruct // the rest unset
 	wantRun(t, "stop", e.run("stop"), 0, "stopped server (pid 4242)\n", "")
 	if _, up := e.health(t.Context()); up {
 		t.Error("the server still answers after floe stop")
 	}
 }
 
+// A server gone before it is asked, another serving the port by then, is told so: floe stop does not stop that one.
+func TestStopAnother(t *testing.T) {
+	t.Parallel()
+
+	ln, port := holdPort(t)
+	e := newDenvOn(t, port)
+	servetest.Fake{PID: 4242, Next: 4343, Keeps: true}.Serve(t, ln) //nolint:exhaustruct // the rest unset
+	wantRun(t, "stop", e.run("stop"), 0, "server (pid 4242) is gone, and another (pid 4343) serves the port now\n", "")
+}
+
 // A server that does not take the request (of a build without it) or answers on after it is told with its port and
-// pid, and floe stop fails.
+// pid, and floe stop fails; one the request to which fails is told with net/http's words.
 func TestStopKeptAnswering(t *testing.T) {
 	t.Parallel()
 
+	still := "is still running; stop it yourself (the process 4242, if it runs on this machine), and the next floe" +
+		" command that uses the server starts its own\n"
 	for _, c := range []struct {
-		name   string
-		answer int
+		name string
+		fake servetest.Fake
 		// at once: one that does not take the request is not waited for, which takes 3 s.
 		atOnce bool
-	}{{"no request", http.StatusNotFound, true}, {"answers on", http.StatusNoContent, false}} {
+		want   func(port string) string
+	}{
+		{"no request", servetest.Fake{PID: 4242, Answer: http.StatusNotFound, Keeps: true}, true, //nolint:exhaustruct // the rest unset
+			func(port string) string { return "floe: the server on port " + port + " " + still }},
+		{"answers on", servetest.Fake{PID: 4242, Keeps: true}, false, //nolint:exhaustruct // the rest unset
+			func(port string) string { return "floe: the server on port " + port + " " + still }},
+		{"no answer", servetest.Fake{PID: 4242, Hang: true, Keeps: true}, false, //nolint:exhaustruct // the rest unset
+			func(port string) string {
+				return "floe: the server on port " + port + " is still running, and asking it to stop failed (Post" +
+					` "http://127.0.0.1:` + port + `/api/stop": context deadline exceeded); stop it yourself (the` +
+					" process 4242, if it runs on this machine), and the next floe command that uses the server starts" +
+					" its own\n"
+			}},
+	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
 			ln, port := holdPort(t)
 			e := newDenvOn(t, port)
-			fakeServer(t, ln, 4242, c.answer, true, 0)
+			c.fake.Serve(t, ln)
 			start := time.Now()
-			wantRun(t, "stop", e.run("stop"), 1, "", "floe: the server on port "+e.port+" is still running; stop it"+
-				" yourself (the process 4242, if it runs on this machine), and the next floe command that uses the"+
-				" server starts its own\n")
+			wantRun(t, "stop", e.run("stop"), 1, "", c.want(e.port))
 			if took := time.Since(start); c.atOnce && took > time.Second {
 				t.Errorf("floe stop took %v, waiting for a server that did not take the request", took)
 			}
@@ -468,7 +462,8 @@ func TestStopSendsNoSignal(t *testing.T) {
 	t.Cleanup(func() { _ = child.Process.Kill() }) //nolint:errcheck // gone already, when stopped
 	ln, port := holdPort(t)
 	e := newDenvOn(t, port)
-	fakeServer(t, ln, child.Process.Pid, http.StatusNotFound, true, 0)
+	//nolint:exhaustruct // the rest unset
+	servetest.Fake{PID: child.Process.Pid, Answer: http.StatusNotFound, Keeps: true}.Serve(t, ln)
 	if r := e.run("stop"); r.code != 1 {
 		t.Errorf("stop = %+v", r)
 	}

@@ -174,6 +174,7 @@ var messagesJA = map[string]string{
 	"store_rebuild_kept":      "ページ「%s」は前のままにしました。公開した元のデータファイルを直して公開し直すか、テンプレートを直してください",
 
 	"daemon_kept_answering": "ポート %d のサーバーがまだ動いています。自分で止めてください（この機械で動いていれば、プロセス %d）。止めた後は、サーバーを使う次の floe のコマンドが、自分のサーバーを起こします",
+	"daemon_stop_failed":    "ポート %[2]d のサーバーがまだ動いています。止めるよう頼めませんでした（%[1]s）。自分で止めてください（この機械で動いていれば、プロセス %[3]d）。止めた後は、サーバーを使う次の floe のコマンドが、自分のサーバーを起こします",
 	"daemon_port_taken":     "ポート %d は別のプログラムが使っています。FLOE_PORT に空いているポートを設定してください",
 	"daemon_port_in_use":    "ポート %d は使われています。そのプログラムを止める（floe のサーバーなら floe stop）か、FLOE_PORT を設定してください",
 	"daemon_cannot_listen":  "127.0.0.1:%d で待ち受けられません（権限がありません）。FLOE_PORT に別のポートを設定してください",
@@ -186,6 +187,7 @@ var messagesJA = map[string]string{
 	"cli_serving":           "%s を %s/ で返しています",
 	"cli_not_running":       "サーバーは動いていません",
 	"cli_stopped":           "サーバーを止めました（pid %d）",
+	"cli_stopped_other":     "サーバー（pid %d）は止まり、今は別のサーバー（pid %d）がポートで動いています",
 	"cli_updated":           "「%s」を置き換えました（前の publish は %s）",
 	"cli_updated_titled":    "「%s」を置き換えました（前の publish は %s、題は「%s」）",
 	"cli_title_changed":     "注意：題が変わりました。別のページなら、別の --slug で publish してください",

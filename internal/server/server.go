@@ -51,9 +51,9 @@ type Server struct {
 	every time.Duration
 	// id is this server's, new each start: in each version, so that a tab open across a restart reloads.
 	id string
-	// stopping is closed, once (halting), when the server stops: asked to (/api/stop), or by Serve's ctx.
-	stopping chan struct{}
-	halting  sync.Once
+	// stopping is done when the server stops: asked to (/api/stop, which calls halt), or by Serve's ctx.
+	stopping context.Context
+	halt     context.CancelFunc
 
 	// looking lets one look run at a time (look).
 	looking sync.Mutex
@@ -69,10 +69,11 @@ type Server struct {
 func New(cfg Config) *Server {
 	s := &Server{
 		cfg: cfg, hosts: map[string]bool{}, origins: map[string]bool{}, every: time.Second, id: rand.Text()[:8],
-		stopping: make(chan struct{}), halting: sync.Once{}, looking: sync.Mutex{}, mu: sync.Mutex{},
+		stopping: nil, halt: nil, looking: sync.Mutex{}, mu: sync.Mutex{},
 		drawing: store.Drawing{Kit: nil, Icons: nil, Err: nil}, gen: 0, mark: "",
 		fresh: false,
 	}
+	s.stopping, s.halt = context.WithCancel(context.Background())
 	// Requests under another name are refused against DNS rebinding.
 	for _, h := range []string{"localhost", "127.0.0.1"} {
 		host := net.JoinHostPort(h, strconv.Itoa(cfg.Port))
@@ -302,11 +303,13 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	case err := <-errc:
 		return fmt.Errorf("serve: %w", err)
 	case <-ctx.Done():
-	case <-s.stopping:
+	case <-s.stopping.Done():
 	}
-	// The event streams end, which Shutdown would wait for otherwise.
+	// The watching ends, and the event streams, which Shutdown would wait for otherwise.
+	cancel()
 	s.halt()
-	// LIMIT: a request still running after 10 s is cut off. Wait longer if a save comes to take that.
+	// LIMIT: a request still running after 10 s is cut off, and a connection opened but sent nothing (a browser's
+	// preconnect) is waited for 5 s. Wait longer if a save comes to take that.
 	done, stop := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer stop()
 	if err := srv.Shutdown(done); err != nil {
@@ -318,11 +321,6 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 		return fmt.Errorf("serve: %w", err)
 	}
 	return nil
-}
-
-// halt closes stopping, once.
-func (s *Server) halt() {
-	s.halting.Do(func() { close(s.stopping) })
 }
 
 // watchDrawing looks at the drawing every s.every until ctx is done.

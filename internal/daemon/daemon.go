@@ -64,7 +64,7 @@ func Probe(ctx context.Context, base string) Status {
 	defer cancel()
 	var none server.Health
 	down := Status{State: Down, Health: none}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/api/health", http.NoBody)
+	req, err := Request(ctx, base, http.MethodGet, "/api/health", nil)
 	if err != nil {
 		return down
 	}
@@ -168,11 +168,13 @@ func Ensure(ctx context.Context, s Server) error {
 	}
 }
 
-// Stop asks p, the server of floe on port, to stop, and returns what serves the port once it is gone.
+// Stop asks p, the server of floe on port, to stop, and returns what serves the port once it is gone: nothing, or
+// another server a command started meanwhile.
 // LIMIT: it returns once the port is free, while the old process may finish the requests under way (10 s at most,
 // under the store's lock). A server in a container whose port is handed out stops, but the container's proxy may
-// keep the port bound, and the next command is told the port is silent. Two servers of other namespaces may tell
-// one pid. Give the health an id of each start if waiting for the process or telling them apart comes to matter.
+// keep the port bound, and the next command is told the port is silent. Two servers of one pid (of other
+// namespaces, or a pid used again) are not told apart. Give the health an id of each start if waiting for the
+// process or telling them apart comes to matter.
 func Stop(ctx context.Context, port int, p Status) (Status, error) {
 	old := p.Health.PID
 	// 409 is another server's (this one gone already); no answer, one gone as it answered. The wait tells both.
@@ -182,13 +184,18 @@ func Stop(ctx context.Context, port int, p Status) (Status, error) {
 	}
 	// Wait for that server only: a concurrent command may have started the new one already.
 	p = waitWhile(ctx, Base(port), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
-	if p.State == Ours && p.Health.PID == old {
+	switch {
+	case p.State != Ours || p.Health.PID != old:
+		return p, nil
+	case err != nil:
+		return p, usererr.LibraryWith("daemon_stop_failed", err, port, old)
+	default:
 		return p, usererr.New("daemon_kept_answering", port, old)
 	}
-	return p, nil
 }
 
-// ask asks the server at base to stop, naming it by pid, and returns the status it answered with.
+// ask asks the server at base to stop, naming it by pid, and returns the status it answered with, or net/http's
+// error for no answer.
 func ask(ctx context.Context, base string, pid int) (int, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
@@ -202,7 +209,7 @@ func ask(ctx context.Context, base string, pid int) (int, error) {
 	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return 0, fmt.Errorf("ask the server to stop: %w", err)
+		return 0, err //nolint:wrapcheck // told in net/http's words
 	}
 	_ = res.Body.Close() //nolint:errcheck // read-only
 	return res.StatusCode, nil

@@ -183,6 +183,7 @@ var messagesEN = map[string]string{
 	"store_rebuild_kept":      `page "%s" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
 
 	"daemon_kept_answering": "the server on port %d is still running; stop it yourself (the process %d, if it runs on this machine), and the next floe command that uses the server starts its own",
+	"daemon_stop_failed":    "the server on port %[2]d is still running, and asking it to stop failed (%[1]s); stop it yourself (the process %[3]d, if it runs on this machine), and the next floe command that uses the server starts its own",
 	"daemon_port_taken":     "port %d is used by another program; set FLOE_PORT to a free port",
 	"daemon_port_in_use":    "port %d is in use; stop that program (floe stop, if it is floe's server) or set FLOE_PORT",
 	"daemon_cannot_listen":  "cannot listen on 127.0.0.1:%d (permission denied); set FLOE_PORT to another port",
@@ -195,6 +196,7 @@ var messagesEN = map[string]string{
 	"cli_serving":           "serving %s at %s/",
 	"cli_not_running":       "server is not running",
 	"cli_stopped":           "stopped server (pid %d)",
+	"cli_stopped_other":     "server (pid %d) is gone, and another (pid %d) serves the port now",
 	"cli_updated":           "updated \"%s\" (last published %s)",
 	"cli_updated_titled":    "updated \"%s\" (last published %s, title \"%s\")",
 	"cli_title_changed":     "warning: the title changed; if this is a different page, publish it under another --slug",
