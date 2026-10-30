@@ -32,6 +32,9 @@ pre {
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
 blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
+/* Text in a part's box reads to the box's width, which the part sets; the page's own text, the part text, keeps
+   --text-width, folded in details or tabs too */
+:where([data-floe-part]:not([data-floe-part=stack], [data-floe-part=details], [data-floe-part=tabs])) :is(p, ul, ol, blockquote) { max-width: none; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
