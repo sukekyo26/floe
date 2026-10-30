@@ -116,14 +116,12 @@ func Find(root ast.Node, at []string) (key, value ast.Node) {
 // of nothing), it returns no line and no node: the mistake is placed at the file alone, as at the first key it
 // would read as that key's.
 func Locate(root *ast.MappingNode, at []string) (Pos, ast.Node) {
-	if root == nil {
-		return Pos{}, nil
+	if root != nil {
+		if key, value := Find(root, at); value != ast.Node(root) {
+			return OfValue(key, value), value
+		}
 	}
-	key, value := Find(root, at)
-	if value == ast.Node(root) {
-		return Pos{}, nil
-	}
-	return OfValue(key, value), value
+	return Pos{Line: 0, Column: 0}, nil
 }
 
 // New returns the mistake worded by the catalog message key with args, at at in file.

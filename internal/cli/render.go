@@ -30,9 +30,9 @@ func (a *app) renderCmd() *cobra.Command {
 and its CSP is in a <meta>. A file is written only when it changes, and its path is printed.
 
 Every mistake of every file is printed as file:line:column: message (file: message for one of
-the whole file), and nothing is written until all are fixed; nor when two data files would write the same file. The warnings of the
-pages drawn are printed after them as file:line:column: warning: message, and leave the exit
-code as it is.
+the whole file), and nothing is written until all are fixed; nor when two data files would
+write the same file. The warnings of the pages drawn are printed after them as
+file:line:column: warning: message, and leave the exit code as it is.
 
 --check writes nothing: it prints each page that is missing or is not what its data file
 draws, and the exit code is 1 when there is one, so that CI tells a data file whose page

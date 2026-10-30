@@ -80,8 +80,8 @@ func placeOf(d *doc.Data, e *jsonschema.ValidationError) yamlpos.Pos {
 }
 
 // placeOfName returns where a property name the schema refuses is: the key name of the one object at depth
-// in root that has it, or the file alone (yamlpos.Locate of root) when there are none or more. The keys every data file shares are not
-// values the schema checks.
+// in root that has it, or the file alone (yamlpos.Locate of root) when there are none or more. The keys every data
+// file shares are not values the schema checks.
 // LIMIT: jsonschema v6.0.3 shares the slice of InstanceLocation with later checks, which change what it holds
 // (upstream #276, #269): only its length is right. Go back to the library's place once it is fixed; the
 // mistakes told at the file alone then move, and the golden files change.
