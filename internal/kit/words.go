@@ -11,7 +11,7 @@ import (
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
-// words are the words a part or a template writes in the page's language (the headings of risks), by the
+// words are the words a part or a template writes in the page's language (fields' required), by the
 // language tag, lowercased, and their names: its words.yaml; nil without one.
 type words map[string]map[string]string
 

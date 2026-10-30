@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// wrapPage holds a path and a URL in cards, which have no place to break a line, words beside narrow
+// wrapPage holds a path and a URL in options, which have no place to break a line, words beside narrow
 // columns (keys' text beside its keycaps, the language of code and the counts of a diff beside a long file
 // name), a path in a table and in a tree's note, which scroll instead, and entries with a long path, a long pill
 // and a long line of code in its text.
@@ -15,7 +15,7 @@ title: Wrap
 sections:
   - heading: Wrap
     parts:
-      - cards:
+      - options:
           - { title: path, text: 'See ` + "`internal/kit/floe/templates/report/page.html:216`" + ` here.' }
           - { title: url, text: 'See https://github.com/sukekyo26/floe/pull/117/files here.' }
       - keys:

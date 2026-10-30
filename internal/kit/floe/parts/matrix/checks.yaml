@@ -1,8 +1,0 @@
-- for: rows
-  field: cells
-  expr: len(item.cells) == len(doc.columns)
-  message: write as many cells in each row as there are columns
-- for: rows
-  field: cells
-  expr: 'all(item.cells, type(#) == "map" || # in ["yes", "part", "no"])'
-  message: write each cell yes, part or no, or { mark, note }

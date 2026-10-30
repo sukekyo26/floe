@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "report",
-  "description": "A page of sections, each a heading over parts: Markdown text, code, commands at a terminal, tables, images, cards, notes, numbers, progress, steps, checklists, what changes, options, facts, diffs, file trees, links, review findings, folded parts, matrices, decisions, risks, fields, timelines, bars, questions, glossaries, records with long text, keys, tabs, scripts, diagrams, or HTML for what they cannot say.",
+  "description": "A page of sections, each a heading over parts: Markdown text, code, commands at a terminal, tables, images, notes, numbers, progress, steps, checklists, what changes, options, facts, diffs, file trees, links, review findings, folded parts, decisions, fields, timelines, bars, questions, records with long text, keys, tabs, scripts, diagrams, or HTML for what they cannot say.",
   "type": "object",
   "properties": {
     "eyebrow": { "type": "string", "description": "A short line above the title, such as the kind of page and its date" },

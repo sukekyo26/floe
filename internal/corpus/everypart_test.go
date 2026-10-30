@@ -89,11 +89,8 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 		enums := map[string][]string{}
 		p.enumsOf(p.schema, "", enums, true, map[string]bool{})
 		for _, path := range slices.Sorted(maps.Keys(enums)) {
-			// One may be written short, for the object it is a key of (matrix's cells: [yes], for { mark: yes }); but
-			// not for the part's own data, which a list of words would meet.
-			parent := path[:max(0, strings.LastIndex(path, "."))]
 			for _, v := range enums[path] {
-				if !written[name][path+"="+v] && (parent == "" || !written[name][parent+"="+v]) {
+				if !written[name][path+"="+v] {
 					t.Errorf("every-part draws %s with no %s: %s", name, strings.TrimPrefix(path, "."), v)
 				}
 			}

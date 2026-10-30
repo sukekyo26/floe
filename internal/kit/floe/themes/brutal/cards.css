@@ -5,7 +5,7 @@
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / "";
   display: block; width: auto; height: auto; background: none; color: inherit; font-size: 2.4rem; font-weight: 900; line-height: 1;
 }
-/* Plain cards and options take the primary faces in turn; numbers, facts and links stay on the surface */
+/* Options take the primary faces in turn; numbers, facts and links stay on the surface */
 :scope.numbered > .card { --face: var(--brutal-yellow); --on-face: var(--brutal-ink); background: var(--face); color: var(--on-face); }
 :scope.numbered > .card:nth-child(3n + 2) { --face: var(--brutal-blue); }
 :scope.numbered > .card:nth-child(3n) { --face: var(--brutal-pink); }

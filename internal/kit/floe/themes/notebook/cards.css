@@ -2,7 +2,7 @@
 /* The panel of a card, on plain paper */
 .card { position: relative; background: var(--surface); }
 :scope.numbered > .card::before { content: none; }
-/* Plain cards and options are sticky notes, each held by a strip of tape and set a little askew */
+/* Options are sticky notes, each held by a strip of tape and set a little askew */
 :scope.numbered > .card {
   border: 0; border-radius: 0; --face: var(--nb-stick-1); --on-face: var(--nb-stick-ink); background: var(--face); color: var(--on-face); padding-top: 1.6rem;
   box-shadow: 0 10px 18px -12px var(--nb-stick-shadow); transform: rotate(-1.2deg);

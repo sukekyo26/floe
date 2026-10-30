@@ -48,15 +48,6 @@ sections:
             read_only = true
             banner = "This wiki has moved to the new host."
       - code: { text: "rsync --archive --delete --exclude '*.tmp' --exclude 'cache/' --log-file=copy.log old-wiki:/srv/wiki/pages/ /srv/new-wiki/pages/\n" }
-  - heading: Who does what
-    parts:
-      - cards:
-          - title: Copy
-            text: Copies the pages on **Saturday** and keeps a list of what failed.
-          - title: Links
-            text: Runs the link check and fixes what it finds.
-          - title: Bookmarks
-            text: Sends the new address to the team on Monday morning.
   - heading: Risks
     parts:
       - table:
@@ -119,15 +110,6 @@ sections:
           date: 2030-03-28
           text: The old server is out of support in **May**.
           rejected: [Stay on the old server, Move to a hosted wiki]
-      - risks:
-          - { what: Broken links, likely: high, impact: mid, fix: A link check after the copy }
-          - { what: Lost attachments, likely: low, impact: high }
-          - { what: Slow search, likely: mid, impact: low }
-      - matrix:
-          columns: [Old wiki, New host]
-          rows:
-            - { what: Search, cells: [yes, { mark: part, note: rebuilt Sunday }] }
-            - { what: Single sign-on, cells: [no, yes] }
   - heading: Reference
     parts:
       - facts:
@@ -137,9 +119,6 @@ sections:
           - { name: read_only, type: bool, required: true, text: Refuses edits, default: false }
           - { name: banner, type: string, text: Shown on every page }
           - { name: port, type: number, default: '8080' }
-      - glossary:
-          - { term: Freeze, text: The days when the old wiki is **read-only**. }
-          - { term: Host, text: Where the wiki runs. }
       - entries:
           - title: '`export`'
             tags: [Runs nightly, '`wiki.conf`', { pill: on track }, { pill: done, tone: good }]

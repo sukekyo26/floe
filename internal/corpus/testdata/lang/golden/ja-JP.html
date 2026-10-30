@@ -88,7 +88,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="fields"], [data-floe-part="matrix"], [data-floe-part="risks"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="fields"]) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
 :scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
 }
@@ -137,7 +137,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="fields"], [data-floe-part="matrix"], [data-floe-part="risks"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="fields"]) to (:scope [data-floe-part] > *) {
 /* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns */
 :scope {
   overflow-x: auto;
@@ -178,44 +178,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="matrix"]) to (:scope [data-floe-part] > *) {
-/* In the table's look; a cell's mark is drawn by the style, its word kept for a screen reader */
-:scope :is(th, td):not(:first-child) { min-width: 5em; text-align: center; }
-:scope td.what { font-weight: 600; }
-:scope .mark { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; font-weight: 800; line-height: 1; vertical-align: middle; }
-:scope .mark > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-:scope .yes .mark { background: var(--good-soft); color: var(--good); }
-:scope .part .mark { background: var(--warn-soft); color: var(--warn); }
-:scope .no .mark { background: var(--bad-soft); color: var(--bad); }
-:scope .yes .mark::before { content: "✓"; content: "✓" / ""; }
-:scope .part .mark::before { content: "△"; content: "△" / ""; font-size: 0.8em; }
-:scope .no .mark::before { content: "×"; content: "×" / ""; }
-:scope small { display: block; font-size: 0.75rem; color: var(--muted); }
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="risks"]) to (:scope [data-floe-part] > *) {
-/* In the table's look; a level is three bars filled one, two or all, in the colour of the risk */
-:scope td.what { font-weight: 600; }
-:scope td:is(.low, .mid, .high) { min-width: 6.5em; white-space: nowrap; }
-:scope .level { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
-:scope .level::before {
-  content: ""; width: 2.4rem; height: 0.5rem; border-radius: 2px; color: var(--good);
-  background: linear-gradient(currentColor, currentColor) left / 30% 100% no-repeat,
-    color-mix(in srgb, var(--line) 70%, var(--surface));
-  mask: repeating-linear-gradient(to right, #000 0 30%, transparent 30% 35%);
-}
-:scope .mid .level::before { background-size: 65% 100%, auto; }
-:scope .high .level::before { background-size: 100% 100%, auto; }
-:scope tr.warn .level::before { color: var(--warn); }
-:scope tr.bad .level::before { color: var(--bad); }
-}
-}
-</style>
-<style>
-@layer floe.parts {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
 blockquote > * { --face: initial; --on-face: initial; }
 blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
@@ -224,7 +186,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="fields"], [data-floe-part="matrix"], [data-floe-part="risks"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="fields"]) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
 }
 }
@@ -251,7 +213,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="fields"], [data-floe-part="matrix"], [data-floe-part="risks"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="fields"]) to (:scope [data-floe-part] > *) {
 :scope { padding: 6px; }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope thead th { background: none; padding-block: 0.6rem 0.5rem; }
@@ -294,18 +256,6 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </header>
 <section>
 <h2 id="words-of-the-parts">Words of the parts</h2>
-<div data-floe-part="risks"><table>
-<thead><tr><th scope="col">リスク</th><th scope="col">起きやすさ</th><th scope="col">影響</th><th scope="col">手当て</th></tr></thead>
-<tbody>
-<tr class="bad"><td class="what">Broken links</td><td class="high"><span class="level">高</span></td><td class="mid"><span class="level">中</span></td><td>A link check</td></tr>
-</tbody>
-</table></div>
-<div data-floe-part="matrix"><table>
-<thead><tr><th></th><th scope="col">Old</th><th scope="col">New</th></tr></thead>
-<tbody>
-<tr><td class="what">Search</td><td class="yes"><span class="mark"><span>できる</span></span></td><td class="part"><span class="mark"><span>一部</span></span></td></tr>
-</tbody>
-</table></div>
 <div data-floe-part="fields"><table>
 <tbody>
 <tr><td class="name"><code>port</code><span class="required">必須</span><span class="type">number</span></td><td><span class="default">既定: <code>8080</code></span></td></tr>
