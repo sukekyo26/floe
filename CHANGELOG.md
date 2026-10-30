@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add a note to print from the management page: printing a page's frame,
+  which would put only one screen of the page on paper, prints instead a note
+  to open the page alone, with its URL, and print it from there.
 - Add printing every ground of a page as the screen draws it, the page's own
   too, so that a light text on a fill is not lost on white paper; and the CSS
   variables `--face` and `--on-face`, which a face filling itself with a colour

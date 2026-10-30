@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/chromedp/cdproto/emulation"
-	"github.com/chromedp/chromedp"
 )
 
 // colorsList is the list the stub answers for the colors: a favourite, a description, tags, links (one whose file is
@@ -40,13 +39,10 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b := s.b
 	s.floe(t, "publish", s.page(t, "scheme.yaml", "Scheme", "<script>setInterval(() => parent.postMessage(matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', '*'), 100)</script>"), "--slug", "scheme")
 	// The OS's preference, and no motion: a row rising in is faded while it does.
-	media := func(scheme string) {
+	media := func(medium, scheme string) {
 		t.Helper()
 
-		features := []*emulation.MediaFeature{{Name: "prefers-color-scheme", Value: scheme}, {Name: "prefers-reduced-motion", Value: "reduce"}}
-		if _, err := chromedp.Call(b.ctx, emulation.SetEmulatedMedia, emulation.SetEmulatedMediaParams{Features: features}); err != nil {
-			t.Fatal(err)
-		}
+		b.media(medium, &emulation.MediaFeature{Name: "prefers-color-scheme", Value: scheme}, &emulation.MediaFeature{Name: "prefers-reduced-motion", Value: "reduce"})
 	}
 	const ground = "getComputedStyle(document.body).backgroundColor"
 	s.floe(t, "publish", s.page(t, "p.yaml", "P", "<p>p</p>"), "--slug", "p")
@@ -55,7 +51,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	for _, scheme := range []string{"dark", "light"} {
 		// The server's list for the pages first, the list stubbed after.
 		b.unstub()
-		media(scheme)
+		media("", scheme)
 		// Light whatever the OS prefers: the list, a page's frame and a missing page's; the page in the frame reads the
 		// OS's preference.
 		for _, path := range []string{"/", "/a/p/", "/a/none/", "/a/scheme/"} {
@@ -110,6 +106,14 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.until("the pages to pick from", "document.getElementById('page-pick').matches(':popover-open')")
 		b.eval("document.getElementById('page-pick-q').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))")
 		measure("the frame's pages to pick from")
+		// What a frame prints: the note naming the page alone, with the error under a failed read, and a missing page's.
+		media("print", scheme)
+		b.eval("document.getElementById('page-pick').hidePopover(); showError('failed')")
+		measure("the frame printed")
+		b.navigate("/a/none/")
+		b.until("the missing page", "!document.getElementById('notfound').hidden")
+		measure("a missing page's frame printed")
+		media("", scheme)
 	}
 
 	const light = "rgb(244, 243, 240)"

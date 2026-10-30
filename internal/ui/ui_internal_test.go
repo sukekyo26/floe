@@ -161,9 +161,9 @@ func builtinSources(t *testing.T) map[string]string {
 }
 
 var (
-	// usedRe finds the keys ui.html names: {{.Msg "ui_x"}}, t('ui_x') and the delete or unlink
-	// variants t(`ui_${kind(a)}_x`).
-	usedRe     = regexp.MustCompile(`\{\{\.Msg "(ui_\w+)"\}\}|'(ui_\w+)'|` + "`ui_\\$\\{\\w+\\(\\w*\\)\\}(\\w*)`")
+	// usedRe finds the keys ui.html names: .Msg "ui_x", alone ({{.Msg "ui_x"}}), with arguments or as one
+	// ({{.Msg "ui_x" (.Msg "ui_y")}}), t('ui_x') and the delete or unlink variants t(`ui_${kind(a)}_x`).
+	usedRe     = regexp.MustCompile(`\.Msg "(ui_\w+)"|'(ui_\w+)'|` + "`ui_\\$\\{\\w+\\(\\w*\\)\\}(\\w*)`")
 	jsVerbsRe  = regexp.MustCompile(`%(?:\[\d+\])?[sd%]`)
 	japaneseRe = regexp.MustCompile(`.{0,20}[\p{Hiragana}\p{Katakana}\p{Han}]+.{0,20}`)
 	// elsewhereRe finds URLs of other hosts, in full or scheme-relative ("//host", '//host', (//host

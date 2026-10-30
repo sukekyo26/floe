@@ -121,6 +121,16 @@
   /* No color-scheme here or on the root: Chrome hands an iframe's to the page in it as its prefers-color-scheme, the OS's without one */
   .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; }
   .notfound { flex: 1; align-content: center; }
+  /* An iframe prints what fits one screen of the page in it: a frame's print hides the bar, the frame, the toasts and
+     the pages to pick from, and names the page alone in their place, but on a missing page's frame, which prints its
+     state. The screen shows no note.
+     LIMIT: VS Code's Simple Browser holds the page in a frame of its own, where Ctrl+P is VS Code's Quick Open, and opens
+     a new tab outside it: print the page from a browser */
+  .print-alone { display: none; }
+  @media print {
+    .framed :is(.bar, .frame, .toasts, #page-pick) { display: none; }
+    .framed:has(#notfound[hidden]) .print-alone { display: block; margin: 2rem; color: var(--fg); font: 1rem/1.7 var(--body); }
+  }
 
   /* The shelf on the left picks which list the right shows; on a narrow screen a row of its buttons over the list. The whole
      window's width, as the header bar's: the shelf under the logo, the list out to the bar's right end */
@@ -653,6 +663,7 @@
 </main>
 <!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
 <iframe class="frame" id="frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
+<p class="print-alone" id="print-alone"><span id="print-alone-text">{{.Msg "ui_print_alone" (.Msg "ui_open_raw")}}</span> <a id="print-raw"></a></p>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="state notfound" id="notfound" hidden>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>
@@ -1950,6 +1961,8 @@
     // The slug as the server read it from the URL, unescaped: escaped again to make one
     $('frame-download').href = `/api/artifacts/${encodeURIComponent(framed)}/download`;
     $('frame-download').download = `${framed}.html`;
+    // The page alone in full, as the browser reads the bar's link to it: a link on paper cannot be followed
+    $('print-raw').href = $('print-raw').textContent = $('frame-open').href;
     pagePicker();
   } else {
     $('manage').hidden = false;
