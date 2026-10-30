@@ -171,8 +171,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `washi`, `aurora` and `app`), each a palette of CSS variables and the shape
   of the parts. `aurora` lays faces of frosted white glass on a wash of
   lavender, peach and mint, with a violet accent and round corners. `app`
-  raises white cards from a cool grey ground with soft shadows, in the system
-  UI font, with a raspberry accent. Pages in
+  raises white cards from a cool grey ground with soft shadows, its Latin in
+  the UI face of Windows or Android, with a raspberry accent. Pages in
   `default`, and in the themes that take its colours (`soft`, `editorial`), have
   the warm grey ground and text of the management page, with lines of the same
   warmth, and a terminal's prompt, the language of code and a diff's hunk heads

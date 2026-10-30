@@ -119,7 +119,7 @@ floe の主要な変更を記録します。フォーマットは
   `ink`・`brutal`・`blueprint`・`notebook`・`retro`・`swiss`・`washi`・`aurora`・`app`）。どれも
   CSS の変数のパレットと部品の形を持つ。`aurora` は、ラベンダー・桃・ミントのぼかしの地に、白い
   すりガラスの面と紫の差し色、丸い角。`app` は、青みの灰の地から白いカードを柔らかい影で浮かせ、
-  字は OS の字、差し色はラズベリー。`default` と、その色を使うテーマ（`soft`・`editorial`）のページの地は、管理
+  欧文は Windows・Android のアプリの字、差し色はラズベリー。`default` と、その色を使うテーマ（`soft`・`editorial`）のページの地は、管理
   ページと同じ暖かい灰色で、字の色も管理ページと同じ、線も同じ暖かさ。terminal のプロンプト、
   code の言語の札、diff の hunk の頭は黄緑。
 - 追加：`FLOE_TEMPLATES_DIR` の自分のテンプレート（`page.html`・`schema.json`・

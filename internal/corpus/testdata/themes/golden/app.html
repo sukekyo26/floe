@@ -93,9 +93,11 @@ blockquote > * + * { margin-top: 0.6rem; }
   --bg: #eef1f6; --surface: #ffffff; --fg: #1a2233; --muted: #5a6478; --line: #e1e6ee;
   --accent: #c2185b; --accent-soft: #fce4ee;
   --good: #137a4a; --good-soft: #dff3e8; --warn: #8f5800; --warn-soft: #fdecd2; --bad: #c62828; --bad-soft: #fde2e2;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, sans-serif;
+  /* Latin in the UI face of Windows or Android, which holds no Japanese; Japanese in default's faces, before
+     system-ui, which draws Japanese in Chinese forms where the system's UI is Chinese */
+  --font: "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, sans-serif;
   --code-bg: #1a2233; --code-fg: #e7ebf3; --code-prompt: #ff8fb8;
-  --rule: 0 solid transparent;
+  --rule: none;
   --shadow: rgb(26 34 51 / 0.14);
   /* How a card is raised from the ground: a close shadow and a soft wide one */
   --app-raise: 0 1px 2px color-mix(in srgb, var(--shadow) 60%, transparent), 0 6px 16px -4px var(--shadow);
@@ -361,7 +363,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 /* An app's screen: white cards raised from a cool ground by soft shadows, with no frame. A quote is ruled in the accent,
-   on no ground of its own, so that it lies as well on the ground as in a card or a band */
+   on no ground of its own, so that in a note or a card it makes no white box in the white */
 blockquote { border-left: 4px solid var(--on-face, var(--accent)); padding: 0.2rem 0 0.2rem 1.1rem; color: var(--on-face, var(--fg)); }
 }
 </style>
@@ -405,10 +407,10 @@ blockquote { border-left: 4px solid var(--on-face, var(--accent)); padding: 0.2r
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="note"]) to (:scope [data-floe-part] > *) {
-:scope { background: var(--surface); box-shadow: var(--app-raise); border-top: 3px solid var(--accent); }
-:scope.good { background: var(--surface); border-top-color: var(--good); }
-:scope.warn { background: var(--surface); border-top-color: var(--warn); }
-:scope.bad { background: var(--surface); border-top-color: var(--bad); }
+:scope, :scope:is(.good, .warn, .bad) { background: var(--surface); box-shadow: var(--app-raise); border-top: 3px solid var(--accent); }
+:scope.good { border-top-color: var(--good); }
+:scope.warn { border-top-color: var(--warn); }
+:scope.bad { border-top-color: var(--bad); }
 :scope::before { border-radius: 8px; }
 /* A line's code takes the ground, which the note's white would hide it in */
 :scope code { background: var(--face, var(--bg)); }
