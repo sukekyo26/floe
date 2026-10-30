@@ -58,7 +58,8 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out := make([]string, 0, 16)
 	b.navigate("/a/docs/")
 	out = append(out, b.until("the folder open", "location.pathname === '/' && document.querySelectorAll('#list li.tree').length > 0 && location.search"))
-	out = append(out, b.eval(rows))
+	// The folders' tab has no project groups: each folder heads its tree.
+	out = append(out, b.eval(rows), b.eval("document.querySelectorAll('#list li.group').length + ' groups, ' + document.querySelectorAll('#list li.folder').length + ' folder'"))
 	click("guide")
 	b.until("guide open", "document.querySelectorAll('#list li.tree').length > 3")
 	click("a,b:c")
@@ -129,7 +130,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.until("the folder added", rows+".includes('m.html') && new URLSearchParams(location.search).get('tab') + ' ' + "+opens),
 		b.eval("document.getElementById('add-title').textContent"))
 
-	check(t, "folders", out, "?tab=folders&open=docs|a,b:c+,assets+,big+,guide+,index.html|docs,docs:guide,docs:a,b:c|"+
+	check(t, "folders", out, "?tab=folders&open=docs|a,b:c+,assets+,big+,guide+,index.html|0 groups, 1 folder|docs,docs:guide,docs:a,b:c|"+
 		"a,b:c-,odd.html,assets+,big+,guide-,deep+,setup.html,start.html,index.html|.,a,b:c,guide|"+
 		"a,b:c-,odd.html,assets+,big+,guide+,index.html|docs,docs:a,b:c|big|a,b:c-,odd.html,assets+,big+,guide+,index.html,new.html|"+
 		"docs / guide/setup.html|/a/docs/guide/setup.html#end|true,true,true|none yet|"+

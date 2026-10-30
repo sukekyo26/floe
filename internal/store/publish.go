@@ -327,9 +327,10 @@ func (s *Store) PrepareLink(
 		Warnings: warnings, opts: opts, from: from, named: named,
 	}
 	e.Meta.Folder = folder
-	// A folder's own title, as a data file's title: is: where it is in its repository, else its name
+	// A folder's own title, as a data file's title: is: where it is in its repository, its repository's name at its
+	// root, else its name
 	if folder {
-		e.Meta.DataTitle = cmp.Or(within, filepath.Base(path))
+		e.Meta.DataTitle = cmp.Or(within, from, filepath.Base(path))
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, usererr.WithWarnings(err, warnings) //nolint:wrapcheck // its mistakes, with the page's warnings

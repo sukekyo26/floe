@@ -275,13 +275,17 @@
   }
   li + li { border-top: 1px solid var(--line); }
   li.group:not(:first-child) { margin-top: 1.1rem; }
-  li:is(:has(+ li.group), :last-child) { border-radius: 0 0 20px 20px; box-shadow: 0 1px 0 var(--line); }
+  li:is(:has(+ li.group), :has(+ li.folder), :last-child) { border-radius: 0 0 20px 20px; box-shadow: 0 1px 0 var(--line); }
   /* A heading is not pressed, so it is not pointed out */
   li:not(.group):hover { background: var(--hover); }
   /* A folder's row is the heading of its tree: its own ground, its title larger than the tree's names */
   li.folder { background: var(--subtle); }
   li.folder a.title { font-size: 0.98rem; font-weight: 700; }
-  li.folder a.title::before { content: none; }
+  /* Without groups, the list's first row rounds its top as a group's heading does */
+  #list > li.folder:first-child { border-radius: 20px 20px 0 0; }
+  li.folder + li.folder, li.tree + li.folder { margin-top: 0.6rem; border-radius: 20px 20px 0 0; border-top: 0; }
+  /* A folder closed is its block whole */
+  #list > li.folder:is(:has(+ li.folder), :last-child) { border-radius: 20px; }
   li::before {
     content: ""; position: absolute; left: 0; top: 0.55rem; bottom: 0.55rem; width: 2px; border-radius: 0 2px 2px 0;
     background: var(--ink); opacity: 0; transition: opacity 0.15s;
@@ -1033,6 +1037,7 @@
       && (!state.tag || (a.tags ?? []).includes(state.tag))
       && matches(a, q));
     const sorted = SORTS[state.sort] ? shown.sort(SORTS[state.sort]) : shown;
+    if (!grouped(state)) return sorted;
     // Group by group, each in the order picked (sort is stable): the favourites first, then the projects as projectOrder
     // has them, those without one last
     const rank = new Map(sorted.map((a) => {
@@ -1042,6 +1047,8 @@
     return sorted.sort((x, y) => rank.get(x) - rank.get(y));
   }
 
+  // The folders' tab has no groups: each folder heads its own tree, in the order picked
+  const grouped = (state) => state.tab !== 'folders';
   // The group an entry is listed under: the favourites (null) in all of the list, else its project. A project's name is a
   // string, NONE too, so none is taken for the favourites
   const group = (a, state) => (!state.fav && !state.archived && a.favorite ? null : a.project ?? NONE);
@@ -1939,7 +1946,7 @@
     const rows = [];
     shown.slice(start, start + size).forEach((a, i) => {
       const g = groups[start + i];
-      if (i === 0 || groups[start + i - 1] !== g) {
+      if (grouped(state) && (i === 0 || groups[start + i - 1] !== g)) {
         const li = document.createElement('li');
         li.className = 'group';
         li.setAttribute('role', 'none');
