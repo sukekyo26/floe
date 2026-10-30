@@ -12,9 +12,11 @@ import (
 
 	"golang.org/x/net/html"
 
+	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/page"
+	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -149,5 +151,26 @@ func TestTrim(t *testing.T) {
 		if got := s.trim(tt.out); got != tt.want {
 			t.Errorf("%s: trim(%q) = %q, want %q", tt.name, tt.out, got, tt.want)
 		}
+	}
+}
+
+// text/template's mistake of running a part.html of floe's is told there too, as one of a part of one's own:
+// drawPart parts them not. The value is one the part's schema would refuse, drawn unchecked.
+func TestFloePartExecPlaced(t *testing.T) {
+	t.Parallel()
+
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := doc.Read("d.yaml", []byte("lang: en\nb: x\n"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	it := schema.Item{At: []string{"b"}, Part: "code", Holds: nil, Format: "", Value: "x"}
+	_, err = drawPart(k, d, it, "x", newItems(nil, "", nil))
+	want := `parts/code/part.html:1:39: executing "part.html" at <.file>: can't evaluate field file in type string`
+	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render(""); got != want {
+		t.Errorf("told %q, want %q", got, want)
 	}
 }

@@ -269,8 +269,8 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 				// item. Tell both if one misleads.
 				mistakes[i] = e.PlacedAt(e.File(), line, column)
 			case e.File() == "" && e.At() == "":
-				// At the value drawn: a part of floe's is no file one can fix, and the value tells why. One of
-				// the whole output (the icons of a diagram) takes no place.
+				// At the value drawn: a function refusing it, or text/template's mistake that says not where in
+				// part.html it is. One of the whole output (the icons of a diagram) takes no place.
 				pos := d.PosOf(it.At)
 				mistakes[i] = e.PlacedAt(d.File, pos.Line, pos.Column)
 			}
