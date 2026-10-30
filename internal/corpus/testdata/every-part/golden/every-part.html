@@ -529,10 +529,11 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
 .option.pick { outline: 2px solid var(--accent); outline-offset: -1px; }
 .option h3 > span { margin-left: 0.4rem; vertical-align: 0.1em; }
-.option ul { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
+/* The pros and cons alone, not a list in the text */
+.option .points { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
 /* The mark hangs at the left, so that a line of text and code flows as one */
-.option li { position: relative; padding-left: 1.45rem; }
-.option li::before { position: absolute; left: 0.1rem; font-weight: 800; }
+.option .points > li { position: relative; padding-left: 1.45rem; }
+.option .points > li::before { position: absolute; left: 0.1rem; font-weight: 800; }
 .option li.pro { color: var(--fg); }
 .option li.pro::before { content: "+"; color: var(--good); }
 .option li.con::before { content: "−"; color: var(--bad); }
@@ -1411,8 +1412,13 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <h2 id="choices">Choices</h2>
 <div class="numbered" data-floe-part="options">
 <div class="card option pick" data-floe-look="panel"><h3 id="copy-in-one-go">Copy in one go <span data-floe-part="cell">Recommended</span></h3><p>Two days of read-only.</p>
-<ul><li class="pro">Simple</li><li class="con">Longer freeze</li></ul></div>
-<div class="card option" data-floe-look="panel"><h3 id="copy-by-space">Copy by space</h3><ul><li class="pro">Short freezes</li><li class="con">Links break between spaces</li><li class="con">Twice the work</li></ul></div>
+<ul class="points"><li class="pro">Simple</li><li class="con">Longer freeze</li></ul></div>
+<div class="card option" data-floe-look="panel"><h3 id="copy-by-space">Copy by space</h3><p>Each space is copied apart:</p>
+<ul>
+<li>Docs first</li>
+<li>Then the rest</li>
+</ul>
+<ul class="points"><li class="pro">Short freezes</li><li class="con">Links break between spaces</li><li class="con">Twice the work</li></ul></div>
 </div>
 <div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span class="good" data-floe-part="cell">decided</span><span>2030-03-28</span></p><h3 id="the-wiki-moves-to-the-new-host">The wiki moves to the new host</h3><p>The old server is out of support in <strong>May</strong>.</p>
 <p class="set-aside">Set aside</p><ul><li>Stay on the old server</li><li>Move to a hosted wiki</li></ul></div></div>

@@ -119,6 +119,11 @@ sections:
             cons: [Longer freeze]
             pick: Recommended
           - title: Copy by space
+            text: |
+              Each space is copied apart:
+
+              - Docs first
+              - Then the rest
             pros: [Short freezes]
             cons: [Links break between spaces, Twice the work]
       - decision:

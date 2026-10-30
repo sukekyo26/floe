@@ -154,7 +154,7 @@ func TestPartWords(t *testing.T) {
 	t.Parallel()
 
 	p, _ := floe(t).Part("fields")
-	for lang, want := range map[string]string{"ja-jp": "必須", "en": "required", "fr": "required", "ja": "必須"} {
+	for lang, want := range map[string]string{"ja-jp": ">必須<", "en": ">required<", "fr": ">required<", "ja": ">必須<"} {
 		var b strings.Builder
 		// Every key of the schema, as Walk hands an item, left out ones nil.
 		data := []any{map[string]any{"name": "x", "required": true, "type": nil, "default": nil, "text": nil}}

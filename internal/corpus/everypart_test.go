@@ -316,7 +316,7 @@ func readOccurrences(v any, parts map[string]*part, written map[string]map[strin
 }
 
 // valuesIn returns each string written in v, the data of a part at path, as path=value, path the keys it
-// is written at from the part's (rows.cells.mark), but in the lists of the parts it holds.
+// is written at from the part's (steps' state, a.b for b in an object a), but in the lists of the parts it holds.
 func valuesIn(v any, path string) map[string]bool {
 	found := map[string]bool{}
 	switch v := v.(type) {

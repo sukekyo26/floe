@@ -297,10 +297,11 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
 .option.pick { outline: 2px solid var(--accent); outline-offset: -1px; }
 .option h3 > span { margin-left: 0.4rem; vertical-align: 0.1em; }
-.option ul { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
+/* The pros and cons alone, not a list in the text */
+.option .points { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
 /* The mark hangs at the left, so that a line of text and code flows as one */
-.option li { position: relative; padding-left: 1.45rem; }
-.option li::before { position: absolute; left: 0.1rem; font-weight: 800; }
+.option .points > li { position: relative; padding-left: 1.45rem; }
+.option .points > li::before { position: absolute; left: 0.1rem; font-weight: 800; }
 .option li.pro { color: var(--fg); }
 .option li.pro::before { content: "+"; color: var(--good); }
 .option li.con::before { content: "−"; color: var(--bad); }
