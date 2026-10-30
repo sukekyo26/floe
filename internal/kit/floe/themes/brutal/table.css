@@ -1,2 +1,2 @@
 :scope thead th { --face: var(--brutal-head-bg); --on-face: var(--brutal-head-fg); background: var(--face); color: var(--on-face); font-weight: 900; }
-:scope tbody tr + tr td { border-top: 2px solid var(--fg); }
+:scope { --table-rule: 2px solid var(--fg); }

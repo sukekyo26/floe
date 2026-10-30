@@ -225,7 +225,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   font-size: 0.8rem; font-weight: 600; color: var(--muted);
   background: color-mix(in srgb, var(--line) 40%, var(--surface));
 }
-:scope tbody tr + tr td { border-top: 1px solid var(--line); }
+/* The rule between rows; a theme sets --table-rule alone, none for no rule */
+:scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
 :scope .num { text-align: right; }
 :scope td.num {
   min-width: auto; font-family: var(--mono);

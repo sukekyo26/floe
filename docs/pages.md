@@ -64,7 +64,8 @@ Each part is one key naming its kind. `floe part list` lists them with a line ea
 To list things, pick the part by what the rows are:
 
 - One line each: a Markdown list in `text`.
-- A name and its longer text, such as the places a change touches, tests, or decisions to take: `entries`, the verdict or state in a tag.
+- A name and its longer text, such as requirements, risks and what is done about them, or terms: `entries`, a state in a tag.
+- A decision: `decision` for one told with its reasons and the options set aside, `options` for options weighed side by side with their pros and cons, and `entries` for a run of short decisions, the pick in a tag.
 - A thing before and after: `compare`.
 - A few short values at the top of a page: `facts`.
 - Rows compared both along and across, each cell short: `table`.
@@ -77,7 +78,7 @@ The parts `report` takes in a section:
 | `code` | Code as it is, under its `file` with its `lang`. A button over it copies the code. |
 | `terminal` | Commands (`run`) and what they printed (`out`), at the prompt of its `shell` (`bash`, `sh`, `zsh`, `powershell`, `cmd`). floe draws the prompt, so a `run` that starts with one (`$ ls`) is refused. A button over them copies the commands, a line each, without the prompt or what they printed. |
 | `table` | Rows compared both along and across, each cell short. `columns` and `rows`. A column is its title, or `{ title, num, pills }`: `num: true` for numbers, and `pills`, words with their tones (`{ done: good }`), for a cell of the column that is one of them, whole, to be drawn as that pill. A cell is a line of Markdown, a number in quotes as it is drawn, or a pill `{ pill, tone }`, written as an object, not in quotes. |
-| `entries` | Records one under another, each a `title` (a line of Markdown) with its `tags` beside it (each as a table's cell: a line of Markdown or a pill) and its `text` (Markdown) the full width under them. For a name and its longer text, which a table squeezes into a narrow column: the places a change touches, with what is done to each in a tag (`{ pill: change, tone: accent }`), tests, decisions with the pick in a tag, items with their state. Use a `timeline` for what happened in order. A list of words and what they mean is a Markdown list, or `entries` when a meaning is long. A tag shows no column's name, so say in it what it is (`merged 2026-10-30`). Code in `text` is drawn as it is, without a copy button; put it in a `code` part after the entries. |
+| `entries` | Records one under another, each a `title` (a line of Markdown) with its `tags` beside it (each as a table's cell: a line of Markdown or a pill) and its `text` (Markdown) the full width under them. For a name and its longer text, which a table squeezes into a narrow column: requirements, risks with their state in a tag (`{ pill: watching, tone: warn }`), terms whose meaning is long, a run of short decisions with the pick in a tag. Use a `timeline` for what happened in order. A list of words and what they mean is a Markdown list, or `entries` when a meaning is long. A tag shows no column's name, so say in it what it is (`merged 2026-10-30`). Code in `text` is drawn as it is, without a copy button; put it in a `code` part after the entries. |
 | `image` | An image, such as a screenshot: its `file` and its `alt`, what it shows ([Images](#images)). |
 | `note`, `stats`, `progress`, `steps`, `checklist` | A note in a tone, large numbers, bars of progress, numbered steps, items ticked once done. |
 | `compare`, `options`, `facts`, `diff`, `tree`, `links` | What changes before and after, options with pros and cons, names with values, a diff (a button over it copies the diff as written), files and folders, links. |

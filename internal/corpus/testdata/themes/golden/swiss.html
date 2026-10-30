@@ -230,7 +230,8 @@ blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-hei
   font-size: 0.8rem; font-weight: 600; color: var(--muted);
   background: color-mix(in srgb, var(--line) 40%, var(--surface));
 }
-:scope tbody tr + tr td { border-top: 1px solid var(--line); }
+/* The rule between rows; a theme sets --table-rule alone, none for no rule */
+:scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
 :scope .num { text-align: right; }
 :scope td.num {
   min-width: auto; font-family: var(--mono);
@@ -404,10 +405,9 @@ blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-hei
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
-:scope { border: 0; }
+:scope { border: 0; --table-rule: none; }
 :scope thead th { background: none; color: var(--fg); font-weight: 800; border-bottom: 2px solid var(--fg); }
 :scope tbody td { border-bottom: 1px solid var(--fg); }
-:scope tbody tr + tr td { border-top: 0; }
 :scope :is(th, td):first-child { padding-left: 0; }
 :scope td.num { font-size: 1.35rem; font-weight: 300; }
 }

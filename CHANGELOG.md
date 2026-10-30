@@ -23,8 +23,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add the part `entries`: records one under another, each a heading with its
   tags (a line of Markdown or a pill, as a table's cells) beside it, and
   Markdown text the full width under them, for a name and its longer text,
-  such as the places a change touches, tests or decisions, the verdict or
-  state in a tag. It goes where parts go, and in `details` and `tabs` too.
+  such as requirements, risks and what is done about them, or terms, a state
+  in a tag. It goes where parts go, and in `details` and `tabs` too.
 - Add the refusal of a `|` or `>` text whose first line not of spaces begins
   with spaces and a tab (a tab alone too), which floe's YAML library counts
   into the indentation, dropping or shortening the lines after it.

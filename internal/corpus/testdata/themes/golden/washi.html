@@ -239,7 +239,8 @@ blockquote {
   font-size: 0.8rem; font-weight: 600; color: var(--muted);
   background: color-mix(in srgb, var(--line) 40%, var(--surface));
 }
-:scope tbody tr + tr td { border-top: 1px solid var(--line); }
+/* The rule between rows; a theme sets --table-rule alone, none for no rule */
+:scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
 :scope .num { text-align: right; }
 :scope td.num {
   min-width: auto; font-family: var(--mono);
@@ -419,10 +420,9 @@ blockquote {
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
-:scope { border: 0; padding-inline: 1.4rem; }
+:scope { border: 0; padding-inline: 1.4rem; --table-rule: 1px solid var(--washi-hair); }
 :scope table { border-top: 4px double var(--fg); border-bottom: 4px double var(--fg); }
 :scope thead th { background: none; color: var(--fg); font-size: 0.9rem; letter-spacing: 0.1em; border-bottom: 1px solid var(--fg); }
-:scope tbody tr + tr td { border-top: 1px solid var(--washi-hair); }
 }
 }
 </style>
