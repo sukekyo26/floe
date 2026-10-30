@@ -227,4 +227,6 @@ adheres to [Semantic Versioning](https://semver.org/).
   each page under the folder's title with the pages of its directory to pick
   from. Names starting with a dot are left out; one directory shows its first
   1000 entries. The tabs show an icon before their names, alone on a narrow
-  screen.
+  screen. A folder's page has the folder's tree on its left, whose edge is
+  dragged or keyed to widen it, and which hides at a button; the browser keeps
+  both.

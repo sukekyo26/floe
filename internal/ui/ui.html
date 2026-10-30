@@ -131,13 +131,14 @@
   .side-head { position: sticky; top: 0; display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.1rem 0.45rem 0.5rem; background: var(--panel); }
   .side-head span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 0.72rem/1.2 var(--mono); letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
   .side :is(a, button.dir) {
-    display: block; width: 100%; padding: 0.22rem 0.5rem 0.22rem calc(0.6rem + var(--d) * 0.9rem); border: 0; border-radius: 6px; background: none;
+    display: block; width: 100%; padding: 0.22rem 0.5rem 0.22rem calc(0.3rem + var(--d) * 1.1rem); border: 0; border-radius: 6px; background: none;
     color: var(--fg); font: inherit; text-align: left; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .side :is(a, button.dir):hover { background: var(--hover); }
   .side button.dir { font-weight: 650; cursor: pointer; }
   .side a[aria-current="page"] { background: var(--sel); font-weight: 700; }
-  .side .note { padding: 0.22rem 0.5rem 0.22rem calc(0.6rem + var(--d) * 0.9rem); color: var(--muted); font-size: 0.78rem; }
+  .side .note { padding: 0.22rem 0.5rem 0.22rem calc(0.3rem + var(--d) * 1.1rem + 14px + 0.35rem); color: var(--muted); font-size: 0.78rem; }
+  .side .fold.none { visibility: hidden; }
   .side :is(a, button):focus-visible, .grip:focus-visible { outline: var(--ring); outline-offset: -2px; }
   /* The edge between the tree and the page, to widen or narrow the tree: a line shows while it is dragged or focused */
   .grip { position: fixed; top: var(--bar); bottom: 0; left: calc(var(--side) - 3px); z-index: 3; width: 6px; cursor: col-resize; touch-action: none; }
@@ -2109,9 +2110,13 @@
   }
 
   // Reads the directories open in the side's tree again, each under ones open; one gone closes
+  // As readOpen's, the last call's answers win
+  let sideReads = 0;
   async function readSide() {
+    const n = ++sideReads;
     const keys = [...sideOpen].filter((dir) => !dir || sideOpen.has(dirOf(dir)));
     const read = await Promise.all(keys.map((dir) => readListing(framed, dir)));
+    if (n !== sideReads) return;
     sideListings.clear();
     keys.forEach((dir, i) => {
       if (read[i] === null) sideOpen.delete(dir);
@@ -2145,7 +2150,7 @@
         btn.className = 'dir';
         btn.style.setProperty('--d', d);
         btn.setAttribute('aria-expanded', String(sideOpen.has(path)));
-        btn.innerHTML = '<span class="fold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span>';
+        btn.innerHTML = '<span class="fold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>';
         btn.append(name);
         btn.title = path;
         btn.addEventListener('click', async () => {
@@ -2169,7 +2174,8 @@
         const link = document.createElement('a');
         link.href = pageHref({ slug: framed, file: p.file });
         link.style.setProperty('--d', d);
-        link.textContent = p.file.slice(p.file.lastIndexOf('/') + 1);
+        link.innerHTML = '<span class="fold none"></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>';
+        link.append(p.file.slice(p.file.lastIndexOf('/') + 1));
         link.title = p.file;
         if (p.file === FILE) link.setAttribute('aria-current', 'page');
         rows.push(link);
@@ -2180,8 +2186,14 @@
     };
     walk('', 0);
     $('side-tree').replaceChildren(...rows);
+    if (!sideShown && rows.length && !$('side').hidden) {
+      sideShown = true;
+      $('side-tree').querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'center' });
+    }
   }
 
+  // Whether the tree was drawn once: the page open now is scrolled into sight then, not at each redraw
+  let sideShown = false;
   // The widest the tree may be: 480 px, or half the window, whichever is less
   const sideMax = () => Math.max(SIDE_MIN, Math.min(480, Math.floor(innerWidth / 2)));
   // Lays the side out as it is: open or not, its width within the bounds of now (what is kept is not changed by them)
@@ -2198,6 +2210,10 @@
     $('side-grip').setAttribute('aria-valuemin', String(SIDE_MIN));
     $('side-grip').setAttribute('aria-valuemax', String(sideMax()));
     $('side-show').hidden = open;
+    // The tree beside the page lists its pages: the bar's pages to pick from come back with it hidden, or over the page
+    const pick = open && !sideNarrow.matches;
+    $('frame-pick').hidden = pick;
+    if (pick && $('page-pick').matches(':popover-open')) $('page-pick').hidePopover();
   }
   function keepSide() {
     if (sideNarrow.matches) return;
@@ -2211,6 +2227,7 @@
     if (sideNarrow.matches) sideOver = open;
     else side.open = open;
     layoutSide();
+    if (open) $('side-tree').querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'center' });
     keepSide();
     $(open ? 'side-hide' : 'side-show').focus();
   }
@@ -2275,8 +2292,8 @@
     // A folder's page has no star, archive or download of its own: its folder's row does
     for (const id of ['frame-star', 'frame-archive', 'frame-download']) $(id).hidden = Boolean(FILE);
     if (found && FILE) {
-      renderSide(a);
       layoutSide();
+      renderSide(a);
     } else {
       for (const id of ['side', 'side-grip', 'side-show']) $(id).hidden = true;
       document.documentElement.style.setProperty('--side', '0px');

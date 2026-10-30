@@ -109,7 +109,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.until("the folder open", "document.querySelectorAll('#list li.tree').length === 3")
 		measure("the folders")
 		b.navigate("/a/f/?file=index.html")
-		b.until("the folder's page", "!document.getElementById('frame-pick').hidden")
+		b.until("the folder's page", "!document.getElementById('frame').hidden")
 		measure("a folder's page in the frame")
 		// The frame's pages to pick from, open, one of them reached and the one open now marked.
 		b.navigate("/a/a/")

@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -18,6 +19,10 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	for _, rel := range []string{"docs/index.html", "docs/guide/setup.html", "docs/guide/start.html", "docs/guide/deep/x.html", "docs/api/a.html"} {
 		s.write(t, rel, "<!doctype html><title>t</title><p>page</p>")
 	}
+	// A directory longer than the tree's height, its last page opened at the end
+	for i := range 80 {
+		s.write(t, fmt.Sprintf("docs/api/many/p%03d.html", i), "<p>many</p>")
+	}
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "docs"))
 	b.size(1200, 800, false)
 	defer b.unsize()
@@ -28,7 +33,7 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	state := `[[...document.querySelectorAll('#side-tree > *')].map((e) => e.textContent + (e.getAttribute('aria-expanded') === 'true' ? '-' : e.getAttribute('aria-expanded') ? '+' : '') + (e.getAttribute('aria-current') ? '*' : '')).join(','),
 		['aria-valuenow', 'aria-valuemin', 'aria-valuemax'].map((a) => document.getElementById('side-grip').getAttribute(a)).join('/'),
 		getComputedStyle(document.getElementById('frame')).marginLeft].join(' ')`
-	shown := "[!document.getElementById('side').hidden, !document.getElementById('side-grip').hidden, !document.getElementById('side-show').hidden, document.getElementById('side').classList.contains('over')].join()"
+	shown := "[!document.getElementById('side').hidden, !document.getElementById('side-grip').hidden, !document.getElementById('side-show').hidden, document.getElementById('side').classList.contains('over'), !document.getElementById('frame-pick').hidden].join()"
 	kept := "localStorage.getItem('frame.side')"
 	key := func(k string) {
 		t.Helper()
@@ -115,15 +120,22 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, b.eval(shown+" + ' ' + getComputedStyle(document.getElementById('frame')).marginLeft"), b.eval(kept+" === "+js(before)))
 
 	ring := "solid 2px rgb(107, 105, 100) -2px seen"
-	check(t, "side", out, "api+,guide-,deep+,setup.html*,start.html,index.html 280/160/480 280px|true,true,false,false|none kept|"+
+	// The page open now is scrolled into the tree's sight, at the foot of a long directory too.
+	b.size(1200, 800, false)
+	b.navigate("/a/docs/?file=api%2Fmany%2Fp079.html")
+	b.until("the tree", "document.querySelector('#side-tree [aria-current]')")
+	out = append(out, b.eval("(() => { const s = document.getElementById('side').getBoundingClientRect(); "+
+		"const c = document.querySelector('#side-tree [aria-current]').getBoundingClientRect(); return c.top >= s.top && c.bottom <= s.bottom; })()"))
+
+	check(t, "side", out, "api+,guide-,deep+,setup.html*,start.html,index.html 280/160/480 280px|true,true,false,false,false|none kept|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 264/160/480 264px|{\"width\":264,\"open\":true}|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 160/160/480 160px|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 480/160/480 480px|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 300/160/480 300px|{\"width\":300,\"open\":true}|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 480/160/480 480px|"+
-		"false,false,true,false 0px side-show|{\"width\":300,\"open\":false}|false,false,true,false|"+
+		"false,false,true,false,true 0px side-show|{\"width\":300,\"open\":false}|false,false,true,false,true|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 300/160/480 300px side-hide|"+
 		"api+,guide-,deep-,x.html,setup.html*,start.html,index.html 300/160/480 300px|docs / guide/start.html|"+
 		"side-hide: "+ring+"|side-grip: "+ring+"|none,none,none|"+
-		"false,false,true,true|true,false,false,true 0px|true")
+		"false,false,true,true,true|true,false,false,true,true 0px|true|true")
 }
