@@ -48,6 +48,8 @@ func TestFormat(t *testing.T) {
 		{`{{1 | num 0}}`, "write num, or num and a count of significant digits from 1 before the number"},
 		{`{{1 | num 1 2}}`, "write num, or num and a count of significant digits from 1 before the number"},
 		{`{{true | bytes}}`, "bytes takes a number, not true (bool)"},
+		{`{{num nil}}`, "num takes a number; none is written, or it is null"},
+		{`{{bytes nil}}`, "bytes takes a number; none is written, or it is null"},
 	} {
 		page := template.Must(template.New("t").Funcs(funcs).Parse(tt.src))
 		if err := page.Execute(&strings.Builder{}, nil); err == nil || !strings.Contains(err.Error(), tt.want) {
