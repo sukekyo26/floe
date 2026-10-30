@@ -123,4 +123,6 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：`floe icons fetch` と `floe icons search`。図の `icon` の部品が使う AWS
   Architecture Icons を手元に置く。
 - 追加：データファイルから描いたページのスクリプトが、ページの中身を外へ送れないようにする
-  CSP。サーバーが返すページにも、`floe render` が書くページにも付ける。
+  CSP。サーバーが返すページにも、`floe render` が書くページとダウンロードにも付ける。
+  サーバーを通さずに開くページの charset は、`page.html` が書いたものに替えて、floe の
+  1 つを頭の先頭に置く。
