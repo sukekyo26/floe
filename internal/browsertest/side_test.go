@@ -127,6 +127,41 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, b.eval("(() => { const s = document.getElementById('side').getBoundingClientRect(); "+
 		"const c = document.querySelector('#side-tree [aria-current]').getBoundingClientRect(); return c.top >= s.top && c.bottom <= s.bottom; })()"))
 
+	// The page's directory is read however the tree is: closed in the tree, the bar still picks among its pages.
+	b.navigate("/a/docs/?file=guide%2Fsetup.html")
+	b.until("the tree", "document.querySelector('#side-tree [aria-current]')")
+	b.eval("[...document.querySelectorAll('#side-tree button.dir')].find((d) => d.textContent === 'guide').click()")
+	b.until("guide closed", "!document.querySelector('#side-tree [aria-current]')")
+	b.eval("document.getElementById('side-hide').click()")
+	b.eval("load()")
+	b.eval("document.getElementById('frame-pick').click()")
+	out = append(out, b.until("the pages to pick", "[...document.querySelectorAll('#page-pick-list [role=option]')].map((o) => o.textContent).join(',')"))
+	b.eval("document.getElementById('page-pick').hidePopover(); document.getElementById('side-show').click()")
+	// A row with the focus keeps it as the tree is drawn anew; the title drawn is the folder's of now.
+	b.eval("[...document.querySelectorAll('#side-tree button.dir')].find((d) => d.textContent === 'api').focus()")
+	b.eval("items = items.map((x) => x.slug === 'docs' ? { ...x, title: 'Docs anew' } : x); renderFrame()")
+	out = append(out, b.eval("document.activeElement.textContent + ' ' + document.getElementById('side-title').textContent"))
+	// A directory pressed draws the tree with the folder of now, not of when the button was made.
+	b.eval("items = items.map((x) => x.slug === 'docs' ? { ...x, title: 'Docs again' } : x)")
+	b.eval("document.activeElement.click()")
+	out = append(out, b.until("api open", "document.querySelector('#side-tree [title=\"api/many\"]') && document.getElementById('side-title').textContent"))
+	// The edge steps from the width shown, which a narrower window holds under the one kept.
+	b.eval("document.getElementById('side-grip').focus()")
+	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.End)); err != nil {
+		t.Fatal(err)
+	}
+	b.size(700, 800, false)
+	b.until("the window narrowed", "document.getElementById('side-grip').getAttribute('aria-valuenow') === '350'")
+	key(kb.ArrowLeft)
+	out = append(out, b.eval("document.getElementById('side-grip').getAttribute('aria-valuenow')"))
+	// A folder's page not found has no tree, whatever the window does.
+	b.navigate("/a/docs/?file=nope.html")
+	b.until("the frame", "!document.getElementById('notfound').hidden")
+	b.size(1100, 800, false)
+	b.until("the window widened", "innerWidth === 1100")
+	b.eval("new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))")
+	out = append(out, b.eval(shown))
+
 	check(t, "side", out, "api+,guide-,deep+,setup.html*,start.html,index.html 280/160/480 280px|true,true,false,false,false|none kept|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 264/160/480 264px|{\"width\":264,\"open\":true}|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 160/160/480 160px|"+
@@ -137,5 +172,6 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 		"api+,guide-,deep+,setup.html*,start.html,index.html 300/160/480 300px side-hide|"+
 		"api+,guide-,deep-,x.html,setup.html*,start.html,index.html 300/160/480 300px|docs / guide/start.html|"+
 		"side-hide: "+ring+"|side-grip: "+ring+"|none,none,none|"+
-		"false,false,true,true,true|true,false,false,true,true 0px|true|true")
+		"false,false,true,true,true|true,false,false,true,true 0px|true|true|"+
+		"guide/setup.html,guide/start.html|api Docs anew|Docs again|334|false,false,false,false,true")
 }

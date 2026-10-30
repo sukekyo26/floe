@@ -122,10 +122,9 @@
   /* The frame: the iframe fills the space under the header bar. A page without a background of its own shows on the browser's default white */
   .framed body { height: 100dvh; display: flex; flex-direction: column; }
   /* No color-scheme here or on the root: Chrome hands an iframe's to the page in it as its prefers-color-scheme, the OS's without one */
-  .frame { flex: 1; display: block; width: 100%; border: 0; background: #fff; }
+  /* A folder's page has the folder's tree on its left, --side the width it takes (0 when hidden or over the page) */
+  .frame { flex: 1; display: block; width: calc(100% - var(--side, 0px)); margin-left: var(--side, 0px); border: 0; background: #fff; }
   .notfound { flex: 1; align-content: center; }
-  /* A folder's page: the folder's tree on the frame's left (--side the width it takes, 0 when hidden or over the page) */
-  .frame { margin-left: var(--side, 0px); width: calc(100% - var(--side, 0px)); }
   .side {
     position: fixed; left: 0; top: var(--bar); bottom: 0; z-index: 2; width: var(--side-width); overflow: hidden auto; padding: 0 0.3rem 0.8rem;
     background: var(--panel); border-right: 1px solid var(--line); font-size: 0.84rem;
@@ -735,13 +734,13 @@
   </p>
   </div>
 </main>
-<!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
 <nav class="side" id="side" hidden>
   <div class="side-head"><span id="side-title"></span><button type="button" class="icon-btn" id="side-hide" aria-expanded="true" aria-controls="side" title="{{.Msg "ui_side_hide"}}" aria-label="{{.Msg "ui_side_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
   <div id="side-tree"></div>
 </nav>
 <div class="grip" id="side-grip" role="separator" aria-orientation="vertical" aria-controls="side" aria-label="{{.Msg "ui_side_width"}}" tabindex="0" hidden></div>
 <button type="button" class="icon-btn side-show" id="side-show" aria-expanded="false" aria-controls="side" title="{{.Msg "ui_side_show"}}" aria-label="{{.Msg "ui_side_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+<!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
 <iframe class="frame" id="frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
 <p class="print-alone" id="print-alone"><span id="print-alone-text">{{.Msg "ui_print_alone" (.Msg "ui_open_raw")}}</span> <a id="print-raw"></a></p>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
@@ -1712,6 +1711,20 @@
     return li;
   }
 
+  // What a tree's row begins with, in the list's and the frame's: a directory's fold and icon, a page's room for the fold
+  // and its icon; and a directory's note (unread, cut, empty), '' for none
+  const DIR_HEAD = '<span class="fold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>';
+  const PAGE_HEAD = '<span class="fold none"></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>';
+  const baseName = (file) => file.slice(file.lastIndexOf('/') + 1);
+  function treeNote(l) {
+    if (l instanceof Error) return t('ui_folder_failed', l.message);
+    const shown = l.dirs.length + l.pages.length;
+    if (l.more) return t('ui_folder_more', shown + l.more, shown);
+    return shown === 0 ? t('ui_folder_empty') : '';
+  }
+  // A tree's directories as read, compared to tell a change: an Error by its words, which JSON gives none of
+  const sameListings = (m) => JSON.stringify([...m], (_, v) => (v instanceof Error ? `Error ${v.message}` : v));
+
   // The rows of the directory dir of the folder a, depth d deep, and of its directories open: what was read of them, a
   // directory not read yet left out until it is
   function treeRows(a, dir, d, rows) {
@@ -1731,7 +1744,7 @@
       return li;
     };
     if (l instanceof Error) {
-      rows.push(note(t('ui_folder_failed', l.message)));
+      rows.push(note(treeNote(l)));
       return;
     }
     for (const name of l.dirs) {
@@ -1741,7 +1754,7 @@
       btn.type = 'button';
       btn.className = 'title';
       btn.setAttribute('aria-expanded', String(opened.has(openKey(a.slug, path))));
-      btn.innerHTML = '<span class="fold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>';
+      btn.innerHTML = DIR_HEAD;
       btn.append(name);
       btn.title = path;
       btn.addEventListener('click', () => toggleOpen(a.slug, path));
@@ -1752,10 +1765,10 @@
     }
     for (const p of l.pages) {
       const li = tree(['page']);
-      const name = p.file.slice(p.file.lastIndexOf('/') + 1);
+      const name = baseName(p.file);
       const link = li.querySelector('.title');
       link.href = pageHref({ slug: a.slug, file: p.file });
-      link.innerHTML = '<span class="fold none"></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>';
+      link.innerHTML = PAGE_HEAD;
       link.append(name);
       link.title = p.file;
       const time = li.querySelector('time');
@@ -1772,9 +1785,8 @@
       copy.addEventListener('click', () => copyPath(`${a.path}/${p.file}`, copy));
       rows.push(li);
     }
-    const shown = l.dirs.length + l.pages.length;
-    if (l.more) rows.push(note(t('ui_folder_more', shown + l.more, shown)));
-    else if (shown === 0) rows.push(note(t('ui_folder_empty')));
+    const text = treeNote(l);
+    if (text) rows.push(note(text));
   }
 
   // GET /api/artifacts/{slug}/pages of dir: null for one that is not there (any more)
@@ -1792,7 +1804,7 @@
   let openReads = 0;
   async function readOpen() {
     const n = ++openReads;
-    const before = JSON.stringify([...listings]);
+    const before = sameListings(listings);
     const shown = (key) => {
       const [slug, dir = ''] = key.split(/:(.*)/s);
       const a = items.find((x) => x.slug === slug);
@@ -1811,7 +1823,7 @@
       if (read[i] === null) opened.delete(key);
       else listings.set(key, read[i]);
     });
-    return JSON.stringify([...listings]) !== before;
+    return sameListings(listings) !== before;
   }
 
   // Opens or closes the directory dir ('' for the top) of the folder slug; closed, what is open under it closes too
@@ -2125,91 +2137,97 @@
     });
   }
 
-  // Reads the directories open in the side's tree again, each under ones open; one gone closes
+  // Reads again the directories open in the side's tree, each under ones open, and the page's own, whatever is open,
+  // for the pages to pick from. One gone for now stays open, to show again when it is back
+  // LIMIT: each directory open is read every 3 s with the list, as readOpen's
   // As readOpen's, the last call's answers win
   let sideReads = 0;
   async function readSide() {
     const n = ++sideReads;
-    const keys = [...sideOpen].filter((dir) => !dir || sideOpen.has(dirOf(dir)));
+    const keys = [...new Set([...sideOpen].filter((dir) => !dir || sideOpen.has(dirOf(dir))).concat(dirOf(FILE)))];
     const read = await Promise.all(keys.map((dir) => readListing(framed, dir)));
     if (n !== sideReads) return;
     sideListings.clear();
-    keys.forEach((dir, i) => {
-      if (read[i] === null) sideOpen.delete(dir);
-      else sideListings.set(dir, read[i]);
-    });
+    keys.forEach((dir, i) => { if (read[i] !== null) sideListings.set(dir, read[i]); });
+    const l = sideListings.get(dirOf(FILE));
+    fileListing = l instanceof Error ? undefined : l;
   }
 
-  // The side's tree of the folder a, as read
+  // The side's tree of the folder a, as read. A row with the focus has it again once drawn anew
   function renderSide(a) {
     $('side-title').textContent = a.title;
     $('side').setAttribute('aria-label', a.title);
+    const focused = $('side-tree').contains(document.activeElement) ? document.activeElement.title : null;
     const rows = [];
     const walk = (dir, d) => {
       const l = sideListings.get(dir);
       if (l === undefined) return;
-      const note = (text) => {
+      const text = l instanceof Error ? treeNote(l) : '';
+      if (!text) {
+        for (const name of l.dirs) {
+          const path = dir ? `${dir}/${name}` : name;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'dir';
+          btn.style.setProperty('--d', d);
+          btn.setAttribute('aria-expanded', String(sideOpen.has(path)));
+          btn.innerHTML = DIR_HEAD;
+          btn.append(name);
+          btn.title = path;
+          btn.addEventListener('click', () => toggleSide(path));
+          rows.push(btn);
+          if (sideOpen.has(path)) walk(path, d + 1);
+        }
+        for (const p of l.pages) {
+          const link = document.createElement('a');
+          link.href = pageHref({ slug: framed, file: p.file });
+          link.style.setProperty('--d', d);
+          link.innerHTML = PAGE_HEAD;
+          link.append(baseName(p.file));
+          link.title = p.file;
+          if (p.file === FILE) link.setAttribute('aria-current', 'page');
+          rows.push(link);
+        }
+      }
+      const note = text || treeNote(l);
+      if (note) {
         const p = document.createElement('p');
         p.className = 'note';
         p.style.setProperty('--d', d);
-        p.textContent = text;
+        p.textContent = note;
         rows.push(p);
-      };
-      if (l instanceof Error) {
-        note(t('ui_folder_failed', l.message));
-        return;
       }
-      for (const name of l.dirs) {
-        const path = dir ? `${dir}/${name}` : name;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'dir';
-        btn.style.setProperty('--d', d);
-        btn.setAttribute('aria-expanded', String(sideOpen.has(path)));
-        btn.innerHTML = '<span class="fold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>';
-        btn.append(name);
-        btn.title = path;
-        btn.addEventListener('click', async () => {
-          if (sideOpen.has(path)) {
-            for (const k of [...sideOpen]) if (k === path || k.startsWith(`${path}/`)) sideOpen.delete(k);
-          } else {
-            sideOpen.add(path);
-            try {
-              await readSide();
-            } catch (e) {
-              showError(t('ui_load_failed', e.message));
-            }
-          }
-          renderSide(a);
-          $('side-tree').querySelector(`button.dir[title="${CSS.escape(path)}"]`)?.focus();
-        });
-        rows.push(btn);
-        if (sideOpen.has(path)) walk(path, d + 1);
-      }
-      for (const p of l.pages) {
-        const link = document.createElement('a');
-        link.href = pageHref({ slug: framed, file: p.file });
-        link.style.setProperty('--d', d);
-        link.innerHTML = '<span class="fold none"></span><svg class="kind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>';
-        link.append(p.file.slice(p.file.lastIndexOf('/') + 1));
-        link.title = p.file;
-        if (p.file === FILE) link.setAttribute('aria-current', 'page');
-        rows.push(link);
-      }
-      const shown = l.dirs.length + l.pages.length;
-      if (l.more) note(t('ui_folder_more', shown + l.more, shown));
-      else if (shown === 0) note(t('ui_folder_empty'));
     };
     walk('', 0);
     $('side-tree').replaceChildren(...rows);
+    if (focused !== null) [...$('side-tree').querySelectorAll('[title]')].find((e) => e.title === focused)?.focus();
     if (!sideShown && rows.length && !$('side').hidden) {
       sideShown = true;
       $('side-tree').querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'center' });
     }
   }
 
+  // Opens or closes the directory path of the side's tree; closed, what is open under it closes too. Drawn with the
+  // folder as it is now, its title perhaps changed since
+  async function toggleSide(path) {
+    if (sideOpen.has(path)) {
+      for (const k of [...sideOpen]) if (k === path || k.startsWith(`${path}/`)) sideOpen.delete(k);
+    } else {
+      sideOpen.add(path);
+      try {
+        await readSide();
+      } catch (e) {
+        showError(t('ui_load_failed', e.message));
+      }
+    }
+    const a = items.find((x) => x.slug === framed);
+    if (a) renderSide(a);
+  }
+
   // Whether the tree was drawn once: the page open now is scrolled into sight then, not at each redraw
   let sideShown = false;
+  // Whether the frame shows a folder's page found, which alone has the tree, its edge and its button
+  let sideFound = false;
   // The widest the tree may be: 480 px, or half the window, whichever is less
   const sideMax = () => Math.max(SIDE_MIN, Math.min(480, Math.floor(innerWidth / 2)));
   // Lays the side out as it is: open or not, its width within the bounds of now (what is kept is not changed by them)
@@ -2268,16 +2286,18 @@
       keepSide();
     });
     grip.addEventListener('keydown', (e) => {
-      const to = { ArrowLeft: side.width - 16, ArrowRight: side.width + 16, Home: SIDE_MIN, End: sideMax() }[e.key];
+      // From the width shown, which the window may hold under the one kept
+      const now = Number(grip.getAttribute('aria-valuenow'));
+      const to = { ArrowLeft: now - 16, ArrowRight: now + 16, Home: SIDE_MIN, End: sideMax() }[e.key];
       if (to === undefined) return;
       e.preventDefault();
       sideWidth(to);
       keepSide();
     });
-    addEventListener('resize', layoutSide);
+    addEventListener('resize', () => { if (sideFound) layoutSide(); });
     sideNarrow.addEventListener('change', () => {
       sideOver = false;
-      layoutSide();
+      if (sideFound) layoutSide();
     });
   }
 
@@ -2308,7 +2328,8 @@
     $('frame-archived').hidden = !(found && a.archived);
     // A folder's page has no star, archive or download of its own: its folder's row does
     for (const id of ['frame-star', 'frame-archive', 'frame-download']) $(id).hidden = Boolean(FILE);
-    if (found && FILE) {
+    sideFound = found && Boolean(FILE);
+    if (sideFound) {
       layoutSide();
       renderSide(a);
     } else {
@@ -2367,11 +2388,9 @@
       if (text !== drawn) items = JSON.parse(text);
       // The list redrawn when what is open of the folders changed, the frame when the directory of its page did
       if (framed && FILE) {
-        const was = JSON.stringify([...sideListings]);
+        const was = sameListings(sideListings);
         await readSide();
-        const l = sideListings.get(dirOf(FILE));
-        fileListing = l instanceof Error ? undefined : l;
-        if (JSON.stringify([...sideListings]) !== was) drawn = '';
+        if (sameListings(sideListings) !== was) drawn = '';
       } else if (!framed && await readOpen()) drawn = '';
     } catch (e) {
       loadFailed = true;
