@@ -112,10 +112,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 A part draws an item of the data: `floe part list` lists them, and `floe part show <name>` prints what one takes. The schema names it with `$ref`, under `properties` or `items`:
 
 ```json
-"risks": { "$ref": "floe:///parts/risks.json", "description": "What may go wrong" }
+"findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }
 ```
 
-`page.html` puts the item where it goes, `{{.Data.risks}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML.
+`page.html` puts the item where it goes, `{{.Data.findings}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML.
 
 The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
 

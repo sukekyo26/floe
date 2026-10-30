@@ -49,7 +49,7 @@ quote/
 
 ## Looks and shared schemas
 
-- A look alone is a directory of a `part.css` (and a `part.yaml` with its `description:` and the looks it takes), without a schema: it draws nothing, and lends its style to parts and elements that take it. floe's looks alone are `panel`, `rows`, `band`, a band filled with the accent whose text, links, code and focus ring are in the colour on a fill, and `numbered`, the items of a list numbered in rings with a line joining each to the next, as the part `steps` and runbook's steps are.
+- A look alone is a directory of a `part.css` (and a `part.yaml` with its `description:` and the looks it takes), without a schema: it draws nothing, and lends its style to parts and elements that take it. floe's looks alone are `panel`, `rows`, `cards`, cards side by side, each in a panel, numbered by their place, as the part `options` takes them, `band`, a band filled with the accent whose text, links, code and focus ring are in the colour on a fill, and `numbered`, the items of a list numbered in rings with a line joining each to the next, as the part `steps` and runbook's steps are.
 - A part takes the looks of others by its `part.yaml`, `looks: [panel]`, and the looks those take in turn, each before it, which it adjusts.
 - A shared schema is a `<name>.json` a template's or a part's schema names (`floe:///parts/<name>.json`), always at its root. floe's are `tone.json` (`accent`, `good`, `warn`, `bad`) and `any.json` (a part of any kind). Its schemas are checked as a template's are, from its own root: a part or a format of floe's it holds is drawn where `properties` and `items` reach it from there, in a template's page or a part's alike.
 - A value of `any.json` comes to `part.html` as it does to a template's `page.html`, a map of every kind: the kind written holds the part drawn, the others nil. `{{.x}}` writes the map as text; draw it with `{{range .x}}{{.}}{{end}}`, or `{{range .}}{{.}}{{end}}` when the schema's root is `any.json` ([templates.md](templates.md#parts-in-a-template) tells how to draw one kind alone).
@@ -71,7 +71,7 @@ As in `page.css`, a `}` that closes no block and an `@import` are refused at the
 ## Borrowing a look
 
 - An element that is no part's box takes a look by `data-floe-look`: `<section data-floe-look="panel">` is a panel in every theme. It has it in `floe.looks`, under the parts and the template, so that the part or template it is in adjusts it.
-- floe's parts take looks so: `compare`, `fields`, `findings`, `matrix` and `risks` take the table's, `stats`, `options`, `facts`, `links` and `decision` the cards', `diff` and `terminal` code's, `checklist`, `entries`, `faq`, `glossary` and `keys` the look `rows`, and the other parts drawn in a panel `panel`'s. A theme's rules for a look draw every part that takes it.
+- floe's parts take looks so: `compare`, `fields` and `findings` take the table's, `stats`, `options`, `facts`, `links` and `decision` the cards', `diff` and `terminal` code's, `checklist`, `entries`, `faq` and `keys` the look `rows`, and the other parts drawn in a panel `panel`'s. A theme's rules for a look draw every part that takes it.
 
 ## Themes
 

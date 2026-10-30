@@ -42,7 +42,7 @@ Every data file holds these keys, which floe reads itself:
 | Key | What it is |
 |---|---|
 | `template` | The template that draws the page (`report`, `design`, `handoff`, `adr`, `postmortem`, `runbook`, `slides`, or one of your own). Required. |
-| `lang` | The page's language (`<html lang>`), as a tag such as `en`, `ja` or `pt-BR`. Required. The words floe and the parts draw (a heading of `risks`, the zoom buttons of a diagram, the copy button of code) and the text of a diagram follow it, English for a language they have no words of. |
+| `lang` | The page's language (`<html lang>`), as a tag such as `en`, `ja` or `pt-BR`. Required. The words floe and the parts draw (`required` in `fields`, the zoom buttons of a diagram, the copy button of code) and the text of a diagram follow it, English for a language they have no words of. |
 | `title` | The page's title. |
 | `theme` | The theme the page is drawn in (default `default`): its colours, faces and the shape of the parts. `floe template show <template>` lists the themes on its `themes:` line: `default`, `soft`, `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `swiss` and `washi`. |
 
@@ -72,10 +72,10 @@ Each part is one key naming its kind. `floe part list` lists them with a line ea
 | `table` | `columns` and `rows`; each cell is a line of Markdown, a number in quotes as it is drawn, or a pill `{ pill, tone }`. |
 | `entries` | Records one under another, each a `title` (a line of Markdown), its `tags` on the line under it (each as a table's cell: a line of Markdown or a pill) and its `text` (Markdown) the full width. For rows whose names are short and whose rest is long: a table squeezes the long text into a narrow column. Keep a `table` when the rows are compared column by column (before and after, input and output), and a `timeline` for what happened in order. A tag shows no column's name, so say in it what it is (`merged 2026-10-30`). Code in `text` is drawn as it is, without a copy button; put it in a `code` part after the entries. |
 | `image` | An image, such as a screenshot: its `file` and its `alt`, what it shows ([Images](#images)). |
-| `cards`, `note`, `stats`, `progress`, `steps`, `checklist` | Cards, a note in a tone, large numbers, bars of progress, numbered steps, items ticked once done. |
+| `note`, `stats`, `progress`, `steps`, `checklist` | A note in a tone, large numbers, bars of progress, numbered steps, items ticked once done. |
 | `compare`, `options`, `facts`, `diff`, `tree`, `links` | What changes before and after, options with pros and cons, names with values, a diff (a button over it copies the diff as written), files and folders, links. |
-| `findings`, `decision`, `risks`, `matrix`, `fields` | What a review found, a decision, risks, a table of yes / part / no, the keys of a setting. |
-| `timeline`, `bars`, `faq`, `glossary`, `keys` | Dates in order, bars of values, questions and answers, words and their meaning, keys to press. |
+| `findings`, `decision`, `fields` | What a review found, a decision, the keys of a setting. |
+| `timeline`, `bars`, `faq`, `keys` | Dates in order, bars of values, questions and answers, keys to press. |
 | `details`, `tabs` | Parts folded under a title, or shown one at a time under tabs; they hold `text`, `code`, `terminal`, `diff`, `note`, `table` and `image`. |
 | `diagram` | A diagram, checked and drawn as inline SVG ([Diagrams](#diagrams)). |
 | `script` | Something that moves ([Scripts and HTML](#scripts-and-html)). |

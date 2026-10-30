@@ -142,11 +142,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   reached by keyboard shows one thin grey ring, and a button pressed with the
   mouse shows none.
 - Add floe's template `report`: a header over sections, each a heading over
-  parts; and thirty-two parts a template refers to as
-  `floe:///parts/<name>.json` (`floe part list` lists them): thirty that a
+  parts; and twenty-nine parts a template refers to as
+  `floe:///parts/<name>.json` (`floe part list` lists them): twenty-seven that a
   section of report takes beside Markdown `text` and `html`, from `code`,
   `terminal`, `table` and `image` (an image of the data file's directory,
-  such as a screenshot) to `findings`, `decision`, `risks`, `timeline`,
+  such as a screenshot) to `findings`, `decision`, `entries`, `timeline`,
   `tabs`, `diagram` and `script`, and `cell` and `stack`, which other parts
   hold.
 - Add nine themes a data file picks with `theme:` (`default`, `soft`,

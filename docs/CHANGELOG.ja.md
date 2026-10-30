@@ -97,10 +97,10 @@ floe の主要な変更を記録します。フォーマットは
   付け、ページの題の下に出て、検索でも当たり、publish し直しても残る。キーで来たボタンや欄には
   細い灰色の輪を 1 つ出し、マウスで押したボタンには出さない。
 - 追加：floe のテンプレート `report`（見出しの下に節を並べ、節ごとに見出しと部品を置く）と、
-  テンプレートが `floe:///parts/<name>.json` で指す 32 の部品（`floe part list` が並べる）。
-  そのうち 30 は report の節が Markdown の `text`・`html` と並べて取るもの（`code`・
+  テンプレートが `floe:///parts/<name>.json` で指す 29 の部品（`floe part list` が並べる）。
+  そのうち 27 は report の節が Markdown の `text`・`html` と並べて取るもの（`code`・
   `terminal`・`table`・`image`（画面の写しなど、データファイルのディレクトリの画像）から
-  `findings`・`decision`・`risks`・`timeline`・`tabs`・`diagram`・`script` まで）、`cell` と `stack` はほかの部品が中に持つもの。
+  `findings`・`decision`・`entries`・`timeline`・`tabs`・`diagram`・`script` まで）、`cell` と `stack` はほかの部品が中に持つもの。
 - 追加：データファイルが `theme:` で選ぶ 9 つのテーマ（`default`・`soft`・`editorial`・
   `ink`・`brutal`・`blueprint`・`notebook`・`swiss`・`washi`）。どれも CSS の変数のパレットと
   部品の形を持つ。`default` と、その色を使うテーマ（`soft`・`editorial`）のページの地は、管理

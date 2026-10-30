@@ -112,10 +112,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 部品はデータの項目を描きます。`floe part list` が並べ、`floe part show <名前>` が取るものを出します。schema は `properties` か `items` の下で、`$ref` で名指します。
 
 ```json
-"risks": { "$ref": "floe:///parts/risks.json", "description": "What may go wrong" }
+"findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }
 ```
 
-`page.html` は項目を置きたい所に置きます（`{{.Data.risks}}`）。floe は部品の schema と checks で確かめ（誤りはデータファイルの行と列で言う）、HTML で描きます。
+`page.html` は項目を置きたい所に置きます（`{{.Data.findings}}`）。floe は部品の schema と checks で確かめ（誤りはデータファイルの行と列で言う）、HTML で描きます。
 
 部品 `text` は、ほかの部品と並び、横に `code`・`terminal` を置ける所の Markdown です。floe は中の囲んだコードのブロックを警告し、`code` に書くよう勧めます。code の部品を置かない、ただの Markdown の欄は、`{"type": "string", "format": "markdown"}` にします。
 
