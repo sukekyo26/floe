@@ -72,7 +72,7 @@ It sees:
 |---|---|
 | `.Title` | The page's title: the data file's `title:`, else the slug |
 | `.Lang` | The page's language: the data file's `lang:` |
-| `.Data` | The data file's items, without `lang`, `template`, `theme` and `title`, which floe reads itself. An item the schema declares but the data leaves out is nil, so `{{with .Data.lead}}` works. A part comes drawn (see [Parts in a template](#parts-in-a-template)), as does an item of `"format": "markdown"` (its HTML) or `"format": "image"` (a data URI) |
+| `.Data` | The data file's items, without `lang`, `template`, `theme` and `title`, which floe reads itself. An item the schema declares but the data leaves out is nil: `{{with .Data.lead}}`, `{{range}}` and `{{if}}` read it as empty, but `len`, `index` and `slice` refuse it (`len of nil pointer`), so write them inside `with`: `{{with .Data.done}}{{len .}}{{else}}0{{end}}`. A part comes drawn (see [Parts in a template](#parts-in-a-template)), as does an item of `"format": "markdown"` (its HTML) or `"format": "image"` (a data URI) |
 | `.Calc` | The values of `computed.yaml`, by name |
 | `markdown` | Markdown text as HTML (`{{markdown .text}}`), raw HTML in it left out |
 | `markdownLine` | A line of Markdown, such as a table cell, as HTML without a paragraph around it |
