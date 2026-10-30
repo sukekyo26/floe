@@ -431,16 +431,22 @@ func TestStopKeptAnswering(t *testing.T) {
 	for _, c := range []struct {
 		name   string
 		answer int
-	}{{"no request", http.StatusNotFound}, {"answers on", http.StatusNoContent}} {
+		// at once: one that does not take the request is not waited for, which takes 3 s.
+		atOnce bool
+	}{{"no request", http.StatusNotFound, true}, {"answers on", http.StatusNoContent, false}} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
 			ln, port := holdPort(t)
 			e := newDenvOn(t, port)
 			fakeServer(t, ln, 4242, c.answer, true, 0)
+			start := time.Now()
 			wantRun(t, "stop", e.run("stop"), 1, "", "floe: the server on port "+e.port+" is still running; stop it"+
 				" yourself (the process 4242, if it runs on this machine), and the next floe command that uses the"+
 				" server starts its own\n")
+			if took := time.Since(start); c.atOnce && took > time.Second {
+				t.Errorf("floe stop took %v, waiting for a server that did not take the request", took)
+			}
 		})
 	}
 }
