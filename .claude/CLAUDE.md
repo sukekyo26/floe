@@ -50,7 +50,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **保存先を書くのはサーバーだけ**：CLI は API で頼む。publish・link・rm・rebuild・管理ページの変更はどれも API
 - **アーカイブは meta.json の `archived` 1 つ**：一覧から外すのは meta.json の `archived` だけで持ち、ディレクトリ・`/a/<slug>/`・ダウンロード・rebuild は見ない。立てる・外すのは `Store.Edit`（`PATCH`）だけで、ほかに外れるのは publish し直したとき（`newMeta` が引き継がない）だけ。`GET /api/artifacts` は全部を返し、一覧から外すのは見せる側（`floe list` と管理ページの `inView`）でする
 - **ページの中身と版は 1 か所ずつ**：中身は `server` の `content`、版は `version`（印は `files.Mark` 1 つ）。版は中身の前に取る。live reload は描かない
-- **CSP とサンドボックスは返すときに付ける**：ページとその下のファイルはヘッダーで。ダウンロードは描いたページに CSP の meta を足す
+- **CSP とサンドボックスは返すときに付ける**：ページとその下のファイルはヘッダーで。ヘッダーの無い出口（render・ダウンロード）は、`CutOffPage` が描いたページに CSP の meta を足し、ページの charset の meta を全部外して、floe の charset 1 つを頭の先頭に置く（サーバーが返すページは、page.html の charset が残ってもヘッダーの utf-8 が勝つ）
 - **描くものはまとまり 1 つ**：サーバーは `Config.Drawing` で読んだ Kit とアイコン集を 1 つ持ち、自分の 3 つの根とアイコン集を 1 つのタイマーで毎秒見張り、変われば丸ごと読み直す。見張りが後で直せない描き（ストアに書くものと download）は、描く前に同じ見張りをその場で 1 回走らせる（`latest`）。読めなければ `store.Drawing.Err` で描く出力を全部止める
 - **API の誤りは `refuse` 1 つ**：usererr の Report を返し、409 は `store.Conflict` で見分ける。プロトコルの断り（forbidden host・origin・not found など）は英語の固定の文
 - **書き込みの本文は `decodeStrict` 1 つで読む**：API の書き込み（POST・PUT・PATCH）の本文は、送る形の型（`Link`・`Upload`・`Edit`、rebuild は欄の無い型）に、`decodeStrict` が encoding/json/v2 だけで読む（構文の確かめも v2 に任せ、v1 で読み直さない）。構文の誤り、型に無い鍵（大文字小文字だけが違うものも）、同じ鍵の 2 つ目（入れ子の map の中も）、文字列の中の孤立したサロゲートと UTF-8 でない字、v2 が読まない形の値（改行の入った base64、数の配列の `[]byte`）は、encoding/json/v2 の言葉のまま 400 で断り、object でない本文（null も）も断る。CLI は本文を `encode`（encoding/json/v2 の `Marshal`）1 つで作り、UTF-8 でない字は、publish がサーバーを起こす前に、渡した所の名前の誤りにする。nil の map は null で送り、CLI が意図して送る空の字は落とさない（送る型のポインタの欄は `omitempty` でなく `omitzero`）。値が null の欄は、送らないのと同じ（変えない）。受ける鍵は型の欄にだけ書き、本文を map で読んで鍵を拾わない
