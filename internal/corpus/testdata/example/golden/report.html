@@ -19,7 +19,7 @@
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
-p, ul, ol { margin: 0; max-width: var(--text-width); }
+p, ul, ol { margin: 0; }
 ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 /* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
    --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
@@ -36,7 +36,7 @@ pre {
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
-blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
+blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
@@ -167,7 +167,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="compare"], [data-floe-part="steps"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="compare"], [data-floe-part="entries"], [data-floe-part="steps"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
 :scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
 }
@@ -189,7 +189,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   overflow-x: auto;
 }
 :scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
-:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.8rem 1.1rem; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.4rem 0.8rem; line-height: 1.6; }
 :scope :is(th, td):not(.num) { min-width: 7em; }
 /* A num column's heading wraps as long as it needs, but not a character a line */
 :scope th.num { min-width: 6em; }
@@ -197,7 +197,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   font-size: 0.8rem; font-weight: 600; color: var(--muted);
   background: color-mix(in srgb, var(--line) 40%, var(--surface));
 }
-:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line) 18%, var(--surface)); }
+/* The rule between rows; a theme sets --table-rule alone, none for no rule */
+:scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
 :scope .num { text-align: right; }
 :scope td.num {
   min-width: auto; font-family: var(--mono);
@@ -326,6 +327,36 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
+@scope ([data-floe-part="entries"]) to (:scope [data-floe-part] > *) {
+/* Rows in a panel, a rule between each and the next */
+:scope > * + * { border-top: 1px solid var(--line); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="entries"]) to (:scope [data-floe-part] > *) {
+/* A heading with its tags on the same line, then its text the full width, which a wide block in it (code, a table)
+   does not widen past the panel.
+   LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
+   if pages come to put code in entries */
+:scope { margin: 0; display: grid; }
+:scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; padding: 0.55rem 1.2rem; }
+:scope dt { min-width: 0; font-weight: 700; }
+:scope dd { margin: 0; }
+/* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
+   them, which stays as large as in a table's cell */
+:scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: 0.85rem; color: var(--muted); }
+:scope .tags > span { min-width: 0; }
+:scope .tags code { font-size: 0.86rem; }
+:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; line-height: 1.65; }
+/* A long pill wraps rather than overflow the panel */
+:scope .tags [data-floe-part] { white-space: normal; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
 @scope ([data-floe-part="note"]) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
 :scope {
@@ -356,7 +387,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="options"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
 /* Each card is numbered by its place, as the steps of a plan are */
 :scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
 .card {
@@ -370,23 +401,6 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
 .card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
 .card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
-/* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
-.option.pick { outline: 2px solid var(--accent); outline-offset: -1px; }
-.option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
-/* The pros and cons alone, not a list in the text */
-.option .points { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
-/* The mark hangs at the left, so that a line of text and code flows as one */
-.option .points > li { position: relative; padding-left: 1.45rem; }
-.option .points > li::before { position: absolute; left: 0.1rem; font-weight: 800; }
-.option li.pro { color: var(--fg); }
-.option li.pro::before { content: "+"; color: var(--good); }
-.option li.con::before { content: "−"; color: var(--bad); }
 }
 }
 </style>
@@ -416,7 +430,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="steps"]) to (:scope [data-floe-part] > *) {
 /* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
    rings and lines of its own states */
-:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; max-width: none; }
+:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; }
 :scope > li { position: relative; counter-increment: floe-step; display: grid; gap: 0.15rem; padding: 0.2rem 0 1.3rem 3rem; min-height: 2rem; }
 :scope > li:last-child { padding-bottom: 0.2rem; }
 :scope > li::before {
@@ -441,7 +455,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope > li.done::after { background: var(--good); }
 :scope > li.doing::before { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 :scope > li > strong { line-height: 1.6; }
-:scope > li > :not(strong) { margin: 0; max-width: var(--text-width); color: var(--muted); font-size: 0.92rem; }
+:scope > li > :not(strong) { margin: 0; color: var(--muted); font-size: 0.92rem; }
 }
 }
 </style>
@@ -480,7 +494,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="compare"], [data-floe-part="steps"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="compare"], [data-floe-part="entries"], [data-floe-part="steps"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
 }
 }
@@ -498,12 +512,22 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope { padding: 6px; }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope thead th { background: none; padding-block: 0.6rem 0.5rem; }
-:scope tbody td, :scope tbody tr:nth-child(even) td { background: var(--surface); }
-:scope tbody tr + tr td { border-top: 1px solid var(--line); }
+:scope tbody td { background: var(--surface); }
 :scope tbody tr:first-child td:first-child { border-top-left-radius: 14px; }
 :scope tbody tr:first-child td:last-child { border-top-right-radius: 14px; }
 :scope tbody tr:last-child td:first-child { border-bottom-left-radius: 14px; }
 :scope tbody tr:last-child td:last-child { border-bottom-right-radius: 14px; }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="entries"]) to (:scope [data-floe-part] > *) {
+:scope { padding: 6px; }
+:scope > * { background: var(--surface); }
+:scope > :first-child { border-radius: 14px 14px 0 0; }
+:scope > :last-child { border-radius: 0 0 14px 14px; }
+:scope > :only-child { border-radius: 14px; }
 }
 }
 </style>
@@ -525,7 +549,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="options"], [data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="stats"]) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border-radius: 20px; padding: 0.75rem; gap: 0.75rem; }
 /* A tile of the surface on the panel of the cards */
 .card { background: var(--surface); border-radius: 14px; }
@@ -731,14 +755,14 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </section>
 <section>
 <h2 id="who-does-what">Who does what</h2>
-<div class="numbered" data-floe-part="options">
-<div class="card option" data-floe-look="panel"><div class="title">Copy</div><p>Copies the pages on <strong>Saturday</strong> and keeps a list of what failed.</p>
-</div>
-<div class="card option" data-floe-look="panel"><div class="title">Links</div><p>Runs the link check and fixes what it finds.</p>
-</div>
-<div class="card option" data-floe-look="panel"><div class="title">Bookmarks</div><p>Sends the new address to the team on Monday morning.</p>
-</div>
-</div>
+<dl data-floe-part="entries">
+<div><dt>Copy</dt><dd class="tags"><span>Saturday</span><span><span class="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><p>Copies the pages and keeps a list of what failed.</p>
+</dd></div>
+<div><dt>Links</dt><dd class="tags"><span>Sunday</span><span><span class="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><p>Runs the link check and fixes what it finds.</p>
+</dd></div>
+<div><dt>Bookmarks</dt><dd class="tags"><span>Monday morning</span></dd><dd class="text"><p>Sends the new address to the team.</p>
+</dd></div>
+</dl>
 </section>
 <section>
 <h2 id="how-long-the-copy-takes">How long the copy takes</h2>

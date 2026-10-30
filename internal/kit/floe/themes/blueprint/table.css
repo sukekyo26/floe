@@ -2,4 +2,4 @@
 :scope thead th {
   background: none; color: var(--accent); font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
 }
-:scope tbody tr:nth-child(even) td { background: none; }
+:scope { --table-rule: none; }

@@ -1,6 +1,7 @@
 # A report: a heading and parts per section, and subsections of a heading and parts after them. Text is
 # Markdown; code and commands go in code and terminal, which draws the prompt; numbers, steps and what
-# changes go in stats, steps and compare;
+# changes go in stats, steps and compare; a name and its longer text goes in entries, its state in a
+# tag, and a table is for rows compared both along and across;
 # a table's cells are lines of Markdown, numbers in quotes, or pills; html goes in as it is; a script is a
 # function the page calls with an element to draw in and its data; a diagram is checked for overlaps
 # and overflowing text (frames may cross, and a frame's label is held to the frame's width, not its
@@ -49,13 +50,16 @@ sections:
                 banner = "This wiki has moved to the new host."
   - heading: Who does what
     parts:
-      - options:
+      - entries:
           - title: Copy
-            text: Copies the pages on **Saturday** and keeps a list of what failed.
+            tags: [Saturday, { pill: ready, tone: good }]
+            text: Copies the pages and keeps a list of what failed.
           - title: Links
+            tags: [Sunday, { pill: waits on the copy, tone: warn }]
             text: Runs the link check and fixes what it finds.
           - title: Bookmarks
-            text: Sends the new address to the team on Monday morning.
+            tags: [Monday morning]
+            text: Sends the new address to the team.
   - heading: How long the copy takes
     parts:
       - script:

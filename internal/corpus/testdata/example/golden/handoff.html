@@ -19,7 +19,7 @@
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
-p, ul, ol { margin: 0; max-width: var(--text-width); }
+p, ul, ol { margin: 0; }
 ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 /* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
    --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
@@ -36,7 +36,7 @@ pre {
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
-blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
+blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
@@ -140,7 +140,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts {
 @scope ([data-floe-part="links"]) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
-:scope { list-style: none; margin: 0; padding: 0; max-width: none; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
+:scope { list-style: none; margin: 0; padding: 0; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
 :scope > li { position: relative; gap: 0.1rem; padding-block: 0.9rem; padding-left: 3.7rem; }
 :scope > li::before {
   content: ""; position: absolute; left: 1.1rem; top: 0.95rem; display: block; width: 1.9rem; height: 1.9rem;
@@ -193,10 +193,10 @@ body { margin: 0; font-size: 16px; line-height: 1.7; padding-block: 0 4rem; }
 .band { padding-block: 1.8rem 1.6rem; }
 .band .column { display: grid; gap: 0.5rem; justify-items: start; }
 h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
-.when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; max-width: none; }
+.when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; }
 .kind { border: 1px solid currentColor; border-radius: 4px; padding: 0 0.6rem; font-size: 0.85rem; font-weight: 700; }
 .date { font-family: var(--mono); }
-.counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; max-width: none; }
+.counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; }
 .counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: 8px; }
 /* Not a face (base.css): a link fills its box, so its ring is outside it, on the band */
 .counts a { color: inherit; text-decoration: none; }
@@ -211,17 +211,17 @@ main h2 { font-size: 1.15rem; }
    alone, as a counter style is not held by @scope.
    LIMIT: up to Q99 fits the pad; a hundredth question spills left of it */
 @counter-style floe-handoff-q { system: extends decimal; prefix: "Q"; suffix: " "; }
-.asks ol { list-style-type: floe-handoff-q; padding-left: 3rem; gap: 1.1rem; max-width: none; }
+.asks ol { list-style-type: floe-handoff-q; padding-left: 3rem; gap: 1.1rem; }
 .asks ol > li::marker { color: var(--warn); font-family: var(--mono); font-weight: 700; }
 .ask { display: grid; gap: 0.35rem; }
 .question { font-weight: 700; font-size: 1.05rem; }
-.options { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: none; }
+.options { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .options li { border: 1px solid var(--line); border-radius: 999px; padding: 0 0.8rem; background: var(--surface); }
 .why, .by { color: var(--muted); font-size: 0.92rem; }
 /* As many columns as the sections written, side by side while each has 16rem */
 .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
 .board section { padding: 1rem 1.2rem; display: grid; gap: 0.6rem; }
-.board ul, .board ol { max-width: none; gap: 0.6rem; }
+.board ul, .board ol { gap: 0.6rem; }
 .done, .doing { list-style: none; padding: 0; }
 .done li::before { content: "✓"; color: var(--good); font-weight: 800; margin-right: 0.45rem; }
 .ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "entries",
-  "description": "Records one under another, each a heading, its tags under it and Markdown text the full width: for rows whose names are short and whose rest is long; keep a table when the rows are compared column by column, and put code in a code part after it",
+  "description": "Records one under another, each a heading with its tags beside it and Markdown text the full width under them: for a name and its longer text, such as requirements, risks and what is done about them, or terms whose meaning is long, a state in a tag; a run of short decisions, the pick in a tag (a decision told with its reasons is decision, options weighed side by side are options); put code in a code part after it",
   "type": "array",
   "minItems": 1,
   "items": {

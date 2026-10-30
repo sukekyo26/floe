@@ -2,7 +2,7 @@
 :scope {
   padding: 0.8rem 1.2rem; overflow-x: auto; overflow-wrap: normal;
 }
-:scope ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; max-width: none; }
+:scope ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
 :scope ul ul { margin-left: 0.5rem; padding-left: 1.15rem; border-left: 1px solid var(--line); }
 :scope li { padding-block: 0.12rem; }
 :scope .name {

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "table",
-  "description": "A table; each cell is a line of Markdown (code, bold, links), a number in quotes as it is drawn, a word of its column's pills, drawn as that pill, or a pill",
+  "description": "A table, for rows compared both along and across, each cell short; for a name and its longer text write entries, and for a line each a Markdown list. Each cell is a line of Markdown (code, bold, links), a number in quotes as it is drawn, a word of its column's pills, drawn as that pill, or a pill",
   "type": "object",
   "properties": {
     "columns": {

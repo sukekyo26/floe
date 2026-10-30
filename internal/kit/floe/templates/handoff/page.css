@@ -6,10 +6,10 @@ body { margin: 0; font-size: 16px; line-height: 1.7; padding-block: 0 4rem; }
 .band { padding-block: 1.8rem 1.6rem; }
 .band .column { display: grid; gap: 0.5rem; justify-items: start; }
 h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
-.when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; max-width: none; }
+.when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; }
 .kind { border: 1px solid currentColor; border-radius: 4px; padding: 0 0.6rem; font-size: 0.85rem; font-weight: 700; }
 .date { font-family: var(--mono); }
-.counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; max-width: none; }
+.counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; }
 .counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: 8px; }
 /* Not a face (base.css): a link fills its box, so its ring is outside it, on the band */
 .counts a { color: inherit; text-decoration: none; }
@@ -24,17 +24,17 @@ main h2 { font-size: 1.15rem; }
    alone, as a counter style is not held by @scope.
    LIMIT: up to Q99 fits the pad; a hundredth question spills left of it */
 @counter-style floe-handoff-q { system: extends decimal; prefix: "Q"; suffix: " "; }
-.asks ol { list-style-type: floe-handoff-q; padding-left: 3rem; gap: 1.1rem; max-width: none; }
+.asks ol { list-style-type: floe-handoff-q; padding-left: 3rem; gap: 1.1rem; }
 .asks ol > li::marker { color: var(--warn); font-family: var(--mono); font-weight: 700; }
 .ask { display: grid; gap: 0.35rem; }
 .question { font-weight: 700; font-size: 1.05rem; }
-.options { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: none; }
+.options { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .options li { border: 1px solid var(--line); border-radius: 999px; padding: 0 0.8rem; background: var(--surface); }
 .why, .by { color: var(--muted); font-size: 0.92rem; }
 /* As many columns as the sections written, side by side while each has 16rem */
 .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
 .board section { padding: 1rem 1.2rem; display: grid; gap: 0.6rem; }
-.board ul, .board ol { max-width: none; gap: 0.6rem; }
+.board ul, .board ol { gap: 0.6rem; }
 .done, .doing { list-style: none; padding: 0; }
 .done li::before { content: "✓"; color: var(--good); font-weight: 800; margin-right: 0.45rem; }
 .ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }
