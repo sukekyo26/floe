@@ -1,0 +1,9 @@
+template: report
+lang: en
+title: A tab before a text
+sections:
+  - heading: h
+    parts:
+      - text: |
+          	Tabbed line
+          # Next steps

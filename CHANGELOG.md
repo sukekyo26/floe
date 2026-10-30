@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the refusal of a `|` or `>` text whose first line not of spaces begins
+  with spaces and a tab (a tab alone too), which floe's YAML library counts
+  into the indentation, dropping or shortening the lines after it.
 - Add a note to print from the management page: printing a page's frame,
   which would put only one screen of the page on paper, prints instead a note
   to open the page alone, with its URL, and print it from there.
