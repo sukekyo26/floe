@@ -36,7 +36,7 @@ quote/
 
 - schema は、floe の部品と同じく `"$ref": "floe:///parts/quote.json"` で名指します。部品の schema も、floe の部品と共有の schema をこう名指します。
 - 部品の要素は箱で、`data-floe-part="quote"` で自分を名乗ります。
-- `part.html` は項目を `.` で見て、テンプレートの `page.html` と同じ関数を使えます（`asset` は除く。[templates.ja.md](templates.ja.md#pagehtml)）。
+- `part.html` は項目を `.` で見て、テンプレートの `page.html` と同じ関数を使えます（`asset` は除く。[templates.ja.md](templates.ja.md#pagehtml)）。`part.html` を走らせた誤り（schema が宣言していない鍵、range できない値）は、それを持ち込んだ値でなく、`part.html` の行と列で言います。値の形を部品の schema で決めておくと、違う形の値はその値の位置で言われます。
 - floe の部品が描くのに使う関数も使えます。floe の部品の `part.html` が使い方の見本で、`floe part show <名前> part.html` が出します（`floe part show code part.html`）。
   - `{{copyButton}}` は、写すボタンをページの言語で描きます。部品の箱の直下に置きます（`<figure data-floe-part="quote">…{{copyButton}}</figure>`）。写す範囲は、ボタンから上へ一番近い部品の箱で決まるので、自分の部品の中の部品の箱に置くと、自分のでなくその部品の中身を写します。部品の中の `data-floe-copy` を付けた要素の字を、どれも改行で終えて並べて写します（code は `<code>`、terminal はコマンドの 1 つずつに付けます）。見た目は floe のもので、置き場所と字の逃がし方は、code と同じく部品の CSS が書きます。部品の箱に `isolation: isolate`（ボタンをページの外の物の下に置くため）、ボタンのまわりに `margin: var(--floe-copy-gap)`、ボタンの下を字が通るなら、`:scope:has(> .floe-copy)` の中で、一番長い行の後ろに `padding-inline-end: var(--floe-copy-room)`（右端までスクロールすると、行の終わりがボタンの左に出る）。`--floe-copy-size`（ボタンの大きさ）・`--floe-copy-gap`・`--floe-copy-room` は floe がページの根に置き、部品には当てません。
   - `{{diagram}}` は引数を取らず、部品の値の全体を図として描きます。値は、部品 `diagram` と同じ spec そのものでなければならず、横に別の鍵（`caption` など）を置くと、図の schema が断ります。
