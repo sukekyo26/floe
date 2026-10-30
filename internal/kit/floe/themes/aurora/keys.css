@@ -1,0 +1,2 @@
+/* A keycap is of the surface, not of --bg, which lies flat on the wash */
+:scope kbd { background: var(--surface); }

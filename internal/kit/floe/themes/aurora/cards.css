@@ -1,0 +1,1 @@
+:scope.numbered > .card::before { color: var(--on-fill); background: var(--accent); border-radius: 50%; }

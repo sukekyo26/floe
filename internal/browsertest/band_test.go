@@ -52,8 +52,9 @@ const measureBand = `(() => {` + colours + `
 
 // TestUIBand draws Markdown in the look band in every theme, and parts in it in the default one: the parts are in
 // the page's text colour, not the band's, only a line's code is framed, and every text and focus ring in the band
-// reads on the ground under it, as measureContrast and measureRings measure. The parts are in the default theme
-// alone, as a part with no ground of its own (swiss's note) is drawn on the band's colour, which band's LIMIT tells.
+// reads on the ground under it, as measureContrast and measureRings measure. The parts are in the default theme, as a
+// part with no ground of its own (swiss's note) is drawn on the band's colour, which band's LIMIT tells, and in aurora,
+// whose glass would let the band through but for its band.css.
 func TestUIBand(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	for name, text := range bandKit {
@@ -70,7 +71,7 @@ func TestUIBand(t *testing.T) { //nolint:paralleltest // the browser tests share
 		t.Fatal(err)
 	}
 	_, _, themes, _ := k.Names()
-	pages := map[string]string{"parts": bandParts}
+	pages := map[string]string{"parts": bandParts, "parts-aurora": bandParts + "theme: aurora\n"}
 	for _, theme := range themes {
 		pages["text-"+theme] = bandText + "theme: " + theme + "\n"
 	}

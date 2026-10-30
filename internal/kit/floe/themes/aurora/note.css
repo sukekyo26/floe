@@ -1,0 +1,8 @@
+/* A note is glass tinted with its tone */
+:scope {
+  background: color-mix(in srgb, var(--accent-soft) var(--aurora-tint), transparent); border: 1px solid var(--aurora-edge); border-radius: 22px;
+  box-shadow: 0 10px 30px -12px var(--shadow);
+}
+:scope.good { background: color-mix(in srgb, var(--good-soft) var(--aurora-tint), transparent); }
+:scope.warn { background: color-mix(in srgb, var(--warn-soft) var(--aurora-tint), transparent); }
+:scope.bad { background: color-mix(in srgb, var(--bad-soft) var(--aurora-tint), transparent); }
