@@ -104,7 +104,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   server at `http://127.0.0.1:7325`, started in the background when it is not
   running; `--link` registers a file in place instead: an HTML file shown as it
   is, or a data file drawn each time its page is opened, the open tab reloading
-  when it is saved.
+  when it is saved. A server a command cannot use (of another store, drawing
+  with other directories, outdated and not stopping) is refused with what to
+  do, then to run that command again.
 - Add `floe check` and `floe render`: check data files without writing them,
   and write each page to an HTML file that opens without floe (`--check` for
   CI), the mistakes printed as `file:line:column: message`, every one of a
