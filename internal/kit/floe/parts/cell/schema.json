@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "cell",
-  "description": "A line of Markdown, or a pill { pill: a short status, as it is, tone }; quote one holding ': '",
+  "description": "A line of Markdown, quoted when it holds ': '; or a pill { pill: a short status, as it is, tone }, written as an object, not in quotes",
   "type": ["string", "object"],
   "properties": {
     "pill": { "type": "string", "minLength": 1 },

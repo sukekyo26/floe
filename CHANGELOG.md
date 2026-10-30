@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add a table's columns written as their titles alone (`columns: [Risk, Owner]`),
+  an object `{ title, num, pills }` only for a column holding more; and a
+  column's `pills`, words with their tones (`{ done: good, open: bad }`), for a
+  cell of the column that is one of them, whole, to be drawn as that pill
+  without `{ pill, tone }` written in each cell.
+- Add the function `written` to a part's `part.html`: the part's value as
+  written, its parts and formats not drawn, to compare a cell with a word
+  (floe's `table` matches a column's `pills` so).
 - Add the part `entries`: records one under another, each a heading, its tags
   (a line of Markdown or a pill, as a table's cells) on the line under it, and
   Markdown text the full width, for rows whose names are short and whose rest

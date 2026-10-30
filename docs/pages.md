@@ -23,12 +23,9 @@ sections:
           steps:
             - { run: wiki export --out pages/, out: 1840 pages written }
       - table:
-          columns:
-            - title: Risk
-            - { title: Pages, num: true }
-            - title: State
+          columns: [Risk, { title: Pages, num: true }, { title: State, pills: { watching: warn, done: good } }]
           rows:
-            - [Broken links, '120', { pill: watching, tone: warn }]
+            - [Broken links, '120', watching]
       - note: { tone: warn, text: Edits during the freeze are lost. }
 ```
 
@@ -69,7 +66,7 @@ Each part is one key naming its kind. `floe part list` lists them with a line ea
 | `text` | Markdown, tables included; raw HTML in it is left out. A fenced block of code (```` ``` ````) is drawn as plain code and warned of: write code in `code` and commands in `terminal`. An image file named in it is not shown, only a data URI of a png, gif, jpeg or webp: write images in `image`. |
 | `code` | Code as it is, under its `file` with its `lang`. A button over it copies the code. |
 | `terminal` | Commands (`run`) and what they printed (`out`), at the prompt of its `shell` (`bash`, `sh`, `zsh`, `powershell`, `cmd`). floe draws the prompt, so a `run` that starts with one (`$ ls`) is refused. A button over them copies the commands, a line each, without the prompt or what they printed. |
-| `table` | `columns` and `rows`; each cell is a line of Markdown, a number in quotes as it is drawn, or a pill `{ pill, tone }`. |
+| `table` | `columns` and `rows`. A column is its title, or `{ title, num, pills }`: `num: true` for numbers, and `pills`, words with their tones (`{ done: good }`), for a cell of the column that is one of them, whole, to be drawn as that pill. A cell is a line of Markdown, a number in quotes as it is drawn, or a pill `{ pill, tone }`, written as an object, not in quotes. |
 | `entries` | Records one under another, each a `title` (a line of Markdown), its `tags` on the line under it (each as a table's cell: a line of Markdown or a pill) and its `text` (Markdown) the full width. For rows whose names are short and whose rest is long: a table squeezes the long text into a narrow column. Keep a `table` when the rows are compared column by column (before and after, input and output), and a `timeline` for what happened in order. A tag shows no column's name, so say in it what it is (`merged 2026-10-30`). Code in `text` is drawn as it is, without a copy button; put it in a `code` part after the entries. |
 | `image` | An image, such as a screenshot: its `file` and its `alt`, what it shows ([Images](#images)). |
 | `cards`, `note`, `stats`, `progress`, `steps`, `checklist` | Cards, a note in a tone, large numbers, bars of progress, numbered steps, items ticked once done. |
