@@ -310,8 +310,8 @@ func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error 
 func (s *items) named(d *doc.Data, marks []occurrence, n int, told *usererr.Error) *usererr.Error {
 	var starts []occurrence
 	for i, o := range marks {
-		named := slices.ContainsFunc(starts, func(p occurrence) bool { return p.n == o.n })
-		if o.exact && !o.end && !named && moved(marks, i) {
+		listed := slices.ContainsFunc(starts, func(p occurrence) bool { return p.n == o.n })
+		if o.exact && !o.end && !listed && moved(marks, i) {
 			if o.n == n {
 				starts = slices.Insert(starts, 0, o)
 			} else {
