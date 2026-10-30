@@ -17,17 +17,19 @@ import (
 // each part the page names a box of, and of each look the page or those parts take, before the parts that take it
 // and the parts that place it (those whose boxes hold its box), which adjust it; then the theme's style of each of
 // those parts in the same order, which wins over theirs, their @media print too.
-// Within the layer the more specific rule wins, else the later.
+// Within the layer the more specific rule wins, else the one of the nearer scope, else the later.
 // An element that takes a look without being a part's box (a card of options) has it a layer under the
 // template's and the parts', floe.looks: the part it is in, or the template it is the template's own of,
 // adjusts it whatever the selectors, as a part does the looks it takes, where the nearer scope would win
-// otherwise.
+// otherwise; and the theme's base.css, a layer under, wins over none of its looks, unless with !important. A layer of
+// their own, not the theme's, as in one layer specificity and the nearer scope would decide instead.
 // LIMIT: such elements share the layer, so the look of one held in another wins over the outer's rules for
 // it by the nearer scope. Make the outer a part's box (data-floe-part) if HTML comes to nest them so.
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
 // LIMIT: a theme's file of a look wins over a part's adjustment of it; move it after the look's if a part needs one.
+// LIMIT: !important turns the layers' order round (an earlier layer's wins), and floe does not refuse it.
 func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) {
 	themed, ok := k.Theme(theme)
 	base, okBase := k.Theme(kit.DefaultTheme)

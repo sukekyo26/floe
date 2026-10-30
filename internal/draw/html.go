@@ -249,14 +249,14 @@ func (s *items) next(text string) (n int, end bool, rest string, ok bool) {
 // left open and the attributes it adds to body or html are not checked; check them in the browser (B12).
 // page.html puts an item where elements go; between html and head, the probe is dropped and a right item is
 // refused.
-// LIMIT: in a table, tbody, thead, tfoot, tr or colgroup, the parser's foster parenting decides. Refused: what is
-// not of that place (rows straight in a table, read into a tbody of their own; cells in a tbody; rows in a tr;
-// text in a colgroup), and formatting left open at the item's end. Drawn moved, unchecked by the marks and the
-// probe but for what checkPage refuses in the whole page: the item's text and elements that are no part of a
-// table, and text page.html writes beside the item, put before the table, and formatting left open before its
-// rows or misnested (<b><i>x</b>), rebuilt in what page.html writes after the table. A name of a part moved out
-// of a table is told at template:, by checkPage. Probe with text the parser moves too if pages come to put items
-// there.
+// LIMIT: in a table, tbody, thead, tfoot, tr or colgroup, the parser's foster parenting decides. Refused: what is not
+// of that place (rows straight in a table, read into a tbody of their own; cells in a tbody; rows in a tr; text in a
+// colgroup), and formatting left open at the item's end, put before the table with the item's end and named by named.
+// Drawn moved, unchecked by the marks and the probe but for what checkPage refuses in the whole page: the item's text
+// and elements that are no part of a table, and text page.html writes beside the item, put before the table, and
+// formatting left open before its rows or misnested (<b><i>x</b>), rebuilt in what page.html writes after the table. A
+// name of a part moved out of a table is told at template:, by checkPage. Probe with text the parser moves too if pages
+// come to put items there.
 func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error {
 	if len(s.html) == 0 {
 		return nil
@@ -274,20 +274,22 @@ func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error 
 			// LIMIT: told at template:, whether page.html or a part's part.html put the item there: which of them did
 			// is not known without marks around a part's output too, which would refuse part.html left open as an
 			// item's is. Mark a part's output if one comes to need it told at part.html.
-			found = append(found, yamlpos.New(d.File, d.Where["template"], "draw_html_placed",
-				strings.Join(s.html[o.n], "."), o.holder))
+			found = append(found, s.placed(d, marks, i))
 			break
+		}
+		whole := func(where string) *usererr.Error {
+			return s.named(d, marks, i, yamlpos.New(d.File, pos, "draw_html_whole", where))
 		}
 		end := slices.IndexFunc(marks[i+1:], func(p occurrence) bool { return p.n == o.n && p.end })
 		if end < 0 {
-			refuse("draw_html_whole", unfinished(s.texts[o.n]))
+			found = append(found, whole(unfinished(s.texts[o.n])))
 			break
 		}
 		if e := marks[i+1+end]; !e.exact {
-			refuse("draw_html_whole", e.holder)
+			found = append(found, whole(e.holder))
 			break
 		} else if where := changed(o.n, o.node, e.node); where != "" {
-			refuse("draw_html_whole", where)
+			found = append(found, whole(where))
 			break
 		}
 		for n := o.node.NextSibling; n != marks[i+1+end].node; n = n.NextSibling {
@@ -298,6 +300,79 @@ func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error 
 		}
 	}
 	return found.Err()
+}
+
+// placed returns the mistake of marks[i], a mark of an item in a text or an attribute, told at template:: page.html
+// or a part's part.html put the item there; but for an end, which the item left open what holds out of a table,
+// named.
+func (s *items) placed(d *doc.Data, marks []occurrence, i int) *usererr.Error {
+	o := marks[i]
+	told := yamlpos.New(d.File, d.Where["template"], "draw_html_placed", strings.Join(s.html[o.n], "."), o.holder)
+	if o.end {
+		return s.named(d, marks, i, told)
+	}
+	return told
+}
+
+// named returns the mistake of an item that changed the page, told at marks[at], a mark of the item check refused:
+// the elements an item leaves open, as reread says, at that item. It reads again, in the page's order, each copy of
+// that item, and of the items with a mark before marks[at], whose moving made the item look changed, that the parser
+// moved: the k-th start of an item, a comment of its own, whose k-th end, a comment of its own, is not after it (an
+// item drawn twice has two of each); told when none says one. It names alone: the page is refused whichever it
+// returns.
+// LIMIT: an item is read again in the element its start is in, as the parser put it, alone: not in the elements
+// above it, nor the formatting page.html left open. Where they would change its reading, it may name none, and the
+// mistake check read is told.
+func (s *items) named(d *doc.Data, marks []occurrence, at int, told *usererr.Error) *usererr.Error {
+	before := map[int]bool{}
+	for _, o := range marks[:at] {
+		before[o.n] = true
+	}
+	ends := map[int][]int{}
+	for i, o := range marks {
+		if o.exact && o.end {
+			ends[o.n] = append(ends[o.n], i)
+		}
+	}
+	kth := map[int]int{}
+	for i, o := range marks {
+		if !o.exact || o.end {
+			continue
+		}
+		k := kth[o.n]
+		kth[o.n]++
+		if o.n != marks[at].n && !before[o.n] || k < len(ends[o.n]) && ends[o.n][k] > i {
+			continue
+		}
+		if where := s.reread(o); where != "" {
+			return yamlpos.New(d.File, d.PosOf(s.html[o.n]), "draw_html_whole", where)
+		}
+	}
+	return told
+}
+
+// reread reads the text of the item that start, a comment of its own, starts, alone, as the parser reads HTML in the
+// element the page put start in, a comment of the secret after it, and returns the elements that hold that comment,
+// outside in, or the one whose text does: those the item leaves open; "" for none, or when it is not found.
+func (s *items) reread(start occurrence) string {
+	at := s.secret + "q"
+	nodes, err := html.ParseFragment(strings.NewReader(s.texts[start.n]+"<!--"+at+"-->"), start.node.Parent)
+	if err != nil {
+		return ""
+	}
+	for _, top := range nodes {
+		for n := range top.Descendants() {
+			switch {
+			case n.Type == html.CommentNode && n.Data == at, n.Type == html.TextNode && strings.Contains(n.Data, at):
+				var open []string
+				for p := n.Parent; p != nil; p = p.Parent {
+					open = append([]string{"<" + p.Data + ">"}, open...)
+				}
+				return strings.Join(open, " ")
+			}
+		}
+	}
+	return ""
 }
 
 // unfinished returns where text, read alone, ends in a tag it does not finish: what is past the last token a
