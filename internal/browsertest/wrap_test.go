@@ -37,6 +37,10 @@ sections:
               ` + "```" + `
               floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml
               ` + "```" + `
+
+              | name | kind | where | what | state | owner |
+              | --- | --- | --- | --- | --- | --- |
+              | export | nightly | wiki.conf | writes pages | running | platform |
 `
 
 // measureWrap returns one line for a page wider than 390 px, one for each part's box, or a box in it, that is wider
