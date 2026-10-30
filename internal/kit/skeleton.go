@@ -4,7 +4,7 @@ import "fmt"
 
 // The files of the smallest part and template Load takes, but those naming them, to fill in. A template's page
 // keeps its language and title, without which a page reads as broken, and a viewport, without which a phone draws
-// the page opened by itself 980px wide and shrinks it. No charset: floe adds it as it draws the page.
+// the page opened by itself 980px wide and shrinks it. No charset: floe gives it.
 const (
 	skeletonSchema = `{
   "$schema": "https://json-schema.org/draft/2020-12/schema",

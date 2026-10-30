@@ -176,4 +176,6 @@ adheres to [Semantic Versioning](https://semver.org/).
   data file, however many diagrams and files need them.
 - Add a page's CSP, which keeps the scripts of a page drawn from a data file
   from sending what it holds out, on the server and in a page `floe render`
-  writes.
+  writes or a download gives. Such a page holds one charset, floe's, first in
+  its head, in place of those `page.html` writes; `floe render --check` tells a
+  page written before with two.
