@@ -173,9 +173,9 @@ func TestDrawMistakes(t *testing.T) {
 		return "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>t</title></head>\n<body>\n" + body + "\n</body></html>\n"
 	}
 	for _, tt := range []struct{ name, page, want string }{
-		{"num", page("<p>{{.Data.n | num}}</p>"), "templates/mine/page.html:4:16: num takes a number, not abc (string)"},
+		{"num", page("<p>{{.Data.n | num}}</p>"), `templates/mine/page.html:4:16: num takes a number, not "abc"`},
 		{"no key", page("あいう{{.Data.x.y}}"), `templates/mine/page.html:4:11: executing "page.html" at <.Data.x.y>: map has no entry for key "x"`},
-		{"in a define", "{{define \"x\"}}\n\t{{num .}}{{end}}" + page("{{template \"x\" .Data.n}}"), `templates/mine/page.html:2:4: num takes a number, not abc (string)`},
+		{"in a define", "{{define \"x\"}}\n\t{{num .}}{{end}}" + page("{{template \"x\" .Data.n}}"), `templates/mine/page.html:2:4: num takes a number, not "abc"`},
 	} {
 		k := ownKit(t, nil, mine(tt.page, mineSchema, nil))
 		if got := drawn(t, k, "lang: en\ntemplate: mine\nn: abc\n", none); got != tt.want {
@@ -190,7 +190,7 @@ func TestDrawMistakes(t *testing.T) {
 	}, mine(minePage, `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"bigs": {"type": "array", "items": {"$ref": "floe:///parts/big.json"}}}}`, nil))
 	got := drawn(t, k, "lang: en\ntemplate: mine\nbigs:\n  - n: abc\n  - n: xyz\n", none)
-	if want := lines("d.yaml:4:5: num takes a number, not abc (string)", "d.yaml:5:5: num takes a number, not xyz (string)"); got != want {
+	if want := lines(`d.yaml:4:5: num takes a number, not "abc"`, `d.yaml:5:5: num takes a number, not "xyz"`); got != want {
 		t.Errorf("a part told\n%s\nwant\n%s", got, want)
 	}
 }
