@@ -679,7 +679,7 @@ func TestPrepareLinkFolder(t *testing.T) {
 
 	top, err := s.Pages("docs", "")
 	if err != nil || !slices.Equal(top.Dirs, []string{"guide"}) || len(top.Pages) != 1 || top.Pages[0].File != "index.html" ||
-		top.Pages[0].UpdatedAt == "" {
+		top.Pages[0].Modified.IsZero() {
 		t.Errorf("Pages(docs) = %+v, %v", top, err)
 	}
 	if err = os.WriteFile(filepath.Join(proj, "docs/guide/new.html"), nil, 0o600); err != nil {

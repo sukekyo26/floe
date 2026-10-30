@@ -1,9 +1,15 @@
 package browsertest_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
+
+	"github.com/sukekyo26/floe/internal/link"
 )
 
 // TestUIFolders opens a linked folder's tree in the list: its URL leads to the list with it open, a directory is read
@@ -27,13 +33,18 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	page("docs/guide/deep/x.html", "../../")
 	page("docs/a,b:c/odd.html", "../")
 	s.write(t, "docs/s.css", "h1 { color: rgb(1, 2, 3); }")
+	// A directory of no page, whose note the keys pass over; one of more pages than a directory lists, whose last opens all the same.
+	s.write(t, "docs/assets/a.css", "")
+	for i := range link.MaxListed + 1 {
+		s.write(t, fmt.Sprintf("docs/big/p%04d.html", i), "<p>big</p>")
+	}
 	docs := filepath.Join(s.Env["HOME"], "docs")
 	s.floe(t, "publish", "--link", docs)
 
 	// The rows under the folder, a directory's name with its state, and the directories read so far
 	rows := `[...document.querySelectorAll('#list li.tree')].map((li) => {
 		const b = li.querySelector('button.title');
-		return b ? b.textContent + (b.getAttribute('aria-expanded') === 'true' ? '-' : '+') : li.querySelector('.title')?.textContent ?? li.textContent.trim();
+		return b ? b.textContent + (b.getAttribute('aria-expanded') === 'true' ? '-' : '+') : li.querySelector('.title')?.textContent ?? '(' + li.textContent.trim() + ')';
 	}).join(',')`
 	read := `performance.getEntriesByType('resource').map((e) => new URL(e.name)).filter((u) => u.pathname.endsWith('/pages'))
 		.map((u) => u.searchParams.get('dir') || '.').filter((d, i, all) => all.indexOf(d) === i).sort().join(',')`
@@ -48,17 +59,26 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/a/docs/")
 	out = append(out, b.until("the folder open", "location.pathname === '/' && document.querySelectorAll('#list li.tree').length > 0 && location.search"))
 	out = append(out, b.eval(rows))
-	click("guide/")
+	click("guide")
 	b.until("guide open", "document.querySelectorAll('#list li.tree').length > 3")
-	click("a,b:c/")
+	click("a,b:c")
 	b.until("a,b:c open", rows+".includes('odd.html')")
 	out = append(out, b.eval(opens))
 	// Reloaded, what was open is again, read once each; the directory under guide, never opened, is not read.
 	b.navigate(b.eval("location.pathname + location.search"))
 	out = append(out, b.until("the tree again", rows+".includes('odd.html') && "+rows), b.eval(read))
 	// Closed, guide's rows go, and it leaves the URL.
-	click("guide/")
+	click("guide")
 	out = append(out, b.until("guide closed", "!"+rows+".includes('setup') && "+rows), b.eval(opens))
+	// ↓ passes over a note, which has nothing to focus, to the row after it.
+	click("assets")
+	b.until("assets open", rows+".includes('(No HTML')")
+	b.eval(`[...document.querySelectorAll('#list li.tree button.title')].find((x) => x.textContent === 'assets').focus()`)
+	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.ArrowDown)); err != nil {
+		t.Fatal(err)
+	}
+	out = append(out, b.eval("document.activeElement.textContent"))
+	click("assets")
 	// A page added shows at the next poll.
 	page("docs/new.html", "")
 	out = append(out, b.until("the page added", rows+".includes('new.html') && "+rows))
@@ -83,6 +103,10 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/a/docs/guide/setup.html")
 	out = append(out, b.eval("getComputedStyle(document.querySelector('h1')).color"))
 
+	// A page past what its directory lists opens, as the server serves it.
+	b.navigate("/a/docs/?file=big%2Fp1000.html")
+	out = append(out, b.until("the page past the list", "!document.getElementById('frame').hidden && document.getElementById('frame-title').textContent"))
+
 	// Gone, the folder says so and opens nothing.
 	if err := os.Rename(docs, docs+"-moved"); err != nil {
 		t.Fatal(err)
@@ -96,16 +120,18 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Added from the dialog, a folder is opened.
 	s.write(t, "more/m.html", "<title>m</title>")
 	b.navigate("/?tab=links")
-	b.eval(`document.getElementById('add-folder').click();
-		document.getElementById('add-path').value = ` + js(filepath.Join(s.Env["HOME"], "more")) + `;
+	// Opened for a folder, the dialog shows the folder's icon in place of the link's.
+	b.eval("document.getElementById('add-folder').click()")
+	out = append(out, b.eval("['add-icon-link', 'add-icon-folder'].map((id) => getComputedStyle(document.getElementById(id)).display).join()"))
+	b.eval(`document.getElementById('add-path').value = ` + js(filepath.Join(s.Env["HOME"], "more")) + `;
 		document.getElementById('add').requestSubmit()`)
 	out = append(out, b.until("the folder added", rows+".includes('m.html') && new URLSearchParams(location.search).get('tab') + ' ' + "+opens),
 		b.eval("document.getElementById('add-title').textContent"))
 
-	check(t, "folders", out, "?tab=folders&open=docs|a,b:c/+,guide/+,index.html|docs,docs:guide,docs:a,b:c|"+
-		"a,b:c/-,odd.html,guide/-,deep/+,setup.html,start.html,index.html|.,a,b:c,guide|"+
-		"a,b:c/-,odd.html,guide/+,index.html|docs,docs:a,b:c|a,b:c/-,odd.html,guide/+,index.html,new.html|"+
+	check(t, "folders", out, "?tab=folders&open=docs|a,b:c+,assets+,big+,guide+,index.html|docs,docs:guide,docs:a,b:c|"+
+		"a,b:c-,odd.html,assets+,big+,guide-,deep+,setup.html,start.html,index.html|.,a,b:c,guide|"+
+		"a,b:c-,odd.html,assets+,big+,guide+,index.html|docs,docs:a,b:c|big|a,b:c-,odd.html,assets+,big+,guide+,index.html,new.html|"+
 		"docs / guide/setup.html|/a/docs/guide/setup.html#end|true,true,true|none yet|"+
-		"?file=guide%2Fsetup.html#top|the page at #end|guide/setup.html*,guide/start.html|rgb(1, 2, 3)|tree rows 0|"+
-		"folders more|Add a folder")
+		"?file=guide%2Fsetup.html#top|the page at #end|guide/setup.html*,guide/start.html|rgb(1, 2, 3)|docs / big/p1000.html|tree rows 0|"+
+		"none,block|folders more|Add a folder")
 }

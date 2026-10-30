@@ -257,7 +257,7 @@ func (s *Store) listed(slug string, m *Meta) Listed {
 		} else if l.Title == "" {
 			l.Title = name
 		}
-		missing := !isDir(m.Path)
+		missing := !link.IsFolder(m.Path)
 		l.Missing = &missing
 		return l
 	}
@@ -278,48 +278,21 @@ func (s *Store) listed(slug string, m *Meta) Listed {
 	return l
 }
 
-// isDir reports whether dir is a directory by its real path, as a folder's link serves it.
-func isDir(dir string) bool {
-	resolved, err := filepath.EvalSymlinks(dir)
-	if err != nil || resolved != dir {
-		return false
-	}
-	fi, err := os.Stat(dir)
-	return err == nil && fi.IsDir()
-}
-
-// Listing is a directory of a folder's link, as GET /api/artifacts/{slug}/pages answers it (see link.Dir).
-type Listing struct {
-	Dirs  []string `json:"dirs"`
-	Pages []Page   `json:"pages"`
-	More  int      `json:"more"`
-}
-
-// Page is a page of a folder: its path under the folder and when it changed.
-type Page struct {
-	File      string `json:"file"`
-	UpdatedAt string `json:"updatedAt"`
-}
-
 // Pages lists the directory dir ("" for the top) of the folder slug links, as link.Dir does: ErrNotFound for a slug
 // that is no folder's link or a directory that is none of it.
-func (s *Store) Pages(slug, dir string) (Listing, error) {
+func (s *Store) Pages(slug, dir string) (link.Listing, error) {
 	m := s.ReadMeta(slug)
-	if _, ok := s.dir(slug); !ok || m == nil || !m.Folder {
-		return Listing{}, ErrNotFound
+	if m == nil || !m.Folder {
+		return link.Listing{}, ErrNotFound
 	}
 	l, err := link.Dir(m.Path, dir)
 	if errors.Is(err, link.ErrNoDir) {
-		return Listing{}, ErrNotFound
+		return l, ErrNotFound
 	}
 	if err != nil {
-		return Listing{}, usererr.CannotRead(m.Path, err) //nolint:wrapcheck // the system's words, at the folder
+		return l, usererr.CannotRead(m.Path, err) //nolint:wrapcheck // the system's words, at the folder
 	}
-	out := Listing{Dirs: append([]string{}, l.Dirs...), Pages: []Page{}, More: l.More}
-	for _, p := range l.Pages {
-		out.Pages = append(out.Pages, Page{File: p.File, UpdatedAt: p.Modified.UTC().Format(isoMillis)})
-	}
-	return out, nil
+	return l, nil
 }
 
 // modTime is the mtime of file, or "" when it cannot be read.

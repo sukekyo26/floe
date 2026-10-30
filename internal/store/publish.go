@@ -380,15 +380,11 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, bool
 	if err != nil {
 		return "", nil, false, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
 	}
-	if err = link.Check(path, home); err != nil {
+	folder, err := link.Check(path, home)
+	if err != nil {
 		return "", nil, false, err //nolint:wrapcheck // a usererr for the caller to show
 	}
-	// Check let only a regular file or a folder through; a folder named config.yml is no data file.
-	fi, err := os.Stat(path)
-	if err != nil {
-		return "", nil, false, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
-	}
-	folder := fi.IsDir()
+	// A folder named config.yml is no data file.
 	if (folder || !files.IsDataFile(path)) && opts.theme() != "" {
 		return "", nil, false, usererr.New("store_theme_link")
 	}
