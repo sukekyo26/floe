@@ -63,7 +63,7 @@ sections:
             - title: Risk
             - title: Likelihood
             - { title: Pages, num: true }
-            - title: What we do ([`linkcheck`](https://example.com/linkcheck))
+            - title: What we do ([a check](https://example.com/linkcheck), `linkcheck`)
             - title: State
           rows:
             - [Broken links, High, '120', A link check after the copy, { pill: watching, tone: warn }]
