@@ -291,7 +291,8 @@ blockquote > * + * { margin-top: 0.6rem; }
   display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
-.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
+.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
 .card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
 }
 }
@@ -301,7 +302,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
 /* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
 .option.pick { outline: 2px solid var(--accent); outline-offset: -1px; }
-.option h3 > span { margin-left: 0.4rem; vertical-align: 0.1em; }
+.option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
 /* The pros and cons alone, not a list in the text */
 .option .points { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
 /* The mark hangs at the left, so that a line of text and code flows as one */
@@ -495,6 +496,8 @@ h2 { font-size: 1.4rem; }
 header { display: grid; gap: 0.7rem; }
 section { display: grid; gap: 1rem; }
 section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
+.sub { margin-top: 0.5rem; }
+.sub > h3 { font-size: 1.15rem; }
 .eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .lead { color: var(--muted); font-size: 1.05rem; }
 .muted { color: var(--muted); }
@@ -654,9 +657,9 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 <div class="numbered" data-floe-part="options">
-<div class="card option" data-floe-look="panel"><h3 id="one">One</h3><p>First.</p>
+<div class="card option" data-floe-look="panel"><div class="title">One</div><p>First.</p>
 </div>
-<div class="card option" data-floe-look="panel"><h3 id="two">Two</h3><p>Second.</p>
+<div class="card option" data-floe-look="panel"><div class="title">Two</div><p>Second.</p>
 </div>
 </div>
 <form data-floe-part="tabs">

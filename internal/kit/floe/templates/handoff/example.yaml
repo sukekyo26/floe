@@ -1,6 +1,6 @@
 # A handoff: only the date is required. What the reader is to decide goes in asks, first on the page; what is done,
-# in progress and next go in done, doing and next, side by side. Sections of your own, each a heading over parts as
-# in report, go in more.
+# in progress and next go in done, doing and next, side by side. Sections of your own, each a heading over parts,
+# go in more.
 template: handoff
 lang: en
 title: Checkout redesign

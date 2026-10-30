@@ -127,7 +127,8 @@ blockquote > * + * { margin-top: 0.6rem; }
   display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
-.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
+.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
 .card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
 }
 }

@@ -1,1 +1,1 @@
-description: Cards side by side, each a class="card" child in a panel (data-floe-look="panel"), numbered by their place when the element is class="numbered"; take it by looks or data-floe-look="cards"
+description: Cards side by side, each a class="card" child in a panel (data-floe-look="panel") with its title in a class="title" child, numbered by their place when the element is class="numbered"; take it by looks or data-floe-look="cards"

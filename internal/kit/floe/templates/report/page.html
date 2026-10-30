@@ -23,6 +23,16 @@
 {{- end}}
 {{- range .parts}}{{range .}}{{with .}}
 {{.}}{{end}}{{end}}{{end}}
+{{- /* LIMIT: subsections are one level, drawn after the section's parts. For a deeper level or parts after them, draw a
+   section by a defined template that takes its level, and place its mistakes at page.html's lines, as draw does those
+   of page.html */}}
+{{- range .sections}}
+<section class="sub">
+<h3>{{.heading}}</h3>
+{{- range .parts}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}
+</section>
+{{- end}}
 </section>
 {{- end}}
 </main>

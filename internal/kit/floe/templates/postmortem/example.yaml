@@ -1,6 +1,6 @@
 # An incident review: the summary, the timeline and the cause are required. The impact goes in effects, a name and
 # a value each; what went well, badly and by luck in lessons; what is done next in actions; and sections of your own,
-# each a heading over parts as in report, in more.
+# each a heading over parts, in more.
 template: postmortem
 lang: en
 title: Checkout failed for 47 minutes after a certificate expired
