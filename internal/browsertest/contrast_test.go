@@ -7,6 +7,7 @@ import (
 
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/chromedp"
+
 	"github.com/sukekyo26/floe/internal/kit"
 )
 
