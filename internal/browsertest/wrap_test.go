@@ -1,14 +1,15 @@
 package browsertest_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
 
 // wrapPage holds a path and a URL in options, which have no place to break a line, words beside narrow
 // columns (keys' text beside its keycaps, the language of code and the counts of a diff beside a long file
-// name), a path in a table and in a tree's note, which scroll instead, and entries with a long path, a long pill
-// and a long line of code in its text.
+// name), a path in a table and in a tree's note, which scroll instead, and entries with a long URL for a title, a
+// long path, a long pill and a long line of code in its text.
 const wrapPage = `template: report
 lang: en
 title: Wrap
@@ -29,8 +30,8 @@ sections:
       - tree:
           - { path: internal/kit/floe/parts/, note: internal/kit/floe/parts/findings/part_internal_test.go }
       - entries:
-          - title: '` + "`internal/kit/floe/parts/findings/part_internal_test.go`" + `'
-            tags: ['` + "`internal/kit/floe/parts/findings/part.html`" + `', { pill: blocked until the platform team reviews the export, tone: warn }]
+          - title: https://github.com/sukekyo26/floe/pull/313/files/a0a4ebfb0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8
+            tags: ['` + "`internal/kit/floe/parts/findings/part.html`" + `', { pill: blocked until the platform team reviews the export and the import and the backup of every page, tone: warn }]
             text: |
               The whole command:
 
@@ -43,11 +44,11 @@ sections:
               | export | nightly | wiki.conf | writes pages | running | platform |
 `
 
-// measureWrap returns one line for a page wider than 390 px, one for each part's box, or a box in it, that is wider
-// than its place or reaches past 390 px, out of those that scroll sideways, and one for each
+// measureWrap returns one line for a page wider than the window, one for each part's box, or a box in it, that is
+// wider than its place or reaches past the window, out of those that scroll sideways, and one for each
 // word that breaks across lines in keys' text, code's language, a diff's counts, a table and a tree's note.
 const measureWrap = `(() => {
-  const out = [];
+  const out = [], w = innerWidth;
   // What is in a box that scrolls sideways may be wider than it.
   const scrolled = (e) => {
     for (let a = e.parentElement; a; a = a.parentElement) {
@@ -56,11 +57,11 @@ const measureWrap = `(() => {
     return false;
   };
   // A phone's emulated screen widens to the page, so the page is held to the width set, and each part's box too.
-  if (document.documentElement.scrollWidth > 390) out.push('the page is ' + document.documentElement.scrollWidth + ' px wide');
+  if (document.documentElement.scrollWidth > w) out.push('the page is ' + document.documentElement.scrollWidth + ' px wide');
   for (const e of document.querySelectorAll('[data-floe-part], [data-floe-part] *')) {
     const s = getComputedStyle(e);
     if (scrolled(e) || ['auto', 'scroll'].includes(s.overflowX) || s.display === 'inline') continue;
-    if (e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > 391) out.push('overflows: ' + e.textContent.trim().slice(0, 40));
+    if (e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > w + 1) out.push('overflows: ' + e.textContent.trim().slice(0, 40));
   }
   const whole = '[data-floe-part=keys] dd, [data-floe-part=code] .lang, [data-floe-part=diff] figcaption > :not(.file), td, [data-floe-part=tree] .note';
   for (const e of document.querySelectorAll(whole)) {
@@ -77,19 +78,22 @@ const measureWrap = `(() => {
   return out.join('\n');
 })()`
 
-// TestUIWrap draws a page as wide as a phone (390 px): a path or a URL breaks rather than overflow its card,
-// and no other word breaks for it.
+// TestUIWrap draws a page as wide as a phone (390 px), and as a narrow window (620 px), wider than where parts lay
+// out for a phone: a path or a URL breaks rather than overflow its card, and no other word breaks for it.
 func TestUIWrap(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	s.floe(t, "publish", s.write(t, "wrap.yaml", wrapPage), "--slug", "wrap")
-	b.size(390, 844, true)
-	b.navigate("/a/wrap/?raw")
-	// A phone's scrollbar is drawn over the page, so that the page is laid out 390 px wide, as measureWrap takes it.
-	if got := b.eval("innerWidth + ' ' + document.documentElement.clientWidth"); got != "390 390" {
-		t.Fatalf("at 390 px the page is laid out %s wide", got)
-	}
-	if got := b.eval(measureWrap); got != "" {
-		t.Errorf("at 390 px:\n  %s", strings.ReplaceAll(got, "\n", "\n  "))
+	for _, w := range []int64{390, 620} {
+		b.size(w, 844, true)
+		b.navigate("/a/wrap/?raw")
+		// A phone's scrollbar is drawn over the page, so that the page is laid out as wide as the window, as measureWrap
+		// takes it.
+		if got, want := b.eval("innerWidth + ' ' + document.documentElement.clientWidth"), fmt.Sprintf("%d %d", w, w); got != want {
+			t.Fatalf("at %d px the page is laid out %s wide", w, got)
+		}
+		if got := b.eval(measureWrap); got != "" {
+			t.Errorf("at %d px:\n  %s", w, strings.ReplaceAll(got, "\n", "\n  "))
+		}
 	}
 }

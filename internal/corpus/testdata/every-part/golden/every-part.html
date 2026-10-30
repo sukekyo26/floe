@@ -334,18 +334,16 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
    if pages come to put code in entries */
 :scope { margin: 0; display: grid; }
 :scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; padding: 0.55rem 1.2rem; }
-:scope dt { font-weight: 700; }
+:scope dt { min-width: 0; font-weight: 700; }
 :scope dd { margin: 0; }
 /* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
    them, which stays as large as in a table's cell */
-:scope .tags { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: 0.85rem; color: var(--muted); }
+:scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: 0.85rem; color: var(--muted); }
 :scope .tags > span { min-width: 0; }
 :scope .tags code { font-size: 0.86rem; }
 :scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; line-height: 1.65; }
-@media (max-width: 36rem) {
-  /* A long pill wraps rather than overflow the panel */
-  :scope .tags [data-floe-part] { white-space: normal; }
-}
+/* A long pill wraps rather than overflow the panel */
+:scope .tags [data-floe-part] { white-space: normal; }
 }
 }
 </style>
