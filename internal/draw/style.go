@@ -21,7 +21,8 @@ import (
 // An element that takes a look without being a part's box (a card of options) has it a layer under the
 // template's and the parts', floe.looks: the part it is in, or the template it is the template's own of,
 // adjusts it whatever the selectors, as a part does the looks it takes, where the nearer scope would win
-// otherwise.
+// otherwise; and the theme's base.css, a layer under, wins over none of its looks, however it is written. A layer of
+// their own, not the theme's, as in one layer specificity and the nearer scope would decide instead.
 // LIMIT: such elements share the layer, so the look of one held in another wins over the outer's rules for
 // it by the nearer scope. Make the outer a part's box (data-floe-part) if HTML comes to nest them so.
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
