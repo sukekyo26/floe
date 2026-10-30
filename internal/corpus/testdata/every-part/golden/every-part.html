@@ -1292,6 +1292,71 @@ banner = &#34;This wiki has moved to the new host.&#34;
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
+<figure data-floe-part="code"><pre><code data-floe-copy="">rsync --archive --delete --exclude &#39;*.tmp&#39; --exclude &#39;cache/&#39; --log-file=copy.log old-wiki:/srv/wiki/pages/ /srv/new-wiki/pages/
+</code></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 </section>
 <section>
 <h2 id="who-does-what">Who does what</h2>

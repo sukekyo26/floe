@@ -109,14 +109,15 @@ const measureContrast = `(() => {` + colours + `
 // in turn, and takes the outline that the
 // focus changes, on the element or around it. Under it is the ground of the element on top at 12 points along the
 // middle of its line (a quarter, a half and three quarters of each side), the colour of that element's border where
-// the point is on one; a point that a box around clips is left out. It returns one line for each ring below 3:1, as
-// WCAG asks of what is not text, at more than half of its points: a ring that crosses what lies beside it (the frame
-// of a line's code next to a link) is still seen on the rest. The page's tab must have the focus (SetFocusEmulationEnabled)
-// for a focus to be :focus-visible.
+// the point is on one; a point that a box around clips (at its padding box, as overflow clips) is left out, and one
+// off the screen too. It returns one line for each ring below 3:1, as WCAG asks of what is not text, at more than half
+// of its points: a ring that crosses what lies beside it (the frame of a line's code next to a link) is still seen on
+// the rest; one for each ring that boxes around clip at more than half of its points; and one for each element whose
+// focus draws no ring, on it or around it. The page's tab must have the focus (SetFocusEmulationEnabled) for a focus to
+// be :focus-visible.
 // LIMIT: a ring 2px wide over two grounds is measured on the one under the middle of its line (the edge of the
-// border 3px wide under brutal's heading of code is not), one low at fewer than half its points passes, and a ring
-// every point of which a box clips is measured nowhere: the scrolling code of the part code with no heading draws no
-// ring in themes with no padding round it.
+// border 3px wide under brutal's heading of code is not), and one low at fewer than half its points passes. The round
+// corners of a box clipping a ring are not seen, nor a scrollbar under a ring, which the test's Chrome hides.
 const measureRings = `(() => {` + colours + `
   const low = new Set();
   const outline = (e) => { const s = getComputedStyle(e); return s.outlineStyle + s.outlineWidth + s.outlineColor + s.outlineOffset; };
@@ -139,14 +140,23 @@ const measureRings = `(() => {` + colours + `
     const clips = [];
     for (let a = r.parentElement; a && a !== document.documentElement; a = a.parentElement) {
       const t = getComputedStyle(a);
-      if (t.overflowX !== 'visible' || t.overflowY !== 'visible') clips.push(a.getBoundingClientRect());
+      if (t.overflowX === 'visible' && t.overflowY === 'visible') continue;
+      // overflow clips at the padding box, inside the border and the scrollbar
+      const c = a.getBoundingClientRect(), left = c.left + a.clientLeft, top = c.top + a.clientTop;
+      clips.push({ left, top, right: left + a.clientWidth, bottom: top + a.clientHeight });
     }
     const xs = [0.25, 0.5, 0.75].map((f) => b.left + f * b.width), ys = [0.25, 0.5, 0.75].map((f) => b.top + f * b.height);
     const read = [];
+    let clipped = 0;
     for (const [x, y] of xs.flatMap((x) => [[x, b.top - d], [x, b.bottom + d]]).concat(ys.flatMap((y) => [[b.left - d, y], [b.right + d, y]]))) {
-      if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight || clips.some((c) => x < c.left || x >= c.right || y < c.top || y >= c.bottom)) continue;
+      if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+      if (clips.some((c) => x < c.left || x >= c.right || y < c.top || y >= c.bottom)) { clipped++; continue; }
       const bg = under(x, y), ring = over(faded(s.outlineColor, 1), bg);
       read.push({ bg, ring, q: ratio(ring, bg) });
+    }
+    if (clipped * 2 > 12) {
+      low.add(name(e) + (r === e ? '' : ' (its ring on ' + name(r) + ')') + ': ring clipped at ' + clipped + ' of 12 points');
+      return;
     }
     const lows = read.filter((p) => p.q < 3).sort((p, q) => p.q - q.q);
     if (lows.length * 2 > read.length) {
@@ -162,12 +172,44 @@ const measureRings = `(() => {` + colours + `
       for (let r = e; r && r !== document.documentElement; r = r.parentElement) before.push([r, outline(r)]);
       e.focus({ preventScroll: true });
       if (document.activeElement !== e) continue;
-      for (const [r, was] of before) if (r === e || outline(r) !== was) measure(e, r);
+      const rings = before.filter(([r, was]) => (r === e && getComputedStyle(r).outlineStyle !== 'none') || (r !== e && outline(r) !== was));
+      if (rings.length === 0) low.add(name(e) + ': no ring');
+      for (const [r] of rings) measure(e, r);
       e.blur();
     }
   });
   return [...low].join('\n');
 })()`
+
+// TestRings measures rings that measureRings tells of: one that the box it is in clips at its padding box, its
+// border around, and a focus that draws no ring.
+func TestRings(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	if _, err := chromedp.Call(b.ctx, emulation.SetFocusEmulationEnabled, emulation.SetFocusEmulationEnabledParams{Enabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	s.floe(t, "publish", s.write(t, "rings.yaml", "lang: en\ntemplate: report\ntitle: Rings\nsections: []\n"), "--slug", "rings")
+	b.navigate("/a/rings/?raw")
+	b.until("the page", "!!document.querySelector('h1')")
+	// The middle of the clipped ring's line, 1px off the button, lies on its box's border, 4px wide.
+	b.eval(`(() => {
+	  const box = document.createElement('div');
+	  Object.assign(box.style, { overflow: 'hidden', border: '4px solid black', width: '200px', margin: '40px' });
+	  const clipped = document.createElement('button');
+	  clipped.className = 'clipped';
+	  Object.assign(clipped.style, { display: 'block', width: '100%', outline: '2px solid black', outlineOffset: '1px' });
+	  box.append(clipped);
+	  const ringless = document.createElement('button');
+	  ringless.className = 'ringless';
+	  ringless.style.outline = 'none';
+	  document.body.append(box, ringless);
+	  return '';
+	})()`)
+	if got, want := b.eval(measureRings), "button.clipped: ring clipped at 12 of 12 points\nbutton.ringless: no ring"; got != want {
+		t.Errorf("measured %q, want %q", got, want)
+	}
+}
 
 // TestUIContrast measures every page of floePages as measureContrast and measureRings do: the parts, the templates,
 // the themes and their palettes together draw nothing that cannot be read, nor a focus that cannot be seen.

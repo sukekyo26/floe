@@ -47,6 +47,7 @@ sections:
             # Read-only from Friday evening
             read_only = true
             banner = "This wiki has moved to the new host."
+      - code: { text: "rsync --archive --delete --exclude '*.tmp' --exclude 'cache/' --log-file=copy.log old-wiki:/srv/wiki/pages/ /srv/new-wiki/pages/\n" }
   - heading: Who does what
     parts:
       - cards:
