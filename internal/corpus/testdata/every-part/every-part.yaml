@@ -199,6 +199,8 @@ sections:
           - title: PowerShell
             parts:
               - code: { lang: powershell, text: "$env:WIKI = 'new'" }
+              - entries:
+                  - { title: New window, tags: [PowerShell 7], text: The variable holds in that window alone. }
               - note: { text: 'Run it in a new window; [the steps](https://example.com/steps) and `run.sh`.', tone: good }
               - table:
                   columns: [{ title: Shell }, { title: Lines, num: true }]

@@ -316,14 +316,24 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="entries"]) to (:scope [data-floe-part] > *) {
-/* A heading, its tags on the line under it, then its text the full width */
-:scope > div { display: grid; gap: 0.35rem; padding: 0.75rem 1.2rem; }
-:scope p { margin: 0; }
-:scope .title { font-weight: 700; }
-/* Spaced, not parted by a character, which a wrapped line would begin with */
+/* A heading, its tags on the line under it, then its text the full width, which a wide block in it (code, a table)
+   does not widen past the panel.
+   LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
+   if pages come to put code in entries */
+:scope { margin: 0; display: grid; }
+:scope > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; padding: 0.75rem 1.2rem; }
+:scope dt { font-weight: 700; }
+:scope dd { margin: 0; }
+/* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
+   them, which stays as large as in a table's cell */
 :scope .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.9rem; font-size: 0.85rem; color: var(--muted); }
-:scope .text { display: grid; gap: 0.35rem; }
-:scope .text > * { margin: 0; }
+:scope .tags > span { min-width: 0; }
+:scope .tags code { font-size: 0.86rem; }
+:scope .text { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; }
+@media (max-width: 36rem) {
+  /* A long pill wraps rather than overflow the panel */
+  :scope .tags [data-floe-part] { white-space: normal; }
+}
 }
 }
 </style>
@@ -1487,17 +1497,17 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div><dt>Host</dt><dd><p>Where the wiki runs.</p>
 </dd></div>
 </dl>
-<div data-floe-part="entries">
-<div><p class="title"><code>export</code></p><p class="tags"><span>Runs nightly</span><span><code>wiki.conf</code></span><span><span data-floe-part="cell">on track</span></span><span><span class="good" data-floe-part="cell">done</span></span></p><div class="text"><p>Writes every page as Markdown, with its history, into <code>pages/</code>.</p>
+<dl data-floe-part="entries">
+<div><dt><code>export</code></dt><dd class="tags"><span>Runs nightly</span><span><code>wiki.conf</code></span><span><span data-floe-part="cell">on track</span></span><span><span class="good" data-floe-part="cell">done</span></span></dd><dd class="text"><p>Writes every page as Markdown, with its history, into <code>pages/</code>.</p>
 <ul>
 <li>Pages under <strong>drafts</strong> are left out</li>
 <li>Images go to <code>pages/images/</code></li>
 </ul>
-</div></div>
-<div><p class="title">Search index</p><p class="tags"><span><span class="warn" data-floe-part="cell">by hand</span></span><span><span class="bad" data-floe-part="cell">blocked</span></span><span><span class="accent" data-floe-part="cell">next</span></span></p><div class="text"><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p>
-</div></div>
-<div><p class="title">Old links</p></div>
-</div>
+</dd></div>
+<div><dt>Search index</dt><dd class="tags"><span><span class="warn" data-floe-part="cell">by hand</span></span><span><span class="bad" data-floe-part="cell">blocked</span></span><span><span class="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p>
+</dd></div>
+<div><dt>Old links</dt></div>
+</dl>
 <dl data-floe-part="keys">
 <div><dt><kbd>Ctrl</kbd><span>+</span><kbd>K</kbd></dt><dd>Search the wiki</dd></div>
 <div><dt><kbd>g</kbd><span>+</span><kbd>h</kbd></dt><dd>Go home</dd></div>
