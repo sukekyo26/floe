@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/goccy/go-yaml/ast"
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/diagram"
@@ -140,17 +141,19 @@ func diagramOf(
 		return "", err
 	}
 	// A file of nothing is a spec of nothing, as a data file of nothing is: the schema tells what it lacks.
-	var v any = map[string]any{}
-	root, err := yamlpos.Parse(p.name, src)
+	v := map[string]any{}
+	body, err := yamlpos.Parse(p.name, src)
 	switch {
 	case errors.Is(err, yamlpos.ErrEmpty):
 	case err != nil:
 		return "", err //nolint:wrapcheck // a mistake at its line and column
 	default:
-		if err = yamlpos.Decode(p.name, root, &v); err != nil {
+		// Read into a map, as doc.Read reads a data file: goccy/go-yaml refuses a top that is not keys and values.
+		if err = yamlpos.Decode(p.name, body, &v); err != nil {
 			return "", err //nolint:wrapcheck // as above
 		}
 	}
+	root, _ := body.(*ast.MappingNode) //nolint:errcheck // see above
 	got, err := with(d, doc.Ints(v), o)
 	return got, yamlpos.Place(err, p.name, root, nil) //nolint:wrapcheck // mistakes placed
 }

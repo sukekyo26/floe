@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml/ast"
+
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/i18n"
@@ -62,7 +64,8 @@ func draw(t *testing.T, src string, how func(d *diagram.Drawer, v any) (string, 
 		t.Fatal(err)
 	}
 	out, err := how(drawer(t), doc.Ints(v))
-	if err = yamlpos.Place(err, "s.yaml", root, nil); err != nil {
+	top, _ := root.(*ast.MappingNode) //nolint:errcheck // nil but for keys and values, a spec of none
+	if err = yamlpos.Place(err, "s.yaml", top, nil); err != nil {
 		return "", usererr.Tell(i18n.EnglishCatalog(), err).Render("floe: ")
 	}
 	return out, ""
@@ -313,7 +316,8 @@ func TestLayoutMistakes(t *testing.T) {
 	var v any
 	_ = yamlpos.Decode("s.yaml", root, &v) //nolint:errcheck // as above
 	_, err := drawer(t).Draw(doc.Ints(v), diagram.Options{Lang: "en", Icons: none, Seq: 1})
-	r := usererr.Tell(i18n.EnglishCatalog(), yamlpos.Place(err, "s.yaml", root, nil))
+	top, _ := root.(*ast.MappingNode) //nolint:errcheck // keys and values just above
+	r := usererr.Tell(i18n.EnglishCatalog(), yamlpos.Place(err, "s.yaml", top, nil))
 	if len(r.Mistakes) != 1 || r.Mistakes[0].File != "" {
 		t.Errorf("icons not fetched = %q, want it once, at no place", r.Render("floe: "))
 	}

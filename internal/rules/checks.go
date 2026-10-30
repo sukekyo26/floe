@@ -239,22 +239,15 @@ func itemsAt(v any, steps, at []string, found *[]item) bool {
 }
 
 // failure is the mistake of c failing, or not running with err, at the path at in d: at its line and column,
-// with its value when it is text on one line. One that Find places at the top of d, or in a file without a
-// node, is placed at d alone: at its first key it would read as that key's mistake.
+// with its value when it is text on one line; at d alone, without a value, where yamlpos.Locate gives no line.
 func (c check) failure(d *doc.Data, at []string, err error) *usererr.Error {
-	place := func(key string, args ...any) *usererr.Error { return usererr.NewAt(d.File, 0, 0, key, args...) }
 	var shown string
-	// d.Root is nil for an empty file, which Find cannot take as an ast.Node.
-	if d.Root != nil {
-		if key, value := yamlpos.Find(d.Root, at); value != ast.Node(d.Root) {
-			pos := yamlpos.OfValue(key, value)
-			place = func(key string, args ...any) *usererr.Error { return yamlpos.New(d.File, pos, key, args...) }
-			switch value.(type) {
-			case *ast.NullNode, *ast.LiteralNode:
-			case ast.ScalarNode:
-				shown = value.GetToken().Value
-			}
-		}
+	pos, value := yamlpos.Locate(d.Root, at)
+	place := func(key string, args ...any) *usererr.Error { return yamlpos.New(d.File, pos, key, args...) }
+	switch value.(type) {
+	case *ast.NullNode, *ast.LiteralNode:
+	case ast.ScalarNode:
+		shown = value.GetToken().Value
 	}
 	var nf *notFinite
 	switch {

@@ -111,6 +111,21 @@ func Find(root ast.Node, at []string) (key, value ast.Node) {
 	return key, value
 }
 
+// Locate returns where the value at the path at is written under root, and its node: OfValue of the last value
+// Find reaches. When it reaches none under root (at is empty, its first key is not written, or root is nil, a file
+// of nothing), it returns no line and no node: the mistake is placed at the file alone, as at the first key it
+// would read as that key's.
+func Locate(root *ast.MappingNode, at []string) (Pos, ast.Node) {
+	if root == nil {
+		return Pos{}, nil
+	}
+	key, value := Find(root, at)
+	if value == ast.Node(root) {
+		return Pos{}, nil
+	}
+	return OfValue(key, value), value
+}
+
 // New returns the mistake worded by the catalog message key with args, at at in file.
 func New(file string, at Pos, key string, args ...any) *usererr.Error {
 	return usererr.NewAt(file, at.Line, at.Column, key, args...)

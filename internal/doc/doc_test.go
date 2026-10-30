@@ -36,7 +36,7 @@ func TestReadShared(t *testing.T) {
 }
 
 // Read moves the shared keys out of the values, each where it is written: its value, its key when the value is
-// left out, the top of the file when the key is.
+// left out, line 0 (the file alone) when the key is.
 func TestRead(t *testing.T) {
 	t.Parallel()
 
@@ -76,7 +76,7 @@ func TestRead(t *testing.T) {
 	if !maps.Equal(d.Values, map[string]any{"template": "report", "lang": "ja", "title": "Plan", "x": 1}) {
 		t.Errorf("Values = %#v", d.Values)
 	}
-	want := map[string]yamlpos.Pos{"template": {Line: 2, Column: 11}, "lang": {Line: 3, Column: 7}, "theme": {Line: 2, Column: 1}, "title": {Line: 4, Column: 8}}
+	want := map[string]yamlpos.Pos{"template": {Line: 2, Column: 11}, "lang": {Line: 3, Column: 7}, "theme": {Line: 0, Column: 0}, "title": {Line: 4, Column: 8}}
 	if !maps.Equal(d.Where, want) {
 		t.Errorf("Where = %v, want %v", d.Where, want)
 	}
@@ -97,20 +97,20 @@ func TestReadSecondBOM(t *testing.T) {
 }
 
 // The mistakes of the shared keys are told together; a mistake of the walk or of reading the values stops
-// before them; an empty file reads as {}, its mistakes at 1:1.
+// before them; an empty file reads as {}, its mistakes at the file alone.
 func TestReadMistakes(t *testing.T) {
 	t.Parallel()
 
 	for _, tt := range []struct{ src, want string }{
-		{"template: report\ntitle: 3\n", "a.yaml:1:1: " + noLang + "\na.yaml:2:8: title must be text"},
+		{"template: report\ntitle: 3\n", "a.yaml: " + noLang + "\na.yaml:2:8: title must be text"},
 		{"lang: \"\"\n", "a.yaml:1:7: " + noLang},
 		{"lang: \"  \"\n", "a.yaml:1:7: " + noLang},
 		{"lang:\n", "a.yaml:1:1: " + noLang},
 		{"lang: ~\n", "a.yaml:1:7: " + noLang},
 		{"lang: null\ntemplate: ~\ntitle: ~\n", "a.yaml:1:7: " + noLang},
 		{"title: 3\ntheme: 4\nlang: 5\n", "a.yaml:1:8: title must be text\na.yaml:2:8: theme must be text\na.yaml:3:7: lang must be text"},
-		{"", "a.yaml:1:1: " + noLang},
-		{"# just a note\n", "a.yaml:1:1: " + noLang},
+		{"", "a.yaml: " + noLang},
+		{"# just a note\n", "a.yaml: " + noLang},
 		{"&top\ntitle: 3\n", "a.yaml:1:1: anchors, aliases, merge keys (<<) and tags are not supported; write the value out"},
 		{"- a\n- b\n", "a.yaml:1:1: sequence was used where mapping is expected"},
 		{"~\n", "a.yaml:1:1: null was used where mapping is expected"},

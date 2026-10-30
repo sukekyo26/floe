@@ -110,7 +110,7 @@ func TestNames(t *testing.T) {
 		want       string
 	}{
 		{"unknown template", "lang: ja\ntemplate: reprot\n", none, `d.yaml:2:11: unknown template "reprot"; use adr, design, handoff, postmortem, report, runbook, slides`},
-		{"no template", "lang: ja\n", none, "d.yaml:1:1: name the template at the top level, like template: report (templates: adr, design, handoff, postmortem, report, runbook, slides)"},
+		{"no template", "lang: ja\n", none, "d.yaml: name the template at the top level, like template: report (templates: adr, design, handoff, postmortem, report, runbook, slides)"},
 		{"template not text", "lang: ja\ntemplate: 5\n", none, "d.yaml:2:11: template must be text"},
 		{"template null", "lang: ja\ntemplate: ~\n", none, "d.yaml:2:11: name the template at the top level, like template: report (templates: adr, design, handoff, postmortem, report, runbook, slides)"},
 		// Empty, as null, names none: the template is told missing, and the theme is the default.
@@ -122,7 +122,7 @@ func TestNames(t *testing.T) {
 		{"unknown theme", "lang: ja\ntemplate: report\ntheme: nope\n", none, `d.yaml:3:8: there is no theme "nope"; use ` + themes},
 		{
 			"no lang and an unknown template", "template: reprot\ntitle: t\n", none,
-			lines("d.yaml:1:1: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", `d.yaml:1:11: unknown template "reprot"; use adr, design, handoff, postmortem, report, runbook, slides`),
+			lines("d.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)", `d.yaml:1:11: unknown template "reprot"; use adr, design, handoff, postmortem, report, runbook, slides`),
 		},
 		{"a theme given", "lang: ja\ntemplate: report\ntheme: 5\n", tmpl.Options{Theme: "ink", Untitled: "", ImagesDir: ""}, ""},
 		{"a theme given with spaces", "lang: ja\ntemplate: report\n", tmpl.Options{Theme: " ink ", Untitled: "", ImagesDir: ""}, ""},

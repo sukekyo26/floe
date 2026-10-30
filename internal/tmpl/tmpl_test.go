@@ -267,7 +267,7 @@ func TestSlidesRefused(t *testing.T) {
 	for _, tt := range []struct{ data, want string }{
 		{"slides: [{heading: h, parts: []}]\n", "sl.yaml:4:30: minItems: got 0, want 1"},
 		{"slides: [{parts: [{text: t}]}]\n", "sl.yaml:4:11: missing property 'heading'"},
-		{"author: a\nslides: [{heading: h}]\n", "sl.yaml:1:1: additional properties 'author' not allowed"},
+		{"author: a\nslides: [{heading: h}]\n", "sl.yaml: additional properties 'author' not allowed"},
 		{"direction: sideways\nslides: [{heading: h}]\n", "sl.yaml:4:12: value must be one of 'down', 'across'"},
 	} {
 		_, _, err := tmpl.Draw(floeKit(t), "sl.yaml", []byte("template: slides\nlang: en\ntitle: x\n"+tt.data), tmpl.Options{Theme: "", Untitled: "", Images: nil, ImagesDir: ""})

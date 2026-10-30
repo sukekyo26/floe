@@ -1,0 +1,58 @@
+$ floe part check
+exit 0
+$ floe template check
+exit 0
+$ floe check b2.yaml c2.yaml d.yaml e.yaml f.yaml p2.yaml
+exit 1
+--- stderr
+b2.yaml: missing property 'n'
+c2.yaml: neg
+c2.yaml:4:9: big ("20")
+d.yaml: additional properties 'zz' not allowed
+d.yaml: missing property 'n'
+e.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)
+e.yaml: missing property 'n'
+f.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)
+f.yaml: name the template at the top level, like template: report (templates: adr, design, handoff, p, postmortem, report, runbook, slides, t)
+p2.yaml: invalid propertyName 'X'
+$ floe render --out-dir $TMP/pages/b2.yaml b2.yaml
+exit 1
+--- stderr
+b2.yaml: missing property 'n'
+$ floe render --out-dir $TMP/pages/c2.yaml c2.yaml
+exit 1
+--- stderr
+c2.yaml: neg
+c2.yaml:4:9: big ("20")
+$ floe render --out-dir $TMP/pages/d.yaml d.yaml
+exit 1
+--- stderr
+d.yaml: additional properties 'zz' not allowed
+d.yaml: missing property 'n'
+$ floe render --out-dir $TMP/pages/e.yaml e.yaml
+exit 1
+--- stderr
+e.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)
+e.yaml: missing property 'n'
+$ floe render --out-dir $TMP/pages/f.yaml f.yaml
+exit 1
+--- stderr
+f.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)
+f.yaml: name the template at the top level, like template: report (templates: adr, design, handoff, p, postmortem, report, runbook, slides, t)
+$ floe render --out-dir $TMP/pages/p2.yaml p2.yaml
+exit 1
+--- stderr
+p2.yaml: invalid propertyName 'X'
+$ floe render --out-dir $TMP/together b2.yaml c2.yaml d.yaml e.yaml f.yaml p2.yaml
+exit 1
+--- stderr
+b2.yaml: missing property 'n'
+c2.yaml: neg
+c2.yaml:4:9: big ("20")
+d.yaml: additional properties 'zz' not allowed
+d.yaml: missing property 'n'
+e.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)
+e.yaml: missing property 'n'
+f.yaml: name the language of the page at the top level, like lang: en (a BCP 47 tag such as en, ja or pt-BR)
+f.yaml: name the template at the top level, like template: report (templates: adr, design, handoff, p, postmortem, report, runbook, slides, t)
+p2.yaml: invalid propertyName 'X'

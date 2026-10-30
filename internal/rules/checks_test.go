@@ -102,6 +102,7 @@ func TestChecksRun(t *testing.T) {
 		{"fails", "- field: a\n  expr: doc.a < doc.b\n  message: a below b\n", "a: 5\nb: 2\n", `d.yaml:3:4: a below b ("5")`},
 		{"keys and values", "- field: r\n  expr: false\n  message: m\n", "r:\n  x: 1\n", "d.yaml:4:3: m"},
 		{"null", "- field: opt\n  expr: doc.opt != nil\n  message: write opt\n", "opt: null\n", "d.yaml:3:6: write opt"},
+		{"a | block", "- field: note\n  expr: false\n  message: m\n", "note: |\n  two\n  lines\n", "d.yaml:3:7: m"},
 		{
 			"for", "- for: items\n  field: price\n  expr: item.price * item.qty < 4\n  message: line total under 4\n", items,
 			`d.yaml:5:13: line total under 4 ("4")`,

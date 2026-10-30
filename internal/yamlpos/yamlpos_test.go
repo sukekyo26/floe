@@ -299,6 +299,37 @@ func TestFind(t *testing.T) {
 	}
 }
 
+// Locate places a path at the last value Find reaches under the root, and one that reaches none, in a file of
+// nothing too, at the file alone, with no node.
+func TestLocate(t *testing.T) {
+	t.Parallel()
+
+	body, err := yamlpos.Parse("a.yaml", []byte("# c\na:\n  b: 1\n  c:\n    - x\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, _ := body.(*ast.MappingNode) //nolint:errcheck // keys and values just above
+	for _, tt := range []struct {
+		root *ast.MappingNode
+		at   []string
+		want yamlpos.Pos
+	}{
+		{root, nil, yamlpos.Pos{}},
+		{root, []string{"zz"}, yamlpos.Pos{}},
+		{root, []string{"zz", "a"}, yamlpos.Pos{}},
+		{nil, []string{"a"}, yamlpos.Pos{}},
+		{root, []string{"a"}, yamlpos.Pos{Line: 3, Column: 3}},
+		{root, []string{"a", "b"}, yamlpos.Pos{Line: 3, Column: 6}},
+		{root, []string{"a", "c", "0"}, yamlpos.Pos{Line: 5, Column: 7}},
+		{root, []string{"a", "zz"}, yamlpos.Pos{Line: 3, Column: 3}},
+	} {
+		got, node := yamlpos.Locate(tt.root, tt.at)
+		if got != tt.want || (node == nil) != (tt.want == yamlpos.Pos{}) {
+			t.Errorf("Locate(%v) = %v, %v; want %v", tt.at, got, node, tt.want)
+		}
+	}
+}
+
 // OfValue places a null written, ~ or null, where it is written, and one left empty, a comment after it too, at
 // its key, as it has no text to point at.
 func TestOfValue(t *testing.T) {

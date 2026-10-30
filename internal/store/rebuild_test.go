@@ -73,7 +73,7 @@ func TestRebuildKept(t *testing.T) {
 	err := s.Rebuild(needs)
 	copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
 	want := lines(
-		copyA+"/data.yaml:1:1: missing property 'need'",
+		copyA+"/data.yaml: missing property 'need'",
 		copyA+`/data.yaml: page "a" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
 	)
 	if got := told(err, root); got != want {

@@ -31,7 +31,7 @@ func TestValidate(t *testing.T) {
 			"required, type, additional properties",
 			`"properties": {"n": {"type":"integer"}, "s": ` + N + `}, "required":["n"], "additionalProperties": false`,
 			"s:\n  text: 3\n  bad: 1\nzz: 1\nyy: 2\n",
-			lines("d.yaml:1:1: additional properties 'yy', 'zz' not allowed", "d.yaml:1:1: missing property 'n'",
+			lines("d.yaml: additional properties 'yy', 'zz' not allowed", "d.yaml: missing property 'n'",
 				"d.yaml:4:3: additional properties 'bad' not allowed", "d.yaml:4:9: got number, want string"),
 		},
 		{
@@ -77,7 +77,7 @@ func TestValidateAdditionalInOrder(t *testing.T) {
 }
 
 // A property name the schema refuses is told at the key of the one object at its depth that has it, else at
-// the top of the file, the same each time (run with -count=20).
+// the file alone, the same each time (run with -count=20).
 func TestPropertyNames(t *testing.T) {
 	t.Parallel()
 
@@ -90,7 +90,7 @@ func TestPropertyNames(t *testing.T) {
 		},
 		{
 			"two items", `"properties": {"items": {"type":"array","items":{"type":"object","propertyNames":` + lower + `}}}`,
-			"items:\n  - Bad: 1\n    a: 1\n  - Bad: 2\n    b: 2\n", "d.yaml:1:1: " + bad,
+			"items:\n  - Bad: 1\n    a: 1\n  - Bad: 2\n    b: 2\n", "d.yaml: " + bad,
 		},
 		{
 			"one $defs twice", `"$defs": {"pn": {"propertyNames": ` + lower + `}}, "properties": {"tags": {"allOf": [{"$ref": "#/$defs/pn"}, {"$ref": "#/$defs/pn"}]}}`,
@@ -98,7 +98,7 @@ func TestPropertyNames(t *testing.T) {
 		},
 		{
 			"the key elsewhere", `"$defs": {"pn": {"propertyNames": ` + lower + `}}, "properties": {"tags": {"allOf": [{"$ref": "#/$defs/pn"}, {"$ref": "#/$defs/pn"}]}, "more": {}}`,
-			"tags:\n  ok: 1\n  Bad: b\nmore:\n  Bad: 1\n", "d.yaml:1:1: " + bad,
+			"tags:\n  ok: 1\n  Bad: b\nmore:\n  Bad: 1\n", "d.yaml: " + bad,
 		},
 		{
 			"two depths", `"properties": {"tags": {"propertyNames":` + lower + `}, "n2": {"type":"object","properties":{"m":{"propertyNames":` + lower + `}}}}`,
@@ -106,12 +106,12 @@ func TestPropertyNames(t *testing.T) {
 		},
 		{
 			"the top", `"propertyNames": ` + lower + `, "additionalProperties": false`,
-			"Bad: 1\n", lines("d.yaml:1:1: additional properties 'Bad' not allowed", "d.yaml:3:1: "+bad),
+			"Bad: 1\n", lines("d.yaml: additional properties 'Bad' not allowed", "d.yaml:3:1: "+bad),
 		},
 		{
 			"names in two objects", `"properties": {"tags": {"propertyNames":` + lower + `}, "more": {}, "x": {"propertyNames": {"pattern": "^[a-y]+$"}}, "y": {}}`,
 			"tags:\n  Bad: 1\nmore:\n  Bad: 1\nx:\n  Zed: 1\ny:\n  Zed: 1\n",
-			lines("d.yaml:1:1: "+bad, "d.yaml:1:1: invalid propertyName 'Zed'"),
+			lines("d.yaml: "+bad, "d.yaml: invalid propertyName 'Zed'"),
 		},
 	} {
 		if got := validate(t, tt.body, tt.data); got != tt.want {
@@ -120,7 +120,7 @@ func TestPropertyNames(t *testing.T) {
 	}
 }
 
-// A Data without a node, as no file doc reads gives, is told at the top of the file.
+// A Data without a node, as no file doc reads gives, is told at the file alone.
 func TestValidateNoNode(t *testing.T) {
 	t.Parallel()
 
@@ -129,7 +129,7 @@ func TestValidateNoNode(t *testing.T) {
 		t.Fatal(told(err))
 	}
 	d := &doc.Data{File: "d.yaml", Lang: "", Template: "", Theme: "", Title: "", Values: map[string]any{}, Root: nil, Where: nil}
-	if got := told(c.Validate(d)); got != "d.yaml:1:1: missing property 'n'" {
+	if got := told(c.Validate(d)); got != "d.yaml: missing property 'n'" {
 		t.Errorf("Validate told %q", got)
 	}
 }

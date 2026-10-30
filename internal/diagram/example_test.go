@@ -63,7 +63,7 @@ func TestExampleMistakes(t *testing.T) {
 		{"source: true\nwidth: 200\nheight: 80\ntitle: t\nparts: []\n", nil, "additional properties 'source' not allowed"},
 		{"example: aws\n", nil, "floe: there is no directory for icons, as HOME is not an absolute path; set FLOE_ICONS_DIR to an absolute path"},
 		{"example: aws\n", broken, `/i/aws/index.json:1:1: holds no version of the icons; run "floe icons fetch aws --force" to fetch them again`},
-		{"example: aws\n", lambda, `s.yaml:1:1: icon "aws/amazon-bedrock": no icon "aws/amazon-bedrock" (search with: floe icons search <word>)`},
+		{"example: aws\n", lambda, `s.yaml: icon "aws/amazon-bedrock": no icon "aws/amazon-bedrock" (search with: floe icons search <word>)`},
 	} {
 		_, got := draw(t, tt.src, drawWith("en", tt.icons))
 		if !strings.Contains(got, tt.want) {
