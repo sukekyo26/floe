@@ -115,7 +115,8 @@ blockquote > * + * { margin-top: 0.6rem; }
   display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
-.card h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
+.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
 .card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
 }
 }
@@ -126,7 +127,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* A card of its own, unnumbered, its title large */
 :scope { grid-template-columns: minmax(0, 1fr); }
 :scope > div { gap: 0.5rem; }
-:scope h3 { font-size: 1.25rem; line-height: 1.45; }
+:scope .title { font-size: 1.25rem; line-height: 1.45; }
 :scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: 0.82rem; }
 :scope .set-aside { margin-top: 0.3rem; font-size: 0.8rem; font-weight: 600; }
 :scope ul { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
@@ -242,6 +243,8 @@ h2 { font-size: 1.4rem; }
 header { display: grid; gap: 0.7rem; }
 section { display: grid; gap: 1rem; }
 section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
+.sub { margin-top: 0.5rem; }
+.sub > h3 { font-size: 1.15rem; }
 .eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .lead { color: var(--muted); font-size: 1.05rem; }
 .muted { color: var(--muted); }
@@ -261,7 +264,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <tr><td class="name"><code>port</code><span class="required">必須</span><span class="type">number</span></td><td><span class="default">既定: <code>8080</code></span></td></tr>
 </tbody>
 </table></div>
-<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta">decided<span>2030-03-28</span></p><h3 id="move">Move</h3><p class="set-aside">退けた案</p><ul><li>Stay</li></ul></div></div>
+<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta">decided<span>2030-03-28</span></p><div class="title">Move</div><p class="set-aside">退けた案</p><ul><li>Stay</li></ul></div></div>
 </section>
 </main>
 

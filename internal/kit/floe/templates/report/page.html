@@ -21,10 +21,19 @@
 {{- with .heading}}
 <h2>{{.}}</h2>
 {{- end}}
-{{- range .parts}}{{range .}}{{with .}}
-{{.}}{{end}}{{end}}{{end}}
+{{- template "parts" .parts}}
+{{- /* LIMIT: subsections are one level, drawn after the section's parts. For a deeper level or parts after them, draw a
+   section by a define that takes its level */}}
+{{- range .sections}}
+<section class="sub">
+<h3>{{.heading}}</h3>
+{{- template "parts" .parts}}
+</section>
+{{- end}}
 </section>
 {{- end}}
 </main>
 </body>
 </html>
+{{- define "parts"}}{{range .}}{{range .}}{{with .}}
+{{.}}{{end}}{{end}}{{end}}{{end}}

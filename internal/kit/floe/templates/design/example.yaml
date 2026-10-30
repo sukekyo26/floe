@@ -1,6 +1,6 @@
 # A design: the background and goals are what it needs; options weighed go in decisions, each option taken marked
 # with pick, which heads the page, and what is decided without weighing options in decided. Sections of your own,
-# each a heading over parts as in report, go in more.
+# each a heading over parts, go in more.
 template: design
 lang: en
 title: Send notifications through a queue
