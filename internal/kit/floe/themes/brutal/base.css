@@ -1,6 +1,5 @@
 /* Thick black frames, flat primary faces and hard offset shadows; no corner is rounded */
 blockquote {
-  border: 3px solid var(--fg); border-radius: 0; padding: 1.1rem 1.4rem; background: var(--brutal-yellow); color: var(--brutal-ink);
+  border: 3px solid var(--fg); border-radius: 0; padding: 1.1rem 1.4rem; --face: var(--brutal-yellow); --on-face: var(--brutal-ink); background: var(--face); color: var(--on-face);
   font-size: 1.2rem; font-weight: 800; box-shadow: 6px 6px 0 var(--fg); margin-right: 6px;
 }
-blockquote :is(a, code) { color: inherit; }

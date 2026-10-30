@@ -1,8 +1,10 @@
-/* Always dark, as code in an editor is; the language stands at the right of the heading */
+/* Always dark, as code in an editor is; the language stands at the right of the heading. A face (base.css) whose
+   root is the part's, set on what it holds too, which base.css starts afresh: a scrolling block's ring in its colour */
+:scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
 :scope {
   display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
   margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
-  background: var(--code-bg); color: var(--code-fg);
+  background: var(--face); color: var(--on-face);
   font-family: var(--mono);
 }
 :scope figcaption {

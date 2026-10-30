@@ -160,7 +160,9 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | `--text-width` | 文の幅の上限。テンプレートが `:scope` で決める |
 | `--page-width`・`--page-pad` | ページを中央にそろえる列の幅と、その左右の余白。余白は箱の内側なので、列は `max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad)` |
 
-floe の土台は、ページの根にこれらで地・色・書体を描きます（`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`）。`page.css` は `:scope` でこれを変えられます。自分のテーマも変えられます（[parts.ja.md](parts.ja.md#テーマ)）。
+floe の土台は、ページの根にこれらで地・色・書体を描きます（`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`）。`page.css` は `:scope` でこれを変えられます。自分のテーマも変えられます（[parts.ja.md](parts.ja.md#テーマ)）。印刷でも、どの地も画面のとおりに出ます。
+
+帯や塗った注意のように、色で自分を塗り、中に字を持つ要素は、`--face` に地を、`--on-face` に字の色を置き、それで自分を塗ります（`background: var(--face); color: var(--on-face)`）。floe の土台は、中のリンク・行の code（地なしの枠）・フォーカスの輪を `--on-face` で描きます（アクセントでは塗った地に溶けるため）。部品の中は、部品の地で初めから描きます。パネルの上の引用のように、自分で明るい地を塗る要素も、中を初めから描きます（`blockquote > * { --face: initial; --on-face: initial; }`）。地を塗らずに色を決めるときは、塗った面の中でも読めるように `var(--on-face, …)` と書きます。
 
 ## schema.json
 

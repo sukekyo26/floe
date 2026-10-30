@@ -1,3 +1,1 @@
-blockquote :is(code, a) { color: inherit; }
-blockquote code { background: color-mix(in srgb, currentColor 15%, transparent); }
-blockquote { border: 0; padding: 1.1rem 1.5rem; border-radius: 14px; background: var(--fg); color: var(--bg); font-size: 1.05rem; }
+blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem 1.5rem; border-radius: 14px; background: var(--face); color: var(--on-face); font-size: 1.05rem; }
