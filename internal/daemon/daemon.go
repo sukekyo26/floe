@@ -41,7 +41,7 @@ type Status struct {
 }
 
 // Build identifies the running binary by version, mtime and size, so that reinstalling floe makes
-// the next publish restart the server.
+// the next command that uses the server restart it.
 func Build() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -88,7 +88,12 @@ func waitWhile(ctx context.Context, base string, p Status, cond func(Status) boo
 			return p
 		case <-time.After(20 * time.Millisecond):
 		}
-		p = Probe(ctx, base)
+		q := Probe(ctx, base)
+		// A probe the deadline cut short reads as Down, and tells nothing of the server.
+		if ctx.Err() != nil {
+			return p
+		}
+		p = q
 	}
 	return p
 }
@@ -111,8 +116,9 @@ type Server struct {
 	Env []string
 }
 
-func (s Server) base() string {
-	return "http://" + Addr(s.Port)
+// Base is the URL a server of floe serves at, on port.
+func Base(port int) string {
+	return "http://" + Addr(port)
 }
 
 // Addr is the address a server of floe serves on, on port.
@@ -123,7 +129,7 @@ func Addr(port int) string {
 // Ensure makes sure a server of this build serves the root on the port, starting one or replacing an
 // outdated one as needed.
 func Ensure(ctx context.Context, s Server) error {
-	p := Probe(ctx, s.base())
+	p := Probe(ctx, Base(s.Port))
 	outdated := p.State == Ours && sameDir(p.Health.Root, s.Root) && p.Health.Build != s.Build
 	// One of other directories is refused before it is replaced, which would draw others' pages with these,
 	// whatever the command.
@@ -134,7 +140,7 @@ func Ensure(ctx context.Context, s Server) error {
 	}
 	if outdated {
 		var err error
-		if p, err = s.replace(ctx, p); err != nil {
+		if p, err = Stop(ctx, s.Port, p); err != nil {
 			return err
 		}
 	}
@@ -158,16 +164,18 @@ func Ensure(ctx context.Context, s Server) error {
 	}
 }
 
-// replace stops p, a server of another build, and returns what serves the port once it is gone.
-func (s Server) replace(ctx context.Context, p Status) (Status, error) {
+// Stop stops p, the server of floe on port, and returns what serves the port once it is gone.
+// LIMIT: the pid is the one p's health tells, signalled as a process of this machine; a server in a container
+// whose port is handed out tells one of its own. Check it is a process of floe here if that comes to matter.
+func Stop(ctx context.Context, port int, p Status) (Status, error) {
 	old := p.Health.PID
-	if err := Terminate(old); err != nil {
+	if err := terminate(old); err != nil {
 		return p, err
 	}
 	// Wait for that server only: a concurrent command may have started the new one already.
-	p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
+	p = waitWhile(ctx, Base(port), p, func(q Status) bool { return q.State == Ours && q.Health.PID == old })
 	if p.State == Ours && p.Health.PID == old {
-		return p, usererr.New("daemon_outdated_alive", old)
+		return p, usererr.New("daemon_kept_answering", port, old)
 	}
 	return p, nil
 }
@@ -196,7 +204,7 @@ func sameDir(a, b string) bool {
 
 // sameOrUnread reports whether the directories a and b of templates or icons draw alike: one directory, or
 // two that cannot be read, neither holding anything to draw with.
-// LIMIT: one made readable later draws pages unchecked until the next publish tells the two apart; watch
+// LIMIT: one made readable later draws pages unchecked until the next command that draws tells the two apart; watch
 // the directories if that comes to matter.
 func sameOrUnread(a, b string) bool {
 	if sameDir(a, b) {
@@ -210,29 +218,29 @@ func sameOrUnread(a, b string) bool {
 // startAndWait starts a server on the port, p being Down, and waits for one to answer there.
 func startAndWait(ctx context.Context, s Server, p Status) (Status, error) {
 	started := false
-	// Twice at most: the port another publish bound comes free, if its server fails, while this one
+	// Twice at most: the port another command bound comes free, if its server fails, while this one
 	// waits for it.
 	for try := 0; try < 2 && p.State == Down && !started; try++ {
 		var err error
 		if started, err = start(ctx, s); err != nil {
 			return p, err
 		}
-		p = waitWhile(ctx, s.base(), p, func(q Status) bool { return q.State == Down })
+		p = waitWhile(ctx, Base(s.Port), p, func(q Status) bool { return q.State == Down })
 	}
-	// Bound, but none answers: another publish's server still starting, or a program that does not.
+	// Bound, but none answers: another command's server still starting, or a program that does not.
 	if p.State == Down && !started {
 		return p, usererr.New("daemon_port_silent", s.Port)
 	}
 	return p, nil
 }
 
-// ListenerEnv tells "floe serve" the file descriptor of the listener the publish that started it bound.
+// ListenerEnv tells "floe serve" the file descriptor of the listener the command that started it bound.
 const ListenerEnv = "FLOE_SERVE_LISTENER"
 
 // listenerFD is the descriptor a started server takes its listener at: the first of cmd.ExtraFiles.
 const listenerFD = 3
 
-// errLowFD is a descriptor below those a publish hands down.
+// errLowFD is a descriptor below those a command hands down.
 var errLowFD = errors.New("not a descriptor handed down")
 
 // ErrHandedAddr is a listener handed down on another address than the server's.
@@ -260,7 +268,7 @@ func Listen(port int) (*net.TCPListener, error) {
 	return net.ListenTCP("tcp", addr) //nolint:wrapcheck // as above
 }
 
-// Handed returns the listener the publish that started this server bound on port, in the variables
+// Handed returns the listener the command that started this server bound on port, in the variables
 // getenv reads, or nil when none was handed down.
 func Handed(getenv func(string) string, port int) (net.Listener, error) {
 	v := getenv(ListenerEnv)
@@ -278,7 +286,7 @@ func Handed(getenv func(string) string, port int) (net.Listener, error) {
 	if fd < listenerFD {
 		return nil, refuse(errLowFD)
 	}
-	f := os.NewFile(uintptr(fd), "listener") //nolint:gosec // G115: a descriptor the publish wrote
+	f := os.NewFile(uintptr(fd), "listener") //nolint:gosec // G115: a descriptor the command wrote
 	defer f.Close()                          //nolint:errcheck // the listener holds its own copy
 	ln, err := net.FileListener(f)
 	if err != nil {
@@ -292,8 +300,8 @@ func Handed(getenv func(string) string, port int) (net.Listener, error) {
 }
 
 // start binds the port, then runs "floe serve" on it in a session of its own, so that it outlives the
-// publish and its terminal (and ctx: the server must not be killed when the publish ends), and
-// reports whether it did. A publish that cannot bind the port starts nothing: another publish's
+// command and its terminal (and ctx: the server must not be killed when the command ends), and
+// reports whether it did. A command that cannot bind the port starts nothing: another command's
 // server has it already (or another program), and a second server, slow to start, would otherwise
 // take the port once that one stops.
 func start(ctx context.Context, s Server) (bool, error) {
@@ -325,8 +333,8 @@ func start(ctx context.Context, s Server) (bool, error) {
 	return true, nil
 }
 
-// Terminate sends SIGTERM to pid. A process that has exited already counts as stopped.
-func Terminate(pid int) error {
+// terminate sends SIGTERM to pid. A process that has exited already counts as stopped.
+func terminate(pid int) error {
 	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil && !errors.Is(err, syscall.ESRCH) {
 		return fmt.Errorf("stop the server (pid %d): %w", pid, err)
 	}
