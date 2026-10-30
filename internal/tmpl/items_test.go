@@ -28,7 +28,8 @@ func quoted(s string) string {
 }
 
 // An item of format html that changes the page drawn around it is refused at it, saying what to close; one that
-// changes none is drawn as written, with no mark of floe's left in the page.
+// changes none is drawn as written, with no mark of floe's left in the page. In a table, text page.html writes
+// beside an item is moved before the table alone, and the item is not refused for it.
 func TestHTMLItems(t *testing.T) {
 	t.Parallel()
 
@@ -71,6 +72,19 @@ func TestHTMLItems(t *testing.T) {
 		{htmlPage("<p>{{.Data.h}}</p>"), "<table><tr><td>x</td></tr></table>", "d.yaml:3:4: HTML changes the page around it at </p>: close in it each element and comment it opens, and close no element it did not open"},
 		{htmlPage("<p><b>{{.Data.t}}</p><div>{{.Data.h}}</div>"), "plain", ""},
 		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), "<tr><td>x</td></tr>", ""},
+		{htmlPage("<table><tbody>{{.Data.h}}x</tbody></table>"), "<tr><td>x</td></tr>", ""},
+		{htmlPage("<table><thead>{{.Data.h}}x</thead></table>"), "<tr><th>x</th></tr>", ""},
+		{htmlPage("<table><tfoot>{{.Data.h}}x</tfoot></table>"), "<tr><td>x</td></tr>", ""},
+		{htmlPage("<table>{{.Data.h}}x</table>"), "<tbody><tr><td>x</td></tr></tbody>", ""},
+		{htmlPage("<table><tr>{{.Data.h}}x</tr></table>"), "<td>x</td>", ""},
+		{htmlPage("<table><tbody>{{.Data.h}} x </tbody></table>"), "<tr><td>x</td></tr>", ""},
+		{htmlPage("<table><tbody>{{.Data.h}}{{.Data.t}}</tbody></table>"), "<tr><td>x</td></tr>", ""},
+		{htmlPage("<table><tbody>{{.Data.h}}x</tbody></table>"), "<tr><td><b>x</td></tr>", ""},
+		{htmlPage("<table><tbody>x{{.Data.h}}</tbody></table>"), "<tr><td>x</td></tr>", ""},
+		{htmlPage("<table><tbody>{{.Data.h}}x</tbody></table>"), "<tr><td>x</td>", changes("3:4", "<tr>")},
+		{htmlPage("<table><tbody>{{.Data.h}}x</tbody></table>"), "<td>x</td>", changes("3:4", "<tr>")},
+		{htmlPage("<table>{{.Data.h}}x</table>"), "<tr><td>x</td></tr>", changes("3:4", "<tbody>")},
+		{htmlPage("<table><tr>{{.Data.h}}x</tr></table>"), "<tr><td>x</td></tr>", changes("3:4", "</tr>")},
 		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), `<tr><td>x</td></tr><meta http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{htmlPage("<svg><foreignObject>{{.Data.h}}</foreignObject></svg><p>after</p>"), `<meta http-equiv="refresh" content="0">`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{htmlPage("<textarea>{{.Data.h}}</textarea>"), "<b>x</b>", "d.yaml:2:11: page.html, or the part.html of a part holding it, puts the item h of format html in a text or an attribute of <textarea>, where HTML does not work: put it, or the part holding it, where elements go, or give the item another format"},

@@ -278,7 +278,7 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 		// A function's mistakes at a JSON pointer are at one from the root of the part's value.
 		return nil, yamlpos.Place(mistakes.Err(), d.File, d.Root, it.At) //nolint:wrapcheck // mistakes placed
 	}
-	return template.HTML(s.trim(b.String())), nil //nolint:gosec // G203: drawn by html/template
+	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
 }
 
 // executed returns the mistakes err of executing the template name, the file file whose text is src (nil when

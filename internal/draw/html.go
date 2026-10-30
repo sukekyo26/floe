@@ -34,6 +34,7 @@ func probe(n int) string {
 // read once, and the icons of the diagrams, counted so that the ids of each differ.
 type items struct {
 	secret    string     // of the marks, in lower case as a parser makes tag and attribute names
+	edge      string     // the text of the comment drawn outside each probe: the secret and a letter, no mark
 	html      [][]string // the path of each item of format html, by its number
 	texts     []string   // its text
 	images    fs.FS      // the data's images, nil for none
@@ -54,8 +55,9 @@ type image struct {
 // under imagesDir ("" for the data file's directory), and whose diagrams show the icons of icons (nil for none
 // kept).
 func newItems(images fs.FS, imagesDir string, icons diagram.Icons) *items {
+	secret := strings.ToLower(rand.Text())
 	return &items{
-		secret: strings.ToLower(rand.Text()), html: nil, texts: nil, images: images, imagesDir: imagesDir,
+		secret: secret, edge: secret + "p", html: nil, texts: nil, images: images, imagesDir: imagesDir,
 		read: map[string]image{}, icons: icons, diagrams: 0, warnings: nil,
 	}
 }
@@ -69,35 +71,16 @@ func (s *items) marked(at []string, text string) template.HTML {
 	return template.HTML(start + text + end) //nolint:gosec // G203: the data's HTML, checked in the page drawn (check)
 }
 
-// around returns what is drawn before and after the item n: the probes and the marks.
+// around returns what is drawn before and after the item n: the probes and the marks, each probe between a mark
+// and an edge, a comment of the secret, so that it is a text of its own: text page.html writes beside it is no
+// part of it, which the parser would move with it out of a table. A part's output trimmed keeps it too.
 func (s *items) around(n int) (before, after string) {
-	return probe(n) + "<!--" + s.mark(n, "s") + "-->", "<!--" + s.mark(n, "e") + "-->" + probe(n)
+	edge := "<!--" + s.edge + "-->"
+	return edge + probe(n) + "<!--" + s.mark(n, "s") + "-->", "<!--" + s.mark(n, "e") + "-->" + probe(n) + edge
 }
 
-// trim returns out, a part's output, without the white space at its start and end, as strings.TrimSpace takes it
-// off, but the probe of an item whose mark it then starts or ends with: what checks the page drawn reads the
-// probes around an item, which a part's output put in the page keeps as page.html's item does.
-func (s *items) trim(out string) string {
-	out = strings.TrimSpace(out)
-	if rest, ok := strings.CutPrefix(out, "<!--"); ok {
-		if text, _, ok := strings.Cut(rest, "-->"); ok {
-			if n, end, ok := s.exact(text); ok && !end {
-				out = probe(n) + out
-			}
-		}
-	}
-	if at := strings.LastIndex(out, "<!--"); at >= 0 {
-		if text, ok := strings.CutSuffix(out[at+len("<!--"):], "-->"); ok {
-			if n, end, ok := s.exact(text); ok && end {
-				out += probe(n)
-			}
-		}
-	}
-	return out
-}
-
-// plain returns text without the probes and the marks of the items, as they are drawn around them: the text of a
-// mistake page.html or a part's part.html made with an item.
+// plain returns text without the probes, the marks and the edges of the items, as they are drawn around them: the
+// text of a mistake page.html or a part's part.html made with an item.
 func (s *items) plain(text string) string {
 	if len(s.html) == 0 {
 		return text
@@ -268,11 +251,12 @@ func (s *items) next(text string) (n int, end bool, rest string, ok bool) {
 // refused.
 // LIMIT: in a table, tbody, thead, tfoot, tr or colgroup, the parser's foster parenting decides. Refused: what is
 // not of that place (rows straight in a table, read into a tbody of their own; cells in a tbody; rows in a tr;
-// text in a colgroup), formatting left open at the item's end, and a right item page.html follows with text.
-// Drawn moved, unchecked by the marks and the probe but for what checkPage refuses in the whole page: the item's
-// text and elements that are no part of a table, put before the table, and formatting left open before its rows
-// or misnested (<b><i>x</b>), rebuilt in what page.html writes after the table. A name of a part moved out of a
-// table is told at template:, by checkPage. Probe with text the parser moves too if pages come to put items there.
+// text in a colgroup), and formatting left open at the item's end. Drawn moved, unchecked by the marks and the
+// probe but for what checkPage refuses in the whole page: the item's text and elements that are no part of a
+// table, and text page.html writes beside the item, put before the table, and formatting left open before its
+// rows or misnested (<b><i>x</b>), rebuilt in what page.html writes after the table. A name of a part moved out
+// of a table is told at template:, by checkPage. Probe with text the parser moves too if pages come to put items
+// there.
 func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error {
 	if len(s.html) == 0 {
 		return nil
@@ -371,7 +355,7 @@ func holds(p, n *html.Node) bool {
 	return false
 }
 
-// unmark takes the marks of the items, and their probes, out of tree, checked.
+// unmark takes the marks of the items, their probes and the edges, out of tree, checked.
 func (s *items) unmark(tree *html.Node) {
 	var marks []*html.Node
 	for n := range tree.Descendants() {
@@ -380,6 +364,7 @@ func (s *items) unmark(tree *html.Node) {
 		}
 		i, end, ok := s.exact(n.Data)
 		switch {
+		case n.Data == s.edge:
 		case !ok:
 			continue
 		case end:

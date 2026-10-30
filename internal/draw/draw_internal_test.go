@@ -147,26 +147,6 @@ func TestRefusalWords(t *testing.T) {
 	}
 }
 
-// trim keeps the probe of an item whose mark a part's output starts or ends with, and no other: a comment like a
-// mark without the secret is no mark.
-func TestTrim(t *testing.T) {
-	t.Parallel()
-
-	s := newItems(nil, "", nil)
-	h := string(s.marked([]string{"h"}, "<b>ok</b>"))
-	for _, tt := range []struct{ name, out, want string }{
-		{"the item alone", "\n" + h + "\n", h},
-		{"text around", "\n a" + h + "b \n", "a" + h + "b"},
-		{"a mark without the secret first", "\n<!--n0s-->x\n", "<!--n0s-->x"},
-		{"a mark without the secret last", "\nx<!--n0e-->\n", "x<!--n0e-->"},
-		{"a mark with text after it in its comment", "\n<!--" + s.mark(0, "s") + "x-->y\n", "<!--" + s.mark(0, "s") + "x-->y"},
-	} {
-		if got := s.trim(tt.out); got != tt.want {
-			t.Errorf("%s: trim(%q) = %q, want %q", tt.name, tt.out, got, tt.want)
-		}
-	}
-}
-
 // text/template's mistake of running a part.html of floe's is told there too, as one of a part of one's own:
 // drawPart parts them not. The value is one the part's schema would refuse, drawn unchecked.
 func TestFloePartExecPlaced(t *testing.T) {
