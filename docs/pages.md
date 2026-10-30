@@ -41,7 +41,7 @@ Every data file holds these keys, which floe reads itself:
 | `template` | The template that draws the page (`report`, `design`, `handoff`, `adr`, `postmortem`, `runbook`, `slides`, or one of your own). Required. |
 | `lang` | The page's language (`<html lang>`), as a tag such as `en`, `ja` or `pt-BR`. Required. The words floe and the parts draw (`required` in `fields`, the zoom buttons of a diagram, the copy button of code) and the text of a diagram follow it, English for a language they have no words of. |
 | `title` | The page's title. |
-| `theme` | The theme the page is drawn in (default `default`): its colours, faces and the shape of the parts. `floe template show <template>` lists the themes on its `themes:` line: `default`, `soft`, `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `swiss`, `washi` and `app`. |
+| `theme` | The theme the page is drawn in (default `default`): its colours, faces and the shape of the parts. `floe template show <template>` lists the themes on its `themes:` line: `default`, `soft`, `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `retro`, `swiss`, `washi`, `aurora` and `app`. |
 
 The rest is the template's: `report` takes `eyebrow` (a short line above the title), `lead` (a sentence or two under the title) and `sections`, each a `heading` and `parts`, and `sections` of its own after the parts: subsections, each a `heading` (an `<h3>`) and `parts`, one level only. A section with subsections has a heading; a heading is never empty, so a section with none leaves the key out. `floe template show <template>` prints what a template takes and an example to start from.
 

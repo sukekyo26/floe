@@ -68,10 +68,14 @@ const colours = `
 // background colours of the element and those around it laid one over another on the root's, each faded by
 // the opacity over it, as the text is. It returns one line for each below 4.5:1, 3:1 for large text (24px,
 // or 18.66px bold), as WCAG AA asks.
-// LIMIT: a ground of an image or a gradient (blueprint's squares) counts as the colour under it, the ground
-// is that of the elements around in the document, not of one positioned under the text, an opacity fades
-// each ground on its own rather than the group, and a diagram's text, in SVG, is not measured. Measure them
-// if a theme comes to put text on such a ground.
+// LIMIT: a ground of an image or a gradient (blueprint's squares, aurora's wash) counts as the colour under it, the
+// ground is that of the elements around in the document, not of one positioned under the text, an opacity fades
+// each ground on its own rather than the group, and a diagram's text, in SVG, is not measured. aurora's text on its
+// wash and its glass is so measured on --bg alone: its palette was worked out by hand on the darkest colour of the
+// wash. Measuring each colour of a gradient would need oklab() and oklch() read (Chrome keeps color-mix(in oklab …)
+// so) and the layers of one element laid over one another and over its own background-color, and would take the
+// lines of a pattern (notebook's rules) as a ground of the text over them. Measure them if a theme comes to put
+// text on such a ground darker than its palette allows for.
 const measureContrast = `(() => {` + colours + `
   const low = new Set();
   const measure = (e, s, under, what, text) => {

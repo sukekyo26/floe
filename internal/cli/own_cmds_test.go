@@ -156,7 +156,7 @@ func TestListShow(t *testing.T) {
 		}
 		return strings.TrimSuffix(string(b), "\n")
 	}
-	allThemes := "app, blueprint, brutal, default, editorial, empty, ink, mine, notebook, soft, swiss, washi"
+	allThemes := "app, aurora, blueprint, brutal, default, editorial, empty, ink, mine, notebook, retro, soft, swiss, washi"
 	for _, tt := range []struct {
 		args []string
 		code int
