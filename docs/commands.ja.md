@@ -12,7 +12,7 @@
 | `floe rebuild` | 保存したページを、今のテンプレート・部品・テーマで描き直す |
 | `floe template list` | テンプレートを並べる |
 | `floe template show <名前> [ファイル]` | テンプレートのテーマと、読むファイルを全部、書いたとおりに出す。ファイル名を足すとそれだけ |
-| `floe template new <名前>` | 埋めて使う最小の自分のテンプレートを作る |
+| `floe template new <名前>` | 埋めて使う自分のテンプレートを作る（floe が受ける最小のものに、viewport を足したもの） |
 | `floe template check` | 自分のテンプレートを確かめる |
 | `floe part list` | 部品・見た目・共有の schema を並べる |
 | `floe part show <名前> [ファイル]` | 部品・見た目・共有の schema と、読むファイルを全部、書いたとおりに出す。ファイル名を足すとそれだけ |
@@ -142,7 +142,7 @@ floe と自分のテンプレートを 1 行ずつ、タブで区切った 3 列
 
 ## `floe template new <名前>`
 
-`FLOE_TEMPLATES_DIR` にテンプレート `<名前>` を作ります。`floe template check` が通す最小の `page.html`・`schema.json`・`example.yaml` で、埋めて使います。
+`FLOE_TEMPLATES_DIR` にテンプレート `<名前>` を作ります。`floe template check` が通す最小の `page.html`・`schema.json`・`example.yaml` で、埋めて使います。`page.html` は viewport の `<meta>` も持ち、スマホはページを自分の幅で描きます。
 
 - 名前は英小文字・数字・`-`・`_` で、英小文字か数字で始めます。
 - 何も上書きしません。その名前のものがあれば、何も作らずに止まります（終了コード 1）。

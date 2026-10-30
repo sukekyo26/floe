@@ -146,8 +146,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add templates of your own in `FLOE_TEMPLATES_DIR`: `page.html`,
   `schema.json` and `example.yaml`, and `page.css`, `checks.yaml`,
   `computed.yaml`, `words.yaml` and `assets/` if they like; and
-  `floe template list`, `show`, `new` (the smallest template, to fill in) and
-  `check`.
+  `floe template list`, `show`, `new` (the smallest template, to fill in, its
+  `page.html` with a viewport for phones) and `check`.
 - Add parts, looks, shared schemas and themes of your own in `FLOE_PARTS_DIR`
   and `FLOE_THEMES_DIR`, beside floe's and never named as one of them; and
   `floe part list`, `show`, `new` (the smallest part, to fill in) and `check`.

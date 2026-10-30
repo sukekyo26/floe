@@ -115,10 +115,11 @@ need: floe template show report example.yaml.`,
 		},
 	}, &cobra.Command{
 		Use:   "new <name>",
-		Short: "Make a template of your own: the smallest that floe template check takes, to fill in",
+		Short: "Make a template of your own to fill in: the smallest floe template check takes, with a viewport",
 		Long: `Make the template <name> in FLOE_TEMPLATES_DIR (else floe/templates under XDG_CONFIG_HOME, or
-~/.config): a page.html, a schema.json and an example.yaml, which floe template check takes. Nothing
-is written over: with anything of that name there, nothing is made.`,
+~/.config): a page.html (with a viewport <meta>, so that a phone draws the page at its width), a
+schema.json and an example.yaml, which floe template check takes. Nothing is written over: with
+anything of that name there, nothing is made.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return a.newOwn(kit.KindTemplate, args[0])
