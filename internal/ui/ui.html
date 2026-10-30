@@ -455,7 +455,9 @@
   /* A bar too narrow for the kinds' counts, the sort and the add button side by side drops the counts */
   @container bar (max-width: 27rem) {
     .tabs .n { display: none; }
-    /* The kinds' icons alone, their words left for screen readers */
+  }
+  /* A bar too narrow for the kinds' words beside the sort shows their icons alone, the words left for screen readers */
+  @container bar (max-width: 36rem) {
     .tabs .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .tabs button > svg { margin-right: 0; }
   }
@@ -702,7 +704,7 @@
 <dialog id="add-dialog" aria-labelledby="add-title">
   <form class="add" id="add">
     <div class="add-head">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+      <svg id="add-icon-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" id="add-icon-folder" hidden><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>
       <div>
         <h2 id="add-title">{{.Msg "ui_add_link"}}</h2>
         <p class="lead" id="add-lead">{{.Msg "ui_add_lead"}}</p>
@@ -2199,6 +2201,9 @@
       $('add-lead').textContent = t(folder ? 'ui_add_folder_lead' : 'ui_add_lead');
       $('add-path-label').textContent = t(folder ? 'ui_add_folder_path' : 'ui_add_path');
       $('add-path').placeholder = folder ? '/home/you/project/docs' : '/home/you/project/coverage/index.html';
+      $('add-slug').placeholder = t(folder ? 'ui_add_folder_slug_placeholder' : 'ui_add_slug_placeholder');
+      $('add-icon-link').hidden = folder;
+      $('add-icon-folder').hidden = !folder;
       $('add-error').hidden = true;
       $('add-dialog').showModal();
     };
