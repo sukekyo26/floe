@@ -35,6 +35,7 @@ const measureTabs = `(() => {
 // It finds tabs whose picked title is drawn apart from the others, as a theme's style of tabs wins over tabs' own
 // print but for a fill it keeps to the screen.
 // LIMIT: tabs is the only part whose state print draws otherwise; check a part's that comes to do so too.
+// LIMIT: it tells the picked title drawn apart alone, not a ground a theme gives every title alike outside @media screen.
 func TestUIPrint(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	s.b.media("print")

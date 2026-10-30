@@ -17,8 +17,6 @@ import (
 // each part the page names a box of, and of each look the page or those parts take, before the parts that take it
 // and the parts that place it (those whose boxes hold its box), which adjust it; then the theme's style of each of
 // those parts in the same order, which wins over theirs, their @media print too.
-// LIMIT: a theme's style of a look so wins over what a part that takes it adjusts of it (brutal's margin of a
-// panel over a step's). Put the theme's after the look's own, before the parts', if a part comes to need its own.
 // Within the layer the more specific rule wins, else the later.
 // An element that takes a look without being a part's box (a card of options) has it a layer under the
 // template's and the parts', floe.looks: the part it is in, or the template it is the template's own of,
@@ -29,6 +27,7 @@ import (
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
+// LIMIT: a theme's style of a look wins over what a part taking it adjusts of it (brutal's panel margin over a step's); put it after the look's own if a part needs its own.
 func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) {
 	themed, ok := k.Theme(theme)
 	base, okBase := k.Theme(kit.DefaultTheme)

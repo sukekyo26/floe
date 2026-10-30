@@ -28,11 +28,15 @@ var layersKit = map[string]string{
 	"templates/brand/schema.json": `{"type": "object", "properties": {"note": {"$ref": "floe:///parts/note.json"}}, "additionalProperties": false}`,
 	"templates/brand/page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
 		`<body>{{.Data.note}}</body></html>`,
-	"templates/brand/page.css": ":scope { --accent: rgb(1, 2, 3); --surface: rgb(4, 5, 6); }\n",
-	"parts/sheet/schema.json":  `{"type": "object"}`,
-	"parts/sheet/part.html":    `<div data-floe-part="sheet"></div>`,
-	"parts/sheet/part.css":     "",
-	"parts/sheet/part.yaml":    "looks: [panel]\n",
+	"templates/brand/page.css":      ":scope { --accent: rgb(1, 2, 3); --surface: rgb(4, 5, 6); }\n",
+	"parts/sheet/schema.json":       `{"type": "object"}`,
+	"parts/sheet/part.html":         `<div data-floe-part="sheet"></div>`,
+	"parts/sheet/part.css":          "",
+	"parts/sheet/part.yaml":         "looks: [panel]\n",
+	"templates/layers/example.yaml": "lang: en\ntemplate: layers\n",
+	"templates/themed/example.yaml": "lang: en\ntemplate: themed\n",
+	"templates/bare/example.yaml":   "lang: en\ntemplate: bare\n",
+	"templates/brand/example.yaml":  "lang: en\ntemplate: brand\n",
 }
 
 // TestUILayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its
@@ -47,9 +51,6 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	s := newSite(t)
 	b := s.b
 	s.own(t, layersKit)
-	for _, name := range []string{"layers", "themed", "bare", "brand"} {
-		s.own(t, map[string]string{"templates/" + name + "/example.yaml": "lang: en\ntemplate: " + name + "\n"})
-	}
 	open := func(slug, data, ready string) {
 		t.Helper()
 

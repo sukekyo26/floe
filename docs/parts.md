@@ -62,7 +62,7 @@ floe puts a page's CSS into `<style>`s before its `</head>`, in six cascade laye
 
 1. `floe.palette`: the palettes, floe's `default` and then the theme's.
 2. `floe.base`: floe's base, the page's ground, colour and face on its root, and text, lists, links, code and quotes.
-3. `floe.theme`: the theme's `base.css`, scoped as the template's `page.css` is: it reaches the page and the boxes of the parts, not what they hold, which a part draws from floe's base.
+3. `floe.theme`: the theme's `base.css`, scoped as the template's `page.css` is: it reaches the page and the boxes of the parts, not what they hold, which a part draws from floe's base. Its root is `:scope`; `:root` and `html` are outside the scope, and a rule for what a part holds (`table th`) goes in the theme's file of that part.
 4. `floe.looks`: the looks of elements that take one without being a part's box (`data-floe-look`).
 5. `floe.page`: the template's `page.css`.
 6. `floe.parts`: the parts' style, each part after the looks it takes, then the theme's files of the parts. A theme's file wins over its part's `part.css`, its `@media print` too: a theme that fills a state print leaves out, such as the tab picked, writes it in `@media screen`.
@@ -83,7 +83,7 @@ A theme of your own is a directory of these files, each left out if not needed. 
 | File | What it holds |
 |---|---|
 | `palette.css` | The variables of [the palette](templates.md#the-palette), and those of names of its own, on `:root`. It goes over floe's `default` palette, so it writes only what it changes. |
-| `base.css` | Rules for every page, such as Markdown's quotes. They reach the page, not what a part holds, under the template's `page.css` and the looks. |
+| `base.css` | Rules for every page, such as Markdown's quotes. They reach the page, not what a part holds, under the template's `page.css` and the looks. Write the root as `:scope`, not `:root` or `html`, which are outside the scope, and what a part holds in the file of that part. |
 | `<name>.css` | The style of the part or look `<name>`, scoped as its `part.css` is: `panel.css` reaches every panel, `code.css` code, a diff and a terminal. |
 
 - A file of another name is refused.
