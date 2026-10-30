@@ -8,19 +8,20 @@ import (
 var layersKit = map[string]string{
 	"templates/layers/schema.json": `{"type": "object", "properties": {"note": {"$ref": "floe:///parts/note.json"}}, "additionalProperties": false}`,
 	"templates/layers/page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
-		`<body><header>h</header><p id="own">own</p><div id="boxed" data-floe-look="panel">b</div>{{.Data.note}}</body></html>`,
+		`<body><header>h</header><p id="own">own</p><section data-floe-look="panel">b</section>{{.Data.note}}</body></html>`,
 	"templates/layers/page.css": "body { color: rgb(0, 0, 2); }\np { color: rgb(255, 0, 0); }\n" +
 		"body div[data-floe-part=note].warn { background-color: rgb(255, 0, 0); margin-top: 7px; }\n" +
 		"body div[data-floe-part=note].warn::before { top: 0px; }\n" +
-		"#boxed { background-color: rgb(0, 0, 4); }\n" +
+		"section { background-color: rgb(0, 0, 4); }\n" +
 		"@keyframes held { from { opacity: 0.5; } to { opacity: 0.5; } }\nheader { animation: held 1000s; }\n" +
 		`@font-face { font-family: "own face"; src: url(data:,); }` + "\n",
 	"templates/themed/schema.json": `{"type": "object", "properties": {"text": {"type": "string", "format": "markdown"},
 "note": {"$ref": "floe:///parts/note.json"}}, "additionalProperties": false}`,
 	"templates/themed/page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
-		`<body><p id="own">own</p><header data-floe-look="band"><h2 id="banded">b</h2></header>{{.Data.text}}{{.Data.note}}</body></html>`,
-	"templates/themed/page.css":  "p { color: rgb(255, 0, 0); }\n",
-	"themes/mine/base.css":       "p { color: rgb(0, 0, 7); }\nblockquote { background-color: rgb(0, 0, 8); }\nh2 { color: rgb(0, 0, 9); }\n",
+		`<body><p id="own">own</p><header data-floe-look="band"><h2 class="banded">b</h2></header>{{.Data.text}}{{.Data.note}}</body></html>`,
+	"templates/themed/page.css": "p { color: rgb(255, 0, 0); }\n",
+	"themes/mine/base.css": "body p { color: rgb(0, 0, 7); }\nblockquote { background-color: rgb(0, 0, 8); }\n" +
+		"[data-floe-look~=\"band\"] h2.banded { color: rgb(0, 0, 9); }\n",
 	"themes/mine/band.css":       ":scope h2 { color: rgb(0, 0, 10); }\n",
 	"templates/bare/schema.json": `{"type": "object", "additionalProperties": false}`,
 	"templates/bare/page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
@@ -68,18 +69,19 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			document.querySelector('header').getAnimations()[0]?.animationName,
 			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`)
 	check(t, "layers", []string{got}, "rgb(246, 232, 210) | 13.6px | 7px | rgb(255, 0, 0) | rgb(0, 0, 2) | held | true")
-	// The template's own element that takes the panel's look has it under the template's CSS, which adjusts it: its
-	// background, the corners of default's panel.
-	got = b.eval(`(() => { const s = getComputedStyle(document.getElementById('boxed')); return s.backgroundColor + ' ' + s.borderTopLeftRadius })()`)
+	// The template's own element that takes the panel's look has it under the template's CSS, which adjusts it by the
+	// layer, though it would lose by its selector (section), the less specific: its background, the corners of
+	// default's panel.
+	got = b.eval(`(() => { const s = getComputedStyle(document.querySelector('section')); return s.backgroundColor + ' ' + s.borderTopLeftRadius })()`)
 	check(t, "a look of the template's own", []string{got}, "rgb(0, 0, 4) 20px")
 
-	// The theme's base.css: the template's paragraph wins over it; it draws the quote on the page but not the one in
-	// the note, whose paragraph floe's base draws in its quote's colour (default's --muted); the theme's band.css wins
-	// over it on the band.
+	// The theme's base.css: the template's paragraph wins over it, its selector (p) the less specific; it draws the
+	// quote on the page but not the one in the note, whose paragraph floe's base draws in its quote's colour (default's
+	// --muted); the theme's band.css wins over it on the band by the layer, its selector (:scope h2) the less specific.
 	open("themed", "template: themed\nlang: en\ntheme: mine\ntext: '> page'\nnote: { text: '> held' }\n", "[data-floe-part=note] blockquote")
 	got = b.eval(`(() => { const c = (q, p) => getComputedStyle(document.querySelector(q))[p];
 		return [c('#own', 'color'), c('body > blockquote', 'backgroundColor'), c('[data-floe-part=note] blockquote', 'backgroundColor'),
-			c('[data-floe-part=note] p', 'color'), c('#banded', 'color')].join(' | ') })()`)
+			c('[data-floe-part=note] p', 'color'), c('.banded', 'color')].join(' | ') })()`)
 	check(t, "the theme's base.css", []string{got}, "rgb(255, 0, 0) | rgb(0, 0, 8) | rgba(0, 0, 0, 0) | rgb(97, 95, 90) | rgb(0, 0, 10)")
 
 	// A part's style stops at a part it holds: the note's code is on the surface, the code of the table in it on
