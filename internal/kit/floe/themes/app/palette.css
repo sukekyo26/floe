@@ -1,0 +1,12 @@
+/* An app's screen: cool grey ground, white cards raised by soft shadows, a raspberry accent */
+:root {
+  --bg: #eef1f6; --surface: #ffffff; --fg: #1a2233; --muted: #5a6478; --line: #e1e6ee;
+  --accent: #c2185b; --accent-soft: #fce4ee;
+  --good: #137a4a; --good-soft: #dff3e8; --warn: #8f5800; --warn-soft: #fdecd2; --bad: #c62828; --bad-soft: #fde2e2;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, sans-serif;
+  --code-bg: #1a2233; --code-fg: #e7ebf3; --code-prompt: #ff8fb8;
+  --rule: 0 solid transparent;
+  --shadow: rgb(26 34 51 / 0.14);
+  /* How a card is raised from the ground: a close shadow and a soft wide one */
+  --app-raise: 0 1px 2px color-mix(in srgb, var(--shadow) 60%, transparent), 0 6px 16px -4px var(--shadow);
+}
