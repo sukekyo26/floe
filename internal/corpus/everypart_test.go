@@ -92,9 +92,9 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 			}
 		}
 	}
-	items, _ := parts["stack"].schema["items"].(map[string]any)
-	takes, _ := items["properties"].(map[string]any)
-	if len(takes) == 0 {
+	items, ok := parts["stack"].schema["items"].(map[string]any)
+	takes, ok2 := items["properties"].(map[string]any)
+	if !ok || !ok2 || len(takes) == 0 {
 		t.Fatal("stack's schema names no part under items.properties")
 	}
 	for _, name := range slices.Sorted(maps.Keys(takes)) {
