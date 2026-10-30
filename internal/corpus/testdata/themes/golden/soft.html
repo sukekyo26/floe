@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The soft theme</title>
 <style>
-@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -83,6 +83,15 @@ blockquote > * + * { margin-top: 0.6rem; }
   /* The column a template centres its page in: its width, without the pad each side of it */
   --page-width: 96rem; --page-pad: 16px;
   color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *) {
+/* Faces with round corners, as the parts are drawn by default */
+blockquote > * { --face: initial; --on-face: initial; }
+blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-radius: 14px; background: color-mix(in srgb, var(--line) 40%, var(--surface)); }
 }
 }
 </style>
@@ -340,13 +349,6 @@ blockquote > * + * { margin-top: 0.6rem; }
   :scope > div { display: grid; order: 0; }
 }
 }
-}
-</style>
-<style>
-@layer floe.parts {
-/* Faces with round corners, as the parts are drawn by default */
-blockquote > * { --face: initial; --on-face: initial; }
-blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-radius: 14px; background: color-mix(in srgb, var(--line) 40%, var(--surface)); }
 }
 </style>
 <style>

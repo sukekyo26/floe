@@ -169,8 +169,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add twelve themes a data file picks with `theme:` (`default`, `soft`,
   `editorial`, `ink`, `brutal`, `blueprint`, `notebook`, `retro`, `swiss`,
   `washi`, `aurora` and `app`), each a palette of CSS variables and the shape
-  of the parts. `aurora` lays faces of frosted white glass on a wash of
-  lavender, peach and mint, with a violet accent and round corners. `app`
+  of the parts. A quote in a part (a note, a step, a card, details or tabs)
+  is drawn as floe's, a rule at its left, not in the theme's shape of the
+  page's quotes; and on paper, where every tab shows under its title, no
+  theme fills the title of the tab picked on the screen. `aurora` lays faces
+  of frosted white glass on a wash of lavender, peach and mint, with a violet
+  accent and round corners. `app`
   raises white cards from a cool grey ground with soft shadows, its Latin in
   the UI face of Windows or Android, with a raspberry accent. Pages in
   `default`, and in the themes that take its colours (`soft`, `editorial`), have
@@ -194,6 +198,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   text/template's mistake of running a `part.html` (a key its schema does not
   declare) is told at its line and column, as one of a `page.html` is; a
   function refusing a value (`num`, `bars`) is told at the value.
+  A theme's `base.css` reaches the page as a template's `page.css` does, not
+  what a part holds, and under the template's `page.css` and the looks: its
+  root is `:scope`, `:root` and `html` being outside it, and a rule for what a
+  part holds goes in the theme's file of that part.
   A mistake of a part, shared schema, theme or template of your own stops
   every page drawn until it is fixed. The directories of parts, themes and
   templates of your own that are one, or one in the other, are refused for

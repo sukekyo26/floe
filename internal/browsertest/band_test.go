@@ -1,8 +1,6 @@
 package browsertest_test
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -57,15 +55,7 @@ const measureBand = `(() => {` + colours + `
 // whose glass would let the band through but for its band.css.
 func TestUIBand(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
-	for name, text := range bandKit {
-		at := filepath.Join(s.Dir, filepath.FromSlash(name))
-		if err := os.MkdirAll(filepath.Dir(at), 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(at, []byte(text), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
+	s.own(t, bandKit)
 	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)

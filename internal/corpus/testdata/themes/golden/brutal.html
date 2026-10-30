@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The brutal theme</title>
 <style>
-@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -101,6 +101,17 @@ blockquote > * + * { margin-top: 0.6rem; }
   --brutal-ink: #0a0a0a;
   /* The heads of its tables */
   --brutal-head-bg: #0a0a0a; --brutal-head-fg: #ffde21;
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *) {
+/* Thick black frames, flat primary faces and hard offset shadows; no corner is rounded */
+blockquote {
+  border: 3px solid var(--fg); border-radius: 0; padding: 1.1rem 1.4rem; --face: var(--brutal-yellow); --on-face: var(--brutal-ink); background: var(--face); color: var(--on-face);
+  font-size: 1.2rem; font-weight: 800; box-shadow: 6px 6px 0 var(--fg); margin-right: 6px;
+}
 }
 }
 </style>
@@ -362,15 +373,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-/* Thick black frames, flat primary faces and hard offset shadows; no corner is rounded */
-blockquote {
-  border: 3px solid var(--fg); border-radius: 0; padding: 1.1rem 1.4rem; --face: var(--brutal-yellow); --on-face: var(--brutal-ink); background: var(--face); color: var(--on-face);
-  font-size: 1.2rem; font-weight: 800; box-shadow: 6px 6px 0 var(--fg); margin-right: 6px;
-}
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
 :scope {
   border: 2px solid var(--fg); border-radius: 0; font-weight: 900; color: var(--brutal-ink); background: var(--brutal-blue);
@@ -476,7 +478,8 @@ blockquote {
 @layer floe.parts {
 @scope ([data-floe-part="tabs"]) to (:scope [data-floe-part] > *) {
 :scope > label { border-radius: 0; border: 2px solid transparent; }
-:scope > label:has(:checked) { background: var(--brutal-yellow); color: var(--brutal-ink); border-color: var(--fg); }
+/* On screen alone: on paper every tab shows under its title, which tabs' own print takes off its ground */
+@media screen { :scope > label:has(:checked) { background: var(--brutal-yellow); color: var(--brutal-ink); border-color: var(--fg); } }
 }
 }
 </style>

@@ -1,0 +1,2 @@
+/* No stripes on a band, where the orange would sink into the accent */
+:scope h2::after { content: none; }

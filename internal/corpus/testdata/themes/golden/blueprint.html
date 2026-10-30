@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The blueprint theme</title>
 <style>
-@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -100,6 +100,24 @@ blockquote > * + * { margin-top: 0.6rem; }
     linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px;
   --page-bg: var(--bp-squares), var(--bg);
   --rule: 1.5px solid var(--accent);
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *) {
+/* A drawing on squared paper in blue ink: every cell ruled, labels in capitals of a fixed width, notes as
+   dashed callouts and cards with their figure numbers */
+blockquote > * { --face: initial; --on-face: initial; }
+blockquote {
+  background: var(--bp-squares), var(--surface); border-radius: 0;
+  box-shadow: none;
+}
+blockquote { border: 1.5px solid var(--accent); padding: 0.9rem 1.2rem; color: var(--fg); }
+blockquote::before {
+  content: "QUOTE"; display: block; margin-bottom: 0.3rem; color: var(--accent);
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em;
+}
 }
 }
 </style>
@@ -361,22 +379,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-/* A drawing on squared paper in blue ink: every cell ruled, labels in capitals of a fixed width, notes as
-   dashed callouts and cards with their figure numbers */
-blockquote > * { --face: initial; --on-face: initial; }
-blockquote {
-  background: var(--bp-squares), var(--surface); border-radius: 0;
-  box-shadow: none;
-}
-blockquote { border: 1.5px solid var(--accent); padding: 0.9rem 1.2rem; color: var(--fg); }
-blockquote::before {
-  content: "QUOTE"; display: block; margin-bottom: 0.3rem; color: var(--accent);
-  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em;
-}
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
 :scope {
   display: inline-flex; align-items: center; gap: 0.45em; border-radius: 0; background: none; border: 1.5px solid currentColor;
@@ -465,7 +467,8 @@ blockquote::before {
 @layer floe.parts {
 @scope ([data-floe-part="tabs"]) to (:scope [data-floe-part] > *) {
 :scope > label { border-radius: 0; font-family: var(--mono); letter-spacing: 0.04em; }
-:scope > label:has(:checked) { background: none; color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+/* On screen alone: on paper every tab shows under its title, which tabs' own print takes off its ground */
+@media screen { :scope > label:has(:checked) { background: none; color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); } }
 }
 }
 </style>

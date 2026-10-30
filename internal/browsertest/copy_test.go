@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -374,15 +373,7 @@ var snipKit = map[string]string{
 func TestUICopyOwnPart(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := copySite(t, "en")
 	b := s.b
-	for name, text := range snipKit {
-		at := filepath.Join(s.Dir, filepath.FromSlash(name))
-		if err := os.MkdirAll(filepath.Dir(at), 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(at, []byte(text), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
+	s.own(t, snipKit)
 	s.floe(t, "publish", s.write(t, "snip.yaml", "lang: en\ntemplate: snips\ntitle: Snip\nsnip: {}\n"), "--slug", "snip")
 	var look string
 	got := s.clip(t, func() {

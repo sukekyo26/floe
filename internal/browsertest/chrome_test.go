@@ -7,8 +7,6 @@
 // changes those.
 // LIMIT: a frame URL's #part (written by the frame, kept on reload and Back) is not checked in a browser; port develop's TestUIFrameHash in a PR that changes leaveFrame or the frame's hash handling.
 // LIMIT: the diagram's zoom, pan and keys are not checked in a browser; port develop's TestUIZoom in a PR that changes zoom.js.
-// LIMIT: the order of floe's CSS layers, @scope and a part's looks are not checked as computed styles, but for the gap between
-// the diagram's toolbar and frame (TestUIDiagram); port develop's TestUILayers in a PR that changes how draw assembles the page's CSS.
 package browsertest_test
 
 import (
@@ -402,6 +400,21 @@ func (s *site) write(t *testing.T, rel, text string) string {
 		t.Fatal(err)
 	}
 	return file
+}
+
+// own writes files (paths under the server's directory, slash-separated), parts, themes and templates of one's own.
+func (s *site) own(t *testing.T, files map[string]string) {
+	t.Helper()
+
+	for name, text := range files {
+		at := filepath.Join(s.Dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(at), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(at, []byte(text), 0o600); err != nil { //nolint:gosec // G703: a path the test names
+			t.Fatal(err)
+		}
+	}
 }
 
 // page writes a data file for the report template under home titled title ("" for none), with html as its one

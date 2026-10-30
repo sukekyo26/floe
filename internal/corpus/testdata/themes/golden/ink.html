@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The ink theme</title>
 <style>
-@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -95,6 +95,13 @@ blockquote > * + * { margin-top: 0.6rem; }
   --good: #1e6b43; --good-soft: #dcebe2; --warn: #8a5a10; --warn-soft: #f3e7d1; --bad: #a8261e; --bad-soft: #f6e0de;
   --code-bg: #141414; --code-fg: #ececec; --code-prompt: #9fb4e6;
   --rule: 2px solid var(--fg);
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *) {
+blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem 1.5rem; border-radius: 14px; background: var(--face); color: var(--on-face); font-size: 1.05rem; }
 }
 }
 </style>
@@ -352,11 +359,6 @@ blockquote > * + * { margin-top: 0.6rem; }
   :scope > div { display: grid; order: 0; }
 }
 }
-}
-</style>
-<style>
-@layer floe.parts {
-blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem 1.5rem; border-radius: 14px; background: var(--face); color: var(--on-face); font-size: 1.05rem; }
 }
 </style>
 <style>

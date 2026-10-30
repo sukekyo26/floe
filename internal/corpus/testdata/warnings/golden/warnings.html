@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Warnings</title>
 <style>
-@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -87,6 +87,16 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 </style>
 <style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *) {
+/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+blockquote > * { --face: initial; --on-face: initial; }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
+blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+}
+}
+</style>
+<style>
 @layer floe.parts {
 @scope ([data-floe-part="stack"]) to (:scope [data-floe-part] > *) {
 /* What details and tabs hold */
@@ -119,14 +129,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 :scope > summary:focus-visible { outline-offset: -2px; border-radius: 14px; }
 :scope > div { padding: 0 1.2rem 1.1rem; }
 }
-}
-</style>
-<style>
-@layer floe.parts {
-/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
-blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
-blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 </style>
 <style>

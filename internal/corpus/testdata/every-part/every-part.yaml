@@ -28,7 +28,7 @@ sections:
           > Read-only means read-only: [the freeze](https://example.com/freeze) covers `comments` too.
       - steps:
           - { title: Freeze edits on the old wiki, text: On **Friday evening**., state: done }
-          - { title: Copy the pages and check the links, state: doing }
+          - { title: Copy the pages and check the links, text: '> Broken links first: [the report](https://example.com/report).', state: doing }
           - { title: Point the team's bookmarks at the new host, state: todo }
           - title: Close the old server
       - terminal:
@@ -82,7 +82,10 @@ sections:
       - note:
           tone: warn
           title: Heads up
-          text: Anyone editing during the freeze loses their changes; [the plan](https://example.com/plan) and `freeze.sh` say when.
+          text: |
+            Anyone editing during the freeze loses their changes; [the plan](https://example.com/plan) and `freeze.sh` say when.
+
+            > Saved drafts are lost too: [the drafts](https://example.com/drafts) and `drafts.sh`.
       - note: { text: 'The new host is ready; [the host](https://example.com/host) and `host.sh`.', tone: accent }
       - note: { text: 'Attachments over 1 MB failed; [the list](https://example.com/failed) names each, and `retry.sh` sends them again.', tone: bad }
       - note: { text: 'The banner goes up on Friday; [the banner](https://example.com/banner) and `banner.sh`.' }
@@ -185,7 +188,10 @@ sections:
           title: The whole log
           open: true
           parts:
-            - text: What the copy printed.
+            - text: |
+                What the copy printed.
+
+                > Every page, with [the count](https://example.com/count) and `count.sh`.
             - terminal:
                 steps:
                   - { run: wiki export, out: done }

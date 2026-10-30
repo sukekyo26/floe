@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Every part</title>
 <style>
-@layer floe.palette, floe.base, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -83,6 +83,16 @@ blockquote > * + * { margin-top: 0.6rem; }
   /* The column a template centres its page in: its width, without the pad each side of it */
   --page-width: 96rem; --page-pad: 16px;
   color-scheme: light;
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) to ([data-floe-part] > *) {
+/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+blockquote > * { --face: initial; --on-face: initial; }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
+blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
 </style>
@@ -709,14 +719,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-/* Panels of a quiet ground hold faces of the surface, as tiles in a box */
-blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
-blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
-}
-</style>
-<style>
-@layer floe.parts {
 @scope ([data-floe-part="bars"], [data-floe-part="checklist"], [data-floe-part="compare"], [data-floe-part="details"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="keys"], [data-floe-part="progress"], [data-floe-part="steps"], [data-floe-part="table"], [data-floe-part="timeline"], [data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
 }
@@ -884,7 +886,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <ol data-floe-part="steps">
 <li class="done"><strong>Freeze edits on the old wiki</strong><p>On <strong>Friday evening</strong>.</p>
 </li>
-<li class="doing" aria-current="step"><strong>Copy the pages and check the links</strong></li>
+<li class="doing" aria-current="step"><strong>Copy the pages and check the links</strong><blockquote>
+<p>Broken links first: <a href="https://example.com/report">the report</a>.</p>
+</blockquote>
+</li>
 <li class="todo"><strong>Point the team&#39;s bookmarks at the new host</strong></li>
 <li class="todo"><strong>Close the old server</strong></li>
 </ol>
@@ -1371,6 +1376,9 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </tbody>
 </table></div>
 <div class="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes; <a href="https://example.com/plan">the plan</a> and <code>freeze.sh</code> say when.</p>
+<blockquote>
+<p>Saved drafts are lost too: <a href="https://example.com/drafts">the drafts</a> and <code>drafts.sh</code>.</p>
+</blockquote>
 </div>
 <div class="accent" data-floe-part="note"><p>The new host is ready; <a href="https://example.com/host">the host</a> and <code>host.sh</code>.</p>
 </div>
@@ -1551,7 +1559,10 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </section>
 <section>
 <h2 id="folded">Folded</h2>
-<details data-floe-part="details" open=""><summary>The whole log</summary><div data-floe-part="stack"><p>What the copy printed.</p><figure class="sh" data-floe-part="terminal"><pre><span class="run" data-floe-copy="">wiki export</span><span class="out">done</span></pre><script>(function copyButton(words) {
+<details data-floe-part="details" open=""><summary>The whole log</summary><div data-floe-part="stack"><p>What the copy printed.</p>
+<blockquote>
+<p>Every page, with <a href="https://example.com/count">the count</a> and <code>count.sh</code>.</p>
+</blockquote><figure class="sh" data-floe-part="terminal"><pre><span class="run" data-floe-copy="">wiki export</span><span class="out">done</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
