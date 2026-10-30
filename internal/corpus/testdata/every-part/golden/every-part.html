@@ -88,7 +88,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="bars"], [data-floe-part="checklist"], [data-floe-part="compare"], [data-floe-part="details"], [data-floe-part="faq"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="glossary"], [data-floe-part="keys"], [data-floe-part="matrix"], [data-floe-part="progress"], [data-floe-part="risks"], [data-floe-part="steps"], [data-floe-part="table"], [data-floe-part="timeline"], [data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="bars"], [data-floe-part="checklist"], [data-floe-part="compare"], [data-floe-part="details"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="glossary"], [data-floe-part="keys"], [data-floe-part="matrix"], [data-floe-part="progress"], [data-floe-part="risks"], [data-floe-part="steps"], [data-floe-part="table"], [data-floe-part="timeline"], [data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
 :scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
 }
@@ -156,7 +156,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="checklist"], [data-floe-part="faq"], [data-floe-part="glossary"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="checklist"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="glossary"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
 /* Rows in a panel, a rule between each and the next */
 :scope > * + * { border-top: 1px solid var(--line); }
 }
@@ -310,6 +310,30 @@ blockquote > * + * { margin-top: 0.6rem; }
 :scope figcaption :is(.added, .removed) { flex: none; }
 :scope figcaption .added { color: var(--code-add); }
 :scope figcaption .removed { color: var(--code-del); }
+}
+}
+</style>
+<style>
+@layer floe.parts {
+@scope ([data-floe-part="entries"]) to (:scope [data-floe-part] > *) {
+/* A heading, its tags on the line under it, then its text the full width, which a wide block in it (code, a table)
+   does not widen past the panel.
+   LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
+   if pages come to put code in entries */
+:scope { margin: 0; display: grid; }
+:scope > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; padding: 0.75rem 1.2rem; }
+:scope dt { font-weight: 700; }
+:scope dd { margin: 0; }
+/* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
+   them, which stays as large as in a table's cell */
+:scope .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.9rem; font-size: 0.85rem; color: var(--muted); }
+:scope .tags > span { min-width: 0; }
+:scope .tags code { font-size: 0.86rem; }
+:scope .text { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; }
+@media (max-width: 36rem) {
+  /* A long pill wraps rather than overflow the panel */
+  :scope .tags [data-floe-part] { white-space: normal; }
+}
 }
 }
 </style>
@@ -744,7 +768,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="bars"], [data-floe-part="checklist"], [data-floe-part="compare"], [data-floe-part="details"], [data-floe-part="faq"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="glossary"], [data-floe-part="keys"], [data-floe-part="matrix"], [data-floe-part="progress"], [data-floe-part="risks"], [data-floe-part="steps"], [data-floe-part="table"], [data-floe-part="timeline"], [data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="bars"], [data-floe-part="checklist"], [data-floe-part="compare"], [data-floe-part="details"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="glossary"], [data-floe-part="keys"], [data-floe-part="matrix"], [data-floe-part="progress"], [data-floe-part="risks"], [data-floe-part="steps"], [data-floe-part="table"], [data-floe-part="timeline"], [data-floe-part="tree"]) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
 }
 }
@@ -786,7 +810,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 </style>
 <style>
 @layer floe.parts {
-@scope ([data-floe-part="checklist"], [data-floe-part="faq"], [data-floe-part="glossary"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="checklist"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="glossary"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
 :scope { padding: 6px; }
 :scope > * { background: var(--surface); }
 :scope > :first-child { border-radius: 14px 14px 0 0; }
@@ -1490,6 +1514,17 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </dd></div>
 <div><dt>Host</dt><dd><p>Where the wiki runs.</p>
 </dd></div>
+</dl>
+<dl data-floe-part="entries">
+<div><dt><code>export</code></dt><dd class="tags"><span>Runs nightly</span><span><code>wiki.conf</code></span><span><span data-floe-part="cell">on track</span></span><span><span class="good" data-floe-part="cell">done</span></span></dd><dd class="text"><p>Writes every page as Markdown, with its history, into <code>pages/</code>.</p>
+<ul>
+<li>Pages under <strong>drafts</strong> are left out</li>
+<li>Images go to <code>pages/images/</code></li>
+</ul>
+</dd></div>
+<div><dt>Search index</dt><dd class="tags"><span><span class="warn" data-floe-part="cell">by hand</span></span><span><span class="bad" data-floe-part="cell">blocked</span></span><span><span class="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p>
+</dd></div>
+<div><dt>Old links</dt></div>
 </dl>
 <dl data-floe-part="keys">
 <div><dt><kbd>Ctrl</kbd><span>+</span><kbd>K</kbd></dt><dd>Search the wiki</dd></div>

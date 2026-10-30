@@ -72,7 +72,7 @@ As in `page.css`, a `}` that closes no block and an `@import` are refused at the
 ## Borrowing a look
 
 - An element that is no part's box takes a look by `data-floe-look`: `<section data-floe-look="panel">` is a panel in every theme. It has it in `floe.looks`, under the parts and the template, so that the part or template it is in adjusts it.
-- floe's parts take looks so: `compare`, `fields`, `findings`, `matrix` and `risks` take the table's, `stats`, `options`, `facts`, `links` and `decision` the cards', `diff` and `terminal` code's, `checklist`, `faq`, `glossary` and `keys` the look `rows`, and the other parts drawn in a panel `panel`'s. A theme's rules for a look draw every part that takes it.
+- floe's parts take looks so: `compare`, `fields`, `findings`, `matrix` and `risks` take the table's, `stats`, `options`, `facts`, `links` and `decision` the cards', `diff` and `terminal` code's, `checklist`, `entries`, `faq`, `glossary` and `keys` the look `rows`, and the other parts drawn in a panel `panel`'s. A theme's rules for a look draw every part that takes it.
 
 ## Themes
 
