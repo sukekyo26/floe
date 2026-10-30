@@ -274,8 +274,7 @@ func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error 
 			// LIMIT: told at template:, whether page.html or a part's part.html put the item there: which of them did
 			// is not known without marks around a part's output too, which would refuse part.html left open as an
 			// item's is. Mark a part's output if one comes to need it told at part.html.
-			found = append(found, s.named(d, marks, i, yamlpos.New(d.File, d.Where["template"], "draw_html_placed",
-				strings.Join(s.html[o.n], "."), o.holder)))
+			found = append(found, s.placed(d, marks, i))
 			break
 		}
 		whole := func(where string) *usererr.Error {
@@ -303,52 +302,53 @@ func (s *items) check(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) error 
 	return found.Err()
 }
 
-// named returns the mistake of an item that changed the page, told at marks[at], a mark of the item check refused:
-// the elements an item leaves open, as reread says, at that item. It reads again, in the page's order, the items whose
-// marks the parser moved (moved) among that item and those with a mark before marks[at], whose moving made the item
-// look changed; told when none says one. It names alone: the page is refused whichever it returns.
-// LIMIT: an item is read again in the element its start is in, as the parser put it, alone: not in the elements
-// above it, nor the formatting page.html left open. Where they would change its reading, it may name none, and the
-// mistake check read is told.
-func (s *items) named(d *doc.Data, marks []occurrence, at int, told *usererr.Error) *usererr.Error {
-	n := marks[at].n
-	var starts []int
-	for i, o := range marks {
-		listed := slices.ContainsFunc(starts, func(j int) bool { return marks[j].n == o.n })
-		before := slices.ContainsFunc(marks[:at], func(p occurrence) bool { return p.n == o.n })
-		if o.exact && !o.end && !listed && (o.n == n || before) && moved(marks, i) {
-			starts = append(starts, i)
-		}
-	}
-	for _, i := range starts {
-		if where := s.reread(marks[i]); where != "" {
-			return yamlpos.New(d.File, d.PosOf(s.html[marks[i].n]), "draw_html_whole", where)
-		}
+// placed returns the mistake of marks[i], a mark of an item in a text or an attribute, told at template:: page.html
+// or a part's part.html put the item there; but for an end, which the item left open what holds out of a table,
+// named.
+func (s *items) placed(d *doc.Data, marks []occurrence, i int) *usererr.Error {
+	o := marks[i]
+	told := yamlpos.New(d.File, d.Where["template"], "draw_html_placed", strings.Join(s.html[o.n], "."), o.holder)
+	if o.end {
+		return s.named(d, marks, i, told)
 	}
 	return told
 }
 
-// moved reports whether the parser moved the marks of the item marks[i] starts, a comment of its own: its end, the
-// item's k-th end for its k-th start (an item drawn twice has two), is before it, or none, or no comment of its own,
-// as a table puts what an item left open before it.
-func moved(marks []occurrence, i int) bool {
-	n := marks[i].n
-	k := 0
-	for _, p := range marks[:i] {
-		if p.n == n && p.exact && !p.end {
-			k++
+// named returns the mistake of an item that changed the page, told at marks[at], a mark of the item check refused:
+// the elements an item leaves open, as reread says, at that item. It reads again, in the page's order, each copy of
+// that item, and of the items with a mark before marks[at], whose moving made the item look changed, that the parser
+// moved: the k-th start of an item, a comment of its own, whose k-th end, a comment of its own, is not after it (an
+// item drawn twice has two of each); told when none says one. It names alone: the page is refused whichever it
+// returns.
+// LIMIT: an item is read again in the element its start is in, as the parser put it, alone: not in the elements
+// above it, nor the formatting page.html left open. Where they would change its reading, it may name none, and the
+// mistake check read is told.
+func (s *items) named(d *doc.Data, marks []occurrence, at int, told *usererr.Error) *usererr.Error {
+	before := map[int]bool{}
+	for _, o := range marks[:at] {
+		before[o.n] = true
+	}
+	ends := map[int][]int{}
+	for i, o := range marks {
+		if o.exact && o.end {
+			ends[o.n] = append(ends[o.n], i)
 		}
 	}
-	for j, p := range marks {
-		if p.n != n || !p.end {
+	kth := map[int]int{}
+	for i, o := range marks {
+		if !o.exact || o.end {
 			continue
 		}
-		if k == 0 {
-			return j < i || !p.exact
+		k := kth[o.n]
+		kth[o.n]++
+		if o.n != marks[at].n && !before[o.n] || k < len(ends[o.n]) && ends[o.n][k] > i {
+			continue
 		}
-		k--
+		if where := s.reread(o); where != "" {
+			return yamlpos.New(d.File, d.PosOf(s.html[o.n]), "draw_html_whole", where)
+		}
 	}
-	return true
+	return told
 }
 
 // reread reads the text of the item that start, a comment of its own, starts, alone, as the parser reads HTML in the
@@ -363,14 +363,12 @@ func (s *items) reread(start occurrence) string {
 	for _, top := range nodes {
 		for n := range top.Descendants() {
 			switch {
-			case n.Type == html.CommentNode && n.Data == at:
+			case n.Type == html.CommentNode && n.Data == at, n.Type == html.TextNode && strings.Contains(n.Data, at):
 				var open []string
 				for p := n.Parent; p != nil; p = p.Parent {
 					open = append([]string{"<" + p.Data + ">"}, open...)
 				}
 				return strings.Join(open, " ")
-			case n.Type == html.TextNode && strings.Contains(n.Data, at) && n.Parent != nil:
-				return "<" + n.Parent.Data + ">"
 			}
 		}
 	}

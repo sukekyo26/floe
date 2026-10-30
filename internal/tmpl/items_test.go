@@ -388,7 +388,7 @@ func TestSelectText(t *testing.T) {
 		{"<select><svg><foreignObject><xmp>x</xmp></foreignObject></svg></select>", in("svg") + "\n" + in("xmp")},
 		{"<select><style>x{}</style></select>", style},
 		{"<select><noscript>x</noscript></select>", "d.yaml:2:11: the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out"},
-		{"<select><plaintext>x</select>", "d.yaml:3:4: HTML changes the page around it at <plaintext>: close in it each element and comment it opens, and close no element it did not open"},
+		{"<select><plaintext>x</select>", "d.yaml:3:4: HTML changes the page around it at <select> <plaintext>: close in it each element and comment it opens, and close no element it did not open"},
 		{"<select><xmp></select><meta http-equiv=refresh content=0></xmp>", "d.yaml:3:4: HTML changes the page around it at <select>: close in it each element and comment it opens, and close no element it did not open"},
 		{`<select><option>a</option><optgroup label="g"><option>b</option></optgroup></select>`, ""},
 		{"<xmp><b>x</b></xmp>", ""},
