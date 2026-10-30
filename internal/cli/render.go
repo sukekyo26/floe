@@ -29,8 +29,8 @@ func (a *app) renderCmd() *cobra.Command {
 (made when missing). The page opens without floe, as a download does: what it shows is in it,
 and its CSP is in a <meta>. A file is written only when it changes, and its path is printed.
 
-Every mistake of every file is printed as file:line:column: message, and nothing is written
-until all are fixed; nor when two data files would write the same file. The warnings of the
+Every mistake of every file is printed as file:line:column: message (file: message for one of
+the whole file), and nothing is written until all are fixed; nor when two data files would write the same file. The warnings of the
 pages drawn are printed after them as file:line:column: warning: message, and leave the exit
 code as it is.
 

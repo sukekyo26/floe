@@ -97,7 +97,8 @@ floe の主要な変更を記録します。フォーマットは
   シグナルを送らない。その pid は別のプロセスでありうる）。サーバーは途中の要求を終えてから止まる。
 - 追加：`floe check` と `floe render`。データファイルを書かずに確かめ、ページを floe 無しで
   開ける HTML のファイルに書く（CI 向けに `--check`）。誤りは
-  `file:line:column: message` で出し、確かめの 1 つの段の誤りは全部まとめて出す。
+  `file:line:column: message` で出し（根に足りない鍵など、ファイル全体の誤りは
+  `file: message`）、確かめの 1 つの段の誤りは全部まとめて出す。
 - 追加：`floe rebuild`。保存したページを、今のテンプレート・部品・テーマで描き直す。描けなく
   なったページは前のままにする。
 - 追加：`floe list`・`floe rm`・`floe serve`・`floe stop` と、ブラウザの言語で英語か日本語に

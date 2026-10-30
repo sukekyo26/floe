@@ -99,7 +99,7 @@ A linked folder is one row of the management page's Folders tab. Its URL (`/a/<s
 
 Check each data file as its page is drawn: its YAML, its template and theme, the template's schema, its checks and computed values, and the page drawn. A relative path is resolved against the working directory.
 
-- The mistakes of every file are printed as `file:line:column: message`, in the order the files were given (exit code 1): every mistake of a stage of the checks at once, a stage running only when the one before it has none. [pages.md](pages.md#reading-mistakes) tells how to read them.
+- The mistakes of every file are printed as `file:line:column: message` (`file: message` for one of the whole file), in the order the files were given (exit code 1): every mistake of a stage of the checks at once, a stage running only when the one before it has none. [pages.md](pages.md#reading-mistakes) tells how to read them.
 - The warnings of the pages drawn, advice on a better way to write them, are printed after the mistakes as `file:line:column: warning: message`; they leave the exit code as it is. [pages.md](pages.md#warnings) tells them.
 - Nothing is printed when every file is right and has no warning (exit code 0).
 - Nothing is written, and the server is not started, so a repository's CI can run it over its data files.
@@ -229,7 +229,7 @@ Stop the background server, and return once it is gone, so that a command right 
 Check each diagram spec and print the diagrams, in order, as one HTML fragment of inline SVG on stdout, to paste into an HTML page of your own: a whole document with `<!doctype html>` and `<html lang>`, since `floe publish --link` shows the file as it is. In a data file, write the spec in a `diagram` part instead ([pages.md](pages.md#diagrams), which tells how a spec is written). A relative path is resolved against the working directory.
 
 - A spec is checked against the diagram's schema, then laid out once for every language its text is written in, and checked: text that overflows, parts that overlap or stick out of the canvas, edges through boxes, crossings … ([pages.md](pages.md#diagrams) lists the checks).
-- Every mistake of every spec is printed as `file:line:column: message`, in the order the specs were given, and nothing is drawn until all are fixed (exit code 1).
+- Every mistake of every spec is printed as `file:line:column: message` (`file: message` for one of the whole spec), in the order the specs were given, and nothing is drawn until all are fixed (exit code 1).
 - The text is written in the language of `--lang` (`en` when left out). A language a text does not have falls back to English.
 - The fragment starts with the assets: the diagrams' style, which takes its colours from the palette's CSS variables (a page without them gets `default`'s colours), and the script that zooms them. Readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. A page needs the assets once; holding them more than once does no harm.
 

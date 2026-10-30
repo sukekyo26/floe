@@ -165,7 +165,7 @@ plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad'
 plan.yaml:8:36: write the command without its prompt, which floe draws from the shell ("$ ls")
 ```
 
-- `file:line:column:` が誤りの場所です。変える値か、それを持つ鍵を指します。言われた誤りを全部直してから、`floe check` をもう一度走らせます。次の段の誤りが出ることがあります。
+- `file:line:column:` が誤りの場所です。変える値か、それを持つ鍵を指します。行の無い `file:` だけの誤りは、ファイル全体の誤りです。根に足りない鍵（`plan.yaml: missing property 'title'`）や、テンプレートのデータファイル全体にかける検査がこう出ます。言われた誤りを全部直してから、`floe check` をもう一度走らせます。次の段の誤りが出ることがあります。
 - 形の誤り（`additional properties 'x' not allowed`・`missing property 'x'`・`got string, want array`）は、テンプレートか部品の schema がデータを断ったものです。`floe template show <テンプレート> schema.json` と `floe part show <部品> schema.json` が、取るものを出します。
 - 自分の部品・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check` と `floe template check` が並べます。
 - 同じ誤りは、何か所から指されても 1 回だけ言います。
