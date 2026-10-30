@@ -12,7 +12,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe rebuild` | Draw every stored page again with the templates, parts and themes of now |
 | `floe template list` | List the templates |
 | `floe template show <name> [file]` | Show a template: its themes and every file it reads as written, or one of them |
-| `floe template new <name>` | Make the smallest template of your own, to fill in |
+| `floe template new <name>` | Make a template of your own to fill in: the smallest floe takes, with a viewport |
 | `floe template check` | Check the templates of your own |
 | `floe part list` | List the parts, looks and shared schemas |
 | `floe part show <name> [file]` | Show a part, look or shared schema and every file it reads as written, or one of them |
@@ -142,7 +142,7 @@ Print a template, to read before writing a data file of it: its description, whe
 
 ## `floe template new <name>`
 
-Make the template `<name>` in `FLOE_TEMPLATES_DIR`: a `page.html`, a `schema.json` and an `example.yaml`, the smallest that `floe template check` takes, to fill in.
+Make the template `<name>` in `FLOE_TEMPLATES_DIR`: a `page.html`, a `schema.json` and an `example.yaml`, the smallest that `floe template check` takes, to fill in. The `page.html` also holds a viewport `<meta>`, so that a phone draws the page at its own width.
 
 - A name is lower case letters, digits, `-` and `_`, starting with a letter or a digit.
 - Nothing is written over: with anything of that name there, the command stops and makes nothing (exit code 1).

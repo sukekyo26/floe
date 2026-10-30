@@ -7,7 +7,7 @@
 自分のテンプレートは、`FLOE_TEMPLATES_DIR`（既定は `$XDG_CONFIG_HOME/floe/templates`、無ければ `~/.config/floe/templates`）の中の、テンプレートの名前のディレクトリです。floe のテンプレートと同じ名前なら、floe のものを隠します。`FLOE_TEMPLATES_DIR` の直下のファイルは読まず、何も言いません。テンプレートのファイルは、その名前のディレクトリの中に置いてください。
 
 ```sh
-floe template new memo     # 埋めて使う最小のテンプレート memo を作る
+floe template new memo     # 埋めて使うテンプレート memo を作る
 floe template check        # 自分のテンプレートを全部、example.yaml を描いて確かめる
 floe template show memo    # テーマと、読むファイルを全部出す（schema と見本が先）
 ```
@@ -53,12 +53,13 @@ memo/
 
 ## page.html
 
-`page.html` は Go の [html/template](https://pkg.go.dev/html/template) で、入れるものをエスケープします。`floe template new` は最小のものを書きます。
+`page.html` は Go の [html/template](https://pkg.go.dev/html/template) で、入れるものをエスケープします。`floe template new` は次のものを書きます。floe が受ける最小のものに viewport の `<meta>` を足したもので、viewport が無いと、スマホは直に開いたページを 980px の幅で描いて縮めます。charset は floe が補います。
 
 ```html
 <!doctype html>
 <html lang="{{.Lang}}">
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}}</title>
 </head>
 <body>
