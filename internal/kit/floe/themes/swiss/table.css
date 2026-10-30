@@ -1,5 +1,6 @@
 :scope { border: 0; }
 :scope thead th { background: none; color: var(--fg); font-weight: 800; border-bottom: 2px solid var(--fg); }
-:scope tbody td, :scope tbody tr:nth-child(even) td { background: none; border-bottom: 1px solid var(--fg); }
+:scope tbody td { border-bottom: 1px solid var(--fg); }
+:scope tbody tr + tr td { border-top: 0; }
 :scope :is(th, td):first-child { padding-left: 0; }
 :scope td.num { font-size: 1.35rem; font-weight: 300; }

@@ -228,7 +228,7 @@ blockquote {
   overflow-x: auto;
 }
 :scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
-:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.8rem 1.1rem; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.4rem 0.8rem; line-height: 1.6; }
 :scope :is(th, td):not(.num) { min-width: 7em; }
 /* A num column's heading wraps as long as it needs, but not a character a line */
 :scope th.num { min-width: 6em; }
@@ -236,7 +236,7 @@ blockquote {
   font-size: 0.8rem; font-weight: 600; color: var(--muted);
   background: color-mix(in srgb, var(--line) 40%, var(--surface));
 }
-:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line) 18%, var(--surface)); }
+:scope tbody tr + tr td { border-top: 1px solid var(--line); }
 :scope .num { text-align: right; }
 :scope td.num {
   min-width: auto; font-family: var(--mono);
@@ -422,7 +422,6 @@ blockquote {
 @layer floe.parts {
 @scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
 :scope thead th { --face: var(--brutal-head-bg); --on-face: var(--brutal-head-fg); background: var(--face); color: var(--on-face); font-weight: 900; }
-:scope tbody tr:nth-child(even) td { background: none; }
 :scope tbody tr + tr td { border-top: 2px solid var(--fg); }
 }
 }

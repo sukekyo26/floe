@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "compare",
-  "description": "What changes, side by side: each row a thing, as it is before and after, in a table under the two headings; a row the same both sides is drawn faint",
+  "description": "Things before and after: each row a thing, as it is before and after, side by side in a table under the two headings; a row the same both sides is drawn faint",
   "type": "object",
   "properties": {
     "before": { "type": "string", "minLength": 1, "description": "The heading of the left, such as Now; a line of Markdown" },

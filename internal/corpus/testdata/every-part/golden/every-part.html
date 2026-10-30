@@ -240,7 +240,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   overflow-x: auto;
 }
 :scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
-:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.8rem 1.1rem; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.4rem 0.8rem; line-height: 1.6; }
 :scope :is(th, td):not(.num) { min-width: 7em; }
 /* A num column's heading wraps as long as it needs, but not a character a line */
 :scope th.num { min-width: 6em; }
@@ -248,7 +248,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   font-size: 0.8rem; font-weight: 600; color: var(--muted);
   background: color-mix(in srgb, var(--line) 40%, var(--surface));
 }
-:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--line) 18%, var(--surface)); }
+:scope tbody tr + tr td { border-top: 1px solid var(--line); }
 :scope .num { text-align: right; }
 :scope td.num {
   min-width: auto; font-family: var(--mono);
@@ -327,20 +327,20 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="entries"]) to (:scope [data-floe-part] > *) {
-/* A heading, its tags on the line under it, then its text the full width, which a wide block in it (code, a table)
+/* A heading with its tags on the same line, then its text the full width, which a wide block in it (code, a table)
    does not widen past the panel.
    LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
    if pages come to put code in entries */
 :scope { margin: 0; display: grid; }
-:scope > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; padding: 0.75rem 1.2rem; }
+:scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; padding: 0.55rem 1rem; }
 :scope dt { font-weight: 700; }
 :scope dd { margin: 0; }
 /* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
    them, which stays as large as in a table's cell */
-:scope .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.9rem; font-size: 0.85rem; color: var(--muted); }
+:scope .tags { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: 0.85rem; color: var(--muted); }
 :scope .tags > span { min-width: 0; }
 :scope .tags code { font-size: 0.86rem; }
-:scope .text { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; }
+:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; line-height: 1.65; }
 @media (max-width: 36rem) {
   /* A long pill wraps rather than overflow the panel */
   :scope .tags [data-floe-part] { white-space: normal; }
@@ -773,8 +773,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope { padding: 6px; }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope thead th { background: none; padding-block: 0.6rem 0.5rem; }
-:scope tbody td, :scope tbody tr:nth-child(even) td { background: var(--surface); }
-:scope tbody tr + tr td { border-top: 1px solid var(--line); }
+:scope tbody td { background: var(--surface); }
 :scope tbody tr:first-child td:first-child { border-top-left-radius: 14px; }
 :scope tbody tr:first-child td:last-child { border-top-right-radius: 14px; }
 :scope tbody tr:last-child td:first-child { border-bottom-left-radius: 14px; }
