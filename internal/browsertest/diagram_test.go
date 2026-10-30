@@ -70,3 +70,50 @@ func TestUIDiagram(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		}
 	}
 }
+
+const tabsPage = `template: report
+lang: en
+title: Tabs
+sections:
+  - heading: Tabs
+    parts:
+      - tabs:
+          - title: Table
+            parts:
+              - table: { columns: [A], rows: [[a]] }
+          - title: Diagram
+            parts:
+              - diagram: { width: 600, height: 200, title: d, parts: [ { box: { x: 20, y: 40, w: 160, h: 60, rows: [one] } } ] }
+`
+
+// tabDiagram tells the diagram in the second tab: its viewBox, its frame's size, and whether it is fitted (the button
+// that fits it disabled) and zoomed.
+const tabDiagram = `(() => {
+  const w = document.querySelector('[data-floe-part=tabs] .dg-wrap');
+  const fit = w.previousElementSibling.querySelector('[data-zoom=fit]');
+  return w.querySelector('svg').getAttribute('viewBox') + ' ' + (w.clientWidth > 0 && w.clientHeight > 0 ? 'sized' : 'unsized') +
+    (fit.disabled ? ' fitted' : '') + (w.classList.contains('zoomed') ? ' zoomed' : '');
+})()`
+
+// TestUIDiagramInTabs draws a diagram in a tab not chosen: hidden, it keeps the viewBox written; printed, it shows
+// whole though its tab is not chosen; its tab chosen, it fits its frame.
+func TestUIDiagramInTabs(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.write(t, "tabs.yaml", tabsPage), "--slug", "tabs")
+	b.navigate("/a/tabs/?raw")
+	b.until("the toolbar", "!!document.querySelector('[data-floe-part=tabs] .dg-tools')")
+	if got := b.eval(tabDiagram); got != "0 0 600 200 unsized" {
+		t.Errorf("hidden: %s, want 0 0 600 200 unsized", got)
+	}
+	b.media("print")
+	b.eval(`dispatchEvent(new Event('beforeprint')), 1`)
+	b.still()
+	if got := b.eval(tabDiagram); !strings.HasPrefix(got, "0 0 600 200 sized") {
+		t.Errorf("printed: %s, want 0 0 600 200 sized", got)
+	}
+	b.media("")
+	b.eval(`dispatchEvent(new Event('afterprint')), document.querySelectorAll('[data-floe-part=tabs] input')[1].click(), 1`)
+	// The frame is measured when its ResizeObserver tells it, after the tab shows
+	b.until("the diagram fitted", tabDiagram+".endsWith(' sized fitted')")
+}
