@@ -78,12 +78,16 @@ func TestExecuted(t *testing.T) {
 }
 
 // The CSP goes first in the head, after the charset, before what the page's head holds; a page without a
-// head gets it in the head the parser makes.
+// head gets it in the head the parser makes. The page holds that charset alone: those it wrote, wherever, go.
 func TestCutOffPage(t *testing.T) {
 	t.Parallel()
 
 	for _, page := range []string{
 		"<!doctype html><html><head><title>t</title></head><body></body></html>", "<!-- c --> <!DOCTYPE html>\n<p>x",
+		`<!doctype html><html><head><meta charset="utf-8"><title>t</title></head><body></body></html>`,
+		`<!doctype html><html><head><title>t</title><meta charset="shift_jis"></head><body></body></html>`,
+		`<!doctype html><html><head><meta charset="utf-8"></head><body><p>x<meta charset="utf-8"></p>` +
+			`<template><meta charset="utf-8"></template></body></html>`,
 	} {
 		got, err := CutOffPage([]byte(page))
 		if err != nil {
@@ -91,11 +95,17 @@ func TestCutOffPage(t *testing.T) {
 		}
 		tree, _ := html.Parse(bytes.NewReader(got)) //nolint:errcheck // a bytes.Reader fails no read
 		var head *html.Node
+		charsets := 0
 		for n := range tree.Descendants() {
-			if n.Type == html.ElementNode && n.Data == "head" {
+			if n.Type == html.ElementNode && n.Data == "head" && head == nil {
 				head = n
-				break
 			}
+			if _, ok := attrOf(n, "charset"); ok && n.Type == html.ElementNode && n.Data == "meta" {
+				charsets++
+			}
+		}
+		if charsets != 1 {
+			t.Errorf("%q: %d charsets in %q, want 1", page, charsets, got)
 		}
 		charset, csp := head.FirstChild, head.FirstChild.NextSibling
 		if v, _ := attrOf(charset, "charset"); v != "utf-8" {
