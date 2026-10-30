@@ -14,20 +14,30 @@
    label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
    diff's counts do; a pill (cell), kept on one line, still overflows. Give such a part a layout for narrow screens, as
    keys has */
-:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; }
+/* Print keeps every ground, the page's too, as the screen draws it: a light text on a fill would be lost on white
+   paper. The prefixed name is for a Chromium before 136, as a VS Code's may be.
+   LIMIT: no test fails without the prefixed name, as the Chrome of the tests reads both */
+:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
 p, ul, ol { margin: 0; max-width: var(--text-width); }
 ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
-a { color: var(--accent); }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-code { font-family: var(--mono); font-size: 0.86em; background: var(--accent-soft); padding: 0.1em 0.35em; border-radius: 4px; }
+/* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
+   --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
+   its own) and the focus ring in it take them, as the accent and its soft ground would sink into the fill. What a part
+   holds draws on the part's own ground, without them; the part's box stays in the face, its ring too. An element that
+   paints a light ground of its own does the same with what it holds, and one that sets a colour on no ground of its
+   own writes it as var(--on-face, …) */
+:where([data-floe-part]) > * { --face: initial; --on-face: initial; }
+a { color: var(--on-face, var(--accent)); }
+:focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: 4px; }
 pre {
-  margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
-pre code { font-size: inherit; background: none; padding: 0; }
-blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--muted); }
+pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
+blockquote { margin: 0; max-width: var(--text-width); padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
@@ -180,11 +190,13 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
-/* Always dark, as code in an editor is; the language stands at the right of the heading */
+/* Always dark, as code in an editor is; the language stands at the right of the heading. A face (base.css) whose
+   root is the part's, set on what it holds too, which base.css starts afresh: a scrolling block's ring in its colour */
+:scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
 :scope {
   display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
   margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
-  background: var(--code-bg); color: var(--code-fg);
+  background: var(--face); color: var(--on-face);
   font-family: var(--mono);
 }
 :scope figcaption {
@@ -328,7 +340,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 :scope.warn .title { color: var(--warn); }
 :scope.bad .title { color: var(--bad); }
 :scope > .title + * { margin-top: 0.1rem; }
-:scope code { background: var(--surface); }
+:scope code { background: var(--face, var(--surface)); }
 }
 }
 </style>
@@ -717,6 +729,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.parts {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+blockquote > * { --face: initial; --on-face: initial; }
 blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
 blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
@@ -882,6 +895,9 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <section>
 <h2 id="steps">Steps</h2>
 <p>The pages move over <strong>one weekend</strong>; the old wiki stays readable until the new one opens.</p>
+<blockquote>
+<p>Read-only means read-only: <a href="https://example.com/freeze">the freeze</a> covers <code>comments</code> too.</p>
+</blockquote>
 <ol data-floe-part="steps">
 <li class="done"><strong>Freeze edits on the old wiki</strong><p>On <strong>Friday evening</strong>.</p>
 </li>
@@ -1291,7 +1307,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <section>
 <h2 id="risks">Risks</h2>
 <div data-floe-part="table"><table>
-<thead><tr><th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col" class="num">Pages</th><th scope="col">What we do</th><th scope="col">State</th></tr></thead>
+<thead><tr><th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col" class="num">Pages</th><th scope="col">What we do (<a href="https://example.com/linkcheck">a check</a>, <code>linkcheck</code>)</th><th scope="col">State</th></tr></thead>
 <tbody>
 <tr><td>Broken links</td><td>High</td><td class="num">120</td><td>A link check after the copy</td><td><span class="warn" data-floe-part="cell">watching</span></td></tr>
 <tr><td>Lost attachments</td><td>Low</td><td class="num">8</td><td>Keep the old host for <strong>a month</strong></td><td><span class="good" data-floe-part="cell">covered</span></td></tr>
@@ -1303,7 +1319,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </div>
 <div class="accent" data-floe-part="note"><p>The new host is ready.</p>
 </div>
-<div class="bad" data-floe-part="note"><p>Attachments over 1 MB failed.</p>
+<div class="bad" data-floe-part="note"><p>Attachments over 1 MB failed; <a href="https://example.com/failed">the list</a> names each, and <code>retry.sh</code> sends them again.</p>
 </div>
 <div data-floe-part="note"><p>The banner goes up on Friday.</p>
 </div>
