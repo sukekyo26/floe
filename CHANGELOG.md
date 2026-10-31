@@ -258,8 +258,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Change floe's themes to draw upright and write no word: notebook's and
   washi's pills and notebook's tape no longer tilt; blueprint's quote takes a
   short rule for QUOTE and its cards number 01 for FIG. 01; washi's note seals
-  take the note's mark for their kanji and its card seals count 1, 2. A note's
-  mark of no tone (accent, muted) is ※ for i in every theme.
+  take the note's mark for their kanji and its card seals count 1, 2.
 - Change the cards of retro, washi, notebook and swiss so that their
   decorations take no room: retro's stripes are thinner (2px each) inside its
   frame; washi's inner rule lies over the padding, its seal is smaller,
