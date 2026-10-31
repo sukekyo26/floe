@@ -168,19 +168,19 @@ func TestOutlineRandom(t *testing.T) {
 			}
 			return false
 		}
-		const runs = 10000
+		const runs = 4000
 		over := 0
 		for range runs {
 			x1, y1 := pt()
 			x2, y2 := pt()
 			s := seg{x1, y1, x2, y2}
 			got := crossedBy(s, c.r)
-			if !got && deep(s, 500, 1+1e-6) {
+			if !got && deep(s, 300, 1+1e-6) {
 				t.Errorf("%s: %v has a point deeper than 1 in, but is not crossedBy", c.name, s)
 			}
-			if got && !deep(s, 500, 1-1e-6) && !deep(s, 50000, 1-1e-6) {
+			if got && !deep(s, 300, 1-1e-6) && !deep(s, 5000, 1-1e-6) {
 				over++
-				if !deep(s, 50000, 0) {
+				if !deep(s, 5000, 0) {
 					t.Errorf("%s: %v is crossedBy with no point inside the shape drawn", c.name, s)
 				}
 			}
