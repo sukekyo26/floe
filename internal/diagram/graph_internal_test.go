@@ -1231,9 +1231,11 @@ func TestGraphLabelRoom(t *testing.T) {
 	t.Parallel()
 
 	box := rect{x: 0, y: 0, w: 48, h: 30, what: "", at: "", form: outline{hex: 0, radius: 0}} //nolint:exhaustruct_v5 // a box
-	d := &drawing{right: false, boxes: map[int]rect{0: box}, shapes: map[int]string{0: ""},
+	d := &drawing{
+		right: false, boxes: map[int]rect{0: box}, shapes: map[int]string{0: ""},
 		routes: map[int][][2]float64{0: {{60, 0}, {60, 200}}}, ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{},
-		spots: map[int]spot{}}
+		spots: map[int]spot{},
+	}
 	if !d.place(0, 20) {
 		t.Fatal("no room by a long run")
 	}
@@ -1255,9 +1257,11 @@ func TestGraphLabelRoom(t *testing.T) {
 		t.Errorf("crowded: %s", fault)
 	}
 
-	short := &drawing{right: false, boxes: map[int]rect{0: {x: 100, y: 0, w: 48, h: 60, what: "", at: ""}}, //nolint:exhaustruct_v5 // a box
+	short := &drawing{
+		right: false, boxes: map[int]rect{0: {x: 100, y: 0, w: 48, h: 60, what: "", at: ""}}, //nolint:exhaustruct_v5 // a box
 		shapes: map[int]string{0: ""}, routes: map[int][][2]float64{0: {{10, 10}, {10, 20}}}, ends: map[int][2]int{0: {0, 0}},
-		back: map[int]bool{}, spots: map[int]spot{}}
+		back: map[int]bool{}, spots: map[int]spot{},
+	}
 	if short.place(0, 20) {
 		t.Error("a label placed by a run too short for it, inside a box's span, where no cut makes room")
 	}
