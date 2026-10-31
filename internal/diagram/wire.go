@@ -106,65 +106,78 @@ func (gr *group) entries(v int) {
 		return cmp.Or(cmp.Compare(gr.links[a].exit, gr.links[b].exit), gr.links[a].edge-gr.links[b].edge)
 	})
 	lo, hi := n.x+inEnd, n.x+n.w-inEnd
-	sixes := columns(lo, hi, column/2)
-	free := func(count int, left, right float64) []float64 {
-		var xs []float64
-		for _, x := range sixes {
-			if x > left+column/2 && x < right-column/2 {
-				xs = append(xs, x)
-			}
-		}
-		if len(xs) < count {
-			return nil
-		}
-		return spread(xs, count)
-	}
+	top := entrySide{gr: gr, ins: ins, sixes: columns(lo, hi, column/2)}
 	var straight []int // indexes in ins
 	for k, l := range ins {
 		if x := gr.links[l].exit; x >= lo && x <= hi {
 			straight = append(straight, k)
 		}
 	}
-	// gaps lays the links between straight entries into their gaps; false and the gap that cannot hold its own.
-	gaps := func(set bool) (int, bool) {
-		left, from := math.Inf(-1), 0
-		for g, k := range append(slices.Clone(straight), len(ins)) {
-			right := math.Inf(1)
-			if k < len(ins) {
-				right = gr.links[ins[k]].exit
-			}
-			xs := free(k-from, left, right)
-			if xs == nil && k > from {
-				return g, false
-			}
-			if set {
-				for j, x := range xs {
-					gr.links[ins[from+j]].entry, gr.links[ins[from+j]].straight = x, false
-				}
-				if k < len(ins) {
-					gr.links[ins[k]].entry, gr.links[ins[k]].straight = right, true
-				}
-			}
-			left, from = right, k+1
-		}
-		return 0, true
-	}
 	for {
-		g, ok := gaps(false)
+		g, ok := top.lay(straight, false)
 		if ok || len(straight) == 0 {
 			break
 		}
-		straight = slices.Delete(straight, min(g, len(straight)-1), min(g, len(straight)-1)+1)
+		closing := min(g, len(straight)-1)
+		straight = slices.Delete(straight, closing, closing+1)
 	}
-	gaps(true)
+	top.lay(straight, true)
+}
+
+// entrySide is the top of a node: the links into it in the order of their exits, and its columns at x ≡ 6.
+type entrySide struct {
+	gr    *group
+	ins   []int
+	sixes []float64
+}
+
+// free is count columns between two straight entries at left and right, spread evenly, not beside either; nil when
+// there are fewer.
+func (s entrySide) free(count int, left, right float64) []float64 {
+	var xs []float64
+	for _, x := range s.sixes {
+		if x > left+column/2 && x < right-column/2 {
+			xs = append(xs, x)
+		}
+	}
+	if len(xs) < count {
+		return nil
+	}
+	return spread(xs, count)
+}
+
+// lay lays the links between the straight entries (indexes in ins) into their gaps, setting their entries when set;
+// on a gap that cannot hold its own, it returns the gap's index and false.
+func (s entrySide) lay(straight []int, set bool) (int, bool) {
+	links := s.gr.links
+	left, from := math.Inf(-1), 0
+	for g, k := range append(slices.Clone(straight), len(s.ins)) {
+		right := math.Inf(1)
+		if k < len(s.ins) {
+			right = links[s.ins[k]].exit
+		}
+		xs := s.free(k-from, left, right)
+		if xs == nil && k > from {
+			return g, false
+		}
+		if set {
+			for j, x := range xs {
+				links[s.ins[from+j]].entry, links[s.ins[from+j]].straight = x, false
+			}
+			if k < len(s.ins) {
+				links[s.ins[k]].entry, links[s.ins[k]].straight = right, true
+			}
+		}
+		left, from = right, k+1
+	}
+	return 0, true
 }
 
 // track puts the bent links of the channel below rank r on tracks and returns how many it takes. Of two links
 // whose runs across overlap (or come within half a column), the one whose exit is within the other's run, or
 // whose run holds the other's entry, goes on a track above, so that a run down does not cut a run across. Those
 // constraints follow the exits' order among links going one way, and none holds between links going opposite
-// ways, so they make no cycle. Tracks fill from the top, each taking, left to right, the links whose links above
-// are on tracks before it, half a column past the run before.
+// ways, so they make no cycle.
 func (gr *group) track(r int) int {
 	var bent []int
 	for _, u := range gr.ranks[r] {
@@ -180,13 +193,18 @@ func (gr *group) track(r int) int {
 		blo, _ := gr.span(b)
 		return cmp.Or(cmp.Compare(alo, blo), gr.links[a].edge-gr.links[b].edge)
 	})
+	return gr.fill(bent, above)
+}
+
+// fill puts the links bent, in order, on tracks from the top: each track takes, left to right, the links whose links
+// above are on tracks before it, half a column past the run before. It returns how many tracks it takes.
+func (gr *group) fill(bent []int, above map[int][]int) int {
 	placed := map[int]int{}
-	left := bent
 	t := 0
-	for ; len(left) > 0; t++ {
+	for ; len(bent) > 0; t++ {
 		end := math.Inf(-1)
 		var rest []int
-		for _, l := range left {
+		for _, l := range bent {
 			ready := true
 			for _, a := range above[l] {
 				if p, ok := placed[a]; !ok || p >= t {
@@ -200,12 +218,13 @@ func (gr *group) track(r int) int {
 			}
 			rest = append(rest, l)
 		}
-		left = rest
+		bent = rest
 	}
 	return t
 }
 
-func (gr *group) span(l int) (float64, float64) {
+// span is where link l runs across.
+func (gr *group) span(l int) (lo, hi float64) {
 	a := gr.links[l]
 	return min(a.exit, a.entry), max(a.exit, a.entry)
 }
@@ -244,10 +263,10 @@ func (gr *group) points(chain []int, right bool) [][2]float64 {
 	first := gr.links[chain[0]]
 	u := gr.nodes[first.from]
 	pts := [][2]float64{{first.exit, u.y + u.h}}
-	for k, li := range chain {
+	in := 0.0 // where the link before entered
+	for _, li := range chain {
 		l := gr.links[li]
 		if a := gr.nodes[l.from]; a.box == nil {
-			in := gr.links[chain[k-1]].entry
 			mid := (gr.top[a.rank] + gr.bottom[a.rank]) / 2
 			pts = append(pts, [2]float64{in, mid}, [2]float64{l.exit, mid}, [2]float64{l.exit, gr.bottom[a.rank]})
 		}
@@ -257,6 +276,7 @@ func (gr *group) points(chain []int, right bool) [][2]float64 {
 			pts = append(pts, [2]float64{l.exit, y}, [2]float64{l.entry, y})
 		}
 		pts = append(pts, [2]float64{l.entry, b.y})
+		in = l.entry
 	}
 	pts = corners(pts)
 	if right {

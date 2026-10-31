@@ -82,7 +82,27 @@ func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 			edges = append(edges, k)
 		}
 	}
-	// The groups, in the order of their first box.
+	for _, gr := range groupsOf(g, edges, byName) {
+		out.groups = append(out.groups, gr)
+		out.passed += gr.passed()
+	}
+	return out, problems
+}
+
+// passed is how many points the group's edges pass ranks at.
+func (gr *group) passed() int {
+	n := 0
+	for _, nd := range gr.nodes {
+		if nd.box == nil {
+			n++
+		}
+	}
+	return n
+}
+
+// groupsOf splits the boxes of g into the groups the edges (by index) join, in the order of their first box, each
+// ranked.
+func groupsOf(g *graph, edges []int, byName map[string]int) []*group {
 	root := make([]int, len(g.Nodes))
 	for i := range root {
 		root[i] = i
@@ -106,6 +126,7 @@ func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 		}
 		members[r] = append(members[r], i)
 	}
+	groups := make([]*group, 0, len(firsts))
 	for _, r := range firsts {
 		var own []int
 		for _, k := range edges {
@@ -113,11 +134,9 @@ func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 				own = append(own, k)
 			}
 		}
-		gr := rank(g, members[r], own, byName)
-		out.groups = append(out.groups, gr)
-		out.passed += len(gr.nodes) - len(members[r])
+		groups = append(groups, rank(g, members[r], own, byName))
 	}
-	return out, problems
+	return groups
 }
 
 func edgeAt(at string, k int) string {
@@ -168,30 +187,21 @@ func (o *graphOut) items() []item {
 	out := make([]item, 0, len(o.g.Nodes)+len(o.g.Edges))
 	for i, n := range o.g.Nodes {
 		w := where[i]
-		r := w.gr.drawn(w.gr.nodes[w.n], right)
+		r := drawnOf(w.gr.nodes[w.n], right)
 		r.x, r.y = r.x+o.g.X, r.y+o.g.Y
 		r.form = outlineOf(r.w, r.h, n.Box.Shape)
 		drawn[i] = r
-		b := &box{Name: n.Box.Name, X: r.x, Y: r.y, Origin: "", W: r.w, H: r.h, Rows: n.Box.Rows, Tone: n.Box.Tone,
-			Shape: n.Box.Shape, graph: o.at}
+		b := &box{
+			Name: n.Box.Name, X: r.x, Y: r.y, Origin: "", W: r.w, H: r.h, Rows: n.Box.Rows, Tone: n.Box.Tone,
+			Shape: n.Box.Shape, graph: o.at,
+		}
 		out = append(out, item{boxAt(o.at, i), part{Box: b}}) //nolint:exhaustruct_v5 // one kind of part
 	}
 	for k, e := range o.g.Edges {
 		var p part
 		switch gr := owner[k]; {
 		case gr != nil:
-			chain := gr.chains[k]
-			pts := gr.points(chain, right)
-			for i := range pts {
-				pts[i] = [2]float64{pts[i][0] + o.g.X, pts[i][1] + o.g.Y}
-			}
-			top, bottom := gr.nodes[gr.links[chain[0]].from], gr.nodes[gr.links[chain[len(chain)-1]].to]
-			pts[0] = endOn(drawn[top.of], pts[0], right, true)
-			pts[len(pts)-1] = endOn(drawn[bottom.of], pts[len(pts)-1], right, false)
-			if gr.reversed[k] {
-				slices.Reverse(pts)
-			}
-			p.Edge = o.edge(k, pts)
+			p.Edge = o.edge(k, o.route(gr, k, drawn, right))
 		case slices.Contains(o.loops, k):
 			p.Edge = &edge{ //nolint:exhaustruct_v5 // the rest as left out
 				From: end{Name: e.From, Point: nil}, To: end{Name: e.To, Point: nil}, Dashed: e.Dashed, Bold: e.Bold,
@@ -203,6 +213,23 @@ func (o *graphOut) items() []item {
 		out = append(out, item{edgeAt(o.at, k), p})
 	}
 	return out
+}
+
+// route is the corners of edge k of group gr as drawn, at the graph's place, its ends on its boxes' outlines,
+// from the box it is written from.
+func (o *graphOut) route(gr *group, k int, drawn []rect, right bool) [][2]float64 {
+	chain := gr.chains[k]
+	pts := gr.points(chain, right)
+	for i := range pts {
+		pts[i] = [2]float64{pts[i][0] + o.g.X, pts[i][1] + o.g.Y}
+	}
+	top, bottom := gr.nodes[gr.links[chain[0]].from], gr.nodes[gr.links[chain[len(chain)-1]].to]
+	pts[0] = endOn(drawn[top.of], pts[0], right, true)
+	pts[len(pts)-1] = endOn(drawn[bottom.of], pts[len(pts)-1], right, false)
+	if gr.reversed[k] {
+		slices.Reverse(pts)
+	}
+	return pts
 }
 
 // edge is the graph's edge k as an edge drawn by hand: from point to point by via, straight from one to the next.

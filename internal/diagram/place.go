@@ -23,8 +23,10 @@ func (gr *group) place(right bool) (trips, pulls int) {
 		if n.box == nil {
 			continue
 		}
-		r := boxRect(&box{Name: "", X: 0, Y: 0, Origin: "", W: 0, H: 0, Rows: n.box.Rows, Tone: "", Shape: n.box.Shape,
-			graph: ""}, "")
+		r := boxRect(&box{
+			Name: "", X: 0, Y: 0, Origin: "", W: 0, H: 0, Rows: n.box.Rows, Tone: "", Shape: n.box.Shape,
+			graph: "",
+		}, "")
 		n.w, n.h = r.w, r.h
 		if right {
 			n.w, n.h = r.h, r.w
@@ -149,7 +151,7 @@ func ceil12(v float64) float64 {
 }
 
 // drawn is n's area as drawn: as laid out, or turned for right.
-func (gr *group) drawn(n gnode, right bool) rect {
+func drawnOf(n gnode, right bool) rect {
 	if right {
 		return rect{x: n.y, y: n.x, w: n.h, h: n.w, what: "", at: ""}
 	}

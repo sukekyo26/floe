@@ -65,7 +65,9 @@ type measures struct {
 }
 
 func nodeBox(n *node, cx, y float64) *box {
-	return &box{Name: n.Name, X: cx, Y: y, Origin: "centre", W: 0, H: 0, Rows: n.Rows, Tone: n.Tone, Shape: n.Shape, graph: ""}
+	return &box{
+		Name: n.Name, X: cx, Y: y, Origin: "centre", W: 0, H: 0, Rows: n.Rows, Tone: n.Tone, Shape: n.Shape, graph: "",
+	}
 }
 
 // measure keeps n's span, its box or its children side by side, the wider, and the tallest node of its depth.

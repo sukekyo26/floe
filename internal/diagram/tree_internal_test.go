@@ -10,7 +10,10 @@ func TestTreeStraightDown(t *testing.T) {
 	rows := []row{{Text: Text{"en": "A"}, Style: ""}}
 	leaf := node{Name: "", Rows: rows, Tone: "", Shape: "", Children: nil}
 	root := node{Name: "", Rows: rows, Tone: "", Shape: "", Children: []node{leaf}}
-	items, _ := expand([]part{{Tree: &tree{X: 0.3, Y: 10, Root: root}}}) //nolint:exhaustruct_v5 // one kind of part
+	items, found := expand([]part{{Tree: &tree{X: 0.3, Y: 10, Root: root}}}) //nolint:exhaustruct_v5 // one kind of part
+	if len(found) > 0 {
+		t.Fatal(found)
+	}
 	e := items[1].p.Edge
 	if e == nil || e.Via != nil || e.To.Point[0] != 0.3 {
 		t.Errorf("edge = %+v, want one straight down at x 0.3", e)

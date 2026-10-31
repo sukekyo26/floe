@@ -33,7 +33,7 @@ func laid(g *graph) *layout {
 
 // grouped is g read and laid out, its groups kept, as items lays it out.
 func grouped(g *graph) []*group {
-	o, _ := readGraph(g, "#/parts/0/graph")
+	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are graphFault's
 	o.items()
 	return o.groups
 }
@@ -44,8 +44,8 @@ func touch(a, b path) (bool, int) {
 	for _, s := range a.segs {
 		for _, q := range b.segs {
 			sv, qv := s[0] == s[2], q[0] == q[2]
-			switch {
-			case sv == qv:
+			switch sv {
+			case qv:
 				// Both down, or both across: in one line and meeting.
 				i := 0
 				if sv {
@@ -185,7 +185,7 @@ func TestGraphRandom(t *testing.T) {
 		for i := range 3000 {
 			g := randomGraph(rnd, c.direction)
 			if fault := graphFault(g); fault != "" {
-				b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errchkjson // plain values
+				b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
 				t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
 			}
 		}
@@ -200,7 +200,7 @@ func writtenOrder(rnd *rand.Rand) (*graph, [][]string) {
 	count := 3 + rnd.IntN(6)
 	gadget := 1 + rnd.IntN(count-2)
 	fan := rnd.IntN(count - 1)
-	var ranks [][]string
+	ranks := make([][]string, 0, count)
 	idx := 0
 	name := func() string {
 		idx++
@@ -289,7 +289,7 @@ func TestGraphWrittenOrder(t *testing.T) {
 			t.Fatalf("graph %d: %d groups, want 1", i, len(groups))
 		}
 		gr := groups[0]
-		var got [][]string
+		got := make([][]string, 0, len(gr.ranks))
 		for _, rank := range gr.ranks {
 			var names []string
 			for _, n := range rank {
@@ -326,7 +326,8 @@ func TestGraphTrips(t *testing.T) {
 		{
 			"swinging", graphOf([]string{"0a", "0b", "1a", "1b", "1c", "1d", "2a", "2b", "2c"},
 				"0a>1b", "0a>1c", "0a>1d", "0b>1a", "0b>1b", "1a>2a", "1a>2b", "1a>2c", "1c>2c", "1d>2a", "1d>2b"),
-			maxTrips, [][]string{{"0b", "0a"}, {"1c", "1a", "1b", "1d"}, {"2c", "2a", "2b"}},
+			maxTrips,
+			[][]string{{"0b", "0a"}, {"1c", "1a", "1b", "1d"}, {"2c", "2a", "2b"}},
 		},
 		{"K2,2, crossing as written", graphOf([]string{"a", "b", "x", "y"}, "a>x", "a>y", "b>x", "b>y"), 1, [][]string{{"a", "b"}, {"x", "y"}}},
 		{"one swap", graphOf([]string{"r", "a", "b", "x", "y"}, "r>a", "r>b", "a>y", "b>x"), 1, [][]string{{"r"}, {"a", "b"}, {"y", "x"}}},
@@ -336,7 +337,7 @@ func TestGraphTrips(t *testing.T) {
 			[][]string{{"r"}, {"a", "b", "c"}, {"z", "y", "x"}},
 		},
 	} {
-		o, _ := readGraph(c.g, "#/parts/0/graph")
+		o, _ := readGraph(c.g, "#/parts/0/graph") //nolint:errcheck // every name is a box's
 		gr := o.groups[0]
 		trips, _ := gr.place(false)
 		var got [][]string
@@ -356,8 +357,10 @@ func TestGraphTrips(t *testing.T) {
 // channel is a random channel as the prototype drew them: 1 to 6 boxes above and below, 1 to 12 links between them,
 // a second between two boxes among them, and half the time in one order above and below.
 func channel(rnd *rand.Rand) (*group, bool) {
-	gr := &group{nodes: nil, links: nil, ranks: [][]int{nil, nil}, chains: map[int][]int{}, reversed: map[int]bool{},
-		tracks: nil, top: nil, bottom: nil}
+	gr := &group{
+		nodes: nil, links: nil, ranks: [][]int{nil, nil}, chains: map[int][]int{}, reversed: map[int]bool{},
+		tracks: nil, top: nil, bottom: nil,
+	}
 	up, low := 1+rnd.IntN(6), 1+rnd.IntN(6)
 	for i := range up + low {
 		r := 0
@@ -365,8 +368,10 @@ func channel(rnd *rand.Rand) (*group, bool) {
 			r = 1
 		}
 		gr.ranks[r] = append(gr.ranks[r], i)
-		gr.nodes = append(gr.nodes, gnode{box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: i, rank: r, w: 0, h: 29,
-			x: 0, y: 0, ins: nil, outs: nil, written: i})
+		gr.nodes = append(gr.nodes, gnode{
+			box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: i, rank: r, w: 0, h: 29,
+			x: 0, y: 0, ins: nil, outs: nil, written: i,
+		})
 	}
 	ordered := rnd.IntN(2) == 0
 	pairs := make([][2]int, 1+rnd.IntN(12))
@@ -461,8 +466,10 @@ func TestWireCases(t *testing.T) {
 	t.Parallel()
 
 	links := func(pairs ...[2]float64) *group {
-		gr := &group{nodes: []gnode{{box: nil, of: 0, rank: 0, w: 0, h: 0, x: 0, y: 0, ins: nil, outs: nil, written: 0}},
-			links: nil, ranks: [][]int{{0}}, chains: map[int][]int{}, reversed: map[int]bool{}, tracks: nil, top: nil, bottom: nil}
+		gr := &group{
+			nodes: []gnode{{box: nil, of: 0, rank: 0, w: 0, h: 0, x: 0, y: 0, ins: nil, outs: nil, written: 0}},
+			links: nil, ranks: [][]int{{0}}, chains: map[int][]int{}, reversed: map[int]bool{}, tracks: nil, top: nil, bottom: nil,
+		}
 		for k, p := range pairs {
 			gr.links = append(gr.links, glink{from: 0, to: 0, edge: k, exit: p[0], entry: p[1], straight: false, track: 0})
 			gr.nodes[0].outs = append(gr.nodes[0].outs, k)
@@ -479,11 +486,15 @@ func TestWireCases(t *testing.T) {
 	}
 
 	// a→d and b→c, the boxes' order crossed once.
-	gr := &group{nodes: nil, links: nil, ranks: [][]int{{0, 1}, {2, 3}}, chains: map[int][]int{}, reversed: map[int]bool{},
-		tracks: nil, top: nil, bottom: nil}
+	gr := &group{
+		nodes: nil, links: nil, ranks: [][]int{{0, 1}, {2, 3}}, chains: map[int][]int{}, reversed: map[int]bool{},
+		tracks: nil, top: nil, bottom: nil,
+	}
 	for i, x := range []float64{12, 114, 12, 114} {
-		gr.nodes = append(gr.nodes, gnode{box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: i, rank: i / 2, w: 72, h: 29,
-			x: x, y: 0, ins: nil, outs: nil, written: i})
+		gr.nodes = append(gr.nodes, gnode{
+			box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: i, rank: i / 2, w: 72, h: 29,
+			x: x, y: 0, ins: nil, outs: nil, written: i,
+		})
 	}
 	gr.link(0, 3, 0)
 	gr.link(1, 2, 1)
@@ -516,9 +527,13 @@ func TestWireBend(t *testing.T) {
 		{"right gap", []float64{24, 216, 300, 312}, []bool{true, false, false, false}},
 		{"room enough", []float64{-60, 120, 204}, []bool{false, true, true}},
 	} {
-		gr := &group{nodes: []gnode{{box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: 0, rank: 1, w: 240, h: 29, x: 0,
-			y: 0, ins: nil, outs: nil, written: 0}}, links: nil, ranks: nil, chains: map[int][]int{}, reversed: map[int]bool{},
-			tracks: nil, top: nil, bottom: nil}
+		gr := &group{
+			nodes: []gnode{{
+				box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: 0, rank: 1, w: 240, h: 29, x: 0,
+				y: 0, ins: nil, outs: nil, written: 0,
+			}}, links: nil, ranks: nil, chains: map[int][]int{}, reversed: map[int]bool{},
+			tracks: nil, top: nil, bottom: nil,
+		}
 		for k, x := range c.exits {
 			gr.links = append(gr.links, glink{from: 0, to: 0, edge: k, exit: x, entry: 0, straight: false, track: 0})
 			gr.nodes[0].ins = append(gr.nodes[0].ins, k)
@@ -576,7 +591,7 @@ func TestGraphLimit(t *testing.T) {
 	}
 	exact := chainGraph(42, 100) // 100 edges of 40 points
 	for _, g := range []*graph{big, exact} {
-		o, _ := readGraph(g, "#/parts/0/graph")
+		o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // every name is a box's
 		if o.passed > maxPassed {
 			t.Fatalf("%d boxes: %d points, over %d", len(g.Nodes), o.passed, maxPassed)
 		}
@@ -589,7 +604,7 @@ func TestGraphLimit(t *testing.T) {
 			t.Errorf("%d boxes: %v %v", len(g.Nodes), l.failure, l.problems)
 		}
 	}
-	if o, _ := readGraph(exact, "#"); o.passed != maxPassed {
+	if o, _ := readGraph(exact, "#"); o.passed != maxPassed { //nolint:errcheck // every name is a box's
 		t.Errorf("the chain passes %d ranks, want %d", o.passed, maxPassed)
 	}
 
@@ -611,7 +626,7 @@ func TestCrossPairs(t *testing.T) {
 	t.Parallel()
 
 	bipartite := func(up, low int, x float64) *graph {
-		var names, edges []string
+		names, edges := make([]string, 0, up+low), make([]string, 0, up*low)
 		for i := range up {
 			names = append(names, fmt.Sprintf("u%v-%d", x, i))
 		}
@@ -632,7 +647,7 @@ func TestCrossPairs(t *testing.T) {
 		parts []part
 		want  int
 	}{
-		{[]part{{Graph: bipartite(20, 20, 0)}, hand}, 400},                                         //nolint:exhaustruct_v5 // one kind of part
+		{[]part{{Graph: bipartite(20, 20, 0)}, hand}, 400},                                           //nolint:exhaustruct_v5 // one kind of part
 		{[]part{{Graph: bipartite(10, 20, 0)}, {Graph: bipartite(10, 20, 5000)}, hand}, 40000 + 400}, //nolint:exhaustruct_v5 // one kind of part
 	} {
 		l := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: c.parts, Example: ""},
@@ -644,5 +659,133 @@ func TestCrossPairs(t *testing.T) {
 		if n != c.want {
 			t.Errorf("%d parts: %d pairs, want %d", len(c.parts), n, c.want)
 		}
+	}
+}
+
+// Two edges of different graphs crossing are told to move a graph, at the first; an edge of a graph crossing one
+// written by hand is told at the one by hand.
+func TestGraphCrossingTold(t *testing.T) {
+	t.Parallel()
+
+	across := path{segs: []seg{{0, 50, 100, 50}}, what: "edge a→b", at: "#/parts/0/graph/edges/0", own: -1, crossing: false, graph: "#/parts/0/graph"}
+	down := path{segs: []seg{{50, 0, 50, 100}}, what: "edge c→d", at: "#/parts/1/graph/edges/0", own: -1, crossing: false, graph: "#/parts/1/graph"}
+	hand := down
+	hand.at, hand.graph, hand.what = "#/parts/1", "", "edge [50,0]→[50,100]"
+	for _, c := range []struct {
+		paths   []path
+		key, at string
+	}{
+		{[]path{across, down}, "diagram_graph_crossing", "#/parts/0/graph/edges/0"},
+		{[]path{down, across}, "diagram_graph_crossing", "#/parts/1/graph/edges/0"},
+		{[]path{across, hand}, "diagram_crossing", "#/parts/1"},
+		{[]path{hand, across}, "diagram_crossing", "#/parts/1"},
+	} {
+		l := &layout{paths: c.paths} //nolint:exhaustruct_v5 // its paths alone
+		l.checkCrossings()
+		if len(l.problems) != 1 || l.problems[0].Key != c.key || l.problems[0].At() != c.at ||
+			fmt.Sprint(l.problems[0].Args) != fmt.Sprint([]any{c.paths[0].what, c.paths[1].what, "50", "50"}) {
+			t.Errorf("%s and %s: %v, want %s at %s", c.paths[0].what, c.paths[1].what, l.problems, c.key, c.at)
+		}
+	}
+}
+
+// boxIn is the area of the box named name in l.
+func boxIn(l *layout, name string) rect {
+	return l.names[name].r
+}
+
+// A graph's shapes: a chain runs straight, an edge back up a cycle points the way it is written, groups stand side
+// by side as written, the languages lay out alike, a box widens for its edges, boxes of a rank stand nodeGap apart,
+// a leaf added keeps the other ranks' order, and right is down turned.
+func TestGraphShapes(t *testing.T) {
+	t.Parallel()
+
+	chain := laid(graphOf([]string{"a", "b", "c", "d"}, "a>b", "b>c", "c>d"))
+	for _, p := range chain.paths {
+		if len(p.segs) != 1 {
+			t.Errorf("chain: %s turns: %v", p.what, p.segs)
+		}
+	}
+
+	cycle := laid(graphOf([]string{"a", "b", "c"}, "a>b", "b>c", "c>a"))
+	back := cycle.paths[2].segs
+	if a := boxIn(cycle, "a"); back[len(back)-1][3] != a.y+a.h {
+		t.Errorf("cycle: c→a ends at %v, want at the bottom of a, %v", back[len(back)-1], a.y+a.h)
+	}
+
+	apart := laid(graphOf([]string{"a", "b", "c", "d"}, "a>b", "c>d"))
+	if a, c := boxIn(apart, "a"), boxIn(apart, "c"); c.x < a.x+a.w+groupGap {
+		t.Errorf("two groups: c at %v, not right of a (%v to %v)", c.x, a.x, a.x+a.w)
+	}
+
+	langs := graphOf([]string{"a", "b"}, "a>b")
+	langs.Nodes[1].Box.Rows[0].Text = Text{"en": "Save", "ja": "データファイルと画像の写しを保存する"}
+	en := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: langs}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
+		Options{Lang: "en", Icons: NoIcons{Err: nil}, Seq: 1})
+	ja := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: langs}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
+		Options{Lang: "ja", Icons: NoIcons{Err: nil}, Seq: 1})
+	if en.inspect() != ja.inspect() {
+		t.Errorf("languages: en\n%s\nja\n%s", en.inspect(), ja.inspect())
+	}
+
+	// Eleven edges at one box: five in, three out, and three back up a cycle, turned to leave it too.
+	hub := laid(graphOf([]string{"a", "b", "c", "d", "e", "hub", "x", "y", "z"},
+		"a>hub", "b>hub", "c>hub", "d>hub", "e>hub", "hub>x", "hub>y", "hub>z", "x>hub", "y>hub", "z>hub"))
+	if len(hub.problems) > 0 {
+		t.Errorf("eleven edges: %v", hub.problems)
+	}
+	if h := boxIn(hub, "hub"); h.w < 12*6+36 {
+		t.Errorf("eleven edges: the box %v wide, want %v or more for six edges out", h.w, 12*6+36)
+	}
+
+	beside := laid(graphOf([]string{"r", "a", "b", "c"}, "r>a", "r>b", "r>c"))
+	for _, pair := range [][2]string{{"a", "b"}, {"b", "c"}} {
+		if l, r := boxIn(beside, pair[0]), boxIn(beside, pair[1]); r.x-(l.x+l.w) < nodeGap {
+			t.Errorf("beside: %s and %s %v apart, want %v or more", pair[0], pair[1], r.x-(l.x+l.w), nodeGap)
+		}
+	}
+
+	// A leaf added keeps the order of the other ranks.
+	order := func(g *graph) []string {
+		var out []string
+		for _, gr := range grouped(g) {
+			for _, rank := range gr.ranks[:2] {
+				names := []string{}
+				for _, n := range rank {
+					if b := gr.nodes[n].box; b != nil {
+						names = append(names, b.Name)
+					}
+				}
+				slices.SortFunc(names, func(a, b string) int {
+					return int(gr.nodes[slices.IndexFunc(gr.nodes, func(n gnode) bool { return n.box != nil && n.box.Name == a })].x -
+						gr.nodes[slices.IndexFunc(gr.nodes, func(n gnode) bool { return n.box != nil && n.box.Name == b })].x)
+				})
+				out = append(out, strings.Join(names, " "))
+			}
+		}
+		return out
+	}
+	tree := graphOf([]string{"r", "a", "b", "c", "x", "y"}, "r>a", "r>b", "r>c", "a>x", "c>y")
+	more := graphOf([]string{"r", "a", "b", "c", "x", "y", "w"}, "r>a", "r>b", "r>c", "a>x", "c>y", "b>w")
+	if a, b := order(tree), order(more); !slices.Equal(a, b) {
+		t.Errorf("a leaf added: ranks %v, then %v", a, b)
+	}
+
+	// Right runs the edges left to right, as down runs them top down.
+	g := graphOf([]string{"a", "b", "c"}, "a>b", "a>c", "b>c")
+	down := laid(g)
+	turned := *g
+	turned.Direction = "right"
+	r := laid(&turned)
+	for _, e := range g.Edges {
+		if f, to := boxIn(down, e.From), boxIn(down, e.To); to.y < f.y+f.h {
+			t.Errorf("down: %s→%s, %v not below %v", e.From, e.To, to, f)
+		}
+		if f, to := boxIn(r, e.From), boxIn(r, e.To); to.x < f.x+f.w {
+			t.Errorf("right: %s→%s, %v not right of %v", e.From, e.To, to, f)
+		}
+	}
+	if len(r.problems) > 0 {
+		t.Errorf("right: %v", r.problems)
 	}
 }
