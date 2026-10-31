@@ -48,11 +48,11 @@ The stored page stays as it was drawn: changing the template, a part or a theme 
 
 | Flag | Description |
 |---|---|
-| `--link` | Register the file or folder in place: an HTML file is shown as it is, a data file is drawn each time its page is opened, a folder lists the HTML files under it (see [Linked files](#linked-files)). |
+| `--link` | Register the file or folder in place: an HTML file is shown as it is, a data file is drawn each time its page is opened, a folder lists the HTML files under it (see [links.md](links.md)). |
 | `--slug <name>` | The URL name: 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit. Defaults to the file name; a linked `index.html` takes the name of its directory. |
 | `--title <text>` | The title in the list. Defaults to the data file's `title:`, or a linked file's `<title>`, else its first `<h1>`, else the slug. |
 | `--description <text>` | A description shown in the list. |
-| `--theme <name>` | The theme to draw the page with, its palette and the parts' shape, over the data file's `theme:`. Defaults to `theme:`, else `default`. Refused with `--link` of an HTML file, which is shown as it is. |
+| `--theme <name>` | The theme to draw the page with, its palette and the parts' shape, over the data file's `theme:`. Defaults to `theme:`, else `default`. Refused with `--link` of an HTML file or a folder, which are shown as they are. |
 | `--force` | Replace a page published from another project, or a link to another file. |
 
 ### Projects and overwriting
@@ -68,7 +68,7 @@ Each page belongs to the project it is published from. The project is the reposi
 `--link` registers a file or a folder where it is, instead of storing a page; [links.md](links.md) tells how each is shown.
 
 - Only a regular `.html` or `.htm` file, a data file (`.yaml`, `.yml`) or a folder can be linked. A data file is checked as `floe check` checks it, and refused with its mistakes.
-- Refused: a file or folder in a hidden directory right under your home (settings and keys live there); a file directly under `/` or under your home itself, and those two as folders, as the whole directory would be served; `--theme` with an HTML file or a folder.
+- Refused: a hidden directory right under your home (settings and keys live there), and a file or folder in one; a file directly under `/` or under your home itself, and those two as folders, as the whole directory would be served; `--theme` with an HTML file or a folder.
 - A link without `--slug` reuses the slug of the same file, else takes the first free one of `name`, `name-2`, `name-3` …; a folder in a repository is named by its project and its place in it (`api-docs-docs`), so that folders of one name in several repositories differ by their URL, and a folder outside one by its name (`handbook`). The same slug for another file is refused unless `--force`.
 
 ---

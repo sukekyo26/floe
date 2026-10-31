@@ -38,17 +38,57 @@ quote/
 - Its element is its box, which names it: `data-floe-part="quote"`.
 - It draws no heading (`<h1>` to `<h6>`): a part knows not the level it is put at, in a template's section, in `details` or in another part. A title is an element of `class="title"` (`<div class="title">`), which the look `cards` draws as a card's title; the headings are the template's and those its Markdown draws. floe does not check it.
 - `part.html` sees the item as `.`, and the functions of a template's `page.html` but `asset` ([templates.md](templates.md#pagehtml)). An item its schema declares but the value leaves out is nil, as in `page.html`'s `.Data`. A mistake of running `part.html` (a key its schema does not declare, a value it cannot range over) is told at its line and column in `part.html`, not at the value that brought it: give the values their shape in the part's schema, so that a value of another shape is told at it.
-- It has the functions floe's parts draw with too. floe's parts show them in their `part.html`, which `floe part show <name> part.html` prints (`floe part show code part.html`):
-  - `{{copyButton}}` draws the copy button, in the page's language. Put it right under the part's box (`<figure data-floe-part="quote">…{{copyButton}}</figure>`): what it copies is found from the button up, by the nearest box of a part, so that in the box of a part inside yours it copies that part's, not yours. It copies the text of each element of the part marked `data-floe-copy`, each ending in a line break (code marks its `<code>`; a terminal, each command). Its look is floe's; the part's CSS places it and keeps text clear of it, as code's does: `isolation: isolate` on the part's box, so that the button stays under the page outside; `margin: var(--floe-copy-gap)` around it; and, where text lies under it, `padding-inline-end: var(--floe-copy-room)` after the longest line, under `:scope:has(> .floe-copy)`, so that a line scrolled to its end ends left of the button. floe sets `--floe-copy-size` (the button's size), `--floe-copy-gap` and `--floe-copy-room` on the page's root, and applies none of them to a part.
-  - `{{diagram}}` takes nothing and draws the part's whole value as a diagram. The value is a spec as the part `diagram` takes it, nothing else: a key beside the spec (a `caption`) is refused by the diagram's schema.
-  - `{{script .js .data}}` draws an element, and a script that calls `.js`, a function, with it and `.data`, as the part `script` does.
-  - `{{$d := diff .text}}` reads a diff as `git diff` writes it: `$d.Lines`, each with `.Kind` and `.Text`; and `$d.Added` and `$d.Removed`, how many `add` and `del` lines it has. `.Kind` is `hunk` for a line starting with `@@`; `meta` for one starting with `\` (in a hunk too), for one starting with `--- ` or `+++ ` outside a hunk, and for any other line not starting with `+`, `-` or a space (`diff --git`, `index`), which also ends a hunk; `add` and `del` for the other lines starting with `+` and `-`, outside a hunk too; `""` for a line starting with a space, or empty.
-  - `{{range bars .}}` reads a list of items, each written as keys and values: `label`, `value` and `tone`. Each comes as `.Label`, `.Tone`, `.Value` as written and `.Width`, its value as a percentage of the largest. An item not written as keys and values is a mistake, told at the part's value with which item it is; so is a `value` that is not a number or is below 0, told with the value, and one not written or null, told as missing. To have such a mistake told at the item or the value itself, give the list in the part's schema the items `bars` takes, as the part `bars` does: `"items": {"type": "object", "properties": {"label": {"type": "string", "minLength": 1}, "value": {"type": "number", "minimum": 0}, "tone": {"$ref": "floe:///parts/tone.json"}}, "required": ["label", "value"], "additionalProperties": false}` (`minimum` alone lets a value that is not a number through to `bars`). Put it in the schema of the list `part.html` gives to `bars`: for `bars .items`, under `properties.items`, as `properties.items.items`; at the root it checks nothing of the list.
-  - `{{written}}` returns the part's value as written, for `part.html` to compare it, or to draw a word of it as text, as a pill's (not as Markdown or HTML: draw those items from `.`): the parts and the formats in it are not drawn, so it may go to `eq` and `index`, and a key the value leaves out is not there, not nil (`{{(written).note}}` is a mistake when `note` is left out; take it with `index` or `with`). floe's `table` matches the cells of a column's `pills` so.
-  - `{{range tree .}}` reads a list of items of `path` (a folder's ending in `/`), `note` and `change`, and nests them into the folders the paths name, a folder not listed of its own too: each comes as `.Name`, `.Note`, `.Change`, `.Dir` (a folder) and `.Children`.
+- `part.html` has the functions floe's parts draw with too ([Functions of part.html](#functions-of-parthtml)).
 - Its schema takes floe's `format`s as a template's does (`html`, `markdown`, `image`), declared under `properties` or `items`, where floe follows, or as the root, and a shared schema that holds them. Such an item comes to `part.html` drawn: `html` as written, `markdown` as HTML, `image` as a data URI (`<img src="{{.file}}" alt="{{.alt}}">`). Write it as `{{.h}}`: do not pass it to a function (`markdown`, `markdownLine`, `printf`, `slice`, `eq`, …) nor put it in a `<script>`, as it is HTML, not the text written, and does not work there. An item of `html` is checked in the page drawn as a template's is ([templates.md](templates.md)). A plain string drawn as Markdown is `{{markdown .text}}`. A value of `any.json` does not come drawn as one item but as a map of every kind ([Looks and shared schemas](#looks-and-shared-schemas)).
 - A part of rows one under another takes the look `rows` (`looks: [rows]`) and writes no padding above and below its rows, which `rows` gives; rows that cannot take it read `var(--floe-row-pad)`. A theme leaves that variable as it is. [Borrowing a look](#borrowing-a-look) tells more.
 - `floe part show <name>` prints every file one reads, floe's too, under a `files:` line naming them; `floe part show <name> <file>` prints one of them alone: copy from floe's parts what fits.
+
+## Functions of part.html
+
+It has the functions floe's parts draw with too. floe's parts show them in their `part.html`, which `floe part show <name> part.html` prints (`floe part show code part.html`).
+
+### `copyButton`
+
+`{{copyButton}}` draws the copy button, in the page's language. Put it right under the part's box (`<figure data-floe-part="quote">…{{copyButton}}</figure>`): what it copies is found from the button up, by the nearest box of a part, so that in the box of a part inside yours it copies that part's, not yours. It copies the text of each element of the part marked `data-floe-copy`, each ending in a line break (code marks its `<code>`; a terminal, each command). Its look is floe's; the part's CSS places it and keeps text clear of it, as code's does: `isolation: isolate` on the part's box, so that the button stays under the page outside; `margin: var(--floe-copy-gap)` around it; and, where text lies under it, `padding-inline-end: var(--floe-copy-room)` after the longest line, under `:scope:has(> .floe-copy)`, so that a line scrolled to its end ends left of the button. floe sets `--floe-copy-size` (the button's size), `--floe-copy-gap` and `--floe-copy-room` on the page's root, and applies none of them to a part.
+
+### `diagram`
+
+`{{diagram}}` takes nothing and draws the part's whole value as a diagram. The value is a spec as the part `diagram` takes it, nothing else: a key beside the spec (a `caption`) is refused by the diagram's schema.
+
+### `script`
+
+`{{script .js .data}}` draws an element, and a script that calls `.js`, a function, with it and `.data`, as the part `script` does.
+
+### `diff`
+
+`{{$d := diff .text}}` reads a diff as `git diff` writes it: `$d.Lines`, each with `.Kind` and `.Text`; and `$d.Added` and `$d.Removed`, how many `add` and `del` lines it has. `.Kind` is `hunk` for a line starting with `@@`; `meta` for one starting with `\` (in a hunk too), for one starting with `--- ` or `+++ ` outside a hunk, and for any other line not starting with `+`, `-` or a space (`diff --git`, `index`), which also ends a hunk; `add` and `del` for the other lines starting with `+` and `-`, outside a hunk too; `""` for a line starting with a space, or empty.
+
+### `bars`
+
+`{{range bars .}}` reads a list of items, each written as keys and values: `label`, `value` and `tone`. Each comes as `.Label`, `.Tone`, `.Value` as written and `.Width`, its value as a percentage of the largest. An item not written as keys and values is a mistake, told at the part's value with which item it is; so is a `value` that is not a number or is below 0, told with the value, and one not written or null, told as missing. To have such a mistake told at the item or the value itself, give the list in the part's schema the items `bars` takes, as the part `bars` does (`minimum` alone lets a value that is not a number through to `bars`):
+
+```json
+"items": {
+  "type": "object",
+  "properties": {
+    "label": {"type": "string", "minLength": 1},
+    "value": {"type": "number", "minimum": 0},
+    "tone": {"$ref": "floe:///parts/tone.json"}
+  },
+  "required": ["label", "value"],
+  "additionalProperties": false
+}
+```
+
+Put it in the schema of the list `part.html` gives to `bars`: for `bars .items`, under `properties.items`, as `properties.items.items`; at the root it checks nothing of the list.
+
+### `written`
+
+`{{written}}` returns the part's value as written, for `part.html` to compare it, or to draw a word of it as text, as a pill's (not as Markdown or HTML: draw those items from `.`): the parts and the formats in it are not drawn, so it may go to `eq` and `index`, and a key the value leaves out is not there, not nil (`{{(written).note}}` is a mistake when `note` is left out; take it with `index` or `with`). floe's `table` matches the cells of a column's `pills` so.
+
+### `tree`
+
+`{{range tree .}}` reads a list of items of `path` (a folder's ending in `/`), `note` and `change`, and nests them into the folders the paths name, a folder not listed of its own too: each comes as `.Name`, `.Note`, `.Change`, `.Dir` (a folder) and `.Children`.
 
 ## Looks and shared schemas
 

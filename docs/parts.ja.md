@@ -38,17 +38,57 @@ quote/
 - 部品の要素は箱で、`data-floe-part="quote"` で自分を名乗ります。
 - 見出し（`<h1>`〜`<h6>`）は描きません。部品は、テンプレートの節・`details`・ほかの部品の中など、自分が置かれる段を知らないからです。題は `class="title"` の要素（`<div class="title">`）で書き、見た目 `cards` がカードの題として描きます。見出しは、テンプレートと、その Markdown が描くものです。floe は確かめません。
 - `part.html` は項目を `.` で見て、テンプレートの `page.html` と同じ関数を使えます（`asset` は除く。[templates.ja.md](templates.ja.md#pagehtml)）。schema が宣言し、値が省いた項目は、`page.html` の `.Data` と同じく nil で来ます。`part.html` を走らせた誤り（schema が宣言していない鍵、range できない値）は、それを持ち込んだ値でなく、`part.html` の行と列で言います。値の形を部品の schema で決めておくと、違う形の値はその値の位置で言われます。
-- floe の部品が描くのに使う関数も使えます。floe の部品の `part.html` が使い方の見本で、`floe part show <名前> part.html` が出します（`floe part show code part.html`）。
-  - `{{copyButton}}` は、写すボタンをページの言語で描きます。部品の箱の直下に置きます（`<figure data-floe-part="quote">…{{copyButton}}</figure>`）。写す範囲は、ボタンから上へ一番近い部品の箱で決まるので、自分の部品の中の部品の箱に置くと、自分のでなくその部品の中身を写します。部品の中の `data-floe-copy` を付けた要素の字を、どれも改行で終えて並べて写します（code は `<code>`、terminal はコマンドの 1 つずつに付けます）。見た目は floe のもので、置き場所と字の逃がし方は、code と同じく部品の CSS が書きます。部品の箱に `isolation: isolate`（ボタンをページの外の物の下に置くため）、ボタンのまわりに `margin: var(--floe-copy-gap)`、ボタンの下を字が通るなら、`:scope:has(> .floe-copy)` の中で、一番長い行の後ろに `padding-inline-end: var(--floe-copy-room)`（右端までスクロールすると、行の終わりがボタンの左に出る）。`--floe-copy-size`（ボタンの大きさ）・`--floe-copy-gap`・`--floe-copy-room` は floe がページの根に置き、部品には当てません。
-  - `{{diagram}}` は引数を取らず、部品の値の全体を図として描きます。値は、部品 `diagram` と同じ spec そのものでなければならず、横に別の鍵（`caption` など）を置くと、図の schema が断ります。
-  - `{{script .js .data}}` は、要素と、関数 `.js` をそれと `.data` で呼ぶ script を描きます。部品 `script` と同じです。
-  - `{{$d := diff .text}}` は、`git diff` が書く形の diff を読みます。`$d.Lines` はそれぞれ `.Kind` と `.Text` を持ち、`$d.Added` と `$d.Removed` は `add` と `del` の行の数です。`.Kind` は、`@@` で始まる行が `hunk`。`\` で始まる行（hunk の中も）、hunk の外の `--- `・`+++ ` で始まる行、`+`・`-`・空白のどれでも始まらない行（`diff --git`・`index` など。hunk も終える）が `meta`。それ以外の `+`・`-` で始まる行が、hunk の外でも `add`・`del`。空白で始まる行と空の行が `""` です。
-  - `{{range bars .}}` は、キーと値で書いた項目（`label`・`value`・`tone`）のリストを読みます。それぞれ `.Label`・`.Tone`・書いたままの `.Value`・`.Width`（一番大きい値に対する割合を百分率で）で来ます。キーと値で書いていない項目は誤りで、部品の値の位置で、何番目の項目かを言います。数でないか 0 より小さい `value` も誤りで、同じ位置で、その値を言います。書いていないか null の `value` も誤りで、同じ位置で、値が無いと言います。誤りを項目や値そのものの位置で言いたいときは、部品 `bars` と同じく、部品の schema で、並びの項目を `bars` が取る形に決めてください：`"items": {"type": "object", "properties": {"label": {"type": "string", "minLength": 1}, "value": {"type": "number", "minimum": 0}, "tone": {"$ref": "floe:///parts/tone.json"}}, "required": ["label", "value"], "additionalProperties": false}`（`minimum` だけでは、数でない値は `bars` まで来ます）。これは、`part.html` が `bars` に渡す並びの schema に置きます。`bars .items` なら `properties.items` の下に `properties.items.items` として置き、根に置いても並びは確かめられません。
-  - `{{written}}` は、部品の値を書いたままで返します。`part.html` が比べるか、pill の字のように字のまま描くためのもので、Markdown や HTML として描く項目は `.` から取ります。中の部品と format は描いていないので `eq`・`index` に渡せます。値が書いていない鍵は nil でなく無いので、`note` を省いた値で `{{(written).note}}` は誤りです（`index` か `with` で引きます）。floe の `table` は、列の `pills` の升をこれで比べます。
-  - `{{range tree .}}` は、`path`（フォルダは `/` で終える）・`note`・`change` を持つ項目の並びを読み、パスが名指すフォルダに入れ子にします（並びに無いフォルダも作ります）。それぞれ `.Name`・`.Note`・`.Change`・`.Dir`（フォルダか）・`.Children` で来ます。
+- floe の部品が描くのに使う関数も使えます（[part.html の関数](#parthtml-の関数)）。
 - 部品の schema は、テンプレートと同じく floe の `format`（`html`・`markdown`・`image`）を取ります。floe が辿る `properties` か `items` の下か、根で宣言します。format を持つ共有の schema も取ります。その項目は `part.html` に描いたものが来ます（`html` は書いたとおり、`markdown` は HTML に、`image` は data URI に。`<img src="{{.file}}" alt="{{.alt}}">`）。`{{.h}}` と書き、関数（`markdown`・`markdownLine`・`printf`・`slice`・`eq` など）に渡したり、`<script>` の中に置いたりしません（書いた字でなく HTML なので、そこでは正しく動きません）。`html` の項目は、テンプレートの項目と同じく描いたページで確かめます（[templates.ja.md](templates.ja.md)）。format の無い文字を Markdown で描くのは `{{markdown .text}}` です。`any.json` の値は、描いた 1 つでなく、全部の種類の map で来ます（[見た目と共有の schema](#見た目と共有の-schema)）。
 - 行が縦に並ぶ部品は、見た目 `rows` を借り（`looks: [rows]`）、行の上下の余白を書かずに `rows` に任せます。`rows` を借りられない行は `var(--floe-row-pad)` を読みます。テーマはこの変数を替えません。詳しくは[見た目を借りる](#見た目を借りる)にあります。
 - `floe part show <名前>` は、floe の部品も含めて、読むファイルを全部、並べた `files:` の行の後に出し、`floe part show <名前> <ファイル>` はそのファイルだけを出します。合うものを floe の部品から写してください。
+
+## part.html の関数
+
+floe の部品が描くのに使う関数も使えます。floe の部品の `part.html` が使い方の見本で、`floe part show <名前> part.html` が出します（`floe part show code part.html`）。
+
+### `copyButton`
+
+`{{copyButton}}` は、写すボタンをページの言語で描きます。部品の箱の直下に置きます（`<figure data-floe-part="quote">…{{copyButton}}</figure>`）。写す範囲は、ボタンから上へ一番近い部品の箱で決まるので、自分の部品の中の部品の箱に置くと、自分のでなくその部品の中身を写します。部品の中の `data-floe-copy` を付けた要素の字を、どれも改行で終えて並べて写します（code は `<code>`、terminal はコマンドの 1 つずつに付けます）。見た目は floe のもので、置き場所と字の逃がし方は、code と同じく部品の CSS が書きます。部品の箱に `isolation: isolate`（ボタンをページの外の物の下に置くため）、ボタンのまわりに `margin: var(--floe-copy-gap)`、ボタンの下を字が通るなら、`:scope:has(> .floe-copy)` の中で、一番長い行の後ろに `padding-inline-end: var(--floe-copy-room)`（右端までスクロールすると、行の終わりがボタンの左に出る）。`--floe-copy-size`（ボタンの大きさ）・`--floe-copy-gap`・`--floe-copy-room` は floe がページの根に置き、部品には当てません。
+
+### `diagram`
+
+`{{diagram}}` は引数を取らず、部品の値の全体を図として描きます。値は、部品 `diagram` と同じ spec そのものでなければならず、横に別の鍵（`caption` など）を置くと、図の schema が断ります。
+
+### `script`
+
+`{{script .js .data}}` は、要素と、関数 `.js` をそれと `.data` で呼ぶ script を描きます。部品 `script` と同じです。
+
+### `diff`
+
+`{{$d := diff .text}}` は、`git diff` が書く形の diff を読みます。`$d.Lines` はそれぞれ `.Kind` と `.Text` を持ち、`$d.Added` と `$d.Removed` は `add` と `del` の行の数です。`.Kind` は、`@@` で始まる行が `hunk`。`\` で始まる行（hunk の中も）、hunk の外の `--- `・`+++ ` で始まる行、`+`・`-`・空白のどれでも始まらない行（`diff --git`・`index` など。hunk も終える）が `meta`。それ以外の `+`・`-` で始まる行が、hunk の外でも `add`・`del`。空白で始まる行と空の行が `""` です。
+
+### `bars`
+
+`{{range bars .}}` は、キーと値で書いた項目（`label`・`value`・`tone`）のリストを読みます。それぞれ `.Label`・`.Tone`・書いたままの `.Value`・`.Width`（一番大きい値に対する割合を百分率で）で来ます。キーと値で書いていない項目は誤りで、部品の値の位置で、何番目の項目かを言います。数でないか 0 より小さい `value` も誤りで、同じ位置で、その値を言います。書いていないか null の `value` も誤りで、同じ位置で、値が無いと言います。誤りを項目や値そのものの位置で言いたいときは、部品 `bars` と同じく、部品の schema で、並びの項目を `bars` が取る形に決めてください（`minimum` だけでは、数でない値は `bars` まで来ます）。
+
+```json
+"items": {
+  "type": "object",
+  "properties": {
+    "label": {"type": "string", "minLength": 1},
+    "value": {"type": "number", "minimum": 0},
+    "tone": {"$ref": "floe:///parts/tone.json"}
+  },
+  "required": ["label", "value"],
+  "additionalProperties": false
+}
+```
+
+これは、`part.html` が `bars` に渡す並びの schema に置きます。`bars .items` なら `properties.items` の下に `properties.items.items` として置き、根に置いても並びは確かめられません。
+
+### `written`
+
+`{{written}}` は、部品の値を書いたままで返します。`part.html` が比べるか、pill の字のように字のまま描くためのもので、Markdown や HTML として描く項目は `.` から取ります。中の部品と format は描いていないので `eq`・`index` に渡せます。値が書いていない鍵は nil でなく無いので、`note` を省いた値で `{{(written).note}}` は誤りです（`index` か `with` で引きます）。floe の `table` は、列の `pills` の升をこれで比べます。
+
+### `tree`
+
+`{{range tree .}}` は、`path`（フォルダは `/` で終える）・`note`・`change` を持つ項目の並びを読み、パスが名指すフォルダに入れ子にします（並びに無いフォルダも作ります）。それぞれ `.Name`・`.Note`・`.Change`・`.Dir`（フォルダか）・`.Children` で来ます。
 
 ## 見た目と共有の schema
 
