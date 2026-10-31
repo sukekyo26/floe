@@ -243,6 +243,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix `floe diagram render`'s fragment changing the page it is pasted into: its
+  colours now come from `default`'s palette set on the diagrams alone, so the page
+  keeps its own variables and color-scheme outside them, and a diagram in a shadow
+  root is coloured too. A variable on the page's `:root` no longer reaches the
+  diagrams; set it on `.dg-tools, .dg-wrap` instead. The fragment draws in floe's
+  fonts, and needs a browser that reads `@scope`. The diagram part's CSS reads the
+  palette's variables without colours of its own, so the CSS of
+  `floe part show diagram` draws black diagrams in a page without a palette; use
+  the fragment's assets there. floe's palettes are written on `:scope`.
 - Fix shadows reaching other parts and the page's edge: app's and aurora's
   soft shadows fell on the part below, aurora's past the page's edge and onto
   the card beside, and notebook's tilted sticky notes onto the part below.

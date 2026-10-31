@@ -129,7 +129,7 @@ A theme of your own is a directory of these files, each left out if not needed. 
 
 | File | What it holds |
 |---|---|
-| `palette.css` | The variables of [the palette](templates.md#the-palette), and those of names of its own, on `:root`. It goes over floe's `default` palette, so it writes only what it changes. |
+| `palette.css` | The variables of [the palette](templates.md#the-palette), and those of names of its own, on `:scope`, which is the page's root (`:root` takes the same element). It goes over floe's `default` palette, so it writes only what it changes. |
 | `base.css` | Rules for every page, such as Markdown's quotes. They reach the page, not what a part holds, under the template's `page.css` and the looks. Write the root as `:scope`, not `:root` or `html`, which are outside the scope, and what a part holds in the file of that part. |
 | `<name>.css` | The style of the part or look `<name>`, scoped as its `part.css` is: `panel.css` reaches every panel, `code.css` code, a diff and a terminal. |
 
