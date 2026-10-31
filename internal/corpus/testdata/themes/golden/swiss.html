@@ -265,15 +265,18 @@ blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-hei
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
 :scope {
-  position: relative; background: var(--accent-soft); padding: 1rem 1.25rem 1rem 3.7rem;
-  border-radius: 14px; max-width: var(--text-width);
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  gap: 0; background: var(--accent-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
 }
+:scope > * { grid-column: text; align-self: first baseline; }
 :scope.good { background: var(--good-soft); }
 :scope.warn { background: var(--warn-soft); }
 :scope.bad { background: var(--bad-soft); }
 :scope::before {
-  content: "i"; content: "i" / ""; position: absolute; left: 1.25rem; top: 1.1rem;
-  display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+  content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
+  display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  border-radius: 50%;
   background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
 :scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
@@ -433,10 +436,10 @@ blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-hei
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope, :scope:is(.good, .warn) {
-  background: none; border: 0; border-top: 2px solid var(--fg); border-radius: 0; padding-left: 2.6rem;
+  background: none; border: 0; border-top: 2px solid var(--fg); border-radius: 0; padding-left: 0.2rem; --floe-mark-gap: 0.8rem;
 }
 :scope::before, :scope:is(.good, .warn)::before {
-  left: 0.2rem; background: none; width: 1.6rem; color: var(--accent); font-size: 1rem; font-weight: 900;
+  background: none; color: var(--accent); font-size: 1rem; font-weight: 900;
 }
 /* Its red is read on the surface alone: the good one's mark is black */
 :scope.good::before { color: var(--fg); }
@@ -446,8 +449,8 @@ blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-hei
 :scope.bad, :scope.bad > * { --face: var(--bad); --on-face: var(--on-fill); }
 :scope:is(.warn, .bad) { background: var(--face); color: var(--on-face); }
 :scope:is(.warn, .bad)::before { color: var(--on-face); }
-:scope.bad { border: 0; border-radius: 0; padding-left: 2.6rem; }
-:scope.bad::before { left: 0.6rem; background: none; font-weight: 900; }
+:scope.bad { border: 0; border-radius: 0; padding-left: 0.6rem; --floe-mark-gap: 0.4rem; }
+:scope.bad::before { background: none; font-weight: 900; }
 .title, :scope.good .title { color: var(--fg); font-weight: 900; }
 :scope:is(.warn, .bad) .title { color: var(--on-face); }
 }

@@ -150,15 +150,22 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
 :scope { list-style: none; margin: 0; padding: 0; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
-:scope > li { position: relative; gap: 0.1rem; padding-block: 0.9rem; padding-left: 3.7rem; }
-:scope > li::before {
-  content: ""; position: absolute; left: 1.1rem; top: 0.95rem; display: block; width: 1.9rem; height: 1.9rem;
-  border-radius: 9px; background: var(--accent-soft);
+:scope > li {
+  --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; position: relative; display: grid;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  gap: 0; padding-block: 0.9rem; padding-left: 1.1rem;
 }
+:scope > li > * { grid-column: text; align-self: first baseline; }
+:scope > li > * + * { margin-top: 0.1rem; }
+/* The mark: a box, and over it the link's sign, each level with the first line of the link */
+:scope > li::before, :scope > li::after {
+  content: "\200b"; content: "\200b" / ""; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  overflow: hidden; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+}
+:scope > li::before { border-radius: 9px; background: var(--accent-soft); }
 :scope a { font-weight: 700; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
-:scope a::before {
-  content: ""; position: absolute; left: calc(1.1rem + 0.45rem); top: calc(0.95rem + 0.45rem); width: 1rem; height: 1rem;
-  background: var(--accent); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / contain no-repeat;
+:scope > li::after {
+  background: var(--accent); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / 1rem no-repeat;
 }
 :scope a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
 :scope > li:hover a { text-decoration-thickness: 2px; }
@@ -224,31 +231,43 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* The date at the left of a dot on a line that runs down to the next */
+/* The date at the left of a dot on a line that runs down to the next, as the look numbered places its ring and line
+   (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
 :scope { list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; }
-:scope > li { position: relative; display: grid; grid-template-columns: 7rem minmax(0, 1fr); column-gap: 2rem; padding-bottom: 1.1rem; }
+:scope > li {
+  --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; position: relative; anchor-scope: --floe-mark; display: grid;
+  grid-template:
+    [mark-start] auto [mark-end] / [date-start] auto [date-end mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  gap: 0; padding-bottom: 1.1rem;
+}
 :scope > li:last-child { padding-bottom: 0; }
+/* The title and the text stand in the text's column, the title in the dot's row */
+:scope > li > div { display: contents; }
+:scope > li > div > * { grid-column: text; align-self: first baseline; }
+:scope > li > div > * + * { margin-top: 0.15rem; }
 :scope > li::before {
-  content: ""; position: absolute; left: calc(7rem + 0.65rem); top: 0.55rem; width: 0.7rem; height: 0.7rem; border-radius: 50%;
-  background: var(--accent);
+  content: "\200b"; content: "\200b" / ""; anchor-name: --floe-mark; grid-area: mark; align-self: first baseline;
+  display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  overflow: hidden; border-radius: 50%; background: var(--accent);
 }
 :scope > li:not(:last-child)::after {
-  content: ""; position: absolute; left: calc(7rem + 1rem - 1px); top: 1.5rem; bottom: 0.2rem; width: 2px; background: var(--line);
+  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
+  left: calc(anchor(--floe-mark center) - 1px); width: 2px; background: var(--line);
 }
 :scope > li.good::before { background: var(--good); }
 :scope > li.warn::before { background: var(--warn); }
 :scope > li.bad::before { background: var(--bad); }
 :scope .date {
-  text-align: right; font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums;
-  font-family: var(--mono);
+  grid-area: mark / date; align-self: first baseline; width: 7rem; margin-inline-end: 0.65rem; text-align: right;
+  font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
 }
-:scope li > div { display: grid; gap: 0.15rem; }
-:scope li > div > :not(strong) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+:scope li > div > :not(strong) { color: var(--muted); font-size: 0.92rem; }
 @media (max-width: 36rem) {
-  :scope > li { grid-template-columns: minmax(0, 1fr); padding-left: 1.6rem; }
-  :scope > li::before { left: 0; }
-  :scope > li:not(:last-child)::after { left: calc(0.35rem - 1px); }
-  :scope .date { text-align: left; }
+  :scope > li {
+    --floe-mark-gap: 0.9rem;
+    grid-template: auto [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  }
+  :scope .date { grid-area: 1 / text; text-align: left; }
 }
 }
 }

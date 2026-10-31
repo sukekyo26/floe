@@ -274,15 +274,18 @@ blockquote {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
 :scope {
-  position: relative; background: var(--accent-soft); padding: 1rem 1.25rem 1rem 3.7rem;
-  border-radius: 14px; max-width: var(--text-width);
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  gap: 0; background: var(--accent-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
 }
+:scope > * { grid-column: text; align-self: first baseline; }
 :scope.good { background: var(--good-soft); }
 :scope.warn { background: var(--warn-soft); }
 :scope.bad { background: var(--bad-soft); }
 :scope::before {
-  content: "i"; content: "i" / ""; position: absolute; left: 1.25rem; top: 1.1rem;
-  display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+  content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
+  display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  border-radius: 50%;
   background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
 :scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
@@ -440,12 +443,12 @@ blockquote {
 :scope {
   background: var(--surface); color: var(--fg); border-radius: 0; box-shadow: none;
 }
-:scope, :scope:is(.good, .warn, .bad) { background: var(--surface); border: 0; border-top: 2px solid var(--accent); padding-left: 4rem; }
+:scope, :scope:is(.good, .warn, .bad) { background: var(--surface); border: 0; border-top: 2px solid var(--accent); --floe-mark: 2rem; --floe-mark-gap: 0.75rem; }
 :scope.good { border-top-color: var(--good); }
 :scope.warn { border-top-color: var(--warn); }
 :scope.bad { border-top-color: var(--bad); }
 /* The seals are the kanji for a note, good, a warning and a danger, escaped to keep the source in English */
-:scope::before { content: "\6CE8"; content: "\6CE8" / ""; width: 2rem; height: 2rem; border-radius: 4px; background: var(--accent); color: var(--on-fill); font-size: 1.05rem; }
+:scope::before { content: "\6CE8"; content: "\6CE8" / ""; border-radius: 4px; background: var(--accent); color: var(--on-fill); font-size: 1.05rem; }
 :scope.good::before { content: "\826F"; content: "\826F" / ""; background: var(--good); color: var(--on-fill); }
 :scope.warn::before { content: "\6212"; content: "\6212" / ""; background: var(--warn); color: var(--on-fill); }
 :scope.bad::before { content: "\5371"; content: "\5371" / ""; background: var(--bad); color: var(--on-fill); }

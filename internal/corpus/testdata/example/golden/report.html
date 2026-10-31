@@ -370,15 +370,18 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
 :scope {
-  position: relative; background: var(--accent-soft); padding: 1rem 1.25rem 1rem 3.7rem;
-  border-radius: 14px; max-width: var(--text-width);
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  gap: 0; background: var(--accent-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
 }
+:scope > * { grid-column: text; align-self: first baseline; }
 :scope.good { background: var(--good-soft); }
 :scope.warn { background: var(--warn-soft); }
 :scope.bad { background: var(--bad-soft); }
 :scope::before {
-  content: "i"; content: "i" / ""; position: absolute; left: 1.25rem; top: 1.1rem;
-  display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+  content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
+  display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  border-radius: 50%;
   background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
 :scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
@@ -439,18 +442,31 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
-   rings and lines of its own states */
+   rings and lines of its own states. The ring stands in the column mark on the baseline of the item's first line, and
+   the line runs from the ring's bottom (its anchor) to the item's.
+   LIMIT: text written straight in an item breaks into a grid item a run, as an element of it does: write an item's
+   text in an element. An item whose first child has no baseline (an image, an empty block) has its ring at that
+   child's bottom.
+   LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand. */
 :scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; }
-:scope > li { position: relative; counter-increment: floe-step; display: grid; gap: 0.15rem; padding: 0.2rem 0 1.3rem 3rem; min-height: 2rem; }
+:scope > li {
+  --floe-mark: 2rem; --floe-mark-gap: 1rem; position: relative; anchor-scope: --floe-mark; counter-increment: floe-step;
+  display: grid;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  gap: 0; padding: 0.2rem 0 1.3rem;
+}
 :scope > li:last-child { padding-bottom: 0.2rem; }
+:scope > li > * { grid-column: text; align-self: first baseline; }
+:scope > li > * + * { margin-top: 0.15rem; }
 :scope > li::before {
-  content: counter(floe-step); position: absolute; left: 0; top: 0; display: grid; place-items: center;
-  width: 2rem; height: 2rem; border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
+  content: counter(floe-step); anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid;
+  place-items: center; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
   background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
 }
 :scope > li:not(:last-child)::after {
-  content: ""; position: absolute; left: calc(1rem - 1px); top: 2.35rem; bottom: 0.35rem; width: 2px; border-radius: 1px;
-  background: var(--line);
+  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
+  left: calc(anchor(--floe-mark center) - 1px); width: 2px; border-radius: 1px; background: var(--line);
 }
 }
 }
@@ -465,7 +481,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope > li.done::after { background: var(--good); }
 :scope > li.doing::before { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 :scope > li > strong { line-height: 1.6; }
-:scope > li > :not(strong) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+:scope > li > :not(strong) { color: var(--muted); font-size: 0.92rem; }
 }
 }
 </style>
@@ -545,12 +561,13 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
-  padding-left: 4.35rem; border-radius: 18px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
 }
 :scope.good { border-color: color-mix(in srgb, var(--good) 20%, transparent); }
 :scope.warn { border-color: color-mix(in srgb, var(--warn) 20%, transparent); }
 :scope.bad { border-color: color-mix(in srgb, var(--bad) 20%, transparent); }
-:scope::before { top: 0.85rem; width: 2.25rem; height: 2.25rem; border-radius: 10px; background: var(--surface); color: var(--accent); }
+:scope { --floe-mark: 2.25rem; }
+:scope::before { border-radius: 10px; background: var(--surface); color: var(--accent); }
 :scope.good::before { background: var(--surface); color: var(--good); }
 :scope.warn::before { background: var(--surface); color: var(--warn); }
 :scope.bad::before { background: var(--surface); color: var(--bad); }
