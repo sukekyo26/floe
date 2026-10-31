@@ -35,9 +35,10 @@ func (a *app) diagramRenderCmd() *cobra.Command {
 into a page, their text in the language of --lang (en when left out). A spec is checked against
 the diagram's schema, then laid out once for every language its text is written in and checked:
 overflowing text, overlaps, edges through boxes, crossings … (frames may cross one another, and a
-frame's label is held to the frame's width, not its height or the canvas). Every mistake of every
+frame's label is held to the frame's width, not its height or a canvas written). Every mistake of every
 spec is printed as file:line:column: message (file: message for one of the whole spec, such as a
-key it lacks), and nothing is drawn until all are fixed.
+key it lacks), and nothing is drawn until all are fixed. A width or height left out is as far as
+what is drawn reaches, and 20 more; raw SVG is not measured, so write both with a raw part.
 An icon part takes the icons that floe icons fetch <set> keeps.
 
 The fragment starts with the diagrams' style and the script that zooms them (once per page is
