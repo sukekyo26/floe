@@ -2,6 +2,7 @@ package diagram
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -15,14 +16,11 @@ const maxPassed = 4000
 
 // gnode is a box of a graph, or a point where an edge passes a rank.
 type gnode struct {
-	box     *graphBox // nil for a point an edge passes, or its label's box
-	label   Text      // the label whose box it is; nil for a box or a point
-	of      int       // the box's index in nodes; for a point or a label's box, its edge's index in edges
+	box     *graphBox // nil for a point an edge passes
+	of      int       // the box's index in nodes; for a point, its edge's index in edges
 	rank    int
 	w, h    float64 // across the ranks and along them, as laid out down
 	x, y    float64 // its left and top, as laid out down
-	col     float64 // for a point or a label's box, the column its edge enters it at
-	jog     float64 // how far right of col its edge leaves it: 0, or half a column when it is entered bent
 	ins     []int   // the links into it from the rank above
 	outs    []int   // the links out of it to the rank below
 	written int     // the box's index among the nodes of its group, the order ties fall back on; points after
@@ -49,7 +47,6 @@ type group struct {
 	top      []float64     // the top of each rank, as laid out down
 	bottom   []float64     // the bottom of each rank: of its tallest box, or a column below its top
 	arcs     []arc         // its edges between its boxes, turned round where they break a cycle
-	labels   map[int]Text  // the labels of its edges, by index in edges, when they take two ranks
 }
 
 // graphOut is a graph read and ranked: its groups, and the ranks its edges pass between their ends.
@@ -122,8 +119,6 @@ func groupsOf(g *graph, edges []int, byName map[string]int) []*group {
 		}
 		members[r] = append(members[r], i)
 	}
-	// A label on an edge kept doubles the ranks of every group of the graph (a dropped edge's does not).
-	labelled := slices.ContainsFunc(edges, func(k int) bool { return g.Edges[k].Label != nil })
 	groups := make([]*group, 0, len(firsts))
 	for _, r := range firsts {
 		var own []int
@@ -132,7 +127,7 @@ func groupsOf(g *graph, edges []int, byName map[string]int) []*group {
 				own = append(own, k)
 			}
 		}
-		groups = append(groups, rank(g, members[r], own, byName, labelled))
+		groups = append(groups, rank(g, members[r], own, byName))
 	}
 	return groups
 }
@@ -145,46 +140,70 @@ func boxAt(at string, i int) string {
 	return at + "/nodes/" + strconv.Itoa(i) + "/box"
 }
 
-// items lays out each group, side by side in the order of their first box, and opens the graph into a box for each
-// of its boxes and an edge for each of its edges, at their JSON pointers, so that they are named, drawn and checked
-// as boxes and edges written by hand are.
+// items lays out each group and places its labels, side by side in the order of their first box, and opens the graph
+// into a box for each of its boxes and an edge for each of its edges, at their JSON pointers, so that they are named,
+// drawn and checked as boxes and edges written by hand are.
 func (o *graphOut) items() ([]item, error) {
 	right := o.g.Direction == "right"
+	across := 0 // the axis groups stand side by side on, as drawn
+	if right {
+		across = 1
+	}
+	boxes := make([]rect, len(o.g.Nodes))
+	routes := map[int][][2]float64{}
+	labels := map[int]rect{}
 	left := 0.0
 	for _, gr := range o.groups {
 		gr.place(right)
 		gr.wire()
-		gr.shift(left)
-		width := 0.0
+		d := &drawing{across: across, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{},
+			ends: map[int][2]int{}, labels: map[int]rect{}}
 		for _, n := range gr.nodes {
-			width = max(width, n.right())
-		}
-		left = onGrid(width+groupGap, 12, math.Ceil)
-	}
-	type spot struct {
-		gr *group
-		n  int
-	}
-	where := map[int]spot{}
-	owner := map[int]*group{}
-	for _, gr := range o.groups {
-		for i, n := range gr.nodes {
 			if n.box != nil {
-				where[n.of] = spot{gr, i}
+				r := drawnOf(n, right)
+				r.x, r.y = r.x+o.g.X, r.y+o.g.Y
+				r.form = outlineOf(r.w, r.h, n.box.Shape)
+				d.boxes[n.of], d.shapes[n.of] = r, n.box.Shape
 			}
 		}
-		for k := range gr.chains {
-			owner[k] = gr
+		edges := slices.Sorted(maps.Keys(gr.chains))
+		for _, k := range edges {
+			d.routes[k] = o.route(gr, k, d.boxes, right)
+			chain := gr.chains[k]
+			d.ends[k] = [2]int{gr.nodes[gr.links[chain[0]].from].of, gr.nodes[gr.links[chain[len(chain)-1]].to].of}
+			if gr.reversed[k] {
+				d.ends[k] = [2]int{d.ends[k][1], d.ends[k][0]}
+				d.back = append(d.back, k)
+			}
+		}
+		for _, k := range edges {
+			if t := o.g.Edges[k].Label; t != nil && !d.place(k, labelWidth(t, false)) {
+				return nil, fmt.Errorf("diagram: the graph at %s found no room for edge %d's label", o.at, k) //nolint:err113 // floe's own
+			}
+		}
+		// The group a column right of left, its boxes on the grid as laid out (a label before them moves it on by
+		// whole columns), and the top left of what it draws at x and y.
+		start := [2]float64{o.g.X, o.g.Y}
+		lo, hi := d.span(across)
+		boxLo, _ := d.boxSpan(across)
+		by := left
+		if lo < boxLo {
+			by += onGrid(boxLo-lo, column, math.Ceil)
+		}
+		d.stretch(across, math.Inf(-1), by)
+		if top, _ := d.span(1 - across); top < start[1-across] {
+			d.stretch(1-across, math.Inf(-1), start[1-across]-top)
+		}
+		left = onGrid(hi+by-start[across]+groupGap, column, math.Ceil)
+		maps.Copy(routes, d.routes)
+		maps.Copy(labels, d.labels)
+		for i, r := range d.boxes {
+			boxes[i] = r
 		}
 	}
-	drawn := make([]rect, len(o.g.Nodes))
 	out := make([]item, 0, len(o.g.Nodes)+len(o.g.Edges))
 	for i, n := range o.g.Nodes {
-		w := where[i]
-		r := drawnOf(w.gr.nodes[w.n], right)
-		r.x, r.y = r.x+o.g.X, r.y+o.g.Y
-		r.form = outlineOf(r.w, r.h, n.Box.Shape)
-		drawn[i] = r
+		r := boxes[i]
 		b := &box{
 			Name: n.Box.Name, X: r.x, Y: r.y, Origin: "", W: r.w, H: r.h, Rows: n.Box.Rows, Tone: n.Box.Tone,
 			Shape: n.Box.Shape, graph: o.at,
@@ -192,22 +211,237 @@ func (o *graphOut) items() ([]item, error) {
 		out = append(out, item{boxAt(o.at, i), part{Box: b}}) //nolint:exhaustruct_v5 // one kind of part
 	}
 	for k := range o.g.Edges {
-		if gr := owner[k]; gr != nil { // else told by readGraph
-			at, anchor := o.labelAt(gr, k, right)
-			if at == nil && o.g.Edges[k].Label != nil {
-				return nil, fmt.Errorf("diagram: the graph at %s laid out no label's box for edge %d", //nolint:err113 // floe's own
-					o.at, k)
-			}
-			e := o.edge(k, o.route(gr, k, drawn, right), at, anchor)
-			out = append(out, item{edgeAt(o.at, k), part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
+		pts, ok := routes[k]
+		if !ok { // told by readGraph
+			continue
 		}
+		e := o.edge(k, pts)
+		if r, ok := labels[k]; ok {
+			e.Label, e.At, e.anchor = o.g.Edges[k].Label, &[2]float64{r.x + 5, r.y + labelH/2}, "start"
+		}
+		out = append(out, item{edgeAt(o.at, k), part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
 	}
 	return out, nil
 }
 
+// drawing is a group laid out, as drawn, while its labels are placed: its boxes and its edges' corners and labels.
+type drawing struct {
+	across int // the axis edges leave their boxes across: 0 (x) for down, 1 (y) for right
+	boxes  map[int]rect
+	shapes map[int]string
+	routes map[int][][2]float64
+	ends   map[int][2]int // the boxes each edge's corners start and end on
+	back   []int          // the edges drawn up, against the ranks
+	labels map[int]rect
+}
+
+// place places edge k's label, w wide: beside the first straight run of its edge with room for it, from the box it
+// is written from; with none, it makes room beside the edge's first run (see room). It reports false only on
+// floe's fault, when the room made is not clear.
+func (d *drawing) place(k int, w float64) bool {
+	pts := d.routes[k]
+	things, runs := d.things(), d.runs()
+	for _, s := range segsOf(pts) {
+		down := s[0] == s[2]
+		lo, hi := min(s[1], s[3]), max(s[1], s[3])
+		long := float64(labelH)
+		if !down {
+			lo, hi, long = min(s[0], s[2]), max(s[0], s[2]), w
+		}
+		for at := lo + 2; at+long <= hi-2; at += 6 {
+			for _, near := range []bool{true, false} {
+				r := rect{x: s[0] + column, y: at, w: w, h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // a spot
+				switch {
+				case down && !near:
+					r.x = s[0] - column - w
+				case !down:
+					r.x, r.y = at, s[1]+column
+					if !near {
+						r.y = s[1] - column - labelH
+					}
+				}
+				if clear(r, things, runs) {
+					d.labels[k] = r
+					return true
+				}
+			}
+		}
+	}
+	r := d.room(k, w)
+	ok := clear(r, d.things(), d.runs())
+	d.labels[k] = r
+	return ok
+}
+
+// room makes room for edge k's label beside the first run of its edge, out of the box it is written from, and
+// returns where the label stands: the drawing is cut across the run just past the box (past every box and label the
+// cut would cross), and all that lies past the cut moves on along the run by the label's length; then it is cut along the run,
+// a quarter column past it, and all that lies past that cut moves on across as far as the label needs, the boxes
+// the cut crosses widening. Neither cut bends a run or makes two things meet: a straight run stays straight, and a
+// run across a cut grows longer.
+func (d *drawing) room(k int, w float64) rect {
+	along := 1 - d.across
+	size := [2]float64{w, labelH} // across and along, as laid out down
+	if d.across == 1 {
+		size = [2]float64{labelH, w}
+	}
+	pts := d.routes[k]
+	p0, sign := pts[0], 1.0
+	if pts[1][along] < p0[along] {
+		sign = -1
+	}
+	cut := p0[along] + sign
+	for moved := true; moved; {
+		moved = false
+		for _, b := range d.things() {
+			if lo, hi := b.lo(along), b.lo(along)+b.size(along); lo <= cut && cut <= hi {
+				cut, moved = map[bool]float64{true: hi + 1, false: lo - 1}[sign > 0], true
+			}
+		}
+	}
+	d.stretch(along, cut, size[1]+4)
+	r := rect{what: "", at: ""} //nolint:exhaustruct_v5 // a spot
+	r.set(along, cut+2, size[1])
+	x := d.routes[k][0][d.across]
+	r.set(d.across, x+column, size[0])
+	if need := d.reach(r, x); need > 0 {
+		d.stretch(d.across, x+3, onGrid(need, column, math.Ceil))
+	}
+	return r
+}
+
+// reach is how far past the run at x the nearest thing within r's span along stands short of r's far end, and a
+// little: everything past the cut, its edge at r's near end too, moves on across with the cut. 0 when nothing does.
+func (d *drawing) reach(r rect, x float64) float64 {
+	along := 1 - d.across
+	lo, hi := r.lo(along), r.lo(along)+r.size(along)
+	end := r.lo(d.across) + r.size(d.across) + 2
+	near := math.Inf(1)
+	for _, b := range d.things() {
+		if b.lo(along) < hi && lo < b.lo(along)+b.size(along) && b.lo(d.across) > x && b.lo(d.across) < end {
+			near = min(near, b.lo(d.across))
+		}
+	}
+	for _, s := range d.runs() {
+		{
+			a, b := min(s[along], s[along+2]), max(s[along], s[along+2])
+			if c := min(s[d.across], s[d.across+2]); b > lo && a < hi && c > x && c < end {
+				near = min(near, c)
+			}
+		}
+	}
+	if math.IsInf(near, 1) {
+		return 0
+	}
+	return end - near
+}
+
+// stretch moves everything past at on axis on by by; a box at moves wider.
+func (d *drawing) stretch(axis int, at, by float64) {
+	for i, b := range d.boxes {
+		switch lo := b.lo(axis); {
+		case lo > at:
+			b.set(axis, lo+by, b.size(axis))
+		case lo+b.size(axis) > at:
+			b.set(axis, lo, b.size(axis)+by)
+			b.form = outlineOf(b.w, b.h, d.shapes[i])
+		}
+		d.boxes[i] = b
+	}
+	for k, pts := range d.routes {
+		for i := range pts {
+			if pts[i][axis] > at {
+				pts[i][axis] += by
+			}
+		}
+		// Each end back onto its box's outline: a box widened may leave an end on a side's slant short of it.
+		ends, leaves := d.ends[k], [2]bool{true, false}
+		if slices.Contains(d.back, k) {
+			leaves = [2]bool{false, true}
+		}
+		pts[0] = endOn(d.boxes[ends[0]], pts[0], d.across == 1, leaves[0])
+		pts[len(pts)-1] = endOn(d.boxes[ends[1]], pts[len(pts)-1], d.across == 1, leaves[1])
+	}
+	for k, r := range d.labels {
+		if r.lo(axis) > at {
+			r.set(axis, r.lo(axis)+by, r.size(axis))
+			d.labels[k] = r
+		}
+	}
+}
+
+// span is where what the group draws (boxes, edges and labels) starts and ends on axis; boxSpan, its boxes alone.
+func (d *drawing) span(axis int) (lo, hi float64) {
+	lo, hi = d.boxSpan(axis)
+	for _, r := range d.labels {
+		lo, hi = min(lo, r.lo(axis)), max(hi, r.lo(axis)+r.size(axis))
+	}
+	for _, pts := range d.routes {
+		for _, p := range pts {
+			lo, hi = min(lo, p[axis]), max(hi, p[axis])
+		}
+	}
+	return lo, hi
+}
+
+func (d *drawing) boxSpan(axis int) (lo, hi float64) {
+	lo, hi = math.Inf(1), math.Inf(-1)
+	for _, r := range d.boxes {
+		lo, hi = min(lo, r.lo(axis)), max(hi, r.lo(axis)+r.size(axis))
+	}
+	return lo, hi
+}
+
+// things are the group's boxes and labels.
+func (d *drawing) things() []rect {
+	return slices.Concat(slices.Collect(maps.Values(d.boxes)), slices.Collect(maps.Values(d.labels)))
+}
+
+// runs are the group's edges' runs.
+func (d *drawing) runs() []seg {
+	var out []seg
+	for _, pts := range d.routes {
+		out = append(out, segsOf(pts)...)
+	}
+	return out
+}
+
+// clear reports whether r, and 1 about it, meets none of things, and none of runs runs through it: a label touching
+// something would meet it once moves add up their rounding.
+func clear(r rect, things []rect, runs []seg) bool {
+	r = rect{x: r.x - 1, y: r.y - 1, w: r.w + 2, h: r.h + 2, what: "", at: ""} //nolint:exhaustruct_v5 // a spot
+	return !slices.ContainsFunc(things, r.overlaps) && !slices.ContainsFunc(runs, func(s seg) bool { return crossedBy(s, r) })
+}
+
+// lo is where r starts on axis (0 x, 1 y), size how long it is on it, and set sets both.
+func (a rect) lo(axis int) float64 {
+	return [2]float64{a.x, a.y}[axis]
+}
+
+func (a rect) size(axis int) float64 {
+	return [2]float64{a.w, a.h}[axis]
+}
+
+func (a *rect) set(axis int, lo, size float64) {
+	if axis == 0 {
+		a.x, a.w = lo, size
+	} else {
+		a.y, a.h = lo, size
+	}
+}
+
+// segsOf is the runs between corners pts.
+func segsOf(pts [][2]float64) []seg {
+	segs := make([]seg, 0, len(pts)-1)
+	for i := 1; i < len(pts); i++ {
+		segs = append(segs, seg{pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1]})
+	}
+	return segs
+}
+
 // route is the corners of edge k of group gr as drawn, at the graph's place, its ends on its boxes' outlines,
 // from the box it is written from.
-func (o *graphOut) route(gr *group, k int, drawn []rect, right bool) [][2]float64 {
+func (o *graphOut) route(gr *group, k int, drawn map[int]rect, right bool) [][2]float64 {
 	chain := gr.chains[k]
 	pts := gr.points(chain, right)
 	for i := range pts {
@@ -222,30 +456,13 @@ func (o *graphOut) route(gr *group, k int, drawn []rect, right bool) [][2]float6
 	return pts
 }
 
-// labelAt is where edge k's label stands in its label's box, and how: down, its text starts a column right of the
-// edge's column (5 in, as label pads it), so that a language narrower than the widest stays by the edge; right, it is
-// centred along the box, under the edge. As drawn at the graph's place: as laid out down (the group's place added),
-// turned for right, then at x and y. Nil for an edge without one.
-func (o *graphOut) labelAt(gr *group, k int, right bool) (*[2]float64, string) {
-	for _, l := range gr.chains[k] {
-		if n := gr.nodes[gr.links[l].to]; n.label != nil {
-			p, anchor := [2]float64{n.col + column + 5, n.y + (n.h-inEnd)/2}, "start"
-			if right {
-				p, anchor = [2]float64{n.y + (n.h-inEnd)/2, n.col + column + (n.w-column)/2}, "middle"
-			}
-			return &[2]float64{p[0] + o.g.X, p[1] + o.g.Y}, anchor
-		}
-	}
-	return nil, ""
-}
-
 // edge is the graph's edge k as an edge drawn by hand: from point to point by via, straight from one to the next.
-func (o *graphOut) edge(k int, pts [][2]float64, at *[2]float64, anchor string) *edge {
+func (o *graphOut) edge(k int, pts [][2]float64) *edge {
 	e := o.g.Edges[k]
 	return &edge{
 		From: end{Name: "", Point: &pts[0]}, To: end{Name: "", Point: &pts[len(pts)-1]}, FromSide: "", ToSide: "",
-		Via: pts[1 : len(pts)-1], Straight: true, Label: e.Label, At: at, Dashed: e.Dashed, Bold: e.Bold, Tone: e.Tone,
-		Start: e.Start, End: e.End, Crossing: false, who: "edge " + e.From + "→" + e.To, graph: o.at, anchor: anchor,
+		Via: pts[1 : len(pts)-1], Straight: true, Label: nil, At: nil, Dashed: e.Dashed, Bold: e.Bold, Tone: e.Tone,
+		Start: e.Start, End: e.End, Crossing: false, who: "edge " + e.From + "→" + e.To, graph: o.at,
 	}
 }
 

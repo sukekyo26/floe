@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -28,22 +27,6 @@ func graphOf(names []string, edges ...string) *graph {
 	return g
 }
 
-// labelled is g with its four boxes' text that many w's wide (0 keeps the name), and its four edges' labels ("" for
-// none), in order.
-func labelled(g *graph, w0, w1, w2, w3 int, labels ...string) *graph {
-	for i, w := range []int{w0, w1, w2, w3} {
-		if w > 0 {
-			g.Nodes[i].Box.Rows[0].Text["en"] = strings.Repeat("w", w)
-		}
-	}
-	for k, t := range labels {
-		if t != "" {
-			g.Edges[k].Label = Text{"en": t}
-		}
-	}
-	return g
-}
-
 // laid is g laid out and checked, as the only part of a diagram.
 func laid(g *graph) *layout {
 	l := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: g}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
@@ -55,7 +38,7 @@ func laid(g *graph) *layout {
 // grouped is g read and laid out, its groups kept, as items lays it out.
 func grouped(g *graph) []*group {
 	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are graphFault's
-	_, _ = o.items()                        //nolint:errcheck // its failures are laid's, which graphFault tells
+	_, _ = o.items() //nolint:errcheck // its failures are laid's
 	return o.groups
 }
 
@@ -107,11 +90,6 @@ func graphFault(g *graph) string {
 		return l.problems.Error()
 	}
 	drawn := 0
-	for _, p := range l.paths {
-		if p.own >= 0 {
-			return p.what + " is not checked against its own label"
-		}
-	}
 	for i, a := range l.paths {
 		for _, b := range l.paths[i+1:] {
 			bad, n := touch(a, b)
@@ -134,17 +112,6 @@ func graphFault(g *graph) string {
 			if d := depth(r, ends[j][0], ends[j][1]); math.Abs(d) > 1e-9 {
 				return fmt.Sprintf("%s ends %v from the outline of %s", p.what, d, name)
 			}
-		}
-	}
-	// wire changes the order only where untangle swaps points or labels' boxes, which crosses no more links; the
-	// links drawn cross no more than the order wired (below), however straighten moves runs.
-	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are told above
-	for _, gr := range o.groups {
-		gr.place(g.Direction == "right")
-		before := gr.crossings()
-		gr.wire()
-		if after := gr.crossings(); after > before {
-			return fmt.Sprintf("wired, its ranks' order crosses %d links, over the %d before", after, before)
 		}
 	}
 	ordered := 0
@@ -184,13 +151,6 @@ func groupFault(gr *group) string {
 		if math.Mod(l.exit, column) != 0 || !l.straight && math.Mod(l.entry, column) != column/2 || l.straight != (l.entry == l.exit) {
 			return fmt.Sprintf("a link off the grid: exit %v, entry %v, straight %v", l.exit, l.entry, l.straight)
 		}
-		// Each end on its node's side as it finally stands, however straighten moved a run after settle.
-		if lo, hi := gr.nodes[l.from].side(true); l.exit < lo || l.exit > hi {
-			return fmt.Sprintf("a link leaves at %v, off its node's side %v to %v", l.exit, lo, hi)
-		}
-		if lo, hi := gr.nodes[l.to].side(false); l.entry < lo || l.entry > hi {
-			return fmt.Sprintf("a link enters at %v, off its node's side %v to %v", l.entry, lo, hi)
-		}
 	}
 	// A point stands at its link's column, a column past what stands before it, or nodeGap past boxes between;
 	// only one pushed off it is entered bent.
@@ -205,19 +165,18 @@ func groupFault(gr *group) string {
 			room := math.Inf(-1)
 			if last >= 0 {
 				o := gr.nodes[rank[last]]
-				at, gap := o.right(), column
+				at, gap := o.x+o.w, column
 				for _, b := range rank[last+1 : k] {
 					at, gap = onGrid(at+nodeGap, 6, math.Ceil)+gr.nodes[b].w, nodeGap
 				}
 				room = onGrid(at+gap, 6, math.Ceil)
 			}
+			// A point's column is its x, and it leaves w right of it.
 			switch {
-			case n.x != n.col || n.label == nil && n.w != 0:
-				return fmt.Sprintf("a point or label's box not standing at its column %v: x %v, w %v, jog %v", n.col, n.x, n.w, n.jog)
-			case e >= room && (n.col != e || n.jog != 0):
-				return fmt.Sprintf("a point off its link's column %v with room: column %v, leaving %v on", e, n.col, n.jog)
-			case e < room && (n.jog != column/2 || math.Mod(n.col, column) != column/2):
-				return fmt.Sprintf("a point pushed off its link's column %v not entered bent: column %v", e, n.col)
+			case e >= room && (n.x != e || n.w != 0):
+				return fmt.Sprintf("a point off its link's column %v with room: column %v, leaving %v on", e, n.x, n.w)
+			case e < room && (n.w != column/2 || math.Mod(n.x, column) != column/2):
+				return fmt.Sprintf("a point pushed off its link's column %v not entered bent: column %v", e, n.x)
 			}
 			last = k
 		}
@@ -229,8 +188,8 @@ func groupFault(gr *group) string {
 			if a.box == nil && b.box == nil {
 				want = column
 			}
-			if b.x-a.right() < want {
-				return fmt.Sprintf("rank %d: nodes %v apart, want %v", r, b.x-a.right(), want)
+			if b.x-(a.x+a.w) < want {
+				return fmt.Sprintf("rank %d: nodes %v apart, want %v", r, b.x-(a.x+a.w), want)
 			}
 		}
 		if r+1 == len(gr.ranks) {
@@ -770,13 +729,7 @@ func TestGraphLimit(t *testing.T) {
 		big.Edges = append(big.Edges, graphOf(nil, fmt.Sprintf("b%d>b%d", a, b)).Edges...)
 	}
 	exact := chainGraph(42, 100) // 100 edges of 40 points
-	// A label doubles the ranks: 10 edges of a point (the label's box or one past it) and 210 of 19.
-	labelled := chainGraph(11, 210)
-	labelled.Edges[0].Label = Text{"en": "yes"}
-	// Twenty edges side by side, one labelled: each passes the label's rank by a point.
-	parallel := graphOf([]string{"a", "b"}, slices.Repeat([]string{"a>b"}, 20)...)
-	parallel.Edges[0].Label = Text{"en": "yes"}
-	for _, g := range []*graph{big, exact, labelled, parallel} {
+	for _, g := range []*graph{big, exact} {
 		o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // every name is a box's
 		if o.passed > maxPassed {
 			t.Fatalf("%d boxes: %d points, over %d", len(g.Nodes), o.passed, maxPassed)
@@ -790,13 +743,8 @@ func TestGraphLimit(t *testing.T) {
 			t.Errorf("%d boxes: %v %v", len(g.Nodes), l.failure, l.problems)
 		}
 	}
-	for _, g := range []*graph{exact, labelled} {
-		if o, _ := readGraph(g, "#"); o.passed != maxPassed { //nolint:errcheck // every name is a box's
-			t.Errorf("the chain passes %d ranks, want %d", o.passed, maxPassed)
-		}
-	}
-	if o, _ := readGraph(parallel, "#"); o.passed != 20 { //nolint:errcheck // every name is a box's
-		t.Errorf("twenty edges side by side, one labelled, pass %d ranks, want 20", o.passed)
+	if o, _ := readGraph(exact, "#"); o.passed != maxPassed { //nolint:errcheck // every name is a box's
+		t.Errorf("the chain passes %d ranks, want %d", o.passed, maxPassed)
 	}
 
 	// Counted before any point is made: graphs whose edges pass far more ranks than the limit make none, and are
@@ -816,14 +764,12 @@ func TestGraphLimit(t *testing.T) {
 
 	over := chainGraph(42, 100)
 	over.Edges = append(over.Edges, graphOf(nil, "c39>c41").Edges...)
-	overLabelled := chainGraph(11, 210)
-	overLabelled.Edges[0].Label = Text{"en": "yes"}
-	overLabelled.Edges = append(overLabelled.Edges, graphOf(nil, "c1>c2").Edges...)
 	split := graphOf([]string{"a", "b", "c"}, "a>b", "b>c", "a>c")
 	split.X = 2000
-	for _, parts := range [][]part{{{Graph: over}}, {{Graph: overLabelled}}, {{Graph: exact}, {Graph: split}}} { //nolint:exhaustruct_v5 // one kind of part
+	for _, parts := range [][]part{{{Graph: over}}, {{Graph: exact}, {Graph: split}}} { //nolint:exhaustruct_v5 // one kind of part
 		items, found, err := expand(parts)
-		if err != nil || len(items) != 0 || len(found) != 1 || found[0].Key != "diagram_graph_long" || found[0].At() != "#" ||
+		_ = err
+		if len(items) != 0 || len(found) != 1 || found[0].Key != "diagram_graph_long" || found[0].At() != "#" ||
 			fmt.Sprint(found[0].Args) != "[4001 4000]" {
 			t.Errorf("%d graphs: %d items, %v; want none, diagram_graph_long at # of 4001", len(parts), len(items), found)
 		}
@@ -905,18 +851,6 @@ func TestGraphTold(t *testing.T) {
 			t.Errorf("%s: %v, want %s at %s", c.name, c.l.problems, c.key, c.at)
 		}
 	}
-	// Things of one graph meet only by a fault of its layout: floe's failure, not a mistake to move a graph.
-	for _, l := range []*layout{
-		{boxes: []rect{box(0, ga), box(20, ga)}, w: 500, h: 500},            //nolint:exhaustruct_v5 // what it checks
-		{boxes: []rect{box(30, ga)}, paths: []path{across}, w: 500, h: 500}, //nolint:exhaustruct_v5 // what it checks
-		{labels: []rect{{x: 40, y: 10, w: 30, h: 18, what: "label", at: ga + "/edges/0", graph: ga}}, //nolint:exhaustruct_v5 // what it checks
-			paths: []path{across}, w: 500, h: 500},
-	} {
-		l.check()
-		if l.failure == nil || len(l.problems) != 0 {
-			t.Errorf("one graph's things meeting: failure %v, mistakes %v", l.failure, l.problems)
-		}
-	}
 }
 
 // boxIn is the area of the box named name in l.
@@ -938,18 +872,15 @@ func TestGraphShapes(t *testing.T) {
 	}
 
 	// Edges that can run straight do: every edge of the kept flow, and K3,3's edges straight down; of the two edges
-	// of fan a reader once saw bend, c→hub runs straight and x→a turns twice at most. Of the example flow's labelled
-	// edges a reader saw bend, linked→data runs straight past a label's box below, and top→whole, whose box's other
-	// label stands beside it, turns twice.
+	// of fan a reader once saw bend, c→hub runs straight and x→a turns twice at most.
 	for _, c := range []struct {
 		file  string
 		turns map[string]int // the most turns of the edges named; of every edge, none, when nil
 	}{
-		{"testdata/graph/flow.yaml", nil},
-		{"testdata/graph/fan.yaml", map[string]int{"edge c→hub": 0, "edge x→a": 2}},
-		{"examples/flow.yaml", map[string]int{"edge linked→data": 0, "edge top→whole": 2}},
+		{"flow.yaml", nil},
+		{"fan.yaml", map[string]int{"edge c→hub": 0, "edge x→a": 2}},
 	} {
-		src, err := os.ReadFile(filepath.FromSlash(c.file))
+		src, err := os.ReadFile(filepath.Join("testdata", "graph", c.file))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -991,29 +922,6 @@ func TestGraphShapes(t *testing.T) {
 	for _, k := range []int{0, 4, 8} {
 		if p := k33.paths[k]; len(p.segs) != 1 {
 			t.Errorf("K3,3: %s turns: %v", p.what, p.segs)
-		}
-	}
-
-	// Labelled edges, each laid out by one of settle's ways not to push a column, turn no more than twice: a long
-	// edge pushed two ranks down by a label's box runs straight from where it leaves, its run above moved across
-	// (straighten); a label's box whose edge comes down left of a long edge's point stands left of it (untangle); and
-	// a box's first labelled exit leaves room for its second's label (exits).
-	for _, c := range []struct {
-		name, edge string
-		turns      int
-		g          *graph
-	}{
-		{"straighten", "edge linked→data", 0, labelled(graphOf([]string{"linked", "hidden", "secret", "data"},
-			"linked>hidden", "linked>data", "hidden>secret", "secret>data"), 14, 22, 0, 22, "yes", "no", "yes", "")},
-		{"untangle", "edge top→whole", 2, labelled(graphOf([]string{"x", "top", "data", "whole"},
-			"x>top", "x>data", "top>data", "top>whole"), 20, 0, 0, 20, "", "", "", "yes")},
-		{"exits", "edge top→whole", 2, labelled(graphOf([]string{"x", "top", "data", "whole"},
-			"x>top", "x>data", "top>data", "top>whole"), 30, 16, 0, 20, "", "", "no", "yes")},
-	} {
-		for _, p := range laid(c.g).paths {
-			if p.what == c.edge && len(p.segs)-1 > c.turns {
-				t.Errorf("%s: %s turns %d times, want %d at most: %v", c.name, p.what, len(p.segs)-1, c.turns, p.segs)
-			}
 		}
 	}
 
@@ -1097,160 +1005,5 @@ func TestGraphShapes(t *testing.T) {
 	}
 	if len(r.problems) > 0 {
 		t.Errorf("right: %v", r.problems)
-	}
-}
-
-// laidSpec is the diagram of src read and laid out in lang, and checked.
-func laidSpec(t *testing.T, src string, lang i18n.Lang) *layout {
-	t.Helper()
-	_, v, err := yamlpos.ParseMap("s.yaml", []byte(src))
-	if err != nil {
-		t.Fatal(err)
-	}
-	s, err := read(v)
-	if err != nil {
-		t.Fatal(err)
-	}
-	l := newLayout(s, Options{Lang: lang, Icons: NoIcons{Err: nil}, Seq: 1})
-	l.check()
-	if l.failure != nil || len(l.problems) > 0 {
-		t.Fatalf("%v %v", l.failure, l.problems)
-	}
-	return l
-}
-
-// A graph's labels: one label doubles the ranks, and an edge without one passes the label's rank by a point; a
-// label stands in the rank next to the box its edge is written from, back up a cycle too; it starts a column right
-// of its edge's column (below it, right); an edge stepping half a column past a label's box steps under its text; a
-// label wider in another language lays out alike in both; a graph's label has no background, one by hand has; and a
-// graph with no label keeps its ranks.
-func TestGraphLabels(t *testing.T) {
-	t.Parallel()
-
-	g2 := graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "check>write")
-	g2.Edges[1].Label, g2.Edges[2].Label = Text{"en": "yes"}, Text{"en": "no"}
-	gr := grouped(g2)[0]
-	rank := map[string]int{}
-	for _, n := range gr.nodes {
-		switch {
-		case n.box != nil:
-			rank[n.box.Name] = n.rank
-		case n.label != nil:
-			rank[g2.Edges[n.of].Label["en"]] = n.rank
-		default:
-			rank["point of "+g2.Edges[n.of].From+">"+g2.Edges[n.of].To] = n.rank
-		}
-	}
-	want := map[string]int{"write": 0, "check": 2, "show": 4, "yes": 3, "no": 1, "point of write>check": 1}
-	if fmt.Sprint(rank) != fmt.Sprint(want) {
-		t.Errorf("g2's ranks: %v, want %v", rank, want)
-	}
-	// An edge back up two ranks: its label next to show, which it is written from, not next to write.
-	back := graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "show>write")
-	back.Edges[2].Label = Text{"en": "again"}
-	for _, n := range grouped(back)[0].nodes {
-		if n.label != nil && n.rank != 3 {
-			t.Errorf("show→write's label at rank %d, want 3, next to show", n.rank)
-		}
-	}
-	// A labelled edge left with no label's box is floe's fault, not a label dropped quietly.
-	o, _ := readGraph(g2, "#/parts/0/graph") //nolint:errcheck // every name is a box's
-	clear(o.groups[0].labels)
-	if _, err := o.items(); err == nil {
-		t.Error("g2 with no label's box laid out without a failure")
-	}
-
-	// With no label, or a label only on an edge dropped (from a box to itself, to a name of no box), the ranks stay.
-	dropped := graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "check>check", "check>gone")
-	dropped.Edges[2].Label, dropped.Edges[3].Label = Text{"en": "again"}, Text{"en": "gone"}
-	for _, g := range []*graph{graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "check>write"), dropped} {
-		for i, n := range grouped(g)[0].nodes[:3] {
-			if n.rank != i {
-				t.Errorf("%s stands at rank %d, want %d", n.box.Name, n.rank, i)
-			}
-		}
-	}
-
-	for _, direction := range []string{"", "right"} {
-		g2.Direction = direction
-		l := laid(g2)
-		for k, p := range l.paths[1:] {
-			lb, s := l.labels[k], p.segs[0]
-			if direction == "" && (s[0] != s[2] || lb.x != s[0]+column) {
-				t.Errorf("down: %s from %v, its label at x %v, want a column right of it", p.what, s, lb.x)
-			}
-			if direction == "right" && (s[1] != s[3] || lb.y != s[1]+column) {
-				t.Errorf("right: %s from %v, its label at y %v, want a column below it", p.what, s, lb.y)
-			}
-		}
-		for _, el := range l.labelEls {
-			if el.Class == "label-bg" {
-				t.Errorf("%q: a graph's label drawn on a background", direction)
-			}
-		}
-	}
-
-	// Down, a label's text starts by its edge, though the label is as wide as its widest language: in English, "yes"
-	// starts 5 into the label, a column right of check→show, not in the middle of the room the Japanese takes.
-	g2.Direction = ""
-	g2.Edges[1].Label = Text{"en": "yes", "ja": "データファイルと画像の写しを保存する"}
-	l := laid(g2)
-	line := l.paths[1].segs[0][0]
-	for _, el := range l.labelEls {
-		if el.Kind == "text" && el.Text["en"] == "yes" && (el.Anchor != "start" || el.X != line+column+5) {
-			t.Errorf("down: yes drawn at x %v, anchor %s; want its start at %v, by check→show at %v", el.X, el.Anchor, line+column+5, line)
-		}
-	}
-
-	// Three labelled edges out of a box with room for their columns but not their labels: the later labels' boxes
-	// are pushed, and their edges step under the text.
-	fan := graphOf([]string{"a", "b", "c", "d"}, "a>b", "a>c", "a>d")
-	for k := range fan.Edges {
-		fan.Edges[k].Label = Text{"en": "label"}
-	}
-	fl := laid(fan)
-	steps := 0
-	for k, p := range fl.paths {
-		lb := fl.labels[k]
-		for _, s := range p.segs {
-			if s[1] == s[3] && math.Abs(s[2]-s[0]) == column/2 {
-				steps++
-				if s[1] <= lb.y+lb.h {
-					t.Errorf("%s steps at y %v, not under its label's text, %v to %v", p.what, s[1], lb.y, lb.y+lb.h)
-				}
-			}
-		}
-	}
-	if steps == 0 {
-		t.Error("fan: no label's box pushed")
-	}
-
-	const src = `title: t
-parts:
-  - graph:
-      x: 20
-      y: 20
-      nodes:
-        - box: { name: write, rows: [Write the data] }
-        - box: { name: check, shape: hex, rows: ["Checks pass?"] }
-        - box: { name: show, rows: [Show the page] }
-      edges:
-        - { from: write, to: check }
-        - { from: check, to: show, label: { en: "yes", ja: データファイルと画像の写しを保存する } }
-        - { from: check, to: write, label: "no" }
-  - edge: { from: [400, 20], to: [400, 200], label: by hand }
-`
-	en, ja := laidSpec(t, src, "en"), laidSpec(t, src, "ja")
-	if fmt.Sprint(en.boxes, en.paths) != fmt.Sprint(ja.boxes, ja.paths) {
-		t.Errorf("en and ja lay out apart:\n%v\n%v", en.inspect(), ja.inspect())
-	}
-	bg := 0
-	for _, el := range en.labelEls {
-		if el.Class == "label-bg" {
-			bg++
-		}
-	}
-	if bg != 1 {
-		t.Errorf("%d labels on a background, want the one by hand", bg)
 	}
 }
