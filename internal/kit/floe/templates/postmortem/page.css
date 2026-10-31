@@ -6,9 +6,6 @@ body { margin: 0; padding-block: 0 4rem; font-size: 16px; line-height: 1.75; }
 .band { padding-block: 2rem 1.8rem; }
 .band .column { display: grid; gap: 0.4rem; justify-items: start; }
 .kind { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.08em; display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; align-items: baseline; }
-/* LIMIT: the contrast test measures the badge of the example's severity alone; the others were measured once, in every
-   theme, when they were made */
-.severity { border-radius: 99px; padding: 0.05rem 0.7rem; font-weight: 800; background: var(--tone-soft); color: var(--tone); }
 h1 { font-size: clamp(1.5rem, 4vw, 2.1rem); line-height: 1.35; }
 .summary { font-size: 1.05rem; }
 .authors { font-size: 0.9rem; }
@@ -20,5 +17,4 @@ h2 { font-size: 1.15rem; }
 .cause { border-left: 4px solid var(--accent); padding-left: 1.1rem; }
 .lessons { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr)); gap: 1rem; }
 .lessons h3 { border-left: 4px solid var(--tone); padding-left: 0.6rem; font-size: 1rem; }
-.state { font-size: 0.8rem; font-weight: 700; padding: 0.05rem 0.6rem; border-radius: 99px; white-space: nowrap; background: var(--tone-soft); color: var(--tone); }
 .ref { display: block; font-family: var(--mono); font-size: 0.85rem; color: var(--muted); }

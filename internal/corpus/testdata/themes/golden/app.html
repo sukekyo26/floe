@@ -131,7 +131,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.palette {
-:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where(:scope, [data-floe-part], [data-floe-look~="bars"], [data-floe-look~="cell"], [data-floe-look~="checklist"], [data-floe-look~="code"], [data-floe-look~="compare"], [data-floe-look~="decision"], [data-floe-look~="details"], [data-floe-look~="diagram"], [data-floe-look~="diff"], [data-floe-look~="entries"], [data-floe-look~="facts"], [data-floe-look~="faq"], [data-floe-look~="fields"], [data-floe-look~="findings"], [data-floe-look~="image"], [data-floe-look~="keys"], [data-floe-look~="links"], [data-floe-look~="note"], [data-floe-look~="options"], [data-floe-look~="progress"], [data-floe-look~="script"], [data-floe-look~="stack"], [data-floe-look~="stats"], [data-floe-look~="steps"], [data-floe-look~="table"], [data-floe-look~="tabs"], [data-floe-look~="terminal"], [data-floe-look~="text"], [data-floe-look~="timeline"], [data-floe-look~="tree"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
 :where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
 :where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
 :where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
@@ -151,9 +151,10 @@ blockquote { border-left: 4px solid var(--on-face, var(--accent)); padding: 0.2r
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A pill: a short status in the colour of its tone */
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too) */
 :scope {
-  display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
+  display: inline-block; font-family: var(--font); font-size: 0.78rem; font-weight: 600; letter-spacing: normal; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
   background: var(--tone-soft); color: var(--tone);
 }

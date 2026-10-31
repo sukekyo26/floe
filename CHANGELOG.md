@@ -249,6 +249,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the statuses and cautions of floe's templates to borrow the parts
+  cell and note: adr's status, postmortem's severity and actions' states,
+  handoff's kind and states are pills, and adr's record superseding it (now
+  after the head), runbook's caution and what to do if a step fails are notes,
+  drawn as the theme draws its pills and notes. A pill is in the text's own
+  face wherever it stands (retro's pick in options, in its card's title, no
+  longer in Georgia). notebook's pills are filled solid, the paper's lines no
+  longer through them.
 - Change findings' nit to be a pill of the tone `muted`, drawn as the theme
   draws its other pills: with no ground in blueprint, editorial and washi,
   filled in ink, in the theme's text colour in brutal, notebook and swiss.
@@ -281,6 +289,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix pills unreadable on a filled face (a band, a note): blueprint's,
+  editorial's, washi's and swiss's, which have no ground, drew in the tone's
+  colour on it; they now take the face's text colour, the tone told by the
+  word alone, and notebook's no longer let the face through.
 - Fix decision marking a list in its text with the × of the options it set
   aside.
 - Fix an edge told running through a box it does not touch: the check

@@ -8,11 +8,11 @@ import (
 	"github.com/sukekyo26/floe/internal/kit"
 )
 
-// toneExtra is a section added to every-part: a pill without a tone in a note of one, and a diagram's boxes with a
+// toneExtra is a section added to every-part: a pill without a tone, and one borrowing cell's look, in a note of one, and a diagram's boxes with a
 // tone and without.
 const toneExtra = `  - heading: Tones held
     parts:
-      - html: <div data-floe-tone="good" data-floe-part="note"><p>Held <span data-floe-part="cell">plain</span></p></div>
+      - html: <div data-floe-tone="good" data-floe-part="note"><p>Held <span data-floe-part="cell">plain</span> <span data-floe-look="cell">borrowed</span></p></div>
       - diagram:
           width: 560
           height: 80
@@ -33,10 +33,10 @@ const toneExtra = `  - heading: Tones held
 //     part's box) keeps the colour when the three are set on it to others. What draws in colours of a theme's own (brutal's fills) or in
 //     none of its tone (a stat without a note), and links, are let be; accent, and muted's text, the page's colours
 //     drawn anywhere (blueprint's panels, a date), are not measured so;
-//   - a part's box without a tone whose --tone is not --accent (stats': --muted; the diagram's: none), and the page's
+//   - a part's box, or an element taking a part's look, without a tone whose --tone is not --accent (stats': --muted; the diagram's: none), and the page's
 //     root;
 //   - a diagram's box without a tone filled other than --surface.
-const measureTones = `((tones) => {
+const measureTones = `((tones, parts) => {
   const out = [], root = getComputedStyle(document.documentElement), v = (s, n) => s.getPropertyValue(n).trim();
   for (const t of tones) for (const n of ['--' + t, '--' + t + '-soft']) if (!v(root, n)) out.push('palette: no ' + n);
   const props = ['color', 'backgroundColor', 'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
@@ -63,8 +63,9 @@ const measureTones = `((tones) => {
     if (i >= 0) out.push(name(e) + ': ' + held[Math.floor(i / (3 * props.length))].tagName.toLowerCase() + ' draws in ' + t + "'s colours, not from --tone");
   }
   if (v(root, '--tone') !== v(root, '--accent')) out.push('the page: --tone not --accent');
-  for (const b of document.querySelectorAll('[data-floe-part]:not([data-floe-tone])')) {
-    const s = getComputedStyle(b), p = b.dataset.floePart;
+  const borrowed = parts.map((p) => '[data-floe-look~="' + p + '"]:not([data-floe-part]):not([data-floe-tone])');
+  for (const b of document.querySelectorAll(['[data-floe-part]:not([data-floe-tone])', ...borrowed].join(', '))) {
+    const s = getComputedStyle(b), p = b.dataset.floePart || b.dataset.floeLook;
     const want = p === 'stats' ? v(s, '--muted') : p === 'diagram' ? '' : v(s, '--accent');
     if (p !== 'diagram' && v(s, '--tone') !== want) out.push(p + ' without a tone: --tone ' + v(s, '--tone'));
   }
@@ -88,7 +89,7 @@ func TestUITone(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _, themes, _ := k.Names()
+	parts, _, themes, _ := k.Names()
 	tones, err := k.Tones()
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +106,7 @@ func TestUITone(t *testing.T) { //nolint:paralleltest // the browser tests share
 	file := s.write(t, "every.yaml", string(everyPart)+toneExtra)
 	var amiss []string
 	measure := func(what string) {
-		got := b.eval(measureTones + "(" + mustJSON(tones) + ")")
+		got := b.eval(measureTones + "(" + mustJSON(tones) + ", " + mustJSON(parts) + ")")
 		for _, l := range strings.Split(got, "\n") {
 			if l != "" {
 				amiss = append(amiss, what+": "+l)

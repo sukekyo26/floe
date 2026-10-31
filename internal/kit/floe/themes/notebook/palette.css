@@ -14,9 +14,15 @@
   /* Its markers, the tape and the sticky notes, with the ink on them and their shadow, and the corners of
      a frame drawn round by hand */
   --nb-tape: rgb(220 205 160 / 0.75);
-  --nb-yellow: rgb(255 224 64 / 0.65); --nb-green: rgb(120 220 130 / 0.55); --nb-pink: rgb(255 140 185 / 0.5);
-  --nb-blue: rgb(120 190 255 / 0.5); --nb-orange: rgb(255 170 80 / 0.55);
-  /* The tones' fills, a highlighter's (--tone-fill); muted keeps its pale ground */
+  /* The yellow highlighter strokes over text (a quote, the tab chosen), the paper showing through */
+  --nb-yellow: rgb(255 224 64 / 0.65);
+  /* The highlighters of the tones' fills (--tone-fill), solid, mixed once with the paper's --surface here, so that a
+     pill on a filled face reads as on the page; on a face of another ground they keep the paper's mix. muted keeps
+     its pale ground */
+  --nb-green: color-mix(in srgb, rgb(120 220 130) 55%, var(--surface));
+  --nb-pink: color-mix(in srgb, rgb(255 140 185) 50%, var(--surface));
+  --nb-blue: color-mix(in srgb, rgb(120 190 255) 50%, var(--surface));
+  --nb-orange: color-mix(in srgb, rgb(255 170 80) 55%, var(--surface));
   --accent-fill: var(--nb-blue); --good-fill: var(--nb-green); --warn-fill: var(--nb-orange); --bad-fill: var(--nb-pink);
   --nb-stick-1: #fff1a6; --nb-stick-2: #ffd2e1; --nb-stick-3: #cfe8ff;
   --nb-stick-ink: #2b2a26; --nb-stick-shadow: rgb(40 30 10 / 0.45);

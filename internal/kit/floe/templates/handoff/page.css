@@ -7,7 +7,6 @@ body { margin: 0; font-size: 16px; line-height: 1.7; padding-block: 0 4rem; }
 .band .column { display: grid; gap: 0.5rem; justify-items: start; }
 h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; }
-.kind { border: 1px solid currentColor; border-radius: 4px; padding: 0 0.6rem; font-size: 0.85rem; font-weight: 700; }
 .date { font-family: var(--mono); }
 .counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; }
 .counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: 8px; }
@@ -40,6 +39,6 @@ main h2 { font-size: 1.15rem; }
 .ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }
 .doing li { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.6rem; align-items: baseline; }
 .doing .what, .doing .where { grid-column: 1 / -1; }
-.state { justify-self: start; font-size: 0.78rem; font-weight: 600; padding: 0 0.6rem; border-radius: 999px; background: var(--tone-soft); color: var(--tone); }
+.state { justify-self: start; }
 .notes { display: grid; gap: 0.6rem; }
 main > section { display: grid; gap: var(--floe-room); }

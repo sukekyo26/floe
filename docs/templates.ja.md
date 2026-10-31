@@ -147,6 +147,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 - `cards`：`class="card"` の子を横に並べ、子はそれぞれ `data-floe-look="panel"` でパネルにし、題を `class="title"` の要素（見出しなら `<h3 class="title">`）で書きます。`class="numbered"` を付けると、場所の番号を付けます（`options` と同じ）。
 - `band`：アクセントの色で塗った帯。中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。design の結論や handoff の頭のように。
 - `numbered`：`<ol>` に付けると、項目に丸い番号を付けて線でつなぎます。部品 `steps` と runbook の手順のように。項目の字は要素で包みます（`<li><p>Restart <code>api</code> now</p></li>`）。項目に直に書いた字は、字の続きと要素ごとに grid の別の項目になって崩れます。項目は字で始めます。字の無いもの（画像、空のブロック）で始まると、丸はその下の縁に来ます。
+- `cell` と `note`（部品の見た目）：テンプレートが自分の言葉（`{{word …}}`）で描く札（状態、重さ、種類）は `data-floe-look="cell"` で pill に、注意は `data-floe-look="note"` で注記にし、色は `data-floe-tone` で付けます（`<p class="status" data-floe-look="cell" data-floe-tone="good">`）。adr・postmortem・handoff・runbook のように。テーマは、自分の pill と注記の形で描きます。`page.css` は形を書きません（書くと見た目に勝ちます）。注記の中身は要素で包み（`<div data-floe-look="note"><p>…</p></div>`）、題は `<strong class="title">` にします。書き手が自由に書く字（Markdown の行、名前）は pill にしません。長くなり、塗りのあるテーマの pill の上ではリンクが読めないことがあります。
 
 ## パレット
 

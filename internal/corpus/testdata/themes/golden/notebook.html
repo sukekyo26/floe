@@ -129,9 +129,15 @@ blockquote > * + * { margin-top: 0.6rem; }
   /* Its markers, the tape and the sticky notes, with the ink on them and their shadow, and the corners of
      a frame drawn round by hand */
   --nb-tape: rgb(220 205 160 / 0.75);
-  --nb-yellow: rgb(255 224 64 / 0.65); --nb-green: rgb(120 220 130 / 0.55); --nb-pink: rgb(255 140 185 / 0.5);
-  --nb-blue: rgb(120 190 255 / 0.5); --nb-orange: rgb(255 170 80 / 0.55);
-  /* The tones' fills, a highlighter's (--tone-fill); muted keeps its pale ground */
+  /* The yellow highlighter strokes over text (a quote, the tab chosen), the paper showing through */
+  --nb-yellow: rgb(255 224 64 / 0.65);
+  /* The highlighters of the tones' fills (--tone-fill), solid, mixed once with the paper's --surface here, so that a
+     pill on a filled face reads as on the page; on a face of another ground they keep the paper's mix. muted keeps
+     its pale ground */
+  --nb-green: color-mix(in srgb, rgb(120 220 130) 55%, var(--surface));
+  --nb-pink: color-mix(in srgb, rgb(255 140 185) 50%, var(--surface));
+  --nb-blue: color-mix(in srgb, rgb(120 190 255) 50%, var(--surface));
+  --nb-orange: color-mix(in srgb, rgb(255 170 80) 55%, var(--surface));
   --accent-fill: var(--nb-blue); --good-fill: var(--nb-green); --warn-fill: var(--nb-orange); --bad-fill: var(--nb-pink);
   --nb-stick-1: #fff1a6; --nb-stick-2: #ffd2e1; --nb-stick-3: #cfe8ff;
   --nb-stick-ink: #2b2a26; --nb-stick-shadow: rgb(40 30 10 / 0.45);
@@ -143,7 +149,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.palette {
-:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where(:scope, [data-floe-part], [data-floe-look~="bars"], [data-floe-look~="cell"], [data-floe-look~="checklist"], [data-floe-look~="code"], [data-floe-look~="compare"], [data-floe-look~="decision"], [data-floe-look~="details"], [data-floe-look~="diagram"], [data-floe-look~="diff"], [data-floe-look~="entries"], [data-floe-look~="facts"], [data-floe-look~="faq"], [data-floe-look~="fields"], [data-floe-look~="findings"], [data-floe-look~="image"], [data-floe-look~="keys"], [data-floe-look~="links"], [data-floe-look~="note"], [data-floe-look~="options"], [data-floe-look~="progress"], [data-floe-look~="script"], [data-floe-look~="stack"], [data-floe-look~="stats"], [data-floe-look~="steps"], [data-floe-look~="table"], [data-floe-look~="tabs"], [data-floe-look~="terminal"], [data-floe-look~="text"], [data-floe-look~="timeline"], [data-floe-look~="tree"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
 :where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
 :where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
 :where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
@@ -164,9 +170,10 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A pill: a short status in the colour of its tone */
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too) */
 :scope {
-  display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
+  display: inline-block; font-family: var(--font); font-size: 0.78rem; font-weight: 600; letter-spacing: normal; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
   background: var(--tone-soft); color: var(--tone);
 }

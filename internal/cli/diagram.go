@@ -145,7 +145,8 @@ func diagramAssets() (string, error) {
 	if err != nil {
 		return "", err //nolint:wrapcheck // as above
 	}
-	colours := slices.Concat(t.Palette(), draw.Tones(tones))
+	parts, _, _, _ := k.Names()
+	colours := slices.Concat(t.Palette(), draw.Tones(tones, parts))
 	palette := draw.Sheet("floe.palette", draw.InScope("("+diagram.Roots+")", colours))
 	return script + "\n<style>" + palette + "</style>\n<style>" + draw.Sheet("", p.CSS()) + "</style>", nil
 }

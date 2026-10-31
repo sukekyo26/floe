@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/chromedp/cdproto/cdp"
@@ -37,12 +38,14 @@ sections:
           <ol id="block" data-floe-look="numbered"><li><div style="height: 60px"></div><p>Under</p></li><li><p>Next</p></li></ol>
           <ol id="sized" data-floe-look="numbered"><li style="--floe-mark: 3rem"><strong>A</strong></li><li><strong>B</strong></li></ol>
           <ol id="wrapped" data-floe-look="numbered"><li><p>Restart <code>api</code> now</p></li><li><p>Next</p></li></ol>
+          <div id="looknote" data-floe-look="note" data-floe-tone="warn"><strong class="title">Title</strong><p>Text</p></div>
 `
 
 // markRows are the rows whose mark stands beside a first line, with the element of that line.
 var markRows = []struct{ name, row, line string }{
 	{"links", "[data-floe-part=links] > li", "[data-floe-part=links] > li > a"},
 	{"note", "[data-floe-part=note]", "[data-floe-part=note] > .title"},
+	{"note borrowed", "#looknote", "#looknote > .title"},
 	{"steps", "[data-floe-part=steps] > li", "[data-floe-part=steps] > li > strong"},
 	{"timeline", "[data-floe-part=timeline] > li", "[data-floe-part=timeline] > li strong"},
 	{"numbered", "#plain > li", "#plain > li > strong"},
@@ -176,7 +179,7 @@ func (b *browser) marksIn(where string, narrow bool) []string {
 		mark, _ := b.pseudoBoxes(r.row)
 		got := m.Marks[i]
 		switch {
-		case mark == nil && r.name != "note":
+		case mark == nil && !strings.HasPrefix(r.name, "note"):
 			amiss = append(amiss, where+": "+r.name+" has no mark")
 		case mark == nil:
 			if math.Abs(got.Left-got.Content) > 0.5 {

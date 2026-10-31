@@ -91,10 +91,10 @@ func TestDrawAdrStates(t *testing.T) {
 		if err != nil {
 			t.Fatal(told(err))
 		}
-		if want := `<p class="status ` + tt.state + `"` + tt.tone + `>` + tt.word + `</p>`; !bytes.Contains(page, []byte(want)) {
+		if want := `<p class="status ` + tt.state + `" data-floe-look="cell"` + tt.tone + `>` + tt.word + `</p>`; !bytes.Contains(page, []byte(want)) {
 			t.Errorf("%s %s draws no %s", tt.lang, tt.state, want)
 		}
-		by := `<p class="superseded-by" data-floe-tone="warn">` + tt.by + `: `
+		by := `<div class="superseded-by" data-floe-look="note" data-floe-tone="warn"><p>` + tt.by + `: `
 		if got := bytes.Contains(page, []byte(`class="superseded-by"`)); got != (tt.by != "") || got && !bytes.Contains(page, []byte(by)) {
 			t.Errorf("%s %s: the record superseding it drawn = %v, want %v as %s", tt.lang, tt.state, got, tt.by != "", by)
 		}
@@ -115,8 +115,8 @@ func TestDrawPostmortem(t *testing.T) {
 	} {
 		page := drawPostmortem(t, "lang: "+tt.lang+"\nseverity: "+tt.level+"\nactions: [{what: w, state: "+tt.state+"}]\n")
 		for _, want := range []string{
-			`<span class="severity ` + tt.level + `"` + tt.levelTone + `>` + tt.levelWord + `</span>`,
-			`<span class="state ` + tt.state + `"` + tt.stateTone + `>` + tt.stateWord + `</span>`,
+			`<span class="severity ` + tt.level + `" data-floe-look="cell"` + tt.levelTone + `>` + tt.levelWord + `</span>`,
+			`<span class="state ` + tt.state + `" data-floe-look="cell"` + tt.stateTone + `>` + tt.stateWord + `</span>`,
 		} {
 			if !bytes.Contains(page, []byte(want)) {
 				t.Errorf("%s %s %s draws no %s", tt.lang, tt.level, tt.state, want)
@@ -136,17 +136,17 @@ func TestDrawPostmortemLeftOut(t *testing.T) {
 	}{
 		{
 			"no severity", "lang: en\nactions: [{what: w, state: done}]\n",
-			[]string{`<th>State</th>`, `<span class="state done" data-floe-tone="good">`},
+			[]string{`<th>State</th>`, `<span class="state done" data-floe-look="cell" data-floe-tone="good">`},
 			[]string{`class="severity`, `<th>Owner</th>`},
 		},
 		{
 			"no state", "lang: en\nseverity: low\nactions: [{what: w, owner: o}]\n",
-			[]string{`<span class="severity low" data-floe-tone="muted">`, `<th>Owner</th>`, `<td>o</td>`},
+			[]string{`<span class="severity low" data-floe-look="cell" data-floe-tone="muted">`, `<th>Owner</th>`, `<td>o</td>`},
 			[]string{`class="state`, `<th>State</th>`},
 		},
 		{
 			"some states", "lang: ja\nactions: [{what: a, state: done}, {what: b}]\n",
-			[]string{`<th>状態</th>`, `<td><span class="state done" data-floe-tone="good">済み</span></td>`, `<td>b</td><td></td>`},
+			[]string{`<th>状態</th>`, `<td><span class="state done" data-floe-look="cell" data-floe-tone="good">済み</span></td>`, `<td>b</td><td></td>`},
 			[]string{`<th>担当</th>`},
 		},
 	} {
@@ -194,7 +194,7 @@ func TestDrawRunbook(t *testing.T) {
 		if ids.ReplaceAllString(steps, "") != ids.ReplaceAllString(back, "") {
 			t.Errorf("%s: a step of the rollback\n%s\nis not drawn as one of the steps\n%s", tt.lang, back, steps)
 		}
-		for _, want := range []string{`<h3 id="restart">Restart</h3><span class="who">Ops</span>`, `<b>` + tt.fails + `</b>`} {
+		for _, want := range []string{`<h3 id="restart">Restart</h3><span class="who">Ops</span>`, `<div class="fails" data-floe-look="note" data-floe-tone="bad"><strong class="title">` + tt.fails + `</strong>`} {
 			if !strings.Contains(steps, want) {
 				t.Errorf("%s draws no %s", tt.lang, want)
 			}

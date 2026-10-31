@@ -10,7 +10,7 @@
    page's own, which floe keeps */}}
 <header class="band" data-floe-look="band">
 <div class="column">
-<p class="when"><span class="kind">{{word "kind"}}</span><span class="date">{{.Data.date}}</span>
+<p class="when"><span class="kind" data-floe-look="cell">{{word "kind"}}</span><span class="date">{{.Data.date}}</span>
 {{- if and .Data.from .Data.to}}<span class="hands">{{.Data.from}} → {{.Data.to}}</span>{{else}}{{with or .Data.from .Data.to}}<span class="hands">{{.}}</span>{{end}}{{end}}</p>
 <h1>{{.Title}}</h1>
 {{- with .Data.summary}}
@@ -48,7 +48,7 @@
 {{- end}}
 {{- with .Data.doing}}
 <section data-floe-look="panel"><h2 id="doing">{{word "doing"}}</h2>
-<ul class="doing">{{range .}}<li><b class="who">{{.who}}</b>{{with .state}}<span class="state {{.}}"{{if eq . "waiting"}} data-floe-tone="warn"{{else if eq . "blocked"}} data-floe-tone="bad"{{end}}>{{word (printf "state_%s" .)}}</span>{{end}}<span class="what">{{markdownLine .what}}</span>{{with .where}}<span class="where">{{markdownLine .}}</span>{{end}}</li>{{end}}</ul>
+<ul class="doing">{{range .}}<li><b class="who">{{.who}}</b>{{with .state}}<span class="state {{.}}" data-floe-look="cell"{{if eq . "waiting"}} data-floe-tone="warn"{{else if eq . "blocked"}} data-floe-tone="bad"{{end}}>{{word (printf "state_%s" .)}}</span>{{end}}<span class="what">{{markdownLine .what}}</span>{{with .where}}<span class="where">{{markdownLine .}}</span>{{end}}</li>{{end}}</ul>
 </section>
 {{- end}}
 {{- with .Data.next}}

@@ -15,7 +15,7 @@
 {{- with .Data.needs}}
 <section class="needs" data-floe-look="panel"><h2>{{word "needs"}}</h2><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></section>
 {{- end}}
-{{- with .Data.caution}}<p class="caution">{{markdownLine .}}</p>{{end}}
+{{- with .Data.caution}}<div class="caution" data-floe-look="note" data-floe-tone="warn"><p>{{markdownLine .}}</p></div>{{end}}
 <section><h2>{{word "steps"}}</h2>{{template "procedure" .Data.steps}}</section>
 {{- with .Data.rollback}}
 <section class="rollback"><h2>{{word "rollback"}}</h2>{{template "procedure" .}}</section>
@@ -35,6 +35,6 @@
 <li><div class="head"><h3>{{markdownLine .title}}</h3>{{with .who}}<span class="who">{{.}}</span>{{end}}</div>
 {{- with .text}}{{.}}{{end}}
 {{- with .run}}{{.}}{{end}}
-{{- with .if_fails}}<p class="fails"><b>{{word "if_fails"}}</b> {{markdownLine .}}</p>{{end}}</li>
+{{- with .if_fails}}<div class="fails" data-floe-look="note" data-floe-tone="bad"><strong class="title">{{word "if_fails"}}</strong><p>{{markdownLine .}}</p></div>{{end}}</li>
 {{- end}}
 </ol>{{end}}

@@ -7,10 +7,6 @@ article { padding: clamp(1.25rem, 5vw, 3rem); display: grid; gap: 1.8rem; }
 header { display: grid; gap: 0.4rem; justify-items: start; border-bottom: 3px double var(--line); padding-bottom: 1.4rem; }
 .kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; gap: 0.8rem; }
 h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
-/* LIMIT: the contrast test measures the badge of the example's state alone; the others were measured once, in every
-   theme, when they were made */
-.status { font-weight: 800; letter-spacing: 0.15em; padding: 0.05rem 0.8rem; border: 2px solid currentColor; border-radius: 6px; background: var(--tone-soft); color: var(--tone); }
-.superseded-by { --face: var(--tone-soft); --on-face: var(--tone); background: var(--face); color: var(--on-face); padding: 0.3rem 0.8rem; border-radius: 6px; }
 .deciders { color: var(--muted); font-size: 0.9rem; }
 section { display: grid; gap: var(--floe-room); }
 h2 { font-size: 1.1rem; }

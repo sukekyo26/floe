@@ -7,11 +7,16 @@ import (
 	"github.com/sukekyo26/floe/internal/kit"
 )
 
-// bandKit is a template that places, in a band, a note, a table and code of floe's and Markdown, each when the data
-// file has it.
+// bandPillsHTML is a pill borrowed from cell in each tone and in none.
+const bandPillsHTML = `<span data-floe-look="cell">plain</span> <span data-floe-look="cell" data-floe-tone="accent">open</span> ` +
+	`<span data-floe-look="cell" data-floe-tone="good">ok</span> <span data-floe-look="cell" data-floe-tone="warn">wait</span> ` +
+	`<span data-floe-look="cell" data-floe-tone="bad">stop</span> <span data-floe-look="cell" data-floe-tone="muted">later</span>`
+
+// bandKit is a template that places, in a band, pills it borrows from cell, in each tone and in none, and a note, a
+// table and code of floe's and Markdown, each when the data file has it.
 var bandKit = map[string]string{
 	"templates/mine/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +
-		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\">{{.Data.note}}{{.Data.text}}{{.Data.table}}{{.Data.code}}</header>\n</body></html>\n",
+		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{.Data.note}}{{.Data.text}}{{.Data.table}}{{.Data.code}}</header>\n</body></html>\n",
 	"templates/mine/page.css": "header { display: grid; gap: 1rem; padding: 2rem; }\n",
 	"templates/mine/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"note": {"$ref": "floe:///parts/note.json"}, "text": {"type": "string", "format": "markdown"},
@@ -48,11 +53,12 @@ const measureBand = `(() => {` + colours + `
   return out.join('\n');
 })()`
 
-// TestUIBand draws Markdown in the look band in every theme, and parts in it in the default one: the parts are in
-// the page's text colour, not the band's, only a line's code is framed, and every text and focus ring in the band
-// reads on the ground under it, as measureContrast and measureRings measure. The parts are in the default theme, as a
-// part with no ground of its own (swiss's note) is drawn on the band's colour, which band's LIMIT tells, and in aurora,
-// whose glass would let the band through but for its band.css.
+// TestUIBand draws Markdown and pills a template borrows in the look band in every theme, and other parts in it in the default one: the
+// parts are in the page's text colour, not the band's, only a line's code is framed, and every text and focus ring in
+// the band reads on the ground under it, as measureContrast and measureRings measure, pills of a theme that gives
+// them no ground too, in the band's text colour. The other parts are in the default theme, as a part with no ground
+// of its own (swiss's note) is drawn on the band's colour, which band's LIMIT tells, and in aurora, whose glass would
+// let the band through but for its band.css.
 func TestUIBand(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	s.own(t, bandKit)
