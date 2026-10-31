@@ -243,6 +243,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix an edge told running through a box it does not touch: the check
+  measured a box by the rectangle around it, so an edge past a hex's points
+  or a rounded corner (a pill's or a state's end, a box's, a table's or a
+  bar's corner) was refused. It now measures the shape drawn, which floe
+  decides in one place for drawing and checking alike, and writes each
+  corner's radii as floe cut them, not as a browser would.
 - Fix shadows reaching other parts and the page's edge: app's and aurora's
   soft shadows fell on the part below, aurora's past the page's edge and onto
   the card beside, and notebook's tilted sticky notes onto the part below.
