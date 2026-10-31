@@ -8,11 +8,12 @@ import (
 	"testing"
 )
 
-// shadowsExtra is a section added to every-part: a panel in a note's box, and cards of html.
+// shadowsExtra is a section added to every-part: panels one after another in a note's box, between its text, and
+// cards of html.
 const shadowsExtra = `  - heading: Nested boxes
     parts:
       - html: |
-          <div data-floe-part="note"><div data-floe-look="panel"><p>A panel in a note</p></div></div>
+          <div data-floe-part="note"><p>Text before</p><div data-floe-look="panel"><p>A panel in a note</p></div><div data-floe-look="panel"><p>Another</p></div><p>Text after</p></div>
           <div data-floe-look="cards"><div class="card" data-floe-look="panel">One</div><div class="card" data-floe-look="panel">Two</div></div>
 `
 
@@ -49,12 +50,16 @@ const markTilted = `(() => { const tilted = [...document.querySelectorAll('[data
 
 // measureShadows returns, one to a line, what a box draws outside itself reaching what it must not: past the page's
 // edge or the sides of the column's padding; out of a box around it that is framed or filled (its padding box); onto
-// another box (not one around it nor in it). What a box draws is its shadows (from the computed box-shadow: moved by
-// its offset, grown by its spread, fading out over its blur), its outline (its width and offset, a focus ring aside),
-// its box itself when tilted (its bounding box, which holds the tilt), and the ::before and ::after of a tilted box,
-// given as extra by its index. Boxes inside a line (inline) are not measured.
+// any other element (not one around it nor in it): onto its border box when it is framed or filled, else onto its
+// content box, where its text is. What a box draws is its shadows that show (from the computed box-shadow, its
+// lengths alone, whatever form its colour takes: moved by its offset, grown by its spread, fading out over its blur),
+// its outline (its width and offset), its box itself when tilted (its bounding box, which holds the tilt), and the
+// ::before and ::after of a tilted box, given as extra by its index. Boxes inside a line (inline) are not measured.
 const measureShadows = `((extra) => {
   const out = new Set(), pagePad = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-pad'));
+  const canvas = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const shows = (colour) => { canvas.clearRect(0, 0, 1, 1); canvas.fillStyle = 'transparent'; canvas.fillStyle = colour;
+    canvas.fillRect(0, 0, 1, 1); return canvas.getImageData(0, 0, 1, 1).data[3] > 0; };
   const name = (e) => { const p = e.parentElement && e.parentElement.closest('[data-floe-part]');
     return (p ? p.dataset.floePart + ' ' : '') + e.tagName.toLowerCase() + (e.dataset.floePart ? '[' + e.dataset.floePart + ']' : '') +
       (e.dataset.floeLook ? '{' + e.dataset.floeLook + '}' : '') + (e.classList.contains('card') ? '.card' : ''); };
@@ -65,18 +70,24 @@ const measureShadows = `((extra) => {
       !/rgba\(0, 0, 0, 0\)|transparent/.test(s.backgroundColor) || s.backgroundImage !== 'none'; };
   const holders = (e) => { const hs = []; for (let p = up(e); p && p !== document.body; p = up(p)) {
     if (isColumn(p)) { hs.push(p); break; } if (painted(p)) hs.push(p); } return hs; };
-  const pad = (p) => { const r = p.getBoundingClientRect(), s = getComputedStyle(p);
-    return { l: r.left + parseFloat(s.borderLeftWidth), t: r.top + parseFloat(s.borderTopWidth),
-      r: r.right - parseFloat(s.borderRightWidth), b: r.bottom - parseFloat(s.borderBottomWidth) }; };
+  const inner = (p, padding) => { const r = p.getBoundingClientRect(), s = getComputedStyle(p), k = (side) =>
+      parseFloat(s['border' + side + 'Width']) + (padding ? parseFloat(s['padding' + side]) : 0);
+    return { l: r.left + k('Left'), t: r.top + k('Top'), r: r.right - k('Right'), b: r.bottom - k('Bottom') }; };
   const join = (a, b) => a ? { l: Math.min(a.l, b.l), t: Math.min(a.t, b.t), r: Math.max(a.r, b.r), b: Math.max(a.b, b.b) } : b;
   const boxes = [...document.querySelectorAll('[data-floe-part], [data-floe-look], blockquote')]
     .filter((b) => b.getClientRects().length && !getComputedStyle(b).display.startsWith('inline'));
+  const others = [...document.body.querySelectorAll('*')].filter((o) => {
+    return o.checkVisibility({ visibilityProperty: true }) && getComputedStyle(o).display !== 'contents' && !o.matches('input[type=radio]'); })
+    .map((o) => { const r = painted(o) ? o.getBoundingClientRect() : inner(o, true); return { o, r: { l: r.left ?? r.l, t: r.top ?? r.t, r: r.right ?? r.r, b: r.bottom ?? r.b } }; })
+    .filter(({ r }) => r.r - r.l > 0.5 && r.b - r.t > 0.5);
   for (const e of boxes) {
     const s = getComputedStyle(e), r = e.getBoundingClientRect();
     let ink = null;
-    for (const m of s.boxShadow.matchAll(/(rgba?\([^)]*\)|[a-z]+)\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+([\d.]+)px\s+(-?[\d.]+)px(\s+inset)?/g)) {
-      if (m[6] || /^rgba\(.*, 0\)$|^transparent$/.test(m[1])) continue;
-      const [x, y, blur, spread] = m.slice(2, 6).map(Number), g = blur + spread;
+    for (const shadow of s.boxShadow === 'none' ? [] : s.boxShadow.split(/,(?![^(]*\))/)) {
+      if (/\binset\b/.test(shadow)) continue;
+      const lengths = [...shadow.matchAll(/(-?[\d.]+)px/g)].map((m) => Number(m[1]));
+      if (!shows(shadow.replace(/-?[\d.]+px/g, '').trim())) continue;
+      const [x, y, blur = 0, spread = 0] = lengths, g = blur + spread;
       ink = join(ink, { l: r.left + x - g, t: r.top + y - g, r: r.right + x + g, b: r.bottom + y + g });
     }
     if (s.transform !== 'none') ink = join(ink, { l: r.left, t: r.top, r: r.right, b: r.bottom });
@@ -86,16 +97,15 @@ const measureShadows = `((extra) => {
     if (!ink) continue;
     const what = name(e);
     for (const h of holders(e)) {
-      const c = pad(h), col = isColumn(h);
+      const c = inner(h, false), col = isColumn(h);
       const over = { right: ink.r - c.r, left: c.l - ink.l, bottom: col ? 0 : ink.b - c.b, top: col ? 0 : c.t - ink.t };
       const sides = Object.entries(over).filter(([, v]) => v > 0.5).map(([k, v]) => k + ' ' + v.toFixed(1));
       if (sides.length) out.add(what + ' out of ' + name(h) + ': ' + sides.join(', '));
     }
     if (ink.l < -0.5 || ink.r > document.documentElement.clientWidth + 0.5) out.add(what + ' past the page edge');
-    for (const b of boxes) {
-      if (b === e || b.contains(e) || e.contains(b)) continue;
-      const q = b.getBoundingClientRect();
-      const w = Math.min(ink.r, q.right) - Math.max(ink.l, q.left), v = Math.min(ink.b, q.bottom) - Math.max(ink.t, q.top);
+    for (const { o: b, r: q } of others) {
+      if (b === e || b.contains(e) || e.contains(b) || q.r <= ink.l || q.l >= ink.r || q.b <= ink.t || q.t >= ink.b) continue;
+      const w = Math.min(ink.r, q.r) - Math.max(ink.l, q.l), v = Math.min(ink.b, q.b) - Math.max(ink.t, q.t);
       if (w > 0.5 && v > 0.5) out.add(what + ' onto ' + name(b) + ' by ' + Math.min(w, v).toFixed(1));
     }
   }
@@ -147,6 +157,15 @@ const measureCast = `[...document.querySelectorAll('[data-floe-part], [data-floe
   const s = getComputedStyle(e), c = s.getPropertyValue('--floe-shadow-color').trim();
   return !/^rgba\(.*, 0\)$|^transparent$/.test(c) && !s.boxShadow.split(/,(?![^(]*\))/).some((x) => x.trim().startsWith(c) && !x.includes('inset'));
 }).map((e) => e.tagName.toLowerCase() + '[' + (e.dataset.floePart || e.dataset.floeLook) + ']').filter((v, i, a) => a.indexOf(v) === i).join(' | ')`
+
+// exampleWidths are the widths a template's example is measured at: a phone's and the column at its widest, and a wide
+// screen for slides, whose content grows with the screen.
+func exampleWidths(tmpl string) []int64 {
+	if tmpl == "slides" {
+		return []int64{480, 1600, 2560}
+	}
+	return []int64{480, 1600}
+}
 
 // TestUIShadows draws every part, and floe's templates with their parts one after another at the least room floe
 // leaves between parts, in every theme and in one of one's own whose shadow reaches that room on every side, at the
@@ -209,7 +228,7 @@ func TestUIShadows(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			slug := "shadows-" + tmpl + "-" + name
 			s.floe(t, "publish", f, "--slug", slug, "--theme", name)
 			b.navigate("/a/" + slug + "/?raw")
-			for _, w := range widths {
+			for _, w := range exampleWidths(tmpl) {
 				amiss = append(amiss, b.shadowsIn(tmpl+" in "+name, w)...)
 			}
 		}
