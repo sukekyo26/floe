@@ -1,3 +1,3 @@
 /* No ground of its own: on a face (a band, a note, a quote) it takes the face's text colour, to read on it.
    LIMIT: on a face its tone shows not (nor the colours of its marks); its word tells it */
-:scope { background: none; border: 1px solid currentColor; border-radius: 3px; padding: 0 0.5em; color: var(--on-face, var(--tone)); }
+:scope { background: none; border: 1px solid currentColor; padding: 0 0.5em; color: var(--on-face, var(--tone)); }

@@ -1,2 +1,1 @@
-:scope { border-radius: 10px; --floe-shadow-color: var(--shadow); }
-:scope .lang { border-radius: 8px; }
+:scope { border-radius: var(--nb-hand); --floe-shadow-color: var(--shadow); }

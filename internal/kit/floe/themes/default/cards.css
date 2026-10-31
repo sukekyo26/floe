@@ -1,6 +1,6 @@
-:scope { background: var(--default-panel); border-radius: 20px; padding: var(--floe-room); }
+:scope { background: var(--default-panel); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
-.card { background: var(--surface); border-radius: 14px; }
+.card { background: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
   font-family: var(--mono); font-size: 0.75rem; font-weight: 400;

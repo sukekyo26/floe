@@ -1,8 +1,8 @@
 :scope {
-  border: 3px solid var(--fg); border-radius: 0; background: var(--surface); --floe-mark: 2.15rem;
+  border: 3px solid var(--fg); background: var(--surface); --floe-mark: 2.15rem;
   --floe-shadow-color: var(--tone-fill);
 }
 :scope::before {
-  border-radius: 0; border: 2px solid var(--fg); background: var(--tone-fill); color: var(--brutal-ink); font-weight: 900;
+  border-radius: var(--radius-small); border: 2px solid var(--fg); background: var(--tone-fill); color: var(--brutal-ink); font-weight: 900;
 }
 .title { color: var(--fg); font-weight: 900; }

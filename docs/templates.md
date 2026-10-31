@@ -167,6 +167,7 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in (`data-floe-tone`, [parts.md](parts.md#the-css-layers-and-scope)), from those above; accent's outside a tone. A template marks a tone so too |
 | `--shadow` | A colour for shadows; a box casts one only when its theme sets `--floe-shadow-color` on it ([parts.md](parts.md#themes)) |
 | `--floe-shadow-x`, `-y`, `-blur`, `-spread` | The theme's one shadow, in px or rem (none by default) |
+| `--radius`, `--radius-small`, `--radius-pill` | How round corners are, one length each: a box's (a panel, a note, code, a quote), a small box's within one (a key, a bar, an image, code in a line), and a pill's (a cell, a tab's title). A box along the edge of another, a gap `p` within it, rounds by `calc(var(--radius) - p)` |
 | `--font`, `--display`, `--mono` | The text's typeface, the headings', and the fixed-width one |
 | `--code-bg`, `--code-fg`, `--code-prompt` | The ground of code and a terminal, always dark; their text; a terminal's prompt |
 | `--code-add`, `--code-del` | A diff's lines added and removed |

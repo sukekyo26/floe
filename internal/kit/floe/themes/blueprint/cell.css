@@ -1,7 +1,7 @@
 /* No ground of its own: on a face (a band, a note, a quote) it takes the face's text colour, to read on it.
    LIMIT: on a face its tone shows not (nor the colours of its marks); its word tells it */
 :scope {
-  display: inline-flex; align-items: center; gap: 0.45em; border-radius: 0; background: none; border: 1.5px solid currentColor;
+  display: inline-flex; align-items: center; gap: 0.45em; background: none; border: 1.5px solid currentColor;
   font-family: var(--mono); letter-spacing: 0.04em; color: var(--on-face, var(--tone));
 }
 :scope::before { content: ""; width: 7px; height: 7px; background: currentColor; }

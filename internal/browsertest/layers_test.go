@@ -136,7 +136,7 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		"      - options: [{ title: a }]\n      - steps: [{ title: b }]\n", ".card")
 	got = b.eval(`['.card', '[data-floe-part=steps]'].map((at) => {
 		const s = getComputedStyle(document.querySelector(at)); return s.backgroundColor + ' ' + s.borderTopLeftRadius; }).join(' | ')`)
-	check(t, "cards", []string{got}, "rgb(255, 255, 255) 14px | color(srgb 0.91098 0.903529 0.884706) 20px")
+	check(t, "cards", []string{got}, "rgb(255, 255, 255) 8px | color(srgb 0.91098 0.903529 0.884706) 20px")
 
 	// Nested, the outer wins whatever the selectors: a look of one's own over the look a cell of it takes again,
 	// two deep, and a part of one's own over the box of another it holds.

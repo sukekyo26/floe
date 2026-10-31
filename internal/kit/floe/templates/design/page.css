@@ -7,7 +7,7 @@ body { margin: 0; font-size: 16px; line-height: 1.8; padding-block: 0 4rem; }
 .head .column { display: grid; gap: 0.5rem; justify-items: start; }
 h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .byline { display: flex; flex-wrap: wrap; gap: 0 1rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
-.status { border: 2px solid var(--accent); color: var(--accent); font-weight: 800; padding: 0 0.7rem; border-radius: 4px; }
+.status { border: 2px solid var(--accent); color: var(--accent); font-weight: 800; padding: 0 0.7rem; border-radius: var(--radius-small); }
 .summary { color: var(--muted); font-size: 1.05rem; }
 .verdict { padding-block: 1.4rem 1.6rem; }
 .verdict h2 { font-size: 0.8rem; letter-spacing: 0.15em; margin-bottom: 0.4rem; }

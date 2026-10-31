@@ -1,6 +1,6 @@
 /* Squares in place of the ground of its tone */
 :scope {
-  background: var(--bp-squares), var(--surface); border-radius: 0; border: 1.5px dashed var(--tone); --floe-mark: 1.75rem;
+  background: var(--bp-squares), var(--surface); border: 1.5px dashed var(--tone); --floe-mark: 1.75rem;
 }
 :scope::before { background: none; border: 1.5px solid currentColor; color: var(--tone); font-family: var(--mono); }
 .title { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }

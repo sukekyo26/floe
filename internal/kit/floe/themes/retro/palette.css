@@ -8,4 +8,5 @@
   /* Its three stripes, an ornament alone, apart from the tones */
   --retro-orange: #d9622b; --retro-mustard: #e8a33d; --retro-olive: #6b7a2a;
   --retro-stripes: linear-gradient(var(--retro-orange) 0 33.3%, var(--retro-mustard) 33.3% 66.6%, var(--retro-olive) 66.6% 100%);
+  --radius: 22px;
 }

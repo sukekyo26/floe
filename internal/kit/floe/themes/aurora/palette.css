@@ -18,4 +18,5 @@
   /* Its glass: a clouded white over the wash, how much of its tone a note's glass holds, and the light at its edge.
      band.css makes them opaque in a band, whose accent they would let through */
   --aurora-glass: rgb(255 255 255 / 0.6); --aurora-tint: 70%; --aurora-edge: rgb(255 255 255 / 0.85);
+  --radius: 22px;
 }

@@ -23,5 +23,5 @@
 }
 :scope > li:not(:last-child)::after {
   content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
-  left: calc(anchor(--floe-mark center) - 1px); width: 2px; border-radius: 1px; background: var(--line);
+  left: calc(anchor(--floe-mark center) - 1px); width: 2px; border-radius: 999px; background: var(--line);
 }

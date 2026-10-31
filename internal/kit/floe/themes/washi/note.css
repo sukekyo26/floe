@@ -1,9 +1,9 @@
 :scope {
-  background: var(--surface); color: var(--fg); border-radius: 0; border: 0; border-top: 2px solid var(--tone);
+  background: var(--surface); color: var(--fg); border: 0; border-top: 2px solid var(--tone);
   --floe-mark: 2rem; --floe-mark-gap: 0.75rem;
 }
 /* The seals are the kanji for a note, good, a warning and a danger, escaped to keep the source in English */
-:scope::before { content: "\6CE8"; content: "\6CE8" / ""; border-radius: 4px; background: var(--tone); color: var(--on-fill); font-size: 1.05rem; }
+:scope::before { content: "\6CE8"; content: "\6CE8" / ""; border-radius: var(--radius-small); background: var(--tone); color: var(--on-fill); font-size: 1.05rem; }
 :scope[data-floe-tone=good]::before { content: "\826F"; content: "\826F" / ""; }
 :scope[data-floe-tone=warn]::before { content: "\6212"; content: "\6212" / ""; }
 :scope[data-floe-tone=bad]::before { content: "\5371"; content: "\5371" / ""; }

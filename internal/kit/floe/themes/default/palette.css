@@ -14,9 +14,15 @@
   --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
   /* Its panels' quiet ground, which holds faces of the surface */
   --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* A face of the surface within a panel (rows, a table's body, a tree, code): the pad between them, and its
+     corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
+     LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0 */
+  --default-pad: 6px; --default-inner: calc(var(--radius) - var(--default-pad));
   /* How wide prose grows, which a template sets for its page on :scope */
   --text-width: 56rem;
   /* The column a template centres its page in: its width, without the pad each side of it */
   --page-width: 96rem; --page-pad: 16px;
+  /* How round corners are: a box's, a small box's in it, and a pill's; one length each */
+  --radius: 20px; --radius-small: 6px; --radius-pill: 999px;
   color-scheme: light;
 }

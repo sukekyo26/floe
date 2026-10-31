@@ -12,7 +12,7 @@ section { display: grid; gap: var(--floe-room); }
 h2 { font-size: 1.1rem; }
 .decision { border-left: 4px solid var(--accent); padding-left: 1.1rem; }
 .alternatives { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
-.alternatives li { border: 1px dashed var(--line); border-radius: 6px; padding: 0.5rem 0.9rem; }
+.alternatives li { border: 1px dashed var(--line); border-radius: var(--radius-small); padding: 0.5rem 0.9rem; }
 .alternatives .title { font-weight: 700; }
 .alternatives :is(.title, .why) { display: block; }
 .consequences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: 1rem; }

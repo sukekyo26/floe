@@ -6,4 +6,4 @@ h2:not(aside h2)::after {
   content: ""; display: block; width: 4.5rem; height: 9px; margin-top: 0.7rem; background: var(--retro-stripes);
 }
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { background: var(--surface); border: 0; border-radius: 22px; padding: 1rem 1.4rem; color: var(--fg); border-left: 9px solid var(--retro-mustard); }
+blockquote { background: var(--surface); border: 0; border-radius: var(--radius); padding: 1rem 1.4rem; color: var(--fg); border-left: 9px solid var(--retro-mustard); }
