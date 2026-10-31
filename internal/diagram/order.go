@@ -18,7 +18,9 @@ func (gr *group) order() int {
 		return 0
 	}
 	best := cloneRanks(gr.ranks)
-	for trip := 1; trip <= maxTrips; trip++ {
+	trip := 0
+	for trip < maxTrips {
+		trip++
 		before := cloneRanks(gr.ranks)
 		for r := 1; r < len(gr.ranks); r++ {
 			gr.sweep(r, true)
@@ -31,12 +33,11 @@ func (gr *group) order() int {
 			least, best = n, cloneRanks(gr.ranks)
 		}
 		if n == 0 || slices.EqualFunc(before, gr.ranks, slices.Equal) {
-			gr.ranks = best
-			return trip
+			break
 		}
 	}
 	gr.ranks = best
-	return maxTrips
+	return trip
 }
 
 func cloneRanks(ranks [][]int) [][]int {
