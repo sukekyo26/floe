@@ -1,8 +1,12 @@
-.card { position: relative; border: 1px solid var(--fg); outline: 1px solid var(--fg); outline-offset: -6px; padding: 1.4rem 3.6rem 1.3rem 1.5rem; }
+/* A card in two rules, the inner one drawn over the padding its part sets, short of its text (facts' rows).
+   LIMIT: it stands 5px in, within --floe-row-pad (0.4rem); a template of one's own setting the variable under 5px
+   draws facts' text over it */
+.card { position: relative; border: 1px solid var(--fg); outline: 1px solid var(--fg); outline-offset: -4px; }
+/* The seal of its number stamped on its corner, over the padding and out of it no more than --floe-room */
 :scope.numbered > .card::before {
   content: counter(floe-card, cjk-decimal); content: counter(floe-card, cjk-decimal) / "";
-  position: absolute; top: 1rem; right: 1rem; display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%;
-  background: var(--washi-shu); color: var(--on-fill); font-size: 1rem; font-weight: 700; transform: rotate(-8deg);
+  position: absolute; top: -0.5rem; right: -0.5rem; --floe-mark: 1.6rem; border-radius: 50%;
+  background: var(--washi-shu); color: var(--on-fill); font-size: 0.8rem; font-weight: 700;
 }
 .card .title { letter-spacing: 0.08em; }
 .card :is(p, ul, ol) { color: var(--muted); }

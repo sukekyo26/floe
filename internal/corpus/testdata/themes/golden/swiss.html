@@ -330,9 +330,13 @@ blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-hei
 .card {
   padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
+/* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
+   sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
+   LIMIT: whether a decoration keeps off the text is seen, not measured */
+:scope.numbered > .card { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-small);
+  display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
@@ -480,11 +484,11 @@ blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-hei
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-.card { border: 0; border-left: 1px solid var(--fg); padding: 0.25rem 1.4rem 0.5rem; }
-:scope > .card:first-child { border-left: 0; padding-left: 0; }
+.card { border: 0; border-left: 1px solid var(--fg); }
+:scope > .card:first-child { border-left: 0; }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / "";
-  display: block; width: auto; height: auto; background: none; color: var(--fg);
+  --floe-mark: auto; background: none; color: var(--fg);
   font-size: 3rem; font-weight: 900; line-height: 1;
 }
 .card .title { font-size: 1.2rem; font-weight: 900; }

@@ -339,9 +339,13 @@ blockquote {
 .card {
   padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
+/* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
+   sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
+   LIMIT: whether a decoration keeps off the text is seen, not measured */
+:scope.numbered > .card { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-small);
+  display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
@@ -487,11 +491,15 @@ blockquote {
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-.card { position: relative; border: 1px solid var(--fg); outline: 1px solid var(--fg); outline-offset: -6px; padding: 1.4rem 3.6rem 1.3rem 1.5rem; }
+/* A card in two rules, the inner one drawn over the padding its part sets, short of its text (facts' rows).
+   LIMIT: it stands 5px in, within --floe-row-pad (0.4rem); a template of one's own setting the variable under 5px
+   draws facts' text over it */
+.card { position: relative; border: 1px solid var(--fg); outline: 1px solid var(--fg); outline-offset: -4px; }
+/* The seal of its number stamped on its corner, over the padding and out of it no more than --floe-room */
 :scope.numbered > .card::before {
   content: counter(floe-card, cjk-decimal); content: counter(floe-card, cjk-decimal) / "";
-  position: absolute; top: 1rem; right: 1rem; display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%;
-  background: var(--washi-shu); color: var(--on-fill); font-size: 1rem; font-weight: 700; transform: rotate(-8deg);
+  position: absolute; top: -0.5rem; right: -0.5rem; --floe-mark: 1.6rem; border-radius: 50%;
+  background: var(--washi-shu); color: var(--on-fill); font-size: 0.8rem; font-weight: 700;
 }
 .card .title { letter-spacing: 0.08em; }
 .card :is(p, ul, ol) { color: var(--muted); }
