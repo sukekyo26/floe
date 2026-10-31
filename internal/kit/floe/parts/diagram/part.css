@@ -1,99 +1,79 @@
 /* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
    set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
-/* The colours and fonts of the page's palette, with floe's default ones for a fragment of floe diagram
-   render pasted into a page without them */
-/* LIMIT: the fallbacks copy default's palette.css by hand, and nothing checks they match; change them with it */
-.dg-wrap, .dg-tools {
-  --dg-bg: var(--bg, #f4f3f0);
-  --dg-surface: var(--surface, #fff);
-  --dg-fg: var(--fg, #22211f);
-  --dg-muted: var(--muted, #615f5a);
-  --dg-line: var(--line, #dad7d0);
-  --dg-accent: var(--accent, #1d6670);
-  --dg-accent-soft: var(--accent-soft, #dcebec);
-  --dg-good: var(--good, #1d7542);
-  --dg-good-soft: var(--good-soft, #dcefe3);
-  --dg-warn: var(--warn, #8a5a10);
-  --dg-warn-soft: var(--warn-soft, #f6e8d2);
-  --dg-bad: var(--bad, #b3261e);
-  --dg-bad-soft: var(--bad-soft, #fbe5e2);
-  --dg-font: var(--font, sans-serif);
-  --dg-mono: var(--mono, monospace);
-}
 /* The frame spans the body's width. Its height follows the diagram's aspect ratio, capped by the
    screen's height and by max-height (how far it may grow), with the diagram centred in it */
-.dg-wrap { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--dg-line); border-radius: 8px; touch-action: pan-y; }
-.dg-wrap:focus-visible { outline: 2px solid var(--dg-accent); outline-offset: 2px; }
+.dg-wrap { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; touch-action: pan-y; }
+.dg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .dg-wrap.zoomed:active { cursor: grabbing; }
 .dg-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: 12px; line-height: 1.4; }
-.dg-tools span { color: var(--dg-muted); margin-right: auto; }
+.dg-tools span { color: var(--muted); margin-right: auto; }
 @media (max-width: 640px) { .dg-tools span { display: none; } }
 /* Buttons do nothing on paper */
 @media print { .dg-tools { display: none; } }
-.dg-tools button { min-width: 2.2rem; padding: 2px 8px; font: inherit; color: var(--dg-fg); background: var(--dg-surface); border: 1px solid var(--dg-line); border-radius: 6px; cursor: pointer; }
-.dg-tools button:hover:not(:disabled) { border-color: var(--dg-accent); color: var(--dg-accent); }
+.dg-tools button { min-width: 2.2rem; padding: 2px 8px; font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.dg-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .dg-tools button:disabled { opacity: 0.4; cursor: default; }
-.dg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--dg-font); }
+.dg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--font); }
 .dg text { dominant-baseline: central; }
-.dg .main { fill: var(--dg-fg); font-size: 13px; font-weight: 700; }
-.dg .sub { fill: var(--dg-muted); font-size: 12px; }
-.dg .code { font-family: var(--dg-mono); font-size: 12px; }
-.dg .box rect, .dg .box path { fill: var(--dg-surface); stroke: var(--dg-line); stroke-width: 1.2; }
-.dg .box.accent rect, .dg .box.accent path { fill: var(--dg-accent-soft); stroke: var(--dg-accent); }
-.dg .box.good rect, .dg .box.good path { fill: var(--dg-good-soft); stroke: var(--dg-good); }
-.dg .box.warn rect, .dg .box.warn path { fill: var(--dg-warn-soft); stroke: var(--dg-warn); }
-.dg .box.bad rect, .dg .box.bad path { fill: var(--dg-bad-soft); stroke: var(--dg-bad); }
-.dg .box.bad text { fill: var(--dg-bad); }
-.dg .table .bg, .dg .table .head { fill: var(--dg-surface); }
-.dg .table.accent .head { fill: var(--dg-accent-soft); }
-.dg .table.good .head { fill: var(--dg-good-soft); }
-.dg .table.warn .head { fill: var(--dg-warn-soft); }
-.dg .table.bad .head { fill: var(--dg-bad-soft); }
-.dg .table .outline { fill: none; stroke: var(--dg-line); stroke-width: 1.2; }
-.dg .table.accent .outline { stroke: var(--dg-accent); }
-.dg .table.good .outline { stroke: var(--dg-good); }
-.dg .table.warn .outline { stroke: var(--dg-warn); }
-.dg .table.bad .outline { stroke: var(--dg-bad); }
-.dg .table .sep { stroke: var(--dg-line); }
-.dg .cell { fill: var(--dg-fg); }
-.dg .type { fill: var(--dg-muted); font-size: 12px; }
+.dg .main { fill: var(--fg); font-size: 13px; font-weight: 700; }
+.dg .sub { fill: var(--muted); font-size: 12px; }
+.dg .code { font-family: var(--mono); font-size: 12px; }
+.dg .box rect, .dg .box path { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+.dg .box.accent rect, .dg .box.accent path { fill: var(--accent-soft); stroke: var(--accent); }
+.dg .box.good rect, .dg .box.good path { fill: var(--good-soft); stroke: var(--good); }
+.dg .box.warn rect, .dg .box.warn path { fill: var(--warn-soft); stroke: var(--warn); }
+.dg .box.bad rect, .dg .box.bad path { fill: var(--bad-soft); stroke: var(--bad); }
+.dg .box.bad text { fill: var(--bad); }
+.dg .table .bg, .dg .table .head { fill: var(--surface); }
+.dg .table.accent .head { fill: var(--accent-soft); }
+.dg .table.good .head { fill: var(--good-soft); }
+.dg .table.warn .head { fill: var(--warn-soft); }
+.dg .table.bad .head { fill: var(--bad-soft); }
+.dg .table .outline { fill: none; stroke: var(--line); stroke-width: 1.2; }
+.dg .table.accent .outline { stroke: var(--accent); }
+.dg .table.good .outline { stroke: var(--good); }
+.dg .table.warn .outline { stroke: var(--warn); }
+.dg .table.bad .outline { stroke: var(--bad); }
+.dg .table .sep { stroke: var(--line); }
+.dg .cell { fill: var(--fg); }
+.dg .type { fill: var(--muted); font-size: 12px; }
 /* A frame's dashes are a little darker than the secondary text. Without color-mix, --muted stays */
-.dg .frame rect { fill: none; stroke: var(--dg-muted); stroke: color-mix(in srgb, var(--dg-muted) 75%, var(--dg-fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
-.dg .frame.accent rect { stroke: var(--dg-accent); }
-.dg .frame text { fill: var(--dg-muted); font-size: 12px; font-weight: 700; }
-.dg .frame.grouped text { fill: var(--dg-fg); font-size: 13px; }
-.dg .edge, .dg .line { fill: none; stroke: var(--dg-muted); stroke-width: 1.5; }
+.dg .frame rect { fill: none; stroke: var(--muted); stroke: color-mix(in srgb, var(--muted) 75%, var(--fg)); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.dg .frame.accent rect { stroke: var(--accent); }
+.dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
+.dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
+.dg .edge, .dg .line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
 .dg .edge.dashed { stroke-dasharray: 5 4; }
 .dg .edge.bold { stroke-width: 3; }
-.dg .edge.accent { stroke: var(--dg-accent); }
-.dg .edge.good { stroke: var(--dg-good); }
-.dg .edge.warn { stroke: var(--dg-warn); }
-.dg .edge.bad { stroke: var(--dg-bad); }
+.dg .edge.accent { stroke: var(--accent); }
+.dg .edge.good { stroke: var(--good); }
+.dg .edge.warn { stroke: var(--warn); }
+.dg .edge.bad { stroke: var(--bad); }
 /* An edge's ends take its colour (context-stroke). Without it, --muted stays */
-.dg .mk-fill { fill: var(--dg-muted); fill: context-stroke; }
-.dg .mk-hollow { fill: var(--dg-bg); stroke: var(--dg-muted); stroke: context-stroke; stroke-width: 1.2; }
-.dg .mk-line { fill: none; stroke: var(--dg-muted); stroke: context-stroke; stroke-width: 1.5; }
-.dg .dot { fill: var(--dg-muted); stroke: var(--dg-muted); }
-.dg .dot.accent { fill: var(--dg-accent); stroke: var(--dg-accent); }
-.dg .dot.good { fill: var(--dg-good); stroke: var(--dg-good); }
-.dg .dot.warn { fill: var(--dg-warn); stroke: var(--dg-warn); }
-.dg .dot.bad { fill: var(--dg-bad); stroke: var(--dg-bad); }
-.dg .dot.hollow { fill: var(--dg-bg); stroke-width: 2; }
-.dg .bar { fill: var(--dg-muted); }
-.dg .bar.accent { fill: var(--dg-accent); }
-.dg .bar.good { fill: var(--dg-good); }
-.dg .bar.warn { fill: var(--dg-warn); }
-.dg .bar.bad { fill: var(--dg-bad); }
-.dg .axis { stroke: var(--dg-muted); stroke-width: 1.2; }
-.dg .grid { stroke: var(--dg-line); }
-.dg .venn { fill: var(--dg-accent-soft); fill-opacity: 0.6; stroke: var(--dg-accent); stroke-width: 1.5; }
-.dg .venn.good { fill: var(--dg-good-soft); stroke: var(--dg-good); }
-.dg .venn.warn { fill: var(--dg-warn-soft); stroke: var(--dg-warn); }
-.dg .venn.bad { fill: var(--dg-bad-soft); stroke: var(--dg-bad); }
-.dg .label-bg { fill: var(--dg-bg); }
-.dg .label { fill: var(--dg-fg); font-size: 12px; }
+.dg .mk-fill { fill: var(--muted); fill: context-stroke; }
+.dg .mk-hollow { fill: var(--bg); stroke: var(--muted); stroke: context-stroke; stroke-width: 1.2; }
+.dg .mk-line { fill: none; stroke: var(--muted); stroke: context-stroke; stroke-width: 1.5; }
+.dg .dot { fill: var(--muted); stroke: var(--muted); }
+.dg .dot.accent { fill: var(--accent); stroke: var(--accent); }
+.dg .dot.good { fill: var(--good); stroke: var(--good); }
+.dg .dot.warn { fill: var(--warn); stroke: var(--warn); }
+.dg .dot.bad { fill: var(--bad); stroke: var(--bad); }
+.dg .dot.hollow { fill: var(--bg); stroke-width: 2; }
+.dg .bar { fill: var(--muted); }
+.dg .bar.accent { fill: var(--accent); }
+.dg .bar.good { fill: var(--good); }
+.dg .bar.warn { fill: var(--warn); }
+.dg .bar.bad { fill: var(--bad); }
+.dg .axis { stroke: var(--muted); stroke-width: 1.2; }
+.dg .grid { stroke: var(--line); }
+.dg .venn { fill: var(--accent-soft); fill-opacity: 0.6; stroke: var(--accent); stroke-width: 1.5; }
+.dg .venn.good { fill: var(--good-soft); stroke: var(--good); }
+.dg .venn.warn { fill: var(--warn-soft); stroke: var(--warn); }
+.dg .venn.bad { fill: var(--bad-soft); stroke: var(--bad); }
+.dg .label-bg { fill: var(--bg); }
+.dg .label { fill: var(--fg); font-size: 12px; }
 .dg .label.strong { font-size: 13px; font-weight: 700; }
-.dg .lifeline { stroke: var(--dg-muted); stroke-width: 1.2; stroke-dasharray: 6 4; }
-.dg .divider { stroke: var(--dg-muted); stroke-width: 1.2; stroke-dasharray: 12 6; }
-.dg .band { fill: var(--dg-accent-soft); stroke: var(--dg-accent); }
+.dg .lifeline { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 6 4; }
+.dg .divider { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 12 6; }
+.dg .band { fill: var(--accent-soft); stroke: var(--accent); }

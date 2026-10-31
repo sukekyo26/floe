@@ -1,5 +1,5 @@
 {{define "diagram" -}}
-<div class="dg-wrap" style="aspect-ratio: {{n .W}} / {{n .H}}; max-height: min(85vh, {{n .MaxH}}px)"><svg viewBox="0 0 {{n .W}} {{n .H}}" class="dg" role="img" aria-label="{{t .Title}}"><defs>
+<div class="{{.Wrap}}" style="aspect-ratio: {{n .W}} / {{n .H}}; max-height: min(85vh, {{n .MaxH}}px)"><svg viewBox="0 0 {{n .W}} {{n .H}}" class="dg" role="img" aria-label="{{t .Title}}"><defs>
 {{- range .Markers}}<marker id="{{.ID}}" viewBox="{{.ViewBox}}" refX="{{n .RX}}" refY="{{n .RY}}" markerWidth="{{n .W}}" markerHeight="{{n .H}}" markerUnits="userSpaceOnUse" orient="auto-start-reverse">{{.Body}}</marker>{{end}}
 {{- range .Icons}}<image id="{{.ID}}" href="{{.Href}}" width="{{n .Size}}" height="{{n .Size}}"/>{{end -}}
 </defs>{{range .Elems}}{{template "el" .}}{{end}}</svg></div>

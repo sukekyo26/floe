@@ -1,11 +1,12 @@
 // Zooms and pans a diagram inside its frame, which first shows the whole diagram. The frame's size comes
 // from CSS, and the viewBox is rewritten to the frame's aspect ratio, so what shows is the viewBox.
-// messages holds the toolbar's wording by language; the lang attribute of the page's root picks one.
-function zoomable(messages) {
+// words holds the toolbar's wording by language, which the lang attribute of the page's root picks; wrap and tools
+// are the classes of the frame and the toolbar.
+function zoomable({ words, wrap: wrapClass, tools: toolsClass }) {
   const MAX = 4;
   // A tag is matched as floe matches it: in lower case, with _ read as -
   const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
-  const msg = messages[lang] || messages[lang.split('-')[0]] || messages.en;
+  const msg = words[lang] || words[lang.split('-')[0]] || words.en;
   const setup = (wrap) => {
     // A page may hold these assets more than once (fragments rendered apart); a second run does nothing.
     // A frame without a diagram is left alone, so that the frames after it still get theirs
@@ -22,7 +23,7 @@ function zoomable(messages) {
     // Zooming out stops at the whole diagram or the actual size, whichever is smaller
     const min = () => Math.min(fit(), 1);
     const tools = document.createElement('div');
-    tools.className = 'dg-tools';
+    tools.className = toolsClass;
     const hint = document.createElement('span');
     hint.textContent = msg.diagram_zoom_hint;
     tools.append(hint);
@@ -159,7 +160,7 @@ function zoomable(messages) {
       render();
     });
   };
-  const init = () => document.querySelectorAll('.dg-wrap').forEach(setup);
+  const init = () => document.querySelectorAll('.' + wrapClass).forEach(setup);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 }

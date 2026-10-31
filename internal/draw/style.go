@@ -47,11 +47,6 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 	// The first sheet names the layers, which puts them in that order. Each file after it is a sheet of its
 	// own, so that a mistake in it, a comment or a block left open, ends with it.
 	var sheets []string
-	// No </style in a CSS, in a comment or a string too, closes its <style> and leaves what follows to be read
-	// as the page's HTML.
-	write := func(body string) {
-		sheets = append(sheets, "\n"+styleEnd.ReplaceAllString(body, `<\/$1`))
-	}
 	// The layers of depth, the deepest first, so that the outer win.
 	deepest := 0
 	for _, d := range n.depths {
@@ -63,11 +58,11 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 			order = append(order, fmt.Sprintf("%s.depth%d", kind, d))
 		}
 	}
-	write("@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;\n@layer " +
-		strings.Join(order, ", ") + ";\n@layer floe.base {\n" + string(k.BaseCSS()) + "}\n")
+	sheets = append(sheets, Sheet("", []byte("@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;\n@layer "+
+		strings.Join(order, ", ")+";\n@layer floe.base {\n"+string(k.BaseCSS())+"}\n")))
 	sheet := func(layer string, css []byte) {
 		if len(css) != 0 {
-			write("@layer " + layer + " {\n" + string(css) + "}\n")
+			sheets = append(sheets, Sheet(layer, css))
 		}
 	}
 	sheet("floe.palette", base.Palette())
@@ -105,7 +100,23 @@ func pageScoped(css []byte) []byte {
 	if len(css) == 0 {
 		return nil
 	}
-	return []byte("@scope (:root) to ([data-floe-part] > *) {\n" + string(css) + "}\n")
+	return Scoped("(:root) to ([data-floe-part] > *)", css)
+}
+
+// Scoped is css in @scope with the prelude scope, its root :scope.
+func Scoped(scope string, css []byte) []byte {
+	return []byte("@scope " + scope + " {\n" + string(css) + "}\n")
+}
+
+// Sheet is css in the layer named layer (in none for ""), as the text of a <style> of its own, so that a mistake in
+// it, a comment or a block left open, ends with it. No </style in it, in a comment or a string too, closes the
+// <style> and leaves what follows to be read as the page's HTML.
+func Sheet(layer string, css []byte) string {
+	body := string(css)
+	if layer != "" {
+		body = "@layer " + layer + " {\n" + body + "}\n"
+	}
+	return "\n" + styleEnd.ReplaceAllString(body, `<\/$1`)
 }
 
 // styleEnd finds </style, of either case, which HTML reads as the end of a <style>. Written <\/style it is
