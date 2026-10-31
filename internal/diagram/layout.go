@@ -124,8 +124,9 @@ func newLayout(s *spec, opts Options) *layout {
 	b, _ := json.Marshal(s) //nolint:errcheck,errchkjson // read from JSON, it writes as JSON
 	sum := sha256.Sum256(b)
 	l.id = "dg" + strconv.Itoa(opts.Seq) + "-" + hex.EncodeToString(sum[:3])
-	items, found := expand(s.Parts)
+	items, found, err := expand(s.Parts)
 	l.problems = append(l.problems, found...)
+	l.failure = err
 	for _, it := range items {
 		l.name(it.at, it.p)
 	}

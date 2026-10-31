@@ -3,6 +3,7 @@ package diagram
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand/v2"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -36,10 +38,113 @@ func laid(g *graph) *layout {
 }
 
 // grouped is g read and laid out, its groups kept, as items lays it out.
-func grouped(g *graph) []*group {
+func grouped(g *graph) ([]*group, error) {
 	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are graphFault's
-	o.items()
-	return o.groups
+	_, err := o.items()
+	return o.groups, err
+}
+
+// unlabelled is g with no label on its edges.
+func unlabelled(g *graph) *graph {
+	c := *g
+	c.Edges = slices.Clone(g.Edges)
+	for k := range c.Edges {
+		c.Edges[k].Label = nil
+	}
+	return &c
+}
+
+// labelFault is what is wrong with the labels of g laid out as l, or "": an edge turning or crossing another more or
+// less often than in g laid out with no label, or a label not a column beside a run of its own edge.
+func labelFault(g *graph, l *layout) string {
+	if !slices.ContainsFunc(g.Edges, func(e graphEdge) bool { return e.Label != nil }) {
+		return ""
+	}
+	plain := laid(unlabelled(g))
+	for k, p := range l.paths {
+		if len(p.segs) != len(plain.paths[k].segs) {
+			return fmt.Sprintf("%s turns %d times labelled, %d times not", p.what, len(p.segs)-1, len(plain.paths[k].segs)-1)
+		}
+	}
+	if a, b := crossings(l), crossings(plain); a != b {
+		return fmt.Sprintf("%d crossings labelled, %d not", a, b)
+	}
+	// Across the ranks, room made and labels before the boxes move them by whole columns, keeping their grid.
+	across := 0
+	if g.Direction == "right" {
+		across = 1
+	}
+	for _, n := range g.Nodes {
+		if a, b := l.names[n.Box.Name].r, plain.names[n.Box.Name].r; math.Mod(a.lo(across)-b.lo(across), column) != 0 {
+			return fmt.Sprintf("box %s at %v,%v labelled, %v,%v not: off its grid", n.Box.Name, a.x, a.y, b.x, b.y)
+		}
+	}
+	if fault := handFault(g, l); fault != "" {
+		return fault
+	}
+	j := 0
+	for k, e := range g.Edges {
+		if e.Label == nil {
+			continue
+		}
+		r := l.labels[j]
+		j++
+		if !slices.ContainsFunc(l.paths[k].segs, func(s seg) bool { return beside(r, s) }) {
+			return fmt.Sprintf("the label of %s at %v, %v not a column beside a run of it", l.paths[k].what, r.x, r.y)
+		}
+	}
+	return ""
+}
+
+// handFault is a mistake of a label of g, laid out as l, with an edge written by hand from the middle of a side of a
+// box its edges do not use (left and right laid out down, top and bottom laid out right), 20 out, or "".
+func handFault(g *graph, l *layout) string {
+	parts := []part{{Graph: g}} //nolint:exhaustruct_v5 // one kind of part
+	for _, n := range g.Nodes {
+		r := l.names[n.Box.Name].r
+		ends := map[string][2]float64{"left": {r.x - 20, r.y + r.h/2}, "right": {r.x + r.w + 20, r.y + r.h/2}}
+		if g.Direction == "right" {
+			ends = map[string][2]float64{"top": {r.x + r.w/2, r.y - 20}, "bottom": {r.x + r.w/2, r.y + r.h + 20}}
+		}
+		for _, side := range slices.Sorted(maps.Keys(ends)) {
+			p := ends[side]
+			parts = append(parts, part{Edge: &edge{
+				From: end{Name: n.Box.Name, Point: nil}, To: end{Name: "", Point: &p}, //nolint:exhaustruct_v5 // one kind of part
+				FromSide: side, ToSide: "", Via: nil, Straight: true, Label: nil, At: nil, Dashed: false, Bold: false, Tone: "",
+				Start: nil, End: nil, Crossing: true, who: "", graph: "", anchor: "",
+			}})
+		}
+	}
+	hands := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: parts, Example: ""}, //nolint:exhaustruct_v5 // a graph and edges
+		Options{Lang: "en", Icons: NoIcons{Err: nil}, Seq: 1})
+	hands.check()
+	for _, p := range hands.problems {
+		if slices.ContainsFunc(p.Args, func(a any) bool { return strings.HasPrefix(fmt.Sprint(a), `label "`) }) {
+			return "an edge written by hand: " + p.Error()
+		}
+	}
+	return ""
+}
+
+// beside reports whether r stands a column beside run s, within its length.
+func beside(r rect, s seg) bool {
+	along := runAxis(s)
+	across := 1 - along
+	lo, hi := min(s[along], s[along+2]), max(s[along], s[along+2])
+	near := math.Abs(r.lo(across)-s[across]-column) < 1e-6 || math.Abs(s[across]-column-r.lo(across)-r.size(across)) < 1e-6
+	return near && r.lo(along) >= lo && r.lo(along)+r.size(along) <= hi
+}
+
+// crossings counts the pairs of l's edges that cross.
+func crossings(l *layout) int {
+	n := 0
+	for i, a := range l.paths {
+		for _, b := range l.paths[i+1:] {
+			_, c := touch(a, b)
+			n += c
+		}
+	}
+	return n
 }
 
 // touch reports whether two edges share a run or touch anywhere but where they cross, and counts their crossings.
@@ -89,6 +194,9 @@ func graphFault(g *graph) string {
 	if len(l.problems) > 0 {
 		return l.problems.Error()
 	}
+	if fault := labelFault(g, l); fault != "" {
+		return fault
+	}
 	drawn := 0
 	for i, a := range l.paths {
 		for _, b := range l.paths[i+1:] {
@@ -115,7 +223,10 @@ func graphFault(g *graph) string {
 		}
 	}
 	ordered := 0
-	groups := grouped(g)
+	groups, err := grouped(g)
+	if err != nil {
+		return err.Error()
+	}
 	least := math.Inf(1)
 	for _, n := range groups[0].nodes {
 		least = min(least, n.x)
@@ -267,7 +378,14 @@ func randomGraph(rnd *rand.Rand, direction string) *graph {
 		if a == b {
 			continue
 		}
-		g.Edges = append(g.Edges, graphEdge{From: names[a], To: names[b], Dashed: false, Bold: false, Tone: "", Start: nil, End: nil})
+		g.Edges = append(g.Edges, graphEdge{From: names[a], To: names[b], Dashed: false, Bold: false, Tone: "", Start: nil, End: nil, Label: nil})
+	}
+	if rnd.IntN(3) == 0 {
+		for k := range g.Edges {
+			if rnd.IntN(3) == 0 {
+				g.Edges[k].Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(12))}
+			}
+		}
 	}
 	return g
 }
@@ -277,13 +395,21 @@ func randomGraph(rnd *rand.Rand, direction string) *graph {
 func TestGraphRandom(t *testing.T) {
 	t.Parallel()
 
+	// Last, graphs with a label on every edge, in English and Japanese, crowding labels into every channel.
 	for _, c := range []struct {
 		direction string
 		seed      [2]uint64
-	}{{"", [2]uint64{1, 2}}, {"right", [2]uint64{3, 4}}} {
+		graphs    int
+		every     bool
+	}{{"", [2]uint64{1, 2}, 3000, false}, {"right", [2]uint64{3, 4}, 3000, false}, {"", [2]uint64{5, 6}, 300, true}, {"right", [2]uint64{7, 8}, 300, true}} {
 		rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
-		for i := range 3000 {
+		for i := range c.graphs {
 			g := randomGraph(rnd, c.direction)
+			for k := range g.Edges {
+				if c.every {
+					g.Edges[k].Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(10)), "ja": strings.Repeat("字", rnd.IntN(16))}
+				}
+			}
 			if fault := graphFault(g); fault != "" {
 				b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
 				t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
@@ -384,9 +510,9 @@ func TestGraphWrittenOrder(t *testing.T) {
 	rnd := rand.New(rand.NewPCG(7, 8)) //nolint:gosec // G404: graphs to try, no secret
 	for i := range 1000 {
 		g, want := writtenOrder(rnd)
-		groups := grouped(g)
-		if len(groups) != 1 {
-			t.Fatalf("graph %d: %d groups, want 1", i, len(groups))
+		groups, err := grouped(g)
+		if err != nil || len(groups) != 1 {
+			t.Fatalf("graph %d: %d groups, want 1: %v", i, len(groups), err)
 		}
 		gr := groups[0]
 		got := make([][]string, 0, len(gr.ranks))
@@ -751,7 +877,7 @@ func TestGraphLimit(t *testing.T) {
 	for i := range hundred {
 		hundred[i] = part{Graph: chainGraph(200, 200)} //nolint:exhaustruct_v5 // one kind of part
 	}
-	if items, found := expand(hundred); len(items) != 0 || len(found) != 1 || fmt.Sprint(found[0].Args) != "[3960000 4000]" {
+	if items, found, err := expand(hundred); err != nil || len(items) != 0 || len(found) != 1 || fmt.Sprint(found[0].Args) != "[3960000 4000]" {
 		t.Errorf("a hundred graphs: %d items, %v; want none, one diagram_graph_long", len(items), found)
 	}
 
@@ -760,8 +886,8 @@ func TestGraphLimit(t *testing.T) {
 	split := graphOf([]string{"a", "b", "c"}, "a>b", "b>c", "a>c")
 	split.X = 2000
 	for _, parts := range [][]part{{{Graph: over}}, {{Graph: exact}, {Graph: split}}} { //nolint:exhaustruct_v5 // one kind of part
-		items, found := expand(parts)
-		if len(items) != 0 || len(found) != 1 || found[0].Key != "diagram_graph_long" || found[0].At() != "#" ||
+		items, found, err := expand(parts)
+		if err != nil || len(items) != 0 || len(found) != 1 || found[0].Key != "diagram_graph_long" || found[0].At() != "#" ||
 			fmt.Sprint(found[0].Args) != "[4001 4000]" {
 			t.Errorf("%d graphs: %d items, %v; want none, diagram_graph_long at # of 4001", len(parts), len(items), found)
 		}
@@ -841,6 +967,18 @@ func TestGraphTold(t *testing.T) {
 		c.l.check()
 		if len(c.l.problems) != 1 || c.l.problems[0].Key != c.key || c.l.problems[0].At() != c.at {
 			t.Errorf("%s: %v, want %s at %s", c.name, c.l.problems, c.key, c.at)
+		}
+	}
+	// Things of one graph meet only by a fault of its layout: floe's failure, not a mistake to move a graph.
+	for _, l := range []*layout{
+		{boxes: []rect{box(0, ga), box(20, ga)}, w: 500, h: 500},            //nolint:exhaustruct_v5 // what it checks
+		{boxes: []rect{box(30, ga)}, paths: []path{across}, w: 500, h: 500}, //nolint:exhaustruct_v5 // what it checks
+		{labels: []rect{{x: 40, y: 10, w: 30, h: 18, what: "label", at: ga + "/edges/0", graph: ga}}, //nolint:exhaustruct_v5 // what it checks
+			paths: []path{across}, w: 500, h: 500},
+	} {
+		l.check()
+		if l.failure == nil || len(l.problems) != 0 {
+			t.Errorf("one graph's things meeting: failure %v, mistakes %v", l.failure, l.problems)
 		}
 	}
 }
@@ -958,7 +1096,11 @@ func TestGraphShapes(t *testing.T) {
 	// A leaf added keeps the order of the other ranks.
 	order := func(g *graph) []string {
 		var out []string
-		for _, gr := range grouped(g) {
+		groups, err := grouped(g)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, gr := range groups {
 			for _, rank := range gr.ranks[:2] {
 				names := []string{}
 				for _, n := range rank {
@@ -997,5 +1139,242 @@ func TestGraphShapes(t *testing.T) {
 	}
 	if len(r.problems) > 0 {
 		t.Errorf("right: %v", r.problems)
+	}
+}
+
+// laidSpec is the diagram of src read and laid out in lang, and checked.
+func laidSpec(t *testing.T, src string, lang i18n.Lang) *layout {
+	t.Helper()
+	_, v, err := yamlpos.ParseMap("s.yaml", []byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := read(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := newLayout(s, Options{Lang: lang, Icons: NoIcons{Err: nil}, Seq: 1})
+	l.check()
+	if l.failure != nil || len(l.problems) > 0 {
+		t.Fatalf("%v %v", l.failure, l.problems)
+	}
+	return l
+}
+
+// labelled is g with label text on the edges ks.
+func labelled(g *graph, text string, ks ...int) *graph {
+	for _, k := range ks {
+		g.Edges[k].Label = Text{"en": text}
+	}
+	return g
+}
+
+// A graph's labels stand beside their runs, from the box their edges are written from: right of a run down, else
+// left with the text set toward it; below a run across, else above; a run up or left from its end nearer that box.
+// With no room beside an edge, room is made, its edges as straight as with no label. A label in another language
+// takes the room of the widest, its text by its run; a graph's label has no background, one by hand has. A label
+// left of the boxes moves the graph right, its left at x, and a label of one group stands clear of the next.
+func TestGraphLabels(t *testing.T) {
+	t.Parallel()
+
+	g2 := func(dir string) *graph {
+		g := labelled(graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "check>write"), "yes", 1)
+		g.Edges[2].Label, g.Direction = Text{"en": "no"}, dir
+		return g
+	}
+	for _, c := range []struct {
+		name, dir string
+		k         int
+		side      int // the axis the label stands a column past its first run on: 0 right of it, 1 below it
+	}{
+		{"down, right of check→show", "", 1, 0},
+		{"down, up check→write, by check", "", 2, 0},
+		{"right, below check→show", "right", 1, 1},
+		{"right, left along check→write, by check", "right", 2, 1},
+	} {
+		l := laid(g2(c.dir))
+		r, s := l.labels[c.k-1], l.paths[c.k].segs[0]
+		along := 1 - c.side
+		near := min(math.Abs(r.lo(along)-s[along]), math.Abs(r.lo(along)+r.size(along)-s[along]))
+		if r.lo(c.side) != s[c.side]+column || near >= column/2 {
+			t.Errorf("%s: label at %v,%v, its first run %v", c.name, r.x, r.y, s)
+		}
+	}
+
+	// Twenty edges side by side, the first labelled: no room right of it, so left, set toward it; the graph moves
+	// right as far as the label stands left of x.
+	par := labelled(graphOf([]string{"a", "b"}, slices.Repeat([]string{"a>b"}, 20)...), "L0", 0)
+	o, _ := readGraph(par, "#/parts/0/graph") //nolint:errcheck // every name is a box's
+	items, err := o.items()
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := items[2].p.Edge
+	run := e.From.Point[0]
+	if left := e.At[0] + 5 - labelWidth(e.Label, false); e.anchor != "end" || e.At[0] != run-column-5 || left < par.X || left >= par.X+column {
+		t.Errorf("parallel: label at %v (%s), run at %v, x %v", e.At, e.anchor, run, par.X)
+	}
+
+	// Back up four ranks: the label next to d, which it is written from.
+	back := labelled(graphOf([]string{"a", "b", "c", "d"}, "a>b", "b>c", "c>d", "d>a"), "no", 3)
+	for _, dir := range []string{"", "right"} {
+		back.Direction = dir
+		l := laid(back)
+		d, r := boxIn(l, "d"), l.labels[0]
+		if dir == "" && r.y+r.h != d.y-2 || dir == "right" && r.x+r.w != d.x-2 {
+			t.Errorf("%q: d→a's label at %v,%v, d at %v,%v", dir, r.x, r.y, d.x, d.y)
+		}
+	}
+
+	// Three edges between two boxes, the middle one labelled: no room between its neighbours a column off, so room
+	// is made, and every edge runs straight.
+	three := labelled(graphOf([]string{"a", "b"}, "a>b", "a>b", "a>b"), "label", 1)
+	l := laid(three)
+	for _, p := range l.paths {
+		if len(p.segs) != 1 {
+			t.Errorf("three: %s turns: %v", p.what, p.segs)
+		}
+	}
+	if !beside(l.labels[0], l.paths[1].segs[0]) {
+		t.Errorf("three: label at %v,%v, not beside %v", l.labels[0].x, l.labels[0].y, l.paths[1].segs[0])
+	}
+
+	// Two groups: the first's label reaching right, the second past it.
+	two := labelled(graphOf([]string{"a", "b", "c", "d"}, "a>b", "c>d"), strings.Repeat("w", 30), 0)
+	l = laid(two)
+	if c := boxIn(l, "c"); c.x <= l.labels[0].x+l.labels[0].w {
+		t.Errorf("two groups: c at %v, the label of a→b reaching %v", c.x, l.labels[0].x+l.labels[0].w)
+	}
+
+	const src = `title: t
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: write, rows: [Write the data] }
+        - box: { name: check, shape: hex, rows: ["Checks pass?"] }
+        - box: { name: show, rows: [Show the page] }
+      edges:
+        - { from: write, to: check }
+        - { from: check, to: show, label: { en: "yes", ja: データファイルと画像の写しを保存する } }
+        - { from: check, to: write, label: "no" }
+  - edge: { from: [400, 20], to: [400, 200], label: by hand }
+`
+	en, ja := laidSpec(t, src, "en"), laidSpec(t, src, "ja")
+	if fmt.Sprint(en.boxes, en.paths, en.labels) != fmt.Sprint(ja.boxes, ja.paths, ja.labels) {
+		t.Errorf("en and ja lay out apart:\n%v\n%v", en.inspect(), ja.inspect())
+	}
+	bg := 0
+	for _, el := range en.labelEls {
+		switch {
+		case el.Class == "label-bg":
+			bg++
+		case el.Kind == "text" && el.Text["en"] == "yes":
+			if x := en.paths[1].segs[0][0]; el.Anchor == "start" && el.X != x+column+5 || el.Anchor == "end" && el.X != x-column-5 {
+				t.Errorf("yes drawn at %v (%s), its run at %v", el.X, el.Anchor, x)
+			}
+		}
+	}
+	if bg != 1 {
+		t.Errorf("%d labels on a background, want the one by hand", bg)
+	}
+}
+
+// crowd is a drawing down: a box at 0,0 48x30, edge 0 a short run out of its bottom at x 24, edge 2 a run beside it
+// at x 12, and edge 1 a run across from x 25 at y, its label below it from x 26, on a box far off.
+func crowd(y float64) *drawing {
+	far := rect{x: 1000, y: 1000, w: 10, h: 10, what: "", at: ""} //nolint:exhaustruct_v5 // a box
+	d := &drawing{right: false, boxes: map[int]rect{
+		0: {x: 0, y: 0, w: 48, h: 30, what: "", at: ""}, //nolint:exhaustruct_v5 // a box
+		1: far,
+	}, shapes: map[int]string{0: "", 1: ""}, routes: map[int][][2]float64{
+		0: {{24, 30}, {24, 60}}, 1: {{25, y}, {200, y}}, 2: {{12, -100}, {12, 300}},
+	}, ends: map[int][2]int{0: {0, 1}, 1: {1, 1}, 2: {1, 1}}, back: map[int]bool{}, spots: map[int]spot{
+		1: {seg: 0, side: 1, at: 26, w: 30},
+	}}
+	return d
+}
+
+// A label keeps clear of where an edge written by hand leaves a box of the graph, the middle of a side the graph's
+// edges do not use; and where no run of its edge takes room for it, it is floe's failure.
+func TestGraphLabelRoom(t *testing.T) {
+	t.Parallel()
+
+	box := rect{x: 0, y: 0, w: 48, h: 30, what: "", at: "", form: outline{hex: 0, radius: 0}} //nolint:exhaustruct_v5 // a box
+	d := &drawing{
+		right: false, boxes: map[int]rect{0: box}, shapes: map[int]string{0: ""},
+		routes: map[int][][2]float64{0: {{60, 0}, {60, 200}}}, ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{},
+		spots: map[int]spot{},
+	}
+	if err := d.place(0, 20); err != nil {
+		t.Fatal(err)
+	}
+	if r, _ := d.rect(0); r.y <= box.y+box.h/2 && box.y+box.h/2 <= r.y+r.h {
+		t.Errorf("label at %v,%v, across the middle of the box's right side at %v", r.x, r.y, box.y+box.h/2)
+	}
+
+	// A short run down out of a box, blocked left by a run beside it, and right by the label of a run across, which
+	// starts just right of it at y (the cut a unit past the box is at 31): room is made below that label, which stays
+	// with its run, whole, partly past the cut (y 28) or from the cut on (y 30).
+	// A label far across from where the new one goes, from x 150, leaves nothing in its way.
+	for _, c := range []struct{ y, side, at, stays, moves float64 }{
+		{28, 1, 26, 27, 0}, {30, 1, 26, 29, 0}, {50, -1, 26, 0, 11}, {28, 1, 150, 0, 0},
+	} {
+		d := crowd(c.y)
+		d.spots[1] = spot{seg: 0, side: c.side, at: c.at, w: 30}
+		if stays, moves := d.crossed(1, 31, 25, 66); stays != c.stays || moves != c.moves {
+			t.Errorf("y %v, side %v: the cut at 31 leaves %v of the label before the room, %v after; want %v, %v",
+				c.y, c.side, stays, moves, c.stays, c.moves)
+		}
+	}
+	for _, y := range []float64{28, 30} {
+		d := crowd(y)
+		if err := d.place(0, 30); err != nil {
+			t.Fatalf("y %v: %v", y, err)
+		}
+		mine, _ := d.rect(0)
+		theirs, _ := d.rect(1)
+		if mine.overlaps(theirs) || !beside(mine, segAt(d.routes[0], 0)) {
+			t.Errorf("y %v: label at %v, the other at %v, the run %v", y, mine, theirs, d.routes[0])
+		}
+	}
+
+	// A run down 2 right of a run, in the way of a label beside it: the cut along the run falls between them,
+	// so that the run in the way moves on with the rest, past the label.
+	way := &drawing{right: false, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{
+		0: {{24, 0}, {24, 300}}, 1: {{26, 0}, {26, 300}},
+	}, ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}}
+	r := spotRect(segAt(way.routes[0], 0), spot{seg: 0, side: 1, at: 100, w: 30})
+	at, need := way.reach(r, 24, 1)
+	if at <= 24 || at >= 26 || need <= 0 {
+		t.Fatalf("reach: cut at %v, %v on", at, need)
+	}
+	way.stretch(0, at, onGrid(need, column, math.Ceil))
+	if x := way.routes[1][0][0]; x < r.x+r.w {
+		t.Errorf("the run in the way at %v, the label to %v", x, r.x+r.w)
+	}
+
+	// A label above and left of the box: the group moves right and down by whole columns, keeping its grid, the
+	// label's left and top within a column of x and y.
+	up := &drawing{
+		right: false, boxes: map[int]rect{0: {x: 20, y: 20, w: 48, h: 30, what: "", at: ""}}, //nolint:exhaustruct_v5 // a box
+		shapes: map[int]string{0: ""}, routes: map[int][][2]float64{0: {{32, 20}, {200, 20}}}, ends: map[int][2]int{0: {0, 0}},
+		back: map[int]bool{}, spots: map[int]spot{0: {seg: 0, side: -1, at: 7, w: 30}},
+	}
+	up.stand(0, 0, [2]float64{20, 20})
+	lr, _ := up.rect(0)
+	if b := up.boxes[0]; math.Mod(b.x-20, column) != 0 || math.Mod(b.y-20, column) != 0 || lr.x < 20 || lr.x >= 20+column ||
+		lr.y < 20 || lr.y >= 20+column {
+		t.Errorf("stand: box at %v,%v, label at %v,%v", b.x, b.y, lr.x, lr.y)
+	}
+
+	short := &drawing{
+		right: false, boxes: map[int]rect{0: {x: 100, y: 0, w: 48, h: 60, what: "", at: ""}}, //nolint:exhaustruct_v5 // a box
+		shapes: map[int]string{0: ""}, routes: map[int][][2]float64{0: {{10, 10}, {10, 20}}}, ends: map[int][2]int{0: {0, 0}},
+		back: map[int]bool{}, spots: map[int]spot{},
+	}
+	if short.place(0, 20) == nil {
+		t.Error("a label placed by a run too short for it, inside a box's span, where no cut makes room")
 	}
 }

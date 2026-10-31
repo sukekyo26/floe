@@ -17,10 +17,10 @@ const treeGapX, treeGapY = 24.0, 40.0
 
 // expand is the parts with each tree opened into a box for each node and an edge from each node to each child,
 // at the node's JSON pointer, so that they are named, laid out and checked as boxes and edges written by hand are.
-// It reads the nodes read into their types, and walks no value along the schema.
+// It reads the nodes read into their types, and walks no value along the schema. Its error is floe's failure.
 // LIMIT: trees grow down alone, and a subtree's span is not shared with its neighbours' (a wide row of leaves
 // widens every span above it); pack them if wide trees waste room.
-func expand(parts []part) ([]item, usererr.List) {
+func expand(parts []part) ([]item, usererr.List, error) {
 	var problems usererr.List
 	graphs := map[int]*graphOut{}
 	passed := 0
@@ -48,13 +48,17 @@ func expand(parts []part) ([]item, usererr.List) {
 			m.place(&out, &p.Tree.Root, p.Tree.X, p.Tree.Y, 0, pointer(i)+"/tree/root")
 		case p.Graph != nil:
 			if o := graphs[i]; o != nil {
-				out = append(out, o.items()...)
+				its, err := o.items()
+				if err != nil {
+					return nil, nil, err
+				}
+				out = append(out, its...)
 			}
 		default:
 			out = append(out, item{pointer(i), p})
 		}
 	}
-	return out, problems
+	return out, problems, nil
 }
 
 // measures are a tree's sizes, measured once from its leaves up: how wide each node stands with its subtree, and

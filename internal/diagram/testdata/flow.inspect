@@ -1,55 +1,55 @@
-box "floe publish <file>" 200,20 200x40
-box "Resolve a link to its real path" 130,90 340x52
-box "A data file, or linked HTML?" 130,166 340x52
-box "Linked with --link?" 130,242 340x52
-box "In a hidden directory of home?" 130,318 340x52
-box "Right under / or your home?" 130,394 340x52
-box "Check the data file and its images" 130,470 340x52
-box "Slug of a-z, 0-9 and hyphens?" 130,546 340x52
-box "Slug taken by the other kind?" 130,622 340x52
-box "Another owner, without --force?" 130,698 340x52
-box "Check the server, start it if needed" 130,774 340x52
-box "Save the data file and its images" 130,850 340x52
-box "Print the URL" 200,926 200x40
-box "Publish a data file, or link HTML" 540,174 300x36
-box "Settings and keys live there" 540,326 300x36
-box "The whole directory would be served" 540,402 300x36
-box "Each mistake at its line and column" 540,478 300x36
-box "Not usable in a URL" 540,554 300x36
-box "Remove it first, or use another slug" 540,630 300x36
-box "Use another slug, or add --force" 540,706 300x36
-edge [300,60]→[300,90] M300,60 V90
-edge [300,142]→[300,166] M300,142 V166
-edge [300,218]→[300,242] M300,218 V242
-edge [300,294]→[300,318] M300,294 V318
-edge [300,370]→[300,394] M300,370 V394
-edge [300,446]→[300,470] M300,446 V470
-edge [300,522]→[300,546] M300,522 V546
-edge [300,598]→[300,622] M300,598 V622
-edge [300,674]→[300,698] M300,674 V698
-edge [300,750]→[300,774] M300,750 V774
-edge [300,826]→[300,850] M300,826 V850
-edge [300,902]→[300,926] M300,902 V926
-edge [130,268]→[130,496] M130,268 H90 V496 H130
-edge [470,192]→[540,192] M470,192 H540
-edge [470,344]→[540,344] M470,344 H540
-edge [470,420]→[540,420] M470,420 H540
-edge [470,496]→[540,496] M470,496 H540
-edge [470,572]→[540,572] M470,572 H540
-edge [470,648]→[540,648] M470,648 H540
-edge [470,724]→[540,724] M470,724 H540
-label "yes" 307,221 34x18
-label "yes" 307,297 34x18
-label "no" 307,373 46x18
-label "no" 307,449 46x18
-label "yes" 307,601 34x18
-label "no" 307,677 46x18
-label "no" 307,753 46x18
-label "no" 83,245 46x18
-label "no" 482,169 46x18
-label "yes" 488,321 34x18
-label "yes" 488,397 34x18
-label "mistakes" 471.2,473 67.6x18
-label "no" 482,549 46x18
-label "yes" 488,625 34x18
-label "yes" 488,701 34x18
+box "publish" 548,20 192x29
+box "resolve" 506,73 280x29
+box "kind" 488,126 312x29
+box "linked" 392,179 224x29
+box "hidden" 266,232 304x29
+box "top" 26,285 280x29
+box "data" 668,374 304x46
+box "slug" 410,444 296x29
+box "taken" 410,509 296x29
+box "owner" 404,574 312x29
+box "server" 398,639 320x29
+box "save" 410,692 296x46
+box "url" 488,762 136x29
+box "notData" 644,179 272x29
+box "secret" 332,285 240x29
+box "whole" 356,382.5 288x29
+box "mistakes" 734,444 288x29
+box "badSlug" 734,509 176x29
+box "otherKind" 740,574 296x29
+box "otherOwner" 746,639 272x29
+edge publish→resolve M644,49 V73
+edge resolve→kind M644,102 V126
+edge kind→linked M572,155 V179
+edge kind→notData M716,155 V179
+edge linked→hidden M452,208 V232
+edge linked→data M596,208 V326 H890 V374
+edge hidden→top M284,261 V285
+edge hidden→secret M488,261 V285
+edge top→data M284,314 V338 H746 V374
+edge top→whole M272,314 V350 H506 V382.5
+edge data→slug M692,420 V447.22
+edge data→mistakes M896,420 V444
+edge slug→taken M488,473 V509
+edge slug→badSlug M692,469.78 V485 H818 V509
+edge taken→owner M488,538 V574
+edge taken→otherKind M692,534.78 V550 H890 V574
+edge owner→server M488,603 V639
+edge owner→otherOwner M704,598.17 V615 H878 V639
+edge server→save M560,668 V692
+edge save→url M560,738 V762
+label "yes" 584,157 34x18
+label "no" 728,157 46x18
+label "yes" 464,210 34x18
+label "no" 608,210 46x18
+label "no" 296,263 46x18
+label "yes" 500,263 34x18
+label "no" 296,316 46x18
+label "yes" 226,316 34x18
+label "mistakes" 908,422 67.6x18
+label "yes" 500,475 34x18
+label "no" 830,487 46x18
+label "no" 500,540 46x18
+label "yes" 902,552 34x18
+label "no" 500,605 46x18
+label "yes" 890,617 34x18

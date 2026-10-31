@@ -10,9 +10,9 @@ func TestTreeStraightDown(t *testing.T) {
 	rows := []row{{Text: Text{"en": "A"}, Style: ""}}
 	leaf := node{Name: "", Rows: rows, Tone: "", Shape: "", Children: nil}
 	root := node{Name: "", Rows: rows, Tone: "", Shape: "", Children: []node{leaf}}
-	items, found := expand([]part{{Tree: &tree{X: 0.3, Y: 10, Root: root}}}) //nolint:exhaustruct_v5 // one kind of part
-	if len(found) > 0 {
-		t.Fatal(found)
+	items, found, err := expand([]part{{Tree: &tree{X: 0.3, Y: 10, Root: root}}}) //nolint:exhaustruct_v5 // one kind of part
+	if err != nil || len(found) > 0 {
+		t.Fatal(err, found)
 	}
 	e := items[1].p.Edge
 	if e == nil || e.Via != nil || e.To.Point[0] != 0.3 {

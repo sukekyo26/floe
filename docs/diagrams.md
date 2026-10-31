@@ -34,7 +34,7 @@ A `diagram` part, in a section or in `details` and `tabs`, is a spec written in 
 | `label` | `text`, `x` `y`, `anchor` (`middle`; `start`, `end`), `plain` (no background), `strong`, `in` (the names of the circles of a Venn diagram it sits inside, outside the others; without `x` and `y`, floe places it). |
 | `line` | `x1` `y1` `x2` `y2`, `kind` (`line`; `lifeline`, `divider`). It may cross other parts, but not leave the canvas. |
 | `tree` | `x` `y` (the root's centre and top), `root`: a node of `rows`, `name`, `tone`, `shape` as a `box` has them, and `children`, nodes too. floe places each node under its parent, the children side by side and each depth in one row, and draws an edge down from each node to each child. A node's `name` can be the end of an edge written by hand. |
-| `graph` | `x` `y` (the top left of all of it), `nodes`, `edges`, `direction` (`down`; `right`). A node is `box: { name, rows, tone, shape }`, as a `box` has them, its `name` needed; an edge is `{ from, to }`, two names of its boxes, with `dashed`, `bold`, `tone`, `start` and `end` (`arrow` or `none`). floe lays the boxes out in ranks and draws each edge between them, as below. |
+| `graph` | `x` `y` (the top left of all of it), `nodes`, `edges`, `direction` (`down`; `right`). A node is `box: { name, rows, tone, shape }`, as a `box` has them, its `name` needed; an edge is `{ from, to }`, two names of its boxes, with `label`, `dashed`, `bold`, `tone`, `start` and `end` (`arrow` or `none`). floe lays the boxes out in ranks and draws each edge between them, as below. |
 | `raw` | `svg`: SVG that no part can draw, of SVG's elements alone (no script or `foreignObject`), not laid out or checked. |
 
 A `graph` holds only how its boxes are joined; floe places them:
@@ -49,12 +49,13 @@ A `graph` holds only how its boxes are joined; floe places them:
       - box: { name: show, rows: [Show the page] }
     edges:
       - { from: write, to: check }
-      - { from: check, to: show }
-      - { from: check, to: write }
+      - { from: check, to: show, label: "yes" }
+      - { from: check, to: write, label: "no" }
 ```
 
 - Each box goes a rank below the boxes its edges come from (an edge back up a cycle is drawn the way it is written); the boxes of a rank are ordered to cross fewer edges, as written when none cross. The same spec is always laid out the same way.
 - Edges leave and enter a box at separate points of its side, on its outline, so that no two share a run; a box widens (with `right`, grows taller) for many edges. Edges of one graph may cross one another; an edge of a graph crossing another part is checked as any edge.
+- An edge's `label` does not change how the graph is laid out: once its edges are drawn, the label stands a column beside a straight run of its edge, nearest the box the edge is written from where there is room (right of a run down, else left; below a run across, else above), with no background. Where there is none, floe makes room, moving the drawing apart there and widening boxes as it must, so that edges run as straight as with no label. A label takes the room of its widest language, so that every language lays out alike. The graph's `x` and `y` are the top left of all of it, labels too, to within a column: a label left of or above its boxes moves the graph on by whole columns, so that its boxes keep their grid.
 - A graph holds 200 boxes and 400 edges at most, and the edges of all the graphs of a diagram may pass 4000 ranks between their ends, all told.
 - A box of a graph can be the end of an edge written by hand, which ends at the middle of a side: give it `fromSide` or `toSide` for a side the graph's edges do not use, so that it does not run along one of them.
 - A mistake between a part of a graph and one written by hand (an overlap, an edge through a box, a crossing) is told at the one written by hand, which can be moved. One that only parts of graphs make (two graphs overlapping or crossing, a graph off the canvas) is told at the graph, to move it by its `x` and `y`.
