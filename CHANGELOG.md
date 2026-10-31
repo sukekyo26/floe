@@ -255,6 +255,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change a diagram to refuse a coordinate past a million either way, a size
+  (`w`, `h`, `r`) past a million, and a canvas (`width`, `height`) past ten
+  million, in the schema's words (`maximum: got 1×10¹⁷, want 1×10⁰⁶`): a
+  bound on size, so that what floe works out from them stays finite and of a
+  sane size. A diagram written at 1e17 was drawn with its boxes on one another
+  and its edges of no length, with no mistake told.
 - Change floe's themes to draw upright and write no word: notebook's and
   washi's pills and notebook's tape no longer tilt; blueprint's quote takes a
   short rule for QUOTE and its cards number 01 for FIG. 01; washi's note seals

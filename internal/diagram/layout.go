@@ -152,17 +152,18 @@ func written(size float64) float64 {
 	return size
 }
 
-// reach is the farthest end of what is drawn, told by end, and 0 when all of it is before 0. An end that is not
-// finite (a circle of radius 1e308) is left out, so that the part sticks out of the canvas the others reach.
+// reach is the farthest end of what is drawn, told by end, and 0 when all of it is before 0. Coordinates and sizes
+// written reach about two million at most, short of what a canvas may be written (ten million).
+// LIMIT: text's length, the number of rows and the boxes a tree opens into (wide or deep) are not bounded, so a
+// label tens of thousands of characters long, a box of hundreds of thousands of rows, or a tree of hundreds of
+// thousands of boxes reaches past it, telling a canvas that cannot be written.
 // LIMIT: raw SVG is not measured (that would read SVG as a browser does), so it may be cut off right of or below
 // what else is drawn; write width and height with it.
 // LIMIT: text is as wide as its estimate; text drawn over canvasPad wider (a run of bold Ws) at the end is cut off.
 func (l *layout) reach(end func(rect) float64) float64 {
 	far := 0.0
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.heads, l.areas, l.strokes) {
-		if e := end(r); !math.IsInf(e, 0) && !math.IsNaN(e) {
-			far = max(far, e)
-		}
+		far = max(far, end(r))
 	}
 	return far
 }
@@ -327,6 +328,9 @@ func what(kind, name string, text Text) string {
 }
 
 // fit refuses text that is wider than room, telling the width to write: the widest of its languages.
+// LIMIT: text and the number of rows are not bounded, so a row tens of thousands of characters long asks for a width
+// past what may be written (a million), and a box of 58,824 rows or more for a height past it (diagram_too_short);
+// bound them if one comes to matter.
 func (l *layout) fit(at, who string, t Text, size float64, code bool, room, written float64) {
 	if lang, tw := widest(t, size, code); tw > room {
 		// LIMIT: the language's mark is made here, so no catalog picks its brackets; move it if one needs its own.

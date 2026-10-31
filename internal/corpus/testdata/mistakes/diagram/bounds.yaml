@@ -1,0 +1,11 @@
+template: report
+lang: en
+title: Coordinates and sizes past a million
+sections:
+  - heading: Diagram
+    parts:
+      - diagram:
+          title: Past a million either way
+          parts:
+            - box: { x: 1000001, y: -1000001, w: 1000001, h: 40, rows: [A] }
+            - edge: { from: [20, 20], to: [20, 1.0e+17] }
