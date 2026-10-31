@@ -34,6 +34,16 @@ var layersKit = map[string]string{
 	"parts/sheet/part.html":         `<div data-floe-part="sheet"></div>`,
 	"parts/sheet/part.css":          "",
 	"parts/sheet/part.yaml":         "looks: [panel]\n",
+	"parts/box/part.yaml":           "description: a box of one's own\n",
+	"parts/box/part.css":            ":scope { background-color: rgb(0, 0, 11); }\n",
+	"parts/grid/part.yaml":          "description: a grid of one's own\n",
+	"parts/grid/part.css":           ".cell { background-color: rgb(0, 0, 12); }\n",
+	"parts/outer/schema.json":       `{"type": "object"}`,
+	"parts/outer/part.html":         `<div data-floe-part="outer"></div>`,
+	"parts/outer/part.css":          ":scope > * { padding-top: 3px; }\n",
+	"parts/inner/schema.json":       `{"type": "object"}`,
+	"parts/inner/part.html":         `<div data-floe-part="inner"></div>`,
+	"parts/inner/part.css":          ":scope { padding-top: 9px; }\n",
 	"templates/layers/example.yaml": "lang: en\ntemplate: layers\n",
 	"templates/themed/example.yaml": "lang: en\ntemplate: themed\n",
 	"templates/bare/example.yaml":   "lang: en\ntemplate: bare\n",
@@ -47,7 +57,8 @@ var layersKit = map[string]string{
 // base.css is under the template's page.css and the looks, and reaches the page but not what a part holds. A part's
 // style stops at a part it holds. floe's theme does not style a part of one's own that took the place of
 // floe's, but does those drawn in its look. floe's base draws the page's ground, colour and face in the theme's,
-// under a template that draws none of them, and the theme the parts in the colours a template sets.
+// under a template that draws none of them, and the theme the parts in the colours a template sets. Nested, the
+// outer look and the outer part win, as deep as they stand.
 func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -126,4 +137,13 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	got = b.eval(`['.card', '[data-floe-part=steps]'].map((at) => {
 		const s = getComputedStyle(document.querySelector(at)); return s.backgroundColor + ' ' + s.borderTopLeftRadius; }).join(' | ')`)
 	check(t, "cards", []string{got}, "rgb(255, 255, 255) 14px | color(srgb 0.91098 0.903529 0.884706) 20px")
+
+	// Nested, the outer wins whatever the selectors: a look of one's own over the look a cell of it takes again,
+	// two deep, and a part of one's own over the box of another it holds.
+	open("nested-own", "template: report\nlang: en\nsections:\n  - parts:\n      - html: >-\n"+
+		`          <div data-floe-look="box"><div data-floe-look="grid"><div class="cell" data-floe-look="box">`+
+		`p</div></div></div><div data-floe-part="outer"><div id="inner" data-floe-part="inner"></div></div>`+"\n", "#inner")
+	got = b.eval(`(() => { const c = (q, p) => getComputedStyle(document.querySelector(q))[p];
+		return [c('.cell', 'backgroundColor'), c('#inner', 'paddingTop')].join(' | ') })()`)
+	check(t, "nested own", []string{got}, "rgb(0, 0, 12) | 3px")
 }

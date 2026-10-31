@@ -27,9 +27,6 @@ func TestWalk(t *testing.T) {
 	var calls []string
 	ready, err := c.Walk(values, func(it schema.Item, ready any) (any, error) {
 		name := strings.Join(it.At, ".") + "=" + it.Part + it.Format
-		if it.Part == "stack" && !slices.Equal(it.Holds, []string{"note", "stack"}) {
-			t.Errorf("stack holds %v", it.Holds)
-		}
 		calls = append(calls, name)
 		return "<" + name + ">", nil
 	})

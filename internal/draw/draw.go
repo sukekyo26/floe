@@ -39,13 +39,9 @@ func Page(
 	images fs.FS, imagesDir string, icons diagram.Icons,
 ) ([]byte, []*usererr.Error, error) {
 	s := newItems(images, imagesDir, icons)
-	holds := map[string][]string{}
 	var found usererr.List
 	var failed [][]string
 	data, err := t.Schema().Walk(d.Values, func(it schema.Item, ready any) (any, error) {
-		if it.Part != "" {
-			holds[it.Part] = it.Holds
-		}
 		// Walk calls fn with the items a part holds before the part, so that what failed in it is known here; at
 		// the part's own path are what its root is: a format (a part whose value is an image), or another part.
 		if slices.ContainsFunc(failed, func(at []string) bool { return atOrUnder(at, it.At) }) {
@@ -75,12 +71,6 @@ func Page(
 	tree, named, err := readPage(k, d, s, b.Bytes())
 	if err != nil {
 		return nil, nil, err
-	}
-	for name, parts := range holds {
-		named.uses[name] = append(named.uses[name], parts...)
-	}
-	for name, used := range named.uses {
-		named.uses[name] = slices.Compact(slices.Sorted(slices.Values(used)))
 	}
 	sheets, err := pageStyle(k, theme, named, t.CSS())
 	if err != nil {
