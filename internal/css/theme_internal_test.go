@@ -13,6 +13,8 @@ import (
 )
 
 // faces are the declarations whose strings may hold letters in a theme: the names of typefaces, which no page shows.
+// LIMIT: a theme reading one of them where text shows (content: var(--display)) writes a word unseen; read them in
+// a typeface's place alone.
 var faces = []string{"font-family", "font", "--font", "--display", "--mono"}
 
 // counted are the properties that name a counter or list style.
