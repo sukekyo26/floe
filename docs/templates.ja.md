@@ -12,7 +12,7 @@ floe template check        # 自分のテンプレートを全部、example.yaml
 floe template show memo    # テーマと、読むファイルを全部出す（schema と見本が先）
 ```
 
-自分のテンプレート・部品・テーマに誤りが 1 つあると、そのテンプレートで描くかどうかによらず（`report` のページも）、直すまでどのページも止めます。`floe check`・`floe render` も、サーバーの publish とリンクしたページもです。`floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（[commands.ja.md](commands.ja.md#サーバー)）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。
+自分のテンプレート・部品・見た目・共有の schema・テーマに誤りが 1 つあると、そのテンプレートで描くかどうかによらず（`report` のページも）、直すまでどのページも止めます。`floe check`・`floe render` も、サーバーの publish とリンクしたページもです。`floe part check` と `floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（[commands.ja.md](commands.ja.md#サーバー)）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。
 
 ### 別の置き場所で作る
 
@@ -138,7 +138,13 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ### 借りられる見た目
 
-`<section data-floe-look="panel">` は、テンプレートの要素を、どのテーマでもパネル（ほとんどの部品を描く箱）で描きます。`rows`・`cards`・`table` なら、その見た目を借ります（`cards` は `class="card"` の子を横に並べ、子はそれぞれ `data-floe-look="panel"` でパネルにし、題を `class="title"` の要素（見出しなら `<h3 class="title">`）で書きます。`class="numbered"` を付けると、場所の番号を付けます。options と同じです）。`band` は、design の結論や handoff の頭のような、アクセントの色で塗った帯で、中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。`<ol>` に `numbered` を付けると、項目に丸い番号を付けて線でつなぎます（runbook の手順のように）。項目の字は要素で包みます（`<li><p>Restart <code>api</code> now</p></li>`）。項目に直に書いた字は、字の続きと要素ごとに grid の別の項目になって崩れます。項目は字で始めます。字の無いもの（画像、空のブロック）で始まると、丸はその下の縁に来ます。決まりは [parts.ja.md](parts.ja.md#見た目を借りる) にあります。
+テンプレートの要素は、`data-floe-look` で見た目を借ります。どのテーマでも同じに描きます（決まりは [parts.ja.md](parts.ja.md#見た目を借りる) にあります）。
+
+- `panel`：ほとんどの部品を描く箱（`<section data-floe-look="panel">`）。
+- `rows`・`table`：`checklist` と `table` の見た目。
+- `cards`：`class="card"` の子を横に並べ、子はそれぞれ `data-floe-look="panel"` でパネルにし、題を `class="title"` の要素（見出しなら `<h3 class="title">`）で書きます。`class="numbered"` を付けると、場所の番号を付けます（`options` と同じ）。
+- `band`：アクセントの色で塗った帯。中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。design の結論や handoff の頭のように。
+- `numbered`：`<ol>` に付けると、項目に丸い番号を付けて線でつなぎます。部品 `steps` と runbook の手順のように。項目の字は要素で包みます（`<li><p>Restart <code>api</code> now</p></li>`）。項目に直に書いた字は、字の続きと要素ごとに grid の別の項目になって崩れます。項目は字で始めます。字の無いもの（画像、空のブロック）で始まると、丸はその下の縁に来ます。
 
 ## パレット
 
@@ -230,7 +236,7 @@ storage_gb: item_bytes * records.in_1_year / 1e9
 
 ## 画像
 
-データの画像と `assets/` の画像は、png・jpeg・gif・webp・svg のファイル（名前で見分ける）で、1 MiB までです。パスは相対パスで、名前の間は `/` 1 つ、`./`・`..`・ドットで始まる名前は使いません。
+データの画像と `assets/` の画像は、png・jpeg・gif・webp・svg のファイル（名前で見分ける）で、1 MiB までです。データの画像は [pages.ja.md](pages.ja.md#画像) のとおりに名指します。`assets/` の画像は `assets/` の中のパスで、名前の間は `/` 1 つ、`./`・`..` を使わず、ドットで始まる名前の下にも置きません。floe はそれを読まないからです（`assets/ has no ".x/a.png"`）。
 
 - `floe template check` は `assets/` の画像を全部読みます。
 - `example.yaml` が名指す画像は、テンプレートのディレクトリから読みます。見本から書き始めたデータファイルは、その隣に画像が要ります。
@@ -239,7 +245,7 @@ storage_gb: item_bytes * records.in_1_year / 1e9
 
 データファイルは次の順に確かめ、前の段を通ったデータだけを次の段にかけます。`floe check` は全部を走らせます。
 
-自分の部品・見た目・共有の schema・テーマ・テンプレートは、その前に読みます。どれかに誤りがあれば、どのページも止めます（[parts.ja.md](parts.ja.md#部品とテーマの置き場所)）。
+自分の部品・見た目・共有の schema・テーマ・テンプレートは、その前に読みます（[テンプレートの置き場所](#テンプレートの置き場所)）。
 
 1. YAML と、名指したテンプレートとテーマ
 2. テンプレートの `schema.json`

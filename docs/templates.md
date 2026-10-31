@@ -12,7 +12,7 @@ floe template check        # checks every template of your own, drawing its exam
 floe template show memo    # prints its themes and every file it reads, its schema and example first
 ```
 
-A mistake of a template, part or theme of your own stops every page, whether it is drawn with that one or not (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike. `floe template check` lists them all. A published page is drawn with the server's templates ([commands.md](commands.md#the-server)); after you change one, `floe rebuild` draws the stored pages again with it.
+A mistake of a template, part, look, shared schema or theme of your own stops every page, whether it is drawn with that one or not (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike. `floe part check` and `floe template check` list them all. A published page is drawn with the server's templates ([commands.md](commands.md#the-server)); after you change one, `floe rebuild` draws the stored pages again with it.
 
 ### Make one in another directory
 
@@ -138,7 +138,13 @@ The last draws the part only when it is a note. Test the item before its kind, a
 
 ### Looks to borrow
 
-`<section data-floe-look="panel">` draws an element of the template as a panel, the box most parts are drawn in, in every theme; `rows`, `cards` or `table` borrow those looks (`cards` lays out its children of `class="card"`, each a panel by `data-floe-look="panel"` with its title in an element of `class="title"` (`<h3 class="title">` for a heading), and numbers them by their place when it has `class="numbered"`, as options does), and `band` draws a band filled with the accent, its text, links, code and focus ring in the colour on a fill, as design's conclusion and handoff's head are, and `numbered` on an `<ol>` numbers its items in rings joined by a line, as runbook's steps are: write each item's text in an element (`<li><p>Restart <code>api</code> now</p></li>`), as text written straight in an item breaks into a grid item a run, and start the item with text, as a ring stands at the bottom of a first child with no text (an image, an empty block). [parts.md](parts.md#borrowing-a-look) tells the rules.
+An element of the template borrows a look by `data-floe-look`, drawn alike in every theme ([parts.md](parts.md#borrowing-a-look) tells the rules):
+
+- `panel`: the box most parts are drawn in (`<section data-floe-look="panel">`).
+- `rows`, `table`: the looks of `checklist` and of `table`.
+- `cards`: its children of `class="card"` side by side, each a panel by `data-floe-look="panel"` with its title in an element of `class="title"` (`<h3 class="title">` for a heading); numbered by their place with `class="numbered"`, as `options` is.
+- `band`: a band filled with the accent, its text, links, code and focus ring in the colour on a fill, as design's conclusion and handoff's head are.
+- `numbered`: on an `<ol>`, its items numbered in rings joined by a line, as the part `steps` and runbook's steps are. Write each item's text in an element (`<li><p>Restart <code>api</code> now</p></li>`), as text written straight in an item breaks into a grid item a run, and start the item with text, as a ring stands at the bottom of a first child with no text (an image, an empty block).
 
 ## The palette
 
@@ -230,7 +236,7 @@ A data file of the template, to start one from: `floe template show` prints it, 
 
 ## Images
 
-An image, of the data or of `assets/`, is a png, jpeg, gif, webp or svg file, by its name, up to 1 MiB. A path is relative, with one `/` between names, without `./`, `..` or names starting with a dot.
+An image, of the data or of `assets/`, is a png, jpeg, gif, webp or svg file, by its name, up to 1 MiB. An image of the data is named as [pages.md](pages.md#images) tells; one of `assets/` by its path in `assets/`, with one `/` between names, without `./` or `..`, and never under a name starting with a dot, which floe does not read (`assets/ has no ".x/a.png"`).
 
 - `floe template check` reads every image of `assets/`.
 - The images `example.yaml` names are read from the template's directory: a data file started from the example needs them beside it.
@@ -239,7 +245,7 @@ An image, of the data or of `assets/`, is a png, jpeg, gif, webp or svg file, by
 
 A data file is checked in this order, and each stage runs only on data that passed the one before. `floe check` runs them all.
 
-The parts, looks, shared schemas, themes and templates of your own are read first: a mistake of one stops every page ([parts.md](parts.md#where-parts-and-themes-are)).
+The parts, looks, shared schemas, themes and templates of your own are read first ([Where templates are](#where-templates-are)).
 
 1. Its YAML, and the template and theme it names
 2. The template's `schema.json`
