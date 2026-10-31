@@ -103,8 +103,9 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 // boxes lays out a list (ul, ol, menu: the elements a browser marks and pads) that is a part's box or takes a look, as
 // what draws it does: without a list's marks, padding or the room between items, in a grid. Each goes in the lowest
 // layer of what draws it, under the layers of depth, so that the part's or look's own rules at any depth set it over.
-// A part's box is so over the page's and the theme's rules for lists; an element that takes a look over the theme's
-// alone, as the template that borrows a look adjusts it. floe's own and fixed, it goes unchecked by css.Check.
+// A part's box keeps these four over the page's and the theme's rules for lists; an element that takes a look over the
+// theme's alone, as the template that borrows a look adjusts it (a rule for the items, li or ::marker, reaches both).
+// floe's own and fixed, it goes unchecked by css.Check.
 const boxes = "@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { " + boxList + " } }\n" +
 	"@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { " + boxList + " } }\n"
 

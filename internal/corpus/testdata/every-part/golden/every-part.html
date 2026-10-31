@@ -212,7 +212,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="faq"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Rows in a panel, a theme's frame of the box around them: a list that is a part's box or takes the look has no
-   marks, padding or room between its items (floe lays it out so, under the look's layers). Each row is padded above
+   marks, padding or room between its items (floe lays it out so, under the parts' layers for a part's box and the
+   looks' for an element that takes the look). Each row is padded above
    and below by --floe-row-pad (base.css), and so is a row the box draws last as ::after (checklist's count); what
    takes it writes its rows' padding at the sides alone. A rule parts each row from the next */
 :scope > *, :scope::after { padding-block: var(--floe-row-pad); }
@@ -224,7 +225,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="entries"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Rows in a panel, a theme's frame of the box around them: a list that is a part's box or takes the look has no
-   marks, padding or room between its items (floe lays it out so, under the look's layers). Each row is padded above
+   marks, padding or room between its items (floe lays it out so, under the parts' layers for a part's box and the
+   looks' for an element that takes the look). Each row is padded above
    and below by --floe-row-pad (base.css), and so is a row the box draws last as ::after (checklist's count); what
    takes it writes its rows' padding at the sides alone. A rule parts each row from the next */
 :scope > *, :scope::after { padding-block: var(--floe-row-pad); }

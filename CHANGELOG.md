@@ -246,8 +246,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Change a list (`ul`, `ol` or `menu`) that is a part's box or takes a look to
   draw no marks, padding or room between its items, laid out in a grid, in parts
   and templates of one's own too; a template's `page.css` or a theme's `base.css`
-  that writes a rule for every list reaches a part's box by its margin alone, and
-  an element that takes a look no longer takes a theme's such rule.
+  that writes a rule for every list no longer changes a part's box's display,
+  marks, padding or room between items, nor a theme's such rule those of an
+  element that takes a look.
 - Change the diagrams of `floe diagram render`'s fragment to take no variable or
   color-scheme from the page around them, its `:root` or an element holding them;
   they draw in floe's fonts, and in a shadow root too. They take their colours
