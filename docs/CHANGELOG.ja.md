@@ -184,6 +184,10 @@ floe の主要な変更を記録します。フォーマットは
   - 自分のテーマの影は、パレットの `--floe-shadow-x`・`-y`・`-blur`・`-spread` と、
     箱の `--floe-shadow-color` で描き、箱の中の影は `--floe-inset` で描く。
     `--shadow` だけでは影は描かれず、部品の箱に `box-shadow` を書くと消える。
+  - 部品の箱は自分の margin を書かない。テンプレートの `page.css` やテーマの
+    `base.css` が `ul`・`ol`・`dl`・`figure`・`form` に margin を書くと、それで
+    描く部品も動く（checklist・links・steps・timeline・facts・keys・entries・
+    stats・code・image・diff・terminal・tabs）。
 
 - 修正：テーマが行の余白を変えると、行の印が取り残されていた（retro の links で、
   印がリンクの行より上にあった）。links・note・timeline と見た目 `numbered`

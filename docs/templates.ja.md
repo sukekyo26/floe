@@ -96,6 +96,7 @@ memo/
 - どのブロックも閉じない `}` と `@import` は、その行で断ります。Google Fonts のようなスタイルシートは `page.html` の `<link>` で読みます。
 - パレットの変数（`var(--muted)`）で描くと、データファイルが選んだテーマに従います。
 - 続けて並ぶ部品の間（節の中、項目の中）は `var(--floe-room)`（0.75rem）以上をあけます。テーマの影が箱の外へ出る、一番大きい長さです。
+- 部品の箱でもある要素への規則（`ul { margin-block: 1rem }`、`figure { … }`）は、部品にも届きます。部品は自分の箱に margin を書かないためです（checklist・links は `ul`、steps・timeline は `ol`、facts・keys・entries・stats は `dl`、code・image・diff・terminal は `figure`、tabs は `form`）。
 
 たとえば `report` の `page.css` は、floe のテンプレートがどれも使う列で、ページを中央にそろえます：
 

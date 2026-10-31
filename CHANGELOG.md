@@ -261,6 +261,10 @@ adheres to [Semantic Versioning](https://semver.org/).
     and `-spread` in its palette and `--floe-shadow-color` on the box, and a
     shadow within a box by `--floe-inset`; `--shadow` alone draws none, and a
     `box-shadow` written on a part's box drops them.
+  - A part's box writes no margin of its own: a template's `page.css` or a
+    theme's `base.css` that sets a margin on `ul`, `ol`, `dl`, `figure` or
+    `form` moves the parts drawn in them too (checklist, links, steps,
+    timeline, facts, keys, entries, stats, code, image, diff, terminal, tabs).
 
 - Fix a row's mark left behind when a theme changes the row's padding (retro's
   links, whose mark stood above the link's line): the marks of links, note,
