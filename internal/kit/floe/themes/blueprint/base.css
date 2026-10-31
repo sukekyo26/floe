@@ -3,7 +3,6 @@
 blockquote > * { --face: initial; --on-face: initial; }
 blockquote {
   background: var(--bp-squares), var(--surface); border-radius: 0;
-  box-shadow: none;
 }
 blockquote { border: 1.5px solid var(--accent); padding: 0.9rem 1.2rem; color: var(--fg); }
 blockquote::before {

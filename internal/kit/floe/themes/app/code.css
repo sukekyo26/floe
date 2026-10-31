@@ -1,1 +1,1 @@
-:scope { box-shadow: var(--app-raise); }
+:scope { --floe-shadow-color: var(--shadow); }

@@ -1,1 +1,1 @@
-:scope { border-radius: 18px; box-shadow: 0 10px 30px -12px var(--shadow); }
+:scope { border-radius: 18px; --floe-shadow-color: var(--shadow); }

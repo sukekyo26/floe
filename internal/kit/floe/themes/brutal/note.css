@@ -1,10 +1,10 @@
 :scope {
   border: 3px solid var(--fg); border-radius: 0; background: var(--surface); --floe-mark: 2.15rem;
-  box-shadow: 6px 6px 0 var(--brutal-blue); margin: 0 6px 6px 0;
+  --floe-shadow-color: var(--brutal-blue);
 }
-:scope.good { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-green); }
-:scope.warn { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-orange); }
-:scope.bad { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-red); }
+:scope.good { background: var(--surface); --floe-shadow-color: var(--brutal-green); }
+:scope.warn { background: var(--surface); --floe-shadow-color: var(--brutal-orange); }
+:scope.bad { background: var(--surface); --floe-shadow-color: var(--brutal-red); }
 :scope::before {
   border-radius: 0; border: 2px solid var(--fg); background: var(--brutal-blue); color: var(--brutal-ink); font-weight: 900;
 }

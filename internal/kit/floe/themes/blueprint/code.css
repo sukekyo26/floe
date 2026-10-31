@@ -1,4 +1,4 @@
-:scope { border: 1.5px solid var(--accent); border-radius: 0; box-shadow: none; }
+:scope { border: 1.5px solid var(--accent); border-radius: 0; }
 :scope figcaption {
   background: none; border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 40%, transparent); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
 }

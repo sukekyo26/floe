@@ -13,6 +13,8 @@
     var(--bg);
   --rule: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
   --shadow: rgb(80 50 160 / 0.18);
+  /* The soft wide shadow its glass casts down */
+  --floe-shadow-y: 6px; --floe-shadow-blur: 20px; --floe-shadow-spread: -14px;
   /* Its glass: a clouded white over the wash, how much of its tone a note's glass holds, and the light at its edge.
      band.css makes them opaque in a band, whose accent they would let through */
   --aurora-glass: rgb(255 255 255 / 0.6); --aurora-tint: 70%; --aurora-edge: rgb(255 255 255 / 0.85);

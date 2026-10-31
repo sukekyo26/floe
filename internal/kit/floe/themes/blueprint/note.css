@@ -1,7 +1,6 @@
 /* A note of a tone too, whose own background of its tone this takes the place of */
 :scope, :scope:is(.good, .warn, .bad) {
   background: var(--bp-squares), var(--surface); border-radius: 0;
-  box-shadow: none;
 }
 :scope { border: 1.5px dashed var(--accent); --floe-mark: 1.75rem; }
 :scope.good { border-color: var(--good); }
