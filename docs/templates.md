@@ -158,7 +158,8 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | --- | --- |
 | `--bg`, `--surface` | The page's ground, a part's face |
 | `--fg`, `--muted` | Text, faint text |
-| `--muted-soft` | A quiet ground, mixed from `--fg` and `--surface` by default; with `--muted`, the colours of the tone `muted` |
+| `--muted-soft` | The pale ground of the tone `muted`, mixed from `--fg` and `--surface` by default; with `--muted`, the colours of that tone |
+| `--quiet` | A quiet ground within a box of the surface: a table's head, a bar's track, progress's, a keycap. Mixed from `--line` and `--surface` by default |
 | `--line` | Lines and borders |
 | `--accent`, `--accent-soft` | The colour that stands out, and its pale ground; the colours of the tone `accent` |
 | `--good`, `--warn`, `--bad` and their `-soft` | Good, warning and bad, and their pale grounds: the colours of those tones |
