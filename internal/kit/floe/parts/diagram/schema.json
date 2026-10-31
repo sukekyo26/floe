@@ -45,7 +45,13 @@
     }
   },
   "$defs": {
-    "size": { "type": "number", "minimum": 1 },
+    "size": { "type": "number", "minimum": 1, "maximum": 1000000 },
+    "coord": {
+      "type": "number",
+      "minimum": -1000000,
+      "maximum": 1000000,
+      "description": "A coordinate, within a million either way: past it the steps of layout round away"
+    },
     "text": {
       "description": "Text, or its words in each language by tag, English among them: {en: …, ja: …}",
       "type": ["string", "object"],
@@ -54,14 +60,14 @@
     },
     "name": { "type": "string", "minLength": 1, "description": "The name an edge's from or to gives, unique in the diagram" },
     "tone": { "$ref": "floe:///parts/tone.json" },
-    "point": { "type": "array", "prefixItems": [{ "type": "number" }, { "type": "number" }], "minItems": 2, "maxItems": 2 },
+    "point": { "type": "array", "prefixItems": [{ "$ref": "#/$defs/coord" }, { "$ref": "#/$defs/coord" }], "minItems": 2, "maxItems": 2 },
     "side": { "enum": ["top", "right", "bottom", "left"] },
     "origin": { "enum": ["left", "centre"], "description": "What x is: the left edge (the default) or the centre" },
     "end": {
       "description": "The name of a part, a named row or a node, or a point [x, y]",
       "type": ["string", "array"],
       "minLength": 1,
-      "prefixItems": [{ "type": "number" }, { "type": "number" }],
+      "prefixItems": [{ "$ref": "#/$defs/coord" }, { "$ref": "#/$defs/coord" }],
       "minItems": 2,
       "maxItems": 2
     },
@@ -73,7 +79,7 @@
       "additionalProperties": false,
       "properties": {
         "name": { "$ref": "#/$defs/name" },
-        "x": { "type": "number" }, "y": { "type": "number" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" },
+        "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" }, "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" },
         "label": { "$ref": "#/$defs/text" },
         "accent": { "type": "boolean" },
         "icon": { "type": "string", "description": "An icon in the corner, the AWS group frame style" },
@@ -87,7 +93,7 @@
       "additionalProperties": false,
       "properties": {
         "name": { "$ref": "#/$defs/name" },
-        "x": { "type": "number" }, "y": { "type": "number" }, "origin": { "$ref": "#/$defs/origin" },
+        "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" }, "origin": { "$ref": "#/$defs/origin" },
         "w": { "$ref": "#/$defs/size" }, "h": { "$ref": "#/$defs/size" },
         "rows": {
           "type": "array",
@@ -113,7 +119,7 @@
       "additionalProperties": false,
       "properties": {
         "name": { "$ref": "#/$defs/name" },
-        "x": { "type": "number" }, "y": { "type": "number" }, "origin": { "$ref": "#/$defs/origin" },
+        "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" }, "origin": { "$ref": "#/$defs/origin" },
         "w": { "$ref": "#/$defs/size" },
         "title": { "$ref": "#/$defs/text" },
         "rows": {
@@ -143,7 +149,7 @@
       "properties": {
         "name": { "$ref": "#/$defs/name" },
         "icon": { "type": "string" },
-        "x": { "type": "number" }, "y": { "type": "number" },
+        "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" },
         "label": { "$ref": "#/$defs/text" },
         "size": { "$ref": "#/$defs/size" }
       }
@@ -173,7 +179,7 @@
       "additionalProperties": false,
       "properties": {
         "name": { "$ref": "#/$defs/name" },
-        "cx": { "type": "number" }, "cy": { "type": "number" }, "r": { "$ref": "#/$defs/size" },
+        "cx": { "$ref": "#/$defs/coord" }, "cy": { "$ref": "#/$defs/coord" }, "r": { "$ref": "#/$defs/size" },
         "tone": { "$ref": "#/$defs/tone" }, "hollow": { "type": "boolean" }
       }
     },
@@ -184,7 +190,7 @@
       "additionalProperties": false,
       "properties": {
         "name": { "$ref": "#/$defs/name" },
-        "x1": { "type": "number" }, "x2": { "type": "number" }, "y": { "type": "number" },
+        "x1": { "$ref": "#/$defs/coord" }, "x2": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" },
         "tone": { "$ref": "#/$defs/tone" }, "label": { "$ref": "#/$defs/text" }
       }
     },
@@ -194,12 +200,12 @@
       "required": ["x1", "x2", "y", "ticks"],
       "additionalProperties": false,
       "properties": {
-        "x1": { "type": "number" }, "x2": { "type": "number" }, "y": { "type": "number" },
+        "x1": { "$ref": "#/$defs/coord" }, "x2": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" },
         "ticks": {
           "type": "array",
-          "items": { "type": "array", "prefixItems": [{ "type": "number" }, { "$ref": "#/$defs/text" }], "minItems": 2, "maxItems": 2 }
+          "items": { "type": "array", "prefixItems": [{ "$ref": "#/$defs/coord" }, { "$ref": "#/$defs/text" }], "minItems": 2, "maxItems": 2 }
         },
-        "grid": { "type": "number" }
+        "grid": { "$ref": "#/$defs/coord" }
       }
     },
     "circle": {
@@ -209,7 +215,7 @@
       "additionalProperties": false,
       "properties": {
         "name": { "$ref": "#/$defs/name" },
-        "cx": { "type": "number" }, "cy": { "type": "number" }, "r": { "$ref": "#/$defs/size" },
+        "cx": { "$ref": "#/$defs/coord" }, "cy": { "$ref": "#/$defs/coord" }, "r": { "$ref": "#/$defs/size" },
         "tone": { "$ref": "#/$defs/tone" }
       }
     },
@@ -223,7 +229,7 @@
       "else": { "required": ["x", "y"] },
       "properties": {
         "text": { "$ref": "#/$defs/text" },
-        "x": { "type": "number" }, "y": { "type": "number" },
+        "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" },
         "anchor": { "enum": ["middle", "start", "end"], "description": "Only where x and y place the label; with in alone, leave it out" },
         "plain": { "type": "boolean", "description": "No background, for text on a coloured area" },
         "strong": { "type": "boolean" },
@@ -236,7 +242,7 @@
       "required": ["x1", "y1", "x2", "y2"],
       "additionalProperties": false,
       "properties": {
-        "x1": { "type": "number" }, "y1": { "type": "number" }, "x2": { "type": "number" }, "y2": { "type": "number" },
+        "x1": { "$ref": "#/$defs/coord" }, "y1": { "$ref": "#/$defs/coord" }, "x2": { "$ref": "#/$defs/coord" }, "y2": { "$ref": "#/$defs/coord" },
         "kind": { "enum": ["line", "lifeline", "divider"] }
       }
     },
@@ -245,7 +251,7 @@
       "description": "A tree of boxes, its root's centre at x and top at y: floe places each node under its parent and draws the edges",
       "required": ["x", "y", "root"],
       "additionalProperties": false,
-      "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "root": { "$ref": "#/$defs/node" } }
+      "properties": { "x": { "$ref": "#/$defs/coord" }, "y": { "$ref": "#/$defs/coord" }, "root": { "$ref": "#/$defs/node" } }
     },
     "node": {
       "type": "object",

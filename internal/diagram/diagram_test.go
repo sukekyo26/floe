@@ -472,15 +472,14 @@ func TestVennBounded(t *testing.T) {
 		t.Errorf("circles apart = %q, want no room", got)
 	}
 	// Far from 0, a label is placed.
-	far := "width: 100000000000000000000.0\nheight: 300\ntitle: T\nparts:\n" +
-		"  - circle: { name: a, cx: 50000000000000000000.0, cy: 150, r: 100 }\n  - label: { text: x, in: [a] }\n"
-	if got, mistakes := draw(t, far, inspect); mistakes != "" || !strings.Contains(got, `label "x" 50000000000000000000,141`) {
+	far := "width: 1000000\nheight: 300\ntitle: T\nparts:\n" +
+		"  - circle: { name: a, cx: 999000, cy: 150, r: 100 }\n  - label: { text: x, in: [a] }\n"
+	if got, mistakes := draw(t, far, inspect); mistakes != "" || !strings.Contains(got, `label "x" 998991.4,141`) {
 		t.Errorf("a region far from 0 = %s %s, want the label placed", got, mistakes)
 	}
-	// A huge radius ends, its circle sticking out. A region that only touches the canvas has no room in it and
-	// sticks out; one with some of the canvas looks for room there.
+	// A region that only touches the canvas has no room in it and sticks out; one with some of the canvas looks for
+	// room there.
 	for _, tt := range []struct{ circle, want string }{
-		{"cx: 200, cy: 100, r: 9.683899191965114e+299", `s.yaml:5:5: circle "c" sticks out of the 400x200 canvas`},
 		{"cx: -100.5, cy: 100, r: 100.5", `s.yaml:6:5: label "x" sticks out of the 400x200 canvas`},
 		{"cx: 0.5, cy: 100, r: 1.5", `s.yaml:6:5: label "x" finds no room inside c`},
 	} {
@@ -543,14 +542,16 @@ func TestCanvasLeftOut(t *testing.T) {
 			"  - circle: { name: a, cx: -200, cy: 50, r: 50 }\n  - label: { text: x, in: [a] }\n",
 			"s.yaml:3:5: circle \"a\" sticks out of the 20x120 canvas\ns.yaml:4:5: label \"x\" sticks out of the 20x120 canvas",
 		},
-		// An end that is not finite is left out of the canvas, which the part then sticks out of.
+		// Coordinates and sizes stand within a million either way, the schema refusing past it; at a million, the
+		// layout checks the part as any other.
 		{
-			"  - box: { x: 20, y: 20, w: 100, h: 40, rows: [A] }\n  - circle: { name: c, cx: -1.0e+308, cy: 50, r: 1.0e+308 }\n",
-			`s.yaml:4:5: circle "c" sticks out of the 140x80 canvas`,
+			"  - box: { x: 20, y: 20, w: 100, h: 40, rows: [A] }\n  - circle: { name: c, cx: 1.0e+308, cy: -1000001, r: 1000001 }\n",
+			"s.yaml:4:28: maximum: got 1×10³⁰⁸, want 1×10⁰⁶\ns.yaml:4:42: minimum: got -1.000001×10⁰⁶, want -1×10⁰⁶\n" +
+				"s.yaml:4:55: maximum: got 1.000001×10⁰⁶, want 1×10⁰⁶",
 		},
 		{
-			"  - box: { x: 20, y: 20, w: 100, h: 40, rows: [A] }\n  - circle: { name: c, cx: 1.0e+308, cy: 1.0e+308, r: 1.0e+308 }\n",
-			`s.yaml:4:5: circle "c" sticks out of the 140x80 canvas`,
+			"  - box: { x: 20, y: 20, w: 100, h: 40, rows: [A] }\n  - circle: { name: c, cx: -1000000, cy: 50, r: 1000000 }\n",
+			`s.yaml:4:5: circle "c" sticks out of the 140x1000070 canvas`,
 		},
 	} {
 		_, got := draw(t, "title: T\nparts:\n"+c.parts, render("en"))

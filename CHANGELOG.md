@@ -255,6 +255,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change a diagram to refuse a coordinate past a million either way, and a
+  size (`w`, `h`, `r`, `width`, `height`) past a million, in the schema's
+  words (`maximum: got 1×10¹⁷, want 1×10⁰⁶`): past it, the steps of layout
+  round away, and boxes drawn far out met and edges shrank to nothing with no
+  mistake told.
 - Change the cards of retro, washi, notebook and swiss so that their
   decorations take no room: retro's stripes are thinner (2px each) inside its
   frame; washi's inner rule lies over the padding, its seal is smaller,
