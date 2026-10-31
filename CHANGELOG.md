@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add one padding above and below the rows of what is drawn as rows (the
+  looks table and rows, the parts that take them, the templates' tables and
+  lists in them, and facts' tiles): 0.4rem, set by `--floe-row-pad` in
+  floe's base.css, in the page's line height; a part of your own takes it by
+  the look rows, or by the variable.
 - Add the line and column of a mistake about a value of a YAML file at the
   value's first character, though floe's YAML library places it off after a
   tab, after a value with spaces at its line's end, and after a comment or

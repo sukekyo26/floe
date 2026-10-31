@@ -1,2 +1,4 @@
-/* Rows in a panel, a rule between each and the next */
+/* Rows in a panel, each padded above and below by --floe-row-pad (base.css), a rule between each and the next; what
+   takes it writes its rows' padding at the sides alone */
+:scope > * { padding-block: var(--floe-row-pad); }
 :scope > * + * { border-top: 1px solid var(--line); }

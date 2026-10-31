@@ -39,6 +39,9 @@ pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
 blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
+   rows, and the look table and facts take it. Themes leave it as it is, so that rows are as tall in every theme */
+:root { --floe-row-pad: 0.4rem; }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
    what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
@@ -189,7 +192,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   overflow-x: auto;
 }
 :scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
-:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.4rem 0.8rem; line-height: 1.6; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
 :scope :is(th, td):not(.num) { min-width: 7em; }
 /* A num column's heading wraps as long as it needs, but not a character a line */
 :scope th.num { min-width: 6em; }
@@ -328,7 +331,9 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="entries"]) to (:scope [data-floe-part] > *) {
-/* Rows in a panel, a rule between each and the next */
+/* Rows in a panel, each padded above and below by --floe-row-pad (base.css), a rule between each and the next; what
+   takes it writes its rows' padding at the sides alone */
+:scope > * { padding-block: var(--floe-row-pad); }
 :scope > * + * { border-top: 1px solid var(--line); }
 }
 }
@@ -341,7 +346,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
    LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
    if pages come to put code in entries */
 :scope { margin: 0; display: grid; }
-:scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; padding: 0.55rem 1.2rem; }
+:scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; padding-inline: 1.2rem; }
 :scope dt { min-width: 0; font-weight: 700; }
 :scope dd { margin: 0; }
 /* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in

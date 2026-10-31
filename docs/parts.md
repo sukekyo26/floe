@@ -75,6 +75,7 @@ As in `page.css`, a `}` that closes no block and an `@import` are refused at the
 
 - An element that is no part's box takes a look by `data-floe-look`: `<section data-floe-look="panel">` is a panel in every theme. It has it in `floe.looks`, under the parts and the template, so that the part or template it is in adjusts it.
 - floe's parts take looks so: `compare`, `fields` and `findings` take the table's, `stats`, `options`, `facts`, `links` and `decision` the cards', `diff` and `terminal` code's, `checklist`, `entries`, `faq` and `keys` the look `rows`, and the other parts drawn in a panel `panel`'s. A theme's rules for a look draw every part that takes it.
+- The look `rows` pads each of its rows by `--floe-row-pad` (floe's base, 0.4rem) above and below: a part or a template that takes it writes its rows' padding at the sides alone. A part whose rows do not take `rows` takes the variable, as the table's cells and facts' tiles do (`padding-block: var(--floe-row-pad)`), so that its rows are as tall as the others.
 
 ## Themes
 
@@ -88,6 +89,7 @@ A theme of your own is a directory of these files, each left out if not needed. 
 
 - A file of another name is refused.
 - Write a colour once, in `palette.css`, and take it with `var()` (`var(--accent)`) in the other files, so that the template's colours on `:scope` and the palette agree.
+- Leave `--floe-row-pad`, the padding above and below a row, as floe's base sets it: the rows of every part are as tall in every theme.
 - A data file picks the theme with `theme:`, as one of floe's.
 
 ## Checking

@@ -1,6 +1,6 @@
 /* Keycaps at the left of what they do, over it on a narrow screen */
 :scope { margin: 0; display: grid; }
-:scope > div { display: grid; grid-template-columns: minmax(7rem, auto) minmax(0, 1fr); gap: 0.2rem 1.5rem; align-items: center; padding: 0.65rem 1.2rem; }
+:scope > div { display: grid; grid-template-columns: minmax(7rem, auto) minmax(0, 1fr); gap: 0.2rem 1.5rem; align-items: center; padding-inline: 1.2rem; }
 :scope dt { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; color: var(--muted); font-size: 0.8rem; }
 :scope dd { margin: 0; }
 :scope kbd {

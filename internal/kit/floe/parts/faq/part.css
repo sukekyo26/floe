@@ -1,7 +1,9 @@
-/* Each question a row; Q leads it, and its answer opens under it */
+/* Each question a row; Q leads it, and its answer opens under it. The summary takes the rows' padding, not the
+   details, so that a click on it opens the answer */
 :scope { display: grid; }
+:scope > details { padding-block: 0; }
 :scope summary {
-  display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.5rem; padding: 0.75rem 1.2rem;
+  display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.5rem; padding: var(--floe-row-pad) 1.2rem;
   cursor: pointer; font-weight: 700; list-style: none;
 }
 :scope summary::-webkit-details-marker { display: none; }

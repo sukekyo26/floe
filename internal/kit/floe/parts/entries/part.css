@@ -3,7 +3,7 @@
    LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
    if pages come to put code in entries */
 :scope { margin: 0; display: grid; }
-:scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; padding: 0.55rem 1.2rem; }
+:scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; padding-inline: 1.2rem; }
 :scope dt { min-width: 0; font-weight: 700; }
 :scope dd { margin: 0; }
 /* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in

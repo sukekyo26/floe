@@ -75,6 +75,7 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 
 - 部品の箱でない要素は `data-floe-look` で見た目を借ります。`<section data-floe-look="panel">` はどのテーマでもパネルです。その見た目は部品とテンプレートより下の `floe.looks` に入るので、中に置かれた部品やテンプレートが整えられます。
 - floe の部品もこうして見た目を借ります。`compare`・`fields`・`findings` は table の、`stats`・`options`・`facts`・`links`・`decision` は cards の、`diff`・`terminal` は code の、`checklist`・`entries`・`faq`・`keys` は `rows` の、ほかのパネルに描く部品は `panel` の見た目を借ります。テーマのある見た目へのルールは、それを借りる部品を全部描きます。
+- 見た目 `rows` は、行ごとに上下に `--floe-row-pad`（floe の base で 0.4rem）の余白を付けます。借りる部品やテンプレートは、行の余白を左右だけ書きます。行が `rows` を借りない部品は、表のセルや facts のタイルのように変数を読み（`padding-block: var(--floe-row-pad)`）、ほかの行と高さをそろえます。
 
 ## テーマ
 
@@ -88,6 +89,7 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 
 - ほかの名前のファイルは断ります。
 - 色は `palette.css` に 1 回だけ書き、ほかのファイルでは `var()`（`var(--accent)`）で使います。テンプレートが `:scope` に書く色とパレットが食い違わないためです。
+- 行の上下の余白 `--floe-row-pad` は、floe の base のまま替えません。どのテーマでも、どの部品の行も同じ高さになります。
 - データファイルは、floe のテーマと同じく `theme:` で選びます。
 
 ## 確かめる
