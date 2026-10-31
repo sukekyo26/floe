@@ -105,9 +105,10 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 // layer of what draws it, under the layers of depth, so that the part's or look's own rules at any depth set it over.
 // A part's box is so over the page's and the theme's rules for lists; an element that takes a look over the theme's
 // alone, as the template that borrows a look adjusts it. floe's own and fixed, it goes unchecked by css.Check.
-const boxes = `@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
-@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
-`
+const boxes = "@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { " + boxList + " } }\n" +
+	"@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { " + boxList + " } }\n"
+
+const boxList = "display: grid; list-style: none; padding: 0; gap: 0;"
 
 // pageScoped is css reaching the page short of what the parts hold, or nil when css is empty.
 func pageScoped(css []byte) []byte {
