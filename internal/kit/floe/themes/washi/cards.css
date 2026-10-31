@@ -4,7 +4,7 @@
 .card { position: relative; border: 1px solid var(--fg); outline: 1px solid var(--fg); outline-offset: -4px; }
 /* The seal of its number stamped on its corner, over the padding and out of it no more than --floe-room */
 :scope.numbered > .card::before {
-  content: counter(floe-card, cjk-decimal); content: counter(floe-card, cjk-decimal) / "";
+  content: counter(floe-card); content: counter(floe-card) / "";
   position: absolute; top: -0.5rem; right: -0.5rem; --floe-mark: 1.6rem; border-radius: 50%;
   background: var(--washi-shu); color: var(--on-fill); font-size: 0.8rem; font-weight: 700;
 }

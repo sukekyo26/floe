@@ -139,7 +139,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 blockquote > * { --face: initial; --on-face: initial; }
 blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-panel); --quiet: var(--surface); color: var(--fg); }
-blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
 </style>
@@ -616,6 +616,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   cursor: pointer; font-weight: 700; list-style: none;
 }
 :scope summary::-webkit-details-marker { display: none; }
+/* LIMIT: Q is a letter in the CSS, past words.yaml, so it stays in English on a page in any language; make it a mark
+   or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope summary::before { content: "Q"; content: "Q" / ""; color: var(--accent); }
 :scope summary::after { content: "+"; content: "+" / ""; color: var(--muted); font-weight: 400; }
 :scope details[open] summary::after { content: "−"; content: "−" / ""; }
@@ -717,7 +719,9 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader.
+   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
+   too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
@@ -747,7 +751,9 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="note"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader.
+   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
+   too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
@@ -922,6 +928,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
 :scope .run::before { content: "$ "; color: var(--code-prompt); }
 :scope.zsh .run::before { content: "% "; }
+/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language; move it out
+   of the CSS if a part's CSS comes to be checked for letters as a theme's is */
 :scope.powershell .run::before { content: "PS> "; }
 :scope.cmd .run::before { content: "> "; }
 :scope .out { opacity: 0.7; }
@@ -937,6 +945,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
 :scope .run::before { content: "$ "; color: var(--code-prompt); }
 :scope.zsh .run::before { content: "% "; }
+/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language; move it out
+   of the CSS if a part's CSS comes to be checked for letters as a theme's is */
 :scope.powershell .run::before { content: "PS> "; }
 :scope.cmd .run::before { content: "> "; }
 :scope .out { opacity: 0.7; }
