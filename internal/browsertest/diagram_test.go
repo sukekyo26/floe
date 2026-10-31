@@ -3,6 +3,7 @@ package browsertest_test
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -27,16 +28,22 @@ plain: { example: flow }
 pic: { width: 300, height: 100, title: p, parts: [ { box: { x: 20, y: 20, w: 120, h: 50, rows: [pic] } } ] }
 `
 
-// measureDiagrams returns a line for each diagram whose toolbar is not 0.4rem above its frame.
+// measureDiagrams returns a line for each diagram whose toolbar is not 0.4rem above its frame, or whose frame and
+// toolbar part.css does not reach: they are found from the SVG, not by the classes Go gives them, which part.css
+// writes by hand.
 const measureDiagrams = `(() => {
   const out = [];
   const want = 0.4 * parseFloat(getComputedStyle(document.documentElement).fontSize);
-  for (const wrap of document.querySelectorAll('.dg-wrap')) {
+  for (const svg of document.querySelectorAll('svg.dg')) {
+    const wrap = svg.parentElement;
     const box = wrap.closest('[data-floe-part="diagram"]');
     const name = box.parentElement.closest('[data-floe-part]')?.dataset.floePart ?? 'page';
     const tools = wrap.previousElementSibling;
+    if (getComputedStyle(wrap).overflow !== 'hidden' || getComputedStyle(tools).display !== 'flex') {
+      out.push(name + ': part.css does not reach the frame (' + wrap.className + ') or the toolbar (' + tools.className + ')');
+    }
     const gap = wrap.getBoundingClientRect().top - tools.getBoundingClientRect().bottom;
-    if (!tools.matches('.dg-tools') || Math.abs(gap - want) > 0.5) {
+    if (Math.abs(gap - want) > 0.5) {
       out.push(name + ': toolbar ' + gap.toFixed(1) + ' px above the frame, want ' + want.toFixed(1));
     }
   }
@@ -44,7 +51,7 @@ const measureDiagrams = `(() => {
 })()`
 
 // TestUIDiagram draws a diagram of a template and one in a part of one's own, wide and as wide as a phone: each
-// has its toolbar a little above its frame, not over it.
+// has its toolbar a little above its frame, not over it, and part.css reaches both.
 func TestUIDiagram(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -56,7 +63,7 @@ func TestUIDiagram(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}{{1440, 900, false}, {390, 844, true}} {
 		b.size(size.width, size.height, size.mobile)
 		b.navigate("/a/diagrams/?raw")
-		b.until("the toolbars", "document.querySelectorAll('.dg-tools').length === 2")
+		b.until("the toolbars", "[...document.querySelectorAll('svg.dg')].filter((s) => s.parentElement.previousElementSibling).length === 2")
 		if got := b.eval(measureDiagrams); got != "" {
 			t.Errorf("at %d px:\n  %s", size.width, strings.ReplaceAll(got, "\n", "\n  "))
 		}
@@ -166,23 +173,33 @@ const outside = `(() => {
     getComputedStyle(document.documentElement).colorScheme].join(' | ');
 })()`
 
-// TestUIDiagramFragment pastes the fragment of floe diagram render into pages of one's own, their style in the head
-// before it. In a page without a palette, the diagram is painted as in a page of floe's default theme, its toolbar
+// TestUIDiagramFragment pastes the fragment of floe diagram render, a diagram of each tone and every built-in example,
+// into pages of one's own, their style in the head before it. In a page without a palette, the diagram is painted as in a page of floe's default theme, its toolbar
 // too, and in a shadow root as well. The page outside the diagrams keeps what it draws: its palette in a layer of its
 // own, its color-scheme of a meta, the variables it reads with a fallback. A page's colours written on the
 // diagrams' roots win, before the fragment or after it.
 func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
-	fragment := s.floe(t, "diagram", "render", s.write(t, "tones.yaml", tonesSpec))
+	// The diagrams: one of each tone, then every built-in example but aws, which draw every kind of part between them.
+	specs := []string{s.write(t, "tones.yaml", tonesSpec)}
 	var data strings.Builder
-	data.WriteString("template: report\nlang: en\ntitle: Tones\nsections:\n  - parts:\n      - diagram:\n")
+	data.WriteString("template: report\nlang: en\ntitle: Diagrams\nsections:\n  - parts:\n      - diagram:\n")
 	for line := range strings.Lines(tonesSpec) {
 		data.WriteString("          " + line)
 	}
-	s.floe(t, "publish", s.write(t, "tones-page.yaml", data.String()), "--slug", "tones")
-	b.navigate("/a/tones/?raw")
-	b.until("the toolbar", "document.querySelector('.dg-tools')")
+	for line := range strings.Lines(s.floe(t, "diagram", "example")) {
+		kind, _, _ := strings.Cut(line, "\t")
+		if kind == "aws" { // its icons are fetched, which a test does not
+			continue
+		}
+		specs = append(specs, s.write(t, kind+".yaml", "example: "+kind+"\n"))
+		data.WriteString("      - diagram: { example: " + kind + " }\n")
+	}
+	fragment := s.floe(t, append([]string{"diagram", "render"}, specs...)...)
+	s.floe(t, "publish", s.write(t, "diagrams.yaml", data.String()), "--slug", "diagrams")
+	b.navigate("/a/diagrams/?raw")
+	b.until("the toolbars", "document.querySelectorAll('.dg-tools').length === "+strconv.Itoa(len(specs)))
 	want := b.eval(diagramColours("document"))
 
 	dir := t.TempDir()
@@ -198,7 +215,7 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 	}
 
 	open("bare.html", "", fragment)
-	b.until("the toolbar", "document.querySelector('.dg-tools')")
+	b.until("the toolbars", "document.querySelectorAll('.dg-tools').length === "+strconv.Itoa(len(specs)))
 	if got := b.eval(diagramColours("document")); got != want {
 		t.Errorf("in a page without a palette:\n%s\nwant, as in floe's page:\n%s", got, want)
 	}
