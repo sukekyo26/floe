@@ -302,8 +302,8 @@ blockquote {
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader: a mark, no letter, as the
-   page may be in any language */
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader. The i is the sign of
+   information, read as a mark in any language (and in washi's seal), not as a word */
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
@@ -311,7 +311,7 @@ blockquote {
 }
 :scope > * { grid-column: text; align-self: first baseline; }
 :scope::before {
-  content: "*"; content: "*" / ""; grid-area: mark; align-self: first baseline;
+  content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
   display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%;
   background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
