@@ -23,8 +23,8 @@ main h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px solid var(-
 /* The question is set as the text around it is, not as the headings are */
 .decision > h3 { margin-top: 0.4rem; font-size: 1.05rem; line-height: inherit; text-wrap: wrap; }
 .non-goals { color: var(--muted); }
-.decided { list-style: none; padding: 0; gap: 0; }
-.decided li { padding: 0.6rem 1rem; }
+.decided { gap: 0; }
+.decided li { padding-inline: 1rem; }
 aside { position: sticky; top: 1rem; align-self: start; padding: 1rem 1.2rem; }
 aside h2 { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
 aside ul { list-style: none; padding: 0; gap: 0.15rem; }

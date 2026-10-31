@@ -39,6 +39,9 @@ pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
 blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
+   rows, and the look table and facts take it. Themes leave it as it is, so that rows are as tall in every theme */
+:root { --floe-row-pad: 0.4rem; }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
    what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
@@ -149,7 +152,11 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="checklist"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
-/* Rows in a panel, a rule between each and the next */
+/* Rows in a panel, without a list's marks and padding, a theme's frame of the box in their place. Each row is padded
+   above and below by --floe-row-pad (base.css), and so is a row the box draws last as ::after (checklist's count);
+   what takes it writes its rows' padding at the sides alone. A rule parts each row from the next */
+:scope { list-style: none; padding: 0; }
+:scope > *, :scope::after { padding-block: var(--floe-row-pad); }
 :scope > * + * { border-top: 1px solid var(--line); }
 }
 }
@@ -159,19 +166,20 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="checklist"]) to (:scope [data-floe-part] > *) {
 /* The count of the items done comes from counters, under the last */
 :scope {
-  list-style: none; margin: 0; padding: 0.35rem 0; display: grid; gap: 0;
+  margin: 0; display: grid; gap: 0;
   counter-reset: floe-check floe-checked;
 }
-:scope > li { position: relative; padding: 0.6rem 1.2rem 0.6rem 3rem; counter-increment: floe-check; }
+:scope > li { position: relative; padding-inline: 3rem 1.2rem; counter-increment: floe-check; }
 :scope > li.done { counter-increment: floe-check floe-checked; color: var(--muted); }
-/* A mark, not a box: the items are not to be ticked on the page */
+/* A mark, not a box: the items are not to be ticked on the page. Its top is left as it would lie, level with the
+   item's first line under the rows' padding */
 :scope > li::before {
-  content: "–"; position: absolute; left: 1.2rem; top: 0.6rem; width: 1.15rem; text-align: center;
+  content: "–"; position: absolute; left: 1.2rem; width: 1.15rem; text-align: center;
   font-weight: 800; color: var(--muted);
 }
 :scope > li.done::before { content: "✓"; color: var(--good); }
 :scope::after {
-  content: counter(floe-checked) " / " counter(floe-check); padding: 0.4rem 1.2rem 0.1rem; text-align: right;
+  content: counter(floe-checked) " / " counter(floe-check); padding-inline: 1.2rem; text-align: right;
   font-family: var(--mono);
   font-size: 0.8rem; color: var(--muted);
 }
@@ -240,7 +248,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   overflow-x: auto;
 }
 :scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
-:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.4rem 0.8rem; line-height: 1.6; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
 :scope :is(th, td):not(.num) { min-width: 7em; }
 /* A num column's heading wraps as long as it needs, but not a character a line */
 :scope th.num { min-width: 6em; }
@@ -333,7 +341,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
    LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
    if pages come to put code in entries */
 :scope { margin: 0; display: grid; }
-:scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; padding: 0.55rem 1.2rem; }
+:scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; padding-inline: 1.2rem; }
 :scope dt { min-width: 0; font-weight: 700; }
 :scope dd { margin: 0; }
 /* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
@@ -433,7 +441,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="facts"]) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, unnumbered */
 :scope { margin: 0; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem; }
-:scope > div { gap: 0.1rem; padding-block: 0.8rem; }
+:scope > div { gap: 0.1rem; padding-block: var(--floe-row-pad); }
 :scope dt { font-size: 0.8rem; color: var(--muted); }
 :scope dd { margin: 0; font-weight: 600; }
 }
@@ -442,10 +450,12 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="faq"]) to (:scope [data-floe-part] > *) {
-/* Each question a row; Q leads it, and its answer opens under it */
+/* Each question a row; Q leads it, and its answer opens under it.
+   LIMIT: the rows' padding is the details', outside the summary, where a click opens nothing. Pad the summary of
+   every part drawn as rows alike, not faq's alone, if it comes to be missed */
 :scope { display: grid; }
 :scope summary {
-  display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.5rem; padding: 0.75rem 1.2rem;
+  display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.5rem; padding-inline: 1.2rem;
   cursor: pointer; font-weight: 700; list-style: none;
 }
 :scope summary::-webkit-details-marker { display: none; }
@@ -453,7 +463,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope summary::after { content: "+"; content: "+" / ""; color: var(--muted); font-weight: 400; }
 :scope details[open] summary::after { content: "−"; content: "−" / ""; }
 :scope summary:focus-visible { outline-offset: -2px; }
-:scope details > div { display: grid; gap: 0.5rem; padding: 0 1.2rem 0.9rem 3.1rem; color: var(--muted); }
+:scope details > div { display: grid; gap: 0.5rem; padding: 0.5rem 1.2rem 0 3.1rem; color: var(--muted); }
 :scope details > div > * { margin: 0; }
 }
 }
@@ -493,7 +503,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
 /* Keycaps at the left of what they do, over it on a narrow screen */
 :scope { margin: 0; display: grid; }
-:scope > div { display: grid; grid-template-columns: minmax(7rem, auto) minmax(0, 1fr); gap: 0.2rem 1.5rem; align-items: center; padding: 0.65rem 1.2rem; }
+:scope > div { display: grid; grid-template-columns: minmax(7rem, auto) minmax(0, 1fr); gap: 0.2rem 1.5rem; align-items: center; padding-inline: 1.2rem; }
 :scope dt { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; color: var(--muted); font-size: 0.8rem; }
 :scope dd { margin: 0; }
 :scope kbd {
@@ -771,7 +781,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="compare"], [data-floe-part="fields"], [data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
 :scope { padding: 6px; }
 :scope table { border-collapse: separate; border-spacing: 0; }
-:scope thead th { background: none; padding-block: 0.6rem 0.5rem; }
+:scope thead th { background: none; }
 :scope tbody td { background: var(--surface); }
 :scope tbody tr:first-child td:first-child { border-top-left-radius: 14px; }
 :scope tbody tr:first-child td:last-child { border-top-right-radius: 14px; }

@@ -3,7 +3,7 @@
   overflow-x: auto;
 }
 :scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
-:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.4rem 0.8rem; line-height: 1.6; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
 :scope :is(th, td):not(.num) { min-width: 7em; }
 /* A num column's heading wraps as long as it needs, but not a character a line */
 :scope th.num { min-width: 6em; }

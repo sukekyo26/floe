@@ -39,6 +39,9 @@ pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
 blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+/* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
+   rows, and the look table and facts take it. Themes leave it as it is, so that rows are as tall in every theme */
+:root { --floe-row-pad: 0.4rem; }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
    what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
@@ -206,7 +209,7 @@ blockquote { padding-left: 1.4rem; border-left: 3px solid var(--accent); color: 
   overflow-x: auto;
 }
 :scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
-:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: 0.4rem 0.8rem; line-height: 1.6; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
 :scope :is(th, td):not(.num) { min-width: 7em; }
 /* A num column's heading wraps as long as it needs, but not a character a line */
 :scope th.num { min-width: 6em; }
