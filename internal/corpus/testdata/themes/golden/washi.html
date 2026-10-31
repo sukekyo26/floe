@@ -500,6 +500,7 @@ blockquote {
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope > label { border-radius: 0; }
 /* On screen alone: on paper every tab shows under its title, which tabs' own print takes off its ground */
 @media screen { :scope > label:has(:checked) { background: none; color: var(--fg); box-shadow: inset 0 -2px 0 var(--washi-shu); } }
 }

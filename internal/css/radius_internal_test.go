@@ -12,8 +12,8 @@ import (
 )
 
 // radiusShapes are the corners floe's CSS may write as they are: shapes, not sizes (a square, a circle, a pill's
-// ends, the corners of the parent)
-var radiusShapes = []string{"0", "50%", "999px", "inherit"}
+// ends)
+var radiusShapes = []string{"0", "50%", "999px"}
 
 // paletteRadii are the palette's corners, which floe's CSS reads within calc() and as one corner of several: each
 // is one length
