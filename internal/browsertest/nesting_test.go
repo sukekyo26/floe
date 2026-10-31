@@ -8,7 +8,8 @@ import (
 
 // nestingPage draws a card of stats and the cards HTML nests so: in cards, in a panel, in an element of an empty
 // look, in an element that takes cards and the panel, and in a part's box that takes cards. In brutal, a note and a
-// code in a note's box, and in the stacks of details and tabs.
+// code in a note's box, and in the stacks of details and tabs; and Markdown's h4 and hr in a note and in details,
+// and a part of one's own whose box is a <figure> with no margins of its own, in a note's box.
 const nestingPage = `template: report
 lang: en
 sections:
@@ -20,12 +21,13 @@ sections:
           <div data-floe-look=""><div id="in-empty" data-floe-look="cards"><div class="card" data-floe-look="panel"><p class="title">c</p></div></div></div>
           <div id="both" data-floe-look="cards panel"><div class="card" data-floe-look="panel"><p class="title">d</p></div></div>
           <div id="box" data-floe-part="text" data-floe-look="cards"><div class="card" data-floe-look="panel"><p class="title">e</p></div></div>
-          <div data-floe-part="note"><p>n</p><div id="in-note" data-floe-part="note"><p>m</p></div></div>
+          <div data-floe-part="note"><p>n</p><div id="in-note" data-floe-part="note"><p>m</p></div><figure id="fig" data-floe-part="fig">f</figure></div>
+      - note: { text: "a\n\n#### h\n\nb\n\n---\n\nc" }
       - details:
           title: d
           open: true
           parts:
-            - text: t
+            - text: "#### h\n\nb\n\n---\n\nc"
             - note: { text: x }
       - tabs:
           - title: t
@@ -54,10 +56,15 @@ const measureCards = `(() => {
 const measureHeld = `['#in-note', '[data-floe-part=details] [data-floe-part=note]', '[data-floe-part=tabs] [data-floe-part=code]']
   .map((at) => getComputedStyle(document.querySelector(at)).margin).join(' | ')`
 
+// measureBlocks tells the margins of Markdown's h4 and hr in a note and in a stack, and of a <figure> box in a note.
+const measureBlocks = `['[data-floe-part=note] h4', '[data-floe-part=note] hr', '[data-floe-part=stack] h4', '[data-floe-part=stack] hr', '#fig']
+  .map((at) => getComputedStyle(document.querySelector(at)).margin).join(' | ')`
+
 // TestUINesting checks, in the browser, that what nests the outer wins over what it holds, in every theme: the
 // cards a cards of the HTML holds are drawn as the cards of a part are, whatever looks nest around them and
 // whatever the depth; and a stack or a note keeps a theme's room for a shadow, brutal's, on the boxes it holds,
-// giving them no margins of its own but the note's gap between them.
+// giving them no margins of its own but the note's gap between them, which floe's base leaves alone in the blocks
+// a browser gives margins of its own (h4, hr, figure).
 func TestUINesting(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -65,6 +72,11 @@ func TestUINesting(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	if err != nil {
 		t.Fatal(err)
 	}
+	s.own(t, map[string]string{
+		"parts/fig/schema.json": `{"type": "object"}`,
+		"parts/fig/part.html":   `<figure data-floe-part="fig">f</figure>`,
+		"parts/fig/part.css":    "",
+	})
 	file := s.write(t, "nesting.yaml", nestingPage)
 	out, want := make([]string, 0, len(themes)), make([]string, 0, len(themes))
 	for _, theme := range themes {
@@ -79,4 +91,6 @@ func TestUINesting(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	b.navigate("/a/nesting-brutal/?raw")
 	check(t, "held", []string{b.eval(measureHeld)}, "8px 6px 6px 0px | 0px 6px 6px 0px | 0px 6px 6px 0px")
+	b.navigate("/a/nesting-default/?raw")
+	check(t, "blocks", []string{b.eval(measureBlocks)}, "8px 0px 0px | 8px 0px 0px | 0px | 0px | 8px 0px 0px")
 }

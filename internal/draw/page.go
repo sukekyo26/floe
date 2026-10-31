@@ -181,6 +181,10 @@ func checkNames(
 
 // depths returns, by "part " and the name of each part's box in tree and "look " and each look an element takes,
 // the depths those elements stand at, sorted: how many elements that nest hold each.
+// LIMIT: the style of a look or a part reaches only the elements the browser counts at a depth tree holds them at,
+// so where x/net/html's tree and the browser's part (a div or a span in a select's option, which x/net/html drops
+// as an old select's reader does and a browser of the new select keeps; see inSelect), what nests there in the
+// browser gets none of it. Count in the browser's tree, or mark the depth on the elements, if a page comes to so.
 func depths(tree *html.Node) map[string][]int {
 	found := map[string][]int{}
 	for n := range tree.Descendants() {

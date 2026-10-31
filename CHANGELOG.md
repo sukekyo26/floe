@@ -8,11 +8,6 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Add the outer winning where looks and parts nest: a look's style for an
-  element in it that takes another look (a card in an element of `cards` that
-  takes `panel`), and a part's for the box of a part in it, win over that
-  element's own, whatever the selectors, as the cards of a part are drawn;
-  a look still loses to the box of a part in it.
 - Add one padding above and below the rows of what is drawn as rows (the
   looks table and rows, the parts that take them, the templates' tables and
   lists in them, and facts' tiles): 0.4rem, set by `--floe-row-pad` in
@@ -242,3 +237,23 @@ adheres to [Semantic Versioning](https://semver.org/).
   screen. A folder's page has the folder's tree on its left, whose edge is
   dragged or keyed to widen it, and which hides at a button; the browser keeps
   both.
+
+### Fixed
+
+- Fix the outer losing where looks and parts nest: a look's style for an
+  element in it that takes another look, and a part's for the box of a part in
+  it, now win over that element's own, whatever the selectors; a look still
+  loses to the box of a part in it. What changes on a page:
+  - A card in an element of `cards` that takes `panel` itself
+    (`<div data-floe-look="cards"><div class="card" data-floe-look="panel">`)
+    is drawn as the cards of a part are, in every theme (in default it was
+    the panel's grey; in editorial, ink, notebook, swiss, washi and brutal it
+    lost the theme's line, shadow or margin of a card).
+  - A part's box placed in a note's box by format html is spaced from what is
+    before it by the note's 0.5rem, and keeps its other margins (brutal's room
+    for its shadow).
+  - Markdown's `####`–`######`, `---`, and a `<figure>` or `<dl>` of format
+    html have no margins of a browser's own anywhere, as headings, paragraphs
+    and lists already had none: what holds them spaces them (a section's gap,
+    a note's 0.5rem). On a page's sections, a `####` and a `---` stand a
+    section's gap from the next, not more.
