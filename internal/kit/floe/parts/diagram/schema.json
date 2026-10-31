@@ -305,7 +305,7 @@
       "properties": {
         "from": { "$ref": "#/$defs/name" },
         "to": { "$ref": "#/$defs/name" },
-        "label": { "$ref": "#/$defs/text", "description": "Words on the edge, which make every edge of its graph two ranks long" },
+        "label": { "$ref": "#/$defs/text", "description": "Words beside the edge, which make every edge of its graph pass about twice as many ranks" },
         "dashed": { "type": "boolean" },
         "bold": { "type": "boolean" },
         "tone": { "$ref": "#/$defs/tone" },

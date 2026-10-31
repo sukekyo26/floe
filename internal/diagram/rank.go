@@ -28,7 +28,10 @@ func rank(g *graph, members, edges []int, byName map[string]int) *group {
 	turn(arcs, outs, gr.reversed)
 	gr.rankLongest(arcs)
 	gr.arcs = arcs
-	// A label on any edge of the graph makes every edge two ranks long, its label between.
+	// A label on any edge of the graph doubles the ranks: an edge k ranks long becomes 2k long, with a rank for its
+	// label next to the box it is written from.
+	// LIMIT: every edge of such a graph, labelled or not, passes about twice as many ranks, counts them against
+	// maxPassed, and makes the graph wider and taller. Give a rank only to the labels if that comes to matter.
 	if slices.ContainsFunc(g.Edges, func(e graphEdge) bool { return e.Label != nil }) {
 		for i := range gr.nodes {
 			gr.nodes[i].rank *= 2

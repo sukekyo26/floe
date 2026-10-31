@@ -70,12 +70,12 @@ func TestGraphMistakes(t *testing.T) {
 			`s.yaml:10:18: the name "write" is given before: give each part, row and node its own name`,
 		},
 		{"an edge from a box to itself", strings.Replace(g1, "{ from: check, to: write }", "{ from: write, to: write }", 1), `s.yaml:13:13: edge write→write starts where it ends: end it at another part or point`},
-		{"a label", strings.Replace(g1, "to: check }", `to: check, label: "yes" }`, 1), `s.yaml:11:13: additional properties 'label' not allowed`},
+		{"a label of a number", strings.Replace(g1, "to: check }", "to: check, label: 3 }", 1), `s.yaml:11:44: got number, want string or object`},
 		{"a diamond", strings.Replace(g1, "to: check }", "to: check, end: diamond }", 1), `s.yaml:11:42: value must be one of 'none', 'arrow'`},
 		{"up", strings.Replace(g1, "y: 20\n", "y: 20\n      direction: up\n", 1), `s.yaml:6:18: value must be one of 'down', 'right'`},
 		{"a box placed", strings.Replace(g1, "{ name: show,", "{ name: show, x: 10,", 1), `s.yaml:9:18: additional properties 'x' not allowed`},
 		{"201 boxes", many.String(), `s.yaml:7:9: maxItems: got 201, want 200`},
-		{"4,001 ranks passed", long.String(), `s.yaml: graph: the edges of this diagram's graphs pass 4001 ranks between their ends, more than 4000: split the diagram`},
+		{"4,001 ranks passed", long.String(), `s.yaml: graph: the edges of this diagram's graphs pass 4001 ranks between their ends, more than 4000: split the diagram (in a graph with an edge label, every edge passes about twice as many ranks)`},
 	} {
 		if _, got := draw(t, c.src, inspect); got != c.want {
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
