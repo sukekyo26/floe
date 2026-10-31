@@ -3,7 +3,9 @@
 <title>Moving the team wiki</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
-@layer floe.looks.depth1, floe.looks.depth0, floe.parts.depth1, floe.parts.depth0;
+@layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
+@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -330,10 +332,11 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Rows in a panel, without a list's marks and padding, a theme's frame of the box in their place. Each row is padded
-   above and below by --floe-row-pad (base.css), and so is a row the box draws last as ::after (checklist's count);
-   what takes it writes its rows' padding at the sides alone. A rule parts each row from the next */
-:scope { list-style: none; padding: 0; }
+/* Rows in a panel, a theme's frame of the box around them: a list that is a part's box or takes the look has no
+   marks, padding or room between its items (floe lays it out so, under the parts' layers for a part's box and the
+   looks' for an element that takes the look). Each row is padded above
+   and below by --floe-row-pad (base.css), and so is a row the box draws last as ::after (checklist's count); what
+   takes it writes its rows' padding at the sides alone. A rule parts each row from the next */
 :scope > *, :scope::after { padding-block: var(--floe-row-pad); }
 :scope > * + * { border-top: 1px solid var(--line); }
 }
@@ -446,7 +449,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
    text in an element. An item whose first child has no baseline (an image, an empty block) has its ring at that
    child's bottom.
    LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand. */
-:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; }
+:scope { counter-reset: floe-step; }
 :scope > li {
   --floe-mark: 2rem; --floe-mark-gap: 1rem; position: relative; anchor-scope: --floe-mark; counter-increment: floe-step;
   display: grid;

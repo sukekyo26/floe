@@ -3,7 +3,9 @@
 <title>Words in fr</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
-@layer floe.looks.depth1, floe.looks.depth0, floe.parts.depth1, floe.parts.depth0;
+@layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
+@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -146,9 +148,9 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope .title { font-size: 1.25rem; line-height: 1.45; }
 :scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: 0.82rem; }
 :scope .set-aside { margin-top: 0.3rem; font-size: 0.8rem; font-weight: 600; }
-:scope ul { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
-:scope li { position: relative; padding-left: 1.45rem; }
-:scope li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad); }
+:scope .rejected { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
+:scope .rejected li { position: relative; padding-left: 1.45rem; }
+:scope .rejected li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad); }
 }
 }
 </style>
@@ -288,7 +290,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <tr><td class="name"><code>port</code><span class="required">required</span><span class="type">number</span></td><td><span class="default">Default: <code>8080</code></span></td></tr>
 </tbody>
 </table></div>
-<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta">decided<span>2030-03-28</span></p><div class="title">Move</div><p class="set-aside">Set aside</p><ul><li>Stay</li></ul></div></div>
+<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta">decided<span>2030-03-28</span></p><div class="title">Move</div><p class="set-aside">Set aside</p><ul class="rejected"><li>Stay</li></ul></div></div>
 </section>
 </main>
 

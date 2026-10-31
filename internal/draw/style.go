@@ -30,6 +30,9 @@ import (
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
+// Under the layers of depth, floe.looks.boxes and floe.parts.boxes lay out the lists that are parts' boxes or take
+// looks (boxes), so that the look's or part's own rules at any depth set them over, and the page's and the theme's do
+// not reach a part's box.
 // LIMIT: a theme's file of a look wins over the adjustment of it by a part that takes it on the same element; move
 // it after the look's if a part needs one.
 // LIMIT: a part's box that takes a look, held in an element that takes another, has it in floe.parts, which wins over
@@ -54,12 +57,13 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 	}
 	var order []string
 	for _, kind := range []string{"floe.looks", "floe.parts"} {
+		order = append(order, kind+".boxes")
 		for d := deepest; d >= 0; d-- {
 			order = append(order, fmt.Sprintf("%s.depth%d", kind, d))
 		}
 	}
 	layers := "@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;\n@layer " +
-		strings.Join(order, ", ") + ";\n@layer floe.base {\n" + string(k.BaseCSS()) + "}\n"
+		strings.Join(order, ", ") + ";\n" + boxes + "@layer floe.base {\n" + string(k.BaseCSS()) + "}\n"
 	sheets = append(sheets, Sheet("", []byte(layers)))
 	sheet := func(layer string, css []byte) {
 		if len(css) != 0 {
@@ -95,6 +99,17 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 	sheet("floe.page", pageScoped(own))
 	return sheets, nil
 }
+
+// boxes lays out a list (ul, ol, menu: the elements a browser marks and pads) that is a part's box or takes a look, as
+// what draws it does: without a list's marks, padding or the room between items, in a grid. Each goes in the lowest
+// layer of what draws it, under the layers of depth, so that the part's or look's own rules at any depth set it over.
+// A part's box keeps these four over the page's and the theme's rules for lists; an element that takes a look over the
+// theme's alone, as the template that borrows a look adjusts it (a rule for the items, li or ::marker, reaches both).
+// floe's own and fixed, it goes unchecked by css.Check.
+const boxes = "@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { " + boxList + " } }\n" +
+	"@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { " + boxList + " } }\n"
+
+const boxList = "display: grid; list-style: none; padding: 0; gap: 0;"
 
 // pageScoped is css reaching the page short of what the parts hold, or nil when css is empty.
 func pageScoped(css []byte) []byte {

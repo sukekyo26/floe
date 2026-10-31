@@ -4,6 +4,6 @@
 :scope .title { font-size: 1.25rem; line-height: 1.45; }
 :scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: 0.82rem; }
 :scope .set-aside { margin-top: 0.3rem; font-size: 0.8rem; font-weight: 600; }
-:scope ul { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
-:scope li { position: relative; padding-left: 1.45rem; }
-:scope li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad); }
+:scope .rejected { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
+:scope .rejected li { position: relative; padding-left: 1.45rem; }
+:scope .rejected li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad); }

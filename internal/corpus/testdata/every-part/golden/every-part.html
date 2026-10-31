@@ -3,7 +3,9 @@
 <title>Every part</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
-@layer floe.looks.depth2, floe.looks.depth1, floe.looks.depth0, floe.parts.depth2, floe.parts.depth1, floe.parts.depth0;
+@layer floe.looks.boxes, floe.looks.depth2, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth2, floe.parts.depth1, floe.parts.depth0;
+@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -209,10 +211,11 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="faq"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Rows in a panel, without a list's marks and padding, a theme's frame of the box in their place. Each row is padded
-   above and below by --floe-row-pad (base.css), and so is a row the box draws last as ::after (checklist's count);
-   what takes it writes its rows' padding at the sides alone. A rule parts each row from the next */
-:scope { list-style: none; padding: 0; }
+/* Rows in a panel, a theme's frame of the box around them: a list that is a part's box or takes the look has no
+   marks, padding or room between its items (floe lays it out so, under the parts' layers for a part's box and the
+   looks' for an element that takes the look). Each row is padded above
+   and below by --floe-row-pad (base.css), and so is a row the box draws last as ::after (checklist's count); what
+   takes it writes its rows' padding at the sides alone. A rule parts each row from the next */
 :scope > *, :scope::after { padding-block: var(--floe-row-pad); }
 :scope > * + * { border-top: 1px solid var(--line); }
 }
@@ -221,10 +224,11 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="entries"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Rows in a panel, without a list's marks and padding, a theme's frame of the box in their place. Each row is padded
-   above and below by --floe-row-pad (base.css), and so is a row the box draws last as ::after (checklist's count);
-   what takes it writes its rows' padding at the sides alone. A rule parts each row from the next */
-:scope { list-style: none; padding: 0; }
+/* Rows in a panel, a theme's frame of the box around them: a list that is a part's box or takes the look has no
+   marks, padding or room between its items (floe lays it out so, under the parts' layers for a part's box and the
+   looks' for an element that takes the look). Each row is padded above
+   and below by --floe-row-pad (base.css), and so is a row the box draws last as ::after (checklist's count); what
+   takes it writes its rows' padding at the sides alone. A rule parts each row from the next */
 :scope > *, :scope::after { padding-block: var(--floe-row-pad); }
 :scope > * + * { border-top: 1px solid var(--line); }
 }
@@ -235,7 +239,6 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* The count of the items done comes from counters, under the last */
 :scope {
-  display: grid; gap: 0;
   counter-reset: floe-check floe-checked;
 }
 :scope > li { position: relative; padding-inline: 3rem 1.2rem; counter-increment: floe-check; }
@@ -456,9 +459,9 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope .title { font-size: 1.25rem; line-height: 1.45; }
 :scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: 0.82rem; }
 :scope .set-aside { margin-top: 0.3rem; font-size: 0.8rem; font-weight: 600; }
-:scope ul { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
-:scope li { position: relative; padding-left: 1.45rem; }
-:scope li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad); }
+:scope .rejected { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
+:scope .rejected li { position: relative; padding-left: 1.45rem; }
+:scope .rejected li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad); }
 }
 }
 </style>
@@ -657,7 +660,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
-:scope { list-style: none; padding: 0; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--floe-room); }
+:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--floe-room); }
 :scope > li {
   --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
@@ -840,7 +843,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
    text in an element. An item whose first child has no baseline (an image, an empty block) has its ring at that
    child's bottom.
    LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand. */
-:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; }
+:scope { counter-reset: floe-step; }
 :scope > li {
   --floe-mark: 2rem; --floe-mark-gap: 1rem; position: relative; anchor-scope: --floe-mark; counter-increment: floe-step;
   display: grid;
@@ -935,7 +938,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* The date at the left of a dot on a line that runs down to the next, as the look numbered places its ring and line
    (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
-:scope { list-style: none; padding: 1.1rem 1.3rem; display: grid; gap: 0; }
+:scope { padding: 1.1rem 1.3rem; }
 :scope > li {
   --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; position: relative; anchor-scope: --floe-mark; display: grid;
   grid-template:
@@ -1795,7 +1798,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <ul class="points"><li class="pro">Short freezes</li><li class="con">Links break between spaces</li><li class="con">Twice the work</li></ul></div>
 </div>
 <div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span class="good" data-floe-part="cell">decided</span><span>2030-03-28</span></p><div class="title">The wiki moves to the new host</div><p>The old server is out of support in <strong>May</strong>.</p>
-<p class="set-aside">Set aside</p><ul><li>Stay on the old server</li><li>Move to a hosted wiki</li></ul></div></div>
+<p class="set-aside">Set aside</p><ul class="rejected"><li>Stay on the old server</li><li>Move to a hosted wiki</li></ul></div></div>
 </section>
 <section>
 <h2 id="reference">Reference</h2>

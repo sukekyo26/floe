@@ -96,7 +96,7 @@ It sees:
 - A `}` that closes no block, and an `@import`, are refused at their line: load a stylesheet, such as Google Fonts, with a `<link>` in `page.html`.
 - Draw with the palette's variables (`var(--muted)`), so that the page follows the theme the data file picks.
 - Leave at least `var(--floe-room)` (0.75rem) between parts that stand one after another (in a section, in an item), the most a theme's shadow reaches outside a box.
-- A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part: a part writes no margin of its own on its box (checklist and links are `ul`, steps and timeline `ol`, facts, keys, entries and stats `dl`, code, image, diff and terminal `figure`, tabs `form`).
+- A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part, as a part writes no margin of its own on its box (checklist and links are `ul`, steps and timeline `ol`, facts, keys, entries and stats `dl`, code, image, diff and terminal `figure`, tabs `form`). It does not change a list's display, marks, padding or room between items, which floe sets for a list that is a part's box ([parts.md](parts.md#the-css-layers-and-scope)); a list that takes a look takes those from the template's `page.css` too, so that the template adjusts it.
 
 `report`'s `page.css`, for one, centres its page in the column every floe template uses:
 
