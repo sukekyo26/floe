@@ -14,7 +14,7 @@
 :scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
 :scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }
 :scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad); }
-:scope > * { margin: 0; }
+/* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
 :scope > * + * { margin-top: 0.5rem; }
 .title { display: block; font-size: 0.9rem; color: var(--accent); }
 :scope.good .title { color: var(--good); }

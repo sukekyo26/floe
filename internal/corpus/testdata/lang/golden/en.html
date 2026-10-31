@@ -3,6 +3,7 @@
 <title>Words in en</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
+@layer floe.looks.depth1, floe.looks.depth0, floe.parts.depth1, floe.parts.depth0;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -20,6 +21,8 @@
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
 p, ul, ol { margin: 0; }
+/* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
+h4, h5, h6, hr, figure, dl { margin: 0; }
 ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 /* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
    --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
@@ -100,24 +103,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="fields"]) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
-}
-}
-</style>
-<style>
-@layer floe.looks {
-@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="decision"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Each card is numbered by its place, as the steps of a plan are */
 :scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
 .card {
@@ -135,8 +122,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="decision"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A card of its own, unnumbered, its title large */
 :scope { grid-template-columns: minmax(0, 1fr); }
 :scope > div { gap: 0.5rem; }
@@ -150,8 +137,24 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="fields"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns */
 :scope {
   overflow-x: auto;
@@ -176,8 +179,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="fields"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the table's look, without a heading: the name over its type, what it is over its default */
 :scope td.name { width: 30%; }
 :scope .name code { font-weight: 700; background: none; padding: 0; white-space: nowrap; }
@@ -192,22 +195,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="fields"]) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
-}
-}
-</style>
-<style>
-@layer floe.looks {
-@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="decision"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border-radius: 20px; padding: 0.75rem; gap: 0.75rem; }
 /* A tile of the surface on the panel of the cards */
 .card { background: var(--surface); border-radius: 14px; }
@@ -219,8 +208,22 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="fields"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { padding: 6px; }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope thead th { background: none; }

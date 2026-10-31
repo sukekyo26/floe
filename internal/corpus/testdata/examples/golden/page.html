@@ -3,6 +3,7 @@
 <title>図の例</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
+@layer floe.looks.depth0, floe.parts.depth0;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -20,6 +21,8 @@
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
 p, ul, ol { margin: 0; }
+/* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
+h4, h5, h6, hr, figure, dl { margin: 0; }
 ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 /* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
    --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
@@ -100,8 +103,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="diagram"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="diagram"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
    set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
 /* The colours and fonts of the page's palette, with floe's default ones for a fragment of floe diagram

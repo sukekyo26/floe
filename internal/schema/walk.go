@@ -101,9 +101,8 @@ func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) 
 // the part or the format, and the value as written.
 type Item struct {
 	At     []string
-	Part   string   // "" for a format
-	Holds  []string // the parts the part's schema may hold, sorted
-	Format string   // "" for a part
+	Part   string // "" for a format
+	Format string // "" for a part
 	Value  any
 }
 
@@ -114,16 +113,14 @@ type Item struct {
 // It is the one walk of values: what floe checks of the items and what it draws both come from it.
 // LIMIT: {{.x}} writes an object as Go's map, refused only if it holds html; give any.json's one part when needed
 func (c *Compiled) Walk(values any, fn func(it Item, ready any) (any, error)) (any, error) {
-	w := &walk{c: c, fn: fn, holds: map[*jsonschema.Schema][]string{}}
+	w := &walk{c: c, fn: fn}
 	return w.step(c.Follow(c.Root), values, nil)
 }
 
-// walk is a walk of values: the Compiled it goes by, what it calls with each Item, and the parts the schema of
-// each part it met may hold, by the root of the part's schema.
+// walk is a walk of values: the Compiled it goes by, and what it calls with each Item.
 type walk struct {
-	c     *Compiled
-	fn    func(Item, any) (any, error)
-	holds map[*jsonschema.Schema][]string
+	c  *Compiled
+	fn func(Item, any) (any, error)
 }
 
 // step walks v, at the path at, under the step st.
@@ -134,14 +131,9 @@ func (w *walk) step(st Step, v any, at []string) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		holds, ok := w.holds[st.PartRoot]
-		if !ok {
-			holds = w.c.partsFrom(st.PartRoot)
-			w.holds[st.PartRoot] = holds
-		}
-		return w.fn(Item{At: at, Part: partName(st.Part), Holds: holds, Format: "", Value: v}, ready)
+		return w.fn(Item{At: at, Part: partName(st.Part), Format: "", Value: v}, ready)
 	case st.Format != "":
-		return w.fn(Item{At: at, Part: "", Holds: nil, Format: st.Format, Value: v}, v)
+		return w.fn(Item{At: at, Part: "", Format: st.Format, Value: v}, v)
 	}
 	return w.under(st, v, at)
 }
@@ -179,18 +171,6 @@ func (w *walk) in(s *jsonschema.Schema, v any, at []string, step string) (any, e
 		return v, nil
 	}
 	return w.step(w.c.Follow(s), v, slices.Concat(at, []string{step}))
-}
-
-// partsFrom returns the names of the parts Follow, repeated from root, stops at, sorted.
-func (c *Compiled) partsFrom(root *jsonschema.Schema) []string {
-	var names []string
-	for s := range c.followFrom(root).atPart {
-		if name := partName(c.Follow(s).Part); !slices.Contains(names, name) {
-			names = append(names, name)
-		}
-	}
-	slices.Sort(names)
-	return names
 }
 
 // itemsOf returns the schema of each item of s: Items2020, or before 2020-12 Items of one schema.
