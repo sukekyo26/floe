@@ -36,7 +36,7 @@ func unescape(s string) string {
 		}
 		r, err := strconv.ParseUint(s[i+1:j], 16, 32)
 		if err == nil {
-			b.WriteRune(rune(r))
+			b.WriteRune(rune(r)) //nolint:gosec // six hex digits at most, under 2^24
 		}
 		if j < len(s) && s[j] == ' ' {
 			j++
