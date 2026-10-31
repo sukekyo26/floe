@@ -107,10 +107,10 @@ func (b *browser) pseudoBoxes(sel string) (before, after []float64) {
 		return []float64{q[0], q[1], q[4], q[5]}
 	}
 	for _, p := range find(doc.Root).PseudoElements {
-		switch p.PseudoType {
-		case cdp.PseudoTypeBefore:
+		if p.PseudoType == cdp.PseudoTypeBefore {
 			before = box(p.NodeID)
-		case cdp.PseudoTypeAfter:
+		}
+		if p.PseudoType == cdp.PseudoTypeAfter {
 			after = box(p.NodeID)
 		}
 	}
@@ -200,7 +200,7 @@ func TestUIMarks(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		t.Fatal(err)
 	}
 	file := s.write(t, "marks.yaml", marksPage)
-	var amiss []string
+	amiss := make([]string, 0, len(themes))
 	for _, theme := range themes {
 		name := theme.Name()
 		s.floe(t, "publish", file, "--slug", "marks-"+name, "--theme", name)
