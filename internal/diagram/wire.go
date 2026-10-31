@@ -26,6 +26,8 @@ func (gr *group) wire() {
 		}
 		gr.settle(r + 1)
 		// settle may move the boxes below off the columns chosen for them: choose those again, the points' kept.
+		// LIMIT: only for the rank right below; a box a settle further down moves is not chosen for again, so an
+		// edge meant to enter straight may bend. Choose every exit once all ranks stand, if that comes to matter.
 		for _, u := range gr.ranks[r] {
 			gr.exits(u, pos, true)
 		}
