@@ -45,6 +45,8 @@ Read the pages in a recent Chrome, Safari (26 or later) or Firefox (147 or later
 | Write pages (data files) | [pages.md](docs/pages.md) | [pages.ja.md](docs/pages.ja.md) |
 | Make a template of your own | [templates.md](docs/templates.md) | [templates.ja.md](docs/templates.ja.md) |
 | Make a part or theme of your own | [parts.md](docs/parts.md) | [parts.ja.md](docs/parts.ja.md) |
+| Draw a diagram | [diagrams.md](docs/diagrams.md) | [diagrams.ja.md](docs/diagrams.ja.md) |
+| Show an HTML file or a folder as it is | [links.md](docs/links.md) | [links.ja.md](docs/links.ja.md) |
 | Look up a command or a setting | [commands.md](docs/commands.md) | [commands.ja.md](docs/commands.ja.md) |
 | See what changed | [CHANGELOG.md](CHANGELOG.md) | [CHANGELOG.ja.md](docs/CHANGELOG.ja.md) |
 
