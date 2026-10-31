@@ -305,7 +305,7 @@
       "properties": {
         "from": { "$ref": "#/$defs/name" },
         "to": { "$ref": "#/$defs/name" },
-        "label": { "$ref": "#/$defs/text", "description": "Words beside the edge, which make every edge of its graph pass about twice as many ranks" },
+        "label": { "$ref": "#/$defs/text", "description": "Words beside the edge, where the layout leaves room or floe makes it, the layout as with no label" },
         "dashed": { "type": "boolean" },
         "bold": { "type": "boolean" },
         "tone": { "$ref": "#/$defs/tone" },
