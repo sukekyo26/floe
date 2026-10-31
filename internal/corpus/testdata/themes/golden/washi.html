@@ -145,7 +145,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *) {
 /* Sumi and vermilion printed on washi, in a Mincho face: tables closed by double rules, states and notes as
-   seals, cards marked with a seal of their number in kanji, and quotes ruled in vermilion */
+   seals, cards marked with a seal of their number, and quotes ruled in vermilion */
 blockquote > * { --face: initial; --on-face: initial; }
 blockquote {
   background: var(--surface); color: var(--fg);
@@ -428,7 +428,7 @@ blockquote {
    LIMIT: on a face its tone shows not (nor the colours of its marks); its word tells it */
 :scope {
   background: none; border: 2px solid currentColor;
-  letter-spacing: 0.15em; font-weight: 700; transform: rotate(-2deg); color: var(--on-face, var(--tone));
+  letter-spacing: 0.15em; font-weight: 700; color: var(--on-face, var(--tone));
 }
 }
 }
@@ -478,11 +478,8 @@ blockquote {
   background: var(--surface); color: var(--fg); border: 0; border-top: 2px solid var(--tone);
   --floe-mark: 2rem; --floe-mark-gap: 0.75rem;
 }
-/* The seals are the kanji for a note, good, a warning and a danger, escaped to keep the source in English */
-:scope::before { content: "\6CE8"; content: "\6CE8" / ""; border-radius: var(--radius-small); background: var(--tone); color: var(--on-fill); font-size: 1.05rem; }
-:scope[data-floe-tone=good]::before { content: "\826F"; content: "\826F" / ""; }
-:scope[data-floe-tone=warn]::before { content: "\6212"; content: "\6212" / ""; }
-:scope[data-floe-tone=bad]::before { content: "\5371"; content: "\5371" / ""; }
+/* The seal holds the note's own mark of its tone */
+:scope::before { border-radius: var(--radius-small); background: var(--tone); color: var(--on-fill); font-size: 1.05rem; }
 .title { letter-spacing: 0.1em; }
 :scope code { background: var(--face, color-mix(in srgb, var(--fg) 6%, transparent)); }
 }
@@ -497,7 +494,7 @@ blockquote {
 .card { position: relative; border: 1px solid var(--fg); outline: 1px solid var(--fg); outline-offset: -4px; }
 /* The seal of its number stamped on its corner, over the padding and out of it no more than --floe-room */
 :scope.numbered > .card::before {
-  content: counter(floe-card, cjk-decimal); content: counter(floe-card, cjk-decimal) / "";
+  content: counter(floe-card); content: counter(floe-card) / "";
   position: absolute; top: -0.5rem; right: -0.5rem; --floe-mark: 1.6rem; border-radius: 50%;
   background: var(--washi-shu); color: var(--on-fill); font-size: 0.8rem; font-weight: 700;
 }

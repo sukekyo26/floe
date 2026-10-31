@@ -441,7 +441,7 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
-  background: var(--tone-fill); color: var(--fg); border-radius: var(--nb-pill); transform: rotate(-1.5deg); font-weight: 700;
+  background: var(--tone-fill); color: var(--fg); border-radius: var(--nb-pill); font-weight: 700;
 }
 }
 }
@@ -507,7 +507,7 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 :scope.numbered > .card:nth-child(3n) { --face: var(--nb-stick-3); }
 :scope.numbered > .card::before {
   content: ""; position: absolute; top: -8px; left: 50%; width: 84px; height: 22px; margin-left: -42px;
-  background: var(--nb-tape); transform: rotate(-3deg);
+  background: var(--nb-tape);
 }
 /* Every text on a sticky note is in its ink, marks and pills among them, whose colours are for the paper */
 :scope.numbered > .card *, :scope.numbered > .card ::before { color: var(--nb-stick-ink); }
