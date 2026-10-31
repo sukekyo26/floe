@@ -1225,6 +1225,21 @@ parts:
 	}
 }
 
+// crowd is a drawing down: a box at 0,0 48x30, edge 0 a short run out of its bottom at x 24, edge 2 a run beside it
+// at x 12, and edge 1 a run across from x 25 at y, its label below it from x 26, on a box far off.
+func crowd(y float64) *drawing {
+	far := rect{x: 1000, y: 1000, w: 10, h: 10, what: "", at: ""} //nolint:exhaustruct_v5 // a box
+	d := &drawing{right: false, boxes: map[int]rect{
+		0: {x: 0, y: 0, w: 48, h: 30, what: "", at: ""}, //nolint:exhaustruct_v5 // a box
+		1: far,
+	}, shapes: map[int]string{0: "", 1: ""}, routes: map[int][][2]float64{
+		0: {{24, 30}, {24, 60}}, 1: {{25, y}, {200, y}}, 2: {{12, -100}, {12, 300}},
+	}, ends: map[int][2]int{0: {0, 1}, 1: {1, 1}, 2: {1, 1}}, back: map[int]bool{}, spots: map[int]spot{
+		1: {seg: 0, side: 1, at: 26, w: 30},
+	}}
+	return d
+}
+
 // A label keeps clear of where an edge written by hand leaves a box of the graph, the middle of a side the graph's
 // edges do not use; and where no run of its edge takes room for it, it is floe's failure.
 func TestGraphLabelRoom(t *testing.T) {
@@ -1243,18 +1258,34 @@ func TestGraphLabelRoom(t *testing.T) {
 		t.Errorf("label at %v,%v, across the middle of the box's right side at %v", r.x, r.y, box.y+box.h/2)
 	}
 
-	// A graph whose labels crowd its channels, as TestGraphRandom makes it: a cut making room for one crosses the
-	// labels of others, which leave part of themselves in the band, and the room takes them.
-	rnd := rand.New(rand.NewPCG(7, 8)) //nolint:gosec // G404: a graph to try, no secret
-	var crowded *graph
-	for range 563 {
-		crowded = randomGraph(rnd, "right")
-		for k := range crowded.Edges {
-			crowded.Edges[k].Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(10)), "ja": strings.Repeat("字", rnd.IntN(16))}
+	// A short run down out of a box, blocked left by a run beside it, and right by the label of a run across, which
+	// starts just right of it at y (the cut a unit past the box is at 31): room is made below that label, which stays
+	// with its run, whole, partly past the cut (y 28) or from the cut on (y 30).
+	for _, y := range []float64{28, 30} {
+		d := crowd(y)
+		if !d.place(0, 30) {
+			t.Fatalf("y %v: no room made", y)
+		}
+		mine, _ := d.rect(0)
+		theirs, _ := d.rect(1)
+		if mine.overlaps(theirs) || !beside(mine, segsOf(d.routes[0])[0]) {
+			t.Errorf("y %v: label at %v, the other at %v, the run %v", y, mine, theirs, d.routes[0])
 		}
 	}
-	if fault := graphFault(crowded); fault != "" {
-		t.Errorf("crowded: %s", fault)
+
+	// A run down 2 right of a run, in the way of a label beside it: the cut along the run falls between them,
+	// so that the run in the way moves on with the rest, past the label.
+	way := &drawing{right: false, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{
+		0: {{24, 0}, {24, 300}}, 1: {{26, 0}, {26, 300}},
+	}, ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}}
+	r := spotRect(segsOf(way.routes[0])[0], spot{seg: 0, side: 1, at: 100, w: 30})
+	at, need := way.reach(r, 24, 1)
+	if at <= 24 || at >= 26 || need <= 0 {
+		t.Fatalf("reach: cut at %v, %v on", at, need)
+	}
+	way.stretch(0, at, onGrid(need, column, math.Ceil))
+	if x := way.routes[1][0][0]; x < r.x+r.w {
+		t.Errorf("the run in the way at %v, the label to %v", x, r.x+r.w)
 	}
 
 	short := &drawing{
