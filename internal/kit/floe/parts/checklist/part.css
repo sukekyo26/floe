@@ -1,6 +1,5 @@
 /* The count of the items done comes from counters, under the last */
 :scope {
-  display: grid; gap: 0;
   counter-reset: floe-check floe-checked;
 }
 :scope > li { position: relative; padding-inline: 3rem 1.2rem; counter-increment: floe-check; }
