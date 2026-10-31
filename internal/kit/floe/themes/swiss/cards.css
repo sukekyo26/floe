@@ -1,4 +1,4 @@
-.card { border: 0; border-left: 1px solid var(--fg); padding: 0.25rem 1.4rem 0.5rem; }
+.card { border: 0; border-left: 1px solid var(--fg); padding-inline: 1.4rem; }
 :scope > .card:first-child { border-left: 0; padding-left: 0; }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / "";

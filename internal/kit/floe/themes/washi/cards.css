@@ -1,4 +1,7 @@
-.card { position: relative; border: 1px solid var(--fg); outline: 1px solid var(--fg); outline-offset: -6px; padding: 1.4rem 3.6rem 1.3rem 1.5rem; }
+/* A card in two rules, the inner one within a frame of the surface, which keeps it off the padding its part sets */
+.card { position: relative; border: 6px solid var(--surface); outline: 1px solid var(--fg); --floe-inset: inset 0 0 0 1px var(--fg); }
+/* Room at the right for the seal of its number */
+:scope.numbered > .card { padding-right: 3.6rem; }
 :scope.numbered > .card::before {
   content: counter(floe-card, cjk-decimal); content: counter(floe-card, cjk-decimal) / "";
   position: absolute; top: 1rem; right: 1rem; display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%;

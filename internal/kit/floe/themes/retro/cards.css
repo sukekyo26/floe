@@ -1,6 +1,8 @@
-/* A card is a round face in a brown frame, its top in the three stripes, clear of its text over the padding a part
-   sets its cards (facts, links) */
-:scope > .card { border: 2px solid var(--fg); border-radius: var(--radius); padding-top: 1.6rem; background: var(--surface);
-  /* The stripes as shadows inside its top, which keep to its round corners and stay off the ground of its text */
-  --floe-inset: inset 0 4px var(--retro-orange), inset 0 8px var(--retro-mustard), inset 0 12px var(--retro-olive); }
+/* A card is a round face in a brown frame, its top the three stripes in a frame of their own height, which keeps them
+   off the padding its part sets (facts' rows) */
+:scope > .card {
+  border: 2px solid var(--fg); border-top: 14px solid transparent; border-radius: var(--radius);
+  background: linear-gradient(var(--fg) 0 2px, var(--retro-orange) 2px 6px, var(--retro-mustard) 6px 10px, var(--retro-olive) 10px 14px)
+    0 0 / 100% 14px no-repeat border-box border-box var(--surface);
+}
 :scope.numbered > .card::before { border-radius: 50%; background: var(--fg); color: var(--surface); font-family: var(--display); }

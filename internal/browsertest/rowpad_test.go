@@ -102,12 +102,11 @@ const measureRowPad = `(() => {
   return out.join(', ');
 })()`
 
-// rowPadWant is what measureRowPad returns for rowParts, each row padded pad above and below, facts' top padded
-// factsTop.
-func rowPadWant(pad, factsTop string) string {
+// rowPadWant is what measureRowPad returns for rowParts, each row padded pad above and below.
+func rowPadWant(pad string) string {
 	both := pad + "/" + pad + " page"
 	rows := []string{
-		"checklist " + both, "compare " + both, "compare head " + both, "entries " + both, "facts " + factsTop + "/" + pad + " page",
+		"checklist " + both, "compare " + both, "compare head " + both, "entries " + both, "facts " + both,
 		"faq " + both, "faq question 0px/0px page", "fields " + both, "findings " + both, "keys " + both, "look rows " + both,
 		"table " + both, "table head " + both,
 	}
@@ -120,7 +119,7 @@ const rowsSection = "  - heading: Rows\n    parts:\n      - html: |\n          <
 
 // TestUIRowPad measures the rows of every part and look drawn as rows: each is padded --floe-row-pad (0.4rem) above
 // and below, in the page's line height, in every theme, on the screen and printed, which leaves the variable as it is
-// (a theme's base.css could set it, being over floe.base); retro's tiles keep the room of their stripes on top. A
+// (a theme's base.css could set it, being over floe.base). A
 // template whose page's line height is not report's (design: its decided list and its table; postmortem: its table)
 // pads them the same; and a template of one's own setting the variable in its page.css pads them all by it.
 func TestUIRowPad(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -138,11 +137,7 @@ func TestUIRowPad(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			name := theme.Name()
 			b.navigate("/a/rows-" + name + "/?raw")
 			out = append(out, media+" "+name+": "+b.eval(measureRowPad))
-			top := "6.4px"
-			if name == "retro" {
-				top = "25.6px"
-			}
-			want = append(want, media+" "+name+": "+rowPadWant("6.4px", top))
+			want = append(want, media+" "+name+": "+rowPadWant("6.4px"))
 		}
 	}
 	for _, theme := range themes {
@@ -170,6 +165,6 @@ func TestUIRowPad(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	s.floe(t, "publish", s.write(t, "own.yaml", "template: rowpad\nlang: en\ntitle: Rows\nparts:\n"+rowParts), "--slug", "rows-own")
 	b.navigate("/a/rows-own/?raw")
 	out = append(out, "own: "+b.eval(measureRowPad))
-	want = append(want, "own: "+rowPadWant("16px", "16px"))
+	want = append(want, "own: "+rowPadWant("16px"))
 	check(t, "rows", out, strings.Join(want, "|"))
 }
