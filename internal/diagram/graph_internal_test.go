@@ -55,7 +55,7 @@ func laid(g *graph) *layout {
 // grouped is g read and laid out, its groups kept, as items lays it out.
 func grouped(g *graph) []*group {
 	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are graphFault's
-	o.items()
+	_, _ = o.items()                        //nolint:errcheck // its failures are laid's, which graphFault tells
 	return o.groups
 }
 
@@ -803,7 +803,7 @@ func TestGraphLimit(t *testing.T) {
 	for i := range hundred {
 		hundred[i] = part{Graph: chainGraph(200, 200)} //nolint:exhaustruct_v5 // one kind of part
 	}
-	if items, found := expand(hundred); len(items) != 0 || len(found) != 1 || fmt.Sprint(found[0].Args) != "[3960000 4000]" {
+	if items, found, err := expand(hundred); err != nil || len(items) != 0 || len(found) != 1 || fmt.Sprint(found[0].Args) != "[3960000 4000]" {
 		t.Errorf("a hundred graphs: %d items, %v; want none, one diagram_graph_long", len(items), found)
 	}
 
@@ -815,8 +815,8 @@ func TestGraphLimit(t *testing.T) {
 	split := graphOf([]string{"a", "b", "c"}, "a>b", "b>c", "a>c")
 	split.X = 2000
 	for _, parts := range [][]part{{{Graph: over}}, {{Graph: overLabelled}}, {{Graph: exact}, {Graph: split}}} { //nolint:exhaustruct_v5 // one kind of part
-		items, found := expand(parts)
-		if len(items) != 0 || len(found) != 1 || found[0].Key != "diagram_graph_long" || found[0].At() != "#" ||
+		items, found, err := expand(parts)
+		if err != nil || len(items) != 0 || len(found) != 1 || found[0].Key != "diagram_graph_long" || found[0].At() != "#" ||
 			fmt.Sprint(found[0].Args) != "[4001 4000]" {
 			t.Errorf("%d graphs: %d items, %v; want none, diagram_graph_long at # of 4001", len(parts), len(items), found)
 		}
@@ -1146,6 +1146,13 @@ func TestGraphLabels(t *testing.T) {
 			t.Errorf("show→write's label at rank %d, want 3, next to show", n.rank)
 		}
 	}
+	// A labelled edge left with no label's box is floe's fault, not a label dropped quietly.
+	o, _ := readGraph(g2, "#/parts/0/graph") //nolint:errcheck // every name is a box's
+	clear(o.groups[0].labels)
+	if _, err := o.items(); err == nil {
+		t.Error("g2 with no label's box laid out without a failure")
+	}
+
 	// With no label, or a label only on an edge dropped (from a box to itself, to a name of no box), the ranks stay.
 	dropped := graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "check>check", "check>gone")
 	dropped.Edges[2].Label, dropped.Edges[3].Label = Text{"en": "again"}, Text{"en": "gone"}

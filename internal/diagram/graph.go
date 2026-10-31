@@ -1,6 +1,7 @@
 package diagram
 
 import (
+	"fmt"
 	"math"
 	"slices"
 	"strconv"
@@ -147,7 +148,7 @@ func boxAt(at string, i int) string {
 // items lays out each group, side by side in the order of their first box, and opens the graph into a box for each
 // of its boxes and an edge for each of its edges, at their JSON pointers, so that they are named, drawn and checked
 // as boxes and edges written by hand are.
-func (o *graphOut) items() []item {
+func (o *graphOut) items() ([]item, error) {
 	right := o.g.Direction == "right"
 	left := 0.0
 	for _, gr := range o.groups {
@@ -193,11 +194,15 @@ func (o *graphOut) items() []item {
 	for k := range o.g.Edges {
 		if gr := owner[k]; gr != nil { // else told by readGraph
 			at, anchor := o.labelAt(gr, k, right)
+			if at == nil && o.g.Edges[k].Label != nil {
+				return nil, fmt.Errorf("diagram: the graph at %s laid out no label's box for edge %d", //nolint:err113 // floe's own
+					o.at, k)
+			}
 			e := o.edge(k, o.route(gr, k, drawn, right), at, anchor)
 			out = append(out, item{edgeAt(o.at, k), part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
 		}
 	}
-	return out
+	return out, nil
 }
 
 // route is the corners of edge k of group gr as drawn, at the graph's place, its ends on its boxes' outlines,
@@ -237,13 +242,9 @@ func (o *graphOut) labelAt(gr *group, k int, right bool) (*[2]float64, string) {
 // edge is the graph's edge k as an edge drawn by hand: from point to point by via, straight from one to the next.
 func (o *graphOut) edge(k int, pts [][2]float64, at *[2]float64, anchor string) *edge {
 	e := o.g.Edges[k]
-	var label Text
-	if at != nil {
-		label = e.Label
-	}
 	return &edge{
 		From: end{Name: "", Point: &pts[0]}, To: end{Name: "", Point: &pts[len(pts)-1]}, FromSide: "", ToSide: "",
-		Via: pts[1 : len(pts)-1], Straight: true, Label: label, At: at, Dashed: e.Dashed, Bold: e.Bold, Tone: e.Tone,
+		Via: pts[1 : len(pts)-1], Straight: true, Label: e.Label, At: at, Dashed: e.Dashed, Bold: e.Bold, Tone: e.Tone,
 		Start: e.Start, End: e.End, Crossing: false, who: "edge " + e.From + "→" + e.To, graph: o.at, anchor: anchor,
 	}
 }
