@@ -1,5 +1,5 @@
 /* Black on cream, flat primaries, its sections ruled thick */
-:root {
+:scope {
   --bg: #f5f0e6; --surface: #fff; --fg: #0a0a0a; --muted: #3d3d3d; --line: #0a0a0a;
   --accent: #285cdb; --accent-soft: #dbe6ff;
   --good: #0d7941; --good-soft: #d4f5e2; --warn: #a35400; --warn-soft: #ffe9c7; --bad: #c71d1d; --bad-soft: #ffdede;

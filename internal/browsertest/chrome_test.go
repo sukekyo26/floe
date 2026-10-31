@@ -438,8 +438,8 @@ func (s *site) page(t *testing.T, rel, title, html string) string {
 	return s.write(t, rel, b.String())
 }
 
-// floe runs floe as an agent would, from home, against this server.
-func (s *site) floe(t *testing.T, args ...string) {
+// floe runs floe as an agent would, from home, against this server, and returns what it printed.
+func (s *site) floe(t *testing.T, args ...string) string {
 	t.Helper()
 
 	var stdout, stderr bytes.Buffer
@@ -447,6 +447,7 @@ func (s *site) floe(t *testing.T, args ...string) {
 	if code := cli.Run(args, cli.Env{Stdout: &stdout, Stderr: &stderr, Dir: s.Env["HOME"], Getenv: getenv}); code != 0 {
 		t.Fatalf("floe %s = %d: %s", strings.Join(args, " "), code, stderr.String())
 	}
+	return stdout.String()
 }
 
 // get answers path of the server, read whole.

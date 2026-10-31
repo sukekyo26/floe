@@ -241,8 +241,22 @@ adheres to [Semantic Versioning](https://semver.org/).
   dragged or keyed to widen it, and which hides at a button; the browser keeps
   both.
 
+### Changed
+
+- Change the diagrams of `floe diagram render`'s fragment to take no variable or
+  color-scheme from the page around them, its `:root` or an element holding them;
+  they draw in floe's fonts, and in a shadow root too. They take their colours
+  through `@scope`, which a browser that does not read it drops. The diagram
+  part's CSS has no colours of its own, so the CSS of `floe part show diagram`
+  alone draws black diagrams in a page without a palette. floe's palettes are
+  written on `:scope`.
+
 ### Fixed
 
+- Fix the diagrams of `floe diagram render`'s fragment taking the variables of the
+  page they are pasted into: a page's `--bg` filled the edges' labels, so that
+  they could not be read. The fragment carries `default`'s palette on the diagrams
+  alone, and the page outside them keeps its variables and color-scheme.
 - Fix shadows reaching other parts and the page's edge: app's and aurora's
   soft shadows fell on the part below, aurora's past the page's edge and onto
   the card beside, and notebook's tilted sticky notes onto the part below.
