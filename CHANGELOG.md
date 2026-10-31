@@ -240,6 +240,28 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix shadows reaching other parts and the page's edge: app's and aurora's
+  soft shadows fell on the part below, aurora's past the page's edge and onto
+  the card beside, and notebook's sticky notes onto the part below. What a box
+  draws outside itself now stays within `--floe-room` (0.75rem) on every
+  side, the least room floe leaves between parts, and takes no room. What
+  changes on a page:
+  - app's, aurora's and notebook's shadows are smaller; app's close shadow is
+    gone; notebook's sticky notes grow at most 24rem wide, and its cards no
+    longer leave room round them.
+  - brutal's boxes and cards are 6px wider and no longer leave 6px below
+    them, as its shadows take no room; soft's faint shadow on panels and code
+    is gone.
+  - The parts in adr's and postmortem's sections, in runbook's steps, swiss's
+    cards, and a tab's title and its panel stand `--floe-room` apart (runbook
+    put no room between a step's text and its terminal).
+  - ink's cards keep their 4px shadow, which falls within the page's side and
+    the cards' gap.
+  - A theme of one's own draws a shadow by `--floe-shadow-x`, `-y`, `-blur`
+    and `-spread` in its palette and `--floe-shadow-color` on the box, and a
+    shadow within a box by `--floe-inset`; `--shadow` alone draws none, and a
+    `box-shadow` written on a part's box drops them.
+
 - Fix a row's mark left behind when a theme changes the row's padding (retro's
   links, whose mark stood above the link's line): the marks of links, note,
   timeline and the look `numbered` (steps, runbook) stand on the baseline of

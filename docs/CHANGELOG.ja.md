@@ -170,6 +170,21 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 修正
 
+- 修正：影がほかの部品やページの端に届いていた。app と aurora のぼかしの影が下の
+  部品に、aurora の影がページの端と隣のカードに、notebook の付箋が下の部品に
+  届いていた。箱の外へ描くものは、四方とも、floe が部品の間に空ける最小
+  `--floe-room`（0.75rem）以下になり、場所は空けない。ページで変わる所：
+  - app・aurora・notebook の影が小さくなる。app の近い薄い影は無くなる。notebook の
+    付箋は幅 24rem までになり、cards のまわりの余白は無くなる。
+  - brutal の箱とカードは 6px 広くなり、下の 6px の間が無くなる（影のために場所を
+    空けない）。soft の panel と code の薄い影は無くなる。
+  - adr・postmortem の節の中、runbook の手順の中、swiss の cards、タブの名前と中身の
+    間が `--floe-room` になる（runbook は手順の説明と terminal の間が 0 だった）。
+  - ink のカードの 4px の影は変わらない。ページの左右の余白とカードの間に収まる。
+  - 自分のテーマの影は、パレットの `--floe-shadow-x`・`-y`・`-blur`・`-spread` と、
+    箱の `--floe-shadow-color` で描き、箱の中の影は `--floe-inset` で描く。
+    `--shadow` だけでは影は描かれず、部品の箱に `box-shadow` を書くと消える。
+
 - 修正：テーマが行の余白を変えると、行の印が取り残されていた（retro の links で、
   印がリンクの行より上にあった）。links・note・timeline と見た目 `numbered`
   （steps・runbook）の印は、どのテーマでも行の最初の行のベースラインにそろい、次の
