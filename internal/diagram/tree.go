@@ -1,6 +1,10 @@
 package diagram
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/sukekyo26/floe/internal/usererr"
+)
 
 // item is a part to lay out, at its JSON pointer in the spec; a tree's nodes and edges are items of their own.
 type item struct {
@@ -16,18 +20,41 @@ const treeGapX, treeGapY = 24.0, 40.0
 // It reads the nodes read into their types, and walks no value along the schema.
 // LIMIT: trees grow down alone, and a subtree's span is not shared with its neighbours' (a wide row of leaves
 // widens every span above it); pack them if wide trees waste room.
-func expand(parts []part) []item {
+func expand(parts []part) ([]item, usererr.List) {
+	var problems usererr.List
+	graphs := map[int]*graphOut{}
+	passed := 0
+	for i, p := range parts {
+		if p.Graph != nil {
+			o, found := readGraph(p.Graph, pointer(i)+"/graph")
+			problems = append(problems, found...)
+			graphs[i] = o
+			passed += o.passed
+		}
+	}
+	// Over the limit, no graph is laid out: the limit is the diagram's, so that no one graph is told to change.
+	// LIMIT: an edge written by hand to a box of a graph not laid out is told naming nothing too; the graphs come
+	// first.
+	if passed > maxPassed {
+		problems = append(problems, usererr.NewIn("", "#", "diagram_graph_long", passed, maxPassed))
+		graphs = nil
+	}
 	out := make([]item, 0, len(parts))
 	for i, p := range parts {
-		if p.Tree == nil {
+		switch {
+		case p.Tree != nil:
+			m := measures{spans: map[*node]float64{}, heights: nil}
+			m.measure(&p.Tree.Root, 0)
+			m.place(&out, &p.Tree.Root, p.Tree.X, p.Tree.Y, 0, pointer(i)+"/tree/root")
+		case p.Graph != nil:
+			if o := graphs[i]; o != nil {
+				out = append(out, o.items()...)
+			}
+		default:
 			out = append(out, item{pointer(i), p})
-			continue
 		}
-		m := measures{spans: map[*node]float64{}, heights: nil}
-		m.measure(&p.Tree.Root, 0)
-		m.place(&out, &p.Tree.Root, p.Tree.X, p.Tree.Y, 0, pointer(i)+"/tree/root")
 	}
-	return out
+	return out, problems
 }
 
 // measures are a tree's sizes, measured once from its leaves up: how wide each node stands with its subtree, and
@@ -38,7 +65,7 @@ type measures struct {
 }
 
 func nodeBox(n *node, cx, y float64) *box {
-	return &box{Name: n.Name, X: cx, Y: y, Origin: "centre", W: 0, H: 0, Rows: n.Rows, Tone: n.Tone, Shape: n.Shape}
+	return &box{Name: n.Name, X: cx, Y: y, Origin: "centre", W: 0, H: 0, Rows: n.Rows, Tone: n.Tone, Shape: n.Shape, graph: ""}
 }
 
 // measure keeps n's span, its box or its children side by side, the wider, and the tallest node of its depth.

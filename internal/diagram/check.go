@@ -1,6 +1,7 @@
 package diagram
 
 import (
+	"iter"
 	"math"
 	"slices"
 	"strings"
@@ -39,14 +40,14 @@ func (l *layout) checkPlacement() {
 	for i, a := range solids {
 		for _, b := range solids[i+1:] {
 			if a.overlaps(b) {
-				l.problem(a.at, "diagram_overlap", a.what, b.what)
+				l.problem(blame(a.at, a.graph, b.at, b.graph), "diagram_overlap", a.what, b.what)
 			}
 		}
 	}
 	for _, b := range slices.Concat(l.boxes, l.marks) {
 		for _, f := range l.frames {
 			if b.overlaps(f) && !b.inside(f) {
-				l.problem(b.at, "diagram_straddle", b.what, f.what)
+				l.problem(blame(b.at, b.graph, f.at, f.graph), "diagram_straddle", b.what, f.what)
 			}
 		}
 	}
@@ -59,30 +60,57 @@ func (l *layout) checkEdges() {
 	for _, p := range l.paths {
 		for _, b := range l.boxes {
 			if p.runsThrough(b) {
-				l.problem(p.at, "diagram_runs_through", p.what, b.what)
+				l.problem(blame(p.at, p.graph, b.at, b.graph), "diagram_runs_through", p.what, b.what)
 			}
 		}
 		for i, r := range texts {
 			if i != p.own && p.runsThrough(r) {
-				l.problem(p.at, "diagram_runs_through", p.what, r.what)
+				l.problem(blame(p.at, p.graph, r.at, r.graph), "diagram_runs_through", p.what, r.what)
 			}
 		}
 	}
 }
 
-// checkCrossings reports edges crossing like an X, unless one of them allows it.
+// checkCrossings reports edges crossing like an X, unless one of them allows it; two edges of different graphs,
+// neither of which can, are told to move a graph.
 // LIMIT: edges overlapping along a stretch pass (a ↔ drawn on purpose); refuse them if accidental overlaps mislead.
 func (l *layout) checkCrossings() {
-	for i, a := range l.paths {
-		for _, b := range l.paths[i+1:] {
-			if a.crossing || b.crossing {
-				continue
-			}
-			if x, y, ok := firstCrossing(a, b); ok {
-				l.problem(a.at, "diagram_crossing", a.what, b.what, num(x), num(y))
+	for a, b := range l.crossPairs() {
+		x, y, ok := firstCrossing(a, b)
+		switch {
+		case !ok:
+		case a.graph != "" && b.graph != "":
+			l.problem(a.at, "diagram_graph_crossing", a.what, b.what, num(x), num(y))
+		default:
+			l.problem(blame(a.at, a.graph, b.at, b.graph), "diagram_crossing", a.what, b.what, num(x), num(y))
+		}
+	}
+}
+
+// crossPairs are the pairs of edges checkCrossings compares, one at a time: not two of one graph, whose crossings
+// its layout keeps to those of its ranks' order, nor one allowed to cross.
+func (l *layout) crossPairs() iter.Seq2[path, path] {
+	return func(yield func(path, path) bool) {
+		for i, a := range l.paths {
+			for _, b := range l.paths[i+1:] {
+				if a.crossing || b.crossing || a.graph != "" && a.graph == b.graph {
+					continue
+				}
+				if !yield(a, b) {
+					return
+				}
 			}
 		}
 	}
+}
+
+// blame is where a mistake between two things goes: at the first, a, unless a graph laid it out and not the
+// other, which its writer can move.
+func blame(a, aGraph, b, bGraph string) string {
+	if aGraph != "" && bGraph == "" {
+		return b
+	}
+	return a
 }
 
 func (p path) runsThrough(r rect) bool {

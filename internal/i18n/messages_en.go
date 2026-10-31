@@ -237,6 +237,9 @@ var messagesEN = map[string]string{
 	// diagram: the parts' names, layout and raw SVG of a diagram, and its zoom toolbar
 	"diagram_name_used":        `the name "%s" is given before: give each part, row and node its own name`,
 	"diagram_name_unknown":     `edge: no part, row or node named "%s"`,
+	"diagram_graph_unknown":    `edge: no box of this graph named "%s"`,
+	"diagram_graph_long":       "graph: the edges of this diagram's graphs pass %d ranks between their ends, more than %d: split the diagram",
+	"diagram_graph_crossing":   "%s crosses %s of another graph at %s,%s; move one of the graphs by its x and y",
 	"diagram_end_kind":         `edge: "%s" is a %s, which no edge can end at: end it at a box, a table or its named row, an icon, a frame, a bar, a dot or a point`,
 	"diagram_end_side":         `edge: %s has no side %s: write the side of a box, a table, an icon, a frame or a bar, left or right of a row, and none for a dot or a point`,
 	"diagram_too_narrow":       `%s: "%s"%s needs w: %s or more`,

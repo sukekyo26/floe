@@ -44,6 +44,39 @@ func (o outline) el(r rect) elem {
 	return elem{Kind: "rect", X: x, Y: y, W: w, H: h, RX: o.radius}
 }
 
+// on is where the line across side of r at t (an x on top or bottom, a y on left or right) first meets r's
+// outline from that side: on the side where it is straight, else on a round corner or a hexagon's slant.
+func (o outline) on(r rect, side string, t float64) [2]float64 {
+	across := side == "top" || side == "bottom"
+	along, length := t-r.y, r.h
+	if across {
+		along, length = t-r.x, r.w
+	}
+	in := 0.0
+	switch e := math.Min(along, length-along); {
+	case o.hex > 0 && across:
+		// Its points are left and right: towards an end, the top and the bottom slant in to the middle's height.
+		if e < o.hex {
+			in = (o.hex - e) / o.hex * r.h / 2
+		}
+	case o.hex > 0:
+		in = o.hex * math.Abs(t-r.y-r.h/2) / (r.h / 2)
+	case e < o.radius:
+		c := o.radius
+		in = c - math.Sqrt(c*c-(c-e)*(c-e))
+	}
+	switch side {
+	case "top":
+		return [2]float64{t, r.y + in}
+	case "bottom":
+		return [2]float64{t, r.y + r.h - in}
+	case "left":
+		return [2]float64{r.x + in, t}
+	default:
+		return [2]float64{r.x + r.w - in, t}
+	}
+}
+
 // head draws the top of r in its outline, down to y+depth: a table's heading, its corners its outline's. It draws
 // round corners only, not a hexagon, as a table has no other outline.
 func (o outline) head(r rect, depth float64) string {

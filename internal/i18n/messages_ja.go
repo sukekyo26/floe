@@ -226,6 +226,9 @@ var messagesJA = map[string]string{
 	// diagram
 	"diagram_name_used":        "名前「%s」は前にも付いています。部品・行・節にはそれぞれ別の名前を付けてください",
 	"diagram_name_unknown":     "edge: 「%s」という名前の部品も行も節もありません",
+	"diagram_graph_unknown":    "edge: この graph に「%s」という名前の箱はありません",
+	"diagram_graph_long":       "graph: 図の graph の線が端と端の間で越える段が合わせて %d あり、%d を超えています。図を分けてください",
+	"diagram_graph_crossing":   "%sが別の graph の%sと %s,%s で交差しています。どちらかの graph の x・y を動かしてください",
 	"diagram_end_kind":         "edge: 「%s」は %s で、線の端にできません。box・table かその名前の付いた行・icon・frame・bar・dot・点で終えてください",
 	"diagram_end_side":         "edge: %s に辺 %s はありません。辺は box・table・icon・frame・bar に、行には left か right を書き、dot と点には書かないでください",
 	"diagram_too_narrow":       "%s: 「%s」%sには w: %s 以上が要ります",
