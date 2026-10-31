@@ -44,4 +44,4 @@ main h2 { font-size: 1.15rem; }
 .state.waiting { background: var(--warn-soft); color: var(--warn); }
 .state.blocked { background: var(--bad-soft); color: var(--bad); }
 .notes { display: grid; gap: 0.6rem; }
-main > section:not(.asks):not(.notes) { display: grid; gap: 1rem; }
+main > section { display: grid; gap: var(--floe-room); }

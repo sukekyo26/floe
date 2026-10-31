@@ -7,7 +7,7 @@ header { display: grid; gap: 0.4rem; justify-items: start; }
 .kind .name { color: var(--accent); font-weight: 700; }
 h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
 .summary { font-size: 1.05rem; }
-section { display: grid; gap: 0.8rem; }
+section { display: grid; gap: var(--floe-room); }
 h2 { font-size: 1.15rem; }
 .needs { padding: 1rem 1.3rem; }
 .caution { --face: var(--warn-soft); --on-face: var(--warn); background: var(--face); color: var(--on-face); font-weight: 700; padding: 0.6rem 1rem; border-radius: 6px; }

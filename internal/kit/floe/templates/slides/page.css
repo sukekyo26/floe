@@ -21,7 +21,7 @@ body { margin: 0; font-size: 16px; line-height: 1.6; }
 .slides > li.divider::after { color: inherit; }
 .slide h2 { font-size: clamp(1.7rem, 4vw, 3rem); line-height: 1.25; }
 .divider h2 { font-size: clamp(2rem, 5vw, 3.6rem); }
-.content { display: grid; gap: 1rem; }
+.content { display: grid; gap: var(--floe-room); }
 /* Across, on a screen: the cover and the slides side by side, each as wide and as tall as the screen and kept from
    shrinking, stopped at by the scroll sideways; a slide taller than the screen scrolls down inside itself.
    LIMIT: a mouse's wheel scrolls down, not across; the ← and → keys, a swipe, Shift and the wheel, or a trackpad move
