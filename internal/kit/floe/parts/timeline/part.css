@@ -14,7 +14,7 @@
 :scope > li > div > * + * { margin-top: 0.15rem; }
 :scope > li::before {
   content: "\200b"; content: "\200b" / ""; anchor-name: --floe-mark; grid-area: mark; align-self: first baseline;
-  display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   overflow: hidden; border-radius: 50%; background: var(--accent);
 }
 :scope > li:not(:last-child)::after {

@@ -1,6 +1,6 @@
 :scope { gap: 0; }
 .card { border: 0; border-left: 1px solid var(--fg); padding: 0.25rem 1.4rem 0.5rem; }
-:scope:not([data-floe-part~="links"]) > .card:first-child { border-left: 0; padding-left: 0; }
+:scope > .card:first-child { border-left: 0; padding-left: 0; }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / "";
   display: block; width: auto; height: auto; background: none; color: var(--fg);

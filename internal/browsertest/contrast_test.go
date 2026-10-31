@@ -87,7 +87,8 @@ const measureContrast = `(() => {` + colours + `
     if (r < (large ? 3 : 4.5)) low.add(name(e) + what + ' ' + hex(shown) + ' on ' + hex(bg) + ' ' + r.toFixed(2) + ' "' + text.trim().slice(0, 16) + '"');
   };
   // A string of a zero-width space alone, which a mark that is no letter holds for its baseline, shows no text.
-  const text = (content) => /^["'][^"'\u200b]/.test(content) || /\b(counters?|attr)\(/.test(content);
+  const text = (content) => !/^(["'])\u200b\1(\s*\/|$)/.test(content) &&
+    (/^["'][^"']/.test(content) || /\b(counters?|attr)\(/.test(content));
   const measureAll = () => {
     grounds.clear();
     for (const e of document.body.querySelectorAll('*')) {
@@ -253,6 +254,27 @@ func TestRings(t *testing.T) { //nolint:paralleltest // the browser tests share 
 	if got, want := b.eval(measureRings), "button.clipped: ring clipped at 12 of 12 points\nbutton.ringless: no ring\nbutton.thin: no ring\n"+
 		"button.tall: ring clipped at 1 of 1 points\n"+
 		"button.wide: ring #f4f4f4 on #f4f3f0 1.01, 6 of 6 points\nbutton.huge: ring off the screen at every point"; got != want {
+		t.Errorf("measured %q, want %q", got, want)
+	}
+}
+
+// TestContrastText measures the text of ::before as measureContrast does: a string of a zero-width space alone, with
+// its text for a screen reader or not, shows no text and is not measured; one that starts with it and goes on is.
+func TestContrastText(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.write(t, "text.yaml", "lang: en\ntemplate: report\ntitle: Text\nsections: []\n"), "--slug", "text")
+	b.navigate("/a/text/?raw")
+	b.until("the page", "!!document.querySelector('h1')")
+	b.eval(`(() => {
+	  const sheet = new CSSStyleSheet();
+	  sheet.replaceSync('i::before { color: #eee; background: #fff; } .bare::before { content: "\\200b"; } ' +
+	    '.silent::before { content: "\\200b" / ""; } .word::before { content: "\\200bWarning"; }');
+	  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+	  for (const name of ['bare', 'silent', 'word']) { const i = document.createElement('i'); i.className = name; document.body.append(i); }
+	  return '';
+	})()`)
+	if got, want := b.eval(measureContrast), "i.word::before #eeeeee on #ffffff 1.16 \"\"\u200bWarning\"\""; got != want {
 		t.Errorf("measured %q, want %q", got, want)
 	}
 }
