@@ -169,9 +169,10 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 :scope > li { position: relative; padding-inline: 3rem 1.2rem; counter-increment: floe-check; }
 :scope > li.done { counter-increment: floe-check floe-checked; color: var(--muted); }
-/* A mark, not a box: the items are not to be ticked on the page */
+/* A mark, not a box: the items are not to be ticked on the page. Its top is left as it would lie, level with the
+   item's first line under the rows' padding */
 :scope > li::before {
-  content: "–"; position: absolute; left: 1.2rem; top: var(--floe-row-pad); width: 1.15rem; text-align: center;
+  content: "–"; position: absolute; left: 1.2rem; width: 1.15rem; text-align: center;
   font-weight: 800; color: var(--muted);
 }
 :scope > li.done::before { content: "✓"; color: var(--good); }
@@ -447,12 +448,12 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts {
 @scope ([data-floe-part="faq"]) to (:scope [data-floe-part] > *) {
-/* Each question a row; Q leads it, and its answer opens under it. The summary takes the rows' padding, not the
-   details, so that a click on it opens the answer */
+/* Each question a row; Q leads it, and its answer opens under it.
+   LIMIT: the rows' padding is the details', outside the summary, where a click opens nothing. Pad the summary of
+   every part drawn as rows alike, not faq's alone, if it comes to be missed */
 :scope { display: grid; }
-:scope > details { padding-block: 0; }
 :scope summary {
-  display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.5rem; padding: var(--floe-row-pad) 1.2rem;
+  display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.5rem; padding-inline: 1.2rem;
   cursor: pointer; font-weight: 700; list-style: none;
 }
 :scope summary::-webkit-details-marker { display: none; }
@@ -460,7 +461,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope summary::after { content: "+"; content: "+" / ""; color: var(--muted); font-weight: 400; }
 :scope details[open] summary::after { content: "−"; content: "−" / ""; }
 :scope summary:focus-visible { outline-offset: -2px; }
-:scope details > div { display: grid; gap: 0.5rem; padding: 0 1.2rem 0.9rem 3.1rem; color: var(--muted); }
+:scope details > div { display: grid; gap: 0.5rem; padding: 0.5rem 1.2rem 0 3.1rem; color: var(--muted); }
 :scope details > div > * { margin: 0; }
 }
 }

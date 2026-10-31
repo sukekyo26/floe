@@ -5,9 +5,10 @@
 }
 :scope > li { position: relative; padding-inline: 3rem 1.2rem; counter-increment: floe-check; }
 :scope > li.done { counter-increment: floe-check floe-checked; color: var(--muted); }
-/* A mark, not a box: the items are not to be ticked on the page */
+/* A mark, not a box: the items are not to be ticked on the page. Its top is left as it would lie, level with the
+   item's first line under the rows' padding */
 :scope > li::before {
-  content: "–"; position: absolute; left: 1.2rem; top: var(--floe-row-pad); width: 1.15rem; text-align: center;
+  content: "–"; position: absolute; left: 1.2rem; width: 1.15rem; text-align: center;
   font-weight: 800; color: var(--muted);
 }
 :scope > li.done::before { content: "✓"; color: var(--good); }
