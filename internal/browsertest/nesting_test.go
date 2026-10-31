@@ -92,5 +92,5 @@ func TestUINesting(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/a/nesting-brutal/?raw")
 	check(t, "held", []string{b.eval(measureHeld)}, "12px 0px 0px | 0px | 0px")
 	b.navigate("/a/nesting-default/?raw")
-	check(t, "blocks", []string{b.eval(measureBlocks)}, "8px 0px 0px | 8px 0px 0px | 0px | 0px | 8px 0px 0px")
+	check(t, "blocks", []string{b.eval(measureBlocks)}, "8px 0px 0px | 8px 0px 0px | 0px | 0px | 12px 0px 0px")
 }
