@@ -13,7 +13,7 @@
 }
 :scope > li.done::before { content: "✓"; color: var(--good); }
 :scope::after {
-  content: counter(floe-checked) " / " counter(floe-check); padding: var(--floe-row-pad) 1.2rem; text-align: right;
+  content: counter(floe-checked) " / " counter(floe-check); padding-inline: 1.2rem; text-align: right;
   font-family: var(--mono);
   font-size: 0.8rem; color: var(--muted);
 }

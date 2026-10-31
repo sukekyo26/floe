@@ -47,6 +47,7 @@ quote/
   - `{{written}}` は、部品の値を書いたままで返します。`part.html` が比べるか、pill の字のように字のまま描くためのもので、Markdown や HTML として描く項目は `.` から取ります。中の部品と format は描いていないので `eq`・`index` に渡せます。値が書いていない鍵は nil でなく無いので、`note` を省いた値で `{{(written).note}}` は誤りです（`index` か `with` で引きます）。floe の `table` は、列の `pills` の升をこれで比べます。
   - `{{range tree .}}` は、`path`（フォルダは `/` で終える）・`note`・`change` を持つ項目の並びを読み、パスが名指すフォルダに入れ子にします（並びに無いフォルダも作ります）。それぞれ `.Name`・`.Note`・`.Change`・`.Dir`（フォルダか）・`.Children` で来ます。
 - 部品の schema は、テンプレートと同じく floe の `format`（`html`・`markdown`・`image`）を取ります。floe が辿る `properties` か `items` の下か、根で宣言します。format を持つ共有の schema も取ります。その項目は `part.html` に描いたものが来ます（`html` は書いたとおり、`markdown` は HTML に、`image` は data URI に。`<img src="{{.file}}" alt="{{.alt}}">`）。`{{.h}}` と書き、関数（`markdown`・`markdownLine`・`printf`・`slice`・`eq` など）に渡したり、`<script>` の中に置いたりしません（書いた字でなく HTML なので、そこでは正しく動きません）。`html` の項目は、テンプレートの項目と同じく描いたページで確かめます（[templates.ja.md](templates.ja.md)）。format の無い文字を Markdown で描くのは `{{markdown .text}}` です。`any.json` の値は、描いた 1 つでなく、全部の種類の map で来ます（[見た目と共有の schema](#見た目と共有の-schema)）。
+- 行が縦に並ぶ部品は、見た目 `rows` を借り（`looks: [rows]`）、行の上下の余白を書かずに `rows` に任せます。`rows` を借りられない行は `var(--floe-row-pad)` を読みます。テーマはこの変数を替えません。詳しくは[見た目を借りる](#見た目を借りる)にあります。
 - `floe part show <名前>` は、floe の部品も含めて、読むファイルを全部、並べた `files:` の行の後に出し、`floe part show <名前> <ファイル>` はそのファイルだけを出します。合うものを floe の部品から写してください。
 
 ## 見た目と共有の schema
@@ -75,7 +76,7 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 
 - 部品の箱でない要素は `data-floe-look` で見た目を借ります。`<section data-floe-look="panel">` はどのテーマでもパネルです。その見た目は部品とテンプレートより下の `floe.looks` に入るので、中に置かれた部品やテンプレートが整えられます。
 - floe の部品もこうして見た目を借ります。`compare`・`fields`・`findings` は table の、`stats`・`options`・`facts`・`links`・`decision` は cards の、`diff`・`terminal` は code の、`checklist`・`entries`・`faq`・`keys` は `rows` の、ほかのパネルに描く部品は `panel` の見た目を借ります。テーマのある見た目へのルールは、それを借りる部品を全部描きます。
-- 見た目 `rows` は、行ごとに上下に `--floe-row-pad`（floe の base で 0.4rem）の余白を付けます。借りる部品やテンプレートは、行の余白を左右だけ書きます。行が `rows` を借りない部品は、表のセルや facts のタイルのように変数を読み（`padding-block: var(--floe-row-pad)`）、ほかの行と高さをそろえます。
+- 見た目 `rows` は、行ごとに上下に `--floe-row-pad`（floe の base で 0.4rem）の余白を付けます。箱が最後に `::after` で描く行（checklist の数）も行です。借りる部品やテンプレートは、行の余白を左右だけ書きます。行が `rows` を借りない部品は、表のセルや facts のタイルのように変数を読み（`padding-block: var(--floe-row-pad)`）、ほかの行と高さをそろえます。
 
 ## テーマ
 

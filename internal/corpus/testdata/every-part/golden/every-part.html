@@ -153,8 +153,9 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts {
 @scope ([data-floe-part="checklist"], [data-floe-part="entries"], [data-floe-part="faq"], [data-floe-part="keys"]) to (:scope [data-floe-part] > *) {
 /* Rows in a panel, each padded above and below by --floe-row-pad (base.css), a rule between each and the next; what
-   takes it writes its rows' padding at the sides alone */
-:scope > * { padding-block: var(--floe-row-pad); }
+   takes it writes its rows' padding at the sides alone. A row the box draws last as ::after (checklist's count) is a
+   row too */
+:scope > *, :scope::after { padding-block: var(--floe-row-pad); }
 :scope > * + * { border-top: 1px solid var(--line); }
 }
 }
@@ -177,7 +178,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 :scope > li.done::before { content: "✓"; color: var(--good); }
 :scope::after {
-  content: counter(floe-checked) " / " counter(floe-check); padding: var(--floe-row-pad) 1.2rem; text-align: right;
+  content: counter(floe-checked) " / " counter(floe-check); padding-inline: 1.2rem; text-align: right;
   font-family: var(--mono);
   font-size: 0.8rem; color: var(--muted);
 }
