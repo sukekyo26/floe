@@ -135,10 +135,18 @@ const measureCellShadows = `[...document.querySelectorAll('[data-floe-part=cell]
   return box && !/^rgba\(.*, 0\)$|^transparent$/.test(colour(box)) ? colour(c) + ' in ' + colour(box) : '';
 }).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' | ')`
 
+// measureCast returns each box that sets a shadow's colour but casts no shadow of that colour, as a box-shadow written
+// on it elsewhere wins over base.css's.
+const measureCast = `[...document.querySelectorAll('[data-floe-part], [data-floe-look], blockquote')].filter((e) => {
+  const s = getComputedStyle(e), c = s.getPropertyValue('--floe-shadow-color').trim();
+  return !/^rgba\(.*, 0\)$|^transparent$/.test(c) && !s.boxShadow.split(/,(?![^(]*\))/).some((x) => x.trim().startsWith(c) && !x.includes('inset'));
+}).map((e) => e.tagName.toLowerCase() + '[' + (e.dataset.floePart || e.dataset.floeLook) + ']').filter((v, i, a) => a.indexOf(v) === i).join(' | ')`
+
 // TestUIShadows draws every part, and floe's templates with their parts one after another at the least room floe
 // leaves between parts, in every theme and in one of one's own whose shadow reaches that room on every side, at the
 // widths of a phone, a laptop, the column at its widest and slides on a wide screen: nothing a box draws outside
-// itself (a shadow, a tilt and its tape, an outline) reaches the page's edge, another box or the box it stands in.
+// itself (a shadow, a tilt and its tape, an outline) reaches the page's edge, another box or the box it stands in;
+// every box that sets a shadow's colour casts it.
 // A box in one that casts a shadow casts none (the colour is the box's alone), and retro's cards keep the stripes
 // they draw inside themselves with --floe-inset.
 func TestUIShadows(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -171,6 +179,9 @@ func TestUIShadows(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		b.navigate("/a/shadows-" + name + "/?raw")
 		for _, w := range widths {
 			amiss = append(amiss, b.shadowsIn("every-part in "+name, w)...)
+		}
+		if lost := b.eval(measureCast); lost != "" {
+			amiss = append(amiss, "every-part in "+name+": no shadow cast by "+lost)
 		}
 	}
 	examples, err := filepath.Glob("../corpus/testdata/example/*.yaml")
