@@ -166,6 +166,21 @@ func diagramColours(root string) string {
 })(` + root + `)`
 }
 
+// unpainted lists the shapes of the diagrams that a rule of part.css leaves in the browser's defaults, as one that
+// reads a variable no palette sets: a line without a stroke, another shape black, or with neither fill nor stroke.
+// LIMIT: a filled shape's stroke left so is not told; it draws no outline, as some shapes are meant to.
+const unpainted = `(() => {
+  const out = new Set();
+  for (const e of document.querySelectorAll('svg.dg :is(rect, path, circle, ellipse, line, polyline, polygon, text)')) {
+    if (e.closest('defs')) continue;
+    const c = getComputedStyle(e);
+    if (e.tagName === 'line' ? c.stroke === 'none' : c.fill === 'rgb(0, 0, 0)' || (c.fill === 'none' && c.stroke === 'none')) {
+      out.add(e.tagName + '.' + [...e.classList].join('.') + ' in .' + [...e.parentElement.classList].join('.'));
+    }
+  }
+  return [...out].join('\n');
+})()`
+
 // outside tells what a page draws outside the diagrams with its own palette, and its root's color-scheme.
 const outside = `(() => {
   const c = getComputedStyle(document.querySelector('.probe'));
@@ -200,6 +215,9 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 	s.floe(t, "publish", s.write(t, "diagrams.yaml", data.String()), "--slug", "diagrams")
 	b.navigate("/a/diagrams/?raw")
 	b.until("the toolbars", "document.querySelectorAll('.dg-tools').length === "+strconv.Itoa(len(specs)))
+	if got := b.eval(unpainted); got != "" {
+		t.Errorf("shapes part.css leaves unpainted in floe's page:\n%s", got)
+	}
 	want := b.eval(diagramColours("document"))
 
 	dir := t.TempDir()
