@@ -3,7 +3,7 @@
 <title>The retro theme in a record</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
-@layer floe.looks.boxes, floe.looks.depth0, floe.parts.boxes, floe.parts.depth0;
+@layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
 @layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.base {
@@ -152,10 +152,30 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 }
 </style>
 <style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: 0.78rem; font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
+  background: var(--tone-soft); color: var(--tone);
+}
+}
+}
+</style>
+<style>
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
 :scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { border: 1.5px solid currentColor; }
 }
 }
 </style>
@@ -178,10 +198,6 @@ article { padding: clamp(1.25rem, 5vw, 3rem); display: grid; gap: 1.8rem; }
 header { display: grid; gap: 0.4rem; justify-items: start; border-bottom: 3px double var(--line); padding-bottom: 1.4rem; }
 .kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; gap: 0.8rem; }
 h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
-/* LIMIT: the contrast test measures the badge of the example's state alone; the others were measured once, in every
-   theme, when they were made */
-.status { font-weight: 800; letter-spacing: 0.15em; padding: 0.05rem 0.8rem; border: 2px solid currentColor; border-radius: 6px; background: var(--tone-soft); color: var(--tone); }
-.superseded-by { --face: var(--tone-soft); --on-face: var(--tone); background: var(--face); color: var(--on-face); padding: 0.3rem 0.8rem; border-radius: 6px; }
 .deciders { color: var(--muted); font-size: 0.9rem; }
 section { display: grid; gap: var(--floe-room); }
 h2 { font-size: 1.1rem; }
@@ -201,7 +217,7 @@ h2 { font-size: 1.1rem; }
 <article data-floe-look="panel">
 <header>
 <p class="kind">Decision record</p>
-<h1 id="the-retro-theme-in-a-record">The retro theme in a record</h1><p class="status accepted" data-floe-tone="good">Accepted</p>
+<h1 id="the-retro-theme-in-a-record">The retro theme in a record</h1><p class="status accepted" data-floe-part="cell" data-floe-tone="good">Accepted</p>
 </header>
 <section><h2 id="context">Context</h2><p>A page drawn in a panel, its headings with the stripes.</p>
 </section>

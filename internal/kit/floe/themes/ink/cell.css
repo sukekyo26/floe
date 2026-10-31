@@ -1,1 +1,6 @@
-:scope { border-radius: 6px; font-weight: 700; background: var(--tone); color: var(--on-fill); }
+/* Filled with its tone; on a face (a band in accent) a ring in the face's text colour, drawn within it, keeps a pill
+   of the face's own colour seen */
+:scope {
+  border-radius: 6px; font-weight: 700; background: var(--tone); color: var(--on-fill);
+  outline: 1.5px solid var(--on-face, transparent); outline-offset: -1.5px;
+}

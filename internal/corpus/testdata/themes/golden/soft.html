@@ -133,9 +133,10 @@ blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-rad
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A pill: a short status in the colour of its tone */
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too) */
 :scope {
-  display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
+  display: inline-block; font-family: var(--font); font-size: 0.78rem; font-weight: 600; letter-spacing: normal; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
   background: var(--tone-soft); color: var(--tone);
 }

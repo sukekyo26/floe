@@ -148,6 +148,8 @@ An element of the template borrows a look by `data-floe-look`, drawn alike in ev
 - `band`: a band filled with the accent, its text, links, code and focus ring in the colour on a fill, as design's conclusion and handoff's head are.
 - `numbered`: on an `<ol>`, its items numbered in rings joined by a line, as the part `steps` and runbook's steps are. Write each item's text in an element (`<li><p>Restart <code>api</code> now</p></li>`), as text written straight in an item breaks into a grid item a run, and start the item with text, as a ring stands at the bottom of a first child with no text (an image, an empty block).
 
+A status the template words itself (`{{word …}}`: a state, a severity, a kind) and a caution are drawn as parts, not borrowed as looks: the template writes a part's box in `page.html`, a pill by `data-floe-part="cell"` and a caution by `data-floe-part="note"`, their colour by `data-floe-tone` (`<p class="status" data-floe-part="cell" data-floe-tone="good">`), as adr's, postmortem's, handoff's and runbook's are. They then stand in a band, a face and a tone as parts do, drawn as the theme draws its pills and notes; `page.css` places the box and does not reach in it. Write a note's text in an element (`<div data-floe-part="note"><p>…</p></div>`), its title as `<strong class="title">`. Text a writer writes freely (a line of Markdown, a name) is no pill: it may run long, and a link in it may not read on a theme's filled pill.
+
 ## The palette
 
 The page's colours and faces are CSS variables that the theme's `palette.css` sets, and that the parts, the diagrams, floe's base and the template draw with. floe's `default` palette defines them all and goes into every page; the theme a data file picks sets them over it.

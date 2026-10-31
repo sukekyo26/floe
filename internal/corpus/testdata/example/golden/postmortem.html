@@ -137,10 +137,26 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 /* A band filled with the accent, a face (base.css): its text, links, code and focus ring in the colour on a fill */
 :scope { --face: var(--accent); --on-face: var(--on-fill); background: var(--face); color: var(--on-face); }
 /* A part in the band draws on its own ground, in the page's text colour, which it would otherwise take from the band.
-   LIMIT: a part with no ground of its own (a pill, links without a panel) is drawn in that colour on the accent; give it a
-   panel, or keep it out of the band. A theme whose faces let what is under them through (aurora's glass) lets the accent
-   through them too, where the text sinks: such a theme makes its faces opaque in a band, in its band.css, as aurora does */
+   A pill of a theme that gives it no ground draws in the band's text colour (the face's rule), its tone told by its
+   word alone, as in any face (a note's, a quote's), its marks' colours too (swiss's tick and triangle).
+   LIMIT: another part with no ground of its own (links without a panel, swiss's note) is drawn in the page's text
+   colour on the accent; give it a panel, or keep it out of the band. A theme whose faces let what is under them
+   through (aurora's glass) lets the accent through them too, where the text sinks: such a theme makes its faces
+   opaque in a band, in its band.css, as aurora does */
 :scope [data-floe-part] { color: var(--fg); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: 0.78rem; font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
+  background: var(--tone-soft); color: var(--tone);
+}
 }
 }
 </style>
@@ -301,6 +317,14 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border-radius: 20px; padding: var(--floe-room); }
@@ -359,9 +383,6 @@ body { margin: 0; padding-block: 0 4rem; font-size: 16px; line-height: 1.75; }
 .band { padding-block: 2rem 1.8rem; }
 .band .column { display: grid; gap: 0.4rem; justify-items: start; }
 .kind { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.08em; display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; align-items: baseline; }
-/* LIMIT: the contrast test measures the badge of the example's severity alone; the others were measured once, in every
-   theme, when they were made */
-.severity { border-radius: 99px; padding: 0.05rem 0.7rem; font-weight: 800; background: var(--tone-soft); color: var(--tone); }
 h1 { font-size: clamp(1.5rem, 4vw, 2.1rem); line-height: 1.35; }
 .summary { font-size: 1.05rem; }
 .authors { font-size: 0.9rem; }
@@ -373,7 +394,6 @@ h2 { font-size: 1.15rem; }
 .cause { border-left: 4px solid var(--accent); padding-left: 1.1rem; }
 .lessons { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr)); gap: 1rem; }
 .lessons h3 { border-left: 4px solid var(--tone); padding-left: 0.6rem; font-size: 1rem; }
-.state { font-size: 0.8rem; font-weight: 700; padding: 0.05rem 0.6rem; border-radius: 99px; white-space: nowrap; background: var(--tone-soft); color: var(--tone); }
 .ref { display: block; font-family: var(--mono); font-size: 0.85rem; color: var(--muted); }
 }
 }
@@ -382,7 +402,7 @@ h2 { font-size: 1.15rem; }
 <body>
 <header class="band" data-floe-look="band">
 <div class="column">
-<p class="kind">Incident review <span class="date">2030-05-14</span> <span class="severity high" data-floe-tone="bad">High</span></p>
+<p class="kind">Incident review <span class="date">2030-05-14</span> <span class="severity high" data-floe-part="cell" data-floe-tone="bad">High</span></p>
 <h1 id="checkout-failed-for-47-minutes-after-a-certificate-expired">Checkout failed for 47 minutes after a certificate expired</h1>
 <p class="summary">The certificate of the payment gateway&#39;s internal endpoint expired at 10:42 UTC, so <code>POST /checkout</code> failed; every customer saw it until a new one was issued. See the <a href="/a/runbook-certs/">runbook</a>.</p><p class="authors">Authors: Payments team</p>
 </div>
@@ -414,9 +434,9 @@ h2 { font-size: 1.15rem; }
 <section><h2 id="actions">Actions</h2><div data-floe-look="table"><table>
 <thead><tr><th>Action</th><th>Owner</th><th>State</th></tr></thead>
 <tbody>
-<tr><td>Put every certificate under the renewal job<span class="ref">OPS-412</span></td><td>Platform team</td><td><span class="state doing">In progress</span></td></tr>
-<tr><td>Send expiry warnings to the on-call rota<span class="ref">OPS-413</span></td><td>Payments team</td><td><span class="state done" data-floe-tone="good">Done</span></td></tr>
-<tr><td>Alert 14 days before any certificate expires, from <a href="/a/cert-inventory/">the inventory</a></td><td>Platform team</td><td><span class="state todo" data-floe-tone="warn">To do</span></td></tr>
+<tr><td>Put every certificate under the renewal job<span class="ref">OPS-412</span></td><td>Platform team</td><td><span class="state doing" data-floe-part="cell">In progress</span></td></tr>
+<tr><td>Send expiry warnings to the on-call rota<span class="ref">OPS-413</span></td><td>Payments team</td><td><span class="state done" data-floe-part="cell" data-floe-tone="good">Done</span></td></tr>
+<tr><td>Alert 14 days before any certificate expires, from <a href="/a/cert-inventory/">the inventory</a></td><td>Platform team</td><td><span class="state todo" data-floe-part="cell" data-floe-tone="warn">To do</span></td></tr>
 </tbody>
 </table></div></section>
 </div>

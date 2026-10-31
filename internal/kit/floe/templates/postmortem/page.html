@@ -8,7 +8,7 @@
 <body>
 <header class="band" data-floe-look="band">
 <div class="column">
-<p class="kind">{{word "kind"}}{{with .Data.date}} <span class="date">{{.}}</span>{{end}}{{with .Data.severity}} <span class="severity {{.}}"{{if eq . "high"}} data-floe-tone="bad"{{else if eq . "medium"}} data-floe-tone="warn"{{else}} data-floe-tone="muted"{{end}}>{{word (printf "severity_%s" .)}}</span>{{end}}</p>
+<p class="kind">{{word "kind"}}{{with .Data.date}} <span class="date">{{.}}</span>{{end}}{{with .Data.severity}} <span class="severity {{.}}" data-floe-part="cell"{{if eq . "high"}} data-floe-tone="bad"{{else if eq . "medium"}} data-floe-tone="warn"{{else}} data-floe-tone="muted"{{end}}>{{word (printf "severity_%s" .)}}</span>{{end}}</p>
 <h1>{{.Title}}</h1>
 <p class="summary">{{markdownLine .Data.summary}}</p>
 {{- with .Data.authors}}<p class="authors">{{word "authors"}}: {{.}}</p>{{end}}
@@ -37,7 +37,7 @@
 <thead><tr><th>{{word "action"}}</th>{{if $owner}}<th>{{word "owner"}}</th>{{end}}{{if $state}}<th>{{word "state"}}</th>{{end}}</tr></thead>
 <tbody>
 {{- range .}}
-<tr><td>{{markdownLine .what}}{{with .ref}}<span class="ref">{{.}}</span>{{end}}</td>{{if $owner}}<td>{{.owner}}</td>{{end}}{{if $state}}<td>{{with .state}}<span class="state {{.}}"{{if eq . "done"}} data-floe-tone="good"{{else if eq . "todo"}} data-floe-tone="warn"{{end}}>{{word (printf "state_%s" .)}}</span>{{end}}</td>{{end}}</tr>
+<tr><td>{{markdownLine .what}}{{with .ref}}<span class="ref">{{.}}</span>{{end}}</td>{{if $owner}}<td>{{.owner}}</td>{{end}}{{if $state}}<td>{{with .state}}<span class="state {{.}}" data-floe-part="cell"{{if eq . "done"}} data-floe-tone="good"{{else if eq . "todo"}} data-floe-tone="warn"{{end}}>{{word (printf "state_%s" .)}}</span>{{end}}</td>{{end}}</tr>
 {{- end}}
 </tbody>
 </table></div></section>

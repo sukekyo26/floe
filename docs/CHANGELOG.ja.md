@@ -178,6 +178,12 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：組み込みのテンプレートの状態の札と注意を、部品 cell・note として描く。adr の
+  状態、postmortem の重さと行動の状態、handoff の種類と状態は pill に、adr の置き換えた
+  記録（頭の後ろに移した）、runbook の注意と失敗したときは注記になり、テーマの pill と
+  注記の形で描く。pill は、置かれた所によらず本文の字体になる（retro の options の選んだ
+  案の札は、カードの題の Georgia でなくなる）。notebook の pill は不透明に塗り、紙の
+  罫線が透けない。
 - 変更：findings の nit は tone `muted` の pill になり、テーマのほかの pill と同じ形で
   描く（blueprint・editorial・washi は地なし、ink は塗り、brutal・notebook・swiss は
   テーマの字の色）。
@@ -205,6 +211,9 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 修正
 
+- 修正：塗った面（帯、注記）の上の pill が読めなかった。地の無い blueprint・editorial・
+  washi・swiss の pill は面の上に tone の色で描いていたが、面の字の色で描く（tone は
+  言葉で伝わる）。notebook の pill は面が透けなくなった。
 - 修正：decision が、説明の中の並びにも、退けた案の × を付けていた。
 - 修正：触れていない箱を「線が通る」と言っていた。検査が箱をまわりの四角で
   測っていたので、hex の尖りの外や丸い角（pill・state の端、箱・table・bar

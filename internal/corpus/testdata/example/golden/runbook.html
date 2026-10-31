@@ -186,6 +186,66 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
+:scope {
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
+}
+:scope > * { grid-column: text; align-self: first baseline; }
+:scope::before {
+  content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
+  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  border-radius: 50%;
+  background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+}
+/* A tone's mark, no more specific than the mark's own rule, so that a theme's :scope::before (content: none) wins */
+:scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
+:scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
+:scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
+/* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
+:scope > * + * { margin-top: 0.5rem; }
+.title { display: block; font-size: 0.9rem; color: var(--tone); }
+:scope > .title + * { margin-top: 0.1rem; }
+/* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
+:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
+:scope code { background: var(--face, var(--surface)); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="note"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
+:scope {
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
+}
+:scope > * { grid-column: text; align-self: first baseline; }
+:scope::before {
+  content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
+  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  border-radius: 50%;
+  background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+}
+/* A tone's mark, no more specific than the mark's own rule, so that a theme's :scope::before (content: none) wins */
+:scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
+:scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
+:scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
+/* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
+:scope > * + * { margin-top: 0.5rem; }
+.title { display: block; font-size: 0.9rem; color: var(--tone); }
+:scope > .title + * { margin-top: 0.1rem; }
+/* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
+:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
+:scope code { background: var(--face, var(--surface)); }
+}
+}
+</style>
+<style>
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="numbered"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
@@ -317,6 +377,26 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope {
+  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
+}
+:scope::before { border-radius: 10px; background: var(--surface); color: var(--tone); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="note"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope {
+  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
+}
+:scope::before { border-radius: 10px; background: var(--surface); color: var(--tone); }
+}
+}
+</style>
+<style>
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border: 0; border-radius: 20px; }
@@ -355,15 +435,12 @@ h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
 section { display: grid; gap: var(--floe-room); }
 h2 { font-size: 1.15rem; }
 .needs { padding: 1rem 1.3rem; }
-.caution { --face: var(--warn-soft); --on-face: var(--warn); background: var(--face); color: var(--on-face); font-weight: 700; padding: 0.6rem 1rem; border-radius: 6px; }
 .steps > li > * + * { margin-top: var(--floe-room); }
 /* Over the look numbered's rings, as floe.page comes after floe.looks */
 .steps > li::before { background: var(--accent); color: var(--on-fill); box-shadow: none; }
 .steps .head { display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: baseline; }
 .steps h3 { font-size: 1.1rem; }
 .who { font-size: 0.75rem; font-weight: 700; padding: 0 0.6rem; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
-.fails { border-left: 4px solid var(--bad); --face: var(--bad-soft); --on-face: var(--fg); background: var(--face); color: var(--on-face); padding: 0.4rem 0.8rem; border-radius: 0 6px 6px 0; }
-.fails b { color: var(--bad); margin-right: 0.4rem; }
 .rollback { border: 2px dashed var(--bad); border-radius: 10px; padding: 1rem 1.3rem; }
 .rollback h2 { color: var(--bad); }
 .rollback .steps > li::before { background: var(--bad); }
@@ -377,7 +454,7 @@ h2 { font-size: 1.15rem; }
 <p class="kind"><span class="name">Runbook</span> <span>Owner: Platform team</span> <span>Updated: 2030-05-16</span></p>
 <h1 id="issue-and-deploy-a-new-certificate-for-the-payment-gateway">Issue and deploy a new certificate for the payment gateway</h1><p class="summary">Replace the TLS certificate of the gateway&#39;s internal endpoint before it expires, or at once when it has. Takes about 20 minutes; checkout keeps working throughout.</p>
 </header>
-<section class="needs" data-floe-look="panel"><h2 id="before-you-start">Before you start</h2><ul><li>You can run <code>kubectl</code> against the <code>payments</code> cluster</li><li>You hold the <code>cert-issuer</code> role in the vault</li><li>The on-call engineer of the payments team knows you are starting</li></ul></section><p class="caution">Do not delete the old secret until checkout works on the new one; the gateway cannot start without a certificate.</p>
+<section class="needs" data-floe-look="panel"><h2 id="before-you-start">Before you start</h2><ul><li>You can run <code>kubectl</code> against the <code>payments</code> cluster</li><li>You hold the <code>cert-issuer</code> role in the vault</li><li>The on-call engineer of the payments team knows you are starting</li></ul></section><div class="caution" data-floe-part="note" data-floe-tone="warn"><p>Do not delete the old secret until checkout works on the new one; the gateway cannot start without a certificate.</p></div>
 <section><h2 id="steps">Steps</h2><ol class="steps" data-floe-look="numbered">
 <li><div class="head"><h3 id="issue-the-certificate">Issue the certificate</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">vault write -format=json pki/issue/gateway common_name=gateway.internal ttl=8760h &gt; cert.json</span><span class="run" data-floe-copy="">jq -r .data.certificate cert.json &gt; cert.pem &amp;&amp; jq -r .data.private_key cert.json &gt; key.pem</span><span class="run" data-floe-copy="">jq -r .data.expiration cert.json</span><span class="out">1936688400</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
@@ -442,7 +519,7 @@ h2 { font-size: 1.15rem; }
   });
   show(words.copy, false);
   document.currentScript.after(button, status);
-})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><p class="fails"><b>If it fails</b> A <code>permission denied</code> means the role is missing; ask the platform team for <code>cert-issuer</code>.</p></li>
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><div class="fails" data-floe-part="note" data-floe-tone="bad"><strong class="title">If it fails</strong><p>A <code>permission denied</code> means the role is missing; ask the platform team for <code>cert-issuer</code>.</p></div></li>
 <li><div class="head"><h3 id="store-it-as-a-new-secret">Store it as a new secret</h3></div><p>Name it with today&#39;s date, so the old one stays until the end.</p><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments create secret tls gateway-tls-20300516 --cert=cert.pem --key=key.pem</span><span class="out">secret/gateway-tls-20300516 created</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
@@ -570,7 +647,7 @@ h2 { font-size: 1.15rem; }
   });
   show(words.copy, false);
   document.currentScript.after(button, status);
-})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><p class="fails"><b>If it fails</b> Roll back at once (below), then page the on-call engineer.</p></li>
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><div class="fails" data-floe-part="note" data-floe-tone="bad"><strong class="title">If it fails</strong><p>Roll back at once (below), then page the on-call engineer.</p></div></li>
 <li><div class="head"><h3 id="check-that-checkout-works">Check that checkout works</h3><span class="who">Payments on-call</span></div><p>Place a test order on the staging shop and watch the checkout error rate on the dashboard for five minutes.</p></li>
 <li><div class="head"><h3 id="delete-the-old-secret">Delete the old secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments delete secret gateway-tls-20290514</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');

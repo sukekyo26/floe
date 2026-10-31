@@ -148,6 +148,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 - `band`：アクセントの色で塗った帯。中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。design の結論や handoff の頭のように。
 - `numbered`：`<ol>` に付けると、項目に丸い番号を付けて線でつなぎます。部品 `steps` と runbook の手順のように。項目の字は要素で包みます（`<li><p>Restart <code>api</code> now</p></li>`）。項目に直に書いた字は、字の続きと要素ごとに grid の別の項目になって崩れます。項目は字で始めます。字の無いもの（画像、空のブロック）で始まると、丸はその下の縁に来ます。
 
+テンプレートが自分の言葉（`{{word …}}`）で描く札（状態、重さ、種類）と注意は、見た目として借りず、部品として描きます。`page.html` に部品の箱を書き、札は `data-floe-part="cell"`、注意は `data-floe-part="note"`、色は `data-floe-tone` で付けます（`<p class="status" data-floe-part="cell" data-floe-tone="good">`）。adr・postmortem・handoff・runbook のように。帯・面・tone の中でも部品と同じに振る舞い、テーマの pill と注記の形で描かれます。`page.css` は箱の置き場所を書き、中には届きません。注記の中身は要素で包み（`<div data-floe-part="note"><p>…</p></div>`）、題は `<strong class="title">` にします。書き手が自由に書く字（Markdown の行、名前）は pill にしません。長くなり、塗りのあるテーマの pill の上ではリンクが読めないことがあります。
+
 ## パレット
 
 ページの色と書体は、テーマの `palette.css` が決める CSS の変数で、部品・図・floe の土台・テンプレートが使います。floe の `default` のパレットが全部を定めて、どのページにも入り、データファイルが選んだテーマがその上に重ねます。

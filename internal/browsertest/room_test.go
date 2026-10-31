@@ -15,9 +15,11 @@ import (
 // and goes unmeasured, until floe spaces that flow in one place.
 // LIMIT: a place of a template's that holds only text (a section of Markdown alone) is not known from the drawn page
 // and goes unmeasured there; the same place holding a part elsewhere is measured.
-// LIMIT: the room before a template's section in a section (report's .sub, design's .decision) and after the first
-// child of an item whose mark stands in its grid's row mark (a step's head, the row as tall as the mark) is not
-// measured, until the room above a template's heading is one rule.
+// LIMIT: the room before a template's own section (report's .sub, design's .decision), between a template's own
+// section or header and a note it places (adr's record superseding it after its header, runbook's caution after its
+// needs) and after the first child of an item whose mark stands in its
+// grid's row mark (a step's head, the row as tall as the mark) is not measured, until the room around a template's
+// heading is one rule. A cell is a pill in a line, not a box among parts, wherever it stands.
 // LIMIT: what a tab not chosen holds is hidden, and goes unmeasured; the tab chosen is measured.
 const measurePartRoom = `(() => {
   const probe = document.body.appendChild(document.createElement('div'));
@@ -26,7 +28,7 @@ const measurePartRoom = `(() => {
   probe.remove();
   const block = (e) => { const s = getComputedStyle(e); return e.getClientRects().length && !s.display.startsWith('inline') &&
     s.display !== 'contents' && !['absolute', 'fixed'].includes(s.position); };
-  const box = (e) => e.matches('[data-floe-part], .card') && block(e);
+  const box = (e) => e.matches('[data-floe-part]:not([data-floe-part=cell]), .card') && block(e);
   const name = (e) => e.tagName.toLowerCase() + (e.dataset.floePart ? '[' + e.dataset.floePart + ']' : '') +
     (e.dataset.floeLook ? '{' + e.dataset.floeLook + '}' : '') + (e.classList.length ? '.' + [...e.classList].join('.') : '');
   const out = new Set();
@@ -38,7 +40,8 @@ const measurePartRoom = `(() => {
     const marked = mark.content !== 'none' && mark.display !== 'none' && mark.gridRowStart === 'mark';
     for (let i = 1; i < kids.length; i++) {
       const a = kids[i - 1], b = kids[i];
-      if (b.matches('section:not([data-floe-part])') || (marked && i === 1)) continue;
+      const own = 'section:not([data-floe-part])';
+      if (b.matches(own) || (a.matches(own + ', header') && b.matches('[data-floe-part=note]')) || (marked && i === 1)) continue;
       const r = a.getBoundingClientRect(), q = b.getBoundingClientRect();
       const d = q.top >= r.bottom - 0.5 ? q.top - r.bottom : q.left - r.right;
       if (Math.abs(d - room) > 0.5) out.add(name(a) + ' + ' + name(b) + ' in ' + name(c) + ': ' + d.toFixed(1));
