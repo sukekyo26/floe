@@ -1,5 +1,5 @@
 /* Sumi, indigo and vermilion on washi, in a Mincho face, its sections ruled double */
-:root {
+:scope {
   --bg: #ede4cf; --surface: #f7f1e3; --fg: #1d1b18; --muted: #5f594f; --line: #d3c9b4;
   --accent: #264c78; --accent-soft: #dde5ef;
   --good: #4f6f2e; --good-soft: #e3ead5; --warn: #885c0e; --warn-soft: #f1e4c8; --bad: #b33721; --bad-soft: #f5ddd6;

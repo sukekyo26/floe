@@ -116,8 +116,11 @@ func (a *app) diagrams(paths []string, lang string, with func(*diagram.Drawer, a
 	return out, nil
 }
 
-// diagramAssets are what a page holds once for the diagrams of floe diagram render: the script that zooms them
-// and the CSS of floe's part diagram, unscoped, as a page without floe's parts takes it.
+// diagramAssets are what a page holds once for the diagrams of floe diagram render: the script that zooms them,
+// default's palette on the diagrams' roots alone, in its layer, and the CSS of floe's part diagram, unscoped, as a
+// page without floe's parts takes it.
+// LIMIT: a browser that does not read @scope drops the palette, and the diagrams are drawn without colours; the
+// docs ask for the browsers the README names.
 func diagramAssets() (string, error) {
 	script, err := diagram.Script()
 	if err != nil {
@@ -131,7 +134,14 @@ func diagramAssets() (string, error) {
 	if !ok {
 		return "", errors.New("diagram: floe has no part diagram") //nolint:err113 // floe's own mistake
 	}
-	return script + "\n<style>\n" + string(p.CSS()) + "</style>", nil
+	t, ok := k.Theme(kit.DefaultTheme)
+	if !ok {
+		return "", errors.New("diagram: floe has no theme " + kit.DefaultTheme) //nolint:err113 // floe's own mistake
+	}
+	// The page around the diagrams keeps its own palette. In a layer, so that the page's rules for the diagrams win:
+	// out of one, the palette's :scope, as near as can be, would win over those as specific.
+	palette := draw.Sheet("floe.palette", draw.InScope("("+diagram.Roots+")", t.Palette()))
+	return script + "\n<style>" + palette + "</style>\n<style>" + draw.Sheet("", p.CSS()) + "</style>", nil
 }
 
 func diagramOf(

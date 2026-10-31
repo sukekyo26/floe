@@ -1,5 +1,5 @@
 /* Pen on ruled paper in a rounded face */
-:root {
+:scope {
   --bg: #fffcf0; --surface: #fffef9; --fg: #2e2c27; --muted: #6b665b; --line: #e9e3cf;
   --accent: #2f5fa8; --accent-soft: #dfe8f6;
   --good: #2c7730; --good-soft: #def0df; --warn: #995b00; --warn-soft: #fbebd0; --bad: #c22727; --bad-soft: #fbe0e0;

@@ -1,6 +1,9 @@
 package browsertest_test
 
 import (
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -25,16 +28,22 @@ plain: { example: flow }
 pic: { width: 300, height: 100, title: p, parts: [ { box: { x: 20, y: 20, w: 120, h: 50, rows: [pic] } } ] }
 `
 
-// measureDiagrams returns a line for each diagram whose toolbar is not 0.4rem above its frame.
+// measureDiagrams returns a line for each diagram whose toolbar is not 0.4rem above its frame, or whose frame and
+// toolbar part.css does not reach: they are found from the SVG, not by the classes Go gives them, which part.css
+// writes by hand.
 const measureDiagrams = `(() => {
   const out = [];
   const want = 0.4 * parseFloat(getComputedStyle(document.documentElement).fontSize);
-  for (const wrap of document.querySelectorAll('.dg-wrap')) {
+  for (const svg of document.querySelectorAll('svg.dg')) {
+    const wrap = svg.parentElement;
     const box = wrap.closest('[data-floe-part="diagram"]');
     const name = box.parentElement.closest('[data-floe-part]')?.dataset.floePart ?? 'page';
     const tools = wrap.previousElementSibling;
+    if (getComputedStyle(wrap).overflow !== 'hidden' || getComputedStyle(tools).display !== 'flex') {
+      out.push(name + ': part.css does not reach the frame (' + wrap.className + ') or the toolbar (' + tools.className + ')');
+    }
     const gap = wrap.getBoundingClientRect().top - tools.getBoundingClientRect().bottom;
-    if (!tools.matches('.dg-tools') || Math.abs(gap - want) > 0.5) {
+    if (Math.abs(gap - want) > 0.5) {
       out.push(name + ': toolbar ' + gap.toFixed(1) + ' px above the frame, want ' + want.toFixed(1));
     }
   }
@@ -42,7 +51,7 @@ const measureDiagrams = `(() => {
 })()`
 
 // TestUIDiagram draws a diagram of a template and one in a part of one's own, wide and as wide as a phone: each
-// has its toolbar a little above its frame, not over it.
+// has its toolbar a little above its frame, not over it, and part.css reaches both.
 func TestUIDiagram(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -54,7 +63,7 @@ func TestUIDiagram(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}{{1440, 900, false}, {390, 844, true}} {
 		b.size(size.width, size.height, size.mobile)
 		b.navigate("/a/diagrams/?raw")
-		b.until("the toolbars", "document.querySelectorAll('.dg-tools').length === 2")
+		b.until("the toolbars", "[...document.querySelectorAll('svg.dg')].filter((s) => s.parentElement.previousElementSibling).length === 2")
 		if got := b.eval(measureDiagrams); got != "" {
 			t.Errorf("at %d px:\n  %s", size.width, strings.ReplaceAll(got, "\n", "\n  "))
 		}
@@ -122,5 +131,149 @@ func TestUIDiagramInTabs(t *testing.T) { //nolint:paralleltest // the browser te
 	b.until("the diagram in details fitted", folded("details")+".endsWith(' sized fitted')")
 	if got := b.eval(folded("details")); strings.HasPrefix(got, "0 0 600 200") {
 		t.Errorf("opened: %s, want the viewBox of the frame's ratio", got)
+	}
+}
+
+// tonesSpec is a diagram with a box and an edge of each tone, as a spec of floe diagram render.
+const tonesSpec = `width: 420
+height: 200
+title: Tones
+parts:
+  - box: { x: 20, y: 20, w: 100, h: 40, tone: accent, rows: [a] }
+  - box: { x: 160, y: 20, w: 100, h: 40, tone: good, rows: [g] }
+  - box: { x: 300, y: 20, w: 100, h: 40, tone: warn, rows: [w] }
+  - box: { x: 20, y: 120, w: 100, h: 40, tone: bad, rows: [b] }
+  - box: { x: 160, y: 120, w: 100, h: 40, rows: [plain] }
+  - edge: { from: [120, 40], to: [160, 40], tone: accent }
+  - edge: { from: [260, 140], to: [300, 140] }
+`
+
+// diagramColours lists, in the tree root names (document, or a shadow root), what the diagram's CSS paints:
+// the frame's border, the font, every shape's fill and stroke, and the toolbar's text and buttons.
+func diagramColours(root string) string {
+	return `((root) => {
+  const out = [];
+  const read = (sel, props) => root.querySelectorAll(sel).forEach((e, i) => {
+    const cs = getComputedStyle(e);
+    out.push(sel + ' ' + i + ': ' + props.map((p) => cs.getPropertyValue(p)).join(' '));
+  });
+  read('.dg-wrap', ['border-top-color']);
+  read('.dg', ['font-family']);
+  read('.dg *', ['fill', 'stroke']);
+  read('.dg-tools span', ['color']);
+  read('.dg-tools button', ['color', 'background-color', 'border-top-color']);
+  return out.join('\n');
+})(` + root + `)`
+}
+
+// unpainted lists the shapes of the diagrams that a rule of part.css leaves in the browser's defaults, as one that
+// reads a variable no palette sets: a line without a stroke, another shape black, or with neither fill nor stroke.
+// LIMIT: a filled shape's stroke left so is not told; it draws no outline, as some shapes are meant to.
+const unpainted = `(() => {
+  const out = new Set();
+  for (const e of document.querySelectorAll('svg.dg :is(rect, path, circle, ellipse, line, polyline, polygon, text)')) {
+    if (e.closest('defs')) continue;
+    const c = getComputedStyle(e);
+    if (e.tagName === 'line' ? c.stroke === 'none' : c.fill === 'rgb(0, 0, 0)' || (c.fill === 'none' && c.stroke === 'none')) {
+      out.add(e.tagName + '.' + [...e.classList].join('.') + ' in .' + [...e.parentElement.classList].join('.'));
+    }
+  }
+  return [...out].join('\n');
+})()`
+
+// outside tells what a page draws outside the diagrams with its own palette, and its root's color-scheme.
+const outside = `(() => {
+  const c = getComputedStyle(document.querySelector('.probe'));
+  return [c.color, c.backgroundColor, c.width, c.borderTopStyle, c.boxShadow,
+    getComputedStyle(document.documentElement).colorScheme].join(' | ');
+})()`
+
+// TestUIDiagramFragment pastes the fragment of floe diagram render, a diagram of each tone and every built-in example,
+// into pages of one's own, their style in the head before it. In a page without a palette, the diagram is painted as in a page of floe's default theme, its toolbar
+// too, and in a shadow root as well. The page outside the diagrams keeps what it draws: its palette in a layer of its
+// own, its color-scheme of a meta, the variables it reads with a fallback. A page's colours written on the
+// diagrams' roots win, before the fragment or after it.
+func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	// The diagrams: one of each tone, then every built-in example but aws, which draw every kind of part between them.
+	specs := []string{s.write(t, "tones.yaml", tonesSpec)}
+	var data strings.Builder
+	data.WriteString("template: report\nlang: en\ntitle: Diagrams\nsections:\n  - parts:\n      - diagram:\n")
+	for line := range strings.Lines(tonesSpec) {
+		data.WriteString("          " + line)
+	}
+	for line := range strings.Lines(s.floe(t, "diagram", "example")) {
+		kind, _, _ := strings.Cut(line, "\t")
+		if kind == "aws" { // its icons are fetched, which a test does not
+			continue
+		}
+		specs = append(specs, s.write(t, kind+".yaml", "example: "+kind+"\n"))
+		data.WriteString("      - diagram: { example: " + kind + " }\n")
+	}
+	fragment := s.floe(t, append([]string{"diagram", "render"}, specs...)...)
+	s.floe(t, "publish", s.write(t, "diagrams.yaml", data.String()), "--slug", "diagrams")
+	b.navigate("/a/diagrams/?raw")
+	b.until("the toolbars", "document.querySelectorAll('.dg-tools').length === "+strconv.Itoa(len(specs)))
+	if got := b.eval(unpainted); got != "" {
+		t.Errorf("shapes part.css leaves unpainted in floe's page:\n%s", got)
+	}
+	want := b.eval(diagramColours("document"))
+
+	dir := t.TempDir()
+	open := func(name, head, body string) {
+		t.Helper()
+		file := filepath.Join(dir, name)
+		page := "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><title>" + name + "</title>" + head +
+			"</head>\n<body>\n" + body + "\n</body></html>\n"
+		if err := os.WriteFile(file, []byte(page), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		b.navigate("file://" + file)
+	}
+
+	open("bare.html", "", fragment)
+	b.until("the toolbars", "document.querySelectorAll('.dg-tools').length === "+strconv.Itoa(len(specs)))
+	if got := b.eval(diagramColours("document")); got != want {
+		t.Errorf("in a page without a palette:\n%s\nwant, as in floe's page:\n%s", got, want)
+	}
+
+	open("shadow.html", "", `<div id="h"></div><script>document.getElementById('h').attachShadow({mode: 'open'}).innerHTML = `+
+		js(fragment)+`;</script>`)
+	inShadow := b.eval(diagramColours("document.getElementById('h').shadowRoot"))
+	var wantShadow []string
+	for line := range strings.Lines(want) {
+		if !strings.HasPrefix(line, ".dg-tools") { // the zoom script finds no diagram in a shadow root
+			wantShadow = append(wantShadow, strings.TrimSuffix(line, "\n"))
+		}
+	}
+	if w := strings.Join(wantShadow, "\n"); inShadow != w {
+		t.Errorf("in a shadow root:\n%s\nwant:\n%s", inShadow, w)
+	}
+
+	own := `<meta name="color-scheme" content="light dark"><style>
+@layer host { :root { --bg: rgb(10, 20, 30); --accent: rgb(200, 0, 100); } }
+.probe { color: var(--accent, rgb(1, 1, 1)); background: var(--bg); width: var(--text-width, 33px);
+  border-top: var(--rule, 3px dotted rgb(2, 2, 2)); box-shadow: var(--shadow, 0 0 0 1px rgb(3, 3, 3)); }
+</style>`
+	open("alone.html", own, `<p class="probe">p</p>`)
+	alone := b.eval(outside)
+	open("around.html", own, `<p class="probe">p</p>`+fragment)
+	b.until("the toolbar", "document.querySelector('.dg-tools')")
+	if got := b.eval(outside); got != alone {
+		t.Errorf("outside the diagram: %s, want %s, as without it", got, alone)
+	}
+
+	const accent = "rgb(1, 2, 3)"
+	rule := "<style>.dg-tools, .dg-wrap { --accent: " + accent + "; }</style>"
+	stroke := "getComputedStyle(document.querySelector('.dg .box.accent rect')).stroke"
+	for _, page := range []struct{ name, head, body string }{
+		{"before.html", rule, fragment},
+		{"after.html", "", fragment + rule},
+	} {
+		open(page.name, page.head, page.body)
+		if got := b.eval(stroke); got != accent {
+			t.Errorf("%s: the accent box's stroke %s, want the page's %s", page.name, got, accent)
+		}
 	}
 }

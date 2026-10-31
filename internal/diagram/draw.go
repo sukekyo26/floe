@@ -191,7 +191,7 @@ func (l *layout) draw(lang i18n.Lang) (template.HTML, error) {
 	var b strings.Builder
 	err = t.ExecuteTemplate(&b, "diagram", map[string]any{
 		"W": l.w, "H": l.h, "MaxH": math.Floor(l.h*maxScale + 0.5), "Title": l.s.Title,
-		"Markers": defs, "Icons": l.iconDefs, "Elems": elems,
+		"Markers": defs, "Icons": l.iconDefs, "Elems": elems, "Wrap": wrapClass,
 	})
 	if err != nil {
 		return "", fmt.Errorf("diagram: draw: %w", err)
@@ -264,6 +264,16 @@ func segsData(segs []seg) string {
 	return pathData(pts)
 }
 
+// The classes of what a diagram is drawn as: its frame, which diagram.svg.tmpl writes, and its toolbar, which the
+// zoom script puts before it. part.css writes them too.
+const (
+	wrapClass  = "dg-wrap"
+	toolsClass = "dg-tools"
+)
+
+// Roots selects what a diagram is drawn as, the roots of what its CSS styles.
+const Roots = "." + toolsClass + ", ." + wrapClass
+
 // Script is the script that zooms the diagrams of a page, its toolbar worded in every language for the page's
 // <html lang> to pick from. A page may hold it more than once: a second run does nothing.
 var Script = sync.OnceValues(func() (string, error) {
@@ -275,7 +285,7 @@ var Script = sync.OnceValues(func() (string, error) {
 			words[lang][k] = c.Msg(k)
 		}
 	}
-	return page.Script(zoomJS, words)
+	return page.Script(zoomJS, map[string]any{"words": words, "wrap": wrapClass, "tools": toolsClass})
 })
 
 var zoomKeys = []string{
