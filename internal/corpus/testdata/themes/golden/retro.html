@@ -247,7 +247,7 @@ blockquote { background: var(--surface); border: 0; border-radius: var(--radius)
 }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-small);
+  --floe-mark: 1.75rem; display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
@@ -521,11 +521,10 @@ blockquote { background: var(--surface); border: 0; border-radius: var(--radius)
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A card is a round face in a brown frame, its top in the three stripes, clear of its text over the padding a part
-   sets its cards (facts, links) */
-:scope > .card { border: 2px solid var(--fg); border-radius: var(--radius); padding-top: 1.6rem; background: var(--surface);
-  /* The stripes as shadows inside its top, which keep to its round corners and stay off the ground of its text */
-  --floe-inset: inset 0 4px var(--retro-orange), inset 0 8px var(--retro-mustard), inset 0 12px var(--retro-olive); }
+/* A card is a round face in a brown frame, its top in the three stripes. They are shadows inside its top, which keep
+   to its round corners, thin enough to lie within the padding its part sets (facts' rows, --floe-row-pad) */
+:scope > .card { border: 2px solid var(--fg); border-radius: var(--radius); background: var(--surface);
+  --floe-inset: inset 0 2px var(--retro-orange), inset 0 4px var(--retro-mustard), inset 0 6px var(--retro-olive); }
 :scope.numbered > .card::before { border-radius: 50%; background: var(--fg); color: var(--surface); font-family: var(--display); }
 }
 }

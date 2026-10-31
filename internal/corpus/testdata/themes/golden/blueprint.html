@@ -343,7 +343,7 @@ blockquote::before {
 }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-small);
+  --floe-mark: 1.75rem; display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
@@ -491,7 +491,7 @@ blockquote::before {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope.numbered > .card::before {
   content: "FIG. " counter(floe-card, decimal-leading-zero); content: "FIG. " counter(floe-card, decimal-leading-zero) / "";
-  display: block; width: auto; height: auto; background: none; color: var(--accent);
+  --floe-mark: auto; background: none; color: var(--accent);
   font-family: var(--mono); font-size: 0.7rem; font-weight: 400; letter-spacing: 0.12em;
 }
 .card .title { color: var(--accent); }

@@ -1,9 +1,9 @@
 /* The panel of a card, on plain paper */
 .card { position: relative; background: var(--surface); }
 :scope.numbered > .card::before { content: none; }
-/* Options are sticky notes, each held by a strip of tape */
+/* Options are sticky notes, each held by a strip of tape over its top, within the padding its part sets */
 :scope.numbered > .card {
-  border: 0; border-radius: 0; --face: var(--nb-stick-1); --on-face: var(--nb-stick-ink); background: var(--face); color: var(--on-face); padding-top: 1.6rem;
+  border: 0; border-radius: 0; --face: var(--nb-stick-1); --on-face: var(--nb-stick-ink); background: var(--face); color: var(--on-face);
   --floe-shadow-color: var(--nb-stick-shadow);
 }
 :scope.numbered > .card:nth-child(3n + 2) { --face: var(--nb-stick-2); }

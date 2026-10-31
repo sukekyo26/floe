@@ -357,7 +357,7 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-small);
+  --floe-mark: 1.75rem; display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
@@ -494,9 +494,9 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 /* The panel of a card, on plain paper */
 .card { position: relative; background: var(--surface); }
 :scope.numbered > .card::before { content: none; }
-/* Options are sticky notes, each held by a strip of tape */
+/* Options are sticky notes, each held by a strip of tape over its top, within the padding its part sets */
 :scope.numbered > .card {
-  border: 0; border-radius: 0; --face: var(--nb-stick-1); --on-face: var(--nb-stick-ink); background: var(--face); color: var(--on-face); padding-top: 1.6rem;
+  border: 0; border-radius: 0; --face: var(--nb-stick-1); --on-face: var(--nb-stick-ink); background: var(--face); color: var(--on-face);
   --floe-shadow-color: var(--nb-stick-shadow);
 }
 :scope.numbered > .card:nth-child(3n + 2) { --face: var(--nb-stick-2); }

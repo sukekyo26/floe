@@ -119,9 +119,8 @@ const rowsSection = "  - heading: Rows\n    parts:\n      - html: |\n          <
 
 // TestUIRowPad measures the rows of every part and look drawn as rows: each is padded --floe-row-pad (0.4rem) above
 // and below, in the page's line height, in every theme, on the screen and printed, which leaves the variable as it is
-// (a theme's base.css could set it, being over floe.base). A
-// template whose page's line height is not report's (design: its decided list and its table; postmortem: its table)
-// pads them the same; and a template of one's own setting the variable in its page.css pads them all by it.
+// (a theme's base.css could set it, being over floe.base). A template whose page's line height is not report's
+// (design: its decided list and its table; postmortem: its table) pads them the same; and a template of one's own setting the variable in its page.css pads them all by it.
 func TestUIRowPad(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
