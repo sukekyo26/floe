@@ -15,11 +15,11 @@ import (
 )
 
 // named is what the elements of a page drawn name: the boxes of parts (data-floe-part) and the looks they
-// take without being a box (data-floe-look), each a part or a look of the Kit, sorted; and, by part, what it
-// uses, which it places: the parts and looks its elements name, and the parts its schema may hold.
+// take without being a box (data-floe-look), each a part or a look of the Kit, sorted; and, by "part " or "look "
+// and the name, the depths those elements stand at, as depths counts them.
 type named struct {
 	boxes, looks []string
-	uses         map[string][]string
+	depths       map[string][]int
 }
 
 // checkPage refuses in tree, the page drawn from d as a browser reads it, at d's template:, which draws it: an
@@ -61,7 +61,7 @@ func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error
 		return named{}, found
 	}
 	return named{
-		boxes: slices.Sorted(maps.Keys(boxes)), looks: slices.Sorted(maps.Keys(taken)), uses: uses(tree),
+		boxes: slices.Sorted(maps.Keys(boxes)), looks: slices.Sorted(maps.Keys(taken)), depths: depths(tree),
 	}, nil
 }
 
@@ -179,41 +179,44 @@ func checkNames(
 	}
 }
 
-// uses returns, by the name of each part's box in tree, what the elements it holds nearest name: the parts
-// whose boxes they are, and the looks they take (data-floe-look).
-func uses(tree *html.Node) map[string][]string {
-	found := map[string][]string{}
+// depths returns, by "part " and the name of each part's box in tree and "look " and each look an element takes,
+// the depths those elements stand at, sorted: how many elements that nest hold each.
+func depths(tree *html.Node) map[string][]int {
+	found := map[string][]int{}
 	for n := range tree.Descendants() {
-		if holder, ok := holderOf(n); ok {
-			found[holder] = append(found[holder], namesOf(n)...)
+		if !nests(n) {
+			continue
 		}
+		depth := 0
+		for a := range n.Ancestors() {
+			if nests(a) {
+				depth++
+			}
+		}
+		if name, ok := boxOf(n); ok {
+			found["part "+name] = append(found["part "+name], depth)
+		}
+		if value, ok := attrOf(n, "data-floe-look"); ok {
+			for _, name := range fields(value) {
+				found["look "+name] = append(found["look "+name], depth)
+			}
+		}
+	}
+	for key, d := range found {
+		found[key] = slices.Compact(slices.Sorted(slices.Values(d)))
 	}
 	return found
 }
 
-// holderOf returns the part whose box holds n nearest.
-func holderOf(n *html.Node) (string, bool) {
-	for a := range n.Ancestors() {
-		if holder, ok := boxOf(a); ok {
-			return holder, true
-		}
-	}
-	return "", false
-}
-
-// namesOf returns what n names, an element: the part it is the box of, and the looks it takes.
-func namesOf(n *html.Node) []string {
+// nests reports whether n is an element with a data-floe-part or a data-floe-look, of any value, empty too: as
+// the browser counts it by the selector nester.
+func nests(n *html.Node) bool {
 	if n.Type != html.ElementNode {
-		return nil
+		return false
 	}
-	var names []string
-	if name, ok := boxOf(n); ok {
-		names = append(names, name)
-	}
-	if value, ok := attrOf(n, "data-floe-look"); ok {
-		names = append(names, fields(value)...)
-	}
-	return names
+	_, box := attrOf(n, "data-floe-part")
+	_, look := attrOf(n, "data-floe-look")
+	return box || look
 }
 
 // boxOf returns the part n, an element, is the box of: its data-floe-part, one name as written.

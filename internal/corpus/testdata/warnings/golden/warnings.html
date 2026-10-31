@@ -3,6 +3,7 @@
 <title>Warnings</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
+@layer floe.looks.depth1, floe.looks.depth0, floe.parts.depth1, floe.parts.depth0;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -100,25 +101,16 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="stack"]) to (:scope [data-floe-part] > *) {
-/* What details and tabs hold */
-:scope { display: grid; gap: 1rem; min-width: 0; }
-:scope > * { min-width: 0; margin: 0; }
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="details"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
 :scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
 }
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="details"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* The mark before the title turns down when open */
 :scope > summary {
   display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 1.2rem; cursor: pointer; font-weight: 700; list-style: none;
@@ -135,8 +127,19 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="details"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* What details and tabs hold */
+:scope { display: grid; gap: 1rem; min-width: 0; }
+/* No margins of its own on what it holds: it wins over the parts it holds (base.css and each part zero theirs),
+   and a theme's room for a shadow (brutal's) stays */
+:scope > * { min-width: 0; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); border: 0; border-radius: 20px; box-shadow: none; }
 }
 }

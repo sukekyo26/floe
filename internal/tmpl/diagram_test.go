@@ -64,7 +64,7 @@ func TestDiagramsInPage(t *testing.T) {
 	if len(ids) != 2 || ids[0][1] == ids[1][1] {
 		t.Errorf("ids %v, want two that differ", ids)
 	}
-	if !strings.Contains(page, `@scope ([data-floe-part="diagram"])`) {
+	if !strings.Contains(page, `@scope ([data-floe-part="diagram"]`) {
 		t.Error("the page holds no CSS of the part diagram")
 	}
 	plain := drawPage(t, k, "lang: en\ntemplate: report\ntitle: t\nsections:\n  - heading: h\n    parts:\n      - text: x\n", none)
@@ -192,7 +192,7 @@ func TestOwnPartDiagrams(t *testing.T) {
 		ids[0][1] == ids[1][1] || ids[1][1] == ids[2][1] {
 		t.Errorf("ids %v, want three that differ", ids)
 	}
-	if !strings.Contains(page, `@scope ([data-floe-part="diagram"])`) {
+	if !strings.Contains(page, `@scope ([data-floe-part="diagram"]`) {
 		t.Error("the page holds no CSS of the part diagram")
 	}
 

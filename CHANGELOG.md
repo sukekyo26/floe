@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the outer winning where looks and parts nest: a look's style for an
+  element in it that takes another look (a card in an element of `cards` that
+  takes `panel`), and a part's for the box of a part in it, win over that
+  element's own, whatever the selectors, as the cards of a part are drawn;
+  a look still loses to the box of a part in it.
 - Add one padding above and below the rows of what is drawn as rows (the
   looks table and rows, the parts that take them, the templates' tables and
   lists in them, and facts' tiles): 0.4rem, set by `--floe-row-pad` in

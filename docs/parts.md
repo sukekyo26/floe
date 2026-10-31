@@ -70,11 +70,13 @@ floe puts a page's CSS into `<style>`s before its `</head>`, in six cascade laye
 
 A part's `part.css`, and a theme's file of it, are scoped to the elements that have its look, from their own on, short of what the parts in them hold. Write the element itself as `:scope`. A part's style reaches the box of a part it holds, but not what that part holds.
 
+Nested, the outer wins. `floe.looks` and `floe.parts` are each split into layers by how deep the element a style reaches stands, counted in the parts' boxes and the elements that take looks around it, the outer the stronger. So a look's style for an element in it that takes another look, and a part's style for a part's box in it, win over that element's own, whatever the selectors and however near the scope. Between a look and a part the order of the layers above stands: a look's style loses to the box of a part it holds. On one element, a theme's file of a look wins over the `part.css` of a part that takes it, as above.
+
 As in `page.css`, a `}` that closes no block and an `@import` are refused at their line.
 
 ## Borrowing a look
 
-- An element that is no part's box takes a look by `data-floe-look`: `<section data-floe-look="panel">` is a panel in every theme. It has it in `floe.looks`, under the parts and the template, so that the part or template it is in adjusts it.
+- An element that is no part's box takes a look by `data-floe-look`: `<section data-floe-look="panel">` is a panel in every theme. It has it in `floe.looks`, under the parts and the template, so that the part or template it is in adjusts it. A card in an element that takes `cards` may take `panel` itself (`<div data-floe-look="cards"><div class="card" data-floe-look="panel">`): the cards, the outer, draw it as they draw the cards of a part.
 - floe's parts take looks so: `compare`, `fields` and `findings` take the table's, `stats`, `options`, `facts`, `links` and `decision` the cards', `diff` and `terminal` code's, `checklist`, `entries`, `faq` and `keys` the look `rows`, and the other parts drawn in a panel `panel`'s. A theme's rules for a look draw every part that takes it.
 - The look `rows` leaves out a list's marks and padding, and pads each of its rows by `--floe-row-pad` (floe's base, 0.4rem) above and below; its box's `::after` is a row too, padded alike, as checklist's count: a part or a template that takes it writes its rows' padding at the sides alone. A part whose rows do not take `rows` takes the variable, as the table's cells and facts' tiles do (`padding-block: var(--floe-row-pad)`), so that its rows are as tall as the others.
 

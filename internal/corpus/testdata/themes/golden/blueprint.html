@@ -3,6 +3,7 @@
 <title>The blueprint theme</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
+@layer floe.looks.depth1, floe.looks.depth0, floe.parts.depth1, floe.parts.depth0;
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -125,8 +126,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A pill: a short status in the colour of its tone */
 :scope {
   display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
@@ -140,8 +141,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Always dark, as code in an editor is; the language stands at the right of the heading. A face (base.css) whose
    root is the part's, set on what it holds too, which base.css starts afresh: a scrolling block's ring in its colour */
 :scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
@@ -194,8 +195,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="diff"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls: the code is as
    wide as that line (code's part.css), the button's room inside each line's face rather than after the code */
 :scope pre { padding-inline: 0; }
@@ -214,24 +215,24 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
 :scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
 }
 }
 </style>
 <style>
-@layer floe.looks {
-@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
 :scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
 }
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns */
 :scope {
   overflow-x: auto;
@@ -256,8 +257,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="findings"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the table's look, without a heading: a level's pill, then where it is and what became of it over what it is */
 :scope td.level { width: 1%; min-width: auto; white-space: nowrap; }
 :scope .level .nit { background: color-mix(in srgb, var(--fg) 8%, var(--surface)); color: var(--muted); }
@@ -270,8 +271,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="note"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
 :scope {
   position: relative; background: var(--accent-soft); padding: 1rem 1.25rem 1rem 3.7rem;
@@ -288,7 +289,7 @@ blockquote::before {
 :scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
 :scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }
 :scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad); }
-:scope > * { margin: 0; }
+/* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
 :scope > * + * { margin-top: 0.5rem; }
 .title { display: block; font-size: 0.9rem; color: var(--accent); }
 :scope.good .title { color: var(--good); }
@@ -300,8 +301,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Each card is numbered by its place, as the steps of a plan are */
 :scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
 .card {
@@ -319,8 +320,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
 .option.pick { outline: 2px solid var(--accent); outline-offset: -1px; }
 .option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
@@ -336,32 +337,19 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
-/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
-:scope figcaption { opacity: 0.85; }
-:scope :is(.run, .out) { display: block; }
-:scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
-:scope .run::before { content: "$ "; color: var(--code-prompt); }
-:scope.zsh .run::before { content: "% "; }
-:scope.powershell .run::before { content: "PS> "; }
-:scope.cmd .run::before { content: "> "; }
-:scope .out { opacity: 0.7; }
-}
-}
-</style>
-<style>
-@layer floe.parts {
-@scope ([data-floe-part="stack"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* What details and tabs hold */
 :scope { display: grid; gap: 1rem; min-width: 0; }
-:scope > * { min-width: 0; margin: 0; }
+/* No margins of its own on what it holds: it wins over the parts it holds (base.css and each part zero theirs),
+   and a theme's room for a shadow (brutal's) stays */
+:scope > * { min-width: 0; }
 }
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="tabs"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows */
 :scope { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0; }
 :scope > label {
@@ -382,8 +370,23 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="cell"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
+:scope figcaption { opacity: 0.85; }
+:scope :is(.run, .out) { display: block; }
+:scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
+:scope .run::before { content: "$ "; color: var(--code-prompt); }
+:scope.zsh .run::before { content: "% "; }
+:scope.powershell .run::before { content: "PS> "; }
+:scope.cmd .run::before { content: "> "; }
+:scope .out { opacity: 0.7; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
   display: inline-flex; align-items: center; gap: 0.45em; border-radius: 0; background: none; border: 1.5px solid currentColor;
   font-family: var(--mono); letter-spacing: 0.04em; color: var(--accent);
@@ -394,8 +397,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="code"], [data-floe-part="diff"], [data-floe-part="terminal"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { border: 1.5px solid var(--accent); border-radius: 0; box-shadow: none; }
 :scope figcaption {
   background: none; border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 40%, transparent); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
@@ -405,8 +408,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
   background: var(--bp-squares), var(--surface); border-radius: 0;
   box-shadow: none; border: 1.5px solid var(--accent);
@@ -415,8 +418,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.looks {
-@scope ([data-floe-look~="panel"]) to (:scope [data-floe-part] > *) {
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
   background: var(--bp-squares), var(--surface); border-radius: 0;
   box-shadow: none; border: 1.5px solid var(--accent);
@@ -425,8 +428,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="findings"], [data-floe-part="table"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope :is(th, td) { border: 1px solid var(--accent); }
 :scope thead th {
   background: none; color: var(--accent); font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
@@ -436,8 +439,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="note"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A note of a tone too, whose own background of its tone this takes the place of */
 :scope, :scope:is(.good, .warn, .bad) {
   background: var(--bp-squares), var(--surface); border-radius: 0;
@@ -456,8 +459,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="options"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope.numbered > .card::before {
   content: "FIG. " counter(floe-card, decimal-leading-zero); content: "FIG. " counter(floe-card, decimal-leading-zero) / "";
   display: block; width: auto; height: auto; background: none; color: var(--accent);
@@ -468,8 +471,8 @@ blockquote::before {
 }
 </style>
 <style>
-@layer floe.parts {
-@scope ([data-floe-part="tabs"]) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope > label { border-radius: 0; font-family: var(--mono); letter-spacing: 0.04em; }
 /* On screen alone: on paper every tab shows under its title, which tabs' own print takes off its ground */
 @media screen { :scope > label:has(:checked) { background: none; color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); } }

@@ -2,6 +2,7 @@ package draw
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -14,21 +15,27 @@ import (
 // then the theme's), the theme's base.css, the looks, the template's own and the parts'. The theme's base.css
 // reaches what the template's does, the page short of what the parts hold, so that the template, the looks and the
 // parts each win over it, and a part draws what it holds from floe's base alone. The parts' are the style of
-// each part the page names a box of, and of each look the page or those parts take, before the parts that take it
-// and the parts that place it (those whose boxes hold its box), which adjust it; then the theme's style of each of
-// those parts in the same order, which wins over theirs, their @media print too.
-// Within the layer the more specific rule wins, else the one of the nearer scope, else the later.
-// An element that takes a look without being a part's box (a card of options) has it a layer under the
-// template's and the parts', floe.looks: the part it is in, or the template it is the template's own of,
-// adjusts it whatever the selectors, as a part does the looks it takes, where the nearer scope would win
-// otherwise; and the theme's base.css, a layer under, wins over none of its looks, unless with !important. A layer of
-// their own, not the theme's, as in one layer specificity and the nearer scope would decide instead.
-// LIMIT: such elements share the layer, so the look of one held in another wins over the outer's rules for
-// it by the nearer scope. Make the outer a part's box (data-floe-part) if HTML comes to nest them so.
+// each part the page names a box of, and of each look the page or those parts take, before the parts that take it,
+// which adjust it; then the theme's style of each of those parts in the same order, which wins over theirs, their
+// @media print too. An element that takes a look without being a part's box (a card of options) has it in
+// floe.looks, under the template's and the parts': the part it is in, or the template it is the template's own of,
+// adjusts it whatever the selectors, and the theme's base.css, a layer under, wins over none of its looks, unless
+// with !important.
+// Nested, the outer wins: floe.looks and floe.parts are each layered by how deep in the page the element a style
+// reaches stands, counted in the boxes and the elements that take looks around it, the outer the later, so that a
+// look's style for a look held in it, and a part's for a part's box held in it, win whatever the selectors, where
+// the nearer scope would win in one layer. Between the looks and the parts the layers' order stands: a look loses
+// to the boxes of the parts it holds. Within a layer the more specific rule wins, else the one of the nearer scope,
+// else the later.
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
-// LIMIT: a theme's file of a look wins over a part's adjustment of it; move it after the look's if a part needs one.
+// LIMIT: a theme's file of a look wins over the adjustment of it by a part that takes it on the same element; move
+// it after the look's if a part needs one.
+// LIMIT: a part's box that takes a look, held in an element that takes another, has it in floe.parts, which wins over
+// the outer look's rules for it. Make the outer a part's box if HTML comes to nest them so.
+// LIMIT: each style is written once for each depth its elements stand at, so a deep page's CSS grows with its depth;
+// no bound is set. Mark the depth on the elements instead if that comes to weigh.
 // LIMIT: !important turns the layers' order round (an earlier layer's wins), and floe does not refuse it.
 func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) {
 	themed, ok := k.Theme(theme)
@@ -45,8 +52,19 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 	write := func(body string) {
 		sheets = append(sheets, "\n"+styleEnd.ReplaceAllString(body, `<\/$1`))
 	}
-	write("@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;\n@layer floe.base {\n" +
-		string(k.BaseCSS()) + "}\n")
+	// The layers of depth, the deepest first, so that the outer win.
+	deepest := 0
+	for _, d := range n.depths {
+		deepest = max(deepest, slices.Max(d))
+	}
+	var order []string
+	for _, kind := range []string{"floe.looks", "floe.parts"} {
+		for d := deepest; d >= 0; d-- {
+			order = append(order, fmt.Sprintf("%s.depth%d", kind, d))
+		}
+	}
+	write("@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;\n@layer " +
+		strings.Join(order, ", ") + ";\n@layer floe.base {\n" + string(k.BaseCSS()) + "}\n")
 	sheet := func(layer string, css []byte) {
 		if len(css) != 0 {
 			write("@layer " + layer + " {\n" + string(css) + "}\n")
@@ -57,11 +75,20 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 		sheet("floe.palette", themed.Palette())
 	}
 	sheet("floe.theme", pageScoped(themed.Base()))
-	names := inOrder(k, slices.Concat(n.boxes, n.looks), n.uses)
-	// Each style goes to the boxes that have its look, and to the other elements that take it, a layer under.
+	names := inOrder(k, slices.Concat(n.boxes, n.looks))
+	// Each style goes to the boxes that have its look, and to the other elements that take it, a layer under, each
+	// in the layer of its depth.
 	styled := func(name string, css []byte) {
-		sheet("floe.parts", scoped(k, name, n.boxes, false, css))
-		sheet("floe.looks", scoped(k, name, n.looks, true, css))
+		for _, kind := range []struct {
+			layer string
+			look  bool
+			named []string
+		}{{"floe.parts", false, n.boxes}, {"floe.looks", true, n.looks}} {
+			byDepth := scoped(k, name, kind.named, kind.look, n.depths, css)
+			for _, d := range slices.Sorted(maps.Keys(byDepth)) {
+				sheet(fmt.Sprintf("%s.depth%d", kind.layer, d), byDepth[d])
+			}
+		}
 	}
 	for _, name := range names {
 		styled(name, cssOf(k, name))
@@ -88,20 +115,14 @@ func pageScoped(css []byte) []byte {
 // <style> anyway.
 var styleEnd = regexp.MustCompile(`(?i)</(style)`)
 
-// inOrder returns names, parts and looks of k, with the looks they take, each after its looks and the parts
-// it places that names holds (uses), those it places first, else in order.
-func inOrder(k *kit.Kit, names []string, uses map[string][]string) []string {
+// inOrder returns names, parts and looks of k, with the looks they take, each after its looks, else in order.
+func inOrder(k *kit.Kit, names []string) []string {
 	names = slices.Compact(slices.Sorted(slices.Values(names)))
 	done := map[string]bool{}
 	ordered := make([]string, 0, len(names))
 	var visit func(name string)
 	visit = func(name string) {
 		done[name] = true
-		for _, used := range uses[name] {
-			if slices.Contains(names, used) && !done[used] {
-				visit(used)
-			}
-		}
 		for _, look := range looksOf(k, name) {
 			if !done[look] {
 				visit(look)
@@ -118,24 +139,45 @@ func inOrder(k *kit.Kit, names []string, uses map[string][]string) []string {
 }
 
 // scoped is css, the style of the part or look name or its theme's for it, reaching the elements that have
-// its look, from their own on, short of what the parts in them hold: of named, the parts a page names, each
-// that is name or takes its look, the boxes (data-floe-part="table"), or the elements that take it without
-// being a box when look (data-floe-look="table"). It is nil when none of them has the look, or css is empty.
-func scoped(k *kit.Kit, name string, named []string, look bool, css []byte) []byte {
-	var roots []string
+// its look, from their own on, short of what the parts in them hold, by the depth they stand at (depths): of
+// named, the parts a page names, each that is name or takes its look, the boxes (data-floe-part="table"), or the
+// elements that take it without being a box when look (data-floe-look="table"). It is nil when none of them has
+// the look, or css is empty.
+func scoped(k *kit.Kit, name string, named []string, look bool, depths map[string][]int, css []byte) map[int][]byte {
+	roots := map[int][]string{}
 	for _, n := range named {
-		switch {
-		case n != name && !slices.Contains(takenBy(k, n), name):
-		case look:
-			roots = append(roots, `[data-floe-look~="`+n+`"]`)
-		default:
-			roots = append(roots, `[data-floe-part="`+n+`"]`)
+		if n != name && !slices.Contains(takenBy(k, n), name) {
+			continue
+		}
+		key, root := "part "+n, `[data-floe-part="`+n+`"]`
+		if look {
+			key, root = "look "+n, `[data-floe-look~="`+n+`"]`
+		}
+		for _, d := range depths[key] {
+			roots[d] = append(roots[d], at(d, root))
 		}
 	}
-	if roots == nil || len(css) == 0 {
+	if len(roots) == 0 || len(css) == 0 {
 		return nil
 	}
-	return []byte("@scope (" + strings.Join(roots, ", ") + ") to (:scope [data-floe-part] > *) {\n" + string(css) + "}\n")
+	out := map[int][]byte{}
+	for d, r := range roots {
+		out[d] = []byte("@scope (" + strings.Join(r, ", ") + ") to (:scope [data-floe-part] > *) {\n" + string(css) + "}\n")
+	}
+	return out
+}
+
+// nester is an element that nests, as nests counts it: a part's box or one that takes a look, of any value.
+const nester = ":is([data-floe-part], [data-floe-look])"
+
+// at is the selector of the elements of root that stand depth deep: held by depth elements that nest, no more. The
+// depth is in :where, so that the root, which & stands for, is as specific as root alone at every depth.
+func at(depth int, root string) string {
+	within := ""
+	if depth > 0 {
+		within = ":where(" + strings.Repeat(nester+" ", depth) + "*)"
+	}
+	return root + within + ":where(:not(" + strings.Repeat(nester+" ", depth+1) + "*))"
 }
 
 // looksOf returns the looks the part or look name takes, in order.

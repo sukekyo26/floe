@@ -160,7 +160,7 @@ func TestFloePartExecPlaced(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	it := schema.Item{At: []string{"b"}, Part: "code", Holds: nil, Format: "", Value: "x"}
+	it := schema.Item{At: []string{"b"}, Part: "code", Format: "", Value: "x"}
 	_, err = drawPart(k, d, it, "x", newItems(nil, "", nil))
 	want := `parts/code/part.html:1:39: executing "part.html" at <.file>: can't evaluate field file in type string`
 	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render(""); got != want {
@@ -187,7 +187,7 @@ func TestWritten(t *testing.T) {
 		"columns": []any{map[string]any{"title": "a", "num": nil, "pills": map[string]any{"x": "good"}}},
 		"rows":    []any{[]any{template.HTML("drawn x")}, []any{template.HTML("drawn y")}},
 	}
-	it := schema.Item{At: []string{"b"}, Part: "table", Holds: []string{"cell"}, Format: "", Value: value}
+	it := schema.Item{At: []string{"b"}, Part: "table", Format: "", Value: value}
 	got, err := drawPart(k, d, it, ready, newItems(nil, "", nil))
 	if err != nil {
 		t.Fatal(err)
@@ -195,6 +195,41 @@ func TestWritten(t *testing.T) {
 	for _, want := range []string{`<td><span class="good" data-floe-part="cell">x</span></td>`, `<td>drawn y</td>`} {
 		if !strings.Contains(fmt.Sprint(got), want) {
 			t.Errorf("drew %s, want it to hold %s", got, want)
+		}
+	}
+}
+
+// depths counts, at each element that nests, the elements that nest around it, as the selector nester does: an
+// attribute of any value nests, empty or white space too, and an element that is a box and takes looks is one.
+func TestDepths(t *testing.T) {
+	t.Parallel()
+
+	tree, err := html.Parse(strings.NewReader(`<div data-floe-look=""><div data-floe-look="cards">` +
+		`<div class="card" data-floe-look="panel"><p>x</p></div></div></div>` +
+		`<div data-floe-look=" "><div data-floe-part="note" data-floe-look="cards rows"><section>` +
+		`<div data-floe-part="table"></div></section></div></div><div data-floe-part="table"></div>`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := fmt.Sprint(depths(tree))
+	want := "map[look cards:[1] look panel:[2] look rows:[1] part note:[1] part table:[0 2]]"
+	if got != want {
+		t.Errorf("depths = %s, want %s", got, want)
+	}
+}
+
+// at puts the depth in :where, so that the root is as specific at every depth as at none.
+func TestAt(t *testing.T) {
+	t.Parallel()
+
+	root := `[data-floe-look~="panel"]`
+	for depth, want := range []string{
+		root + `:where(:not(` + nester + ` *))`,
+		root + `:where(` + nester + ` *):where(:not(` + nester + ` ` + nester + ` *))`,
+		root + `:where(` + nester + ` ` + nester + ` *):where(:not(` + nester + ` ` + nester + ` ` + nester + ` *))`,
+	} {
+		if got := at(depth, root); got != want {
+			t.Errorf("at(%d) = %s, want %s", depth, got, want)
 		}
 	}
 }
