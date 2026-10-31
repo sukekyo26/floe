@@ -108,9 +108,11 @@ func handFault(g *graph, l *layout) string {
 		}
 		for _, side := range slices.Sorted(maps.Keys(ends)) {
 			p := ends[side]
-			parts = append(parts, part{Edge: &edge{From: end{Name: n.Box.Name, Point: nil}, To: end{Name: "", Point: &p}, //nolint:exhaustruct_v5 // one kind of part
+			parts = append(parts, part{Edge: &edge{
+				From: end{Name: n.Box.Name, Point: nil}, To: end{Name: "", Point: &p}, //nolint:exhaustruct_v5 // one kind of part
 				FromSide: side, ToSide: "", Via: nil, Straight: true, Label: nil, At: nil, Dashed: false, Bold: false, Tone: "",
-				Start: nil, End: nil, Crossing: true, who: "", graph: "", anchor: ""}})
+				Start: nil, End: nil, Crossing: true, who: "", graph: "", anchor: "",
+			}})
 		}
 	}
 	hands := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: parts, Example: ""}, //nolint:exhaustruct_v5 // a graph and edges
@@ -969,8 +971,8 @@ func TestGraphTold(t *testing.T) {
 	}
 	// Things of one graph meet only by a fault of its layout: floe's failure, not a mistake to move a graph.
 	for _, l := range []*layout{
-		{boxes: []rect{box(0, ga), box(20, ga)}, w: 500, h: 500},                                     //nolint:exhaustruct_v5 // what it checks
-		{boxes: []rect{box(30, ga)}, paths: []path{across}, w: 500, h: 500},                          //nolint:exhaustruct_v5 // what it checks
+		{boxes: []rect{box(0, ga), box(20, ga)}, w: 500, h: 500},            //nolint:exhaustruct_v5 // what it checks
+		{boxes: []rect{box(30, ga)}, paths: []path{across}, w: 500, h: 500}, //nolint:exhaustruct_v5 // what it checks
 		{labels: []rect{{x: 40, y: 10, w: 30, h: 18, what: "label", at: ga + "/edges/0", graph: ga}}, //nolint:exhaustruct_v5 // what it checks
 			paths: []path{across}, w: 500, h: 500},
 	} {
@@ -1351,6 +1353,20 @@ func TestGraphLabelRoom(t *testing.T) {
 	way.stretch(0, at, onGrid(need, column, math.Ceil))
 	if x := way.routes[1][0][0]; x < r.x+r.w {
 		t.Errorf("the run in the way at %v, the label to %v", x, r.x+r.w)
+	}
+
+	// A label above and left of the box: the group moves right and down by whole columns, keeping its grid, the
+	// label's left and top within a column of x and y.
+	up := &drawing{
+		right: false, boxes: map[int]rect{0: {x: 20, y: 20, w: 48, h: 30, what: "", at: ""}}, //nolint:exhaustruct_v5 // a box
+		shapes: map[int]string{0: ""}, routes: map[int][][2]float64{0: {{32, 20}, {200, 20}}}, ends: map[int][2]int{0: {0, 0}},
+		back: map[int]bool{}, spots: map[int]spot{0: {seg: 0, side: -1, at: 7, w: 30}},
+	}
+	up.stand(0, 0, [2]float64{20, 20})
+	lr, _ := up.rect(0)
+	if b := up.boxes[0]; math.Mod(b.x-20, column) != 0 || math.Mod(b.y-20, column) != 0 || lr.x < 20 || lr.x >= 20+column ||
+		lr.y < 20 || lr.y >= 20+column {
+		t.Errorf("stand: box at %v,%v, label at %v,%v", b.x, b.y, lr.x, lr.y)
 	}
 
 	short := &drawing{

@@ -326,7 +326,8 @@ func (d *drawing) place(k int, w float64) bool {
 		}
 	}
 	for i := range len(d.routes[k]) - 1 {
-		if sp, ok := d.room(k, i, w); ok && free(heldRect(segAt(d.routes[k], i), sp), d.held(k), append(d.runs(), d.hands()...)) {
+		sp, ok := d.room(k, i, w)
+		if ok && free(heldRect(segAt(d.routes[k], i), sp), d.held(k), append(d.runs(), d.hands()...)) {
 			d.spots[k] = sp
 			return true
 		}
