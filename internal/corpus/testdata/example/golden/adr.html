@@ -113,11 +113,12 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.palette {
-:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
-:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
-:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); }
-:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
-:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
 }
 </style>
 <style>
@@ -262,7 +263,7 @@ h2 { font-size: 1.1rem; }
 <article data-floe-look="panel">
 <header>
 <p class="kind">Decision record <span class="number">ADR 0007</span> <span class="date">2030-03-02</span></p>
-<h1 id="keep-sessions-in-the-database-not-in-memory">Keep sessions in the database, not in memory</h1><p class="status superseded">Superseded</p><p class="superseded-by" data-floe-tone="warn">Superseded by: <a href="/a/adr-0012/">ADR 0012</a>: sessions in the cache cluster</p><p class="deciders">Decided by: Platform team</p>
+<h1 id="keep-sessions-in-the-database-not-in-memory">Keep sessions in the database, not in memory</h1><p class="status superseded" data-floe-tone="muted">Superseded</p><p class="superseded-by" data-floe-tone="warn">Superseded by: <a href="/a/adr-0012/">ADR 0012</a>: sessions in the cache cluster</p><p class="deciders">Decided by: Platform team</p>
 </header>
 <section><h2 id="context">Context</h2><p>The web app keeps each user&#39;s session in the memory of the server that made it. With a second server behind the
 load balancer, a user sent to the other server is logged out (<a href="/a/incident-42/">incident 42</a>).</p>

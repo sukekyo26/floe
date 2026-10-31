@@ -146,7 +146,7 @@ func TestShapeMistakes(t *testing.T) {
 	}{
 		{"  - boxx: {}", "s.yaml:5:5: additional properties 'boxx' not allowed"},
 		{"  - {}", "s.yaml:5:5: minProperties: got 0, want 1"},
-		{"  - box: { x: 1, y: 1, rows: [a], tone: blue }", "s.yaml:5:41: value must be one of 'accent', 'good', 'warn', 'bad'"},
+		{"  - box: { x: 1, y: 1, rows: [a], tone: blue }", "s.yaml:5:41: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'"},
 		{"  - box: { y: 1, rows: [a] }", "s.yaml:5:12: missing property 'x'"},
 		{"  - box: { x: 1, y: 1, rows: [{ ja: あ }] }", "s.yaml:5:33: missing property 'en'"},
 		{"  - box: { x: 1, y: 1, rows: [a], w: 0 }", "s.yaml:5:38: minimum: got 0, want 1"},

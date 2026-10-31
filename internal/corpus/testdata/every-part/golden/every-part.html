@@ -113,11 +113,12 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.palette {
-:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
-:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
-:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); }
-:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
-:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
 }
 </style>
 <style>
@@ -609,7 +610,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope .type {
   display: block; width: fit-content; margin-top: 0.2rem; padding: 0 0.45rem; border-radius: 5px; font-size: 0.75rem;
   font-family: var(--mono);
-  background: color-mix(in srgb, var(--fg) 8%, var(--surface)); color: var(--muted);
+  background: var(--tone-soft); color: var(--tone);
 }
 :scope .default { display: block; margin-top: 0.15rem; font-size: 0.85rem; color: var(--muted); }
 }
@@ -620,7 +621,6 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the table's look, without a heading: a level's pill, then where it is and what became of it over what it is */
 :scope td.level { width: 1%; min-width: auto; white-space: nowrap; }
-:scope .level .nit { background: color-mix(in srgb, var(--fg) 8%, var(--surface)); color: var(--muted); }
 :scope .head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem; }
 /* Where it is breaks, though in a table: a path would widen the column too far */
 :scope .at { padding: 0; background: none; font-size: 0.8rem; color: var(--accent); overflow-wrap: anywhere; }
@@ -1201,6 +1201,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <div class="card stat" data-floe-tone="accent" data-floe-look="panel"><dt>Spaces</dt><dd class="value">12</dd></div>
 <div class="card stat" data-floe-tone="warn" data-floe-look="panel"><dt>Owners left</dt><dd class="value">3</dd></div>
 <div class="card stat" data-floe-tone="bad" data-floe-look="panel"><dt>Lost pages</dt><dd class="value">1</dd></div>
+<div class="card stat" data-floe-tone="muted" data-floe-look="panel"><dt>Skipped</dt><dd class="value">2</dd><dd class="note">left for later</dd></div>
 </dl>
 <div data-floe-part="compare"><table>
 <thead><tr><th></th><th scope="col">Now</th><th scope="col" class="after">After the move</th></tr></thead>
@@ -1701,6 +1702,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <tr><td>Its tone</td><td class="num">6</td><td>a note</td><td><span data-floe-tone="bad" data-floe-part="cell">high</span></td></tr>
 <tr><td>Changed by Markdown and HTML</td><td class="num">4</td><td><strong>done</strong></td><td><span data-floe-tone="good" data-floe-part="cell">**done**</span></td></tr>
 <tr><td>An ampersand</td><td class="num">5</td><td>A&amp;B</td><td><span data-floe-tone="accent" data-floe-part="cell">A&amp;B</span></td></tr>
+<tr><td>A quiet one</td><td class="num">7</td><td>a note</td><td><span data-floe-tone="muted" data-floe-part="cell">later</span></td></tr>
 </tbody>
 </table></div>
 <div data-floe-part="table"><table>
@@ -1718,6 +1720,8 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </div>
 <div data-floe-tone="bad" data-floe-part="note"><p>Attachments over 1 MB failed; <a href="https://example.com/failed">the list</a> names each, and <code>retry.sh</code> sends them again.</p>
 </div>
+<div data-floe-tone="muted" data-floe-part="note"><p>The old wiki stays read-only; <a href="https://example.com/wiki">the wiki</a> and <code>wiki.sh</code>.</p>
+</div>
 <div data-floe-part="note"><p>The banner goes up on Friday; <a href="https://example.com/banner">the banner</a> and <code>banner.sh</code>.</p>
 </div>
 <blockquote>
@@ -1732,6 +1736,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div data-floe-tone="accent"><span class="label">Moved</span><span class="track"><span style="width: 48.91304347826087%"></span></span><span class="value">900</span></div>
 <div data-floe-tone="warn"><span class="label">Pending</span><span class="track"><span style="width: 21.73913043478261%"></span></span><span class="value">400</span></div>
 <div data-floe-tone="bad"><span class="label">Broken</span><span class="track"><span style="width: 6.521739130434782%"></span></span><span class="value">120</span></div>
+<div data-floe-tone="muted"><span class="label">Skipped</span><span class="track"><span style="width: 3.260869565217391%"></span></span><span class="value">60</span></div>
 </div>
 <div data-floe-part="progress">
 <label class="bar"><span class="label">Pages</span><span class="count">1200 / 1840</span><progress value="1200" max="1840">1200 / 1840</progress></label>
@@ -1739,6 +1744,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <label class="bar" data-floe-tone="accent"><span class="label">Spaces</span><span class="count">4 / 12</span><progress value="4" max="12">4 / 12</progress></label>
 <label class="bar" data-floe-tone="warn"><span class="label">Owners</span><span class="count">1 / 4</span><progress value="1" max="4">1 / 4</progress></label>
 <label class="bar" data-floe-tone="bad"><span class="label">Links</span><span class="count">10 / 120</span><progress value="10" max="120">10 / 120</progress></label>
+<label class="bar" data-floe-tone="muted"><span class="label">Drafts</span><span class="count">2 / 6</span><progress value="2" max="6">2 / 6</progress></label>
 </div>
 <ul data-floe-part="checklist">
 <li class="done">Freeze edits</li>
@@ -1750,6 +1756,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <li data-floe-tone="accent"><span class="date">2030-04-06</span><div><strong>Copy</strong></div></li>
 <li data-floe-tone="good"><span class="date">2030-04-07</span><div><strong>Open</strong></div></li>
 <li data-floe-tone="bad"><span class="date">2030-04-08</span><div><strong>Rollback window ends</strong></div></li>
+<li data-floe-tone="muted"><span class="date">2030-04-20</span><div><strong>Old links checked</strong></div></li>
 <li><span class="date">2030-04-30</span><div><strong>Old server off</strong></div></li>
 </ol>
 </section>
@@ -1776,9 +1783,9 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </dl>
 <div data-floe-part="fields"><table>
 <tbody>
-<tr><td class="name"><code>read_only</code><span class="required">required</span><span class="type">bool</span></td><td>Refuses edits<span class="default">Default: <code>false</code></span></td></tr>
-<tr><td class="name"><code>banner</code><span class="type">string</span></td><td>Shown on every page</td></tr>
-<tr><td class="name"><code>port</code><span class="type">number</span></td><td><span class="default">Default: <code>8080</code></span></td></tr>
+<tr><td class="name"><code>read_only</code><span class="required">required</span><span class="type" data-floe-tone="muted">bool</span></td><td>Refuses edits<span class="default">Default: <code>false</code></span></td></tr>
+<tr><td class="name"><code>banner</code><span class="type" data-floe-tone="muted">string</span></td><td>Shown on every page</td></tr>
+<tr><td class="name"><code>port</code><span class="type" data-floe-tone="muted">number</span></td><td><span class="default">Default: <code>8080</code></span></td></tr>
 </tbody>
 </table></div>
 <dl data-floe-part="entries">
@@ -1810,7 +1817,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <tbody>
 <tr><td class="level"><span data-floe-tone="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">wiki.conf:3</code><span class="status"><span data-floe-tone="good" data-floe-part="cell">fixed</span></span></div><div>The banner names the old host</div></td></tr>
 <tr><td class="level"><span data-floe-tone="warn" data-floe-part="cell">should</span></td><td><div>The search index is rebuilt by hand</div></td></tr>
-<tr><td class="level"><span class="nit" data-floe-part="cell">nit</span></td><td><div>Two pages have the same title</div><div class="why">Left as the owners asked</div></td></tr>
+<tr><td class="level"><span data-floe-tone="muted" data-floe-part="cell">nit</span></td><td><div>Two pages have the same title</div><div class="why">Left as the owners asked</div></td></tr>
 </tbody>
 </table></div>
 <div data-floe-part="tree"><ul>

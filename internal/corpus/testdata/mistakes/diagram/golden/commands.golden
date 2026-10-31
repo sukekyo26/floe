@@ -15,7 +15,7 @@ floe: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downl
 raw.yaml:12:27: raw SVG holds <noscript>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 raw.yaml:13:27: raw SVG holds <base>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 room.yaml:14:15: label "only in a" is not all inside a and outside the other circles: move it, or leave out x and y for floe to place it
-shape.yaml:12:67: value must be one of 'accent', 'good', 'warn', 'bad'
+shape.yaml:12:67: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 $ floe render --out-dir $TMP/pages/far.yaml far.yaml
 exit 1
 --- stderr
@@ -48,7 +48,7 @@ room.yaml:14:15: label "only in a" is not all inside a and outside the other cir
 $ floe render --out-dir $TMP/pages/shape.yaml shape.yaml
 exit 1
 --- stderr
-shape.yaml:12:67: value must be one of 'accent', 'good', 'warn', 'bad'
+shape.yaml:12:67: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 $ floe render --out-dir $TMP/together far.yaml narrow.yaml place.yaml raw.yaml room.yaml shape.yaml
 exit 1
 --- stderr
@@ -66,4 +66,4 @@ floe: AWS icons are not in $SAMPLE/.icons/aws; run "floe icons fetch aws" (downl
 raw.yaml:12:27: raw SVG holds <noscript>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 raw.yaml:13:27: raw SVG holds <base>, which a diagram may not hold: leave it out, and draw the looks with SVG's shapes and attributes (fill= and the like)
 room.yaml:14:15: label "only in a" is not all inside a and outside the other circles: move it, or leave out x and y for floe to place it
-shape.yaml:12:67: value must be one of 'accent', 'good', 'warn', 'bad'
+shape.yaml:12:67: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'

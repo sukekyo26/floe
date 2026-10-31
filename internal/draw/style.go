@@ -116,19 +116,25 @@ const boxes = "@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { " +
 
 const boxList = "display: grid; list-style: none; padding: 0; gap: 0;"
 
-// Tones gives each element marked with a tone of tones (data-floe-tone) the tone's colours from the palette, --tone
-// and --tone-soft, from --<tone> and --<tone>-soft, and the root (:scope) and each part's box accent's, so that a part
-// takes no tone from around it and a rule outside a tone reads accent. A part's box that takes a tone holds the two as
-// specific: the tone's rule, written after, wins. floe's own and fixed, it goes unchecked by css.Check.
+// Tones gives each element marked with a tone of tones (data-floe-tone) the tone's colours from the palette: --tone
+// and --tone-soft from --<tone> and --<tone>-soft, and --tone-fill from --<tone>-fill, a theme's own fill for the tone,
+// or else --<tone>-soft; and the root (:scope) and each part's box accent's, so that a part takes no tone from around
+// it and a rule outside a tone reads accent. A part's box that takes a tone holds them as specific: the tone's rule,
+// written after, wins. floe's own and fixed, it goes unchecked by css.Check.
 // LIMIT: a data-floe-tone of no tone matches none, as if not written: a part's box draws in accent's colours, another
 // element in the tone around it.
 func Tones(tones []string) []byte {
 	var b strings.Builder
-	b.WriteString(":where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }\n")
+	b.WriteString(toneRule(":where(:scope, [data-floe-part])", "accent"))
 	for _, t := range tones {
-		fmt.Fprintf(&b, ":where([data-floe-tone=%q]) { --tone: var(--%s); --tone-soft: var(--%s-soft); }\n", t, t, t)
+		b.WriteString(toneRule(fmt.Sprintf(":where([data-floe-tone=%q])", t), t))
 	}
 	return []byte(b.String())
+}
+
+func toneRule(selector, tone string) string {
+	return fmt.Sprintf("%[1]s { --tone: var(--%[2]s); --tone-soft: var(--%[2]s-soft); "+
+		"--tone-fill: var(--%[2]s-fill, var(--%[2]s-soft)); }\n", selector, tone)
 }
 
 // pageScoped is css reaching the page short of what the parts hold, or nil when css is empty.

@@ -113,11 +113,12 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.palette {
-:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
-:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
-:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); }
-:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
-:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
 }
 </style>
 <style>
@@ -262,7 +263,6 @@ blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-rad
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the table's look, without a heading: a level's pill, then where it is and what became of it over what it is */
 :scope td.level { width: 1%; min-width: auto; white-space: nowrap; }
-:scope .level .nit { background: color-mix(in srgb, var(--fg) 8%, var(--surface)); color: var(--muted); }
 :scope .head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem; }
 /* Where it is breaks, though in a table: a path would widen the column too far */
 :scope .at { padding: 0; background: none; font-size: 0.8rem; color: var(--accent); overflow-wrap: anywhere; }
@@ -645,7 +645,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <div data-floe-part="findings"><table>
 <tbody>
 <tr><td class="level"><span data-floe-tone="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">a.conf:1</code><span class="status"><span data-floe-tone="good" data-floe-part="cell">fixed</span></span></div><div>The wiki is still open</div></td></tr>
-<tr><td class="level"><span class="nit" data-floe-part="cell">nit</span></td><td><div>Two pages share a title</div></td></tr>
+<tr><td class="level"><span data-floe-tone="muted" data-floe-part="cell">nit</span></td><td><div>Two pages share a title</div></td></tr>
 </tbody>
 </table></div>
 </section>
