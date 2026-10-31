@@ -1,12 +1,12 @@
 :scope {
-  border: 3px solid var(--fg); border-radius: 0; background: var(--surface); padding-left: 4rem;
+  border: 3px solid var(--fg); border-radius: 0; background: var(--surface); --floe-mark: 1.9rem;
   box-shadow: 6px 6px 0 var(--brutal-blue); margin: 0 6px 6px 0;
 }
 :scope.good { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-green); }
 :scope.warn { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-orange); }
 :scope.bad { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-red); }
 :scope::before {
-  width: 1.9rem; height: 1.9rem; border-radius: 0; border: 2px solid var(--fg); background: var(--brutal-blue); color: var(--brutal-ink); font-weight: 900;
+  border-radius: 0; border: 2px solid var(--fg); background: var(--brutal-blue); color: var(--brutal-ink); font-weight: 900;
 }
 :scope.good::before { background: var(--brutal-green); color: var(--brutal-ink); }
 :scope.warn::before { background: var(--brutal-orange); color: var(--brutal-ink); }
