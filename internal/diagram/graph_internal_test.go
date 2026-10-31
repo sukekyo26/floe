@@ -3,6 +3,7 @@ package diagram
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand/v2"
 	"os"
@@ -68,6 +69,19 @@ func labelFault(g *graph, l *layout) string {
 	if a, b := crossings(l), crossings(plain); a != b {
 		return fmt.Sprintf("%d crossings labelled, %d not", a, b)
 	}
+	// Across the ranks, room made and labels before the boxes move them by whole columns, keeping their grid.
+	across := 0
+	if g.Direction == "right" {
+		across = 1
+	}
+	for _, n := range g.Nodes {
+		if a, b := l.names[n.Box.Name].r, plain.names[n.Box.Name].r; math.Mod(a.lo(across)-b.lo(across), column) != 0 {
+			return fmt.Sprintf("box %s at %v,%v labelled, %v,%v not: off its grid", n.Box.Name, a.x, a.y, b.x, b.y)
+		}
+	}
+	if fault := handFault(g, l); fault != "" {
+		return fault
+	}
 	j := 0
 	for k, e := range g.Edges {
 		if e.Label == nil {
@@ -77,6 +91,34 @@ func labelFault(g *graph, l *layout) string {
 		j++
 		if !slices.ContainsFunc(l.paths[k].segs, func(s seg) bool { return beside(r, s) }) {
 			return fmt.Sprintf("the label of %s at %v, %v not a column beside a run of it", l.paths[k].what, r.x, r.y)
+		}
+	}
+	return ""
+}
+
+// handFault is a mistake of a label of g, laid out as l, with an edge written by hand from the middle of a side of a
+// box its edges do not use (left and right laid out down, top and bottom laid out right), 20 out, or "".
+func handFault(g *graph, l *layout) string {
+	parts := []part{{Graph: g}} //nolint:exhaustruct_v5 // one kind of part
+	for _, n := range g.Nodes {
+		r := l.names[n.Box.Name].r
+		ends := map[string][2]float64{"left": {r.x - 20, r.y + r.h/2}, "right": {r.x + r.w + 20, r.y + r.h/2}}
+		if g.Direction == "right" {
+			ends = map[string][2]float64{"top": {r.x + r.w/2, r.y - 20}, "bottom": {r.x + r.w/2, r.y + r.h + 20}}
+		}
+		for _, side := range slices.Sorted(maps.Keys(ends)) {
+			p := ends[side]
+			parts = append(parts, part{Edge: &edge{From: end{Name: n.Box.Name, Point: nil}, To: end{Name: "", Point: &p}, //nolint:exhaustruct_v5 // one kind of part
+				FromSide: side, ToSide: "", Via: nil, Straight: true, Label: nil, At: nil, Dashed: false, Bold: false, Tone: "",
+				Start: nil, End: nil, Crossing: true, who: "", graph: "", anchor: ""}})
+		}
+	}
+	hands := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: parts, Example: ""}, //nolint:exhaustruct_v5 // a graph and edges
+		Options{Lang: "en", Icons: NoIcons{Err: nil}, Seq: 1})
+	hands.check()
+	for _, p := range hands.problems {
+		if slices.ContainsFunc(p.Args, func(a any) bool { return strings.HasPrefix(fmt.Sprint(a), `label "`) }) {
+			return "an edge written by hand: " + p.Error()
 		}
 	}
 	return ""
@@ -925,6 +967,18 @@ func TestGraphTold(t *testing.T) {
 			t.Errorf("%s: %v, want %s at %s", c.name, c.l.problems, c.key, c.at)
 		}
 	}
+	// Things of one graph meet only by a fault of its layout: floe's failure, not a mistake to move a graph.
+	for _, l := range []*layout{
+		{boxes: []rect{box(0, ga), box(20, ga)}, w: 500, h: 500},                                     //nolint:exhaustruct_v5 // what it checks
+		{boxes: []rect{box(30, ga)}, paths: []path{across}, w: 500, h: 500},                          //nolint:exhaustruct_v5 // what it checks
+		{labels: []rect{{x: 40, y: 10, w: 30, h: 18, what: "label", at: ga + "/edges/0", graph: ga}}, //nolint:exhaustruct_v5 // what it checks
+			paths: []path{across}, w: 500, h: 500},
+	} {
+		l.check()
+		if l.failure == nil || len(l.problems) != 0 {
+			t.Errorf("one graph's things meeting: failure %v, mistakes %v", l.failure, l.problems)
+		}
+	}
 }
 
 // boxIn is the area of the box named name in l.
@@ -1261,10 +1315,13 @@ func TestGraphLabelRoom(t *testing.T) {
 	// A short run down out of a box, blocked left by a run beside it, and right by the label of a run across, which
 	// starts just right of it at y (the cut a unit past the box is at 31): room is made below that label, which stays
 	// with its run, whole, partly past the cut (y 28) or from the cut on (y 30).
-	for _, c := range []struct{ y, side, stays, moves float64 }{{28, 1, 27, 0}, {30, 1, 29, 0}, {50, -1, 0, 11}} {
+	// A label far across from where the new one goes, from x 150, leaves nothing in its way.
+	for _, c := range []struct{ y, side, at, stays, moves float64 }{
+		{28, 1, 26, 27, 0}, {30, 1, 26, 29, 0}, {50, -1, 26, 0, 11}, {28, 1, 150, 0, 0},
+	} {
 		d := crowd(c.y)
-		d.spots[1] = spot{seg: 0, side: c.side, at: 26, w: 30}
-		if stays, moves := d.crossed(1, 31); stays != c.stays || moves != c.moves {
+		d.spots[1] = spot{seg: 0, side: c.side, at: c.at, w: 30}
+		if stays, moves := d.crossed(1, 31, 25, 66); stays != c.stays || moves != c.moves {
 			t.Errorf("y %v, side %v: the cut at 31 leaves %v of the label before the room, %v after; want %v, %v",
 				c.y, c.side, stays, moves, c.stays, c.moves)
 		}

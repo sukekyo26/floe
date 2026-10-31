@@ -239,7 +239,7 @@ func (d *drawing) stand(across int, left float64, start [2]float64) float64 {
 	}
 	d.stretch(across, math.Inf(-1), by)
 	if top, _ := d.span(1 - across); top < start[1-across] {
-		d.stretch(1-across, math.Inf(-1), start[1-across]-top)
+		d.stretch(1-across, math.Inf(-1), onGrid(start[1-across]-top, column, math.Ceil))
 	}
 	return onGrid(hi+by-start[across]+groupGap, column, math.Ceil)
 }
@@ -301,8 +301,8 @@ func isDown(s seg) bool { return s[0] == s[2] }
 
 // place places edge k's label, w wide: beside the first run of its edge with room for it, from the box it is written
 // from, each run from its end nearer that box; with none, it makes room beside a run (see room), the first that
-// takes it. It reports false when none does, or room made is not clear: floe's fault either way, as room made is clear
-// by how it is made (see room).
+// takes it and keeps clear of where edges written by hand leave boxes. It reports false when none does: floe's fault,
+// as room made is clear by how it is made (see room), but for those.
 // LIMIT: each spot is compared with every box, label and run of the group (0.06s for the largest graph allowed, every
 // edge labelled); compare only the things near a spot if larger graphs come to need it. Room made grows the group
 // and widens the boxes a cut crosses beyond their text, and minds no edge written by hand: a band made over the
@@ -326,9 +326,9 @@ func (d *drawing) place(k int, w float64) bool {
 		}
 	}
 	for i := range len(d.routes[k]) - 1 {
-		if sp, ok := d.room(k, i, w); ok {
+		if sp, ok := d.room(k, i, w); ok && free(heldRect(segAt(d.routes[k], i), sp), d.held(k), append(d.runs(), d.hands()...)) {
 			d.spots[k] = sp
-			return free(heldRect(segAt(d.routes[k], i), sp), d.held(k), d.runs())
+			return true
 		}
 	}
 	return false
@@ -386,7 +386,8 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 	if (cut-to)*sign >= 0 {
 		return spot{seg: 0, side: 0, at: 0, w: 0}, false
 	}
-	stays, moves := d.crossed(along, cut)
+	cross := s[1-along]
+	stays, moves := d.crossed(along, cut, cross+1, cross+column+size[0])
 	d.stretch(along, cut, stays+size[1]+4+moves)
 	sp := spot{seg: i, side: 1, at: cut + stays + 2, w: w}
 	s = segAt(d.routes[k], i)
@@ -396,13 +397,17 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 	return sp, true
 }
 
-// crossed is how far the labels reach into the band a cut at cut on axis along opens, by how stretch moves them: a
-// label stays whole, if its run does, or moves whole with its run, so that what of it lay past the cut (it stays) or
-// short of it (it moves) lies in the band, before (stays) or after (moves) the room made there.
-func (d *drawing) crossed(along int, cut float64) (stays, moves float64) {
+// crossed is how far the labels across from lo to hi (where the label to place stands with its column) reach into
+// the band a cut at cut on axis along opens, by how stretch moves them: a label stays whole, if its run does, or
+// moves whole with its run, so that what of it lay past the cut (it stays) or short of it (it moves) lies in the
+// band, before (stays) or after (moves) the room made there. A label beside that span stays clear of the room.
+func (d *drawing) crossed(along int, cut, lo, hi float64) (stays, moves float64) {
 	for k, sp := range d.spots {
 		s := segAt(d.routes[k], sp.seg)
 		r := heldRect(s, sp)
+		if a := r.lo(1 - along); a >= hi || a+r.size(1-along) <= lo {
+			continue
+		}
 		lo, hi := r.lo(along), r.lo(along)+r.size(along)
 		if runAxis(s) == along && sp.at > cut || runAxis(s) != along && s[along] > cut {
 			moves = max(moves, cut-lo)
