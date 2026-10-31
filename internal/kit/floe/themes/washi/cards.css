@@ -4,7 +4,7 @@
 :scope.numbered > .card::before {
   content: counter(floe-card, cjk-decimal); content: counter(floe-card, cjk-decimal) / "";
   position: absolute; top: -0.5rem; right: -0.5rem; display: grid; place-items: center; --floe-mark: 1.6rem; border-radius: 50%;
-  background: var(--washi-shu); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; transform: rotate(-8deg);
+  background: var(--washi-shu); color: var(--on-fill); font-size: 0.8rem; font-weight: 700;
 }
 .card .title { letter-spacing: 0.08em; }
 .card :is(p, ul, ol) { color: var(--muted); }

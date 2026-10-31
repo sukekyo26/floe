@@ -343,7 +343,7 @@ blockquote::before {
 }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  --floe-mark: 1.75rem; display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
+  --floe-mark: 1.75rem; display: grid; place-items: center; justify-self: start; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
