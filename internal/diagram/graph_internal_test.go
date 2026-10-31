@@ -1261,6 +1261,14 @@ func TestGraphLabelRoom(t *testing.T) {
 	// A short run down out of a box, blocked left by a run beside it, and right by the label of a run across, which
 	// starts just right of it at y (the cut a unit past the box is at 31): room is made below that label, which stays
 	// with its run, whole, partly past the cut (y 28) or from the cut on (y 30).
+	for _, c := range []struct{ y, side, stays, moves float64 }{{28, 1, 27, 0}, {30, 1, 29, 0}, {50, -1, 0, 11}} {
+		d := crowd(c.y)
+		d.spots[1] = spot{seg: 0, side: c.side, at: 26, w: 30}
+		if stays, moves := d.crossed(1, 31); stays != c.stays || moves != c.moves {
+			t.Errorf("y %v, side %v: the cut at 31 leaves %v of the label before the room, %v after; want %v, %v",
+				c.y, c.side, stays, moves, c.stays, c.moves)
+		}
+	}
 	for _, y := range []float64{28, 30} {
 		d := crowd(y)
 		if !d.place(0, 30) {
