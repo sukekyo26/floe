@@ -22,31 +22,7 @@ const (
 func (gr *group) place(right bool) (trips, pulls int) {
 	gr.split()
 	for i := range gr.nodes {
-		n := &gr.nodes[i]
-		if n.box == nil {
-			if n.label != nil {
-				// A label beside its edge's column, a column right of it (below it for right), with room along for its
-				// edge to step half a column past it.
-				lw := labelWidth(n.label, false)
-				n.w, n.h = column+lw, labelH+inEnd
-				if right {
-					n.w, n.h = column+labelH, lw+inEnd
-				}
-			}
-			continue
-		}
-		r := boxRect(&box{
-			Name: "", X: 0, Y: 0, Origin: "", W: 0, H: 0, Rows: n.box.Rows, Tone: "", Shape: n.box.Shape,
-			graph: "",
-		}, "")
-		n.w, n.h = r.w, r.h
-		if right {
-			n.w, n.h = r.h, r.w
-		}
-		// Room on a side for its links, a column of the grid each, 12 in from each end, and one more.
-		if k := max(len(n.ins), len(n.outs)); k > 0 {
-			n.w = max(n.w, onGrid(float64(12*k+36), 8, math.Ceil))
-		}
+		gr.size(i, right)
 	}
 	trips = gr.order()
 	for _, rank := range gr.ranks {
@@ -67,6 +43,36 @@ func (gr *group) place(right bool) (trips, pulls int) {
 		gr.nodes[i].x -= least
 	}
 	return trips, pulls
+}
+
+// size sets how wide and tall node i is, as laid out down: a box as drawn, with room on a side for its links; a
+// label's box about its label; a point nothing.
+func (gr *group) size(i int, right bool) {
+	n := &gr.nodes[i]
+	if n.box == nil {
+		if n.label != nil {
+			// A label beside its edge's column, a column right of it (below it for right), with room along for its
+			// edge to step half a column past it.
+			lw := labelWidth(n.label, false)
+			n.w, n.h = column+lw, labelH+inEnd
+			if right {
+				n.w, n.h = column+labelH, lw+inEnd
+			}
+		}
+		return
+	}
+	r := boxRect(&box{
+		Name: "", X: 0, Y: 0, Origin: "", W: 0, H: 0, Rows: n.box.Rows, Tone: "", Shape: n.box.Shape,
+		graph: "",
+	}, "")
+	n.w, n.h = r.w, r.h
+	if right {
+		n.w, n.h = r.h, r.w
+	}
+	// Room on a side for its links, a column of the grid each, 12 in from each end, and one more.
+	if k := max(len(n.ins), len(n.outs)); k > 0 {
+		n.w = max(n.w, onGrid(float64(12*k+36), 8, math.Ceil))
+	}
 }
 
 // boxesOf are the boxes of rank, in order: the points of a rank are placed by wire, at their links' columns.

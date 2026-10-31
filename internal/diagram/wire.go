@@ -197,16 +197,7 @@ func (gr *group) settle(r int) {
 		e := gr.links[n.ins[0]].exit
 		need := e
 		if last >= 0 {
-			o := gr.nodes[rank[last]]
-			at, gap := o.right(), column
-			if between := gr.boxesOf(rank[last+1 : k]); len(between) > 0 {
-				// The boxes between, packed as the passes below pack them, on the grid of 6.
-				for _, b := range between {
-					at = onGrid(at+nodeGap, 6, math.Ceil) + gr.nodes[b].w
-				}
-				gap = nodeGap
-			}
-			need = max(e, onGrid(at+gap, 6, math.Ceil))
+			need = max(e, gr.past(rank, last, k))
 		}
 		n.col, n.jog = need, 0
 		if need != e {
@@ -234,6 +225,19 @@ func (gr *group) settle(r int) {
 	}
 }
 
+// past is the first x the point or label's box rank[k] may stand at, past the one at rank[last] and the boxes
+// between, packed as settle packs them, on the grid of 6.
+func (gr *group) past(rank []int, last, k int) float64 {
+	at, gap := gr.nodes[rank[last]].right(), column
+	if between := gr.boxesOf(rank[last+1 : k]); len(between) > 0 {
+		for _, b := range between {
+			at = onGrid(at+nodeGap, 6, math.Ceil) + gr.nodes[b].w
+		}
+		gap = nodeGap
+	}
+	return onGrid(at+gap, 6, math.Ceil)
+}
+
 // straighten moves the straight run of an edge above link l, up to the box it leaves or the point it enters bent,
 // across to column c, so that the node l enters stands at c straight rather than pushed. It moves nothing and
 // reports false unless every node of the run has room at c in its rank, and the box leaves by c in its exits' order.
@@ -251,12 +255,8 @@ func (gr *group) straighten(l int, c float64) bool {
 			}
 			continue
 		}
-		rank := gr.ranks[u.rank]
-		if k := slices.Index(rank, gr.links[l].from); k+1 < len(rank) {
-			at, m := c+max(u.w, u.jog), gr.nodes[rank[k+1]]
-			if m.box == nil && m.col < onGrid(at+column, 6, math.Ceil) || m.box != nil && m.x < onGrid(at+nodeGap, 6, math.Ceil) {
-				return false
-			}
+		if !gr.roomAt(gr.links[l].from, c-u.jog) {
+			return false
 		}
 	}
 	// The run's links stay straight; the lowest one's entry is set with the rank it enters.
@@ -281,6 +281,21 @@ func (gr *group) gap(a, b int) int {
 		return 1
 	}
 	return int(math.Ceil((ta.w + column) / column))
+}
+
+// roomAt reports whether the point or label's box v may stand at column col, as far from what stands right of it in
+// its rank as settle puts them: a column from a point or label's box, nodeGap from a box.
+func (gr *group) roomAt(v int, col float64) bool {
+	n, rank := gr.nodes[v], gr.ranks[gr.nodes[v].rank]
+	k := slices.Index(rank, v)
+	if k+1 == len(rank) {
+		return true
+	}
+	at, m := col+max(n.w, n.jog), gr.nodes[rank[k+1]]
+	if m.box != nil {
+		return m.x >= onGrid(at+nodeGap, 6, math.Ceil)
+	}
+	return m.col >= onGrid(at+column, 6, math.Ceil)
 }
 
 // leaves reports whether the box link l leaves can leave by column c instead, right of where it leaves: c on its

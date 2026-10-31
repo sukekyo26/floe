@@ -123,7 +123,8 @@ func (l *layout) tell(key string, things []placed, args ...any) {
 	}
 	if len(things) > 1 && !slices.ContainsFunc(things, func(t placed) bool { return t.graph != things[0].graph }) {
 		if l.failure == nil {
-			l.failure = fmt.Errorf("diagram: the graph at %s laid out a mistake of its own, %s %v", things[0].graph, key, args) //nolint:err113 // floe's own
+			l.failure = fmt.Errorf("diagram: the graph at %s laid out a mistake of its own, %s %v", //nolint:err113 // floe's own
+				things[0].graph, key, args)
 		}
 		return
 	}
