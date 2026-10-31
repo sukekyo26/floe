@@ -66,7 +66,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
 /* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves at
-   least --floe-room, and what a box draws outside itself (its shadow, a tilt, an outline) reaches no further on any
+   least --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
    side, so that it never meets another box nor the page's edge: nothing makes room for it. A box casts its theme's one
    shadow, --floe-shadow-x, -y, -blur and -spread (inherited from the palette, in px or rem), in the colour
    --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
@@ -130,10 +130,8 @@ blockquote > * + * { margin-top: 0.6rem; }
   --nb-blue: rgb(120 190 255 / 0.5); --nb-orange: rgb(255 170 80 / 0.55);
   --nb-stick-1: #fff1a6; --nb-stick-2: #ffd2e1; --nb-stick-3: #cfe8ff;
   --nb-stick-ink: #2b2a26; --nb-stick-shadow: rgb(40 30 10 / 0.45);
-  /* The soft shadow under what lies on the page, and how far a sticky note tilts at most and how wide it grows at most:
-     half the width times the tilt's sine, with the shadow, stays within --floe-room */
+  /* The soft shadow under what lies on the page */
   --floe-shadow-y: 3px; --floe-shadow-blur: 8px; --floe-shadow-spread: -5px;
-  --nb-tilt: 1.2deg; --nb-stick-width: 24rem;
   --nb-hand: 14px 6px 12px 8px / 8px 12px 6px 14px;
 }
 }
@@ -489,13 +487,13 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 /* The panel of a card, on plain paper */
 .card { position: relative; background: var(--surface); }
 :scope.numbered > .card::before { content: none; }
-/* Options are sticky notes, each held by a strip of tape and set a little askew */
+/* Options are sticky notes, each held by a strip of tape */
 :scope.numbered > .card {
   border: 0; border-radius: 0; --face: var(--nb-stick-1); --on-face: var(--nb-stick-ink); background: var(--face); color: var(--on-face); padding-top: 1.6rem;
-  --floe-shadow-color: var(--nb-stick-shadow); max-width: var(--nb-stick-width); transform: rotate(calc(-1 * var(--nb-tilt)));
+  --floe-shadow-color: var(--nb-stick-shadow);
 }
-:scope.numbered > .card:nth-child(3n + 2) { --face: var(--nb-stick-2); transform: rotate(calc(var(--nb-tilt) * 5 / 6)); }
-:scope.numbered > .card:nth-child(3n) { --face: var(--nb-stick-3); transform: rotate(calc(-0.5 * var(--nb-tilt))); }
+:scope.numbered > .card:nth-child(3n + 2) { --face: var(--nb-stick-2); }
+:scope.numbered > .card:nth-child(3n) { --face: var(--nb-stick-3); }
 :scope.numbered > .card::before {
   content: ""; position: absolute; top: -8px; left: 50%; width: 84px; height: 22px; margin-left: -42px;
   background: var(--nb-tape); transform: rotate(-3deg);
