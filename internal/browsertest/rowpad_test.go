@@ -112,7 +112,7 @@ func rowPadWant(pad, factsTop string) string {
 		"table " + both, "table head " + both,
 	}
 	slices.Sort(rows)
-	return strings.Join(append(rows, "checklist mark level", "checklist count "+pad+"/"+pad, "boxes as html rows"), ", ")
+	return strings.Join(rows, ", ") + ", checklist mark level, checklist count " + pad + "/" + pad + ", boxes as html rows"
 }
 
 // rowsSection is a section of design's and postmortem's more holding an element of html that takes the look rows.
