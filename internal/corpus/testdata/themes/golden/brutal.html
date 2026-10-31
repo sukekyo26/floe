@@ -281,7 +281,7 @@ blockquote {
 :scope.bad { background: var(--bad-soft); }
 :scope::before {
   content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
-  display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%;
   background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
@@ -442,7 +442,7 @@ blockquote {
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
-  border: 3px solid var(--fg); border-radius: 0; background: var(--surface); --floe-mark: 1.9rem;
+  border: 3px solid var(--fg); border-radius: 0; background: var(--surface); --floe-mark: 2.15rem;
   box-shadow: 6px 6px 0 var(--brutal-blue); margin: 0 6px 6px 0;
 }
 :scope.good { background: var(--surface); box-shadow: 6px 6px 0 var(--brutal-green); }

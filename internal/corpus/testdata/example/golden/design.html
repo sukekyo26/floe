@@ -224,7 +224,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope > li > * + * { margin-top: 0.15rem; }
 :scope > li::before {
   content: counter(floe-step); anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid;
-  place-items: center; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
   background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
 }

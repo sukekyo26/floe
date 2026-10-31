@@ -342,7 +342,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 /* The mark: a box, and over it the link's sign, each level with the first line of the link */
 :scope > li::before, :scope > li::after {
   content: "\200b"; content: "\200b" / ""; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
-  overflow: hidden; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  overflow: hidden; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
 }
 :scope > li::before { border-radius: 9px; background: var(--accent-soft); }
 :scope a { font-weight: 700; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
@@ -375,7 +375,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 :scope.bad { background: var(--bad-soft); }
 :scope::before {
   content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
-  display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%;
   background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
@@ -542,8 +542,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 :scope.good { border-color: var(--good); }
 :scope.warn { border-color: var(--warn); }
 :scope.bad { border-color: var(--bad); }
-/* A pseudo-element is no element of * { box-sizing: border-box }: its frame stays within the mark's size */
-:scope::before { box-sizing: border-box; border: 2px solid var(--fg); }
+:scope::before { border: 2px solid var(--fg); }
 }
 }
 </style>

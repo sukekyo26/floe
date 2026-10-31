@@ -275,7 +275,7 @@ blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-hei
 :scope.bad { background: var(--bad-soft); }
 :scope::before {
   content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
-  display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%;
   background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
@@ -436,7 +436,7 @@ blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-hei
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope, :scope:is(.good, .warn) {
-  background: none; border: 0; border-top: 2px solid var(--fg); border-radius: 0; padding-left: 0.2rem; --floe-mark-gap: 0.8rem;
+  background: none; border: 0; border-top: 2px solid var(--fg); border-radius: 0;
 }
 :scope::before, :scope:is(.good, .warn)::before {
   background: none; color: var(--accent); font-size: 1rem; font-weight: 900;
@@ -449,7 +449,7 @@ blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-hei
 :scope.bad, :scope.bad > * { --face: var(--bad); --on-face: var(--on-fill); }
 :scope:is(.warn, .bad) { background: var(--face); color: var(--on-face); }
 :scope:is(.warn, .bad)::before { color: var(--on-face); }
-:scope.bad { border: 0; border-radius: 0; padding-left: 0.6rem; --floe-mark-gap: 0.4rem; }
+:scope.bad { border: 0; border-radius: 0; }
 :scope.bad::before { background: none; font-weight: 900; }
 .title, :scope.good .title { color: var(--fg); font-weight: 900; }
 :scope:is(.warn, .bad) .title { color: var(--on-face); }
@@ -461,7 +461,7 @@ blockquote::before { content: "\201C"; display: block; font-size: 4rem; line-hei
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { gap: 0; }
 .card { border: 0; border-left: 1px solid var(--fg); padding: 0.25rem 1.4rem 0.5rem; }
-:scope:not([data-floe-part~="links"]) > .card:first-child { border-left: 0; padding-left: 0; }
+:scope > .card:first-child { border-left: 0; padding-left: 0; }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / "";
   display: block; width: auto; height: auto; background: none; color: var(--fg);

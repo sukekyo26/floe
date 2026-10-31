@@ -287,7 +287,7 @@ blockquote::before {
 :scope.bad { background: var(--bad-soft); }
 :scope::before {
   content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
-  display: grid; place-items: center; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%;
   background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
@@ -451,7 +451,7 @@ blockquote::before {
   background: var(--bp-squares), var(--surface); border-radius: 0;
   box-shadow: none;
 }
-:scope { border: 1.5px dashed var(--accent); }
+:scope { border: 1.5px dashed var(--accent); --floe-mark: 1.75rem; }
 :scope.good { border-color: var(--good); }
 :scope.warn { border-color: var(--warn); }
 :scope.bad { border-color: var(--bad); }
