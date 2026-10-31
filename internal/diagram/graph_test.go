@@ -78,7 +78,7 @@ func TestGraphMistakes(t *testing.T) {
 		{"up", strings.Replace(g1, "y: 20\n", "y: 20\n      direction: up\n", 1), `s.yaml:6:18: value must be one of 'down', 'right'`},
 		{"a box placed", strings.Replace(g1, "{ name: show,", "{ name: show, x: 10,", 1), `s.yaml:9:18: additional properties 'x' not allowed`},
 		{"201 boxes", many.String(), `s.yaml:7:9: maxItems: got 201, want 200`},
-		{"4,001 ranks passed", long.String(), `s.yaml: graph: the edges of this diagram's graphs pass 4001 ranks between their ends, more than 4000: split the diagram (in a graph with an edge label, every edge passes about twice as many ranks)`},
+		{"4,001 ranks passed", long.String(), `s.yaml: graph: the edges of this diagram's graphs pass 4001 ranks between their ends, more than 4000: split the diagram`},
 	} {
 		if _, got := draw(t, c.src, inspect); got != c.want {
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
