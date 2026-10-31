@@ -1,6 +1,7 @@
 package diagram
 
 import (
+	"cmp"
 	"fmt"
 	"math"
 	"slices"
@@ -253,7 +254,7 @@ func (l *layout) addEdge(e *edge, at string) {
 		// A graph's label stands beside its own line, not on it: nothing to hide under it, and its own line is
 		// checked against it like any other.
 		inGraph := e.graph != ""
-		i := l.label(at, e.Label, x, y, "middle", inGraph, false)
+		i := l.label(at, e.Label, x, y, cmp.Or(e.anchor, "middle"), inGraph, false)
 		l.labels[i].graph = e.graph
 		if !inGraph {
 			p.own = i

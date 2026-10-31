@@ -1172,6 +1172,18 @@ func TestGraphLabels(t *testing.T) {
 		}
 	}
 
+	// Down, a label's text starts by its edge, though the label is as wide as its widest language: in English, "yes"
+	// starts 5 into the label, a column right of check→show, not in the middle of the room the Japanese takes.
+	g2.Direction = ""
+	g2.Edges[1].Label = Text{"en": "yes", "ja": "データファイルと画像の写しを保存する"}
+	l := laid(g2)
+	line := l.paths[1].segs[0][0]
+	for _, el := range l.labelEls {
+		if el.Kind == "text" && el.Text["en"] == "yes" && (el.Anchor != "start" || el.X != line+column+5) {
+			t.Errorf("down: yes drawn at x %v, anchor %s; want its start at %v, by check→show at %v", el.X, el.Anchor, line+column+5, line)
+		}
+	}
+
 	// Three labelled edges out of a box with room for their columns but not their labels: the later labels' boxes
 	// are pushed, and their edges step under the text.
 	fan := graphOf([]string{"a", "b", "c", "d"}, "a>b", "a>c", "a>d")

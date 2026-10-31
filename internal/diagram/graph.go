@@ -190,7 +190,8 @@ func (o *graphOut) items() []item {
 	}
 	for k := range o.g.Edges {
 		if gr := owner[k]; gr != nil { // else told by readGraph
-			e := o.edge(k, o.route(gr, k, drawn, right), o.labelAt(gr, k, right))
+			at, anchor := o.labelAt(gr, k, right)
+			e := o.edge(k, o.route(gr, k, drawn, right), at, anchor)
 			out = append(out, item{edgeAt(o.at, k), part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
 		}
 	}
@@ -214,23 +215,25 @@ func (o *graphOut) route(gr *group, k int, drawn []rect, right bool) [][2]float6
 	return pts
 }
 
-// labelAt is the centre of edge k's label, on its column in its label's box, as drawn at the graph's place: as
-// laid out down (the group's place added), turned for right, then at x and y. Nil for an edge without one.
-func (o *graphOut) labelAt(gr *group, k int, right bool) *[2]float64 {
+// labelAt is where edge k's label stands in its label's box, and how: down, its text starts a column right of the
+// edge's column (5 in, as label pads it), so that a language narrower than the widest stays by the edge; right, it is
+// centred along the box, under the edge. As drawn at the graph's place: as laid out down (the group's place added),
+// turned for right, then at x and y. Nil for an edge without one.
+func (o *graphOut) labelAt(gr *group, k int, right bool) (*[2]float64, string) {
 	for _, l := range gr.chains[k] {
 		if n := gr.nodes[gr.links[l].to]; n.label != nil {
-			p := [2]float64{n.col + column + (n.w-column)/2, n.y + (n.h-inEnd)/2}
+			p, anchor := [2]float64{n.col + column + 5, n.y + (n.h-inEnd)/2}, "start"
 			if right {
-				p = [2]float64{p[1], p[0]}
+				p, anchor = [2]float64{n.y + (n.h-inEnd)/2, n.col + column + (n.w-column)/2}, "middle"
 			}
-			return &[2]float64{p[0] + o.g.X, p[1] + o.g.Y}
+			return &[2]float64{p[0] + o.g.X, p[1] + o.g.Y}, anchor
 		}
 	}
-	return nil
+	return nil, ""
 }
 
 // edge is the graph's edge k as an edge drawn by hand: from point to point by via, straight from one to the next.
-func (o *graphOut) edge(k int, pts [][2]float64, at *[2]float64) *edge {
+func (o *graphOut) edge(k int, pts [][2]float64, at *[2]float64, anchor string) *edge {
 	e := o.g.Edges[k]
 	var label Text
 	if at != nil {
@@ -239,7 +242,7 @@ func (o *graphOut) edge(k int, pts [][2]float64, at *[2]float64) *edge {
 	return &edge{
 		From: end{Name: "", Point: &pts[0]}, To: end{Name: "", Point: &pts[len(pts)-1]}, FromSide: "", ToSide: "",
 		Via: pts[1 : len(pts)-1], Straight: true, Label: label, At: at, Dashed: e.Dashed, Bold: e.Bold, Tone: e.Tone,
-		Start: e.Start, End: e.End, Crossing: false, who: "edge " + e.From + "→" + e.To, graph: o.at,
+		Start: e.Start, End: e.End, Crossing: false, who: "edge " + e.From + "→" + e.To, graph: o.at, anchor: anchor,
 	}
 }
 
