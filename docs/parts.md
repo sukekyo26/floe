@@ -79,6 +79,7 @@ As in `page.css`, a `}` that closes no block and an `@import` are refused at the
 - An element that is no part's box takes a look by `data-floe-look`: `<section data-floe-look="panel">` is a panel in every theme. It has it in `floe.looks`, under the parts and the template, so that the part or template it is in adjusts it. A card in an element that takes `cards` may take `panel` itself (`<div data-floe-look="cards"><div class="card" data-floe-look="panel">`): the cards, the outer, draw it as they draw the cards of a part.
 - floe's parts take looks so: `compare`, `fields` and `findings` take the table's, `stats`, `options`, `facts`, `links` and `decision` the cards', `diff` and `terminal` code's, `checklist`, `entries`, `faq` and `keys` the look `rows`, and the other parts drawn in a panel `panel`'s. A theme's rules for a look draw every part that takes it.
 - The look `rows` leaves out a list's marks and padding, and pads each of its rows by `--floe-row-pad` (floe's base, 0.4rem) above and below; its box's `::after` is a row too, padded alike, as checklist's count: a part or a template that takes it writes its rows' padding at the sides alone. A part whose rows do not take `rows` takes the variable, as the table's cells and facts' tiles do (`padding-block: var(--floe-row-pad)`), so that its rows are as tall as the others.
+- A row with a mark that is no letter (numbered's ring, timeline's dot, links' box, note's mark) is a grid with the columns `mark` and `text` and the row `mark`: the mark is its `::before` in `grid-area: mark`, `--floe-mark` big and `--floe-mark-gap` from the text (its `margin-inline-end`), and stands, as what the row holds does (`grid-column: text`), on the baseline of the first line (`align-self: first baseline`), the row growing when the mark is the taller. What the row holds is spaced by `> * + * { margin-top }`, not the grid's gap. The line to the next mark is the row's `::after`, from the mark's bottom by anchor positioning (`anchor-name: --floe-mark` on the mark, `anchor-scope: --floe-mark` on the row, `top: calc(anchor(--floe-mark bottom) + 0.35rem)`, `left: calc(anchor(--floe-mark center) - 1px)`) to 0.35rem above the row's end. A part of one's own whose rows have such a mark draws them so; a mark of letters (decision's ×) stands in the text's flow and needs none of it.
 
 ## Themes
 
@@ -93,6 +94,7 @@ A theme of your own is a directory of these files, each left out if not needed. 
 - A file of another name is refused.
 - Write a colour once, in `palette.css`, and take it with `var()` (`var(--accent)`) in the other files, so that the template's colours on `:scope` and the palette agree.
 - Leave `--floe-row-pad`, the padding above and below a row, as floe's base sets it: the rows of every part are as tall in every theme.
+- A row's mark (note's, numbered's ring, timeline's dot, links' box) is sized by `--floe-mark` and kept from the text by `--floe-mark-gap`; a theme sets those, not the mark's `top`, `left` or the row's padding, and hides the mark by `content: none`, its column then taking no room.
 - A data file picks the theme with `theme:`, as one of floe's.
 
 ## Checking
