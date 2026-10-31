@@ -71,8 +71,9 @@ var rowPadKit = map[string]string{
 // measureRowPad returns, for each kind of row, its part's name (or the look it takes outside a part), its padding
 // above and below, and its line height, "page" when it is the page's. A table's rows are its body's cells, not its
 // head's, which a theme may pad (default) in a smaller font, nor its number columns, whose font a theme may change
-// (swiss). It adds whether checklist's mark is level with its row's text (within the 1/64 px a layout rounds to) and
-// whether checklist's edge is that of the box of html's rows in the same theme.
+// (swiss). It adds whether checklist's mark is level with its row's text (within the 1/64 px a layout rounds to), the
+// padding of checklist's count, a row its box draws as ::after, and whether checklist's edge is that of the box of
+// html's rows in the same theme.
 const measureRowPad = `(() => {
   const ratio = (e) => { const c = getComputedStyle(e); return parseFloat(c.lineHeight) / parseFloat(c.fontSize); };
   const page = ratio(document.body);
@@ -88,6 +89,8 @@ const measureRowPad = `(() => {
     const li = list.querySelector('li');
     const off = parseFloat(getComputedStyle(li, '::before').top) - parseFloat(getComputedStyle(li).paddingTop);
     out.push('checklist mark ' + (Math.abs(off) < 0.1 ? 'level' : 'off by ' + off.toFixed(2)));
+    const count = getComputedStyle(list, '::after');
+    out.push('checklist count ' + count.paddingTop + '/' + count.paddingBottom);
     const box = document.querySelector('div[data-floe-look="rows"]');
     out.push('checklist edge ' + (!box || edge(list) === edge(box) ? 'as rows' : edge(list) + ', rows ' + edge(box)));
   }
@@ -101,7 +104,7 @@ func rowPadWant(pad, factsTop string) string {
 		"checklist " + pad + "/" + pad + " page", "compare " + pad + "/" + pad + " page", "entries " + pad + "/" + pad + " page",
 		"facts " + factsTop + "/" + pad + " page", "faq " + pad + "/" + pad + " page", "fields " + pad + "/" + pad + " page",
 		"findings " + pad + "/" + pad + " page", "keys " + pad + "/" + pad + " page", "look rows " + pad + "/" + pad + " page",
-		"table " + pad + "/" + pad + " page", "checklist mark level", "checklist edge as rows",
+		"table " + pad + "/" + pad + " page", "checklist mark level", "checklist count " + pad + "/" + pad, "checklist edge as rows",
 	}, ", ")
 }
 
