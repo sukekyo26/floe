@@ -152,12 +152,13 @@ func (o *graphOut) items() ([]item, error) {
 	boxes := make([]rect, len(o.g.Nodes))
 	routes := map[int][][2]float64{}
 	labels := map[int]rect{}
+	toward := map[int]bool{}
 	left := 0.0
 	for _, gr := range o.groups {
 		gr.place(right)
 		gr.wire()
 		d := &drawing{across: across, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{},
-			ends: map[int][2]int{}, labels: map[int]rect{}}
+			ends: map[int][2]int{}, labels: map[int]rect{}, toward: map[int]bool{}}
 		for _, n := range gr.nodes {
 			if n.box != nil {
 				r := drawnOf(n, right)
@@ -197,6 +198,7 @@ func (o *graphOut) items() ([]item, error) {
 		left = onGrid(hi+by-start[across]+groupGap, column, math.Ceil)
 		maps.Copy(routes, d.routes)
 		maps.Copy(labels, d.labels)
+		maps.Copy(toward, d.toward)
 		for i, r := range d.boxes {
 			boxes[i] = r
 		}
@@ -218,6 +220,9 @@ func (o *graphOut) items() ([]item, error) {
 		e := o.edge(k, pts)
 		if r, ok := labels[k]; ok {
 			e.Label, e.At, e.anchor = o.g.Edges[k].Label, &[2]float64{r.x + 5, r.y + labelH/2}, "start"
+			if toward[k] {
+				e.At[0], e.anchor = r.x+r.w-5, "end"
+			}
 		}
 		out = append(out, item{edgeAt(o.at, k), part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
 	}
@@ -233,6 +238,7 @@ type drawing struct {
 	ends   map[int][2]int // the boxes each edge's corners start and end on
 	back   []int          // the edges drawn up, against the ranks
 	labels map[int]rect
+	toward map[int]bool // the labels left of their run down, their text set toward it, at their right end
 }
 
 // place places edge k's label, w wide: beside the first straight run of its edge with room for it, from the box it
@@ -261,7 +267,7 @@ func (d *drawing) place(k int, w float64) bool {
 					}
 				}
 				if clear(r, things, runs) {
-					d.labels[k] = r
+					d.labels[k], d.toward[k] = r, down && !near
 					return true
 				}
 			}
