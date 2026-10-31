@@ -1,6 +1,7 @@
 package diagram
 
 import (
+	"fmt"
 	"iter"
 	"math"
 	"slices"
@@ -111,13 +112,20 @@ var graphKeys = map[string]string{
 }
 
 // tell tells the mistake of key that things make, in their order: at the first written by hand, which its writer
-// can move; when graphs laid them all out, at the first's graph, in the words that say to move it.
+// can move; when graphs laid them all out, at the first's graph, in the words that say to move it. Two things or
+// more of one graph meet only by a fault of its layout, which no writer can mend: floe's failure.
 func (l *layout) tell(key string, things []placed, args ...any) {
 	for _, t := range things {
 		if t.graph == "" {
 			l.problem(t.at, key, args...)
 			return
 		}
+	}
+	if len(things) > 1 && !slices.ContainsFunc(things, func(t placed) bool { return t.graph != things[0].graph }) {
+		if l.failure == nil {
+			l.failure = fmt.Errorf("diagram: the graph at %s laid out a mistake of its own, %s %v", things[0].graph, key, args) //nolint:err113 // floe's own
+		}
+		return
 	}
 	l.problem(things[0].graph, graphKeys[key], args...)
 }

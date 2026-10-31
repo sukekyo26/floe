@@ -35,6 +35,9 @@ func (gr *group) wire() {
 		for _, v := range gr.ranks[r+1] {
 			gr.entries(v)
 		}
+	}
+	// The tracks once every run stands: straighten moves runs of channels already wired.
+	for r := range gr.tracks {
 		gr.tracks[r] = gr.track(r)
 	}
 	gr.shiftRight()
@@ -120,15 +123,6 @@ func (gr *group) exits(u int, pos []int, keep bool) {
 	cols := columns(lo, hi, 0)
 	even := spread(cols, len(outs))
 	fixed := func(k int) bool { return keep && gr.nodes[gr.links[outs[k]].to].box == nil }
-	// gap is how many columns exit k stands right of exit k-1: one, or past a label's box when both reach points or
-	// labels' boxes, which stand a column apart past it.
-	gap := func(k int) int {
-		a, b := gr.nodes[gr.links[outs[k-1]].to], gr.nodes[gr.links[outs[k]].to]
-		if a.box != nil || b.box != nil {
-			return 1
-		}
-		return int(math.Ceil((a.w + column) / column))
-	}
 	for k, l := range outs {
 		if fixed(k) {
 			continue
@@ -138,11 +132,11 @@ func (gr *group) exits(u int, pos []int, keep bool) {
 		first, want := 0, 0
 		if k > 0 {
 			first = slices.Index(cols, gr.links[outs[k-1]].exit) + 1
-			want = first - 1 + gap(k)
+			want = first - 1 + gr.gap(outs[k-1], l)
 		}
 		end, least, room := len(cols)-1, 0, 0
 		for j := k + 1; j < len(outs); j++ {
-			least, room = least+1, room+gap(j)
+			least, room = least+1, room+gr.gap(outs[j-1], outs[j])
 			if fixed(j) {
 				end = slices.Index(cols, gr.links[outs[j]].exit)
 				break
@@ -165,22 +159,24 @@ func (gr *group) exits(u int, pos []int, keep bool) {
 	}
 }
 
-// untangle swaps two points or labels' boxes side by side in rank r whose links come down the other way round, the
-// left one's right of the right one's, until none do: then neither pushes the other off its column. A swap crosses
-// no more links: the two links above stop crossing, and the two below cross at most once more.
+// untangle orders the points and labels' boxes of rank r between each two boxes by the columns their links come
+// down from (ties as they stand), so that none pushes another off its column. It crosses no more links: two of them
+// stood the other way round only when their links came from different nodes and crossed above, and they cross at
+// most once below.
 func (gr *group) untangle(r int, pos []int) {
 	rank := gr.ranks[r]
-	for swapped := true; swapped; {
-		swapped = false
-		for k := 0; k+1 < len(rank); k++ {
-			a, b := gr.nodes[rank[k]], gr.nodes[rank[k+1]]
-			if a.box != nil || b.box != nil || gr.links[a.ins[0]].exit <= gr.links[b.ins[0]].exit {
-				continue
-			}
-			rank[k], rank[k+1] = rank[k+1], rank[k]
-			pos[rank[k]], pos[rank[k+1]] = k, k+1
-			swapped = true
+	for lo := 0; lo < len(rank); {
+		hi := lo
+		for hi < len(rank) && gr.nodes[rank[hi]].box == nil {
+			hi++
 		}
+		slices.SortStableFunc(rank[lo:hi], func(a, b int) int {
+			return cmp.Compare(gr.links[gr.nodes[a].ins[0]].exit, gr.links[gr.nodes[b].ins[0]].exit)
+		})
+		lo = hi + 1
+	}
+	for k, v := range rank {
+		pos[v] = k
 	}
 }
 
@@ -276,35 +272,33 @@ func (gr *group) straighten(l int, c float64) bool {
 			}
 		}
 	}
-	top := gr.nodes[gr.links[run[len(run)-1]].from].rank
-	for i := max(top-1, 0); i < gr.nodes[gr.links[run[0]].to].rank-1; i++ {
-		gr.tracks[i] = gr.track(i)
-	}
 	return true
 }
 
-// leaves reports whether the box link l leaves can leave by column c instead, in its exits' order: c on its side,
-// and the exit after it a column on, past a label's box when both reach points or labels' boxes.
+// gap is how many columns the exit of link b stands right of the exit of link a, the one before it out of a node:
+// one, or past a's label's box when both reach points or labels' boxes, which stand a column apart past it.
+func (gr *group) gap(a, b int) int {
+	ta, tb := gr.nodes[gr.links[a].to], gr.nodes[gr.links[b].to]
+	if ta.box != nil || tb.box != nil {
+		return 1
+	}
+	return int(math.Ceil((ta.w + column) / column))
+}
+
+// leaves reports whether the box link l leaves can leave by column c instead, right of where it leaves: c on its
+// side, and the gap to the next exit kept.
 func (gr *group) leaves(l int, c float64) bool {
 	u := gr.nodes[gr.links[l].from]
 	if lo, hi := u.side(true); c < lo || c > hi {
 		return false
 	}
-	to := gr.nodes[gr.links[l].to]
+	next := -1
 	for _, o := range u.outs {
-		e, oto := gr.links[o].exit, gr.nodes[gr.links[o].to]
-		if o == l || e <= gr.links[l].exit {
-			continue
-		}
-		want := c + column
-		if to.box == nil && oto.box == nil {
-			want += to.w
-		}
-		if e < want {
-			return false
+		if e := gr.links[o].exit; e > gr.links[l].exit && (next < 0 || e < gr.links[next].exit) {
+			next = o
 		}
 	}
-	return true
+	return next < 0 || gr.links[next].exit >= c+column*float64(gr.gap(l, next))
 }
 
 // shiftRight moves the group across by whole columns, so that it keeps its grid, to start within a column right of

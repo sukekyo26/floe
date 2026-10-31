@@ -27,6 +27,22 @@ func graphOf(names []string, edges ...string) *graph {
 	return g
 }
 
+// labelled is g with its four boxes' text that many w's wide (0 keeps the name), and its four edges' labels ("" for
+// none), in order.
+func labelled(g *graph, w0, w1, w2, w3 int, labels ...string) *graph {
+	for i, w := range []int{w0, w1, w2, w3} {
+		if w > 0 {
+			g.Nodes[i].Box.Rows[0].Text["en"] = strings.Repeat("w", w)
+		}
+	}
+	for k, t := range labels {
+		if t != "" {
+			g.Edges[k].Label = Text{"en": t}
+		}
+	}
+	return g
+}
+
 // laid is g laid out and checked, as the only part of a diagram.
 func laid(g *graph) *layout {
 	l := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: g}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
@@ -112,6 +128,17 @@ func graphFault(g *graph) string {
 			if d := depth(r, ends[j][0], ends[j][1]); math.Abs(d) > 1e-9 {
 				return fmt.Sprintf("%s ends %v from the outline of %s", p.what, d, name)
 			}
+		}
+	}
+	// wire changes the order only where untangle swaps points or labels' boxes, which crosses no more links; the
+	// links drawn cross no more than the order wired (below), however straighten moves runs.
+	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are told above
+	for _, gr := range o.groups {
+		gr.place(g.Direction == "right")
+		before := gr.crossings()
+		gr.wire()
+		if after := gr.crossings(); after > before {
+			return fmt.Sprintf("wired, its ranks' order crosses %d links, over the %d before", after, before)
 		}
 	}
 	ordered := 0
@@ -851,6 +878,18 @@ func TestGraphTold(t *testing.T) {
 			t.Errorf("%s: %v, want %s at %s", c.name, c.l.problems, c.key, c.at)
 		}
 	}
+	// Things of one graph meet only by a fault of its layout: floe's failure, not a mistake to move a graph.
+	for _, l := range []*layout{
+		{boxes: []rect{box(0, ga), box(20, ga)}, w: 500, h: 500},            //nolint:exhaustruct_v5 // what it checks
+		{boxes: []rect{box(30, ga)}, paths: []path{across}, w: 500, h: 500}, //nolint:exhaustruct_v5 // what it checks
+		{labels: []rect{{x: 40, y: 10, w: 30, h: 18, what: "label", at: ga + "/edges/0", graph: ga}}, //nolint:exhaustruct_v5 // what it checks
+			paths: []path{across}, w: 500, h: 500},
+	} {
+		l.check()
+		if l.failure == nil || len(l.problems) != 0 {
+			t.Errorf("one graph's things meeting: failure %v, mistakes %v", l.failure, l.problems)
+		}
+	}
 }
 
 // boxIn is the area of the box named name in l.
@@ -925,6 +964,29 @@ func TestGraphShapes(t *testing.T) {
 	for _, k := range []int{0, 4, 8} {
 		if p := k33.paths[k]; len(p.segs) != 1 {
 			t.Errorf("K3,3: %s turns: %v", p.what, p.segs)
+		}
+	}
+
+	// Labelled edges, each laid out by one of settle's ways not to push a column, turn no more than twice: a long
+	// edge pushed two ranks down by a label's box runs straight from where it leaves, its run above moved across
+	// (straighten); a label's box whose edge comes down left of a long edge's point stands left of it (untangle); and
+	// a box's first labelled exit leaves room for its second's label (exits).
+	for _, c := range []struct {
+		name, edge string
+		turns      int
+		g          *graph
+	}{
+		{"straighten", "edge linked→data", 0, labelled(graphOf([]string{"linked", "hidden", "secret", "data"},
+			"linked>hidden", "linked>data", "hidden>secret", "secret>data"), 14, 22, 0, 22, "yes", "no", "yes", "")},
+		{"untangle", "edge top→whole", 2, labelled(graphOf([]string{"x", "top", "data", "whole"},
+			"x>top", "x>data", "top>data", "top>whole"), 20, 0, 0, 20, "", "", "", "yes")},
+		{"exits", "edge top→whole", 2, labelled(graphOf([]string{"x", "top", "data", "whole"},
+			"x>top", "x>data", "top>data", "top>whole"), 30, 16, 0, 20, "", "", "no", "yes")},
+	} {
+		for _, p := range laid(c.g).paths {
+			if p.what == c.edge && len(p.segs)-1 > c.turns {
+				t.Errorf("%s: %s turns %d times, want %d at most: %v", c.name, p.what, len(p.segs)-1, c.turns, p.segs)
+			}
 		}
 	}
 
