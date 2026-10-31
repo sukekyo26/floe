@@ -79,6 +79,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **見た目と部品の間は層の順**：見た目は、テンプレートの page.css と部品に負ける（中の部品の箱にも）。同じ要素が借りる見た目は、テーマの見た目のファイルが、借りる部品の part.css に勝つ
 - **部品の印刷はテーマが崩さない**：同じ深さの要素の上では、テーマの部品・見た目ごとのファイルは部品の part.css の後ろに入り、part.css の `@media print` にも勝つ。部品が印刷で外す画面だけの状態（選んだタブ）を塗るときは、`@media screen` に入れる。入れ子では「入れ子は置く側が勝つ」が先に効き、外の部品の part.css（`@media print` も）は、中の部品の箱へのテーマのファイルに勝つ（tabs の印刷の `:scope > div` は、テーマの stack.css に勝つ）。`TestUIPrint` が tabs を全テーマで確かめる
 - **番号と線の手順は見た目 `numbered` 1 つ**：部品やテンプレートは、丸い番号と次への線を part.css・page.css に書かず、`numbered` を借りる。自分で書くのは、丸と線の色（状態など）と中の並びだけ
+- **行の印は最初の行のベースラインに**：字でない行の印（丸・点・箱）を描く行の箱は grid にし、名前の付いた列 `mark`（幅 `auto`）と `text`、名前の付いた行 `mark` を持つ。印は `::before` を `grid-area: mark` に置き、大きさは枠を含めて `--floe-mark`（部品が印に `box-sizing: border-box` を書く）、字との間は印の `margin-inline-end: var(--floe-mark-gap)`。中身は `grid-column: text` で、印も中身も `align-self: first baseline`（印が行より高ければ行が伸びる）。中身の間は grid の gap でなく `> * + *` の `margin-top`。次の印への線は `::after` を、anchor positioning で印の下の縁から（印に `anchor-name: --floe-mark`、行に `anchor-scope: --floe-mark`）、上も下も 0.35rem あけて引く。`top` を行の余白を前提にした数で書かない。テーマは印を `content: none` で消し、大きさと間を 2 つの変数で変える。字だけの印は字の流れの中に置き、この決まりの外。`TestUIMarks` が全テーマで測る。直書きの字・字の無い最初の中身・anchor positioning を読まないブラウザは `LIMIT:`（numbered の part.css）
 - **目次の id はテンプレートが付ける**：テンプレートが自分の段へリンクするときは、page.html が言語によらない決まった id を見出しに付ける。floe が見出しの字から作る id に頼らない
 - **組み込みの言葉はそろえる**：floe の words.yaml は、どれも en を持ち、どの言語も en と同じ鍵を持つ（テストが floe の下の words.yaml を全部探して確かめる）
 

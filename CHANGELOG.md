@@ -240,6 +240,29 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a row's mark left behind when a theme changes the row's padding (retro's
+  links, whose mark stood above the link's line): the marks of links, note,
+  timeline and the look `numbered` (steps, runbook) stand on the baseline of
+  their row's first line in every theme, and the line to the next mark starts
+  0.35rem below the mark, however big the mark or the title. What changes on a
+  page:
+  - A row whose mark is taller than its first line grows by the difference:
+    steps' title and text stand 7px further apart, a note with a big mark
+    (default, brutal, washi, blueprint, notebook) is up to 9px taller, and
+    ink's note 7px shorter.
+  - timeline's date stands on its title's baseline, a few px lower, and its
+    line starts 5.6px below the dot (was 4px).
+  - A note's text keeps `--floe-mark-gap` from a mark with a border (brutal,
+    notebook, blueprint), 2 to 4px further right.
+  - swiss's note has its mark within the note's padding, as the other themes
+    do, its text 18px further right; the first card of swiss's links has its
+    mark at the card's edge, as its first cards have their text.
+  - The item of an `<ol>` that takes `numbered` breaks when it holds text
+    written straight in it: write its text in an element
+    (`<li><p>…</p></li>`).
+  - An older browser that reads no anchor positioning draws the line to the
+    next mark out of place.
+
 - Fix the outer losing where looks and parts nest: a look's style for an
   element in it that takes another look, and a part's for the box of a part in
   it, now win over that element's own, whatever the selectors; a look still
