@@ -110,6 +110,8 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 
 部品の `part.css` と、テーマのその部品のファイルは、その見た目を持つ要素から、その中の部品が持つものの手前までに scope されます。要素そのものは `:scope` と書きます。部品のスタイルは、中の部品の箱には届きますが、その部品の中には届きません。
 
+部品の箱か、見た目を借りる並び（`ul`・`ol`・`menu`）は、印・余白・項目の間を持たず、grid で並びます。floe が `floe.parts` と `floe.looks` の一番下の層（`floe.parts.boxes`・`floe.looks.boxes`）でそうするので、どの部品と見た目の自分の規則も、その上に書けます。部品は、並びの見た目を外す規則を書きません。テンプレートの `page.css` やテーマの `base.css` が並び全部への規則を書いても、部品の箱に届くのは margin だけです。見た目を借りる要素には、テーマのそうした規則は届かず、借りるテンプレートの `page.css` が整えられます。箱を印のある並びにしたい部品は、`part.css` に `list-style` と余白を書くか、箱の中に並びを置きます。印の無い並びを読み上げで並びとして読ませたいときは（Safari は読まない）、`role="list"` を書きます。
+
 部品は、色をパレットの変数からそのまま取り（`var(--accent)`）、自分の既定の値を持ちません。floe のページは、どれもパレットを持つためです。そのため、`floe part show <名前>` が出す CSS は、パレットの無いページでは色が付きません。そうしたページに図を置くときは、`default` のパレットを持つ `floe diagram render` の断片のスタイルを使います（[commands.ja.md](commands.ja.md#floe-diagram-render-specyaml)）。
 
 部品は自分の箱に margin を書きません。部品の箱になりうるブロック（`p`・`ul`・`ol`・`dl`・`figure`・`form`・`menu`・`fieldset` など）の margin は floe の base が 0 にし、部品の間は置く側（テンプレートの節、stack、note）が、隣と `--floe-room` 以上あけて空けます。部品の箱に margin を書くと、置く側の間に勝ってしまいます。
@@ -122,7 +124,7 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 
 - 部品の箱でない要素は `data-floe-look` で見た目を借ります。`<section data-floe-look="panel">` はどのテーマでもパネルです。その見た目は部品とテンプレートより下の `floe.looks` に入るので、中に置かれた部品やテンプレートが整えられます。`cards` を借りる要素の中のカードは、自分でも `panel` を借りられます（`<div data-floe-look="cards"><div class="card" data-floe-look="panel">`）。外の cards が、部品のカードと同じに描きます。
 - floe の部品もこうして見た目を借ります。`compare`・`fields`・`findings` は table の、`stats`・`options`・`facts`・`links`・`decision` は cards の、`diff`・`terminal` は code の、`checklist`・`entries`・`faq`・`keys` は `rows` の、`steps` は `panel` とともに `numbered` の、ほかのパネルに描く部品は `panel` の見た目を借ります。テーマのある見た目へのルールは、それを借りる部品を全部描きます。
-- 見た目 `rows` は、リストの印と余白を外し、行ごとに上下に `--floe-row-pad`（floe の base で 0.4rem）の余白を付けます。rows の箱の `::after` も行として、上下に同じ余白が付きます（checklist の数）。借りる部品やテンプレートは、行の余白を左右だけ書きます。行が `rows` を借りない部品は、表のセルや facts のタイルのように変数を読み（`padding-block: var(--floe-row-pad)`）、ほかの行と高さをそろえます。
+- 見た目 `rows` は、行ごとに上下に `--floe-row-pad`（floe の base で 0.4rem）の余白を付けます。rows の箱の `::after` も行として、上下に同じ余白が付きます（checklist の数）。借りる部品やテンプレートは、行の余白を左右だけ書きます。行が `rows` を借りない部品は、表のセルや facts のタイルのように変数を読み（`padding-block: var(--floe-row-pad)`）、ほかの行と高さをそろえます。
 - 字でない印（numbered の丸、timeline の点、links の箱、note の印）を持つ行は、列 `mark` と `text`、行 `mark` を持つ grid です。印は `::before` を `grid-area: mark` に置き、大きさは枠を含めて `--floe-mark`（`box-sizing: border-box`）、字との間は `--floe-mark-gap`（印の `margin-inline-end`）で、行の中身（`grid-column: text`）と同じく最初の行のベースラインにそろいます（`align-self: first baseline`）。印が行より高ければ行が伸びます。中身の間は grid の gap でなく `> * + * { margin-top }` で空けます。次の印への線は行の `::after` で、anchor positioning で印の下から（印に `anchor-name: --floe-mark`、行に `anchor-scope: --floe-mark`、`top: calc(anchor(--floe-mark bottom) + 0.35rem)`、`left: calc(anchor(--floe-mark center) - 1px)`）、行の終わりの 0.35rem 手前まで引きます。自分の部品の行がこうした印を持つときも、同じに描きます。字の印（decision の × など）は字の流れの中に置き、この形は要りません。
 
 ## テーマ

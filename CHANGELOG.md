@@ -243,6 +243,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change a list (`ul`, `ol` or `menu`) that is a part's box or takes a look to
+  draw no marks, padding or room between its items, laid out in a grid, in parts
+  and templates of one's own too; a template's `page.css` or a theme's `base.css`
+  that writes a rule for every list reaches a part's box by its margin alone, and
+  an element that takes a look no longer takes a theme's such rule.
 - Change the diagrams of `floe diagram render`'s fragment to take no variable or
   color-scheme from the page around them, its `:root` or an element holding them;
   they draw in floe's fonts, and in a shadow root too. They take their colours
@@ -253,6 +258,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix decision marking a list in its text with the × of the options it set
+  aside.
 - Fix an edge told running through a box it does not touch: the check
   measured a box by the rectangle around it, so an edge past a hex's points
   or a rounded corner (a pill's or a state's end, a box's, a table's or a
