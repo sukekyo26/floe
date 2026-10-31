@@ -1,14 +1,14 @@
 $ floe check pills.yaml
 exit 1
 --- stderr
-pills.yaml:8:52: value must be one of 'accent', 'good', 'warn', 'bad'
+pills.yaml:8:52: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 pills.yaml:9:45: minProperties: got 0, want 1
 pills.yaml:10:46: invalid propertyName ''
 pills.yaml:11:17: additional properties 'pills' not allowed
 $ floe render --out-dir $TMP/pages/pills.yaml pills.yaml
 exit 1
 --- stderr
-pills.yaml:8:52: value must be one of 'accent', 'good', 'warn', 'bad'
+pills.yaml:8:52: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 pills.yaml:9:45: minProperties: got 0, want 1
 pills.yaml:10:46: invalid propertyName ''
 pills.yaml:11:17: additional properties 'pills' not allowed

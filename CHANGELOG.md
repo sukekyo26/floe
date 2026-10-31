@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the tone `muted`, a quiet one in `--muted` on `--muted-soft`, wherever
+  a tone is written (note, a pill, a table's pills, bars, progress, stats,
+  timeline, a diagram).
 - Add a diagram's `width` and `height` left out: the canvas then reaches as
   far right (or down) as what is drawn, and 20 more, its top left still 0, 0.
   Raw SVG is not measured, so write both with a `raw` part.
@@ -243,6 +246,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change findings' nit to be a pill of the tone `muted`, drawn as the theme
+  draws its other pills: with no ground in blueprint, editorial and washi,
+  filled in ink, in the theme's text colour in brutal, notebook and swiss.
 - Change a tone to be marked by `data-floe-tone`, not by a class, in parts,
   themes and templates of one's own and in a data file's html (a pill written
   as `<span data-floe-tone="good" data-floe-part="cell">`). floe gives what is

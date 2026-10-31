@@ -1,7 +1,7 @@
 <div data-floe-part="findings"><table>
 <tbody>
 {{- range .}}
-<tr><td class="level"><span {{if eq .level "must"}}data-floe-tone="bad"{{else if eq .level "should"}}data-floe-tone="warn"{{else}}class="nit"{{end}} data-floe-part="cell">{{.level}}</span></td><td>
+<tr><td class="level"><span {{if eq .level "must"}}data-floe-tone="bad"{{else if eq .level "should"}}data-floe-tone="warn"{{else}}data-floe-tone="muted"{{end}} data-floe-part="cell">{{.level}}</span></td><td>
 {{- if or .at .status}}<div class="head">{{with .at}}<code class="at">{{.}}</code>{{end}}{{with .status}}<span class="status">{{.}}</span>{{end}}</div>{{end -}}
 <div>{{markdownLine .text}}</div>{{with .why}}<div class="why">{{markdownLine .}}</div>{{end}}</td></tr>
 {{- end}}

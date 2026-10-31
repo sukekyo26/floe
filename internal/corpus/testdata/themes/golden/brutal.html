@@ -138,6 +138,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 :where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); }
 :where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
 :where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); }
 }
 </style>
 <style>
@@ -284,7 +285,6 @@ blockquote {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the table's look, without a heading: a level's pill, then where it is and what became of it over what it is */
 :scope td.level { width: 1%; min-width: auto; white-space: nowrap; }
-:scope .level .nit { background: color-mix(in srgb, var(--fg) 8%, var(--surface)); color: var(--muted); }
 :scope .head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem; }
 /* Where it is breaks, though in a table: a path would widen the column too far */
 :scope .at { padding: 0; background: none; font-size: 0.8rem; color: var(--accent); overflow-wrap: anywhere; }
@@ -470,16 +470,18 @@ blockquote {
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { border: 3px solid var(--fg); border-radius: 0; background: var(--surface); --floe-mark: 2.15rem; }
-/* Its own colours for a note without a tone and accent's to bad's; another tone keeps floe's */
-:scope:is(:not([data-floe-tone]), [data-floe-tone=accent]) { --floe-shadow-color: var(--brutal-blue); }
-:scope[data-floe-tone=good] { --floe-shadow-color: var(--brutal-green); }
-:scope[data-floe-tone=warn] { --floe-shadow-color: var(--brutal-orange); }
-:scope[data-floe-tone=bad] { --floe-shadow-color: var(--brutal-red); }
-:scope::before { border-radius: 0; border: 2px solid var(--fg); color: var(--brutal-ink); font-weight: 900; }
-:scope:is(:not([data-floe-tone]), [data-floe-tone=accent])::before { background: var(--brutal-blue); }
-:scope[data-floe-tone=good]::before { background: var(--brutal-green); }
-:scope[data-floe-tone=warn]::before { background: var(--brutal-orange); }
-:scope[data-floe-tone=bad]::before { background: var(--brutal-red); }
+/* Its own fill for a note without a tone and accent's to bad's, for its shadow and its mark's ground; another tone
+   casts its own colour and lays its pale ground under the mark's black */
+:scope { --brutal-fill: initial; }
+:scope:is(:not([data-floe-tone]), [data-floe-tone=accent]) { --brutal-fill: var(--brutal-blue); }
+:scope[data-floe-tone=good] { --brutal-fill: var(--brutal-green); }
+:scope[data-floe-tone=warn] { --brutal-fill: var(--brutal-orange); }
+:scope[data-floe-tone=bad] { --brutal-fill: var(--brutal-red); }
+:scope { --floe-shadow-color: var(--brutal-fill, var(--tone)); }
+:scope::before {
+  border-radius: 0; border: 2px solid var(--fg); background: var(--brutal-fill, var(--tone-soft)); color: var(--brutal-ink);
+  font-weight: 900;
+}
 .title { color: var(--fg); font-weight: 900; }
 }
 }
@@ -773,7 +775,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <div data-floe-part="findings"><table>
 <tbody>
 <tr><td class="level"><span data-floe-tone="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">a.conf:1</code><span class="status"><span data-floe-tone="good" data-floe-part="cell">fixed</span></span></div><div>The wiki is still open</div></td></tr>
-<tr><td class="level"><span class="nit" data-floe-part="cell">nit</span></td><td><div>Two pages share a title</div></td></tr>
+<tr><td class="level"><span data-floe-tone="muted" data-floe-part="cell">nit</span></td><td><div>Two pages share a title</div></td></tr>
 </tbody>
 </table></div>
 </section>
