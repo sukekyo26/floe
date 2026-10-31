@@ -1,11 +1,10 @@
 package diagram
 
-import "slices"
-
 // rank makes a group of the boxes members of g (their indexes in nodes, as written) and its edges (their indexes
 // in edges): an edge back up a cycle turned round, and each box at the rank of its longest path from a box no edge
-// enters. The points of the edges passing ranks are made by split, once the diagram's are counted.
-func rank(g *graph, members, edges []int, byName map[string]int) *group {
+// enters, the ranks doubled when the graph is labelled. The points of the edges passing ranks are made by split, once
+// the diagram's are counted.
+func rank(g *graph, members, edges []int, byName map[string]int, labelled bool) *group {
 	gr := &group{
 		nodes: nil, links: nil, ranks: nil, chains: map[int][]int{}, reversed: map[int]bool{}, tracks: nil, top: nil,
 		bottom: nil, arcs: nil, labels: map[int]Text{},
@@ -28,11 +27,11 @@ func rank(g *graph, members, edges []int, byName map[string]int) *group {
 	turn(arcs, outs, gr.reversed)
 	gr.rankLongest(arcs)
 	gr.arcs = arcs
-	// A label on any edge of the graph doubles the ranks: an edge k ranks long becomes 2k long, with a rank for its
-	// label next to the box it is written from.
+	// A label on any edge the graph keeps doubles the ranks: an edge k ranks long becomes 2k long, with a rank for
+	// its label next to the box it is written from.
 	// LIMIT: every edge of such a graph, labelled or not, passes about twice as many ranks, counts them against
 	// maxPassed, and makes the graph wider and taller. Give a rank only to the labels if that comes to matter.
-	if slices.ContainsFunc(g.Edges, func(e graphEdge) bool { return e.Label != nil }) {
+	if labelled {
 		for i := range gr.nodes {
 			gr.nodes[i].rank *= 2
 		}

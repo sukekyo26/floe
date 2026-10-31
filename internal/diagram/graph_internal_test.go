@@ -1146,10 +1146,14 @@ func TestGraphLabels(t *testing.T) {
 			t.Errorf("show→write's label at rank %d, want 3, next to show", n.rank)
 		}
 	}
-	plain := grouped(graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "check>write"))[0]
-	for i, n := range plain.nodes[:3] {
-		if n.rank != i {
-			t.Errorf("with no label, %s stands at rank %d, want %d", n.box.Name, n.rank, i)
+	// With no label, or a label only on an edge dropped (from a box to itself, to a name of no box), the ranks stay.
+	dropped := graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "check>check", "check>gone")
+	dropped.Edges[2].Label, dropped.Edges[3].Label = Text{"en": "again"}, Text{"en": "gone"}
+	for _, g := range []*graph{graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "check>write"), dropped} {
+		for i, n := range grouped(g)[0].nodes[:3] {
+			if n.rank != i {
+				t.Errorf("%s stands at rank %d, want %d", n.box.Name, n.rank, i)
+			}
 		}
 	}
 

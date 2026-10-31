@@ -121,6 +121,8 @@ func groupsOf(g *graph, edges []int, byName map[string]int) []*group {
 		}
 		members[r] = append(members[r], i)
 	}
+	// A label on an edge kept doubles the ranks of every group of the graph (a dropped edge's does not).
+	labelled := slices.ContainsFunc(edges, func(k int) bool { return g.Edges[k].Label != nil })
 	groups := make([]*group, 0, len(firsts))
 	for _, r := range firsts {
 		var own []int
@@ -129,7 +131,7 @@ func groupsOf(g *graph, edges []int, byName map[string]int) []*group {
 				own = append(own, k)
 			}
 		}
-		groups = append(groups, rank(g, members[r], own, byName))
+		groups = append(groups, rank(g, members[r], own, byName, labelled))
 	}
 	return groups
 }
