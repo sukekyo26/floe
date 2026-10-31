@@ -291,8 +291,7 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader. The i is the sign of
-   information, read as a mark in any language (and in washi's seal), not as a word */
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
@@ -300,7 +299,7 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 }
 :scope > * { grid-column: text; align-self: first baseline; }
 :scope::before {
-  content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
+  content: "※"; content: "※" / ""; grid-area: mark; align-self: first baseline;
   display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%;
   background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
@@ -405,7 +404,8 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 :scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
 :scope .run::before { content: "$ "; color: var(--code-prompt); }
 :scope.zsh .run::before { content: "% "; }
-/* LIMIT: PS is letters in the CSS, past words.yaml (the shell's own prompt); S169 decides it */
+/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language; move it out
+   of the CSS if a part's CSS comes to be checked for letters as a theme's is */
 :scope.powershell .run::before { content: "PS> "; }
 :scope.cmd .run::before { content: "> "; }
 :scope .out { opacity: 0.7; }

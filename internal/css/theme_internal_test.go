@@ -12,54 +12,87 @@ import (
 	"github.com/tdewolff/parse/v2/css"
 )
 
-// listStyles are the counter and list styles a theme may write: digits and shapes, the same in every language.
-var listStyles = []string{"decimal", "decimal-leading-zero", "none", "disc", "circle", "square"}
+// faces are the declarations whose strings may hold letters in a theme: the names of typefaces, which no page shows.
+var faces = []string{"font-family", "font", "--font", "--display", "--mono"}
 
-// texted are the properties whose strings a page shows as text.
-var texted = []string{"content", "quotes", "list-style", "list-style-type"}
+// counted are the properties that name a counter or list style.
+var counted = []string{"list-style", "list-style-type"}
 
-// turns are the transform functions that turn, skew or scale. matrix() is among them, whatever it holds: reading
-// whether one only moves would be reading the value's meaning.
-var turns = []string{"rotate", "skew", "scale", "matrix"}
+// listWords are the words a theme may write where a counter or list style is named: digits and shapes, the same in
+// every language, the places of a list's marker, CSS's own keywords and !important.
+var listWords = []string{
+	"decimal", "decimal-leading-zero", "none", "disc", "circle", "square",
+	"inside", "outside", "inherit", "initial", "unset", "revert", "revert-layer", "important",
+}
 
-// marksAmiss returns what a theme's declaration of prop writes amiss: a string with a letter (a word of a language
-// the page may not be in) or an escape (which only the browser reads), attr() (the markup's text), a counter or list
-// style that is no digit or shape, or a transform that turns, skews or scales. A translate only moves.
-func marksAmiss(prop string, value []token) []string {
+// moves are the transform functions a theme may write, which move alone, never turn, skew nor scale.
+var moves = []string{"translate", "translatex", "translatey"}
+
+// transforms are the properties of a transform; unturned are those a theme writes not at all (they turn, scale or
+// move along a path).
+var (
+	transforms = []string{"transform", "-webkit-transform", "-moz-transform"}
+	unturned   = []string{"rotate", "scale", "zoom", "offset-path", "offset-rotate", "perspective"}
+)
+
+// turnings are the functions a variable may not hold, as a transform may read it: they turn, skew, scale or stand
+// in for those.
+var turnings = []string{"rotate", "skew", "scale", "matrix", "perspective"}
+
+// global are CSS's own keywords, which any property takes.
+var global = []string{"inherit", "initial", "unset", "revert", "revert-layer", "none", "important"}
+
+func foldIn(list []string, s string) bool {
+	return slices.ContainsFunc(list, func(w string) bool { return strings.EqualFold(w, s) })
+}
+
+// declAmiss returns what a theme's declaration of prop writes amiss, by the forms a theme may write alone: a counter
+// or list style of digits or shapes and no variable, a transform that moves alone, and no variable that turns.
+func declAmiss(prop string, value []token) []string {
 	var amiss []string
-	if prop == "rotate" || prop == "scale" {
-		if len(value) != 1 || !strings.EqualFold(string(value[0].data), "none") {
-			amiss = append(amiss, "turns or scales; a theme draws upright")
+	switch {
+	case slices.Contains(unturned, prop):
+		return []string{"turns, scales or moves along a path; a theme writes it not"}
+	case slices.Contains(transforms, prop):
+		for _, tok := range value {
+			f := strings.ToLower(strings.TrimSuffix(string(tok.data), "("))
+			if (tok.tt == css.FunctionToken && !slices.Contains(moves, f)) || (tok.tt == css.IdentToken && !foldIn(global, f)) {
+				amiss = append(amiss, "turns, skews or scales; a theme moves alone")
+			}
 		}
 		return amiss
+	case strings.HasPrefix(prop, "--"):
+		for _, tok := range value {
+			f := strings.ToLower(string(tok.data))
+			if tok.tt == css.FunctionToken && slices.ContainsFunc(turnings, func(t string) bool { return strings.HasPrefix(f, t) }) {
+				amiss = append(amiss, "holds a turn for a transform; a theme moves alone")
+			}
+		}
+		return amiss
+	default:
 	}
 	counter, commas := false, 0
 	for _, tok := range value {
 		data := string(tok.data)
 		switch tok.tt {
-		case css.StringToken:
-			if slices.Contains(texted, prop) && strings.ContainsFunc(data, unicode.IsLetter) {
-				amiss = append(amiss, "writes a word; write a mark")
-			}
-			if slices.Contains(texted, prop) && strings.Contains(data, `\`) {
-				amiss = append(amiss, "writes an escape; write the character")
-			}
 		case css.FunctionToken:
 			f := strings.ToLower(strings.TrimSuffix(data, "("))
-			counter, commas = f == "counter" || f == "counters", 0
-			if f == "attr" && slices.Contains(texted, prop) {
-				amiss = append(amiss, "shows an attribute's text; write a mark")
+			if f == "counter" || f == "counters" {
+				counter, commas = true, 0
 			}
-			if slices.ContainsFunc(turns, func(turn string) bool { return strings.HasPrefix(f, turn) }) {
-				amiss = append(amiss, "turns, skews or scales; a theme draws upright")
+			if f == "var" && (counter || slices.Contains(counted, prop)) {
+				amiss = append(amiss, "counts by a variable; count in digits")
+			}
+			if f == "attr" {
+				amiss = append(amiss, "shows an attribute's text; write a mark")
 			}
 		case css.CommaToken:
 			commas++
 		case css.RightParenthesisToken:
 			counter = false
 		case css.IdentToken:
-			style := (counter && commas > 0) || (!counter && (prop == "list-style" || prop == "list-style-type"))
-			if style && !slices.ContainsFunc(listStyles, func(s string) bool { return strings.EqualFold(s, data) }) {
+			style := (counter && commas > 0) || (!counter && slices.Contains(counted, prop))
+			if style && !foldIn(listWords, data) {
 				amiss = append(amiss, "counts in "+data+"; count in digits")
 			}
 		default:
@@ -68,18 +101,45 @@ func marksAmiss(prop string, value []token) []string {
 	return amiss
 }
 
-// TestThemeMarks keeps a theme's decorations out of words and tilts: what a theme's CSS shows as text is marks and
-// digits alone, and nothing it draws turns, skews or scales, in a transform, the properties rotate and scale, or a
-// variable a transform may read.
+// sheetAmiss returns what a theme's CSS writes amiss: a string with a letter (a word of a language the page may not
+// be in) but in a typeface's name, one with an escape, which only the browser reads (write the character), a counter
+// style of its own, and what declAmiss finds.
+func sheetAmiss(src []byte) []string {
+	var amiss []string
+	named := map[int]bool{} // where the strings of typefaces' names start
+	for prop, decls := range declarations(src, func(string) bool { return true }) {
+		for _, d := range decls {
+			for _, why := range declAmiss(prop, d.value) {
+				amiss = append(amiss, prop+": "+text(src, d.value)+" "+why)
+			}
+			if slices.Contains(faces, prop) {
+				for _, tok := range d.value {
+					named[tok.at] = true
+				}
+			}
+		}
+	}
+	for _, tok := range lex(src) {
+		switch {
+		case tok.tt == css.AtKeywordToken && strings.EqualFold(string(tok.data), "@counter-style"):
+			amiss = append(amiss, "@counter-style counts in a style of its own; count in digits")
+		case tok.tt == css.StringToken && strings.Contains(string(tok.data), `\`):
+			amiss = append(amiss, string(tok.data)+" writes an escape; write the character")
+		case tok.tt == css.StringToken && !named[tok.at] && strings.ContainsFunc(string(tok.data), unicode.IsLetter):
+			amiss = append(amiss, string(tok.data)+" writes a word; write a mark")
+		default:
+		}
+	}
+	return amiss
+}
+
+// TestThemeMarks keeps a theme's decorations out of words and tilts, by what a theme's CSS may write alone: strings
+// of marks (letters only in a typeface's name), counters of digits, and transforms that move.
 func TestThemeMarks(t *testing.T) {
 	t.Parallel()
 
 	themes := os.DirFS("../kit/floe/themes")
-	found := 0
-	watched := func(p string) bool {
-		return slices.Contains(texted, p) || strings.HasPrefix(p, "--") ||
-			slices.Contains([]string{"transform", "-webkit-transform", "rotate", "scale"}, p)
-	}
+	read := 0
 	err := fs.WalkDir(themes, ".", func(name string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || path.Ext(name) != ".css" {
 			return err
@@ -88,46 +148,44 @@ func TestThemeMarks(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		for prop, decls := range declarations(src, watched) {
-			for _, d := range decls {
-				found++
-				for _, why := range marksAmiss(prop, d.value) {
-					t.Errorf("%s: %s: %s %s", name, prop, text(src, d.value), why)
-				}
-			}
+		read++
+		for _, why := range sheetAmiss(src) {
+			t.Errorf("%s: %s", name, why)
 		}
 		return nil
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if found == 0 {
-		t.Fatal("nothing watched found in floe's themes")
+	if read == 0 {
+		t.Fatal("no CSS found in floe's themes")
 	}
 }
 
-// TestMarksAmiss runs the check on what floe's themes do not write today, each way it may come.
-func TestMarksAmiss(t *testing.T) {
+// TestSheetAmiss runs the check on forms floe's themes do not write today, one at a time.
+func TestSheetAmiss(t *testing.T) {
 	t.Parallel()
 
 	for src, want := range map[string]bool{
 		`content: "“"`: false, `content: "●" / ""`: false, `content: counter(c, Decimal)`: false,
-		`content: counters(c, ".", decimal-leading-zero)`: false, `transform: translate(2px, 50%)`: false, `rotate: none`: false,
+		`content: counters(c, ".", decimal-leading-zero)`: false, `transform: translate(2px, 50%)`: false,
+		`transform: none`: false, `list-style: inside square`: false, `list-style: none !important`: false,
+		`--font: "Hiragino Sans", sans-serif`: false, `font-family: "Yu Mincho"`: false, `--squares: linear-gradient(red, blue)`: false,
 		`content: "QUOTE"`: true, `content: "\201C"`: true, `content: attr(data-floe-tone)`: true,
 		`quotes: "QUOTE" ""`: true, `list-style-type: "Q"`: true, `list-style-type: cjk-decimal`: true,
+		`text-emphasis: "x"`: true, `hyphenate-character: "x"`: true, `text-overflow: "more"`: true, `--label: "Fig."`: true,
 		`content: counter(c, cjk-decimal)`: true, `content: counters(c, ".", lower-roman)`: true,
-		`transform: rotate(-2deg)`: true, `-webkit-transform: skewX(4deg)`: true, `transform: matrix(1, 0, 0, 1, 2, 2)`: true,
-		`rotate: 2deg`: true, `scale: 1.1`: true, `--tilt: rotate(-2deg)`: true,
+		`content: counter(c, var(--style))`: true, `list-style-type: var(--style)`: true,
+		`transform: rotate(-2deg)`: true, `-webkit-transform: skewX(4deg)`: true, `-moz-transform: scale(1.1)`: true,
+		`transform: matrix(1, 0, 0, 1, 2, 2)`: true, `transform: var(--move)`: true, `transform: translateZ(2px)`: true,
+		`rotate: 2deg`: true, `rotate: none`: true, `scale: 1.1`: true, `zoom: 1.1`: true, `offset-path: path("M0 0")`: true,
+		`offset-rotate: 10deg`: true, `perspective: 100px`: true, `--tilt: rotate(-2deg)`: true, `--flat: perspective(9px)`: true,
 	} {
-		decls := declarations([]byte(":scope { "+src+"; }"), func(string) bool { return true })
-		amiss := false
-		for prop, ds := range decls {
-			for _, d := range ds {
-				amiss = amiss || len(marksAmiss(prop, d.value)) > 0
-			}
+		if amiss := sheetAmiss([]byte(":scope { " + src + "; }")); (len(amiss) > 0) != want {
+			t.Errorf("%s: amiss %q, want amiss %v", src, amiss, want)
 		}
-		if amiss != want {
-			t.Errorf("%s: amiss %v, want %v", src, amiss, want)
-		}
+	}
+	if amiss := sheetAmiss([]byte("@counter-style kanji { system: fixed; symbols: '一'; }")); len(amiss) == 0 {
+		t.Error("@counter-style passes")
 	}
 }

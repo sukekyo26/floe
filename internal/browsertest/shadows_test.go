@@ -42,7 +42,8 @@ var shadowsKit = map[string]string{
 // terminal, at the least room floe leaves in a step.
 var shadowsQuote = strings.NewReplacer("text: 'Name it with today''s date", "text: '> Name it with today''s date")
 
-// markProbed gives each box drawn tilted, or with a ::before or ::after placed out of the flow (notebook's tape), an
+// markProbed gives each box drawn with a transform (a theme moves alone, by translate), or with a ::before or ::after
+// placed out of the flow (notebook's tape), an
 // index, so that those, which a script cannot measure, are measured by pseudoBoxes, and returns how many there are.
 const markProbed = `(() => { const probed = [...document.querySelectorAll('[data-floe-part], [data-floe-look]')]
   .filter((e) => e.getClientRects().length && (getComputedStyle(e).transform !== 'none' ||
@@ -54,7 +55,7 @@ const markProbed = `(() => { const probed = [...document.querySelectorAll('[data
 // any other element (not one around it nor in it): onto its border box when it is framed or filled, else onto its
 // content box, where its text is. What a box draws is its shadows that show (from the computed box-shadow, its
 // lengths alone, whatever form its colour takes: moved by its offset, grown by its spread, fading out over its blur),
-// its outline (its width and offset), its box itself when tilted (its bounding box, which holds the tilt), and the
+// its outline (its width and offset), its box itself when transformed (its bounding box, where it is moved to), and the
 // ::before and ::after of a box markProbed marks, given as extra by its index. Boxes inside a line (inline) are not measured.
 const measureShadows = `((extra) => {
   const out = new Set(), pagePad = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-pad'));
