@@ -34,7 +34,7 @@
 | `label` | `text`、`x` `y`、`anchor`（`middle`。`start`・`end`）、`plain`（背景なし）、`strong`、`in`（ベン図で、内側に置く円の名前。ほかの円の外。`x` と `y` を省けば floe が置く）。 |
 | `line` | `x1` `y1` `x2` `y2`、`kind`（`line`。`lifeline`・`divider`）。ほかの部品と交わってよいが、キャンバスから出ない。 |
 | `tree` | `x` `y`（根の中心と上）、`root`：節。節は `box` と同じ `rows`・`name`・`tone`・`shape` と、子の節を並べた `children` を持つ。floe が各節を親の下に置き（子は横に並べ、深さごとに 1 段にそろえる）、親から子へ線を引く。節の `name` は、手で書いた線の端にできる。 |
-| `graph` | `x` `y`（全体の左上）、`nodes`、`edges`、`direction`（`down`。`right`）。節は `box: { name, rows, tone, shape }` で、`box` と同じ鍵を持ち、`name` は要る。線は `{ from, to }`（その graph の箱の名前 2 つ）で、`dashed`・`bold`・`tone`・`start`・`end`（`arrow` か `none`）を持てる。floe が箱を段に分けて並べ、箱の間に線を引く（下）。 |
+| `graph` | `x` `y`（全体の左上）、`nodes`、`edges`、`direction`（`down`。`right`）。節は `box: { name, rows, tone, shape }` で、`box` と同じ鍵を持ち、`name` は要る。線は `{ from, to }`（その graph の箱の名前 2 つ）で、`label`・`dashed`・`bold`・`tone`・`start`・`end`（`arrow` か `none`）を持てる。floe が箱を段に分けて並べ、箱の間に線を引く（下）。 |
 | `raw` | `svg`：どの部品でも描けない SVG。SVG の要素だけで（script や `foreignObject` は無し）、配置も確かめもしない。 |
 
 `graph` には、箱のつながりだけを書きます。置き場所は floe が決めます：
@@ -49,12 +49,13 @@
       - box: { name: show, rows: [Show the page] }
     edges:
       - { from: write, to: check }
-      - { from: check, to: show }
-      - { from: check, to: write }
+      - { from: check, to: show, label: "yes" }
+      - { from: check, to: write, label: "no" }
 ```
 
 - 箱は、線が来る箱より下の段に置きます（輪を作る戻りの線も、書いた向きのまま描きます）。段の中の箱は、線の交わりが少ない順に並べ、交わりが無ければ書いた順のままです。同じ spec は、いつも同じに並びます。
 - 線は、箱の辺の別々の点から、形の輪郭の上で出入りするので、2 本の線が同じ所を通りません。線の多い箱は広くなります（`right` では高くなります）。同じ graph の線どうしは交わってよく、graph の線とほかの部品は、ほかの線と同じく確かめます。
+- 線の `label` は、線のすぐ横（線の 1 列右。`right` では下）の、書いた from の箱のすぐ隣の段に、地の色なしで立ちます。線や箱がラベルを通ったり重なったりはしません。ラベルが 1 つでもある graph は段が 2 倍になるので、ラベルの無い線も越える段がほぼ 2 倍になり、図が高く広くなります。ラベルの場所はいちばん広い言語の字で決めるので、どの言語でも同じに並びます。
 - 1 つの graph の箱は 200、線は 400 までです。図の全部の graph の線が端と端の間で越える段は、合わせて 4000 までです。
 - graph の箱は、手で書いた線の端にもできます。その線は辺の真ん中で終わるので、graph の線が使わない辺を `fromSide`・`toSide` で選びます（graph の線の上を走らないように）。
 - graph の部品と手で書いた部品の間の誤り（重なり、線が箱を通る、交差）は、動かせる、手で書いた方の行と列に言います。graph の部品だけが起こす誤り（2 つの graph の重なりや交差、キャンバスからはみ出す graph）は、graph の場所に、その `x`・`y` を動かすよう言います。
