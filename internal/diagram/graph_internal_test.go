@@ -351,13 +351,21 @@ func randomGraph(rnd *rand.Rand, direction string) *graph {
 func TestGraphRandom(t *testing.T) {
 	t.Parallel()
 
+	// Last, graphs with a label on every edge, in English and Japanese, crowding labels into every channel.
 	for _, c := range []struct {
 		direction string
 		seed      [2]uint64
-	}{{"", [2]uint64{1, 2}}, {"right", [2]uint64{3, 4}}} {
+		graphs    int
+		every     bool
+	}{{"", [2]uint64{1, 2}, 3000, false}, {"right", [2]uint64{3, 4}, 3000, false}, {"", [2]uint64{5, 6}, 300, true}, {"right", [2]uint64{7, 8}, 300, true}} {
 		rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
-		for i := range 3000 {
+		for i := range c.graphs {
 			g := randomGraph(rnd, c.direction)
+			for k := range g.Edges {
+				if c.every {
+					g.Edges[k].Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(10)), "ja": strings.Repeat("字", rnd.IntN(16))}
+				}
+			}
 			if fault := graphFault(g); fault != "" {
 				b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
 				t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
@@ -1224,13 +1232,27 @@ func TestGraphLabelRoom(t *testing.T) {
 
 	box := rect{x: 0, y: 0, w: 48, h: 30, what: "", at: "", form: outline{hex: 0, radius: 0}} //nolint:exhaustruct_v5 // a box
 	d := &drawing{right: false, boxes: map[int]rect{0: box}, shapes: map[int]string{0: ""},
-		routes: map[int][][2]float64{0: {{60, -100}, {60, 200}}}, ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{},
+		routes: map[int][][2]float64{0: {{60, 0}, {60, 200}}}, ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{},
 		spots: map[int]spot{}}
 	if !d.place(0, 20) {
 		t.Fatal("no room by a long run")
 	}
 	if r, _ := d.rect(0); r.y <= box.y+box.h/2 && box.y+box.h/2 <= r.y+r.h {
 		t.Errorf("label at %v,%v, across the middle of the box's right side at %v", r.x, r.y, box.y+box.h/2)
+	}
+
+	// A graph whose labels crowd its channels, as TestGraphRandom makes it: a cut making room for one crosses the
+	// labels of others, which leave part of themselves in the band, and the room takes them.
+	rnd := rand.New(rand.NewPCG(7, 8)) //nolint:gosec // G404: a graph to try, no secret
+	var crowded *graph
+	for range 563 {
+		crowded = randomGraph(rnd, "right")
+		for k := range crowded.Edges {
+			crowded.Edges[k].Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(10)), "ja": strings.Repeat("字", rnd.IntN(16))}
+		}
+	}
+	if fault := graphFault(crowded); fault != "" {
+		t.Errorf("crowded: %s", fault)
 	}
 
 	short := &drawing{right: false, boxes: map[int]rect{0: {x: 100, y: 0, w: 48, h: 60, what: "", at: ""}}, //nolint:exhaustruct_v5 // a box

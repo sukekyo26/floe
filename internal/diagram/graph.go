@@ -286,7 +286,7 @@ func isDown(s seg) bool { return s[0] == s[2] }
 
 // place places edge k's label, w wide: beside the first run of its edge with room for it, from the box it is written
 // from, each run from its end nearer that box; with none, it makes room beside a run (see room), the first that
-// takes it. It reports false only on floe's fault, when no room made is clear.
+// takes it. It reports false when none does: floe's fault, as is room made not clear, which tell takes for one.
 func (d *drawing) place(k int, w float64) bool {
 	things, runs := d.things(), append(d.runs(), d.hands()...)
 	for i, s := range segsOf(d.routes[k]) {
@@ -315,10 +315,8 @@ func (d *drawing) place(k int, w float64) bool {
 	}
 	for i := range len(d.routes[k]) - 1 {
 		if sp, ok := d.room(k, i, w); ok {
-			if clear(heldRect(segsOf(d.routes[k])[i], sp), d.things(), d.runs()) {
-				d.spots[k] = sp
-				return true
-			}
+			d.spots[k] = sp
+			return true
 		}
 	}
 	return false
