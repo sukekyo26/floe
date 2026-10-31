@@ -149,17 +149,17 @@ func written(size float64) float64 {
 	return size
 }
 
-// reach is the farthest end of what is drawn, told by end, and 0 when all of it is before 0.
+// reach is the farthest end of what is drawn, told by end, and 0 when all of it is before 0. An end that is not
+// finite (a circle of radius 1e308) is left out, so that the part sticks out of the canvas the others reach.
 // LIMIT: raw SVG is not measured (that would read SVG as a browser does), so it may be cut off right of or below
 // what else is drawn; write width and height with it.
 // LIMIT: text is as wide as its estimate; text drawn over canvasPad wider (a run of bold Ws) at the end is cut off.
-// LIMIT: an end that is not finite (a circle of radius 1e308) makes the canvas +Inf: drawn so, or told in a mistake
-// as a +Inf canvas when the part sticks out left or above, as with place's 1e299; refuse it if diagrams that large
-// come to matter.
 func (l *layout) reach(end func(rect) float64) float64 {
 	far := 0.0
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.heads, l.areas, l.strokes) {
-		far = max(far, end(r))
+		if e := end(r); !math.IsInf(e, 0) && !math.IsNaN(e) {
+			far = max(far, e)
+		}
 	}
 	return far
 }
