@@ -58,7 +58,7 @@ var lineRows = []string{
 
 // measureMarks returns, as JSON, for each of markRows: the baseline of its first line, how far below its top a box
 // drawn as its mark (its ::before's size, frame, font and text, a counter's as "1") has its baseline, the left of the
-// element of its first line, the mark's margin to the text and the left of the row's content box; the box of each of lineRows, the
+// element of its first line, the row's --floe-mark-gap and the left of the row's content box; the box of each of lineRows, the
 // baselines of timeline's date and title, the lines the paragraph of #wrapped takes (its height in its line height)
 // and its left, the root's font size, and the colours of steps' mark and line of a step done. A script reads no box
 // of a pseudo-element, the mark's own place, which DevTools gives (pseudoBoxes).
@@ -81,13 +81,15 @@ const measureMarks = `((marks, rows) => {
     box.remove();
     return a;
   };
+  const length = (el, v) => { const d = document.createElement('i'); d.style.cssText = 'display:block;position:absolute;width:' + v;
+    el.append(d); const w = d.getBoundingClientRect().width; d.remove(); return w; };
   const box = (sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; };
   const p = document.querySelector('#wrapped p');
   const done = document.querySelector('[data-floe-part=steps] > li.done');
   return JSON.stringify({
     marks: marks.map(([row, line]) => {
       const r = document.querySelector(row), l = document.querySelector(line), s = getComputedStyle(r);
-      return { base: base(l), ascent: ascent(r), left: l.getBoundingClientRect().left, gap: parseFloat(getComputedStyle(r, '::before').marginInlineEnd),
+      return { base: base(l), ascent: ascent(r), left: l.getBoundingClientRect().left, gap: length(r, 'var(--floe-mark-gap)'),
         content: r.getBoundingClientRect().left + parseFloat(s.borderLeftWidth) + parseFloat(s.paddingLeft) };
     }),
     rows: rows.map(box),
@@ -239,13 +241,14 @@ func TestUIMarks(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		b.navigate("/a/marks-" + name + "/?raw")
 		amiss = append(amiss, b.marksIn(name, false)...)
 	}
-	// A theme of one's own pads the rows 2rem above, sets their line height 2.5 and moves the note's text off its mark.
+	// A theme of one's own pads the rows 2rem above, sets their line height 2.5, draws their first line bigger than the
+	// mark's letters and moves the note's text off its mark.
 	s.own(t, map[string]string{
-		"themes/tall/links.css":    ":scope > li { padding-top: 2rem; line-height: 2.5; }\n",
-		"themes/tall/note.css":     ":scope { padding-top: 2rem; line-height: 2.5; --floe-mark-gap: 2rem; }\n",
-		"themes/tall/steps.css":    ":scope > li { padding-top: 2rem; line-height: 2.5; }\n",
-		"themes/tall/timeline.css": ":scope > li { padding-top: 2rem; line-height: 2.5; }\n",
-		"themes/tall/numbered.css": ":scope > li { padding-top: 2rem; line-height: 2.5; }\n",
+		"themes/tall/links.css":    ":scope > li { padding-top: 2rem; line-height: 2.5; }\n:scope a { font-size: 1.6rem; }\n",
+		"themes/tall/note.css":     ":scope { padding-top: 2rem; line-height: 2.5; --floe-mark-gap: 2rem; }\n.title { font-size: 1.6rem; }\n",
+		"themes/tall/steps.css":    ":scope > li { padding-top: 2rem; line-height: 2.5; }\n:scope strong { font-size: 1.6rem; }\n",
+		"themes/tall/timeline.css": ":scope > li { padding-top: 2rem; line-height: 2.5; }\n:scope strong { font-size: 1.6rem; }\n",
+		"themes/tall/numbered.css": ":scope > li { padding-top: 2rem; line-height: 2.5; }\n:scope strong { font-size: 1.6rem; }\n",
 	})
 	s.floe(t, "publish", file, "--slug", "marks-tall", "--theme", "tall")
 	b.navigate("/a/marks-tall/?raw")
