@@ -9,6 +9,8 @@
   --brutal-yellow: #ffde21; --brutal-blue: #6fa2ff; --brutal-pink: #ff8acb;
   --brutal-green: #3ddc84; --brutal-orange: #ffa62b; --brutal-red: #ff5c5c;
   --brutal-ink: #0a0a0a;
+  /* Its hard shadows, falling right and down */
+  --floe-shadow-x: 6px; --floe-shadow-y: 6px;
   /* The heads of its tables */
   --brutal-head-bg: #0a0a0a; --brutal-head-fg: #ffde21;
 }

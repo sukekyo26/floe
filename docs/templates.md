@@ -95,6 +95,8 @@ It sees:
 - Its root is `:scope`. Write the page's variables on `:scope`, not on `:root` or `html`, which are outside the scope.
 - A `}` that closes no block, and an `@import`, are refused at their line: load a stylesheet, such as Google Fonts, with a `<link>` in `page.html`.
 - Draw with the palette's variables (`var(--muted)`), so that the page follows the theme the data file picks.
+- Leave at least `var(--floe-room)` (0.75rem) between parts that stand one after another (in a section, in an item), the most a theme's shadow reaches outside a box.
+- A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part: a part writes no margin of its own on its box (checklist and links are `ul`, steps and timeline `ol`, facts, keys, entries and stats `dl`, code, image, diff and terminal `figure`, tabs `form`).
 
 `report`'s `page.css`, for one, centres its page in the column every floe template uses:
 
@@ -158,7 +160,8 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--accent`, `--accent-soft` | The colour that stands out, and its pale ground |
 | `--good`, `--warn`, `--bad` and their `-soft` | Good, warning and bad, and their pale grounds |
 | `--on-fill` | Text on a face filled with `--accent` or a tone's colour, such as a pill |
-| `--shadow` | The colour of shadows |
+| `--shadow` | A colour for shadows; a box casts one only when its theme sets `--floe-shadow-color` on it ([parts.md](parts.md#themes)) |
+| `--floe-shadow-x`, `-y`, `-blur`, `-spread` | The theme's one shadow, in px or rem (none by default) |
 | `--font`, `--display`, `--mono` | The text's typeface, the headings', and the fixed-width one |
 | `--code-bg`, `--code-fg`, `--code-prompt` | The ground of code and a terminal, always dark; their text; a terminal's prompt |
 | `--code-add`, `--code-del` | A diff's lines added and removed |

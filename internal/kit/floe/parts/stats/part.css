@@ -1,5 +1,5 @@
 /* In the faces of cards, unnumbered */
-:scope { margin: 0; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
 :scope > div { gap: 0.15rem; }
 .stat dt { font-size: 0.85rem; color: var(--muted); }
 .stat dd { margin: 0; }

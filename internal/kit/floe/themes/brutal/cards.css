@@ -1,6 +1,4 @@
-:scope { gap: 1.5rem; padding: 0 6px 6px 0; }
-/* The panel of a card, with the room its shadow takes left to the gap */
-.card { margin: 0; }
+:scope { gap: 1.5rem; }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / "";
   display: block; width: auto; height: auto; background: none; color: inherit; font-size: 2.4rem; font-weight: 900; line-height: 1;

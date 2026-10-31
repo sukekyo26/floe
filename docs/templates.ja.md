@@ -95,6 +95,8 @@ memo/
 - 根は `:scope` です。ページの変数は `:scope` に書きます。`:root` や `html` は scope の外です。
 - どのブロックも閉じない `}` と `@import` は、その行で断ります。Google Fonts のようなスタイルシートは `page.html` の `<link>` で読みます。
 - パレットの変数（`var(--muted)`）で描くと、データファイルが選んだテーマに従います。
+- 続けて並ぶ部品の間（節の中、項目の中）は `var(--floe-room)`（0.75rem）以上をあけます。テーマの影が箱の外へ出る、一番大きい長さです。
+- 部品の箱でもある要素への規則（`ul { margin-block: 1rem }`、`figure { … }`）は、部品にも届きます。部品は自分の箱に margin を書かないためです（checklist・links は `ul`、steps・timeline は `ol`、facts・keys・entries・stats は `dl`、code・image・diff・terminal は `figure`、tabs は `form`）。
 
 たとえば `report` の `page.css` は、floe のテンプレートがどれも使う列で、ページを中央にそろえます：
 
@@ -158,7 +160,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | `--accent`・`--accent-soft` | 目立つ色と、その淡い地 |
 | `--good`・`--warn`・`--bad` と `-soft` | 良い・注意・悪いと、その淡い地 |
 | `--on-fill` | `--accent` やトーンの色で塗った面の上の文字（pill など） |
-| `--shadow` | 影の色 |
+| `--shadow` | 影の色の候補。影は、テーマが箱に `--floe-shadow-color` を置いたときだけ描かれる（[parts.ja.md](parts.ja.md#テーマ)） |
+| `--floe-shadow-x`・`-y`・`-blur`・`-spread` | テーマの 1 組の影。px か rem（既定は無し） |
 | `--font`・`--display`・`--mono` | 本文・見出し・等幅の書体 |
 | `--code-bg`・`--code-fg`・`--code-prompt` | コードとターミナルの地（いつも暗い）、その文字、プロンプト |
 | `--code-add`・`--code-del` | diff の足した行と消した行 |

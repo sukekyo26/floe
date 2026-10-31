@@ -1,5 +1,5 @@
 :scope {
-  background: var(--surface); color: var(--fg); border-radius: 0; box-shadow: none;
+  background: var(--surface); color: var(--fg); border-radius: 0;
 }
 :scope, :scope:is(.good, .warn, .bad) { background: var(--surface); border: 0; border-top: 2px solid var(--accent); --floe-mark: 2rem; --floe-mark-gap: 0.75rem; }
 :scope.good { border-top-color: var(--good); }

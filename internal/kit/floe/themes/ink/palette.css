@@ -5,4 +5,6 @@
   --good: #1e6b43; --good-soft: #dcebe2; --warn: #8a5a10; --warn-soft: #f3e7d1; --bad: #a8261e; --bad-soft: #f6e0de;
   --code-bg: #141414; --code-fg: #ececec; --code-prompt: #9fb4e6;
   --rule: 2px solid var(--fg);
+  /* The hard shadow of its cards, falling right and down */
+  --floe-shadow-x: 4px; --floe-shadow-y: 4px;
 }

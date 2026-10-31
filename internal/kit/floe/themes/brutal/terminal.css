@@ -1,1 +1,1 @@
-:scope { box-shadow: 6px 6px 0 var(--brutal-pink); }
+:scope { --floe-shadow-color: var(--brutal-pink); }

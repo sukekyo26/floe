@@ -1,4 +1,4 @@
-:scope { border: 3px solid var(--fg); border-radius: 0; box-shadow: 6px 6px 0 var(--brutal-blue); margin: 0 6px 6px 0; }
+:scope { border: 3px solid var(--fg); border-radius: 0; --floe-shadow-color: var(--brutal-blue); }
 :scope figcaption {
   background: var(--surface); color: var(--fg); opacity: 1; font-weight: 800; border-bottom: 3px solid var(--fg);
 }

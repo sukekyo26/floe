@@ -9,6 +9,6 @@
   --code-bg: #1a2233; --code-fg: #e7ebf3; --code-prompt: #ff8fb8;
   --rule: none;
   --shadow: rgb(26 34 51 / 0.14);
-  /* How a card is raised from the ground: a close shadow and a soft wide one */
-  --app-raise: 0 1px 2px color-mix(in srgb, var(--shadow) 60%, transparent), 0 6px 16px -4px var(--shadow);
+  /* How a card is raised from the ground: a soft wide shadow under it */
+  --floe-shadow-y: 4px; --floe-shadow-blur: 12px; --floe-shadow-spread: -4px;
 }

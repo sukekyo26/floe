@@ -1,6 +1,6 @@
 /* The date at the left of a dot on a line that runs down to the next, as the look numbered places its ring and line
    (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
-:scope { list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; }
+:scope { list-style: none; padding: 1.1rem 1.3rem; display: grid; gap: 0; }
 :scope > li {
   --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; position: relative; anchor-scope: --floe-mark; display: grid;
   grid-template:

@@ -1,1 +1,1 @@
-:scope { border: 3px solid var(--fg); border-radius: 0; box-shadow: 6px 6px 0 var(--fg); margin: 0 6px 6px 0; }
+:scope { border: 3px solid var(--fg); border-radius: 0; --floe-shadow-color: var(--fg); }

@@ -22,7 +22,7 @@ h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-heig
 h3 { font-size: 1.05rem; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
-h4, h5, h6, hr, figure, dl { margin: 0; }
+h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
 ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 /* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
    --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
@@ -65,6 +65,22 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-copy.copied svg + svg { display: block; color: var(--code-add); }
 .floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
+/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves at
+   least --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
+   side, so that it never meets another box nor the page's edge: nothing makes room for it. A box casts its theme's one
+   shadow, --floe-shadow-x, -y, -blur and -spread (inherited from the palette, in px or rem), in the colour
+   --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
+   none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
+   LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
+   length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses */
+:root { --floe-room: 0.75rem; }
+@property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
+@property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
+[data-floe-part], [data-floe-look], blockquote {
+  box-shadow:
+    var(--floe-shadow-x, 0px) var(--floe-shadow-y, 0px) var(--floe-shadow-blur, 0px) var(--floe-shadow-spread, 0px) var(--floe-shadow-color),
+    var(--floe-inset);
+}
 }
 </style>
 <style>
@@ -160,7 +176,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 :scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
 :scope {
   display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
-  margin: 0; border-radius: 14px; overflow: hidden; color-scheme: dark; box-shadow: 0 1px 2px var(--shadow);
+  border-radius: 14px; overflow: hidden; color-scheme: dark;
   background: var(--face); color: var(--on-face);
   font-family: var(--mono);
 }
@@ -264,7 +280,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, unnumbered */
-:scope { margin: 0; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem; }
+:scope { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--floe-room); }
 :scope > div { gap: 0.1rem; padding-block: var(--floe-row-pad); }
 :scope dt { font-size: 0.8rem; color: var(--muted); }
 :scope dd { margin: 0; font-weight: 600; }
@@ -275,7 +291,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
 }
 }
 </style>
@@ -283,7 +299,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow) 50%, transparent); }
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
 }
 }
 </style>
@@ -331,7 +347,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
-:scope { list-style: none; margin: 0; padding: 0; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; }
+:scope { list-style: none; padding: 0; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--floe-room); }
 :scope > li {
   --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
@@ -389,6 +405,8 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 :scope.warn .title { color: var(--warn); }
 :scope.bad .title { color: var(--bad); }
 :scope > .title + * { margin-top: 0.1rem; }
+/* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
+:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
 :scope code { background: var(--face, var(--surface)); }
 }
 }
@@ -415,8 +433,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 @scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* What details and tabs hold */
 :scope { display: grid; gap: 1rem; min-width: 0; }
-/* No margins of its own on what it holds: it wins over the parts it holds (base.css and each part zero theirs),
-   and a theme's room for a shadow (brutal's) stays */
+/* No margins of its own on what it holds: it wins over the parts it holds, whose roots base.css zeroes */
 :scope > * { min-width: 0; }
 }
 }
@@ -425,7 +442,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, unnumbered */
-:scope { margin: 0; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
 :scope > div { gap: 0.15rem; }
 .stat dt { font-size: 0.85rem; color: var(--muted); }
 .stat dd { margin: 0; }
@@ -446,7 +463,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows */
-:scope { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0; }
+:scope { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 :scope > label {
   position: relative; padding: 0.3rem 0.95rem; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600;
   color: var(--muted);
@@ -454,7 +471,8 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 :scope > label:has(:checked) { background: var(--accent-soft); color: var(--accent); }
 :scope > label:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 :scope input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
-:scope > div { order: 1; flex-basis: 100%; display: none; margin-top: 0.3rem; }
+/* The panel stands --floe-room below the row of titles, the gap and its margin together */
+:scope > div { order: 1; flex-basis: 100%; display: none; margin-top: calc(var(--floe-room) - 0.35rem); }
 :scope > label:has(:checked) + div { display: grid; }
 /* On paper every tab shows, each under its title */
 @media print {
@@ -496,7 +514,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border-radius: 22px; box-shadow: none; }
+:scope { border-radius: 22px; }
 }
 }
 </style>
@@ -507,7 +525,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
    sets its cards (facts, links) */
 :scope > .card { border: 2px solid var(--fg); border-radius: 22px; padding-top: 1.6rem; background: var(--surface);
   /* The stripes as shadows inside its top, which keep to its round corners and stay off the ground of its text */
-  box-shadow: inset 0 4px var(--retro-orange), inset 0 8px var(--retro-mustard), inset 0 12px var(--retro-olive); }
+  --floe-inset: inset 0 4px var(--retro-orange), inset 0 8px var(--retro-mustard), inset 0 12px var(--retro-olive); }
 :scope.numbered > .card::before { border-radius: 50%; background: var(--fg); color: var(--surface); font-family: var(--display); }
 }
 }
@@ -515,14 +533,14 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: 2px solid var(--fg); border-radius: 22px; box-shadow: none; }
+:scope { border: 2px solid var(--fg); border-radius: 22px; }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: 2px solid var(--fg); border-radius: 22px; box-shadow: none; }
+:scope { border: 2px solid var(--fg); border-radius: 22px; }
 }
 }
 </style>

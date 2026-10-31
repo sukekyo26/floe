@@ -1,4 +1,4 @@
-:scope, :scope:is(.good, .warn, .bad) { background: var(--surface); box-shadow: var(--app-raise); border-top: 3px solid var(--accent); }
+:scope, :scope:is(.good, .warn, .bad) { background: var(--surface); --floe-shadow-color: var(--shadow); border-top: 3px solid var(--accent); }
 :scope.good { border-top-color: var(--good); }
 :scope.warn { border-top-color: var(--warn); }
 :scope.bad { border-top-color: var(--bad); }
