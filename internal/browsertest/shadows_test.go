@@ -27,13 +27,19 @@ const shadowsMore = `  - heading: Close
       - code: { lang: sh, text: three }
 `
 
-// shadowsKit is a theme of one's own whose shadow reaches --floe-room on every side of its panels, code and notes.
+// shadowsKit is a theme of one's own whose shadow reaches --floe-room on every side of its panels, code, notes and
+// quotes.
 var shadowsKit = map[string]string{
 	"themes/edge/palette.css": ":root { --floe-shadow-blur: 12px; }\n",
 	"themes/edge/panel.css":   ":scope { --floe-shadow-color: rgb(0 0 0 / 0.4); }\n",
 	"themes/edge/code.css":    ":scope { --floe-shadow-color: rgb(0 0 0 / 0.4); }\n",
 	"themes/edge/note.css":    ":scope { --floe-shadow-color: rgb(0 0 0 / 0.4); }\n",
+	"themes/edge/base.css":    "blockquote { --floe-shadow-color: rgb(0 0 0 / 0.4); }\n",
 }
+
+// shadowsQuote turns the text of a runbook's step into a quote, a box of the page that stands right before the step's
+// terminal, at the least room floe leaves in a step.
+var shadowsQuote = strings.NewReplacer("text: 'Name it with today''s date", "text: '> Name it with today''s date")
 
 // markTilted gives each box drawn tilted an index, so that its ::before and ::after, which a script cannot measure,
 // are measured by pseudoBoxes, and returns how many there are.
@@ -194,7 +200,7 @@ func TestUIShadows(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			t.Fatal(err)
 		}
 		tmpl := strings.TrimSuffix(filepath.Base(ex), ".yaml")
-		text := string(data)
+		text := shadowsQuote.Replace(string(data))
 		if strings.Contains(text, "\nmore:\n") {
 			text += shadowsMore
 		}
