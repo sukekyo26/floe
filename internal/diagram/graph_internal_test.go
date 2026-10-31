@@ -1307,8 +1307,8 @@ func TestGraphLabelRoom(t *testing.T) {
 		routes: map[int][][2]float64{0: {{60, 0}, {60, 200}}}, ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{},
 		spots: map[int]spot{},
 	}
-	if !d.place(0, 20) {
-		t.Fatal("no room by a long run")
+	if err := d.place(0, 20); err != nil {
+		t.Fatal(err)
 	}
 	if r, _ := d.rect(0); r.y <= box.y+box.h/2 && box.y+box.h/2 <= r.y+r.h {
 		t.Errorf("label at %v,%v, across the middle of the box's right side at %v", r.x, r.y, box.y+box.h/2)
@@ -1330,8 +1330,8 @@ func TestGraphLabelRoom(t *testing.T) {
 	}
 	for _, y := range []float64{28, 30} {
 		d := crowd(y)
-		if !d.place(0, 30) {
-			t.Fatalf("y %v: no room made", y)
+		if err := d.place(0, 30); err != nil {
+			t.Fatalf("y %v: %v", y, err)
 		}
 		mine, _ := d.rect(0)
 		theirs, _ := d.rect(1)
@@ -1374,7 +1374,7 @@ func TestGraphLabelRoom(t *testing.T) {
 		shapes: map[int]string{0: ""}, routes: map[int][][2]float64{0: {{10, 10}, {10, 20}}}, ends: map[int][2]int{0: {0, 0}},
 		back: map[int]bool{}, spots: map[int]spot{},
 	}
-	if short.place(0, 20) {
+	if short.place(0, 20) == nil {
 		t.Error("a label placed by a run too short for it, inside a box's span, where no cut makes room")
 	}
 }

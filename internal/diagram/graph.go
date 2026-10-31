@@ -220,9 +220,10 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 		}
 	}
 	for _, k := range edges {
-		if t := o.g.Edges[k].Label; t != nil && !d.place(k, labelWidth(t, false)) {
-			return nil, fmt.Errorf("diagram: the graph at %s found no room for edge %d's label", //nolint:err113 // floe's own
-				o.at, k)
+		if t := o.g.Edges[k].Label; t != nil {
+			if err := d.place(k, labelWidth(t, false)); err != nil {
+				return nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
+			}
 		}
 	}
 	return d, nil
@@ -301,13 +302,14 @@ func isDown(s seg) bool { return s[0] == s[2] }
 
 // place places edge k's label, w wide: beside the first run of its edge with room for it, from the box it is written
 // from, each run from its end nearer that box; with none, it makes room beside a run (see room), the first that
-// takes it and keeps clear of where edges written by hand leave boxes. It reports false when none does: floe's fault,
-// as room made is clear by how it is made (see room), but for those.
+// takes it. It fails when none takes it, and when room made is not clear (of where edges written by hand leave
+// boxes, too): floe's fault, as room made is clear by how it is made (see room), and a failed room would leave the
+// drawing stretched.
 // LIMIT: each spot is compared with every box, label and run of the group (0.06s for the largest graph allowed, every
 // edge labelled); compare only the things near a spot if larger graphs come to need it. Room made grows the group
 // and widens the boxes a cut crosses beyond their text, and minds no edge written by hand: a band made over the
 // middle of a box's side may stand in the way of one, told at it.
-func (d *drawing) place(k int, w float64) bool {
+func (d *drawing) place(k int, w float64) error {
 	things, runs := d.held(-1), append(d.runs(), d.hands()...)
 	for i := range len(d.routes[k]) - 1 {
 		s := segAt(d.routes[k], i)
@@ -320,19 +322,23 @@ func (d *drawing) place(k int, w float64) bool {
 				sp := spot{seg: i, side: side, at: a, w: w}
 				if free(heldRect(s, sp), things, runs) {
 					d.spots[k] = sp
-					return true
+					return nil
 				}
 			}
 		}
 	}
 	for i := range len(d.routes[k]) - 1 {
 		sp, ok := d.room(k, i, w)
-		if ok && free(heldRect(segAt(d.routes[k], i), sp), d.held(k), append(d.runs(), d.hands()...)) {
-			d.spots[k] = sp
-			return true
+		if !ok {
+			continue
 		}
+		if !free(heldRect(segAt(d.routes[k], i), sp), d.held(k), append(d.runs(), d.hands()...)) {
+			return fmt.Errorf("room made for edge %d's label is not clear", k) //nolint:err113 // floe's own
+		}
+		d.spots[k] = sp
+		return nil
 	}
-	return false
+	return fmt.Errorf("found no room for edge %d's label", k) //nolint:err113 // floe's own
 }
 
 // starts are where a label long along run s may start along it, 2 in from its ends, by 6 from its end nearer the box.
