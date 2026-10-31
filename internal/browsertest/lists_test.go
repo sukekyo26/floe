@@ -169,8 +169,9 @@ func TestUILists(t *testing.T) { //nolint:paralleltest // the browser tests shar
 	s.floe(t, "publish", s.write(t, "decision.yaml", listsDecision), "--slug", "lists-decision")
 	b.navigate("/a/lists-decision/?raw")
 	marks := `(() => ['[data-floe-part=decision] ul:not(.rejected)', '[data-floe-part=decision] .rejected']
-  .map((q) => getComputedStyle(document.querySelector(q)).listStyleType).join(' '))()`
-	if got := b.eval(marks); got != "disc none" {
-		t.Errorf("decision's list in its text and the options set aside: %s, want disc none", got)
+  .map((q) => getComputedStyle(document.querySelector(q)).listStyleType + ' ' +
+    getComputedStyle(document.querySelector(q + ' > li'), '::before').content).join(', '))()`
+	if got := b.eval(marks); got != `disc none, none "×" / ""` {
+		t.Errorf("decision's list in its text and the options set aside: %s, want disc none, none \"×\" / \"\"", got)
 	}
 }
