@@ -83,7 +83,9 @@ func TestRadius(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		corner := func(name string) bool { return strings.HasSuffix(name, "radius") || slices.Contains(paletteRadii, name) }
+		corner := func(name string) bool {
+			return strings.HasSuffix(name, "radius") || slices.Contains(paletteRadii, name)
+		}
 		for prop, values := range declarations(src, corner) {
 			for _, value := range values {
 				if strings.HasPrefix(prop, "--") {
