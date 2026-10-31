@@ -254,6 +254,9 @@ adheres to [Semantic Versioning](https://semver.org/).
     line starts 5.6px below the dot (was 4px).
   - A note's text keeps `--floe-mark-gap` from a mark with a border (brutal,
     notebook, blueprint), 2 to 4px further right.
+  - swiss's note has its mark within the note's padding, as the other themes
+    do, its text 18px further right; the first card of swiss's links has its
+    mark at the card's edge, as its first cards have their text.
   - The item of an `<ol>` that takes `numbered` breaks when it holds text
     written straight in it: write its text in an element
     (`<li><p>…</p></li>`).

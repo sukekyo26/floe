@@ -181,6 +181,9 @@ floe の主要な変更を記録します。フォーマットは
     始まる（前は 4px）。
   - 枠のある印（brutal・notebook・blueprint）の note の字が、印から
     `--floe-mark-gap` 離れ、2〜4px 右へ動く。
+  - swiss の note の印が、ほかのテーマと同じく note の余白の内側に来て、字が 18px
+    右へ動く。swiss の links の 1 枚目のカードは、1 枚目のカードの字と同じく、印が
+    カードの左の端に付く。
   - `numbered` を借りる `<ol>` の項目に直に字を書くと崩れる。字は要素で包む
     （`<li><p>…</p></li>`）。
   - anchor positioning を読まない古いブラウザでは、次の印への線の位置が崩れる。
