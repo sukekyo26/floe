@@ -95,7 +95,7 @@ memo/
 - 根は `:scope` です。ページの変数は `:scope` に書きます。`:root` や `html` は scope の外です。
 - どのブロックも閉じない `}` と `@import` は、その行で断ります。Google Fonts のようなスタイルシートは `page.html` の `<link>` で読みます。
 - パレットの変数（`var(--muted)`）で描くと、データファイルが選んだテーマに従います。
-- 続けて並ぶ部品の間（節の中、項目の中）は `var(--floe-room)`（0.75rem）以上をあけます。テーマの影が箱の外へ出る、一番大きい長さです。
+- 続けて並ぶ部品の間（節の中、項目の中）は、floe のどこもと同じく `var(--floe-room)`（0.75rem）をあけます。テーマの影が箱の外へ出る、一番大きい長さです。部品 text の段落や見出しも、部品としてそこに並びます。
 - 部品の箱でもある要素への規則（`ul { margin-block: 1rem }`、`figure { … }`）は、部品にも届きます。部品は自分の箱に margin を書かないためです（checklist・links は `ul`、steps・timeline は `ol`、facts・keys・entries・stats は `dl`、code・image・diff・terminal は `figure`、tabs は `form`）。ただし、部品の箱の並びの display・印・余白・項目の間は、floe が決めるので変わりません（[parts.ja.md](parts.ja.md#css-の層と-scope)）。見た目を借りる並びのそれは `page.css` で変わるので、テンプレートが整えられます。
 
 たとえば `report` の `page.css` は、floe のテンプレートがどれも使う列で、ページを中央にそろえます：

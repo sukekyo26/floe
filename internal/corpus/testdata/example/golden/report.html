@@ -402,8 +402,10 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Each card is numbered by its place, as the steps of a plan are */
-:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
+/* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
+   any parts.
+   LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
 .card {
   padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
@@ -578,7 +580,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border-radius: 20px; padding: var(--floe-room); gap: var(--floe-room); }
+:scope { background: var(--default-panel); border-radius: 20px; padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
 .card { background: var(--surface); border-radius: 14px; }
 :scope.numbered > .card::before {
@@ -602,7 +604,7 @@ main {
 h1 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: 0.01em; }
 h2 { font-size: 1.4rem; }
 header { display: grid; gap: 0.7rem; }
-section { display: grid; gap: 1rem; }
+section { display: grid; gap: var(--floe-room); }
 section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 .sub { margin-top: 0.5rem; }
 .sub > h3 { font-size: 1.15rem; }

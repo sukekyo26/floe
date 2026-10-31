@@ -1,4 +1,4 @@
-:scope { background: var(--default-panel); border-radius: 20px; padding: var(--floe-room); gap: var(--floe-room); }
+:scope { background: var(--default-panel); border-radius: 20px; padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
 .card { background: var(--surface); border-radius: 14px; }
 :scope.numbered > .card::before {

@@ -243,6 +243,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the room between parts that stand one after another to
+  `--floe-room` (0.75rem) everywhere: in a stack (details' and tabs' panels),
+  between cards (stats, options, decision, facts, links, and html's cards,
+  brutal's and notebook's too), and in report's, design's, runbook's,
+  handoff's and slides' sections, where the paragraphs and headings of a text
+  stand too. It was 1rem, 0.8rem, 1.5rem or 1.75rem.
 - Change a list (`ul`, `ol` or `menu`) that is a part's box or takes a look to
   draw no marks, padding or room between its items, laid out in a grid, in parts
   and templates of one's own too; a template's `page.css` or a theme's `base.css`

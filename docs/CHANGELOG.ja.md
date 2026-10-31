@@ -173,6 +173,11 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：続けて並ぶ部品の間を、どこも `--floe-room`（0.75rem）にした。stack
+  （details・tabs の中身）の中、カードの間（stats・options・decision・facts・
+  links、html の cards。brutal・notebook も）、report・design・runbook・handoff・
+  slides の節の中（text の段落と見出しも並ぶ）。今までは 1rem・0.8rem・1.5rem・
+  1.75rem だった。
 - 変更：部品の箱か、見た目を借りる並び（`ul`・`ol`・`menu`）は、自分の部品と
   テンプレートでも、印・余白・項目の間を持たず、grid で並ぶ。テンプレートの
   `page.css` やテーマの `base.css` が並び全部への規則を書いても、部品の箱の並びの

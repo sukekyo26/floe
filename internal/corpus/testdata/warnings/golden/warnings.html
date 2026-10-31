@@ -150,7 +150,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* What details and tabs hold */
-:scope { display: grid; gap: 1rem; min-width: 0; }
+:scope { display: grid; gap: var(--floe-room); min-width: 0; }
 /* No margins of its own on what it holds: it wins over the parts it holds, whose roots base.css zeroes */
 :scope > * { min-width: 0; }
 }
@@ -177,7 +177,7 @@ main {
 h1 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: 0.01em; }
 h2 { font-size: 1.4rem; }
 header { display: grid; gap: 0.7rem; }
-section { display: grid; gap: 1rem; }
+section { display: grid; gap: var(--floe-room); }
 section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 .sub { margin-top: 0.5rem; }
 .sub > h3 { font-size: 1.15rem; }

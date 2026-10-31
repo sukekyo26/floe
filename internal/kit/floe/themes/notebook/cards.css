@@ -1,4 +1,3 @@
-:scope { gap: 1.75rem; }
 /* The panel of a card, on plain paper */
 .card { position: relative; background: var(--surface); }
 :scope.numbered > .card::before { content: none; }
