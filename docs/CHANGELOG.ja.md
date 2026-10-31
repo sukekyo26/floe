@@ -174,10 +174,10 @@ floe の主要な変更を記録します。フォーマットは
 ### 変更
 
 - 変更：続けて並ぶ部品の間を、どこも `--floe-room`（0.75rem）にした。stack
-  （details・tabs の中身）の中、カードの間（stats・options・decision・facts・
-  links、html の cards。brutal・notebook も）、report・design・runbook・handoff・
-  slides の節の中（text の段落と見出しも並ぶ）。今までは 1rem・0.8rem・1.5rem・
-  1.75rem だった。
+  （details・tabs の中身）の中、stats・options・decision・html の cards のカードの
+  間（1rem だった）、brutal・notebook のすべてのカードの間（1.5rem・1.75rem だった。
+  facts・links は、ほかのテーマではもう 0.75rem）、report・design・runbook・
+  handoff・slides の節の中（1rem か 0.8rem だった。text の段落と見出しも並ぶ）。
 - 変更：部品の箱か、見た目を借りる並び（`ul`・`ol`・`menu`）は、自分の部品と
   テンプレートでも、印・余白・項目の間を持たず、grid で並ぶ。テンプレートの
   `page.css` やテーマの `base.css` が並び全部への規則を書いても、部品の箱の並びの
@@ -205,7 +205,7 @@ floe の主要な変更を記録します。フォーマットは
   パレットを図だけに当てて持ち、図の外のページの変数と color-scheme は変わらない。
 - 修正：影がほかの部品やページの端に届いていた。app と aurora のぼかしの影が下の
   部品に、aurora の影がページの端と隣のカードに、notebook の傾いた付箋が下の部品に
-  届いていた。箱の外へ描くものは、四方とも、floe が部品の間に空ける最小
+  届いていた。箱の外へ描くものは、四方とも、floe が部品の間に空ける
   `--floe-room`（0.75rem）以下の、箱の大きさによらない大きさになり、場所は空け
   ない。ページで変わる所：
   - app・aurora・notebook の影が小さくなる。app の近い薄い影は無くなる。notebook の

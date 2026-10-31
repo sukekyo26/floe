@@ -245,10 +245,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Change the room between parts that stand one after another to
   `--floe-room` (0.75rem) everywhere: in a stack (details' and tabs' panels),
-  between cards (stats, options, decision, facts, links, and html's cards,
-  brutal's and notebook's too), and in report's, design's, runbook's,
-  handoff's and slides' sections, where the paragraphs and headings of a text
-  stand too. It was 1rem, 0.8rem, 1.5rem or 1.75rem.
+  between the cards of stats, options, decision and html's cards (1rem), all
+  cards in brutal and notebook (1.5rem and 1.75rem; facts' and links' were
+  0.75rem in the other themes already), and in report's, design's, runbook's,
+  handoff's and slides' sections (1rem or 0.8rem), where the paragraphs and
+  headings of a text stand too.
 - Change a list (`ul`, `ol` or `menu`) that is a part's box or takes a look to
   draw no marks, padding or room between its items, laid out in a grid, in parts
   and templates of one's own too; a template's `page.css` or a theme's `base.css`
@@ -285,7 +286,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   soft shadows fell on the part below, aurora's past the page's edge and onto
   the card beside, and notebook's tilted sticky notes onto the part below.
   What a box draws outside itself now stays within `--floe-room` (0.75rem)
-  on every side, the least room floe leaves between parts, in a size that
+  on every side, the room floe leaves between parts, in a size that
   does not follow the box's, and takes no room. What changes on a page:
   - app's, aurora's and notebook's shadows are smaller; app's close shadow is
     gone; notebook's sticky notes no longer tilt, and its cards no longer
