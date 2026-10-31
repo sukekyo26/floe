@@ -76,7 +76,7 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 
 - 部品の箱でない要素は `data-floe-look` で見た目を借ります。`<section data-floe-look="panel">` はどのテーマでもパネルです。その見た目は部品とテンプレートより下の `floe.looks` に入るので、中に置かれた部品やテンプレートが整えられます。
 - floe の部品もこうして見た目を借ります。`compare`・`fields`・`findings` は table の、`stats`・`options`・`facts`・`links`・`decision` は cards の、`diff`・`terminal` は code の、`checklist`・`entries`・`faq`・`keys` は `rows` の、ほかのパネルに描く部品は `panel` の見た目を借ります。テーマのある見た目へのルールは、それを借りる部品を全部描きます。
-- 見た目 `rows` は、行ごとに上下に `--floe-row-pad`（floe の base で 0.4rem）の余白を付けます。箱が最後に `::after` で描く行（checklist の数）も行です。借りる部品やテンプレートは、行の余白を左右だけ書きます。行が `rows` を借りない部品は、表のセルや facts のタイルのように変数を読み（`padding-block: var(--floe-row-pad)`）、ほかの行と高さをそろえます。
+- 見た目 `rows` は、リストの印と余白を外し、行ごとに上下に `--floe-row-pad`（floe の base で 0.4rem）の余白を付けます。rows の箱の `::after` も行として、上下に同じ余白が付きます（checklist の数）。借りる部品やテンプレートは、行の余白を左右だけ書きます。行が `rows` を借りない部品は、表のセルや facts のタイルのように変数を読み（`padding-block: var(--floe-row-pad)`）、ほかの行と高さをそろえます。
 
 ## テーマ
 

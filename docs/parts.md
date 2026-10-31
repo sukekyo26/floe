@@ -76,7 +76,7 @@ As in `page.css`, a `}` that closes no block and an `@import` are refused at the
 
 - An element that is no part's box takes a look by `data-floe-look`: `<section data-floe-look="panel">` is a panel in every theme. It has it in `floe.looks`, under the parts and the template, so that the part or template it is in adjusts it.
 - floe's parts take looks so: `compare`, `fields` and `findings` take the table's, `stats`, `options`, `facts`, `links` and `decision` the cards', `diff` and `terminal` code's, `checklist`, `entries`, `faq` and `keys` the look `rows`, and the other parts drawn in a panel `panel`'s. A theme's rules for a look draw every part that takes it.
-- The look `rows` pads each of its rows by `--floe-row-pad` (floe's base, 0.4rem) above and below, and a row its box draws last as `::after`, as checklist's count: a part or a template that takes it writes its rows' padding at the sides alone. A part whose rows do not take `rows` takes the variable, as the table's cells and facts' tiles do (`padding-block: var(--floe-row-pad)`), so that its rows are as tall as the others.
+- The look `rows` leaves out a list's marks and padding, and pads each of its rows by `--floe-row-pad` (floe's base, 0.4rem) above and below; its box's `::after` is a row too, padded alike, as checklist's count: a part or a template that takes it writes its rows' padding at the sides alone. A part whose rows do not take `rows` takes the variable, as the table's cells and facts' tiles do (`padding-block: var(--floe-row-pad)`), so that its rows are as tall as the others.
 
 ## Themes
 

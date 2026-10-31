@@ -1,5 +1,6 @@
-/* Rows in a panel, each padded above and below by --floe-row-pad (base.css), a rule between each and the next; what
-   takes it writes its rows' padding at the sides alone. A row the box draws last as ::after (checklist's count) is a
-   row too */
+/* Rows in a panel, without a list's marks and padding, a theme's frame of the box in their place. Each row is padded
+   above and below by --floe-row-pad (base.css), and so is a row the box draws last as ::after (checklist's count);
+   what takes it writes its rows' padding at the sides alone. A rule parts each row from the next */
+:scope { list-style: none; padding: 0; }
 :scope > *, :scope::after { padding-block: var(--floe-row-pad); }
 :scope > * + * { border-top: 1px solid var(--line); }
