@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "diagram",
-  "description": "A diagram: a canvas of width by height and the parts placed on it, drawn as inline SVG; or example, the name of a built-in one, which floe diagram example lists",
+  "description": "A diagram: a canvas of width by height (either left out, as far as what is drawn reaches and 20 more) and the parts placed on it, drawn as inline SVG; or example, the name of a built-in one, which floe diagram example lists",
   "type": "object",
   "if": { "required": ["example"] },
   "then": {
@@ -11,11 +11,11 @@
     }
   },
   "else": {
-    "required": ["width", "height", "title", "parts"],
+    "required": ["title", "parts"],
     "additionalProperties": false,
     "properties": {
-      "width": { "$ref": "#/$defs/size" },
-      "height": { "$ref": "#/$defs/size" },
+      "width": { "$ref": "#/$defs/size", "description": "Left out, as far right as what is drawn reaches and 20 more; raw SVG is not measured, so write it with raw" },
+      "height": { "$ref": "#/$defs/size", "description": "Left out, as far down as what is drawn reaches and 20 more; raw SVG is not measured, so write it with raw" },
       "title": { "$ref": "#/$defs/text", "description": "What the diagram shows, for a reader who cannot see it" },
       "parts": {
         "type": "array",
@@ -68,7 +68,7 @@
     "marker": { "enum": ["none", "arrow", "triangle", "diamond", "odiamond", "one", "many", "zero-one", "zero-many"] },
     "frame": {
       "type": "object",
-      "description": "A box around other parts, its label inside the top left corner, or right of its icon. Frames are not checked against one another, so they may cross, and a frame's label is held to the frame's width, not its height or the canvas",
+      "description": "A box around other parts, its label inside the top left corner, or right of its icon. Frames are not checked against one another, so they may cross, and a frame's label is held to the frame's width, not its height or a canvas written",
       "required": ["x", "y", "w", "h"],
       "additionalProperties": false,
       "properties": {

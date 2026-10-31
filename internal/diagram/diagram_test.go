@@ -445,6 +445,49 @@ func TestVennBounded(t *testing.T) {
 	}
 }
 
+// A width or height left out reaches as far as what is drawn, and 20 more; one written stays. The canvas still
+// starts at 0, 0, and what cannot be placed in it is told by the canvas reached.
+func TestCanvasLeftOut(t *testing.T) {
+	t.Parallel()
+
+	// The label, right of and below the box, is what reaches farthest.
+	parts := "title: T\nparts:\n  - box: { x: 20, y: 20, w: 100, h: 40, rows: [A] }\n" +
+		"  - label: { text: far, x: 300, y: 100, anchor: start }\n"
+	for _, c := range []struct{ size, want string }{
+		{"", `viewBox="0 0 346.6 129"`},
+		{"width: 400\n", `viewBox="0 0 400 129"`},
+		{"height: 300\n", `viewBox="0 0 346.6 300"`},
+	} {
+		svg, mistakes := draw(t, c.size+parts, render("en"))
+		if mistakes != "" || !strings.Contains(svg, c.want) {
+			t.Errorf("a canvas of %q = %s %s, want %s", c.size, svg, mistakes, c.want)
+		}
+	}
+
+	// A region's labels go where they go on a canvas written.
+	venn := "  - circle: { name: a, cx: 120, cy: 120, r: 100 }\n  - circle: { name: b, cx: 240, cy: 120, r: 100 }\n" +
+		"  - label: { text: both, in: [a, b] }\n  - label: { text: a alone, in: [a] }\n"
+	written, mistakes := draw(t, "width: 400\nheight: 300\ntitle: T\nparts:\n"+venn, inspect)
+	left, mistakes2 := draw(t, "title: T\nparts:\n"+venn, inspect)
+	if mistakes != "" || mistakes2 != "" || left != written {
+		t.Errorf("a Venn diagram of no canvas = %s %s, want it as on one written: %s %s", left, mistakes2, written, mistakes)
+	}
+
+	for _, c := range []struct{ parts, want string }{
+		{"  - box: { x: -10, y: 20, rows: [Write] }\n", `s.yaml:3:5: box "Write" sticks out of the 82x69 canvas`},
+		{"  - box: { x: -200, y: -100, rows: [Write] }\n", `s.yaml:3:5: box "Write" sticks out of the 20x20 canvas`},
+		{
+			"  - circle: { name: a, cx: -200, cy: 50, r: 50 }\n  - label: { text: x, in: [a] }\n",
+			"s.yaml:3:5: circle \"a\" sticks out of the 20x120 canvas\ns.yaml:4:5: label \"x\" sticks out of the 20x120 canvas",
+		},
+	} {
+		_, got := draw(t, "title: T\nparts:\n"+c.parts, render("en"))
+		if got != c.want {
+			t.Errorf("%s = %q, want %q", c.parts, got, c.want)
+		}
+	}
+}
+
 // A label placed by its region keeps out of every other circle, one of no name too.
 func TestVennUnnamed(t *testing.T) {
 	t.Parallel()

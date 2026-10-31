@@ -189,7 +189,7 @@ func (l *layout) draw(lang i18n.Lang) (template.HTML, error) {
 	t.Funcs(template.FuncMap{"t": func(x Text) string { return x.in(lang) }})
 	var b strings.Builder
 	err = t.ExecuteTemplate(&b, "diagram", map[string]any{
-		"W": l.s.Width, "H": l.s.Height, "MaxH": math.Floor(l.s.Height*maxScale + 0.5), "Title": l.s.Title,
+		"W": l.w, "H": l.h, "MaxH": math.Floor(l.h*maxScale + 0.5), "Title": l.s.Title,
 		"Markers": defs, "Icons": l.iconDefs, "Elems": elems,
 	})
 	if err != nil {

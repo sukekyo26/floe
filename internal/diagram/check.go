@@ -9,9 +9,10 @@ import (
 // check reports the layout's mistakes: text too wide or tall for its box or frame (as it was laid out), parts
 // (edges, lines and axes too) sticking out of the canvas, overlapping (frame headings too), boxes and marks straddling
 // the edge of a frame, edges running through boxes, labels or frame headings, and edges crossing. A frame's own box is
-// compared with no other frame's, and a frame's heading is not kept within the frame's height or the canvas (its
-// width is, by addFrame): frames may cross on purpose (a group over two columns, bands that cross), and on the
-// page a heading out of its frame shows below it, one out of the canvas cut short or gone. A frame's icon is a
+// compared with no other frame's, and a frame's heading is not kept within the frame's height or a canvas written
+// (its width is, by addFrame): frames may cross on purpose (a group over two columns, bands that cross), and on the
+// page a heading out of its frame shows below it, one out of a canvas written cut short or gone (a canvas left
+// out reaches it). A frame's icon is a
 // box and its heading a text, each checked as those are.
 func (l *layout) check() {
 	l.checkPlacement()
@@ -23,11 +24,14 @@ func (l *layout) check() {
 // frame headings overlapping; and boxes and marks straddling a frame. Frames are not compared with one another.
 // LIMIT: labels are not kept off a frame's edge, where an edge's label may sit; compare label parts if one strays.
 func (l *layout) checkPlacement() {
-	canvas := rect{0, 0, l.s.Width, l.s.Height, "", ""}
+	canvas := rect{0, 0, l.w, l.h, "", ""}
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
 		if !r.inside(canvas) {
-			l.problem(r.at, "diagram_outside", r.what, num(l.s.Width), num(l.s.Height))
+			l.problem(r.at, "diagram_outside", r.what, num(l.w), num(l.h))
 		}
+	}
+	for _, r := range l.strays {
+		l.problem(r.at, "diagram_outside", r.what, num(l.w), num(l.h))
 	}
 	solids := slices.Concat(l.boxes, l.marks, l.labels, l.heads)
 	// LIMIT: every pair is compared (O(n²)), here and for edges. If diagrams of hundreds of parts get slow,
@@ -208,7 +212,7 @@ func (l *layout) addLabel(lb *label, at string) {
 	x, y, st := l.place(lb, g)
 	switch {
 	case !st.tried:
-		l.problem(at, "diagram_outside", what("label", "", lb.Text), num(l.s.Width), num(l.s.Height))
+		l.strays = append(l.strays, rect{0, 0, 0, 0, what("label", "", lb.Text), at})
 		return
 	case !st.found:
 		l.problem(at, "diagram_label_no_room", what("label", "", lb.Text), names)
@@ -242,8 +246,8 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 			x0, y0, x1, y1 = max(x0, c.CX-c.R), max(y0, c.CY-c.R), min(x1, c.CX+c.R), min(y1, c.CY+c.R)
 		}
 		st.tried = x0 >= x1 || y0 >= y1 ||
-			max(x0, 0) < min(x1, l.s.Width) && max(y0, 0) < min(y1, l.s.Height)
-		xs, ys := grid(x0, x1, l.s.Width), grid(y0, y1, l.s.Height)
+			max(x0, 0) < min(x1, l.w) && max(y0, 0) < min(y1, l.h)
+		xs, ys := grid(x0, x1, l.w), grid(y0, y1, l.h)
 		var best float64
 		best, st.x, st.top = g.most(xs, ys, w, h, (x0+x1)/2, (y0+y1)/2)
 		st.found = best > 0

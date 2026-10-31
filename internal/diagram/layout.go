@@ -31,6 +31,9 @@ const (
 	tableSep  = 9
 	cornerR   = 8 // the corner radius of a box and a table
 	labelH    = 18
+	// canvasPad is the room right of and below what is drawn on a canvas whose width or height is left out: for
+	// text drawn wider than its estimate, and for an edge's marker past its end.
+	canvasPad = 20
 )
 
 // rect is the area a part takes, with the words that name it and where it is written (a JSON pointer).
@@ -88,6 +91,12 @@ type layout struct {
 	iconDefs                                    []iconDef
 	iconIDs                                     map[string]string // by name and size
 	stacks                                      map[string]stack  // the labels placed by each region of a Venn diagram
+	// The canvas: its width and height as written, or for one left out, +Inf while the parts are added and then
+	// what is drawn reaches, so that each check and the drawing read the canvas they are told of.
+	w, h float64
+	// Labels placed by their region that had none of it in the canvas, told sticking out by checkPlacement, once
+	// the canvas is known; only what and at are kept.
+	strays []rect
 }
 
 func (l *layout) problem(at, key string, args ...any) {
@@ -104,7 +113,7 @@ func newLayout(s *spec, opts Options) *layout {
 		s: s, opts: opts, id: "", problems: nil, failure: nil, names: map[string]target{}, circles: map[string]circle{},
 		boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, strokes: nil, paths: nil,
 		areaEls: nil, gridEls: nil, edgeEls: nil, boxEls: nil, labelEls: nil, markers: nil, iconDefs: nil,
-		iconIDs: map[string]string{}, stacks: map[string]stack{},
+		iconIDs: map[string]string{}, stacks: map[string]stack{}, w: written(s.Width), h: written(s.Height), strays: nil,
 	}
 	b, _ := json.Marshal(s) //nolint:errcheck,errchkjson // read from JSON, it writes as JSON
 	sum := sha256.Sum256(b)
@@ -123,7 +132,35 @@ func newLayout(s *spec, opts Options) *layout {
 	for _, it := range items {
 		l.add(it.at, it.p)
 	}
+	if s.Width == 0 {
+		l.w = l.reach(func(r rect) float64 { return r.x + r.w }) + canvasPad
+	}
+	if s.Height == 0 {
+		l.h = l.reach(func(r rect) float64 { return r.y + r.h }) + canvasPad
+	}
 	return l
+}
+
+// written is a canvas's size as written, or +Inf for one left out (0), so that nothing is held within it yet.
+func written(size float64) float64 {
+	if size == 0 {
+		return math.Inf(1)
+	}
+	return size
+}
+
+// reach is the farthest end of what is drawn, told by end, and 0 when all of it is before 0.
+// LIMIT: raw SVG is not measured (that would read SVG as a browser does), so it may be cut off right of or below
+// what else is drawn; write width and height with it.
+// LIMIT: text is as wide as its estimate; text drawn over canvasPad wider (a run of bold Ws) at the end is cut off.
+// LIMIT: an end that is not finite (a circle of radius 1e308) makes the canvas +Inf, which no check refuses, as
+// with place's 1e299; refuse it if diagrams that large come to matter.
+func (l *layout) reach(end func(rect) float64) float64 {
+	far := 0.0
+	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.heads, l.areas, l.strokes) {
+		far = max(far, end(r))
+	}
+	return far
 }
 
 // name keeps the name of the part at at, refusing one used before.

@@ -57,7 +57,8 @@ func (t Text) in(lang i18n.Lang) string {
 	return t["en"]
 }
 
-// spec is a diagram's value: its canvas and parts, or the name of a built-in example.
+// spec is a diagram's value: its canvas and parts, or the name of a built-in example. A width or height left out
+// is 0, as the schema takes 1 or more.
 type spec struct {
 	Width   float64 `json:"width"`
 	Height  float64 `json:"height"`
