@@ -257,8 +257,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   measured a box by the rectangle around it, so an edge past a hex's points
   or a rounded corner (a pill's or a state's end, a box's, a table's or a
   bar's corner) was refused. It now measures the shape drawn, which floe
-  decides in one place for drawing and checking alike, and writes each
-  corner's radii as floe cut them, not as a browser would.
+  decides in one place for drawing and checking alike. Corners are round,
+  of a radius no more than half the shorter side, so a tall pill's ends are
+  half circles, where a browser drew them as ellipses before.
 - Fix the diagrams of `floe diagram render`'s fragment taking the variables of the
   page they are pasted into: a page's `--bg` filled the edges' labels, so that
   they could not be read. The fragment carries `default`'s palette on the diagrams

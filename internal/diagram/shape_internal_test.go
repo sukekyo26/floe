@@ -49,12 +49,16 @@ func TestOutline(t *testing.T) {
 		{"table: into its corner", boxOf(100, 380, 200, 52, "table"), seg{90, 370, 106, 386}, true},
 		{"bar: within 1 of its corner", boxOf(100, 463, 200, 14, "bar"), seg{90, 455, 101.3, 464.3}, false},
 		{"bar: into its corner", boxOf(100, 463, 200, 14, "bar"), seg{90, 455, 103, 466}, true},
-		{"tall pill: past its elliptic corner", boxOf(400, 20, 60, 120, "pill"), seg{390, 15, 405, 30}, false},
+		// A tall pill's ends are half circles of half its width, and its sides straight between them.
+		{"tall pill: past its round end", boxOf(400, 20, 60, 120, "pill"), seg{390, 15, 405, 30}, false},
 		{"tall pill: into it", boxOf(400, 20, 60, 120, "pill"), seg{390, 15, 415, 60}, true},
-		// Inside the drawn ellipse by less than 1, though inside a circle of the corner's width.
-		{"tall pill: within 1 of its elliptic side", boxOf(400, 20, 60, 120, "pill"), seg{395, 60, 402.3, 60}, false},
+		{"tall pill: along its straight side, 1 in", boxOf(400, 20, 60, 120, "pill"), seg{401, 60, 401, 100}, false},
+		{"tall pill: along its straight side, 1.5 in", boxOf(400, 20, 60, 120, "pill"), seg{401.5, 60, 401.5, 100}, true},
+		// Below its round corner, along its straight side: inside, where an elliptic corner (20 by 26) would not be.
+		{"narrow state: its corners round, not elliptic", boxOf(100, 100, 40, 80, "state"), seg{101.2, 120.5, 101.2, 121.5}, true},
 		{"icon: past its corner, which is square", rect{100, 300, 48, 48, "", "", sharp}, seg{90, 290, 102, 302}, true},
 		{"2 by 2: no room 1 in", boxOf(100, 100, 2, 2, "pill"), seg{90, 101, 110, 101}, false},
+		{"a run of no length, inside", boxOf(100, 300, 200, 52, ""), seg{200, 326, 200, 326}, false},
 	} {
 		if got := crossedBy(c.s, c.r); got != c.want {
 			t.Errorf("%s: crossedBy(%v) = %v, want %v", c.name, c.s, got, c.want)
@@ -72,9 +76,8 @@ func TestOutline(t *testing.T) {
 	}
 }
 
-// depth is how far p is inside r's outline (less than 0 outside, roughly), told without crossedBy: a hexagon's
-// distance to its nearest side, a rounded corner's to its arc (an ellipse's found by search), else to the nearest
-// side of the rectangle.
+// depth is how far p is inside r's outline (less than 0 outside), told without crossedBy: a hexagon's distance to
+// its nearest side, a round corner's to its arc, else to the nearest side of the rectangle.
 func depth(r rect, px, py float64) float64 {
 	o := r.form
 	x0, y0, x1, y1 := r.x, r.y, r.x+r.w, r.y+r.h
@@ -88,72 +91,42 @@ func depth(r rect, px, py float64) float64 {
 		return d
 	}
 	edge := math.Min(math.Min(px-x0, x1-px), math.Min(py-y0, y1-py))
-	if o.rx == 0 || o.ry == 0 {
+	c := o.radius
+	if c == 0 {
 		return edge
 	}
-	cx, cy := x0+o.rx, y0+o.ry
+	cx, cy := x0+c, y0+c
 	switch {
-	case px > x1-o.rx:
-		cx = x1 - o.rx
-	case px >= x0+o.rx:
+	case px > x1-c:
+		cx = x1 - c
+	case px >= x0+c:
 		return edge
 	}
 	switch {
-	case py > y1-o.ry:
-		cy = y1 - o.ry
-	case py >= y0+o.ry:
+	case py > y1-c:
+		cy = y1 - c
+	case py >= y0+c:
 		return edge
 	}
-	return toEllipse(px-cx, py-cy, o.rx, o.ry)
-}
-
-// toEllipse is how far u, v is inside the ellipse of radii a, b about 0 (less than 0 outside): its distance to the
-// nearest point on it, searched over the quarter u, v is in.
-func toEllipse(u, v, a, b float64) float64 {
-	in := (u/a)*(u/a)+(v/b)*(v/b) < 1
-	au, av := math.Abs(u), math.Abs(v)
-	dist := func(th float64) float64 { return math.Hypot(a*math.Cos(th)-au, b*math.Sin(th)-av) }
-	best, bt := math.Inf(1), 0.0
-	for i := 0; i <= 256; i++ {
-		th := math.Pi / 2 * float64(i) / 256
-		if d := dist(th); d < best {
-			best, bt = d, th
-		}
-	}
-	lo, hi := math.Max(0, bt-math.Pi/512), math.Min(math.Pi/2, bt+math.Pi/512)
-	for range 60 {
-		m1, m2 := lo+(hi-lo)/3, hi-(hi-lo)/3
-		if dist(m1) < dist(m2) {
-			hi = m2
-		} else {
-			lo = m1
-		}
-	}
-	best = dist((lo + hi) / 2)
-	if in {
-		return best
-	}
-	return -best
+	return c - math.Hypot(px-cx, py-cy)
 }
 
 // Random runs near each shape agree with points along them: a run with a point deeper than 1 in is crossedBy (none
-// missed). A run crossedBy with no point so deep, checked again closely, is counted: none for a shape of circular
-// corners or sides; for an elliptic corner, measured 1 in by an ellipse of radii 1 less (a LIMIT), some may be, but
-// each with a point inside the shape drawn.
+// missed), and a run crossedBy has a point 1 in, checked again closely if the first points miss it (none extra).
 func TestOutlineRandom(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range []struct {
-		name     string
-		r        rect
-		elliptic bool
+		name string
+		r    rect
 	}{
-		{"hex", boxOf(100, 100, 200, 52, "hex"), false},
-		{"rect", boxOf(100, 100, 200, 52, ""), false},
-		{"pill", boxOf(100, 100, 200, 52, "pill"), false},
-		{"state", boxOf(100, 100, 200, 80, "state"), false},
-		{"bar", boxOf(100, 100, 200, 14, "bar"), false},
-		{"tall pill", boxOf(100, 100, 60, 120, "pill"), true},
+		{"hex", boxOf(100, 100, 200, 52, "hex")},
+		{"rect", boxOf(100, 100, 200, 52, "")},
+		{"pill", boxOf(100, 100, 200, 52, "pill")},
+		{"state", boxOf(100, 100, 200, 80, "state")},
+		{"bar", boxOf(100, 100, 200, 14, "bar")},
+		{"tall pill", boxOf(100, 100, 60, 120, "pill")},
+		{"narrow state", boxOf(100, 100, 40, 80, "state")},
 	} {
 		rnd := rand.New(rand.NewPCG(11, 12)) //nolint:gosec // G404: runs to try, no secret
 		pt := func() (float64, float64) {
@@ -169,7 +142,6 @@ func TestOutlineRandom(t *testing.T) {
 			return false
 		}
 		const runs = 4000
-		over := 0
 		for range runs {
 			x1, y1 := pt()
 			x2, y2 := pt()
@@ -179,14 +151,8 @@ func TestOutlineRandom(t *testing.T) {
 				t.Errorf("%s: %v has a point deeper than 1 in, but is not crossedBy", c.name, s)
 			}
 			if got && !deep(s, 300, 1-1e-6) && !deep(s, 5000, 1-1e-6) {
-				over++
-				if !deep(s, 5000, 0) {
-					t.Errorf("%s: %v is crossedBy with no point inside the shape drawn", c.name, s)
-				}
+				t.Errorf("%s: %v is crossedBy with no point 1 in", c.name, s)
 			}
-		}
-		if over > 0 && !c.elliptic {
-			t.Errorf("%s: %d runs crossedBy with no point 1 in, want none", c.name, over)
 		}
 	}
 }
