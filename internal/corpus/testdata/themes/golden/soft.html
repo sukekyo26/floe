@@ -137,7 +137,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope (:root) to ([data-floe-part] > *) {
 /* Faces with round corners, as the parts are drawn by default */
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-radius: var(--radius); background: color-mix(in srgb, var(--line) 40%, var(--surface)); }
+blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-radius: var(--radius); background: var(--muted-soft); }
 }
 }
 </style>
@@ -258,7 +258,7 @@ blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-rad
 :scope th.num { min-width: 6em; }
 :scope thead th {
   font-size: 0.8rem; font-weight: 600; color: var(--muted);
-  background: color-mix(in srgb, var(--line) 40%, var(--surface));
+  background: var(--muted-soft);
 }
 /* The rule between rows; a theme sets --table-rule alone, none for no rule */
 :scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }

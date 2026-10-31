@@ -132,7 +132,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope (:root) to ([data-floe-part] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-panel); color: var(--fg); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-panel); --muted-soft: var(--surface); color: var(--fg); }
 blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
@@ -269,7 +269,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope th.num { min-width: 6em; }
 :scope thead th {
   font-size: 0.8rem; font-weight: 600; color: var(--muted);
-  background: color-mix(in srgb, var(--line) 40%, var(--surface));
+  background: var(--muted-soft);
 }
 /* The rule between rows; a theme sets --table-rule alone, none for no rule */
 :scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
@@ -333,9 +333,9 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border-radius: var(--radius); padding: var(--floe-room); }
+:scope { background: var(--default-panel); --muted-soft: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
-.card { background: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
+.card { background: var(--surface); --muted-soft: var(--default-panel); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
   font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
@@ -346,21 +346,24 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border: 0; }
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --muted-soft: var(--surface); }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border: 0; }
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --muted-soft: var(--surface); }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border: 0; }
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --muted-soft: var(--surface); }
 }
 }
 </style>
@@ -370,7 +373,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope { padding: var(--default-pad); }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope thead th { background: none; }
-:scope tbody td { background: var(--surface); }
+:scope tbody td { background: var(--surface); --muted-soft: var(--default-panel); }
 :scope tbody tr:first-child td:first-child { border-top-left-radius: var(--default-inner); }
 :scope tbody tr:first-child td:last-child { border-top-right-radius: var(--default-inner); }
 :scope tbody tr:last-child td:first-child { border-bottom-left-radius: var(--default-inner); }
