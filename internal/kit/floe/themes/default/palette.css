@@ -18,5 +18,7 @@
   --text-width: 56rem;
   /* The column a template centres its page in: its width, without the pad each side of it */
   --page-width: 96rem; --page-pad: 16px;
+  /* How round corners are: a box's, a small box's in it, and a pill's; one length each */
+  --radius: 20px; --radius-small: 6px; --radius-pill: 999px;
   color-scheme: light;
 }

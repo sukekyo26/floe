@@ -2,6 +2,6 @@
    fixed-width text too) */
 :scope {
   display: inline-block; font-family: var(--font); font-size: 0.78rem; font-weight: 600; letter-spacing: normal; line-height: 1.6;
-  padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
+  padding: 0.1em 0.75em; border-radius: var(--radius-pill); white-space: nowrap;
   background: var(--tone-soft); color: var(--tone);
 }

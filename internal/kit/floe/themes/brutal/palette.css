@@ -15,4 +15,5 @@
   --floe-shadow-x: 6px; --floe-shadow-y: 6px;
   /* The heads of its tables */
   --brutal-head-bg: #0a0a0a; --brutal-head-fg: #ffde21;
+  --radius: 0; --radius-small: 0; --radius-pill: 0;
 }

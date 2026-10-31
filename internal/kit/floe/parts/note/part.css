@@ -2,7 +2,7 @@
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
+  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: var(--radius); max-width: var(--text-width);
 }
 :scope > * { grid-column: text; align-self: first baseline; }
 :scope::before {

@@ -35,9 +35,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
-code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: 4px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
 pre {
-  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
+  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
@@ -107,6 +107,8 @@ blockquote > * + * { margin-top: 0.6rem; }
   --text-width: 56rem;
   /* The column a template centres its page in: its width, without the pad each side of it */
   --page-width: 96rem; --page-pad: 16px;
+  /* How round corners are: a box's, a small box's in it, and a pill's; one length each */
+  --radius: 20px; --radius-small: 6px; --radius-pill: 999px;
   color-scheme: light;
 }
 }
@@ -126,7 +128,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope (:root) to ([data-floe-part] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-panel); color: var(--fg); }
 blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
@@ -138,7 +140,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
    fixed-width text too) */
 :scope {
   display: inline-block; font-family: var(--font); font-size: 0.78rem; font-weight: 600; letter-spacing: normal; line-height: 1.6;
-  padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
+  padding: 0.1em 0.75em; border-radius: var(--radius-pill); white-space: nowrap;
   background: var(--tone-soft); color: var(--tone);
 }
 }
@@ -152,7 +154,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
 :scope {
   display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
-  border-radius: 14px; overflow: hidden; color-scheme: dark;
+  border-radius: var(--radius); overflow: hidden; color-scheme: dark;
   background: var(--face); color: var(--on-face);
   font-family: var(--mono);
 }
@@ -166,7 +168,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 :scope .file { opacity: 0.85; }
 :scope .lang {
-  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: 5px;
+  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
   background: var(--code-prompt); color: var(--code-bg);
 }
 /* A block, so that the code's last line break draws no empty line */
@@ -202,7 +204,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 }
 }
 </style>
@@ -210,7 +212,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 }
 }
 </style>
@@ -260,7 +262,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
    set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
 /* The frame spans the body's width. Its height follows the diagram's aspect ratio, capped by the
    screen's height and by max-height (how far it may grow), with the diagram centred in it */
-.dg-wrap { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; touch-action: pan-y; }
+.dg-wrap { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-small); touch-action: pan-y; }
 .dg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .dg-wrap.zoomed:active { cursor: grabbing; }
@@ -269,7 +271,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @media (max-width: 640px) { .dg-tools span { display: none; } }
 /* Buttons do nothing on paper */
 @media print { .dg-tools { display: none; } }
-.dg-tools button { min-width: 2.2rem; padding: 2px 8px; font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.dg-tools button { min-width: 2.2rem; padding: 2px 8px; font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-small); cursor: pointer; }
 .dg-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .dg-tools button:disabled { opacity: 0.4; cursor: default; }
 /* What has no tone draws in its shape's own colours, written after var(): the diagram's root holds no tone, unlike
@@ -357,7 +359,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
+  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: var(--radius); max-width: var(--text-width);
 }
 :scope > * { grid-column: text; align-self: first baseline; }
 :scope::before {
@@ -392,7 +394,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
@@ -446,7 +448,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 :scope > li:not(:last-child)::after {
   content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
-  left: calc(anchor(--floe-mark center) - 1px); width: 2px; border-radius: 1px; background: var(--line);
+  left: calc(anchor(--floe-mark center) - 1px); width: 2px; border-radius: 999px; background: var(--line);
 }
 }
 }
@@ -491,49 +493,48 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border-radius: 18px; padding: 6px; --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); }
+:scope { padding: 6px; --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); }
 :scope figcaption { background: none; border: 0; padding: 0.3rem 0.6rem 0.5rem; }
-:scope pre { background: var(--code-ground); border-radius: 12px; }
-:scope .lang { border-radius: 6px; }
+:scope pre { background: var(--code-ground); border-radius: calc(var(--radius) - 6px); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border: 0; border-radius: 20px; }
+:scope { background: var(--default-panel); border: 0; }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border: 0; border-radius: 20px; }
+:scope { background: var(--default-panel); border: 0; }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { padding: 6px; }
+:scope { padding: 6px; --default-inner: calc(var(--radius) - 6px); }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope thead th { background: none; }
 :scope tbody td { background: var(--surface); }
-:scope tbody tr:first-child td:first-child { border-top-left-radius: 14px; }
-:scope tbody tr:first-child td:last-child { border-top-right-radius: 14px; }
-:scope tbody tr:last-child td:first-child { border-bottom-left-radius: 14px; }
-:scope tbody tr:last-child td:last-child { border-bottom-right-radius: 14px; }
+:scope tbody tr:first-child td:first-child { border-top-left-radius: var(--default-inner); }
+:scope tbody tr:first-child td:last-child { border-top-right-radius: var(--default-inner); }
+:scope tbody tr:last-child td:first-child { border-bottom-left-radius: var(--default-inner); }
+:scope tbody tr:last-child td:last-child { border-bottom-right-radius: var(--default-inner); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { padding: 6px; }
+:scope { padding: 6px; --default-inner: calc(var(--radius) - 6px); }
 :scope > * { background: var(--surface); }
-:scope > :first-child { border-radius: 14px 14px 0 0; }
-:scope > :last-child { border-radius: 0 0 14px 14px; }
-:scope > :only-child { border-radius: 14px; }
+:scope > :first-child { border-radius: var(--default-inner) var(--default-inner) 0 0; }
+:scope > :last-child { border-radius: 0 0 var(--default-inner) var(--default-inner); }
+:scope > :only-child { border-radius: var(--default-inner); }
 }
 }
 </style>
@@ -541,18 +542,18 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
-  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
+  border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
 }
-:scope::before { border-radius: 10px; background: var(--surface); color: var(--tone); }
+:scope::before { border-radius: var(--radius-small); background: var(--surface); color: var(--tone); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border-radius: 20px; padding: var(--floe-room); }
+:scope { background: var(--default-panel); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
-.card { background: var(--surface); border-radius: 14px; }
+.card { background: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
   font-family: var(--mono); font-size: 0.75rem; font-weight: 400;

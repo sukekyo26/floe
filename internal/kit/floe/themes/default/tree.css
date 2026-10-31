@@ -1,2 +1,2 @@
 :scope { padding: 6px; }
-:scope > ul { background: var(--surface); border-radius: 14px; padding: 0.7rem 1.1rem; }
+:scope > ul { background: var(--surface); border-radius: calc(var(--radius) - 6px); padding: 0.7rem 1.1rem; }

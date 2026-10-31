@@ -1,7 +1,7 @@
 /* No ground of its own: on a face (a band, a note, a quote) it takes the face's text colour, to read on it.
    LIMIT: on a face its tone shows not (nor the colours of its marks); its word tells it */
 :scope {
-  background: none; padding: 0; border-radius: 0; font-size: 0.9rem; font-weight: 800; color: var(--on-face, var(--fg));
+  background: none; padding: 0; font-size: 0.9rem; font-weight: 800; color: var(--on-face, var(--fg));
 }
 :scope::before { content: "●"; content: "●" / ""; margin-right: 0.35em; color: var(--on-face, var(--tone)); }
 /* Its red is read on the surface alone: the good one's mark is black, and the warning's red as accent's */

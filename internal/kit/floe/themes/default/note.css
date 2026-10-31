@@ -1,4 +1,4 @@
 :scope {
-  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
+  border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
 }
-:scope::before { border-radius: 10px; background: var(--surface); color: var(--tone); }
+:scope::before { border-radius: var(--radius-small); background: var(--surface); color: var(--tone); }

@@ -1,4 +1,3 @@
-:scope { border-radius: 18px; padding: 6px; --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); }
+:scope { padding: 6px; --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); }
 :scope figcaption { background: none; border: 0; padding: 0.3rem 0.6rem 0.5rem; }
-:scope pre { background: var(--code-ground); border-radius: 12px; }
-:scope .lang { border-radius: 6px; }
+:scope pre { background: var(--code-ground); border-radius: calc(var(--radius) - 6px); }

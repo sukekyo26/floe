@@ -1,4 +1,4 @@
 :scope {
-  background: var(--surface); color: var(--fg); border-radius: 0;
+  background: var(--surface); color: var(--fg);
   border: 0; border-top: 4px double var(--fg); border-bottom: 4px double var(--fg);
 }

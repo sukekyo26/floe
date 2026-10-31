@@ -8,5 +8,6 @@
   border-width: 0 2px 2px 0; transform: rotate(-45deg); transition: transform 0.15s;
 }
 :scope[open] > summary::before { transform: rotate(45deg); margin-top: -0.25rem; }
-:scope > summary:focus-visible { outline-offset: -2px; border-radius: 14px; }
+:scope > summary:focus-visible { outline-offset: -2px; border-radius: var(--radius); }
+:scope[open] > summary:focus-visible { border-end-start-radius: 0; border-end-end-radius: 0; }
 :scope > div { padding: 0 1.2rem 1.1rem; }

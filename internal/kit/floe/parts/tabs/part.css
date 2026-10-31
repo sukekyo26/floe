@@ -1,7 +1,7 @@
 /* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows */
 :scope { --tabs-gap: 0.35rem; display: flex; flex-wrap: wrap; gap: var(--tabs-gap); }
 :scope > label {
-  position: relative; padding: 0.3rem 0.95rem; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600;
+  position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: 0.9rem; font-weight: 600;
   color: var(--muted);
 }
 :scope > label:has(:checked) { background: var(--accent-soft); color: var(--accent); }

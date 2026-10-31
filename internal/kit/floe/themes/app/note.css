@@ -1,4 +1,4 @@
 :scope { background: var(--surface); --floe-shadow-color: var(--shadow); border-top: 3px solid var(--tone); }
-:scope::before { border-radius: 8px; }
+:scope::before { border-radius: var(--radius-small); }
 /* A line's code takes the ground, which the note's white would hide it in */
 :scope code { background: var(--face, var(--bg)); }
