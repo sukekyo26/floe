@@ -6,6 +6,8 @@ import (
 )
 
 // maxTrips is how many round trips of sweeps order takes at most.
+// LIMIT: 12 trips of median sweeps, no more, keeping the fewest crossings seen; a graph whose order keeps changing
+// may keep crossings another order would not. Sweep more, or by another key, if one comes to.
 const maxTrips = 12
 
 // order orders each rank to cross fewer links: as built (the boxes as written, then the points by their edge's
@@ -92,7 +94,7 @@ func (gr *group) sweep(r int, down bool) {
 }
 
 // median is the middle of xs, or the mean of the middle two.
-func median(xs []int) float64 {
+func median[T int | float64](xs []T) float64 {
 	slices.Sort(xs)
 	m := len(xs)
 	if m%2 == 1 {

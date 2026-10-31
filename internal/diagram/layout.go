@@ -353,8 +353,9 @@ func (l *layout) fit(at, who string, t Text, size float64, code bool, room, writ
 	}
 }
 
-func ceil8(v float64) float64 {
-	return math.Ceil(v/8) * 8
+// onGrid is v on a grid of step, by round (math.Ceil, Floor or Round).
+func onGrid(v, step float64, round func(float64) float64) float64 {
+	return round(v/step) * step
 }
 
 func rowSize(style string, first bool) (float64, bool) {
@@ -380,7 +381,7 @@ func boxRect(b *box, at string) rect {
 			size, code := rowSize(r.Style, i == 0)
 			widest = max(widest, textWidth(r.Text, size, code))
 		}
-		w = ceil8(widest + inset(b))
+		w = onGrid(widest+inset(b), 8, math.Ceil)
 	}
 	h := b.H
 	if h == 0 {
@@ -425,7 +426,7 @@ func tableWidth(t *table) float64 {
 	for _, row := range t.Rows {
 		widest = max(widest, textWidth(rowText(row), sizeSub, true)+24)
 	}
-	return ceil8(widest)
+	return onGrid(widest, 8, math.Ceil)
 }
 
 // rowText is row as drawn in each language it is written in; none for a separator.

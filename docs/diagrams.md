@@ -57,7 +57,8 @@ A `graph` holds only how its boxes are joined; floe places them:
 - Edges leave and enter a box at separate points of its side, on its outline, so that no two share a run; a box widens (with `right`, grows taller) for many edges. Edges of one graph may cross one another; an edge of a graph crossing another part is checked as any edge.
 - A graph holds 200 boxes and 400 edges at most, and the edges of all the graphs of a diagram may pass 4000 ranks between their ends, all told.
 - A box of a graph can be the end of an edge written by hand, which ends at the middle of a side: give it `fromSide` or `toSide` for a side the graph's edges do not use, so that it does not run along one of them.
-- A mistake between a part of a graph and one written by hand (an overlap, an edge through a box, a crossing) is told at the one written by hand, which can be moved.
+- A mistake between a part of a graph and one written by hand (an overlap, an edge through a box, a crossing) is told at the one written by hand, which can be moved. One that only parts of graphs make (two graphs overlapping or crossing, a graph off the canvas) is told at the graph, to move it by its `x` and `y`.
+- An edge from a box to itself is refused.
 
 An edge without `via` and sides runs right-angled from the side of one end facing the other, with two turns at most; give `via` or a side to take another way.
 

@@ -53,16 +53,16 @@ func TestGraphMistakes(t *testing.T) {
 	for _, c := range []struct {
 		name, src, want string
 	}{
-		{"a name no box has", strings.Replace(g1, "to: show", "to: shwo", 1), `s.yaml:12:13: edge: no box of this graph named "shwo"`},
+		{"a name no box has", strings.Replace(g1, "to: show", "to: shwo", 1), `s.yaml:12:30: edge: no box of this graph named "shwo"`},
 		{
 			"a name no box has, and an edge by hand to a box laid out",
 			strings.Replace(g1, "to: show", "to: shwo", 1) + "  - edge: { from: show, to: [400, 200] }\n",
-			`s.yaml:12:13: edge: no box of this graph named "shwo"`,
+			`s.yaml:12:30: edge: no box of this graph named "shwo"`,
 		},
 		{
 			"a box outside the graph",
 			strings.Replace(g1, "to: show", "to: note", 1) + "  - box: { name: note, x: 400, y: 20, rows: [N] }\n",
-			`s.yaml:12:13: edge: no box of this graph named "note"`,
+			`s.yaml:12:30: edge: no box of this graph named "note"`,
 		},
 		{
 			"a name given twice",
@@ -143,8 +143,11 @@ func TestGraphBlame(t *testing.T) {
 		}
 	}
 
-	// Off the canvas, a box of the graph is told at itself, having no other to be told at.
-	if _, got := draw(t, "width: 100\n"+g1, inspect); !strings.HasPrefix(got, `s.yaml:8:18: box "write" sticks out of the 100x`) {
+	// Off the canvas, what a graph laid out is told at the graph, to move it.
+	_, got := draw(t, "width: 100\n"+g1, inspect)
+	told := strings.Split(got, "\n")
+	if !slices.Contains(told, `s.yaml:5:7: box "write" sticks out of the 100x175 canvas; move its graph by its x and y`) ||
+		slices.ContainsFunc(told, func(s string) bool { return !strings.HasPrefix(s, "s.yaml:5:7: ") }) {
 		t.Errorf("off the canvas: told %q", got)
 	}
 }

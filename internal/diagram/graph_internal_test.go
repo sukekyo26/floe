@@ -354,6 +354,25 @@ func TestGraphTrips(t *testing.T) {
 	}
 }
 
+// pull stops at maxPulls on lefts that keep moving, and before it once nothing moves.
+func TestGraphPulls(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		name  string
+		g     *graph
+		pulls int
+	}{
+		{"swinging", graphOf([]string{"n0", "n1", "n2", "n3"}, "n0>n2", "n2>n3", "n0>n1", "n3>n1", "n0>n2"), maxPulls},
+		{"a diamond", graphOf([]string{"a", "b", "c", "d"}, "a>b", "a>c", "b>d", "c>d"), 3},
+	} {
+		o, _ := readGraph(c.g, "#/parts/0/graph") //nolint:errcheck // every name is a box's
+		if _, pulls := o.groups[0].place(false); pulls != c.pulls {
+			t.Errorf("%s: %d pulls, want %d", c.name, pulls, c.pulls)
+		}
+	}
+}
+
 // channel is a random channel as the prototype drew them: 1 to 6 boxes above and below, 1 to 12 links between them,
 // a second between two boxes among them, and half the time in one order above and below.
 func channel(rnd *rand.Rand) (*group, bool) {
@@ -393,10 +412,10 @@ func channel(rnd *rand.Rand) (*group, bool) {
 			n := &gr.nodes[i]
 			n.w = float64(48 + rnd.IntN(200))
 			if k := max(len(n.ins), len(n.outs)); k > 0 {
-				n.w = max(n.w, ceil8(float64(12*k+36)))
+				n.w = max(n.w, onGrid(float64(12*k+36), 8, math.Ceil))
 			}
 			n.x = x
-			x = ceil6(x + n.w + nodeGap + float64(rnd.IntN(40)))
+			x = onGrid(x+n.w+nodeGap+float64(rnd.IntN(40)), 6, math.Ceil)
 		}
 	}
 	return gr, ordered
@@ -608,6 +627,21 @@ func TestGraphLimit(t *testing.T) {
 		t.Errorf("the chain passes %d ranks, want %d", o.passed, maxPassed)
 	}
 
+	// Counted before any point is made: graphs whose edges pass far more ranks than the limit make none, and are
+	// refused all told.
+	huge := chainGraph(200, 200)               // 200 edges of 198 points
+	o, _ := readGraph(huge, "#/parts/0/graph") //nolint:errcheck // every name is a box's
+	if gr := o.groups[0]; o.passed != 200*198 || len(gr.nodes) != 200 || len(gr.links) != 0 {
+		t.Errorf("200 boxes: %d ranks passed, %d nodes, %d links; want %d, 200, none made", o.passed, len(gr.nodes), len(gr.links), 200*198)
+	}
+	hundred := make([]part, 100)
+	for i := range hundred {
+		hundred[i] = part{Graph: chainGraph(200, 200)} //nolint:exhaustruct_v5 // one kind of part
+	}
+	if items, found := expand(hundred); len(items) != 0 || len(found) != 1 || fmt.Sprint(found[0].Args) != "[3960000 4000]" {
+		t.Errorf("a hundred graphs: %d items, %v; want none, one diagram_graph_long", len(items), found)
+	}
+
 	over := chainGraph(42, 100)
 	over.Edges = append(over.Edges, graphOf(nil, "c39>c41").Edges...)
 	split := graphOf([]string{"a", "b", "c"}, "a>b", "b>c", "a>c")
@@ -662,130 +696,38 @@ func TestCrossPairs(t *testing.T) {
 	}
 }
 
-// Two edges of different graphs crossing are told to move a graph, at the first; an edge of a graph crossing one
-// written by hand is told at the one by hand.
-func TestGraphCrossingTold(t *testing.T) {
+// A mistake that only things graphs laid out make is told at the first's graph, to move it: two graphs' boxes
+// overlapping, an edge of one through a box of another, crossing an edge of another, and a box off the canvas. With
+// a thing written by hand, it is told at that.
+func TestGraphTold(t *testing.T) {
 	t.Parallel()
 
-	across := path{segs: []seg{{0, 50, 100, 50}}, what: "edge a→b", at: "#/parts/0/graph/edges/0", own: -1, crossing: false, graph: "#/parts/0/graph"}
-	down := path{segs: []seg{{50, 0, 50, 100}}, what: "edge c→d", at: "#/parts/1/graph/edges/0", own: -1, crossing: false, graph: "#/parts/1/graph"}
+	const ga, gb = "#/parts/0/graph", "#/parts/1/graph"
+	box := func(x float64, graph string) rect {
+		return rect{x: x, y: 0, w: 40, h: 40, what: "box at " + num(x), at: graph + "/nodes/0/box", form: outline{hex: 0, radius: 0}, graph: graph}
+	}
+	across := path{segs: []seg{{0, 20, 100, 20}}, what: "edge a→b", at: ga + "/edges/0", own: -1, crossing: false, graph: ga}
+	down := path{segs: []seg{{50, -10, 50, 100}}, what: "edge c→d", at: gb + "/edges/0", own: -1, crossing: false, graph: gb}
 	hand := down
-	hand.at, hand.graph, hand.what = "#/parts/1", "", "edge [50,0]→[50,100]"
+	hand.at, hand.graph, hand.what = "#/parts/1", "", "edge [50,-10]→[50,100]"
+	handBox := box(20, "")
+	handBox.at = "#/parts/1"
 	for _, c := range []struct {
-		paths   []path
+		name    string
+		l       *layout
 		key, at string
 	}{
-		{[]path{across, down}, "diagram_graph_crossing", "#/parts/0/graph/edges/0"},
-		{[]path{down, across}, "diagram_graph_crossing", "#/parts/1/graph/edges/0"},
-		{[]path{across, hand}, "diagram_crossing", "#/parts/1"},
-		{[]path{hand, across}, "diagram_crossing", "#/parts/1"},
+		{"two graphs' boxes", &layout{boxes: []rect{box(0, ga), box(20, gb)}, w: 500, h: 500}, "diagram_graph_overlap", ga},                              //nolint:exhaustruct_v5 // what it checks
+		{"a graph's box and one by hand", &layout{boxes: []rect{box(0, ga), handBox}, w: 500, h: 500}, "diagram_overlap", "#/parts/1"},                   //nolint:exhaustruct_v5 // what it checks
+		{"an edge through another graph's box", &layout{boxes: []rect{box(30, gb)}, paths: []path{across}, w: 500, h: 500}, "diagram_graph_through", ga}, //nolint:exhaustruct_v5 // what it checks
+		{"two graphs' edges", &layout{paths: []path{across, down}, w: 500, h: 500}, "diagram_graph_crossing", ga},                                        //nolint:exhaustruct_v5 // what it checks
+		{"the other first", &layout{paths: []path{down, across}, w: 500, h: 500}, "diagram_graph_crossing", gb},                                          //nolint:exhaustruct_v5 // what it checks
+		{"a graph's edge and one by hand", &layout{paths: []path{across, hand}, w: 500, h: 500}, "diagram_crossing", "#/parts/1"},                        //nolint:exhaustruct_v5 // what it checks
+		{"a graph's box off the canvas", &layout{boxes: []rect{box(480, ga)}, w: 500, h: 500}, "diagram_graph_outside", ga},                              //nolint:exhaustruct_v5 // what it checks
 	} {
-		l := &layout{paths: c.paths} //nolint:exhaustruct_v5 // its paths alone
-		l.checkCrossings()
-		if len(l.problems) != 1 || l.problems[0].Key != c.key || l.problems[0].At() != c.at ||
-			fmt.Sprint(l.problems[0].Args) != fmt.Sprint([]any{c.paths[0].what, c.paths[1].what, "50", "50"}) {
-			t.Errorf("%s and %s: %v, want %s at %s", c.paths[0].what, c.paths[1].what, l.problems, c.key, c.at)
+		c.l.check()
+		if len(c.l.problems) != 1 || c.l.problems[0].Key != c.key || c.l.problems[0].At() != c.at {
+			t.Errorf("%s: %v, want %s at %s", c.name, c.l.problems, c.key, c.at)
 		}
-	}
-}
-
-// boxIn is the area of the box named name in l.
-func boxIn(l *layout, name string) rect {
-	return l.names[name].r
-}
-
-// A graph's shapes: a chain runs straight, an edge back up a cycle points the way it is written, groups stand side
-// by side as written, the languages lay out alike, a box widens for its edges, boxes of a rank stand nodeGap apart,
-// a leaf added keeps the other ranks' order, and right is down turned.
-func TestGraphShapes(t *testing.T) {
-	t.Parallel()
-
-	chain := laid(graphOf([]string{"a", "b", "c", "d"}, "a>b", "b>c", "c>d"))
-	for _, p := range chain.paths {
-		if len(p.segs) != 1 {
-			t.Errorf("chain: %s turns: %v", p.what, p.segs)
-		}
-	}
-
-	cycle := laid(graphOf([]string{"a", "b", "c"}, "a>b", "b>c", "c>a"))
-	back := cycle.paths[2].segs
-	if a := boxIn(cycle, "a"); back[len(back)-1][3] != a.y+a.h {
-		t.Errorf("cycle: c→a ends at %v, want at the bottom of a, %v", back[len(back)-1], a.y+a.h)
-	}
-
-	apart := laid(graphOf([]string{"a", "b", "c", "d"}, "a>b", "c>d"))
-	if a, c := boxIn(apart, "a"), boxIn(apart, "c"); c.x < a.x+a.w+groupGap {
-		t.Errorf("two groups: c at %v, not right of a (%v to %v)", c.x, a.x, a.x+a.w)
-	}
-
-	langs := graphOf([]string{"a", "b"}, "a>b")
-	langs.Nodes[1].Box.Rows[0].Text = Text{"en": "Save", "ja": "データファイルと画像の写しを保存する"}
-	en := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: langs}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
-		Options{Lang: "en", Icons: NoIcons{Err: nil}, Seq: 1})
-	ja := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: langs}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
-		Options{Lang: "ja", Icons: NoIcons{Err: nil}, Seq: 1})
-	if en.inspect() != ja.inspect() {
-		t.Errorf("languages: en\n%s\nja\n%s", en.inspect(), ja.inspect())
-	}
-
-	// Eleven edges at one box: five in, three out, and three back up a cycle, turned to leave it too.
-	hub := laid(graphOf([]string{"a", "b", "c", "d", "e", "hub", "x", "y", "z"},
-		"a>hub", "b>hub", "c>hub", "d>hub", "e>hub", "hub>x", "hub>y", "hub>z", "x>hub", "y>hub", "z>hub"))
-	if len(hub.problems) > 0 {
-		t.Errorf("eleven edges: %v", hub.problems)
-	}
-	if h := boxIn(hub, "hub"); h.w < 12*6+36 {
-		t.Errorf("eleven edges: the box %v wide, want %v or more for six edges out", h.w, 12*6+36)
-	}
-
-	beside := laid(graphOf([]string{"r", "a", "b", "c"}, "r>a", "r>b", "r>c"))
-	for _, pair := range [][2]string{{"a", "b"}, {"b", "c"}} {
-		if l, r := boxIn(beside, pair[0]), boxIn(beside, pair[1]); r.x-(l.x+l.w) < nodeGap {
-			t.Errorf("beside: %s and %s %v apart, want %v or more", pair[0], pair[1], r.x-(l.x+l.w), nodeGap)
-		}
-	}
-
-	// A leaf added keeps the order of the other ranks.
-	order := func(g *graph) []string {
-		var out []string
-		for _, gr := range grouped(g) {
-			for _, rank := range gr.ranks[:2] {
-				names := []string{}
-				for _, n := range rank {
-					if b := gr.nodes[n].box; b != nil {
-						names = append(names, b.Name)
-					}
-				}
-				slices.SortFunc(names, func(a, b string) int {
-					return int(gr.nodes[slices.IndexFunc(gr.nodes, func(n gnode) bool { return n.box != nil && n.box.Name == a })].x -
-						gr.nodes[slices.IndexFunc(gr.nodes, func(n gnode) bool { return n.box != nil && n.box.Name == b })].x)
-				})
-				out = append(out, strings.Join(names, " "))
-			}
-		}
-		return out
-	}
-	tree := graphOf([]string{"r", "a", "b", "c", "x", "y"}, "r>a", "r>b", "r>c", "a>x", "c>y")
-	more := graphOf([]string{"r", "a", "b", "c", "x", "y", "w"}, "r>a", "r>b", "r>c", "a>x", "c>y", "b>w")
-	if a, b := order(tree), order(more); !slices.Equal(a, b) {
-		t.Errorf("a leaf added: ranks %v, then %v", a, b)
-	}
-
-	// Right runs the edges left to right, as down runs them top down.
-	g := graphOf([]string{"a", "b", "c"}, "a>b", "a>c", "b>c")
-	down := laid(g)
-	turned := *g
-	turned.Direction = "right"
-	r := laid(&turned)
-	for _, e := range g.Edges {
-		if f, to := boxIn(down, e.From), boxIn(down, e.To); to.y < f.y+f.h {
-			t.Errorf("down: %s→%s, %v not below %v", e.From, e.To, to, f)
-		}
-		if f, to := boxIn(r, e.From), boxIn(r, e.To); to.x < f.x+f.w {
-			t.Errorf("right: %s→%s, %v not right of %v", e.From, e.To, to, f)
-		}
-	}
-	if len(r.problems) > 0 {
-		t.Errorf("right: %v", r.problems)
 	}
 }

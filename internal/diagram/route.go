@@ -254,7 +254,9 @@ func (l *layout) addEdge(e *edge, at string) {
 	}
 	l.paths = append(l.paths, p)
 	if len(segs) > 0 {
-		l.strokes = append(l.strokes, span(segs, who, at))
+		r := span(segs, who, at)
+		r.graph = e.graph
+		l.strokes = append(l.strokes, r)
 	}
 }
 

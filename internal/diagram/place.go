@@ -12,12 +12,16 @@ const (
 	pointW   = 36.0
 	nodeGap  = 24.0
 	groupGap = 24.0
+	// LIMIT: 8 pulls towards the median, no more; lefts that keep moving stop where the eighth leaves them. Settle
+	// them another way (Brandes-Köpf) if a graph comes to look skewed.
 	maxPulls = 8
 )
 
-// place sizes the group's nodes, orders its ranks and sets the nodes' lefts, as laid out down: right lays out the
-// boxes turned, their height across the ranks. It returns the trips order took and the pulls of the lefts.
+// place splits the group's arcs into links, sizes its nodes, orders its ranks and sets the nodes' lefts, as laid
+// out down: right lays out the boxes turned, their height across the ranks. It returns the trips order took and
+// the pulls of the lefts.
 func (gr *group) place(right bool) (trips, pulls int) {
+	gr.split()
 	for i := range gr.nodes {
 		n := &gr.nodes[i]
 		if n.box == nil {
@@ -33,14 +37,14 @@ func (gr *group) place(right bool) (trips, pulls int) {
 		}
 		// Room on a side for its links, a column of the grid each, 12 in from each end, and one more.
 		if k := max(len(n.ins), len(n.outs)); k > 0 {
-			n.w = max(n.w, ceil8(float64(12*k+36)))
+			n.w = max(n.w, onGrid(float64(12*k+36), 8, math.Ceil))
 		}
 	}
 	trips = gr.order()
 	for _, rank := range gr.ranks {
 		left := 0.0
 		for _, i := range rank {
-			gr.nodes[i].x = ceil6(left)
+			gr.nodes[i].x = onGrid(left, 6, math.Ceil)
 			left = gr.nodes[i].x + gr.nodes[i].w + nodeGap
 		}
 	}
@@ -118,36 +122,23 @@ func (gr *group) pullOne(r, i int, down bool) bool {
 	if len(centres) == 0 {
 		return false
 	}
-	slices.Sort(centres)
-	m := len(centres)
-	want := centres[m/2]
-	if m%2 == 0 {
-		want = (centres[m/2-1] + centres[m/2]) / 2
-	}
+	want := median(centres)
 	lo, hi := math.Inf(-1), math.Inf(1)
 	at := slices.Index(gr.ranks[r], i)
 	if at > 0 {
 		o := gr.nodes[gr.ranks[r][at-1]]
-		lo = ceil6(o.x + o.w + nodeGap)
+		lo = onGrid(o.x+o.w+nodeGap, 6, math.Ceil)
 	}
 	if at+1 < len(gr.ranks[r]) {
 		o := gr.nodes[gr.ranks[r][at+1]]
-		hi = math.Floor((o.x-nodeGap-n.w)/6) * 6
+		hi = onGrid(o.x-nodeGap-n.w, 6, math.Floor)
 	}
-	x := min(max(math.Round((want-n.w/2)/6)*6, lo), hi)
+	x := min(max(onGrid(want-n.w/2, 6, math.Round), lo), hi)
 	if x == n.x {
 		return false
 	}
 	n.x = x
 	return true
-}
-
-func ceil6(v float64) float64 {
-	return math.Ceil(v/6) * 6
-}
-
-func ceil12(v float64) float64 {
-	return math.Ceil(v/12) * 12
 }
 
 // drawn is n's area as drawn: as laid out, or turned for right.

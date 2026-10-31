@@ -1,6 +1,7 @@
 package diagram
 
 import (
+	"math"
 	"slices"
 	"strconv"
 
@@ -43,19 +44,20 @@ type group struct {
 	tracks   []int         // the tracks of the channel below each rank
 	top      []float64     // the top of each rank, as laid out down
 	bottom   []float64     // the bottom of each rank: of its tallest box, or a column below its top
+	arcs     []arc         // its edges between its boxes, turned round where they break a cycle
 }
 
-// graphOut is a graph read and ranked: its groups, its self-loops, and the boxes of each name.
+// graphOut is a graph read and ranked: its groups, and the ranks its edges pass between their ends.
 type graphOut struct {
 	g      *graph
 	at     string
 	groups []*group
-	loops  []int // the edges from a box to itself, by index
-	passed int   // the ranks its edges pass between their ends
+	passed int
 }
 
-// readGraph resolves the names of g's edges against its boxes, an edge naming no box of it dropped and told, and
-// splits it into groups, each ranked. A self-loop is kept apart, to be drawn as an edge by name.
+// readGraph resolves the names of g's edges against its boxes, and splits it into groups, each ranked. An edge
+// naming no box of it, or from a box to itself, is dropped and told.
+// LIMIT: an edge from a box to itself is refused; B3 lays it out.
 func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 	var problems usererr.List
 	byName := map[string]int{}
@@ -64,20 +66,20 @@ func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 			byName[n.Box.Name] = i
 		}
 	}
-	out := &graphOut{g: g, at: at, groups: nil, loops: nil, passed: 0}
+	out := &graphOut{g: g, at: at, groups: nil, passed: 0}
 	var edges []int
 	for k, e := range g.Edges {
 		known := true
-		for _, name := range []string{e.From, e.To} {
-			if _, ok := byName[name]; !ok {
-				problems = append(problems, usererr.NewIn("", edgeAt(at, k), "diagram_graph_unknown", name))
+		for _, end := range [2][2]string{{"from", e.From}, {"to", e.To}} {
+			if _, ok := byName[end[1]]; !ok {
+				problems = append(problems, usererr.NewIn("", edgeAt(at, k)+"/"+end[0], "diagram_graph_unknown", end[1]))
 				known = false
 			}
 		}
 		switch {
 		case !known:
 		case e.From == e.To:
-			out.loops = append(out.loops, k)
+			problems = append(problems, usererr.NewIn("", edgeAt(at, k), "diagram_edge_nowhere", "edge "+e.From+"→"+e.To))
 		default:
 			edges = append(edges, k)
 		}
@@ -87,17 +89,6 @@ func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 		out.passed += gr.passed()
 	}
 	return out, problems
-}
-
-// passed is how many points the group's edges pass ranks at.
-func (gr *group) passed() int {
-	n := 0
-	for _, nd := range gr.nodes {
-		if nd.box == nil {
-			n++
-		}
-	}
-	return n
 }
 
 // groupsOf splits the boxes of g into the groups the edges (by index) join, in the order of their first box, each
@@ -165,7 +156,7 @@ func (o *graphOut) items() []item {
 			gr.links[i].exit += left
 			gr.links[i].entry += left
 		}
-		left = ceil12(width + groupGap)
+		left = onGrid(width+groupGap, 12, math.Ceil)
 	}
 	type spot struct {
 		gr *group
@@ -197,20 +188,11 @@ func (o *graphOut) items() []item {
 		}
 		out = append(out, item{boxAt(o.at, i), part{Box: b}}) //nolint:exhaustruct_v5 // one kind of part
 	}
-	for k, e := range o.g.Edges {
-		var p part
-		switch gr := owner[k]; {
-		case gr != nil:
-			p.Edge = o.edge(k, o.route(gr, k, drawn, right))
-		case slices.Contains(o.loops, k):
-			p.Edge = &edge{ //nolint:exhaustruct_v5 // the rest as left out
-				From: end{Name: e.From, Point: nil}, To: end{Name: e.To, Point: nil}, Dashed: e.Dashed, Bold: e.Bold,
-				Tone: e.Tone, Start: e.Start, End: e.End, graph: o.at,
-			}
-		default:
-			continue // naming no box of the graph, told
+	for k := range o.g.Edges {
+		if gr := owner[k]; gr != nil { // else told by readGraph
+			e := o.edge(k, o.route(gr, k, drawn, right))
+			out = append(out, item{edgeAt(o.at, k), part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
 		}
-		out = append(out, item{edgeAt(o.at, k), p})
 	}
 	return out
 }

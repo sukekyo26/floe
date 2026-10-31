@@ -174,7 +174,7 @@ func (s entrySide) lay(straight []int, set bool) (int, bool) {
 }
 
 // track puts the bent links of the channel below rank r on tracks and returns how many it takes. Of two links
-// whose runs across overlap (or come within half a column), the one whose exit is within the other's run, or
+// whose runs across overlap, the one whose exit is within the other's run, or
 // whose run holds the other's entry, goes on a track above, so that a run down does not cut a run across. Those
 // constraints follow the exits' order among links going one way, and none holds between links going opposite
 // ways, so they make no cycle.
@@ -197,7 +197,7 @@ func (gr *group) track(r int) int {
 }
 
 // fill puts the links bent, in order, on tracks from the top: each track takes, left to right, the links whose links
-// above are on tracks before it, half a column past the run before. It returns how many tracks it takes.
+// above are on tracks before it, past the run before. It returns how many tracks it takes.
 func (gr *group) fill(bent []int, above map[int][]int) int {
 	placed := map[int]int{}
 	t := 0
@@ -212,7 +212,8 @@ func (gr *group) fill(bent []int, above map[int][]int) int {
 				}
 			}
 			lo, hi := gr.span(l)
-			if ready && lo >= end+column/2 {
+			// The grid keeps two runs half a column apart: their ends are exits at x ≡ 0 and entries at x ≡ 6.
+			if ready && lo > end {
 				gr.links[l].track, placed[l], end = t, t, hi
 				continue
 			}
@@ -240,7 +241,7 @@ func (gr *group) above(bent []int) map[int][]int {
 		for _, b := range bent[i+1:] {
 			alo, ahi := gr.span(a)
 			blo, bhi := gr.span(b)
-			if ahi+column/2 <= blo || bhi+column/2 <= alo {
+			if ahi < blo || bhi < alo {
 				continue
 			}
 			aUp := within(gr.links[a].exit, b) || within(gr.links[b].entry, a)

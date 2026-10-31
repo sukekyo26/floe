@@ -1,12 +1,12 @@
 package diagram
 
 // rank makes a group of the boxes members of g (their indexes in nodes, as written) and its edges (their indexes
-// in edges): an edge back up a cycle turned round, each box at the rank of its longest path from a box no edge
-// enters, and an edge passing ranks between its ends broken into links by a point at each.
+// in edges): an edge back up a cycle turned round, and each box at the rank of its longest path from a box no edge
+// enters. The points of the edges passing ranks are made by split, once the diagram's are counted.
 func rank(g *graph, members, edges []int, byName map[string]int) *group {
 	gr := &group{
 		nodes: nil, links: nil, ranks: nil, chains: map[int][]int{}, reversed: map[int]bool{}, tracks: nil, top: nil,
-		bottom: nil,
+		bottom: nil, arcs: nil,
 	}
 	local := map[int]int{}
 	for j, i := range members {
@@ -23,8 +23,23 @@ func rank(g *graph, members, edges []int, byName map[string]int) *group {
 	}
 	turn(arcs, outs, gr.reversed)
 	gr.rankLongest(arcs)
-	// A point at each rank an arc passes, and a link for each rank it goes down.
-	for _, a := range arcs {
+	gr.arcs = arcs
+	return gr
+}
+
+// passed is how many ranks the group's arcs pass between their ends: the points split makes.
+func (gr *group) passed() int {
+	n := 0
+	for _, a := range gr.arcs {
+		n += gr.nodes[a.to].rank - gr.nodes[a.from].rank - 1
+	}
+	return n
+}
+
+// split breaks each arc passing ranks into links by a point at each rank it passes, and lists the nodes of each
+// rank: the boxes as written, then the points by their edge's order.
+func (gr *group) split() {
+	for _, a := range gr.arcs {
 		prev := a.from
 		for r := gr.nodes[a.from].rank + 1; r <= gr.nodes[a.to].rank; r++ {
 			next := a.to
@@ -45,7 +60,6 @@ func rank(g *graph, members, edges []int, byName map[string]int) *group {
 		}
 		gr.ranks[nd.rank] = append(gr.ranks[nd.rank], i)
 	}
-	return gr
 }
 
 func (gr *group) link(from, to, edge int) {
@@ -60,6 +74,8 @@ type arc struct{ from, to, edge int }
 
 // turn turns round each arc back up a cycle, found depth first from each box as written on a stack of its own (no
 // recursion): an arc to a box on the way. outs are the arcs out of each box, as written.
+// LIMIT: the arcs turned are not the fewest that break every cycle (that is NP-hard); find fewer with a heuristic
+// (Eades) if a graph turns more than it needs.
 func turn(arcs []arc, outs [][]int, reversed map[int]bool) {
 	const (
 		unseen = iota
@@ -96,6 +112,8 @@ func turn(arcs []arc, outs [][]int, reversed map[int]bool) {
 }
 
 // rankLongest ranks each box by its longest path from a box no arc enters (Kahn's way), taking boxes as written.
+// LIMIT: the longest path, not the ranks of fewest points (network simplex): a box leading to one far below sits
+// high, its edge long. Balance the ranks if graphs come to pass many.
 func (gr *group) rankLongest(arcs []arc) {
 	n := len(gr.nodes)
 	into := make([]int, n)
