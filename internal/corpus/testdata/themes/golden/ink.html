@@ -127,7 +127,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.palette {
-:where(:scope, [data-floe-part], [data-floe-look~="bars"], [data-floe-look~="cell"], [data-floe-look~="checklist"], [data-floe-look~="code"], [data-floe-look~="compare"], [data-floe-look~="decision"], [data-floe-look~="details"], [data-floe-look~="diagram"], [data-floe-look~="diff"], [data-floe-look~="entries"], [data-floe-look~="facts"], [data-floe-look~="faq"], [data-floe-look~="fields"], [data-floe-look~="findings"], [data-floe-look~="image"], [data-floe-look~="keys"], [data-floe-look~="links"], [data-floe-look~="note"], [data-floe-look~="options"], [data-floe-look~="progress"], [data-floe-look~="script"], [data-floe-look~="stack"], [data-floe-look~="stats"], [data-floe-look~="steps"], [data-floe-look~="table"], [data-floe-look~="tabs"], [data-floe-look~="terminal"], [data-floe-look~="text"], [data-floe-look~="timeline"], [data-floe-look~="tree"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
 :where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
 :where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
 :where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
@@ -405,7 +405,12 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border-radius: 6px; font-weight: 700; background: var(--tone); color: var(--on-fill); }
+/* Filled with its tone; on a face (a band in accent) a ring in the face's text colour, drawn within it, keeps a pill
+   of the face's own colour seen */
+:scope {
+  border-radius: 6px; font-weight: 700; background: var(--tone); color: var(--on-fill);
+  outline: 1.5px solid var(--on-face, transparent); outline-offset: -1.5px;
+}
 }
 }
 </style>

@@ -113,7 +113,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.palette {
-:where(:scope, [data-floe-part], [data-floe-look~="bars"], [data-floe-look~="cell"], [data-floe-look~="checklist"], [data-floe-look~="code"], [data-floe-look~="compare"], [data-floe-look~="decision"], [data-floe-look~="details"], [data-floe-look~="diagram"], [data-floe-look~="diff"], [data-floe-look~="entries"], [data-floe-look~="facts"], [data-floe-look~="faq"], [data-floe-look~="fields"], [data-floe-look~="findings"], [data-floe-look~="image"], [data-floe-look~="keys"], [data-floe-look~="links"], [data-floe-look~="note"], [data-floe-look~="options"], [data-floe-look~="progress"], [data-floe-look~="script"], [data-floe-look~="stack"], [data-floe-look~="stats"], [data-floe-look~="steps"], [data-floe-look~="table"], [data-floe-look~="tabs"], [data-floe-look~="terminal"], [data-floe-look~="text"], [data-floe-look~="timeline"], [data-floe-look~="tree"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
 :where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
 :where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
 :where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
@@ -132,8 +132,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
    fixed-width text too) */
 :scope {
@@ -199,8 +199,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="note"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="note"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
@@ -245,8 +245,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
 :scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 }
@@ -266,8 +266,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="note"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="note"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
   border-radius: 18px; border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
 }
@@ -320,8 +320,8 @@ h2 { font-size: 1.1rem; }
 <article data-floe-look="panel">
 <header>
 <p class="kind">Decision record <span class="number">ADR 0007</span> <span class="date">2030-03-02</span></p>
-<h1 id="keep-sessions-in-the-database-not-in-memory">Keep sessions in the database, not in memory</h1><p class="status superseded" data-floe-look="cell" data-floe-tone="muted">Superseded</p><p class="deciders">Decided by: Platform team</p>
-</header><div class="superseded-by" data-floe-look="note" data-floe-tone="warn"><p>Superseded by: <a href="/a/adr-0012/">ADR 0012</a>: sessions in the cache cluster</p></div>
+<h1 id="keep-sessions-in-the-database-not-in-memory">Keep sessions in the database, not in memory</h1><p class="status superseded" data-floe-part="cell" data-floe-tone="muted">Superseded</p><p class="deciders">Decided by: Platform team</p>
+</header><div class="superseded-by" data-floe-part="note" data-floe-tone="warn"><p>Superseded by: <a href="/a/adr-0012/">ADR 0012</a>: sessions in the cache cluster</p></div>
 <section><h2 id="context">Context</h2><p>The web app keeps each user&#39;s session in the memory of the server that made it. With a second server behind the
 load balancer, a user sent to the other server is logged out (<a href="/a/incident-42/">incident 42</a>).</p>
 </section>

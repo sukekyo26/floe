@@ -38,14 +38,16 @@ sections:
           <ol id="block" data-floe-look="numbered"><li><div style="height: 60px"></div><p>Under</p></li><li><p>Next</p></li></ol>
           <ol id="sized" data-floe-look="numbered"><li style="--floe-mark: 3rem"><strong>A</strong></li><li><strong>B</strong></li></ol>
           <ol id="wrapped" data-floe-look="numbered"><li><p>Restart <code>api</code> now</p></li><li><p>Next</p></li></ol>
-          <div id="looknote" data-floe-look="note" data-floe-tone="warn"><strong class="title">Title</strong><p>Text</p></div>
+          <div id="plainnote" data-floe-part="note" data-floe-tone="warn"><p>Text alone</p></div>
+          <ol data-floe-look="numbered"><li><p>A step</p><div id="stepnote" data-floe-part="note" data-floe-tone="bad"><strong class="title">If it fails</strong><p>Text</p></div></li></ol>
 `
 
 // markRows are the rows whose mark stands beside a first line, with the element of that line.
 var markRows = []struct{ name, row, line string }{
 	{"links", "[data-floe-part=links] > li", "[data-floe-part=links] > li > a"},
 	{"note", "[data-floe-part=note]", "[data-floe-part=note] > .title"},
-	{"note borrowed", "#looknote", "#looknote > .title"},
+	{"note without a title", "#plainnote", "#plainnote > p"},
+	{"note in a step", "#stepnote", "#stepnote > .title"},
 	{"steps", "[data-floe-part=steps] > li", "[data-floe-part=steps] > li > strong"},
 	{"timeline", "[data-floe-part=timeline] > li", "[data-floe-part=timeline] > li strong"},
 	{"numbered", "#plain > li", "#plain > li > strong"},

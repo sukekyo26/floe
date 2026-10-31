@@ -113,7 +113,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.palette {
-:where(:scope, [data-floe-part], [data-floe-look~="bars"], [data-floe-look~="cell"], [data-floe-look~="checklist"], [data-floe-look~="code"], [data-floe-look~="compare"], [data-floe-look~="decision"], [data-floe-look~="details"], [data-floe-look~="diagram"], [data-floe-look~="diff"], [data-floe-look~="entries"], [data-floe-look~="facts"], [data-floe-look~="faq"], [data-floe-look~="fields"], [data-floe-look~="findings"], [data-floe-look~="image"], [data-floe-look~="keys"], [data-floe-look~="links"], [data-floe-look~="note"], [data-floe-look~="options"], [data-floe-look~="progress"], [data-floe-look~="script"], [data-floe-look~="stack"], [data-floe-look~="stats"], [data-floe-look~="steps"], [data-floe-look~="table"], [data-floe-look~="tabs"], [data-floe-look~="terminal"], [data-floe-look~="text"], [data-floe-look~="timeline"], [data-floe-look~="tree"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
 :where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
 :where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
 :where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
@@ -139,16 +139,17 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 /* A part in the band draws on its own ground, in the page's text colour, which it would otherwise take from the band.
    A pill of a theme that gives it no ground draws in the band's text colour (the face's rule), its tone told by its
    word alone, as in any face (a note's, a quote's), its marks' colours too (swiss's tick and triangle).
-   LIMIT: another part with no ground of its own (links without a panel) is drawn in the page's text colour on the
-   accent; give it a panel, or keep it out of the band. A theme whose faces let what is under them through (aurora's glass) lets the accent
-   through them too, where the text sinks: such a theme makes its faces opaque in a band, in its band.css, as aurora does */
+   LIMIT: another part with no ground of its own (links without a panel, swiss's note) is drawn in the page's text
+   colour on the accent; give it a panel, or keep it out of the band. A theme whose faces let what is under them
+   through (aurora's glass) lets the accent through them too, where the text sinks: such a theme makes its faces
+   opaque in a band, in its band.css, as aurora does */
 :scope [data-floe-part] { color: var(--fg); }
 }
 }
 </style>
 <style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
    fixed-width text too) */
 :scope {
@@ -230,8 +231,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 </style>
 <style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
 :scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 }
@@ -318,7 +319,7 @@ main > section { display: grid; gap: var(--floe-room); }
 <body>
 <header class="band" data-floe-look="band">
 <div class="column">
-<p class="when"><span class="kind" data-floe-look="cell">Handoff</span><span class="date">2030-05-14 18:00</span><span class="hands">Mina → Kenji</span></p>
+<p class="when"><span class="kind" data-floe-part="cell">Handoff</span><span class="date">2030-05-14 18:00</span><span class="hands">Mina → Kenji</span></p>
 <h1 id="checkout-redesign">Checkout redesign</h1>
 <p class="summary">The card form is done; the address form waits on one decision, and the tax rules (<code>tax_rules</code>) on the finance team.</p>
 <ul class="counts">
@@ -341,7 +342,7 @@ main > section { display: grid; gap: var(--floe-room); }
 <ul class="done"><li>Card form validation, with the error under each field<span class="ref">#412</span></li><li>Saved cards shown first<span class="ref">#415</span></li><li>A test for every <strong>declined</strong> card code</li></ul>
 </section>
 <section data-floe-look="panel"><h2 id="doing">In progress</h2>
-<ul class="doing"><li><b class="who">Mina</b><span class="state doing" data-floe-look="cell">Working</span><span class="what">Address form</span><span class="where">Half the fields; the postcode lookup is next</span></li><li><b class="who">Sam</b><span class="state waiting" data-floe-look="cell" data-floe-tone="warn">Waiting</span><span class="what">Tax rules for the new regions</span><span class="where">Waiting on the finance team&#39;s table</span></li><li><b class="who">Kenji</b><span class="state blocked" data-floe-look="cell" data-floe-tone="bad">Blocked</span><span class="what">Payment errors in the staging environment</span><span class="where">The test card provider is down since noon</span></li></ul>
+<ul class="doing"><li><b class="who">Mina</b><span class="state doing" data-floe-part="cell">Working</span><span class="what">Address form</span><span class="where">Half the fields; the postcode lookup is next</span></li><li><b class="who">Sam</b><span class="state waiting" data-floe-part="cell" data-floe-tone="warn">Waiting</span><span class="what">Tax rules for the new regions</span><span class="where">Waiting on the finance team&#39;s table</span></li><li><b class="who">Kenji</b><span class="state blocked" data-floe-part="cell" data-floe-tone="bad">Blocked</span><span class="what">Payment errors in the staging environment</span><span class="where">The test card provider is down since noon</span></li></ul>
 </section>
 <section data-floe-look="panel"><h2 id="next">Next</h2>
 <ol class="next"><li>Finish the address form and its postcode lookup</li><li>Put the tax table in once finance sends it</li><li>Run the whole checkout on staging when the provider is back</li></ol>

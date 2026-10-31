@@ -249,8 +249,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Change the statuses and cautions of floe's templates to borrow the parts
-  cell and note: adr's status, postmortem's severity and actions' states,
+- Change the statuses and cautions of floe's templates to be drawn as the
+  parts cell and note: adr's status, postmortem's severity and actions' states,
   handoff's kind and states are pills, and adr's record superseding it (now
   after the head), runbook's caution and what to do if a step fails are notes,
   drawn as the theme draws its pills and notes. A pill is in the text's own

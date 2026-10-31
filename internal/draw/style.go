@@ -78,8 +78,7 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 	if err != nil {
 		return nil, err //nolint:wrapcheck // floe's own, which its tests check
 	}
-	parts, _, _, _ := k.Names()
-	sheet("floe.palette", Tones(tones, parts))
+	sheet("floe.palette", Tones(tones))
 	sheet("floe.theme", pageScoped(themed.Base()))
 	names := inOrder(k, slices.Concat(n.boxes, n.looks))
 	// Each style goes to the boxes that have its look, and to the other elements that take it, a layer under, each
@@ -119,20 +118,14 @@ const boxList = "display: grid; list-style: none; padding: 0; gap: 0;"
 
 // Tones gives each element marked with a tone of tones (data-floe-tone) the tone's colours from the palette: --tone
 // and --tone-soft from --<tone> and --<tone>-soft, and --tone-fill from --<tone>-fill, a theme's own fill for the tone,
-// or else --<tone>-soft; and the root (:scope), each part's box and each element that takes the look of a part of parts
-// (a template's pill borrowing cell) accent's, so that a part takes no tone from around it and a rule outside a tone
-// reads accent. A part's box that takes a tone holds them as specific: the tone's rule,
+// or else --<tone>-soft; and the root (:scope) and each part's box accent's, so that a part takes no tone from around
+// it and a rule outside a tone reads accent. A part's box that takes a tone holds them as specific: the tone's rule,
 // written after, wins. floe's own and fixed, it goes unchecked by css.Check.
-// LIMIT: a data-floe-tone of no tone matches none, as if not written: a part's box, or an element taking a part's
-// look, draws in accent's colours, another element in the tone around it.
-func Tones(tones, parts []string) []byte {
+// LIMIT: a data-floe-tone of no tone matches none, as if not written: a part's box draws in accent's colours, another
+// element in the tone around it.
+func Tones(tones []string) []byte {
 	var b strings.Builder
-	afresh := make([]string, 0, 2+len(parts))
-	afresh = append(afresh, ":scope", "[data-floe-part]")
-	for _, p := range parts {
-		afresh = append(afresh, fmt.Sprintf("[data-floe-look~=%q]", p))
-	}
-	b.WriteString(toneRule(":where("+strings.Join(afresh, ", ")+")", "accent"))
+	b.WriteString(toneRule(":where(:scope, [data-floe-part])", "accent"))
 	for _, t := range tones {
 		b.WriteString(toneRule(fmt.Sprintf(":where([data-floe-tone=%q])", t), t))
 	}

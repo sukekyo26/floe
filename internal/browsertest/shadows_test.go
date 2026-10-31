@@ -147,7 +147,7 @@ func (b *browser) shadowsIn(where string, width int64) []string {
 
 // measureCellShadows returns the shadow colour of every cell drawn in a box that casts a shadow, and of that box, as
 // "cell in box".
-const measureCellShadows = `[...document.querySelectorAll('[data-floe-part=cell], [data-floe-look~=cell]')].map((c) => {
+const measureCellShadows = `[...document.querySelectorAll('[data-floe-part=cell]')].map((c) => {
   const box = c.parentElement.closest('[data-floe-part], [data-floe-look]'), colour = (e) => getComputedStyle(e).getPropertyValue('--floe-shadow-color').trim();
   return box && !/^rgba\(.*, 0\)$|^transparent$/.test(colour(box)) ? colour(c) + ' in ' + colour(box) : '';
 }).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' | ')`

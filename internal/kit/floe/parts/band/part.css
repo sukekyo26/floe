@@ -3,7 +3,8 @@
 /* A part in the band draws on its own ground, in the page's text colour, which it would otherwise take from the band.
    A pill of a theme that gives it no ground draws in the band's text colour (the face's rule), its tone told by its
    word alone, as in any face (a note's, a quote's), its marks' colours too (swiss's tick and triangle).
-   LIMIT: another part with no ground of its own (links without a panel) is drawn in the page's text colour on the
-   accent; give it a panel, or keep it out of the band. A theme whose faces let what is under them through (aurora's glass) lets the accent
-   through them too, where the text sinks: such a theme makes its faces opaque in a band, in its band.css, as aurora does */
+   LIMIT: another part with no ground of its own (links without a panel, swiss's note) is drawn in the page's text
+   colour on the accent; give it a panel, or keep it out of the band. A theme whose faces let what is under them
+   through (aurora's glass) lets the accent through them too, where the text sinks: such a theme makes its faces
+   opaque in a band, in its band.css, as aurora does */
 :scope [data-floe-part] { color: var(--fg); }
