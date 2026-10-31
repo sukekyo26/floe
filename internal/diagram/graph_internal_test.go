@@ -1138,6 +1138,14 @@ func TestGraphLabels(t *testing.T) {
 	if fmt.Sprint(rank) != fmt.Sprint(want) {
 		t.Errorf("g2's ranks: %v, want %v", rank, want)
 	}
+	// An edge back up two ranks: its label next to show, which it is written from, not next to write.
+	back := graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "show>write")
+	back.Edges[2].Label = Text{"en": "again"}
+	for _, n := range grouped(back)[0].nodes {
+		if n.label != nil && n.rank != 3 {
+			t.Errorf("show→write's label at rank %d, want 3, next to show", n.rank)
+		}
+	}
 	plain := grouped(graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "check>write"))[0]
 	for i, n := range plain.nodes[:3] {
 		if n.rank != i {
