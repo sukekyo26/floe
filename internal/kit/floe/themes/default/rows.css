@@ -1,4 +1,4 @@
-:scope { padding: 6px; --default-inner: calc(var(--radius) - 6px); }
+:scope { padding: 6px; }
 :scope > * { background: var(--surface); }
 :scope > :first-child { border-radius: var(--default-inner) var(--default-inner) 0 0; }
 :scope > :last-child { border-radius: 0 0 var(--default-inner) var(--default-inner); }

@@ -1,4 +1,4 @@
-:scope { padding: 6px; --default-inner: calc(var(--radius) - 6px); }
+:scope { padding: 6px; }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope thead th { background: none; }
 :scope tbody td { background: var(--surface); }

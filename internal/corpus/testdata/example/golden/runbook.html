@@ -103,6 +103,9 @@ blockquote > * + * { margin-top: 0.6rem; }
   --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
   /* Its panels' quiet ground, which holds faces of the surface */
   --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* The corner of a face of the surface 6px within a panel, round about the panel's own.
+     LIMIT: a --radius under 6px leaves it square, as the browser cuts calc at 0 */
+  --default-inner: calc(var(--radius) - 6px);
   /* How wide prose grows, which a template sets for its page on :scope */
   --text-width: 56rem;
   /* The column a template centres its page in: its width, without the pad each side of it */
@@ -417,7 +420,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="terminal"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { padding: 6px; --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); }
 :scope figcaption { background: none; border: 0; padding: 0.3rem 0.6rem 0.5rem; }
-:scope pre { background: var(--code-ground); border-radius: calc(var(--radius) - 6px); }
+:scope pre { background: var(--code-ground); border-radius: var(--default-inner); }
 }
 }
 </style>
