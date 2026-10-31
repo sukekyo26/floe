@@ -105,10 +105,9 @@ func (n gnode) side(out bool) (lo, hi float64) {
 }
 
 // exits sets the exits of the links out of node u, at x ≡ 0 on its bottom, in the order their ends stand in the
-// rank below (ties as their edges are written), a column apart at least. Each takes, first, a column its edge can
-// enter the box it reaches straight from (through the points it passes); then one that leaves room for the labels'
-// boxes of the exits after it; then the column nearest to that box; then the one nearest to where it would stand
-// spread evenly.
+// rank below (ties as their edges are written), a column apart at least. Each takes, first, a column that leaves
+// room for the labels' boxes of the exits after it; then the column nearest to where its edge can enter the box it
+// reaches straight (through the points it passes); then the one nearest to where it would stand spread evenly.
 func (gr *group) exits(u int, pos []int, keep bool) {
 	n := gr.nodes[u]
 	if len(n.outs) == 0 {
@@ -143,15 +142,14 @@ func (gr *group) exits(u int, pos []int, keep bool) {
 			}
 		}
 		lo, hi := gr.nodes[gr.through(gr.links[l].to, false)].side(false)
-		cost := func(i int) (int, int, float64, float64) {
-			off := max(lo-cols[i], cols[i]-hi, 0)
-			return min(int(math.Ceil(off)), 1), max(i-(end-room), 0), off, math.Abs(cols[i] - even[k])
+		cost := func(i int) (int, float64, float64) {
+			return max(i-(end-room), 0), max(lo-cols[i], cols[i]-hi, 0), math.Abs(cols[i] - even[k])
 		}
 		best := min(max(first, want), end-least)
 		for i := best + 1; i <= end-least; i++ {
-			a1, a2, a3, a4 := cost(i)
-			b1, b2, b3, b4 := cost(best)
-			if cmp.Or(a1-b1, a2-b2, cmp.Compare(a3, b3), cmp.Compare(a4, b4)) < 0 {
+			a1, a2, a3 := cost(i)
+			b1, b2, b3 := cost(best)
+			if cmp.Or(a1-b1, cmp.Compare(a2, b2), cmp.Compare(a3, b3)) < 0 {
 				best = i
 			}
 		}
