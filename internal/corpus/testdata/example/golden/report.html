@@ -111,6 +111,15 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 </style>
 <style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=accent]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=good]) { --tone: var(--good); --tone-soft: var(--good-soft); }
+:where([data-floe-tone=warn]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+:where([data-floe-tone=bad]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+}
+</style>
+<style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
@@ -127,11 +136,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope {
   display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
-  background: var(--accent-soft); color: var(--accent);
+  background: var(--tone-soft); color: var(--tone);
 }
-:scope.good { background: var(--good-soft); color: var(--good); }
-:scope.warn { background: var(--warn-soft); color: var(--warn); }
-:scope.bad { background: var(--bad-soft); color: var(--bad); }
 }
 }
 </style>
@@ -263,27 +269,18 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 .dg-tools button { min-width: 2.2rem; padding: 2px 8px; font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
 .dg-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .dg-tools button:disabled { opacity: 0.4; cursor: default; }
-.dg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--font); }
+/* What has no tone draws in its shape's own colours, written after var(): the diagram's root holds no tone, unlike
+   a part's box, and what has one (data-floe-tone) takes its colours */
+.dg { --tone: initial; --tone-soft: initial; position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--font); }
 .dg text { dominant-baseline: central; }
 .dg .main { fill: var(--fg); font-size: 13px; font-weight: 700; }
 .dg .sub { fill: var(--muted); font-size: 12px; }
 .dg .code { font-family: var(--mono); font-size: 12px; }
-.dg .box rect, .dg .box path { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
-.dg .box.accent rect, .dg .box.accent path { fill: var(--accent-soft); stroke: var(--accent); }
-.dg .box.good rect, .dg .box.good path { fill: var(--good-soft); stroke: var(--good); }
-.dg .box.warn rect, .dg .box.warn path { fill: var(--warn-soft); stroke: var(--warn); }
-.dg .box.bad rect, .dg .box.bad path { fill: var(--bad-soft); stroke: var(--bad); }
-.dg .box.bad text { fill: var(--bad); }
-.dg .table .bg, .dg .table .head { fill: var(--surface); }
-.dg .table.accent .head { fill: var(--accent-soft); }
-.dg .table.good .head { fill: var(--good-soft); }
-.dg .table.warn .head { fill: var(--warn-soft); }
-.dg .table.bad .head { fill: var(--bad-soft); }
-.dg .table .outline { fill: none; stroke: var(--line); stroke-width: 1.2; }
-.dg .table.accent .outline { stroke: var(--accent); }
-.dg .table.good .outline { stroke: var(--good); }
-.dg .table.warn .outline { stroke: var(--warn); }
-.dg .table.bad .outline { stroke: var(--bad); }
+.dg .box rect, .dg .box path { fill: var(--tone-soft, var(--surface)); stroke: var(--tone, var(--line)); stroke-width: 1.2; }
+.dg .box[data-floe-tone=bad] text { fill: var(--tone); }
+.dg .table .bg { fill: var(--surface); }
+.dg .table .head { fill: var(--tone-soft, var(--surface)); }
+.dg .table .outline { fill: none; stroke: var(--tone, var(--line)); stroke-width: 1.2; }
 .dg .table .sep { stroke: var(--line); }
 .dg .cell { fill: var(--fg); }
 .dg .type { fill: var(--muted); font-size: 12px; }
@@ -293,33 +290,19 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 .dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
 .dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
 .dg .edge, .dg .line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.dg .edge { stroke: var(--tone, var(--muted)); }
 .dg .edge.dashed { stroke-dasharray: 5 4; }
 .dg .edge.bold { stroke-width: 3; }
-.dg .edge.accent { stroke: var(--accent); }
-.dg .edge.good { stroke: var(--good); }
-.dg .edge.warn { stroke: var(--warn); }
-.dg .edge.bad { stroke: var(--bad); }
 /* An edge's ends take its colour (context-stroke). Without it, --muted stays */
 .dg .mk-fill { fill: var(--muted); fill: context-stroke; }
 .dg .mk-hollow { fill: var(--bg); stroke: var(--muted); stroke: context-stroke; stroke-width: 1.2; }
 .dg .mk-line { fill: none; stroke: var(--muted); stroke: context-stroke; stroke-width: 1.5; }
-.dg .dot { fill: var(--muted); stroke: var(--muted); }
-.dg .dot.accent { fill: var(--accent); stroke: var(--accent); }
-.dg .dot.good { fill: var(--good); stroke: var(--good); }
-.dg .dot.warn { fill: var(--warn); stroke: var(--warn); }
-.dg .dot.bad { fill: var(--bad); stroke: var(--bad); }
+.dg .dot { fill: var(--tone, var(--muted)); stroke: var(--tone, var(--muted)); }
 .dg .dot.hollow { fill: var(--bg); stroke-width: 2; }
-.dg .bar { fill: var(--muted); }
-.dg .bar.accent { fill: var(--accent); }
-.dg .bar.good { fill: var(--good); }
-.dg .bar.warn { fill: var(--warn); }
-.dg .bar.bad { fill: var(--bad); }
+.dg .bar { fill: var(--tone, var(--muted)); }
 .dg .axis { stroke: var(--muted); stroke-width: 1.2; }
 .dg .grid { stroke: var(--line); }
-.dg .venn { fill: var(--accent-soft); fill-opacity: 0.6; stroke: var(--accent); stroke-width: 1.5; }
-.dg .venn.good { fill: var(--good-soft); stroke: var(--good); }
-.dg .venn.warn { fill: var(--warn-soft); stroke: var(--warn); }
-.dg .venn.bad { fill: var(--bad-soft); stroke: var(--bad); }
+.dg .venn { fill: var(--tone-soft, var(--accent-soft)); fill-opacity: 0.6; stroke: var(--tone, var(--accent)); stroke-width: 1.5; }
 .dg .label-bg { fill: var(--bg); }
 .dg .label { fill: var(--fg); font-size: 12px; }
 .dg .label.strong { font-size: 13px; font-weight: 700; }
@@ -371,27 +354,21 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; background: var(--accent-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
+  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
 }
 :scope > * { grid-column: text; align-self: first baseline; }
-:scope.good { background: var(--good-soft); }
-:scope.warn { background: var(--warn-soft); }
-:scope.bad { background: var(--bad-soft); }
 :scope::before {
   content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
   display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%;
-  background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
-:scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
-:scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }
-:scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad); }
+:scope[data-floe-tone=good]::before { content: "✓"; content: "✓" / ""; }
+:scope[data-floe-tone=warn]::before { content: "!"; content: "!" / ""; }
+:scope[data-floe-tone=bad]::before { content: "×"; content: "×" / ""; }
 /* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
 :scope > * + * { margin-top: 0.5rem; }
-.title { display: block; font-size: 0.9rem; color: var(--accent); }
-:scope.good .title { color: var(--good); }
-:scope.warn .title { color: var(--warn); }
-:scope.bad .title { color: var(--bad); }
+.title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
 /* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
 :scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
@@ -423,8 +400,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the faces of cards, unnumbered */
-:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+/* In the faces of cards, unnumbered; a card without a tone notes in --muted */
+:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); --tone: var(--muted); }
 :scope > div { gap: 0.15rem; }
 .stat dt { font-size: 0.85rem; color: var(--muted); }
 .stat dd { margin: 0; }
@@ -433,11 +410,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
 }
 .stat .unit { margin-left: 0.3em; font-size: 0.5em; font-weight: 400; color: var(--muted); }
-.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
-.stat.accent .note { color: var(--accent); }
-.stat.good .note { color: var(--good); }
-.stat.warn .note { color: var(--warn); }
-.stat.bad .note { color: var(--bad); }
+.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--tone); }
 }
 }
 </style>
@@ -564,16 +537,9 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
-  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
 }
-:scope.good { border-color: color-mix(in srgb, var(--good) 20%, transparent); }
-:scope.warn { border-color: color-mix(in srgb, var(--warn) 20%, transparent); }
-:scope.bad { border-color: color-mix(in srgb, var(--bad) 20%, transparent); }
-:scope { --floe-mark: 2.25rem; }
-:scope::before { border-radius: 10px; background: var(--surface); color: var(--accent); }
-:scope.good::before { background: var(--surface); color: var(--good); }
-:scope.warn::before { background: var(--surface); color: var(--warn); }
-:scope.bad::before { background: var(--surface); color: var(--bad); }
+:scope::before { border-radius: 10px; background: var(--surface); color: var(--tone); }
 }
 }
 </style>
@@ -626,7 +592,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <h2 id="at-a-glance">At a glance</h2>
 <dl data-floe-part="stats">
 <div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value">1,840</dd></div>
-<div class="card stat good" data-floe-look="panel"><dt>Broken links</dt><dd class="value">120</dd><dd class="note">-35 since the last check</dd></div>
+<div class="card stat" data-floe-tone="good" data-floe-look="panel"><dt>Broken links</dt><dd class="value">120</dd><dd class="note">-35 since the last check</dd></div>
 <div class="card stat" data-floe-look="panel"><dt>Downtime</dt><dd class="value">0<span class="unit">hours</span></dd></div>
 </dl>
 <div data-floe-part="compare"><table>
@@ -786,9 +752,9 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <section>
 <h2 id="who-does-what">Who does what</h2>
 <dl data-floe-part="entries">
-<div><dt>Copy</dt><dd class="tags"><span>Saturday</span><span><span class="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><p>Copies the pages and keeps a list of what failed.</p>
+<div><dt>Copy</dt><dd class="tags"><span>Saturday</span><span><span data-floe-tone="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><p>Copies the pages and keeps a list of what failed.</p>
 </dd></div>
-<div><dt>Links</dt><dd class="tags"><span>Sunday</span><span><span class="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><p>Runs the link check and fixes what it finds.</p>
+<div><dt>Links</dt><dd class="tags"><span>Sunday</span><span><span data-floe-tone="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><p>Runs the link check and fixes what it finds.</p>
 </dd></div>
 <div><dt>Bookmarks</dt><dd class="tags"><span>Monday morning</span></dd><dd class="text"><p>Sends the new address to the team.</p>
 </dd></div>
@@ -948,19 +914,19 @@ banner = &#34;This wiki has moved to the new host.&#34;
   const init = () => document.querySelectorAll('.' + wrapClass).forEach(setup);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-})({"tools":"dg-tools","words":{"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}},"wrap":"dg-wrap"});</script><div class="dg-wrap" style="aspect-ratio: 640 / 112; max-height: min(85vh, 138px)"><svg viewBox="0 0 640 112" class="dg" role="img" aria-label="The pages from the old server to the new host"><defs><marker id="dg1-c76e86_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-fill"></path></marker></defs><path d="M200,56 H230" class="edge" marker-end="url(#dg1-c76e86_arrow)"></path><path d="M410,56 H440" class="edge" marker-end="url(#dg1-c76e86_arrow)"></path><g class="box"><rect x="20" y="30" width="180" height="52" rx="8"></rect><text x="110" y="47.5" text-anchor="middle" class="main">Old server</text><text x="110" y="64.5" text-anchor="middle" class="sub">read-only</text></g><g class="box accent"><rect x="230" y="30" width="180" height="52" rx="8"></rect><text x="320" y="47.5" text-anchor="middle" class="main">Copy the pages</text><text x="320" y="64.5" text-anchor="middle" class="sub">and check the links</text></g><g class="box good"><rect x="440" y="30" width="180" height="52" rx="8"></rect><text x="530" y="56" text-anchor="middle" class="main">New host</text></g></svg></div></div>
+})({"tools":"dg-tools","words":{"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}},"wrap":"dg-wrap"});</script><div class="dg-wrap" style="aspect-ratio: 640 / 112; max-height: min(85vh, 138px)"><svg viewBox="0 0 640 112" class="dg" role="img" aria-label="The pages from the old server to the new host"><defs><marker id="dg1-c76e86_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-fill"></path></marker></defs><path d="M200,56 H230" class="edge" marker-end="url(#dg1-c76e86_arrow)"></path><path d="M410,56 H440" class="edge" marker-end="url(#dg1-c76e86_arrow)"></path><g class="box"><rect x="20" y="30" width="180" height="52" rx="8"></rect><text x="110" y="47.5" text-anchor="middle" class="main">Old server</text><text x="110" y="64.5" text-anchor="middle" class="sub">read-only</text></g><g class="box" data-floe-tone="accent"><rect x="230" y="30" width="180" height="52" rx="8"></rect><text x="320" y="47.5" text-anchor="middle" class="main">Copy the pages</text><text x="320" y="64.5" text-anchor="middle" class="sub">and check the links</text></g><g class="box" data-floe-tone="good"><rect x="440" y="30" width="180" height="52" rx="8"></rect><text x="530" y="56" text-anchor="middle" class="main">New host</text></g></svg></div></div>
 </section>
 <section>
 <h2 id="risks">Risks</h2>
 <div data-floe-part="table"><table>
 <thead><tr><th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col" class="num">Pages</th><th scope="col">What we do</th><th scope="col">State</th></tr></thead>
 <tbody>
-<tr><td>Broken links</td><td>High</td><td class="num">120</td><td>A link check after the copy</td><td><span class="warn" data-floe-part="cell">watching</span></td></tr>
-<tr><td>Lost attachments</td><td>Low</td><td class="num">8</td><td>Keep the old host for <strong>a month</strong></td><td><span class="good" data-floe-part="cell">covered</span></td></tr>
-<tr><td>Slow search</td><td>Unknown</td><td class="num">-</td><td>Rebuild the index on <code>Sunday</code></td><td><span class="accent" data-floe-part="cell">open</span></td></tr>
+<tr><td>Broken links</td><td>High</td><td class="num">120</td><td>A link check after the copy</td><td><span data-floe-tone="warn" data-floe-part="cell">watching</span></td></tr>
+<tr><td>Lost attachments</td><td>Low</td><td class="num">8</td><td>Keep the old host for <strong>a month</strong></td><td><span data-floe-tone="good" data-floe-part="cell">covered</span></td></tr>
+<tr><td>Slow search</td><td>Unknown</td><td class="num">-</td><td>Rebuild the index on <code>Sunday</code></td><td><span data-floe-tone="accent" data-floe-part="cell">open</span></td></tr>
 </tbody>
 </table></div>
-<div class="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>
+<div data-floe-tone="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>
 </div>
 <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>
 </section>

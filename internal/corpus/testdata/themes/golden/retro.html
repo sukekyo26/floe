@@ -126,6 +126,15 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 </style>
 <style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=accent]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=good]) { --tone: var(--good); --tone-soft: var(--good-soft); }
+:where([data-floe-tone=warn]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+:where([data-floe-tone=bad]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+}
+</style>
+<style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *) {
 /* The seventies: three stripes of orange, mustard and olive under headings and on the faces, round fat corners */
@@ -147,11 +156,8 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 :scope {
   display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
-  background: var(--accent-soft); color: var(--accent);
+  background: var(--tone-soft); color: var(--tone);
 }
-:scope.good { background: var(--good-soft); color: var(--good); }
-:scope.warn { background: var(--warn-soft); color: var(--warn); }
-:scope.bad { background: var(--bad-soft); color: var(--bad); }
 }
 }
 </style>
@@ -162,11 +168,8 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 :scope {
   display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
-  background: var(--accent-soft); color: var(--accent);
+  background: var(--tone-soft); color: var(--tone);
 }
-:scope.good { background: var(--good-soft); color: var(--good); }
-:scope.warn { background: var(--warn-soft); color: var(--warn); }
-:scope.bad { background: var(--bad-soft); color: var(--bad); }
 }
 }
 </style>
@@ -387,27 +390,21 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; background: var(--accent-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
+  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
 }
 :scope > * { grid-column: text; align-self: first baseline; }
-:scope.good { background: var(--good-soft); }
-:scope.warn { background: var(--warn-soft); }
-:scope.bad { background: var(--bad-soft); }
 :scope::before {
   content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
   display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%;
-  background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
-:scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
-:scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }
-:scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad); }
+:scope[data-floe-tone=good]::before { content: "✓"; content: "✓" / ""; }
+:scope[data-floe-tone=warn]::before { content: "!"; content: "!" / ""; }
+:scope[data-floe-tone=bad]::before { content: "×"; content: "×" / ""; }
 /* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
 :scope > * + * { margin-top: 0.5rem; }
-.title { display: block; font-size: 0.9rem; color: var(--accent); }
-:scope.good .title { color: var(--good); }
-:scope.warn .title { color: var(--warn); }
-:scope.bad .title { color: var(--bad); }
+.title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
 /* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
 :scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
@@ -445,8 +442,8 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the faces of cards, unnumbered */
-:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+/* In the faces of cards, unnumbered; a card without a tone notes in --muted */
+:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); --tone: var(--muted); }
 :scope > div { gap: 0.15rem; }
 .stat dt { font-size: 0.85rem; color: var(--muted); }
 .stat dd { margin: 0; }
@@ -455,11 +452,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
   font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
 }
 .stat .unit { margin-left: 0.3em; font-size: 0.5em; font-weight: 400; color: var(--muted); }
-.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
-.stat.accent .note { color: var(--accent); }
-.stat.good .note { color: var(--good); }
-.stat.warn .note { color: var(--warn); }
-.stat.bad .note { color: var(--bad); }
+.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--tone); }
 }
 }
 </style>
@@ -562,10 +555,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: 2px solid var(--accent); border-radius: 22px; }
-:scope.good { border-color: var(--good); }
-:scope.warn { border-color: var(--warn); }
-:scope.bad { border-color: var(--bad); }
+:scope { border: 2px solid var(--tone); border-radius: 22px; }
 :scope::before { border: 2px solid var(--fg); }
 }
 }
@@ -608,13 +598,13 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </blockquote>
 <div data-floe-part="note"><strong class="title">Note</strong><p>A note in the accent.</p>
 </div>
-<div class="warn" data-floe-part="note"><p>A warning.</p>
+<div data-floe-tone="warn" data-floe-part="note"><p>A warning.</p>
 </div>
 <div data-floe-part="table"><table>
 <thead><tr><th scope="col">Name</th><th scope="col" class="num">Count</th><th scope="col">State</th></tr></thead>
 <tbody>
-<tr><td>Pages</td><td class="num">1,840</td><td><span class="good" data-floe-part="cell">done</span></td></tr>
-<tr><td>Links</td><td class="num">120</td><td><span class="bad" data-floe-part="cell">open</span></td></tr>
+<tr><td>Pages</td><td class="num">1,840</td><td><span data-floe-tone="good" data-floe-part="cell">done</span></td></tr>
+<tr><td>Links</td><td class="num">120</td><td><span data-floe-tone="bad" data-floe-part="cell">open</span></td></tr>
 </tbody>
 </table></div>
 <figure data-floe-part="code"><figcaption><span class="file">a.conf</span><span class="lang">ini</span></figcaption><pre><code data-floe-copy="">read_only = true
@@ -825,22 +815,22 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 <div data-floe-part="findings"><table>
 <tbody>
-<tr><td class="level"><span class="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">a.conf:1</code><span class="status"><span class="good" data-floe-part="cell">fixed</span></span></div><div>The wiki is still open</div></td></tr>
+<tr><td class="level"><span data-floe-tone="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">a.conf:1</code><span class="status"><span data-floe-tone="good" data-floe-part="cell">fixed</span></span></div><div>The wiki is still open</div></td></tr>
 <tr><td class="level"><span class="nit" data-floe-part="cell">nit</span></td><td><div>Two pages share a title</div></td></tr>
 </tbody>
 </table></div>
 <dl data-floe-part="stats">
 <div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value">1,840</dd></div>
-<div class="card stat good" data-floe-look="panel"><dt>Broken links</dt><dd class="value">120</dd></div>
+<div class="card stat" data-floe-tone="good" data-floe-look="panel"><dt>Broken links</dt><dd class="value">120</dd></div>
 </dl>
 <dl data-floe-part="facts">
 <div class="card" data-floe-look="panel"><dt>Owner</dt><dd>The platform team</dd></div>
-<div class="card" data-floe-look="panel"><dt>State</dt><dd><span class="good" data-floe-part="cell">on track</span></dd></div>
+<div class="card" data-floe-look="panel"><dt>State</dt><dd><span data-floe-tone="good" data-floe-part="cell">on track</span></dd></div>
 </dl>
 <ul data-floe-part="links">
 <li class="card" data-floe-look="panel"><a href="https://example.com/guide">Migration guide</a><p>How the copy works</p><span class="url">https://example.com/guide</span></li>
 </ul>
-<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span class="good" data-floe-part="cell">decided</span></p><div class="title">The wiki moves to the new host</div><p>The old server is out of support in <strong>May</strong>.</p>
+<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span data-floe-tone="good" data-floe-part="cell">decided</span></p><div class="title">The wiki moves to the new host</div><p>The old server is out of support in <strong>May</strong>.</p>
 </div></div>
 </section>
 </main>

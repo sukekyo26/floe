@@ -1,7 +1,4 @@
-:scope, :scope:is(.good, .warn, .bad) { background: var(--surface); --floe-shadow-color: var(--shadow); border-top: 3px solid var(--accent); }
-:scope.good { border-top-color: var(--good); }
-:scope.warn { border-top-color: var(--warn); }
-:scope.bad { border-top-color: var(--bad); }
+:scope { background: var(--surface); --floe-shadow-color: var(--shadow); border-top: 3px solid var(--tone); }
 :scope::before { border-radius: 8px; }
 /* A line's code takes the ground, which the note's white would hide it in */
 :scope code { background: var(--face, var(--bg)); }

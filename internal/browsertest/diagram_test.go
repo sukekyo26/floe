@@ -266,7 +266,7 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 
 	const accent = "rgb(1, 2, 3)"
 	rule := "<style>.dg-tools, .dg-wrap { --accent: " + accent + "; }</style>"
-	stroke := "getComputedStyle(document.querySelector('.dg .box.accent rect')).stroke"
+	stroke := "getComputedStyle(document.querySelector('.dg .box[data-floe-tone=accent] rect')).stroke"
 	for _, page := range []struct{ name, head, body string }{
 		{"before.html", rule, fragment},
 		{"after.html", "", fragment + rule},

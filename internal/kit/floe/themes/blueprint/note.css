@@ -1,13 +1,6 @@
-/* A note of a tone too, whose own background of its tone this takes the place of */
-:scope, :scope:is(.good, .warn, .bad) {
-  background: var(--bp-squares), var(--surface); border-radius: 0;
+/* Squares in place of the ground of its tone */
+:scope {
+  background: var(--bp-squares), var(--surface); border-radius: 0; border: 1.5px dashed var(--tone); --floe-mark: 1.75rem;
 }
-:scope { border: 1.5px dashed var(--accent); --floe-mark: 1.75rem; }
-:scope.good { border-color: var(--good); }
-:scope.warn { border-color: var(--warn); }
-:scope.bad { border-color: var(--bad); }
-:scope::before { background: none; border: 1.5px solid currentColor; color: var(--accent); font-family: var(--mono); }
-:scope.good::before { background: none; color: var(--good); }
-:scope.warn::before { background: none; color: var(--warn); }
-:scope.bad::before { background: none; color: var(--bad); }
-.title { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+:scope::before { background: none; border: 1.5px solid currentColor; color: var(--tone); font-family: var(--mono); }
+.title { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }

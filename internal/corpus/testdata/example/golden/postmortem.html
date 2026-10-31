@@ -111,6 +111,15 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 </style>
 <style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=accent]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=good]) { --tone: var(--good); --tone-soft: var(--good-soft); }
+:where([data-floe-tone=warn]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+:where([data-floe-tone=bad]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+}
+</style>
+<style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
@@ -268,15 +277,12 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope > li::before {
   content: "\200b"; content: "\200b" / ""; anchor-name: --floe-mark; grid-area: mark; align-self: first baseline;
   display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-  overflow: hidden; border-radius: 50%; background: var(--accent);
+  overflow: hidden; border-radius: 50%; background: var(--tone);
 }
 :scope > li:not(:last-child)::after {
   content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
   left: calc(anchor(--floe-mark center) - 1px); width: 2px; background: var(--line);
 }
-:scope > li.good::before { background: var(--good); }
-:scope > li.warn::before { background: var(--warn); }
-:scope > li.bad::before { background: var(--bad); }
 :scope .date {
   grid-area: mark / date; align-self: first baseline; width: 7rem; margin-inline-end: 0.65rem; text-align: right;
   font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
@@ -366,10 +372,7 @@ h2 { font-size: 1.15rem; }
 .side { display: grid; gap: 2rem; }
 .cause { border-left: 4px solid var(--accent); padding-left: 1.1rem; }
 .lessons { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr)); gap: 1rem; }
-.lessons h3 { border-left: 4px solid; padding-left: 0.6rem; font-size: 1rem; }
-.good h3 { border-color: var(--good); }
-.bad h3 { border-color: var(--bad); }
-.lucky h3 { border-color: var(--warn); }
+.lessons h3 { border-left: 4px solid var(--tone); padding-left: 0.6rem; font-size: 1rem; }
 .state { font-size: 0.8rem; font-weight: 700; padding: 0.05rem 0.6rem; border-radius: 99px; white-space: nowrap; background: var(--accent-soft); color: var(--accent); }
 .state.done { background: var(--good-soft); color: var(--good); }
 .state.todo { background: var(--warn-soft); color: var(--warn); }
@@ -395,20 +398,20 @@ h2 { font-size: 1.15rem; }
 </dl></section>
 <div class="split">
 <section><h2 id="timeline">Timeline</h2><ol data-floe-part="timeline">
-<li class="bad"><span class="date">2030-05-14 10:42</span><div><strong>The certificate expires</strong></div></li>
+<li data-floe-tone="bad"><span class="date">2030-05-14 10:42</span><div><strong>The certificate expires</strong></div></li>
 <li><span class="date">10:44</span><div><strong>Checkout errors cross the alert threshold</strong><p>The on-call engineer is paged.</p>
 </div></li>
-<li class="warn"><span class="date">10:58</span><div><strong>Cause found</strong><p>TLS handshake failures in the gateway&#39;s logs point at the certificate.</p>
+<li data-floe-tone="warn"><span class="date">10:58</span><div><strong>Cause found</strong><p>TLS handshake failures in the gateway&#39;s logs point at the certificate.</p>
 </div></li>
 <li><span class="date">11:21</span><div><strong>A new certificate is issued and deployed</strong></div></li>
-<li class="good"><span class="date">11:29</span><div><strong>Checkout recovers</strong></div></li>
+<li data-floe-tone="good"><span class="date">11:29</span><div><strong>Checkout recovers</strong></div></li>
 <li><span class="date">2030-05-15 09:00</span><div><strong>Review held</strong></div></li>
 </ol></section>
 <div class="side">
 <section class="cause"><h2 id="cause">Cause</h2><p>The certificate was issued by hand two years ago and was not in the renewal job&#39;s list, so nothing renewed it.</p>
 <p>The expiry alert existed but went to a mailbox no one reads since the team was reorganised.</p>
 </section>
-<section><h2 id="lessons">Lessons</h2><div class="lessons"><div class="good"><h3 id="went-well">Went well</h3><ul><li>The alert on checkout errors paged within two minutes</li><li>The gateway&#39;s logs named the failing handshake</li></ul></div><div class="bad"><h3 id="went-badly">Went badly</h3><ul><li>Nothing listed the certificates issued by hand</li><li>The expiry warning went to a dead mailbox</li></ul></div><div class="lucky"><h3 id="got-lucky">Got lucky</h3><ul><li>It happened on a weekday morning with the whole team at work</li></ul></div>
+<section><h2 id="lessons">Lessons</h2><div class="lessons"><div data-floe-tone="good"><h3 id="went-well">Went well</h3><ul><li>The alert on checkout errors paged within two minutes</li><li>The gateway&#39;s logs named the failing handshake</li></ul></div><div data-floe-tone="bad"><h3 id="went-badly">Went badly</h3><ul><li>Nothing listed the certificates issued by hand</li><li>The expiry warning went to a dead mailbox</li></ul></div><div data-floe-tone="warn"><h3 id="got-lucky">Got lucky</h3><ul><li>It happened on a weekday morning with the whole team at work</li></ul></div>
 </div></section>
 <section><h2 id="actions">Actions</h2><div data-floe-look="table"><table>
 <thead><tr><th>Action</th><th>Owner</th><th>State</th></tr></thead>

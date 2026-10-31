@@ -1,7 +1,8 @@
-:scope, :scope:is(.good, .warn, .bad) {
+:scope {
   background: none; padding: 0; border-radius: 0; font-size: 0.9rem; font-weight: 800; color: var(--fg);
 }
-:scope::before { content: "●"; content: "●" / ""; margin-right: 0.35em; color: var(--accent); }
-:scope.good::before { content: "✓"; content: "✓" / ""; color: var(--fg); }
-:scope.warn::before { content: "▲"; content: "▲" / ""; }
-:scope.bad::before { content: "×"; content: "×" / ""; color: var(--bad); }
+:scope::before { content: "●"; content: "●" / ""; margin-right: 0.35em; color: var(--tone); }
+/* Its red is read on the surface alone: the good one's mark is black, and the warning's red as accent's */
+:scope[data-floe-tone=good]::before { content: "✓"; content: "✓" / ""; color: var(--fg); }
+:scope[data-floe-tone=warn]::before { content: "▲"; content: "▲" / ""; color: var(--accent); }
+:scope[data-floe-tone=bad]::before { content: "×"; content: "×" / ""; }

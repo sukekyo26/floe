@@ -1,11 +1,4 @@
 :scope {
-  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
 }
-:scope.good { border-color: color-mix(in srgb, var(--good) 20%, transparent); }
-:scope.warn { border-color: color-mix(in srgb, var(--warn) 20%, transparent); }
-:scope.bad { border-color: color-mix(in srgb, var(--bad) 20%, transparent); }
-:scope { --floe-mark: 2.25rem; }
-:scope::before { border-radius: 10px; background: var(--surface); color: var(--accent); }
-:scope.good::before { background: var(--surface); color: var(--good); }
-:scope.warn::before { background: var(--surface); color: var(--warn); }
-:scope.bad::before { background: var(--surface); color: var(--bad); }
+:scope::before { border-radius: 10px; background: var(--surface); color: var(--tone); }

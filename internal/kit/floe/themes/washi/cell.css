@@ -1,7 +1,4 @@
-:scope, :scope:is(.good, .warn, .bad) {
+:scope {
   background: none; border: 2px solid currentColor; border-radius: 3px;
-  letter-spacing: 0.15em; font-weight: 700; transform: rotate(-2deg); color: var(--accent);
+  letter-spacing: 0.15em; font-weight: 700; transform: rotate(-2deg); color: var(--tone);
 }
-:scope.good { color: var(--good); }
-:scope.warn { color: var(--warn); }
-:scope.bad { color: var(--bad); }

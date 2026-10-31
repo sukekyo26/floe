@@ -244,11 +244,11 @@ func (l *layout) addDot(d *dot, at string) {
 	r := dotR(d)
 	who := fmt.Sprintf("dot %s,%s", num(d.CX), num(d.CY))
 	l.marks = append(l.marks, rect{x: d.CX - r, y: d.CY - r, w: r * 2, h: r * 2, what: who, at: at})
-	cls := "dot" + tone(d.Tone)
+	cls := "dot"
 	if d.Hollow {
 		cls += " hollow"
 	}
-	l.boxEls = append(l.boxEls, elem{Kind: "circle", X: d.CX, Y: d.CY, R: r, Class: cls})
+	l.boxEls = append(l.boxEls, elem{Kind: "circle", X: d.CX, Y: d.CY, R: r, Class: cls, Tone: d.Tone})
 }
 
 func (l *layout) addCircle(c *circle, at string) {
@@ -257,7 +257,7 @@ func (l *layout) addCircle(c *circle, at string) {
 		who = "circle " + strconv.Quote(c.Name)
 	}
 	l.areas = append(l.areas, rect{x: c.CX - c.R, y: c.CY - c.R, w: c.R * 2, h: c.R * 2, what: who, at: at})
-	l.areaEls = append(l.areaEls, elem{Kind: "circle", X: c.CX, Y: c.CY, R: c.R, Class: "venn" + toneOr(c.Tone, "accent")})
+	l.areaEls = append(l.areaEls, elem{Kind: "circle", X: c.CX, Y: c.CY, R: c.R, Class: "venn", Tone: c.Tone})
 }
 
 func (l *layout) addRaw(r *raw, at string) {
@@ -275,17 +275,6 @@ func (l *layout) addRaw(r *raw, at string) {
 	default:
 		l.edgeEls = append(l.edgeEls, elem{Kind: "raw", Raw: svg})
 	}
-}
-
-func tone(t string) string {
-	if t == "" {
-		return ""
-	}
-	return " " + t
-}
-
-func toneOr(t, def string) string {
-	return tone(cmpOr(t, def))
 }
 
 func cmpOr(s, def string) string {
@@ -410,7 +399,7 @@ func (l *layout) addBox(b *box, at string) {
 	r.form = outlineOf(r.w, r.h, b.Shape)
 	l.boxes = append(l.boxes, r)
 	kids = append([]elem{r.form.el(r)}, kids...)
-	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "box" + tone(b.Tone), Kids: kids})
+	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "box", Tone: b.Tone, Kids: kids})
 }
 
 func tableWidth(t *table) float64 {
@@ -501,7 +490,7 @@ func (l *layout) addTable(t *table, at string) {
 	}
 	kids = append(kids, outer)
 	l.boxes = append(l.boxes, r)
-	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "table" + tone(t.Tone), Kids: kids})
+	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "table", Tone: t.Tone, Kids: kids})
 }
 
 func iconSize(i *icon) float64 {
@@ -651,7 +640,7 @@ func (l *layout) addBar(b *bar, at string) {
 	r.form = outlineOf(r.w, r.h, "bar")
 	l.boxes = append(l.boxes, r)
 	el := r.form.el(r)
-	el.Class = "bar" + tone(b.Tone)
+	el.Class, el.Tone = "bar", b.Tone
 	l.boxEls = append(l.boxEls, el)
 	if b.Label != nil {
 		l.label(at, b.Label, r.x+r.w+10, b.Y, "start", false, false)

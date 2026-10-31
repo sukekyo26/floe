@@ -111,6 +111,15 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 </style>
 <style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=accent]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=good]) { --tone: var(--good); --tone-soft: var(--good-soft); }
+:where([data-floe-tone=warn]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+:where([data-floe-tone=bad]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+}
+</style>
+<style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
@@ -127,11 +136,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope {
   display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
-  background: var(--accent-soft); color: var(--accent);
+  background: var(--tone-soft); color: var(--tone);
 }
-:scope.good { background: var(--good-soft); color: var(--good); }
-:scope.warn { background: var(--warn-soft); color: var(--warn); }
-:scope.bad { background: var(--bad-soft); color: var(--bad); }
 }
 }
 </style>

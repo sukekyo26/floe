@@ -2,27 +2,21 @@
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; background: var(--accent-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
+  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
 }
 :scope > * { grid-column: text; align-self: first baseline; }
-:scope.good { background: var(--good-soft); }
-:scope.warn { background: var(--warn-soft); }
-:scope.bad { background: var(--bad-soft); }
 :scope::before {
   content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
   display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%;
-  background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
-:scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
-:scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }
-:scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad); }
+:scope[data-floe-tone=good]::before { content: "✓"; content: "✓" / ""; }
+:scope[data-floe-tone=warn]::before { content: "!"; content: "!" / ""; }
+:scope[data-floe-tone=bad]::before { content: "×"; content: "×" / ""; }
 /* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
 :scope > * + * { margin-top: 0.5rem; }
-.title { display: block; font-size: 0.9rem; color: var(--accent); }
-:scope.good .title { color: var(--good); }
-:scope.warn .title { color: var(--warn); }
-:scope.bad .title { color: var(--bad); }
+.title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
 /* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
 :scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }

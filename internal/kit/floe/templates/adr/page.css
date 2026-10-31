@@ -23,6 +23,4 @@ h2 { font-size: 1.1rem; }
 .alternatives .title { font-weight: 700; }
 .alternatives :is(.title, .why) { display: block; }
 .consequences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: 1rem; }
-.consequences h3 { border-left: 4px solid; padding-left: 0.6rem; }
-.good h3 { border-color: var(--good); }
-.bad h3 { border-color: var(--bad); }
+.consequences h3 { border-left: 4px solid var(--tone); padding-left: 0.6rem; }

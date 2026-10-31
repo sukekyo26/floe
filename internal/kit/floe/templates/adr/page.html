@@ -23,8 +23,8 @@
 {{- end}}
 {{- with .Data.consequences}}
 <section><h2>{{word "consequences"}}</h2><div class="consequences">
-{{- with .good}}<div class="good"><h3>{{word "good"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
-{{- with .bad}}<div class="bad"><h3>{{word "bad"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
+{{- with .good}}<div data-floe-tone="good"><h3>{{word "good"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
+{{- with .bad}}<div data-floe-tone="bad"><h3>{{word "bad"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
 </div></section>
 {{- end}}
 {{- range $m := .Data.more}}

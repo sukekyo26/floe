@@ -111,6 +111,15 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 </style>
 <style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=accent]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=good]) { --tone: var(--good); --tone-soft: var(--good-soft); }
+:where([data-floe-tone=warn]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+:where([data-floe-tone=bad]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+}
+</style>
+<style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
@@ -245,9 +254,7 @@ h2 { font-size: 1.1rem; }
 .alternatives .title { font-weight: 700; }
 .alternatives :is(.title, .why) { display: block; }
 .consequences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: 1rem; }
-.consequences h3 { border-left: 4px solid; padding-left: 0.6rem; }
-.good h3 { border-color: var(--good); }
-.bad h3 { border-color: var(--bad); }
+.consequences h3 { border-left: 4px solid var(--tone); padding-left: 0.6rem; }
 }
 }
 </style>
@@ -267,7 +274,7 @@ load balancer, a user sent to the other server is logged out (<a href="/a/incide
 every server reads the same sessions, and a server going down logs nobody out.</p>
 </section>
 <section><h2 id="options-set-aside">Options set aside</h2><ul class="alternatives"><li><span class="title">Sticky sessions at the load balancer</span> <span class="why">A server going down still logs its users out</span></li><li><span class="title">A cache cluster for sessions</span> <span class="why">A new service to run, for <strong>two</strong> servers</span></li></ul></section>
-<section><h2 id="consequences">Consequences</h2><div class="consequences"><div class="good"><h3 id="gains">Gains</h3><ul><li>Any server answers any request</li><li>Sessions outlive a deploy</li></ul></div><div class="bad"><h3 id="costs">Costs</h3><ul><li>One read of the database on every request</li><li>Old sessions need a job to remove them</li></ul></div>
+<section><h2 id="consequences">Consequences</h2><div class="consequences"><div data-floe-tone="good"><h3 id="gains">Gains</h3><ul><li>Any server answers any request</li><li>Sessions outlive a deploy</li></ul></div><div data-floe-tone="bad"><h3 id="costs">Costs</h3><ul><li>One read of the database on every request</li><li>Old sessions need a job to remove them</li></ul></div>
 </div></section>
 <section><h2 id="related-records">Related records</h2>
 <ul data-floe-part="links">

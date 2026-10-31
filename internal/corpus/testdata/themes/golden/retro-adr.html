@@ -126,6 +126,15 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 </style>
 <style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=accent]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=good]) { --tone: var(--good); --tone-soft: var(--good-soft); }
+:where([data-floe-tone=warn]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+:where([data-floe-tone=bad]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+}
+</style>
+<style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *) {
 /* The seventies: three stripes of orange, mustard and olive under headings and on the faces, round fat corners */
@@ -183,9 +192,7 @@ h2 { font-size: 1.1rem; }
 .alternatives .title { font-weight: 700; }
 .alternatives :is(.title, .why) { display: block; }
 .consequences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: 1rem; }
-.consequences h3 { border-left: 4px solid; padding-left: 0.6rem; }
-.good h3 { border-color: var(--good); }
-.bad h3 { border-color: var(--bad); }
+.consequences h3 { border-left: 4px solid var(--tone); padding-left: 0.6rem; }
 }
 }
 </style>

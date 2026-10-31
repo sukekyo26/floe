@@ -25,9 +25,9 @@
 <section class="cause"><h2>{{word "cause"}}</h2>{{.Data.cause}}</section>
 {{- with .Data.lessons}}
 <section><h2>{{word "lessons"}}</h2><div class="lessons">
-{{- with .good}}<div class="good"><h3>{{word "good"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
-{{- with .bad}}<div class="bad"><h3>{{word "bad"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
-{{- with .lucky}}<div class="lucky"><h3>{{word "lucky"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
+{{- with .good}}<div data-floe-tone="good"><h3>{{word "good"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
+{{- with .bad}}<div data-floe-tone="bad"><h3>{{word "bad"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
+{{- with .lucky}}<div data-floe-tone="warn"><h3>{{word "lucky"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
 </div></section>
 {{- end}}
 {{- with .Data.actions}}

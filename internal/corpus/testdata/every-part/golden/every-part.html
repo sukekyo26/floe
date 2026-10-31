@@ -111,6 +111,15 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 </style>
 <style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=accent]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone=good]) { --tone: var(--good); --tone-soft: var(--good-soft); }
+:where([data-floe-tone=warn]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+:where([data-floe-tone=bad]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+}
+</style>
+<style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
@@ -149,10 +158,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @scope ([data-floe-part="bars"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A bar's length is set on it, as a share of the longest */
 :scope { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.6rem 1rem; align-items: center; padding: 1rem 1.3rem; }
-:scope > div { display: contents; color: var(--accent); }
-:scope > div.good { color: var(--good); }
-:scope > div.warn { color: var(--warn); }
-:scope > div.bad { color: var(--bad); }
+:scope > div { display: contents; color: var(--tone); }
 :scope .label { color: var(--fg); font-size: 0.92rem; }
 :scope .track { height: 0.85rem; border-radius: 4px; background: color-mix(in srgb, var(--line) 45%, var(--surface)); }
 :scope .track > span { display: block; height: 100%; min-width: 2px; border-radius: 4px; background: currentColor; }
@@ -170,11 +176,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope {
   display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
-  background: var(--accent-soft); color: var(--accent);
+  background: var(--tone-soft); color: var(--tone);
 }
-:scope.good { background: var(--good-soft); color: var(--good); }
-:scope.warn { background: var(--warn-soft); color: var(--warn); }
-:scope.bad { background: var(--bad-soft); color: var(--bad); }
 }
 }
 </style>
@@ -185,11 +188,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope {
   display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
-  background: var(--accent-soft); color: var(--accent);
+  background: var(--tone-soft); color: var(--tone);
 }
-:scope.good { background: var(--good-soft); color: var(--good); }
-:scope.warn { background: var(--warn-soft); color: var(--warn); }
-:scope.bad { background: var(--bad-soft); color: var(--bad); }
 }
 }
 </style>
@@ -200,11 +200,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope {
   display: inline-block; font-size: 0.78rem; font-weight: 600; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: 999px; white-space: nowrap;
-  background: var(--accent-soft); color: var(--accent);
+  background: var(--tone-soft); color: var(--tone);
 }
-:scope.good { background: var(--good-soft); color: var(--good); }
-:scope.warn { background: var(--warn-soft); color: var(--warn); }
-:scope.bad { background: var(--bad-soft); color: var(--bad); }
 }
 }
 </style>
@@ -698,27 +695,21 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; background: var(--accent-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
+  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
 }
 :scope > * { grid-column: text; align-self: first baseline; }
-:scope.good { background: var(--good-soft); }
-:scope.warn { background: var(--warn-soft); }
-:scope.bad { background: var(--bad-soft); }
 :scope::before {
   content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
   display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%;
-  background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
-:scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
-:scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }
-:scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad); }
+:scope[data-floe-tone=good]::before { content: "✓"; content: "✓" / ""; }
+:scope[data-floe-tone=warn]::before { content: "!"; content: "!" / ""; }
+:scope[data-floe-tone=bad]::before { content: "×"; content: "×" / ""; }
 /* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
 :scope > * + * { margin-top: 0.5rem; }
-.title { display: block; font-size: 0.9rem; color: var(--accent); }
-:scope.good .title { color: var(--good); }
-:scope.warn .title { color: var(--warn); }
-:scope.bad .title { color: var(--bad); }
+.title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
 /* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
 :scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
@@ -733,27 +724,21 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; background: var(--accent-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
+  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: 14px; max-width: var(--text-width);
 }
 :scope > * { grid-column: text; align-self: first baseline; }
-:scope.good { background: var(--good-soft); }
-:scope.warn { background: var(--warn-soft); }
-:scope.bad { background: var(--bad-soft); }
 :scope::before {
   content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
   display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
   border-radius: 50%;
-  background: var(--accent); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
-:scope.good::before { content: "✓"; content: "✓" / ""; background: var(--good); }
-:scope.warn::before { content: "!"; content: "!" / ""; background: var(--warn); }
-:scope.bad::before { content: "×"; content: "×" / ""; background: var(--bad); }
+:scope[data-floe-tone=good]::before { content: "✓"; content: "✓" / ""; }
+:scope[data-floe-tone=warn]::before { content: "!"; content: "!" / ""; }
+:scope[data-floe-tone=bad]::before { content: "×"; content: "×" / ""; }
 /* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
 :scope > * + * { margin-top: 0.5rem; }
-.title { display: block; font-size: 0.9rem; color: var(--accent); }
-:scope.good .title { color: var(--good); }
-:scope.warn .title { color: var(--warn); }
-:scope.bad .title { color: var(--bad); }
+.title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
 /* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
 :scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
@@ -784,10 +769,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope {
   display: grid; gap: 1rem; padding: 1.1rem 1.3rem;
 }
-.bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 1rem; align-items: baseline; color: var(--accent); }
-.bar.good { color: var(--good); }
-.bar.warn { color: var(--warn); }
-.bar.bad { color: var(--bad); }
+.bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 1rem; align-items: baseline; color: var(--tone); }
 .bar .label { color: var(--fg); }
 .bar .count {
   font-family: var(--mono);
@@ -817,8 +799,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the faces of cards, unnumbered */
-:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+/* In the faces of cards, unnumbered; a card without a tone notes in --muted */
+:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); --tone: var(--muted); }
 :scope > div { gap: 0.15rem; }
 .stat dt { font-size: 0.85rem; color: var(--muted); }
 .stat dd { margin: 0; }
@@ -827,11 +809,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
 }
 .stat .unit { margin-left: 0.3em; font-size: 0.5em; font-weight: 400; color: var(--muted); }
-.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
-.stat.accent .note { color: var(--accent); }
-.stat.good .note { color: var(--good); }
-.stat.warn .note { color: var(--warn); }
-.stat.bad .note { color: var(--bad); }
+.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--tone); }
 }
 }
 </style>
@@ -957,15 +935,12 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope > li::before {
   content: "\200b"; content: "\200b" / ""; anchor-name: --floe-mark; grid-area: mark; align-self: first baseline;
   display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-  overflow: hidden; border-radius: 50%; background: var(--accent);
+  overflow: hidden; border-radius: 50%; background: var(--tone);
 }
 :scope > li:not(:last-child)::after {
   content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
   left: calc(anchor(--floe-mark center) - 1px); width: 2px; background: var(--line);
 }
-:scope > li.good::before { background: var(--good); }
-:scope > li.warn::before { background: var(--warn); }
-:scope > li.bad::before { background: var(--bad); }
 :scope .date {
   grid-area: mark / date; align-self: first baseline; width: 7rem; margin-inline-end: 0.65rem; text-align: right;
   font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
@@ -1151,16 +1126,9 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
-  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
 }
-:scope.good { border-color: color-mix(in srgb, var(--good) 20%, transparent); }
-:scope.warn { border-color: color-mix(in srgb, var(--warn) 20%, transparent); }
-:scope.bad { border-color: color-mix(in srgb, var(--bad) 20%, transparent); }
-:scope { --floe-mark: 2.25rem; }
-:scope::before { border-radius: 10px; background: var(--surface); color: var(--accent); }
-:scope.good::before { background: var(--surface); color: var(--good); }
-:scope.warn::before { background: var(--surface); color: var(--warn); }
-:scope.bad::before { background: var(--surface); color: var(--bad); }
+:scope::before { border-radius: 10px; background: var(--surface); color: var(--tone); }
 }
 }
 </style>
@@ -1168,16 +1136,9 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="note"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
-  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: 18px; border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
 }
-:scope.good { border-color: color-mix(in srgb, var(--good) 20%, transparent); }
-:scope.warn { border-color: color-mix(in srgb, var(--warn) 20%, transparent); }
-:scope.bad { border-color: color-mix(in srgb, var(--bad) 20%, transparent); }
-:scope { --floe-mark: 2.25rem; }
-:scope::before { border-radius: 10px; background: var(--surface); color: var(--accent); }
-:scope.good::before { background: var(--surface); color: var(--good); }
-:scope.warn::before { background: var(--surface); color: var(--warn); }
-:scope.bad::before { background: var(--surface); color: var(--bad); }
+:scope::before { border-radius: 10px; background: var(--surface); color: var(--tone); }
 }
 }
 </style>
@@ -1232,11 +1193,11 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <h2 id="at-a-glance">At a glance</h2>
 <dl data-floe-part="stats">
 <div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value">1,840</dd></div>
-<div class="card stat good" data-floe-look="panel"><dt>Broken links</dt><dd class="value">120</dd><dd class="note">-35 since the last check</dd></div>
+<div class="card stat" data-floe-tone="good" data-floe-look="panel"><dt>Broken links</dt><dd class="value">120</dd><dd class="note">-35 since the last check</dd></div>
 <div class="card stat" data-floe-look="panel"><dt>Downtime</dt><dd class="value">0<span class="unit">hours</span></dd></div>
-<div class="card stat accent" data-floe-look="panel"><dt>Spaces</dt><dd class="value">12</dd></div>
-<div class="card stat warn" data-floe-look="panel"><dt>Owners left</dt><dd class="value">3</dd></div>
-<div class="card stat bad" data-floe-look="panel"><dt>Lost pages</dt><dd class="value">1</dd></div>
+<div class="card stat" data-floe-tone="accent" data-floe-look="panel"><dt>Spaces</dt><dd class="value">12</dd></div>
+<div class="card stat" data-floe-tone="warn" data-floe-look="panel"><dt>Owners left</dt><dd class="value">3</dd></div>
+<div class="card stat" data-floe-tone="bad" data-floe-look="panel"><dt>Lost pages</dt><dd class="value">1</dd></div>
 </dl>
 <div data-floe-part="compare"><table>
 <thead><tr><th></th><th scope="col">Now</th><th scope="col" class="after">After the move</th></tr></thead>
@@ -1721,22 +1682,22 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div data-floe-part="table"><table>
 <thead><tr><th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col" class="num">Pages</th><th scope="col">What we do (<a href="https://example.com/linkcheck">a check</a>, <code>linkcheck</code>)</th><th scope="col">State</th></tr></thead>
 <tbody>
-<tr><td>Broken links</td><td>High</td><td class="num">120</td><td>A link check after the copy</td><td><span class="warn" data-floe-part="cell">watching</span></td></tr>
-<tr><td>Lost attachments</td><td>Low</td><td class="num">8</td><td>Keep the old host for <strong>a month</strong></td><td><span class="good" data-floe-part="cell">covered</span></td></tr>
+<tr><td>Broken links</td><td>High</td><td class="num">120</td><td>A link check after the copy</td><td><span data-floe-tone="warn" data-floe-part="cell">watching</span></td></tr>
+<tr><td>Lost attachments</td><td>Low</td><td class="num">8</td><td>Keep the old host for <strong>a month</strong></td><td><span data-floe-tone="good" data-floe-part="cell">covered</span></td></tr>
 <tr><td>Slow search</td><td>Unknown</td><td class="num">-</td><td>Rebuild the index on <code>Sunday</code></td><td><span data-floe-part="cell">open</span></td></tr>
-<tr><td>New host</td><td>Low</td><td class="num">0</td><td>Nothing</td><td><span class="accent" data-floe-part="cell">ready</span></td></tr>
+<tr><td>New host</td><td>Low</td><td class="num">0</td><td>Nothing</td><td><span data-floe-tone="accent" data-floe-part="cell">ready</span></td></tr>
 </tbody>
 </table></div>
 <div data-floe-part="table"><table>
 <thead><tr><th scope="col">Change</th><th scope="col" class="num">Size</th><th scope="col">Note</th><th scope="col">Urgency</th></tr></thead>
 <tbody>
-<tr><td>A word of the column</td><td class="num">1</td><td>mid</td><td><span class="warn" data-floe-part="cell">mid</span></td></tr>
-<tr><td>Its pill as an object</td><td class="num">2</td><td>a note</td><td><span class="warn" data-floe-part="cell">mid</span></td></tr>
+<tr><td>A word of the column</td><td class="num">1</td><td>mid</td><td><span data-floe-tone="warn" data-floe-part="cell">mid</span></td></tr>
+<tr><td>Its pill as an object</td><td class="num">2</td><td>a note</td><td><span data-floe-tone="warn" data-floe-part="cell">mid</span></td></tr>
 <tr><td>Holding a word</td><td class="num">mid</td><td>mid-week</td><td>middle</td></tr>
 <tr><td>After a space</td><td class="num">3</td><td>high</td><td>high</td></tr>
-<tr><td>Its tone</td><td class="num">6</td><td>a note</td><td><span class="bad" data-floe-part="cell">high</span></td></tr>
-<tr><td>Changed by Markdown and HTML</td><td class="num">4</td><td><strong>done</strong></td><td><span class="good" data-floe-part="cell">**done**</span></td></tr>
-<tr><td>An ampersand</td><td class="num">5</td><td>A&amp;B</td><td><span class="accent" data-floe-part="cell">A&amp;B</span></td></tr>
+<tr><td>Its tone</td><td class="num">6</td><td>a note</td><td><span data-floe-tone="bad" data-floe-part="cell">high</span></td></tr>
+<tr><td>Changed by Markdown and HTML</td><td class="num">4</td><td><strong>done</strong></td><td><span data-floe-tone="good" data-floe-part="cell">**done**</span></td></tr>
+<tr><td>An ampersand</td><td class="num">5</td><td>A&amp;B</td><td><span data-floe-tone="accent" data-floe-part="cell">A&amp;B</span></td></tr>
 </tbody>
 </table></div>
 <div data-floe-part="table"><table>
@@ -1745,14 +1706,14 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <tr><td>mid</td></tr>
 </tbody>
 </table></div>
-<div class="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes; <a href="https://example.com/plan">the plan</a> and <code>freeze.sh</code> say when.</p>
+<div data-floe-tone="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes; <a href="https://example.com/plan">the plan</a> and <code>freeze.sh</code> say when.</p>
 <blockquote>
 <p>Saved drafts are lost too: <a href="https://example.com/drafts">the drafts</a> and <code>drafts.sh</code>.</p>
 </blockquote>
 </div>
-<div class="accent" data-floe-part="note"><p>The new host is ready; <a href="https://example.com/host">the host</a> and <code>host.sh</code>.</p>
+<div data-floe-tone="accent" data-floe-part="note"><p>The new host is ready; <a href="https://example.com/host">the host</a> and <code>host.sh</code>.</p>
 </div>
-<div class="bad" data-floe-part="note"><p>Attachments over 1 MB failed; <a href="https://example.com/failed">the list</a> names each, and <code>retry.sh</code> sends them again.</p>
+<div data-floe-tone="bad" data-floe-part="note"><p>Attachments over 1 MB failed; <a href="https://example.com/failed">the list</a> names each, and <code>retry.sh</code> sends them again.</p>
 </div>
 <div data-floe-part="note"><p>The banner goes up on Friday; <a href="https://example.com/banner">the banner</a> and <code>banner.sh</code>.</p>
 </div>
@@ -1763,29 +1724,29 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <section>
 <h2 id="progress">Progress</h2>
 <div data-floe-part="bars">
-<div class="good"><span class="label">Copied</span><span class="track"><span style="width: 100%"></span></span><span class="value">1,840</span></div>
+<div data-floe-tone="good"><span class="label">Copied</span><span class="track"><span style="width: 100%"></span></span><span class="value">1,840</span></div>
 <div><span class="label">Checked</span><span class="track"><span style="width: 65.21739130434783%"></span></span><span class="value">1,200</span></div>
-<div class="accent"><span class="label">Moved</span><span class="track"><span style="width: 48.91304347826087%"></span></span><span class="value">900</span></div>
-<div class="warn"><span class="label">Pending</span><span class="track"><span style="width: 21.73913043478261%"></span></span><span class="value">400</span></div>
-<div class="bad"><span class="label">Broken</span><span class="track"><span style="width: 6.521739130434782%"></span></span><span class="value">120</span></div>
+<div data-floe-tone="accent"><span class="label">Moved</span><span class="track"><span style="width: 48.91304347826087%"></span></span><span class="value">900</span></div>
+<div data-floe-tone="warn"><span class="label">Pending</span><span class="track"><span style="width: 21.73913043478261%"></span></span><span class="value">400</span></div>
+<div data-floe-tone="bad"><span class="label">Broken</span><span class="track"><span style="width: 6.521739130434782%"></span></span><span class="value">120</span></div>
 </div>
 <div data-floe-part="progress">
 <label class="bar"><span class="label">Pages</span><span class="count">1200 / 1840</span><progress value="1200" max="1840">1200 / 1840</progress></label>
-<label class="bar good"><span class="label">Images</span><span class="count">30 / 30</span><progress value="30" max="30">30 / 30</progress></label>
-<label class="bar accent"><span class="label">Spaces</span><span class="count">4 / 12</span><progress value="4" max="12">4 / 12</progress></label>
-<label class="bar warn"><span class="label">Owners</span><span class="count">1 / 4</span><progress value="1" max="4">1 / 4</progress></label>
-<label class="bar bad"><span class="label">Links</span><span class="count">10 / 120</span><progress value="10" max="120">10 / 120</progress></label>
+<label class="bar" data-floe-tone="good"><span class="label">Images</span><span class="count">30 / 30</span><progress value="30" max="30">30 / 30</progress></label>
+<label class="bar" data-floe-tone="accent"><span class="label">Spaces</span><span class="count">4 / 12</span><progress value="4" max="12">4 / 12</progress></label>
+<label class="bar" data-floe-tone="warn"><span class="label">Owners</span><span class="count">1 / 4</span><progress value="1" max="4">1 / 4</progress></label>
+<label class="bar" data-floe-tone="bad"><span class="label">Links</span><span class="count">10 / 120</span><progress value="10" max="120">10 / 120</progress></label>
 </div>
 <ul data-floe-part="checklist">
 <li class="done">Freeze edits</li>
 <li>Copy the <strong>attachments</strong></li>
 </ul>
 <ol data-floe-part="timeline">
-<li class="warn"><span class="date">2030-04-05</span><div><strong>Freeze</strong><p>Edits stop.</p>
+<li data-floe-tone="warn"><span class="date">2030-04-05</span><div><strong>Freeze</strong><p>Edits stop.</p>
 </div></li>
-<li class="accent"><span class="date">2030-04-06</span><div><strong>Copy</strong></div></li>
-<li class="good"><span class="date">2030-04-07</span><div><strong>Open</strong></div></li>
-<li class="bad"><span class="date">2030-04-08</span><div><strong>Rollback window ends</strong></div></li>
+<li data-floe-tone="accent"><span class="date">2030-04-06</span><div><strong>Copy</strong></div></li>
+<li data-floe-tone="good"><span class="date">2030-04-07</span><div><strong>Open</strong></div></li>
+<li data-floe-tone="bad"><span class="date">2030-04-08</span><div><strong>Rollback window ends</strong></div></li>
 <li><span class="date">2030-04-30</span><div><strong>Old server off</strong></div></li>
 </ol>
 </section>
@@ -1801,14 +1762,14 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </ul>
 <ul class="points"><li class="pro">Short freezes</li><li class="con">Links break between spaces</li><li class="con">Twice the work</li></ul></div>
 </div>
-<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span class="good" data-floe-part="cell">decided</span><span>2030-03-28</span></p><div class="title">The wiki moves to the new host</div><p>The old server is out of support in <strong>May</strong>.</p>
+<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span data-floe-tone="good" data-floe-part="cell">decided</span><span>2030-03-28</span></p><div class="title">The wiki moves to the new host</div><p>The old server is out of support in <strong>May</strong>.</p>
 <p class="set-aside">Set aside</p><ul class="rejected"><li>Stay on the old server</li><li>Move to a hosted wiki</li></ul></div></div>
 </section>
 <section>
 <h2 id="reference">Reference</h2>
 <dl data-floe-part="facts">
 <div class="card" data-floe-look="panel"><dt>Owner</dt><dd>The platform team</dd></div>
-<div class="card" data-floe-look="panel"><dt>State</dt><dd><span class="good" data-floe-part="cell">on track</span></dd></div>
+<div class="card" data-floe-look="panel"><dt>State</dt><dd><span data-floe-tone="good" data-floe-part="cell">on track</span></dd></div>
 </dl>
 <div data-floe-part="fields"><table>
 <tbody>
@@ -1818,13 +1779,13 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </tbody>
 </table></div>
 <dl data-floe-part="entries">
-<div><dt><code>export</code></dt><dd class="tags"><span>Runs nightly</span><span><code>wiki.conf</code></span><span><span data-floe-part="cell">on track</span></span><span><span class="good" data-floe-part="cell">done</span></span></dd><dd class="text"><p>Writes every page as Markdown, with its history, into <code>pages/</code>.</p>
+<div><dt><code>export</code></dt><dd class="tags"><span>Runs nightly</span><span><code>wiki.conf</code></span><span><span data-floe-part="cell">on track</span></span><span><span data-floe-tone="good" data-floe-part="cell">done</span></span></dd><dd class="text"><p>Writes every page as Markdown, with its history, into <code>pages/</code>.</p>
 <ul>
 <li>Pages under <strong>drafts</strong> are left out</li>
 <li>Images go to <code>pages/images/</code></li>
 </ul>
 </dd></div>
-<div><dt>Search index</dt><dd class="tags"><span><span class="warn" data-floe-part="cell">by hand</span></span><span><span class="bad" data-floe-part="cell">blocked</span></span><span><span class="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p>
+<div><dt>Search index</dt><dd class="tags"><span><span data-floe-tone="warn" data-floe-part="cell">by hand</span></span><span><span data-floe-tone="bad" data-floe-part="cell">blocked</span></span><span><span data-floe-tone="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p>
 </dd></div>
 <div><dt>Old links</dt></div>
 </dl>
@@ -1844,8 +1805,8 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </ul>
 <div data-floe-part="findings"><table>
 <tbody>
-<tr><td class="level"><span class="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">wiki.conf:3</code><span class="status"><span class="good" data-floe-part="cell">fixed</span></span></div><div>The banner names the old host</div></td></tr>
-<tr><td class="level"><span class="warn" data-floe-part="cell">should</span></td><td><div>The search index is rebuilt by hand</div></td></tr>
+<tr><td class="level"><span data-floe-tone="bad" data-floe-part="cell">must</span></td><td><div class="head"><code class="at">wiki.conf:3</code><span class="status"><span data-floe-tone="good" data-floe-part="cell">fixed</span></span></div><div>The banner names the old host</div></td></tr>
+<tr><td class="level"><span data-floe-tone="warn" data-floe-part="cell">should</span></td><td><div>The search index is rebuilt by hand</div></td></tr>
 <tr><td class="level"><span class="nit" data-floe-part="cell">nit</span></td><td><div>Two pages have the same title</div><div class="why">Left as the owners asked</div></td></tr>
 </tbody>
 </table></div>
@@ -2195,7 +2156,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><dl data-floe-part="entries">
 <div><dt>New window</dt><dd class="tags"><span>PowerShell 7</span></dd><dd class="text"><p>The variable holds in that window alone.</p>
 </dd></div>
-</dl><div class="good" data-floe-part="note"><p>Run it in a new window; <a href="https://example.com/steps">the steps</a> and <code>run.sh</code>.</p>
+</dl><div data-floe-tone="good" data-floe-part="note"><p>Run it in a new window; <a href="https://example.com/steps">the steps</a> and <code>run.sh</code>.</p>
 </div><div data-floe-part="table"><table>
 <thead><tr><th scope="col">Shell</th><th scope="col" class="num">Lines</th></tr></thead>
 <tbody>
@@ -2203,7 +2164,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </tbody>
 </table></div></div>
 </form>
-<details><summary>What the freeze covers</summary><p>Edits, <span class="good" data-floe-part="cell">comments</span> and uploads.</p></details>
+<details><summary>What the freeze covers</summary><p>Edits, <span data-floe-tone="good" data-floe-part="cell">comments</span> and uploads.</p></details>
 <div></div><script>{const floeScript = function (el, data) {
   el.textContent = `${data.pages} pages`;
 }
