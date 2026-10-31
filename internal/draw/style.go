@@ -58,8 +58,9 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 			order = append(order, fmt.Sprintf("%s.depth%d", kind, d))
 		}
 	}
-	sheets = append(sheets, Sheet("", []byte("@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;\n@layer "+
-		strings.Join(order, ", ")+";\n@layer floe.base {\n"+string(k.BaseCSS())+"}\n")))
+	layers := "@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;\n@layer " +
+		strings.Join(order, ", ") + ";\n@layer floe.base {\n" + string(k.BaseCSS()) + "}\n"
+	sheets = append(sheets, Sheet("", []byte(layers)))
 	sheet := func(layer string, css []byte) {
 		if len(css) != 0 {
 			sheets = append(sheets, Sheet(layer, css))
@@ -100,11 +101,11 @@ func pageScoped(css []byte) []byte {
 	if len(css) == 0 {
 		return nil
 	}
-	return Scoped("(:root) to ([data-floe-part] > *)", css)
+	return InScope("(:root) to ([data-floe-part] > *)", css)
 }
 
-// Scoped is css in @scope with the prelude scope, its root :scope.
-func Scoped(scope string, css []byte) []byte {
+// InScope is css in @scope with the prelude scope, its root :scope.
+func InScope(scope string, css []byte) []byte {
 	return []byte("@scope " + scope + " {\n" + string(css) + "}\n")
 }
 

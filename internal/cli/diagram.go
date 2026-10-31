@@ -140,7 +140,7 @@ func diagramAssets() (string, error) {
 	}
 	// The page around the diagrams keeps its own palette. In a layer, so that the page's rules for the diagrams win:
 	// out of one, the palette's :scope, as near as can be, would win over those as specific.
-	palette := draw.Sheet("floe.palette", draw.Scoped("("+diagram.Roots+")", t.Palette()))
+	palette := draw.Sheet("floe.palette", draw.InScope("("+diagram.Roots+")", t.Palette()))
 	return script + "\n<style>" + palette + "</style>\n<style>" + draw.Sheet("", p.CSS()) + "</style>", nil
 }
 
