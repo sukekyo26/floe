@@ -8,6 +8,9 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：パレットの角の丸さの変数 `--radius`・`--radius-small`・`--radius-pill`（どれも
+  1 つの長さ）。箱、箱の中の小さな升、札の丸さ。部品・テンプレート・floe の base・テーマが
+  読み、テーマは丸さをパレットだけで決める。
 - 追加：静かな tone `muted`（`--muted-soft` の地に `--muted` の色）。tone を書ける
   所（note、pill、表の pills、bars、progress、stats、timeline、図）のどこでも書ける。
   adr の deprecated・superseded、postmortem の重さ low、fields の型はこの色で描く。
@@ -178,6 +181,14 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：部品とテンプレートの角の丸さをパレットのものに。default の箱は 20px（note・
+  code・引用は 18px だった）、panel の縁に沿う面は箱と同心の角（cards のカード 8px、
+  部品 code の中の code 14px）。箱の中の小さな升（キー・棒・画像・図の枠・fields の型・
+  行の中の code とその言葉・links と cards の印）は 6px で、blueprint・brutal・swiss・
+  washi では四角、editorial では 3px。タブの名前は札の形（default は丸く、app・ink は
+  6px）。progress の棒と handoff・runbook の札はテーマの札の形、runbook の戻す手順の
+  囲みはテーマの箱の形。notebook の note と code は panel と同じ手書きの角。角の丸い
+  四角に描く note の印は 6px。
 - 変更：組み込みのテンプレートの状態の札と注意を、部品 cell・note として描く。adr の
   状態、postmortem の重さと行動の状態、handoff の種類と状態は pill に、adr の置き換えた
   記録（頭の後ろに移した）、runbook の注意と失敗したときは注記になり、テーマの pill と
