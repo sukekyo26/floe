@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -1074,5 +1075,168 @@ func TestGraphShapes(t *testing.T) {
 	}
 	if len(r.problems) > 0 {
 		t.Errorf("right: %v", r.problems)
+	}
+}
+
+// laidSpec is the diagram of src read and laid out in lang, and checked.
+func laidSpec(t *testing.T, src string, lang i18n.Lang) *layout {
+	t.Helper()
+	_, v, err := yamlpos.ParseMap("s.yaml", []byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := read(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := newLayout(s, Options{Lang: lang, Icons: NoIcons{Err: nil}, Seq: 1})
+	l.check()
+	if l.failure != nil || len(l.problems) > 0 {
+		t.Fatalf("%v %v", l.failure, l.problems)
+	}
+	return l
+}
+
+// labelled is g with label text on the edges ks.
+func labelled(g *graph, text string, ks ...int) *graph {
+	for _, k := range ks {
+		g.Edges[k].Label = Text{"en": text}
+	}
+	return g
+}
+
+// A graph's labels stand beside their runs, from the box their edges are written from: right of a run down, else
+// left with the text set toward it; below a run across, else above; a run up or left from its end nearer that box.
+// With no room beside an edge, room is made, its edges as straight as with no label. A label in another language
+// takes the room of the widest, its text by its run; a graph's label has no background, one by hand has. A label
+// left of the boxes moves the graph right, its left at x, and a label of one group stands clear of the next.
+func TestGraphLabels(t *testing.T) {
+	t.Parallel()
+
+	g2 := func(dir string) *graph {
+		g := labelled(graphOf([]string{"write", "check", "show"}, "write>check", "check>show", "check>write"), "yes", 1)
+		g.Edges[2].Label, g.Direction = Text{"en": "no"}, dir
+		return g
+	}
+	for _, c := range []struct {
+		name, dir string
+		k         int
+		side      int // the axis the label stands a column past its first run on: 0 right of it, 1 below it
+	}{
+		{"down, right of check→show", "", 1, 0},
+		{"down, up check→write, by check", "", 2, 0},
+		{"right, below check→show", "right", 1, 1},
+		{"right, left along check→write, by check", "right", 2, 1},
+	} {
+		l := laid(g2(c.dir))
+		r, s := l.labels[c.k-1], l.paths[c.k].segs[0]
+		along := 1 - c.side
+		near := min(math.Abs(r.lo(along)-s[along]), math.Abs(r.lo(along)+r.size(along)-s[along]))
+		if r.lo(c.side) != s[c.side]+column || near >= column/2 {
+			t.Errorf("%s: label at %v,%v, its first run %v", c.name, r.x, r.y, s)
+		}
+	}
+
+	// Twenty edges side by side, the first labelled: no room right of it, so left, set toward it; the graph moves
+	// right as far as the label stands left of x.
+	par := labelled(graphOf([]string{"a", "b"}, slices.Repeat([]string{"a>b"}, 20)...), "L0", 0)
+	o, _ := readGraph(par, "#/parts/0/graph") //nolint:errcheck // every name is a box's
+	items, err := o.items()
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := items[2].p.Edge
+	run := e.From.Point[0]
+	if left := e.At[0] + 5 - labelWidth(e.Label, false); e.anchor != "end" || e.At[0] != run-column-5 || left < par.X || left >= par.X+column {
+		t.Errorf("parallel: label at %v (%s), run at %v, x %v", e.At, e.anchor, run, par.X)
+	}
+
+	// Back up four ranks: the label next to d, which it is written from.
+	back := labelled(graphOf([]string{"a", "b", "c", "d"}, "a>b", "b>c", "c>d", "d>a"), "no", 3)
+	for _, dir := range []string{"", "right"} {
+		back.Direction = dir
+		l := laid(back)
+		d, r := boxIn(l, "d"), l.labels[0]
+		if dir == "" && r.y+r.h != d.y-2 || dir == "right" && r.x+r.w != d.x-2 {
+			t.Errorf("%q: d→a's label at %v,%v, d at %v,%v", dir, r.x, r.y, d.x, d.y)
+		}
+	}
+
+	// Three edges between two boxes, the middle one labelled: no room between its neighbours a column off, so room
+	// is made, and every edge runs straight.
+	three := labelled(graphOf([]string{"a", "b"}, "a>b", "a>b", "a>b"), "label", 1)
+	l := laid(three)
+	for _, p := range l.paths {
+		if len(p.segs) != 1 {
+			t.Errorf("three: %s turns: %v", p.what, p.segs)
+		}
+	}
+	if !beside(l.labels[0], l.paths[1].segs[0]) {
+		t.Errorf("three: label at %v,%v, not beside %v", l.labels[0].x, l.labels[0].y, l.paths[1].segs[0])
+	}
+
+	// Two groups: the first's label reaching right, the second past it.
+	two := labelled(graphOf([]string{"a", "b", "c", "d"}, "a>b", "c>d"), strings.Repeat("w", 30), 0)
+	l = laid(two)
+	if c := boxIn(l, "c"); c.x <= l.labels[0].x+l.labels[0].w {
+		t.Errorf("two groups: c at %v, the label of a→b reaching %v", c.x, l.labels[0].x+l.labels[0].w)
+	}
+
+	const src = `title: t
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: write, rows: [Write the data] }
+        - box: { name: check, shape: hex, rows: ["Checks pass?"] }
+        - box: { name: show, rows: [Show the page] }
+      edges:
+        - { from: write, to: check }
+        - { from: check, to: show, label: { en: "yes", ja: データファイルと画像の写しを保存する } }
+        - { from: check, to: write, label: "no" }
+  - edge: { from: [400, 20], to: [400, 200], label: by hand }
+`
+	en, ja := laidSpec(t, src, "en"), laidSpec(t, src, "ja")
+	if fmt.Sprint(en.boxes, en.paths, en.labels) != fmt.Sprint(ja.boxes, ja.paths, ja.labels) {
+		t.Errorf("en and ja lay out apart:\n%v\n%v", en.inspect(), ja.inspect())
+	}
+	bg := 0
+	for _, el := range en.labelEls {
+		switch {
+		case el.Class == "label-bg":
+			bg++
+		case el.Kind == "text" && el.Text["en"] == "yes":
+			if x := en.paths[1].segs[0][0]; el.Anchor == "start" && el.X != x+column+5 || el.Anchor == "end" && el.X != x-column-5 {
+				t.Errorf("yes drawn at %v (%s), its run at %v", el.X, el.Anchor, x)
+			}
+		}
+	}
+	if bg != 1 {
+		t.Errorf("%d labels on a background, want the one by hand", bg)
+	}
+}
+
+// A label keeps clear of where an edge written by hand leaves a box of the graph, the middle of a side the graph's
+// edges do not use; and where no run of its edge takes room for it, it is floe's failure.
+func TestGraphLabelRoom(t *testing.T) {
+	t.Parallel()
+
+	box := rect{x: 0, y: 0, w: 48, h: 30, what: "", at: "", form: outline{hex: 0, radius: 0}} //nolint:exhaustruct_v5 // a box
+	d := &drawing{right: false, boxes: map[int]rect{0: box}, shapes: map[int]string{0: ""},
+		routes: map[int][][2]float64{0: {{60, -100}, {60, 200}}}, ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{},
+		spots: map[int]spot{}}
+	if !d.place(0, 20) {
+		t.Fatal("no room by a long run")
+	}
+	if r, _ := d.rect(0); r.y <= box.y+box.h/2 && box.y+box.h/2 <= r.y+r.h {
+		t.Errorf("label at %v,%v, across the middle of the box's right side at %v", r.x, r.y, box.y+box.h/2)
+	}
+
+	short := &drawing{right: false, boxes: map[int]rect{0: {x: 100, y: 0, w: 48, h: 60, what: "", at: ""}}, //nolint:exhaustruct_v5 // a box
+		shapes: map[int]string{0: ""}, routes: map[int][][2]float64{0: {{10, 10}, {10, 20}}}, ends: map[int][2]int{0: {0, 0}},
+		back: map[int]bool{}, spots: map[int]spot{}}
+	if short.place(0, 20) {
+		t.Error("a label placed by a run too short for it, inside a box's span, where no cut makes room")
 	}
 }
