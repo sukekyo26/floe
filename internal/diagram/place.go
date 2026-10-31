@@ -64,7 +64,9 @@ func (gr *group) place(right bool) (trips, pulls int) {
 // boxes it leads to: the points first, so that an edge passing ranks runs straight, then boxes of one link in and
 // one out, then the rest as written. It stops when nothing moves, or after maxPulls, and returns the pulls taken.
 func (gr *group) pull() int {
-	for pull := 1; pull <= maxPulls; pull++ {
+	pull := 0
+	for pull < maxPulls {
+		pull++
 		moved := false
 		down := pull%2 == 1
 		for k := range gr.ranks {
@@ -79,10 +81,10 @@ func (gr *group) pull() int {
 			}
 		}
 		if !moved {
-			return pull
+			break
 		}
 	}
-	return maxPulls
+	return pull
 }
 
 func (gr *group) pullOrder(r int) []int {
