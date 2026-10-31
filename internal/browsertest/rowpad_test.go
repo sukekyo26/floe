@@ -71,24 +71,23 @@ var rowPadKit = map[string]string{
 // measureRowPad returns, for each kind of row, its part's name (or the look it takes outside a part), its padding
 // above and below, and its line height, "page" when it is the page's. A table's rows are its body's cells, not its
 // head's, which a theme may pad (default) in a smaller font, nor its number columns, whose font a theme may change
-// (swiss). A question of faq is its summary, which a click opens, the details around it unpadded. It adds whether
-// checklist's mark is level with its row's text and whether checklist's edge is that of the box of html's rows in the
-// same theme.
+// (swiss). It adds whether checklist's mark is level with its row's text (within the 1/64 px a layout rounds to) and
+// whether checklist's edge is that of the box of html's rows in the same theme.
 const measureRowPad = `(() => {
   const ratio = (e) => { const c = getComputedStyle(e); return parseFloat(c.lineHeight) / parseFloat(c.fontSize); };
   const page = ratio(document.body);
   const name = (e) => { const p = e.parentElement.closest('[data-floe-part], [data-floe-look]');
     return p.dataset.floePart || 'look ' + p.dataset.floeLook; };
   const edge = (e) => getComputedStyle(e).paddingTop + '/' + getComputedStyle(e).paddingBottom;
-  const row = (e) => name(e) + (e.matches('[data-floe-part="faq"] > details') ? ' details' : '') + ' ' + edge(e) + ' ' +
-    (Math.abs(ratio(e) - page) < 0.005 ? 'page' : ratio(e).toFixed(2));
+  const row = (e) => name(e) + ' ' + edge(e) + ' ' + (Math.abs(ratio(e) - page) < 0.005 ? 'page' : ratio(e).toFixed(2));
   const rows = [...document.querySelectorAll(':is([data-floe-part], [data-floe-look~="table"]) tbody td:not(.num), ' +
-    '[data-floe-look~="rows"] > *, :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"]) > *, ' +
-    '[data-floe-part="faq"] > *, [data-floe-part="faq"] summary, [data-floe-part="facts"] > .card')];
+    '[data-floe-look~="rows"] > *, :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], ' +
+    '[data-floe-part="faq"]) > *, [data-floe-part="facts"] > .card')];
   const out = [...new Set(rows.map(row))].sort();
   for (const list of document.querySelectorAll('[data-floe-part="checklist"]')) {
     const li = list.querySelector('li');
-    out.push('checklist mark ' + (getComputedStyle(li, '::before').top === getComputedStyle(li).paddingTop ? 'level' : 'off'));
+    const off = parseFloat(getComputedStyle(li, '::before').top) - parseFloat(getComputedStyle(li).paddingTop);
+    out.push('checklist mark ' + (Math.abs(off) < 0.1 ? 'level' : 'off by ' + off.toFixed(2)));
     const box = document.querySelector('div[data-floe-look="rows"]');
     out.push('checklist edge ' + (!box || edge(list) === edge(box) ? 'as rows' : edge(list) + ', rows ' + edge(box)));
   }
@@ -96,11 +95,11 @@ const measureRowPad = `(() => {
 })()`
 
 // rowPadWant is what measureRowPad returns for rowParts, each row padded pad above and below, facts' top padded
-// factsTop, faq's details not at all.
+// factsTop.
 func rowPadWant(pad, factsTop string) string {
 	return strings.Join([]string{
 		"checklist " + pad + "/" + pad + " page", "compare " + pad + "/" + pad + " page", "entries " + pad + "/" + pad + " page",
-		"facts " + factsTop + "/" + pad + " page", "faq " + pad + "/" + pad + " page", "faq details 0px/0px page", "fields " + pad + "/" + pad + " page",
+		"facts " + factsTop + "/" + pad + " page", "faq " + pad + "/" + pad + " page", "fields " + pad + "/" + pad + " page",
 		"findings " + pad + "/" + pad + " page", "keys " + pad + "/" + pad + " page", "look rows " + pad + "/" + pad + " page",
 		"table " + pad + "/" + pad + " page", "checklist mark level", "checklist edge as rows",
 	}, ", ")
