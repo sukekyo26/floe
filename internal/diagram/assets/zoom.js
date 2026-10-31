@@ -160,6 +160,7 @@ function zoomable({ words, wrap: wrapClass, tools: toolsClass }) {
       render();
     });
   };
+  // LIMIT: a diagram in a shadow root is not found, and gets no toolbar or zoom; look in the shadow roots if one is asked for
   const init = () => document.querySelectorAll('.' + wrapClass).forEach(setup);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
