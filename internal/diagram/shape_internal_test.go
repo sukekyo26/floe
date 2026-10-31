@@ -51,6 +51,8 @@ func TestOutline(t *testing.T) {
 		{"bar: into its corner", boxOf(100, 463, 200, 14, "bar"), seg{90, 455, 103, 466}, true},
 		{"tall pill: past its elliptic corner", boxOf(400, 20, 60, 120, "pill"), seg{390, 15, 405, 30}, false},
 		{"tall pill: into it", boxOf(400, 20, 60, 120, "pill"), seg{390, 15, 415, 60}, true},
+		// Inside the drawn ellipse by less than 1, though inside a circle of the corner's width.
+		{"tall pill: within 1 of its elliptic side", boxOf(400, 20, 60, 120, "pill"), seg{395, 60, 402.3, 60}, false},
 		{"icon: past its corner, which is square", rect{100, 300, 48, 48, "", "", sharp}, seg{90, 290, 102, 302}, true},
 		{"2 by 2: no room 1 in", boxOf(100, 100, 2, 2, "pill"), seg{90, 101, 110, 101}, false},
 	} {
@@ -136,7 +138,8 @@ func toEllipse(u, v, a, b float64) float64 {
 
 // Random runs near each shape agree with points along them: a run with a point deeper than 1 in is crossedBy (none
 // missed). A run crossedBy with no point so deep, checked again closely, is counted: none for a shape of circular
-// corners or sides; for an elliptic corner, measured 1 in by an ellipse of radii 1 less (a LIMIT), some may be.
+// corners or sides; for an elliptic corner, measured 1 in by an ellipse of radii 1 less (a LIMIT), some may be, but
+// each with a point inside the shape drawn.
 func TestOutlineRandom(t *testing.T) {
 	t.Parallel()
 
@@ -177,6 +180,9 @@ func TestOutlineRandom(t *testing.T) {
 			}
 			if got && !deep(s, 500, 1-1e-6) && !deep(s, 50000, 1-1e-6) {
 				over++
+				if !deep(s, 50000, 0) {
+					t.Errorf("%s: %v is crossedBy with no point inside the shape drawn", c.name, s)
+				}
 			}
 		}
 		if over > 0 && !c.elliptic {
