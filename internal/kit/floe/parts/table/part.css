@@ -9,7 +9,7 @@
 :scope th.num { min-width: 6em; }
 :scope thead th {
   font-size: 0.8rem; font-weight: 600; color: var(--muted);
-  background: color-mix(in srgb, var(--line) 40%, var(--surface));
+  background: var(--muted-soft);
 }
 /* The rule between rows; a theme sets --table-rule alone, none for no rule */
 :scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }

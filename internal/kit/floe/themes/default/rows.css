@@ -1,5 +1,5 @@
 :scope { padding: var(--default-pad); }
-:scope > * { background: var(--surface); }
+:scope > * { background: var(--surface); --muted-soft: var(--default-panel); }
 :scope > :first-child { border-radius: var(--default-inner) var(--default-inner) 0 0; }
 :scope > :last-child { border-radius: 0 0 var(--default-inner) var(--default-inner); }
 :scope > :only-child { border-radius: var(--default-inner); }
