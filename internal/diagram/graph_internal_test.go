@@ -106,6 +106,11 @@ func graphFault(g *graph) string {
 		return l.problems.Error()
 	}
 	drawn := 0
+	for _, p := range l.paths {
+		if p.own >= 0 {
+			return p.what + " is not checked against its own label"
+		}
+	}
 	for i, a := range l.paths {
 		for _, b := range l.paths[i+1:] {
 			bad, n := touch(a, b)
