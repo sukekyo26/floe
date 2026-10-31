@@ -277,3 +277,62 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 		}
 	}
 }
+
+// measureBoxes returns a line for each box of the page's diagrams whose text, as the browser draws it, is not inside
+// its shape, and for each two boxes of a diagram that overlap: the width floe estimates for text against the width
+// drawn.
+const measureBoxes = `(() => {
+  const out = [];
+  for (const svg of document.querySelectorAll('svg.dg')) {
+    const boxes = [...svg.querySelectorAll('g.box')].map((g) => ({ shape: g.firstElementChild.getBBox(), texts: [...g.querySelectorAll('text')] }));
+    for (const b of boxes) {
+      for (const t of b.texts) {
+        const r = t.getBBox();
+        if (r.x < b.shape.x || r.y < b.shape.y || r.x + r.width > b.shape.x + b.shape.width || r.y + r.height > b.shape.y + b.shape.height) {
+          out.push('"' + t.textContent + '" sticks out of its box');
+        }
+      }
+    }
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i].shape, c = boxes[j].shape;
+        if (a.x < c.x + c.width && c.x < a.x + a.width && a.y < c.y + c.height && c.y < a.y + a.height) {
+          out.push('two boxes overlap: "' + boxes[i].texts[0].textContent + '" and "' + boxes[j].texts[0].textContent + '"');
+        }
+      }
+    }
+  }
+  return out.join('\n');
+})()`
+
+// TestUIGraph draws the graphs kept in the diagram tests, down and right, in English and Japanese: in each, the text
+// the browser draws stays inside its box, and no two boxes overlap.
+func TestUIGraph(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	files, err := filepath.Glob("../diagram/testdata/graph/*.yaml")
+	if err != nil || len(files) < 2 {
+		t.Fatalf("the graphs kept: %v %v", files, err)
+	}
+	for _, lang := range []string{"en", "ja"} {
+		var page strings.Builder
+		page.WriteString("template: report\nlang: " + lang + "\ntitle: Graphs\nsections:\n  - heading: Graphs\n    parts:\n")
+		for _, f := range files {
+			src, err := os.ReadFile(f)
+			if err != nil {
+				t.Fatal(err)
+			}
+			page.WriteString("      - diagram:\n")
+			for line := range strings.Lines(string(src)) {
+				page.WriteString("          " + line)
+			}
+		}
+		slug := "graphs-" + lang
+		s.floe(t, "publish", s.write(t, slug+".yaml", page.String()), "--slug", slug)
+		b.navigate("/a/" + slug + "/?raw")
+		b.until("the diagrams", "document.querySelectorAll('svg.dg').length === "+strconv.Itoa(len(files)))
+		if got := b.eval(measureBoxes); got != "" {
+			t.Errorf("%s:\n  %s", lang, strings.ReplaceAll(got, "\n", "\n  "))
+		}
+	}
+}
