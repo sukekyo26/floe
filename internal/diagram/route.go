@@ -251,6 +251,7 @@ func (l *layout) addEdge(e *edge, at string) {
 			x, y = e.At[0], e.At[1]
 		}
 		p.own = l.label(at, e.Label, x, y, "middle", false, false)
+		l.labels[p.own].graph = e.graph
 	}
 	l.paths = append(l.paths, p)
 	if len(segs) > 0 {

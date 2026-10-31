@@ -24,6 +24,14 @@ func (gr *group) place(right bool) (trips, pulls int) {
 	for i := range gr.nodes {
 		n := &gr.nodes[i]
 		if n.box == nil {
+			if n.label != nil {
+				// A label's text, with room around it across and, along, for its edge to step half a column below it.
+				lw := labelWidth(n.label, false)
+				n.w, n.h = lw+inEnd, labelH+inEnd
+				if right {
+					n.w, n.h = labelH+inEnd, lw+inEnd
+				}
+			}
 			continue
 		}
 		r := boxRect(&box{

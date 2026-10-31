@@ -44,10 +44,13 @@ func (gr *group) wire() {
 		}
 		gr.top[r], gr.bottom[r] = y, y+tall
 		for _, i := range rank {
-			if gr.nodes[i].box != nil {
-				gr.nodes[i].y = y + (tall-gr.nodes[i].h)/2
-			} else {
-				gr.nodes[i].y, gr.nodes[i].h = y, tall
+			switch n := &gr.nodes[i]; {
+			case n.box != nil:
+				n.y = y + (tall-n.h)/2
+			case n.label != nil:
+				n.y = y
+			default:
+				n.y, n.h = y, tall
 			}
 		}
 		if r < len(gr.tracks) {
@@ -74,16 +77,16 @@ func spread(xs []float64, n int) []float64 {
 	return out
 }
 
-// side is where links may leave node n (out) or enter it: on a box, 12 in from its ends; a point is entered at its
-// column x and left at x+w (6 to the right when it is entered bent, else the same).
+// side is where links may leave node n (out) or enter it: on a box, 12 in from its ends; a point or a label's box
+// is entered at its column and left jog to the right of it.
 func (n gnode) side(out bool) (lo, hi float64) {
 	switch {
 	case n.box != nil:
 		return n.x + inEnd, n.x + n.w - inEnd
 	case out:
-		return n.x + n.w, n.x + n.w
+		return n.col + n.jog, n.col + n.jog
 	}
-	return n.x, n.x
+	return n.col, n.col
 }
 
 // exits sets the exits of the links out of node u, at x ≡ 0 on its bottom, in the order their ends stand in the
@@ -104,12 +107,21 @@ func (gr *group) exits(u int, pos []int, keep bool) {
 	cols := columns(lo, hi, 0)
 	even := spread(cols, len(outs))
 	fixed := func(k int) bool { return keep && gr.nodes[gr.links[outs[k]].to].box == nil }
-	next := 0
+	next, prev := 0, -1
 	for k, l := range outs {
 		if fixed(k) {
-			next = slices.Index(cols, gr.links[l].exit) + 1
+			next, prev = slices.Index(cols, gr.links[l].exit)+1, k
 			continue
 		}
+		// Two points or labels' boxes in a row stand a column apart besides half each label's box: leave them that.
+		to := gr.nodes[gr.links[l].to]
+		if prev >= 0 && to.box == nil && gr.nodes[gr.links[outs[prev]].to].box == nil {
+			want := gr.links[outs[prev]].exit + column + to.w/2 + gr.nodes[gr.links[outs[prev]].to].w/2
+			for next < len(cols)-(len(outs)-k) && cols[next] < want {
+				next++
+			}
+		}
+		prev = k
 		// The last column it may take: one for each exit after it, and before the next exit kept.
 		last := len(cols) - (len(outs) - k)
 		for j := k + 1; j < len(outs); j++ {
@@ -118,6 +130,7 @@ func (gr *group) exits(u int, pos []int, keep bool) {
 				break
 			}
 		}
+		next = min(next, last)
 		lo, hi := gr.nodes[gr.through(gr.links[l].to, false)].side(false)
 		cost := func(x float64) (float64, float64) {
 			return max(lo-x, x-hi, 0), math.Abs(x - even[k])
@@ -134,41 +147,48 @@ func (gr *group) exits(u int, pos []int, keep bool) {
 	}
 }
 
-// settle places the points of rank r at the columns their links come down from, so that each edge runs straight
-// through the ranks it passes: a point is a column, and the next point stands a column on, or nodeGap past the
-// boxes between. A point pushed off its column, by the point before or by the boxes between, is entered bent at
-// the first x ≡ 6 it may stand at, and left half a column on, at x ≡ 0 (not half a column before: the column it
-// enters at keeps a column from the one before it). The boxes then stand as near their places as the points let
-// them, nodeGap from them and from one another.
+// settle places the points and labels' boxes of rank r at the columns their links come down from, so that each
+// edge runs straight through the ranks it passes: a point is a column, a label's box its width about its column.
+// Each stands a column past the one before (a label's box has room about its text), or nodeGap past the boxes
+// between. One pushed off its column, by the one before or by the boxes between, is entered bent at the first
+// x ≡ 6 it may stand at, and left half a column on, at x ≡ 0 (not half a column before: the column it enters at
+// keeps a column from the one before it). The boxes then stand as near their places as the columns let them,
+// nodeGap from them and from one another.
 func (gr *group) settle(r int) {
 	rank := gr.ranks[r]
-	last, right := -1, 0.0 // the last point placed, by index in rank, and the column it leaves at
+	last := -1 // the last placed, by index in rank
 	for k, v := range rank {
 		n := &gr.nodes[v]
 		if n.box != nil {
 			continue
 		}
+		half := n.w / 2
 		e := gr.links[n.ins[0]].exit
 		need := e
 		if last >= 0 {
-			need = max(e, right+column)
+			o := gr.nodes[rank[last]]
+			at, gap := o.x+o.w, column
 			if between := gr.boxesOf(rank[last+1 : k]); len(between) > 0 {
 				// The boxes between, packed as the passes below pack them, on the grid of 6.
-				at := right
 				for _, b := range between {
 					at = onGrid(at+nodeGap, 6, math.Ceil) + gr.nodes[b].w
 				}
-				need = max(e, onGrid(at+nodeGap, 6, math.Ceil))
+				gap = nodeGap
 			}
+			need = max(e, onGrid(at+gap+half, 6, math.Ceil))
 		}
-		n.x, n.w = need, 0
+		n.col, n.jog = need, 0
 		if need != e {
-			n.x, n.w = onGrid(need-column/2, column, math.Ceil)+column/2, column/2
+			n.col, n.jog = onGrid(need-column/2, column, math.Ceil)+column/2, column/2
 		}
-		last, right = k, n.x+n.w
+		n.x = n.col - half
+		if n.label == nil {
+			n.w = n.jog
+		}
+		last = k
 	}
 	// The boxes, left to right past what stands before each, then right to left before what stands after: the room
-	// left for the boxes between two points holds them packed, so the second pass keeps what the first made.
+	// left for the boxes between two columns holds them packed, so the second pass keeps what the first made.
 	for k := 1; k < len(rank); k++ {
 		if n := &gr.nodes[rank[k]]; n.box != nil {
 			o := gr.nodes[rank[k-1]]
@@ -189,9 +209,14 @@ func (gr *group) shiftRight() {
 	for _, n := range gr.nodes {
 		least = min(least, n.x)
 	}
-	by := -onGrid(least, column, math.Floor)
+	gr.shift(-onGrid(least, column, math.Floor))
+}
+
+// shift moves the group right by by, as laid out down.
+func (gr *group) shift(by float64) {
 	for i := range gr.nodes {
 		gr.nodes[i].x += by
+		gr.nodes[i].col += by
 	}
 	for i := range gr.links {
 		gr.links[i].exit += by
@@ -373,8 +398,9 @@ func (gr *group) points(chain []int, right bool) [][2]float64 {
 	for _, li := range chain {
 		l := gr.links[li]
 		if a := gr.nodes[l.from]; a.box == nil {
-			mid := (gr.top[a.rank] + gr.bottom[a.rank]) / 2
-			pts = append(pts, [2]float64{in, mid}, [2]float64{l.exit, mid}, [2]float64{l.exit, gr.bottom[a.rank]})
+			// Half a column across near its foot: below a label's text, or near the bottom of the rank a point spans.
+			step := a.y + a.h - column/2
+			pts = append(pts, [2]float64{in, step}, [2]float64{l.exit, step}, [2]float64{l.exit, gr.bottom[a.rank]})
 		}
 		b := gr.nodes[l.to]
 		if !l.straight {

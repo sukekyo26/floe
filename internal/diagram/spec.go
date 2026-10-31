@@ -108,6 +108,7 @@ type graphBox struct {
 type graphEdge struct {
 	From   string  `json:"from"`
 	To     string  `json:"to"`
+	Label  Text    `json:"label"`
 	Dashed bool    `json:"dashed"`
 	Bold   bool    `json:"bold"`
 	Tone   string  `json:"tone"`

@@ -1,18 +1,22 @@
 package diagram
 
+import "slices"
+
 // rank makes a group of the boxes members of g (their indexes in nodes, as written) and its edges (their indexes
 // in edges): an edge back up a cycle turned round, and each box at the rank of its longest path from a box no edge
 // enters. The points of the edges passing ranks are made by split, once the diagram's are counted.
 func rank(g *graph, members, edges []int, byName map[string]int) *group {
 	gr := &group{
 		nodes: nil, links: nil, ranks: nil, chains: map[int][]int{}, reversed: map[int]bool{}, tracks: nil, top: nil,
-		bottom: nil, arcs: nil,
+		bottom: nil, arcs: nil, labels: map[int]Text{},
 	}
 	local := map[int]int{}
 	for j, i := range members {
 		local[i] = j
 		b := g.Nodes[i].Box
-		gr.nodes = append(gr.nodes, gnode{box: b, of: i, rank: 0, w: 0, h: 0, x: 0, y: 0, ins: nil, outs: nil, written: j})
+		gr.nodes = append(gr.nodes, gnode{
+			box: b, label: nil, of: i, rank: 0, w: 0, h: 0, x: 0, y: 0, col: 0, jog: 0, ins: nil, outs: nil, written: j,
+		})
 	}
 	arcs := make([]arc, 0, len(edges))
 	outs := make([][]int, len(members)) // the arcs out of each box, as written
@@ -24,6 +28,15 @@ func rank(g *graph, members, edges []int, byName map[string]int) *group {
 	turn(arcs, outs, gr.reversed)
 	gr.rankLongest(arcs)
 	gr.arcs = arcs
+	// A label on any edge of the graph makes every edge two ranks long, its label between.
+	if slices.ContainsFunc(g.Edges, func(e graphEdge) bool { return e.Label != nil }) {
+		for i := range gr.nodes {
+			gr.nodes[i].rank *= 2
+		}
+		for _, k := range edges {
+			gr.labels[k] = g.Edges[k].Label
+		}
+	}
 	return gr
 }
 
@@ -36,17 +49,26 @@ func (gr *group) passed() int {
 	return n
 }
 
-// split breaks each arc passing ranks into links by a point at each rank it passes, and lists the nodes of each
-// rank: the boxes as written, then the points by their edge's order.
+// split breaks each arc passing ranks into links by a point at each rank it passes, its label's box at the rank
+// next to the box it is written from, and lists the nodes of each rank: the boxes as written, then the points and
+// labels' boxes by their edge's order.
 func (gr *group) split() {
 	for _, a := range gr.arcs {
+		at := gr.nodes[a.from].rank + 1
+		if gr.reversed[a.edge] {
+			at = gr.nodes[a.to].rank - 1
+		}
 		prev := a.from
 		for r := gr.nodes[a.from].rank + 1; r <= gr.nodes[a.to].rank; r++ {
 			next := a.to
 			if r < gr.nodes[a.to].rank {
 				next = len(gr.nodes)
+				var label Text
+				if r == at {
+					label = gr.labels[a.edge]
+				}
 				gr.nodes = append(gr.nodes, gnode{
-					box: nil, of: a.edge, rank: r, w: 0, h: 0, x: 0, y: 0, ins: nil,
+					box: nil, label: label, of: a.edge, rank: r, w: 0, h: 0, x: 0, y: 0, col: 0, jog: 0, ins: nil,
 					outs: nil, written: len(gr.nodes),
 				})
 			}

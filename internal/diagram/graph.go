@@ -14,11 +14,14 @@ const maxPassed = 4000
 
 // gnode is a box of a graph, or a point where an edge passes a rank.
 type gnode struct {
-	box     *graphBox // nil for a point an edge passes
-	of      int       // the box's index in nodes; for a point, its edge's index in edges
+	box     *graphBox // nil for a point an edge passes, or its label's box
+	label   Text      // the label whose box it is; nil for a box or a point
+	of      int       // the box's index in nodes; for a point or a label's box, its edge's index in edges
 	rank    int
 	w, h    float64 // across the ranks and along them, as laid out down
 	x, y    float64 // its left and top, as laid out down
+	col     float64 // for a point or a label's box, the column its edge enters it at
+	jog     float64 // how far right of col its edge leaves it: 0, or half a column when it is entered bent
 	ins     []int   // the links into it from the rank above
 	outs    []int   // the links out of it to the rank below
 	written int     // the box's index among the nodes of its group, the order ties fall back on; points after
@@ -45,6 +48,7 @@ type group struct {
 	top      []float64     // the top of each rank, as laid out down
 	bottom   []float64     // the bottom of each rank: of its tallest box, or a column below its top
 	arcs     []arc         // its edges between its boxes, turned round where they break a cycle
+	labels   map[int]Text  // the labels of its edges, by index in edges, when they take two ranks
 }
 
 // graphOut is a graph read and ranked: its groups, and the ranks its edges pass between their ends.
@@ -147,14 +151,10 @@ func (o *graphOut) items() []item {
 	for _, gr := range o.groups {
 		gr.place(right)
 		gr.wire()
+		gr.shift(left)
 		width := 0.0
-		for i := range gr.nodes {
-			gr.nodes[i].x += left
-			width = max(width, gr.nodes[i].x+gr.nodes[i].w)
-		}
-		for i := range gr.links {
-			gr.links[i].exit += left
-			gr.links[i].entry += left
+		for _, n := range gr.nodes {
+			width = max(width, n.x+n.w)
 		}
 		left = onGrid(width+groupGap, 12, math.Ceil)
 	}
@@ -190,7 +190,7 @@ func (o *graphOut) items() []item {
 	}
 	for k := range o.g.Edges {
 		if gr := owner[k]; gr != nil { // else told by readGraph
-			e := o.edge(k, o.route(gr, k, drawn, right))
+			e := o.edge(k, o.route(gr, k, drawn, right), o.labelAt(gr, k, right))
 			out = append(out, item{edgeAt(o.at, k), part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
 		}
 	}
@@ -214,12 +214,31 @@ func (o *graphOut) route(gr *group, k int, drawn []rect, right bool) [][2]float6
 	return pts
 }
 
+// labelAt is the centre of edge k's label, on its column in its label's box, as drawn at the graph's place: as
+// laid out down (the group's place added), turned for right, then at x and y. Nil for an edge without one.
+func (o *graphOut) labelAt(gr *group, k int, right bool) *[2]float64 {
+	for _, l := range gr.chains[k] {
+		if n := gr.nodes[gr.links[l].to]; n.label != nil {
+			p := [2]float64{n.col, n.y + (n.h-inEnd)/2}
+			if right {
+				p = [2]float64{p[1], p[0]}
+			}
+			return &[2]float64{p[0] + o.g.X, p[1] + o.g.Y}
+		}
+	}
+	return nil
+}
+
 // edge is the graph's edge k as an edge drawn by hand: from point to point by via, straight from one to the next.
-func (o *graphOut) edge(k int, pts [][2]float64) *edge {
+func (o *graphOut) edge(k int, pts [][2]float64, at *[2]float64) *edge {
 	e := o.g.Edges[k]
+	var label Text
+	if at != nil {
+		label = e.Label
+	}
 	return &edge{
 		From: end{Name: "", Point: &pts[0]}, To: end{Name: "", Point: &pts[len(pts)-1]}, FromSide: "", ToSide: "",
-		Via: pts[1 : len(pts)-1], Straight: true, Label: nil, At: nil, Dashed: e.Dashed, Bold: e.Bold, Tone: e.Tone,
+		Via: pts[1 : len(pts)-1], Straight: true, Label: label, At: at, Dashed: e.Dashed, Bold: e.Bold, Tone: e.Tone,
 		Start: e.Start, End: e.End, Crossing: false, who: "edge " + e.From + "→" + e.To, graph: o.at,
 	}
 }
