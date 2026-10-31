@@ -37,7 +37,7 @@ var layersKit = map[string]string{
 	"parts/box/part.yaml":           "description: a box of one's own\n",
 	"parts/box/part.css":            ":scope { background-color: rgb(0, 0, 11); }\n",
 	"parts/grid/part.yaml":          "description: a grid of one's own\n",
-	"parts/grid/part.css":           ".cell { background-color: rgb(0, 0, 12); }\n& p { color: rgb(0, 0, 13); }\n:scope p { color: rgb(0, 0, 14); }\n",
+	"parts/grid/part.css":           ".cell { background-color: rgb(0, 0, 12); }\n",
 	"parts/outer/schema.json":       `{"type": "object"}`,
 	"parts/outer/part.html":         `<div data-floe-part="outer"></div>`,
 	"parts/outer/part.css":          ":scope > * { padding-top: 3px; }\n",
@@ -139,12 +139,11 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	check(t, "cards", []string{got}, "rgb(255, 255, 255) 14px | color(srgb 0.91098 0.903529 0.884706) 20px")
 
 	// Nested, the outer wins whatever the selectors: a look of one's own over the look a cell of it takes again,
-	// two deep, and a part of one's own over the box of another it holds. & stands for a root as specific at every
-	// depth, so that of two rules alike the later wins.
+	// two deep, and a part of one's own over the box of another it holds.
 	open("nested-own", "template: report\nlang: en\nsections:\n  - parts:\n      - html: >-\n"+
 		`          <div data-floe-look="box"><div data-floe-look="grid"><div class="cell" data-floe-look="box">`+
-		`<p id="deep">p</p></div></div></div><div data-floe-part="outer"><div id="inner" data-floe-part="inner"></div></div>`+"\n", "#inner")
+		`p</div></div></div><div data-floe-part="outer"><div id="inner" data-floe-part="inner"></div></div>`+"\n", "#inner")
 	got = b.eval(`(() => { const c = (q, p) => getComputedStyle(document.querySelector(q))[p];
-		return [c('.cell', 'backgroundColor'), c('#deep', 'color'), c('#inner', 'paddingTop')].join(' | ') })()`)
-	check(t, "nested own", []string{got}, "rgb(0, 0, 12) | rgb(0, 0, 14) | 3px")
+		return [c('.cell', 'backgroundColor'), c('#inner', 'paddingTop')].join(' | ') })()`)
+	check(t, "nested own", []string{got}, "rgb(0, 0, 12) | 3px")
 }

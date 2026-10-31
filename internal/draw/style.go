@@ -171,7 +171,8 @@ func scoped(k *kit.Kit, name string, named []string, look bool, depths map[strin
 const nester = ":is([data-floe-part], [data-floe-look])"
 
 // at is the selector of the elements of root that stand depth deep: held by depth elements that nest, no more. The
-// depth is in :where, so that the root, which & stands for, is as specific as root alone at every depth.
+// depth is in :where, so that the root is as specific as root alone at every depth, whatever specificity a browser
+// gives & in a scope (Chrome gives it none).
 func at(depth int, root string) string {
 	within := ""
 	if depth > 0 {
