@@ -212,7 +212,7 @@ sections:
               - table:
                   columns: [Shell, { title: Lines, num: true }]
                   rows: [[PowerShell, '1']]
-      - html: <details><summary>What the freeze covers</summary><p>Edits, <span class="good" data-floe-part="cell">comments</span> and uploads.</p></details>
+      - html: <details><summary>What the freeze covers</summary><p>Edits, <span data-floe-tone="good" data-floe-part="cell">comments</span> and uploads.</p></details>
       - script:
           data: { pages: 1840, "__proto__": "<b>" }
           js: |

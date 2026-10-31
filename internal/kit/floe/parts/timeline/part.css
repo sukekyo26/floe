@@ -15,15 +15,12 @@
 :scope > li::before {
   content: "\200b"; content: "\200b" / ""; anchor-name: --floe-mark; grid-area: mark; align-self: first baseline;
   display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-  overflow: hidden; border-radius: 50%; background: var(--accent);
+  overflow: hidden; border-radius: 50%; background: var(--tone);
 }
 :scope > li:not(:last-child)::after {
   content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
   left: calc(anchor(--floe-mark center) - 1px); width: 2px; background: var(--line);
 }
-:scope > li.good::before { background: var(--good); }
-:scope > li.warn::before { background: var(--warn); }
-:scope > li.bad::before { background: var(--bad); }
 :scope .date {
   grid-area: mark / date; align-self: first baseline; width: 7rem; margin-inline-end: 0.65rem; text-align: right;
   font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);

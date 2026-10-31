@@ -19,7 +19,7 @@
 <ul class="counts">
 <li>{{with .Data.done}}<a href="#done"><b>{{len .}}</b> {{word "done"}}</a>{{else}}<b>0</b> {{word "done"}}{{end}}</li>
 <li>{{with .Data.doing}}<a href="#doing"><b>{{len .}}</b> {{word "doing"}}</a>{{else}}<b>0</b> {{word "doing"}}{{end}}</li>
-<li{{if .Data.asks}} class="hot"{{end}}>{{with .Data.asks}}<a href="#asks"><b>{{len .}}</b> {{word "asks"}}</a>{{else}}<b>0</b> {{word "asks"}}{{end}}</li>
+<li{{if .Data.asks}} class="hot" data-floe-tone="warn"{{end}}>{{with .Data.asks}}<a href="#asks"><b>{{len .}}</b> {{word "asks"}}</a>{{else}}<b>0</b> {{word "asks"}}{{end}}</li>
 <li>{{with .Data.next}}<a href="#next"><b>{{len .}}</b> {{word "next"}}</a>{{else}}<b>0</b> {{word "next"}}{{end}}</li>
 </ul>
 </div>
@@ -48,7 +48,7 @@
 {{- end}}
 {{- with .Data.doing}}
 <section data-floe-look="panel"><h2 id="doing">{{word "doing"}}</h2>
-<ul class="doing">{{range .}}<li><b class="who">{{.who}}</b>{{with .state}}<span class="state {{.}}">{{word (printf "state_%s" .)}}</span>{{end}}<span class="what">{{markdownLine .what}}</span>{{with .where}}<span class="where">{{markdownLine .}}</span>{{end}}</li>{{end}}</ul>
+<ul class="doing">{{range .}}<li><b class="who">{{.who}}</b>{{with .state}}<span class="state {{.}}"{{if eq . "waiting"}} data-floe-tone="warn"{{else if eq . "blocked"}} data-floe-tone="bad"{{end}}>{{word (printf "state_%s" .)}}</span>{{end}}<span class="what">{{markdownLine .what}}</span>{{with .where}}<span class="where">{{markdownLine .}}</span>{{end}}</li>{{end}}</ul>
 </section>
 {{- end}}
 {{- with .Data.next}}

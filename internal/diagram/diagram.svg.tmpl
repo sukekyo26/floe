@@ -6,12 +6,12 @@
 {{- end}}
 
 {{define "el" -}}
-{{if eq .Kind "rect"}}<rect x="{{n .X}}" y="{{n .Y}}" width="{{n .W}}" height="{{n .H}}"{{with .RX}} rx="{{n .}}"{{end}}{{with .Class}} class="{{.}}"{{end}}/>
-{{- else if eq .Kind "circle"}}<circle cx="{{n .X}}" cy="{{n .Y}}" r="{{n .R}}"{{with .Class}} class="{{.}}"{{end}}/>
-{{- else if eq .Kind "path"}}<path d="{{.D}}"{{with .Class}} class="{{.}}"{{end}}{{with .Start}} marker-start="url(#{{.}})"{{end}}{{with .End}} marker-end="url(#{{.}})"{{end}}/>
+{{if eq .Kind "rect"}}<rect x="{{n .X}}" y="{{n .Y}}" width="{{n .W}}" height="{{n .H}}"{{with .RX}} rx="{{n .}}"{{end}}{{with .Class}} class="{{.}}"{{end}}{{with .Tone}} data-floe-tone="{{.}}"{{end}}/>
+{{- else if eq .Kind "circle"}}<circle cx="{{n .X}}" cy="{{n .Y}}" r="{{n .R}}"{{with .Class}} class="{{.}}"{{end}}{{with .Tone}} data-floe-tone="{{.}}"{{end}}/>
+{{- else if eq .Kind "path"}}<path d="{{.D}}"{{with .Class}} class="{{.}}"{{end}}{{with .Tone}} data-floe-tone="{{.}}"{{end}}{{with .Start}} marker-start="url(#{{.}})"{{end}}{{with .End}} marker-end="url(#{{.}})"{{end}}/>
 {{- else if eq .Kind "line"}}<line x1="{{n .X}}" y1="{{n .Y}}" x2="{{n .X2}}" y2="{{n .Y2}}" class="{{.Class}}"/>
-{{- else if eq .Kind "text"}}<text x="{{n .X}}" y="{{n .Y}}" text-anchor="{{.Anchor}}"{{with .Class}} class="{{.}}"{{end}}>{{t .Text}}</text>
-{{- else if eq .Kind "g"}}<g class="{{.Class}}">{{range .Kids}}{{template "el" .}}{{end}}</g>
+{{- else if eq .Kind "text"}}<text x="{{n .X}}" y="{{n .Y}}" text-anchor="{{.Anchor}}"{{with .Class}} class="{{.}}"{{end}}{{with .Tone}} data-floe-tone="{{.}}"{{end}}>{{t .Text}}</text>
+{{- else if eq .Kind "g"}}<g class="{{.Class}}"{{with .Tone}} data-floe-tone="{{.}}"{{end}}>{{range .Kids}}{{template "el" .}}{{end}}</g>
 {{- else if eq .Kind "use"}}<use href="#{{.Ref}}" x="{{n .X}}" y="{{n .Y}}"/>
 {{- else if eq .Kind "raw"}}{{.Raw}}
 {{- end}}

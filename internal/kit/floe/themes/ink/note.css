@@ -1,9 +1,3 @@
-:scope { background: var(--surface); border: 1.5px solid var(--accent); }
-:scope.good { background: var(--surface); border-color: var(--good); }
-:scope.warn { background: var(--surface); border-color: var(--warn); }
-:scope.bad { background: var(--surface); border-color: var(--bad); }
-:scope::before, :scope:is(.good, .warn, .bad)::before { content: none; }
-.title { display: inline-block; justify-self: start; font-size: 0.75rem; padding: 0 0.6rem; border-radius: 6px; background: var(--accent); color: var(--on-fill); }
-:scope.good .title { background: var(--good); color: var(--on-fill); }
-:scope.warn .title { background: var(--warn); color: var(--on-fill); }
-:scope.bad .title { background: var(--bad); color: var(--on-fill); }
+:scope { background: var(--surface); border: 1.5px solid var(--tone); }
+:scope::before { content: none; }
+.title { display: inline-block; justify-self: start; font-size: 0.75rem; padding: 0 0.6rem; border-radius: 6px; background: var(--tone); color: var(--on-fill); }

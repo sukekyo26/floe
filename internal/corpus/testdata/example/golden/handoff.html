@@ -90,6 +90,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
 :scope {
   --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
   --accent: #1d6670; --accent-soft: #dcebec;
   --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
   --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -108,6 +109,15 @@ blockquote > * + * { margin-top: 0.6rem; }
   --page-width: 96rem; --page-pad: 16px;
   color-scheme: light;
 }
+}
+</style>
+<style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
 }
 </style>
 <style>
@@ -250,7 +260,7 @@ h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .counts a { color: inherit; text-decoration: none; }
 .counts li > a, .counts li:not(:has(a)) { display: grid; padding: 0.5rem 1rem; font-size: 0.85rem; }
 .counts b { font-family: var(--mono); font-size: 2rem; line-height: 1.1; }
-.counts li.hot { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-soft); }
+.counts li.hot { background: var(--tone-soft); color: var(--tone); border-color: var(--tone-soft); }
 main { display: grid; gap: 2rem; padding-block: 2rem; }
 main h2 { font-size: 1.15rem; }
 .asks { padding: 1.2rem 1.4rem; border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
@@ -275,9 +285,7 @@ main h2 { font-size: 1.15rem; }
 .ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }
 .doing li { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.6rem; align-items: baseline; }
 .doing .what, .doing .where { grid-column: 1 / -1; }
-.state { justify-self: start; font-size: 0.78rem; font-weight: 600; padding: 0 0.6rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
-.state.waiting { background: var(--warn-soft); color: var(--warn); }
-.state.blocked { background: var(--bad-soft); color: var(--bad); }
+.state { justify-self: start; font-size: 0.78rem; font-weight: 600; padding: 0 0.6rem; border-radius: 999px; background: var(--tone-soft); color: var(--tone); }
 .notes { display: grid; gap: 0.6rem; }
 main > section { display: grid; gap: var(--floe-room); }
 }
@@ -293,7 +301,7 @@ main > section { display: grid; gap: var(--floe-room); }
 <ul class="counts">
 <li><a href="#done"><b>3</b> Done</a></li>
 <li><a href="#doing"><b>3</b> In progress</a></li>
-<li class="hot"><a href="#asks"><b>2</b> To decide</a></li>
+<li class="hot" data-floe-tone="warn"><a href="#asks"><b>2</b> To decide</a></li>
 <li><a href="#next"><b>3</b> Next</a></li>
 </ul>
 </div>
@@ -310,7 +318,7 @@ main > section { display: grid; gap: var(--floe-room); }
 <ul class="done"><li>Card form validation, with the error under each field<span class="ref">#412</span></li><li>Saved cards shown first<span class="ref">#415</span></li><li>A test for every <strong>declined</strong> card code</li></ul>
 </section>
 <section data-floe-look="panel"><h2 id="doing">In progress</h2>
-<ul class="doing"><li><b class="who">Mina</b><span class="state doing">Working</span><span class="what">Address form</span><span class="where">Half the fields; the postcode lookup is next</span></li><li><b class="who">Sam</b><span class="state waiting">Waiting</span><span class="what">Tax rules for the new regions</span><span class="where">Waiting on the finance team&#39;s table</span></li><li><b class="who">Kenji</b><span class="state blocked">Blocked</span><span class="what">Payment errors in the staging environment</span><span class="where">The test card provider is down since noon</span></li></ul>
+<ul class="doing"><li><b class="who">Mina</b><span class="state doing">Working</span><span class="what">Address form</span><span class="where">Half the fields; the postcode lookup is next</span></li><li><b class="who">Sam</b><span class="state waiting" data-floe-tone="warn">Waiting</span><span class="what">Tax rules for the new regions</span><span class="where">Waiting on the finance team&#39;s table</span></li><li><b class="who">Kenji</b><span class="state blocked" data-floe-tone="bad">Blocked</span><span class="what">Payment errors in the staging environment</span><span class="where">The test card provider is down since noon</span></li></ul>
 </section>
 <section data-floe-look="panel"><h2 id="next">Next</h2>
 <ol class="next"><li>Finish the address form and its postcode lookup</li><li>Put the tax table in once finance sends it</li><li>Run the whole checkout on staging when the provider is back</li></ol>
