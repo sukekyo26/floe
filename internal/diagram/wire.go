@@ -115,10 +115,10 @@ func (gr *group) exits(u int, pos []int, keep bool) {
 			next, prev = slices.Index(cols, gr.links[l].exit)+1, k
 			continue
 		}
-		// Two points or labels' boxes in a row stand a column apart besides half each label's box: leave them that.
+		// Two points or labels' boxes in a row stand a column apart past a label's box: leave them that.
 		to := gr.nodes[gr.links[l].to]
 		if prev >= 0 && to.box == nil && gr.nodes[gr.links[outs[prev]].to].box == nil {
-			want := gr.links[outs[prev]].exit + column + to.w/2 + gr.nodes[gr.links[outs[prev]].to].w/2
+			want := gr.links[outs[prev]].exit + gr.nodes[gr.links[outs[prev]].to].w + column
 			for next < len(cols)-(len(outs)-k) && cols[next] < want {
 				next++
 			}
@@ -150,7 +150,8 @@ func (gr *group) exits(u int, pos []int, keep bool) {
 }
 
 // settle places the points and labels' boxes of rank r at the columns their links come down from, so that each
-// edge runs straight through the ranks it passes: a point is a column, a label's box its width about its column.
+// edge runs straight through the ranks it passes: a point is a column, a label's box its column and the label
+// beside it.
 // Each stands a column past the one before (a label's box has room about its text), or nodeGap past the boxes
 // between. One pushed off its column, by the one before or by the boxes between, is entered bent at the first
 // x ≡ 6 it may stand at, and left half a column on, at x ≡ 0 (not half a column before: the column it enters at
@@ -164,7 +165,6 @@ func (gr *group) settle(r int) {
 		if n.box != nil {
 			continue
 		}
-		half := n.w / 2
 		e := gr.links[n.ins[0]].exit
 		need := e
 		if last >= 0 {
@@ -177,13 +177,13 @@ func (gr *group) settle(r int) {
 				}
 				gap = nodeGap
 			}
-			need = max(e, onGrid(at+gap+half, 6, math.Ceil))
+			need = max(e, onGrid(at+gap, 6, math.Ceil))
 		}
 		n.col, n.jog = need, 0
 		if need != e {
 			n.col, n.jog = onGrid(need-column/2, column, math.Ceil)+column/2, column/2
 		}
-		n.x = n.col - half
+		n.x = n.col
 		if n.label == nil {
 			n.w = n.jog
 		}

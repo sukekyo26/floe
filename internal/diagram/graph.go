@@ -219,7 +219,7 @@ func (o *graphOut) route(gr *group, k int, drawn []rect, right bool) [][2]float6
 func (o *graphOut) labelAt(gr *group, k int, right bool) *[2]float64 {
 	for _, l := range gr.chains[k] {
 		if n := gr.nodes[gr.links[l].to]; n.label != nil {
-			p := [2]float64{n.col, n.y + (n.h-inEnd)/2}
+			p := [2]float64{n.col + column + (n.w-column)/2, n.y + (n.h-inEnd)/2}
 			if right {
 				p = [2]float64{p[1], p[0]}
 			}

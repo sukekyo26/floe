@@ -25,11 +25,12 @@ func (gr *group) place(right bool) (trips, pulls int) {
 		n := &gr.nodes[i]
 		if n.box == nil {
 			if n.label != nil {
-				// A label's text, with room around it across and, along, for its edge to step half a column below it.
+				// A label beside its edge's column, a column right of it (below it for right), with room along for its
+				// edge to step half a column past it.
 				lw := labelWidth(n.label, false)
-				n.w, n.h = lw+inEnd, labelH+inEnd
+				n.w, n.h = column+lw, labelH+inEnd
 				if right {
-					n.w, n.h = labelH+inEnd, lw+inEnd
+					n.w, n.h = column+labelH, lw+inEnd
 				}
 			}
 			continue

@@ -238,7 +238,7 @@ var messagesEN = map[string]string{
 	"diagram_name_used":        `the name "%s" is given before: give each part, row and node its own name`,
 	"diagram_name_unknown":     `edge: no part, row or node named "%s"`,
 	"diagram_graph_unknown":    `edge: no box of this graph named "%s"`,
-	"diagram_graph_long":       "graph: the edges of this diagram's graphs pass %d ranks between their ends, more than %d: split the diagram",
+	"diagram_graph_long":       "graph: the edges of this diagram's graphs pass %d ranks between their ends, more than %d: split the diagram (in a graph with an edge label, every edge passes a rank more)",
 	"diagram_graph_crossing":   "%s crosses %s of another graph at %s,%s; move one of the graphs by its x and y",
 	"diagram_graph_overlap":    "%s overlaps %s of another graph; move one of the graphs by its x and y",
 	"diagram_graph_through":    "%s runs through %s of another graph; move one of the graphs by its x and y",
