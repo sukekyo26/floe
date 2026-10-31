@@ -62,9 +62,9 @@ const measureBlocks = `['[data-floe-part=note] h4', '[data-floe-part=note] hr', 
 
 // TestUINesting checks, in the browser, that what nests the outer wins over what it holds, in every theme: the
 // cards a cards of the HTML holds are drawn as the cards of a part are, whatever looks nest around them and
-// whatever the depth; and a stack or a note keeps a theme's room for a shadow, brutal's, on the boxes it holds,
-// giving them no margins of its own but the note's gap between them, which floe's base leaves alone in the blocks
-// a browser gives margins of its own (h4, hr, figure).
+// whatever the depth; and a stack or a note gives the boxes it holds no margins of its own but the note's gap between
+// them, in brutal too, whose shadows take no room, which floe's base leaves alone in the blocks a browser gives
+// margins of its own (h4, hr, figure).
 func TestUINesting(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -90,7 +90,7 @@ func TestUINesting(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	check(t, "nesting", out, strings.Join(want, "|"))
 
 	b.navigate("/a/nesting-brutal/?raw")
-	check(t, "held", []string{b.eval(measureHeld)}, "8px 6px 6px 0px | 0px 6px 6px 0px | 0px 6px 6px 0px")
+	check(t, "held", []string{b.eval(measureHeld)}, "8px 0px 0px | 0px | 0px")
 	b.navigate("/a/nesting-default/?raw")
 	check(t, "blocks", []string{b.eval(measureBlocks)}, "8px 0px 0px | 8px 0px 0px | 0px | 0px | 8px 0px 0px")
 }
