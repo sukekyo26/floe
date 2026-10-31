@@ -22,7 +22,7 @@ h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-heig
 h3 { font-size: 1.05rem; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
-h4, h5, h6, hr, figure, dl { margin: 0; }
+h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
 ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 /* A face that fills itself and holds text (a band, a filled note, a quote in ink, code's box) sets its ground in
    --face and its text's colour in --on-face, and paints itself with them: links, a line's code (framed, on no ground of
@@ -410,6 +410,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope.warn .title { color: var(--warn); }
 :scope.bad .title { color: var(--bad); }
 :scope > .title + * { margin-top: 0.1rem; }
+/* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
+:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
 :scope code { background: var(--face, var(--surface)); }
 }
 }
