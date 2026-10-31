@@ -5,6 +5,7 @@
 :scope.good { border-color: var(--good); }
 :scope.warn { border-color: var(--warn); }
 :scope.bad { border-color: var(--bad); }
+:scope { --floe-mark: 1.85rem; }
 :scope::before { background: none; border: 2px solid currentColor; border-radius: 48% 52% 45% 55%; color: var(--accent); }
 :scope.good::before { background: none; color: var(--good); }
 :scope.warn::before { background: none; color: var(--warn); }

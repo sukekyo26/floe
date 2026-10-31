@@ -36,6 +36,7 @@ floe stop                   # stop the background server
 
 The server starts on the first publish and keeps running until `floe stop`.
 Open `http://127.0.0.1:7325` for the management page.
+Read the pages in a recent Chrome, Safari (26 or later) or Firefox (147 or later).
 
 ## Documentation
 

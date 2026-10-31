@@ -1,26 +1,38 @@
-/* The date at the left of a dot on a line that runs down to the next */
+/* The date at the left of a dot on a line that runs down to the next, as the look numbered places its ring and line
+   (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
 :scope { list-style: none; margin: 0; padding: 1.1rem 1.3rem; display: grid; gap: 0; }
-:scope > li { position: relative; display: grid; grid-template-columns: 7rem minmax(0, 1fr); column-gap: 2rem; padding-bottom: 1.1rem; }
+:scope > li {
+  --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; position: relative; anchor-scope: --floe-mark; display: grid;
+  grid-template:
+    [mark-start] auto [mark-end] / [date-start] auto [date-end mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  gap: 0; padding-bottom: 1.1rem;
+}
 :scope > li:last-child { padding-bottom: 0; }
+/* The title and the text stand in the text's column, the title in the dot's row */
+:scope > li > div { display: contents; }
+:scope > li > div > * { grid-column: text; align-self: first baseline; }
+:scope > li > div > * + * { margin-top: 0.15rem; }
 :scope > li::before {
-  content: ""; position: absolute; left: calc(7rem + 0.65rem); top: 0.55rem; width: 0.7rem; height: 0.7rem; border-radius: 50%;
-  background: var(--accent);
+  content: "\200b"; content: "\200b" / ""; anchor-name: --floe-mark; grid-area: mark; align-self: first baseline;
+  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  overflow: hidden; border-radius: 50%; background: var(--accent);
 }
 :scope > li:not(:last-child)::after {
-  content: ""; position: absolute; left: calc(7rem + 1rem - 1px); top: 1.5rem; bottom: 0.2rem; width: 2px; background: var(--line);
+  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
+  left: calc(anchor(--floe-mark center) - 1px); width: 2px; background: var(--line);
 }
 :scope > li.good::before { background: var(--good); }
 :scope > li.warn::before { background: var(--warn); }
 :scope > li.bad::before { background: var(--bad); }
 :scope .date {
-  text-align: right; font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums;
-  font-family: var(--mono);
+  grid-area: mark / date; align-self: first baseline; width: 7rem; margin-inline-end: 0.65rem; text-align: right;
+  font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
 }
-:scope li > div { display: grid; gap: 0.15rem; }
-:scope li > div > :not(strong) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+:scope li > div > :not(strong) { color: var(--muted); font-size: 0.92rem; }
 @media (max-width: 36rem) {
-  :scope > li { grid-template-columns: minmax(0, 1fr); padding-left: 1.6rem; }
-  :scope > li::before { left: 0; }
-  :scope > li:not(:last-child)::after { left: calc(0.35rem - 1px); }
-  :scope .date { text-align: left; }
+  :scope > li {
+    --floe-mark-gap: 0.9rem;
+    grid-template: auto [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  }
+  :scope .date { grid-area: 1 / text; text-align: left; }
 }

@@ -144,7 +144,7 @@ An element of the template borrows a look by `data-floe-look`, drawn alike in ev
 - `rows`, `table`: the looks of `checklist` and of `table`.
 - `cards`: its children of `class="card"` side by side, each a panel by `data-floe-look="panel"` with its title in an element of `class="title"` (`<h3 class="title">` for a heading); numbered by their place with `class="numbered"`, as `options` is.
 - `band`: a band filled with the accent, its text, links, code and focus ring in the colour on a fill, as design's conclusion and handoff's head are.
-- `numbered`: on an `<ol>`, its items numbered in rings joined by a line, as the part `steps` and runbook's steps are.
+- `numbered`: on an `<ol>`, its items numbered in rings joined by a line, as the part `steps` and runbook's steps are. Write each item's text in an element (`<li><p>Restart <code>api</code> now</p></li>`), as text written straight in an item breaks into a grid item a run, and start the item with text, as a ring stands at the bottom of a first child with no text (an image, an empty block).
 
 ## The palette
 

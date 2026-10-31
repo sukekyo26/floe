@@ -11,7 +11,7 @@ var layersKit = map[string]string{
 		`<body><header>h</header><p id="own">own</p><section data-floe-look="panel">b</section>{{.Data.note}}</body></html>`,
 	"templates/layers/page.css": "body { color: rgb(0, 0, 2); }\np { color: rgb(255, 0, 0); }\n" +
 		"body div[data-floe-part=note].warn { background-color: rgb(255, 0, 0); margin-top: 7px; }\n" +
-		"body div[data-floe-part=note].warn::before { top: 0px; }\n" +
+		"body div[data-floe-part=note].warn { --floe-mark: 1px; }\n" +
 		"section { background-color: rgb(0, 0, 4); }\n" +
 		"@keyframes held { from { opacity: 0.5; } to { opacity: 0.5; } }\nheader { animation: held 1000s; }\n" +
 		`@font-face { font-family: "own face"; src: url(data:,); }` + "\n",
@@ -72,14 +72,14 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	}
 
 	open("layers", "template: layers\nlang: en\nnote: { text: x, tone: warn }\n", "[data-floe-part=note]")
-	// The part's background, the theme's top of the mark (default's 0.85rem, over the part's), the template's margin;
-	// the template's own paragraph and the note's; the animation and the face.
+	// The part's background, the theme's size of the mark (default's --floe-mark, 2.25rem, over the template's), the
+	// template's margin; the template's own paragraph and the note's; the animation and the face.
 	got := b.eval(`(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n);
-		return [s.backgroundColor, getComputedStyle(n, '::before').top, s.marginTop,
+		return [s.backgroundColor, getComputedStyle(n, '::before').width, s.marginTop,
 			getComputedStyle(document.getElementById('own')).color, getComputedStyle(n.querySelector('p')).color,
 			document.querySelector('header').getAnimations()[0]?.animationName,
 			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`)
-	check(t, "layers", []string{got}, "rgb(246, 232, 210) | 13.6px | 7px | rgb(255, 0, 0) | rgb(0, 0, 2) | held | true")
+	check(t, "layers", []string{got}, "rgb(246, 232, 210) | 36px | 7px | rgb(255, 0, 0) | rgb(0, 0, 2) | held | true")
 	// The template's own element that takes the panel's look has it under the template's CSS, which adjusts it by the
 	// layer, though it would lose by its selector (section), the less specific: its background, the corners of
 	// default's panel.

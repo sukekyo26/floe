@@ -144,7 +144,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 - `rows`・`table`：`checklist` と `table` の見た目。
 - `cards`：`class="card"` の子を横に並べ、子はそれぞれ `data-floe-look="panel"` でパネルにし、題を `class="title"` の要素（見出しなら `<h3 class="title">`）で書きます。`class="numbered"` を付けると、場所の番号を付けます（`options` と同じ）。
 - `band`：アクセントの色で塗った帯。中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。design の結論や handoff の頭のように。
-- `numbered`：`<ol>` に付けると、項目に丸い番号を付けて線でつなぎます。部品 `steps` と runbook の手順のように。
+- `numbered`：`<ol>` に付けると、項目に丸い番号を付けて線でつなぎます。部品 `steps` と runbook の手順のように。項目の字は要素で包みます（`<li><p>Restart <code>api</code> now</p></li>`）。項目に直に書いた字は、字の続きと要素ごとに grid の別の項目になって崩れます。項目は字で始めます。字の無いもの（画像、空のブロック）で始まると、丸はその下の縁に来ます。
 
 ## パレット
 
