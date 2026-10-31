@@ -2,6 +2,7 @@ package browsertest_test
 
 import (
 	"os"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -69,21 +70,22 @@ var rowPadKit = map[string]string{
 }
 
 // measureRowPad returns, for each kind of row, its part's name (or the look it takes outside a part), its padding
-// above and below, and its line height, "page" when it is the page's. A table's rows are its body's cells, not its
-// head's, which a theme may pad (default) in a smaller font, nor its number columns, whose font a theme may change
-// (swiss). It adds whether checklist's mark is level with its row's text (within the 1/64 px a layout rounds to), the
-// padding of checklist's count, a row its box draws as ::after, and whether checklist's edge is that of the box of
-// html's rows in the same theme.
+// above and below, and its line height, "page" when it is the page's: a table's cells, its head's ("head") and its
+// body's, but not its number columns, whose font a theme may change (swiss); the rows of the look rows, and faq's
+// questions ("question"), which take none of their own. It adds whether checklist's mark is level with its row's text
+// (within the 1/64 px a layout rounds to), the padding of checklist's count, a row its box draws as ::after, and
+// whether the box of every part and element drawn as rows is padded on every side as that of html's rows in the same
+// page.
 const measureRowPad = `(() => {
   const ratio = (e) => { const c = getComputedStyle(e); return parseFloat(c.lineHeight) / parseFloat(c.fontSize); };
   const page = ratio(document.body);
   const name = (e) => { const p = e.parentElement.closest('[data-floe-part], [data-floe-look]');
-    return p.dataset.floePart || 'look ' + p.dataset.floeLook; };
+    return (p.dataset.floePart || 'look ' + p.dataset.floeLook) + (e.matches('thead th') ? ' head' : e.matches('summary') ? ' question' : ''); };
   const edge = (e) => getComputedStyle(e).paddingTop + '/' + getComputedStyle(e).paddingBottom;
   const row = (e) => name(e) + ' ' + edge(e) + ' ' + (Math.abs(ratio(e) - page) < 0.005 ? 'page' : ratio(e).toFixed(2));
-  const rows = [...document.querySelectorAll(':is([data-floe-part], [data-floe-look~="table"]) tbody td:not(.num), ' +
+  const rows = [...document.querySelectorAll(':is([data-floe-part], [data-floe-look~="table"]) :is(thead th, tbody td):not(.num), ' +
     '[data-floe-look~="rows"] > *, :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], ' +
-    '[data-floe-part="faq"]) > *, [data-floe-part="facts"] > .card')];
+    '[data-floe-part="faq"]) > *, [data-floe-part="faq"] summary, [data-floe-part="facts"] > .card')];
   const out = [...new Set(rows.map(row))].sort();
   for (const list of document.querySelectorAll('[data-floe-part="checklist"]')) {
     const li = list.querySelector('li');
@@ -91,28 +93,36 @@ const measureRowPad = `(() => {
     out.push('checklist mark ' + (Math.abs(off) < 0.1 ? 'level' : 'off by ' + off.toFixed(2)));
     const count = getComputedStyle(list, '::after');
     out.push('checklist count ' + count.paddingTop + '/' + count.paddingBottom);
-    const box = document.querySelector('div[data-floe-look="rows"]');
-    out.push('checklist edge ' + (!box || edge(list) === edge(box) ? 'as rows' : edge(list) + ', rows ' + edge(box)));
   }
+  const html = document.querySelector('div[data-floe-look="rows"]'), box = (e) => getComputedStyle(e).padding;
+  const odd = [...document.querySelectorAll('[data-floe-look~="rows"], ' +
+    ':is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], [data-floe-part="faq"])')]
+    .filter((e) => box(e) !== box(html)).map((e) => (e.dataset.floePart || e.className) + ' ' + box(e));
+  out.push('boxes ' + (odd.length ? odd.join(' ') + ', html rows ' + box(html) : 'as html rows'));
   return out.join(', ');
 })()`
 
 // rowPadWant is what measureRowPad returns for rowParts, each row padded pad above and below, facts' top padded
 // factsTop.
 func rowPadWant(pad, factsTop string) string {
-	return strings.Join([]string{
-		"checklist " + pad + "/" + pad + " page", "compare " + pad + "/" + pad + " page", "entries " + pad + "/" + pad + " page",
-		"facts " + factsTop + "/" + pad + " page", "faq " + pad + "/" + pad + " page", "fields " + pad + "/" + pad + " page",
-		"findings " + pad + "/" + pad + " page", "keys " + pad + "/" + pad + " page", "look rows " + pad + "/" + pad + " page",
-		"table " + pad + "/" + pad + " page", "checklist mark level", "checklist count " + pad + "/" + pad, "checklist edge as rows",
-	}, ", ")
+	both := pad + "/" + pad + " page"
+	rows := []string{
+		"checklist " + both, "compare " + both, "compare head " + both, "entries " + both, "facts " + factsTop + "/" + pad + " page",
+		"faq " + both, "faq question 0px/0px page", "fields " + both, "findings " + both, "keys " + both, "look rows " + both,
+		"table " + both, "table head " + both,
+	}
+	slices.Sort(rows)
+	return strings.Join(append(rows, "checklist mark level", "checklist count "+pad+"/"+pad, "boxes as html rows"), ", ")
 }
 
+// rowsSection is a section of design's and postmortem's more holding an element of html that takes the look rows.
+const rowsSection = "  - heading: Rows\n    parts:\n      - html: |\n          <div data-floe-look=\"rows\"><p>One</p><p>Two</p></div>\n"
+
 // TestUIRowPad measures the rows of every part and look drawn as rows: each is padded --floe-row-pad (0.4rem) above
-// and below, in the page's line height, in every theme, which leaves the variable as it is (a theme's base.css could
-// set it, being over floe.base); retro's tiles keep the room of their stripes on top. A template whose page's line
-// height is not report's (design: its decided list and its table) pads them the same; a template of one's own setting
-// the variable in its page.css pads them all by it; and print pads them as the screen does.
+// and below, in the page's line height, in every theme, on the screen and printed, which leaves the variable as it is
+// (a theme's base.css could set it, being over floe.base); retro's tiles keep the room of their stripes on top. A
+// template whose page's line height is not report's (design: its decided list and its table; postmortem: its table)
+// pads them the same; and a template of one's own setting the variable in its page.css pads them all by it.
 func TestUIRowPad(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -121,37 +131,45 @@ func TestUIRowPad(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		t.Fatal(err)
 	}
 	file := s.write(t, "rows.yaml", rowPadPage)
-	out, want := make([]string, 0, len(themes)+3), make([]string, 0, len(themes)+3)
-	for _, theme := range themes {
-		name := theme.Name()
-		s.floe(t, "publish", file, "--slug", "rows-"+name, "--theme", name)
-		b.navigate("/a/rows-" + name + "/?raw")
-		out = append(out, name+": "+b.eval(measureRowPad))
-		top := "6.4px"
-		if name == "retro" {
-			top = "25.6px"
+	out, want := make([]string, 0, 2*len(themes)+3), make([]string, 0, 2*len(themes)+3)
+	measure := func(media string) {
+		b.media(media)
+		for _, theme := range themes {
+			name := theme.Name()
+			b.navigate("/a/rows-" + name + "/?raw")
+			out = append(out, media+" "+name+": "+b.eval(measureRowPad))
+			top := "6.4px"
+			if name == "retro" {
+				top = "25.6px"
+			}
+			want = append(want, media+" "+name+": "+rowPadWant("6.4px", top))
 		}
-		want = append(want, name+": "+rowPadWant("6.4px", top))
 	}
+	for _, theme := range themes {
+		s.floe(t, "publish", file, "--slug", "rows-"+theme.Name(), "--theme", theme.Name())
+	}
+	measure("screen")
+	measure("print")
+	b.media("")
 
-	design, err := os.ReadFile("../corpus/testdata/example/design.yaml")
-	if err != nil {
-		t.Fatal(err)
+	for _, sample := range []struct{ name, want string }{
+		{"design", "look rows 6.4px/6.4px page, look table 6.4px/6.4px page, look table head 6.4px/6.4px page, boxes as html rows"},
+		{"postmortem", "facts 6.4px/6.4px page, look rows 6.4px/6.4px page, look table 6.4px/6.4px page, look table head 6.4px/6.4px page, boxes as html rows"},
+	} {
+		data, err := os.ReadFile("../corpus/testdata/example/" + sample.name + ".yaml")
+		if err != nil {
+			t.Fatal(err)
+		}
+		s.floe(t, "publish", s.write(t, sample.name+".yaml", string(data)+rowsSection), "--slug", "rows-"+sample.name)
+		b.navigate("/a/rows-" + sample.name + "/?raw")
+		out = append(out, sample.name+": "+b.eval(measureRowPad))
+		want = append(want, sample.name+": "+sample.want)
 	}
-	s.floe(t, "publish", s.write(t, "design.yaml", string(design)), "--slug", "rows-design")
-	b.navigate("/a/rows-design/?raw")
-	out = append(out, "design: "+b.eval(measureRowPad))
-	want = append(want, "design: look rows 6.4px/6.4px page, look table 6.4px/6.4px page")
 
 	s.own(t, rowPadKit)
 	s.floe(t, "publish", s.write(t, "own.yaml", "template: rowpad\nlang: en\ntitle: Rows\nparts:\n"+rowParts), "--slug", "rows-own")
 	b.navigate("/a/rows-own/?raw")
 	out = append(out, "own: "+b.eval(measureRowPad))
 	want = append(want, "own: "+rowPadWant("16px", "16px"))
-
-	b.media("print")
-	b.navigate("/a/rows-default/?raw")
-	out = append(out, "printed: "+b.eval(measureRowPad))
-	want = append(want, "printed: "+rowPadWant("6.4px", "6.4px"))
 	check(t, "rows", out, strings.Join(want, "|"))
 }
