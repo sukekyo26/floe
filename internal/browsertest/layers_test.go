@@ -10,8 +10,8 @@ var layersKit = map[string]string{
 	"templates/layers/page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
 		`<body><header>h</header><p id="own">own</p><section data-floe-look="panel">b</section>{{.Data.note}}</body></html>`,
 	"templates/layers/page.css": "body { color: rgb(0, 0, 2); }\np { color: rgb(255, 0, 0); }\n" +
-		"body div[data-floe-part=note].warn { background-color: rgb(255, 0, 0); margin-top: 7px; }\n" +
-		"body div[data-floe-part=note].warn { --floe-mark: 1px; }\n" +
+		"body div[data-floe-part=note][data-floe-tone=warn] { background-color: rgb(255, 0, 0); margin-top: 7px; }\n" +
+		"body div[data-floe-part=note][data-floe-tone=warn] { --floe-mark: 1px; }\n" +
 		"section { background-color: rgb(0, 0, 4); }\n" +
 		"@keyframes held { from { opacity: 0.5; } to { opacity: 0.5; } }\nheader { animation: held 1000s; }\n" +
 		`@font-face { font-family: "own face"; src: url(data:,); }` + "\n",

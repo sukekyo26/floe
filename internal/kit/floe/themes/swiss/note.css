@@ -1,18 +1,14 @@
-:scope, :scope:is(.good, .warn) {
-  background: none; border: 0; border-top: 2px solid var(--fg); border-radius: 0;
-}
-:scope::before, :scope:is(.good, .warn)::before {
-  background: none; color: var(--accent); font-size: 1rem; font-weight: 900;
-}
+:scope { background: none; border: 0; border-top: 2px solid var(--fg); border-radius: 0; }
+:scope::before { background: none; color: var(--tone); font-size: 1rem; font-weight: 900; }
 /* Its red is read on the surface alone: the good one's mark is black */
-:scope.good::before { color: var(--fg); }
+:scope[data-floe-tone=good]::before { color: var(--fg); }
 /* The warning's grey, where its red links would sink, and the bad one's red are faces (base.css) on the part's root,
-   set on what it holds too, which base.css starts afresh */
-:scope.warn, :scope.warn > * { --face: color-mix(in srgb, var(--fg) 7%, var(--bg)); --on-face: var(--fg); }
-:scope.bad, :scope.bad > * { --face: var(--bad); --on-face: var(--on-fill); }
-:scope:is(.warn, .bad) { background: var(--face); color: var(--on-face); }
-:scope:is(.warn, .bad)::before { color: var(--on-face); }
-:scope.bad { border: 0; border-radius: 0; }
-:scope.bad::before { background: none; font-weight: 900; }
-.title, :scope.good .title { color: var(--fg); font-weight: 900; }
-:scope:is(.warn, .bad) .title { color: var(--on-face); }
+   set on what it holds too, which base.css starts afresh; the bad one takes no line above */
+:scope[data-floe-tone=warn] { --face: color-mix(in srgb, var(--fg) 7%, var(--bg)); --on-face: var(--fg); }
+:scope[data-floe-tone=bad] { --face: var(--tone); --on-face: var(--on-fill); }
+:scope:is([data-floe-tone=warn], [data-floe-tone=bad]) > * { --face: inherit; --on-face: inherit; }
+:scope:is([data-floe-tone=warn], [data-floe-tone=bad]) { background: var(--face); color: var(--on-face); }
+:scope:is([data-floe-tone=warn], [data-floe-tone=bad])::before { color: var(--on-face); }
+:scope[data-floe-tone=bad] { border: 0; }
+.title { color: var(--fg); font-weight: 900; }
+:scope:is([data-floe-tone=warn], [data-floe-tone=bad]) .title { color: var(--on-face); }

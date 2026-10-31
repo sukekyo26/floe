@@ -11,9 +11,9 @@
 <header>
 <p class="kind">{{word "kind"}}{{with .Data.number}} <span class="number">{{.}}</span>{{end}}{{with .Data.date}} <span class="date">{{.}}</span>{{end}}</p>
 <h1>{{.Title}}</h1>
-<p class="status {{.Data.status}}">{{word (printf "status_%s" .Data.status)}}</p>
+{{- $s := .Data.status}}<p class="status {{$s}}"{{if eq $s "accepted"}} data-floe-tone="good"{{else if eq $s "proposed"}} data-floe-tone="warn"{{else if eq $s "rejected"}} data-floe-tone="bad"{{else}} data-floe-tone="muted"{{end}}>{{word (printf "status_%s" .Data.status)}}</p>
 {{- /* LIMIT: superseded_by under another status is not refused, as the library's words would name status alone; the band it draws shows it */}}
-{{- with .Data.superseded_by}}<p class="superseded-by">{{word "superseded_by"}}: {{markdownLine .}}</p>{{end}}
+{{- with .Data.superseded_by}}<p class="superseded-by" data-floe-tone="warn">{{word "superseded_by"}}: {{markdownLine .}}</p>{{end}}
 {{- with .Data.deciders}}<p class="deciders">{{word "deciders"}}: {{.}}</p>{{end}}
 </header>
 <section><h2>{{word "context"}}</h2>{{.Data.context}}</section>
@@ -23,8 +23,8 @@
 {{- end}}
 {{- with .Data.consequences}}
 <section><h2>{{word "consequences"}}</h2><div class="consequences">
-{{- with .good}}<div class="good"><h3>{{word "good"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
-{{- with .bad}}<div class="bad"><h3>{{word "bad"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
+{{- with .good}}<div data-floe-tone="good"><h3>{{word "good"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
+{{- with .bad}}<div data-floe-tone="bad"><h3>{{word "bad"}}</h3><ul>{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul></div>{{end}}
 </div></section>
 {{- end}}
 {{- range $m := .Data.more}}

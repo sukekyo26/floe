@@ -156,10 +156,13 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | --- | --- |
 | `--bg`, `--surface` | The page's ground, a part's face |
 | `--fg`, `--muted` | Text, faint text |
+| `--muted-soft` | A quiet ground, mixed from `--fg` and `--surface` by default; with `--muted`, the colours of the tone `muted` |
 | `--line` | Lines and borders |
-| `--accent`, `--accent-soft` | The colour that stands out, and its pale ground |
-| `--good`, `--warn`, `--bad` and their `-soft` | Good, warning and bad, and their pale grounds |
+| `--accent`, `--accent-soft` | The colour that stands out, and its pale ground; the colours of the tone `accent` |
+| `--good`, `--warn`, `--bad` and their `-soft` | Good, warning and bad, and their pale grounds: the colours of those tones |
 | `--on-fill` | Text on a face filled with `--accent` or a tone's colour, such as a pill |
+| `--<tone>-fill` | A theme's own fill for a tone (`--good-fill`), which `--tone-fill` takes; left out, the tone's `-soft` |
+| `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in (`data-floe-tone`, [parts.md](parts.md#the-css-layers-and-scope)), from those above; accent's outside a tone. A template marks a tone so too |
 | `--shadow` | A colour for shadows; a box casts one only when its theme sets `--floe-shadow-color` on it ([parts.md](parts.md#themes)) |
 | `--floe-shadow-x`, `-y`, `-blur`, `-spread` | The theme's one shadow, in px or rem (none by default) |
 | `--font`, `--display`, `--mono` | The text's typeface, the headings', and the fixed-width one |

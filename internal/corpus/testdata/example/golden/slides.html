@@ -90,6 +90,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
 :scope {
   --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
   --accent: #1d6670; --accent-soft: #dcebec;
   --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
   --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -108,6 +109,16 @@ blockquote > * + * { margin-top: 0.6rem; }
   --page-width: 96rem; --page-pad: 16px;
   color-scheme: light;
 }
+}
+</style>
+<style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
 }
 </style>
 <style>
@@ -206,8 +217,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the faces of cards, unnumbered */
-:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+/* In the faces of cards, unnumbered; a card without a tone notes in --muted */
+:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); --tone: var(--muted); --tone-soft: var(--muted-soft); }
 :scope > div { gap: 0.15rem; }
 .stat dt { font-size: 0.85rem; color: var(--muted); }
 .stat dd { margin: 0; }
@@ -216,11 +227,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
 }
 .stat .unit { margin-left: 0.3em; font-size: 0.5em; font-weight: 400; color: var(--muted); }
-.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
-.stat.accent .note { color: var(--accent); }
-.stat.good .note { color: var(--good); }
-.stat.warn .note { color: var(--warn); }
-.stat.bad .note { color: var(--bad); }
+.stat .note { font-size: 0.82rem; font-weight: 600; color: var(--tone); }
 }
 }
 </style>
@@ -291,15 +298,12 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope > li::before {
   content: "\200b"; content: "\200b" / ""; anchor-name: --floe-mark; grid-area: mark; align-self: first baseline;
   display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-  overflow: hidden; border-radius: 50%; background: var(--accent);
+  overflow: hidden; border-radius: 50%; background: var(--tone);
 }
 :scope > li:not(:last-child)::after {
   content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
   left: calc(anchor(--floe-mark center) - 1px); width: 2px; background: var(--line);
 }
-:scope > li.good::before { background: var(--good); }
-:scope > li.warn::before { background: var(--warn); }
-:scope > li.bad::before { background: var(--bad); }
 :scope .date {
   grid-area: mark / date; align-self: first baseline; width: 7rem; margin-inline-end: 0.65rem; text-align: right;
   font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
@@ -413,7 +417,7 @@ body { margin: 0; font-size: 16px; line-height: 1.6; }
 <dl data-floe-part="stats">
 <div class="card stat" data-floe-look="panel"><dt>Duration</dt><dd class="value">47<span class="unit">min</span></dd></div>
 <div class="card stat" data-floe-look="panel"><dt>Failed checkouts</dt><dd class="value">3,100</dd><dd class="note">about</dd></div>
-<div class="card stat good" data-floe-look="panel"><dt>Data lost</dt><dd class="value">none</dd></div>
+<div class="card stat" data-floe-tone="good" data-floe-look="panel"><dt>Data lost</dt><dd class="value">none</dd></div>
 </dl>
 </div>
 </li>
@@ -422,9 +426,9 @@ body { margin: 0; font-size: 16px; line-height: 1.6; }
 <div class="content">
 <p>It was not in the renewal job&#39;s list, and its expiry warning went to a mailbox no one reads.</p>
 <ol data-floe-part="timeline">
-<li class="bad"><span class="date">10:42</span><div><strong>The certificate expires</strong></div></li>
-<li class="warn"><span class="date">10:58</span><div><strong>Cause found</strong></div></li>
-<li class="good"><span class="date">11:29</span><div><strong>Checkout recovers</strong></div></li>
+<li data-floe-tone="bad"><span class="date">10:42</span><div><strong>The certificate expires</strong></div></li>
+<li data-floe-tone="warn"><span class="date">10:58</span><div><strong>Cause found</strong></div></li>
+<li data-floe-tone="good"><span class="date">11:29</span><div><strong>Checkout recovers</strong></div></li>
 </ol>
 </div>
 </li>

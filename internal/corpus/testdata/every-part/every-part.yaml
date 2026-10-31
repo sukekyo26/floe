@@ -13,6 +13,7 @@ sections:
           - { label: Spaces, value: '12', tone: accent }
           - { label: Owners left, value: '3', tone: warn }
           - { label: Lost pages, value: '1', tone: bad }
+          - { label: Skipped, value: '2', note: left for later, tone: muted }
       - compare:
           before: Now
           after: After the move
@@ -67,7 +68,7 @@ sections:
             - Change
             - { title: Size, num: true }
             - Note
-            - { title: Urgency, pills: { mid: warn, high: bad, '**done**': good, 'A&B': accent } }
+            - { title: Urgency, pills: { mid: warn, high: bad, '**done**': good, 'A&B': accent, later: muted } }
           rows:
             - [A word of the column, '1', mid, mid]
             - [Its pill as an object, '2', a note, { pill: mid, tone: warn }]
@@ -76,6 +77,7 @@ sections:
             - [Its tone, '6', a note, high]
             - [Changed by Markdown and HTML, '4', '**done**', '**done**']
             - [An ampersand, '5', 'A&B', 'A&B']
+            - [A quiet one, '7', a note, later]
       - table:
           columns: [Another table]
           rows: [[mid]]
@@ -88,6 +90,7 @@ sections:
             > Saved drafts are lost too: [the drafts](https://example.com/drafts) and `drafts.sh`.
       - note: { text: 'The new host is ready; [the host](https://example.com/host) and `host.sh`.', tone: accent }
       - note: { text: 'Attachments over 1 MB failed; [the list](https://example.com/failed) names each, and `retry.sh` sends them again.', tone: bad }
+      - note: { text: 'The old wiki stays read-only; [the wiki](https://example.com/wiki) and `wiki.sh`.', tone: muted }
       - note: { text: 'The banner goes up on Friday; [the banner](https://example.com/banner) and `banner.sh`.' }
       - text: '> A quote with [a link](https://example.com/quote) and `quote.sh`.'
   - heading: Progress
@@ -98,12 +101,14 @@ sections:
           - { label: Moved, value: 900, tone: accent }
           - { label: Pending, value: 400, tone: warn }
           - { label: Broken, value: 120, tone: bad }
+          - { label: Skipped, value: 60, tone: muted }
       - progress:
           - { label: Pages, done: 1200, of: 1840 }
           - { label: Images, done: 30, of: 30, tone: good }
           - { label: Spaces, done: 4, of: 12, tone: accent }
           - { label: Owners, done: 1, of: 4, tone: warn }
           - { label: Links, done: 10, of: 120, tone: bad }
+          - { label: Drafts, done: 2, of: 6, tone: muted }
       - checklist:
           - { text: Freeze edits, done: true }
           - text: Copy the **attachments**
@@ -112,6 +117,7 @@ sections:
           - { date: 2030-04-06, title: Copy, tone: accent }
           - { date: 2030-04-07, title: Open, tone: good }
           - { date: 2030-04-08, title: Rollback window ends, tone: bad }
+          - { date: 2030-04-20, title: Old links checked, tone: muted }
           - { date: 2030-04-30, title: Old server off }
   - heading: Choices
     parts:
@@ -212,7 +218,7 @@ sections:
               - table:
                   columns: [Shell, { title: Lines, num: true }]
                   rows: [[PowerShell, '1']]
-      - html: <details><summary>What the freeze covers</summary><p>Edits, <span class="good" data-floe-part="cell">comments</span> and uploads.</p></details>
+      - html: <details><summary>What the freeze covers</summary><p>Edits, <span data-floe-tone="good" data-floe-part="cell">comments</span> and uploads.</p></details>
       - script:
           data: { pages: 1840, "__proto__": "<b>" }
           js: |

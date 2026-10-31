@@ -10,7 +10,7 @@
 {{- $word := index $rows $r $i}}{{$tone := ""}}{{if and $pills (eq (printf "%T" $word) "string")}}{{$tone = index $pills $word}}{{end -}}
 <td{{if $num}} class="num"{{end}}>
 {{- /* The pill as cell's part.html draws one */}}
-{{- if $tone}}<span class="{{$tone}}" data-floe-part="cell">{{$word}}</span>{{else}}{{$cell}}{{end -}}
+{{- if $tone}}<span data-floe-tone="{{$tone}}" data-floe-part="cell">{{$word}}</span>{{else}}{{$cell}}{{end -}}
 </td>{{end}}</tr>
 {{- end}}
 </tbody>

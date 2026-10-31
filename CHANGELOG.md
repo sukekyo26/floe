@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the tone `muted`, a quiet one in `--muted` on `--muted-soft`, wherever
+  a tone is written (note, a pill, a table's pills, bars, progress, stats,
+  timeline, a diagram); adr's deprecated and superseded, postmortem's low
+  severity and fields' type are drawn in it.
+- Add `--tone-fill`, a theme's own fill of a tone, from `--<tone>-fill` in its
+  palette (`--good-fill`), or else the tone's `-soft`.
 - Add a diagram's `width` and `height` left out: the canvas then reaches as
   far right (or down) as what is drawn, and 20 more, its top left still 0, 0.
   Raw SVG is not measured, so write both with a `raw` part.
@@ -243,6 +249,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change findings' nit to be a pill of the tone `muted`, drawn as the theme
+  draws its other pills: with no ground in blueprint, editorial and washi,
+  filled in ink, in the theme's text colour in brutal, notebook and swiss.
+- Change a tone to be marked by `data-floe-tone`, not by a class, in parts,
+  themes and templates of one's own and in a data file's html (a pill written
+  as `<span data-floe-tone="good" data-floe-part="cell">`). floe gives what is
+  marked the tone's colours as `--tone`, `--tone-soft` and `--tone-fill` (see
+  Added), which a part, a theme or a template draws in with one rule, and a
+  part's box accent's; a value of no tone is as if not written.
 - Change the room between parts that stand one after another to
   `--floe-room` (0.75rem) everywhere: in a stack (details' and tabs' panels),
   between the cards of stats, options, decision and html's cards (1rem), all

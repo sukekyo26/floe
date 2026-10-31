@@ -25,12 +25,8 @@ const everyPart = "testdata/every-part"
 // floeParts are floe's parts, as kit embeds them.
 const floeParts = "../kit/floe/parts"
 
-// tones are the classes a part draws a tone in, and "" for one left out.
-var tones = []string{"accent", "good", "warn", "bad", ""}
-
 // The sample of every part draws every part of floe's but a look (one of no schema), one of no style and the
-// diagram, each
-// part that takes a tone in every tone and in none (an element of the same kind as one drawn in a tone, without
+// diagram, each part that takes a tone in every tone and in none (an element of the same kind as one drawn in a tone, without
 // one), and every value of each enum of a part's schema (findings' level, steps' state) in its data, and every part
 // stack takes in details or tabs. No part draws a heading, as a part knows not the level it is put at.
 func TestEveryPartDrawsEveryPart(t *testing.T) {
@@ -102,6 +98,15 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 			t.Errorf("every-part draws no %s in details or tabs", name)
 		}
 	}
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tones, err := k.Tones()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tones = append(tones, "")               // tone.json's, and none
 	written := map[string]map[string]bool{} // path=value of each part's data, by the part's name
 	readOccurrences(data, parts, written)
 	for _, tone := range tones[:len(tones)-1] {
@@ -267,8 +272,8 @@ func (p *part) enumsOf(s map[string]any, path string, enums map[string][]string,
 	}
 }
 
-// drawnTones are the tones a part's boxes are drawn in: the classes of tones, and the kinds of element
-// (a tag, a part and the other classes) drawn in a tone and in none.
+// drawnTones are the tones a part's boxes are drawn in (data-floe-tone), and the kinds of element (a tag, a part and
+// the classes) drawn in a tone and in none.
 type drawnTones struct {
 	found, toned, plain map[string]bool
 }
@@ -290,15 +295,8 @@ func (d *drawnTones) read(n *html.Node) {
 		if e.Type != html.ElementNode {
 			continue
 		}
-		kind := []string{e.Data, nodeAttr(e, "data-floe-part")}
-		tone := ""
-		for _, c := range strings.Fields(nodeAttr(e, "class")) {
-			if slices.Contains(tones, c) {
-				tone = c
-			} else {
-				kind = append(kind, c)
-			}
-		}
+		kind := append([]string{e.Data, nodeAttr(e, "data-floe-part")}, strings.Fields(nodeAttr(e, "class"))...)
+		tone := nodeAttr(e, "data-floe-tone")
 		k := strings.Join(kind, " ")
 		if tone != "" {
 			d.found[tone], d.toned[k] = true, true
@@ -422,7 +420,7 @@ func pillsDrawn(doc *html.Node) map[string]bool {
 				if at == column {
 					for c := range e.Descendants() {
 						if nodeAttr(c, "data-floe-part") == "cell" {
-							found[nodeAttr(c, "class")] = true
+							found[nodeAttr(c, "data-floe-tone")] = true
 						}
 					}
 				}

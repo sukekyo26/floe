@@ -90,6 +90,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
 :scope {
   --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
   --accent: #1d6670; --accent-soft: #dcebec;
   --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
   --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -123,6 +124,16 @@ blockquote > * + * { margin-top: 0.6rem; }
   --retro-orange: #d9622b; --retro-mustard: #e8a33d; --retro-olive: #6b7a2a;
   --retro-stripes: linear-gradient(var(--retro-orange) 0 33.3%, var(--retro-mustard) 33.3% 66.6%, var(--retro-olive) 66.6% 100%);
 }
+}
+</style>
+<style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
 }
 </style>
 <style>
@@ -169,11 +180,8 @@ header { display: grid; gap: 0.4rem; justify-items: start; border-bottom: 3px do
 h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
 /* LIMIT: the contrast test measures the badge of the example's state alone; the others were measured once, in every
    theme, when they were made */
-.status { font-weight: 800; letter-spacing: 0.15em; padding: 0.05rem 0.8rem; border: 2px solid currentColor; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
-.status.accepted { background: var(--good-soft); color: var(--good); }
-.status.proposed { background: var(--warn-soft); color: var(--warn); }
-.status.rejected { background: var(--bad-soft); color: var(--bad); }
-.superseded-by { --face: var(--warn-soft); --on-face: var(--warn); background: var(--face); color: var(--on-face); padding: 0.3rem 0.8rem; border-radius: 6px; }
+.status { font-weight: 800; letter-spacing: 0.15em; padding: 0.05rem 0.8rem; border: 2px solid currentColor; border-radius: 6px; background: var(--tone-soft); color: var(--tone); }
+.superseded-by { --face: var(--tone-soft); --on-face: var(--tone); background: var(--face); color: var(--on-face); padding: 0.3rem 0.8rem; border-radius: 6px; }
 .deciders { color: var(--muted); font-size: 0.9rem; }
 section { display: grid; gap: var(--floe-room); }
 h2 { font-size: 1.1rem; }
@@ -183,9 +191,7 @@ h2 { font-size: 1.1rem; }
 .alternatives .title { font-weight: 700; }
 .alternatives :is(.title, .why) { display: block; }
 .consequences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: 1rem; }
-.consequences h3 { border-left: 4px solid; padding-left: 0.6rem; }
-.good h3 { border-color: var(--good); }
-.bad h3 { border-color: var(--bad); }
+.consequences h3 { border-left: 4px solid var(--tone); padding-left: 0.6rem; }
 }
 }
 </style>
@@ -195,8 +201,7 @@ h2 { font-size: 1.1rem; }
 <article data-floe-look="panel">
 <header>
 <p class="kind">Decision record</p>
-<h1 id="the-retro-theme-in-a-record">The retro theme in a record</h1>
-<p class="status accepted">Accepted</p>
+<h1 id="the-retro-theme-in-a-record">The retro theme in a record</h1><p class="status accepted" data-floe-tone="good">Accepted</p>
 </header>
 <section><h2 id="context">Context</h2><p>A page drawn in a panel, its headings with the stripes.</p>
 </section>

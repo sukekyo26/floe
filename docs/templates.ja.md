@@ -156,10 +156,13 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | --- | --- |
 | `--bg`・`--surface` | ページの地、部品の面 |
 | `--fg`・`--muted` | 文字、薄い文字 |
+| `--muted-soft` | 静かな地。既定は `--fg` と `--surface` を混ぜた色。`--muted` と合わせて tone `muted` の色 |
 | `--line` | 線と枠 |
-| `--accent`・`--accent-soft` | 目立つ色と、その淡い地 |
-| `--good`・`--warn`・`--bad` と `-soft` | 良い・注意・悪いと、その淡い地 |
+| `--accent`・`--accent-soft` | 目立つ色と、その淡い地。tone `accent` の色 |
+| `--good`・`--warn`・`--bad` と `-soft` | 良い・注意・悪いと、その淡い地。その tone の色 |
 | `--on-fill` | `--accent` やトーンの色で塗った面の上の文字（pill など） |
+| `--<tone>-fill` | テーマが tone を塗る色（`--good-fill`）。`--tone-fill` が読む。無ければその tone の `-soft` |
+| `--tone`・`--tone-soft`・`--tone-fill` | 読む要素の tone（`data-floe-tone`、[parts.ja.md](parts.ja.md#css-の層と-scope)）の色。上の変数から floe が置き、tone の外では accent の色。テンプレートも tone をこの属性で付ける |
 | `--shadow` | 影の色の候補。影は、テーマが箱に `--floe-shadow-color` を置いたときだけ描かれる（[parts.ja.md](parts.ja.md#テーマ)） |
 | `--floe-shadow-x`・`-y`・`-blur`・`-spread` | テーマの 1 組の影。px か rem（既定は無し） |
 | `--font`・`--display`・`--mono` | 本文・見出し・等幅の書体 |

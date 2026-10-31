@@ -94,7 +94,7 @@ floe の部品が描くのに使う関数も使えます。floe の部品の `pa
 
 - 見た目だけのものは、`part.css`（と、`description:` と借りる見た目を書く `part.yaml`）だけで schema の無いディレクトリです。何も描かず、借りる部品や要素にスタイルを貸します。floe の見た目だけのものは `panel`・`rows`・`cards`・`band`・`numbered` です（それぞれが何を描くかは [templates.ja.md](templates.ja.md#借りられる見た目) にあります）。
 - 部品は `part.yaml` の `looks: [panel]` でほかの見た目を借り、その見た目が借りるものも、自分より先に順に借りて、その上で整えます。
-- 共有の schema は、テンプレートか部品の schema が、いつもその根を名指す `<名前>.json`（`floe:///parts/<名前>.json`）です。floe のものは `tone.json`（`accent`・`good`・`warn`・`bad`）と `any.json`（どの種類の部品でも 1 つ）です。その中の schema は、テンプレートと同じく、その根から確かめます。持つ部品と floe の format は、根から `properties` と `items` で辿れる所で、テンプレートから指しても部品から指しても描きます。
+- 共有の schema は、テンプレートか部品の schema が、いつもその根を名指す `<名前>.json`（`floe:///parts/<名前>.json`）です。floe のものは `tone.json`（`accent`・`good`・`warn`・`bad`・`muted`）と `any.json`（どの種類の部品でも 1 つ）です。その中の schema は、テンプレートと同じく、その根から確かめます。持つ部品と floe の format は、根から `properties` と `items` で辿れる所で、テンプレートから指しても部品から指しても描きます。
 - `any.json` の値は、テンプレートの `page.html` と同じく、全部の種類の map で `part.html` に来ます。書いた種類には描いた部品が入り、ほかは nil です。`{{.x}}` と書くと map を字で書くので、`{{range .x}}{{.}}{{end}}` で描きます。schema の根が `any.json` なら `{{range .}}{{.}}{{end}}` です（1 つの種類だけを描く書き方は [templates.ja.md](templates.ja.md#テンプレートの中の部品)）。
 
 ## CSS の層と @scope
@@ -113,6 +113,8 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 部品の箱か、見た目を借りる並び（`ul`・`ol`・`menu`）は、印・余白・項目の間を持たず、grid で並びます。floe が `floe.parts` と `floe.looks` の一番下の層（`floe.parts.boxes`・`floe.looks.boxes`）でそうするので、どの部品と見た目の自分の規則も、その上に書けます。部品は、並びの見た目を外す規則を書きません。テンプレートの `page.css` やテーマの `base.css` が並び全部への規則を書いても、部品の箱のこの 4 つは変わりません（margin と、項目（`li`・`::marker`）への規則は届きます）。見た目を借りる要素の 4 つも、テーマのそうした規則では変わらず、借りるテンプレートの `page.css` が整えられます。箱を印のある並びにしたい部品は、`part.css` に `list-style` と余白を書くか、箱の中に並びを置きます。印の無い並びを読み上げで並びとして読ませたいときは（Safari は読まない）、`role="list"` を書きます。
 
 部品は、色をパレットの変数からそのまま取り（`var(--accent)`）、自分の既定の値を持ちません。floe のページは、どれもパレットを持つためです。そのため、`floe part show <名前>` が出す CSS は、パレットの無いページでは色が付きません。そうしたページに図を置くときは、`default` のパレットを持つ `floe diagram render` の断片のスタイルを使います（[commands.ja.md](commands.ja.md#floe-diagram-render-specyaml)）。また、箱が並びの部品（checklist・links・steps・timeline）の印と余白は、floe がページを描くときに外すので（上のとおり）、その CSS だけでは外れません。floe の外で描くページは、自分で書きます。
+
+tone（`tone.json` のどれか）は、class でなく、その色で描く要素の `data-floe-tone` で付けます（`<span data-floe-tone="good" data-floe-part="cell">`）。floe は、その要素と、その中の部品の箱でないものに、tone の色を `--tone`・`--tone-soft` で置きます（パレットの `--good`・`--good-soft` から）。部品の箱とページは accent の色を持つので、部品は外の tone を継ぎません。テンプレートや見た目の要素に付けても同じです。部品は 2 つを 1 つの規則で読み（`background: var(--tone-soft); color: var(--tone)`）、tone ごとの規則は、tone の色でないもの（note の印、diagram の bad の箱の字）にだけ書きます。tone の無いものを別の色で描く部品は、根に 2 つを置きます（stats は `--muted`・`--muted-soft`）。形ごとに別の色で描く部品（diagram）は、根で 2 つを `initial` にし、形の色を `var()` の後ろに書きます（`var(--tone, var(--line))`）。tone に無い値の `data-floe-tone` は、付けないのと同じで、部品の箱なら accent の色、ほかの要素なら外の tone で描かれます。
 
 部品は自分の箱に margin を書きません。部品の箱になりうるブロック（`p`・`ul`・`ol`・`dl`・`figure`・`form`・`menu`・`fieldset` など）の margin は floe の base が 0 にし、部品の間は置く側（テンプレートの節、stack、note）が、隣と `--floe-room` あけて空けます。部品の箱に margin を書くと、置く側の間に勝ってしまいます。部品の中の Markdown の流れ（段落の間と、その中の部品の箱の前後。Markdown の表など）の間は、部品が決めます。
 
@@ -141,6 +143,7 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 - 色は `palette.css` に 1 回だけ書き、ほかのファイルでは `var()`（`var(--accent)`）で使います。テンプレートが `:scope` に書く色とパレットが食い違わないためです。
 - 行の上下の余白 `--floe-row-pad` は、floe の base のまま替えません。どのテーマでも、どの部品の行も同じ高さになります。
 - 行の印（note の印、numbered の丸、timeline の点、links の箱）の大きさ（枠を含む）は `--floe-mark`、字との間は `--floe-mark-gap` で変えます。印の `top`・`left` や行の余白では動かしません。印は `content: none` で消し、そのとき印の列は幅を取りません。
+- テーマも tone を `var(--tone)`・`var(--tone-soft)` で描き、tone ごとの規則を書きません。tone をテーマの色で塗るテーマ（brutal・notebook）は、`palette.css` に `--good-fill` などで 1 回だけ置き（tone の無いものは `--accent-fill`）、`var(--tone-fill)` で描きます。floe が `--<tone>-fill` から置き、テーマが名指さない tone では `--<tone>-soft` になります。テーマの部品ごとのファイルは、部品の `part.css` と同じ深さの層に後ろから入るので、同じ詳しさなら勝ち、詳しいセレクタなら詳しさで決まります。
 - 影は、テーマの 1 組です。`palette.css` に `--floe-shadow-x`・`-y`・`-blur`・`-spread` で 1 回だけ書き（px か rem。em は箱の字の大きさで変わり、% は影が無くなります）、影を落とす箱に、部品か見た目のファイルで色 `--floe-shadow-color` を置きます（`.card { --floe-shadow-color: var(--fg); }`）。色は中の箱に届きません。箱の中に描く影は `--floe-inset` に置きます（打ち消すのは `initial`。`none` を書くと、箱の影も一緒に消えます）。部品の箱・見た目を借りる要素・引用に `box-shadow` を書きません。floe の base がこれらから書き、上から書くと消えます。
 - 箱の外へ描くもの（影、外へ出る疑似要素、outline）のために場所は空けません。四方とも、floe が部品の間に空ける `--floe-room`（0.75rem）以下にし、ほかの箱やページの端に届かないようにします。大きさは箱の大きさによらない値にします。傾きや拡大のように、箱が大きいほど外へ出る変形は使いません。テーマは部品の間を書きません。間はどこも `--floe-room` で、部品とテンプレートが決めます。テーマの `cards.css` や `tabs.css` が根に `gap` を書くと、間がずれます。
 - データファイルは、floe のテーマと同じく `theme:` で選びます。

@@ -66,21 +66,22 @@ func TestDrawHandoffHands(t *testing.T) {
 	}
 }
 
-// adr stamps each state in its own class and word, and shows the record that superseded it only when it is one.
+// adr stamps each state in its own class, tone and word, and shows the record that superseded it, in warn, only when
+// it is one.
 func TestDrawAdrStates(t *testing.T) {
 	t.Parallel()
 
-	for _, tt := range []struct{ lang, state, word, by string }{
-		{"en", "proposed", "Proposed", ""},
-		{"en", "accepted", "Accepted", ""},
-		{"en", "rejected", "Rejected", ""},
-		{"en", "deprecated", "Deprecated", ""},
-		{"en", "superseded", "Superseded", "Superseded by"},
-		{"ja", "proposed", "提案", ""},
-		{"ja", "accepted", "採用", ""},
-		{"ja", "rejected", "却下", ""},
-		{"ja", "deprecated", "廃止", ""},
-		{"ja", "superseded", "置き換え済み", "置き換えた記録"},
+	for _, tt := range []struct{ lang, state, tone, word, by string }{
+		{"en", "proposed", ` data-floe-tone="warn"`, "Proposed", ""},
+		{"en", "accepted", ` data-floe-tone="good"`, "Accepted", ""},
+		{"en", "rejected", ` data-floe-tone="bad"`, "Rejected", ""},
+		{"en", "deprecated", ` data-floe-tone="muted"`, "Deprecated", ""},
+		{"en", "superseded", ` data-floe-tone="muted"`, "Superseded", "Superseded by"},
+		{"ja", "proposed", ` data-floe-tone="warn"`, "提案", ""},
+		{"ja", "accepted", ` data-floe-tone="good"`, "採用", ""},
+		{"ja", "rejected", ` data-floe-tone="bad"`, "却下", ""},
+		{"ja", "deprecated", ` data-floe-tone="muted"`, "廃止", ""},
+		{"ja", "superseded", ` data-floe-tone="muted"`, "置き換え済み", "置き換えた記録"},
 	} {
 		src := "template: adr\nlang: " + tt.lang + "\ntitle: x\nstatus: " + tt.state + "\ncontext: c\ndecision: d\n"
 		if tt.by != "" {
@@ -90,30 +91,33 @@ func TestDrawAdrStates(t *testing.T) {
 		if err != nil {
 			t.Fatal(told(err))
 		}
-		if want := `<p class="status ` + tt.state + `">` + tt.word + `</p>`; !bytes.Contains(page, []byte(want)) {
+		if want := `<p class="status ` + tt.state + `"` + tt.tone + `>` + tt.word + `</p>`; !bytes.Contains(page, []byte(want)) {
 			t.Errorf("%s %s draws no %s", tt.lang, tt.state, want)
 		}
-		by := `<p class="superseded-by">` + tt.by + `: `
+		by := `<p class="superseded-by" data-floe-tone="warn">` + tt.by + `: `
 		if got := bytes.Contains(page, []byte(`class="superseded-by"`)); got != (tt.by != "") || got && !bytes.Contains(page, []byte(by)) {
 			t.Errorf("%s %s: the record superseding it drawn = %v, want %v as %s", tt.lang, tt.state, got, tt.by != "", by)
 		}
 	}
 }
 
-// postmortem draws each severity and each state of an action in its own class and word.
+// postmortem draws each severity and each state of an action in its own class, tone and word.
 func TestDrawPostmortem(t *testing.T) {
 	t.Parallel()
 
-	for _, tt := range []struct{ lang, level, levelWord, state, stateWord string }{
-		{"en", "high", "High", "todo", "To do"},
-		{"en", "medium", "Medium", "doing", "In progress"},
-		{"en", "low", "Low", "done", "Done"},
-		{"ja", "high", "重大", "todo", "これから"},
-		{"ja", "medium", "中程度", "doing", "作業中"},
-		{"ja", "low", "軽微", "done", "済み"},
+	for _, tt := range []struct{ lang, level, levelTone, levelWord, state, stateTone, stateWord string }{
+		{"en", "high", ` data-floe-tone="bad"`, "High", "todo", ` data-floe-tone="warn"`, "To do"},
+		{"en", "medium", ` data-floe-tone="warn"`, "Medium", "doing", "", "In progress"},
+		{"en", "low", ` data-floe-tone="muted"`, "Low", "done", ` data-floe-tone="good"`, "Done"},
+		{"ja", "high", ` data-floe-tone="bad"`, "重大", "todo", ` data-floe-tone="warn"`, "これから"},
+		{"ja", "medium", ` data-floe-tone="warn"`, "中程度", "doing", "", "作業中"},
+		{"ja", "low", ` data-floe-tone="muted"`, "軽微", "done", ` data-floe-tone="good"`, "済み"},
 	} {
 		page := drawPostmortem(t, "lang: "+tt.lang+"\nseverity: "+tt.level+"\nactions: [{what: w, state: "+tt.state+"}]\n")
-		for _, want := range []string{`<span class="severity ` + tt.level + `">` + tt.levelWord + `</span>`, `<span class="state ` + tt.state + `">` + tt.stateWord + `</span>`} {
+		for _, want := range []string{
+			`<span class="severity ` + tt.level + `"` + tt.levelTone + `>` + tt.levelWord + `</span>`,
+			`<span class="state ` + tt.state + `"` + tt.stateTone + `>` + tt.stateWord + `</span>`,
+		} {
 			if !bytes.Contains(page, []byte(want)) {
 				t.Errorf("%s %s %s draws no %s", tt.lang, tt.level, tt.state, want)
 			}
@@ -132,17 +136,17 @@ func TestDrawPostmortemLeftOut(t *testing.T) {
 	}{
 		{
 			"no severity", "lang: en\nactions: [{what: w, state: done}]\n",
-			[]string{`<th>State</th>`, `<span class="state done">`},
+			[]string{`<th>State</th>`, `<span class="state done" data-floe-tone="good">`},
 			[]string{`class="severity`, `<th>Owner</th>`},
 		},
 		{
 			"no state", "lang: en\nseverity: low\nactions: [{what: w, owner: o}]\n",
-			[]string{`<span class="severity low">`, `<th>Owner</th>`, `<td>o</td>`},
+			[]string{`<span class="severity low" data-floe-tone="muted">`, `<th>Owner</th>`, `<td>o</td>`},
 			[]string{`class="state`, `<th>State</th>`},
 		},
 		{
 			"some states", "lang: ja\nactions: [{what: a, state: done}, {what: b}]\n",
-			[]string{`<th>状態</th>`, `<td><span class="state done">済み</span></td>`, `<td>b</td><td></td>`},
+			[]string{`<th>状態</th>`, `<td><span class="state done" data-floe-tone="good">済み</span></td>`, `<td>b</td><td></td>`},
 			[]string{`<th>担当</th>`},
 		},
 	} {

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -117,8 +118,8 @@ func (a *app) diagrams(paths []string, lang string, with func(*diagram.Drawer, a
 }
 
 // diagramAssets are what a page holds once for the diagrams of floe diagram render: the script that zooms them,
-// default's palette on the diagrams' roots alone, in its layer, and the CSS of floe's part diagram, unscoped, as a
-// page without floe's parts takes it.
+// default's palette and the tones' colours on the diagrams' roots alone, in its layer, and the CSS of floe's part
+// diagram, unscoped, as a page without floe's parts takes it.
 // LIMIT: a browser that does not read @scope drops the palette, and the diagrams are drawn without colours; the
 // docs ask for the browsers the README names.
 func diagramAssets() (string, error) {
@@ -140,7 +141,12 @@ func diagramAssets() (string, error) {
 	}
 	// The page around the diagrams keeps its own palette. In a layer, so that the page's rules for the diagrams win:
 	// out of one, the palette's :scope, as near as can be, would win over those as specific.
-	palette := draw.Sheet("floe.palette", draw.InScope("("+diagram.Roots+")", t.Palette()))
+	tones, err := k.Tones()
+	if err != nil {
+		return "", err //nolint:wrapcheck // as above
+	}
+	colours := slices.Concat(t.Palette(), draw.Tones(tones))
+	palette := draw.Sheet("floe.palette", draw.InScope("("+diagram.Roots+")", colours))
 	return script + "\n<style>" + palette + "</style>\n<style>" + draw.Sheet("", p.CSS()) + "</style>", nil
 }
 

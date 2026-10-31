@@ -1,17 +1,11 @@
 :scope {
-  background: var(--surface); color: var(--fg); border-radius: 0;
+  background: var(--surface); color: var(--fg); border-radius: 0; border: 0; border-top: 2px solid var(--tone);
+  --floe-mark: 2rem; --floe-mark-gap: 0.75rem;
 }
-:scope, :scope:is(.good, .warn, .bad) { background: var(--surface); border: 0; border-top: 2px solid var(--accent); --floe-mark: 2rem; --floe-mark-gap: 0.75rem; }
-:scope.good { border-top-color: var(--good); }
-:scope.warn { border-top-color: var(--warn); }
-:scope.bad { border-top-color: var(--bad); }
 /* The seals are the kanji for a note, good, a warning and a danger, escaped to keep the source in English */
-:scope::before { content: "\6CE8"; content: "\6CE8" / ""; border-radius: 4px; background: var(--accent); color: var(--on-fill); font-size: 1.05rem; }
-:scope.good::before { content: "\826F"; content: "\826F" / ""; background: var(--good); color: var(--on-fill); }
-:scope.warn::before { content: "\6212"; content: "\6212" / ""; background: var(--warn); color: var(--on-fill); }
-:scope.bad::before { content: "\5371"; content: "\5371" / ""; background: var(--bad); color: var(--on-fill); }
-.title { color: var(--accent); letter-spacing: 0.1em; }
-:scope.good .title { color: var(--good); }
-:scope.warn .title { color: var(--warn); }
-:scope.bad .title { color: var(--bad); }
+:scope::before { content: "\6CE8"; content: "\6CE8" / ""; border-radius: 4px; background: var(--tone); color: var(--on-fill); font-size: 1.05rem; }
+:scope[data-floe-tone=good]::before { content: "\826F"; content: "\826F" / ""; }
+:scope[data-floe-tone=warn]::before { content: "\6212"; content: "\6212" / ""; }
+:scope[data-floe-tone=bad]::before { content: "\5371"; content: "\5371" / ""; }
+.title { letter-spacing: 0.1em; }
 :scope code { background: var(--face, color-mix(in srgb, var(--fg) 6%, transparent)); }

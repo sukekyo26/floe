@@ -8,6 +8,8 @@
   /* Its primary faces, in both modes, and the black text on them */
   --brutal-yellow: #ffde21; --brutal-blue: #6fa2ff; --brutal-pink: #ff8acb;
   --brutal-green: #3ddc84; --brutal-orange: #ffa62b; --brutal-red: #ff5c5c;
+  /* The tones' fills, under black (--tone-fill); muted keeps its pale ground */
+  --accent-fill: var(--brutal-blue); --good-fill: var(--brutal-green); --warn-fill: var(--brutal-orange); --bad-fill: var(--brutal-red);
   --brutal-ink: #0a0a0a;
   /* Its hard shadows, falling right and down */
   --floe-shadow-x: 6px; --floe-shadow-y: 6px;

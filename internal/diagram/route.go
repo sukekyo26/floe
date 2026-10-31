@@ -234,7 +234,6 @@ func (l *layout) addEdge(e *edge, at string) {
 	if e.Bold {
 		cls += " bold"
 	}
-	cls += tone(e.Tone)
 	start, end := "none", "arrow"
 	if e.Start != nil {
 		start = *e.Start
@@ -242,7 +241,7 @@ func (l *layout) addEdge(e *edge, at string) {
 	if e.End != nil {
 		end = *e.End
 	}
-	el := elem{Kind: "path", D: pathData(pts), Class: cls, Start: l.marker(start), End: l.marker(end)}
+	el := elem{Kind: "path", D: pathData(pts), Class: cls, Tone: e.Tone, Start: l.marker(start), End: l.marker(end)}
 	l.edgeEls = append(l.edgeEls, el)
 	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing}
 	if e.Label != nil {
