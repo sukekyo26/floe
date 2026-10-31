@@ -9,5 +9,5 @@
   /* The vermilion of its marks (seals, the tab picked, the rules of code and quotes), kept apart from --bad,
      which a template may set otherwise, and the hairlines of its tables, in the ink */
   --washi-shu: #c13b23; --washi-hair: color-mix(in srgb, var(--fg) 18%, transparent);
-  --radius: 0; --radius-small: 0; --radius-pill: 3px;
+  --radius: 0; --radius-small: 3px; --radius-pill: 3px;
 }

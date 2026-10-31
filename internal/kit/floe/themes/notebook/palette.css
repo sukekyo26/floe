@@ -30,5 +30,6 @@
   --floe-shadow-y: 3px; --floe-shadow-blur: 8px; --floe-shadow-spread: -5px;
   /* Hand-drawn corners: a box's, a pill's and a round mark's */
   --nb-hand: 14px 6px 12px 8px / 8px 12px 6px 14px; --nb-pill: 3px 10px 4px 12px; --nb-round: 48% 52% 45% 55%;
-  --radius: 12px;
+  /* The corners of what is drawn without a hand (runbook's box, a key, a bar, a template's pill) */
+  --radius: 12px; --radius-small: 6px; --radius-pill: 999px;
 }

@@ -1,2 +1,2 @@
-:scope { padding: 6px; }
+:scope { padding: var(--default-pad); }
 :scope > ul { background: var(--surface); border-radius: var(--default-inner); padding: 0.7rem 1.1rem; }

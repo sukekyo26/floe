@@ -69,13 +69,43 @@ func text(src []byte, value []token) string {
 	return string(src[value[0].at : last.at+len(last.data)])
 }
 
-// TestRadius keeps the round of every corner of floe's CSS in the palette: a corner reads a variable, or is a shape.
-// The palette's own corners are one length each.
+// lengthless is whether a corner's value takes every length from a variable: var() of one name, calc(), their
+// operators and the corner 0, with no length nor fallback of its own.
+func lengthless(value []token) bool {
+	for _, t := range value {
+		switch t.tt {
+		case css.FunctionToken:
+			if f := strings.ToLower(string(t.data)); f != "var(" && f != "calc(" {
+				return false
+			}
+		case css.CustomPropertyNameToken, css.RightParenthesisToken, css.DelimToken:
+		case css.NumberToken:
+			if string(t.data) != "0" {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// setsCorners is whether a file may set a variable a corner reads: a palette, where a theme's corners are, or
+// floe's base, which holds floe's own (--floe-room).
+func setsCorners(name string) bool { return path.Base(name) == "palette.css" || name == "base.css" }
+
+// TestRadius keeps the round of every corner of floe's CSS in the palette: a corner is a shape, or takes all its
+// lengths from variables set in a palette (or floe's base) alone. The palette's three corners are one length each.
 func TestRadius(t *testing.T) {
 	t.Parallel()
 
 	floe := os.DirFS("../kit/floe")
-	checked := 0
+	setIn := map[string][]string{} // a variable: the files that set it
+	type corner struct {
+		file, prop, value string
+		reads             []string
+	}
+	var corners []corner
 	err := fs.WalkDir(floe, ".", func(name string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || path.Ext(name) != ".css" {
 			return err
@@ -84,25 +114,31 @@ func TestRadius(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		corner := func(name string) bool {
-			return strings.HasSuffix(name, "radius") || slices.Contains(paletteRadii, name)
-		}
-		for prop, values := range declarations(src, corner) {
+		for prop, values := range declarations(src, func(p string) bool { return strings.HasPrefix(p, "--") }) {
+			setIn[prop] = append(setIn[prop], name)
 			for _, value := range values {
-				if strings.HasPrefix(prop, "--") {
-					if slices.Contains(paletteRadii, prop) && (path.Base(name) != "palette.css" || len(value) != 1) {
-						t.Errorf("%s: %s: %s; the palette sets it to one length", name, prop, text(src, value))
-					}
+				if slices.Contains(paletteRadii, prop) && (path.Base(name) != "palette.css" || len(value) != 1) {
+					t.Errorf("%s: %s: %s; the palette sets it to one length", name, prop, text(src, value))
+				}
+			}
+		}
+		for prop, values := range declarations(src, func(p string) bool { return strings.HasSuffix(p, "radius") && !strings.HasPrefix(p, "--") }) {
+			for _, value := range values {
+				if slices.Contains(radiusShapes, text(src, value)) {
 					continue
 				}
-				checked++
-				reads := slices.ContainsFunc(value, func(t token) bool {
-					return t.tt == css.FunctionToken && strings.EqualFold(string(t.data), "var(")
-				})
-				if !reads && !slices.Contains(radiusShapes, text(src, value)) {
+				if !lengthless(value) {
 					t.Errorf("%s: %s: %s; read --radius, --radius-small or --radius-pill, or write a shape (%s)",
 						name, prop, text(src, value), strings.Join(radiusShapes, ", "))
+					continue
 				}
+				c := corner{file: name, prop: prop, value: text(src, value)}
+				for _, tok := range value {
+					if tok.tt == css.CustomPropertyNameToken {
+						c.reads = append(c.reads, string(tok.data))
+					}
+				}
+				corners = append(corners, c)
 			}
 		}
 		return nil
@@ -110,7 +146,16 @@ func TestRadius(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if checked == 0 {
+	if len(corners) == 0 {
 		t.Fatal("no corner found in floe's CSS")
+	}
+	for _, c := range corners {
+		for _, v := range c.reads {
+			if len(setIn[v]) == 0 || !slices.ContainsFunc(setIn[v], setsCorners) ||
+				slices.ContainsFunc(setIn[v], func(f string) bool { return !setsCorners(f) }) {
+				t.Errorf("%s: %s: %s; %s is set in %v, and a corner reads a variable set in a palette alone",
+					c.file, c.prop, c.value, v, setIn[v])
+			}
+		}
 	}
 }
