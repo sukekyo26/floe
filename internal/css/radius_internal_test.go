@@ -19,11 +19,46 @@ var radiusShapes = []string{"0", "50%", "999px"}
 // is one length
 var paletteRadii = []string{"--radius", "--radius-small", "--radius-pill"}
 
-// declarations returns each declaration in src of a property that want takes, by name, with the tokens of its
-// value, read by the tokens alone.
-func declarations(src []byte, want func(name string) bool) map[string][][]token {
-	found := map[string][][]token{}
+// declaration is a declaration's value, read by the tokens alone, and the prelude of the rule it is in.
+type declaration struct {
+	value []token
+	rule  string
+}
+
+// rules returns, for each token, the prelude of the innermost rule it is in ("" outside every rule), comments left
+// out.
+func rules(toks []token) []string {
+	in := make([]string, len(toks))
+	var open []string
+	var prelude strings.Builder
+	for k, t := range toks {
+		switch t.tt {
+		case css.LeftBraceToken:
+			open = append(open, strings.TrimSpace(prelude.String()))
+			prelude.Reset()
+		case css.RightBraceToken:
+			if len(open) > 0 {
+				open = open[:len(open)-1]
+			}
+			prelude.Reset()
+		case css.SemicolonToken:
+			prelude.Reset()
+		case css.CommentToken:
+		default:
+			prelude.Write(t.data)
+		}
+		if len(open) > 0 {
+			in[k] = open[len(open)-1]
+		}
+	}
+	return in
+}
+
+// declarations returns each declaration in src of a property that want takes, by name.
+func declarations(src []byte, want func(name string) bool) map[string][]declaration {
+	found := map[string][]declaration{}
 	toks := lex(src)
+	in := rules(toks)
 	for i := 0; i < len(toks); i++ {
 		name := strings.ToLower(string(toks[i].data))
 		if (toks[i].tt != css.IdentToken && toks[i].tt != css.CustomPropertyNameToken) || !want(name) {
@@ -54,7 +89,7 @@ func declarations(src []byte, want func(name string) bool) map[string][][]token 
 			}
 			value = append(value, toks[j])
 		}
-		found[name] = append(found[name], value)
+		found[name] = append(found[name], declaration{value: value, rule: in[i]})
 		i = j
 	}
 	return found
@@ -90,20 +125,30 @@ func lengthless(value []token) bool {
 	return true
 }
 
-// setsCorners is whether a file may set a variable a corner reads: a palette, where a theme's corners are, a
-// theme's base.css, whose root holds what is the theme's own alone (default's palette lies under every theme's), or
-// floe's base, which holds floe's own (--floe-room).
-func setsCorners(name string) bool {
-	return path.Base(name) == "palette.css" || path.Base(name) == "base.css"
+// place is where a variable is set: a file of floe's, and the prelude of the rule.
+type place struct{ file, rule string }
+
+// setsCorners is whether a variable a corner reads may be set at p: a palette, where a theme's corners are, the
+// :scope of a theme's base.css, which holds what is the theme's own alone (default's palette lies under every
+// theme's), or the :root of floe's base, which holds floe's own (--floe-room).
+func setsCorners(p place) bool {
+	switch {
+	case path.Base(p.file) == "palette.css":
+		return true
+	case p.file == "base.css":
+		return p.rule == ":root"
+	default:
+		return path.Base(p.file) == "base.css" && p.rule == ":scope"
+	}
 }
 
 // TestRadius keeps the round of every corner of floe's CSS in the palette: a corner is a shape, or takes all its
-// lengths from variables set in a palette or a base alone. The palette's three corners are one length each.
+// lengths from variables set in a palette or the root of a base alone. The palette's three corners are one length each.
 func TestRadius(t *testing.T) {
 	t.Parallel()
 
 	floe := os.DirFS("../kit/floe")
-	setIn := map[string][]string{} // a variable: the files that set it
+	setIn := map[string][]place{} // a variable: where it is set
 	type corner struct {
 		file, prop, value string
 		reads             []string
@@ -118,15 +163,16 @@ func TestRadius(t *testing.T) {
 			return err
 		}
 		for prop, values := range declarations(src, func(p string) bool { return strings.HasPrefix(p, "--") }) {
-			setIn[prop] = append(setIn[prop], name)
-			for _, value := range values {
-				if slices.Contains(paletteRadii, prop) && (path.Base(name) != "palette.css" || len(value) != 1) {
-					t.Errorf("%s: %s: %s; the palette sets it to one length", name, prop, text(src, value))
+			for _, d := range values {
+				setIn[prop] = append(setIn[prop], place{file: name, rule: d.rule})
+				if slices.Contains(paletteRadii, prop) && (path.Base(name) != "palette.css" || len(d.value) != 1) {
+					t.Errorf("%s: %s: %s; the palette sets it to one length", name, prop, text(src, d.value))
 				}
 			}
 		}
 		for prop, values := range declarations(src, func(p string) bool { return strings.HasSuffix(p, "radius") && !strings.HasPrefix(p, "--") }) {
-			for _, value := range values {
+			for _, d := range values {
+				value := d.value
 				if slices.Contains(radiusShapes, text(src, value)) {
 					continue
 				}
@@ -155,8 +201,8 @@ func TestRadius(t *testing.T) {
 	for _, c := range corners {
 		for _, v := range c.reads {
 			if len(setIn[v]) == 0 || !slices.ContainsFunc(setIn[v], setsCorners) ||
-				slices.ContainsFunc(setIn[v], func(f string) bool { return !setsCorners(f) }) {
-				t.Errorf("%s: %s: %s; %s is set in %v, and a corner reads a variable set in a palette or a base alone",
+				slices.ContainsFunc(setIn[v], func(p place) bool { return !setsCorners(p) }) {
+				t.Errorf("%s: %s: %s; %s is set in %v, and a corner reads a variable set in a palette or the root of a base alone",
 					c.file, c.prop, c.value, v, setIn[v])
 			}
 		}

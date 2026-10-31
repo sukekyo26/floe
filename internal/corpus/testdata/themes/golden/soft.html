@@ -91,7 +91,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 :scope {
   --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
   --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
-  /* A quiet ground within a box of the surface: a table's head, a bar's track, a keycap */
+  /* A quiet ground within a box of the surface: a table's head, a bar's track, progress's ground, a keycap.
+     LIMIT: one melting into its box's ground is seen, not measured; a theme that paints a box near it sets it there */
   --quiet: color-mix(in srgb, var(--line) 45%, var(--surface));
   --accent: #1d6670; --accent-soft: #dcebec;
   --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
@@ -133,7 +134,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope (:root) to ([data-floe-part] > *) {
 /* Faces with round corners, as the parts are drawn by default */
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-radius: var(--radius); background: var(--quiet); }
+blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-radius: var(--radius); background: var(--quiet); --quiet: var(--surface); }
 }
 }
 </style>
