@@ -62,8 +62,8 @@ const colours = `
 `
 
 // measureContrast is the script that measures, on the page, the contrast of every text shown against the
-// ground under it: an element's own text, the text of its ::before and ::after (a string, a counter() or an
-// attr()) and its list ::marker, as the page is drawn, then with every details open and each tab picked in turn, but a control that is
+// ground under it: an element's own text, the text of its ::before and ::after (a string, but a zero-width space
+// alone, a counter() or an attr()) and its list ::marker, as the page is drawn, then with every details open and each tab picked in turn, but a control that is
 // disabled, which WCAG leaves out, and a progress bar's text, which is not shown. The ground is the
 // background colours of the element and those around it laid one over another on the root's, each faded by
 // the opacity over it, as the text is. It returns one line for each below 4.5:1, 3:1 for large text (24px,
@@ -86,7 +86,8 @@ const measureContrast = `(() => {` + colours + `
     const r = ratio(shown, bg);
     if (r < (large ? 3 : 4.5)) low.add(name(e) + what + ' ' + hex(shown) + ' on ' + hex(bg) + ' ' + r.toFixed(2) + ' "' + text.trim().slice(0, 16) + '"');
   };
-  const text = (content) => /^["'][^"']/.test(content) || /\b(counters?|attr)\(/.test(content);
+  // A string of a zero-width space alone, which a mark that is no letter holds for its baseline, shows no text.
+  const text = (content) => /^["'][^"'\u200b]/.test(content) || /\b(counters?|attr)\(/.test(content);
   const measureAll = () => {
     grounds.clear();
     for (const e of document.body.querySelectorAll('*')) {
