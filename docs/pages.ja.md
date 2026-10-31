@@ -101,7 +101,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `script` | 動くもの（[スクリプトと HTML](#スクリプトと-html)）。 |
 | `html` | そのまま入る HTML。`any.json` の鍵で、部品そのものではないので、`floe part show` にはありません（[スクリプトと HTML](#スクリプトと-html)）。 |
 
-`tone` は `accent`・`good`・`warn`・`bad` のどれかです。
+`tone` は `accent`・`good`・`warn`・`bad`・`muted` のどれかです。
 
 ## 文の書き方
 
@@ -136,7 +136,7 @@ Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書�
 
 ```text
 plan.yaml:5:5: additional properties 'colour' not allowed
-plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad'
+plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 ```
 
 それを直すと、その後の確かめに進みます。

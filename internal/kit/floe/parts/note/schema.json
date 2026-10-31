@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "note",
-  "description": "A note set apart from the text, in the colour of its tone: accent when left out, good, warn for a warning, bad for a danger",
+  "description": "A note set apart from the text, in the colour of its tone, accent when left out",
   "type": "object",
   "properties": {
     "tone": { "$ref": "floe:///parts/tone.json" },

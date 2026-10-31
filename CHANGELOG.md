@@ -10,7 +10,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Add the tone `muted`, a quiet one in `--muted` on `--muted-soft`, wherever
   a tone is written (note, a pill, a table's pills, bars, progress, stats,
-  timeline, a diagram).
+  timeline, a diagram); adr's deprecated and superseded, postmortem's low
+  severity and fields' type are drawn in it.
+- Add `--tone-fill`, a theme's own fill of a tone, from `--<tone>-fill` in its
+  palette (`--good-fill`), or else the tone's `-soft`.
 - Add a diagram's `width` and `height` left out: the canvas then reaches as
   far right (or down) as what is drawn, and 20 more, its top left still 0, 0.
   Raw SVG is not measured, so write both with a `raw` part.

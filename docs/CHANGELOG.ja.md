@@ -10,6 +10,9 @@ floe の主要な変更を記録します。フォーマットは
 
 - 追加：静かな tone `muted`（`--muted-soft` の地に `--muted` の色）。tone を書ける
   所（note、pill、表の pills、bars、progress、stats、timeline、図）のどこでも書ける。
+  adr の deprecated・superseded、postmortem の重さ low、fields の型はこの色で描く。
+- 追加：`--tone-fill`。テーマが tone を塗る色で、パレットの `--<tone>-fill`
+  （`--good-fill`）から、無ければその tone の `-soft` から。
 - 追加：図の `width` と `height` を省けるようにした。省くと、キャンバスは描いた
   ものの右（下）の端まで広がり、さらに 20 空ける。左上は 0, 0 のまま。`raw` の
   SVG は測らないので、`raw` を使う図は両方を書く。

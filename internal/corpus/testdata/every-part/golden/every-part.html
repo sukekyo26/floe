@@ -113,12 +113,12 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.palette {
-:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
-:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
-:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); }
-:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
-:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
-:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); }
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
 }
 </style>
 <style>
@@ -610,7 +610,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope .type {
   display: block; width: fit-content; margin-top: 0.2rem; padding: 0 0.45rem; border-radius: 5px; font-size: 0.75rem;
   font-family: var(--mono);
-  background: color-mix(in srgb, var(--fg) 8%, var(--surface)); color: var(--muted);
+  background: var(--tone-soft); color: var(--tone);
 }
 :scope .default { display: block; margin-top: 0.15rem; font-size: 0.85rem; color: var(--muted); }
 }
@@ -1783,9 +1783,9 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </dl>
 <div data-floe-part="fields"><table>
 <tbody>
-<tr><td class="name"><code>read_only</code><span class="required">required</span><span class="type">bool</span></td><td>Refuses edits<span class="default">Default: <code>false</code></span></td></tr>
-<tr><td class="name"><code>banner</code><span class="type">string</span></td><td>Shown on every page</td></tr>
-<tr><td class="name"><code>port</code><span class="type">number</span></td><td><span class="default">Default: <code>8080</code></span></td></tr>
+<tr><td class="name"><code>read_only</code><span class="required">required</span><span class="type" data-floe-tone="muted">bool</span></td><td>Refuses edits<span class="default">Default: <code>false</code></span></td></tr>
+<tr><td class="name"><code>banner</code><span class="type" data-floe-tone="muted">string</span></td><td>Shown on every page</td></tr>
+<tr><td class="name"><code>port</code><span class="type" data-floe-tone="muted">number</span></td><td><span class="default">Default: <code>8080</code></span></td></tr>
 </tbody>
 </table></div>
 <dl data-floe-part="entries">

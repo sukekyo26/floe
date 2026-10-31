@@ -16,6 +16,8 @@
   --nb-tape: rgb(220 205 160 / 0.75);
   --nb-yellow: rgb(255 224 64 / 0.65); --nb-green: rgb(120 220 130 / 0.55); --nb-pink: rgb(255 140 185 / 0.5);
   --nb-blue: rgb(120 190 255 / 0.5); --nb-orange: rgb(255 170 80 / 0.55);
+  /* The tones' fills, a highlighter's (--tone-fill); muted keeps its pale ground */
+  --accent-fill: var(--nb-blue); --good-fill: var(--nb-green); --warn-fill: var(--nb-orange); --bad-fill: var(--nb-pink);
   --nb-stick-1: #fff1a6; --nb-stick-2: #ffd2e1; --nb-stick-3: #cfe8ff;
   --nb-stick-ink: #2b2a26; --nb-stick-shadow: rgb(40 30 10 / 0.45);
   /* The soft shadow under what lies on the page */

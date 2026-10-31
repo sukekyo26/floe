@@ -75,13 +75,13 @@ func TestDrawAdrStates(t *testing.T) {
 		{"en", "proposed", ` data-floe-tone="warn"`, "Proposed", ""},
 		{"en", "accepted", ` data-floe-tone="good"`, "Accepted", ""},
 		{"en", "rejected", ` data-floe-tone="bad"`, "Rejected", ""},
-		{"en", "deprecated", "", "Deprecated", ""},
-		{"en", "superseded", "", "Superseded", "Superseded by"},
+		{"en", "deprecated", ` data-floe-tone="muted"`, "Deprecated", ""},
+		{"en", "superseded", ` data-floe-tone="muted"`, "Superseded", "Superseded by"},
 		{"ja", "proposed", ` data-floe-tone="warn"`, "提案", ""},
 		{"ja", "accepted", ` data-floe-tone="good"`, "採用", ""},
 		{"ja", "rejected", ` data-floe-tone="bad"`, "却下", ""},
-		{"ja", "deprecated", "", "廃止", ""},
-		{"ja", "superseded", "", "置き換え済み", "置き換えた記録"},
+		{"ja", "deprecated", ` data-floe-tone="muted"`, "廃止", ""},
+		{"ja", "superseded", ` data-floe-tone="muted"`, "置き換え済み", "置き換えた記録"},
 	} {
 		src := "template: adr\nlang: " + tt.lang + "\ntitle: x\nstatus: " + tt.state + "\ncontext: c\ndecision: d\n"
 		if tt.by != "" {
@@ -108,10 +108,10 @@ func TestDrawPostmortem(t *testing.T) {
 	for _, tt := range []struct{ lang, level, levelTone, levelWord, state, stateTone, stateWord string }{
 		{"en", "high", ` data-floe-tone="bad"`, "High", "todo", ` data-floe-tone="warn"`, "To do"},
 		{"en", "medium", ` data-floe-tone="warn"`, "Medium", "doing", "", "In progress"},
-		{"en", "low", "", "Low", "done", ` data-floe-tone="good"`, "Done"},
+		{"en", "low", ` data-floe-tone="muted"`, "Low", "done", ` data-floe-tone="good"`, "Done"},
 		{"ja", "high", ` data-floe-tone="bad"`, "重大", "todo", ` data-floe-tone="warn"`, "これから"},
 		{"ja", "medium", ` data-floe-tone="warn"`, "中程度", "doing", "", "作業中"},
-		{"ja", "low", "", "軽微", "done", ` data-floe-tone="good"`, "済み"},
+		{"ja", "low", ` data-floe-tone="muted"`, "軽微", "done", ` data-floe-tone="good"`, "済み"},
 	} {
 		page := drawPostmortem(t, "lang: "+tt.lang+"\nseverity: "+tt.level+"\nactions: [{what: w, state: "+tt.state+"}]\n")
 		for _, want := range []string{
@@ -141,7 +141,7 @@ func TestDrawPostmortemLeftOut(t *testing.T) {
 		},
 		{
 			"no state", "lang: en\nseverity: low\nactions: [{what: w, owner: o}]\n",
-			[]string{`<span class="severity low">`, `<th>Owner</th>`, `<td>o</td>`},
+			[]string{`<span class="severity low" data-floe-tone="muted">`, `<th>Owner</th>`, `<td>o</td>`},
 			[]string{`class="state`, `<th>State</th>`},
 		},
 		{

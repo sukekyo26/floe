@@ -1,14 +1,8 @@
-:scope { border: 3px solid var(--fg); border-radius: 0; background: var(--surface); --floe-mark: 2.15rem; }
-/* Its own fill for a note without a tone and accent's to bad's, for its shadow and its mark's ground; another tone
-   casts its own colour and lays its pale ground under the mark's black */
-:scope { --brutal-fill: initial; }
-:scope:is(:not([data-floe-tone]), [data-floe-tone=accent]) { --brutal-fill: var(--brutal-blue); }
-:scope[data-floe-tone=good] { --brutal-fill: var(--brutal-green); }
-:scope[data-floe-tone=warn] { --brutal-fill: var(--brutal-orange); }
-:scope[data-floe-tone=bad] { --brutal-fill: var(--brutal-red); }
-:scope { --floe-shadow-color: var(--brutal-fill, var(--tone)); }
+:scope {
+  border: 3px solid var(--fg); border-radius: 0; background: var(--surface); --floe-mark: 2.15rem;
+  --floe-shadow-color: var(--tone-fill);
+}
 :scope::before {
-  border-radius: 0; border: 2px solid var(--fg); background: var(--brutal-fill, var(--tone-soft)); color: var(--brutal-ink);
-  font-weight: 900;
+  border-radius: 0; border: 2px solid var(--fg); background: var(--tone-fill); color: var(--brutal-ink); font-weight: 900;
 }
 .title { color: var(--fg); font-weight: 900; }

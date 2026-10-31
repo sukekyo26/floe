@@ -14,23 +14,25 @@ const toneExtra = `  - heading: Tones held
     parts:
       - html: <div data-floe-tone="good" data-floe-part="note"><p>Held <span data-floe-part="cell">plain</span></p></div>
       - diagram:
-          width: 420
+          width: 560
           height: 80
           title: Boxes in a tone and in none
           parts:
             - box: { x: 10, y: 14, w: 120, h: 52, rows: [Plain] }
             - box: { x: 150, y: 14, w: 120, h: 52, tone: good, rows: [Good] }
             - box: { x: 290, y: 14, w: 120, h: 52, tone: bad, rows: [Bad] }
+            - box: { x: 430, y: 14, w: 120, h: 52, tone: muted, rows: [Muted] }
 `
 
 // measureTones returns, one to a line, what of the page's tones goes amiss, given tone.json's tones:
 //   - a tone whose --<tone> or --<tone>-soft the palette leaves unset;
-//   - an element of a tone (data-floe-tone) whose --tone and --tone-soft are not --<tone> and --<tone>-soft;
-//   - an element of a tone that draws in its tone's colours, --<tone> or --<tone>-soft, but not from --tone and
-//     --tone-soft: what draws so (itself, its ::before and ::after, and what it holds short of a part's box) keeps
-//     the colour when the two are set on it to others. What draws in colours of a theme's own (brutal's fills) or in
-//     none of its tone (a stat without a note), and links, are let be, and accent and muted, the page's colours drawn
-//     anywhere (blueprint's panels, a date), are not measured so;
+//   - an element of a tone (data-floe-tone) whose --tone, --tone-soft and --tone-fill are not --<tone>, --<tone>-soft
+//     and --<tone>-fill (or else --<tone>-soft);
+//   - an element of a tone that draws in its tone's colours, --<tone> or --<tone>-soft, but not from --tone,
+//     --tone-soft or --tone-fill: what draws so (itself, its ::before and ::after, and what it holds short of a
+//     part's box) keeps the colour when the three are set on it to others. What draws in colours of a theme's own (brutal's fills) or in
+//     none of its tone (a stat without a note), and links, are let be; accent, and muted's text, the page's colours
+//     drawn anywhere (blueprint's panels, a date), are not measured so;
 //   - a part's box without a tone whose --tone is not --accent (stats': --muted; the diagram's: none), and the page's
 //     root;
 //   - a diagram's box without a tone filled other than --surface.
@@ -43,7 +45,8 @@ const measureTones = `((tones) => {
   const name = (e) => (part(e) || e.tagName.toLowerCase()) + '[' + e.dataset.floeTone + ']';
   for (const e of document.querySelectorAll('[data-floe-tone]')) {
     const s = getComputedStyle(e), t = e.dataset.floeTone;
-    if (v(s, '--tone') !== v(s, '--' + t) || v(s, '--tone-soft') !== v(s, '--' + t + '-soft')) out.push(name(e) + ': not ' + t + "'s colours");
+    if (v(s, '--tone') !== v(s, '--' + t) || v(s, '--tone-soft') !== v(s, '--' + t + '-soft') ||
+      v(s, '--tone-fill') !== (v(s, '--' + t + '-fill') || v(s, '--' + t + '-soft'))) out.push(name(e) + ': not ' + t + "'s colours");
     const box = e.closest('[data-floe-part]');
     const held = [e, ...e.querySelectorAll('*')].filter((c) => c === e || (!c.matches('[data-floe-part]') && c.closest('[data-floe-part]') === box && !c.closest('a')));
     const drawn = () => held.flatMap((c) => [null, '::before', '::after'].map((p) => getComputedStyle(c, p))).flatMap((cs) => props.map((k) => cs[k]));
@@ -52,10 +55,11 @@ const measureTones = `((tones) => {
     const ink = [getComputedStyle(probe).color, getComputedStyle(probe).backgroundColor];
     probe.remove();
     const before = drawn();
-    e.style.setProperty('--tone', 'rgb(1, 2, 3)'); e.style.setProperty('--tone-soft', 'rgb(4, 5, 6)');
+    e.style.setProperty('--tone', 'rgb(1, 2, 3)'); e.style.setProperty('--tone-soft', 'rgb(4, 5, 6)'); e.style.setProperty('--tone-fill', 'rgb(7, 8, 9)');
     const after = drawn();
-    e.style.removeProperty('--tone'); e.style.removeProperty('--tone-soft');
-    const i = ['accent', 'muted'].includes(t) ? -1 : before.findIndex((c, i) => ink.some((k) => c.includes(k)) && c === after[i]);
+    e.style.removeProperty('--tone'); e.style.removeProperty('--tone-soft'); e.style.removeProperty('--tone-fill');
+    const watched = t === 'accent' ? [] : t === 'muted' ? ink.slice(1) : ink;
+    const i = before.findIndex((c, i) => watched.some((k) => c.includes(k)) && c === after[i]);
     if (i >= 0) out.push(name(e) + ': ' + held[Math.floor(i / (3 * props.length))].tagName.toLowerCase() + ' draws in ' + t + "'s colours, not from --tone");
   }
   if (v(root, '--tone') !== v(root, '--accent')) out.push('the page: --tone not --accent');
