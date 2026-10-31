@@ -228,25 +228,22 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 }
 
 // grid is at most 501 points from lo to hi within 0 and size, step apart, step being 4 or more: counted from lo,
-// so that the canvas cuts the grid and does not move it, else from where the canvas cuts it. Each is made from
-// its index, not by adding step again and again, which a float stops moving.
-// LIMIT: where a float's spacing passes step (beyond 2^55 or so for a step of 4), points round to the same
-// values, and what is between them is not tried; where it passes 500 steps (5e19 and the like), the points are
-// all one. Keep the points relative to the region's origin if a diagram that large comes to matter.
+// so that the canvas cuts the grid and does not move it, or the one point where the canvas cuts it when the range
+// is narrower than a step past it.
 func grid(lo, hi, size float64) []float64 {
 	from, to := max(lo, 0), min(hi, size)
-	if !(from <= to) {
+	if from > to {
 		return nil
 	}
 	step := max(4, (to-from)/500)
 	start := lo + math.Ceil((from-lo)/step)*step
-	if !(start >= from && start < from+step && start <= to) {
+	if start > to {
 		start = from
 	}
 	var out []float64
 	for i := range 501 {
 		p := start + float64(i)*step
-		if !(p <= to) {
+		if p > to {
 			break
 		}
 		out = append(out, p)

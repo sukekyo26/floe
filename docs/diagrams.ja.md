@@ -1,6 +1,6 @@
 # 図
 
-`diagram` の部品は、節にも `details`・`tabs` の中にも置ける、その場に書く spec です。キャンバスと、その上に絶対座標（左上が 0, 0。どの座標も ± 100 万まで、大きさは 100 万まで）で置く部品から成ります。ページを描く前に確かめ（誤りはデータファイルの行と列で言う）、拡大できる inline SVG で描きます。`floe diagram render` は、ファイルに書いた spec を同じように描きます（[commands.ja.md](commands.ja.md#floe-diagram-render-specyaml)）。
+`diagram` の部品は、節にも `details`・`tabs` の中にも置ける、その場に書く spec です。キャンバスと、その上に絶対座標（左上が 0, 0。どの座標も ± 100 万まで、大きさは 100 万まで、キャンバスは 1,000 万まで）で置く部品から成ります。ページを描く前に確かめ（誤りはデータファイルの行と列で言う）、拡大できる inline SVG で描きます。`floe diagram render` は、ファイルに書いた spec を同じように描きます（[commands.ja.md](commands.ja.md#floe-diagram-render-specyaml)）。
 
 ```yaml
 - diagram:

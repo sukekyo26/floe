@@ -495,6 +495,19 @@ func TestVennBounded(t *testing.T) {
 func TestCanvasLeftOut(t *testing.T) {
 	t.Parallel()
 
+	// Written at the ends of the bounds, a box reaches a canvas that may be written as it is, and no more.
+	far := "title: T\nparts:\n  - box: { x: 1000000, y: 1000000, w: 1000000, h: 1000000, rows: [A] }\n"
+	for _, c := range []struct{ size, want, mistakes string }{
+		{"", `viewBox="0 0 2000020 2000020"`, ""},
+		{"width: 2000020\nheight: 2000020\n", `viewBox="0 0 2000020 2000020"`, ""},
+		{"width: 10000001\n", "", "s.yaml:1:8: maximum: got 1.0000001×10⁰⁷, want 1×10⁰⁷"},
+	} {
+		svg, mistakes := draw(t, c.size+far, render("en"))
+		if mistakes != c.mistakes || !strings.Contains(svg, c.want) {
+			t.Errorf("a box at the bounds, %q: mistakes %q, want %q, the canvas %s", c.size, mistakes, c.mistakes, c.want)
+		}
+	}
+
 	// The label, right of and below the box, is what reaches farthest.
 	parts := "title: T\nparts:\n  - box: { x: 20, y: 20, w: 100, h: 40, rows: [A] }\n" +
 		"  - label: { text: far, x: 300, y: 100, anchor: start }\n"

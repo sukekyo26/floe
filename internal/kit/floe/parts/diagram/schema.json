@@ -14,8 +14,8 @@
     "required": ["title", "parts"],
     "additionalProperties": false,
     "properties": {
-      "width": { "$ref": "#/$defs/size", "description": "Left out, as far right as what is drawn reaches and 20 more; raw SVG is not measured, so write it with raw" },
-      "height": { "$ref": "#/$defs/size", "description": "Left out, as far down as what is drawn reaches and 20 more; raw SVG is not measured, so write it with raw" },
+      "width": { "$ref": "#/$defs/canvas", "description": "Left out, as far right as what is drawn reaches and 20 more; raw SVG is not measured, so write it with raw" },
+      "height": { "$ref": "#/$defs/canvas", "description": "Left out, as far down as what is drawn reaches and 20 more; raw SVG is not measured, so write it with raw" },
       "title": { "$ref": "#/$defs/text", "description": "What the diagram shows, for a reader who cannot see it" },
       "parts": {
         "type": "array",
@@ -46,11 +46,17 @@
   },
   "$defs": {
     "size": { "type": "number", "minimum": 1, "maximum": 1000000 },
+    "canvas": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 10000000,
+      "description": "Up to ten million, past where coordinates and sizes written reach (two million), so that a canvas floe tells can be written"
+    },
     "coord": {
       "type": "number",
       "minimum": -1000000,
       "maximum": 1000000,
-      "description": "A coordinate, within a million either way: past it the steps of layout round away"
+      "description": "A coordinate, within a million either way, so that what floe works out from it stays finite and of a sane size"
     },
     "text": {
       "description": "Text, or its words in each language by tag, English among them: {en: …, ja: …}",
