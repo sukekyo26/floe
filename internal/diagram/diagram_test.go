@@ -360,6 +360,52 @@ func TestTooNarrow(t *testing.T) {
 	}
 }
 
+// An edge past the drawn shape of a box, by a hexagon's point or a rounded corner, does not run through it; 4 in
+// from there, it does, told as before.
+func TestEdgesPastShapes(t *testing.T) {
+	t.Parallel()
+
+	shapes := "width: 520\nheight: 500\ntitle: T\nparts:\n" +
+		"  - box: { name: h, x: 100, y: 20, w: 200, h: 52, shape: hex, rows: [Decide] }\n" +
+		"  - edge: { from: [95, 15], to: [108, 28], straight: true }\n" +
+		"  - edge: { from: [310, 10], to: [296, 30], straight: true }\n" +
+		"  - box: { name: s, x: 100, y: 110, w: 200, h: 80, shape: state, rows: [Running] }\n" +
+		"  - edge: { from: [60, 105], to: [106, 118], straight: true }\n" +
+		"  - box: { name: p, x: 100, y: 220, w: 200, h: 52, shape: pill, rows: [Start] }\n" +
+		"  - edge: { from: [60, 215], to: [106, 228], straight: true }\n" +
+		"  - box: { name: r, x: 100, y: 300, w: 200, h: 52, rows: [Save] }\n" +
+		"  - edge: { from: [90, 290], to: [102, 302], straight: true }\n" +
+		"  - table: { name: t, x: 100, y: 380, w: 200, title: T, rows: [[a]] }\n" +
+		"  - edge: { from: [90, 370], to: [102, 382], straight: true }\n" +
+		"  - bar: { name: b, x1: 100, x2: 300, y: 470 }\n" +
+		"  - edge: { from: [90, 455], to: [101.3, 464.3], straight: true }\n" +
+		"  - box: { name: tall, x: 400, y: 20, w: 60, h: 120, shape: pill, rows: [T] }\n" +
+		"  - edge: { from: [390, 15], to: [405, 30], straight: true }\n" +
+		"  - edge: { from: [130, 21], to: [270, 21], straight: true }\n" +
+		"  - edge: { from: [60, 20], to: [100, 46], straight: true }\n"
+	if _, got := draw(t, shapes, inspect); got != "" {
+		t.Errorf("edges past the shapes = %q, want none of them told", got)
+	}
+	inward := strings.NewReplacer("to: [108, 28]", "to: [112, 32]", "to: [296, 30]", "to: [290, 34]",
+		"to: [106, 118]", "to: [110, 121]", "to: [106, 228]", "to: [110, 231]", "to: [102, 302]", "to: [106, 306]",
+		"to: [102, 382]", "to: [106, 386]", "to: [101.3, 464.3]", "to: [103, 466]", "to: [405, 30]", "to: [415, 60]",
+		"from: [130, 21], to: [270, 21]", "from: [60, 46], to: [340, 46]").Replace(shapes)
+	want := strings.Join([]string{
+		`s.yaml:6:5: edge [95,15]→[112,32] runs through box "h"`,
+		`s.yaml:7:5: edge [310,10]→[290,34] runs through box "h"`,
+		`s.yaml:9:5: edge [60,105]→[110,121] runs through box "s"`,
+		`s.yaml:11:5: edge [60,215]→[110,231] runs through box "p"`,
+		`s.yaml:13:5: edge [90,290]→[106,306] runs through box "r"`,
+		`s.yaml:15:5: edge [90,370]→[106,386] runs through table "t"`,
+		`s.yaml:17:5: edge [90,455]→[103,466] runs through bar "b"`,
+		`s.yaml:19:5: edge [390,15]→[415,60] runs through box "tall"`,
+		`s.yaml:20:5: edge [60,46]→[340,46] runs through box "h"`,
+	}, "\n")
+	if _, got := draw(t, inward, inspect); got != want {
+		t.Errorf("edges 4 in = %q, want %q", got, want)
+	}
+}
+
 // A straight edge joins its points as written, a diagonal too; others turn at right angles.
 func TestEdges(t *testing.T) {
 	t.Parallel()

@@ -253,6 +253,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix an edge told running through a box it does not touch: the check
+  measured a box by the rectangle around it, so an edge past a hex's points
+  or a rounded corner (a pill's or a state's end, a box's, a table's or a
+  bar's corner) was refused. It now measures the shape drawn, which floe
+  decides in one place for drawing and checking alike. Corners are circles,
+  of a radius no more than half the shorter side, which changes what is
+  drawn: a tall pill's ends are half circles, and the corners of a box
+  narrower than twice their radius (a narrow state, a bar 4 wide, now
+  radius 2, not 3) are round, where a browser drew ellipses; a table's
+  heading takes its outline's arcs at the corners, not curves of its own.
 - Fix the diagrams of `floe diagram render`'s fragment taking the variables of the
   page they are pasted into: a page's `--bg` filled the edges' labels, so that
   they could not be read. The fragment carries `default`'s palette on the diagrams
