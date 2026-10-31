@@ -25,8 +25,12 @@ parts:
         - { from: check, to: write }
 `
 
-// g2 is g1 with labels on the edges out of check, its label "yes" at 116,180 31.6x18, written from line 3 to 13.
-var g2 = strings.NewReplacer("to: show }", `to: show, label: "yes" }`, "to: write }", `to: write, label: "no" }`).Replace(g1)
+// g2 is g1 with labels on the edges out of check, written from line 3 to 13: "yes" at 116,104 31.6x18, right of
+// check→show; g2r is g2 laid out right, written to line 14, its "no" at 189,80 24.4x18, below check→write.
+var (
+	g2  = strings.NewReplacer("to: show }", `to: show, label: "yes" }`, "to: write }", `to: write, label: "no" }`).Replace(g1)
+	g2r = strings.Replace(g2, "      y: 20\n", "      y: 20\n      direction: right\n", 1)
+)
 
 // A graph's mistakes are told in the words of the parts written by hand, at the graph's own values: an edge naming
 // no box of its graph is dropped alone, and the limit of the ranks passed is told at the diagram's root.
@@ -122,8 +126,8 @@ func TestGraphBlame(t *testing.T) {
 		{"a box over a box of the graph", g1, "  - box: { name: note, x: 100, y: 0, rows: [N] }\n", `box "write" overlaps box "note"`},
 		{"a frame a box of the graph straddles", g1, "  - frame: { name: f, x: 0, y: 0, w: 100, h: 40 }\n", `box "write" straddles the edge of frame "f"`},
 		{"a label in the graph's channel", g1, "  - label: { text: L, x: 68, y: 61, anchor: middle }\n", `edge write→check runs through label "L"`},
-		{"a box over a label of the graph", g2, "  - box: { name: note, x: 110, y: 175, rows: [N] }\n", `box "note" overlaps label "yes"`},
-		{"an edge by hand through a label of the graph", g2, "  - edge: { from: [110, 189], to: [160, 189] }\n", `edge [110,189]→[160,189] runs through label "yes"`},
+		{"a box over a label of the graph", g2r, "  - box: { name: note, x: 176, y: 86, rows: [N] }\n", `box "note" overlaps label "no"`},
+		{"an edge by hand through a label of the graph", g2, "  - edge: { from: [110, 113], to: [160, 113] }\n", `edge [110,113]→[160,113] runs through label "yes"`},
 		{
 			"a box in the graph's channel", k33, "  - box: { name: note, x: 24, y: 78, rows: [N] }\n",
 			`edge a→x runs through box "note"` + "\n@: " + `edge b→x runs through box "note"`,
@@ -148,10 +152,11 @@ func TestGraphBlame(t *testing.T) {
 		}
 	}
 
-	// A box of one graph over a label of another is told at the graph written second, to move a graph.
-	second := strings.NewReplacer("x: 20", "x: 128", "y: 20", "y: 158", "write", "write2", "check", "check2", "show", "show2").
+	// A box of one graph over a box and a label of another is told at the graph of the first box, to move a graph.
+	second := strings.NewReplacer("x: 20", "x: 132", "y: 20", "y: 104", "write", "write2", "check", "check2", "show", "show2").
 		Replace(strings.TrimPrefix(g2, "title: T\nparts:\n"))
-	if _, got := draw(t, g2+second, inspect); got != `s.yaml:15:7: box "write2" overlaps label "yes" of another graph; move one of the graphs by its x and y` {
+	if _, got := draw(t, g2+second, inspect); got != `s.yaml:4:7: box "show" overlaps box "write2" of another graph; move one of the graphs by its x and y`+"\n"+
+		`s.yaml:15:7: box "write2" overlaps label "yes" of another graph; move one of the graphs by its x and y` {
 		t.Errorf("two graphs: told %q", got)
 	}
 

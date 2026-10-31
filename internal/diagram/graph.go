@@ -499,14 +499,18 @@ func (d *drawing) runs() []seg {
 	return out
 }
 
-// hands are the runs from the middle of each side of each box, 2 columns out: where an edge written by hand to the
-// box leaves it, which a label of the graph would stand in the way of.
+// hands are the runs from the middle of the sides of each box the graph's edges do not use (left and right laid
+// out down, top and bottom laid out right), 2 columns out: where an edge written by hand to the box leaves it, as
+// the docs ask, which a label of the graph would stand in the way of.
 func (d *drawing) hands() []seg {
 	var out []seg
 	for _, b := range d.boxes {
-		cx, cy, out2 := b.x+b.w/2, b.y+b.h/2, 2*column
-		out = append(out, seg{b.x - out2, cy, b.x, cy}, seg{b.x + b.w, cy, b.x + b.w + out2, cy},
-			seg{cx, b.y - out2, cx, b.y}, seg{cx, b.y + b.h, cx, b.y + b.h + out2})
+		cx, cy, far := b.x+b.w/2, b.y+b.h/2, 2*column
+		if d.right {
+			out = append(out, seg{cx, b.y - far, cx, b.y}, seg{cx, b.y + b.h, cx, b.y + b.h + far})
+		} else {
+			out = append(out, seg{b.x - far, cy, b.x, cy}, seg{b.x + b.w, cy, b.x + b.w + far, cy})
+		}
 	}
 	return out
 }

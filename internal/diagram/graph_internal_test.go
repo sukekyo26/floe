@@ -36,10 +36,70 @@ func laid(g *graph) *layout {
 }
 
 // grouped is g read and laid out, its groups kept, as items lays it out.
-func grouped(g *graph) []*group {
+func grouped(g *graph) ([]*group, error) {
 	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are graphFault's
-	_, _ = o.items() //nolint:errcheck // its failures are laid's
-	return o.groups
+	_, err := o.items()
+	return o.groups, err
+}
+
+// unlabelled is g with no label on its edges.
+func unlabelled(g *graph) *graph {
+	c := *g
+	c.Edges = slices.Clone(g.Edges)
+	for k := range c.Edges {
+		c.Edges[k].Label = nil
+	}
+	return &c
+}
+
+// labelFault is what is wrong with the labels of g laid out as l, or "": an edge turning or crossing another more or
+// less often than in g laid out with no label, or a label not a column beside a run of its own edge.
+func labelFault(g *graph, l *layout) string {
+	if !slices.ContainsFunc(g.Edges, func(e graphEdge) bool { return e.Label != nil }) {
+		return ""
+	}
+	plain := laid(unlabelled(g))
+	for k, p := range l.paths {
+		if len(p.segs) != len(plain.paths[k].segs) {
+			return fmt.Sprintf("%s turns %d times labelled, %d times not", p.what, len(p.segs)-1, len(plain.paths[k].segs)-1)
+		}
+	}
+	if a, b := crossings(l), crossings(plain); a != b {
+		return fmt.Sprintf("%d crossings labelled, %d not", a, b)
+	}
+	j := 0
+	for k, e := range g.Edges {
+		if e.Label == nil {
+			continue
+		}
+		r := l.labels[j]
+		j++
+		if !slices.ContainsFunc(l.paths[k].segs, func(s seg) bool { return beside(r, s) }) {
+			return fmt.Sprintf("the label of %s at %v, %v not a column beside a run of it", l.paths[k].what, r.x, r.y)
+		}
+	}
+	return ""
+}
+
+// beside reports whether r stands a column beside run s, within its length.
+func beside(r rect, s seg) bool {
+	along := runAxis(s)
+	across := 1 - along
+	lo, hi := min(s[along], s[along+2]), max(s[along], s[along+2])
+	near := math.Abs(r.lo(across)-s[across]-column) < 1e-6 || math.Abs(s[across]-column-r.lo(across)-r.size(across)) < 1e-6
+	return near && r.lo(along) >= lo && r.lo(along)+r.size(along) <= hi
+}
+
+// crossings counts the pairs of l's edges that cross.
+func crossings(l *layout) int {
+	n := 0
+	for i, a := range l.paths {
+		for _, b := range l.paths[i+1:] {
+			_, c := touch(a, b)
+			n += c
+		}
+	}
+	return n
 }
 
 // touch reports whether two edges share a run or touch anywhere but where they cross, and counts their crossings.
@@ -89,6 +149,9 @@ func graphFault(g *graph) string {
 	if len(l.problems) > 0 {
 		return l.problems.Error()
 	}
+	if fault := labelFault(g, l); fault != "" {
+		return fault
+	}
 	drawn := 0
 	for i, a := range l.paths {
 		for _, b := range l.paths[i+1:] {
@@ -115,7 +178,10 @@ func graphFault(g *graph) string {
 		}
 	}
 	ordered := 0
-	groups := grouped(g)
+	groups, err := grouped(g)
+	if err != nil {
+		return err.Error()
+	}
 	least := math.Inf(1)
 	for _, n := range groups[0].nodes {
 		least = min(least, n.x)
@@ -391,9 +457,9 @@ func TestGraphWrittenOrder(t *testing.T) {
 	rnd := rand.New(rand.NewPCG(7, 8)) //nolint:gosec // G404: graphs to try, no secret
 	for i := range 1000 {
 		g, want := writtenOrder(rnd)
-		groups := grouped(g)
-		if len(groups) != 1 {
-			t.Fatalf("graph %d: %d groups, want 1", i, len(groups))
+		groups, err := grouped(g)
+		if err != nil || len(groups) != 1 {
+			t.Fatalf("graph %d: %d groups, want 1: %v", i, len(groups), err)
 		}
 		gr := groups[0]
 		got := make([][]string, 0, len(gr.ranks))
@@ -768,8 +834,7 @@ func TestGraphLimit(t *testing.T) {
 	split.X = 2000
 	for _, parts := range [][]part{{{Graph: over}}, {{Graph: exact}, {Graph: split}}} { //nolint:exhaustruct_v5 // one kind of part
 		items, found, err := expand(parts)
-		_ = err
-		if len(items) != 0 || len(found) != 1 || found[0].Key != "diagram_graph_long" || found[0].At() != "#" ||
+		if err != nil || len(items) != 0 || len(found) != 1 || found[0].Key != "diagram_graph_long" || found[0].At() != "#" ||
 			fmt.Sprint(found[0].Args) != "[4001 4000]" {
 			t.Errorf("%d graphs: %d items, %v; want none, diagram_graph_long at # of 4001", len(parts), len(items), found)
 		}
@@ -966,7 +1031,11 @@ func TestGraphShapes(t *testing.T) {
 	// A leaf added keeps the order of the other ranks.
 	order := func(g *graph) []string {
 		var out []string
-		for _, gr := range grouped(g) {
+		groups, err := grouped(g)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, gr := range groups {
 			for _, rank := range gr.ranks[:2] {
 				names := []string{}
 				for _, n := range rank {
