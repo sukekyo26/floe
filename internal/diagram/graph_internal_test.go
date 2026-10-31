@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -821,6 +822,45 @@ func chainGraph(n, long int) *graph {
 		edges = append(edges, names[0]+">"+names[n-1])
 	}
 	return graphOf(names, edges...)
+}
+
+// A graph placed as far out as 1e17, where a step of a few units rounds away, lays out and places its labels, room
+// made among them, as it does at 20,20 (the same items, moved): it is laid out from 0,0 and moved there last. Laid out where it stands, the
+// spots tried and the cuts pushed past boxes would step on forever, eating memory, so a hang stops the tests.
+func TestGraphFarOut(t *testing.T) {
+	t.Parallel()
+	for _, direction := range []string{"", "right"} {
+		g := graphOf([]string{"a", "b"}, "a>b", "a>b", "a>b")
+		g.Direction = direction
+		for k := range g.Edges {
+			g.Edges[k].Label = Text{"en": "wwwwww"}
+		}
+		near, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // a graph with no mistake
+		want, err := near.items()
+		if err != nil {
+			t.Fatal(err)
+		}
+		g.X, g.Y = 1e17, 1e17
+		far, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // a graph with no mistake
+		done := make(chan error, 1)
+		var got []item
+		go func() {
+			var err error
+			got, err = far.items()
+			done <- err
+		}()
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Fatal(err)
+			}
+		case <-time.After(10 * time.Second):
+			panic("a graph at 1e17 lays out forever")
+		}
+		if len(got) != len(want) || got[0].p.Box.X < 1e17 {
+			t.Errorf("direction %q: %d items, box a at x %v; at 20,20, %d items", direction, len(got), got[0].p.Box.X, len(want))
+		}
+	}
 }
 
 // The work of laying out is held: the points edges pass ranks at are counted, order and pull stop at their caps,

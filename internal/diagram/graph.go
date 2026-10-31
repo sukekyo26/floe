@@ -142,7 +142,8 @@ func boxAt(at string, i int) string {
 
 // items lays out each group and places its labels, side by side in the order of their first box, and opens the graph
 // into a box for each of its boxes and an edge for each of its edges, at their JSON pointers, so that they are named,
-// drawn and checked as boxes and edges written by hand are.
+// drawn and checked as boxes and edges written by hand are. The groups are laid out from 0,0 and moved to the graph's
+// place last: room made and spots tried step by units, which a coordinate as far out as 1e17 would round away.
 func (o *graphOut) items() ([]item, error) {
 	right := o.g.Direction == "right"
 	across := 0 // the axis groups stand side by side on, as drawn
@@ -159,7 +160,9 @@ func (o *graphOut) items() ([]item, error) {
 		if err != nil {
 			return nil, err
 		}
-		left = d.stand(across, left, [2]float64{o.g.X, o.g.Y})
+		left = d.stand(across, left, [2]float64{0, 0})
+		d.stretch(0, math.Inf(-1), o.g.X)
+		d.stretch(1, math.Inf(-1), o.g.Y)
 		maps.Copy(routes, d.routes)
 		for k := range d.spots {
 			labels[k], toward[k] = d.rect(k)
@@ -194,7 +197,7 @@ func (o *graphOut) items() ([]item, error) {
 	return out, nil
 }
 
-// draw lays group gr out and places its labels, as drawn at the graph's place.
+// draw lays group gr out and places its labels, as drawn from 0,0.
 func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 	gr.place(right)
 	gr.wire()
@@ -205,14 +208,13 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 	for _, n := range gr.nodes {
 		if n.box != nil {
 			r := drawnOf(n, right)
-			r.x, r.y = r.x+o.g.X, r.y+o.g.Y
 			r.form = outlineOf(r.w, r.h, n.box.Shape)
 			d.boxes[n.of], d.shapes[n.of] = r, n.box.Shape
 		}
 	}
 	edges := slices.Sorted(maps.Keys(gr.chains))
 	for _, k := range edges {
-		d.routes[k] = o.route(gr, k, d.boxes, right)
+		d.routes[k] = gr.route(k, d.boxes, right)
 		chain := gr.chains[k]
 		d.ends[k] = [2]int{gr.nodes[gr.links[chain[0]].from].of, gr.nodes[gr.links[chain[len(chain)-1]].to].of}
 		if gr.reversed[k] {
@@ -591,14 +593,11 @@ func segAt(pts [][2]float64, i int) seg {
 	return seg{pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1]}
 }
 
-// route is the corners of edge k of group gr as drawn, at the graph's place, its ends on its boxes' outlines,
+// route is the corners of edge k of gr as drawn from 0,0, its ends on its boxes' outlines,
 // from the box it is written from.
-func (o *graphOut) route(gr *group, k int, drawn map[int]rect, right bool) [][2]float64 {
+func (gr *group) route(k int, drawn map[int]rect, right bool) [][2]float64 {
 	chain := gr.chains[k]
 	pts := gr.points(chain, right)
-	for i := range pts {
-		pts[i] = [2]float64{pts[i][0] + o.g.X, pts[i][1] + o.g.Y}
-	}
 	top, bottom := gr.nodes[gr.links[chain[0]].from], gr.nodes[gr.links[chain[len(chain)-1]].to]
 	pts[0] = endOn(drawn[top.of], pts[0], right, true)
 	pts[len(pts)-1] = endOn(drawn[bottom.of], pts[len(pts)-1], right, false)
