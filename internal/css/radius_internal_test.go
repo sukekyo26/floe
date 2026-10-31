@@ -50,6 +50,7 @@ func declarations(src []byte, want func(name string) bool) map[string][][]token 
 				depth--
 			case css.WhitespaceToken, css.CommentToken:
 				continue
+			default:
 			}
 			value = append(value, toks[j])
 		}
