@@ -1,4 +1,6 @@
-/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader */
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader.
+   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
+   too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
   --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];

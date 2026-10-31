@@ -2,5 +2,5 @@
    LIMIT: on a face its tone shows not (nor the colours of its marks); its word tells it */
 :scope {
   background: none; border: 2px solid currentColor;
-  letter-spacing: 0.15em; font-weight: 700; transform: rotate(-2deg); color: var(--on-face, var(--tone));
+  letter-spacing: 0.15em; font-weight: 700; color: var(--on-face, var(--tone));
 }
