@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `--quiet` to the palette, the quiet ground within a box: a table's head,
+  a bar's track, progress's ground and a keycap read it.
 - Add `--radius`, `--radius-small` and `--radius-pill` to the palette, one
   length each: the round of a box's corners, a small box's within one and a
   pill's. Parts, templates, floe's base and themes read them, and a theme sets
@@ -253,6 +255,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change progress's ground to the quiet ground, a little lighter (the line's
+  colour 45% into the surface, as bars' track, not 60%), and a keycap's to it
+  (from the page's ground, or aurora's surface): keys no longer melt into
+  swiss's panel, brutal's are a mid grey as its tracks, and default's are white
+  on its grey panels and grey on its white rows. A table's head where the theme
+  draws none of its own (soft, a theme of your own) and soft's quotes
+  take it too (45%, not 40%).
 - Change the corners of parts and templates to the palette's: in default a box
   is 20px round (a note, code and a quote were 18px), and a face along a
   panel's edge is rounded about it (a card in cards 8px, the code in a code

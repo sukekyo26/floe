@@ -1,7 +1,7 @@
 :scope { padding: var(--default-pad); }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope thead th { background: none; }
-:scope tbody td { background: var(--surface); }
+:scope tbody td { background: var(--surface); --quiet: var(--default-panel); }
 :scope tbody tr:first-child td:first-child { border-top-left-radius: var(--default-inner); }
 :scope tbody tr:first-child td:last-child { border-top-right-radius: var(--default-inner); }
 :scope tbody tr:last-child td:first-child { border-bottom-left-radius: var(--default-inner); }

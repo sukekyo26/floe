@@ -6,7 +6,7 @@
 :scope kbd {
   min-width: 1.8rem; padding: 0.05rem 0.5rem; border-radius: var(--radius-small); text-align: center; color: var(--fg);
   font-family: var(--mono); font-size: 0.8rem;
-  background: var(--bg); box-shadow: inset 0 -2px 0 var(--line), 0 0 0 1px var(--line);
+  background: var(--quiet); box-shadow: inset 0 -2px 0 var(--line), 0 0 0 1px var(--line);
 }
 @media (max-width: 36rem) {
   :scope > div { grid-template-columns: minmax(0, 1fr); }
