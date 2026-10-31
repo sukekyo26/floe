@@ -184,11 +184,12 @@ floe の主要な変更を記録します。フォーマットは
 - 変更：部品とテンプレートの角の丸さをパレットのものに。default の箱は 20px（note・
   code・引用は 18px だった）、panel の縁に沿う面は箱と同心の角（cards のカード 8px、
   部品 code の中の code 14px）。箱の中の小さな升（キー・棒・画像・図の枠・fields の型・
-  行の中の code とその言葉・links と cards の印）は 6px で、blueprint・brutal・swiss・
-  washi では四角、editorial では 3px。タブの名前は札の形（default は丸く、app・ink は
-  6px）。progress の棒と handoff・runbook の札はテーマの札の形、runbook の戻す手順の
-  囲みはテーマの箱の形。notebook の note と code は panel と同じ手書きの角。角の丸い
-  四角に描く note の印は 6px。
+  行の中の code とその言葉・links と cards の印）は 6px で、blueprint・brutal・swiss
+  では四角、editorial・washi では 3px。タブの名前は札の形（default・aurora・retro・
+  soft・notebook は丸く、app・ink は 6px、editorial・washi は 3px）。progress の棒と
+  handoff・runbook の札はテーマの札の形、runbook の戻す手順の囲みはテーマの箱の形。
+  notebook の note と code は panel と同じ手書きの角。角の丸い四角に描く note の印は
+  6px（washi の判は 3px）。details の題に focus したときの輪は、箱の角に沿う。
 - 変更：組み込みのテンプレートの状態の札と注意を、部品 cell・note として描く。adr の
   状態、postmortem の重さと行動の状態、handoff の種類と状態は pill に、adr の置き換えた
   記録（頭の後ろに移した）、runbook の注意と失敗したときは注記になり、テーマの pill と

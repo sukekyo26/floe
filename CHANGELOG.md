@@ -258,11 +258,14 @@ adheres to [Semantic Versioning](https://semver.org/).
   panel's edge is rounded about it (a card in cards 8px, the code in a code
   part 14px); small boxes within one (keys, bars, images, a diagram's frame,
   fields' types, code in a line and its language, links' and cards' marks) are
-  6px, square in blueprint, brutal, swiss and washi, 3px in editorial; a tab's
-  title is drawn as a pill (round in default, 6px in app and ink); progress's
-  bar and handoff's and runbook's pills take the theme's pill; runbook's box of
-  rolling back takes the theme's box; notebook's note and code take its panel's
-  hand-drawn corners; a note's mark drawn as a rounded square is 6px.
+  6px, square in blueprint, brutal and swiss, 3px in editorial and washi; a
+  tab's title is drawn as a pill (round in default, aurora, retro, soft and
+  notebook, 6px in app and ink, 3px in editorial and washi); progress's bar and
+  handoff's and runbook's pills take the theme's pill; runbook's box of rolling
+  back takes the theme's box; notebook's note and code take its panel's
+  hand-drawn corners; a note's mark drawn as a rounded square is 6px (washi's
+  seal 3px); the ring round a focused title of details follows its box's
+  corners.
 - Change the statuses and cautions of floe's templates to be drawn as the
   parts cell and note: adr's status, postmortem's severity and actions' states,
   handoff's kind and states are pills, and adr's record superseding it (now

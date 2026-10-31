@@ -103,9 +103,10 @@ blockquote > * + * { margin-top: 0.6rem; }
   --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
   /* Its panels' quiet ground, which holds faces of the surface */
   --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
-  /* The corner of a face of the surface 6px within a panel, round about the panel's own.
-     LIMIT: a --radius under 6px leaves it square, as the browser cuts calc at 0 */
-  --default-inner: calc(var(--radius) - 6px);
+  /* A face of the surface within a panel (rows, a table's body, a tree, code): the pad between them, and its
+     corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
+     LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0 */
+  --default-pad: 6px; --default-inner: calc(var(--radius) - var(--default-pad));
   /* How wide prose grows, which a template sets for its page on :scope */
   --text-width: 56rem;
   /* The column a template centres its page in: its width, without the pad each side of it */
@@ -129,7 +130,7 @@ blockquote > * + * { margin-top: 0.6rem; }
   /* The vermilion of its marks (seals, the tab picked, the rules of code and quotes), kept apart from --bad,
      which a template may set otherwise, and the hairlines of its tables, in the ink */
   --washi-shu: #c13b23; --washi-hair: color-mix(in srgb, var(--fg) 18%, transparent);
-  --radius: 0; --radius-small: 0; --radius-pill: 3px;
+  --radius: 0; --radius-small: 3px; --radius-pill: 3px;
 }
 }
 </style>
@@ -477,7 +478,7 @@ blockquote {
   --floe-mark: 2rem; --floe-mark-gap: 0.75rem;
 }
 /* The seals are the kanji for a note, good, a warning and a danger, escaped to keep the source in English */
-:scope::before { content: "\6CE8"; content: "\6CE8" / ""; border-radius: var(--radius-pill); background: var(--tone); color: var(--on-fill); font-size: 1.05rem; }
+:scope::before { content: "\6CE8"; content: "\6CE8" / ""; border-radius: var(--radius-small); background: var(--tone); color: var(--on-fill); font-size: 1.05rem; }
 :scope[data-floe-tone=good]::before { content: "\826F"; content: "\826F" / ""; }
 :scope[data-floe-tone=warn]::before { content: "\6212"; content: "\6212" / ""; }
 :scope[data-floe-tone=bad]::before { content: "\5371"; content: "\5371" / ""; }
@@ -503,7 +504,6 @@ blockquote {
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope > label { border-radius: 0; }
 /* On screen alone: on paper every tab shows under its title, which tabs' own print takes off its ground */
 @media screen { :scope > label:has(:checked) { background: none; color: var(--fg); box-shadow: inset 0 -2px 0 var(--washi-shu); } }
 }
