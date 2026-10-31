@@ -7,8 +7,20 @@ import (
 	"testing"
 )
 
-// listsGeneral is a rule for every list, as a template's page.css or a theme's base.css may write one.
-const listsGeneral = "ul, ol, menu { display: flex; padding-left: 2rem; list-style-type: upper-roman; gap: 1rem; margin-block: 1rem; }\n"
+// listsGeneral is a rule for every list, as a template's page.css or a theme's base.css may write one, as specific as
+// an id, so that only the layers keep it from what floe lays out.
+const listsGeneral = ":is(ul, ol, menu):not(#none) { display: flex; padding-left: 2rem; list-style-type: upper-roman; gap: 1rem; " +
+	"margin-block: 1rem; }\n"
+
+// listsLook is a look of one's own that sets its list's room and padding, and a template that lends it to a list.
+var listsLook = map[string]string{
+	"parts/lists-gap/part.css":  ":scope { gap: 7px; padding-left: 9px; }\n",
+	"parts/lists-gap/part.yaml": "description: A list's own room and padding\n",
+	"templates/lists-look/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\"><title>{{.Title}}</title></head>\n" +
+		"<body><ul data-floe-look=\"lists-gap\"><li>a</li><li>b</li></ul></body></html>\n",
+	"templates/lists-look/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+	"templates/lists-look/example.yaml": "lang: en\ntemplate: lists-look\n",
+}
 
 // listsOf tells, for each list that is a part's box or takes a look, shown or not (in a closed details, a tab not
 // picked), what floe sets of it as a list: its display, marks, padding and room between items.
@@ -74,6 +86,9 @@ func TestUILists(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		own[k] = v
 	}
 	for k, v := range listsKit(t, "design", "lists-design") {
+		own[k] = v
+	}
+	for k, v := range listsLook {
 		own[k] = v
 	}
 	s.own(t, own)
@@ -158,6 +173,13 @@ func TestUILists(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		}
 	}
 	check(t, "marked", marked, "")
+
+	s.floe(t, "publish", s.write(t, "look.yaml", "lang: en\ntemplate: lists-look\ntitle: Look\n"), "--slug", "lists-look")
+	b.navigate("/a/lists-look/?raw")
+	look := `(() => { const c = getComputedStyle(document.querySelector('[data-floe-look=lists-gap]')); return c.rowGap + ' ' + c.paddingInlineStart; })()`
+	if got := b.eval(look); got != "7px 9px" {
+		t.Errorf("a look's own room and padding: %s, want 7px 9px, over floe's", got)
+	}
 
 	b.navigate("/a/lists-plain/?raw")
 	ownWay := `(() => [getComputedStyle(document.querySelector('[data-floe-part=timeline]')).paddingInlineStart,
