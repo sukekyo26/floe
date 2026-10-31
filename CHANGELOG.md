@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add a diagram's `width` and `height` left out: the canvas then reaches as
+  far right (or down) as what is drawn, and 20 more, its top left still 0, 0.
+  Raw SVG is not measured, so write both with a `raw` part.
 - Add one padding above and below the rows of what is drawn as rows (the
   looks table and rows, the parts that take them, the templates' tables and
   lists in them, and facts' tiles): 0.4rem, set by `--floe-row-pad` in

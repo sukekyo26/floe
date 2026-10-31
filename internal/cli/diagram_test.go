@@ -45,12 +45,12 @@ func TestDiagram(t *testing.T) {
 	}
 	code, _, errs = runIn(dir, env, "diagram", "render", "b.yaml", "e.yaml")
 	if want := "b.yaml:5:5: additional properties 'boxx' not allowed\n" +
-		"e.yaml: missing properties 'width', 'height', 'title', 'parts'\n"; code != 1 || errs != want {
+		"e.yaml: missing properties 'title', 'parts'\n"; code != 1 || errs != want {
 		t.Errorf("render of a spec of nothing = %d, %q, want %q", code, errs, want)
 	}
 	// What the whole spec lacks is told at the file alone, not at its first key.
 	code, _, errs = runIn(dir, env, "diagram", "inspect", "w.yaml")
-	if want := "w.yaml: missing properties 'height', 'title', 'parts'\n"; code != 1 || errs != want {
+	if want := "w.yaml: missing properties 'title', 'parts'\n"; code != 1 || errs != want {
 		t.Errorf("inspect of a spec lacking keys = %d, %q, want %q", code, errs, want)
 	}
 	// A top that is not keys and values is refused as goccy/go-yaml refuses it in a data file, at its place.

@@ -213,7 +213,7 @@ func TestOwnPartDiagrams(t *testing.T) {
 		{"lang: en\ntemplate: mine\ntwo:\n  a: " + boxSpec + "\n  b: " + overlap + "\n", `d.yaml:5:51: box "A" overlaps box "B"`},
 		{"lang: en\ntemplate: mine\npic: {x: 1}\n", lines(
 			`d.yaml:3:7: additional properties 'x' not allowed`,
-			`d.yaml:3:7: missing properties 'width', 'height', 'title', 'parts'`,
+			`d.yaml:3:7: missing properties 'title', 'parts'`,
 		)},
 	} {
 		if got := drawn(t, k, tt.src, none); got != tt.want {

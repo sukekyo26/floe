@@ -15,6 +15,7 @@ A `diagram` part, in a section or in `details` and `tabs`, is a spec written in 
       - edge: { from: alb, to: api, label: HTTPS }
 ```
 
+- `width` and `height` may each be left out: the canvas then reaches as far right (or down) as what is drawn, and 20 more. Its top left stays 0, 0, so the coordinates are as written. `raw` SVG is not measured: write `width` and `height` with it, or it may be cut off.
 - `example: <kind>` in place of the rest draws a built-in example (`floe diagram example` lists them). The page shows the diagram, not its spec: to read or copy an example's spec, print it with `floe diagram example <kind>`.
 - Text (a `title`, a row, a label) is text, or its words in each language, English among them: `{ en: Store, ja: 保存先 }`. The page draws the words of its `lang:`, and the spec is laid out and checked once for every language it is written in.
 - Each part is one key naming its kind. `floe part show diagram schema.json` prints every key; `floe diagram example <kind>` prints a spec of each kind, its comments explaining its grid.
@@ -40,7 +41,7 @@ An edge without `via` and sides runs right-angled from the side of one end facin
 The checks:
 
 - Text too wide or too tall for its box (a frame's label for the frame's width).
-- Parts (edges, lines and axes too) sticking out of the canvas.
+- Parts (edges, lines and axes too) sticking out of the canvas: left of or above 0, 0, or past a `width` or `height` written.
 - Boxes, marks, labels and frame labels overlapping each other, and boxes and marks straddling the edge of a frame. Frames are not checked against one another, so they may cross.
 - Edges running through boxes, labels or frame labels, and edges crossing like an X (unless one has `crossing: true`).
 - An edge ending at a name no part has, or at a side its end does not have.
