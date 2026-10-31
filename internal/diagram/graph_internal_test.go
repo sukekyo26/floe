@@ -171,12 +171,13 @@ func groupFault(gr *group) string {
 				}
 				room = onGrid(at+gap, 6, math.Ceil)
 			}
-			// A point's column is its x, and it leaves w right of it.
 			switch {
-			case e >= room && (n.x != e || n.w != 0):
-				return fmt.Sprintf("a point off its link's column %v with room: column %v, leaving %v on", e, n.x, n.w)
-			case e < room && (n.w != column/2 || math.Mod(n.x, column) != column/2):
-				return fmt.Sprintf("a point pushed off its link's column %v not entered bent: column %v", e, n.x)
+			case n.x != n.col || n.label == nil && n.w != n.jog:
+				return fmt.Sprintf("a point or label's box not standing at its column %v: x %v, w %v, jog %v", n.col, n.x, n.w, n.jog)
+			case e >= room && (n.col != e || n.jog != 0):
+				return fmt.Sprintf("a point off its link's column %v with room: column %v, leaving %v on", e, n.col, n.jog)
+			case e < room && (n.jog != column/2 || math.Mod(n.col, column) != column/2):
+				return fmt.Sprintf("a point pushed off its link's column %v not entered bent: column %v", e, n.col)
 			}
 			last = k
 		}
@@ -267,7 +268,14 @@ func randomGraph(rnd *rand.Rand, direction string) *graph {
 		if a == b {
 			continue
 		}
-		g.Edges = append(g.Edges, graphEdge{From: names[a], To: names[b], Dashed: false, Bold: false, Tone: "", Start: nil, End: nil})
+		g.Edges = append(g.Edges, graphEdge{From: names[a], To: names[b], Dashed: false, Bold: false, Tone: "", Start: nil, End: nil, Label: nil})
+	}
+	if rnd.IntN(3) == 0 {
+		for k := range g.Edges {
+			if rnd.IntN(3) == 0 {
+				g.Edges[k].Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(12))}
+			}
+		}
 	}
 	return g
 }
