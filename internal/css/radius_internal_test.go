@@ -1,7 +1,6 @@
 package css
 
 import (
-	"bytes"
 	"io/fs"
 	"os"
 	"path"
@@ -27,7 +26,7 @@ func declarations(src []byte, want func(name string) bool) map[string][][]token 
 	toks := lex(src)
 	for i := 0; i < len(toks); i++ {
 		name := strings.ToLower(string(toks[i].data))
-		if toks[i].tt != css.IdentToken || !want(name) {
+		if (toks[i].tt != css.IdentToken && toks[i].tt != css.CustomPropertyNameToken) || !want(name) {
 			continue
 		}
 		j := i + 1
@@ -60,12 +59,13 @@ func declarations(src []byte, want func(name string) bool) map[string][][]token 
 	return found
 }
 
-func text(value []token) string {
-	var b bytes.Buffer
-	for _, t := range value {
-		b.Write(t.data)
+// text returns the value as src writes it, from its first token to its last.
+func text(src []byte, value []token) string {
+	if len(value) == 0 {
+		return ""
 	}
-	return b.String()
+	last := value[len(value)-1]
+	return string(src[value[0].at : last.at+len(last.data)])
 }
 
 // TestRadius keeps the round of every corner of floe's CSS in the palette: a corner reads a variable, or is a shape.
@@ -88,7 +88,7 @@ func TestRadius(t *testing.T) {
 			for _, value := range values {
 				if strings.HasPrefix(prop, "--") {
 					if slices.Contains(paletteRadii, prop) && (path.Base(name) != "palette.css" || len(value) != 1) {
-						t.Errorf("%s: %s: %s; the palette sets it to one length", name, prop, text(value))
+						t.Errorf("%s: %s: %s; the palette sets it to one length", name, prop, text(src, value))
 					}
 					continue
 				}
@@ -96,9 +96,9 @@ func TestRadius(t *testing.T) {
 				reads := slices.ContainsFunc(value, func(t token) bool {
 					return t.tt == css.FunctionToken && strings.EqualFold(string(t.data), "var(")
 				})
-				if !reads && !slices.Contains(radiusShapes, text(value)) {
+				if !reads && !slices.Contains(radiusShapes, text(src, value)) {
 					t.Errorf("%s: %s: %s; read --radius, --radius-small or --radius-pill, or write a shape (%s)",
-						name, prop, text(value), strings.Join(radiusShapes, ", "))
+						name, prop, text(src, value), strings.Join(radiusShapes, ", "))
 				}
 			}
 		}
