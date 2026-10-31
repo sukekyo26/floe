@@ -19,14 +19,15 @@ var radiusShapes = []string{"0", "50%", "999px"}
 // is one length
 var paletteRadii = []string{"--radius", "--radius-small", "--radius-pill"}
 
-// declaration is a declaration's value, read by the tokens alone, and the prelude of the rule it is in.
+// declaration is a declaration's value, read by the tokens alone, and the preludes of the rules it is in, outermost
+// first, joined by " { ".
 type declaration struct {
 	value []token
 	rule  string
 }
 
-// rules returns, for each token, the prelude of the innermost rule it is in ("" outside every rule), comments left
-// out.
+// rules returns, for each token, the preludes of the rules it is in, outermost first and joined by " { " ("" outside
+// every rule), comments left out.
 func rules(toks []token) []string {
 	in := make([]string, len(toks))
 	var open []string
@@ -48,7 +49,7 @@ func rules(toks []token) []string {
 			prelude.Write(t.data)
 		}
 		if len(open) > 0 {
-			in[k] = open[len(open)-1]
+			in[k] = strings.Join(open, " { ")
 		}
 	}
 	return in
@@ -136,10 +137,22 @@ func setsCorners(p place) bool {
 	case path.Base(p.file) == "palette.css":
 		return true
 	case p.file == "base.css":
-		return p.rule == ":root"
+		return isRoot(p.rule, ":root")
 	default:
-		return path.Base(p.file) == "base.css" && p.rule == ":scope"
+		return path.Base(p.file) == "base.css" && isRoot(p.rule, ":scope")
 	}
+}
+
+// isRoot is whether rule, the preludes of a declaration's rules, is root alone, within @media rules or none: within
+// @scope or another rule, :scope is another element.
+func isRoot(rule, root string) bool {
+	preludes := strings.Split(rule, " { ")
+	for _, p := range preludes[:len(preludes)-1] {
+		if !strings.HasPrefix(p, "@media") {
+			return false
+		}
+	}
+	return preludes[len(preludes)-1] == root
 }
 
 // TestRadius keeps the round of every corner of floe's CSS in the palette: a corner is a shape, or takes all its
@@ -205,6 +218,30 @@ func TestRadius(t *testing.T) {
 				t.Errorf("%s: %s: %s; %s is set in %v, and a corner reads a variable set in a palette or the root of a base alone",
 					c.file, c.prop, c.value, v, setIn[v])
 			}
+		}
+	}
+}
+
+// TestCornerRoot takes the root of a base, in @media alone, as where a corner's variable may be set.
+func TestCornerRoot(t *testing.T) {
+	t.Parallel()
+
+	for src, want := range map[string]bool{
+		":scope { --c: 1px; }":                           true,
+		"@media print { :scope { --c: 1px; } }":          true,
+		"@scope (.a) { :scope { --c: 1px; } }":           false,
+		".a { :scope { --c: 1px; } }":                    false,
+		":scope > div { --c: 1px; }":                     false,
+		":scope, .a { --c: 1px; }":                       false,
+		"/* the root */ :scope /* here */ { --c: 1px; }": true,
+		"blockquote { --c: 1px; }":                       false,
+	} {
+		d := declarations([]byte(src), func(p string) bool { return p == "--c" })["--c"]
+		if len(d) != 1 {
+			t.Fatalf("%s: %d declarations of --c", src, len(d))
+		}
+		if got := setsCorners(place{file: "themes/x/base.css", rule: d[0].rule}); got != want {
+			t.Errorf("%s: sets corners %v, want %v", src, got, want)
 		}
 	}
 }

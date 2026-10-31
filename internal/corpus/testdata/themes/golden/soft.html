@@ -133,8 +133,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *) {
 /* Faces with round corners, as the parts are drawn by default */
-blockquote > * { --face: initial; --on-face: initial; }
-blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-radius: var(--radius); background: var(--quiet); --quiet: var(--surface); }
+blockquote > * { --face: initial; --on-face: initial; --quiet: var(--surface); }
+blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-radius: var(--radius); background: var(--quiet); }
 }
 }
 </style>
