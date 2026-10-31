@@ -165,14 +165,14 @@ func groupFault(gr *group) string {
 			room := math.Inf(-1)
 			if last >= 0 {
 				o := gr.nodes[rank[last]]
-				at, gap := o.x+o.w, column
+				at, gap := o.right(), column
 				for _, b := range rank[last+1 : k] {
 					at, gap = onGrid(at+nodeGap, 6, math.Ceil)+gr.nodes[b].w, nodeGap
 				}
 				room = onGrid(at+gap, 6, math.Ceil)
 			}
 			switch {
-			case n.x != n.col || n.label == nil && n.w != n.jog:
+			case n.x != n.col || n.label == nil && n.w != 0:
 				return fmt.Sprintf("a point or label's box not standing at its column %v: x %v, w %v, jog %v", n.col, n.x, n.w, n.jog)
 			case e >= room && (n.col != e || n.jog != 0):
 				return fmt.Sprintf("a point off its link's column %v with room: column %v, leaving %v on", e, n.col, n.jog)
@@ -872,15 +872,18 @@ func TestGraphShapes(t *testing.T) {
 	}
 
 	// Edges that can run straight do: every edge of the kept flow, and K3,3's edges straight down; of the two edges
-	// of fan a reader once saw bend, c→hub runs straight and x→a turns twice at most.
+	// of fan a reader once saw bend, c→hub runs straight and x→a turns twice at most. Of the example flow's labelled
+	// edges a reader saw bend, linked→data runs straight past a label's box below, and top→whole, whose box's other
+	// label stands beside it, turns twice.
 	for _, c := range []struct {
 		file  string
 		turns map[string]int // the most turns of the edges named; of every edge, none, when nil
 	}{
-		{"flow.yaml", nil},
-		{"fan.yaml", map[string]int{"edge c→hub": 0, "edge x→a": 2}},
+		{"testdata/graph/flow.yaml", nil},
+		{"testdata/graph/fan.yaml", map[string]int{"edge c→hub": 0, "edge x→a": 2}},
+		{"examples/flow.yaml", map[string]int{"edge linked→data": 0, "edge top→whole": 2}},
 	} {
-		src, err := os.ReadFile(filepath.Join("testdata", "graph", c.file))
+		src, err := os.ReadFile(filepath.FromSlash(c.file))
 		if err != nil {
 			t.Fatal(err)
 		}

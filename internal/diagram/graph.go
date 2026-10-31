@@ -154,7 +154,7 @@ func (o *graphOut) items() []item {
 		gr.shift(left)
 		width := 0.0
 		for _, n := range gr.nodes {
-			width = max(width, n.x+n.w)
+			width = max(width, n.right())
 		}
 		left = onGrid(width+groupGap, 12, math.Ceil)
 	}
