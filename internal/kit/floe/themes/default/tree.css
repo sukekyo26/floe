@@ -1,2 +1,2 @@
 :scope { padding: var(--default-pad); }
-:scope > ul { background: var(--surface); --muted-soft: var(--default-panel); border-radius: var(--default-inner); padding: 0.7rem 1.1rem; }
+:scope > ul { background: var(--surface); --quiet: var(--default-panel); border-radius: var(--default-inner); padding: 0.7rem 1.1rem; }

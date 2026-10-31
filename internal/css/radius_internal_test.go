@@ -90,12 +90,15 @@ func lengthless(value []token) bool {
 	return true
 }
 
-// setsCorners is whether a file may set a variable a corner reads: a palette, where a theme's corners are, or
+// setsCorners is whether a file may set a variable a corner reads: a palette, where a theme's corners are, a
+// theme's base.css, whose root holds what is the theme's own alone (default's palette lies under every theme's), or
 // floe's base, which holds floe's own (--floe-room).
-func setsCorners(name string) bool { return path.Base(name) == "palette.css" || name == "base.css" }
+func setsCorners(name string) bool {
+	return path.Base(name) == "palette.css" || path.Base(name) == "base.css"
+}
 
 // TestRadius keeps the round of every corner of floe's CSS in the palette: a corner is a shape, or takes all its
-// lengths from variables set in a palette (or floe's base) alone. The palette's three corners are one length each.
+// lengths from variables set in a palette or a base alone. The palette's three corners are one length each.
 func TestRadius(t *testing.T) {
 	t.Parallel()
 
@@ -153,7 +156,7 @@ func TestRadius(t *testing.T) {
 		for _, v := range c.reads {
 			if len(setIn[v]) == 0 || !slices.ContainsFunc(setIn[v], setsCorners) ||
 				slices.ContainsFunc(setIn[v], func(f string) bool { return !setsCorners(f) }) {
-				t.Errorf("%s: %s: %s; %s is set in %v, and a corner reads a variable set in a palette alone",
+				t.Errorf("%s: %s: %s; %s is set in %v, and a corner reads a variable set in a palette or a base alone",
 					c.file, c.prop, c.value, v, setIn[v])
 			}
 		}

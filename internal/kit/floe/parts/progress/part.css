@@ -9,7 +9,7 @@
 }
 .bar progress {
   grid-column: 1 / -1; appearance: none; width: 100%; height: 0.6rem; border: 0; border-radius: var(--radius-pill); overflow: hidden;
-  background: var(--muted-soft); color: inherit;
+  background: var(--quiet); color: inherit;
 }
 /* Each engine's own pseudo-element, in a rule of its own: one it does not know would drop the whole rule */
 .bar progress::-webkit-progress-bar { background: none; }

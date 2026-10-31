@@ -31,8 +31,8 @@ const toneExtra = `  - heading: Tones held
 //   - an element of a tone that draws in its tone's colours, --<tone> or --<tone>-soft, but not from --tone,
 //     --tone-soft or --tone-fill: what draws so (itself, its ::before and ::after, and what it holds short of a
 //     part's box) keeps the colour when the three are set on it to others. What draws in colours of a theme's own (brutal's fills) or in
-//     none of its tone (a stat without a note), and links, are let be; accent and muted, the page's colours drawn
-//     anywhere (blueprint's panels, a date, a bar's track in the quiet ground), are not measured so;
+//     none of its tone (a stat without a note), and links, are let be; accent, and muted's text, the page's colours
+//     drawn anywhere (blueprint's panels, a date), are not measured so;
 //   - a part's box without a tone whose --tone is not --accent (stats': --muted; the diagram's: none), and the page's
 //     root;
 //   - a diagram's box without a tone filled other than --surface.
@@ -58,7 +58,7 @@ const measureTones = `((tones) => {
     e.style.setProperty('--tone', 'rgb(1, 2, 3)'); e.style.setProperty('--tone-soft', 'rgb(4, 5, 6)'); e.style.setProperty('--tone-fill', 'rgb(7, 8, 9)');
     const after = drawn();
     e.style.removeProperty('--tone'); e.style.removeProperty('--tone-soft'); e.style.removeProperty('--tone-fill');
-    const watched = t === 'accent' || t === 'muted' ? [] : ink;
+    const watched = t === 'accent' ? [] : t === 'muted' ? ink.slice(1) : ink;
     const i = before.findIndex((c, i) => watched.some((k) => c.includes(k)) && c === after[i]);
     if (i >= 0) out.push(name(e) + ': ' + held[Math.floor(i / (3 * props.length))].tagName.toLowerCase() + ' draws in ' + t + "'s colours, not from --tone");
   }

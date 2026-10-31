@@ -1,2 +1,2 @@
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --muted-soft: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
