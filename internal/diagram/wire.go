@@ -19,11 +19,16 @@ const (
 // their links come down from, and its boxes give them room.
 func (gr *group) wire() {
 	gr.tracks = make([]int, max(len(gr.ranks)-1, 0))
+	pos := gr.positions()
 	for r := 0; r+1 < len(gr.ranks); r++ {
 		for _, u := range gr.ranks[r] {
-			gr.exits(u)
+			gr.exits(u, pos, false)
 		}
 		gr.settle(r + 1)
+		// settle may move the boxes below off the columns chosen for them: choose those again, the points' kept.
+		for _, u := range gr.ranks[r] {
+			gr.exits(u, pos, true)
+		}
 		for _, v := range gr.ranks[r+1] {
 			gr.entries(v)
 		}
@@ -85,12 +90,11 @@ func (n gnode) side(out bool) (lo, hi float64) {
 // rank below (ties as their edges are written): each at the column nearest to where its edge can enter the box it
 // reaches straight (through the points it passes), then nearest to where it would stand spread evenly, leaving a
 // column for each exit after it.
-func (gr *group) exits(u int) {
+func (gr *group) exits(u int, pos []int, keep bool) {
 	n := gr.nodes[u]
 	if len(n.outs) == 0 {
 		return
 	}
-	pos := gr.positions()
 	outs := slices.Clone(n.outs)
 	slices.SortStableFunc(outs, func(a, b int) int {
 		return cmp.Or(pos[gr.links[a].to]-pos[gr.links[b].to], gr.links[a].edge-gr.links[b].edge)
@@ -99,14 +103,27 @@ func (gr *group) exits(u int) {
 	lo, hi := n.side(true)
 	cols := columns(lo, hi, 0)
 	even := spread(cols, len(outs))
+	fixed := func(k int) bool { return keep && gr.nodes[gr.links[outs[k]].to].box == nil }
 	next := 0
 	for k, l := range outs {
+		if fixed(k) {
+			next = slices.Index(cols, gr.links[l].exit) + 1
+			continue
+		}
+		// The last column it may take: one for each exit after it, and before the next exit kept.
+		last := len(cols) - (len(outs) - k)
+		for j := k + 1; j < len(outs); j++ {
+			if fixed(j) {
+				last = min(last, slices.Index(cols, gr.links[outs[j]].exit)-(j-k))
+				break
+			}
+		}
 		lo, hi := gr.nodes[gr.through(gr.links[l].to, false)].side(false)
 		cost := func(x float64) (float64, float64) {
 			return max(lo-x, x-hi, 0), math.Abs(x - even[k])
 		}
 		best := next
-		for i := next + 1; i <= len(cols)-(len(outs)-k); i++ {
+		for i := next + 1; i <= last; i++ {
 			a, b := cost(cols[i])
 			c, d := cost(cols[best])
 			if a < c || a == c && b < d {
@@ -118,9 +135,11 @@ func (gr *group) exits(u int) {
 }
 
 // settle places the points of rank r at the columns their links come down from, so that each edge runs straight
-// through the ranks it passes: a point is a column, and the next point stands a column on, past the boxes between.
-// A point pushed off its column by the one before is entered bent, at x ≡ 6, and left a column on, at x ≡ 0. The
-// boxes then stand as near their places as the points let them, nodeGap from them and from one another.
+// through the ranks it passes: a point is a column, and the next point stands a column on, or nodeGap past the
+// boxes between. A point pushed off its column, by the point before or by the boxes between, is entered bent at
+// the first x ≡ 6 it may stand at, and left half a column on, at x ≡ 0 (not half a column before: the column it
+// enters at keeps a column from the one before it). The boxes then stand as near their places as the points let
+// them, nodeGap from them and from one another.
 func (gr *group) settle(r int) {
 	rank := gr.ranks[r]
 	last, right := -1, 0.0 // the last point placed, by index in rank, and the column it leaves at
@@ -163,17 +182,14 @@ func (gr *group) settle(r int) {
 	}
 }
 
-// shiftRight moves the group right by whole columns when settle moved a box left of 0, so that it starts at 0 and
-// keeps its grid.
+// shiftRight moves the group across by whole columns, so that it keeps its grid, to start within a column right of
+// 0: settle may have moved its boxes either way.
 func (gr *group) shiftRight() {
-	least := 0.0
+	least := math.Inf(1)
 	for _, n := range gr.nodes {
 		least = min(least, n.x)
 	}
-	by := onGrid(-least, column, math.Ceil)
-	if by == 0 {
-		return
-	}
+	by := -onGrid(least, column, math.Floor)
 	for i := range gr.nodes {
 		gr.nodes[i].x += by
 	}

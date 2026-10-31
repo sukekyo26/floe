@@ -6,8 +6,8 @@ import (
 	"slices"
 )
 
-// The room of a graph laid out down: boxes of a rank stand nodeGap apart, and from the points between them, and
-// groups groupGap apart.
+// The room of a graph laid out down: in a rank, boxes stand nodeGap apart and nodeGap from points, and points a
+// column apart (wire's settle); groups stand groupGap apart.
 const (
 	nodeGap  = 24.0
 	groupGap = 24.0

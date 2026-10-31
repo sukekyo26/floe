@@ -115,7 +115,15 @@ func graphFault(g *graph) string {
 		}
 	}
 	ordered := 0
-	for _, gr := range grouped(g) {
+	groups := grouped(g)
+	least := math.Inf(1)
+	for _, n := range groups[0].nodes {
+		least = min(least, n.x)
+	}
+	if least < 0 || least >= column {
+		return fmt.Sprintf("the first group starts at %v, not within a column right of 0", least)
+	}
+	for _, gr := range groups {
 		ordered += gr.crossings()
 		if fault := groupFault(gr); fault != "" {
 			return fault
@@ -140,8 +148,37 @@ func groupFault(gr *group) string {
 		}
 	}
 	for _, l := range gr.links {
-		if math.Mod(l.exit, column) != 0 || !l.straight && math.Mod(l.entry, column) != column/2 {
-			return fmt.Sprintf("a link off the grid: exit %v, entry %v", l.exit, l.entry)
+		if math.Mod(l.exit, column) != 0 || !l.straight && math.Mod(l.entry, column) != column/2 || l.straight != (l.entry == l.exit) {
+			return fmt.Sprintf("a link off the grid: exit %v, entry %v, straight %v", l.exit, l.entry, l.straight)
+		}
+	}
+	// A point stands at its link's column, a column past what stands before it, or nodeGap past boxes between;
+	// only one pushed off it is entered bent.
+	for _, rank := range gr.ranks {
+		last := -1
+		for k, v := range rank {
+			n := gr.nodes[v]
+			if n.box != nil {
+				continue
+			}
+			e := gr.links[n.ins[0]].exit
+			room := math.Inf(-1)
+			if last >= 0 {
+				o := gr.nodes[rank[last]]
+				at, gap := o.x+o.w, column
+				for _, b := range rank[last+1 : k] {
+					at, gap = onGrid(at+nodeGap, 6, math.Ceil)+gr.nodes[b].w, nodeGap
+				}
+				room = onGrid(at+gap, 6, math.Ceil)
+			}
+			// A point's column is its x, and it leaves w right of it.
+			switch {
+			case e >= room && (n.x != e || n.w != 0):
+				return fmt.Sprintf("a point off its link's column %v with room: column %v, leaving %v on", e, n.x, n.w)
+			case e < room && (n.w != column/2 || math.Mod(n.x, column) != column/2):
+				return fmt.Sprintf("a point pushed off its link's column %v not entered bent: column %v", e, n.x)
+			}
+			last = k
 		}
 	}
 	for r, rank := range gr.ranks {
@@ -826,8 +863,8 @@ func TestGraphShapes(t *testing.T) {
 		}
 	}
 
-	// Edges that can run straight do: every edge of the kept flow, the two of fan a reader once saw bend, and
-	// K3,3's edges straight down.
+	// Edges that can run straight do: every edge of the kept flow, and K3,3's edges straight down; of the two edges
+	// of fan a reader once saw bend, c→hub runs straight and x→a turns twice at most.
 	for _, c := range []struct {
 		file  string
 		turns map[string]int // the most turns of the edges named; of every edge, none, when nil
@@ -856,6 +893,21 @@ func TestGraphShapes(t *testing.T) {
 				t.Errorf("%s: %s turns %d times, want %d at most: %v", c.file, p.what, len(p.segs)-1, most, p.segs)
 			}
 		}
+	}
+	// A box settle moves off its exit's column takes its exit again: six turns, not eight.
+	moved := graphOf([]string{"n0", "n1", "n2"}, "n0>n1", "n2>n1", "n2>n0", "n1>n0", "n1>n0", "n2>n1")
+	for i, b := range []struct {
+		shape string
+		n     int
+	}{{"pill", 9}, {"state", 10}, {"state", 15}} {
+		moved.Nodes[i].Box.Shape, moved.Nodes[i].Box.Rows[0].Text["en"] = b.shape, strings.Repeat("w", b.n)
+	}
+	movedTurns := 0
+	for _, p := range laid(moved).paths {
+		movedTurns += len(p.segs) - 1
+	}
+	if movedTurns > 6 {
+		t.Errorf("a box moved by settle: %d turns, want 6 at most", movedTurns)
 	}
 	k33 := laid(graphOf([]string{"a", "b", "c", "x", "y", "z"},
 		"a>x", "a>y", "a>z", "b>x", "b>y", "b>z", "c>x", "c>y", "c>z"))
