@@ -184,6 +184,13 @@ func groupFault(gr *group) string {
 		if math.Mod(l.exit, column) != 0 || !l.straight && math.Mod(l.entry, column) != column/2 || l.straight != (l.entry == l.exit) {
 			return fmt.Sprintf("a link off the grid: exit %v, entry %v, straight %v", l.exit, l.entry, l.straight)
 		}
+		// Each end on its node's side as it finally stands, however straighten moved a run after settle.
+		if lo, hi := gr.nodes[l.from].side(true); l.exit < lo || l.exit > hi {
+			return fmt.Sprintf("a link leaves at %v, off its node's side %v to %v", l.exit, lo, hi)
+		}
+		if lo, hi := gr.nodes[l.to].side(false); l.entry < lo || l.entry > hi {
+			return fmt.Sprintf("a link enters at %v, off its node's side %v to %v", l.entry, lo, hi)
+		}
 	}
 	// A point stands at its link's column, a column past what stands before it, or nodeGap past boxes between;
 	// only one pushed off it is entered bent.
@@ -222,8 +229,8 @@ func groupFault(gr *group) string {
 			if a.box == nil && b.box == nil {
 				want = column
 			}
-			if b.x-(a.x+a.w) < want {
-				return fmt.Sprintf("rank %d: nodes %v apart, want %v", r, b.x-(a.x+a.w), want)
+			if b.x-a.right() < want {
+				return fmt.Sprintf("rank %d: nodes %v apart, want %v", r, b.x-a.right(), want)
 			}
 		}
 		if r+1 == len(gr.ranks) {

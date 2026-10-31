@@ -17,6 +17,11 @@ const (
 // wire sets each link's exit and entry, and its track in its channel, then the tops of the ranks and the nodes, as
 // laid out down. Channels are wired top down: once the exits above a rank are set, its points stand at the columns
 // their links come down from, and its boxes give them room.
+// What it keeps, which makes two things of one graph never meet (tell takes their meeting for floe's failure): the
+// nodes of a rank stand in its order, each a column past a point's or label's box's right, nodeGap past a box's, and
+// each link's ends stand on its nodes' sides. settle makes it for a rank; straighten keeps it in ranks settled before,
+// as it moves only points and labels' boxes, only right, only into the room roomAt finds before the next node, and
+// a box's exit only into the gap before its next: no box moves, so their exits stand as chosen.
 func (gr *group) wire() {
 	gr.tracks = make([]int, max(len(gr.ranks)-1, 0))
 	pos := gr.positions()
@@ -25,7 +30,7 @@ func (gr *group) wire() {
 			gr.exits(u, pos, false)
 		}
 		gr.untangle(r+1, pos)
-		gr.settle(r + 1)
+		gr.settle(r+1, pos)
 		// settle may move the boxes below off the columns chosen for them: choose those again, the points' kept.
 		// LIMIT: only for the rank right below; a box a settle further down moves is not chosen for again, so an
 		// edge meant to enter straight may bend. Choose every exit once all ranks stand, if that comes to matter.
@@ -186,7 +191,7 @@ func (gr *group) untangle(r int, pos []int) {
 // x ≡ 6 it may stand at, and left half a column on, at x ≡ 0 (not half a column before: the column it enters at
 // keeps a column from the one before it). The boxes then stand as near their places as the columns let them,
 // nodeGap from them and from one another.
-func (gr *group) settle(r int) {
+func (gr *group) settle(r int, pos []int) {
 	rank := gr.ranks[r]
 	last := -1 // the last placed, by index in rank
 	for k, v := range rank {
@@ -201,7 +206,7 @@ func (gr *group) settle(r int) {
 		}
 		n.col, n.jog = need, 0
 		if need != e {
-			if c := onGrid(need, column, math.Ceil); gr.straighten(n.ins[0], c) {
+			if c := onGrid(need, column, math.Ceil); gr.straighten(n.ins[0], c, pos) {
 				n.col = c
 			} else {
 				n.col, n.jog = onGrid(need-column/2, column, math.Ceil)+column/2, column/2
@@ -241,7 +246,7 @@ func (gr *group) past(rank []int, last, k int) float64 {
 // straighten moves the straight run of an edge above link l, up to the box it leaves or the point it enters bent,
 // across to column c, so that the node l enters stands at c straight rather than pushed. It moves nothing and
 // reports false unless every node of the run has room at c in its rank, and the box leaves by c in its exits' order.
-func (gr *group) straighten(l int, c float64) bool {
+func (gr *group) straighten(l int, c float64, pos []int) bool {
 	run := []int{l} // the links of the run, bottom up
 	for u := gr.nodes[gr.links[l].from]; u.box == nil && u.jog == 0; u = gr.nodes[gr.links[l].from] {
 		l = u.ins[0]
@@ -255,7 +260,7 @@ func (gr *group) straighten(l int, c float64) bool {
 			}
 			continue
 		}
-		if !gr.roomAt(gr.links[l].from, c-u.jog) {
+		if !gr.roomAt(gr.links[l].from, c-u.jog, pos) {
 			return false
 		}
 	}
@@ -285,9 +290,9 @@ func (gr *group) gap(a, b int) int {
 
 // roomAt reports whether the point or label's box v may stand at column col, as far from what stands right of it in
 // its rank as settle puts them: a column from a point or label's box, nodeGap from a box.
-func (gr *group) roomAt(v int, col float64) bool {
+func (gr *group) roomAt(v int, col float64, pos []int) bool {
 	n, rank := gr.nodes[v], gr.ranks[gr.nodes[v].rank]
-	k := slices.Index(rank, v)
+	k := pos[v]
 	if k+1 == len(rank) {
 		return true
 	}
