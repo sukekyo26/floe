@@ -15,18 +15,21 @@ const (
 )
 
 // wire sets each link's exit and entry, and its track in its channel, then the tops of the ranks and the nodes, as
-// laid out down. Channels are wired top down, as a point's exit keeps the column it is entered at.
+// laid out down. Channels are wired top down: once the exits above a rank are set, its points stand at the columns
+// their links come down from, and its boxes give them room.
 func (gr *group) wire() {
 	gr.tracks = make([]int, max(len(gr.ranks)-1, 0))
 	for r := 0; r+1 < len(gr.ranks); r++ {
 		for _, u := range gr.ranks[r] {
 			gr.exits(u)
 		}
+		gr.settle(r + 1)
 		for _, v := range gr.ranks[r+1] {
 			gr.entries(v)
 		}
 		gr.tracks[r] = gr.track(r)
 	}
+	gr.shiftRight()
 	gr.top, gr.bottom = make([]float64, len(gr.ranks)), make([]float64, len(gr.ranks))
 	y := 0.0
 	for r, rank := range gr.ranks {
@@ -66,31 +69,117 @@ func spread(xs []float64, n int) []float64 {
 	return out
 }
 
-func (gr *group) centre(i int) float64 {
-	return gr.nodes[i].x + gr.nodes[i].w/2
+// side is where links may leave node n (out) or enter it: on a box, 12 in from its ends; a point is entered at its
+// column x and left at x+w (6 to the right when it is entered bent, else the same).
+func (n gnode) side(out bool) (lo, hi float64) {
+	switch {
+	case n.box != nil:
+		return n.x + inEnd, n.x + n.w - inEnd
+	case out:
+		return n.x + n.w, n.x + n.w
+	}
+	return n.x, n.x
 }
 
-// exits sets the exits of the links out of node u: at x ≡ 0 on its bottom, in the order of the centres they lead to
-// (ties as their edges are written), spread evenly; a point's at the column it is entered at, when that is one.
+// exits sets the exits of the links out of node u, at x ≡ 0 on its bottom, in the order their ends stand in the
+// rank below (ties as their edges are written): each at the column nearest to where its edge can enter the box it
+// reaches straight (through the points it passes), then nearest to where it would stand spread evenly, leaving a
+// column for each exit after it.
 func (gr *group) exits(u int) {
 	n := gr.nodes[u]
 	if len(n.outs) == 0 {
 		return
 	}
-	lo, hi := n.x+inEnd, n.x+n.w-inEnd
-	if n.box == nil && len(n.ins) == 1 {
-		if in := gr.links[n.ins[0]].entry; math.Mod(in, column) == 0 && in >= lo && in <= hi {
-			gr.links[n.outs[0]].exit = in
-			return
-		}
-	}
+	pos := gr.positions()
 	outs := slices.Clone(n.outs)
 	slices.SortStableFunc(outs, func(a, b int) int {
-		return cmp.Or(cmp.Compare(gr.centre(gr.links[a].to), gr.centre(gr.links[b].to)),
-			gr.links[a].edge-gr.links[b].edge)
+		return cmp.Or(pos[gr.links[a].to]-pos[gr.links[b].to], gr.links[a].edge-gr.links[b].edge)
 	})
-	for k, x := range spread(columns(lo, hi, 0), len(outs)) {
-		gr.links[outs[k]].exit = x
+	// ③ makes a box 12·k+36 wide for k links at a side, so it has a column for each; a point has one link out.
+	lo, hi := n.side(true)
+	cols := columns(lo, hi, 0)
+	even := spread(cols, len(outs))
+	next := 0
+	for k, l := range outs {
+		lo, hi := gr.nodes[gr.through(gr.links[l].to, false)].side(false)
+		cost := func(x float64) (float64, float64) {
+			return max(lo-x, x-hi, 0), math.Abs(x - even[k])
+		}
+		best := next
+		for i := next + 1; i <= len(cols)-(len(outs)-k); i++ {
+			a, b := cost(cols[i])
+			c, d := cost(cols[best])
+			if a < c || a == c && b < d {
+				best = i
+			}
+		}
+		gr.links[l].exit, next = cols[best], best+1
+	}
+}
+
+// settle places the points of rank r at the columns their links come down from, so that each edge runs straight
+// through the ranks it passes: a point is a column, and the next point stands a column on, past the boxes between.
+// A point pushed off its column by the one before is entered bent, at x ≡ 6, and left a column on, at x ≡ 0. The
+// boxes then stand as near their places as the points let them, nodeGap from them and from one another.
+func (gr *group) settle(r int) {
+	rank := gr.ranks[r]
+	last, right := -1, 0.0 // the last point placed, by index in rank, and the column it leaves at
+	for k, v := range rank {
+		n := &gr.nodes[v]
+		if n.box != nil {
+			continue
+		}
+		e := gr.links[n.ins[0]].exit
+		need := e
+		if last >= 0 {
+			need = max(e, right+column)
+			if between := gr.boxesOf(rank[last+1 : k]); len(between) > 0 {
+				// The boxes between, packed as the passes below pack them, on the grid of 6.
+				at := right
+				for _, b := range between {
+					at = onGrid(at+nodeGap, 6, math.Ceil) + gr.nodes[b].w
+				}
+				need = max(e, onGrid(at+nodeGap, 6, math.Ceil))
+			}
+		}
+		n.x, n.w = need, 0
+		if need != e {
+			n.x, n.w = onGrid(need-column/2, column, math.Ceil)+column/2, column/2
+		}
+		last, right = k, n.x+n.w
+	}
+	// The boxes, left to right past what stands before each, then right to left before what stands after: the room
+	// left for the boxes between two points holds them packed, so the second pass keeps what the first made.
+	for k := 1; k < len(rank); k++ {
+		if n := &gr.nodes[rank[k]]; n.box != nil {
+			o := gr.nodes[rank[k-1]]
+			n.x = max(n.x, onGrid(o.x+o.w+nodeGap, 6, math.Ceil))
+		}
+	}
+	for k := len(rank) - 2; k >= 0; k-- {
+		if n := &gr.nodes[rank[k]]; n.box != nil {
+			n.x = min(n.x, onGrid(gr.nodes[rank[k+1]].x-nodeGap-n.w, 6, math.Floor))
+		}
+	}
+}
+
+// shiftRight moves the group right by whole columns when settle moved a box left of 0, so that it starts at 0 and
+// keeps its grid.
+func (gr *group) shiftRight() {
+	least := 0.0
+	for _, n := range gr.nodes {
+		least = min(least, n.x)
+	}
+	by := onGrid(-least, column, math.Ceil)
+	if by == 0 {
+		return
+	}
+	for i := range gr.nodes {
+		gr.nodes[i].x += by
+	}
+	for i := range gr.links {
+		gr.links[i].exit += by
+		gr.links[i].entry += by
 	}
 }
 
@@ -105,7 +194,7 @@ func (gr *group) entries(v int) {
 	slices.SortStableFunc(ins, func(a, b int) int {
 		return cmp.Or(cmp.Compare(gr.links[a].exit, gr.links[b].exit), gr.links[a].edge-gr.links[b].edge)
 	})
-	lo, hi := n.x+inEnd, n.x+n.w-inEnd
+	lo, hi := n.side(false)
 	top := entrySide{gr: gr, ins: ins, sixes: columns(lo, hi, column/2)}
 	var straight []int // indexes in ins
 	for k, l := range ins {

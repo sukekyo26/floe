@@ -121,7 +121,7 @@ func TestGraphBlame(t *testing.T) {
 		{"a label in the graph's channel", g1, "  - label: { text: L, x: 68, y: 61, anchor: middle }\n", `edge write→check runs through label "L"`},
 		{
 			"a box in the graph's channel", k33, "  - box: { name: note, x: 24, y: 78, rows: [N] }\n",
-			`edge a→x runs through box "note"` + "\n@: " + `edge a→y runs through box "note"` + "\n@: " + `edge b→x runs through box "note"`,
+			`edge a→x runs through box "note"` + "\n@: " + `edge b→x runs through box "note"`,
 		},
 		{
 			"an edge by hand across the graph's edges", g1, "  - edge: { from: [0, 62], to: [400, 62] }\n",

@@ -46,7 +46,7 @@ func (gr *group) split() {
 			if r < gr.nodes[a.to].rank {
 				next = len(gr.nodes)
 				gr.nodes = append(gr.nodes, gnode{
-					box: nil, of: a.edge, rank: r, w: pointW, h: 0, x: 0, y: 0, ins: nil,
+					box: nil, of: a.edge, rank: r, w: 0, h: 0, x: 0, y: 0, ins: nil,
 					outs: nil, written: len(gr.nodes),
 				})
 			}

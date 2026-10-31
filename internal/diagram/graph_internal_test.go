@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"math"
 	"math/rand/v2"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // graphOf is a graph of boxes named names, with edges written "a>b".
@@ -113,12 +117,71 @@ func graphFault(g *graph) string {
 	ordered := 0
 	for _, gr := range grouped(g) {
 		ordered += gr.crossings()
+		if fault := groupFault(gr); fault != "" {
+			return fault
+		}
 	}
 	if drawn > ordered {
 		return fmt.Sprintf("%d crossings drawn, over the %d of its ranks' order", drawn, ordered)
 	}
 	if again := laid(g); again.inspect() != l.inspect() {
 		return "laid out twice, it differs"
+	}
+	return ""
+}
+
+// groupFault is what is wrong with a group as wired, or "": a box too narrow for its links, a point off the grid
+// (left at x ≡ 0, entered at x ≡ 6 or straight), two nodes of a rank too close (boxes nodeGap from boxes and points,
+// points a column from points), or a cycle in a channel's track constraints.
+func groupFault(gr *group) string {
+	for _, n := range gr.nodes {
+		if n.box != nil && max(len(n.ins), len(n.outs)) > 0 && n.w < float64(12*max(len(n.ins), len(n.outs))+36) {
+			return fmt.Sprintf("box %s %v wide for %d links", n.box.Name, n.w, max(len(n.ins), len(n.outs)))
+		}
+	}
+	for _, l := range gr.links {
+		if math.Mod(l.exit, column) != 0 || !l.straight && math.Mod(l.entry, column) != column/2 {
+			return fmt.Sprintf("a link off the grid: exit %v, entry %v", l.exit, l.entry)
+		}
+	}
+	for r, rank := range gr.ranks {
+		for k := 1; k < len(rank); k++ {
+			a, b := gr.nodes[rank[k-1]], gr.nodes[rank[k]]
+			want := nodeGap
+			if a.box == nil && b.box == nil {
+				want = column
+			}
+			if b.x-(a.x+a.w) < want {
+				return fmt.Sprintf("rank %d: nodes %v apart, want %v", r, b.x-(a.x+a.w), want)
+			}
+		}
+		if r+1 == len(gr.ranks) {
+			continue
+		}
+		var bent []int
+		for _, u := range rank {
+			for _, l := range gr.nodes[u].outs {
+				if !gr.links[l].straight {
+					bent = append(bent, l)
+				}
+			}
+		}
+		above := gr.above(bent)
+		done := map[int]bool{}
+		for changed := true; changed; {
+			changed = false
+			for _, l := range bent {
+				if done[l] {
+					continue
+				}
+				if !slices.ContainsFunc(above[l], func(a int) bool { return !done[a] }) {
+					done[l], changed = true, true
+				}
+			}
+		}
+		if len(done) != len(bent) {
+			return fmt.Sprintf("channel %d: a cycle in the track constraints", r)
+		}
 	}
 	return ""
 }
@@ -354,6 +417,19 @@ func TestGraphTrips(t *testing.T) {
 	}
 }
 
+// swinging is a graph whose boxes' lefts keep moving, pulled down and up in turn.
+func swinging() *graph {
+	g := graphOf([]string{"n0", "n1", "n2", "n3", "n4"},
+		"n4>n1", "n2>n0", "n0>n1", "n3>n0", "n0>n2", "n4>n3", "n0>n3", "n0>n1", "n1>n4", "n1>n4")
+	for i, b := range []struct {
+		shape string
+		n     int
+	}{{"", 9}, {"", 11}, {"pill", 9}, {"hex", 16}, {"pill", 2}} {
+		g.Nodes[i].Box.Shape, g.Nodes[i].Box.Rows[0].Text["en"] = b.shape, strings.Repeat("w", b.n)
+	}
+	return g
+}
+
 // pull stops at maxPulls on lefts that keep moving, and before it once nothing moves.
 func TestGraphPulls(t *testing.T) {
 	t.Parallel()
@@ -363,7 +439,7 @@ func TestGraphPulls(t *testing.T) {
 		g     *graph
 		pulls int
 	}{
-		{"swinging", graphOf([]string{"n0", "n1", "n2", "n3"}, "n0>n2", "n2>n3", "n0>n1", "n3>n1", "n0>n2"), maxPulls},
+		{"swinging", swinging(), maxPulls},
 		{"a diamond", graphOf([]string{"a", "b", "c", "d"}, "a>b", "a>c", "b>d", "c>d"), 3},
 	} {
 		o, _ := readGraph(c.g, "#/parts/0/graph") //nolint:errcheck // every name is a box's
@@ -729,5 +805,145 @@ func TestGraphTold(t *testing.T) {
 		if len(c.l.problems) != 1 || c.l.problems[0].Key != c.key || c.l.problems[0].At() != c.at {
 			t.Errorf("%s: %v, want %s at %s", c.name, c.l.problems, c.key, c.at)
 		}
+	}
+}
+
+// boxIn is the area of the box named name in l.
+func boxIn(l *layout, name string) rect {
+	return l.names[name].r
+}
+
+// A graph's shapes: a chain runs straight, an edge back up a cycle points the way it is written, groups stand side
+// by side as written, the languages lay out alike, a box widens for its edges, boxes of a rank stand nodeGap apart,
+// a leaf added keeps the other ranks' order, and right is down turned.
+func TestGraphShapes(t *testing.T) {
+	t.Parallel()
+
+	chain := laid(graphOf([]string{"a", "b", "c", "d"}, "a>b", "b>c", "c>d"))
+	for _, p := range chain.paths {
+		if len(p.segs) != 1 {
+			t.Errorf("chain: %s turns: %v", p.what, p.segs)
+		}
+	}
+
+	// Edges that can run straight do: every edge of the kept flow, the two of fan a reader once saw bend, and
+	// K3,3's edges straight down.
+	for _, c := range []struct {
+		file  string
+		turns map[string]int // the most turns of the edges named; of every edge, none, when nil
+	}{
+		{"flow.yaml", nil},
+		{"fan.yaml", map[string]int{"edge c→hub": 0, "edge x→a": 2}},
+	} {
+		src, err := os.ReadFile(filepath.Join("testdata", "graph", c.file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, v, err := yamlpos.ParseMap(c.file, src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, err := read(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range laid(s.Parts[0].Graph).paths {
+			most, ok := c.turns[p.what]
+			if c.turns != nil && !ok {
+				continue
+			}
+			if len(p.segs)-1 > most {
+				t.Errorf("%s: %s turns %d times, want %d at most: %v", c.file, p.what, len(p.segs)-1, most, p.segs)
+			}
+		}
+	}
+	k33 := laid(graphOf([]string{"a", "b", "c", "x", "y", "z"},
+		"a>x", "a>y", "a>z", "b>x", "b>y", "b>z", "c>x", "c>y", "c>z"))
+	for _, k := range []int{0, 4, 8} {
+		if p := k33.paths[k]; len(p.segs) != 1 {
+			t.Errorf("K3,3: %s turns: %v", p.what, p.segs)
+		}
+	}
+
+	cycle := laid(graphOf([]string{"a", "b", "c"}, "a>b", "b>c", "c>a"))
+	back := cycle.paths[2].segs
+	if a := boxIn(cycle, "a"); back[len(back)-1][3] != a.y+a.h {
+		t.Errorf("cycle: c→a ends at %v, want at the bottom of a, %v", back[len(back)-1], a.y+a.h)
+	}
+
+	apart := laid(graphOf([]string{"a", "b", "c", "d"}, "a>b", "c>d"))
+	if a, c := boxIn(apart, "a"), boxIn(apart, "c"); c.x < a.x+a.w+groupGap {
+		t.Errorf("two groups: c at %v, not right of a (%v to %v)", c.x, a.x, a.x+a.w)
+	}
+
+	langs := graphOf([]string{"a", "b"}, "a>b")
+	langs.Nodes[1].Box.Rows[0].Text = Text{"en": "Save", "ja": "データファイルと画像の写しを保存する"}
+	en := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: langs}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
+		Options{Lang: "en", Icons: NoIcons{Err: nil}, Seq: 1})
+	ja := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: langs}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
+		Options{Lang: "ja", Icons: NoIcons{Err: nil}, Seq: 1})
+	if en.inspect() != ja.inspect() {
+		t.Errorf("languages: en\n%s\nja\n%s", en.inspect(), ja.inspect())
+	}
+
+	// Eleven edges at one box: five in, three out, and three back up a cycle, turned to leave it too.
+	hub := laid(graphOf([]string{"a", "b", "c", "d", "e", "hub", "x", "y", "z"},
+		"a>hub", "b>hub", "c>hub", "d>hub", "e>hub", "hub>x", "hub>y", "hub>z", "x>hub", "y>hub", "z>hub"))
+	if len(hub.problems) > 0 {
+		t.Errorf("eleven edges: %v", hub.problems)
+	}
+	if h := boxIn(hub, "hub"); h.w < 12*6+36 {
+		t.Errorf("eleven edges: the box %v wide, want %v or more for six edges out", h.w, 12*6+36)
+	}
+
+	beside := laid(graphOf([]string{"r", "a", "b", "c"}, "r>a", "r>b", "r>c"))
+	for _, pair := range [][2]string{{"a", "b"}, {"b", "c"}} {
+		if l, r := boxIn(beside, pair[0]), boxIn(beside, pair[1]); r.x-(l.x+l.w) < nodeGap {
+			t.Errorf("beside: %s and %s %v apart, want %v or more", pair[0], pair[1], r.x-(l.x+l.w), nodeGap)
+		}
+	}
+
+	// A leaf added keeps the order of the other ranks.
+	order := func(g *graph) []string {
+		var out []string
+		for _, gr := range grouped(g) {
+			for _, rank := range gr.ranks[:2] {
+				names := []string{}
+				for _, n := range rank {
+					if b := gr.nodes[n].box; b != nil {
+						names = append(names, b.Name)
+					}
+				}
+				slices.SortFunc(names, func(a, b string) int {
+					return int(gr.nodes[slices.IndexFunc(gr.nodes, func(n gnode) bool { return n.box != nil && n.box.Name == a })].x -
+						gr.nodes[slices.IndexFunc(gr.nodes, func(n gnode) bool { return n.box != nil && n.box.Name == b })].x)
+				})
+				out = append(out, strings.Join(names, " "))
+			}
+		}
+		return out
+	}
+	tree := graphOf([]string{"r", "a", "b", "c", "x", "y"}, "r>a", "r>b", "r>c", "a>x", "c>y")
+	more := graphOf([]string{"r", "a", "b", "c", "x", "y", "w"}, "r>a", "r>b", "r>c", "a>x", "c>y", "b>w")
+	if a, b := order(tree), order(more); !slices.Equal(a, b) {
+		t.Errorf("a leaf added: ranks %v, then %v", a, b)
+	}
+
+	// Right runs the edges left to right, as down runs them top down.
+	g := graphOf([]string{"a", "b", "c"}, "a>b", "a>c", "b>c")
+	down := laid(g)
+	turned := *g
+	turned.Direction = "right"
+	r := laid(&turned)
+	for _, e := range g.Edges {
+		if f, to := boxIn(down, e.From), boxIn(down, e.To); to.y < f.y+f.h {
+			t.Errorf("down: %s→%s, %v not below %v", e.From, e.To, to, f)
+		}
+		if f, to := boxIn(r, e.From), boxIn(r, e.To); to.x < f.x+f.w {
+			t.Errorf("right: %s→%s, %v not right of %v", e.From, e.To, to, f)
+		}
+	}
+	if len(r.problems) > 0 {
+		t.Errorf("right: %v", r.problems)
 	}
 }

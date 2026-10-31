@@ -6,10 +6,9 @@ import (
 	"slices"
 )
 
-// The room of a graph laid out down: a point is three columns of the grid wide, boxes of a rank stand nodeGap
-// apart, and groups groupGap.
+// The room of a graph laid out down: boxes of a rank stand nodeGap apart, and from the points between them, and
+// groups groupGap apart.
 const (
-	pointW   = 36.0
 	nodeGap  = 24.0
 	groupGap = 24.0
 	// LIMIT: 8 pulls towards the median, no more; lefts that keep moving stop where the eighth leaves them. Settle
@@ -43,7 +42,7 @@ func (gr *group) place(right bool) (trips, pulls int) {
 	trips = gr.order()
 	for _, rank := range gr.ranks {
 		left := 0.0
-		for _, i := range rank {
+		for _, i := range gr.boxesOf(rank) {
 			gr.nodes[i].x = onGrid(left, 6, math.Ceil)
 			left = gr.nodes[i].x + gr.nodes[i].w + nodeGap
 		}
@@ -51,7 +50,9 @@ func (gr *group) place(right bool) (trips, pulls int) {
 	pulls = gr.pull()
 	least := math.Inf(1)
 	for _, n := range gr.nodes {
-		least = min(least, n.x)
+		if n.box != nil {
+			least = min(least, n.x)
+		}
 	}
 	for i := range gr.nodes {
 		gr.nodes[i].x -= least
@@ -59,10 +60,28 @@ func (gr *group) place(right bool) (trips, pulls int) {
 	return trips, pulls
 }
 
-// pull moves each node towards the median centre of its links' other ends, down from the rank above then up from
-// the rank below, each move within nodeGap of its neighbours and on the grid of 6, so that a box stands over the
-// boxes it leads to: the points first, so that an edge passing ranks runs straight, then boxes of one link in and
-// one out, then the rest as written. It stops when nothing moves, or after maxPulls, and returns the pulls taken.
+// boxesOf are the boxes of rank, in order: the points of a rank are placed by wire, at their links' columns.
+func (gr *group) boxesOf(rank []int) []int {
+	return slices.DeleteFunc(slices.Clone(rank), func(i int) bool { return gr.nodes[i].box == nil })
+}
+
+// through is the box an edge reaches from node i, going up (or down) through the points it passes.
+func (gr *group) through(i int, up bool) int {
+	for gr.nodes[i].box == nil {
+		if up {
+			i = gr.links[gr.nodes[i].ins[0]].from
+		} else {
+			i = gr.links[gr.nodes[i].outs[0]].to
+		}
+	}
+	return i
+}
+
+// pull moves each box towards the median centre of the boxes its edges reach (through the points they pass), down
+// from the ranks above then up from the ranks below, each move within nodeGap of the boxes beside it and on the grid
+// of 6, so that a box stands over the boxes it leads to: boxes of one link in and one out first, then the rest as
+// written. Points are not pulled: wire puts each at its link's column. It stops when nothing moves, or after
+// maxPulls, and returns the pulls taken.
 func (gr *group) pull() int {
 	pull := 0
 	for pull < maxPulls {
@@ -88,16 +107,12 @@ func (gr *group) pull() int {
 }
 
 func (gr *group) pullOrder(r int) []int {
-	order := slices.Clone(gr.ranks[r])
+	order := gr.boxesOf(gr.ranks[r])
 	class := func(i int) int {
-		n := gr.nodes[i]
-		switch {
-		case n.box == nil:
+		if n := gr.nodes[i]; len(n.ins) == 1 && len(n.outs) == 1 {
 			return 0
-		case len(n.ins) == 1 && len(n.outs) == 1:
-			return 1
 		}
-		return 2
+		return 1
 	}
 	slices.SortStableFunc(order, func(a, b int) int {
 		return cmp.Or(class(a)-class(b), gr.nodes[a].written-gr.nodes[b].written)
@@ -105,19 +120,19 @@ func (gr *group) pullOrder(r int) []int {
 	return order
 }
 
-// pullOne moves node i of rank r towards the median centre of its links' ends above (down) or below, and reports
-// whether it moved.
+// pullOne moves box i of rank r towards the median centre of the boxes its edges reach above (down) or below, and
+// reports whether it moved.
 func (gr *group) pullOne(r, i int, down bool) bool {
 	n := &gr.nodes[i]
 	var centres []float64
 	if down {
 		for _, l := range n.ins {
-			o := gr.nodes[gr.links[l].from]
+			o := gr.nodes[gr.through(gr.links[l].from, true)]
 			centres = append(centres, o.x+o.w/2)
 		}
 	} else {
 		for _, l := range n.outs {
-			o := gr.nodes[gr.links[l].to]
+			o := gr.nodes[gr.through(gr.links[l].to, false)]
 			centres = append(centres, o.x+o.w/2)
 		}
 	}
@@ -126,13 +141,14 @@ func (gr *group) pullOne(r, i int, down bool) bool {
 	}
 	want := median(centres)
 	lo, hi := math.Inf(-1), math.Inf(1)
-	at := slices.Index(gr.ranks[r], i)
+	boxes := gr.boxesOf(gr.ranks[r])
+	at := slices.Index(boxes, i)
 	if at > 0 {
-		o := gr.nodes[gr.ranks[r][at-1]]
+		o := gr.nodes[boxes[at-1]]
 		lo = onGrid(o.x+o.w+nodeGap, 6, math.Ceil)
 	}
-	if at+1 < len(gr.ranks[r]) {
-		o := gr.nodes[gr.ranks[r][at+1]]
+	if at+1 < len(boxes) {
+		o := gr.nodes[boxes[at+1]]
 		hi = onGrid(o.x-nodeGap-n.w, 6, math.Floor)
 	}
 	x := min(max(onGrid(want-n.w/2, 6, math.Round), lo), hi)
