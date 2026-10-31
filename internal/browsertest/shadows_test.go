@@ -42,11 +42,12 @@ var shadowsKit = map[string]string{
 // terminal, at the least room floe leaves in a step.
 var shadowsQuote = strings.NewReplacer("text: 'Name it with today''s date", "text: '> Name it with today''s date")
 
-// markTilted gives each box drawn tilted an index, so that its ::before and ::after, which a script cannot measure,
-// are measured by pseudoBoxes, and returns how many there are.
-const markTilted = `(() => { const tilted = [...document.querySelectorAll('[data-floe-part], [data-floe-look]')]
-  .filter((e) => e.getClientRects().length && getComputedStyle(e).transform !== 'none');
-  tilted.forEach((e, i) => { e.dataset.shadowProbe = i; }); return tilted.length; })()`
+// markProbed gives each box drawn tilted, or with a ::before or ::after placed out of the flow (notebook's tape), an
+// index, so that those, which a script cannot measure, are measured by pseudoBoxes, and returns how many there are.
+const markProbed = `(() => { const probed = [...document.querySelectorAll('[data-floe-part], [data-floe-look]')]
+  .filter((e) => e.getClientRects().length && (getComputedStyle(e).transform !== 'none' ||
+    ['::before', '::after'].some((p) => ['absolute', 'fixed'].includes(getComputedStyle(e, p).position))));
+  probed.forEach((e, i) => { e.dataset.shadowProbe = i; }); return probed.length; })()`
 
 // measureShadows returns, one to a line, what a box draws outside itself reaching what it must not: past the page's
 // edge or the sides of the column's padding; out of a box around it that is framed or filled (its padding box); onto
@@ -54,7 +55,7 @@ const markTilted = `(() => { const tilted = [...document.querySelectorAll('[data
 // content box, where its text is. What a box draws is its shadows that show (from the computed box-shadow, its
 // lengths alone, whatever form its colour takes: moved by its offset, grown by its spread, fading out over its blur),
 // its outline (its width and offset), its box itself when tilted (its bounding box, which holds the tilt), and the
-// ::before and ::after of a tilted box, given as extra by its index. Boxes inside a line (inline) are not measured.
+// ::before and ::after of a box markProbed marks, given as extra by its index. Boxes inside a line (inline) are not measured.
 const measureShadows = `((extra) => {
   const out = new Set(), pagePad = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-pad'));
   const canvas = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
@@ -113,14 +114,14 @@ const measureShadows = `((extra) => {
 })`
 
 // shadowsIn measures the page open at width as measureShadows does, after taking the ::before and ::after of each
-// tilted box from DevTools.
+// box markProbed marks from DevTools.
 func (b *browser) shadowsIn(where string, width int64) []string {
 	b.t.Helper()
 
 	b.size(width, 900, false)
 	defer b.unsize()
 	var n int
-	if _, err := fmt.Sscan(b.eval(markTilted), &n); err != nil {
+	if _, err := fmt.Sscan(b.eval(markProbed), &n); err != nil {
 		b.t.Fatal(err)
 	}
 	extra := map[string][][]float64{}
@@ -170,7 +171,7 @@ func exampleWidths(tmpl string) []int64 {
 // TestUIShadows draws every part, and floe's templates with their parts one after another at the least room floe
 // leaves between parts, in every theme and in one of one's own whose shadow reaches that room on every side, at the
 // widths of a phone, a laptop, the column at its widest and slides on a wide screen: nothing a box draws outside
-// itself (a shadow, a tilt and its tape, an outline) reaches the page's edge, another box or the box it stands in;
+// itself (a shadow, a strip of tape, an outline) reaches the page's edge, another box or the box it stands in;
 // every box that sets a shadow's colour casts it.
 // A box in one that casts a shadow casts none (the colour is the box's alone), and retro's cards keep the stripes
 // they draw inside themselves with --floe-inset.

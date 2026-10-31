@@ -18,9 +18,7 @@
   --nb-blue: rgb(120 190 255 / 0.5); --nb-orange: rgb(255 170 80 / 0.55);
   --nb-stick-1: #fff1a6; --nb-stick-2: #ffd2e1; --nb-stick-3: #cfe8ff;
   --nb-stick-ink: #2b2a26; --nb-stick-shadow: rgb(40 30 10 / 0.45);
-  /* The soft shadow under what lies on the page, and how far a sticky note tilts at most and how wide it grows at most:
-     half the width times the tilt's sine, with the shadow, stays within --floe-room */
+  /* The soft shadow under what lies on the page */
   --floe-shadow-y: 3px; --floe-shadow-blur: 8px; --floe-shadow-spread: -5px;
-  --nb-tilt: 1.2deg; --nb-stick-width: 24rem;
   --nb-hand: 14px 6px 12px 8px / 8px 12px 6px 14px;
 }

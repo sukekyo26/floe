@@ -242,13 +242,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Fix shadows reaching other parts and the page's edge: app's and aurora's
   soft shadows fell on the part below, aurora's past the page's edge and onto
-  the card beside, and notebook's sticky notes onto the part below. What a box
-  draws outside itself now stays within `--floe-room` (0.75rem) on every
-  side, the least room floe leaves between parts, and takes no room. What
-  changes on a page:
+  the card beside, and notebook's tilted sticky notes onto the part below.
+  What a box draws outside itself now stays within `--floe-room` (0.75rem)
+  on every side, the least room floe leaves between parts, in a size that
+  does not follow the box's, and takes no room. What changes on a page:
   - app's, aurora's and notebook's shadows are smaller; app's close shadow is
-    gone; notebook's sticky notes grow at most 24rem wide, and its cards no
-    longer leave room round them.
+    gone; notebook's sticky notes no longer tilt, and its cards no longer
+    leave room round them.
   - brutal's boxes and cards are 6px wider and no longer leave 6px below
     them, as its shadows take no room; soft's faint shadow on panels and code
     is gone.

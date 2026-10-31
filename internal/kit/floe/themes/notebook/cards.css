@@ -2,13 +2,13 @@
 /* The panel of a card, on plain paper */
 .card { position: relative; background: var(--surface); }
 :scope.numbered > .card::before { content: none; }
-/* Options are sticky notes, each held by a strip of tape and set a little askew */
+/* Options are sticky notes, each held by a strip of tape */
 :scope.numbered > .card {
   border: 0; border-radius: 0; --face: var(--nb-stick-1); --on-face: var(--nb-stick-ink); background: var(--face); color: var(--on-face); padding-top: 1.6rem;
-  --floe-shadow-color: var(--nb-stick-shadow); max-width: var(--nb-stick-width); transform: rotate(calc(-1 * var(--nb-tilt)));
+  --floe-shadow-color: var(--nb-stick-shadow);
 }
-:scope.numbered > .card:nth-child(3n + 2) { --face: var(--nb-stick-2); transform: rotate(calc(var(--nb-tilt) * 5 / 6)); }
-:scope.numbered > .card:nth-child(3n) { --face: var(--nb-stick-3); transform: rotate(calc(-0.5 * var(--nb-tilt))); }
+:scope.numbered > .card:nth-child(3n + 2) { --face: var(--nb-stick-2); }
+:scope.numbered > .card:nth-child(3n) { --face: var(--nb-stick-3); }
 :scope.numbered > .card::before {
   content: ""; position: absolute; top: -8px; left: 50%; width: 84px; height: 22px; margin-left: -42px;
   background: var(--nb-tape); transform: rotate(-3deg);
