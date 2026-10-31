@@ -1,55 +1,55 @@
-box "publish" 560,20 192x29
-box "resolve" 518,109 280x29
-box "kind" 500,198 312x29
-box "linked" 404,305 224x29
-box "hidden" 254,412 304x29
-box "top" 26,531 280x29
-box "data" 362,662 304x46
-box "slug" 368,798 296x29
-box "taken" 368,917 296x29
-box "owner" 362,1036 312x29
-box "server" 356,1155 320x29
-box "save" 368,1244 296x46
-box "url" 446,1350 136x29
-box "notData" 656,305 272x29
-box "secret" 332,531 240x29
-box "whole" 692,670.5 288x29
-box "mistakes" 692,798 288x29
-box "badSlug" 692,917 176x29
-box "otherKind" 698,1036 296x29
-box "otherOwner" 704,1155 272x29
-edge publish→resolve M656,49 V109
-edge resolve→kind M656,138 V198
-edge kind→linked M584,227 V305
-edge kind→notData M728,227 V305
-edge linked→hidden M524,334 V412
-edge linked→data M596,334 V662
-edge hidden→top M392,441 V507 H170 V531
-edge hidden→secret M536,441 V531
-edge top→data M212,560 V638 H482 V662
-edge top→whole M284,560 V626 H842 V670.5
-edge data→slug M440,708 V798
-edge data→mistakes M644,708 V774 H842 V798
-edge slug→taken M440,827 V917
-edge slug→badSlug M644,827 V893 H782 V917
-edge taken→owner M440,946 V1036
-edge taken→otherKind M644,946 V1012 H842 V1036
-edge owner→server M452,1065 V1155
-edge owner→otherOwner M656,1065 V1131 H842 V1155
-edge server→save M512,1184 V1244
-edge save→url M512,1290 V1350
-label "yes" 596,251 34x18
-label "no" 740,251 46x18
-label "yes" 536,358 34x18
-label "no" 608,358 46x18
-label "no" 404,465 46x18
-label "yes" 548,465 34x18
-label "no" 224,584 46x18
-label "yes" 296,584 34x18
-label "mistakes" 656,732 67.6x18
-label "yes" 452,851 34x18
-label "no" 656,851 46x18
-label "no" 452,970 46x18
-label "yes" 656,970 34x18
-label "no" 464,1089 46x18
-label "yes" 668,1089 34x18
+box "publish" 548,20 192x29
+box "resolve" 506,73 280x29
+box "kind" 488,126 312x29
+box "linked" 392,179 224x29
+box "hidden" 266,232 304x29
+box "top" 26,285 280x29
+box "data" 668,374 304x46
+box "slug" 410,444 296x29
+box "taken" 410,509 296x29
+box "owner" 404,574 312x29
+box "server" 398,639 320x29
+box "save" 410,692 296x46
+box "url" 488,762 136x29
+box "notData" 644,179 272x29
+box "secret" 332,285 240x29
+box "whole" 356,382.5 288x29
+box "mistakes" 734,444 288x29
+box "badSlug" 734,509 176x29
+box "otherKind" 740,574 296x29
+box "otherOwner" 746,639 272x29
+edge publish→resolve M644,49 V73
+edge resolve→kind M644,102 V126
+edge kind→linked M572,155 V179
+edge kind→notData M716,155 V179
+edge linked→hidden M452,208 V232
+edge linked→data M596,208 V326 H890 V374
+edge hidden→top M284,261 V285
+edge hidden→secret M488,261 V285
+edge top→data M284,314 V338 H746 V374
+edge top→whole M272,314 V350 H506 V382.5
+edge data→slug M692,420 V447.22
+edge data→mistakes M896,420 V444
+edge slug→taken M488,473 V509
+edge slug→badSlug M692,469.78 V485 H818 V509
+edge taken→owner M488,538 V574
+edge taken→otherKind M692,534.78 V550 H890 V574
+edge owner→server M488,603 V639
+edge owner→otherOwner M704,598.17 V615 H878 V639
+edge server→save M560,668 V692
+edge save→url M560,738 V762
+label "yes" 584,157 34x18
+label "no" 728,157 46x18
+label "yes" 464,210 34x18
+label "no" 608,210 46x18
+label "no" 296,263 46x18
+label "yes" 500,263 34x18
+label "no" 296,316 46x18
+label "yes" 226,316 34x18
+label "mistakes" 908,422 67.6x18
+label "yes" 500,475 34x18
+label "no" 830,487 46x18
+label "no" 500,540 46x18
+label "yes" 902,552 34x18
+label "no" 500,605 46x18
+label "yes" 890,617 34x18

@@ -1,7 +1,7 @@
 # Decision flow: what floe publish checks, as a graph. Only the boxes and the edges between them are written;
-# floe lays them out in ranks, each answer beside its edge (a column right of it, with no background), and a refusal
-# leaves its check for the rank below with its reason. The path that skips the checks of a data file is an edge two
-# ranks long.
+# floe lays them out in ranks, then stands each answer a column beside its edge where the layout leaves room (with
+# no background), and a refusal leaves its check for the rank below with its reason. The path that skips the checks
+# of a data file is an edge two ranks long.
 title: { en: What floe publish checks, ja: "floe publish の検査" }
 parts:
   - graph:
