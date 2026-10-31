@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -31,6 +32,9 @@ sections:
       - timeline:
           - { date: "2026-10-01", title: Start, text: begun }
           - { date: "2026-10-02", title: End }
+      - options:
+          - { title: One, text: first }
+          - { title: Two, text: second }
       - html: |
           <ol id="plain" data-floe-look="numbered"><li><strong>Title</strong><p>Text</p></li><li><strong>Next</strong></li></ol>
           <ol id="padded" data-floe-look="numbered"><li style="padding-top: 2rem"><strong>Title</strong><p>Text</p></li><li><strong>Next</strong></li></ol>
@@ -40,6 +44,7 @@ sections:
           <ol id="wrapped" data-floe-look="numbered"><li><p>Restart <code>api</code> now</p></li><li><p>Next</p></li></ol>
           <div id="plainnote" data-floe-part="note" data-floe-tone="warn"><p>Text alone</p></div>
           <ol data-floe-look="numbered"><li><p>A step</p><div id="stepnote" data-floe-part="note" data-floe-tone="bad"><strong class="title">If it fails</strong><p>Text</p></div></li></ol>
+          <div id="sizedcards" class="numbered" data-floe-look="cards"><div class="card" style="--floe-mark: 3rem" data-floe-look="panel"><p>A</p></div></div>
 `
 
 // markRows are the rows whose mark stands beside a first line, with the element of that line.
@@ -211,6 +216,25 @@ func (b *browser) marksIn(where string, narrow bool) []string {
 	}
 	if mark, _ := b.pseudoBoxes("#wrapped > li"); m.Wrapped != 1 || m.WrappedLeft <= mark[2] {
 		amiss = append(amiss, fmt.Sprintf("%s: #wrapped's text in %d lines, from %.1f, its mark ending at %.1f", where, m.Wrapped, m.WrappedLeft, mark[2]))
+	}
+	// A card's number is as big as --floe-mark, frame within, set on the card or on the number, unless a theme draws
+	// it as text (auto), hides it or draws another thing there (notebook's tape).
+	for _, card := range []string{"[data-floe-part=options] > .card", "#sizedcards > .card"} {
+		mark, _ := b.pseudoBoxes(card)
+		size := b.eval(`((card) => { const e = document.querySelector(card), v = getComputedStyle(e, '::before').getPropertyValue('--floe-mark').trim();
+  if (v === 'auto' || !getComputedStyle(e, '::before').content.includes('counter')) return 'auto'; const d = document.createElement('i'); d.style.cssText = 'display:block;position:absolute;width:' + v;
+  e.append(d); const w = d.getBoundingClientRect().width; d.remove(); return String(w); })(` + mustJSON(card) + `)`)
+		if mark == nil || size == "auto" {
+			continue
+		}
+		want, err := strconv.ParseFloat(size, 64)
+		if err != nil {
+			amiss = append(amiss, fmt.Sprintf("%s: %s's number has --floe-mark %q", where, card, size))
+			continue
+		}
+		if w, h := mark[2]-mark[0], mark[3]-mark[1]; math.Abs(w-want) > 0.5 || math.Abs(h-want) > 0.5 {
+			amiss = append(amiss, fmt.Sprintf("%s: %s's number is %.1f by %.1f, not --floe-mark %.1f", where, card, w, h, want))
+		}
 	}
 	if m.Done[0] != m.Done[1] {
 		amiss = append(amiss, fmt.Sprintf("%s: a step done has its mark %s and its line %s", where, m.Done[0], m.Done[1]))
