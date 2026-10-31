@@ -363,9 +363,10 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   border-radius: 50%;
   background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
-:scope[data-floe-tone=good]::before { content: "✓"; content: "✓" / ""; }
-:scope[data-floe-tone=warn]::before { content: "!"; content: "!" / ""; }
-:scope[data-floe-tone=bad]::before { content: "×"; content: "×" / ""; }
+/* A tone's mark, no more specific than the mark's own rule, so that a theme's :scope::before (content: none) wins */
+:scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
+:scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
+:scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
 /* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
 :scope > * + * { margin-top: 0.5rem; }
 .title { display: block; font-size: 0.9rem; color: var(--tone); }

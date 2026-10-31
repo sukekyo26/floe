@@ -160,6 +160,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | `--accent`・`--accent-soft` | 目立つ色と、その淡い地 |
 | `--good`・`--warn`・`--bad` と `-soft` | 良い・注意・悪いと、その淡い地 |
 | `--on-fill` | `--accent` やトーンの色で塗った面の上の文字（pill など） |
+| `--tone`・`--tone-soft` | 読む要素の tone（`data-floe-tone`、[parts.ja.md](parts.ja.md#css-の層と-scope)）の色。上の変数から floe が置き、tone の外では accent の色。テンプレートも tone をこの属性で付ける |
 | `--shadow` | 影の色の候補。影は、テーマが箱に `--floe-shadow-color` を置いたときだけ描かれる（[parts.ja.md](parts.ja.md#テーマ)） |
 | `--floe-shadow-x`・`-y`・`-blur`・`-spread` | テーマの 1 組の影。px か rem（既定は無し） |
 | `--font`・`--display`・`--mono` | 本文・見出し・等幅の書体 |

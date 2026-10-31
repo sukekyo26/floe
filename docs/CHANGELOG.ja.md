@@ -173,6 +173,11 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：tone は、class でなく `data-floe-tone` で付ける（自分の部品・テーマ・
+  テンプレートと、データファイルの html。pill は
+  `<span data-floe-tone="good" data-floe-part="cell">`）。floe は、付けた要素に
+  tone の色を `--tone`・`--tone-soft` で置き、部品・テーマ・テンプレートは 1 つの
+  規則でそれを読む。部品の箱は accent の色を持つ。tone に無い値は外の tone で描く。
 - 変更：続けて並ぶ部品の間を、どこも `--floe-room`（0.75rem）にした。stack
   （details・tabs の中身）の中、stats・options・decision・html の cards のカードの
   間（1rem だった）、brutal・notebook のすべてのカードの間（1.5rem・1.75rem だった。
