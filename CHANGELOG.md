@@ -257,11 +257,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Change the cards of retro, washi, notebook and swiss so that their
   decorations take no room: retro's stripes are thinner (2px each) inside its
-  frame, washi's inner rule lies over the padding and its seal, smaller and
-  upright, on the corner of a numbered card alone, notebook's tape lies over a
-  sticky note's padding, and swiss leaves a card's padding to its part. A card's
-  number keeps the terms of a row's mark: sized by `--floe-mark`, hidden by
-  `content: none`, plain text by `--floe-mark: auto`.
+  frame; washi's inner rule lies over the padding, its seal is smaller,
+  upright and laid on the card's corner, and no card keeps the room at its
+  right for it any more; notebook's tape lies over a sticky note's padding; and
+  swiss leaves a card's padding to its part, so that its first card's text
+  stands in from the column's left as the others do. A card's number keeps the
+  terms of a row's mark: sized by `--floe-mark` (on the card or the number),
+  hidden by `content: none`, plain text by `--floe-mark: auto`.
 - Change progress's ground to the quiet ground, a little lighter (the line's
   colour 45% into the surface, as bars' track, not 60%), and a keycap's to it
   (from the page's ground, or aurora's surface): keys no longer melt into
