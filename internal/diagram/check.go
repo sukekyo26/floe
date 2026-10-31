@@ -1,6 +1,7 @@
 package diagram
 
 import (
+	"iter"
 	"math"
 	"slices"
 	"strings"
@@ -27,7 +28,7 @@ func (l *layout) checkPlacement() {
 	canvas := rect{x: 0, y: 0, w: l.w, h: l.h, what: "", at: ""}
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
 		if !r.inside(canvas) {
-			l.problem(r.at, "diagram_outside", r.what, num(l.w), num(l.h))
+			l.tell("diagram_outside", []placed{{r.at, r.graph}}, r.what, num(l.w), num(l.h))
 		}
 	}
 	for _, r := range l.strays {
@@ -39,14 +40,14 @@ func (l *layout) checkPlacement() {
 	for i, a := range solids {
 		for _, b := range solids[i+1:] {
 			if a.overlaps(b) {
-				l.problem(a.at, "diagram_overlap", a.what, b.what)
+				l.tell("diagram_overlap", []placed{{a.at, a.graph}, {b.at, b.graph}}, a.what, b.what)
 			}
 		}
 	}
 	for _, b := range slices.Concat(l.boxes, l.marks) {
 		for _, f := range l.frames {
 			if b.overlaps(f) && !b.inside(f) {
-				l.problem(b.at, "diagram_straddle", b.what, f.what)
+				l.tell("diagram_straddle", []placed{{b.at, b.graph}, {f.at, f.graph}}, b.what, f.what)
 			}
 		}
 	}
@@ -59,12 +60,12 @@ func (l *layout) checkEdges() {
 	for _, p := range l.paths {
 		for _, b := range l.boxes {
 			if p.runsThrough(b) {
-				l.problem(p.at, "diagram_runs_through", p.what, b.what)
+				l.tell("diagram_runs_through", []placed{{p.at, p.graph}, {b.at, b.graph}}, p.what, b.what)
 			}
 		}
 		for i, r := range texts {
 			if i != p.own && p.runsThrough(r) {
-				l.problem(p.at, "diagram_runs_through", p.what, r.what)
+				l.tell("diagram_runs_through", []placed{{p.at, p.graph}, {r.at, r.graph}}, p.what, r.what)
 			}
 		}
 	}
@@ -73,16 +74,52 @@ func (l *layout) checkEdges() {
 // checkCrossings reports edges crossing like an X, unless one of them allows it.
 // LIMIT: edges overlapping along a stretch pass (a ↔ drawn on purpose); refuse them if accidental overlaps mislead.
 func (l *layout) checkCrossings() {
-	for i, a := range l.paths {
-		for _, b := range l.paths[i+1:] {
-			if a.crossing || b.crossing {
-				continue
-			}
-			if x, y, ok := firstCrossing(a, b); ok {
-				l.problem(a.at, "diagram_crossing", a.what, b.what, num(x), num(y))
+	for a, b := range l.crossPairs() {
+		if x, y, ok := firstCrossing(a, b); ok {
+			l.tell("diagram_crossing", []placed{{a.at, a.graph}, {b.at, b.graph}}, a.what, b.what, num(x), num(y))
+		}
+	}
+}
+
+// crossPairs are the pairs of edges checkCrossings compares, one at a time: not two of one graph, whose crossings
+// its layout keeps to those of its ranks' order, nor one allowed to cross.
+func (l *layout) crossPairs() iter.Seq2[path, path] {
+	return func(yield func(path, path) bool) {
+		for i, a := range l.paths {
+			for _, b := range l.paths[i+1:] {
+				if a.crossing || b.crossing || a.graph != "" && a.graph == b.graph {
+					continue
+				}
+				if !yield(a, b) {
+					return
+				}
 			}
 		}
 	}
+}
+
+// placed is where a thing is written, and the graph that laid it out ("" for one written by hand).
+type placed struct{ at, graph string }
+
+// graphKeys are the words of the mistakes that only things graphs laid out make: their writer cannot move them,
+// but only the graphs, by their x and y.
+var graphKeys = map[string]string{
+	"diagram_outside":      "diagram_graph_outside",
+	"diagram_overlap":      "diagram_graph_overlap",
+	"diagram_runs_through": "diagram_graph_through",
+	"diagram_crossing":     "diagram_graph_crossing",
+}
+
+// tell tells the mistake of key that things make, in their order: at the first written by hand, which its writer
+// can move; when graphs laid them all out, at the first's graph, in the words that say to move it.
+func (l *layout) tell(key string, things []placed, args ...any) {
+	for _, t := range things {
+		if t.graph == "" {
+			l.problem(t.at, key, args...)
+			return
+		}
+	}
+	l.problem(things[0].graph, graphKeys[key], args...)
 }
 
 func (p path) runsThrough(r rect) bool {

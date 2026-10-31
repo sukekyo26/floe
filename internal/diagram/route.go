@@ -244,7 +244,7 @@ func (l *layout) addEdge(e *edge, at string) {
 	}
 	el := elem{Kind: "path", D: pathData(pts), Class: cls, Start: l.marker(start), End: l.marker(end)}
 	l.edgeEls = append(l.edgeEls, el)
-	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing}
+	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing, graph: e.graph}
 	if e.Label != nil {
 		x, y := middle(segs)
 		if e.At != nil {
@@ -254,7 +254,9 @@ func (l *layout) addEdge(e *edge, at string) {
 	}
 	l.paths = append(l.paths, p)
 	if len(segs) > 0 {
-		l.strokes = append(l.strokes, span(segs, who, at))
+		r := span(segs, who, at)
+		r.graph = e.graph
+		l.strokes = append(l.strokes, r)
 	}
 }
 

@@ -38,11 +38,12 @@ const (
 
 // rect is the area a part takes, with the words that name it and where it is written (a JSON pointer), and the
 // shape it is drawn in there, for a box an edge may not run through. A rect that is no box leaves form out, its zero
-// value a plain rectangle.
+// value a plain rectangle; one no graph laid out leaves graph out.
 type rect struct {
 	x, y, w, h float64
 	what, at   string
 	form       outline //exhaustruct:optional
+	graph      string  //exhaustruct:optional
 }
 
 func (a rect) overlaps(b rect) bool {
@@ -56,12 +57,14 @@ func (a rect) inside(b rect) bool {
 // seg is a straight run of a line: x1, y1, x2, y2.
 type seg [4]float64
 
-// path is an edge laid out: its runs, and the index in labels of its label, which it may run through; -1 for none.
+// path is an edge laid out: its runs, and the index in labels of its label, which it may run through; -1 for none;
+// and the JSON pointer of the graph that laid it out, "" for an edge written by hand.
 type path struct {
 	segs     []seg
 	what, at string
 	own      int
 	crossing bool
+	graph    string
 }
 
 // target is what an edge's end may name: a part's area, a table's row, or a dot's centre.
@@ -121,7 +124,8 @@ func newLayout(s *spec, opts Options) *layout {
 	b, _ := json.Marshal(s) //nolint:errcheck,errchkjson // read from JSON, it writes as JSON
 	sum := sha256.Sum256(b)
 	l.id = "dg" + strconv.Itoa(opts.Seq) + "-" + hex.EncodeToString(sum[:3])
-	items := expand(s.Parts)
+	items, found := expand(s.Parts)
+	l.problems = append(l.problems, found...)
 	for _, it := range items {
 		l.name(it.at, it.p)
 	}
@@ -349,8 +353,9 @@ func (l *layout) fit(at, who string, t Text, size float64, code bool, room, writ
 	}
 }
 
-func ceil8(v float64) float64 {
-	return math.Ceil(v/8) * 8
+// onGrid is v on a grid of step, by round (math.Ceil, Floor or Round).
+func onGrid(v, step float64, round func(float64) float64) float64 {
+	return round(v/step) * step
 }
 
 func rowSize(style string, first bool) (float64, bool) {
@@ -376,7 +381,7 @@ func boxRect(b *box, at string) rect {
 			size, code := rowSize(r.Style, i == 0)
 			widest = max(widest, textWidth(r.Text, size, code))
 		}
-		w = ceil8(widest + inset(b))
+		w = onGrid(widest+inset(b), 8, math.Ceil)
 	}
 	h := b.H
 	if h == 0 {
@@ -407,7 +412,7 @@ func (l *layout) addBox(b *box, at string) {
 	if need := len(b.Rows)*lineGap + 12; float64(need) > r.h {
 		l.problem(at, "diagram_too_short", r.what, need, num(r.h))
 	}
-	r.form = outlineOf(r.w, r.h, b.Shape)
+	r.form, r.graph = outlineOf(r.w, r.h, b.Shape), b.graph
 	l.boxes = append(l.boxes, r)
 	kids = append([]elem{r.form.el(r)}, kids...)
 	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "box" + tone(b.Tone), Kids: kids})
@@ -421,7 +426,7 @@ func tableWidth(t *table) float64 {
 	for _, row := range t.Rows {
 		widest = max(widest, textWidth(rowText(row), sizeSub, true)+24)
 	}
-	return ceil8(widest)
+	return onGrid(widest, 8, math.Ceil)
 }
 
 // rowText is row as drawn in each language it is written in; none for a separator.

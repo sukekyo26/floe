@@ -7,7 +7,7 @@ import (
 )
 
 func boxOf(x, y, w, h float64, kind string) rect {
-	return rect{x, y, w, h, "", "", outlineOf(w, h, kind)}
+	return rect{x: x, y: y, w: w, h: h, what: "", at: "", form: outlineOf(w, h, kind)}
 }
 
 // An edge runs through a box when it passes inside the shape drawn 1px in from its edge: past a hexagon's points
@@ -71,6 +71,31 @@ func TestOutline(t *testing.T) {
 		for _, p := range [4][2]float64{{100, 126}, {300, 126}, {200, 100}, {200, 152}} {
 			if d := depth(r, p[0], p[1]); math.Abs(d) > 1e-9 {
 				t.Errorf("%q: the middle of a side %v is %v from its outline, want 0", kind, p, d)
+			}
+		}
+	}
+}
+
+// The point on is at, across any side of any shape, is on its outline.
+func TestOutlineOn(t *testing.T) {
+	t.Parallel()
+
+	for _, r := range []rect{
+		boxOf(100, 100, 200, 52, ""), boxOf(100, 100, 200, 52, "pill"), boxOf(100, 100, 60, 120, "pill"),
+		boxOf(100, 100, 60, 60, "pill"), boxOf(100, 100, 200, 52, "hex"), boxOf(100, 100, 52, 120, "hex"),
+		boxOf(100, 100, 200, 80, "state"), boxOf(100, 100, 200, 80, "table"), boxOf(100, 100, 200, 14, "bar"),
+		boxOf(100, 100, 48, 48, "icon"),
+	} {
+		for _, side := range []string{"top", "bottom", "left", "right"} {
+			lo, hi := r.y, r.y+r.h
+			if side == "top" || side == "bottom" {
+				lo, hi = r.x, r.x+r.w
+			}
+			for at := lo; at <= hi; at += 0.5 {
+				p := r.form.on(r, side, at)
+				if d := depth(r, p[0], p[1]); math.Abs(d) > 1e-9 {
+					t.Errorf("%v %s at %v: %v is %v from the outline, want 0", r.form, side, at, p, d)
+				}
 			}
 		}
 	}

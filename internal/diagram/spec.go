@@ -81,7 +81,38 @@ type part struct {
 	Label  *label  `json:"label"`
 	Line   *line   `json:"line"`
 	Raw    *raw    `json:"raw"`
-	Tree   *tree   `json:"tree,omitempty"` // omitted, so that the ids of a spec without it stay
+	Tree   *tree   `json:"tree,omitempty"`  // omitted, so that the ids of a spec without it stay
+	Graph  *graph  `json:"graph,omitempty"` // as above
+}
+
+type graph struct {
+	X         float64     `json:"x"`
+	Y         float64     `json:"y"`
+	Direction string      `json:"direction"`
+	Nodes     []graphNode `json:"nodes"`
+	Edges     []graphEdge `json:"edges"`
+}
+
+// graphNode is one of its kinds, the one that is not nil.
+type graphNode struct {
+	Box *graphBox `json:"box"`
+}
+
+type graphBox struct {
+	Name  string `json:"name"`
+	Rows  []row  `json:"rows"`
+	Tone  string `json:"tone"`
+	Shape string `json:"shape"`
+}
+
+type graphEdge struct {
+	From   string  `json:"from"`
+	To     string  `json:"to"`
+	Dashed bool    `json:"dashed"`
+	Bold   bool    `json:"bold"`
+	Tone   string  `json:"tone"`
+	Start  *string `json:"start"`
+	End    *string `json:"end"`
 }
 
 type tree struct {
@@ -120,6 +151,7 @@ type box struct {
 	Rows   []row   `json:"rows"`
 	Tone   string  `json:"tone"`
 	Shape  string  `json:"shape"`
+	graph  string  // the JSON pointer of the graph that laid it out; "" for a box written by hand
 }
 
 // row is a line of text in a box, and its style; "" for the default of its place.
@@ -223,6 +255,7 @@ type edge struct {
 	End      *string      `json:"end"`
 	Crossing bool         `json:"crossing"`
 	who      string       // its words in mistakes and inspect, for an edge a tree draws; else made from its ends
+	graph    string       // the JSON pointer of the graph that laid it out; "" for an edge written by hand
 }
 
 type dot struct {
