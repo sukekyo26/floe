@@ -7,7 +7,7 @@ import "testing"
 func TestRoomOf(t *testing.T) {
 	t.Parallel()
 
-	box := rect{x: 100, y: 100, w: 80, h: 20, what: "", at: ""}
+	box := rect{x: 100, y: 100, w: 80, h: 20, what: "", at: "", form: sharp}
 	in := circle{Name: "a", CX: 140, CY: 110, R: 200, Tone: ""}
 	for _, tt := range []struct {
 		name string

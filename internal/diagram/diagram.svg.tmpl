@@ -6,7 +6,7 @@
 {{- end}}
 
 {{define "el" -}}
-{{if eq .Kind "rect"}}<rect x="{{n .X}}" y="{{n .Y}}" width="{{n .W}}" height="{{n .H}}"{{with .RX}} rx="{{n .}}"{{end}}{{with .Class}} class="{{.}}"{{end}}/>
+{{if eq .Kind "rect"}}<rect x="{{n .X}}" y="{{n .Y}}" width="{{n .W}}" height="{{n .H}}"{{with .RX}} rx="{{n .}}"{{end}}{{with .RY}} ry="{{n .}}"{{end}}{{with .Class}} class="{{.}}"{{end}}/>
 {{- else if eq .Kind "circle"}}<circle cx="{{n .X}}" cy="{{n .Y}}" r="{{n .R}}"{{with .Class}} class="{{.}}"{{end}}/>
 {{- else if eq .Kind "path"}}<path d="{{.D}}"{{with .Class}} class="{{.}}"{{end}}{{with .Start}} marker-start="url(#{{.}})"{{end}}{{with .End}} marker-end="url(#{{.}})"{{end}}/>
 {{- else if eq .Kind "line"}}<line x1="{{n .X}}" y1="{{n .Y}}" x2="{{n .X2}}" y2="{{n .Y2}}" class="{{.Class}}"/>

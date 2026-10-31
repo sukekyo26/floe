@@ -153,6 +153,7 @@ type elem struct {
 	Kind         string
 	X, Y, X2, Y2 float64
 	W, H, R, RX  float64
+	RY           float64 // a rect's vertical corner radius, written only when it is not RX
 	D, Class     string
 	Anchor       string
 	Start, End   string // the ids of an edge's markers

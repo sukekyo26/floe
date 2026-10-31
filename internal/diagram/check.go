@@ -24,7 +24,7 @@ func (l *layout) check() {
 // frame headings overlapping; and boxes and marks straddling a frame. Frames are not compared with one another.
 // LIMIT: labels are not kept off a frame's edge, where an edge's label may sit; compare label parts if one strays.
 func (l *layout) checkPlacement() {
-	canvas := rect{0, 0, l.w, l.h, "", ""}
+	canvas := rect{0, 0, l.w, l.h, "", "", sharp}
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
 		if !r.inside(canvas) {
 			l.problem(r.at, "diagram_outside", r.what, num(l.w), num(l.h))
@@ -86,34 +86,7 @@ func (l *layout) checkCrossings() {
 }
 
 func (p path) runsThrough(r rect) bool {
-	return slices.ContainsFunc(p.segs, func(s seg) bool { return crosses(s, r) })
-}
-
-// crosses reports whether a straight run passes inside r, 1px in from its edges. An end touching the edge of r,
-// or a run along it, does not count.
-func crosses(s seg, r rect) bool {
-	x1, y1, x2, y2 := s[0], s[1], s[2], s[3]
-	dx, dy := x2-x1, y2-y1
-	minX, maxX, minY, maxY := r.x+1, r.x+r.w-1, r.y+1, r.y+r.h-1
-	// Clip the run to the closed area (Liang-Barsky). What is left is a chord of it, and when any of the chord
-	// is strictly inside, its midpoint is too.
-	t0, t1 := 0.0, 1.0
-	for _, c := range [4][2]float64{{-dx, x1 - minX}, {dx, maxX - x1}, {-dy, y1 - minY}, {dy, maxY - y1}} {
-		p, q := c[0], c[1]
-		switch {
-		case p == 0 && q < 0:
-			return false
-		case p < 0:
-			t0 = max(t0, q/p)
-		case p > 0:
-			t1 = min(t1, q/p)
-		}
-	}
-	if t0 > t1 {
-		return false
-	}
-	mx, my := x1+dx*(t0+t1)/2, y1+dy*(t0+t1)/2
-	return mx > minX && mx < maxX && my > minY && my < maxY
+	return slices.ContainsFunc(p.segs, func(s seg) bool { return crossedBy(s, r) })
 }
 
 // firstCrossing finds where a run of a first crosses a run of b, rounded to whole units.
@@ -212,7 +185,7 @@ func (l *layout) addLabel(lb *label, at string) {
 	x, y, st := l.place(lb, g)
 	switch {
 	case !st.tried:
-		l.strays = append(l.strays, rect{0, 0, 0, 0, what("label", "", lb.Text), at})
+		l.strays = append(l.strays, rect{0, 0, 0, 0, what("label", "", lb.Text), at, sharp})
 		return
 	case !st.found:
 		l.problem(at, "diagram_label_no_room", what("label", "", lb.Text), names)
@@ -295,7 +268,7 @@ func (g region) most(xs, ys []float64, w, h, mx, my float64) (best, x, top float
 	near := math.Inf(1)
 	for _, px := range xs {
 		for _, py := range ys {
-			switch room := g.roomOf(rect{px - w/2, py - h/2, w, h, "", ""}); {
+			switch room := g.roomOf(rect{px - w/2, py - h/2, w, h, "", "", sharp}); {
 			case room > best:
 				best, near, x, top = room, math.Hypot(px-mx, py-my), px, py-h/2
 			case room == best:

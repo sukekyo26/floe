@@ -36,10 +36,12 @@ const (
 	canvasPad = 20
 )
 
-// rect is the area a part takes, with the words that name it and where it is written (a JSON pointer).
+// rect is the area a part takes, with the words that name it and where it is written (a JSON pointer), and the
+// shape it is drawn in there, for a box an edge may not run through.
 type rect struct {
 	x, y, w, h float64
 	what, at   string
+	form       outline
 }
 
 func (a rect) overlaps(b rect) bool {
@@ -188,17 +190,17 @@ func (l *layout) name(at string, p part) {
 		}
 	case p.Icon != nil:
 		size := iconSize(p.Icon)
-		keep(p.Icon.Name, target{r: rect{p.Icon.X, p.Icon.Y, size, size, "", at}, kind: "icon"})
+		keep(p.Icon.Name, target{r: rect{p.Icon.X, p.Icon.Y, size, size, "", at, sharp}, kind: "icon"})
 	case p.Frame != nil:
-		keep(p.Frame.Name, target{r: rect{p.Frame.X, p.Frame.Y, p.Frame.W, p.Frame.H, "", at}, kind: "frame"})
+		keep(p.Frame.Name, target{r: rect{p.Frame.X, p.Frame.Y, p.Frame.W, p.Frame.H, "", at, sharp}, kind: "frame"})
 	case p.Bar != nil:
 		keep(p.Bar.Name, target{r: barRect(p.Bar, at), kind: "bar"})
 	case p.Dot != nil:
 		r := dotR(p.Dot)
-		keep(p.Dot.Name, target{r: rect{p.Dot.CX - r, p.Dot.CY - r, r * 2, r * 2, "", at}, kind: "dot"})
+		keep(p.Dot.Name, target{r: rect{p.Dot.CX - r, p.Dot.CY - r, r * 2, r * 2, "", at, sharp}, kind: "dot"})
 	case p.Circle != nil:
 		// No area: no edge ends at it.
-		if keep(p.Circle.Name, target{r: rect{x: 0, y: 0, w: 0, h: 0, what: "", at: at}, kind: "circle"}) {
+		if keep(p.Circle.Name, target{r: rect{x: 0, y: 0, w: 0, h: 0, what: "", at: at, form: sharp}, kind: "circle"}) {
 			l.circles[p.Circle.Name] = *p.Circle
 		}
 	}
@@ -238,7 +240,8 @@ func (l *layout) add(at string, p part) {
 
 func (l *layout) addDot(d *dot, at string) {
 	r := dotR(d)
-	l.marks = append(l.marks, rect{d.CX - r, d.CY - r, r * 2, r * 2, fmt.Sprintf("dot %s,%s", num(d.CX), num(d.CY)), at})
+	who := fmt.Sprintf("dot %s,%s", num(d.CX), num(d.CY))
+	l.marks = append(l.marks, rect{d.CX - r, d.CY - r, r * 2, r * 2, who, at, sharp})
 	cls := "dot" + tone(d.Tone)
 	if d.Hollow {
 		cls += " hollow"
@@ -251,7 +254,7 @@ func (l *layout) addCircle(c *circle, at string) {
 	if c.Name != "" {
 		who = "circle " + strconv.Quote(c.Name)
 	}
-	l.areas = append(l.areas, rect{c.CX - c.R, c.CY - c.R, c.R * 2, c.R * 2, who, at})
+	l.areas = append(l.areas, rect{c.CX - c.R, c.CY - c.R, c.R * 2, c.R * 2, who, at, sharp})
 	l.areaEls = append(l.areaEls, elem{Kind: "circle", X: c.CX, Y: c.CY, R: c.R, Class: "venn" + toneOr(c.Tone, "accent")})
 }
 
@@ -381,7 +384,7 @@ func boxRect(b *box, at string) rect {
 	if b.Origin == "centre" {
 		x -= w / 2
 	}
-	return rect{x, b.Y, w, h, what("box", b.Name, b.Rows[0].Text), at}
+	return rect{x, b.Y, w, h, what("box", b.Name, b.Rows[0].Text), at, sharp}
 }
 
 func (l *layout) addBox(b *box, at string) {
@@ -402,26 +405,10 @@ func (l *layout) addBox(b *box, at string) {
 	if need := len(b.Rows)*lineGap + 12; float64(need) > r.h {
 		l.problem(at, "diagram_too_short", r.what, need, num(r.h))
 	}
+	r.form = outlineOf(r.w, r.h, b.Shape)
 	l.boxes = append(l.boxes, r)
-	kids = append([]elem{shape(r, b.Shape)}, kids...)
+	kids = append([]elem{r.form.el(r)}, kids...)
 	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "box" + tone(b.Tone), Kids: kids})
-}
-
-// shape draws a box: a rounded rectangle (rect), a pill, a hexagon for a decision (hex) or a state.
-func shape(r rect, kind string) elem {
-	x, y, w, h := r.x, r.y, r.w, r.h
-	radius := float64(cornerR)
-	switch kind {
-	case "hex":
-		return elem{Kind: "path", D: fmt.Sprintf("M%s,%s H%s L%s,%s L%s,%s H%s L%s,%s Z",
-			num(x+hexInset), num(y), num(x+w-hexInset), num(x+w), num(y+h/2), num(x+w-hexInset), num(y+h),
-			num(x+hexInset), num(x), num(y+h/2))}
-	case "pill":
-		radius = h / 2
-	case "state":
-		radius = math.Min(26, h/2)
-	}
-	return elem{Kind: "rect", X: x, Y: y, W: w, H: h, RX: radius}
 }
 
 func tableWidth(t *table) float64 {
@@ -468,14 +455,14 @@ func tableRects(t *table, at string) (rect, []rect) {
 			h += tableSep
 			continue
 		}
-		rows[i] = rect{x, top, w, rowHeight, "row " + strconv.Quote(row.Name), at}
+		rows[i] = rect{x, top, w, rowHeight, "row " + strconv.Quote(row.Name), at, sharp}
 		top += rowHeight
 		h += rowHeight
 	}
 	if len(t.Rows) > 0 {
 		h += 6
 	}
-	return rect{x, t.Y, w, h, what("table", t.Name, t.Title), at}, rows
+	return rect{x, t.Y, w, h, what("table", t.Name, t.Title), at, sharp}, rows
 }
 
 func (l *layout) addTable(t *table, at string) {
@@ -483,12 +470,11 @@ func (l *layout) addTable(t *table, at string) {
 	if t.W != 0 {
 		l.fit(at, r.what, t.Title, sizeMain, false, t.W-pad*2, t.W)
 	}
-	x, y, w, h, rad := r.x, r.y, r.w, r.h, float64(cornerR)
-	kids := []elem{{Kind: "rect", X: x, Y: y, W: w, H: h, RX: rad, Class: "bg"}, {
-		Kind: "path", Class: "head",
-		D: fmt.Sprintf("M%s,%s V%s Q%s,%s %s,%s H%s Q%s,%s %s,%s V%s Z", num(x), num(y+tableHead), num(y+rad), num(x), num(y),
-			num(x+rad), num(y), num(x+w-rad), num(x+w), num(y), num(x+w), num(y+rad), num(y+tableHead)),
-	}}
+	x, y, w := r.x, r.y, r.w
+	r.form = outlineOf(r.w, r.h, "table")
+	bg, outer := r.form.el(r), r.form.el(r)
+	bg.Class, outer.Class = "bg", "outline"
+	kids := []elem{bg, {Kind: "path", Class: "head", D: r.form.head(r, tableHead)}}
 	if len(t.Rows) > 0 {
 		kids = append(kids, lineEl(x, y+tableHead, x+w, y+tableHead, "sep"))
 	}
@@ -510,7 +496,7 @@ func (l *layout) addTable(t *table, at string) {
 		}
 		top += rowHeight
 	}
-	kids = append(kids, elem{Kind: "rect", X: x, Y: y, W: w, H: h, RX: rad, Class: "outline"})
+	kids = append(kids, outer)
 	l.boxes = append(l.boxes, r)
 	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "table" + tone(t.Tone), Kids: kids})
 }
@@ -535,19 +521,20 @@ func barRect(b *bar, at string) rect {
 		name = num(b.X1) + "-" + num(b.X2)
 	}
 	w := math.Max(math.Abs(b.X2-b.X1), 4)
-	return rect{math.Min(b.X1, b.X2), b.Y - 7, w, 14, what("bar", b.Name, Text{"en": name}), at}
+	return rect{math.Min(b.X1, b.X2), b.Y - 7, w, 14, what("bar", b.Name, Text{"en": name}), at, sharp}
 }
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
 	who := what("frame", f.Name, f.Label)
-	l.frames = append(l.frames, rect{f.X, f.Y, f.W, f.H, who, at})
+	l.frames = append(l.frames, rect{f.X, f.Y, f.W, f.H, who, at, sharp})
 	hx, hy, size := f.X+12, f.Y+18, float64(sizeSub)
 	if f.Icon != "" {
 		hx, hy, size = f.X+40, f.Y+15, sizeMain
 	}
 	if f.Label != nil {
-		l.heads = append(l.heads, rect{hx, hy - 9, textWidth(f.Label, size, false), labelH, "the heading of " + who, at})
+		hw := textWidth(f.Label, size, false)
+		l.heads = append(l.heads, rect{hx, hy - 9, hw, labelH, "the heading of " + who, at, sharp})
 		// The heading keeps the margin on its right that it has on its left.
 		l.fit(at, who, f.Label, size, false, f.W-(hx-f.X)-12, f.W)
 	}
@@ -563,7 +550,7 @@ func (l *layout) addFrame(f *frame, at string) {
 		cls += " grouped"
 		// The icon is a part like a box: nothing may overlap it or run through it. It is checked from the frame's
 		// edge, as the 1px of it outside the frame only covers the frame's line (1.2 wide, centred on its edge).
-		l.boxes = append(l.boxes, rect{f.X, f.Y, 31, 31, "the icon of " + who, at})
+		l.boxes = append(l.boxes, rect{f.X, f.Y, 31, 31, "the icon of " + who, at, sharp})
 		if use, ok := l.image(at, f.Icon, f.X-1, f.Y-1, 32, "the icon of "+who); ok {
 			kids = append(kids, use)
 		}
@@ -577,7 +564,7 @@ func (l *layout) addFrame(f *frame, at string) {
 func (l *layout) addIcon(i *icon, at string) {
 	size := iconSize(i)
 	who := what("icon", i.Name, Text{"en": i.Icon})
-	l.boxes = append(l.boxes, rect{i.X, i.Y, size, size, who, at})
+	l.boxes = append(l.boxes, rect{i.X, i.Y, size, size, who, at, sharp})
 	if use, ok := l.image(at, i.Icon, i.X, i.Y, size, who); ok {
 		l.boxEls = append(l.boxEls, use)
 	}
@@ -638,7 +625,7 @@ func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, st
 	case "end":
 		x0 = x - w + 5
 	}
-	l.labels = append(l.labels, rect{x0, y - 9, w, labelH, what("label", "", t), at})
+	l.labels = append(l.labels, rect{x0, y - 9, w, labelH, what("label", "", t), at, sharp})
 	if !plain {
 		l.labelEls = append(l.labelEls, elem{Kind: "rect", X: x0, Y: y - 9, W: w, H: labelH, Class: "label-bg"})
 	}
@@ -656,8 +643,11 @@ func labelWidth(t Text, strong bool) float64 {
 
 func (l *layout) addBar(b *bar, at string) {
 	r := barRect(b, at)
+	r.form = outlineOf(r.w, r.h, "bar")
 	l.boxes = append(l.boxes, r)
-	l.boxEls = append(l.boxEls, elem{Kind: "rect", X: r.x, Y: r.y, W: r.w, H: r.h, RX: 3, Class: "bar" + tone(b.Tone)})
+	el := r.form.el(r)
+	el.Class = "bar" + tone(b.Tone)
+	l.boxEls = append(l.boxEls, el)
 	if b.Label != nil {
 		l.label(at, b.Label, r.x+r.w+10, b.Y, "start", false, false)
 	}
@@ -690,7 +680,7 @@ func span(runs []seg, who, at string) rect {
 		x0, x1 = min(x0, s[0], s[2]), max(x1, s[0], s[2])
 		y0, y1 = min(y0, s[1], s[3]), max(y1, s[1], s[3])
 	}
-	return rect{x0, y0, x1 - x0, y1 - y0, who, at}
+	return rect{x0, y0, x1 - x0, y1 - y0, who, at, sharp}
 }
 
 // num writes v for SVG and messages, to a hundredth: a sum of estimates (text widths) would show its float error.
