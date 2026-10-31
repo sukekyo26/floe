@@ -301,15 +301,20 @@ func isDown(s seg) bool { return s[0] == s[2] }
 
 // place places edge k's label, w wide: beside the first run of its edge with room for it, from the box it is written
 // from, each run from its end nearer that box; with none, it makes room beside a run (see room), the first that
-// takes it. It reports false when none does: floe's fault, as is room made not clear, which tell takes for one.
+// takes it. It reports false when none does, or room made is not clear: floe's fault either way, as room made is clear
+// by how it is made (see room).
 // LIMIT: each spot is compared with every box, label and run of the group (0.06s for the largest graph allowed, every
 // edge labelled); compare only the things near a spot if larger graphs come to need it. Room made grows the group
 // and widens the boxes a cut crosses beyond their text, and minds no edge written by hand: a band made over the
 // middle of a box's side may stand in the way of one, told at it.
 func (d *drawing) place(k int, w float64) bool {
-	things, runs := d.things(), append(d.runs(), d.hands()...)
+	things, runs := d.held(-1), append(d.runs(), d.hands()...)
 	for i, s := range segsOf(d.routes[k]) {
-		for _, a := range starts(s, map[bool]float64{true: labelH, false: w}[isDown(s)]) {
+		long := w
+		if isDown(s) {
+			long = labelH
+		}
+		for _, a := range starts(s, long) {
 			for _, side := range []float64{1, -1} {
 				sp := spot{seg: i, side: side, at: a, w: w}
 				if free(heldRect(s, sp), things, runs) {
@@ -322,7 +327,7 @@ func (d *drawing) place(k int, w float64) bool {
 	for i := range len(d.routes[k]) - 1 {
 		if sp, ok := d.room(k, i, w); ok {
 			d.spots[k] = sp
-			return true
+			return free(heldRect(segsOf(d.routes[k])[i], sp), d.held(k), d.runs())
 		}
 	}
 	return false
@@ -347,11 +352,13 @@ func starts(s seg, long float64) []float64 {
 
 // room makes room for edge k's label beside run i of its edge, and returns where it stands: the drawing is cut
 // across the run a unit past its end nearer the box (past every box the cut would cross), and all that lies past the
-// cut moves on along the run by the label's length and what the labels the cut crosses leave in the band (crossed);
-// then it is cut along the run, a quarter column right of (or below) it, and all that lies past that cut moves on
-// across as far as the label needs, the boxes the cut crosses widening. Neither cut bends a run or makes two things
-// meet: a straight run stays straight, and a run across a cut grows longer. With the first cut past the run's other
-// end, it makes none and reports false.
+// cut moves on along the run by the label's length and what labels leave in the band (crossed); then it is cut
+// along the run, short of the nearest thing right of (or below) it by the label (see reach), and all that lies past
+// that cut moves on across as far as the label needs, the boxes the cut crosses widening. The room is clear: in the
+// band lie only runs that cross it and what labels leave short of the room; across, nothing by the label stands
+// between the run and the second cut, and all past it moves beyond the label. Neither cut bends a run or makes two
+// things meet: a straight run stays straight, and a run across a cut grows longer. With the first cut past the run's
+// other end, it makes none and reports false.
 func (d *drawing) room(k, i int, w float64) (spot, bool) {
 	s := segsOf(d.routes[k])[i]
 	along := runAxis(s)
@@ -368,7 +375,10 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 		moved = false
 		for _, b := range d.boxes {
 			if lo, hi := b.lo(along), b.lo(along)+b.size(along); lo <= cut && cut <= hi {
-				cut, moved = map[bool]float64{true: hi + 1, false: lo - 1}[sign > 0], true
+				cut, moved = lo-1, true
+				if sign > 0 {
+					cut = hi + 1
+				}
 			}
 		}
 	}
@@ -379,54 +389,53 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 	d.stretch(along, cut, stays+size[1]+4+moves)
 	sp := spot{seg: i, side: 1, at: cut + stays + 2, w: w}
 	s = segsOf(d.routes[k])[i]
-	if need := d.reach(spotRect(s, sp), s[1-along], along); need > 0 {
-		d.stretch(1-along, s[1-along]+3, onGrid(need, column, math.Ceil))
+	if at, need := d.reach(spotRect(s, sp), s[1-along], along); need > 0 {
+		d.stretch(1-along, at, onGrid(need, column, math.Ceil))
 	}
 	return sp, true
 }
 
-// crossed is how far the labels a cut at cut on axis along crosses reach into the band it opens: a label stays whole
-// on its side, or moves whole with its run, and leaves part of itself in the band, before (stays) or after (moves)
-// the room made there.
+// crossed is how far the labels reach into the band a cut at cut on axis along opens, by how stretch moves them: a
+// label stays whole, if its run does, or moves whole with its run, so that what of it lay past the cut (it stays) or
+// short of it (it moves) lies in the band, before (stays) or after (moves) the room made there.
 func (d *drawing) crossed(along int, cut float64) (stays, moves float64) {
 	for k, sp := range d.spots {
 		s := segsOf(d.routes[k])[sp.seg]
 		r := heldRect(s, sp)
 		lo, hi := r.lo(along), r.lo(along)+r.size(along)
-		switch {
-		case lo >= cut || cut >= hi:
-		case runAxis(s) == along && sp.at > cut || runAxis(s) != along && s[along] > cut:
+		if runAxis(s) == along && sp.at > cut || runAxis(s) != along && s[along] > cut {
 			moves = max(moves, cut-lo)
-		default:
+		} else {
 			stays = max(stays, hi-cut)
 		}
 	}
 	return stays, moves
 }
 
-// reach is how far past the run at cross the nearest thing within r's span along the run (on axis along) stands
-// short of r's far end, and a little: everything past the cut, its edge at r's near end too, moves on across with
-// the cut. 0 when nothing does.
-func (d *drawing) reach(r rect, cross float64, along int) float64 {
+// reach is where to cut along the run at cross, and how far on across, for r beside it: the nearest thing past the
+// run within r's span along it (a run, a box, a label held to its run) stands short of r's far end by need, and a
+// little; the cut is between the run and that thing, a quarter column past the run or halfway, the nearer, so that
+// nothing within r's span stays between the run and the cut. need is 0 when nothing stands in r's way.
+func (d *drawing) reach(r rect, cross float64, along int) (at, need float64) {
 	across := 1 - along
 	lo, hi := r.lo(along), r.lo(along)+r.size(along)
 	end := r.lo(across) + r.size(across) + 2
 	near := math.Inf(1)
-	for _, b := range d.things() {
-		if b.lo(along) < hi && lo < b.lo(along)+b.size(along) && b.lo(across) > cross && b.lo(across) < end {
+	for _, b := range d.held(-1) {
+		if b.lo(along) < hi && lo < b.lo(along)+b.size(along) && b.lo(across) > cross {
 			near = min(near, b.lo(across))
 		}
 	}
 	for _, s := range d.runs() {
 		a, b := min(s[along], s[along+2]), max(s[along], s[along+2])
-		if c := min(s[across], s[across+2]); b > lo && a < hi && c > cross && c < end {
+		if c := min(s[across], s[across+2]); b > lo && a < hi && c > cross {
 			near = min(near, c)
 		}
 	}
-	if math.IsInf(near, 1) {
-		return 0
+	if near >= end {
+		return 0, 0
 	}
-	return end - near
+	return cross + min(column/4, (near-cross)/2), end - near
 }
 
 // stretch moves everything past at on axis on by by, the labels with their runs; a box at moves wider, and the
@@ -488,11 +497,14 @@ func (d *drawing) boxSpan(axis int) (lo, hi float64) {
 	return lo, hi
 }
 
-// held are the group's boxes, and its labels each with the column between it and its run (heldRect).
-func (d *drawing) held() []rect {
+// held are the group's boxes, and its labels but edge but's, each with the column between it and its run
+// (heldRect).
+func (d *drawing) held(but int) []rect {
 	out := slices.Collect(maps.Values(d.boxes))
 	for k, sp := range d.spots {
-		out = append(out, heldRect(segsOf(d.routes[k])[sp.seg], sp))
+		if k != but {
+			out = append(out, heldRect(segsOf(d.routes[k])[sp.seg], sp))
+		}
 	}
 	return out
 }
@@ -509,11 +521,6 @@ func heldRect(s seg, sp spot) rect {
 		r.set(across, r.lo(across), s[across]-1-r.lo(across))
 	}
 	return r
-}
-
-// things are the group's boxes and labels, each label held to its run (heldRect).
-func (d *drawing) things() []rect {
-	return d.held()
 }
 
 // runs are the group's edges' runs.
