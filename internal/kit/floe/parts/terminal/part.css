@@ -4,6 +4,7 @@
 :scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
 :scope .run::before { content: "$ "; color: var(--code-prompt); }
 :scope.zsh .run::before { content: "% "; }
+/* LIMIT: PS is letters in the CSS, past words.yaml (the shell's own prompt); S169 decides it */
 :scope.powershell .run::before { content: "PS> "; }
 :scope.cmd .run::before { content: "> "; }
 :scope .out { opacity: 0.7; }

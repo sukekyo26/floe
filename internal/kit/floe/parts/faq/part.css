@@ -7,6 +7,7 @@
   cursor: pointer; font-weight: 700; list-style: none;
 }
 :scope summary::-webkit-details-marker { display: none; }
+/* LIMIT: Q is a letter in the CSS, past words.yaml; S169 makes it a mark or a word of the page's language */
 :scope summary::before { content: "Q"; content: "Q" / ""; color: var(--accent); }
 :scope summary::after { content: "+"; content: "+" / ""; color: var(--muted); font-weight: 400; }
 :scope details[open] summary::after { content: "−"; content: "−" / ""; }
