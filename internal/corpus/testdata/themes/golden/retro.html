@@ -3,7 +3,9 @@
 <title>The retro theme</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
-@layer floe.looks.depth2, floe.looks.depth1, floe.looks.depth0, floe.parts.depth2, floe.parts.depth1, floe.parts.depth0;
+@layer floe.looks.boxes, floe.looks.depth2, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth2, floe.parts.depth1, floe.parts.depth0;
+@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -250,9 +252,9 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 :scope .title { font-size: 1.25rem; line-height: 1.45; }
 :scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: 0.82rem; }
 :scope .set-aside { margin-top: 0.3rem; font-size: 0.8rem; font-weight: 600; }
-:scope ul { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
-:scope li { position: relative; padding-left: 1.45rem; }
-:scope li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad); }
+:scope .rejected { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
+:scope .rejected li { position: relative; padding-left: 1.45rem; }
+:scope .rejected li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad); }
 }
 }
 </style>
@@ -347,7 +349,7 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
-:scope { list-style: none; padding: 0; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--floe-room); }
+:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--floe-room); }
 :scope > li {
   --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
