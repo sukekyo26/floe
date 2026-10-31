@@ -56,7 +56,7 @@ func TestOutline(t *testing.T) {
 		{"tall pill: along its straight side, 1.5 in", boxOf(400, 20, 60, 120, "pill"), seg{401.5, 60, 401.5, 100}, true},
 		// Below its round corner, along its straight side: inside, where an elliptic corner (20 by 26) would not be.
 		{"narrow state: its corners round, not elliptic", boxOf(100, 100, 40, 80, "state"), seg{101.2, 120.5, 101.2, 121.5}, true},
-		{"icon: past its corner, which is square", rect{100, 300, 48, 48, "", "", sharp}, seg{90, 290, 102, 302}, true},
+		{"icon: past its corner, which is square", boxOf(100, 300, 48, 48, "icon"), seg{90, 290, 102, 302}, true},
 		{"2 by 2: no room 1 in", boxOf(100, 100, 2, 2, "pill"), seg{90, 101, 110, 101}, false},
 		{"a run of no length, inside", boxOf(100, 300, 200, 52, ""), seg{200, 326, 200, 326}, false},
 	} {
@@ -127,6 +127,9 @@ func TestOutlineRandom(t *testing.T) {
 		{"bar", boxOf(100, 100, 200, 14, "bar")},
 		{"tall pill", boxOf(100, 100, 60, 120, "pill")},
 		{"narrow state", boxOf(100, 100, 40, 80, "state")},
+		// Its two rectangles of no width, its four circles one.
+		{"square pill", boxOf(100, 100, 60, 60, "pill")},
+		{"table", boxOf(100, 100, 200, 80, "table")},
 	} {
 		rnd := rand.New(rand.NewPCG(11, 12)) //nolint:gosec // G404: runs to try, no secret
 		pt := func() (float64, float64) {

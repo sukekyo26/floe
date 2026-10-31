@@ -24,7 +24,7 @@ func (l *layout) check() {
 // frame headings overlapping; and boxes and marks straddling a frame. Frames are not compared with one another.
 // LIMIT: labels are not kept off a frame's edge, where an edge's label may sit; compare label parts if one strays.
 func (l *layout) checkPlacement() {
-	canvas := rect{0, 0, l.w, l.h, "", "", sharp}
+	canvas := rect{x: 0, y: 0, w: l.w, h: l.h, what: "", at: ""}
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
 		if !r.inside(canvas) {
 			l.problem(r.at, "diagram_outside", r.what, num(l.w), num(l.h))
@@ -185,7 +185,7 @@ func (l *layout) addLabel(lb *label, at string) {
 	x, y, st := l.place(lb, g)
 	switch {
 	case !st.tried:
-		l.strays = append(l.strays, rect{0, 0, 0, 0, what("label", "", lb.Text), at, sharp})
+		l.strays = append(l.strays, rect{x: 0, y: 0, w: 0, h: 0, what: what("label", "", lb.Text), at: at})
 		return
 	case !st.found:
 		l.problem(at, "diagram_label_no_room", what("label", "", lb.Text), names)
@@ -268,7 +268,7 @@ func (g region) most(xs, ys []float64, w, h, mx, my float64) (best, x, top float
 	near := math.Inf(1)
 	for _, px := range xs {
 		for _, py := range ys {
-			switch room := g.roomOf(rect{px - w/2, py - h/2, w, h, "", "", sharp}); {
+			switch room := g.roomOf(rect{x: px - w/2, y: py - h/2, w: w, h: h, what: "", at: ""}); {
 			case room > best:
 				best, near, x, top = room, math.Hypot(px-mx, py-my), px, py-h/2
 			case room == best:

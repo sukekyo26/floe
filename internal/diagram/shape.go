@@ -13,17 +13,16 @@ type outline struct {
 	radius float64
 }
 
-// sharp is a plain rectangle's outline: an icon's, and what is not a box (a label, a mark).
-var sharp = outline{hex: 0, radius: 0}
-
-// outlineOf is the outline of a w by h box of kind: a box's shape (rect, which "" is, pill, hex, state), table or
-// bar. Corners are round, of a radius no more than half the shorter side: a pill's ends are half circles, tall or
-// wide, and no corner is an ellipse.
+// outlineOf is the outline of a w by h box of kind: a box's shape (rect, which "" is, pill, hex, state), table, bar
+// or icon. Corners are round, of a radius no more than half the shorter side: a pill's ends are half circles, tall
+// or wide, and no corner is an ellipse. An icon's are square.
 func outlineOf(w, h float64, kind string) outline {
 	radius := float64(cornerR)
 	switch kind {
 	case "hex":
 		return outline{hex: hexInset, radius: 0}
+	case "icon":
+		return outline{hex: 0, radius: 0}
 	case "pill":
 		radius = math.Inf(1)
 	case "state":
@@ -45,7 +44,8 @@ func (o outline) el(r rect) elem {
 	return elem{Kind: "rect", X: x, Y: y, W: w, H: h, RX: o.radius}
 }
 
-// head draws the top of r in its outline, down to y+depth: a table's heading, its corners its outline's.
+// head draws the top of r in its outline, down to y+depth: a table's heading, its corners its outline's. It draws
+// round corners only, not a hexagon, as a table has no other outline.
 func (o outline) head(r rect, depth float64) string {
 	x, y, w, c := r.x, r.y, r.w, o.radius
 	return fmt.Sprintf("M%s,%s V%s A%s,%s 0 0 1 %s,%s H%s A%s,%s 0 0 1 %s,%s V%s Z", num(x), num(y+depth), num(y+c),
@@ -74,11 +74,8 @@ func crossedBy(s seg, r rect) bool {
 		return throughHex(s, r, o.hex)
 	}
 	// A round rectangle is two rectangles across each other and a circle at each corner: a run is in it when it is
-	// in one of them. A corner of radius 1 or less is sharp 1px in.
+	// in one of them. A corner of radius 1 or less is sharp 1px in, and the two rectangles then hold all of it.
 	c := o.radius - 1
-	if c <= 0 {
-		return true
-	}
 	if throughRect(s, minX, minY+c, maxX, maxY-c) || throughRect(s, minX+c, minY, maxX-c, maxY) {
 		return true
 	}

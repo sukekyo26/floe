@@ -37,11 +37,12 @@ const (
 )
 
 // rect is the area a part takes, with the words that name it and where it is written (a JSON pointer), and the
-// shape it is drawn in there, for a box an edge may not run through.
+// shape it is drawn in there, for a box an edge may not run through. A rect that is no box leaves form out, its zero
+// value a plain rectangle.
 type rect struct {
 	x, y, w, h float64
 	what, at   string
-	form       outline
+	form       outline //exhaustruct:optional
 }
 
 func (a rect) overlaps(b rect) bool {
@@ -190,17 +191,18 @@ func (l *layout) name(at string, p part) {
 		}
 	case p.Icon != nil:
 		size := iconSize(p.Icon)
-		keep(p.Icon.Name, target{r: rect{p.Icon.X, p.Icon.Y, size, size, "", at, sharp}, kind: "icon"})
+		keep(p.Icon.Name, target{r: rect{x: p.Icon.X, y: p.Icon.Y, w: size, h: size, what: "", at: at}, kind: "icon"})
 	case p.Frame != nil:
-		keep(p.Frame.Name, target{r: rect{p.Frame.X, p.Frame.Y, p.Frame.W, p.Frame.H, "", at, sharp}, kind: "frame"})
+		f := p.Frame
+		keep(f.Name, target{r: rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at}, kind: "frame"})
 	case p.Bar != nil:
 		keep(p.Bar.Name, target{r: barRect(p.Bar, at), kind: "bar"})
 	case p.Dot != nil:
 		r := dotR(p.Dot)
-		keep(p.Dot.Name, target{r: rect{p.Dot.CX - r, p.Dot.CY - r, r * 2, r * 2, "", at, sharp}, kind: "dot"})
+		keep(p.Dot.Name, target{r: rect{x: p.Dot.CX - r, y: p.Dot.CY - r, w: r * 2, h: r * 2, what: "", at: at}, kind: "dot"})
 	case p.Circle != nil:
 		// No area: no edge ends at it.
-		if keep(p.Circle.Name, target{r: rect{x: 0, y: 0, w: 0, h: 0, what: "", at: at, form: sharp}, kind: "circle"}) {
+		if keep(p.Circle.Name, target{r: rect{x: 0, y: 0, w: 0, h: 0, what: "", at: at}, kind: "circle"}) {
 			l.circles[p.Circle.Name] = *p.Circle
 		}
 	}
@@ -241,7 +243,7 @@ func (l *layout) add(at string, p part) {
 func (l *layout) addDot(d *dot, at string) {
 	r := dotR(d)
 	who := fmt.Sprintf("dot %s,%s", num(d.CX), num(d.CY))
-	l.marks = append(l.marks, rect{d.CX - r, d.CY - r, r * 2, r * 2, who, at, sharp})
+	l.marks = append(l.marks, rect{x: d.CX - r, y: d.CY - r, w: r * 2, h: r * 2, what: who, at: at})
 	cls := "dot" + tone(d.Tone)
 	if d.Hollow {
 		cls += " hollow"
@@ -254,7 +256,7 @@ func (l *layout) addCircle(c *circle, at string) {
 	if c.Name != "" {
 		who = "circle " + strconv.Quote(c.Name)
 	}
-	l.areas = append(l.areas, rect{c.CX - c.R, c.CY - c.R, c.R * 2, c.R * 2, who, at, sharp})
+	l.areas = append(l.areas, rect{x: c.CX - c.R, y: c.CY - c.R, w: c.R * 2, h: c.R * 2, what: who, at: at})
 	l.areaEls = append(l.areaEls, elem{Kind: "circle", X: c.CX, Y: c.CY, R: c.R, Class: "venn" + toneOr(c.Tone, "accent")})
 }
 
@@ -384,7 +386,7 @@ func boxRect(b *box, at string) rect {
 	if b.Origin == "centre" {
 		x -= w / 2
 	}
-	return rect{x, b.Y, w, h, what("box", b.Name, b.Rows[0].Text), at, sharp}
+	return rect{x: x, y: b.Y, w: w, h: h, what: what("box", b.Name, b.Rows[0].Text), at: at}
 }
 
 func (l *layout) addBox(b *box, at string) {
@@ -455,14 +457,14 @@ func tableRects(t *table, at string) (rect, []rect) {
 			h += tableSep
 			continue
 		}
-		rows[i] = rect{x, top, w, rowHeight, "row " + strconv.Quote(row.Name), at, sharp}
+		rows[i] = rect{x: x, y: top, w: w, h: rowHeight, what: "row " + strconv.Quote(row.Name), at: at}
 		top += rowHeight
 		h += rowHeight
 	}
 	if len(t.Rows) > 0 {
 		h += 6
 	}
-	return rect{x, t.Y, w, h, what("table", t.Name, t.Title), at, sharp}, rows
+	return rect{x: x, y: t.Y, w: w, h: h, what: what("table", t.Name, t.Title), at: at}, rows
 }
 
 func (l *layout) addTable(t *table, at string) {
@@ -472,7 +474,8 @@ func (l *layout) addTable(t *table, at string) {
 	}
 	x, y, w := r.x, r.y, r.w
 	r.form = outlineOf(r.w, r.h, "table")
-	bg, outer := r.form.el(r), r.form.el(r)
+	bg := r.form.el(r)
+	outer := bg
 	bg.Class, outer.Class = "bg", "outline"
 	kids := []elem{bg, {Kind: "path", Class: "head", D: r.form.head(r, tableHead)}}
 	if len(t.Rows) > 0 {
@@ -521,20 +524,20 @@ func barRect(b *bar, at string) rect {
 		name = num(b.X1) + "-" + num(b.X2)
 	}
 	w := math.Max(math.Abs(b.X2-b.X1), 4)
-	return rect{math.Min(b.X1, b.X2), b.Y - 7, w, 14, what("bar", b.Name, Text{"en": name}), at, sharp}
+	return rect{x: math.Min(b.X1, b.X2), y: b.Y - 7, w: w, h: 14, what: what("bar", b.Name, Text{"en": name}), at: at}
 }
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
 	who := what("frame", f.Name, f.Label)
-	l.frames = append(l.frames, rect{f.X, f.Y, f.W, f.H, who, at, sharp})
+	l.frames = append(l.frames, rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: who, at: at})
 	hx, hy, size := f.X+12, f.Y+18, float64(sizeSub)
 	if f.Icon != "" {
 		hx, hy, size = f.X+40, f.Y+15, sizeMain
 	}
 	if f.Label != nil {
 		hw := textWidth(f.Label, size, false)
-		l.heads = append(l.heads, rect{hx, hy - 9, hw, labelH, "the heading of " + who, at, sharp})
+		l.heads = append(l.heads, rect{x: hx, y: hy - 9, w: hw, h: labelH, what: "the heading of " + who, at: at})
 		// The heading keeps the margin on its right that it has on its left.
 		l.fit(at, who, f.Label, size, false, f.W-(hx-f.X)-12, f.W)
 	}
@@ -550,7 +553,8 @@ func (l *layout) addFrame(f *frame, at string) {
 		cls += " grouped"
 		// The icon is a part like a box: nothing may overlap it or run through it. It is checked from the frame's
 		// edge, as the 1px of it outside the frame only covers the frame's line (1.2 wide, centred on its edge).
-		l.boxes = append(l.boxes, rect{f.X, f.Y, 31, 31, "the icon of " + who, at, sharp})
+		ir := rect{x: f.X, y: f.Y, w: 31, h: 31, what: "the icon of " + who, at: at, form: outlineOf(31, 31, "icon")}
+		l.boxes = append(l.boxes, ir)
 		if use, ok := l.image(at, f.Icon, f.X-1, f.Y-1, 32, "the icon of "+who); ok {
 			kids = append(kids, use)
 		}
@@ -564,7 +568,8 @@ func (l *layout) addFrame(f *frame, at string) {
 func (l *layout) addIcon(i *icon, at string) {
 	size := iconSize(i)
 	who := what("icon", i.Name, Text{"en": i.Icon})
-	l.boxes = append(l.boxes, rect{i.X, i.Y, size, size, who, at, sharp})
+	r := rect{x: i.X, y: i.Y, w: size, h: size, what: who, at: at, form: outlineOf(size, size, "icon")}
+	l.boxes = append(l.boxes, r)
 	if use, ok := l.image(at, i.Icon, i.X, i.Y, size, who); ok {
 		l.boxEls = append(l.boxEls, use)
 	}
@@ -625,7 +630,7 @@ func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, st
 	case "end":
 		x0 = x - w + 5
 	}
-	l.labels = append(l.labels, rect{x0, y - 9, w, labelH, what("label", "", t), at, sharp})
+	l.labels = append(l.labels, rect{x: x0, y: y - 9, w: w, h: labelH, what: what("label", "", t), at: at})
 	if !plain {
 		l.labelEls = append(l.labelEls, elem{Kind: "rect", X: x0, Y: y - 9, W: w, H: labelH, Class: "label-bg"})
 	}
@@ -680,7 +685,7 @@ func span(runs []seg, who, at string) rect {
 		x0, x1 = min(x0, s[0], s[2]), max(x1, s[0], s[2])
 		y0, y1 = min(y0, s[1], s[3]), max(y1, s[1], s[3])
 	}
-	return rect{x0, y0, x1 - x0, y1 - y0, who, at, sharp}
+	return rect{x: x0, y: y0, w: x1 - x0, h: y1 - y0, what: who, at: at}
 }
 
 // num writes v for SVG and messages, to a hundredth: a sum of estimates (text widths) would show its float error.
