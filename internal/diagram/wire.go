@@ -83,8 +83,6 @@ func spread(xs []float64, n int) []float64 {
 	return out
 }
 
-// side is where links may leave node n (out) or enter it: on a box, 12 in from its ends; a point or a label's box
-// is entered at its column and left jog to the right of it.
 // right is where node n ends across: a box at its right side, a point at the column it leaves by, a label's box past
 // its label.
 func (n gnode) right() float64 {
@@ -94,6 +92,8 @@ func (n gnode) right() float64 {
 	return n.col + max(n.jog, n.w)
 }
 
+// side is where links may leave node n (out) or enter it: on a box, 12 in from its ends; a point or a label's box
+// is entered at its column and left jog to the right of it.
 func (n gnode) side(out bool) (lo, hi float64) {
 	switch {
 	case n.box != nil:
