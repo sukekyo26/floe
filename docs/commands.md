@@ -65,33 +65,11 @@ Each page belongs to the project it is published from. The project is the reposi
 
 ### Linked files
 
-`--link` registers a file where it is, instead of storing a page.
+`--link` registers a file or a folder where it is, instead of storing a page; [links.md](links.md) tells how each is shown.
 
-- Only a regular `.html` or `.htm` file, a data file (`.yaml`, `.yml`) or a folder can be linked.
-- A file in a hidden directory right under your home (settings and keys live there) is refused.
-- A file directly under `/` or under your home itself is refused, because the whole directory would be served.
-- A link without `--slug` reuses the slug of the same file, else takes the first free one of `name`, `name-2`, `name-3` …
-- The same slug for another file is refused unless `--force`.
-
-An HTML file is shown as it is: floe adds nothing around it, so a page of your own or one another tool made shows as written. The files under its directory are served too, for its relative references (CSS, scripts, images). Saving the file reloads the open tab.
-
-A linked data file is drawn each time its page is opened, with `--theme` as given when it was linked, so that a page written in a repository can be read while it is written:
-
-- It is checked when it is linked, as `floe check` checks it, and refused with its mistakes.
-- Saving the data file, a part, theme or template of your own, or fetching icons, reloads the open tab. Saving an image it shows does not: save the data file again, or reload the tab.
-- When it has mistakes, the tab shows them instead of the page, and comes back to the page once they are fixed and saved.
-- Nothing of its directory is served: its images are in its page. Its download is the page drawn, its CSP kept in a `<meta>`.
-- Its title in the list is its `title:`, read each time.
-
-A linked folder is one row of the management page's Folders tab. Its URL (`/a/<slug>/`) opens that tab with the folder open:
-
-- Opening the row shows what is directly in the folder: its directories, then its HTML files (`.html`, `.htm`), by name. A directory opens the same way, and only what is open is read, so a folder of thousands of files costs only the directories opened. What is open is kept in the browser across a reload, not in the URL.
-- Names starting with a dot (`.git`, `.drafts`) are left out, and so are symlinks that lead out of the folder and anything but regular files and directories. A symlink to a directory is not opened. The files under the folder are served as a linked HTML file's are, by the same rules.
-- One directory shows at most 1000 entries, the first by name; the row under them says how many there are.
-- A page of the folder opens in the frame (`/a/<slug>/?file=<path>`) under the folder's title, with the folder's tree on its left, open where the page is. Drag the tree's edge, or use ← → Home End on it, to widen or narrow it (160 px up to 480 px or half the window), and hide it with the button at its head; the browser keeps its width and whether it shows. With the tree hidden, or on a narrow screen (where it opens over the page), the bar picks among the pages of the page's directory. A page's title is its file's name, and nothing of it is read to list it.
-- What is added, removed or renamed in the folder shows when the list is next read. The folder has the row's favourite, archive, tags and title; its pages have none of their own.
-- A folder in a repository is titled by where it is in it (`docs`, `docs/v1`), and without `--slug` named by its project and that (`api-docs-docs`), so that folders of one name in several repositories differ by their URL; a folder outside one is titled and named by its name (`handbook`).
-- A folder is linked by the same rules as a file's directory: not `/` nor your home, nor a hidden directory right under your home. `--theme` is refused.
+- Only a regular `.html` or `.htm` file, a data file (`.yaml`, `.yml`) or a folder can be linked. A data file is checked as `floe check` checks it, and refused with its mistakes.
+- Refused: a file or folder in a hidden directory right under your home (settings and keys live there); a file directly under `/` or under your home itself, and those two as folders, as the whole directory would be served; `--theme` with an HTML file or a folder.
+- A link without `--slug` reuses the slug of the same file, else takes the first free one of `name`, `name-2`, `name-3` …; a folder in a repository is named by its project and its place in it (`api-docs-docs`), so that folders of one name in several repositories differ by their URL, and a folder outside one by its name (`handbook`). The same slug for another file is refused unless `--force`.
 
 ---
 
@@ -143,13 +121,6 @@ Have the server draw every stored page again from the copy of its data file and 
 
 Print the templates, floe's and your own, one per line in three tab-separated columns: the name, where it is (`floe`, or the directory of a template of your own) and the description of its `schema.json`. A template of your own hides floe's of its name. [templates.md](templates.md) tells how templates are written.
 
-## `floe template show <name>`
-
-Print a template, to read before writing a data file of it: its description, where it is, the themes a data file may pick (`themes:`), the files it reads (`files:`), and each of them as written under `==> file <==`: first what a data file may hold (`schema.json`, `checks.yaml`, `computed.yaml`) and its `example.yaml` to start one from, then `page.html`, `page.css` and `words.yaml`. Its `assets/`, images, are not printed.
-
-- With a file named after (`floe template show report example.yaml`), it prints that file alone, as written but the byte order mark at its start. A file it does not read is refused with the files it does.
-- When the output is long, read the `files:` line first, then the file you need.
-
 ## `floe template new <name>`
 
 Make the template `<name>` in `FLOE_TEMPLATES_DIR`: a `page.html`, a `schema.json` and an `example.yaml`, the smallest that `floe template check` takes, to fill in. The `page.html` also holds a viewport `<meta>`, so that a phone draws the page at its own width.
@@ -170,13 +141,6 @@ Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own
 
 Print the parts, looks and shared schemas, floe's and your own, one per line in three tab-separated columns: the name, where it is (`floe`, or the directory of one of your own) and its description.
 
-## `floe part show <name>`
-
-Print a part, a look or a shared schema: its description, where it is, the looks it takes, the files it reads (`files:`), and each of them as written under `==> file <==`: `schema.json`, `checks.yaml`, `part.yaml`, `part.html`, `part.css` and `words.yaml` of a part, `part.yaml` and `part.css` of a look, `<name>.json` of a shared schema. The CSS of the looks it takes is the looks' own: `floe part show panel` prints it.
-
-- With a file named after (`floe part show code part.html`), it prints that file alone, as written but the byte order mark at its start: floe's parts show how `part.html` uses `{{copyButton}}` and the other functions. A file it does not read is refused with the files it does.
-- When the output is long, read the `files:` line first, then the file you need.
-
 ## `floe part new <name>`
 
 Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of its box and an empty `part.css`, the smallest that `floe part check` takes, to fill in.
@@ -187,18 +151,26 @@ Make the part `<name>` in `FLOE_PARTS_DIR`: a `schema.json`, a `part.html` of it
 
 Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `FLOE_THEMES_DIR`, over floe's own, and print every mistake of them (exit code 1), a shared schema's too, checked from its root whether a schema names it or not. Nothing is printed when they are right (exit code 0).
 
-A mistake of a part, shared schema, theme or template of your own stops `floe check`, `floe render` and `floe publish` too, whether the page uses it or not: run `floe part check` and `floe template check` to see it. [parts.md](parts.md) tells what a part and a theme hold.
+[parts.md](parts.md) tells what a part and a theme hold.
 
 ## `floe theme list`
 
 Print the themes, floe's and your own, one per line in the three tab-separated columns of `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own) and an empty description, as a theme has none.
 
-## `floe theme show <name> [file]`
+## `floe template show <name> [file]` / `floe part show <name> [file]` / `floe theme show <name> [file]`
 
-Print a theme: its name, where it is, the files it reads (`files:`), and each of them as written under `==> file <==`: `palette.css`, `base.css`, then the CSS it gives each part or look, by name.
+Print a template, a part (a look or a shared schema too) or a theme, floe's or your own, to read before writing with it or copying from it: its name and description (a theme's name alone, as it has none), where it is, the files it reads (`files:`), and each of them as written under `==> file <==`.
 
-- With a file named after (`floe theme show ink note.css`), it prints that file alone, as written but the byte order mark at its start. A file it does not read is refused with the files it does.
+- With a file named after (`floe part show code part.html`), print that file alone, as written but the byte order mark at its start: floe's parts show how `part.html` uses `{{copyButton}}` and the other functions. A file it does not read is refused with the files it does.
 - When the output is long, read the `files:` line first, then the file you need.
+
+| Of | Also prints | The files, in order |
+|---|---|---|
+| A template | The themes a data file may pick (`themes:`) | What a data file may hold (`schema.json`, `checks.yaml`, `computed.yaml`) and `example.yaml`, then `page.html`, `page.css` and `words.yaml`. Not `assets/`, its images |
+| A part | The looks it takes | `schema.json`, `checks.yaml`, `part.yaml`, `part.html`, `part.css`, `words.yaml`. The CSS of the looks it takes is the looks' own: `floe part show panel` prints it |
+| A look | The looks it takes | `part.yaml`, `part.css` |
+| A shared schema | — | `<name>.json` |
+| A theme | — | `palette.css`, `base.css`, then the CSS it gives each part or look, by name |
 
 ---
 
@@ -216,7 +188,7 @@ Archive the pages in order through the server (it is started when it is not runn
 
 ## `floe serve`
 
-Run the server in the foreground on `127.0.0.1` until SIGTERM, SIGINT or `floe stop`; it stops once the requests under way are done (10 seconds at most), and a second signal ends it at once. `floe publish`, `floe rebuild`, `floe list`, `floe rm` and `floe archive` start the same server in the background, so this is mainly for seeing its errors. A background server that does not start is told as `the server did not start; run "floe serve" to see the error`.
+Run the server in the foreground on `127.0.0.1` until SIGTERM, SIGINT or `floe stop`; it stops once the requests under way are done (10 seconds at most), and a second signal ends it at once. The commands [The server](#the-server) lists start the same server in the background, so this is mainly for seeing its errors. A background server that does not start is told as `the server did not start; run "floe serve" to see the error`.
 
 ## `floe stop`
 
@@ -226,9 +198,9 @@ Stop the background server, and return once it is gone, so that a command right 
 
 ## `floe diagram render <spec.yaml>...`
 
-Check each diagram spec and print the diagrams, in order, as one HTML fragment of inline SVG on stdout, to paste into an HTML page of your own: a whole document with `<!doctype html>` and `<html lang>`, since `floe publish --link` shows the file as it is. In a data file, write the spec in a `diagram` part instead ([pages.md](pages.md#diagrams), which tells how a spec is written). A relative path is resolved against the working directory.
+Check each diagram spec and print the diagrams, in order, as one HTML fragment of inline SVG on stdout, to paste into an HTML page of your own: a whole document with `<!doctype html>` and `<html lang>`, since `floe publish --link` shows the file as it is. In a data file, write the spec in a `diagram` part instead ([diagrams.md](diagrams.md), which tells how a spec is written). A relative path is resolved against the working directory.
 
-- A spec is checked against the diagram's schema, then laid out once for every language its text is written in, and checked: text that overflows, parts that overlap or stick out of the canvas, edges through boxes, crossings … ([pages.md](pages.md#diagrams) lists the checks).
+- A spec is checked against the diagram's schema, then laid out once for every language its text is written in, and checked: text that overflows, parts that overlap or stick out of the canvas, edges through boxes, crossings … ([diagrams.md](diagrams.md) lists the checks).
 - Every mistake of every spec is printed as `file:line:column: message` (`file: message` for one of the whole spec), in the order the specs were given, and nothing is drawn until all are fixed (exit code 1).
 - The text is written in the language of `--lang` (`en` when left out). A language a text does not have falls back to English.
 - The fragment starts with the assets: the diagrams' style, which takes its colours from the palette's CSS variables (a page without them gets `default`'s colours), and the script that zooms them. Readers zoom with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. A page needs the assets once; holding them more than once does no harm.
@@ -276,7 +248,8 @@ List the fetched icons whose name contains every word (case does not matter), on
 - They ask the server to check, save, draw, list and delete pages: the server is the only one that writes the store. A publish sends the data file (and the images the server asks for), and the server checks and draws it with its own templates, parts, themes and icons.
 - After floe is reinstalled (another version, or a rebuilt binary), the next of them replaces the running server.
 - The server keeps running until `floe stop`, logout or reboot.
-- The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_ICONS_DIR` of the command that started it. A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`, so set yours in the shell's environment, where every command takes them, rather than on one command. `floe list`, `floe rm` and `floe archive` do not draw, and take any; but after floe is reinstalled, the one that replaces the running server is refused with other ones, as a `floe publish` is, since the new server would draw with them.
+- The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_ICONS_DIR` of the command that started it: set them in the shell's environment, where every command takes them, rather than on one command.
+- A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`. `floe list`, `floe rm` and `floe archive` do not draw and take any, but the one that replaces the server after floe is reinstalled is refused with other ones too, as the new server would draw with them.
 - A server serves one store (`FLOE_DIR`) on its port: while it runs, a command for another store is refused. Give that store another `FLOE_PORT`.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
 - A stored page is served as it was drawn; its CSP and sandbox are sent with it. Pages run in the sandbox, so their scripts cannot reach the management page's API.
@@ -305,15 +278,13 @@ floe: FLOE_PARTS_DIR is /tmp/t/missing, which cannot be used as a directory (no 
 ```
 
 - `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR` and `FLOE_THEMES_DIR` are used by every command that draws a page or reads your own (`floe check`, `floe render`, the `template` and `part` commands, and the server, which draws), so one set that is not there stops them. Their default that is not there is none: floe draws with its own alone. A default that is there but is no directory is refused.
-- `FLOE_DIR` is used by the server (`floe serve`, and `floe publish`, `floe rebuild`, `floe list`, `floe rm` and `floe archive`, which start it), and made when it is not there. `FLOE_ICONS_DIR` is used by the icons commands, which make it, and by the diagrams that show an icon, at the diagram.
+- `FLOE_DIR` is used by the server, and so by the commands [The server](#the-server) lists, and made when it is not there. `FLOE_ICONS_DIR` is used by the icons commands, which make it, and by the diagrams that show an icon, at the diagram.
 - Without `HOME` (or with one that is not an absolute path), a directory that has no other default is none: `floe check` runs with floe's templates, parts and themes alone, while a command that writes there (`floe template new`, `floe list` for `FLOE_DIR` …) asks for the variable to be set.
 - Keep `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_TEMPLATES_DIR` apart: two that are one directory, or one in the other (through a symlink too), are refused for their names before anything in them is read, a setting not there yet too. A command compares only the ones it reads, and a default only when it is there; `floe part new` and `floe template new` refuse to make what would be in, or hold, the directory of another kind.
 
 ```text
 floe: FLOE_PARTS_DIR (/tmp/pp) and FLOE_THEMES_DIR (/tmp/pp) are one directory, or one is in the other, where floe would read the files of one as those of the other; make FLOE_PARTS_DIR and FLOE_THEMES_DIR two directories, neither in the other
 ```
-
-The command line speaks English, whatever the environment's language; the management page and the page of a data file's mistakes follow the browser's language.
 
 ## Exit codes
 

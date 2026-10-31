@@ -1,10 +1,10 @@
 # ページを書く
 
-floe がページを描く元の YAML、データファイルの書き方です。floe のテンプレート `report`・`design`・`handoff`・`adr`・`postmortem`・`runbook`・`slides` でページを書くには、これだけで足ります。自分のテンプレートの作り方は [templates.ja.md](templates.ja.md)、コマンドとフラグは [commands.ja.md](commands.ja.md) にあります。
+floe がページを描く元の YAML、データファイルの書き方です。floe のテンプレートでも自分のテンプレートでも同じです。部品 `diagram` の spec は [diagrams.ja.md](diagrams.ja.md)、HTML のファイルやフォルダをそのまま見せるには [links.ja.md](links.ja.md) を見てください。自分のテンプレートの作り方は [templates.ja.md](templates.ja.md)、コマンドとフラグは全部 [commands.ja.md](commands.ja.md) にあります。
 
 ## データファイル
 
-データファイルはテンプレートを名指し、テンプレートがそのデータからページを描きます。floe のテンプレートは、見出しの下に節を並べ、節ごとに見出しと部品と、その後に小節（見出しと部品）を置く `report`、設計書の `design`、引き継ぎと状況の知らせの `handoff`、決めたことの記録の `adr`、障害の振り返りの `postmortem`、手順書の `runbook`、1 枚ずつ見せるスライドの `slides` です。
+データファイルはテンプレートを名指し、テンプレートがそのデータからページを描きます。
 
 ```yaml
 template: report
@@ -30,32 +30,42 @@ sections:
 ```
 
 ```sh
-floe check plan.yaml     # 誤りと警告を出すか、何も出さない
-floe publish plan.yaml   # ページを保存し、URL を出す
+floe check plan.yaml            # 誤りと警告を出すか、何も出さない
+floe publish plan.yaml          # ページを保存し、URL を出す
+floe publish --link plan.yaml   # 開くたびに描き、ファイルを保存すると読み直す
+floe render plan.yaml           # floe 無しで開ける plan.html を隣に書く
 ```
+
+フラグは [commands.ja.md](commands.ja.md) にあります。
 
 どのデータファイルも、floe が自分で読む次の鍵を持ちます。
 
 | 鍵 | 中身 |
 |---|---|
-| `template` | ページを描くテンプレート（`report`・`design`・`handoff`・`adr`・`postmortem`・`runbook`・`slides`、または自分のもの）。必須。 |
+| `template` | ページを描くテンプレート（下の floe のもの、または自分のもの）。必須。 |
 | `lang` | ページの言語（`<html lang>`）。`en`・`ja`・`pt-BR` のようなタグ。必須。floe と部品が描く言葉（`fields` の「必須」、図の拡大のボタン、コードのコピーのボタン）と図の文はこれに従い、その言語の言葉が無ければ英語になる。 |
 | `title` | ページの題。 |
 | `theme` | ページを描くテーマ（既定は `default`）。色・書体・部品の形を決める。`floe template show <テンプレート>` が `themes:` の行に並べる：`default`・`soft`・`editorial`・`ink`・`brutal`・`blueprint`・`notebook`・`retro`・`swiss`・`washi`・`aurora`・`app`。 |
 
-ほかはテンプレートのものです。`report` は `eyebrow`（題の上の短い行）、`lead`（題の下の 1〜2 文）、`sections`（`heading` と `parts` の組の並び）を取ります。節は、部品の後に自分の `sections`（小節。`heading`（`<h3>`）と `parts` の組の並び。1 段だけ）を持てます。小節のある節には見出しが要り、見出しは空の字にできないので、見出しの無い節は鍵を書きません。`floe template show <テンプレート>` が、テンプレートが取るものと、書き始めの見本を出します。
+ほかはテンプレートのものです。floe のテンプレート:
 
-`design` は、結論を先に出す設計書です。`background`（Markdown）と `goals` が必須で、`status`・`owner`・`date`・`summary` が頭に、`non_goals`・`decisions`・`decided`・`impact`・`more` を続けられます。判断（`decisions`）は 1 つずつ `question` と、その `options`（部品 `options`）と `why` で、`pick` を付けた案が、問いと一緒にページの一番上に出ます。`pick` の無い判断は未決と出ます。`decided` は案を比べずに決めたこと、`impact` は `what` と `text` の行、`more` は `heading` と `parts` の自分の節です。`background` は Markdown、`summary`・`goals`・`non_goals`・`decided` の各項目・`question`・`why`・影響の範囲の `what` と `text` は Markdown の 1 行、`status`・`owner`・`date`・`more` の見出し・案の `title` と `pick` は、書いたままの字です。
+| テンプレート | 何のため | 必須 |
+|---|---|---|
+| `report` | 報告。部品の節を並べ、節は 1 段だけ小節を持てる | — |
+| `design` | 結論を先に出す設計書 | `background`・`goals` |
+| `handoff` | 引き継ぎと状況の知らせ。決めてほしいことが先 | `date` |
+| `adr` | 決めたことの記録。1 枚に 1 つ | `status`・`context`・`decision` |
+| `postmortem` | 誰も責めない障害の振り返り | `summary`・`timeline`・`cause` |
+| `runbook` | 走らせるコマンドを添えた、繰り返す手順 | `steps` |
+| `slides` | 1 枚ずつ見せるスライド | `slides` |
 
-`handoff` は、決めてほしいことを先に出す、作業の引き継ぎと状況の知らせです。必須は `date` だけで、`from`・`to`・`summary` が頭に、その下に終えた・進行中・決めてほしい・次にやるの数が出ます。`asks` は決めてほしいことで、1 つずつ `question` と `options`・`recommend`・`why`・決める人（`by`）を書き、Q1・Q2 と番号が付きます。`done` は `what` と `ref`（PR やチケット）の行、`doing` は `who`・`what`・`where`（どこまで）・`state`（`doing`・`waiting`・`blocked`）の行、`next` と `notes`（気を付けること）は行、`more` は `heading` と `parts` の自分の節です。`date`・`from`・`to`・`by`・`ref`・`who`・`more` の見出しは書いたままの字で、ほかの行は Markdown の 1 行です。
+`floe template list` が各テンプレートの説明を出し、`floe template show <テンプレート>` が、取る鍵（説明は `schema.json` に）と、書き始めの `example.yaml` を出します。`"format": "markdown"` の項目と、説明が Markdown と言う項目が Markdown です。鍵のほかにページが見せるもの:
 
-`adr` は、1 つの決めたことを紙 1 枚に書く記録です。`status`（`proposed`・`accepted`・`rejected`・`deprecated`・`superseded`。題の下の判子）・`context`・`decision`（Markdown）が必須で、`status` が `superseded` の記録は、置き換えた記録を `superseded_by`（`[ADR 0012](/a/adr-0012/)`）に書きます。`number`・`date`・`deciders` が頭に出て、`alternatives` は選ばなかった案（`title` と `why`）、`consequences` は良くなること（`good`）と引き受けること（`bad`）の行、`more` は `heading` と `parts` の自分の節です。`number`・`date`・`deciders`・`more` の見出しは書いたままの字で、`superseded_by` とほかの行は Markdown の 1 行です。
-
-`postmortem` は、人を責めずに書く障害の振り返りです。`summary`（Markdown の 1 行。アクセントの色で塗った帯の中）・`timeline`・`cause`（Markdown）が必須です。`date`・`severity`（`high`・`medium`・`low`。帯の中の札で、赤は `high` だけ）・`authors` が頭に出て、`effects` は影響（部品 `facts` と同じ `name` と `value`）、`timeline` は部品 `timeline` の値（書いた順に描き、`date` は `10:42` のような書いたままの字）、`lessons` はうまくいったこと（`good`）・まずかったこと（`bad`）・運が良かったこと（`lucky`）の行、`actions` は `what`（Markdown の 1 行）・`owner`・`state`（`todo`・`doing`・`done`。札）・`ref`（チケットなど）の行、`more` は `heading` と `parts` の自分の節です。`date`・`authors`・`owner`・`ref`・`more` の見出しは書いたままの字です。
-
-`runbook` は、何度も行う作業を、打つコマンドと一緒に残す手順書です。必須は `steps` と、各手順の `title`（`rollback` の手順も）だけで、1 つずつ `title`（Markdown の 1 行）・`who`（読む人のほかが行うとき。題の横の札）・`text`（部品 `text`。囲んだコードは警告するので、コマンドは `run` に書く）・`run`（部品 `terminal` の値。写すボタン付き）・`if_fails`（Markdown の 1 行。書いたとおりにいかなかったときにすること）を書きます。`rollback` は同じ形の手順で、戻し方を別の枠に描きます。`summary`（Markdown の 1 行）・`owner`・`updated`（最後に直した日。書いたままの字）が頭に出て、`needs` は始める前に確かめること（Markdown の 1 行ずつ）、`caution` は作業の間にしてはいけないこと（Markdown の 1 行。手順の前）、`more` は `heading` と `parts` の自分の節です。
-
-`slides` は、1 枚ずつ見せるスライドです。1 枚が画面の高さで、スクロールで 1 枚ずつ止まり、右下に何枚目かと総数を出します。印刷すると 1 枚が横向きの 1 ページです。`title` が表紙（アクセントの色で塗った帯）で、`subtitle`（Markdown の 1 行）がその下の 1 行です。必須は `slides` で、1 つずつ `heading`（Markdown の 1 行）と `parts` を書きます。`parts` の無い枚は、帯の上の見出しだけの区切りの 1 枚です。部品は report と同じ大きさで描くので、大きくするにはブラウザで拡大します。`direction: across` と書くと、枚を横に並べ、1 枚を画面の幅にして、← → のキーや左右のなぞりで送ります（マウスのホイールは縦にしか動かず、管理ページの枠の中では、枠を 1 回クリックするとキーが効きます）。`direction: down` は書かないのと同じで、縦に並べます。
+- `report` は `eyebrow`（題の上の短い行）、`lead`（題の下の 1〜2 文）、`sections`（`heading` と `parts` の組の並び）を取ります。節は、部品の後に自分の `sections`（小節。`heading`（`<h3>`）と `parts` の組の並び。1 段だけ）を持てます。小節のある節には見出しが要り、見出しは空の字にできないので、見出しの無い節は鍵を書きません。
+- Markdown でない鍵は、書いたとおりの字で描きます。report の `eyebrow`・`lead`・見出し、design の `status`・`owner`・`date`、handoff の `date`・`from`・`to`・`by`・`ref`・`who`、adr の `number`・`date`・`deciders`、postmortem の `date`・`authors`・`owner`・`ref`、runbook の `owner`・`updated` と手順の `who`、`more` の節の見出しです。
+- `handoff` は、済んだもの・進行中・決めること・次の数をページの頭に出し、`asks` に Q1、Q2 … と番号を付けます。
+- `runbook` は、手順の `who` を題の横の札に、`run` を `terminal` のコピーのボタン付きで描き、`rollback` を別の枠に入れます。
+- `slides` は、1 枚ずつを画面の高さか幅いっぱいにし、番号と枚数を隅に出し、印刷では 1 枚ずつ横向きのページにします。部品は `report` と同じ大きさなので、大きくするにはブラウザで拡大します。`direction: across` では、マウスのホイールは下へしか動かず、管理ページの枠の中では枠をクリックしてから ← → のキーが効きます。
 
 ## 部品
 
@@ -64,8 +74,10 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 並べるものは、行が何かで部品を選びます。
 
 - 1 行に 1 つ：`text` の Markdown の箇条書き。
-- 名前と、それより長い文（要件、リスクとその手当て、用語）：`entries`。状態は札に書く。
+- 名前と、それより長い文（要件、リスクとその手当て、用語。表では長い文が細い列に押し込まれる）：`entries`。状態は札に書く。
 - 判断：理由と退けた案を添えて 1 つを伝えるなら `decision`、案を利点と欠点で横に比べるなら `options`、短い判断を並べるだけなら `entries`（選んだものを札に）。
+- 時の順に起きたこと：`timeline`。
+- 言葉と意味：Markdown の箇条書き。意味が長いなら `entries`。
 - 前と後の 1 つずつ：`compare`。
 - ページの頭の、短い値の数個：`facts`。
 - 行でも列でも見比べる、升の短い並び：`table`。
@@ -78,16 +90,16 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 | `code` | コードをそのまま、`file` と `lang` の下に。右上のボタンでコードをコピーできる。 |
 | `terminal` | コマンド（`run`）と出力（`out`）を、`shell`（`bash`・`sh`・`zsh`・`powershell`・`cmd`）のプロンプトで。プロンプトは floe が描くので、プロンプトで始まる `run`（`$ ls`）は断る。右上のボタンで、コマンドを 1 行ずつ、プロンプトと出力を除いてコピーできる。 |
 | `table` | 行でも列でも見比べる、升の短い並び。`columns` と `rows`。列は題の字か `{ title, num, pills }`。`num: true` は数の列、`pills` は言葉とその色（`{ 済: good }`）で、その列の升が言葉と丸ごと同じなら、その pill で描く。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`（引用符で囲まず、オブジェクトのまま書く）。 |
-| `entries` | 記録を縦に並べます。1 つが `title`（Markdown の 1 行）とその横の `tags`（それぞれ表のセルと同じく Markdown の 1 行か pill）、その下の全部の幅の `text`（Markdown）。名前と、それより長い文のためのもので、表では長い文が細い列に押し込まれます。要件、リスク（状態を札に `{ pill: 見張り中, tone: warn }`）、意味の長い用語、短い判断の並び（選んだものを札に）に使います。時の順に起きたことなら `timeline` を使います。言葉と意味の並びは Markdown の箇条書きで、意味が長いなら `entries` で書きます。札には列の名前が出ないので、何の値かを札の中で言います（`マージ 2026-10-30`）。`text` の中のコードは、写すボタンの無いまま描くので、entries の後に `code` の部品で置きます。 |
+| `entries` | 記録を縦に並べます。1 つが `title`（Markdown の 1 行）とその横の `tags`（それぞれ表のセルと同じく Markdown の 1 行か pill）、その下の全部の幅の `text`（Markdown）。札には列の名前が出ないので、何の値かを札の中で言います（`マージ 2026-10-30`）。`text` の中のコードは、写すボタンの無いまま描くので、entries の後に `code` の部品で置きます。 |
 | `image` | 画面の写しなどの画像。`file` と、何を写すかの `alt`（[画像](#画像)）。 |
 | `note`・`stats`・`progress`・`steps`・`checklist` | 色の付いた注、大きな数、進みの棒、番号付きの手順、済めば印の付く項目。 |
 | `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |
 | `findings`・`decision`・`fields` | レビューで見つけたもの、決めたこと、設定の鍵。 |
 | `timeline`・`bars`・`faq`・`keys` | 日付の順の出来事、値の棒、問いと答え、押すキー。 |
 | `details`・`tabs` | 題の下に畳んだ部品、またはタブで 1 つずつ見せる部品。中に `text`・`code`・`terminal`・`diff`・`note`・`table`・`entries`・`image`・`diagram` を置ける。 |
-| `diagram` | 確かめてから inline SVG で描く図（[図](#図)）。 |
+| `diagram` | 確かめてから inline SVG で描く図（[diagrams.ja.md](diagrams.ja.md)）。 |
 | `script` | 動くもの（[スクリプトと HTML](#スクリプトと-html)）。 |
-| `html` | そのまま入る HTML（[スクリプトと HTML](#スクリプトと-html)）。 |
+| `html` | そのまま入る HTML。`any.json` の鍵で、部品そのものではないので、`floe part show` にはありません（[スクリプトと HTML](#スクリプトと-html)）。 |
 
 `tone` は `accent`・`good`・`warn`・`bad` のどれかです。
 
@@ -104,56 +116,13 @@ floe publish plan.yaml   # ページを保存し、URL を出す
 
 ## 画像
 
-`report` では、画像は部品 `image`（`- image: { file: shots/list.png, alt: ページの一覧 }`）で、節・小節・`details`・`tabs` に置けます。`file` は画像のパス、`alt` は何を写すかです。自分のテンプレートでは `"format": "image"` の項目で取り、その値が画像のパスです。パスは、データファイルのディレクトリからの相対パス、その下だけ、`..` やドットで始まる名前を含まないものです。画像は data URI でページに入るので、ページは見せるものを全部持ちます。png・jpeg・gif・webp・svg のファイルを名前で見分け、1 MiB までです。`floe publish` は、ページが見せる画像をサーバーに送ります。
+`report` では、画像は部品 `image`（`- image: { file: shots/list.png, alt: ページの一覧 }`）で、節・小節・`details`・`tabs` に置けます。`file` は画像のパス、`alt` は何を写すかです。自分のテンプレートでは `"format": "image"` の項目で取り、その値が画像のパスです。パスは、データファイルのディレクトリからの相対パスで、その下だけです。名前の間は `/` 1 つで、`./`・`..`・両端の `/` を使いません。画像は data URI でページに入るので、ページは見せるものを全部持ちます。png・jpeg・gif・webp・svg のファイルを名前で見分け、1 MiB までです。`floe publish` は、ページが見せる画像をサーバーに送ります。
 
 Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書いたまま描かれ、ページの CSP で出ません。出るのは、Markdown に直に書いた png・gif・jpeg・webp の data URI だけです。画像は `image` に書いてください。
 
 ## 図
 
-`diagram` の部品は、節にも `details`・`tabs` の中にも置ける、その場に書く spec です。キャンバスと、その上に絶対座標（左上が 0, 0）で置く部品から成ります。ページを描く前に確かめ（誤りはデータファイルの行と列で言う）、拡大できる inline SVG で描きます。`floe diagram render` は、ファイルに書いた spec を同じように描きます（[commands.ja.md](commands.ja.md#floe-diagram-render-specyaml)）。
-
-```yaml
-- diagram:
-    width: 640
-    height: 200
-    # スクリーンリーダーが読み上げる
-    title: API の配置
-    parts:
-      - frame: { x: 16, y: 16, w: 608, h: 168, label: VPC }
-      - box: { name: alb, x: 40, y: 72, w: 200, h: 56, tone: accent, rows: [[ALB, main code], 公開の入口] }
-      - box: { name: api, x: 400, y: 72, w: 200, h: 56, rows: [API サーバー, ECS] }
-      - edge: { from: alb, to: api, label: HTTPS }
-```
-
-- ほかの鍵の代わりに `example: <種類>` を書くと、組み込みの見本を描きます（`floe diagram example` が並べる）。ページは図だけを見せ、spec は見せません。見本の spec を読む・写すときは、`floe diagram example <種類>` で出します。
-- 文（`title`・行・ラベル）は、文か、言語ごとの言葉（英語を含む）です：`{ en: Store, ja: 保存先 }`。ページは `lang:` の言葉を描き、spec は書いた言語ごとに並べて確かめます。
-- 部品は、種類を名指す鍵 1 つで書きます。`floe part show diagram schema.json` がすべての鍵を出し、`floe diagram example <種類>` が種類ごとの spec を、格子を説明するコメント付きで出します。
-
-| 部品 | 鍵 |
-|---|---|
-| `frame` | `x` `y` `w` `h`、`label`、`name`、`accent`、`square`（角を丸めない）、`icon`（`aws/group/region` のようなアイコン。AWS のグループの形で、角にアイコン）。ラベルは左上の内側に置くので、中身は上から 32 以上（アイコンがあれば 40）下に置く。 |
-| `box` | `x` `y`、`rows`、`w` `h`（省けば行に要る大きさ）、`name`、`origin`（`left`。`x` を真ん中にするなら `centre`）、`tone`、`shape`（`rect`。`pill`、判断の `hex`、`state`）。行は文か `[文, 形]` で、形は `main`・`sub`・`main code`・`sub code`。形が無ければ最初の行が `main`、残りが `sub`。 |
-| `table` | `x` `y`、`title`、`rows`、`w`、`name`、`origin`、`tone`。行は `[名前]`、`[名前, 型]`、区切りの `---`、または線が行に着く `{ name, cells: [名前, 型] }`。 |
-| `icon` | `x` `y`（左上）、`icon`、`label`（アイコンの下）、`size`（48）、`name`。`icon` はセットとその中の名前で `aws/amazon-ec2` のように書く（`floe icons search` で探す）。 |
-| `edge` | `from` と `to`（部品・名前付きの行・`tree` の節の `name`、または点 `[x, y]`）、`fromSide` と `toSide`（`top`・`right`・`bottom`・`left`）、`via`（曲がる点）、`straight`（直角でなく点から点へ）、`label` と `at: [x, y]`、`dashed`、`bold`、`tone`、`start`（`none`）、`end`（`arrow`）、`crossing`。端は `arrow`・`triangle`・`diamond`・`odiamond`・`one`・`many`・`zero-one`・`zero-many`・`none`。`crossing: true` でこの線はほかと交われる。 |
-| `dot` | `cx` `cy`、`r`（7）、`name`、`tone`、`hollow`。線は中心まで届いてよい。 |
-| `bar` | `x1` `x2` `y`、`name`、`tone`、`label`（棒の右）。 |
-| `axis` | `x1` `x2` `y`、`ticks: [[x, 文], ...]`、`grid`（格子の線の上端）。 |
-| `circle` | `cx` `cy` `r`、`name`、`tone`。円どうしは重なってよい。 |
-| `label` | `text`、`x` `y`、`anchor`（`middle`。`start`・`end`）、`plain`（背景なし）、`strong`、`in`（ベン図で、内側に置く円の名前。ほかの円の外。`x` と `y` を省けば floe が置く）。 |
-| `line` | `x1` `y1` `x2` `y2`、`kind`（`line`。`lifeline`・`divider`）。ほかの部品と交わってよいが、キャンバスから出ない。 |
-| `tree` | `x` `y`（根の中心と上）、`root`：節。節は `box` と同じ `rows`・`name`・`tone`・`shape` と、子の節を並べた `children` を持つ。floe が各節を親の下に置き（子は横に並べ、深さごとに 1 段にそろえる）、親から子へ線を引く。節の `name` は、手で書いた線の端にできる。 |
-| `raw` | `svg`：どの部品でも描けない SVG。SVG の要素だけで（script や `foreignObject` は無し）、配置も確かめもしない。 |
-
-`via` も辺も無い線は、相手に向いた辺から、直角に、曲がり 2 つまでで進みます。別の道にするには `via` か辺を書きます。
-
-確かめること：
-
-- 箱に対して広すぎる・高すぎる字（frame のラベルは frame の幅に対して）。
-- キャンバスからはみ出す部品（線・line・axis も）。
-- 箱・印・ラベル・frame のラベルどうしの重なりと、frame の縁をまたぐ箱と印。frame どうしは比べないので、交わってよい。
-- 箱・ラベル・frame のラベルを通る線と、X の形に交わる線（片方に `crossing: true` があればよい）。
-- どの部品も持たない名前や、端の部品に無い辺に着く線。
+部品 `diagram` は、節や `details`・`tabs` の中に書いた spec から図を描き、ページを描く前に確かめます。spec の書き方は [diagrams.ja.md](diagrams.ja.md) にあります。
 
 ## スクリプトと HTML
 
@@ -176,9 +145,9 @@ plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad'
 plan.yaml:8:36: write the command without its prompt, which floe draws from the shell ("$ ls")
 ```
 
-- `file:line:column:` が誤りの場所です。変える値か、それを持つ鍵を指します。行の無い `file:` だけの誤りは、ファイル全体の誤りです。根に足りない鍵（`plan.yaml: missing property 'title'`）や、テンプレートのデータファイル全体にかける検査がこう出ます。言われた誤りを全部直してから、`floe check` をもう一度走らせます。次の段の誤りが出ることがあります。
+- `file:line:column:` が誤りの場所です。変える値か、それを持つ鍵を指します。行の無い `file:` だけの誤りは、ファイル全体の誤りです。根に足りない鍵（`design.yaml: missing properties 'background', 'goals'`）や、テンプレートのデータファイル全体にかける検査がこう出ます。言われた誤りを全部直してから、`floe check` をもう一度走らせます。次の段の誤りが出ることがあります。
 - 形の誤り（`additional properties 'x' not allowed`・`missing property 'x'`・`got string, want array`）は、テンプレートか部品の schema がデータを断ったものです。`floe template show <テンプレート> schema.json` と `floe part show <部品> schema.json` が、取るものを出します。
-- 自分の部品・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check` と `floe template check` が並べます。
+- 自分の部品・見た目・共有の schema・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check` と `floe template check` が並べます。
 - 同じ誤りは、何か所から指されても 1 回だけ言います。
 
 ### 警告
@@ -186,16 +155,8 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 描いたページに警告が付くことがあります。より良い書き方の勧めで、ページは描かれ、終了コードも変わりません（誤りが無ければ 0）。`floe check`・`floe render`・`floe template check`・`floe publish` が、誤りの後に出します:
 
 ```text
-plan.yaml:12:15: warning: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
+plan.yaml:12:15: warning: this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
 ```
 
 - `text` の部品（report の節と小節、design・handoff・adr・postmortem・runbook の `more` の中、runbook の手順の `text`、slides の枚、`details`・`tabs` の中も）の、囲んだコードのブロックを警告します。コードは `code` に、コマンドは `terminal` に書きます。
 - 誤りのあるファイルは描かないので、その警告は誤りを直した後に出ます。ほかの描けたファイルの警告は、誤りと一緒に出します。
-
-## 確かめと公開
-
-- `floe check <data.yaml>...` は、何も書かず、サーバーも起こさずにデータファイルを確かめます。変えるたびと、リポジトリの CI で走らせます。
-- `floe publish <data.yaml>` は、描いたとおりにページを保存して URL を出します。もう一度 publish すると上書きします。`floe publish --link <data.yaml>` は、開くたびにファイルから描き、保存すると開いたタブを読み直すので、書きながら読めます。
-- `floe render <data.yaml>...` は、floe 無しで開ける 1 つの HTML のファイルを、データファイルの隣に書きます。
-
-フラグは [commands.ja.md](commands.ja.md) にあります。

@@ -43,6 +43,8 @@ floe stop                   # 裏で動くサーバーを止める
 | ページを作る（データファイルを書く） | [pages.ja.md](pages.ja.md) | [pages.md](pages.md) |
 | 自分のテンプレートを作る | [templates.ja.md](templates.ja.md) | [templates.md](templates.md) |
 | 自分の部品・テーマを作る | [parts.ja.md](parts.ja.md) | [parts.md](parts.md) |
+| 図を描く | [diagrams.ja.md](diagrams.ja.md) | [diagrams.md](diagrams.md) |
+| HTML のファイルやフォルダをそのまま見せる | [links.ja.md](links.ja.md) | [links.md](links.md) |
 | コマンド・設定を調べる | [commands.ja.md](commands.ja.md) | [commands.md](commands.md) |
 | 変わったことを見る | [CHANGELOG.ja.md](CHANGELOG.ja.md) | [CHANGELOG.md](../CHANGELOG.md) |
 

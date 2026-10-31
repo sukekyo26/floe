@@ -15,7 +15,7 @@ floe part check         # 自分の部品・見た目・共有の schema・テ�
 floe part show quote    # 見た目と、読むファイルを全部出す
 ```
 
-自分の部品・テーマ・テンプレートに誤りが 1 つあると、使うかどうかによらず、どのページの描き（`floe check`・`floe render`・`floe publish`）も止めます。見落とさないためです。`floe part check` と `floe template check` が全部を並べます。書いている間は、別の置き場所で作り、確かめてから移してください（[templates.ja.md](templates.ja.md#別の置き場所で作る)）。`FLOE_PARTS_DIR` か `FLOE_THEMES_DIR` をそこに向け、`floe part check` で確かめます。
+誤りが 1 つあると、[templates.ja.md](templates.ja.md#テンプレートの置き場所) のとおり、どのページも止めます。`floe part check` が並べます。書いている間は、別の置き場所で作り、確かめてから移してください（[templates.ja.md](templates.ja.md#別の置き場所で作る)）。`FLOE_PARTS_DIR` か `FLOE_THEMES_DIR` をそこに向け、`floe part check` で確かめます。
 
 ## 部品のファイル
 
@@ -52,7 +52,7 @@ quote/
 
 ## 見た目と共有の schema
 
-- 見た目だけのものは、`part.css`（と、`description:` と借りる見た目を書く `part.yaml`）だけで schema の無いディレクトリです。何も描かず、借りる部品や要素にスタイルを貸します。floe の見た目だけのものは `panel`・`rows`・`cards`・`band`・`numbered` です。`cards` はパネルのカードを横に並べ、場所の番号を付けます（部品 `options` が借ります）。`band` はアクセントの色で塗った帯で、中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。`numbered` は、リストの項目に丸い番号を付け、次の項目へ線でつなぎます（部品 `steps` と runbook の手順が借ります）。
+- 見た目だけのものは、`part.css`（と、`description:` と借りる見た目を書く `part.yaml`）だけで schema の無いディレクトリです。何も描かず、借りる部品や要素にスタイルを貸します。floe の見た目だけのものは `panel`・`rows`・`cards`・`band`・`numbered` です（それぞれが何を描くかは [templates.ja.md](templates.ja.md#借りられる見た目) にあります）。
 - 部品は `part.yaml` の `looks: [panel]` でほかの見た目を借り、その見た目が借りるものも、自分より先に順に借りて、その上で整えます。
 - 共有の schema は、テンプレートか部品の schema が、いつもその根を名指す `<名前>.json`（`floe:///parts/<名前>.json`）です。floe のものは `tone.json`（`accent`・`good`・`warn`・`bad`）と `any.json`（どの種類の部品でも 1 つ）です。その中の schema は、テンプレートと同じく、その根から確かめます。持つ部品と floe の format は、根から `properties` と `items` で辿れる所で、テンプレートから指しても部品から指しても描きます。
 - `any.json` の値は、テンプレートの `page.html` と同じく、全部の種類の map で `part.html` に来ます。書いた種類には描いた部品が入り、ほかは nil です。`{{.x}}` と書くと map を字で書くので、`{{range .x}}{{.}}{{end}}` で描きます。schema の根が `any.json` なら `{{range .}}{{.}}{{end}}` です（1 つの種類だけを描く書き方は [templates.ja.md](templates.ja.md#テンプレートの中の部品)）。
@@ -75,7 +75,7 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 ## 見た目を借りる
 
 - 部品の箱でない要素は `data-floe-look` で見た目を借ります。`<section data-floe-look="panel">` はどのテーマでもパネルです。その見た目は部品とテンプレートより下の `floe.looks` に入るので、中に置かれた部品やテンプレートが整えられます。
-- floe の部品もこうして見た目を借ります。`compare`・`fields`・`findings` は table の、`stats`・`options`・`facts`・`links`・`decision` は cards の、`diff`・`terminal` は code の、`checklist`・`entries`・`faq`・`keys` は `rows` の、ほかのパネルに描く部品は `panel` の見た目を借ります。テーマのある見た目へのルールは、それを借りる部品を全部描きます。
+- floe の部品もこうして見た目を借ります。`compare`・`fields`・`findings` は table の、`stats`・`options`・`facts`・`links`・`decision` は cards の、`diff`・`terminal` は code の、`checklist`・`entries`・`faq`・`keys` は `rows` の、`steps` は `panel` とともに `numbered` の、ほかのパネルに描く部品は `panel` の見た目を借ります。テーマのある見た目へのルールは、それを借りる部品を全部描きます。
 - 見た目 `rows` は、リストの印と余白を外し、行ごとに上下に `--floe-row-pad`（floe の base で 0.4rem）の余白を付けます。rows の箱の `::after` も行として、上下に同じ余白が付きます（checklist の数）。借りる部品やテンプレートは、行の余白を左右だけ書きます。行が `rows` を借りない部品は、表のセルや facts のタイルのように変数を読み（`padding-block: var(--floe-row-pad)`）、ほかの行と高さをそろえます。
 
 ## テーマ
