@@ -10,17 +10,16 @@ import (
 // listsGeneral is a rule for every list, as a template's page.css or a theme's base.css may write one.
 const listsGeneral = "ul, ol, menu { display: flex; padding-left: 2rem; list-style-type: upper-roman; gap: 1rem; margin-block: 1rem; }\n"
 
-// listsOf tells, for each list shown that is a part's box or takes a look, what a rule for lists could change but
-// its margin, which reaches a part's box to place it.
+// listsOf tells, for each list that is a part's box or takes a look, shown or not (in a closed details, a tab not
+// picked), what floe sets of it as a list: its display, marks, padding and room between items.
 const listsOf = `(() => [...document.querySelectorAll(':is(ul, ol, menu):is([data-floe-part], [data-floe-look])')]
-  .filter((e) => e.getClientRects().length)
   .map((e) => { const c = getComputedStyle(e);
     return (e.dataset.floePart || e.dataset.floeLook) + ': ' + [c.display, c.listStyleType, c.paddingInlineStart, c.rowGap, c.columnGap].join(' '); })
   .join('\n'))()`
 
-// listsMarked tells each list shown that is a part's box or takes a look and still draws a list's marks.
+// listsMarked tells each list that is a part's box or takes a look, shown or not, and still draws a list's marks.
 const listsMarked = `(() => [...document.querySelectorAll(':is(ul, ol, menu):is([data-floe-part], [data-floe-look])')]
-  .filter((e) => e.getClientRects().length && getComputedStyle(e).listStyleType !== 'none')
+  .filter((e) => getComputedStyle(e).listStyleType !== 'none')
   .map((e) => (e.dataset.floePart || e.dataset.floeLook) + ': ' + getComputedStyle(e).listStyleType).join('\n'))()`
 
 // listsDecision is a decision whose text holds a list of Markdown, beside the options it set aside.
@@ -64,8 +63,8 @@ func listsKit(t *testing.T, name, mine string) map[string]string {
 }
 
 // TestUILists draws the lists that are parts' boxes or take looks. A template's page.css or a theme's base.css that
-// writes a rule for every list does not reach a part's box but its margin, nor an element that takes a look from the
-// theme; the template's own page.css does adjust an element that takes a look. Such lists draw no marks, the part's
+// writes a rule for every list does not change a part's box's display, marks, padding or room between items, nor the
+// theme's those of an element that takes a look; the template's own page.css does adjust an element that takes a look. Such lists draw no marks, the part's
 // own arrangement set over them, in every theme and template; a list of Markdown in a part keeps its marks.
 func TestUILists(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -111,7 +110,8 @@ func TestUILists(t *testing.T) { //nolint:paralleltest // the browser tests shar
 	}
 
 	// An element that takes a look: the theme's rule does not reach it, the template's own page.css does.
-	decided := `(() => { const c = getComputedStyle(document.querySelector('.decided')); return [c.display, c.listStyleType].join(' '); })()`
+	decided := `(() => { const c = getComputedStyle(document.querySelector('.decided'));
+  return [c.display, c.listStyleType, c.paddingInlineStart, c.rowGap].join(' '); })()`
 	designFile := s.write(t, "design.yaml", string(design))
 	s.floe(t, "publish", designFile, "--slug", "lists-design-plain", "--theme", "plain")
 	b.navigate("/a/lists-design-plain/?raw")
@@ -124,8 +124,8 @@ func TestUILists(t *testing.T) { //nolint:paralleltest // the browser tests shar
 	designMine := s.write(t, "design-mine.yaml", strings.Replace(string(design), "template: design\n", "template: lists-design\n", 1))
 	s.floe(t, "publish", designMine, "--slug", "lists-design-page", "--theme", "plain")
 	b.navigate("/a/lists-design-page/?raw")
-	if got := b.eval(decided); got != "flex upper-roman" {
-		t.Errorf("a look's list under its template's rule for lists: %s, want flex upper-roman, the template's", got)
+	if got := b.eval(decided); got != "flex upper-roman 32px 16px" {
+		t.Errorf("a look's list under its template's rule for lists: %s, want flex upper-roman 32px 16px, the template's", got)
 	}
 
 	// No marks on such lists, in every theme and template; the part's own arrangement over floe's.
