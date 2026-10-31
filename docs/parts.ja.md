@@ -142,7 +142,9 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 - ほかの名前のファイルは断ります。
 - 色は `palette.css` に 1 回だけ書き、ほかのファイルでは `var()`（`var(--accent)`）で使います。テンプレートが `:scope` に書く色とパレットが食い違わないためです。
 - 行の上下の余白 `--floe-row-pad` は、floe の base のまま替えません。どのテーマでも、どの部品の行も同じ高さになります。
-- 行の印（note の印、numbered の丸、timeline の点、links の箱）の大きさ（枠を含む）は `--floe-mark`、字との間は `--floe-mark-gap` で変えます。印の `top`・`left` や行の余白では動かしません。印は `content: none` で消し、そのとき印の列は幅を取りません。
+- 行の印（note の印、numbered の丸、timeline の点、links の箱）の大きさ（枠を含む）は `--floe-mark`、字との間は `--floe-mark-gap` で変えます。印の `top`・`left` や行の余白では動かしません。印は `content: none` で消し、そのとき印の列は幅を取りません。見た目 cards の番号の札（`.numbered > .card::before`）も同じ約束で、大きさは `--floe-mark`、消すのは `content: none`、字の札は `--floe-mark: auto` と地なしです。
+- カード（見た目 cards を借りる部品の `.card`）は見た目 panel も借ります。テーマの `panel.css` が描き、`cards.css` は違う所（地・枠・番号の札）を書きます。カードの余白は部品が決め、テーマは書きません。
+- テーマの飾りは場所を取りません。余白や枠を広げず、今ある余白の上に重ねて描きます（地、`--floe-inset`、重ねる `::before`）。部品の余白と争わないためです。
 - テーマも tone を `var(--tone)`・`var(--tone-soft)` で描き、tone ごとの規則を書きません。tone をテーマの色で塗るテーマ（brutal・notebook）は、`palette.css` に `--good-fill` などで 1 回だけ置き（tone の無いものは `--accent-fill`）、`var(--tone-fill)` で描きます。floe が `--<tone>-fill` から置き、テーマが名指さない tone では `--<tone>-soft` になります。テーマの部品ごとのファイルは、部品の `part.css` と同じ深さの層に後ろから入るので、同じ詳しさなら勝ち、詳しいセレクタなら詳しさで決まります。
 - 箱の中の静かな地（表の頭、棒の溝、progress の地、キー）は `var(--quiet)` です。箱をそれに近い地で塗るテーマは、その箱で `--quiet` を置き直します（default は、灰色の panel の上では白、その中の白い面の上では灰色に）。
 - 角の丸さはパレットのものです。テーマは `palette.css` に `--radius`・`--radius-small`・`--radius-pill` を 1 つの長さで書き、ほかのファイルは丸さを書きません。ほかの形の角（notebook の手書きなど）は、`palette.css` か `base.css` の `:scope` にテーマ自身の名前の変数で置き、テーマのファイルが読みます。3 つに 4 つの角や `/` を入れると、1 つの角として読む規則や `calc()` の中で無効になります。自分の部品も 3 つを読み、形（`0`・`50%`・`999px`）のほかに長さを書きません。

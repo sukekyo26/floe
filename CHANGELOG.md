@@ -255,6 +255,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the cards of retro, washi, notebook and swiss so that their
+  decorations take no room: retro's stripes are thinner (2px each) inside its
+  frame, washi's inner rule lies over the padding and its seal, smaller and
+  upright, on the corner of a numbered card alone, notebook's tape lies over a
+  sticky note's padding, and swiss leaves a card's padding to its part. A card's
+  number keeps the terms of a row's mark: sized by `--floe-mark`, hidden by
+  `content: none`, plain text by `--floe-mark: auto`.
 - Change progress's ground to the quiet ground, a little lighter (the line's
   colour 45% into the surface, as bars' track, not 60%), and a keycap's to it
   (from the page's ground, or aurora's surface): keys no longer melt into
@@ -315,6 +322,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix washi's facts, whose pills lay over the inner rule of their tile, and
+  swiss's first card picked in options, whose frame touched its text.
 - Fix pills unreadable on a filled face (a band, a note): blueprint's,
   editorial's, washi's and swiss's, which have no ground, drew in the tone's
   colour on it; they now take the face's text colour, the tone told by the
