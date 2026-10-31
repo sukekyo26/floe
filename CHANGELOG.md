@@ -248,7 +248,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   as `<span data-floe-tone="good" data-floe-part="cell">`). floe gives what is
   marked the tone's colours as `--tone` and `--tone-soft`, which a part, a
   theme or a template draws in with one rule, and a part's box accent's; a
-  value of no tone draws in the tone around it.
+  value of no tone is as if not written.
 - Change the room between parts that stand one after another to
   `--floe-room` (0.75rem) everywhere: in a stack (details' and tabs' panels),
   between the cards of stats, options, decision and html's cards (1rem), all

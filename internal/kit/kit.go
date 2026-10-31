@@ -108,15 +108,17 @@ func (k *Kit) BaseCSS() []byte {
 	return bytes.Clone(k.baseCSS)
 }
 
-// Tones returns the tones a part may take, tone.json's of floe's, in its order.
-func (k *Kit) Tones() []string {
+// Tones returns the tones a part may take, tone.json's of floe's, in its order, or floe's mistake when it has none.
+func (k *Kit) Tones() ([]string, error) {
 	for k.base != nil {
 		k = k.base
 	}
 	if s := k.shared[toneSchema]; s != nil && s.schema != nil {
-		return s.schema.Enum()
+		if tones := s.schema.Enum(); len(tones) != 0 {
+			return tones, nil
+		}
 	}
-	return nil
+	return nil, fmt.Errorf("kit: floe's %s.json lists no tones", toneSchema) //nolint:err113 // floe's own mistake
 }
 
 // toneSchema is the shared schema of the tones a part may take.

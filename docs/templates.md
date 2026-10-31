@@ -156,6 +156,7 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | --- | --- |
 | `--bg`, `--surface` | The page's ground, a part's face |
 | `--fg`, `--muted` | Text, faint text |
+| `--muted-soft` | A quiet ground, mixed from `--fg` and `--surface` by default |
 | `--line` | Lines and borders |
 | `--accent`, `--accent-soft` | The colour that stands out, and its pale ground |
 | `--good`, `--warn`, `--bad` and their `-soft` | Good, warning and bad, and their pale grounds |

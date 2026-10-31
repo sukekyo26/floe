@@ -25,10 +25,8 @@ const everyPart = "testdata/every-part"
 // floeParts are floe's parts, as kit embeds them.
 const floeParts = "../kit/floe/parts"
 
-// tones are the classes a part draws a tone in, and "" for one left out.
 // The sample of every part draws every part of floe's but a look (one of no schema), one of no style and the
-// diagram, each
-// part that takes a tone in every tone and in none (an element of the same kind as one drawn in a tone, without
+// diagram, each part that takes a tone in every tone and in none (an element of the same kind as one drawn in a tone, without
 // one), and every value of each enum of a part's schema (findings' level, steps' state) in its data, and every part
 // stack takes in details or tabs. No part draws a heading, as a part knows not the level it is put at.
 func TestEveryPartDrawsEveryPart(t *testing.T) {
@@ -104,7 +102,11 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tones := append(k.Tones(), "")          // tone.json's, and none
+	tones, err := k.Tones()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tones = append(tones, "")               // tone.json's, and none
 	written := map[string]map[string]bool{} // path=value of each part's data, by the part's name
 	readOccurrences(data, parts, written)
 	for _, tone := range tones[:len(tones)-1] {

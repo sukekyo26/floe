@@ -15,7 +15,7 @@ h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .counts a { color: inherit; text-decoration: none; }
 .counts li > a, .counts li:not(:has(a)) { display: grid; padding: 0.5rem 1rem; font-size: 0.85rem; }
 .counts b { font-family: var(--mono); font-size: 2rem; line-height: 1.1; }
-.counts li.hot { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-soft); }
+.counts li.hot { background: var(--tone-soft); color: var(--tone); border-color: var(--tone-soft); }
 main { display: grid; gap: 2rem; padding-block: 2rem; }
 main h2 { font-size: 1.15rem; }
 .asks { padding: 1.2rem 1.4rem; border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
@@ -40,8 +40,6 @@ main h2 { font-size: 1.15rem; }
 .ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }
 .doing li { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.6rem; align-items: baseline; }
 .doing .what, .doing .where { grid-column: 1 / -1; }
-.state { justify-self: start; font-size: 0.78rem; font-weight: 600; padding: 0 0.6rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
-.state.waiting { background: var(--warn-soft); color: var(--warn); }
-.state.blocked { background: var(--bad-soft); color: var(--bad); }
+.state { justify-self: start; font-size: 0.78rem; font-weight: 600; padding: 0 0.6rem; border-radius: 999px; background: var(--tone-soft); color: var(--tone); }
 .notes { display: grid; gap: 0.6rem; }
 main > section { display: grid; gap: var(--floe-room); }

@@ -90,6 +90,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
 :scope {
   --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
   --accent: #1d6670; --accent-soft: #dcebec;
   --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
   --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -113,10 +114,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.palette {
 :where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
-:where([data-floe-tone=accent]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
-:where([data-floe-tone=good]) { --tone: var(--good); --tone-soft: var(--good-soft); }
-:where([data-floe-tone=warn]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
-:where([data-floe-tone=bad]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); }
 }
 </style>
 <style>
@@ -168,8 +169,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 .dg .frame.accent rect { stroke: var(--accent); }
 .dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
 .dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
-.dg .edge, .dg .line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
-.dg .edge { stroke: var(--tone, var(--muted)); }
+.dg .edge { fill: none; stroke: var(--tone, var(--muted)); stroke-width: 1.5; }
+.dg .line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
 .dg .edge.dashed { stroke-dasharray: 5 4; }
 .dg .edge.bold { stroke-width: 3; }
 /* An edge's ends take its colour (context-stroke). Without it, --muted stays */

@@ -37,7 +37,8 @@ const toneExtra = `  - heading: Tones held
 const measureTones = `((tones) => {
   const out = [], root = getComputedStyle(document.documentElement), v = (s, n) => s.getPropertyValue(n).trim();
   for (const t of tones) for (const n of ['--' + t, '--' + t + '-soft']) if (!v(root, n)) out.push('palette: no ' + n);
-  const props = ['color', 'backgroundColor', 'borderTopColor', 'borderLeftColor', 'fill', 'stroke', 'boxShadow'];
+  const props = ['color', 'backgroundColor', 'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
+    'outlineColor', 'textDecorationColor', 'fill', 'stroke', 'boxShadow'];
   const part = (e) => { const p = e.closest('[data-floe-part]'); return p ? p.dataset.floePart : ''; };
   const name = (e) => (part(e) || e.tagName.toLowerCase()) + '[' + e.dataset.floeTone + ']';
   for (const e of document.querySelectorAll('[data-floe-tone]')) {
@@ -84,6 +85,10 @@ func TestUITone(t *testing.T) { //nolint:paralleltest // the browser tests share
 		t.Fatal(err)
 	}
 	_, _, themes, _ := k.Names()
+	tones, err := k.Tones()
+	if err != nil {
+		t.Fatal(err)
+	}
 	everyPart, err := os.ReadFile("../corpus/testdata/every-part/every-part.yaml")
 	if err != nil {
 		t.Fatal(err)
@@ -96,7 +101,7 @@ func TestUITone(t *testing.T) { //nolint:paralleltest // the browser tests share
 	file := s.write(t, "every.yaml", string(everyPart)+toneExtra)
 	var amiss []string
 	measure := func(what string) {
-		got := b.eval(measureTones + "(" + mustJSON(k.Tones()) + ")")
+		got := b.eval(measureTones + "(" + mustJSON(tones) + ")")
 		for _, l := range strings.Split(got, "\n") {
 			if l != "" {
 				amiss = append(amiss, what+": "+l)

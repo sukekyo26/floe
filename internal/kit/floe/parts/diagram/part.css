@@ -34,8 +34,8 @@
 .dg .frame.accent rect { stroke: var(--accent); }
 .dg .frame text { fill: var(--muted); font-size: 12px; font-weight: 700; }
 .dg .frame.grouped text { fill: var(--fg); font-size: 13px; }
-.dg .edge, .dg .line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
-.dg .edge { stroke: var(--tone, var(--muted)); }
+.dg .edge { fill: none; stroke: var(--tone, var(--muted)); stroke-width: 1.5; }
+.dg .line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
 .dg .edge.dashed { stroke-dasharray: 5 4; }
 .dg .edge.bold { stroke-width: 3; }
 /* An edge's ends take its colour (context-stroke). Without it, --muted stays */

@@ -156,6 +156,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | --- | --- |
 | `--bg`・`--surface` | ページの地、部品の面 |
 | `--fg`・`--muted` | 文字、薄い文字 |
+| `--muted-soft` | 静かな地。既定は `--fg` と `--surface` を混ぜた色 |
 | `--line` | 線と枠 |
 | `--accent`・`--accent-soft` | 目立つ色と、その淡い地 |
 | `--good`・`--warn`・`--bad` と `-soft` | 良い・注意・悪いと、その淡い地 |

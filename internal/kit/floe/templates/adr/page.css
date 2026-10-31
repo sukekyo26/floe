@@ -9,11 +9,8 @@ header { display: grid; gap: 0.4rem; justify-items: start; border-bottom: 3px do
 h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
 /* LIMIT: the contrast test measures the badge of the example's state alone; the others were measured once, in every
    theme, when they were made */
-.status { font-weight: 800; letter-spacing: 0.15em; padding: 0.05rem 0.8rem; border: 2px solid currentColor; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
-.status.accepted { background: var(--good-soft); color: var(--good); }
-.status.proposed { background: var(--warn-soft); color: var(--warn); }
-.status.rejected { background: var(--bad-soft); color: var(--bad); }
-.superseded-by { --face: var(--warn-soft); --on-face: var(--warn); background: var(--face); color: var(--on-face); padding: 0.3rem 0.8rem; border-radius: 6px; }
+.status { font-weight: 800; letter-spacing: 0.15em; padding: 0.05rem 0.8rem; border: 2px solid currentColor; border-radius: 6px; background: var(--tone-soft); color: var(--tone); }
+.superseded-by { --face: var(--tone-soft); --on-face: var(--tone); background: var(--face); color: var(--on-face); padding: 0.3rem 0.8rem; border-radius: 6px; }
 .deciders { color: var(--muted); font-size: 0.9rem; }
 section { display: grid; gap: var(--floe-room); }
 h2 { font-size: 1.1rem; }

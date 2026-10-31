@@ -74,7 +74,11 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 	if theme != kit.DefaultTheme {
 		sheet("floe.palette", themed.Palette())
 	}
-	sheet("floe.palette", Tones(k.Tones()))
+	tones, err := k.Tones()
+	if err != nil {
+		return nil, err //nolint:wrapcheck // floe's own, which its tests check
+	}
+	sheet("floe.palette", Tones(tones))
 	sheet("floe.theme", pageScoped(themed.Base()))
 	names := inOrder(k, slices.Concat(n.boxes, n.looks))
 	// Each style goes to the boxes that have its look, and to the other elements that take it, a layer under, each
@@ -116,12 +120,13 @@ const boxList = "display: grid; list-style: none; padding: 0; gap: 0;"
 // and --tone-soft, from --<tone> and --<tone>-soft, and the root (:scope) and each part's box accent's, so that a part
 // takes no tone from around it and a rule outside a tone reads accent. A part's box that takes a tone holds the two as
 // specific: the tone's rule, written after, wins. floe's own and fixed, it goes unchecked by css.Check.
-// LIMIT: a data-floe-tone of no tone matches none, and draws in the tone around it.
+// LIMIT: a data-floe-tone of no tone matches none, as if not written: a part's box draws in accent's colours, another
+// element in the tone around it.
 func Tones(tones []string) []byte {
 	var b strings.Builder
 	b.WriteString(":where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); }\n")
 	for _, t := range tones {
-		fmt.Fprintf(&b, ":where([data-floe-tone=%s]) { --tone: var(--%s); --tone-soft: var(--%s-soft); }\n", t, t, t)
+		fmt.Fprintf(&b, ":where([data-floe-tone=%q]) { --tone: var(--%s); --tone-soft: var(--%s-soft); }\n", t, t, t)
 	}
 	return []byte(b.String())
 }
