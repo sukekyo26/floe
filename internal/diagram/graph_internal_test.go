@@ -1276,7 +1276,7 @@ func TestGraphLabelRoom(t *testing.T) {
 		}
 		mine, _ := d.rect(0)
 		theirs, _ := d.rect(1)
-		if mine.overlaps(theirs) || !beside(mine, segsOf(d.routes[0])[0]) {
+		if mine.overlaps(theirs) || !beside(mine, segAt(d.routes[0], 0)) {
 			t.Errorf("y %v: label at %v, the other at %v, the run %v", y, mine, theirs, d.routes[0])
 		}
 	}
@@ -1286,7 +1286,7 @@ func TestGraphLabelRoom(t *testing.T) {
 	way := &drawing{right: false, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{
 		0: {{24, 0}, {24, 300}}, 1: {{26, 0}, {26, 300}},
 	}, ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}}
-	r := spotRect(segsOf(way.routes[0])[0], spot{seg: 0, side: 1, at: 100, w: 30})
+	r := spotRect(segAt(way.routes[0], 0), spot{seg: 0, side: 1, at: 100, w: 30})
 	at, need := way.reach(r, 24, 1)
 	if at <= 24 || at >= 26 || need <= 0 {
 		t.Fatalf("reach: cut at %v, %v on", at, need)

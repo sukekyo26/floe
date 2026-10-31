@@ -269,7 +269,7 @@ type spot struct {
 // left of a run down).
 func (d *drawing) rect(k int) (rect, bool) {
 	sp := d.spots[k]
-	return spotRect(segsOf(d.routes[k])[sp.seg], sp), sp.side < 0 && isDown(segsOf(d.routes[k])[sp.seg])
+	return spotRect(segAt(d.routes[k], sp.seg), sp), sp.side < 0 && isDown(segAt(d.routes[k], sp.seg))
 }
 
 // spotRect is where a label at sp stands beside run s.
@@ -309,7 +309,8 @@ func isDown(s seg) bool { return s[0] == s[2] }
 // middle of a box's side may stand in the way of one, told at it.
 func (d *drawing) place(k int, w float64) bool {
 	things, runs := d.held(-1), append(d.runs(), d.hands()...)
-	for i, s := range segsOf(d.routes[k]) {
+	for i := range len(d.routes[k]) - 1 {
+		s := segAt(d.routes[k], i)
 		long := w
 		if isDown(s) {
 			long = labelH
@@ -327,7 +328,7 @@ func (d *drawing) place(k int, w float64) bool {
 	for i := range len(d.routes[k]) - 1 {
 		if sp, ok := d.room(k, i, w); ok {
 			d.spots[k] = sp
-			return free(heldRect(segsOf(d.routes[k])[i], sp), d.held(k), d.runs())
+			return free(heldRect(segAt(d.routes[k], i), sp), d.held(k), d.runs())
 		}
 	}
 	return false
@@ -360,7 +361,7 @@ func starts(s seg, long float64) []float64 {
 // things meet: a straight run stays straight, and a run across a cut grows longer. With the first cut past the run's
 // other end, it makes none and reports false.
 func (d *drawing) room(k, i int, w float64) (spot, bool) {
-	s := segsOf(d.routes[k])[i]
+	s := segAt(d.routes[k], i)
 	along := runAxis(s)
 	size := [2]float64{w, labelH} // across and along a run down
 	if along == 0 {
@@ -388,7 +389,7 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 	stays, moves := d.crossed(along, cut)
 	d.stretch(along, cut, stays+size[1]+4+moves)
 	sp := spot{seg: i, side: 1, at: cut + stays + 2, w: w}
-	s = segsOf(d.routes[k])[i]
+	s = segAt(d.routes[k], i)
 	if at, need := d.reach(spotRect(s, sp), s[1-along], along); need > 0 {
 		d.stretch(1-along, at, onGrid(need, column, math.Ceil))
 	}
@@ -400,7 +401,7 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 // short of it (it moves) lies in the band, before (stays) or after (moves) the room made there.
 func (d *drawing) crossed(along int, cut float64) (stays, moves float64) {
 	for k, sp := range d.spots {
-		s := segsOf(d.routes[k])[sp.seg]
+		s := segAt(d.routes[k], sp.seg)
 		r := heldRect(s, sp)
 		lo, hi := r.lo(along), r.lo(along)+r.size(along)
 		if runAxis(s) == along && sp.at > cut || runAxis(s) != along && s[along] > cut {
@@ -467,7 +468,7 @@ func (d *drawing) stretch(axis int, at, by float64) {
 		}
 	}
 	for k, sp := range d.spots {
-		if s := segsOf(d.routes[k])[sp.seg]; runAxis(s) == axis && sp.at > at {
+		if s := segAt(d.routes[k], sp.seg); runAxis(s) == axis && sp.at > at {
 			sp.at += by
 			d.spots[k] = sp
 		}
@@ -503,7 +504,7 @@ func (d *drawing) held(but int) []rect {
 	out := slices.Collect(maps.Values(d.boxes))
 	for k, sp := range d.spots {
 		if k != but {
-			out = append(out, heldRect(segsOf(d.routes[k])[sp.seg], sp))
+			out = append(out, heldRect(segAt(d.routes[k], sp.seg), sp))
 		}
 	}
 	return out
@@ -573,13 +574,9 @@ func (a *rect) set(axis int, lo, size float64) {
 	}
 }
 
-// segsOf is the runs between corners pts.
-func segsOf(pts [][2]float64) []seg {
-	segs := make([]seg, 0, len(pts)-1)
-	for i := 1; i < len(pts); i++ {
-		segs = append(segs, seg{pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1]})
-	}
-	return segs
+// segAt is the run from corner i of pts to the next. A graph's edge has no run of no length (corners leaves none).
+func segAt(pts [][2]float64, i int) seg {
+	return seg{pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1]}
 }
 
 // route is the corners of edge k of group gr as drawn, at the graph's place, its ends on its boxes' outlines,

@@ -214,12 +214,7 @@ func (l *layout) addEdge(e *edge, at string) {
 		return
 	}
 	pts := route(from, to, e.Via, e.Straight)
-	segs := make([]seg, 0, len(pts)-1)
-	for i := 1; i < len(pts); i++ {
-		if pts[i] != pts[i-1] {
-			segs = append(segs, seg{pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1]})
-		}
-	}
+	segs := segsOf(pts)
 	who := e.who
 	if who == "" {
 		who = "edge " + fromWho + "→" + toWho
@@ -266,6 +261,17 @@ func (l *layout) addEdge(e *edge, at string) {
 		r.graph = e.graph
 		l.strokes = append(l.strokes, r)
 	}
+}
+
+// segsOf is the runs between corners pts, those of no length left out.
+func segsOf(pts [][2]float64) []seg {
+	segs := make([]seg, 0, len(pts)-1)
+	for i := 1; i < len(pts); i++ {
+		if pts[i] != pts[i-1] {
+			segs = append(segs, seg{pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1]})
+		}
+	}
+	return segs
 }
 
 // middle is the middle of the longest run, where an edge's label goes unless it says where.
