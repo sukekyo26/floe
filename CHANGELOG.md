@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the diagram part `graph`: write boxes and the edges joining them by
+  name, and floe lays them out in ranks (`direction: down` or `right`), orders
+  each rank to cross fewer edges and draws each edge at right angles between
+  points of its boxes' sides of its own. An edge's `label` stands beside a
+  straight run of it, where floe makes room if there is none without bending
+  the edge; an edge from a box to itself is a loop out of the side the
+  graph's edges do not use. A graph holds 200 boxes and 400 edges. The
+  diagram examples `flow` and `state` are drawn with it.
 - Add `--quiet` to the palette, the quiet ground within a box: a table's head,
   a bar's track, progress's ground and a keycap read it.
 - Add `--radius`, `--radius-small` and `--radius-pill` to the palette, one
