@@ -105,16 +105,27 @@ func text(src []byte, value []token) string {
 	return string(src[value[0].at : last.at+len(last.data)])
 }
 
-// lengthless is whether a corner's value takes every length from a variable: var() of one name, calc(), their
-// operators and the corner 0, with no length nor fallback of its own.
+// lengthless is whether a corner's value takes every length from a variable: var() of one name, calc(), min() of
+// such values (a comma right in min() alone), their operators and the corner 0, with no length nor fallback of its own.
 func lengthless(value []token) bool {
+	var open []string
 	for _, t := range value {
 		switch t.tt {
 		case css.FunctionToken:
-			if f := strings.ToLower(string(t.data)); f != "var(" && f != "calc(" {
+			f := strings.ToLower(string(t.data))
+			if f != "var(" && f != "calc(" && f != "min(" {
 				return false
 			}
-		case css.CustomPropertyNameToken, css.RightParenthesisToken, css.DelimToken:
+			open = append(open, f)
+		case css.RightParenthesisToken:
+			if len(open) > 0 {
+				open = open[:len(open)-1]
+			}
+		case css.CommaToken:
+			if len(open) == 0 || open[len(open)-1] != "min(" {
+				return false
+			}
+		case css.CustomPropertyNameToken, css.DelimToken:
 		case css.NumberToken:
 			if string(t.data) != "0" {
 				return false

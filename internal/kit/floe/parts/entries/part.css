@@ -13,4 +13,4 @@
 :scope .tags code { font-size: 0.86rem; }
 :scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; line-height: 1.65; }
 /* A long pill wraps rather than overflow the panel */
-:scope .tags [data-floe-part] { white-space: normal; }
+:scope .tags { --floe-pill-wrap: normal; }
