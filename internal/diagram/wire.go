@@ -238,6 +238,8 @@ func (gr *group) settle(r int) {
 
 // freeLimit is how far from where it may stand a point looks for a free column: further, it would stand far from
 // its edge, lengthening the edge and pushing what stands after it.
+// LIMIT: a point with no free column so near is entered at x ≡ 6, as before: most where a group's marks narrow
+// where it may stand to columns all under boxes above or taken by exits. Look further there if such turns show.
 const freeLimit = 4 * column
 
 // freeColumn is the column at x ≡ 0 within lo and hi nearest to t (left of two as near), freeLimit from it at most,
