@@ -1,7 +1,7 @@
 /* The stripes go under the page's headings (the template's and those of Markdown, wherever it stands), not in an
-   aside, as design's contents, nor on a band (band.css); they are a box of their own under the heading, not its
-   ground, so that its text stays on the page's */
-h2:not(aside h2)::after {
+   aside, as design's contents, nor in a band, where the orange would sink into the accent, a part's in it too; they are
+   a box of their own under the heading, not its ground, so that its text stays on the page's */
+h2:not(aside h2, [data-floe-look~=band] h2)::after {
   content: ""; display: block; width: 4.5rem; height: 9px; margin-top: 0.7rem; background: var(--retro-stripes);
 }
 blockquote > * { --face: initial; --on-face: initial; }

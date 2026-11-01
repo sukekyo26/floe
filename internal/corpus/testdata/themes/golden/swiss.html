@@ -343,6 +343,8 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 .card {
   padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
+/* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
+.card { --face: initial; --on-face: initial; }
 /* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
    sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
    LIMIT: whether a decoration keeps off the text is seen, not measured */

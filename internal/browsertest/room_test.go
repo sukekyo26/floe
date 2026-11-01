@@ -24,6 +24,7 @@ const measurePartRoom = `(() => {
   probe.style.width = 'var(--floe-room)';
   const room = probe.getBoundingClientRect().width;
   probe.remove();
+  // A box of no height is no block: an empty text's box left in the grid would read as two rooms of 12px, not 24.
   const block = (e) => { const s = getComputedStyle(e); return e.getClientRects().length && e.getBoundingClientRect().height > 0 && !s.display.startsWith('inline') &&
     s.display !== 'contents' && !['absolute', 'fixed'].includes(s.position); };
   const box = (e) => e.matches('[data-floe-part]:not([data-floe-part=cell]), .card') && block(e);

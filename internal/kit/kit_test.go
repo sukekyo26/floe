@@ -110,7 +110,7 @@ func TestEntryFiles(t *testing.T) {
 		{k.Parts, "panel", "part.yaml, part.css"},
 		{k.Parts, "tone", "tone.json"},
 		{k.Templates, "design", "schema.json, computed.yaml, example.yaml, page.html, page.css, words.yaml"},
-		{k.Themes, "retro", "palette.css, base.css, markdown.css, band.css, cards.css, cell.css, note.css, panel.css, table.css"},
+		{k.Themes, "retro", "palette.css, base.css, markdown.css, cards.css, cell.css, note.css, panel.css, table.css"},
 		{k.Themes, "ink", "palette.css, markdown.css, cards.css, cell.css, code.css, note.css, panel.css, table.css"},
 	} {
 		if got := names(tt.entries(), tt.name); got != tt.want {

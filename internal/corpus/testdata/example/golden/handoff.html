@@ -144,8 +144,9 @@ blockquote > * + * { margin-top: 0.6rem; }
      corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
      LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and TestRadius follows the
      corner to --default-inner, not to --default-pad: a pad grown past the radius squares them unseen */
-  /* A quote's ground: the panel's on the page, the surface in a panel (panel.css sets it there) */
-  --default-quote: var(--default-panel);
+  /* A quote's ground, and the quiet ground within it, the other way round: the panel's on the page and on a face of the
+     surface, the surface in a panel; each box that turns --quiet turns them with it */
+  --default-quote: var(--default-panel); --default-quote-quiet: var(--surface);
   --default-pad: 6px; --default-inner: calc(var(--radius) - var(--default-pad));
 }
 }
@@ -154,8 +155,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 <style>
 @layer floe.theme {
 @scope (:root) {
-blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); --quiet: var(--surface); color: var(--fg); }
+blockquote > * { --face: initial; --on-face: initial; --quiet: var(--default-quote-quiet); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); color: var(--fg); }
 blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
@@ -199,6 +200,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 .card {
   padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
+/* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
+.card { --face: initial; --on-face: initial; }
 /* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
    sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
    LIMIT: whether a decoration keeps off the text is seen, not measured */
@@ -282,7 +285,9 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
-.card { background: var(--surface); --quiet: var(--default-panel); border-radius: calc(var(--radius) - var(--floe-room)); }
+.card {
+  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
+  --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; --floe-mark: auto; background: none;
   font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
@@ -294,7 +299,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
 }
 </style>
@@ -302,7 +307,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
 }
 </style>

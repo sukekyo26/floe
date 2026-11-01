@@ -16,12 +16,13 @@ const bandPillsHTML = `<span data-floe-part="cell">plain</span> <span data-floe-
 // itself holding a link and code, a table and code of floe's and Markdown, each when the data file has it.
 var bandKit = map[string]string{
 	"templates/mine/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +
-		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{if .Data.note}}<div data-floe-part=\"note\"><p>A borrowed note, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>{{end}}{{.Data.note}}{{.Data.text}}{{.Data.words}}{{.Data.table}}{{.Data.code}}</header>\n</body></html>\n",
+		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{if .Data.note}}<div data-floe-part=\"note\"><p>A borrowed note, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>{{end}}{{.Data.note}}{{.Data.text}}{{.Data.words}}{{.Data.details}}{{.Data.options}}{{.Data.table}}{{.Data.code}}</header>\n</body></html>\n",
 	"templates/mine/page.css": "header { display: grid; gap: 1rem; padding: 2rem; }\n",
 	"templates/mine/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"note": {"$ref": "floe:///parts/note.json"}, "text": {"type": "string", "format": "markdown"},
 "table": {"$ref": "floe:///parts/table.json"}, "code": {"$ref": "floe:///parts/code.json"},
-"words": {"$ref": "floe:///parts/text.json"}}}`,
+"words": {"$ref": "floe:///parts/text.json"}, "details": {"$ref": "floe:///parts/details.json"},
+"options": {"$ref": "floe:///parts/options.json"}}}`,
 	"templates/mine/example.yaml": "lang: en\ntemplate: mine\n",
 }
 
@@ -31,9 +32,13 @@ var bandText = "lang: en\ntemplate: mine\ntitle: Band\ntext: |\n  A [link](https
 	"  > A quote with [a link](https://example.com/) and `code`.\n\n  ```\n  fenced" + strings.Repeat(" wide", 60) + "\n  ```\n" +
 	"words: \"## Said\\n\\nA text with [a link](https://example.com/) and `code`.\"\n"
 
+// bandHeld is parts in a band that hold Markdown: details holding a heading, and a card of options.
+var bandHeld = "details: { title: Held, open: true, parts: [{ text: \"## Held\\n\\nIn details.\" }] }\n" +
+	"options: [{ title: Card, text: \"A card's text.\" }]\n"
+
 // bandParts is parts in a band: a note with a link and a line's code, a table with a link in its heading and as wide
 // as to scroll, and code as wide as to scroll.
-var bandParts = bandText +
+var bandParts = bandText + bandHeld +
 	"note: { text: \"A note with [a link](https://example.com/) and `code`.\" }\n" +
 	"table:\n  columns: [{ title: \"Name [t](https://example.com/)\" }" + strings.Repeat(", { title: Wide }", 16) + "]\n" +
 	"  rows: [[a" + strings.Repeat(", b", 16) + "]]\n" +
@@ -61,6 +66,11 @@ const measureBand = `(() => {` + colours + `
     if (getComputedStyle(said).color !== band) out.push('a text: colour ' + getComputedStyle(said).color + ', want the band\'s ' + band);
     if (getComputedStyle(text.querySelector('h2'), '::after').content !== 'none') out.push('a text\'s heading: a mark after it');
   }
+  // A heading held in a part in the band takes no mark either; a card draws its text on its own ground.
+  const held = document.querySelector('header [data-floe-part="details"] h2');
+  if (held && getComputedStyle(held, '::after').content !== 'none') out.push('a heading in details: a mark after it');
+  const card = document.querySelector('header .card p');
+  if (card && getComputedStyle(card).color === getComputedStyle(document.querySelector('header')).color) out.push('a card: the band\'s text colour');
   return out.join('\n');
 })()`
 
@@ -78,7 +88,7 @@ func TestUIBand(t *testing.T) { //nolint:paralleltest // the browser tests share
 		t.Fatal(err)
 	}
 	_, _, themes, _ := k.Names()
-	pages := map[string]string{"parts": bandParts, "parts-aurora": bandParts + "theme: aurora\n"}
+	pages := map[string]string{"parts": bandParts, "parts-aurora": bandParts + "theme: aurora\n", "held-retro": bandText + bandHeld + "theme: retro\n"}
 	for _, theme := range themes {
 		pages["text-"+theme] = bandText + "theme: " + theme + "\n"
 	}
