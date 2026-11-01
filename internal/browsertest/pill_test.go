@@ -45,9 +45,9 @@ lang: en
 title: Held
 wrapped:
   table:
-    columns: [{ title: what }, { title: state, pills: { in progress: warn } }]
+    columns: [{ title: what }, { title: state, pills: { waiting for a review: warn } }]
     rows:
-      - [a long line of words about what is done and what is left to do before the move, in progress]
+      - [a long line of words about what is done and what is left to do before the move of every page of the wiki to its new host and after it, waiting for a review]
 `
 
 // pillDoing is handoff's work in progress, a long name beside a state in Japanese, in the grid's column of 1fr.
