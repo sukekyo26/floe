@@ -1,6 +1,7 @@
 package diagram
 
 import (
+	"cmp"
 	"fmt"
 	"math"
 	"slices"
@@ -213,12 +214,7 @@ func (l *layout) addEdge(e *edge, at string) {
 		return
 	}
 	pts := route(from, to, e.Via, e.Straight)
-	segs := make([]seg, 0, len(pts)-1)
-	for i := 1; i < len(pts); i++ {
-		if pts[i] != pts[i-1] {
-			segs = append(segs, seg{pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1]})
-		}
-	}
+	segs := segsOf(pts)
 	who := e.who
 	if who == "" {
 		who = "edge " + fromWho + "→" + toWho
@@ -243,18 +239,38 @@ func (l *layout) addEdge(e *edge, at string) {
 	}
 	el := elem{Kind: "path", D: pathData(pts), Class: cls, Tone: e.Tone, Start: l.marker(start), End: l.marker(end)}
 	l.edgeEls = append(l.edgeEls, el)
-	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing}
+	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing, graph: e.graph}
 	if e.Label != nil {
 		x, y := middle(segs)
 		if e.At != nil {
 			x, y = e.At[0], e.At[1]
 		}
-		p.own = l.label(at, e.Label, x, y, "middle", false, false)
+		// A graph's label stands beside its own line, not on it: nothing to hide under it, and its own line is
+		// checked against it like any other.
+		inGraph := e.graph != ""
+		i := l.label(at, e.Label, x, y, cmp.Or(e.anchor, "middle"), inGraph, false)
+		l.labels[i].graph = e.graph
+		if !inGraph {
+			p.own = i
+		}
 	}
 	l.paths = append(l.paths, p)
 	if len(segs) > 0 {
-		l.strokes = append(l.strokes, span(segs, who, at))
+		r := span(segs, who, at)
+		r.graph = e.graph
+		l.strokes = append(l.strokes, r)
 	}
+}
+
+// segsOf is the runs between corners pts, those of no length left out.
+func segsOf(pts [][2]float64) []seg {
+	segs := make([]seg, 0, len(pts)-1)
+	for i := 1; i < len(pts); i++ {
+		if pts[i] != pts[i-1] {
+			segs = append(segs, seg{pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1]})
+		}
+	}
+	return segs
 }
 
 // middle is the middle of the longest run, where an edge's label goes unless it says where.

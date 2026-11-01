@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the diagram part `graph`: write boxes and the edges joining them by
+  name, and floe lays them out in ranks (`direction: down` or `right`), orders
+  each rank to cross fewer edges and draws each edge at right angles between
+  points of its boxes' sides of its own. An edge's `label` stands beside a
+  straight run of it, where floe makes room if there is none without bending
+  the edge; an edge from a box to itself is a loop out of the side the
+  graph's edges do not use. A graph holds 200 boxes and 400 edges, and the
+  edges of all the graphs of a diagram may pass 4000 ranks between their
+  ends, all told. The diagram examples `flow` and `state` are drawn with it.
 - Add `marks:` to a part's or look's `part.yaml`, which of its elements are
   rows with a mark at their left: `box`, `items` (each `li`) or `joined`
   (with a line to the next). floe lays the rows out in one layer,

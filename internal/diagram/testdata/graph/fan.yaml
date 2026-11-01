@@ -1,0 +1,23 @@
+title: { en: A box of eight edges, ja: 線が 8 本の箱 }
+parts:
+  - graph:
+      x: 20
+      y: 20
+      direction: right
+      nodes:
+        - box: { name: a, rows: [{ en: Read, ja: 読む }] }
+        - box: { name: b, rows: [{ en: Parse, ja: 解く }] }
+        - box: { name: c, shape: state, rows: [{ en: Check, ja: 確かめる }] }
+        - box: { name: hub, shape: hex, rows: [{ en: Draw the page, ja: ページを描く }] }
+        - box: { name: x, rows: [{ en: Save, ja: データファイルと画像の写しを保存する }] }
+        - box: { name: y, shape: pill, rows: [{ en: Show, ja: 見せる }] }
+        - box: { name: z, rows: [{ en: Log, ja: 記録する }] }
+      edges:
+        - { from: a, to: hub }
+        - { from: b, to: hub }
+        - { from: c, to: hub }
+        - { from: hub, to: x }
+        - { from: hub, to: y }
+        - { from: hub, to: z }
+        - { from: x, to: a, dashed: true }
+        - { from: z, to: c, dashed: true }

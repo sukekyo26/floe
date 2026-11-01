@@ -1,0 +1,25 @@
+# Labels on a graph's edges, down: one back up a cycle, one wider in Japanese, and three out of one box, the later
+# pushed and stepping under their text.
+title: { en: Labels, ja: ラベル }
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: write, rows: [{ en: Write the data, ja: データを書く }] }
+        - box: { name: check, shape: hex, rows: [{ en: "Checks pass?", ja: 検査を通るか }] }
+        - box: { name: show, tone: good, rows: [{ en: Show the page, ja: ページを表示 }] }
+        - box: { name: fix, tone: bad, rows: [{ en: Fix the mistakes, ja: 誤りを直す }] }
+        - box: { name: pick, shape: hex, rows: [{ en: "Which theme?", ja: どのテーマか }] }
+        - box: { name: a, rows: [A] }
+        - box: { name: b, rows: [B] }
+        - box: { name: c, rows: [C] }
+      edges:
+        - { from: write, to: check }
+        - { from: check, to: show, label: { en: "yes", ja: データファイルと画像の写しを保存する } }
+        - { from: check, to: fix, label: { en: "no", ja: いいえ } }
+        - { from: fix, to: write, label: { en: again, ja: もう一度 } }
+        - { from: show, to: pick }
+        - { from: pick, to: a, label: { en: first, ja: 1 つ目 } }
+        - { from: pick, to: b, label: { en: second, ja: 2 つ目 } }
+        - { from: pick, to: c, label: { en: third, ja: 3 つ目 } }
