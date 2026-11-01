@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the column a template centres its page in, on an element of the class `floe-column`: `--column-width` wide (the
+  palette's `--page-width` unless the template sets it) within `--page-pad` each side, under the template's
+  `page.css`. A page of one column sets `:scope { --column-width: var(--text-width); }`. floe's templates take it in
+  place of writing the column themselves.
 - Add a theme's `markdown.css`, the look of Markdown (quotes, headings)
   wherever it stands: on the page, in a text and in what the parts hold.
   floe's themes draw their quotes, and retro its stripes under headings, from
@@ -287,6 +291,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change every page to start with no margin on the body, set by floe under the template's `page.css`: a template of
+  your own that writes none loses the browser's 8px, and a margin your theme's `base.css` gives the body no longer
+  reaches it (write it in the template's `page.css`). floe's templates set no font size, so their text takes the size
+  its reader's browser sets, as their spacing and headings already did (at the browser's default of 16px nothing
+  changes). A theme of your own whose `--mono` is `monospace` alone draws a line's code at about 11px rather than
+  13.76px, as a browser sizes text in `monospace` alone from 13px: name a face before `monospace`.
 - Change a table's head, the tab picked and code's heading to be painted by their parts from variables a theme sets,
   in place of rules for their selectors, the state picked and print: `--table-head-bg`, `--table-head-fg`,
   `--tabs-picked-bg`, `--tabs-picked-fg`, `--tabs-picked-ring`, `--code-head-bg`, `--code-head-fg`, `--code-head-add`

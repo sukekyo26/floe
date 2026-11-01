@@ -100,13 +100,12 @@ It sees:
 - A box that scrolls sideways (`overflow-x: auto`) writes `contain: inline-size` for its rule under `@media screen`, so that its content's width widens no grid or flex item around it, nor the page; keep it out of a place whose width its content sets (`justify-self: start`, an inline-block, a table's cell of auto width, an item of a flex row on `flex-basis: auto`), where it shrinks to its border and padding ([parts.md](parts.md#the-css-layers-and-scope)).
 - A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part, as a part writes no margin of its own on its box (checklist and links are `ul`, steps and timeline `ol`, facts, keys, entries and stats `dl`, code, image, diff and terminal `figure`, tabs `form`). It does not change a list's display, marks, padding or room between items, which floe sets for a list that is a part's box ([parts.md](parts.md#the-css-layers-and-scope)); a list that takes a look takes those from the template's `page.css` too, so that the template adjusts it.
 
-`report`'s `page.css`, for one, centres its page in the column every floe template uses:
+- floe starts every page with no margin on the body, and centres the page in a column on an element of the class `floe-column` (`<main class="floe-column">`): `--column-width` wide, the palette's `--page-width` unless the template sets it, within `--page-pad` each side. A page of one column sets `:scope { --column-width: var(--text-width); }` in its `page.css`; a theme sets no `--column-width`. Both stop at the parts' boxes, as `page.css` does, and `page.css` wins over them whatever its selectors. floe sets no font size, so the page's text takes the size its reader's browser sets.
+
+`report`'s `page.css`, for one, lays out its column (`<main class="floe-column">`):
 
 ```css
-main {
-  max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad);
-  display: grid; gap: 2.5rem;
-}
+main { display: grid; gap: 2.5rem; }
 section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 .lead { color: var(--muted); font-size: 1.05rem; }
 ```
@@ -172,13 +171,13 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--shadow` | A colour for shadows; a box casts one only when its theme sets `--floe-shadow-color` on it ([parts.md](parts.md#themes)) |
 | `--floe-shadow-x`, `-y`, `-blur`, `-spread` | The theme's one shadow, in px or rem (none by default) |
 | `--radius`, `--radius-small`, `--radius-pill` | How round corners are, one length each: a box's (a panel, a note, code, a quote), a small box's within one (a key, a bar, an image, code in a line), and a pill's (a cell, a tab's title; a cell that wraps rounds no more than floe's `--floe-pill-end`). A box along the edge of another, a gap `p` within it, rounds by `calc(var(--radius) - p)` |
-| `--font`, `--display`, `--mono` | The text's typeface, the headings', and the fixed-width one |
+| `--font`, `--display`, `--mono` | The text's typeface, the headings', and the fixed-width one. Name a face before `monospace` in `--mono`: a page sets no font size, and a browser sizes text in `monospace` alone from 13px |
 | `--code-bg`, `--code-fg`, `--code-prompt` | The ground of code and a terminal, always dark; their text; a terminal's prompt |
 | `--code-add`, `--code-del` | A diff's lines added and removed |
 | `--page-bg` | The whole page's ground, a pattern such as squares too (`--bg` by default) |
 | `--rule` | The `border` of a rule across the page, such as between sections |
-| `--text-width` | The width of a page of one column, from which a template sets its column (as `adr` and `runbook` do), and of a note. Text itself takes the width of the column or the box it is in |
-| `--page-width`・`--page-pad` | The column a page is centred in: its width, and the pad each side of it. As the pad is inside the box, the column is `max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad)` |
+| `--text-width` | The width of a page of one column, which a template sets its column to by `--column-width: var(--text-width)` (as `adr` and `runbook` do), and of a note. Text itself takes the width of the column or the box it is in |
+| `--page-width`・`--page-pad` | The column a page is centred in (`.floe-column`): its width, unless the template sets `--column-width`, and the pad each side of it, inside the column's box |
 
 floe's base draws the page's ground, colour and face on its root with them (`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`), which `page.css` may set otherwise on `:scope`. A theme of your own may set them too ([parts.md](parts.md#themes)). In print, every ground is kept as the screen draws it.
 

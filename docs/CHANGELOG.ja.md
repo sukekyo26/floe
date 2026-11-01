@@ -8,6 +8,9 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：テンプレートがページを中央にそろえる列を、class `floe-column` の要素に置けるようにした。幅は `--column-width`
+  （テンプレートが置かなければパレットの `--page-width`）で、左右に `--page-pad` をあけ、テンプレートの `page.css` が勝つ。
+  1 列のページは `:scope { --column-width: var(--text-width); }` を置く。floe のテンプレートは、列を自分で書く代わりにこれを使う。
 - 追加：テーマの `markdown.css`。ページの上、text の中、部品の中の、どこにある Markdown にも
   当たる Markdown の見た目（引用、見出し）。floe のテーマは引用（retro は見出しの縞も）をここで
   描く。部品・見た目の名前に `markdown` は使えない。
@@ -207,6 +210,11 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：どのページも、floe が body の余白を 0 にする（テンプレートの `page.css` が勝つ）。body の余白を書いていない自分の
+  テンプレートは、ブラウザの 8px の余白が無くなり、自分のテーマの `base.css` が body に書いた余白も効かなくなる（テンプレートの
+  `page.css` に書けば効く）。floe のテンプレートは字の大きさを決めず、本文の字も、余白や見出しと同じく読み手がブラウザで決めた
+  大きさに従う（ブラウザの既定の 16px なら変わらない）。`--mono` が `monospace` だけの自分のテーマでは、行の中の code が 13.76px から
+  約 11px になる（ブラウザは `monospace` だけの字を 13px から測る）。`--mono` には `monospace` の前に書体の名前を置く。
 - 変更：表の頭、選んだタブ、code の頭を、テーマがセレクタ・選んだ状態・印刷の規則を書いて塗るのでなく、テーマが置く変数から
   部品が塗るようにした：`--table-head-bg`・`--table-head-fg`・`--tabs-picked-bg`・`--tabs-picked-fg`・`--tabs-picked-ring`・
   `--code-head-bg`・`--code-head-fg`・`--code-head-add`・`--code-head-del`（code の頭の上の diff の数）。今ある `--table-rule`・
