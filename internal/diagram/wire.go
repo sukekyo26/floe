@@ -191,9 +191,8 @@ func (gr *group) exits(u int, pos []int, keep bool) {
 // entered bent at the first x ≡ 6 it may stand at, and left half a column on, at x ≡ 0 (not half a column before:
 // the column it enters at keeps a column from the one before it). The boxes then stand as near their places as the
 // points let them, nodeGap from them and from one another.
-// LIMIT: a point of a long edge pushes the boxes beside it off their places, and a box pushed so may lack the
-// columns to let its links enter straight; widen gives it back one column at most, where there is room. A point
-// giving way to the boxes made more turns in all, so it does not.
+// LIMIT: a long edge's point pushes boxes aside; widen gives a box back one column at most. Let points give way if
+// such boxes come to bend many edges: tried, it made more turns in all.
 func (gr *group) settle(r int) {
 	rank := gr.ranks[r]
 	last, right := -1, 0.0 // the last point placed, by index in rank, and the column it leaves at
@@ -238,23 +237,21 @@ func (gr *group) settle(r int) {
 
 // freeLimit is how far from where it may stand a point looks for a free column: further, it would stand far from
 // its edge, lengthening the edge and pushing what stands after it.
-// LIMIT: a point with no free column so near is entered at x ≡ 6, as before: most where a group's marks narrow
-// where it may stand to columns all under boxes above or taken by exits. Look further there if such turns show.
+// LIMIT: a point with no free column freeLimit near is entered at x ≡ 6; look further if its half-column turns show.
+// It is most where a group's marks narrow where it may stand to columns all under boxes above or taken by exits.
 const freeLimit = 4 * column
 
 // freeColumn is the column at x ≡ 0 within lo and hi nearest to t (left of two as near), freeLimit from it at most,
 // that no box of rank r−1 stands over, past 12 in from its ends, and no link of the channel above rank r but in
 // leaves by: exits chooses a box's exits to its boxes again after settle, anywhere along its side.
 func (gr *group) freeColumn(r, in int, t, lo, hi float64) (float64, bool) {
-	start := onGrid(t, column, math.Round)
-	for d := 0.0; d <= freeLimit; d += column {
-		for _, c := range []float64{start - d, start + d} {
-			if c >= lo && c <= hi && !gr.taken(r, in, c) {
-				return c, true
-			}
+	best, found := 0.0, false
+	for c := onGrid(max(lo, t-freeLimit), column, math.Ceil); c <= min(hi, t+freeLimit); c += column {
+		if !gr.taken(r, in, c) && (!found || math.Abs(c-t) < math.Abs(best-t)) {
+			best, found = c, true
 		}
 	}
-	return 0, false
+	return best, found
 }
 
 // taken reports whether column c is under the side of a box of rank r−1, or where a link of the channel below it
@@ -286,27 +283,50 @@ func (gr *group) extent() (lo, hi float64) {
 // widen widens the box at k in rank, by as little as lets each link into it whose exit stands a column or less past
 // an end of its side enter straight: its right to the exit and inEnd (its left to the exit less inEnd). It widens
 // only into room: a gap from the node beside it, or, with none, within the group's extent lo..hi, so that nothing
-// else moves. It widens towards its loops too: they are drawn from the box as widened.
+// else moves; and only where more of its links then enter straight, as entries lays them (a box with straight
+// entries crowding its side may lay them bent all the same). It widens towards its loops too: they are drawn from
+// the box as widened.
 func (gr *group) widen(rank []int, k int, lo, hi float64) {
-	n := &gr.nodes[rank[k]]
-	if k > 0 {
-		o := gr.nodes[rank[k-1]]
-		lo = o.x + o.w + gr.gap(rank[k-1], rank[k])
+	v := rank[k]
+	n := &gr.nodes[v]
+	if before := rank[:k]; len(before) > 0 {
+		p := before[len(before)-1]
+		lo = gr.nodes[p].x + gr.nodes[p].w + gr.gap(p, v)
 	}
-	if k+1 < len(rank) {
-		hi = gr.nodes[rank[k+1]].x - gr.gap(rank[k], rank[k+1])
+	if after := rank[k+1:]; len(after) > 0 {
+		hi = gr.nodes[after[0]].x - gr.gap(v, after[0])
 	}
 	for _, l := range n.ins {
 		e := gr.links[l].exit
 		slo, shi := n.side(false)
+		x, w := n.x, n.w
 		switch {
 		case e > shi && e <= shi+column && e+inEnd <= hi:
 			n.w = e + inEnd - n.x
 		case e < slo && e >= slo-column && e-inEnd >= lo:
 			n.w += n.x - (e - inEnd)
 			n.x = e - inEnd
+		default:
+			continue
+		}
+		wx, ww, wider := n.x, n.w, gr.straightIn(v)
+		n.x, n.w = x, w
+		if gr.straightIn(v) < wider {
+			n.x, n.w = wx, ww
 		}
 	}
+}
+
+// straightIn is how many links into box v enter straight, as entries lays them.
+func (gr *group) straightIn(v int) int {
+	gr.entries(v)
+	count := 0
+	for _, l := range gr.nodes[v].ins {
+		if gr.links[l].straight {
+			count++
+		}
+	}
+	return count
 }
 
 // bounds are where the point at k in rank r may stand: lo, past what stands before it (the point last placed, at
@@ -373,7 +393,8 @@ func (gr *group) shiftRight() {
 	}
 }
 
-// entries sets the entries of the links into node v, in the order of their exits (ties as their edges are written):
+// entries sets the entries of the links into node v: a point (or where an edge enters a frame) is entered where
+// settle put it. Into a box, in the order of their exits (ties as their edges are written):
 // a link whose exit is over v, 12 in from its ends, enters right below it; the rest at x ≡ 6 between those, spread
 // evenly, not in the columns beside a straight entry, so that arrowheads stay apart. When a gap between straight
 // entries (or an end) holds too few columns for its links, the straight entry closing it on the right (else on the
@@ -481,7 +502,9 @@ func (gr *group) track(r int) int {
 }
 
 // fill puts the links bent, in order, on tracks from the top: each track takes, left to right, the links whose links
-// above are on tracks before it, past the run before. It returns how many tracks it takes.
+// above are on tracks before it, past the run before. It returns how many tracks it takes. Two runs on a track keep
+// half a column apart: their ends are exits at x ≡ 0 and entries at x ≡ 6, or a point's entry at x ≡ 0 that taken
+// keeps off every exit.
 func (gr *group) fill(bent []int, above map[int][]int) int {
 	placed := map[int]int{}
 	t := 0
@@ -496,7 +519,7 @@ func (gr *group) fill(bent []int, above map[int][]int) int {
 				}
 			}
 			lo, hi := gr.span(l)
-			// The grid keeps two runs half a column apart: their ends are exits at x ≡ 0 and entries at x ≡ 6.
+			// The grid keeps two runs half a column apart (see fill).
 			if ready && lo > end {
 				gr.links[l].track, placed[l], end = t, t, hi
 				continue

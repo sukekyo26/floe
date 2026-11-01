@@ -505,8 +505,9 @@ func bentAt(n gnode) bool {
 }
 
 // groupFault is what is wrong with a group as wired, or "": a box too narrow for its links, a point off the grid
-// (left at x ≡ 0, entered at x ≡ 6 or straight), two nodes of a rank too close (boxes nodeGap from boxes and points,
-// points a column from points), or a cycle in a channel's track constraints.
+// (left at x ≡ 0; entered at x ≡ 6, straight, or bent at a free column of its own, x ≡ 0), two nodes of a rank too
+// close (boxes nodeGap from boxes and points, points a column from points), or a cycle in a channel's track
+// constraints.
 func groupFault(gr *group) string {
 	for _, n := range gr.nodes {
 		if n.box != nil && max(len(n.ins), len(n.outs)) > 0 && n.w < float64(12*max(len(n.ins), len(n.outs))+36) {
