@@ -76,7 +76,6 @@ func TestGraphMistakes(t *testing.T) {
 			strings.Replace(g1, "      edges:", "        - box: { name: write, rows: [Again] }\n      edges:", 1),
 			`s.yaml:10:18: the name "write" is given before: give each part, row and node its own name`,
 		},
-		{"an edge from a box to itself", strings.Replace(g1, "{ from: check, to: write }", "{ from: write, to: write }", 1), `s.yaml:13:13: edge write→write starts where it ends: end it at another part or point`},
 		{"a label of a number", strings.Replace(g1, "to: check }", "to: check, label: 3 }", 1), `s.yaml:11:44: got number, want string or object`},
 		{"a diamond", strings.Replace(g1, "to: check }", "to: check, end: diamond }", 1), `s.yaml:11:42: value must be one of 'none', 'arrow'`},
 		{"up", strings.Replace(g1, "y: 20\n", "y: 20\n      direction: up\n", 1), `s.yaml:6:18: value must be one of 'down', 'right'`},

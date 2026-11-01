@@ -55,6 +55,7 @@ type graphOut struct {
 	at     string
 	groups []*group
 	passed int
+	loops  [][2]int // the edges from a box to itself, and the box
 }
 
 // readGraph resolves the names of g's edges against its boxes, and splits it into groups, each ranked. An edge
@@ -68,7 +69,7 @@ func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 			byName[n.Box.Name] = i
 		}
 	}
-	out := &graphOut{g: g, at: at, groups: nil, passed: 0}
+	out := &graphOut{g: g, at: at, groups: nil, passed: 0, loops: nil}
 	var edges []int
 	for k, e := range g.Edges {
 		known := true
@@ -81,7 +82,7 @@ func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 		switch {
 		case !known:
 		case e.From == e.To:
-			problems = append(problems, usererr.NewIn("", edgeAt(at, k), "diagram_edge_nowhere", "edge "+e.From+"→"+e.To))
+			out.loops = append(out.loops, [2]int{k, byName[e.From]})
 		default:
 			edges = append(edges, k)
 		}
@@ -160,7 +161,7 @@ func (o *graphOut) items() ([]item, error) {
 		if err != nil {
 			return nil, err
 		}
-		left = d.stand(across, left, [2]float64{0, 0})
+		left = d.stand(across, left)
 		d.stretch(0, math.Inf(-1), o.g.X)
 		d.stretch(1, math.Inf(-1), o.g.Y)
 		maps.Copy(routes, d.routes)
@@ -203,7 +204,7 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 	gr.wire()
 	d := &drawing{
 		right: right, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{},
-		ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{},
+		ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
 	}
 	for _, n := range gr.nodes {
 		if n.box != nil {
@@ -221,6 +222,9 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 			d.ends[k], d.back[k] = [2]int{d.ends[k][1], d.ends[k][0]}, true
 		}
 	}
+	if err := o.drawLoops(d); err != nil {
+		return nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
+	}
 	for _, k := range edges {
 		if t := o.g.Edges[k].Label; t != nil {
 			if err := d.place(k, labelWidth(t, false)); err != nil {
@@ -232,8 +236,8 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 }
 
 // stand moves the group a column past left on axis across, its boxes on the grid as laid out (a label before them
-// moves it on by whole columns), and the top left of what it draws to start; it returns where the next group goes.
-func (d *drawing) stand(across int, left float64, start [2]float64) float64 {
+// moves it on by whole columns), and the top of what it draws to 0; it returns where the next group goes.
+func (d *drawing) stand(across int, left float64) float64 {
 	lo, hi := d.span(across)
 	boxLo, _ := d.boxSpan(across)
 	by := left
@@ -241,10 +245,10 @@ func (d *drawing) stand(across int, left float64, start [2]float64) float64 {
 		by += onGrid(boxLo-lo, column, math.Ceil)
 	}
 	d.stretch(across, math.Inf(-1), by)
-	if top, _ := d.span(1 - across); top < start[1-across] {
-		d.stretch(1-across, math.Inf(-1), onGrid(start[1-across]-top, column, math.Ceil))
+	if top, _ := d.span(1 - across); top < 0 {
+		d.stretch(1-across, math.Inf(-1), onGrid(-top, column, math.Ceil))
 	}
-	return onGrid(hi+by-start[across]+groupGap, column, math.Ceil)
+	return onGrid(hi+by+groupGap, column, math.Ceil)
 }
 
 // drawing is a group laid out, as drawn, while its labels are placed: its boxes and its edges' corners, and where
@@ -257,11 +261,14 @@ type drawing struct {
 	ends   map[int][2]int // the boxes each edge's corners start and end on
 	back   map[int]bool   // the edges drawn up, against the ranks
 	spots  map[int]spot
+	loops  map[int]bool // the edges from a box to itself
 }
 
-// spot is where a label stands, held to its run so that it moves with it: beside run seg of its edge's corners, a
-// column off it on side (+1 right of a run down or below a run across, -1 left or above), from at along it.
+// spot is where a label stands, held to its run so that it moves with it: beside run seg of edge's corners (its own
+// edge's, but a loop's), a column off it on side (+1 right of a run down or below a run across, -1 left or above),
+// from at along it.
 type spot struct {
+	edge int
 	seg  int
 	side float64
 	at   float64
@@ -272,7 +279,12 @@ type spot struct {
 // left of a run down).
 func (d *drawing) rect(k int) (rect, bool) {
 	sp := d.spots[k]
-	return spotRect(segAt(d.routes[k], sp.seg), sp), sp.side < 0 && isDown(segAt(d.routes[k], sp.seg))
+	return spotRect(d.runOf(sp), sp), sp.side < 0 && isDown(d.runOf(sp))
+}
+
+// runOf is the run a label at sp stands beside.
+func (d *drawing) runOf(sp spot) seg {
+	return segAt(d.routes[sp.edge], sp.seg)
 }
 
 // spotRect is where a label at sp stands beside run s.
@@ -321,7 +333,7 @@ func (d *drawing) place(k int, w float64) error {
 		}
 		for _, a := range starts(s, long) {
 			for _, side := range []float64{1, -1} {
-				sp := spot{seg: i, side: side, at: a, w: w}
+				sp := spot{edge: k, seg: i, side: side, at: a, w: w}
 				if free(heldRect(s, sp), things, runs) {
 					d.spots[k] = sp
 					return nil
@@ -393,12 +405,12 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 		}
 	}
 	if (cut-to)*sign >= 0 {
-		return spot{seg: 0, side: 0, at: 0, w: 0}, false
+		return spot{edge: k, seg: 0, side: 0, at: 0, w: 0}, false
 	}
 	cross := s[1-along]
 	stays, moves := d.crossed(along, cut, cross+1, cross+column+size[0])
 	d.stretch(along, cut, stays+size[1]+4+moves)
-	sp := spot{seg: i, side: 1, at: cut + stays + 2, w: w}
+	sp := spot{edge: k, seg: i, side: 1, at: cut + stays + 2, w: w}
 	s = segAt(d.routes[k], i)
 	if at, need := d.reach(spotRect(s, sp), s[1-along], along); need > 0 {
 		d.stretch(1-along, at, onGrid(need, column, math.Ceil))
@@ -411,8 +423,8 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 // moves whole with its run, so that what of it lay past the cut (it stays) or short of it (it moves) lies in the
 // band, before (stays) or after (moves) the room made there. A label beside that span stays clear of the room.
 func (d *drawing) crossed(along int, cut, lo, hi float64) (stays, moves float64) {
-	for k, sp := range d.spots {
-		s := segAt(d.routes[k], sp.seg)
+	for _, sp := range d.spots {
+		s := d.runOf(sp)
 		r := heldRect(s, sp)
 		if a := r.lo(1 - along); a >= hi || a+r.size(1-along) <= lo {
 			continue
@@ -428,9 +440,10 @@ func (d *drawing) crossed(along int, cut, lo, hi float64) (stays, moves float64)
 }
 
 // reach is where to cut along the run at cross, and how far on across, for r beside it: the nearest thing past the
-// run within r's span along it (a run, a box, a label held to its run) stands short of r's far end by need, and a
-// little; the cut is between the run and that thing, a quarter column past the run or halfway, the nearer, so that
-// nothing within r's span stays between the run and the cut. need is 0 when nothing stands in r's way.
+// run within r's span along it (a run, a box, a label held to its run, where an edge written by hand leaves a box)
+// stands short of r's far end by need, and a little; the cut is between the run and that thing, a quarter column
+// past the run or halfway, the nearer, so that nothing within r's span stays between the run and the cut. need is 0
+// when nothing stands in r's way.
 func (d *drawing) reach(r rect, cross float64, along int) (at, need float64) {
 	across := 1 - along
 	lo, hi := r.lo(along), r.lo(along)+r.size(along)
@@ -447,10 +460,20 @@ func (d *drawing) reach(r rect, cross float64, along int) (at, need float64) {
 			near = min(near, c)
 		}
 	}
-	if near >= end {
+	// Where an edge written by hand leaves a box past the run reaches back from the box (hands are drawn from the
+	// boxes, so it moves with its box): it adds to need, from no nearer than the run, but the cut stands short of
+	// the nearest box, run or label, its box among them.
+	first := near
+	for _, s := range d.hands() {
+		a, b := min(s[along], s[along+2]), max(s[along], s[along+2])
+		if c := max(s[across], s[across+2]); b >= lo && a <= hi && c > cross {
+			first = min(first, max(cross, min(s[across], s[across+2])))
+		}
+	}
+	if first >= end {
 		return 0, 0
 	}
-	return cross + min(column/4, (near-cross)/2), end - near
+	return cross + min(column/4, (near-cross)/2), end - first
 }
 
 // stretch moves everything past at on axis on by by, the labels with their runs; a box at moves wider, and the
@@ -473,19 +496,31 @@ func (d *drawing) stretch(axis int, at, by float64) {
 				pts[i][axis] += by
 			}
 		}
-		ends := d.ends[k]
-		if widened[ends[0]] {
-			pts[0] = endOn(d.boxes[ends[0]], pts[0], d.right, !d.back[k])
-		}
-		if widened[ends[1]] {
-			pts[len(pts)-1] = endOn(d.boxes[ends[1]], pts[len(pts)-1], d.right, d.back[k])
-		}
+		d.endsOn(k, widened)
 	}
 	for k, sp := range d.spots {
-		if s := segAt(d.routes[k], sp.seg); runAxis(s) == axis && sp.at > at {
+		if s := d.runOf(sp); runAxis(s) == axis && sp.at > at {
 			sp.at += by
 			d.spots[k] = sp
 		}
+	}
+}
+
+// endsOn moves the ends of edge k on a box widened onto its outline again, a loop's onto its loop side.
+func (d *drawing) endsOn(k int, widened map[int]bool) {
+	pts, ends := d.routes[k], d.ends[k]
+	last := len(pts) - 1
+	if d.loops[k] {
+		if widened[ends[0]] {
+			pts[0], pts[last] = d.loopEnd(ends[0], pts[0]), d.loopEnd(ends[0], pts[last])
+		}
+		return
+	}
+	if widened[ends[0]] {
+		pts[0] = endOn(d.boxes[ends[0]], pts[0], d.right, !d.back[k])
+	}
+	if widened[ends[1]] {
+		pts[last] = endOn(d.boxes[ends[1]], pts[last], d.right, d.back[k])
 	}
 }
 
@@ -518,7 +553,7 @@ func (d *drawing) held(but int) []rect {
 	out := slices.Collect(maps.Values(d.boxes))
 	for k, sp := range d.spots {
 		if k != but {
-			out = append(out, heldRect(segAt(d.routes[k], sp.seg), sp))
+			out = append(out, heldRect(d.runOf(sp), sp))
 		}
 	}
 	return out
@@ -552,12 +587,22 @@ func (d *drawing) runs() []seg {
 // the docs ask, which a label of the graph would stand in the way of.
 func (d *drawing) hands() []seg {
 	var out []seg
-	for _, b := range d.boxes {
+	looped := map[int]bool{}
+	for k := range d.loops {
+		looped[d.ends[k][0]] = true
+	}
+	for i, b := range d.boxes {
 		cx, cy, far := b.x+b.w/2, b.y+b.h/2, 2*column
 		if d.right {
-			out = append(out, seg{cx, b.y - far, cx, b.y}, seg{cx, b.y + b.h, cx, b.y + b.h + far})
+			out = append(out, seg{cx, b.y - far, cx, b.y})
+			if !looped[i] {
+				out = append(out, seg{cx, b.y + b.h, cx, b.y + b.h + far})
+			}
 		} else {
-			out = append(out, seg{b.x - far, cy, b.x, cy}, seg{b.x + b.w, cy, b.x + b.w + far, cy})
+			out = append(out, seg{b.x - far, cy, b.x, cy})
+			if !looped[i] {
+				out = append(out, seg{b.x + b.w, cy, b.x + b.w + far, cy})
+			}
 		}
 	}
 	return out
@@ -625,4 +670,180 @@ func endOn(r rect, p [2]float64, right, leaves bool) [2]float64 {
 		side, t = map[bool]string{true: "right", false: "left"}[leaves], p[1]
 	}
 	return r.form.on(r, side, t)
+}
+
+// loopGap is the least room between the ends of loops on a box's side; loopDepth, how far in from the side's line
+// an end may stand on the outline: short of a column, where the edges leaving the next side stand (B1).
+const (
+	loopGap   = 6.0
+	loopDepth = column - 2
+)
+
+// LIMIT: boxes too short for their loops grow by a column at a time; loopGrows caps the rounds.
+const loopGrows = 1000
+
+// axes are the axis a loop goes out on from its box's side (x laid out down, y laid out right), and the side's.
+func (d *drawing) axes() (across, along int) {
+	if d.right {
+		return 1, 0
+	}
+	return 0, 1
+}
+
+// at is the point a on axis across and c on the other.
+func (d *drawing) at(a, c float64) [2]float64 {
+	across, along := d.axes()
+	var p [2]float64
+	p[across], p[along] = a, c
+	return p
+}
+
+// drawLoops draws the loops of the group's boxes (see loop), each box's in the order written, the boxes in the order
+// of their first loop. All boxes grow for their loops before any loop is drawn: a box grown, cut across its middle,
+// moves the middles of the boxes of its rank, where edges written by hand leave them and labels keep clear.
+func (o *graphOut) drawLoops(d *drawing) error {
+	onBox := map[int][]int{}
+	var order []int
+	widths := map[int]float64{}
+	for _, l := range o.loops {
+		k, i := l[0], l[1]
+		if _, ok := d.boxes[i]; !ok {
+			continue
+		}
+		if onBox[i] == nil {
+			order = append(order, i)
+		}
+		onBox[i] = append(onBox[i], k)
+		if t := o.g.Edges[k].Label; t != nil {
+			widths[k] = labelWidth(t, false)
+		}
+	}
+	_, along := d.axes()
+	for grown := 0; ; grown++ {
+		short := slices.DeleteFunc(slices.Clone(order), func(i int) bool { return d.loopFit(i, onBox[i], widths).ok })
+		if len(short) == 0 {
+			break
+		}
+		if grown == loopGrows {
+			return fmt.Errorf("boxes grew %d times for their loops", loopGrows) //nolint:err113 // floe's own
+		}
+		for _, i := range short {
+			b := d.boxes[i]
+			d.stretch(along, b.lo(along)+b.size(along)/2, column)
+		}
+	}
+	for _, i := range order {
+		if err := d.loop(i, onBox[i], widths); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// fit is where the loops of a box stand on its side: their ends part apart, out from the middle, and their labels,
+// stack long one after another along the side and broad across, and whether the box is long enough for them.
+type fit struct {
+	part, stack, broad float64
+	ok                 bool
+}
+
+// loopFit is how the loops ks of box i fit its side: their ends stand loopGap apart or more, where the outline is
+// within loopDepth of the side's line however wide the box grows across later (as room is made, cut along its
+// side), its corners rounding no wider than the side allows, and their labels within the side.
+func (d *drawing) loopFit(i int, ks []int, widths map[int]float64) fit {
+	across, along := d.axes()
+	var f fit
+	for _, k := range ks {
+		if w, ok := widths[k]; ok {
+			long, broad := float64(labelH), w
+			if d.right {
+				long, broad = w, labelH
+			}
+			f.stack, f.broad = f.stack+long+2, max(f.broad, broad)
+		}
+	}
+	n := float64(len(ks))
+	b := d.boxes[i]
+	// However wide the box grows across, its corners round no wider than half its side: measured on the box as
+	// wide as its side is long. A hexagon laid out right slants across its bottom as deep as it grows tall: its
+	// loops stay off the slants.
+	worst := b
+	worst.set(across, b.lo(across), max(b.size(across), b.size(along)))
+	worst.form = outlineOf(worst.w, worst.h, d.shapes[i])
+	far, mid := worst.lo(across)+worst.size(across), b.lo(along)+b.size(along)/2
+	deep := func(off float64) bool {
+		if d.right && d.shapes[i] == "hex" && b.size(along)/2-off < hexInset {
+			return true
+		}
+		return max(far-worst.form.on(worst, d.loopSide(), mid-off)[across],
+			far-worst.form.on(worst, d.loopSide(), mid+off)[across]) > loopDepth
+	}
+	f.part = math.Floor(b.size(along) / (2*n + 2))
+	for f.part >= loopGap && deep(n*f.part) {
+		f.part--
+	}
+	f.ok = f.part >= loopGap && b.size(along) >= f.stack+2
+	return f
+}
+
+// loopSide is the side of a box its loops leave: the one the graph's edges do not use.
+func (d *drawing) loopSide() string {
+	if d.right {
+		return "bottom"
+	}
+	return "right"
+}
+
+// loop draws ks, the edges from box i to itself, on its loop side: the k-th out of the side (k+1) parts before its
+// middle, out by k+2 columns and back in as far past, so that they nest; their labels stand one after another a
+// column out from the outer loop's run across the side, within the side. With something in the way of the loops,
+// their labels and a column more, room is made as for a label beside a run (reach): a cut along the side, short of
+// the nearest thing, moves all past it on. Room made is clear by how it is made; it fails when it is not.
+func (d *drawing) loop(i int, ks []int, widths map[int]float64) error {
+	across, along := d.axes()
+	n := float64(len(ks))
+	f := d.loopFit(i, ks, widths)
+	b := d.boxes[i]
+	far, mid := b.lo(across)+b.size(across), b.lo(along)+b.size(along)/2
+	area := func() rect {
+		var r rect
+		r.set(across, far+1, column*(n+2)-1+column+f.broad)
+		r.set(along, min(mid-n*f.part, mid-f.stack/2), max(2*n*f.part, f.stack))
+		return r
+	}
+	for _, k := range ks { // its side is the loops' now, no hand's
+		d.ends[k], d.loops[k] = [2]int{i, i}, true
+	}
+	if at, need := d.reach(area(), far, along); need > 0 {
+		d.stretch(across, at, onGrid(need, column, math.Ceil))
+		b = d.boxes[i]
+		far = b.lo(across) + b.size(across)
+	}
+	if !free(area(), d.held(-1), append(d.runs(), d.hands()...)) {
+		return fmt.Errorf("room made for the loops of box %d is not clear", i) //nolint:err113 // floe's own
+	}
+	for j, k := range ks {
+		out, off := far+column*float64(j+2), f.part*float64(j+1)
+		d.routes[k] = [][2]float64{
+			d.loopEnd(i, d.at(far, mid-off)), d.at(out, mid-off), d.at(out, mid+off), d.loopEnd(i, d.at(far, mid+off)),
+		}
+	}
+	outer, at := ks[len(ks)-1], mid-f.stack/2+1
+	for _, k := range ks {
+		if w, ok := widths[k]; ok {
+			d.spots[k] = spot{edge: outer, seg: 1, side: 1, at: at, w: w}
+			at += labelH + 2
+			if d.right {
+				at += w - labelH
+			}
+		}
+	}
+	return nil
+}
+
+// loopEnd moves p, an end of a loop on box i's loop side, onto its outline.
+func (d *drawing) loopEnd(i int, p [2]float64) [2]float64 {
+	b := d.boxes[i]
+	_, along := d.axes()
+	return b.form.on(b, d.loopSide(), p[along])
 }
