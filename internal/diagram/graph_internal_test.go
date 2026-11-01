@@ -339,7 +339,44 @@ func graphFault(g *graph) string {
 	if again := laid(g); again.inspect() != l.inspect() {
 		return "laid out twice, it differs"
 	}
+	if fault := laneFault(g, l); fault != "" {
+		return fault
+	}
 	return clusterFault(g, l)
+}
+
+// laneFault is what is wrong with the lanes of g laid out as l, or "": a lane not as long as the one written before
+// it, from the same place along the ranks, or not after it, nodeGap apart.
+func laneFault(g *graph, l *layout) string {
+	if !g.Lanes {
+		return ""
+	}
+	_, clusters, _ := flatten(g, "#")
+	frames := map[string]rect{}
+	for _, f := range l.frames {
+		frames[f.at] = f
+	}
+	along, across := 1, 0
+	if g.Direction == "right" {
+		along, across = 0, 1
+	}
+	var last *rect
+	for _, c := range clusters {
+		if c.parent >= 0 {
+			continue
+		}
+		f := frames["#/parts/0/graph"+strings.TrimPrefix(c.at, "#")]
+		if last != nil {
+			if f.lo(along) != last.lo(along) || f.size(along) != last.size(along) {
+				return fmt.Sprintf("lane %v is not from end to end as lane %v before it", f, *last)
+			}
+			if gap := f.lo(across) - last.lo(across) - last.size(across); math.Abs(gap-nodeGap) > 1e-9 {
+				return fmt.Sprintf("lane %v stands %v after lane %v, not nodeGap", f, gap, *last)
+			}
+		}
+		last = &f
+	}
+	return ""
 }
 
 // onFrameSide reports whether p is on r's top or bottom (left or right, right), within its other sides.
@@ -687,16 +724,26 @@ func addLoops(rnd *rand.Rand, g *graph, every bool) {
 func TestGraphRandom(t *testing.T) {
 	t.Parallel()
 
-	// Last, graphs with a label on every edge, in English and Japanese, crowding labels into every channel.
+	// Then, graphs with a label on every edge, in English and Japanese, crowding labels into every channel; last,
+	// graphs in lanes.
 	for _, c := range []struct {
 		direction string
 		seed      [2]uint64
 		graphs    int
 		every     bool
-	}{{"", [2]uint64{1, 2}, 3000, false}, {"right", [2]uint64{3, 4}, 3000, false}, {"", [2]uint64{5, 6}, 300, true}, {"right", [2]uint64{7, 8}, 300, true}} {
+		lanes     bool
+	}{
+		{"", [2]uint64{1, 2}, 3000, false, false},
+		{"right", [2]uint64{3, 4}, 3000, false, false},
+		{"", [2]uint64{5, 6}, 300, true, false},
+		{"right", [2]uint64{7, 8}, 300, true, false},
+		{"", [2]uint64{9, 10}, 1000, false, true},
+		{"right", [2]uint64{11, 12}, 1000, false, true},
+	} {
 		rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1]))       //nolint:gosec // G404: graphs to try, no secret
 		loops := rand.New(rand.NewPCG(c.seed[0]+10, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
 		groups := rand.New(rand.NewPCG(c.seed[0]+20, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
+		lanes := rand.New(rand.NewPCG(c.seed[0]+30, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
 		for i := range c.graphs {
 			g := randomGraph(rnd, c.direction)
 			for k := range g.Edges {
@@ -706,6 +753,9 @@ func TestGraphRandom(t *testing.T) {
 			}
 			addLoops(loops, g, c.every)
 			addGroups(groups, g)
+			if c.lanes {
+				inLanes(lanes, g)
+			}
 			if fault := graphFault(g); fault != "" {
 				b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
 				t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
@@ -1221,7 +1271,17 @@ func TestGraphLimit(t *testing.T) {
 			deep.Edges = append(deep.Edges, e)
 		}
 	}
-	for _, g := range []*graph{big, exact, two, deep} {
+	// 100 lanes of a box each, a chain through them 100 ranks long: 20,000 marks.
+	lanes := graphOf(nil)
+	lanes.Lanes = true
+	for i := range 100 {
+		name := fmt.Sprintf("b%d", i)
+		lanes.Nodes = append(lanes.Nodes, inGroup(graphOf([]string{name}), fmt.Sprintf("l%d", i), "", name).Nodes...)
+		if i > 0 {
+			lanes.Edges = append(lanes.Edges, graphOf(nil, fmt.Sprintf("b%d>%s", i-1, name)).Edges...)
+		}
+	}
+	for _, g := range []*graph{big, exact, two, deep, lanes} {
 		o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // every name is a box's
 		if o.passed > maxPassed {
 			t.Fatalf("%d boxes: %d points, over %d", len(g.Nodes), o.passed, maxPassed)
@@ -2132,6 +2192,28 @@ func addGroups(rnd *rand.Rand, g *graph) {
 	}
 }
 
+// inLanes wraps the nodes of g at its top, as written, into 2 to 4 lanes of them in a row (fewer if it has fewer),
+// some labelled, its groups nested in them.
+func inLanes(rnd *rand.Rand, g *graph) {
+	n := min(len(g.Nodes), 2+rnd.IntN(3))
+	cuts := make([]int, 0, n+1)
+	cuts = append(cuts, 0, len(g.Nodes))
+	for _, c := range rnd.Perm(len(g.Nodes) - 1)[:n-1] {
+		cuts = append(cuts, c+1)
+	}
+	slices.Sort(cuts)
+	nodes := g.Nodes
+	g.Nodes, g.Lanes = nil, true
+	for i := range n {
+		var t Text
+		if rnd.IntN(2) == 0 {
+			t = Text{"en": strings.Repeat("w", 1+rnd.IntN(12))}
+		}
+		lane := &graphGroup{Name: fmt.Sprintf("lane%d", i), Label: t, Accent: false, Nodes: nodes[cuts[i]:cuts[i+1]]}
+		g.Nodes = append(g.Nodes, graphNode{Box: nil, Group: lane})
+	}
+}
+
 // A graph's groups keep their boxes side by side in every rank, framed apart from all else: nested, side by side,
 // boxes with no edge, edges in and out of them at any rank, round trips, loops, labels and a group of boxes beside.
 func TestGraphGroups(t *testing.T) {
@@ -2179,6 +2261,55 @@ func TestGraphGroups(t *testing.T) {
 			g.Direction = direction
 			if fault := graphFault(g); fault != "" {
 				t.Errorf("%q %s: %s", direction, c.name, fault)
+			}
+		}
+	}
+}
+
+// Lanes stand as written, nodeGap apart, each from end to end of the graph: headed or bare, a group nested at the
+// first rank or the last, one with no edge, and lanes whose edges the order would have swapped. A group nested in a
+// lane frames only its boxes' ranks.
+func TestGraphLanes(t *testing.T) {
+	t.Parallel()
+	for _, direction := range []string{"", "right"} {
+		for _, c := range []struct {
+			name string
+			g    func() *graph
+		}{
+			{"headed, bare and nested", func() *graph {
+				g := graphOf([]string{"a", "b", "c", "d", "e", "f"}, "a>b", "b>c", "c>d", "d>e", "a>f")
+				inGroup(inGroup(g, "top", "Top", "a"), "inner", "", "e")
+				return inGroup(inGroup(inGroup(g, "A", "A", "top", "c"), "B", "", "b", "d"), "C", "C", "inner", "f")
+			}},
+			{"a lane with no edge", func() *graph {
+				g := graphOf([]string{"a", "b", "c", "z"}, "a>b", "b>c")
+				return inGroup(inGroup(inGroup(g, "X", "X", "a", "b"), "Y", "Y", "c"), "Z", "Z", "z")
+			}},
+			{"against the order", func() *graph {
+				g := graphOf([]string{"a2", "b1", "b2", "a1"}, "a1>a2", "b1>b2")
+				return inGroup(inGroup(inGroup(g, "L1", "L1", "a2"), "L2", "L2", "b1", "b2"), "L3", "L3", "a1")
+			}},
+		} {
+			g := c.g()
+			g.Direction, g.Lanes = direction, true
+			if fault := graphFault(g); fault != "" {
+				t.Errorf("%q %s: %s", direction, c.name, fault)
+				continue
+			}
+			along := 1
+			if direction == "right" {
+				along = 0
+			}
+			_, clusters, _ := flatten(g, "#")
+			l := laid(g)
+			long := 0.0
+			for _, f := range l.frames {
+				long = max(long, f.size(along))
+			}
+			for i, f := range l.frames {
+				if nested := clusters[i].parent >= 0; nested == (f.size(along) == long) {
+					t.Errorf("%q %s: frame %v, nested %v, %v long, the lanes %v", direction, c.name, f, nested, f.size(along), long)
+				}
 			}
 		}
 	}

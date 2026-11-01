@@ -113,13 +113,38 @@ parts:
         - { from: api, to: store }
 `
 
+// lanes is a graph of two lanes, a group nested in the second.
+const lanes = `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      lanes: true
+      nodes:
+        - group:
+            name: user
+            nodes:
+              - box: { name: ask, rows: [Ask] }
+        - group:
+            name: dev
+            nodes:
+              - box: { name: build, rows: [Build] }
+              - group: { name: tools, nodes: [{ box: { name: ci, rows: [CI] } }] }
+      edges:
+        - { from: ask, to: build }
+`
+
 // The mistakes of groups and edges to them: an empty one, a name of none, an edge between a group and what it holds,
-// one to a group whose other end stands among its ranks, a name given twice, and too many nodes through groups.
+// one to a group whose other end stands among its ranks, a name given twice, too many nodes through groups, an edge
+// at a lane and a box in no lane.
 func TestGraphGroupMistakes(t *testing.T) {
 	t.Parallel()
 
 	edge := func(e string) string {
 		return strings.Replace(gg, "        - { from: api, to: store }\n", "        - { from: api, to: store }\n        - "+e+"\n", 1)
+	}
+	lane := func(e string) string {
+		return strings.Replace(lanes, "        - { from: ask, to: build }\n", "        - { from: ask, to: build }\n        - "+e+"\n", 1)
 	}
 	var many strings.Builder
 	many.WriteString("title: T\nparts:\n  - graph:\n      x: 0\n      y: 0\n      nodes:\n")
@@ -157,6 +182,14 @@ parts:
 		{"a group named as a box before it", strings.Replace(gg, "name: server", "name: cli", 1), `s.yaml:9:13: the name "cli" is given before: give each part, row and node its own name`},
 		{"a box named as a group before it", strings.Replace(gg, "name: x,", "name: server,", 1), `s.yaml:17:18: the name "server" is given before: give each part, row and node its own name`},
 		{"202 boxes and groups", many.String(), `s.yaml:4:7: graph: 202 boxes and groups, past 200; split it into graphs`},
+		{"from a lane", lane("{ from: user, to: build }"), `s.yaml:19:19: edge user→build: user is a lane, from end to end of the graph; end the edge at a box or a group in it`},
+		{"to a lane", lane("{ from: ask, to: dev }"), `s.yaml:19:28: edge ask→dev: dev is a lane, from end to end of the graph; end the edge at a box or a group in it`},
+		{"from a lane to a lane", lane("{ from: user, to: dev }"), `s.yaml:19:19: edge user→dev: user is a lane, from end to end of the graph; end the edge at a box or a group in it`},
+		{"from a lane to a box it holds", lane("{ from: dev, to: build }"), `s.yaml:19:28: edge dev→build: both ends are group "dev" or inside it; end the edge at a box or another group outside "dev"`},
+		{"a box in no lane", strings.Replace(lanes, "      nodes:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n", 1), `s.yaml:8:11: missing property 'group'`},
+		{"to a group in a lane", lane("{ from: ask, to: tools }"), ""},
+		{"lanes false, a box in no lane", strings.Replace(strings.Replace(lanes, "lanes: true", "lanes: false", 1), "      nodes:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n", 1), ""},
+		{"no lanes, a box in no lane", strings.Replace(strings.Replace(lanes, "      lanes: true\n", "", 1), "      nodes:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n", 1), ""},
 	} {
 		if _, got := draw(t, c.src, inspect); got != c.want {
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
