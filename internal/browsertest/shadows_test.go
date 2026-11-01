@@ -56,14 +56,14 @@ const markProbed = `(() => { const probed = [...document.querySelectorAll('[data
   probed.forEach((e, i) => { e.dataset.shadowProbe = i; }); return probed.length; })()`
 
 // measureShadows returns, one to a line, what a box draws outside itself reaching what it must not: past the page's
-// edge or the sides of the column's padding; out of a box around it that is framed or filled (its padding box); onto
+// edge or the sides of the column's padding (.floe-column); out of a box around it that is framed or filled (its padding box); onto
 // any other element (not one around it nor in it): onto its border box when it is framed or filled, else onto its
 // content box, where its text is. What a box draws is its shadows that show (from the computed box-shadow, its
 // lengths alone, whatever form its colour takes: moved by its offset, grown by its spread, fading out over its blur),
 // its outline (its width and offset), its box itself when transformed (its bounding box, where it is moved to), and the
 // ::before and ::after of a box markProbed marks, given as extra by its index. Boxes inside a line (inline) are not measured.
 const measureShadows = `((extra) => {
-  const out = new Set(), pagePad = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-pad'));
+  const out = new Set();
   const canvas = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
   const shows = (colour) => { canvas.clearRect(0, 0, 1, 1); canvas.fillStyle = 'transparent'; canvas.fillStyle = colour;
     canvas.fillRect(0, 0, 1, 1); return canvas.getImageData(0, 0, 1, 1).data[3] > 0; };
@@ -71,7 +71,7 @@ const measureShadows = `((extra) => {
     return (p ? p.dataset.floePart + ' ' : '') + e.tagName.toLowerCase() + (e.dataset.floePart ? '[' + e.dataset.floePart + ']' : '') +
       (e.dataset.floeLook ? '{' + e.dataset.floeLook + '}' : '') + (e.classList.contains('card') ? '.card' : ''); };
   const up = (e) => { let p = e.parentElement; while (p && getComputedStyle(p).display === 'contents') p = p.parentElement; return p; };
-  const isColumn = (p) => Math.abs(parseFloat(getComputedStyle(p).paddingLeft) - pagePad) < 0.5;
+  const isColumn = (p) => p.classList.contains('floe-column');
   const painted = (p) => { const s = getComputedStyle(p);
     return ['Top', 'Right', 'Bottom', 'Left'].some((k) => parseFloat(s['border' + k + 'Width']) > 0) ||
       !/rgba\(0, 0, 0, 0\)|transparent/.test(s.backgroundColor) || s.backgroundImage !== 'none'; };

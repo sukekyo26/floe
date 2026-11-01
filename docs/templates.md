@@ -91,7 +91,7 @@ It sees:
 
 `page.css` lays the page out around the parts: their places, the page's width, its header. It goes into a layer under the parts' styles and the theme's files of them, so it does not restyle a part, and over the theme's `base.css`. It does not reach a part text's Markdown either, which floe draws in a box of its own (`data-floe-text`).
 
-- floe puts it in `@scope (:root) to ([data-floe-part] > *)`: it reaches a part's box, so that it places the part, but not what the part holds.
+- floe puts it in `@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *)`: it reaches a part's box and a text's box, so that it places them, but not what they hold.
 - Its root is `:scope`. Write the page's variables on `:scope`, not on `:root` or `html`, which are outside the scope.
 - A `}` that closes no block, and an `@import`, are refused at their line: load a stylesheet, such as Google Fonts, with a `<link>` in `page.html`.
 - Draw with the palette's variables (`var(--muted)`), so that the page follows the theme the data file picks.
@@ -99,7 +99,6 @@ It sees:
 - Pad a box of your page with a ground or a frame (one that takes the look panel, say) by `var(--floe-pad-block) var(--floe-pad-inline)` (1.1rem and 1.3rem), as floe's parts and templates pad theirs, and a row of the look `rows` by none: `rows` pads its rows at the sides too.
 - A box that scrolls sideways (`overflow-x: auto`) writes `contain: inline-size` for its rule under `@media screen`, so that its content's width widens no grid or flex item around it, nor the page; keep it out of a place whose width its content sets (`justify-self: start`, an inline-block, a table's cell of auto width, an item of a flex row on `flex-basis: auto`), where it shrinks to its border and padding ([parts.md](parts.md#the-css-layers-and-scope)).
 - A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part, as a part writes no margin of its own on its box (checklist and links are `ul`, steps and timeline `ol`, facts, keys, entries and stats `dl`, code, image, diff and terminal `figure`, tabs `form`). It does not change a list's display, marks, padding or room between items, which floe sets for a list that is a part's box ([parts.md](parts.md#the-css-layers-and-scope)); a list that takes a look takes those from the template's `page.css` too, so that the template adjusts it.
-
 - floe starts every page with no margin on the body, and centres the page in a column on an element of the class `floe-column` (`<main class="floe-column">`): `--column-width` wide, the palette's `--page-width` unless the template sets it, within `--page-pad` each side. A page of one column sets `:scope { --column-width: var(--text-width); }` in its `page.css`; a theme sets no `--column-width`. Both stop at the parts' boxes, as `page.css` does, and `page.css` wins over them whatever its selectors. floe sets no font size, so the page's text takes the size its reader's browser sets.
 
 `report`'s `page.css`, for one, lays out its column (`<main class="floe-column">`):

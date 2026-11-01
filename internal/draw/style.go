@@ -109,7 +109,7 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 		styled(name, themed.CSS(name))
 	}
 	sheet("floe.marks", marks(k, n))
-	sheet("floe.page.defaults", pageScoped([]byte(pageDefaults)))
+	sheet("floe.page.defaults", pageDefaults)
 	sheet("floe.page", pageScoped(own))
 	return sheets, nil
 }
@@ -133,9 +133,9 @@ const boxes = "@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { " +
 // checks it; set it in a template's page.css alone.
 // LIMIT: with no font-size on the body, a browser sizes text in monospace alone from 13px, as no ancestor sets a size:
 // a theme whose --mono is monospace alone draws a line's code about 11px. Name a face before monospace.
-const pageDefaults = "body { margin: 0; }\n" +
+var pageDefaults = pageScoped([]byte("body { margin: 0; }\n" +
 	".floe-column { max-width: calc(var(--column-width, var(--page-width)) + 2 * var(--page-pad)); " +
-	"margin-inline: auto; padding-inline: var(--page-pad); }\n"
+	"margin-inline: auto; padding-inline: var(--page-pad); }\n"))
 
 const boxList = "display: grid; list-style: none; padding: 0; gap: 0;"
 
