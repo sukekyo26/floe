@@ -2543,3 +2543,31 @@ func TestGraphGroupEdges(t *testing.T) {
 		}
 	}
 }
+
+// The hands of a box come in one order, its sides' as written: left then right laid out down, top then bottom laid
+// out right; a side a loop or a level edge takes has none.
+func TestGraphHandsOrder(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		right  bool
+		looped bool
+		taken  string
+		want   []seg
+	}{
+		{false, false, "", []seg{{-4, 34.5, 20, 34.5}, {60, 34.5, 84, 34.5}}},
+		{true, false, "", []seg{{40, -4, 40, 20}, {40, 49, 40, 73}}},
+		{false, true, "", []seg{{-4, 34.5, 20, 34.5}}},
+		{true, true, "", []seg{{40, -4, 40, 20}}},
+		{false, false, "left", []seg{{60, 34.5, 84, 34.5}}},
+		{true, false, "bottom", []seg{{40, -4, 40, 20}}},
+	} {
+		d := &drawing{ //nolint:exhaustruct_v5 // a box and its taken sides
+			right: c.right, boxes: map[int]rect{0: {x: 20, y: 20, w: 40, h: 29, what: "", at: ""}}, //nolint:exhaustruct_v5 // a box
+			taken: map[int]map[string]bool{0: {c.taken: c.taken != ""}},
+		}
+		if got := d.handsOf(0, c.looped); !slices.Equal(got, c.want) {
+			t.Errorf("right %v, looped %v, %q taken: %v, want %v", c.right, c.looped, c.taken, got, c.want)
+		}
+	}
+}

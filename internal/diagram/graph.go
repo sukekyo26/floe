@@ -69,10 +69,11 @@ type graphOut struct {
 	ends     map[int][2]gref
 	groups   []*group
 	passed   int
-	loops    [][2]int // the edges from a box to itself, and the box
-	skip     bool     // too many nodes: told, and not laid out
-	levels   []int    // the edges written level between boxes, but those told (levelMistake)
-	row      []int    // the first box, as written, of each box's row: the boxes level edges stand in one rank
+	loops    [][2]int       // the edges from a box to itself, and the box
+	skip     bool           // too many nodes: told, and not laid out
+	levels   []int          // the edges written level between boxes, but those told (levelMistake)
+	row      []int          // the first box, as written, of each box's row: the boxes level edges stand in one rank
+	facing   map[[2]int]int // where each block stands in its lane (faces)
 }
 
 // readGraph reads g's boxes and groups, resolves the names of its edges against them, and splits it into groups of
@@ -81,7 +82,7 @@ type graphOut struct {
 func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
-		loops: nil, skip: false, levels: nil, row: nil,
+		loops: nil, skip: false, levels: nil, row: nil, facing: nil,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)
 	if n := len(out.boxes) + len(out.clusters); n > maxNodes {
@@ -113,8 +114,10 @@ func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 			cedges = append(cedges, k)
 		}
 	}
+	levels, told := out.unlooped(levels)
+	problems = append(problems, told...)
 	out.rows(levels)
-	edges, told := out.across(edges)
+	edges, told = out.across(edges)
 	problems = append(problems, told...)
 	for _, gr := range out.groupsOf(edges, cedges, levels) {
 		problems = append(problems, gr.among...)
@@ -345,7 +348,7 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 	d := &drawing{
 		right: right, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{},
 		ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
-		frames: map[int]rect{}, heads: map[int]float64{}, level: map[int][2]string{},
+		frames: map[int]rect{}, heads: map[int]float64{}, level: map[int][2]string{}, taken: map[int]map[string]bool{},
 	}
 	sides := map[int][2]float64{} // each group's left and right, as laid out down
 	for _, n := range gr.nodes {
@@ -430,10 +433,11 @@ type drawing struct {
 	ends   map[int][2]int // the boxes each edge's corners start and end on
 	back   map[int]bool   // the edges drawn up, against the ranks
 	spots  map[int]spot
-	loops  map[int]bool      // the edges from a box to itself
-	frames map[int]rect      // the frames of its groups, by group
-	heads  map[int]float64   // the widths of its groups' headings
-	level  map[int][2]string // the level edges, and the sides of their boxes they take, from the box written first
+	loops  map[int]bool            // the edges from a box to itself
+	frames map[int]rect            // the frames of its groups, by group
+	heads  map[int]float64         // the widths of its groups' headings
+	level  map[int][2]string       // the level edges, and the sides of their boxes they take, from the box written first
+	taken  map[int]map[string]bool // the sides of each box level edges take
 }
 
 // spot is where a label stands, held to its run so that it moves with it: beside run seg of edge's corners (its own
@@ -767,9 +771,7 @@ func (d *drawing) boxSpan(axis int) (lo, hi float64) {
 func (d *drawing) held(but int) []rect {
 	out := slices.Collect(maps.Values(d.boxes))
 	for c, w := range d.heads {
-		f := d.frames[c]
-		head := rect{x: f.x + 12, y: f.y + 9, w: w, h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // as addFrame's
-		out = append(out, head)
+		out = append(out, headRect(d.frames[c], w))
 	}
 	for k, sp := range d.spots {
 		if k != but {
@@ -777,6 +779,11 @@ func (d *drawing) held(but int) []rect {
 		}
 	}
 	return out
+}
+
+// headRect is where the heading w wide of the frame f stands, as addFrame puts it.
+func headRect(f rect, w float64) rect {
+	return rect{x: f.x + 12, y: f.y + 9, w: w, h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // a heading's room
 }
 
 // heldRect is a label at sp beside run s with the column between them, short of the run by a unit: what is kept
@@ -823,18 +830,18 @@ func (d *drawing) hands() []seg {
 func (d *drawing) handsOf(i int, looped bool) []seg {
 	b := d.boxes[i]
 	cx, cy, far := b.x+b.w/2, b.y+b.h/2, 2*column
-	sides := map[string]seg{"left": {b.x - far, cy, b.x, cy}, "right": {b.x + b.w, cy, b.x + b.w + far, cy}}
-	if d.right {
-		sides = map[string]seg{"top": {cx, b.y - far, cx, b.y}, "bottom": {cx, b.y + b.h, cx, b.y + b.h + far}}
+	type hand struct {
+		side string
+		run  seg
 	}
-	taken := d.levelSides(i)
-	if looped {
-		taken[d.loopSide()] = true
+	sides := []hand{{"left", seg{b.x - far, cy, b.x, cy}}, {"right", seg{b.x + b.w, cy, b.x + b.w + far, cy}}}
+	if d.right {
+		sides = []hand{{"top", seg{cx, b.y - far, cx, b.y}}, {"bottom", seg{cx, b.y + b.h, cx, b.y + b.h + far}}}
 	}
 	var out []seg
-	for _, side := range slices.Sorted(maps.Keys(sides)) {
-		if !taken[side] {
-			out = append(out, sides[side])
+	for _, h := range sides {
+		if !d.taken[i][h.side] && (!looped || h.side != d.loopSide()) {
+			out = append(out, h.run)
 		}
 	}
 	return out

@@ -417,8 +417,9 @@ edge a→b M168,49 V74
 // A level edge is refused at a group, between boxes of no one group nor right in two lanes, when an edge joins two
 // boxes of its row, when something stands between its boxes in their rank, when it takes the side of its box's
 // loops, and when it runs through a lane's heading laid out right; a box among a group's ranks is told by ranks.
-// The rest lay out: loops on the other side, a cycle through a row, three edges between two boxes, and headings
-// that do not reach the edge.
+// A level edge refused for loops makes no row, so an edge between its boxes is not told too. The rest lay out: a
+// row of one lane however it faces, level on a loop (a loop), loops on the other side, a cycle through a row, three
+// edges between two boxes, and headings that do not reach the edge.
 func TestGraphLevelMistakes(t *testing.T) {
 	t.Parallel()
 
@@ -615,6 +616,54 @@ parts:
         - { from: q, to: x }
         - { from: x, to: g }
 `, `s.yaml:14:19: edge x→g: x can stand neither above group "g" nor below it, as q stands no lower than it and p no higher; end the edge at a box in "g"`},
+		{"loops, and an edge across the row of the level edge refused", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: a, rows: [A] }
+        - box: { name: b, rows: [B] }
+      edges:
+        - { from: a, to: a }
+        - { from: a, to: b, level: true }
+        - { from: a, to: b }
+`, `s.yaml:11:36: edge a→b: it takes side right of a, where a's loops are; drop level or the loops`},
+		{"a row of one lane", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      lanes: true
+      nodes:
+        - group: { name: l, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: b, rows: [B] } }, { box: { name: c, rows: [C] } }] }
+      edges:
+        - { from: a, to: b, level: true }
+        - { from: b, to: c, level: true }
+`, ""},
+		{"a row of one lane facing a lane before, more of the lane in its rank", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      lanes: true
+      nodes:
+        - group: { name: m, nodes: [{ box: { name: c, rows: [C] } }] }
+        - group: { name: l, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: b, rows: [B] } }, { box: { name: x, rows: [X] } }, { group: { name: g, nodes: [{ box: { name: g1, rows: [G1] } }] } }] }
+      edges:
+        - { from: a, to: b, level: true }
+        - { from: c, to: a, level: true }
+`, ""},
+		{"level on a loop", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: a, rows: [A] }
+      edges:
+        - { from: a, to: a, level: true }
+`, ""},
 		{"loops on the other side", `title: T
 parts:
   - graph:
