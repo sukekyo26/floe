@@ -283,6 +283,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change a long pill that wraps (entries' tags) to a label of round corners, not
+  an oval stretched up and down; a pill of one line stays round at both ends
+  (notebook keeps its own corners). A part or template of your own lets its
+  pills wrap by `--floe-pill-wrap: normal` on an element of its own.
+- Change the text of a part on a ground of its own (a note, a part on a panel)
+  to the palette's text colour: it takes no colour a template's `page.css` sets
+  around it.
 - Change the part text to draw its Markdown in a box of no part
   (`data-floe-text`): a template's `page.css` and a theme's `base.css` stop at
   it, so that a template's heading marks (design's rule, report's line) no
@@ -383,6 +390,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix swiss's parts in a band (a note, details, a table), whose text was dark on
+  the red band and whose links, titles, marks and focus rings red on it: they
+  draw in the band's text colour.
 - Fix a page that grew wider than a phone's screen when a long line of code or a
   wide table stood in a list's item or a quote (in a text, a faq's answer, a
   card of options or of a decision, a step, a tab): on screen, code, tables and
