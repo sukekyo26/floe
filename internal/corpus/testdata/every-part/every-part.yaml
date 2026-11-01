@@ -128,7 +128,7 @@ sections:
     parts:
       - options:
           - title: Copy in one go
-            text: Two days of read-only.
+            text: 'Two days of read-only, as [the plan](https://example.com/plan) says: `export --all`.'
             pros: [Simple]
             cons: [Longer freeze]
             pick: Recommended
@@ -137,7 +137,7 @@ sections:
               Each space is copied apart:
 
               - Docs first
-              - Then the rest
+              - Then the rest, as [the plan](https://example.com/plan) says: `export --space`
             pros: [Short freezes]
             cons: [Links break between spaces, Twice the work]
       - decision:

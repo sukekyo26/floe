@@ -150,7 +150,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 - `numbered`：`<ol>` に付けると、項目に丸い番号を付けて線でつなぎます。部品 `steps` と runbook の手順のように。項目の字は要素で包みます（`<li><p>Restart <code>api</code> now</p></li>`）。項目に直に書いた字は、字の続きと要素ごとに grid の別の項目になって崩れます。項目は字で始めます。字の無いもの（画像、空のブロック）で始まると、丸はその下の縁に来ます。丸の色は tone（`data-floe-tone`。自分のか外のもの）から `data-floe-mark` で取ります。`ring` は縁を tone に、`solid` は丸とそこからの線を tone で塗ります（`<li data-floe-mark="solid" data-floe-tone="good">`）。付けなければ線の色の丸です。`::before` を上書きせずにこうして塗れば、tone を自分の色で塗るテーマでも、そのテーマの色で描かれます。
 - `marked`：`<ul>` に付けると、項目の前の字を行の印にします。decision の不採用や handoff の済んだ作業のように。`page.css` が字と色を書き（`.done > li::before { content: "✓"; color: var(--good) }`）、項目の字は 1 つの要素に包みます（`<li><span>…</span></li>`）。
 
-テンプレートが自分の言葉（`{{word …}}`）で描く札（状態、重さ、種類）と注意は、見た目として借りず、部品として描きます。`page.html` に部品の箱を書き、札は `data-floe-part="cell"`、注意は `data-floe-part="note"`、色は `data-floe-tone` で付けます（`<p class="status" data-floe-part="cell" data-floe-tone="good">`）。adr・postmortem・handoff・runbook のように。帯・面・tone の中でも部品と同じに振る舞い、テーマの pill と注記の形で描かれます。`page.css` は箱の置き場所を書き、中には届きません。注記の中身は要素で包み（`<div data-floe-part="note"><p>…</p></div>`）、題は `<strong class="title">` にします。書き手が自由に書く字（Markdown の行、名前）は pill にしません。長くなり、塗りのあるテーマの pill の上ではリンクが読めないことがあります。
+テンプレートが自分の言葉（`{{word …}}`）で描く札（状態、重さ、種類）と注意は、見た目として借りず、部品として描きます。`page.html` に部品の箱を書き、札は `data-floe-part="cell"`、注意は `data-floe-part="note"`、色は `data-floe-tone` で付けます（`<p class="status" data-floe-part="cell" data-floe-tone="good">`）。adr・postmortem・handoff・runbook のように。帯・面・tone の中でも部品と同じに振る舞い、テーマの pill と注記の形で描かれます。`page.css` は箱の置き場所を書き、中には届きません。注記の中身は要素で包み（`<div data-floe-part="note"><p>…</p></div>`）、題は `<strong class="title">` にします。書き手が自由に書く字（Markdown の行、名前）は pill にしません。長くなり、塗りのあるテーマの pill の上ではリンクが読めないことがあります。pill は表の升の中でも 1 行に保ちます。長いものを折り返させるなら、まわりの要素に `--floe-pill-wrap: normal` を置きます。
 
 ## パレット
 
@@ -170,7 +170,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | `--tone`・`--tone-soft`・`--tone-fill` | 読む要素の tone（`data-floe-tone`、[parts.ja.md](parts.ja.md#css-の層と-scope)）の色。上の変数から floe が置き、tone の外では accent の色。テンプレートも tone をこの属性で付ける |
 | `--shadow` | 影の色の候補。影は、テーマが箱に `--floe-shadow-color` を置いたときだけ描かれる（[parts.ja.md](parts.ja.md#テーマ)） |
 | `--floe-shadow-x`・`-y`・`-blur`・`-spread` | テーマの 1 組の影。px か rem（既定は無し） |
-| `--radius`・`--radius-small`・`--radius-pill` | 角の丸さ。どれも 1 つの長さ。箱（panel・note・code・引用）、箱の中の小さな升（キー・棒・画像・行の中の code）、札（cell・タブの名前）。箱の縁から間 `p` だけ内にあって縁に沿う箱は `calc(var(--radius) - p)` |
+| `--radius`・`--radius-small`・`--radius-pill` | 角の丸さ。どれも 1 つの長さ。箱（panel・note・code・引用）、箱の中の小さな升（キー・棒・画像・行の中の code）、札（cell・タブの名前。折り返した cell は floe の `--floe-pill-end` までしか丸くならない）。箱の縁から間 `p` だけ内にあって縁に沿う箱は `calc(var(--radius) - p)` |
 | `--font`・`--display`・`--mono` | 本文・見出し・等幅の書体 |
 | `--code-bg`・`--code-fg`・`--code-prompt` | コードとターミナルの地（いつも暗い）、その文字、プロンプト |
 | `--code-add`・`--code-del` | diff の足した行と消した行 |
@@ -181,7 +181,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 floe の土台は、ページの根にこれらで地・色・書体を描きます（`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`）。`page.css` は `:scope` でこれを変えられます。自分のテーマも変えられます（[parts.ja.md](parts.ja.md#テーマ)）。印刷でも、どの地も画面のとおりに出ます。
 
-帯や塗った注意のように、色で自分を塗り、中に字を持つ要素は、`--face` に地を、`--on-face` に字の色を置き、それで自分を塗ります（`background: var(--face); color: var(--on-face)`）。floe の土台は、中のリンク・行の code（地なしの枠）・フォーカスの輪を `--on-face` で描きます（アクセントでは塗った地に溶けるため）。部品の中は、部品の地で初めから描きます。パネルの上の引用のように、自分で明るい地を塗る要素も、中を初めから描きます（`blockquote > * { --face: initial; --on-face: initial; }`）。地を塗らずに色を決めるときは、塗った面の中でも読めるように `var(--on-face, …)` と書きます。
+帯や塗った注意のように、色で自分を塗り、中に字を持つ要素は、`--face` に地を、`--on-face` に字の色を置き、それで自分を塗ります（`background: var(--face); color: var(--on-face)`）。floe の土台は、中のリンク・行の code（地なしの枠）・フォーカスの輪を `--on-face` で描きます（アクセントでは塗った地に溶けるため）。部品の中は、部品の地で初めから描きます。パネルの上の引用のように、自分で明るい地を塗る要素も、中を初めから描きます（`blockquote > * { --face: initial; --on-face: initial; }`）。見た目 `panel` は、地と一緒に字の色も書きます。地を塗らずに色を決めるときは、塗った面の中でも読めるように `var(--on-face, …)` と書きます。
 
 ## schema.json
 
