@@ -95,10 +95,9 @@ func (d *Drawer) layout(v any, opts Options) (*layout, error) {
 		}
 	}
 	l := newLayout(s, opts)
-	if l.failure != nil {
-		return nil, l.failure
+	if err = l.checked(); err != nil {
+		return nil, err
 	}
-	l.check()
 	found := l.problems
 	if name != "" {
 		if found, err = exampleMistakes(name, found); err != nil {

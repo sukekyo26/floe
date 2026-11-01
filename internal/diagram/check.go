@@ -22,6 +22,15 @@ func (l *layout) check() {
 	l.checkCrossings()
 }
 
+// checked checks l (see check), but a layout that failed, and returns floe's failure in laying it out or checking
+// it (two things of one graph that meet), the mistakes left in l.problems.
+func (l *layout) checked() error {
+	if l.failure == nil {
+		l.check()
+	}
+	return l.failure
+}
+
 // checkPlacement reports parts sticking out of the canvas; boxes (a frame's icon among them), marks, labels and
 // frame headings overlapping; and boxes and marks straddling a frame. Frames are not compared with one another.
 // LIMIT: labels are not kept off a frame's edge, where an edge's label may sit; compare label parts if one strays.

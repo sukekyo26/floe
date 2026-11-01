@@ -244,7 +244,7 @@ var messagesEN = map[string]string{
 	"diagram_graph_crossing":   "%s crosses %s of another graph at %s,%s; move one of the graphs by its x and y",
 	"diagram_graph_overlap":    "%s overlaps %s of another graph; move one of the graphs by its x and y",
 	"diagram_graph_through":    "%s runs through %s of another graph; move one of the graphs by its x and y",
-	"diagram_graph_outside":    "%s sticks out of the %sx%s canvas; move its graph by its x and y",
+	"diagram_graph_outside":    "%s sticks out of the %sx%s canvas; move its graph by its x and y, or widen the canvas by its width and height (or leave them out)",
 	"diagram_end_kind":         `edge: "%s" is a %s, which no edge can end at: end it at a box, a table or its named row, an icon, a frame, a bar, a dot or a point`,
 	"diagram_end_side":         `edge: %s has no side %s: write the side of a box, a table, an icon, a frame or a bar, left or right of a row, and none for a dot or a point`,
 	"diagram_too_narrow":       `%s: "%s"%s needs w: %s or more`,

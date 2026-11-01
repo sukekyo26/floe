@@ -1112,16 +1112,16 @@ func TestGraphTold(t *testing.T) {
 			t.Errorf("%s: %v, want %s at %s", c.name, c.l.problems, c.key, c.at)
 		}
 	}
-	// Things of one graph meet only by a fault of its layout: floe's failure, not a mistake to move a graph.
+	// Things of one graph meet only by a fault of its layout: floe's failure, not a mistake to move a graph, which
+	// checked returns as Drawer reads it.
 	for _, l := range []*layout{
 		{boxes: []rect{box(0, ga), box(20, ga)}, w: 500, h: 500},            //nolint:exhaustruct_v5 // what it checks
 		{boxes: []rect{box(30, ga)}, paths: []path{across}, w: 500, h: 500}, //nolint:exhaustruct_v5 // what it checks
 		{labels: []rect{{x: 40, y: 10, w: 30, h: 18, what: "label", at: ga + "/edges/0", graph: ga}}, //nolint:exhaustruct_v5 // what it checks
 			paths: []path{across}, w: 500, h: 500},
 	} {
-		l.check()
-		if l.failure == nil || len(l.problems) != 0 {
-			t.Errorf("one graph's things meeting: failure %v, mistakes %v", l.failure, l.problems)
+		if err := l.checked(); err == nil || len(l.problems) != 0 {
+			t.Errorf("one graph's things meeting: failure %v, mistakes %v", err, l.problems)
 		}
 	}
 }

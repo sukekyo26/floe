@@ -78,6 +78,7 @@ func TestGraphMistakes(t *testing.T) {
 		},
 		{"a label of a number", strings.Replace(g1, "to: check }", "to: check, label: 3 }", 1), `s.yaml:11:44: got number, want string or object`},
 		{"a diamond", strings.Replace(g1, "to: check }", "to: check, end: diamond }", 1), `s.yaml:11:42: value must be one of 'none', 'arrow'`},
+		{"x past a million", strings.Replace(g1, "x: 20\n", "x: 1000001\n", 1), `s.yaml:4:10: maximum: got 1.000001×10⁰⁶, want 1×10⁰⁶`},
 		{"up", strings.Replace(g1, "y: 20\n", "y: 20\n      direction: up\n", 1), `s.yaml:6:18: value must be one of 'down', 'right'`},
 		{"a box placed", strings.Replace(g1, "{ name: show,", "{ name: show, x: 10,", 1), `s.yaml:9:18: additional properties 'x' not allowed`},
 		{"201 boxes", many.String(), `s.yaml:7:9: maxItems: got 201, want 200`},
@@ -162,7 +163,7 @@ func TestGraphBlame(t *testing.T) {
 	// Off the canvas, what a graph laid out is told at the graph, to move it.
 	_, got := draw(t, "width: 100\n"+g1, inspect)
 	told := strings.Split(got, "\n")
-	if !slices.Contains(told, `s.yaml:5:7: box "write" sticks out of the 100x175 canvas; move its graph by its x and y`) ||
+	if !slices.Contains(told, `s.yaml:5:7: box "write" sticks out of the 100x175 canvas; move its graph by its x and y, or widen the canvas by its width and height (or leave them out)`) ||
 		slices.ContainsFunc(told, func(s string) bool { return !strings.HasPrefix(s, "s.yaml:5:7: ") }) {
 		t.Errorf("off the canvas: told %q", got)
 	}

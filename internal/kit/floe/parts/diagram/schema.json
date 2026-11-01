@@ -278,8 +278,8 @@
       "required": ["x", "y", "nodes"],
       "additionalProperties": false,
       "properties": {
-        "x": { "type": "number" },
-        "y": { "type": "number" },
+        "x": { "$ref": "#/$defs/coord" },
+        "y": { "$ref": "#/$defs/coord" },
         "direction": { "enum": ["down", "right"], "description": "Which way the edges run: down (the default) or right" },
         "nodes": {
           "type": "array",
