@@ -1,31 +1,31 @@
-frame "User" 12,12 236x760
-frame "Architect" 262,12 236x760
-frame "Engineer" 512,12 236x760
-box "order" 312,48 136x52
-box "design" 542,124 176x52
-box "dreview" 280,200 200x52
-box "answer" 50,200 136x52
-box "build" 518,276 224x52
-box "review" 304,352 152x52
-box "fix" 566,428 128x52
-box "ready" 300,504 160x52
-box "ci" 566,620 128x52
-box "ok" 58,620 144x52
-box "merge" 546,696 168x52
-edge order→design M380,100 V150 H542
-edge design→dreview M630,176 V226 H480
-edge [280,218]→[186,218] M280,218 H186
-edge [186,234]→[280,234] M186,234 H280
-edge dreview→build M380,252 V302 H518
-edge build→review M630,328 V378 H456
-edge review→fix M380,404 V454 H566
-edge fix→ready M630,480 V530 H460
-edge ready→ci M380,556 V588 H630 V620
-edge ci→ok M566,646 H202
-edge ok→merge M130,672 V722 H546
-label "ask" 200,195 34x18
-label "answer" 190.4,239 53.2x18
-label "OK" 436.8,293 24.4x18
-label "findings" 426.2,445 67.6x18
-label "ready to merge" 382.6,579 110.8x18
-label "ask" 522,637 34x18
+frame "user" 20,20 228x744
+frame "architect" 272,20 258x744
+frame "engineer" 554,20 252x744
+box "answer" 32,214 136x46
+box "ok" 32,632.5 144x29
+box "order" 380,50 136x46
+box "dreview" 314,214 200x46
+box "review" 362,378 152x46
+box "ready" 356,542 160x46
+box "design" 566,132 176x46
+box "build" 566,296 224x46
+box "fix" 566,460 128x46
+box "ci" 566,624 128x46
+box "merge" 566,706 168x46
+edge order→design M500,96 V108 H650 V132
+edge design→dreview M584,178 V190 H410 V214
+edge dreview→answer M314,231 H168
+edge answer→dreview M168,243 H314
+edge dreview→build M500,260 V272 H674 V296
+edge build→review M584,342 V354 H434 V378
+edge review→fix M500,424 V436 H626 V460
+edge fix→ready M584,506 V518 H434 V542
+edge ready→ci M500,588 V600 H626 V624
+edge ci→ok M566,653 H176
+edge ok→merge M164,661.5 V682 H650 V706
+label "ask" 278,201 34x18
+label "answer" 179,255 53.2x18
+label "OK" 502,284 24.4x18
+label "findings" 556,406 67.6x18
+label "ready to merge" 638,602 110.8x18
+label "ask" 494,623 34x18
