@@ -1605,3 +1605,56 @@ func TestGraphLoopEnds(t *testing.T) {
 		}
 	}
 }
+
+// A box grows once for its loops, as long as they need: by a label thousands of characters long (no cap on rounds
+// of growing to reach), and no longer for the loops of a box of its rank, which grows with it.
+func TestGraphLoopGrow(t *testing.T) {
+	t.Parallel()
+	for _, direction := range []string{"", "right"} {
+		g := graphOf([]string{"a"}, "a>a")
+		g.Direction = direction
+		g.Edges[0].Label = Text{"en": strings.Repeat("w", 2000)}
+		if fault := graphFault(g); fault != "" {
+			t.Errorf("direction %q, a loop's label 2000 characters long: %s", direction, fault)
+		}
+	}
+	loops := func(both bool) *graph {
+		g := graphOf([]string{"s", "b", "c"}, "s>b", "s>c", "b>b", "b>b", "b>b")
+		if both {
+			g.Edges = append(g.Edges, graphOf(nil, "c>c", "c>c", "c>c").Edges...)
+		}
+		for k := 2; k < len(g.Edges); k++ {
+			g.Edges[k].Label = Text{"en": []string{"one", "two", "three"}[(k-2)%3]}
+		}
+		return g
+	}
+	one, both := laid(loops(false)).names["b"].r, laid(loops(true)).names["b"].r
+	if fault := graphFault(loops(true)); fault != "" {
+		t.Fatal(fault)
+	}
+	if one.h != both.h {
+		t.Errorf("box b %v tall with loops on c too, %v with loops on b alone", both.h, one.h)
+	}
+}
+
+// reach makes room past where an edge written by hand leaves a box past the cut, from where it starts, though that
+// is short of the run: the box past the run within the hand's length.
+func TestGraphReachHands(t *testing.T) {
+	t.Parallel()
+	d := &drawing{
+		right: false, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{0: {{90, 0}, {90, 200}}},
+		ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
+	}
+	d.boxes[0] = rect{x: 20, y: 0, w: 50, h: 20, what: "", at: ""}   //nolint:exhaustruct_v5 // a box
+	d.boxes[1] = rect{x: 100, y: 80, w: 50, h: 40, what: "", at: ""} //nolint:exhaustruct_v5 // a box, its left hand from 76
+	for i, b := range d.boxes {
+		b.form = outlineOf(b.w, b.h, "")
+		d.boxes[i] = b
+	}
+	r := rect{x: 91, y: 95, w: 40, h: 10, what: "", at: ""} //nolint:exhaustruct_v5 // a label beside the run
+	at, need := d.reach(r, 90, 1)
+	d.stretch(0, at, need)
+	if !free(r, nil, d.hands()) {
+		t.Errorf("cut at %v, moved on %v: %v is not clear of the hands %v", at, need, r, d.hands())
+	}
+}
