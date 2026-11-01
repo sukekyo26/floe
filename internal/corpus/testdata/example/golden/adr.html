@@ -321,7 +321,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: one record on a sheet, the panel of the
-   theme, in a column as wide as prose and a little more.
+   theme, in a column as wide as prose.
    LIMIT: the consequences sit side by side while each has 14rem; a width where they wrap is not looked at */
 body { margin: 0; padding-block: 2.5rem 4rem; font-size: 16px; line-height: 1.85; }
 .column { max-width: calc(var(--text-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }

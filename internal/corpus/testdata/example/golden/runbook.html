@@ -449,7 +449,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: what to check, a caution, the steps numbered
-   under a line to the next (the look numbered), and how to roll back, in one column as wide as prose and the numbers */
+   under a line to the next (the look numbered), and how to roll back, in one column as wide as prose */
 body { margin: 0; padding-block: 2.5rem 4rem; font-size: 16px; line-height: 1.75; }
 .column { max-width: calc(var(--text-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); display: grid; gap: 2rem; }
 header { display: grid; gap: 0.4rem; justify-items: start; }

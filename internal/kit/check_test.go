@@ -19,7 +19,7 @@ func TestCheckFloe(t *testing.T) {
 }
 
 const (
-	partFiles  = "a part holds schema.json, part.html and part.css, and a look alone part.css without the other two (and part.yaml if it takes looks); add what it lacks, or remove what a look has no use for"
+	partFiles  = "a part holds schema.json, part.html and part.css, and a look alone part.css without the other two (and part.yaml if it takes looks or has rows with a mark, marks:); add what it lacks, or remove what a look has no use for"
 	lookUnread = "floe reads no file but part.css and part.yaml in a look, a directory without a schema.json: remove it, or add the schema.json to make it a part"
 	braceTold  = "this } closes no block: floe puts this CSS in a layer, which it would close, leaving the rules after it out of the layer and over the parts' styles"
 )
@@ -123,17 +123,17 @@ func TestCheckMistakes(t *testing.T) {
 		},
 		{
 			"marks: in the part and a look it takes", with(map[string]string{"p/part.yaml": "marks: box\nlooks: [numbered]\n"}), nil, nil,
-			"own/parts/p/part.yaml:1:1: marks: is written by both p and numbered, which p puts on one element; write it in one of them only",
+			"own/parts/p/part.yaml:1:1: p and the looks it takes write marks: twice (p and numbered), though one chain of looks writes it once: remove p's own marks:, or take one look that writes it",
 		},
 		{
 			"marks: in two looks taken", with(map[string]string{"p/part.yaml": "looks: [panel, numbered, marked]\n"}), nil, nil,
-			"own/parts/p/part.yaml:1:26: marks: is written by both numbered and marked, which p puts on one element; write it in one of them only",
+			"own/parts/p/part.yaml:1:26: p and the looks it takes write marks: twice (numbered and marked), though one chain of looks writes it once: remove p's own marks:, or take one look that writes it",
 		},
 		// h takes g alone, which holds both itself: g is told, h not.
 		{
 			"marks: in two looks a taken look takes",
 			with(map[string]string{"g/part.css": "a{}", "g/part.yaml": "looks: [numbered, marked]\n", "h/part.css": "a{}", "h/part.yaml": "looks: [g]\n"}), nil, nil,
-			"own/parts/g/part.yaml:1:19: marks: is written by both numbered and marked, which g puts on one element; write it in one of them only",
+			"own/parts/g/part.yaml:1:19: g and the looks it takes write marks: twice (numbered and marked), though one chain of looks writes it once: remove g's own marks:, or take one look that writes it",
 		},
 		{"marks: once down the looks", with(map[string]string{
 			"p/part.yaml": "marks: items\nlooks: [rows]\n", "foo/part.css": "a{}", "foo/part.yaml": "looks: [numbered]\n",
