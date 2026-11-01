@@ -290,7 +290,8 @@ func (ls listing) emit(c, r int) []int {
 	return out
 }
 
-// unit is a run of a rank within group c: one node of c's own, or every node of a group nested in c (cl).
+// unit is a run of a rank within group c: one node of c's own, a block of c's boxes (see level.go), or every node of
+// a group nested in c (cl).
 type unit struct {
 	cl    int // -1 for a node of c's own
 	nodes []int
@@ -307,7 +308,7 @@ func (gr *group) units(seq []int, c int) []unit {
 		if d == c {
 			d = -1
 		}
-		if n := len(out); d >= 0 && n > 0 && out[n-1].cl == d {
+		if n := len(out); n > 0 && out[n-1].cl == d && (d >= 0 || gr.sameBlock(out[n-1].nodes[0], i)) {
 			out[n-1].nodes = append(out[n-1].nodes, i)
 			continue
 		}
@@ -361,6 +362,9 @@ func (gr *group) sortIn(seq []int, c int, keys map[int]float64) []int {
 			order[j] = moving[k]
 			k++
 		}
+	}
+	if gr.out.lane(c) { // a lane's blocks facing another lane stand at its end towards it, the rest as ordered
+		slices.SortStableFunc(order, func(a, b int) int { return gr.facing(us[a]) - gr.facing(us[b]) })
 	}
 	out := slices.Clone(head)
 	for _, j := range order {

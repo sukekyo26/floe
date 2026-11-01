@@ -48,10 +48,11 @@ func expand(parts []part) ([]item, usererr.List, error) {
 			m.place(&out, &p.Tree.Root, p.Tree.X, p.Tree.Y, 0, pointer(i)+"/tree/root")
 		case p.Graph != nil:
 			if o := graphs[i]; o != nil && !o.skip {
-				its, err := o.items()
+				its, told, err := o.items()
 				if err != nil {
 					return nil, nil, err
 				}
+				problems = append(problems, told...)
 				out = append(out, its...)
 			}
 		default:

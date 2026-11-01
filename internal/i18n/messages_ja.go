@@ -232,7 +232,7 @@ var messagesJA = map[string]string{
 	"diagram_graph_lane":       "edge %s→%s: %s は graph の端から端までの帯です。帯の中の箱かまとまりで終えてください",
 	"diagram_graph_many":       "graph: 箱とまとまりが %d 個あり、%d を超えています。graph を分けてください",
 	"diagram_graph_inside":     "edge %s→%s: 両端がまとまり「%s」かその中にあります。「%s」の外の箱か、ほかのまとまりで終えてください",
-	"diagram_graph_among":      "edge %s→%s: %s はまとまり「%s」の箱の間の段にあります（%s から来て %s へ行く）。「%s」の中の箱で終えてください",
+	"diagram_graph_among":      "edge %[1]s→%[2]s: %[3]s はまとまり「%[4]s」の上にも下にも立てません（%[5]s が %[3]s と同じ段か上に、%[6]s が同じ段か下に立ちます）。「%[7]s」の中の箱で終えてください",
 	"diagram_graph_long":       "graph: 図の graph の線が端と端の間で越える段が合わせて %d あり、%d を超えています。図を分けてください",
 	"diagram_graph_crossing":   "%sが別の graph の%sと %s,%s で交差しています。どちらかの graph の x・y を動かしてください",
 	"diagram_graph_overlap":    "%sが別の graph の%sと重なっています。どちらかの graph の x・y を動かしてください",
@@ -275,6 +275,14 @@ var messagesJA = map[string]string{
 	"cli_themes":               "テーマ: %s",
 	"cli_files":                "ファイル: %s",
 	"diagram_edge_nowhere":     "%sは始まりと終わりが同じ所です。片方の端に別の部品か点を書いてください",
+
+	// diagram: a graph's level edges
+	"diagram_graph_level_group":   "edge %s→%s: %s はまとまりです。level は 2 つの箱を同じ段に置きます。箱で終えるか、level を外してください",
+	"diagram_graph_level_apart":   "edge %s→%s: level でつなげるのは、同じまとまりの中の 2 つの箱か、別々の帯の直下の 2 つの箱です。どちらかを動かすか、level を外してください",
+	"diagram_graph_level_rank":    "edge %s→%s: %s と %s は level の線で同じ段に立つので、この線は段をまたげません。別の所で終えるか、2 つをつなぐ線の level を外してください",
+	"diagram_graph_level_between": "edge %s→%s: 段の中で、%s が 2 つの箱の間に立ちます。level を外すか、それをよけてください",
+	"diagram_graph_level_loop":    "edge %[1]s→%[2]s: %[4]s の辺 %[3]s を使いますが、そこには輪があります。level か輪を外してください",
+	"diagram_graph_level_heading": "edge %s→%s: 帯「%s」の見出しを横切ります。right では見出しが最初の段に伸びます。level を外すか、見出しを短くしてください",
 
 	// ui
 	"ui_back_to_list":                "一覧へ戻る",

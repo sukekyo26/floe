@@ -55,6 +55,7 @@ type group struct {
 	frames   map[int][2]float64 // each group's frame's top and bottom, as laid out down
 	botRoom  []float64          // the room below each rank for the frames ending there
 	headAt   float64            // how far a heading's room stands from its frame's top, along the ranks
+	levels   []int              // its level edges, by their indexes in edges, but those told
 }
 
 // graphOut is a graph read and ranked: its boxes and groups read flat, its groups of connected boxes, and the ranks
@@ -68,8 +69,11 @@ type graphOut struct {
 	ends     map[int][2]gref
 	groups   []*group
 	passed   int
-	loops    [][2]int // the edges from a box to itself, and the box
-	skip     bool     // too many nodes: told, and not laid out
+	loops    [][2]int       // the edges from a box to itself, and the box
+	skip     bool           // too many nodes: told, and not laid out
+	levels   []int          // the edges written level between boxes, but those told (levelMistake)
+	row      []int          // the first box, as written, of each box's row: the boxes level edges stand in one rank
+	facing   map[[2]int]int // where each block stands in its lane (faces)
 }
 
 // readGraph reads g's boxes and groups, resolves the names of its edges against them, and splits it into groups of
@@ -78,7 +82,7 @@ type graphOut struct {
 func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
-		loops: nil, skip: false,
+		loops: nil, skip: false, levels: nil, row: nil, facing: nil,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)
 	if n := len(out.boxes) + len(out.clusters); n > maxNodes {
@@ -87,25 +91,37 @@ func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 	}
 	byName := out.names()
 	var problems usererr.List
-	var edges, cedges []int
+	var edges, cedges, levels []int
 	for k := range g.Edges {
 		ends, mistakes := out.endsOf(k, byName)
 		if len(mistakes) > 0 {
 			problems = append(problems, mistakes...)
 			continue
 		}
+		out.ends[k] = ends
 		switch {
 		case ends[0].box >= 0 && ends[0] == ends[1]:
 			out.loops = append(out.loops, [2]int{k, ends[0].box})
+		case g.Edges[k].Level:
+			if mistake := out.levelMistake(k, ends); mistake != nil {
+				problems = append(problems, mistake)
+				continue
+			}
+			levels = append(levels, k)
 		case ends[0].box >= 0 && ends[1].box >= 0:
 			edges = append(edges, k)
 		default:
 			cedges = append(cedges, k)
 		}
-		out.ends[k] = ends
 	}
-	for _, gr := range out.groupsOf(edges, cedges) {
+	levels, told := out.unlooped(levels)
+	problems = append(problems, told...)
+	out.rows(levels)
+	edges, told = out.across(edges)
+	problems = append(problems, told...)
+	for _, gr := range out.groupsOf(edges, cedges, levels) {
 		problems = append(problems, gr.among...)
+		problems = append(problems, gr.levelMistakes()...)
 		out.groups = append(out.groups, gr)
 		out.passed += gr.passed()
 	}
@@ -175,8 +191,8 @@ func (o *graphOut) members(e gref) []int {
 
 // groupsOf splits the boxes into the groups the edges (by index) join, boxes edges by groups edges (cedges) too, and
 // boxes of one group at the top too, in the order of their first box, each ranked.
-func (o *graphOut) groupsOf(edges, cedges []int) []*group {
-	find := o.joined(edges, cedges)
+func (o *graphOut) groupsOf(edges, cedges, levels []int) []*group {
+	find := o.joined(slices.Concat(edges, levels), cedges)
 	members := map[int][]int{}
 	var firsts []int
 	for i := range o.boxes {
@@ -188,10 +204,15 @@ func (o *graphOut) groupsOf(edges, cedges []int) []*group {
 	}
 	groups := make([]*group, 0, len(firsts))
 	for _, r := range firsts {
-		var own, cown []int
+		var own, cown, lown []int
 		for _, k := range edges {
 			if find(o.ends[k][0].box) == r {
 				own = append(own, k)
+			}
+		}
+		for _, k := range levels {
+			if find(o.ends[k][0].box) == r {
+				lown = append(lown, k)
 			}
 		}
 		for _, k := range cedges {
@@ -199,7 +220,7 @@ func (o *graphOut) groupsOf(edges, cedges []int) []*group {
 				cown = append(cown, k)
 			}
 		}
-		groups = append(groups, o.rank(members[r], own, cown))
+		groups = append(groups, o.rank(members[r], own, cown, lown))
 	}
 	return groups
 }
@@ -247,7 +268,7 @@ func edgeAt(at string, k int) string {
 // into a box for each of its boxes and an edge for each of its edges, at their JSON pointers, so that they are named,
 // drawn and checked as boxes and edges written by hand are. The groups are laid out from 0,0 and moved to the graph's
 // place last: room made and spots tried step by units, which a coordinate as far out as 1e17 would round away.
-func (o *graphOut) items() ([]item, error) {
+func (o *graphOut) items() ([]item, usererr.List, error) {
 	right := o.g.Direction == "right"
 	across := 0 // the axis groups stand side by side on, as drawn
 	if right {
@@ -259,11 +280,13 @@ func (o *graphOut) items() ([]item, error) {
 	labels := map[int]rect{}
 	toward := map[int]bool{}
 	left := 0.0
+	var told usererr.List
 	for _, gr := range o.groups {
 		d, err := o.draw(gr, right)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		told = append(told, d.headed(o, gr)...)
 		left = d.stand(across, left)
 		d.stretch(0, math.Inf(-1), o.g.X)
 		d.stretch(1, math.Inf(-1), o.g.Y)
@@ -291,7 +314,7 @@ func (o *graphOut) items() ([]item, error) {
 		}
 		out = append(out, item{edgeAt(o.at, k), part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
 	}
-	return out, nil
+	return out, told, nil
 }
 
 // opened is out with the nodes cs opened as written, a group's frame before the nodes it holds, so that a name used
@@ -325,7 +348,7 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 	d := &drawing{
 		right: right, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{},
 		ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
-		frames: map[int]rect{}, heads: map[int]float64{},
+		frames: map[int]rect{}, heads: map[int]float64{}, level: map[int][2]string{}, taken: map[int]map[string]bool{},
 	}
 	sides := map[int][2]float64{} // each group's left and right, as laid out down
 	for _, n := range gr.nodes {
@@ -364,10 +387,14 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 			d.ends[k], d.back[k] = [2]int{d.ends[k][1], d.ends[k][0]}, true
 		}
 	}
+	d.growLevels(gr)
 	if err := o.drawLoops(d); err != nil {
 		return nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
 	}
-	for _, k := range edges {
+	if err := o.drawLevels(gr, d); err != nil {
+		return nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
+	}
+	for _, k := range slices.Sorted(slices.Values(slices.Concat(edges, gr.levels))) {
 		if t := o.g.Edges[k].Label; t != nil {
 			if err := d.place(k, labelWidth(t, false)); err != nil {
 				return nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
@@ -406,9 +433,11 @@ type drawing struct {
 	ends   map[int][2]int // the boxes each edge's corners start and end on
 	back   map[int]bool   // the edges drawn up, against the ranks
 	spots  map[int]spot
-	loops  map[int]bool    // the edges from a box to itself
-	frames map[int]rect    // the frames of its groups, by group
-	heads  map[int]float64 // the widths of its groups' headings
+	loops  map[int]bool            // the edges from a box to itself
+	frames map[int]rect            // the frames of its groups, by group
+	heads  map[int]float64         // the widths of its groups' headings
+	level  map[int][2]string       // the level edges, and the sides of their boxes they take, from the box written first
+	taken  map[int]map[string]bool // the sides of each box level edges take
 }
 
 // spot is where a label stands, held to its run so that it moves with it: beside run seg of edge's corners (its own
@@ -470,6 +499,9 @@ func isDown(s seg) bool { return s[0] == s[2] }
 // edge labelled); compare only the things near a spot if larger graphs come to need it. Room made grows the group
 // and widens the boxes a cut crosses beyond their text, and minds no edge written by hand: a band made over the
 // middle of a box's side may stand in the way of one, told at it.
+// LIMIT: room made puts a label below its run (right of it laid out right), so the label of the upper of two level
+// edges between the same boxes stands between them, pushing the other edge and the boxes' sides apart. Make room
+// above a run too (as for a loop left of its box) if pairs of labelled level edges come to look spread.
 func (d *drawing) place(k int, w float64) error {
 	things, runs := d.held(-1), append(d.runs(), d.hands()...)
 	for i := range len(d.routes[k]) - 1 {
@@ -539,6 +571,11 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 	if to < from {
 		sign = -1
 	}
+	_, level := d.level[k]
+	if level { // a level edge's run starts within its box's bounds, on a slant or a round end
+		b := d.boxes[d.ends[k][0]]
+		from = b.lo(along) + max(sign, 0)*b.size(along)
+	}
 	cut := from + sign
 	for moved := true; moved; {
 		moved = false
@@ -551,12 +588,19 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 			}
 		}
 	}
+	if (cut-to)*sign >= 0 && level { // a level edge's only run: cut through the boxes in the way, widening them
+		cut = from + sign
+	}
 	if (cut-to)*sign >= 0 {
 		return spot{edge: k, seg: 0, side: 0, at: 0, w: 0}, false
 	}
 	cross := s[1-along]
 	stays, moves := d.crossed(along, cut, cross+1, cross+column+size[0])
-	d.stretch(along, cut, stays+size[1]+4+moves)
+	by := stays + size[1] + 4 + moves
+	if level { // across the ranks, by whole columns, keeping the grid of points and edges
+		by = onGrid(by, column, math.Ceil)
+	}
+	d.stretch(along, cut, by)
 	sp := spot{edge: k, seg: i, side: 1, at: cut + stays + 2, w: w}
 	s = segAt(d.routes[k], i)
 	if at, need := d.reach(spotRect(s, sp), s[1-along], along); need > 0 {
@@ -673,6 +717,15 @@ func (d *drawing) stretch(axis int, at, by float64) {
 func (d *drawing) endsOn(k int, widened map[int]bool) {
 	pts, ends := d.routes[k], d.ends[k]
 	last := len(pts) - 1
+	if sides, ok := d.level[k]; ok {
+		_, along := d.axes()
+		for j, i := range [2]int{0, last} {
+			if b := d.boxes[ends[j]]; widened[ends[j]] {
+				pts[i] = b.form.on(b, sides[j], pts[i][along])
+			}
+		}
+		return
+	}
 	if d.loops[k] {
 		if widened[ends[0]] {
 			pts[0], pts[last] = d.loopEnd(ends[0], pts[0]), d.loopEnd(ends[0], pts[last])
@@ -718,9 +771,7 @@ func (d *drawing) boxSpan(axis int) (lo, hi float64) {
 func (d *drawing) held(but int) []rect {
 	out := slices.Collect(maps.Values(d.boxes))
 	for c, w := range d.heads {
-		f := d.frames[c]
-		head := rect{x: f.x + 12, y: f.y + 9, w: w, h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // as addFrame's
-		out = append(out, head)
+		out = append(out, headRect(d.frames[c], w))
 	}
 	for k, sp := range d.spots {
 		if k != but {
@@ -728,6 +779,11 @@ func (d *drawing) held(but int) []rect {
 		}
 	}
 	return out
+}
+
+// headRect is where the heading w wide of the frame f stands, as addFrame puts it.
+func headRect(f rect, w float64) rect {
+	return rect{x: f.x + 12, y: f.y + 9, w: w, h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // a heading's room
 }
 
 // heldRect is a label at sp beside run s with the column between them, short of the run by a unit: what is kept
@@ -769,20 +825,26 @@ func (d *drawing) hands() []seg {
 	return out
 }
 
-// handsOf are the hands of box i (see hands), but on its loop side when it has loops.
+// handsOf are the hands of box i (see hands), but on its loop side when it has loops and on the sides its level
+// edges take.
 func (d *drawing) handsOf(i int, looped bool) []seg {
 	b := d.boxes[i]
 	cx, cy, far := b.x+b.w/2, b.y+b.h/2, 2*column
+	type hand struct {
+		side string
+		run  seg
+	}
+	sides := []hand{{"left", seg{b.x - far, cy, b.x, cy}}, {"right", seg{b.x + b.w, cy, b.x + b.w + far, cy}}}
 	if d.right {
-		if looped {
-			return []seg{{cx, b.y - far, cx, b.y}}
+		sides = []hand{{"top", seg{cx, b.y - far, cx, b.y}}, {"bottom", seg{cx, b.y + b.h, cx, b.y + b.h + far}}}
+	}
+	var out []seg
+	for _, h := range sides {
+		if !d.taken[i][h.side] && (!looped || h.side != d.loopSide()) {
+			out = append(out, h.run)
 		}
-		return []seg{{cx, b.y - far, cx, b.y}, {cx, b.y + b.h, cx, b.y + b.h + far}}
 	}
-	if looped {
-		return []seg{{b.x - far, cy, b.x, cy}}
-	}
-	return []seg{{b.x - far, cy, b.x, cy}, {b.x + b.w, cy, b.x + b.w + far, cy}}
+	return out
 }
 
 // looped are the boxes with loops.

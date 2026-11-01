@@ -28,10 +28,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   side in every rank, framed as a `frame` with its `label` (groups nest), and
   an edge may end at a group, at its frame's top or bottom. With `lanes:
   true`, its groups are lanes, bands from end to end of the graph in the order
-  written, their tops and bottoms in line. A graph holds 200
+  written, their tops and bottoms in line. An edge written `level: true`
+  stands its two boxes in one rank, the edge straight between their facing
+  sides: two boxes of one group, side by side as written, or directly in two
+  lanes, each at its lane's end towards the other; floe refuses one whose
+  boxes something stands between, or that takes the side of a box's loops.
+  A graph holds 200
   boxes and groups and 400 edges, and the edges of all the graphs of a diagram
   may pass 4000 ranks between their ends, all told. The diagram examples
-  `flow` and `state` are drawn with it.
+  `flow`, `state` and `swimlane` are drawn with it.
 - Add `marks:` to a part's or look's `part.yaml`, which of its elements are
   rows with a mark at their left: `box`, `items` (each `li`) or `joined`
   (with a line to the next). floe lays the rows out in one layer,
