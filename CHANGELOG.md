@@ -380,6 +380,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a page that grew wider than a phone's screen when a long line of code or a
+  wide table stood in a list's item or a quote (in a text, a faq's answer, a
+  card of options or of a decision, a step, a tab): on screen, code, tables and
+  trees now scroll inside their box at any place, and widen nothing around
+  them. Print is as before.
 - Fix washi's facts, whose pills lay over the inner rule of their tile, and
   swiss's first card picked in options, whose frame touched its text.
 - Fix pills unreadable on a filled face (a band, a note): blueprint's,
