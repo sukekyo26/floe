@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add a theme's `markdown.css`, the look of Markdown (quotes, headings)
+  wherever it stands: on the page, in a text and in what the parts hold.
+  floe's themes draw their quotes, and retro its stripes under headings, from
+  it. A part or look is not named `markdown`.
 - Add the diagram part `graph`: write boxes and the edges joining them by
   name, and floe lays them out in ranks (`direction: down` or `right`), orders
   each rank to cross fewer edges and draws each edge at right angles between
@@ -239,9 +243,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   declare) is told at its line and column, as one of a `page.html` is; a
   function refusing a value (`num`, `bars`) is told at the value.
   A theme's `base.css` reaches the page as a template's `page.css` does, not
-  what a part holds, and under the template's `page.css` and the looks: its
-  root is `:scope`, `:root` and `html` being outside it, and a rule for what a
-  part holds goes in the theme's file of that part.
+  what a part holds nor a text's Markdown, and under the template's
+  `page.css` and the looks: its root is `:scope`, `:root` and `html` being
+  outside it, and a rule for what a part holds goes in the theme's file of
+  that part. A theme's `markdown.css` is the look of Markdown wherever it
+  stands, in what the parts hold too, under every part's, look's and
+  template's CSS.
   A mistake of a part, shared schema, theme or template of your own stops
   every page drawn until it is fixed. The directories of parts, themes and
   templates of your own that are one, or one in the other, are refused for
@@ -273,6 +280,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the part text to draw its Markdown in a box of no part
+  (`data-floe-text`): a template's `page.css` and a theme's `base.css` stop at
+  it, so that a template's heading marks (design's rule, report's line) no
+  longer fall on a text's headings, and it takes the face and tone around it.
+  A heading in a part or a text is 1.2em (`#`) or 1.1em (`##`), no larger than
+  a template's own.
+- Change a theme's quotes and retro's stripes to be drawn in what the parts
+  hold too (details, tabs, notes, entries), as on the page. default's quote is
+  white in a panel; swiss's quote is a heavy red rule at the left of its bold
+  text, with no “; washi's quote is shorter (less padding and line height).
+- Change steps', timeline's and cards' muted text to take the colour on a
+  quote's face, as a quote with a face of its own (ink's) now stands in them.
 - Change steps' step in progress to a ring 1.5px wide, runbook's lines to
   its rings' colour (the accent, and bad in its rollback, its frame and
   heading too), and brutal's and notebook's filled rings to the tone's own

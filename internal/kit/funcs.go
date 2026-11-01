@@ -66,7 +66,8 @@ func markdownHTML(text string) (template.HTML, error) {
 	// With raw HTML left out, every <table> in the output is one goldmark drew.
 	html = strings.ReplaceAll(html, "<table>", `<div data-floe-part="`+markdownPart+`"><table>`)
 	html = strings.ReplaceAll(html, "</table>", "</table></div>")
-	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
+	// No space at its ends: a text of raw HTML alone leaves its box a comment alone, which :empty takes (base.css).
+	return template.HTML(strings.TrimSpace(html)), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 }
 
 // Markdown writes text, an item of format markdown, as HTML, as markdown in page.html does.

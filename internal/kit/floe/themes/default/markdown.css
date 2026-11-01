@@ -1,0 +1,3 @@
+blockquote > * { --face: initial; --on-face: initial; --quiet: var(--default-quote-quiet); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); color: var(--fg); }
+blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }

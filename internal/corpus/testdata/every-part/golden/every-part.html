@@ -22,6 +22,9 @@
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
+/* A heading in a part or a text is Markdown's, as a part draws none: no larger than a template's own */
+:where([data-floe-part], [data-floe-text]) h1 { font-size: 1.2em; }
+:where([data-floe-part], [data-floe-text]) h2 { font-size: 1.1em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -33,6 +36,10 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    paints a light ground of its own does the same with what it holds, and one that sets a colour on no ground of its
    own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; }
+/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do; a text of raw HTML alone
+   draws nothing, its box a comment alone */
+[data-floe-text] { display: grid; gap: var(--floe-room); }
+[data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
 code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
@@ -74,7 +81,9 @@ blockquote > * + * { margin-top: 0.6rem; }
    --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
    none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
    LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
-   length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses */
+   length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses.
+   LIMIT: a part's Markdown flow is spaced under --floe-room (S164), so a theme's quote shadowed as far as that, in a
+   part, meets the next paragraph or leaves the part's box; until floe spaces that flow in one place */
 :root { --floe-room: 0.75rem; }
 @property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
@@ -126,7 +135,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.theme {
-@scope (:root) to ([data-floe-part] > *) {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
 :scope {
   /* default's own, here and not in its palette, which lies under every theme's */
@@ -135,10 +144,19 @@ blockquote > * + * { margin-top: 0.6rem; }
      corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
      LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and TestRadius follows the
      corner to --default-inner, not to --default-pad: a pad grown past the radius squares them unseen */
+  /* A quote's ground, and the quiet ground within it, the other way round: the panel's on the page and on a face of the
+     surface, the surface in a panel; each box that turns --quiet turns them with it */
+  --default-quote: var(--default-panel); --default-quote-quiet: var(--surface);
   --default-pad: 6px; --default-inner: calc(var(--radius) - var(--default-pad));
 }
-blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-panel); --quiet: var(--surface); color: var(--fg); }
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) {
+blockquote > * { --face: initial; --on-face: initial; --quiet: var(--default-quote-quiet); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); color: var(--fg); }
 blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
@@ -476,6 +494,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 .card {
   padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
+/* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
+.card { --face: initial; --on-face: initial; }
 /* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
    sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
    LIMIT: whether a decoration keeps off the text is seen, not measured */
@@ -487,7 +507,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
 .card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
-.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 }
 }
 </style>
@@ -883,7 +903,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 :scope { padding: 1.1rem 1.3rem; }
 :scope > li.done::before { content: "✓"; }
 :scope > li > strong { line-height: 1.6; }
-:scope > li > :not(strong) { color: var(--muted); font-size: 0.92rem; }
+:scope > li > :not(strong) { color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 }
 }
 </style>
@@ -971,7 +991,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
   font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
 }
 :scope > li::after { background: var(--line); }
-:scope li > div > :not(strong) { color: var(--muted); font-size: 0.92rem; }
+:scope li > div > :not(strong) { color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 @media (max-width: 36rem) {
   :scope > li {
     --floe-mark-gap: 0.9rem;
@@ -1017,7 +1037,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="bars"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="faq"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="progress"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="tree"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
 }
 </style>
@@ -1025,7 +1045,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="entries"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
 }
 </style>
@@ -1033,7 +1053,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
 }
 </style>
@@ -1065,7 +1085,10 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="faq"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { padding: var(--default-pad); }
-:scope > * { background: var(--surface); --quiet: var(--default-panel); }
+:scope > * {
+  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
+  --default-quote-quiet: var(--surface);
+}
 :scope > :first-child { border-radius: var(--default-inner) var(--default-inner) 0 0; }
 :scope > :last-child { border-radius: 0 0 var(--default-inner) var(--default-inner); }
 :scope > :only-child { border-radius: var(--default-inner); }
@@ -1076,7 +1099,10 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="entries"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { padding: var(--default-pad); }
-:scope > * { background: var(--surface); --quiet: var(--default-panel); }
+:scope > * {
+  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
+  --default-quote-quiet: var(--surface);
+}
 :scope > :first-child { border-radius: var(--default-inner) var(--default-inner) 0 0; }
 :scope > :last-child { border-radius: 0 0 var(--default-inner) var(--default-inner); }
 :scope > :only-child { border-radius: var(--default-inner); }
@@ -1134,7 +1160,9 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
-.card { background: var(--surface); --quiet: var(--default-panel); border-radius: calc(var(--radius) - var(--floe-room)); }
+.card {
+  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
+  --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; --floe-mark: auto; background: none;
   font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
@@ -1193,7 +1221,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 </style>
 <style>
 @layer floe.page {
-@scope (:root) to ([data-floe-part] > *) {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* The colours and faces are the theme's palette; the page lays them out */
 body {
   margin: 0; font-size: 16px; line-height: 1.85; padding-block: 2.5rem 4rem;
@@ -1245,17 +1273,30 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </section>
 <section>
 <h2 id="steps">Steps</h2>
-<p>The pages move over <strong>one weekend</strong>; the old wiki stays readable until the new one opens.</p>
+<div data-floe-text=""><p>The pages move over <strong>one weekend</strong>; the old wiki stays readable until the new one opens.</p>
 <blockquote>
 <p>Read-only means read-only: <a href="https://example.com/freeze">the freeze</a> covers <code>comments</code> too.</p>
 </blockquote>
+<div data-floe-part="table"><table>
+<thead>
+<tr>
+<th>Day</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Saturday</td>
+<td>copy the pages</td>
+</tr>
+</tbody>
+</table></div></div>
+<div data-floe-text=""><!-- raw HTML omitted --></div>
 <ol data-floe-part="steps">
-<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong>Freeze edits on the old wiki</strong><p>On <strong>Friday evening</strong>.</p>
-</li>
+<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong>Freeze edits on the old wiki</strong><p>On <strong>Friday evening</strong>.</p></li>
 <li class="doing" data-floe-mark="ring" aria-current="step"><strong>Copy the pages and check the links</strong><blockquote>
 <p>Broken links first: <a href="https://example.com/report">the report</a>.</p>
-</blockquote>
-</li>
+</blockquote></li>
 <li class="todo"><strong>Point the team&#39;s bookmarks at the new host</strong></li>
 <li class="todo"><strong>Close the old server</strong></li>
 </ol>
@@ -1745,19 +1786,14 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div data-floe-tone="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes; <a href="https://example.com/plan">the plan</a> and <code>freeze.sh</code> say when.</p>
 <blockquote>
 <p>Saved drafts are lost too: <a href="https://example.com/drafts">the drafts</a> and <code>drafts.sh</code>.</p>
-</blockquote>
-</div>
-<div data-floe-tone="accent" data-floe-part="note"><p>The new host is ready; <a href="https://example.com/host">the host</a> and <code>host.sh</code>.</p>
-</div>
-<div data-floe-tone="bad" data-floe-part="note"><p>Attachments over 1 MB failed; <a href="https://example.com/failed">the list</a> names each, and <code>retry.sh</code> sends them again.</p>
-</div>
-<div data-floe-tone="muted" data-floe-part="note"><p>The old wiki stays read-only; <a href="https://example.com/wiki">the wiki</a> and <code>wiki.sh</code>.</p>
-</div>
-<div data-floe-part="note"><p>The banner goes up on Friday; <a href="https://example.com/banner">the banner</a> and <code>banner.sh</code>.</p>
-</div>
-<blockquote>
+</blockquote></div>
+<div data-floe-tone="accent" data-floe-part="note"><p>The new host is ready; <a href="https://example.com/host">the host</a> and <code>host.sh</code>.</p></div>
+<div data-floe-tone="bad" data-floe-part="note"><p>Attachments over 1 MB failed; <a href="https://example.com/failed">the list</a> names each, and <code>retry.sh</code> sends them again.</p></div>
+<div data-floe-tone="muted" data-floe-part="note"><p>The old wiki stays read-only; <a href="https://example.com/wiki">the wiki</a> and <code>wiki.sh</code>.</p></div>
+<div data-floe-part="note"><p>The banner goes up on Friday; <a href="https://example.com/banner">the banner</a> and <code>banner.sh</code>.</p></div>
+<div data-floe-text=""><blockquote>
 <p>A quote with <a href="https://example.com/quote">a link</a> and <code>quote.sh</code>.</p>
-</blockquote>
+</blockquote></div>
 </section>
 <section>
 <h2 id="progress">Progress</h2>
@@ -1782,8 +1818,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <li><span>Copy the <strong>attachments</strong></span></li>
 </ul>
 <ol data-floe-part="timeline">
-<li data-floe-tone="warn"><span class="date">2030-04-05</span><div><strong>Freeze</strong><p>Edits stop.</p>
-</div></li>
+<li data-floe-tone="warn"><span class="date">2030-04-05</span><div><strong>Freeze</strong><p>Edits stop.</p></div></li>
 <li data-floe-tone="accent"><span class="date">2030-04-06</span><div><strong>Copy</strong></div></li>
 <li data-floe-tone="good"><span class="date">2030-04-07</span><div><strong>Open</strong></div></li>
 <li data-floe-tone="bad"><span class="date">2030-04-08</span><div><strong>Rollback window ends</strong></div></li>
@@ -1794,17 +1829,14 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <section>
 <h2 id="choices">Choices</h2>
 <div class="numbered" data-floe-part="options">
-<div class="card option pick" data-floe-look="panel"><div class="title">Copy in one go <span data-floe-part="cell">Recommended</span></div><p>Two days of read-only.</p>
-<ul class="points" data-floe-look="marked"><li class="pro"><span>Simple</span></li><li class="con"><span>Longer freeze</span></li></ul></div>
+<div class="card option pick" data-floe-look="panel"><div class="title">Copy in one go <span data-floe-part="cell">Recommended</span></div><p>Two days of read-only.</p><ul class="points" data-floe-look="marked"><li class="pro"><span>Simple</span></li><li class="con"><span>Longer freeze</span></li></ul></div>
 <div class="card option" data-floe-look="panel"><div class="title">Copy by space</div><p>Each space is copied apart:</p>
 <ul>
 <li>Docs first</li>
 <li>Then the rest</li>
-</ul>
-<ul class="points" data-floe-look="marked"><li class="pro"><span>Short freezes</span></li><li class="con"><span>Links break between spaces</span></li><li class="con"><span>Twice the work</span></li></ul></div>
+</ul><ul class="points" data-floe-look="marked"><li class="pro"><span>Short freezes</span></li><li class="con"><span>Links break between spaces</span></li><li class="con"><span>Twice the work</span></li></ul></div>
 </div>
-<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span data-floe-tone="good" data-floe-part="cell">decided</span><span>2030-03-28</span></p><div class="title">The wiki moves to the new host</div><p>The old server is out of support in <strong>May</strong>.</p>
-<p class="set-aside">Set aside</p><ul class="rejected" data-floe-look="marked"><li><span>Stay on the old server</span></li><li><span>Move to a hosted wiki</span></li></ul></div></div>
+<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span data-floe-tone="good" data-floe-part="cell">decided</span><span>2030-03-28</span></p><div class="title">The wiki moves to the new host</div><p>The old server is out of support in <strong>May</strong>.</p><p class="set-aside">Set aside</p><ul class="rejected" data-floe-look="marked"><li><span>Stay on the old server</span></li><li><span>Move to a hosted wiki</span></li></ul></div></div>
 </section>
 <section>
 <h2 id="reference">Reference</h2>
@@ -1824,10 +1856,8 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <ul>
 <li>Pages under <strong>drafts</strong> are left out</li>
 <li>Images go to <code>pages/images/</code></li>
-</ul>
-</dd></div>
-<div><dt>Search index</dt><dd class="tags"><span><span data-floe-tone="warn" data-floe-part="cell">by hand</span></span><span><span data-floe-tone="bad" data-floe-part="cell">blocked</span></span><span><span data-floe-tone="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p>
-</dd></div>
+</ul></dd></div>
+<div><dt>Search index</dt><dd class="tags"><span><span data-floe-tone="warn" data-floe-part="cell">by hand</span></span><span><span data-floe-tone="bad" data-floe-part="cell">blocked</span></span><span><span data-floe-tone="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p></dd></div>
 <div><dt>Old links</dt></div>
 </dl>
 <dl data-floe-part="keys">
@@ -1835,10 +1865,8 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div><dt><kbd>g</kbd><span>+</span><kbd>h</kbd></dt><dd>Go home</dd></div>
 </dl>
 <div data-floe-part="faq">
-<details open=""><summary>Can I edit during the freeze?</summary><div><p>No: edits are lost.</p>
-</div></details>
-<details><summary>Where do old links go?</summary><div><p>To the same page on the new host.</p>
-</div></details>
+<details open=""><summary>Can I edit during the freeze?</summary><div><p>No: edits are lost.</p></div></details>
+<details><summary>Where do old links go?</summary><div><p>To the same page on the new host.</p></div></details>
 </div>
 <ul data-floe-part="links">
 <li class="card" data-floe-look="panel"><a href="https://example.com/guide">Migration guide</a><p>How the copy works</p><span class="url">https://example.com/guide</span></li>
@@ -1931,10 +1959,10 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </section>
 <section>
 <h2 id="folded">Folded</h2>
-<details data-floe-part="details" open=""><summary>The whole log</summary><div data-floe-part="stack"><p>What the copy printed.</p>
+<details data-floe-part="details" open=""><summary>The whole log</summary><div data-floe-part="stack"><div data-floe-text=""><p>What the copy printed.</p>
 <blockquote>
 <p>Every page, with <a href="https://example.com/count">the count</a> and <code>count.sh</code>.</p>
-</blockquote><figure class="sh" data-floe-part="terminal"><pre><span class="run" data-floe-copy="">wiki export</span><span class="out">done</span></pre><script>(function copyButton(words) {
+</blockquote></div><figure class="sh" data-floe-part="terminal"><pre><span class="run" data-floe-copy="">wiki export</span><span class="out">done</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -2063,8 +2091,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><dl data-floe-part="entries">
-<div><dt>Copied</dt><dd class="tags"><span>412 pages</span></dd><dd class="text"><p>Every page but the drafts.</p>
-</dd></div>
+<div><dt>Copied</dt><dd class="tags"><span>412 pages</span></dd><dd class="text"><p>Every page but the drafts.</p></dd></div>
 </dl><figure data-floe-part="image"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAAJElEQVR42mOwqTgxIIhh1OJRi0ctHrV41OJRi0ctHrV45FgMAGfIo72jTm6ZAAAAAElFTkSuQmCC" alt="The wiki after the move"/></figure></div></details>
 <form data-floe-part="tabs">
 <label><input type="radio" name="tab" checked=""/>bash</label><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code data-floe-copy="">export WIKI=new</code></pre><script>(function copyButton(words) {
@@ -2195,10 +2222,8 @@ banner = &#34;This wiki has moved to the new host.&#34;
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><dl data-floe-part="entries">
-<div><dt>New window</dt><dd class="tags"><span>PowerShell 7</span></dd><dd class="text"><p>The variable holds in that window alone.</p>
-</dd></div>
-</dl><div data-floe-tone="good" data-floe-part="note"><p>Run it in a new window; <a href="https://example.com/steps">the steps</a> and <code>run.sh</code>.</p>
-</div><div data-floe-part="table"><table>
+<div><dt>New window</dt><dd class="tags"><span>PowerShell 7</span></dd><dd class="text"><p>The variable holds in that window alone.</p></dd></div>
+</dl><div data-floe-tone="good" data-floe-part="note"><p>Run it in a new window; <a href="https://example.com/steps">the steps</a> and <code>run.sh</code>.</p></div><div data-floe-part="table"><table>
 <thead><tr><th scope="col">Shell</th><th scope="col" class="num">Lines</th></tr></thead>
 <tbody>
 <tr><td>PowerShell</td><td class="num">1</td></tr>

@@ -13,6 +13,9 @@
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
+/* A heading in a part or a text is Markdown's, as a part draws none: no larger than a template's own */
+:where([data-floe-part], [data-floe-text]) h1 { font-size: 1.2em; }
+:where([data-floe-part], [data-floe-text]) h2 { font-size: 1.1em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -24,6 +27,10 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    paints a light ground of its own does the same with what it holds, and one that sets a colour on no ground of its
    own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; }
+/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do; a text of raw HTML alone
+   draws nothing, its box a comment alone */
+[data-floe-text] { display: grid; gap: var(--floe-room); }
+[data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
 code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
@@ -65,7 +72,9 @@ blockquote > * + * { margin-top: 0.6rem; }
    --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
    none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
    LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
-   length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses */
+   length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses.
+   LIMIT: a part's Markdown flow is spaced under --floe-room (S164), so a theme's quote shadowed as far as that, in a
+   part, meets the next paragraph or leaves the part's box; until floe spaces that flow in one place */
 :root { --floe-room: 0.75rem; }
 @property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }

@@ -89,13 +89,13 @@ memo/
 
 ## page.css
 
-`page.css` は、部品の周りのページを並べます（部品の置き場所、ページの幅、ヘッダー）。部品のスタイルとテーマの部品ごとのファイルより下の層に入るので、部品の形は変えません。テーマの `base.css` より上の層です。
+`page.css` は、部品の周りのページを並べます（部品の置き場所、ページの幅、ヘッダー）。部品のスタイルとテーマの部品ごとのファイルより下の層に入るので、部品の形は変えません。テーマの `base.css` より上の層です。部品 text の Markdown にも届きません（floe が自分の外枠 `data-floe-text` に描きます）。
 
 - floe は `@scope (:root) to ([data-floe-part] > *)` で包みます。部品の箱までは届いて部品を置けますが、部品の中には届きません。
 - 根は `:scope` です。ページの変数は `:scope` に書きます。`:root` や `html` は scope の外です。
 - どのブロックも閉じない `}` と `@import` は、その行で断ります。Google Fonts のようなスタイルシートは `page.html` の `<link>` で読みます。
 - パレットの変数（`var(--muted)`）で描くと、データファイルが選んだテーマに従います。
-- 続けて並ぶ部品の間（節の中、項目の中）は、floe のどこもと同じく `var(--floe-room)`（0.75rem）をあけます。テーマの影が箱の外へ出る、一番大きい長さです。部品 text の段落や見出しも、部品としてそこに並びます。
+- 続けて並ぶ部品の間（節の中、項目の中）は、floe のどこもと同じく `var(--floe-room)`（0.75rem）をあけます。テーマの影が箱の外へ出る、一番大きい長さです。部品 text の外枠も部品と同じくそこに並び、中の段落や見出しは floe が同じ間で並べます。
 - 部品の箱でもある要素への規則（`ul { margin-block: 1rem }`、`figure { … }`）は、部品にも届きます。部品は自分の箱に margin を書かないためです（checklist・links は `ul`、steps・timeline は `ol`、facts・keys・entries・stats は `dl`、code・image・diff・terminal は `figure`、tabs は `form`）。ただし、部品の箱の並びの display・印・余白・項目の間は、floe が決めるので変わりません（[parts.ja.md](parts.ja.md#css-の層と-scope)）。見た目を借りる並びのそれは `page.css` で変わるので、テンプレートが整えられます。
 
 たとえば `report` の `page.css` は、floe のテンプレートがどれも使う列で、ページを中央にそろえます：
@@ -119,7 +119,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 `page.html` は項目を置きたい所に置きます（`{{.Data.findings}}`）。floe は部品の schema と checks で確かめ（誤りはデータファイルの行と列で言う）、HTML で描きます。
 
-部品 `text` は、ほかの部品と並び、横に `code`・`terminal` を置ける所の Markdown です。floe は中の囲んだコードのブロックを警告し、`code` に書くよう勧めます。code の部品を置かない、ただの Markdown の欄は、`{"type": "string", "format": "markdown"}` にします。
+部品 `text` は、ほかの部品と並び、横に `code`・`terminal` を置ける所の Markdown です。floe は中の囲んだコードのブロックを警告し、`code` に書くよう勧めます。Markdown は部品の箱でない外枠（`data-floe-text`）に描き、自分の地も tone も持たないので、外の面と tone を継ぎます。`page.css` とテーマの `base.css` はそこで止まり、テーマの `markdown.css` がどこでも Markdown として描きます。見出しはテンプレートの見出しより大きくなりません（1.2em・1.1em）。code の部品を置かない、ただの Markdown の欄は、`{"type": "string", "format": "markdown"}` にします。
 
 種類を名指す鍵 1 つの部品は、種類によらず `any.json` を指します。そのリストは、report の節と同じく、`items` で `any.json` を指します。テンプレートの根の schema では、次のとおりです。
 

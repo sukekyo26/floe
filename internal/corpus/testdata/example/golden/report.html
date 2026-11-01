@@ -22,6 +22,9 @@
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
+/* A heading in a part or a text is Markdown's, as a part draws none: no larger than a template's own */
+:where([data-floe-part], [data-floe-text]) h1 { font-size: 1.2em; }
+:where([data-floe-part], [data-floe-text]) h2 { font-size: 1.1em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -33,6 +36,10 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    paints a light ground of its own does the same with what it holds, and one that sets a colour on no ground of its
    own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; }
+/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do; a text of raw HTML alone
+   draws nothing, its box a comment alone */
+[data-floe-text] { display: grid; gap: var(--floe-room); }
+[data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
 code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
@@ -74,7 +81,9 @@ blockquote > * + * { margin-top: 0.6rem; }
    --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
    none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
    LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
-   length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses */
+   length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses.
+   LIMIT: a part's Markdown flow is spaced under --floe-room (S164), so a theme's quote shadowed as far as that, in a
+   part, meets the next paragraph or leaves the part's box; until floe spaces that flow in one place */
 :root { --floe-room: 0.75rem; }
 @property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
@@ -126,7 +135,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.theme {
-@scope (:root) to ([data-floe-part] > *) {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
 :scope {
   /* default's own, here and not in its palette, which lies under every theme's */
@@ -135,10 +144,19 @@ blockquote > * + * { margin-top: 0.6rem; }
      corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
      LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and TestRadius follows the
      corner to --default-inner, not to --default-pad: a pad grown past the radius squares them unseen */
+  /* A quote's ground, and the quiet ground within it, the other way round: the panel's on the page and on a face of the
+     surface, the surface in a panel; each box that turns --quiet turns them with it */
+  --default-quote: var(--default-panel); --default-quote-quiet: var(--surface);
   --default-pad: 6px; --default-inner: calc(var(--radius) - var(--default-pad));
 }
-blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-panel); --quiet: var(--surface); color: var(--fg); }
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) {
+blockquote > * { --face: initial; --on-face: initial; --quiet: var(--default-quote-quiet); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); color: var(--fg); }
 blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
@@ -400,6 +418,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 .card {
   padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
+/* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
+.card { --face: initial; --on-face: initial; }
 /* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
    sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
    LIMIT: whether a decoration keeps off the text is seen, not measured */
@@ -411,7 +431,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
 .card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
-.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 }
 }
 </style>
@@ -467,7 +487,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 :scope { padding: 1.1rem 1.3rem; }
 :scope > li.done::before { content: "✓"; }
 :scope > li > strong { line-height: 1.6; }
-:scope > li > :not(strong) { color: var(--muted); font-size: 0.92rem; }
+:scope > li > :not(strong) { color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 }
 }
 </style>
@@ -509,7 +529,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
 }
 </style>
@@ -517,7 +537,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
 }
 </style>
@@ -539,7 +559,10 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { padding: var(--default-pad); }
-:scope > * { background: var(--surface); --quiet: var(--default-panel); }
+:scope > * {
+  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
+  --default-quote-quiet: var(--surface);
+}
 :scope > :first-child { border-radius: var(--default-inner) var(--default-inner) 0 0; }
 :scope > :last-child { border-radius: 0 0 var(--default-inner) var(--default-inner); }
 :scope > :only-child { border-radius: var(--default-inner); }
@@ -561,7 +584,9 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
-.card { background: var(--surface); --quiet: var(--default-panel); border-radius: calc(var(--radius) - var(--floe-room)); }
+.card {
+  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
+  --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; --floe-mark: auto; background: none;
   font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
@@ -592,7 +617,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 </style>
 <style>
 @layer floe.page {
-@scope (:root) to ([data-floe-part] > *) {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* The colours and faces are the theme's palette; the page lays them out */
 body {
   margin: 0; font-size: 16px; line-height: 1.85; padding-block: 2.5rem 4rem;
@@ -640,10 +665,9 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </section>
 <section>
 <h2 id="steps">Steps</h2>
-<p>The pages move over <strong>one weekend</strong>; the old wiki stays readable until the new one opens.</p>
+<div data-floe-text=""><p>The pages move over <strong>one weekend</strong>; the old wiki stays readable until the new one opens.</p></div>
 <ol data-floe-part="steps">
-<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong>Freeze edits on the old wiki</strong><p>On <strong>Friday evening</strong>.</p>
-</li>
+<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong>Freeze edits on the old wiki</strong><p>On <strong>Friday evening</strong>.</p></li>
 <li class="doing" data-floe-mark="ring" aria-current="step"><strong>Copy the pages and check the links</strong></li>
 <li class="todo"><strong>Point the team&#39;s bookmarks at the new host</strong></li>
 </ol>
@@ -713,7 +737,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 <section class="sub">
 <h3 id="the-old-wiki">The old wiki</h3>
-<p>It answers until the new one opens, with edits turned off.</p>
+<div data-floe-text=""><p>It answers until the new one opens, with edits turned off.</p></div>
 <figure data-floe-part="code"><figcaption><span class="file">old-wiki.conf</span></figcaption><pre><code data-floe-copy=""># Read-only from Friday evening
 read_only = true
 banner = &#34;This wiki has moved to the new host.&#34;
@@ -786,12 +810,9 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <section>
 <h2 id="who-does-what">Who does what</h2>
 <dl data-floe-part="entries">
-<div><dt>Copy</dt><dd class="tags"><span>Saturday</span><span><span data-floe-tone="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><p>Copies the pages and keeps a list of what failed.</p>
-</dd></div>
-<div><dt>Links</dt><dd class="tags"><span>Sunday</span><span><span data-floe-tone="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><p>Runs the link check and fixes what it finds.</p>
-</dd></div>
-<div><dt>Bookmarks</dt><dd class="tags"><span>Monday morning</span></dd><dd class="text"><p>Sends the new address to the team.</p>
-</dd></div>
+<div><dt>Copy</dt><dd class="tags"><span>Saturday</span><span><span data-floe-tone="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><p>Copies the pages and keeps a list of what failed.</p></dd></div>
+<div><dt>Links</dt><dd class="tags"><span>Sunday</span><span><span data-floe-tone="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><p>Runs the link check and fixes what it finds.</p></dd></div>
+<div><dt>Bookmarks</dt><dd class="tags"><span>Monday morning</span></dd><dd class="text"><p>Sends the new address to the team.</p></dd></div>
 </dl>
 </section>
 <section>
@@ -960,8 +981,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <tr><td>Slow search</td><td>Unknown</td><td class="num">-</td><td>Rebuild the index on <code>Sunday</code></td><td><span data-floe-tone="accent" data-floe-part="cell">open</span></td></tr>
 </tbody>
 </table></div>
-<div data-floe-tone="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p>
-</div>
+<div data-floe-tone="warn" data-floe-part="note"><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p></div>
 <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>
 </section>
 </main>

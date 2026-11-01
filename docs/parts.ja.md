@@ -103,7 +103,7 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 
 1. `floe.palette`：パレット。floe の `default` の上にテーマのもの。
 2. `floe.base`：floe の土台。ページの根の地・色・書体と、文・リスト・リンク・コード・引用。
-3. `floe.theme`：テーマの `base.css`。テンプレートの `page.css` と同じく scope され、ページと部品の箱には届きますが、部品の中には届きません（部品は中を floe の土台から描きます）。根は `:scope` で、`:root` や `html` は scope の外です。部品の中への規則（`table th` など）は、その部品のテーマのファイルに書きます。
+3. `floe.theme`：テーマの `base.css`。テンプレートの `page.css` と同じく scope され、ページと部品の箱には届きますが、部品の中と、text の Markdown（外枠 `data-floe-text` の中）には届きません。根は `:scope` で、`:root` や `html` は scope の外です。部品の中への規則（`table th` など）は、その部品のテーマのファイルに書きます。その後ろにテーマの `markdown.css` が入り、ページ全体（部品の中も）に届きます。どこにある Markdown の見た目もここに書きます。
 4. `floe.looks`：部品の箱でなく見た目を借りる要素（`data-floe-look`）の見た目。層を分けているので、見た目を借りたテンプレートや部品は、セレクタの詳しさや範囲の近さによらず見た目を整えられ、テーマの `base.css` は見た目に勝てません。ただし `!important` を使うと別です（層の順が逆になります。floe は断りません）。
 5. `floe.page`：テンプレートの `page.css`。
 6. `floe.parts`：部品のスタイル（それぞれ借りる見た目の後に）、その後にテーマの部品ごとのファイル。テーマのファイルは、その部品の `part.css` に、`@media print` の規則にも勝ちます。印刷で外す状態（選んだタブなど）を塗るテーマは、`@media screen` の中に書きます。
@@ -114,7 +114,7 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 
 部品は、色をパレットの変数からそのまま取り（`var(--accent)`）、自分の既定の値を持ちません。floe のページは、どれもパレットを持つためです。そのため、`floe part show <名前>` が出す CSS は、パレットの無いページでは色が付きません。そうしたページに図を置くときは、`default` のパレットを持つ `floe diagram render` の断片のスタイルを使います（[commands.ja.md](commands.ja.md#floe-diagram-render-specyaml)）。また、箱が並びの部品（checklist・links・steps・timeline）の印と余白は、floe がページを描くときに外すので（上のとおり）、その CSS だけでは外れません。floe の外で描くページは、自分で書きます。
 
-tone（`tone.json` のどれか）は、class でなく、その色で描く要素の `data-floe-tone` で付けます（`<span data-floe-tone="good" data-floe-part="cell">`）。floe は、その要素と、その中の部品の箱でないものに、tone の色を `--tone`・`--tone-soft` で置きます（パレットの `--good`・`--good-soft` から）。部品の箱とページは accent の色を持つので、部品は外の tone を継ぎません。テンプレートや見た目の要素に付けても同じです。部品は 2 つを 1 つの規則で読み（`background: var(--tone-soft); color: var(--tone)`）、tone ごとの規則は、tone の色でないもの（note の印、diagram の bad の箱の字）にだけ書きます。tone の無いものを別の色で描く部品は、根に 2 つを置きます（stats は `--muted`・`--muted-soft`）。形ごとに別の色で描く部品（diagram）は、根で 2 つを `initial` にし、形の色を `var()` の後ろに書きます（`var(--tone, var(--line))`）。tone に無い値の `data-floe-tone` は、付けないのと同じで、部品の箱なら accent の色、ほかの要素なら外の tone で描かれます。
+tone（`tone.json` のどれか）は、class でなく、その色で描く要素の `data-floe-tone` で付けます（`<span data-floe-tone="good" data-floe-part="cell">`）。floe は、その要素と、その中の部品の箱でないものに、tone の色を `--tone`・`--tone-soft` で置きます（パレットの `--good`・`--good-soft` から）。部品の箱とページは accent の色を持つので、部品は外の tone を継ぎません（部品の箱でない text の外枠は、外の tone を継ぎます）。テンプレートや見た目の要素に付けても同じです。部品は 2 つを 1 つの規則で読み（`background: var(--tone-soft); color: var(--tone)`）、tone ごとの規則は、tone の色でないもの（note の印、diagram の bad の箱の字）にだけ書きます。tone の無いものを別の色で描く部品は、根に 2 つを置きます（stats は `--muted`・`--muted-soft`）。形ごとに別の色で描く部品（diagram）は、根で 2 つを `initial` にし、形の色を `var()` の後ろに書きます（`var(--tone, var(--line))`）。tone に無い値の `data-floe-tone` は、付けないのと同じで、部品の箱なら accent の色、ほかの要素なら外の tone で描かれます。
 
 部品は自分の箱に margin を書きません。部品の箱になりうるブロック（`p`・`ul`・`ol`・`dl`・`figure`・`form`・`menu`・`fieldset` など）の margin は floe の base が 0 にし、部品の間は置く側（テンプレートの節、stack、note）が、隣と `--floe-room` あけて空けます。部品の箱に margin を書くと、置く側の間に勝ってしまいます。部品の中の Markdown の流れ（段落の間と、その中の部品の箱の前後。Markdown の表など）の間は、部品が決めます。
 
@@ -137,7 +137,8 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 | ファイル | 中身 |
 |---|---|
 | `palette.css` | [パレット](templates.ja.md#パレット)の変数と、テーマ自身の名前の変数を `:scope` に（ページの根。`:root` も同じ要素に当たる）。floe の `default` のパレットの上に重なるので、変えるものだけを書く。 |
-| `base.css` | どのページにも入るルール（Markdown の引用など）。ページに当たり、部品の中には当たらず、テンプレートの `page.css` と見た目の下に入る。根は `:root` や `html`（scope の外）でなく `:scope` と書き、部品の中はその部品のファイルに書く。テーマ自身の名前の変数は、ここの `:scope` に置いてもよい。 |
+| `base.css` | 部品の周りのページのルール。ページに当たり、部品の中と text の Markdown には当たらず、テンプレートの `page.css` と見た目の下に入る。根は `:root` や `html`（scope の外）でなく `:scope` と書き、部品の中はその部品のファイルに書く。テーマ自身の名前の変数は、ここの `:scope` に置いてもよい。 |
+| `markdown.css` | Markdown の見た目（引用、見出し）。ページの上、text の中、部品の中の、どこの Markdown にも当たる。部品・見た目・テンプレートの CSS はどれもそれに勝つ。引用や見出しのように部品が描かない要素に書く。`p` や `ul` に書くと、部品が描く同じ要素にも当たる。 |
 | `<名前>.css` | 部品か見た目 `<名前>` のスタイル。その `part.css` と同じく scope される。`panel.css` はどのパネルにも、`code.css` はコード・diff・ターミナルに届く。 |
 
 - ほかの名前のファイルは断ります。

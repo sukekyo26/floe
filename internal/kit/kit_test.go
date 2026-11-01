@@ -110,7 +110,8 @@ func TestEntryFiles(t *testing.T) {
 		{k.Parts, "panel", "part.yaml, part.css"},
 		{k.Parts, "tone", "tone.json"},
 		{k.Templates, "design", "schema.json, computed.yaml, example.yaml, page.html, page.css, words.yaml"},
-		{k.Themes, "ink", "palette.css, base.css, cards.css, cell.css, code.css, note.css, panel.css, table.css"},
+		{k.Themes, "retro", "palette.css, base.css, markdown.css, cards.css, cell.css, note.css, panel.css, table.css"},
+		{k.Themes, "ink", "palette.css, markdown.css, cards.css, cell.css, code.css, note.css, panel.css, table.css"},
 	} {
 		if got := names(tt.entries(), tt.name); got != tt.want {
 			t.Errorf("%s shows %s, want %s", tt.name, got, tt.want)
@@ -380,9 +381,10 @@ func TestNames(t *testing.T) {
 			"own/parts/panel: panel is the name of floe's parts/panel: give yours another name",
 		},
 		{
-			fstest.MapFS{"base/part.css": {Data: []byte("")}, "palette/part.css": {Data: []byte("")}},
+			fstest.MapFS{"base/part.css": {Data: []byte("")}, "palette/part.css": {Data: []byte("")}, "markdown/part.css": {Data: []byte("")}},
 			lines(
 				"own/parts/base: base names a file of every theme (base.css), which a theme's CSS for this part would be read as: give it another name",
+				"own/parts/markdown: markdown names a file of every theme (markdown.css), which a theme's CSS for this part would be read as: give it another name",
 				"own/parts/palette: palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name",
 			),
 		},
@@ -432,6 +434,7 @@ func TestNameMistake(t *testing.T) {
 		{"Bad", "own/parts/Bad: floe takes no such name: write lower case letters, digits, - and _, starting with a letter or a digit; rename it"},
 		{"base", "own/parts/base: base names a file of every theme (base.css), which a theme's CSS for this part would be read as: give it another name"},
 		{"palette", "own/parts/palette: palette names a file of every theme (palette.css), which a theme's CSS for this part would be read as: give it another name"},
+		{"markdown", "own/parts/markdown: markdown names a file of every theme (markdown.css), which a theme's CSS for this part would be read as: give it another name"},
 		{"note", "own/parts/note: note is the name of floe's parts/note: give yours another name"},
 		{"any", "own/parts/any: any is the name of floe's parts/any.json: give yours another name"},
 		{"shr", "own/parts/shr: shr names both own/parts/shr and own/parts/shr.json: give one of them another name"},

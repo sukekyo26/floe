@@ -221,7 +221,7 @@ func (k *Kit) NameMistake(dir string, kind Kind, name string) error {
 }
 
 // refusedName returns the mistake of the name of one's own of the kind in dir, nil for none: a name floe does
-// not take (validName); a part's or a look's that is a theme's file (base, palette); one a part or a look and
+// not take (validName); a part's or a look's that is a theme's file (base, palette, markdown); one a part or a look and
 // a shared schema of dir both have (twice); and a part's, a look's, a shared schema's or a theme's that the
 // base has: floe's templates and parts would go on reading the base's, compiled with it, and a theme of one's
 // own would hide floe's whole. It is told at the entry.
@@ -233,7 +233,7 @@ func (k *Kit) refusedName(dir string, kind Kind, name string, twice bool) *usere
 	switch {
 	case !validName(name):
 		return usererr.NewAt(at, 0, 0, "kit_bad_name")
-	case kind == KindPart && (name == "base" || name == "palette"):
+	case kind == KindPart && (name == "base" || name == "palette" || name == "markdown"):
 		return usererr.NewAt(at, 0, 0, "kit_name_theme_file", name)
 	case twice:
 		return usererr.NewAt(at, 0, 0, "kit_name_twice", name, path.Join(dir, name), path.Join(dir, name+".json"))
