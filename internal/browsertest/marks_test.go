@@ -2,11 +2,13 @@ package browsertest_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"os"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/dom"
@@ -126,14 +128,31 @@ const measureMarks = `((marks, rows) => {
 func (b *browser) pseudoBoxes(sel string) (before, after []float64) {
 	b.t.Helper()
 
+	// Just after a page loads, DevTools may still replace the document, and the nodes got of the one before are
+	// gone: measure again.
+	var err error
+	for range 20 {
+		if before, after, err = b.tryPseudoBoxes(sel); err == nil {
+			return before, after
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	b.t.Fatalf("%s: %v", sel, err)
+	return nil, nil
+}
+
+func (b *browser) tryPseudoBoxes(sel string) (before, after []float64, err error) {
 	depth, pierce := int64(-1), true
 	doc, err := chromedp.Call(b.ctx, dom.GetDocument, dom.GetDocumentParams{Depth: &depth, Pierce: &pierce})
 	if err != nil {
-		b.t.Fatal(err)
+		return nil, nil, err
 	}
 	q, err := chromedp.Call(b.ctx, dom.QuerySelector, dom.QuerySelectorParams{NodeID: doc.Root.NodeID, Selector: sel})
-	if err != nil || q.NodeID == 0 {
-		b.t.Fatalf("%s: not found: %v", sel, err)
+	if err != nil {
+		return nil, nil, err
+	}
+	if q.NodeID == 0 {
+		return nil, nil, errors.New("not found")
 	}
 	var find func(n *cdp.Node) *cdp.Node
 	find = func(n *cdp.Node) *cdp.Node {
@@ -147,23 +166,20 @@ func (b *browser) pseudoBoxes(sel string) (before, after []float64) {
 		}
 		return nil
 	}
-	box := func(id cdp.NodeID) []float64 {
-		m, err := chromedp.Call(b.ctx, dom.GetBoxModel, dom.GetBoxModelParams{NodeID: id})
+	for _, p := range find(doc.Root).PseudoElements {
+		m, err := chromedp.Call(b.ctx, dom.GetBoxModel, dom.GetBoxModelParams{NodeID: p.NodeID})
 		if err != nil {
-			b.t.Fatalf("%s: %v", sel, err)
+			return nil, nil, err
 		}
 		q := m.Model.Border
-		return []float64{q[0], q[1], q[4], q[5]}
-	}
-	for _, p := range find(doc.Root).PseudoElements {
 		if p.PseudoType == cdp.PseudoTypeBefore {
-			before = box(p.NodeID)
+			before = []float64{q[0], q[1], q[4], q[5]}
 		}
 		if p.PseudoType == cdp.PseudoTypeAfter {
-			after = box(p.NodeID)
+			after = []float64{q[0], q[1], q[4], q[5]}
 		}
 	}
-	return before, after
+	return before, after, nil
 }
 
 // marksIn measures the page open and returns what is amiss in it: a mark whose baseline is more than 0.6 px off that
