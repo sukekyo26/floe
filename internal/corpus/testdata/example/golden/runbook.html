@@ -43,9 +43,16 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
 code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
+/* A box that scrolls sideways tells nothing of its content's width outside (contain: inline-size), so that a long line
+   or a wide table scrolls in it and widens no grid or flex item around it, nor the page; every rule writing
+   overflow-x: auto writes it too.
+   LIMIT: where the content sets the width (inline-block, float, max-content or fit-content, justify-items or
+   justify-self start in a grid, an item of a flex row on flex-basis auto, a grid's auto column sized by its content),
+   such a box shrinks to its border and padding unless the place sets its width. No part or template of floe's places
+   one so */
 pre {
   margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
-  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+  padding: 0.9rem 1rem; overflow-x: auto; contain: inline-size; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
 blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
@@ -331,8 +338,9 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
   display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1.1rem; font-size: 0.78rem;
   background: color-mix(in srgb, var(--code-fg) 5%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
 }
+/* It scrolls sideways, telling nothing of its width outside (base.css's pre has the LIMIT) */
 :scope pre {
-  margin: 0; padding: 0.95rem 1.1rem; overflow-x: auto; background: none; border: 0; border-radius: 0; color: inherit;
+  margin: 0; padding: 0.95rem 1.1rem; overflow-x: auto; contain: inline-size; background: none; border: 0; border-radius: 0; color: inherit;
   font-family: inherit; font-size: 0.875rem; line-height: 1.65; tab-size: 4;
 }
 :scope .file { opacity: 0.85; }
