@@ -365,7 +365,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
   box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
 }
 :where([data-floe-part="steps"] > li, [data-floe-part="timeline"] > li):not(:last-child)::after {
-  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom, 100%) + 0.35rem); bottom: 0.35rem;
+  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
   left: calc(anchor(--floe-mark center) - 1px); width: 2px;
 }
 }

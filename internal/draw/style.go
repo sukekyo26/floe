@@ -310,7 +310,7 @@ func marks(k *kit.Kit, n named) []byte {
 	}
 	if len(joined) > 0 {
 		css += ":where(" + strings.Join(joined, ", ") + `):not(:last-child)::after {
-  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom, 100%) + 0.35rem); bottom: 0.35rem;
+  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
   left: calc(anchor(--floe-mark center) - 1px); width: 2px;
 }
 `
