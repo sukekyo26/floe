@@ -2286,8 +2286,8 @@ func TestGraphLanes(t *testing.T) {
 				return inGroup(inGroup(inGroup(g, "X", "X", "a", "b"), "Y", "Y", "c"), "Z", "Z", "z")
 			}},
 			{"against the order", func() *graph {
-				g := graphOf([]string{"a2", "b1", "b2", "a1"}, "a1>a2", "b1>b2")
-				return inGroup(inGroup(inGroup(g, "L1", "L1", "a2"), "L2", "L2", "b1", "b2"), "L3", "L3", "a1")
+				g := graphOf([]string{"a", "b", "c", "x", "y", "z"}, "a>b", "x>z", "y>c")
+				return inGroup(inGroup(inGroup(g, "L1", "L1", "a", "b", "c"), "L2", "L2", "x"), "L3", "L3", "y", "z")
 			}},
 		} {
 			g := c.g()
