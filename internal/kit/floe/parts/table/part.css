@@ -10,10 +10,11 @@
 /* A num column's heading wraps as long as it needs, but not a character a line */
 :scope th.num { min-width: 6em; }
 :scope thead th {
-  font-size: 0.8rem; font-weight: 600; color: var(--muted);
-  background: var(--quiet);
+  font-size: 0.8rem; font-weight: 600; color: var(--table-head-fg, var(--muted));
+  background: var(--table-head-bg, var(--quiet));
 }
-/* The rule between rows; a theme sets --table-rule alone, none for no rule */
+/* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
+   --table-rule (none for no rule) */
 :scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
 :scope .num { text-align: right; }
 :scope td.num {

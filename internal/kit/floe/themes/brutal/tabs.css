@@ -1,3 +1,1 @@
-:scope > label { border: 2px solid transparent; }
-/* On screen alone: on paper every tab shows under its title, which tabs' own print takes off its ground */
-@media screen { :scope > label:has(:checked) { background: var(--brutal-yellow); color: var(--brutal-ink); border-color: var(--fg); } }
+:scope { --tabs-picked-bg: var(--brutal-yellow); --tabs-picked-fg: var(--brutal-ink); --tabs-picked-ring: inset 0 0 0 2px var(--fg); }

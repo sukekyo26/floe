@@ -1,1 +1,2 @@
-:scope thead th { background: var(--surface); border-bottom: 1px solid var(--line); }
+:scope { --table-head-bg: var(--surface); }
+:scope thead th { border-bottom: 1px solid var(--line); }

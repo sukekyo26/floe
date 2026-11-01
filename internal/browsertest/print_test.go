@@ -32,8 +32,7 @@ const measureTabs = `(() => {
 
 // TestUIPrint draws every page of floePages for print, and finds every ground kept on paper: print leaves a ground
 // out unless asked, as a browser's print does by default, and a light text on a fill would be lost on white paper.
-// It finds tabs whose picked title is drawn apart from the others, as a theme's style of tabs wins over tabs' own
-// print but for a fill it keeps to the screen.
+// It finds tabs whose picked title is drawn apart from the others, as tabs paints the picked one on the screen alone.
 // LIMIT: tabs is the only part whose state print draws otherwise; check a part's that comes to do so too.
 // LIMIT: it tells the picked title drawn apart alone, not a ground a theme gives every title alike outside @media screen.
 func TestUIPrint(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time

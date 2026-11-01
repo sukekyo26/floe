@@ -205,9 +205,12 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
   background: var(--face); color: var(--on-face);
   font-family: var(--mono);
 }
+/* A theme sets the heading's ground and colour by --code-head-bg and --code-head-fg, and the colours of a diff's
+   counts on it by --code-head-add and --code-head-del */
 :scope figcaption {
   display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1.1rem; font-size: 0.78rem;
-  background: color-mix(in srgb, var(--code-fg) 5%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
+  background: var(--code-head-bg, color-mix(in srgb, var(--code-fg) 5%, transparent)); color: var(--code-head-fg, var(--code-fg));
+  border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
 }
 /* It scrolls sideways, telling nothing of its width outside (base.css's pre has the LIMIT) */
 :scope pre {
@@ -240,8 +243,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 /* A scrolling block's ring on the part's root, inside its edge: the root, round, clips what lies outside the block, and
    the root's own ring lies over the block, its edges and its scrollbar, round at the root's corners. A copy button lies
    inside the root by --floe-copy-gap, clear of it.
-   LIMIT: what is faded by opacity (a terminal's heading, along the root's top edge; a heading's file name, a terminal's
-   output and a diff's lines outside a hunk, where they scroll under its edges) draws over the ring, as Chrome paints
+   LIMIT: what is faded by opacity (a heading's file name, a terminal's output and a diff's lines outside a hunk, where
+   they scroll under its edges) draws over the ring, as Chrome paints
    such a child after its parent's outline: the ring shows through their faint ground, their text over it. Fade them by
    their colour if that comes to hide the ring. */
 :scope > pre:focus-visible { outline: none; }
@@ -286,10 +289,11 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 /* A num column's heading wraps as long as it needs, but not a character a line */
 :scope th.num { min-width: 6em; }
 :scope thead th {
-  font-size: 0.8rem; font-weight: 600; color: var(--muted);
-  background: var(--quiet);
+  font-size: 0.8rem; font-weight: 600; color: var(--table-head-fg, var(--muted));
+  background: var(--table-head-bg, var(--quiet));
 }
-/* The rule between rows; a theme sets --table-rule alone, none for no rule */
+/* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
+   --table-rule (none for no rule) */
 :scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
 :scope .num { text-align: right; }
 :scope td.num {
@@ -524,7 +528,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
-:scope figcaption { opacity: 0.85; }
+/* Its heading fainter than code's, whatever colour a theme gives it */
+:scope figcaption { color: color-mix(in srgb, var(--code-head-fg, var(--code-fg)) 85%, transparent); }
 :scope :is(.run, .out) { display: block; }
 :scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
 :scope .run::before { content: "$ "; color: var(--code-prompt); }
@@ -548,8 +553,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { padding: var(--default-pad); --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); }
-:scope figcaption { background: none; border: 0; padding: 0.3rem 0.6rem 0.5rem; }
+:scope { padding: var(--default-pad); --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); --code-head-bg: none; }
+:scope figcaption { border: 0; padding: 0.3rem 0.6rem 0.5rem; }
 :scope pre { background: var(--code-ground); border-radius: var(--default-inner); }
 }
 }
@@ -573,9 +578,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { padding: var(--default-pad); }
+:scope { padding: var(--default-pad); --table-head-bg: none; }
 :scope table { border-collapse: separate; border-spacing: 0; }
-:scope thead th { background: none; }
 :scope tbody td { background: var(--surface); --quiet: var(--default-panel); }
 :scope tbody tr:first-child td:first-child { border-top-left-radius: var(--default-inner); }
 :scope tbody tr:first-child td:last-child { border-top-right-radius: var(--default-inner); }
