@@ -66,11 +66,16 @@ const measureBand = `(() => {` + colours + `
     if (getComputedStyle(said).color !== band) out.push('a text: colour ' + getComputedStyle(said).color + ', want the band\'s ' + band);
     if (getComputedStyle(text.querySelector('h2'), '::after').content !== 'none') out.push('a text\'s heading: a mark after it');
   }
-  // A heading held in a part in the band takes no mark either; a card draws its text on its own ground.
+  // A heading held in a part in the band takes no mark either. A card of a ground of its own draws its text off the
+  // band's face; one of none (swiss's) on it, in the band's text colour.
   const held = document.querySelector('header [data-floe-part="details"] h2');
   if (held && getComputedStyle(held, '::after').content !== 'none') out.push('a heading in details: a mark after it');
-  const card = document.querySelector('header [data-floe-look~="cards"] > .card p');
-  if (card && getComputedStyle(card).color === getComputedStyle(document.querySelector('header')).color) out.push('a card: the band\'s text colour');
+  const card = document.querySelector('header [data-floe-look~="cards"] > .card');
+  if (card) {
+    const grounded = rgba(getComputedStyle(card).backgroundColor)[3] > 0;
+    const onBand = getComputedStyle(card.querySelector('p')).color === getComputedStyle(document.querySelector('header')).color;
+    if (grounded === onBand) out.push('a card ' + (grounded ? 'on a ground of its own' : 'of no ground') + ': ' + (onBand ? '' : 'not ') + 'in the band\'s text colour');
+  }
   return out.join('\n');
 })()`
 
