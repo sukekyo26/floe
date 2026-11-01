@@ -160,6 +160,11 @@ func toneRule(selector, tone string) string {
 		"--tone-fill: var(--%[2]s-fill, var(--%[2]s-soft)); }\n", selector, tone)
 }
 
+// LIMIT: the names @keyframes, @counter-style and @font-face make are not held by @scope: they are the page's, every
+// file's alike. Of two files that make one name, the one of the higher layer wins wherever it is used: a part's style
+// and a theme's style of a part over page.css, page.css over the theme's base.css, and between parts the outer
+// element's; @font-face replaces a face of the same descriptors alone. Each names its own with its template's, part's
+// or theme's name.
 // pageScoped is css reaching the page short of what the parts and texts hold (a text draws Markdown in a box of no
 // part, data-floe-text, which has no ground or tone of its own), or nil when css is empty.
 func pageScoped(css []byte) []byte {

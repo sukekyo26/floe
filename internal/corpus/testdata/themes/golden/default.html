@@ -47,6 +47,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 [data-floe-text] { display: grid; gap: var(--floe-room); }
 [data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
+/* LIMIT: a part draws a ring of focus or a pick by outline on its box (links' and options' cards): a theme that draws a
+   decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
+   or ::before */
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
 /* What a browser draws in its own monospace stays the page's size: with no font size set on the page, a browser sizes
    monospace alone from 13px, and the same named twice from the page's */
@@ -402,9 +405,10 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 .option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
 /* The pros and cons alone, not a list in the text, their signs as the look marked places them */
 .option .points { gap: 0.2rem; }
-.option li.pro { color: var(--fg); }
-.option li.pro::before { content: "+"; color: var(--good); }
-.option li.con::before { content: "−"; color: var(--bad); }
+/* Of no ground of their own: in the face's colour within a face, a theme's filled card */
+.option li.pro { color: var(--on-face, var(--fg)); }
+.option li.pro::before { content: "+"; color: var(--on-face, var(--good)); }
+.option li.con::before { content: "−"; color: var(--on-face, var(--bad)); }
 }
 }
 </style>

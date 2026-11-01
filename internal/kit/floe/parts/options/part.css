@@ -3,6 +3,7 @@
 .option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
 /* The pros and cons alone, not a list in the text, their signs as the look marked places them */
 .option .points { gap: 0.2rem; }
-.option li.pro { color: var(--fg); }
-.option li.pro::before { content: "+"; color: var(--good); }
-.option li.con::before { content: "−"; color: var(--bad); }
+/* Of no ground of their own: in the face's colour within a face, a theme's filled card */
+.option li.pro { color: var(--on-face, var(--fg)); }
+.option li.pro::before { content: "+"; color: var(--on-face, var(--good)); }
+.option li.con::before { content: "−"; color: var(--on-face, var(--bad)); }
