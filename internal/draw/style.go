@@ -41,6 +41,11 @@ import (
 // LIMIT: each style is written once for each depth its elements stand at, so a deep page's CSS grows with its depth;
 // no bound is set. Mark the depth on the elements instead if that comes to weigh.
 // LIMIT: !important turns the layers' order round (an earlier layer's wins), and floe does not refuse it.
+// LIMIT: the names @keyframes, @counter-style and @font-face make are not held by @scope: they are the page's, every
+// file's alike. Of two files that make one name, the one of the higher layer wins wherever it is used: a part's style
+// and a theme's style of a part over page.css, page.css over the theme's base.css and markdown.css, and between parts
+// the outer element's; @font-face replaces alone a face whose descriptors are all the same. Each names its own with
+// its template's, part's or theme's name.
 func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) {
 	themed, ok := k.Theme(theme)
 	base, okBase := k.Theme(kit.DefaultTheme)
