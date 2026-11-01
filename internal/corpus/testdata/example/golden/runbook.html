@@ -180,7 +180,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
 .card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
-.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 }
 }
 </style>

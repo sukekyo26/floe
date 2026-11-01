@@ -196,7 +196,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
 .card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
-.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 }
 }
 </style>
@@ -296,7 +296,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 :scope { padding: 1.1rem 1.3rem; }
 :scope > li.done::before { content: "✓"; }
 :scope > li > strong { line-height: 1.6; }
-:scope > li > :not(strong) { color: var(--muted); font-size: 0.92rem; }
+:scope > li > :not(strong) { color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 }
 }
 </style>
@@ -325,7 +325,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
   font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
 }
 :scope > li::after { background: var(--line); }
-:scope li > div > :not(strong) { color: var(--muted); font-size: 0.92rem; }
+:scope li > div > :not(strong) { color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 @media (max-width: 36rem) {
   :scope > li {
     --floe-mark-gap: 0.9rem;

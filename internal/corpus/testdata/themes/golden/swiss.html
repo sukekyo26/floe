@@ -353,7 +353,7 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
 .card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
-.card :is(p, ul, ol) { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 }
 }
 </style>
@@ -503,7 +503,7 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
   font-size: 3rem; font-weight: 900; line-height: 1;
 }
 .card .title { font-size: 1.2rem; font-weight: 900; }
-.card :is(p, ul, ol) { color: var(--fg); }
+.card :is(p, ul, ol) { color: var(--on-face, var(--fg)); }
 }
 }
 </style>
