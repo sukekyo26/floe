@@ -1,0 +1,25 @@
+template: report
+lang: en
+title: Edges to groups
+sections:
+  - heading: Diagram
+    parts:
+      - diagram:
+          title: An edge to a group from what it holds, and one from a box among its ranks
+          parts:
+            - graph:
+                x: 20
+                y: 20
+                nodes:
+                  - group:
+                      name: server
+                      label: Server
+                      nodes:
+                        - box: { name: api, rows: [API] }
+                        - box: { name: store, rows: [Store] }
+                  - box: { name: x, rows: [X] }
+                edges:
+                  - { from: api, to: x }
+                  - { from: x, to: store }
+                  - { from: api, to: server }
+                  - { from: x, to: server }

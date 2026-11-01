@@ -90,6 +90,80 @@ func TestGraphMistakes(t *testing.T) {
 	}
 }
 
+// gg is a graph with a group, a group nested in it, and a box outside.
+const gg = `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - box: { name: cli, rows: [CLI] }
+        - group:
+            name: server
+            label: Server
+            nodes:
+              - box: { name: api, rows: [API] }
+              - group:
+                  name: data
+                  nodes:
+                    - box: { name: store, rows: [Store] }
+        - box: { name: x, rows: [X] }
+      edges:
+        - { from: cli, to: api }
+        - { from: api, to: store }
+`
+
+// The mistakes of groups and edges to them: an empty one, a name of none, an edge between a group and what it holds,
+// one to a group whose other end stands among its ranks, a name given twice, and too many nodes through groups.
+func TestGraphGroupMistakes(t *testing.T) {
+	t.Parallel()
+
+	edge := func(e string) string {
+		return strings.Replace(gg, "        - { from: api, to: store }\n", "        - { from: api, to: store }\n        - "+e+"\n", 1)
+	}
+	var many strings.Builder
+	many.WriteString("title: T\nparts:\n  - graph:\n      x: 0\n      y: 0\n      nodes:\n")
+	for g := range 2 {
+		fmt.Fprintf(&many, "        - group:\n            nodes:\n")
+		for i := range 100 {
+			fmt.Fprintf(&many, "              - box: { name: b%d_%d, rows: [B] }\n", g, i)
+		}
+	}
+	tangled := `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - group: { name: g, nodes: [{ box: { name: g1, rows: [G1] } }, { box: { name: g2, rows: [G2] } }] }
+        - group: { name: h, nodes: [{ box: { name: h1, rows: [H1] } }] }
+      edges:
+        - { from: g1, to: h1 }
+        - { from: h1, to: g2 }
+        - { from: h, to: g }
+`
+	for _, c := range []struct {
+		name, src, want string
+	}{
+		{"an empty group", strings.Replace(strings.Replace(gg, "                  nodes:\n                    - box: { name: store, rows: [Store] }\n", "                  nodes: []\n", 1), "        - { from: api, to: store }\n", "", 1), `s.yaml:15:26: minItems: got 0, want 1`},
+		{"a name of none", edge("{ from: cli, to: servr }"), `s.yaml:21:28: edge: no box of this graph named "servr"`},
+		{"from a box the group holds", edge("{ from: api, to: server }"), `s.yaml:21:19: edge api→server: group "server" holds api; end the edge at a box or another group outside "server"`},
+		{"to a box the group holds", edge("{ from: server, to: store }"), `s.yaml:21:31: edge server→store: group "server" holds store; end the edge at a box or another group outside "server"`},
+		{"from a group to itself", edge("{ from: server, to: server }"), `s.yaml:21:31: edge server→server: group "server" holds server; end the edge at a box or another group outside "server"`},
+		{"to a group nested in it", edge("{ from: server, to: data }"), `s.yaml:21:31: edge server→data: group "server" holds data; end the edge at a box or another group outside "server"`},
+		{"a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: x, to: server }"), `s.yaml:23:19: edge x→server: x stands between boxes of group "server" (api leads to it and it leads to store); end the edge at a box in "server"`},
+		{"to a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: server, to: x }"), `s.yaml:23:31: edge server→x: x stands between boxes of group "server" (api leads to it and it leads to store); end the edge at a box in "server"`},
+		{"a group among another's ranks", tangled, `s.yaml:12:19: edge h→g: h stands between boxes of group "g" (g1 leads to it and it leads to g2); end the edge at a box in "g"`},
+		{"a group named as a box before it", strings.Replace(gg, "name: server", "name: cli", 1), `s.yaml:9:13: the name "cli" is given before: give each part, row and node its own name`},
+		{"a box named as a group before it", strings.Replace(gg, "name: x,", "name: server,", 1), `s.yaml:17:18: the name "server" is given before: give each part, row and node its own name`},
+		{"202 boxes and groups", many.String(), `s.yaml:4:7: graph: 202 boxes and groups, past 200; split it into graphs`},
+	} {
+		if _, got := draw(t, c.src, inspect); got != c.want {
+			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
+		}
+	}
+}
+
 // k33 is a graph of three boxes over three, each edge to each, its channel four tracks tall.
 const k33 = `title: T
 parts:

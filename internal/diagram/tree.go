@@ -47,7 +47,7 @@ func expand(parts []part) ([]item, usererr.List, error) {
 			m.measure(&p.Tree.Root, 0)
 			m.place(&out, &p.Tree.Root, p.Tree.X, p.Tree.Y, 0, pointer(i)+"/tree/root")
 		case p.Graph != nil:
-			if o := graphs[i]; o != nil {
+			if o := graphs[i]; o != nil && !o.skip {
 				its, err := o.items()
 				if err != nil {
 					return nil, nil, err

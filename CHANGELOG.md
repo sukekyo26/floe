@@ -14,9 +14,12 @@ adheres to [Semantic Versioning](https://semver.org/).
   points of its boxes' sides of its own. An edge's `label` stands beside a
   straight run of it, where floe makes room if there is none without bending
   the edge; an edge from a box to itself is a loop out of the side the
-  graph's edges do not use. A graph holds 200 boxes and 400 edges, and the
-  edges of all the graphs of a diagram may pass 4000 ranks between their
-  ends, all told. The diagram examples `flow` and `state` are drawn with it.
+  graph's edges do not use. A `group` of its nodes keeps its boxes side by
+  side in every rank, framed as a `frame` with its `label` (groups nest), and
+  an edge may end at a group, at its frame's top or bottom. A graph holds 200
+  boxes and groups and 400 edges, and the edges of all the graphs of a diagram
+  may pass 4000 ranks between their ends, all told. The diagram examples
+  `flow` and `state` are drawn with it.
 - Add `marks:` to a part's or look's `part.yaml`, which of its elements are
   rows with a mark at their left: `box`, `items` (each `li`) or `joined`
   (with a line to the next). floe lays the rows out in one layer,

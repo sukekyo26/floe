@@ -39,6 +39,9 @@ func (gr *group) order() int {
 		}
 	}
 	gr.ranks = best
+	if len(gr.cls) > 0 {
+		gr.align()
+	}
 	return trip
 }
 
@@ -82,6 +85,10 @@ func (gr *group) sweep(r int, down bool) {
 			keys[n] = median(at)
 			moving = append(moving, n)
 		}
+	}
+	if len(gr.cls) > 0 {
+		gr.ranks[r] = gr.sortIn(gr.ranks[r], -1, keys)
+		return
 	}
 	slices.SortStableFunc(moving, func(a, b int) int { return cmp.Compare(keys[a], keys[b]) })
 	k := 0
