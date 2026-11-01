@@ -22,6 +22,9 @@
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
+/* A heading in a part or a text is Markdown's, as a part draws none: no larger than a template's own */
+:where([data-floe-part], [data-floe-text]) h1 { font-size: 1.2em; }
+:where([data-floe-part], [data-floe-text]) h2 { font-size: 1.1em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -33,6 +36,11 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    paints a light ground of its own does the same with what it holds, and one that sets a colour on no ground of its
    own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; }
+/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do, and none widens the column
+   past the screen (a wide table, long code); a text of raw HTML alone draws nothing, its box a comment alone */
+[data-floe-text] { display: grid; gap: var(--floe-room); min-width: 0; }
+[data-floe-text] > * { min-width: 0; }
+[data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
 code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
@@ -126,7 +134,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.theme {
-@scope (:root) to ([data-floe-part] > *) {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
 :scope {
   /* default's own, here and not in its palette, which lies under every theme's */
@@ -135,10 +143,18 @@ blockquote > * + * { margin-top: 0.6rem; }
      corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
      LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and TestRadius follows the
      corner to --default-inner, not to --default-pad: a pad grown past the radius squares them unseen */
+  /* A quote's ground: the panel's on the page, the surface in a panel (panel.css sets it there) */
+  --default-quote: var(--default-panel);
   --default-pad: 6px; --default-inner: calc(var(--radius) - var(--default-pad));
 }
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) {
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-panel); --quiet: var(--surface); color: var(--fg); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); --quiet: var(--surface); color: var(--fg); }
 blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
@@ -403,7 +419,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); }
 }
 }
 </style>
@@ -411,7 +427,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); }
 }
 }
 </style>
@@ -447,7 +463,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 </style>
 <style>
 @layer floe.page {
-@scope (:root) to ([data-floe-part] > *) {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: what to check, a caution, the steps numbered
    under a line to the next (the look numbered), and how to roll back, in one column as wide as prose */
 body { margin: 0; padding-block: 2.5rem 4rem; font-size: 16px; line-height: 1.75; }
@@ -542,7 +558,7 @@ h2 { font-size: 1.15rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><div class="fails" data-floe-part="note" data-floe-tone="bad"><strong class="title">If it fails</strong><p>A <code>permission denied</code> means the role is missing; ask the platform team for <code>cert-issuer</code>.</p></div></li>
-<li data-floe-mark="solid"><div class="head"><h3 id="store-it-as-a-new-secret">Store it as a new secret</h3></div><p>Name it with today&#39;s date, so the old one stays until the end.</p><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments create secret tls gateway-tls-20300516 --cert=cert.pem --key=key.pem</span><span class="out">secret/gateway-tls-20300516 created</span></pre><script>(function copyButton(words) {
+<li data-floe-mark="solid"><div class="head"><h3 id="store-it-as-a-new-secret">Store it as a new secret</h3></div><div data-floe-text=""><p>Name it with today&#39;s date, so the old one stays until the end.</p></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments create secret tls gateway-tls-20300516 --cert=cert.pem --key=key.pem</span><span class="out">secret/gateway-tls-20300516 created</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -670,7 +686,7 @@ h2 { font-size: 1.15rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><div class="fails" data-floe-part="note" data-floe-tone="bad"><strong class="title">If it fails</strong><p>Roll back at once (below), then page the on-call engineer.</p></div></li>
-<li data-floe-mark="solid"><div class="head"><h3 id="check-that-checkout-works">Check that checkout works</h3><span class="who">Payments on-call</span></div><p>Place a test order on the staging shop and watch the checkout error rate on the dashboard for five minutes.</p></li>
+<li data-floe-mark="solid"><div class="head"><h3 id="check-that-checkout-works">Check that checkout works</h3><span class="who">Payments on-call</span></div><div data-floe-text=""><p>Place a test order on the staging shop and watch the checkout error rate on the dashboard for five minutes.</p></div></li>
 <li data-floe-mark="solid"><div class="head"><h3 id="delete-the-old-secret">Delete the old secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments delete secret gateway-tls-20290514</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
@@ -801,7 +817,7 @@ h2 { font-size: 1.15rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></li>
-<li data-floe-mark="solid"><div class="head"><h3 id="tell-the-on-call-engineer">Tell the on-call engineer</h3></div><p>Say which step failed and what it printed.</p></li>
+<li data-floe-mark="solid"><div class="head"><h3 id="tell-the-on-call-engineer">Tell the on-call engineer</h3></div><div data-floe-text=""><p>Say which step failed and what it printed.</p></div></li>
 </ol></section>
 <section><h2 id="related">Related</h2>
 <ul data-floe-part="links">

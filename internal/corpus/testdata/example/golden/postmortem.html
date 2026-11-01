@@ -22,6 +22,9 @@
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
+/* A heading in a part or a text is Markdown's, as a part draws none: no larger than a template's own */
+:where([data-floe-part], [data-floe-text]) h1 { font-size: 1.2em; }
+:where([data-floe-part], [data-floe-text]) h2 { font-size: 1.1em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -33,6 +36,11 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    paints a light ground of its own does the same with what it holds, and one that sets a colour on no ground of its
    own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; }
+/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do, and none widens the column
+   past the screen (a wide table, long code); a text of raw HTML alone draws nothing, its box a comment alone */
+[data-floe-text] { display: grid; gap: var(--floe-room); min-width: 0; }
+[data-floe-text] > * { min-width: 0; }
+[data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
 code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
@@ -126,7 +134,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.theme {
-@scope (:root) to ([data-floe-part] > *) {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
 :scope {
   /* default's own, here and not in its palette, which lies under every theme's */
@@ -135,10 +143,18 @@ blockquote > * + * { margin-top: 0.6rem; }
      corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
      LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and TestRadius follows the
      corner to --default-inner, not to --default-pad: a pad grown past the radius squares them unseen */
+  /* A quote's ground: the panel's on the page, the surface in a panel (panel.css sets it there) */
+  --default-quote: var(--default-panel);
   --default-pad: 6px; --default-inner: calc(var(--radius) - var(--default-pad));
 }
+}
+}
+</style>
+<style>
+@layer floe.theme {
+@scope (:root) {
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-panel); --quiet: var(--surface); color: var(--fg); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); --quiet: var(--surface); color: var(--fg); }
 blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
@@ -347,7 +363,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); }
 }
 }
 </style>
@@ -355,7 +371,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); }
 }
 }
 </style>
@@ -363,7 +379,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); }
 }
 }
 </style>
@@ -404,7 +420,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 </style>
 <style>
 @layer floe.page {
-@scope (:root) to ([data-floe-part] > *) {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: a band of the summary, then the impact,
    and the timeline beside the cause, the lessons and the actions, in the column every template centres its page in.
    LIMIT: the timeline and the rest sit side by side while each has 26rem; a width where they wrap is not looked at */
@@ -447,18 +463,15 @@ h2 { font-size: 1.15rem; }
 <div class="split">
 <section><h2 id="timeline">Timeline</h2><ol data-floe-part="timeline">
 <li data-floe-tone="bad"><span class="date">2030-05-14 10:42</span><div><strong>The certificate expires</strong></div></li>
-<li><span class="date">10:44</span><div><strong>Checkout errors cross the alert threshold</strong><p>The on-call engineer is paged.</p>
-</div></li>
-<li data-floe-tone="warn"><span class="date">10:58</span><div><strong>Cause found</strong><p>TLS handshake failures in the gateway&#39;s logs point at the certificate.</p>
-</div></li>
+<li><span class="date">10:44</span><div><strong>Checkout errors cross the alert threshold</strong><p>The on-call engineer is paged.</p></div></li>
+<li data-floe-tone="warn"><span class="date">10:58</span><div><strong>Cause found</strong><p>TLS handshake failures in the gateway&#39;s logs point at the certificate.</p></div></li>
 <li><span class="date">11:21</span><div><strong>A new certificate is issued and deployed</strong></div></li>
 <li data-floe-tone="good"><span class="date">11:29</span><div><strong>Checkout recovers</strong></div></li>
 <li><span class="date">2030-05-15 09:00</span><div><strong>Review held</strong></div></li>
 </ol></section>
 <div class="side">
 <section class="cause"><h2 id="cause">Cause</h2><p>The certificate was issued by hand two years ago and was not in the renewal job&#39;s list, so nothing renewed it.</p>
-<p>The expiry alert existed but went to a mailbox no one reads since the team was reorganised.</p>
-</section>
+<p>The expiry alert existed but went to a mailbox no one reads since the team was reorganised.</p></section>
 <section><h2 id="lessons">Lessons</h2><div class="lessons"><div data-floe-tone="good"><h3 id="went-well">Went well</h3><ul><li>The alert on checkout errors paged within two minutes</li><li>The gateway&#39;s logs named the failing handshake</li></ul></div><div data-floe-tone="bad"><h3 id="went-badly">Went badly</h3><ul><li>Nothing listed the certificates issued by hand</li><li>The expiry warning went to a dead mailbox</li></ul></div><div data-floe-tone="warn"><h3 id="got-lucky">Got lucky</h3><ul><li>It happened on a weekday morning with the whole team at work</li></ul></div>
 </div></section>
 <section><h2 id="actions">Actions</h2><div data-floe-look="table"><table>

@@ -1,0 +1,8 @@
+/* The stripes go under the page's headings (the template's and those of Markdown, wherever it stands), not in an
+   aside, as design's contents, nor on a band (band.css); they are a box of their own under the heading, not its
+   ground, so that its text stays on the page's */
+h2:not(aside h2)::after {
+  content: ""; display: block; width: 4.5rem; height: 9px; margin-top: 0.7rem; background: var(--retro-stripes);
+}
+blockquote > * { --face: initial; --on-face: initial; }
+blockquote { background: var(--surface); border: 0; border-radius: var(--radius); padding: 1rem 1.4rem; color: var(--fg); border-left: 9px solid var(--retro-mustard); }

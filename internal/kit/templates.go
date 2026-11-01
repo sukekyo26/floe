@@ -25,10 +25,11 @@ type Theme struct {
 	name     string
 	dir      string
 	base     []byte            // base.css, nil for none
+	markdown []byte            // markdown.css, nil for none
 	palette  []byte            // palette.css, nil for none
 	partsCSS map[string][]byte // <part or look>.css by its name
 	unread   []string          // the files of its directory it does not read: of no part or look of the Kit
-	files    []Source          // the files it read, palette.css and base.css first, for floe theme show
+	files    []Source          // the files it read, palette.css, base.css and markdown.css first, for floe theme show
 }
 
 // Name returns the name of t.
@@ -36,6 +37,9 @@ func (t *Theme) Name() string { return t.name }
 
 // Base returns the base.css of t, nil for none.
 func (t *Theme) Base() []byte { return bytes.Clone(t.base) }
+
+// Markdown returns the markdown.css of t, nil for none: the look of Markdown, wherever it stands.
+func (t *Theme) Markdown() []byte { return bytes.Clone(t.markdown) }
 
 // Palette returns the palette.css of t, nil for none.
 func (t *Theme) Palette() []byte { return bytes.Clone(t.palette) }
@@ -73,7 +77,7 @@ func (k *Kit) readThemes(d Dir) error {
 // readTheme reads the theme of d named name, its directory.
 func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 	t := &Theme{
-		name: name, dir: path.Join(d.Name, name), base: nil, palette: nil, partsCSS: map[string][]byte{}, unread: nil,
+		name: name, dir: path.Join(d.Name, name), base: nil, markdown: nil, palette: nil, partsCSS: map[string][]byte{}, unread: nil,
 		files: nil,
 	}
 	d = d.recording()
@@ -84,7 +88,7 @@ func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 	var read []string
 	for _, file := range all {
 		stem, ok := strings.CutSuffix(file, ".css")
-		if !ok || stem != "base" && stem != "palette" && !k.isPartOrLook(stem) {
+		if !ok || stem != "base" && stem != "palette" && stem != "markdown" && !k.isPartOrLook(stem) {
 			continue
 		}
 		read = append(read, file)
@@ -97,6 +101,8 @@ func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 			t.base = src
 		case "palette":
 			t.palette = src
+		case "markdown":
+			t.markdown = src
 		default:
 			t.partsCSS[stem] = src
 		}
@@ -109,15 +115,17 @@ func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 	return t, nil
 }
 
-// themeRank places palette.css and base.css before the CSS of the parts, as floe theme show prints them.
+// themeRank places palette.css, base.css and markdown.css before the CSS of the parts, as floe theme show prints them.
 func themeRank(file string) int {
 	switch file {
 	case "palette.css":
 		return 0
 	case "base.css":
 		return 1
+	case "markdown.css":
+		return 2
 	}
-	return 2
+	return 3
 }
 
 // Template is a template read: page.html and the schema of its data, and what goes with them.

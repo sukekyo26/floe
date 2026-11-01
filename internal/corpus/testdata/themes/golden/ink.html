@@ -22,6 +22,9 @@
 :root { background: var(--page-bg); color: var(--fg); font-family: var(--font); overflow-wrap: anywhere; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
+/* A heading in a part or a text is Markdown's, as a part draws none: no larger than a template's own */
+:where([data-floe-part], [data-floe-text]) h1 { font-size: 1.2em; }
+:where([data-floe-part], [data-floe-text]) h2 { font-size: 1.1em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -33,6 +36,11 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    paints a light ground of its own does the same with what it holds, and one that sets a colour on no ground of its
    own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; }
+/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do, and none widens the column
+   past the screen (a wide table, long code); a text of raw HTML alone draws nothing, its box a comment alone */
+[data-floe-text] { display: grid; gap: var(--floe-room); min-width: 0; }
+[data-floe-text] > * { min-width: 0; }
+[data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
 code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
@@ -141,7 +149,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 </style>
 <style>
 @layer floe.theme {
-@scope (:root) to ([data-floe-part] > *) {
+@scope (:root) {
 blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem 1.5rem; border-radius: var(--radius); background: var(--face); color: var(--on-face); font-size: 1.05rem; }
 }
 }
@@ -486,7 +494,7 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 </style>
 <style>
 @layer floe.page {
-@scope (:root) to ([data-floe-part] > *) {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* The colours and faces are the theme's palette; the page lays them out */
 body {
   margin: 0; font-size: 16px; line-height: 1.85; padding-block: 2.5rem 4rem;
@@ -516,14 +524,12 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </header>
 <section>
 <h2 id="parts">Parts</h2>
-<p>Text with <strong>bold</strong>, <code>code</code> and a <a href="https://example.com/">link</a>.</p>
+<div data-floe-text=""><p>Text with <strong>bold</strong>, <code>code</code> and a <a href="https://example.com/">link</a>.</p>
 <blockquote>
 <p>A quote.</p>
-</blockquote>
-<div data-floe-part="note"><strong class="title">Note</strong><p>A note in the accent.</p>
-</div>
-<div data-floe-tone="warn" data-floe-part="note"><p>A warning.</p>
-</div>
+</blockquote></div>
+<div data-floe-part="note"><strong class="title">Note</strong><p>A note in the accent.</p></div>
+<div data-floe-tone="warn" data-floe-part="note"><p>A warning.</p></div>
 <div data-floe-part="table"><table>
 <thead><tr><th scope="col">Name</th><th scope="col" class="num">Count</th><th scope="col">State</th></tr></thead>
 <tbody>
@@ -661,14 +667,12 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 <div class="numbered" data-floe-part="options">
-<div class="card option" data-floe-look="panel"><div class="title">One</div><p>First.</p>
-</div>
-<div class="card option" data-floe-look="panel"><div class="title">Two</div><p>Second.</p>
-</div>
+<div class="card option" data-floe-look="panel"><div class="title">One</div><p>First.</p></div>
+<div class="card option" data-floe-look="panel"><div class="title">Two</div><p>Second.</p></div>
 </div>
 <form data-floe-part="tabs">
-<label><input type="radio" name="tab" checked=""/>One</label><div data-floe-part="stack"><p>First.</p></div>
-<label><input type="radio" name="tab"/>Two</label><div data-floe-part="stack"><p>Second.</p></div>
+<label><input type="radio" name="tab" checked=""/>One</label><div data-floe-part="stack"><div data-floe-text=""><p>First.</p></div></div>
+<label><input type="radio" name="tab"/>Two</label><div data-floe-part="stack"><div data-floe-text=""><p>Second.</p></div></div>
 </form>
 <figure data-floe-part="diff"><figcaption><span class="file">a.conf</span><span class="added">+1</span><span class="removed">−1</span><span class="lang">ini</span></figcaption><pre><code data-floe-copy=""><span class="hunk">@@ -1 +1 @@
 </span><span class="del">-read_only = false

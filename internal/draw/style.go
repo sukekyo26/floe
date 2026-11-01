@@ -80,6 +80,12 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 	}
 	sheet("floe.palette", Tones(tones))
 	sheet("floe.theme", pageScoped(themed.Base()))
+	// LIMIT: markdown.css reaches the whole page, a part's own elements too: a rule for p or ul there styles what a
+	// part draws as such, where its part.css writes nothing. Keep Markdown's alone to it (what wraps every Markdown
+	// output in an element of its own would move what parts space by > * + *; see S164).
+	if md := themed.Markdown(); len(md) > 0 {
+		sheet("floe.theme", InScope("(:root)", md))
+	}
 	names := inOrder(k, slices.Concat(n.boxes, n.looks))
 	// Each style goes to the boxes that have its look, and to the other elements that take it, a layer under, each
 	// in the layer of its depth.
@@ -138,12 +144,13 @@ func toneRule(selector, tone string) string {
 		"--tone-fill: var(--%[2]s-fill, var(--%[2]s-soft)); }\n", selector, tone)
 }
 
-// pageScoped is css reaching the page short of what the parts hold, or nil when css is empty.
+// pageScoped is css reaching the page short of what the parts and texts hold (a text draws Markdown in a box of no
+// part, data-floe-text, which has no ground or tone of its own), or nil when css is empty.
 func pageScoped(css []byte) []byte {
 	if len(css) == 0 {
 		return nil
 	}
-	return InScope("(:root) to ([data-floe-part] > *)", css)
+	return InScope("(:root) to ([data-floe-part] > *, [data-floe-text] > *)", css)
 }
 
 // InScope is css in @scope with the prelude scope, its root :scope.

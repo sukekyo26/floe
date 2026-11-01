@@ -71,7 +71,7 @@ func TestCheckMistakes(t *testing.T) {
 			"a file a theme does not read", part,
 			map[string]string{"t/tabel.css": "a{}"},
 			nil,
-			"own/themes/t/tabel.css: floe reads no file of this name in a theme: a theme holds base.css, palette.css and a <part>.css for each part or look it styles; rename it after one, or remove it",
+			"own/themes/t/tabel.css: floe reads no file of this name in a theme: a theme holds base.css, markdown.css, palette.css and a <part>.css for each part or look it styles; rename it after one, or remove it",
 		},
 		{"part.css", with(map[string]string{"p/part.css": "}\n@import \"x\";\n"}), nil, nil, lines(
 			"own/parts/p/part.css:1:1: "+braceTold,
@@ -140,9 +140,10 @@ func TestCheckMistakes(t *testing.T) {
 			"bar/part.css": "a{}", "bar/part.yaml": "looks: [panel, marked]\n",
 		}), nil, nil, ""},
 		// The files in the order they come: palette.css, base.css, then the parts' files.
-		{"a theme", part, map[string]string{"t/palette.css": ":root { --a: 1 }\n}\n", "t/base.css": "}", "t/p.css": "@import \"x\";"}, nil, lines(
+		{"a theme", part, map[string]string{"t/palette.css": ":root { --a: 1 }\n}\n", "t/base.css": "}", "t/markdown.css": "}", "t/p.css": "@import \"x\";"}, nil, lines(
 			"own/themes/t/palette.css:2:1: "+braceTold,
 			"own/themes/t/base.css:1:1: "+braceTold,
+			"own/themes/t/markdown.css:1:1: "+braceTold,
 			"own/themes/t/p.css:1:1: floe puts this CSS in a layer, where a browser reads no @import: load the stylesheet with a <link> in page.html",
 		)},
 		{"a template without its files", part, nil, map[string]string{
