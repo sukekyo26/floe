@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/kit"
 )
 
 // wrapPage holds a path and a URL in options, which have no place to break a line, words beside narrow
@@ -83,6 +85,12 @@ sections:
                 ` + "```" + `
                 floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml
                 ` + "```" + `
+
+              > A quote holding a table:
+              >
+              > | file | what | where | when | who |
+              > | --- | --- | --- | --- | --- |
+              > | internal/kit/floe/parts/findings/part_internal_test.go | a test of the findings | in the kit | on Sunday | the team |
       - options:
           - title: An option holding a long block
             text: |
@@ -91,6 +99,12 @@ sections:
               > ` + "```" + `
               > floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml
               > ` + "```" + `
+
+              > A quote holding a table:
+              >
+              > | file | what | where | when | who |
+              > | --- | --- | --- | --- | --- |
+              > | internal/kit/floe/parts/findings/part_internal_test.go | a test of the findings | in the kit | on Sunday | the team |
       - decision:
           title: A decision holding a long block
           text: |
@@ -113,6 +127,12 @@ sections:
                 ` + "```" + `
                 floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml
                 ` + "```" + `
+
+              - an item holding a table:
+
+                | file | what | where | when | who |
+                | --- | --- | --- | --- | --- |
+                | internal/kit/floe/parts/findings/part_internal_test.go | a test of the findings | in the kit | on Sunday | the team |
       - tabs:
           - title: A
             parts:
@@ -122,6 +142,12 @@ sections:
                   > ` + "```" + `
                   > floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml
                   > ` + "```" + `
+
+                  > A quote holding a table:
+                  >
+                  > | file | what | where | when | who |
+                  > | --- | --- | --- | --- | --- |
+                  > | internal/kit/floe/parts/findings/part_internal_test.go | a test of the findings | in the kit | on Sunday | the team |
           - title: B
             parts:
               - text: b
@@ -142,10 +168,9 @@ sections:
               | export | nightly | wiki.conf | writes pages | running | platform |
 `
 
-// measureWrap returns one line for a page wider than the window, one for each element that scrolls sideways with no
-// contain: inline-size, one for each part's box, or a box in it, that is wider than its place or reaches past the
-// window, out of those that scroll sideways, and one for each word that breaks across lines in keys' text, code's
-// language, a diff's counts, a table and a tree's note.
+// measureWrap returns one line for a page wider than the window, one for each part's box, or a box in it, that is
+// wider than its place or reaches past the window, out of those that scroll sideways, and one for each
+// word that breaks across lines in keys' text, code's language, a diff's counts, a table and a tree's note.
 const measureWrap = `(() => {
   const out = [], w = innerWidth;
   // What is in a box that scrolls sideways may be wider than it.
@@ -157,11 +182,6 @@ const measureWrap = `(() => {
   };
   // A phone's emulated screen widens to the page, so the page is held to the width set, and each part's box too.
   if (document.documentElement.scrollWidth > w) out.push('the page is ' + document.documentElement.scrollWidth + ' px wide');
-  // A box that scrolls sideways tells nothing of its content's width outside, wherever it stands.
-  for (const e of document.querySelectorAll('*')) {
-    const s = getComputedStyle(e);
-    if (['auto', 'scroll'].includes(s.overflowX) && !s.contain.split(' ').includes('inline-size')) out.push('scrolls with no contain: inline-size: ' + e.tagName.toLowerCase() + ' ' + e.textContent.trim().slice(0, 40));
-  }
   for (const e of document.querySelectorAll('[data-floe-part], [data-floe-part] *')) {
     const s = getComputedStyle(e);
     if (scrolled(e) || ['auto', 'scroll'].includes(s.overflowX) || s.display === 'inline') continue;
@@ -182,8 +202,22 @@ const measureWrap = `(() => {
   return out.join('\n');
 })()`
 
+// measureContain returns one line for each element that scrolls sideways and tells its content's width outside, with
+// no contain of inline-size (size and strict hold it); a form's control scrolls by the browser's own sheet.
+const measureContain = `(() => {
+  const out = [];
+  for (const e of document.querySelectorAll('*')) {
+    if (e.matches('textarea, select, input')) continue;
+    const s = getComputedStyle(e);
+    if (!['auto', 'scroll'].includes(s.overflowX)) continue;
+    if (!s.contain.split(' ').some((v) => ['inline-size', 'size', 'strict'].includes(v))) out.push(e.tagName.toLowerCase() + ' ' + e.textContent.trim().slice(0, 40));
+  }
+  return out.join('\n');
+})()`
+
 // TestUIWrap draws a page as wide as a phone (390 px), and as a narrow window (620 px), wider than where parts lay
-// out for a phone: a path or a URL breaks rather than overflow its card, and no other word breaks for it.
+// out for a phone: a path or a URL breaks rather than overflow its card, and no other word breaks for it. It draws the
+// page in every theme too, to find a box that scrolls sideways and tells its width outside.
 func TestUIWrap(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -198,6 +232,19 @@ func TestUIWrap(t *testing.T) { //nolint:paralleltest // the browser tests share
 		}
 		if got := b.eval(measureWrap); got != "" {
 			t.Errorf("at %d px:\n  %s", w, strings.ReplaceAll(got, "\n", "\n  "))
+		}
+	}
+	// A box that scrolls sideways on screen tells nothing of its content's width outside, in every theme's files too.
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, themes, _ := k.Names()
+	for _, theme := range themes {
+		s.floe(t, "publish", s.write(t, "wrap-"+theme+".yaml", wrapPage+"theme: "+theme+"\n"), "--slug", "wrap-"+theme)
+		b.navigate("/a/wrap-" + theme + "/?raw")
+		if got := b.eval(measureContain); got != "" {
+			t.Errorf("%s: scrolls sideways with no contain: inline-size:\n  %s", theme, strings.ReplaceAll(got, "\n", "\n  "))
 		}
 	}
 }

@@ -13,9 +13,10 @@
 }
 /* It scrolls sideways, telling nothing of its width outside (base.css's pre has the LIMIT) */
 :scope pre {
-  margin: 0; padding: 0.95rem 1.1rem; overflow-x: auto; contain: inline-size; background: none; border: 0; border-radius: 0; color: inherit;
+  margin: 0; padding: 0.95rem 1.1rem; overflow-x: auto; background: none; border: 0; border-radius: 0; color: inherit;
   font-family: inherit; font-size: 0.875rem; line-height: 1.65; tab-size: 4;
 }
+@media screen { :scope pre { contain: inline-size; } }
 :scope .file { opacity: 0.85; }
 :scope .lang {
   flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);

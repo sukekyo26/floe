@@ -1,8 +1,9 @@
 /* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
    its width outside (base.css's pre has the LIMIT) */
 :scope {
-  overflow-x: auto; contain: inline-size;
+  overflow-x: auto;
 }
+@media screen { :scope { contain: inline-size; } }
 :scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
 :scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
 :scope :is(th, td):not(.num) { min-width: 7em; }
