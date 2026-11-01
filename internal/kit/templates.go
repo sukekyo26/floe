@@ -77,8 +77,8 @@ func (k *Kit) readThemes(d Dir) error {
 // readTheme reads the theme of d named name, its directory.
 func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 	t := &Theme{
-		name: name, dir: path.Join(d.Name, name), base: nil, markdown: nil, palette: nil, partsCSS: map[string][]byte{}, unread: nil,
-		files: nil,
+		name: name, dir: path.Join(d.Name, name), base: nil, markdown: nil, palette: nil, partsCSS: map[string][]byte{},
+		unread: nil, files: nil,
 	}
 	d = d.recording()
 	all, err := entries(d, name, false)
