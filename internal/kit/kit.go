@@ -235,10 +235,11 @@ func (k *Kit) marksOf(name string) taken {
 	if p, ok := k.Part(name); ok {
 		return p.marks
 	}
+	var none taken
 	if l, ok := k.Look(name); ok {
-		return l.marks
+		none = l.marks
 	}
-	return taken{}
+	return none
 }
 
 // isPartOrLook reports whether name is a part or a look of k or its base.
