@@ -2,13 +2,13 @@
 :scope {
   counter-reset: floe-check floe-checked;
 }
-:scope > li { --floe-mark-gap: 0.65rem; padding-inline: 1.2rem; counter-increment: floe-check; }
+:scope > li { --floe-mark-gap: 0.65rem; counter-increment: floe-check; }
 :scope > li.done { counter-increment: floe-check floe-checked; color: var(--muted); }
 /* A sign of the look marked, not a box: the items are not to be ticked on the page */
 :scope > li::before { content: "–"; color: var(--muted); }
 :scope > li.done::before { content: "✓"; color: var(--good); }
 :scope::after {
-  content: counter(floe-checked) " / " counter(floe-check); padding-inline: 1.2rem; text-align: right;
+  content: counter(floe-checked) " / " counter(floe-check); text-align: right;
   font-family: var(--mono);
   font-size: 0.8rem; color: var(--muted);
 }

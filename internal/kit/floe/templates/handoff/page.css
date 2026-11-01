@@ -17,7 +17,7 @@ h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .counts li.hot { background: var(--tone-soft); color: var(--tone); border-color: var(--tone-soft); }
 main { display: grid; gap: 2rem; padding-block: 2rem; }
 main h2 { font-size: 1.15rem; }
-.asks { padding: 1.2rem 1.4rem; border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
+.asks { padding: var(--floe-pad-block) var(--floe-pad-inline); border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
 .asks h2 { color: var(--warn); font-size: 1.3rem; }
 /* Q1, Q2 … are the list's own numbers: each li stays a list item, its layout inside it. The name is the page's
    alone, as a counter style is not held by @scope.
@@ -32,7 +32,7 @@ main h2 { font-size: 1.15rem; }
 .why, .by { color: var(--muted); font-size: 0.92rem; }
 /* As many columns as the sections written, side by side while each has 16rem */
 .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
-.board section { padding: 1rem 1.2rem; display: grid; gap: 0.6rem; }
+.board section { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.6rem; }
 .board ul, .board ol { gap: 0.6rem; }
 .doing { list-style: none; padding: 0; }
 /* A tick as the look marked places a row's sign */

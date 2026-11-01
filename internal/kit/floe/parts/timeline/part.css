@@ -1,6 +1,6 @@
 /* The date at the left of a dot on a line that runs down to the next, each item a row (marks: joined) that floe lays
    out, the date in a column of its own (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
-:scope { padding: 1.1rem 1.3rem; }
+:scope { padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > li {
   --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem;
   grid-template:

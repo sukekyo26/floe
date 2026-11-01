@@ -1,7 +1,7 @@
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
 :scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
 :scope > li {
-  --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0; padding-block: 0.9rem; padding-left: 1.1rem;
+  --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0;
 }
 :scope > li > * + * { margin-top: 0.1rem; }
 /* Each item is a row (marks: items), which floe lays out: the mark is a box, and over it (::after) the link's sign.
