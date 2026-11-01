@@ -12,11 +12,11 @@ const bandPillsHTML = `<span data-floe-part="cell">plain</span> <span data-floe-
 	`<span data-floe-part="cell" data-floe-tone="good">ok</span> <span data-floe-part="cell" data-floe-tone="warn">wait</span> ` +
 	`<span data-floe-part="cell" data-floe-tone="bad">stop</span> <span data-floe-part="cell" data-floe-tone="muted">later</span>`
 
-// bandKit is a template that places, in a band, pills (cell) in each tone and in none, and a note, one it places
-// itself holding a link and code, a table and code of floe's and Markdown, each when the data file has it.
+// bandKit is a template that places, in a band, pills (cell) in each tone and in none, a card of its own (the look
+// cards), and a note, one it places itself holding a link and code, a table and code of floe's and Markdown, each when the data file has it.
 var bandKit = map[string]string{
 	"templates/mine/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +
-		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{if .Data.note}}<div data-floe-part=\"note\"><p>A borrowed note, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>{{end}}{{.Data.note}}{{.Data.text}}{{.Data.words}}{{.Data.details}}{{.Data.options}}{{.Data.table}}{{.Data.code}}</header>\n</body></html>\n",
+		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{if .Data.note}}<div data-floe-part=\"note\"><p>A borrowed note, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>{{end}}{{.Data.note}}{{.Data.text}}{{.Data.words}}{{.Data.details}}{{.Data.options}}<div data-floe-look=\"cards\"><div class=\"card\" data-floe-look=\"panel\"><p>A card of the template's own.</p></div></div>{{.Data.table}}{{.Data.code}}</header>\n</body></html>\n",
 	"templates/mine/page.css": "header { display: grid; gap: 1rem; padding: 2rem; }\n",
 	"templates/mine/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"note": {"$ref": "floe:///parts/note.json"}, "text": {"type": "string", "format": "markdown"},
@@ -69,7 +69,7 @@ const measureBand = `(() => {` + colours + `
   // A heading held in a part in the band takes no mark either; a card draws its text on its own ground.
   const held = document.querySelector('header [data-floe-part="details"] h2');
   if (held && getComputedStyle(held, '::after').content !== 'none') out.push('a heading in details: a mark after it');
-  const card = document.querySelector('header .card p');
+  const card = document.querySelector('header [data-floe-look~="cards"] > .card p');
   if (card && getComputedStyle(card).color === getComputedStyle(document.querySelector('header')).color) out.push('a card: the band\'s text colour');
   return out.join('\n');
 })()`
