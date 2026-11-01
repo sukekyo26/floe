@@ -9,14 +9,26 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // graphOf is a graph of boxes named names, with edges written "a>b".
+// graphBoxes are g's boxes, through its groups, as written.
+func graphBoxes(g *graph) []*graphBox {
+	boxes, _, _ := flatten(g, "#")
+	out := make([]*graphBox, len(boxes))
+	for i, b := range boxes {
+		out[i] = b.box
+	}
+	return out
+}
+
 func graphOf(names []string, edges ...string) *graph {
 	g := &graph{X: 20, Y: 20, Direction: "", Nodes: nil, Edges: nil}
 	for _, n := range names {
@@ -111,9 +123,9 @@ func labelFault(g *graph, l *layout) string {
 	if g.Direction == "right" {
 		across = 1
 	}
-	for _, n := range g.Nodes {
-		if a, b := l.names[n.Box.Name].r, plain.names[n.Box.Name].r; math.Mod(a.lo(across)-b.lo(across), column) != 0 {
-			return fmt.Sprintf("box %s at %v,%v labelled, %v,%v not: off its grid", n.Box.Name, a.x, a.y, b.x, b.y)
+	for _, b := range graphBoxes(g) {
+		if x, y := l.names[b.Name].r, plain.names[b.Name].r; math.Mod(x.lo(across)-y.lo(across), column) != 0 {
+			return fmt.Sprintf("box %s at %v,%v labelled, %v,%v not: off its grid", b.Name, x.x, x.y, y.x, y.y)
 		}
 	}
 	if fault := handFault(g, l); fault != "" {
@@ -166,7 +178,8 @@ func loopLabelFault(g *graph, l *layout, k int, r rect) string {
 // box its edges do not use (left and right laid out down, top and bottom laid out right), 20 out, or "".
 func handFault(g *graph, l *layout) string {
 	parts := []part{{Graph: g}} //nolint:exhaustruct_v5 // one kind of part
-	for _, n := range g.Nodes {
+	for _, b := range graphBoxes(g) {
+		n := graphNode{Box: b, Group: nil}
 		r := l.names[n.Box.Name].r
 		ends := map[string][2]float64{"left": {r.x - 20, r.y + r.h/2}, "right": {r.x + r.w + 20, r.y + r.h/2}}
 		loopSide := "right"
@@ -282,14 +295,20 @@ func graphFault(g *graph) string {
 		}
 	}
 	shape := map[string]string{}
-	for _, n := range g.Nodes {
-		shape[n.Box.Name] = n.Box.Shape
+	for _, b := range graphBoxes(g) {
+		shape[b.Name] = b.Shape
 	}
 	for k, p := range l.paths {
 		e := g.Edges[k]
 		ends := [2][2]float64{{p.segs[0][0], p.segs[0][1]}, {p.segs[len(p.segs)-1][2], p.segs[len(p.segs)-1][3]}}
 		for j, name := range []string{e.From, e.To} {
 			r := l.names[name].r
+			if _, ok := shape[name]; !ok { // a group's: on its frame's top or bottom (left or right, laid out right)
+				if !onFrameSide(r, ends[j], g.Direction == "right") {
+					return fmt.Sprintf("%s ends at %v, off the top and bottom of %s's frame %v", p.what, ends[j], name, r)
+				}
+				continue
+			}
 			r.form = outlineOf(r.w, r.h, shape[name])
 			if d := depth(r, ends[j][0], ends[j][1]); math.Abs(d) > 1e-9 {
 				return fmt.Sprintf("%s ends %v from the outline of %s", p.what, d, name)
@@ -320,6 +339,126 @@ func graphFault(g *graph) string {
 	if again := laid(g); again.inspect() != l.inspect() {
 		return "laid out twice, it differs"
 	}
+	return clusterFault(g, l)
+}
+
+// onFrameSide reports whether p is on r's top or bottom (left or right, right), within its other sides.
+func onFrameSide(r rect, p [2]float64, right bool) bool {
+	along, across := 0, 1
+	if right {
+		along, across = 1, 0
+	}
+	near := func(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
+	return (near(p[across], r.lo(across)) || near(p[across], r.lo(across)+r.size(across))) &&
+		p[along] > r.lo(along) && p[along] < r.lo(along)+r.size(along)
+}
+
+// clusterFault is what is wrong with the groups of g laid out as l, or "": a frame not holding a box of its group
+// (nested too) or the corners of an edge between them, holding a box of none of them, a frame outside or touching
+// another but within it (nested), one above or left of the graph's x and y, or an edge's end at a frame under its
+// heading.
+func clusterFault(g *graph, l *layout) string {
+	boxes, clusters, _ := flatten(g, "#")
+	if len(clusters) == 0 {
+		return ""
+	}
+	frames := map[string]rect{}
+	for _, f := range l.frames {
+		frames[f.at] = f
+	}
+	within := func(r, f rect) bool {
+		return r.x > f.x && r.y > f.y && r.x+r.w < f.x+f.w && r.y+r.h < f.y+f.h
+	}
+	frameOf := func(c int) rect { return frames["#/parts/0/graph"+strings.TrimPrefix(clusters[c].at, "#")] }
+	held := func(c int, name string) bool {
+		for _, b := range clusters[c].boxes {
+			if boxes[b].box.Name == name {
+				return true
+			}
+		}
+		for d := range clusters {
+			for p := d; p >= 0; p = clusters[p].parent {
+				if p == c && clusters[d].g.Name == name && name != "" {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	if s := frameStart(g, l); s != "" {
+		return s
+	}
+	for c := range clusters {
+		f := frameOf(c)
+		for i, b := range boxes {
+			r := l.names[b.box.Name].r
+			switch in := slices.Contains(clusters[c].boxes, i); {
+			case in && !within(r, f):
+				return fmt.Sprintf("the frame of group %d %v does not hold its box %s %v", c, f, b.box.Name, r)
+			case !in && r.overlaps(f):
+				return fmt.Sprintf("the frame of group %d %v holds box %s %v, of none of its", c, f, b.box.Name, r)
+			}
+		}
+		for k, e := range g.Edges {
+			if k >= len(l.paths) || !held(c, e.From) || !held(c, e.To) {
+				continue
+			}
+			for _, s := range l.paths[k].segs {
+				if s[0] < f.x || s[2] < f.x || s[0] > f.x+f.w || s[2] > f.x+f.w || s[1] < f.y || s[3] < f.y ||
+					s[1] > f.y+f.h || s[3] > f.y+f.h {
+					return fmt.Sprintf("%s, of group %d, runs out of its frame %v", l.paths[k].what, c, f)
+				}
+			}
+		}
+		for d := c + 1; d < len(clusters); d++ {
+			o := frameOf(d)
+			nested := false
+			for p := clusters[d].parent; p >= 0; p = clusters[p].parent {
+				nested = nested || p == c
+			}
+			grown := rect{x: f.x - 1, y: f.y - 1, w: f.w + 2, h: f.h + 2, what: "", at: ""} //nolint:exhaustruct_v5 // a frame touching
+			switch {
+			case nested && !within(o, f):
+				return fmt.Sprintf("the frame of group %d %v, nested in group %d's, is not within it %v", d, o, c, f)
+			case !nested && grown.overlaps(o):
+				return fmt.Sprintf("the frames of groups %d %v and %d %v meet", c, f, d, o)
+			}
+		}
+		if t := clusters[c].g.Label; t != nil {
+			head := rect{x: f.x + 12, y: f.y + 9, w: textWidth(t, sizeSub, false), h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // as addFrame's
+			for _, p := range l.paths {
+				for _, end := range [][2]float64{{p.segs[0][0], p.segs[0][1]}, {p.segs[len(p.segs)-1][2], p.segs[len(p.segs)-1][3]}} {
+					if end[0] >= head.x && end[0] <= head.x+head.w && end[1] >= f.y && end[1] <= head.y+head.h {
+						return fmt.Sprintf("%s ends at %v, under the heading of group %d", p.what, end, c)
+					}
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// frameStart is what is wrong with where a graph's frames start, or "": none starts above or left of the graph's x
+// and y, and the frame starting first on an axis, with nothing drawn before it, starts at x (or y).
+func frameStart(g *graph, l *layout) string {
+	at := [2]float64{g.X, g.Y}
+	for axis := range 2 {
+		frame, other := math.Inf(1), math.Inf(1)
+		for _, f := range l.frames {
+			frame = min(frame, f.lo(axis))
+		}
+		for _, r := range slices.Concat(l.boxes, l.labels) {
+			other = min(other, r.lo(axis))
+		}
+		for _, p := range l.paths {
+			for _, s := range p.segs {
+				other = min(other, s[axis], s[axis+2])
+			}
+		}
+		if frame < at[axis] || frame <= other && frame != at[axis] {
+			return fmt.Sprintf("the first frame on axis %d starts at %v, the graph at %v", axis, frame, at[axis])
+		}
+	}
 	return ""
 }
 
@@ -343,10 +482,17 @@ func groupFault(gr *group) string {
 		last := -1
 		for k, v := range rank {
 			n := gr.nodes[v]
-			if n.box != nil {
+			if !n.settles() {
 				continue
 			}
 			e := gr.links[n.ins[0]].exit
+			if len(gr.cls) > 0 { // a mark of a group's stops it short of its column, entered bent either way
+				if n.x != e && (n.w != column/2 || math.Mod(n.x, column) != column/2) {
+					return fmt.Sprintf("a point off its link's column %v not entered bent: column %v", e, n.x)
+				}
+				last = k
+				continue
+			}
 			room := math.Inf(-1)
 			if last >= 0 {
 				o := gr.nodes[rank[last]]
@@ -369,10 +515,7 @@ func groupFault(gr *group) string {
 	for r, rank := range gr.ranks {
 		for k := 1; k < len(rank); k++ {
 			a, b := gr.nodes[rank[k-1]], gr.nodes[rank[k]]
-			want := nodeGap
-			if a.box == nil && b.box == nil {
-				want = column
-			}
+			want := gr.gap(rank[k-1], rank[k])
 			if b.x-(a.x+a.w) < want {
 				return fmt.Sprintf("rank %d: nodes %v apart, want %v", r, b.x-(a.x+a.w), want)
 			}
@@ -420,6 +563,9 @@ func shrunk(g *graph) *graph {
 			}
 		}
 		for i := len(g.Nodes) - 1; i >= 0 && len(g.Nodes) > 1; i-- {
+			if g.Nodes[i].Box == nil { // a group stays whole
+				continue
+			}
 			name := g.Nodes[i].Box.Name
 			try := *g
 			try.Nodes = slices.Delete(slices.Clone(g.Nodes), i, i+1)
@@ -470,7 +616,8 @@ func addLoops(rnd *rand.Rand, g *graph, every bool) {
 	if !every && rnd.IntN(2) == 0 {
 		return
 	}
-	for _, n := range g.Nodes {
+	for _, b := range graphBoxes(g) {
+		n := graphNode{Box: b, Group: nil}
 		if !every && rnd.IntN(4) != 0 {
 			continue
 		}
@@ -497,8 +644,9 @@ func TestGraphRandom(t *testing.T) {
 		graphs    int
 		every     bool
 	}{{"", [2]uint64{1, 2}, 3000, false}, {"right", [2]uint64{3, 4}, 3000, false}, {"", [2]uint64{5, 6}, 300, true}, {"right", [2]uint64{7, 8}, 300, true}} {
-		rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1]))      //nolint:gosec // G404: graphs to try, no secret
-		loops := rand.New(rand.NewPCG(c.seed[0]+10, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
+		rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1]))       //nolint:gosec // G404: graphs to try, no secret
+		loops := rand.New(rand.NewPCG(c.seed[0]+10, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
+		groups := rand.New(rand.NewPCG(c.seed[0]+20, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
 		for i := range c.graphs {
 			g := randomGraph(rnd, c.direction)
 			for k := range g.Edges {
@@ -507,6 +655,7 @@ func TestGraphRandom(t *testing.T) {
 				}
 			}
 			addLoops(loops, g, c.every)
+			addGroups(groups, g)
 			if fault := graphFault(g); fault != "" {
 				b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
 				t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
@@ -714,7 +863,7 @@ func TestGraphPulls(t *testing.T) {
 func channel(rnd *rand.Rand) (*group, bool) {
 	gr := &group{
 		nodes: nil, links: nil, ranks: [][]int{nil, nil}, chains: map[int][]int{}, reversed: map[int]bool{},
-		tracks: nil, top: nil, bottom: nil,
+		tracks: nil, top: nil, bottom: nil, arcs: nil, out: nil, among: nil, cls: nil, frames: nil, botRoom: nil, headAt: 0,
 	}
 	up, low := 1+rnd.IntN(6), 1+rnd.IntN(6)
 	for i := range up + low {
@@ -724,7 +873,7 @@ func channel(rnd *rand.Rand) (*group, bool) {
 		}
 		gr.ranks[r] = append(gr.ranks[r], i)
 		gr.nodes = append(gr.nodes, gnode{
-			box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: i, rank: r, w: 0, h: 29,
+			box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: i, kind: kindPlain, cl: -1, rank: r, w: 0, h: 29,
 			x: 0, y: 0, ins: nil, outs: nil, written: i,
 		})
 	}
@@ -822,8 +971,8 @@ func TestWireCases(t *testing.T) {
 
 	links := func(pairs ...[2]float64) *group {
 		gr := &group{
-			nodes: []gnode{{box: nil, of: 0, rank: 0, w: 0, h: 0, x: 0, y: 0, ins: nil, outs: nil, written: 0}},
-			links: nil, ranks: [][]int{{0}}, chains: map[int][]int{}, reversed: map[int]bool{}, tracks: nil, top: nil, bottom: nil,
+			nodes: []gnode{{box: nil, of: 0, kind: kindPlain, cl: -1, rank: 0, w: 0, h: 0, x: 0, y: 0, ins: nil, outs: nil, written: 0}},
+			links: nil, ranks: [][]int{{0}}, chains: map[int][]int{}, reversed: map[int]bool{}, tracks: nil, top: nil, bottom: nil, arcs: nil, out: nil, among: nil, cls: nil, frames: nil, botRoom: nil, headAt: 0,
 		}
 		for k, p := range pairs {
 			gr.links = append(gr.links, glink{from: 0, to: 0, edge: k, exit: p[0], entry: p[1], straight: false, track: 0})
@@ -843,11 +992,11 @@ func TestWireCases(t *testing.T) {
 	// a→d and b→c, the boxes' order crossed once.
 	gr := &group{
 		nodes: nil, links: nil, ranks: [][]int{{0, 1}, {2, 3}}, chains: map[int][]int{}, reversed: map[int]bool{},
-		tracks: nil, top: nil, bottom: nil,
+		tracks: nil, top: nil, bottom: nil, arcs: nil, out: nil, among: nil, cls: nil, frames: nil, botRoom: nil, headAt: 0,
 	}
 	for i, x := range []float64{12, 114, 12, 114} {
 		gr.nodes = append(gr.nodes, gnode{
-			box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: i, rank: i / 2, w: 72, h: 29,
+			box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: i, kind: kindPlain, cl: -1, rank: i / 2, w: 72, h: 29,
 			x: x, y: 0, ins: nil, outs: nil, written: i,
 		})
 	}
@@ -884,10 +1033,10 @@ func TestWireBend(t *testing.T) {
 	} {
 		gr := &group{
 			nodes: []gnode{{
-				box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: 0, rank: 1, w: 240, h: 29, x: 0,
+				box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: 0, kind: kindPlain, cl: -1, rank: 1, w: 240, h: 29, x: 0,
 				y: 0, ins: nil, outs: nil, written: 0,
 			}}, links: nil, ranks: nil, chains: map[int][]int{}, reversed: map[int]bool{},
-			tracks: nil, top: nil, bottom: nil,
+			tracks: nil, top: nil, bottom: nil, arcs: nil, out: nil, among: nil, cls: nil, frames: nil, botRoom: nil, headAt: 0,
 		}
 		for k, x := range c.exits {
 			gr.links = append(gr.links, glink{from: 0, to: 0, edge: k, exit: x, entry: 0, straight: false, track: 0})
@@ -991,7 +1140,38 @@ func TestGraphLimit(t *testing.T) {
 		big.Edges = append(big.Edges, graphOf(nil, fmt.Sprintf("b%d>b%d", a, b)).Edges...)
 	}
 	exact := chainGraph(42, 100) // 100 edges of 40 points
-	for _, g := range []*graph{big, exact} {
+	// Two groups of 99 boxes, 400 edges from one to the other; and 10 groups nested, 190 boxes, big's edges.
+	two := graphOf(nil)
+	for _, name := range []string{"a", "b"} {
+		names := make([]string, 0, 99)
+		for i := range 99 {
+			names = append(names, fmt.Sprintf("%s%d", name, i))
+		}
+		two.Nodes = append(two.Nodes, inGroup(graphOf(names), name, name, names...).Nodes...)
+	}
+	for range 400 {
+		two.Edges = append(two.Edges, graphOf(nil, "a>b").Edges...)
+	}
+	deep := graphOf(nil)
+	for d := range 10 {
+		var names []string
+		for i := range 19 {
+			names = append(names, fmt.Sprintf("b%d", 19*d+i))
+		}
+		deep.Nodes = append(deep.Nodes, graphOf(names).Nodes...)
+		if d > 0 {
+			names = append(names, fmt.Sprintf("g%d", d-1))
+		}
+		inGroup(deep, fmt.Sprintf("g%d", d), "", names...)
+	}
+	for _, e := range big.Edges {
+		a, _ := strconv.Atoi(e.From[1:]) //nolint:errcheck // b and a number, as made
+		b, _ := strconv.Atoi(e.To[1:])   //nolint:errcheck // as above
+		if a < 190 && b < 190 {
+			deep.Edges = append(deep.Edges, e)
+		}
+	}
+	for _, g := range []*graph{big, exact, two, deep} {
 		o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // every name is a box's
 		if o.passed > maxPassed {
 			t.Fatalf("%d boxes: %d points, over %d", len(g.Nodes), o.passed, maxPassed)
@@ -1007,6 +1187,28 @@ func TestGraphLimit(t *testing.T) {
 	}
 	if o, _ := readGraph(exact, "#"); o.passed != maxPassed { //nolint:errcheck // every name is a box's
 		t.Errorf("the chain passes %d ranks, want %d", o.passed, maxPassed)
+	}
+
+	// Edges to a group refused, each named by the boxes it stands among, found by a search from each end, not from
+	// each pair: groups g and h of 99 boxes each, g a chain between h's first and last, and 300 edges g→h.
+	among := graphOf(nil)
+	for _, name := range []string{"g", "h"} {
+		names := make([]string, 0, 99)
+		for i := range 99 {
+			names = append(names, fmt.Sprintf("%s%d", name, i))
+		}
+		among.Nodes = append(among.Nodes, inGroup(graphOf(names), name, "", names...).Nodes...)
+	}
+	for i := range 98 {
+		among.Edges = append(among.Edges, graphOf(nil, fmt.Sprintf("g%d>g%d", i, i+1)).Edges...)
+	}
+	among.Edges = append(among.Edges, graphOf(nil, "h0>g0", "g98>h98").Edges...)
+	for range 300 {
+		among.Edges = append(among.Edges, graphOf(nil, "g>h").Edges...)
+	}
+	start := time.Now()
+	if _, errs := readGraph(among, "#"); len(errs) != 300 || time.Since(start) > 3*time.Second {
+		t.Errorf("300 edges among: %d mistakes in %v, want 300 within 3s", len(errs), time.Since(start))
 	}
 
 	// Counted before any point is made: graphs whose edges pass far more ranks than the limit make none, and are
@@ -1088,6 +1290,9 @@ func TestGraphTold(t *testing.T) {
 	box := func(x float64, graph string) rect {
 		return rect{x: x, y: 0, w: 40, h: 40, what: "box at " + num(x), at: graph + "/nodes/0/box", form: outline{hex: 0, radius: 0}, graph: graph}
 	}
+	frame := func(x float64, graph string) rect {
+		return rect{x: x, y: 10, w: 100, h: 100, what: "frame at " + num(x), at: graph + "/nodes/1/group", graph: graph} //nolint:exhaustruct_v5 // a frame
+	}
 	across := path{segs: []seg{{0, 20, 100, 20}}, what: "edge a→b", at: ga + "/edges/0", own: -1, crossing: false, graph: ga}
 	down := path{segs: []seg{{50, -10, 50, 100}}, what: "edge c→d", at: gb + "/edges/0", own: -1, crossing: false, graph: gb}
 	hand := down
@@ -1099,13 +1304,15 @@ func TestGraphTold(t *testing.T) {
 		l       *layout
 		key, at string
 	}{
-		{"two graphs' boxes", &layout{boxes: []rect{box(0, ga), box(20, gb)}, w: 500, h: 500}, "diagram_graph_overlap", ga},                              //nolint:exhaustruct_v5 // what it checks
-		{"a graph's box and one by hand", &layout{boxes: []rect{box(0, ga), handBox}, w: 500, h: 500}, "diagram_overlap", "#/parts/1"},                   //nolint:exhaustruct_v5 // what it checks
-		{"an edge through another graph's box", &layout{boxes: []rect{box(30, gb)}, paths: []path{across}, w: 500, h: 500}, "diagram_graph_through", ga}, //nolint:exhaustruct_v5 // what it checks
-		{"two graphs' edges", &layout{paths: []path{across, down}, w: 500, h: 500}, "diagram_graph_crossing", ga},                                        //nolint:exhaustruct_v5 // what it checks
-		{"the other first", &layout{paths: []path{down, across}, w: 500, h: 500}, "diagram_graph_crossing", gb},                                          //nolint:exhaustruct_v5 // what it checks
-		{"a graph's edge and one by hand", &layout{paths: []path{across, hand}, w: 500, h: 500}, "diagram_crossing", "#/parts/1"},                        //nolint:exhaustruct_v5 // what it checks
-		{"a graph's box off the canvas", &layout{boxes: []rect{box(480, ga)}, w: 500, h: 500}, "diagram_graph_outside", ga},                              //nolint:exhaustruct_v5 // what it checks
+		{"two graphs' boxes", &layout{boxes: []rect{box(0, ga), box(20, gb)}, w: 500, h: 500}, "diagram_graph_overlap", ga},                                     //nolint:exhaustruct_v5 // what it checks
+		{"a graph's box and one by hand", &layout{boxes: []rect{box(0, ga), handBox}, w: 500, h: 500}, "diagram_overlap", "#/parts/1"},                          //nolint:exhaustruct_v5 // what it checks
+		{"an edge through another graph's box", &layout{boxes: []rect{box(30, gb)}, paths: []path{across}, w: 500, h: 500}, "diagram_graph_through", ga},        //nolint:exhaustruct_v5 // what it checks
+		{"two graphs' edges", &layout{paths: []path{across, down}, w: 500, h: 500}, "diagram_graph_crossing", ga},                                               //nolint:exhaustruct_v5 // what it checks
+		{"the other first", &layout{paths: []path{down, across}, w: 500, h: 500}, "diagram_graph_crossing", gb},                                                 //nolint:exhaustruct_v5 // what it checks
+		{"a graph's edge and one by hand", &layout{paths: []path{across, hand}, w: 500, h: 500}, "diagram_crossing", "#/parts/1"},                               //nolint:exhaustruct_v5 // what it checks
+		{"a graph's box off the canvas", &layout{boxes: []rect{box(480, ga)}, w: 500, h: 500}, "diagram_graph_outside", ga},                                     //nolint:exhaustruct_v5 // what it checks
+		{"a graph's frame and a box by hand", &layout{boxes: []rect{handBox}, frames: []rect{frame(40, ga)}, w: 500, h: 500}, "diagram_straddle", "#/parts/1"},  //nolint:exhaustruct_v5 // what it checks
+		{"a graph's frame and another's box", &layout{boxes: []rect{box(80, gb)}, frames: []rect{frame(40, ga)}, w: 500, h: 500}, "diagram_graph_straddle", gb}, //nolint:exhaustruct_v5 // what it checks
 	} {
 		c.l.check()
 		if len(c.l.problems) != 1 || c.l.problems[0].Key != c.key || c.l.problems[0].At() != c.at {
@@ -1115,8 +1322,9 @@ func TestGraphTold(t *testing.T) {
 	// Things of one graph meet only by a fault of its layout: floe's failure, not a mistake to move a graph, which
 	// checked returns as Drawer reads it.
 	for _, l := range []*layout{
-		{boxes: []rect{box(0, ga), box(20, ga)}, w: 500, h: 500},            //nolint:exhaustruct_v5 // what it checks
-		{boxes: []rect{box(30, ga)}, paths: []path{across}, w: 500, h: 500}, //nolint:exhaustruct_v5 // what it checks
+		{boxes: []rect{box(0, ga), box(20, ga)}, w: 500, h: 500},                   //nolint:exhaustruct_v5 // what it checks
+		{boxes: []rect{box(0, ga)}, frames: []rect{frame(20, ga)}, w: 500, h: 500}, //nolint:exhaustruct_v5 // what it checks
+		{boxes: []rect{box(30, ga)}, paths: []path{across}, w: 500, h: 500},        //nolint:exhaustruct_v5 // what it checks
 		{labels: []rect{{x: 40, y: 10, w: 30, h: 18, what: "label", at: ga + "/edges/0", graph: ga}}, //nolint:exhaustruct_v5 // what it checks
 			paths: []path{across}, w: 500, h: 500},
 	} {
@@ -1656,5 +1864,277 @@ func TestGraphReachHands(t *testing.T) {
 	d.stretch(0, at, need)
 	if !free(r, nil, d.hands()) {
 		t.Errorf("cut at %v, moved on %v: %v is not clear of the hands %v", at, need, r, d.hands())
+	}
+}
+
+// inGroup is g with the nodes named (boxes or groups, at its top) moved into a new group, where the first stood.
+func inGroup(g *graph, name, label string, members ...string) *graph {
+	var held []graphNode
+	at := -1
+	for i := 0; i < len(g.Nodes); i++ {
+		n := g.Nodes[i]
+		nm := ""
+		if n.Box != nil {
+			nm = n.Box.Name
+		} else {
+			nm = n.Group.Name
+		}
+		if !slices.Contains(members, nm) {
+			continue
+		}
+		if at < 0 {
+			at = i
+		}
+		held = append(held, n)
+		g.Nodes = slices.Delete(g.Nodes, i, i+1)
+		i--
+	}
+	var t Text
+	if label != "" {
+		t = Text{"en": label}
+	}
+	grp := graphNode{Box: nil, Group: &graphGroup{Name: name, Label: t, Accent: false, Nodes: held}}
+	g.Nodes = slices.Insert(g.Nodes, at, grp)
+	return g
+}
+
+// addGroups puts half the graphs' boxes at random into 1 to 3 groups, some nested, some labelled, and ends a tenth
+// of their edges at a group instead, dropping those between a group and what it holds or among its ranks (told).
+func addGroups(rnd *rand.Rand, g *graph) {
+	if rnd.IntN(2) == 0 {
+		return
+	}
+	var made []string
+	for c := range 1 + rnd.IntN(3) {
+		var top []string
+		for _, n := range g.Nodes {
+			if n.Box != nil || rnd.IntN(2) == 0 {
+				if n.Box != nil {
+					top = append(top, n.Box.Name)
+				} else {
+					top = append(top, n.Group.Name)
+				}
+			}
+		}
+		rnd.Shuffle(len(top), func(i, j int) { top[i], top[j] = top[j], top[i] })
+		size := 1 + rnd.IntN(max(1, len(top)/3))
+		if size >= len(top) {
+			break
+		}
+		name, label := fmt.Sprintf("g%d", c), ""
+		if rnd.IntN(2) == 0 {
+			label = strings.Repeat("w", 1+rnd.IntN(12))
+		}
+		inGroup(g, name, label, top[:size]...)
+		made = append(made, name)
+	}
+	for k := range g.Edges {
+		if len(made) > 0 && g.Edges[k].From != g.Edges[k].To && rnd.IntN(10) == 0 {
+			if rnd.IntN(2) == 0 {
+				g.Edges[k].From = made[rnd.IntN(len(made))]
+			} else {
+				g.Edges[k].To = made[rnd.IntN(len(made))]
+			}
+		}
+	}
+	for {
+		_, problems := readGraph(g, "#/parts/0/graph")
+		var drop []int
+		for _, p := range problems {
+			if p.Key == "diagram_graph_inside" || p.Key == "diagram_graph_among" {
+				k, err := strconv.Atoi(strings.Split(strings.TrimPrefix(p.At(), "#/parts/0/graph/edges/"), "/")[0])
+				if err != nil {
+					panic(err)
+				}
+				drop = append(drop, k)
+			}
+		}
+		if len(drop) == 0 {
+			return
+		}
+		slices.Sort(drop)
+		for _, k := range slices.Backward(slices.Compact(drop)) {
+			g.Edges = slices.Delete(g.Edges, k, k+1)
+		}
+	}
+}
+
+// A graph's groups keep their boxes side by side in every rank, framed apart from all else: nested, side by side,
+// boxes with no edge, edges in and out of them at any rank, round trips, loops, labels and a group of boxes beside.
+func TestGraphGroups(t *testing.T) {
+	t.Parallel()
+	base := func() *graph {
+		return graphOf([]string{"cli", "api", "store", "cache", "page", "z"}, "cli>api", "api>store", "api>cache", "store>page")
+	}
+	for _, direction := range []string{"", "right"} {
+		for _, c := range []struct {
+			name string
+			g    func() *graph
+		}{
+			{"one", func() *graph { return inGroup(base(), "server", "Local server", "api", "store") }},
+			{"nested", func() *graph {
+				return inGroup(inGroup(base(), "data", "Data", "store", "cache"), "server", "Local server", "api", "data")
+			}},
+			{"side by side", func() *graph {
+				return inGroup(inGroup(base(), "a", "A", "api"), "b", "", "store", "cache")
+			}},
+			{"no edges", func() *graph { return inGroup(base(), "lone", "Lone", "z", "page") }},
+			{"in and out at any rank", func() *graph {
+				g := inGroup(base(), "server", "Local server", "api", "store", "cache")
+				g.Edges = append(g.Edges, graphOf(nil, "cli>store", "api>page", "cli>cache").Edges...)
+				return g
+			}},
+			{"round trip", func() *graph {
+				g := inGroup(base(), "server", "Local server", "api", "store")
+				g.Edges = append(g.Edges, graphOf(nil, "store>api").Edges...)
+				return g
+			}},
+			{"loop", func() *graph {
+				g := inGroup(base(), "server", "Local server", "api", "store")
+				g.Edges = append(g.Edges, graphOf(nil, "store>store", "api>api").Edges...)
+				return g
+			}},
+			{"labels", func() *graph {
+				g := inGroup(base(), "server", "Local server", "api", "store", "cache")
+				for k := range g.Edges {
+					g.Edges[k].Label = Text{"en": "label"}
+				}
+				return g
+			}},
+		} {
+			g := c.g()
+			g.Direction = direction
+			if fault := graphFault(g); fault != "" {
+				t.Errorf("%q %s: %s", direction, c.name, fault)
+			}
+		}
+	}
+}
+
+// An edge needs no turn a group makes it take: one beside a frame runs straight down by it, the frame moved out of
+// its way, and one between groups passes inside the group spanning its ranks, not round the frames. Making room
+// for a point moves frames, but never widens one.
+func TestGraphGroupStraight(t *testing.T) {
+	t.Parallel()
+	for _, direction := range []string{"", "right"} {
+		g := graphOf([]string{"cli", "api", "store", "cache", "page", "disk"},
+			"cli>api", "api>store", "api>cache", "store>page", "cli>server", "server>db", "cli>page", "server>cli")
+		g.Nodes[0].Box.Rows[0].Text = Text{"en": "floe publish"} // as wide as the plan's picture
+		g = inGroup(inGroup(g, "data", "Data", "store", "cache"), "server", "Local server", "api", "data")
+		g = inGroup(g, "db", "Database", "disk")
+		g.Direction = direction
+		for _, p := range laid(g).paths {
+			if p.what == "edge cli→page" && len(p.segs) != 1 {
+				t.Errorf("%q: cli→page beside the frame turns: %v", direction, p.segs)
+			}
+		}
+
+		// x in group a, at b's first rank; b spans four ranks: x→b3's points stand in b.
+		between := inGroup(inGroup(graphOf([]string{"x", "b0", "b1", "b2", "b3"}, "b0>b1", "b1>b2", "b2>b3", "x>b3"),
+			"a", "A", "x"), "b", "B", "b0", "b1", "b2", "b3")
+		between.Direction = direction
+		grs, err := grouped(between)
+		if err != nil {
+			t.Fatal(err)
+		}
+		points := 0
+		for _, n := range grs[0].nodes {
+			if n.isPoint() && n.of == 3 {
+				points++
+				if n.cl != 1 {
+					t.Errorf("%q: a point of x→b3 at rank %d stands in group %d, not b", direction, n.rank, n.cl)
+				}
+			}
+		}
+		if points != 2 {
+			t.Errorf("%q: x→b3 passes %d points, want 2", direction, points)
+		}
+	}
+
+	// Every frame as wide as before room is made for the points, in random graphs and the two above.
+	rnd := rand.New(rand.NewPCG(9, 10))     //nolint:gosec // G404: graphs to try, no secret
+	groups := rand.New(rand.NewPCG(29, 10)) //nolint:gosec // G404: graphs to try, no secret
+	for i := range 600 {
+		direction := []string{"", "right"}[i%2]
+		g := randomGraph(rnd, direction)
+		addGroups(groups, g)
+		if fault := wideningFault(g); fault != "" {
+			t.Fatalf("graph %d %q: %s", i, direction, fault)
+		}
+	}
+}
+
+// wideningFault is a frame of g that making room for the points widens, or "".
+func wideningFault(g *graph) string {
+	right := g.Direction == "right"
+	widths := func(gr *group) map[int]float64 {
+		out := map[int]float64{}
+		for _, n := range gr.nodes {
+			switch n.kind {
+			case kindLeft:
+				out[n.cl] -= n.x
+			case kindRight:
+				out[n.cl] += n.x
+			case kindPlain, kindHeading, kindIn, kindOut:
+			}
+		}
+		return out
+	}
+	before, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are graphFault's
+	after, _ := readGraph(g, "#/parts/0/graph")  //nolint:errcheck // as above
+	for k, gr := range before.groups {
+		gr.split()
+		gr.size(right)
+		gr.order()
+		gr.pack(nil)
+		gr.pull()
+		ga := after.groups[k]
+		ga.place(right)
+		// A group's marks stand in each of its ranks: its width counted once a rank.
+		wb, wa := widths(gr), widths(ga)
+		for c, w := range wb {
+			if wa[c] > w {
+				return fmt.Sprintf("group %d widens from %v to %v", c, w, wa[c])
+			}
+		}
+	}
+	return ""
+}
+
+// An edge to a group ends at its frame's top (from above) or leaves its bottom, each at a point of its own clear
+// of the heading: from a box, to one, between groups with no edge between their boxes, into a nested group, back,
+// and into a group whose second rank another edge from that box enters.
+func TestGraphGroupEdges(t *testing.T) {
+	t.Parallel()
+	base := func(edges ...string) *graph {
+		g := graphOf([]string{"cli", "api", "store", "cache", "page", "disk"},
+			append([]string{"cli>api", "api>store", "api>cache"}, edges...)...)
+		g = inGroup(inGroup(g, "data", "Data", "store", "cache"), "server", "Local server", "api", "data")
+		return inGroup(g, "db", "Database", "disk")
+	}
+	for _, direction := range []string{"", "right"} {
+		for _, c := range []struct {
+			name  string
+			edges []string
+		}{
+			{"in", []string{"cli>server"}},
+			{"out", []string{"server>page"}},
+			{"between groups", []string{"server>db"}},
+			{"into a nested group", []string{"cli>data"}},
+			{"back", []string{"cli>server", "server>cli"}},
+			{"in, beside one to the second rank", []string{"cli>server", "cli>store", "cli>data"}},
+			{"labelled", []string{"cli>server", "server>db", "data>page"}},
+		} {
+			g := base(c.edges...)
+			g.Direction = direction
+			for k := range g.Edges {
+				if c.name == "labelled" {
+					g.Edges[k].Label = Text{"en": "label"}
+				}
+			}
+			if fault := graphFault(g); fault != "" {
+				t.Errorf("%q %s: %s", direction, c.name, fault)
+			}
+		}
 	}
 }

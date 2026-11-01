@@ -21,8 +21,51 @@ const (
 // the pulls of the lefts.
 func (gr *group) place(right bool) (trips, pulls int) {
 	gr.split()
+	gr.size(right)
+	trips = gr.order()
+	if len(gr.cls) > 0 {
+		gr.pack(nil)
+	} else {
+		for _, rank := range gr.ranks {
+			left := 0.0
+			for _, i := range gr.boxesOf(rank) {
+				gr.nodes[i].x = onGrid(left, 6, math.Ceil)
+				left = gr.nodes[i].x + gr.nodes[i].w + nodeGap
+			}
+		}
+	}
+	pulls = gr.pull()
+	if len(gr.cls) > 0 { // again, room made for each point at its column, and the boxes pulled again
+		gr.pack(gr.wanted())
+		pulls = max(pulls, gr.pull())
+	}
+	least := math.Inf(1)
+	for _, n := range gr.nodes {
+		if n.box != nil {
+			least = min(least, n.x)
+		}
+	}
+	if len(gr.cls) > 0 { // by whole columns, keeping where edges leave frames at x ≡ 0
+		least = onGrid(least, column, math.Floor)
+	}
+	for i := range gr.nodes {
+		gr.nodes[i].x -= least
+	}
+	return trips, pulls
+}
+
+// size sizes the group's boxes (turned for right) and its headings' rooms, and sets where a heading stands from its
+// frame's top: 12 in from its left and 9 down from its top (addFrame), along the ranks as drawn.
+func (gr *group) size(right bool) {
+	gr.headAt = 9
+	if right {
+		gr.headAt = 12
+	}
 	for i := range gr.nodes {
 		n := &gr.nodes[i]
+		if n.kind == kindHeading && right {
+			n.w, n.h = n.h, n.w
+		}
 		if n.box == nil {
 			continue
 		}
@@ -39,25 +82,6 @@ func (gr *group) place(right bool) (trips, pulls int) {
 			n.w = max(n.w, onGrid(float64(12*k+36), 8, math.Ceil))
 		}
 	}
-	trips = gr.order()
-	for _, rank := range gr.ranks {
-		left := 0.0
-		for _, i := range gr.boxesOf(rank) {
-			gr.nodes[i].x = onGrid(left, 6, math.Ceil)
-			left = gr.nodes[i].x + gr.nodes[i].w + nodeGap
-		}
-	}
-	pulls = gr.pull()
-	least := math.Inf(1)
-	for _, n := range gr.nodes {
-		if n.box != nil {
-			least = min(least, n.x)
-		}
-	}
-	for i := range gr.nodes {
-		gr.nodes[i].x -= least
-	}
-	return trips, pulls
 }
 
 // boxesOf are the boxes of rank, in order: the points of a rank are placed by wire, at their links' columns.
@@ -65,9 +89,9 @@ func (gr *group) boxesOf(rank []int) []int {
 	return slices.DeleteFunc(slices.Clone(rank), func(i int) bool { return gr.nodes[i].box == nil })
 }
 
-// through is the box an edge reaches from node i, going up (or down) through the points it passes.
+// through is the box (or port) an edge reaches from node i, going up (or down) through the points it passes.
 func (gr *group) through(i int, up bool) int {
-	for gr.nodes[i].box == nil {
+	for gr.nodes[i].isPoint() {
 		if up {
 			i = gr.links[gr.nodes[i].ins[0]].from
 		} else {
@@ -141,15 +165,22 @@ func (gr *group) pullOne(r, i int, down bool) bool {
 	}
 	want := median(centres)
 	lo, hi := math.Inf(-1), math.Inf(1)
-	boxes := gr.boxesOf(gr.ranks[r])
-	at := slices.Index(boxes, i)
-	if at > 0 {
-		o := gr.nodes[boxes[at-1]]
-		lo = onGrid(o.x+o.w+nodeGap, 6, math.Ceil)
+	// Within a group, a box keeps clear of every node beside it, the group's marks among them; else of the boxes
+	// beside it, the points stand where wire puts them.
+	// LIMIT: a group's marks are not pulled: its frame stands where pack puts it, and only its boxes move towards
+	// the boxes their edges reach. Pull a group whole if frames come to stand off from what they lead to.
+	beside := gr.ranks[r]
+	if len(gr.cls) == 0 {
+		beside = gr.boxesOf(beside)
 	}
-	if at+1 < len(boxes) {
-		o := gr.nodes[boxes[at+1]]
-		hi = onGrid(o.x-nodeGap-n.w, 6, math.Floor)
+	at := slices.Index(beside, i)
+	if at > 0 {
+		o := gr.nodes[beside[at-1]]
+		lo = onGrid(o.x+o.w+gr.gap(beside[at-1], i), 6, math.Ceil)
+	}
+	if at+1 < len(beside) {
+		o := gr.nodes[beside[at+1]]
+		hi = onGrid(o.x-gr.gap(i, beside[at+1])-n.w, 6, math.Floor)
 	}
 	x := min(max(onGrid(want-n.w/2, 6, math.Round), lo), hi)
 	if x == n.x {

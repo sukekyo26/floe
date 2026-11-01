@@ -95,7 +95,16 @@ type graph struct {
 
 // graphNode is one of its kinds, the one that is not nil.
 type graphNode struct {
-	Box *graphBox `json:"box"`
+	Box   *graphBox   `json:"box,omitempty"`
+	Group *graphGroup `json:"group,omitempty"` // omitted, so that the ids of a spec without it stay
+}
+
+// graphGroup is a group of a graph's nodes, kept side by side in every rank and framed.
+type graphGroup struct {
+	Name   string      `json:"name"`
+	Label  Text        `json:"label"`
+	Accent bool        `json:"accent"`
+	Nodes  []graphNode `json:"nodes"`
 }
 
 type graphBox struct {
@@ -140,6 +149,7 @@ type frame struct {
 	Accent bool    `json:"accent"`
 	Icon   string  `json:"icon"`
 	Square bool    `json:"square"`
+	graph  string  // the JSON pointer of the graph that laid it out; "" for a frame written by hand
 }
 
 type box struct {

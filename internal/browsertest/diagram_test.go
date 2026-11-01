@@ -279,8 +279,8 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 }
 
 // measureBoxes returns a line for each box of the page's diagrams whose text, as the browser draws it, is not inside
-// its shape, for each two boxes of a diagram that overlap, and for each label whose text overlaps a box, another
-// label's text or an edge (loops too): the width floe estimates for text against the width drawn.
+// its shape, for each two boxes of a diagram that overlap, and for each label or frame's heading whose text overlaps
+// a box, another's text or an edge (loops too): the width floe estimates for text against the width drawn.
 const measureBoxes = `(() => {
   const out = [];
   for (const svg of document.querySelectorAll('svg.dg')) {
@@ -302,7 +302,7 @@ const measureBoxes = `(() => {
       }
     }
     const meet = (a, c) => a.x < c.x + c.width && c.x < a.x + a.width && a.y < c.y + c.height && c.y < a.y + a.height;
-    const labels = [...svg.querySelectorAll('text.label')].map((t) => ({ text: t.textContent, r: t.getBBox() }));
+    const labels = [...svg.querySelectorAll('text.label, g.frame > text')].map((t) => ({ text: t.textContent, r: t.getBBox() }));
     for (let i = 0; i < labels.length; i++) {
       for (const b of boxes) {
         if (meet(labels[i].r, b.shape)) {
@@ -330,8 +330,8 @@ const measureBoxes = `(() => {
 })()`
 
 // TestUIGraph draws the graphs kept in the diagram tests, down and right, in English and Japanese: in each, the text
-// the browser draws stays inside its box, and no two boxes overlap, nor a label's text a box, another label's or an
-// edge.
+// the browser draws stays inside its box, and no two boxes overlap, nor a label's or a heading's text a box, another's
+// or an edge.
 func TestUIGraph(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b

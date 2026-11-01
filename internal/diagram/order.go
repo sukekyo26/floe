@@ -39,6 +39,9 @@ func (gr *group) order() int {
 		}
 	}
 	gr.ranks = best
+	if len(gr.cls) > 0 {
+		gr.align()
+	}
 	return trip
 }
 
@@ -83,6 +86,10 @@ func (gr *group) sweep(r int, down bool) {
 			moving = append(moving, n)
 		}
 	}
+	if len(gr.cls) > 0 {
+		gr.ranks[r] = gr.sortIn(gr.ranks[r], -1, keys)
+		return
+	}
 	slices.SortStableFunc(moving, func(a, b int) int { return cmp.Compare(keys[a], keys[b]) })
 	k := 0
 	for i, n := range gr.ranks[r] {
@@ -105,6 +112,8 @@ func median[T int | float64](xs []T) float64 {
 
 // crossings counts the pairs of links between two ranks whose ends are in opposite orders, rank by rank: the
 // links sorted by their upper end, the pairs out of order at the lower end (with a Fenwick tree, O(E log V)).
+// LIMIT: links crossing a frame's side are not counted: an edge between two boxes outside a group, either side of
+// it, may cross its frame between two of its ranks. Count them too if frames come to look crossed.
 func (gr *group) crossings() int {
 	pos := gr.positions()
 	total := 0

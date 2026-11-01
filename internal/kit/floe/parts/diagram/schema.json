@@ -281,20 +281,34 @@
         "x": { "$ref": "#/$defs/coord" },
         "y": { "$ref": "#/$defs/coord" },
         "direction": { "enum": ["down", "right"], "description": "Which way the edges run: down (the default) or right" },
-        "nodes": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 200,
-          "items": {
-            "type": "object",
-            "description": "One key naming the kind of the node",
-            "minProperties": 1,
-            "maxProperties": 1,
-            "additionalProperties": false,
-            "properties": { "box": { "$ref": "#/$defs/graphBox" } }
-          }
-        },
+        "nodes": { "$ref": "#/$defs/graphNodes" },
         "edges": { "type": "array", "maxItems": 400, "items": { "$ref": "#/$defs/graphEdge" } }
+      }
+    },
+    "graphNodes": {
+      "type": "array",
+      "description": "Boxes and groups of boxes; a graph holds 200 of them at most, counted through its groups",
+      "minItems": 1,
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "description": "One key naming the kind of the node",
+        "minProperties": 1,
+        "maxProperties": 1,
+        "additionalProperties": false,
+        "properties": { "box": { "$ref": "#/$defs/graphBox" }, "group": { "$ref": "#/$defs/graphGroup" } }
+      }
+    },
+    "graphGroup": {
+      "type": "object",
+      "description": "Boxes and groups kept side by side in every rank, framed, its label in the frame's top left corner; an edge of the graph may end at it by its name, at the frame's top or bottom",
+      "required": ["nodes"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "label": { "$ref": "#/$defs/text" },
+        "accent": { "type": "boolean" },
+        "nodes": { "$ref": "#/$defs/graphNodes" }
       }
     },
     "graphBox": {
@@ -311,7 +325,7 @@
     },
     "graphEdge": {
       "type": "object",
-      "description": "An edge from a box of the graph to a box of the graph, by name; from and to the same box, a loop out of the side the graph's edges do not use",
+      "description": "An edge between boxes or groups of the graph, by name; from and to the same box, a loop out of the side the graph's edges do not use; at a group, it ends at the frame's top or bottom",
       "required": ["from", "to"],
       "additionalProperties": false,
       "properties": {

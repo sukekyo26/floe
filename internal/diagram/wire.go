@@ -37,24 +37,64 @@ func (gr *group) wire() {
 		gr.tracks[r] = gr.track(r)
 	}
 	gr.shiftRight()
+	gr.rise()
+}
+
+// rise sets the tops and bottoms of the ranks and the nodes' tops, as laid out down: a rank as tall as its tallest
+// box (and its headings' rooms), the room above it for the frames starting there and below it for those ending,
+// then its channel's tracks.
+func (gr *group) rise() {
 	gr.top, gr.bottom = make([]float64, len(gr.ranks)), make([]float64, len(gr.ranks))
+	above, below := gr.rooms()
 	y := 0.0
 	for r, rank := range gr.ranks {
+		y += above[r].room
 		tall := column
 		for _, i := range rank {
-			tall = max(tall, gr.nodes[i].h)
-		}
-		gr.top[r], gr.bottom[r] = y, y+tall
-		for _, i := range rank {
-			if gr.nodes[i].box != nil {
-				gr.nodes[i].y = y + (tall-gr.nodes[i].h)/2
-			} else {
-				gr.nodes[i].y, gr.nodes[i].h = y, tall
+			if n := gr.nodes[i]; n.kind == kindHeading {
+				tall = max(tall, gr.headAt-above[r].of[n.cl]+n.h)
+			} else if n.kind == kindPlain {
+				tall = max(tall, n.h)
 			}
 		}
+		gr.top[r], gr.bottom[r] = y, y+tall
+		gr.stand(r, above[r], below[r])
+		gr.botRoom = append(gr.botRoom, below[r].room)
 		if r < len(gr.tracks) {
-			y += tall + riseMin + column*float64(gr.tracks[r])
+			y += tall + below[r].room + riseMin + column*float64(gr.tracks[r])
 		}
+	}
+}
+
+// stand sets the tops of the nodes of rank r, and the tops and bottoms of the frames starting and ending there: a
+// box in the middle of the rank, a point along it, a heading its offset below its frame's top, and where an edge
+// enters or leaves a frame on its top or bottom.
+func (gr *group) stand(r int, above, below room) {
+	top, bottom := gr.top[r], gr.bottom[r]
+	for _, i := range gr.ranks[r] {
+		n := &gr.nodes[i]
+		switch n.kind {
+		case kindPlain:
+			if n.box != nil {
+				n.y = top + (bottom-top-n.h)/2
+			} else {
+				n.y, n.h = top, bottom-top
+			}
+		case kindHeading:
+			n.y = top - above.of[n.cl] + gr.headAt
+		case kindIn:
+			n.y, n.h = top-above.of[n.cl], 0
+		case kindOut:
+			n.y, n.h = bottom+below.of[n.cl], 0
+		case kindLeft, kindRight:
+			n.y, n.h = top, bottom-top
+		}
+	}
+	for c, room := range above.of {
+		gr.frames[c] = [2]float64{top - room, gr.frames[c][1]}
+	}
+	for c, room := range below.of {
+		gr.frames[c] = [2]float64{gr.frames[c][0], bottom + room}
 	}
 }
 
@@ -147,25 +187,19 @@ func (gr *group) settle(r int) {
 	last, right := -1, 0.0 // the last point placed, by index in rank, and the column it leaves at
 	for k, v := range rank {
 		n := &gr.nodes[v]
-		if n.box != nil {
+		if !n.settles() {
 			continue
 		}
 		e := gr.links[n.ins[0]].exit
-		need := e
-		if last >= 0 {
-			need = max(e, right+column)
-			if between := gr.boxesOf(rank[last+1 : k]); len(between) > 0 {
-				// The boxes between, packed as the passes below pack them, on the grid of 6.
-				at := right
-				for _, b := range between {
-					at = onGrid(at+nodeGap, 6, math.Ceil) + gr.nodes[b].w
-				}
-				need = max(e, onGrid(at+nodeGap, 6, math.Ceil))
-			}
-		}
+		lo, hi := gr.bounds(r, k, last, right)
+		need := max(e, lo)
 		n.x, n.w = need, 0
 		if need != e {
 			n.x, n.w = onGrid(need-column/2, column, math.Ceil)+column/2, column/2
+		}
+		if n.x+n.w > hi {
+			// Short of a mark of a group's, which does not move: entered bent to the left of its column.
+			n.x, n.w = onGrid(hi-column, column, math.Floor)+column/2, column/2
 		}
 		last, right = k, n.x+n.w
 	}
@@ -174,14 +208,61 @@ func (gr *group) settle(r int) {
 	for k := 1; k < len(rank); k++ {
 		if n := &gr.nodes[rank[k]]; n.box != nil {
 			o := gr.nodes[rank[k-1]]
-			n.x = max(n.x, onGrid(o.x+o.w+nodeGap, 6, math.Ceil))
+			n.x = max(n.x, onGrid(o.x+o.w+gr.gap(rank[k-1], rank[k]), 6, math.Ceil))
 		}
 	}
 	for k := len(rank) - 2; k >= 0; k-- {
 		if n := &gr.nodes[rank[k]]; n.box != nil {
-			n.x = min(n.x, onGrid(gr.nodes[rank[k+1]].x-nodeGap-n.w, 6, math.Floor))
+			n.x = min(n.x, onGrid(gr.nodes[rank[k+1]].x-gr.gap(rank[k], rank[k+1])-n.w, 6, math.Floor))
 		}
 	}
+}
+
+// bounds are where the point at k in rank r may stand: lo, past what stands before it (the point last placed, at
+// last, leaving at right, or the nearest node after it that settle does not move) with the boxes between packed;
+// hi, where it must leave by, short of the nearest node after it that settle does not move, with what stands
+// between packed (a point as wide as pack gives it). With no group, no node is unmoved: hi is
+// infinite.
+func (gr *group) bounds(r, k, last int, right float64) (lo, hi float64) {
+	rank := gr.ranks[r]
+	v := rank[k]
+	prev, at := last, right
+	for j := k - 1; j > last; j-- {
+		if m := gr.nodes[rank[j]]; m.rigid() {
+			prev, at = j, m.x+m.w
+			break
+		}
+	}
+	lo = math.Inf(-1)
+	if prev >= 0 {
+		p := rank[prev]
+		between := gr.boxesOf(rank[prev+1 : k])
+		for _, b := range between {
+			at = onGrid(at+gr.gap(p, b), 6, math.Ceil) + gr.nodes[b].w
+			p = b
+		}
+		lo = at + gr.gap(p, v)
+		if len(between) > 0 {
+			lo = onGrid(lo, 6, math.Ceil)
+		}
+	}
+	hi = math.Inf(1)
+	for j := k + 1; j < len(rank); j++ {
+		if !gr.nodes[rank[j]].rigid() {
+			continue
+		}
+		at, next := gr.nodes[rank[j]].x, rank[j]
+		for i := j - 1; i > k; i-- {
+			at = at - gr.gap(rank[i], next) - gr.room(rank[i])
+			if gr.nodes[rank[i]].box != nil { // as the boxes' pass right to left puts it, on the grid of 6
+				at = onGrid(at, 6, math.Floor)
+			}
+			next = rank[i]
+		}
+		hi = at - gr.gap(v, next)
+		break
+	}
+	return lo, hi
 }
 
 // shiftRight moves the group across by whole columns, so that it keeps its grid, to start within a column right of
@@ -374,13 +455,14 @@ func (gr *group) points(chain []int, right bool) [][2]float64 {
 	in := 0.0 // where the link before entered
 	for _, li := range chain {
 		l := gr.links[li]
-		if a := gr.nodes[l.from]; a.box == nil {
+		if a := gr.nodes[l.from]; a.isPoint() {
 			mid := (gr.top[a.rank] + gr.bottom[a.rank]) / 2
 			pts = append(pts, [2]float64{in, mid}, [2]float64{l.exit, mid}, [2]float64{l.exit, gr.bottom[a.rank]})
 		}
 		b := gr.nodes[l.to]
 		if !l.straight {
-			y := gr.bottom[gr.nodes[l.from].rank] + column*float64(1+l.track)
+			r := gr.nodes[l.from].rank
+			y := gr.bottom[r] + gr.below(r) + column*float64(1+l.track)
 			pts = append(pts, [2]float64{l.exit, y}, [2]float64{l.entry, y})
 		}
 		pts = append(pts, [2]float64{l.entry, b.y})
