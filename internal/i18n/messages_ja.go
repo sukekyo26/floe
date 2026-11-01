@@ -229,6 +229,7 @@ var messagesJA = map[string]string{
 	"diagram_name_used":        "名前「%s」は前にも付いています。部品・行・節にはそれぞれ別の名前を付けてください",
 	"diagram_name_unknown":     "edge: 「%s」という名前の部品も行も節もありません",
 	"diagram_graph_unknown":    "edge: この graph に「%s」という名前の箱もまとまりもありません",
+	"diagram_graph_lane":       "edge %s→%s: %s は graph の端から端までの帯です。帯の中の箱かまとまりで終えてください",
 	"diagram_graph_many":       "graph: 箱とまとまりが %d 個あり、%d を超えています。graph を分けてください",
 	"diagram_graph_inside":     "edge %s→%s: 両端がまとまり「%s」かその中にあります。「%s」の外の箱か、ほかのまとまりで終えてください",
 	"diagram_graph_among":      "edge %s→%s: %s はまとまり「%s」の箱の間の段にあります（%s から来て %s へ行く）。「%s」の中の箱で終えてください",

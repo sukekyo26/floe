@@ -240,6 +240,7 @@ var messagesEN = map[string]string{
 	"diagram_name_used":        `the name "%s" is given before: give each part, row and node its own name`,
 	"diagram_name_unknown":     `edge: no part, row or node named "%s"`,
 	"diagram_graph_unknown":    `edge: no box or group of this graph named "%s"`,
+	"diagram_graph_lane":       `edge %s→%s: %s is a lane, from end to end of the graph; end the edge at a box or a group in it`,
 	"diagram_graph_many":       "graph: %d boxes and groups, past %d; split it into graphs",
 	"diagram_graph_inside":     `edge %s→%s: both ends are group "%s" or inside it; end the edge at a box or another group outside "%s"`,
 	"diagram_graph_among":      `edge %s→%s: %s stands between boxes of group "%s" (%s leads to it and it leads to %s); end the edge at a box in "%s"`,

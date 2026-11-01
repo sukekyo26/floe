@@ -281,9 +281,12 @@
         "x": { "$ref": "#/$defs/coord" },
         "y": { "$ref": "#/$defs/coord" },
         "direction": { "enum": ["down", "right"], "description": "Which way the edges run: down (the default) or right" },
+        "lanes": { "type": "boolean", "description": "Whether its nodes are lanes: each a group, a band from end to end of the graph along its edges, in the order written" },
         "nodes": { "$ref": "#/$defs/graphNodes" },
         "edges": { "type": "array", "maxItems": 400, "items": { "$ref": "#/$defs/graphEdge" } }
-      }
+      },
+      "if": { "properties": { "lanes": { "const": true } }, "required": ["lanes"] },
+      "then": { "properties": { "nodes": { "items": { "required": ["group"] } } } }
     },
     "graphNodes": {
       "type": "array",
@@ -301,7 +304,7 @@
     },
     "graphGroup": {
       "type": "object",
-      "description": "Boxes and groups kept side by side in every rank, framed, its label in the frame's top left corner; an edge of the graph may end at it by its name, at the frame's top or bottom",
+      "description": "Boxes and groups kept side by side in every rank, framed, its label in the frame's top left corner; an edge of the graph may end at it by its name, at the frame's top or bottom, unless it is a lane",
       "required": ["nodes"],
       "additionalProperties": false,
       "properties": {

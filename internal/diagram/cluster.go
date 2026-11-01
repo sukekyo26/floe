@@ -168,10 +168,13 @@ func (gr *group) pointIn(spans map[int][2]int, a arc, r int) int {
 	return lower
 }
 
-// spans are the first and last ranks of each group of the group of boxes, by its boxes, nested too.
+// spans are the first and last ranks of each group of the group of boxes, by its boxes, nested too; a lane spans
+// every rank, the last taken from the nodes, as gr.ranks may not be made yet.
 func (gr *group) spans() map[int][2]int {
 	out := map[int][2]int{}
+	last := 0
 	for _, n := range gr.nodes {
+		last = max(last, n.rank)
 		if n.box == nil {
 			continue
 		}
@@ -181,6 +184,13 @@ func (gr *group) spans() map[int][2]int {
 				s = [2]int{n.rank, n.rank}
 			}
 			out[c] = [2]int{min(s[0], n.rank), max(s[1], n.rank)}
+		}
+	}
+	if gr.out.g.Lanes {
+		for c := range out {
+			if gr.out.clusters[c].parent < 0 {
+				out[c] = [2]int{0, last}
+			}
 		}
 	}
 	return out
@@ -318,11 +328,13 @@ func (gr *group) pinned(seq []int, c int) (head, rest, tail []int) {
 
 // sortIn orders seq, group c's nodes in a rank, by keys as sweep does, a group nested by the mean of its nodes' keys:
 // the units with no key keep their places, and the others fill those left, stably; then each group nested inside.
+// Lanes keep their places.
 func (gr *group) sortIn(seq []int, c int, keys map[int]float64) []int {
 	head, rest, tail := gr.pinned(seq, c)
 	us := gr.units(rest, c)
 	key := map[int]float64{}
 	var moving []int
+	lanes := c < 0 && gr.out.g.Lanes
 	for j, u := range us {
 		sum, n := 0.0, 0
 		for _, i := range u.nodes {
@@ -330,7 +342,7 @@ func (gr *group) sortIn(seq []int, c int, keys map[int]float64) []int {
 				sum, n = sum+k, n+1
 			}
 		}
-		if n > 0 {
+		if n > 0 && !lanes {
 			key[j] = sum / float64(n)
 			moving = append(moving, j)
 		}
@@ -492,6 +504,7 @@ func (gr *group) pack(floor map[int]float64) {
 // for a link from one. A point in a group is not pushed: it would widen its own frame.
 // LIMIT: the columns are exits' as the boxes stand before the second pull; a box it moves may leave a point off its
 // column again. Push points in groups too, without widening their frames, if such turns come to show.
+// LIMIT: in lanes every point is in a group, so none is pushed. Push points in groups too if lanes come to look bent.
 func (gr *group) wanted() map[int]float64 {
 	pos := gr.positions()
 	for u, n := range gr.nodes {
@@ -604,7 +617,22 @@ func (gr *group) rooms() (above, below []room) {
 		above[s[0]].of[c], below[s[1]].of[c] = a, b
 		above[s[0]].room, below[s[1]].room = max(above[s[0]].room, a), max(below[s[1]].room, b)
 	}
+	gr.lineUp(above, below)
 	return above, below
+}
+
+// lineUp gives every lane the most room of any above the first rank and below the last, so that the lanes start
+// and end as one.
+func (gr *group) lineUp(above, below []room) {
+	if !gr.out.g.Lanes {
+		return
+	}
+	last := len(gr.ranks) - 1
+	for _, c := range gr.cls {
+		if gr.out.clusters[c].parent < 0 {
+			above[0].of[c], below[last].of[c] = above[0].room, below[last].room
+		}
+	}
 }
 
 // below is the room below rank r for the frames ending there.
