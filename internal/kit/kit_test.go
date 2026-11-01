@@ -45,7 +45,7 @@ func TestFloe(t *testing.T) {
 		t.Error("Floe read floe's own twice")
 	}
 	parts, looks, themes, templates := k.Names()
-	if len(parts) != 30 || !slices.Equal(looks, []string{"band", "cards", "numbered", "panel", "rows"}) || len(themes) != 12 ||
+	if len(parts) != 30 || !slices.Equal(looks, []string{"band", "cards", "marked", "numbered", "panel", "rows"}) || len(themes) != 12 ||
 		!slices.Equal(templates, []string{"adr", "design", "handoff", "postmortem", "report", "runbook", "slides"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}
@@ -240,7 +240,7 @@ func TestReadMistakes(t *testing.T) {
 		},
 		{"part.yaml, together", part(map[string]string{"part.yaml": "looks: [panel, [x]]\nbogus: 1\ndescription: x\n"}), lines(
 			"parts/p/part.yaml:1:16: write looks: as a list of the names of parts or looks, each as text (in quotes where YAML would read a number, true, false or null), like looks: [panel]",
-			"parts/p/part.yaml:2:1: bogus is not a key of part.yaml; write looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
+			"parts/p/part.yaml:2:1: bogus is not a key of part.yaml; write looks:, the list of the looks the part takes, like looks: [panel], marks:, which of its elements are rows with a mark at their left (box, items or joined), and a look alone's description:",
 			"parts/p/part.yaml:3:1: a part's description is its schema.json's description; part.yaml's description: is a look alone's, which has no schema",
 		)},
 		{"looks not text", part(map[string]string{"part.yaml": "looks: [404, 1.10, true, false, ~, '']\n"}), lines(
@@ -253,13 +253,20 @@ func TestReadMistakes(t *testing.T) {
 		)},
 		{
 			"part.yaml not keys and values", part(map[string]string{"part.yaml": "- a\n"}),
-			"parts/p/part.yaml:1:1: write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
+			"parts/p/part.yaml:1:1: write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], marks:, which of its elements are rows with a mark at their left (box, items or joined), and a look alone's description:",
 		},
 		{
 			"a look's description",
 			fstest.MapFS{"lk/part.css": {Data: []byte("")}, "lk/part.yaml": {Data: []byte("description: [1]\n")}},
 			"parts/lk/part.yaml:1:14: write description: as text, what the look is",
 		},
+		{"marks: none of the three", fstest.MapFS{
+			"lk/part.css": {Data: []byte("")}, "lk/part.yaml": {Data: []byte("description: x\nmarks: line\n")},
+			"q/part.css": {Data: []byte("")}, "q/part.yaml": {Data: []byte("marks: [box]\n")},
+		}, lines(
+			"parts/lk/part.yaml:2:8: write marks: as box (the part's box is a row with a mark at its left), items (each li of the box is one) or joined (items, a line joining each to the next)",
+			"parts/q/part.yaml:1:8: write marks: as box (the part's box is a row with a mark at its left), items (each li of the box is one) or joined (items, a line joining each to the next)",
+		)},
 		{
 			"a Go template", part(map[string]string{"part.html": "<div>{{.t}\n"}),
 			"parts/p/part.html:1: bad character U+007D '}'",
@@ -278,7 +285,7 @@ func TestReadMistakes(t *testing.T) {
 			"parts/p/checks.yaml:1:15: unexpected token EOF",
 		},
 		{"words.yaml and part.yaml at once", part(map[string]string{"words.yaml": "- a\n", "part.yaml": "- a\n"}), lines(
-			"parts/p/part.yaml:1:1: write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], and a look alone's description:",
+			"parts/p/part.yaml:1:1: write part.yaml as keys and values: looks:, the list of the looks the part takes, like looks: [panel], marks:, which of its elements are rows with a mark at their left (box, items or joined), and a look alone's description:",
 			"parts/p/words.yaml:1:1: write words.yaml as language tags, each the names of the words and their text",
 		)},
 	} {

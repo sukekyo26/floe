@@ -84,7 +84,8 @@ func checkPart(p *Part) error {
 
 // checkLooks refuses a look that k's own parts and looks take that is no part or look of k or its base, and,
 // when they name none such, each cycle of looks taken that one of them is in: the CSS of a look goes before
-// that of those that take it, an order a cycle has none of.
+// that of those that take it, an order a cycle has none of; and, when there is none, marks: written twice
+// (checkMarks).
 func (k *Kit) checkLooks() usererr.List {
 	own := map[string][]taken{}
 	for name, p := range k.parts {
@@ -104,7 +105,10 @@ func (k *Kit) checkLooks() usererr.List {
 	if found != nil {
 		return found
 	}
-	return k.lookCycles(own)
+	if found = k.lookCycles(own); found != nil {
+		return found
+	}
+	return k.checkMarks(own)
 }
 
 // lookCycles refuses each cycle of the looks the parts and looks of k and its base take that one of own is
@@ -139,6 +143,53 @@ func (k *Kit) lookCycles(own map[string][]taken) usererr.List {
 		found = append(found, yamlpos.New(t.file, t.at, key, c[i], strings.Join(path, " → ")))
 	}
 	return found
+}
+
+// checkMarks refuses each part or look of k's own (own, by the looks each takes) that, with the looks it takes,
+// writes marks: more than once: an element they all reach would be rows of two kinds. A look it takes that holds two
+// itself is the one told. It is told at its own marks:, else at the name in its looks: that brings the second.
+func (k *Kit) checkMarks(own map[string][]taken) usererr.List {
+	var found usererr.List
+	for _, name := range slices.Sorted(maps.Keys(own)) {
+		all := k.marking(name)
+		if len(all) < 2 || slices.ContainsFunc(own[name], func(t taken) bool { return len(k.marking(t.name)) >= 2 }) {
+			continue
+		}
+		at := k.marksOf(name)
+		if at.name == "" {
+			at = k.second(own[name])
+		}
+		found = append(found, yamlpos.New(at.file, at.at, "kit_marks_twice", name, all[0], all[1]))
+	}
+	return found
+}
+
+// marking returns, of the part or look name and the looks it takes, those that write marks:, in that order.
+func (k *Kit) marking(name string) []string {
+	var found []string
+	for _, n := range append([]string{name}, k.Taken(name)...) {
+		if k.Marks(n) != "" && !slices.Contains(found, n) {
+			found = append(found, n)
+		}
+	}
+	return found
+}
+
+// second returns the first of looks whose looks bring a second that writes marks:.
+func (k *Kit) second(looks []taken) taken {
+	var seen []string
+	for _, t := range looks {
+		for _, n := range k.marking(t.name) {
+			if !slices.Contains(seen, n) {
+				seen = append(seen, n)
+			}
+		}
+		if len(seen) >= 2 {
+			return t
+		}
+	}
+	var none taken
+	return none
 }
 
 // unread refuses each file of the directory dir that it holds and floe does not read, with key.

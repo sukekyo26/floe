@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The ink theme</title>
 <style>
-@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
 @layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
 @layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
@@ -291,19 +291,15 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader.
+/* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
+   silent to a screen reader.
    LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
    too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
-  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
-  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: var(--radius); max-width: var(--text-width);
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: var(--radius); max-width: var(--text-width);
 }
-:scope > * { grid-column: text; align-self: first baseline; }
 :scope::before {
-  content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
-  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-  border-radius: 50%;
+  content: "i"; content: "i" / ""; border-radius: 50%;
   background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
 }
 /* A tone's mark, no more specific than the mark's own rule, so that a theme's :scope::before (content: none) wins */
@@ -351,11 +347,8 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 /* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
 .option.pick { outline: 2px solid var(--accent); outline-offset: -1px; }
 .option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
-/* The pros and cons alone, not a list in the text */
-.option .points { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
-/* The mark hangs at the left, so that a line of text and code flows as one */
-.option .points > li { position: relative; padding-left: 1.45rem; }
-.option .points > li::before { position: absolute; left: 0.1rem; font-weight: 800; }
+/* The pros and cons alone, not a list in the text, their signs as the look marked places them */
+.option .points { gap: 0.2rem; }
 .option li.pro { color: var(--fg); }
 .option li.pro::before { content: "+"; color: var(--good); }
 .option li.con::before { content: "−"; color: var(--bad); }
@@ -471,6 +464,23 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 .card { border: 1.5px solid var(--fg); --floe-shadow-color: var(--fg); }
 :scope.numbered > .card::before { content: none; }
+}
+}
+</style>
+<style>
+@layer floe.marks {
+:where([data-floe-part="note"]) {
+  position: relative; anchor-scope: --floe-mark; display: grid; gap: 0;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+}
+:where([data-floe-part="note"]) > * { grid-column: text; align-self: first baseline; }
+:where([data-floe-part="note"])::before {
+  anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+}
+:where([data-floe-part="note"])::after {
+  grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
 }
 }
 </style>

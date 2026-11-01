@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"testing/fstest"
 	ttemplate "text/template"
 
 	"golang.org/x/net/html"
@@ -230,6 +231,37 @@ func TestAt(t *testing.T) {
 	} {
 		if got := at(depth, root); got != want {
 			t.Errorf("at(%d) = %s, want %s", depth, got, want)
+		}
+	}
+}
+
+// marks lays out the rows of what the page names, under the root of the name it names, a look's own look too, and
+// writes nothing for a page that names none with marks:.
+func TestMarks(t *testing.T) {
+	t.Parallel()
+
+	base, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	k, err := kit.Load(base, kit.Sources{Parts: kit.Dir{FS: fstest.MapFS{
+		"foo/part.css":  {Data: []byte(":scope { color: red }\n")},
+		"foo/part.yaml": {Data: []byte("looks: [numbered]\n")},
+	}, Name: "parts"}})
+	if err != nil {
+		t.Fatal(usererr.Tell(i18n.EnglishCatalog(), err).Render(""))
+	}
+	if got := marks(k, named{boxes: []string{"code", "table"}, looks: []string{"panel"}}); got != nil {
+		t.Errorf("marks of a page without rows = %s", got)
+	}
+	got := string(marks(k, named{boxes: []string{"note"}, looks: []string{"foo"}}))
+	for _, want := range []string{
+		`:where([data-floe-part="note"], [data-floe-look~="foo"] > li) {`,
+		`:where([data-floe-part="note"])::after {`,
+		`:where([data-floe-look~="foo"] > li):not(:last-child)::after {`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("marks lacks %s in\n%s", want, got)
 		}
 	}
 }

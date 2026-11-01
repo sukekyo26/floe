@@ -2,8 +2,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Words in en</title>
 <style>
-@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
-@layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
+@layer floe.looks.boxes, floe.looks.depth2, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth2, floe.parts.depth1, floe.parts.depth0;
 @layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.base {
@@ -177,9 +177,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 :scope .title { font-size: 1.25rem; line-height: 1.45; }
 :scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: 0.82rem; }
 :scope .set-aside { margin-top: 0.3rem; font-size: 0.8rem; font-weight: 600; }
-:scope .rejected { list-style: none; padding: 0; display: grid; gap: 0.15rem; }
-:scope .rejected li { position: relative; padding-left: 1.45rem; }
-:scope .rejected li::before { content: "×"; content: "×" / ""; position: absolute; left: 0.1rem; font-weight: 800; color: var(--bad); }
+:scope .rejected { gap: 0.15rem; }
+:scope .rejected > li::before { content: "×"; content: "×" / ""; color: var(--bad); }
 }
 }
 </style>
@@ -242,6 +241,17 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 }
 </style>
 <style>
+@layer floe.looks.depth2 {
+@scope ([data-floe-look~="marked"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each item's sign, which the part that takes the look writes, stands as a row's mark (marks: items) of
+   --floe-mark across, --floe-mark-gap from the item's text; that text is in one element, so that a line of text and
+   code flows as one */
+:scope > li { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
+:scope > li::before { line-height: 1; font-weight: 800; }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { background: var(--default-panel); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
@@ -285,6 +295,23 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 }
 </style>
 <style>
+@layer floe.marks {
+:where([data-floe-look~="marked"] > li) {
+  position: relative; anchor-scope: --floe-mark; display: grid; gap: 0;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+}
+:where([data-floe-look~="marked"] > li) > * { grid-column: text; align-self: first baseline; }
+:where([data-floe-look~="marked"] > li)::before {
+  anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+}
+:where([data-floe-look~="marked"] > li)::after {
+  grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+}
+}
+</style>
+<style>
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *) {
 /* The colours and faces are the theme's palette; the page lays them out */
@@ -321,7 +348,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <tr><td class="name"><code>port</code><span class="required">required</span><span class="type" data-floe-tone="muted">number</span></td><td><span class="default">Default: <code>8080</code></span></td></tr>
 </tbody>
 </table></div>
-<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta">decided<span>2030-03-28</span></p><div class="title">Move</div><p class="set-aside">Set aside</p><ul class="rejected"><li>Stay</li></ul></div></div>
+<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta">decided<span>2030-03-28</span></p><div class="title">Move</div><p class="set-aside">Set aside</p><ul class="rejected" data-floe-look="marked"><li><span>Stay</span></li></ul></div></div>
 </section>
 </main>
 

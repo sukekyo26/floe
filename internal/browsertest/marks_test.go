@@ -2,21 +2,22 @@ package browsertest_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"os"
 	"strconv"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/chromedp"
 )
 
-// marksPage draws every part whose rows have a mark that is no letter, and the look numbered on items of html: plain,
-// padded above, under a big title, starting with a block of no text, with a bigger mark, and with its text in a
-// paragraph.
+// marksPage draws every part whose rows have a mark, a letter's (decision, options, checklist) too, and the look
+// numbered on items of html: plain, padded above, under a big title, starting with a block of no text, with a bigger
+// mark, and with its text in a paragraph.
 const marksPage = `template: report
 lang: en
 title: Marks
@@ -33,8 +34,12 @@ sections:
           - { date: "2026-10-01", title: Start, text: begun }
           - { date: "2026-10-02", title: End }
       - options:
-          - { title: One, text: first }
+          - { title: One, text: first, pros: ["fast, with ` + "`code`" + ` in it"], cons: [costly] }
           - { title: Two, text: second }
+      - decision: { title: Take one, rejected: ["the other, too slow"] }
+      - checklist:
+          - { text: open it, done: true }
+          - { text: close it }
       - html: |
           <ol id="plain" data-floe-look="numbered"><li><strong>Title</strong><p>Text</p></li><li><strong>Next</strong></li></ol>
           <ol id="padded" data-floe-look="numbered"><li style="padding-top: 2rem"><strong>Title</strong><p>Text</p></li><li><strong>Next</strong></li></ol>
@@ -47,18 +52,25 @@ sections:
           <div id="sizedcards" class="numbered" data-floe-look="cards"><div class="card" style="--floe-mark: 3rem" data-floe-look="panel"><p>A</p></div></div>
 `
 
-// markRows are the rows whose mark stands beside a first line, with the element of that line.
-var markRows = []struct{ name, row, line string }{
-	{"links", "[data-floe-part=links] > li", "[data-floe-part=links] > li > a"},
-	{"note", "[data-floe-part=note]", "[data-floe-part=note] > .title"},
-	{"note without a title", "#plainnote", "#plainnote > p"},
-	{"note in a step", "#stepnote", "#stepnote > .title"},
-	{"steps", "[data-floe-part=steps] > li", "[data-floe-part=steps] > li > strong"},
-	{"timeline", "[data-floe-part=timeline] > li", "[data-floe-part=timeline] > li strong"},
-	{"numbered", "#plain > li", "#plain > li > strong"},
-	{"numbered padded", "#padded > li", "#padded > li > strong"},
-	{"numbered big", "#big > li", "#big > li > h3"},
-	{"numbered sized", "#sized > li", "#sized > li > strong"},
+// markRows are the rows whose mark stands beside a first line, with the element of that line; bare when a theme may
+// leave the mark out.
+var markRows = []struct {
+	name, row, line string
+	bare            bool
+}{
+	{"links", "[data-floe-part=links] > li", "[data-floe-part=links] > li > a", false},
+	{"note", "[data-floe-part=note]", "[data-floe-part=note] > .title", true},
+	{"note without a title", "#plainnote", "#plainnote > p", true},
+	{"note in a step", "#stepnote", "#stepnote > .title", true},
+	{"steps", "[data-floe-part=steps] > li", "[data-floe-part=steps] > li > strong", false},
+	{"timeline", "[data-floe-part=timeline] > li", "[data-floe-part=timeline] > li strong", false},
+	{"numbered", "#plain > li", "#plain > li > strong", false},
+	{"numbered padded", "#padded > li", "#padded > li > strong", false},
+	{"numbered big", "#big > li", "#big > li > h3", false},
+	{"numbered sized", "#sized > li", "#sized > li > strong", false},
+	{"decision", "[data-floe-part=decision] .rejected > li", "[data-floe-part=decision] .rejected > li > span", true},
+	{"options", "[data-floe-part=options] .points > li", "[data-floe-part=options] .points > li > span", true},
+	{"checklist", "[data-floe-part=checklist] > li", "[data-floe-part=checklist] > li > span", true},
 }
 
 // lineRows are the first rows of each list whose line runs to the next mark.
@@ -99,7 +111,9 @@ const measureMarks = `((marks, rows) => {
   return JSON.stringify({
     marks: marks.map(([row, line]) => {
       const r = document.querySelector(row), l = document.querySelector(line), s = getComputedStyle(r);
+      const size = getComputedStyle(r, '::before').getPropertyValue('--floe-mark').trim();
       return { base: base(l), ascent: ascent(r), left: l.getBoundingClientRect().left, gap: length(r, 'var(--floe-mark-gap)'),
+        size: size === 'auto' ? null : length(r, 'var(--floe-mark)'),
         content: r.getBoundingClientRect().left + parseFloat(s.borderLeftWidth) + parseFloat(s.paddingLeft) };
     }),
     rows: rows.map(box),
@@ -114,14 +128,31 @@ const measureMarks = `((marks, rows) => {
 func (b *browser) pseudoBoxes(sel string) (before, after []float64) {
 	b.t.Helper()
 
+	// Just after a page loads, DevTools may still replace the document, and the nodes got of the one before are
+	// gone: measure again.
+	var err error
+	for range 20 {
+		if before, after, err = b.tryPseudoBoxes(sel); err == nil {
+			return before, after
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	b.t.Fatalf("%s: %v", sel, err)
+	return nil, nil
+}
+
+func (b *browser) tryPseudoBoxes(sel string) (before, after []float64, err error) {
 	depth, pierce := int64(-1), true
 	doc, err := chromedp.Call(b.ctx, dom.GetDocument, dom.GetDocumentParams{Depth: &depth, Pierce: &pierce})
 	if err != nil {
-		b.t.Fatal(err)
+		return nil, nil, err
 	}
 	q, err := chromedp.Call(b.ctx, dom.QuerySelector, dom.QuerySelectorParams{NodeID: doc.Root.NodeID, Selector: sel})
-	if err != nil || q.NodeID == 0 {
-		b.t.Fatalf("%s: not found: %v", sel, err)
+	if err != nil {
+		return nil, nil, err
+	}
+	if q.NodeID == 0 {
+		return nil, nil, errors.New("not found")
 	}
 	var find func(n *cdp.Node) *cdp.Node
 	find = func(n *cdp.Node) *cdp.Node {
@@ -135,23 +166,20 @@ func (b *browser) pseudoBoxes(sel string) (before, after []float64) {
 		}
 		return nil
 	}
-	box := func(id cdp.NodeID) []float64 {
-		m, err := chromedp.Call(b.ctx, dom.GetBoxModel, dom.GetBoxModelParams{NodeID: id})
+	for _, p := range find(doc.Root).PseudoElements {
+		m, err := chromedp.Call(b.ctx, dom.GetBoxModel, dom.GetBoxModelParams{NodeID: p.NodeID})
 		if err != nil {
-			b.t.Fatalf("%s: %v", sel, err)
+			return nil, nil, err
 		}
 		q := m.Model.Border
-		return []float64{q[0], q[1], q[4], q[5]}
-	}
-	for _, p := range find(doc.Root).PseudoElements {
 		if p.PseudoType == cdp.PseudoTypeBefore {
-			before = box(p.NodeID)
+			before = []float64{q[0], q[1], q[4], q[5]}
 		}
 		if p.PseudoType == cdp.PseudoTypeAfter {
-			after = box(p.NodeID)
+			after = []float64{q[0], q[1], q[4], q[5]}
 		}
 	}
-	return before, after
+	return before, after, nil
 }
 
 // marksIn measures the page open and returns what is amiss in it: a mark whose baseline is more than 0.6 px off that
@@ -171,7 +199,7 @@ func (b *browser) marksIn(where string, narrow bool) []string {
 	var m struct {
 		Marks []struct {
 			Base, Left, Gap, Content float64
-			Ascent                   *float64
+			Ascent, Size             *float64
 		}
 		Rows                   [][]float64
 		WrappedLeft, Rem, Date float64
@@ -186,7 +214,7 @@ func (b *browser) marksIn(where string, narrow bool) []string {
 		mark, _ := b.pseudoBoxes(r.row)
 		got := m.Marks[i]
 		switch {
-		case mark == nil && !strings.HasPrefix(r.name, "note"):
+		case mark == nil && !r.bare:
 			amiss = append(amiss, where+": "+r.name+" has no mark")
 		case mark == nil:
 			if math.Abs(got.Left-got.Content) > 0.5 {
@@ -198,6 +226,9 @@ func (b *browser) marksIn(where string, narrow bool) []string {
 			}
 			if gap := got.Left - mark[2]; math.Abs(gap-got.Gap) > 0.5 {
 				amiss = append(amiss, fmt.Sprintf("%s: %s's text %.1f px from its mark, not %.1f", where, r.name, gap, got.Gap))
+			}
+			if w := mark[2] - mark[0]; got.Size != nil && math.Abs(w-*got.Size) > 0.5 {
+				amiss = append(amiss, fmt.Sprintf("%s: %s's mark %.1f px wide, not --floe-mark %.1f", where, r.name, w, *got.Size))
 			}
 		}
 	}
@@ -242,6 +273,28 @@ func (b *browser) marksIn(where string, narrow bool) []string {
 	return amiss
 }
 
+// rollbackIn measures the runbook open and returns what is amiss in it: a ring or a line of the rollback's first step
+// not in its row's tone (bad), as --tone or, in a theme that fills a tone in its own colour, --tone-fill.
+func (b *browser) rollbackIn(where string) []string {
+	b.t.Helper()
+
+	got := b.eval(`(() => {
+  const li = document.querySelector('.rollback .steps > li');
+  const colour = (v) => { const d = document.createElement('i'); d.style.color = v; li.append(d); const c = getComputedStyle(d).color; d.remove(); return c; };
+  return JSON.stringify([colour('var(--tone)'), colour('var(--tone-fill)'), getComputedStyle(li, '::before').backgroundColor,
+    getComputedStyle(li, '::after').backgroundColor, colour('var(--bad)')]);
+})()`)
+	var c []string
+	if err := json.Unmarshal([]byte(got), &c); err != nil {
+		b.t.Fatal(err)
+	}
+	tone, fill, ring, line, bad := c[0], c[1], c[2], c[3], c[4]
+	if tone != bad || (ring != tone && ring != fill) || line != ring {
+		return []string{fmt.Sprintf("%s: the rollback's ring is %s and its line %s, its tone %s (fill %s), bad %s", where, ring, line, tone, fill, bad)}
+	}
+	return nil
+}
+
 func mustJSON(v any) string {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -250,11 +303,12 @@ func mustJSON(v any) string {
 	return string(b)
 }
 
-// TestUIMarks measures the marks that are no letter beside the first line of a row (links, note, steps, timeline and
-// the look numbered), in every theme, in a theme of one's own that pads the rows above and sets their line height, and,
+// TestUIMarks measures the marks beside the first line of a row (links, note, steps, timeline, the look numbered, and
+// the letters of the look marked in decision, options and checklist), in every theme, in a theme of one's own that pads the rows above and sets their line height, and,
 // for timeline, on a narrow screen too: each stands on its first line's baseline, wherever a theme or the row's
 // padding puts that line, its --floe-mark-gap from the text, or takes no room when a theme leaves it out, and each line to the next mark runs from 0.35rem
-// below its mark to 0.35rem above its row's end, however big the mark or the title and whatever the row starts with.
+// below its mark to 0.35rem above its row's end, however big the mark or the title and whatever the row starts with;
+// a theme that leaves the rings out leaves out their lines; and the runbook's rollback rings and lines its steps in bad.
 func TestUIMarks(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -263,12 +317,20 @@ func TestUIMarks(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		t.Fatal(err)
 	}
 	file := s.write(t, "marks.yaml", marksPage)
+	example, err := os.ReadFile("../kit/floe/templates/runbook/example.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	runbook := s.write(t, "runbook.yaml", string(example))
 	amiss := make([]string, 0, len(themes))
 	for _, theme := range themes {
 		name := theme.Name()
 		s.floe(t, "publish", file, "--slug", "marks-"+name, "--theme", name)
 		b.navigate("/a/marks-" + name + "/?raw")
 		amiss = append(amiss, b.marksIn(name, false)...)
+		s.floe(t, "publish", runbook, "--slug", "runbook-"+name, "--theme", name)
+		b.navigate("/a/runbook-" + name + "/?raw")
+		amiss = append(amiss, b.rollbackIn(name)...)
 	}
 	// A theme of one's own pads the rows 2rem above, sets their line height 2.5, draws their first line bigger than the
 	// mark's letters and moves the note's text off its mark.
@@ -278,10 +340,18 @@ func TestUIMarks(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		"themes/tall/steps.css":    ":scope > li { padding-top: 2rem; line-height: 2.5; }\n:scope strong { font-size: 1.6rem; }\n",
 		"themes/tall/timeline.css": ":scope > li { padding-top: 2rem; line-height: 2.5; }\n:scope strong { font-size: 1.6rem; }\n",
 		"themes/tall/numbered.css": ":scope > li { padding-top: 2rem; line-height: 2.5; }\n:scope strong { font-size: 1.6rem; }\n",
+		"themes/tall/decision.css": ":scope .rejected > li::before { content: none; }\n",
+		// A theme that leaves the look numbered's rings out leaves out their lines with them.
+		"themes/bare/numbered.css": ":scope > li::before { content: none; }\n",
 	})
 	s.floe(t, "publish", file, "--slug", "marks-tall", "--theme", "tall")
 	b.navigate("/a/marks-tall/?raw")
 	amiss = append(amiss, b.marksIn("tall", false)...)
+	s.floe(t, "publish", file, "--slug", "marks-bare", "--theme", "bare")
+	b.navigate("/a/marks-bare/?raw")
+	if _, line := b.pseudoBoxes("#plain > li"); line != nil && line[3]-line[1] > 0.5 {
+		amiss = append(amiss, fmt.Sprintf("bare: a line %.1f px high under no ring", line[3]-line[1]))
+	}
 	b.size(500, 900, false)
 	b.navigate("/a/marks-default/?raw")
 	amiss = append(amiss, b.marksIn("narrow", true)...)
