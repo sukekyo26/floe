@@ -7,13 +7,14 @@ import (
 )
 
 // rank makes a group of the boxes members (their indexes among the boxes read, as written), its edges between boxes
-// and its edges to groups (cedges; by their indexes in edges): an edge back up a cycle turned round, and each box at
-// the rank of its longest path from a box no edge enters. The points of the edges passing ranks are made by split,
-// once the diagram's are counted.
-func (o *graphOut) rank(members, edges, cedges []int) *group {
+// and its edges to groups (cedges; by their indexes in edges), and its level edges: an edge back up a cycle turned
+// round, and each box at the rank of its longest path from a box no edge enters, a row of boxes (rows) ranked as one.
+// The points of the edges passing ranks are made by split, once the diagram's are counted.
+func (o *graphOut) rank(members, edges, cedges, levels []int) *group {
 	gr := &group{
 		nodes: nil, links: nil, ranks: nil, chains: map[int][]int{}, reversed: map[int]bool{}, tracks: nil, top: nil,
 		bottom: nil, arcs: nil, out: o, among: nil, cls: nil, frames: map[int][2]float64{}, botRoom: nil, headAt: 0,
+		levels: levels,
 	}
 	local := map[int]int{}
 	for j, i := range members {
@@ -23,25 +24,39 @@ func (o *graphOut) rank(members, edges, cedges []int) *group {
 			outs: nil, written: j,
 		})
 	}
-	arcs := make([]arc, 0, len(edges)+len(cedges))
-	outs := make([][]int, len(members)) // the arcs out of each box, as written
-	for _, k := range edges {
-		from, to := local[o.ends[k][0].box], local[o.ends[k][1].box]
-		outs[from] = append(outs[from], len(arcs))
-		arcs = append(arcs, arc{from, to, k})
+	stands := map[int]int{} // each box's node to rank by: its row's first box's
+	for b := range local {
+		stands[b] = local[o.row[b]]
 	}
-	turn(arcs, outs, gr.reversed)
+	arcs := make([]arc, 0, len(edges)+len(cedges))
+	stood := make([]arc, 0, len(edges)) // the arcs between the nodes the boxes rank by
+	outs := make([][]int, len(members)) // the arcs out of each such node, as written
+	for _, k := range edges {
+		from, to := o.ends[k][0].box, o.ends[k][1].box
+		outs[stands[from]] = append(outs[stands[from]], len(stood))
+		arcs = append(arcs, arc{local[from], local[to], k})
+		stood = append(stood, arc{stands[from], stands[to], k})
+	}
+	turn(stood, outs, gr.reversed)
+	for i, a := range arcs {
+		if gr.reversed[a.edge] {
+			arcs[i].from, arcs[i].to = a.to, a.from
+		}
+	}
 	for c := range o.clusters {
 		if _, ok := local[o.clusters[c].boxes[0]]; ok {
 			gr.cls = append(gr.cls, c)
 		}
 	}
 	if len(cedges) == 0 {
-		gr.rankLongest(arcs)
-		gr.arcs = arcs
-		return gr
+		gr.rankLongest(stood)
+	} else {
+		arcs = gr.rankWith(arcs, stood, cedges, local, stands)
 	}
-	gr.arcs = gr.rankWith(arcs, cedges, local)
+	for j, b := range members {
+		gr.nodes[j].rank = gr.nodes[stands[b]].rank
+	}
+	gr.arcs = arcs
 	return gr
 }
 
@@ -52,9 +67,10 @@ func (o *graphOut) rank(members, edges, cedges []int) *group {
 // bottom → X's top, drawn up, leaving its frame's bottom; where both make one, X stands among G's ranks: told, and
 // not laid out. Each edge is added in the order written, so that an earlier one takes its way.
 // LIMIT: the way taken is the first that makes no cycle, not the one turning the fewest edges, as with turn.
-func (gr *group) rankWith(arcs []arc, cedges []int, local map[int]int) []arc {
-	rk := newRanking(gr.out, local, len(gr.nodes))
-	for _, a := range arcs {
+// The boxes rank by their nodes (stands), a row by its first box's; the arcs between them are stood.
+func (gr *group) rankWith(arcs, stood []arc, cedges []int, local, stands map[int]int) []arc {
+	rk := newRanking(gr.out, stands, len(gr.nodes))
+	for _, a := range stood {
 		rk.add(a.from, a.to, 1)
 	}
 	var forms []edgeForm
@@ -69,11 +85,12 @@ func (gr *group) rankWith(arcs []arc, cedges []int, local map[int]int) []arc {
 			rk.add(up1, lo0, 1)
 			forms = append(forms, edgeForm{k, [2]gref{ends[1], ends[0]}, true})
 		default:
-			gr.among = append(gr.among, gr.amid(k, local, rk.reached))
+			gr.among = append(gr.among, gr.amid(k, stands, rk.reached))
 		}
 	}
-	for j, r := range rk.longest()[:len(gr.nodes)] {
-		gr.nodes[j].rank = r
+	ranks := rk.longest() // before the ports are made: they stand by their groups' boxes' ranks
+	for j := range gr.nodes {
+		gr.nodes[j].rank = ranks[stands[gr.nodes[j].of]]
 	}
 	for _, f := range forms {
 		arcs = append(arcs, gr.ported(f, local))
@@ -291,6 +308,11 @@ func (gr *group) split() {
 	}
 	if len(gr.cls) > 0 {
 		gr.mark()
+	}
+	if len(gr.levels) > 0 { // each block side by side, and a lane's blocks at their ends (sortIn)
+		for r := range gr.ranks {
+			gr.ranks[r] = gr.sortIn(gr.rowUp(gr.ranks[r]), -1, nil)
+		}
 	}
 }
 

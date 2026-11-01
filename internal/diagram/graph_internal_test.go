@@ -52,7 +52,7 @@ func laid(g *graph) *layout {
 // grouped is g read and laid out, its groups kept, as items lays it out.
 func grouped(g *graph) ([]*group, error) {
 	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are graphFault's
-	_, err := o.items()
+	_, _, err := o.items()                  //nolint:errcheck // the mistakes are told by laid
 	return o.groups, err
 }
 
@@ -1197,13 +1197,13 @@ func TestGraphFarOut(t *testing.T) {
 			g.Edges[k].Label = Text{"en": "wwwwww"}
 		}
 		near, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // a graph with no mistake
-		want, err := near.items()
+		want, _, err := near.items()               //nolint:errcheck // the mistakes are told by laid
 		if err != nil {
 			t.Fatal(err)
 		}
 		g.X, g.Y = 999000, 998000
 		far, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // a graph with no mistake
-		got, err := far.items()
+		got, _, err := far.items()                //nolint:errcheck // the mistakes are told by laid
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1789,7 +1789,7 @@ func TestGraphLabels(t *testing.T) {
 	// right as far as the label stands left of x.
 	par := labelled(graphOf([]string{"a", "b"}, slices.Repeat([]string{"a>b"}, 20)...), "L0", 0)
 	o, _ := readGraph(par, "#/parts/0/graph") //nolint:errcheck // every name is a box's
-	items, err := o.items()
+	items, _, err := o.items()                //nolint:errcheck // the mistakes are told by laid
 	if err != nil {
 		t.Fatal(err)
 	}
