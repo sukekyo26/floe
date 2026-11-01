@@ -50,8 +50,8 @@ var boxPadKit = map[string]string{
 }
 
 // measureBoxPad returns, for each of the boxes named (the parts' or a built-in template's), its padding (top right
-// bottom left). A box is the first element its selector finds, or its only child when that paints a ground of its own:
-// the box inside a frame a theme draws (default's tree).
+// bottom left), the first element its selector finds. A tree whose list paints a ground of its own is a frame a theme
+// draws around the box (default's): it returns the frame's padding too ("frame"), and the list's as the box's.
 func measureBoxPad(names string) string {
 	return `((names) => {
   const boxes = {
@@ -67,7 +67,9 @@ func measureBoxPad(names string) string {
   const out = [];
   for (const name of names.split(', ')) {
     let e = document.querySelector(boxes[name]);
-    if (e.children.length === 1 && ground(e.firstElementChild)) e = e.firstElementChild;
+    const pad = (e) => { const s = getComputedStyle(e); return [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' '); };
+    const list = name === 'tree' && e.querySelector(':scope > ul');
+    if (list && ground(list)) { out.push(name + ' frame ' + pad(e) + ', ' + pad(list)); continue; }
     const s = getComputedStyle(e);
     out.push(name + ' ' + [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' '));
   }
@@ -79,12 +81,13 @@ func measureBoxPad(names string) string {
 const partBoxes = "options, stats, facts, links, decision, steps, timeline, progress, bars, tree, note, details title, details body"
 
 // boxPadWant is what measureBoxPad returns for boxParts, each box padded block above and below and inline at the
-// left and the right: facts' cards are rows (TestUIRowPad), and details' title is as tall as a row of its own.
-func boxPadWant(block, inline string) string {
+// left and the right: facts' cards are rows (TestUIRowPad), details' title is as tall as a row of its own, and frame
+// is the padding of the frame a theme draws around the tree, as measureBoxPad returns it ("" when it draws none).
+func boxPadWant(block, inline, frame string) string {
 	box := block + " " + inline + " " + block + " " + inline
 	return strings.Join([]string{
 		"options " + box, "stats " + box, "facts 6.4px " + inline + " 6.4px " + inline, "links " + box, "decision " + box,
-		"steps " + box, "timeline " + box, "progress " + box, "bars " + box, "tree " + box, "note " + box,
+		"steps " + box, "timeline " + box, "progress " + box, "bars " + box, "tree " + frame + box, "note " + box,
 		"details title 12.8px " + inline + " 12.8px " + inline, "details body 0px " + inline + " " + block + " " + inline,
 	}, ", ")
 }
@@ -112,13 +115,15 @@ func TestUIBoxPad(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		}
 		files[name] = s.write(t, name+".yaml", string(data))
 	}
+	// frames are the themes that frame the tree, by the padding of the frame: default's grey, --default-pad.
+	frames := map[string]string{"default": "frame 6px 6px 6px 6px, "}
 	out, want := make([]string, 0, 4*len(themes)+1), make([]string, 0, 4*len(themes)+1)
 	for _, theme := range themes {
 		name := theme.Name()
 		s.floe(t, "publish", page, "--slug", "boxes-"+name, "--theme", name)
 		b.navigate("/a/boxes-" + name + "/?raw")
 		out = append(out, name+": "+b.eval(measureBoxPad(partBoxes)))
-		want = append(want, name+": "+boxPadWant("17.6px", "20.8px"))
+		want = append(want, name+": "+boxPadWant("17.6px", "20.8px", frames[name]))
 		for _, sample := range []string{"design", "runbook", "handoff"} {
 			slug := "boxes-" + sample + "-" + name
 			s.floe(t, "publish", files[sample], "--slug", slug, "--theme", name)
@@ -136,6 +141,6 @@ func TestUIBoxPad(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	s.floe(t, "publish", s.write(t, "own.yaml", "template: boxpad\nlang: en\ntitle: Boxes\nparts:\n"+boxParts), "--slug", "boxes-own")
 	b.navigate("/a/boxes-own/?raw")
 	out = append(out, "own: "+b.eval(measureBoxPad(partBoxes)))
-	want = append(want, "own: "+boxPadWant("16px", "32px"))
+	want = append(want, "own: "+boxPadWant("16px", "32px", frames["default"]))
 	check(t, "boxes", out, strings.Join(want, "|"))
 }
