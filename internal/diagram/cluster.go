@@ -421,7 +421,8 @@ func (gr *group) gap(a, b int) float64 {
 }
 
 // pointRoom is the room settle needs for a point between nodes it does not move: a column to reach x ≡ 6 from where
-// it may first stand, and half a column to leave by, entered bent.
+// it may first stand, and half a column to leave by, entered bent there. A point at a free column of its own may
+// stand further, up to freeLimit, as far as the nodes after it leave it room (bounds).
 const pointRoom = 1.5 * column
 
 // room is how wide node i stands when packed: a point (or where an edge enters a frame) as settle may need it.
