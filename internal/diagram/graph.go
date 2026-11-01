@@ -157,7 +157,7 @@ func (o *graphOut) endsOf(k int, byName map[string]gref) ([2]gref, usererr.List)
 		return ends, usererr.List{mistake}
 	}
 	for i, end := range ends {
-		if o.g.Lanes && end.cl >= 0 && o.clusters[end.cl].parent < 0 {
+		if o.lane(end.cl) {
 			at := edgeAt(o.at, k) + "/" + [2]string{"from", "to"}[i]
 			return ends, usererr.List{usererr.NewIn("", at, "diagram_graph_lane", e.From, e.To, o.endName(end))}
 		}
@@ -226,15 +226,15 @@ func (o *graphOut) joined(edges, cedges []int) func(int) int {
 	for _, k := range slices.Concat(edges, cedges) {
 		join(slices.Concat(o.members(o.ends[k][0]), o.members(o.ends[k][1])))
 	}
-	var lanes []int
 	for _, c := range o.clusters {
 		if c.parent < 0 {
 			join(c.boxes)
-			lanes = append(lanes, c.boxes...)
 		}
 	}
-	if o.g.Lanes {
-		join(lanes)
+	if o.g.Lanes { // every box is in a lane
+		for b := range o.boxes {
+			join([]int{0, b})
+		}
 	}
 	return find
 }

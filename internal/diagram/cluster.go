@@ -87,6 +87,11 @@ func (o *graphOut) holds(c int, e gref) bool {
 	return false
 }
 
+// lane reports whether group c is a lane: at the top of a graph of lanes.
+func (o *graphOut) lane(c int) bool {
+	return o.g.Lanes && c >= 0 && o.clusters[c].parent < 0
+}
+
 // endName is how a mistake names end e.
 func (o *graphOut) endName(e gref) string {
 	if e.box >= 0 {
@@ -186,11 +191,9 @@ func (gr *group) spans() map[int][2]int {
 			out[c] = [2]int{min(s[0], n.rank), max(s[1], n.rank)}
 		}
 	}
-	if gr.out.g.Lanes {
-		for c := range out {
-			if gr.out.clusters[c].parent < 0 {
-				out[c] = [2]int{0, last}
-			}
+	for c := range out {
+		if gr.out.lane(c) {
+			out[c] = [2]int{0, last}
 		}
 	}
 	return out
@@ -328,21 +331,23 @@ func (gr *group) pinned(seq []int, c int) (head, rest, tail []int) {
 
 // sortIn orders seq, group c's nodes in a rank, by keys as sweep does, a group nested by the mean of its nodes' keys:
 // the units with no key keep their places, and the others fill those left, stably; then each group nested inside.
-// Lanes keep their places.
+// Lanes have no key.
 func (gr *group) sortIn(seq []int, c int, keys map[int]float64) []int {
 	head, rest, tail := gr.pinned(seq, c)
 	us := gr.units(rest, c)
 	key := map[int]float64{}
 	var moving []int
-	lanes := c < 0 && gr.out.g.Lanes
 	for j, u := range us {
+		if gr.out.lane(u.cl) {
+			continue
+		}
 		sum, n := 0.0, 0
 		for _, i := range u.nodes {
 			if k, ok := keys[i]; ok {
 				sum, n = sum+k, n+1
 			}
 		}
-		if n > 0 && !lanes {
+		if n > 0 {
 			key[j] = sum / float64(n)
 			moving = append(moving, j)
 		}
@@ -617,20 +622,16 @@ func (gr *group) rooms() (above, below []room) {
 		above[s[0]].of[c], below[s[1]].of[c] = a, b
 		above[s[0]].room, below[s[1]].room = max(above[s[0]].room, a), max(below[s[1]].room, b)
 	}
-	gr.lineUp(above, below)
+	gr.lineUp(spans, above, below)
 	return above, below
 }
 
-// lineUp gives every lane the most room of any above the first rank and below the last, so that the lanes start
-// and end as one.
-func (gr *group) lineUp(above, below []room) {
-	if !gr.out.g.Lanes {
-		return
-	}
-	last := len(gr.ranks) - 1
+// lineUp gives every lane the most room of any above its first rank and below its last, the graph's, so that the
+// lanes start and end as one.
+func (gr *group) lineUp(spans map[int][2]int, above, below []room) {
 	for _, c := range gr.cls {
-		if gr.out.clusters[c].parent < 0 {
-			above[0].of[c], below[last].of[c] = above[0].room, below[last].room
+		if s := spans[c]; gr.out.lane(c) {
+			above[s[0]].of[c], below[s[1]].of[c] = above[s[0]].room, below[s[1]].room
 		}
 	}
 }
