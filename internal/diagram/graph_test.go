@@ -119,24 +119,21 @@ parts:
   - graph:
       x: 20
       y: 20
-      lanes: true
-      nodes:
-        - group:
-            name: user
-            nodes:
-              - box: { name: ask, rows: [Ask] }
-        - group:
-            name: dev
-            nodes:
-              - box: { name: build, rows: [Build] }
-              - group: { name: tools, nodes: [{ box: { name: ci, rows: [CI] } }] }
+      lanes:
+        - name: user
+          nodes:
+            - box: { name: ask, rows: [Ask] }
+        - name: dev
+          nodes:
+            - box: { name: build, rows: [Build] }
+            - group: { name: tools, nodes: [{ box: { name: ci, rows: [CI] } }] }
       edges:
         - { from: ask, to: build }
 `
 
 // The mistakes of groups and edges to them: an empty one, a name of none, an edge between a group and what it holds,
 // one to a group whose other end stands among its ranks, a name given twice, too many nodes through groups, an edge
-// at a lane and a box in no lane.
+// at a lane, a box among the lanes and nodes beside them.
 func TestGraphGroupMistakes(t *testing.T) {
 	t.Parallel()
 
@@ -182,14 +179,13 @@ parts:
 		{"a group named as a box before it", strings.Replace(gg, "name: server", "name: cli", 1), `s.yaml:9:13: the name "cli" is given before: give each part, row and node its own name`},
 		{"a box named as a group before it", strings.Replace(gg, "name: x,", "name: server,", 1), `s.yaml:17:18: the name "server" is given before: give each part, row and node its own name`},
 		{"202 boxes and groups", many.String(), `s.yaml:4:7: graph: 202 boxes and groups, past 200; split it into graphs`},
-		{"from a lane", lane("{ from: user, to: build }"), `s.yaml:19:19: edge user→build: user is a lane, from end to end of the graph; end the edge at a box or a group in it`},
-		{"to a lane", lane("{ from: ask, to: dev }"), `s.yaml:19:28: edge ask→dev: dev is a lane, from end to end of the graph; end the edge at a box or a group in it`},
-		{"from a lane to a lane", lane("{ from: user, to: dev }"), `s.yaml:19:19: edge user→dev: user is a lane, from end to end of the graph; end the edge at a box or a group in it`},
-		{"from a lane to a box it holds", lane("{ from: dev, to: build }"), `s.yaml:19:28: edge dev→build: both ends are group "dev" or inside it; end the edge at a box or another group outside "dev"`},
-		{"a box in no lane", strings.Replace(lanes, "      nodes:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n", 1), `s.yaml:8:11: missing property 'group'`},
+		{"from a lane", lane("{ from: user, to: build }"), `s.yaml:16:19: edge user→build: user is a lane, from end to end of the graph; end the edge at a box or a group in it`},
+		{"to a lane", lane("{ from: ask, to: dev }"), `s.yaml:16:28: edge ask→dev: dev is a lane, from end to end of the graph; end the edge at a box or a group in it`},
+		{"from a lane to a lane", lane("{ from: user, to: dev }"), `s.yaml:16:19: edge user→dev: user is a lane, from end to end of the graph; end the edge at a box or a group in it`},
+		{"from a lane to a box it holds", lane("{ from: dev, to: build }"), `s.yaml:16:28: edge dev→build: both ends are group "dev" or inside it; end the edge at a box or another group outside "dev"`},
+		{"a box among the lanes", strings.Replace(lanes, "      lanes:\n", "      lanes:\n        - box: { name: z, rows: [Z] }\n", 1), "s.yaml:7:11: additional properties 'box' not allowed\ns.yaml:7:11: missing property 'nodes'"},
 		{"to a group in a lane", lane("{ from: ask, to: tools }"), ""},
-		{"lanes false, a box in no lane", strings.Replace(strings.Replace(lanes, "lanes: true", "lanes: false", 1), "      nodes:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n", 1), ""},
-		{"no lanes, a box in no lane", strings.Replace(strings.Replace(lanes, "      lanes: true\n", "", 1), "      nodes:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n", 1), ""},
+		{"nodes beside lanes", strings.Replace(lanes, "      edges:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n      edges:\n", 1), `s.yaml:15:9: false schema`},
 	} {
 		if _, got := draw(t, c.src, inspect); got != c.want {
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
@@ -303,11 +299,10 @@ parts:
   - graph:
       x: 20
       y: 20
-      lanes: true
-      nodes:
-        - group: { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: ok, rows: [OK] } }] }
-        - group: { name: v, label: V, nodes: [{ box: { name: b, rows: [B] } }, { box: { name: q, rows: [Q] } }] }
-        - group: { name: w, label: W, nodes: [{ box: { name: c, rows: [C] } }, { box: { name: d, rows: [D] } }] }
+      lanes:
+        - { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: ok, rows: [OK] } }] }
+        - { name: v, label: V, nodes: [{ box: { name: b, rows: [B] } }, { box: { name: q, rows: [Q] } }] }
+        - { name: w, label: W, nodes: [{ box: { name: c, rows: [C] } }, { box: { name: d, rows: [D] } }] }
       edges:
         - { from: c, to: b }
         - { from: b, to: a, level: true, label: ask }
@@ -344,7 +339,7 @@ label "ask" 184.4,93.5 31.6x18
 label "answer" 83,147.5 53.2x18
 label "ask" 244.4,170.5 31.6x18
 `},
-		{"lanes, right", strings.Replace(level3, "      lanes: true\n", "      direction: right\n      lanes: true\n", 1), `frame "u" 20,20 242x54
+		{"lanes, right", strings.Replace(level3, "      lanes:\n", "      direction: right\n      lanes:\n", 1), `frame "u" 20,20 242x54
 frame "v" 20,98 242x96
 frame "w" 20,218 242x114
 box "a" 126,32 40x29
@@ -478,75 +473,70 @@ parts:
   - graph:
       x: 20
       y: 20
-      lanes: true
-      nodes:
-        - group: { name: u, nodes: [{ box: { name: a, rows: [A] } }] }
-        - group: { name: v, nodes: [{ box: { name: c, rows: [C] } }, { box: { name: b, rows: [B] } }] }
+      lanes:
+        - { name: u, nodes: [{ box: { name: a, rows: [A] } }] }
+        - { name: v, nodes: [{ box: { name: c, rows: [C] } }, { box: { name: b, rows: [B] } }] }
       edges:
         - { from: a, to: b, level: true }
         - { from: b, to: c, level: true }
-`, `s.yaml:11:36: edge a→b: box "c" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:10:36: edge a→b: box "c" stands between its boxes in their rank; drop level, or move it out of the way`},
 		{"a group of a lane whose block faces both ways", `title: T
 parts:
   - graph:
       x: 20
       y: 20
-      lanes: true
-      nodes:
-        - group: { name: u, nodes: [{ box: { name: s, rows: [S] } }, { box: { name: a, rows: [A] } }, { box: { name: x, rows: [X] } }] }
-        - group: { name: v, nodes: [{ box: { name: b, rows: [B] } }, { group: { name: h, nodes: [{ box: { name: m1, rows: [M1] } }, { box: { name: m2, rows: [M2] } }] } }] }
-        - group: { name: e, nodes: [{ box: { name: c, rows: [C] } }] }
+      lanes:
+        - { name: u, nodes: [{ box: { name: s, rows: [S] } }, { box: { name: a, rows: [A] } }, { box: { name: x, rows: [X] } }] }
+        - { name: v, nodes: [{ box: { name: b, rows: [B] } }, { group: { name: h, nodes: [{ box: { name: m1, rows: [M1] } }, { box: { name: m2, rows: [M2] } }] } }] }
+        - { name: e, nodes: [{ box: { name: c, rows: [C] } }] }
       edges:
         - { from: s, to: a }
         - { from: m1, to: x }
         - { from: x, to: m2 }
         - { from: a, to: b, level: true }
         - { from: b, to: c, level: true }
-`, `s.yaml:16:36: edge b→c: group "h" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:15:36: edge b→c: group "h" stands between its boxes in their rank; drop level, or move it out of the way`},
 		{"a box of a lane between", `title: T
 parts:
   - graph:
       x: 20
       y: 20
-      lanes: true
-      nodes:
-        - group: { name: u, nodes: [{ box: { name: a, rows: [A] } }] }
-        - group: { name: v, nodes: [{ box: { name: m, rows: [M] } }] }
-        - group: { name: e, nodes: [{ box: { name: b, rows: [B] } }] }
+      lanes:
+        - { name: u, nodes: [{ box: { name: a, rows: [A] } }] }
+        - { name: v, nodes: [{ box: { name: m, rows: [M] } }] }
+        - { name: e, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: a, to: b, level: true }
-`, `s.yaml:12:36: edge a→b: box "m" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:11:36: edge a→b: box "m" stands between its boxes in their rank; drop level, or move it out of the way`},
 		{"a group's frame in a lane between", `title: T
 parts:
   - graph:
       x: 20
       y: 20
-      lanes: true
-      nodes:
-        - group: { name: u, nodes: [{ box: { name: s, rows: [S] } }, { box: { name: a, rows: [A] } }, { box: { name: x, rows: [X] } }] }
-        - group: { name: v, nodes: [{ group: { name: h, label: H, nodes: [{ box: { name: m1, rows: [M1] } }, { box: { name: m2, rows: [M2] } }] } }] }
-        - group: { name: e, nodes: [{ box: { name: b, rows: [B] } }] }
+      lanes:
+        - { name: u, nodes: [{ box: { name: s, rows: [S] } }, { box: { name: a, rows: [A] } }, { box: { name: x, rows: [X] } }] }
+        - { name: v, nodes: [{ group: { name: h, label: H, nodes: [{ box: { name: m1, rows: [M1] } }, { box: { name: m2, rows: [M2] } }] } }] }
+        - { name: e, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: s, to: a }
         - { from: a, to: x }
         - { from: m1, to: x }
         - { from: x, to: m2 }
         - { from: a, to: b, level: true }
-`, `s.yaml:16:36: edge a→b: group "h" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:15:36: edge a→b: group "h" stands between its boxes in their rank; drop level, or move it out of the way`},
 		{"two handoffs between two lanes in a rank", `title: T
 parts:
   - graph:
       x: 20
       y: 20
-      lanes: true
-      nodes:
-        - group: { name: u, nodes: [{ box: { name: p, rows: [P] } }, { box: { name: q, rows: [Q] } }] }
-        - group: { name: v, nodes: [{ box: { name: r, rows: [R] } }, { box: { name: s, rows: [S] } }] }
+      lanes:
+        - { name: u, nodes: [{ box: { name: p, rows: [P] } }, { box: { name: q, rows: [Q] } }] }
+        - { name: v, nodes: [{ box: { name: r, rows: [R] } }, { box: { name: s, rows: [S] } }] }
       edges:
         - { from: p, to: r, level: true }
         - { from: q, to: s, level: true }
-`, `s.yaml:11:36: edge p→r: box "q" stands between its boxes in their rank; drop level, or move it out of the way
-s.yaml:12:36: edge q→s: box "p" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:10:36: edge p→r: box "q" stands between its boxes in their rank; drop level, or move it out of the way
+s.yaml:11:36: edge q→s: box "p" stands between its boxes in their rank; drop level, or move it out of the way`},
 		{"loops on the side the edge takes, from", `title: T
 parts:
   - graph:
@@ -577,30 +567,28 @@ parts:
       x: 20
       y: 20
       direction: right
-      lanes: true
-      nodes:
-        - group: { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: z, rows: [Z] } }] }
-        - group: { name: v, label: "A long heading of this lane", nodes: [{ box: { name: m, rows: [M] } }] }
-        - group: { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }
+      lanes:
+        - { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: z, rows: [Z] } }] }
+        - { name: v, label: "A long heading of this lane", nodes: [{ box: { name: m, rows: [M] } }] }
+        - { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: z, to: m }
         - { from: a, to: b, level: true }
-`, `s.yaml:14:36: edge a→b: it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`},
+`, `s.yaml:13:36: edge a→b: it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`},
 		{"the heading of the lane the edge enters, laid out right", `title: T
 parts:
   - graph:
       x: 20
       y: 20
       direction: right
-      lanes: true
-      nodes:
-        - group: { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: z, rows: [Z] } }] }
-        - group: { name: v, label: V, nodes: [{ box: { name: m, rows: [M] } }] }
-        - group: { name: e, label: "A long heading of this lane", nodes: [{ box: { name: b, rows: [B] } }] }
+      lanes:
+        - { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: z, rows: [Z] } }] }
+        - { name: v, label: V, nodes: [{ box: { name: m, rows: [M] } }] }
+        - { name: e, label: "A long heading of this lane", nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: z, to: m }
         - { from: a, to: b, level: true }
-`, `s.yaml:14:36: edge a→b: it runs through the heading of lane "e", which reaches into the first rank laid out right; drop level, or shorten the heading`},
+`, `s.yaml:13:36: edge a→b: it runs through the heading of lane "e", which reaches into the first rank laid out right; drop level, or shorten the heading`},
 		{"a box among a group's ranks by a row", `title: T
 parts:
   - graph:
@@ -634,9 +622,8 @@ parts:
   - graph:
       x: 20
       y: 20
-      lanes: true
-      nodes:
-        - group: { name: l, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: b, rows: [B] } }, { box: { name: c, rows: [C] } }] }
+      lanes:
+        - { name: l, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: b, rows: [B] } }, { box: { name: c, rows: [C] } }] }
       edges:
         - { from: a, to: b, level: true }
         - { from: b, to: c, level: true }
@@ -646,10 +633,9 @@ parts:
   - graph:
       x: 20
       y: 20
-      lanes: true
-      nodes:
-        - group: { name: m, nodes: [{ box: { name: c, rows: [C] } }] }
-        - group: { name: l, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: b, rows: [B] } }, { box: { name: x, rows: [X] } }, { group: { name: g, nodes: [{ box: { name: g1, rows: [G1] } }] } }] }
+      lanes:
+        - { name: m, nodes: [{ box: { name: c, rows: [C] } }] }
+        - { name: l, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: b, rows: [B] } }, { box: { name: x, rows: [X] } }, { group: { name: g, nodes: [{ box: { name: g1, rows: [G1] } }] } }] }
       edges:
         - { from: a, to: b, level: true }
         - { from: c, to: a, level: true }
@@ -711,11 +697,10 @@ parts:
       x: 20
       y: 20
       direction: right
-      lanes: true
-      nodes:
-        - group: { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: z, rows: [Z] } }] }
-        - group: { name: v, label: V, nodes: [{ box: { name: m, rows: [M] } }] }
-        - group: { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }
+      lanes:
+        - { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: z, rows: [Z] } }] }
+        - { name: v, label: V, nodes: [{ box: { name: m, rows: [M] } }] }
+        - { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: z, to: m }
         - { from: a, to: b, level: true }
@@ -725,11 +710,10 @@ parts:
   - graph:
       x: 20
       y: 20
-      lanes: true
-      nodes:
-        - group: { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: z, rows: [Z] } }] }
-        - group: { name: v, label: "A long heading of this lane", nodes: [{ box: { name: m, rows: [M] } }] }
-        - group: { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }
+      lanes:
+        - { name: u, label: U, nodes: [{ box: { name: a, rows: [A] } }, { box: { name: z, rows: [Z] } }] }
+        - { name: v, label: "A long heading of this lane", nodes: [{ box: { name: m, rows: [M] } }] }
+        - { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: z, to: m }
         - { from: a, to: b, level: true }
@@ -740,10 +724,9 @@ parts:
       x: 20
       y: 20
       direction: right
-      lanes: true
-      nodes:
-        - group: { name: u, label: U, nodes: [{ group: { name: g, label: "A long heading of a group", nodes: [{ box: { name: z, rows: [Z] } }] } }, { box: { name: a, rows: [A] } }] }
-        - group: { name: v, label: V, nodes: [{ box: { name: b, rows: [B] } }] }
+      lanes:
+        - { name: u, label: U, nodes: [{ group: { name: g, label: "A long heading of a group", nodes: [{ box: { name: z, rows: [Z] } }] } }, { box: { name: a, rows: [A] } }] }
+        - { name: v, label: V, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: a, to: b, level: true }
 `, ""},

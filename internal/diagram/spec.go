@@ -86,12 +86,12 @@ type part struct {
 }
 
 type graph struct {
-	X         float64     `json:"x"`
-	Y         float64     `json:"y"`
-	Direction string      `json:"direction"`
-	Lanes     bool        `json:"lanes,omitempty"` // omitted, so that the ids of a spec without it stay
-	Nodes     []graphNode `json:"nodes"`
-	Edges     []graphEdge `json:"edges"`
+	X         float64      `json:"x"`
+	Y         float64      `json:"y"`
+	Direction string       `json:"direction"`
+	Lanes     []graphGroup `json:"lanes,omitempty"` // omitted, so that the ids of a spec without it stay
+	Nodes     []graphNode  `json:"nodes"`
+	Edges     []graphEdge  `json:"edges"`
 }
 
 // graphNode is one of its kinds, the one that is not nil.
