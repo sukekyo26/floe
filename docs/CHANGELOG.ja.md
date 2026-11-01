@@ -205,6 +205,11 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：部品の間に置く箱の余白を、どのテーマでも上下 1.1rem・左右 1.3rem の 1 組にそろえた。カード（options・stats・
+  decision は上下 1.15rem から、links は上下 0.9rem・左 1.1rem から）、bars、tree（default の外枠の中の白い箱も）、
+  note（editorial も）、details、design・runbook・handoff の箱。見た目 `rows` は行の左右にも 1.3rem の余白を付ける
+  （entries・keys・checklist・faq は 1.2rem から、design の決めたことの並びは 1rem から、自分の HTML で借りる要素は 0 から）。
+  faq の問いは今までどおり行の幅で押せる。自分の部品・テンプレートは `--floe-pad-block` と `--floe-pad-inline` を読める。
 - 変更：折り返す長い pill（entries の tags）は、上下に伸びた楕円でなく、角の丸い札で
   描く。1 行の pill は今どおり両端が丸い（notebook は自分の角のまま）。自分の部品や
   テンプレートで pill を折り返させるには、自分の要素に `--floe-pill-wrap: normal` を置く。

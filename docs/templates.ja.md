@@ -96,6 +96,7 @@ memo/
 - どのブロックも閉じない `}` と `@import` は、その行で断ります。Google Fonts のようなスタイルシートは `page.html` の `<link>` で読みます。
 - パレットの変数（`var(--muted)`）で描くと、データファイルが選んだテーマに従います。
 - 続けて並ぶ部品の間（節の中、項目の中）は、floe のどこもと同じく `var(--floe-room)`（0.75rem）をあけます。テーマの影が箱の外へ出る、一番大きい長さです。部品 text の外枠も部品と同じくそこに並び、中の段落や見出しは floe が同じ間で並べます。
+- 地や枠を持つページの箱（見た目 panel を借りるものなど）の余白は、floe の部品とテンプレートと同じく `var(--floe-pad-block) var(--floe-pad-inline)`（1.1rem と 1.3rem）にします。見た目 `rows` の行には余白を書きません。`rows` が行の左右にも余白を付けます。
 - 横にスクロールする箱（`overflow-x: auto`）は、`@media screen` の中で、その規則に `contain: inline-size` を書きます。中身の幅で外の grid・flex の項目もページも広げないためです。中身で幅が決まる所（`justify-self: start`、inline-block、自動の幅の表の升、flex の行の `flex-basis: auto` の項目）には置きません。そこでは枠と余白だけの幅に潰れます（[parts.ja.md](parts.ja.md#css-の層と-scope)）。
 - 部品の箱でもある要素への規則（`ul { margin-block: 1rem }`、`figure { … }`）は、部品にも届きます。部品は自分の箱に margin を書かないためです（checklist・links は `ul`、steps・timeline は `ol`、facts・keys・entries・stats は `dl`、code・image・diff・terminal は `figure`、tabs は `form`）。ただし、部品の箱の並びの display・印・余白・項目の間は、floe が決めるので変わりません（[parts.ja.md](parts.ja.md#css-の層と-scope)）。見た目を借りる並びのそれは `page.css` で変わるので、テンプレートが整えられます。
 
