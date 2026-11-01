@@ -1446,6 +1446,15 @@ func TestGraphWiden(t *testing.T) {
 	}
 }
 
+// pathTurns is how many times the paths of l turn, all told.
+func pathTurns(l *layout) int {
+	n := 0
+	for _, p := range l.paths {
+		n += len(p.segs) - 1
+	}
+	return n
+}
+
 // boxIn is the area of the box named name in l.
 func boxIn(l *layout, name string) rect {
 	return l.names[name].r
@@ -1499,6 +1508,19 @@ func TestGraphShapes(t *testing.T) {
 				t.Errorf("%s: %s turns %d times, want %d at most: %v", c.file, p.what, len(p.segs)-1, most, p.segs)
 			}
 		}
+	}
+	// A point pushed off its column stands at a free column of its own, turning once in the channel above: ten
+	// turns, not the twelve of entering it at x ≡ 6 and leaving it half a column on.
+	pushed := graphOf([]string{"n0", "n1", "n2", "n3"}, "n1>n3", "n0>n2", "n1>n2", "n3>n0", "n2>n3", "n3>n2")
+	for i, b := range []struct {
+		shape string
+		n     int
+	}{{"pill", 8}, {"state", 5}, {"", 13}, {"hex", 3}} {
+		pushed.Nodes[i].Box.Shape, pushed.Nodes[i].Box.Rows[0].Text["en"] = b.shape, strings.Repeat("w", b.n)
+	}
+	pushed.Edges[4].Label = Text{"en": strings.Repeat("w", 9)}
+	if turns := pathTurns(laid(pushed)); turns != 10 {
+		t.Errorf("a point pushed off its column: %d turns, want 10", turns)
 	}
 	// A box settle moves off its exit's column takes its exit again: six turns, not eight.
 	moved := graphOf([]string{"n0", "n1", "n2"}, "n0>n1", "n2>n1", "n2>n0", "n1>n0", "n1>n0", "n2>n1")
