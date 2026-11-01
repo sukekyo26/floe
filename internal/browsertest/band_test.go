@@ -36,10 +36,10 @@ var bandText = "lang: en\ntemplate: mine\ntitle: Band\ntext: |\n  A [link](https
 var bandHeld = "details: { title: Held, open: true, parts: [{ text: \"## Held\\n\\nIn details.\" }] }\n" +
 	"options: [{ title: Card, text: \"A card's text.\" }]\n"
 
-// bandParts is parts in a band: a note with a link and a line's code, a table with a link in its heading and as wide
+// bandParts is parts in a band: a note with a title, a link and a line's code, a table with a link in its heading and as wide
 // as to scroll, and code as wide as to scroll.
 var bandParts = bandText + bandHeld +
-	"note: { text: \"A note with [a link](https://example.com/) and `code`.\" }\n" +
+	"note: { title: Said, text: \"A note with [a link](https://example.com/) and `code`.\" }\n" +
 	"table:\n  columns: [{ title: \"Name [t](https://example.com/)\" }" + strings.Repeat(", { title: Wide }", 16) + "]\n" +
 	"  rows: [[a" + strings.Repeat(", b", 16) + "]]\n" +
 	"code: { file: a.conf, text: \"wide" + strings.Repeat(" wide", 60) + "\\n\" }\n"
@@ -52,8 +52,11 @@ const measureBand = `(() => {` + colours + `
   const probe = document.body.appendChild(document.createElement('p'));
   const want = getComputedStyle(probe).color;
   probe.remove();
-  const note = document.querySelector('[data-floe-part="note"]');
-  if (note && getComputedStyle(note).color !== want) out.push('note: colour ' + getComputedStyle(note).color + ', want ' + want);
+  // A note on a ground of its own is in the page's text colour, one of none (swiss's) in the band's.
+  for (const note of document.querySelectorAll('[data-floe-part="note"]')) {
+    const s = getComputedStyle(note), on = rgba(s.backgroundColor)[3] > 0 ? want : getComputedStyle(document.querySelector('header')).color;
+    if (s.color !== on) out.push('note: colour ' + s.color + ', want ' + on);
+  }
   const line = document.querySelector('header > p > code');
   if (!framed(line)) out.push('a line\'s code: no frame, ' + getComputedStyle(line).boxShadow);
   const fenced = document.querySelector('header > pre > code');
@@ -79,12 +82,11 @@ const measureBand = `(() => {` + colours + `
   return out.join('\n');
 })()`
 
-// TestUIBand draws Markdown and pills a template places in the look band in every theme, and other parts in it in the default one: the
-// parts are in the page's text colour, not the band's, only a line's code is framed, and every text and focus ring in
-// the band reads on the ground under it; a text there is in the band's text colour, its heading unmarked, as measureContrast and measureRings measure, pills of a theme that gives
-// them no ground too, in the band's text colour. The other parts are in the default theme, as a part with no ground
-// of its own (swiss's note) is drawn on the band's colour, which band's LIMIT tells, and in aurora, whose glass would
-// let the band through but for its band.css.
+// TestUIBand draws Markdown, pills and parts a template places in the look band, in every theme: a part on a ground
+// of its own is in the page's text colour and one of none (swiss's note) in the band's, only a line's code is framed,
+// and every text and focus ring in the band reads on the ground under it, as measureContrast and measureRings measure;
+// a text there is in the band's text colour, its heading unmarked, pills of a theme that gives them no ground too.
+// Aurora's glass would let the band through but for its band.css.
 func TestUIBand(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	s.own(t, bandKit)
@@ -93,9 +95,9 @@ func TestUIBand(t *testing.T) { //nolint:paralleltest // the browser tests share
 		t.Fatal(err)
 	}
 	_, _, themes, _ := k.Names()
-	pages := map[string]string{"parts": bandParts, "parts-aurora": bandParts + "theme: aurora\n", "held-retro": bandText + bandHeld + "theme: retro\n"}
+	pages := map[string]string{}
 	for _, theme := range themes {
-		pages["text-"+theme] = bandText + "theme: " + theme + "\n"
+		pages["parts-"+theme] = bandParts + "theme: " + theme + "\n"
 	}
 	for slug, page := range pages {
 		s.floe(t, "publish", s.write(t, slug+".yaml", page), "--slug", slug)
