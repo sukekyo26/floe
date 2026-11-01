@@ -68,6 +68,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
    rows, and the look table and facts take it. Themes leave it as it is, so that rows are as tall in every theme */
 :root { --floe-row-pad: 0.4rem; }
+/* The padding of a box among parts, from its frame to its text (a card, what takes the look panel, note), and at the
+   sides of a row of the look rows. Themes leave it as it is and pad no box; a theme's frame around a box pads the
+   element it paints inside by it (default's tree) */
+:root { --floe-pad-block: 1.1rem; --floe-pad-inline: 1.3rem; }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
    what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
@@ -276,7 +280,7 @@ blockquote { background: var(--surface); border: 0; border-radius: var(--radius)
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
 :scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
 .card {
-  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
 /* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
 .card { --face: initial; --on-face: initial; }
@@ -409,7 +413,7 @@ blockquote { background: var(--surface); border: 0; border-radius: var(--radius)
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
 :scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
 :scope > li {
-  --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0; padding-block: 0.9rem; padding-left: 1.1rem;
+  --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0;
 }
 :scope > li > * + * { margin-top: 0.1rem; }
 /* Each item is a row (marks: items), which floe lays out: the mark is a box, and over it (::after) the link's sign.
@@ -439,7 +443,7 @@ blockquote { background: var(--surface); border: 0; border-radius: var(--radius)
    LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
    too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
-  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: 1rem 1.25rem; border-radius: var(--radius); max-width: var(--text-width);
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius); max-width: var(--text-width);
 }
 :scope::before {
   content: "i"; content: "i" / ""; border-radius: 50%;
@@ -560,7 +564,7 @@ blockquote { background: var(--surface); border: 0; border-radius: var(--radius)
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A card is a round face in a brown frame, its top in the three stripes. They are shadows inside its top, which keep
-   to its round corners, thin enough to lie within the padding its part sets (facts' rows, --floe-row-pad).
+   to its round corners, thin enough to lie within a card's padding (base.css's two variables; facts' rows, --floe-row-pad).
    LIMIT: they are 6px deep; a template of one's own setting --floe-row-pad under 6px draws facts' text over them */
 :scope > .card { border: 2px solid var(--fg); border-radius: var(--radius); background: var(--surface);
   --floe-inset: inset 0 2px var(--retro-orange), inset 0 4px var(--retro-mustard), inset 0 6px var(--retro-olive); }

@@ -1,5 +1,5 @@
 :scope {
-  display: grid; gap: 1rem; padding: 1.1rem 1.3rem;
+  display: grid; gap: 1rem; padding: var(--floe-pad-block) var(--floe-pad-inline);
 }
 .bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 1rem; align-items: baseline; color: var(--tone); }
 .bar .label { color: var(--fg); }

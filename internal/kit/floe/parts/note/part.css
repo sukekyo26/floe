@@ -3,7 +3,7 @@
    LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
    too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
-  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: 1rem 1.25rem; border-radius: var(--radius); max-width: var(--text-width);
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius); max-width: var(--text-width);
 }
 :scope::before {
   content: "i"; content: "i" / ""; border-radius: 50%;

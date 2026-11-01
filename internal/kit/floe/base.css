@@ -59,6 +59,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
    rows, and the look table and facts take it. Themes leave it as it is, so that rows are as tall in every theme */
 :root { --floe-row-pad: 0.4rem; }
+/* The padding of a box among parts, from its frame to its text (a card, what takes the look panel, note), and at the
+   sides of a row of the look rows. Themes leave it as it is and pad no box; a theme's frame around a box pads the
+   element it paints inside by it (default's tree) */
+:root { --floe-pad-block: 1.1rem; --floe-pad-inline: 1.3rem; }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
    what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part

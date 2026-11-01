@@ -68,6 +68,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
    rows, and the look table and facts take it. Themes leave it as it is, so that rows are as tall in every theme */
 :root { --floe-row-pad: 0.4rem; }
+/* The padding of a box among parts, from its frame to its text (a card, what takes the look panel, note), and at the
+   sides of a row of the look rows. Themes leave it as it is and pad no box; a theme's frame around a box pads the
+   element it paints inside by it (default's tree) */
+:root { --floe-pad-block: 1.1rem; --floe-pad-inline: 1.3rem; }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
    what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
@@ -211,7 +215,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
 :scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
 .card {
-  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
 /* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
 .card { --face: initial; --on-face: initial; }
@@ -236,7 +240,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
 :scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
 :scope > li {
-  --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0; padding-block: 0.9rem; padding-left: 1.1rem;
+  --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0;
 }
 :scope > li > * + * { margin-top: 0.1rem; }
 /* Each item is a row (marks: items), which floe lays out: the mark is a box, and over it (::after) the link's sign.
@@ -369,7 +373,7 @@ h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .counts li.hot { background: var(--tone-soft); color: var(--tone); border-color: var(--tone-soft); }
 main { display: grid; gap: 2rem; padding-block: 2rem; }
 main h2 { font-size: 1.15rem; }
-.asks { padding: 1.2rem 1.4rem; border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
+.asks { padding: var(--floe-pad-block) var(--floe-pad-inline); border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
 .asks h2 { color: var(--warn); font-size: 1.3rem; }
 /* Q1, Q2 … are the list's own numbers: each li stays a list item, its layout inside it. The name is the page's
    alone, as a counter style is not held by @scope.
@@ -384,7 +388,7 @@ main h2 { font-size: 1.15rem; }
 .why, .by { color: var(--muted); font-size: 0.92rem; }
 /* As many columns as the sections written, side by side while each has 16rem */
 .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
-.board section { padding: 1rem 1.2rem; display: grid; gap: 0.6rem; }
+.board section { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.6rem; }
 .board ul, .board ol { gap: 0.6rem; }
 .doing { list-style: none; padding: 0; }
 /* A tick as the look marked places a row's sign */

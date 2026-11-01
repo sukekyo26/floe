@@ -1,7 +1,7 @@
 /* A folder's contents hang from a rule under it; the marks of files and folders are masks in the text's colour. A deep
    tree scrolls sideways, telling nothing of its width outside (base.css's pre has the LIMIT) */
 :scope {
-  padding: 0.8rem 1.2rem; overflow-x: auto; overflow-wrap: normal;
+  padding: var(--floe-pad-block) var(--floe-pad-inline); overflow-x: auto; overflow-wrap: normal;
 }
 @media screen { :scope { contain: inline-size; } }
 :scope ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
