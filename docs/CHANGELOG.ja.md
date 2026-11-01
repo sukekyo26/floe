@@ -8,6 +8,14 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：部品と見た目の `part.yaml` の `marks:`。どの要素が左に印のある行かを、`box`・
+  `items`（子の `li`）・`joined`（次への線つき）で言う。floe が行を層 `floe.marks` に
+  1 つ並べ（印の置き場所と大きさ）、印は部品が描く。部品の見た目の連なりで `marks:` を
+  2 回書くと、`floe part check` が断る。
+- 追加：見た目 `marked`。並びの項目の前の字を行の印にする。decision・options・checklist・
+  handoff の済んだ作業が借りる。
+- 追加：見た目 `numbered` の項目の `data-floe-mark`。`ring` は縁を tone に、`solid` は丸と
+  線を tone で塗る。
 - 追加：パレットの `--quiet`（箱の中の静かな地）。表の頭、棒の溝、progress の地、キーが
   読む。
 - 追加：パレットの角の丸さの変数 `--radius`・`--radius-small`・`--radius-pill`（どれも
@@ -183,6 +191,11 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：steps の作業中の輪を 1.5px に、runbook の線を丸と同じ色に（アクセント。戻し方は
+  枠と見出しとともに bad）、brutal・notebook の塗った丸を tone の自分の塗りに。
+- 変更：runbook と adr の本文の列を文の幅に（3rem と 6rem 狭く）。
+- 変更：字の印（decision の ×、options の +・−、checklist の –・✓、handoff の ✓）を自分の
+  列の中央に置き、字の 2 行目以降を印の下でなく字の下に折り返す。
 - 変更：図の座標は ± 100 万まで、大きさ（`w`・`h`・`r`）は 100 万まで、キャンバス（`width`・
   `height`）は 1,000 万までとし、越えると schema の言葉（`maximum: got 1×10¹⁷, want 1×10⁰⁶`）
   で断る。floe が計算する数を有限で正気な大きさに保つ、大きさの上限。1e17 に書いた図は、箱が
