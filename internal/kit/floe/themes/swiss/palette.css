@@ -6,4 +6,5 @@
   --font: "Helvetica Neue", Helvetica, Arial, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
   --code-bg: #111; --code-fg: #f2f2f2; --code-prompt: #ff3b3b;
   --rule: 4px solid var(--fg);
+  --radius: 0; --radius-small: 0; --radius-pill: 0;
 }

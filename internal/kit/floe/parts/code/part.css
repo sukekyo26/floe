@@ -3,7 +3,7 @@
 :scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
 :scope {
   display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
-  border-radius: 14px; overflow: hidden; color-scheme: dark;
+  border-radius: var(--radius); overflow: hidden; color-scheme: dark;
   background: var(--face); color: var(--on-face);
   font-family: var(--mono);
 }
@@ -17,7 +17,7 @@
 }
 :scope .file { opacity: 0.85; }
 :scope .lang {
-  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: 5px;
+  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
   background: var(--code-prompt); color: var(--code-bg);
 }
 /* A block, so that the code's last line break draws no empty line */

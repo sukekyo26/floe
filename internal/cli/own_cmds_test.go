@@ -182,7 +182,7 @@ func TestListShow(t *testing.T) {
 			`floe: mine has no file "nope.css" (its files: schema.json, checks.yaml, part.yaml, part.html, part.css, words.yaml)` + "\n",
 		},
 		{[]string{"part", "show", "tone"}, 0, func(out string) bool {
-			return strings.HasPrefix(out, "tone: The colour of a part: accent, good, warn or bad, from the theme's colour variables\nwhere: floe\nfiles: tone.json\n==> tone.json <==\n{\n")
+			return strings.HasPrefix(out, "tone: The colour of a part: accent, good, warn, bad or muted (quiet), from the theme's colour variables\nwhere: floe\nfiles: tone.json\n==> tone.json <==\n{\n")
 		}, ""},
 		{[]string{"part", "show", "rows"}, 0, func(out string) bool {
 			return out == "rows: Rows in a panel, a rule between each and the next; take it by looks or data-floe-look\nwhere: floe\nlooks: panel\n"+

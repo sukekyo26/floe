@@ -16,6 +16,8 @@ type outline struct {
 // outlineOf is the outline of a w by h box of kind: a box's shape (rect, which "" is, pill, hex, state), table, bar
 // or icon. Corners are round, of a radius no more than half the shorter side: a pill's ends are half circles, tall
 // or wide, and no corner is an ellipse. An icon's are square.
+// LIMIT: the corners are numbers in Go, which the check measures, so a theme's --radius does not round them; read
+// the palette here if a square theme's round boxes in a diagram come to matter.
 func outlineOf(w, h float64, kind string) outline {
 	radius := float64(cornerR)
 	switch kind {

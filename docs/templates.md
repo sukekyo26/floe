@@ -95,8 +95,8 @@ It sees:
 - Its root is `:scope`. Write the page's variables on `:scope`, not on `:root` or `html`, which are outside the scope.
 - A `}` that closes no block, and an `@import`, are refused at their line: load a stylesheet, such as Google Fonts, with a `<link>` in `page.html`.
 - Draw with the palette's variables (`var(--muted)`), so that the page follows the theme the data file picks.
-- Leave at least `var(--floe-room)` (0.75rem) between parts that stand one after another (in a section, in an item), the most a theme's shadow reaches outside a box.
-- A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part: a part writes no margin of its own on its box (checklist and links are `ul`, steps and timeline `ol`, facts, keys, entries and stats `dl`, code, image, diff and terminal `figure`, tabs `form`).
+- Leave `var(--floe-room)` (0.75rem) between parts that stand one after another (in a section, in an item), as every place of floe's does, the most a theme's shadow reaches outside a box. The paragraphs and headings of a part text stand there as parts too.
+- A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part, as a part writes no margin of its own on its box (checklist and links are `ul`, steps and timeline `ol`, facts, keys, entries and stats `dl`, code, image, diff and terminal `figure`, tabs `form`). It does not change a list's display, marks, padding or room between items, which floe sets for a list that is a part's box ([parts.md](parts.md#the-css-layers-and-scope)); a list that takes a look takes those from the template's `page.css` too, so that the template adjusts it.
 
 `report`'s `page.css`, for one, centres its page in the column every floe template uses:
 
@@ -148,6 +148,8 @@ An element of the template borrows a look by `data-floe-look`, drawn alike in ev
 - `band`: a band filled with the accent, its text, links, code and focus ring in the colour on a fill, as design's conclusion and handoff's head are.
 - `numbered`: on an `<ol>`, its items numbered in rings joined by a line, as the part `steps` and runbook's steps are. Write each item's text in an element (`<li><p>Restart <code>api</code> now</p></li>`), as text written straight in an item breaks into a grid item a run, and start the item with text, as a ring stands at the bottom of a first child with no text (an image, an empty block).
 
+A status the template words itself (`{{word …}}`: a state, a severity, a kind) and a caution are drawn as parts, not borrowed as looks: the template writes a part's box in `page.html`, a pill by `data-floe-part="cell"` and a caution by `data-floe-part="note"`, their colour by `data-floe-tone` (`<p class="status" data-floe-part="cell" data-floe-tone="good">`), as adr's, postmortem's, handoff's and runbook's are. They then stand in a band, a face and a tone as parts do, drawn as the theme draws its pills and notes; `page.css` places the box and does not reach in it. Write a note's text in an element (`<div data-floe-part="note"><p>…</p></div>`), its title as `<strong class="title">`. Text a writer writes freely (a line of Markdown, a name) is no pill: it may run long, and a link in it may not read on a theme's filled pill.
+
 ## The palette
 
 The page's colours and faces are CSS variables that the theme's `palette.css` sets, and that the parts, the diagrams, floe's base and the template draw with. floe's `default` palette defines them all and goes into every page; the theme a data file picks sets them over it.
@@ -156,12 +158,17 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | --- | --- |
 | `--bg`, `--surface` | The page's ground, a part's face |
 | `--fg`, `--muted` | Text, faint text |
+| `--muted-soft` | The pale ground of the tone `muted`, mixed from `--fg` and `--surface` by default; with `--muted`, the colours of that tone |
+| `--quiet` | A quiet ground within a box of the surface: a table's head, a bar's track, progress's, a keycap. Mixed from `--line` and `--surface` by default |
 | `--line` | Lines and borders |
-| `--accent`, `--accent-soft` | The colour that stands out, and its pale ground |
-| `--good`, `--warn`, `--bad` and their `-soft` | Good, warning and bad, and their pale grounds |
+| `--accent`, `--accent-soft` | The colour that stands out, and its pale ground; the colours of the tone `accent` |
+| `--good`, `--warn`, `--bad` and their `-soft` | Good, warning and bad, and their pale grounds: the colours of those tones |
 | `--on-fill` | Text on a face filled with `--accent` or a tone's colour, such as a pill |
+| `--<tone>-fill` | A theme's own fill for a tone (`--good-fill`), which `--tone-fill` takes; left out, the tone's `-soft` |
+| `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in (`data-floe-tone`, [parts.md](parts.md#the-css-layers-and-scope)), from those above; accent's outside a tone. A template marks a tone so too |
 | `--shadow` | A colour for shadows; a box casts one only when its theme sets `--floe-shadow-color` on it ([parts.md](parts.md#themes)) |
 | `--floe-shadow-x`, `-y`, `-blur`, `-spread` | The theme's one shadow, in px or rem (none by default) |
+| `--radius`, `--radius-small`, `--radius-pill` | How round corners are, one length each: a box's (a panel, a note, code, a quote), a small box's within one (a key, a bar, an image, code in a line), and a pill's (a cell, a tab's title). A box along the edge of another, a gap `p` within it, rounds by `calc(var(--radius) - p)` |
 | `--font`, `--display`, `--mono` | The text's typeface, the headings', and the fixed-width one |
 | `--code-bg`, `--code-fg`, `--code-prompt` | The ground of code and a terminal, always dark; their text; a terminal's prompt |
 | `--code-add`, `--code-del` | A diff's lines added and removed |

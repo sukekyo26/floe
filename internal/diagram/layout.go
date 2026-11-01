@@ -157,17 +157,18 @@ func written(size float64) float64 {
 	return size
 }
 
-// reach is the farthest end of what is drawn, told by end, and 0 when all of it is before 0. An end that is not
-// finite (a circle of radius 1e308) is left out, so that the part sticks out of the canvas the others reach.
+// reach is the farthest end of what is drawn, told by end, and 0 when all of it is before 0. Coordinates and sizes
+// written reach about two million at most, short of what a canvas may be written (ten million).
+// LIMIT: text's length, the number of rows and the boxes a tree opens into (wide or deep) are not bounded, so a
+// label tens of thousands of characters long, a box of hundreds of thousands of rows, or a tree of hundreds of
+// thousands of boxes reaches past it, telling a canvas that cannot be written.
 // LIMIT: raw SVG is not measured (that would read SVG as a browser does), so it may be cut off right of or below
 // what else is drawn; write width and height with it.
 // LIMIT: text is as wide as its estimate; text drawn over canvasPad wider (a run of bold Ws) at the end is cut off.
 func (l *layout) reach(end func(rect) float64) float64 {
 	far := 0.0
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.heads, l.areas, l.strokes) {
-		if e := end(r); !math.IsInf(e, 0) && !math.IsNaN(e) {
-			far = max(far, e)
-		}
+		far = max(far, end(r))
 	}
 	return far
 }
@@ -249,11 +250,11 @@ func (l *layout) addDot(d *dot, at string) {
 	r := dotR(d)
 	who := fmt.Sprintf("dot %s,%s", num(d.CX), num(d.CY))
 	l.marks = append(l.marks, rect{x: d.CX - r, y: d.CY - r, w: r * 2, h: r * 2, what: who, at: at})
-	cls := "dot" + tone(d.Tone)
+	cls := "dot"
 	if d.Hollow {
 		cls += " hollow"
 	}
-	l.boxEls = append(l.boxEls, elem{Kind: "circle", X: d.CX, Y: d.CY, R: r, Class: cls})
+	l.boxEls = append(l.boxEls, elem{Kind: "circle", X: d.CX, Y: d.CY, R: r, Class: cls, Tone: d.Tone})
 }
 
 func (l *layout) addCircle(c *circle, at string) {
@@ -262,7 +263,7 @@ func (l *layout) addCircle(c *circle, at string) {
 		who = "circle " + strconv.Quote(c.Name)
 	}
 	l.areas = append(l.areas, rect{x: c.CX - c.R, y: c.CY - c.R, w: c.R * 2, h: c.R * 2, what: who, at: at})
-	l.areaEls = append(l.areaEls, elem{Kind: "circle", X: c.CX, Y: c.CY, R: c.R, Class: "venn" + toneOr(c.Tone, "accent")})
+	l.areaEls = append(l.areaEls, elem{Kind: "circle", X: c.CX, Y: c.CY, R: c.R, Class: "venn", Tone: c.Tone})
 }
 
 func (l *layout) addRaw(r *raw, at string) {
@@ -280,17 +281,6 @@ func (l *layout) addRaw(r *raw, at string) {
 	default:
 		l.edgeEls = append(l.edgeEls, elem{Kind: "raw", Raw: svg})
 	}
-}
-
-func tone(t string) string {
-	if t == "" {
-		return ""
-	}
-	return " " + t
-}
-
-func toneOr(t, def string) string {
-	return tone(cmpOr(t, def))
 }
 
 func cmpOr(s, def string) string {
@@ -343,6 +333,9 @@ func what(kind, name string, text Text) string {
 }
 
 // fit refuses text that is wider than room, telling the width to write: the widest of its languages.
+// LIMIT: text and the number of rows are not bounded, so a row tens of thousands of characters long asks for a width
+// past what may be written (a million), and a box of 58,824 rows or more for a height past it (diagram_too_short);
+// bound them if one comes to matter.
 func (l *layout) fit(at, who string, t Text, size float64, code bool, room, written float64) {
 	if lang, tw := widest(t, size, code); tw > room {
 		// LIMIT: the language's mark is made here, so no catalog picks its brackets; move it if one needs its own.
@@ -416,7 +409,7 @@ func (l *layout) addBox(b *box, at string) {
 	r.form, r.graph = outlineOf(r.w, r.h, b.Shape), b.graph
 	l.boxes = append(l.boxes, r)
 	kids = append([]elem{r.form.el(r)}, kids...)
-	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "box" + tone(b.Tone), Kids: kids})
+	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "box", Tone: b.Tone, Kids: kids})
 }
 
 func tableWidth(t *table) float64 {
@@ -507,7 +500,7 @@ func (l *layout) addTable(t *table, at string) {
 	}
 	kids = append(kids, outer)
 	l.boxes = append(l.boxes, r)
-	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "table" + tone(t.Tone), Kids: kids})
+	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "table", Tone: t.Tone, Kids: kids})
 }
 
 func iconSize(i *icon) float64 {
@@ -657,7 +650,7 @@ func (l *layout) addBar(b *bar, at string) {
 	r.form = outlineOf(r.w, r.h, "bar")
 	l.boxes = append(l.boxes, r)
 	el := r.form.el(r)
-	el.Class = "bar" + tone(b.Tone)
+	el.Class, el.Tone = "bar", b.Tone
 	l.boxEls = append(l.boxEls, el)
 	if b.Label != nil {
 		l.label(at, b.Label, r.x+r.w+10, b.Y, "start", false, false)

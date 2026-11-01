@@ -108,6 +108,22 @@ func (k *Kit) BaseCSS() []byte {
 	return bytes.Clone(k.baseCSS)
 }
 
+// Tones returns the tones a part may take, tone.json's of floe's, in its order, or floe's mistake when it has none.
+func (k *Kit) Tones() ([]string, error) {
+	for k.base != nil {
+		k = k.base
+	}
+	if s := k.shared[toneSchema]; s != nil && s.schema != nil {
+		if tones := s.schema.Enum(); len(tones) != 0 {
+			return tones, nil
+		}
+	}
+	return nil, fmt.Errorf("kit: floe's %s.json lists no tones", toneSchema) //nolint:err113 // floe's own mistake
+}
+
+// toneSchema is the shared schema of the tones a part may take.
+const toneSchema = "tone"
+
 // read reads src over base (nil for none): parts and looks, then themes and templates, a name or a $ref found
 // in either. It does what it takes to have the values, and returns every mistake of it Sorted, and no Kit.
 func read(base *Kit, src Sources) (*Kit, error) {

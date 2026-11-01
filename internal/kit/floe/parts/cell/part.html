@@ -1,2 +1,2 @@
 {{/* LIMIT: a pill written in quotes, '{ pill: x }', is text to YAML and drawn as text; plain on the page, it is not checked. Recommend the object (a warning) for a text starting with { pill: if it comes to be missed */ -}}
-{{if eq (printf "%T" .) "string"}}{{markdownLine .}}{{else}}<span{{with .tone}} class="{{.}}"{{end}} data-floe-part="cell">{{.pill}}</span>{{end}}
+{{if eq (printf "%T" .) "string"}}{{markdownLine .}}{{else}}<span{{with .tone}} data-floe-tone="{{.}}"{{end}} data-floe-part="cell">{{.pill}}</span>{{end}}

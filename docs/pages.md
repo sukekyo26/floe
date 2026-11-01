@@ -101,7 +101,7 @@ The parts `report` takes in a section:
 | `script` | Something that moves ([Scripts and HTML](#scripts-and-html)). |
 | `html` | HTML that goes in as it is: a key of `any.json`, not a part of its own, so `floe part show` has none ([Scripts and HTML](#scripts-and-html)). |
 
-A `tone` is `accent`, `good`, `warn` or `bad`.
+A `tone` is `accent`, `good`, `warn`, `bad` or `muted`.
 
 ## Writing text
 
@@ -136,7 +136,7 @@ A `diagram` part, in a section or in `details` and `tabs`, draws a diagram from 
 
 ```text
 plan.yaml:5:5: additional properties 'colour' not allowed
-plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad'
+plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 ```
 
 and once that is fixed, the checks after it:

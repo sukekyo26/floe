@@ -192,7 +192,7 @@ func TestWritten(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`<td><span class="good" data-floe-part="cell">x</span></td>`, `<td>drawn y</td>`} {
+	for _, want := range []string{`<td><span data-floe-tone="good" data-floe-part="cell">x</span></td>`, `<td>drawn y</td>`} {
 		if !strings.Contains(fmt.Sprint(got), want) {
 			t.Errorf("drew %s, want it to hold %s", got, want)
 		}
