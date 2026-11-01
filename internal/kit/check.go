@@ -211,6 +211,9 @@ func checkTheme(t *Theme) error {
 	if t.base != nil {
 		errs = append(errs, css.Check(path.Join(t.dir, "base.css"), t.base))
 	}
+	if t.markdown != nil {
+		errs = append(errs, css.Check(path.Join(t.dir, "markdown.css"), t.markdown))
+	}
 	for _, name := range slices.Sorted(maps.Keys(t.partsCSS)) {
 		errs = append(errs, css.Check(path.Join(t.dir, name+".css"), t.partsCSS[name]))
 	}

@@ -20,7 +20,7 @@
   font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
 }
 :scope > li::after { background: var(--line); }
-:scope li > div > :not(strong) { color: var(--muted); font-size: 0.92rem; }
+:scope li > div > :not(strong) { color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 @media (max-width: 36rem) {
   :scope > li {
     --floe-mark-gap: 0.9rem;

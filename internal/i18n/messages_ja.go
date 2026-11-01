@@ -101,7 +101,7 @@ var messagesJA = map[string]string{
 	"kit_part_unread":            "floe は部品の中のこの名前のファイルを読みません。部品は schema.json・part.html・part.css と、要るなら part.yaml・checks.yaml・words.yaml を持ちます。消してください",
 	"kit_marks_twice":            "%[1]s とそれが取る見た目で marks: が 2 回書かれています（%[2]s と %[3]s）。1 つの見た目の連なりで marks: を書けるのは 1 つだけです。%[1]s の marks: を消すか、marks: を書く見た目を 1 つだけ取ってください",
 	"kit_look_unread":            "schema.json の無いディレクトリ（見た目）の中で、floe が読むのは part.css と part.yaml だけです。消すか、schema.json を足して部品にしてください",
-	"kit_theme_unread":           "floe はテーマの中のこの名前のファイルを読みません。テーマは base.css・palette.css と、見た目を変える部品か見た目ごとの <部品>.css を持ちます。どれかの名前にするか、消してください",
+	"kit_theme_unread":           "floe はテーマの中のこの名前のファイルを読みません。テーマは base.css・markdown.css・palette.css と、見た目を変える部品か見た目ごとの <部品>.css を持ちます。どれかの名前にするか、消してください",
 	"kit_look_unknown":           "looks の %q は部品でも見た目でもありません。floe か自分の部品にある名前を書いてください",
 	"kit_look_cycle_part":        "部品 %s が自分の見た目を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",
 	"kit_look_cycle_look":        "見た目 %s が自分を借りていて（%s）、floe がたどり続けてしまいます。part.yaml を直してください",

@@ -12,9 +12,13 @@ func TestMarkdown(t *testing.T) {
 
 	html, err := markdownHTML("a <b>x</b>\n\n| h |\n| - |\n| c |\n")
 	want := "<p>a <!-- raw HTML omitted -->x<!-- raw HTML omitted --></p>\n" +
-		"<div data-floe-part=\"table\"><table>\n<thead>\n<tr>\n<th>h</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>c</td>\n</tr>\n</tbody>\n</table></div>\n"
+		"<div data-floe-part=\"table\"><table>\n<thead>\n<tr>\n<th>h</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>c</td>\n</tr>\n</tbody>\n</table></div>"
 	if err != nil || string(html) != want {
 		t.Errorf("markdown = %q, %v; want %q", html, err, want)
+	}
+	// Raw HTML alone leaves a comment alone, no space at its end, which :empty takes.
+	if html, err := markdownHTML("<div>x</div>\n"); err != nil || html != "<!-- raw HTML omitted -->" {
+		t.Errorf("markdown of raw HTML alone = %q, %v", html, err)
 	}
 	line, ok := funcs["markdownLine"].(func(string) (template.HTML, error))
 	if !ok {

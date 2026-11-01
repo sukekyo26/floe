@@ -9,12 +9,10 @@ import (
 // measurePartRoom returns, one to a line, each room between parts that is not --floe-room, read from the page. It
 // measures the room between every two children one after another that are shown as blocks (not out of the flow),
 // across when on one line, else down, in a place where parts stand: a box laid out as a grid or a flex that is a
-// stack, holds cards, or holds a part's box outside any part (a template's section or step). Tabs are measured from
+// stack, holds cards, holds a part's box outside any part (a template's section or step), or is a text's box. Tabs are measured from
 // the bottom of their names to the top of the panel shown, as their children are names and panels, not parts in a row.
 // LIMIT: the flow of a part's Markdown (its paragraphs, and before and after a part's box in it) is spaced by the part
 // and goes unmeasured, until floe spaces that flow in one place.
-// LIMIT: a place of a template's that holds only text (a section of Markdown alone) is not known from the drawn page
-// and goes unmeasured there; the same place holding a part elsewhere is measured.
 // LIMIT: the room before a template's own section (report's .sub, design's .decision), between a template's own
 // section or header and a note it places (adr's record superseding it after its header, runbook's caution after its
 // needs) and after the first child of an item whose mark stands in its
@@ -26,7 +24,8 @@ const measurePartRoom = `(() => {
   probe.style.width = 'var(--floe-room)';
   const room = probe.getBoundingClientRect().width;
   probe.remove();
-  const block = (e) => { const s = getComputedStyle(e); return e.getClientRects().length && !s.display.startsWith('inline') &&
+  // A box of no height is no block: an empty text's box left in the grid would read as two rooms of 12px, not 24.
+  const block = (e) => { const s = getComputedStyle(e); return e.getClientRects().length && e.getBoundingClientRect().height > 0 && !s.display.startsWith('inline') &&
     s.display !== 'contents' && !['absolute', 'fixed'].includes(s.position); };
   const box = (e) => e.matches('[data-floe-part]:not([data-floe-part=cell]), .card') && block(e);
   const name = (e) => e.tagName.toLowerCase() + (e.dataset.floePart ? '[' + e.dataset.floePart + ']' : '') +
@@ -34,7 +33,7 @@ const measurePartRoom = `(() => {
   const out = new Set();
   for (const c of document.body.querySelectorAll('*')) {
     if (c.matches('[data-floe-part=tabs]') || !/grid|flex/.test(getComputedStyle(c).display)) continue;
-    if (!(c.matches('[data-floe-part=stack]') || [...c.children].some((k) => k.matches('.card')) ||
+    if (!(c.matches('[data-floe-part=stack], [data-floe-text]') || [...c.children].some((k) => k.matches('.card')) ||
       ([...c.children].some(box) && !c.closest('[data-floe-part]')))) continue;
     const kids = [...c.children].filter(block), mark = getComputedStyle(c, '::before');
     const marked = mark.content !== 'none' && mark.display !== 'none' && mark.gridRowStart === 'mark';

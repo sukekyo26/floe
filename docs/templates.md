@@ -89,13 +89,14 @@ It sees:
 
 ## page.css
 
-`page.css` lays the page out around the parts: their places, the page's width, its header. It goes into a layer under the parts' styles and the theme's files of them, so it does not restyle a part, and over the theme's `base.css`.
+`page.css` lays the page out around the parts: their places, the page's width, its header. It goes into a layer under the parts' styles and the theme's files of them, so it does not restyle a part, and over the theme's `base.css`. It does not reach a part text's Markdown either, which floe draws in a box of its own (`data-floe-text`).
 
 - floe puts it in `@scope (:root) to ([data-floe-part] > *)`: it reaches a part's box, so that it places the part, but not what the part holds.
 - Its root is `:scope`. Write the page's variables on `:scope`, not on `:root` or `html`, which are outside the scope.
 - A `}` that closes no block, and an `@import`, are refused at their line: load a stylesheet, such as Google Fonts, with a `<link>` in `page.html`.
 - Draw with the palette's variables (`var(--muted)`), so that the page follows the theme the data file picks.
-- Leave `var(--floe-room)` (0.75rem) between parts that stand one after another (in a section, in an item), as every place of floe's does, the most a theme's shadow reaches outside a box. The paragraphs and headings of a part text stand there as parts too.
+- Leave `var(--floe-room)` (0.75rem) between parts that stand one after another (in a section, in an item), as every place of floe's does, the most a theme's shadow reaches outside a box. A part text's box stands there as a part does, and floe spaces its paragraphs and headings by the same room in it.
+- A box that scrolls sideways (`overflow-x: auto`) writes `contain: inline-size` for its rule under `@media screen`, so that its content's width widens no grid or flex item around it, nor the page; keep it out of a place whose width its content sets (`justify-self: start`, an inline-block, a table's cell of auto width, an item of a flex row on `flex-basis: auto`), where it shrinks to its border and padding ([parts.md](parts.md#the-css-layers-and-scope)).
 - A rule for an element that is a part's box too (`ul { margin-block: 1rem }`, `figure { … }`) reaches the part, as a part writes no margin of its own on its box (checklist and links are `ul`, steps and timeline `ol`, facts, keys, entries and stats `dl`, code, image, diff and terminal `figure`, tabs `form`). It does not change a list's display, marks, padding or room between items, which floe sets for a list that is a part's box ([parts.md](parts.md#the-css-layers-and-scope)); a list that takes a look takes those from the template's `page.css` too, so that the template adjusts it.
 
 `report`'s `page.css`, for one, centres its page in the column every floe template uses:
@@ -119,7 +120,7 @@ A part draws an item of the data: `floe part list` lists them, and `floe part sh
 
 `page.html` puts the item where it goes, `{{.Data.findings}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML.
 
-The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
+The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. It draws its Markdown in a box of no part (`data-floe-text`), with no ground or tone of its own, so that it takes the face and tone around it; `page.css` and the theme's `base.css` stop at it, and the theme's `markdown.css` draws it as Markdown anywhere. Its headings are no larger than a template's own (1.2em and 1.1em). A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
 
 A part of any kind, one key naming its kind, refers to `any.json`; a list of them, as report's sections do, refers to it as its items. In a template's root schema:
 

@@ -16,10 +16,11 @@ var layersKit = map[string]string{
 		"@keyframes held { from { opacity: 0.5; } to { opacity: 0.5; } }\nheader { animation: held 1000s; }\n" +
 		`@font-face { font-family: "own face"; src: url(data:,); }` + "\n",
 	"templates/themed/schema.json": `{"type": "object", "properties": {"text": {"type": "string", "format": "markdown"},
-"note": {"$ref": "floe:///parts/note.json"}}, "additionalProperties": false}`,
+"note": {"$ref": "floe:///parts/note.json"}, "words": {"$ref": "floe:///parts/text.json"}}, "additionalProperties": false}`,
 	"templates/themed/page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head>` +
-		`<body><p id="own">own</p><header data-floe-look="band"><h2 class="banded">b</h2></header>{{.Data.text}}{{.Data.note}}</body></html>`,
-	"templates/themed/page.css": "p { color: rgb(255, 0, 0); }\n",
+		`<body><p id="own">own</p><header data-floe-look="band"><h2 class="banded">b</h2></header>{{.Data.text}}{{.Data.note}}{{.Data.words}}</body></html>`,
+	"templates/themed/page.css": "p { color: rgb(255, 0, 0); }\nh2 { letter-spacing: 5px; }\n",
+	"themes/mine/markdown.css":  "blockquote { letter-spacing: 3px; }\n",
 	"themes/mine/base.css": "body p { color: rgb(0, 0, 7); }\nblockquote { background-color: rgb(0, 0, 8); }\n" +
 		"[data-floe-look~=\"band\"] h2.banded { color: rgb(0, 0, 9); }\n",
 	"themes/mine/band.css":       ":scope h2 { color: rgb(0, 0, 10); }\n",
@@ -102,6 +103,17 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		return [c('#own', 'color'), c('body > blockquote', 'backgroundColor'), c('[data-floe-part=note] blockquote', 'backgroundColor'),
 			c('[data-floe-part=note] p', 'color'), c('.banded', 'color')].join(' | ') })()`)
 	check(t, "the theme's base.css", []string{got}, "rgb(255, 0, 0) | rgb(0, 0, 8) | rgba(0, 0, 0, 0) | rgb(97, 95, 90) | rgb(0, 0, 10)")
+
+	// A text draws its Markdown in a box of no part: the template's page.css (p, h2) and the theme's base.css (body p,
+	// blockquote) stop at it, while they reach the template's own heading; the theme's markdown.css reaches every
+	// quote, the page's, the note's and the text's.
+	open("themed-text", "template: themed\nlang: en\ntheme: mine\ntext: '> page'\nnote: { text: '> held' }\n"+
+		"words: \"## Words\\n\\nsaid\\n\\n> quoted\"\n", "[data-floe-text] blockquote")
+	got = b.eval(`(() => { const c = (q, p) => getComputedStyle(document.querySelector(q))[p];
+		return [c('[data-floe-text] > p', 'color'), c('[data-floe-text] h2', 'letterSpacing'), c('.banded', 'letterSpacing'),
+			c('[data-floe-text] blockquote', 'backgroundColor'), ...['body > blockquote', '[data-floe-part=note] blockquote',
+			'[data-floe-text] blockquote'].map((q) => c(q, 'letterSpacing'))].join(' | ') })()`)
+	check(t, "a text", []string{got}, "rgb(34, 33, 31) | normal | 5px | rgba(0, 0, 0, 0) | 3px | 3px | 3px")
 
 	// A part's style stops at a part it holds: the note's code is on the surface, the code of the table in it on
 	// floe's base.
