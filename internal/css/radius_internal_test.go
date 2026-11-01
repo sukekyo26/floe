@@ -256,3 +256,25 @@ func TestCornerRoot(t *testing.T) {
 		}
 	}
 }
+
+func TestLengthless(t *testing.T) {
+	t.Parallel()
+
+	for value, want := range map[string]bool{
+		"var(--radius)":                                 true,
+		"calc(var(--radius) - var(--floe-room))":        true,
+		"min(var(--radius-pill), var(--floe-pill-end))": true,
+		"0":                                      true,
+		"var(--a, 1px)":                          false,
+		"var(--a, var(--b))":                     false,
+		"calc(var(--a), var(--b))":               false,
+		"min(var(--radius-pill, 4px), var(--b))": false,
+		"min(var(--radius-pill), 1rem)":          false,
+		"max(var(--a), var(--b))":                false,
+	} {
+		d := declarations([]byte(".a { border-radius: "+value+"; }"), func(p string) bool { return p == "border-radius" })["border-radius"]
+		if got := lengthless(d[0].value); got != want {
+			t.Errorf("%s: lengthless %v, want %v", value, got, want)
+		}
+	}
+}

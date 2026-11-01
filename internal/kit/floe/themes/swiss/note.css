@@ -1,6 +1,6 @@
 /* No ground: its text and faces are those around it (a band's), what it holds too, its mark and title in the face's
    colour in one */
-:scope { background: none; color: inherit; border: 0; border-top: 2px solid var(--fg); }
+:scope { background: none; color: inherit; border: 0; border-top: 2px solid var(--on-face, var(--fg)); }
 :scope > * { --face: inherit; --on-face: inherit; }
 :scope::before { background: none; color: var(--on-face, var(--tone)); font-size: 1rem; font-weight: 900; }
 /* Its red is read on the surface alone: the good one's mark is black */
