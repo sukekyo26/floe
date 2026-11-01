@@ -79,7 +79,7 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 	}
 	parts := readParts(t)
 	// Every part stack takes is drawn in one of every-part's stacks, so that its part.html leaves none out: but text,
-	// which draws its Markdown with no box to tell it by, and the diagram, whose samples are diagram/'s.
+	// which draws its Markdown in a box of no part, and the diagram, whose samples are diagram/'s.
 	inStack := map[string]bool{}
 	for n := range doc.Descendants() {
 		if nodeAttr(n, "data-floe-part") == "stack" {
