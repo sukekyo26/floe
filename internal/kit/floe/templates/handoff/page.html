@@ -9,7 +9,7 @@
 {{- /* A count is counted inside its with: a list left out is nil, which len refuses. Its link goes to an id of the
    page's own, which floe keeps */}}
 <header class="band" data-floe-look="band">
-<div class="column">
+<div class="floe-column">
 <p class="when"><span class="kind" data-floe-part="cell">{{word "kind"}}</span><span class="date">{{.Data.date}}</span>
 {{- if and .Data.from .Data.to}}<span class="hands">{{.Data.from}} → {{.Data.to}}</span>{{else}}{{with or .Data.from .Data.to}}<span class="hands">{{.}}</span>{{end}}{{end}}</p>
 <h1>{{.Title}}</h1>
@@ -24,7 +24,7 @@
 </ul>
 </div>
 </header>
-<main class="column">
+<main class="floe-column">
 {{- with .Data.asks}}
 <section class="asks" data-floe-look="panel"><h2 id="asks">{{word "asks"}}</h2>
 <ol>

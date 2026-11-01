@@ -91,7 +91,7 @@ memo/
 
 `page.css` は、部品の周りのページを並べます（部品の置き場所、ページの幅、ヘッダー）。部品のスタイルとテーマの部品ごとのファイルより下の層に入るので、部品の形は変えません。テーマの `base.css` より上の層です。部品 text の Markdown にも届きません（floe が自分の外枠 `data-floe-text` に描きます）。
 
-- floe は `@scope (:root) to ([data-floe-part] > *)` で包みます。部品の箱までは届いて部品を置けますが、部品の中には届きません。
+- floe は `@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *)` で包みます。部品の箱と text の外枠までは届いて置けますが、その中には届きません。
 - 根は `:scope` です。ページの変数は `:scope` に書きます。`:root` や `html` は scope の外です。
 - どのブロックも閉じない `}` と `@import` は、その行で断ります。Google Fonts のようなスタイルシートは `page.html` の `<link>` で読みます。
 - パレットの変数（`var(--muted)`）で描くと、データファイルが選んだテーマに従います。
@@ -99,14 +99,12 @@ memo/
 - 地や枠を持つページの箱（見た目 panel を借りるものなど）の余白は、floe の部品とテンプレートと同じく `var(--floe-pad-block) var(--floe-pad-inline)`（1.1rem と 1.3rem）にします。見た目 `rows` の行には余白を書きません。`rows` が行の左右にも余白を付けます。
 - 横にスクロールする箱（`overflow-x: auto`）は、`@media screen` の中で、その規則に `contain: inline-size` を書きます。中身の幅で外の grid・flex の項目もページも広げないためです。中身で幅が決まる所（`justify-self: start`、inline-block、自動の幅の表の升、flex の行の `flex-basis: auto` の項目）には置きません。そこでは枠と余白だけの幅に潰れます（[parts.ja.md](parts.ja.md#css-の層と-scope)）。
 - 部品の箱でもある要素への規則（`ul { margin-block: 1rem }`、`figure { … }`）は、部品にも届きます。部品は自分の箱に margin を書かないためです（checklist・links は `ul`、steps・timeline は `ol`、facts・keys・entries・stats は `dl`、code・image・diff・terminal は `figure`、tabs は `form`）。ただし、部品の箱の並びの display・印・余白・項目の間は、floe が決めるので変わりません（[parts.ja.md](parts.ja.md#css-の層と-scope)）。見た目を借りる並びのそれは `page.css` で変わるので、テンプレートが整えられます。
+- floe は、どのページも body の余白を 0 にし、class `floe-column` の要素（`<main class="floe-column">`）を列にしてページを中央にそろえます。列の幅は `--column-width`（テンプレートが置かなければパレットの `--page-width`）で、左右に `--page-pad` をあけます。1 列のページは `page.css` に `:scope { --column-width: var(--text-width); }` を置きます。テーマは `--column-width` を置きません。どちらも `page.css` と同じく部品の箱で止まり、`page.css` がセレクタによらず勝ちます。floe は字の大きさを決めないので、ページの字は読み手のブラウザの大きさになります。
 
-たとえば `report` の `page.css` は、floe のテンプレートがどれも使う列で、ページを中央にそろえます：
+たとえば `report` の `page.css` は、列（`<main class="floe-column">`）の中を並べます：
 
 ```css
-main {
-  max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad);
-  display: grid; gap: 2.5rem;
-}
+main { display: grid; gap: 2.5rem; }
 section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 .lead { color: var(--muted); font-size: 1.05rem; }
 ```
@@ -172,13 +170,13 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | `--shadow` | 影の色の候補。影は、テーマが箱に `--floe-shadow-color` を置いたときだけ描かれる（[parts.ja.md](parts.ja.md#テーマ)） |
 | `--floe-shadow-x`・`-y`・`-blur`・`-spread` | テーマの 1 組の影。px か rem（既定は無し） |
 | `--radius`・`--radius-small`・`--radius-pill` | 角の丸さ。どれも 1 つの長さ。箱（panel・note・code・引用）、箱の中の小さな升（キー・棒・画像・行の中の code）、札（cell・タブの名前。折り返した cell は floe の `--floe-pill-end` までしか丸くならない）。箱の縁から間 `p` だけ内にあって縁に沿う箱は `calc(var(--radius) - p)` |
-| `--font`・`--display`・`--mono` | 本文・見出し・等幅の書体 |
+| `--font`・`--display`・`--mono` | 本文・見出し・等幅の書体。`--mono` は `monospace` の前に書体の名前を置く（ページは字の大きさを決めないので、ブラウザは `monospace` だけの字を 13px から測る） |
 | `--code-bg`・`--code-fg`・`--code-prompt` | コードとターミナルの地（いつも暗い）、その文字、プロンプト |
 | `--code-add`・`--code-del` | diff の足した行と消した行 |
 | `--page-bg` | ページ全体の地。方眼のような模様も（既定は `--bg`） |
 | `--rule` | 節の間のような、ページを横切る線の `border` |
-| `--text-width` | 1 列のページの幅。テンプレートが列の幅をここから決める（`adr`・`runbook` のように）。部品 note の幅にも使う。文そのものは、入っている列か箱の幅まで使う |
-| `--page-width`・`--page-pad` | ページを中央にそろえる列の幅と、その左右の余白。余白は箱の内側なので、列は `max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad)` |
+| `--text-width` | 1 列のページの幅。テンプレートが `--column-width: var(--text-width)` で列をこの幅にする（`adr`・`runbook` のように）。部品 note の幅にも使う。文そのものは、入っている列か箱の幅まで使う |
+| `--page-width`・`--page-pad` | ページを中央にそろえる列（`.floe-column`）の幅（テンプレートが `--column-width` を置かなければ）と、列の箱の内側の左右の余白 |
 
 floe の土台は、ページの根にこれらで地・色・書体を描きます（`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`）。`page.css` は `:scope` でこれを変えられます。自分のテーマも変えられます（[parts.ja.md](parts.ja.md#テーマ)）。印刷でも、どの地も画面のとおりに出ます。
 

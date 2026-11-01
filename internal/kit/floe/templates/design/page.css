@@ -1,10 +1,9 @@
 /* The colours and faces are the theme's palette; the page lays them out: a head, a band of the conclusion, and the
    body beside its contents, each in the column every template centres its page in.
    LIMIT: the body falls to one column under 800px; a width just over it is not looked at */
-body { margin: 0; font-size: 16px; line-height: 1.8; padding-block: 0 4rem; }
-.column { max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+body { line-height: 1.8; padding-block: 0 4rem; }
 .head { padding-block: 2.5rem 1.6rem; border-bottom: var(--rule); }
-.head .column { display: grid; gap: 0.5rem; justify-items: start; }
+.head .floe-column { display: grid; gap: 0.5rem; justify-items: start; }
 h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .byline { display: flex; flex-wrap: wrap; gap: 0 1rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
 .status { border: 2px solid var(--accent); color: var(--accent); font-weight: 800; padding: 0 0.7rem; border-radius: var(--radius-small); }

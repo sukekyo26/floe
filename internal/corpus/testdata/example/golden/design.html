@@ -48,6 +48,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 [data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
+/* What a browser draws in its own monospace stays the page's size: with no font size set on the page, a browser sizes
+   monospace alone from 13px, and the same named twice from the page's */
+kbd, samp, tt { font-family: monospace, monospace; }
 code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
 /* On screen, a box that scrolls sideways tells nothing of its content's width outside (contain: inline-size), so that
    a long line or a wide table scrolls in it and widens no grid or flex item around it, nor the page; every rule writing
@@ -469,15 +472,22 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 }
 </style>
 <style>
+@layer floe.page.defaults {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+body { margin: 0; }
+.floe-column { max-width: calc(var(--column-width, var(--page-width)) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+}
+}
+</style>
+<style>
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: a head, a band of the conclusion, and the
    body beside its contents, each in the column every template centres its page in.
    LIMIT: the body falls to one column under 800px; a width just over it is not looked at */
-body { margin: 0; font-size: 16px; line-height: 1.8; padding-block: 0 4rem; }
-.column { max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+body { line-height: 1.8; padding-block: 0 4rem; }
 .head { padding-block: 2.5rem 1.6rem; border-bottom: var(--rule); }
-.head .column { display: grid; gap: 0.5rem; justify-items: start; }
+.head .floe-column { display: grid; gap: 0.5rem; justify-items: start; }
 h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .byline { display: flex; flex-wrap: wrap; gap: 0 1rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
 .status { border: 2px solid var(--accent); color: var(--accent); font-weight: 800; padding: 0 0.7rem; border-radius: var(--radius-small); }
@@ -510,7 +520,7 @@ aside a { text-decoration: none; }
 </head>
 <body>
 <header class="head">
-<div class="column">
+<div class="floe-column">
 <p class="byline"><span>Platform team</span><span>2030-05-14</span></p>
 <h1 id="send-notifications-through-a-queue">Send notifications through a queue</h1>
 <p class="status">In review</p>
@@ -518,7 +528,7 @@ aside a { text-decoration: none; }
 </div>
 </header>
 <section class="verdict" data-floe-look="band" aria-labelledby="conclusion">
-<div class="column">
+<div class="floe-column">
 <h2 id="conclusion">Conclusion</h2>
 <ol>
 <li><span class="question">Which queue</span><strong class="pick">A table in the database we have</strong><span class="why">It needs no new service to run, and the load is well within what the database takes</span></li>
@@ -526,7 +536,7 @@ aside a { text-decoration: none; }
 </ol>
 </div>
 </section>
-<div class="column body">
+<div class="floe-column body">
 <main>
 <section><h2 id="background">Background</h2><p>Today a notification is sent <strong>inside the web request</strong> that causes it: saving a comment sends its email before the
 page answers. When the mail provider is slow, so is the page, and a provider outage turns into failed saves.</p>

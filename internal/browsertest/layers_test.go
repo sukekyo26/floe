@@ -56,6 +56,12 @@ var layersKit = map[string]string{
 	"templates/rowed/page.css":     "#paged > li { row-gap: 3px; }\n",
 	"templates/rowed/example.yaml": "lang: en\ntemplate: rowed\n",
 	"themes/mine/numbered.css":     ":scope > li { row-gap: 5px; }\n",
+	"templates/column/schema.json": `{"type": "object", "additionalProperties": false}`,
+	"templates/column/page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body>` +
+		`<main class="floe-column"><div data-floe-part="note"><div class="floe-column" id="held">h</div></div></main></body></html>`,
+	"templates/column/page.css":     "main { max-width: 10rem; }\n",
+	"templates/column/example.yaml": "lang: en\ntemplate: column\n",
+	"themes/column/base.css":        "body { margin: 5px; }\n.floe-column { padding-left: 3px; }\n",
 }
 
 // TestUILayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its
@@ -68,7 +74,8 @@ var layersKit = map[string]string{
 // floe's, but does those drawn in its look. floe's base draws the page's ground, colour and face in the theme's,
 // under a template that draws none of them, and the theme the parts in the colours a template sets. Nested, the
 // outer look and the outer part win, as deep as they stand. floe's layout of the rows with a mark (floe.marks) is
-// under the template's page.css and over the looks' files.
+// under the template's page.css and over the looks' files. floe's start of every page (the body's margin, the column
+// .floe-column) is under the template's page.css and over the theme's base.css, and stops at a part's box.
 func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -81,11 +88,19 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.until(ready, "!!document.querySelector("+js(ready)+")")
 	}
 
+	// floe's start of every page, under the template's page.css: the template's main, though its selector is the less
+	// specific, sets the column's width; the theme's base.css sets neither the body's margin nor the column's padding;
+	// a .floe-column in a part's box takes no column.
+	open("column", "template: column\nlang: en\ntheme: column\n", "#held")
+	got := b.eval(`(() => { const m = getComputedStyle(document.querySelector('main')), h = getComputedStyle(document.getElementById('held'));
+		return [getComputedStyle(document.body).marginTop, m.maxWidth, m.paddingLeft, h.maxWidth, h.paddingLeft].join(' | ') })()`)
+	check(t, "column", []string{got}, "0px | 160px | 16px | none | 0px")
+
 	open("layers", "template: layers\nlang: en\nnote: { text: x, tone: warn }\n", "[data-floe-part=note]")
 	// The part's background, the theme's size of the mark (default's --floe-mark, 2.25rem, over the template's), the
 	// template's margin; the template's own paragraph and the note's, in the palette's colour on its ground; the animation
 	// and the face.
-	got := b.eval(`(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n);
+	got = b.eval(`(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n);
 		return [s.backgroundColor, getComputedStyle(n, '::before').width, s.marginTop,
 			getComputedStyle(document.getElementById('own')).color, getComputedStyle(n.querySelector('p')).color,
 			document.querySelector('header').getAnimations()[0]?.animationName,
