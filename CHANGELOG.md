@@ -15,7 +15,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add the diagram part `graph`: write boxes and the edges joining them by
   name, and floe lays them out in ranks (`direction: down` or `right`), orders
   each rank to cross fewer edges and draws each edge at right angles between
-  points of its boxes' sides of its own. An edge's `label` stands beside a
+  points of its boxes' sides of its own, straight where it can: a box a
+  column short of an edge's way widens into the room beside it, and an edge
+  passing ranks turns once where it must leave its column. An edge's `label` stands beside a
   straight run of it, where floe makes room if there is none without bending
   the edge; an edge from a box to itself is a loop out of the side the
   graph's edges do not use. A `group` of its nodes keeps its boxes side by

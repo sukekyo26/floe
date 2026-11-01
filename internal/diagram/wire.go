@@ -7,7 +7,9 @@ import (
 )
 
 // The grid of a channel, the room between two ranks: exits stand at x ≡ 0 and entries at x ≡ 6 (mod column), so
-// that no two links of a group share a run or touch, and runs across stand on tracks a column apart.
+// that no two links of a group share a run or touch, and runs across stand on tracks a column apart. A point pushed
+// off its column may instead be entered at x ≡ 0, at a column no box above stands over and no other link of the
+// channel leaves by (freeColumn).
 const (
 	column  = 12.0
 	inEnd   = 12.0 // how far in from the ends of a side its links stand
@@ -30,6 +32,12 @@ func (gr *group) wire() {
 		// edge meant to enter straight may bend. Choose every exit once all ranks stand, if that comes to matter.
 		for _, u := range gr.ranks[r] {
 			gr.exits(u, pos, true)
+		}
+		lo, hi := gr.extent()
+		for k, v := range gr.ranks[r+1] {
+			if gr.nodes[v].box != nil {
+				gr.widen(gr.ranks[r+1], k, lo, hi)
+			}
 		}
 		for _, v := range gr.ranks[r+1] {
 			gr.entries(v)
@@ -117,7 +125,7 @@ func spread(xs []float64, n int) []float64 {
 }
 
 // side is where links may leave node n (out) or enter it: on a box, 12 in from its ends; a point is entered at its
-// column x and left at x+w (6 to the right when it is entered bent, else the same).
+// column x and left at x+w (6 to the right when it is entered bent at x ≡ 6, else the same).
 func (n gnode) side(out bool) (lo, hi float64) {
 	switch {
 	case n.box != nil:
@@ -178,10 +186,14 @@ func (gr *group) exits(u int, pos []int, keep bool) {
 
 // settle places the points of rank r at the columns their links come down from, so that each edge runs straight
 // through the ranks it passes: a point is a column, and the next point stands a column on, or nodeGap past the
-// boxes between. A point pushed off its column, by the point before or by the boxes between, is entered bent at
-// the first x ≡ 6 it may stand at, and left half a column on, at x ≡ 0 (not half a column before: the column it
-// enters at keeps a column from the one before it). The boxes then stand as near their places as the points let
-// them, nodeGap from them and from one another.
+// boxes between. A point pushed off its column, by the point before, by the boxes between or by a group's mark,
+// stands at the free column nearest to where it may (freeColumn), entered bent and left there; with none, it is
+// entered bent at the first x ≡ 6 it may stand at, and left half a column on, at x ≡ 0 (not half a column before:
+// the column it enters at keeps a column from the one before it). The boxes then stand as near their places as the
+// points let them, nodeGap from them and from one another.
+// LIMIT: a point of a long edge pushes the boxes beside it off their places, and a box pushed so may lack the
+// columns to let its links enter straight; widen gives it back one column at most, where there is room. A point
+// giving way to the boxes made more turns in all, so it does not.
 func (gr *group) settle(r int) {
 	rank := gr.ranks[r]
 	last, right := -1, 0.0 // the last point placed, by index in rank, and the column it leaves at
@@ -190,15 +202,21 @@ func (gr *group) settle(r int) {
 		if !n.settles() {
 			continue
 		}
-		e := gr.links[n.ins[0]].exit
+		in := n.ins[0]
+		e := gr.links[in].exit
 		lo, hi := gr.bounds(r, k, last, right)
-		need := max(e, lo)
-		n.x, n.w = need, 0
-		if need != e {
-			n.x, n.w = onGrid(need-column/2, column, math.Ceil)+column/2, column/2
-		}
-		if n.x+n.w > hi {
-			// Short of a mark of a group's, which does not move: entered bent to the left of its column.
+		n.x, n.w = e, 0
+		switch c, ok := gr.freeColumn(r, in, min(max(e, lo), hi), lo, hi); {
+		case e >= lo && e <= hi:
+		case ok:
+			n.x = c
+		case e < lo:
+			n.x, n.w = onGrid(lo-column/2, column, math.Ceil)+column/2, column/2
+			if n.x+n.w > hi {
+				// Short of a mark of a group's, which does not move: entered bent to the left of its column.
+				n.x = onGrid(hi-column, column, math.Floor) + column/2
+			}
+		default: // short of a mark of a group's: entered bent to the left of its column
 			n.x, n.w = onGrid(hi-column, column, math.Floor)+column/2, column/2
 		}
 		last, right = k, n.x+n.w
@@ -214,6 +232,77 @@ func (gr *group) settle(r int) {
 	for k := len(rank) - 2; k >= 0; k-- {
 		if n := &gr.nodes[rank[k]]; n.box != nil {
 			n.x = min(n.x, onGrid(gr.nodes[rank[k+1]].x-gr.gap(rank[k], rank[k+1])-n.w, 6, math.Floor))
+		}
+	}
+}
+
+// freeLimit is how far from where it may stand a point looks for a free column: further, it would stand far from
+// its edge, lengthening the edge and pushing what stands after it.
+const freeLimit = 4 * column
+
+// freeColumn is the column at x ≡ 0 within lo and hi nearest to t (left of two as near), freeLimit from it at most,
+// that no box of rank r−1 stands over, past 12 in from its ends, and no link of the channel above rank r but in
+// leaves by: exits chooses a box's exits to its boxes again after settle, anywhere along its side.
+func (gr *group) freeColumn(r, in int, t, lo, hi float64) (float64, bool) {
+	start := onGrid(t, column, math.Round)
+	for d := 0.0; d <= freeLimit; d += column {
+		for _, c := range []float64{start - d, start + d} {
+			if c >= lo && c <= hi && !gr.taken(r, in, c) {
+				return c, true
+			}
+		}
+	}
+	return 0, false
+}
+
+// taken reports whether column c is under the side of a box of rank r−1, or where a link of the channel below it
+// but in leaves.
+func (gr *group) taken(r, in int, c float64) bool {
+	for _, u := range gr.ranks[r-1] {
+		n := gr.nodes[u]
+		if lo, hi := n.side(true); n.box != nil && c >= lo && c <= hi {
+			return true
+		}
+		for _, l := range n.outs {
+			if l != in && gr.links[l].exit == c {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// extent is how far the group's nodes reach across, as they stand.
+func (gr *group) extent() (lo, hi float64) {
+	lo, hi = math.Inf(1), math.Inf(-1)
+	for _, n := range gr.nodes {
+		lo, hi = min(lo, n.x), max(hi, n.x+n.w)
+	}
+	return lo, hi
+}
+
+// widen widens the box at k in rank, by as little as lets each link into it whose exit stands a column or less past
+// an end of its side enter straight: its right to the exit and inEnd (its left to the exit less inEnd). It widens
+// only into room: a gap from the node beside it, or, with none, within the group's extent lo..hi, so that nothing
+// else moves. It widens towards its loops too: they are drawn from the box as widened.
+func (gr *group) widen(rank []int, k int, lo, hi float64) {
+	n := &gr.nodes[rank[k]]
+	if k > 0 {
+		o := gr.nodes[rank[k-1]]
+		lo = o.x + o.w + gr.gap(rank[k-1], rank[k])
+	}
+	if k+1 < len(rank) {
+		hi = gr.nodes[rank[k+1]].x - gr.gap(rank[k], rank[k+1])
+	}
+	for _, l := range n.ins {
+		e := gr.links[l].exit
+		slo, shi := n.side(false)
+		switch {
+		case e > shi && e <= shi+column && e+inEnd <= hi:
+			n.w = e + inEnd - n.x
+		case e < slo && e >= slo-column && e-inEnd >= lo:
+			n.w += n.x - (e - inEnd)
+			n.x = e - inEnd
 		}
 	}
 }
@@ -289,6 +378,11 @@ func (gr *group) shiftRight() {
 // left) bends, joining the gap to the next, until every gap holds its links.
 func (gr *group) entries(v int) {
 	n := gr.nodes[v]
+	if n.settles() { // its one link enters where settle put it
+		l := &gr.links[n.ins[0]]
+		l.entry, l.straight = n.x, l.exit == n.x
+		return
+	}
 	ins := slices.Clone(n.ins)
 	slices.SortStableFunc(ins, func(a, b int) int {
 		return cmp.Or(cmp.Compare(gr.links[a].exit, gr.links[b].exit), gr.links[a].edge-gr.links[b].edge)
