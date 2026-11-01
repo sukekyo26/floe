@@ -122,8 +122,6 @@ func (n gnode) side(out bool) (lo, hi float64) {
 	switch {
 	case n.box != nil:
 		return n.x + inEnd, n.x + n.w - inEnd
-	case n.kind == kindOut:
-		return n.x, n.x
 	case out:
 		return n.x + n.w, n.x + n.w
 	}
