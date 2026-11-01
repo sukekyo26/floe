@@ -16,13 +16,17 @@ const bandPillsHTML = `<span data-floe-part="cell">plain</span> <span data-floe-
 // cards), and a note, one it places itself holding a link and code, a table and code of floe's and Markdown, each when the data file has it.
 var bandKit = map[string]string{
 	"templates/mine/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +
-		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{if .Data.note}}<div data-floe-part=\"note\"><p>A borrowed note, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>{{end}}{{.Data.note}}{{.Data.text}}{{.Data.words}}{{.Data.details}}{{.Data.options}}<div data-floe-look=\"cards\"><div class=\"card\" data-floe-look=\"panel\"><p>A card of the template's own.</p></div></div>{{.Data.table}}{{.Data.code}}</header>\n</body></html>\n",
+		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{if .Data.note}}<div data-floe-part=\"note\"><p>A borrowed note, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>{{end}}{{.Data.note}}{{.Data.text}}{{.Data.words}}{{.Data.details}}{{.Data.options}}<div data-floe-look=\"cards\"><div class=\"card\" data-floe-look=\"panel\"><p>A card of the template's own.</p></div></div>" +
+		"<div data-floe-look=\"panel\"><p>A panel of the template's own, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>" +
+		"<div data-floe-look=\"table\"><table><tr><th>A <a href=\"https://example.com/\">table</a></th></tr><tr><td>of its own, <code>code</code></td></tr></table></div>" +
+		"{{.Data.table}}{{.Data.code}}{{.Data.progress}}{{.Data.tree}}{{.Data.timeline}}</header>\n</body></html>\n",
 	"templates/mine/page.css": "header { display: grid; gap: 1rem; padding: 2rem; }\n",
 	"templates/mine/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"note": {"$ref": "floe:///parts/note.json"}, "text": {"type": "string", "format": "markdown"},
 "table": {"$ref": "floe:///parts/table.json"}, "code": {"$ref": "floe:///parts/code.json"},
 "words": {"$ref": "floe:///parts/text.json"}, "details": {"$ref": "floe:///parts/details.json"},
-"options": {"$ref": "floe:///parts/options.json"}}}`,
+"options": {"$ref": "floe:///parts/options.json"}, "progress": {"$ref": "floe:///parts/progress.json"},
+"tree": {"$ref": "floe:///parts/tree.json"}, "timeline": {"$ref": "floe:///parts/timeline.json"}}}`,
 	"templates/mine/example.yaml": "lang: en\ntemplate: mine\n",
 }
 
@@ -36,13 +40,21 @@ var bandText = "lang: en\ntemplate: mine\ntitle: Band\ntext: |\n  A [link](https
 var bandHeld = "details: { title: Held, open: true, parts: [{ text: \"## Held\\n\\nIn details.\" }] }\n" +
 	"options: [{ title: Card, text: \"A card's text.\" }]\n"
 
-// bandParts is parts in a band: a note with a link and a line's code, a table with a link in its heading and as wide
+// bandParts is parts in a band: a note with a title, a link and a line's code, a table with a link in its heading and as wide
 // as to scroll, and code as wide as to scroll.
 var bandParts = bandText + bandHeld +
-	"note: { text: \"A note with [a link](https://example.com/) and `code`.\" }\n" +
+	"note: { title: Said, text: \"A note with [a link](https://example.com/) and `code`.\" }\n" +
 	"table:\n  columns: [{ title: \"Name [t](https://example.com/)\" }" + strings.Repeat(", { title: Wide }", 16) + "]\n" +
 	"  rows: [[a" + strings.Repeat(", b", 16) + "]]\n" +
 	"code: { file: a.conf, text: \"wide" + strings.Repeat(" wide", 60) + "\\n\" }\n"
+
+// bandColours is parts in a band that draw some of their text in colours of their own (muted, a tone, the page's
+// text colour): progress's label and count, a tree's note and change, a timeline's date.
+// LIMIT: on a theme whose panel has no ground (swiss), such text stays in its colour on the band's, where it cannot be
+// read (S174); the test leaves them out of swiss's band.
+var bandColours = "progress: [{ label: Copied, done: 40, of: 100 }]\n" +
+	"tree: [{ path: pages/, note: what export writes }, { path: pages/home.md, change: changed }]\n" +
+	"timeline: [{ date: '03-01', title: Started, text: The copy began. }]\n"
 
 // measureBand returns a line for each thing the band draws wrong: a part in it not in the page's text colour, a
 // line's code without its frame (a shadow every code has, seen only in a face), or code in a fenced block with one.
@@ -52,8 +64,11 @@ const measureBand = `(() => {` + colours + `
   const probe = document.body.appendChild(document.createElement('p'));
   const want = getComputedStyle(probe).color;
   probe.remove();
-  const note = document.querySelector('[data-floe-part="note"]');
-  if (note && getComputedStyle(note).color !== want) out.push('note: colour ' + getComputedStyle(note).color + ', want ' + want);
+  // A note on a ground of its own is in the page's text colour, one of none (swiss's) in the band's.
+  for (const note of document.querySelectorAll('[data-floe-part="note"]')) {
+    const s = getComputedStyle(note), on = rgba(s.backgroundColor)[3] > 0 ? want : getComputedStyle(document.querySelector('header')).color;
+    if (s.color !== on) out.push('note: colour ' + s.color + ', want ' + on);
+  }
   const line = document.querySelector('header > p > code');
   if (!framed(line)) out.push('a line\'s code: no frame, ' + getComputedStyle(line).boxShadow);
   const fenced = document.querySelector('header > pre > code');
@@ -79,12 +94,12 @@ const measureBand = `(() => {` + colours + `
   return out.join('\n');
 })()`
 
-// TestUIBand draws Markdown and pills a template places in the look band in every theme, and other parts in it in the default one: the
-// parts are in the page's text colour, not the band's, only a line's code is framed, and every text and focus ring in
-// the band reads on the ground under it; a text there is in the band's text colour, its heading unmarked, as measureContrast and measureRings measure, pills of a theme that gives
-// them no ground too, in the band's text colour. The other parts are in the default theme, as a part with no ground
-// of its own (swiss's note) is drawn on the band's colour, which band's LIMIT tells, and in aurora, whose glass would
-// let the band through but for its band.css.
+// TestUIBand draws Markdown, pills and parts a template places in the look band, in every theme: a part on a ground
+// of its own is in the page's text colour and one of none (swiss's note) in the band's, only a line's code is framed,
+// and every text and focus ring in the band reads on the ground under it, as measureContrast and measureRings measure;
+// a text there is in the band's text colour, its heading unmarked, pills of a theme that gives them no ground too. The
+// template places a panel and a table of its own too, as looks on elements that are no part's box.
+// Aurora's glass would let the band through but for its band.css.
 func TestUIBand(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	s.own(t, bandKit)
@@ -93,9 +108,13 @@ func TestUIBand(t *testing.T) { //nolint:paralleltest // the browser tests share
 		t.Fatal(err)
 	}
 	_, _, themes, _ := k.Names()
-	pages := map[string]string{"parts": bandParts, "parts-aurora": bandParts + "theme: aurora\n", "held-retro": bandText + bandHeld + "theme: retro\n"}
+	pages := map[string]string{}
 	for _, theme := range themes {
-		pages["text-"+theme] = bandText + "theme: " + theme + "\n"
+		page := bandParts + "theme: " + theme + "\n"
+		if theme != "swiss" {
+			page += bandColours
+		}
+		pages["parts-"+theme] = page
 	}
 	for slug, page := range pages {
 		s.floe(t, "publish", s.write(t, slug+".yaml", page), "--slug", slug)

@@ -1,7 +1,8 @@
 /* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
-   fixed-width text too) */
+   fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
+   --floe-pill-wrap: normal; one that wraps is a label of round corners (base.css's --floe-pill-end) */
 :scope {
   display: inline-block; font-family: var(--font); font-size: 0.78rem; font-weight: 600; letter-spacing: normal; line-height: 1.6;
-  padding: 0.1em 0.75em; border-radius: var(--radius-pill); white-space: nowrap;
+  padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);
   background: var(--tone-soft); color: var(--tone);
 }

@@ -61,7 +61,8 @@ var layersKit = map[string]string{
 // TestUILayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its
 // selectors are the more specific, loses to the part's style and to the theme's style of the part, and still styles
 // what neither of them does, such as where a part stands. It reaches the part's element but not what the part holds,
-// whose colour it gives by inheritance alone. Its @keyframes and @font-face, in floe's @scope, work. The theme's
+// whose colour it gives by inheritance alone, to a part of no ground of its own: one that paints its ground (a note)
+// sets its text's colour with it, the palette's. Its @keyframes and @font-face, in floe's @scope, work. The theme's
 // base.css is under the template's page.css and the looks, and reaches the page but not what a part holds. A part's
 // style stops at a part it holds. floe's theme does not style a part of one's own that took the place of
 // floe's, but does those drawn in its look. floe's base draws the page's ground, colour and face in the theme's,
@@ -82,13 +83,14 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 
 	open("layers", "template: layers\nlang: en\nnote: { text: x, tone: warn }\n", "[data-floe-part=note]")
 	// The part's background, the theme's size of the mark (default's --floe-mark, 2.25rem, over the template's), the
-	// template's margin; the template's own paragraph and the note's; the animation and the face.
+	// template's margin; the template's own paragraph and the note's, in the palette's colour on its ground; the animation
+	// and the face.
 	got := b.eval(`(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n);
 		return [s.backgroundColor, getComputedStyle(n, '::before').width, s.marginTop,
 			getComputedStyle(document.getElementById('own')).color, getComputedStyle(n.querySelector('p')).color,
 			document.querySelector('header').getAnimations()[0]?.animationName,
 			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`)
-	check(t, "layers", []string{got}, "rgb(246, 232, 210) | 36px | 7px | rgb(255, 0, 0) | rgb(0, 0, 2) | held | true")
+	check(t, "layers", []string{got}, "rgb(246, 232, 210) | 36px | 7px | rgb(255, 0, 0) | rgb(34, 33, 31) | held | true")
 	// The template's own element that takes the panel's look has it under the template's CSS, which adjusts it by the
 	// layer, though it would lose by its selector (section), the less specific: its background, the corners of
 	// default's panel.
