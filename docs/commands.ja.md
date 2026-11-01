@@ -170,7 +170,7 @@ floe のものか自分のものの、テンプレート・部品（見た目と
 | 部品 | 借りる見た目 | `schema.json`・`checks.yaml`・`part.yaml`・`part.html`・`part.css`・`words.yaml`。借りる見た目の CSS は、その見た目のもので、`floe part show panel` が出す |
 | 見た目 | 借りる見た目 | `part.yaml`・`part.css` |
 | 共有の schema | — | `<名前>.json` |
-| テーマ | — | `palette.css`・`base.css`、その後に部品か見た目ごとの CSS を名前の順で |
+| テーマ | — | `palette.css`・`base.css`・`markdown.css`、その後に部品か見た目ごとの CSS を名前の順で |
 
 ---
 
