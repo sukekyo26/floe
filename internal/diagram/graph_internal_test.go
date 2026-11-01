@@ -356,9 +356,6 @@ func graphFault(g *graph) string {
 // laneFault is what is wrong with the lanes of g laid out as l, or "": a lane not as long as the one written before
 // it, from the same place along the ranks, or not after it, nodeGap apart.
 func laneFault(g *graph, l *layout) string {
-	if !g.Lanes {
-		return ""
-	}
 	_, clusters, _ := flatten(g, "#")
 	frames := map[string]rect{}
 	for _, f := range l.frames {
@@ -370,7 +367,7 @@ func laneFault(g *graph, l *layout) string {
 	}
 	var last *rect
 	for _, c := range clusters {
-		if c.parent >= 0 {
+		if !c.lane {
 			continue
 		}
 		f := frames["#/parts/0/graph"+strings.TrimPrefix(c.at, "#")]
@@ -1374,7 +1371,6 @@ func TestGraphLimit(t *testing.T) {
 	}
 	// 100 lanes of a box each, a chain through them 100 ranks long: 20,000 marks.
 	lanes := graphOf(nil)
-	lanes.Lanes = true
 	for i := range 100 {
 		name := fmt.Sprintf("b%d", i)
 		lanes.Nodes = append(lanes.Nodes, inGroup(graphOf([]string{name}), fmt.Sprintf("l%d", i), "", name).Nodes...)
@@ -1382,6 +1378,7 @@ func TestGraphLimit(t *testing.T) {
 			lanes.Edges = append(lanes.Edges, graphOf(nil, fmt.Sprintf("b%d>%s", i-1, name)).Edges...)
 		}
 	}
+	inLaned(lanes)
 	for _, g := range []*graph{big, exact, two, deep, lanes} {
 		o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // every name is a box's
 		if o.passed > maxPassed {
@@ -2304,15 +2301,22 @@ func inLanes(rnd *rand.Rand, g *graph) {
 	}
 	slices.Sort(cuts)
 	nodes := g.Nodes
-	g.Nodes, g.Lanes = nil, true
+	g.Nodes = nil
 	for i := range n {
 		var t Text
 		if rnd.IntN(2) == 0 {
 			t = Text{"en": strings.Repeat("w", 1+rnd.IntN(12))}
 		}
-		lane := &graphGroup{Name: fmt.Sprintf("lane%d", i), Label: t, Accent: false, Nodes: nodes[cuts[i]:cuts[i+1]]}
-		g.Nodes = append(g.Nodes, graphNode{Box: nil, Group: lane})
+		g.Lanes = append(g.Lanes, graphGroup{Name: fmt.Sprintf("lane%d", i), Label: t, Accent: false, Nodes: nodes[cuts[i]:cuts[i+1]]})
 	}
+}
+
+// inLaned makes the groups at the top of g, as written, its lanes.
+func inLaned(g *graph) {
+	for _, n := range g.Nodes {
+		g.Lanes = append(g.Lanes, *n.Group)
+	}
+	g.Nodes = nil
 }
 
 // A graph's groups keep their boxes side by side in every rank, framed apart from all else: nested, side by side,
@@ -2392,7 +2396,8 @@ func TestGraphLanes(t *testing.T) {
 			}},
 		} {
 			g := c.g()
-			g.Direction, g.Lanes = direction, true
+			g.Direction = direction
+			inLaned(g)
 			if fault := graphFault(g); fault != "" {
 				t.Errorf("%q %s: %s", direction, c.name, fault)
 				continue
