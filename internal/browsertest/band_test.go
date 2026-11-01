@@ -16,17 +16,20 @@ const bandPillsHTML = `<span data-floe-part="cell">plain</span> <span data-floe-
 // itself holding a link and code, a table and code of floe's and Markdown, each when the data file has it.
 var bandKit = map[string]string{
 	"templates/mine/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +
-		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{if .Data.note}}<div data-floe-part=\"note\"><p>A borrowed note, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>{{end}}{{.Data.note}}{{.Data.text}}{{.Data.table}}{{.Data.code}}</header>\n</body></html>\n",
+		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{if .Data.note}}<div data-floe-part=\"note\"><p>A borrowed note, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>{{end}}{{.Data.note}}{{.Data.text}}{{.Data.words}}{{.Data.table}}{{.Data.code}}</header>\n</body></html>\n",
 	"templates/mine/page.css": "header { display: grid; gap: 1rem; padding: 2rem; }\n",
 	"templates/mine/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"note": {"$ref": "floe:///parts/note.json"}, "text": {"type": "string", "format": "markdown"},
-"table": {"$ref": "floe:///parts/table.json"}, "code": {"$ref": "floe:///parts/code.json"}}}`,
+"table": {"$ref": "floe:///parts/table.json"}, "code": {"$ref": "floe:///parts/code.json"},
+"words": {"$ref": "floe:///parts/text.json"}}}`,
 	"templates/mine/example.yaml": "lang: en\ntemplate: mine\n",
 }
 
-// bandText is Markdown in a band: a link, a line's code, a quote holding both, and a fenced block wide enough to scroll.
+// bandText is Markdown in a band: a link, a line's code, a quote holding both, and a fenced block wide enough to scroll;
+// and a part text, a heading over a link and a line's code.
 var bandText = "lang: en\ntemplate: mine\ntitle: Band\ntext: |\n  A [link](https://example.com/) and `inline`.\n\n" +
-	"  > A quote with [a link](https://example.com/) and `code`.\n\n  ```\n  fenced" + strings.Repeat(" wide", 60) + "\n  ```\n"
+	"  > A quote with [a link](https://example.com/) and `code`.\n\n  ```\n  fenced" + strings.Repeat(" wide", 60) + "\n  ```\n" +
+	"words: \"## Said\\n\\nA text with [a link](https://example.com/) and `code`.\"\n"
 
 // bandParts is parts in a band: a note with a link and a line's code, a table with a link in its heading and as wide
 // as to scroll, and code as wide as to scroll.
@@ -50,12 +53,20 @@ const measureBand = `(() => {` + colours + `
   if (!framed(line)) out.push('a line\'s code: no frame, ' + getComputedStyle(line).boxShadow);
   const fenced = document.querySelector('header > pre > code');
   if (framed(fenced)) out.push('fenced code: frame ' + getComputedStyle(fenced).boxShadow);
+  // A text has no ground of its own: its Markdown is in the band's text colour, and its heading takes no mark of the
+  // page's (retro's stripes, which its band.css leaves out).
+  const text = document.querySelector('header > [data-floe-text]');
+  if (text) {
+    const band = getComputedStyle(document.querySelector('header')).color, said = text.querySelector('p');
+    if (getComputedStyle(said).color !== band) out.push('a text: colour ' + getComputedStyle(said).color + ', want the band\'s ' + band);
+    if (getComputedStyle(text.querySelector('h2'), '::after').content !== 'none') out.push('a text\'s heading: a mark after it');
+  }
   return out.join('\n');
 })()`
 
 // TestUIBand draws Markdown and pills a template places in the look band in every theme, and other parts in it in the default one: the
 // parts are in the page's text colour, not the band's, only a line's code is framed, and every text and focus ring in
-// the band reads on the ground under it, as measureContrast and measureRings measure, pills of a theme that gives
+// the band reads on the ground under it; a text there is in the band's text colour, its heading unmarked, as measureContrast and measureRings measure, pills of a theme that gives
 // them no ground too, in the band's text colour. The other parts are in the default theme, as a part with no ground
 // of its own (swiss's note) is drawn on the band's colour, which band's LIMIT tells, and in aurora, whose glass would
 // let the band through but for its band.css.

@@ -8,7 +8,7 @@ import (
 
 // wrapPage holds a path and a URL in options, which have no place to break a line, words beside narrow
 // columns (keys' text beside its keycaps, the language of code and the counts of a diff beside a long file
-// name), a path in a table and in a tree's note, which scroll instead, and entries with a long URL for a title, a
+// name), a path in a table, in a tree's note and in a text's Markdown table and code, which scroll instead, and entries with a long URL for a title, a
 // long path, a long pill and a long line of code in its text.
 const wrapPage = `template: report
 lang: en
@@ -27,6 +27,12 @@ sections:
           columns: [{ title: file }, { title: what }]
           rows:
             - ['` + "`internal/kit/floe/parts/findings/part_internal_test.go`" + `', a test of the findings]
+      - text: |
+          | file | what | where | when | who |
+          | --- | --- | --- | --- | --- |
+          | internal/kit/floe/parts/findings/part_internal_test.go | a test of the findings | in the kit | on Sunday | the team |
+
+              internal/kit/floe/parts/findings/part_internal_test.go internal/kit/floe/parts/findings/part.css
       - tree:
           - { path: internal/kit/floe/parts/, note: internal/kit/floe/parts/findings/part_internal_test.go }
       - entries:

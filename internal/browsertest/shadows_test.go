@@ -8,13 +8,16 @@ import (
 	"testing"
 )
 
-// shadowsExtra is a section added to every-part: panels one after another in a note's box, between its text, and
-// cards of html.
+// shadowsExtra is a section added to every-part: panels one after another in a note's box, between its text, cards
+// of html, and quotes at the end of a note and of an answer, where a theme's quote casts its shadow out of the part.
 const shadowsExtra = `  - heading: Nested boxes
     parts:
       - html: |
           <div data-floe-part="note"><p>Text before</p><div data-floe-look="panel"><p>A panel in a note</p></div><div data-floe-look="panel"><p>Another</p></div><p>Text after</p></div>
           <div data-floe-look="cards"><div class="card" data-floe-look="panel">One</div><div class="card" data-floe-look="panel">Two</div></div>
+      - note: { text: "Text before.\n\n> A quote at the end of a note." }
+      - faq:
+          - { q: A question?, a: "An answer.\n\n> A quote at the end of an answer.", open: true }
 `
 
 // shadowsMore is a section of a template's more, its parts one after another at the least room between them, and an
@@ -29,7 +32,9 @@ const shadowsMore = `  - heading: Close
 `
 
 // shadowsKit is a theme of one's own whose shadow reaches --floe-room on every side of its panels, code, notes and
-// quotes.
+// quotes on the page (base.css).
+// LIMIT: a quote's shadow in a part (markdown.css) is not measured at --floe-room: a part's Markdown flow is spaced
+// under it (S164), and so large a shadow meets the next paragraph; floe's themes' quotes in parts are measured.
 var shadowsKit = map[string]string{
 	"themes/edge/palette.css": ":root { --floe-shadow-blur: 12px; }\n",
 	"themes/edge/panel.css":   ":scope { --floe-shadow-color: rgb(0 0 0 / 0.4); }\n",
