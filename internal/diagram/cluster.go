@@ -35,53 +35,55 @@ type cluster struct {
 // is -1): a node a group or the graph holds, or an end of an edge.
 type gref struct{ box, cl int }
 
-// flatten reads g's nodes, as written, depth first on a stack of its own: its boxes and groups, and the nodes at its
-// top.
+// flatten reads g's nodes, or its lanes, as written, depth first on a stack of its own: its boxes and groups, and the
+// nodes at its top.
 func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []gref) {
 	type level struct {
 		nodes []graphNode
 		at    string
 		cl    int
 		next  int
-		lanes bool // its nodes are g's lanes, each at at/lanes/i
 	}
-	root := level{nodes: g.Nodes, at: at, cl: -1, next: 0, lanes: len(g.Lanes) > 0}
-	if root.lanes {
-		root.nodes = make([]graphNode, len(g.Lanes))
-		for i := range g.Lanes {
-			root.nodes[i] = graphNode{Box: nil, Group: &g.Lanes[i]}
-		}
-	}
-	stack := []level{root}
-	for len(stack) > 0 {
-		lv := &stack[len(stack)-1]
-		if lv.next == len(lv.nodes) {
-			stack = stack[:len(stack)-1]
-			continue
-		}
-		n, nat, cl := lv.nodes[lv.next], lv.at+"/nodes/"+strconv.Itoa(lv.next), lv.cl
-		gat := nat + "/group"
-		if lv.lanes {
-			gat = lv.at + "/lanes/" + strconv.Itoa(lv.next)
-		}
-		lv.next++
-		var c gref
-		if n.Box != nil {
-			c = gref{box: len(boxes), cl: -1}
-			boxes = append(boxes, gbox{box: n.Box, at: nat + "/box", cl: cl})
-			for p := cl; p >= 0; p = clusters[p].parent {
-				clusters[p].boxes = append(clusters[p].boxes, c.box)
-			}
-		} else {
-			c = gref{box: -1, cl: len(clusters)}
-			clusters = append(clusters, cluster{g: n.Group, at: gat, parent: cl, lane: lv.lanes, boxes: nil, kids: nil})
-			stack = append(stack, level{nodes: n.Group.Nodes, at: gat, cl: c.cl, next: 0, lanes: false})
-		}
+	add := func(c gref, cl int) {
 		if cl < 0 {
 			top = append(top, c)
 		} else {
 			clusters[cl].kids = append(clusters[cl].kids, c)
 		}
+	}
+	walk := func(nodes []graphNode, at string, cl int) {
+		stack := []level{{nodes: nodes, at: at, cl: cl, next: 0}}
+		for len(stack) > 0 {
+			lv := &stack[len(stack)-1]
+			if lv.next == len(lv.nodes) {
+				stack = stack[:len(stack)-1]
+				continue
+			}
+			n, nat, cl := lv.nodes[lv.next], lv.at+"/nodes/"+strconv.Itoa(lv.next), lv.cl
+			lv.next++
+			var c gref
+			if n.Box != nil {
+				c = gref{box: len(boxes), cl: -1}
+				boxes = append(boxes, gbox{box: n.Box, at: nat + "/box", cl: cl})
+				for p := cl; p >= 0; p = clusters[p].parent {
+					clusters[p].boxes = append(clusters[p].boxes, c.box)
+				}
+			} else {
+				c = gref{box: -1, cl: len(clusters)}
+				clusters = append(clusters, cluster{g: n.Group, at: nat + "/group", parent: cl, lane: false, boxes: nil, kids: nil})
+				stack = append(stack, level{nodes: n.Group.Nodes, at: nat + "/group", cl: c.cl, next: 0})
+			}
+			add(c, cl)
+		}
+	}
+	if len(g.Lanes) == 0 {
+		walk(g.Nodes, at, -1)
+	}
+	for i := range g.Lanes {
+		lat, c := at+"/lanes/"+strconv.Itoa(i), gref{box: -1, cl: len(clusters)}
+		clusters = append(clusters, cluster{g: &g.Lanes[i], at: lat, parent: -1, lane: true, boxes: nil, kids: nil})
+		add(c, -1)
+		walk(g.Lanes[i].Nodes, lat, c.cl)
 	}
 	return boxes, clusters, top
 }

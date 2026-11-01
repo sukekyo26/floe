@@ -17,5 +17,6 @@ sections:
                   - name: l1
                     nodes:
                       - box: { name: a, rows: [B] }
+                      - box: { name: c, rows: [C] }
                 edges:
-                  - { from: a, to: l1 }
+                  - { from: c, to: l1 }
