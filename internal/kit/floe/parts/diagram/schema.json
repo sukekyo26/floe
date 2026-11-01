@@ -311,7 +311,7 @@
     },
     "graphEdge": {
       "type": "object",
-      "description": "An edge from a box of the graph to a box of the graph, by name",
+      "description": "An edge from a box of the graph to a box of the graph, by name; from and to the same box, a loop out of the side the graph's edges do not use",
       "required": ["from", "to"],
       "additionalProperties": false,
       "properties": {
