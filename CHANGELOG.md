@@ -287,6 +287,16 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change a table's head, the tab picked and code's heading to be painted by their parts from variables a theme sets,
+  in place of rules for their selectors, the state picked and print: `--table-head-bg`, `--table-head-fg`,
+  `--tabs-picked-bg`, `--tabs-picked-fg`, `--tabs-picked-ring`, `--code-head-bg`, `--code-head-fg`, `--code-head-add`
+  and `--code-head-del` (a diff's counts on code's heading), beside `--table-rule` and `--code-ground`. A terminal's
+  heading is faded by its colour, not its opacity: its ground and rule are a little stronger in every theme but
+  brutal, and a theme of your own that writes the heading's colour by a rule draws a terminal's at that colour,
+  not fainter. A shadow a theme of your own gives every tab title is not drawn on the tab picked, unless set as
+  `--tabs-picked-ring`. brutal's tab titles are 2px smaller on every side, and the tab picked holds its text 2px
+  nearer its black frame: the frame is drawn within it, not as a border every tab kept room for. notebook's ring of
+  focus on a tab not picked has the hand-drawn corners of the tab picked, not an oval.
 - Change the padding of a box among parts to one pair, 1.1rem above and below and 1.3rem at the sides, in every
   theme: cards (options', stats' and decision's from 1.15rem above and below; links' from 0.9rem and 1.1rem at the
   left), bars, tree (default's white box within its frame too), note (editorial's too), details, and the boxes of

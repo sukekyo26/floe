@@ -1,1 +1,2 @@
 :scope { --floe-shadow-color: var(--brutal-pink); }
+:scope figcaption { color: var(--code-head-fg); }

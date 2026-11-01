@@ -1,1 +1,2 @@
-:scope figcaption { background: color-mix(in srgb, var(--code-fg) 7%, transparent); font-weight: 600; }
+:scope { --code-head-bg: color-mix(in srgb, var(--code-fg) 7%, transparent); }
+:scope figcaption { font-weight: 600; }

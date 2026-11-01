@@ -1,5 +1,5 @@
-:scope { border: 0; --table-rule: none; }
-:scope thead th { background: none; color: var(--on-face, var(--fg)); font-weight: 800; border-bottom: 2px solid var(--on-face, var(--fg)); }
+:scope { border: 0; --table-rule: none; --table-head-bg: none; --table-head-fg: var(--on-face, var(--fg)); }
+:scope thead th { border-bottom: 2px solid var(--on-face, var(--fg)); font-weight: 800; }
 :scope tbody td { border-bottom: 1px solid var(--on-face, var(--fg)); }
 :scope :is(th, td):first-child { padding-left: 0; }
 :scope td.num { font-size: 1.35rem; font-weight: 300; }
