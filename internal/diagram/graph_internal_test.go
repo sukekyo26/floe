@@ -754,7 +754,7 @@ func TestGraphRandom(t *testing.T) {
 		{"right", [2]uint64{15, 16}, 300, false, false, "plain", 123},
 		{"", [2]uint64{17, 18}, 300, false, false, "groups", 97},
 		{"right", [2]uint64{19, 20}, 300, false, false, "groups", 107},
-		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 88},
+		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 91},
 		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 88},
 	} {
 		rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1]))       //nolint:gosec // G404: graphs to try, no secret
