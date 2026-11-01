@@ -48,6 +48,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 [data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
+/* What a browser draws in its own monospace stays the page's size: with no font size set on the page, a browser sizes
+   monospace alone from 13px, and the same named twice from the page's */
+kbd, samp, tt { font-family: monospace, monospace; }
 code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
 /* On screen, a box that scrolls sideways tells nothing of its content's width outside (contain: inline-size), so that
    a long line or a wide table scrolls in it and widens no grid or flex item around it, nor the page; every rule writing
@@ -228,13 +231,21 @@ blockquote { background: var(--surface); border: 0; border-radius: var(--radius)
 }
 </style>
 <style>
+@layer floe.page.defaults {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+body { margin: 0; }
+.floe-column { max-width: calc(var(--column-width, var(--page-width)) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+}
+}
+</style>
+<style>
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: one record on a sheet, the panel of the
    theme, in a column as wide as prose.
    LIMIT: the consequences sit side by side while each has 14rem; a width where they wrap is not looked at */
-body { margin: 0; padding-block: 2.5rem 4rem; font-size: 16px; line-height: 1.85; }
-.column { max-width: calc(var(--text-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+body { padding-block: 2.5rem 4rem; line-height: 1.85; }
+:scope { --column-width: var(--text-width); }
 article { padding: clamp(1.25rem, 5vw, 3rem); display: grid; gap: 1.8rem; }
 header { display: grid; gap: 0.4rem; justify-items: start; border-bottom: 3px double var(--line); padding-bottom: 1.4rem; }
 .kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; gap: 0.8rem; }
@@ -254,7 +265,7 @@ h2 { font-size: 1.1rem; }
 </style>
 </head>
 <body>
-<div class="column">
+<div class="floe-column">
 <article data-floe-look="panel">
 <header>
 <p class="kind">Decision record</p>
