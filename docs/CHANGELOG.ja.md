@@ -207,6 +207,14 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：表の頭、選んだタブ、code の頭を、テーマがセレクタ・選んだ状態・印刷の規則を書いて塗るのでなく、テーマが置く変数から
+  部品が塗るようにした：`--table-head-bg`・`--table-head-fg`・`--tabs-picked-bg`・`--tabs-picked-fg`・`--tabs-picked-ring`・
+  `--code-head-bg`・`--code-head-fg`・`--code-head-add`・`--code-head-del`（code の頭の上の diff の数）。今ある `--table-rule`・
+  `--code-ground` と並ぶ。terminal の頭は opacity でなく字の色で薄める：brutal のほかのテーマで、頭の地と下の線が少し濃くなり、
+  頭の字の色を規則で書く自分のテーマでは、terminal の頭もその色のまま（薄めない）になる。自分のテーマが全部のタブの名前に
+  付けた影は、選んだタブの上では描かれない（`--tabs-picked-ring` に置けば描かれる）。brutal のタブの名前は上下左右 2px ずつ
+  小さくなり、選んだタブの字と黒い枠の間も 2px ずつ狭くなる（枠を、全部のタブが場所を取る枠線でなく、内側に描く）。notebook の
+  選んでいないタブのフォーカスの輪が、楕円でなく、選んだタブと同じ手書きの角になる。
 - 変更：部品の間に置く箱の余白を、どのテーマでも上下 1.1rem・左右 1.3rem の 1 組にそろえた。カード（options・stats・
   decision は上下 1.15rem から、links は上下 0.9rem・左 1.1rem から）、bars、tree（default の外枠の中の白い箱も）、
   note（editorial も）、details、design・runbook・handoff の箱。見た目 `rows` は行の左右にも 1.3rem の余白を付ける
