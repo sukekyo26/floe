@@ -462,6 +462,37 @@ func frameStart(g *graph, l *layout) string {
 	return ""
 }
 
+// freeFault is a point of gr entered bent at a column of its own (x ≡ 0) that a box above stands over or another
+// link of its channel leaves by, or "".
+func freeFault(gr *group) string {
+	for r := 1; r < len(gr.ranks); r++ {
+		for _, v := range gr.ranks[r] {
+			n := gr.nodes[v]
+			if !n.settles() || n.w != 0 || gr.links[n.ins[0]].straight {
+				continue
+			}
+			for _, u := range gr.ranks[r-1] {
+				o := gr.nodes[u]
+				if o.box != nil && n.x >= o.x+inEnd && n.x <= o.x+o.w-inEnd {
+					return fmt.Sprintf("a point at its own column %v under box %s %v..%v", n.x, o.box.Name, o.x, o.x+o.w)
+				}
+				for _, l := range o.outs {
+					if l != n.ins[0] && gr.links[l].exit == n.x {
+						return fmt.Sprintf("a point at its own column %v where link %d leaves", n.x, l)
+					}
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// bentAt reports whether point n stands as one entered bent does: at a column of its own (x ≡ 0, leaving where it
+// enters), or entered at x ≡ 6 and left half a column on.
+func bentAt(n gnode) bool {
+	return n.w == 0 && math.Mod(n.x, column) == 0 || n.w == column/2 && math.Mod(n.x, column) == column/2
+}
+
 // groupFault is what is wrong with a group as wired, or "": a box too narrow for its links, a point off the grid
 // (left at x ≡ 0, entered at x ≡ 6 or straight), two nodes of a rank too close (boxes nodeGap from boxes and points,
 // points a column from points), or a cycle in a channel's track constraints.
@@ -472,9 +503,16 @@ func groupFault(gr *group) string {
 		}
 	}
 	for _, l := range gr.links {
-		if math.Mod(l.exit, column) != 0 || !l.straight && math.Mod(l.entry, column) != column/2 || l.straight != (l.entry == l.exit) {
+		// A bent link enters a box at x ≡ 6, and a point at x ≡ 6 or at a column of its own, x ≡ 0.
+		bentOff := !l.straight && math.Mod(l.entry, column) != column/2 && (!gr.nodes[l.to].settles() || math.Mod(l.entry, column) != 0)
+		if math.Mod(l.exit, column) != 0 || bentOff || l.straight != (l.entry == l.exit) {
 			return fmt.Sprintf("a link off the grid: exit %v, entry %v, straight %v", l.exit, l.entry, l.straight)
 		}
+	}
+	// A point entered bent at a column of its own stands under no box above, past 12 in from its ends, and where no
+	// other link of the channel leaves.
+	if s := freeFault(gr); s != "" {
+		return s
 	}
 	// A point stands at its link's column, a column past what stands before it, or nodeGap past boxes between;
 	// only one pushed off it is entered bent.
@@ -487,7 +525,7 @@ func groupFault(gr *group) string {
 			}
 			e := gr.links[n.ins[0]].exit
 			if len(gr.cls) > 0 { // a mark of a group's stops it short of its column, entered bent either way
-				if n.x != e && (n.w != column/2 || math.Mod(n.x, column) != column/2) {
+				if n.x != e && !bentAt(n) {
 					return fmt.Sprintf("a point off its link's column %v not entered bent: column %v", e, n.x)
 				}
 				last = k
@@ -506,7 +544,7 @@ func groupFault(gr *group) string {
 			switch {
 			case e >= room && (n.x != e || n.w != 0):
 				return fmt.Sprintf("a point off its link's column %v with room: column %v, leaving %v on", e, n.x, n.w)
-			case e < room && (n.w != column/2 || math.Mod(n.x, column) != column/2):
+			case e < room && (!bentAt(n) || n.x < room):
 				return fmt.Sprintf("a point pushed off its link's column %v not entered bent: column %v", e, n.x)
 			}
 			last = k
@@ -1334,6 +1372,80 @@ func TestGraphTold(t *testing.T) {
 	}
 }
 
+// A point pushed off its column stands at the free column nearest to where it may, freeLimit from it at most: not
+// under the side of a box above, nor where another link of the channel leaves; the left of two as near.
+func TestGraphFreeColumn(t *testing.T) {
+	t.Parallel()
+	gr := &group{ //nolint:exhaustruct_v5 // what freeColumn reads
+		nodes: []gnode{
+			{box: &graphBox{Name: "a", Rows: nil, Tone: "", Shape: ""}, of: 0, kind: kindPlain, cl: -1, rank: 0, w: 100, h: 29, x: 0, y: 0, ins: nil, outs: nil, written: 0},
+			{box: nil, of: 0, kind: kindPlain, cl: -1, rank: 0, w: 0, h: 0, x: 144, y: 0, ins: nil, outs: []int{0}, written: 1},
+		},
+		links: []glink{{from: 1, to: 2, edge: 0, exit: 144, entry: 0, straight: false, track: 0}},
+		ranks: [][]int{{0, 1}, {2}},
+	}
+	for _, c := range []struct {
+		t, lo, hi, want float64
+		ok              bool
+	}{
+		{96, 96, 300, 96, true},  // free where it may first stand
+		{60, 0, 300, 96, true},   // under a's side (12 to 88) as far as 96, right; left of 12 is too far
+		{144, 0, 300, 132, true}, // the point's exit taken: the left of 132 and 156
+		{105, 100, 300, 108, true},
+		{150, 145, 155, 0, false}, // no column within lo and hi
+	} {
+		got, ok := gr.freeColumn(1, 99, c.t, c.lo, c.hi)
+		if got != c.want || ok != c.ok {
+			t.Errorf("t %v in %v..%v: %v %v, want %v %v", c.t, c.lo, c.hi, got, ok, c.want, c.ok)
+		}
+	}
+	wide := &group{ //nolint:exhaustruct_v5 // what freeColumn reads
+		nodes: []gnode{{box: &graphBox{Name: "a", Rows: nil, Tone: "", Shape: ""}, of: 0, kind: kindPlain, cl: -1, rank: 0, w: 300, h: 29, x: 0, y: 0, ins: nil, outs: nil, written: 0}},
+		ranks: [][]int{{0}, {}},
+	}
+	if got, ok := wide.freeColumn(1, -1, 150, 0, 400); ok { // the nearest free columns, 0 and 300, past freeLimit
+		t.Errorf("under a wide box: %v, want none within %v", got, freeLimit)
+	}
+}
+
+// A box widens, into room only, by as little as lets a link whose exit stands a column or less past an end of its
+// side enter straight.
+func TestGraphWiden(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name         string
+		exit         float64
+		beside       float64 // the left of a box right of it, or 0 for none
+		extent       float64 // the group's right
+		wantX, wantW float64
+	}{
+		{"a column past its right", 156, 0, 500, 100, 68},
+		{"two columns past", 168, 0, 500, 100, 64},
+		{"a column past its left", 100, 0, 500, 88, 76},
+		{"no room before the box beside it", 156, 180, 500, 100, 64},
+		{"room before the box beside it", 156, 192, 500, 100, 68},
+		{"at the end, within the group", 156, 0, 170, 100, 68},
+		{"at the end, past the group", 156, 0, 160, 100, 64},
+	} {
+		box := func(x float64, ins []int) gnode {
+			return gnode{box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: 0, kind: kindPlain, cl: -1, rank: 1, w: 64, h: 29, x: x, y: 0, ins: ins, outs: nil, written: 0}
+		}
+		gr := &group{ //nolint:exhaustruct_v5 // what widen reads
+			nodes: []gnode{box(100, []int{0})},
+			links: []glink{{from: 9, to: 0, edge: 0, exit: c.exit, entry: 0, straight: false, track: 0}},
+		}
+		rank := []int{0}
+		if c.beside > 0 {
+			gr.nodes = append(gr.nodes, box(c.beside, nil))
+			rank = append(rank, 1)
+		}
+		gr.widen(rank, 0, 0, c.extent)
+		if n := gr.nodes[0]; n.x != c.wantX || n.w != c.wantW {
+			t.Errorf("%s: x %v w %v, want %v %v", c.name, n.x, n.w, c.wantX, c.wantW)
+		}
+	}
+}
+
 // boxIn is the area of the box named name in l.
 func boxIn(l *layout, name string) rect {
 	return l.names[name].r
@@ -1353,15 +1465,20 @@ func TestGraphShapes(t *testing.T) {
 	}
 
 	// Edges that can run straight do: every edge of the kept flow, and K3,3's edges straight down; of the two edges
-	// of fan a reader once saw bend, c→hub runs straight and x→a turns twice at most.
+	// of fan a reader once saw bend, c→hub runs straight and x→a turns twice at most; in the state example, the
+	// edges of running, its box widened for them, and the long edge past it.
 	for _, c := range []struct {
 		file  string
 		turns map[string]int // the most turns of the edges named; of every edge, none, when nil
 	}{
-		{"flow.yaml", nil},
-		{"fan.yaml", map[string]int{"edge c→hub": 0, "edge x→a": 2}},
+		{"testdata/graph/flow.yaml", nil},
+		{"testdata/graph/fan.yaml", map[string]int{"edge c→hub": 0, "edge x→a": 2}},
+		{"examples/state.yaml", map[string]int{
+			"edge stopped→running": 0, "edge running→outdated": 0, "edge outdated→running": 0, "edge running→stopped": 0,
+			"edge outdated→stopped": 0,
+		}},
 	} {
-		src, err := os.ReadFile(filepath.Join("testdata", "graph", c.file))
+		src, err := os.ReadFile(filepath.FromSlash(c.file))
 		if err != nil {
 			t.Fatal(err)
 		}
