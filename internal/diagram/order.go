@@ -86,7 +86,7 @@ func (gr *group) sweep(r int, down bool) {
 			moving = append(moving, n)
 		}
 	}
-	if len(gr.cls) > 0 {
+	if len(gr.cls) > 0 || len(gr.levels) > 0 { // keeping groups and blocks whole
 		gr.ranks[r] = gr.sortIn(gr.ranks[r], -1, keys)
 		return
 	}

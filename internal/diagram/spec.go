@@ -124,6 +124,7 @@ type graphEdge struct {
 	Tone   string  `json:"tone"`
 	Start  *string `json:"start"`
 	End    *string `json:"end"`
+	Level  bool    `json:"level,omitempty"` // omitted, so that the ids of a spec without it stay
 }
 
 type tree struct {
