@@ -48,6 +48,13 @@ var layersKit = map[string]string{
 	"templates/themed/example.yaml": "lang: en\ntemplate: themed\n",
 	"templates/bare/example.yaml":   "lang: en\ntemplate: bare\n",
 	"templates/brand/example.yaml":  "lang: en\ntemplate: brand\n",
+	"templates/rowed/schema.json":   `{"type": "object", "additionalProperties": false}`,
+	"templates/rowed/page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body>` +
+		`<ol id="paged" data-floe-look="numbered"><li><p>a</p><p>b</p></li></ol>` +
+		`<ol id="looked" data-floe-look="numbered"><li><p>a</p><p>b</p></li></ol></body></html>`,
+	"templates/rowed/page.css":     "#paged > li { row-gap: 3px; }\n",
+	"templates/rowed/example.yaml": "lang: en\ntemplate: rowed\n",
+	"themes/mine/numbered.css":     ":scope > li { row-gap: 5px; }\n",
 }
 
 // TestUILayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its
@@ -58,7 +65,8 @@ var layersKit = map[string]string{
 // style stops at a part it holds. floe's theme does not style a part of one's own that took the place of
 // floe's, but does those drawn in its look. floe's base draws the page's ground, colour and face in the theme's,
 // under a template that draws none of them, and the theme the parts in the colours a template sets. Nested, the
-// outer look and the outer part win, as deep as they stand.
+// outer look and the outer part win, as deep as they stand. floe's layout of the rows with a mark (floe.marks) is
+// under the template's page.css and over the looks' files.
 func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -146,4 +154,9 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	got = b.eval(`(() => { const c = (q, p) => getComputedStyle(document.querySelector(q))[p];
 		return [c('.cell', 'backgroundColor'), c('#inner', 'paddingTop')].join(' | ') })()`)
 	check(t, "nested own", []string{got}, "rgb(0, 0, 12) | 3px")
+
+	// A row's gap: the template's page.css wins over floe.marks (its 0), which wins over the theme's file of the look.
+	open("rowed", "template: rowed\nlang: en\ntheme: mine\n", "#looked")
+	got = b.eval(`['#paged > li', '#looked > li'].map((q) => getComputedStyle(document.querySelector(q)).rowGap).join(' | ')`)
+	check(t, "rowed", []string{got}, "3px | 0px")
 }

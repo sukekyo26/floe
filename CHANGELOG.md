@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `marks:` to a part's or look's `part.yaml`, which of its elements are
+  rows with a mark at their left: `box`, `items` (each `li`) or `joined`
+  (with a line to the next). floe lays the rows out in one layer,
+  `floe.marks`, where the mark stands and how big; the part draws the mark.
+  `floe part check` refuses `marks:` written twice down a part's looks.
+- Add the look `marked`, a letter before each item of a list as a row's
+  mark, which decision, options, checklist and handoff's done work take.
+- Add `data-floe-mark` to an item of the look `numbered`: `ring` rings it in
+  its tone, `solid` fills it and its line in the tone.
 - Add `--quiet` to the palette, the quiet ground within a box: a table's head,
   a bar's track, progress's ground and a keycap read it.
 - Add `--radius`, `--radius-small` and `--radius-pill` to the palette, one
@@ -255,6 +264,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change steps' step in progress to a ring 1.5px wide, runbook's lines to
+  its rings' colour (the accent, and bad in its rollback, its frame and
+  heading too), and brutal's and notebook's filled rings to the tone's own
+  fill.
+- Change runbook's and adr's column to the width of prose (3rem and 6rem
+  narrower).
+- Change a letter mark (decision's ×, options' + and −, checklist's – and
+  ✓, handoff's ✓) to stand in a column of its own, centred, the lines of its
+  text wrapping under the text, not under the mark.
 - Change a diagram to refuse a coordinate past a million either way, a size
   (`w`, `h`, `r`) past a million, and a canvas (`width`, `height`) past ten
   million, in the schema's words (`maximum: got 1×10¹⁷, want 1×10⁰⁶`): a

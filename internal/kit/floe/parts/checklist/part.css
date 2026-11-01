@@ -2,14 +2,10 @@
 :scope {
   counter-reset: floe-check floe-checked;
 }
-:scope > li { position: relative; padding-inline: 3rem 1.2rem; counter-increment: floe-check; }
+:scope > li { --floe-mark-gap: 0.65rem; padding-inline: 1.2rem; counter-increment: floe-check; }
 :scope > li.done { counter-increment: floe-check floe-checked; color: var(--muted); }
-/* A mark, not a box: the items are not to be ticked on the page. Its top is left as it would lie, level with the
-   item's first line under the rows' padding */
-:scope > li::before {
-  content: "–"; position: absolute; left: 1.2rem; width: 1.15rem; text-align: center;
-  font-weight: 800; color: var(--muted);
-}
+/* A sign of the look marked, not a box: the items are not to be ticked on the page */
+:scope > li::before { content: "–"; color: var(--muted); }
 :scope > li.done::before { content: "✓"; color: var(--good); }
 :scope::after {
   content: counter(floe-checked) " / " counter(floe-check); padding-inline: 1.2rem; text-align: right;

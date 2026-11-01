@@ -34,8 +34,9 @@ main h2 { font-size: 1.15rem; }
 .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
 .board section { padding: 1rem 1.2rem; display: grid; gap: 0.6rem; }
 .board ul, .board ol { gap: 0.6rem; }
-.done, .doing { list-style: none; padding: 0; }
-.done li::before { content: "✓"; color: var(--good); font-weight: 800; margin-right: 0.45rem; }
+.doing { list-style: none; padding: 0; }
+/* A tick as the look marked places a row's sign */
+.done > li::before { content: "✓"; color: var(--good); }
 .ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }
 .doing li { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.6rem; align-items: baseline; }
 .doing .what, .doing .where { grid-column: 1 / -1; }

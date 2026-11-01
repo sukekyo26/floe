@@ -1,11 +1,11 @@
-/* The date at the left of a dot on a line that runs down to the next, as the look numbered places its ring and line
-   (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
+/* The date at the left of a dot on a line that runs down to the next, each item a row (marks: joined) that floe lays
+   out, the date in a column of its own (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
 :scope { padding: 1.1rem 1.3rem; }
 :scope > li {
-  --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; position: relative; anchor-scope: --floe-mark; display: grid;
+  --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem;
   grid-template:
     [mark-start] auto [mark-end] / [date-start] auto [date-end mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; padding-bottom: 1.1rem;
+  padding-bottom: 1.1rem;
 }
 :scope > li:last-child { padding-bottom: 0; }
 /* The title and the text stand in the text's column, the title in the dot's row */
@@ -13,18 +13,13 @@
 :scope > li > div > * { grid-column: text; align-self: first baseline; }
 :scope > li > div > * + * { margin-top: 0.15rem; }
 :scope > li::before {
-  content: "\200b"; content: "\200b" / ""; anchor-name: --floe-mark; grid-area: mark; align-self: first baseline;
-  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-  overflow: hidden; border-radius: 50%; background: var(--tone);
-}
-:scope > li:not(:last-child)::after {
-  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
-  left: calc(anchor(--floe-mark center) - 1px); width: 2px; background: var(--line);
+  content: "\200b"; content: "\200b" / ""; overflow: hidden; border-radius: 50%; background: var(--tone);
 }
 :scope .date {
   grid-area: mark / date; align-self: first baseline; width: 7rem; margin-inline-end: 0.65rem; text-align: right;
   font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
 }
+:scope > li::after { background: var(--line); }
 :scope li > div > :not(strong) { color: var(--muted); font-size: 0.92rem; }
 @media (max-width: 36rem) {
   :scope > li {

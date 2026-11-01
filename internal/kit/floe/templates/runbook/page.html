@@ -18,7 +18,7 @@
 {{- with .Data.caution}}<div class="caution" data-floe-part="note" data-floe-tone="warn"><p>{{markdownLine .}}</p></div>{{end}}
 <section><h2>{{word "steps"}}</h2>{{template "procedure" .Data.steps}}</section>
 {{- with .Data.rollback}}
-<section class="rollback"><h2>{{word "rollback"}}</h2>{{template "procedure" .}}</section>
+<section class="rollback" data-floe-tone="bad"><h2>{{word "rollback"}}</h2>{{template "procedure" .}}</section>
 {{- end}}
 {{- range $m := .Data.more}}
 <section><h2>{{$m.heading}}</h2>
@@ -32,7 +32,7 @@
 {{- /* steps and rollback are steps of one shape, drawn here */}}
 {{- define "procedure"}}<ol class="steps" data-floe-look="numbered">
 {{- range .}}
-<li><div class="head"><h3>{{markdownLine .title}}</h3>{{with .who}}<span class="who">{{.}}</span>{{end}}</div>
+<li data-floe-mark="solid"><div class="head"><h3>{{markdownLine .title}}</h3>{{with .who}}<span class="who">{{.}}</span>{{end}}</div>
 {{- with .text}}{{.}}{{end}}
 {{- with .run}}{{.}}{{end}}
 {{- with .if_fails}}<div class="fails" data-floe-part="note" data-floe-tone="bad"><strong class="title">{{word "if_fails"}}</strong><p>{{markdownLine .}}</p></div>{{end}}</li>

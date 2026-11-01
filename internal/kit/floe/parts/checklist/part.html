@@ -1,5 +1,5 @@
 <ul data-floe-part="checklist">
 {{- range .}}
-<li{{if .done}} class="done"{{end}}>{{markdownLine .text}}</li>
+<li{{if .done}} class="done"{{end}}><span>{{markdownLine .text}}</span></li>
 {{- end}}
 </ul>
