@@ -154,6 +154,7 @@ type elem struct {
 	X, Y, X2, Y2 float64
 	W, H, R, RX  float64
 	D, Class     string
+	Tone         string // its data-floe-tone, "" for none
 	Anchor       string
 	Start, End   string // the ids of an edge's markers
 	Ref          string // the id a use places

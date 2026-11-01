@@ -3,7 +3,9 @@
 <title>Checkout redesign</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
-@layer floe.looks.depth1, floe.looks.depth0, floe.parts.depth1, floe.parts.depth0;
+@layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
+@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -33,9 +35,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
-code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: 4px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
 pre {
-  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
+  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
@@ -65,8 +67,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-copy.copied svg + svg { display: block; color: var(--code-add); }
 .floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
-/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves at
-   least --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
+/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves
+   --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
    side, so that it never meets another box nor the page's edge: nothing makes room for it. A box casts its theme's one
    shadow, --floe-shadow-x, -y, -blur and -spread (inherited from the palette, in px or rem), in the colour
    --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
@@ -88,6 +90,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
 :scope {
   --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
+  /* A quiet ground within a box of the surface: a table's head, a bar's track, progress's ground, a keycap.
+     LIMIT: one melting into its box's ground is seen, not measured; a theme that paints a box near it sets it there */
+  --quiet: color-mix(in srgb, var(--line) 45%, var(--surface));
   --accent: #1d6670; --accent-soft: #dcebec;
   --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
   --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -98,23 +104,42 @@ blockquote > * + * { margin-top: 0.6rem; }
   --page-bg: var(--bg); --rule: 1px solid var(--line);
   /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
   --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
-  /* Its panels' quiet ground, which holds faces of the surface */
-  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
   /* How wide prose grows, which a template sets for its page on :scope */
   --text-width: 56rem;
   /* The column a template centres its page in: its width, without the pad each side of it */
   --page-width: 96rem; --page-pad: 16px;
+  /* How round corners are: a box's, a small box's in it, and a pill's; one length each */
+  --radius: 20px; --radius-small: 6px; --radius-pill: 999px;
   color-scheme: light;
 }
+}
+</style>
+<style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
 }
 </style>
 <style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+:scope {
+  /* default's own, here and not in its palette, which lies under every theme's */
+  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* A face of the surface within a panel (rows, a table's body, a tree, code): the pad between them, and its
+     corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
+     LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and TestRadius follows the
+     corner to --default-inner, not to --default-pad: a pad grown past the radius squares them unseen */
+  --default-pad: 6px; --default-inner: calc(var(--radius) - var(--default-pad));
+}
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
-blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-panel); --quiet: var(--surface); color: var(--fg); }
+blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
 </style>
@@ -124,24 +149,46 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 /* A band filled with the accent, a face (base.css): its text, links, code and focus ring in the colour on a fill */
 :scope { --face: var(--accent); --on-face: var(--on-fill); background: var(--face); color: var(--on-face); }
 /* A part in the band draws on its own ground, in the page's text colour, which it would otherwise take from the band.
-   LIMIT: a part with no ground of its own (a pill, links without a panel) is drawn in that colour on the accent; give it a
-   panel, or keep it out of the band. A theme whose faces let what is under them through (aurora's glass) lets the accent
-   through them too, where the text sinks: such a theme makes its faces opaque in a band, in its band.css, as aurora does */
+   A pill of a theme that gives it no ground draws in the band's text colour (the face's rule), its tone told by its
+   word alone, as in any face (a note's, a quote's), its marks' colours too (swiss's tick and triangle).
+   LIMIT: another part with no ground of its own (links without a panel, swiss's note) is drawn in the page's text
+   colour on the accent; give it a panel, or keep it out of the band. A theme whose faces let what is under them
+   through (aurora's glass) lets the accent through them too, where the text sinks: such a theme makes its faces
+   opaque in a band, in its band.css, as aurora does */
 :scope [data-floe-part] { color: var(--fg); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: 0.78rem; font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: var(--radius-pill); white-space: nowrap;
+  background: var(--tone-soft); color: var(--tone);
+}
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Each card is numbered by its place, as the steps of a plan are */
-:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
+/* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
+   any parts.
+   LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
 .card {
   padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
+/* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
+   sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
+   LIMIT: whether a decoration keeps off the text is seen, not measured */
+:scope.numbered > .card { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
@@ -154,7 +201,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
-:scope { list-style: none; padding: 0; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--floe-room); }
+:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
 :scope > li {
   --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
@@ -167,12 +214,12 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   content: "\200b"; content: "\200b" / ""; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
   overflow: hidden; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
 }
-:scope > li::before { border-radius: 9px; background: var(--accent-soft); }
+:scope > li::before { border-radius: var(--radius-small); background: var(--accent-soft); }
 :scope a { font-weight: 700; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
 :scope > li::after {
   background: var(--accent); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / 1rem no-repeat;
 }
-:scope a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+:scope a::after { content: ""; position: absolute; inset: 0; }
 :scope > li:hover a { text-decoration-thickness: 2px; }
 :scope a:focus-visible { outline: none; }
 :scope > li:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -187,7 +234,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 }
 }
 </style>
@@ -195,18 +242,26 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border-radius: 20px; padding: var(--floe-room); gap: var(--floe-room); }
+:scope { background: var(--default-panel); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
-.card { background: var(--surface); border-radius: 14px; }
+.card { background: var(--surface); --quiet: var(--default-panel); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; --floe-mark: auto; background: none;
   font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
 }
 }
@@ -215,14 +270,16 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border: 0; border-radius: 20px; }
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border: 0; border-radius: 20px; }
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
 }
 }
 </style>
@@ -238,15 +295,14 @@ body { margin: 0; font-size: 16px; line-height: 1.7; padding-block: 0 4rem; }
 .band .column { display: grid; gap: 0.5rem; justify-items: start; }
 h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; }
-.kind { border: 1px solid currentColor; border-radius: 4px; padding: 0 0.6rem; font-size: 0.85rem; font-weight: 700; }
 .date { font-family: var(--mono); }
 .counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; }
-.counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: 8px; }
+.counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: var(--radius-small); }
 /* Not a face (base.css): a link fills its box, so its ring is outside it, on the band */
 .counts a { color: inherit; text-decoration: none; }
 .counts li > a, .counts li:not(:has(a)) { display: grid; padding: 0.5rem 1rem; font-size: 0.85rem; }
 .counts b { font-family: var(--mono); font-size: 2rem; line-height: 1.1; }
-.counts li.hot { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-soft); }
+.counts li.hot { background: var(--tone-soft); color: var(--tone); border-color: var(--tone-soft); }
 main { display: grid; gap: 2rem; padding-block: 2rem; }
 main h2 { font-size: 1.15rem; }
 .asks { padding: 1.2rem 1.4rem; border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
@@ -260,7 +316,7 @@ main h2 { font-size: 1.15rem; }
 .ask { display: grid; gap: 0.35rem; }
 .question { font-weight: 700; font-size: 1.05rem; }
 .options { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.options li { border: 1px solid var(--line); border-radius: 999px; padding: 0 0.8rem; background: var(--surface); }
+.options li { border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 0 0.8rem; background: var(--surface); }
 .why, .by { color: var(--muted); font-size: 0.92rem; }
 /* As many columns as the sections written, side by side while each has 16rem */
 .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
@@ -271,11 +327,9 @@ main h2 { font-size: 1.15rem; }
 .ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }
 .doing li { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.6rem; align-items: baseline; }
 .doing .what, .doing .where { grid-column: 1 / -1; }
-.state { justify-self: start; font-size: 0.78rem; font-weight: 600; padding: 0 0.6rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
-.state.waiting { background: var(--warn-soft); color: var(--warn); }
-.state.blocked { background: var(--bad-soft); color: var(--bad); }
+.state { justify-self: start; }
 .notes { display: grid; gap: 0.6rem; }
-main > section:not(.asks):not(.notes) { display: grid; gap: 1rem; }
+main > section { display: grid; gap: var(--floe-room); }
 }
 }
 </style>
@@ -283,13 +337,13 @@ main > section:not(.asks):not(.notes) { display: grid; gap: 1rem; }
 <body>
 <header class="band" data-floe-look="band">
 <div class="column">
-<p class="when"><span class="kind">Handoff</span><span class="date">2030-05-14 18:00</span><span class="hands">Mina → Kenji</span></p>
+<p class="when"><span class="kind" data-floe-part="cell">Handoff</span><span class="date">2030-05-14 18:00</span><span class="hands">Mina → Kenji</span></p>
 <h1 id="checkout-redesign">Checkout redesign</h1>
 <p class="summary">The card form is done; the address form waits on one decision, and the tax rules (<code>tax_rules</code>) on the finance team.</p>
 <ul class="counts">
 <li><a href="#done"><b>3</b> Done</a></li>
 <li><a href="#doing"><b>3</b> In progress</a></li>
-<li class="hot"><a href="#asks"><b>2</b> To decide</a></li>
+<li class="hot" data-floe-tone="warn"><a href="#asks"><b>2</b> To decide</a></li>
 <li><a href="#next"><b>3</b> Next</a></li>
 </ul>
 </div>
@@ -306,7 +360,7 @@ main > section:not(.asks):not(.notes) { display: grid; gap: 1rem; }
 <ul class="done"><li>Card form validation, with the error under each field<span class="ref">#412</span></li><li>Saved cards shown first<span class="ref">#415</span></li><li>A test for every <strong>declined</strong> card code</li></ul>
 </section>
 <section data-floe-look="panel"><h2 id="doing">In progress</h2>
-<ul class="doing"><li><b class="who">Mina</b><span class="state doing">Working</span><span class="what">Address form</span><span class="where">Half the fields; the postcode lookup is next</span></li><li><b class="who">Sam</b><span class="state waiting">Waiting</span><span class="what">Tax rules for the new regions</span><span class="where">Waiting on the finance team&#39;s table</span></li><li><b class="who">Kenji</b><span class="state blocked">Blocked</span><span class="what">Payment errors in the staging environment</span><span class="where">The test card provider is down since noon</span></li></ul>
+<ul class="doing"><li><b class="who">Mina</b><span class="state doing" data-floe-part="cell">Working</span><span class="what">Address form</span><span class="where">Half the fields; the postcode lookup is next</span></li><li><b class="who">Sam</b><span class="state waiting" data-floe-part="cell" data-floe-tone="warn">Waiting</span><span class="what">Tax rules for the new regions</span><span class="where">Waiting on the finance team&#39;s table</span></li><li><b class="who">Kenji</b><span class="state blocked" data-floe-part="cell" data-floe-tone="bad">Blocked</span><span class="what">Payment errors in the staging environment</span><span class="where">The test card provider is down since noon</span></li></ul>
 </section>
 <section data-floe-look="panel"><h2 id="next">Next</h2>
 <ol class="next"><li>Finish the address form and its postcode lookup</li><li>Put the tax table in once finance sends it</li><li>Run the whole checkout on staging when the provider is back</li></ol>

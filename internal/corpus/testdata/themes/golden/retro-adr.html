@@ -3,7 +3,9 @@
 <title>The retro theme in a record</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
-@layer floe.looks.depth0, floe.parts.depth0;
+@layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
+@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -33,9 +35,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
-code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: 4px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
 pre {
-  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
+  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
@@ -65,8 +67,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-copy.copied svg + svg { display: block; color: var(--code-add); }
 .floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
-/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves at
-   least --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
+/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves
+   --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
    side, so that it never meets another box nor the page's edge: nothing makes room for it. A box casts its theme's one
    shadow, --floe-shadow-x, -y, -blur and -spread (inherited from the palette, in px or rem), in the colour
    --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
@@ -88,6 +90,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
 :scope {
   --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
+  /* A quiet ground within a box of the surface: a table's head, a bar's track, progress's ground, a keycap.
+     LIMIT: one melting into its box's ground is seen, not measured; a theme that paints a box near it sets it there */
+  --quiet: color-mix(in srgb, var(--line) 45%, var(--surface));
   --accent: #1d6670; --accent-soft: #dcebec;
   --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
   --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -98,12 +104,12 @@ blockquote > * + * { margin-top: 0.6rem; }
   --page-bg: var(--bg); --rule: 1px solid var(--line);
   /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
   --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
-  /* Its panels' quiet ground, which holds faces of the surface */
-  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
   /* How wide prose grows, which a template sets for its page on :scope */
   --text-width: 56rem;
   /* The column a template centres its page in: its width, without the pad each side of it */
   --page-width: 96rem; --page-pad: 16px;
+  /* How round corners are: a box's, a small box's in it, and a pill's; one length each */
+  --radius: 20px; --radius-small: 6px; --radius-pill: 999px;
   color-scheme: light;
 }
 }
@@ -120,7 +126,18 @@ blockquote > * + * { margin-top: 0.6rem; }
   /* Its three stripes, an ornament alone, apart from the tones */
   --retro-orange: #d9622b; --retro-mustard: #e8a33d; --retro-olive: #6b7a2a;
   --retro-stripes: linear-gradient(var(--retro-orange) 0 33.3%, var(--retro-mustard) 33.3% 66.6%, var(--retro-olive) 66.6% 100%);
+  --radius: 22px;
 }
+}
+</style>
+<style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
 }
 </style>
 <style>
@@ -134,7 +151,20 @@ h2:not(aside h2)::after {
   content: ""; display: block; width: 4.5rem; height: 9px; margin-top: 0.7rem; background: var(--retro-stripes);
 }
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { background: var(--surface); border: 0; border-radius: 22px; padding: 1rem 1.4rem; color: var(--fg); border-left: 9px solid var(--retro-mustard); }
+blockquote { background: var(--surface); border: 0; border-radius: var(--radius); padding: 1rem 1.4rem; color: var(--fg); border-left: 9px solid var(--retro-mustard); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: 0.78rem; font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: var(--radius-pill); white-space: nowrap;
+  background: var(--tone-soft); color: var(--tone);
+}
 }
 }
 </style>
@@ -142,14 +172,21 @@ blockquote { background: var(--surface); border: 0; border-radius: 22px; padding
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { border: 1.5px solid currentColor; }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: 2px solid var(--fg); border-radius: 22px; }
+:scope { border: 2px solid var(--fg); }
 }
 }
 </style>
@@ -165,25 +202,16 @@ article { padding: clamp(1.25rem, 5vw, 3rem); display: grid; gap: 1.8rem; }
 header { display: grid; gap: 0.4rem; justify-items: start; border-bottom: 3px double var(--line); padding-bottom: 1.4rem; }
 .kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; gap: 0.8rem; }
 h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
-/* LIMIT: the contrast test measures the badge of the example's state alone; the others were measured once, in every
-   theme, when they were made */
-.status { font-weight: 800; letter-spacing: 0.15em; padding: 0.05rem 0.8rem; border: 2px solid currentColor; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
-.status.accepted { background: var(--good-soft); color: var(--good); }
-.status.proposed { background: var(--warn-soft); color: var(--warn); }
-.status.rejected { background: var(--bad-soft); color: var(--bad); }
-.superseded-by { --face: var(--warn-soft); --on-face: var(--warn); background: var(--face); color: var(--on-face); padding: 0.3rem 0.8rem; border-radius: 6px; }
 .deciders { color: var(--muted); font-size: 0.9rem; }
 section { display: grid; gap: var(--floe-room); }
 h2 { font-size: 1.1rem; }
 .decision { border-left: 4px solid var(--accent); padding-left: 1.1rem; }
 .alternatives { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
-.alternatives li { border: 1px dashed var(--line); border-radius: 6px; padding: 0.5rem 0.9rem; }
+.alternatives li { border: 1px dashed var(--line); border-radius: var(--radius-small); padding: 0.5rem 0.9rem; }
 .alternatives .title { font-weight: 700; }
 .alternatives :is(.title, .why) { display: block; }
 .consequences { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: 1rem; }
-.consequences h3 { border-left: 4px solid; padding-left: 0.6rem; }
-.good h3 { border-color: var(--good); }
-.bad h3 { border-color: var(--bad); }
+.consequences h3 { border-left: 4px solid var(--tone); padding-left: 0.6rem; }
 }
 }
 </style>
@@ -193,8 +221,7 @@ h2 { font-size: 1.1rem; }
 <article data-floe-look="panel">
 <header>
 <p class="kind">Decision record</p>
-<h1 id="the-retro-theme-in-a-record">The retro theme in a record</h1>
-<p class="status accepted">Accepted</p>
+<h1 id="the-retro-theme-in-a-record">The retro theme in a record</h1><p class="status accepted" data-floe-part="cell" data-floe-tone="good">Accepted</p>
 </header>
 <section><h2 id="context">Context</h2><p>A page drawn in a panel, its headings with the stripes.</p>
 </section>

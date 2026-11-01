@@ -8,6 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `--quiet` to the palette, the quiet ground within a box: a table's head,
+  a bar's track, progress's ground and a keycap read it.
+- Add `--radius`, `--radius-small` and `--radius-pill` to the palette, one
+  length each: the round of a box's corners, a small box's within one and a
+  pill's. Parts, templates, floe's base and themes read them, and a theme sets
+  its corners in its palette alone.
+- Add the tone `muted`, a quiet one in `--muted` on `--muted-soft`, wherever
+  a tone is written (note, a pill, a table's pills, bars, progress, stats,
+  timeline, a diagram); adr's deprecated and superseded, postmortem's low
+  severity and fields' type are drawn in it.
+- Add `--tone-fill`, a theme's own fill of a tone, from `--<tone>-fill` in its
+  palette (`--good-fill`), or else the tone's `-soft`.
 - Add a diagram's `width` and `height` left out: the canvas then reaches as
   far right (or down) as what is drawn, and 20 more, its top left still 0, 0.
   Raw SVG is not measured, so write both with a `raw` part.
@@ -243,6 +255,75 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change a diagram to refuse a coordinate past a million either way, a size
+  (`w`, `h`, `r`) past a million, and a canvas (`width`, `height`) past ten
+  million, in the schema's words (`maximum: got 1×10¹⁷, want 1×10⁰⁶`): a
+  bound on size, so that what floe works out from them stays finite and of a
+  sane size. A diagram written at 1e17 was drawn with its boxes on one another
+  and its edges of no length, with no mistake told.
+- Change floe's themes to draw upright and write no word: notebook's and
+  washi's pills and notebook's tape no longer tilt; blueprint's quote takes a
+  short rule for QUOTE and its cards number 01 for FIG. 01; washi's note seals
+  take the note's mark for their kanji and its card seals count 1, 2.
+- Change the cards of retro, washi, notebook and swiss so that their
+  decorations take no room: retro's stripes are thinner (2px each) inside its
+  frame; washi's inner rule lies over the padding, its seal is smaller,
+  upright and laid on the card's corner, and no card keeps the room at its
+  right for it any more; notebook's tape lies over a sticky note's padding; and
+  swiss leaves a card's padding to its part, so that its first card's text
+  stands in from the column's left as the others do. A card's number keeps the
+  terms of a row's mark: sized by `--floe-mark` (on the card or the number),
+  hidden by `content: none`, plain text by `--floe-mark: auto`.
+- Change progress's ground to the quiet ground, a little lighter (the line's
+  colour 45% into the surface, as bars' track, not 60%), and a keycap's to it
+  (from the page's ground, or aurora's surface): keys no longer melt into
+  swiss's panel, brutal's are a mid grey as its tracks, and default's are white
+  on its grey panels and grey on its white rows. A table's head where the theme
+  draws none of its own (soft, a theme of your own) and soft's quotes
+  take it too (45%, not 40%).
+- Change the corners of parts and templates to the palette's: in default a box
+  is 20px round (a note, code and a quote were 18px), and a face along a
+  panel's edge is rounded about it (a card in cards 8px, the code in a code
+  part 14px); small boxes within one (keys, bars, images, a diagram's frame,
+  fields' types, code in a line and its language, links' and cards' marks) are
+  6px, square in blueprint, brutal and swiss, 3px in editorial and washi; a
+  tab's title is drawn as a pill (round in default, aurora, retro, soft and
+  notebook, 6px in app and ink, 3px in editorial and washi); progress's bar and
+  handoff's and runbook's pills take the theme's pill; runbook's box of rolling
+  back takes the theme's box; notebook's note and code take its panel's
+  hand-drawn corners; a note's mark drawn as a rounded square is 6px (washi's
+  seal 3px); the ring round a focused title of details follows its box's
+  corners.
+- Change the statuses and cautions of floe's templates to be drawn as the
+  parts cell and note: adr's status, postmortem's severity and actions' states,
+  handoff's kind and states are pills, and adr's record superseding it (now
+  after the head), runbook's caution and what to do if a step fails are notes,
+  drawn as the theme draws its pills and notes. A pill is in the text's own
+  face wherever it stands (retro's pick in options, in its card's title, no
+  longer in Georgia). notebook's pills are filled solid, the paper's lines no
+  longer through them.
+- Change findings' nit to be a pill of the tone `muted`, drawn as the theme
+  draws its other pills: with no ground in blueprint, editorial and washi,
+  filled in ink, in the theme's text colour in brutal, notebook and swiss.
+- Change a tone to be marked by `data-floe-tone`, not by a class, in parts,
+  themes and templates of one's own and in a data file's html (a pill written
+  as `<span data-floe-tone="good" data-floe-part="cell">`). floe gives what is
+  marked the tone's colours as `--tone`, `--tone-soft` and `--tone-fill` (see
+  Added), which a part, a theme or a template draws in with one rule, and a
+  part's box accent's; a value of no tone is as if not written.
+- Change the room between parts that stand one after another to
+  `--floe-room` (0.75rem) everywhere: in a stack (details' and tabs' panels),
+  between the cards of stats, options, decision and html's cards (1rem), all
+  cards in brutal and notebook (1.5rem and 1.75rem; facts' and links' were
+  0.75rem in the other themes already), and in report's, design's, runbook's,
+  handoff's and slides' sections (1rem or 0.8rem), where the paragraphs and
+  headings of a text stand too.
+- Change a list (`ul`, `ol` or `menu`) that is a part's box or takes a look to
+  draw no marks, padding or room between its items, laid out in a grid, in parts
+  and templates of one's own too; a template's `page.css` or a theme's `base.css`
+  that writes a rule for every list no longer changes a part's box's display,
+  marks, padding or room between items, nor a theme's such rule those of an
+  element that takes a look.
 - Change the diagrams of `floe diagram render`'s fragment to take no variable or
   color-scheme from the page around them, its `:root` or an element holding them;
   they draw in floe's fonts, and in a shadow root too. They take their colours
@@ -253,6 +334,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix washi's facts, whose pills lay over the inner rule of their tile, and
+  swiss's first card picked in options, whose frame touched its text.
+- Fix pills unreadable on a filled face (a band, a note): blueprint's,
+  editorial's, washi's and swiss's, which have no ground, drew in the tone's
+  colour on it; they now take the face's text colour, the tone told by the
+  word alone, and notebook's no longer let the face through.
+- Fix decision marking a list in its text with the × of the options it set
+  aside.
 - Fix an edge told running through a box it does not touch: the check
   measured a box by the rectangle around it, so an edge past a hex's points
   or a rounded corner (a pill's or a state's end, a box's, a table's or a
@@ -271,7 +360,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   soft shadows fell on the part below, aurora's past the page's edge and onto
   the card beside, and notebook's tilted sticky notes onto the part below.
   What a box draws outside itself now stays within `--floe-room` (0.75rem)
-  on every side, the least room floe leaves between parts, in a size that
+  on every side, the room floe leaves between parts, in a size that
   does not follow the box's, and takes no room. What changes on a page:
   - app's, aurora's and notebook's shadows are smaller; app's close shadow is
     gone; notebook's sticky notes no longer tilt, and its cards no longer

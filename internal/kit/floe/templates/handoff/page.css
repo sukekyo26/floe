@@ -7,15 +7,14 @@ body { margin: 0; font-size: 16px; line-height: 1.7; padding-block: 0 4rem; }
 .band .column { display: grid; gap: 0.5rem; justify-items: start; }
 h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; }
-.kind { border: 1px solid currentColor; border-radius: 4px; padding: 0 0.6rem; font-size: 0.85rem; font-weight: 700; }
 .date { font-family: var(--mono); }
 .counts { list-style: none; padding: 0; margin-top: 0.4rem; display: flex; flex-wrap: wrap; gap: 0.8rem; }
-.counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: 8px; }
+.counts li { min-width: 7.5rem; border: 1px solid currentColor; border-radius: var(--radius-small); }
 /* Not a face (base.css): a link fills its box, so its ring is outside it, on the band */
 .counts a { color: inherit; text-decoration: none; }
 .counts li > a, .counts li:not(:has(a)) { display: grid; padding: 0.5rem 1rem; font-size: 0.85rem; }
 .counts b { font-family: var(--mono); font-size: 2rem; line-height: 1.1; }
-.counts li.hot { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-soft); }
+.counts li.hot { background: var(--tone-soft); color: var(--tone); border-color: var(--tone-soft); }
 main { display: grid; gap: 2rem; padding-block: 2rem; }
 main h2 { font-size: 1.15rem; }
 .asks { padding: 1.2rem 1.4rem; border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
@@ -29,7 +28,7 @@ main h2 { font-size: 1.15rem; }
 .ask { display: grid; gap: 0.35rem; }
 .question { font-weight: 700; font-size: 1.05rem; }
 .options { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.options li { border: 1px solid var(--line); border-radius: 999px; padding: 0 0.8rem; background: var(--surface); }
+.options li { border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 0 0.8rem; background: var(--surface); }
 .why, .by { color: var(--muted); font-size: 0.92rem; }
 /* As many columns as the sections written, side by side while each has 16rem */
 .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
@@ -40,8 +39,6 @@ main h2 { font-size: 1.15rem; }
 .ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }
 .doing li { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.6rem; align-items: baseline; }
 .doing .what, .doing .where { grid-column: 1 / -1; }
-.state { justify-self: start; font-size: 0.78rem; font-weight: 600; padding: 0 0.6rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
-.state.waiting { background: var(--warn-soft); color: var(--warn); }
-.state.blocked { background: var(--bad-soft); color: var(--bad); }
+.state { justify-self: start; }
 .notes { display: grid; gap: 0.6rem; }
-main > section:not(.asks):not(.notes) { display: grid; gap: 1rem; }
+main > section { display: grid; gap: var(--floe-room); }

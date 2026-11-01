@@ -1,1 +1,1 @@
-blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem 1.5rem; border-radius: 14px; background: var(--face); color: var(--on-face); font-size: 1.05rem; }
+blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem 1.5rem; border-radius: var(--radius); background: var(--face); color: var(--on-face); font-size: 1.05rem; }

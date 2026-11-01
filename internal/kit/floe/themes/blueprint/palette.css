@@ -10,4 +10,5 @@
     linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px;
   --page-bg: var(--bp-squares), var(--bg);
   --rule: 1.5px solid var(--accent);
+  --radius: 0; --radius-small: 0; --radius-pill: 0;
 }

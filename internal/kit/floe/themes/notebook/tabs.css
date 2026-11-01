@@ -1,2 +1,2 @@
 /* On screen alone: on paper every tab shows under its title, which tabs' own print takes off its ground */
-@media screen { :scope > label:has(:checked) { background: var(--nb-yellow); color: var(--fg); border-radius: 3px 10px 4px 12px; } }
+@media screen { :scope > label:has(:checked) { background: var(--nb-yellow); color: var(--fg); border-radius: var(--nb-pill); } }

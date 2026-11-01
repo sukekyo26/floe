@@ -5,7 +5,7 @@
    text in an element. An item whose first child has no baseline (an image, an empty block) has its ring at that
    child's bottom.
    LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand. */
-:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; }
+:scope { counter-reset: floe-step; }
 :scope > li {
   --floe-mark: 2rem; --floe-mark-gap: 1rem; position: relative; anchor-scope: --floe-mark; counter-increment: floe-step;
   display: grid;
@@ -23,5 +23,5 @@
 }
 :scope > li:not(:last-child)::after {
   content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
-  left: calc(anchor(--floe-mark center) - 1px); width: 2px; border-radius: 1px; background: var(--line);
+  left: calc(anchor(--floe-mark center) - 1px); width: 2px; border-radius: 999px; background: var(--line);
 }

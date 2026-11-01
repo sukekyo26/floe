@@ -8,6 +8,16 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：パレットの `--quiet`（箱の中の静かな地）。表の頭、棒の溝、progress の地、キーが
+  読む。
+- 追加：パレットの角の丸さの変数 `--radius`・`--radius-small`・`--radius-pill`（どれも
+  1 つの長さ）。箱、箱の中の小さな升、札の丸さ。部品・テンプレート・floe の base・テーマが
+  読み、テーマは丸さをパレットだけで決める。
+- 追加：静かな tone `muted`（`--muted-soft` の地に `--muted` の色）。tone を書ける
+  所（note、pill、表の pills、bars、progress、stats、timeline、図）のどこでも書ける。
+  adr の deprecated・superseded、postmortem の重さ low、fields の型はこの色で描く。
+- 追加：`--tone-fill`。テーマが tone を塗る色で、パレットの `--<tone>-fill`
+  （`--good-fill`）から、無ければその tone の `-soft` から。
 - 追加：図の `width` と `height` を省けるようにした。省くと、キャンバスは描いた
   ものの右（下）の端まで広がり、さらに 20 空ける。左上は 0, 0 のまま。`raw` の
   SVG は測らないので、`raw` を使う図は両方を書く。
@@ -173,6 +183,58 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：図の座標は ± 100 万まで、大きさ（`w`・`h`・`r`）は 100 万まで、キャンバス（`width`・
+  `height`）は 1,000 万までとし、越えると schema の言葉（`maximum: got 1×10¹⁷, want 1×10⁰⁶`）
+  で断る。floe が計算する数を有限で正気な大きさに保つ、大きさの上限。1e17 に書いた図は、箱が
+  重なり線が長さ 0 のまま、誤り無しに描かれていた。
+- 変更：floe のテーマを、傾けず言葉を書かない形に。notebook と washi の札と notebook の
+  テープがまっすぐに。blueprint の引用の上は QUOTE でなく短い線、カードの番号は FIG. 01 でなく
+  01。washi の note の判子は漢字でなく note の印、カードの判子は 1・2。
+- 変更：retro・washi・notebook・swiss のカードの飾りが場所を取らない形に。retro の縞は
+  枠の内側で細く（2px ずつ）、washi の 2 本目の線は余白の上に、判子は小さく、まっすぐ、
+  カードの角に重ね、判子のための右の空きはどのカードからも無くなる。notebook のテープは付箋の
+  余白の上に。swiss はカードの余白を部品に任せ、最初のカードの字もほかと同じく列の左端から
+  内へ寄る。カードの番号の札は行の印と同じ約束（大きさは `--floe-mark`（カードか札に置く）、
+  消すのは `content: none`、字は `--floe-mark: auto`）。
+- 変更：progress の地を静かな地に（線の色を `--surface` に 60% でなく 45%、bars の溝と
+  同じで、少し明るい）、キーの地を静かな地に（ページの地、aurora は `--surface` から）。swiss
+  のキーが panel に溶けなくなり、brutal のキーは溝と同じ中くらいの灰、default のキーは灰色の
+  panel の上で白、白い行の上で灰。テーマが自分の頭を描かない表の頭（soft・自分の
+  テーマ）と soft の引用も静かな地（40% でなく 45%）。
+- 変更：部品とテンプレートの角の丸さをパレットのものに。default の箱は 20px（note・
+  code・引用は 18px だった）、panel の縁に沿う面は箱と同心の角（cards のカード 8px、
+  部品 code の中の code 14px）。箱の中の小さな升（キー・棒・画像・図の枠・fields の型・
+  行の中の code とその言葉・links と cards の印）は 6px で、blueprint・brutal・swiss
+  では四角、editorial・washi では 3px。タブの名前は札の形（default・aurora・retro・
+  soft・notebook は丸く、app・ink は 6px、editorial・washi は 3px）。progress の棒と
+  handoff・runbook の札はテーマの札の形、runbook の戻す手順の囲みはテーマの箱の形。
+  notebook の note と code は panel と同じ手書きの角。角の丸い四角に描く note の印は
+  6px（washi の判は 3px）。details の題に focus したときの輪は、箱の角に沿う。
+- 変更：組み込みのテンプレートの状態の札と注意を、部品 cell・note として描く。adr の
+  状態、postmortem の重さと行動の状態、handoff の種類と状態は pill に、adr の置き換えた
+  記録（頭の後ろに移した）、runbook の注意と失敗したときは注記になり、テーマの pill と
+  注記の形で描く。pill は、置かれた所によらず本文の字体になる（retro の options の選んだ
+  案の札は、カードの題の Georgia でなくなる）。notebook の pill は不透明に塗り、紙の
+  罫線が透けない。
+- 変更：findings の nit は tone `muted` の pill になり、テーマのほかの pill と同じ形で
+  描く（blueprint・editorial・washi は地なし、ink は塗り、brutal・notebook・swiss は
+  テーマの字の色）。
+- 変更：tone は、class でなく `data-floe-tone` で付ける（自分の部品・テーマ・
+  テンプレートと、データファイルの html。pill は
+  `<span data-floe-tone="good" data-floe-part="cell">`）。floe は、付けた要素に
+  tone の色を `--tone`・`--tone-soft`・`--tone-fill`（追加の項目）で置き、部品・
+  テーマ・テンプレートは 1 つの規則でそれを読む。部品の箱は accent の色を持つ。
+  tone に無い値は、付けないのと同じ。
+- 変更：続けて並ぶ部品の間を、どこも `--floe-room`（0.75rem）にした。stack
+  （details・tabs の中身）の中、stats・options・decision・html の cards のカードの
+  間（1rem だった）、brutal・notebook のすべてのカードの間（1.5rem・1.75rem だった。
+  facts・links は、ほかのテーマではもう 0.75rem）、report・design・runbook・
+  handoff・slides の節の中（1rem か 0.8rem だった。text の段落と見出しも並ぶ）。
+- 変更：部品の箱か、見た目を借りる並び（`ul`・`ol`・`menu`）は、自分の部品と
+  テンプレートでも、印・余白・項目の間を持たず、grid で並ぶ。テンプレートの
+  `page.css` やテーマの `base.css` が並び全部への規則を書いても、部品の箱の並びの
+  display・印・余白・項目の間は変わらず、見た目を借りる要素のそれも、テーマの
+  規則では変わらない。
 - 変更：`floe diagram render` の断片の図は、まわりのページ（`:root` や図を包む要素）
   の変数と color-scheme を読まない。floe の字体で描き、shadow root の中でも色が付く。
   色は `@scope` で当てるので、`@scope` を読まないブラウザでは色が付かない。図の部品
@@ -181,6 +243,12 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 修正
 
+- 修正：washi の facts の札がタイルの 2 本目の線に重なる。swiss の options で最初の
+  カードを選んだとき、枠が字に付く。
+- 修正：塗った面（帯、注記）の上の pill が読めなかった。地の無い blueprint・editorial・
+  washi・swiss の pill は面の上に tone の色で描いていたが、面の字の色で描く（tone は
+  言葉で伝わる）。notebook の pill は面が透けなくなった。
+- 修正：decision が、説明の中の並びにも、退けた案の × を付けていた。
 - 修正：触れていない箱を「線が通る」と言っていた。検査が箱をまわりの四角で
   測っていたので、hex の尖りの外や丸い角（pill・state の端、箱・table・bar
   の角）の外を通る線を断っていた。描いた形で測るようにし、形は描くのにも測る
@@ -194,7 +262,7 @@ floe の主要な変更を記録します。フォーマットは
   パレットを図だけに当てて持ち、図の外のページの変数と color-scheme は変わらない。
 - 修正：影がほかの部品やページの端に届いていた。app と aurora のぼかしの影が下の
   部品に、aurora の影がページの端と隣のカードに、notebook の傾いた付箋が下の部品に
-  届いていた。箱の外へ描くものは、四方とも、floe が部品の間に空ける最小
+  届いていた。箱の外へ描くものは、四方とも、floe が部品の間に空ける
   `--floe-room`（0.75rem）以下の、箱の大きさによらない大きさになり、場所は空け
   ない。ページで変わる所：
   - app・aurora・notebook の影が小さくなる。app の近い薄い影は無くなる。notebook の

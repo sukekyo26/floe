@@ -7,4 +7,5 @@
   --rule: 2px solid var(--fg);
   /* The hard shadow of its cards, falling right and down */
   --floe-shadow-x: 4px; --floe-shadow-y: 4px;
+  --radius: 14px; --radius-pill: 6px;
 }

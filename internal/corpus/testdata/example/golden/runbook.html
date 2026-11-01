@@ -3,7 +3,9 @@
 <title>Issue and deploy a new certificate for the payment gateway</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
-@layer floe.looks.depth1, floe.looks.depth0, floe.parts.depth1, floe.parts.depth0;
+@layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
+@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
+@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.base {
 /* What every page starts from, under the template's CSS and the parts': its ground, colour and face on the root, which a
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
@@ -33,9 +35,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
-code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: 4px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
 pre {
-  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 6px;
+  margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
   padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
@@ -65,8 +67,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-copy.copied svg + svg { display: block; color: var(--code-add); }
 .floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
-/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves at
-   least --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
+/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves
+   --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
    side, so that it never meets another box nor the page's edge: nothing makes room for it. A box casts its theme's one
    shadow, --floe-shadow-x, -y, -blur and -spread (inherited from the palette, in px or rem), in the colour
    --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
@@ -88,6 +90,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* Every page's colours and faces, under every theme's palette: what a theme leaves out keeps these */
 :scope {
   --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
+  --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
+  /* A quiet ground within a box of the surface: a table's head, a bar's track, progress's ground, a keycap.
+     LIMIT: one melting into its box's ground is seen, not measured; a theme that paints a box near it sets it there */
+  --quiet: color-mix(in srgb, var(--line) 45%, var(--surface));
   --accent: #1d6670; --accent-soft: #dcebec;
   --good: #1d7542; --good-soft: #dcefe3; --warn: #8a5a10; --warn-soft: #f6e8d2; --bad: #b3261e; --bad-soft: #fbe5e2;
   --font: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -98,37 +104,62 @@ blockquote > * + * { margin-top: 0.6rem; }
   --page-bg: var(--bg); --rule: 1px solid var(--line);
   /* Text on a face filled with the accent or a tone (a pill, a seal, a band), and the colour of shadows */
   --on-fill: var(--surface); --shadow: rgb(34 33 31 / 0.12);
-  /* Its panels' quiet ground, which holds faces of the surface */
-  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
   /* How wide prose grows, which a template sets for its page on :scope */
   --text-width: 56rem;
   /* The column a template centres its page in: its width, without the pad each side of it */
   --page-width: 96rem; --page-pad: 16px;
+  /* How round corners are: a box's, a small box's in it, and a pill's; one length each */
+  --radius: 20px; --radius-small: 6px; --radius-pill: 999px;
   color-scheme: light;
 }
+}
+</style>
+<style>
+@layer floe.palette {
+:where(:scope, [data-floe-part]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="accent"]) { --tone: var(--accent); --tone-soft: var(--accent-soft); --tone-fill: var(--accent-fill, var(--accent-soft)); }
+:where([data-floe-tone="good"]) { --tone: var(--good); --tone-soft: var(--good-soft); --tone-fill: var(--good-fill, var(--good-soft)); }
+:where([data-floe-tone="warn"]) { --tone: var(--warn); --tone-soft: var(--warn-soft); --tone-fill: var(--warn-fill, var(--warn-soft)); }
+:where([data-floe-tone="bad"]) { --tone: var(--bad); --tone-soft: var(--bad-soft); --tone-fill: var(--bad-fill, var(--bad-soft)); }
+:where([data-floe-tone="muted"]) { --tone: var(--muted); --tone-soft: var(--muted-soft); --tone-fill: var(--muted-fill, var(--muted-soft)); }
 }
 </style>
 <style>
 @layer floe.theme {
 @scope (:root) to ([data-floe-part] > *) {
 /* Panels of a quiet ground hold faces of the surface, as tiles in a box */
+:scope {
+  /* default's own, here and not in its palette, which lies under every theme's */
+  --default-panel: color-mix(in srgb, var(--line) 45%, var(--bg));
+  /* A face of the surface within a panel (rows, a table's body, a tree, code): the pad between them, and its
+     corners, round about the panel's own at its sides and bottom and kept one shape at its top under a title.
+     LIMIT: a --radius under the pad leaves them square, as the browser cuts calc at 0, and TestRadius follows the
+     corner to --default-inner, not to --default-pad: a pad grown past the radius squares them unseen */
+  --default-pad: 6px; --default-inner: calc(var(--radius) - var(--default-pad));
+}
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { border: 0; padding: 1rem 1.4rem; border-radius: 18px; background: var(--default-panel); color: var(--fg); }
-blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-panel); --quiet: var(--surface); color: var(--fg); }
+blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Each card is numbered by its place, as the steps of a plan are */
-:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; counter-reset: floe-card; }
+/* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
+   any parts.
+   LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
 .card {
   padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
+/* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
+   sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
+   LIMIT: whether a decoration keeps off the text is seen, not measured */
+:scope.numbered > .card { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
-  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 8px;
+  display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
@@ -141,7 +172,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
-:scope { list-style: none; padding: 0; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--floe-room); }
+:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
 :scope > li {
   --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; position: relative; display: grid;
   grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
@@ -154,12 +185,12 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   content: "\200b"; content: "\200b" / ""; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
   overflow: hidden; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
 }
-:scope > li::before { border-radius: 9px; background: var(--accent-soft); }
+:scope > li::before { border-radius: var(--radius-small); background: var(--accent-soft); }
 :scope a { font-weight: 700; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
 :scope > li::after {
   background: var(--accent); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / 1rem no-repeat;
 }
-:scope a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+:scope a::after { content: ""; position: absolute; inset: 0; }
 :scope > li:hover a { text-decoration-thickness: 2px; }
 :scope a:focus-visible { outline: none; }
 :scope > li:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -167,6 +198,70 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted);
   font-family: var(--mono);
 }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader.
+   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
+   too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
+:scope {
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: var(--radius); max-width: var(--text-width);
+}
+:scope > * { grid-column: text; align-self: first baseline; }
+:scope::before {
+  content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
+  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  border-radius: 50%;
+  background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+}
+/* A tone's mark, no more specific than the mark's own rule, so that a theme's :scope::before (content: none) wins */
+:scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
+:scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
+:scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
+/* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
+:scope > * + * { margin-top: 0.5rem; }
+.title { display: block; font-size: 0.9rem; color: var(--tone); }
+:scope > .title + * { margin-top: 0.1rem; }
+/* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
+:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
+:scope code { background: var(--face, var(--surface)); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="note"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A mark of the tone stands at the left, drawn by the style and silent to a screen reader.
+   LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
+   too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
+:scope {
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; position: relative; display: grid;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+  gap: 0; background: var(--tone-soft); padding: 1rem 1.25rem; border-radius: var(--radius); max-width: var(--text-width);
+}
+:scope > * { grid-column: text; align-self: first baseline; }
+:scope::before {
+  content: "i"; content: "i" / ""; grid-area: mark; align-self: first baseline;
+  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+  border-radius: 50%;
+  background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+}
+/* A tone's mark, no more specific than the mark's own rule, so that a theme's :scope::before (content: none) wins */
+:scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
+:scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
+:scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
+/* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
+:scope > * + * { margin-top: 0.5rem; }
+.title { display: block; font-size: 0.9rem; color: var(--tone); }
+:scope > .title + * { margin-top: 0.1rem; }
+/* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
+:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
+:scope code { background: var(--face, var(--surface)); }
 }
 }
 </style>
@@ -180,7 +275,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
    text in an element. An item whose first child has no baseline (an image, an empty block) has its ring at that
    child's bottom.
    LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand. */
-:scope { list-style: none; padding: 0; display: grid; gap: 0; counter-reset: floe-step; }
+:scope { counter-reset: floe-step; }
 :scope > li {
   --floe-mark: 2rem; --floe-mark-gap: 1rem; position: relative; anchor-scope: --floe-mark; counter-increment: floe-step;
   display: grid;
@@ -198,7 +293,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 :scope > li:not(:last-child)::after {
   content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
-  left: calc(anchor(--floe-mark center) - 1px); width: 2px; border-radius: 1px; background: var(--line);
+  left: calc(anchor(--floe-mark center) - 1px); width: 2px; border-radius: 999px; background: var(--line);
 }
 }
 }
@@ -207,7 +302,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 }
 }
 </style>
@@ -215,7 +310,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little */
-:scope { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+:scope { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 }
 }
 </style>
@@ -227,7 +322,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
 :scope {
   display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
-  border-radius: 14px; overflow: hidden; color-scheme: dark;
+  border-radius: var(--radius); overflow: hidden; color-scheme: dark;
   background: var(--face); color: var(--on-face);
   font-family: var(--mono);
 }
@@ -241,7 +336,7 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 }
 :scope .file { opacity: 0.85; }
 :scope .lang {
-  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: 5px;
+  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
   background: var(--code-prompt); color: var(--code-bg);
 }
 /* A block, so that the code's last line break draws no empty line */
@@ -282,6 +377,8 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 :scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
 :scope .run::before { content: "$ "; color: var(--code-prompt); }
 :scope.zsh .run::before { content: "% "; }
+/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language; move it out
+   of the CSS if a part's CSS comes to be checked for letters as a theme's is */
 :scope.powershell .run::before { content: "PS> "; }
 :scope.cmd .run::before { content: "> "; }
 :scope .out { opacity: 0.7; }
@@ -291,37 +388,58 @@ blockquote::before { content: "\201C"; display: block; font: 1.9rem/0.6 Georgia,
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border-radius: 20px; padding: var(--floe-room); gap: var(--floe-room); }
+:scope { background: var(--default-panel); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
-.card { background: var(--surface); border-radius: 14px; }
+.card { background: var(--surface); --quiet: var(--default-panel); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; display: block; width: auto; height: auto; background: none;
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; --floe-mark: auto; background: none;
   font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
 }
 }
 }
 </style>
 <style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope {
+  border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
+}
+:scope::before { border-radius: var(--radius-small); background: var(--surface); color: var(--tone); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="note"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope {
+  border: 1px solid color-mix(in srgb, var(--tone) 20%, transparent); --floe-mark: 2.25rem;
+}
+:scope::before { border-radius: var(--radius-small); background: var(--surface); color: var(--tone); }
+}
+}
+</style>
+<style>
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border: 0; border-radius: 20px; }
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); border: 0; border-radius: 20px; }
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="terminal"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border-radius: 18px; padding: 6px; --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); }
+:scope { padding: var(--default-pad); --code-ground: color-mix(in srgb, var(--code-fg) 4%, var(--code-bg)); }
 :scope figcaption { background: none; border: 0; padding: 0.3rem 0.6rem 0.5rem; }
-:scope pre { background: var(--code-ground); border-radius: 12px; }
-:scope .lang { border-radius: 6px; }
+:scope pre { background: var(--code-ground); border-radius: var(--default-inner); }
 }
 }
 </style>
@@ -337,19 +455,16 @@ header { display: grid; gap: 0.4rem; justify-items: start; }
 .kind .name { color: var(--accent); font-weight: 700; }
 h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
 .summary { font-size: 1.05rem; }
-section { display: grid; gap: 0.8rem; }
+section { display: grid; gap: var(--floe-room); }
 h2 { font-size: 1.15rem; }
 .needs { padding: 1rem 1.3rem; }
-.caution { --face: var(--warn-soft); --on-face: var(--warn); background: var(--face); color: var(--on-face); font-weight: 700; padding: 0.6rem 1rem; border-radius: 6px; }
 .steps > li > * + * { margin-top: var(--floe-room); }
 /* Over the look numbered's rings, as floe.page comes after floe.looks */
 .steps > li::before { background: var(--accent); color: var(--on-fill); box-shadow: none; }
 .steps .head { display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: baseline; }
 .steps h3 { font-size: 1.1rem; }
-.who { font-size: 0.75rem; font-weight: 700; padding: 0 0.6rem; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
-.fails { border-left: 4px solid var(--bad); --face: var(--bad-soft); --on-face: var(--fg); background: var(--face); color: var(--on-face); padding: 0.4rem 0.8rem; border-radius: 0 6px 6px 0; }
-.fails b { color: var(--bad); margin-right: 0.4rem; }
-.rollback { border: 2px dashed var(--bad); border-radius: 10px; padding: 1rem 1.3rem; }
+.who { font-size: 0.75rem; font-weight: 700; padding: 0 0.6rem; border-radius: var(--radius-pill); background: var(--accent-soft); color: var(--accent); }
+.rollback { border: 2px dashed var(--bad); border-radius: var(--radius); padding: 1rem 1.3rem; }
 .rollback h2 { color: var(--bad); }
 .rollback .steps > li::before { background: var(--bad); }
 }
@@ -362,7 +477,7 @@ h2 { font-size: 1.15rem; }
 <p class="kind"><span class="name">Runbook</span> <span>Owner: Platform team</span> <span>Updated: 2030-05-16</span></p>
 <h1 id="issue-and-deploy-a-new-certificate-for-the-payment-gateway">Issue and deploy a new certificate for the payment gateway</h1><p class="summary">Replace the TLS certificate of the gateway&#39;s internal endpoint before it expires, or at once when it has. Takes about 20 minutes; checkout keeps working throughout.</p>
 </header>
-<section class="needs" data-floe-look="panel"><h2 id="before-you-start">Before you start</h2><ul><li>You can run <code>kubectl</code> against the <code>payments</code> cluster</li><li>You hold the <code>cert-issuer</code> role in the vault</li><li>The on-call engineer of the payments team knows you are starting</li></ul></section><p class="caution">Do not delete the old secret until checkout works on the new one; the gateway cannot start without a certificate.</p>
+<section class="needs" data-floe-look="panel"><h2 id="before-you-start">Before you start</h2><ul><li>You can run <code>kubectl</code> against the <code>payments</code> cluster</li><li>You hold the <code>cert-issuer</code> role in the vault</li><li>The on-call engineer of the payments team knows you are starting</li></ul></section><div class="caution" data-floe-part="note" data-floe-tone="warn"><p>Do not delete the old secret until checkout works on the new one; the gateway cannot start without a certificate.</p></div>
 <section><h2 id="steps">Steps</h2><ol class="steps" data-floe-look="numbered">
 <li><div class="head"><h3 id="issue-the-certificate">Issue the certificate</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">vault write -format=json pki/issue/gateway common_name=gateway.internal ttl=8760h &gt; cert.json</span><span class="run" data-floe-copy="">jq -r .data.certificate cert.json &gt; cert.pem &amp;&amp; jq -r .data.private_key cert.json &gt; key.pem</span><span class="run" data-floe-copy="">jq -r .data.expiration cert.json</span><span class="out">1936688400</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
@@ -427,7 +542,7 @@ h2 { font-size: 1.15rem; }
   });
   show(words.copy, false);
   document.currentScript.after(button, status);
-})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><p class="fails"><b>If it fails</b> A <code>permission denied</code> means the role is missing; ask the platform team for <code>cert-issuer</code>.</p></li>
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><div class="fails" data-floe-part="note" data-floe-tone="bad"><strong class="title">If it fails</strong><p>A <code>permission denied</code> means the role is missing; ask the platform team for <code>cert-issuer</code>.</p></div></li>
 <li><div class="head"><h3 id="store-it-as-a-new-secret">Store it as a new secret</h3></div><p>Name it with today&#39;s date, so the old one stays until the end.</p><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments create secret tls gateway-tls-20300516 --cert=cert.pem --key=key.pem</span><span class="out">secret/gateway-tls-20300516 created</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
@@ -555,7 +670,7 @@ h2 { font-size: 1.15rem; }
   });
   show(words.copy, false);
   document.currentScript.after(button, status);
-})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><p class="fails"><b>If it fails</b> Roll back at once (below), then page the on-call engineer.</p></li>
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><div class="fails" data-floe-part="note" data-floe-tone="bad"><strong class="title">If it fails</strong><p>Roll back at once (below), then page the on-call engineer.</p></div></li>
 <li><div class="head"><h3 id="check-that-checkout-works">Check that checkout works</h3><span class="who">Payments on-call</span></div><p>Place a test order on the staging shop and watch the checkout error rate on the dashboard for five minutes.</p></li>
 <li><div class="head"><h3 id="delete-the-old-secret">Delete the old secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments delete secret gateway-tls-20290514</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');

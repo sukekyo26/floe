@@ -95,8 +95,8 @@ memo/
 - 根は `:scope` です。ページの変数は `:scope` に書きます。`:root` や `html` は scope の外です。
 - どのブロックも閉じない `}` と `@import` は、その行で断ります。Google Fonts のようなスタイルシートは `page.html` の `<link>` で読みます。
 - パレットの変数（`var(--muted)`）で描くと、データファイルが選んだテーマに従います。
-- 続けて並ぶ部品の間（節の中、項目の中）は `var(--floe-room)`（0.75rem）以上をあけます。テーマの影が箱の外へ出る、一番大きい長さです。
-- 部品の箱でもある要素への規則（`ul { margin-block: 1rem }`、`figure { … }`）は、部品にも届きます。部品は自分の箱に margin を書かないためです（checklist・links は `ul`、steps・timeline は `ol`、facts・keys・entries・stats は `dl`、code・image・diff・terminal は `figure`、tabs は `form`）。
+- 続けて並ぶ部品の間（節の中、項目の中）は、floe のどこもと同じく `var(--floe-room)`（0.75rem）をあけます。テーマの影が箱の外へ出る、一番大きい長さです。部品 text の段落や見出しも、部品としてそこに並びます。
+- 部品の箱でもある要素への規則（`ul { margin-block: 1rem }`、`figure { … }`）は、部品にも届きます。部品は自分の箱に margin を書かないためです（checklist・links は `ul`、steps・timeline は `ol`、facts・keys・entries・stats は `dl`、code・image・diff・terminal は `figure`、tabs は `form`）。ただし、部品の箱の並びの display・印・余白・項目の間は、floe が決めるので変わりません（[parts.ja.md](parts.ja.md#css-の層と-scope)）。見た目を借りる並びのそれは `page.css` で変わるので、テンプレートが整えられます。
 
 たとえば `report` の `page.css` は、floe のテンプレートがどれも使う列で、ページを中央にそろえます：
 
@@ -148,6 +148,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 - `band`：アクセントの色で塗った帯。中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。design の結論や handoff の頭のように。
 - `numbered`：`<ol>` に付けると、項目に丸い番号を付けて線でつなぎます。部品 `steps` と runbook の手順のように。項目の字は要素で包みます（`<li><p>Restart <code>api</code> now</p></li>`）。項目に直に書いた字は、字の続きと要素ごとに grid の別の項目になって崩れます。項目は字で始めます。字の無いもの（画像、空のブロック）で始まると、丸はその下の縁に来ます。
 
+テンプレートが自分の言葉（`{{word …}}`）で描く札（状態、重さ、種類）と注意は、見た目として借りず、部品として描きます。`page.html` に部品の箱を書き、札は `data-floe-part="cell"`、注意は `data-floe-part="note"`、色は `data-floe-tone` で付けます（`<p class="status" data-floe-part="cell" data-floe-tone="good">`）。adr・postmortem・handoff・runbook のように。帯・面・tone の中でも部品と同じに振る舞い、テーマの pill と注記の形で描かれます。`page.css` は箱の置き場所を書き、中には届きません。注記の中身は要素で包み（`<div data-floe-part="note"><p>…</p></div>`）、題は `<strong class="title">` にします。書き手が自由に書く字（Markdown の行、名前）は pill にしません。長くなり、塗りのあるテーマの pill の上ではリンクが読めないことがあります。
+
 ## パレット
 
 ページの色と書体は、テーマの `palette.css` が決める CSS の変数で、部品・図・floe の土台・テンプレートが使います。floe の `default` のパレットが全部を定めて、どのページにも入り、データファイルが選んだテーマがその上に重ねます。
@@ -156,12 +158,17 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | --- | --- |
 | `--bg`・`--surface` | ページの地、部品の面 |
 | `--fg`・`--muted` | 文字、薄い文字 |
+| `--muted-soft` | tone `muted` の淡い地。既定は `--fg` と `--surface` を混ぜた色。`--muted` と合わせてその tone の色 |
+| `--quiet` | `--surface` の箱の中の静かな地（表の頭、棒の溝、progress の地、キー）。既定は `--line` と `--surface` を混ぜた色 |
 | `--line` | 線と枠 |
-| `--accent`・`--accent-soft` | 目立つ色と、その淡い地 |
-| `--good`・`--warn`・`--bad` と `-soft` | 良い・注意・悪いと、その淡い地 |
+| `--accent`・`--accent-soft` | 目立つ色と、その淡い地。tone `accent` の色 |
+| `--good`・`--warn`・`--bad` と `-soft` | 良い・注意・悪いと、その淡い地。その tone の色 |
 | `--on-fill` | `--accent` やトーンの色で塗った面の上の文字（pill など） |
+| `--<tone>-fill` | テーマが tone を塗る色（`--good-fill`）。`--tone-fill` が読む。無ければその tone の `-soft` |
+| `--tone`・`--tone-soft`・`--tone-fill` | 読む要素の tone（`data-floe-tone`、[parts.ja.md](parts.ja.md#css-の層と-scope)）の色。上の変数から floe が置き、tone の外では accent の色。テンプレートも tone をこの属性で付ける |
 | `--shadow` | 影の色の候補。影は、テーマが箱に `--floe-shadow-color` を置いたときだけ描かれる（[parts.ja.md](parts.ja.md#テーマ)） |
 | `--floe-shadow-x`・`-y`・`-blur`・`-spread` | テーマの 1 組の影。px か rem（既定は無し） |
+| `--radius`・`--radius-small`・`--radius-pill` | 角の丸さ。どれも 1 つの長さ。箱（panel・note・code・引用）、箱の中の小さな升（キー・棒・画像・行の中の code）、札（cell・タブの名前）。箱の縁から間 `p` だけ内にあって縁に沿う箱は `calc(var(--radius) - p)` |
 | `--font`・`--display`・`--mono` | 本文・見出し・等幅の書体 |
 | `--code-bg`・`--code-fg`・`--code-prompt` | コードとターミナルの地（いつも暗い）、その文字、プロンプト |
 | `--code-add`・`--code-del` | diff の足した行と消した行 |

@@ -1,4 +1,4 @@
 :scope {
-  background: var(--bp-squares), var(--surface); border-radius: 0;
+  background: var(--bp-squares), var(--surface);
   border: 1.5px solid var(--accent);
 }

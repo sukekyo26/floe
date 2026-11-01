@@ -87,6 +87,21 @@ type Compiled struct {
 	res  map[string]Resource
 }
 
+// Enum returns the strings of the enum at c's root, in its order, nil for none: a shared schema's list of names, such
+// as tone.json's.
+func (c *Compiled) Enum() []string {
+	if c.Root.Enum == nil {
+		return nil
+	}
+	var out []string
+	for _, v := range c.Root.Enum.Values {
+		if s, ok := v.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
 // english words the library's mistakes, in English in every language (the catalog's library key).
 var english = message.NewPrinter(language.English)
 

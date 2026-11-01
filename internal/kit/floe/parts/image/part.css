@@ -1,2 +1,2 @@
 /* A thin frame keeps a screenshot's white apart from the page's */
-:scope img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+:scope img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius-small); }
