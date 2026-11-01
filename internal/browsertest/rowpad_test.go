@@ -72,8 +72,8 @@ var rowPadKit = map[string]string{
 // measureRowPad returns, for each kind of row, its part's name (or the look it takes outside a part), its padding
 // above and below, and its line height, "page" when it is the page's: a table's cells, its head's ("head") and its
 // body's, but not its number columns, whose font a theme may change (swiss); the rows of the look rows, and faq's
-// questions ("question"), which take none of their own. It adds whether checklist's mark is level with its row's text
-// (within the 1/64 px a layout rounds to), the padding of checklist's count, a row its box draws as ::after, and
+// questions ("question"), which take none of their own (TestUIMarks measures checklist's mark on its first line). It
+// adds the padding of checklist's count, a row its box draws as ::after, and
 // whether the box of every part and element drawn as rows is padded on every side as that of html's rows in the same
 // page.
 const measureRowPad = `(() => {
@@ -88,9 +88,6 @@ const measureRowPad = `(() => {
     '[data-floe-part="faq"]) > *, [data-floe-part="faq"] summary, [data-floe-part="facts"] > .card')];
   const out = [...new Set(rows.map(row))].sort();
   for (const list of document.querySelectorAll('[data-floe-part="checklist"]')) {
-    const li = list.querySelector('li');
-    const off = parseFloat(getComputedStyle(li, '::before').top) - parseFloat(getComputedStyle(li).paddingTop);
-    out.push('checklist mark ' + (Math.abs(off) < 0.1 ? 'level' : 'off by ' + off.toFixed(2)));
     const count = getComputedStyle(list, '::after');
     out.push('checklist count ' + count.paddingTop + '/' + count.paddingBottom);
   }
@@ -111,7 +108,7 @@ func rowPadWant(pad string) string {
 		"table " + both, "table head " + both,
 	}
 	slices.Sort(rows)
-	return strings.Join(rows, ", ") + ", checklist mark level, checklist count " + pad + "/" + pad + ", boxes as html rows"
+	return strings.Join(rows, ", ") + ", checklist count " + pad + "/" + pad + ", boxes as html rows"
 }
 
 // rowsSection is a section of design's and postmortem's more holding an element of html that takes the look rows.
