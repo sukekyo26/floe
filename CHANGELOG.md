@@ -428,6 +428,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a diagram on a panel, in details or on a theme's patterned page, whose
+  labels' boxes and hollow ends and dots stood out in the page's ground: a
+  diagram paints its own ground, `--bg`, in its frame. The labels of a Venn
+  diagram's regions (`in`) have no box, `plain` or not.
+
 - Fix swiss's parts in a band (a note, details, a table) and a template's own
   panels and tables there, whose text and rules were dark on the red band and
   whose links, titles, marks and focus rings red on it: they draw in the band's
