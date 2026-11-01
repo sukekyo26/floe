@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>The retro theme in a record</title>
 <style>
-@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
 @layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
 @layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
@@ -197,7 +197,7 @@ blockquote { background: var(--surface); border: 0; border-radius: var(--radius)
    theme, in a column as wide as prose and a little more.
    LIMIT: the consequences sit side by side while each has 14rem; a width where they wrap is not looked at */
 body { margin: 0; padding-block: 2.5rem 4rem; font-size: 16px; line-height: 1.85; }
-.column { max-width: calc(var(--text-width) + 6rem + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+.column { max-width: calc(var(--text-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
 article { padding: clamp(1.25rem, 5vw, 3rem); display: grid; gap: 1.8rem; }
 header { display: grid; gap: 0.4rem; justify-items: start; border-bottom: 3px double var(--line); padding-bottom: 1.4rem; }
 .kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; gap: 0.8rem; }

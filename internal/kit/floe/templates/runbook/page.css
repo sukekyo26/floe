@@ -1,7 +1,7 @@
 /* The colours and faces are the theme's palette; the page lays them out: what to check, a caution, the steps numbered
    under a line to the next (the look numbered), and how to roll back, in one column as wide as prose and the numbers */
 body { margin: 0; padding-block: 2.5rem 4rem; font-size: 16px; line-height: 1.75; }
-.column { max-width: calc(var(--text-width) + 3rem + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); display: grid; gap: 2rem; }
+.column { max-width: calc(var(--text-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); display: grid; gap: 2rem; }
 header { display: grid; gap: 0.4rem; justify-items: start; }
 .kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; }
 .kind .name { color: var(--accent); font-weight: 700; }
@@ -11,11 +11,8 @@ section { display: grid; gap: var(--floe-room); }
 h2 { font-size: 1.15rem; }
 .needs { padding: 1rem 1.3rem; }
 .steps > li > * + * { margin-top: var(--floe-room); }
-/* Over the look numbered's rings, as floe.page comes after floe.looks */
-.steps > li::before { background: var(--accent); color: var(--on-fill); box-shadow: none; }
 .steps .head { display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; align-items: baseline; }
 .steps h3 { font-size: 1.1rem; }
 .who { font-size: 0.75rem; font-weight: 700; padding: 0 0.6rem; border-radius: var(--radius-pill); background: var(--accent-soft); color: var(--accent); }
-.rollback { border: 2px dashed var(--bad); border-radius: var(--radius); padding: 1rem 1.3rem; }
-.rollback h2 { color: var(--bad); }
-.rollback .steps > li::before { background: var(--bad); }
+.rollback { border: 2px dashed var(--tone); border-radius: var(--radius); padding: 1rem 1.3rem; }
+.rollback h2 { color: var(--tone); }

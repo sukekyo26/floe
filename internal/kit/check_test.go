@@ -121,6 +121,24 @@ func TestCheckMistakes(t *testing.T) {
 			"a part's cycle", with(map[string]string{"p/part.yaml": "looks: [zl]\n", "zl/part.css": "a{}", "zl/part.yaml": "looks: [p]\n"}), nil, nil,
 			"own/parts/p/part.yaml:1:9: the part p takes its own look (p → zl → p), which floe would follow forever; fix its part.yaml",
 		},
+		{
+			"marks: in the part and a look it takes", with(map[string]string{"p/part.yaml": "marks: box\nlooks: [numbered]\n"}), nil, nil,
+			"own/parts/p/part.yaml:1:1: marks: is written by both p and numbered, which p puts on one element; write it in one of them only",
+		},
+		{
+			"marks: in two looks taken", with(map[string]string{"p/part.yaml": "looks: [panel, numbered, marked]\n"}), nil, nil,
+			"own/parts/p/part.yaml:1:26: marks: is written by both numbered and marked, which p puts on one element; write it in one of them only",
+		},
+		// h takes g alone, which holds both itself: g is told, h not.
+		{
+			"marks: in two looks a taken look takes",
+			with(map[string]string{"g/part.css": "a{}", "g/part.yaml": "looks: [numbered, marked]\n", "h/part.css": "a{}", "h/part.yaml": "looks: [g]\n"}), nil, nil,
+			"own/parts/g/part.yaml:1:19: marks: is written by both numbered and marked, which g puts on one element; write it in one of them only",
+		},
+		{"marks: once down the looks", with(map[string]string{
+			"p/part.yaml": "marks: items\nlooks: [rows]\n", "foo/part.css": "a{}", "foo/part.yaml": "looks: [numbered]\n",
+			"bar/part.css": "a{}", "bar/part.yaml": "looks: [panel, marked]\n",
+		}), nil, nil, ""},
 		// The files in the order they come: palette.css, base.css, then the parts' files.
 		{"a theme", part, map[string]string{"t/palette.css": ":root { --a: 1 }\n}\n", "t/base.css": "}", "t/p.css": "@import \"x\";"}, nil, lines(
 			"own/themes/t/palette.css:2:1: "+braceTold,

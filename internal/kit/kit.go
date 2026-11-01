@@ -200,6 +200,47 @@ func lookUp[T any](k *Kit, name string, of func(*Kit) map[string]*T) (*T, bool) 
 	return nil, false
 }
 
+// Taken returns the looks the part or look name takes, and those they take in turn, each once, in the order
+// first reached. No look takes itself: check refuses one that would.
+func (k *Kit) Taken(name string) []string {
+	var found []string
+	var follow func(at string)
+	follow = func(at string) {
+		for _, t := range k.looksOf(at) {
+			if !slices.Contains(found, t.name) {
+				found = append(found, t.name)
+				follow(t.name)
+			}
+		}
+	}
+	follow(name)
+	return found
+}
+
+// Marks returns which elements of the part or look name are rows with a mark at their left, as its part.yaml's
+// marks: says: "box", "items", "joined", or none.
+func (k *Kit) Marks(name string) string { return k.marksOf(name).name }
+
+func (k *Kit) looksOf(name string) []taken {
+	if p, ok := k.Part(name); ok {
+		return p.looks
+	}
+	if l, ok := k.Look(name); ok {
+		return l.looks
+	}
+	return nil
+}
+
+func (k *Kit) marksOf(name string) taken {
+	if p, ok := k.Part(name); ok {
+		return p.marks
+	}
+	if l, ok := k.Look(name); ok {
+		return l.marks
+	}
+	return taken{}
+}
+
 // isPartOrLook reports whether name is a part or a look of k or its base.
 func (k *Kit) isPartOrLook(name string) bool {
 	_, part := k.Part(name)

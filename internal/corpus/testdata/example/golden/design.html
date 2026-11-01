@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Send notifications through a queue</title>
 <style>
-@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
 @layer floe.looks.boxes, floe.looks.depth2, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth2, floe.parts.depth1, floe.parts.depth0;
 @layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
@@ -173,6 +173,17 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 }
 </style>
 <style>
+@layer floe.looks.depth2 {
+@scope ([data-floe-look~="marked"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each item's sign, which the part that takes the look writes, stands as a row's mark (marks: items) of
+   --floe-mark across, --floe-mark-gap from the item's text; that text is in one element, so that a line of text and
+   code flows as one */
+:scope > li { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
+:scope > li::before { line-height: 1; font-weight: 800; }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
@@ -203,11 +214,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 /* Numbered cards; the ring of the one to take is an outline, leaving a theme's shadow of a card as it is */
 .option.pick { outline: 2px solid var(--accent); outline-offset: -1px; }
 .option .title > span { margin-left: 0.4rem; vertical-align: 0.1em; }
-/* The pros and cons alone, not a list in the text */
-.option .points { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
-/* The mark hangs at the left, so that a line of text and code flows as one */
-.option .points > li { position: relative; padding-left: 1.45rem; }
-.option .points > li::before { position: absolute; left: 0.1rem; font-weight: 800; }
+/* The pros and cons alone, not a list in the text, their signs as the look marked places them */
+.option .points { gap: 0.2rem; }
 .option li.pro { color: var(--fg); }
 .option li.pro::before { content: "+"; color: var(--good); }
 .option li.con::before { content: "−"; color: var(--bad); }
@@ -254,45 +262,37 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
-   rings and lines of its own states. The ring stands in the column mark on the baseline of the item's first line, and
-   the line runs from the ring's bottom (its anchor) to the item's.
+/* Items of a list numbered in rings, a line joining each to the next: each item is a row (marks: joined), which floe
+   lays out. An item's ring takes one of three forms: by default a ring of the line's colour; data-floe-mark="ring"
+   rings it in its tone, its own or around it; data-floe-mark="solid" fills it and the line from it in that tone.
    LIMIT: text written straight in an item breaks into a grid item a run, as an element of it does: write an item's
    text in an element. An item whose first child has no baseline (an image, an empty block) has its ring at that
    child's bottom.
-   LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand. */
+   LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand.
+   LIMIT: what takes the look and sets its rings' colours over ::before or ::after, rather than by the tone and
+   data-floe-mark, is not refused: told apart from writing a ring's content (a tick) it is not, by the CSS's words */
 :scope { counter-reset: floe-step; }
-:scope > li {
-  --floe-mark: 2rem; --floe-mark-gap: 1rem; position: relative; anchor-scope: --floe-mark; counter-increment: floe-step;
-  display: grid;
-  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; padding: 0.2rem 0 1.3rem;
-}
+:scope > li { --floe-mark: 2rem; --floe-mark-gap: 1rem; counter-increment: floe-step; padding: 0.2rem 0 1.3rem; }
 :scope > li:last-child { padding-bottom: 0.2rem; }
-:scope > li > * { grid-column: text; align-self: first baseline; }
 :scope > li > * + * { margin-top: 0.15rem; }
 :scope > li::before {
-  content: counter(floe-step); anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid;
-  place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-  border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
+  content: counter(floe-step); border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
   background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
 }
-:scope > li:not(:last-child)::after {
-  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
-  left: calc(anchor(--floe-mark center) - 1px); width: 2px; border-radius: 999px; background: var(--line);
-}
+:scope > li::after { border-radius: 999px; background: var(--line); }
+:scope > li:where([data-floe-mark="ring"])::before { background: var(--tone-soft); color: var(--tone); box-shadow: inset 0 0 0 1.5px var(--tone); }
+:scope > li:where([data-floe-mark="solid"])::before { background: var(--tone); color: var(--on-fill); box-shadow: none; }
+:scope > li:where([data-floe-mark="solid"])::after { background: var(--tone); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* The number and the line to the next are the look numbered's; here a step's mark turns a tick once done, its line
-   coloured, and a ring while being done */
+/* The number and the line to the next are the look numbered's; a step done takes a tick, filled in good, and one
+   being done a ring in accent (data-floe-mark) */
 :scope { padding: 1.1rem 1.3rem; }
-:scope > li.done::before { content: "✓"; background: var(--good); color: var(--on-fill); box-shadow: none; }
-:scope > li.done::after { background: var(--good); }
-:scope > li.doing::before { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+:scope > li.done::before { content: "✓"; }
 :scope > li > strong { line-height: 1.6; }
 :scope > li > :not(strong) { color: var(--muted); font-size: 0.92rem; }
 }
@@ -395,6 +395,27 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 }
 </style>
 <style>
+@layer floe.marks {
+:where([data-floe-part="steps"] > li, [data-floe-look~="marked"] > li) {
+  position: relative; anchor-scope: --floe-mark; display: grid; gap: 0;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+}
+:where([data-floe-part="steps"] > li, [data-floe-look~="marked"] > li) > * { grid-column: text; align-self: first baseline; }
+:where([data-floe-part="steps"] > li, [data-floe-look~="marked"] > li)::before {
+  anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+}
+:where([data-floe-look~="marked"] > li)::after {
+  grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+}
+:where([data-floe-part="steps"] > li):not(:last-child)::after {
+  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom, 100%) + 0.35rem); bottom: 0.35rem;
+  left: calc(anchor(--floe-mark center) - 1px); width: 2px;
+}
+}
+</style>
+<style>
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: a head, a band of the conclusion, and the
@@ -464,8 +485,8 @@ page answers. When the mail provider is slow, so is the page, and a provider out
 <section><h2 id="decisions">Options</h2>
 <section class="decision" aria-labelledby="question-0"><h3 id="question-0">Which queue</h3>
 <div class="numbered" data-floe-part="options">
-<div class="card option pick" data-floe-look="panel"><div class="title">A table in the database we have <span data-floe-part="cell">Recommended</span></div><ul class="points"><li class="pro">No new service to run or watch</li><li class="pro">Written in the same transaction as the comment</li><li class="con">Polling adds load to the database</li></ul></div>
-<div class="card option" data-floe-look="panel"><div class="title">A message broker</div><ul class="points"><li class="pro">Made for this, and scales further</li><li class="con">A new service to run, watch and back up</li></ul></div>
+<div class="card option pick" data-floe-look="panel"><div class="title">A table in the database we have <span data-floe-part="cell">Recommended</span></div><ul class="points" data-floe-look="marked"><li class="pro"><span>No new service to run or watch</span></li><li class="pro"><span>Written in the same transaction as the comment</span></li><li class="con"><span>Polling adds load to the database</span></li></ul></div>
+<div class="card option" data-floe-look="panel"><div class="title">A message broker</div><ul class="points" data-floe-look="marked"><li class="pro"><span>Made for this, and scales further</span></li><li class="con"><span>A new service to run, watch and back up</span></li></ul></div>
 </div>
 </section>
 <section class="decision" aria-labelledby="question-1"><h3 id="question-1">How to try a failed <code>send</code> again</h3>

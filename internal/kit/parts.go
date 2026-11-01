@@ -23,6 +23,7 @@ type Part struct {
 	name    string
 	dir     string // as its mistakes name it
 	looks   []taken
+	marks   taken // part.yaml's marks:, its name none for none
 	css     []byte
 	hasCSS  bool
 	checks  *rules.Checks // nil for none
@@ -34,7 +35,7 @@ type Part struct {
 	files   []Source         // the files of partFiles it read, for floe part show
 }
 
-// taken is a look a part or a look takes, and where its part.yaml names it.
+// taken is a name a part.yaml writes, a look it takes or its marks:, and where it writes it.
 type taken struct {
 	name string
 	file string
@@ -86,6 +87,7 @@ type Look struct {
 	dir    string
 	about  string
 	looks  []taken
+	marks  taken
 	css    []byte
 	hasCSS bool
 	unread []string // the files of its directory it does not read, part.html, checks.yaml and words.yaml too
@@ -303,7 +305,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 	if err != nil {
 		return err
 	}
-	looks, about, yamlErr := readPartYAML(d, name, !isPart)
+	looks, about, marks, yamlErr := readPartYAML(d, name, !isPart)
 	if !isPart {
 		if yamlErr == nil {
 			unread, failed := unreadIn(d, name, lookFiles...)
@@ -311,7 +313,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 				return failed
 			}
 			k.looks[name] = &Look{
-				name: name, dir: dir, about: about, looks: looks, css: css, hasCSS: hasCSS, unread: unread,
+				name: name, dir: dir, about: about, looks: looks, marks: marks, css: css, hasCSS: hasCSS, unread: unread,
 				files: inOrder(lookFiles, d),
 			}
 		}
@@ -346,7 +348,7 @@ func (k *Kit) readPart(d Dir, name string) error {
 		return err
 	}
 	k.parts[name] = &Part{
-		name: name, dir: dir, looks: looks, css: css, hasCSS: hasCSS, checks: checks, words: w, pages: ps,
+		name: name, dir: dir, looks: looks, marks: marks, css: css, hasCSS: hasCSS, checks: checks, words: w, pages: ps,
 		pageSrc: pageSrc, unread: unread, schema: nil,
 		files: inOrder(partFiles, d),
 	}
@@ -401,27 +403,28 @@ func readPages(d Dir, dir, file string, fns template.FuncMap, w words) (pages, [
 }
 
 // readPartYAML reads the part.yaml of the directory dir of d, of a look alone when look: the looks it takes,
-// and a look's description; none without one. A part's description is its schema's. Its mistakes are told
+// a look's description and its marks:; none without one. A part's description is its schema's. Its mistakes are told
 // all together.
-func readPartYAML(d Dir, dir string, look bool) ([]taken, string, error) {
+func readPartYAML(d Dir, dir string, look bool) ([]taken, string, taken, error) {
 	file := path.Join(d.Name, dir, "part.yaml")
 	src, ok, err := readFile(d, dir, "part.yaml")
 	if !ok || err != nil {
-		return nil, "", err
+		return nil, "", taken{}, err
 	}
 	body, err := yamlpos.Parse(file, src)
 	switch {
 	case errors.Is(err, yamlpos.ErrEmpty):
-		return nil, "", nil
+		return nil, "", taken{}, nil
 	case err != nil:
-		return nil, "", err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
+		return nil, "", taken{}, err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
 	}
 	m, ok := body.(*ast.MappingNode)
 	if !ok {
-		return nil, "", yamlpos.New(file, yamlpos.Of(body), "kit_part_yaml")
+		return nil, "", taken{}, yamlpos.New(file, yamlpos.Of(body), "kit_part_yaml")
 	}
 	var looks []taken
 	var about string
+	var marks taken
 	var found usererr.List
 	for _, kv := range m.Values {
 		k := yamlpos.KeyOf(kv)
@@ -429,22 +432,29 @@ func readPartYAML(d Dir, dir string, look bool) ([]taken, string, error) {
 		case key == "looks":
 			var more usererr.List
 			if looks, more, err = readLooks(file, k, kv.Value); err != nil {
-				return nil, "", err
+				return nil, "", taken{}, err
 			}
 			found = append(found, more...)
 		case key == "description" && !look:
 			found = append(found, yamlpos.New(file, yamlpos.Of(k), "kit_part_yaml_description"))
 		case key == "description":
 			if about, ok, err = yamlpos.Text(kv.Value); err != nil {
-				return nil, "", err //nolint:wrapcheck // floe's failure, which says what failed
+				return nil, "", taken{}, err //nolint:wrapcheck // floe's failure, which says what failed
 			} else if !ok {
 				found = append(found, yamlpos.New(file, yamlpos.OfValue(k, kv.Value), "kit_part_yaml_about"))
+			}
+		case key == "marks":
+			marks = taken{file: file, at: yamlpos.Of(k)}
+			if marks.name, ok, err = yamlpos.Text(kv.Value); err != nil {
+				return nil, "", taken{}, err //nolint:wrapcheck // floe's failure, which says what failed
+			} else if !ok || !slices.Contains([]string{"box", "items", "joined"}, marks.name) {
+				found = append(found, yamlpos.New(file, yamlpos.OfValue(k, kv.Value), "kit_part_yaml_marks"))
 			}
 		default:
 			found = append(found, yamlpos.New(file, yamlpos.Of(k), "kit_part_yaml_key", key))
 		}
 	}
-	return looks, about, found.Sorted().Err()
+	return looks, about, marks, found.Sorted().Err()
 }
 
 // readLooks reads the looks part.yaml, file, gives the key k: a list of names, each text, as a key is (YAML

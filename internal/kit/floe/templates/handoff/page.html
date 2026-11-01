@@ -43,7 +43,7 @@
 <div class="board">
 {{- with .Data.done}}
 <section data-floe-look="panel"><h2 id="done">{{word "done"}}</h2>
-<ul class="done">{{range .}}<li>{{markdownLine .what}}{{with .ref}}<span class="ref">{{.}}</span>{{end}}</li>{{end}}</ul>
+<ul class="done" data-floe-look="marked">{{range .}}<li><span>{{markdownLine .what}}</span>{{with .ref}}<span class="ref">{{.}}</span>{{end}}</li>{{end}}</ul>
 </section>
 {{- end}}
 {{- with .Data.doing}}

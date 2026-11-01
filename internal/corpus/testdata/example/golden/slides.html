@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>What the certificate outage taught us</title>
 <style>
-@layer floe.palette, floe.base, floe.theme, floe.looks, floe.page, floe.parts;
+@layer floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
 @layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
 @layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
@@ -190,17 +190,12 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 /* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
 :scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
 :scope > li {
-  --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; position: relative; display: grid;
-  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; padding-block: 0.9rem; padding-left: 1.1rem;
+  --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0; padding-block: 0.9rem; padding-left: 1.1rem;
 }
-:scope > li > * { grid-column: text; align-self: first baseline; }
 :scope > li > * + * { margin-top: 0.1rem; }
-/* The mark: a box, and over it the link's sign, each level with the first line of the link */
-:scope > li::before, :scope > li::after {
-  content: "\200b"; content: "\200b" / ""; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
-  overflow: hidden; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-}
+/* Each item is a row (marks: items), which floe lays out: the mark is a box, and over it (::after) the link's sign.
+   The card's gap (the look cards) is the row's to set, as floe.marks is under it */
+:scope > li::before, :scope > li::after { content: "\200b"; content: "\200b" / ""; overflow: hidden; }
 :scope > li::before { border-radius: var(--radius-small); background: var(--accent-soft); }
 :scope a { font-weight: 700; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
 :scope > li::after {
@@ -253,45 +248,37 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Items of a list numbered in rings, a line joining each to the next; a part or a template that takes it colours the
-   rings and lines of its own states. The ring stands in the column mark on the baseline of the item's first line, and
-   the line runs from the ring's bottom (its anchor) to the item's.
+/* Items of a list numbered in rings, a line joining each to the next: each item is a row (marks: joined), which floe
+   lays out. An item's ring takes one of three forms: by default a ring of the line's colour; data-floe-mark="ring"
+   rings it in its tone, its own or around it; data-floe-mark="solid" fills it and the line from it in that tone.
    LIMIT: text written straight in an item breaks into a grid item a run, as an element of it does: write an item's
    text in an element. An item whose first child has no baseline (an image, an empty block) has its ring at that
    child's bottom.
-   LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand. */
+   LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand.
+   LIMIT: what takes the look and sets its rings' colours over ::before or ::after, rather than by the tone and
+   data-floe-mark, is not refused: told apart from writing a ring's content (a tick) it is not, by the CSS's words */
 :scope { counter-reset: floe-step; }
-:scope > li {
-  --floe-mark: 2rem; --floe-mark-gap: 1rem; position: relative; anchor-scope: --floe-mark; counter-increment: floe-step;
-  display: grid;
-  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; padding: 0.2rem 0 1.3rem;
-}
+:scope > li { --floe-mark: 2rem; --floe-mark-gap: 1rem; counter-increment: floe-step; padding: 0.2rem 0 1.3rem; }
 :scope > li:last-child { padding-bottom: 0.2rem; }
-:scope > li > * { grid-column: text; align-self: first baseline; }
 :scope > li > * + * { margin-top: 0.15rem; }
 :scope > li::before {
-  content: counter(floe-step); anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid;
-  place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-  border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
+  content: counter(floe-step); border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
   background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
 }
-:scope > li:not(:last-child)::after {
-  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
-  left: calc(anchor(--floe-mark center) - 1px); width: 2px; border-radius: 999px; background: var(--line);
-}
+:scope > li::after { border-radius: 999px; background: var(--line); }
+:scope > li:where([data-floe-mark="ring"])::before { background: var(--tone-soft); color: var(--tone); box-shadow: inset 0 0 0 1.5px var(--tone); }
+:scope > li:where([data-floe-mark="solid"])::before { background: var(--tone); color: var(--on-fill); box-shadow: none; }
+:scope > li:where([data-floe-mark="solid"])::after { background: var(--tone); }
 }
 }
 </style>
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* The number and the line to the next are the look numbered's; here a step's mark turns a tick once done, its line
-   coloured, and a ring while being done */
+/* The number and the line to the next are the look numbered's; a step done takes a tick, filled in good, and one
+   being done a ring in accent (data-floe-mark) */
 :scope { padding: 1.1rem 1.3rem; }
-:scope > li.done::before { content: "✓"; background: var(--good); color: var(--on-fill); box-shadow: none; }
-:scope > li.done::after { background: var(--good); }
-:scope > li.doing::before { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+:scope > li.done::before { content: "✓"; }
 :scope > li > strong { line-height: 1.6; }
 :scope > li > :not(strong) { color: var(--muted); font-size: 0.92rem; }
 }
@@ -300,14 +287,14 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* The date at the left of a dot on a line that runs down to the next, as the look numbered places its ring and line
-   (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
+/* The date at the left of a dot on a line that runs down to the next, each item a row (marks: joined) that floe lays
+   out, the date in a column of its own (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
 :scope { padding: 1.1rem 1.3rem; }
 :scope > li {
-  --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; position: relative; anchor-scope: --floe-mark; display: grid;
+  --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem;
   grid-template:
     [mark-start] auto [mark-end] / [date-start] auto [date-end mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
-  gap: 0; padding-bottom: 1.1rem;
+  padding-bottom: 1.1rem;
 }
 :scope > li:last-child { padding-bottom: 0; }
 /* The title and the text stand in the text's column, the title in the dot's row */
@@ -315,18 +302,13 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 :scope > li > div > * { grid-column: text; align-self: first baseline; }
 :scope > li > div > * + * { margin-top: 0.15rem; }
 :scope > li::before {
-  content: "\200b"; content: "\200b" / ""; anchor-name: --floe-mark; grid-area: mark; align-self: first baseline;
-  display: grid; place-items: center; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-  overflow: hidden; border-radius: 50%; background: var(--tone);
-}
-:scope > li:not(:last-child)::after {
-  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
-  left: calc(anchor(--floe-mark center) - 1px); width: 2px; background: var(--line);
+  content: "\200b"; content: "\200b" / ""; overflow: hidden; border-radius: 50%; background: var(--tone);
 }
 :scope .date {
   grid-area: mark / date; align-self: first baseline; width: 7rem; margin-inline-end: 0.65rem; text-align: right;
   font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
 }
+:scope > li::after { background: var(--line); }
 :scope li > div > :not(strong) { color: var(--muted); font-size: 0.92rem; }
 @media (max-width: 36rem) {
   :scope > li {
@@ -364,6 +346,27 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
 :scope { background: var(--default-panel); border: 0; --quiet: var(--surface); }
+}
+}
+</style>
+<style>
+@layer floe.marks {
+:where([data-floe-part="links"] > li, [data-floe-part="steps"] > li, [data-floe-part="timeline"] > li) {
+  position: relative; anchor-scope: --floe-mark; display: grid; gap: 0;
+  grid-template: [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
+}
+:where([data-floe-part="links"] > li, [data-floe-part="steps"] > li, [data-floe-part="timeline"] > li) > * { grid-column: text; align-self: first baseline; }
+:where([data-floe-part="links"] > li, [data-floe-part="steps"] > li, [data-floe-part="timeline"] > li)::before {
+  anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+}
+:where([data-floe-part="links"] > li)::after {
+  grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
+}
+:where([data-floe-part="steps"] > li, [data-floe-part="timeline"] > li):not(:last-child)::after {
+  content: ""; position: absolute; top: calc(anchor(--floe-mark bottom, 100%) + 0.35rem); bottom: 0.35rem;
+  left: calc(anchor(--floe-mark center) - 1px); width: 2px;
 }
 }
 </style>
@@ -460,8 +463,8 @@ body { margin: 0; font-size: 16px; line-height: 1.6; }
 <h2 id="three-actions-one-done">Three actions, one done</h2>
 <div class="content">
 <ol data-floe-part="steps">
-<li class="done"><strong>Send expiry warnings to the on-call rota</strong></li>
-<li class="doing" aria-current="step"><strong>Put every certificate under the renewal job</strong></li>
+<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong>Send expiry warnings to the on-call rota</strong></li>
+<li class="doing" data-floe-mark="ring" aria-current="step"><strong>Put every certificate under the renewal job</strong></li>
 <li class="todo"><strong>Alert 14 days before any certificate expires</strong></li>
 </ol>
 </div>

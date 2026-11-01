@@ -43,7 +43,11 @@ func check(k *Kit) error {
 			return err
 		}
 	}
-	found = append(found, k.checkLooks()...)
+	if looks := k.checkLooks(); looks != nil {
+		found = append(found, looks...)
+	} else {
+		found = append(found, k.checkMarks()...)
+	}
 	for _, name := range slices.Sorted(maps.Keys(k.themes)) {
 		if err := add(checkTheme(k.themes[name])); err != nil {
 			return err
@@ -137,6 +141,52 @@ func (k *Kit) lookCycles(own map[string][]taken) usererr.List {
 			key = "kit_look_cycle_look"
 		}
 		found = append(found, yamlpos.New(t.file, t.at, key, c[i], strings.Join(path, " → ")))
+	}
+	return found
+}
+
+// checkMarks refuses each part or look of k's own that, with the looks it takes, writes marks: more than once:
+// an element they all reach would be rows of two kinds. A look it takes that holds two itself is the one told. It is
+// told at its own marks:, else at the name in its looks: that brings the second. Its looks are known, none in a cycle.
+func (k *Kit) checkMarks() usererr.List {
+	own := map[string][]taken{}
+	for name, p := range k.parts {
+		own[name] = p.looks
+	}
+	for name, l := range k.looks {
+		own[name] = l.looks
+	}
+	marking := func(name string) []string {
+		var found []string
+		for _, n := range append([]string{name}, k.Taken(name)...) {
+			if k.Marks(n) != "" && !slices.Contains(found, n) {
+				found = append(found, n)
+			}
+		}
+		return found
+	}
+	var found usererr.List
+	for _, name := range slices.Sorted(maps.Keys(own)) {
+		all := marking(name)
+		if len(all) < 2 || slices.ContainsFunc(own[name], func(t taken) bool { return len(marking(t.name)) >= 2 }) {
+			continue
+		}
+		at := k.marksOf(name)
+		if at.name == "" {
+			var seen []string
+			for _, t := range own[name] {
+				for _, n := range marking(t.name) {
+					if !slices.Contains(seen, n) {
+						seen = append(seen, n)
+					}
+				}
+				if len(seen) >= 2 {
+					at = t
+					break
+				}
+			}
+		}
+		found = append(found, yamlpos.New(at.file, at.at, "kit_marks_twice", name, all[0], all[1]))
 	}
 	return found
 }
