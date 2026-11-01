@@ -231,8 +231,12 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 /* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
    set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
 /* The frame spans the body's width. Its height follows the diagram's aspect ratio, capped by the
-   screen's height and by max-height (how far it may grow), with the diagram centred in it */
-.dg-wrap { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-small); touch-action: pan-y; }
+   screen's height and by max-height (how far it may grow), with the diagram centred in it. It paints its own ground,
+   --bg, the one what hides the lines under it (a label's box, a hollow end or dot) is painted: CSS cannot read the
+   ground outside it. Its colour is --fg, for raw's currentColor */
+/* LIMIT: the ground is flat, so a theme's pattern on the page (aurora's, notebook's, blueprint's) does not run through a
+   diagram; to let it, cut the lines under what hides them (a mask) instead of painting a ground */
+.dg-wrap { position: relative; width: 100%; overflow: hidden; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); touch-action: pan-y; }
 .dg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .dg-wrap.zoomed:active { cursor: grabbing; }
@@ -293,8 +297,12 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 /* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
    set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
 /* The frame spans the body's width. Its height follows the diagram's aspect ratio, capped by the
-   screen's height and by max-height (how far it may grow), with the diagram centred in it */
-.dg-wrap { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-small); touch-action: pan-y; }
+   screen's height and by max-height (how far it may grow), with the diagram centred in it. It paints its own ground,
+   --bg, the one what hides the lines under it (a label's box, a hollow end or dot) is painted: CSS cannot read the
+   ground outside it. Its colour is --fg, for raw's currentColor */
+/* LIMIT: the ground is flat, so a theme's pattern on the page (aurora's, notebook's, blueprint's) does not run through a
+   diagram; to let it, cut the lines under what hides them (a mask) instead of painting a ground */
+.dg-wrap { position: relative; width: 100%; overflow: hidden; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); touch-action: pan-y; }
 .dg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .dg-wrap.zoomed:active { cursor: grabbing; }

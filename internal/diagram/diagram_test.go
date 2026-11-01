@@ -440,6 +440,19 @@ func TestEdges(t *testing.T) {
 	}
 }
 
+// A label with in stands on a circle's colour and has no box, placed by floe or at x and y, whatever plain says; one
+// free of in has its box unless plain.
+func TestVennLabelsBare(t *testing.T) {
+	t.Parallel()
+	src := "width: 300\nheight: 300\ntitle: T\nparts:\n  - circle: { name: a, cx: 150, cy: 150, r: 100 }\n" +
+		"  - label: { text: placed, in: [a] }\n  - label: { text: put, in: [a], x: 150, y: 200 }\n" +
+		"  - label: { text: free, x: 150, y: 280 }\n  - label: { text: bare, x: 40, y: 20, plain: true }\n"
+	got, mistakes := draw(t, src, render("en"))
+	if mistakes != "" || strings.Count(got, `class="label-bg"`) != 1 {
+		t.Errorf("drew %s %s\n  want one label-bg, the free label's", got, mistakes)
+	}
+}
+
 // Placing the labels of a region tries a bounded number of points within the canvas, however large the circle,
 // on a grid the canvas cuts but does not move; a region all outside the canvas sticks out.
 func TestVennBounded(t *testing.T) {

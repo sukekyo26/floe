@@ -219,7 +219,8 @@ func (l *layout) regionOf(at string, in []string) (region, bool) {
 }
 
 // addLabel places a label: where it says, or, with in alone, in its region of a Venn diagram, below the labels
-// placed there before it; one at a place that says in is checked to be in that region, all of it.
+// placed there before it; one at a place that says in is checked to be in that region, all of it. One with in stands
+// on a circle's colour, so it has no box whatever plain says.
 func (l *layout) addLabel(lb *label, at string) {
 	anchor := cmpOr(lb.Anchor, "middle")
 	if lb.In == nil {
@@ -232,7 +233,7 @@ func (l *layout) addLabel(lb *label, at string) {
 	}
 	names := strings.Join(lb.In, ", ")
 	if lb.X != nil {
-		i := l.label(at, lb.Text, *lb.X, *lb.Y, anchor, lb.Plain, lb.Strong)
+		i := l.label(at, lb.Text, *lb.X, *lb.Y, anchor, true, lb.Strong)
 		if g.roomOf(l.labels[i]) < 0 {
 			l.problem(at, "diagram_label_region", l.labels[i].what, names)
 		}
@@ -247,7 +248,7 @@ func (l *layout) addLabel(lb *label, at string) {
 		l.problem(at, "diagram_label_no_room", what("label", "", lb.Text), names)
 		return
 	}
-	l.label(at, lb.Text, x, y, "middle", lb.Plain, lb.Strong)
+	l.label(at, lb.Text, x, y, "middle", true, lb.Strong)
 }
 
 // place finds where a label placed by its region goes: the labels of one region are stacked, the first above,
