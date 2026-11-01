@@ -138,8 +138,8 @@ func (o *graphOut) names() map[string]gref {
 	return byName
 }
 
-// endsOf are the ends of edge k by name, or its mistakes: a name of nothing of the graph, or between a group and
-// what it holds.
+// endsOf are the ends of edge k by name, or its mistakes: a name of nothing of the graph, between a group and what
+// it holds, or at a lane.
 func (o *graphOut) endsOf(k int, byName map[string]gref) ([2]gref, usererr.List) {
 	e := o.g.Edges[k]
 	var ends [2]gref
@@ -155,6 +155,12 @@ func (o *graphOut) endsOf(k int, byName map[string]gref) ([2]gref, usererr.List)
 	}
 	if mistake := o.inside(k, ends); mistake != nil {
 		return ends, usererr.List{mistake}
+	}
+	for i, end := range ends {
+		if o.lane(end.cl) {
+			at := edgeAt(o.at, k) + "/" + [2]string{"from", "to"}[i]
+			return ends, usererr.List{usererr.NewIn("", at, "diagram_graph_lane", e.From, e.To, o.endName(end))}
+		}
 	}
 	return ends, nil
 }
@@ -199,7 +205,7 @@ func (o *graphOut) groupsOf(edges, cedges []int) []*group {
 }
 
 // joined is the root of each box's group of connected boxes: joined by edges, by edges to groups (all the boxes of
-// both ends) and by a group at the top (all its boxes).
+// both ends), by a group at the top (all its boxes) and by lanes (all the boxes).
 func (o *graphOut) joined(edges, cedges []int) func(int) int {
 	root := make([]int, len(o.boxes))
 	for i := range root {
@@ -223,6 +229,11 @@ func (o *graphOut) joined(edges, cedges []int) func(int) int {
 	for _, c := range o.clusters {
 		if c.parent < 0 {
 			join(c.boxes)
+		}
+	}
+	if o.g.Lanes { // every box is in a lane
+		for b := range o.boxes {
+			join([]int{0, b})
 		}
 	}
 	return find

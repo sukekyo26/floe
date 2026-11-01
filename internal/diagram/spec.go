@@ -89,6 +89,7 @@ type graph struct {
 	X         float64     `json:"x"`
 	Y         float64     `json:"y"`
 	Direction string      `json:"direction"`
+	Lanes     bool        `json:"lanes,omitempty"` // omitted, so that the ids of a spec without it stay
 	Nodes     []graphNode `json:"nodes"`
 	Edges     []graphEdge `json:"edges"`
 }
