@@ -32,7 +32,7 @@
 | `bar` | `x1` `x2` `y`、`name`、`tone`、`label`（棒の右）。 |
 | `axis` | `x1` `x2` `y`、`ticks: [[x, 文], ...]`、`grid`（格子の線の上端）。 |
 | `circle` | `cx` `cy` `r`、`name`、`tone`。円どうしは重なってよい。 |
-| `label` | `text`、`x` `y`、`anchor`（`middle`。`start`・`end`）、`plain`（背景なし。`in` のあるラベルは、いつも背景なし）、`strong`、`in`（ベン図で、内側に置く円の名前。ほかの円の外。`x` と `y` を省けば floe が置く）。 |
+| `label` | `text`、`x` `y`、`anchor`（`middle`。`start`・`end`）、`plain`（背景なし。`in` のあるラベルの既定。`false` で背景を付ける）、`strong`、`in`（ベン図で、内側に置く円の名前。ほかの円の外。`x` と `y` を省けば floe が置く）。 |
 | `line` | `x1` `y1` `x2` `y2`、`kind`（`line`。`lifeline`・`divider`）。ほかの部品と交わってよいが、キャンバスから出ない。 |
 | `tree` | `x` `y`（根の中心と上）、`root`：節。節は `box` と同じ `rows`・`name`・`tone`・`shape` と、子の節を並べた `children` を持つ。floe が各節を親の下に置き（子は横に並べ、深さごとに 1 段にそろえる）、親から子へ線を引く。節の `name` は、手で書いた線の端にできる。 |
 | `graph` | `x` `y`（全体の左上）、`nodes`、`edges`、`direction`（`down`。`right`）、`nodes` の代わりの `lanes`。節は `box: { name, rows, tone, shape }`（`box` と同じ鍵を持ち、`name` は要る）か、`group: { name, label, accent, nodes }`（箱とまとまりを枠で囲むまとまり）。線は `{ from, to }`（その graph の箱かまとまりの名前 2 つ）で、`label`・`dashed`・`bold`・`tone`・`start`・`end`（`arrow` か `none`）を持てる。floe が箱を段に分けて並べ、箱の間に線を引く（下）。 |

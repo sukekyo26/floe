@@ -618,8 +618,9 @@ func (l *layout) image(at, name string, x, y, size float64, who string) (elem, b
 
 // label places text at x, y: 18px tall, with 5px around it, on a box of the diagram's ground (label-bg) unless plain.
 // It returns the label's index in labels.
-// LIMIT: the box is --bg, so on a coloured shape (a circle, raw's) it shows; a label free of in may say plain, but an
-// edge's, an icon's and a bar's cannot. Tell the shape under them if they are drawn there.
+// LIMIT: the box is --bg, so on a coloured shape (a circle, raw's) it shows; a label may say plain (one with in has
+// none unless it says plain: false), but an edge's, an icon's and a bar's cannot. Tell the shape under them if they
+// are drawn there.
 func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, strong bool) int {
 	cls := "label"
 	if strong {

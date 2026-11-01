@@ -296,6 +296,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the labels of a Venn diagram's regions (`in`) to have no box unless
+  they say `plain: false`: one that wrote no `plain` loses the box it drew on
+  its circle. A diagram's ground, `--bg`, is painted in its frame, so a
+  diagram on a panel or a theme's patterned page stands as a box of the page's
+  ground, and a fragment of `floe diagram render` on another page as a box of
+  `default`'s `--bg`, light on a dark page.
+
 - Change every page to start with no margin on the body, set by floe under the template's `page.css`: a template of
   your own that writes none loses the browser's 8px, and a margin your theme's `base.css` gives the body no longer
   reaches it (write it in the template's `page.css`). floe's templates set no font size, so their text takes the size
@@ -430,8 +437,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Fix a diagram on a panel, in details or on a theme's patterned page, whose
   labels' boxes and hollow ends and dots stood out in the page's ground: a
-  diagram paints its own ground, `--bg`, in its frame. The labels of a Venn
-  diagram's regions (`in`) have no box, `plain` or not.
+  diagram paints its own ground, `--bg`, in its frame.
 
 - Fix swiss's parts in a band (a note, details, a table) and a template's own
   panels and tables there, whose text and rules were dark on the red band and

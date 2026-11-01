@@ -220,11 +220,17 @@ func (l *layout) regionOf(at string, in []string) (region, bool) {
 
 // addLabel places a label: where it says, or, with in alone, in its region of a Venn diagram, below the labels
 // placed there before it; one at a place that says in is checked to be in that region, all of it. One with in stands
-// on a circle's colour, so it has no box whatever plain says.
+// on a circle's colour, so it has no box unless it says plain: false.
+// LIMIT: a line one may cross (a divider, a lifeline) or raw's shape over a label with no box runs over its text, as
+// only edges are told running through labels; tell them too if they are drawn there.
 func (l *layout) addLabel(lb *label, at string) {
 	anchor := cmpOr(lb.Anchor, "middle")
+	plain := lb.In != nil
+	if lb.Plain != nil {
+		plain = *lb.Plain
+	}
 	if lb.In == nil {
-		l.label(at, lb.Text, *lb.X, *lb.Y, anchor, lb.Plain, lb.Strong)
+		l.label(at, lb.Text, *lb.X, *lb.Y, anchor, plain, lb.Strong)
 		return
 	}
 	g, ok := l.regionOf(at, lb.In)
@@ -233,7 +239,7 @@ func (l *layout) addLabel(lb *label, at string) {
 	}
 	names := strings.Join(lb.In, ", ")
 	if lb.X != nil {
-		i := l.label(at, lb.Text, *lb.X, *lb.Y, anchor, true, lb.Strong)
+		i := l.label(at, lb.Text, *lb.X, *lb.Y, anchor, plain, lb.Strong)
 		if g.roomOf(l.labels[i]) < 0 {
 			l.problem(at, "diagram_label_region", l.labels[i].what, names)
 		}
@@ -248,7 +254,7 @@ func (l *layout) addLabel(lb *label, at string) {
 		l.problem(at, "diagram_label_no_room", what("label", "", lb.Text), names)
 		return
 	}
-	l.label(at, lb.Text, x, y, "middle", true, lb.Strong)
+	l.label(at, lb.Text, x, y, "middle", plain, lb.Strong)
 }
 
 // place finds where a label placed by its region goes: the labels of one region are stacked, the first above,

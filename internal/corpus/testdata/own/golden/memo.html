@@ -176,7 +176,9 @@ blockquote > * + * { margin-top: 0.6rem; }
    --bg, the one what hides the lines under it (a label's box, a hollow end or dot) is painted: CSS cannot read the
    ground outside it. Its colour is --fg, for raw's currentColor */
 /* LIMIT: the ground is flat, so a theme's pattern on the page (aurora's, notebook's, blueprint's) does not run through a
-   diagram; to let it, cut the lines under what hides them (a mask) instead of painting a ground */
+   diagram, and a fragment of floe diagram render on another page paints default's --bg, a light box on a dark page
+   (its docs tell to set --bg on the roots); to let the ground through, cut the lines under what hides them (a mask)
+   instead of painting one */
 .dg-wrap { position: relative; width: 100%; overflow: hidden; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); touch-action: pan-y; }
 .dg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }

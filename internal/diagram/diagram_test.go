@@ -440,16 +440,17 @@ func TestEdges(t *testing.T) {
 	}
 }
 
-// A label with in stands on a circle's colour and has no box, placed by floe or at x and y, whatever plain says; one
-// free of in has its box unless plain.
+// A label with in stands on a circle's colour and has no box, placed by floe or at x and y, unless it says plain:
+// false; one free of in has its box unless it says plain.
 func TestVennLabelsBare(t *testing.T) {
 	t.Parallel()
 	src := "width: 300\nheight: 300\ntitle: T\nparts:\n  - circle: { name: a, cx: 150, cy: 150, r: 100 }\n" +
 		"  - label: { text: placed, in: [a] }\n  - label: { text: put, in: [a], x: 150, y: 200 }\n" +
+		"  - label: { text: boxed, in: [a], x: 150, y: 100, plain: false }\n" +
 		"  - label: { text: free, x: 150, y: 280 }\n  - label: { text: bare, x: 40, y: 20, plain: true }\n"
 	got, mistakes := draw(t, src, render("en"))
-	if mistakes != "" || strings.Count(got, `class="label-bg"`) != 1 {
-		t.Errorf("drew %s %s\n  want one label-bg, the free label's", got, mistakes)
+	if mistakes != "" || strings.Count(got, `class="label-bg"`) != 2 {
+		t.Errorf("drew %s %s\n  want two label-bg, boxed's and free's", got, mistakes)
 	}
 }
 
@@ -463,7 +464,7 @@ func TestVennBounded(t *testing.T) {
 		t.Errorf("a huge circle = %q, want it to stick out, told at once", got)
 	}
 	src = "width: 400\nheight: 300\ntitle: T\nparts:\n  - circle: { name: a, cx: 90, cy: 150, r: 101 }\n" +
-		"  - circle: { name: b, cx: 250, cy: 150, r: 101 }\n  - label: { text: xxxx, in: [a, b], plain: true }\n"
+		"  - circle: { name: b, cx: 250, cy: 150, r: 101 }\n  - label: { text: xxxx, in: [a, b] }\n"
 	// The circles stick out themselves; the label finds its room in the canvas.
 	if _, got := draw(t, src, render("en")); strings.Contains(got, `label "xxxx"`) {
 		t.Errorf("a region in the canvas of circles out of it = %q, want the label placed", got)
