@@ -274,7 +274,7 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
 :scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:not([data-floe-part]) { --face: initial; --on-face: initial; }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
 }
 }
 </style>
@@ -285,7 +285,7 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
 :scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:not([data-floe-part]) { --face: initial; --on-face: initial; }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
 }
 }
 </style>
@@ -479,7 +479,7 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* No ground: its text and faces are those around it (a band's), what it holds too */
-:scope { border: 0; border-top: 2px solid var(--fg); background: none; color: inherit; --face: inherit; --on-face: inherit; }
+:scope { border: 0; border-top: 2px solid var(--on-face, var(--fg)); background: none; color: inherit; --face: inherit; --on-face: inherit; }
 :scope > * { --face: inherit; --on-face: inherit; }
 }
 }
@@ -488,7 +488,7 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* No ground: its text and faces are those around it (a band's), what it holds too */
-:scope { border: 0; border-top: 2px solid var(--fg); background: none; color: inherit; --face: inherit; --on-face: inherit; }
+:scope { border: 0; border-top: 2px solid var(--on-face, var(--fg)); background: none; color: inherit; --face: inherit; --on-face: inherit; }
 :scope > * { --face: inherit; --on-face: inherit; }
 }
 }
@@ -498,7 +498,7 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { border: 0; --table-rule: none; }
 :scope thead th { background: none; color: var(--on-face, var(--fg)); font-weight: 800; border-bottom: 2px solid var(--on-face, var(--fg)); }
-:scope tbody td { border-bottom: 1px solid var(--fg); }
+:scope tbody td { border-bottom: 1px solid var(--on-face, var(--fg)); }
 :scope :is(th, td):first-child { padding-left: 0; }
 :scope td.num { font-size: 1.35rem; font-weight: 300; }
 }
@@ -509,7 +509,7 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* No ground: its text and faces are those around it (a band's), what it holds too, its mark and title in the face's
    colour in one */
-:scope { background: none; color: inherit; border: 0; border-top: 2px solid var(--fg); }
+:scope { background: none; color: inherit; border: 0; border-top: 2px solid var(--on-face, var(--fg)); }
 :scope > * { --face: inherit; --on-face: inherit; }
 :scope::before { background: none; color: var(--on-face, var(--tone)); font-size: 1rem; font-weight: 900; }
 /* Its red is read on the surface alone: the good one's mark is black */

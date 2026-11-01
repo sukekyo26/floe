@@ -390,9 +390,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Fix swiss's parts in a band (a note, details, a table), whose text was dark on
-  the red band and whose links, titles, marks and focus rings red on it: they
-  draw in the band's text colour.
+- Fix swiss's parts in a band (a note, details, a table) and a template's own
+  panels and tables there, whose text and rules were dark on the red band and
+  whose links, titles, marks and focus rings red on it: they draw in the band's
+  text colour.
 - Fix a page that grew wider than a phone's screen when a long line of code or a
   wide table stood in a list's item or a quote (in a text, a faq's answer, a
   card of options or of a decision, a step, a tab): on screen, code, tables and

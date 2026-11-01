@@ -182,6 +182,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 :scope { --face: var(--accent); --on-face: var(--on-fill); background: var(--face); color: var(--on-face); }
 /* A part on a ground of its own (a panel, a note) sets its text's colour with it; one of none draws in the band's,
    its tone told by its word alone (a pill of a theme that gives it no ground), as in any face.
+   LIMIT: on a theme whose panel has no ground (swiss), text a part draws in a colour of its own (muted, a tone, the
+   page's text colour: progress's label, a tree's note, a timeline's date) stays in it on the band (S174).
    LIMIT: a theme whose faces let what is under them through (aurora's glass) lets the accent through them too, where
    the text sinks: such a theme makes its faces opaque in a band, in its band.css, as aurora does */
 }
@@ -249,7 +251,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
 :scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:not([data-floe-part]) { --face: initial; --on-face: initial; }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
 }
 }
 </style>
@@ -260,7 +262,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
 :scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:not([data-floe-part]) { --face: initial; --on-face: initial; }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
 }
 }
 </style>
@@ -359,7 +361,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
+:scope { background: var(--default-panel); color: var(--fg); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
 .card {
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);

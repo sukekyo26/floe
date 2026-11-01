@@ -223,7 +223,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
 :scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:not([data-floe-part]) { --face: initial; --on-face: initial; }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
 }
 }
 </style>
@@ -234,7 +234,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
 :scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:not([data-floe-part]) { --face: initial; --on-face: initial; }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
 }
 }
 </style>
@@ -296,7 +296,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
+:scope { background: var(--default-panel); color: var(--fg); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
 .card {
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);

@@ -205,7 +205,7 @@ blockquote { background: var(--surface); border: 0; border-radius: var(--radius)
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
 :scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:not([data-floe-part]) { --face: initial; --on-face: initial; }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
 }
 }
 </style>
