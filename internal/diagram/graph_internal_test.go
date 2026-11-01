@@ -190,6 +190,9 @@ func handFault(g *graph, l *layout) string {
 		if slices.ContainsFunc(g.Edges, func(e graphEdge) bool { return e.From == n.Box.Name && e.To == n.Box.Name }) {
 			delete(ends, loopSide) // its loops use it
 		}
+		for _, side := range levelSides(g, l, n.Box.Name) { // and its level edges theirs
+			delete(ends, side)
+		}
 		for _, side := range slices.Sorted(maps.Keys(ends)) {
 			p := ends[side]
 			parts = append(parts, part{Edge: &edge{
@@ -284,14 +287,19 @@ func graphFault(g *graph) string {
 	if fault := labelFault(g, l); fault != "" {
 		return fault
 	}
+	if fault := levelFault(g, l); fault != "" {
+		return fault
+	}
 	drawn := 0
 	for i, a := range l.paths {
-		for _, b := range l.paths[i+1:] {
+		for j, b := range l.paths[i+1:] {
 			bad, n := touch(a, b)
 			if bad {
 				return a.what + " touches " + b.what
 			}
-			drawn += n
+			if !g.Edges[i].Level && !g.Edges[i+1+j].Level { // a level edge crosses the edges passing its rank
+				drawn += n
+			}
 		}
 	}
 	shape := map[string]string{}
@@ -724,26 +732,37 @@ func addLoops(rnd *rand.Rand, g *graph, every bool) {
 func TestGraphRandom(t *testing.T) {
 	t.Parallel()
 
-	// Then, graphs with a label on every edge, in English and Japanese, crowding labels into every channel; last,
-	// graphs in lanes.
+	// Then, graphs with a label on every edge, in English and Japanese, crowding labels into every channel; then,
+	// graphs in lanes; last, graphs with level edges between boxes picked at random, with no group (plain), groups
+	// and lanes, those told only of their level edges skipped, and at least least of them laid out.
 	for _, c := range []struct {
 		direction string
 		seed      [2]uint64
 		graphs    int
 		every     bool
 		lanes     bool
+		level     string
+		least     int
 	}{
-		{"", [2]uint64{1, 2}, 3000, false, false},
-		{"right", [2]uint64{3, 4}, 3000, false, false},
-		{"", [2]uint64{5, 6}, 300, true, false},
-		{"right", [2]uint64{7, 8}, 300, true, false},
-		{"", [2]uint64{9, 10}, 1000, false, true},
-		{"right", [2]uint64{11, 12}, 1000, false, true},
+		{"", [2]uint64{1, 2}, 3000, false, false, "", 0},
+		{"right", [2]uint64{3, 4}, 3000, false, false, "", 0},
+		{"", [2]uint64{5, 6}, 300, true, false, "", 0},
+		{"right", [2]uint64{7, 8}, 300, true, false, "", 0},
+		{"", [2]uint64{9, 10}, 1000, false, true, "", 0},
+		{"right", [2]uint64{11, 12}, 1000, false, true, "", 0},
+		{"", [2]uint64{13, 14}, 300, false, false, "plain", 132},
+		{"right", [2]uint64{15, 16}, 300, false, false, "plain", 123},
+		{"", [2]uint64{17, 18}, 300, false, false, "groups", 97},
+		{"right", [2]uint64{19, 20}, 300, false, false, "groups", 107},
+		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 88},
+		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 88},
 	} {
 		rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1]))       //nolint:gosec // G404: graphs to try, no secret
 		loops := rand.New(rand.NewPCG(c.seed[0]+10, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
 		groups := rand.New(rand.NewPCG(c.seed[0]+20, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
 		lanes := rand.New(rand.NewPCG(c.seed[0]+30, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
+		levels := rand.New(rand.NewPCG(c.seed[0]+40, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
+		laidOut := 0
 		for i := range c.graphs {
 			g := randomGraph(rnd, c.direction)
 			for k := range g.Edges {
@@ -752,16 +771,98 @@ func TestGraphRandom(t *testing.T) {
 				}
 			}
 			addLoops(loops, g, c.every)
-			addGroups(groups, g)
+			if c.level != "plain" {
+				addGroups(groups, g)
+			}
 			if c.lanes {
 				inLanes(lanes, g)
+			}
+			if c.level != "" {
+				if addLevels(levels, g); levelTold(g) {
+					continue
+				}
+				laidOut++
 			}
 			if fault := graphFault(g); fault != "" {
 				b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
 				t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
 			}
 		}
+		if laidOut < c.least {
+			t.Errorf("seed %v: %d graphs with level edges laid out, fewer than %d", c.seed, laidOut, c.least)
+		}
 	}
+}
+
+// levelSides are the sides of box name its level edges take, laid out as l: towards the other box.
+func levelSides(g *graph, l *layout, name string) []string {
+	before, after, axis := "left", "right", 0
+	if g.Direction == "right" {
+		before, after, axis = "top", "bottom", 1
+	}
+	var out []string
+	for _, e := range g.Edges {
+		other := e.To
+		if e.To == name {
+			other = e.From
+		}
+		if !e.Level || e.From == e.To || e.From != name && e.To != name {
+			continue
+		}
+		if l.names[other].r.lo(axis) < l.names[name].r.lo(axis) {
+			out = append(out, before)
+		} else {
+			out = append(out, after)
+		}
+	}
+	return out
+}
+
+// levelFault is what is wrong with the level edges of g laid out as l, or "": an edge of more than one run, or
+// between boxes whose middles across the ranks differ, which stand in two ranks.
+func levelFault(g *graph, l *layout) string {
+	along := 1
+	if g.Direction == "right" {
+		along = 0
+	}
+	for k, e := range g.Edges {
+		if !e.Level || e.From == e.To {
+			continue
+		}
+		a, b := l.names[e.From].r, l.names[e.To].r
+		if len(l.paths[k].segs) != 1 || a.lo(along)+a.size(along)/2 != b.lo(along)+b.size(along)/2 {
+			return fmt.Sprintf("%s runs %v between %v and %v", l.paths[k].what, l.paths[k].segs, a, b)
+		}
+	}
+	return ""
+}
+
+// addLevels adds to g, at random from rnd, 1 to 3 edges written level between two boxes, half of them labelled.
+func addLevels(rnd *rand.Rand, g *graph) {
+	boxes := graphBoxes(g)
+	for range 1 + rnd.IntN(3) {
+		a, b := boxes[rnd.IntN(len(boxes))].Name, boxes[rnd.IntN(len(boxes))].Name
+		if a == b {
+			continue
+		}
+		e := graphEdge{From: a, To: b, Label: nil, Dashed: false, Bold: false, Tone: "", Start: nil, End: nil, Level: true}
+		if rnd.IntN(2) == 0 {
+			e.Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(12))}
+		}
+		g.Edges = append(g.Edges, e)
+	}
+}
+
+// levelTold reports whether g is told, and told only of mistakes of its level edges (and of boxes among a group's
+// ranks, which a row makes too).
+func levelTold(g *graph) bool {
+	l := laid(g)
+	for _, p := range l.problems {
+		if !strings.HasPrefix(p.Key, "diagram_graph_level_") && p.Key != "diagram_graph_among" {
+			return false
+		}
+	}
+	return l.failure == nil && len(l.problems) > 0
 }
 
 // writtenOrder is a ranked graph whose written order crosses once, in a pair at the left of two ranks, and nowhere
