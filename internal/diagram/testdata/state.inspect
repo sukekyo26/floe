@@ -14,3 +14,4 @@ label "publish or serve" 223,104 125.2x18
 label "floe reinstalled" 772.6,68 125.2x18
 label "next publish replaces it" 947.8,158 182.8x18
 label "floe stop, logout or reboot" 386.2,134 204.4x18
+label "floe stop, logout or reboot" 925.29,200 204.4x18

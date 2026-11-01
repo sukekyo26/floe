@@ -19,6 +19,6 @@ parts:
         - { from: running, to: outdated, label: { en: floe reinstalled, ja: "floe を入れ直す" } }
         - { from: outdated, to: running, label: { en: next publish replaces it, ja: "次の publish が入れ替え" } }
         - { from: running, to: stopped, label: { en: "floe stop, logout or reboot", ja: "floe stop・ログアウト・再起動" } }
-        - { from: outdated, to: stopped }
+        - { from: outdated, to: stopped, label: { en: "floe stop, logout or reboot", ja: "floe stop・ログアウト・再起動" } }
   - dot: { cx: 120, cy: 22 }
   - edge: { from: [120, 29], to: stopped }
