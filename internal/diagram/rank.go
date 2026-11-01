@@ -1,6 +1,10 @@
 package diagram
 
-import "github.com/sukekyo26/floe/internal/usererr"
+import (
+	"slices"
+
+	"github.com/sukekyo26/floe/internal/usererr"
+)
 
 // rank makes a group of the boxes members (their indexes among the boxes read, as written), its edges between boxes
 // and its edges to groups (cedges; by their indexes in edges): an edge back up a cycle turned round, and each box at
@@ -47,6 +51,7 @@ func (o *graphOut) rank(members, edges, cedges []int) *group {
 // as X's bottom → G's top, G a rank or more below X, entering its frame's top; but where that makes a cycle, as G's
 // bottom → X's top, drawn up, leaving its frame's bottom; where both make one, X stands among G's ranks: told, and
 // not laid out. Each edge is added in the order written, so that an earlier one takes its way.
+// LIMIT: the way taken is the first that makes no cycle, not the one turning the fewest edges, as with turn.
 func (gr *group) rankWith(arcs []arc, cedges []int, local map[int]int) []arc {
 	rk := newRanking(gr.out, local, len(gr.nodes))
 	for _, a := range arcs {
@@ -55,15 +60,16 @@ func (gr *group) rankWith(arcs []arc, cedges []int, local map[int]int) []arc {
 	var forms []edgeForm
 	for _, k := range cedges {
 		ends := gr.out.ends[k]
+		up0, lo0, up1, lo1 := rk.upper(ends[0]), rk.lower(ends[0]), rk.upper(ends[1]), rk.lower(ends[1])
 		switch {
-		case !rk.reach(rk.lower(ends[1]), rk.upper(ends[0])):
-			rk.add(rk.upper(ends[0]), rk.lower(ends[1]), 1)
+		case !rk.reached(lo1)[up0]:
+			rk.add(up0, lo1, 1)
 			forms = append(forms, edgeForm{k, ends, false})
-		case !rk.reach(rk.lower(ends[0]), rk.upper(ends[1])):
-			rk.add(rk.upper(ends[1]), rk.lower(ends[0]), 1)
-			forms = append(forms, edgeForm{k, [2]gend{ends[1], ends[0]}, true})
+		case !rk.reached(lo0)[up1]:
+			rk.add(up1, lo0, 1)
+			forms = append(forms, edgeForm{k, [2]gref{ends[1], ends[0]}, true})
 		default:
-			gr.among = append(gr.among, gr.amid(k, local, rk.reach))
+			gr.among = append(gr.among, gr.amid(k, local, rk.reached))
 		}
 	}
 	for j, r := range rk.longest()[:len(gr.nodes)] {
@@ -80,7 +86,7 @@ func (gr *group) rankWith(arcs []arc, cedges []int, local map[int]int) []arc {
 // against the way it is written.
 type edgeForm struct {
 	k        int
-	ends     [2]gend
+	ends     [2]gref
 	reversed bool
 }
 
@@ -155,30 +161,30 @@ func (rk *ranking) stand(c int) int {
 }
 
 // upper is the node an edge leaves end e by, down: the box, or the group's B; lower, the node it enters e by.
-func (rk *ranking) upper(e gend) int {
+func (rk *ranking) upper(e gref) int {
 	if e.box >= 0 {
 		return rk.local[e.box]
 	}
 	return rk.stand(e.cl) + 1
 }
 
-func (rk *ranking) lower(e gend) int {
+func (rk *ranking) lower(e gref) int {
 	if e.box >= 0 {
 		return rk.local[e.box]
 	}
 	return rk.stand(e.cl)
 }
 
-// reach reports whether node to is reached from node from by the arcs, breadth first.
-func (rk *ranking) reach(from, to int) bool {
-	seen := map[int]bool{from: true}
-	queue := []int{from}
+// reached are the nodes reached from the nodes from by the arcs, breadth first, from among them.
+func (rk *ranking) reached(from ...int) map[int]bool {
+	seen := map[int]bool{}
+	for _, u := range from {
+		seen[u] = true
+	}
+	queue := slices.Clone(from)
 	for len(queue) > 0 {
 		u := queue[0]
 		queue = queue[1:]
-		if u == to {
-			return true
-		}
 		for _, i := range rk.out[u] {
 			if v := rk.arcs[i].to; !seen[v] {
 				seen[v] = true
@@ -186,7 +192,7 @@ func (rk *ranking) reach(from, to int) bool {
 			}
 		}
 	}
-	return false
+	return seen
 }
 
 // longest is each node's rank: its longest path, by the arcs' lengths, from a node no arc enters (Kahn's way).
@@ -218,21 +224,28 @@ func (rk *ranking) longest() []int {
 
 // amid is the mistake of edge k, to a group G whose other end X stands among G's ranks: a box of G leads to X, and X
 // to a box of G, the first of each as written. X is the box when one end is, else its from.
-func (gr *group) amid(k int, local map[int]int, reach func(from, to int) bool) *usererr.Error {
+func (gr *group) amid(k int, local map[int]int, reached func(from ...int) map[int]bool) *usererr.Error {
 	o := gr.out
 	ends := o.ends[k]
 	x, g, key := 0, 1, "from"
 	if ends[0].box < 0 && ends[1].box >= 0 {
 		x, g, key = 1, 0, "to"
 	}
+	members := o.members(ends[x])
+	xs := make([]int, 0, len(members))
+	for _, m := range members {
+		xs = append(xs, local[m])
+	}
+	fromX := reached(xs...)
 	var before, after string
 	for _, b := range o.clusters[ends[g].cl].boxes {
-		for _, m := range o.members(ends[x]) {
-			if before == "" && reach(local[b], local[m]) {
+		if after == "" && fromX[local[b]] {
+			after = o.boxes[b].box.Name
+		}
+		if before == "" {
+			fromB := reached(local[b])
+			if slices.ContainsFunc(xs, func(m int) bool { return fromB[m] }) {
 				before = o.boxes[b].box.Name
-			}
-			if after == "" && reach(local[m], local[b]) {
-				after = o.boxes[b].box.Name
 			}
 		}
 	}

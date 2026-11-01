@@ -118,6 +118,7 @@ var graphKeys = map[string]string{
 	"diagram_overlap":      "diagram_graph_overlap",
 	"diagram_runs_through": "diagram_graph_through",
 	"diagram_crossing":     "diagram_graph_crossing",
+	"diagram_straddle":     "diagram_graph_straddle",
 }
 
 // tell tells the mistake of key that things make, in their order: at the first written by hand, which its writer

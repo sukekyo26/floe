@@ -27,18 +27,16 @@ type cluster struct {
 	at     string
 	parent int
 	boxes  []int
-	kids   []child
+	kids   []gref
 }
 
-// child is a node of a group or of the graph, a box or a group, by its index among the boxes or groups read.
-type child struct{ box, cl int }
-
-// gend is an end of a graph's edge: a box, or a group (the other is -1).
-type gend struct{ box, cl int }
+// gref is a node of a graph written, a box or a group, by its index among the boxes or groups read (the other
+// is -1): a node a group or the graph holds, or an end of an edge.
+type gref struct{ box, cl int }
 
 // flatten reads g's nodes, as written, depth first on a stack of its own: its boxes and groups, and the nodes at its
 // top.
-func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []child) {
+func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []gref) {
 	type level struct {
 		nodes []graphNode
 		at    string
@@ -54,15 +52,15 @@ func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []child
 		}
 		n, nat, cl := lv.nodes[lv.next], lv.at+"/nodes/"+strconv.Itoa(lv.next), lv.cl
 		lv.next++
-		var c child
+		var c gref
 		if n.Box != nil {
-			c = child{box: len(boxes), cl: -1}
+			c = gref{box: len(boxes), cl: -1}
 			boxes = append(boxes, gbox{box: n.Box, at: nat + "/box", cl: cl})
 			for p := cl; p >= 0; p = clusters[p].parent {
 				clusters[p].boxes = append(clusters[p].boxes, c.box)
 			}
 		} else {
-			c = child{box: -1, cl: len(clusters)}
+			c = gref{box: -1, cl: len(clusters)}
 			clusters = append(clusters, cluster{g: n.Group, at: nat + "/group", parent: cl, boxes: nil, kids: nil})
 			stack = append(stack, level{nodes: n.Group.Nodes, at: nat + "/group", cl: c.cl, next: 0})
 		}
@@ -76,7 +74,7 @@ func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []child
 }
 
 // holds reports whether group c holds end e, or is it.
-func (o *graphOut) holds(c int, e gend) bool {
+func (o *graphOut) holds(c int, e gref) bool {
 	p := e.cl
 	if e.box >= 0 {
 		p = o.boxes[e.box].cl
@@ -90,7 +88,7 @@ func (o *graphOut) holds(c int, e gend) bool {
 }
 
 // endName is how a mistake names end e.
-func (o *graphOut) endName(e gend) string {
+func (o *graphOut) endName(e gref) string {
 	if e.box >= 0 {
 		return o.boxes[e.box].box.Name
 	}
@@ -99,7 +97,7 @@ func (o *graphOut) endName(e gend) string {
 
 // inside is the mistake of edge k between a group and what it holds, at the end held (at its to when it is the
 // group itself), or nil.
-func (o *graphOut) inside(k int, ends [2]gend) *usererr.Error {
+func (o *graphOut) inside(k int, ends [2]gref) *usererr.Error {
 	e := o.g.Edges[k]
 	for i, g := range ends {
 		if g.cl < 0 {
@@ -181,6 +179,12 @@ func (gr *group) spans() map[int][2]int {
 // its first rank, then lists each rank as the groups hold it: in each group, its left mark and its heading, its nodes
 // as written (a box, or a group nested), its points and ports by their edges' order, and its right mark, so that a
 // group stands side by side in every rank.
+//
+// LIMIT: an edge between a box of a group and one outside meets the frame's side, not its top or bottom, when the
+// box inside is past the group's first rank (an edge in) or before its last (out): its points pass by the group's
+// marks, not through a port. Give such edges ports too if frames come to look crossed.
+// LIMIT: a long heading widens its group (down), its room standing before the boxes of the first rank, or deepens
+// the first rank (right). Give the heading a rank's room of its own if long labels come to look stretched.
 func (gr *group) mark() {
 	spans := gr.spans()
 	marks := map[[2]int][2]int{} // a group's left and right marks in a rank

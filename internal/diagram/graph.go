@@ -64,8 +64,8 @@ type graphOut struct {
 	at       string
 	boxes    []gbox
 	clusters []cluster
-	top      []child // the nodes at the graph's top, as written
-	ends     map[int][2]gend
+	top      []gref // the nodes at the graph's top, as written
+	ends     map[int][2]gref
 	groups   []*group
 	passed   int
 	loops    [][2]int // the edges from a box to itself, and the box
@@ -77,7 +77,7 @@ type graphOut struct {
 // and told; one from a box to itself is a loop, kept out of the groups (drawLoops).
 func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 	out := &graphOut{
-		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gend{}, groups: nil, passed: 0,
+		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
 		loops: nil, skip: false,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)
@@ -113,10 +113,10 @@ func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 }
 
 // names are the ends an edge may name, as written, the first of a name used twice (told by layout).
-func (o *graphOut) names() map[string]gend {
-	byName := map[string]gend{}
-	var name func(c child)
-	name = func(c child) {
+func (o *graphOut) names() map[string]gref {
+	byName := map[string]gref{}
+	var name func(c gref)
+	name = func(c gref) {
 		n := ""
 		if c.box >= 0 {
 			n = o.boxes[c.box].box.Name
@@ -124,7 +124,7 @@ func (o *graphOut) names() map[string]gend {
 			n = o.clusters[c.cl].g.Name
 		}
 		if _, ok := byName[n]; !ok && n != "" {
-			byName[n] = gend(c)
+			byName[n] = c
 		}
 		if c.cl >= 0 {
 			for _, k := range o.clusters[c.cl].kids {
@@ -140,9 +140,9 @@ func (o *graphOut) names() map[string]gend {
 
 // endsOf are the ends of edge k by name, or its mistakes: a name of nothing of the graph, or between a group and
 // what it holds.
-func (o *graphOut) endsOf(k int, byName map[string]gend) ([2]gend, usererr.List) {
+func (o *graphOut) endsOf(k int, byName map[string]gref) ([2]gref, usererr.List) {
 	e := o.g.Edges[k]
-	var ends [2]gend
+	var ends [2]gref
 	var mistakes usererr.List
 	for i, end := range [2][2]string{{"from", e.From}, {"to", e.To}} {
 		var ok bool
@@ -160,7 +160,7 @@ func (o *graphOut) endsOf(k int, byName map[string]gend) ([2]gend, usererr.List)
 }
 
 // members are the boxes of end e: the box, or every box of the group.
-func (o *graphOut) members(e gend) []int {
+func (o *graphOut) members(e gref) []int {
 	if e.box >= 0 {
 		return []int{e.box}
 	}
@@ -285,7 +285,7 @@ func (o *graphOut) items() ([]item, error) {
 
 // opened is out with the nodes cs opened as written, a group's frame before the nodes it holds, so that a name used
 // twice is told at the later: each box at its place among boxes, each frame at its group's.
-func (o *graphOut) opened(cs []child, boxes []rect, frames map[int]rect, out []item) []item {
+func (o *graphOut) opened(cs []gref, boxes []rect, frames map[int]rect, out []item) []item {
 	for _, c := range cs {
 		if c.box >= 0 {
 			r, n := boxes[c.box], o.boxes[c.box]
@@ -366,14 +366,17 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 	return d, nil
 }
 
-// stand moves the group a column past left on axis across, its boxes on the grid as laid out (a label before them
-// moves it on by whole columns), and the top of what it draws to 0; it returns where the next group goes.
+// stand moves the group a column past left on axis across, its boxes and frames on the grid as laid out (a label
+// before them moves it on by whole columns), and the top of what it draws to 0; it returns where the next group goes.
 func (d *drawing) stand(across int, left float64) float64 {
 	lo, hi := d.span(across)
-	boxLo, _ := d.boxSpan(across)
+	laidLo, _ := d.boxSpan(across)
+	for _, f := range d.frames {
+		laidLo = min(laidLo, f.lo(across))
+	}
 	by := left
-	if lo < boxLo {
-		by += onGrid(boxLo-lo, column, math.Ceil)
+	if lo < laidLo {
+		by += onGrid(laidLo-lo, column, math.Ceil)
 	}
 	d.stretch(across, math.Inf(-1), by)
 	if top, _ := d.span(1 - across); top < 0 {

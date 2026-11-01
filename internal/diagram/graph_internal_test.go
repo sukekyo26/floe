@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/yamlpos"
@@ -384,11 +385,11 @@ func clusterFault(g *graph, l *layout) string {
 		}
 		return false
 	}
+	if s := frameStart(g, l); s != "" {
+		return s
+	}
 	for c := range clusters {
 		f := frameOf(c)
-		if f.x < g.X || f.y < g.Y {
-			return fmt.Sprintf("the frame of group %d at %v,%v, above or left of the graph's %v,%v", c, f.x, f.y, g.X, g.Y)
-		}
 		for i, b := range boxes {
 			r := l.names[b.box.Name].r
 			switch in := slices.Contains(clusters[c].boxes, i); {
@@ -432,6 +433,30 @@ func clusterFault(g *graph, l *layout) string {
 					}
 				}
 			}
+		}
+	}
+	return ""
+}
+
+// frameStart is what is wrong with where a graph's frames start, or "": none starts above or left of the graph's x
+// and y, and the frame starting first on an axis, with nothing drawn before it, starts at x (or y).
+func frameStart(g *graph, l *layout) string {
+	at := [2]float64{g.X, g.Y}
+	for axis := range 2 {
+		frame, other := math.Inf(1), math.Inf(1)
+		for _, f := range l.frames {
+			frame = min(frame, f.lo(axis))
+		}
+		for _, r := range slices.Concat(l.boxes, l.labels) {
+			other = min(other, r.lo(axis))
+		}
+		for _, p := range l.paths {
+			for _, s := range p.segs {
+				other = min(other, s[axis], s[axis+2])
+			}
+		}
+		if frame < at[axis] || frame <= other && frame != at[axis] {
+			return fmt.Sprintf("the first frame on axis %d starts at %v, the graph at %v", axis, frame, at[axis])
 		}
 	}
 	return ""
@@ -1164,6 +1189,28 @@ func TestGraphLimit(t *testing.T) {
 		t.Errorf("the chain passes %d ranks, want %d", o.passed, maxPassed)
 	}
 
+	// Edges to a group refused, each named by the boxes it stands among, found by a search from each end, not from
+	// each pair: groups g and h of 99 boxes each, g a chain between h's first and last, and 300 edges g→h.
+	among := graphOf(nil)
+	for _, name := range []string{"g", "h"} {
+		names := make([]string, 0, 99)
+		for i := range 99 {
+			names = append(names, fmt.Sprintf("%s%d", name, i))
+		}
+		among.Nodes = append(among.Nodes, inGroup(graphOf(names), name, "", names...).Nodes...)
+	}
+	for i := range 98 {
+		among.Edges = append(among.Edges, graphOf(nil, fmt.Sprintf("g%d>g%d", i, i+1)).Edges...)
+	}
+	among.Edges = append(among.Edges, graphOf(nil, "h0>g0", "g98>h98").Edges...)
+	for range 300 {
+		among.Edges = append(among.Edges, graphOf(nil, "g>h").Edges...)
+	}
+	start := time.Now()
+	if _, errs := readGraph(among, "#"); len(errs) != 300 || time.Since(start) > 3*time.Second {
+		t.Errorf("300 edges among: %d mistakes in %v, want 300 within 3s", len(errs), time.Since(start))
+	}
+
 	// Counted before any point is made: graphs whose edges pass far more ranks than the limit make none, and are
 	// refused all told.
 	huge := chainGraph(200, 200)               // 200 edges of 198 points
@@ -1257,14 +1304,15 @@ func TestGraphTold(t *testing.T) {
 		l       *layout
 		key, at string
 	}{
-		{"two graphs' boxes", &layout{boxes: []rect{box(0, ga), box(20, gb)}, w: 500, h: 500}, "diagram_graph_overlap", ga},                                    //nolint:exhaustruct_v5 // what it checks
-		{"a graph's box and one by hand", &layout{boxes: []rect{box(0, ga), handBox}, w: 500, h: 500}, "diagram_overlap", "#/parts/1"},                         //nolint:exhaustruct_v5 // what it checks
-		{"an edge through another graph's box", &layout{boxes: []rect{box(30, gb)}, paths: []path{across}, w: 500, h: 500}, "diagram_graph_through", ga},       //nolint:exhaustruct_v5 // what it checks
-		{"two graphs' edges", &layout{paths: []path{across, down}, w: 500, h: 500}, "diagram_graph_crossing", ga},                                              //nolint:exhaustruct_v5 // what it checks
-		{"the other first", &layout{paths: []path{down, across}, w: 500, h: 500}, "diagram_graph_crossing", gb},                                                //nolint:exhaustruct_v5 // what it checks
-		{"a graph's edge and one by hand", &layout{paths: []path{across, hand}, w: 500, h: 500}, "diagram_crossing", "#/parts/1"},                              //nolint:exhaustruct_v5 // what it checks
-		{"a graph's box off the canvas", &layout{boxes: []rect{box(480, ga)}, w: 500, h: 500}, "diagram_graph_outside", ga},                                    //nolint:exhaustruct_v5 // what it checks
-		{"a graph's frame and a box by hand", &layout{boxes: []rect{handBox}, frames: []rect{frame(40, ga)}, w: 500, h: 500}, "diagram_straddle", "#/parts/1"}, //nolint:exhaustruct_v5 // what it checks
+		{"two graphs' boxes", &layout{boxes: []rect{box(0, ga), box(20, gb)}, w: 500, h: 500}, "diagram_graph_overlap", ga},                                     //nolint:exhaustruct_v5 // what it checks
+		{"a graph's box and one by hand", &layout{boxes: []rect{box(0, ga), handBox}, w: 500, h: 500}, "diagram_overlap", "#/parts/1"},                          //nolint:exhaustruct_v5 // what it checks
+		{"an edge through another graph's box", &layout{boxes: []rect{box(30, gb)}, paths: []path{across}, w: 500, h: 500}, "diagram_graph_through", ga},        //nolint:exhaustruct_v5 // what it checks
+		{"two graphs' edges", &layout{paths: []path{across, down}, w: 500, h: 500}, "diagram_graph_crossing", ga},                                               //nolint:exhaustruct_v5 // what it checks
+		{"the other first", &layout{paths: []path{down, across}, w: 500, h: 500}, "diagram_graph_crossing", gb},                                                 //nolint:exhaustruct_v5 // what it checks
+		{"a graph's edge and one by hand", &layout{paths: []path{across, hand}, w: 500, h: 500}, "diagram_crossing", "#/parts/1"},                               //nolint:exhaustruct_v5 // what it checks
+		{"a graph's box off the canvas", &layout{boxes: []rect{box(480, ga)}, w: 500, h: 500}, "diagram_graph_outside", ga},                                     //nolint:exhaustruct_v5 // what it checks
+		{"a graph's frame and a box by hand", &layout{boxes: []rect{handBox}, frames: []rect{frame(40, ga)}, w: 500, h: 500}, "diagram_straddle", "#/parts/1"},  //nolint:exhaustruct_v5 // what it checks
+		{"a graph's frame and another's box", &layout{boxes: []rect{box(80, gb)}, frames: []rect{frame(40, ga)}, w: 500, h: 500}, "diagram_graph_straddle", gb}, //nolint:exhaustruct_v5 // what it checks
 	} {
 		c.l.check()
 		if len(c.l.problems) != 1 || c.l.problems[0].Key != c.key || c.l.problems[0].At() != c.at {

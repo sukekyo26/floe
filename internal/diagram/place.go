@@ -163,6 +163,8 @@ func (gr *group) pullOne(r, i int, down bool) bool {
 	lo, hi := math.Inf(-1), math.Inf(1)
 	// Within a group, a box keeps clear of every node beside it, the group's marks among them; else of the boxes
 	// beside it, the points stand where wire puts them.
+	// LIMIT: a group's marks are not pulled: its frame stands where pack puts it, and only its boxes move towards
+	// the boxes their edges reach. Pull a group whole if frames come to stand off from what they lead to.
 	beside := gr.ranks[r]
 	if len(gr.cls) == 0 {
 		beside = gr.boxesOf(beside)

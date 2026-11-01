@@ -60,16 +60,16 @@ func TestGraphMistakes(t *testing.T) {
 	for _, c := range []struct {
 		name, src, want string
 	}{
-		{"a name no box has", strings.Replace(g1, "to: show", "to: shwo", 1), `s.yaml:12:30: edge: no box of this graph named "shwo"`},
+		{"a name no box has", strings.Replace(g1, "to: show", "to: shwo", 1), `s.yaml:12:30: edge: no box or group of this graph named "shwo"`},
 		{
 			"a name no box has, and an edge by hand to a box laid out",
 			strings.Replace(g1, "to: show", "to: shwo", 1) + "  - edge: { from: show, to: [400, 200] }\n",
-			`s.yaml:12:30: edge: no box of this graph named "shwo"`,
+			`s.yaml:12:30: edge: no box or group of this graph named "shwo"`,
 		},
 		{
 			"a box outside the graph",
 			strings.Replace(g1, "to: show", "to: note", 1) + "  - box: { name: note, x: 400, y: 20, rows: [N] }\n",
-			`s.yaml:12:30: edge: no box of this graph named "note"`,
+			`s.yaml:12:30: edge: no box or group of this graph named "note"`,
 		},
 		{
 			"a name given twice",
@@ -146,7 +146,7 @@ parts:
 		name, src, want string
 	}{
 		{"an empty group", strings.Replace(strings.Replace(gg, "                  nodes:\n                    - box: { name: store, rows: [Store] }\n", "                  nodes: []\n", 1), "        - { from: api, to: store }\n", "", 1), `s.yaml:15:26: minItems: got 0, want 1`},
-		{"a name of none", edge("{ from: cli, to: servr }"), `s.yaml:21:28: edge: no box of this graph named "servr"`},
+		{"a name of none", edge("{ from: cli, to: servr }"), `s.yaml:21:28: edge: no box or group of this graph named "servr"`},
 		{"from a box the group holds", edge("{ from: api, to: server }"), `s.yaml:21:19: edge api→server: group "server" holds api; end the edge at a box or another group outside "server"`},
 		{"to a box the group holds", edge("{ from: server, to: store }"), `s.yaml:21:31: edge server→store: group "server" holds store; end the edge at a box or another group outside "server"`},
 		{"from a group to itself", edge("{ from: server, to: server }"), `s.yaml:21:31: edge server→server: group "server" holds server; end the edge at a box or another group outside "server"`},

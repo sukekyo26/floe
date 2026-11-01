@@ -33,8 +33,8 @@ func expand(parts []part) ([]item, usererr.List, error) {
 		}
 	}
 	// Over the limit, no graph is laid out: the limit is the diagram's, so that no one graph is told to change.
-	// LIMIT: an edge written by hand to a box of a graph not laid out is told naming nothing too; the graphs come
-	// first.
+	// LIMIT: an edge written by hand to a box or group of a graph not laid out (over this limit, or one graph past
+	// maxNodes) is told naming nothing too; the graphs' mistakes come first.
 	if passed > maxPassed {
 		problems = append(problems, usererr.NewIn("", "#", "diagram_graph_long", passed, maxPassed))
 		graphs = nil
