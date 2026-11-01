@@ -495,6 +495,9 @@ func isDown(s seg) bool { return s[0] == s[2] }
 // edge labelled); compare only the things near a spot if larger graphs come to need it. Room made grows the group
 // and widens the boxes a cut crosses beyond their text, and minds no edge written by hand: a band made over the
 // middle of a box's side may stand in the way of one, told at it.
+// LIMIT: room made puts a label below its run (right of it laid out right), so the label of the upper of two level
+// edges between the same boxes stands between them, pushing the other edge and the boxes' sides apart. Make room
+// above a run too (as for a loop left of its box) if pairs of labelled level edges come to look spread.
 func (d *drawing) place(k int, w float64) error {
 	things, runs := d.held(-1), append(d.runs(), d.hands()...)
 	for i := range len(d.routes[k]) - 1 {
