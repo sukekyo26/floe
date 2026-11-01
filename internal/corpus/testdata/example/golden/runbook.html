@@ -36,10 +36,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    paints a light ground of its own does the same with what it holds, and one that sets a colour on no ground of its
    own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; }
-/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do, and none widens the column
-   past the screen (a wide table, long code); a text of raw HTML alone draws nothing, its box a comment alone */
-[data-floe-text] { display: grid; gap: var(--floe-room); min-width: 0; }
-[data-floe-text] > * { min-width: 0; }
+/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do; a text of raw HTML alone
+   draws nothing, its box a comment alone */
+[data-floe-text] { display: grid; gap: var(--floe-room); }
 [data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
