@@ -434,7 +434,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - Fix washi's cards losing their inner rule while picked (options) or focused (links): the rule is drawn within the
-  card, by `--floe-inset`, no longer by the outline that the ring takes.
+  card, by `--floe-inset`, no longer by the outline that the ring takes. A card of your own in washi drawn on a ground
+  other than `--surface` shows a band of it between the rules, and one that takes no `panel` has the outer rule alone.
+- Fix the ring of the option picked sinking into brutal's and notebook's filled cards (2.3:1 on brutal's blue): it
+  takes the face's text colour there, as a focus ring does.
 - Fix swiss's parts in a band (a note, details, a table) and a template's own
   panels and tables there, whose text and rules were dark on the red band and
   whose links, titles, marks and focus rings red on it: they draw in the band's

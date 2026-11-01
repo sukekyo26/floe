@@ -2,8 +2,10 @@
    LIMIT: it stands 5px in, within --floe-row-pad (0.4rem); a template of one's own setting the variable under 5px
    draws facts' text over it.
    LIMIT: drawn within the box (--floe-inset, not an outline, which links' focus ring and options' pick take), its band
-   between the rules is the card's ground, --surface; a card of one's own on another ground shows that band. A card's
-   ::before and ::after are links' marks, and inset shadows cannot leave the band clear */
+   between the rules is --surface: a card, floe's or one's own, painted on another ground shows that band. A card's
+   ::before and ::after are links' marks, and inset shadows cannot leave the band clear.
+   LIMIT: base.css draws --floe-inset on a box alone (a part's, or an element that takes a look): a card of one's own
+   that takes no panel has the outer rule alone. floe's cards all take the panel */
 .card { position: relative; border: 1px solid var(--fg); --floe-inset: inset 0 0 0 2px var(--surface), inset 0 0 0 3px var(--fg); }
 /* The seal of its number stamped on its corner, over the padding and out of it no more than --floe-room */
 :scope.numbered > .card::before {
