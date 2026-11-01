@@ -241,7 +241,7 @@ var messagesEN = map[string]string{
 	"diagram_name_unknown":     `edge: no part, row or node named "%s"`,
 	"diagram_graph_unknown":    `edge: no box or group of this graph named "%s"`,
 	"diagram_graph_many":       "graph: %d boxes and groups, past %d; split it into graphs",
-	"diagram_graph_inside":     `edge %s→%s: group "%s" holds %s; end the edge at a box or another group outside "%s"`,
+	"diagram_graph_inside":     `edge %s→%s: both ends are group "%s" or inside it; end the edge at a box or another group outside "%s"`,
 	"diagram_graph_among":      `edge %s→%s: %s stands between boxes of group "%s" (%s leads to it and it leads to %s); end the edge at a box in "%s"`,
 	"diagram_graph_long":       "graph: the edges of this diagram's graphs pass %d ranks between their ends, more than %d: split the diagram",
 	"diagram_graph_crossing":   "%s crosses %s of another graph at %s,%s; move one of the graphs by its x and y",

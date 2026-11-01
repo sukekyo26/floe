@@ -112,7 +112,7 @@ func (o *graphOut) inside(k int, ends [2]gref) *usererr.Error {
 		}
 		key := [2]string{"from", "to"}[held]
 		return usererr.NewIn("", edgeAt(o.at, k)+"/"+key, "diagram_graph_inside",
-			e.From, e.To, o.endName(g), o.endName(ends[held]), o.endName(g))
+			e.From, e.To, o.endName(g), o.endName(g))
 	}
 	return nil
 }
