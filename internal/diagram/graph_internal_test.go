@@ -462,14 +462,25 @@ func frameStart(g *graph, l *layout) string {
 	return ""
 }
 
-// freeFault is a point of gr entered bent at a column of its own (x ≡ 0) that a box above stands over or another
-// link of its channel leaves by, or "".
+// freeFault is a point of gr entered bent at a column of its own (x ≡ 0) more than freeLimit from where it may stand,
+// or that a box above stands over or another link of its channel leaves by, or "".
 func freeFault(gr *group) string {
 	for r := 1; r < len(gr.ranks); r++ {
-		for _, v := range gr.ranks[r] {
+		last, right := -1, 0.0 // as settle walks the rank
+		for k, v := range gr.ranks[r] {
 			n := gr.nodes[v]
-			if !n.settles() || n.w != 0 || gr.links[n.ins[0]].straight {
+			if !n.settles() {
 				continue
+			}
+			lo, hi := gr.bounds(r, k, last, right)
+			last, right = k, n.x+n.w
+			if n.w != 0 || gr.links[n.ins[0]].straight {
+				continue
+			}
+			// The boxes as they stand now (widen may have widened them) pack no looser than settle saw them: t
+			// here lies between settle's and the point, so a point freeLimit from settle's t is here too.
+			if t := min(max(gr.links[n.ins[0]].exit, lo), hi); math.Abs(n.x-t) > freeLimit {
+				return fmt.Sprintf("a point at its own column %v, %v from where it may stand", n.x, math.Abs(n.x-t))
 			}
 			for _, u := range gr.ranks[r-1] {
 				o := gr.nodes[u]
@@ -1405,6 +1416,14 @@ func TestGraphFreeColumn(t *testing.T) {
 	}
 	if got, ok := wide.freeColumn(1, -1, 150, 0, 400); ok { // the nearest free columns, 0 and 300, past freeLimit
 		t.Errorf("under a wide box: %v, want none within %v", got, freeLimit)
+	}
+	// freeLimit from t, not from the column nearest it: pushed to lo 54, a box over 60 to 96 leaves 108, 54 from t.
+	over := &group{ //nolint:exhaustruct_v5 // what freeColumn reads
+		nodes: []gnode{{box: &graphBox{Name: "a", Rows: nil, Tone: "", Shape: ""}, of: 0, kind: kindPlain, cl: -1, rank: 0, w: 60, h: 29, x: 48, y: 0, ins: nil, outs: nil, written: 0}},
+		ranks: [][]int{{0}, {}},
+	}
+	if got, ok := over.freeColumn(1, -1, 54, 54, 300); ok {
+		t.Errorf("pushed to 54 under a box over 60 to 96: %v, want none within %v of 54", got, freeLimit)
 	}
 }
 
