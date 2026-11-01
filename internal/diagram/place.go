@@ -24,7 +24,7 @@ func (gr *group) place(right bool) (trips, pulls int) {
 	gr.size(right)
 	trips = gr.order()
 	if len(gr.cls) > 0 {
-		gr.pack()
+		gr.pack(nil)
 	} else {
 		for _, rank := range gr.ranks {
 			left := 0.0
@@ -35,6 +35,10 @@ func (gr *group) place(right bool) (trips, pulls int) {
 		}
 	}
 	pulls = gr.pull()
+	if len(gr.cls) > 0 { // again, room made for each point at its column, and the boxes pulled again
+		gr.pack(gr.wanted())
+		pulls = max(pulls, gr.pull())
+	}
 	least := math.Inf(1)
 	for _, n := range gr.nodes {
 		if n.box != nil {

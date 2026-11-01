@@ -267,6 +267,7 @@ func (gr *group) passed() int {
 // split breaks each arc passing ranks into links by a point at each rank it passes, and lists the nodes of each
 // rank: the boxes as written, then the points by their edge's order.
 func (gr *group) split() {
+	spans := gr.spans()
 	for _, a := range gr.arcs {
 		prev := a.from
 		for r := gr.nodes[a.from].rank + 1; r <= gr.nodes[a.to].rank; r++ {
@@ -274,7 +275,7 @@ func (gr *group) split() {
 			if r < gr.nodes[a.to].rank {
 				next = len(gr.nodes)
 				gr.nodes = append(gr.nodes, gnode{
-					box: nil, of: a.edge, kind: kindPlain, cl: gr.out.shared(gr.nodes[a.from].cl, gr.nodes[a.to].cl),
+					box: nil, of: a.edge, kind: kindPlain, cl: gr.pointIn(spans, a, r),
 					rank: r, w: 0, h: 0, x: 0, y: 0, ins: nil, outs: nil, written: len(gr.nodes),
 				})
 			}

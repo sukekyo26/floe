@@ -141,19 +141,31 @@ func (n gnode) settles() bool { return n.isPoint() || n.kind == kindIn }
 // and where an edge leaves its frame.
 func (n gnode) rigid() bool { return n.kind != kindPlain && n.kind != kindIn }
 
-// shared is the innermost group holding both group a and group b (-1 for none, or when either is).
-func (o *graphOut) shared(a, b int) int {
-	if a < 0 || b < 0 {
+// pointIn is the group the point of arc a at rank r stands in: of the groups holding either end, the innermost
+// whose ranks r is among, the lower end's on a tie (-1 for none), so that an edge between groups passes inside
+// one where it can, not round their frames. A group never takes a point at a rank past its own, so a point never
+// stretches a frame.
+func (gr *group) pointIn(spans map[int][2]int, a arc, r int) int {
+	depth := func(c int) int {
+		d := 0
+		for ; c >= 0; c = gr.out.clusters[c].parent {
+			d++
+		}
+		return d
+	}
+	spanning := func(c int) int {
+		for ; c >= 0; c = gr.out.clusters[c].parent {
+			if s, ok := spans[c]; ok && s[0] <= r && r <= s[1] {
+				return c
+			}
+		}
 		return -1
 	}
-	up := map[int]bool{}
-	for ; a >= 0; a = o.clusters[a].parent {
-		up[a] = true
+	lower, upper := spanning(gr.nodes[a.to].cl), spanning(gr.nodes[a.from].cl)
+	if depth(upper) > depth(lower) {
+		return upper
 	}
-	for b >= 0 && !up[b] {
-		b = o.clusters[b].parent
-	}
-	return b
+	return lower
 }
 
 // spans are the first and last ranks of each group of the group of boxes, by its boxes, nested too.
@@ -424,7 +436,7 @@ func (gr *group) room(i int) float64 {
 // before it in its rank, a group's left and right marks one place in all its ranks, so that its frame is one
 // rectangle (the longest path of those constraints, in Kahn's way). The points take their room too, so that settle
 // has room for each where it is placed, the marks unmoved.
-func (gr *group) pack() {
+func (gr *group) pack(floor map[int]float64) {
 	n := len(gr.nodes)
 	at := map[int]int{} // each group's place among the group's
 	for j, c := range gr.cls {
@@ -440,20 +452,86 @@ func (gr *group) pack() {
 		}
 		return i
 	}
-	type step struct {
-		to int
-		by float64
-	}
-	next := make([][]step, n+2*len(gr.cls))
+	next := make([][]packArc, n+2*len(gr.cls))
 	into := make([]int, len(next))
 	for _, rank := range gr.ranks {
 		for k := 1; k < len(rank); k++ {
 			a, b := rank[k-1], rank[k]
-			next[slot(a)] = append(next[slot(a)], step{slot(b), gr.room(a) + gr.gap(a, b)})
+			next[slot(a)] = append(next[slot(a)], packArc{slot(b), gr.room(a) + gr.gap(a, b)})
 			into[slot(b)]++
 		}
 	}
 	x := make([]float64, len(next))
+	var was []float64 // packed again: where each stands, nothing moving left of it, nor a point left of its floor
+	if floor != nil {
+		was = make([]float64, len(next))
+		for i := range gr.nodes {
+			was[slot(i)] = gr.nodes[i].x
+			x[slot(i)] = max(x[slot(i)], gr.nodes[i].x, floor[i])
+		}
+	}
+	longest(next, into, x, func(s int, at float64) float64 {
+		switch {
+		case was != nil && s >= n: // a group's marks by whole columns, so that a frame moved keeps what it holds on the grid
+			return was[s] + onGrid(at-was[s], column, math.Ceil)
+		case s < n:
+			return onGrid(at, gr.step(s), math.Ceil)
+		}
+		return onGrid(at, 6, math.Ceil)
+	})
+	for i := range gr.nodes {
+		gr.nodes[i].x = x[slot(i)]
+	}
+}
+
+// wanted is how far right each point at the graph's top, outside every group, should stand when packed again, so
+// that settle can put it at the column its link comes down from: that column less its room, by whole columns from
+// where it stands, so that the frames it pushes keep their places on the grid. The column is the exit exits gives a
+// link from a box, as the boxes stand now; a port's x for a link from a frame; the upper point's (or port's) column
+// for a link from one. A point in a group is not pushed: it would widen its own frame.
+// LIMIT: the columns are exits' as the boxes stand before the second pull; a box it moves may leave a point off its
+// column again. Push points in groups too, without widening their frames, if such turns come to show.
+func (gr *group) wanted() map[int]float64 {
+	pos := gr.positions()
+	for u, n := range gr.nodes {
+		if n.box != nil {
+			gr.exits(u, pos, false)
+		}
+	}
+	col := map[int]float64{}
+	out := map[int]float64{}
+	for _, rank := range gr.ranks {
+		for _, v := range rank {
+			n := gr.nodes[v]
+			if !n.settles() {
+				continue
+			}
+			l := gr.links[n.ins[0]]
+			c := l.exit
+			switch u := gr.nodes[l.from]; {
+			case u.settles():
+				c = col[l.from]
+			case u.box == nil: // where an edge leaves a frame
+				c = u.x
+			}
+			col[v] = c
+			if want := c - pointRoom; n.cl < 0 && want > n.x {
+				out[v] = n.x + onGrid(want-n.x, column, math.Ceil)
+			}
+		}
+	}
+	return out
+}
+
+// packArc is a constraint of pack: the slot to, at least by past the slot it leaves.
+type packArc struct {
+	to int
+	by float64
+}
+
+// longest sets x, from where each slot starts, to the longest path of the arcs next (into counting the arcs entering
+// each slot), in Kahn's way, each slot put onto its grid as it is reached.
+func longest(next [][]packArc, into []int, x []float64, onto func(s int, at float64) float64) {
 	var queue []int
 	for s := range next {
 		if into[s] == 0 {
@@ -463,21 +541,22 @@ func (gr *group) pack() {
 	for len(queue) > 0 {
 		s := queue[0]
 		queue = queue[1:]
-		step := 6.0
-		if s < n && gr.nodes[s].kind == kindOut { // an exit stands at x ≡ 0
-			step = column
-		}
-		x[s] = onGrid(x[s], step, math.Ceil)
-		for _, st := range next[s] {
-			x[st.to] = max(x[st.to], x[s]+st.by)
-			if into[st.to]--; into[st.to] == 0 {
-				queue = append(queue, st.to)
+		x[s] = onto(s, x[s])
+		for _, a := range next[s] {
+			x[a.to] = max(x[a.to], x[s]+a.by)
+			if into[a.to]--; into[a.to] == 0 {
+				queue = append(queue, a.to)
 			}
 		}
 	}
-	for i := range gr.nodes {
-		gr.nodes[i].x = x[slot(i)]
+}
+
+// step is the grid pack puts node i on: a column for where an edge leaves a frame, at x ≡ 0, else 6.
+func (gr *group) step(i int) float64 {
+	if gr.nodes[i].kind == kindOut {
+		return column
 	}
+	return 6
 }
 
 // room is the room above (or below) a rank for the frames starting (or ending) there: the most, and each group's.

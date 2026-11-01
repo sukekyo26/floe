@@ -2011,6 +2011,96 @@ func TestGraphGroups(t *testing.T) {
 	}
 }
 
+// An edge needs no turn a group makes it take: one beside a frame runs straight down by it, the frame moved out of
+// its way, and one between groups passes inside the group spanning its ranks, not round the frames. Making room
+// for a point moves frames, but never widens one.
+func TestGraphGroupStraight(t *testing.T) {
+	t.Parallel()
+	for _, direction := range []string{"", "right"} {
+		g := graphOf([]string{"cli", "api", "store", "cache", "page", "disk"},
+			"cli>api", "api>store", "api>cache", "store>page", "cli>server", "server>db", "cli>page", "server>cli")
+		g.Nodes[0].Box.Rows[0].Text = Text{"en": "floe publish"} // as wide as the plan's picture
+		g = inGroup(inGroup(g, "data", "Data", "store", "cache"), "server", "Local server", "api", "data")
+		g = inGroup(g, "db", "Database", "disk")
+		g.Direction = direction
+		for _, p := range laid(g).paths {
+			if p.what == "edge cli→page" && len(p.segs) != 1 {
+				t.Errorf("%q: cli→page beside the frame turns: %v", direction, p.segs)
+			}
+		}
+
+		// x in group a, at b's first rank; b spans four ranks: x→b3's points stand in b.
+		between := inGroup(inGroup(graphOf([]string{"x", "b0", "b1", "b2", "b3"}, "b0>b1", "b1>b2", "b2>b3", "x>b3"),
+			"a", "A", "x"), "b", "B", "b0", "b1", "b2", "b3")
+		between.Direction = direction
+		grs, err := grouped(between)
+		if err != nil {
+			t.Fatal(err)
+		}
+		points := 0
+		for _, n := range grs[0].nodes {
+			if n.isPoint() && n.of == 3 {
+				points++
+				if n.cl != 1 {
+					t.Errorf("%q: a point of x→b3 at rank %d stands in group %d, not b", direction, n.rank, n.cl)
+				}
+			}
+		}
+		if points != 2 {
+			t.Errorf("%q: x→b3 passes %d points, want 2", direction, points)
+		}
+	}
+
+	// Every frame as wide as before room is made for the points, in random graphs and the two above.
+	rnd := rand.New(rand.NewPCG(9, 10))     //nolint:gosec // G404: graphs to try, no secret
+	groups := rand.New(rand.NewPCG(29, 10)) //nolint:gosec // G404: graphs to try, no secret
+	for i := range 600 {
+		direction := []string{"", "right"}[i%2]
+		g := randomGraph(rnd, direction)
+		addGroups(groups, g)
+		if fault := wideningFault(g); fault != "" {
+			t.Fatalf("graph %d %q: %s", i, direction, fault)
+		}
+	}
+}
+
+// wideningFault is a frame of g that making room for the points widens, or "".
+func wideningFault(g *graph) string {
+	right := g.Direction == "right"
+	widths := func(gr *group) map[int]float64 {
+		out := map[int]float64{}
+		for _, n := range gr.nodes {
+			switch n.kind {
+			case kindLeft:
+				out[n.cl] -= n.x
+			case kindRight:
+				out[n.cl] += n.x
+			case kindPlain, kindHeading, kindIn, kindOut:
+			}
+		}
+		return out
+	}
+	before, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are graphFault's
+	after, _ := readGraph(g, "#/parts/0/graph")  //nolint:errcheck // as above
+	for k, gr := range before.groups {
+		gr.split()
+		gr.size(right)
+		gr.order()
+		gr.pack(nil)
+		gr.pull()
+		ga := after.groups[k]
+		ga.place(right)
+		// A group's marks stand in each of its ranks: its width counted once a rank.
+		wb, wa := widths(gr), widths(ga)
+		for c, w := range wb {
+			if wa[c] > w {
+				return fmt.Sprintf("group %d widens from %v to %v", c, w, wa[c])
+			}
+		}
+	}
+	return ""
+}
+
 // An edge to a group ends at its frame's top (from above) or leaves its bottom, each at a point of its own clear
 // of the heading: from a box, to one, between groups with no edge between their boxes, into a nested group, back,
 // and into a group whose second rank another edge from that box enters.
