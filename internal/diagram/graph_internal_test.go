@@ -1463,6 +1463,20 @@ func TestGraphWiden(t *testing.T) {
 			t.Errorf("%s: x %v w %v, want %v %v", c.name, n.x, n.w, c.wantX, c.wantW)
 		}
 	}
+	// Widened left for the link from 216, the box keeps no column left of it for the link from 168, which
+	// entries lays first: 216 would enter bent all the same, so the box stays as it is.
+	crowded := &group{ //nolint:exhaustruct_v5 // what widen reads
+		nodes: []gnode{{box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: 0, kind: kindPlain, cl: -1, rank: 1, w: 128, h: 29, x: 210, y: 0, ins: []int{0, 1, 2}, outs: nil, written: 0}},
+		links: []glink{
+			{from: 9, to: 0, edge: 0, exit: 168, entry: 0, straight: false, track: 0},
+			{from: 9, to: 0, edge: 1, exit: 216, entry: 0, straight: false, track: 0},
+			{from: 9, to: 0, edge: 2, exit: 288, entry: 0, straight: false, track: 0},
+		},
+	}
+	crowded.widen([]int{0}, 0, 0, 500)
+	if n := crowded.nodes[0]; n.x != 210 || n.w != 128 {
+		t.Errorf("widened where no more links enter straight: x %v w %v, want 210 128", n.x, n.w)
+	}
 }
 
 // pathTurns is how many times the paths of l turn, all told.
