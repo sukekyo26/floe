@@ -287,6 +287,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the padding of a box among parts to one pair, 1.1rem above and below and 1.3rem at the sides, in every
+  theme: cards (options', stats' and decision's from 1.15rem above and below; links' from 0.9rem and 1.1rem at the
+  left), bars, tree (default's white box within its frame too), note (editorial's too), details, and the boxes of
+  design, runbook and handoff. The look `rows` pads its rows by 1.3rem at the sides (entries, keys, checklist and faq
+  from 1.2rem; design's decided list from 1rem; an element of your own HTML that takes it from none); faq's question
+  still opens across its row. A part or a template of your own reads `--floe-pad-block` and `--floe-pad-inline`. A part of your
+  own that takes `rows` drops the padding it writes at the sides of an element in a row (a `summary`, a `div`), which
+  now sits twice as far in, and widens an element that opens the row across by a negative margin, as faq does; a
+  decoration in the `::after` of its box has the sides' padding too.
 - Change a long pill that wraps (entries' tags) to a label of round corners, not
   an oval stretched up and down; a pill of one line stays round at both ends
   (notebook keeps its own corners). A part or template of your own lets its

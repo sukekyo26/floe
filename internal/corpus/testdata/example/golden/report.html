@@ -68,6 +68,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 /* The padding above and below a row of what draws rows one under another: the look rows gives it to each of its
    rows, and the look table and facts take it. Themes leave it as it is, so that rows are as tall in every theme */
 :root { --floe-row-pad: 0.4rem; }
+/* The padding of a box among parts, from its frame to its text (a card, what takes the look panel, note), and at the
+   sides of a row of the look rows. Themes leave it as it is and pad no box; a theme's frame around a box pads the
+   element it paints inside by it (default's tree) */
+:root { --floe-pad-block: 1.1rem; --floe-pad-inline: 1.3rem; }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
    what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
@@ -376,9 +380,9 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 /* Rows in a panel, a theme's frame of the box around them: a list that is a part's box or takes the look has no
    marks, padding or room between its items (floe lays it out so, under the parts' layers for a part's box and the
    looks' for an element that takes the look). Each row is padded above
-   and below by --floe-row-pad (base.css), and so is a row the box draws last as ::after (checklist's count); what
-   takes it writes its rows' padding at the sides alone. A rule parts each row from the next */
-:scope > *, :scope::after { padding-block: var(--floe-row-pad); }
+   and below by --floe-row-pad and at the sides by --floe-pad-inline (base.css), and so is a row the box draws last as
+   ::after (checklist's count); what takes it writes no padding of its rows. A rule parts each row from the next */
+:scope > *, :scope::after { padding: var(--floe-row-pad) var(--floe-pad-inline); }
 :scope > * + * { border-top: 1px solid var(--line); }
 }
 }
@@ -391,7 +395,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
    if pages come to put code in entries */
 :scope { display: grid; }
-:scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; padding-inline: 1.2rem; }
+:scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; }
 :scope dt { min-width: 0; font-weight: 700; }
 :scope dd { margin: 0; }
 /* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
@@ -413,7 +417,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
    too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
-  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: 1rem 1.25rem; border-radius: var(--radius); max-width: var(--text-width);
+  --floe-mark: 1.6rem; --floe-mark-gap: 0.85rem; background: var(--tone-soft); color: var(--fg); padding: var(--floe-pad-block) var(--floe-pad-inline); border-radius: var(--radius); max-width: var(--text-width);
 }
 :scope::before {
   content: "i"; content: "i" / ""; border-radius: 50%;
@@ -441,7 +445,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
 :scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
 .card {
-  padding: 1.15rem 1.3rem; display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.4rem; align-content: start; min-width: 0;
 }
 /* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
 .card { --face: initial; --on-face: initial; }
@@ -509,7 +513,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* The number and the line to the next are the look numbered's; a step done takes a tick, filled in good, and one
    being done a ring in accent (data-floe-mark) */
-:scope { padding: 1.1rem 1.3rem; }
+:scope { padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > li.done::before { content: "✓"; }
 :scope > li > strong { line-height: 1.6; }
 :scope > li > :not(strong) { color: var(--on-face, var(--muted)); font-size: 0.92rem; }
