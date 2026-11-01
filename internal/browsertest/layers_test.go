@@ -56,12 +56,12 @@ var layersKit = map[string]string{
 	"templates/rowed/page.css":     "#paged > li { row-gap: 3px; }\n",
 	"templates/rowed/example.yaml": "lang: en\ntemplate: rowed\n",
 	"themes/mine/numbered.css":     ":scope > li { row-gap: 5px; }\n",
-	"templates/column/schema.json":  `{"type": "object", "additionalProperties": false}`,
+	"templates/column/schema.json": `{"type": "object", "additionalProperties": false}`,
 	"templates/column/page.html": `<!doctype html><html lang="{{.Lang}}"><head><title>{{.Title}}</title></head><body>` +
 		`<main class="floe-column"><div data-floe-part="note"><div class="floe-column" id="held">h</div></div></main></body></html>`,
-	"templates/column/page.css":    "main { max-width: 10rem; }\n",
+	"templates/column/page.css":     "main { max-width: 10rem; }\n",
 	"templates/column/example.yaml": "lang: en\ntemplate: column\n",
-	"themes/column/base.css":       "body { margin: 5px; }\n.floe-column { padding-left: 3px; }\n",
+	"themes/column/base.css":        "body { margin: 5px; }\n.floe-column { padding-left: 3px; }\n",
 }
 
 // TestUILayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its
