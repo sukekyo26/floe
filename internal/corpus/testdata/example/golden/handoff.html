@@ -352,15 +352,22 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 }
 </style>
 <style>
+@layer floe.page.defaults {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+body { margin: 0; }
+.floe-column { max-width: calc(var(--column-width, var(--page-width)) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+}
+}
+</style>
+<style>
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* The colours and faces are the theme's palette; the page lays them out: a band of the counts, what to decide, and
    a board of what is done, in progress and next, each in the column every template centres its page in.
    LIMIT: the board puts its sections side by side while each has 16rem; a width where they wrap is not looked at */
-body { margin: 0; font-size: 16px; line-height: 1.7; padding-block: 0 4rem; }
-.column { max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+body { line-height: 1.7; padding-block: 0 4rem; }
 .band { padding-block: 1.8rem 1.6rem; }
-.band .column { display: grid; gap: 0.5rem; justify-items: start; }
+.band .floe-column { display: grid; gap: 0.5rem; justify-items: start; }
 h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; }
 .date { font-family: var(--mono); }
@@ -405,7 +412,7 @@ main > section { display: grid; gap: var(--floe-room); }
 </head>
 <body>
 <header class="band" data-floe-look="band">
-<div class="column">
+<div class="floe-column">
 <p class="when"><span class="kind" data-floe-part="cell">Handoff</span><span class="date">2030-05-14 18:00</span><span class="hands">Mina → Kenji</span></p>
 <h1 id="checkout-redesign">Checkout redesign</h1>
 <p class="summary">The card form is done; the address form waits on one decision, and the tax rules (<code>tax_rules</code>) on the finance team.</p>
@@ -417,7 +424,7 @@ main > section { display: grid; gap: var(--floe-room); }
 </ul>
 </div>
 </header>
-<main class="column">
+<main class="floe-column">
 <section class="asks" data-floe-look="panel"><h2 id="asks">To decide</h2>
 <ol>
 <li><div class="ask"><p class="question">Ask for a phone number at checkout?</p><ul class="options"><li>Always</li><li>Only for delivery</li><li>Never</li></ul><p class="recommend"><b>Recommended:</b> Only for delivery</p><p class="why">Couriers call when they cannot find the door; nobody else uses it</p><p class="by">Who decides: Product</p></div></li>

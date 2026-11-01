@@ -30,6 +30,7 @@ import (
 // A part's style and its theme's reach the part's elements, and the box of a part it holds but not what
 // that part holds; the template's reaches the boxes of the parts, so that it places them, but not what
 // they hold.
+// Under the template's page.css, floe.page.defaults gives the body no margin and lays out the column (pageDefaults).
 // Under the layers of depth, floe.looks.boxes and floe.parts.boxes lay out the lists that are parts' boxes or take
 // looks (boxes), so that the look's or part's own rules at any depth set them over, and the page's and the theme's do
 // not reach a part's box.
@@ -108,6 +109,7 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 		styled(name, themed.CSS(name))
 	}
 	sheet("floe.marks", marks(k, n))
+	sheet("floe.page.defaults", pageScoped([]byte(pageDefaults)))
 	sheet("floe.page", pageScoped(own))
 	return sheets, nil
 }
@@ -120,6 +122,20 @@ func pageStyle(k *kit.Kit, theme string, n named, own []byte) ([]string, error) 
 // floe's own and fixed, it goes unchecked by css.Check.
 const boxes = "@layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { " + boxList + " } }\n" +
 	"@layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { " + boxList + " } }\n"
+
+// pageDefaults is what every template's page starts from: the body's margin and the column a template centres its page
+// in (class floe-column), --column-width wide, the palette's --page-width unless the template sets it. Scoped as the
+// template's page.css is, in a sublayer of floe.page under it, so that page.css wins over it whatever its selectors, as
+// when each template wrote it, and the theme's base.css and the looks do not. floe's own and fixed, it goes unchecked
+// by css.Check.
+// LIMIT: --column-width is the template's to set; a theme that sets it in its palette widens the column of a template
+// that sets none (report, design, handoff, postmortem) alone, as adr's and runbook's page.css win over it. Nothing
+// checks it; set it in a template's page.css alone.
+// LIMIT: with no font-size on the body, a browser sizes text in monospace alone from 13px, as no ancestor sets a size:
+// a theme whose --mono is monospace alone draws a line's code about 11px. Name a face before monospace.
+const pageDefaults = "body { margin: 0; }\n" +
+	".floe-column { max-width: calc(var(--column-width, var(--page-width)) + 2 * var(--page-pad)); " +
+	"margin-inline: auto; padding-inline: var(--page-pad); }\n"
 
 const boxList = "display: grid; list-style: none; padding: 0; gap: 0;"
 

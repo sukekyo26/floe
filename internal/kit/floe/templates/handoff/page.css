@@ -1,10 +1,9 @@
 /* The colours and faces are the theme's palette; the page lays them out: a band of the counts, what to decide, and
    a board of what is done, in progress and next, each in the column every template centres its page in.
    LIMIT: the board puts its sections side by side while each has 16rem; a width where they wrap is not looked at */
-body { margin: 0; font-size: 16px; line-height: 1.7; padding-block: 0 4rem; }
-.column { max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+body { line-height: 1.7; padding-block: 0 4rem; }
 .band { padding-block: 1.8rem 1.6rem; }
-.band .column { display: grid; gap: 0.5rem; justify-items: start; }
+.band .floe-column { display: grid; gap: 0.5rem; justify-items: start; }
 h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .when { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: baseline; }
 .date { font-family: var(--mono); }

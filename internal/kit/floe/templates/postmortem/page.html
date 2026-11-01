@@ -7,14 +7,14 @@
 </head>
 <body>
 <header class="band" data-floe-look="band">
-<div class="column">
+<div class="floe-column">
 <p class="kind">{{word "kind"}}{{with .Data.date}} <span class="date">{{.}}</span>{{end}}{{with .Data.severity}} <span class="severity {{.}}" data-floe-part="cell"{{if eq . "high"}} data-floe-tone="bad"{{else if eq . "medium"}} data-floe-tone="warn"{{else}} data-floe-tone="muted"{{end}}>{{word (printf "severity_%s" .)}}</span>{{end}}</p>
 <h1>{{.Title}}</h1>
 <p class="summary">{{markdownLine .Data.summary}}</p>
 {{- with .Data.authors}}<p class="authors">{{word "authors"}}: {{.}}</p>{{end}}
 </div>
 </header>
-<main class="column">
+<main class="floe-column">
 {{- with .Data.effects}}
 <section><h2>{{word "impact"}}</h2>{{.}}</section>
 {{- end}}

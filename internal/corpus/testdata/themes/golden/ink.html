@@ -540,16 +540,21 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 }
 </style>
 <style>
+@layer floe.page.defaults {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+body { margin: 0; }
+.floe-column { max-width: calc(var(--column-width, var(--page-width)) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+}
+}
+</style>
+<style>
 @layer floe.page {
 @scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
 /* The colours and faces are the theme's palette; the page lays them out */
 body {
-  margin: 0; font-size: 16px; line-height: 1.85; padding-block: 2.5rem 4rem;
+  line-height: 1.85; padding-block: 2.5rem 4rem;
 }
-main {
-  max-width: calc(var(--page-width) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad);
-  display: grid; gap: 2.5rem;
-}
+main { display: grid; gap: 2.5rem; }
 h1 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); font-weight: 800; letter-spacing: 0.01em; }
 h2 { font-size: 1.4rem; }
 header { display: grid; gap: 0.7rem; }
@@ -565,7 +570,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </style>
 </head>
 <body>
-<main>
+<main class="floe-column">
 <header>
 <h1 id="the-ink-theme">The ink theme</h1>
 </header>

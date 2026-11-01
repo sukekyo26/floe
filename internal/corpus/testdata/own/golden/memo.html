@@ -232,6 +232,14 @@ blockquote > * + * { margin-top: 0.6rem; }
 }
 }
 </style>
+<style>
+@layer floe.page.defaults {
+@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *) {
+body { margin: 0; }
+.floe-column { max-width: calc(var(--column-width, var(--page-width)) + 2 * var(--page-pad)); margin-inline: auto; padding-inline: var(--page-pad); }
+}
+}
+</style>
 </head>
 <body>
 <main>
