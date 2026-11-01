@@ -22,9 +22,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   the edge; an edge from a box to itself is a loop out of the side the
   graph's edges do not use. A `group` of its nodes keeps its boxes side by
   side in every rank, framed as a `frame` with its `label` (groups nest), and
-  an edge may end at a group, at its frame's top or bottom. With `lanes:
-  true`, its groups are lanes, bands from end to end of the graph in the order
-  written, their tops and bottoms in line. An edge written `level: true`
+  an edge may end at a group, at its frame's top or bottom. Written as
+  `lanes` in place of `nodes`, its groups are lanes, bands from end to end of
+  the graph in the order written, their tops and bottoms in line. An edge written `level: true`
   stands its two boxes in one rank, the edge straight between their facing
   sides: two boxes of one group, side by side as written, or directly in two
   lanes, each at its lane's end towards the other; floe refuses one whose

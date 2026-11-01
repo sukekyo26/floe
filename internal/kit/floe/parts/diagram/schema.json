@@ -275,18 +275,20 @@
     "graph": {
       "type": "object",
       "description": "Boxes and the edges between them, which floe lays out in ranks, the top left of all of it at x and y; the edges of one graph may cross one another",
-      "required": ["x", "y", "nodes"],
+      "required": ["x", "y"],
+      "$comment": "LIMIT: neither nodes nor lanes is told only as missing nodes, both (or lanes: true with nodes) only as nodes' false schema, naming no lanes: the library tells one rule's words, and oneOf or anyOf tell none of theirs",
+      "if": { "required": ["lanes"] },
+      "then": { "properties": { "nodes": false } },
+      "else": { "required": ["nodes"] },
       "additionalProperties": false,
       "properties": {
         "x": { "$ref": "#/$defs/coord" },
         "y": { "$ref": "#/$defs/coord" },
         "direction": { "enum": ["down", "right"], "description": "Which way the edges run: down (the default) or right" },
-        "lanes": { "type": "boolean", "description": "Whether its nodes are lanes: each a group, a band from end to end of the graph along its edges, in the order written" },
+        "lanes": { "type": "array", "minItems": 1, "maxItems": 200, "items": { "$ref": "#/$defs/graphGroup" }, "description": "In place of nodes: lanes, each a group, a band from end to end of the graph along its edges, in the order written; a graph holds 200 boxes and groups at most, counted through its lanes" },
         "nodes": { "$ref": "#/$defs/graphNodes" },
         "edges": { "type": "array", "maxItems": 400, "items": { "$ref": "#/$defs/graphEdge" } }
-      },
-      "if": { "properties": { "lanes": { "const": true } }, "required": ["lanes"] },
-      "then": { "properties": { "nodes": { "items": { "required": ["group"] } } } }
+      }
     },
     "graphNodes": {
       "type": "array",

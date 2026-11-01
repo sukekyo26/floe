@@ -248,13 +248,10 @@ func (o *graphOut) joined(edges, cedges []int) func(int) int {
 		join(slices.Concat(o.members(o.ends[k][0]), o.members(o.ends[k][1])))
 	}
 	for _, c := range o.clusters {
-		if c.parent < 0 {
+		if c.lane { // every box is in a lane, and all lanes are one
+			join(append([]int{0}, c.boxes...))
+		} else if c.parent < 0 {
 			join(c.boxes)
-		}
-	}
-	if o.g.Lanes { // every box is in a lane
-		for b := range o.boxes {
-			join([]int{0, b})
 		}
 	}
 	return find

@@ -10,7 +10,7 @@ import (
 )
 
 // maxNodes is how many boxes and groups a graph holds, counted through its groups: the schema bounds each list of
-// nodes alone.
+// nodes or lanes alone.
 const maxNodes = 200
 
 // gbox is a box of a graph, read flat: its JSON pointer and its innermost group (-1 for none).
@@ -26,6 +26,7 @@ type cluster struct {
 	g      *graphGroup
 	at     string
 	parent int
+	lane   bool // a lane: one of the graph's lanes
 	boxes  []int
 	kids   []gref
 }
@@ -42,8 +43,16 @@ func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []gref)
 		at    string
 		cl    int
 		next  int
+		lanes bool // its nodes are g's lanes, each at at/lanes/i
 	}
-	stack := []level{{nodes: g.Nodes, at: at, cl: -1, next: 0}}
+	root := level{nodes: g.Nodes, at: at, cl: -1, next: 0, lanes: len(g.Lanes) > 0}
+	if root.lanes {
+		root.nodes = make([]graphNode, len(g.Lanes))
+		for i := range g.Lanes {
+			root.nodes[i] = graphNode{Box: nil, Group: &g.Lanes[i]}
+		}
+	}
+	stack := []level{root}
 	for len(stack) > 0 {
 		lv := &stack[len(stack)-1]
 		if lv.next == len(lv.nodes) {
@@ -51,6 +60,10 @@ func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []gref)
 			continue
 		}
 		n, nat, cl := lv.nodes[lv.next], lv.at+"/nodes/"+strconv.Itoa(lv.next), lv.cl
+		gat := nat + "/group"
+		if lv.lanes {
+			gat = lv.at + "/lanes/" + strconv.Itoa(lv.next)
+		}
 		lv.next++
 		var c gref
 		if n.Box != nil {
@@ -61,8 +74,8 @@ func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []gref)
 			}
 		} else {
 			c = gref{box: -1, cl: len(clusters)}
-			clusters = append(clusters, cluster{g: n.Group, at: nat + "/group", parent: cl, boxes: nil, kids: nil})
-			stack = append(stack, level{nodes: n.Group.Nodes, at: nat + "/group", cl: c.cl, next: 0})
+			clusters = append(clusters, cluster{g: n.Group, at: gat, parent: cl, lane: lv.lanes, boxes: nil, kids: nil})
+			stack = append(stack, level{nodes: n.Group.Nodes, at: gat, cl: c.cl, next: 0, lanes: false})
 		}
 		if cl < 0 {
 			top = append(top, c)
@@ -89,7 +102,7 @@ func (o *graphOut) holds(c int, e gref) bool {
 
 // lane reports whether group c is a lane: at the top of a graph of lanes.
 func (o *graphOut) lane(c int) bool {
-	return o.g.Lanes && c >= 0 && o.clusters[c].parent < 0
+	return c >= 0 && o.clusters[c].lane
 }
 
 // endName is how a mistake names end e.
