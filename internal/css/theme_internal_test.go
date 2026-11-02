@@ -1,9 +1,6 @@
 package css
 
 import (
-	"io/fs"
-	"os"
-	"path"
 	"slices"
 	"strings"
 	"testing"
@@ -140,28 +137,11 @@ func sheetAmiss(src []byte) []string {
 func TestThemeMarks(t *testing.T) {
 	t.Parallel()
 
-	themes := os.DirFS("../kit/floe/themes")
-	read := 0
-	err := fs.WalkDir(themes, ".", func(name string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || path.Ext(name) != ".css" {
-			return err
-		}
-		src, err := fs.ReadFile(themes, name)
-		if err != nil {
-			return err
-		}
-		read++
+	sheets(t, "../kit/floe/themes", func(name string, src []byte) {
 		for _, why := range sheetAmiss(src) {
 			t.Errorf("%s: %s", name, why)
 		}
-		return nil
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if read == 0 {
-		t.Fatal("no CSS found in floe's themes")
-	}
 }
 
 // TestSheetAmiss runs the check on forms floe's themes do not write today, one at a time.
