@@ -45,3 +45,34 @@ func TestFloeWordsMatch(t *testing.T) {
 		t.Fatalf("walking floe: %v, %d words.yaml", err, found)
 	}
 }
+
+// A note says its tone in a hidden word, read from its words.yaml by the tone's value: every tone of tone.json has a
+// word there, in every language, or a note of a tone added to tone.json alone would not draw.
+func TestNoteToneWords(t *testing.T) {
+	t.Parallel()
+
+	k, err := Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tones, err := k.Tones()
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := "floe/parts/note/words.yaml"
+	src, err := floeFiles.ReadFile(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w, err := readWords(name, src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for tag, words := range w {
+		for _, tone := range tones {
+			if words[tone] == "" {
+				t.Errorf("%s: %s has no word for the tone %s", name, tag, tone)
+			}
+		}
+	}
+}
