@@ -565,12 +565,14 @@ func dotR(d *dot) float64 {
 
 func barRect(b *bar, at string) rect {
 	w := math.Max(math.Abs(b.X2-b.X1), 4)
-	return rect{x: math.Min(b.X1, b.X2), y: b.Y - 7, w: w, h: 14, what: "", at: at}.named("bar", b.Name, b.Label, false, nil)
+	return rect{x: math.Min(b.X1, b.X2), y: b.Y - 7, w: w, h: 14, what: "", at: at}.named(
+		"bar", b.Name, b.Label, false, nil)
 }
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
-	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named("frame", f.Name, f.Label, false, nil)
+	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named(
+		"frame", f.Name, f.Label, false, nil)
 	who := fr.what
 	l.frames = append(l.frames, fr)
 	hx, hy, size := f.X+12, f.Y+18, float64(sizeSub)
