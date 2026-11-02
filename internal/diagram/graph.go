@@ -298,7 +298,8 @@ func (o *graphOut) items() ([]item, usererr.List, error) {
 		}
 		maps.Copy(frames, d.frames)
 	}
-	out := o.opened(o.top, boxes, hands, frames, frameSides(frames, routes), make([]item, 0, len(o.boxes)+len(o.clusters)+len(o.g.Edges)))
+	room := make([]item, 0, len(o.boxes)+len(o.clusters)+len(o.g.Edges))
+	out := o.opened(o.top, boxes, hands, frames, frameSides(frames, routes), room)
 	for k := range o.g.Edges {
 		pts, ok := routes[k]
 		if !ok { // told by readGraph
@@ -899,7 +900,7 @@ func (d *drawing) endSides() map[int]map[string]bool {
 // frameSides are the sides of each frame, a group's or a lane's, an edge written by hand may end at: those none of
 // the graph's edges (loops and level edges too) ends at or crosses.
 func frameSides(frames map[int]rect, routes map[int][][2]float64) map[int][]string {
-	var runs []seg
+	runs := make([]seg, 0, 3*len(routes))
 	for _, pts := range routes {
 		runs = append(runs, segsOf(pts)...)
 	}
