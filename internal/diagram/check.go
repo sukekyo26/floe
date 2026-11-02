@@ -5,6 +5,7 @@ import (
 	"iter"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -43,7 +44,7 @@ func (l *layout) checkPlacement() {
 	canvas := rect{x: 0, y: 0, w: l.w, h: l.h, what: "", at: ""}
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
 		if !r.inside(canvas) {
-			l.tell("diagram_outside", []placed{r.where()}, r.what, num(l.w), num(l.h))
+			l.tell("diagram_outside", []placed{{r.at, r.graph}}, r.what, num(l.w), num(l.h))
 		}
 	}
 	for _, r := range l.strays {
@@ -55,7 +56,7 @@ func (l *layout) checkPlacement() {
 	for i, a := range solids {
 		for _, b := range solids[i+1:] {
 			if a.overlaps(b) {
-				l.tell("diagram_overlap", []placed{a.where(), b.where()}, a.what, b.what)
+				l.tell("diagram_overlap", []placed{{a.at, a.graph}, {b.at, b.graph}}, a.what, b.what)
 			}
 		}
 	}
@@ -63,7 +64,7 @@ func (l *layout) checkPlacement() {
 	for _, b := range slices.Concat(l.boxes, l.marks, pinned) {
 		for _, f := range l.frames {
 			if b.overlaps(f) && !b.inside(f) {
-				l.tell("diagram_straddle", []placed{b.where(), f.where()}, b.what, f.what)
+				l.tell("diagram_straddle", []placed{{b.at, b.graph}, {f.at, f.graph}}, b.what, f.what)
 			}
 		}
 	}
@@ -76,12 +77,12 @@ func (l *layout) checkEdges() {
 	for _, p := range l.paths {
 		for _, b := range l.boxes {
 			if p.runsThrough(b) {
-				l.tell("diagram_runs_through", []placed{p.where(), b.where()}, p.what, b.what)
+				l.tell("diagram_runs_through", []placed{{p.at, p.graph}, {b.at, b.graph}}, p.what, b.what)
 			}
 		}
 		for i, r := range texts {
 			if i != p.own && p.runsThrough(r) {
-				l.tell("diagram_runs_through", []placed{p.where(), r.where()}, p.what, r.what)
+				l.tell("diagram_runs_through", []placed{{p.at, p.graph}, {r.at, r.graph}}, p.what, r.what)
 			}
 		}
 	}
@@ -92,7 +93,7 @@ func (l *layout) checkEdges() {
 func (l *layout) checkCrossings() {
 	for a, b := range l.crossPairs() {
 		if x, y, ok := firstCrossing(a, b); ok {
-			l.tell("diagram_crossing", []placed{a.where(), b.where()}, a.what, b.what, num(x), num(y))
+			l.tell("diagram_crossing", []placed{{a.at, a.graph}, {b.at, b.graph}}, a.what, b.what, num(x), num(y))
 		}
 	}
 }
@@ -114,20 +115,8 @@ func (l *layout) crossPairs() iter.Seq2[path, path] {
 	}
 }
 
-// placed is where a thing is written, the graph that laid it out ("" for one written by hand), and the index of the
-// part written it comes of.
-type placed struct {
-	at, graph string
-	part      int
-}
-
-func (r rect) where() placed {
-	return placed{at: r.at, graph: r.graph, part: r.part}
-}
-
-func (p path) where() placed {
-	return placed{at: p.at, graph: p.graph, part: p.part}
-}
+// placed is where a thing is written, and the graph that laid it out ("" for one written by hand).
+type placed struct{ at, graph string }
 
 // graphKeys are the words of the mistakes that only things graphs laid out make: their writer cannot move them,
 // but only the graphs, by their x and y.
@@ -139,17 +128,28 @@ var graphKeys = map[string]string{
 	"diagram_straddle":     "diagram_graph_straddle",
 }
 
-// tell tells the mistake of key that things make, in their order: at the one written by hand written last, of the
-// greatest part (of one part, the first given), as one added or moved last most often made it; when graphs laid them
-// all out, at the first's graph, in the words that say to move it. Two things or more of one graph meet only by a
-// fault of its layout, which no writer can mend: floe's failure.
+// tell tells the mistake of key that things make: at the one written by hand (no graph's nor tree's) written last, of
+// the greatest part (of one part, the first given), as the one added or moved last most often made it; with none,
+// at the one a tree laid out written last so; when graphs laid them all out, at the first's graph, in the words that
+// say to move it. Two things or more of one graph meet only by a fault of its layout, which no writer can mend:
+// floe's failure.
 // LIMIT: a mistake two things make named in the same words twice (two boxes of one text) told at one place is told
 // once (usererr.Tell), where it was told at each before; name them if one comes to need both.
 func (l *layout) tell(key string, things []placed, args ...any) {
-	at := -1
+	at, hand, last := -1, false, 0
 	for i, t := range things {
-		if t.graph == "" && (at < 0 || t.part > things[at].part) {
-			at = i
+		if t.graph != "" {
+			continue
+		}
+		part, tree, err := partOf(t.at)
+		if err != nil {
+			if l.failure == nil {
+				l.failure = err
+			}
+			return
+		}
+		if at < 0 || !tree && !hand || !tree == hand && part > last {
+			at, hand, last = i, !tree, part
 		}
 	}
 	if at >= 0 {
@@ -164,6 +164,18 @@ func (l *layout) tell(key string, things []placed, args ...any) {
 		return
 	}
 	l.problem(things[0].graph, graphKeys[key], args...)
+}
+
+// partOf is the index of the part at points to, a JSON pointer floe made under #/parts, and whether a tree laid it out;
+// a pointer of no part is floe's failure.
+func partOf(at string) (part int, tree bool, err error) {
+	rest, ok := strings.CutPrefix(at, "#/parts/")
+	n, more, _ := strings.Cut(rest, "/")
+	part, err = strconv.Atoi(n)
+	if !ok || err != nil {
+		return 0, false, fmt.Errorf("diagram: a mistake at %q, of no part", at) //nolint:err113 // floe's own
+	}
+	return part, more == "tree" || strings.HasPrefix(more, "tree/"), nil
 }
 
 func (p path) runsThrough(r rect) bool {

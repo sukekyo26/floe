@@ -45,7 +45,6 @@ type rect struct {
 	form       outline //exhaustruct:optional
 	graph      string  //exhaustruct:optional
 	pinned     bool    //exhaustruct:optional // a label its writer put where it is, kept off a frame's edge as a box is
-	part       int     //exhaustruct:optional // the index of the part written it comes of (stamp)
 }
 
 func (a rect) overlaps(b rect) bool {
@@ -67,7 +66,6 @@ type path struct {
 	own      int
 	crossing bool
 	graph    string
-	part     int //exhaustruct:optional // the index of the part written it comes of (stamp)
 }
 
 // target is what an edge's end may name: a part's area, a table's row, or a dot's centre.
@@ -142,9 +140,7 @@ func newLayout(s *spec, opts Options) *layout {
 		}
 	}
 	for _, it := range items {
-		seen := l.sizes()
 		l.add(it.at, it.p)
-		l.stamp(seen, it.part)
 	}
 	if s.Width == 0 {
 		l.w = l.reach(func(r rect) float64 { return r.x + r.w }) + canvasPad
@@ -153,34 +149,6 @@ func newLayout(s *spec, opts Options) *layout {
 		l.h = l.reach(func(r rect) float64 { return r.y + r.h }) + canvasPad
 	}
 	return l
-}
-
-// placedRects are the lists of what is placed, every list of rects l holds (TestStampedEveryList).
-func (l *layout) placedRects() []*[]rect {
-	return []*[]rect{&l.boxes, &l.marks, &l.labels, &l.heads, &l.frames, &l.areas, &l.strokes, &l.strays}
-}
-
-// sizes is how long each of placedRects and paths is.
-func (l *layout) sizes() []int {
-	rects := l.placedRects()
-	n := make([]int, 0, len(rects)+1)
-	n = append(n, len(l.paths))
-	for _, rs := range rects {
-		n = append(n, len(*rs))
-	}
-	return n
-}
-
-// stamp sets part on what was placed since sizes was seen.
-func (l *layout) stamp(seen []int, part int) {
-	for i := seen[0]; i < len(l.paths); i++ {
-		l.paths[i].part = part
-	}
-	for k, rs := range l.placedRects() {
-		for i := seen[k+1]; i < len(*rs); i++ {
-			(*rs)[i].part = part
-		}
-	}
 }
 
 // written is a canvas's size as written, or +Inf for one left out (0), so that nothing is held within it yet.

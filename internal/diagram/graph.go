@@ -315,7 +315,7 @@ func (o *graphOut) items() ([]item, usererr.List, error) {
 				e.At[0], e.anchor = r.x+r.w-5, "end"
 			}
 		}
-		out = append(out, item{at: edgeAt(o.at, k), p: part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
+		out = append(out, item{edgeAt(o.at, k), part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
 	}
 	return out, told, nil
 }
@@ -332,7 +332,7 @@ func (o *graphOut) opened(cs []gref, boxes []rect, hands [][]string, frames map[
 				Name: n.box.Name, X: r.x, Y: r.y, Origin: "", W: r.w, H: r.h, Rows: n.box.Rows, Tone: n.box.Tone,
 				Shape: n.box.Shape, graph: o.at, handSides: hands[c.box],
 			}
-			out = append(out, item{at: n.at, p: part{Box: b}}) //nolint:exhaustruct_v5 // one kind of part
+			out = append(out, item{n.at, part{Box: b}}) //nolint:exhaustruct_v5 // one kind of part
 			continue
 		}
 		r, g := frames[c.cl], o.clusters[c.cl].g
@@ -340,7 +340,7 @@ func (o *graphOut) opened(cs []gref, boxes []rect, hands [][]string, frames map[
 			Name: g.Name, X: r.x, Y: r.y, W: r.w, H: r.h, Label: g.Label, Accent: g.Accent, Icon: "", Square: false,
 			graph: o.at, handSides: sides[c.cl],
 		}
-		out = append(out, item{at: o.clusters[c.cl].at, p: part{Frame: f}}) //nolint:exhaustruct_v5 // one kind of part
+		out = append(out, item{o.clusters[c.cl].at, part{Frame: f}}) //nolint:exhaustruct_v5 // one kind of part
 		out = o.opened(o.clusters[c.cl].kids, boxes, hands, frames, sides, out)
 	}
 	return out
