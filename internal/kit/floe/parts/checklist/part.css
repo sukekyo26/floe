@@ -12,5 +12,5 @@
   content: counter(floe-checked) " / " counter(floe-check);
   content: counter(floe-checked) " / " counter(floe-check) / ""; text-align: right;
   font-family: var(--mono);
-  font-size: 0.8rem; color: var(--muted);
+  font-size: var(--floe-text-small); color: var(--muted);
 }

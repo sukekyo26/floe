@@ -126,6 +126,12 @@ blockquote > * + * { margin-top: 0.6rem; }
    --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
    leave the part's box */
 :root { --floe-room: 0.75rem; }
+/* The small text of parts, in two steps: small (a pill, a chip, a ring's number, a key, a table's heading, a term, a
+   date, a count, a note beside a value) and an aside, a little larger (a card's or a step's words, a note's title, a
+   tab's name, a value's unit). The text of code (code's lines, a tree's names, code in a pill) follows code's size
+   instead, and a diagram's, in its SVG, the diagram's units.
+   LIMIT: in rem, small text in large text (a slide's heading, swiss's large quote) is no larger */
+:root { --floe-text-small: 0.8rem; --floe-text-aside: 0.9rem; }
 @property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
 [data-floe-part], [data-floe-look], blockquote {
@@ -221,11 +227,11 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
-  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
+  background: var(--accent-soft); color: var(--accent); font-size: var(--floe-text-small); font-weight: 700;
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
 .card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
-.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: 0.92rem; }
+.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
 }
 }
 </style>
@@ -236,8 +242,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope { grid-template-columns: minmax(0, 1fr); }
 :scope > div { gap: 0.5rem; }
 :scope .title { font-size: 1.25rem; line-height: 1.45; }
-:scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: 0.82rem; }
-:scope .set-aside { margin-top: 0.3rem; font-size: 0.8rem; font-weight: 600; }
+:scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: var(--floe-text-small); }
+:scope .set-aside { margin-top: 0.3rem; font-size: var(--floe-text-aside); font-weight: 600; }
 :scope .rejected { gap: 0.15rem; }
 :scope .rejected > li::before { content: "×"; content: "×" / ""; color: var(--bad); }
 }
@@ -279,7 +285,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   :scope th.num { min-width: 6em; }
 }
 :scope thead th {
-  font-size: 0.8rem; font-weight: 600; color: var(--table-head-fg, var(--muted));
+  font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted));
   background: var(--table-head-bg, var(--quiet));
 }
 /* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
@@ -299,13 +305,13 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* In the table's look, without a heading: the name over its type, what it is over its default */
 :scope td.name { width: 30%; }
 :scope .name code { font-weight: 700; background: none; padding: 0; white-space: nowrap; }
-:scope .required { margin-left: 0.5rem; font-size: 0.72rem; font-weight: 700; color: var(--bad); }
+:scope .required { margin-left: 0.5rem; font-size: var(--floe-text-small); font-weight: 700; color: var(--bad); }
 :scope .type {
-  display: block; width: fit-content; margin-top: 0.2rem; padding: 0 0.45rem; border-radius: var(--radius-small); font-size: 0.75rem;
+  display: block; width: fit-content; margin-top: 0.2rem; padding: 0 0.45rem; border-radius: var(--radius-small); font-size: var(--floe-text-small);
   font-family: var(--mono);
   background: var(--tone-soft); color: var(--tone);
 }
-:scope .default { display: block; margin-top: 0.15rem; font-size: 0.85rem; color: var(--muted); }
+:scope .default { display: block; margin-top: 0.15rem; font-size: var(--floe-text-small); color: var(--muted); }
 }
 }
 </style>
@@ -331,7 +337,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
-  font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
+  font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
 }
 }
 }

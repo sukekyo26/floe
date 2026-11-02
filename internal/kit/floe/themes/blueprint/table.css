@@ -1,3 +1,3 @@
 :scope { --table-head-bg: none; --table-head-fg: var(--accent); --table-rule: none; }
 :scope :is(th, td) { border: 1px solid var(--accent); }
-:scope thead th { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }
+:scope thead th { font-family: var(--mono); font-size: var(--floe-text-small); letter-spacing: 0.12em; text-transform: uppercase; }

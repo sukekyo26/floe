@@ -19,6 +19,6 @@
 :scope a:focus-visible { outline: none; }
 :scope > li:has(a:focus-visible) { outline: 2px solid var(--links-ring); outline-offset: 2px; }
 :scope .url {
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--floe-text-small); color: var(--muted);
   font-family: var(--mono);
 }
