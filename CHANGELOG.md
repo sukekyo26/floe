@@ -296,6 +296,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change code's look to keep the room at a line's sides on each line, an element
+  `pre` holds, rather than on `pre`: a part of one's own that takes it makes
+  each line an element, as text `pre` holds outside one sits on its edge, and
+  reads `--floe-code-pad` and `--floe-code-room` to move the room onto lines
+  of its own rather than writing them. It makes a block of a `<code>` that
+  `pre` holds alone. A long line of such a part without a copy button keeps
+  the room after it, scrolled to the end.
 - Change the labels of a Venn diagram's regions (`in`) to have no box unless
   they say `plain: false`: one that wrote no `plain` loses the box it drew on
   its circle. A diagram's ground, `--bg`, is painted in its frame, so a
@@ -439,6 +446,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix faint text drawn by `opacity`, which could lie over a scrolling code's
+  focus ring: a code's file name, a terminal's heading and output, a diff's
+  lines outside a hunk, a design's undecided pick and a diagram's disabled
+  button are faded by their colour. A diff's lines outside a hunk are as faint
+  as a terminal's output, 70% rather than 65%.
 - Fix a diagram on a panel, in details or on a theme's patterned page, whose
   labels' boxes and hollow ends and dots stood out in the page's ground: a
   diagram paints its own ground, `--bg`, in its frame.
