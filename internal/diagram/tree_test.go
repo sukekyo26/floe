@@ -66,10 +66,10 @@ func TestTreeMistakes(t *testing.T) {
 			"  - box: { name: a, x: 10, y: 150, rows: [X] }\n  - tree:\n      x: 200\n      y: 10\n      root:\n        name: a\n        rows: [A]\n",
 			`s.yaml:10:9: the name "a" is given before: give each part, row and node its own name`,
 		},
-		// Two nodes of one text and no name read alike: the place tells the first alone.
+		// Two nodes of one text and no name read alike: the place tells which, at the box written after the tree.
 		{
 			"  - tree:\n      x: 200\n      y: 10\n      root:\n        rows: [A]\n        children:\n          - rows: [S]\n          - rows: [S]\n  - box: { x: 150, y: 80, rows: [S] }\n",
-			`s.yaml:11:13: box "S" overlaps box "S"`,
+			`s.yaml:13:5: box "S" overlaps box "S"`,
 		},
 		{
 			"  - tree:\n      x: 20\n      y: 10\n      root:\n        rows: [A]\n        children:\n          - rows: [B]\n          - rows: [Wide child]\n",
