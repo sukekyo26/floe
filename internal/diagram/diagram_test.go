@@ -190,7 +190,7 @@ func TestLayoutMistakes(t *testing.T) {
 	}{
 		{
 			"  - box: { x: 20, y: 20, rows: [{ en: A, ja: あ }] }\n  - box: { name: b, x: 30, y: 30, rows: [{ en: B, ja: い }] }",
-			`s.yaml:5:5: box "A" overlaps box "b"`,
+			`s.yaml:6:5: box "A" overlaps box "b"`,
 		},
 		{"  - box: { name: a, x: 20, y: 20, rows: [A] }\n  - box: { name: a, x: 200, y: 20, rows: [B] }", `s.yaml:6:5: the name "a" is given before: give each part, row and node its own name`},
 		{"  - edge: { from: chek, to: [10, 10] }", `s.yaml:5:5: edge: no part, row or node named "chek"`},
@@ -208,7 +208,7 @@ func TestLayoutMistakes(t *testing.T) {
 		},
 		{
 			"  - edge: { from: [10, 100], to: [390, 100] }\n  - edge: { from: [200, 10], to: [200, 190] }",
-			"s.yaml:5:5: edge [10,100]→[390,100] crosses edge [200,10]→[200,190] at 200,100; move one of them, or add crossing: true to one if it cannot be avoided",
+			"s.yaml:6:5: edge [10,100]→[390,100] crosses edge [200,10]→[200,190] at 200,100; move one of them, or add crossing: true to one if it cannot be avoided",
 		},
 		{"  - label: { text: hi, x: 500, y: 20 }", `s.yaml:5:5: label "hi" sticks out of the 400x200 canvas`},
 		{
@@ -241,6 +241,32 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - raw: { svg: '<g><title>t</title><desc>d</desc><circle r=\"3\"/></g>' }", ""},
 		{"  - raw: { svg: '<text>noscript base</text>' }", ""},
 		{"  - raw: { svg: '<g class=\"noscript\"><!-- <noscript> --></g>' }", ""},
+		// A mistake of parts written by hand is told at the one written last, whatever order the check compares them in;
+		// at the first of those of one part.
+		{
+			"  - dot: { cx: 110, cy: 100 }\n  - label: { text: Dark mode, x: 122, y: 100, anchor: start }\n" +
+				"  - dot: { cx: 110, cy: 112 }\n  - label: { text: Share a note, x: 122, y: 112, anchor: start }",
+			"s.yaml:7:5: dot 110,100 overlaps dot 110,112\ns.yaml:8:5: label \"Dark mode\" overlaps label \"Share a note\"",
+		},
+		{"  - label: { text: a note, x: 150, y: 100 }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: box "a" overlaps label "a note"`},
+		{"  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }\n  - edge: { from: [20, 100], to: [300, 100] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"`},
+		{"  - edge: { from: [20, 100], to: [300, 100] }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"`},
+		{"  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }\n  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: box "a" straddles the edge of frame "F"`},
+		{"  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }\n  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }", `s.yaml:6:5: box "a" straddles the edge of frame "F"`},
+		{
+			"  - box: { name: a, x: 20, y: 20, w: 100, h: 40, rows: [a] }\n  - box: { name: b, x: 200, y: 20, w: 100, h: 40, rows: [b] }\n" +
+				"  - box: { name: c, x: 60, y: 30, w: 200, h: 30, rows: [c] }",
+			"s.yaml:7:5: box \"a\" overlaps box \"c\"\ns.yaml:7:5: box \"b\" overlaps box \"c\"",
+		},
+		{
+			"  - box: { name: a, x: 120, y: 60, w: 80, h: 40, rows: [a] }\n  - edge: { from: [20, 106], to: [300, 106], label: a long edge label here }",
+			`s.yaml:6:5: box "a" overlaps label "a long edge label here"`,
+		},
+		// Two parts named in the same words, told at one place, are told once (LIMIT in tell).
+		{
+			"  - box: { x: 20, y: 20, w: 60, h: 40, rows: [S] }\n  - box: { x: 90, y: 20, w: 60, h: 40, rows: [S] }\n  - label: { text: across both, x: 85, y: 40 }",
+			`s.yaml:7:5: box "S" overlaps label "across both"`,
+		},
 		// Each check of the placement on its own.
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - box: { x: 80, y: 40, w: 60, h: 40, rows: [A] }", `s.yaml:6:5: box "A" straddles the edge of frame "F"`},
 		{"  - box: { name: b, x: 150, y: 80, w: 60, h: 40, rows: [B] }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through box "b"`},
@@ -978,7 +1004,7 @@ func TestEdgesAtDots(t *testing.T) {
 		{"a point at the centre", d + "  - edge: { from: [20, 20], via: [[300, 20]], to: [300, 100] }", `d="M20,20 H300 V100"`},
 		{
 			"checked as routed", d + "  - edge: { from: [100, 103], to: [340, 103] }\n  - edge: { from: [300, 150], to: d }",
-			"s.yaml:6:5: edge [100,103]→[340,103] crosses edge [300,150]→d at 300,103; move one of them, or add crossing: true to one if it cannot be avoided",
+			"s.yaml:7:5: edge [100,103]→[340,103] crosses edge [300,150]→d at 300,103; move one of them, or add crossing: true to one if it cannot be avoided",
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {

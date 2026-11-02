@@ -477,6 +477,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a diagram's placement mistake between two parts written by hand (an overlap, a crossing, an edge through a
+  box, a part across a frame's edge) told at the line of the one compared first, often the part that was there
+  before: it is told at the part written later in `parts` now, which was added or moved last most often. One between
+  a node of a tree and a part written by hand is told at the part written by hand, as one with a graph's is. Two
+  parts named in the same words (two boxes of one text) told at one line are told once.
 - Fix parts a template of one's own places in a band, which could not be read there. In swiss, whose panels, cards
   and notes have no ground, nearly every part's text and focus ring stayed in its own colour on the band's; they are
   on the surface with the page's text in a band now, as in other themes, a table's first column clear of the
