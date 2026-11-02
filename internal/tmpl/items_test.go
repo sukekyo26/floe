@@ -219,7 +219,7 @@ func TestPartHTMLItems(t *testing.T) {
 	for _, tt := range []struct {
 		name, ph, po, body, data, want, drawn string
 	}{
-		{"drawn", whole, "{{.in}}", "{{.Data.p}}<p>after</p>", `p: {h: "<b>ok</b>", md: "**bold** <i>raw</i>"}`, "", "<b>ok</b><section><p><strong>bold</strong> "},
+		{"drawn", whole, "{{.in}}", "{{.Data.p}}<p>after</p>", `p: {h: "<b>ok</b>", md: "**bold** <i>raw</i>"}`, "", "<b>ok</b><section><div data-floe-text=\"\"><p><strong>bold</strong> "},
 		{"a style", whole, "{{.in}}", "{{.Data.p}}<p>after</p>", `p: {h: "<style>p{}</style>"}`, "d.yaml:2:11: the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css", ""},
 		{"left open", whole, "{{.in}}", "{{.Data.p}}<p>after</p>", `p: {h: "<b>x"}`, changes("3:8", "<b>"), ""},
 		{"only the item, an element after", "{{.h}}", "{{.in}}", "<div>{{.Data.p}}<p>after</p></div>", `p: {h: "<b>ok</b>"}`, "", "<div><b>ok</b><p>after</p></div>"},

@@ -75,7 +75,7 @@ memo/
 | `.Lang` | ページの言語。データファイルの `lang:` |
 | `.Data` | データファイルの項目。floe が自分で読む `lang`・`template`・`theme`・`title` は除く。schema が宣言し、データが省いた項目は nil。`{{with .Data.lead}}`・`{{range}}`・`{{if}}` は空として読むが、`len`・`index`・`slice` は断る（`len of nil pointer`）ので、`with` の中で書く：`{{with .Data.done}}{{len .}}{{else}}0{{end}}`。部品は描いた形で来る（[テンプレートの中の部品](#テンプレートの中の部品)）。`"format": "markdown"` の項目は HTML、`"format": "image"` の項目は data URI で来る |
 | `.Calc` | `computed.yaml` の値。名前で引く |
-| `markdown` | Markdown の文を HTML に（`{{markdown .text}}`）。中の生の HTML は除く |
+| `markdown` | Markdown の文を HTML に（`{{markdown .text}}`）。中の生の HTML は除く。部品の `part.html` では text の外枠に包む（[parts.ja.md](parts.ja.md)） |
 | `markdownLine` | 表のセルのような Markdown の 1 行を、段落で囲まない HTML に |
 | `num` | 数を桁区切りで（`{{.Calc.total \| num}}` は `1,234,567`）、または有効数字で丸めて（`{{.Calc.rate \| num 3}}` は `0.00648`） |
 | `bytes` | バイト数を 2 進の単位で（`{{.Calc.size \| bytes}}` は `1.5 KiB`） |

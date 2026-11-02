@@ -33,10 +33,10 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    with it and takes no face either, and a theme that takes the ground away gives both back; one that sets a colour on
    no ground of its own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
-/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do; a text of raw HTML alone
-   draws nothing, its box a comment alone */
-[data-floe-text] { display: grid; gap: var(--floe-room); }
-[data-floe-text]:empty { display: none; }
+/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow): its blocks stand --floe-room apart, as parts
+   do, and a part spaces the box alone, not its blocks; Markdown of raw HTML alone draws no box.
+   A template's own Markdown is not in one, which its page.css spaces; nor is what a quote or a list holds, spaced below */
+[data-floe-text] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
 a { color: var(--on-face, var(--accent)); }
 /* LIMIT: a part draws a ring of focus or a pick by outline on its box (links' and options' cards): a theme that draws a
    decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
@@ -105,8 +105,9 @@ blockquote > * + * { margin-top: 0.6rem; }
    none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
    LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
    length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses.
-   LIMIT: a part's Markdown flow is spaced under --floe-room (S164), so a theme's quote shadowed as far as that, in a
-   part, meets the next paragraph or leaves the part's box; until floe spaces that flow in one place */
+   LIMIT: a part spaces its Markdown's box from its own elements and edge (a title above, its padding below) under
+   --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
+   leave the part's box */
 :root { --floe-room: 0.75rem; }
 @property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }

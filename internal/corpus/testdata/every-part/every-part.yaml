@@ -33,7 +33,7 @@ sections:
           | Saturday | copy the pages |
       - text: <div>Raw HTML alone, which a text draws nothing of</div>
       - steps:
-          - { title: Freeze edits on the old wiki, text: On **Friday evening**., state: done }
+          - { title: Freeze edits on the old wiki, text: "On **Friday evening**.\n\n| Day | Pages |\n| --- | --- |\n| Friday | 1,840 |\n\nNothing is edited after.", state: done }
           - { title: Copy the pages and check the links, text: '> Broken links first: [the report](https://example.com/report).', state: doing }
           - { title: Point the team's bookmarks at the new host, state: todo }
           - title: Close the old server
@@ -118,7 +118,7 @@ sections:
           - { text: Freeze edits, done: true }
           - text: Copy the **attachments**
       - timeline:
-          - { date: 2030-04-05, title: Freeze, text: Edits stop., tone: warn }
+          - { date: 2030-04-05, title: Freeze, text: "Edits stop.\n\n| From | To |\n| --- | --- |\n| 18:00 | Monday |\n\nThe banner says so.", tone: warn }
           - { date: 2030-04-06, title: Copy, tone: accent }
           - { date: 2030-04-07, title: Open, tone: good }
           - { date: 2030-04-08, title: Rollback window ends, tone: bad }
@@ -144,7 +144,7 @@ sections:
           title: The wiki moves to the new host
           status: { pill: decided, tone: good }
           date: 2030-03-28
-          text: The old server is out of support in **May**.
+          text: "The old server is out of support in **May**.\n\n| Host | Support |\n| --- | --- |\n| Old | May |\n\nThe new host is supported for five years."
           rejected: [Stay on the old server, Move to a hosted wiki]
   - heading: Reference
     parts:
@@ -161,6 +161,8 @@ sections:
             text: |
               Writes every page as Markdown, with its history, into `pages/`.
 
+              #### Left out
+
               - Pages under **drafts** are left out
               - Images go to `pages/images/`
           - title: Search index
@@ -171,7 +173,7 @@ sections:
           - { keys: [Ctrl, K], text: Search the wiki }
           - { keys: [g, h], text: Go home }
       - faq:
-          - { q: Can I edit during the freeze?, a: 'No: edits are lost.', open: true }
+          - { q: Can I edit during the freeze?, a: "No: edits are lost.\n\n| Edit | Kept |\n| --- | --- |\n| Page | no |\n\nWait for the new host.", open: true }
           - { q: Where do old links go?, a: To the same page on the new host. }
       - links:
           - { title: Migration guide, url: 'https://example.com/guide', text: How the copy works }

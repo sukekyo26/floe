@@ -60,13 +60,16 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 			drawn[name].read(n)
 		}
 	}
-	// LIMIT: what every-part's values leave out of a part (a branch of an if) is not seen, nor a heading told from one a
-	// part's Markdown draws: every-part writes no heading in a part's Markdown (to write one, skip what markdown draws).
+	// A heading in a part's Markdown is the writer's, in its text's box (data-floe-text), which the walk stops at.
+	// LIMIT: what every-part's values leave out of a part (a branch of an if) is not seen.
 	for n := range doc.Descendants() {
 		if !slices.Contains(draw.Headings, n.DataAtom) {
 			continue
 		}
 		for a := n.Parent; a != nil; a = a.Parent {
+			if hasAttr(a, "data-floe-text") {
+				break
+			}
 			if name := nodeAttr(a, "data-floe-part"); name != "" {
 				t.Errorf("every-part draws a heading <%s> in the part %s", n.Data, name)
 				break
@@ -368,6 +371,10 @@ func valuesIn(v any, path string) map[string]bool {
 		}
 	}
 	return found
+}
+
+func hasAttr(n *html.Node, key string) bool {
+	return slices.ContainsFunc(n.Attr, func(a html.Attribute) bool { return a.Key == key })
 }
 
 func nodeAttr(n *html.Node, key string) string {

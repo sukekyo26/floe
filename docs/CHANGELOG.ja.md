@@ -212,6 +212,11 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：部品の中の Markdown（note の中身、entries の説明、faq の答え、options・decision のカードの文、steps・timeline の項目の
+  文、部品の値の中の format `markdown` の項目）を、部品 text と同じ text の外枠に描く。段落・表・引用・並びの間は、どの部品でも
+  `--floe-room`（12px）になる（前は部品ごとに、steps・timeline 2.4px、entries 5.6px、options 6.4px、note・faq・decision 8px）。
+  自分の部品の `part.html` が `{{markdown .x}}` で描く Markdown も外枠に包まれ、その CSS は中のブロックに `:scope p` で届き、
+  `:scope > p` では届かない。ブロックの間は書かない。テンプレート自身の Markdown は今までどおり。
 - 変更：`via` を書いた直角の線が、via で来た向きのまま進むと来た線を戻るとき、もう一方の向きから先に曲がるので、曲がり角の場所が
   変わる。前は描けた線が、via の横の部品を通ると断られることがある。`from: [0, 0], via: [[200, 0]], to: [100, 100]` は、前は
   `H200 H100 V100`、今は `H200 V100 H100` で、x 180〜220・y 30〜70 の箱を通る。別の via を書けば別の道になる。
