@@ -472,6 +472,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix printing cutting what scrolls sideways on screen: a long line of code, a diff or a terminal, Markdown's code, a
+  wide table and a deep tree were cut at the paper's right edge, with a scrollbar drawn on paper. On paper they fold
+  their lines now (a table shares the paper's width among its columns, its words kept whole); a table whose longest
+  words are wider than the paper still widens the page, which Chrome prints smaller.
 - Fix an edge written by hand to a box of a graph or a tree, or a group's or a lane's frame, with no side written,
   which could end at the middle of a side one of their edges ends at and run over it. With `via` or without, it takes
   a side their edges leave, with the via next to it (or the other end) outside it, across first; with none, the side

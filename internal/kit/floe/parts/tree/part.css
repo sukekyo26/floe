@@ -1,9 +1,10 @@
 /* A folder's contents hang from a rule under it; the marks of files and folders are masks in the text's colour. A deep
-   tree scrolls sideways, telling nothing of its width outside (base.css's pre has the LIMIT) */
+   tree scrolls sideways on screen, telling nothing of its width outside (base.css's pre has the LIMIT), and folds its
+   names on paper */
 :scope {
-  padding: var(--floe-pad-block) var(--floe-pad-inline); overflow-x: auto; overflow-wrap: normal;
+  padding: var(--floe-pad-block) var(--floe-pad-inline); overflow-wrap: normal;
 }
-@media screen { :scope { contain: inline-size; } }
+@media screen { :scope { overflow-x: auto; contain: inline-size; } }
 :scope ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
 :scope ul ul { margin-left: 0.5rem; padding-left: 1.15rem; border-left: 1px solid var(--line); }
 :scope li { padding-block: 0.12rem; }
@@ -25,3 +26,5 @@
 :scope li.removed > .name::after { content: "−"; content: "−" / ""; }
 :scope li.changed > .name { color: var(--warn); }
 :scope li.changed > .name::after { content: "±"; content: "±" / ""; }
+/* On paper a name breaks anywhere, as the tree does not scroll there */
+@media print { :scope .name { white-space: normal; overflow-wrap: anywhere; } }

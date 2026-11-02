@@ -1,14 +1,13 @@
 /* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
-   its width outside (base.css's pre has the LIMIT) */
-:scope {
-  overflow-x: auto;
-}
-@media screen { :scope { contain: inline-size; } }
+   its width outside (base.css's pre has the LIMIT); on paper its columns share the paper's width, words kept whole */
+@media screen { :scope { overflow-x: auto; contain: inline-size; } }
 :scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
 :scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
-:scope :is(th, td):not(.num) { min-width: 7em; }
-/* A num column's heading wraps as long as it needs, but not a character a line */
-:scope th.num { min-width: 6em; }
+@media screen {
+  :scope :is(th, td):not(.num) { min-width: 7em; }
+  /* A num column's heading wraps as long as it needs, but not a character a line */
+  :scope th.num { min-width: 6em; }
+}
 :scope thead th {
   font-size: 0.8rem; font-weight: 600; color: var(--table-head-fg, var(--muted));
   background: var(--table-head-bg, var(--quiet));
