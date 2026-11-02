@@ -1,6 +1,6 @@
 :scope {
-  border: 3px solid var(--fg); --floe-shadow-color: var(--brutal-blue);
+  border: var(--brutal-frame) var(--fg); --floe-shadow-color: var(--brutal-blue);
   --code-head-bg: var(--surface); --code-head-fg: var(--fg); --code-head-add: var(--good); --code-head-del: var(--bad);
 }
-:scope figcaption { font-weight: 800; border-bottom: 3px solid var(--fg); }
+:scope figcaption { font-weight: 800; border-bottom: var(--brutal-frame) var(--fg); }
 :scope .lang { border: 2px solid var(--fg); background: var(--brutal-blue); color: var(--brutal-ink); font-weight: 900; }

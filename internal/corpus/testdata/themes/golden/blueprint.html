@@ -168,6 +168,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 @layer floe.palette {
 /* Blue ink on squared paper, its sections ruled in the ink */
 :scope {
+  /* Width and style of this theme's box frames, and of lines drawn inside boxes alike */
+  --bp-frame: 1.5px solid;
   --bg: #eef4fc; --surface: #f7faff; --fg: #12284d; --muted: #4a5f80; --line: #c5d5ec;
   --accent: #1f56b5; --accent-soft: #dde8fa;
   --good: #1c764d; --good-soft: #dcefe5; --warn: #925d00; --warn-soft: #f6ead3; --bad: #c0302b; --bad-soft: #fbe3e1;
@@ -177,7 +179,7 @@ blockquote > * + * { margin-top: 0.6rem; }
     linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px,
     linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px;
   --page-bg: var(--bp-squares), var(--bg);
-  --rule: 1.5px solid var(--accent);
+  --rule: var(--bp-frame) var(--accent);
   --radius: 0; --radius-small: 0; --radius-pill: 0;
 }
 }
@@ -204,7 +206,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @layer floe.theme {
 @scope (:root) {
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { background: var(--bp-squares), var(--surface); border: 1.5px solid var(--accent); padding: 0.9rem 1.2rem; color: var(--fg); }
+blockquote { background: var(--bp-squares), var(--surface); border: var(--bp-frame) var(--accent); padding: 0.9rem 1.2rem; color: var(--fg); }
 /* A short rule over a quote, as a callout's leader on a drawing */
 blockquote::before { content: ""; display: block; width: 2rem; height: 0; margin-bottom: 0.6rem; border-top: 2px solid var(--accent); }
 }
@@ -531,7 +533,7 @@ blockquote::before { content: ""; display: block; width: 2rem; height: 0; margin
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: 1.5px solid var(--accent); --code-head-bg: none; }
+:scope { border: var(--bp-frame) var(--accent); --code-head-bg: none; }
 :scope figcaption {
   border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 40%, transparent); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
 }
@@ -544,7 +546,7 @@ blockquote::before { content: ""; display: block; width: 2rem; height: 0; margin
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
   background: var(--bp-squares), var(--surface);
-  border: 1.5px solid var(--accent);
+  border: var(--bp-frame) var(--accent);
 }
 }
 }
@@ -554,7 +556,7 @@ blockquote::before { content: ""; display: block; width: 2rem; height: 0; margin
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
   background: var(--bp-squares), var(--surface);
-  border: 1.5px solid var(--accent);
+  border: var(--bp-frame) var(--accent);
 }
 }
 }
