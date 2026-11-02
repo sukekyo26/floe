@@ -246,8 +246,10 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="links"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
-:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link. The ring
+   around a card is drawn on what is around the cards, in the colour on a face there, taken at the root (base.css takes
+   faces away below it) */
+:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); --links-ring: var(--on-face, var(--accent)); }
 :scope > li {
   --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0;
 }
@@ -263,7 +265,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope a::after { content: ""; position: absolute; inset: 0; }
 :scope > li:hover a { text-decoration-thickness: 2px; }
 :scope a:focus-visible { outline: none; }
-:scope > li:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope > li:has(a:focus-visible) { outline: 2px solid var(--links-ring); outline-offset: 2px; }
 :scope .url {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted);
   font-family: var(--mono);
@@ -335,7 +337,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="links"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); color: var(--fg); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
+/* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
+:scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
 .card {
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);

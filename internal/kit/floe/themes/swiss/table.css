@@ -3,3 +3,10 @@
 :scope tbody td { border-bottom: 1px solid var(--on-face, var(--fg)); }
 :scope :is(th, td):first-child { padding-left: 0; }
 :scope td.num { font-size: 1.35rem; font-weight: 300; }
+/* In a band (band.css) the table is on the surface (panel.css), its root still in the band's face, read here, and its
+   first column leaves the part's room (its cells' 0.8rem) at the edge of the ground.
+   LIMIT: a browser that reads no container style query draws it in a band as in any face */
+@container style(--swiss-band: on) {
+  :scope { --table-head-fg: var(--fg); }
+  :scope :is(th, td):first-child { padding-left: 0.8rem; }
+}

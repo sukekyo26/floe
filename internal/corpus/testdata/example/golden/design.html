@@ -209,8 +209,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope { --face: var(--accent); --on-face: var(--on-fill); background: var(--face); color: var(--on-face); }
 /* A part on a ground of its own (a panel, a note) sets its text's colour with it; one of none draws in the band's,
    its tone told by its word alone (a pill of a theme that gives it no ground), as in any face.
-   LIMIT: on a theme whose panel has no ground (swiss), text a part draws in a colour of its own (muted, a tone, the
-   page's text colour: progress's label, a tree's note, a timeline's date) stays in it on the band (S174).
+   LIMIT: in a part of one's own that takes this look (looks: [band]), base.css takes the band's face away from what the
+   part holds, so tabs' titles and rings and links' rings there are in their own colours, not the band's.
    LIMIT: a theme whose faces let what is under them through (aurora's glass) lets the accent through them too, where
    the text sinks: such a theme makes its faces opaque in a band, in its band.css, as aurora does */
 }
@@ -407,7 +407,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); color: var(--fg); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
+/* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
+:scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
 .card {
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);

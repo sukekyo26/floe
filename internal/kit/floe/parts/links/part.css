@@ -1,5 +1,7 @@
-/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
-:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link. The ring
+   around a card is drawn on what is around the cards, in the colour on a face there, taken at the root (base.css takes
+   faces away below it) */
+:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); --links-ring: var(--on-face, var(--accent)); }
 :scope > li {
   --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0;
 }
@@ -15,7 +17,7 @@
 :scope a::after { content: ""; position: absolute; inset: 0; }
 :scope > li:hover a { text-decoration-thickness: 2px; }
 :scope a:focus-visible { outline: none; }
-:scope > li:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope > li:has(a:focus-visible) { outline: 2px solid var(--links-ring); outline-offset: 2px; }
 :scope .url {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted);
   font-family: var(--mono);

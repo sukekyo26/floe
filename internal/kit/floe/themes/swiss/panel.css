@@ -1,3 +1,12 @@
-/* No ground: its text and faces are those around it (a band's), what it holds too */
+/* No ground: its text and faces are those around it (a face's), what it holds too */
 :scope { border: 0; border-top: 2px solid var(--on-face, var(--fg)); background: none; color: inherit; --face: inherit; --on-face: inherit; }
 :scope > * { --face: inherit; --on-face: inherit; }
+/* In a band (band.css), the surface and the page's text, as other themes' panels, keeping no face from the band; a
+   part's root keeps it, for its ring outside on the band.
+   LIMIT: a browser that reads no container style query draws it in a band as in any face
+   LIMIT: a part's root keeps the band's --on-face on the surface, so a rule there reading var(--on-face, …) draws white on
+   white; table.css sets its head's colour itself, and no other is known */
+@container style(--swiss-band: on) {
+  :scope { background: var(--surface); color: var(--fg); border-top-color: var(--fg); }
+  :scope:where(:not([data-floe-part])), :scope > * { --face: initial; --on-face: initial; }
+}
