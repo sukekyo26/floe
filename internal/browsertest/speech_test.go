@@ -137,7 +137,9 @@ func TestUISpeech(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			got, want := bare(read[d.Node.BackendNodeID]), bare(e.Text)
 			if e.Counted {
 				digits := func(r rune) bool { return unicode.IsDigit(r) }
-				strip := func(s string) string { return strings.Map(func(r rune) rune { return map[bool]rune{true: -1, false: r}[digits(r)] }, s) }
+				strip := func(s string) string {
+					return strings.Map(func(r rune) rune { return map[bool]rune{true: -1, false: r}[digits(r)] }, s)
+				}
 				if strip(got) != strip(want) || len(got)-len(strip(got)) <= len(want)-len(strip(want)) {
 					amiss = append(amiss, what+": "+e.Name+" reads "+got+", want its number and "+want)
 				}

@@ -106,21 +106,21 @@ func TestSpeechAmiss(t *testing.T) {
 	t.Parallel()
 
 	for src, want := range map[string]int{
-		`li::before { content: "✓"; content: "✓" / ""; }`:                                         0,
-		`li::before { content: counter(a); content: counter(a) / counter(a); }`:                   0,
-		`li::after { content: counter(a) " / " counter(b) / counter(a); }`:                        0,
-		`li::after { content: counter(a) " / " counter(b) / ""; }`:                                0,
-		`li::before { content: ""; } li::after { content: none; }`:                                0,
-		`li::before { content: "✓"; }`:                                                            1,
-		`li::before { content: "✓" / "✓"; }`:                                                      1,
-		`li::before { content: "✓" / "done"; }`:                                                   1,
-		`li::before { content: "Step " counter(x) / "Step " counter(x); }`:                        1,
-		`li::after { content: counter(a) " / " counter(b) / counter(a) " / " counter(b); }`:       1,
-		`li::before { content: counter(a) / counter(b); }`:                                        1,
-		`li::before { content: "✓" / ""; } li::before { content: "✓"; }`:                          1,
-		`@media print { li::before { content: "✓"; } li.x::after { content: "+" / ""; } }`:        1,
-		`.a { content: "✓"; &::after { content: "+" / ""; } }`:                                    1,
-		`li::before { content: "✓" / ""; content: "✓"; }`:                                         1,
+		`li::before { content: "✓"; content: "✓" / ""; }`:                                   0,
+		`li::before { content: counter(a); content: counter(a) / counter(a); }`:             0,
+		`li::after { content: counter(a) " / " counter(b) / counter(a); }`:                  0,
+		`li::after { content: counter(a) " / " counter(b) / ""; }`:                          0,
+		`li::before { content: ""; } li::after { content: none; }`:                          0,
+		`li::before { content: "✓"; }`:                                                      1,
+		`li::before { content: "✓" / "✓"; }`:                                                1,
+		`li::before { content: "✓" / "done"; }`:                                             1,
+		`li::before { content: "Step " counter(x) / "Step " counter(x); }`:                  1,
+		`li::after { content: counter(a) " / " counter(b) / counter(a) " / " counter(b); }`: 1,
+		`li::before { content: counter(a) / counter(b); }`:                                  1,
+		`li::before { content: "✓" / ""; } li::before { content: "✓"; }`:                    1,
+		`@media print { li::before { content: "✓"; } li.x::after { content: "+" / ""; } }`:  1,
+		`.a { content: "✓"; &::after { content: "+" / ""; } }`:                              1,
+		`li::before { content: "✓" / ""; content: "✓"; }`:                                   1,
 	} {
 		if got := speechAmiss([]byte(src)); len(got) != want {
 			t.Errorf("%s: %d amiss %q, want %d", src, len(got), got, want)
