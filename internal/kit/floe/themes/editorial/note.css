@@ -1,2 +1,2 @@
 :scope::before { content: none; }
-.title { font-size: var(--floe-text-aside); letter-spacing: 0.06em; }
+.title { font-size: 0.8rem; letter-spacing: 0.06em; }

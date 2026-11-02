@@ -3,6 +3,6 @@
 :scope > div { gap: 0.5rem; }
 :scope .title { font-size: 1.25rem; line-height: 1.45; }
 :scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: var(--floe-text-small); }
-:scope .set-aside { margin-top: 0.3rem; font-size: var(--floe-text-small); font-weight: 600; }
+:scope .set-aside { margin-top: 0.3rem; font-size: var(--floe-text-aside); font-weight: 600; }
 :scope .rejected { gap: 0.15rem; }
 :scope .rejected > li::before { content: "×"; content: "×" / ""; color: var(--bad); }
