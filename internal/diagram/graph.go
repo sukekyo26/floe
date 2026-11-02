@@ -74,6 +74,7 @@ type graphOut struct {
 	levels   []int          // the edges written level between boxes, but those told (levelMistake)
 	row      []int          // the first box, as written, of each box's row: the boxes level edges stand in one rank
 	facing   map[[2]int]int // where each block stands in its lane (faces)
+	others   []rect         // the parts written by hand a label room makes may stand on (handParts)
 }
 
 // readGraph reads g's boxes and groups, resolves the names of its edges against them, and splits it into groups of
@@ -82,7 +83,7 @@ type graphOut struct {
 func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
-		loops: nil, skip: false, levels: nil, row: nil, facing: nil,
+		loops: nil, skip: false, levels: nil, row: nil, facing: nil, others: nil,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)
 	if n := len(out.boxes) + len(out.clusters); n > maxNodes {
@@ -280,7 +281,9 @@ func (o *graphOut) items() ([]item, usererr.List, error) {
 	left := 0.0
 	var told usererr.List
 	for _, gr := range o.groups {
-		d, err := o.draw(gr, right)
+		origin := [2]float64{o.g.X, o.g.Y} // where the group's 0,0 goes, but for a label stand moves it on for
+		origin[across] += left
+		d, err := o.draw(gr, right, origin)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -343,14 +346,43 @@ func (o *graphOut) opened(cs []gref, boxes []rect, hands [][]string, frames map[
 	return out
 }
 
-// draw lays group gr out and places its labels, as drawn from 0,0.
-func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
+// handParts are where the boxes, tables, icons, bars and dots written by hand stand: what room made for a label
+// keeps off when it stands the label above its run (clearAbove).
+// LIMIT: an icon's or a bar's label, a tree's boxes, frames, labels and edges written by hand, axes, circles and raw
+// SVG are not among them, and room made moves labels after: a label may stand on one, told at it.
+func handParts(parts []part) []rect {
+	var out []rect
+	for i, p := range parts {
+		at := pointer(i)
+		switch {
+		case p.Box != nil:
+			out = append(out, boxRect(p.Box, at))
+		case p.Table != nil:
+			r, _ := tableRects(p.Table, at)
+			out = append(out, r)
+		case p.Icon != nil:
+			out = append(out, iconRect(p.Icon, at))
+		case p.Bar != nil:
+			out = append(out, barRect(p.Bar, at))
+		case p.Dot != nil:
+			out = append(out, dotRect(p.Dot, at))
+		}
+	}
+	return out
+}
+
+// draw lays group gr out and places its labels, as drawn from 0,0, which goes to origin.
+func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, error) {
 	gr.place(right)
 	gr.wire()
 	d := &drawing{
 		right: right, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{},
 		ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
 		frames: map[int]rect{}, heads: map[int]float64{}, level: map[int][2]string{}, taken: map[int]map[string]bool{},
+		others: make([]rect, len(o.others)),
+	}
+	for i, r := range o.others {
+		d.others[i] = rect{x: r.x - origin[0], y: r.y - origin[1], w: r.w, h: r.h, what: "", at: ""} //nolint:exhaustruct_v5 // an area
 	}
 	sides := map[int][2]float64{} // each group's left and right, as laid out down
 	for _, n := range gr.nodes {
@@ -410,19 +442,28 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 // before them moves it on by whole columns), and the top of what it draws to 0; it returns where the next group goes.
 func (d *drawing) stand(across int, left float64) float64 {
 	lo, hi := d.span(across)
-	laidLo, _ := d.boxSpan(across)
-	for _, f := range d.frames {
-		laidLo = min(laidLo, f.lo(across))
-	}
 	by := left
-	if lo < laidLo {
-		by += onGrid(laidLo-lo, column, math.Ceil)
+	if firm := d.firm(across); lo < firm {
+		by += onGrid(firm-lo, column, math.Ceil)
 	}
 	d.stretch(across, math.Inf(-1), by)
-	if top, _ := d.span(1 - across); top < 0 {
+	if top, _ := d.span(1 - across); top < d.firm(1-across) {
 		d.stretch(1-across, math.Inf(-1), onGrid(-top, column, math.Ceil))
 	}
 	return onGrid(hi+by+groupGap, column, math.Ceil)
+}
+
+// firm is where on axis what the group draws may start for stand to move it on by none: its boxes and frames as laid
+// out side by side (across groups), 0 along the ranks.
+func (d *drawing) firm(axis int) float64 {
+	if axis == 1 && !d.right || axis == 0 && d.right {
+		return 0
+	}
+	laidLo, _ := d.boxSpan(axis)
+	for _, f := range d.frames {
+		laidLo = min(laidLo, f.lo(axis))
+	}
+	return laidLo
 }
 
 // drawing is a group laid out, as drawn, while its labels are placed: its boxes and its edges' corners, and where
@@ -440,6 +481,7 @@ type drawing struct {
 	heads  map[int]float64         // the widths of its groups' headings
 	level  map[int][2]string       // the level edges, and the sides of their boxes they take, from the box written first
 	taken  map[int]map[string]bool // the sides of each box level edges take
+	others []rect                  // the parts written by hand, where they stand from the group's 0,0
 }
 
 // spot is where a label stands, held to its run so that it moves with it: beside run seg of edge's corners (its own
@@ -529,7 +571,7 @@ func (d *drawing) place(k int, w float64) error {
 		if !ok {
 			continue
 		}
-		if !free(heldRect(segAt(d.routes[k], i), sp), d.held(k), append(d.runs(), d.hands()...)) {
+		if sp.side > 0 && !free(heldRect(segAt(d.routes[k], i), sp), d.held(k), append(d.runs(), d.hands()...)) {
 			return fmt.Errorf("room made for edge %d's label is not clear", k) //nolint:err113 // floe's own
 		}
 		d.spots[k] = sp
@@ -623,12 +665,13 @@ func (d *drawing) pastBoxes(along int, cut, sign float64) float64 {
 	return cut
 }
 
-// clearAbove is whether a label at sp, above run s (left of a run down), stands clear and within what the group
-// draws, so that it moves the group off none of its x and y.
+// clearAbove is whether a label at sp, above run s (left of a run down), stands clear, of the parts written by hand
+// too, and where stand moves the group by none, so that it moves the group off none of its x and y.
 func (d *drawing) clearAbove(s seg, sp spot) bool {
+	r := spotRect(s, sp)
 	across := 1 - runAxis(s)
-	top, _ := d.span(across)
-	return spotRect(s, sp).lo(across) >= top && free(heldRect(s, sp), d.held(sp.edge), append(d.runs(), d.hands()...))
+	return r.lo(across) >= d.firm(across) && free(r, d.others, nil) &&
+		free(heldRect(s, sp), d.held(sp.edge), append(d.runs(), d.hands()...))
 }
 
 // crossed is how far the labels across from lo to hi (where the label to place stands with its column) reach into
