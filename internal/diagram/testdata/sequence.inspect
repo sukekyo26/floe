@@ -23,10 +23,10 @@ label "open a new slug in the browser" 407,241 226x18
 label "GET /a/<slug>/?raw" 710.2,281 139.6x18
 label "read" 500.6,321 38.8x18
 label "HTML + reload script" 689.8,361 180.4x18
-label "EventSource ?since=version" 681.4,401 197.2x18
-label "compare versions every second" 659,461 218.8x18
+label "ask ?since=version" 704.2,401 151.6x18
+label "every second while shown" 659,461 182.8x18
 label "publish the same slug again" 417.8,491 204.4x18
 label "rewrite (updatedAt moves on)" 154.2,521 211.6x18
 label "stat finds a new version" 428.6,561 182.8x18
-label "event: reload" 728.2,601 103.6x18
+label "changed" 749.8,601 60.4x18
 label "location.reload()" 825.8,653 132.4x18

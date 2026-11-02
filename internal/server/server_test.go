@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -206,20 +207,59 @@ func TestStoredPage(t *testing.T) {
 		t.Fatal(err)
 	}
 	w := e.do(t, http.MethodGet, "/a/d/?raw", "")
-	if !strings.HasPrefix(w.Body.String(), string(kept)) || !strings.Contains(w.Body.String(), "new window.EventSource") ||
+	// It asks every second whether it changed, each ask cut off after 5 s, holding no connection.
+	if !strings.HasPrefix(w.Body.String(), string(kept)) || !strings.Contains(w.Body.String(), "window.AbortSignal.timeout(5000)") ||
+		!strings.Contains(w.Body.String(), "window.setInterval(look, 1000)") || strings.Contains(w.Body.String(), "EventSource") ||
 		!strings.Contains(w.Body.String(), "artifactOpen") {
 		t.Errorf("served\n%s", w.Body)
 	}
 	csp := w.Header().Get("Content-Security-Policy")
-	if !strings.HasPrefix(csp, "sandbox allow-scripts") || !strings.Contains(csp, "connect-src http://127.0.0.1:7325/api/events/") {
+	if !strings.HasPrefix(csp, "sandbox allow-scripts") || !strings.Contains(csp, "connect-src http://127.0.0.1:7325/api/changed/") {
 		t.Errorf("CSP %q", csp)
 	}
 	if w.Header().Get("X-Content-Type-Options") != "nosniff" {
 		t.Error("no nosniff")
 	}
 	download := e.do(t, http.MethodGet, "/api/artifacts/d/download", "")
-	if !strings.Contains(download.Body.String(), `http-equiv="Content-Security-Policy"`) || strings.Contains(download.Body.String(), "EventSource") {
+	if !strings.Contains(download.Body.String(), `http-equiv="Content-Security-Policy"`) || strings.Contains(download.Body.String(), "/api/changed/") {
 		t.Errorf("downloaded\n%s", download.Body)
+	}
+}
+
+// A page asks whether it changed since the version it was served from: "same" to that version, "changed" after a
+// publish and to any other, and "changed" for no page whatever it gives, so that whether a slug is there is not told.
+func TestChanged(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\nnote: one\n", nil)
+	since := func() string {
+		m := regexp.MustCompile(`/api/changed/d\?since=([^"]*)`).FindStringSubmatch(e.do(t, http.MethodGet, "/a/d/?raw", "").Body.String())
+		if m == nil {
+			t.Fatal("no since in the page")
+		}
+		return m[1]
+	}
+	ask := func(path string) string {
+		w := e.do(t, http.MethodGet, path, "")
+		h := w.Header()
+		if w.Code != http.StatusOK || h.Get("Access-Control-Allow-Origin") != "null" || h.Get("Cache-Control") != "no-store" ||
+			h.Get("Content-Type") != "text/plain; charset=utf-8" {
+			t.Errorf("%s: %d %v", path, w.Code, h)
+		}
+		return w.Body.String()
+	}
+	first := since()
+	got := make([]string, 0, 6)
+	got = append(got, ask("/api/changed/d?since="+first), ask("/api/changed/d?since=other"))
+	e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\nnote: two\n", nil)
+	got = append(got, ask("/api/changed/d?since="+first), ask("/api/changed/d?since="+since()),
+		ask("/api/changed/none?since="), ask("/api/changed/none?since=x"))
+	if want := "same changed changed same changed changed"; strings.Join(got, " ") != want {
+		t.Errorf("answers %q, want %q", strings.Join(got, " "), want)
+	}
+	if w := e.do(t, http.MethodGet, "/api/changed/Bad_Slug?since=", ""); w.Code != http.StatusNotFound {
+		t.Errorf("a slug that cannot be one: %d", w.Code)
 	}
 }
 
