@@ -1,17 +1,17 @@
-box "stopped" 20,56 200x96
-box "running" 581.6,26 176x90
-box "outdated" 1097.6,56 176x96
+box "stopped" 20,56 200x72
+box "running" 581.6,26 176x66
+box "outdated" 1097.6,56 176x72
 dot 120,22 113,15 14x14
-edge stopped→stopped M70,152 V176 H170 V152
-edge stopped→running M215.91,68 H581.6
-edge running→outdated M757.6,68 H1101.69
-edge outdated→running M1097.6,104 H753.51
-edge running→stopped M585.69,104 H220
-edge outdated→stopped M1101.69,140 H215.91
+edge stopped→stopped M70,128 V152 H170 V128
+edge stopped→running M215.91,68 H581.68
+edge running→outdated M757.52,68 H1101.69
+edge outdated→running M1097.68,80 H753.51
+edge running→stopped M585.69,80 H219.92
+edge outdated→stopped M1101.69,116 H215.91
 edge [120,29]→stopped M120,29 V56
-label "start fails (port in use)" 25,188 190x18
-label "publish or serve" 223,80 125.2x18
-label "floe reinstalled" 760.6,80 125.2x18
-label "next publish replaces it" 911.8,116 182.8x18
-label "floe stop, logout or reboot" 374.2,116 204.4x18
-label "floe stop, logout or reboot" 889.29,152 204.4x18
+label "start fails (port in use)" 25,164 190x18
+label "publish or serve" 223,38 125.2x18
+label "floe reinstalled" 760.52,38 125.2x18
+label "next publish replaces it" 911.88,92 182.8x18
+label "floe stop, logout or reboot" 374.2,92 204.4x18
+label "floe stop, logout or reboot" 889.29,128 204.4x18
