@@ -473,8 +473,8 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* What details and tabs hold */
-:scope { display: grid; gap: var(--floe-room); min-width: 0; }
-/* No margins of its own on what it holds: it wins over the parts it holds, whose roots base.css zeroes */
+:scope { display: grid; gap: var(--floe-room); }
+/* A word kept whole (a table's on paper) overflows the stack's column instead of widening it */
 :scope > * { min-width: 0; }
 }
 }
