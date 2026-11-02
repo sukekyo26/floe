@@ -11,8 +11,8 @@ edge decide→api M296,44 H304 V152 H312
 edge api→test M536,152 H600 V188 H664
 edge screens→test M648,116 H656 V188 H664
 edge api→help M536,152 H544 V224 H552
-edge test→release M760,188 H792 V253
-edge help→release M744,224 H792 V253
+edge test→release M760,188 H792 V260
+edge help→release M744,224 H792 V260
 label "" 195,302 10x18
 label "" 307,302 10x18
 label "" 419,302 10x18

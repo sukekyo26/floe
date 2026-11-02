@@ -466,7 +466,7 @@ func TestEdges(t *testing.T) {
 	} {
 		got, mistakes := draw(t, head+c.parts+"\n", render("en"))
 		if mistakes != "" || !strings.Contains(got, c.want) {
-			t.Errorf("%s\n  drew %s %s\n  want %s", c.parts, got, mistakes, c.want)
+			t.Errorf("%s\n  drew %s %q\n  want %q", c.parts, got, mistakes, c.want)
 		}
 	}
 }
@@ -574,7 +574,7 @@ func TestEdgesVia(t *testing.T) {
 		{c01 + "  - edge: { from: [80, 100], via: [[80, 234]], to: c01 }", `d="M80,100 V234 H104"`},
 		{c01 + "  - edge: { from: [10, 200], via: [[30, 200], [30, 200]], to: c01 }", `d="M10,200 H30 H30 V252 H60"`},
 		{"  - edge: { from: [0, 0], via: [[50, 0]], to: [100, 100] }", `d="M0,0 H50 H100 V100"`},
-		{"  - dot: { name: d, cx: 300, cy: 100 }\n  - edge: { from: [10, 20], via: [[300, 20]], to: d }", `d="M10,20 H300 V93"`},
+		{"  - dot: { name: d, cx: 300, cy: 100 }\n  - edge: { from: [10, 20], via: [[300, 20]], to: d }", `d="M10,20 H300 V92"`},
 		// At a via, the turn towards the next point off line takes the other way first when the way the edge came would run
 		// back along it.
 		{"  - box: { name: a, x: 40, y: 40, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 300]], to: [400, 100] }", `d="M140,60 H200 V300 H400 V100"`},
@@ -590,7 +590,7 @@ func TestEdgesVia(t *testing.T) {
 	} {
 		got, mistakes := draw(t, head+c.parts+"\n", render("en"))
 		if mistakes != "" || !strings.Contains(got, c.want) {
-			t.Errorf("%s\n  drew %s %s\n  want %s", c.parts, got, mistakes, c.want)
+			t.Errorf("%s\n  drew %s %q\n  want %q", c.parts, got, mistakes, c.want)
 		}
 	}
 
@@ -947,9 +947,10 @@ func TestGraphLabelAbove(t *testing.T) {
 	}
 }
 
-// An edge ends at a named dot's outline, towards the first point off its centre, both ends measured as routed; it
-// stays at the centre when that point is within the radius, at two dots that touch, and at a dot's centre written as
-// a point. Its label stands where it would at the centre.
+// An edge is drawn to a named dot's outline, the tip of its marker there, towards the first point off its centre, both
+// ends measured as routed; it stays at the centre when the run left cannot keep its marker (or is within the radius),
+// between two dots the one run cannot keep room for, and at a dot's centre written as a point. It is checked and
+// labelled as routed.
 func TestEdgesAtDots(t *testing.T) {
 	t.Parallel()
 
@@ -958,31 +959,42 @@ func TestEdgesAtDots(t *testing.T) {
 		b = "  - box: { name: b, x: 200, y: 20, w: 100, h: 40, rows: [b] }\n"
 		r = "  - dot: { name: r, cx: 240, cy: 140 }\n"
 		d = "  - dot: { name: d, cx: 300, cy: 100 }\n"
+		s = "  - dot: { name: s, cx: 40, cy: 140 }\n"
 	)
 	for _, c := range []struct{ name, parts, want string }{
-		{"square", a + r + "  - edge: { from: a, fromSide: right, to: r }", "edge a→r M120,40 H240 V133"},
-		{"straight", a + r + "  - edge: { from: a, to: r, via: [[180, 100]], straight: true }", "edge a→r M120,40 L180,100 L234.18,136.12"},
-		{"from a dot", "  - dot: { name: s, cx: 40, cy: 140 }\n" + b + "  - edge: { from: s, to: b, start: arrow }", "edge s→b M40,133 V40 H200"},
-		{"via on the centre", a + d + "  - edge: { from: a, via: [[300, 20], [300, 100]], to: d }", "edge a→d M120,40 H300 V20 V93"},
+		{"square, the arrow's tip at the outline", a + r + "  - edge: { from: a, fromSide: right, to: r }", `d="M120,40 H240 V132"`},
+		{"straight", a + r + "  - edge: { from: a, to: r, via: [[180, 100]], straight: true }", `d="M120,40 L180,100 L233.34,135.56"`},
+		{"from a dot, no marker", s + b + "  - edge: { from: s, to: b }", `d="M40,133 V40 H200"`},
+		{"from a dot, an arrow", s + b + "  - edge: { from: s, to: b, start: arrow }", `d="M40,132 V40 H200"`},
+		{"via on the centre", a + d + "  - edge: { from: a, via: [[300, 20], [300, 100]], to: d }", `d="M120,40 H300 V20 V92"`},
+		{"first via on the centre", s + b + "  - edge: { from: s, via: [[40, 140], [40, 40]], to: b }", `d="M40,133 V40 H200"`},
+		{"both dots", "  - dot: { name: s, cx: 40, cy: 100 }\n" + d + "  - edge: { from: s, to: d, start: arrow }", `d="M48,100 H292"`},
+		{"a run that cannot keep the arrow", a + d + "  - edge: { from: d, via: [[300, 88], [200, 88]], to: a, start: arrow }", `d="M300,100 V88`},
+		{"a run that keeps no marker", a + d + "  - edge: { from: d, via: [[300, 88], [200, 88]], to: a }", `d="M300,93 V88`},
+		{"within the radius", "  - dot: { name: r, cx: 240, cy: 45 }\n  - edge: { from: [20, 40], to: r }", `d="M20,40 H240 V45"`},
+		{"via in line within the radius", a + d + "  - edge: { from: a, via: [[300, 40], [300, 95]], to: d }", `d="M120,40 H300 V95 V100"`},
+		{"dots that touch", "  - dot: { name: s, cx: 40, cy: 50 }\n  - dot: { name: t, cx: 54, cy: 50 }\n  - edge: { from: s, to: t }", `d="M40,50 H54"`},
+		{"a run too short for both", "  - dot: { name: s, cx: 40, cy: 50 }\n  - dot: { name: t, cx: 55, cy: 50 }\n  - edge: { from: s, to: t }", `d="M40,50 H55"`},
+		{"a point at the centre", d + "  - edge: { from: [20, 20], via: [[300, 20]], to: [300, 100] }", `d="M20,20 H300 V100"`},
 		{
-			"first via on the centre", "  - dot: { name: s, cx: 40, cy: 140 }\n" + b + "  - edge: { from: s, via: [[40, 140], [40, 40]], to: b }",
-			"edge s→b M40,133 V40 H200",
+			"checked as routed", d + "  - edge: { from: [100, 103], to: [340, 103] }\n  - edge: { from: [300, 150], to: d }",
+			"s.yaml:6:5: edge [100,103]→[340,103] crosses edge [300,150]→d at 300,103; move one of them, or add crossing: true to one if it cannot be avoided",
 		},
-		{"both dots", "  - dot: { name: s, cx: 40, cy: 100 }\n" + d + "  - edge: { from: s, to: d }", "edge s→d M47,100 H293"},
-		{"within the radius", "  - dot: { name: r, cx: 240, cy: 45 }\n  - edge: { from: [20, 40], to: r }", "edge [20,40]→r M20,40 H240 V45"},
-		{"via in line within the radius", a + d + "  - edge: { from: a, via: [[300, 40], [300, 95]], to: d }", "edge a→d M120,40 H300 V95 V100"},
-		{"dots that touch", "  - dot: { name: s, cx: 40, cy: 50 }\n  - dot: { name: t, cx: 54, cy: 50 }\n  - edge: { from: s, to: t }", "edge s→t M40,50 H54"},
-		{"a point at the centre", d + "  - edge: { from: [20, 20], via: [[300, 20]], to: [300, 100] }", "edge [20,20]→[300,100] M20,20 H300 V100"},
-		{"label", "  - dot: { name: u, cx: 150, cy: 155 }\n  - edge: { from: [50, 50], to: u, label: go }", `label "go" 137.8,93.5 24.4x18`},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, mistakes := draw(t, "width: 360\nheight: 200\ntitle: T\nparts:\n"+c.parts+"\n", inspect)
-			if mistakes != "" || !strings.Contains(got, c.want) {
-				t.Errorf("%s\n  inspect = %s %s\n  want %s", c.parts, got, mistakes, c.want)
+			got, mistakes := draw(t, "width: 360\nheight: 200\ntitle: T\nparts:\n"+c.parts+"\n", render("en"))
+			if mistakes != c.want && (mistakes != "" || !strings.Contains(got, c.want)) {
+				t.Errorf("%s\n  drew %s %q\n  want %q", c.parts, got, mistakes, c.want)
 			}
 		})
+	}
+	// The label stands where it would at the centre.
+	got, mistakes := draw(t, "width: 360\nheight: 200\ntitle: T\nparts:\n  - dot: { name: u, cx: 150, cy: 155 }\n"+
+		"  - edge: { from: [50, 50], to: u, label: go }\n", inspect)
+	if want := `label "go" 137.8,93.5 24.4x18`; mistakes != "" || !strings.Contains(got, want) {
+		t.Errorf("inspect = %s %s, want %s", got, mistakes, want)
 	}
 }
 
