@@ -1,5 +1,5 @@
 frame "Store ~/.local/share/floe" 272,108 256x300
-frame "Local server 127.0.0.1:7325" 624,20 280x476
+frame "ローカルサーバー 127.0.0.1:7325" 624,20 280x476
 frame "Browser" 968,20 264x476
 frame "Frame /a/<slug>/" 984,112 232x188
 box "floe publish" 24,64 200x56
@@ -11,7 +11,7 @@ box "/a/<slug>/?raw" 644,152 240x56
 box "/api/changed/<slug>" 644,240 240x56
 box "/ and /a/<slug>/" 644,328 240x56
 box "/api/artifacts" 644,416 240x56
-box "The page" 1000,152 200x132
+box "ページ本体" 1000,152 200x132
 box "Management page" 988,416 224x56
 edge [224,92]→[644,92] M224,92 H644
 edge [124,120]→[288,180] M124,120 V180 H288
@@ -23,7 +23,7 @@ edge [1000,268]→[884,268] M1000,268 H884
 edge [884,348]→[1100,300] M884,348 H1100 V300
 edge [884,364]→[1070,416] M884,364 H1070 V416
 edge [988,444]→[884,444] M988,444 H884
-label "1 health" 397.8,83 72.4x18
+label "① 起動確認" 397.8,83 72.4x18
 label "2 save" 173.4,171 53.2x18
 label "3 read" 551.4,171 53.2x18
 label "4 version" 540.6,259 74.8x18

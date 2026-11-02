@@ -36,9 +36,9 @@ box "C" 240,79 40x29
 box "E" 208,165 40x29
 box "F" 272,165 40x29
 box "z" 340,10 40x29
-edge a→"B" M200,39 V59 H136 V79
+edge "a"→"B" M200,39 V59 H136 V79
 edge "B"→"D" M136,125 V165
-edge a→"C" M200,39 V59 H260 V79
+edge "a"→"C" M200,39 V59 H260 V79
 edge "C"→"E" M260,108 V145 H228 V165
 edge "C"→"F" M260,108 V145 H292 V165
 edge z→a M340,24.5 H220
@@ -76,6 +76,12 @@ func TestTreeMistakes(t *testing.T) {
 		{
 			"  - box: { x: 150, y: 80, rows: [S] }\n  - tree:\n      x: 200\n      y: 10\n      root:\n        rows: [A]\n        children:\n          - rows: [S]\n          - rows: [T]\n",
 			`s.yaml:5:5: box "S" overlaps box "S"`,
+		},
+		// A node with no name is named by its widest text, its box and its edges alike.
+		{
+			"  - tree:\n      x: 200\n      y: 10\n      root:\n        rows: [{ en: Top, ja: \"いちばん上の節\" }]\n        children:\n          - rows: [{ en: Kid, ja: \"子の節\" }]\n" +
+				"  - box: { name: b, x: 180, y: 50, w: 60, h: 30, rows: [b] }\n",
+			`s.yaml:12:5: edge "いちばん上の節"→"子の節" runs through box "b"`,
 		},
 		{
 			"  - tree:\n      x: 20\n      y: 10\n      root:\n        rows: [A]\n        children:\n          - rows: [B]\n          - rows: [Wide child]\n",

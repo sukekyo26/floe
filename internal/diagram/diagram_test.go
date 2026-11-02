@@ -190,7 +190,7 @@ func TestLayoutMistakes(t *testing.T) {
 	}{
 		{
 			"  - box: { x: 20, y: 20, rows: [{ en: A, ja: あ }] }\n  - box: { name: b, x: 30, y: 30, rows: [{ en: B, ja: い }] }",
-			`s.yaml:6:5: box "A" overlaps box "b"`,
+			`s.yaml:6:5: box "あ" overlaps box "b"`,
 		},
 		{"  - box: { name: a, x: 20, y: 20, rows: [A] }\n  - box: { name: a, x: 200, y: 20, rows: [B] }", `s.yaml:6:5: the name "a" is given before: give each part, row and node its own name`},
 		{"  - edge: { from: chek, to: [10, 10] }", `s.yaml:5:5: edge: no part, row or node named "chek"`},
@@ -246,7 +246,7 @@ func TestLayoutMistakes(t *testing.T) {
 		{
 			"  - dot: { cx: 110, cy: 100 }\n  - label: { text: Dark mode, x: 122, y: 100, anchor: start }\n" +
 				"  - dot: { cx: 110, cy: 112 }\n  - label: { text: Share a note, x: 122, y: 112, anchor: start }",
-			"s.yaml:7:5: dot 110,100 overlaps dot 110,112\ns.yaml:8:5: label \"Dark mode\" overlaps label \"Share a note\"",
+			"s.yaml:7:5: dot 103,93 14x14 overlaps dot 103,105 14x14\ns.yaml:8:5: label \"Dark mode\" overlaps label \"Share a note\"",
 		},
 		{"  - label: { text: a note, x: 150, y: 100 }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: box "a" overlaps label "a note"`},
 		{"  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }\n  - edge: { from: [20, 100], to: [300, 100] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"`},
@@ -267,6 +267,27 @@ func TestLayoutMistakes(t *testing.T) {
 			"  - box: { x: 20, y: 20, w: 60, h: 40, rows: [S] }\n  - box: { x: 90, y: 20, w: 60, h: 40, rows: [S] }\n  - label: { text: across both, x: 85, y: 40 }",
 			`s.yaml:7:5: box "S" overlaps label "across both"`,
 		},
+		// A part with no name is named by its text in the language it is laid out as wide as (by code's widths in a code
+		// row), else by where it stands; a label placed in its region with no text, by its region.
+		{
+			"  - label: { text: { en: Decide what to build, ja: \"作るものと作らないものを、使う人と話して決める\" }, x: 16, y: 44, anchor: start }\n" +
+				"  - bar: { x1: 200, x2: 280, y: 44 }",
+			`s.yaml:6:5: bar 200,37 80x14 overlaps label "作るものと作らないものを、使う人と話して決める"`,
+		},
+		{
+			"  - frame: { x: 10, y: 10, w: 250, h: 150 }\n  - frame: { x: 300, y: 100, w: 150, h: 40 }\n  - box: { x: 0, y: 140, w: 80, h: 40, rows: [A] }",
+			"s.yaml:6:5: frame 300,100 150x40 sticks out of the 400x200 canvas\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150",
+		},
+		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, \"\"], [160, \"\"]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", `s.yaml:6:5: box "a" overlaps label 155,108 10x18`},
+		{"  - box: { x: 20, y: 20, rows: [[{ en: \"あいう\", ja: \"abcde\" }, main code]] }\n  - box: { name: b, x: 30, y: 30, w: 80, h: 30, rows: [b] }", `s.yaml:6:5: box "abcde" overlaps box "b"`},
+		{
+			"  - circle: { name: A, cx: 150, cy: 100, r: 20 }\n  - label: { text: a much longer label than fits, in: [A] }\n  - label: { text: \"\", in: [A] }",
+			"s.yaml:6:5: label \"a much longer label than fits\" finds no room inside A and outside the other circles: make that area larger, or the text shorter\n" +
+				"s.yaml:7:5: label in A finds no room inside A and outside the other circles: make that area larger, or the text shorter",
+		},
+		{"  - circle: { cx: 390, cy: 100, r: 20 }", "s.yaml:5:5: circle 370,80 40x40 sticks out of the 400x200 canvas"},
+		{"  - dot: { name: d, cx: 50, cy: 50 }\n  - box: { name: b, x: 40, y: 40, w: 60, h: 30, rows: [b] }", `s.yaml:6:5: box "b" overlaps dot "d"`},
+		{"  - circle: { name: A, cx: 150, cy: 100, r: 60 }\n  - label: { text: \"\", in: [A] }\n  - box: { x: 100, y: 50, w: 100, h: 100, rows: [B] }", `s.yaml:7:5: box "B" overlaps label in A`},
 		// Each check of the placement on its own.
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - box: { x: 80, y: 40, w: 60, h: 40, rows: [A] }", `s.yaml:6:5: box "A" straddles the edge of frame "F"`},
 		{"  - box: { name: b, x: 150, y: 80, w: 60, h: 40, rows: [B] }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through box "b"`},
@@ -385,17 +406,17 @@ func TestTooNarrow(t *testing.T) {
 	for _, c := range []struct {
 		parts, want string
 	}{
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: Short, ja: ずっと長い見出しの文字 }] }", `s.yaml:5:5: box "Short": "ずっと長い見出しの文字" (ja) needs w: 175 or more`},
-		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: { en: F, ja: とても長い日本語の見出し } }", `s.yaml:5:5: frame "F": "とても長い日本語の見出し" (ja) needs w: 168 or more`},
-		{"  - table: { x: 20, y: 20, w: 80, title: { en: T, ja: とても長い日本語の題 }, rows: [a] }", `s.yaml:5:5: table "T": "とても長い日本語の題" (ja) needs w: 162 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: Short, ja: ずっと長い見出しの文字 }] }", `s.yaml:5:5: box "ずっと長い見出しの文字": "ずっと長い見出しの文字" (ja) needs w: 175 or more`},
+		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: { en: F, ja: とても長い日本語の見出し } }", `s.yaml:5:5: frame "とても長い日本語の見出し": "とても長い日本語の見出し" (ja) needs w: 168 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: { en: T, ja: とても長い日本語の題 }, rows: [a] }", `s.yaml:5:5: table "とても長い日本語の題": "とても長い日本語の題" (ja) needs w: 162 or more`},
 		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, int]] }", `s.yaml:5:5: table "T": "とても長い識別子  int" (ja) needs w: 158 or more`},
 		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[id, { en: int, ja: とても長い型の名前 }]] }", `s.yaml:5:5: table "T": "id  とても長い型の名前" (ja) needs w: 162 or more`},
 		// The name and the type in other languages: each language's row as drawn, falling back to English.
 		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, { en: int, ko: 아주 긴 정수 형식 }]] }", `s.yaml:5:5: table "T": "id  아주 긴 정수 형식" (ko) needs w: 161 or more`},
 		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A very long row, ja: 短い }] }", `s.yaml:5:5: box "A very long row": "A very long row" needs w: 149 or more`},
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: あ, ko: 아주 긴 한국어 줄 }] }", `s.yaml:5:5: box "AB": "아주 긴 한국어 줄" (ko) needs w: 147 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: あ, ko: 아주 긴 한국어 줄 }] }", `s.yaml:5:5: box "아주 긴 한국어 줄": "아주 긴 한국어 줄" (ko) needs w: 147 or more`},
 		// Two languages other than English as wide: the first by tag.
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A, ja: あいう, ko: 가나다 }] }", `s.yaml:5:5: box "A": "あいう" (ja) needs w: 71 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A, ja: あいう, ko: 가나다 }] }", `s.yaml:5:5: box "あいう": "あいう" (ja) needs w: 71 or more`},
 		// As wide as English, which is told: in the main row, the sub row, mixed widths and code.
 		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: ABCDEFGHIJ, ja: あいうえおか }] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 110 or more`},
 		{"  - box: { x: 20, y: 20, w: 40, h: 60, rows: [A, { en: ABCDEFGHIJKLMNO, ja: あいうえおかきくけ }] }", `s.yaml:5:5: box "A": "ABCDEFGHIJKLMNO" needs w: 140 or more`},
@@ -404,7 +425,7 @@ func TestTooNarrow(t *testing.T) {
 		// A separator has no text, in a table sized by its rows too.
 		{"  - table: { x: 20, y: 20, title: T, rows: [a, \"---\", b] }", ""},
 		// U+2E80, the first CJK radical, is full-width.
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: \"\u2e80\u2e80\" }] }", "s.yaml:5:5: box \"AB\": \"\u2e80\u2e80\" (ja) needs w: 58 or more"},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: \"\u2e80\u2e80\" }] }", "s.yaml:5:5: box \"\u2e80\u2e80\": \"\u2e80\u2e80\" (ja) needs w: 58 or more"},
 		// Text exactly as wide as the room fits.
 		{"  - box: { x: 20, y: 20, w: 104, h: 60, rows: [A, ABCDEFGHIJ] }", ""},
 	} {
@@ -870,6 +891,12 @@ func TestInspect(t *testing.T) {
 		if mistakes != "" || !strings.Contains(got, want) {
 			t.Errorf("inspect = %s %s, want %s", got, mistakes, want)
 		}
+	}
+	// A frame with no name nor label is named by where it stands, its icon so too, each once; a label by its widest text.
+	got, mistakes = draw(t, head+"  - frame: { x: 10, y: 10, w: 250, h: 150, icon: aws/aws-lambda }\n"+
+		"  - label: { text: { en: Done, ja: \"完了した\" }, x: 100, y: 100 }\n", inspect)
+	if want := "frame 10,10 250x150\nthe icon of frame 10,10 250x150 10,10 31x31\nlabel \"完了した\" 71,91 58x18\n"; mistakes != "" || got != want {
+		t.Errorf("inspect = %q %s, want %q", got, mistakes, want)
 	}
 	// A bar is drawn from the smaller of its x, its label right of it, whichever is written first.
 	got, mistakes = draw(t, head+"  - bar: { x1: 200, x2: 20, y: 50, label: back }\n", inspect)

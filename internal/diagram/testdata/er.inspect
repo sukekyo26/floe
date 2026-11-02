@@ -1,7 +1,7 @@
-table "Page (meta.json)" 380,40 260x212
-table "Project" 40,128 200x58
-table "Stored page" 780,40 240x80
-table "Link" 780,172 240x80
+table "ページ（meta.json）" 380,40 260x212
+table "プロジェクト" 40,128 200x58
+table "保存したページ" 780,40 240x80
+table "リンク" 780,172 240x80
 edge [240,147]→project M240,147 H380
 edge [240,169]→publishedFrom M240,169 H380
 edge pageSlug→storedSlug M640,81 H780
