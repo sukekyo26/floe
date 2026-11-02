@@ -6,5 +6,5 @@
   --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
-  font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
+  font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
 }

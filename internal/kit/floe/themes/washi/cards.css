@@ -11,7 +11,7 @@
 :scope.numbered > .card::before {
   content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   position: absolute; top: -0.5rem; right: -0.5rem; --floe-mark: 1.6rem; border-radius: 50%;
-  background: var(--washi-shu); color: var(--on-fill); font-size: 0.8rem; font-weight: 700;
+  background: var(--washi-shu); color: var(--on-fill); font-size: var(--floe-text-small); font-weight: 700;
 }
 .card .title { letter-spacing: 0.08em; }
 .card :is(p, ul, ol) { color: var(--on-face, var(--muted)); }

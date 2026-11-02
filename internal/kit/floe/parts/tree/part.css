@@ -18,7 +18,7 @@
 }
 :scope .name.dir { font-weight: 600; }
 :scope .name.dir::before { background: var(--accent); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M2.5 5h5l1.5 2h8.5v9h-15z'/%3E%3C/svg%3E"); }
-:scope .note { margin-left: 0.75rem; font-size: 0.85rem; color: var(--muted); }
+:scope .note { margin-left: 0.75rem; font-size: var(--floe-text-small); color: var(--muted); }
 :scope li > .name::after { font-weight: 800; }
 :scope li.added > .name { color: var(--good); }
 :scope li.added > .name::after { content: "+"; content: "+" / ""; }

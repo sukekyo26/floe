@@ -8,7 +8,7 @@
   --tabs-face-bg: var(--on-face); --tabs-face-fg: var(--face);
 }
 :scope > label {
-  position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: 0.9rem; font-weight: 600;
+  position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: var(--floe-text-aside); font-weight: 600;
   color: var(--tabs-title);
 }
 /* The picked tab, on screen alone: on paper every tab shows under its title, alike. A theme sets --tabs-picked-bg,

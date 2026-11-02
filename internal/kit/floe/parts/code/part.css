@@ -19,7 +19,7 @@
 /* A theme sets the heading's ground and colour by --code-head-bg and --code-head-fg, and the colours of a diff's
    counts on it by --code-head-add and --code-head-del */
 :scope figcaption {
-  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem var(--floe-code-pad); font-size: 0.78rem;
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem var(--floe-code-pad); font-size: var(--floe-text-small);
   background: var(--code-head-bg, color-mix(in srgb, var(--code-fg) 5%, transparent)); color: var(--code-head-fg, var(--code-fg));
   border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
 }
@@ -32,7 +32,7 @@
 @media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
 :scope .file { color: var(--floe-code-head-faint); }
 :scope .lang {
-  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
+  flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
   background: var(--code-prompt); color: var(--code-bg);
 }
 /* A block, so that the code's last line break draws no empty line; no padding at its sides, which its line's rule sets */
