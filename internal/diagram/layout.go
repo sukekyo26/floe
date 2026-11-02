@@ -197,9 +197,7 @@ func (l *layout) name(at string, p part) {
 			keep(row.Name, target{r: rows[j], kind: "row", handSides: nil})
 		}
 	case p.Icon != nil:
-		size := iconSize(p.Icon)
-		r := rect{x: p.Icon.X, y: p.Icon.Y, w: size, h: size, what: "", at: at}
-		keep(p.Icon.Name, target{r: r, kind: "icon", handSides: nil})
+		keep(p.Icon.Name, target{r: iconRect(p.Icon, at), kind: "icon", handSides: nil})
 	case p.Frame != nil:
 		f := p.Frame
 		r := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at}
@@ -207,9 +205,7 @@ func (l *layout) name(at string, p part) {
 	case p.Bar != nil:
 		keep(p.Bar.Name, target{r: barRect(p.Bar, at), kind: "bar", handSides: nil})
 	case p.Dot != nil:
-		d := dotR(p.Dot)
-		r := rect{x: p.Dot.CX - d, y: p.Dot.CY - d, w: d * 2, h: d * 2, what: "", at: at}
-		keep(p.Dot.Name, target{r: r, kind: "dot", handSides: nil})
+		keep(p.Dot.Name, target{r: dotRect(p.Dot, at), kind: "dot", handSides: nil})
 	case p.Circle != nil:
 		// No area: no edge ends at it.
 		if keep(p.Circle.Name, target{r: rect{x: 0, y: 0, w: 0, h: 0, what: "", at: at}, kind: "circle", handSides: nil}) {
@@ -512,6 +508,17 @@ func iconSize(i *icon) float64 {
 		return 48
 	}
 	return i.Size
+}
+
+// iconRect is where icon i stands, but its label; dotRect, where dot d does.
+func iconRect(i *icon, at string) rect {
+	size := iconSize(i)
+	return rect{x: i.X, y: i.Y, w: size, h: size, what: "", at: at}
+}
+
+func dotRect(d *dot, at string) rect {
+	r := dotR(d)
+	return rect{x: d.CX - r, y: d.CY - r, w: r * 2, h: r * 2, what: "", at: at}
 }
 
 func dotR(d *dot) float64 {

@@ -24,10 +24,12 @@ func expand(parts []part) ([]item, usererr.List, error) {
 	var problems usererr.List
 	graphs := map[int]*graphOut{}
 	passed := 0
+	others := handParts(parts)
 	for i, p := range parts {
 		if p.Graph != nil {
 			o, found := readGraph(p.Graph, pointer(i)+"/graph")
 			problems = append(problems, found...)
+			o.others = others
 			graphs[i] = o
 			passed += o.passed
 		}
