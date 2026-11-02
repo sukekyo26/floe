@@ -297,8 +297,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Change the management page's corners and text to three steps each: a box's 20px, a middle box's 14px (a menu, the
-  suggestions, the error) and a small square's 6px, and 0.72rem for labels, 0.82rem for small text and 14px for the
-  body. Most sizes move by a few hundredths of a rem; a field's corners are 6px (9px before), the room in a pop-up and a
+  suggestions, the error) and a small square's 6px, and 0.72rem for labels, 0.82rem for small text and 0.875rem for
+  the body, which was a fixed 14px and now follows the browser's text size (14px at its default). Most sizes move by a few hundredths of a rem; a field's corners are 6px (9px before), the room in a pop-up and a
   menu is 6px, a side tree's links and the keys' words are a little larger.
 - Change parts' small text, written before in nine sizes from 0.72rem to 0.92rem, half a stat's number for its unit
   and 12px in a diagram's toolbar, to two steps of floe's base: `--floe-text-small` (0.8rem) for pills, chips, a ring's
