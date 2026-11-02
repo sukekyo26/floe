@@ -472,6 +472,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix parts a template of one's own places in a band, which could not be read there. In swiss, whose panels, cards
+  and notes have no ground, nearly every part's text and focus ring stayed in its own colour on the band's; they are
+  on the surface with the page's text in a band now, as in other themes, a table's first column clear of the
+  surface's edge, and stay as before in any other face. In every theme, in any filled face (a band, or a face a
+  template paints itself), tabs' titles and focus ring and the focus ring around links' cards are in the face's text
+  colour now, and the picked tab in the face's two colours turned over, told from the others and from the face.
 - Fix an edge to a diagram's dot named in `from` or `to` drawn to the dot's centre, its arrow hidden under the dot.
   It is drawn to the dot's outline now, towards the edge's first point off the centre, the tip of its arrow (or
   other marker) on the outline. It is still drawn to the centre when that run is too short for the marker, between
