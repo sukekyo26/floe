@@ -11,8 +11,9 @@ import (
 // across when on one line, else down, in a place where parts stand: a box laid out as a grid or a flex that is a
 // stack, holds cards, holds a part's box outside any part (a template's section or step), or is a text's box. Tabs are measured from
 // the bottom of their names to the top of the panel shown, as their children are names and panels, not parts in a row.
-// LIMIT: the flow of a part's Markdown (its paragraphs, and before and after a part's box in it) is spaced by the part
-// and goes unmeasured, until floe spaces that flow in one place.
+// A part's Markdown stands in a text's box (MarkdownFlow), measured as a text's is.
+// LIMIT: a flow not drawn by MarkdownFlow (what a note drawn in HTML holds, a template's own Markdown it places in a
+// note) and what a quote or a list holds (base.css's 0.6rem and 0.3rem, not room between parts) go unmeasured.
 // LIMIT: the room before a template's own section (report's .sub, design's .decision), between a template's own
 // section or header and a note it places (adr's record superseding it after its header, runbook's caution after its
 // needs) and after the first child of an item whose mark stands in its

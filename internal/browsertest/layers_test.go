@@ -127,9 +127,9 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	open("themed-text", "template: themed\nlang: en\ntheme: mine\ntext: '> page'\nnote: { text: '> held' }\n"+
 		"words: \"## Words\\n\\nsaid\\n\\n> quoted\"\n", "[data-floe-text] blockquote")
 	got = b.eval(`(() => { const c = (q, p) => getComputedStyle(document.querySelector(q))[p];
-		return [c('[data-floe-text] > p', 'color'), c('[data-floe-text] h2', 'letterSpacing'), c('.banded', 'letterSpacing'),
-			c('[data-floe-text] blockquote', 'backgroundColor'), ...['body > blockquote', '[data-floe-part=note] blockquote',
-			'[data-floe-text] blockquote'].map((q) => c(q, 'letterSpacing'))].join(' | ') })()`)
+		return [c('[data-floe-text]:not([data-floe-part] *) > p', 'color'), c('[data-floe-text]:not([data-floe-part] *) h2', 'letterSpacing'), c('.banded', 'letterSpacing'),
+			c('[data-floe-text]:not([data-floe-part] *) blockquote', 'backgroundColor'), ...['body > blockquote', '[data-floe-part=note] blockquote',
+			'[data-floe-text]:not([data-floe-part] *) blockquote'].map((q) => c(q, 'letterSpacing'))].join(' | ') })()`)
 	check(t, "a text", []string{got}, "rgb(34, 33, 31) | normal | 5px | rgba(0, 0, 0, 0) | 3px | 3px | 3px")
 
 	// A part's style stops at a part it holds: the note's code is on the surface, the code of the table in it on

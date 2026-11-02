@@ -31,6 +31,32 @@ func TestMarkdown(t *testing.T) {
 	}
 }
 
+// MarkdownFlow draws Markdown in a text's box, the empty and raw HTML alone too (a comment, which :empty takes), and
+// nothing for empty text; part.html's markdown is it, page.html's draws no box.
+func TestMarkdownFlow(t *testing.T) {
+	t.Parallel()
+
+	for src, want := range map[string]template.HTML{
+		"":               "",
+		"<div>x</div>\n": `<div data-floe-text><!-- raw HTML omitted --></div>`,
+		"a\n\nb":         "<div data-floe-text><p>a</p>\n<p>b</p></div>",
+	} {
+		if got, err := MarkdownFlow(src); err != nil || got != want {
+			t.Errorf("MarkdownFlow(%q) = %q, %v; want %q", src, got, err, want)
+		}
+	}
+	for name, fns := range map[string]template.FuncMap{"part.html": partFuncsAll(), "page.html": pageFuncs()} {
+		md, ok := fns["markdown"].(func(string) (template.HTML, error))
+		if !ok {
+			t.Fatalf("%s's markdown is not a func(string) (template.HTML, error)", name)
+		}
+		got, err := md("a")
+		if want := map[string]template.HTML{"part.html": "<div data-floe-text><p>a</p></div>", "page.html": "<p>a</p>"}[name]; err != nil || got != want {
+			t.Errorf("%s's markdown = %q, %v; want %q", name, got, err, want)
+		}
+	}
+}
+
 // Fenced finds the line of the first fenced code block as goldmark reads it, in a list or a quote and unclosed too,
 // and no code in a line, in a table or indented.
 func TestFenced(t *testing.T) {

@@ -3,6 +3,7 @@ package schema_test
 import (
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -56,5 +57,31 @@ func TestWalk(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Walk tells whether an item is held in a part's value: a format of the template's own after a part is not, one in a
+// part's value is, and one after a part that value holds still is.
+func TestWalkInPart(t *testing.T) {
+	t.Parallel()
+
+	c, err := compile(t, `"properties": {"a": {"$ref": "floe:///parts/stack.json"}, "z": {"type": "string", "format": "markdown"}}`)
+	if c == nil {
+		t.Fatal(told(err))
+	}
+	values := map[string]any{
+		"a": map[string]any{"items": []any{map[string]any{"note": map[string]any{"text": "t"}}, map[string]any{"text": "x"}}},
+		"z": "**z**",
+	}
+	var calls []string
+	if _, err := c.Walk(values, func(it schema.Item, _ any) (any, error) {
+		calls = append(calls, strings.Join(it.At, ".")+"="+it.Part+it.Format+" "+strconv.FormatBool(it.InPart))
+		return nil, nil //nolint:nilnil // the value is not read
+	}); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"a.items.0.note=note true", "a.items.1.text=markdown true", "a=stack false", "z=markdown false"}
+	if !slices.Equal(calls, want) {
+		t.Errorf("calls %v, want %v", calls, want)
 	}
 }
