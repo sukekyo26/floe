@@ -150,6 +150,8 @@ func oneWay(a, b anchor) bool {
 
 // around are the corners of an edge between sides of one way: out past both ends, so that it does not run
 // along the parts' edges. The run out there is loose, outward only: inward it comes nearer the parts.
+// LIMIT: so a run out there on a rule stays on it when moving out lays the runs to it, made longer, along a line
+// (a line across from a side, beyond the rule); write a via or a side to take another way.
 func around(a, b anchor) ([][2]float64, loose) {
 	const out = 20 // how far past the parts it runs
 	switch a.side {
