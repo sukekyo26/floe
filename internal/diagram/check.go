@@ -10,12 +10,12 @@ import (
 
 // check reports the layout's mistakes: text too wide or tall for its box or frame (as it was laid out), parts
 // (edges, lines and axes too) sticking out of the canvas, overlapping (frame headings too), boxes, marks and label
-// parts written at an x and y straddling the edge of a frame, edges running through boxes, labels or frame headings, and edges crossing. A frame's own box is
-// compared with no other frame's, and a frame's heading is not kept within the frame's height or a canvas written
-// (its width is, by addFrame): frames may cross on purpose (a group over two columns, bands that cross), and on the
-// page a heading out of its frame shows below it, one out of a canvas written cut short or gone (a canvas left
-// out reaches it). A frame's icon is a
-// box and its heading a text, each checked as those are.
+// parts written at an x and y straddling the edge of a frame, edges running through boxes, labels or frame headings,
+// and edges crossing. A frame's own box is compared with no other frame's, and a frame's heading is not kept within
+// the frame's height or a canvas written (its width is, by addFrame): frames may cross on purpose (a group over two
+// columns, bands that cross), and on the page a heading out of its frame shows below it, one out of a canvas written
+// cut short or gone (a canvas left out reaches it). A frame's icon is a box and its heading a text, each checked as
+// those are.
 func (l *layout) check() {
 	l.checkPlacement()
 	l.checkEdges()
