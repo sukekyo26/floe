@@ -204,11 +204,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope (:root) {
 blockquote > * { --face: initial; --on-face: initial; }
 blockquote {
-  background: var(--surface); color: var(--fg);
-}
-blockquote {
-  padding: 0.8rem 1.6rem; border: 0; border-left: 3px solid var(--washi-shu); font-size: 1.15rem; line-height: 1.8;
-  letter-spacing: 0.08em;
+  background: var(--surface); color: var(--fg); padding: 0.8rem 1.6rem; border: 0; border-left: 3px solid var(--washi-shu);
+  font-size: 1.15rem; line-height: 1.8; letter-spacing: 0.08em;
 }
 }
 }
@@ -457,8 +454,8 @@ blockquote {
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* What details and tabs hold */
-:scope { display: grid; gap: var(--floe-room); min-width: 0; }
-/* No margins of its own on what it holds: it wins over the parts it holds, whose roots base.css zeroes */
+:scope { display: grid; gap: var(--floe-room); }
+/* A word kept whole (a table's on paper) widens no column it is in: it overflows its part instead */
 :scope > * { min-width: 0; }
 }
 }

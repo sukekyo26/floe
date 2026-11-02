@@ -1,4 +1,4 @@
 /* What details and tabs hold */
-:scope { display: grid; gap: var(--floe-room); min-width: 0; }
-/* No margins of its own on what it holds: it wins over the parts it holds, whose roots base.css zeroes */
+:scope { display: grid; gap: var(--floe-room); }
+/* A word kept whole (a table's on paper) widens no column it is in: it overflows its part instead */
 :scope > * { min-width: 0; }
