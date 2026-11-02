@@ -1,5 +1,9 @@
 /* The seventies: brown on a tan ground, stripes of orange, mustard and olive, round fat corners, a serif heading */
 :scope {
+  /* The frame its boxes draw, and a line inside one drawn alike, read where they are drawn.
+     LIMIT: its colour is read here at the root, so a part or template of one's own setting --fg or --accent within
+     leaves the frame in the root's colour (floe's CSS sets neither below the palette) */
+  --retro-frame: 2px solid var(--fg);
   --bg: #f1e2c4; --surface: #fbf3e2; --fg: #3a2414; --muted: #6b5340; --line: #dcc6a0;
   --accent: #a3401a; --accent-soft: #f7dcc8;
   --good: #556316; --good-soft: #e8ecc8; --warn: #8a5800; --warn-soft: #f8e4b8; --bad: #a82418; --bad-soft: #f6d8d2;

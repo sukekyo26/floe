@@ -168,6 +168,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 @layer floe.palette {
 /* Black on cream, flat primaries, its sections ruled thick */
 :scope {
+  /* The frame its boxes draw, and a line inside one drawn alike, read where they are drawn.
+     LIMIT: its colour is read here at the root, so a part or template of one's own setting --fg or --accent within
+     leaves the frame in the root's colour (floe's CSS sets neither below the palette) */
+  --brutal-frame: 3px solid var(--fg);
   --bg: #f5f0e6; --surface: #fff; --fg: #0a0a0a; --muted: #3d3d3d; --line: #0a0a0a;
   --accent: #285cdb; --accent-soft: #dbe6ff;
   --good: #0d7941; --good-soft: #d4f5e2; --warn: #a35400; --warn-soft: #ffe9c7; --bad: #c71d1d; --bad-soft: #ffdede;
@@ -208,7 +212,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @layer floe.theme {
 @scope (:root) {
 blockquote {
-  border: 3px solid var(--fg); padding: 1.1rem 1.4rem; --face: var(--brutal-yellow); --on-face: var(--brutal-ink); background: var(--face); color: var(--on-face);
+  border: var(--brutal-frame); padding: 1.1rem 1.4rem; --face: var(--brutal-yellow); --on-face: var(--brutal-ink); background: var(--face); color: var(--on-face);
   font-size: 1.2rem; font-weight: 800; --floe-shadow-color: var(--fg);
 }
 }
@@ -532,10 +536,10 @@ blockquote {
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
-  border: 3px solid var(--fg); --floe-shadow-color: var(--brutal-blue);
+  border: var(--brutal-frame); --floe-shadow-color: var(--brutal-blue);
   --code-head-bg: var(--surface); --code-head-fg: var(--fg); --code-head-add: var(--good); --code-head-del: var(--bad);
 }
-:scope figcaption { font-weight: 800; border-bottom: 3px solid var(--fg); }
+:scope figcaption { font-weight: 800; border-bottom: var(--brutal-frame); }
 :scope .lang { border: 2px solid var(--fg); background: var(--brutal-blue); color: var(--brutal-ink); font-weight: 900; }
 }
 }
@@ -550,14 +554,14 @@ blockquote {
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: 3px solid var(--fg); --floe-shadow-color: var(--fg); }
+:scope { border: var(--brutal-frame); --floe-shadow-color: var(--fg); }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: 3px solid var(--fg); --floe-shadow-color: var(--fg); }
+:scope { border: var(--brutal-frame); --floe-shadow-color: var(--fg); }
 }
 }
 </style>
@@ -573,7 +577,7 @@ blockquote {
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
-  border: 3px solid var(--fg); background: var(--surface); --floe-mark: 2.15rem;
+  border: var(--brutal-frame); background: var(--surface); --floe-mark: 2.15rem;
   --floe-shadow-color: var(--tone-fill);
 }
 :scope::before {

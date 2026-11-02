@@ -1,5 +1,9 @@
 /* Black on cream, flat primaries, its sections ruled thick */
 :scope {
+  /* The frame its boxes draw, and a line inside one drawn alike, read where they are drawn.
+     LIMIT: its colour is read here at the root, so a part or template of one's own setting --fg or --accent within
+     leaves the frame in the root's colour (floe's CSS sets neither below the palette) */
+  --brutal-frame: 3px solid var(--fg);
   --bg: #f5f0e6; --surface: #fff; --fg: #0a0a0a; --muted: #3d3d3d; --line: #0a0a0a;
   --accent: #285cdb; --accent-soft: #dbe6ff;
   --good: #0d7941; --good-soft: #d4f5e2; --warn: #a35400; --warn-soft: #ffe9c7; --bad: #c71d1d; --bad-soft: #ffdede;

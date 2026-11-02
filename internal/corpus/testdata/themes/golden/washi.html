@@ -168,6 +168,10 @@ blockquote > * + * { margin-top: 0.6rem; }
 @layer floe.palette {
 /* Sumi, indigo and vermilion on washi, in a Mincho face, its sections ruled double */
 :scope {
+  /* The frame its boxes draw, and a line inside one drawn alike, read where they are drawn.
+     LIMIT: its colour is read here at the root, so a part or template of one's own setting --fg or --accent within
+     leaves the frame in the root's colour (floe's CSS sets neither below the palette) */
+  --washi-frame: 4px double var(--fg);
   --bg: #ede4cf; --surface: #f7f1e3; --fg: #1d1b18; --muted: #5f594f; --line: #d3c9b4;
   --accent: #264c78; --accent-soft: #dde5ef;
   --good: #4f6f2e; --good-soft: #e3ead5; --warn: #885c0e; --warn-soft: #f1e4c8; --bad: #b33721; --bad-soft: #f5ddd6;
@@ -541,7 +545,7 @@ blockquote {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
   background: var(--surface); color: var(--fg);
-  border: 0; border-top: 4px double var(--fg); border-bottom: 4px double var(--fg);
+  border: 0; border-top: var(--washi-frame); border-bottom: var(--washi-frame);
 }
 }
 }
@@ -551,7 +555,7 @@ blockquote {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope {
   background: var(--surface); color: var(--fg);
-  border: 0; border-top: 4px double var(--fg); border-bottom: 4px double var(--fg);
+  border: 0; border-top: var(--washi-frame); border-bottom: var(--washi-frame);
 }
 }
 }
@@ -561,7 +565,7 @@ blockquote {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { border: 0; padding-inline: 1.4rem; --table-rule: 1px solid var(--washi-hair);
   --table-head-bg: none; --table-head-fg: var(--fg); }
-:scope table { border-top: 4px double var(--fg); border-bottom: 4px double var(--fg); }
+:scope table { border-top: var(--washi-frame); border-bottom: var(--washi-frame); }
 :scope thead th { border-bottom: 1px solid var(--fg); font-size: 0.9rem; letter-spacing: 0.1em; }
 }
 }
