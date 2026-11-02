@@ -453,6 +453,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a right-angled edge with `via` running back over itself at a via when the next point lay behind the way it
+  came: it turns the other way first there. `from: a, via: [[200, 20]], to: [100, 0]` from a box below ran back along
+  y 20 (`V20 H200 H100 V0`) and now turns up at the via (`V20 H200 V0 H100`). An edge from a part in a frame to the
+  frame, with its via in the frame, was refused as running through the part, and now may run along the frame's edge.
 - Fix the next page waiting long to show its content while many pages' tabs were open, and the pages opened after
   the sixth not reloading when changed: each open tab held a connection to the server, and Chrome opens six at most
   to one server. A page holds none now, and asks whether it changed every second while it is shown.

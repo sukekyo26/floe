@@ -168,8 +168,9 @@ func around(a, b anchor) [][2]float64 {
 }
 
 // through joins pts to each of next in turn, two points off line with one turn, along the way the edge was going:
-// across first when across. It returns the points and whether the edge goes across at the end, the way kept over
-// a point the same as the one before.
+// across first when across, unless that first run would go back along the run into the point, when it turns the
+// other way first. It returns the points and whether the edge goes across at the end, the way kept over a point the
+// same as the one before.
 func through(pts, next [][2]float64, across bool) ([][2]float64, bool) {
 	for _, q := range next {
 		p := pts[len(pts)-1]
@@ -179,7 +180,7 @@ func through(pts, next [][2]float64, across bool) ([][2]float64, bool) {
 			across = false
 		case p[1] == q[1]:
 			across = true
-		case across:
+		case across != back(runIn(pts), p, q, across):
 			pts = append(pts, [2]float64{q[0], p[1]})
 			across = false
 		default:
@@ -191,12 +192,22 @@ func through(pts, next [][2]float64, across bool) ([][2]float64, bool) {
 	return pts, across
 }
 
+// back reports whether the first run from p towards q, off line, across when across, would go back along in, the run
+// into p.
+func back(in, p, q [2]float64, across bool) bool {
+	if across {
+		return in[0]*(q[0]-p[0]) < 0
+	}
+	return in[1]*(q[1]-p[1]) < 0
+}
+
 // facing is the side of the end e that p, the via next to it, faces: the side towards p when p is beside the end
 // (left or right) or above or below it, and when p is off both ways and known, the side across the way the edge
 // came into p (left or right when across). "" leaves the side to endOf, as without via: for a point, a dot, p on
 // the end or in it, and p off both ways at a from end or on a straight edge. A row takes left or right alone.
 // LIMIT: a graph's box may get a side its graph's edges take, and the edge runs over them (S183); a from end with
-// p off both ways may turn back over itself at p (S182).
+// p off both ways takes the side facing the other end, and when p is behind that side the edge runs through the
+// part it starts from and is refused; writing the side gives another.
 func (l *layout) facing(e end, p [2]float64, across, known bool) string {
 	t, ok := l.names[e.Name]
 	if e.Point != nil || !ok || t.kind == "dot" || t.kind == "circle" {
@@ -224,8 +235,9 @@ func (l *layout) facing(e end, p [2]float64, across, known bool) string {
 // (b.x, p.y) for top or bottom, or, when that turn would run back along the run into p, two turns halfway between p
 // and the side. Else the edge goes on as through takes it.
 // LIMIT: a side written with p not outside it (on its line, beyond the end) is met as through takes it, and the edge
-// may run along the end's edge; meeting it square takes a way round the end. A p level with the side, come to by a
-// run going away from it, runs straight back along that run; turning off it takes a way round as well.
+// may run along the end's edge; meeting it square takes a way round the end. So does a p in a frame, for the frame's
+// side: an edge from a part in it may run along the frame's edge rather than be refused. A p level with the side,
+// come to by a run going away from it, runs straight back along that run; turning off it takes a way round as well.
 func enter(pts [][2]float64, b anchor, across bool) [][2]float64 {
 	p, last := pts[len(pts)-1], [2]float64{b.x, b.y}
 	if b.point || !outside(p, b) {
