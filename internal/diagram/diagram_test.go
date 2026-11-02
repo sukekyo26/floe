@@ -493,7 +493,14 @@ func TestEdgesVia(t *testing.T) {
 		{c01 + "  - edge: { from: [10, 200], via: [[30, 200], [30, 200]], to: c01 }", `d="M10,200 H30 H30 V252 H60"`},
 		{"  - edge: { from: [0, 0], via: [[50, 0]], to: [100, 100] }", `d="M0,0 H50 H100 V100"`},
 		{"  - dot: { name: d, cx: 300, cy: 100 }\n  - edge: { from: [10, 20], via: [[300, 20]], to: d }", `d="M10,20 H300 V100"`},
-		{"  - box: { name: a, x: 40, y: 40, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 300]], to: [400, 100] }", `d="M140,60 H200 V300 V100 H400"`},
+		// At a via, the turn towards the next point off line takes the other way first when the way the edge came would run
+		// back along it.
+		{"  - box: { name: a, x: 40, y: 40, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 300]], to: [400, 100] }", `d="M140,60 H200 V300 H400 V100"`},
+		{"  - box: { name: a, x: 40, y: 40, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 20]], to: [100, 0] }", `d="M90,40 V20 H200 V0 H100"`},
+		{"  - box: { name: a, x: 40, y: 40, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 20], [300, 20]], to: [250, 100] }", `d="M140,60 H200 V20 H300 V100 H250"`},
+		{"  - box: { name: a, x: 40, y: 40, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 20]], to: [180, 100] }", `d="M140,60 H200 V20 H180 V100"`},
+		{"  - table: { x: 40, y: 40, w: 100, title: T, rows: [{ name: r, cells: [x, y] }] }\n  - edge: { from: r, via: [[200, 20]], to: [300, 100] }", `d="M140,81 H200 V20 H300 V100"`},
+		{"  - box: { name: a, x: 40, y: 40, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 120]], to: [300, 180] }", `d="M140,60 H200 V120 V180 H300"`},
 		{
 			"  - box: { name: b, x: 300, y: 100, w: 100, h: 40, rows: [b] }\n  - edge: { from: [10, 20], via: [[200, 300]], to: b, straight: true }",
 			`d="M10,20 L200,300 L300,120"`,
@@ -505,7 +512,10 @@ func TestEdgesVia(t *testing.T) {
 		}
 	}
 
-	// A via in a frame leaves the side facing the other end, and the edge runs through a; both ends unknown are told.
+	// A via in a frame leaves the side facing the other end, and the edge runs back through a: a side with the via not
+	// outside it is met the way the edge was going (LIMIT in enter), b's top too. A from end with the via behind the side
+	// facing the other end starts through a (LIMIT in facing). Turning the other way first at a via runs through k
+	// (LIMIT in through). Both ends unknown are told.
 	for _, c := range []struct {
 		parts, want string
 	}{
@@ -513,6 +523,18 @@ func TestEdgesVia(t *testing.T) {
 			"  - frame: { name: f, x: 200, y: 40, w: 280, h: 200, label: F }\n  - box: { name: a, x: 260, y: 120, w: 100, h: 40, rows: [a] }\n" +
 				"  - edge: { from: a, via: [[420, 140], [420, 200]], to: f }",
 			`s.yaml:7:5: edge a→f runs through box "a"`,
+		},
+		{
+			"  - box: { name: b, x: 300, y: 100, w: 100, h: 40, rows: [b] }\n  - edge: { from: [450, 300], via: [[500, 300]], to: b, toSide: top }",
+			`s.yaml:6:5: edge [450,300]→b runs through box "b"`,
+		},
+		{
+			"  - box: { name: a, x: 40, y: 140, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 220]], to: [210, 0] }",
+			`s.yaml:6:5: edge a→[210,0] runs through box "a"`,
+		},
+		{
+			"  - box: { name: k, x: 180, y: 30, w: 40, h: 40, rows: [k] }\n  - edge: { from: [0, 0], via: [[200, 0]], to: [100, 100] }",
+			`s.yaml:6:5: edge [0,0]→[100,100] runs through box "k"`,
 		},
 		{
 			"  - edge: { from: nope1, via: [[30, 200]], to: nope2 }",
