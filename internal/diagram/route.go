@@ -225,20 +225,11 @@ func (l *layout) facing(e end, p [2]float64, across, known bool) string {
 // may run along the end's edge; meeting it square takes a way round the end.
 func enter(pts [][2]float64, b anchor, across bool) [][2]float64 {
 	p, last := pts[len(pts)-1], [2]float64{b.x, b.y}
-	outside := b.side == "left" && p[0] < last[0] || b.side == "right" && p[0] > last[0] ||
-		b.side == "top" && p[1] < last[1] || b.side == "bottom" && p[1] > last[1]
-	if b.point || !outside {
+	if b.point || !outside(p, b) {
 		pts, _ = through(pts, [][2]float64{last}, across)
 		return pts
 	}
-	// in is the last run into p; none when every via is on the from point, and then nothing to turn back along.
-	var in [2]float64
-	for i := len(pts) - 1; i > 0; i-- {
-		if pts[i] != pts[i-1] {
-			in = [2]float64{pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]}
-			break
-		}
-	}
+	in := runIn(pts)
 	switch {
 	case horizontal(b.side) && in[1]*(last[1]-p[1]) < 0:
 		mid := (p[0] + last[0]) / 2
@@ -252,6 +243,32 @@ func enter(pts [][2]float64, b anchor, across bool) [][2]float64 {
 		pts = append(pts, [2]float64{last[0], p[1]})
 	}
 	return append(pts, last)
+}
+
+// outside reports whether p is on the far side of b's side from the part b is on: left of a left side, and so on.
+func outside(p [2]float64, b anchor) bool {
+	switch b.side {
+	case "left":
+		return p[0] < b.x
+	case "right":
+		return p[0] > b.x
+	case "top":
+		return p[1] < b.y
+	case "bottom":
+		return p[1] > b.y
+	}
+	return false
+}
+
+// runIn is the last run of pts of some length, as a vector; none when every point is the first, and then nothing
+// to turn back along.
+func runIn(pts [][2]float64) [2]float64 {
+	for i := len(pts) - 1; i > 0; i-- {
+		if pts[i] != pts[i-1] {
+			return [2]float64{pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]}
+		}
+	}
+	return [2]float64{0, 0}
 }
 
 // pathData writes the points as SVG path data: H and V along an axis, L across.
@@ -272,14 +289,14 @@ func pathData(pts [][2]float64) string {
 	return b.String()
 }
 
-func (l *layout) addEdge(e *edge, at string) {
+// edgePoints resolves e's ends and is the points it runs through, false when an end cannot be one (told at at).
+func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, fromWho, toWho string, ok bool) {
 	fromSide, toSide := e.FromSide, e.ToSide
 	if len(e.Via) > 0 && fromSide == "" {
 		fromSide = l.facing(e.From, e.Via[0], false, false)
 	}
 	from, fromWho, okFrom := l.endOf(at, e.From, fromSide, l.centre(e.To))
 	angled := len(e.Via) > 0 && !e.Straight
-	var pts [][2]float64
 	across := false
 	if angled && okFrom {
 		pts, across = through([][2]float64{{from.x, from.y}}, e.Via, horizontal(from.side) || from.side == "")
@@ -290,12 +307,18 @@ func (l *layout) addEdge(e *edge, at string) {
 	// Resolved even when from is not, so that both are told.
 	to, toWho, okTo := l.endOf(at, e.To, toSide, l.centre(e.From))
 	if !okFrom || !okTo {
-		return
+		return nil, "", "", false
 	}
 	if angled {
-		pts = enter(pts, to, across)
-	} else {
-		pts = route(from, to, e.Via, e.Straight)
+		return enter(pts, to, across), fromWho, toWho, true
+	}
+	return route(from, to, e.Via, e.Straight), fromWho, toWho, true
+}
+
+func (l *layout) addEdge(e *edge, at string) {
+	pts, fromWho, toWho, ok := l.edgePoints(e, at)
+	if !ok {
+		return
 	}
 	segs := segsOf(pts)
 	who := e.who
