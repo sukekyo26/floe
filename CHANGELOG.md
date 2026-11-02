@@ -472,10 +472,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Refuse a diagram's label written at an `x` and `y` straddling the edge of a frame, as a box or a dot there is
-  (`label "…" straddles the edge of frame "…"`); it was drawn across it. A label is checked by its box, 5 wider each
-  side than its text. The labels of edges, icons, bars and axes, and one floe places in its region (`in` alone), are
-  not checked against frames.
+- Refuse a diagram's label written where it stands, at an `x` and `y` or an edge's at `at`, straddling the edge of a
+  frame, as a box or a dot there is (`label "…" straddles the edge of frame "…"`); it was drawn across it. A label is
+  checked by its box, 5 wider each side than its text. The labels floe places (an edge's with no `at`, an icon's, a
+  bar's, an axis's, and one in its region with `in` alone) are not checked against frames.
 - Fix a graph edge's label floe made room for below its run (right of a run down) when something there was in the
   way, pushing the drawing apart across the run even where the same place above it (left of it) was clear. It stands
   there now, where that is clear of the parts written by hand too and moves the graph off none of its `x` and `y`.
