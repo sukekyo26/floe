@@ -444,6 +444,53 @@ func TestEdges(t *testing.T) {
 // both ways, the side across the way the edge came; the last run meets such a side, and a side written with the via
 // outside it, square, with two turns halfway when one turn would run back. The rest take the side facing the other
 // end: a via on the end or in it, a via off both ways at a from end or on a straight edge, a point, a dot.
+// An end a graph or a tree laid out, with no side written, keeps off the sides their edges end at.
+func TestEdgesHandSides(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		spec, want string
+	}{
+		// graph box: right, not the top a→b ends at
+		{"width: 200\nheight: 160\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [100, 0], via: [[100, 60]], to: b }\n", `d="M100,0 V60 V87.5 H68"`},
+		// laid out right: the bottom, not the left
+		{"width: 260\nheight: 160\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      direction: right\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [0, 100], via: [[60, 100]], to: b }\n", `d="M0,100 H60 H104 V68"`},
+		// a box in a lane
+		{"width: 400\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      lanes:\n        - { name: l1, label: L1, nodes: [{ box: { name: a, rows: [a] } }] }\n        - { name: l2, label: L2, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [300, 0], via: [[300, 100]], to: b }\n", `d="M300,0 V100 V129.5 H218"`},
+		// a tree's child: right, not its top
+		{"width: 260\nheight: 200\ntitle: T\nparts:\n  - tree:\n      x: 90\n      y: 20\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [200, 0], via: [[200, 80]], to: c }\n", `d="M200,0 V80 V103.5 H110"`},
+		// a tree's root keeps its top
+		{"width: 260\nheight: 200\ntitle: T\nparts:\n  - tree:\n      x: 44\n      y: 50\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [200, 0], via: [[200, 40]], to: r }\n", `d="M200,0 V40 H44 V50"`},
+		// without via, from the other end
+		{"width: 260\nheight: 240\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 100\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - box: { name: h, x: 60, y: 10, w: 60, h: 30, rows: [h] }\n  - edge: { from: h, to: b }\n", `d="M90,40 V167.5 H68"`},
+		// a group's frame: right, not its top
+		{"width: 300\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: g }\n  - edge: { from: [200, 0], via: [[200, 60]], to: g }\n", `d="M200,0 V60 V120.5 H164"`},
+		// two of the graph's edges end at b's top
+		{"width: 300\nheight: 200\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: c, rows: [c] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n        - { from: c, to: b }\n  - edge: { from: [250, 0], via: [[250, 60]], to: b }\n", `d="M250,0 V60 V87.5 H116"`},
+		// across first: right, though the top is left too
+		{"width: 300\nheight: 320\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: a, via: [[100, 5]], to: [200, 300] }\n", `d="M68,34.5 H100 V5 H200 V300"`},
+		// a leaf keeps its bottom
+		{"width: 260\nheight: 320\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: b, via: [[100, 140]], to: [100, 300] }\n", `d="M44,102 V140 H100 V300"`},
+		// no side left but the level edge's: the top kept (LIMIT in clear)
+		{"width: 400\nheight: 320\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: c, rows: [c] }\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n        - box: { name: d, rows: [d] }\n      edges:\n        - { from: c, to: a }\n        - { from: a, to: d }\n        - { from: a, to: b, level: true }\n  - edge: { from: [80, 0], via: [[80, 60]], to: a }\n", `d="M80,0 V60 H44 V73"`},
+		// a's bottom, where a→d leaves, is not left though c→a ends at its top: the level edge's side kept, and told.
+		{
+			"width: 400\nheight: 320\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: c, rows: [c] }\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n        - box: { name: d, rows: [d] }\n      edges:\n        - { from: c, to: a }\n        - { from: a, to: d }\n        - { from: a, to: b, level: true }\n  - edge: { from: [200, 140], via: [[80, 140]], to: a }\n",
+			"s.yaml:17:5: edge a→b crosses edge [200,140]→a at 80,94; move one of them, or add crossing: true to one if it cannot be avoided",
+		},
+		// No side left with the via outside it: the side kept, crossing the loop, is told.
+		{
+			"width: 260\nheight: 200\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n        - { from: b, to: b }\n  - edge: { from: [200, 0], via: [[200, 100]], to: b }\n",
+			"s.yaml:14:5: edge b→b crosses edge [200,0]→b at 92,88; move one of them, or add crossing: true to one if it cannot be avoided",
+		},
+	} {
+		got, mistakes := draw(t, c.spec, render("en"))
+		if mistakes != c.want && (mistakes != "" || !strings.Contains(got, c.want)) {
+			t.Errorf("%s\n  drew %s %s\n  want %s", c.spec, got, mistakes, c.want)
+		}
+	}
+}
+
 func TestEdgesVia(t *testing.T) {
 	t.Parallel()
 

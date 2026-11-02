@@ -466,6 +466,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix an edge written by hand to a box of a graph or a tree, or a group's frame, with no side written, which could
+  end at the middle of a side one of their edges ends at and run over it. With `via` or without, it takes a side
+  their edges leave, with the via next to it (or the other end) outside it, across first; with none, the side it
+  took. `from: [100, 0], via: [[100, 60]], to: b`, b under a in a graph a→b, ran into b's top over a→b
+  (`V60 H44 V73`) and now into its right (`V60 V87.5 H68`); some edges refused as running through a box or crossing
+  one of the graph's are drawn now.
 - Fix a right-angled edge with `via` running back over itself at a via when the next point lay behind the way it
   came: it turns the other way first there. `from: a, via: [[200, 20]], to: [100, 0]` from a box below ran back along
   y 20 (`V20 H200 H100 V0`) and now turns up at the via (`V20 H200 V0 H100`).

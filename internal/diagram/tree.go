@@ -72,6 +72,7 @@ type measures struct {
 func nodeBox(n *node, cx, y float64) *box {
 	return &box{
 		Name: n.Name, X: cx, Y: y, Origin: "centre", W: 0, H: 0, Rows: n.Rows, Tone: n.Tone, Shape: n.Shape, graph: "",
+		handSides: nil,
 	}
 }
 
@@ -114,6 +115,14 @@ func nodeWho(n *node) string {
 // depth: halfway between its tallest node and the next depth. A child right below goes straight down.
 func (m *measures) place(out *[]item, n *node, cx, y float64, d int, at string) {
 	b := nodeBox(n, cx, y)
+	// The tree's edges take the top of a node below the root and the bottom of one with children.
+	b.handSides = []string{"left", "right"}
+	if d == 0 {
+		b.handSides = append(b.handSides, "top")
+	}
+	if len(n.Children) == 0 {
+		b.handSides = append(b.handSides, "bottom")
+	}
 	*out = append(*out, item{at, part{Box: b}}) //nolint:exhaustruct_v5 // one kind of part
 	if len(n.Children) == 0 {
 		return

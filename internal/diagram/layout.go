@@ -69,8 +69,9 @@ type path struct {
 
 // target is what an edge's end may name: a part's area, a table's row, or a dot's centre.
 type target struct {
-	r    rect
-	kind string // box, table, row, icon, frame, bar, dot, circle
+	r         rect
+	kind      string   // box, table, row, icon, frame, bar, dot, circle
+	handSides []string // the sides left to edges written by hand (box.handSides); nil: any
 }
 
 // layout is a spec laid out once, for every language its text is written in: the areas its checks compare and
@@ -188,7 +189,7 @@ func (l *layout) name(at string, p part) {
 	}
 	switch {
 	case p.Box != nil:
-		keep(p.Box.Name, target{r: boxRect(p.Box, at), kind: "box"})
+		keep(p.Box.Name, target{r: boxRect(p.Box, at), kind: "box", handSides: p.Box.handSides})
 	case p.Table != nil:
 		r, rows := tableRects(p.Table, at)
 		keep(p.Table.Name, target{r: r, kind: "table"})
@@ -200,7 +201,7 @@ func (l *layout) name(at string, p part) {
 		keep(p.Icon.Name, target{r: rect{x: p.Icon.X, y: p.Icon.Y, w: size, h: size, what: "", at: at}, kind: "icon"})
 	case p.Frame != nil:
 		f := p.Frame
-		keep(f.Name, target{r: rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at}, kind: "frame"})
+		keep(f.Name, target{r: rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at}, kind: "frame", handSides: f.handSides})
 	case p.Bar != nil:
 		keep(p.Bar.Name, target{r: barRect(p.Bar, at), kind: "bar"})
 	case p.Dot != nil:

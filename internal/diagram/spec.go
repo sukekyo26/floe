@@ -142,29 +142,31 @@ type node struct {
 }
 
 type frame struct {
-	Name   string  `json:"name"`
-	X      float64 `json:"x"`
-	Y      float64 `json:"y"`
-	W      float64 `json:"w"`
-	H      float64 `json:"h"`
-	Label  Text    `json:"label"`
-	Accent bool    `json:"accent"`
-	Icon   string  `json:"icon"`
-	Square bool    `json:"square"`
-	graph  string  // the JSON pointer of the graph that laid it out; "" for a frame written by hand
+	Name      string   `json:"name"`
+	X         float64  `json:"x"`
+	Y         float64  `json:"y"`
+	W         float64  `json:"w"`
+	H         float64  `json:"h"`
+	Label     Text     `json:"label"`
+	Accent    bool     `json:"accent"`
+	Icon      string   `json:"icon"`
+	Square    bool     `json:"square"`
+	graph     string   // the JSON pointer of the graph that laid it out; "" for a frame written by hand
+	handSides []string // the sides left to edges written by hand, for a frame a graph laid out; nil: any
 }
 
 type box struct {
-	Name   string  `json:"name"`
-	X      float64 `json:"x"`
-	Y      float64 `json:"y"`
-	Origin string  `json:"origin"`
-	W      float64 `json:"w"`
-	H      float64 `json:"h"`
-	Rows   []row   `json:"rows"`
-	Tone   string  `json:"tone"`
-	Shape  string  `json:"shape"`
-	graph  string  // the JSON pointer of the graph that laid it out; "" for a box written by hand
+	Name      string   `json:"name"`
+	X         float64  `json:"x"`
+	Y         float64  `json:"y"`
+	Origin    string   `json:"origin"`
+	W         float64  `json:"w"`
+	H         float64  `json:"h"`
+	Rows      []row    `json:"rows"`
+	Tone      string   `json:"tone"`
+	Shape     string   `json:"shape"`
+	graph     string   // the JSON pointer of the graph that laid it out; "" for a box written by hand
+	handSides []string // the sides left to edges written by hand, for a box a graph or a tree laid out; nil: any
 }
 
 // row is a line of text in a box, and its style; "" for the default of its place.
