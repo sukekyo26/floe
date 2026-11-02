@@ -1,14 +1,11 @@
 package browsertest_test
 
 import (
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/chromedp"
-
-	"github.com/sukekyo26/floe/internal/kit"
 )
 
 // colours begins the scripts that measure colours on the page: a computed colour read, laid over another, and
@@ -284,48 +281,6 @@ func TestContrastText(t *testing.T) { //nolint:paralleltest // the browser tests
 func TestUIContrast(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	s.floePages(t, func(what string) { s.b.measureColours(t, what) })
-}
-
-// floePages draws the sample of every part (the corpus's every-part) and the example of every template of floe's in
-// every theme of floe's, and calls visit on each, open in the browser, with what tells it.
-func (s *site) floePages(t *testing.T, visit func(what string)) {
-	t.Helper()
-
-	b := s.b
-	src, err := os.ReadFile("../corpus/testdata/every-part/every-part.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	k, err := kit.Floe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, _, themes, templates := k.Names()
-	file := s.write(t, "every-part.yaml", string(src))
-	// The image its part image shows, beside it.
-	shot, err := os.ReadFile("../corpus/testdata/every-part/shots/moved.png")
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.write(t, "shots/moved.png", string(shot))
-	for _, name := range themes {
-		slug := "parts-" + name
-		s.floe(t, "publish", file, "--slug", slug, "--theme", name)
-		b.navigate("/a/" + slug + "/?raw")
-		b.until("the parts", "!!document.querySelector('[data-floe-part=bars]')")
-		visit(name)
-	}
-	for _, tmpl := range templates {
-		tpl, _ := k.Template(tmpl)
-		example := s.write(t, tmpl+".yaml", string(tpl.Example()))
-		for _, name := range themes {
-			slug := "template-" + tmpl + "-" + name
-			s.floe(t, "publish", example, "--slug", slug, "--theme", name)
-			b.navigate("/a/" + slug + "/?raw")
-			b.until("the page", "!!document.querySelector('h1')")
-			visit(tmpl + " in " + name)
-		}
-	}
 }
 
 // measureColours measures the page as measureContrast and measureRings do, the page's tab given the focus, and tells
