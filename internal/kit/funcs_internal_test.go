@@ -31,15 +31,16 @@ func TestMarkdown(t *testing.T) {
 	}
 }
 
-// MarkdownFlow draws Markdown in a text's box, the empty and raw HTML alone too (a comment, which :empty takes), and
-// nothing for empty text; part.html's markdown is it, page.html's draws no box.
+// MarkdownFlow draws Markdown in a text's box, and what draws no block (empty, raw HTML alone, once or twice) as it
+// is, with no box; part.html's markdown is it, page.html's draws no box.
 func TestMarkdownFlow(t *testing.T) {
 	t.Parallel()
 
 	for src, want := range map[string]template.HTML{
-		"":               "",
-		"<div>x</div>\n": `<div data-floe-text><!-- raw HTML omitted --></div>`,
-		"a\n\nb":         "<div data-floe-text><p>a</p>\n<p>b</p></div>",
+		"":                               "",
+		"<div>x</div>\n":                 "<!-- raw HTML omitted -->",
+		"<div>x</div>\n\n<div>y</div>\n": "<!-- raw HTML omitted -->\n<!-- raw HTML omitted -->",
+		"a\n\nb":                         "<div data-floe-text><p>a</p>\n<p>b</p></div>",
 	} {
 		if got, err := MarkdownFlow(src); err != nil || got != want {
 			t.Errorf("MarkdownFlow(%q) = %q, %v; want %q", src, got, err, want)

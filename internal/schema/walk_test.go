@@ -60,8 +60,8 @@ func TestWalk(t *testing.T) {
 	}
 }
 
-// Walk tells whether an item is held in a part's value: a format of the template's own after a part is not, one in a
-// part's value is, and one after a part that value holds still is.
+// Walk tells whether a format is held in a part's value: one of the template's own after a part is not, one in a
+// part's value is, and one after a part that value holds still is; a part is not told so.
 func TestWalkInPart(t *testing.T) {
 	t.Parallel()
 
@@ -80,7 +80,7 @@ func TestWalkInPart(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"a.items.0.note=note true", "a.items.1.text=markdown true", "a=stack false", "z=markdown false"}
+	want := []string{"a.items.0.note=note false", "a.items.1.text=markdown true", "a=stack false", "z=markdown false"}
 	if !slices.Equal(calls, want) {
 		t.Errorf("calls %v, want %v", calls, want)
 	}

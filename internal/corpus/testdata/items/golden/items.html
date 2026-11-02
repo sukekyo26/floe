@@ -43,10 +43,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    no ground of its own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
 /* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow): its blocks stand --floe-room apart, as parts
-   do, and a part spaces the box alone, not its blocks; a box of raw HTML alone draws nothing, a comment alone.
+   do, and a part spaces the box alone, not its blocks; Markdown of raw HTML alone draws no box.
    A template's own Markdown is not in one, which its page.css spaces; nor is what a quote or a list holds, spaced below */
-[data-floe-text] { display: grid; gap: var(--floe-room); }
-[data-floe-text]:empty { display: none; }
+[data-floe-text] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
 a { color: var(--on-face, var(--accent)); }
 /* LIMIT: a part draws a ring of focus or a pick by outline on its box (links' and options' cards): a theme that draws a
    decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
