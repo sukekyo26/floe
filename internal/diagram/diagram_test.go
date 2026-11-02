@@ -845,8 +845,10 @@ func TestGraphLabelAbove(t *testing.T) {
 		// above the upper of two level edges, the two a column apart
 		{spec(nodes, topA, ask, back), []string{`edge b→a M152,102 H92`, `label "ask" 95,60 31.6x18`}},
 		// the upper's above, the lower's below with nothing there
-		{spec(nodes, topA, ask, "        - { from: b, to: a, level: true, label: answer }"),
-			[]string{`label "ask" 95,60 31.6x18`, `label "answer" 96.8,114 53.2x18`}},
+		{
+			spec(nodes, topA, ask, "        - { from: b, to: a, level: true, label: answer }"),
+			[]string{`label "ask" 95,60 31.6x18`, `label "answer" 96.8,114 53.2x18`},
+		},
 		// in lanes
 		{
 			spec("      lanes:", "        - { name: l1, label: One, nodes: [{ box: { name: a, rows: [Short] } }] }",
@@ -866,8 +868,10 @@ func TestGraphLabelAbove(t *testing.T) {
 		// nothing below: below
 		{spec(nodes, topA, ask), []string{`label "ask" 95,114 31.6x18`}},
 		// above would stand past the graph's top, moving it off its y: below
-		{spec(strings.Replace(nodes, "        - box: { name: top, rows: [Start] }\n", "", 1), ask, back),
-			[]string{`box "a" 20,28.5 72x53`, `label "ask" 95,49 31.6x18`}},
+		{
+			spec(strings.Replace(nodes, "        - box: { name: top, rows: [Start] }\n", "", 1), ask, back),
+			[]string{`box "a" 20,28.5 72x53`, `label "ask" 95,49 31.6x18`},
+		},
 		// above not clear: below
 		{
 			spec("      direction: right", "      nodes:", "        - box: { name: a, rows: [two rows, xx, xx] }",

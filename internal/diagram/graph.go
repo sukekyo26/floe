@@ -582,18 +582,7 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 		b := d.boxes[d.ends[k][0]]
 		from = b.lo(along) + max(sign, 0)*b.size(along)
 	}
-	cut := from + sign
-	for moved := true; moved; {
-		moved = false
-		for _, b := range d.boxes {
-			if lo, hi := b.lo(along), b.lo(along)+b.size(along); lo <= cut && cut <= hi {
-				cut, moved = lo-1, true
-				if sign > 0 {
-					cut = hi + 1
-				}
-			}
-		}
-	}
+	cut := d.pastBoxes(along, from+sign, sign)
 	if (cut-to)*sign >= 0 && level { // a level edge's only run: cut through the boxes in the way, widening them
 		cut = from + sign
 	}
@@ -616,6 +605,22 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 		d.stretch(1-along, at, onGrid(need, column, math.Ceil))
 	}
 	return sp, true
+}
+
+// pastBoxes is cut on axis along moved on by sign past every box it crosses, a unit past it.
+func (d *drawing) pastBoxes(along int, cut, sign float64) float64 {
+	for moved := true; moved; {
+		moved = false
+		for _, b := range d.boxes {
+			if lo, hi := b.lo(along), b.lo(along)+b.size(along); lo <= cut && cut <= hi {
+				cut, moved = lo-1, true
+				if sign > 0 {
+					cut = hi + 1
+				}
+			}
+		}
+	}
+	return cut
 }
 
 // clearAbove is whether a label at sp, above run s (left of a run down), stands clear and within what the group
