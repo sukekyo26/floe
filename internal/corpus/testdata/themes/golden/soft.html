@@ -97,7 +97,11 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
 .floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
 .floe-copy.copied svg + svg { display: block; color: var(--code-add); }
-.floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Text a screen reader reads that the page does not show: the copy button's status, and .floe-hidden, the words that
+   tell what a mark of CSS means (a step done, a pro, a file added), which the mark itself is not read for (/ "").
+   It stands at the corner of what places it, or the page's, so that where its text would run widens no page.
+   LIMIT: text selected on the page and copied takes these words too; add user-select: none if that comes to matter */
+.floe-copy-status, .floe-hidden { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
 /* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves
    --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
@@ -390,7 +394,7 @@ blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-rad
    LIMIT: whether a decoration keeps off the text is seen, not measured */
 :scope.numbered > .card { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
-  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
@@ -410,8 +414,8 @@ blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-rad
 .option .points { gap: 0.2rem; }
 /* Of no ground of their own: in the face's colour within a face, a theme's filled card */
 .option li.pro { color: var(--on-face, var(--fg)); }
-.option li.pro::before { content: "+"; color: var(--on-face, var(--good)); }
-.option li.con::before { content: "−"; color: var(--on-face, var(--bad)); }
+.option li.pro::before { content: "+"; content: "+" / ""; color: var(--on-face, var(--good)); }
+.option li.con::before { content: "−"; content: "−" / ""; color: var(--on-face, var(--bad)); }
 }
 }
 </style>
@@ -462,17 +466,20 @@ blockquote { color: var(--muted); border: 0; padding: 0.9rem 1.25rem; border-rad
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
+/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out, and a
+   hidden word before each command, outside what is copied, tells a screen reader it is one */
 /* Its heading in code's faint colour of a heading, whatever colour a theme gives it */
 :scope figcaption { color: var(--floe-code-head-faint); }
 :scope :is(.run, .out) { display: block; }
-:scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
-:scope .run::before { content: "$ "; color: var(--code-prompt); }
-:scope.zsh .run::before { content: "% "; }
-/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language; move it out
-   of the CSS if a part's CSS comes to be checked for letters as a theme's is */
-:scope.powershell .run::before { content: "PS> "; }
-:scope.cmd .run::before { content: "> "; }
+/* Every command but the first, past the hidden words between */
+:scope :is(.run, .out) ~ .run { margin-top: 0.5rem; }
+:scope .run::before { content: "$ "; content: "$ " / ""; color: var(--code-prompt); }
+:scope.zsh .run::before { content: "% "; content: "% " / ""; }
+/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language, and not read out
+   (/ ""), a command's line told by a hidden word instead; move it out of the CSS if a part's CSS comes to be checked
+   for letters as a theme's is */
+:scope.powershell .run::before { content: "PS> "; content: "PS> " / ""; }
+:scope.cmd .run::before { content: "> "; content: "> " / ""; }
 :scope .out { color: var(--floe-code-faint); }
 }
 }
@@ -609,7 +616,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
-<figure class="zsh" data-floe-part="terminal"><figcaption>zsh</figcaption><pre><span class="run" data-floe-copy="">wiki export</span><span class="out">done</span></pre><script>(function copyButton(words) {
+<figure class="zsh" data-floe-part="terminal"><figcaption>zsh</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">wiki export</span><span class="out">done</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +

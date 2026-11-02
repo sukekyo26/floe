@@ -97,7 +97,11 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
 .floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
 .floe-copy.copied svg + svg { display: block; color: var(--code-add); }
-.floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Text a screen reader reads that the page does not show: the copy button's status, and .floe-hidden, the words that
+   tell what a mark of CSS means (a step done, a pro, a file added), which the mark itself is not read for (/ "").
+   It stands at the corner of what places it, or the page's, so that where its text would run widens no page.
+   LIMIT: text selected on the page and copied takes these words too; add user-select: none if that comes to matter */
+.floe-copy-status, .floe-hidden { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
 /* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves
    --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
@@ -182,7 +186,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope (:root) {
 blockquote > * { --face: initial; --on-face: initial; --quiet: var(--default-quote-quiet); }
 blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); color: var(--fg); }
-blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+blockquote::before { content: "“"; content: "“" / ""; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
 </style>
@@ -331,17 +335,19 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* The count of the items done comes from counters, under the last */
+/* The count of the items done comes from counters, under the last.
+   LIMIT: the count is shown alone, not read (/ ""): each item tells a screen reader it is done or not instead */
 :scope {
   counter-reset: floe-check floe-checked;
 }
 :scope > li { --floe-mark-gap: 0.65rem; counter-increment: floe-check; }
 :scope > li.done { counter-increment: floe-check floe-checked; color: var(--muted); }
 /* A sign of the look marked, not a box: the items are not to be ticked on the page */
-:scope > li::before { content: "–"; color: var(--muted); }
-:scope > li.done::before { content: "✓"; color: var(--good); }
+:scope > li::before { content: "–"; content: "–" / ""; color: var(--muted); }
+:scope > li.done::before { content: "✓"; content: "✓" / ""; color: var(--good); }
 :scope::after {
-  content: counter(floe-checked) " / " counter(floe-check); text-align: right;
+  content: counter(floe-checked) " / " counter(floe-check);
+  content: counter(floe-checked) " / " counter(floe-check) / ""; text-align: right;
   font-family: var(--mono);
   font-size: 0.8rem; color: var(--muted);
 }
@@ -580,7 +586,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    LIMIT: whether a decoration keeps off the text is seen, not measured */
 :scope.numbered > .card { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
-  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
@@ -889,8 +895,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 .option .points { gap: 0.2rem; }
 /* Of no ground of their own: in the face's colour within a face, a theme's filled card */
 .option li.pro { color: var(--on-face, var(--fg)); }
-.option li.pro::before { content: "+"; color: var(--on-face, var(--good)); }
-.option li.con::before { content: "−"; color: var(--on-face, var(--bad)); }
+.option li.pro::before { content: "+"; content: "+" / ""; color: var(--on-face, var(--good)); }
+.option li.con::before { content: "−"; content: "−" / ""; color: var(--on-face, var(--bad)); }
 }
 }
 </style>
@@ -961,7 +967,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 :scope > li:last-child { padding-bottom: 0.2rem; }
 :scope > li > * + * { margin-top: 0.15rem; }
 :scope > li::before {
-  content: counter(floe-step); border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
+  content: counter(floe-step); content: counter(floe-step) / counter(floe-step); border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
   background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
 }
 :scope > li::after { border-radius: 999px; background: var(--line); }
@@ -977,7 +983,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 /* The number and the line to the next are the look numbered's; a step done takes a tick, filled in good, and one
    being done a ring in accent (data-floe-mark) */
 :scope { padding: var(--floe-pad-block) var(--floe-pad-inline); }
-:scope > li.done::before { content: "✓"; }
+:scope > li.done::before { content: "✓"; content: "✓" / ""; }
 :scope > li > strong { line-height: 1.6; }
 :scope > li > :not(strong) { color: var(--on-face, var(--muted)); font-size: 0.92rem; }
 }
@@ -1020,17 +1026,20 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
+/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out, and a
+   hidden word before each command, outside what is copied, tells a screen reader it is one */
 /* Its heading in code's faint colour of a heading, whatever colour a theme gives it */
 :scope figcaption { color: var(--floe-code-head-faint); }
 :scope :is(.run, .out) { display: block; }
-:scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
-:scope .run::before { content: "$ "; color: var(--code-prompt); }
-:scope.zsh .run::before { content: "% "; }
-/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language; move it out
-   of the CSS if a part's CSS comes to be checked for letters as a theme's is */
-:scope.powershell .run::before { content: "PS> "; }
-:scope.cmd .run::before { content: "> "; }
+/* Every command but the first, past the hidden words between */
+:scope :is(.run, .out) ~ .run { margin-top: 0.5rem; }
+:scope .run::before { content: "$ "; content: "$ " / ""; color: var(--code-prompt); }
+:scope.zsh .run::before { content: "% "; content: "% " / ""; }
+/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language, and not read out
+   (/ ""), a command's line told by a hidden word instead; move it out of the CSS if a part's CSS comes to be checked
+   for letters as a theme's is */
+:scope.powershell .run::before { content: "PS> "; content: "PS> " / ""; }
+:scope.cmd .run::before { content: "> "; content: "> " / ""; }
 :scope .out { color: var(--floe-code-faint); }
 }
 }
@@ -1038,17 +1047,20 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 <style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="terminal"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
+/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out, and a
+   hidden word before each command, outside what is copied, tells a screen reader it is one */
 /* Its heading in code's faint colour of a heading, whatever colour a theme gives it */
 :scope figcaption { color: var(--floe-code-head-faint); }
 :scope :is(.run, .out) { display: block; }
-:scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
-:scope .run::before { content: "$ "; color: var(--code-prompt); }
-:scope.zsh .run::before { content: "% "; }
-/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language; move it out
-   of the CSS if a part's CSS comes to be checked for letters as a theme's is */
-:scope.powershell .run::before { content: "PS> "; }
-:scope.cmd .run::before { content: "> "; }
+/* Every command but the first, past the hidden words between */
+:scope :is(.run, .out) ~ .run { margin-top: 0.5rem; }
+:scope .run::before { content: "$ "; content: "$ " / ""; color: var(--code-prompt); }
+:scope.zsh .run::before { content: "% "; content: "% " / ""; }
+/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language, and not read out
+   (/ ""), a command's line told by a hidden word instead; move it out of the CSS if a part's CSS comes to be checked
+   for letters as a theme's is */
+:scope.powershell .run::before { content: "PS> "; content: "PS> " / ""; }
+:scope.cmd .run::before { content: "> "; content: "> " / ""; }
 :scope .out { color: var(--floe-code-faint); }
 }
 }
@@ -1114,11 +1126,11 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 :scope .note { margin-left: 0.75rem; font-size: 0.85rem; color: var(--muted); }
 :scope li > .name::after { font-weight: 800; }
 :scope li.added > .name { color: var(--good); }
-:scope li.added > .name::after { content: "+"; }
+:scope li.added > .name::after { content: "+"; content: "+" / ""; }
 :scope li.removed > .name { color: var(--bad); text-decoration: line-through; }
-:scope li.removed > .name::after { content: "−"; }
+:scope li.removed > .name::after { content: "−"; content: "−" / ""; }
 :scope li.changed > .name { color: var(--warn); }
-:scope li.changed > .name::after { content: "±"; }
+:scope li.changed > .name::after { content: "±"; content: "±" / ""; }
 }
 }
 </style>
@@ -1251,7 +1263,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
   --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; --floe-mark: auto; background: none;
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
   font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
 }
 }
@@ -1385,14 +1397,14 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </table></div></div>
 <div data-floe-text=""><!-- raw HTML omitted --></div>
 <ol data-floe-part="steps">
-<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong>Freeze edits on the old wiki</strong><p>On <strong>Friday evening</strong>.</p></li>
+<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong><span class="floe-hidden">Done: </span>Freeze edits on the old wiki</strong><p>On <strong>Friday evening</strong>.</p></li>
 <li class="doing" data-floe-mark="ring" aria-current="step"><strong>Copy the pages and check the links</strong><blockquote>
 <p>Broken links first: <a href="https://example.com/report">the report</a>.</p>
 </blockquote></li>
 <li class="todo"><strong>Point the team&#39;s bookmarks at the new host</strong></li>
 <li class="todo"><strong>Close the old server</strong></li>
 </ol>
-<figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">wiki export --all --out pages/</span><span class="out">1840 pages written to pages/</span><span class="run" data-floe-copy="">linkcheck pages/</span></pre><script>(function copyButton(words) {
+<figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">wiki export --all --out pages/</span><span class="out">1840 pages written to pages/</span><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">linkcheck pages/</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -1456,7 +1468,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
-<figure class="zsh" data-floe-part="terminal"><figcaption>zsh</figcaption><pre><span class="run" data-floe-copy="">wiki status</span></pre><script>(function copyButton(words) {
+<figure class="zsh" data-floe-part="terminal"><figcaption>zsh</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">wiki status</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -1520,7 +1532,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
-<figure class="sh" data-floe-part="terminal"><figcaption>sh</figcaption><pre><span class="run" data-floe-copy="">wiki status</span></pre><script>(function copyButton(words) {
+<figure class="sh" data-floe-part="terminal"><figcaption>sh</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">wiki status</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -1584,7 +1596,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
-<figure class="powershell" data-floe-part="terminal"><figcaption>PowerShell</figcaption><pre><span class="run" data-floe-copy="">wiki status</span></pre><script>(function copyButton(words) {
+<figure class="powershell" data-floe-part="terminal"><figcaption>PowerShell</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">wiki status</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -1648,7 +1660,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
-<figure class="cmd" data-floe-part="terminal"><figcaption>cmd</figcaption><pre><span class="run" data-floe-copy="">wiki status</span></pre><script>(function copyButton(words) {
+<figure class="cmd" data-floe-part="terminal"><figcaption>cmd</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">wiki status</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -1906,8 +1918,8 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <label class="bar" data-floe-tone="muted"><span class="label">Drafts</span><span class="count">2 / 6</span><progress value="2" max="6">2 / 6</progress></label>
 </div>
 <ul data-floe-part="checklist">
-<li class="done"><span>Freeze edits</span></li>
-<li><span>Copy the <strong>attachments</strong></span></li>
+<li class="done"><span><span class="floe-hidden">Done: </span>Freeze edits</span></li>
+<li><span><span class="floe-hidden">Not done: </span>Copy the <strong>attachments</strong></span></li>
 </ul>
 <ol data-floe-part="timeline">
 <li data-floe-tone="warn"><span class="date">2030-04-05</span><div><strong>Freeze</strong><p>Edits stop.</p></div></li>
@@ -1921,12 +1933,12 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <section>
 <h2 id="choices">Choices</h2>
 <div class="numbered" data-floe-part="options">
-<div class="card option pick" data-floe-look="panel"><div class="title">Copy in one go <span data-floe-part="cell">Recommended</span></div><p>Two days of read-only, as <a href="https://example.com/plan">the plan</a> says: <code>export --all</code>.</p><ul class="points" data-floe-look="marked"><li class="pro"><span>Simple</span></li><li class="con"><span>Longer freeze</span></li></ul></div>
+<div class="card option pick" data-floe-look="panel"><div class="title">Copy in one go <span data-floe-part="cell">Recommended</span></div><p>Two days of read-only, as <a href="https://example.com/plan">the plan</a> says: <code>export --all</code>.</p><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>Simple</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Longer freeze</span></li></ul></div>
 <div class="card option" data-floe-look="panel"><div class="title">Copy by space</div><p>Each space is copied apart:</p>
 <ul>
 <li>Docs first</li>
 <li>Then the rest, as <a href="https://example.com/plan">the plan</a> says: <code>export --space</code></li>
-</ul><ul class="points" data-floe-look="marked"><li class="pro"><span>Short freezes</span></li><li class="con"><span>Links break between spaces</span></li><li class="con"><span>Twice the work</span></li></ul></div>
+</ul><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>Short freezes</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Links break between spaces</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Twice the work</span></li></ul></div>
 </div>
 <div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span data-floe-tone="good" data-floe-part="cell">decided</span><span>2030-03-28</span></p><div class="title">The wiki moves to the new host</div><p>The old server is out of support in <strong>May</strong>.</p><p class="set-aside">Set aside</p><ul class="rejected" data-floe-look="marked"><li><span>Stay on the old server</span></li><li><span>Move to a hosted wiki</span></li></ul></div></div>
 </section>
@@ -1973,10 +1985,10 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </table></div>
 <div data-floe-part="tree"><ul>
 <li><span class="name dir">pages/</span><span class="note">what export writes</span><ul>
-<li class="changed"><span class="name">home.md</span></li>
-<li class="removed"><span class="name">old.md</span></li>
+<li class="changed"><span class="name">home.md<span class="floe-hidden"> (changed)</span></span></li>
+<li class="removed"><span class="name">old.md<span class="floe-hidden"> (removed)</span></span></li>
 <li><span class="name dir">new/</span><ul>
-<li class="added"><span class="name">index.md</span></li>
+<li class="added"><span class="name">index.md<span class="floe-hidden"> (added)</span></span></li>
 </ul></li>
 </ul></li>
 </ul></div>
@@ -2054,7 +2066,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <details data-floe-part="details" open=""><summary>The whole log</summary><div data-floe-part="stack"><div data-floe-text=""><p>What the copy printed.</p>
 <blockquote>
 <p>Every page, with <a href="https://example.com/count">the count</a> and <code>count.sh</code>.</p>
-</blockquote></div><figure class="sh" data-floe-part="terminal"><pre><span class="run" data-floe-copy="">wiki export</span><span class="out">done</span></pre><script>(function copyButton(words) {
+</blockquote></div><figure class="sh" data-floe-part="terminal"><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">wiki export</span><span class="out">done</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +

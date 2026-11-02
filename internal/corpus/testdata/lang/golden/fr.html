@@ -97,7 +97,11 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
 .floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
 .floe-copy.copied svg + svg { display: block; color: var(--code-add); }
-.floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Text a screen reader reads that the page does not show: the copy button's status, and .floe-hidden, the words that
+   tell what a mark of CSS means (a step done, a pro, a file added), which the mark itself is not read for (/ "").
+   It stands at the corner of what places it, or the page's, so that where its text would run widens no page.
+   LIMIT: text selected on the page and copied takes these words too; add user-select: none if that comes to matter */
+.floe-copy-status, .floe-hidden { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
 /* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves
    --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
@@ -182,7 +186,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope (:root) {
 blockquote > * { --face: initial; --on-face: initial; --quiet: var(--default-quote-quiet); }
 blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); color: var(--fg); }
-blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+blockquote::before { content: "“"; content: "“" / ""; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
 </style>
@@ -203,7 +207,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    LIMIT: whether a decoration keeps off the text is seen, not measured */
 :scope.numbered > .card { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
-  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
@@ -314,7 +318,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
   --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; --floe-mark: auto; background: none;
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
   font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
 }
 }
