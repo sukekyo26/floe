@@ -1,6 +1,6 @@
 /* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
-   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: what the note holds
-   is Markdown, with no element of text to hold it, so the gaps between what it holds count from after it.
+   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: its Markdown stands in a
+   text's box after the title, and what a note drawn in HTML holds is counted from after the word.
    LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
    too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
@@ -14,7 +14,9 @@
 :scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
 :scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
 :scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
-/* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
+/* The gap between what a note drawn in HTML holds (a template's caution, a data item's note); a note of Markdown has its
+   title next to its text's box, and the box spaces its Markdown. It wins over a part's box held in it, whose other
+   margins stay its own */
 :scope > :not(.floe-hidden) + * { margin-top: 0.5rem; }
 .title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }

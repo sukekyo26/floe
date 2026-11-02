@@ -33,8 +33,9 @@ const shadowsMore = `  - heading: Close
 
 // shadowsKit is a theme of one's own whose shadow reaches --floe-room on every side of its panels, code, notes and
 // quotes on the page (base.css).
-// LIMIT: a quote's shadow in a part (markdown.css) is not measured at --floe-room: a part's Markdown flow is spaced
-// under it (S164), and so large a shadow meets the next paragraph; floe's themes' quotes in parts are measured.
+// LIMIT: a quote's shadow in a part (markdown.css) is not measured at --floe-room: a part spaces its Markdown's box from
+// its title and edge under it, where so large a shadow, first or last in the box, meets them; floe's themes' quotes
+// in parts are measured.
 var shadowsKit = map[string]string{
 	"themes/edge/palette.css": ":root { --floe-shadow-blur: 12px; }\n",
 	"themes/edge/panel.css":   ":scope { --floe-shadow-color: rgb(0 0 0 / 0.4); }\n",

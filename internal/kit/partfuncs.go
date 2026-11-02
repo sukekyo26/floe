@@ -19,10 +19,11 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// partFuncs are the functions floe's parts draw with, besides those of page.html.
+// partFuncs are the functions floe's parts draw with, besides those of page.html and over them: markdown draws in a
+// text's box, as all a part holds of Markdown is (MarkdownFlow).
 var partFuncs = template.FuncMap{
-	"bars": barsOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf, "script": scriptOf,
-	"tree": treeOf, "written": writtenOf,
+	"bars": barsOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf, "markdown": MarkdownFlow,
+	"script": scriptOf, "tree": treeOf, "written": writtenOf,
 }
 
 // copyButtonOf holds the name of the function that draws the copy button of a part, which Part.Page binds anew in

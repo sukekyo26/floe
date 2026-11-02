@@ -296,6 +296,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the Markdown a part holds (a note's text, an entry's, a faq's answer, a card's text in options and decision,
+  a step's and a timeline item's, an item of format `markdown` in a part's own value) to stand in a text's box, as a
+  text's does: its paragraphs, tables, quotes and lists are `--floe-room` (12px) apart in every part, where each part
+  spaced them its own way before (2.4px in steps and timeline, 5.6px in entries, 6.4px in options, 8px in note, faq and
+  decision). A part's own `part.html` that draws `{{markdown .x}}` gets the box too: its CSS reaches the blocks in it by
+  `:scope p`, not `:scope > p`, and writes no room between them. A template's own Markdown is drawn as before.
 - Change where a right-angled edge with `via` turns at a via when going on the way it came would run back over
   itself: it turns the other way first, so its corner moves, and an edge drawn before may now be refused as running
   through a part beside the via. `from: [0, 0], via: [[200, 0]], to: [100, 100]` ran `H200 H100 V100` and now runs

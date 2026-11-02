@@ -27,6 +27,7 @@ sections:
       - links:
           - { title: Docs, url: "https://example.com/docs", text: read }
       - note: { tone: good, title: Heads up, text: a note }
+      - note: { tone: warn, text: "A note of Markdown alone.\n\nA second paragraph." }
       - steps:
           - { title: One, text: first, state: done }
           - { title: Two, text: second }
@@ -61,6 +62,10 @@ var markRows = []struct {
 	{"links", "[data-floe-part=links] > li", "[data-floe-part=links] > li > a", false},
 	{"note", "[data-floe-part=note]", "[data-floe-part=note] > .title", true},
 	{"note without a title", "#plainnote", "#plainnote > p", true},
+	{
+		"note of Markdown without a title", "[data-floe-part=note]:not(:has(> .title)):not(#plainnote)",
+		"[data-floe-part=note]:not(:has(> .title)):not(#plainnote) > [data-floe-text] > p", true,
+	},
 	{"note in a step", "#stepnote", "#stepnote > .title", true},
 	{"steps", "[data-floe-part=steps] > li", "[data-floe-part=steps] > li > strong", false},
 	{"timeline", "[data-floe-part=timeline] > li", "[data-floe-part=timeline] > li strong", false},

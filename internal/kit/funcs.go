@@ -15,8 +15,8 @@ import (
 	"github.com/yuin/goldmark/util"
 )
 
-// funcs are the functions page.html and part.html draw with; word, which each words.yaml gives, is added where
-// they are read.
+// funcs are the functions page.html draws with, and part.html too but those partFuncs sets over; word, which each
+// words.yaml gives, is added where they are read.
 var funcs = template.FuncMap{
 	"bytes":    formatBytes,
 	"num":      formatNum,
@@ -68,6 +68,29 @@ func markdownHTML(text string) (template.HTML, error) {
 	html = strings.ReplaceAll(html, "</table>", "</table></div>")
 	// No space at its ends: a text of raw HTML alone leaves its box a comment alone, which :empty takes (base.css).
 	return template.HTML(strings.TrimSpace(html)), nil //nolint:gosec // G203: goldmark leaves raw HTML out
+}
+
+// MarkdownFlow writes Markdown text as markdownHTML does, in a text's box (data-floe-text): a flow of blocks base.css
+// spaces in one place. Every Markdown a part holds is drawn so: what its part.html draws by markdown, and an item of
+// format markdown in its value; a template's own Markdown is not, which its page.css arranges.
+// Markdown that draws no block, empty or raw HTML alone (which markdown leaves out), is drawn as it is, with no box.
+func MarkdownFlow(text string) (template.HTML, error) {
+	html, err := markdownHTML(text)
+	if drawsBlock(text) {
+		html = "<div data-floe-text>" + html + "</div>" //nolint:gosec // G203: markdownHTML's own output, in floe's box
+	}
+	return html, err
+}
+
+// drawsBlock reports whether goldmark reads in text a block other than raw HTML, which markdown leaves out.
+func drawsBlock(text string) bool {
+	doc := markdown.Parser().Parse(gmtext.NewReader([]byte(text)))
+	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
+		if n.Kind() != ast.KindHTMLBlock {
+			return true
+		}
+	}
+	return false
 }
 
 // Markdown writes text, an item of format markdown, as HTML, as markdown in page.html does.
