@@ -103,13 +103,15 @@ func (m *measures) childrenSpan(n *node) float64 {
 	return sum
 }
 
-// nodeWho names n as an edge's end names a part: its name, or else the English of its first row in quotes.
+// nodeWho names n, its box b, as an edge's end names a part: its name, or else its box's words, or where it stands.
 // LIMIT: two nodes of one text and no name read alike in a mistake that names both; name them if it confuses.
-func nodeWho(n *node) string {
+func nodeWho(n *node, b *box) string {
 	if n.Name != "" {
 		return n.Name
 	}
-	return strconv.Quote(n.Rows[0].Text["en"])
+	text, code := firstRow(b)
+	call, _ := calling("", text, code, boxRect(b, ""))
+	return call
 }
 
 // place adds n's box at depth d, its centre at cx and its top at y, and below it its children side by side,
@@ -144,7 +146,7 @@ func (m *measures) place(out *[]item, n *node, cx, y float64, d int, at string) 
 		}
 		from := end{Point: &[2]float64{cx, bottom}} //nolint:exhaustruct_v5 // a point
 		to := end{Point: &[2]float64{ccx, cy}}      //nolint:exhaustruct_v5 // a point
-		who := "edge " + nodeWho(n) + "→" + nodeWho(c)
+		who := "edge " + nodeWho(n, b) + "→" + nodeWho(c, nodeBox(c, ccx, cy))
 
 		e := &edge{From: from, To: to, who: who} //nolint:exhaustruct_v5 // the rest as left out
 		if !straight {

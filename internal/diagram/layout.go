@@ -45,6 +45,7 @@ type rect struct {
 	form       outline //exhaustruct:optional
 	graph      string  //exhaustruct:optional
 	pinned     bool    //exhaustruct:optional // a label its writer put where it is, kept off a frame's edge as a box is
+	byPlace    bool    //exhaustruct:optional // named by where it stands (named)
 }
 
 func (a rect) overlaps(b rect) bool {
@@ -325,12 +326,45 @@ func textWidth(t Text, size float64, code bool) float64 {
 	return w
 }
 
-// what names a part in a mistake: by its name, else by its English text.
-func what(kind, name string, text Text) string {
-	if name != "" {
-		return kind + " " + strconv.Quote(name)
+// words is text as a mistake names a part by it: in the language it is laid out as wide as, by code's widths (the
+// widest, English of two as wide), quoted; "" for none.
+func words(text Text, code bool) string {
+	lang, _ := widest(text, 1, code)
+	if text[lang] == "" {
+		return ""
 	}
-	return kind + " " + strconv.Quote(text["en"])
+	return strconv.Quote(text[lang])
+}
+
+// calling is what a part standing at r is called in a mistake and by inspect, but its kind: its name quoted, else its
+// words, else where it stands (byPlace).
+func calling(name string, text Text, code bool, r rect) (call string, byPlace bool) {
+	switch w := words(text, code); {
+	case name != "":
+		return strconv.Quote(name), false
+	case w != "":
+		return w, false
+	default:
+		return placeOf(r), true
+	}
+}
+
+// named is r named as a kind (calling).
+func (r rect) named(kind, name string, text Text, code bool) rect {
+	call, byPlace := calling(name, text, code, r)
+	r.what, r.byPlace = kind+" "+call, byPlace
+	return r
+}
+
+// firstRow is box b's first row's text, by which it is named, and whether it is laid out in code's widths.
+func firstRow(b *box) (Text, bool) {
+	_, code := rowSize(b.Rows[0].Style, true)
+	return b.Rows[0].Text, code
+}
+
+// placeOf is where r stands, its top left and size.
+func placeOf(r rect) string {
+	return num(r.x) + "," + num(r.y) + " " + num(r.w) + "x" + num(r.h)
 }
 
 // fit refuses text that is wider than room, telling the width to write: the widest of its languages.
@@ -386,7 +420,8 @@ func boxRect(b *box, at string) rect {
 	if b.Origin == "centre" {
 		x -= w / 2
 	}
-	return rect{x: x, y: b.Y, w: w, h: h, what: what("box", b.Name, b.Rows[0].Text), at: at}
+	text, code := firstRow(b)
+	return rect{x: x, y: b.Y, w: w, h: h, what: "", at: at}.named("box", b.Name, text, code)
 }
 
 func (l *layout) addBox(b *box, at string) {
@@ -464,7 +499,7 @@ func tableRects(t *table, at string) (rect, []rect) {
 	if len(t.Rows) > 0 {
 		h += 6
 	}
-	return rect{x: x, y: t.Y, w: w, h: h, what: what("table", t.Name, t.Title), at: at}, rows
+	return rect{x: x, y: t.Y, w: w, h: h, what: "", at: at}.named("table", t.Name, t.Title, false), rows
 }
 
 func (l *layout) addTable(t *table, at string) {
@@ -530,18 +565,15 @@ func dotR(d *dot) float64 {
 }
 
 func barRect(b *bar, at string) rect {
-	name := b.Label["en"]
-	if name == "" {
-		name = num(b.X1) + "-" + num(b.X2)
-	}
 	w := math.Max(math.Abs(b.X2-b.X1), 4)
-	return rect{x: math.Min(b.X1, b.X2), y: b.Y - 7, w: w, h: 14, what: what("bar", b.Name, Text{"en": name}), at: at}
+	return rect{x: math.Min(b.X1, b.X2), y: b.Y - 7, w: w, h: 14, what: "", at: at}.named("bar", b.Name, b.Label, false)
 }
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
-	who := what("frame", f.Name, f.Label)
-	l.frames = append(l.frames, rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: who, at: at, graph: f.graph})
+	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named("frame", f.Name, f.Label, false)
+	who := fr.what
+	l.frames = append(l.frames, fr)
 	hx, hy, size := f.X+12, f.Y+18, float64(sizeSub)
 	if f.Icon != "" {
 		hx, hy, size = f.X+40, f.Y+15, sizeMain
@@ -565,7 +597,9 @@ func (l *layout) addFrame(f *frame, at string) {
 		cls += " grouped"
 		// The icon is a part like a box: nothing may overlap it or run through it. It is checked from the frame's
 		// edge, as the 1px of it outside the frame only covers the frame's line (1.2 wide, centred on its edge).
+		// Of a frame named by where it stands, named so too (inspect writes no place of its own for it).
 		ir := rect{x: f.X, y: f.Y, w: 31, h: 31, what: "the icon of " + who, at: at, form: outlineOf(31, 31, "icon")}
+		ir.byPlace = fr.byPlace
 		l.boxes = append(l.boxes, ir)
 		if use, ok := l.image(at, f.Icon, f.X-1, f.Y-1, 32, "the icon of "+who); ok {
 			kids = append(kids, use)
@@ -579,8 +613,9 @@ func (l *layout) addFrame(f *frame, at string) {
 
 func (l *layout) addIcon(i *icon, at string) {
 	size := iconSize(i)
-	who := what("icon", i.Name, Text{"en": i.Icon})
-	r := rect{x: i.X, y: i.Y, w: size, h: size, what: who, at: at, form: outlineOf(size, size, "icon")}
+	r := rect{x: i.X, y: i.Y, w: size, h: size, what: "", at: at, form: outlineOf(size, size, "icon")}.named(
+		"icon", i.Name, Text{"en": i.Icon}, false)
+	who := r.what
 	l.boxes = append(l.boxes, r)
 	if use, ok := l.image(at, i.Icon, i.X, i.Y, size, who); ok {
 		l.boxEls = append(l.boxEls, use)
@@ -646,7 +681,7 @@ func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, st
 	case "end":
 		x0 = x - w + 5
 	}
-	l.labels = append(l.labels, rect{x: x0, y: y - 9, w: w, h: labelH, what: what("label", "", t), at: at})
+	l.labels = append(l.labels, rect{x: x0, y: y - 9, w: w, h: labelH, what: "", at: at}.named("label", "", t, false))
 	if !plain {
 		l.labelEls = append(l.labelEls, elem{Kind: "rect", X: x0, Y: y - 9, W: w, H: labelH, Class: "label-bg"})
 	}

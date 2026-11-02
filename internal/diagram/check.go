@@ -1,6 +1,7 @@
 package diagram
 
 import (
+	"cmp"
 	"fmt"
 	"iter"
 	"math"
@@ -285,12 +286,13 @@ func (l *layout) addLabel(lb *label, at string) {
 	}
 	names := strings.Join(lb.In, ", ")
 	x, y, st := l.place(lb, g)
+	who := "label " + cmp.Or(words(lb.Text, false), "in "+names) // placed nowhere: by its region
 	switch {
 	case !st.tried:
-		l.strays = append(l.strays, rect{x: 0, y: 0, w: 0, h: 0, what: what("label", "", lb.Text), at: at})
+		l.strays = append(l.strays, rect{x: 0, y: 0, w: 0, h: 0, what: who, at: at})
 		return
 	case !st.found:
-		l.problem(at, "diagram_label_no_room", what("label", "", lb.Text), names)
+		l.problem(at, "diagram_label_no_room", who, names)
 		return
 	}
 	l.label(at, lb.Text, x, y, "middle", plain, lb.Strong)
