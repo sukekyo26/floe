@@ -99,10 +99,14 @@ sections:
 // so that the page is laid out that wide, as on paper.
 const paperWidth = 718
 
-// TestUIPrint draws every page of floePages, and printPage, for print as wide as an A4 sheet's text, and finds
-// each on paper (measurePaper): nothing scrolls sideways there, as what scrolls is not read on paper, and folds onto
-// lines within it, but what folds no word there (LIMIT: a table's heads and cells, a column of numbers or of pills, a
-// tree's note and its depth) may still reach past it. It finds every ground kept on paper: print leaves a ground
+// slidesWidth is an A4 sheet's length, in CSS px: slides prints on a landscape sheet with no margin (its @page).
+const slidesWidth = 1122
+
+// TestUIPrint draws every page of floePages, and printPage, for print as wide as an A4 sheet's text (slides as wide
+// as its landscape sheet), and finds each on paper (measurePaper): nothing scrolls sideways there, as what scrolls is
+// not read on paper, and folds onto lines within it, but what folds no word there (LIMIT: a table's heads and cells, a
+// column of numbers or of pills, a tree's note and its depth, a field's name, a finding's level) may still reach past
+// it, or past a card it is in, which nothing measures. It finds every ground kept on paper: print leaves a ground
 // out unless asked, as a browser's print does by default, and a light text on a fill would be lost on white paper.
 // It finds tabs whose picked title is drawn apart from the others, as tabs paints the picked one on the screen alone.
 // LIMIT: tabs is the only part whose state print draws otherwise; check a part's that comes to do so too.
@@ -110,8 +114,8 @@ const paperWidth = 718
 func TestUIPrint(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	s.b.size(paperWidth, 1000, false)
-	s.b.scrollbars(true)
 	defer s.b.unsize()
+	s.b.scrollbars(true)
 	defer s.b.scrollbars(false)
 	s.b.media("print")
 	k, err := kit.Floe()
@@ -128,6 +132,10 @@ func TestUIPrint(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		}
 	}
 	s.floePages(t, func(what string) {
+		if strings.HasPrefix(what, "slides in ") {
+			s.b.size(slidesWidth, 1000, false)
+			defer s.b.size(paperWidth, 1000, false)
+		}
 		if wide := s.b.eval(measurePaper); wide != "" {
 			t.Errorf("%s on paper:\n  %s", what, strings.ReplaceAll(wide, "\n", "\n  "))
 		}
