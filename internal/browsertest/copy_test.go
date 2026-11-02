@@ -397,7 +397,8 @@ func TestUICopyOwnPart(t *testing.T) { //nolint:paralleltest // the browser test
 }
 
 // roomPage holds what lies under a copy button: long lines of code (with a heading and without), of a terminal and of a
-// diff, and short ones of code, of a diff and of a terminal.
+// diff, and short ones of code, of a diff and of a terminal (its output faint); and a diff with lines outside a hunk
+// (faint), a long line.
 const roomPage = `template: report
 lang: en
 title: Room
@@ -426,11 +427,44 @@ sections:
           steps:
             - run: echo short
               out: short
+      - diff:
+          file: meta.sh
+          text: |
+            diff --git a/meta.sh b/meta.sh
+            --- a/meta.sh
+            +++ b/meta.sh
+            @@ -1 +1 @@
+            -echo old
+            +%[1]s
+`
+
+// bareKit is bare, a part of one's own that takes code's look and draws no copy button, and a template, bares, that
+// places a list of them; barePage is long and short lines of bare.
+var bareKit = map[string]string{
+	"templates/bares/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +
+		"<title>{{.Title}}</title></head>\n<body>\n{{range .Data.bares}}{{.}}{{end}}\n</body></html>\n",
+	"templates/bares/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"bares": {"type": "array", "items": {"$ref": "floe:///parts/bare.json"}}}}`,
+	"templates/bares/example.yaml": "lang: en\ntemplate: bares\nbares:\n  - text: x\n",
+	"parts/bare/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"text": {"type": "string"}}, "required": ["text"], "additionalProperties": false}`,
+	"parts/bare/part.html": `<figure data-floe-part="bare"><pre><code>{{.text}}</code></pre></figure>`,
+	"parts/bare/part.css":  "",
+	"parts/bare/part.yaml": "looks: [code]\n",
+}
+
+const barePage = `template: bares
+lang: en
+title: Bare
+bares:
+  - text: "%[1]s"
+  - text: echo short
 `
 
 // measureRoom reads, for each part with a copy button, its code scrolled to the end: how far left of the button the
 // text ends ("ok" when it does, else how far under it), or for a short one, whether it scrolls and whether a diff's line
-// reaches the code's right edge; then the room a box keeps after its line.
+// reaches the code's right edge; then, for each bare, whether its long line keeps code's room (1.1rem) after it scrolled
+// to the end ("room", else how wide it is), or a short one does not scroll.
 const measureRoom = `(() => {
   const textEnd = (pre) => {
     const w = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT);
@@ -451,12 +485,39 @@ const measureRoom = `(() => {
     pre.scrollLeft = pre.scrollWidth;
     const clear = button.left - textEnd(pre);
     return part.dataset.floePart + ' ' + (clear > 0 ? 'ok' : 'under by ' + Math.round(-clear));
-  }).join(', ');
+  }).concat([...document.querySelectorAll('[data-floe-part=bare]')].map((part) => {
+    const pre = part.querySelector('pre');
+    if (pre.scrollWidth - pre.clientWidth <= 1) return 'bare short';
+    pre.scrollLeft = pre.scrollWidth;
+    const room = pre.getBoundingClientRect().left + pre.clientLeft + pre.clientWidth - textEnd(pre);
+    return 'bare ' + (room >= 17.6 - 0.5 ? 'room' : 'room ' + Math.round(room));
+  })).join(', ');
+})()`
+
+// measureLines reads where code's look keeps the room at a line's sides: on each line (code's code, a terminal's
+// spans, a diff's lines in its code) rather than on pre, of each part of the family; then whether its faint text, a
+// heading's file name, a terminal's heading and output and a diff's lines outside a hunk, is there and faded by its colour.
+// LIMIT: a terminal and a diff that each write 70% rather than read --floe-code-faint pass; read their CSS for that.
+const measureLines = `(() => {
+  const out = new Set();
+  for (const part of document.querySelectorAll('[data-floe-part=code], [data-floe-part=terminal], [data-floe-part=diff]')) {
+    const name = part.dataset.floePart, pre = getComputedStyle(part.querySelector('pre'));
+    const lines = [...part.querySelectorAll(name === 'diff' ? 'pre > code > span' : 'pre > *')];
+    out.add(name + ' pre ' + pre.paddingLeft + ' ' + pre.paddingRight + ' line ' + [...new Set(lines.map((e) => getComputedStyle(e).paddingLeft))].join(' '));
+  }
+  const alpha = (c) => { const m = c.match(/\/ ([\d.]+)\)$/) || c.match(/^rgba\(.*, ([\d.]+)\)$/); return m ? Number(m[1]) : 1; };
+  for (const [what, sel] of [['file', 'figcaption .file'], ['head', '[data-floe-part=terminal] figcaption'], ['out', '[data-floe-part=terminal] .out'], ['meta', '[data-floe-part=diff] .meta']]) {
+    const found = [...document.querySelectorAll(sel)];
+    out.add(what + (found.length === 0 ? ' missing' : found.every((e) => alpha(getComputedStyle(e).color) < 1) ? ' faint' : ' not faint'));
+  }
+  return [...out].join(', ');
 })()`
 
 // TestCopyRoom scrolls each long line of code, a terminal and a diff to its end: it ends left of the copy button, in
 // every theme; a short one does not scroll (within a pixel, which rounding a rem may take), a short diff's line still
-// reaching the right edge. Printed, with no button, a line keeps the code's own padding after it, 1.1rem.
+// reaching the right edge. Without a button, in a part of one's own in code's look, a long line keeps 1.1rem after it.
+// The room at a line's sides is on the line, 1.1rem, and none on pre, and the faint text is faded by its colour.
+// Printed, with the button hidden, a line keeps the code's own padding after it, 1.1rem.
 func TestCopyRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -464,15 +525,24 @@ func TestCopyRoom(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	if err != nil {
 		t.Fatal(err)
 	}
-	file := s.write(t, "room.yaml", fmt.Sprintf(roomPage, "kubectl -n payments set volume deploy/gateway --add --name=tls --secret-name=gateway-tls-20300516 --overwrite"))
+	s.own(t, bareKit)
+	long := "kubectl -n payments set volume deploy/gateway --add --name=tls --secret-name=gateway-tls-20300516 --overwrite"
+	file, bare := s.write(t, "room.yaml", fmt.Sprintf(roomPage, long)), s.write(t, "bare.yaml", fmt.Sprintf(barePage, long))
 	b.size(900, 900, false)
-	out, want := make([]string, 0, len(themes)+1), make([]string, 0, len(themes)+1)
+	out, want := make([]string, 0, 3*len(themes)+1), make([]string, 0, 3*len(themes)+1)
 	for _, theme := range themes {
 		name := theme.Name()
+		s.floe(t, "publish", bare, "--slug", "bare-"+name, "--theme", name)
+		b.navigate("/a/bare-" + name + "/?raw")
+		out = append(out, name+": "+b.eval(measureRoom))
 		s.floe(t, "publish", file, "--slug", "room-"+name, "--theme", name)
 		b.navigate("/a/room-" + name + "/?raw")
-		out = append(out, name+": "+b.eval(measureRoom))
-		want = append(want, name+": code ok, code ok, terminal ok, diff ok, code short, diff short reaches, terminal short")
+		out = append(out, name+": "+b.eval(measureRoom), name+": "+b.eval(measureLines))
+		// brutal's terminal.css gives a terminal's heading its full colour
+		head := map[bool]string{false: "head faint", true: "head not faint"}[name == "brutal"]
+		want = append(want, name+": bare room, bare short",
+			name+": code ok, code ok, terminal ok, diff ok, code short, diff short reaches, terminal short, diff ok",
+			name+": code pre 0px 0px line 17.6px, terminal pre 0px 0px line 17.6px, diff pre 0px 0px line 17.6px, file faint, "+head+", out faint, meta faint")
 	}
 	b.media("print")
 	out = append(out, "printed: "+b.eval("[...new Set([...document.querySelectorAll('[data-floe-part=code] pre > *, [data-floe-part=terminal] pre > *, [data-floe-part=diff] code > span')]"+
