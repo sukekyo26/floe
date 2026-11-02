@@ -485,6 +485,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a diagram's mistakes, and `floe diagram inspect`, naming a part with no name by its English text, though
+  another language's text decided its width, a frame with no name nor label as `frame ""`, and a dot by its centre
+  though it had a name. A part with no name
+  is named by its text in the language that decides its width (the widest, English of two as wide), and with no text
+  either by where it stands (`frame 10,10 250x150`, a bar with no label `bar 200,37 80x14`); a tree's node so too, in
+  its box and in its edges; a label with `in` and no text, by its region (`label in A`), placed or not.
 - Fix a diagram's placement mistake between two parts written by hand (an overlap, a crossing, an edge through a
   box, a part across a frame's edge) told at the line of the one compared first, often the part that was there
   before: it is told at the part written later in `parts` now, which was added or moved last most often. One between

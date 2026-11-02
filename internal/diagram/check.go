@@ -274,7 +274,7 @@ func (l *layout) addLabel(lb *label, at string) {
 		}
 	}
 	if lb.X != nil {
-		i := l.label(at, lb.Text, *lb.X, *lb.Y, anchor, plain, lb.Strong)
+		i := l.label(at, lb.Text, lb.In, *lb.X, *lb.Y, anchor, plain, lb.Strong)
 		// One out of its region is told so, and not again for a frame's edge it straddles.
 		if lb.In != nil && g.roomOf(l.labels[i]) < 0 {
 			l.problem(at, "diagram_label_region", l.labels[i].what, strings.Join(lb.In, ", "))
@@ -285,15 +285,17 @@ func (l *layout) addLabel(lb *label, at string) {
 	}
 	names := strings.Join(lb.In, ", ")
 	x, y, st := l.place(lb, g)
+	call, _ := calling("", lb.Text, false, lb.In, rect{}) //nolint:exhaustruct_v5 // placed nowhere, by its regions
+	who := "label " + call
 	switch {
 	case !st.tried:
-		l.strays = append(l.strays, rect{x: 0, y: 0, w: 0, h: 0, what: what("label", "", lb.Text), at: at})
+		l.strays = append(l.strays, rect{x: 0, y: 0, w: 0, h: 0, what: who, at: at})
 		return
 	case !st.found:
-		l.problem(at, "diagram_label_no_room", what("label", "", lb.Text), names)
+		l.problem(at, "diagram_label_no_room", who, names)
 		return
 	}
-	l.label(at, lb.Text, x, y, "middle", plain, lb.Strong)
+	l.label(at, lb.Text, lb.In, x, y, "middle", plain, lb.Strong)
 }
 
 // place finds where a label placed by its region goes: the labels of one region are stacked, the first above,

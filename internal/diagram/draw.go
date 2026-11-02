@@ -213,7 +213,10 @@ func (d *Drawer) Inspect(spec any, opts Options) (string, error) {
 func (l *layout) inspect() string {
 	lines := make([]string, 0, len(l.frames)+len(l.boxes)+len(l.marks)+len(l.areas)+len(l.paths)+len(l.labels))
 	area := func(r rect) string {
-		return fmt.Sprintf("%s %s,%s %sx%s", r.what, num(r.x), num(r.y), num(r.w), num(r.h))
+		if r.byPlace { // named by where it stands already
+			return r.what
+		}
+		return r.what + " " + placeOf(r)
 	}
 	for _, r := range l.frames {
 		lines = append(lines, area(r))

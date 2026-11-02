@@ -1,9 +1,9 @@
 frame "Developer machine" 16,60 260x200
 frame "AWS Cloud" 316,16 668x300
-frame "Region (AWS_REGION)" 340,72 240x220
+frame "リージョン（AWS_REGION）" 340,72 240x220
 frame "Global inference profile" 620,72 344x220
 the icon of frame "AWS Cloud" 316,16 31x31
-the icon of frame "Region (AWS_REGION)" 340,72 31x31
+the icon of frame "リージョン（AWS_REGION）" 340,72 31x31
 icon "aws/res/client" 76,116 48x48
 icon "aws/amazon-bedrock" 436,116 48x48
 box "Opus 5.5" 632,114 320x52
