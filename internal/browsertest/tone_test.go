@@ -1,7 +1,6 @@
 package browsertest_test
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -93,16 +92,8 @@ func TestUITone(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if err != nil {
 		t.Fatal(err)
 	}
-	everyPart, err := os.ReadFile("../corpus/testdata/every-part/every-part.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	shot, err := os.ReadFile("../corpus/testdata/every-part/shots/moved.png")
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.write(t, "shots/moved.png", string(shot))
-	file := s.write(t, "every.yaml", string(everyPart)+toneExtra)
+	everyPart := s.everyPart(t)
+	file := s.write(t, "every.yaml", everyPart+toneExtra)
 	var amiss []string
 	measure := func(what string) {
 		got := b.eval(measureTones + "(" + mustJSON(tones) + ")")

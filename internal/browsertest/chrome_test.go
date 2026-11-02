@@ -35,6 +35,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/cli"
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/servetest"
 )
 
@@ -459,4 +460,53 @@ func (s *site) get(t *testing.T, path string) string {
 		t.Fatal(err)
 	}
 	return res
+}
+
+// everyPart returns the corpus's every-part, the sample of every part, and writes the image its part image shows
+// beside where it is written.
+func (s *site) everyPart(t *testing.T) string {
+	t.Helper()
+
+	text, err := os.ReadFile("../corpus/testdata/every-part/every-part.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	shot, err := os.ReadFile("../corpus/testdata/every-part/shots/moved.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.write(t, "shots/moved.png", string(shot))
+	return string(text)
+}
+
+// floePages draws the sample of every part (the corpus's every-part) and the example of every template of floe's in
+// every theme of floe's, and calls visit on each, open in the browser, with what tells it.
+func (s *site) floePages(t *testing.T, visit func(what string)) {
+	t.Helper()
+
+	b := s.b
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, themes, templates := k.Names()
+	file := s.write(t, "every-part.yaml", s.everyPart(t))
+	for _, name := range themes {
+		slug := "parts-" + name
+		s.floe(t, "publish", file, "--slug", slug, "--theme", name)
+		b.navigate("/a/" + slug + "/?raw")
+		b.until("the parts", "!!document.querySelector('[data-floe-part=bars]')")
+		visit(name)
+	}
+	for _, tmpl := range templates {
+		tpl, _ := k.Template(tmpl)
+		example := s.write(t, tmpl+".yaml", string(tpl.Example()))
+		for _, name := range themes {
+			slug := "template-" + tmpl + "-" + name
+			s.floe(t, "publish", example, "--slug", slug, "--theme", name)
+			b.navigate("/a/" + slug + "/?raw")
+			b.until("the page", "!!document.querySelector('h1')")
+			visit(tmpl + " in " + name)
+		}
+	}
 }

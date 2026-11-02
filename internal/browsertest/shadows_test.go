@@ -194,16 +194,8 @@ func TestUIShadows(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		names = append(names, th.Name())
 	}
 	names = append(names, "edge")
-	everyPart, err := os.ReadFile("../corpus/testdata/every-part/every-part.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	shot, err := os.ReadFile("../corpus/testdata/every-part/shots/moved.png")
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.write(t, "shots/moved.png", string(shot))
-	file := s.write(t, "every.yaml", string(everyPart)+shadowsExtra)
+	everyPart := s.everyPart(t)
+	file := s.write(t, "every.yaml", everyPart+shadowsExtra)
 	widths := []int64{480, 1100, 1600, 2560}
 	amiss := make([]string, 0, len(names))
 	for _, name := range names {
