@@ -15,8 +15,13 @@ import (
 // marked marks each element shown whose ::before or ::after draws content with data-speech (one in a tab not picked
 // is given a screen reader no more than it is shown), and returns, for each, its
 // name, whether a pseudo-element's reading (after its /) has a counter, and its text with the hidden words, but
-// what a script or style holds; then each hidden word whose parent is a row (li).
+// what a script or style holds; then each hidden word whose parent is a row (li), and each element whose mark means
+// what the HTML must tell in hidden words, which has none. A numbered row, a numbered card and a slide read their number
+// whatever their CSS writes after /.
 const marked = `(() => {
+  const numbered = '[data-floe-look~="numbered"] > li:not(.done), .numbered > .card, .slides > li';
+  const worded = '[data-floe-part=steps] > li.done > strong, [data-floe-part=checklist] > li > span, .option li > span, ' +
+    '[data-floe-part=tree] li:is(.added, .removed, .changed) > .name, [data-floe-part=terminal] .run';
   const reading = (content) => {
     let depth = 0, quote = '', at = -1;
     for (let i = 0; i < content.length; i++) {
@@ -41,6 +46,7 @@ const marked = `(() => {
       if (/counters?\(/.test(reading(c))) counted = true;
     }
     if (!drawn) continue;
+    if (e.matches(numbered)) counted = true;
     e.dataset.speech = String(i++);
     const copy = e.cloneNode(true);
     copy.querySelectorAll('script, style').forEach((s) => s.remove());
@@ -48,7 +54,10 @@ const marked = `(() => {
     out.push({ name: (part ? part.dataset.floePart + ' ' : '') + e.tagName.toLowerCase() + [...e.classList].map((c) => '.' + c).join(''), counted, text: copy.textContent });
   }
   const rows = [...document.querySelectorAll('li > .floe-hidden')].map((e) => e.textContent);
-  return JSON.stringify({ out, rows });
+  const told = (e) => { const h = e.matches('.run') ? e.previousElementSibling : e.querySelector(':scope > .floe-hidden'); return h?.matches('.floe-hidden') ? h : null; };
+  const unworded = [...document.querySelectorAll(worded)].filter((e) => e.checkVisibility() && !(told(e)?.textContent.trim()))
+    .map((e) => e.closest('[data-floe-part]').dataset.floePart + ' ' + e.tagName.toLowerCase() + [...(e.closest('li') || e).classList].map((c) => '.' + c).join(''));
+  return JSON.stringify({ out, rows, unworded });
 })()`
 
 // spoken returns, by each element's backend node, the text a screen reader is given in it: the text nodes of the
@@ -111,10 +120,14 @@ func TestUISpeech(t *testing.T) { //nolint:paralleltest // the browser tests sha
 				Counted bool
 				Text    string
 			}
-			Rows []string
+			Rows     []string
+			Unworded []string
 		}
 		if err := json.Unmarshal([]byte(b.eval(marked)), &found); err != nil {
 			t.Fatal(err)
+		}
+		for _, e := range found.Unworded {
+			amiss = append(amiss, what+": "+e+" tells no hidden word")
 		}
 		for _, row := range found.Rows {
 			amiss = append(amiss, what+": hidden "+row+" in a row")
