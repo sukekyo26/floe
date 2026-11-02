@@ -104,6 +104,8 @@ type layout struct {
 	// Labels placed by their region that had none of it in the canvas, told sticking out by checkPlacement, once
 	// the canvas is known; only what and at are kept.
 	strays []rect
+	// The labels of label parts written at an x and y, by their index in labels: kept off a frame's edge as boxes are.
+	labelParts []int
 }
 
 func (l *layout) problem(at, key string, args ...any) {
@@ -121,6 +123,7 @@ func newLayout(s *spec, opts Options) *layout {
 		boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, strokes: nil, paths: nil,
 		areaEls: nil, gridEls: nil, edgeEls: nil, boxEls: nil, labelEls: nil, markers: nil, iconDefs: nil,
 		iconIDs: map[string]string{}, stacks: map[string]stack{}, w: written(s.Width), h: written(s.Height), strays: nil,
+		labelParts: nil,
 	}
 	b, _ := json.Marshal(s) //nolint:errcheck,errchkjson // read from JSON, it writes as JSON
 	sum := sha256.Sum256(b)
