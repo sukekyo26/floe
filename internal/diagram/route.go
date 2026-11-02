@@ -116,28 +116,29 @@ func (l *layout) centre(e end) [2]float64 {
 // turns are the corners from a to b without via: two out past both for sides of one way (both left, …), so that
 // the edge does not run along the parts' edges; none for ends in line; one for two points (across first) and for
 // sides across; two in the middle for facing sides (H V H, V H V).
+// The run between the two turns, which floe places, is loose (a's and b's markers as long as marks says).
 // LIMIT: two turns at most and no way round what is in the way; via or a side gives another.
-func turns(a, b anchor) [][2]float64 {
+func turns(a, b anchor, marks [2]float64) ([][2]float64, loose) {
 	switch {
 	case oneWay(a, b):
 		return around(a, b)
 	case a.x == b.x || a.y == b.y:
-		return nil
+		return nil, noLoose
 	case a.point && b.point:
-		return [][2]float64{{b.x, a.y}}
+		return [][2]float64{{b.x, a.y}}, noLoose
 	case horizontal(a.side) && horizontal(b.side):
 		mid := (a.x + b.x) / 2
-		return [][2]float64{{mid, a.y}, {mid, b.y}}
+		return [][2]float64{{mid, a.y}, {mid, b.y}}, between(1, false, a.x, b.x, marks)
 	case vertical(a.side) && vertical(b.side):
 		mid := (a.y + b.y) / 2
-		return [][2]float64{{a.x, mid}, {b.x, mid}}
+		return [][2]float64{{a.x, mid}, {b.x, mid}}, between(1, true, a.y, b.y, marks)
 	case a.side == "" && horizontal(b.side):
 		// From a dot, up or down first, to reach a side across.
-		return [][2]float64{{a.x, b.y}}
+		return [][2]float64{{a.x, b.y}}, noLoose
 	case horizontal(a.side) || a.side == "":
-		return [][2]float64{{b.x, a.y}}
+		return [][2]float64{{b.x, a.y}}, noLoose
 	default:
-		return [][2]float64{{a.x, b.y}}
+		return [][2]float64{{a.x, b.y}}, noLoose
 	}
 }
 
@@ -148,22 +149,24 @@ func oneWay(a, b anchor) bool {
 }
 
 // around are the corners of an edge between sides of one way: out past both ends, so that it does not run
-// along the parts' edges.
-func around(a, b anchor) [][2]float64 {
+// along the parts' edges. The run out there is loose, outward only: inward it comes nearer the parts.
+// LIMIT: so a run out there on a rule stays on it when moving out lays the runs to it, made longer, along a line
+// (a line across from a side, beyond the rule); write a via or a side to take another way.
+func around(a, b anchor) ([][2]float64, loose) {
 	const out = 20 // how far past the parts it runs
 	switch a.side {
 	case "left":
 		x := min(a.x, b.x) - out
-		return [][2]float64{{x, a.y}, {x, b.y}}
+		return [][2]float64{{x, a.y}, {x, b.y}}, loose{i: 1, across: false, lo: math.Inf(-1), hi: x, ok: true}
 	case "right":
 		x := max(a.x, b.x) + out
-		return [][2]float64{{x, a.y}, {x, b.y}}
+		return [][2]float64{{x, a.y}, {x, b.y}}, loose{i: 1, across: false, lo: x, hi: math.Inf(1), ok: true}
 	case "top":
 		y := min(a.y, b.y) - out
-		return [][2]float64{{a.x, y}, {b.x, y}}
+		return [][2]float64{{a.x, y}, {b.x, y}}, loose{i: 1, across: true, lo: math.Inf(-1), hi: y, ok: true}
 	default:
 		y := max(a.y, b.y) + out
-		return [][2]float64{{a.x, y}, {b.x, y}}
+		return [][2]float64{{a.x, y}, {b.x, y}}, loose{i: 1, across: true, lo: y, hi: math.Inf(1), ok: true}
 	}
 }
 
@@ -279,32 +282,36 @@ func (l *layout) clear(e end, side string, other, p [2]float64) string {
 // and the edge may run along the end's edge or through it; meeting it square takes a way round the end. A p level with
 // the side, come to by a run going away from it, runs straight back along that run; turning off it takes a way round as
 // well.
-func enter(pts [][2]float64, b anchor, across bool) [][2]float64 {
+// The run between the two turns halfway is loose (b's marker as long as mark).
+func enter(pts [][2]float64, b anchor, across bool, mark float64) ([][2]float64, loose) {
 	p, last := pts[len(pts)-1], [2]float64{b.x, b.y}
 	switch {
 	case b.point, b.side == "":
 		pts, _ = through(pts, [][2]float64{last}, across)
-		return pts
+		return pts, noLoose
 	case !outside(p, b):
 		if p[0] != last[0] && p[1] != last[1] {
 			pts = append(pts, corner(p, last, across))
 		}
-		return append(pts, last)
+		return append(pts, last), noLoose
 	}
 	in := runIn(pts)
+	free := noLoose
 	switch {
 	case horizontal(b.side) && back(in, p, last, false):
 		mid := (p[0] + last[0]) / 2
+		free = between(len(pts), false, p[0], last[0], [2]float64{0, mark})
 		pts = append(pts, [2]float64{mid, p[1]}, [2]float64{mid, last[1]})
 	case vertical(b.side) && back(in, p, last, true):
 		mid := (p[1] + last[1]) / 2
+		free = between(len(pts), true, p[1], last[1], [2]float64{0, mark})
 		pts = append(pts, [2]float64{p[0], mid}, [2]float64{last[0], mid})
 	case horizontal(b.side) && p[1] != last[1]:
 		pts = append(pts, [2]float64{p[0], last[1]})
 	case vertical(b.side) && p[0] != last[0]:
 		pts = append(pts, [2]float64{last[0], p[1]})
 	}
-	return append(pts, last)
+	return append(pts, last), free
 }
 
 // outside reports whether p is on the far side of b's side from the part b is on: left of a left side, and so on.
@@ -355,7 +362,7 @@ func pathData(pts [][2]float64) string {
 // straight from point to point by via, right-angled by turns without via, or right-angled through via, turning as the
 // via are written and entering the last side by enter.
 // LIMIT: the runs between via go round nothing in the way.
-func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, fromWho, toWho string, ok bool) {
+func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, free loose, fromWho, toWho string, ok bool) {
 	fromSide, toSide := e.FromSide, e.ToSide
 	fromAt, toAt := l.centre(e.From), l.centre(e.To)
 	if fromSide == "" {
@@ -382,18 +389,22 @@ func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, fromWho, toWh
 	// Resolved even when from is not, so that both are told.
 	to, toWho, okTo := l.endOf(at, e.To, toSide, fromAt)
 	if !okFrom || !okTo {
-		return nil, "", "", false
+		return nil, noLoose, "", "", false
 	}
+	startMark, endMark := markerKinds(e)
+	marks := [2]float64{markLength(startMark), markLength(endMark)}
 	start, last := [][2]float64{{from.x, from.y}}, [2]float64{to.x, to.y}
 	switch {
 	case e.Straight:
 		pts = slices.Concat(start, e.Via, [][2]float64{last})
 	case len(e.Via) == 0:
-		pts = slices.Concat(start, turns(from, to), [][2]float64{last})
+		var mid [][2]float64
+		mid, free = turns(from, to, marks)
+		pts = slices.Concat(start, mid, [][2]float64{last})
 	default:
-		pts = enter(pts, to, across)
+		pts, free = enter(pts, to, across, marks[1])
 	}
-	return pts, fromWho, toWho, true
+	return pts, free, fromWho, toWho, true
 }
 
 // atDots is pts, an edge's points as routed, as drawn: each end at a dot it names moved back from the centre towards
@@ -491,7 +502,7 @@ func pull(r float64, kind string) (back, keep float64) {
 }
 
 func (l *layout) addEdge(e *edge, at string) {
-	pts, fromWho, toWho, ok := l.edgePoints(e, at)
+	pts, free, fromWho, toWho, ok := l.edgePoints(e, at)
 	if !ok {
 		return
 	}
@@ -511,15 +522,15 @@ func (l *layout) addEdge(e *edge, at string) {
 	if e.Bold {
 		cls += " bold"
 	}
-	start, end := "none", "arrow"
-	if e.Start != nil {
-		start = *e.Start
-	}
-	if e.End != nil {
-		end = *e.End
-	}
+	start, end := markerKinds(e)
 	drawn := l.atDots(e, pts, start, end)
 	el := elem{Kind: "path", D: pathData(drawn), Class: cls, Tone: e.Tone, Start: l.marker(start), End: l.marker(end)}
+	if free.ok && e.graph == "" {
+		l.loose = append(l.loose, loosePath{
+			loose: free, e: e, pts: pts, path: len(l.paths), el: len(l.edgeEls),
+			stroke: len(l.strokes), labelled: e.Label != nil && e.At == nil,
+		})
+	}
 	l.edgeEls = append(l.edgeEls, el)
 	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing, graph: e.graph}
 	if e.Label != nil {
@@ -564,4 +575,331 @@ func middle(segs []seg) (x, y float64) {
 		}
 	}
 	return (best[0] + best[2]) / 2, (best[1] + best[3]) / 2
+}
+
+// markerKinds are the kinds of e's markers at its start and its end.
+func markerKinds(e *edge) (start, end string) {
+	start, end = "none", "arrow"
+	if e.Start != nil {
+		start = *e.Start
+	}
+	if e.End != nil {
+		end = *e.End
+	}
+	return start, end
+}
+
+// markLength is how long a marker of kind is along its run; 0 for none.
+func markLength(kind string) float64 {
+	for _, m := range markers {
+		if m.Kind == kind {
+			return m.W
+		}
+	}
+	return 0
+}
+
+// loose is a run of an edge that floe places, not where it is written: the run from pts[i] to pts[i+1], across (at
+// one y) or down (at one x), which may move within lo to hi; ok false for none.
+type loose struct {
+	i      int
+	across bool
+	lo, hi float64
+	ok     bool
+}
+
+// noLoose is no loose run: every run where the ends and via put it.
+var noLoose = loose{i: 0, across: false, lo: 0, hi: 0, ok: false}
+
+// between is the run at i between two ends at a and b, kept within them by the length of their markers.
+func between(i int, across bool, a, b float64, marks [2]float64) loose {
+	if a <= b {
+		return loose{i: i, across: across, lo: a + marks[0], hi: b - marks[1], ok: true}
+	}
+	return loose{i: i, across: across, lo: b + marks[1], hi: a - marks[0], ok: true}
+}
+
+// loosePath is an edge with a loose run, as keepOff moves it: its points as routed, its path, drawn element and span.
+type loosePath struct {
+	loose
+	e                *edge
+	pts              [][2]float64
+	path, el, stroke int
+	labelled         bool // its label stands in the middle of its longest run
+}
+
+// ruleGap is how far a loose run keeps off a rule beside it, and the step it moves by.
+const ruleGap = 4
+
+// rule is where a loose run across (or down) keeps out of: lo < y < hi (x) where it is beside from to to in x (y).
+type rule struct {
+	across   bool
+	lo, hi   float64
+	from, to float64
+}
+
+// keepOff moves the loose runs of the edges written by hand off the rules. Edges whose loose runs lie on one line
+// and leave one point or reach one (edges out of a part or into one, sharing the run) move as one. They move by steps
+// of ruleGap to the nearest place within all their bounds (the smaller of two as near) where each edge stays on the
+// canvas, runs through no part or text and crosses no edge (as the checks tell), and what is new of it keeps ruleGap
+// off every rule, part's or frame's edge and other edge's run along it; where there is none, they stay. Edges whose
+// label would stand on another run, the longest run changed, do not move there. The checks read the moved runs.
+// Edges are no rules, but an edge does not move along another.
+// LIMIT: an edge whose label's run would change at every place stays on the rule, and graph's and tree's edges are not
+// moved; move them too if they come to matter.
+func (l *layout) keepOff() {
+	done := make([]bool, len(l.loose))
+	for i := range l.loose {
+		if done[i] {
+			continue
+		}
+		group := l.sharing(i, done)
+		bands := l.beside(group)
+		for _, w := range l.places(group, bands) {
+			moved, ok := l.movedTo(group, w)
+			if !ok || !l.fitAll(group, moved, bands) {
+				continue
+			}
+			for k, q := range moved {
+				m := l.loose[group[k]]
+				l.paths[m.path] = q.p
+				l.strokes[m.stroke] = span(q.p.segs, q.p.what, q.p.at)
+				start, end := markerKinds(m.e)
+				l.edgeEls[m.el].D = pathData(l.atDots(m.e, q.pts, start, end))
+			}
+			break
+		}
+	}
+}
+
+// sharing are the loose edges from i on whose runs lie on i's line and leave or reach a point one of them does,
+// marked done.
+func (l *layout) sharing(i int, done []bool) []int {
+	group := []int{i}
+	done[i] = true
+	for grew := true; grew; {
+		grew = false
+		for j := i + 1; j < len(l.loose); j++ {
+			if done[j] {
+				continue
+			}
+			for _, g := range group {
+				if a, b := l.loose[g], l.loose[j]; a.across == b.across && a.at() == b.at() &&
+					(a.pts[0] == b.pts[0] || a.pts[len(a.pts)-1] == b.pts[len(b.pts)-1]) {
+					group, done[j], grew = append(group, j), true, true
+					break
+				}
+			}
+		}
+	}
+	return group
+}
+
+// at is where m's loose run is: its y across, its x down.
+func (m loosePath) at() float64 {
+	if m.across {
+		return m.pts[m.i][1]
+	}
+	return m.pts[m.i][0]
+}
+
+// beside are the bands what is new of group's moved edges keeps out of: the rules, and ruleGap about the parts'
+// and frames' edges, the dots and the runs of the edges not in group.
+// LIMIT: raw SVG is not measured, so an edge may move onto what it draws.
+func (l *layout) beside(group []int) []rule {
+	out := slices.Clone(l.rules)
+	for _, r := range slices.Concat(l.boxes, l.frames) {
+		for _, s := range []seg{
+			{r.x, r.y, r.x + r.w, r.y},
+			{r.x, r.y + r.h, r.x + r.w, r.y + r.h},
+			{r.x, r.y, r.x, r.y + r.h},
+			{r.x + r.w, r.y, r.x + r.w, r.y + r.h},
+		} {
+			out = append(out, bandOf(s, ruleGap))
+		}
+	}
+	// A dot is kept off all of it, as an edge on its centre looks to end at it.
+	for _, r := range l.marks {
+		out = append(out, rule{across: true, lo: r.y - ruleGap, hi: r.y + r.h + ruleGap, from: r.x, to: r.x + r.w},
+			rule{across: false, lo: r.x - ruleGap, hi: r.x + r.w + ruleGap, from: r.y, to: r.y + r.h})
+	}
+	for j, p := range l.paths {
+		if slices.ContainsFunc(group, func(g int) bool { return l.loose[g].path == j }) {
+			continue
+		}
+		for _, s := range p.segs {
+			if s[0] == s[2] || s[1] == s[3] {
+				out = append(out, bandOf(s, ruleGap))
+			}
+		}
+	}
+	return out
+}
+
+// bandOf is the band about s, a run across or down: ruleGap before it (above, left), after past it.
+func bandOf(s seg, after float64) rule {
+	before := float64(ruleGap)
+	if s[1] == s[3] {
+		return rule{across: true, lo: s[1] - before, hi: s[1] + after, from: min(s[0], s[2]), to: max(s[0], s[2])}
+	}
+	return rule{across: false, lo: s[0] - before, hi: s[0] + after, from: min(s[1], s[3]), to: max(s[1], s[3])}
+}
+
+// places are where the loose runs of group may go when a rule holds them, none when they are clear: just outside
+// each band along them, beside them where they run, within all their bounds, nearest first (the smaller of two as
+// near).
+func (l *layout) places(group []int, bands []rule) []float64 {
+	first := l.loose[group[0]]
+	v, across := first.at(), first.across
+	lo, hi, o0, o1 := math.Inf(-1), math.Inf(1), math.Inf(1), math.Inf(-1)
+	held := false
+	for _, g := range group {
+		m := l.loose[g]
+		s := seg{m.pts[m.i][0], m.pts[m.i][1], m.pts[m.i+1][0], m.pts[m.i+1][1]}
+		lo, hi = max(lo, m.lo), min(hi, m.hi)
+		held = held || inBand(l.rules, s)
+		_, a, b := runOf(s)
+		o0, o1 = min(o0, a), max(o1, b)
+	}
+	if !held {
+		return nil
+	}
+	var out []float64
+	for _, u := range bands {
+		if u.across != across || u.from >= o1 || o0 >= u.to {
+			continue
+		}
+		for _, w := range []float64{u.lo, u.hi} {
+			if w != v && w > lo && w < hi && !slices.Contains(out, w) {
+				out = append(out, w)
+			}
+		}
+	}
+	slices.SortFunc(out, func(a, b float64) int {
+		return cmp.Or(cmp.Compare(math.Abs(a-v), math.Abs(b-v)), cmp.Compare(a, b))
+	})
+	return out
+}
+
+// runOf is where s, a run across or down, is (its y, its x) and from where to where it runs along.
+func runOf(s seg) (at, a, b float64) {
+	if s[1] == s[3] {
+		return s[1], min(s[0], s[2]), max(s[0], s[2])
+	}
+	return s[0], min(s[1], s[3]), max(s[1], s[3])
+}
+
+// inBand reports whether s, a run across or down, lies in a band along it.
+func inBand(bands []rule, s seg) bool {
+	if s[0] != s[2] && s[1] != s[3] {
+		return false
+	}
+	across := s[1] == s[3]
+	w, o0, o1 := runOf(s)
+	return slices.ContainsFunc(bands, func(u rule) bool {
+		return u.across == across && u.lo < w && w < u.hi && u.from < o1 && o0 < u.to
+	})
+}
+
+// movedPath is a loose edge with its loose run moved: its points and its path.
+type movedPath struct {
+	pts [][2]float64
+	p   path
+}
+
+// movedTo is each edge of group with its loose run at w; false when one has its label and its longest run changes.
+func (l *layout) movedTo(group []int, w float64) ([]movedPath, bool) {
+	out := make([]movedPath, 0, len(group))
+	for _, g := range group {
+		m := l.loose[g]
+		pts := slices.Clone(m.pts)
+		c := 0
+		if m.across {
+			c = 1
+		}
+		pts[m.i][c], pts[m.i+1][c] = w, w
+		q := l.paths[m.path]
+		q.segs = segsOf(pts)
+		x0, y0 := middle(l.paths[m.path].segs)
+		if x1, y1 := middle(q.segs); m.labelled && (x1 != x0 || y1 != y0) {
+			return nil, false
+		}
+		out = append(out, movedPath{pts: pts, p: q})
+	}
+	return out, true
+}
+
+// fitAll reports whether every path of moved, group's edges moved, is as the checks take it with no mistake, the
+// others of moved as moved, and what is new of it lies in none of bands.
+// LIMIT: each place tried compares the edges moved with every part, text and edge (places × edges × runs); compare
+// only those near them if diagrams of hundreds of edges on rules get slow.
+func (l *layout) fitAll(group []int, moved []movedPath, bands []rule) bool {
+	all := slices.Clone(l.paths)
+	for k, q := range moved {
+		all[l.loose[group[k]].path] = q.p
+	}
+	canvas := l.canvas()
+	for k, q := range moved {
+		i := l.loose[group[k]].path
+		if !span(q.p.segs, "", "").inside(canvas) || len(l.throughs(q.p)) > 0 {
+			return false
+		}
+		for j, o := range all {
+			if j != i && crosses(q.p, o) {
+				return false
+			}
+		}
+		for _, s := range newRuns(q.p.segs, l.paths[i].segs) {
+			if inBand(bands, s) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// newRuns are the stretches of segs, runs across or down, that no run of was along them holds.
+func newRuns(segs, was []seg) []seg {
+	var out []seg
+	for _, s := range segs {
+		across := s[1] == s[3]
+		a, b := min(s[0], s[2]), max(s[0], s[2])
+		if !across {
+			a, b = min(s[1], s[3]), max(s[1], s[3])
+		}
+		left := [][2]float64{{a, b}}
+		for _, o := range was {
+			oa, ob := min(o[0], o[2]), max(o[0], o[2])
+			on := across && o[1] == s[1] && o[3] == s[1]
+			if !across {
+				oa, ob = min(o[1], o[3]), max(o[1], o[3])
+				on = o[0] == s[0] && o[2] == s[0]
+			}
+			if on {
+				left = cut(left, oa, ob)
+			}
+		}
+		for _, r := range left {
+			if across {
+				out = append(out, seg{r[0], s[1], r[1], s[1]})
+			} else {
+				out = append(out, seg{s[0], r[0], s[0], r[1]})
+			}
+		}
+	}
+	return out
+}
+
+// cut is spans with a to b cut out of them.
+func cut(spans [][2]float64, a, b float64) [][2]float64 {
+	var out [][2]float64
+	for _, r := range spans {
+		if r[0] < a {
+			out = append(out, [2]float64{r[0], min(r[1], a)})
+		}
+		if r[1] > b {
+			out = append(out, [2]float64{max(r[0], b), r[1]})
+		}
+	}
+	return out
 }

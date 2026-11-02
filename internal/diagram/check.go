@@ -41,7 +41,7 @@ func (l *layout) checked() error {
 // bar's and an axis's, a label part's in its region of a Venn diagram, minding only circles) are not kept off a
 // frame's edge; keep them off too if one strays.
 func (l *layout) checkPlacement() {
-	canvas := rect{x: 0, y: 0, w: l.w, h: l.h, what: "", at: ""}
+	canvas := l.canvas()
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
 		if !r.inside(canvas) {
 			l.tell("diagram_outside", []placed{{r.at, r.graph}}, r.what, num(l.w), num(l.h))
@@ -73,19 +73,37 @@ func (l *layout) checkPlacement() {
 // checkEdges reports edges running through boxes, labels or frame headings: an edge across a label hides part
 // of it behind the label's background, and one across text without a background strikes through it.
 func (l *layout) checkEdges() {
-	texts := slices.Concat(l.labels, l.heads)
 	for _, p := range l.paths {
-		for _, b := range l.boxes {
-			if p.runsThrough(b) {
-				l.tell("diagram_runs_through", []placed{{p.at, p.graph}, {b.at, b.graph}}, p.what, b.what)
-			}
-		}
-		for i, r := range texts {
-			if i != p.own && p.runsThrough(r) {
-				l.tell("diagram_runs_through", []placed{{p.at, p.graph}, {r.at, r.graph}}, p.what, r.what)
-			}
+		for _, r := range l.throughs(p) {
+			l.tell("diagram_runs_through", []placed{{p.at, p.graph}, {r.at, r.graph}}, p.what, r.what)
 		}
 	}
+}
+
+// throughs are the parts, then the texts but its own label, that p runs through.
+func (l *layout) throughs(p path) []rect {
+	var out []rect
+	for _, b := range l.boxes {
+		if p.runsThrough(b) {
+			out = append(out, b)
+		}
+	}
+	for i, r := range l.labels {
+		if i != p.own && p.runsThrough(r) {
+			out = append(out, r)
+		}
+	}
+	for _, r := range l.heads {
+		if p.runsThrough(r) {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// canvas is the canvas as a rect, for what must stay within it.
+func (l *layout) canvas() rect {
+	return rect{x: 0, y: 0, w: l.w, h: l.h, what: "", at: ""}
 }
 
 // checkCrossings reports edges crossing like an X, unless one of them allows it.
@@ -104,7 +122,7 @@ func (l *layout) crossPairs() iter.Seq2[path, path] {
 	return func(yield func(path, path) bool) {
 		for i, a := range l.paths {
 			for _, b := range l.paths[i+1:] {
-				if a.crossing || b.crossing || a.graph != "" && a.graph == b.graph {
+				if !crossable(a, b) {
 					continue
 				}
 				if !yield(a, b) {
@@ -113,6 +131,21 @@ func (l *layout) crossPairs() iter.Seq2[path, path] {
 			}
 		}
 	}
+}
+
+// crossable reports whether a and b are told when they cross: not two of one graph, whose crossings its layout
+// keeps to those of its ranks' order, nor one allowed to cross.
+func crossable(a, b path) bool {
+	return !a.crossing && !b.crossing && (a.graph == "" || a.graph != b.graph)
+}
+
+// crosses reports whether a crosses b, as checkCrossings tells it.
+func crosses(a, b path) bool {
+	if !crossable(a, b) {
+		return false
+	}
+	_, _, ok := firstCrossing(a, b)
+	return ok
 }
 
 // placed is where a thing is written, and the graph that laid it out ("" for one written by hand).

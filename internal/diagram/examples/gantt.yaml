@@ -9,13 +9,13 @@
 # diagram inspect measures it (5 of room each side included, from x = 11), so that it ends before
 # the bars at x = 200. A task that waits for another is joined to it by name, from the right of the
 # one before to the left of the next (fromSide: right, toSide: left), and the edge bends halfway
-# between them, at x = 200 + 8(a + b) for the day a the one before is over and the day b the next
-# starts. So a task leaves one free day after the last task it waits for (b=a+1): a + b is then odd,
-# never a multiple of 14, and the bend never lies on a week's line; for an edge from an earlier
-# task, keep a + b off the multiples of 14 too. A task with two or more edges out shares their first
-# run, and the edges into one task join on the way. The release is a dot on a row of its own, named
-# by the edges into it, which end at its outline with their arrows; its x is not on a week's line
-# either.
+# between them. Where the bend would lie on a week's line, floe moves it 4 off when there is room
+# between the bars for the move and the arrow; else it stays on the line. A task starts a day or
+# more after the last task it waits for: on the same day the bars' ends meet, and the edge runs
+# straight down with no room to bend. A task with two or more edges out shares their first run,
+# and the edges into one task join on the way. The release is a dot on a row of its own, named by
+# the edges into it, which end at its outline with their arrows; floe does not move an edge's end,
+# so the dot's x is kept off the weeks' lines by hand.
 width: 920
 height: 330
 title: { en: "The plan of one version of an app, week by week", ja: "あるアプリの 1 つの版の開発の予定（週ごと）" }

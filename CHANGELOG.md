@@ -485,6 +485,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a diagram's edge running along a grid line, an axis or a `line` where floe placed its run (between facing
+  sides, round two sides of one way, the two turns into a side): the run now keeps 4 off the lines of `axis` and `line`
+  parts, moved to the nearest place where the edge makes no new mistake, and stays where there is none.
 - Fix a diagram's mistakes, and `floe diagram inspect`, naming a part with no name by its English text, though
   another language's text decided its width, a frame with no name nor label as `frame ""`, and a dot by its centre
   though it had a name. A part with no name

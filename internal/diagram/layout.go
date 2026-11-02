@@ -94,6 +94,8 @@ type layout struct {
 	heads    []rect // frame headings, which edges may not cross
 	strokes  []rect // the spans of edges and lines, which must stay on the canvas
 	paths    []path
+	rules    []rule      // the lines of axes and line parts, which loose runs keep off (keepOff)
+	loose    []loosePath // the edges with a run floe placed
 	// The elements of the layers, drawn bottom to top; grid lines below every other edge, last first.
 	areaEls, gridEls, edgeEls, boxEls, labelEls []elem
 	markers                                     []string // the marker kinds the edges use, in the order of first use
@@ -121,6 +123,7 @@ func newLayout(s *spec, opts Options) *layout {
 	l := &layout{
 		s: s, opts: opts, id: "", problems: nil, failure: nil, names: map[string]target{}, circles: map[string]circle{},
 		boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, strokes: nil, paths: nil,
+		rules: nil, loose: nil,
 		areaEls: nil, gridEls: nil, edgeEls: nil, boxEls: nil, labelEls: nil, markers: nil, iconDefs: nil,
 		iconIDs: map[string]string{}, stacks: map[string]stack{}, w: written(s.Width), h: written(s.Height), strays: nil,
 	}
@@ -132,6 +135,7 @@ func newLayout(s *spec, opts Options) *layout {
 	l.failure = err
 	for _, it := range items {
 		l.name(it.at, it.p)
+		l.rules = append(l.rules, rulesOf(it.p)...)
 	}
 	for _, p := range s.Parts {
 		if lb := p.Label; lb != nil && lb.In != nil && lb.X == nil {
@@ -143,6 +147,7 @@ func newLayout(s *spec, opts Options) *layout {
 	for _, it := range items {
 		l.add(it.at, it.p)
 	}
+	l.keepOff()
 	if s.Width == 0 {
 		l.w = l.reach(func(r rect) float64 { return r.x + r.w }) + canvasPad
 	}
@@ -708,19 +713,56 @@ func (l *layout) addBar(b *bar, at string) {
 	}
 }
 
-func (l *layout) addAxis(a *axis, at string) {
-	runs := []seg{{a.X1, a.Y, a.X2, a.Y}}
-	l.edgeEls = append(l.edgeEls, lineEl(a.X1, a.Y, a.X2, a.Y, "axis"))
+// tickLength is how far below an axis its ticks reach.
+const tickLength = 5
+
+// axisRuns are the lines axis a draws: itself, its grid's lines (none without grid) and its ticks.
+func axisRuns(a *axis) (line seg, grid, ticks []seg) {
 	for _, t := range a.Ticks {
 		if a.Grid != nil {
-			runs = append(runs, seg{t.X, *a.Grid, t.X, a.Y})
-			l.gridEls = append(l.gridEls, lineEl(t.X, *a.Grid, t.X, a.Y, "grid"))
+			grid = append(grid, seg{t.X, *a.Grid, t.X, a.Y})
 		}
-		runs = append(runs, seg{t.X, a.Y, t.X, a.Y + 5})
-		l.edgeEls = append(l.edgeEls, lineEl(t.X, a.Y, t.X, a.Y+5, "axis"))
-		l.label(at, t.Text, nil, t.X, a.Y+17, "middle", true, false)
+		ticks = append(ticks, seg{t.X, a.Y, t.X, a.Y + tickLength})
 	}
+	return seg{a.X1, a.Y, a.X2, a.Y}, grid, ticks
+}
+
+func (l *layout) addAxis(a *axis, at string) {
+	line, grid, ticks := axisRuns(a)
+	l.edgeEls = append(l.edgeEls, lineEl(line[0], line[1], line[2], line[3], "axis"))
+	for _, g := range grid {
+		l.gridEls = append(l.gridEls, lineEl(g[0], g[1], g[2], g[3], "grid"))
+	}
+	for i, t := range ticks {
+		l.edgeEls = append(l.edgeEls, lineEl(t[0], t[1], t[2], t[3], "axis"))
+		l.label(at, a.Ticks[i].Text, nil, t[0], a.Y+17, "middle", true, false)
+	}
+	runs := slices.Concat([]seg{line}, grid, ticks)
 	l.strokes = append(l.strokes, span(runs, fmt.Sprintf("axis %s-%s at %s", num(a.X1), num(a.X2), num(a.Y)), at))
+}
+
+// rulesOf are the rules part p draws: an axis's line, grid and ticks, and a line across or down. Each keeps a loose
+// run ruleGap off it, and an axis's line with ticks, past them below.
+// LIMIT: edges are no rules: edges into one part share their runs on purpose, and one written later is placed after.
+func rulesOf(p part) []rule {
+	switch {
+	case p.Axis != nil:
+		line, grid, ticks := axisRuns(p.Axis)
+		out := make([]rule, 0, 1+len(grid)+len(ticks))
+		below := float64(ruleGap)
+		if len(ticks) > 0 {
+			below += tickLength
+		}
+		out = append(out, bandOf(line, below))
+		for _, s := range slices.Concat(grid, ticks) {
+			out = append(out, bandOf(s, ruleGap))
+		}
+		return out
+	case p.Line != nil && (p.Line.X1 == p.Line.X2 || p.Line.Y1 == p.Line.Y2):
+		n := p.Line
+		return []rule{bandOf(seg{n.X1, n.Y1, n.X2, n.Y2}, ruleGap)}
+	}
+	return nil
 }
 
 func lineEl(x1, y1, x2, y2 float64, cls string) elem {

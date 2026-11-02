@@ -1078,3 +1078,285 @@ func TestIconLookedUpOnce(t *testing.T) {
 		t.Errorf("an icon placed twice: %d lookups, %s; want 1", n, mistakes)
 	}
 }
+
+// The runs floe places (between facing sides, round sides of one way, the two turns halfway into a side) keep
+// ruleGap off the lines of axes and line parts along them, where they move with no new mistake.
+func TestEdgesOffRules(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ src, want string }{
+		// g1: a run between facing sides, on a grid line, moves to the nearer place, the smaller of two as near.
+		{`width: 500
+height: 140
+title: g1
+parts:
+  - axis: { x1: 200, x2: 424, y: 110, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+`, `edge decide→design M296,44 H308 V80 H328`},
+		// g2: a run round two sides of one way moves outward only; a line written after the edge is kept off too.
+		{`width: 500
+height: 160
+title: g2
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 20, y: 100, w: 60, h: 30, rows: [b] }
+  - edge: { from: a, fromSide: right, to: b, toSide: right }
+  - line: { x1: 100, y1: 0, x2: 100, y2: 160 }
+`, `edge a→b M80,35 H104 V115 H80`},
+		// g3: a run across on an axis with no ticks moves above it.
+		{`width: 300
+height: 200
+title: g3
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 160, y: 140, w: 60, h: 30, rows: [b] }
+  - edge: { from: a, fromSide: bottom, to: b, toSide: top }
+  - axis: { x1: 10, x2: 290, y: 95, ticks: [] }
+`, `edge a→b M50,50 V91 H190 V140`},
+		// g4: a run between facing sides on a line part.
+		{`width: 300
+height: 160
+title: g4
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 120, y: 100, w: 60, h: 30, rows: [b] }
+  - line: { x1: 100, y1: 0, x2: 100, y2: 160 }
+  - edge: { from: a, fromSide: right, to: b, toSide: left }
+`, `edge a→b M80,35 H96 V115 H120`},
+		// e1: no room between the ends inside their markers: it stays.
+		{`width: 300
+height: 160
+title: e1
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 88, y: 100, w: 60, h: 30, rows: [b] }
+  - line: { x1: 84, y1: 0, x2: 84, y2: 160 }
+  - edge: { from: a, fromSide: right, to: b, toSide: left }
+`, `edge a→b M80,35 H84 V115 H88`},
+		// e2: outward is off the canvas written: it stays.
+		{`width: 102
+height: 160
+title: e2
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 20, y: 100, w: 60, h: 30, rows: [b] }
+  - edge: { from: a, fromSide: right, to: b, toSide: right }
+  - line: { x1: 100, y1: 0, x2: 100, y2: 160 }
+`, `edge a→b M80,35 H100 V115 H80`},
+		// e3: an axis with ticks is kept off past them below, so the run moves above.
+		{`width: 300
+height: 200
+title: e3
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 160, y: 150, w: 60, h: 30, rows: [b] }
+  - edge: { from: a, fromSide: bottom, to: b, toSide: top }
+  - axis: { x1: 10, x2: 290, y: 100, ticks: [[10, "0"], [150, "1"], [290, "2"]] }
+`, `edge a→b M50,50 V96 H190 V150`},
+		// e4: two edges out of one part sharing the run move as one.
+		{`width: 500
+height: 230
+title: e4
+parts:
+  - axis: { x1: 200, x2: 424, y: 200, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - bar: { name: api, x1: 328, x2: 408, y: 140 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+  - edge: { from: decide, fromSide: right, to: api, toSide: left }
+`, `edge decide→design M296,44 H308 V80 H328
+edge decide→api M296,44 H308 V140 H328`},
+		// e5: both move right when a part holds the left for one of them.
+		{`width: 500
+height: 230
+title: e5
+parts:
+  - axis: { x1: 200, x2: 424, y: 200, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - bar: { name: api, x1: 328, x2: 408, y: 140 }
+  - box: { name: x, x: 270, y: 100, w: 40, h: 30, rows: [x] }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+  - edge: { from: decide, fromSide: right, to: api, toSide: left }
+`, `edge decide→design M296,44 H316 V80 H328
+edge decide→api M296,44 H316 V140 H328`},
+		// e6: the label stands on the run that would move: it stays.
+		{`width: 500
+height: 140
+title: e6
+parts:
+  - axis: { x1: 200, x2: 424, y: 110, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left, label: next }
+`, `edge decide→design M296,44 H312 V80 H328`},
+		// f1: a part's edge along the place nearer holds it.
+		{`width: 500
+height: 140
+title: f1
+parts:
+  - axis: { x1: 200, x2: 424, y: 110, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+  - box: { name: k, x: 268, y: 56, w: 40, h: 30, rows: [k] }
+`, `edge decide→design M296,44 H316 V80 H328`},
+		// f2: another edge's run along the place nearer holds it.
+		{`width: 500
+height: 140
+title: f2
+parts:
+  - axis: { x1: 200, x2: 424, y: 110, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+  - edge: { from: [308, 52], to: [308, 76], straight: true, end: none }
+`, `edge decide→design M296,44 H316 V80 H328
+edge [308,52]→[308,76] M308,52 V76`},
+		// f3: moving it changes the run the label stands on: it stays.
+		{`width: 400
+height: 160
+title: f3
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 300, y: 100, w: 60, h: 30, rows: [b] }
+  - line: { x1: 190, y1: 0, x2: 190, y2: 160 }
+  - edge: { from: a, fromSide: right, to: b, toSide: left, label: next }
+`, `edge a→b M80,35 H190 V115 H300`},
+		// f4: the run made longer would lie along a line part: it stays.
+		{`width: 500
+height: 160
+title: f4
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 20, y: 100, w: 60, h: 30, rows: [b] }
+  - edge: { from: a, fromSide: right, to: b, toSide: right }
+  - line: { x1: 100, y1: 0, x2: 100, y2: 160 }
+  - line: { x1: 101, y1: 35, x2: 200, y2: 35 }
+`, `edge a→b M80,35 H100 V115 H80`},
+		// f5: an axis with no ticks is kept off by ruleGap below.
+		{`width: 300
+height: 200
+title: f5
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 160, y: 144, w: 60, h: 30, rows: [b] }
+  - edge: { from: a, fromSide: bottom, to: b, toSide: top }
+  - axis: { x1: 10, x2: 290, y: 95, ticks: [] }
+`, `edge a→b M50,50 V99 H190 V144`},
+		// f6: with ticks, past them below.
+		{`width: 300
+height: 200
+title: f6
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 160, y: 144, w: 60, h: 30, rows: [b] }
+  - edge: { from: a, fromSide: bottom, to: b, toSide: top }
+  - axis: { x1: 10, x2: 290, y: 95, ticks: [[10, ""], [290, ""]] }
+`, `edge a→b M50,50 V91 H190 V144`},
+		// f7: a canvas whose size is left out holds anything below and right.
+		{`title: f7
+parts:
+  - axis: { x1: 200, x2: 424, y: 110, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+`, `edge decide→design M296,44 H308 V80 H328`},
+		// h1: the two turns halfway into a side, after via, move as well.
+		{`width: 300
+height: 200
+title: h1
+parts:
+  - box: { name: b, x: 200, y: 100, w: 60, h: 30, rows: [b] }
+  - line: { x1: 185, y1: 0, x2: 185, y2: 200 }
+  - edge: { from: [170, 150], via: [[170, 60]], to: b, toSide: left }
+`, `edge [170,150]→b M170,150 V60 H181 V115 H200`},
+		// h2: a run ruleGap off a line stays.
+		{`width: 500
+height: 140
+title: h2
+parts:
+  - axis: { x1: 200, x2: 424, y: 110, ticks: [[200, ""], [316, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+`, `edge decide→design M296,44 H312 V80 H328`},
+		// h3: a slanting line is no rule.
+		{`width: 300
+height: 160
+title: h3
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 120, y: 100, w: 60, h: 30, rows: [b] }
+  - line: { x1: 60, y1: 0, x2: 140, y2: 160 }
+  - edge: { from: a, fromSide: right, to: b, toSide: left }
+`, `edge a→b M80,35 H100 V115 H120`},
+		// f8: a start's marker keeps the run off that end too: no room, it stays.
+		{`width: 300
+height: 160
+title: f8
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 104, y: 100, w: 60, h: 30, rows: [b] }
+  - line: { x1: 92, y1: 0, x2: 92, y2: 160 }
+  - edge: { from: a, fromSide: right, to: b, toSide: left, start: arrow }
+`, `edge a→b M80,35 H92 V115 H104`},
+		// f8b: with no marker at the start, the run moves nearer it.
+		{`width: 300
+height: 160
+title: f8b
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 104, y: 100, w: 60, h: 30, rows: [b] }
+  - line: { x1: 92, y1: 0, x2: 92, y2: 160 }
+  - edge: { from: a, fromSide: right, to: b, toSide: left }
+`, `edge a→b M80,35 H88 V115 H104`},
+		// f9: the place nearer runs through a label: it moves the other way.
+		{`width: 500
+height: 140
+title: f9
+parts:
+  - axis: { x1: 200, x2: 424, y: 110, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+  - label: { text: x, x: 306, y: 62, anchor: end }
+`, `edge decide→design M296,44 H316 V80 H328`},
+		// f10: the place nearer crosses another edge: it moves the other way.
+		{`width: 500
+height: 140
+title: f10
+parts:
+  - axis: { x1: 200, x2: 424, y: 110, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+  - edge: { from: [302, 62], to: [310, 62], end: none }
+`, `edge decide→design M296,44 H316 V80 H328
+edge [302,62]→[310,62] M302,62 H310`},
+		// f11: the place nearer runs over a dot: it moves the other way.
+		{`width: 500
+height: 140
+title: f11
+parts:
+  - axis: { x1: 200, x2: 424, y: 110, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+  - dot: { cx: 304, cy: 62 }
+`, `edge decide→design M296,44 H316 V80 H328`},
+	} {
+		got, mistakes := draw(t, c.src, inspect)
+		var edges []string
+		for line := range strings.Lines(got) {
+			if strings.HasPrefix(line, "edge ") {
+				edges = append(edges, strings.TrimSuffix(line, "\n"))
+			}
+		}
+		if mistakes != "" || strings.Join(edges, "\n") != c.want {
+			t.Errorf("%s\n  drew %q %s\n  want %q", c.src, edges, mistakes, c.want)
+		}
+	}
+}
