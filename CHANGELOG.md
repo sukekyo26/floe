@@ -462,6 +462,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix swiss's cards keeping their left line on the first card of a wrapped line while the first card of all had none:
+  every card has the same line now (the first card's text stands 1px further right, past it). In a band, swiss's
+  cards' lines and numbers are in the band's text colour, not black on its red.
 - Fix the next page waiting long to show its content while many pages' tabs were open, and the pages opened after
   the sixth not reloading when changed: each open tab held a connection to the server, and Chrome opens six at most
   to one server. A page holds none now, and asks whether it changed every second while it is shown.
