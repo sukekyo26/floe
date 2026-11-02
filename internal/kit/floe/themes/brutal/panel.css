@@ -1,1 +1,1 @@
-:scope { border: var(--brutal-frame); --floe-shadow-color: var(--fg); }
+:scope { border: var(--brutal-frame) var(--fg); --floe-shadow-color: var(--fg); }

@@ -1,1 +1,1 @@
-:scope { border: var(--retro-frame); }
+:scope { border: var(--retro-frame) var(--fg); }

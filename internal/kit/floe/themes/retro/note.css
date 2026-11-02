@@ -1,2 +1,2 @@
 :scope { border: 2px solid var(--tone); }
-:scope::before { border: var(--retro-frame); }
+:scope::before { border: 2px solid var(--fg); }

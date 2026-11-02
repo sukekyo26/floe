@@ -1,4 +1,4 @@
 :scope { border: 0; padding-inline: 1.4rem; --table-rule: 1px solid var(--washi-hair);
   --table-head-bg: none; --table-head-fg: var(--fg); }
-:scope table { border-top: var(--washi-frame); border-bottom: var(--washi-frame); }
+:scope table { border-top: var(--washi-frame) var(--fg); border-bottom: var(--washi-frame) var(--fg); }
 :scope thead th { border-bottom: 1px solid var(--fg); font-size: 0.9rem; letter-spacing: 0.1em; }

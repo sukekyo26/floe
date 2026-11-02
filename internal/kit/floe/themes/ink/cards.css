@@ -1,2 +1,2 @@
-.card { border: var(--ink-frame); --floe-shadow-color: var(--fg); }
+.card { border: var(--ink-frame) var(--fg); --floe-shadow-color: var(--fg); }
 :scope.numbered > .card::before { content: none; }

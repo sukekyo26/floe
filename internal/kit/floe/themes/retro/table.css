@@ -1,3 +1,3 @@
-:scope thead th { border-bottom: var(--retro-frame); font-family: var(--display); font-size: 0.95rem; }
+:scope thead th { border-bottom: var(--retro-frame) var(--fg); font-family: var(--display); font-size: 0.95rem; }
 :scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--accent-soft) 45%, var(--surface)); }
 :scope { --table-head-bg: none; --table-head-fg: var(--fg); --table-rule: none; }

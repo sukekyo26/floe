@@ -168,10 +168,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 @layer floe.palette {
 /* Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink */
 :scope {
-  /* The frame its boxes draw, and a line inside one drawn alike, read where they are drawn.
-     LIMIT: its colour is read here at the root, so a part or template of one's own setting --fg or --accent within
-     leaves the frame in the root's colour (floe's CSS sets neither below the palette) */
-  --ink-frame: 1.5px solid var(--fg);
+  /* Width and style of this theme's box frames, and of lines drawn inside boxes alike */
+  --ink-frame: 1.5px solid;
   --bg: #fafaf7; --surface: #fff; --fg: #141414; --muted: #5a5a5a; --line: #d9d9d4;
   --accent: #2b3a67; --accent-soft: #e3e7f1;
   --good: #1e6b43; --good-soft: #dcebe2; --warn: #8a5a10; --warn-soft: #f3e7d1; --bad: #a8261e; --bad-soft: #f6e0de;
@@ -528,14 +526,14 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: var(--ink-frame); }
+:scope { border: var(--ink-frame) var(--fg); }
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { border: var(--ink-frame); }
+:scope { border: var(--ink-frame) var(--fg); }
 }
 }
 </style>
@@ -561,7 +559,7 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-.card { border: var(--ink-frame); --floe-shadow-color: var(--fg); }
+.card { border: var(--ink-frame) var(--fg); --floe-shadow-color: var(--fg); }
 :scope.numbered > .card::before { content: none; }
 }
 }

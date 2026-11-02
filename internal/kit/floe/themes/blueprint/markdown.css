@@ -1,4 +1,4 @@
 blockquote > * { --face: initial; --on-face: initial; }
-blockquote { background: var(--bp-squares), var(--surface); border: var(--bp-frame); padding: 0.9rem 1.2rem; color: var(--fg); }
+blockquote { background: var(--bp-squares), var(--surface); border: var(--bp-frame) var(--accent); padding: 0.9rem 1.2rem; color: var(--fg); }
 /* A short rule over a quote, as a callout's leader on a drawing */
 blockquote::before { content: ""; display: block; width: 2rem; height: 0; margin-bottom: 0.6rem; border-top: 2px solid var(--accent); }

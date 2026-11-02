@@ -1,9 +1,7 @@
 /* Blue ink on squared paper, its sections ruled in the ink */
 :scope {
-  /* The frame its boxes draw, and a line inside one drawn alike, read where they are drawn.
-     LIMIT: its colour is read here at the root, so a part or template of one's own setting --fg or --accent within
-     leaves the frame in the root's colour (floe's CSS sets neither below the palette) */
-  --bp-frame: 1.5px solid var(--accent);
+  /* Width and style of this theme's box frames, and of lines drawn inside boxes alike */
+  --bp-frame: 1.5px solid;
   --bg: #eef4fc; --surface: #f7faff; --fg: #12284d; --muted: #4a5f80; --line: #c5d5ec;
   --accent: #1f56b5; --accent-soft: #dde8fa;
   --good: #1c764d; --good-soft: #dcefe5; --warn: #925d00; --warn-soft: #f6ead3; --bad: #c0302b; --bad-soft: #fbe3e1;
@@ -13,6 +11,6 @@
     linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px,
     linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px) 0 0 / 16px 16px;
   --page-bg: var(--bp-squares), var(--bg);
-  --rule: 1.5px solid var(--accent);
+  --rule: var(--bp-frame) var(--accent);
   --radius: 0; --radius-small: 0; --radius-pill: 0;
 }

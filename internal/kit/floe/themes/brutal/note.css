@@ -1,5 +1,5 @@
 :scope {
-  border: var(--brutal-frame); background: var(--surface); --floe-mark: 2.15rem;
+  border: var(--brutal-frame) var(--fg); background: var(--surface); --floe-mark: 2.15rem;
   --floe-shadow-color: var(--tone-fill);
 }
 :scope::before {
