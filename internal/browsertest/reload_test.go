@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -59,7 +60,35 @@ func TestUIReload(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	check(t, "reload", out, "1|2|Live · floe|true|true,true|own own none /a/no-such/|true|true")
 }
 
-// leave clicks links out of a page in the frame: a target=_blank tab runs in the other site's origin
+// Pages held open past the six connections Chrome opens to one server still reload when republished: they hold no
+// connection. Each is in a sandboxed iframe of one page, as the frame shows it, and tells the page when it loads. Each
+// declares globals named like the ones the appended script uses (document cannot be shadowed); it must not pick them up.
+// LIMIT: the wait of the next tab to load (the user's case) is not checked: headless Chrome counts a sandboxed page's
+// requests apart from a tab's own, and does not wait there.
+func TestUIReloadMany(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	publish := func(slug, n string) {
+		s.floe(t, "publish", s.page(t, "many/"+slug+".yaml", slug, "<script>const fetch = null; const AbortSignal = null; "+
+			"const setInterval = null; parent.postMessage('"+slug+" "+n+"', '*')</script>"),
+			"--slug", slug)
+	}
+	const held = 8
+	for i := range held {
+		publish("p"+strconv.Itoa(i), "1")
+	}
+	b.navigate("/")
+	b.eval("(window.heard = [], addEventListener('message', (e) => window.heard.push(e.data)), true)")
+	for i := range held {
+		b.eval("(() => { const f = document.createElement('iframe'); f.src = '/a/p" + strconv.Itoa(i) + "/?raw'; document.body.append(f); return true })()")
+		b.until("page "+strconv.Itoa(i)+" to load", "window.heard.includes('p"+strconv.Itoa(i)+" 1')")
+	}
+	last := "p" + strconv.Itoa(held-1)
+	publish(last, "2")
+	b.until("the last page to reload", "window.heard.includes('"+last+" 2')")
+}
+
+// leave clicks links out of a page in the frame// leave clicks links out of a page in the frame: a target=_blank tab runs in the other site's origin
 // out of the sandbox, a link without target opens a new tab too (most sites refuse to be framed), a
 // link within the server stays in the frame, and a link to a frame URL moves the whole tab. The other
 // site refuses framing. It returns each tab's origin (none when no tab opened) and where the tab moved.

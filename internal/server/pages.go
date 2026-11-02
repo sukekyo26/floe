@@ -67,8 +67,8 @@ var errNoPage = errors.New("no such page")
 // rebuild); for a linked file, its mark; for a linked data file, the generation of the drawing, its mark and its
 // meta.json's updatedAt (a link made again, another theme). m is slug's meta.json as it was read for the content
 // served with it, so that both are of one publish; "" when there is no page.
-// LIMIT: each open tab reads meta.json and stats a file every second (version is all it does). Fold the versions
-// into the server's watching if tabs come to be hundreds.
+// LIMIT: each tab shown reads meta.json and stats a file every second it asks (version is all it does). Fold the
+// versions into the server's watching if tabs come to be hundreds.
 // LIMIT: a linked data file's images, and the files under a linked HTML file, are not in its version: changing
 // only them reloads no tab (the user chose so). Save the data file again, or reload the tab.
 func (s *Server) version(slug string, m *store.Meta, rest string) string {
@@ -182,15 +182,15 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()
 	csp := pageCSP
 	if got.drawn {
-		// The reload script's stream only, under the name the page was opened by: the management API is
+		// The reload script's asking only, under the name the page was opened by: the management API is
 		// on the same port.
-		csp += "; " + draw.CutOff("http://"+r.Host+"/api/events/")
+		csp += "; " + draw.CutOff("http://"+r.Host+"/api/changed/")
 	}
 	h.Set("Content-Security-Policy", csp)
 	h.Set("X-Content-Type-Options", "nosniff")
 	tail := ""
 	if got.typ == htmlType {
-		tail = servedScript(slug, rest, version)
+		tail = servedScript(slug, rest, version, s.every)
 	}
 	stream(w, got.typ, got.body, tail)
 }
@@ -298,10 +298,15 @@ const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => 
 	"tell(); window.addEventListener('hashchange', tell); }"
 
 // servedScript is appended to a served page only: it reloads the open tab when the page changes (a publish, a
-// rebuild, a linked file saved), and handles links inside the frame. The version the page was served from goes
-// into since, so a change before the stream connects is not missed.
-func servedScript(slug, rest, version string) string {
-	u := "/api/events/" + slug
+// rebuild, a linked file saved), and handles links inside the frame. The page holds no connection to the server,
+// as Chrome opens six at most to one server and an open tab holding one would make the next pages wait: while it is
+// shown, it asks every every whether the version it was served from (since) is still the page's, each ask cut off
+// after 5 s so that one left hanging (a connection half open after sleep) does not stop the asking, and once more
+// when it is shown again. A tab not shown asks nothing, and reloads when shown.
+// LIMIT: that a tab not shown asks nothing is not checked in a browser: headless Chrome showed no tab hidden. Were it
+// broken, a tab not shown asks every second, holding nothing.
+func servedScript(slug, rest, version string, every time.Duration) string {
+	u := "/api/changed/" + slug
 	if rest != "" {
 		parts := strings.Split(rest, "/")
 		for i, p := range parts {
@@ -310,45 +315,36 @@ func servedScript(slug, rest, version string) string {
 		u += "/" + strings.Join(parts, "/")
 	}
 	lit, _ := json.Marshal(u + "?since=" + url.QueryEscape(version)) //nolint:errcheck // a string always encodes
-	// The stream is closed before reloading; a slow reload would otherwise get the event again.
-	return "\n<script>{const es = new window.EventSource(" + string(lit) + ");" +
-		"es.addEventListener('reload', () => { es.close(); location.reload(); });" + leaveFrame + "}</script>\n"
+	// What a page could shadow is read through window, as in leaveFrame. busy stays set once reloading.
+	return "\n<script>{const u = " + string(lit) + "; let busy = false;" +
+		"const look = async () => { if (busy || window.document.hidden) return; busy = true;" +
+		"try { const r = await window.fetch(u, { cache: 'no-store', signal: window.AbortSignal.timeout(5000) });" +
+		"if ((await r.text()) === 'changed') { location.reload(); return; } } catch {}" +
+		"busy = false; };" +
+		"window.setInterval(look, " + strconv.FormatInt(every.Milliseconds(), 10) + ");" +
+		"window.document.addEventListener('visibilitychange', look); look();" + leaveFrame + "}</script>\n"
 }
 
-// watch is the event stream of a page. Pages subscribe from the sandbox (Origin: null), so CORS opens
-// to null only; any sandboxed iframe of another site can claim null too, so the event says nothing but
-// "changed". It compares versions, and draws nothing.
-func (s *Server) watch(w http.ResponseWriter, r *http.Request) {
+// changed answers whether the page of slug (of rest under a link) is no longer of the version since: "changed" or
+// "same". Pages ask from the sandbox (Origin null), so CORS opens to null only; any sandboxed iframe of another site
+// can claim null too, so it says nothing but that. No page is "changed" whatever since is: a version holds this
+// server's id, new each start, so "same" comes only to a page served, and whether a slug is there is not told. It
+// compares versions, and draws nothing.
+func (s *Server) changed(w http.ResponseWriter, r *http.Request) {
 	slug, rest := r.PathValue("slug"), r.PathValue("rest")
 	if !store.ValidSlug(slug) {
 		notFound(w)
 		return
 	}
-	since := r.URL.Query().Get("since")
+	answer := "same"
+	if v := s.version(slug, s.cfg.Store.ReadMeta(slug), rest); v == "" || v != r.URL.Query().Get("since") {
+		answer = "changed"
+	}
 	h := w.Header()
-	h.Set("Content-Type", "text/event-stream")
+	h.Set("Content-Type", "text/plain; charset=utf-8")
 	h.Set("Cache-Control", "no-store")
 	h.Set("Access-Control-Allow-Origin", "null")
-	w.WriteHeader(http.StatusOK)
-	rc := http.NewResponseController(w)
-	if _, err := io.WriteString(w, "retry: 1000\n\n"); err != nil || rc.Flush() != nil {
-		return
-	}
-	ticker := time.NewTicker(s.every)
-	defer ticker.Stop()
-	for {
-		if s.version(slug, s.cfg.Store.ReadMeta(slug), rest) != since {
-			_, _ = io.WriteString(w, "event: reload\ndata: changed\n\n") //nolint:errcheck // closing anyway
-			return
-		}
-		select {
-		case <-r.Context().Done():
-			return
-		case <-s.stopping.Done():
-			return
-		case <-ticker.C:
-		}
-	}
+	_, _ = io.WriteString(w, answer) //nolint:errcheck // the page asks again
 }
 
 // mistakes is the page shown for a linked data file with mistakes, in the reader's language.

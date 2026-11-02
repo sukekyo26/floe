@@ -18,7 +18,7 @@ import (
 )
 
 // A page drawn from a data file sends nothing out with fetch, XHR, an image or a form, reaches no
-// management API, and still reloads on the event stream; its download sends nothing out either. Linked
+// management API, and still reloads by asking whether it changed; its download sends nothing out either. Linked
 // HTML is not cut off, which shows that a request that got out would be seen.
 func TestUICutOff(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)

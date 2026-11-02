@@ -188,28 +188,3 @@ func TestStopFinishesRequests(t *testing.T) {
 		})
 	}
 }
-
-// An event stream open when the server is asked to stop is closed, so that stopping does not wait for it.
-func TestStopEndsStreams(t *testing.T) {
-	t.Parallel()
-
-	s, _ := watched(t, false)
-	addr, done := serving(t.Context(), t, s)
-	since := s.version("x", s.cfg.Store.ReadMeta("x"), "")
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/api/events/x?since="+since, http.NoBody)
-	if err != nil {
-		t.Fatal(err)
-	}
-	res, err := client.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	if _, err = bufio.NewReader(res.Body).ReadString('\n'); err != nil {
-		t.Fatal(err)
-	}
-	if code := askStop(t, addr, `{"pid": `+strconv.Itoa(os.Getpid())+`}`); code != http.StatusNoContent {
-		t.Fatalf("stop = %d", code)
-	}
-	ended(t, done)
-}
