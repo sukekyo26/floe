@@ -58,14 +58,27 @@ func rules(toks []token) ([]string, []int) {
 	return in, blocks
 }
 
-// declarations returns each declaration in src of a property that want takes, by name.
+// declarations returns each declaration in src of a property that want takes, by name: a name at the start of a block or
+// after a ;, a colon, and the value up to the ; or } that ends it. What reaches a { is a rule's prelude (li:has(…) {), not a
+// declaration.
 func declarations(src []byte, want func(name string) bool) map[string][]declaration {
 	found := map[string][]declaration{}
 	toks := lex(src)
 	in, blocks := rules(toks)
+	start := true
 	for i := 0; i < len(toks); i++ {
+		switch toks[i].tt {
+		case css.WhitespaceToken, css.CommentToken:
+			continue
+		case css.LeftBraceToken, css.SemicolonToken, css.RightBraceToken:
+			start = true
+			continue
+		default:
+		}
+		begins := start
+		start = false
 		name := strings.ToLower(string(toks[i].data))
-		if (toks[i].tt != css.IdentToken && toks[i].tt != css.CustomPropertyNameToken) || !want(name) {
+		if !begins || (toks[i].tt != css.IdentToken && toks[i].tt != css.CustomPropertyNameToken) || !want(name) {
 			continue
 		}
 		j := i + 1
@@ -76,10 +89,14 @@ func declarations(src []byte, want func(name string) bool) map[string][]declarat
 			continue
 		}
 		var value []token
-		depth := 0
+		depth, prelude := 0, false
 		for j++; j < len(toks); j++ {
 			tt := toks[j].tt
 			if depth == 0 && (tt == css.SemicolonToken || tt == css.RightBraceToken) {
+				break
+			}
+			if depth == 0 && tt == css.LeftBraceToken {
+				prelude = true
 				break
 			}
 			switch tt {
@@ -93,8 +110,11 @@ func declarations(src []byte, want func(name string) bool) map[string][]declarat
 			}
 			value = append(value, toks[j])
 		}
+		if prelude {
+			continue
+		}
 		found[name] = append(found[name], declaration{value: value, rule: in[i], block: blocks[i]})
-		i = j
+		i = j - 1
 	}
 	return found
 }

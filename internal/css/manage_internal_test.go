@@ -1,6 +1,7 @@
 package css
 
 import (
+	"maps"
 	"os"
 	"regexp"
 	"slices"
@@ -15,9 +16,12 @@ import (
 // corner less the room between them), and the shapes.
 var manageCorners = []string{
 	"var(--corner)", "var(--corner-menu)", "var(--corner-small)",
-	"calc(var(--corner)-var(--menu-pad))", "calc(var(--corner-menu)-var(--menu-pad))",
+	"calc(var(--corner) - var(--menu-pad))", "calc(var(--corner-menu) - var(--menu-pad))",
 	"999px", "50%", "0",
 }
+
+// manageSteps are the steps :root sets, which no other rule sets again.
+var manageSteps = []string{"--corner", "--corner-menu", "--corner-small", "--menu-pad", "--text-label", "--text-small", "--text"}
 
 // manageText are the management page's steps of text; a heading of 1rem or more and an em of 1 or more are written as
 // numbers.
@@ -42,10 +46,11 @@ var colorFunctions = []string{
 // svgColors are the SVG attributes that take a color.
 var svgColors = []string{"fill", "stroke", "stop-color", "flood-color", "lighting-color", "color"}
 
-// TestManageSheet keeps the management page's (ui.html's) corners and text to the steps in its :root, and its colors in
-// :root alone: a value outside :root writes no color of its own (a # color or a color function), nor does an SVG
-// attribute of its markup; the icon's data URI, a string, writes them out.
-// LIMIT: a color's name (white) is not read.
+// TestManageSheet keeps the management page's (ui.html's) corners and text to the steps in its :root, set nowhere else,
+// and its colors in :root alone: a value outside :root writes no color of its own (a # color or a color function), in the
+// style and in an element's style attribute, nor does an SVG attribute of its markup.
+// LIMIT: a color's name (white) is not read, nor the HTML the script builds in its strings.
+// LIMIT: corners are read in border-…-radius alone, not in -webkit-border-radius nor clip-path's inset(… round …).
 func TestManageSheet(t *testing.T) {
 	t.Parallel()
 
@@ -59,45 +64,82 @@ func TestManageSheet(t *testing.T) {
 	}
 	var style string
 	for n := range doc.Descendants() {
-		if n.Type == html.ElementNode && n.Data == "style" && n.FirstChild != nil {
-			style += n.FirstChild.Data
-		}
 		if n.Type != html.ElementNode {
 			continue
+		}
+		if n.Data == "style" && n.FirstChild != nil {
+			style += n.FirstChild.Data
 		}
 		for _, a := range n.Attr {
 			if slices.Contains(svgColors, a.Key) && colored(lex([]byte(a.Val))) {
 				t.Errorf("<%s %s=%q>: give the color a variable in :root and set it from the style", n.Data, a.Key, a.Val)
+			}
+			if a.Key == "style" {
+				manageCheck(t, "<"+n.Data+" style>", []byte("style {"+a.Val+"}"))
 			}
 		}
 	}
 	if style == "" {
 		t.Fatal("ui.html has no style")
 	}
-	sheet := []byte(style)
-	for _, d := range values(sheet) {
-		name, v := d.name, groups(d.value)
-		switch {
-		case radiusProperty.MatchString(name):
-			for _, c := range v {
-				if c != "/" && !slices.Contains(manageCorners, c) {
-					t.Errorf("%s: %s in %q; read one of :root's corners %v", name, text(sheet, d.value), d.rule, manageCorners)
+	manageCheck(t, "ui.html's style", []byte(style))
+}
+
+// manageCheck checks the declarations of sheet, told as in where.
+func manageCheck(t *testing.T, where string, sheet []byte) {
+	t.Helper()
+
+	all := declarations(sheet, func(string) bool { return true })
+	names := slices.Sorted(maps.Keys(all))
+	for _, name := range names {
+		for _, d := range all[name] {
+			value := text(sheet, d.value)
+			preludes := strings.Split(d.rule, " { ")
+			inRoot := preludes[len(preludes)-1] == ":root"
+			switch {
+			case slices.Contains(manageSteps, name) && !inRoot:
+				t.Errorf("%s: sets %s in %q; only :root sets the steps", where, name, d.rule)
+			case radiusProperty.MatchString(name):
+				for _, c := range items(d.value) {
+					if c := text(sheet, c); c != "/" && !slices.Contains(manageCorners, c) {
+						t.Errorf("%s: %s: %s in %q; read one of :root's corners %v", where, name, value, d.rule, manageCorners)
+					}
 				}
+			case name == "font-size" || name == "font":
+				size := value
+				if name == "font" {
+					size = fontSize(d.value)
+				}
+				if size == "" || !slices.Contains(manageText, size) && !large(size) && manageEm[d.rule] != size {
+					t.Errorf("%s: %s: %s in %q; read one of :root's steps of text %v", where, name, value, d.rule, manageText)
+				}
+			default:
 			}
-		case name == "font-size" || name == "font":
-			size := text(sheet, d.value)
-			if name == "font" {
-				size = fontSize(d.value)
+			if !inRoot && manageMixed[[2]string{d.rule, name}] != value && colored(d.value) {
+				t.Errorf("%s: %s: %s in %q; give the color a variable in :root", where, name, value, d.rule)
 			}
-			if size == "" || !slices.Contains(manageText, size) && !large(size) && manageEm[d.rule] != size {
-				t.Errorf("%s: %s in %q; read one of :root's steps of text %v", name, text(sheet, d.value), d.rule, manageText)
-			}
-		}
-		preludes := strings.Split(d.rule, " { ")
-		if preludes[len(preludes)-1] != ":root" && manageMixed[[2]string{d.rule, name}] != text(sheet, d.value) && colored(d.value) {
-			t.Errorf("%s: %s in %q; give the color a variable in :root", name, text(sheet, d.value), d.rule)
 		}
 	}
+}
+
+// items splits a value into its items: a function with what it holds, or a token.
+func items(value []token) [][]token {
+	var out [][]token
+	depth, start := 0, 0
+	for i, t := range value {
+		switch t.tt {
+		case css.FunctionToken, css.LeftParenthesisToken:
+			depth++
+		case css.RightParenthesisToken:
+			depth--
+		default:
+		}
+		if depth == 0 {
+			out = append(out, value[start:i+1])
+			start = i + 1
+		}
+	}
+	return out
 }
 
 // radiusProperty names the properties of corners.
@@ -111,73 +153,4 @@ func colored(value []token) bool {
 		}
 	}
 	return false
-}
-
-// namedDeclaration is a declaration and its property's name.
-type namedDeclaration struct {
-	declaration
-	name string
-}
-
-// values returns every declaration of src, a property's name at the start of a block or after a ;, followed by a colon,
-// and its value up to the ; or } that ends it; what reaches a { is a rule's prelude (li:has(…) {), not a declaration.
-func values(src []byte) []namedDeclaration {
-	toks := lex(src)
-	in, blocks := rules(toks)
-	var found []namedDeclaration
-	start := true
-	for i := 0; i < len(toks); i++ {
-		t := toks[i]
-		switch t.tt {
-		case css.WhitespaceToken, css.CommentToken:
-			continue
-		case css.LeftBraceToken, css.SemicolonToken, css.RightBraceToken:
-			start = true
-			continue
-		default:
-		}
-		begins := start && (t.tt == css.IdentToken || t.tt == css.CustomPropertyNameToken)
-		start = false
-		if !begins {
-			continue
-		}
-		j := i + 1
-		for j < len(toks) && toks[j].tt == css.WhitespaceToken {
-			j++
-		}
-		if j == len(toks) || toks[j].tt != css.ColonToken {
-			continue
-		}
-		var value []token
-		depth, prelude := 0, false
-		for j++; j < len(toks); j++ {
-			tt := toks[j].tt
-			if depth == 0 && (tt == css.SemicolonToken || tt == css.RightBraceToken) {
-				break
-			}
-			if depth == 0 && tt == css.LeftBraceToken {
-				prelude = true
-				break
-			}
-			switch tt {
-			case css.FunctionToken, css.LeftParenthesisToken:
-				depth++
-			case css.RightParenthesisToken:
-				depth--
-			case css.WhitespaceToken, css.CommentToken:
-				continue
-			default:
-			}
-			value = append(value, toks[j])
-		}
-		if prelude {
-			continue
-		}
-		found = append(found, namedDeclaration{
-			declaration: declaration{value: value, rule: in[i], block: blocks[i]},
-			name:        strings.ToLower(string(t.data)),
-		})
-		i = j - 1
-	}
-	return found
 }

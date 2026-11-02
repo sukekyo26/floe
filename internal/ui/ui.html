@@ -15,7 +15,8 @@
     --fg: #22211f; --muted: #615f5a; --faint: #6b6964; --line: #e3e1dc;
     --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00; --archived: #2f7a78;
     --danger: #b8332b; --danger-soft: #f8e3e1; --on-danger: #fff; --frame-bg: #fff;
-    /* The logo's: its sky, its two lines, its edge and its three faces; the icon's data URI writes them out */
+    /* The logo's: its sky, its two lines, its edge and its three faces */
+    /* LIMIT: the icon's data URI (the <link rel="icon">) copies these by hand, as a data URI cannot read a variable */
     --logo-sky-top: #d9f3ed; --logo-sky-bottom: #c2e7df; --logo-line: #5bb3a4; --logo-line-soft: #8acbbe;
     --logo-edge: #6faecb; --logo-face-left: #f6fcfe; --logo-face-back: #d3eaf4; --logo-face-front: #e8f5fa;
     --brand-glow: color-mix(in srgb, var(--logo-line) 35%, transparent);
@@ -44,6 +45,7 @@
     /* LIMIT: the logo's and the icons' SVG rx are numbers, not read by TestManageSheet */
     --corner: 20px; --corner-menu: 14px; --corner-small: 6px;
     /* The room inside a pop-up and a menu, which their items' corners take off the box's */
+    /* LIMIT: TestManageSheet does not check that a box whose items read calc(… - var(--menu-pad)) is padded by --menu-pad */
     --menu-pad: 6px;
     /* The text: a label (counts, times, keys, tags), small text (descriptions, menus, fields) and the body's; a heading is 1rem
        or more */
