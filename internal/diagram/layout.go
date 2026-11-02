@@ -250,8 +250,8 @@ func (l *layout) add(at string, p part) {
 
 func (l *layout) addDot(d *dot, at string) {
 	r := dotR(d)
-	who := fmt.Sprintf("dot %s,%s", num(d.CX), num(d.CY))
-	l.marks = append(l.marks, rect{x: d.CX - r, y: d.CY - r, w: r * 2, h: r * 2, what: who, at: at})
+	l.marks = append(l.marks, rect{x: d.CX - r, y: d.CY - r, w: r * 2, h: r * 2, what: "", at: at}.named(
+		"dot", d.Name, nil, false, nil))
 	cls := "dot"
 	if d.Hollow {
 		cls += " hollow"
@@ -260,11 +260,8 @@ func (l *layout) addDot(d *dot, at string) {
 }
 
 func (l *layout) addCircle(c *circle, at string) {
-	who := fmt.Sprintf("circle %s,%s", num(c.CX), num(c.CY))
-	if c.Name != "" {
-		who = "circle " + strconv.Quote(c.Name)
-	}
-	l.areas = append(l.areas, rect{x: c.CX - c.R, y: c.CY - c.R, w: c.R * 2, h: c.R * 2, what: who, at: at})
+	l.areas = append(l.areas, rect{x: c.CX - c.R, y: c.CY - c.R, w: c.R * 2, h: c.R * 2, what: "", at: at}.named(
+		"circle", c.Name, nil, false, nil))
 	l.areaEls = append(l.areaEls, elem{Kind: "circle", X: c.CX, Y: c.CY, R: c.R, Class: "venn", Tone: c.Tone})
 }
 
@@ -337,21 +334,23 @@ func words(text Text, code bool) string {
 }
 
 // calling is what a part standing at r is called in a mistake and by inspect, but its kind: its name quoted, else its
-// words, else where it stands (byPlace).
-func calling(name string, text Text, code bool, r rect) (call string, byPlace bool) {
+// words, else the Venn regions it is placed in (a label's in), else where it stands (byPlace).
+func calling(name string, text Text, code bool, in []string, r rect) (call string, byPlace bool) {
 	switch w := words(text, code); {
 	case name != "":
 		return strconv.Quote(name), false
 	case w != "":
 		return w, false
+	case in != nil:
+		return "in " + strings.Join(in, ", "), false
 	default:
 		return placeOf(r), true
 	}
 }
 
-// named is a named as a kind (calling).
-func (a rect) named(kind, name string, text Text, code bool) rect {
-	call, byPlace := calling(name, text, code, a)
+// named is a with what it is called: its kind, then calling.
+func (a rect) named(kind, name string, text Text, code bool, in []string) rect {
+	call, byPlace := calling(name, text, code, in, a)
 	a.what, a.byPlace = kind+" "+call, byPlace
 	return a
 }
@@ -420,12 +419,12 @@ func boxRect(b *box, at string) rect {
 	if b.Origin == "centre" {
 		x -= w / 2
 	}
-	text, code := firstRow(b)
-	return rect{x: x, y: b.Y, w: w, h: h, what: "", at: at}.named("box", b.Name, text, code)
+	return rect{x: x, y: b.Y, w: w, h: h, what: "", at: at}
 }
 
 func (l *layout) addBox(b *box, at string) {
-	r := boxRect(b, at)
+	text, code := firstRow(b)
+	r := boxRect(b, at).named("box", b.Name, text, code, nil)
 	kids := make([]elem, 0, len(b.Rows))
 	for i, row := range b.Rows {
 		size, code := rowSize(row.Style, i == 0)
@@ -499,7 +498,7 @@ func tableRects(t *table, at string) (rect, []rect) {
 	if len(t.Rows) > 0 {
 		h += 6
 	}
-	return rect{x: x, y: t.Y, w: w, h: h, what: "", at: at}.named("table", t.Name, t.Title, false), rows
+	return rect{x: x, y: t.Y, w: w, h: h, what: "", at: at}.named("table", t.Name, t.Title, false, nil), rows
 }
 
 func (l *layout) addTable(t *table, at string) {
@@ -566,12 +565,12 @@ func dotR(d *dot) float64 {
 
 func barRect(b *bar, at string) rect {
 	w := math.Max(math.Abs(b.X2-b.X1), 4)
-	return rect{x: math.Min(b.X1, b.X2), y: b.Y - 7, w: w, h: 14, what: "", at: at}.named("bar", b.Name, b.Label, false)
+	return rect{x: math.Min(b.X1, b.X2), y: b.Y - 7, w: w, h: 14, what: "", at: at}.named("bar", b.Name, b.Label, false, nil)
 }
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
-	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named("frame", f.Name, f.Label, false)
+	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named("frame", f.Name, f.Label, false, nil)
 	who := fr.what
 	l.frames = append(l.frames, fr)
 	hx, hy, size := f.X+12, f.Y+18, float64(sizeSub)
@@ -597,9 +596,7 @@ func (l *layout) addFrame(f *frame, at string) {
 		cls += " grouped"
 		// The icon is a part like a box: nothing may overlap it or run through it. It is checked from the frame's
 		// edge, as the 1px of it outside the frame only covers the frame's line (1.2 wide, centred on its edge).
-		// Of a frame named by where it stands, named so too (inspect writes no place of its own for it).
 		ir := rect{x: f.X, y: f.Y, w: 31, h: 31, what: "the icon of " + who, at: at, form: outlineOf(31, 31, "icon")}
-		ir.byPlace = fr.byPlace
 		l.boxes = append(l.boxes, ir)
 		if use, ok := l.image(at, f.Icon, f.X-1, f.Y-1, 32, "the icon of "+who); ok {
 			kids = append(kids, use)
@@ -614,14 +611,14 @@ func (l *layout) addFrame(f *frame, at string) {
 func (l *layout) addIcon(i *icon, at string) {
 	size := iconSize(i)
 	r := rect{x: i.X, y: i.Y, w: size, h: size, what: "", at: at, form: outlineOf(size, size, "icon")}.named(
-		"icon", i.Name, Text{"en": i.Icon}, false)
+		"icon", i.Name, Text{"en": i.Icon}, false, nil)
 	who := r.what
 	l.boxes = append(l.boxes, r)
 	if use, ok := l.image(at, i.Icon, i.X, i.Y, size, who); ok {
 		l.boxEls = append(l.boxEls, use)
 	}
 	if i.Label != nil {
-		l.label(at, i.Label, i.X+size/2, i.Y+size+16, "middle", false, false)
+		l.label(at, i.Label, nil, i.X+size/2, i.Y+size+16, "middle", false, false)
 	}
 }
 
@@ -668,7 +665,7 @@ func (l *layout) image(at, name string, x, y, size float64, who string) (elem, b
 // LIMIT: the box is --bg, so on a coloured shape (a circle, raw's) it shows; a label may say plain (one with in has
 // none unless it says plain: false), but an edge's, an icon's and a bar's cannot. Tell the shape under them if they
 // are drawn there.
-func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, strong bool) int {
+func (l *layout) label(at string, t Text, in []string, x, y float64, anchor string, plain, strong bool) int {
 	cls := "label"
 	if strong {
 		cls = "label strong"
@@ -681,7 +678,7 @@ func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, st
 	case "end":
 		x0 = x - w + 5
 	}
-	l.labels = append(l.labels, rect{x: x0, y: y - 9, w: w, h: labelH, what: "", at: at}.named("label", "", t, false))
+	l.labels = append(l.labels, rect{x: x0, y: y - 9, w: w, h: labelH, what: "", at: at}.named("label", "", t, false, in))
 	if !plain {
 		l.labelEls = append(l.labelEls, elem{Kind: "rect", X: x0, Y: y - 9, W: w, H: labelH, Class: "label-bg"})
 	}
@@ -705,7 +702,7 @@ func (l *layout) addBar(b *bar, at string) {
 	el.Class, el.Tone = "bar", b.Tone
 	l.boxEls = append(l.boxEls, el)
 	if b.Label != nil {
-		l.label(at, b.Label, r.x+r.w+10, b.Y, "start", false, false)
+		l.label(at, b.Label, nil, r.x+r.w+10, b.Y, "start", false, false)
 	}
 }
 
@@ -719,7 +716,7 @@ func (l *layout) addAxis(a *axis, at string) {
 		}
 		runs = append(runs, seg{t.X, a.Y, t.X, a.Y + 5})
 		l.edgeEls = append(l.edgeEls, lineEl(t.X, a.Y, t.X, a.Y+5, "axis"))
-		l.label(at, t.Text, t.X, a.Y+17, "middle", true, false)
+		l.label(at, t.Text, nil, t.X, a.Y+17, "middle", true, false)
 	}
 	l.strokes = append(l.strokes, span(runs, fmt.Sprintf("axis %s-%s at %s", num(a.X1), num(a.X2), num(a.Y)), at))
 }

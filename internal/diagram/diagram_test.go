@@ -246,7 +246,7 @@ func TestLayoutMistakes(t *testing.T) {
 		{
 			"  - dot: { cx: 110, cy: 100 }\n  - label: { text: Dark mode, x: 122, y: 100, anchor: start }\n" +
 				"  - dot: { cx: 110, cy: 112 }\n  - label: { text: Share a note, x: 122, y: 112, anchor: start }",
-			"s.yaml:7:5: dot 110,100 overlaps dot 110,112\ns.yaml:8:5: label \"Dark mode\" overlaps label \"Share a note\"",
+			"s.yaml:7:5: dot 103,93 14x14 overlaps dot 103,105 14x14\ns.yaml:8:5: label \"Dark mode\" overlaps label \"Share a note\"",
 		},
 		{"  - label: { text: a note, x: 150, y: 100 }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: box "a" overlaps label "a note"`},
 		{"  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }\n  - edge: { from: [20, 100], to: [300, 100] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"`},
@@ -285,6 +285,9 @@ func TestLayoutMistakes(t *testing.T) {
 			"s.yaml:6:5: label \"a much longer label than fits\" finds no room inside A and outside the other circles: make that area larger, or the text shorter\n" +
 				"s.yaml:7:5: label in A finds no room inside A and outside the other circles: make that area larger, or the text shorter",
 		},
+		{"  - circle: { cx: 390, cy: 100, r: 20 }", "s.yaml:5:5: circle 370,80 40x40 sticks out of the 400x200 canvas"},
+		{"  - dot: { name: d, cx: 50, cy: 50 }\n  - box: { name: b, x: 40, y: 40, w: 60, h: 30, rows: [b] }", `s.yaml:6:5: box "b" overlaps dot "d"`},
+		{"  - circle: { name: A, cx: 150, cy: 100, r: 60 }\n  - label: { text: \"\", in: [A] }\n  - box: { x: 100, y: 50, w: 100, h: 100, rows: [B] }", `s.yaml:7:5: box "B" overlaps label in A`},
 		// Each check of the placement on its own.
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - box: { x: 80, y: 40, w: 60, h: 40, rows: [A] }", `s.yaml:6:5: box "A" straddles the edge of frame "F"`},
 		{"  - box: { name: b, x: 150, y: 80, w: 60, h: 40, rows: [B] }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through box "b"`},
@@ -892,7 +895,7 @@ func TestInspect(t *testing.T) {
 	// A frame with no name nor label is named by where it stands, its icon so too, each once; a label by its widest text.
 	got, mistakes = draw(t, head+"  - frame: { x: 10, y: 10, w: 250, h: 150, icon: aws/aws-lambda }\n"+
 		"  - label: { text: { en: Done, ja: \"完了した\" }, x: 100, y: 100 }\n", inspect)
-	if want := "frame 10,10 250x150\nthe icon of frame 10,10 250x150\nlabel \"完了した\" 71,91 58x18\n"; mistakes != "" || got != want {
+	if want := "frame 10,10 250x150\nthe icon of frame 10,10 250x150 10,10 31x31\nlabel \"完了した\" 71,91 58x18\n"; mistakes != "" || got != want {
 		t.Errorf("inspect = %q %s, want %q", got, mistakes, want)
 	}
 	// A bar is drawn from the smaller of its x, its label right of it, whichever is written first.

@@ -103,14 +103,11 @@ func (m *measures) childrenSpan(n *node) float64 {
 	return sum
 }
 
-// nodeWho names n, its box b, as an edge's end names a part: its name, or else its box's words, or where it stands.
+// nodeWho is what node box b is called, as its box is (calling).
 // LIMIT: two nodes of one text and no name read alike in a mistake that names both; name them if it confuses.
-func nodeWho(n *node, b *box) string {
-	if n.Name != "" {
-		return n.Name
-	}
+func nodeWho(b *box) string {
 	text, code := firstRow(b)
-	call, _ := calling("", text, code, boxRect(b, ""))
+	call, _ := calling(b.Name, text, code, nil, boxRect(b, ""))
 	return call
 }
 
@@ -134,6 +131,7 @@ func (m *measures) place(out *[]item, n *node, cx, y float64, d int, at string) 
 	bottom := y + boxRect(b, "").h
 	cy := y + m.heights[d] + treeGapY
 	turn := y + m.heights[d] + treeGapY/2
+	parent := nodeWho(b)
 	off := -m.childrenSpan(n) / 2 // the left of the next child's span, from cx
 	for i := range n.Children {
 		c := &n.Children[i]
@@ -146,7 +144,7 @@ func (m *measures) place(out *[]item, n *node, cx, y float64, d int, at string) 
 		}
 		from := end{Point: &[2]float64{cx, bottom}} //nolint:exhaustruct_v5 // a point
 		to := end{Point: &[2]float64{ccx, cy}}      //nolint:exhaustruct_v5 // a point
-		who := "edge " + nodeWho(n, b) + "→" + nodeWho(c, nodeBox(c, ccx, cy))
+		who := "edge " + parent + "→" + nodeWho(nodeBox(c, ccx, cy))
 
 		e := &edge{From: from, To: to, who: who} //nolint:exhaustruct_v5 // the rest as left out
 		if !straight {

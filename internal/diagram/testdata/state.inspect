@@ -1,7 +1,7 @@
 box "stopped" 20,56 200x72
 box "running" 581.6,26 176x66
 box "outdated" 1097.6,56 176x72
-dot 120,22 113,15 14x14
+dot 113,15 14x14
 edge stopped→stopped M70,128 V152 H170 V128
 edge stopped→running M215.91,68 H581.68
 edge running→outdated M757.52,68 H1101.69
