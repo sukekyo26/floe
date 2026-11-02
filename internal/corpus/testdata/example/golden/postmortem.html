@@ -11,7 +11,7 @@
    template's :scope sets over, and its text, lists, links, code and quotes, inside the parts too */
 * { box-sizing: border-box; }
 /* A long word, a path or a URL breaks at any character, so that no box it is in overflows, however narrow; a part
-   that scrolls sideways instead, as a table does, keeps its words whole.
+   that scrolls sideways on screen instead, as a table does, keeps its words whole there, and folds its lines on paper.
    LIMIT: a word only a little wider than its column, which spilled over the box's padding before, breaks too, and a short
    label beside a long text in a row of flex breaks unless it keeps from shrinking (flex: none), as code's language and
    diff's counts do; a pill (cell), kept on one line unless what holds it sets --floe-pill-wrap: normal, still overflows.
@@ -56,8 +56,15 @@ a { color: var(--on-face, var(--accent)); }
 kbd, samp, tt { font-family: monospace, monospace; }
 code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(--accent-soft)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-face, transparent) 55%, transparent); padding: 0.1em 0.35em; border-radius: var(--radius-small); }
 /* On screen, a box that scrolls sideways tells nothing of its content's width outside (contain: inline-size), so that
-   a long line or a wide table scrolls in it and widens no grid or flex item around it, nor the page; every rule writing
-   overflow-x: auto writes it too, under @media screen, so that paper is laid out as without it.
+   a long line or a wide table scrolls in it and widens no grid or flex item around it, nor the page; every rule writes
+   overflow-x: auto with it, under @media screen. On paper, where what scrolls is not read, nothing scrolls: pre folds
+   its lines, and a part that scrolls on screen folds what it holds within the paper's width.
+   LIMIT: what folds no word on paper (a table's heads and cells, a column of numbers or of pills, a tree's note and its
+   depth, a field's name, a finding's level) reaches past the paper when its longest words are wider, and Chrome prints
+   the whole page smaller. In a grid's column of a fixed least width (cards side by side) it reaches past its card
+   instead, over the next card or out of the theme's frame, the page no wider.
+   LIMIT: a box a grid's item holds, sent on to the next page at a page's end, leaves the item as short as before, and
+   what follows is drawn over it; a grid's fragmentation, not a box's scrolling.
    LIMIT: such a box shrinks to its border and padding (code's pre, which leaves its padding to its lines, to its border
    alone) on screen where its content sets the width; give the place a width if floe places one so.
    Such places: an inline-block, a float, an absolute or other shrink-to-fit box, a width of min-content, max-content
@@ -65,9 +72,10 @@ code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(
    on flex-basis auto, a grid's auto column sized by its content. No part or template of floe's places one so */
 pre {
   margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
-  padding: 0.9rem 1rem; overflow-x: auto; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
+  padding: 0.9rem 1rem; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
 }
-@media screen { pre { contain: inline-size; } }
+@media screen { pre { overflow-x: auto; contain: inline-size; } }
+@media print { pre { white-space: pre-wrap; overflow-wrap: break-word; } }
 pre code { font-size: inherit; background: none; box-shadow: none; padding: 0; }
 blockquote { margin: 0; padding-left: 1rem; border-left: 3px solid var(--line); color: var(--on-face, var(--muted)); }
 blockquote > * + * { margin-top: 0.6rem; }
@@ -325,16 +333,15 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
-   its width outside (base.css's pre has the LIMIT) */
-:scope {
-  overflow-x: auto;
-}
-@media screen { :scope { contain: inline-size; } }
+   its width outside (base.css's pre has the LIMIT); on paper its columns share the paper's width, words kept whole */
+@media screen { :scope { overflow-x: auto; contain: inline-size; } }
 :scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
 :scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
-:scope :is(th, td):not(.num) { min-width: 7em; }
-/* A num column's heading wraps as long as it needs, but not a character a line */
-:scope th.num { min-width: 6em; }
+@media screen {
+  :scope :is(th, td):not(.num) { min-width: 7em; }
+  /* A num column's heading wraps as long as it needs, but not a character a line */
+  :scope th.num { min-width: 6em; }
+}
 :scope thead th {
   font-size: 0.8rem; font-weight: 600; color: var(--table-head-fg, var(--muted));
   background: var(--table-head-bg, var(--quiet));

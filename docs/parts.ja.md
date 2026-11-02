@@ -126,7 +126,7 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 
 部品の間に、地や枠を持つ箱（カード、見た目 panel を借りる部品や要素、note）を描く部品・テンプレートは、floe のものと同じく、その箱の縁から字までの余白を `var(--floe-pad-block) var(--floe-pad-inline)`（floe の base で 1.1rem と 1.3rem）で書き、自分の長さを書きません。見た目 `panel` 自身は余白を持ちません（表・rows・details は、行を箱の縁まで引くため）。
 
-横にスクロールする自分の箱（`overflow-x: auto`）は、floe の `pre`・code・table・tree と同じく、`@media screen` の中で、その規則に `contain: inline-size` を書きます。書かないと、箱が中身の幅を外へ伝え、外の grid・flex の項目（並びの項目、カード）が一番長い行の幅まで広がり、ページも広がります。そうした箱は、中身で幅が決まる所（inline-block、float、絶対位置などの shrink-to-fit の箱、`min-content`・`max-content`・`fit-content` の幅、自動の幅の表の升、`justify-self: start`、flex の行の `flex-basis: auto` の項目）には置きません。そこでは枠と余白だけの幅に潰れます。
+横にスクロールする自分の箱は、floe の `pre`・code・table・tree と同じく、`overflow-x: auto` と `contain: inline-size` を `@media screen` の中の 1 つの規則に書き、紙では中身を折り返します（紙ではスクロールした所が読めません。floe の `pre` は紙で行を折り返します）。書かないと、箱が中身の幅を外へ伝え、外の grid・flex の項目（並びの項目、カード）が一番長い行の幅まで広がり、ページも広がります。そうした箱は、中身で幅が決まる所（inline-block、float、絶対位置などの shrink-to-fit の箱、`min-content`・`max-content`・`fit-content` の幅、自動の幅の表の升、`justify-self: start`、flex の行の `flex-basis: auto` の項目）には置きません。そこでは枠と余白だけの幅に潰れます。
 
 入れ子では外が勝ちます。`floe.looks` と `floe.parts` はそれぞれ、スタイルが scope される要素（見た目を借りる要素か、部品の箱）の深さ（まわりにある部品の箱と、見た目を借りる要素の数）で層に分かれ、外側ほど強い層に入ります。そのため、見た目や部品のどの規則も、その中の要素に scope された見た目や部品の規則に、セレクタの詳しさや範囲の近さによらず勝ちます。見た目の中の、別の見た目を借りる要素への規則や、部品の中の部品の箱への規則だけでなく、そうした要素の中身への規則も勝ちます（cards の `.card :is(p, ul, ol)` は、`panel` を借りるカードの中の字に、table の `:scope :is(th, td)` は、中で自分も `table` を借りる要素のセルに勝ちます）。部品の規則は今までどおり、中の部品の箱までで、その部品の中には届きません。見た目と部品の間は上の層の順のままで、見た目のスタイルは、中の部品の箱に負けます。1 つの要素の上では、上のとおり、テーマの見た目のファイルが、それを借りる部品の `part.css` に勝ちます。
 
