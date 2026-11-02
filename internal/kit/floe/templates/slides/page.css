@@ -17,7 +17,7 @@ body { line-height: 1.6; }
 /* Off base's list: the slides fill the width, one under the next, numbered by a counter of their own */
 .slides { list-style: none; padding: 0; margin: 0; display: block; gap: 0; counter-reset: floe-slide; }
 .slides > li { counter-increment: floe-slide; }
-.slides > li::after { content: counter(floe-slide) " / " attr(data-total); content: counter(floe-slide) " / " attr(data-total) / ""; position: absolute; right: 3vw; bottom: 3svh; font-family: var(--mono); color: var(--muted); font-size: 1rem; }
+.slides > li::after { content: counter(floe-slide) " / " attr(data-total); content: counter(floe-slide) " / " attr(data-total) / counter(floe-slide); position: absolute; right: 3vw; bottom: 3svh; font-family: var(--mono); color: var(--muted); font-size: 1rem; }
 .slides > li.divider::after { color: inherit; }
 .slide h2 { font-size: clamp(1.7rem, 4vw, 3rem); line-height: 1.25; }
 .divider h2 { font-size: clamp(2rem, 5vw, 3.6rem); }

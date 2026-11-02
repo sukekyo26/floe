@@ -9,7 +9,7 @@
 .card { position: relative; border: 1px solid var(--fg); --floe-inset: inset 0 0 0 2px var(--surface), inset 0 0 0 3px var(--fg); }
 /* The seal of its number stamped on its corner, over the padding and out of it no more than --floe-room */
 :scope.numbered > .card::before {
-  content: counter(floe-card); content: counter(floe-card) / "";
+  content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   position: absolute; top: -0.5rem; right: -0.5rem; --floe-mark: 1.6rem; border-radius: 50%;
   background: var(--washi-shu); color: var(--on-fill); font-size: 0.8rem; font-weight: 700;
 }

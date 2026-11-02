@@ -20,8 +20,8 @@
 :scope .note { margin-left: 0.75rem; font-size: 0.85rem; color: var(--muted); }
 :scope li > .name::after { font-weight: 800; }
 :scope li.added > .name { color: var(--good); }
-:scope li.added > .name::after { content: "+"; }
+:scope li.added > .name::after { content: "+"; content: "+" / ""; }
 :scope li.removed > .name { color: var(--bad); text-decoration: line-through; }
-:scope li.removed > .name::after { content: "−"; }
+:scope li.removed > .name::after { content: "−"; content: "−" / ""; }
 :scope li.changed > .name { color: var(--warn); }
-:scope li.changed > .name::after { content: "±"; }
+:scope li.changed > .name::after { content: "±"; content: "±" / ""; }
