@@ -213,6 +213,9 @@ func drawItem(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 	}
 	switch it.Format {
 	case "markdown":
+		if it.InPart {
+			return kit.MarkdownFlow(text) //nolint:wrapcheck // goldmark fails only to write, and a buffer does not
+		}
 		return kit.Markdown(text) //nolint:wrapcheck // goldmark fails only to write, and a buffer does not
 	case "html":
 		return s.marked(it.At, text), nil

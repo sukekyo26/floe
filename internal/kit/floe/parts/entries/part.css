@@ -11,6 +11,6 @@
 :scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: 0.85rem; color: var(--muted); }
 :scope .tags > span { min-width: 0; }
 :scope .tags code { font-size: 0.86rem; }
-:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; line-height: 1.65; }
+:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); line-height: 1.65; }
 /* A long pill wraps rather than overflow the panel */
 :scope .tags { --floe-pill-wrap: normal; }

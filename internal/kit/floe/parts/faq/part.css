@@ -15,5 +15,4 @@
 :scope summary::after { content: "+"; content: "+" / ""; color: var(--muted); font-weight: 400; }
 :scope details[open] summary::after { content: "−"; content: "−" / ""; }
 :scope summary:focus-visible { outline-offset: -2px; }
-:scope details > div { display: grid; gap: 0.5rem; padding: 0.5rem 0 0 calc(var(--faq-q) + var(--faq-q-gap)); color: var(--muted); }
-:scope details > div > * { margin: 0; }
+:scope details > div { display: grid; padding: 0.5rem 0 0 calc(var(--faq-q) + var(--faq-q-gap)); color: var(--muted); }

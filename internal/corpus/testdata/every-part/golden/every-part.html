@@ -42,8 +42,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    with it and takes no face either, and a theme that takes the ground away gives both back; one that sets a colour on
    no ground of its own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
-/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do; a text of raw HTML alone
-   draws nothing, its box a comment alone */
+/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow): its blocks stand --floe-room apart, as parts
+   do, and a part spaces the box alone, not its blocks; a box of raw HTML alone draws nothing, a comment alone.
+   A template's own Markdown is not in one, which its page.css spaces; nor is what a quote or a list holds, spaced below */
 [data-floe-text] { display: grid; gap: var(--floe-room); }
 [data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
@@ -114,8 +115,9 @@ blockquote > * + * { margin-top: 0.6rem; }
    none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
    LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
    length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses.
-   LIMIT: a part's Markdown flow is spaced under --floe-room (S164), so a theme's quote shadowed as far as that, in a
-   part, meets the next paragraph or leaves the part's box; until floe spaces that flow in one place */
+   LIMIT: a part spaces its Markdown's box from its own elements and edge (a title above, its padding below) under
+   --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
+   leave the part's box */
 :root { --floe-room: 0.75rem; }
 @property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
@@ -196,6 +198,17 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="bars"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="faq"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="progress"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="tree"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="table"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
@@ -531,6 +544,35 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="table"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
+   its width outside (base.css's pre has the LIMIT) */
+:scope {
+  overflow-x: auto;
+}
+@media screen { :scope { contain: inline-size; } }
+:scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
+:scope :is(th, td):not(.num) { min-width: 7em; }
+/* A num column's heading wraps as long as it needs, but not a character a line */
+:scope th.num { min-width: 6em; }
+:scope thead th {
+  font-size: 0.8rem; font-weight: 600; color: var(--table-head-fg, var(--muted));
+  background: var(--table-head-bg, var(--quiet));
+}
+/* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
+   --table-rule (none for no rule) */
+:scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
+:scope .num { text-align: right; }
+:scope td.num {
+  min-width: auto; font-family: var(--mono);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+}
+}
+</style>
+<style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="table"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
@@ -684,7 +726,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: 0.85rem; color: var(--muted); }
 :scope .tags > span { min-width: 0; }
 :scope .tags code { font-size: 0.86rem; }
-:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; line-height: 1.65; }
+:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); line-height: 1.65; }
 /* A long pill wraps rather than overflow the panel */
 :scope .tags { --floe-pill-wrap: normal; }
 }
@@ -706,7 +748,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: 0.85rem; color: var(--muted); }
 :scope .tags > span { min-width: 0; }
 :scope .tags code { font-size: 0.86rem; }
-:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; line-height: 1.65; }
+:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); line-height: 1.65; }
 /* A long pill wraps rather than overflow the panel */
 :scope .tags { --floe-pill-wrap: normal; }
 }
@@ -743,8 +785,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope summary::after { content: "+"; content: "+" / ""; color: var(--muted); font-weight: 400; }
 :scope details[open] summary::after { content: "−"; content: "−" / ""; }
 :scope summary:focus-visible { outline-offset: -2px; }
-:scope details > div { display: grid; gap: 0.5rem; padding: 0.5rem 0 0 calc(var(--faq-q) + var(--faq-q-gap)); color: var(--muted); }
-:scope details > div > * { margin: 0; }
+:scope details > div { display: grid; padding: 0.5rem 0 0 calc(var(--faq-q) + var(--faq-q-gap)); color: var(--muted); }
 }
 }
 </style>
@@ -836,8 +877,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
-   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: what the note holds
-   is Markdown, with no element of text to hold it, so the gaps between what it holds count from after it.
+   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: its Markdown stands in a
+   text's box after the title, and what a note drawn in HTML holds is counted from after the word.
    LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
    too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
@@ -851,7 +892,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
 :scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
 :scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
-/* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
+/* The gap between what a note drawn in HTML holds (a template's caution, a data item's note); a note of Markdown has its
+   title next to its text's box, and the box spaces its Markdown. It wins over a part's box held in it, whose other
+   margins stay its own */
 :scope > :not(.floe-hidden) + * { margin-top: 0.5rem; }
 .title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
@@ -865,8 +908,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="note"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
-   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: what the note holds
-   is Markdown, with no element of text to hold it, so the gaps between what it holds count from after it.
+   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: its Markdown stands in a
+   text's box after the title, and what a note drawn in HTML holds is counted from after the word.
    LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
    too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
@@ -880,7 +923,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
 :scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
 :scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
-/* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
+/* The gap between what a note drawn in HTML holds (a template's caution, a data item's note); a note of Markdown has its
+   title next to its text's box, and the box spaces its Markdown. It wins over a part's box held in it, whose other
+   margins stay its own */
 :scope > :not(.floe-hidden) + * { margin-top: 0.5rem; }
 .title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
@@ -1148,6 +1193,14 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="table"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="entries"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
@@ -1236,6 +1289,19 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { padding: var(--default-pad); --table-head-bg: none; }
+:scope table { border-collapse: separate; border-spacing: 0; }
+:scope tbody td { background: var(--surface); --quiet: var(--default-panel); }
+:scope tbody tr:first-child td:first-child { border-top-left-radius: var(--default-inner); }
+:scope tbody tr:first-child td:last-child { border-top-right-radius: var(--default-inner); }
+:scope tbody tr:last-child td:first-child { border-bottom-left-radius: var(--default-inner); }
+:scope tbody tr:last-child td:last-child { border-bottom-right-radius: var(--default-inner); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="table"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { padding: var(--default-pad); --table-head-bg: none; }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope tbody td { background: var(--surface); --quiet: var(--default-panel); }
@@ -1402,10 +1468,25 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </table></div></div>
 <div data-floe-text=""><!-- raw HTML omitted --></div>
 <ol data-floe-part="steps">
-<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong><span class="floe-hidden">Done: </span>Freeze edits on the old wiki</strong><p>On <strong>Friday evening</strong>.</p></li>
-<li class="doing" data-floe-mark="ring" aria-current="step"><strong>Copy the pages and check the links</strong><blockquote>
+<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong><span class="floe-hidden">Done: </span>Freeze edits on the old wiki</strong><div data-floe-text=""><p>On <strong>Friday evening</strong>.</p>
+<div data-floe-part="table"><table>
+<thead>
+<tr>
+<th>Day</th>
+<th>Pages</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Friday</td>
+<td>1,840</td>
+</tr>
+</tbody>
+</table></div>
+<p>Nothing is edited after.</p></div></li>
+<li class="doing" data-floe-mark="ring" aria-current="step"><strong>Copy the pages and check the links</strong><div data-floe-text=""><blockquote>
 <p>Broken links first: <a href="https://example.com/report">the report</a>.</p>
-</blockquote></li>
+</blockquote></div></li>
 <li class="todo"><strong>Point the team&#39;s bookmarks at the new host</strong></li>
 <li class="todo"><strong>Close the old server</strong></li>
 </ol>
@@ -1892,14 +1973,14 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <tr><td>mid</td></tr>
 </tbody>
 </table></div>
-<div data-floe-tone="warn" data-floe-part="note"><span class="floe-hidden">Warning: </span><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes; <a href="https://example.com/plan">the plan</a> and <code>freeze.sh</code> say when.</p>
+<div data-floe-tone="warn" data-floe-part="note"><span class="floe-hidden">Warning: </span><strong class="title">Heads up</strong><div data-floe-text=""><p>Anyone editing during the freeze loses their changes; <a href="https://example.com/plan">the plan</a> and <code>freeze.sh</code> say when.</p>
 <blockquote>
 <p>Saved drafts are lost too: <a href="https://example.com/drafts">the drafts</a> and <code>drafts.sh</code>.</p>
-</blockquote></div>
-<div data-floe-tone="accent" data-floe-part="note"><span class="floe-hidden">Note: </span><p>The new host is ready; <a href="https://example.com/host">the host</a> and <code>host.sh</code>.</p></div>
-<div data-floe-tone="bad" data-floe-part="note"><span class="floe-hidden">Problem: </span><p>Attachments over 1 MB failed; <a href="https://example.com/failed">the list</a> names each, and <code>retry.sh</code> sends them again.</p></div>
-<div data-floe-tone="muted" data-floe-part="note"><span class="floe-hidden">Note: </span><p>The old wiki stays read-only; <a href="https://example.com/wiki">the wiki</a> and <code>wiki.sh</code>.</p></div>
-<div data-floe-part="note"><span class="floe-hidden">Note: </span><p>The banner goes up on Friday; <a href="https://example.com/banner">the banner</a> and <code>banner.sh</code>.</p></div>
+</blockquote></div></div>
+<div data-floe-tone="accent" data-floe-part="note"><span class="floe-hidden">Note: </span><div data-floe-text=""><p>The new host is ready; <a href="https://example.com/host">the host</a> and <code>host.sh</code>.</p></div></div>
+<div data-floe-tone="bad" data-floe-part="note"><span class="floe-hidden">Problem: </span><div data-floe-text=""><p>Attachments over 1 MB failed; <a href="https://example.com/failed">the list</a> names each, and <code>retry.sh</code> sends them again.</p></div></div>
+<div data-floe-tone="muted" data-floe-part="note"><span class="floe-hidden">Note: </span><div data-floe-text=""><p>The old wiki stays read-only; <a href="https://example.com/wiki">the wiki</a> and <code>wiki.sh</code>.</p></div></div>
+<div data-floe-part="note"><span class="floe-hidden">Note: </span><div data-floe-text=""><p>The banner goes up on Friday; <a href="https://example.com/banner">the banner</a> and <code>banner.sh</code>.</p></div></div>
 <div data-floe-text=""><blockquote>
 <p>A quote with <a href="https://example.com/quote">a link</a> and <code>quote.sh</code>.</p>
 </blockquote></div>
@@ -1927,7 +2008,22 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <li><span><span class="floe-hidden">Not done: </span>Copy the <strong>attachments</strong></span></li>
 </ul>
 <ol data-floe-part="timeline">
-<li data-floe-tone="warn"><span class="date">2030-04-05</span><div><strong>Freeze</strong><p>Edits stop.</p></div></li>
+<li data-floe-tone="warn"><span class="date">2030-04-05</span><div><strong>Freeze</strong><div data-floe-text=""><p>Edits stop.</p>
+<div data-floe-part="table"><table>
+<thead>
+<tr>
+<th>From</th>
+<th>To</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>18:00</td>
+<td>Monday</td>
+</tr>
+</tbody>
+</table></div>
+<p>The banner says so.</p></div></div></li>
 <li data-floe-tone="accent"><span class="date">2030-04-06</span><div><strong>Copy</strong></div></li>
 <li data-floe-tone="good"><span class="date">2030-04-07</span><div><strong>Open</strong></div></li>
 <li data-floe-tone="bad"><span class="date">2030-04-08</span><div><strong>Rollback window ends</strong></div></li>
@@ -1938,14 +2034,29 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <section>
 <h2 id="choices">Choices</h2>
 <div class="numbered" data-floe-part="options">
-<div class="card option pick" data-floe-look="panel"><div class="title">Copy in one go <span data-floe-part="cell">Recommended</span></div><p>Two days of read-only, as <a href="https://example.com/plan">the plan</a> says: <code>export --all</code>.</p><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>Simple</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Longer freeze</span></li></ul></div>
-<div class="card option" data-floe-look="panel"><div class="title">Copy by space</div><p>Each space is copied apart:</p>
+<div class="card option pick" data-floe-look="panel"><div class="title">Copy in one go <span data-floe-part="cell">Recommended</span></div><div data-floe-text=""><p>Two days of read-only, as <a href="https://example.com/plan">the plan</a> says: <code>export --all</code>.</p></div><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>Simple</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Longer freeze</span></li></ul></div>
+<div class="card option" data-floe-look="panel"><div class="title">Copy by space</div><div data-floe-text=""><p>Each space is copied apart:</p>
 <ul>
 <li>Docs first</li>
 <li>Then the rest, as <a href="https://example.com/plan">the plan</a> says: <code>export --space</code></li>
-</ul><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>Short freezes</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Links break between spaces</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Twice the work</span></li></ul></div>
+</ul></div><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>Short freezes</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Links break between spaces</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Twice the work</span></li></ul></div>
 </div>
-<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span data-floe-tone="good" data-floe-part="cell">decided</span><span>2030-03-28</span></p><div class="title">The wiki moves to the new host</div><p>The old server is out of support in <strong>May</strong>.</p><p class="set-aside">Set aside</p><ul class="rejected" data-floe-look="marked"><li><span>Stay on the old server</span></li><li><span>Move to a hosted wiki</span></li></ul></div></div>
+<div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta"><span data-floe-tone="good" data-floe-part="cell">decided</span><span>2030-03-28</span></p><div class="title">The wiki moves to the new host</div><div data-floe-text=""><p>The old server is out of support in <strong>May</strong>.</p>
+<div data-floe-part="table"><table>
+<thead>
+<tr>
+<th>Host</th>
+<th>Support</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Old</td>
+<td>May</td>
+</tr>
+</tbody>
+</table></div>
+<p>The new host is supported for five years.</p></div><p class="set-aside">Set aside</p><ul class="rejected" data-floe-look="marked"><li><span>Stay on the old server</span></li><li><span>Move to a hosted wiki</span></li></ul></div></div>
 </section>
 <section>
 <h2 id="reference">Reference</h2>
@@ -1961,12 +2072,13 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </tbody>
 </table></div>
 <dl data-floe-part="entries">
-<div><dt><code>export</code></dt><dd class="tags"><span>Runs nightly</span><span><code>wiki.conf</code></span><span><span data-floe-part="cell">on track</span></span><span><span data-floe-tone="good" data-floe-part="cell">done</span></span></dd><dd class="text"><p>Writes every page as Markdown, with its history, into <code>pages/</code>.</p>
+<div><dt><code>export</code></dt><dd class="tags"><span>Runs nightly</span><span><code>wiki.conf</code></span><span><span data-floe-part="cell">on track</span></span><span><span data-floe-tone="good" data-floe-part="cell">done</span></span></dd><dd class="text"><div data-floe-text=""><p>Writes every page as Markdown, with its history, into <code>pages/</code>.</p>
+<h4 id="left-out">Left out</h4>
 <ul>
 <li>Pages under <strong>drafts</strong> are left out</li>
 <li>Images go to <code>pages/images/</code></li>
-</ul></dd></div>
-<div><dt>Search index</dt><dd class="tags"><span><span data-floe-tone="warn" data-floe-part="cell">by hand</span></span><span><span data-floe-tone="bad" data-floe-part="cell">blocked</span></span><span><span data-floe-tone="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p></dd></div>
+</ul></div></dd></div>
+<div><dt>Search index</dt><dd class="tags"><span><span data-floe-tone="warn" data-floe-part="cell">by hand</span></span><span><span data-floe-tone="bad" data-floe-part="cell">blocked</span></span><span><span data-floe-tone="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><div data-floe-text=""><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p></div></dd></div>
 <div><dt>Old links</dt></div>
 </dl>
 <dl data-floe-part="keys">
@@ -1974,8 +2086,23 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div><dt><kbd>g</kbd><span>+</span><kbd>h</kbd></dt><dd>Go home</dd></div>
 </dl>
 <div data-floe-part="faq">
-<details open=""><summary>Can I edit during the freeze?</summary><div><p>No: edits are lost.</p></div></details>
-<details><summary>Where do old links go?</summary><div><p>To the same page on the new host.</p></div></details>
+<details open=""><summary>Can I edit during the freeze?</summary><div><div data-floe-text=""><p>No: edits are lost.</p>
+<div data-floe-part="table"><table>
+<thead>
+<tr>
+<th>Edit</th>
+<th>Kept</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Page</td>
+<td>no</td>
+</tr>
+</tbody>
+</table></div>
+<p>Wait for the new host.</p></div></div></details>
+<details><summary>Where do old links go?</summary><div><div data-floe-text=""><p>To the same page on the new host.</p></div></div></details>
 </div>
 <ul data-floe-part="links">
 <li class="card" data-floe-look="panel"><a href="https://example.com/guide">Migration guide</a><p>How the copy works</p><span class="url">https://example.com/guide</span></li>
@@ -2200,7 +2327,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><dl data-floe-part="entries">
-<div><dt>Copied</dt><dd class="tags"><span>412 pages</span></dd><dd class="text"><p>Every page but the drafts.</p></dd></div>
+<div><dt>Copied</dt><dd class="tags"><span>412 pages</span></dd><dd class="text"><div data-floe-text=""><p>Every page but the drafts.</p></div></dd></div>
 </dl><figure data-floe-part="image"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAAJElEQVR42mOwqTgxIIhh1OJRi0ctHrV41OJRi0ctHrV45FgMAGfIo72jTm6ZAAAAAElFTkSuQmCC" alt="The wiki after the move"/></figure></div></details>
 <form data-floe-part="tabs">
 <label><input type="radio" name="tab" checked=""/>bash</label><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code data-floe-copy="">export WIKI=new</code></pre><script>(function copyButton(words) {
@@ -2331,8 +2458,8 @@ banner = &#34;This wiki has moved to the new host.&#34;
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><dl data-floe-part="entries">
-<div><dt>New window</dt><dd class="tags"><span>PowerShell 7</span></dd><dd class="text"><p>The variable holds in that window alone.</p></dd></div>
-</dl><div data-floe-tone="good" data-floe-part="note"><span class="floe-hidden">Good: </span><p>Run it in a new window; <a href="https://example.com/steps">the steps</a> and <code>run.sh</code>.</p></div><div data-floe-part="table"><table>
+<div><dt>New window</dt><dd class="tags"><span>PowerShell 7</span></dd><dd class="text"><div data-floe-text=""><p>The variable holds in that window alone.</p></div></dd></div>
+</dl><div data-floe-tone="good" data-floe-part="note"><span class="floe-hidden">Good: </span><div data-floe-text=""><p>Run it in a new window; <a href="https://example.com/steps">the steps</a> and <code>run.sh</code>.</p></div></div><div data-floe-part="table"><table>
 <thead><tr><th scope="col">Shell</th><th scope="col" class="num">Lines</th></tr></thead>
 <tbody>
 <tr><td>PowerShell</td><td class="num">1</td></tr>

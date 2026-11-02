@@ -42,8 +42,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    with it and takes no face either, and a theme that takes the ground away gives both back; one that sets a colour on
    no ground of its own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
-/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do; a text of raw HTML alone
-   draws nothing, its box a comment alone */
+/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow): its blocks stand --floe-room apart, as parts
+   do, and a part spaces the box alone, not its blocks; a box of raw HTML alone draws nothing, a comment alone.
+   A template's own Markdown is not in one, which its page.css spaces; nor is what a quote or a list holds, spaced below */
 [data-floe-text] { display: grid; gap: var(--floe-room); }
 [data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
@@ -114,8 +115,9 @@ blockquote > * + * { margin-top: 0.6rem; }
    none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
    LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
    length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses.
-   LIMIT: a part's Markdown flow is spaced under --floe-room (S164), so a theme's quote shadowed as far as that, in a
-   part, meets the next paragraph or leaves the part's box; until floe spaces that flow in one place */
+   LIMIT: a part spaces its Markdown's box from its own elements and edge (a title above, its padding below) under
+   --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
+   leave the part's box */
 :root { --floe-room: 0.75rem; }
 @property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
@@ -348,8 +350,8 @@ blockquote { padding-left: 1.4rem; border-left: 3px solid var(--accent); color: 
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
-   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: what the note holds
-   is Markdown, with no element of text to hold it, so the gaps between what it holds count from after it.
+   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: its Markdown stands in a
+   text's box after the title, and what a note drawn in HTML holds is counted from after the word.
    LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
    too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
@@ -363,7 +365,9 @@ blockquote { padding-left: 1.4rem; border-left: 3px solid var(--accent); color: 
 :scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
 :scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
 :scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
-/* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
+/* The gap between what a note drawn in HTML holds (a template's caution, a data item's note); a note of Markdown has its
+   title next to its text's box, and the box spaces its Markdown. It wins over a part's box held in it, whose other
+   margins stay its own */
 :scope > :not(.floe-hidden) + * { margin-top: 0.5rem; }
 .title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
@@ -572,8 +576,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <blockquote>
 <p>A quote.</p>
 </blockquote></div>
-<div data-floe-part="note"><span class="floe-hidden">Note: </span><strong class="title">Note</strong><p>A note in the accent.</p></div>
-<div data-floe-tone="warn" data-floe-part="note"><span class="floe-hidden">Warning: </span><p>A warning.</p></div>
+<div data-floe-part="note"><span class="floe-hidden">Note: </span><strong class="title">Note</strong><div data-floe-text=""><p>A note in the accent.</p></div></div>
+<div data-floe-tone="warn" data-floe-part="note"><span class="floe-hidden">Warning: </span><div data-floe-text=""><p>A warning.</p></div></div>
 <div data-floe-part="table"><table>
 <thead><tr><th scope="col">Name</th><th scope="col" class="num">Count</th><th scope="col">State</th></tr></thead>
 <tbody>
@@ -711,8 +715,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 <div class="numbered" data-floe-part="options">
-<div class="card option" data-floe-look="panel"><div class="title">One</div><p>First.</p></div>
-<div class="card option" data-floe-look="panel"><div class="title">Two</div><p>Second.</p></div>
+<div class="card option" data-floe-look="panel"><div class="title">One</div><div data-floe-text=""><p>First.</p></div></div>
+<div class="card option" data-floe-look="panel"><div class="title">Two</div><div data-floe-text=""><p>Second.</p></div></div>
 </div>
 <form data-floe-part="tabs">
 <label><input type="radio" name="tab" checked=""/>One</label><div data-floe-part="stack"><div data-floe-text=""><p>First.</p></div></div>

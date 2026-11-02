@@ -42,8 +42,9 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    with it and takes no face either, and a theme that takes the ground away gives both back; one that sets a colour on
    no ground of its own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
-/* A text's Markdown, in a box of no part: its blocks stand --floe-room apart, as parts do; a text of raw HTML alone
-   draws nothing, its box a comment alone */
+/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow): its blocks stand --floe-room apart, as parts
+   do, and a part spaces the box alone, not its blocks; a box of raw HTML alone draws nothing, a comment alone.
+   A template's own Markdown is not in one, which its page.css spaces; nor is what a quote or a list holds, spaced below */
 [data-floe-text] { display: grid; gap: var(--floe-room); }
 [data-floe-text]:empty { display: none; }
 a { color: var(--on-face, var(--accent)); }
@@ -114,8 +115,9 @@ blockquote > * + * { margin-top: 0.6rem; }
    none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
    LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
    length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses.
-   LIMIT: a part's Markdown flow is spaced under --floe-room (S164), so a theme's quote shadowed as far as that, in a
-   part, meets the next paragraph or leaves the part's box; until floe spaces that flow in one place */
+   LIMIT: a part spaces its Markdown's box from its own elements and edge (a title above, its padding below) under
+   --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
+   leave the part's box */
 :root { --floe-room: 0.75rem; }
 @property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
@@ -445,7 +447,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: 0.85rem; color: var(--muted); }
 :scope .tags > span { min-width: 0; }
 :scope .tags code { font-size: 0.86rem; }
-:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.35rem; line-height: 1.65; }
+:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); line-height: 1.65; }
 /* A long pill wraps rather than overflow the panel */
 :scope .tags { --floe-pill-wrap: normal; }
 }
@@ -455,8 +457,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
-   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: what the note holds
-   is Markdown, with no element of text to hold it, so the gaps between what it holds count from after it.
+   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: its Markdown stands in a
+   text's box after the title, and what a note drawn in HTML holds is counted from after the word.
    LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
    too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
@@ -470,7 +472,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
 :scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
 :scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
-/* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
+/* The gap between what a note drawn in HTML holds (a template's caution, a data item's note); a note of Markdown has its
+   title next to its text's box, and the box spaces its Markdown. It wins over a part's box held in it, whose other
+   margins stay its own */
 :scope > :not(.floe-hidden) + * { margin-top: 0.5rem; }
 .title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
@@ -747,7 +751,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <h2 id="steps">Steps</h2>
 <div data-floe-text=""><p>The pages move over <strong>one weekend</strong>; the old wiki stays readable until the new one opens.</p></div>
 <ol data-floe-part="steps">
-<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong><span class="floe-hidden">Done: </span>Freeze edits on the old wiki</strong><p>On <strong>Friday evening</strong>.</p></li>
+<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong><span class="floe-hidden">Done: </span>Freeze edits on the old wiki</strong><div data-floe-text=""><p>On <strong>Friday evening</strong>.</p></div></li>
 <li class="doing" data-floe-mark="ring" aria-current="step"><strong>Copy the pages and check the links</strong></li>
 <li class="todo"><strong>Point the team&#39;s bookmarks at the new host</strong></li>
 </ol>
@@ -890,9 +894,9 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <section>
 <h2 id="who-does-what">Who does what</h2>
 <dl data-floe-part="entries">
-<div><dt>Copy</dt><dd class="tags"><span>Saturday</span><span><span data-floe-tone="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><p>Copies the pages and keeps a list of what failed.</p></dd></div>
-<div><dt>Links</dt><dd class="tags"><span>Sunday</span><span><span data-floe-tone="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><p>Runs the link check and fixes what it finds.</p></dd></div>
-<div><dt>Bookmarks</dt><dd class="tags"><span>Monday morning</span></dd><dd class="text"><p>Sends the new address to the team.</p></dd></div>
+<div><dt>Copy</dt><dd class="tags"><span>Saturday</span><span><span data-floe-tone="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><div data-floe-text=""><p>Copies the pages and keeps a list of what failed.</p></div></dd></div>
+<div><dt>Links</dt><dd class="tags"><span>Sunday</span><span><span data-floe-tone="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><div data-floe-text=""><p>Runs the link check and fixes what it finds.</p></div></dd></div>
+<div><dt>Bookmarks</dt><dd class="tags"><span>Monday morning</span></dd><dd class="text"><div data-floe-text=""><p>Sends the new address to the team.</p></div></dd></div>
 </dl>
 </section>
 <section>
@@ -1061,7 +1065,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <tr><td>Slow search</td><td>Unknown</td><td class="num">-</td><td>Rebuild the index on <code>Sunday</code></td><td><span data-floe-tone="accent" data-floe-part="cell">open</span></td></tr>
 </tbody>
 </table></div>
-<div data-floe-tone="warn" data-floe-part="note"><span class="floe-hidden">Warning: </span><strong class="title">Heads up</strong><p>Anyone editing during the freeze loses their changes.</p></div>
+<div data-floe-tone="warn" data-floe-part="note"><span class="floe-hidden">Warning: </span><strong class="title">Heads up</strong><div data-floe-text=""><p>Anyone editing during the freeze loses their changes.</p></div></div>
 <details><summary>What the freeze covers</summary><p>Edits, comments and uploads.</p></details>
 </section>
 </main>

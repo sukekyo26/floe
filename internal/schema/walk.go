@@ -103,6 +103,7 @@ type Item struct {
 	At     []string
 	Part   string // "" for a format
 	Format string // "" for a part
+	InPart bool   // held in a part's value, not the template's own
 	Value  any
 }
 
@@ -113,27 +114,31 @@ type Item struct {
 // It is the one walk of values: what floe checks of the items and what it draws both come from it.
 // LIMIT: {{.x}} writes an object as Go's map, refused only if it holds html; give any.json's one part when needed
 func (c *Compiled) Walk(values any, fn func(it Item, ready any) (any, error)) (any, error) {
-	w := &walk{c: c, fn: fn}
+	w := &walk{c: c, fn: fn, inPart: false}
 	return w.step(c.Follow(c.Root), values, nil)
 }
 
 // walk is a walk of values: the Compiled it goes by, and what it calls with each Item.
 type walk struct {
-	c  *Compiled
-	fn func(Item, any) (any, error)
+	c      *Compiled
+	fn     func(Item, any) (any, error)
+	inPart bool // walking a part's value
 }
 
 // step walks v, at the path at, under the step st.
 func (w *walk) step(st Step, v any, at []string) (any, error) {
 	switch {
 	case st.Part != "":
+		out := w.inPart
+		w.inPart = true
 		ready, err := w.step(w.c.Follow(st.PartRoot), v, at)
+		w.inPart = out
 		if err != nil {
 			return nil, err
 		}
-		return w.fn(Item{At: at, Part: partName(st.Part), Format: "", Value: v}, ready)
+		return w.fn(Item{At: at, Part: partName(st.Part), Format: "", InPart: out, Value: v}, ready)
 	case st.Format != "":
-		return w.fn(Item{At: at, Part: "", Format: st.Format, Value: v}, v)
+		return w.fn(Item{At: at, Part: "", Format: st.Format, InPart: w.inPart, Value: v}, v)
 	}
 	return w.under(st, v, at)
 }
