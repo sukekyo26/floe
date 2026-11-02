@@ -466,6 +466,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix swiss's cards keeping their left line on the first card of a wrapped line while the first card of all had none:
+  every card has the same line now (the first card's text stands 1px further right, past it). In a band, swiss's
+  cards' lines and numbers are in the band's text colour, not black on its red.
 - Fix a right-angled edge with `via` running back over itself at a via when the next point lay behind the way it
   came: it turns the other way first there. `from: a, via: [[200, 20]], to: [100, 0]` from a box below ran back along
   y 20 (`V20 H200 H100 V0`) and now turns up at the via (`V20 H200 V0 H100`).

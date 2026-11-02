@@ -92,15 +92,7 @@ func TestUILists(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		own[k] = v
 	}
 	s.own(t, own)
-	everyPart, err := os.ReadFile("../corpus/testdata/every-part/every-part.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	shot, err := os.ReadFile("../corpus/testdata/every-part/shots/moved.png")
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.write(t, "shots/moved.png", string(shot))
+	everyPart := s.everyPart(t)
 	design, err := os.ReadFile("../kit/floe/templates/design/example.yaml")
 	if err != nil {
 		t.Fatal(err)
@@ -113,8 +105,8 @@ func TestUILists(t *testing.T) { //nolint:paralleltest // the browser tests shar
 	}
 
 	// A part's box: the page's and the theme's rule for lists change nothing of it.
-	plain := s.write(t, "every.yaml", string(everyPart))
-	mine := s.write(t, "every-mine.yaml", strings.Replace(string(everyPart), "template: report\n", "template: lists-report\n", 1))
+	plain := s.write(t, "every.yaml", everyPart)
+	mine := s.write(t, "every-mine.yaml", strings.Replace(everyPart, "template: report\n", "template: lists-report\n", 1))
 	want := read("lists-plain", plain)
 	if got := read("lists-page", mine); got != want {
 		t.Errorf("parts' boxes under the page's rule for lists:\n%s\nwant, as without it:\n%s", got, want)
@@ -144,34 +136,12 @@ func TestUILists(t *testing.T) { //nolint:paralleltest // the browser tests shar
 	}
 
 	// No marks on such lists, in every theme and template; the part's own arrangement over floe's.
-	themes, err := os.ReadDir("../kit/floe/themes")
-	if err != nil {
-		t.Fatal(err)
-	}
-	examples, err := filepath.Glob("../corpus/testdata/example/*.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	pages := map[string]string{"every-part": plain}
-	for _, ex := range examples {
-		data, err := os.ReadFile(ex)
-		if err != nil {
-			t.Fatal(err)
-		}
-		name := strings.TrimSuffix(filepath.Base(ex), ".yaml")
-		pages[name] = s.write(t, "example-"+name+".yaml", string(data))
-	}
 	var marked []string
-	for _, th := range themes {
-		for name, file := range pages {
-			slug := "lists-" + name + "-" + th.Name()
-			s.floe(t, "publish", file, "--slug", slug, "--theme", th.Name())
-			b.navigate("/a/" + slug + "/?raw")
-			for line := range strings.Lines(b.eval(listsMarked)) {
-				marked = append(marked, name+" in "+th.Name()+": "+strings.TrimSuffix(line, "\n"))
-			}
+	s.floePages(t, func(what string) {
+		for line := range strings.Lines(b.eval(listsMarked)) {
+			marked = append(marked, what+": "+strings.TrimSuffix(line, "\n"))
 		}
-	}
+	})
 	check(t, "marked", marked, "")
 
 	s.floe(t, "publish", s.write(t, "look.yaml", "lang: en\ntemplate: lists-look\ntitle: Look\n"), "--slug", "lists-look")
