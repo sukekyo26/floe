@@ -296,6 +296,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change an open page's tab not shown to reload when shown, no longer while hidden: switched to, it shows the page
+  it had for a moment, and a linked data file's page is drawn again then.
 - Change a right-angled edge with `via` that repeats a point (a via on the point before it, or on the edge's start)
   to keep the way it was going over that point: `from: [10, 100], via: [[10, 100], [50, 150]], to: [200, 150]`
   goes across first (`H50 V150`) where it went down first (`V150 H50`).
@@ -451,6 +453,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix the next page waiting long to show its content while many pages' tabs were open, and the pages opened after
+  the sixth not reloading when changed: each open tab held a connection to the server, and Chrome opens six at most
+  to one server. A page holds none now, and asks whether it changed every second while it is shown.
 - Fix an edge with `via` whose end is a box, table, row, icon, frame or bar named without a side, which ran along the
   end's edge or back over itself after its last via, or was refused as running through the box it started from. Such
   an end, at either end of the edge and on a `straight` edge too, takes the side towards the via next to it when that
