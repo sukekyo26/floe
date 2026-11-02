@@ -88,7 +88,7 @@ func TestUIReloadMany(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the last page to reload", "window.heard.includes('"+last+" 2')")
 }
 
-// leave clicks links out of a page in the frame// leave clicks links out of a page in the frame: a target=_blank tab runs in the other site's origin
+// leave clicks links out of a page in the frame: a target=_blank tab runs in the other site's origin
 // out of the sandbox, a link without target opens a new tab too (most sites refuse to be framed), a
 // link within the server stays in the frame, and a link to a frame URL moves the whole tab. The other
 // site refuses framing. It returns each tab's origin (none when no tab opened) and where the tab moved.

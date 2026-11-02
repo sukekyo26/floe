@@ -190,7 +190,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	h.Set("X-Content-Type-Options", "nosniff")
 	tail := ""
 	if got.typ == htmlType {
-		tail = servedScript(slug, rest, version, s.every)
+		tail = servedScript(slug, rest, version)
 	}
 	stream(w, got.typ, got.body, tail)
 }
@@ -297,15 +297,19 @@ const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => 
 	"{ artifactHash: location.hash, artifactPath: location.pathname }, location.protocol + '//' + location.host);" +
 	"tell(); window.addEventListener('hashchange', tell); }"
 
+// askEvery is how often a page shown asks whether it changed: about as often as the drawing is watched, and set
+// apart from it so that the page's asking does not follow a test's shorter watching.
+const askEvery = time.Second
+
 // servedScript is appended to a served page only: it reloads the open tab when the page changes (a publish, a
 // rebuild, a linked file saved), and handles links inside the frame. The page holds no connection to the server,
 // as Chrome opens six at most to one server and an open tab holding one would make the next pages wait: while it is
-// shown, it asks every every whether the version it was served from (since) is still the page's, each ask cut off
+// shown, it asks every askEvery whether the version it was served from (since) is still the page's, each ask cut off
 // after 5 s so that one left hanging (a connection half open after sleep) does not stop the asking, and once more
 // when it is shown again. A tab not shown asks nothing, and reloads when shown.
 // LIMIT: that a tab not shown asks nothing is not checked in a browser: headless Chrome showed no tab hidden. Were it
 // broken, a tab not shown asks every second, holding nothing.
-func servedScript(slug, rest, version string, every time.Duration) string {
+func servedScript(slug, rest, version string) string {
 	u := "/api/changed/" + slug
 	if rest != "" {
 		parts := strings.Split(rest, "/")
@@ -321,7 +325,7 @@ func servedScript(slug, rest, version string, every time.Duration) string {
 		"try { const r = await window.fetch(u, { cache: 'no-store', signal: window.AbortSignal.timeout(5000) });" +
 		"if ((await r.text()) === 'changed') { location.reload(); return; } } catch {}" +
 		"busy = false; };" +
-		"window.setInterval(look, " + strconv.FormatInt(every.Milliseconds(), 10) + ");" +
+		"window.setInterval(look, " + strconv.FormatInt(askEvery.Milliseconds(), 10) + ");" +
 		"window.document.addEventListener('visibilitychange', look); look();" + leaveFrame + "}</script>\n"
 }
 

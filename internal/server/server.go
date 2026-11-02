@@ -47,7 +47,7 @@ type Server struct {
 	cfg     Config
 	hosts   map[string]bool
 	origins map[string]bool
-	// every is how often the drawing is watched and an open page, while shown, asks whether its version changed.
+	// every is how often the drawing is watched.
 	every time.Duration
 	// id is this server's, new each start: in each version, so that a tab open across a restart reloads.
 	id string

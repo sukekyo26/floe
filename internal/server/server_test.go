@@ -226,8 +226,6 @@ func TestStoredPage(t *testing.T) {
 	}
 }
 
-// The management page and a page's URL are the frame, in the reader's language, which only the management page and
-// VS Code may frame; a page not there is the frame with 404.
 // A page asks whether it changed since the version it was served from: "same" to that version, "changed" after a
 // publish and to any other, and "changed" for no page whatever it gives, so that whether a slug is there is not told.
 func TestChanged(t *testing.T) {
@@ -265,6 +263,8 @@ func TestChanged(t *testing.T) {
 	}
 }
 
+// The management page and a page's URL are the frame, in the reader's language, which only the management page and
+// VS Code may frame; a page not there is the frame with 404.
 func TestManagementPageAndFrame(t *testing.T) {
 	t.Parallel()
 
