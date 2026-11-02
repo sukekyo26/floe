@@ -252,7 +252,8 @@ func TestChanged(t *testing.T) {
 		return w.Body.String()
 	}
 	first := since()
-	got := []string{ask("/api/changed/d?since=" + first), ask("/api/changed/d?since=other")}
+	got := make([]string, 0, 6)
+	got = append(got, ask("/api/changed/d?since="+first), ask("/api/changed/d?since=other"))
 	e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\nnote: two\n", nil)
 	got = append(got, ask("/api/changed/d?since="+first), ask("/api/changed/d?since="+since()),
 		ask("/api/changed/none?since="), ask("/api/changed/none?since=x"))
