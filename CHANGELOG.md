@@ -301,7 +301,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   each line an element, as text `pre` holds outside one sits on its edge, and
   reads `--floe-code-pad` and `--floe-code-room` to move the room onto lines
   of its own rather than writing them. It makes a block of a `<code>` that
-  `pre` holds alone. A long line of such a part without a copy button keeps
+  `pre` holds, and takes the inline look off it, and of no other: a `<code>`
+  elsewhere in such a part (its heading, an element `pre` holds) keeps the
+  inline look of floe's base. A long line of such a part without a copy button keeps
   the room after it, scrolled to the end.
 - Change the labels of a Venn diagram's regions (`in`) to have no box unless
   they say `plain: false`: one that wrote no `plain` loses the box it drew on
