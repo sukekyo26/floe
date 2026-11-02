@@ -25,11 +25,11 @@ parts:
   - edge: { from: [910, 304], to: [650, 304], label: "GET /a/<slug>/?raw", at: [780, 290] }
   - edge: { from: [650, 344], to: [390, 344], label: { en: read, ja: "読む" }, at: [520, 330] }
   - edge: { from: [650, 384], to: [910, 384], dashed: true, label: { en: "HTML + reload script", ja: "HTML + 再読み込みスクリプト" }, at: [780, 370] }
-  - edge: { from: [910, 424], to: [656, 424], label: { en: "EventSource ?since=version", ja: "EventSource ?since=版" }, at: [780, 410] }
-  - label: { text: { en: compare versions every second, ja: "1 秒ごとに版を比べる" }, x: 664, y: 470, anchor: start }
+  - edge: { from: [910, 424], to: [656, 424], label: { en: "ask ?since=version", ja: "?since=版 を問い合わせ" }, at: [780, 410] }
+  - label: { text: { en: every second while shown, ja: "見えている間、1 秒ごと" }, x: 664, y: 470, anchor: start }
   - line: { x1: 16, y1: 500, x2: 1024, y2: 500, kind: divider }
   - label: { text: { en: publish the same slug again, ja: "同じ slug で公開し直す" }, x: 520, y: 500 }
   - edge: { from: [130, 544], to: [390, 544], label: { en: rewrite (updatedAt moves on), ja: "書き直す（updatedAt が進む）" }, at: [260, 530] }
   - edge: { from: [644, 584], to: [390, 584], label: { en: stat finds a new version, ja: "stat で新しい版を見つける" }, at: [520, 570] }
-  - edge: { from: [650, 624], to: [910, 624], dashed: true, label: "event: reload", at: [780, 610] }
+  - edge: { from: [650, 624], to: [910, 624], dashed: true, label: "changed", at: [780, 610] }
   - edge: { from: [910, 648], via: [[950, 648], [950, 676]], to: [910, 676], label: location.reload(), at: [892, 662] }
