@@ -58,7 +58,8 @@ code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(
 /* On screen, a box that scrolls sideways tells nothing of its content's width outside (contain: inline-size), so that
    a long line or a wide table scrolls in it and widens no grid or flex item around it, nor the page; every rule writing
    overflow-x: auto writes it too, under @media screen, so that paper is laid out as without it.
-   LIMIT: such a box shrinks to its border and padding on screen where its content sets the width; give the place a width if floe places one so.
+   LIMIT: such a box shrinks to its border and padding (code's pre, which leaves its padding to its lines, to its border
+   alone) on screen where its content sets the width; give the place a width if floe places one so.
    Such places: an inline-block, a float, an absolute or other shrink-to-fit box, a width of min-content, max-content
    or fit-content, a table's cell of auto width, justify-items or justify-self start in a grid, an item of a flex row
    on flex-basis auto, a grid's auto column sized by its content. No part or template of floe's places one so */
@@ -80,7 +81,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 :root { --floe-pad-block: 1.1rem; --floe-pad-inline: 1.3rem; }
 /* The copy button a part draws with copyButton, the same in every part: round, in the colours of code on its ground
    (--code-ground, which a theme sets where it gives code a ground of its own), its icon a check once it copied. Above
-   what it lies over, which may draw above it otherwise (an element with opacity, as diff's faded lines): a part
+   what it lies over, which may draw above it otherwise (a block that scrolls): a part
    holding it isolates its box (isolation: isolate), so that it stays under the page outside. Its ring is
    inside it, in the code's colour, which the accent is too faint on. Its status is for screen readers alone. Its size,
    the room a part leaves around it and what text keeps clear of it at its right are here alone: a part that lies text
@@ -502,7 +503,7 @@ h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .verdict li { display: grid; gap: 0.1rem; }
 .verdict .question { font-size: 0.9rem; }
 .verdict .pick { font-size: 1.4rem; line-height: 1.4; }
-.verdict .undecided { opacity: 0.8; }
+.verdict .undecided { color: color-mix(in srgb, currentColor 80%, transparent); }
 .body { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 2.5rem; padding-block: 2rem; }
 main { display: grid; gap: 2.2rem; align-content: start; }
 main section { display: grid; gap: var(--floe-room); }
