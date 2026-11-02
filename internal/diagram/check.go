@@ -5,6 +5,7 @@ import (
 	"iter"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -127,15 +128,33 @@ var graphKeys = map[string]string{
 	"diagram_straddle":     "diagram_graph_straddle",
 }
 
-// tell tells the mistake of key that things make, in their order: at the first written by hand, which its writer
-// can move; when graphs laid them all out, at the first's graph, in the words that say to move it. Two things or
-// more of one graph meet only by a fault of its layout, which no writer can mend: floe's failure.
+// tell tells the mistake of key that things make: at the one written by hand (no graph's nor tree's) written last, of
+// the greatest part (of one part, the first given), as the one added or moved last most often made it; with none,
+// at the one a tree laid out written last so; when graphs laid them all out, at the first's graph, in the words that
+// say to move it. Two things or more of one graph meet only by a fault of its layout, which no writer can mend:
+// floe's failure.
+// LIMIT: a mistake two things make named in the same words twice (two boxes of one text) told at one place is told
+// once (usererr.Tell), where it was told at each before; name them if one comes to need both.
 func (l *layout) tell(key string, things []placed, args ...any) {
-	for _, t := range things {
-		if t.graph == "" {
-			l.problem(t.at, key, args...)
+	at, hand, last := -1, false, 0
+	for i, t := range things {
+		if t.graph != "" {
+			continue
+		}
+		part, tree, err := partOf(t.at)
+		if err != nil {
+			if l.failure == nil {
+				l.failure = err
+			}
 			return
 		}
+		if at < 0 || !tree && !hand || !tree == hand && part > last {
+			at, hand, last = i, !tree, part
+		}
+	}
+	if at >= 0 {
+		l.problem(things[at].at, key, args...)
+		return
 	}
 	if len(things) > 1 && !slices.ContainsFunc(things, func(t placed) bool { return t.graph != things[0].graph }) {
 		if l.failure == nil {
@@ -145,6 +164,18 @@ func (l *layout) tell(key string, things []placed, args ...any) {
 		return
 	}
 	l.problem(things[0].graph, graphKeys[key], args...)
+}
+
+// partOf is the index of the part at points to, a JSON pointer floe made under #/parts, and whether a tree laid it out;
+// a pointer of no part is floe's failure.
+func partOf(at string) (part int, tree bool, err error) {
+	rest, ok := strings.CutPrefix(at, "#/parts/")
+	n, more, _ := strings.Cut(rest, "/")
+	part, err = strconv.Atoi(n)
+	if !ok || err != nil {
+		return 0, false, fmt.Errorf("diagram: a mistake at %q, of no part", at) //nolint:err113 // floe's own
+	}
+	return part, more == "tree" || strings.HasPrefix(more, "tree/"), nil
 }
 
 func (p path) runsThrough(r rect) bool {
