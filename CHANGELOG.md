@@ -302,7 +302,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   diagram on a panel or a theme's patterned page stands as a box of the page's
   ground, and a fragment of `floe diagram render` on another page as a box of
   `default`'s `--bg`, light on a dark page.
-
+- Change brutal's and notebook's numbered cards (options', or a part or template of your own that takes the look
+  `cards` with `class="numbered"`) to draw what they hold in its own colours on their filled faces, no longer
+  painting every text in the card's ink: options' + and − signs take the face's colour by `var(--on-face, …)`. Text of
+  your own in such a card written in `--muted`, `--accent` or a tone with no `var(--on-face, …)` no longer reads on
+  their yellow, blue or pink faces; write it with `var(--on-face, …)`. A pill there keeps its own colour.
 - Change every page to start with no margin on the body, set by floe under the template's `page.css`: a template of
   your own that writes none loses the browser's 8px, and a margin your theme's `base.css` gives the body no longer
   reaches it (write it in the template's `page.css`). floe's templates set no font size, so their text takes the size
@@ -438,7 +442,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Fix a diagram on a panel, in details or on a theme's patterned page, whose
   labels' boxes and hollow ends and dots stood out in the page's ground: a
   diagram paints its own ground, `--bg`, in its frame.
-
+- Fix washi's cards losing their inner rule while picked (options) or focused (links): the rule is drawn within the
+  card, by `--floe-inset`, no longer by the outline that the ring takes. A card of your own in washi drawn on a ground
+  other than `--surface` shows a band of it between the rules, and one that takes no `panel` has the outer rule alone.
+- Fix the ring of the option picked sinking into brutal's and notebook's filled cards (2.3:1 on brutal's blue): it
+  takes the face's text colour there, as a focus ring does.
 - Fix swiss's parts in a band (a note, details, a table) and a template's own
   panels and tables there, whose text and rules were dark on the red band and
   whose links, titles, marks and focus rings red on it: they draw in the band's
