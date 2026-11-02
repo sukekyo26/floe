@@ -472,11 +472,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Fix an edge to a diagram's dot named in `from` or `to` ending at the dot's centre, its arrow hidden under the
-  dot. It ends at the dot's outline now, towards the edge's first point off the centre, so that the arrow shows; its
-  label stands where it did. It still ends at the centre when that point is within the radius, between two dots that
-  touch, and when the end is written as a point at the centre. The built-in gantt example draws its arrows into the
-  release again.
+- Fix an edge to a diagram's dot named in `from` or `to` drawn to the dot's centre, its arrow hidden under the dot.
+  It is drawn to the dot's outline now, towards the edge's first point off the centre, the tip of its arrow (or
+  other marker) on the outline. It is still drawn to the centre when that run is too short for the marker, between
+  two dots that touch or overlap, and when the end is written as a point at the centre. The edge is checked, and its
+  label placed, as before. The built-in gantt example draws its arrows into the release again.
 - Refuse a diagram's label written where it stands, at an `x` and `y` or an edge's at `at`, straddling the edge of a
   frame, as a box or a dot there is (`label "…" straddles the edge of frame "…"`); it was drawn across it. A label is
   checked by its box, 5 wider each side than its text. The labels floe places (an edge's with no `at`, an icon's, a
