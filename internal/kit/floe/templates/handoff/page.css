@@ -20,7 +20,10 @@ main h2 { font-size: 1.15rem; }
 .asks h2 { color: var(--warn); font-size: 1.3rem; }
 /* Q1, Q2 … are the list's own numbers: each li stays a list item, its layout inside it. The name is the page's
    alone, as a counter style is not held by @scope.
-   LIMIT: up to Q99 fits the pad; a hundredth question spills left of it */
+   LIMIT: up to Q99 fits the pad; a hundredth question spills left of it.
+   LIMIT: the prefix Q is letters a screen reader reads as they are, in any page's language, as a counter style's prefix
+   takes no text in its place. To tell the number in words, put a word of words.yaml at each li's head as hidden text
+   (.floe-hidden) and the Q in ::marker's content, read out by / "" */
 @counter-style floe-handoff-q { system: extends decimal; prefix: "Q"; suffix: " "; }
 .asks ol { list-style-type: floe-handoff-q; padding-left: 3rem; gap: 1.1rem; }
 .asks ol > li::marker { color: var(--warn); font-family: var(--mono); font-weight: 700; }
@@ -35,7 +38,7 @@ main h2 { font-size: 1.15rem; }
 .board ul, .board ol { gap: 0.6rem; }
 .doing { list-style: none; padding: 0; }
 /* A tick as the look marked places a row's sign */
-.done > li::before { content: "✓"; color: var(--good); }
+.done > li::before { content: "✓"; content: "✓" / ""; color: var(--good); }
 .ref, .where { display: block; color: var(--muted); font-size: 0.88rem; }
 .doing li { display: grid; grid-template-columns: auto 1fr; gap: 0.1rem 0.6rem; align-items: baseline; }
 .doing .what, .doing .where { grid-column: 1 / -1; }

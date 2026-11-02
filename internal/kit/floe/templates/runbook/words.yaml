@@ -6,6 +6,7 @@ en:
   steps: Steps
   rollback: Roll back
   if_fails: If it fails
+  caution: 'Caution: '
 ja:
   kind: 手順書
   owner: 担当
@@ -14,3 +15,4 @@ ja:
   steps: 手順
   rollback: 戻し方
   if_fails: 失敗したら
+  caution: 注意：

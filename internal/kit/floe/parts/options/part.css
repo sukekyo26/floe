@@ -5,5 +5,5 @@
 .option .points { gap: 0.2rem; }
 /* Of no ground of their own: in the face's colour within a face, a theme's filled card */
 .option li.pro { color: var(--on-face, var(--fg)); }
-.option li.pro::before { content: "+"; color: var(--on-face, var(--good)); }
-.option li.con::before { content: "−"; color: var(--on-face, var(--bad)); }
+.option li.pro::before { content: "+"; content: "+" / ""; color: var(--on-face, var(--good)); }
+.option li.con::before { content: "−"; content: "−" / ""; color: var(--on-face, var(--bad)); }
