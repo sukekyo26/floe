@@ -601,7 +601,8 @@ func starts(s seg, long float64) []float64 {
 // across the run a unit past its end nearer the box (past every box the cut would cross), and all that lies past the
 // cut moves on along the run by the label's length and what labels leave below (right of) it in the band (crossed).
 // The label stands below the run (right of a run down). Where something there stands in its way (see reach) and the
-// same place above the run (left of it) is clear and within what the group draws (clearAbove), the label stands
+// same place above the run (left of it) is clear, of the parts written by hand too, and moves the group by none
+// (clearAbove), the label stands
 // there instead, with no second cut. Else the drawing is cut along the run, short of the nearest thing below it by
 // the label, and all that lies past that cut moves on across as far as the label needs, the boxes the cut crosses
 // widening. The room is clear: in the band lie only runs that cross it and what labels leave short of the room;

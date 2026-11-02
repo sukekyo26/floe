@@ -474,9 +474,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Fix a graph edge's label floe made room for below its run (right of a run down) when something there was in the
   way, pushing the drawing apart across the run even where the same place above it (left of it) was clear. It stands
-  there now, where that stays within what the graph draws. Of two labelled level edges between the same boxes, the
-  upper's label stood between them, the two 36 apart rather than 12; it stands above the upper one now, and the
-  labels of such a pair stand outside it where there is room.
+  there now, where that is clear of the parts written by hand too and moves the graph off none of its `x` and `y`.
+  Of two labelled level edges between the same boxes, the upper's label stood between them, the two 36 apart rather
+  than 12; it stands above the upper one now, and the labels of such a pair stand outside it where there is room.
 - Fix an edge written by hand to a box of a graph or a tree, or a group's or a lane's frame, with no side written,
   which could end at the middle of a side one of their edges ends at and run over it. With `via` or without, it takes
   a side their edges leave, with the via next to it (or the other end) outside it, across first; with none, the side
