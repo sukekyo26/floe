@@ -467,6 +467,10 @@ func TestEdgesHandSides(t *testing.T) {
 		{"width: 300\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: g }\n  - edge: { from: [200, 0], via: [[200, 60]], to: g }\n", `d="M200,0 V60 V120.5 H164"`},
 		// two of the graph's edges end at b's top
 		{"width: 300\nheight: 200\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: c, rows: [c] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n        - { from: c, to: b }\n  - edge: { from: [250, 0], via: [[250, 60]], to: b }\n", `d="M250,0 V60 V87.5 H116"`},
+		// a group's frame in the first rank keeps its top, which no edge of the graph ends at
+		{"width: 300\nheight: 240\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 40\n      nodes:\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n        - box: { name: a, rows: [a] }\n      edges:\n        - { from: g, to: a }\n  - edge: { from: [250, 0], via: [[250, 20]], to: g }\n", `d="M250,0 V20 H86 V40"`},
+		// a lane's outer side, which no edge of the graph crosses, is left
+		{"width: 400\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      lanes:\n        - { name: l1, label: L1, nodes: [{ box: { name: a, rows: [a] } }] }\n        - { name: l2, label: L2, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [0, 200], via: [[10, 200]], to: l1 }\n", `d="M0,200 H10 V88 H20"`},
 		// across first: right, though the top is left too
 		{"width: 300\nheight: 320\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: a, via: [[100, 5]], to: [200, 300] }\n", `d="M68,34.5 H100 V5 H200 V300"`},
 		// a leaf keeps its bottom

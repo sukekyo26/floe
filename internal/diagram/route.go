@@ -246,7 +246,10 @@ func (l *layout) facing(e end, p [2]float64, across, known bool) string {
 // first, then up or down towards it. With neither, side is kept: another would run along e's edge or back over the
 // edge, where this one meets theirs, mostly told as a crossing.
 // LIMIT: with no side left that p is outside of, the edge keeps a side the graph's or the tree's edges take, and may
-// run over theirs silently; write the via outside a side left, or write the side.
+// run over theirs silently; write the via outside a side left, or write the side. The graph's labels keep off a box's
+// sides across its edges alone (hands), not a box's top or bottom left, nor a frame's sides left, so an edge to one
+// may meet a label and be refused. A box's sides left are counted from the ends of the graph's edges, so one running
+// past a box, skipping ranks, may cross or run beside an edge ending at the box's side.
 func (l *layout) clear(e end, side string, other, p [2]float64) string {
 	t, ok := l.names[e.Name]
 	if e.Point != nil || !ok || t.handSides == nil {
@@ -354,29 +357,30 @@ func pathData(pts [][2]float64) string {
 // LIMIT: the runs between via go round nothing in the way.
 func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, fromWho, toWho string, ok bool) {
 	fromSide, toSide := e.FromSide, e.ToSide
+	fromAt, toAt := l.centre(e.From), l.centre(e.To)
 	if fromSide == "" {
-		near := l.centre(e.To)
+		near := toAt
 		if len(e.Via) > 0 {
 			fromSide, near = l.facing(e.From, e.Via[0], false, false), e.Via[0]
 		}
-		fromSide = l.clear(e.From, fromSide, l.centre(e.To), near)
+		fromSide = l.clear(e.From, fromSide, toAt, near)
 	}
-	from, fromWho, okFrom := l.endOf(at, e.From, fromSide, l.centre(e.To))
+	from, fromWho, okFrom := l.endOf(at, e.From, fromSide, toAt)
 	angled := len(e.Via) > 0 && !e.Straight
 	across := false
 	if angled && okFrom {
 		pts, across = through([][2]float64{{from.x, from.y}}, e.Via, horizontal(from.side) || from.side == "")
 	}
 	if toSide == "" {
-		near := l.centre(e.From)
+		near := fromAt
 		if len(e.Via) > 0 {
 			near = e.Via[len(e.Via)-1]
 			toSide = l.facing(e.To, near, across, angled && okFrom)
 		}
-		toSide = l.clear(e.To, toSide, l.centre(e.From), near)
+		toSide = l.clear(e.To, toSide, fromAt, near)
 	}
 	// Resolved even when from is not, so that both are told.
-	to, toWho, okTo := l.endOf(at, e.To, toSide, l.centre(e.From))
+	to, toWho, okTo := l.endOf(at, e.To, toSide, fromAt)
 	if !okFrom || !okTo {
 		return nil, "", "", false
 	}
