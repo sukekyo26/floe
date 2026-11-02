@@ -296,6 +296,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the labels of a Venn diagram's regions (`in`) to have no box unless
+  they say `plain: false`: one that wrote no `plain` loses the box it drew on
+  its circle. A diagram's ground, `--bg`, is painted in its frame, so a
+  diagram on a panel or a theme's patterned page stands as a box of the page's
+  ground, and a fragment of `floe diagram render` on another page as a box of
+  `default`'s `--bg`, light on a dark page.
 - Change brutal's and notebook's numbered cards (options', or a part or template of your own that takes the look
   `cards` with `class="numbered"`) to draw what they hold in its own colours on their filled faces, no longer
   painting every text in the card's ink: options' + and − signs take the face's colour by `var(--on-face, …)`. Text of
@@ -433,6 +439,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a diagram on a panel, in details or on a theme's patterned page, whose
+  labels' boxes and hollow ends and dots stood out in the page's ground: a
+  diagram paints its own ground, `--bg`, in its frame.
 - Fix washi's cards losing their inner rule while picked (options) or focused (links): the rule is drawn within the
   card, by `--floe-inset`, no longer by the outline that the ring takes. A card of your own in washi drawn on a ground
   other than `--surface` shows a band of it between the rules, and one that takes no `panel` has the outer rule alone.

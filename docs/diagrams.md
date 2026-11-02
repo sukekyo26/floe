@@ -18,6 +18,7 @@ A `diagram` part, in a section or in `details` and `tabs`, is a spec written in 
 - `width` and `height` may each be left out: the canvas then reaches as far right (or down) as what is drawn, and 20 more. Its top left stays 0, 0, so the coordinates are as written. `raw` SVG is not measured: write `width` and `height` with it, or it may be cut off.
 - `example: <kind>` in place of the rest draws a built-in example (`floe diagram example` lists them). The page shows the diagram, not its spec: to read or copy an example's spec, print it with `floe diagram example <kind>`.
 - Text (a `title`, a row, a label) is text, or its words in each language, English among them: `{ en: Store, ja: 保存先 }`. The page draws the words of its `lang:`, and the spec is laid out and checked once for every language it is written in.
+- A diagram paints its own ground, the page's `--bg`, in its frame, and what hides the lines under it (a label's box, a hollow end or dot) is painted that ground: on a panel or a theme's patterned page, the diagram stands as a box of the page's ground.
 - Each part is one key naming its kind. `floe part show diagram schema.json` prints every key; `floe diagram example <kind>` prints a spec of each kind, its comments explaining its grid.
 
 | Part | Keys |
@@ -31,7 +32,7 @@ A `diagram` part, in a section or in `details` and `tabs`, is a spec written in 
 | `bar` | `x1` `x2` `y`, `name`, `tone`, `label` (right of the bar). |
 | `axis` | `x1` `x2` `y`, `ticks: [[x, text], ...]`, `grid` (the top of the grid lines). |
 | `circle` | `cx` `cy` `r`, `name`, `tone`. Circles may overlap. |
-| `label` | `text`, `x` `y`, `anchor` (`middle`; `start`, `end`), `plain` (no background), `strong`, `in` (the names of the circles of a Venn diagram it sits inside, outside the others; without `x` and `y`, floe places it). |
+| `label` | `text`, `x` `y`, `anchor` (`middle`; `start`, `end`), `plain` (no background: the default for a label with `in`; `false` gives it one), `strong`, `in` (the names of the circles of a Venn diagram it sits inside, outside the others; without `x` and `y`, floe places it). |
 | `line` | `x1` `y1` `x2` `y2`, `kind` (`line`; `lifeline`, `divider`). It may cross other parts, but not leave the canvas. |
 | `tree` | `x` `y` (the root's centre and top), `root`: a node of `rows`, `name`, `tone`, `shape` as a `box` has them, and `children`, nodes too. floe places each node under its parent, the children side by side and each depth in one row, and draws an edge down from each node to each child. A node's `name` can be the end of an edge written by hand. |
 | `graph` | `x` `y` (the top left of all of it), `nodes`, `edges`, `direction` (`down`; `right`), and `lanes` in place of `nodes`. A node is `box: { name, rows, tone, shape }`, as a `box` has them, its `name` needed, or `group: { name, label, accent, nodes }`, boxes and groups framed together; an edge is `{ from, to }`, two names of its boxes or groups, with `label`, `dashed`, `bold`, `tone`, `start` and `end` (`arrow` or `none`). floe lays the boxes out in ranks and draws each edge between them, as below. |

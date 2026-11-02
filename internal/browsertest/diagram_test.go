@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/kit"
 )
 
 // diagramKit is a part of one's own, pic, that draws its value as a diagram in its box, and a template that
@@ -157,7 +159,7 @@ func diagramColours(root string) string {
     const cs = getComputedStyle(e);
     out.push(sel + ' ' + i + ': ' + props.map((p) => cs.getPropertyValue(p)).join(' '));
   });
-  read('.dg-wrap', ['border-top-color']);
+  read('.dg-wrap', ['border-top-color', 'background-color', 'color']);
   read('.dg', ['font-family']);
   read('.dg *', ['fill', 'stroke']);
   read('.dg-tools span', ['color']);
@@ -358,6 +360,102 @@ func TestUIGraph(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		b.until("the diagrams", "document.querySelectorAll('svg.dg').length === "+strconv.Itoa(len(files)))
 		if got := b.eval(measureBoxes); got != "" {
 			t.Errorf("%s:\n  %s", lang, strings.ReplaceAll(got, "\n", "\n  "))
+		}
+	}
+}
+
+// groundSpecs are two diagrams drawing what hides what lies under it: a hand-written edge's label, a hollow end and a
+// hollow dot; and the labels of a Venn diagram's regions, with no plain, beside a bar's label.
+var groundSpecs = []string{`title: edges
+width: 380
+height: 140
+parts:
+  - box: { name: a, x: 20, y: 20, w: 90, h: 36, rows: [A] }
+  - box: { name: b, x: 270, y: 20, w: 90, h: 36, rows: [B] }
+  - edge: { from: a, to: b, label: a label, end: triangle }
+  - edge: { from: [20, 110], to: [200, 110] }
+  - dot: { cx: 110, cy: 110, r: 7, hollow: true }
+`, `title: venn
+width: 520
+height: 200
+parts:
+  - circle: { name: p, cx: 120, cy: 100, r: 80, tone: accent }
+  - circle: { name: q, cx: 220, cy: 100, r: 80, tone: good }
+  - label: { text: both, in: [p, q] }
+  - label: { text: only p, in: [p] }
+  - label: { text: only q, x: 250, y: 110, in: [q] }
+  - bar: { x1: 330, x2: 420, y: 150, label: a bar }
+`}
+
+// groundParts are the diagrams of groundSpecs as parts, indented by n.
+func groundParts(n int) string {
+	var b strings.Builder
+	for _, spec := range groundSpecs {
+		b.WriteString(strings.Repeat(" ", n) + "- diagram:\n")
+		for line := range strings.Lines(spec) {
+			b.WriteString(strings.Repeat(" ", n+4) + line)
+		}
+	}
+	return b.String()
+}
+
+// measureGround returns a line for each diagram whose ground, the first thing up from its frame that paints one, is
+// not its frame, for each thing hiding what lies under it not painted the frame's ground, and for each Venn diagram
+// with a box under more labels than its bar's.
+const measureGround = `(() => {
+  const out = [];
+  document.querySelectorAll('.dg-wrap').forEach((wrap, i) => {
+    let e = wrap;
+    while (e && getComputedStyle(e).backgroundColor === 'rgba(0, 0, 0, 0)' && getComputedStyle(e).backgroundImage === 'none') {
+      e = e.parentElement;
+    }
+    if (e !== wrap) {
+      out.push('diagram ' + i + ': its ground is ' + (e ? e.tagName.toLowerCase() + ' ' + e.className : 'none'));
+      return;
+    }
+    const ground = getComputedStyle(wrap).backgroundColor;
+    wrap.querySelectorAll('.label-bg, .mk-hollow, .dot.hollow').forEach((h) => {
+      const fill = getComputedStyle(h).fill;
+      if (fill !== ground) {
+        out.push('diagram ' + i + ': ' + h.getAttribute('class') + ' painted ' + fill + ' on ' + ground);
+      }
+    });
+    if (wrap.querySelector('.venn') && wrap.querySelectorAll('.label-bg').length !== 1) {
+      out.push('diagram ' + i + ': ' + wrap.querySelectorAll('.label-bg').length + ' label boxes, want the bar\'s alone');
+    }
+  });
+  return out.join('\n');
+})()`
+
+// TestUIDiagramGround draws diagrams in a template's section, in details and tabs, and in ADR's panel, in every theme:
+// each diagram paints its own ground, and what hides what lies under it (a label's box, a hollow end and dot) is painted
+// that ground, as no CSS can read the ground outside it; the labels of a Venn diagram's regions have no box.
+func TestUIDiagramGround(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, themes, _ := k.Names()
+	report := "template: report\nlang: en\ntitle: Ground\nsections:\n  - heading: Section\n    parts:\n" + groundParts(6) +
+		"  - heading: Held\n    parts:\n      - details:\n          title: Open\n          open: true\n          parts:\n" +
+		groundParts(12) + "      - tabs:\n          - title: One\n            parts:\n" + groundParts(14) +
+		"          - title: Two\n            parts:\n              - text: two\n"
+	adr := "template: adr\nlang: en\ntitle: Ground\nnumber: ADR 1\ndate: 2030-03-02\nstatus: accepted\n" +
+		"context: Some context.\ndecision: Some decision.\nmore:\n  - heading: Diagrams\n    parts:\n" + groundParts(6)
+	for _, theme := range themes {
+		for name, page := range map[string]string{"report": report, "adr": adr} {
+			slug := "ground-" + name + "-" + theme
+			s.floe(t, "publish", s.write(t, slug+".yaml", page+"theme: "+theme+"\n"), "--slug", slug)
+			s.b.navigate("/a/" + slug + "/?raw")
+			want := 2
+			if name == "report" {
+				want = 6
+			}
+			s.b.until("the diagrams", "document.querySelectorAll('svg.dg').length === "+strconv.Itoa(want))
+			if got := s.b.eval(measureGround); got != "" {
+				t.Errorf("%s in %s:\n  %s", name, theme, strings.ReplaceAll(got, "\n", "\n  "))
+			}
 		}
 	}
 }

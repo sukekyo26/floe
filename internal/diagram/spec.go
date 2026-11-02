@@ -328,7 +328,7 @@ type label struct {
 	X      *float64 `json:"x"`
 	Y      *float64 `json:"y"`
 	Anchor string   `json:"anchor"`
-	Plain  bool     `json:"plain"`
+	Plain  *bool    `json:"plain"`
 	Strong bool     `json:"strong"`
 	In     []string `json:"in"`
 }

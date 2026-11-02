@@ -18,6 +18,7 @@
 - `width` と `height` は、それぞれ省けます。省くと、キャンバスは描いたものの右（下）の端まで広がり、さらに 20 空けます。左上は 0, 0 のままなので、座標は書いたとおりです。`raw` の SVG は測らないので、`raw` を使う図は `width` と `height` を書きます（書かないと切れることがあります）。
 - ほかの鍵の代わりに `example: <種類>` を書くと、組み込みの見本を描きます（`floe diagram example` が並べる）。ページは図だけを見せ、spec は見せません。見本の spec を読む・写すときは、`floe diagram example <種類>` で出します。
 - 文（`title`・行・ラベル）は、文か、言語ごとの言葉（英語を含む）です：`{ en: Store, ja: 保存先 }`。ページは `lang:` の言葉を描き、spec は書いた言語ごとに並べて確かめます。
+- 図は、枠の中にページの地 `--bg` を塗ります。下の線を隠すもの（ラベルの下の四角、白抜きの端と点）も、その地で塗ります。白い面や、模様のあるテーマのページの上では、図はページの地の色の箱になります。
 - 部品は、種類を名指す鍵 1 つで書きます。`floe part show diagram schema.json` がすべての鍵を出し、`floe diagram example <種類>` が種類ごとの spec を、格子を説明するコメント付きで出します。
 
 | 部品 | 鍵 |
@@ -31,7 +32,7 @@
 | `bar` | `x1` `x2` `y`、`name`、`tone`、`label`（棒の右）。 |
 | `axis` | `x1` `x2` `y`、`ticks: [[x, 文], ...]`、`grid`（格子の線の上端）。 |
 | `circle` | `cx` `cy` `r`、`name`、`tone`。円どうしは重なってよい。 |
-| `label` | `text`、`x` `y`、`anchor`（`middle`。`start`・`end`）、`plain`（背景なし）、`strong`、`in`（ベン図で、内側に置く円の名前。ほかの円の外。`x` と `y` を省けば floe が置く）。 |
+| `label` | `text`、`x` `y`、`anchor`（`middle`。`start`・`end`）、`plain`（背景なし。`in` のあるラベルの既定。`false` で背景を付ける）、`strong`、`in`（ベン図で、内側に置く円の名前。ほかの円の外。`x` と `y` を省けば floe が置く）。 |
 | `line` | `x1` `y1` `x2` `y2`、`kind`（`line`。`lifeline`・`divider`）。ほかの部品と交わってよいが、キャンバスから出ない。 |
 | `tree` | `x` `y`（根の中心と上）、`root`：節。節は `box` と同じ `rows`・`name`・`tone`・`shape` と、子の節を並べた `children` を持つ。floe が各節を親の下に置き（子は横に並べ、深さごとに 1 段にそろえる）、親から子へ線を引く。節の `name` は、手で書いた線の端にできる。 |
 | `graph` | `x` `y`（全体の左上）、`nodes`、`edges`、`direction`（`down`。`right`）、`nodes` の代わりの `lanes`。節は `box: { name, rows, tone, shape }`（`box` と同じ鍵を持ち、`name` は要る）か、`group: { name, label, accent, nodes }`（箱とまとまりを枠で囲むまとまり）。線は `{ from, to }`（その graph の箱かまとまりの名前 2 つ）で、`label`・`dashed`・`bold`・`tone`・`start`・`end`（`arrow` か `none`）を持てる。floe が箱を段に分けて並べ、箱の間に線を引く（下）。 |
