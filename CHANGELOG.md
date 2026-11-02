@@ -474,8 +474,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Fix parts a template of one's own places in a band, which could not be read there. In swiss, whose panels, cards
   and notes have no ground, nearly every part's text and focus ring stayed in its own colour on the band's; they are
-  on the surface with the page's text in a band now, as in other themes, and stay as before in any other face. In
-  every theme, tabs' titles and focus ring, and the focus ring around links' cards, are in the band's text colour now.
+  on the surface with the page's text in a band now, as in other themes, a table's first column clear of the
+  surface's edge, and stay as before in any other face. In every theme, in any filled face (a band, or a face a
+  template paints itself), tabs' titles and focus ring and the focus ring around links' cards are in the face's text
+  colour now, and the picked tab in the face's two colours turned over, told from the others and from the face.
 - Refuse a diagram's label written where it stands, at an `x` and `y` or an edge's at `at`, straddling the edge of a
   frame, as a box or a dot there is (`label "…" straddles the edge of frame "…"`); it was drawn across it. A label is
   checked by its box, 5 wider each side than its text. The labels floe places (an edge's with no `at`, an icon's, a

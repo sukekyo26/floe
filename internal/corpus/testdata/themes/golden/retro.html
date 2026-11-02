@@ -554,10 +554,12 @@ blockquote { background: var(--surface); border: 0; border-radius: var(--radius)
 @scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows. The titles
    have no ground: they and their ring are in the colour on a face around tabs, taken at the root (base.css takes faces
-   away below it) */
+   away below it). In a face the picked one is in the face's two colours turned over, to be told from the others and the
+   face whatever a theme picks it in (--tabs-face-bg and --tabs-face-fg are none outside a face) */
 :scope {
   --tabs-gap: 0.35rem; display: flex; flex-wrap: wrap; gap: var(--tabs-gap);
   --tabs-title: var(--on-face, var(--muted)); --tabs-ring: var(--on-face, var(--accent)); --tabs-print: var(--on-face, var(--fg));
+  --tabs-face-bg: var(--on-face); --tabs-face-fg: var(--face);
 }
 :scope > label {
   position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: 0.9rem; font-weight: 600;
@@ -569,7 +571,7 @@ blockquote { background: var(--surface); border: 0; border-radius: var(--radius)
    that wants that shadow on the picked one too sets the ring */
 @media screen {
   :scope > label:has(:checked) {
-    background: var(--tabs-picked-bg, var(--accent-soft)); color: var(--tabs-picked-fg, var(--accent));
+    background: var(--tabs-face-bg, var(--tabs-picked-bg, var(--accent-soft))); color: var(--tabs-face-fg, var(--tabs-picked-fg, var(--accent)));
     box-shadow: var(--tabs-picked-ring, none);
   }
 }

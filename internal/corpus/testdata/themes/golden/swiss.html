@@ -459,10 +459,12 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 @scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows. The titles
    have no ground: they and their ring are in the colour on a face around tabs, taken at the root (base.css takes faces
-   away below it) */
+   away below it). In a face the picked one is in the face's two colours turned over, to be told from the others and the
+   face whatever a theme picks it in (--tabs-face-bg and --tabs-face-fg are none outside a face) */
 :scope {
   --tabs-gap: 0.35rem; display: flex; flex-wrap: wrap; gap: var(--tabs-gap);
   --tabs-title: var(--on-face, var(--muted)); --tabs-ring: var(--on-face, var(--accent)); --tabs-print: var(--on-face, var(--fg));
+  --tabs-face-bg: var(--on-face); --tabs-face-fg: var(--face);
 }
 :scope > label {
   position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: 0.9rem; font-weight: 600;
@@ -474,7 +476,7 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
    that wants that shadow on the picked one too sets the ring */
 @media screen {
   :scope > label:has(:checked) {
-    background: var(--tabs-picked-bg, var(--accent-soft)); color: var(--tabs-picked-fg, var(--accent));
+    background: var(--tabs-face-bg, var(--tabs-picked-bg, var(--accent-soft))); color: var(--tabs-face-fg, var(--tabs-picked-fg, var(--accent)));
     box-shadow: var(--tabs-picked-ring, none);
   }
 }
@@ -547,7 +549,9 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 :scope > * { --face: inherit; --on-face: inherit; }
 /* In a band (band.css), the surface and the page's text, as other themes' panels, keeping no face from the band; a
    part's root keeps it, for its ring outside on the band.
-   LIMIT: a browser that reads no container style query draws it in a band as in any face */
+   LIMIT: a browser that reads no container style query draws it in a band as in any face
+   LIMIT: a part's root keeps the band's --on-face on the surface, so a rule there reading var(--on-face, …) draws white on
+   white; table.css sets its head's colour itself, and no other is known */
 @container style(--swiss-band: on) {
   :scope { background: var(--surface); color: var(--fg); border-top-color: var(--fg); }
   :scope:where(:not([data-floe-part])), :scope > * { --face: initial; --on-face: initial; }
@@ -563,7 +567,9 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 :scope > * { --face: inherit; --on-face: inherit; }
 /* In a band (band.css), the surface and the page's text, as other themes' panels, keeping no face from the band; a
    part's root keeps it, for its ring outside on the band.
-   LIMIT: a browser that reads no container style query draws it in a band as in any face */
+   LIMIT: a browser that reads no container style query draws it in a band as in any face
+   LIMIT: a part's root keeps the band's --on-face on the surface, so a rule there reading var(--on-face, …) draws white on
+   white; table.css sets its head's colour itself, and no other is known */
 @container style(--swiss-band: on) {
   :scope { background: var(--surface); color: var(--fg); border-top-color: var(--fg); }
   :scope:where(:not([data-floe-part])), :scope > * { --face: initial; --on-face: initial; }
