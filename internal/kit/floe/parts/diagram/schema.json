@@ -181,7 +181,7 @@
     },
     "dot": {
       "type": "object",
-      "description": "A circle edges may reach the centre of (a commit, a milestone, a start state)",
+      "description": "A circle (a commit, a milestone, a start state); an edge naming it ends at its outline",
       "required": ["cx", "cy"],
       "additionalProperties": false,
       "properties": {

@@ -387,12 +387,107 @@ func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, fromWho, toWh
 	start, last := [][2]float64{{from.x, from.y}}, [2]float64{to.x, to.y}
 	switch {
 	case e.Straight:
-		return slices.Concat(start, e.Via, [][2]float64{last}), fromWho, toWho, true
+		pts = slices.Concat(start, e.Via, [][2]float64{last})
 	case len(e.Via) == 0:
-		return slices.Concat(start, turns(from, to), [][2]float64{last}), fromWho, toWho, true
+		pts = slices.Concat(start, turns(from, to), [][2]float64{last})
 	default:
-		return enter(pts, to, across), fromWho, toWho, true
+		pts = enter(pts, to, across)
 	}
+	return pts, fromWho, toWho, true
+}
+
+// atDots is pts, an edge's points as routed, as drawn: each end at a dot it names moved back from the centre towards
+// the first point off it (rimEnd), both measured on pts. Only the drawing moves: the edge is checked and labelled as
+// routed, so that what it is refused for and where its label stands are as with the end at the centre. Ends on the one
+// run between two dots move only when the run keeps room for both.
+// LIMIT: an edge between two dots that touch or overlap ends at their centres, its arrows hidden; move them apart.
+// LIMIT: the label of an edge, placed as routed, may stand over an arrow moved back on a short run; write at.
+func (l *layout) atDots(e *edge, pts [][2]float64, start, end string) [][2]float64 {
+	last := len(pts) - 1
+	a, aOK := l.rimEnd(e.From, pts, 0, 1, start)
+	b, bOK := l.rimEnd(e.To, pts, last, -1, end)
+	if !aOK && !bOK {
+		return pts
+	}
+	_, fromDot := l.dot(e.From)
+	_, toDot := l.dot(e.To)
+	if fromDot && toDot && offFrom(pts, 0, 1) == last && (!aOK || !bOK || a.run-a.back-b.back <= max(a.keep, b.keep)) {
+		return pts
+	}
+	lo, hi := 0, last
+	var out [][2]float64
+	if aOK {
+		out, lo = append(out, a.at), a.off
+	}
+	if bOK {
+		hi = b.off
+	}
+	if lo <= hi {
+		out = append(out, pts[lo:hi+1]...)
+	}
+	if bOK {
+		out = append(out, b.at)
+	}
+	return out
+}
+
+// rimmed is where an end at a dot is drawn: at, back from the centre along the run to the first point off it, pts[off],
+// run long; back, how far it moves, keep, how much of the run its marker needs behind it.
+type rimmed struct {
+	at              [2]float64
+	off             int
+	run, back, keep float64
+}
+
+// rimEnd is the end of pts at i, going on by step, moved back from the centre of a dot e names so that it, or the
+// tip of its marker kind, meets the dot's outline; false for an end at no dot, or whose run cannot keep its marker
+// (or is no longer than the radius, with none).
+// LIMIT: an end written as a point at a dot's centre is no dot's and stays, its arrow hidden: name the dot.
+func (l *layout) rimEnd(e end, pts [][2]float64, i, step int, kind string) (rimmed, bool) {
+	t, ok := l.dot(e)
+	if !ok {
+		return rimmed{}, false //nolint:exhaustruct_v5 // none
+	}
+	off := offFrom(pts, i, step)
+	if off < 0 {
+		return rimmed{}, false //nolint:exhaustruct_v5 // none
+	}
+	c, q := pts[i], pts[off]
+	run := math.Hypot(q[0]-c[0], q[1]-c[1])
+	back, keep := pull(t.r.w/2, kind)
+	// LIMIT: a run too short for its marker (a via in line within it too) leaves the end at the centre, hidden.
+	if run-back <= keep {
+		return rimmed{}, false //nolint:exhaustruct_v5 // none
+	}
+	at := [2]float64{c[0] + (q[0]-c[0])/run*back, c[1] + (q[1]-c[1])/run*back}
+	return rimmed{at: at, off: off, run: run, back: back, keep: keep}, true
+}
+
+// dot is the dot e names, false for an end that names no dot.
+func (l *layout) dot(e end) (target, bool) {
+	t, ok := l.names[e.Name]
+	return t, e.Point == nil && ok && t.kind == "dot"
+}
+
+// offFrom is the index of the first of pts off pts[i], going on from i by step; -1 when all stand on it.
+func offFrom(pts [][2]float64, i, step int) int {
+	for j := i + step; j >= 0 && j < len(pts); j += step {
+		if pts[j] != pts[i] {
+			return j
+		}
+	}
+	return -1
+}
+
+// pull is how far an end at a dot of radius r moves back for the tip of its marker of kind (none: the end) to meet the
+// outline, and how much of its run the marker needs behind the end.
+func pull(r float64, kind string) (back, keep float64) {
+	for _, m := range markers {
+		if m.Kind == kind {
+			return r + m.W - m.RX, m.RX
+		}
+	}
+	return r, 0
 }
 
 func (l *layout) addEdge(e *edge, at string) {
@@ -423,7 +518,8 @@ func (l *layout) addEdge(e *edge, at string) {
 	if e.End != nil {
 		end = *e.End
 	}
-	el := elem{Kind: "path", D: pathData(pts), Class: cls, Tone: e.Tone, Start: l.marker(start), End: l.marker(end)}
+	drawn := l.atDots(e, pts, start, end)
+	el := elem{Kind: "path", D: pathData(drawn), Class: cls, Tone: e.Tone, Start: l.marker(start), End: l.marker(end)}
 	l.edgeEls = append(l.edgeEls, el)
 	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing, graph: e.graph}
 	if e.Label != nil {
