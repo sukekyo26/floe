@@ -442,7 +442,8 @@ func TestEdges(t *testing.T) {
 
 // An end named without a side, its via next to it outside it, takes the side towards that via, or when the via is off
 // both ways, the side across the way the edge came; the last run meets such a side, and a side written with the via
-// outside it, square. Every other end goes as before.
+// outside it, square, with two turns halfway when one turn would run back. The rest take the side facing the other
+// end: a via on the end or in it, a via off both ways at a from end or on a straight edge, a point, a dot.
 func TestEdgesVia(t *testing.T) {
 	t.Parallel()
 
@@ -453,7 +454,7 @@ func TestEdgesVia(t *testing.T) {
 	for _, c := range []struct {
 		parts, want string
 	}{
-		// Changed.
+		// Sides taken from the via, and met square.
 		{c01 + "  - edge: { from: [44, 154], via: [[44, 252]], to: c01 }", `d="M44,154 V252 H60"`},
 		{c01 + "  - edge: { from: [10, 20], via: [[10, 240]], to: c01 }", `d="M10,20 V240 V252 H60"`},
 		{c01 + "  - edge: { from: [0, 150], via: [[90, 150]], to: c01 }", `d="M0,150 H90 H104 V234"`},
@@ -480,7 +481,9 @@ func TestEdgesVia(t *testing.T) {
 				"  - edge: { from: [10, 20], via: [[310, 20]], to: t }",
 			`d="M10,20 H310 H400 V60"`,
 		},
-		// As before.
+		// Sides facing the other end, sides written with the via not outside them, points and dots: through goes on.
+		// A via level with the side, come to going away from it, runs back along that run (LIMIT in enter).
+		{c01 + "  - edge: { from: [50, 300], via: [[50, 252], [20, 252]], to: c01 }", `d="M50,300 V252 H20 H60"`},
 		{page + "  - edge: { from: [530, 160], via: [[530, 120]], to: slug }", `d="M530,160 V120 V81 H500"`},
 		{c01 + "  - edge: { from: [300, 100], via: [[200, 100]], to: c01, toSide: left }", `d="M300,100 H200 H60 V252"`},
 		{c01 + "  - edge: { from: [60, 20], via: [[60, 100]], to: c01, toSide: left }", `d="M60,20 V100 V252"`},
@@ -502,7 +505,7 @@ func TestEdgesVia(t *testing.T) {
 		}
 	}
 
-	// A via in a frame leaves the side to the end's centre as before, and the edge runs through a; both ends told.
+	// A via in a frame leaves the side facing the other end, and the edge runs through a; both ends unknown are told.
 	for _, c := range []struct {
 		parts, want string
 	}{

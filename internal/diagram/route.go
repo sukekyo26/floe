@@ -67,12 +67,12 @@ func onSide(t target, side string, other [2]float64) anchor {
 	r := t.r
 	cx, cy := r.x+r.w/2, r.y+r.h/2
 	if side == "" {
-		dx, dy := other[0]-cx, other[1]-cy
+		lr, tb := towards(r, other)
 		switch {
-		case t.kind == "row" || math.Abs(dx) >= math.Abs(dy):
-			side = map[bool]string{true: "right", false: "left"}[dx >= 0]
+		case t.kind == "row" || math.Abs(other[0]-cx) >= math.Abs(other[1]-cy):
+			side = lr
 		default:
-			side = map[bool]string{true: "bottom", false: "top"}[dy >= 0]
+			side = tb
 		}
 	}
 	switch side {
@@ -85,6 +85,19 @@ func onSide(t target, side string, other [2]float64) anchor {
 	default:
 		return anchor{cx, r.y + r.h, side, false}
 	}
+}
+
+// towards is the side of r across towards p, left or right by r's centre (right when level with it), and the side up
+// or down towards p, top or bottom (bottom when level).
+func towards(r rect, p [2]float64) (lr, tb string) {
+	lr, tb = "left", "top"
+	if p[0] >= r.x+r.w/2 {
+		lr = "right"
+	}
+	if p[1] >= r.y+r.h/2 {
+		tb = "bottom"
+	}
+	return lr, tb
 }
 
 func pointName(p [2]float64) string {
@@ -100,20 +113,10 @@ func (l *layout) centre(e end) [2]float64 {
 	return [2]float64{t.r.x + t.r.w/2, t.r.y + t.r.h/2}
 }
 
-// route is the points of an edge from a to b with no via, right-angled, or straight from point to point by via.
-// A right-angled edge with via is joined by addEdge.
-// LIMIT: without via, two turns at most and no way round what is in the way; via or a side gives another.
-func route(a, b anchor, via [][2]float64, straight bool) [][2]float64 {
-	start, last := [][2]float64{{a.x, a.y}}, [2]float64{b.x, b.y}
-	if straight {
-		return slices.Concat(start, via, [][2]float64{last})
-	}
-	return slices.Concat(start, turns(a, b), [][2]float64{last})
-}
-
 // turns are the corners from a to b without via: two out past both for sides of one way (both left, …), so that
 // the edge does not run along the parts' edges; none for ends in line; one for two points (across first) and for
 // sides across; two in the middle for facing sides (H V H, V H V).
+// LIMIT: two turns at most and no way round what is in the way; via or a side gives another.
 func turns(a, b anchor) [][2]float64 {
 	switch {
 	case oneWay(a, b):
@@ -200,8 +203,7 @@ func (l *layout) facing(e end, p [2]float64, across, known bool) string {
 		return ""
 	}
 	r := t.r
-	lr := map[bool]string{true: "left", false: "right"}[p[0] < r.x+r.w/2]
-	tb := map[bool]string{true: "top", false: "bottom"}[p[1] < r.y+r.h/2]
+	lr, tb := towards(r, p)
 	level := p[1] >= r.y && p[1] <= r.y+r.h
 	under := p[0] >= r.x && p[0] <= r.x+r.w
 	switch {
@@ -222,7 +224,8 @@ func (l *layout) facing(e end, p [2]float64, across, known bool) string {
 // (b.x, p.y) for top or bottom, or, when that turn would run back along the run into p, two turns halfway between p
 // and the side. Else the edge goes on as through takes it.
 // LIMIT: a side written with p not outside it (on its line, beyond the end) is met as through takes it, and the edge
-// may run along the end's edge; meeting it square takes a way round the end.
+// may run along the end's edge; meeting it square takes a way round the end. A p level with the side, come to by a
+// run going away from it, runs straight back along that run; turning off it takes a way round as well.
 func enter(pts [][2]float64, b anchor, across bool) [][2]float64 {
 	p, last := pts[len(pts)-1], [2]float64{b.x, b.y}
 	if b.point || !outside(p, b) {
@@ -289,7 +292,10 @@ func pathData(pts [][2]float64) string {
 	return b.String()
 }
 
-// edgePoints resolves e's ends and is the points it runs through, false when an end cannot be one (told at at).
+// edgePoints resolves e's ends and is the points it runs through, false when an end cannot be one (told at at):
+// straight from point to point by via, right-angled by turns without via, or right-angled through via, turning as the
+// via are written and entering the last side by enter.
+// LIMIT: the runs between via go round nothing in the way.
 func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, fromWho, toWho string, ok bool) {
 	fromSide, toSide := e.FromSide, e.ToSide
 	if len(e.Via) > 0 && fromSide == "" {
@@ -309,10 +315,15 @@ func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, fromWho, toWh
 	if !okFrom || !okTo {
 		return nil, "", "", false
 	}
-	if angled {
+	start, last := [][2]float64{{from.x, from.y}}, [2]float64{to.x, to.y}
+	switch {
+	case e.Straight:
+		return slices.Concat(start, e.Via, [][2]float64{last}), fromWho, toWho, true
+	case len(e.Via) == 0:
+		return slices.Concat(start, turns(from, to), [][2]float64{last}), fromWho, toWho, true
+	default:
 		return enter(pts, to, across), fromWho, toWho, true
 	}
-	return route(from, to, e.Via, e.Straight), fromWho, toWho, true
 }
 
 func (l *layout) addEdge(e *edge, at string) {
