@@ -256,10 +256,25 @@ func TestLayoutMistakes(t *testing.T) {
 				"s.yaml:8:5: label \"a heading across both\" straddles the edge of frame \"G\"",
 		},
 		{"  - circle: { name: c, cx: 100, cy: 100, r: 90 }\n  - frame: { x: 10, y: 10, w: 100, h: 180, label: F }\n  - label: { text: across, x: 110, y: 100, in: [c] }", `s.yaml:7:5: label "across" straddles the edge of frame "F"`},
-		// Not a label part's, nor one floe places in its region (LIMIT in checkPlacement): not compared.
+		// One out of its region is told so alone.
+		{
+			"  - circle: { name: c, cx: 100, cy: 100, r: 90 }\n  - frame: { x: 10, y: 10, w: 100, h: 180, label: F }\n  - label: { text: across, x: 110, y: 20, in: [c] }",
+			`s.yaml:7:5: label "across" is not all inside c and outside the other circles: move it, or leave out x and y for floe to place it`,
+		},
+		// An edge's label written at an x and y, as a label part.
+		{
+			"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - edge: { from: [20, 150], to: [200, 150], label: a long note, at: [100, 50] }",
+			`s.yaml:6:5: label "a long note" straddles the edge of frame "F"`,
+		},
+		// Not one floe places: an edge's in its middle, a label part's in its region (LIMIT in checkPlacement): not compared.
 		{"  - circle: { name: c, cx: 100, cy: 100, r: 90 }\n  - frame: { x: 10, y: 10, w: 100, h: 180, label: F }\n  - label: { text: placed across the edge, in: [c] }", ""},
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - frame: { x: 150, y: 10, w: 100, h: 100, label: G }\n  - edge: { from: [20, 60], to: [240, 60], label: an edge label }", ""},
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - bar: { x1: 20, x2: 80, y: 50, label: a long bar label }", ""},
+		{
+			"  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n" +
+				"      edges:\n        - { from: a, to: b, label: a graph label }\n  - frame: { x: 100, y: 5, w: 200, h: 150, label: F }",
+			"",
+		},
 		{"  - label: { text: L, x: 200, y: 100 }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through label "L"`},
 		{"  - box: { x: 20, y: 20, w: 80, h: 20, rows: [A, B] }", `s.yaml:5:5: box "A": its text needs a height of 46px or more; the box has 20px`},
 		{"  - box: { x: 20, y: -5, w: 60, h: 40, rows: [A] }", `s.yaml:5:5: box "A" sticks out of the 400x200 canvas`},

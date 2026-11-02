@@ -9,13 +9,13 @@ import (
 )
 
 // check reports the layout's mistakes: text too wide or tall for its box or frame (as it was laid out), parts
-// (edges, lines and axes too) sticking out of the canvas, overlapping (frame headings too), boxes, marks and label
-// parts written at an x and y straddling the edge of a frame, edges running through boxes, labels or frame headings,
-// and edges crossing. A frame's own box is compared with no other frame's, and a frame's heading is not kept within
-// the frame's height or a canvas written (its width is, by addFrame): frames may cross on purpose (a group over two
-// columns, bands that cross), and on the page a heading out of its frame shows below it, one out of a canvas written
-// cut short or gone (a canvas left out reaches it). A frame's icon is a box and its heading a text, each checked as
-// those are.
+// (edges, lines and axes too) sticking out of the canvas, overlapping (frame headings too), boxes, marks and the
+// labels their writer put where they are straddling the edge of a frame, edges running through boxes, labels or frame
+// headings, and edges crossing. A frame's own box is compared with no other frame's, and a frame's heading is not
+// kept within the frame's height or a canvas written (its width is, by addFrame): frames may cross on purpose (a group
+// over two columns, bands that cross), and on the page a heading out of its frame shows below it, one out of a canvas
+// written cut short or gone (a canvas left out reaches it). A frame's icon is a box and its heading a text, each
+// checked as those are.
 func (l *layout) check() {
 	l.checkPlacement()
 	l.checkEdges()
@@ -32,12 +32,13 @@ func (l *layout) checked() error {
 }
 
 // checkPlacement reports parts sticking out of the canvas; boxes (a frame's icon among them), marks, labels and
-// frame headings overlapping; and boxes, marks and label parts written at an x and y straddling a frame, a label by
-// its box (5 wider each side than its text, with no background too, as for overlaps). Frames are not compared with
-// one another, so a label part heading a band across frames that cross it straddles them, as a box there does.
-// LIMIT: an edge's, an icon's, a bar's and an axis's labels are not kept off a frame's edge (an edge's sits in the
-// middle of an edge, which may cross frames), nor a label part placed in its region of a Venn diagram, whose place
-// floe finds minding only circles; keep them off too if one strays.
+// frame headings overlapping; and boxes, marks and the labels their writer put where they are (pinned: a label part
+// written at an x and y, an edge's written at) straddling a frame, a label by its box (5 wider each side than its
+// text, with no background too, as for overlaps). Frames are not compared with one another, so a label heading a
+// band across frames that cross it straddles them, as a box there does.
+// LIMIT: the labels floe places (an edge's in the middle of the edge, which may cross frames, a graph's, an icon's, a
+// bar's and an axis's, a label part's in its region of a Venn diagram, minding only circles) are not kept off a
+// frame's edge; keep them off too if one strays.
 func (l *layout) checkPlacement() {
 	canvas := rect{x: 0, y: 0, w: l.w, h: l.h, what: "", at: ""}
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
@@ -58,11 +59,8 @@ func (l *layout) checkPlacement() {
 			}
 		}
 	}
-	written := make([]rect, len(l.labelParts))
-	for j, i := range l.labelParts {
-		written[j] = l.labels[i]
-	}
-	for _, b := range slices.Concat(l.boxes, l.marks, written) {
+	pinned := slices.DeleteFunc(slices.Clone(l.labels), func(r rect) bool { return !r.pinned })
+	for _, b := range slices.Concat(l.boxes, l.marks, pinned) {
 		for _, f := range l.frames {
 			if b.overlaps(f) && !b.inside(f) {
 				l.tell("diagram_straddle", []placed{{b.at, b.graph}, {f.at, f.graph}}, b.what, f.what)
@@ -237,23 +235,24 @@ func (l *layout) addLabel(lb *label, at string) {
 	if lb.Plain != nil {
 		plain = *lb.Plain
 	}
-	if lb.In == nil {
-		l.labelParts = append(l.labelParts, l.label(at, lb.Text, *lb.X, *lb.Y, anchor, plain, lb.Strong))
-		return
+	var g region
+	if lb.In != nil {
+		var ok bool
+		if g, ok = l.regionOf(at, lb.In); !ok {
+			return
+		}
 	}
-	g, ok := l.regionOf(at, lb.In)
-	if !ok {
+	if lb.X != nil {
+		i := l.label(at, lb.Text, *lb.X, *lb.Y, anchor, plain, lb.Strong)
+		// One out of its region is told so, and not again for a frame's edge it straddles.
+		if lb.In != nil && g.roomOf(l.labels[i]) < 0 {
+			l.problem(at, "diagram_label_region", l.labels[i].what, strings.Join(lb.In, ", "))
+			return
+		}
+		l.labels[i].pinned = true
 		return
 	}
 	names := strings.Join(lb.In, ", ")
-	if lb.X != nil {
-		i := l.label(at, lb.Text, *lb.X, *lb.Y, anchor, plain, lb.Strong)
-		l.labelParts = append(l.labelParts, i)
-		if g.roomOf(l.labels[i]) < 0 {
-			l.problem(at, "diagram_label_region", l.labels[i].what, names)
-		}
-		return
-	}
 	x, y, st := l.place(lb, g)
 	switch {
 	case !st.tried:
