@@ -71,7 +71,7 @@ func (gr *group) size(right bool) {
 		}
 		r := boxRect(&box{
 			Name: "", X: 0, Y: 0, Origin: "", W: 0, H: 0, Rows: n.box.Rows, Tone: "", Shape: n.box.Shape,
-			graph: "",
+			graph: "", handSides: nil,
 		}, "")
 		n.w, n.h = r.w, r.h
 		if right {
