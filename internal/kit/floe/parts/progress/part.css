@@ -5,7 +5,7 @@
 .bar .label { color: var(--fg); }
 .bar .count {
   font-family: var(--mono);
-  font-size: 0.85rem; font-variant-numeric: tabular-nums; color: var(--muted);
+  font-size: var(--floe-text-small); font-variant-numeric: tabular-nums; color: var(--muted);
 }
 .bar progress {
   grid-column: 1 / -1; appearance: none; width: 100%; height: 0.6rem; border: 0; border-radius: var(--radius-pill); overflow: hidden;

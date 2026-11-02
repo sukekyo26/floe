@@ -212,6 +212,9 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：部品の小さい字は、今まで 0.72rem から 0.92rem の間の 11 通りで書いていたが、floe の base の 2 つの段にした。札・チップ・番号の丸・キー・表の見出し・名前・日付・数・値の横の注は
+  `--floe-text-small`（0.8rem）、カードや手順の文・note の題・タブの名前・値の単位は `--floe-text-aside`（0.9rem）。言語の札や fields の `required` は前より少し大きく、表の見出しや
+  stats の名前は少し小さくなる。code の本文は code の大きさのまま。テーマは 2 つを置き直さない。
 - 変更：部品の中の Markdown（note の中身、entries の説明、faq の答え、options・decision のカードの文、steps・timeline の項目の
   文、部品の値の中の format `markdown` の項目）を、部品 text と同じ text の外枠に描く。段落・表・引用・並びの間は、どの部品でも
   `--floe-room`（12px）になる（前は部品ごとに、steps・timeline 2.4px、entries 5.6px、options 6.4px、note・faq・decision 8px）。

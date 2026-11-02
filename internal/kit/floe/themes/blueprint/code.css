@@ -1,5 +1,5 @@
 :scope { border: var(--bp-frame) var(--accent); --code-head-bg: none; }
 :scope figcaption {
-  border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 40%, transparent); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+  border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 40%, transparent); font-size: var(--floe-text-small); letter-spacing: 0.1em; text-transform: uppercase;
 }
 :scope .lang { background: none; border: 1.5px solid var(--code-prompt); color: var(--code-prompt); }

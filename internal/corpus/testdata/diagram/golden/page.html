@@ -126,6 +126,12 @@ blockquote > * + * { margin-top: 0.6rem; }
    --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
    leave the part's box */
 :root { --floe-room: 0.75rem; }
+/* The small text of parts, in two steps: small (a pill, a chip, a ring's number, a key, a table's heading, a term, a
+   date, a count, a note beside a value) and an aside, a little larger (a card's or a step's words, a note's title, a
+   tab's name, a value's unit). The text of code (code's lines, a tree's names, code in a pill) follows code's size
+   instead, and a diagram's, in its SVG, the diagram's units.
+   LIMIT: in rem, small text in large text (a slide's heading, swiss's large quote) is no larger */
+:root { --floe-text-small: 0.8rem; --floe-text-aside: 0.9rem; }
 @property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
 [data-floe-part], [data-floe-look], blockquote {
@@ -262,6 +268,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .dg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .dg-wrap.zoomed:active { cursor: grabbing; }
+/* LIMIT: the toolbar's text is in px, off the scale of parts' small text (base.css's --floe-text-*) */
 .dg-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: 12px; line-height: 1.4; }
 .dg-tools span { color: var(--muted); margin-right: auto; }
 @media (max-width: 640px) { .dg-tools span { display: none; } }
@@ -335,6 +342,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .dg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .dg-wrap.zoomed:active { cursor: grabbing; }
+/* LIMIT: the toolbar's text is in px, off the scale of parts' small text (base.css's --floe-text-*) */
 .dg-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: 12px; line-height: 1.4; }
 .dg-tools span { color: var(--muted); margin-right: auto; }
 @media (max-width: 640px) { .dg-tools span { display: none; } }
@@ -415,7 +423,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   :scope th.num { min-width: 6em; }
 }
 :scope thead th {
-  font-size: 0.8rem; font-weight: 600; color: var(--table-head-fg, var(--muted));
+  font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted));
   background: var(--table-head-bg, var(--quiet));
 }
 /* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
@@ -442,7 +450,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   --tabs-face-bg: var(--on-face); --tabs-face-fg: var(--face);
 }
 :scope > label {
-  position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: 0.9rem; font-weight: 600;
+  position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: var(--floe-text-aside); font-weight: 600;
   color: var(--tabs-title);
 }
 /* The picked tab, on screen alone: on paper every tab shows under its title, alike. A theme sets --tabs-picked-bg,

@@ -8,7 +8,7 @@
 }
 :scope::before {
   content: "i"; content: "i" / ""; border-radius: 50%;
-  background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--tone); color: var(--on-fill); font-size: var(--floe-text-small); font-weight: 700; line-height: 1;
 }
 /* A tone's mark, no more specific than the mark's own rule, so that a theme's :scope::before (content: none) wins */
 :scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
@@ -18,7 +18,7 @@
    title next to its text's box, and the box spaces its Markdown. It wins over a part's box held in it, whose other
    margins stay its own */
 :scope > :not(.floe-hidden) + * { margin-top: 0.5rem; }
-.title { display: block; font-size: 0.9rem; color: var(--tone); }
+.title { display: block; font-size: var(--floe-text-aside); color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
 /* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
 :scope > :is([data-floe-part], [data-floe-look]) + *, :scope > :not(.floe-hidden) + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }

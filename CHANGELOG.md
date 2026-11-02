@@ -296,6 +296,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change parts' small text, written before in eleven sizes from 0.72rem to 0.92rem, to two steps of floe's base:
+  `--floe-text-small` (0.8rem) for pills, chips, a ring's number, keys, a table's heading, terms, dates, counts and a
+  note beside a value, and `--floe-text-aside` (0.9rem) for a card's or a step's words, a note's title, a tab's name and
+  a value's unit. A language's chip and a field's `required` are a little larger than before, a table's heading and
+  stats' terms a little smaller; the text of code keeps code's size. A theme does not set the two.
 - Change the Markdown a part holds (a note's text, an entry's, a faq's answer, a card's text in options and decision,
   a step's and a timeline item's, an item of format `markdown` in a part's own value) to stand in a text's box, as a
   text's does: its paragraphs, tables, quotes and lists are `--floe-room` (12px) apart in every part, where each part

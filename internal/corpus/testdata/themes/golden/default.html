@@ -126,6 +126,12 @@ blockquote > * + * { margin-top: 0.6rem; }
    --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
    leave the part's box */
 :root { --floe-room: 0.75rem; }
+/* The small text of parts, in two steps: small (a pill, a chip, a ring's number, a key, a table's heading, a term, a
+   date, a count, a note beside a value) and an aside, a little larger (a card's or a step's words, a note's title, a
+   tab's name, a value's unit). The text of code (code's lines, a tree's names, code in a pill) follows code's size
+   instead, and a diagram's, in its SVG, the diagram's units.
+   LIMIT: in rem, small text in large text (a slide's heading, swiss's large quote) is no larger */
+:root { --floe-text-small: 0.8rem; --floe-text-aside: 0.9rem; }
 @property --floe-shadow-color { syntax: "<color>"; inherits: false; initial-value: transparent; }
 @property --floe-inset { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
 [data-floe-part], [data-floe-look], blockquote {
@@ -209,7 +215,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
    --floe-pill-wrap: normal; one that wraps is a label of round corners (base.css's --floe-pill-end) */
 :scope {
-  display: inline-block; font-family: var(--font); font-size: 0.78rem; font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  display: inline-block; font-family: var(--font); font-size: var(--floe-text-small); font-weight: 600; letter-spacing: normal; line-height: 1.6;
   padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);
   background: var(--tone-soft); color: var(--tone);
 }
@@ -240,7 +246,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A theme sets the heading's ground and colour by --code-head-bg and --code-head-fg, and the colours of a diff's
    counts on it by --code-head-add and --code-head-del */
 :scope figcaption {
-  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem var(--floe-code-pad); font-size: 0.78rem;
+  display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem var(--floe-code-pad); font-size: var(--floe-text-small);
   background: var(--code-head-bg, color-mix(in srgb, var(--code-fg) 5%, transparent)); color: var(--code-head-fg, var(--code-fg));
   border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
 }
@@ -253,7 +259,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
 :scope .file { color: var(--floe-code-head-faint); }
 :scope .lang {
-  flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
+  flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
   background: var(--code-prompt); color: var(--code-bg);
 }
 /* A block, so that the code's last line break draws no empty line; no padding at its sides, which its line's rule sets */
@@ -342,7 +348,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   :scope th.num { min-width: 6em; }
 }
 :scope thead th {
-  font-size: 0.8rem; font-weight: 600; color: var(--table-head-fg, var(--muted));
+  font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted));
   background: var(--table-head-bg, var(--quiet));
 }
 /* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
@@ -363,9 +369,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope td.level { width: 1%; min-width: auto; white-space: nowrap; }
 :scope .head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem; }
 /* Where it is breaks, though in a table: a path would widen the column too far */
-:scope .at { padding: 0; background: none; font-size: 0.8rem; color: var(--accent); overflow-wrap: anywhere; }
+:scope .at { padding: 0; background: none; font-size: var(--floe-text-small); color: var(--accent); overflow-wrap: anywhere; }
 :scope .status { margin-left: auto; }
-:scope .why { margin-top: 0.15rem; font-size: 0.88rem; color: var(--muted); }
+:scope .why { margin-top: 0.15rem; font-size: var(--floe-text-aside); color: var(--muted); }
 }
 }
 </style>
@@ -382,7 +388,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 :scope::before {
   content: "i"; content: "i" / ""; border-radius: 50%;
-  background: var(--tone); color: var(--on-fill); font-size: 0.8rem; font-weight: 700; line-height: 1;
+  background: var(--tone); color: var(--on-fill); font-size: var(--floe-text-small); font-weight: 700; line-height: 1;
 }
 /* A tone's mark, no more specific than the mark's own rule, so that a theme's :scope::before (content: none) wins */
 :scope:where([data-floe-tone=good])::before { content: "✓"; content: "✓" / ""; }
@@ -392,7 +398,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    title next to its text's box, and the box spaces its Markdown. It wins over a part's box held in it, whose other
    margins stay its own */
 :scope > :not(.floe-hidden) + * { margin-top: 0.5rem; }
-.title { display: block; font-size: 0.9rem; color: var(--tone); }
+.title { display: block; font-size: var(--floe-text-aside); color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
 /* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
 :scope > :is([data-floe-part], [data-floe-look]) + *, :scope > :not(.floe-hidden) + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
@@ -419,11 +425,11 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
-  background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
+  background: var(--accent-soft); color: var(--accent); font-size: var(--floe-text-small); font-weight: 700;
 }
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
 .card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
-.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: 0.92rem; }
+.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
 }
 }
 </style>
@@ -465,7 +471,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   --tabs-face-bg: var(--on-face); --tabs-face-fg: var(--face);
 }
 :scope > label {
-  position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: 0.9rem; font-weight: 600;
+  position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: var(--floe-text-aside); font-weight: 600;
   color: var(--tabs-title);
 }
 /* The picked tab, on screen alone: on paper every tab shows under its title, alike. A theme sets --tabs-picked-bg,
@@ -581,7 +587,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
-  font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
+  font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
 }
 }
 }

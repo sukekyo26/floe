@@ -126,6 +126,8 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 
 部品の間に、地や枠を持つ箱（カード、見た目 panel を借りる部品や要素、note）を描く部品・テンプレートは、floe のものと同じく、その箱の縁から字までの余白を `var(--floe-pad-block) var(--floe-pad-inline)`（floe の base で 1.1rem と 1.3rem）で書き、自分の長さを書きません。見た目 `panel` 自身は余白を持ちません（表・rows・details は、行を箱の縁まで引くため）。
 
+部品は、本文より小さい字を、自分の数で書かず、floe の base の 2 つの段で書きます：札・チップ・番号の丸・キー・表の見出し・名前・日付・数・値の横の注は `var(--floe-text-small)`（0.8rem）、カードや手順の文・note の題・タブの名前・値の単位は `var(--floe-text-aside)`（0.9rem）。code の本文（行、tree の名前）は、code の大きさに従います。どちらも rem なので、大きな字の中でも小さい字は大きくなりません。
+
 横にスクロールする自分の箱は、floe の `pre`・code・table・tree と同じく、`overflow-x: auto` と `contain: inline-size` を `@media screen` の中の 1 つの規則に書き、紙では中身を折り返します（紙ではスクロールした所が読めません。floe の `pre` は紙で行を折り返します）。書かないと、箱が中身の幅を外へ伝え、外の grid・flex の項目（並びの項目、カード）が一番長い行の幅まで広がり、ページも広がります。そうした箱は、中身で幅が決まる所（inline-block、float、絶対位置などの shrink-to-fit の箱、`min-content`・`max-content`・`fit-content` の幅、自動の幅の表の升、`justify-self: start`、flex の行の `flex-basis: auto` の項目）には置きません。そこでは枠と余白だけの幅に潰れます。
 
 入れ子では外が勝ちます。`floe.looks` と `floe.parts` はそれぞれ、スタイルが scope される要素（見た目を借りる要素か、部品の箱）の深さ（まわりにある部品の箱と、見た目を借りる要素の数）で層に分かれ、外側ほど強い層に入ります。そのため、見た目や部品のどの規則も、その中の要素に scope された見た目や部品の規則に、セレクタの詳しさや範囲の近さによらず勝ちます。見た目の中の、別の見た目を借りる要素への規則や、部品の中の部品の箱への規則だけでなく、そうした要素の中身への規則も勝ちます（cards の `.card :is(p, ul, ol)` は、`panel` を借りるカードの中の字に、table の `:scope :is(th, td)` は、中で自分も `table` を借りる要素のセルに勝ちます）。部品の規則は今までどおり、中の部品の箱までで、その部品の中には届きません。見た目と部品の間は上の層の順のままで、見た目のスタイルは、中の部品の箱に負けます。1 つの要素の上では、上のとおり、テーマの見た目のファイルが、それを借りる部品の `part.css` に勝ちます。
@@ -156,6 +158,7 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 - ほかの名前のファイルは断ります。
 - 色は `palette.css` に 1 回だけ書き、ほかのファイルでは `var()`（`var(--accent)`）で使います。テンプレートが `:scope` に書く色とパレットが食い違わないためです。
 - 行の上下の余白 `--floe-row-pad` と、箱の余白と行の左右の余白 `--floe-pad-block`・`--floe-pad-inline` は、floe の base のまま替えません。どのテーマでも、どの部品の行と箱も同じ余白になります。テーマは箱の余白を書きません。テーマが箱のまわりに描く外枠（default の灰色）はテーマのもので、その中で地を塗る要素が 2 つの変数を読みます。
+- 部品の小さい字の 2 つの段 `--floe-text-small`・`--floe-text-aside` は、floe の base のまま替えません。テーマが部品の字に自分の個性で付ける大きさ（大きめの表の見出し、地の無い札など）は、部品ごとのファイルに数のまま書きます。
 - 行の印（note の印、numbered の丸、timeline の点、links の箱）の大きさ（枠を含む）は `--floe-mark`、字との間は `--floe-mark-gap` で変えます。印の `top`・`left` や行の余白では動かしません。印は `content: none` で消し、そのとき印の列は幅を取りません。見た目 cards の番号の札（`.numbered > .card::before`）も同じ約束で、大きさは `--floe-mark`、消すのは `content: none`、字の札は `--floe-mark: auto` と地なしです。
 - カード（見た目 cards を借りる部品の `.card`）は見た目 panel も借ります。テーマの `panel.css` が描き、`cards.css` は違う所（地・枠・番号の札）を書きます。カードの余白は 2 つの変数のもので、テーマは書きません。最初のカードもほかと同じ余白で、列の左端にそろえるために余白を 0 にしません。
 - テーマは傾けず、言葉を書きません。CSS の字は `words.yaml` を通らず、ページの言語で変わらないためです。変形（`transform`・`-webkit-transform`・`-moz-transform`）は `translate()`・`translateX()`・`translateY()` で動かすか `none` だけで、`rotate`・`scale`・`zoom`・`offset-path`・`offset-rotate`・`perspective` と、回す関数を持つ変数は書きません。文字列は記号だけで、字は書体の名前（`font-family`・`font`・`--font`・`--display`・`--mono`）にだけ書き、エスケープでなくそのまま書きます。`content` に `attr()` を書きません。数え方（`counter()`・`counters()`・`list-style`・`list-style-type`）は `decimal`・`decimal-leading-zero` と形（`none`・`disc`・`circle`・`square`）だけで、変数で書かず、`@counter-style` も書きません。

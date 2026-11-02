@@ -17,10 +17,10 @@
 }
 :scope .date {
   grid-area: mark / date; align-self: first baseline; width: 7rem; margin-inline-end: 0.65rem; text-align: right;
-  font-size: 0.82rem; line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
+  font-size: var(--floe-text-small); line-height: 1.9; color: var(--muted); font-variant-numeric: tabular-nums; font-family: var(--mono);
 }
 :scope > li::after { background: var(--line); }
-:scope li > div > :not(strong) { color: var(--on-face, var(--muted)); font-size: 0.92rem; }
+:scope li > div > :not(strong) { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
 @media (max-width: 36rem) {
   :scope > li {
     --floe-mark-gap: 0.9rem;
