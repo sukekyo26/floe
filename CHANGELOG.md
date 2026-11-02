@@ -296,6 +296,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change a right-angled edge with `via` that repeats a point (a via on the point before it, or on the edge's start)
+  to keep the way it was going over that point: `from: [10, 100], via: [[10, 100], [50, 150]], to: [200, 150]`
+  goes across first (`H50 V150`) where it went down first (`V150 H50`).
 - Change code's look to keep the room at a line's sides on each line, an element
   `pre` holds, rather than on `pre`: a part of one's own that takes it makes
   each line an element, as text `pre` holds outside one sits on its edge, and
@@ -448,6 +451,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix an edge with `via` whose end is a box, table, row, icon, frame or bar named without a side, which ran along the
+  end's edge or back over itself after its last via, or was refused as running through the box it started from. Such
+  an end, at either end of the edge and on a `straight` edge too, takes the side towards the via next to it when that
+  via is beside it, above or below it; with the via off both ways, the last end of a right-angled edge takes the side
+  across the way the edge came. The last run of a right-angled edge meets its end's side square, a side written too
+  when the via is outside it, with two turns halfway when one turn would run back over the edge.
 - Fix faint text drawn by `opacity`, which could lie over a scrolling code's
   focus ring: a code's file name, a terminal's heading and output, a diff's
   lines outside a hunk, a design's undecided pick and a diagram's disabled

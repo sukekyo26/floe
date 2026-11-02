@@ -440,6 +440,91 @@ func TestEdges(t *testing.T) {
 	}
 }
 
+// An end named without a side, its via next to it outside it, takes the side towards that via, or when the via is off
+// both ways, the side across the way the edge came; the last run meets such a side, and a side written with the via
+// outside it, square, with two turns halfway when one turn would run back. The rest take the side facing the other
+// end: a via on the end or in it, a via off both ways at a from end or on a straight edge, a point, a dot.
+func TestEdgesVia(t *testing.T) {
+	t.Parallel()
+
+	const head = "width: 560\nheight: 340\ntitle: T\nparts:\n"
+	const c01 = "  - box: { name: c01, x: 60, y: 234, h: 36, rows: [[render, main code]] }\n"
+	const ab = "  - box: { name: a, x: 40, y: 40, w: 100, h: 40, rows: [a] }\n  - box: { name: b, x: 300, y: 140, w: 100, h: 40, rows: [b] }\n"
+	const page = "  - table: { x: 300, y: 40, w: 200, title: Page, rows: [{ name: slug, cells: [slug, PK] }, [title, text]] }\n"
+	for _, c := range []struct {
+		parts, want string
+	}{
+		// Sides taken from the via, and met square.
+		{c01 + "  - edge: { from: [44, 154], via: [[44, 252]], to: c01 }", `d="M44,154 V252 H60"`},
+		{c01 + "  - edge: { from: [10, 20], via: [[10, 240]], to: c01 }", `d="M10,20 V240 V252 H60"`},
+		{c01 + "  - edge: { from: [0, 150], via: [[90, 150]], to: c01 }", `d="M0,150 H90 H104 V234"`},
+		{c01 + "  - edge: { from: [10, 200], via: [[30, 200]], to: c01 }", `d="M10,200 H30 V252 H60"`},
+		{c01 + "  - edge: { from: [10, 100], via: [[10, 200]], to: c01 }", `d="M10,100 V200 H104 V234"`},
+		{c01 + "  - edge: { from: [0, 150], via: [[200, 150]], to: c01 }", `d="M0,150 H200 V252 H148"`},
+		{c01 + "  - edge: { from: [10, 20], via: [[104, 20], [200, 20], [200, 252]], to: c01 }", `d="M10,20 H104 H200 V252 H148"`},
+		{c01 + "  - edge: { from: [0, 150], via: [[120, 150]], to: c01 }", `d="M0,150 H120 V192 H104 V234"`},
+		{c01 + "  - edge: { from: [10, 100], via: [[10, 262]], to: c01 }", `d="M10,100 V262 H35 V252 H60"`},
+		{c01 + "  - edge: { from: [10, 100], via: [[10, 200]], to: c01, toSide: top }", `d="M10,100 V200 H104 V234"`},
+		{c01 + "  - edge: { from: [10, 100], via: [[10, 100]], to: c01 }", `d="M10,100 H10 V252 H60"`},
+		{ab + "  - edge: { from: a, via: [[90, 160], [200, 160]], to: b }", `d="M90,80 V160 H200 H300"`},
+		{
+			"  - box: { name: a, x: 40, y: 40, w: 100, h: 40, rows: [a] }\n  - box: { name: b, x: 300, y: 200, w: 100, h: 40, rows: [b] }\n" +
+				"  - edge: { from: a, via: [[90, 220]], to: b, straight: true }",
+			`d="M90,80 V220 H300"`,
+		},
+		{
+			page + "  - box: { name: a, x: 40, y: 180, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[530, 200], [530, 81]], to: slug }",
+			`d="M140,200 H530 V81 H500"`,
+		},
+		{
+			"  - table: { name: t, x: 300, y: 60, w: 200, title: Page, rows: [[slug, PK], [title, text]] }\n" +
+				"  - edge: { from: [10, 20], via: [[310, 20]], to: t }",
+			`d="M10,20 H310 H400 V60"`,
+		},
+		// Sides facing the other end, sides written with the via not outside them, points and dots: through goes on.
+		// A via level with the side, come to going away from it, runs back along that run (LIMIT in enter).
+		{c01 + "  - edge: { from: [50, 300], via: [[50, 252], [20, 252]], to: c01 }", `d="M50,300 V252 H20 H60"`},
+		{page + "  - edge: { from: [530, 160], via: [[530, 120]], to: slug }", `d="M530,160 V120 V81 H500"`},
+		{c01 + "  - edge: { from: [300, 100], via: [[200, 100]], to: c01, toSide: left }", `d="M300,100 H200 H60 V252"`},
+		{c01 + "  - edge: { from: [60, 20], via: [[60, 100]], to: c01, toSide: left }", `d="M60,20 V100 V252"`},
+		{c01 + "  - edge: { from: [0, 100], via: [[60, 100]], to: c01 }", `d="M0,100 H60 H104 V234"`},
+		{c01 + "  - edge: { from: [10, 240], via: [[60, 240]], to: c01 }", `d="M10,240 H60 V252"`},
+		{c01 + "  - edge: { from: [80, 100], via: [[80, 234]], to: c01 }", `d="M80,100 V234 H104"`},
+		{c01 + "  - edge: { from: [10, 200], via: [[30, 200], [30, 200]], to: c01 }", `d="M10,200 H30 H30 V252 H60"`},
+		{"  - edge: { from: [0, 0], via: [[50, 0]], to: [100, 100] }", `d="M0,0 H50 H100 V100"`},
+		{"  - dot: { name: d, cx: 300, cy: 100 }\n  - edge: { from: [10, 20], via: [[300, 20]], to: d }", `d="M10,20 H300 V100"`},
+		{"  - box: { name: a, x: 40, y: 40, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 300]], to: [400, 100] }", `d="M140,60 H200 V300 V100 H400"`},
+		{
+			"  - box: { name: b, x: 300, y: 100, w: 100, h: 40, rows: [b] }\n  - edge: { from: [10, 20], via: [[200, 300]], to: b, straight: true }",
+			`d="M10,20 L200,300 L300,120"`,
+		},
+	} {
+		got, mistakes := draw(t, head+c.parts+"\n", render("en"))
+		if mistakes != "" || !strings.Contains(got, c.want) {
+			t.Errorf("%s\n  drew %s %s\n  want %s", c.parts, got, mistakes, c.want)
+		}
+	}
+
+	// A via in a frame leaves the side facing the other end, and the edge runs through a; both ends unknown are told.
+	for _, c := range []struct {
+		parts, want string
+	}{
+		{
+			"  - frame: { name: f, x: 200, y: 40, w: 280, h: 200, label: F }\n  - box: { name: a, x: 260, y: 120, w: 100, h: 40, rows: [a] }\n" +
+				"  - edge: { from: a, via: [[420, 140], [420, 200]], to: f }",
+			`s.yaml:7:5: edge a→f runs through box "a"`,
+		},
+		{
+			"  - edge: { from: nope1, via: [[30, 200]], to: nope2 }",
+			"s.yaml:5:5: edge: no part, row or node named \"nope1\"\ns.yaml:5:5: edge: no part, row or node named \"nope2\"",
+		},
+	} {
+		if _, mistakes := draw(t, head+c.parts+"\n", render("en")); mistakes != c.want {
+			t.Errorf("%s\n  told %q\n  want %q", c.parts, mistakes, c.want)
+		}
+	}
+}
+
 // A label with in stands on a circle's colour and has no box, placed by floe or at x and y, unless it says plain:
 // false; one free of in has its box unless it says plain.
 func TestVennLabelsBare(t *testing.T) {
