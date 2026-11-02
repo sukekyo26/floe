@@ -23,13 +23,13 @@
   background: var(--code-head-bg, color-mix(in srgb, var(--code-fg) 5%, transparent)); color: var(--code-head-fg, var(--code-fg));
   border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 8%, transparent);
 }
-/* It scrolls sideways, telling nothing of its width outside (base.css's pre has the LIMIT); its lines hold the room at
-   its sides */
+/* On screen it scrolls sideways, telling nothing of its width outside (base.css's pre has the LIMIT); on paper its lines
+   fold (base.css's pre), each as wide as the box. Its lines hold the room at its sides */
 :scope pre {
-  margin: 0; padding: 0.95rem 0; overflow-x: auto; background: none; border: 0; border-radius: 0; color: inherit;
+  margin: 0; padding: 0.95rem 0; background: none; border: 0; border-radius: 0; color: inherit;
   font-family: inherit; font-size: 0.875rem; line-height: 1.65; tab-size: 4;
 }
-@media screen { :scope pre { contain: inline-size; } }
+@media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
 :scope .file { color: var(--floe-code-head-faint); }
 :scope .lang {
   flex: none; margin-left: auto; font-size: 0.72rem; font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
@@ -44,6 +44,7 @@
    a part whose lines differ moves the room onto them by these variables, as diff does; nothing checks it. Make this
    rule outweigh a part's if one comes to write a line's padding by mistake. */
 :scope pre > * { width: max-content; min-width: 100%; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
+@media print { :scope pre > * { width: auto; } }
 /* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
    it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
    Where it draws the button, a line keeps the button's room after it: scrolled to the end, a line ends left of the

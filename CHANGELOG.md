@@ -476,6 +476,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   frame, as a box or a dot there is (`label "…" straddles the edge of frame "…"`); it was drawn across it. A label is
   checked by its box, 5 wider each side than its text. The labels floe places (an edge's with no `at`, an icon's, a
   bar's, an axis's, and one in its region with `in` alone) are not checked against frames.
+- Fix printing cutting what scrolls sideways on screen: a long line of code, a diff or a terminal, Markdown's code, a
+  wide table and a deep tree were cut at the paper's right edge, with a scrollbar drawn on paper. On paper they fold
+  their lines now (a table shares the paper's width among its columns, its words kept whole); a table whose longest
+  words are wider than the paper, or a field's long name, still widens the page, which Chrome prints smaller, and such
+  a table in a card side by side with others reaches past its card, over the next one.
 - Fix a graph edge's label floe made room for below its run (right of a run down) when something there was in the
   way, pushing the drawing apart across the run even where the same place above it (left of it) was clear. It stands
   there now, where that is clear of the parts written by hand too and moves the graph off none of its `x` and `y`.
