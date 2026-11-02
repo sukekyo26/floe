@@ -69,8 +69,9 @@ type path struct {
 
 // target is what an edge's end may name: a part's area, a table's row, or a dot's centre.
 type target struct {
-	r    rect
-	kind string // box, table, row, icon, frame, bar, dot, circle
+	r         rect
+	kind      string   // box, table, row, icon, frame, bar, dot, circle
+	handSides []string // the sides left to edges written by hand (box.handSides); nil: any
 }
 
 // layout is a spec laid out once, for every language its text is written in: the areas its checks compare and
@@ -188,27 +189,30 @@ func (l *layout) name(at string, p part) {
 	}
 	switch {
 	case p.Box != nil:
-		keep(p.Box.Name, target{r: boxRect(p.Box, at), kind: "box"})
+		keep(p.Box.Name, target{r: boxRect(p.Box, at), kind: "box", handSides: p.Box.handSides})
 	case p.Table != nil:
 		r, rows := tableRects(p.Table, at)
-		keep(p.Table.Name, target{r: r, kind: "table"})
+		keep(p.Table.Name, target{r: r, kind: "table", handSides: nil})
 		for j, row := range p.Table.Rows {
-			keep(row.Name, target{r: rows[j], kind: "row"})
+			keep(row.Name, target{r: rows[j], kind: "row", handSides: nil})
 		}
 	case p.Icon != nil:
 		size := iconSize(p.Icon)
-		keep(p.Icon.Name, target{r: rect{x: p.Icon.X, y: p.Icon.Y, w: size, h: size, what: "", at: at}, kind: "icon"})
+		r := rect{x: p.Icon.X, y: p.Icon.Y, w: size, h: size, what: "", at: at}
+		keep(p.Icon.Name, target{r: r, kind: "icon", handSides: nil})
 	case p.Frame != nil:
 		f := p.Frame
-		keep(f.Name, target{r: rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at}, kind: "frame"})
+		r := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at}
+		keep(f.Name, target{r: r, kind: "frame", handSides: f.handSides})
 	case p.Bar != nil:
-		keep(p.Bar.Name, target{r: barRect(p.Bar, at), kind: "bar"})
+		keep(p.Bar.Name, target{r: barRect(p.Bar, at), kind: "bar", handSides: nil})
 	case p.Dot != nil:
-		r := dotR(p.Dot)
-		keep(p.Dot.Name, target{r: rect{x: p.Dot.CX - r, y: p.Dot.CY - r, w: r * 2, h: r * 2, what: "", at: at}, kind: "dot"})
+		d := dotR(p.Dot)
+		r := rect{x: p.Dot.CX - d, y: p.Dot.CY - d, w: d * 2, h: d * 2, what: "", at: at}
+		keep(p.Dot.Name, target{r: r, kind: "dot", handSides: nil})
 	case p.Circle != nil:
 		// No area: no edge ends at it.
-		if keep(p.Circle.Name, target{r: rect{x: 0, y: 0, w: 0, h: 0, what: "", at: at}, kind: "circle"}) {
+		if keep(p.Circle.Name, target{r: rect{x: 0, y: 0, w: 0, h: 0, what: "", at: at}, kind: "circle", handSides: nil}) {
 			l.circles[p.Circle.Name] = *p.Circle
 		}
 	}

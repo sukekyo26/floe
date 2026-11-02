@@ -272,6 +272,7 @@ func (o *graphOut) items() ([]item, usererr.List, error) {
 		across = 1
 	}
 	boxes := make([]rect, len(o.boxes))
+	hands := make([][]string, len(o.boxes))
 	frames := map[int]rect{}
 	routes := map[int][][2]float64{}
 	labels := map[int]rect{}
@@ -291,12 +292,14 @@ func (o *graphOut) items() ([]item, usererr.List, error) {
 		for k := range d.spots {
 			labels[k], toward[k] = d.rect(k)
 		}
+		sides := d.handSides()
 		for i, r := range d.boxes {
-			boxes[i] = r
+			boxes[i], hands[i] = r, sides[i]
 		}
 		maps.Copy(frames, d.frames)
 	}
-	out := o.opened(o.top, boxes, frames, make([]item, 0, len(o.boxes)+len(o.clusters)+len(o.g.Edges)))
+	room := make([]item, 0, len(o.boxes)+len(o.clusters)+len(o.g.Edges))
+	out := o.opened(o.top, boxes, hands, frames, frameSides(frames, routes), room)
 	for k := range o.g.Edges {
 		pts, ok := routes[k]
 		if !ok { // told by readGraph
@@ -316,13 +319,15 @@ func (o *graphOut) items() ([]item, usererr.List, error) {
 
 // opened is out with the nodes cs opened as written, a group's frame before the nodes it holds, so that a name used
 // twice is told at the later: each box at its place among boxes, each frame at its group's.
-func (o *graphOut) opened(cs []gref, boxes []rect, frames map[int]rect, out []item) []item {
+func (o *graphOut) opened(cs []gref, boxes []rect, hands [][]string, frames map[int]rect, sides map[int][]string,
+	out []item,
+) []item {
 	for _, c := range cs {
 		if c.box >= 0 {
 			r, n := boxes[c.box], o.boxes[c.box]
 			b := &box{
 				Name: n.box.Name, X: r.x, Y: r.y, Origin: "", W: r.w, H: r.h, Rows: n.box.Rows, Tone: n.box.Tone,
-				Shape: n.box.Shape, graph: o.at,
+				Shape: n.box.Shape, graph: o.at, handSides: hands[c.box],
 			}
 			out = append(out, item{n.at, part{Box: b}}) //nolint:exhaustruct_v5 // one kind of part
 			continue
@@ -330,10 +335,10 @@ func (o *graphOut) opened(cs []gref, boxes []rect, frames map[int]rect, out []it
 		r, g := frames[c.cl], o.clusters[c.cl].g
 		f := &frame{
 			Name: g.Name, X: r.x, Y: r.y, W: r.w, H: r.h, Label: g.Label, Accent: g.Accent, Icon: "", Square: false,
-			graph: o.at,
+			graph: o.at, handSides: sides[c.cl],
 		}
 		out = append(out, item{o.clusters[c.cl].at, part{Frame: f}}) //nolint:exhaustruct_v5 // one kind of part
-		out = o.opened(o.clusters[c.cl].kids, boxes, frames, out)
+		out = o.opened(o.clusters[c.cl].kids, boxes, hands, frames, sides, out)
 	}
 	return out
 }
@@ -837,11 +842,90 @@ func (d *drawing) handsOf(i int, looped bool) []seg {
 	}
 	var out []seg
 	for _, h := range sides {
-		if !d.taken[i][h.side] && (!looped || h.side != d.loopSide()) {
+		if d.unheld(i, h.side, looped) {
 			out = append(out, h.run)
 		}
 	}
 	return out
+}
+
+// unheld reports whether side of box i is neither one its level edges take nor, when it has loops, its loop side.
+func (d *drawing) unheld(i int, side string, looped bool) bool {
+	return !d.taken[i][side] && (!looped || side != d.loopSide())
+}
+
+// handSides are the sides of each box an edge written by hand may end at, once the graph is drawn: those none of
+// its edges ends at (ends) and unheld.
+func (d *drawing) handSides() map[int][]string {
+	used, looped := d.endSides(), d.looped()
+	out := map[int][]string{}
+	for i := range d.boxes {
+		out[i] = make([]string, 0, 4)
+		for _, side := range []string{"left", "right", "top", "bottom"} {
+			if !used[i][side] && d.unheld(i, side, looped[i]) {
+				out[i] = append(out[i], side)
+			}
+		}
+	}
+	return out
+}
+
+// endSides are the sides of each box the graph's edges end at, but its loops and level edges: an end is on the side
+// of the box's centre it is along the ranks (top or bottom laid out down).
+func (d *drawing) endSides() map[int]map[string]bool {
+	used := map[int]map[string]bool{}
+	for k, pts := range d.routes {
+		if _, lv := d.level[k]; lv || d.loops[k] {
+			continue
+		}
+		for j, p := range [2][2]float64{pts[0], pts[len(pts)-1]} {
+			i := d.ends[k][j]
+			if i < 0 {
+				continue
+			}
+			if used[i] == nil {
+				used[i] = map[string]bool{}
+			}
+			lr, tb := towards(d.boxes[i], p)
+			if d.right {
+				used[i][lr] = true
+			} else {
+				used[i][tb] = true
+			}
+		}
+	}
+	return used
+}
+
+// frameSides are the sides of each frame, a group's or a lane's, an edge written by hand may end at: those none of
+// the graph's edges (loops and level edges too) ends at or crosses.
+func frameSides(frames map[int]rect, routes map[int][][2]float64) map[int][]string {
+	runs := make([]seg, 0, 3*len(routes))
+	for _, pts := range routes {
+		runs = append(runs, segsOf(pts)...)
+	}
+	out := map[int][]string{}
+	for c, r := range frames {
+		sides := [4]seg{
+			{r.x, r.y, r.x, r.y + r.h},
+			{r.x + r.w, r.y, r.x + r.w, r.y + r.h},
+			{r.x, r.y, r.x + r.w, r.y},
+			{r.x, r.y + r.h, r.x + r.w, r.y + r.h},
+		}
+		out[c] = make([]string, 0, 4)
+		for j, side := range []string{"left", "right", "top", "bottom"} {
+			if !slices.ContainsFunc(runs, func(s seg) bool { return meets(s, sides[j]) }) {
+				out[c] = append(out[c], side)
+			}
+		}
+	}
+	return out
+}
+
+// meets reports whether two runs along the axes meet: cross, touch or share a stretch.
+func meets(a, b seg) bool {
+	return max(min(a[0], a[2]), min(b[0], b[2])) <= min(max(a[0], a[2]), max(b[0], b[2])) &&
+		max(min(a[1], a[3]), min(b[1], b[3])) <= min(max(a[1], a[3]), max(b[1], b[3]))
 }
 
 // looped are the boxes with loops.
