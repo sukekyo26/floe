@@ -1,12 +1,15 @@
-/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
+/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out, and a
+   hidden word before each command, outside what is copied, tells a screen reader it is one */
 /* Its heading in code's faint colour of a heading, whatever colour a theme gives it */
 :scope figcaption { color: var(--floe-code-head-faint); }
 :scope :is(.run, .out) { display: block; }
-:scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
-:scope .run::before { content: "$ "; color: var(--code-prompt); }
-:scope.zsh .run::before { content: "% "; }
-/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language; move it out
-   of the CSS if a part's CSS comes to be checked for letters as a theme's is */
-:scope.powershell .run::before { content: "PS> "; }
-:scope.cmd .run::before { content: "> "; }
+/* Every command but the first, past the hidden words between */
+:scope :is(.run, .out) ~ .run { margin-top: 0.5rem; }
+:scope .run::before { content: "$ "; content: "$ " / ""; color: var(--code-prompt); }
+:scope.zsh .run::before { content: "% "; content: "% " / ""; }
+/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language, and not read out
+   (/ ""), a command's line told by a hidden word instead; move it out of the CSS if a part's CSS comes to be checked
+   for letters as a theme's is */
+:scope.powershell .run::before { content: "PS> "; content: "PS> " / ""; }
+:scope.cmd .run::before { content: "> "; content: "> " / ""; }
 :scope .out { color: var(--floe-code-faint); }

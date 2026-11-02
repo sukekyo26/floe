@@ -2,7 +2,7 @@
 .card { border: 0; border-left: 1px solid var(--fg); --face: inherit; --on-face: inherit; }
 :scope > .card:first-child { border-left: 0; }
 :scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / "";
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero);
   --floe-mark: auto; background: none; color: var(--fg);
   font-size: 3rem; font-weight: 900; line-height: 1;
 }

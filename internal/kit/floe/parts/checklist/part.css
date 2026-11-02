@@ -1,14 +1,16 @@
-/* The count of the items done comes from counters, under the last */
+/* The count of the items done comes from counters, under the last.
+   LIMIT: the count is shown alone, not read (/ ""): each item tells a screen reader it is done or not instead */
 :scope {
   counter-reset: floe-check floe-checked;
 }
 :scope > li { --floe-mark-gap: 0.65rem; counter-increment: floe-check; }
 :scope > li.done { counter-increment: floe-check floe-checked; color: var(--muted); }
 /* A sign of the look marked, not a box: the items are not to be ticked on the page */
-:scope > li::before { content: "–"; color: var(--muted); }
-:scope > li.done::before { content: "✓"; color: var(--good); }
+:scope > li::before { content: "–"; content: "–" / ""; color: var(--muted); }
+:scope > li.done::before { content: "✓"; content: "✓" / ""; color: var(--good); }
 :scope::after {
-  content: counter(floe-checked) " / " counter(floe-check); text-align: right;
+  content: counter(floe-checked) " / " counter(floe-check);
+  content: counter(floe-checked) " / " counter(floe-check) / ""; text-align: right;
   font-family: var(--mono);
   font-size: 0.8rem; color: var(--muted);
 }

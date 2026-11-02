@@ -1,8 +1,6 @@
 package css
 
 import (
-	"io/fs"
-	"os"
 	"path"
 	"slices"
 	"strings"
@@ -19,27 +17,31 @@ var radiusShapes = []string{"0", "50%", "999px"}
 // is one length
 var paletteRadii = []string{"--radius", "--radius-small", "--radius-pill"}
 
-// declaration is a declaration's value, read by the tokens alone, and the preludes of the rules it is in, outermost
-// first, joined by " { ".
+// declaration is a declaration's value, read by the tokens alone, the preludes of the rules it is in, outermost
+// first, joined by " { ", and the place of the { that holds it right (-1 outside every block): two rules of one
+// prelude are two blocks.
 type declaration struct {
 	value []token
 	rule  string
+	block int
 }
 
 // rules returns, for each token, the preludes of the rules it is in, outermost first and joined by " { " ("" outside
-// every rule), comments left out.
-func rules(toks []token) []string {
-	in := make([]string, len(toks))
+// every rule), comments left out, and the place of the innermost { it is in (-1 outside every block).
+func rules(toks []token) ([]string, []int) {
+	in, blocks := make([]string, len(toks)), make([]int, len(toks))
 	var open []string
+	var at []int
 	var prelude strings.Builder
 	for k, t := range toks {
 		switch t.tt {
 		case css.LeftBraceToken:
 			open = append(open, strings.TrimSpace(prelude.String()))
+			at = append(at, k)
 			prelude.Reset()
 		case css.RightBraceToken:
 			if len(open) > 0 {
-				open = open[:len(open)-1]
+				open, at = open[:len(open)-1], at[:len(at)-1]
 			}
 			prelude.Reset()
 		case css.SemicolonToken:
@@ -48,18 +50,19 @@ func rules(toks []token) []string {
 		default:
 			prelude.Write(t.data)
 		}
+		blocks[k] = -1
 		if len(open) > 0 {
-			in[k] = strings.Join(open, " { ")
+			in[k], blocks[k] = strings.Join(open, " { "), at[len(at)-1]
 		}
 	}
-	return in
+	return in, blocks
 }
 
 // declarations returns each declaration in src of a property that want takes, by name.
 func declarations(src []byte, want func(name string) bool) map[string][]declaration {
 	found := map[string][]declaration{}
 	toks := lex(src)
-	in := rules(toks)
+	in, blocks := rules(toks)
 	for i := 0; i < len(toks); i++ {
 		name := strings.ToLower(string(toks[i].data))
 		if (toks[i].tt != css.IdentToken && toks[i].tt != css.CustomPropertyNameToken) || !want(name) {
@@ -90,7 +93,7 @@ func declarations(src []byte, want func(name string) bool) map[string][]declarat
 			}
 			value = append(value, toks[j])
 		}
-		found[name] = append(found[name], declaration{value: value, rule: in[i]})
+		found[name] = append(found[name], declaration{value: value, rule: in[i], block: blocks[i]})
 		i = j
 	}
 	return found
@@ -171,21 +174,13 @@ func isRoot(rule, root string) bool {
 func TestRadius(t *testing.T) {
 	t.Parallel()
 
-	floe := os.DirFS("../kit/floe")
 	setIn := map[string][]place{} // a variable: where it is set
 	type corner struct {
 		file, prop, value string
 		reads             []string
 	}
 	var corners []corner
-	err := fs.WalkDir(floe, ".", func(name string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || path.Ext(name) != ".css" {
-			return err
-		}
-		src, err := fs.ReadFile(floe, name)
-		if err != nil {
-			return err
-		}
+	sheets(t, "../kit/floe", func(name string, src []byte) {
 		for prop, values := range declarations(src, func(p string) bool { return strings.HasPrefix(p, "--") }) {
 			for _, d := range values {
 				setIn[prop] = append(setIn[prop], place{file: name, rule: d.rule})
@@ -214,11 +209,7 @@ func TestRadius(t *testing.T) {
 				corners = append(corners, c)
 			}
 		}
-		return nil
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if len(corners) == 0 {
 		t.Fatal("no corner found in floe's CSS")
 	}

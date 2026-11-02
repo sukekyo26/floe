@@ -97,7 +97,14 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-copy svg { grid-area: 1 / 1; width: 16px; height: 16px; }
 .floe-copy svg + svg, .floe-copy.copied svg:first-child { display: none; }
 .floe-copy.copied svg + svg { display: block; color: var(--code-add); }
-.floe-copy-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Text a screen reader reads that the page does not show: the copy button's status, and .floe-hidden, the words that
+   tell what a mark of CSS means (a step done, a pro, a file added), which the mark itself is not read for (/ "").
+   It stands at the corner of what places it, or the page's, so that where its text would run widens no page.
+   LIMIT: text selected on the page and copied takes these words too; add user-select: none if that comes to matter.
+   LIMIT: a phone's screen reader (VoiceOver, TalkBack) moves its highlight onto the box it reads, so at each hidden word
+   the page may jump to that corner; floe's pages are read in a desktop's browser. Place each beside its text (its
+   ancestor positioned) if a phone's screen reader comes to be used */
+.floe-copy-status, .floe-hidden { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
 /* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves
    --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
@@ -182,7 +189,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 @scope (:root) {
 blockquote > * { --face: initial; --on-face: initial; --quiet: var(--default-quote-quiet); }
 blockquote { border: 0; padding: 1rem 1.4rem; border-radius: var(--radius); background: var(--default-quote); color: var(--fg); }
-blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
+blockquote::before { content: "“"; content: "“" / ""; display: block; font: 1.9rem/0.6 Georgia, serif; color: var(--accent); }
 }
 }
 </style>
@@ -203,7 +210,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    LIMIT: whether a decoration keeps off the text is seen, not measured */
 :scope.numbered > .card { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
-  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / "";
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
   background: var(--accent-soft); color: var(--accent); font-size: 0.8rem; font-weight: 700;
 }
@@ -245,7 +252,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
-   silent to a screen reader.
+   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: what the note holds
+   is Markdown, with no element of text to hold it, so the gaps between what it holds count from after it.
    LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
    too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
@@ -260,11 +268,11 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 :scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
 :scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
 /* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
-:scope > * + * { margin-top: 0.5rem; }
+:scope > :not(.floe-hidden) + * { margin-top: 0.5rem; }
 .title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
 /* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
-:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
+:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > :not(.floe-hidden) + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
 :scope code { background: var(--face, var(--surface)); }
 }
 }
@@ -273,7 +281,8 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="note"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A mark of the tone stands at the left, the box a row (marks: box) that floe lays out, drawn by the style and
-   silent to a screen reader.
+   silent to a screen reader, to which the hidden word at the box's head tells the tone instead: what the note holds
+   is Markdown, with no element of text to hold it, so the gaps between what it holds count from after it.
    LIMIT: i is a letter in the CSS, past words.yaml, so it stays in English on a page in any language (washi's seal
    too); make it a mark or a word of the page's language once a part's CSS can take its text from words.yaml */
 :scope {
@@ -288,11 +297,11 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 :scope:where([data-floe-tone=warn])::before { content: "!"; content: "!" / ""; }
 :scope:where([data-floe-tone=bad])::before { content: "×"; content: "×" / ""; }
 /* Only the gap between what it holds: it wins over a part's box held in it, whose other margins stay its own */
-:scope > * + * { margin-top: 0.5rem; }
+:scope > :not(.floe-hidden) + * { margin-top: 0.5rem; }
 .title { display: block; font-size: 0.9rem; color: var(--tone); }
 :scope > .title + * { margin-top: 0.1rem; }
 /* A part's box stands --floe-room from what is next to it, as what it draws outside itself reaches that far */
-:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > * + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
+:scope > :is([data-floe-part], [data-floe-look]) + *, :scope > :not(.floe-hidden) + :is([data-floe-part], [data-floe-look]) { margin-top: var(--floe-room); }
 :scope code { background: var(--face, var(--surface)); }
 }
 }
@@ -314,7 +323,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 :scope > li:last-child { padding-bottom: 0.2rem; }
 :scope > li > * + * { margin-top: 0.15rem; }
 :scope > li::before {
-  content: counter(floe-step); border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
+  content: counter(floe-step); content: counter(floe-step) / counter(floe-step); border-radius: 50%; font-size: 0.8rem; font-weight: 700; line-height: 1;
   background: var(--surface); color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line);
 }
 :scope > li::after { border-radius: 999px; background: var(--line); }
@@ -421,17 +430,20 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="terminal"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
+/* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out, and a
+   hidden word before each command, outside what is copied, tells a screen reader it is one */
 /* Its heading in code's faint colour of a heading, whatever colour a theme gives it */
 :scope figcaption { color: var(--floe-code-head-faint); }
 :scope :is(.run, .out) { display: block; }
-:scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
-:scope .run::before { content: "$ "; color: var(--code-prompt); }
-:scope.zsh .run::before { content: "% "; }
-/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language; move it out
-   of the CSS if a part's CSS comes to be checked for letters as a theme's is */
-:scope.powershell .run::before { content: "PS> "; }
-:scope.cmd .run::before { content: "> "; }
+/* Every command but the first, past the hidden words between */
+:scope :is(.run, .out) ~ .run { margin-top: 0.5rem; }
+:scope .run::before { content: "$ "; content: "$ " / ""; color: var(--code-prompt); }
+:scope.zsh .run::before { content: "% "; content: "% " / ""; }
+/* LIMIT: PS is letters in the CSS, past words.yaml: the shell's own prompt, the same in any language, and not read out
+   (/ ""), a command's line told by a hidden word instead; move it out of the CSS if a part's CSS comes to be checked
+   for letters as a theme's is */
+:scope.powershell .run::before { content: "PS> "; content: "PS> " / ""; }
+:scope.cmd .run::before { content: "> "; content: "> " / ""; }
 :scope .out { color: var(--floe-code-faint); }
 }
 }
@@ -445,7 +457,7 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
   --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
 :scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / ""; --floe-mark: auto; background: none;
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
   font-family: var(--mono); font-size: 0.75rem; font-weight: 400;
 }
 }
@@ -557,9 +569,9 @@ h2 { font-size: 1.15rem; }
 <p class="kind"><span class="name">Runbook</span> <span>Owner: Platform team</span> <span>Updated: 2030-05-16</span></p>
 <h1 id="issue-and-deploy-a-new-certificate-for-the-payment-gateway">Issue and deploy a new certificate for the payment gateway</h1><p class="summary">Replace the TLS certificate of the gateway&#39;s internal endpoint before it expires, or at once when it has. Takes about 20 minutes; checkout keeps working throughout.</p>
 </header>
-<section class="needs" data-floe-look="panel"><h2 id="before-you-start">Before you start</h2><ul><li>You can run <code>kubectl</code> against the <code>payments</code> cluster</li><li>You hold the <code>cert-issuer</code> role in the vault</li><li>The on-call engineer of the payments team knows you are starting</li></ul></section><div class="caution" data-floe-part="note" data-floe-tone="warn"><p>Do not delete the old secret until checkout works on the new one; the gateway cannot start without a certificate.</p></div>
+<section class="needs" data-floe-look="panel"><h2 id="before-you-start">Before you start</h2><ul><li>You can run <code>kubectl</code> against the <code>payments</code> cluster</li><li>You hold the <code>cert-issuer</code> role in the vault</li><li>The on-call engineer of the payments team knows you are starting</li></ul></section><div class="caution" data-floe-part="note" data-floe-tone="warn"><p><span class="floe-hidden">Caution: </span>Do not delete the old secret until checkout works on the new one; the gateway cannot start without a certificate.</p></div>
 <section><h2 id="steps">Steps</h2><ol class="steps" data-floe-look="numbered">
-<li data-floe-mark="solid"><div class="head"><h3 id="issue-the-certificate">Issue the certificate</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">vault write -format=json pki/issue/gateway common_name=gateway.internal ttl=8760h &gt; cert.json</span><span class="run" data-floe-copy="">jq -r .data.certificate cert.json &gt; cert.pem &amp;&amp; jq -r .data.private_key cert.json &gt; key.pem</span><span class="run" data-floe-copy="">jq -r .data.expiration cert.json</span><span class="out">1936688400</span></pre><script>(function copyButton(words) {
+<li data-floe-mark="solid"><div class="head"><h3 id="issue-the-certificate">Issue the certificate</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">vault write -format=json pki/issue/gateway common_name=gateway.internal ttl=8760h &gt; cert.json</span><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">jq -r .data.certificate cert.json &gt; cert.pem &amp;&amp; jq -r .data.private_key cert.json &gt; key.pem</span><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">jq -r .data.expiration cert.json</span><span class="out">1936688400</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -623,7 +635,7 @@ h2 { font-size: 1.15rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><div class="fails" data-floe-part="note" data-floe-tone="bad"><strong class="title">If it fails</strong><p>A <code>permission denied</code> means the role is missing; ask the platform team for <code>cert-issuer</code>.</p></div></li>
-<li data-floe-mark="solid"><div class="head"><h3 id="store-it-as-a-new-secret">Store it as a new secret</h3></div><div data-floe-text=""><p>Name it with today&#39;s date, so the old one stays until the end.</p></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments create secret tls gateway-tls-20300516 --cert=cert.pem --key=key.pem</span><span class="out">secret/gateway-tls-20300516 created</span></pre><script>(function copyButton(words) {
+<li data-floe-mark="solid"><div class="head"><h3 id="store-it-as-a-new-secret">Store it as a new secret</h3></div><div data-floe-text=""><p>Name it with today&#39;s date, so the old one stays until the end.</p></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">kubectl -n payments create secret tls gateway-tls-20300516 --cert=cert.pem --key=key.pem</span><span class="out">secret/gateway-tls-20300516 created</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -687,7 +699,7 @@ h2 { font-size: 1.15rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></li>
-<li data-floe-mark="solid"><div class="head"><h3 id="point-the-gateway-at-the-new-secret">Point the gateway at the new secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments set volume deploy/gateway --add --name=tls --secret-name=gateway-tls-20300516 --overwrite</span><span class="run" data-floe-copy="">kubectl -n payments rollout status deploy/gateway</span><span class="out">deployment &#34;gateway&#34; successfully rolled out</span></pre><script>(function copyButton(words) {
+<li data-floe-mark="solid"><div class="head"><h3 id="point-the-gateway-at-the-new-secret">Point the gateway at the new secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">kubectl -n payments set volume deploy/gateway --add --name=tls --secret-name=gateway-tls-20300516 --overwrite</span><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">kubectl -n payments rollout status deploy/gateway</span><span class="out">deployment &#34;gateway&#34; successfully rolled out</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -752,7 +764,7 @@ h2 { font-size: 1.15rem; }
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><div class="fails" data-floe-part="note" data-floe-tone="bad"><strong class="title">If it fails</strong><p>Roll back at once (below), then page the on-call engineer.</p></div></li>
 <li data-floe-mark="solid"><div class="head"><h3 id="check-that-checkout-works">Check that checkout works</h3><span class="who">Payments on-call</span></div><div data-floe-text=""><p>Place a test order on the staging shop and watch the checkout error rate on the dashboard for five minutes.</p></div></li>
-<li data-floe-mark="solid"><div class="head"><h3 id="delete-the-old-secret">Delete the old secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments delete secret gateway-tls-20290514</span></pre><script>(function copyButton(words) {
+<li data-floe-mark="solid"><div class="head"><h3 id="delete-the-old-secret">Delete the old secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">kubectl -n payments delete secret gateway-tls-20290514</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -818,7 +830,7 @@ h2 { font-size: 1.15rem; }
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></li>
 </ol></section>
 <section class="rollback" data-floe-tone="bad"><h2 id="roll-back">Roll back</h2><ol class="steps" data-floe-look="numbered">
-<li data-floe-mark="solid"><div class="head"><h3 id="point-the-gateway-back-at-the-old-secret">Point the gateway back at the old secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="run" data-floe-copy="">kubectl -n payments rollout undo deploy/gateway</span><span class="out">deployment.apps/gateway rolled back</span></pre><script>(function copyButton(words) {
+<li data-floe-mark="solid"><div class="head"><h3 id="point-the-gateway-back-at-the-old-secret">Point the gateway back at the old secret</h3></div><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">kubectl -n payments rollout undo deploy/gateway</span><span class="out">deployment.apps/gateway rolled back</span></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
