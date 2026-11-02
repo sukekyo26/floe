@@ -28,7 +28,7 @@
 | `table` | `x` `y`、`title`、`rows`、`w`、`name`、`origin`、`tone`。行は `[名前]`、`[名前, 型]`、区切りの `---`、または線が行に着く `{ name, cells: [名前, 型] }`。 |
 | `icon` | `x` `y`（左上）、`icon`、`label`（アイコンの下）、`size`（48）、`name`。`icon` はセットとその中の名前で `aws/amazon-ec2` のように書く（`floe icons search` で探す）。 |
 | `edge` | `from` と `to`（部品・名前付きの行・`tree` の節の `name`、または点 `[x, y]`）、`fromSide` と `toSide`（`top`・`right`・`bottom`・`left`）、`via`（曲がる点）、`straight`（直角でなく点から点へ）、`label` と `at: [x, y]`、`dashed`、`bold`、`tone`、`start`（`none`）、`end`（`arrow`）、`crossing`。端は `arrow`・`triangle`・`diamond`・`odiamond`・`one`・`many`・`zero-one`・`zero-many`・`none`。`crossing: true` でこの線はほかと交われる。 |
-| `dot` | `cx` `cy`、`r`（7）、`name`、`tone`、`hollow`。線は中心まで届いてよい。 |
+| `dot` | `cx` `cy`、`r`（7）、`name`、`tone`、`hollow`。名前で着く線は、線の、中心と違う最初の点の向きの縁で終わり、矢じりが見えます。その点が半径の内にあるとき、接する 2 つの dot の間、中心を座標で書いたとき（dot の名前を書く）は、中心で終わります。 |
 | `bar` | `x1` `x2` `y`、`name`、`tone`、`label`（棒の右）。 |
 | `axis` | `x1` `x2` `y`、`ticks: [[x, 文], ...]`、`grid`（格子の線の上端）。 |
 | `circle` | `cx` `cy` `r`、`name`、`tone`。円どうしは重なってよい。 |
