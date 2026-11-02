@@ -349,11 +349,11 @@ func calling(name string, text Text, code bool, r rect) (call string, byPlace bo
 	}
 }
 
-// named is r named as a kind (calling).
-func (r rect) named(kind, name string, text Text, code bool) rect {
-	call, byPlace := calling(name, text, code, r)
-	r.what, r.byPlace = kind+" "+call, byPlace
-	return r
+// named is a named as a kind (calling).
+func (a rect) named(kind, name string, text Text, code bool) rect {
+	call, byPlace := calling(name, text, code, a)
+	a.what, a.byPlace = kind+" "+call, byPlace
+	return a
 }
 
 // firstRow is box b's first row's text, by which it is named, and whether it is laid out in code's widths.
