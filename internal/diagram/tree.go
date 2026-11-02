@@ -8,8 +8,9 @@ import (
 
 // item is a part to lay out, at its JSON pointer in the spec; a tree's nodes and edges are items of their own.
 type item struct {
-	at string
-	p  part
+	at   string
+	p    part
+	part int //exhaustruct:optional // the index of the part written it comes of, set by expand
 }
 
 // treeGapX is the room between the spans of siblings, treeGapY between the tallest node of a depth and the next.
@@ -43,6 +44,7 @@ func expand(parts []part) ([]item, usererr.List, error) {
 	}
 	out := make([]item, 0, len(parts))
 	for i, p := range parts {
+		from := len(out)
 		switch {
 		case p.Tree != nil:
 			m := measures{spans: map[*node]float64{}, heights: nil}
@@ -58,7 +60,10 @@ func expand(parts []part) ([]item, usererr.List, error) {
 				out = append(out, its...)
 			}
 		default:
-			out = append(out, item{pointer(i), p})
+			out = append(out, item{at: pointer(i), p: p})
+		}
+		for k := from; k < len(out); k++ {
+			out[k].part = i
 		}
 	}
 	return out, problems, nil
@@ -125,7 +130,7 @@ func (m *measures) place(out *[]item, n *node, cx, y float64, d int, at string) 
 	if len(n.Children) == 0 {
 		b.handSides = append(b.handSides, "bottom")
 	}
-	*out = append(*out, item{at, part{Box: b}}) //nolint:exhaustruct_v5 // one kind of part
+	*out = append(*out, item{at: at, p: part{Box: b}}) //nolint:exhaustruct_v5 // one kind of part
 	if len(n.Children) == 0 {
 		return
 	}
@@ -151,7 +156,7 @@ func (m *measures) place(out *[]item, n *node, cx, y float64, d int, at string) 
 			e.Via = [][2]float64{{cx, turn}, {ccx, turn}}
 		}
 		cat := at + "/children/" + strconv.Itoa(i)
-		*out = append(*out, item{cat, part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
+		*out = append(*out, item{at: cat, p: part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part
 		m.place(out, c, ccx, cy, d+1, cat)
 		off += s + treeGapX
 	}

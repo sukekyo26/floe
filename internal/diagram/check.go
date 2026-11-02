@@ -43,7 +43,7 @@ func (l *layout) checkPlacement() {
 	canvas := rect{x: 0, y: 0, w: l.w, h: l.h, what: "", at: ""}
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
 		if !r.inside(canvas) {
-			l.tell("diagram_outside", []placed{{r.at, r.graph}}, r.what, num(l.w), num(l.h))
+			l.tell("diagram_outside", []placed{r.where()}, r.what, num(l.w), num(l.h))
 		}
 	}
 	for _, r := range l.strays {
@@ -55,7 +55,7 @@ func (l *layout) checkPlacement() {
 	for i, a := range solids {
 		for _, b := range solids[i+1:] {
 			if a.overlaps(b) {
-				l.tell("diagram_overlap", []placed{{a.at, a.graph}, {b.at, b.graph}}, a.what, b.what)
+				l.tell("diagram_overlap", []placed{a.where(), b.where()}, a.what, b.what)
 			}
 		}
 	}
@@ -63,7 +63,7 @@ func (l *layout) checkPlacement() {
 	for _, b := range slices.Concat(l.boxes, l.marks, pinned) {
 		for _, f := range l.frames {
 			if b.overlaps(f) && !b.inside(f) {
-				l.tell("diagram_straddle", []placed{{b.at, b.graph}, {f.at, f.graph}}, b.what, f.what)
+				l.tell("diagram_straddle", []placed{b.where(), f.where()}, b.what, f.what)
 			}
 		}
 	}
@@ -76,12 +76,12 @@ func (l *layout) checkEdges() {
 	for _, p := range l.paths {
 		for _, b := range l.boxes {
 			if p.runsThrough(b) {
-				l.tell("diagram_runs_through", []placed{{p.at, p.graph}, {b.at, b.graph}}, p.what, b.what)
+				l.tell("diagram_runs_through", []placed{p.where(), b.where()}, p.what, b.what)
 			}
 		}
 		for i, r := range texts {
 			if i != p.own && p.runsThrough(r) {
-				l.tell("diagram_runs_through", []placed{{p.at, p.graph}, {r.at, r.graph}}, p.what, r.what)
+				l.tell("diagram_runs_through", []placed{p.where(), r.where()}, p.what, r.what)
 			}
 		}
 	}
@@ -92,7 +92,7 @@ func (l *layout) checkEdges() {
 func (l *layout) checkCrossings() {
 	for a, b := range l.crossPairs() {
 		if x, y, ok := firstCrossing(a, b); ok {
-			l.tell("diagram_crossing", []placed{{a.at, a.graph}, {b.at, b.graph}}, a.what, b.what, num(x), num(y))
+			l.tell("diagram_crossing", []placed{a.where(), b.where()}, a.what, b.what, num(x), num(y))
 		}
 	}
 }
@@ -114,8 +114,20 @@ func (l *layout) crossPairs() iter.Seq2[path, path] {
 	}
 }
 
-// placed is where a thing is written, and the graph that laid it out ("" for one written by hand).
-type placed struct{ at, graph string }
+// placed is where a thing is written, the graph that laid it out ("" for one written by hand), and the index of the
+// part written it comes of.
+type placed struct {
+	at, graph string
+	part      int
+}
+
+func (r rect) where() placed {
+	return placed{at: r.at, graph: r.graph, part: r.part}
+}
+
+func (p path) where() placed {
+	return placed{at: p.at, graph: p.graph, part: p.part}
+}
 
 // graphKeys are the words of the mistakes that only things graphs laid out make: their writer cannot move them,
 // but only the graphs, by their x and y.
@@ -127,15 +139,22 @@ var graphKeys = map[string]string{
 	"diagram_straddle":     "diagram_graph_straddle",
 }
 
-// tell tells the mistake of key that things make, in their order: at the first written by hand, which its writer
-// can move; when graphs laid them all out, at the first's graph, in the words that say to move it. Two things or
-// more of one graph meet only by a fault of its layout, which no writer can mend: floe's failure.
+// tell tells the mistake of key that things make, in their order: at the one written by hand written last, of the
+// greatest part (of one part, the first given), as one added or moved last most often made it; when graphs laid them
+// all out, at the first's graph, in the words that say to move it. Two things or more of one graph meet only by a
+// fault of its layout, which no writer can mend: floe's failure.
+// LIMIT: a mistake two things make named in the same words twice (two boxes of one text) told at one place is told
+// once (usererr.Tell), where it was told at each before; name them if one comes to need both.
 func (l *layout) tell(key string, things []placed, args ...any) {
-	for _, t := range things {
-		if t.graph == "" {
-			l.problem(t.at, key, args...)
-			return
+	at := -1
+	for i, t := range things {
+		if t.graph == "" && (at < 0 || t.part > things[at].part) {
+			at = i
 		}
+	}
+	if at >= 0 {
+		l.problem(things[at].at, key, args...)
+		return
 	}
 	if len(things) > 1 && !slices.ContainsFunc(things, func(t placed) bool { return t.graph != things[0].graph }) {
 		if l.failure == nil {
