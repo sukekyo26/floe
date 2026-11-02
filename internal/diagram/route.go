@@ -216,9 +216,8 @@ func back(in, p, q [2]float64, across bool) bool {
 // (left or right) or above or below it, and when p is off both ways and known, the side across the way the edge
 // came into p (left or right when across). "" leaves the side to endOf, as without via: for a point, a dot, p on
 // the end or in it, and p off both ways at a from end or on a straight edge. A row takes left or right alone.
-// LIMIT: a graph's box may get a side its graph's edges take, and the edge runs over them (S183); a from end with
-// p off both ways takes the side facing the other end, and when p is behind that side the edge runs through the
-// part it starts from and is refused; writing the side gives another.
+// LIMIT: a from end with p off both ways takes the side facing the other end, and when p is behind that side the
+// edge runs through the part it starts from and is refused; writing the side gives another.
 func (l *layout) facing(e end, p [2]float64, across, known bool) string {
 	t, ok := l.names[e.Name]
 	if e.Point != nil || !ok || t.kind == "dot" || t.kind == "circle" {
@@ -239,6 +238,36 @@ func (l *layout) facing(e end, p [2]float64, across, known bool) string {
 		return tb
 	}
 	return ""
+}
+
+// clear is side, the side taken for the end e with none written ("" for the side facing other, as endOf takes it),
+// or, when e is a box or frame a graph or a tree laid out and side is one their edges take, a side of those left to
+// edges written by hand (target.handSides) that p, the via next to e or else other, is outside of: across towards p
+// first, then up or down towards it. With neither, side is kept: another would run along e's edge or back over the
+// edge, where this one meets theirs, mostly told as a crossing.
+// LIMIT: with no side left that p is outside of, the edge keeps a side the graph's or the tree's edges take, and may
+// run over theirs silently; write the via outside a side left, or write the side. The graph's labels keep off a box's
+// sides across its edges alone (hands), not a box's top or bottom left, nor a frame's sides left, so an edge to one
+// may meet a label and be refused. A box's sides left are counted from the ends of the graph's edges, so one running
+// past a box, skipping ranks, may cross or run beside an edge ending at the box's side.
+func (l *layout) clear(e end, side string, other, p [2]float64) string {
+	t, ok := l.names[e.Name]
+	if e.Point != nil || !ok || t.handSides == nil {
+		return side
+	}
+	if side == "" {
+		side = onSide(t, "", other).side
+	}
+	if slices.Contains(t.handSides, side) {
+		return side
+	}
+	lr, tb := towards(t.r, p)
+	for _, s := range []string{lr, tb} {
+		if slices.Contains(t.handSides, s) && outside(p, onSide(t, s, p)) {
+			return s
+		}
+	}
+	return side
 }
 
 // enter joins pts to b, the end of a right-angled edge with via, across going across at the end. A point or a dot is
@@ -328,20 +357,30 @@ func pathData(pts [][2]float64) string {
 // LIMIT: the runs between via go round nothing in the way.
 func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, fromWho, toWho string, ok bool) {
 	fromSide, toSide := e.FromSide, e.ToSide
-	if len(e.Via) > 0 && fromSide == "" {
-		fromSide = l.facing(e.From, e.Via[0], false, false)
+	fromAt, toAt := l.centre(e.From), l.centre(e.To)
+	if fromSide == "" {
+		near := toAt
+		if len(e.Via) > 0 {
+			fromSide, near = l.facing(e.From, e.Via[0], false, false), e.Via[0]
+		}
+		fromSide = l.clear(e.From, fromSide, toAt, near)
 	}
-	from, fromWho, okFrom := l.endOf(at, e.From, fromSide, l.centre(e.To))
+	from, fromWho, okFrom := l.endOf(at, e.From, fromSide, toAt)
 	angled := len(e.Via) > 0 && !e.Straight
 	across := false
 	if angled && okFrom {
 		pts, across = through([][2]float64{{from.x, from.y}}, e.Via, horizontal(from.side) || from.side == "")
 	}
-	if len(e.Via) > 0 && toSide == "" {
-		toSide = l.facing(e.To, e.Via[len(e.Via)-1], across, angled && okFrom)
+	if toSide == "" {
+		near := fromAt
+		if len(e.Via) > 0 {
+			near = e.Via[len(e.Via)-1]
+			toSide = l.facing(e.To, near, across, angled && okFrom)
+		}
+		toSide = l.clear(e.To, toSide, fromAt, near)
 	}
 	// Resolved even when from is not, so that both are told.
-	to, toWho, okTo := l.endOf(at, e.To, toSide, l.centre(e.From))
+	to, toWho, okTo := l.endOf(at, e.To, toSide, fromAt)
 	if !okFrom || !okTo {
 		return nil, "", "", false
 	}
