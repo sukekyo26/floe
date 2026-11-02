@@ -1,7 +1,14 @@
-/* No ground: its text and faces are those around it (a band's), what it holds too, its mark and title in the face's
+/* No ground: its text and faces are those around it (a face's), what it holds too, its mark and title in the face's
    colour in one */
 :scope { background: none; color: inherit; border: 0; border-top: 2px solid var(--on-face, var(--fg)); }
 :scope > * { --face: inherit; --on-face: inherit; }
+/* In a band (band.css), the surface and the page's text, as other themes' notes, keeping no face from the band at its
+   root either, which paints a ground and draws no ring; a warning's and a bad one's keep their own face.
+   LIMIT: a browser that reads no container style query draws it in a band as in any face */
+@container style(--swiss-band: on) {
+  :scope { background: var(--surface); color: var(--fg); border-top-color: var(--fg); }
+  :scope:not([data-floe-tone=warn], [data-floe-tone=bad]), :scope:not([data-floe-tone=warn], [data-floe-tone=bad]) > * { --face: initial; --on-face: initial; }
+}
 :scope::before { background: none; color: var(--on-face, var(--tone)); font-size: 1rem; font-weight: 900; }
 /* Its red is read on the surface alone: the good one's mark is black */
 :scope[data-floe-tone=good]::before { color: var(--on-face, var(--fg)); }

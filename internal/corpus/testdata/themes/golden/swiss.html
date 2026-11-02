@@ -457,11 +457,16 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows */
-:scope { --tabs-gap: 0.35rem; display: flex; flex-wrap: wrap; gap: var(--tabs-gap); }
+/* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows. The titles
+   have no ground: they and their ring are in the colour on a face around tabs, taken at the root (base.css takes faces
+   away below it) */
+:scope {
+  --tabs-gap: 0.35rem; display: flex; flex-wrap: wrap; gap: var(--tabs-gap);
+  --tabs-title: var(--on-face, var(--muted)); --tabs-ring: var(--on-face, var(--accent)); --tabs-print: var(--on-face, var(--fg));
+}
 :scope > label {
   position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: 0.9rem; font-weight: 600;
-  color: var(--muted);
+  color: var(--tabs-title);
 }
 /* The picked tab, on screen alone: on paper every tab shows under its title, alike. A theme sets --tabs-picked-bg,
    --tabs-picked-fg and --tabs-picked-ring (a box-shadow) rather than a rule of its own.
@@ -473,7 +478,7 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
     box-shadow: var(--tabs-picked-ring, none);
   }
 }
-:scope > label:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope > label:has(:focus-visible) { outline: 2px solid var(--tabs-ring); outline-offset: 2px; }
 :scope input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
 /* The panel stands --floe-room below the row of titles, the gap and its margin together.
    LIMIT: a theme's tabs.css that writes the root's gap alone moves the panel off --floe-room; a theme writes no room
@@ -482,7 +487,7 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 :scope > label:has(:checked) + div { display: grid; }
 /* On paper every tab shows, each under its title */
 @media print {
-  :scope > label { flex-basis: 100%; padding-inline: 0; color: var(--fg); }
+  :scope > label { flex-basis: 100%; padding-inline: 0; color: var(--tabs-print); }
   :scope > div { display: grid; order: 0; }
 }
 }
@@ -537,18 +542,32 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* No ground: its text and faces are those around it (a band's), what it holds too */
+/* No ground: its text and faces are those around it (a face's), what it holds too */
 :scope { border: 0; border-top: 2px solid var(--on-face, var(--fg)); background: none; color: inherit; --face: inherit; --on-face: inherit; }
 :scope > * { --face: inherit; --on-face: inherit; }
+/* In a band (band.css), the surface and the page's text, as other themes' panels, keeping no face from the band; a
+   part's root keeps it, for its ring outside on the band.
+   LIMIT: a browser that reads no container style query draws it in a band as in any face */
+@container style(--swiss-band: on) {
+  :scope { background: var(--surface); color: var(--fg); border-top-color: var(--fg); }
+  :scope:where(:not([data-floe-part])), :scope > * { --face: initial; --on-face: initial; }
+}
 }
 }
 </style>
 <style>
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* No ground: its text and faces are those around it (a band's), what it holds too */
+/* No ground: its text and faces are those around it (a face's), what it holds too */
 :scope { border: 0; border-top: 2px solid var(--on-face, var(--fg)); background: none; color: inherit; --face: inherit; --on-face: inherit; }
 :scope > * { --face: inherit; --on-face: inherit; }
+/* In a band (band.css), the surface and the page's text, as other themes' panels, keeping no face from the band; a
+   part's root keeps it, for its ring outside on the band.
+   LIMIT: a browser that reads no container style query draws it in a band as in any face */
+@container style(--swiss-band: on) {
+  :scope { background: var(--surface); color: var(--fg); border-top-color: var(--fg); }
+  :scope:where(:not([data-floe-part])), :scope > * { --face: initial; --on-face: initial; }
+}
 }
 }
 </style>
@@ -556,6 +575,9 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { border: 0; --table-rule: none; --table-head-bg: none; --table-head-fg: var(--on-face, var(--fg)); }
+/* In a band (band.css) the table is on the surface (panel.css), its root still in the band's face, read here.
+   LIMIT: a browser that reads no container style query draws it in a band as in any face */
+@container style(--swiss-band: on) { :scope { --table-head-fg: var(--fg); } }
 :scope thead th { border-bottom: 2px solid var(--on-face, var(--fg)); font-weight: 800; }
 :scope tbody td { border-bottom: 1px solid var(--on-face, var(--fg)); }
 :scope :is(th, td):first-child { padding-left: 0; }
@@ -566,10 +588,17 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="note"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* No ground: its text and faces are those around it (a band's), what it holds too, its mark and title in the face's
+/* No ground: its text and faces are those around it (a face's), what it holds too, its mark and title in the face's
    colour in one */
 :scope { background: none; color: inherit; border: 0; border-top: 2px solid var(--on-face, var(--fg)); }
 :scope > * { --face: inherit; --on-face: inherit; }
+/* In a band (band.css), the surface and the page's text, as other themes' notes, keeping no face from the band at its
+   root either, which paints a ground and draws no ring; a warning's and a bad one's keep their own face.
+   LIMIT: a browser that reads no container style query draws it in a band as in any face */
+@container style(--swiss-band: on) {
+  :scope { background: var(--surface); color: var(--fg); border-top-color: var(--fg); }
+  :scope:not([data-floe-tone=warn], [data-floe-tone=bad]), :scope:not([data-floe-tone=warn], [data-floe-tone=bad]) > * { --face: initial; --on-face: initial; }
+}
 :scope::before { background: none; color: var(--on-face, var(--tone)); font-size: 1rem; font-weight: 900; }
 /* Its red is read on the surface alone: the good one's mark is black */
 :scope[data-floe-tone=good]::before { color: var(--on-face, var(--fg)); }
@@ -586,8 +615,11 @@ blockquote { border: 0; border-left: 6px solid var(--on-face, var(--accent)); pa
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A card draws no ground of its own here: it keeps the face around it (a band's) */
+/* A card draws no ground of its own here: it keeps the face around it, but in a band (band.css), where it is a panel
+   on the surface (panel.css) and keeps none: written here too, as this file wins over panel.css on a card.
+   LIMIT: a browser that reads no container style query draws it in a band as in any face */
 .card { border: 0; border-left: 1px solid var(--on-face, var(--fg)); --face: inherit; --on-face: inherit; }
+@container style(--swiss-band: on) { .card { --face: initial; --on-face: initial; } }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero);
   --floe-mark: auto; background: none; color: var(--on-face, var(--fg));

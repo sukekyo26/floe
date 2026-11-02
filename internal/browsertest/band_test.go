@@ -19,14 +19,15 @@ var bandKit = map[string]string{
 		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{if .Data.note}}<div data-floe-part=\"note\"><p>A borrowed note, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>{{end}}{{.Data.note}}{{.Data.text}}{{.Data.words}}{{.Data.details}}{{.Data.options}}<div data-floe-look=\"cards\"><div class=\"card\" data-floe-look=\"panel\"><p>A card of the template's own.</p></div></div>" +
 		"<div data-floe-look=\"panel\"><p>A panel of the template's own, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>" +
 		"<div data-floe-look=\"table\"><table><tr><th>A <a href=\"https://example.com/\">table</a></th></tr><tr><td>of its own, <code>code</code></td></tr></table></div>" +
-		"{{.Data.table}}{{.Data.code}}{{.Data.progress}}{{.Data.tree}}{{.Data.timeline}}</header>\n</body></html>\n",
+		"{{.Data.table}}{{.Data.code}}{{.Data.progress}}{{.Data.tree}}{{.Data.timeline}}{{.Data.tabs}}{{.Data.links}}</header>\n</body></html>\n",
 	"templates/mine/page.css": "header { display: grid; gap: 1rem; padding: 2rem; }\n",
 	"templates/mine/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"note": {"$ref": "floe:///parts/note.json"}, "text": {"type": "string", "format": "markdown"},
 "table": {"$ref": "floe:///parts/table.json"}, "code": {"$ref": "floe:///parts/code.json"},
 "words": {"$ref": "floe:///parts/text.json"}, "details": {"$ref": "floe:///parts/details.json"},
 "options": {"$ref": "floe:///parts/options.json"}, "progress": {"$ref": "floe:///parts/progress.json"},
-"tree": {"$ref": "floe:///parts/tree.json"}, "timeline": {"$ref": "floe:///parts/timeline.json"}}}`,
+"tree": {"$ref": "floe:///parts/tree.json"}, "timeline": {"$ref": "floe:///parts/timeline.json"},
+"tabs": {"$ref": "floe:///parts/tabs.json"}, "links": {"$ref": "floe:///parts/links.json"}}}`,
 	"templates/mine/example.yaml": "lang: en\ntemplate: mine\n",
 }
 
@@ -49,12 +50,13 @@ var bandParts = bandText + bandHeld +
 	"code: { file: a.conf, text: \"wide" + strings.Repeat(" wide", 60) + "\\n\" }\n"
 
 // bandColours is parts in a band that draw some of their text in colours of their own (muted, a tone, the page's
-// text colour): progress's label and count, a tree's note and change, a timeline's date.
-// LIMIT: on a theme whose panel has no ground (swiss), such text stays in its colour on the band's, where it cannot be
-// read (S174); the test leaves them out of swiss's band.
+// text colour): progress's label and count, a tree's note and change, a timeline's date; tabs, whose titles have no
+// ground, and links, whose cards' rings are drawn around them.
 var bandColours = "progress: [{ label: Copied, done: 40, of: 100 }]\n" +
 	"tree: [{ path: pages/, note: what export writes }, { path: pages/home.md, change: changed }]\n" +
-	"timeline: [{ date: '03-01', title: Started, text: The copy began. }]\n"
+	"timeline: [{ date: '03-01', title: Started, text: The copy began. }]\n" +
+	"tabs: [{ title: One, parts: [{ text: First. }] }, { title: Two, parts: [{ text: Second. }] }]\n" +
+	"links: [{ title: Guide, url: 'https://example.com/guide', text: How it works }]\n"
 
 // measureBand returns a line for each thing the band draws wrong: a part in it not in the page's text colour, a
 // line's code without its frame (a shadow every code has, seen only in a face), or code in a fenced block with one.
@@ -95,7 +97,8 @@ const measureBand = `(() => {` + colours + `
 })()`
 
 // TestUIBand draws Markdown, pills and parts a template places in the look band, in every theme: a part on a ground
-// of its own is in the page's text colour and one of none (swiss's note) in the band's, only a line's code is framed,
+// of its own is in the page's text colour (swiss's boxes, of no ground elsewhere, are on the surface in a band) and one
+// of none in the band's, only a line's code is framed,
 // and every text and focus ring in the band reads on the ground under it, as measureContrast and measureRings measure;
 // a text there is in the band's text colour, its heading unmarked, pills of a theme that gives them no ground too. The
 // template places a panel and a table of its own too, as looks on elements that are no part's box.
@@ -110,11 +113,7 @@ func TestUIBand(t *testing.T) { //nolint:paralleltest // the browser tests share
 	_, _, themes, _ := k.Names()
 	pages := map[string]string{}
 	for _, theme := range themes {
-		page := bandParts + "theme: " + theme + "\n"
-		if theme != "swiss" {
-			page += bandColours
-		}
-		pages["parts-"+theme] = page
+		pages["parts-"+theme] = bandParts + bandColours + "theme: " + theme + "\n"
 	}
 	for slug, page := range pages {
 		s.floe(t, "publish", s.write(t, slug+".yaml", page), "--slug", slug)

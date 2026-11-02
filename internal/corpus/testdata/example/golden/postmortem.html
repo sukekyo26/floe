@@ -209,8 +209,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope { --face: var(--accent); --on-face: var(--on-fill); background: var(--face); color: var(--on-face); }
 /* A part on a ground of its own (a panel, a note) sets its text's colour with it; one of none draws in the band's,
    its tone told by its word alone (a pill of a theme that gives it no ground), as in any face.
-   LIMIT: on a theme whose panel has no ground (swiss), text a part draws in a colour of its own (muted, a tone, the
-   page's text colour: progress's label, a tree's note, a timeline's date) stays in it on the band (S174).
+   LIMIT: in a part of one's own that takes this look (looks: [band]), base.css takes the band's face away from what the
+   part holds, so tabs' titles and rings and links' rings there are in their own colours, not the band's.
    LIMIT: a theme whose faces let what is under them through (aurora's glass) lets the accent through them too, where
    the text sinks: such a theme makes its faces opaque in a band, in its band.css, as aurora does */
 }
@@ -271,8 +271,10 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
-:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link. The ring
+   around a card is drawn on what is around the cards, in the colour on a face there, taken at the root (base.css takes
+   faces away below it) */
+:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); --links-ring: var(--on-face, var(--accent)); }
 :scope > li {
   --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0;
 }
@@ -288,7 +290,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope a::after { content: ""; position: absolute; inset: 0; }
 :scope > li:hover a { text-decoration-thickness: 2px; }
 :scope a:focus-visible { outline: none; }
-:scope > li:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope > li:has(a:focus-visible) { outline: 2px solid var(--links-ring); outline-offset: 2px; }
 :scope .url {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted);
   font-family: var(--mono);
@@ -404,7 +406,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); color: var(--fg); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
+/* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
+:scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
 .card {
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);

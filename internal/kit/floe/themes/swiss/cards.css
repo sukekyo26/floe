@@ -1,5 +1,8 @@
-/* A card draws no ground of its own here: it keeps the face around it (a band's) */
+/* A card draws no ground of its own here: it keeps the face around it, but in a band (band.css), where it is a panel
+   on the surface (panel.css) and keeps none: written here too, as this file wins over panel.css on a card.
+   LIMIT: a browser that reads no container style query draws it in a band as in any face */
 .card { border: 0; border-left: 1px solid var(--on-face, var(--fg)); --face: inherit; --on-face: inherit; }
+@container style(--swiss-band: on) { .card { --face: initial; --on-face: initial; } }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero);
   --floe-mark: auto; background: none; color: var(--on-face, var(--fg));

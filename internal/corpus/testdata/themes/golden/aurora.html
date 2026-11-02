@@ -469,11 +469,16 @@ blockquote { border: 1px solid var(--aurora-edge); border-radius: var(--radius);
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows */
-:scope { --tabs-gap: 0.35rem; display: flex; flex-wrap: wrap; gap: var(--tabs-gap); }
+/* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows. The titles
+   have no ground: they and their ring are in the colour on a face around tabs, taken at the root (base.css takes faces
+   away below it) */
+:scope {
+  --tabs-gap: 0.35rem; display: flex; flex-wrap: wrap; gap: var(--tabs-gap);
+  --tabs-title: var(--on-face, var(--muted)); --tabs-ring: var(--on-face, var(--accent)); --tabs-print: var(--on-face, var(--fg));
+}
 :scope > label {
   position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: 0.9rem; font-weight: 600;
-  color: var(--muted);
+  color: var(--tabs-title);
 }
 /* The picked tab, on screen alone: on paper every tab shows under its title, alike. A theme sets --tabs-picked-bg,
    --tabs-picked-fg and --tabs-picked-ring (a box-shadow) rather than a rule of its own.
@@ -485,7 +490,7 @@ blockquote { border: 1px solid var(--aurora-edge); border-radius: var(--radius);
     box-shadow: var(--tabs-picked-ring, none);
   }
 }
-:scope > label:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope > label:has(:focus-visible) { outline: 2px solid var(--tabs-ring); outline-offset: 2px; }
 :scope input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
 /* The panel stands --floe-room below the row of titles, the gap and its margin together.
    LIMIT: a theme's tabs.css that writes the root's gap alone moves the panel off --floe-room; a theme writes no room
@@ -494,7 +499,7 @@ blockquote { border: 1px solid var(--aurora-edge); border-radius: var(--radius);
 :scope > label:has(:checked) + div { display: grid; }
 /* On paper every tab shows, each under its title */
 @media print {
-  :scope > label { flex-basis: 100%; padding-inline: 0; color: var(--fg); }
+  :scope > label { flex-basis: 100%; padding-inline: 0; color: var(--tabs-print); }
   :scope > div { display: grid; order: 0; }
 }
 }

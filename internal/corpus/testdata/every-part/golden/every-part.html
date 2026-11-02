@@ -854,8 +854,10 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link */
-:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link. The ring
+   around a card is drawn on what is around the cards, in the colour on a face there, taken at the root (base.css takes
+   faces away below it) */
+:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); --links-ring: var(--on-face, var(--accent)); }
 :scope > li {
   --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0;
 }
@@ -871,7 +873,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope a::after { content: ""; position: absolute; inset: 0; }
 :scope > li:hover a { text-decoration-thickness: 2px; }
 :scope a:focus-visible { outline: none; }
-:scope > li:has(a:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope > li:has(a:focus-visible) { outline: 2px solid var(--links-ring); outline-offset: 2px; }
 :scope .url {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--muted);
   font-family: var(--mono);
@@ -1048,11 +1050,16 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="tabs"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows */
-:scope { --tabs-gap: 0.35rem; display: flex; flex-wrap: wrap; gap: var(--tabs-gap); }
+/* Radio buttons, a form to each tabs so that their groups stay apart: the panel after the checked one shows. The titles
+   have no ground: they and their ring are in the colour on a face around tabs, taken at the root (base.css takes faces
+   away below it) */
+:scope {
+  --tabs-gap: 0.35rem; display: flex; flex-wrap: wrap; gap: var(--tabs-gap);
+  --tabs-title: var(--on-face, var(--muted)); --tabs-ring: var(--on-face, var(--accent)); --tabs-print: var(--on-face, var(--fg));
+}
 :scope > label {
   position: relative; padding: 0.3rem 0.95rem; border-radius: var(--radius-pill); cursor: pointer; font-size: 0.9rem; font-weight: 600;
-  color: var(--muted);
+  color: var(--tabs-title);
 }
 /* The picked tab, on screen alone: on paper every tab shows under its title, alike. A theme sets --tabs-picked-bg,
    --tabs-picked-fg and --tabs-picked-ring (a box-shadow) rather than a rule of its own.
@@ -1064,7 +1071,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
     box-shadow: var(--tabs-picked-ring, none);
   }
 }
-:scope > label:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+:scope > label:has(:focus-visible) { outline: 2px solid var(--tabs-ring); outline-offset: 2px; }
 :scope input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
 /* The panel stands --floe-room below the row of titles, the gap and its margin together.
    LIMIT: a theme's tabs.css that writes the root's gap alone moves the panel off --floe-room; a theme writes no room
@@ -1073,7 +1080,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope > label:has(:checked) + div { display: grid; }
 /* On paper every tab shows, each under its title */
 @media print {
-  :scope > label { flex-basis: 100%; padding-inline: 0; color: var(--fg); }
+  :scope > label { flex-basis: 100%; padding-inline: 0; color: var(--tabs-print); }
   :scope > div { display: grid; order: 0; }
 }
 }
@@ -1337,7 +1344,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { background: var(--default-panel); color: var(--fg); --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
+/* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
+:scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
 .card {
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
