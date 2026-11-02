@@ -14,7 +14,7 @@ h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .verdict li { display: grid; gap: 0.1rem; }
 .verdict .question { font-size: 0.9rem; }
 .verdict .pick { font-size: 1.4rem; line-height: 1.4; }
-.verdict .undecided { opacity: 0.8; }
+.verdict .undecided { color: color-mix(in srgb, currentColor 80%, transparent); }
 .body { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 2.5rem; padding-block: 2rem; }
 main { display: grid; gap: 2.2rem; align-content: start; }
 main section { display: grid; gap: var(--floe-room); }

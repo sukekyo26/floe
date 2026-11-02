@@ -296,6 +296,18 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change a right-angled edge with `via` that repeats a point (a via on the point before it, or on the edge's start)
+  to keep the way it was going over that point: `from: [10, 100], via: [[10, 100], [50, 150]], to: [200, 150]`
+  goes across first (`H50 V150`) where it went down first (`V150 H50`).
+- Change code's look to keep the room at a line's sides on each line, an element
+  `pre` holds, rather than on `pre`: a part of one's own that takes it makes
+  each line an element, as text `pre` holds outside one sits on its edge, and
+  reads `--floe-code-pad` and `--floe-code-room` to move the room onto lines
+  of its own rather than writing them. It makes a block of a `<code>` that
+  `pre` holds, and takes the inline look off it, and of no other: a `<code>`
+  elsewhere in such a part (its heading, an element `pre` holds) keeps the
+  inline look of floe's base. A long line of such a part without a copy button keeps
+  the room after it, scrolled to the end.
 - Change the labels of a Venn diagram's regions (`in`) to have no box unless
   they say `plain: false`: one that wrote no `plain` loses the box it drew on
   its circle. A diagram's ground, `--bg`, is painted in its frame, so a
@@ -439,10 +451,17 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Fix an edge with `via` ending at a box, table, row, icon, frame or bar named without a side, which ran along the
-  end's edge or back over itself after its last via, or was refused as running through the box it started from: the
-  end takes the side towards the via next to it (or across the way the edge came, when the via is off both ways), and
-  the last run meets the end's side square, a side written too when the via is outside it.
+- Fix an edge with `via` whose end is a box, table, row, icon, frame or bar named without a side, which ran along the
+  end's edge or back over itself after its last via, or was refused as running through the box it started from. Such
+  an end, at either end of the edge and on a `straight` edge too, takes the side towards the via next to it when that
+  via is beside it, above or below it; with the via off both ways, the last end of a right-angled edge takes the side
+  across the way the edge came. The last run of a right-angled edge meets its end's side square, a side written too
+  when the via is outside it, with two turns halfway when one turn would run back over the edge.
+- Fix faint text drawn by `opacity`, which could lie over a scrolling code's
+  focus ring: a code's file name, a terminal's heading and output, a diff's
+  lines outside a hunk, a design's undecided pick and a diagram's disabled
+  button are faded by their colour. A diff's lines outside a hunk are as faint
+  as a terminal's output, 70% rather than 65%.
 - Fix a diagram on a panel, in details or on a theme's patterned page, whose
   labels' boxes and hollow ends and dots stood out in the page's ground: a
   diagram paints its own ground, `--bg`, in its frame.

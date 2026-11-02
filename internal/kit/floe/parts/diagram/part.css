@@ -17,9 +17,14 @@
 @media (max-width: 640px) { .dg-tools span { display: none; } }
 /* Buttons do nothing on paper */
 @media print { .dg-tools { display: none; } }
-.dg-tools button { min-width: 2.2rem; padding: 2px 8px; font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-small); cursor: pointer; }
+/* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */
+.dg-tools button {
+  --floe-tool-alpha: 100%; min-width: 2.2rem; padding: 2px 8px; font: inherit; border-radius: var(--radius-small); cursor: pointer;
+  color: color-mix(in srgb, var(--fg) var(--floe-tool-alpha), transparent); background: color-mix(in srgb, var(--surface) var(--floe-tool-alpha), transparent);
+  border: 1px solid color-mix(in srgb, var(--line) var(--floe-tool-alpha), transparent);
+}
 .dg-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.dg-tools button:disabled { opacity: 0.4; cursor: default; }
+.dg-tools button:disabled { --floe-tool-alpha: 40%; cursor: default; }
 /* What has no tone draws in its shape's own colours, written after var(): the diagram's root holds no tone, unlike
    a part's box, and what has one (data-floe-tone) takes its colours */
 .dg { --tone: initial; --tone-soft: initial; position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--font); }
