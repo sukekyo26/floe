@@ -241,15 +241,15 @@ func (l *layout) facing(e end, p [2]float64, across, known bool) string {
 	return ""
 }
 
-// enter joins pts to b, the end of a right-angled edge with via, across going across at the end. A point or a dot
-// is joined as through takes it. When the last point p is outside b's side, the last run meets the side square: one
-// turn at (p.x, b.y) for left or right, at (b.x, p.y) for top or bottom, or, when that turn would run back along the
-// run into p, two turns halfway between p and the side. Else the edge goes on the way it was going, with no turn the other
+// enter joins pts to b, the end of a right-angled edge with via, across going across at the end. A point or a dot is
+// joined as through takes it. When the last point p is outside b's side, the last run meets the side square: one turn
+// at (p.x, b.y) for left or right, at (b.x, p.y) for top or bottom, or, when that turn would run back along the run
+// into p, two turns halfway between p and the side. Else the edge goes on the way it was going, with no turn the other
 // way first: that would run along the end's edge, drawn, where this runs back, mostly through the end, and is refused.
-// LIMIT: a side with p not outside it (on its line, beyond the end, or p in the end) is met the way the edge was
-// going, and the edge may run along the end's edge or through it; meeting it square takes a way round the end. A p
-// level with the side, come to by a run going away from it, runs straight back along that run; turning off it takes
-// a way round as well.
+// LIMIT: a side with p not outside it (on its line, beyond the end, or p in the end) is met the way the edge was going,
+// and the edge may run along the end's edge or through it; meeting it square takes a way round the end. A p level with
+// the side, come to by a run going away from it, runs straight back along that run; turning off it takes a way round as
+// well.
 func enter(pts [][2]float64, b anchor, across bool) [][2]float64 {
 	p, last := pts[len(pts)-1], [2]float64{b.x, b.y}
 	switch {
