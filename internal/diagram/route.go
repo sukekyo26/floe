@@ -446,18 +446,18 @@ type rimmed struct {
 func (l *layout) rimEnd(e end, pts [][2]float64, i, step int, kind string) (rimmed, bool) {
 	t, ok := l.dot(e)
 	if !ok {
-		return rimmed{}, false //nolint:exhaustruct // none
+		return rimmed{}, false //nolint:exhaustruct_v5 // none
 	}
 	off := offFrom(pts, i, step)
 	if off < 0 {
-		return rimmed{}, false //nolint:exhaustruct // none
+		return rimmed{}, false //nolint:exhaustruct_v5 // none
 	}
 	c, q := pts[i], pts[off]
 	run := math.Hypot(q[0]-c[0], q[1]-c[1])
 	back, keep := pull(t.r.w/2, kind)
 	// LIMIT: a run too short for its marker (a via in line within it too) leaves the end at the centre, hidden.
 	if run-back <= keep {
-		return rimmed{}, false //nolint:exhaustruct // none
+		return rimmed{}, false //nolint:exhaustruct_v5 // none
 	}
 	at := [2]float64{c[0] + (q[0]-c[0])/run*back, c[1] + (q[1]-c[1])/run*back}
 	return rimmed{at: at, off: off, run: run, back: back, keep: keep}, true
@@ -518,7 +518,8 @@ func (l *layout) addEdge(e *edge, at string) {
 	if e.End != nil {
 		end = *e.End
 	}
-	el := elem{Kind: "path", D: pathData(l.atDots(e, pts, start, end)), Class: cls, Tone: e.Tone, Start: l.marker(start), End: l.marker(end)}
+	drawn := l.atDots(e, pts, start, end)
+	el := elem{Kind: "path", D: pathData(drawn), Class: cls, Tone: e.Tone, Start: l.marker(start), End: l.marker(end)}
 	l.edgeEls = append(l.edgeEls, el)
 	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing, graph: e.graph}
 	if e.Label != nil {
