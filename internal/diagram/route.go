@@ -100,18 +100,15 @@ func (l *layout) centre(e end) [2]float64 {
 	return [2]float64{t.r.x + t.r.w/2, t.r.y + t.r.h/2}
 }
 
-// route is the points an edge runs through, from a to b by via: straight from point to point, or right-angled.
-// LIMIT: two turns at most, and no way round what is in the way; via or a side gives another.
+// route is the points of an edge from a to b with no via, right-angled, or straight from point to point by via.
+// A right-angled edge with via is joined by addEdge.
+// LIMIT: without via, two turns at most and no way round what is in the way; via or a side gives another.
 func route(a, b anchor, via [][2]float64, straight bool) [][2]float64 {
 	start, last := [][2]float64{{a.x, a.y}}, [2]float64{b.x, b.y}
-	switch {
-	case straight:
+	if straight {
 		return slices.Concat(start, via, [][2]float64{last})
-	case len(via) == 0:
-		return slices.Concat(start, turns(a, b), [][2]float64{last})
-	default:
-		return through(start, slices.Concat(via, [][2]float64{last}), horizontal(a.side) || a.side == "")
 	}
+	return slices.Concat(start, turns(a, b), [][2]float64{last})
 }
 
 // turns are the corners from a to b without via: two out past both for sides of one way (both left, …), so that
@@ -168,11 +165,13 @@ func around(a, b anchor) [][2]float64 {
 }
 
 // through joins pts to each of next in turn, two points off line with one turn, along the way the edge was going:
-// across first when across.
-func through(pts, next [][2]float64, across bool) [][2]float64 {
+// across first when across. It returns the points and whether the edge goes across at the end, the way kept over
+// a point the same as the one before.
+func through(pts, next [][2]float64, across bool) ([][2]float64, bool) {
 	for _, q := range next {
 		p := pts[len(pts)-1]
 		switch {
+		case p == q:
 		case p[0] == q[0]:
 			across = false
 		case p[1] == q[1]:
@@ -186,7 +185,73 @@ func through(pts, next [][2]float64, across bool) [][2]float64 {
 		}
 		pts = append(pts, q)
 	}
-	return pts
+	return pts, across
+}
+
+// facing is the side of the end e that p, the via next to it, faces: the side towards p when p is beside the end
+// (left or right) or above or below it, and when p is off both ways and known, the side across the way the edge
+// came into p (left or right when across). "" leaves the side to endOf, as without via: for a point, a dot, p on
+// the end or in it, and p off both ways at a from end or on a straight edge. A row takes left or right alone.
+// LIMIT: a graph's box may get a side its graph's edges take, and the edge runs over them (S183); a from end with
+// p off both ways may turn back over itself at p (S182).
+func (l *layout) facing(e end, p [2]float64, across, known bool) string {
+	t, ok := l.names[e.Name]
+	if e.Point != nil || !ok || t.kind == "dot" || t.kind == "circle" {
+		return ""
+	}
+	r := t.r
+	lr := map[bool]string{true: "left", false: "right"}[p[0] < r.x+r.w/2]
+	tb := map[bool]string{true: "top", false: "bottom"}[p[1] < r.y+r.h/2]
+	level := p[1] >= r.y && p[1] <= r.y+r.h
+	under := p[0] >= r.x && p[0] <= r.x+r.w
+	switch {
+	case t.kind == "row" && !under:
+		return lr
+	case t.kind == "row", level && under:
+		return ""
+	case level, !under && known && across:
+		return lr
+	case under, known:
+		return tb
+	}
+	return ""
+}
+
+// enter joins pts to b, the end of a right-angled edge with via, across going across at the end. When the last
+// point p is outside b's side, the last run meets the side square: one turn at (p.x, b.y) for left or right, at
+// (b.x, p.y) for top or bottom, or, when that turn would run back along the run into p, two turns halfway between p
+// and the side. Else the edge goes on as through takes it.
+// LIMIT: a side written with p not outside it (on its line, beyond the end) is met as through takes it, and the edge
+// may run along the end's edge; meeting it square takes a way round the end.
+func enter(pts [][2]float64, b anchor, across bool) [][2]float64 {
+	p, last := pts[len(pts)-1], [2]float64{b.x, b.y}
+	outside := b.side == "left" && p[0] < last[0] || b.side == "right" && p[0] > last[0] ||
+		b.side == "top" && p[1] < last[1] || b.side == "bottom" && p[1] > last[1]
+	if b.point || !outside {
+		pts, _ = through(pts, [][2]float64{last}, across)
+		return pts
+	}
+	// in is the last run into p; none when every via is on the from point, and then nothing to turn back along.
+	var in [2]float64
+	for i := len(pts) - 1; i > 0; i-- {
+		if pts[i] != pts[i-1] {
+			in = [2]float64{pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1]}
+			break
+		}
+	}
+	switch {
+	case horizontal(b.side) && in[1]*(last[1]-p[1]) < 0:
+		mid := (p[0] + last[0]) / 2
+		pts = append(pts, [2]float64{mid, p[1]}, [2]float64{mid, last[1]})
+	case vertical(b.side) && in[0]*(last[0]-p[0]) < 0:
+		mid := (p[1] + last[1]) / 2
+		pts = append(pts, [2]float64{p[0], mid}, [2]float64{last[0], mid})
+	case horizontal(b.side) && p[1] != last[1]:
+		pts = append(pts, [2]float64{p[0], last[1]})
+	case vertical(b.side) && p[0] != last[0]:
+		pts = append(pts, [2]float64{last[0], p[1]})
+	}
+	return append(pts, last)
 }
 
 // pathData writes the points as SVG path data: H and V along an axis, L across.
@@ -208,12 +273,30 @@ func pathData(pts [][2]float64) string {
 }
 
 func (l *layout) addEdge(e *edge, at string) {
-	from, fromWho, okFrom := l.endOf(at, e.From, e.FromSide, l.centre(e.To))
-	to, toWho, okTo := l.endOf(at, e.To, e.ToSide, l.centre(e.From))
+	fromSide, toSide := e.FromSide, e.ToSide
+	if len(e.Via) > 0 && fromSide == "" {
+		fromSide = l.facing(e.From, e.Via[0], false, false)
+	}
+	from, fromWho, okFrom := l.endOf(at, e.From, fromSide, l.centre(e.To))
+	angled := len(e.Via) > 0 && !e.Straight
+	var pts [][2]float64
+	across := false
+	if angled && okFrom {
+		pts, across = through([][2]float64{{from.x, from.y}}, e.Via, horizontal(from.side) || from.side == "")
+	}
+	if len(e.Via) > 0 && toSide == "" {
+		toSide = l.facing(e.To, e.Via[len(e.Via)-1], across, angled && okFrom)
+	}
+	// Resolved even when from is not, so that both are told.
+	to, toWho, okTo := l.endOf(at, e.To, toSide, l.centre(e.From))
 	if !okFrom || !okTo {
 		return
 	}
-	pts := route(from, to, e.Via, e.Straight)
+	if angled {
+		pts = enter(pts, to, across)
+	} else {
+		pts = route(from, to, e.Via, e.Straight)
+	}
 	segs := segsOf(pts)
 	who := e.who
 	if who == "" {
