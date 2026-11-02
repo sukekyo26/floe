@@ -1,6 +1,6 @@
 box "Chief executive" 404,20 152x29
 box "Engineering" 176,89 120x29
-box "Apps" 88,158 72x29
+box "アプリ" 88,158 72x29
 box "Servers" 184,158 88x29
 box "Quality" 296,158 88x29
 box "Sales" 492,89 72x29
@@ -10,7 +10,7 @@ box "Administration" 700,89 144x29
 box "People" 672,158 80x29
 box "Accounts" 776,158 96x29
 edge "Chief executive"→"Engineering" M480,49 V69 H236 V89
-edge "Engineering"→"Apps" M236,118 V138 H124 V158
+edge "Engineering"→"アプリ" M236,118 V138 H124 V158
 edge "Engineering"→"Servers" M236,118 V138 H228 V158
 edge "Engineering"→"Quality" M236,118 V138 H340 V158
 edge "Chief executive"→"Sales" M480,49 V69 H528 V89

@@ -77,6 +77,12 @@ func TestTreeMistakes(t *testing.T) {
 			"  - box: { x: 150, y: 80, rows: [S] }\n  - tree:\n      x: 200\n      y: 10\n      root:\n        rows: [A]\n        children:\n          - rows: [S]\n          - rows: [T]\n",
 			`s.yaml:5:5: box "S" overlaps box "S"`,
 		},
+		// A node with no name is named by its widest text, its box and its edges alike.
+		{
+			"  - tree:\n      x: 200\n      y: 10\n      root:\n        rows: [{ en: Top, ja: \"いちばん上の節\" }]\n        children:\n          - rows: [{ en: Kid, ja: \"子の節\" }]\n" +
+				"  - box: { name: b, x: 180, y: 50, w: 60, h: 30, rows: [b] }\n",
+			`s.yaml:12:5: edge "いちばん上の節"→"子の節" runs through box "b"`,
+		},
 		{
 			"  - tree:\n      x: 20\n      y: 10\n      root:\n        rows: [A]\n        children:\n          - rows: [B]\n          - rows: [Wide child]\n",
 			`s.yaml:11:13: edge "A"→"B" sticks out of the 400x200 canvas`,

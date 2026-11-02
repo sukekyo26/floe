@@ -10,11 +10,11 @@ label "10/12" 521,208 46x18
 label "12:00" 713,208 46x18
 label "10/13" 905,208 46x18
 label "Phase 0: setup" 11,75 110.8x18
-label "Phase 1: port" 11,115 110.8x18
+label "フェーズ 1: 移植" 11,115 110.8x18
 label "Phase 2: diagrams" 11,155 132.4x18
 label "#1, #2: repository and CI" 202.1,75 190x18
 label "#3 to #12 (10 PRs)" 526.6,115 139.6x18
 label "#13, #14 in review" 882.9,155 139.6x18
-label "repository" 146.1,15 94x18
-label "phase 1 done" 469.8,15 103.6x18
+label "リポジトリ作成" 146.1,15 94x18
+label "フェーズ 1 完了" 469.8,15 103.6x18
 label "#14 opened" 836.9,15 82x18

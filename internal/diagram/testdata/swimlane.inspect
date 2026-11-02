@@ -23,9 +23,9 @@ edge fix→ready M584,506 V518 H434 V542
 edge ready→ci M500,588 V600 H626 V624
 edge ci→ok M566,653 H176
 edge ok→merge M164,661.5 V682 H650 V706
-label "ask" 278,201 34x18
+label "聞く" 278,201 34x18
 label "answer" 179,255 53.2x18
 label "OK" 502,284 24.4x18
 label "findings" 556,406 67.6x18
 label "ready to merge" 638,602 110.8x18
-label "ask" 494,623 34x18
+label "聞く" 494,623 34x18
