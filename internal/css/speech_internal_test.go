@@ -9,8 +9,9 @@ import (
 )
 
 // speechAmiss returns what is amiss in the readings src gives what it draws with content: the last content of each
-// block that holds one right (a rule's, in @media or nested too) is read after its /, by "" (a mark, not read) or by
-// the counters before it alone (a number, read), and by no string, which passes no words.yaml.
+// block that holds one right (a rule's, in @media or nested too) is read after its /, by "" (a mark, or a number that
+// words do not tell from what is around it, not read) or by all the counters before it alone, in their order (a
+// number, read), and by no string, which passes no words.yaml.
 // LIMIT: one's own parts, themes and templates are not read, nor the management page (ui.html), a counter style's
 // prefix, suffix or symbols (handoff's Q, which takes no reading), a counter or text within var() after / (taken as
 // no counter), nor ::marker's content, which floe's CSS does not write.
@@ -35,17 +36,23 @@ func speechAmiss(src []byte) []string {
 		case !ok:
 			amiss = append(amiss, "content: "+value+" in "+d.rule+" is read out; write / \"\" after a mark, or the counters before / after a number")
 		case len(after) == 1 && after[0].tt == css.StringToken && string(after[0].data) == `""`:
+		case !slices.Equal(groups(after), counters(before)):
+			amiss = append(amiss, "content: "+value+" in "+d.rule+" reads "+text(src, after)+"; read \"\" or the counters before / alone, all of them once")
 		default:
-			counters := groups(before)
-			for _, g := range groups(after) {
-				if !strings.HasPrefix(g, "counter(") && !strings.HasPrefix(g, "counters(") || !slices.Contains(counters, g) {
-					amiss = append(amiss, "content: "+value+" in "+d.rule+" reads "+g+"; read \"\" or the counters before / alone")
-					break
-				}
-			}
 		}
 	}
 	return amiss
+}
+
+// counters returns the counter() and counters() of a value, in order, as text.
+func counters(value []token) []string {
+	var out []string
+	for _, g := range groups(value) {
+		if strings.HasPrefix(g, "counter(") || strings.HasPrefix(g, "counters(") {
+			out = append(out, g)
+		}
+	}
+	return out
 }
 
 // cutSlash splits a value at its / outside every bracket.
@@ -108,7 +115,7 @@ func TestSpeechAmiss(t *testing.T) {
 	for src, want := range map[string]int{
 		`li::before { content: "✓"; content: "✓" / ""; }`:                                   0,
 		`li::before { content: counter(a); content: counter(a) / counter(a); }`:             0,
-		`li::after { content: counter(a) " / " counter(b) / counter(a); }`:                  0,
+		`li::after { content: counter(a) " / " counter(b) / counter(a); }`:                  1,
 		`li::after { content: counter(a) " / " counter(b) / ""; }`:                          0,
 		`li::before { content: ""; } li::after { content: none; }`:                          0,
 		`li::before { content: "✓"; }`:                                                      1,
@@ -121,6 +128,10 @@ func TestSpeechAmiss(t *testing.T) {
 		`@media print { li::before { content: "✓"; } li.x::after { content: "+" / ""; } }`:  1,
 		`.a { content: "✓"; &::after { content: "+" / ""; } }`:                              1,
 		`li::before { content: "✓" / ""; content: "✓"; }`:                                   1,
+		`li::before { content: counter(a) / counter(a) counter(a); }`:                       1,
+		`li::before { content: counter(a) "." counter(b) / counter(b); }`:                   1,
+		`li::before { content: counter(a) "." counter(b) / counter(a) counter(b); }`:        0,
+		`li::before { content: "" counter(a); content: counter(a) / ""; }`:                  0,
 	} {
 		if got := speechAmiss([]byte(src)); len(got) != want {
 			t.Errorf("%s: %d amiss %q, want %d", src, len(got), got, want)

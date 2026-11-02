@@ -16,12 +16,15 @@ import (
 // is given a screen reader no more than it is shown), and returns, for each, its
 // name, whether a pseudo-element's reading (after its /) has a counter, and its text with the hidden words, but
 // what a script or style holds; then each hidden word whose parent is a row (li), and each element whose mark means
-// what the HTML must tell in hidden words, which has none. A numbered row, a numbered card and a slide read their number
+// what the HTML must tell in hidden words, which has none. A numbered row and a numbered card read their number
 // whatever their CSS writes after /.
+// LIMIT: worded and numbered list by hand the marks that mean what the HTML must tell, as tokens do not tell a mark
+// that means from one that adorns; add a part's or template's to them when it draws one
 const marked = `(() => {
-  const numbered = '[data-floe-look~="numbered"] > li:not(.done), .numbered > .card, .slides > li';
+  const numbered = '[data-floe-look~="numbered"] > li:not(.done), .numbered > .card';
   const worded = '[data-floe-part=steps] > li.done > strong, [data-floe-part=checklist] > li > span, .option li > span, ' +
-    '[data-floe-part=tree] li:is(.added, .removed, .changed) > .name, [data-floe-part=terminal] .run';
+    '[data-floe-part=tree] li:is(.added, .removed, .changed) > .name, [data-floe-part=terminal] .run, ' +
+    '[data-floe-part=note]:not([class]), [data-floe-part=note].caution > p';
   const reading = (content) => {
     let depth = 0, quote = '', at = -1;
     for (let i = 0; i < content.length; i++) {
@@ -47,12 +50,14 @@ const marked = `(() => {
     }
     if (!drawn) continue;
     if (e.matches(numbered)) counted = true;
+    if (counted) e.dataset.speechCounted = '';
     e.dataset.speech = String(i++);
     const copy = e.cloneNode(true);
     copy.querySelectorAll('script, style').forEach((s) => s.remove());
     const part = e.closest('[data-floe-part]');
-    out.push({ name: (part ? part.dataset.floePart + ' ' : '') + e.tagName.toLowerCase() + [...e.classList].map((c) => '.' + c).join(''), counted, text: copy.textContent });
+    out.push({ name: (part ? part.dataset.floePart + ' ' : '') + e.tagName.toLowerCase() + [...e.classList].map((c) => '.' + c).join(''), counted, text: copy.textContent, e });
   }
+  for (const o of out) { o.inner = !!o.e.querySelector('[data-speech-counted]'); delete o.e; }
   const rows = [...document.querySelectorAll('li > .floe-hidden')].map((e) => e.textContent);
   const told = (e) => { const h = e.matches('.run') ? e.previousElementSibling : e.querySelector(':scope > .floe-hidden'); return h?.matches('.floe-hidden') ? h : null; };
   const unworded = [...document.querySelectorAll(worded)].filter((e) => e.checkVisibility() && !(told(e)?.textContent.trim()))
@@ -107,7 +112,8 @@ func bare(s string) string {
 
 // TestUISpeech reads, in every page of floe's parts and templates in every theme, what a screen reader is given in
 // each element CSS draws content in: a mark is not read and a hidden word is, so that it is the element's text;
-// where the reading after / is a counter, its number is read too. A hidden word stands in a row's text, not in the
+// where the reading after / is a counter, its number is read too (and in what holds such an element, a number may be
+// read that its text does not have). A hidden word stands in a row's text, not in the
 // row.
 func TestUISpeech(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
@@ -118,6 +124,7 @@ func TestUISpeech(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			Out []struct {
 				Name    string
 				Counted bool
+				Inner   bool
 				Text    string
 			}
 			Rows     []string
@@ -148,7 +155,7 @@ func TestUISpeech(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			}
 			e := found.Out[i]
 			got, want := bare(read[d.Node.BackendNodeID]), bare(e.Text)
-			if e.Counted {
+			if e.Counted || e.Inner {
 				strip := func(s string) string {
 					return strings.Map(func(r rune) rune {
 						if unicode.IsDigit(r) {
@@ -157,7 +164,7 @@ func TestUISpeech(t *testing.T) { //nolint:paralleltest // the browser tests sha
 						return r
 					}, s)
 				}
-				if strip(got) != strip(want) || len(got)-len(strip(got)) <= len(want)-len(strip(want)) {
+				if strip(got) != strip(want) || e.Counted && len(got)-len(strip(got)) <= len(want)-len(strip(want)) {
 					amiss = append(amiss, what+": "+e.Name+" reads "+got+", want its number and "+want)
 				}
 			} else if got != want {
