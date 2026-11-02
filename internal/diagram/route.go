@@ -3,6 +3,7 @@ package diagram
 import (
 	"cmp"
 	"fmt"
+	"iter"
 	"math"
 	"slices"
 	"strconv"
@@ -387,19 +388,74 @@ func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, fromWho, toWh
 	start, last := [][2]float64{{from.x, from.y}}, [2]float64{to.x, to.y}
 	switch {
 	case e.Straight:
-		return slices.Concat(start, e.Via, [][2]float64{last}), fromWho, toWho, true
+		pts = slices.Concat(start, e.Via, [][2]float64{last})
 	case len(e.Via) == 0:
-		return slices.Concat(start, turns(from, to), [][2]float64{last}), fromWho, toWho, true
+		pts = slices.Concat(start, turns(from, to), [][2]float64{last})
 	default:
-		return enter(pts, to, across), fromWho, toWho, true
+		pts = enter(pts, to, across)
 	}
+	return pts, fromWho, toWho, true
+}
+
+// atDots is the edge e routed through pts with its ends at dots moved to their outlines (rim), both measured on pts as
+// routed. When both move on the one run between them, by as much as it is long or more (two dots that touch), neither
+// does.
+// LIMIT: an edge between two dots that touch ends at their centres, its arrows hidden; move the dots apart.
+func (l *layout) atDots(e *edge, pts [][2]float64) [][2]float64 {
+	from, nFrom := l.rim(e.From, slices.All(pts))
+	to, nTo := l.rim(e.To, slices.Backward(pts))
+	out := slices.Clone(pts[nFrom-1 : len(pts)-nTo+1])
+	if len(out) == 2 && (from != out[0] && to != out[1]) {
+		if math.Hypot(out[1][0]-out[0][0], out[1][1]-out[0][1]) <= l.radius(e.From)+l.radius(e.To) {
+			return pts
+		}
+	}
+	out[0], out[len(out)-1] = from, to
+	return out
+}
+
+// radius is the radius of the dot e names.
+func (l *layout) radius(e end) float64 {
+	return l.names[e.Name].r.w / 2
+}
+
+// rim is the end of an edge, the first of points (the edge's, from that end), moved back from a dot's centre to its
+// outline towards the first point off the centre, so that an arrow there shows; and how many points from the end stand
+// on the end (1 but at a dot), the ones after it that atDots drops. An end at no dot, or whose first point off it is
+// no farther than the dot's radius, stays.
+// LIMIT: an end written as a point at a dot's centre is no dot's and stays, its arrow hidden: name the dot.
+func (l *layout) rim(e end, points iter.Seq2[int, [2]float64]) ([2]float64, int) {
+	var p [2]float64
+	n := 0
+	for _, q := range points {
+		switch {
+		case n == 0:
+			p, n = q, 1
+			t, ok := l.names[e.Name]
+			if e.Point != nil || !ok || t.kind != "dot" {
+				return p, 1
+			}
+		case q == p:
+			n++
+		default:
+			r := l.radius(e)
+			d := math.Hypot(q[0]-p[0], q[1]-p[1])
+			// LIMIT: a first point off the centre within the dot's radius (a via in line too) leaves the end there, hidden.
+			if d <= r {
+				return p, 1
+			}
+			return [2]float64{p[0] + (q[0]-p[0])/d*r, p[1] + (q[1]-p[1])/d*r}, n
+		}
+	}
+	return p, 1
 }
 
 func (l *layout) addEdge(e *edge, at string) {
-	pts, fromWho, toWho, ok := l.edgePoints(e, at)
+	routed, fromWho, toWho, ok := l.edgePoints(e, at)
 	if !ok {
 		return
 	}
+	pts := l.atDots(e, routed)
 	segs := segsOf(pts)
 	who := e.who
 	if who == "" {
@@ -427,7 +483,7 @@ func (l *layout) addEdge(e *edge, at string) {
 	l.edgeEls = append(l.edgeEls, el)
 	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing, graph: e.graph}
 	if e.Label != nil {
-		x, y := middle(segs)
+		x, y := middle(segsOf(routed)) // where it stands with no end moved to a dot's outline
 		if e.At != nil {
 			x, y = e.At[0], e.At[1]
 		}
