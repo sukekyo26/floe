@@ -439,6 +439,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix an edge with `via` ending at a box, table, row, icon, frame or bar named without a side, which ran along the
+  end's edge or back over itself after its last via, or was refused as running through the box it started from: the
+  end takes the side towards the via next to it (or across the way the edge came, when the via is off both ways), and
+  the last run meets the end's side square, a side written too when the via is outside it.
 - Fix a diagram on a panel, in details or on a theme's patterned page, whose
   labels' boxes and hollow ends and dots stood out in the page's ground: a
   diagram paints its own ground, `--bg`, in its frame.
