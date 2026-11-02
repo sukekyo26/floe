@@ -296,6 +296,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change where a right-angled edge with `via` turns at a via when going on the way it came would run back over
+  itself: it turns the other way first, so its corner moves, and an edge drawn before may now be refused as running
+  through a part beside the via. `from: [0, 0], via: [[200, 0]], to: [100, 100]` ran `H200 H100 V100` and now runs
+  `H200 V100 H100`, through a box at x 180 to 220, y 30 to 70; another via gives another way.
 - Change what a screen reader reads of the marks CSS draws: no mark is read as
   its shape (a check mark, plus, a prompt's `$`, a quote's “), and what a mark
   alone meant is read in words of the page's language: a step or a checklist's
@@ -464,8 +468,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 - Fix a right-angled edge with `via` running back over itself at a via when the next point lay behind the way it
   came: it turns the other way first there. `from: a, via: [[200, 20]], to: [100, 0]` from a box below ran back along
-  y 20 (`V20 H200 H100 V0`) and now turns up at the via (`V20 H200 V0 H100`). An edge from a part in a frame to the
-  frame, with its via in the frame, was refused as running through the part, and now may run along the frame's edge.
+  y 20 (`V20 H200 H100 V0`) and now turns up at the via (`V20 H200 V0 H100`).
 - Fix the next page waiting long to show its content while many pages' tabs were open, and the pages opened after
   the sixth not reloading when changed: each open tab held a connection to the server, and Chrome opens six at most
   to one server. A page holds none now, and asks whether it changed every second while it is shown.
