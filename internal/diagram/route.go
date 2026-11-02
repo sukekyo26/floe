@@ -171,25 +171,36 @@ func around(a, b anchor) [][2]float64 {
 // across first when across, unless that first run would go back along the run into the point, when it turns the
 // other way first. It returns the points and whether the edge goes across at the end, the way kept over a point the
 // same as the one before.
+// LIMIT: the turn is taken without looking at what is in the way, so turning the other way first may run through a
+// part that the way the edge was going passed by, and the edge is refused; another via gives another way.
 func through(pts, next [][2]float64, across bool) ([][2]float64, bool) {
 	for _, q := range next {
-		p := pts[len(pts)-1]
+		p, in := pts[len(pts)-1], runIn(pts)
 		switch {
 		case p == q:
 		case p[0] == q[0]:
 			across = false
 		case p[1] == q[1]:
 			across = true
-		case across != back(runIn(pts), p, q, across):
-			pts = append(pts, [2]float64{q[0], p[1]})
-			across = false
 		default:
-			pts = append(pts, [2]float64{p[0], q[1]})
-			across = true
+			first := across
+			if back(in, p, q, across) {
+				first = !across
+			}
+			pts = append(pts, corner(p, q, first))
+			across = !first
 		}
 		pts = append(pts, q)
 	}
 	return pts, across
+}
+
+// corner is the turn from p to q off line: across first when across.
+func corner(p, q [2]float64, across bool) [2]float64 {
+	if across {
+		return [2]float64{q[0], p[1]}
+	}
+	return [2]float64{p[0], q[1]}
 }
 
 // back reports whether the first run from p towards q, off line, across when across, would go back along in, the run
@@ -230,26 +241,33 @@ func (l *layout) facing(e end, p [2]float64, across, known bool) string {
 	return ""
 }
 
-// enter joins pts to b, the end of a right-angled edge with via, across going across at the end. When the last
-// point p is outside b's side, the last run meets the side square: one turn at (p.x, b.y) for left or right, at
-// (b.x, p.y) for top or bottom, or, when that turn would run back along the run into p, two turns halfway between p
-// and the side. Else the edge goes on as through takes it.
-// LIMIT: a side written with p not outside it (on its line, beyond the end) is met as through takes it, and the edge
-// may run along the end's edge; meeting it square takes a way round the end. So does a p in a frame, for the frame's
-// side: an edge from a part in it may run along the frame's edge rather than be refused. A p level with the side,
-// come to by a run going away from it, runs straight back along that run; turning off it takes a way round as well.
+// enter joins pts to b, the end of a right-angled edge with via, across going across at the end. A point or a dot
+// is joined as through takes it. When the last point p is outside b's side, the last run meets the side square: one turn at
+// (p.x, b.y) for left or right, at (b.x, p.y) for top or bottom, or, when that turn would run back along the run into
+// p, two turns halfway between p and the side. Else the edge goes on the way it was going, with no turn the other
+// way first: that would run along the end's edge, drawn, where this runs back, mostly through the end, and is refused.
+// LIMIT: a side with p not outside it (on its line, beyond the end, or p in the end) is met the way the edge was
+// going, and the edge may run along the end's edge or through it; meeting it square takes a way round the end. A p
+// level with the side, come to by a run going away from it, runs straight back along that run; turning off it takes
+// a way round as well.
 func enter(pts [][2]float64, b anchor, across bool) [][2]float64 {
 	p, last := pts[len(pts)-1], [2]float64{b.x, b.y}
-	if b.point || !outside(p, b) {
+	switch {
+	case b.point, b.side == "":
 		pts, _ = through(pts, [][2]float64{last}, across)
 		return pts
+	case !outside(p, b):
+		if p[0] != last[0] && p[1] != last[1] {
+			pts = append(pts, corner(p, last, across))
+		}
+		return append(pts, last)
 	}
 	in := runIn(pts)
 	switch {
-	case horizontal(b.side) && in[1]*(last[1]-p[1]) < 0:
+	case horizontal(b.side) && back(in, p, last, false):
 		mid := (p[0] + last[0]) / 2
 		pts = append(pts, [2]float64{mid, p[1]}, [2]float64{mid, last[1]})
-	case vertical(b.side) && in[0]*(last[0]-p[0]) < 0:
+	case vertical(b.side) && back(in, p, last, true):
 		mid := (p[1] + last[1]) / 2
 		pts = append(pts, [2]float64{p[0], mid}, [2]float64{last[0], mid})
 	case horizontal(b.side) && p[1] != last[1]:
