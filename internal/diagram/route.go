@@ -641,9 +641,10 @@ type rule struct {
 // of ruleGap to the nearest place within all their bounds (the smaller of two as near) where each edge stays on the
 // canvas, runs through no part or text and crosses no edge (as the checks tell), and what is new of it keeps ruleGap
 // off every rule, part's or frame's edge and other edge's run along it; where there is none, they stay. Edges whose
-// label would stand on another run, the longest run changed, stay too. The checks read the moved runs.
-// LIMIT: an edge whose label's run would change stays on the rule, and graph's and tree's edges are not moved; move
-// them too if they come to matter.
+// label would stand on another run, the longest run changed, do not move there. The checks read the moved runs.
+// Edges are no rules, but an edge does not move along another.
+// LIMIT: an edge whose label's run would change at every place stays on the rule, and graph's and tree's edges are not
+// moved; move them too if they come to matter.
 func (l *layout) keepOff() {
 	done := make([]bool, len(l.loose))
 	for i := range l.loose {
@@ -654,10 +655,7 @@ func (l *layout) keepOff() {
 		bands := l.beside(group)
 		for _, w := range l.places(group, bands) {
 			moved, ok := l.movedTo(group, w)
-			if !ok {
-				break
-			}
-			if !l.fitAll(moved, bands) {
+			if !ok || !l.fitAll(group, moved, bands) {
 				continue
 			}
 			for k, q := range moved {
@@ -704,7 +702,8 @@ func (m loosePath) at() float64 {
 }
 
 // beside are the bands what is new of group's moved edges keeps out of: the rules, and ruleGap about the parts'
-// and frames' edges and the runs of the edges not in group.
+// and frames' edges, the dots and the runs of the edges not in group.
+// LIMIT: raw SVG is not measured, so an edge may move onto what it draws.
 func (l *layout) beside(group []int) []rule {
 	out := slices.Clone(l.rules)
 	for _, r := range slices.Concat(l.boxes, l.frames) {
@@ -716,6 +715,11 @@ func (l *layout) beside(group []int) []rule {
 		} {
 			out = append(out, bandOf(s, ruleGap))
 		}
+	}
+	// A dot is kept off all of it, as an edge on its centre looks to end at it.
+	for _, r := range l.marks {
+		out = append(out, rule{across: true, lo: r.y - ruleGap, hi: r.y + r.h + ruleGap, from: r.x, to: r.x + r.w},
+			rule{across: false, lo: r.x - ruleGap, hi: r.x + r.w + ruleGap, from: r.y, to: r.y + r.h})
 	}
 	for j, p := range l.paths {
 		if slices.ContainsFunc(group, func(g int) bool { return l.loose[g].path == j }) {
@@ -739,34 +743,48 @@ func bandOf(s seg, after float64) rule {
 	return rule{across: false, lo: s[0] - before, hi: s[0] + after, from: min(s[1], s[3]), to: max(s[1], s[3])}
 }
 
-// places are where the loose runs of group may go, nearest first (the smaller of two as near), when a rule holds
-// them; none when they are clear. They are tried as far as all of bands reach, enough to step past every one.
+// places are where the loose runs of group may go when a rule holds them, none when they are clear: just outside
+// each band along them, beside them where they run, within all their bounds, nearest first (the smaller of two as
+// near).
 func (l *layout) places(group []int, bands []rule) []float64 {
 	first := l.loose[group[0]]
-	v := first.at()
-	lo, hi := math.Inf(-1), math.Inf(1)
+	v, across := first.at(), first.across
+	lo, hi, o0, o1 := math.Inf(-1), math.Inf(1), math.Inf(1), math.Inf(-1)
 	held := false
 	for _, g := range group {
 		m := l.loose[g]
+		s := seg{m.pts[m.i][0], m.pts[m.i][1], m.pts[m.i+1][0], m.pts[m.i+1][1]}
 		lo, hi = max(lo, m.lo), min(hi, m.hi)
-		held = held || inBand(l.rules, seg{m.pts[m.i][0], m.pts[m.i][1], m.pts[m.i+1][0], m.pts[m.i+1][1]})
+		held = held || inBand(l.rules, s)
+		_, a, b := runOf(s)
+		o0, o1 = min(o0, a), max(o1, b)
 	}
 	if !held {
 		return nil
 	}
-	reach := 0.0
-	for _, u := range bands {
-		reach += u.hi - u.lo
-	}
 	var out []float64
-	for k := 1; float64(k-1)*ruleGap <= reach; k++ {
-		for _, w := range []float64{v - float64(k)*ruleGap, v + float64(k)*ruleGap} {
-			if w > lo && w < hi {
+	for _, u := range bands {
+		if u.across != across || u.from >= o1 || o0 >= u.to {
+			continue
+		}
+		for _, w := range []float64{u.lo, u.hi} {
+			if w != v && w > lo && w < hi && !slices.Contains(out, w) {
 				out = append(out, w)
 			}
 		}
 	}
+	slices.SortFunc(out, func(a, b float64) int {
+		return cmp.Or(cmp.Compare(math.Abs(a-v), math.Abs(b-v)), cmp.Compare(a, b))
+	})
 	return out
+}
+
+// runOf is where s, a run across or down, is (its y, its x) and from where to where it runs along.
+func runOf(s seg) (at, a, b float64) {
+	if s[1] == s[3] {
+		return s[1], min(s[0], s[2]), max(s[0], s[2])
+	}
+	return s[0], min(s[1], s[3]), max(s[1], s[3])
 }
 
 // inBand reports whether s, a run across or down, lies in a band along it.
@@ -775,21 +793,16 @@ func inBand(bands []rule, s seg) bool {
 		return false
 	}
 	across := s[1] == s[3]
-	w, o0, o1 := s[0], min(s[1], s[3]), max(s[1], s[3])
-	if across {
-		w, o0, o1 = s[1], min(s[0], s[2]), max(s[0], s[2])
-	}
+	w, o0, o1 := runOf(s)
 	return slices.ContainsFunc(bands, func(u rule) bool {
 		return u.across == across && u.lo < w && w < u.hi && u.from < o1 && o0 < u.to
 	})
 }
 
-// movedPath is a loose edge with its loose run moved: its points and its path, and the runs it had.
+// movedPath is a loose edge with its loose run moved: its points and its path.
 type movedPath struct {
 	pts [][2]float64
 	p   path
-	i   int // in paths
-	was []seg
 }
 
 // movedTo is each edge of group with its loose run at w; false when one has its label and its longest run changes.
@@ -803,35 +816,38 @@ func (l *layout) movedTo(group []int, w float64) ([]movedPath, bool) {
 			c = 1
 		}
 		pts[m.i][c], pts[m.i+1][c] = w, w
-		was := l.paths[m.path].segs
 		q := l.paths[m.path]
 		q.segs = segsOf(pts)
-		x0, y0 := middle(was)
+		x0, y0 := middle(l.paths[m.path].segs)
 		if x1, y1 := middle(q.segs); m.labelled && (x1 != x0 || y1 != y0) {
 			return nil, false
 		}
-		out = append(out, movedPath{pts: pts, p: q, i: m.path, was: was})
+		out = append(out, movedPath{pts: pts, p: q})
 	}
 	return out, true
 }
 
-// fitAll reports whether every path of moved is as the checks take it with no mistake, the others of moved as moved,
-// and what is new of it lies in none of bands.
-func (l *layout) fitAll(moved []movedPath, bands []rule) bool {
+// fitAll reports whether every path of moved, group's edges moved, is as the checks take it with no mistake, the
+// others of moved as moved, and what is new of it lies in none of bands.
+// LIMIT: each place tried compares the edges moved with every part, text and edge (places × edges × runs); compare
+// only those near them if diagrams of hundreds of edges on rules get slow.
+func (l *layout) fitAll(group []int, moved []movedPath, bands []rule) bool {
 	all := slices.Clone(l.paths)
-	for _, q := range moved {
-		all[q.i] = q.p
+	for k, q := range moved {
+		all[l.loose[group[k]].path] = q.p
 	}
-	for _, q := range moved {
-		if !span(q.p.segs, "", "").inside(l.canvas()) || len(l.throughs(q.p)) > 0 {
+	canvas := l.canvas()
+	for k, q := range moved {
+		i := l.loose[group[k]].path
+		if !span(q.p.segs, "", "").inside(canvas) || len(l.throughs(q.p)) > 0 {
 			return false
 		}
 		for j, o := range all {
-			if _, _, ok := crosses(q.p, o); ok && j != q.i {
+			if j != i && crosses(q.p, o) {
 				return false
 			}
 		}
-		for _, s := range newRuns(q.p.segs, q.was) {
+		for _, s := range newRuns(q.p.segs, l.paths[i].segs) {
 			if inBand(bands, s) {
 				return false
 			}

@@ -41,8 +41,9 @@ func (l *layout) checked() error {
 // bar's and an axis's, a label part's in its region of a Venn diagram, minding only circles) are not kept off a
 // frame's edge; keep them off too if one strays.
 func (l *layout) checkPlacement() {
+	canvas := l.canvas()
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
-		if !r.inside(l.canvas()) {
+		if !r.inside(canvas) {
 			l.tell("diagram_outside", []placed{{r.at, r.graph}}, r.what, num(l.w), num(l.h))
 		}
 	}
@@ -87,8 +88,13 @@ func (l *layout) throughs(p path) []rect {
 			out = append(out, b)
 		}
 	}
-	for i, r := range slices.Concat(l.labels, l.heads) {
+	for i, r := range l.labels {
 		if i != p.own && p.runsThrough(r) {
+			out = append(out, r)
+		}
+	}
+	for _, r := range l.heads {
+		if p.runsThrough(r) {
 			out = append(out, r)
 		}
 	}
@@ -133,12 +139,13 @@ func crossable(a, b path) bool {
 	return !a.crossing && !b.crossing && (a.graph == "" || a.graph != b.graph)
 }
 
-// crosses is where a crosses b, as checkCrossings tells it; false when they do not, or are not told.
-func crosses(a, b path) (x, y float64, ok bool) {
+// crosses reports whether a crosses b, as checkCrossings tells it.
+func crosses(a, b path) bool {
 	if !crossable(a, b) {
-		return 0, 0, false
+		return false
 	}
-	return firstCrossing(a, b)
+	_, _, ok := firstCrossing(a, b)
+	return ok
 }
 
 // placed is where a thing is written, and the graph that laid it out ("" for one written by hand).

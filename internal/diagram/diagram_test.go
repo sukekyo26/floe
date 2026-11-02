@@ -1245,7 +1245,7 @@ parts:
   - box: { name: b, x: 160, y: 144, w: 60, h: 30, rows: [b] }
   - edge: { from: a, fromSide: bottom, to: b, toSide: top }
   - axis: { x1: 10, x2: 290, y: 95, ticks: [] }
-`, `edge a→b M50,50 V101 H190 V144`},
+`, `edge a→b M50,50 V99 H190 V144`},
 		// f6: with ticks, past them below.
 		{`width: 300
 height: 200
@@ -1255,7 +1255,7 @@ parts:
   - box: { name: b, x: 160, y: 144, w: 60, h: 30, rows: [b] }
   - edge: { from: a, fromSide: bottom, to: b, toSide: top }
   - axis: { x1: 10, x2: 290, y: 95, ticks: [[10, ""], [290, ""]] }
-`, `edge a→b M50,50 V89 H190 V144`},
+`, `edge a→b M50,50 V91 H190 V144`},
 		// f7: a canvas whose size is left out holds anything below and right.
 		{`title: f7
 parts:
@@ -1336,6 +1336,17 @@ parts:
   - edge: { from: [302, 62], to: [310, 62], end: none }
 `, `edge decide→design M296,44 H316 V80 H328
 edge [302,62]→[310,62] M302,62 H310`},
+		// f11: the place nearer runs over a dot: it moves the other way.
+		{`width: 500
+height: 140
+title: f11
+parts:
+  - axis: { x1: 200, x2: 424, y: 110, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - bar: { name: decide, x1: 200, x2: 296, y: 44 }
+  - bar: { name: design, x1: 328, x2: 408, y: 80 }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+  - dot: { cx: 304, cy: 62 }
+`, `edge decide→design M296,44 H316 V80 H328`},
 	} {
 		got, mistakes := draw(t, c.src, inspect)
 		var edges []string
