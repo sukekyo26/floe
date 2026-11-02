@@ -861,8 +861,24 @@ func (d *drawing) unheld(i int, side string, looped bool) bool {
 }
 
 // handSides are the sides of each box an edge written by hand may end at, once the graph is drawn: those none of
-// its edges ends at (an end is on the side of the box's centre it is along the ranks) and unheld.
+// its edges ends at (ends) and unheld.
 func (d *drawing) handSides() map[int][]string {
+	used, looped := d.endSides(), d.looped()
+	out := map[int][]string{}
+	for i := range d.boxes {
+		out[i] = make([]string, 0, 4)
+		for _, side := range []string{"left", "right", "top", "bottom"} {
+			if !used[i][side] && d.unheld(i, side, looped[i]) {
+				out[i] = append(out[i], side)
+			}
+		}
+	}
+	return out
+}
+
+// endSides are the sides of each box the graph's edges end at, but its loops and level edges: an end is on the side
+// of the box's centre it is along the ranks (top or bottom laid out down).
+func (d *drawing) endSides() map[int]map[string]bool {
 	used := map[int]map[string]bool{}
 	for k, pts := range d.routes {
 		if _, lv := d.level[k]; lv || d.loops[k] {
@@ -884,17 +900,7 @@ func (d *drawing) handSides() map[int][]string {
 			}
 		}
 	}
-	looped := d.looped()
-	out := map[int][]string{}
-	for i := range d.boxes {
-		out[i] = make([]string, 0, 4)
-		for _, side := range []string{"left", "right", "top", "bottom"} {
-			if !used[i][side] && d.unheld(i, side, looped[i]) {
-				out[i] = append(out[i], side)
-			}
-		}
-	}
-	return out
+	return used
 }
 
 // looped are the boxes with loops.
