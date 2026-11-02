@@ -906,8 +906,10 @@ func frameSides(frames map[int]rect, routes map[int][][2]float64) map[int][]stri
 	out := map[int][]string{}
 	for c, r := range frames {
 		sides := [4]seg{
-			{r.x, r.y, r.x, r.y + r.h}, {r.x + r.w, r.y, r.x + r.w, r.y + r.h},
-			{r.x, r.y, r.x + r.w, r.y}, {r.x, r.y + r.h, r.x + r.w, r.y + r.h},
+			{r.x, r.y, r.x, r.y + r.h},
+			{r.x + r.w, r.y, r.x + r.w, r.y + r.h},
+			{r.x, r.y, r.x + r.w, r.y},
+			{r.x, r.y + r.h, r.x + r.w, r.y + r.h},
 		}
 		out[c] = make([]string, 0, 4)
 		for j, side := range []string{"left", "right", "top", "bottom"} {
