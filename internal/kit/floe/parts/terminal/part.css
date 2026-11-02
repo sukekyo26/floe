@@ -1,6 +1,6 @@
 /* In the look of code, dark as a terminal is; the prompt is drawn, so a copy of the commands leaves it out */
-/* Its heading fainter than code's, whatever colour a theme gives it */
-:scope figcaption { color: color-mix(in srgb, var(--code-head-fg, var(--code-fg)) 85%, transparent); }
+/* Its heading in code's faint colour of a heading, whatever colour a theme gives it */
+:scope figcaption { color: var(--floe-code-head-faint); }
 :scope :is(.run, .out) { display: block; }
 :scope .run + .run, :scope .out + .run { margin-top: 0.5rem; }
 :scope .run::before { content: "$ "; color: var(--code-prompt); }
@@ -9,4 +9,4 @@
    of the CSS if a part's CSS comes to be checked for letters as a theme's is */
 :scope.powershell .run::before { content: "PS> "; }
 :scope.cmd .run::before { content: "> "; }
-:scope .out { opacity: 0.7; }
+:scope .out { color: var(--floe-code-faint); }
