@@ -126,7 +126,7 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 
 部品の間に、地や枠を持つ箱（カード、見た目 panel を借りる部品や要素、note）を描く部品・テンプレートは、floe のものと同じく、その箱の縁から字までの余白を `var(--floe-pad-block) var(--floe-pad-inline)`（floe の base で 1.1rem と 1.3rem）で書き、自分の長さを書きません。見た目 `panel` 自身は余白を持ちません（表・rows・details は、行を箱の縁まで引くため）。
 
-部品は、本文より小さい字を、自分の数で書かず、floe の base の 2 つの段で書きます：札・チップ・番号の丸・キー・表の見出し・名前・日付・数・値の横の注は `var(--floe-text-small)`（0.8rem）、カードや手順の文・note の題・タブの名前・値の単位は `var(--floe-text-aside)`（0.9rem）。code の本文（行、tree の名前）は、code の大きさに従います。どちらも rem なので、大きな字の中でも小さい字は大きくなりません。
+部品は、本文より小さい字を、自分の数で書かず、floe の base の 2 つの段で書きます：札・チップ・番号の丸・キー・表の見出し・名前・日付・数・値の横の注は `var(--floe-text-small)`（0.8rem）、カードや手順の文・note の題・並びの上の小さな題・タブの名前・値の単位は `var(--floe-text-aside)`（0.9rem）。code の本文（行、tree の名前）は、code の大きさに従います。どちらも rem なので、大きな字の中でも小さい字は大きくなりません。
 
 横にスクロールする自分の箱は、floe の `pre`・code・table・tree と同じく、`overflow-x: auto` と `contain: inline-size` を `@media screen` の中の 1 つの規則に書き、紙では中身を折り返します（紙ではスクロールした所が読めません。floe の `pre` は紙で行を折り返します）。書かないと、箱が中身の幅を外へ伝え、外の grid・flex の項目（並びの項目、カード）が一番長い行の幅まで広がり、ページも広がります。そうした箱は、中身で幅が決まる所（inline-block、float、絶対位置などの shrink-to-fit の箱、`min-content`・`max-content`・`fit-content` の幅、自動の幅の表の升、`justify-self: start`、flex の行の `flex-basis: auto` の項目）には置きません。そこでは枠と余白だけの幅に潰れます。
 

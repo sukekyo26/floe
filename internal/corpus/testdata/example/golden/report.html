@@ -375,8 +375,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .dg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .dg-wrap.zoomed:active { cursor: grabbing; }
-/* LIMIT: the toolbar's text is in px, off the scale of parts' small text (base.css's --floe-text-*) */
-.dg-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: 12px; line-height: 1.4; }
+.dg-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
 .dg-tools span { color: var(--muted); margin-right: auto; }
 @media (max-width: 640px) { .dg-tools span { display: none; } }
 /* Buttons do nothing on paper */

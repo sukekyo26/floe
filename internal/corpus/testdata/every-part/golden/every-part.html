@@ -258,7 +258,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A bar's length is set on it, as a share of the longest */
 :scope { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.6rem 1rem; align-items: center; padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > div { display: contents; color: var(--tone); }
-:scope .label { color: var(--fg); font-size: var(--floe-text-aside); }
+:scope .label { color: var(--fg); font-size: var(--floe-text-small); }
 /* The track is the quiet ground (--quiet), as a table's head, progress's and a keycap's.
    LIMIT: a quiet ground melting into its box's ground is seen, not measured; a theme that paints a box near --quiet
    sets --quiet on that box */
@@ -661,7 +661,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope > div { gap: 0.5rem; }
 :scope .title { font-size: 1.25rem; line-height: 1.45; }
 :scope .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; font-size: var(--floe-text-small); }
-:scope .set-aside { margin-top: 0.3rem; font-size: var(--floe-text-small); font-weight: 600; }
+:scope .set-aside { margin-top: 0.3rem; font-size: var(--floe-text-aside); font-weight: 600; }
 :scope .rejected { gap: 0.15rem; }
 :scope .rejected > li::before { content: "×"; content: "×" / ""; color: var(--bad); }
 }
