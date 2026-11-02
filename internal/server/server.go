@@ -47,11 +47,11 @@ type Server struct {
 	cfg     Config
 	hosts   map[string]bool
 	origins map[string]bool
-	// every is how often the drawing is watched and an event stream compares a page's version.
+	// every is how often the drawing is watched.
 	every time.Duration
 	// id is this server's, new each start: in each version, so that a tab open across a restart reloads.
 	id string
-	// stopping is done when the server stops: asked to (/api/stop, which calls halt), or by Serve's ctx.
+	// stopping is done when the server is asked to stop (/api/stop, which calls halt).
 	stopping context.Context
 	halt     context.CancelFunc
 
@@ -145,8 +145,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/stop", s.stop)
 	mux.HandleFunc("GET /api/artifacts/{slug}/download", s.download)
 	mux.HandleFunc("GET /api/artifacts/{slug}/pages", s.pages)
-	mux.HandleFunc("GET /api/events/{slug}", s.watch)
-	mux.HandleFunc("GET /api/events/{slug}/{rest...}", s.watch)
+	mux.HandleFunc("GET /api/changed/{slug}", s.changed)
+	mux.HandleFunc("GET /api/changed/{slug}/{rest...}", s.changed)
 	mux.HandleFunc("GET /a/{slug}", s.redirect)
 	// /a/{slug}/ and /a/{slug}/{rest...} would both match /a/x/, so one route takes both.
 	mux.HandleFunc("GET /a/{slug}/{rest...}", s.servePage)
@@ -322,9 +322,8 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	case <-ctx.Done():
 	case <-s.stopping.Done():
 	}
-	// The watching ends, and the event streams, which Shutdown would wait for otherwise.
+	// The watching ends.
 	cancel()
-	s.halt()
 	// LIMIT: a request still running after 10 s is cut off, and a connection opened but sent nothing (a browser's
 	// preconnect) is waited for 5 s. Wait longer if a save comes to take that.
 	done, stop := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
