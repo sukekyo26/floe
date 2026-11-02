@@ -312,6 +312,16 @@ func (b *browser) size(width, height int64, mobile bool) {
 	}
 }
 
+// scrollbars hides the scrollbars of this test's tab, or shows them again, so that a page is laid out as wide as the
+// window, as on paper.
+func (b *browser) scrollbars(hidden bool) {
+	b.t.Helper()
+
+	if _, err := chromedp.Call(b.ctx, emulation.SetScrollbarsHidden, emulation.SetScrollbarsHiddenParams{Hidden: hidden}); err != nil {
+		b.t.Fatal(err)
+	}
+}
+
 func (b *browser) unsize() {
 	b.t.Helper()
 
