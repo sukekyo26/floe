@@ -463,7 +463,7 @@ bares:
 
 // measureRoom reads, for each part with a copy button, its code scrolled to the end: how far left of the button the
 // text ends ("ok" when it does, else how far under it), or for a short one, whether it scrolls and whether a diff's line
-// reaches the code's right edge; then, for each bare, whether its long line keeps code's room (1.1rem) after it scrolled
+// reaches the code's right edge; then, for each bare, whether its long line keeps code's room (its line's padding at the left, --floe-code-pad) after it scrolled
 // to the end ("room", else how wide it is), or a short one does not scroll.
 const measureRoom = `(() => {
   const textEnd = (pre) => {
@@ -490,14 +490,14 @@ const measureRoom = `(() => {
     if (pre.scrollWidth - pre.clientWidth <= 1) return 'bare short';
     pre.scrollLeft = pre.scrollWidth;
     const room = pre.getBoundingClientRect().left + pre.clientLeft + pre.clientWidth - textEnd(pre);
-    return 'bare ' + (room >= 17.6 - 0.5 ? 'room' : 'room ' + Math.round(room));
+    const pad = parseFloat(getComputedStyle(pre.firstElementChild).paddingLeft);
+    return 'bare ' + (pad > 0 && room >= pad - 0.5 ? 'room' : 'room ' + Math.round(room) + ' of ' + pad);
   })).join(', ');
 })()`
 
 // measureLines reads where code's look keeps the room at a line's sides: on each line (code's code, a terminal's
 // spans, a diff's lines in its code) rather than on pre, of each part of the family; then whether its faint text, a
 // heading's file name, a terminal's heading and output and a diff's lines outside a hunk, is there and faded by its colour.
-// LIMIT: a terminal and a diff that each write 70% rather than read --floe-code-faint pass; read their CSS for that.
 const measureLines = `(() => {
   const out = new Set();
   for (const part of document.querySelectorAll('[data-floe-part=code], [data-floe-part=terminal], [data-floe-part=diff]')) {

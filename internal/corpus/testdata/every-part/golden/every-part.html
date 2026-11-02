@@ -355,13 +355,14 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    root is the part's, set on what it holds too, which base.css starts afresh: a scrolling block's ring in its colour */
 :scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
 /* What a part that takes code's look reads, set here with their values rather than read with a fallback, so that it
-   copies no number: the room at a line's sides (and the copy button's after it), and the colour of faint text.
+   copies no number: the room at a line's sides (and the copy button's after it), and the colour of faint text, a
+   line's of the colour it is in (currentColor is resolved where the variable is read).
    LIMIT: the heading's faint colour is made at the root from --code-head-fg there, so the file name does not follow
    a colour a theme gives the heading itself, by a rule or by --code-head-fg on figcaption; make it in the heading
    from currentColor if a theme comes to do so. */
 :scope {
   --floe-code-pad: 1.1rem; --floe-code-room: var(--floe-code-pad);
-  --floe-code-faint: color-mix(in srgb, var(--on-face) 70%, transparent);
+  --floe-code-faint: color-mix(in srgb, currentColor 70%, transparent);
   --floe-code-head-faint: color-mix(in srgb, var(--code-head-fg, var(--code-fg)) 85%, transparent);
   display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
   border-radius: var(--radius); overflow: hidden; color-scheme: dark;
@@ -426,13 +427,14 @@ blockquote::before { content: "“"; display: block; font: 1.9rem/0.6 Georgia, s
    root is the part's, set on what it holds too, which base.css starts afresh: a scrolling block's ring in its colour */
 :scope, :scope > * { --face: var(--code-bg); --on-face: var(--code-fg); }
 /* What a part that takes code's look reads, set here with their values rather than read with a fallback, so that it
-   copies no number: the room at a line's sides (and the copy button's after it), and the colour of faint text.
+   copies no number: the room at a line's sides (and the copy button's after it), and the colour of faint text, a
+   line's of the colour it is in (currentColor is resolved where the variable is read).
    LIMIT: the heading's faint colour is made at the root from --code-head-fg there, so the file name does not follow
    a colour a theme gives the heading itself, by a rule or by --code-head-fg on figcaption; make it in the heading
    from currentColor if a theme comes to do so. */
 :scope {
   --floe-code-pad: 1.1rem; --floe-code-room: var(--floe-code-pad);
-  --floe-code-faint: color-mix(in srgb, var(--on-face) 70%, transparent);
+  --floe-code-faint: color-mix(in srgb, currentColor 70%, transparent);
   --floe-code-head-faint: color-mix(in srgb, var(--code-head-fg, var(--code-fg)) 85%, transparent);
   display: grid; grid-template-columns: minmax(0, 1fr); position: relative; isolation: isolate;
   border-radius: var(--radius); overflow: hidden; color-scheme: dark;
