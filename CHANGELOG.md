@@ -296,6 +296,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change what a screen reader reads of the marks CSS draws: no mark is read as
+  its shape (a check mark, plus, a prompt's `$`, a quote's “), and what a mark
+  alone meant is read in words of the page's language: a step or a checklist's
+  item done or not, an option's pros and cons, a tree's file added, removed or
+  changed, and a terminal's command. A numbered step, a numbered card and a
+  slide read their number; a checklist's count is shown alone. A part of
+  one's own writes `/ ""` after a mark's `content`, and tells its meaning in
+  `<span class="floe-hidden">` with a word of its `words.yaml`.
 - Change a right-angled edge with `via` that repeats a point (a via on the point before it, or on the edge's start)
   to keep the way it was going over that point: `from: [10, 100], via: [[10, 100], [50, 150]], to: [200, 150]`
   goes across first (`H50 V150`) where it went down first (`V150 H50`).
