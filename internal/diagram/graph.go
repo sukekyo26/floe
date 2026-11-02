@@ -371,6 +371,16 @@ func handParts(parts []part) []rect {
 	return out
 }
 
+// from is where rs stand from origin.
+func from(rs []rect, origin [2]float64) []rect {
+	out := make([]rect, len(rs))
+	for i, r := range rs {
+		r.x, r.y = r.x-origin[0], r.y-origin[1]
+		out[i] = r
+	}
+	return out
+}
+
 // draw lays group gr out and places its labels, as drawn from 0,0, which goes to origin.
 func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, error) {
 	gr.place(right)
@@ -379,10 +389,7 @@ func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, err
 		right: right, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{},
 		ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
 		frames: map[int]rect{}, heads: map[int]float64{}, level: map[int][2]string{}, taken: map[int]map[string]bool{},
-		others: make([]rect, len(o.others)),
-	}
-	for i, r := range o.others {
-		d.others[i] = rect{x: r.x - origin[0], y: r.y - origin[1], w: r.w, h: r.h, what: "", at: ""} //nolint:exhaustruct_v5 // an area
+		others: from(o.others, origin),
 	}
 	sides := map[int][2]float64{} // each group's left and right, as laid out down
 	for _, n := range gr.nodes {
