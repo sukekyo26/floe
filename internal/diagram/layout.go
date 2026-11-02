@@ -44,6 +44,7 @@ type rect struct {
 	what, at   string
 	form       outline //exhaustruct:optional
 	graph      string  //exhaustruct:optional
+	pinned     bool    //exhaustruct:optional // a label its writer put where it is, kept off a frame's edge as a box is
 }
 
 func (a rect) overlaps(b rect) bool {

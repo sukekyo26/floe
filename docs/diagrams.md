@@ -74,6 +74,6 @@ The checks:
 
 - Text too wide or too tall for its box (a frame's label for the frame's width).
 - Parts (edges, lines and axes too) sticking out of the canvas: left of or above 0, 0, or past a `width` or `height` written.
-- Boxes, marks, labels and frame labels overlapping each other, and boxes and marks straddling the edge of a frame. Frames are not checked against one another, so they may cross.
+- Boxes, marks, labels and frame labels overlapping each other, and boxes, marks and the labels written where they stand (a label at an `x` and `y`, an edge's label at `at`) straddling the edge of a frame. A label is checked by its box, 5 wider each side than its text, with no background too, as for overlaps. The labels floe places are not checked against frames: an edge's with no `at` (in the middle of the edge, which may cross frames), an icon's, a bar's, an axis's, and a label in its region (`in` with no `x` and `y`). Frames are not checked against one another, so they may cross; a label or a box across the edge of one that another crosses is refused all the same.
 - Edges running through boxes, labels or frame labels, and edges crossing like an X (unless one has `crossing: true`, or both are edges of one `graph`). A box is the shape drawn: an edge may pass a hex's points and a rounded corner, and run along its outline or within 1 of it.
 - An edge ending at a name no part has, or at a side its end does not have.
