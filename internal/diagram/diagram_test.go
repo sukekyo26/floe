@@ -823,6 +823,76 @@ func TestInspect(t *testing.T) {
 	}
 }
 
+// Room made for a label stands it above its run (left of a run down) where below would push the drawing apart across
+// it, and above is clear and within what the graph draws; else below, as before.
+func TestGraphLabelAbove(t *testing.T) {
+	t.Parallel()
+
+	spec := func(lines ...string) string {
+		return "width: 640\nheight: 400\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n" + strings.Join(lines, "\n") + "\n"
+	}
+	const (
+		nodes = "      nodes:\n        - box: { name: top, rows: [Start] }\n        - box: { name: a, rows: [Short] }\n" +
+			"        - box: { name: b, rows: [A taller box, two rows] }\n      edges:"
+		topA = "        - { from: top, to: a }"
+		ask  = "        - { from: a, to: b, level: true, label: ask }"
+		back = "        - { from: b, to: a, level: true }"
+	)
+	for _, c := range []struct {
+		spec string
+		want []string
+	}{
+		// above the upper of two level edges, the two a column apart
+		{spec(nodes, topA, ask, back), []string{`edge b→a M152,102 H92`, `label "ask" 95,60 31.6x18`}},
+		// the upper's above, the lower's below with nothing there
+		{spec(nodes, topA, ask, "        - { from: b, to: a, level: true, label: answer }"),
+			[]string{`label "ask" 95,60 31.6x18`, `label "answer" 96.8,114 53.2x18`}},
+		// in lanes
+		{
+			spec("      lanes:", "        - { name: l1, label: One, nodes: [{ box: { name: a, rows: [Short] } }] }",
+				"        - { name: l2, label: Two, nodes: [{ box: { name: b, rows: [A taller box, two rows] } }] }",
+				"      edges:", ask, back),
+			[]string{`frame "l1" 20,20 180x88`, `label "ask" 155,37 31.6x18`},
+		},
+		// left of a run down, set towards it
+		{
+			spec("      nodes:", "        - box: { name: a, rows: [A taller box] }", "        - box: { name: b, rows: [Short] }",
+				"        - box: { name: c, rows: [Short, Short, A taller box] }", "        - box: { name: d, rows: [A taller box] }",
+				"        - box: { name: e, rows: [xx, A taller box] }", "      edges:", "        - { from: e, to: c }",
+				"        - { from: d, to: e, label: answer }", "        - { from: e, to: b, label: a long label here }",
+				"        - { from: b, to: d, level: true }", "        - { from: d, to: e, label: ok }"),
+			[]string{`edge d→e M344,49 V107`, `label "answer" 278.8,52 53.2x18`, `box "d" 308,20 128x29`},
+		},
+		// nothing below: below
+		{spec(nodes, topA, ask), []string{`label "ask" 95,114 31.6x18`}},
+		// above would stand past the graph's top, moving it off its y: below
+		{spec(strings.Replace(nodes, "        - box: { name: top, rows: [Start] }\n", "", 1), ask, back),
+			[]string{`box "a" 20,28.5 72x53`, `label "ask" 95,49 31.6x18`}},
+		// above not clear: below
+		{
+			spec("      direction: right", "      nodes:", "        - box: { name: a, rows: [two rows, xx, xx] }",
+				"        - box: { name: b, rows: [Short] }", "        - box: { name: c, rows: [Short] }", "      edges:",
+				"        - { from: c, to: b, label: go }", "        - { from: c, to: a, label: ok }",
+				"        - { from: c, to: a, label: retry later }"),
+			[]string{`label "retry later" 95,92 89.2x18`, `box "c" 20,44 72x84`},
+		},
+		// the middle of three: below
+		{
+			spec("      nodes:", "        - box: { name: a, rows: [Short] }", "        - box: { name: b, rows: [A taller box, two rows, three] }",
+				"      edges:", "        - { from: a, to: b, level: true }", "        - { from: b, to: a, level: true, label: ask }",
+				"        - { from: a, to: b, level: true }"),
+			[]string{`edge a→b M92,105.5 H152`, `label "ask" 117,81.5 31.6x18`},
+		},
+	} {
+		got, mistakes := draw(t, c.spec, inspect)
+		for _, want := range c.want {
+			if mistakes != "" || !strings.Contains(got, want) {
+				t.Errorf("%s\n  inspect = %s %s\n  want %s", c.spec, got, mistakes, want)
+			}
+		}
+	}
+}
+
 // counted counts the lookups of icons.
 type counted struct {
 	iconsOf

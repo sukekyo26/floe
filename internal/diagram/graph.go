@@ -501,9 +501,11 @@ func isDown(s seg) bool { return s[0] == s[2] }
 // edge labelled); compare only the things near a spot if larger graphs come to need it. Room made grows the group
 // and widens the boxes a cut crosses beyond their text, and minds no edge written by hand: a band made over the
 // middle of a box's side may stand in the way of one, told at it.
-// LIMIT: room made puts a label below its run (right of it laid out right), so the label of the upper of two level
-// edges between the same boxes stands between them, pushing the other edge and the boxes' sides apart. Make room
-// above a run too (as for a loop left of its box) if pairs of labelled level edges come to look spread.
+// LIMIT: room made stands a label above its run only where that is clear already and moves the group off none of its
+// x and y; else it pushes what is below apart, so the label of the middle of three level edges between the same boxes
+// stands between two of them. hands keeps labels off the middle of a box's unused sides only: an edge written by hand
+// into a box's top (bottom laid out right) or from a part above may cross a label above its run, told at it. Make room
+// above a run (as for a loop left of its box) if labels come to look spread.
 func (d *drawing) place(k int, w float64) error {
 	things, runs := d.held(-1), append(d.runs(), d.hands()...)
 	for i := range len(d.routes[k]) - 1 {
@@ -555,13 +557,15 @@ func starts(s seg, long float64) []float64 {
 
 // room makes room for edge k's label beside run i of its edge, and returns where it stands: the drawing is cut
 // across the run a unit past its end nearer the box (past every box the cut would cross), and all that lies past the
-// cut moves on along the run by the label's length and what labels leave in the band (crossed); then it is cut
-// along the run, short of the nearest thing right of (or below) it by the label (see reach), and all that lies past
-// that cut moves on across as far as the label needs, the boxes the cut crosses widening. The room is clear: in the
-// band lie only runs that cross it and what labels leave short of the room; across, nothing by the label stands
-// between the run and the second cut, and all past it moves beyond the label. Neither cut bends a run or makes two
-// things meet: a straight run stays straight, and a run across a cut grows longer. With the first cut past the run's
-// other end, it makes none and reports false.
+// cut moves on along the run by the label's length and what labels leave below (right of) it in the band (crossed).
+// The label stands below the run (right of a run down). Where something there stands in its way (see reach) and the
+// same place above the run (left of it) is clear and within what the group draws (clearAbove), the label stands
+// there instead, with no second cut. Else the drawing is cut along the run, short of the nearest thing below it by
+// the label, and all that lies past that cut moves on across as far as the label needs, the boxes the cut crosses
+// widening. The room is clear: in the band lie only runs that cross it and what labels leave short of the room;
+// below, nothing by the label stands between the run and the second cut, and all past it moves beyond the label;
+// above, it is clear as checked. Neither cut bends a run or makes two things meet: a straight run stays straight, and
+// a run across a cut grows longer. With the first cut past the run's other end, it makes none and reports false.
 func (d *drawing) room(k, i int, w float64) (spot, bool) {
 	s := segAt(d.routes[k], i)
 	along := runAxis(s)
@@ -606,9 +610,20 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 	sp := spot{edge: k, seg: i, side: 1, at: cut + stays + 2, w: w}
 	s = segAt(d.routes[k], i)
 	if at, need := d.reach(spotRect(s, sp), s[1-along], along); need > 0 {
+		if up := (spot{edge: k, seg: i, side: -1, at: sp.at, w: w}); d.clearAbove(s, up) {
+			return up, true
+		}
 		d.stretch(1-along, at, onGrid(need, column, math.Ceil))
 	}
 	return sp, true
+}
+
+// clearAbove is whether a label at sp, above run s (left of a run down), stands clear and within what the group
+// draws, so that it moves the group off none of its x and y.
+func (d *drawing) clearAbove(s seg, sp spot) bool {
+	across := 1 - runAxis(s)
+	top, _ := d.span(across)
+	return spotRect(s, sp).lo(across) >= top && free(heldRect(s, sp), d.held(sp.edge), append(d.runs(), d.hands()...))
 }
 
 // crossed is how far the labels across from lo to hi (where the label to place stands with its column) reach into
