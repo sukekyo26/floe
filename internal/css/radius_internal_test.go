@@ -21,6 +21,7 @@ var paletteRadii = []string{"--radius", "--radius-small", "--radius-pill"}
 // first, joined by " { ", and the place of the { that holds it right (-1 outside every block): two rules of one
 // prelude are two blocks.
 type declaration struct {
+	name  string // as written: a variable's name is case-sensitive
 	value []token
 	rule  string
 	block int
@@ -113,7 +114,7 @@ func declarations(src []byte, want func(name string) bool) map[string][]declarat
 		if prelude {
 			continue
 		}
-		found[name] = append(found[name], declaration{value: value, rule: in[i], block: blocks[i]})
+		found[name] = append(found[name], declaration{name: string(toks[i].data), value: value, rule: in[i], block: blocks[i]})
 		i = j - 1
 	}
 	return found
