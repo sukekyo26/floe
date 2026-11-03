@@ -497,6 +497,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a diagram table measuring its rows' types in code, though they are drawn in the plain font: a table with no
+  `w` is sized and a written `w` is checked with the name and the two spaces after it in code and the type not, so a
+  long type needs a narrower table than before.
+
 - Fix a heading written in a template's Markdown field (adr's `context` and `decision`, design's `background`,
   postmortem's `cause`) drawn as large as the page's title, or as a section's heading with its line: such a heading
   is drawn as in a text, and floe's templates name their own headings outside the box of their Markdown.

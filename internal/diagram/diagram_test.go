@@ -423,10 +423,15 @@ func TestTooNarrow(t *testing.T) {
 		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: Short, ja: ずっと長い見出しの文字 }] }", `s.yaml:5:5: box "ずっと長い見出しの文字": "ずっと長い見出しの文字" (ja) needs w: 175 or more`},
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: { en: F, ja: とても長い日本語の見出し } }", `s.yaml:5:5: frame "とても長い日本語の見出し": "とても長い日本語の見出し" (ja) needs w: 168 or more`},
 		{"  - table: { x: 20, y: 20, w: 80, title: { en: T, ja: とても長い日本語の題 }, rows: [a] }", `s.yaml:5:5: table "とても長い日本語の題": "とても長い日本語の題" (ja) needs w: 162 or more`},
-		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, int]] }", `s.yaml:5:5: table "T": "とても長い識別子  int" (ja) needs w: 158 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, int]] }", `s.yaml:5:5: table "T": "とても長い識別子  int" (ja) needs w: 157 or more`},
 		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[id, { en: int, ja: とても長い型の名前 }]] }", `s.yaml:5:5: table "T": "id  とても長い型の名前" (ja) needs w: 162 or more`},
 		// The name and the type in other languages: each language's row as drawn, falling back to English.
-		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, { en: int, ko: 아주 긴 정수 형식 }]] }", `s.yaml:5:5: table "T": "id  아주 긴 정수 형식" (ko) needs w: 161 or more`},
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: id, ja: とても長い識別子 }, { en: int, ko: 아주 긴 정수 형식 }]] }", `s.yaml:5:5: table "T": "id  아주 긴 정수 형식" (ko) needs w: 160 or more`},
+		// A row is measured as drawn: the name and the two spaces after it in code, the type not; the name and the
+		// type of one language, so the long Japanese name and the long English type are not added up.
+		{"  - table: { x: 20, y: 20, w: 200, title: T, rows: [[id, \"character varying(255)\"]] }", `s.yaml:5:5: table "T": "id  character varying(255)" needs w: 213 or more`},
+		{"  - table: { x: 20, y: 20, w: 216, title: T, rows: [[id, \"character varying(255)\"]] }", ""},
+		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: a, ja: とても長い名前 }, { en: a very long type name, ja: 型 }]] }", `s.yaml:5:5: table "T": "a  a very long type name" needs w: 198 or more`},
 		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A very long row, ja: 短い }] }", `s.yaml:5:5: box "A very long row": "A very long row" needs w: 149 or more`},
 		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: あ, ko: 아주 긴 한국어 줄 }] }", `s.yaml:5:5: box "아주 긴 한국어 줄": "아주 긴 한국어 줄" (ko) needs w: 147 or more`},
 		// Two languages other than English as wide: the first by tag.
@@ -913,6 +918,11 @@ func TestInspect(t *testing.T) {
 		"  - label: { text: { en: Done, ja: \"完了した\" }, x: 100, y: 100 }\n", inspect)
 	if want := "frame 10,10 250x150\nthe icon of frame 10,10 250x150 10,10 31x31\nlabel \"完了した\" 71,91 58x18\n"; mistakes != "" || got != want {
 		t.Errorf("inspect = %q %s, want %q", got, mistakes, want)
+	}
+	// A table's width is its rows' as drawn: the type is not in code.
+	got, mistakes = draw(t, head+"  - table: { x: 20, y: 20, title: T, rows: [[id, \"character varying(255)\"], [name, text]] }\n", inspect)
+	if want := `table "T" 20,20 216x80`; mistakes != "" || !strings.HasPrefix(got, want+"\n") {
+		t.Errorf("inspect = %q %s, want it to begin %q", got, mistakes, want)
 	}
 	// A label whose centre is on a circle's edge is in no circle, wherever the circle stands.
 	for _, c := range []struct{ cx, x, want string }{{"100.2", "130.2", "114.4"}, {"100.7", "130.7", "114.9"}} {
