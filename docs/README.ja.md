@@ -56,7 +56,7 @@ floe stop                   # 裏で動くサーバーを止める
 
 ## 開発
 
-`just ci` で CI と同じものを走らせます。ブラウザのテストは Chrome を `FLOE_CHROME`、無ければ `PATH` で探し、見つからなければ飛ばします。
+`just ci` で CI と同じ検査を走らせます。ただし、テストは race の見張りなしで走らせます。CI は race の見張り付きで走らせ、ブラウザのテストは 2 つの別のジョブ（`just test-browser looks`・`rest`）に分けるので、race は CI で初めて分かります。ブラウザのテストは Chrome を `FLOE_CHROME`、無ければ `PATH` で探し、見つからなければ飛ばします。
 
 ## ライセンス
 

@@ -2,6 +2,12 @@
 
 pkgs       := "./..."
 cover_file := "coverage.out"
+# The packages but the browser tests, as a command that lists them: run in the recipe, not each time just reads this file.
+core_pkgs  := "go list " + pkgs + " | grep -v /internal/browsertest$"
+# The browser tests CI runs on one machine (test-browser looks); the rest run on another. Chosen by adding the heaviest
+# first (go test -race -json, each test's time) while the sum nears half of all: choose again so when a test is added.
+# LIMIT: how even the two are is not checked; CI's two jobs' times show it.
+browser_looks := "TestUIWrappedAlike|TestUIShadows|TestUISpeech|TestUIRoom|TestUIContrast|TestUIPrint|TestUILists"
 # Default version is the trimmed contents of VERSION; override with `VERSION=1.2.3 just build`.
 version    := env_var_or_default("VERSION", trim(`cat VERSION 2>/dev/null || echo 0.0.0-dev`))
 ldflags    := "-s -w -X github.com/sukekyo26/floe/internal/version.Version=" + version
@@ -52,6 +58,45 @@ test:
 test-race:
     CGO_ENABLED=1 go test -race -shuffle=on {{pkgs}}
 
+# Run tests with the race detector but the browser tests, as CI's test job does
+test-race-core:
+    CGO_ENABLED=1 go test -race -shuffle=on $({{core_pkgs}})
+
+# LIMIT: without Chrome every test skips and it passes; it runs what CI does on a machine with Chrome alone.
+# Run one part of the browser tests with the race detector, as CI's job of it does: looks (browser_looks) or rest
+test-browser part:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "{{part}}" in
+    looks) pick=-run ;;
+    rest) pick=-skip ;;
+    *) echo "test-browser: no part {{part}}; use looks or rest" >&2; exit 1 ;;
+    esac
+    # -race as the run below, so that one test binary is built; a build that fails stops here, not as names missing.
+    listed=$(CGO_ENABLED=1 go test -race -list . ./internal/browsertest)
+    declare -A have=() seen=()
+    for name in $(grep '^Test' <<<"$listed" || true); do have[$name]=1; done
+    if [ ${#have[@]} -eq 0 ]; then
+        echo "test-browser: go test -list tells no test of internal/browsertest" >&2; exit 1
+    fi
+    looks="{{browser_looks}}"
+    # read drops an empty name at the end, which the first test tells.
+    if [[ -z $looks || $looks == *'|' ]]; then
+        echo "test-browser: browser_looks has an empty name" >&2; exit 1
+    fi
+    IFS='|' read -ra names <<<"$looks"
+    for name in "${names[@]}"; do
+        if [ -z "$name" ]; then
+            echo "test-browser: browser_looks has an empty name" >&2; exit 1
+        elif [ -n "${seen[$name]:-}" ]; then
+            echo "test-browser: $name is twice in browser_looks" >&2; exit 1
+        elif [ -z "${have[$name]:-}" ]; then
+            echo "test-browser: $name is in browser_looks but no test of internal/browsertest; remove it" >&2; exit 1
+        fi
+        seen[$name]=1
+    done
+    CGO_ENABLED=1 go test -race -shuffle=on "$pick" '^({{browser_looks}})$' ./internal/browsertest
+
 # Write the golden files of internal/corpus and internal/diagram anew from what floe prints and draws now; read the change in git diff
 golden:
     go test ./internal/corpus -run TestCorpus -update
@@ -64,7 +109,7 @@ cover-check:
     min_coverage="${MIN_COVERAGE:-90}"
     # The browser tests are left out: without Chrome (skipped) they would lower the total, so that it would not be CI's.
     # set, as it runs without -race (which makes go count atomic): only whether a line ran counts, and set is the fastest
-    go test -shuffle=on -covermode=set -coverpkg=./internal/... -coverprofile={{cover_file}} $(go list {{pkgs}} | grep -v /internal/browsertest$)
+    go test -shuffle=on -covermode=set -coverpkg=./internal/... -coverprofile={{cover_file}} $({{core_pkgs}})
     total=$(go tool cover -func={{cover_file}} | awk '/^total:/ {gsub("%","",$3); print $3}')
     echo "Total coverage: ${total}% (threshold: ${min_coverage}%)"
     awk -v t="$total" -v m="$min_coverage" 'BEGIN { exit (t+0 >= m+0) ? 0 : 1 }' || {
@@ -120,5 +165,7 @@ shellcheck:
 shfmt-check:
     go tool shfmt -i 2 -ci -d install.sh
 
-# Pre-push gate mirroring CI
+# LIMIT: test runs every package without the race detector; a race is told by CI alone (test-race-core and the two
+# browser jobs, all with -race).
+# Pre-push gate of CI's checks
 ci: fmt-check vet lint test cover-check vuln mod-verify mod-tidy-check shellcheck shfmt-check
