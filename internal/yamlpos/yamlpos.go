@@ -194,9 +194,9 @@ func Text(n ast.Node) (text string, ok bool, err error) {
 // is refused at its start, and nothing in it is walked.
 // Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not
 // walking what they hold; a key that is not text, as goccy/go-yaml or YAML 1.2 reads it; a value or a text
-// key a comment may have cut short; a key in { } without a value, but one refused already; and a plain value
-// that YAML 1.2 reads otherwise than goccy/go-yaml (017, 1e3), or as a number JSON has none for (.inf, .nan)
-// or floe cannot hold.
+// key out of { } and [ ] a comment may have cut short; a key in { } without a value, but one refused as not
+// text; and a plain value that YAML 1.2 reads otherwise than goccy/go-yaml (017, 1e3), or as a number JSON has
+// none for (.inf, .nan) or floe cannot hold.
 func Parse(file string, src []byte) (ast.Node, error) {
 	body, err := document(file, src)
 	if err != nil {
@@ -228,11 +228,13 @@ func document(file string, src []byte) (ast.Node, error) {
 	// Read once, for blockTabs, the parser and dropped: the parser changes its nodes, not the tokens' types
 	// and places, which dropped reads after it.
 	tks := lexer.Tokenize(string(src))
-	places := textpos.Each(src, starts(src, tks))
 	// blockTabs first: past a text it refuses, goccy/go-yaml reads the lines after it otherwise, some as comments.
+	// LIMIT: so the comments in flows are not told with its mistakes, but once they are mended, as the tokens past
+	// them cannot be trusted; nothing gathers them.
 	if err := blockTabs(file, src, tks); err != nil {
 		return nil, err
 	}
+	places := textpos.Each(src, starts(src, tks))
 	if err := flowComments(file, tks, places); err != nil {
 		return nil, err
 	}
@@ -459,6 +461,9 @@ func (w *walk) wrapper(n ast.Node) bool {
 	return false
 }
 
+// LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
+// is an item as right as any. Nor is a , in { } before a rest with ": " in it ({ label: 1,500 words: many }
+// reads a key 500 words of the value many). Catch them if a schema comes to take such text.
 func (w *walk) node(n ast.Node) {
 	if w.wrapper(n) {
 		return
@@ -498,8 +503,8 @@ func (w *walk) number(n ast.Node) bool {
 // pair walks a key and its value. A merge key is refused with its value, which is not walked. A key is a
 // name: one that is not text (0x10, ~, 1.0), or that YAML 1.2 reads as a number (1e3, 08), would be read as
 // another name than the one written. It is judged as a key alone, and for a comment that cut it short; a key
-// of a { } written without a ":" after it, which YAML gives an empty value ({ a, b: 1 }), unless refused
-// already, cut short too.
+// of a { } written without a ":" after it, which YAML gives an empty value ({ a, b: 1 }), unless refused as not
+// text.
 func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 	if _, merge := v.Key.(*ast.MergeKeyNode); merge {
 		w.found = append(w.found, New(w.file, Of(v.Key), "yaml_no_anchors"))
@@ -525,11 +530,9 @@ func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 // sees is short. The comment may be the author's, which floe cannot tell from text cut short, so either is
 // refused. A comment after a quoted value cuts nothing. The caller gives it text, and a number it refused,
 // not a number, true or ~ it takes, which the text cut short would not read as: an item that takes text
-// refuses such a number by its type, and one that takes a number gets one.
+// refuses such a number by its type, and one that takes a number gets one. A value in { } or [ ] has no comment
+// after it here: flowComments refuses one before the parser.
 // LIMIT: text cut to a number both read alike (title: 2024 #1) passes; catch it if a schema takes such text.
-// LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
-// is an item as right as any. Nor is a , in { } before a rest with ": " in it ({ label: 1,500 words: many }
-// reads a key 500 words of the value many). Catch them if a schema comes to take such text.
 // LIMIT: a line of a plain value over lines that begins with # is a comment, and the value ends before it
 // (title: Plan, then "  #1 draft"), which is not caught: the comment is not after the value's text.
 func (w *walk) cut(n ast.Node) bool {
