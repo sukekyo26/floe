@@ -423,3 +423,35 @@ func TestSaveUnreadable(t *testing.T) {
 		t.Errorf("of meta.json broken: versions/ %v", got)
 	}
 }
+
+// A link saved where a stored page's meta.json cannot be read, which it then replaces, leaves none of the page's copy
+// or versions behind.
+func TestLinkLeavesNoVersions(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", titled("A"), map[string][]byte{"a.png": png}, store.Options{})
+	publish(t, s, dw, "d.yaml", titled("B"), map[string][]byte{"a.png": png}, store.Options{})
+	if err := os.WriteFile(filepath.Join(root, "d", "meta.json"), []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	home := filepath.Dir(root)
+	html := filepath.Join(home, "proj", "z.html")
+	if err := os.MkdirAll(filepath.Dir(html), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(html, []byte("<title>z</title>"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	e, err := s.PrepareLink(t.Context(), dw, html, store.Options{Slug: ptr("d")}, "", home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Save(e); err != nil {
+		t.Fatal(err)
+	}
+	if got := names(t, filepath.Join(root, "d")); !slices.Equal(got, []string{".", "meta.json"}) {
+		t.Errorf("left %v", got)
+	}
+}
