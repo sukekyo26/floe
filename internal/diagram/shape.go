@@ -87,9 +87,9 @@ func (o outline) head(r rect, depth float64) string {
 		num(c), num(c), num(x+c), num(y), num(x+w-c), num(c), num(c), num(x+w), num(y+c), num(y+depth))
 }
 
-// eps is the one tolerance of a diagram's shapes: in crossedBy, a run counts as parallel to a side when its turn
+// eps is the tolerance of crossedBy and of a Venn diagram's regions: a run counts as parallel to a side when its turn
 // across the side is less than eps of its length, and a point as inside a shape when it is more than eps (in px) in;
-// a Venn diagram's room and the circles a label is in are told by it too. What is left of a float's rounding then
+// a region's room and the circles a label is in are told within it too. What is left of a float's rounding then
 // does not count either way.
 const eps = 1e-9
 
