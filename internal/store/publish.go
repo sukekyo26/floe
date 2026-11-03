@@ -535,7 +535,7 @@ func (s *Store) Save(e *Entry) error {
 		mark = contentMark(e.Source, e.Images)
 		pre = s.press(e.Slug, mark)
 	}
-	return s.save(e, mark, pre)
+	return s.commit(e, mark, pre)
 }
 
 // pressed is the page of the copy source of a stored page, gzipped, to keep as its version n.
@@ -546,7 +546,7 @@ type pressed struct {
 }
 
 // press gzips the page of the stored page slug as it is now, when a save of content of mark makes a version after
-// its last: nil else, or when it cannot be read, for save to look again under the lock.
+// its last: nil else, or when it cannot be read, for commit to look again under the lock.
 func (s *Store) press(slug, mark string) *pressed {
 	m := s.ReadMeta(slug)
 	if m == nil || m.IsLink() || len(m.Versions) == 0 {
@@ -563,8 +563,8 @@ func (s *Store) press(slug, mark string) *pressed {
 	return &pressed{source: m.Source, n: last.N, gz: gzipped(page)}
 }
 
-// save is Save, the content of a stored page of mark, its page before pressed as pre (nil for none).
-func (s *Store) save(e *Entry, mark string, pre *pressed) error {
+// commit is Save, the content of a stored page of mark, its page before pressed as pre (nil for none).
+func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 	unlock, err := s.lock(true)
 	if err != nil {
 		return err
@@ -677,7 +677,7 @@ func (s *Store) writeVersion(slug string, m *Meta, kept *pressed) (func(), error
 	file, gz, ok := s.versionFile(slug, m, kept.n)
 	if !ok || !gz {
 		//nolint:err113 // floe's own mistake
-		return nil, fmt.Errorf("store: keep version %d of %q, which its meta.json names as none before its last", kept.n, slug)
+		return nil, fmt.Errorf("store: keep version %d of %q, which meta.json names as none before its last", kept.n, slug)
 	}
 	dir := filepath.Dir(file)
 	made := os.Mkdir(dir, 0o700) == nil

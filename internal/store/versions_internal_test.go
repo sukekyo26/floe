@@ -48,7 +48,7 @@ func TestSaveVersionRace(t *testing.T) {
 		t.Fatal(err)
 	}
 	drawn[6] = string(between.Page)
-	if err := s.save(late, mark, pre); err != nil {
+	if err := s.commit(late, mark, pre); err != nil {
 		t.Fatal(err)
 	}
 	m := s.ReadMeta(slug)

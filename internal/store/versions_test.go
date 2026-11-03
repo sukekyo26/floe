@@ -13,27 +13,27 @@ import (
 	"github.com/sukekyo26/floe/internal/store"
 )
 
-// numbers are the numbers of the versions of slug.
-func numbers(t *testing.T, s *store.Store, slug string) []int {
+// numbers are the numbers of the versions of the page d.
+func numbers(t *testing.T, s *store.Store) []int {
 	t.Helper()
 
-	m := s.ReadMeta(slug)
+	m := s.ReadMeta("d")
 	if m == nil {
-		t.Fatalf("no meta.json of %s", slug)
+		t.Fatal("no meta.json of d")
 	}
-	var got []int
+	got := make([]int, 0, len(m.Versions))
 	for _, v := range m.Versions {
 		got = append(got, v.N)
 	}
 	return got
 }
 
-// gzips are the names under versions/ of slug.
-func gzips(t *testing.T, root, slug string) []string {
+// gzips are the names under versions/ of the page d.
+func gzips(t *testing.T, root string) []string {
 	t.Helper()
 
 	got := []string{}
-	entries, err := os.ReadDir(filepath.Join(root, slug, "versions"))
+	entries, err := os.ReadDir(filepath.Join(root, "d", "versions"))
 	if os.IsNotExist(err) {
 		return got
 	}
@@ -95,10 +95,10 @@ func TestSaveVersions(t *testing.T) {
 			o.Theme = ptr(step.theme)
 		}
 		drawn[i] = string(publish(t, s, dw, "d.yaml", step.src, step.images, o).Page)
-		if got := numbers(t, s, "d"); !slices.Equal(got, step.want) {
+		if got := numbers(t, s); !slices.Equal(got, step.want) {
 			t.Errorf("%s: versions %v, want %v", step.name, got, step.want)
 		}
-		if got := gzips(t, root, "d"); !slices.Equal(got, step.gzips) {
+		if got := gzips(t, root); !slices.Equal(got, step.gzips) {
 			t.Errorf("%s: versions/ %v, want %v", step.name, got, step.gzips)
 		}
 	}
@@ -117,7 +117,7 @@ func TestSaveVersions(t *testing.T) {
 		t.Fatalf("1.html.gz is no gzip: %v", err)
 	}
 	for _, broken := range [][]byte{b[:2], b[:len(b)/2], b[:len(b)-1]} {
-		if err := os.WriteFile(gz, broken, 0o600); err != nil {
+		if err := os.WriteFile(gz, broken, 0o600); err != nil { //nolint:gosec // G703: the test's own temporary file
 			t.Fatal(err)
 		}
 		if got, ok := s.VersionPage("d", s.ReadMeta("d"), 1); ok {
@@ -143,10 +143,10 @@ func TestVersionsKept(t *testing.T) {
 			names = append(names, strconv.Itoa(n)+".html.gz")
 		}
 	}
-	if got := numbers(t, s, "d"); !slices.Equal(got, want) {
+	if got := numbers(t, s); !slices.Equal(got, want) {
 		t.Errorf("versions %v, want %v", got, want)
 	}
-	if got := gzips(t, root, "d"); !slices.Equal(got, names) {
+	if got := gzips(t, root); !slices.Equal(got, names) {
 		t.Errorf("versions/ %v, want %v", got, names)
 	}
 }
@@ -168,7 +168,7 @@ func TestRebuildKeepsVersions(t *testing.T) {
 	if err := s.Rebuild(dw); err != nil {
 		t.Fatal(told(err, root))
 	}
-	if got := gzips(t, root, "d"); !slices.Equal(got, []string{"1.html.gz", "9.html.gz"}) {
+	if got := gzips(t, root); !slices.Equal(got, []string{"1.html.gz", "9.html.gz"}) {
 		t.Errorf("drawn the same, versions/ %v", got)
 	}
 	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
@@ -177,7 +177,7 @@ func TestRebuildKeepsVersions(t *testing.T) {
 	if after := s.ReadMeta("d").Versions; !slices.Equal(after, before) {
 		t.Errorf("versions %v, before %v", after, before)
 	}
-	if got := gzips(t, root, "d"); !slices.Equal(got, []string{"1.html.gz"}) {
+	if got := gzips(t, root); !slices.Equal(got, []string{"1.html.gz"}) {
 		t.Errorf("versions/ %v, want 1.html.gz", got)
 	}
 	if !strings.Contains(page(t, s, "d", 2), "<body>v2") || page(t, s, "d", 1) != first {
@@ -200,27 +200,27 @@ func TestVersionsNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Save(e); err != nil {
+	if err = s.Save(e); err != nil {
 		t.Fatal(err)
 	}
-	if got := numbers(t, s, "d"); !slices.Equal(got, []int{3}) {
+	if got := numbers(t, s); !slices.Equal(got, []int{3}) {
 		t.Errorf("replaced: versions %v, want [3]", got)
 	}
-	if got := gzips(t, root, "d"); len(got) != 0 {
+	if got := gzips(t, root); len(got) != 0 {
 		t.Errorf("replaced: versions/ %v", got)
 	}
-	if err := s.Remove("d"); err != nil {
+	if err = s.Remove("d"); err != nil {
 		t.Fatal(err)
 	}
 	publish(t, s, dw, "d.yaml", titled("B"), map[string][]byte{"a.png": png}, store.Options{})
-	if got := numbers(t, s, "d"); !slices.Equal(got, []int{1}) {
+	if got := numbers(t, s); !slices.Equal(got, []int{1}) {
 		t.Errorf("removed: versions %v, want [1]", got)
 	}
 	const long = "2026-01-02T03:04:05.000Z"
 	unversioned := func(slug string) *store.Meta {
 		m := s.ReadMeta(slug)
 		m.Versions, m.UpdatedAt = nil, long
-		if err := s.WriteMeta(slug, m); err != nil {
+		if err = s.WriteMeta(slug, m); err != nil {
 			t.Fatal(err)
 		}
 		return m
@@ -240,7 +240,7 @@ func TestVersionsNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Save(e); err != nil {
+	if err = s.Save(e); err != nil {
 		t.Fatal(err)
 	}
 	if m := s.ReadMeta("d"); m.UpdatedAt == long || m.Versions[0].At != m.UpdatedAt {
@@ -373,7 +373,7 @@ func TestVersionPage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Save(e); err != nil {
+	if err = s.Save(e); err != nil {
 		t.Fatal(err)
 	}
 	link := s.ReadMeta("z")
@@ -406,20 +406,20 @@ func TestSaveUnreadable(t *testing.T) {
 		t.Fatal(err)
 	}
 	publish(t, s, dw, "d.yaml", titled("C"), map[string][]byte{"a.png": png}, store.Options{})
-	if got := numbers(t, s, "d"); !slices.Equal(got, []int{1, 3}) || page(t, s, "d", 1) != first {
+	if got := numbers(t, s); !slices.Equal(got, []int{1, 3}) || page(t, s, "d", 1) != first {
 		t.Errorf("of a page gone: versions %v", got)
 	}
-	if got := gzips(t, root, "d"); !slices.Equal(got, []string{"1.html.gz"}) {
+	if got := gzips(t, root); !slices.Equal(got, []string{"1.html.gz"}) {
 		t.Errorf("of a page gone: versions/ %v", got)
 	}
 	if err := os.WriteFile(filepath.Join(root, "d", "meta.json"), []byte("{"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	publish(t, s, dw, "d.yaml", titled("D"), map[string][]byte{"a.png": png}, store.Options{})
-	if got := numbers(t, s, "d"); !slices.Equal(got, []int{1}) {
+	if got := numbers(t, s); !slices.Equal(got, []int{1}) {
 		t.Errorf("of meta.json broken: versions %v", got)
 	}
-	if got := gzips(t, root, "d"); len(got) != 0 {
+	if got := gzips(t, root); len(got) != 0 {
 		t.Errorf("of meta.json broken: versions/ %v", got)
 	}
 }

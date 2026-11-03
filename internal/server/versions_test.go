@@ -103,7 +103,8 @@ func TestVersionTabMark(t *testing.T) {
 	e.publish(t, "d", noted("one"), nil)
 	e.publish(t, "d", noted("two"), nil)
 	one, two := since(1), since(2)
-	got := []string{ask("/api/changed/d?since=" + one + "&v=1"), ask("/api/changed/d?since=" + two + "&v=2")}
+	got := make([]string, 0, 11)
+	got = append(got, ask("/api/changed/d?since="+one+"&v=1"), ask("/api/changed/d?since="+two+"&v=2"))
 	e.publish(t, "d", noted("three"), nil)
 	three := since(3)
 	got = append(got, ask("/api/changed/d?since="+one+"&v=1"), ask("/api/changed/d?since="+two+"&v=2"))

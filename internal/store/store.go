@@ -158,16 +158,16 @@ func (s *Store) copyDir(slug string, m *Meta) (string, bool) {
 // versionFile is the file of version n of the stored page slug, whose meta.json is m, and whether it is gzipped: the
 // one way a version's number becomes a path, false for a number m does not list. The last is the page of the copy,
 // the ones before under versions/.
-func (s *Store) versionFile(slug string, m *Meta, n int) (string, bool, bool) {
+func (s *Store) versionFile(slug string, m *Meta, n int) (file string, gzipped, ok bool) {
 	if m.IsLink() || !slices.ContainsFunc(m.Versions, func(v Version) bool { return v.N == n }) {
 		return "", false, false
 	}
 	if n == m.Versions[len(m.Versions)-1].N {
-		dir, ok := s.copyDir(slug, m)
-		return filepath.Join(dir, pageName), false, ok
+		copied, isCopy := s.copyDir(slug, m)
+		return filepath.Join(copied, pageName), false, isCopy
 	}
-	dir, ok := s.dir(slug)
-	return filepath.Join(dir, versionsName, strconv.Itoa(n)+".html.gz"), true, ok
+	dir, isDir := s.dir(slug)
+	return filepath.Join(dir, versionsName, strconv.Itoa(n)+".html.gz"), true, isDir
 }
 
 // VersionMark is what tells version n of the stored page slug, whose meta.json is m, from any other, without reading
