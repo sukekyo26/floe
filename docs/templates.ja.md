@@ -75,7 +75,7 @@ memo/
 | `.Lang` | ページの言語。データファイルの `lang:` |
 | `.Data` | データファイルの項目。floe が自分で読む `lang`・`template`・`theme`・`title` は除く。schema が宣言し、データが省いた項目は nil。`{{with .Data.lead}}`・`{{range}}`・`{{if}}` は空として読むが、`len`・`index`・`slice` は断る（`len of nil pointer`）ので、`with` の中で書く：`{{with .Data.done}}{{len .}}{{else}}0{{end}}`。部品は描いた形で来る（[テンプレートの中の部品](#テンプレートの中の部品)）。`"format": "markdown"` の項目は HTML、`"format": "image"` の項目は data URI で来る |
 | `.Calc` | `computed.yaml` の値。名前で引く |
-| `markdown` | Markdown の文を HTML に（`{{markdown .text}}`）。中の生の HTML は除く。部品の `part.html` では text の外枠に包む（[parts.ja.md](parts.ja.md)） |
+| `markdown` | Markdown の文を HTML に（`{{markdown .text}}`）。中の生の HTML は除く。`page.html` ではテンプレート自身の Markdown の包みに（下）、部品の `part.html` では text の外枠に包む（[parts.ja.md](parts.ja.md)） |
 | `markdownLine` | 表のセルのような Markdown の 1 行を、段落で囲まない HTML に |
 | `num` | 数を桁区切りで（`{{.Calc.total \| num}}` は `1,234,567`）、または有効数字で丸めて（`{{.Calc.rate \| num 3}}` は `0.00648`） |
 | `bytes` | バイト数を 2 進の単位で（`{{.Calc.size \| bytes}}` は `1.5 KiB`） |
@@ -96,7 +96,7 @@ memo/
 - `@keyframes`・`@counter-style`・`@font-face` が作る名前は、scope に閉じず、ページ全体のものです。自分のテンプレートの名前を頭に付けます（`handoff` の `floe-handoff-q`）。部品やテーマの部品ごとのファイルが同じ名前を作ると、層が高いので、そちらが勝ちます。テーマの `base.css` と `markdown.css` には、自分の名前が勝ちます。
 - どのブロックも閉じない `}` と `@import` は、その行で断ります。Google Fonts のようなスタイルシートは `page.html` の `<link>` で読みます。
 - パレットの変数（`var(--muted)`）で描くと、データファイルが選んだテーマに従います。
-- 続けて並ぶ部品の間（節の中、項目の中）は、floe のどこもと同じく `var(--floe-room)`（0.75rem）をあけます。テーマの影が箱の外へ出る、一番大きい長さです。部品 text の外枠も部品と同じくそこに並び、中の段落や見出しは floe が同じ間で並べます。
+- 続けて並ぶ部品の間（節の中、項目の中）は、floe のどこもと同じく `var(--floe-room)`（0.75rem）をあけます。テーマの影が箱の外へ出る、一番大きい長さです。部品 text の外枠も部品と同じくそこに並び、中の段落や見出しは floe が同じ間で並べます。テンプレート自身の Markdown の包み（`data-floe-markdown`）も同じ間で並びますが、text の外枠と違い、自分の `page.css` が中に届きます。
 - 地や枠を持つページの箱（見た目 panel を借りるものなど）の余白は、floe の部品とテンプレートと同じく `var(--floe-pad-block) var(--floe-pad-inline)`（1.1rem と 1.3rem）にします。見た目 `rows` の行には余白を書きません。`rows` が行の左右にも余白を付けます。
 - 横にスクロールする箱は、`overflow-x: auto` と `contain: inline-size` を `@media screen` の中の 1 つの規則に書き、紙では中身を折り返します。中身の幅で外の grid・flex の項目もページも広げないためと、紙ではスクロールした所が読めないためです。中身で幅が決まる所（`justify-self: start`、inline-block、自動の幅の表の升、flex の行の `flex-basis: auto` の項目）には置きません。そこでは枠と余白だけの幅に潰れます（[parts.ja.md](parts.ja.md#css-の層と-scope)）。
 - 部品の箱でもある要素への規則（`ul { margin-block: 1rem }`、`figure { … }`）は、部品にも届きます。部品は自分の箱に margin を書かないためです（checklist・links は `ul`、steps・timeline は `ol`、facts・keys・entries・stats は `dl`、code・image・diff・terminal は `figure`、tabs は `form`）。ただし、部品の箱の並びの display・印・余白・項目の間は、floe が決めるので変わりません（[parts.ja.md](parts.ja.md#css-の層と-scope)）。見た目を借りる並びのそれは `page.css` で変わるので、テンプレートが整えられます。
@@ -120,7 +120,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 `page.html` は項目を置きたい所に置きます（`{{.Data.findings}}`）。floe は部品の schema と checks で確かめ（誤りはデータファイルの行と列で言う）、HTML で描きます。
 
-部品 `text` は、ほかの部品と並び、横に `code`・`terminal` を置ける所の Markdown です。floe は中の囲んだコードのブロックを警告し、`code` に書くよう勧めます。Markdown は部品の箱でない外枠（`data-floe-text`）に描き、自分の地も tone も持たないので、外の面と tone を継ぎます。`page.css` とテーマの `base.css` はそこで止まり、テーマの `markdown.css` がどこでも Markdown として描きます。見出しはテンプレートの見出しより大きくなりません（1.2em・1.1em）。code の部品を置かない、ただの Markdown の欄は、`{"type": "string", "format": "markdown"}` にします。
+部品 `text` は、ほかの部品と並び、横に `code`・`terminal` を置ける所の Markdown です。floe は中の囲んだコードのブロックを警告し、`code` に書くよう勧めます。Markdown は部品の箱でない外枠（`data-floe-text`）に描き、自分の地も tone も持たないので、外の面と tone を継ぎます。`page.css` とテーマの `base.css` はそこで止まり、テーマの `markdown.css` がどこでも Markdown として描きます。見出しは、テンプレート自身の Markdown と同じく Markdown の大きさです（1.2em・1.1em）。code の部品を置かない、ただの Markdown の欄は、`{"type": "string", "format": "markdown"}` にします。
 
 種類を名指す鍵 1 つの部品は、種類によらず `any.json` を指します。そのリストは、report の節と同じく、`items` で `any.json` を指します。テンプレートの根の schema では、次のとおりです。
 
@@ -191,7 +191,7 @@ floe の土台は、ページの根にこれらで地・色・書体を描きま
 - floe に文の描き方を伝える `format` は `markdown`・`html`・`image` です。floe が辿る `properties` か `items` の下で宣言します。
 - `$ref` は、部品か共有の schema の全体（`floe:///parts/table.json`）を `properties` か `items` の下で、または自分のファイルの中の場所（`#/$defs/row`）を名指します。floe の外（`file://`・`https://`）や部品の中を指すものは断ります。schema の根には `$id` を書きません。
 
-`"format": "markdown"` の項目は Markdown の文で、`{{.Data.text}}` が HTML で描きます。
+`"format": "markdown"` の項目は Markdown の文で、`{{.Data.text}}` が HTML で描きます。`{{markdown}}` と同じく、テンプレート自身の Markdown の包み（`<div data-floe-markdown>`）に描きます。floe の base が、text と同じくブロックの間を `--floe-room` にし、見出しを text と同じ大きさ（1.2em・1.1em）にします。text の外枠と違い、自分の `page.css` とテーマの `base.css` は中に届き、整えられます。自分の見出しは、包みの外の形（`header h1`・`section > h2`）で指し、要素の名前だけ（`h2 { … }`）では書きません。書き手の見出しにも当たるためです。部品の箱（`note`）の中に置くと、間は部品の決めた間でなく同じく `--floe-room` になり、`page.css` は部品の箱で止まります。
 
 `"format": "html"` の項目は、テンプレートのものも部品のものも、そのまま入ります。ブラウザが読む描いたページで、要素を開いたままにすることも、周りのページの要素を閉じることもできず、項目の所で断ります。要素は丸ごと書きます。`page.html` か、その項目を持つ部品の `part.html` は、項目を要素を置ける所に置き、HTML が働かない文字や属性の中（`<title>`・`title="…"`）には置きません。
 

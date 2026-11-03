@@ -113,22 +113,22 @@ func TestUILayers(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	check(t, "a look of the template's own", []string{got}, "rgb(0, 0, 4) 20px")
 
 	// The theme's base.css: the template's paragraph wins over it, its selector (p) the less specific; it draws the
-	// quote on the page but not the one in the note, whose paragraph floe's base draws in its quote's colour (default's
+	// quote of the template's own Markdown, in floe's box of it, but not the one in the note, whose paragraph floe's base draws in its quote's colour (default's
 	// --muted); the theme's band.css wins over it on the band by the layer, its selector (:scope h2) the less specific.
 	open("themed", "template: themed\nlang: en\ntheme: mine\ntext: '> page'\nnote: { text: '> held' }\n", "[data-floe-part=note] blockquote")
 	got = b.eval(`(() => { const c = (q, p) => getComputedStyle(document.querySelector(q))[p];
-		return [c('#own', 'color'), c('body > blockquote', 'backgroundColor'), c('[data-floe-part=note] blockquote', 'backgroundColor'),
+		return [c('#own', 'color'), c('body > [data-floe-markdown] > blockquote', 'backgroundColor'), c('[data-floe-part=note] blockquote', 'backgroundColor'),
 			c('[data-floe-part=note] p', 'color'), c('.banded', 'color')].join(' | ') })()`)
 	check(t, "the theme's base.css", []string{got}, "rgb(255, 0, 0) | rgb(0, 0, 8) | rgba(0, 0, 0, 0) | rgb(97, 95, 90) | rgb(0, 0, 10)")
 
 	// A text draws its Markdown in a box of no part: the template's page.css (p, h2) and the theme's base.css (body p,
-	// blockquote) stop at it, while they reach the template's own heading; the theme's markdown.css reaches every
+	// blockquote) stop at it, while they reach the template's own heading and the box of its own Markdown; the theme's markdown.css reaches every
 	// quote, the page's, the note's and the text's.
 	open("themed-text", "template: themed\nlang: en\ntheme: mine\ntext: '> page'\nnote: { text: '> held' }\n"+
 		"words: \"## Words\\n\\nsaid\\n\\n> quoted\"\n", "[data-floe-text] blockquote")
 	got = b.eval(`(() => { const c = (q, p) => getComputedStyle(document.querySelector(q))[p];
 		return [c('[data-floe-text]:not([data-floe-part] *) > p', 'color'), c('[data-floe-text]:not([data-floe-part] *) h2', 'letterSpacing'), c('.banded', 'letterSpacing'),
-			c('[data-floe-text]:not([data-floe-part] *) blockquote', 'backgroundColor'), ...['body > blockquote', '[data-floe-part=note] blockquote',
+			c('[data-floe-text]:not([data-floe-part] *) blockquote', 'backgroundColor'), ...['body > [data-floe-markdown] > blockquote', '[data-floe-part=note] blockquote',
 			'[data-floe-text]:not([data-floe-part] *) blockquote'].map((q) => c(q, 'letterSpacing'))].join(' | ') })()`)
 	check(t, "a text", []string{got}, "rgb(34, 33, 31) | normal | 5px | rgba(0, 0, 0, 0) | 3px | 3px | 3px")
 

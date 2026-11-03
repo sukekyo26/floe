@@ -20,7 +20,7 @@ import (
 var funcs = template.FuncMap{
 	"bytes":    formatBytes,
 	"num":      formatNum,
-	"markdown": markdownHTML,
+	"markdown": Markdown,
 	// markdownLine writes a line of Markdown, such as a table cell, as HTML without a paragraph around it.
 	"markdownLine": func(text string) (template.HTML, error) {
 		// The text is made one paragraph of unbroken lines: a blank line would split it, an indented line
@@ -71,13 +71,19 @@ func markdownHTML(text string) (template.HTML, error) {
 }
 
 // MarkdownFlow writes Markdown text as markdownHTML does, in a text's box (data-floe-text): a flow of blocks base.css
-// spaces in one place. Every Markdown a part holds is drawn so: what its part.html draws by markdown, and an item of
-// format markdown in its value; a template's own Markdown is not, which its page.css arranges.
-// Markdown that draws no block, empty or raw HTML alone (which markdown leaves out), is drawn as it is, with no box.
+// spaces in one place, where page.css and a theme's base.css stop. Every Markdown a part holds is drawn so: what its
+// part.html draws by markdown, and an item of format markdown in its value; a template's own Markdown is in a box of
+// its own (Markdown).
 func MarkdownFlow(text string) (template.HTML, error) {
+	return flow(text, "data-floe-text")
+}
+
+// flow writes Markdown text as markdownHTML does, in floe's box marked by the attribute mark. Markdown that draws no
+// block, empty or raw HTML alone (which markdown leaves out), is drawn as it is, with no box.
+func flow(text, mark string) (template.HTML, error) {
 	html, err := markdownHTML(text)
 	if drawsBlock(text) {
-		html = "<div data-floe-text>" + html + "</div>" //nolint:gosec // G203: markdownHTML's own output, in floe's box
+		html = template.HTML("<div "+mark+">") + html + "</div>" //nolint:gosec // G203: markdownHTML's own output
 	}
 	return html, err
 }
@@ -93,9 +99,11 @@ func drawsBlock(text string) bool {
 	return false
 }
 
-// Markdown writes text, an item of format markdown, as HTML, as markdown in page.html does.
+// Markdown writes a template's own Markdown, an item of format markdown or what page.html's markdown draws, as
+// markdownHTML does, in the box of a template's Markdown (data-floe-markdown): spaced and its headings sized as a
+// text's by base.css, while page.css and a theme's base.css reach in it, as they do not in a text's.
 func Markdown(text string) (template.HTML, error) {
-	return markdownHTML(text)
+	return flow(text, "data-floe-markdown")
 }
 
 // TextPart is the part of Markdown that stands among other parts (any.json, stack), where a code part can stand

@@ -27,9 +27,12 @@
 :root { --floe-pill-end: 0.75lh; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
-/* A heading in a part or a text is Markdown's, as a part draws none: no larger than a template's own */
-:where([data-floe-part], [data-floe-text]) h1 { font-size: 1.2em; }
-:where([data-floe-part], [data-floe-text]) h2 { font-size: 1.1em; }
+/* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
+   its own outside the box of its Markdown: in Markdown's sizes, smaller than a template's title.
+   LIMIT: 1.2em is larger than the section headings of adr (1.1rem) and postmortem (1.15rem), and 1.1em as large as
+   adr's (and near postmortem's), its h2 told from them by nothing; lower them if that matters */
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.2em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1.1em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -42,10 +45,13 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    with it and takes no face either, and a theme that takes the ground away gives both back; one that sets a colour on
    no ground of its own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
-/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow): its blocks stand --floe-room apart, as parts
-   do, and a part spaces the box alone, not its blocks; Markdown of raw HTML alone draws no box.
-   A template's own Markdown is not in one, which its page.css spaces; nor is what a quote or a list holds, spaced below */
-[data-floe-text] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
+/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow), and a template's own Markdown in a box of
+   its own (Markdown): its blocks stand --floe-room apart, as parts do, and what places the box spaces it alone, not
+   its blocks; Markdown of raw HTML alone draws no box. page.css reaches in a template's box, to arrange it, not in a
+   text's. What a quote or a list holds is spaced below.
+   LIMIT: a template's Markdown placed in a part's box (a note of its own) is spaced so too, not as the part spaces
+   what it holds, and page.css stops at the part's box there; floe's templates place none so */
+[data-floe-text], [data-floe-markdown] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
 a { color: var(--on-face, var(--accent)); }
 /* LIMIT: a part draws a ring of focus or a pick by outline on its box (links' and options' cards): a theme that draws a
    decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
@@ -516,7 +522,7 @@ body { margin: 0; }
 body { line-height: 1.8; padding-block: 0 4rem; }
 .head { padding-block: 2.5rem 1.6rem; border-bottom: var(--rule); }
 .head .floe-column { display: grid; gap: 0.5rem; justify-items: start; }
-h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
+.head h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .byline { display: flex; flex-wrap: wrap; gap: 0 1rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
 .status { border: 2px solid var(--accent); color: var(--accent); font-weight: 800; padding: 0 0.7rem; border-radius: var(--radius-small); }
 .summary { color: var(--muted); font-size: 1.05rem; }
@@ -530,7 +536,7 @@ h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .body { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 2.5rem; padding-block: 2rem; }
 main { display: grid; gap: 2.2rem; align-content: start; }
 main section { display: grid; gap: var(--floe-room); }
-main h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px solid var(--accent); }
+main > section > h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px solid var(--accent); }
 /* The question is set as the text around it is, not as the headings are */
 .decision > h3 { margin-top: 0.4rem; font-size: 1.05rem; line-height: inherit; text-wrap: wrap; }
 .non-goals { color: var(--muted); }
@@ -566,9 +572,9 @@ aside a { text-decoration: none; }
 </section>
 <div class="floe-column body">
 <main>
-<section><h2 id="background">Background</h2><p>Today a notification is sent <strong>inside the web request</strong> that causes it: saving a comment sends its email before the
+<section><h2 id="background">Background</h2><div data-floe-markdown=""><p>Today a notification is sent <strong>inside the web request</strong> that causes it: saving a comment sends its email before the
 page answers. When the mail provider is slow, so is the page, and a provider outage turns into failed saves.</p>
-<p>Last month 2% of comment saves took over five seconds, all of them waiting on the mail provider.</p></section>
+<p>Last month 2% of comment saves took over five seconds, all of them waiting on the mail provider.</p></div></section>
 <section><h2 id="goals">Goals</h2><ul><li>A page answers without waiting for any notification</li><li>A notification that fails is tried again, and none is lost</li><li>Email, push and chat go out the same way</li></ul></section>
 <section><h2 id="non-goals">Non-goals</h2><ul class="non-goals"><li>Changing what the notifications say</li><li>A user&#39;s settings of which notifications they get</li></ul></section>
 <section><h2 id="decisions">Options</h2>

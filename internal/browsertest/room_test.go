@@ -1,19 +1,20 @@
 package browsertest_test
 
 import (
+	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 )
 
-// measurePartRoom returns, one to a line, each room between parts that is not --floe-room, read from the page. It
+// measurePartRoom returns, as JSON, each room between parts that is not --floe-room, read from the page (amiss), and
+// how many boxes of a template's own Markdown it measured a room in (markdown). It
 // measures the room between every two children one after another that are shown as blocks (not out of the flow),
 // across when on one line, else down, in a place where parts stand: a box laid out as a grid or a flex that is a
-// stack, holds cards, holds a part's box outside any part (a template's section or step), or is a text's box. Tabs are measured from
+// stack, holds cards, holds a part's box outside any part (a template's section or step), or is a text's box or the box of a
+// template's own Markdown. Tabs are measured from
 // the bottom of their names to the top of the panel shown, as their children are names and panels, not parts in a row.
 // A part's Markdown stands in a text's box (MarkdownFlow), measured as a text's is.
-// LIMIT: a flow not drawn by MarkdownFlow (what a note drawn in HTML holds, a template's own Markdown it places in a
-// note) and what a quote or a list holds (base.css's 0.6rem and 0.3rem, not room between parts) go unmeasured.
+// LIMIT: a flow in no box of Markdown (what a note drawn in HTML holds) and what a quote or a list holds (base.css's 0.6rem and 0.3rem, not room between parts) go unmeasured.
 // LIMIT: the room before a template's own section (report's .sub, design's .decision), between a template's own
 // section or header and a note it places (adr's record superseding it after its header, runbook's caution after its
 // needs) and after the first child of an item whose mark stands in its
@@ -32,11 +33,13 @@ const measurePartRoom = `(() => {
   const name = (e) => e.tagName.toLowerCase() + (e.dataset.floePart ? '[' + e.dataset.floePart + ']' : '') +
     (e.dataset.floeLook ? '{' + e.dataset.floeLook + '}' : '') + (e.classList.length ? '.' + [...e.classList].join('.') : '');
   const out = new Set();
+  let markdown = 0;
   for (const c of document.body.querySelectorAll('*')) {
     if (c.matches('[data-floe-part=tabs]') || !/grid|flex/.test(getComputedStyle(c).display)) continue;
-    if (!(c.matches('[data-floe-part=stack], [data-floe-text]') || [...c.children].some((k) => k.matches('.card')) ||
+    if (!(c.matches('[data-floe-part=stack], [data-floe-text], [data-floe-markdown]') || [...c.children].some((k) => k.matches('.card')) ||
       ([...c.children].some(box) && !c.closest('[data-floe-part]')))) continue;
     const kids = [...c.children].filter(block), mark = getComputedStyle(c, '::before');
+    if (c.matches('[data-floe-markdown]') && kids.length > 1) markdown++;
     const marked = mark.content !== 'none' && mark.display !== 'none' && mark.gridRowStart === 'mark';
     for (let i = 1; i < kids.length; i++) {
       const a = kids[i - 1], b = kids[i];
@@ -53,27 +56,37 @@ const measurePartRoom = `(() => {
     const d = panel.getBoundingClientRect().top - Math.max(...names.map((l) => l.getBoundingClientRect().bottom));
     if (Math.abs(d - room) > 0.5) out.add('tabs names + panel: ' + d.toFixed(1));
   }
-  return [...out].sort().join('\n');
+  return JSON.stringify({ amiss: [...out].sort(), markdown });
 })()`
 
 // TestUIRoom draws every part and floe's templates' examples in every theme, details open, at the widths of a phone
 // (cards in one column) and a laptop: wherever parts stand one after another (a template's section, a step, a stack,
 // cards, tabs' names and panel), the room between them, and between a heading or a paragraph and a part there, is
-// --floe-room.
+// --floe-room. A template's own Markdown is measured in its box, in an example whose field holds two blocks or more.
 func TestUIRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	var amiss []string
+	markdown := 0
 	s.floePages(t, func(what string) {
 		s.b.eval("document.querySelectorAll('details').forEach((d) => { d.open = true; })")
 		for _, w := range []int64{480, 1100} {
 			s.b.size(w, 900, false)
-			if got := s.b.eval(measurePartRoom); got != "" {
-				for _, l := range strings.Split(got, "\n") {
-					amiss = append(amiss, fmt.Sprintf("%s at %dpx: %s", what, w, l))
-				}
+			var got struct {
+				Amiss    []string `json:"amiss"`
+				Markdown int      `json:"markdown"`
 			}
+			if err := json.Unmarshal([]byte(s.b.eval(measurePartRoom)), &got); err != nil {
+				t.Fatal(err)
+			}
+			for _, l := range got.Amiss {
+				amiss = append(amiss, fmt.Sprintf("%s at %dpx: %s", what, w, l))
+			}
+			markdown += got.Markdown
 			s.b.unsize()
 		}
 	})
 	check(t, "room", amiss, "")
+	if markdown == 0 {
+		t.Error("no box of a template's own Markdown measured: its mark or its grid changed, or no example's field holds two blocks")
+	}
 }
