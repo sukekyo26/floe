@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `labels: between` to the diagram part `axis`: each tick's text stands halfway between it and the next tick on
+  its right, or `x2` past the last, as a week's name in the middle of its week (the default `labels: at` keeps it at
+  the tick).
 - Add the column a template centres its page in, on an element of the class `floe-column`: `--column-width` wide (the
   palette's `--page-width` unless the template sets it) within `--page-pad` each side, under the template's
   `page.css`. A page of one column sets `:scope { --column-width: var(--text-width); }`. floe's templates take it in
@@ -488,6 +491,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Fix a tree scrolled sideways on screen ending its ground at the box's width: in default, a long name ran out of the
   white ground onto the grey frame. The tree's list now reaches to its longest line, and a theme's ground on it with
   it; scrolled to the end, the room at the tree's right edge stays.
+- Fix a diagram's `axis` tick of empty text (`""`) taking room as a label 10 wide: it was listed by
+  `floe diagram inspect`, told overlapping a part, sticking out of the canvas or run through by an edge, and widened a
+  canvas left out. It is now a mark alone.
 - Fix a diagram's edge running along a grid line, an axis or a `line` where floe placed its run (between facing
   sides, round two sides of one way, the two turns into a side): the run now keeps 4 off the lines of `axis` and `line`
   parts, moved to the nearest place where the edge makes no new mistake, and stays where there is none.

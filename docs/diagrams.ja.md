@@ -30,7 +30,7 @@
 | `edge` | `from` と `to`（部品・名前付きの行・`tree` の節の `name`、または点 `[x, y]`）、`fromSide` と `toSide`（`top`・`right`・`bottom`・`left`）、`via`（曲がる点）、`straight`（直角でなく点から点へ）、`label` と `at: [x, y]`、`dashed`、`bold`、`tone`、`start`（`none`）、`end`（`arrow`）、`crossing`。端は `arrow`・`triangle`・`diamond`・`odiamond`・`one`・`many`・`zero-one`・`zero-many`・`none`。`crossing: true` でこの線はほかと交われる。 |
 | `dot` | `cx` `cy`、`r`（7）、`name`、`tone`、`hollow`。名前で着く線は、線の、中心と違う最初の点の向きへ、矢じり（ほかの端の印も）の先が縁に来るよう描く。その区間が印に足りない（印が無ければ半径以下の）とき、接するか重なる 2 つの dot の間、端を中心の座標で書いたとき（dot の名前を書く）は、中心まで描く。検査と線の名前の場所は、中心まで描く線として決める。 |
 | `bar` | `x1` `x2` `y`、`name`、`tone`、`label`（棒の右）。 |
-| `axis` | `x1` `x2` `y`、`ticks: [[x, 文], ...]`、`grid`（格子の線の上端）。 |
+| `axis` | `x1` `x2` `y`、`ticks: [[x, 文], ...]`、`grid`（格子の線の上端）、`labels`（`at`：目盛りの字を目盛りの位置に。`between`：その目盛りと右隣の目盛り（最後の目盛りは `x2`）の真ん中に）。字が空（`""`）の目盛りは、印だけで札にならない。 |
 | `circle` | `cx` `cy` `r`、`name`、`tone`。円どうしは重なってよい。 |
 | `label` | `text`、`x` `y`、`anchor`（`middle`。`start`・`end`）、`plain`（背景なし。`in` のあるラベルの既定。`false` で背景を付ける）、`strong`、`in`（ベン図で、内側に置く円の名前。ほかの円の外。`x` と `y` を省けば floe が置く）。 |
 | `line` | `x1` `y1` `x2` `y2`、`kind`（`line`。`lifeline`・`divider`）。ほかの部品と交わってよいが、キャンバスから出ない。 |
