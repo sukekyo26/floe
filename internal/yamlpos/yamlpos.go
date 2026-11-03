@@ -190,7 +190,8 @@ func Text(n ast.Node) (text string, ok bool, err error) {
 
 // Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A byte order
 // mark at its start is left out, as YAML 1.2 reads it. Before it is parsed, a comment in { } or [ ] is refused
-// (flowComments). A syntax error is goccy/go-yaml's (library). A second document, or text a second --- drops, is refused at its start, and nothing in it is walked.
+// (flowComments). A syntax error is goccy/go-yaml's (library). A second document, or text a second --- drops,
+// is refused at its start, and nothing in it is walked.
 // Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not
 // walking what they hold; a key that is not text, as goccy/go-yaml or YAML 1.2 reads it; a value or a text
 // key a comment may have cut short; a key in { } without a value, but one refused already; and a plain value
