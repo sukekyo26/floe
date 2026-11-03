@@ -1,6 +1,7 @@
 package css
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -29,16 +30,12 @@ func TestTextScale(t *testing.T) {
 	t.Parallel()
 
 	sheets(t, "../kit/floe/parts", func(name string, src []byte) {
-		sizes := declarations(src, func(p string) bool { return p == "font-size" || p == "font" })
-		for _, d := range sizes["font-size"] {
-			if v := text(src, d.value); !sized(name, d.rule, v) {
-				t.Errorf("%s: font-size: %s in %q; write a part's small text by one of base.css's steps %v", name, v, d.rule, textSteps)
-			}
-		}
-		for _, d := range sizes["font"] {
-			if v := fontSize(d.value); !sized(name, d.rule, v) {
-				t.Errorf("%s: font: %s in %q has the size %q; write a part's small text by one of base.css's steps %v",
-					name, text(src, d.value), d.rule, v, textSteps)
+		for prop, decls := range declarations(src, func(p string) bool { return p == "font-size" || p == "font" }) {
+			for _, d := range decls {
+				if why := sizeAmiss(src, name, d.rule, prop, d.value); why != "" {
+					t.Errorf("%s: %s: %s in %q %s; write a part's small text by one of base.css's steps %v",
+						name, prop, text(src, d.value), d.rule, why, textSteps)
+				}
 			}
 		}
 	})
@@ -52,6 +49,20 @@ func TestTextScale(t *testing.T) {
 	})
 }
 
+// sizeAmiss returns why the size a declaration of prop writes in rule of the file name is not one a part may write,
+// or "" when it is.
+func sizeAmiss(src []byte, name, rule, prop string, value []token) string {
+	v, ok := sizeOf(src, prop, value)
+	switch {
+	case !ok:
+		return "writes no size"
+	case !sized(name, rule, v):
+		return fmt.Sprintf("has the size %q", v)
+	default:
+		return ""
+	}
+}
+
 // sized reports whether v is a size a part may write in rule of the file name.
 func sized(name, rule, v string) bool {
 	return slices.Contains(textSteps, v) || v == "inherit" || codeText[[2]string{name, rule}] == v ||
@@ -59,18 +70,24 @@ func sized(name, rule, v string) bool {
 		large(v)
 }
 
-// fontSize returns the size a font shorthand writes: the item before its / outside every bracket, or else its first
-// length, percentage or function; inherit is inherit, and "" when there is none.
-func fontSize(value []token) string {
+// sizeOf returns the size a declaration of prop (font-size or font) writes, and whether it writes one: inherit, in
+// any case, as inherit; font-size's value as it is, none when empty; a font shorthand's item before its / outside every
+// bracket, or else its first length, percentage or function, past an angle (oblique's), none when there is none (a
+// system font, a keyword's size, CSS's own keywords but inherit, a number alone). Every check of a size reads it so,
+// and a value that writes no size passes none.
+func sizeOf(src []byte, prop string, value []token) (string, bool) {
+	if items := groups(value); len(items) == 1 && strings.EqualFold(items[0], "inherit") {
+		return "inherit", true
+	}
+	if prop == "font-size" {
+		return text(src, value), len(value) > 0
+	}
 	if before, _, ok := cutSlash(value); ok {
 		items := groups(before)
 		if len(items) == 0 {
-			return ""
+			return "", false
 		}
-		return items[len(items)-1]
-	}
-	if items := groups(value); len(items) == 1 && strings.EqualFold(items[0], "inherit") {
-		return "inherit"
+		return items[len(items)-1], true
 	}
 	depth := 0
 	start := -1
@@ -84,16 +101,26 @@ func fontSize(value []token) string {
 		case css.RightParenthesisToken:
 			depth--
 			if depth == 0 && start >= 0 {
-				return strings.Join(groups(value[start:i+1]), "")
+				return strings.Join(groups(value[start:i+1]), ""), true
 			}
 		case css.DimensionToken, css.PercentageToken:
-			if depth == 0 {
-				return string(t.data)
+			if depth == 0 && !angle(string(t.data)) {
+				return string(t.data), true
 			}
 		default:
 		}
 	}
-	return ""
+	return "", false
+}
+
+// angleUnits are CSS Values' units of an angle, which a font shorthand writes after oblique.
+var angleUnits = []string{"deg", "grad", "rad", "turn"}
+
+// angle reports whether the dimension v is in a unit of an angle.
+func angle(v string) bool {
+	return slices.ContainsFunc(angleUnits, func(u string) bool {
+		return len(v) > len(u) && strings.EqualFold(v[len(v)-len(u):], u)
+	})
 }
 
 // large reports whether v is a rem or an em of 1 or more, written as a number alone.
@@ -105,4 +132,67 @@ func large(v string) bool {
 		}
 	}
 	return false
+}
+
+// TestSizeOf reads the size of forms floe's CSS does not write today: none from a value that writes no size, an
+// angle passed over, inherit in any case.
+func TestSizeOf(t *testing.T) {
+	t.Parallel()
+
+	for decl, want := range map[string]string{
+		"font-size: ": "", "font-size: /**/": "", "font: caption": "", "font: bold small sans-serif": "",
+		"font: initial": "", "font: unset": "", "font: revert": "", "font: revert-layer": "", "font: 0 serif": "",
+		"font: 700 var(--floe-text-small)/1.4 sans-serif": "var(--floe-text-small)", "font: oblique 10deg 0.8rem serif": "0.8rem",
+		"font: oblique 1.5rad var(--floe-text-aside) serif": "var(--floe-text-aside)", "font: INHERIT": "inherit",
+		"font-size: INHERIT": "inherit", "font: 1.1rem serif": "1.1rem", "font-size: small": "small",
+		"font-size: initial": "initial", "font: bold small/1.4 serif": "small",
+	} {
+		src := []byte(":scope { " + decl + "; }")
+		prop, _, _ := strings.Cut(decl, ":")
+		ds := declarations(src, func(p string) bool { return p == prop })[prop]
+		if len(ds) != 1 {
+			t.Fatalf("%s: %d declarations", decl, len(ds))
+		}
+		got, ok := sizeOf(src, prop, ds[0].value)
+		if got != want || ok != (want != "") {
+			t.Errorf("sizeOf(%s) = %q, %v; want %q, %v", decl, got, ok, want, want != "")
+		}
+	}
+}
+
+// TestSized checks what TestTextScale says of forms floe's parts do not write today, in a rule codeText names (code's
+// :scope pre) and in one it does not.
+func TestSized(t *testing.T) {
+	t.Parallel()
+
+	refused := []string{
+		"font-size: ", "font-size: /**/", "font: caption", "font: bold small sans-serif", "font: initial", "font: unset",
+		"font: revert", "font: revert-layer", "font: 0 serif", "font: 0.7rem sans-serif", "font-size: small",
+		"font-size: initial", "font: bold small/1.4 serif",
+	}
+	passed := []string{
+		"font: 700 var(--floe-text-small)/1.4 sans-serif", "font: inherit", "font: 1.1rem serif",
+		"font: oblique 10deg var(--floe-text-small) serif", "font-size: INHERIT",
+	}
+	check := func(rule, decl string, want bool) {
+		t.Helper()
+
+		src := []byte(rule + " { " + decl + "; }")
+		prop, _, _ := strings.Cut(decl, ":")
+		for _, d := range declarations(src, func(p string) bool { return p == prop })[prop] {
+			if why := sizeAmiss(src, "code/part.css", d.rule, prop, d.value); (why == "") != want {
+				t.Errorf("%s { %s }: %q, want passed %v", rule, decl, why, want)
+			}
+		}
+	}
+	for _, rule := range []string{":scope pre", ":scope .lines"} {
+		for _, decl := range refused {
+			check(rule, decl, false)
+		}
+		for _, decl := range passed {
+			check(rule, decl, true)
+		}
+	}
+	check(":scope pre", "font: 0.875rem monospace", true)
+	check(":scope .lines", "font: 0.875rem monospace", false)
 }
