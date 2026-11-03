@@ -63,6 +63,7 @@ cover-check:
     set -euo pipefail
     min_coverage="${MIN_COVERAGE:-90}"
     # The browser tests are left out: without Chrome (skipped) they would lower the total, so that it would not be CI's.
+    # set, as it runs without -race (which makes go count atomic): only whether a line ran counts, and set is the fastest
     go test -shuffle=on -covermode=set -coverpkg=./internal/... -coverprofile={{cover_file}} $(go list {{pkgs}} | grep -v /internal/browsertest$)
     total=$(go tool cover -func={{cover_file}} | awk '/^total:/ {gsub("%","",$3); print $3}')
     echo "Total coverage: ${total}% (threshold: ${min_coverage}%)"

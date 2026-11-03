@@ -754,7 +754,8 @@ func TestGraphRandom(t *testing.T) {
 		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 91},
 		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 88},
 	} {
-		// A name of no mark -run reads as a pattern: down-1-2 (down for the direction left out).
+		// A name of no mark -run reads as a pattern: down-1-2 (down for the direction left out); -run
+		// TestGraphRandom/down-1-2$ picks that one alone, as down-1 is down-13-14 and down-17-18 too.
 		t.Run(fmt.Sprintf("%s-%d-%d", cmpOr(c.direction, "down"), c.seed[0], c.seed[1]), func(t *testing.T) {
 			t.Parallel()
 
