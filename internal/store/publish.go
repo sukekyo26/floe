@@ -583,7 +583,10 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 	}
 	made := os.Mkdir(dir, 0o700) == nil
 	if e.Meta.IsLink() {
-		err = s.WriteMeta(e.Slug, &e.Meta)
+		// What it replaces is a link, or a page whose meta.json could not be read, whose copy and versions go.
+		if err = s.WriteMeta(e.Slug, &e.Meta); err == nil {
+			s.tidy(e.Slug, &e.Meta)
+		}
 	} else {
 		err = s.keepCopy(e.Slug, &e.Meta, e.Source, e.Page, e.Images, s.nextVersion(e, mark, pre))
 	}
@@ -610,7 +613,8 @@ func (s *Store) nextVersion(e *Entry, mark string, pre *pressed) *pressed {
 	var kept *pressed
 	if len(versions) == 0 {
 		// LIMIT: of pages published before pages had versions only, whose first takes the time of the publish before,
-		// so that publishing them all again does not move them up the list. Drop it once each has a version.
+		// so that publishing them all again does not move them up the list; one of other content too keeps the time
+		// before. Drop it once each has a version.
 		if now != nil && !e.replaced {
 			e.Meta.UpdatedAt = now.UpdatedAt
 		}
@@ -666,16 +670,23 @@ func (s *Store) keepCopy(slug string, m *Meta, src, page []byte, images map[stri
 		undo()
 		return err
 	}
-	removeSources(dir, source)
-	s.removeVersions(slug, m)
+	s.tidy(slug, m)
 	return nil
+}
+
+// tidy removes what is under the page slug that m, its meta.json written, does not name: the copies and versions
+// that a save replaced or dropped, or left when it stopped halfway; of a link, which names none, every one.
+func (s *Store) tidy(slug string, m *Meta) {
+	dir, _ := s.dir(slug)
+	removeSources(dir, m.Source)
+	s.removeVersions(slug, m)
 }
 
 // writeVersion writes the page kept, gzipped, as the version m names it, and returns what removes it, with
 // versions/ when it made it.
 func (s *Store) writeVersion(slug string, m *Meta, kept *pressed) (func(), error) {
-	file, gz, ok := s.versionFile(slug, m, kept.n)
-	if !ok || !gz {
+	file, at, ok := s.versionFile(slug, m, kept.n)
+	if !ok || lastVersion(m, at) {
 		//nolint:err113 // floe's own mistake
 		return nil, fmt.Errorf("store: keep version %d of %q, which meta.json names as none before its last", kept.n, slug)
 	}
@@ -702,9 +713,13 @@ func (s *Store) removeVersions(slug string, m *Meta) {
 	dir = filepath.Join(dir, versionsName)
 	named := map[string]bool{}
 	for _, v := range m.Versions {
-		if file, gz, ok := s.versionFile(slug, m, v.N); ok && gz {
+		if file, at, ok := s.versionFile(slug, m, v.N); ok && !lastVersion(m, at) {
 			named[filepath.Base(file)] = true
 		}
+	}
+	if len(named) == 0 {
+		_ = os.RemoveAll(dir) //nolint:errcheck // as below
+		return
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {

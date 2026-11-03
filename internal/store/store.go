@@ -155,31 +155,37 @@ func (s *Store) copyDir(slug string, m *Meta) (string, bool) {
 	return filepath.Join(dir, source), true
 }
 
-// versionFile is the file of version n of the stored page slug, whose meta.json is m, and whether it is gzipped: the
-// one way a version's number becomes a path, false for a number m does not list. The last is the page of the copy,
-// the ones before under versions/.
-func (s *Store) versionFile(slug string, m *Meta, n int) (file string, gzipped, ok bool) {
-	if m.IsLink() || !slices.ContainsFunc(m.Versions, func(v Version) bool { return v.N == n }) {
-		return "", false, false
+// versionFile is the file of version n of the stored page slug, whose meta.json is m, and where m lists it: the one
+// way a version's number becomes a path, false for a number m does not list. The last is the page of the copy, the
+// ones before (lastVersion tells) gzipped under versions/.
+func (s *Store) versionFile(slug string, m *Meta, n int) (file string, at int, ok bool) {
+	at = slices.IndexFunc(m.Versions, func(v Version) bool { return v.N == n })
+	if m.IsLink() || at < 0 {
+		return "", -1, false
 	}
-	if n == m.Versions[len(m.Versions)-1].N {
+	if lastVersion(m, at) {
 		copied, isCopy := s.copyDir(slug, m)
-		return filepath.Join(copied, pageName), false, isCopy
+		return filepath.Join(copied, pageName), at, isCopy
 	}
 	dir, isDir := s.dir(slug)
-	return filepath.Join(dir, versionsName, strconv.Itoa(n)+".html.gz"), true, isDir
+	return filepath.Join(dir, versionsName, strconv.Itoa(n)+".html.gz"), at, isDir
+}
+
+// lastVersion tells whether the version at of m is its last, its copy's page, not gzipped.
+func lastVersion(m *Meta, at int) bool {
+	return at == len(m.Versions)-1
 }
 
 // VersionMark is what tells version n of the stored page slug, whose meta.json is m, from any other, without reading
 // it: its number and when it was made, a number coming again after a removal or a rename; for the last, its copy too,
 // which a rebuild draws again. "" for a version m does not list.
 func (s *Store) VersionMark(slug string, m *Meta, n int) string {
-	if _, _, ok := s.versionFile(slug, m, n); !ok {
+	_, at, ok := s.versionFile(slug, m, n)
+	if !ok {
 		return ""
 	}
-	i := slices.IndexFunc(m.Versions, func(v Version) bool { return v.N == n })
-	mark := "v" + strconv.Itoa(n) + "." + m.Versions[i].At
-	if i == len(m.Versions)-1 {
+	mark := "v" + strconv.Itoa(n) + "." + m.Versions[at].At
+	if lastVersion(m, at) {
 		mark += "." + m.Source
 	}
 	return mark
@@ -188,7 +194,7 @@ func (s *Store) VersionMark(slug string, m *Meta, n int) string {
 // VersionPage is the page of version n of the stored page slug, whose meta.json is m, as it was drawn: false when m
 // lists no such version or it cannot be read whole.
 func (s *Store) VersionPage(slug string, m *Meta, n int) ([]byte, bool) {
-	file, gz, ok := s.versionFile(slug, m, n)
+	file, at, ok := s.versionFile(slug, m, n)
 	if !ok {
 		return nil, false
 	}
@@ -196,7 +202,7 @@ func (s *Store) VersionPage(slug string, m *Meta, n int) ([]byte, bool) {
 	if err != nil {
 		return nil, false
 	}
-	if !gz {
+	if lastVersion(m, at) {
 		return b, true
 	}
 	r, err := gzip.NewReader(bytes.NewReader(b))
