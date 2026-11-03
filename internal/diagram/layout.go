@@ -745,7 +745,9 @@ func (l *layout) addAxis(a *axis, at string) {
 
 // tickTextX is where the text of axis a's tick at x is centred: at it, or with labels between, halfway to the nearest
 // tick right of it, else to x2.
-// LIMIT: a tick at or right of x2 is not refused, and its text is centred at or left of it, past the axis's end.
+// LIMIT: a tick outside x1 to x2 is not refused, and the text of one at or right of x2 is centred at or left of
+// it, past the axis's end.
+// LIMIT: each tick looks through all the ticks (O(n²)); ticks are tens at most. Sort them once for thousands.
 func tickTextX(a *axis, x float64) float64 {
 	if a.Labels != "between" {
 		return x

@@ -3,9 +3,9 @@
 #
 # Grid: day d of the plan starts at x = 200 + 16d (a week is 112), day 0 being the first day of the
 # first week; the axis has a tick at the start of each week, named by the week, and one at the end
-# of the last with no text; labels: between puts each week's name in the middle of its week. A task is a
-# bar from the start of the day it starts to the start of the day after it ends. Tasks stand in rows
-# at y = 44 + 36n, their names at x = 16; a name is at most 184 wide in either language as floe
+# of the last with no text; labels: between puts each week's name in the middle of its week. A task
+# is a bar from the start of the day it starts to the start of the day after it ends. Tasks stand in
+# rows at y = 44 + 36n, their names at x = 16; a name is at most 184 wide in either language as floe
 # diagram inspect measures it (5 of room each side included, from x = 11), so that it ends before
 # the bars at x = 200. A task that waits for another is joined to it by name, from the right of the
 # one before to the left of the next (fromSide: right, toSide: left), and the edge bends halfway
