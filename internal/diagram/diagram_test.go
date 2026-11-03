@@ -916,7 +916,7 @@ func TestInspect(t *testing.T) {
 	}
 	// A label whose centre is on a circle's edge is in no circle, wherever the circle stands.
 	for _, c := range []struct{ cx, x, want string }{{"100.2", "130.2", "114.4"}, {"100.7", "130.7", "114.9"}} {
-		got, mistakes := draw(t, head+"  - circle: { name: A, cx: "+c.cx+", cy: 100, r: 50 }\n  - label: { text: Mon, x: "+c.x+", y: 140, plain: true }\n", inspect)
+		got, mistakes = draw(t, head+"  - circle: { name: A, cx: "+c.cx+", cy: 100, r: 50 }\n  - label: { text: Mon, x: "+c.x+", y: 140, plain: true }\n", inspect)
 		if want := `label "Mon" ` + c.want + ",131 31.6x18\n"; mistakes != "" || !strings.HasSuffix(got, want) {
 			t.Errorf("a circle at %s: inspect = %q %s, want it to end %q", c.cx, got, mistakes, want)
 		}
@@ -926,7 +926,7 @@ func TestInspect(t *testing.T) {
 		src := "width: 1200\nheight: 520\ntitle: T\nparts:\n  - circle: { name: a, cx: " + c.a + ", cy: 200, r: 170 }\n" +
 			"  - circle: { name: b, cx: " + c.b + ", cy: 200, r: 170 }\n  - circle: { name: c, cx: " + c.c + ", cy: 335, r: 170 }\n" +
 			"  - label: { text: \"cli, i18n\", in: [a, b, c] }\n"
-		got, mistakes := draw(t, src, inspect)
+		got, mistakes = draw(t, src, inspect)
 		if want := `label "cli, i18n" ` + c.want + `,220 74.8x18 in a, b, c`; mistakes != "" || !strings.Contains(got, want) {
 			t.Errorf("circles at %s: inspect = %s %s, want %s", c.a, got, mistakes, want)
 		}
