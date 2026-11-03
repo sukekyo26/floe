@@ -69,7 +69,8 @@ code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(
    alone) on screen where its content sets the width; give the place a width if floe places one so.
    Such places: an inline-block, a float, an absolute or other shrink-to-fit box, a width of min-content, max-content
    or fit-content, a table's cell of auto width, justify-items or justify-self start in a grid, an item of a flex row
-   on flex-basis auto, a grid's auto column sized by its content. No part or template of floe's places one so */
+   on flex-basis auto, a grid's auto column sized by its content. No part or template of floe's places one so: tree's list
+   is fit-content on screen but holds no box that scrolls */
 pre {
   margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
   padding: 0.9rem 1rem; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
@@ -1177,11 +1178,14 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @scope ([data-floe-part="tree"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A folder's contents hang from a rule under it; the marks of files and folders are masks in the text's colour. A deep
    tree scrolls sideways on screen, telling nothing of its width outside (base.css's pre has the LIMIT), and folds its
-   names on paper */
+   names on paper. On screen its list reaches to its longest line, so that a theme's ground on it does too */
 :scope {
   padding: var(--floe-pad-block) var(--floe-pad-inline); overflow-wrap: normal;
 }
-@media screen { :scope { overflow-x: auto; contain: inline-size; } }
+@media screen {
+  :scope { overflow-x: auto; contain: inline-size; }
+  :scope > ul { width: fit-content; min-width: 100%; }
+}
 :scope ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
 :scope ul ul { margin-left: 0.5rem; padding-left: 1.15rem; border-left: 1px solid var(--line); }
 :scope li { padding-block: 0.12rem; }

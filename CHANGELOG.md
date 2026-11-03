@@ -485,6 +485,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a tree scrolled sideways on screen ending its ground at the box's width: in default, a long name ran out of the
+  white ground onto the grey frame. The tree's list now reaches to its longest line, and a theme's ground on it with
+  it; scrolled to the end, the room at the tree's right edge stays.
 - Fix a diagram's edge running along a grid line, an axis or a `line` where floe placed its run (between facing
   sides, round two sides of one way, the two turns into a side): the run now keeps 4 off the lines of `axis` and `line`
   parts, moved to the nearest place where the edge makes no new mistake, and stays where there is none.
