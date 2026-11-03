@@ -1,18 +1,26 @@
 // Package store keeps the pages under the store directory: <slug>/meta.json for each, and for a stored page
 // <slug>/source-<id>/, which meta.json names: the data file published (data.yaml), the page drawn from it
-// (page.html, without its CSP, which goes with it when it is served) and the images it shows (images/).
+// (page.html, without its CSP, which goes with it when it is served) and the images it shows (images/). The versions
+// of a stored page are in meta.json, its last the copy's page, the ones before gzipped under <slug>/versions/.
 package store
 
 import (
 	"bytes"
 	"cmp"
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +41,9 @@ const (
 	dataName     = "data.yaml"
 	pageName     = "page.html"
 	imagesName   = "images"
+	versionsName = "versions"
+	// keepVersions is how many versions a stored page keeps, the oldest going first.
+	keepVersions = 20
 )
 
 var slugRe = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$`)
@@ -70,9 +81,19 @@ type Meta struct {
 	// Archived keeps the page off the list (floe list and the management page), served and drawn as any.
 	Archived bool `json:"archived,omitempty"`
 	// Tags are the page's tags, as tagged keeps them.
-	Tags      []string `json:"tags,omitempty"`
-	CreatedAt string   `json:"createdAt"`
-	UpdatedAt string   `json:"updatedAt"`
+	Tags []string `json:"tags,omitempty"`
+	// Versions are a stored page's versions, oldest first: a publish of other content than the last's adds one.
+	Versions  []Version `json:"versions,omitempty"`
+	CreatedAt string    `json:"createdAt"`
+	UpdatedAt string    `json:"updatedAt"`
+}
+
+// Version is a version of a stored page: its number, never going back within the page; when the publish that made it
+// was (its updatedAt); and the mark of what it was published with (contentMark).
+type Version struct {
+	N    int    `json:"n"`
+	At   string `json:"at"`
+	Mark string `json:"mark"`
 }
 
 // IsLink reports whether the entry is a linked file or folder.
@@ -132,6 +153,90 @@ func (s *Store) copyDir(slug string, m *Meta) (string, bool) {
 		return "", false
 	}
 	return filepath.Join(dir, source), true
+}
+
+// versionFile is the file of version n of the stored page slug, whose meta.json is m, and where m lists it: the one
+// way a version's number becomes a path, false for a number m does not list. The last is the page of the copy, the
+// ones before (lastVersion tells) gzipped under versions/.
+func (s *Store) versionFile(slug string, m *Meta, n int) (file string, at int, ok bool) {
+	at = slices.IndexFunc(m.Versions, func(v Version) bool { return v.N == n })
+	if m.IsLink() || at < 0 {
+		return "", -1, false
+	}
+	if lastVersion(m, at) {
+		copied, isCopy := s.copyDir(slug, m)
+		return filepath.Join(copied, pageName), at, isCopy
+	}
+	dir, isDir := s.dir(slug)
+	return filepath.Join(dir, versionsName, strconv.Itoa(n)+".html.gz"), at, isDir
+}
+
+// lastVersion tells whether the version at of m is its last, its copy's page, not gzipped.
+func lastVersion(m *Meta, at int) bool {
+	return at == len(m.Versions)-1
+}
+
+// VersionMark is what tells version n of the stored page slug, whose meta.json is m, from any other, without reading
+// it: its number and when it was made, a number coming again after a removal or a rename; for the last, its copy too,
+// which a rebuild draws again. "" for a version m does not list.
+func (s *Store) VersionMark(slug string, m *Meta, n int) string {
+	_, at, ok := s.versionFile(slug, m, n)
+	if !ok {
+		return ""
+	}
+	mark := "v" + strconv.Itoa(n) + "." + m.Versions[at].At
+	if lastVersion(m, at) {
+		mark += "." + m.Source
+	}
+	return mark
+}
+
+// VersionPage is the page of version n of the stored page slug, whose meta.json is m, as it was drawn: false when m
+// lists no such version or it cannot be read whole.
+func (s *Store) VersionPage(slug string, m *Meta, n int) ([]byte, bool) {
+	file, at, ok := s.versionFile(slug, m, n)
+	if !ok {
+		return nil, false
+	}
+	b, _, err := files.Read(file)
+	if err != nil {
+		return nil, false
+	}
+	if lastVersion(m, at) {
+		return b, true
+	}
+	r, err := gzip.NewReader(bytes.NewReader(b))
+	if err != nil {
+		return nil, false
+	}
+	// Read to its end, where gzip checks its sum and length: one cut short or broken is no page.
+	page, err := io.ReadAll(r)
+	return page, err == nil
+}
+
+// gzipped is page gzipped, as a version before the last is kept.
+func gzipped(page []byte) []byte {
+	var b bytes.Buffer
+	w := gzip.NewWriter(&b)
+	_, _ = w.Write(page) //nolint:errcheck // a buffer takes every write
+	_ = w.Close()        //nolint:errcheck // as above
+	return b.Bytes()
+}
+
+// contentMark is the mark of what a stored page is published with: the data file src and the images it read, by
+// name. Each part goes with its length before it, so that no two sets come to the same bytes.
+func contentMark(src []byte, images map[string][]byte) string {
+	h := sha256.New()
+	put := func(b []byte) {
+		h.Write(binary.BigEndian.AppendUint64(nil, uint64(len(b))))
+		h.Write(b)
+	}
+	put(src)
+	for _, name := range slices.Sorted(maps.Keys(images)) {
+		put([]byte(name))
+		put(images[name])
+	}
+	return "sha256:" + hex.EncodeToString(h.Sum(nil))
 }
 
 // ReadMeta returns the meta.json of slug, or nil when it is missing, unreadable or slug cannot be one.
@@ -246,6 +351,8 @@ func (s *Store) List() ([]Listed, error) {
 
 func (s *Store) listed(slug string, m *Meta) Listed {
 	l := Listed{Slug: slug, Meta: *m, Missing: nil}
+	// The list is read every few seconds: versions are asked for a page at a time.
+	l.Versions = nil
 	if !m.IsLink() {
 		return l
 	}

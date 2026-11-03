@@ -64,15 +64,22 @@ var errNoPage = errors.New("no such page")
 
 // version is what an open tab of slug, of the file rest under a link ("" for the page), compares to tell that it
 // changed, without drawing: this server's id with, for a stored page, its copy (a new one each publish and
-// rebuild); for a linked file, its mark; for a linked data file, the generation of the drawing, its mark and its
-// meta.json's updatedAt (a link made again, another theme). m is slug's meta.json as it was read for the content
-// served with it, so that both are of one publish; "" when there is no page.
+// rebuild), or of its version v (versionParam, 0 for none) the store's mark of it; for a linked file, its mark; for a
+// linked data file, the generation of the drawing, its mark and its meta.json's updatedAt (a link made again, another
+// theme). m is slug's meta.json as it was read for the content served with it, so that both are of one publish; ""
+// when there is no page, or no version v.
 // LIMIT: each tab shown reads meta.json and stats a file every second it asks (version is all it does). Fold the
 // versions into the server's watching if tabs come to be hundreds.
 // LIMIT: a linked data file's images, and the files under a linked HTML file, are not in its version: changing
 // only them reloads no tab (the user chose so). Save the data file again, or reload the tab.
-func (s *Server) version(slug string, m *store.Meta, rest string) string {
+func (s *Server) version(slug string, m *store.Meta, rest string, v int) string {
 	if m == nil {
+		return ""
+	}
+	if v > 0 {
+		if mark := s.cfg.Store.VersionMark(slug, m, v); mark != "" {
+			return s.id + "." + mark
+		}
 		return ""
 	}
 	if !m.IsLink() {
@@ -90,14 +97,22 @@ func (s *Server) version(slug string, m *store.Meta, rest string) string {
 }
 
 // content is what slug, whose meta.json is m, serves for rest ("" for the page itself): a stored page as it was
-// drawn, a linked file as it is, a linked data file drawn now. A linked data file with mistakes (or a drawing
+// drawn (of its version v, which version told is there, when v is not 0), a linked file as it is, a linked data file
+// drawn now. A linked data file with mistakes (or a drawing
 // that cannot be read) is its mistakes, its body the page of them in the language of c, drawn with what drawing
 // returns. drawn tells a page floe drew, whose CSP cuts it off. errNoPage for none.
 // LIMIT: no Range support. Add it if videos need seeking.
 func (s *Server) content(
-	c *i18n.Catalog, slug string, m *store.Meta, rest string, drawing func() store.Drawing,
+	c *i18n.Catalog, slug string, m *store.Meta, rest string, v int, drawing func() store.Drawing,
 ) (served, error) {
 	none := served{body: nil, typ: "", drawn: false}
+	if v > 0 {
+		page, ok := s.cfg.Store.VersionPage(slug, m, v)
+		if !ok {
+			return none, errNoPage
+		}
+		return served{body: io.NopCloser(bytes.NewReader(page)), typ: htmlType, drawn: true}, nil
+	}
 	file, ok := s.cfg.Store.File(slug, m, rest)
 	if !ok {
 		return none, errNoPage
@@ -121,6 +136,21 @@ func (s *Server) content(
 		}
 	}
 	return served{body: f, typ: typ, drawn: !m.IsLink()}, nil
+}
+
+// versionParam is the version ?v= of q asks of the page whose meta.json is m, at rest: 0 for none, and false for one
+// that cannot be a version's number. Only a stored page's own URL (rest "", which serves the page with ?raw only)
+// reads it: under a link, ?v= is a file's own (style.css?v=3, against a cache), and a slug of no page asks none.
+func versionParam(m *store.Meta, rest string, q url.Values) (int, bool) {
+	if m == nil || m.IsLink() || rest != "" || !q.Has("v") {
+		return 0, true
+	}
+	raw := q.Get("v")
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 1 || strconv.Itoa(n) != raw {
+		return 0, false
+	}
+	return n, true
 }
 
 // served is what content serves: body, of the media type typ, drawn by floe or not.
@@ -152,26 +182,33 @@ func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing) ([
 // header), whose iframe loads the page from ?raw; a missing page gets the frame with 404, which shows the way back.
 // A folder's page at file is framed at ?file=, its iframe loading file under the folder; a folder's URL itself
 // leads to the list with the folder open.
-// ?raw and the files under a link's directory are the page and its files. Its version is taken from the meta.json
+// ?raw and the files under a link's directory are the page and its files, ?raw&v=<n> a stored page's version n. Its
+// version is taken from the meta.json
 // its content is served by, before the content: a change in between costs one extra reload, not a miss. A stored
 // page whose copy a publish removed after its meta.json was read is read once more.
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	slug, rest := r.PathValue("slug"), r.PathValue("rest")
-	if rest == "" && !r.URL.Query().Has("raw") {
+	q := r.URL.Query()
+	if rest == "" && !q.Has("raw") {
 		s.frame(w, r, slug)
 		return
 	}
 	var version string
 	var got served
+	var v int
 	err := errNoPage
 	for try := 0; try < 2 && errors.Is(err, errNoPage); try++ {
 		m := s.cfg.Store.ReadMeta(slug)
-		if m == nil {
+		var ok bool
+		if v, ok = versionParam(m, rest, q); m == nil || !ok {
 			break
 		}
-		version = s.version(slug, m, rest)
+		version = s.version(slug, m, rest, v)
+		if v > 0 && version == "" {
+			break
+		}
 		// Of the last look, as the version is: one changed since reloads the tab.
-		got, err = s.content(catalog(r), slug, m, rest, func() store.Drawing { d, _ := s.now(); return d })
+		got, err = s.content(catalog(r), slug, m, rest, v, func() store.Drawing { d, _ := s.now(); return d })
 	}
 	if errors.Is(err, errNoPage) {
 		notFound(w)
@@ -190,7 +227,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	h.Set("X-Content-Type-Options", "nosniff")
 	tail := ""
 	if got.typ == htmlType {
-		tail = servedScript(slug, rest, version)
+		tail = servedScript(slug, rest, version, v)
 	}
 	stream(w, got.typ, got.body, tail)
 }
@@ -227,7 +264,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// A file kept is not mended by the watch: of what the directories hold now.
-	got, err := s.content(catalog(r), slug, m, "", s.latest)
+	got, err := s.content(catalog(r), slug, m, "", 0, s.latest)
 	switch {
 	case errors.Is(err, errNoPage):
 		notFound(w)
@@ -307,9 +344,10 @@ const askEvery = time.Second
 // shown, it asks every askEvery whether the version it was served from (since) is still the page's, each ask cut off
 // after 5 s so that one left hanging (a connection half open after sleep) does not stop the asking, and once more
 // when it is shown again. A tab not shown asks nothing, and reloads when shown.
+// A version v of a stored page (0 for none) asks of that version.
 // LIMIT: that a tab not shown asks nothing is not checked in a browser: headless Chrome showed no tab hidden. Were it
 // broken, a tab not shown asks every second, holding nothing.
-func servedScript(slug, rest, version string) string {
+func servedScript(slug, rest, version string, v int) string {
 	u := "/api/changed/" + slug
 	if rest != "" {
 		parts := strings.Split(rest, "/")
@@ -318,7 +356,11 @@ func servedScript(slug, rest, version string) string {
 		}
 		u += "/" + strings.Join(parts, "/")
 	}
-	lit, _ := json.Marshal(u + "?since=" + url.QueryEscape(version)) //nolint:errcheck // a string always encodes
+	u += "?since=" + url.QueryEscape(version)
+	if v > 0 {
+		u += "&v=" + strconv.Itoa(v)
+	}
+	lit, _ := json.Marshal(u) //nolint:errcheck // a string always encodes
 	// What a page could shadow is read through window, as in leaveFrame. busy stays set once reloading.
 	return "\n<script>{const u = " + string(lit) + "; let busy = false;" +
 		"const look = async () => { if (busy || window.document.hidden) return; busy = true;" +
@@ -341,7 +383,11 @@ func (s *Server) changed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	answer := "same"
-	if v := s.version(slug, s.cfg.Store.ReadMeta(slug), rest); v == "" || v != r.URL.Query().Get("since") {
+	q := r.URL.Query()
+	m := s.cfg.Store.ReadMeta(slug)
+	if v, ok := versionParam(m, rest, q); !ok {
+		answer = "changed"
+	} else if version := s.version(slug, m, rest, v); version == "" || version != q.Get("since") {
 		answer = "changed"
 	}
 	h := w.Header()
