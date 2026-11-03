@@ -294,33 +294,45 @@ func cmpOr(s, def string) string {
 	return s
 }
 
-// widest is the language of t whose text is widest, and its width: a full-width character (U+2E80 and above) is
-// size wide, any other 0.6 of it, or 0.62 in code. Widths are counted in fiftieths of size, so that text as wide
-// compares equal: English is kept against text only as wide, and of the others the first by tag.
-// LIMIT: an estimate of no font, as floe draws with the system's. Measure the text if one comes to miss.
-func widest(t Text, size float64, code bool) (string, float64) {
+// units is the width of s in fiftieths of its size: a full-width character (U+2E80 and above) is 50, any other 30,
+// or 31 in code.
+// LIMIT: an estimate of no font, as floe draws with the system's; wide letters such as W and M run past it, so a
+// table's name and type may overlap. Measure the text if one comes to miss.
+func units(s string, code bool) int {
 	narrow := 30
 	if code {
 		narrow = 31
 	}
-	units := func(s string) int {
-		n := 0
-		for _, c := range s {
-			if c >= 0x2e80 {
-				n += 50
-			} else {
-				n += narrow
-			}
+	n := 0
+	for _, c := range s {
+		if c >= 0x2e80 {
+			n += 50
+		} else {
+			n += narrow
 		}
-		return n
 	}
-	lang, most := "en", units(t["en"])
+	return n
+}
+
+// widestBy is the language of t that n counts widest, and its width at size. Widths are counted in units, so that
+// text as wide compares equal: English is kept against text only as wide, and of the others the first by tag. n is
+// called only for t's languages.
+func widestBy(t Text, size float64, n func(lang string) int) (string, float64) {
+	lang, most := "en", 0
+	if _, ok := t["en"]; ok {
+		most = n("en")
+	}
 	for _, k := range slices.Sorted(maps.Keys(t)) {
-		if n := units(t[k]); n > most {
-			lang, most = k, n
+		if w := n(k); w > most {
+			lang, most = k, w
 		}
 	}
 	return lang, float64(most) * size / 50
+}
+
+// widest is the language of t whose text is widest, and its width.
+func widest(t Text, size float64, code bool) (string, float64) {
+	return widestBy(t, size, func(lang string) int { return units(t[lang], code) })
 }
 
 func textWidth(t Text, size float64, code bool) float64 {
@@ -376,7 +388,13 @@ func placeOf(r rect) string {
 // past what may be written (a million), and a box of 58,824 rows or more for a height past it (diagram_too_short);
 // bound them if one comes to matter.
 func (l *layout) fit(at, who string, t Text, size float64, code bool, room, written float64) {
-	if lang, tw := widest(t, size, code); tw > room {
+	lang, tw := widest(t, size, code)
+	l.fitWidth(at, who, t, lang, tw, room, written)
+}
+
+// fitWidth refuses t, measured tw wide in lang, when it is wider than room.
+func (l *layout) fitWidth(at, who string, t Text, lang string, tw, room, written float64) {
+	if tw > room {
 		// LIMIT: the language's mark is made here, so no catalog picks its brackets; move it if one needs its own.
 		in := ""
 		if lang != "en" {
@@ -458,7 +476,8 @@ func tableWidth(t *table) float64 {
 	}
 	widest := textWidth(t.Title, sizeMain, false) + pad*2
 	for _, row := range t.Rows {
-		widest = max(widest, textWidth(rowText(row), sizeSub, true)+24)
+		_, rw := rowWidth(row)
+		widest = max(widest, rw+24)
 	}
 	return onGrid(widest, 8, math.Ceil)
 }
@@ -479,6 +498,24 @@ func rowText(row tableRow) Text {
 		}
 	}
 	return t
+}
+
+// tableCells are how a row's cells are drawn, and so measured: the class of each and whether it is in code.
+var tableCells = [2]struct {
+	class string
+	code  bool
+}{{"cell code", true}, {"type", false}}
+
+// rowWidth is the language row is widest in and its width, each cell measured as drawn (tableCells), so code and
+// other text are counted in one row; the two spaces after the name count as the name. A separator is 0.
+func rowWidth(row tableRow) (string, float64) {
+	return widestBy(rowText(row), sizeSub, func(lang string) int {
+		name := row.Cells[0].in(i18n.Lang(lang))
+		if len(row.Cells) == 1 {
+			return units(name, tableCells[0].code)
+		}
+		return units(name+"  ", tableCells[0].code) + units(row.Cells[1].in(i18n.Lang(lang)), tableCells[1].code)
+	})
 }
 
 // tableRects are the area of t and of each of its rows.
@@ -529,12 +566,13 @@ func (l *layout) addTable(t *table, at string) {
 			continue
 		}
 		if t.W != 0 {
-			l.fit(at, r.what, rowText(row), sizeSub, true, w-24, w)
+			lang, rw := rowWidth(row)
+			l.fitWidth(at, r.what, rowText(row), lang, rw, w-24, w)
 		}
 		rowY := rows[i].y + rowHeight/2
-		kids = append(kids, elem{Kind: "text", X: x + 12, Y: rowY, Anchor: "start", Class: "cell code", Text: row.Cells[0]})
+		kids = append(kids, elem{Kind: "text", X: x + 12, Y: rowY, Anchor: "start", Class: tableCells[0].class, Text: row.Cells[0]})
 		if len(row.Cells) == 2 {
-			kids = append(kids, elem{Kind: "text", X: x + w - 12, Y: rowY, Anchor: "end", Class: "type", Text: row.Cells[1]})
+			kids = append(kids, elem{Kind: "text", X: x + w - 12, Y: rowY, Anchor: "end", Class: tableCells[1].class, Text: row.Cells[1]})
 		}
 		top += rowHeight
 	}
