@@ -297,7 +297,8 @@ func cmpOr(s, def string) string {
 // units is the width of s in fiftieths of its size: a full-width character (U+2E80 and above) is 50, any other 30,
 // or 31 in code.
 // LIMIT: an estimate of no font, as floe draws with the system's; wide letters such as W and M run past it, so a
-// table's name and type may overlap. Measure the text if one comes to miss.
+// table's name and type may overlap, and a table's written w that was refused while types were measured in code
+// lets them through to overlap. Measure the text if one comes to miss.
 func units(s string, code bool) int {
 	narrow := 30
 	if code {
@@ -315,13 +316,9 @@ func units(s string, code bool) int {
 }
 
 // widestBy is the language of t that n counts widest, and its width at size. Widths are counted in units, so that
-// text as wide compares equal: English is kept against text only as wide, and of the others the first by tag. n is
-// called only for t's languages.
+// text as wide compares equal: English is kept against text only as wide, and of the others the first by tag.
 func widestBy(t Text, size float64, n func(lang string) int) (string, float64) {
-	lang, most := "en", 0
-	if _, ok := t["en"]; ok {
-		most = n("en")
-	}
+	lang, most := "en", n("en")
 	for _, k := range slices.Sorted(maps.Keys(t)) {
 		if w := n(k); w > most {
 			lang, most = k, w
@@ -409,11 +406,16 @@ func onGrid(v, step float64, round func(float64) float64) float64 {
 	return round(v/step) * step
 }
 
+// inCode is whether text of class is drawn in code: part.css gives only .code the monospace font.
+func inCode(class string) bool {
+	return strings.HasSuffix(class, "code")
+}
+
 func rowSize(style string, first bool) (float64, bool) {
 	if style == "" && first || strings.HasPrefix(style, "main") {
-		return sizeMain, strings.HasSuffix(style, "code")
+		return sizeMain, inCode(style)
 	}
-	return sizeSub, strings.HasSuffix(style, "code")
+	return sizeSub, inCode(style)
 }
 
 // inset is how much narrower than a box its text must be: its margins, and a hexagon's points.
@@ -493,28 +495,31 @@ func rowText(row tableRow) Text {
 		t = Text{}
 		for _, c := range row.Cells {
 			for lang := range c {
-				t[lang] = row.Cells[0].in(i18n.Lang(lang)) + "  " + row.Cells[1].in(i18n.Lang(lang))
+				t[lang] = row.Cells[0].in(i18n.Lang(lang)) + cellGap + row.Cells[1].in(i18n.Lang(lang))
 			}
 		}
 	}
 	return t
 }
 
-// tableCells are how a row's cells are drawn, and so measured: the class of each and whether it is in code.
-var tableCells = [2]struct {
-	class string
-	code  bool
-}{{"cell code", true}, {"type", false}}
+// tableCells are the classes a row's cells are drawn in, and so measured by.
+var tableCells = [2]string{"cell code", "type"}
+
+// cellGap is written between a row's name and its type, as the least room between them.
+const cellGap = "  "
 
 // rowWidth is the language row is widest in and its width, each cell measured as drawn (tableCells), so code and
-// other text are counted in one row; the two spaces after the name count as the name. A separator is 0.
+// other text are counted in one row; the gap after the name counts as the name. A separator is 0.
 func rowWidth(row tableRow) (string, float64) {
+	if row.Sep {
+		return "en", 0
+	}
 	return widestBy(rowText(row), sizeSub, func(lang string) int {
 		name := row.Cells[0].in(i18n.Lang(lang))
 		if len(row.Cells) == 1 {
-			return units(name, tableCells[0].code)
+			return units(name, inCode(tableCells[0]))
 		}
-		return units(name+"  ", tableCells[0].code) + units(row.Cells[1].in(i18n.Lang(lang)), tableCells[1].code)
+		return units(name+cellGap, inCode(tableCells[0])) + units(row.Cells[1].in(i18n.Lang(lang)), inCode(tableCells[1]))
 	})
 }
 
@@ -571,11 +576,11 @@ func (l *layout) addTable(t *table, at string) {
 		}
 		rowY := rows[i].y + rowHeight/2
 		kids = append(kids, elem{
-			Kind: "text", X: x + 12, Y: rowY, Anchor: "start", Class: tableCells[0].class, Text: row.Cells[0],
+			Kind: "text", X: x + 12, Y: rowY, Anchor: "start", Class: tableCells[0], Text: row.Cells[0],
 		})
 		if len(row.Cells) == 2 {
 			kids = append(kids, elem{
-				Kind: "text", X: x + w - 12, Y: rowY, Anchor: "end", Class: tableCells[1].class, Text: row.Cells[1],
+				Kind: "text", X: x + w - 12, Y: rowY, Anchor: "end", Class: tableCells[1], Text: row.Cells[1],
 			})
 		}
 		top += rowHeight
