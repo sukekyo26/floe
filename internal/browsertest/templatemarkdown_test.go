@@ -16,12 +16,16 @@ import (
 const headingsMarkdown = "# Heading one\n\n## Heading two\n\n### Heading three\n\n"
 
 // measureHeadings returns, for each heading headingsMarkdown writes, the look of every one drawn: its size, weight,
-// spacing, case, style, frame and padding, one heading to a line.
+// spacing, case, style, frame and padding, one heading to a line. The size of h1 and h2, which base.css gives in em, is
+// read against the box around them, so that a page.css may size the text of a field; h3's is in rem there, read as it is.
 const measureHeadings = `(() => ['Heading one', 'Heading two', 'Heading three'].map((t) =>
   [...document.querySelectorAll('h1, h2, h3, h4, h5, h6')].filter((h) => h.textContent.trim() === t).map((h) => {
-    const s = getComputedStyle(h);
-    return t + ': ' + ['fontSize', 'fontWeight', 'letterSpacing', 'textTransform', 'fontStyle', 'borderTopWidth', 'borderRightWidth',
-      'borderBottomWidth', 'borderLeftWidth', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'].map((p) => s[p]).join(' ');
+    const s = getComputedStyle(h), size = parseFloat(s.fontSize);
+    const ems = (v) => (parseFloat(v) / size).toFixed(3) + 'em';
+    return t + ': ' + [h.matches('h1, h2') ? (size / parseFloat(getComputedStyle(h.parentElement).fontSize)).toFixed(3) + 'em' : s.fontSize,
+      s.fontWeight, s.letterSpacing === 'normal' ? 'normal' : ems(s.letterSpacing), s.textTransform, s.fontStyle,
+      ...['borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'paddingTop', 'paddingRight', 'paddingBottom',
+        'paddingLeft'].map((p) => s[p])].join(' ');
   }).join('\n')).join('\n'))()`
 
 // markdownFields returns where the template's own fields of format markdown stand in values, as the schema's Walk
@@ -56,6 +60,8 @@ func prepend(t *testing.T, v any, at []string, text string) {
 				t.Fatal(err)
 			}
 			v = c[i]
+		default:
+			t.Fatalf("%v: %q is in a %T, not in keys and values or a list", at, key, v)
 		}
 	}
 	headed := func(old any) string {
@@ -74,6 +80,8 @@ func prepend(t *testing.T, v any, at []string, text string) {
 			t.Fatal(err)
 		}
 		c[i] = headed(c[i])
+	default:
+		t.Fatalf("%v: %q is in a %T, not in keys and values or a list", at, at[last], v)
 	}
 }
 
@@ -101,7 +109,10 @@ func TestUITemplateMarkdown(t *testing.T) { //nolint:paralleltest // the browser
 	}
 	fields := 0
 	for _, name := range templates {
-		tpl, _ := k.Template(name)
+		tpl, ok := k.Template(name)
+		if !ok {
+			t.Fatalf("floe has no template %s, though it names it", name)
+		}
 		_, values, err := yamlpos.ParseMap(name+".yaml", tpl.Example())
 		if err != nil {
 			t.Fatal(err)

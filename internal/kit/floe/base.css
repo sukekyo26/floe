@@ -20,7 +20,8 @@ h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-heig
 h3 { font-size: 1.05rem; }
 /* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
    its own outside the box of its Markdown: in Markdown's sizes, smaller than a template's title.
-   LIMIT: 1.2em is larger than the section headings of adr (1.1rem) and postmortem (1.15rem); lower it if that matters */
+   LIMIT: 1.2em is larger than the section headings of adr (1.1rem) and postmortem (1.15rem), and 1.1em as large as
+   adr's (and near postmortem's), its h2 told from them by nothing; lower them if that matters */
 :where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.2em; }
 :where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1.1em; }
 p, ul, ol { margin: 0; }
