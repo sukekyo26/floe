@@ -74,7 +74,7 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 	}
 	if err == nil {
 		// Of meta.json as it is now: an edit made while the page was drawn stays.
-		err = s.keepCopy(slug, now, got.src, got.page, got.images)
+		err = s.keepCopy(slug, now, got.src, got.page, got.images, nil)
 	}
 	if err == nil {
 		return nil

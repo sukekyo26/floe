@@ -145,6 +145,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/stop", s.stop)
 	mux.HandleFunc("GET /api/artifacts/{slug}/download", s.download)
 	mux.HandleFunc("GET /api/artifacts/{slug}/pages", s.pages)
+	mux.HandleFunc("GET /api/artifacts/{slug}/versions", s.versions)
 	mux.HandleFunc("GET /api/changed/{slug}", s.changed)
 	mux.HandleFunc("GET /api/changed/{slug}/{rest...}", s.changed)
 	mux.HandleFunc("GET /a/{slug}", s.redirect)
@@ -284,6 +285,20 @@ func (s *Server) pages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, l)
+}
+
+// versions answers the versions of the page slug, oldest first: none for a link, or a page of none yet.
+func (s *Server) versions(w http.ResponseWriter, r *http.Request) {
+	m := s.cfg.Store.ReadMeta(r.PathValue("slug"))
+	if m == nil {
+		notFound(w)
+		return
+	}
+	versions := m.Versions
+	if versions == nil {
+		versions = []store.Version{}
+	}
+	sendJSON(w, http.StatusOK, versions)
 }
 
 func (*Server) redirect(w http.ResponseWriter, r *http.Request) {

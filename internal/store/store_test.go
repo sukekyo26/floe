@@ -165,8 +165,8 @@ func TestPublishCopy(t *testing.T) {
 		t.Errorf("File = %s, %v", file, ok)
 	}
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
-	if n := entries(t, filepath.Join(root, "d")); n != 2 {
-		t.Errorf("%d entries under d, want meta.json and one copy", n)
+	if n := entries(t, filepath.Join(root, "d")); n != 3 {
+		t.Errorf("%d entries under d, want meta.json, one copy and versions/", n)
 	}
 	if got := files(t, copyOf(t, s, root, "d")); !slices.Equal(got, []string{"data.yaml", "page.html"}) {
 		t.Errorf("files %v, want no image", got)

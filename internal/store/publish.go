@@ -141,6 +141,8 @@ type Entry struct {
 	from string
 	// named is what a link without --slug is named after, for Save to pick its slug again: "" else.
 	named string
+	// replaced tells that settle found Prev another's, which this publish replaces.
+	replaced bool
 }
 
 // Upload is a data file sent for a publish: what PrepareData checks and builds a stored page of, without
@@ -261,7 +263,7 @@ func imagesApart(file string, images map[string][]byte) error {
 func (s *Store) storedPage(file string, src []byte, opts Options, from string) (*Entry, error) {
 	e := &Entry{
 		Slug: *opts.Slug, Meta: seedMeta("", file, src, opts.theme()), Source: src, Page: nil, Images: nil,
-		Prev: nil, Warnings: nil, opts: opts, from: from, named: "",
+		Prev: nil, Warnings: nil, opts: opts, from: from, named: "", replaced: false,
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, err
@@ -324,7 +326,7 @@ func (s *Store) PrepareLink(
 	}
 	e := &Entry{
 		Slug: slug, Meta: seedMeta(path, path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
-		Warnings: warnings, opts: opts, from: from, named: named,
+		Warnings: warnings, opts: opts, from: from, named: named, replaced: false,
 	}
 	e.Meta.Folder = folder
 	// A folder's own title, as a data file's title: is: where it is in its repository, its repository's name at its
@@ -370,6 +372,7 @@ func (e *Entry) settle(prev *Meta) error {
 	// A folder's link lost its folder would serve its parent's files.
 	e.Meta.Folder = was.Folder
 	e.Prev = prev
+	e.replaced = replacing
 	return nil
 }
 
@@ -431,6 +434,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Folder:        false,
 		Archived:      false,
 		Tags:          base.Tags,
+		Versions:      base.Versions,
 		CreatedAt:     cmp.Or(base.CreatedAt, now),
 		UpdatedAt:     now,
 	}
@@ -520,10 +524,47 @@ func title(opts Options, path string, keepTitle bool, base *Meta, own, slug stri
 // another publish or a rename may have changed it since Prepare: what was set on the management page
 // stays, and a page of another project is still refused. A stored page's copy goes to a new directory,
 // which meta.json then names, so that a save that fails leaves the old copy; the copies it no longer names
-// go after.
+// go after. A stored page published with other content than its last version's gets a version (nextVersion), the
+// page of the copy before kept, gzipped outside the lock, as the version before.
 // LIMIT: a reader that read meta.json just before a save may find its copy gone, and shows that it cannot be
 // read until its next look. Keep the copy before until the next save if that shows.
 func (s *Store) Save(e *Entry) error {
+	var mark string
+	var pre *pressed
+	if !e.Meta.IsLink() {
+		mark = contentMark(e.Source, e.Images)
+		pre = s.press(e.Slug, mark)
+	}
+	return s.commit(e, mark, pre)
+}
+
+// pressed is the page of the copy source of a stored page, gzipped, to keep as its version n.
+type pressed struct {
+	source string
+	n      int
+	gz     []byte
+}
+
+// press gzips the page of the stored page slug as it is now, when a save of content of mark makes a version after
+// its last: nil else, or when it cannot be read, for commit to look again under the lock.
+func (s *Store) press(slug, mark string) *pressed {
+	m := s.ReadMeta(slug)
+	if m == nil || m.IsLink() || len(m.Versions) == 0 {
+		return nil
+	}
+	last := m.Versions[len(m.Versions)-1]
+	if last.Mark == mark {
+		return nil
+	}
+	page, ok := s.VersionPage(slug, m, last.N)
+	if !ok {
+		return nil
+	}
+	return &pressed{source: m.Source, n: last.N, gz: gzipped(page)}
+}
+
+// commit is Save, the content of a stored page of mark, its page before pressed as pre (nil for none).
+func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 	unlock, err := s.lock(true)
 	if err != nil {
 		return err
@@ -542,9 +583,12 @@ func (s *Store) Save(e *Entry) error {
 	}
 	made := os.Mkdir(dir, 0o700) == nil
 	if e.Meta.IsLink() {
-		err = s.WriteMeta(e.Slug, &e.Meta)
+		// What it replaces is a link, or a page whose meta.json could not be read, whose copy and versions go.
+		if err = s.WriteMeta(e.Slug, &e.Meta); err == nil {
+			s.tidy(e.Slug, &e.Meta)
+		}
 	} else {
-		err = s.keepCopy(e.Slug, &e.Meta, e.Source, e.Page, e.Images)
+		err = s.keepCopy(e.Slug, &e.Meta, e.Source, e.Page, e.Images, s.nextVersion(e, mark, pre))
 	}
 	// The directory this save made, left, would keep a rename off the slug from the management page, which
 	// does not list it. One that was there (its meta.json unreadable) stays.
@@ -554,10 +598,50 @@ func (s *Store) Save(e *Entry) error {
 	return err
 }
 
+// nextVersion adds to e.Meta, settled under the lock, the version the save of a stored page of content mark makes,
+// and returns the page of the version before to keep (nil for none), pre when it is of the copy that is still last.
+// A page replaced, or of no version, gets one whatever its content, its page before being none of its versions; one
+// whose last version's content is mark gets none. Numbers go on from the last of the page replaced.
+// A last version that cannot be read, which nothing serves, is dropped.
+func (s *Store) nextVersion(e *Entry, mark string, pre *pressed) *pressed {
+	now := e.Prev
+	n := 1
+	if now != nil && len(now.Versions) > 0 {
+		n = now.Versions[len(now.Versions)-1].N + 1
+	}
+	versions := slices.Clone(e.Meta.Versions)
+	var kept *pressed
+	if len(versions) == 0 {
+		// LIMIT: of pages published before pages had versions only, whose first takes the time of the publish before,
+		// so that publishing them all again does not move them up the list; one of other content too keeps the time
+		// before. Drop it once each has a version.
+		if now != nil && !e.replaced {
+			e.Meta.UpdatedAt = now.UpdatedAt
+		}
+	} else {
+		last := versions[len(versions)-1]
+		if last.Mark == mark {
+			return nil
+		}
+		if pre != nil && pre.source == now.Source && pre.n == last.N {
+			kept = pre
+		} else if page, ok := s.VersionPage(e.Slug, now, last.N); ok {
+			// LIMIT: gzipped under the lock, when another save of the slug came between press and the lock.
+			kept = &pressed{source: now.Source, n: last.N, gz: gzipped(page)}
+		} else {
+			versions = versions[:len(versions)-1]
+		}
+	}
+	versions = append(versions, Version{N: n, At: e.Meta.UpdatedAt, Mark: mark})
+	e.Meta.Versions = versions[max(0, len(versions)-keepVersions):]
+	return kept
+}
+
 // keepCopy writes a new copy of the stored page slug, the data file src, the page drawn from it and its
-// images, then m naming it as its meta.json, then removes the copies before: what a save and a rebuild keep. A
-// copy that meta.json could not come to name goes. It is called under the lock.
-func (s *Store) keepCopy(slug string, m *Meta, src, page []byte, images map[string][]byte) error {
+// images, then the page of the version before, kept (nil for none), where m names it, then m naming the copy as
+// its meta.json, then removes the copies and versions m does not name: what a save and a rebuild keep. What
+// meta.json could not come to name goes. It is called under the lock.
+func (s *Store) keepCopy(slug string, m *Meta, src, page []byte, images map[string][]byte, kept *pressed) error {
 	dir, ok := s.dir(slug)
 	if !ok {
 		return fmt.Errorf("store: keep a copy of %q, which cannot be a slug", slug) //nolint:err113 // floe's own mistake
@@ -566,13 +650,86 @@ func (s *Store) keepCopy(slug string, m *Meta, src, page []byte, images map[stri
 	if err != nil {
 		return err
 	}
+	undo := func() {
+		_ = os.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // the error is the write's
+	}
+	if kept != nil {
+		unkeep, err := s.writeVersion(slug, m, kept)
+		if err != nil {
+			undo()
+			return err
+		}
+		undo = func() {
+			_ = os.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // as above
+			unkeep()
+		}
+	}
 	m.Source = source
 	if err := s.WriteMeta(slug, m); err != nil {
-		_ = os.RemoveAll(filepath.Join(dir, source)) //nolint:errcheck // the error is the write's
+		// meta.json is the one before, whose last version is kept's, served from its copy: none names the file.
+		undo()
 		return err
 	}
-	removeSources(dir, source)
+	s.tidy(slug, m)
 	return nil
+}
+
+// tidy removes what is under the page slug that m, its meta.json written, does not name: the copies and versions
+// that a save replaced or dropped, or left when it stopped halfway; of a link, which names none, every one.
+func (s *Store) tidy(slug string, m *Meta) {
+	dir, _ := s.dir(slug)
+	removeSources(dir, m.Source)
+	s.removeVersions(slug, m)
+}
+
+// writeVersion writes the page kept, gzipped, as the version m names it, and returns what removes it, with
+// versions/ when it made it.
+func (s *Store) writeVersion(slug string, m *Meta, kept *pressed) (func(), error) {
+	file, at, ok := s.versionFile(slug, m, kept.n)
+	if !ok || lastVersion(m, at) {
+		//nolint:err113 // floe's own mistake
+		return nil, fmt.Errorf("store: keep version %d of %q, which meta.json names as none before its last", kept.n, slug)
+	}
+	dir := filepath.Dir(file)
+	made := os.Mkdir(dir, 0o700) == nil
+	unkeep := func() {
+		_ = os.Remove(file) //nolint:errcheck // the error is the write's
+		if made {
+			_ = os.Remove(dir) //nolint:errcheck // as above
+		}
+	}
+	if err := files.WriteAtomic(file, kept.gz, 0o600, nil); err != nil {
+		unkeep()
+		return nil, usererr.CannotWrite(file, err) //nolint:wrapcheck // the system's words, at the version
+	}
+	return unkeep, nil
+}
+
+// removeVersions removes what is under versions/ of slug but the versions before the last m names: those dropped
+// past keepVersions, or left by a save that stopped halfway. The save is done by then: what cannot go is left for
+// the next.
+func (s *Store) removeVersions(slug string, m *Meta) {
+	dir, _ := s.dir(slug)
+	dir = filepath.Join(dir, versionsName)
+	named := map[string]bool{}
+	for _, v := range m.Versions {
+		if file, at, ok := s.versionFile(slug, m, v.N); ok && !lastVersion(m, at) {
+			named[filepath.Base(file)] = true
+		}
+	}
+	if len(named) == 0 {
+		_ = os.RemoveAll(dir) //nolint:errcheck // as below
+		return
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, d := range entries {
+		if !named[d.Name()] {
+			_ = os.RemoveAll(filepath.Join(dir, d.Name())) //nolint:errcheck // as above
+		}
+	}
 }
 
 // lock waits to hold the store alone among saves, edits, removals and rebuilds, in this process or another,
