@@ -87,7 +87,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | 部品 | 描くもの |
 |---|---|
 | `text` | Markdown（表も）。中の生の HTML は除く。囲んだコードのブロック（```` ``` ````）はただのコードとして描き、警告する：コードは `code`、コマンドは `terminal` に書く。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ）ので、画像は `image` に書く。 |
-| `code` | コードをそのまま、`file` と `lang` の下に。右上のボタンでコードをコピーできる。 |
+| `code` | コードをそのまま、`file` と `lang` の下に。右上のボタンでコードをコピーできる。図や表を文字で描かず、`diagram`・`table`・`tree` で書く。 |
 | `terminal` | コマンド（`run`）と出力（`out`）を、`shell`（`bash`・`sh`・`zsh`・`powershell`・`cmd`）のプロンプトで。プロンプトは floe が描くので、プロンプトで始まる `run`（`$ ls`）は断る。右上のボタンで、コマンドを 1 行ずつ、プロンプトと出力を除いてコピーできる。 |
 | `table` | 行でも列でも見比べる、升の短い並び。`columns` と `rows`。列は題の字か `{ title, num, pills }`。`num: true` は数の列、`pills` は言葉とその色（`{ 済: good }`）で、その列の升が言葉と丸ごと同じなら、その pill で描く。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`（引用符で囲まず、オブジェクトのまま書く）。 |
 | `entries` | 記録を縦に並べます。1 つが `title`（Markdown の 1 行）とその横の `tags`（それぞれ表のセルと同じく Markdown の 1 行か pill）、その下の全部の幅の `text`（Markdown）。札には列の名前が出ないので、何の値かを札の中で言います（`マージ 2026-10-30`）。`text` の中のコードは、写すボタンの無いまま描くので、entries の後に `code` の部品で置きます。 |
