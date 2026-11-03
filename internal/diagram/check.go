@@ -309,7 +309,7 @@ func (l *layout) addLabel(lb *label, at string) {
 	if lb.X != nil {
 		i := l.label(at, lb.Text, lb.In, *lb.X, *lb.Y, anchor, plain, lb.Strong)
 		// One out of its region is told so, and not again for a frame's edge it straddles.
-		if lb.In != nil && g.roomOf(l.labels[i]) < 0 {
+		if lb.In != nil && g.roomOf(l.labels[i]) < -eps {
 			l.problem(at, "diagram_label_region", l.labels[i].what, strings.Join(lb.In, ", "))
 			return
 		}
@@ -356,7 +356,8 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 		xs, ys := grid(x0, x1, l.w), grid(y0, y1, l.h)
 		var best float64
 		best, st.x, st.top = g.most(xs, ys, w, h, (x0+x1)/2, (y0+y1)/2)
-		st.found = best > 0
+		// A region whose most room is eps or less holds no label: floe places none touching an edge.
+		st.found = best > eps
 	}
 	n := st.next
 	st.next++
@@ -395,20 +396,39 @@ func grid(lo, hi, size float64) []float64 {
 // LIMIT: the grid counts 4 apart from where the circles' boxes start, so a middle off it leaves the label off the
 // axis, above or below as the radius goes; try the middle itself first if diagrams come to need it.
 func (g region) most(xs, ys []float64, w, h, mx, my float64) (best, x, top float64) {
-	near := math.Inf(1)
+	tries := make([]try, 0, len(xs)*len(ys))
 	for _, px := range xs {
 		for _, py := range ys {
-			switch room := g.roomOf(rect{x: px - w/2, y: py - h/2, w: w, h: h, what: "", at: ""}); {
-			case room > best:
-				best, near, x, top = room, math.Hypot(px-mx, py-my), px, py-h/2
-			case room == best:
-				if d := math.Hypot(px-mx, py-my); d < near {
-					near, x, top = d, px, py-h/2
-				}
-			}
+			box := rect{x: px - w/2, y: py - h/2, w: w, h: h, what: "", at: ""}
+			tries = append(tries, try{x: px, y: py, room: g.roomOf(box)})
 		}
 	}
-	return best, x, top
+	best, x, y := pick(tries, mx, my)
+	return best, x, y - h/2
+}
+
+// try is a point a block is tried centred on, and the room it keeps there.
+type try struct{ x, y, room float64 }
+
+// pick is the most room of tries (0 when none has more) and the first try of the nearest to mx, my of those within
+// eps of it: room and nearness less than eps apart are one, measured from the most and the nearest, so that neither
+// a float's rounding nor the order the tries come in picks one.
+func pick(tries []try, mx, my float64) (best, x, y float64) {
+	for _, s := range tries {
+		best = max(best, s.room)
+	}
+	near := math.Inf(1)
+	for _, s := range tries {
+		if s.room >= best-eps {
+			near = min(near, math.Hypot(s.x-mx, s.y-my))
+		}
+	}
+	for _, s := range tries {
+		if s.room >= best-eps && math.Hypot(s.x-mx, s.y-my) <= near+eps {
+			return best, s.x, s.y
+		}
+	}
+	return best, 0, 0
 }
 
 // stack is the labels of one region of a Venn diagram placed by it, and where their block went.

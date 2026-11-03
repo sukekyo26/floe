@@ -293,6 +293,13 @@ func TestLayoutMistakes(t *testing.T) {
 				"s.yaml:7:5: label in A finds no room inside A and outside the other circles: make that area larger, or the text shorter",
 		},
 		{"  - circle: { cx: 390, cy: 100, r: 20 }", "s.yaml:5:5: circle 370,80 40x40 sticks out of the 400x200 canvas"},
+		// A label at x and y whose corner is on the circle's edge is in, wherever the circle stands; one 0.001 out is not.
+		{"  - circle: { name: A, cx: 100.3, cy: 100, r: 50 }\n  - label: { text: Mon, in: [A], x: 114.5, y: 131, plain: true }", ""},
+		{"  - circle: { name: A, cx: 117.3, cy: 100, r: 50 }\n  - label: { text: Mon, in: [A], x: 131.5, y: 131, plain: true }", ""},
+		{
+			"  - circle: { name: A, cx: 100.3, cy: 100, r: 50 }\n  - label: { text: Mon, in: [A], x: 114.5, y: 131.00125, plain: true }",
+			"s.yaml:6:5: label \"Mon\" is not all inside A and outside the other circles: move it, or leave out x and y for floe to place it",
+		},
 		{"  - dot: { name: d, cx: 50, cy: 50 }\n  - box: { name: b, x: 40, y: 40, w: 60, h: 30, rows: [b] }", `s.yaml:6:5: box "b" overlaps dot "d"`},
 		{"  - circle: { name: A, cx: 150, cy: 100, r: 60 }\n  - label: { text: \"\", in: [A] }\n  - box: { x: 100, y: 50, w: 100, h: 100, rows: [B] }", `s.yaml:7:5: box "B" overlaps label in A`},
 		// Each check of the placement on its own.
@@ -906,6 +913,24 @@ func TestInspect(t *testing.T) {
 		"  - label: { text: { en: Done, ja: \"完了した\" }, x: 100, y: 100 }\n", inspect)
 	if want := "frame 10,10 250x150\nthe icon of frame 10,10 250x150 10,10 31x31\nlabel \"完了した\" 71,91 58x18\n"; mistakes != "" || got != want {
 		t.Errorf("inspect = %q %s, want %q", got, mistakes, want)
+	}
+	// A label whose centre is on a circle's edge is in no circle, wherever the circle stands.
+	for _, c := range []struct{ cx, x, want string }{{"100.2", "130.2", "114.4"}, {"100.7", "130.7", "114.9"}} {
+		got, mistakes = draw(t, head+"  - circle: { name: A, cx: "+c.cx+", cy: 100, r: 50 }\n  - label: { text: Mon, x: "+c.x+", y: 140, plain: true }\n", inspect)
+		if want := `label "Mon" ` + c.want + ",131 31.6x18\n"; mistakes != "" || !strings.HasSuffix(got, want) {
+			t.Errorf("a circle at %s: inspect = %q %s, want it to end %q", c.cx, got, mistakes, want)
+		}
+	}
+	// A label floe places in a region of circles symmetric about a line off its grid goes to one side, wherever they stand.
+	for _, c := range []struct{ a, b, c, want string }{{"300", "460", "380", "340.6"}, {"377.7", "537.7", "457.7", "418.3"}, {"455.55", "615.55", "535.55", "496.15"}} {
+		src := "width: 1200\nheight: 520\ntitle: T\nparts:\n  - circle: { name: a, cx: " + c.a + ", cy: 200, r: 170 }\n" +
+			"  - circle: { name: b, cx: " + c.b + ", cy: 200, r: 170 }\n  - circle: { name: c, cx: " + c.c + ", cy: 335, r: 170 }\n" +
+			"  - label: { text: \"cli, i18n\", in: [a, b, c] }\n"
+		got, mistakes = draw(t, src, inspect)
+		_, label, _ := strings.Cut(got, "\nlabel ")
+		if want := `"cli, i18n" ` + c.want + ",220 74.8x18 in a, b, c\n"; mistakes != "" || label != want {
+			t.Errorf("circles at %s: inspect = %q %s, want its label %q", c.a, got, mistakes, want)
+		}
 	}
 	// A bar is drawn from the smaller of its x, its label right of it, whichever is written first.
 	got, mistakes = draw(t, head+"  - bar: { x1: 200, x2: 20, y: 50, label: back }\n", inspect)

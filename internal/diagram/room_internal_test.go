@@ -1,6 +1,9 @@
 package diagram
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 // roomOf tells a box over a circle of out by the point of the box nearest its centre: over its middle, along an
 // edge, from beside it; a box clear of it has room, one touching it none.
@@ -27,5 +30,29 @@ func TestRoomOf(t *testing.T) {
 	}
 	if got := (region{in: []circle{{CX: 140, CY: 110, R: 40}}, out: nil}).roomOf(box); got >= 0 {
 		t.Errorf("a box over the edge of a circle of in: roomOf = %v, want it outside", got)
+	}
+}
+
+// pick takes the most room and the nearest within eps of them, measured from the most and the nearest: rounding left
+// in either, or the order the tries come in, picks no other.
+func TestPick(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name  string
+		tries []try
+		mx    float64
+		want  float64 // the x picked
+	}{
+		{"room rounded apart", []try{{378, 0, 5}, {382, 0, 5 + 1e-13}}, 380, 378},
+		{"nearness rounded apart", []try{{378, 0, 5}, {382, 0, 5}}, 380 + 1e-13, 378},
+		{"a chain of rooms each within eps", []try{{370, 0, 5}, {379, 0, 5 + 0.9*eps}, {400, 0, 5 + 1.5*eps}}, 380, 379},
+		{"more room, farther", []try{{380, 0, 5}, {400, 0, 6}}, 380, 400},
+		{"none of room", []try{{380, 0, -1}}, 380, 0},
+	} {
+		best, x, _ := pick(tt.tries, tt.mx, 0)
+		if x != tt.want || best < 0 || math.IsInf(best, 0) {
+			t.Errorf("%s: pick = %v, %v, want x %v", tt.name, best, x, tt.want)
+		}
 	}
 }
