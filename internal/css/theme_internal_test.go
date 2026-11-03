@@ -45,8 +45,10 @@ func foldIn(list []string, s string) bool {
 	return slices.ContainsFunc(list, func(w string) bool { return strings.EqualFold(w, s) })
 }
 
-// declAmiss returns what a theme's declaration of prop writes amiss, by the forms a theme may write alone: a counter
-// or list style of digits or shapes and no variable, a transform that moves alone, and no variable that turns.
+// declAmiss returns what a theme's declaration of prop writes amiss, by the forms a theme may write alone, a
+// variable's value as any other's (it may be read anywhere): a counter or list style of digits or shapes and no
+// variable, no attribute's text, a transform that moves alone, and no variable that turns.
+// LIMIT: a variable's value wrapped in {} (--x: { attr(y) }) is read as a rule's prelude and passes every check.
 func declAmiss(prop string, value []token) []string {
 	var amiss []string
 	switch {
@@ -67,7 +69,6 @@ func declAmiss(prop string, value []token) []string {
 				amiss = append(amiss, "holds a turn for a transform; a theme moves alone")
 			}
 		}
-		return amiss
 	default:
 	}
 	counter, commas := false, 0
@@ -162,6 +163,9 @@ func TestSheetAmiss(t *testing.T) {
 		`transform: matrix(1, 0, 0, 1, 2, 2)`: true, `transform: var(--move)`: true, `transform: translateZ(2px)`: true,
 		`rotate: 2deg`: true, `rotate: none`: true, `scale: 1.1`: true, `zoom: 1.1`: true, `offset-path: path("M0 0")`: true,
 		`offset-rotate: 10deg`: true, `perspective: 100px`: true, `--tilt: rotate(-2deg)`: true, `--flat: perspective(9px)`: true,
+		`--x: attr(data-x)`: true, `--s: counter(c, upper-alpha)`: true, `--t: counters(c, ".", lower-roman)`: true,
+		`--v: counter(c, var(--t))`: true, `--display: attr(data-x)`: true, `--FONT: "Fig."`: true, `--Display: "Fig."`: true,
+		`FONT-FAMILY: "Yu Mincho"`: false, `--n: counter(c)`: false, `--m: counter(c, decimal)`: false, `--u: upper-alpha`: false,
 	} {
 		if amiss := sheetAmiss([]byte(":scope { " + src + "; }")); (len(amiss) > 0) != want {
 			t.Errorf("%s: amiss %q, want amiss %v", src, amiss, want)
