@@ -293,11 +293,12 @@ type bar struct {
 }
 
 type axis struct {
-	X1    float64  `json:"x1"`
-	X2    float64  `json:"x2"`
-	Y     float64  `json:"y"`
-	Ticks []tick   `json:"ticks"`
-	Grid  *float64 `json:"grid"`
+	X1     float64  `json:"x1"`
+	X2     float64  `json:"x2"`
+	Y      float64  `json:"y"`
+	Ticks  []tick   `json:"ticks"`
+	Grid   *float64 `json:"grid"`
+	Labels string   `json:"labels"`
 }
 
 // tick is a mark on an axis, [x, text].

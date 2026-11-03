@@ -13,13 +13,6 @@ edge screens→test M648,116 H656 V188 H664
 edge api→help M536,152 H544 V224 H552
 edge test→release M760,188 H792 V260
 edge help→release M744,224 H792 V260
-label 195,302 10x18
-label 307,302 10x18
-label 419,302 10x18
-label 531,302 10x18
-label 643,302 10x18
-label 755,302 10x18
-label 867,302 10x18
 label "Week 1" 229.4,302 53.2x18
 label "Week 2" 341.4,302 53.2x18
 label "Week 3" 453.4,302 53.2x18

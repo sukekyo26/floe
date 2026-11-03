@@ -203,7 +203,7 @@
     },
     "axis": {
       "type": "object",
-      "description": "A time axis with labelled ticks, and grid lines up to grid",
+      "description": "A time axis with labelled ticks, and grid lines up to grid; a tick's text is drawn at it, or between it and the next tick (labels: between); a tick of empty text is a mark alone",
       "required": ["x1", "x2", "y", "ticks"],
       "additionalProperties": false,
       "properties": {
@@ -212,7 +212,8 @@
           "type": "array",
           "items": { "type": "array", "prefixItems": [{ "$ref": "#/$defs/coord" }, { "$ref": "#/$defs/text" }], "minItems": 2, "maxItems": 2 }
         },
-        "grid": { "$ref": "#/$defs/coord" }
+        "grid": { "$ref": "#/$defs/coord" },
+        "labels": { "enum": ["at", "between"], "description": "Where a tick's text goes: at the tick (the default), or halfway between it and the next tick on its right, or x2 past the last" }
       }
     },
     "circle": {

@@ -735,10 +735,28 @@ func (l *layout) addAxis(a *axis, at string) {
 	}
 	for i, t := range ticks {
 		l.edgeEls = append(l.edgeEls, lineEl(t[0], t[1], t[2], t[3], "axis"))
-		l.label(at, a.Ticks[i].Text, nil, t[0], a.Y+17, "middle", true, false)
+		if text := a.Ticks[i].Text; words(text, false) != "" {
+			l.label(at, text, nil, tickTextX(a, t[0]), a.Y+17, "middle", true, false)
+		}
 	}
 	runs := slices.Concat([]seg{line}, grid, ticks)
 	l.strokes = append(l.strokes, span(runs, fmt.Sprintf("axis %s-%s at %s", num(a.X1), num(a.X2), num(a.Y)), at))
+}
+
+// tickTextX is where the text of axis a's tick at x is centred: at it, or with labels between, halfway to the nearest
+// tick right of it, else to x2.
+// LIMIT: a tick at or right of x2 is not refused, and its text is centred at or left of it, past the axis's end.
+func tickTextX(a *axis, x float64) float64 {
+	if a.Labels != "between" {
+		return x
+	}
+	next, found := a.X2, false
+	for _, t := range a.Ticks {
+		if t.X > x && (!found || t.X < next) {
+			next, found = t.X, true
+		}
+	}
+	return (x + next) / 2
 }
 
 // rulesOf are the rules part p draws: an axis's line, grid and ticks, and a line across or down. Each keeps a loose
