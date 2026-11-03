@@ -108,7 +108,8 @@ A `tone` is `accent`, `good`, `warn`, `bad` or `muted`.
 A data file is one YAML document of keys and values. One with `---` between documents, or with anchors, aliases, merge keys (`<<`) or tags, is refused.
 
 - Write text with a `: `, a ` #` or, in `{ }` or `[ ]`, a `,` in it in quotes (`"…"`) or as a block (`|-`): YAML reads them as a key and its value, the start of a comment, or the end of the text.
-- A comment on the line of a value not in quotes is refused, in every YAML file floe reads, as it may have cut the value short (`lead: PR #100` reads as `PR`): write the comment on a line of its own.
+- A comment on the line of a value not in quotes is refused, in every YAML file floe reads, as it may have cut the value short (`lead: PR #100` reads as `PR`): write the comment on a line of its own, outside any `{ }` or `[ ]`.
+- A comment can't be written in `{ }` or `[ ]`, even on a line of its own, in any YAML file floe reads: write it on a line outside them.
 - A `|` or `>` text whose first line (not of spaces alone) begins with spaces and a tab is refused, in every YAML file floe reads: YAML 1.2 reads the tab as text, but floe's YAML library as indentation, and it drops or shortens the lines after it. Begin the line without the tab, or write the text's indentation after the `|` or `>` (`|2` for text two spaces past its key).
 - A key without a value in `{ }` is refused too, as the rest of text a `,` ended (`{ label: 1,500 words }` reads as `label: 1` and a key `500 words`). A `,` in `[ ]` is not caught: `[1,500 words]` is two items.
 - A file is UTF-8, without a byte order mark past its start.
