@@ -570,9 +570,13 @@ func (l *layout) addTable(t *table, at string) {
 			l.fitWidth(at, r.what, rowText(row), lang, rw, w-24, w)
 		}
 		rowY := rows[i].y + rowHeight/2
-		kids = append(kids, elem{Kind: "text", X: x + 12, Y: rowY, Anchor: "start", Class: tableCells[0].class, Text: row.Cells[0]})
+		kids = append(kids, elem{
+			Kind: "text", X: x + 12, Y: rowY, Anchor: "start", Class: tableCells[0].class, Text: row.Cells[0],
+		})
 		if len(row.Cells) == 2 {
-			kids = append(kids, elem{Kind: "text", X: x + w - 12, Y: rowY, Anchor: "end", Class: tableCells[1].class, Text: row.Cells[1]})
+			kids = append(kids, elem{
+				Kind: "text", X: x + w - 12, Y: rowY, Anchor: "end", Class: tableCells[1].class, Text: row.Cells[1],
+			})
 		}
 		top += rowHeight
 	}
