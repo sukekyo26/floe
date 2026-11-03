@@ -488,6 +488,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a tree scrolled sideways on screen ending its ground at the box's width: in default, a long name ran out of the
+  white ground onto the grey frame. The tree's list now reaches to its longest line, and a theme's ground on it with
+  it; scrolled to the end, the room at the tree's right edge stays.
 - Fix a Venn diagram's labels moving with a float's rounding: a label floe places in a region symmetric about a
   line went to one side or the other as the circles stood, a label at `x` and `y` touching a circle's edge was told
   outside its region, and `floe diagram inspect` named a label whose centre is on an edge `in` the circle, or not. Room
