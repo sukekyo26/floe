@@ -112,11 +112,14 @@ func TestVersionTabMark(t *testing.T) {
 	got = append(got, ask("/api/changed/d?since="+one+"&v=1"), ask("/api/changed/d?since="+three+"&v=3"),
 		ask("/api/changed/d/x?since="+one+"&v=1"), ask("/api/changed/nope?since="+one+"&v=1"))
 	want(t, e.do(t, http.MethodDelete, "/api/artifacts/d", "", "Origin", origin), http.StatusNoContent, "")
+	// Each v1 a version before the last, whose mark has no copy in it.
 	e.publish(t, "d", noted("one"), nil)
+	e.publish(t, "d", noted("two"), nil)
 	got = append(got, ask("/api/changed/d?since="+one+"&v=1"))
 	one = since(1)
 	want(t, e.do(t, http.MethodDelete, "/api/artifacts/d", "", "Origin", origin), http.StatusNoContent, "")
 	e.publish(t, "o", noted("one"), nil)
+	e.publish(t, "o", noted("two"), nil)
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/o", map[string]any{"slug": "d"}), http.StatusOK, `"slug":"d"`)
 	got = append(got, ask("/api/changed/d?since="+one+"&v=1"))
 	one = since(1)
