@@ -21,7 +21,6 @@ var paletteRadii = []string{"--radius", "--radius-small", "--radius-pill"}
 // first, joined by " { ", and the place of the { that holds it right (-1 outside every block): two rules of one
 // prelude are two blocks.
 type declaration struct {
-	name  string // as written: a variable's name is case-sensitive
 	value []token
 	rule  string
 	block int
@@ -62,6 +61,7 @@ func rules(toks []token) ([]string, []int) {
 // declarations returns each declaration in src of a property that want takes, by name: a name at the start of a block or
 // after a ;, a colon, and the value up to the ; or } that ends it. What reaches a { is a rule's prelude (li:has(…) {), not a
 // declaration.
+// A property's name is lowered, a variable's kept as written: CSS tells --Radius from --radius.
 func declarations(src []byte, want func(name string) bool) map[string][]declaration {
 	found := map[string][]declaration{}
 	toks := lex(src)
@@ -78,7 +78,10 @@ func declarations(src []byte, want func(name string) bool) map[string][]declarat
 		}
 		begins := start
 		start = false
-		name := strings.ToLower(string(toks[i].data))
+		name := string(toks[i].data)
+		if !strings.HasPrefix(name, "--") {
+			name = strings.ToLower(name)
+		}
 		if !begins || (toks[i].tt != css.IdentToken && toks[i].tt != css.CustomPropertyNameToken) || !want(name) {
 			continue
 		}
@@ -114,7 +117,7 @@ func declarations(src []byte, want func(name string) bool) map[string][]declarat
 		if prelude {
 			continue
 		}
-		found[name] = append(found[name], declaration{name: string(toks[i].data), value: value, rule: in[i], block: blocks[i]})
+		found[name] = append(found[name], declaration{value: value, rule: in[i], block: blocks[i]})
 		i = j - 1
 	}
 	return found
