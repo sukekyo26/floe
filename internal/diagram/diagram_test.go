@@ -280,15 +280,10 @@ func TestLayoutMistakes(t *testing.T) {
 			"s.yaml:6:5: frame 300,100 150x40 sticks out of the 400x200 canvas\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150",
 		},
 		{"  - label: { text: \"\", x: 160, y: 117 }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", `s.yaml:6:5: box "a" overlaps label 155,108 10x18`},
-		// A tick of no text in any language is a mark alone: nothing overlaps it, sticks out or is run through by it.
+		// A tick of no text in any language is a mark alone: nothing overlaps it or sticks out (an edge through it: f13).
 		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, \"\"], [160, \"\"]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
 		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, { en: \"\", ja: \"\" }], [160, { en: \"\", ja: \"\" }]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
 		{"  - axis: { x1: 10, x2: 396, y: 100, ticks: [[10, \"\"], [396, \"\"]] }", ""},
-		{
-			"  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }\n  - box: { name: b, x: 140, y: 150, w: 60, h: 30, rows: [b] }\n" +
-				"  - edge: { from: a, fromSide: bottom, to: b, toSide: top }\n  - axis: { x1: 10, x2: 390, y: 95, ticks: [[50, \"\"], [170, \"\"]] }",
-			"",
-		},
 		// A tick's text between ticks is checked as at one.
 		{"  - axis: { x1: 20, x2: 380, y: 100, ticks: [[20, Mon], [140, \"\"]], labels: between }\n  - box: { name: a, x: 60, y: 105, w: 40, h: 30, rows: [a] }", `s.yaml:6:5: box "a" overlaps label "Mon"`},
 		{"  - box: { x: 20, y: 20, rows: [[{ en: \"あいう\", ja: \"abcde\" }, main code]] }\n  - box: { name: b, x: 30, y: 30, w: 80, h: 30, rows: [b] }", `s.yaml:6:5: box "abcde" overlaps box "b"`},
@@ -931,6 +926,7 @@ func TestAxisTickText(t *testing.T) {
 		{`ticks: [[260, Wed], [20, Mon], [140, Tue]], labels: between`, "label \"Wed\" 304.2,108 31.6x18\nlabel \"Mon\" 64.2,108 31.6x18\nlabel \"Tue\" 184.2,108 31.6x18\n"},
 		{`ticks: [[20, Mon], [20, ""], [140, ""]], labels: between`, `label "Mon" 64.2,108 31.6x18` + "\n"},
 		{`ticks: [[20, Mon], [380, End]], labels: between`, "label \"Mon\" 184.2,108 31.6x18\nlabel \"End\" 364.2,108 31.6x18\n"},
+		{`ticks: [[400, A]], labels: between`, `label "A" 381.4,108 17.2x18` + "\n"},
 		{`ticks: [[20, Mon], [140, Tue]], labels: at`, "label \"Mon\" 4.2,108 31.6x18\nlabel \"Tue\" 124.2,108 31.6x18\n"},
 	} {
 		src := "width: 420\nheight: 150\ntitle: T\nparts:\n  - axis: { x1: 20, x2: 380, y: 100, " + c.axis + " }\n"
@@ -1380,6 +1376,16 @@ parts:
   - axis: { x1: 10, x2: 300, y: 95, ticks: [[150, ""]] }
   - line: { x1: 10, y1: 112, x2: 300, y2: 112 }
 `, `edge a→b M50,50 V108 H250 V174`},
+		// f13: an edge runs through a tick of no text, no label.
+		{`width: 400
+height: 200
+title: f13
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 140, y: 150, w: 60, h: 30, rows: [b] }
+  - edge: { from: a, fromSide: bottom, to: b, toSide: top }
+  - axis: { x1: 10, x2: 390, y: 95, ticks: [[50, ""], [170, ""]] }
+`, `edge a→b M50,50 V104 H170 V150`},
 		// f11: the place nearer runs over a dot: it moves the other way.
 		{`width: 500
 height: 140
