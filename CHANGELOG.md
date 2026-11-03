@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the versions of a stored page: a publish of a data file, or images it reads, other than the last version's
+  keeps the page before as a version and makes the new page the next one (a rebuild, or a publish of a theme only,
+  draws the last again and adds none). A page keeps 20, the oldest going first, those before the last gzipped under
+  its directory. `GET /api/artifacts/{slug}/versions` lists them, and `/a/{slug}/?raw&v=<n>` serves version `n` as the
+  page is served.
 - Add `labels: between` to the diagram part `axis`: each tick's text stands halfway between it and the next tick on
   its right, or `x2` past the last, as a week's name in the middle of its week (the default `labels: at` keeps it at
   the tick).
