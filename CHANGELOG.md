@@ -488,6 +488,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a tree scrolled sideways on screen ending its ground at the box's width: in default, a long name ran out of the
+  white ground onto the grey frame. The tree's list now reaches to its longest line, and a theme's ground on it with
+  it; scrolled to the end, the room at the tree's right edge stays.
 - Fix a diagram's `axis` tick of empty text (`""`) taking room as a label 10 wide: it was listed by
   `floe diagram inspect`, told overlapping a part, sticking out of the canvas or run through by an edge, and widened a
   canvas left out. It is now a mark alone.
