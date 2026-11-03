@@ -488,6 +488,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a Venn diagram's labels moving with a float's rounding: a label floe places in a region symmetric about a
+  line went to one side or the other as the circles stood, a label at `x` and `y` touching a circle's edge was told
+  outside its region, and `floe diagram inspect` named a label whose centre is on an edge `in` the circle, or not. Room
+  and the circles a label is in are now told within 1e-9 px.
 - Fix a diagram's `axis` tick of empty text (`""`) taking room as a label 10 wide: it was listed by
   `floe diagram inspect`, told overlapping a part, sticking out of the canvas or run through by an edge, and widened a
   canvas left out. It is now a mark alone.
