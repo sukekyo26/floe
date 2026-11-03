@@ -1,0 +1,9 @@
+template: report
+lang: en
+title: A comment in a flow
+sections:
+  - heading: h
+    parts:
+      - table:
+          columns: [a, Before (PR #378), c]
+          rows: [[1, 2, 3]]
