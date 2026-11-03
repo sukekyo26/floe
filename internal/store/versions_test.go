@@ -216,13 +216,14 @@ func TestVersionsNumbers(t *testing.T) {
 		t.Errorf("removed: versions %v, want [1]", got)
 	}
 	const long = "2026-01-02T03:04:05.000Z"
-	m := s.ReadMeta("d")
-	m.Versions, m.UpdatedAt = nil, long
-	if err = s.WriteMeta("d", m); err != nil {
+	was := s.ReadMeta("d")
+	was.Versions, was.UpdatedAt = nil, long
+	if err = s.WriteMeta("d", was); err != nil {
 		t.Fatal(err)
 	}
 	publish(t, s, dw, "d.yaml", titled("B"), map[string][]byte{"a.png": png}, store.Options{})
-	if m := s.ReadMeta("d"); len(m.Versions) != 1 || m.Versions[0].N != 1 || m.UpdatedAt == long || m.Versions[0].At != m.UpdatedAt {
+	if m := s.ReadMeta("d"); len(m.Versions) != 1 || m.Versions[0].N != 1 || m.UpdatedAt == long || m.Versions[0].At != m.UpdatedAt ||
+		m.CreatedAt != was.CreatedAt {
 		t.Errorf("of no versions: %+v", m)
 	}
 }
