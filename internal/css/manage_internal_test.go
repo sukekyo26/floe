@@ -106,7 +106,7 @@ func manageCheck(t *testing.T, where string, sheet []byte) {
 					}
 				}
 			case name == "font-size" || name == "font":
-				size, ok := sizeOf(sheet, name, d.value)
+				size, ok := sizeOf(name, d.value)
 				if !ok || !slices.Contains(manageText, size) && !large(size) && manageEm[d.rule] != size {
 					t.Errorf("%s: %s: %s in %q; read one of :root's steps of text %v", where, name, value, d.rule, manageText)
 				}
