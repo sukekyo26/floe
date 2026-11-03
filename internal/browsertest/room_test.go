@@ -9,11 +9,11 @@ import (
 // measurePartRoom returns, one to a line, each room between parts that is not --floe-room, read from the page. It
 // measures the room between every two children one after another that are shown as blocks (not out of the flow),
 // across when on one line, else down, in a place where parts stand: a box laid out as a grid or a flex that is a
-// stack, holds cards, holds a part's box outside any part (a template's section or step), or is a text's box. Tabs are measured from
+// stack, holds cards, holds a part's box outside any part (a template's section or step), or is a text's box or the box of a
+// template's own Markdown. Tabs are measured from
 // the bottom of their names to the top of the panel shown, as their children are names and panels, not parts in a row.
 // A part's Markdown stands in a text's box (MarkdownFlow), measured as a text's is.
-// LIMIT: a flow not drawn by MarkdownFlow (what a note drawn in HTML holds, a template's own Markdown it places in a
-// note) and what a quote or a list holds (base.css's 0.6rem and 0.3rem, not room between parts) go unmeasured.
+// LIMIT: a flow in no box of Markdown (what a note drawn in HTML holds) and what a quote or a list holds (base.css's 0.6rem and 0.3rem, not room between parts) go unmeasured.
 // LIMIT: the room before a template's own section (report's .sub, design's .decision), between a template's own
 // section or header and a note it places (adr's record superseding it after its header, runbook's caution after its
 // needs) and after the first child of an item whose mark stands in its
@@ -34,7 +34,7 @@ const measurePartRoom = `(() => {
   const out = new Set();
   for (const c of document.body.querySelectorAll('*')) {
     if (c.matches('[data-floe-part=tabs]') || !/grid|flex/.test(getComputedStyle(c).display)) continue;
-    if (!(c.matches('[data-floe-part=stack], [data-floe-text]') || [...c.children].some((k) => k.matches('.card')) ||
+    if (!(c.matches('[data-floe-part=stack], [data-floe-text], [data-floe-markdown]') || [...c.children].some((k) => k.matches('.card')) ||
       ([...c.children].some(box) && !c.closest('[data-floe-part]')))) continue;
     const kids = [...c.children].filter(block), mark = getComputedStyle(c, '::before');
     const marked = mark.content !== 'none' && mark.display !== 'none' && mark.gridRowStart === 'mark';

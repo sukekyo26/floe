@@ -2,6 +2,7 @@ package kit
 
 import (
 	"html/template"
+	"strings"
 	"testing"
 )
 
@@ -31,19 +32,22 @@ func TestMarkdown(t *testing.T) {
 	}
 }
 
-// MarkdownFlow draws Markdown in a text's box, and what draws no block (empty, raw HTML alone, once or twice) as it
-// is, with no box; part.html's markdown is it, page.html's draws no box.
+// MarkdownFlow draws Markdown in a text's box and Markdown in the box of a template's own Markdown, and what draws no
+// block (empty, raw HTML alone, once or twice) as it is, with no box; part.html's markdown is MarkdownFlow, page.html's
+// Markdown.
 func TestMarkdownFlow(t *testing.T) {
 	t.Parallel()
 
-	for src, want := range map[string]template.HTML{
+	for src, want := range map[string]string{
 		"":                               "",
 		"<div>x</div>\n":                 "<!-- raw HTML omitted -->",
 		"<div>x</div>\n\n<div>y</div>\n": "<!-- raw HTML omitted -->\n<!-- raw HTML omitted -->",
-		"a\n\nb":                         "<div data-floe-text><p>a</p>\n<p>b</p></div>",
+		"a\n\nb":                         "<div MARK><p>a</p>\n<p>b</p></div>",
 	} {
-		if got, err := MarkdownFlow(src); err != nil || got != want {
-			t.Errorf("MarkdownFlow(%q) = %q, %v; want %q", src, got, err, want)
+		for name, draw := range map[string]func(string) (template.HTML, error){"data-floe-text": MarkdownFlow, "data-floe-markdown": Markdown} {
+			if got, err := draw(src); err != nil || string(got) != strings.ReplaceAll(want, "MARK", name) {
+				t.Errorf("drawn in %s, %q = %q, %v; want %q", name, src, got, err, strings.ReplaceAll(want, "MARK", name))
+			}
 		}
 	}
 	for name, fns := range map[string]template.FuncMap{"part.html": partFuncsAll(), "page.html": pageFuncs()} {
@@ -52,7 +56,7 @@ func TestMarkdownFlow(t *testing.T) {
 			t.Fatalf("%s's markdown is not a func(string) (template.HTML, error)", name)
 		}
 		got, err := md("a")
-		if want := map[string]template.HTML{"part.html": "<div data-floe-text><p>a</p></div>", "page.html": "<p>a</p>"}[name]; err != nil || got != want {
+		if want := map[string]template.HTML{"part.html": "<div data-floe-text><p>a</p></div>", "page.html": "<div data-floe-markdown><p>a</p></div>"}[name]; err != nil || got != want {
 			t.Errorf("%s's markdown = %q, %v; want %q", name, got, err, want)
 		}
 	}

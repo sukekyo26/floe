@@ -31,7 +31,7 @@ var bandKit = map[string]string{
 	"templates/mine/example.yaml": "lang: en\ntemplate: mine\n",
 }
 
-// bandText is Markdown in a band: a link, a line's code, a quote holding both, and a fenced block wide enough to scroll;
+// bandText is Markdown in a band, the template's own (in floe's box of it, data-floe-markdown): a link, a line's code, a quote holding both, and a fenced block wide enough to scroll;
 // and a part text, a heading over a link and a line's code.
 var bandText = "lang: en\ntemplate: mine\ntitle: Band\ntext: |\n  A [link](https://example.com/) and `inline`.\n\n" +
 	"  > A quote with [a link](https://example.com/) and `code`.\n\n  ```\n  fenced" + strings.Repeat(" wide", 60) + "\n  ```\n" +
@@ -72,9 +72,9 @@ const measureBand = `(() => {` + colours + `
     if (rgba(s.backgroundColor)[3] === 0) out.push('note: no ground of its own');
     if (s.color !== want) out.push('note: colour ' + s.color + ', want ' + want);
   }
-  const line = document.querySelector('header > p > code');
+  const line = document.querySelector('header > [data-floe-markdown] > p > code');
   if (!framed(line)) out.push('a line\'s code: no frame, ' + getComputedStyle(line).boxShadow);
-  const fenced = document.querySelector('header > pre > code');
+  const fenced = document.querySelector('header > [data-floe-markdown] > pre > code');
   if (framed(fenced)) out.push('fenced code: frame ' + getComputedStyle(fenced).boxShadow);
   // A text has no ground of its own: its Markdown is in the band's text colour, and its heading takes no mark of the
   // page's (retro's stripes, which its band.css leaves out).
@@ -124,7 +124,7 @@ func TestUIBand(t *testing.T) { //nolint:paralleltest // the browser tests share
 	for slug, page := range pages {
 		s.floe(t, "publish", s.write(t, slug+".yaml", page), "--slug", slug)
 		s.b.navigate("/a/" + slug + "/?raw")
-		s.b.until("the band", "document.querySelector('header > pre') !== null")
+		s.b.until("the band", "document.querySelector('header > [data-floe-markdown] > pre') !== null")
 		if got := s.b.eval(measureBand); got != "" {
 			t.Errorf("in the band of %s:\n  %s", slug, strings.ReplaceAll(got, "\n", "\n  "))
 		}
