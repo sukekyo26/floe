@@ -156,6 +156,7 @@ func TestShapeMistakes(t *testing.T) {
 		{"  - label: { text: a, x: 1 }", "s.yaml:5:14: missing property 'y'"},
 		{"  - circle: { name: c, cx: 1, cy: 1, r: 1 }\n  - label: { text: a, x: 1, in: [c] }", "s.yaml:6:14: properties 'y' required, if 'x' exists"},
 		{"  - edge: { from: [1, 2, 3], to: b }", "s.yaml:5:19: maxItems: got 3, want 2"},
+		{"  - axis: { x1: 1, x2: 9, y: 1, ticks: [], labels: Between }", "s.yaml:5:52: value must be one of 'at', 'between'"},
 		{"  - box: { x: 1, y: 1, rows: [a], zz: 1, aa: 1, mm: 1 }", "s.yaml:5:12: additional properties 'aa', 'mm', 'zz' not allowed"},
 		// A label placed by its region takes no anchor; one at x and y does.
 		{"  - circle: { name: c, cx: 100, cy: 100, r: 80 }\n  - label: { text: a, in: [c], anchor: start }", "s.yaml:6:14: properties 'x' required, if 'anchor' exists"},
@@ -278,7 +279,13 @@ func TestLayoutMistakes(t *testing.T) {
 			"  - frame: { x: 10, y: 10, w: 250, h: 150 }\n  - frame: { x: 300, y: 100, w: 150, h: 40 }\n  - box: { x: 0, y: 140, w: 80, h: 40, rows: [A] }",
 			"s.yaml:6:5: frame 300,100 150x40 sticks out of the 400x200 canvas\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150",
 		},
-		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, \"\"], [160, \"\"]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", `s.yaml:6:5: box "a" overlaps label 155,108 10x18`},
+		{"  - label: { text: \"\", x: 160, y: 117 }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", `s.yaml:6:5: box "a" overlaps label 155,108 10x18`},
+		// A tick of no text in any language is a mark alone: nothing overlaps it or sticks out (an edge through it: f13).
+		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, \"\"], [160, \"\"]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
+		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, { en: \"\", ja: \"\" }], [160, { en: \"\", ja: \"\" }]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
+		{"  - axis: { x1: 10, x2: 396, y: 100, ticks: [[10, \"\"], [396, \"\"]] }", ""},
+		// A tick's text between ticks is checked as at one.
+		{"  - axis: { x1: 20, x2: 380, y: 100, ticks: [[20, Mon], [140, \"\"]], labels: between }\n  - box: { name: a, x: 60, y: 105, w: 40, h: 30, rows: [a] }", `s.yaml:6:5: box "a" overlaps label "Mon"`},
 		{"  - box: { x: 20, y: 20, rows: [[{ en: \"あいう\", ja: \"abcde\" }, main code]] }\n  - box: { name: b, x: 30, y: 30, w: 80, h: 30, rows: [b] }", `s.yaml:6:5: box "abcde" overlaps box "b"`},
 		{
 			"  - circle: { name: A, cx: 150, cy: 100, r: 20 }\n  - label: { text: a much longer label than fits, in: [A] }\n  - label: { text: \"\", in: [A] }",
@@ -779,6 +786,8 @@ func TestCanvasLeftOut(t *testing.T) {
 		{"line: { x1: 20, y1: 150, x2: 400, y2: 150 }", `viewBox="0 0 420 170"`},
 		// The axis reaches across, its tick's text down.
 		{"axis: { x1: 20, x2: 500, y: 100, ticks: [[20, a]] }", `viewBox="0 0 520 146"`},
+		// A tick of no text reaches no further than its mark.
+		{"axis: { x1: 20, x2: 300, y: 100, ticks: [[20, \"\"], [300, \"\"]] }", `viewBox="0 0 320 125"`},
 		{"dot: { cx: 50, cy: 300 }", `viewBox="0 0 140 327"`},
 		// The frame reaches across, its heading below its height.
 		{"frame: { x: 140, y: 100, w: 200, h: 20, label: Store }", `viewBox="0 0 360 147"`},
@@ -903,6 +912,26 @@ func TestInspect(t *testing.T) {
 	for _, want := range []string{`bar "back" 20,43 180x14`, `label "back" 205,41 38.8x18`} {
 		if mistakes != "" || !strings.Contains(got, want) {
 			t.Errorf("inspect = %s %s, want %s", got, mistakes, want)
+		}
+	}
+}
+
+// A tick's text is at the tick, or with labels between, halfway to the nearest tick right of it, else to x2, however
+// the ticks are written; a tick of no text in any language is a mark alone.
+func TestAxisTickText(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ axis, want string }{
+		{`ticks: [[20, { en: "", ja: "月" }], [140, ""]]`, `label "月" 9,108 22x18` + "\n"},
+		{`ticks: [[260, Wed], [20, Mon], [140, Tue]], labels: between`, "label \"Wed\" 304.2,108 31.6x18\nlabel \"Mon\" 64.2,108 31.6x18\nlabel \"Tue\" 184.2,108 31.6x18\n"},
+		{`ticks: [[20, Mon], [20, ""], [140, ""]], labels: between`, `label "Mon" 64.2,108 31.6x18` + "\n"},
+		{`ticks: [[20, Mon], [380, End]], labels: between`, "label \"Mon\" 184.2,108 31.6x18\nlabel \"End\" 364.2,108 31.6x18\n"},
+		{`ticks: [[400, A]], labels: between`, `label "A" 381.4,108 17.2x18` + "\n"},
+		{`ticks: [[20, Mon], [140, Tue]], labels: at`, "label \"Mon\" 4.2,108 31.6x18\nlabel \"Tue\" 124.2,108 31.6x18\n"},
+	} {
+		src := "width: 420\nheight: 150\ntitle: T\nparts:\n  - axis: { x1: 20, x2: 380, y: 100, " + c.axis + " }\n"
+		if got, mistakes := draw(t, src, inspect); mistakes != "" || got != c.want {
+			t.Errorf("%s\n  placed %q %s\n  want %q", c.axis, got, mistakes, c.want)
 		}
 	}
 }
@@ -1336,6 +1365,27 @@ parts:
   - edge: { from: [302, 62], to: [310, 62], end: none }
 `, `edge decide→design M296,44 H316 V80 H328
 edge [302,62]→[310,62] M302,62 H310`},
+		// f12: a tick of no text is no label to keep off: the run moves to the nearer place.
+		{`width: 320
+height: 230
+title: f12
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 220, y: 174, w: 60, h: 30, rows: [b] }
+  - edge: { from: a, fromSide: bottom, to: b, toSide: top }
+  - axis: { x1: 10, x2: 300, y: 95, ticks: [[150, ""]] }
+  - line: { x1: 10, y1: 112, x2: 300, y2: 112 }
+`, `edge a→b M50,50 V108 H250 V174`},
+		// f13: an edge runs through a tick of no text, no label.
+		{`width: 400
+height: 200
+title: f13
+parts:
+  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }
+  - box: { name: b, x: 140, y: 150, w: 60, h: 30, rows: [b] }
+  - edge: { from: a, fromSide: bottom, to: b, toSide: top }
+  - axis: { x1: 10, x2: 390, y: 95, ticks: [[50, ""], [170, ""]] }
+`, `edge a→b M50,50 V104 H170 V150`},
 		// f11: the place nearer runs over a dot: it moves the other way.
 		{`width: 500
 height: 140
