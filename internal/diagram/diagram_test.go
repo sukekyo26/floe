@@ -927,8 +927,9 @@ func TestInspect(t *testing.T) {
 			"  - circle: { name: b, cx: " + c.b + ", cy: 200, r: 170 }\n  - circle: { name: c, cx: " + c.c + ", cy: 335, r: 170 }\n" +
 			"  - label: { text: \"cli, i18n\", in: [a, b, c] }\n"
 		got, mistakes = draw(t, src, inspect)
-		if want := `label "cli, i18n" ` + c.want + `,220 74.8x18 in a, b, c`; mistakes != "" || !strings.Contains(got, want) {
-			t.Errorf("circles at %s: inspect = %s %s, want %s", c.a, got, mistakes, want)
+		_, label, _ := strings.Cut(got, "\nlabel ")
+		if want := `"cli, i18n" ` + c.want + ",220 74.8x18 in a, b, c\n"; mistakes != "" || label != want {
+			t.Errorf("circles at %s: inspect = %q %s, want its label %q", c.a, got, mistakes, want)
 		}
 	}
 	// A bar is drawn from the smaller of its x, its label right of it, whichever is written first.
