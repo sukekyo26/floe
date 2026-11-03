@@ -186,8 +186,7 @@ func TestRebuildKeepsVersions(t *testing.T) {
 }
 
 // A page replaced goes on from the numbers of the one before, whatever its content, keeping none of its versions; one
-// removed starts again at 1. A page of no versions, as published before pages had them, gets one whatever its
-// content, of the time it was published before; one replaced, or of another publish after, of now.
+// removed starts again at 1. A page of no versions gets one whatever its content, of the time it is published.
 func TestVersionsNumbers(t *testing.T) {
 	t.Parallel()
 
@@ -217,34 +216,15 @@ func TestVersionsNumbers(t *testing.T) {
 		t.Errorf("removed: versions %v, want [1]", got)
 	}
 	const long = "2026-01-02T03:04:05.000Z"
-	unversioned := func(slug string) *store.Meta {
-		m := s.ReadMeta(slug)
-		m.Versions, m.UpdatedAt = nil, long
-		if err = s.WriteMeta(slug, m); err != nil {
-			t.Fatal(err)
-		}
-		return m
+	was := s.ReadMeta("d")
+	was.Versions, was.UpdatedAt = nil, long
+	if err = s.WriteMeta("d", was); err != nil {
+		t.Fatal(err)
 	}
-	was := unversioned("d")
 	publish(t, s, dw, "d.yaml", titled("B"), map[string][]byte{"a.png": png}, store.Options{})
-	m := s.ReadMeta("d")
-	if len(m.Versions) != 1 || m.Versions[0].N != 1 || m.Versions[0].At != long || m.UpdatedAt != long || m.CreatedAt != was.CreatedAt {
+	if m := s.ReadMeta("d"); len(m.Versions) != 1 || m.Versions[0].N != 1 || m.UpdatedAt == long || m.Versions[0].At != m.UpdatedAt ||
+		m.CreatedAt != was.CreatedAt {
 		t.Errorf("of no versions: %+v", m)
-	}
-	publish(t, s, dw, "d.yaml", titled("C"), map[string][]byte{"a.png": png}, store.Options{})
-	if m := s.ReadMeta("d"); m.UpdatedAt == long || m.Versions[1].At != m.UpdatedAt {
-		t.Errorf("a publish after: %+v", m)
-	}
-	unversioned("d")
-	e, err = s.PrepareData(dw, up, store.Options{Force: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = s.Save(e); err != nil {
-		t.Fatal(err)
-	}
-	if m := s.ReadMeta("d"); m.UpdatedAt == long || m.Versions[0].At != m.UpdatedAt {
-		t.Errorf("replaced, of no versions: %+v", m)
 	}
 }
 

@@ -141,8 +141,6 @@ type Entry struct {
 	from string
 	// named is what a link without --slug is named after, for Save to pick its slug again: "" else.
 	named string
-	// replaced tells that settle found Prev another's, which this publish replaces.
-	replaced bool
 }
 
 // Upload is a data file sent for a publish: what PrepareData checks and builds a stored page of, without
@@ -263,7 +261,7 @@ func imagesApart(file string, images map[string][]byte) error {
 func (s *Store) storedPage(file string, src []byte, opts Options, from string) (*Entry, error) {
 	e := &Entry{
 		Slug: *opts.Slug, Meta: seedMeta("", file, src, opts.theme()), Source: src, Page: nil, Images: nil,
-		Prev: nil, Warnings: nil, opts: opts, from: from, named: "", replaced: false,
+		Prev: nil, Warnings: nil, opts: opts, from: from, named: "",
 	}
 	if err := e.settle(s.ReadMeta(e.Slug)); err != nil {
 		return nil, err
@@ -326,7 +324,7 @@ func (s *Store) PrepareLink(
 	}
 	e := &Entry{
 		Slug: slug, Meta: seedMeta(path, path, data, opts.theme()), Source: nil, Page: nil, Images: nil, Prev: nil,
-		Warnings: warnings, opts: opts, from: from, named: named, replaced: false,
+		Warnings: warnings, opts: opts, from: from, named: named,
 	}
 	e.Meta.Folder = folder
 	// A folder's own title, as a data file's title: is: where it is in its repository, its repository's name at its
@@ -372,7 +370,6 @@ func (e *Entry) settle(prev *Meta) error {
 	// A folder's link lost its folder would serve its parent's files.
 	e.Meta.Folder = was.Folder
 	e.Prev = prev
-	e.replaced = replacing
 	return nil
 }
 
@@ -611,14 +608,7 @@ func (s *Store) nextVersion(e *Entry, mark string, pre *pressed) *pressed {
 	}
 	versions := slices.Clone(e.Meta.Versions)
 	var kept *pressed
-	if len(versions) == 0 {
-		// LIMIT: of pages published before pages had versions only, whose first takes the time of the publish before,
-		// so that publishing them all again does not move them up the list; one of other content too keeps the time
-		// before. Drop it once each has a version.
-		if now != nil && !e.replaced {
-			e.Meta.UpdatedAt = now.UpdatedAt
-		}
-	} else {
+	if len(versions) > 0 {
 		last := versions[len(versions)-1]
 		if last.Mark == mark {
 			return nil
