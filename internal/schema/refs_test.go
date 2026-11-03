@@ -76,25 +76,29 @@ func TestCompileRefs(t *testing.T) {
 		// A doc whose root is not an object is not filled.
 		{"a part of true", `{"properties": {"a": {"$ref": "floe:///parts/t.json#/$defs/x"}}}`, notFound("parts/t.json", "floe:///parts/t.json#/$defs/x")},
 	} {
-		first := ""
-		for i := range 20 {
-			_, err := schema.Compile(tmplID, "schema.json", []byte(tt.src), refParts(t))
-			got := told(err)
-			if i == 0 {
-				first = got
-			} else if got != first {
-				t.Fatalf("%s: run %d told\n%s\nrun 0\n%s", tt.name, i, got, first)
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			first := ""
+			for i := range 20 {
+				_, err := schema.Compile(tmplID, "schema.json", []byte(tt.src), refParts(t))
+				got := told(err)
+				if i == 0 {
+					first = got
+				} else if got != first {
+					t.Fatalf("run %d told\n%s\nrun 0\n%s", i, got, first)
+				}
 			}
-		}
-		if tt.name == "98 of both" {
-			if n := strings.Count(first, "\n") + 1; n != 98 {
-				t.Errorf("98 of both told %d mistakes", n)
+			if tt.name == "98 of both" {
+				if n := strings.Count(first, "\n") + 1; n != 98 {
+					t.Errorf("98 of both told %d mistakes", n)
+				}
+				return
 			}
-			continue
-		}
-		if first != tt.want {
-			t.Errorf("%s: Compile told\n%s\nwant\n%s", tt.name, first, tt.want)
-		}
+			if first != tt.want {
+				t.Errorf("Compile told\n%s\nwant\n%s", first, tt.want)
+			}
+		})
 	}
 }
 
@@ -122,8 +126,8 @@ func TestCompileRefsStop(t *testing.T) {
 	}
 }
 
-// compile tells at most 100 mistakes, tells a URL refused once however much inside it is filled, and leaves
-// the resources it was given as they were.
+// compile tells at most 100 mistakes and leaves the resources it was given as they were (a URL refused is told
+// once at the most compiles: TestCompileTimes).
 func TestCompileRefsBounds(t *testing.T) {
 	t.Parallel()
 
@@ -135,14 +139,6 @@ func TestCompileRefsBounds(t *testing.T) {
 	r := usererr.Tell(i18n.EnglishCatalog(), err)
 	if r.Failure != "" || len(r.Mistakes) != 100 {
 		t.Errorf("101 missing $defs told %d mistakes, failure %q", len(r.Mistakes), r.Failure)
-	}
-	refs = make([]string, 0, 1000)
-	for i := range 1000 {
-		refs = append(refs, fmt.Sprintf(`"p%d": {"$ref": "https://example.com/b.json#/$defs/h%d"}`, i, i))
-	}
-	_, err = schema.Compile(tmplID, "schema.json", []byte(`{"properties": {`+strings.Join(refs, ", ")+`}}`), nil)
-	if got := told(err); got != "schema.json: https://example.com/b.json"+noURL {
-		t.Errorf("1000 $defs in a URL refused told %q", got)
 	}
 	res := refParts(t)
 	src := []byte(`{"properties": {"a": {"$ref": "floe:///parts/q.json"}}}`)

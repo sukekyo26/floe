@@ -754,40 +754,46 @@ func TestGraphRandom(t *testing.T) {
 		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 91},
 		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 88},
 	} {
-		rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1]))       //nolint:gosec // G404: graphs to try, no secret
-		loops := rand.New(rand.NewPCG(c.seed[0]+10, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
-		groups := rand.New(rand.NewPCG(c.seed[0]+20, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
-		lanes := rand.New(rand.NewPCG(c.seed[0]+30, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
-		levels := rand.New(rand.NewPCG(c.seed[0]+40, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
-		laidOut := 0
-		for i := range c.graphs {
-			g := randomGraph(rnd, c.direction)
-			for k := range g.Edges {
-				if c.every {
-					g.Edges[k].Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(10)), "ja": strings.Repeat("字", rnd.IntN(16))}
+		// A name of no mark -run reads as a pattern: down-1-2 (down for the direction left out); -run
+		// TestGraphRandom/down-1-2$ picks that one alone, as down-1 is down-13-14 and down-17-18 too.
+		t.Run(fmt.Sprintf("%s-%d-%d", cmpOr(c.direction, "down"), c.seed[0], c.seed[1]), func(t *testing.T) {
+			t.Parallel()
+
+			rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1]))       //nolint:gosec // G404: graphs to try, no secret
+			loops := rand.New(rand.NewPCG(c.seed[0]+10, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
+			groups := rand.New(rand.NewPCG(c.seed[0]+20, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
+			lanes := rand.New(rand.NewPCG(c.seed[0]+30, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
+			levels := rand.New(rand.NewPCG(c.seed[0]+40, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
+			laidOut := 0
+			for i := range c.graphs {
+				g := randomGraph(rnd, c.direction)
+				for k := range g.Edges {
+					if c.every {
+						g.Edges[k].Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(10)), "ja": strings.Repeat("字", rnd.IntN(16))}
+					}
+				}
+				addLoops(loops, g, c.every)
+				if c.level != "plain" {
+					addGroups(groups, g)
+				}
+				if c.lanes {
+					inLanes(lanes, g)
+				}
+				if c.level != "" {
+					if addLevels(levels, g); levelTold(g) {
+						continue
+					}
+					laidOut++
+				}
+				if fault := graphFault(g); fault != "" {
+					b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
+					t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
 				}
 			}
-			addLoops(loops, g, c.every)
-			if c.level != "plain" {
-				addGroups(groups, g)
+			if laidOut < c.least {
+				t.Errorf("seed %v: %d graphs with level edges laid out, fewer than %d", c.seed, laidOut, c.least)
 			}
-			if c.lanes {
-				inLanes(lanes, g)
-			}
-			if c.level != "" {
-				if addLevels(levels, g); levelTold(g) {
-					continue
-				}
-				laidOut++
-			}
-			if fault := graphFault(g); fault != "" {
-				b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
-				t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
-			}
-		}
-		if laidOut < c.least {
-			t.Errorf("seed %v: %d graphs with level edges laid out, fewer than %d", c.seed, laidOut, c.least)
-		}
+		})
 	}
 }
 
