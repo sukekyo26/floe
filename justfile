@@ -74,20 +74,26 @@ test-browser part:
     esac
     # -race as the run below, so that one test binary is built; a build that fails stops here, not as names missing.
     listed=$(CGO_ENABLED=1 go test -race -list . ./internal/browsertest)
-    tests=$(grep '^Test' <<<"$listed")
-    seen=""
-    IFS='|' read -ra names <<<"{{browser_looks}}"
+    declare -A have=() seen=()
+    for name in $(grep '^Test' <<<"$listed" || true); do have[$name]=1; done
+    if [ ${#have[@]} -eq 0 ]; then
+        echo "test-browser: go test -list tells no test of internal/browsertest" >&2; exit 1
+    fi
+    looks="{{browser_looks}}"
+    # read drops an empty name at the end, which the first test tells.
+    if [[ -z $looks || $looks == *'|' ]]; then
+        echo "test-browser: browser_looks has an empty name" >&2; exit 1
+    fi
+    IFS='|' read -ra names <<<"$looks"
     for name in "${names[@]}"; do
         if [ -z "$name" ]; then
             echo "test-browser: browser_looks has an empty name" >&2; exit 1
-        fi
-        if grep -qxF "$name" <<<"$seen"; then
+        elif [ -n "${seen[$name]:-}" ]; then
             echo "test-browser: $name is twice in browser_looks" >&2; exit 1
-        fi
-        if ! grep -qxF "$name" <<<"$tests"; then
+        elif [ -z "${have[$name]:-}" ]; then
             echo "test-browser: $name is in browser_looks but no test of internal/browsertest; remove it" >&2; exit 1
         fi
-        seen+="$name"$'\n'
+        seen[$name]=1
     done
     CGO_ENABLED=1 go test -race -shuffle=on "$pick" '^({{browser_looks}})$' ./internal/browsertest
 
@@ -159,7 +165,7 @@ shellcheck:
 shfmt-check:
     go tool shfmt -i 2 -ci -d install.sh
 
-# LIMIT: the browser tests run here in test, without -race; CI runs them with -race in its two browser jobs, so a race
-# in them is told by CI alone.
+# LIMIT: test runs every package without the race detector; a race is told by CI alone (test-race-core and the two
+# browser jobs, all with -race).
 # Pre-push gate of CI's checks
 ci: fmt-check vet lint test cover-check vuln mod-verify mod-tidy-check shellcheck shfmt-check

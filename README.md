@@ -58,7 +58,7 @@ data file's mistakes, is in English or Japanese, by the browser's language.
 
 ## Development
 
-`just ci` runs CI's checks, the browser tests without the race detector: CI runs them with it, in two jobs of their own (`just test-browser looks` and `rest`). The browser tests find Chrome at `FLOE_CHROME`, else on `PATH`, and are skipped without it.
+`just ci` runs CI's checks, its tests without the race detector: CI runs them with it, the browser tests in two jobs of their own (`just test-browser looks` and `rest`), so a race is told by CI alone. The browser tests find Chrome at `FLOE_CHROME`, else on `PATH`, and are skipped without it.
 
 ## License
 
