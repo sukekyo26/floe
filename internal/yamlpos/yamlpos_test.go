@@ -90,7 +90,6 @@ func TestParse(t *testing.T) {
 		// A plain value over lines is cut where its last line holds the comment.
 		{"title: Plan\n  draft #1\n", "a.yaml:2:9: " + fmt.Sprintf(cutAt, "Plan draft")},
 		{"x: {a, b: 1}\n", `a.yaml:1:5: "a" is a key without a value in { }: write its value after a ":", or, if a , in text ended the text before it, put that text in quotes`},
-		{"x: {a #c\n , b: 1}\n", "a.yaml:1:7: " + fmt.Sprintf(cutAt, "a")},
 		// A long one shows its end, where the cut is, or its head.
 		{"lead: " + strings.Repeat("a", 50) + "bcd # c\n", "a.yaml:1:61: " + fmt.Sprintf(cutAt, "…"+strings.Repeat("a", 37)+"bcd")},
 		{"a: { " + strings.Repeat("b", 50) + " }\n", "a.yaml:1:6: \"" + strings.Repeat("b", 40) + "…\" is a key without a value in { }: write its value after a \":\", or, if a , in text ended the text before it, put that text in quotes"},
@@ -259,6 +258,70 @@ func TestParseBlockTabs(t *testing.T) {
 		{"after \\x", "a: \"\\x41\"\nb: |\n  \tx\n  y\n", "a.yaml:3:3: " + tab},
 		// goccy/go-yaml's own mistake, as on a file without the check.
 		{"after a tab in double quotes", "a: \"\tx\"\nb: |\n  z\n", "a.yaml:1:9: value is not allowed in this context. map key-value is pre-defined"},
+	} {
+		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
+		if got := told(err); got != tt.want {
+			t.Errorf("%s: Parse(%q) told\n%s\nwant\n%s", tt.name, tt.src, got, tt.want)
+		}
+	}
+}
+
+// A comment in { } or [ ] is refused at its #, before the parser, telling where the innermost flow it is in
+// opens: in a flow closed or left open, a comment that took an end or not. Out of a flow it is the walk's. Past an
+// end that does not close the flow open, or with none, goccy/go-yaml's lexer reads the ends after it otherwise,
+// so those are goccy/go-yaml's.
+func TestParseFlowComments(t *testing.T) {
+	t.Parallel()
+
+	at := func(line, column, openLine, openColumn int) string {
+		return fmt.Sprintf("a.yaml:%d:%d: %s", line, column, i18n.EnglishCatalog().Msg("yaml_flow_comment", openLine, openColumn))
+	}
+	for _, tt := range []struct{ name, src, want string }{
+		{"a comma's", "x: [a, # c ]\n", at(1, 8, 1, 4)},
+		{"one a flow over lines holds right", "ports: [\n  8080,  # admin\n  9090,\n]\n", at(2, 10, 1, 8)},
+		{"one on a line of its own", "x: [\n  # c\n  a,\n]\n", at(2, 3, 1, 4)},
+		{"one that took the end of the innermost, at its start", "items: [\n  {name: Issue #1},\n]\n", at(2, 16, 2, 3)},
+		{"one on a later line that took the end", "tags: [\n  a, Issue #1]\ny: 1\n", at(2, 12, 1, 7)},
+		{"one that took two ends", "x: [\n  {a: 1,\n   b: Issue #1}]\ny: 1\n", at(3, 13, 2, 3)},
+		{"one in a sequence", "x: [a, PR #378, c]\ny: 1\n", at(1, 11, 1, 4)},
+		{"one with a # in it", "x: [a, PR #1 and #2, c]\ny: 1\n", at(1, 11, 1, 4)},
+		{"each of two flows", "x: [a #1]\ny: [b #2]\nz: 1\n", at(1, 7, 1, 4) + "\n" + at(2, 7, 2, 4)},
+		{"over CRLF lines and a tab", "# c\r\nx: [a\tb, Issue #1]\r\ny: 1\r\n", at(2, 16, 2, 4)},
+		{"one without a space before it", "x: [a,#c]\n", at(1, 7, 1, 4)},
+		{"one after an alias", "x: [*a #1]\n", at(1, 8, 1, 4)},
+		{"one in a flow closed", "x: {a #c\n , b: 1}\n", at(1, 7, 1, 4)},
+		{"one before an end left out", "x: [a, b #note\ny: 1\n", at(1, 10, 1, 4)},
+		{"one of the author's before an end left out", "x: [a #1\n  , b\ny: 1\n", at(1, 7, 1, 4)},
+		{"one with flows in it", "x: [a #see {b}\ny: 1\n", at(1, 7, 1, 4)},
+		{"one with quotes in it", "x: [a, b # 'quoted]\ny: 1\n", at(1, 10, 1, 4)},
+		{"one with ends of the other kind in it", "x: [a, b # see [doc}\ny: 1\n", at(1, 10, 1, 4)},
+		{"one past an end goccy/go-yaml reads as text", "x: {a: b}}\ny: [c #1\n", at(2, 7, 2, 4)},
+		{"one far past an end left out", "x: [a\ny: 1\nz: 2  # next\n", at(3, 7, 1, 4)},
+		{"one on a line past an end left out", "x: [a\ny: 1 # next\nz: 2\n", at(2, 6, 1, 4)},
+		{"one past a flow closed in one left open", "x: [a\n- [b] #c\n", at(2, 7, 1, 4)},
+		{"one on a later line of a flow left open", "x: [\n  a, # c\n  b\ny: 1\n", at(2, 6, 1, 4)},
+		{"one before ...", "x: [a #1]\n...\ny: [b\n", at(1, 7, 1, 4)},
+		{"one in a flow past ---", "--- [a\n--- [b #c]\n", at(2, 8, 2, 5)},
+		{"one in a second document, before it is refused", "x: 1\n---\ny: [a #c]\n", at(3, 7, 3, 4)},
+		{"one with a mistake of the walk", "title: Plan #1\nx: [a #2]\n", at(2, 7, 2, 4)},
+		{"one before an end that closes, and one in the flow after it", "x: [a #1\ny: ]\nz: [b #2]\n", at(1, 7, 1, 4) + "\n" + at(3, 7, 3, 4)},
+		{"a file whose places are not mended (\\x), at goccy/go-yaml's", "x: \"\\x41\"\ny: [a #c]\n", at(2, 7, 2, 4)},
+		// What is out of a flow, or no comment, passes.
+		{"a # in quotes", "x: [\"Issue #1\", b]\n", ""},
+		{"a # with no space before it", "x: [Issue#1]\n", ""},
+		{"a comment after a flow", "x: [a] # out\n", ""},
+		{"a comment on a line of its own out of a flow", "# out\nx: [a]\n", ""},
+		{"a [ in quotes", "x: \"[a #1\"\n", ""},
+		{"a [ in a | text", "x: |\n  [a #1\n", ""},
+		// goccy/go-yaml's own mistake.
+		{"past --- that leaves a flow", "--- [a\n--- #c\nx: 1\n", "a.yaml:1:5: sequence end token ']' not found"},
+		{"past ... that leaves a flow", "x: [a\n...\n# c\n", "a.yaml:1:4: sequence end token ']' not found"},
+		{"an end too many", "x: [a]]\n", "a.yaml:1:7: value is not allowed in this context"},
+		{"an end left out, no comment", "x: [a\ny: 1\n", "a.yaml:2:1: ',' or ']' must be specified"},
+		{"an end left out over CRLF lines and a tab, at goccy/go-yaml's", "# c\r\nx: [a\tb, c\r\ny: 1\r\n", "a.yaml:4:1: ',' or ']' must be specified"},
+		{"a comment past an end too many", "x: [a]]\ny: [b, c]\nz: 1 # d\n", "a.yaml:1:7: value is not allowed in this context"},
+		{"a comment past an end with none open", "x: ]\ny: [b]\nz: 1 # d\n", "a.yaml:1:4: could not find '[' character corresponding to ']'"},
+		{"a comment past an end of the other kind", "x: {a: [b}, c #d\n", "a.yaml:1:10: ',' or ']' must be specified"},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
 		if got := told(err); got != tt.want {

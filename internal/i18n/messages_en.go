@@ -16,6 +16,7 @@ var messagesEN = map[string]string{
 	"yaml_no_anchors":           "anchors, aliases, merge keys (<<) and tags are not supported; write the value out",
 	"yaml_block_tab":            "a line of a | or > text begins with spaces and a tab, which YAML 1.2 reads as text, but floe as indentation, reading the lines after it otherwise: begin the line without the tab, or write the text's indentation after the | or > (like |2)",
 	"yaml_comment_cut":          "a # after a space began a YAML comment, which may have cut the value short, to %s: put the value in quotes if the # is part of it, or write the comment on a line of its own",
+	"yaml_flow_comment":         "a # in { } or [ ] begins a YAML comment, which floe does not take there (in the { } or [ ] opened at %d:%d): put the value in quotes if the # is part of it, move the comment out of the { } or [ ], or close the { } or [ ] if it was left open",
 	"yaml_flow_key_alone":       "%q is a key without a value in { }: write its value after a \":\", or, if a , in text ended the text before it, put that text in quotes",
 	"yaml_key_not_text":         "a key is a name: write %s as text, in quotes",
 	"yaml_not_finite":           "%s is not a value a YAML file can hold; write a number in digits, or quote it as text",

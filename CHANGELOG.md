@@ -304,6 +304,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Refuse a comment in `{ }` or `[ ]`, in every YAML file floe reads, a comment on a line of its own and one in a
+  flow over lines too: YAML reads a `#` there as a comment to the line's end, the `}` or `]` on it too, which the
+  YAML library told only as missing, at the `[` or the next line. floe tells it at the `#`, and where the innermost
+  `{ }` or `[ ]` it is in opens.
+
 - Change how a template's own Markdown, an item of format markdown and `{{markdown}}` in `page.html`, is drawn: in a
   `<div data-floe-markdown>`, its blocks `--floe-room` apart and its headings as large as a text's (1.2em and 1.1em).
   `page.css` and the theme's `base.css` still reach in it; a `page.css` that names its blocks as the children of the

@@ -189,13 +189,14 @@ func Text(n ast.Node) (text string, ok bool, err error) {
 }
 
 // Parse reads src as one YAML document and returns its body, or ErrEmpty when src holds none. A byte order
-// mark at its start is left out, as YAML 1.2 reads it. A syntax error is goccy/go-yaml's (library). A
-// second document, or text a second --- drops, is refused at its start, and nothing in it is walked.
+// mark at its start is left out, as YAML 1.2 reads it. Before it is parsed, a comment in { } or [ ] is refused
+// (flowComments). A syntax error is goccy/go-yaml's (library). A second document, or text a second --- drops,
+// is refused at its start, and nothing in it is walked.
 // Else one walk of the body refuses, all together, sorted: anchors, aliases, merge keys and tags, not
 // walking what they hold; a key that is not text, as goccy/go-yaml or YAML 1.2 reads it; a value or a text
-// key a comment may have cut short; a key in { } without a value, but one refused already; and a plain value
-// that YAML 1.2 reads otherwise than goccy/go-yaml (017, 1e3), or as a number JSON has none for (.inf, .nan)
-// or floe cannot hold.
+// key out of { } and [ ] a comment may have cut short; a key in { } without a value, but one refused as not
+// text; and a plain value that YAML 1.2 reads otherwise than goccy/go-yaml (017, 1e3), or as a number JSON has
+// none for (.inf, .nan) or floe cannot hold.
 func Parse(file string, src []byte) (ast.Node, error) {
 	body, err := document(file, src)
 	if err != nil {
@@ -227,8 +228,14 @@ func document(file string, src []byte) (ast.Node, error) {
 	// Read once, for blockTabs, the parser and dropped: the parser changes its nodes, not the tokens' types
 	// and places, which dropped reads after it.
 	tks := lexer.Tokenize(string(src))
-	begins := starts(src, tks)
+	// blockTabs first: past a text it refuses, goccy/go-yaml reads the lines after it otherwise, some as comments.
+	// LIMIT: so the comments in flows are not told with its mistakes, but once they are mended, as the tokens past
+	// them cannot be trusted; nothing gathers them.
 	if err := blockTabs(file, src, tks); err != nil {
+		return nil, err
+	}
+	places := textpos.Each(src, starts(src, tks))
+	if err := flowComments(file, tks, places); err != nil {
 		return nil, err
 	}
 	doc, err := parser.Parse(tks, 0)
@@ -238,7 +245,7 @@ func document(file string, src []byte) (ast.Node, error) {
 		return nil, library(file, err)
 	}
 	// After the parser, which reads goccy/go-yaml's columns to tell the indentation.
-	mend(src, tks, begins)
+	mend(tks, places)
 	var body ast.Node
 	var head *Pos // a directive heads the document after it
 	for _, d := range doc.Docs {
@@ -309,6 +316,53 @@ func blockTabs(file string, src []byte, tks token.Tokens) error {
 	return found.Sorted().Err()
 }
 
+// flowComments refuses each comment in a { } or [ ], before the parser, as blockTabs: YAML reads a # there as a
+// comment to the line's end, taking a flow's end with it when one is on the line, which goccy/go-yaml then refuses
+// as missing, not where it went. One a flow holds right is refused too, for one rule, and one past a flow whose
+// end was left out, which the mistake tells by where the innermost flow it is in opens. A flow is closed by its own
+// end, and a document's --- or ... leaves those open. Past an end of the other kind, or with none open, nothing is
+// told: goccy/go-yaml's lexer reads the ends after it otherwise (an end as text), so what follows is left to its
+// parser to refuse. Places are those of places, goccy/go-yaml's without them.
+// LIMIT: a file it refuses is not parsed, so the mistakes the walk finds (a # in a value out of a flow, a number,
+// a key) are told once these are mended, as past blockTabs; tell them at once if one comes to need it.
+func flowComments(file string, tks token.Tokens, places []textpos.Place) error {
+	place := func(i int) (int, int) {
+		if i < len(places) {
+			return places[i].Line, places[i].Column
+		}
+		return tks[i].Position.Line, tks[i].Position.Column
+	}
+	var found usererr.List
+	var open []int // the token of each flow open
+	for i, tk := range tks {
+		switch tk.Type { //nolint:exhaustive // the flows' starts and ends, documents' bounds, and comments
+		case token.MappingStartType, token.SequenceStartType:
+			open = append(open, i)
+		case token.MappingEndType, token.SequenceEndType:
+			n := len(open)
+			if n == 0 || !closes(tks[open[n-1]].Type, tk.Type) {
+				return found.Err()
+			}
+			open = open[:n-1]
+		case token.DocumentHeaderType, token.DocumentEndType:
+			open = nil
+		case token.CommentType:
+			if n := len(open); n > 0 {
+				l, c := place(i)
+				ol, oc := place(open[n-1])
+				found = append(found, usererr.NewAt(file, l, c, "yaml_flow_comment", ol, oc))
+			}
+		}
+	}
+	return found.Err()
+}
+
+// closes is whether end is the end of a flow that start begins.
+func closes(start, end token.Type) bool {
+	return start == token.MappingStartType && end == token.MappingEndType ||
+		start == token.SequenceStartType && end == token.SequenceEndType
+}
+
 // starts returns the byte of src each of tks begins at, or nil when the text of one is not there: goccy/go-yaml's
 // own lines and columns drift (a tab it does not count, the spaces it drops after a plain value, a CRLF in a
 // comment or in quotes counted twice). A token's Origin is the spaces and line breaks before it and the text it
@@ -340,11 +394,11 @@ func starts(src []byte, tks token.Tokens) []int {
 	return begins
 }
 
-// mend writes over the line and column of each of tks at the byte of src it begins at, none for no begins.
+// mend writes over the line and column of each of tks with its place, none for no places.
 // LIMIT: a token the parser makes, copying a place (a null left out, the value of a tag), keeps goccy/go-yaml's
 // place; OfValue tells a null left out at its key, and floe refuses tags.
-func mend(src []byte, tks token.Tokens, begins []int) {
-	for i, p := range textpos.Each(src, begins) {
+func mend(tks token.Tokens, places []textpos.Place) {
+	for i, p := range places {
 		tks[i].Position.Line, tks[i].Position.Column = p.Line, p.Column
 	}
 }
@@ -407,6 +461,9 @@ func (w *walk) wrapper(n ast.Node) bool {
 	return false
 }
 
+// LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
+// is an item as right as any. Nor is a , in { } before a rest with ": " in it ({ label: 1,500 words: many }
+// reads a key 500 words of the value many). Catch them if a schema comes to take such text.
 func (w *walk) node(n ast.Node) {
 	if w.wrapper(n) {
 		return
@@ -446,8 +503,8 @@ func (w *walk) number(n ast.Node) bool {
 // pair walks a key and its value. A merge key is refused with its value, which is not walked. A key is a
 // name: one that is not text (0x10, ~, 1.0), or that YAML 1.2 reads as a number (1e3, 08), would be read as
 // another name than the one written. It is judged as a key alone, and for a comment that cut it short; a key
-// of a { } written without a ":" after it, which YAML gives an empty value ({ a, b: 1 }), unless refused
-// already, cut short too.
+// of a { } written without a ":" after it, which YAML gives an empty value ({ a, b: 1 }), unless refused as not
+// text.
 func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 	if _, merge := v.Key.(*ast.MergeKeyNode); merge {
 		w.found = append(w.found, New(w.file, Of(v.Key), "yaml_no_anchors"))
@@ -473,11 +530,9 @@ func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 // sees is short. The comment may be the author's, which floe cannot tell from text cut short, so either is
 // refused. A comment after a quoted value cuts nothing. The caller gives it text, and a number it refused,
 // not a number, true or ~ it takes, which the text cut short would not read as: an item that takes text
-// refuses such a number by its type, and one that takes a number gets one.
+// refuses such a number by its type, and one that takes a number gets one. A value in { } or [ ] has no comment
+// after it here: flowComments refuses one before the parser.
 // LIMIT: text cut to a number both read alike (title: 2024 #1) passes; catch it if a schema takes such text.
-// LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
-// is an item as right as any. Nor is a , in { } before a rest with ": " in it ({ label: 1,500 words: many }
-// reads a key 500 words of the value many). Catch them if a schema comes to take such text.
 // LIMIT: a line of a plain value over lines that begins with # is a comment, and the value ends before it
 // (title: Plan, then "  #1 draft"), which is not caught: the comment is not after the value's text.
 func (w *walk) cut(n ast.Node) bool {
