@@ -611,14 +611,7 @@ func (s *Store) nextVersion(e *Entry, mark string, pre *pressed) *pressed {
 	}
 	versions := slices.Clone(e.Meta.Versions)
 	var kept *pressed
-	if len(versions) == 0 {
-		// LIMIT: of pages published before pages had versions only, whose first takes the time of the publish before,
-		// so that publishing them all again does not move them up the list; one of other content too keeps the time
-		// before. Drop it once each has a version.
-		if now != nil && !e.replaced {
-			e.Meta.UpdatedAt = now.UpdatedAt
-		}
-	} else {
+	if len(versions) > 0 {
 		last := versions[len(versions)-1]
 		if last.Mark == mark {
 			return nil
