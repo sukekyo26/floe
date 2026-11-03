@@ -58,15 +58,22 @@ func prepend(t *testing.T, v any, at []string, text string) {
 			v = c[i]
 		}
 	}
+	headed := func(old any) string {
+		s, ok := old.(string)
+		if !ok {
+			t.Fatalf("%v: a field of format markdown that is not a string", at)
+		}
+		return text + s
+	}
 	switch c := v.(type) {
 	case map[string]any:
-		c[at[last]] = text + c[at[last]].(string) //nolint:forcetypeassert // a field of format markdown is a string
+		c[at[last]] = headed(c[at[last]])
 	case []any:
 		i, err := strconv.Atoi(at[last])
 		if err != nil {
 			t.Fatal(err)
 		}
-		c[i] = text + c[i].(string) //nolint:forcetypeassert // a field of format markdown is a string
+		c[i] = headed(c[i])
 	}
 }
 

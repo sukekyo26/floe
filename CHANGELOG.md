@@ -299,6 +299,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change how a template's own Markdown, an item of format markdown and `{{markdown}}` in `page.html`, is drawn: in a
+  `<div data-floe-markdown>`, its blocks `--floe-room` apart and its headings as large as a text's (1.2em and 1.1em).
+  `page.css` and the theme's `base.css` still reach in it; a `page.css` that names its blocks as the children of the
+  element around them (`section > p`) names them in it now (`section > [data-floe-markdown] > p`).
 - Change the management page's corners and text to three steps each: a box's 20px, a middle box's 14px (a menu, the
   suggestions, the error) and a small square's 6px, and 0.72rem for labels, 0.82rem for small text and 0.875rem for
   the body, which was a fixed 14px and now follows the browser's text size (14px at its default). Most sizes move by a few hundredths of a rem; a field's corners are 6px (9px before), the room in a pop-up and a
@@ -488,6 +492,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a heading written in a template's Markdown field (adr's `context` and `decision`, design's `background`,
+  postmortem's `cause`) drawn as large as the page's title, or as a section's heading with its line: such a heading
+  is drawn as in a text, and floe's templates name their own headings outside the box of their Markdown.
 - Fix a tree scrolled sideways on screen ending its ground at the box's width: in default, a long name ran out of the
   white ground onto the grey frame. The tree's list now reaches to its longest line, and a theme's ground on it with
   it; scrolled to the end, the room at the tree's right edge stays.

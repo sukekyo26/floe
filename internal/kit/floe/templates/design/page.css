@@ -4,7 +4,7 @@
 body { line-height: 1.8; padding-block: 0 4rem; }
 .head { padding-block: 2.5rem 1.6rem; border-bottom: var(--rule); }
 .head .floe-column { display: grid; gap: 0.5rem; justify-items: start; }
-h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
+.head h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .byline { display: flex; flex-wrap: wrap; gap: 0 1rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
 .status { border: 2px solid var(--accent); color: var(--accent); font-weight: 800; padding: 0 0.7rem; border-radius: var(--radius-small); }
 .summary { color: var(--muted); font-size: 1.05rem; }
@@ -18,7 +18,7 @@ h1 { font-size: clamp(1.8rem, 4.5vw, 2.4rem); font-weight: 800; }
 .body { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 2.5rem; padding-block: 2rem; }
 main { display: grid; gap: 2.2rem; align-content: start; }
 main section { display: grid; gap: var(--floe-room); }
-main h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px solid var(--accent); }
+main > section > h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px solid var(--accent); }
 /* The question is set as the text around it is, not as the headings are */
 .decision > h3 { margin-top: 0.4rem; font-size: 1.05rem; line-height: inherit; text-wrap: wrap; }
 .non-goals { color: var(--muted); }

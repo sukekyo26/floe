@@ -27,9 +27,11 @@
 :root { --floe-pill-end: 0.75lh; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
-/* A heading in a part or a text is Markdown's, as a part draws none: no larger than a template's own */
-:where([data-floe-part], [data-floe-text]) h1 { font-size: 1.2em; }
-:where([data-floe-part], [data-floe-text]) h2 { font-size: 1.1em; }
+/* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
+   its own outside the box of its Markdown: in Markdown's sizes, smaller than a template's title.
+   LIMIT: 1.2em is larger than the section headings of adr (1.1rem) and postmortem (1.15rem); lower it if that matters */
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.2em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1.1em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -42,10 +44,13 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    with it and takes no face either, and a theme that takes the ground away gives both back; one that sets a colour on
    no ground of its own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
-/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow): its blocks stand --floe-room apart, as parts
-   do, and a part spaces the box alone, not its blocks; Markdown of raw HTML alone draws no box.
-   A template's own Markdown is not in one, which its page.css spaces; nor is what a quote or a list holds, spaced below */
-[data-floe-text] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
+/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow), and a template's own Markdown in a box of
+   its own (Markdown): its blocks stand --floe-room apart, as parts do, and what places the box spaces it alone, not
+   its blocks; Markdown of raw HTML alone draws no box. page.css reaches in a template's box, to arrange it, not in a
+   text's. What a quote or a list holds is spaced below.
+   LIMIT: a template's Markdown placed in a part's box (a note of its own) is spaced so too, not as the part spaces
+   what it holds, and page.css stops at the part's box there; floe's templates place none so */
+[data-floe-text], [data-floe-markdown] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
 a { color: var(--on-face, var(--accent)); }
 /* LIMIT: a part draws a ring of focus or a pick by outline on its box (links' and options' cards): a theme that draws a
    decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
@@ -502,12 +507,12 @@ body { padding-block: 0 4rem; line-height: 1.75; }
 .band { padding-block: 2rem 1.8rem; }
 .band .floe-column { display: grid; gap: 0.4rem; justify-items: start; }
 .kind { font-family: var(--mono); font-size: 0.8rem; letter-spacing: 0.08em; display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; align-items: baseline; }
-h1 { font-size: clamp(1.5rem, 4vw, 2.1rem); line-height: 1.35; }
+.band h1 { font-size: clamp(1.5rem, 4vw, 2.1rem); line-height: 1.35; }
 .summary { font-size: 1.05rem; }
 .authors { font-size: 0.9rem; }
 main { display: grid; gap: 2.2rem; padding-top: 2rem; }
 section { display: grid; gap: var(--floe-room); align-content: start; }
-h2 { font-size: 1.15rem; }
+section > h2 { font-size: 1.15rem; }
 .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr)); gap: 2.5rem; align-items: start; }
 .side { display: grid; gap: 2rem; }
 .cause { border-left: 4px solid var(--accent); padding-left: 1.1rem; }
@@ -543,8 +548,8 @@ h2 { font-size: 1.15rem; }
 <li><span class="date">2030-05-15 09:00</span><div><strong>Review held</strong></div></li>
 </ol></section>
 <div class="side">
-<section class="cause"><h2 id="cause">Cause</h2><p>The certificate was issued by hand two years ago and was not in the renewal job&#39;s list, so nothing renewed it.</p>
-<p>The expiry alert existed but went to a mailbox no one reads since the team was reorganised.</p></section>
+<section class="cause"><h2 id="cause">Cause</h2><div data-floe-markdown=""><p>The certificate was issued by hand two years ago and was not in the renewal job&#39;s list, so nothing renewed it.</p>
+<p>The expiry alert existed but went to a mailbox no one reads since the team was reorganised.</p></div></section>
 <section><h2 id="lessons">Lessons</h2><div class="lessons"><div data-floe-tone="good"><h3 id="went-well">Went well</h3><ul><li>The alert on checkout errors paged within two minutes</li><li>The gateway&#39;s logs named the failing handshake</li></ul></div><div data-floe-tone="bad"><h3 id="went-badly">Went badly</h3><ul><li>Nothing listed the certificates issued by hand</li><li>The expiry warning went to a dead mailbox</li></ul></div><div data-floe-tone="warn"><h3 id="got-lucky">Got lucky</h3><ul><li>It happened on a weekday morning with the whole team at work</li></ul></div>
 </div></section>
 <section><h2 id="actions">Actions</h2><div data-floe-look="table"><table>

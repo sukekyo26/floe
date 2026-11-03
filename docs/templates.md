@@ -75,7 +75,7 @@ It sees:
 | `.Lang` | The page's language: the data file's `lang:` |
 | `.Data` | The data file's items, without `lang`, `template`, `theme` and `title`, which floe reads itself. An item the schema declares but the data leaves out is nil: `{{with .Data.lead}}`, `{{range}}` and `{{if}}` read it as empty, but `len`, `index` and `slice` refuse it (`len of nil pointer`), so write them inside `with`: `{{with .Data.done}}{{len .}}{{else}}0{{end}}`. A part comes drawn (see [Parts in a template](#parts-in-a-template)), as does an item of `"format": "markdown"` (its HTML) or `"format": "image"` (a data URI) |
 | `.Calc` | The values of `computed.yaml`, by name |
-| `markdown` | Markdown text as HTML (`{{markdown .text}}`), raw HTML in it left out; in a part's `part.html`, in a text's box ([parts.md](parts.md)) |
+| `markdown` | Markdown text as HTML (`{{markdown .text}}`), raw HTML in it left out: in `page.html`, in the box of a template's own Markdown (below); in a part's `part.html`, in a text's box ([parts.md](parts.md)) |
 | `markdownLine` | A line of Markdown, such as a table cell, as HTML without a paragraph around it |
 | `num` | A number with its digits grouped (`{{.Calc.total \| num}}` is `1,234,567`), or rounded to significant digits (`{{.Calc.rate \| num 3}}` is `0.00648`) |
 | `bytes` | A count of bytes in a binary unit (`{{.Calc.size \| bytes}}` is `1.5 KiB`) |
@@ -120,7 +120,7 @@ A part draws an item of the data: `floe part list` lists them, and `floe part sh
 
 `page.html` puts the item where it goes, `{{.Data.findings}}`: floe checks it against the part's schema and checks, its mistakes at the data file's lines and columns, and draws it as HTML.
 
-The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. It draws its Markdown in a box of no part (`data-floe-text`), with no ground or tone of its own, so that it takes the face and tone around it; `page.css` and the theme's `base.css` stop at it, and the theme's `markdown.css` draws it as Markdown anywhere. Its headings are no larger than a template's own (1.2em and 1.1em). A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
+The part `text` is Markdown that stands among other parts, where `code` and `terminal` can stand beside it: floe warns of a fenced block of code in it, to be written in `code`. It draws its Markdown in a box of no part (`data-floe-text`), with no ground or tone of its own, so that it takes the face and tone around it; `page.css` and the theme's `base.css` stop at it, and the theme's `markdown.css` draws it as Markdown anywhere. Its headings are in Markdown's sizes (1.2em and 1.1em), as in a template's own Markdown. A field of plain Markdown, where no code part stands, is `{"type": "string", "format": "markdown"}` instead.
 
 A part of any kind, one key naming its kind, refers to `any.json`; a list of them, as report's sections do, refers to it as its items. In a template's root schema:
 
@@ -191,7 +191,7 @@ A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Wr
 - A `format` that tells floe how to draw a text: `markdown`, `html` or `image`. Declare it under `properties` or `items`, where floe follows.
 - A `$ref` names a part or a schema the parts share, whole (`floe:///parts/table.json`), under `properties` or `items`, or a place in the schema's own file (`#/$defs/row`). One out of floe (`file://`, `https://`) or into a part is refused. The root of the schema takes no `$id`.
 
-An item of `"format": "markdown"` is Markdown text: `{{.Data.text}}` draws it as HTML.
+An item of `"format": "markdown"` is Markdown text: `{{.Data.text}}` draws it as HTML, in the box of a template's own Markdown (`<div data-floe-markdown>`), as `{{markdown}}` does. floe's base spaces its blocks `--floe-room` apart, as a text's, and sizes its headings as a text's (1.2em and 1.1em). Unlike a text's box, your `page.css` and the theme's `base.css` reach in it, to arrange it; name your own headings outside it (`header h1`, `section > h2`), not by the element alone (`h2 { … }`), which would reach the author's headings too. Placed in a part's box (a `note`), it is spaced so too, not as the part spaces what it holds, and `page.css` stops at the part's box.
 
 An item of `"format": "html"` goes in as it is, a template's or a part's alike. It leaves no element open nor closes one of the page around it, as a browser reads the page drawn, refused at the item: write each element whole. `page.html`, or the `part.html` of a part holding it, puts it where elements go, not in a text or an attribute (`<title>`, `title="…"`), where HTML does not work.
 

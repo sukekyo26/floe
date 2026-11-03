@@ -27,9 +27,11 @@
 :root { --floe-pill-end: 0.75lh; }
 h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; line-height: 1.35; text-wrap: balance; }
 h3 { font-size: 1.05rem; }
-/* A heading in a part or a text is Markdown's, as a part draws none: no larger than a template's own */
-:where([data-floe-part], [data-floe-text]) h1 { font-size: 1.2em; }
-:where([data-floe-part], [data-floe-text]) h2 { font-size: 1.1em; }
+/* A heading in a part, a text or a template's own Markdown is the author's, as a part draws none and a template names
+   its own outside the box of its Markdown: in Markdown's sizes, smaller than a template's title.
+   LIMIT: 1.2em is larger than the section headings of adr (1.1rem) and postmortem (1.15rem); lower it if that matters */
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h1 { font-size: 1.2em; }
+:where([data-floe-part], [data-floe-text], [data-floe-markdown]) h2 { font-size: 1.1em; }
 p, ul, ol { margin: 0; }
 /* The other blocks with a browser's own margins, so that what places them spaces them, wherever they stand */
 h4, h5, h6, hr, figure, dl, form, menu, fieldset { margin: 0; }
@@ -42,10 +44,13 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    with it and takes no face either, and a theme that takes the ground away gives both back; one that sets a colour on
    no ground of its own writes it as var(--on-face, …) */
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
-/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow): its blocks stand --floe-room apart, as parts
-   do, and a part spaces the box alone, not its blocks; Markdown of raw HTML alone draws no box.
-   A template's own Markdown is not in one, which its page.css spaces; nor is what a quote or a list holds, spaced below */
-[data-floe-text] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
+/* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow), and a template's own Markdown in a box of
+   its own (Markdown): its blocks stand --floe-room apart, as parts do, and what places the box spaces it alone, not
+   its blocks; Markdown of raw HTML alone draws no box. page.css reaches in a template's box, to arrange it, not in a
+   text's. What a quote or a list holds is spaced below.
+   LIMIT: a template's Markdown placed in a part's box (a note of its own) is spaced so too, not as the part spaces
+   what it holds, and page.css stops at the part's box there; floe's templates place none so */
+[data-floe-text], [data-floe-markdown] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
 a { color: var(--on-face, var(--accent)); }
 /* LIMIT: a part draws a ring of focus or a pick by outline on its box (links' and options' cards): a theme that draws a
    decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
@@ -419,10 +424,10 @@ body { padding-block: 2.5rem 4rem; line-height: 1.85; }
 article { padding: clamp(1.25rem, 5vw, 3rem); display: grid; gap: 1.8rem; }
 header { display: grid; gap: 0.4rem; justify-items: start; border-bottom: 3px double var(--line); padding-bottom: 1.4rem; }
 .kind { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); display: flex; gap: 0.8rem; }
-h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
+header h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.4; }
 .deciders { color: var(--muted); font-size: 0.9rem; }
 section { display: grid; gap: var(--floe-room); }
-h2 { font-size: 1.1rem; }
+section > h2 { font-size: 1.1rem; }
 .decision { border-left: 4px solid var(--accent); padding-left: 1.1rem; }
 .alternatives { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
 .alternatives li { border: 1px dashed var(--line); border-radius: var(--radius-small); padding: 0.5rem 0.9rem; }
@@ -441,10 +446,10 @@ h2 { font-size: 1.1rem; }
 <p class="kind">Decision record <span class="number">ADR 0007</span> <span class="date">2030-03-02</span></p>
 <h1 id="keep-sessions-in-the-database-not-in-memory">Keep sessions in the database, not in memory</h1><p class="status superseded" data-floe-part="cell" data-floe-tone="muted">Superseded</p><p class="deciders">Decided by: Platform team</p>
 </header><div class="superseded-by" data-floe-part="note" data-floe-tone="warn"><p>Superseded by: <a href="/a/adr-0012/">ADR 0012</a>: sessions in the cache cluster</p></div>
-<section><h2 id="context">Context</h2><p>The web app keeps each user&#39;s session in the memory of the server that made it. With a second server behind the
-load balancer, a user sent to the other server is logged out (<a href="/a/incident-42/">incident 42</a>).</p></section>
-<section class="decision"><h2 id="decision">Decision</h2><p>Keep sessions in a <code>sessions</code> table in the database we have, as <a href="/a/database-guide/">the database guide</a> asks:
-every server reads the same sessions, and a server going down logs nobody out.</p></section>
+<section><h2 id="context">Context</h2><div data-floe-markdown=""><p>The web app keeps each user&#39;s session in the memory of the server that made it. With a second server behind the
+load balancer, a user sent to the other server is logged out (<a href="/a/incident-42/">incident 42</a>).</p></div></section>
+<section class="decision"><h2 id="decision">Decision</h2><div data-floe-markdown=""><p>Keep sessions in a <code>sessions</code> table in the database we have, as <a href="/a/database-guide/">the database guide</a> asks:
+every server reads the same sessions, and a server going down logs nobody out.</p></div></section>
 <section><h2 id="options-set-aside">Options set aside</h2><ul class="alternatives"><li><span class="title">Sticky sessions at the load balancer</span> <span class="why">A server going down still logs its users out</span></li><li><span class="title">A cache cluster for sessions</span> <span class="why">A new service to run, for <strong>two</strong> servers</span></li></ul></section>
 <section><h2 id="consequences">Consequences</h2><div class="consequences"><div data-floe-tone="good"><h3 id="gains">Gains</h3><ul><li>Any server answers any request</li><li>Sessions outlive a deploy</li></ul></div><div data-floe-tone="bad"><h3 id="costs">Costs</h3><ul><li>One read of the database on every request</li><li>Old sessions need a job to remove them</li></ul></div>
 </div></section>
