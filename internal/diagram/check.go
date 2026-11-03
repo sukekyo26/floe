@@ -309,7 +309,7 @@ func (l *layout) addLabel(lb *label, at string) {
 	if lb.X != nil {
 		i := l.label(at, lb.Text, lb.In, *lb.X, *lb.Y, anchor, plain, lb.Strong)
 		// One out of its region is told so, and not again for a frame's edge it straddles.
-		if lb.In != nil && g.roomOf(l.labels[i]) < 0 {
+		if lb.In != nil && g.roomOf(l.labels[i]) < -eps {
 			l.problem(at, "diagram_label_region", l.labels[i].what, strings.Join(lb.In, ", "))
 			return
 		}
@@ -392,17 +392,20 @@ func grid(lo, hi, size float64) []float64 {
 // the block goes then (its middle and top), 0 for none of room: of points of one room, the one nearest mx, my,
 // the middle of the circles' boxes, as room told by the point of a box nearest a circle is one while the box
 // covers its centre, and a label stays on the axis of a Venn diagram of one when the middle is a point of the grid.
+// Room and nearness less than eps apart are one, so that a float's rounding picks no point; best stays the first of
+// them found.
 // LIMIT: the grid counts 4 apart from where the circles' boxes start, so a middle off it leaves the label off the
 // axis, above or below as the radius goes; try the middle itself first if diagrams come to need it.
+// LIMIT: one is not transitive: what best is told may be eps off the room of the point chosen; none can see it.
 func (g region) most(xs, ys []float64, w, h, mx, my float64) (best, x, top float64) {
 	near := math.Inf(1)
 	for _, px := range xs {
 		for _, py := range ys {
 			switch room := g.roomOf(rect{x: px - w/2, y: py - h/2, w: w, h: h, what: "", at: ""}); {
-			case room > best:
+			case room > best+eps:
 				best, near, x, top = room, math.Hypot(px-mx, py-my), px, py-h/2
-			case room == best:
-				if d := math.Hypot(px-mx, py-my); d < near {
+			case room >= best-eps:
+				if d := math.Hypot(px-mx, py-my); d < near-eps {
 					near, x, top = d, px, py-h/2
 				}
 			}

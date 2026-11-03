@@ -248,7 +248,7 @@ func (l *layout) regionNames(r rect) string {
 	var in []string
 	for _, name := range slices.Sorted(maps.Keys(l.circles)) {
 		c := l.circles[name]
-		if math.Hypot(r.x+r.w/2-c.CX, r.y+r.h/2-c.CY) < c.R {
+		if math.Hypot(r.x+r.w/2-c.CX, r.y+r.h/2-c.CY) < c.R-eps {
 			in = append(in, name)
 		}
 	}
