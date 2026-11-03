@@ -190,18 +190,18 @@ func TestVersion(t *testing.T) {
 	if err := s.cfg.Store.Save(e); err != nil {
 		t.Fatal(err)
 	}
-	v := s.version("d", s.cfg.Store.ReadMeta("d"), "")
-	if s.version("d", s.cfg.Store.ReadMeta("d"), "") != v {
+	v := s.version("d", s.cfg.Store.ReadMeta("d"), "", 0)
+	if s.version("d", s.cfg.Store.ReadMeta("d"), "", 0) != v {
 		t.Error("a version changed with nothing")
 	}
 	write(t, data, "lang: en\ntemplate: mine\nn: 2\n")
-	if s.version("d", s.cfg.Store.ReadMeta("d"), "") == v {
+	if s.version("d", s.cfg.Store.ReadMeta("d"), "", 0) == v {
 		t.Error("the data file saved, the version is the same")
 	}
-	v = s.version("d", s.cfg.Store.ReadMeta("d"), "")
+	v = s.version("d", s.cfg.Store.ReadMeta("d"), "", 0)
 	write(t, filepath.Join(dir, "mine", "page.html"), "<p>{{.Data.n}}</p>\n")
 	s.look()
-	if s.version("d", s.cfg.Store.ReadMeta("d"), "") == v {
+	if s.version("d", s.cfg.Store.ReadMeta("d"), "", 0) == v {
 		t.Error("the drawing read again, the version is the same")
 	}
 	again, _ := watched(t, false)
@@ -300,9 +300,9 @@ func TestVersionOfContent(t *testing.T) {
 		return s.cfg.Store.ReadMeta("p")
 	}
 	old := publish()
-	v := s.version("p", old, "")
+	v := s.version("p", old, "", 0)
 	publish()
-	if s.version("p", s.cfg.Store.ReadMeta("p"), "") == v {
+	if s.version("p", s.cfg.Store.ReadMeta("p"), "", 0) == v {
 		t.Error("a publish after, the version is the same")
 	}
 }
@@ -403,7 +403,7 @@ func TestVersionBeforeContent(t *testing.T) {
 	req.Host = "127.0.0.1:7325"
 	w := httptest.NewRecorder()
 	s.Handler().ServeHTTP(w, req)
-	now := url.QueryEscape(s.version("d", s.cfg.Store.ReadMeta("d"), ""))
+	now := url.QueryEscape(s.version("d", s.cfg.Store.ReadMeta("d"), "", 0))
 	if strings.Contains(w.Body.String(), "since="+now) {
 		t.Error("the page drawn before the save is served with the version after it: its tab would not reload")
 	}
