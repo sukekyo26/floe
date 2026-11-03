@@ -399,7 +399,8 @@ func (g region) most(xs, ys []float64, w, h, mx, my float64) (best, x, top float
 	tries := make([]try, 0, len(xs)*len(ys))
 	for _, px := range xs {
 		for _, py := range ys {
-			tries = append(tries, try{x: px, y: py, room: g.roomOf(rect{x: px - w/2, y: py - h/2, w: w, h: h, what: "", at: ""})})
+			box := rect{x: px - w/2, y: py - h/2, w: w, h: h, what: "", at: ""}
+			tries = append(tries, try{x: px, y: py, room: g.roomOf(box)})
 		}
 	}
 	best, x, y := pick(tries, mx, my)
