@@ -141,6 +141,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/artifacts/{slug}", s.save)
 	mux.HandleFunc("PATCH /api/artifacts/{slug}", s.edit)
 	mux.HandleFunc("DELETE /api/artifacts/{slug}", s.remove)
+	mux.HandleFunc("POST /api/artifacts/{slug}/read", s.markRead)
 	mux.HandleFunc("POST /api/rebuild", s.rebuild)
 	mux.HandleFunc("POST /api/stop", s.stop)
 	mux.HandleFunc("GET /api/artifacts/{slug}/download", s.download)
@@ -264,7 +265,7 @@ type Health struct {
 }
 
 func (s *Server) list(w http.ResponseWriter, r *http.Request) {
-	list, err := s.cfg.Store.List()
+	list, err := s.cfg.Store.List(Viewer)
 	if err != nil {
 		refuse(w, r, err)
 		return

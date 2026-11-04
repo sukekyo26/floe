@@ -59,9 +59,10 @@ The stored page stays as it was drawn: changing the template, a part or a theme 
 
 Each page belongs to the project it is published from. The project is the repository name in git's `origin` URL, else the repository's directory (a worktree joins its main checkout), else the working directory's name.
 
-- The same slug from the same project overwrites the page. stderr says so (`updated "plan" (last published …, title "…")`). If the title changed, a warning suggests another `--slug`. The exit code stays 0.
+- The same slug from the same project overwrites the page. stderr says so (`updated "plan" (last updated …, title "…")`). If the title changed, a warning suggests another `--slug`. The exit code stays 0.
 - A slug published from another project is refused unless `--force`. `--force` starts the page afresh: nothing of the old one is kept.
 - A republish keeps what was set on the management page (title, project, favourite, tags), the description and the creation time. `--title` and `--description` override them. An archived page comes back to the lists.
+- A republish of the same content, with another theme or not, draws the page again, but its update time and its place in the list stay; other content moves them up. A linked file is listed at the later of the file's time and when it was linked, so that linking it again brings it up.
 
 ### Linked files
 

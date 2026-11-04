@@ -401,7 +401,7 @@ func TestSlugIsNoPath(t *testing.T) {
 			t.Errorf("Remove(%q) = %v", slug, err)
 		}
 	}
-	if list, err := s.List(); err != nil || len(list) != 0 {
+	if list, err := s.List("local"); err != nil || len(list) != 0 {
 		t.Errorf("List = %v, %v", list, err)
 	}
 }
@@ -461,7 +461,7 @@ func TestPrepareLink(t *testing.T) {
 	if got := told(err, root); !strings.Contains(got, `unknown template "nope"`) {
 		t.Errorf("told %s", got)
 	}
-	if list, err := s.List(); err != nil || len(list) != 1 || list[0].Title != "i" {
+	if list, err := s.List("local"); err != nil || len(list) != 1 || list[0].Title != "i" {
 		t.Errorf("List = %+v, %v", list, err)
 	}
 }
@@ -666,7 +666,7 @@ func TestPrepareLinkFolder(t *testing.T) {
 		t.Errorf("a folder with --theme: told %s", got)
 	}
 
-	list, err := s.List()
+	list, err := s.List("local")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -701,7 +701,7 @@ func TestPrepareLinkFolder(t *testing.T) {
 	if err = os.RemoveAll(filepath.Join(proj, "docs")); err != nil {
 		t.Fatal(err)
 	}
-	list, err = s.List()
+	list, err = s.List("local")
 	if err != nil || !*list[slices.IndexFunc(list, func(l store.Listed) bool { return l.Slug == "docs" })].Missing {
 		t.Errorf("a folder gone is not missing (%v)", err)
 	}
@@ -742,7 +742,7 @@ func TestFolderNames(t *testing.T) {
 		}
 		got = append(got, e.Slug)
 	}
-	list, err := s.List()
+	list, err := s.List("local")
 	if err != nil {
 		t.Fatal(err)
 	}

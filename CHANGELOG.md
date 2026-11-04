@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add what a viewer has read of the stored pages, kept in `reads.json` in the store. A page opened in its frame tells
+  the frame the version it served, which the frame sends to `POST /api/artifacts/{slug}/read`, and `GET /api/artifacts`
+  gives each stored page `news` (`new` for a page not seen, `version` for a version after the one read) and `version`
+  (the number of its last). Pages from before floe first writes `reads.json` count as read. `GET /api/artifacts` also
+  gives the name of the `template` of a stored page and a linked data file; `floe rebuild` writes it to the meta.json of
+  pages published before.
 - Add the versions of a stored page: a publish of a data file, or images it reads, other than the last version's
   keeps the page before as a version and makes the new page the next one (a rebuild, or a publish of a theme only,
   draws the last again and adds none). A page keeps 20, the oldest going first, those before the last gzipped under
@@ -304,6 +310,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change a stored page's `updatedAt` to move only when a publish adds a version: publishing the same content again, or
+  with another theme only, no longer moves it. `floe publish` says `last updated` in place of `last published`.
+- Change the time a linked file is listed at to the later of the file's time and when it was linked, so that linking
+  it again brings it up the list.
 - Refuse a comment in `{ }` or `[ ]`, in every YAML file floe reads, a comment on a line of its own and one in a
   flow over lines too: YAML reads a `#` there as a comment to the line's end, the `}` or `]` on it too, which the
   YAML library told only as missing, at the `[` or the next line. floe tells it at the `#`, and where the innermost
