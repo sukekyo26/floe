@@ -496,6 +496,7 @@ func TestGraphIconsHands(t *testing.T) {
 	t.Parallel()
 
 	g := iconGraph([]string{"a"})
+	g.Nodes[0].Icon.Label = Text{"en": "a label wider than its icon"}
 	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // none
 	if _, _, err := o.items(); err != nil { //nolint:errcheck // none but this
 		t.Fatal(err)
@@ -532,8 +533,8 @@ func turnsOf(p path) int {
 func TestGraphIconTurns(t *testing.T) {
 	t.Parallel()
 
-	names := []string{"hub", "sink"}
-	var edges []string
+	names, edges := make([]string, 2, 10), make([]string, 0, 16)
+	names[0], names[1] = "hub", "sink"
 	for i := range 8 {
 		names = append(names, fmt.Sprintf("n%d", i))
 		edges = append(edges, fmt.Sprintf("hub>n%d", i), fmt.Sprintf("n%d>sink", i))

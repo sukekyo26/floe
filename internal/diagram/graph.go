@@ -411,7 +411,7 @@ func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, err
 		frames: map[int]rect{}, heads: map[int]rect{}, icons: map[int]*icon{}, onIcon: map[endAt]iconEnd{},
 		moved: map[int]float64{}, settled: map[int]bool{},
 		settling: settling{things: nil, sides: nil, runs: nil, labels: nil},
-		level: map[int][2]string{}, taken: map[int]map[string]bool{},
+		level:    map[int][2]string{}, taken: map[int]map[string]bool{},
 		others: from(o.others, origin),
 	}
 	sides := map[int][2]float64{} // each group's left and right, as laid out down
@@ -947,7 +947,8 @@ func (d *drawing) handsOf(i int, looped bool) []seg {
 	if d.icons[i] != nil { // an edge written by hand ends on the icon, the bottom side under its label
 		at := d.iconAt(i)
 		cx, cy = at.x+at.w/2, at.y+at.h/2
-		b = d.iconDrawn(i)
+		b = at
+		b.h += iconUnder(d.icons[i])
 	}
 	type hand struct {
 		side string
