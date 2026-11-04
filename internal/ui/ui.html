@@ -2820,7 +2820,7 @@
     });
   }
   // Not while typing or with a dialog open
-  const plainKey = (e) => !composing(e) && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog');
+  const plainKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog');
   // The search's words on a missing page's bar, and the bar's new pages, go to the list
   if (framed) {
     // The list and the iframe beside it are of the list's page alone

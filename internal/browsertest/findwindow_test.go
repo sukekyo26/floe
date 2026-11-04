@@ -193,6 +193,7 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the star drawn", "document.querySelector('#find-actions .star').getAttribute('aria-pressed') === 'false'")
 	out = append(out, b.eval("document.activeElement.matches('#find-actions .star')"))
 	// The menu is whole, inside the window of any height it fits, and an answer does not close it.
+	typeFind(b, "beta") // one row: a window far shorter than the menu
 	for _, size := range [][2]int64{{1440, 900}, {400, 800}} {
 		b.size(size[0], size[1], false)
 		b.eval("document.querySelector('" + menu + " summary').click()")
@@ -201,6 +202,7 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 		b.eval("document.querySelector('" + menu + " summary').click()")
 	}
 	b.size(1440, 900, false)
+	typeFind(b, "")
 	b.eval("document.querySelector('" + menu + " summary').click()")
 	change("a", "title: 'Alpha plan!'")
 	b.until("the rows drawn", "document.querySelector('#find-list a').textContent === 'Alpha plan!'")
@@ -248,7 +250,8 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	// Another page's new name leaves this one here.
 	b.eval("document.getElementById('edit-slug').value = 'a2'; document.getElementById('edit-submit').click()")
 	b.until("the edit closed", "!document.getElementById('edit-dialog').open")
-	out = append(out, b.eval("location.pathname + ' ' + window.errs"))
+	// The dialog's close comes after: wait for what it does.
+	out = append(out, b.eval("new Promise((go) => setTimeout(() => go(location.pathname + ' ' + window.errs), 100))"))
 	// This page's: its URL moves, and deleted, it goes to the list.
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "gamma")
@@ -416,6 +419,8 @@ const does = {
   rest: () => { window.pageTakes = false; document.designMode = 'off'; document.activeElement.blur(); },
   post: (keys) => { for (const k of keys) parent.postMessage({ artifactKey: k }, home); },
   go: (url) => { setTimeout(() => { location.href = url; }); },
+  open: () => parent.postMessage({ artifactOpen: '/' }, home),
+  self: () => postMessage({ artifactKeysWanted: true }, '*'),
 };
 </script>`
 
@@ -550,7 +555,12 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 	realKey(b, "/", 0)
 	b.until("the other told", "window.seen.length > 0")
 	inPage(b, "other", "post", "['j']")
-	out = append(out, b.eval("window.seen.join(',') + ' ' + window.done + '.'"))
+	inPage(b, "other", "open", "0")
+	// A page cannot take the keys for itself, the frame not having said so.
+	inPage(b, "other", "self", "0")
+	realKey(b, "/", 0)
+	b.until("the other told again", "window.seen.length > 1")
+	out = append(out, b.eval("window.seen.join(',') + ' ' + window.done + '. ' + location.pathname"))
 	b.eval("other.remove()")
 	// The iframe gone out to another site: nothing it says is heard, the key or the way to move.
 	open("/a/d1/", "frame")
@@ -579,7 +589,7 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"0 Escape:false",
 		"?",
 		"Ctrl+K j:false,k:true", "Ctrl+K j:false,k:true",
-		".", "/:false .", ". /a/d1/", "j",
+		".", "/:false,/:false . /a/d1/", ". /a/d1/", "j",
 	}, "|"))
 }
 
