@@ -198,7 +198,8 @@ const outside = `(() => {
 func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
-	// The diagrams: one of each tone, then every built-in example but aws, which draw every kind of part between them.
+	// The diagrams: one of each tone, then every built-in example but the AWS ones, which draw every kind of part
+	// between them.
 	specs := []string{s.write(t, "tones.yaml", tonesSpec)}
 	var data strings.Builder
 	data.WriteString("template: report\nlang: en\ntitle: Diagrams\nsections:\n  - parts:\n      - diagram:\n")
@@ -207,7 +208,7 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 	}
 	for line := range strings.Lines(s.floe(t, "diagram", "example")) {
 		kind, _, _ := strings.Cut(line, "\t")
-		if kind == "aws" { // its icons are fetched, which a test does not
+		if strings.HasPrefix(kind, "aws") { // their icons are fetched, which a test does not
 			continue
 		}
 		specs = append(specs, s.write(t, kind+".yaml", "example: "+kind+"\n"))

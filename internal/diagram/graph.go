@@ -74,6 +74,7 @@ type graphOut struct {
 	levels   []int          // the edges written level between boxes, but those told (levelMistake)
 	row      []int          // the first box, as written, of each box's row: the boxes level edges stand in one rank
 	facing   map[[2]int]int // where each block stands in its lane (faces)
+	drawn    []drawnBox     // where each box stands, drawn
 	others   []rect         // the parts written by hand a label room makes may stand on (handParts)
 }
 
@@ -83,7 +84,7 @@ type graphOut struct {
 func readGraph(g *graph, at string) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
-		loops: nil, skip: false, levels: nil, row: nil, facing: nil, others: nil,
+		loops: nil, skip: false, levels: nil, row: nil, facing: nil, drawn: nil, others: nil,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)
 	if n := len(out.boxes) + len(out.clusters); n > maxNodes {
@@ -272,7 +273,8 @@ func (o *graphOut) items() ([]item, usererr.List, error) {
 	if right {
 		across = 1
 	}
-	boxes := make([]rect, len(o.boxes))
+	o.drawn = make([]drawnBox, len(o.boxes))
+	inset := 0.0 // how far the first group starts drawing past its rectangles, across the groups
 	hands := make([][]string, len(o.boxes))
 	frames := map[int]rect{}
 	routes := map[int][][2]float64{}
@@ -289,20 +291,22 @@ func (o *graphOut) items() ([]item, usererr.List, error) {
 		}
 		told = append(told, d.headed(o, gr)...)
 		left = d.stand(across, left)
-		d.stretch(0, math.Inf(-1), o.g.X)
-		d.stretch(1, math.Inf(-1), o.g.Y)
-		maps.Copy(routes, d.routes)
+		if gr == o.groups[0] {
+			inset = d.unseen(across)
+		}
+		d.stretch(across, math.Inf(-1), [2]float64{o.g.X, o.g.Y}[across]-inset)
+		d.stretch(1-across, math.Inf(-1), [2]float64{o.g.X, o.g.Y}[1-across]-d.unseen(1-across))
 		for k := range d.spots {
 			labels[k], toward[k] = d.rect(k)
 		}
-		sides := d.handSides()
-		for i, r := range d.boxes {
-			boxes[i], hands[i] = r, sides[i]
+		o.keepBoxes(d, hands)
+		for k := range d.routes {
+			routes[k] = d.gathered(k)
 		}
 		maps.Copy(frames, d.frames)
 	}
 	room := make([]item, 0, len(o.boxes)+len(o.clusters)+len(o.g.Edges))
-	out := o.opened(o.top, boxes, hands, frames, frameSides(frames, routes), room)
+	out := o.opened(o.top, hands, frames, frameSides(frames, routes), room)
 	for k := range o.g.Edges {
 		pts, ok := routes[k]
 		if !ok { // told by readGraph
@@ -320,14 +324,30 @@ func (o *graphOut) items() ([]item, usererr.List, error) {
 	return out, told, nil
 }
 
+// keepBoxes keeps where the boxes of d stand, drawn, and the sides left to edges written by hand.
+func (o *graphOut) keepBoxes(d *drawing, hands [][]string) {
+	sides := d.handSides()
+	for i, r := range d.boxes {
+		hands[i] = sides[i]
+		o.drawn[i].cell = r
+		if d.icons[i] != nil {
+			o.drawn[i].icon = d.iconAt(i)
+		}
+	}
+}
+
 // opened is out with the nodes cs opened as written, a group's frame before the nodes it holds, so that a name used
 // twice is told at the later: each box at its place among boxes, each frame at its group's.
-func (o *graphOut) opened(cs []gref, boxes []rect, hands [][]string, frames map[int]rect, sides map[int][]string,
-	out []item,
-) []item {
+func (o *graphOut) opened(cs []gref, hands [][]string, frames map[int]rect, sides map[int][]string, out []item) []item {
 	for _, c := range cs {
 		if c.box >= 0 {
-			r, n := boxes[c.box], o.boxes[c.box]
+			r, n := o.drawn[c.box].cell, o.boxes[c.box]
+			if n.box.icon != nil {
+				i, at := *n.box.icon, o.drawn[c.box].icon
+				i.X, i.Y, i.graph, i.handSides = at.x, at.y, o.at, hands[c.box]
+				out = append(out, item{n.at, part{Icon: &i}}) //nolint:exhaustruct_v5 // one kind of part
+				continue
+			}
 			b := &box{
 				Name: n.box.Name, X: r.x, Y: r.y, Origin: "", W: r.w, H: r.h, Rows: n.box.Rows, Tone: n.box.Tone,
 				Shape: n.box.Shape, graph: o.at, handSides: hands[c.box],
@@ -337,11 +357,11 @@ func (o *graphOut) opened(cs []gref, boxes []rect, hands [][]string, frames map[
 		}
 		r, g := frames[c.cl], o.clusters[c.cl].g
 		f := &frame{
-			Name: g.Name, X: r.x, Y: r.y, W: r.w, H: r.h, Label: g.Label, Accent: g.Accent, Icon: "", Square: false,
+			Name: g.Name, X: r.x, Y: r.y, W: r.w, H: r.h, Label: g.Label, Accent: g.Accent, Icon: g.Icon, Square: false,
 			graph: o.at, handSides: sides[c.cl],
 		}
 		out = append(out, item{o.clusters[c.cl].at, part{Frame: f}}) //nolint:exhaustruct_v5 // one kind of part
-		out = o.opened(o.clusters[c.cl].kids, boxes, hands, frames, sides, out)
+		out = o.opened(o.clusters[c.cl].kids, hands, frames, sides, out)
 	}
 	return out
 }
@@ -388,16 +408,17 @@ func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, err
 	d := &drawing{
 		right: right, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{},
 		ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
-		frames: map[int]rect{}, heads: map[int]float64{}, level: map[int][2]string{}, taken: map[int]map[string]bool{},
+		frames: map[int]rect{}, heads: map[int]rect{}, icons: map[int]*icon{}, onIcon: map[endAt]iconEnd{},
+		moved: map[int]float64{}, settled: map[int]bool{},
+		settling: settling{things: nil, sides: nil, runs: nil, labels: nil},
+		level:    map[int][2]string{}, taken: map[int]map[string]bool{},
 		others: from(o.others, origin),
 	}
 	sides := map[int][2]float64{} // each group's left and right, as laid out down
 	for _, n := range gr.nodes {
 		switch {
 		case n.box != nil:
-			r := drawnOf(n, right)
-			r.form = outlineOf(r.w, r.h, n.box.Shape)
-			d.boxes[n.of], d.shapes[n.of] = r, n.box.Shape
+			d.addBox(n)
 		case n.kind == kindLeft:
 			sides[n.cl] = [2]float64{n.x, sides[n.cl][1]}
 		case n.kind == kindRight:
@@ -409,8 +430,8 @@ func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, err
 			x: sides[c][0], w: sides[c][1] - sides[c][0], y: gr.frames[c][0], h: gr.frames[c][1] - gr.frames[c][0],
 		}
 		d.frames[c] = drawnOf(f, right)
-		if t := o.clusters[c].g.Label; t != nil {
-			d.heads[c] = textWidth(t, frameClass(""))
+		if g := o.clusters[c].g; headed(g) {
+			d.heads[c] = headArea(g)
 		}
 	}
 	box := func(n gnode) int { // the box at an end, or -1 at a frame
@@ -442,7 +463,18 @@ func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, err
 			}
 		}
 	}
+	d.settleIcons()
 	return d, nil
+}
+
+// addBox keeps box n as drawn.
+func (d *drawing) addBox(n gnode) {
+	r := drawnOf(n, d.right)
+	r.form = outlineOf(r.w, r.h, n.box.Shape)
+	d.boxes[n.of], d.shapes[n.of] = r, n.box.Shape
+	if n.box.icon != nil {
+		d.icons[n.of] = n.box.icon
+	}
 }
 
 // stand moves the group a column past left on axis across, its boxes and frames on the grid as laid out (a label
@@ -473,22 +505,30 @@ func (d *drawing) firm(axis int) float64 {
 	return laidLo
 }
 
+// drawnBox is where a box stands, drawn: its rectangle, and within it an icon's square.
+type drawnBox struct{ cell, icon rect }
+
 // drawing is a group laid out, as drawn, while its labels are placed: its boxes and its edges' corners, and where
 // its labels stand beside their runs.
 type drawing struct {
-	right  bool
-	boxes  map[int]rect
-	shapes map[int]string
-	routes map[int][][2]float64
-	ends   map[int][2]int // the boxes each edge's corners start and end on
-	back   map[int]bool   // the edges drawn up, against the ranks
-	spots  map[int]spot
-	loops  map[int]bool            // the edges from a box to itself
-	frames map[int]rect            // the frames of its groups, by group
-	heads  map[int]float64         // the widths of its groups' headings
-	level  map[int][2]string       // the level edges, and the sides of their boxes they take, from the box written first
-	taken  map[int]map[string]bool // the sides of each box level edges take
-	others []rect                  // the parts written by hand, where they stand from the group's 0,0
+	right    bool
+	boxes    map[int]rect
+	shapes   map[int]string
+	routes   map[int][][2]float64
+	ends     map[int][2]int // the boxes each edge's corners start and end on
+	back     map[int]bool   // the edges drawn up, against the ranks
+	spots    map[int]spot
+	loops    map[int]bool            // the edges from a box to itself
+	frames   map[int]rect            // the frames of its groups, by group
+	heads    map[int]rect            // where its groups' headings stand from their frames
+	icons    map[int]*icon           // the icons among its boxes
+	onIcon   map[endAt]iconEnd       // where the ends at its icons go
+	settling settling                // what the ends moved keep off
+	moved    map[int]float64         // how far each icon has moved across the ranks in its rectangle
+	settled  map[int]bool            // the icons straighten has placed
+	level    map[int][2]string       // the level edges, and the sides of their boxes they take, from the box written first
+	taken    map[int]map[string]bool // the sides of each box level edges take
+	others   []rect                  // the parts written by hand, where they stand from the group's 0,0
 }
 
 // spot is where a label stands, held to its run so that it moves with it: beside run seg of edge's corners (its own
@@ -854,9 +894,10 @@ func (d *drawing) held(but int) []rect {
 	return out
 }
 
-// headRect is where the heading w wide of the frame f stands, as addFrame puts it.
-func headRect(f rect, w float64) rect {
-	return rect{x: f.x + 12, y: f.y + 9, w: w, h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // a heading's room
+// headRect is where the heading at head (headArea) of the frame f stands.
+func headRect(f, head rect) rect {
+	//nolint:exhaustruct_v5 // a heading's room
+	return rect{x: f.x + head.x, y: f.y + head.y, w: head.w, h: head.h, what: "", at: ""}
 }
 
 // heldRect is a label at sp beside run s with the column between them, short of the run by a unit: what is kept
@@ -903,6 +944,12 @@ func (d *drawing) hands() []seg {
 func (d *drawing) handsOf(i int, looped bool) []seg {
 	b := d.boxes[i]
 	cx, cy, far := b.x+b.w/2, b.y+b.h/2, 2*column
+	if d.icons[i] != nil { // an edge written by hand ends on the icon, the bottom side under its label
+		at := d.iconAt(i)
+		cx, cy = at.x+at.w/2, at.y+at.h/2
+		b = at
+		b.h += iconUnder(d.icons[i])
+	}
 	type hand struct {
 		side string
 		run  seg

@@ -97,6 +97,7 @@ type graph struct {
 // graphNode is one of its kinds, the one that is not nil.
 type graphNode struct {
 	Box   *graphBox   `json:"box,omitempty"`
+	Icon  *icon       `json:"icon,omitempty"`  // omitted, so that the ids of a spec without it stay
 	Group *graphGroup `json:"group,omitempty"` // omitted, so that the ids of a spec without it stay
 }
 
@@ -105,10 +106,12 @@ type graphGroup struct {
 	Name   string      `json:"name"`
 	Label  Text        `json:"label"`
 	Accent bool        `json:"accent"`
+	Icon   string      `json:"icon,omitempty"` // omitted, so that the ids of a spec without it stay
 	Nodes  []graphNode `json:"nodes"`
 }
 
 type graphBox struct {
+	icon  *icon  // the icon a node is, read flat as a box: its Shape is "icon"
 	Name  string `json:"name"`
 	Rows  []row  `json:"rows"`
 	Tone  string `json:"tone"`
@@ -232,12 +235,14 @@ func (r *tableRow) UnmarshalJSON(b []byte) error {
 }
 
 type icon struct {
-	Name  string  `json:"name"`
-	Icon  string  `json:"icon"`
-	X     float64 `json:"x"`
-	Y     float64 `json:"y"`
-	Label Text    `json:"label"`
-	Size  float64 `json:"size"`
+	Name      string   `json:"name"`
+	Icon      string   `json:"icon"`
+	X         float64  `json:"x"`
+	Y         float64  `json:"y"`
+	Label     Text     `json:"label"`
+	Size      float64  `json:"size"`
+	graph     string   // the JSON pointer of the graph that laid it out; "" for an icon written by hand
+	handSides []string // the sides left to edges written by hand, for an icon a graph laid out; nil: any
 }
 
 // end is an edge's end: the name of a part, a named row or a node, or a point.
