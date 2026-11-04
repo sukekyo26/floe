@@ -13,6 +13,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   whole, and acts on the row reached with the buttons of a row. Add a modal of the keyboard shortcuts, opened by `?` or the button in the
   bar. On a page open whole, `h` goes back to the list. With the focus in a page, `j`, `k`, `h`, `?`, `/` and `Ctrl+K` now work too (`Ctrl+K` alone in a link's HTML and a folder's,
   which may use the letters themselves).
+- Add marking a stored page unread: a toast offers it for 8 seconds as a page you open becomes read, and "Mark as unread" stays in
+  the page's menus. It goes back to how it looked before you opened it, by `DELETE /api/artifacts/{slug}/read`; opening it again reads it.
+  `POST /api/artifacts/{slug}/read` now answers `{"cleared": true}` when it read the page up to its last version.
 - Add what a viewer has read of the stored pages, kept in `reads.json` in the store. A page opened in its frame tells
   the frame the version it served, which the frame sends to `POST /api/artifacts/{slug}/read`, and `GET /api/artifacts`
   gives each stored page `news` (`new` for a page not seen, `version` for a version after the one read) and `version`

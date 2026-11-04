@@ -359,6 +359,8 @@ func (b *browser) hover(x, y float64) {
 	var last string
 	var err error
 	for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); {
+		// The toast of a page just read lies over it, and takes the pointer: not what these tests are of.
+		b.eval("document.querySelector('.toast.page')?.remove()")
 		move(0, 0) // off the frame first: pointerover fires only on entering
 		move(x, y)
 		if last, err = b.try("window.over"); err == nil && truthy(last) {
