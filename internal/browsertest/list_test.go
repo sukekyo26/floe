@@ -495,13 +495,16 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.eval("getComputedStyle(document.getElementById('listcol')).display"))
 	b.eval("q.value = ''; q.dispatchEvent(new Event('input')); document.getElementById('list-hide').click()")
 	// Folded across the widths: the list as ever, no buttons, under 70rem; folded still above it.
+	// With a page chosen, its head shows.
 	b.size(1000, 700, false)
-	out = append(out, b.until("the list under 70rem", "matchMedia('(max-width: 70rem)').matches && [getComputedStyle(document.getElementById('listcol')).display, ...['list-show', 'list-hide', 'list-grip'].map((id) => document.getElementById(id).getClientRects().length), document.getElementById('read-head').getClientRects().length].join(' ')"))
+	b.until("the list under 70rem", "matchMedia('(max-width: 70rem)').matches && getComputedStyle(document.getElementById('listcol')).display === 'block'")
+	b.eval("document.querySelector('#list li[data-slug=a1] .title').click()")
+	out = append(out, b.until("the head of the page", "document.getElementById('read-title').textContent && [getComputedStyle(document.getElementById('listcol')).display, ...['list-show', 'list-hide', 'list-grip'].map((id) => document.getElementById(id).getClientRects().length), document.getElementById('read-head').getClientRects().length].join(' ')"))
 	b.size(1600, 900, false)
 	out = append(out, b.until("the list folded", "!matchMedia('(max-width: 70rem)').matches && getComputedStyle(document.getElementById('listcol')).display"))
 
 	// What is kept that cannot be a width is the default's, or within the bounds.
-	for _, kept := range []string{"not json", `{"shelf":"x","listOpen":"no"}`, "null"} {
+	for _, kept := range []string{"not json", `{"shelf":"x","listOpen":0}`, "null"} {
 		b.eval("localStorage.setItem('list.columns', " + js(kept) + ")")
 		b.navigate("/")
 		out = append(out, b.eval("[getComputedStyle(document.documentElement).getPropertyValue('--shelf-width'), document.getElementById('shelf-show').hidden, document.getElementById('list-show').hidden].join(' ')"))
@@ -524,7 +527,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"520px 740", "0 0 0 0", "block false 0 true  608", "none true 1 false list-show 200", "false true",
 		"long", "a3 false", "shelf-show:true list-show:true shelf-show 0",
 		"shell shelf-closed list-closed", "list-hide shell shelf-closed lhead", "block", "block",
-		"block 0 0 0 0", "none",
+		"block 0 0 0 1", "none",
 		"200px true true", "200px true true", "200px true true", "320px 320px",
 	}, "|"))
 }
