@@ -108,6 +108,9 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.eval("document.getElementById('find').close(); openKeys()")
 		measure("the window of the keys")
 		b.eval("document.getElementById('keys').close()")
+		b.eval("readDone(items[0].slug)")
+		measure("the toast to mark a page unread")
+		b.eval("document.querySelector('.toast.page').remove()")
 		// The row chosen, its version's mark on its ground, the bar over its page, and the words of a link gone beside the list.
 		b.size(1440, 900, false)
 		b.eval("document.querySelector('#list li[data-slug=a] .title').click()")

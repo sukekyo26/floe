@@ -59,9 +59,18 @@ func writeReads(t *testing.T, root, text string) {
 type readsOf map[string]struct {
 	Since string `json:"since"`
 	Pages map[string]struct {
-		N  int    `json:"n"`
-		At string `json:"at"`
+		N      int    `json:"n"`
+		At     string `json:"at"`
+		Before *struct {
+			N  int    `json:"n"`
+			At string `json:"at"`
+		} `json:"before"`
 	} `json:"pages"`
+}
+
+func markRead(s *store.Store, slug string, n int, at string) error {
+	_, err := s.MarkRead(viewer, slug, n, at)
+	return err //nolint:wrapcheck // for the test to look at
 }
 
 func keptReads(t *testing.T, root string) readsOf {
@@ -164,7 +173,7 @@ func TestNewsPublished(t *testing.T) {
 		t.Errorf("published: %+v", got)
 	}
 	first := s.ReadMeta("d").Versions[0]
-	if err := s.MarkRead(viewer, "d", 1, first.At); err != nil {
+	if _, err := s.MarkRead(viewer, "d", 1, first.At); err != nil {
 		t.Fatal(err)
 	}
 	if got := listedOf(t, s, "d"); got.News != "" {
@@ -187,7 +196,7 @@ func TestNewsPublished(t *testing.T) {
 
 	publish(t, s, dw, "r.yaml", titled("r"), images, store.Options{})
 	rm := s.ReadMeta("r")
-	if err := s.MarkRead(viewer, "r", 1, rm.Versions[0].At); err != nil {
+	if _, err := s.MarkRead(viewer, "r", 1, rm.Versions[0].At); err != nil {
 		t.Fatal(err)
 	}
 	up := store.Upload{File: "r.yaml", Source: []byte(titled("r")), Images: images, Project: "q"}
@@ -241,7 +250,7 @@ func TestReadsBegin(t *testing.T) {
 	if _, err := s.List(viewer); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.MarkRead(viewer, "d", 1, m.Versions[0].At); err != nil {
+	if _, err := s.MarkRead(viewer, "d", 1, m.Versions[0].At); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.Begin(viewer, hour(3)); err != nil {
@@ -314,7 +323,7 @@ func TestReadsBegin(t *testing.T) {
 		if got := listedOf(t, s, "d"); got.News != "" {
 			t.Errorf("%q: news %q", text, got.News)
 		}
-		if got := told(s.MarkRead(viewer, "d", 1, m.Versions[0].At), root); got != unset {
+		if got := told(markRead(s, "d", 1, m.Versions[0].At), root); got != unset {
 			t.Errorf("%q: told %s", text, got)
 		}
 		_, err := os.Stat(filepath.Join(root, "reads.json"))
@@ -338,7 +347,7 @@ func TestReadsUnreadable(t *testing.T) {
 		if err := os.Chmod(file, 0); err != nil {
 			t.Fatal(err)
 		}
-		if got := told(s.MarkRead(viewer, "d", 1, m.Versions[0].At), root); got != "S/reads.json: permission denied" {
+		if got := told(markRead(s, "d", 1, m.Versions[0].At), root); got != "S/reads.json: permission denied" {
 			t.Errorf("told %s", got)
 		}
 		if got := listedOf(t, s, "d"); got.News != "" {
@@ -354,7 +363,7 @@ func TestReadsUnreadable(t *testing.T) {
 	if err := os.Mkdir(file, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if got := told(s.MarkRead(viewer, "d", 1, m.Versions[0].At), root); !strings.HasPrefix(got, "S/reads.json: ") || got == unset {
+	if got := told(markRead(s, "d", 1, m.Versions[0].At), root); !strings.HasPrefix(got, "S/reads.json: ") || got == unset {
 		t.Errorf("a directory: told %s", got)
 	}
 }
@@ -384,7 +393,7 @@ func TestMarkReadNewer(t *testing.T) {
 	mark := func(n int, at string) {
 		t.Helper()
 
-		if err := s.MarkRead(viewer, "d", n, at); err != nil {
+		if _, err := s.MarkRead(viewer, "d", n, at); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -408,7 +417,7 @@ func TestMarkReadNewer(t *testing.T) {
 
 	// Of a page from before since, the last by then taken as read: nothing earlier is written.
 	old := made(t, s, root, "old", 8, 8, 9, 9)
-	if err := s.MarkRead(viewer, "old", 1, old.Versions[0].At); err != nil {
+	if _, err := s.MarkRead(viewer, "old", 1, old.Versions[0].At); err != nil {
 		t.Fatal(err)
 	}
 	if _, kept := keptReads(t, root)[viewer].Pages["old"]; kept || listedOf(t, s, "old").News != "" {
@@ -420,14 +429,14 @@ func TestMarkReadNewer(t *testing.T) {
 		t.Fatal(err)
 	}
 	again := made(t, s, root, "d", 14, 14)
-	if err := s.MarkRead(viewer, "d", 1, again.Versions[0].At); err != nil {
+	if _, err := s.MarkRead(viewer, "d", 1, again.Versions[0].At); err != nil {
 		t.Fatal(err)
 	}
 	if got := keptReads(t, root)[viewer].Pages["d"]; got.N != 1 || got.At != again.Versions[0].At {
 		t.Errorf("made again: %+v", got)
 	}
 
-	if err := s.MarkRead(viewer, "none", 1, "x"); !errors.Is(err, store.ErrNotFound) {
+	if _, err := s.MarkRead(viewer, "none", 1, "x"); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("no page: %v", err)
 	}
 
@@ -435,9 +444,9 @@ func TestMarkReadNewer(t *testing.T) {
 	holdLock(t, root)
 	done := make(chan error, 1)
 	go func() {
-		err := s.MarkRead(viewer, "d", 1, again.Versions[0].At)
+		err := markRead(s, "d", 1, again.Versions[0].At)
 		if err == nil {
-			err = s.MarkRead(viewer, "d", 9, "x")
+			err = markRead(s, "d", 9, "x")
 		}
 		done <- err
 	}()
@@ -708,5 +717,179 @@ func TestListTemplate(t *testing.T) {
 		if got := listedOf(t, s, slug).Template; got != "" {
 			t.Errorf("%s: %q", slug, got)
 		}
+	}
+}
+
+// What reading a page and marking it unread come to, by what was read before: the same look as before it was opened, whatever
+// since says of the page, and a second mark goes no further.
+func TestMarkUnread(t *testing.T) {
+	t.Parallel()
+
+	const since = 10
+	const before = 12 // a version after since
+	cases := []struct {
+		name     string
+		created  int
+		versions []int
+		reads    string // pages of reads.json, as it was
+		read     int    // the version read, 0 for none
+		cleared  bool
+		kept     int // what is kept after the mark
+		news     string
+	}{
+		{name: "new, read once: the dot alone", created: before, versions: []int{before}, read: 1, cleared: true, kept: 0, news: "new"},
+		{
+			name: "a later version read: back to the one before, with its mark", created: before, versions: []int{before, before, before},
+			reads: `"p":{"n":1,"at":"` + hour(before) + `"}`, read: 3, cleared: true, kept: 1, news: "version",
+		},
+		{name: "before since, a version after: back to the one taken as read", created: 9, versions: []int{9, 9, before}, read: 3, cleared: true, kept: 2, news: "version"},
+		{name: "before since, all taken as read: the dot alone", created: 9, versions: []int{9, 9}, kept: 0, news: "new"},
+		{
+			name: "kept from before this was: the dot alone", created: before, versions: []int{before},
+			reads: `"p":{"n":1,"at":"` + hour(before) + `"}`, kept: 0, news: "new",
+		},
+		{
+			name: "the one before gone from the versions: the dot alone", created: before, versions: []int{before, before},
+			reads: `"p":{"n":2,"at":"` + hour(before) + `","before":{"n":9,"at":"gone"}}`, kept: 0, news: "new",
+		},
+		{
+			name: "a record of no version, its before still one, on a page taken as read: the dot alone", created: 9, versions: []int{9},
+			reads: `"p":{"n":7,"at":"gone","before":{"n":1,"at":"` + hour(9) + `"}}`, kept: 0, news: "new",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			s, root := newStore(t)
+			writeReads(t, root, `{"local":{"since":"`+hour(since)+`","pages":{`+c.reads+`}}}`)
+			m := made(t, s, root, "p", c.created, c.versions...)
+			if c.read > 0 {
+				cleared, err := s.MarkRead(viewer, "p", c.read, m.Versions[c.read-1].At)
+				if err != nil || cleared != c.cleared {
+					t.Fatalf("read: %v, %v", cleared, err)
+				}
+			}
+			if got := listedOf(t, s, "p").News; got != "" {
+				t.Fatalf("read, news %q", got)
+			}
+			for range 2 {
+				if err := s.MarkUnread(viewer, "p"); err != nil {
+					t.Fatal(err)
+				}
+				rec := keptReads(t, root)[viewer].Pages["p"]
+				if got := listedOf(t, s, "p").News; rec.N != c.kept || rec.Before != nil || got != c.news {
+					t.Errorf("kept %+v, news %q, want %d %q", rec, got, c.kept, c.news)
+				}
+			}
+			// Opened again, read, and the mark again comes to the same.
+			last := m.Versions[len(m.Versions)-1]
+			cleared, err := s.MarkRead(viewer, "p", last.N, last.At)
+			if err != nil || !cleared || listedOf(t, s, "p").News != "" {
+				t.Errorf("read again: %v, %v, news %q", cleared, err, listedOf(t, s, "p").News)
+			}
+			if err := s.MarkUnread(viewer, "p"); err != nil {
+				t.Fatal(err)
+			}
+			if rec := keptReads(t, root)[viewer].Pages["p"]; rec.N != c.kept {
+				t.Errorf("marked again, kept %+v, want %d", rec, c.kept)
+			}
+		})
+	}
+
+	// The errors are those of a read.
+	s, root := newStore(t)
+	if err := s.MarkUnread(viewer, "none"); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("no page: %v", err)
+	}
+	made(t, s, root, "p", 1, 1)
+	if err := s.MarkUnread(viewer, "p"); told(err, root) != "S/reads.json: is missing, broken or has no since: run floe stop, then floe serve, which writes it anew" {
+		t.Errorf("no since: %v", told(err, root))
+	}
+}
+
+// Of a read: whether it took the page up to its last. An earlier version, a read again and no such version are not that.
+func TestMarkReadCleared(t *testing.T) {
+	t.Parallel()
+
+	s, root := begun(t, hour(1))
+	m := made(t, s, root, "p", 2, 2, 3)
+	for _, c := range []struct {
+		name string
+		n    int
+		at   string
+		want bool
+	}{
+		{"no such version", 9, "x", false},
+		{"marked unread is no version", 0, "", false},
+		{"an earlier version", 1, m.Versions[0].At, false},
+		{"the last", 2, m.Versions[1].At, true},
+		{"the last again", 2, m.Versions[1].At, false},
+	} {
+		if got, err := s.MarkRead(viewer, "p", c.n, c.at); err != nil || got != c.want {
+			t.Errorf("%s: %v, %v", c.name, got, err)
+		}
+	}
+	if rec := keptReads(t, root)[viewer].Pages["p"]; rec.N != 2 || rec.Before == nil || rec.Before.N != 1 {
+		t.Errorf("kept %+v", rec)
+	}
+}
+
+// A page marked unread stays so through a publish of the same content and a rebuild, a new version and one that replaces it, and
+// follows the page to its new slug, with what it held; a record left by a replacing publish is of no version.
+func TestMarkUnreadKept(t *testing.T) {
+	t.Parallel()
+
+	s, root := begun(t, hour(0))
+	dw := picKit(t, "", "")
+	images := map[string][]byte{"a.png": png}
+	publish(t, s, dw, "d.yaml", titled("t0"), images, store.Options{})
+	first := s.ReadMeta("d").Versions[0]
+	if _, err := s.MarkRead(viewer, "d", 1, first.At); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.MarkUnread(viewer, "d"); err != nil {
+		t.Fatal(err)
+	}
+	still := func(what string) {
+		t.Helper()
+
+		if rec := keptReads(t, root)[viewer].Pages["d"]; rec.N != 0 || listedOf(t, s, "d").News != "new" {
+			t.Errorf("%s: kept %+v, news %q", what, rec, listedOf(t, s, "d").News)
+		}
+	}
+	publish(t, s, dw, "d.yaml", titled("t0"), images, store.Options{})
+	still("the same content")
+	if err := s.Rebuild(dw); err != nil {
+		t.Fatal(err)
+	}
+	still("a rebuild")
+	publish(t, s, dw, "d.yaml", titled("t1"), images, store.Options{})
+	still("a new version")
+	publish(t, s, dw, "other.yaml", titled("t2"), images, store.Options{Slug: ptr("d"), Force: true})
+	still("replaced")
+	if _, err := s.Edit("d", store.Edit{Slug: ptr("d2")}); err != nil {
+		t.Fatal(err)
+	}
+	if rec, ok := keptReads(t, root)[viewer].Pages["d2"]; !ok || rec.N != 0 || listedOf(t, s, "d2").News != "new" {
+		t.Errorf("moved: kept %+v %v, news %q", rec, ok, listedOf(t, s, "d2").News)
+	}
+	if _, err := s.Edit("d2", store.Edit{Slug: ptr("d")}); err != nil {
+		t.Fatal(err)
+	}
+
+	last := s.ReadMeta("d")
+	if _, err := s.MarkRead(viewer, "d", last.Versions[len(last.Versions)-1].N, last.Versions[len(last.Versions)-1].At); err != nil {
+		t.Fatal(err)
+	}
+	publish(t, s, dw, "third.yaml", titled("t3"), images, store.Options{Slug: ptr("d"), Force: true})
+	if got := listedOf(t, s, "d").News; got == "" {
+		t.Errorf("read before a replacing publish: no news")
+	}
+	if err := s.MarkUnread(viewer, "d"); err != nil {
+		t.Fatal(err)
+	}
+	if rec := keptReads(t, root)[viewer].Pages["d"]; rec.N == 0 {
+		t.Errorf("with news already, a mark changes nothing: kept %+v", rec)
 	}
 }

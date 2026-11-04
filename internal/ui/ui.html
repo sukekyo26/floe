@@ -424,6 +424,13 @@
   }
   .toast svg { width: 16px; height: 16px; flex: none; color: var(--good); }
   @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  /* One given its own time, which the script takes it away at: animated only as it comes */
+  .toast.timed { animation: toast-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+  .toast.page { pointer-events: auto; }
+  .toast.timed { max-width: calc(100vw - 32px); }
+  .toast:has(.btn) { padding-block: 0.4rem; padding-right: 0.4rem; }
+  .toast .btn { margin-left: 0.5rem; padding: 0.3rem 0.7rem; min-height: 2rem; font-size: var(--text-small); white-space: nowrap; }
   /* The bulk bar, in the head over the list while items are selected: the head on the ground of the rows selected */
   .lhead:has(> .bulk:not([hidden])) { padding-inline: 0.5rem; background: var(--sel); }
   /* What a font makes too wide for the list scrolls, as the row of views does, the clearing staying in reach; 4px hold the focus ring */
@@ -872,6 +879,7 @@
       <details class="more">
         <summary class="icon-btn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></summary>
         <div class="menu">
+          <button type="button" class="icon-btn mark-unread"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/></svg><span class="label">{{.Msg "ui_mark_unread"}}</span></button>
           <button type="button" class="icon-btn select" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span class="label">{{.Msg "ui_select"}}</span></button>
           <button type="button" class="icon-btn edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_edit"}}</button>
           <button type="button" class="icon-btn copy" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>{{.Msg "ui_copy_path"}}</button>
@@ -935,7 +943,13 @@
       history.replaceState(history.state, '', location.pathname + location.search + hash);
     }
     const read = e.data.artifactRead;
-    if (Number.isInteger(read?.n) && typeof read.at === 'string') tellRead(framed ?? picked.slug, { n: read.n, at: read.at });
+    if (Number.isInteger(read?.n) && typeof read.at === 'string') {
+      // A person opened it the first time it tells; again, the page drew itself anew
+      const say = opening;
+      opening = false;
+      const slug = shownSlug();
+      if (slug !== keptUnread) tellRead(slug, { read: { n: read.n, at: read.at }, say });
+    }
   });
   // The versions read go to the server one request at a time: while one is out, each page's last one waits, its earlier ones dropped.
   // One lost is told again the next time the page is loaded. The slug is the caller's own, never one a page's message names
@@ -943,25 +957,46 @@
   const readsWaiting = new Map();
   let readsGoing = false;
   let readFailed = false;
-  async function tellRead(slug, read) {
-    readsWaiting.set(slug, read);
+  // told is a version read and whether to say so, or null to mark the page unread, which waits in the same line: a read on its way
+  // ends first, and one waiting gives way
+  // LIMIT: a read cut off at 5 seconds, or a mark so, may still be written by the server after what follows it, while the store's lock is
+  // held long: the page ends as read, or unread with the frame no longer holding it. Hold them in order if that comes to matter
+  async function tellRead(slug, told) {
+    readsWaiting.set(slug, told);
     if (readsGoing) return;
     readsGoing = true;
     // A Map's iteration also visits what is set while it goes
-    for (const [to, body] of readsWaiting) {
+    for (const [to, value] of readsWaiting) {
       readsWaiting.delete(to);
+      const url = `/api/artifacts/${encodeURIComponent(to)}/read`;
+      const signal = AbortSignal.timeout(5000);
+      // The mark that did not reach the server holds nothing back
+      const letGo = () => { if (!value && keptUnread === to && !readsWaiting.has(to)) keptUnread = null; };
+      const fail = (why) => {
+        readFailed = true;
+        showError(why);
+        letGo();
+      };
       try {
-        const res = await api(`/api/artifacts/${encodeURIComponent(to)}/read`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(5000),
-        });
+        const res = await api(url, value
+          ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value.read), signal }
+          : { method: 'DELETE', signal });
         if (!res.ok && res.status !== 404) {
-          readFailed = true;
-          showError(t('ui_http_error', await res.text(), res.status));
-        } else if (readFailed) {
+          const why = await res.text();
+          fail(value ? t('ui_http_error', why, res.status) : t('ui_unread_failed', why));
+          continue;
+        }
+        if (readFailed) {
           readFailed = false;
           showError('');
         }
-      } catch { /* told again the next time; api tells if the server was not reached */ }
+        if (res.status === 404) letGo();
+        else if (!value) unreadDone(to);
+        else if (value.say && (await res.json()).cleared && keptUnread !== to && to === shownSlug()) readDone(to);
+      } catch (err) {
+        // A read is told again the next time it is opened; a mark, only if pressed again. api tells if the server was not reached
+        if (!value) fail(t('ui_unread_failed', err.message));
+      }
     }
     readsGoing = false;
     // The dot and the counts go now, not at the next look
@@ -1145,13 +1180,71 @@
     btn.setAttribute('aria-label', label);
   }
 
-  function toast(msg) {
+  const pageToast = () => document.querySelector('.toast.page');
+  // ms gives it a time of its own, button a thing to press, which holds it while pointed at or focused; page makes it the one toast
+  // of the page shown, which goes as another page is, and takes the place of the one before
+  function toast(msg, { ms, page, button } = {}) {
+    if (page) pageToast()?.remove();
     const t = document.createElement('div');
     t.className = 'toast';
+    t.classList.toggle('timed', Boolean(ms));
+    t.classList.toggle('page', Boolean(page));
     t.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
     t.append(msg);
+    if (button) t.append(button);
     $('toasts').append(t);
-    setTimeout(() => t.remove(), 3000);
+    let timer = setTimeout(() => t.remove(), ms ?? 3000);
+    if (!button) return;
+    // Not :hover, which stays on a touch screen after the finger has gone
+    let over = false;
+    const hold = () => clearTimeout(timer);
+    const again = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => t.remove(), ms);
+    };
+    t.addEventListener('pointerenter', () => {
+      over = true;
+      hold();
+    });
+    t.addEventListener('pointerleave', () => {
+      over = false;
+      if (!t.contains(document.activeElement)) again();
+    });
+    t.addEventListener('focusin', hold);
+    t.addEventListener('focusout', () => { if (!over) again(); });
+  }
+
+  // The page the frame shows, whole or beside the list
+  const shownSlug = () => framed ?? picked?.slug;
+  // A page marked unread here stays so while it is open, though it tells again as it draws itself anew; opening again reads it
+  // LIMIT: of this tab alone: another tab with the page open reads it again as it draws itself anew. Tell the tabs if that comes to matter
+  // LIMIT: whole, a page gone back to by the browser (bfcache) tells nothing and stays unread, until opened again
+  // LIMIT: the slug of a page open changed, the frame loads it anew: read again, with its toast
+  // LIMIT: whole, pressed and moved on at once, the mark waiting or on its way goes with the page, saying nothing
+  // LIMIT: a browser that sends no focusout as Ctrl+K moves #toasts leaves the toast whose button had the focus, until the next takes its place
+  let keptUnread = null;
+  // Whether the next read told is of a page a person opened: the toast says so of no other
+  let opening = true;
+  function markUnread(slug) {
+    if (slug === shownSlug()) keptUnread = slug;
+    tellRead(slug, null);
+  }
+  // Kept on screen for the time it takes to read and reach, not moving the focus, so that j and k go on through the list
+  function readDone(slug) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn';
+    button.textContent = t('ui_mark_unread');
+    button.setAttribute('aria-label', t('ui_mark_unread_named', items.find((a) => a.slug === slug)?.title ?? slug));
+    button.addEventListener('click', () => markUnread(slug));
+    toast(t('ui_read_done'), { ms: 8000, page: true, button });
+  }
+  // Of the page shown as the answer comes it takes the place of its toast; of another, it leaves the toast of the one shown to press
+  function unreadDone(slug) {
+    const page = slug === shownSlug();
+    const focused = page && pageToast()?.contains(document.activeElement);
+    toast(t('ui_unread_done'), { ms: 5000, page });
+    if (focused) ($('find').open ? $('find-q') : document.querySelector('#frame-actions summary, #read-actions summary'))?.focus();
   }
 
   // The one place the list's filters change: the view and the shelf's picks, as change has them. It leaves the selection
@@ -1665,6 +1758,11 @@
     const box = $('more').content.firstElementChild.cloneNode(true);
     box.querySelector('summary').setAttribute('aria-label', t('ui_more_named', a.title));
     box.querySelector('summary').title = t('ui_more_named', a.title);
+    // What is read of a stored page alone; the menu is drawn anew as the list changes
+    const unread = box.querySelector('.mark-unread');
+    unread.hidden = Boolean(a.path || a.folder || a.news);
+    unread.setAttribute('aria-label', t('ui_mark_unread_named', a.title));
+    unread.addEventListener('click', () => markUnread(a.slug));
     if (a.path) {
       const copy = box.querySelector('.copy');
       copy.hidden = false;
@@ -1751,6 +1849,9 @@
   function readInto(href) {
     if (href === readLoaded) return;
     readLoaded = href;
+    keptUnread = null;
+    opening = true;
+    pageToast()?.remove();
     $('read-frame').contentWindow.location.replace(href);
   }
 
@@ -2174,8 +2275,9 @@
     // Rows drawn already are drawn anew in place, without rising in again: only a row new to the list rises in
     const had = new Set([...$('list').children].map((li) => li.dataset.key));
     // The row with the focus has it again once drawn anew: a page read redraws the list as the keys go through it
-    const focused = $('list').contains(document.activeElement) && document.activeElement.matches('.title')
+    const focused = $('list').contains(document.activeElement) && document.activeElement.matches('.title, summary')
       ? document.activeElement.closest('li').dataset.key : null;
+    const focusedOn = document.activeElement.matches('summary') ? 'summary' : '.title';
     let day = '';
     shown.forEach((a, i) => {
       if (dayOf(a.updatedAt) !== day) {
@@ -2198,7 +2300,7 @@
     for (const li of rows) li.classList.toggle('kept', had.has(li.dataset.key));
     // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
-    if (focused !== null) rows.find((li) => li.dataset.key === focused)?.querySelector('.title')?.focus({ preventScroll: true });
+    if (focused !== null) rows.find((li) => li.dataset.key === focused)?.querySelector(focusedOn)?.focus({ preventScroll: true });
     renderShelf();
     renderNews();
     renderBulk();

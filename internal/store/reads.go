@@ -25,10 +25,11 @@ const (
 var errReadsBroken = errors.New("no reads")
 
 // pageRead is the version of a page a viewer read: its number and when it was made, a number coming again after a
-// removal.
+// removal. N 0 says nothing is read, marked so by hand, whatever since says. Before is what was read until this.
 type pageRead struct {
-	N  int    `json:"n"`
-	At string `json:"at"`
+	N      int       `json:"n"`
+	At     string    `json:"at"`
+	Before *pageRead `json:"before,omitempty"`
 }
 
 // viewerReads is what reads.json keeps of a viewer: since, when floe first served them, and the pages read, by slug.
@@ -138,12 +139,12 @@ func (m *Meta) lastNumber() int {
 }
 
 // taken is the number of the version of the page slug, whose meta.json is m, the reader takes as read: the one on
-// record, else, of a page from before since, the last made by then; 0 for none.
+// record (0 for one marked unread), else, of a page from before since, the last made by then; 0 for none.
 // LIMIT: a record that is of none of m's versions is no record (a page removed and made again, one replaced, a version
 // dropped past keepVersions), so that a page whose version read was dropped is new again. Keep a mark of the page if
 // that comes to matter.
 func (r *reader) taken(slug string, m *Meta) int {
-	if rec, ok := r.pages[slug]; ok && m.hasVersion(rec.N, rec.At) {
+	if rec, ok := r.pages[slug]; ok && (rec.N == 0 || m.hasVersion(rec.N, rec.At)) {
 		return rec.N
 	}
 	if timeOf(m.CreatedAt).After(r.since) {
@@ -158,6 +159,16 @@ func (r *reader) taken(slug string, m *Meta) int {
 	return n
 }
 
+// takenRead is the record of what taken says, nil for nothing read.
+func (r *reader) takenRead(slug string, m *Meta) *pageRead {
+	n := r.taken(slug, m)
+	at := slices.IndexFunc(m.Versions, func(v Version) bool { return v.N == n })
+	if at < 0 {
+		return nil
+	}
+	return &pageRead{N: n, At: m.Versions[at].At, Before: nil}
+}
+
 // news is what the reader has not seen of the stored page slug, whose meta.json is m: "" for nothing, or for a nil
 // reader.
 // LIMIT: a reads.json that goes bad while the server runs has no reader: every page counts as read, rather than all as
@@ -167,10 +178,11 @@ func (r *reader) news(slug string, m *Meta) string {
 		return ""
 	}
 	n := r.taken(slug, m)
+	rec, kept := r.pages[slug]
 	switch {
 	case n == m.lastNumber():
 		return ""
-	case n > 0 || !timeOf(m.CreatedAt).After(r.since):
+	case n > 0 || (!(kept && rec.N == 0) && !timeOf(m.CreatedAt).After(r.since)):
 		return newsVersion
 	default:
 		return newsNew
@@ -179,10 +191,41 @@ func (r *reader) news(slug string, m *Meta) string {
 
 // MarkRead keeps that viewer read the version n, at, of the stored page slug, unless the page has no such version or
 // viewer has read one as new: ErrNotFound for no stored page, store_reads_unset without a since to compare to, and
-// what the system says of a reads.json it cannot read. One
-// that changes nothing takes no lock, as a page read before is passed over often.
-func (s *Store) MarkRead(viewer, slug string, n int, at string) error {
-	if _, newer, err := s.newerRead(viewer, slug, n, at); err != nil || !newer {
+// what the system says of a reads.json it cannot read. It says whether this read the page up to its last, which it had
+// not been. It keeps what viewer had read before, for MarkUnread.
+func (s *Store) MarkRead(viewer, slug string, n int, at string) (bool, error) {
+	cleared := false
+	err := s.changeRead(viewer, slug, func(r *reader, m *Meta) *pageRead {
+		cleared = false
+		if !m.hasVersion(n, at) || r.taken(slug, m) >= n {
+			return nil
+		}
+		cleared = n == m.lastNumber()
+		return &pageRead{N: n, At: at, Before: r.takenRead(slug, m)}
+	})
+	return cleared, err
+}
+
+// MarkUnread takes the stored page slug back to what viewer had read before reading it, or to nothing read: a page
+// with news stays as it is, so that pressing twice goes no further back. Its errors are MarkRead's.
+// LIMIT: one step back alone: what was read before the before is not kept. Keep more if that comes to matter.
+func (s *Store) MarkUnread(viewer, slug string) error {
+	return s.changeRead(viewer, slug, func(r *reader, m *Meta) *pageRead {
+		if r.news(slug, m) != "" {
+			return nil
+		}
+		rec, ok := r.pages[slug]
+		if ok && rec.Before != nil && m.hasVersion(rec.N, rec.At) && m.hasVersion(rec.Before.N, rec.Before.At) {
+			return rec.Before
+		}
+		return &pageRead{N: 0, At: "", Before: nil}
+	})
+}
+
+// changeRead keeps what next says viewer's record of slug comes to, nil for no change. One that changes nothing takes no
+// lock, as a page read before is passed over often.
+func (s *Store) changeRead(viewer, slug string, next func(*reader, *Meta) *pageRead) error {
+	if _, rec, err := s.nextRead(viewer, slug, next); err != nil || rec == nil {
 		return err
 	}
 	unlock, err := s.lock(false)
@@ -194,37 +237,34 @@ func (s *Store) MarkRead(viewer, slug string, n int, at string) error {
 	}
 	defer unlock()
 	// Again, under the lock: another save may have come since.
-	all, newer, err := s.newerRead(viewer, slug, n, at)
-	if err != nil || !newer {
+	all, rec, err := s.nextRead(viewer, slug, next)
+	if err != nil || rec == nil {
 		return err
 	}
 	v := all[viewer]
 	if v.Pages == nil {
 		v.Pages = map[string]pageRead{}
 	}
-	v.Pages[slug] = pageRead{N: n, At: at}
+	v.Pages[slug] = *rec
 	all[viewer] = v
 	return s.writeReads(all)
 }
 
-// newerRead is reads.json, and whether viewer reading the version n, at, of slug changes what it keeps.
-func (s *Store) newerRead(viewer, slug string, n int, at string) (map[string]viewerReads, bool, error) {
+// nextRead is reads.json, and what next says of the stored page slug.
+func (s *Store) nextRead(viewer, slug string, next func(*reader, *Meta) *pageRead) (map[string]viewerReads, *pageRead, error) {
 	m := s.ReadMeta(slug)
 	if m == nil || m.IsLink() {
-		return nil, false, ErrNotFound
-	}
-	if !m.hasVersion(n, at) {
-		return nil, false, nil
+		return nil, nil, ErrNotFound
 	}
 	all, err := s.readReads()
 	if err != nil && !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, errReadsBroken) {
-		return nil, false, usererr.CannotRead(s.readsFile(), err) //nolint:wrapcheck // the system's words, at the file
+		return nil, nil, usererr.CannotRead(s.readsFile(), err) //nolint:wrapcheck // the system's words, at the file
 	}
 	r := readerIn(all, viewer)
 	if r == nil {
-		return nil, false, usererr.NewAt(s.readsFile(), 0, 0, "store_reads_unset")
+		return nil, nil, usererr.NewAt(s.readsFile(), 0, 0, "store_reads_unset")
 	}
-	return all, r.taken(slug, m) < n, nil
+	return all, next(r, m), nil
 }
 
 // moveRead moves what each viewer read of the page from to the page to, or forgets it ("" for to), and what they read
