@@ -995,12 +995,18 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 		return b.eval("(async () => { const row = document.querySelector('#list li[data-slug=a2]'), had = items; drawn = ''; await " + call + "; return row.isConnected && items === had; })()")
 	}
 	const a3 = "#list li[data-slug=a3]"
-	x, y := rowPoint(t, b, a3, false)
+	out := make([]string, 0, 7)
 
+	// Released, nothing is held.
+	x, y := rowPoint(t, b, "#list li[data-slug=a1]", false)
+	b.click(x, y)
+	b.until("a1 picked", "picked?.slug === 'a1'")
+	out = append(out, loaded("load(true)"))
+
+	x, y = rowPoint(t, b, a3, false)
 	// A press on the row of another, the focus elsewhere: the poll's answer held back; released, the press counts and the next poll draws.
 	b.eval("document.querySelector('#list li[data-slug=a1] .title').focus()")
 	b.mouse(chromedp.MousePressed, x, y, 1)
-	out := make([]string, 0, 6)
 	out = append(out, loaded("load(true)"))
 	b.eval("window.heldRow = document.querySelector('#list li[data-slug=a2]')")
 	b.mouse(chromedp.MouseReleased, x, y, 1)
@@ -1039,5 +1045,5 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	b.mouse(chromedp.MouseReleased, x, y, 1)
 	b.until("whole", "location.pathname === '/a/a3/'")
 
-	check(t, "row again, pressed", out, "true|false|false|true|false|true")
+	check(t, "row again, pressed", out, "false|true|false|false|true|false|true")
 }
