@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -265,7 +266,8 @@ func TestUIDiffRead(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b := s.b
 	b.size(1440, 900, false)
 	openDiff(b, "/a/d/?diff")
-	b.eval(`(() => { const real = window.fetch;
+	b.eval(`(() => { const real = window.fetch, told = setServer;
+		setServer = (up) => { if (!up) window.saidDown = true; told(up); };
 		window.diffCalls = [];
 		window.fetch = async (u, i) => {
 			if (!String(u).includes('/diff?')) return real(u, i);
@@ -307,7 +309,7 @@ func TestUIDiffRead(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, b.eval("window.diffCalls.length + ' ' + window.diffCalls[0].aborted + ' ' + window.diffCalls[1].aborted"))
 	b.eval("window.diffGo(); window.diffHeld = null; 1")
 	b.until("the last answer", "diffAnswer.from.n === 2 && diffAnswer.to.n === 3")
-	out = append(out, b.eval(heads), b.eval("document.getElementById('server').textContent === '' || !document.querySelector('.server.down')"))
+	out = append(out, b.eval(heads), b.eval("String(window.saidDown === undefined)"))
 	check(t, "read", out, strings.Join([]string{"v2 v3", "2 3", "?diff&from=2&to=3", "v1 v3", "v1 v3", "2 true false", "v2 v3", "true"}, "|"))
 }
 
@@ -373,6 +375,99 @@ func TestUIDiffPlaces(t *testing.T) { //nolint:paralleltest // the browser tests
 	check(t, "places", out, strings.Join([]string{
 		"true", "true", "Close the diff", "What changed since the version read", "", "", "What changed since the version read", "none", "true 0 block",
 	}, "|"))
+}
+
+// TestUIDiffScrolls keeps the scrolling to one box: the page itself never scrolls, whatever is done, and what scrolls ends with its words,
+// no ground left under them. Words only a screen reader reads, placed absolutely, once widened the page far past them and kept it there.
+func TestUIDiffScrolls(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	var kept, mended strings.Builder
+	for i := range 60 {
+		fmt.Fprintf(&kept, "<h2>S%d</h2><p>Words of the section %d, kept as they are in both.</p>", i, i)
+		word := "are"
+		if i%7 == 0 {
+			word = "were"
+		}
+		fmt.Fprintf(&mended, "<h2>S%d</h2><p>Words of the section %d, kept as they %s in both.</p>", i, i, word)
+	}
+	s.floe(t, "publish", s.page(t, "z.yaml", "Z", kept.String()), "--slug", "z")
+	s.floe(t, "publish", s.page(t, "z.yaml", "Z", kept.String()+"<p>one more</p>"), "--slug", "z")
+	s.floe(t, "publish", s.page(t, "z.yaml", "Z", mended.String()), "--slug", "z")
+	// The page's scrolling, as it can be pushed there too; and of the box, what is left under its last words at its end.
+	const measure = `(() => {
+		const page = document.scrollingElement;
+		page.scrollTop = 1e6;
+		const moved = page.scrollTop;
+		const narrow = matchMedia('(max-width: 40rem)').matches;
+		const box = document.getElementById(narrow ? 'diff' : 'diff-body');
+		box.scrollTop = 1e6;
+		const last = document.getElementById('diff-body').lastElementChild.getBoundingClientRect().bottom;
+		const left = Math.round(box.getBoundingClientRect().bottom - last);
+		const r = [moved, page.scrollHeight - page.clientHeight, left > 40 || left < -1 ? 'left ' + left : 'ends'].join(' ');
+		page.scrollTop = 0;
+		return r;
+	})()`
+	const fine = "0 0 ends"
+	open := func() {
+		t.Helper()
+		openDiff(b, "/a/z/?diff")
+		b.eval("document.querySelector('[data-diff-view=side]').click()")
+	}
+	for _, size := range [][2]int64{{1440, 900}, {1100, 700}, {800, 700}, {400, 800}} {
+		b.size(size[0], size[1], false)
+		open()
+		for _, view := range []string{"side", "all", "only"} {
+			b.eval("document.querySelector('[data-diff-view=" + view + "]').click()")
+			// Changes only may all fit, with nothing to scroll.
+			if got := b.eval(measure); got != fine && !(view == "only" && strings.HasPrefix(got, "0 0 ")) {
+				t.Errorf("%dx%d %s: %s", size[0], size[1], view, got)
+			}
+		}
+	}
+	// What moves the box, and what shortens what it scrolls, leave the page where it is.
+	b.size(1440, 900, false)
+	open()
+	after := func(what, do string) {
+		t.Helper()
+		b.eval(do + "; 1")
+		if got := b.eval("document.scrollingElement.scrollTop + ' ' + (document.scrollingElement.scrollHeight - document.scrollingElement.clientHeight) + ' ' + document.body.scrollTop + ' ' + document.getElementById('diff').scrollTop + ' ' + document.getElementById('diff-main').scrollTop"); got != "0 0 0 0 0" {
+			t.Errorf("%s: %s", what, got)
+		}
+	}
+	after("n", "moveChange(1); moveChange(1); moveChange(1)")
+	after("p", "moveChange(-1)")
+	// The contents, the words brought to the top left under the columns' heads, of a section in the middle.
+	after("the middle of the contents", "[...document.querySelectorAll('#diff-toc button')].find((x) => x.firstChild.textContent === 'S28').click()")
+	if got := b.eval(`(() => {
+		const i = [...document.querySelectorAll('#diff-toc button')].find((x) => x.firstChild.textContent === 'S28').dataset.section;
+		const go = document.querySelector('#diff-body [data-sections~="' + i + '"]').getBoundingClientRect().top;
+		const heads = document.querySelector('.dcols').getBoundingClientRect().bottom;
+		return String(go >= heads - 1 && go < heads + 40 && document.getElementById('diff-body').scrollTop > 0);
+	})()`); got != "true" {
+		t.Errorf("the heading went under the columns' heads: %s", got)
+	}
+	after("the contents", "[...document.querySelectorAll('#diff-toc button')].at(-1).click()")
+	after("scrolled to the end, changes only", "document.getElementById('diff-body').scrollTop = 1e6; document.querySelector('[data-diff-view=only]').click()")
+	after("all together", "document.querySelector('[data-diff-view=all]').click()")
+	b.eval("(() => { document.getElementById('diff-body').scrollTop = 1e6; const e = document.getElementById('diff-from'); e.value = '2'; e.dispatchEvent(new Event('change')); })()")
+	b.until("the other pair", "diffAnswer.from.n === 2")
+	after("chosen again", "1")
+	b.size(400, 800, false)
+	after("narrowed", "1")
+	// At that width all of it scrolls, and is at its top after a redraw.
+	if got := b.eval(`(() => {
+		const box = document.getElementById('diff');
+		box.scrollTop = 1e6;
+		const moved = box.scrollTop > 0;
+		document.querySelector('[data-diff-view=side]').click();
+		return moved + ' ' + box.scrollTop;
+	})()`); got != "true 0" {
+		t.Errorf("redrawn at a phone's width: %s", got)
+	}
+	b.size(1440, 900, false)
+	after("widened", "1")
+	after("the list read again", "drawn = ''; load(true)")
 }
 
 // TestUIDiffNotice says over a page newly at another version what changed since the one read, not over a page read the first time or

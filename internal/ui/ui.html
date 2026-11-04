@@ -141,6 +141,8 @@
   .dmain { flex: 1; min-height: 0; display: grid; grid-template-columns: 15rem minmax(0, 1fr); }
   .dtoc { min-height: 0; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); font-size: var(--text-small); }
   .dtoc h2 { flex: none; margin: 0; padding: 0.75rem 1rem 0.35rem; font-size: var(--text-label); font-weight: 700; color: var(--muted); }
+  /* What scrolls holds what is placed in it, so that the .sr-only words, absolute, are cut with the rest and do not widen the page past it */
+  .diff, .dtoc-list, .dbody { position: relative; }
   .dtoc-list { flex: 1; min-height: 0; overflow: auto; padding: 0 0.5rem; }
   .dtoc button { width: 100%; font: inherit; text-align: left; cursor: pointer; background: none; border: 0; display: flex; align-items: center; gap: 0.4rem; min-height: 1.75rem; padding: 0.1rem 0.5rem; color: var(--muted); text-decoration: none; border-radius: var(--corner-small); }
   .dtoc button span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
