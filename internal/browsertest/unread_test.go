@@ -189,8 +189,9 @@ func TestUIUnreadKept(t *testing.T) { //nolint:paralleltest // the browser tests
 	// A page marked from its row, the mark waiting behind another, then opened: the read takes its place, with nothing said of it.
 	const said = "window.toasted.filter((m) => m === 'Marked as read').length + ' ' + (document.getElementById('error').textContent === '')"
 	for _, slug := range []string{"p2", "p1"} {
+		was := posts(slug)
 		pickUnread(b, slug)
-		b.until("told of "+slug, "window.sent.includes('POST "+slug+"')")
+		b.until("told of "+slug, "window.sent.filter((x) => x === 'POST "+slug+"').length > "+was)
 		sentAll(b)
 	}
 	b.eval("window.toasted.length = 0; window.shut(); markUnread('p3'); markUnread('p2')")
