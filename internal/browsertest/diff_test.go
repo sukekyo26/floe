@@ -258,6 +258,123 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	check(t, "ways", out, strings.Join([]string{"true", "true", "false", "/a/e/?diff true", `["e","one"]`, "true none Close"}, "|"))
 }
 
+// TestUIDiffRead keeps what is shown of one pair: an answer that fails, or has not come, leaves the columns' heads with the words they are
+// of, an error goes with the next answer, and the last of many choices alone is asked to the end, nothing said of the server.
+func TestUIDiffRead(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := diffSite(t)
+	b := s.b
+	b.size(1440, 900, false)
+	openDiff(b, "/a/d/?diff")
+	b.eval(`(() => { const real = window.fetch;
+		window.diffCalls = [];
+		window.fetch = async (u, i) => {
+			if (!String(u).includes('/diff?')) return real(u, i);
+			window.diffCalls.push(i?.signal);
+			if (window.diffRefuse) return new Response('no', { status: 500 });
+			if (window.diffHeld) await window.diffHeld;
+			return real(u, i);
+		};
+	})()`)
+	const heads = "[...document.querySelectorAll('.dcols > div')].map((x) => x.textContent.split(' ')[0]).join(' ')"
+	choose := func(name, value string) {
+		t.Helper()
+		b.eval("(() => { const e = document.getElementById('diff-" + name + "'); e.value = " + js(value) + "; e.dispatchEvent(new Event('change')); })()")
+	}
+	const error = "document.getElementById('error')"
+	// It fails: back to the pair shown, in the list and the URL, its words said.
+	b.eval("window.diffRefuse = true")
+	choose("from", "1")
+	b.until("the error", "!"+error+".hidden")
+	b.eval("document.querySelector('[data-diff-view=all]').click()")
+	b.eval("document.querySelector('[data-diff-view=side]').click()")
+	out := make([]string, 0, 8)
+	out = append(out, b.eval(heads), b.eval(diffPair), b.eval("location.search"))
+	// The next answer takes the error away.
+	b.eval("window.diffRefuse = false")
+	choose("from", "1")
+	b.until("the error gone", error+".hidden && diffAnswer.from.n === 1")
+	out = append(out, b.eval(heads))
+	// While an answer is on its way, what is drawn is what was answered.
+	b.eval("window.diffHeld = new Promise((go) => { window.diffGo = go; }); 1")
+	choose("from", "2")
+	b.eval("document.querySelector('[data-diff-view=all]').click()")
+	b.eval("document.querySelector('[data-diff-view=side]').click()")
+	out = append(out, b.eval(heads))
+	// Chosen again meanwhile, the one before is called off, the server not told down.
+	b.eval("window.diffCalls = []")
+	choose("to", "2")
+	choose("to", "3")
+	out = append(out, b.eval("window.diffCalls.length + ' ' + window.diffCalls[0].aborted + ' ' + window.diffCalls[1].aborted"))
+	b.eval("window.diffGo(); window.diffHeld = null; 1")
+	b.until("the last answer", "diffAnswer.from.n === 2 && diffAnswer.to.n === 3")
+	out = append(out, b.eval(heads), b.eval("document.getElementById('server').textContent === '' || !document.querySelector('.server.down')"))
+	check(t, "read", out, strings.Join([]string{"v2 v3", "2 3", "?diff&from=2&to=3", "v1 v3", "v1 v3", "2 true false", "v2 v3", "true"}, "|"))
+}
+
+// TestUIDiffPlaces: a missing page's frame shows no diff, the contents leave a heading under the columns' heads, a redraw at a phone's
+// width goes back to the top of what scrolls there, and ? tells d only where it works. Printed, nothing of it shows.
+func TestUIDiffPlaces(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := diffSite(t)
+	b := s.b
+	b.size(1440, 900, false)
+	b.navigate("/a/none/?diff")
+	b.until("not found", "!document.getElementById('notfound').hidden")
+	out := make([]string, 0, 12)
+	out = append(out, b.eval("String(document.getElementById('diff').hidden)"))
+
+	// The contents, in a window too short for all of it.
+	b.size(1440, 420, false)
+	openDiff(b, "/a/d/?diff")
+	b.eval("document.querySelector('[data-diff-view=side]').click()")
+	b.eval("[...document.querySelectorAll('#diff-toc button')].at(-1).click()")
+	out = append(out, b.eval(`(() => {
+		const go = document.querySelector('#diff-body [data-sections~="' + [...document.querySelectorAll('#diff-toc button')].at(-1).dataset.section + '"]');
+		return String(go.getBoundingClientRect().top >= document.querySelector('.dcols').getBoundingClientRect().bottom - 1);
+	})()`))
+
+	// The keys told.
+	keys := func() string {
+		t.Helper()
+		b.eval("openKeys()")
+		got := b.eval("[...document.querySelectorAll('.keys-part:not([hidden]) kbd')].filter((k) => k.offsetParent && k.textContent === 'd').map((k) => k.parentElement.nextElementSibling.textContent).join('|')")
+		b.eval("document.getElementById('keys').close()")
+		return got
+	}
+	out = append(out, keys())
+	b.navigate("/a/d/")
+	b.until("the bar", "!document.querySelector('#frame-actions .diff-open').hidden")
+	out = append(out, keys())
+	b.navigate("/a/one/")
+	b.until("the bar of one", "document.getElementById('frame').hasAttribute('src')")
+	out = append(out, keys())
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li[data-slug=one]')")
+	out = append(out, keys())
+	b.eval("document.querySelector('#list li[data-slug=d] .title').click()")
+	b.until("picked", "picked?.slug === 'd'")
+	out = append(out, keys())
+
+	// Printed: neither the diff nor the words over a page.
+	openDiff(b, "/a/d/?diff")
+	b.media("print")
+	out = append(out, b.eval("getComputedStyle(document.getElementById('diff')).display"))
+	b.media("")
+
+	// At a phone's width the whole of it scrolls, and is at its top after a redraw.
+	b.size(400, 500, false)
+	openDiff(b, "/a/d/?diff")
+	out = append(out, b.eval(`(() => {
+		const box = document.getElementById('diff');
+		box.scrollTop = 200;
+		const moved = box.scrollTop > 0;
+		document.querySelector('[data-diff-view=only]').click();
+		return moved + ' ' + box.scrollTop + ' ' + getComputedStyle(box).display;
+	})()`))
+	check(t, "places", out, strings.Join([]string{
+		"true", "true", "Close the diff", "What changed since the version read", "", "", "What changed since the version read", "none", "true 0 block",
+	}, "|"))
+}
+
 // TestUIDiffNotice says over a page newly at another version what changed since the one read, not over a page read the first time or
 // again. It goes as another loads, as the page is marked unread and as it is drawn at another version, and an answer come after any of
 // them says nothing. It holds up no read of another page.

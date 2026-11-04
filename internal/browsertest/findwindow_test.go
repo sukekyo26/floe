@@ -396,9 +396,9 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.navigate("/")
 	out = append(out, b.eval("document.querySelector('#keys-list .mod').textContent + ' ' + document.getElementById('keys-note-list').textContent.includes('⌘K')"))
 	check(t, "keys", out, strings.Join([]string{
-		"false", "true", "false true j↓k↑Enterxfd/CtrlK?Esc",
+		"false", "true", "false true j↓k↑Enterxf/CtrlK?Esc",
 		"false", "true false", "true", "false false", "false false", "false true", "true", "true false",
-		"true false jkhfd/CtrlK?Esc", "true", "true", "1", "q false", "0", "⌘ true",
+		"true false jkhf/CtrlK?Esc", "true", "true", "1", "q false", "0", "⌘ true",
 	}, "|"))
 }
 

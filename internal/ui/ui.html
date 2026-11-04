@@ -161,6 +161,7 @@
   .dcols { position: sticky; top: 0; z-index: 1; background: var(--frame-bg); border-bottom: 1px solid var(--line); font-size: var(--text-small); color: var(--muted); }
   .dcols > div { display: flex; gap: 0.4rem; align-items: center; padding: 0.4rem 1.25rem; }
   .dcols > div + div, .drow > div + div { border-left: 1px solid var(--line); }
+  .drow, .dsame, .dh, .bk { scroll-margin-top: 2.5rem; }
   .drow > div { min-width: 0; padding: 0.15rem 1.25rem; }
   .drow > .del { background: var(--del-soft); }
   .drow > .ins { background: var(--ins-soft); }
@@ -199,7 +200,7 @@
     .dtoc { display: none; }
   }
   @media (max-width: 40rem) {
-      .diff { display: block; overflow: auto; }
+    .diff:not([hidden]) { display: block; overflow: auto; }
     .dbody { overflow: visible; }
     .wide-only { display: none; }
     .narrow-only { display: inline; }
@@ -250,7 +251,7 @@
      a new tab outside it: print the page from a browser */
   .print-alone { display: none; }
   @media print {
-    .framed :is(.bar, .frame, .toasts, .side, .grip, .side-show) { display: none; }
+    .framed :is(.bar, .frame, .diff, .dnote, .toasts, .side, .grip, .side-show) { display: none; }
     .framed:has(#notfound[hidden]) .print-alone { display: block; margin: 2rem; color: var(--fg); font: 1rem/1.7 var(--body); }
   }
 
@@ -879,12 +880,12 @@
     <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></svg><div><h2 id="keys-title">{{.Msg "ui_keys"}}</h2><p class="lead keys-note" id="keys-note-list">{{.Msg "ui_keys_note_list"}}</p><p class="lead keys-note" id="keys-note-frame">{{.Msg "ui_keys_note_frame"}}</p></div></div>
     <div class="keys-part" id="keys-list">
       <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↓</kbd></dt><dd>{{.Msg "ui_keys_next_row"}}</dd><dt><kbd>k</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↑</kbd></dt><dd>{{.Msg "ui_keys_prev_row"}}</dd><dt><kbd>Enter</kbd></dt><dd>{{.Msg "ui_keys_whole"}}</dd></dl></section>
-      <section><h3>{{.Msg "ui_keys_row"}}</h3><dl><dt><kbd>x</kbd></dt><dd>{{.Msg "ui_keys_select"}}</dd><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt><kbd>d</kbd></dt><dd>{{.Msg "ui_keys_diff"}}</dd></dl></section>
+      <section><h3>{{.Msg "ui_keys_row"}}</h3><dl><dt><kbd>x</kbd></dt><dd>{{.Msg "ui_keys_select"}}</dd><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt class="diff-go"><kbd>d</kbd></dt><dd class="diff-go">{{.Msg "ui_keys_diff"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd></dt><dd>{{.Msg "ui_keys_search"}}</dd><dt><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
     </div>
     <div class="keys-part" id="keys-frame">
       <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd></dt><dd>{{.Msg "ui_keys_next_page"}}</dd><dt><kbd>k</kbd></dt><dd>{{.Msg "ui_keys_prev_page"}}</dd><dt><kbd>h</kbd></dt><dd>{{.Msg "ui_back_to_list"}}</dd></dl></section>
-      <section><h3>{{.Msg "ui_keys_page"}}</h3><dl><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt><kbd>d</kbd></dt><dd>{{.Msg "ui_keys_diff"}}</dd><dt class="diff-key"><kbd>n</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_next"}}</dd><dt class="diff-key"><kbd>p</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_prev"}}</dd></dl></section>
+      <section><h3>{{.Msg "ui_keys_page"}}</h3><dl><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt class="diff-go"><kbd>d</kbd></dt><dd class="diff-go">{{.Msg "ui_keys_diff"}}</dd><dt class="diff-key"><kbd>d</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_close"}}</dd><dt class="diff-key"><kbd>n</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_next"}}</dd><dt class="diff-key"><kbd>p</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_prev"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
     </div>
     <div class="dialog-actions"><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
@@ -1240,7 +1241,8 @@
       return res;
     } catch (e) {
       // One cut off by its own time limit (the store's lock held long) tells nothing of the server
-      if (e.name !== 'TimeoutError') setServer(false);
+      // One called off by its own caller, likewise
+      if (e.name !== 'TimeoutError' && e.name !== 'AbortError') setServer(false);
       throw e;
     }
   }
@@ -2879,7 +2881,8 @@
   let diffRead = 0;
   let diffPair = { from: 0, to: 0 };
   let diffAnswer = null;
-  let diffTurn = 0;
+  let diffCall = null;
+  let diffFailed = false;
   // The places n and p go through, the last gone to, and each section's place, by its index
   let diffChanges = [];
   let diffAt = -1;
@@ -2920,10 +2923,8 @@
       $('diff-head').hidden = $('diff-main').hidden = true;
       $('diff-none').hidden = false;
       $('diff-page').href = `/a/${a.slug}/`;
-      $('diff').hidden = false;
       return;
     }
-    $('diff').hidden = false;
     try {
       const res = await api(`/api/artifacts/${encodeURIComponent(a.slug)}/versions`);
       if (!res.ok) throw new Error(await res.text());
@@ -2945,6 +2946,9 @@
     drawDiffPicks();
     await readDiff();
   }
+  function writeDiffPair() {
+    history.replaceState(history.state, '', `${location.pathname}?diff&from=${diffPair.from}&to=${diffPair.to}`);
+  }
   // The versions newest first, one that would not be older than the other not to be chosen
   function drawDiffPicks() {
     const newest = [...diffVersions].reverse();
@@ -2963,22 +2967,36 @@
       open.setAttribute('aria-label', open.title);
     }
   }
+  // What is shown is of the pair answered, the columns' heads with the rest, whatever is chosen meanwhile. Chosen again, the question
+  // before is called off (arrow keys go through the versions one by one); one that fails goes back to what is shown
   async function readDiff() {
-    const turn = ++diffTurn;
+    diffCall?.abort();
+    const call = new AbortController();
+    diffCall = call;
     try {
-      const res = await api(`/api/artifacts/${encodeURIComponent(framed)}/diff?from=${diffPair.from}&to=${diffPair.to}`);
+      const res = await api(`/api/artifacts/${encodeURIComponent(framed)}/diff?from=${diffPair.from}&to=${diffPair.to}`, { signal: call.signal });
       if (!res.ok) throw new Error(await res.text());
-      const answer = await res.json();
-      if (turn !== diffTurn) return;
-      diffAnswer = answer;
+      diffAnswer = await res.json();
+      if (diffFailed) {
+        diffFailed = false;
+        showError('');
+      }
       drawDiff();
     } catch (err) {
-      if (turn === diffTurn) showError(t('ui_diff_failed', err.message));
+      if (err.name === 'AbortError') return;
+      diffFailed = true;
+      showError(t('ui_diff_failed', err.message));
+      if (!diffAnswer) return;
+      diffPair = { from: diffAnswer.from.n, to: diffAnswer.to.n };
+      drawDiffPicks();
+      writeDiffPair();
     }
   }
   const spansOnly = (b, op) => b.spans.every((x) => x.op === op);
   const spansText = (spans, skip) => spans.filter((x) => x.op !== skip).map((x) => x.text).join('');
   const sectionName = (s) => spansText(s.heading, s.state === 'removed' ? '' : 'del') || t('ui_diff_top');
+  const lvOf = (s) => Math.min(Math.max(s.level, 1), 3);
+  const headingChanged = (s) => s.state !== 'changed' || !s.heading.every((x) => x.op === 'same');
   const said = (word) => tagged('span', 'sr-only', `${word} `);
   // Words alone: textContent, as what a page says may look like HTML, and this page may call the API
   function putSpans(box, spans, side) {
@@ -3033,7 +3051,7 @@
     return box;
   }
   function headingOf(s, side) {
-    const h = tagged('h3', `dh lv${Math.min(Math.max(s.level, 1), 3)}${s.level === 0 ? ' nohead' : ''}`);
+    const h = tagged('h3', `dh lv${lvOf(s)}${s.level === 0 ? ' nohead' : ''}`);
     if (s.level === 0) h.textContent = t('ui_diff_top');
     else putSpans(h, s.heading, side);
     if (s.state !== 'changed') h.append(diffMark(s.state));
@@ -3057,7 +3075,7 @@
   }
   function drawSide(box, sections) {
     const heads = tagged('div', 'dcols');
-    for (const n of [diffPair.from, diffPair.to]) heads.append(tagged('div', '', verText(diffVersions.find((v) => v.n === n))));
+    for (const n of [diffAnswer.from.n, diffAnswer.to.n]) heads.append(tagged('div', '', verText(diffVersions.find((v) => v.n === n))));
     box.append(heads);
     const cell = (cls, child) => {
       const c = tagged('div', cls);
@@ -3075,7 +3093,7 @@
         x.append(l, r);
         box.append(x);
       };
-      row(s.state === 'added' ? cell('blank') : cell('', headingOf(s, 'del')), s.state === 'removed' ? cell('blank') : cell('', headingOf(s, 'ins')), s.state !== 'changed' || !s.heading.every((x) => x.op === 'same'));
+      row(s.state === 'added' ? cell('blank') : cell('', headingOf(s, 'del')), s.state === 'removed' ? cell('blank') : cell('', headingOf(s, 'ins')), headingChanged(s));
       const blocks = s.blocks ?? [];
       for (let i = 0; i < blocks.length;) {
         const b = blocks[i];
@@ -3110,7 +3128,7 @@
     }, (s, at) => {
       const h = headingOf(s);
       h.dataset.sections = at;
-      h.classList.toggle('ch', s.state !== 'changed' || !s.heading.every((x) => x.op === 'same'));
+      h.classList.toggle('ch', headingChanged(s));
       col.append(h);
       for (const b of s.blocks ?? []) {
         const same = !b.reshaped && spansOnly(b, 'same');
@@ -3139,11 +3157,15 @@
         count.append(part);
       }
     }
-    for (const b of document.querySelectorAll('[data-diff-view]')) b.setAttribute('aria-pressed', String(b.dataset.diffView === diffView));
-    for (const b of document.querySelectorAll('[data-diff-view]')) b.classList.toggle('primary', b.dataset.diffView === diffView);
+    for (const b of document.querySelectorAll('[data-diff-view]')) {
+      b.setAttribute('aria-pressed', String(b.dataset.diffView === diffView));
+      b.classList.toggle('primary', b.dataset.diffView === diffView);
+    }
     const body = $('diff-body');
     body.replaceChildren();
+    // Of the one that scrolls: the words, or at a phone's width all of it
     body.scrollTop = 0;
+    $('diff').scrollTop = 0;
     if (diffView === 'side') drawSide(body, sections);
     else drawFlow(body, sections, diffView === 'only');
     // n and p go by what changed: a run of changes one after another is one place
@@ -3153,7 +3175,7 @@
     list.replaceChildren();
     sections.forEach((s, i) => {
       if (diffView === 'only' && s.state === 'same') return;
-      const row = tagged('div', `lv${Math.min(Math.max(s.level, 1), 3)}`);
+      const row = tagged('div', `lv${lvOf(s)}`);
       const go = tagged('button', s.state === 'same' ? '' : 'changed');
       go.type = 'button';
       go.dataset.section = i;
@@ -3183,7 +3205,7 @@
       $(`diff-${name}`).addEventListener('change', (e) => {
         diffPair[name] = Number(e.target.value);
         $('diff-url-note').hidden = true;
-        history.replaceState(history.state, '', `${location.pathname}?diff&from=${diffPair.from}&to=${diffPair.to}`);
+        writeDiffPair();
         drawDiffPicks();
         readDiff();
       });
@@ -3216,6 +3238,7 @@
       ? t('ui_link_missing', a.path)
       : t('ui_not_found_detail', framed);
     $('frame').hidden = !found || DIFF;
+    $('diff').hidden = !found || !DIFF;
     $('frame').title = name ?? framed;
     $('frame-title').textContent = found ? name : '';
     if (found && FILE) {
@@ -3427,6 +3450,10 @@
   }
 
   function openKeys() {
+    // d, only where it goes somewhere: the same as the button it presses
+    const open = framed ? $('frame-actions') : $('read-actions');
+    const diffable = !DIFF && !open.hidden && open.querySelector('.diff-open:not([hidden])');
+    for (const e of $('keys').querySelectorAll('.diff-go')) e.hidden = !diffable;
     if (!document.querySelector('dialog[open]')) $('keys').showModal();
   }
 
@@ -3538,11 +3565,7 @@
       // The way the back button goes, which holds the list it was last on
       h: () => $('back').click(),
       f: () => $('frame-actions').querySelector('.star:not([hidden])')?.click(),
-      d: () => {
-        const a = items.find((x) => x.slug === framed);
-        if (DIFF) location.href = `/a/${framed}/`;
-        else if (a && !FILE && canDiff(a)) location.href = `/a/${framed}/?diff`;
-      },
+      d: () => $('frame-actions').querySelector('.diff-open:not([hidden])')?.click(),
     });
     if (DIFF) {
       Object.assign(KEYS, { n: () => moveChange(1), p: () => moveChange(-1) });
@@ -3665,12 +3688,7 @@
       k: () => moveRow(-1),
       x: () => currentRow()?.querySelector('.sel')?.click(),
       f: () => currentRow()?.querySelector('.star:not([hidden])')?.click(),
-      d: () => {
-        const a = picked && !picked.file && items.find((x) => x.slug === picked.slug);
-        if (!a || !canDiff(a)) return;
-        keepOrder();
-        location.href = `/a/${a.slug}/?diff`;
-      },
+      d: () => { if (picked) $('read-actions').querySelector('.diff-open:not([hidden])')?.click(); },
     });
     // Enter on a row opens its page whole; a folder's, as a press, opens its tree
     document.addEventListener('keydown', (e) => {
