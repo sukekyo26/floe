@@ -809,34 +809,37 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 func rowPoint(t *testing.T, b *browser, row string, margin bool) (float64, float64) {
 	t.Helper()
 
-	var at struct{ X, Y float64 }
-	box := "document.querySelector(" + js(row) + ").getBoundingClientRect()"
-	if !margin {
-		box = "document.querySelector(" + js(row+" .title") + ").getBoundingClientRect()"
+	box, x, y := "document.querySelector("+js(row+" .title")+")", 12, 6
+	if margin {
+		box, x, y = "document.querySelector("+js(row)+")", 2, 2
 	}
-	got := b.eval("(() => { const r = " + box + "; const x = r.left + " + map[bool]string{true: "2", false: "12"}[margin] + ", y = r.top + " +
-		map[bool]string{true: "2", false: "6"}[margin] + "; if (!document.elementFromPoint(x, y)?.closest('a.title')) return 'not its link: ' + document.elementFromPoint(x, y)?.outerHTML; return JSON.stringify({ X: x, Y: y }); })()")
+	got := b.eval(fmt.Sprintf(`(() => {
+		const r = %s.getBoundingClientRect(), x = r.left + %d, y = r.top + %d, on = document.elementFromPoint(x, y);
+		return on?.closest('a.title') ? JSON.stringify({ X: x, Y: y }) : 'not its link: ' + on?.outerHTML;
+	})()`, box, x, y))
+	var at struct{ X, Y float64 }
 	if err := json.Unmarshal([]byte(got), &at); err != nil {
 		t.Fatalf("%s: %s", row, got)
 	}
 	return at.X, at.Y
 }
 
-// mouse sends the press or release of a button at x, y, the click count of a second press of a double one with it.
-func (b *browser) mouse(typ input.DispatchMouseEventType, x, y float64, button chromedp.MouseOption, count int) {
+// mouse sends the press or release of the main button at x, y.
+func (b *browser) mouse(typ input.DispatchMouseEventType, x, y float64, count int) {
 	b.t.Helper()
 
-	if err := chromedp.Do(b.ctx, chromedp.MouseEvent(typ, x, y, button, chromedp.ClickCount(count))); err != nil {
+	if err := chromedp.Do(b.ctx, chromedp.MouseEvent(typ, x, y, chromedp.ButtonLeft, chromedp.ClickCount(count))); err != nil {
 		b.t.Fatal(err)
 	}
 }
 
-// pressAt presses and releases the main button at x, y.
-func (b *browser) pressAt(x, y float64, count int) {
+// asideList opens the list of asideSite with room for the page beside it.
+func asideList(b *browser) {
 	b.t.Helper()
 
-	b.mouse(chromedp.MousePressed, x, y, chromedp.ButtonLeft, count)
-	b.mouse(chromedp.MouseReleased, x, y, chromedp.ButtonLeft, count)
+	b.navigate("/")
+	b.size(1440, 900, false)
+	b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length === 3")
 }
 
 const rowAgainPath = "location.pathname + location.search"
@@ -847,16 +850,10 @@ const rowAgainPath = "location.pathname + location.search"
 func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := asideSite(t)
 	b := s.b
-	list := func() {
-		t.Helper()
-		b.navigate("/")
-		b.size(1440, 900, false)
-		b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length === 3")
-	}
-	list()
+	asideList(b)
 	const a2 = "#list li[data-slug=a2]"
 	x, y := rowPoint(t, b, a2, false)
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	b.until("picked", "picked?.slug === 'a2'")
 	out := make([]string, 0, 7)
 	out = append(out, b.eval(rowAgainPath))
@@ -866,19 +863,19 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	// A menu open, the press closes it.
 	b.eval("document.querySelector(" + js(a2+" .more") + ").open = true")
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	b.until("the menu closed", "!document.querySelector('.more[open]')")
 	out = append(out, b.eval(rowAgainPath))
 	// A delete waiting in it, the same.
 	b.eval("document.querySelector(" + js(a2+" .more") + ").open = true; document.querySelector(" + js(a2+" .delete") + ").click()")
 	b.until("armed", "document.querySelector("+js(a2+" .delete.armed")+")")
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	b.until("the menu closed again", "!document.querySelector('.more[open]')")
 	out = append(out, b.eval(rowAgainPath))
 	// A row selected, the press leaves it selected.
 	b.eval("document.querySelector('#list li[data-slug=a1] .sel').click()")
 	x, y = rowPoint(t, b, a2, false)
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	out = append(out, b.eval("[selected.size, picked.slug, "+rowAgainPath+"].join(' ')"))
 	b.eval("document.querySelector('#list li[data-slug=a1] .sel').click()")
 	// Modified, it is left to the link.
@@ -901,9 +898,9 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	// Pressed again, whole, the list's order kept for j.
 	x, y = rowPoint(t, b, a2, false)
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	b.until("a2 again", "picked?.slug === 'a2'")
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	b.until("whole", "location.pathname === '/a/a2/'")
 	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"))
 	b.until("its bar", "document.getElementById('frame').hasAttribute('src')")
@@ -911,18 +908,20 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("on through the list", "location.pathname === '/a/a1/'")
 
 	// In the margin of the row.
-	list()
+	asideList(b)
 	x, y = rowPoint(t, b, a2, true)
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	b.until("picked by the margin", "picked?.slug === 'a2'")
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	b.until("whole by the margin", "location.pathname === '/a/a2/'")
 
 	// Pressed double, as a person does.
-	list()
+	asideList(b)
 	x, y = rowPoint(t, b, "#list li[data-slug=a3]", false)
-	b.pressAt(x, y, 1)
-	b.pressAt(x, y, 2)
+	b.click(x, y)
+	if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(x, y, chromedp.ClickCount(2))); err != nil {
+		t.Fatal(err)
+	}
 	b.until("whole by a double press", "location.pathname === '/a/a3/'")
 
 	check(t, "row again", out, strings.Join([]string{
@@ -949,62 +948,64 @@ func TestUIRowAgainKinds(t *testing.T) { //nolint:paralleltest // the browser te
 	b.until("the rows", "document.querySelector("+js(folder)+") && document.querySelector("+js(missing)+")")
 
 	x, y := rowPoint(t, b, missing, false)
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	b.until("the words why", "picked?.slug === 'gone' && !document.getElementById('read-blank').hidden")
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	out := make([]string, 0, 2)
 	out = append(out, b.eval("picked.slug + ' ' + "+rowAgainPath+" + ' ' + sessionStorage.getItem('artifacts.order')"))
 
 	const expanded = ".querySelector('.title').getAttribute('aria-expanded')"
 	x, y = rowPoint(t, b, folder, false)
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	b.until("the tree", "document.querySelector("+js(folder)+")"+expanded+" === 'true' && document.querySelector('#list li.page')")
 	const page = "#list li.page[data-file='index.html']"
 	px, py := rowPoint(t, b, page, false)
-	b.pressAt(px, py, 1)
+	b.click(px, py)
 	b.until("the page picked", "picked?.file === 'index.html'")
 	x, y = rowPoint(t, b, folder, false)
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	b.until("the tree closed", "document.querySelector("+js(folder)+")"+expanded+" === 'false'")
 	out = append(out, b.eval(rowAgainPath))
-	b.pressAt(x, y, 1)
+	b.click(x, y)
 	b.until("the tree back", "document.querySelector("+js(folder)+")"+expanded+" === 'true' && document.querySelector("+js(page)+")")
 	px, py = rowPoint(t, b, page, false)
-	b.pressAt(px, py, 1)
+	b.click(px, py)
 	b.until("whole by its own URL", "location.pathname + location.search === '/a/docs/?file=index.html'")
 
 	check(t, "row again, kinds", out, "gone / null|/")
 }
 
-// TestUIRowAgainPressed holds off drawing the rows anew from a poll's answer while one is pressed, as the press would be lost, and
-// draws them at the next; a press outside the list, or of the secondary button, whose release a context menu may keep, holds nothing.
+// TestUIRowAgainPressed holds off drawing the rows anew from a poll's answer while one is pressed, as the press would be lost, for 2
+// seconds, as a press may never tell its release, and draws them at the next poll. A press outside the list holds nothing, nor is an
+// action's own load held, and what is held does not reach items.
 func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := asideSite(t)
 	b := s.b
-	list := func() {
-		t.Helper()
-		b.navigate("/")
-		b.size(1440, 900, false)
-		b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length === 3")
+	asideList(b)
+	// Every page read and drawn so, so that nothing else is left to change the answer.
+	for _, slug := range []string{"a1", "a3", "a2"} {
+		x, y := rowPoint(t, b, "#list li[data-slug="+slug+"]", false)
+		b.click(x, y)
+		b.until(slug+" read", "picked?.slug === "+js(slug)+" && !document.querySelector('#list li[data-slug="+slug+"]').classList.contains('unseen') && !readsGoing")
 	}
-	// Whether the rows stayed as a poll came: whose answer differs from what is drawn, or as it comes.
-	const poll = "(async () => { const row = document.querySelector('#list li[data-slug]'); %s await load(); return row.isConnected; })()"
-	polled := func() string {
+	b.eval("load().then(() => true)")
+	// A load whose answer differs from what is drawn: true if it left items and the rows as they are.
+	loaded := func(call string) string {
 		t.Helper()
-		return b.eval(fmt.Sprintf(poll, "drawn = '';"))
+		return b.eval("(async () => { const row = document.querySelector('#list li[data-slug=a2]'), had = items; drawn = ''; await " + call + "; return row.isConnected && items === had; })()")
 	}
-	const a2 = "#list li[data-slug=a2]"
-	list()
-	x, y := rowPoint(t, b, a2, false)
+	const a3 = "#list li[data-slug=a3]"
+	x, y := rowPoint(t, b, a3, false)
 
-	// The first press, the focus on another row, picked though the poll came in the middle of it; then the next poll draws.
-	b.eval("document.querySelector('#list li[data-slug=a3] .title').focus()")
-	b.mouse(chromedp.MousePressed, x, y, chromedp.ButtonLeft, 1)
-	out := make([]string, 0, 5)
-	out = append(out, polled())
-	b.mouse(chromedp.MouseReleased, x, y, chromedp.ButtonLeft, 1)
-	b.until("picked", "picked?.slug === 'a2'")
-	out = append(out, b.eval(fmt.Sprintf(poll, "")))
+	// A press on the row of another, the focus elsewhere: the poll's answer held back; released, the press counts and the next poll draws.
+	b.eval("document.querySelector('#list li[data-slug=a1] .title').focus()")
+	b.mouse(chromedp.MousePressed, x, y, 1)
+	out := make([]string, 0, 6)
+	out = append(out, loaded("load(true)"))
+	b.eval("window.row = document.querySelector('#list li[data-slug=a2]')")
+	b.mouse(chromedp.MouseReleased, x, y, 1)
+	b.until("picked", "picked?.slug === 'a3'")
+	b.until("drawn by the next poll", "!window.row.isConnected")
 
 	// Outside the list, in the top document: an iframe's press does not reach it.
 	r := b.eval(`(() => {
@@ -1016,20 +1017,27 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	if err := json.Unmarshal([]byte(r), &at); err != nil {
 		t.Fatal(r)
 	}
-	b.mouse(chromedp.MousePressed, at.X, at.Y, chromedp.ButtonLeft, 1)
-	out = append(out, polled())
-	b.mouse(chromedp.MouseReleased, at.X, at.Y, chromedp.ButtonLeft, 1)
+	b.mouse(chromedp.MousePressed, at.X, at.Y, 1)
+	out = append(out, loaded("load(true)"))
+	b.mouse(chromedp.MouseReleased, at.X, at.Y, 1)
 
-	// The secondary button: told by the event alone, as Chrome here clears the press itself as its context menu comes up.
-	b.eval("document.querySelector(" + js(a2+" .title") + ").dispatchEvent(new PointerEvent('pointerdown', { button: 2, bubbles: true }))")
-	out = append(out, polled())
+	// The second press, whose release may never come: an action's load goes on, and the poll's only until the time is up.
+	x, y = rowPoint(t, b, a3, false)
+	b.mouse(chromedp.MousePressed, x, y, 2)
+	out = append(out, loaded("load()"))
+	out = append(out, loaded("load(true)"))
+	b.until("the time up", "performance.now() - pressedAt > PRESS_MS")
+	out = append(out, loaded("load(true)"))
+	b.eval("drawn = ''; load().then(() => true)")
+	x, y = rowPoint(t, b, a3, false)
+	b.mouse(chromedp.MouseReleased, x, y, 2)
 
-	// The second press, whole though the poll came in the middle of it.
-	x, y = rowPoint(t, b, a2, false)
-	b.mouse(chromedp.MousePressed, x, y, chromedp.ButtonLeft, 2)
-	out = append(out, polled())
-	b.mouse(chromedp.MouseReleased, x, y, chromedp.ButtonLeft, 2)
-	b.until("whole", "location.pathname === '/a/a2/'")
+	// Pressed again with the poll in the middle of it, the page opens whole.
+	x, y = rowPoint(t, b, a3, false)
+	b.mouse(chromedp.MousePressed, x, y, 1)
+	out = append(out, loaded("load(true)"))
+	b.mouse(chromedp.MouseReleased, x, y, 1)
+	b.until("whole", "location.pathname === '/a/a3/'")
 
-	check(t, "row again, pressed", out, "true|false|false|false|true")
+	check(t, "row again, pressed", out, "true|false|false|true|false|true")
 }

@@ -999,7 +999,7 @@
     }
     readsGoing = false;
     // The dot and the counts go now, not at the next look
-    load();
+    load(true);
   }
   // The frame's own fragment changed (the address bar, Back): the page moves to that part, in
   // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo.
@@ -2758,19 +2758,24 @@
   let loadFailed = false;
 
   // LIMIT: the answers are not put in order: one asked before a read or a mark unread and come after it shows the page as it was, until the next look
-  // Rows are not redrawn from under a press: Chrome sends neither click nor dblclick for a row gone between press and release. Not
-  // for the secondary button, as a context menu may keep its release
-  // LIMIT: a redraw that is no poll's answer (the filters, a new day, the first) may still take a press with it. Hold them too if that comes to trouble someone
-  let pressing = false;
-  $('list').addEventListener('pointerdown', (e) => { if (e.button === 0) pressing = true; });
-  // Not captured: the window's own blur, not an element's as the press moves the focus
-  for (const name of ['pointerup', 'pointercancel', 'blur']) addEventListener(name, () => { pressing = false; });
-  async function load() {
+  // A poll's answer does not redraw the rows from under a press: Chrome sends neither click nor dblclick for a row gone between press
+  // and release. Only for a while, as a press may never tell its release (a context menu, a drag, a release over the iframe)
+  // LIMIT: a press held longer may lose its click to a redraw
+  // LIMIT: the answer held back is drawn by the next poll, up to 3 seconds after the release: drawn at the release, the rows would go before its click
+  // LIMIT: a redraw that is no poll's answer (the filters, a new day, the first, a folder's tree opening or closing, the directories read for an answer already let through) may still take a press with it. Hold them too if that comes to trouble someone
+  // LIMIT: a press meant to bring the window forward, or the focus back from the page, on the row picked opens it whole; with a menu open a double press closes it, then opens the page
+  const PRESS_MS = 2000;
+  let pressedAt = -Infinity;
+  $('list').addEventListener('pointerdown', () => { pressedAt = performance.now(); });
+  addEventListener('pointerup', () => { pressedAt = -Infinity; });
+  // polled tells one asked by no action of the person's: what an action changed is drawn at once, whatever is pressed
+  async function load(polled = false) {
     let text;
     try {
       const res = await api('/api/artifacts');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       text = await res.text();
+      if (polled && performance.now() - pressedAt < PRESS_MS) return;
       if (text !== drawn) items = JSON.parse(text);
       // The list redrawn when what is open of the folders changed, the frame when the directory of its page did
       if (framed && FILE) {
@@ -2788,8 +2793,7 @@
       loadFailed = false;
       showError('');
     }
-    // drawn left behind, the next poll draws it
-    if (text === drawn || pressing) return;
+    if (text === drawn) return;
     drawn = text;
     if (framed) renderFrame();
     else render();
@@ -3175,8 +3179,8 @@
   }
   // A page gives up its keys only to a frame that says it takes them
   for (const id of ['frame', 'read-frame']) $(id)?.addEventListener('load', (e) => e.target.contentWindow.postMessage({ artifactKeysWanted: true }, '*'));
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
-  setInterval(() => { if (!document.hidden) load(); }, POLL_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
+  setInterval(() => { if (!document.hidden) load(true); }, POLL_MS);
   load();
 </script>
 </body>
