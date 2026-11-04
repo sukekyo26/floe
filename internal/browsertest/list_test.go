@@ -184,7 +184,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval("[getComputedStyle(document.getElementById('reader')).display, getComputedStyle(document.getElementById('shelf-more')).display, getComputedStyle(document.getElementById('narrow-filter')).display, getComputedStyle(document.getElementById('news')).display, document.documentElement.scrollWidth <= innerWidth].join(' ')"))
 	b.eval("document.querySelector('#list li[data-slug=r] .title').click()")
 	b.until("the row whole", "location.pathname === '/a/r/'")
-	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [getComputedStyle(document.getElementById('back')).display, getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
+	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [getComputedStyle(document.getElementById('back')).display, getComputedStyle(document.querySelector('#frame-actions .star')).display].join(' ')"))
 	b.unsize()
 
 	check(t, "list", out, strings.Join([]string{

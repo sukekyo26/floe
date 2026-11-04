@@ -263,7 +263,7 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.navigate("/a/c/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	keyDown(b, "key: 'k', ctrlKey: true")
-	out = append(out, b.eval("[getComputedStyle(document.getElementById('find-actions')).display !== 'none', getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
+	out = append(out, b.eval("[getComputedStyle(document.getElementById('find-actions')).display !== 'none', getComputedStyle(document.querySelector('#frame-actions .star')).display].join(' ')"))
 	b.size(1440, 900, false)
 	// From a whole page: a delete of another page stays there, the focus going to the field.
 	b.navigate("/a/c/")
@@ -396,9 +396,9 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.navigate("/")
 	out = append(out, b.eval("document.querySelector('#keys-list .mod').textContent + ' ' + document.getElementById('keys-note-list').textContent.includes('⌘K')"))
 	check(t, "keys", out, strings.Join([]string{
-		"false", "true", "false true j↓k↑Enterxf/CtrlK?Esc",
+		"false", "true", "false true j↓k↑Enterxfd/CtrlK?Esc",
 		"false", "true false", "true", "false false", "false false", "false true", "true", "true false",
-		"true false jkhf/CtrlK?Esc", "true", "true", "1", "q false", "0", "⌘ true",
+		"true false jkhfd/CtrlK?Esc", "true", "true", "1", "q false", "0", "⌘ true",
 	}, "|"))
 }
 

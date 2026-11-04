@@ -142,6 +142,10 @@ func TestUIDiffURLs(t *testing.T) { //nolint:paralleltest // the browser tests s
 		{"?diff&to=1", "2 3", "false", "?diff"},
 	} {
 		openDiff(b, "/a/d/"+tc.query)
+		b.still()
+		if low := b.eval(measureContrast); low != "" {
+			t.Errorf("%s: text that cannot be read:\n%s", tc.query, low)
+		}
 		got := b.eval(diffPair) + "|" + b.eval("String(document.getElementById('diff-url-note').hidden)") + "|" + b.eval("location.search")
 		if want := tc.pair + "|" + tc.note + "|" + tc.search; got != want {
 			t.Errorf("%s: got %s, want %s", tc.query, got, want)
@@ -152,6 +156,10 @@ func TestUIDiffURLs(t *testing.T) { //nolint:paralleltest // the browser tests s
 	for _, slug := range []string{"one", "l"} {
 		b.navigate("/a/" + slug + "/?diff")
 		b.until("no versions", "!document.getElementById('diff-none').hidden")
+		b.still()
+		if low := b.eval(measureContrast); low != "" {
+			t.Errorf("%s: text that cannot be read:\n%s", slug, low)
+		}
 		const bar = "document.querySelector('#frame-actions .diff-open')"
 		if got := b.eval(bar + ".hidden + ' ' + " + bar + ".textContent.includes('Close the diff') + ' ' + document.getElementById('frame').hasAttribute('src') + ' ' + document.getElementById('diff-main').hidden"); got != "false true false true" {
 			t.Errorf("%s: %s", slug, got)
@@ -301,6 +309,10 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("document.querySelector('#list li[data-slug=n] .title').click()")
 	b.until("the words", note)
 	out = append(out, b.eval(note+".firstChild.textContent + ' ' + "+note+".querySelector('a').getAttribute('href')"))
+	b.still()
+	if low := b.eval(measureContrast); low != "" {
+		t.Errorf("the words over a page: text that cannot be read:\n%s", low)
+	}
 	// Another page loaded: gone. And back: read, no words.
 	pick("p")
 	b.until("gone", note+" === null")
