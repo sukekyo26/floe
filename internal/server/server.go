@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/pagediff"
 	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/ui"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -148,6 +149,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/artifacts/{slug}/download", s.download)
 	mux.HandleFunc("GET /api/artifacts/{slug}/pages", s.pages)
 	mux.HandleFunc("GET /api/artifacts/{slug}/versions", s.versions)
+	mux.HandleFunc("GET /api/artifacts/{slug}/diff", s.diff)
 	mux.HandleFunc("GET /api/changed/{slug}", s.changed)
 	mux.HandleFunc("GET /api/changed/{slug}/{rest...}", s.changed)
 	mux.HandleFunc("GET /a/{slug}", s.redirect)
@@ -289,9 +291,12 @@ func (s *Server) pages(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, l)
 }
 
-// versions answers the versions of the page slug, oldest first: none for a link, or a page of none yet.
+// versions answers the versions of the page slug, oldest first, none for a link or a page of none yet, and the one read
+// before the
+// last (store.ReadBefore), which a comparison starts from.
 func (s *Server) versions(w http.ResponseWriter, r *http.Request) {
-	m := s.cfg.Store.ReadMeta(r.PathValue("slug"))
+	slug := r.PathValue("slug")
+	m := s.cfg.Store.ReadMeta(slug)
 	if m == nil {
 		notFound(w)
 		return
@@ -300,7 +305,56 @@ func (s *Server) versions(w http.ResponseWriter, r *http.Request) {
 	if versions == nil {
 		versions = []store.Version{}
 	}
-	sendJSON(w, http.StatusOK, versions)
+	sendJSON(w, http.StatusOK, struct {
+		Versions []store.Version `json:"versions"`
+		Read     int             `json:"read"`
+	}{Versions: versions, Read: s.cfg.Store.ReadBefore(Viewer, slug, m)})
+}
+
+// diff answers what differs between the versions from and to of the stored page slug, by their words alone: not found
+// for none of
+// them, or a link. It reads nothing as read. A version whose copy a publish removed after its meta.json was read is
+// read once more.
+// LIMIT: it looks at no Origin and counts none running at once, so that a sandboxed page or another site, which cannot
+// read the answer,
+// can still ask it as often as they will. One viewer, on their own machine: put a bound on it if the load comes to
+// trouble someone.
+func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
+	slug, q := r.PathValue("slug"), r.URL.Query()
+	from, fromOK := versionNumber(q.Get("from"))
+	to, toOK := versionNumber(q.Get("to"))
+	if !fromOK || !toOK {
+		send(w, http.StatusBadRequest, "from and to must be numbers of versions")
+		return
+	}
+	for range 2 {
+		m := s.cfg.Store.ReadMeta(slug)
+		if m == nil {
+			break
+		}
+		markFrom, okFrom := s.cfg.Store.ReadMark(slug, m, from)
+		markTo, okTo := s.cfg.Store.ReadMark(slug, m, to)
+		if !okFrom || !okTo {
+			break
+		}
+		pageFrom, okFrom := s.cfg.Store.VersionPage(slug, m, from)
+		pageTo, okTo := s.cfg.Store.VersionPage(slug, m, to)
+		if !okFrom || !okTo {
+			continue
+		}
+		result, err := pagediff.Compare(pageFrom, pageTo)
+		if err != nil {
+			refuse(w, r, err)
+			return
+		}
+		sendJSON(w, http.StatusOK, struct {
+			From Read `json:"from"`
+			To   Read `json:"to"`
+			pagediff.Result
+		}{From: Read{N: markFrom.N, At: markFrom.At}, To: Read{N: markTo.N, At: markTo.At}, Result: result})
+		return
+	}
+	notFound(w)
 }
 
 func (*Server) redirect(w http.ResponseWriter, r *http.Request) {

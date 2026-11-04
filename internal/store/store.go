@@ -305,14 +305,16 @@ func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 
 // Listed is an entry of the list. A link takes its title and update time from the file, a linked data file its template
 // too; Missing is set for links only, true when the file cannot be served. News (newsNew, newsVersion, "" for nothing
-// unseen) and Version, the number of the last, are of a stored page only.
+// unseen), Version, the number of the last, and VersionCount, how many are kept, are of a stored page only.
 type Listed struct {
 	Slug string `json:"slug"`
 	Meta
 
 	News    string `json:"news,omitempty"`
 	Version int    `json:"version,omitempty"`
-	Missing *bool  `json:"missing,omitempty"`
+	// VersionCount tells whether there are versions to compare, the versions themselves left out of the list.
+	VersionCount int   `json:"versionCount,omitempty"`
+	Missing      *bool `json:"missing,omitempty"`
 }
 
 // slugs returns the slugs of the store, in their order: the names under it that can be one.
@@ -358,12 +360,13 @@ func (s *Store) List(viewer string) ([]Listed, error) {
 }
 
 func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
-	l := Listed{Slug: slug, Meta: *m, News: "", Version: 0, Missing: nil}
+	l := Listed{Slug: slug, Meta: *m, News: "", Version: 0, VersionCount: 0, Missing: nil}
 	// The list is read every few seconds: versions are asked for a page at a time.
 	l.Versions = nil
 	if !m.IsLink() {
 		l.News = r.news(slug, m)
 		l.Version = m.lastNumber()
+		l.VersionCount = len(m.Versions)
 		return l
 	}
 	// What is in a folder is listed when it is opened (Pages): the list is read every few seconds.
