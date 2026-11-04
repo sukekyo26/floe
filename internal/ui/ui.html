@@ -137,9 +137,12 @@
   .dviews { margin-left: auto; display: flex; gap: 0.35rem; }
   .dviews .btn, .dhead > .btn { height: 2rem; padding: 0 0.75rem; font-size: var(--text-small); white-space: nowrap; }
 
-  .dmain { flex: 1; min-height: 0; display: grid; grid-template-columns: 15rem minmax(0, 1fr); }
-  .dtoc { min-height: 0; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); font-size: var(--text-small); }
-  .dtoc h2 { flex: none; margin: 0; padding: 0.75rem 1rem 0.35rem; font-size: var(--text-label); font-weight: 700; color: var(--muted); }
+  .dmain { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: var(--toc) minmax(0, 1fr); background: var(--panel); }
+  .dmain > .grip { position: absolute; top: 0; }
+  .dmain > .side-show { position: absolute; top: 8px; }
+  .dtoc { min-height: 0; display: flex; flex-direction: column; font-size: var(--text-small); }
+  .dtoc .side-head { flex: none; padding-inline: 1rem 0.4rem; }
+  .dtoc h2 { margin: 0; }
   /* What scrolls holds what is placed in it, so that the .sr-only words, absolute, are cut with the rest and do not widen the page past it */
   .dtoc-list, .dbody { position: relative; }
   .dtoc-list { flex: 1; min-height: 0; overflow: auto; padding: 0 0.5rem; }
@@ -157,7 +160,7 @@
   .mk.added { color: var(--ins); background: var(--ins-soft); }
   .mk.removed { color: var(--del); background: var(--del-soft); }
 
-  .dbody { min-width: 0; overflow: auto; font-size: var(--text); line-height: 1.7; }
+  .dbody { grid-column: 2; min-width: 0; overflow: auto; background: var(--frame-bg); border-left: 1px solid var(--line); font-size: var(--text); line-height: 1.7; }
   .dcols, .drow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dcols { position: sticky; top: 0; z-index: 1; background: var(--frame-bg); border-bottom: 1px solid var(--line); font-size: var(--text-small); color: var(--muted); }
   .dcols > div { display: flex; gap: 0.4rem; align-items: center; padding: 0.4rem 1.25rem; }
@@ -197,7 +200,8 @@
   .dsame .word { flex: none; }
   @media (max-width: 56rem) {
     .dmain { grid-template-columns: minmax(0, 1fr); }
-    .dtoc { display: none; }
+    .dtoc, .dmain > .grip, .dmain > .side-show { display: none; }
+    .dbody { grid-column: auto; border-left: 0; }
   }
   @media (max-width: 40rem) {
     .diff:not([hidden]) { display: block; overflow: auto; }
@@ -224,7 +228,7 @@
   }
   .side.over { box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); width: min(80vw, var(--side-width)); }
   .side-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.1rem 0.45rem 0.5rem; background: var(--panel); }
-  .side-head span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 var(--text-label)/1.2 var(--mono); letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
+  .side-head :is(span, h2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 var(--text-label)/1.2 var(--mono); letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
   .side :is(a, button.dir) {
     display: block; width: 100%; padding: 0.22rem 0.5rem 0.22rem calc(0.3rem + var(--d) * 1.1rem); border: 0; border-radius: var(--corner-small); background: none;
     color: var(--fg); font: inherit; text-align: left; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -850,11 +854,13 @@
   </div>
   <p class="dnote" id="diff-url-note" hidden>{{.Msg "ui_diff_bad_url"}}</p>
   <div class="dmain" id="diff-main">
-    <nav class="dtoc" aria-labelledby="diff-toc-title">
-      <h2 id="diff-toc-title">{{.Msg "ui_diff_toc"}}</h2>
+    <nav class="dtoc" id="diff-toc-nav" aria-labelledby="diff-toc-title">
+      <div class="side-head"><h2 id="diff-toc-title">{{.Msg "ui_diff_toc"}}</h2><button type="button" class="icon-btn" id="diff-toc-hide" aria-expanded="true" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_hide"}}" aria-label="{{.Msg "ui_diff_toc_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
       <div class="dtoc-list" id="diff-toc"></div>
       <p class="dkeys"><kbd>n</kbd>{{.Msg "ui_diff_next"}}<br><kbd>p</kbd>{{.Msg "ui_diff_prev"}}<br><kbd>d</kbd>{{.Msg "ui_diff_close"}}</p>
     </nav>
+    <div class="grip" id="diff-toc-grip" role="separator" aria-orientation="vertical" aria-controls="diff-toc-nav" aria-label="{{.Msg "ui_diff_toc_width"}}" tabindex="0" hidden></div>
+    <button type="button" class="icon-btn side-show" id="diff-toc-show" aria-expanded="false" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_show"}}" aria-label="{{.Msg "ui_diff_toc_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
     <div class="dbody" id="diff-body"></div>
   </div>
   <div class="state notfound" id="diff-none" hidden><p>{{.Msg "ui_diff_none"}}</p><a class="btn" id="diff-page">{{.Msg "ui_diff_open_page"}}</a></div>
@@ -2532,17 +2538,22 @@
   const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
   const sideOpen = new Set(FILE ? dirOf(FILE).split('/').map((_, i, all) => all.slice(0, i).join('/')).concat(dirOf(FILE)) : []);
   const sideListings = new Map();
-  // Its width and whether it shows, the viewer's, kept in the browser for every folder; without storage the default
+  // A column's width and whether it shows, the viewer's, kept in the browser; without storage the default
+  function keptSide(key, width) {
+    const kept = { width, open: true };
+    try {
+      const saved = JSON.parse(localStorage.getItem(key));
+      if (Number.isFinite(saved?.width)) kept.width = saved.width;
+      if (typeof saved?.open === 'boolean') kept.open = saved.open;
+    } catch {
+      // Storage is unavailable, or holds something else
+    }
+    return kept;
+  }
+  // The tree's, for every folder
   const SIDE_KEY = 'frame.side';
   const SIDE_MIN = 160;
-  let side = { width: 280, open: true };
-  try {
-    const saved = JSON.parse(localStorage.getItem(SIDE_KEY));
-    if (Number.isFinite(saved?.width)) side.width = saved.width;
-    if (typeof saved?.open === 'boolean') side.open = saved.open;
-  } catch {
-    // Storage is unavailable, or holds something else
-  }
+  const side = keptSide(SIDE_KEY, 280);
   // A narrow frame shows the tree over the page when asked, without its edge, and keeps nothing of it
   const sideNarrow = matchMedia('(max-width: 40rem)');
   let sideOver = false;
@@ -3195,6 +3206,30 @@
     for (const b of $('diff-toc').querySelectorAll('button')) b.classList.toggle('on', b.dataset.section === String(i));
     $('diff-toc').querySelector('.on')?.scrollIntoView({ block: 'nearest' });
   }
+  // The contents' width and whether they show, within the tree's bounds. Closed, a column is left for the button to open them, which
+  // would stand over the words. Kept apart from the tree's: closing one does not close the other
+  const TOC_KEY = 'diff.toc';
+  const toc = keptSide(TOC_KEY, 240);
+  function layoutToc() {
+    const width = Math.min(Math.max(toc.width, SIDE_MIN), sideMax());
+    $('diff-main').style.setProperty('--toc', toc.open ? `${width}px` : '2.75rem');
+    $('diff-toc-nav').hidden = $('diff-toc-grip').hidden = !toc.open;
+    edgeAt($('diff-toc-grip'), width, width, SIDE_MIN, sideMax());
+    $('diff-toc-show').hidden = toc.open;
+  }
+  function keepToc() {
+    try {
+      localStorage.setItem(TOC_KEY, JSON.stringify(toc));
+    } catch {
+      // Storage is unavailable: the contents are laid out as they are, for now
+    }
+  }
+  function showToc(open) {
+    toc.open = open;
+    layoutToc();
+    keepToc();
+    $(open ? 'diff-toc-hide' : 'diff-toc-show').focus();
+  }
   function moveChange(step) {
     const next = diffChanges[diffAt + step];
     if (!next) return;
@@ -3203,6 +3238,17 @@
     tocAt(next.dataset.section);
   }
   if (DIFF) {
+    layoutToc();
+    addEventListener('resize', layoutToc);
+    $('diff-toc-hide').addEventListener('click', () => showToc(false));
+    $('diff-toc-show').addEventListener('click', () => showToc(true));
+    dragEdge($('diff-toc-grip'), {
+      set: (width) => {
+        toc.width = Math.min(Math.max(Math.round(width), SIDE_MIN), sideMax());
+        layoutToc();
+      },
+      keep: keepToc,
+    });
     for (const name of ['from', 'to']) {
       $(`diff-${name}`).addEventListener('change', (e) => {
         diffPair[name] = Number(e.target.value);

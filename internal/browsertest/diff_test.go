@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 )
 
@@ -329,6 +330,99 @@ func TestUIDiffContents(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 }
 
+// TestUIDiffToc gives the contents the tree's edge and buttons: the width dragged or moved by keys and closed are kept, without the tree's,
+// and each is reached by Tab. Closed, the button to open them stands clear of the words. Where there are no contents, there is neither.
+func TestUIDiffToc(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := diffSite(t)
+	b := s.b
+	b.size(1440, 900, false)
+	b.navigate("/")
+	b.eval("localStorage.removeItem('diff.toc'); localStorage.removeItem('frame.side')")
+	openDiff(b, "/a/d/?diff")
+
+	const grip = "document.getElementById('diff-toc-grip')"
+	const state = "[" + grip + ".getAttribute('aria-valuenow'), " + grip + ".getAttribute('aria-valuemin'), " + grip + ".getAttribute('aria-valuemax'), document.querySelector('.dtoc').offsetWidth, Math.round(" + grip + ".getBoundingClientRect().left + 3), Math.round(document.getElementById('diff-body').getBoundingClientRect().left)].join(' ')"
+	const kept = "localStorage.getItem('diff.toc')"
+	out := []string{b.eval(state), b.eval(kept + " ?? 'none kept'")}
+
+	r := b.rect(grip)
+	x, y := r.X+r.Width/2, r.Y+r.Height/2
+	b.mouse(chromedp.MousePressed, x, y, 1)
+	b.mouse(chromedp.MouseMoved, 300, y, 0)
+	b.mouse(chromedp.MouseReleased, 300, y, 1)
+	out = append(out, b.until("dragged", state+".startsWith('300') && "+state), b.eval(kept))
+	b.eval(grip + ".focus()")
+	b.pressKey(kb.ArrowLeft)
+	out = append(out, b.eval(state), b.eval(kept))
+	// As read again, and its edge stays within the column it moves.
+	openDiff(b, "/a/d/?diff")
+	out = append(out, b.eval(state))
+
+	// Closed and opened, the focus on the button that takes its place, the words where they were left; the tree's own is not touched.
+	b.eval("document.getElementById('diff-toc-hide').click()")
+	const closed = `[document.getElementById('diff-toc-nav').hidden, document.getElementById('diff-toc-grip').hidden, document.getElementById('diff-toc-show').hidden, document.activeElement.id,
+		document.getElementById('diff-toc-show').getBoundingClientRect().right <= document.getElementById('diff-body').getBoundingClientRect().left,
+		document.elementFromPoint(document.getElementById('diff-toc-show').getBoundingClientRect().left + 8, document.getElementById('diff-toc-show').getBoundingClientRect().top + 8)?.closest('button')?.id].join(' ')`
+	out = append(out, b.eval(closed), b.eval(kept), b.eval("localStorage.getItem('frame.side') ?? 'none kept'"))
+	openDiff(b, "/a/d/?diff")
+	out = append(out, b.eval(closed))
+	b.pressKey("n")
+	b.eval("document.getElementById('diff-toc-show').click()")
+	out = append(out, b.eval("[document.getElementById('diff-toc-nav').hidden, document.activeElement.id].join(' ')"), b.eval(kept))
+
+	for _, id := range []string{"diff-toc-hide", "diff-toc-grip"} {
+		b.eval("document.activeElement.blur()")
+		for range 40 {
+			b.pressKey(kb.Tab)
+			if b.eval("document.activeElement.id") == id {
+				break
+			}
+		}
+		out = append(out, id+": "+b.eval("document.activeElement.id + ' ' + getComputedStyle(document.activeElement).outlineStyle"))
+	}
+	b.eval("document.activeElement.blur(); document.getElementById('diff-toc-hide').click()")
+	b.eval("document.activeElement.blur()")
+	for range 40 {
+		b.pressKey(kb.Tab)
+		if b.eval("document.activeElement.id") == "diff-toc-show" {
+			break
+		}
+	}
+	out = append(out, b.eval("document.activeElement.id"))
+	b.still()
+	if low := b.eval(measureContrast); low != "" {
+		t.Errorf("closed: text that cannot be read:\n%s", low)
+	}
+	b.eval("document.getElementById('diff-toc-show').click()")
+
+	// The window narrows it for now, the width kept as it was; with no contents at that width, neither the edge nor the buttons.
+	b.size(800, 700, false)
+	b.until("narrowed", grip+".getAttribute('aria-valuemax') === '400'")
+	out = append(out, b.eval(kept))
+	for _, width := range []int64{800, 400} {
+		b.size(width, 700, false)
+		for _, open := range []string{"true", "false"} {
+			b.eval("localStorage.setItem('diff.toc', '{\"width\":284,\"open\":" + open + "}')")
+			openDiff(b, "/a/d/?diff")
+			if got := b.eval("['.dtoc', '#diff-toc-grip', '#diff-toc-show'].map((q) => document.querySelector(q).getClientRects().length).join(' ') + ' ' + document.getElementById('diff-body').getBoundingClientRect().left"); got != "0 0 0 0" {
+				t.Errorf("at %d, open %s: %s", width, open, got)
+			}
+		}
+	}
+	check(t, "toc", out, strings.Join([]string{
+		"240 160 480 240 240 240", "none kept",
+		"300 160 480 300 300 300", `{"width":300,"open":true}`,
+		"284 160 480 284 284 284", `{"width":284,"open":true}`,
+		"284 160 480 284 284 284",
+		"true true false diff-toc-show true diff-toc-show", `{"width":284,"open":false}`, "none kept",
+		"true true false  true diff-toc-show",
+		"false diff-toc-hide", `{"width":284,"open":true}`,
+		"diff-toc-hide: diff-toc-hide solid", "diff-toc-grip: diff-toc-grip solid",
+		"diff-toc-show",
+		`{"width":284,"open":true}`,
+	}, "|"))
+}
+
 // TestUIDiffRead keeps what is shown of one pair: an answer that fails, or has not come, leaves the columns' heads with the words they are
 // of, an error goes with the next answer, and the last of many choices alone is asked to the end, nothing said of the server.
 func TestUIDiffRead(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -484,17 +578,22 @@ func TestUIDiffScrolls(t *testing.T) { //nolint:paralleltest // the browser test
 		openDiff(b, "/a/z/?diff")
 		b.eval("document.querySelector('[data-diff-view=side]').click()")
 	}
-	for _, size := range [][2]int64{{1440, 900}, {1100, 700}, {800, 700}, {400, 800}} {
-		b.size(size[0], size[1], false)
-		open()
-		for _, view := range []string{"side", "all", "only"} {
-			b.eval("document.querySelector('[data-diff-view=" + view + "]').click()")
-			// Changes only may all fit, with nothing to scroll.
-			if got := b.eval(measure); got != fine && (view != "only" || !strings.HasPrefix(got, "0 0 ")) {
-				t.Errorf("%dx%d %s: %s", size[0], size[1], view, got)
+	b.navigate("/")
+	for _, kept := range []string{"true", "false"} {
+		b.eval("localStorage.setItem('diff.toc', '{\"open\":" + kept + "}')")
+		for _, size := range [][2]int64{{1440, 900}, {1100, 700}, {800, 700}, {400, 800}} {
+			b.size(size[0], size[1], false)
+			open()
+			for _, view := range []string{"side", "all", "only"} {
+				b.eval("document.querySelector('[data-diff-view=" + view + "]').click()")
+				// Changes only may all fit, with nothing to scroll.
+				if got := b.eval(measure); got != fine && (view != "only" || !strings.HasPrefix(got, "0 0 ")) {
+					t.Errorf("%dx%d %s, contents shown %s: %s", size[0], size[1], view, kept, got)
+				}
 			}
 		}
 	}
+	b.eval("localStorage.removeItem('diff.toc')")
 	// What moves the box, and what shortens what it scrolls, leave the page where it is.
 	b.size(1440, 900, false)
 	open()
