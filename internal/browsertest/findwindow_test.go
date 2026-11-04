@@ -370,6 +370,8 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// A whole page: only what works there; / finds, as there is no search; f presses the star shown, not one hidden.
 	keyDown(b, "key: '?', shiftKey: true")
 	out = append(out, b.eval(shown))
+	// Each row's keys on one line, whatever the word between them.
+	out = append(out, b.eval("[...document.querySelectorAll('#keys-frame dt')].every((d) => d.getBoundingClientRect().height < 32)"))
 	b.eval("document.getElementById('keys').close(); document.activeElement.blur()")
 	keyDown(b, "key: '/'")
 	out = append(out, b.eval("document.getElementById('find').open"))
@@ -396,7 +398,7 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	check(t, "keys", out, strings.Join([]string{
 		"false", "true", "false true j↓k↑Enterxf/CtrlK?Esc",
 		"false", "true false", "true", "false false", "false false", "false true", "true", "true false",
-		"true false jkhf/CtrlK?Esc", "true", "1", "q false", "0", "⌘ true",
+		"true false jkhf/CtrlK?Esc", "true", "true", "1", "q false", "0", "⌘ true",
 	}, "|"))
 }
 
