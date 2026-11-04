@@ -1485,6 +1485,17 @@ func TestFaces(t *testing.T) {
 	if got, told := draw(t, head+group, inspect); !strings.HasPrefix(got, `frame "g" 20,20 324x`) || told != "" {
 		t.Errorf("a group's heading:\n  inspect %q %q\n  want the frame 324 wide", got, told)
 	}
+
+	// A lane's heading is measured bold where a level edge is checked against it: regular, this one would not reach it.
+	const lanes = "title: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      direction: right\n      lanes:\n" +
+		"        - { name: u, label: U, nodes: [{ box: { name: a, rows: [Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] } }, { box: { name: z, rows: [Zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz] } }] }\n" +
+		"        - { name: v, label: nnnnnnnnnnnnnnnnnnnnnnn, nodes: [{ box: { name: m, rows: [M] } }] }\n" +
+		"        - { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }\n" +
+		"      edges:\n        - { from: z, to: m }\n        - { from: a, to: b, level: true }\n"
+	want := `s.yaml:13:36: edge a→b: it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`
+	if _, told := draw(t, lanes, inspect); told != want {
+		t.Errorf("a lane's heading:\n  told %q\n  want %q", told, want)
+	}
 }
 
 // A part is named in the language it is measured widest in, so in the class it is drawn in: bold, eight narrow
