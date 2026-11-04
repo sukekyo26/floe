@@ -186,7 +186,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"#|v dot 700 ver:v3 · new version kindof:design proj:p tags:t|#|n dot 700 kindof:report proj:q|#|r ring 500 kindof:report proj:p|l mark 500 kindof:Link · HTML path:/tmp/x/l.html|#|d mark 500 kindof:Link · handoff path:/home/you/work/a (1)/v2.0/data-set_#1/deep/deep/deep/deep/deep/deep/deep/deep/deep/name-2.yaml|#|f mark 500 kindof:Folder path:/tmp/x/f|#|g mark 500 kindof:Link · HTML miss:File not found",
 		"Today,Yesterday,Last 7 days", "2 new / Newest first · 2 new / 2",
 		"Version\nthe words\np", "v ?q=the+words",
-		"false true about:blank New ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
+		"false true about:blank  ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
 		"true false /a/l/?raw Link l", "true false /a/n/?raw New n New",
 		"true true true", "false true about:blank New ",
 		"vn ?view=new", "vn", "1 new / 1", "New", "n", "true",
@@ -437,8 +437,8 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Folded, the head says what the filters narrow the list to, in its line beside the rest; pressed, they show.
 	const what = "[document.getElementById('shelf-what').hidden, document.getElementById('shelf-what').textContent, document.querySelector('.lhead').scrollWidth <= document.querySelector('.lhead').clientWidth].join(' ')"
 	out = append(out, b.eval(what))
-	b.eval("setColumn('list', 408); setView('archived'); refilter({ kind: 'link', tag: 'x' })")
-	out = append(out, b.eval(what), b.eval("(() => { const e = document.getElementById('shelf-what'), r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect().width <= e.getBoundingClientRect().width; })()"))
+	b.eval("setColumn('list', 500); setView('archived'); refilter({ kind: 'link', tag: 'x' })")
+	out = append(out, b.eval(what), b.eval("(() => { const e = document.getElementById('shelf-what'), r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect().width <= e.getBoundingClientRect().width + 0.5; })()"))
 	b.eval("setColumn('list', 740)")
 	b.eval("document.getElementById('shelf-what').click()")
 	out = append(out, b.eval("getComputedStyle(document.querySelector('.shelf')).display"))
@@ -509,6 +509,25 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.size(1600, 900, false)
 	out = append(out, b.until("the list folded", "!matchMedia('(max-width: 70rem)').matches && getComputedStyle(document.getElementById('listcol')).display"))
 
+	// The three heads' buttons stand on one line, open or folded; the list's over the rows' menus, the filters' over their counts.
+	b.size(1600, 900, false)
+	b.until("the wide window", "!matchMedia('(max-width: 70rem)').matches")
+	b.eval("localStorage.removeItem('list.columns')")
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")
+	b.eval("document.querySelector('#list li[data-slug=a1] .title').click()")
+	const lines = `((ids) => ids.map((s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.top + r.height / 2; }).join(' '))`
+	const centre = "(s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.left + r.width / 2; }"
+	open := b.eval(lines + "(['#shelf-hide', '#list-hide', '#read-actions .star'])")
+	b.eval("document.getElementById('list-hide').click(); document.getElementById('shelf-hide').click()")
+	shut := b.eval(lines + "(['#shelf-show', '#list-show', '#read-actions .star'])")
+	y, _, _ := strings.Cut(open, " ")
+	out = append(out, strconv.FormatBool(open == y+" "+y+" "+y), strconv.FormatBool(shut == open))
+	b.eval("document.getElementById('list-show').click(); document.getElementById('shelf-show').click()")
+	out = append(out, b.eval("(() => { const at = "+centre+"; const n = document.querySelector('.views .n').getBoundingClientRect(), i = document.querySelector('#shelf-hide svg').getBoundingClientRect(); return [Math.abs(at('#list-hide') - at('#list li[data-slug=a1] summary')) <= 0.5, Math.abs(n.right - i.right) <= 1].join(' '); })()"))
+	// The rule of the folded columns leaves no width between it and the one under 70rem.
+	out = append(out, b.eval("[...document.styleSheets[0].cssRules].some((r) => r.media?.mediaText === 'not (max-width: 70rem)')"))
+
 	// Between the widths a zoomed window can fall, one set of rules or the other holds: not only "under 70rem", and not both.
 	out = append(out, b.eval("[matchMedia('(max-width: 70rem)').matches, WIDE.matches, WIDE.media].join(' ')"))
 
@@ -536,7 +555,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"520px 740", "0 0 0 0", "block false 0 true  608", "none true 1 false list-show 200", "false true true", "0 ",
 		"long", "a3 false", "shelf-show:true list-show:true shelf-show 0",
 		"shell shelf-closed list-closed", "list-hide shell shelf-closed lhead", "block", "block",
-		"block 0 0 0 1", "none", "false true not (max-width: 70rem)",
+		"block 0 0 0 1", "none", "true", "true", "true true", "true", "false true not (max-width: 70rem)",
 		"200px true true", "200px true true", "200px true true", "320px 320px",
 	}, "|"))
 }
