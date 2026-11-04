@@ -241,7 +241,7 @@ func (gr *group) mark() {
 			marks[[2]int{c, r}] = [2]int{add(c, r, kindLeft, 0, 0), add(c, r, kindRight, 0, 0)}
 		}
 		if t := gr.out.clusters[c].g.Label; t != nil {
-			heading[c] = add(c, spans[c][0], kindHeading, math.Ceil(textWidth(t, sizeSub, false)), labelH)
+			heading[c] = add(c, spans[c][0], kindHeading, math.Ceil(textWidth(t, frameClass(""))), labelH)
 		}
 	}
 	gr.list(spans, marks, heading)

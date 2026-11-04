@@ -321,6 +321,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   with another theme only, no longer moves it. `floe publish` says `last updated` in place of `last published`.
 - Change the time a linked file is listed at to the later of the file's time and when it was linked, so that linking
   it again brings it up the list.
+- Refuse a diagram's `title` empty in any language (`title: ""`, `{ en: "", ja: … }`, `{ en: …, ja: "" }`): it told a
+  reader who cannot see the diagram nothing (`aria-label=""`).
+- Refuse an empty label in a diagram (`label: ""`, the `text` of the part `label`, or `{ en: "", ja: … }`), in the
+  parts `edge`, `bar`, `icon`, `frame` and `label` and a graph's edges and groups. All but a frame's took room, and
+  unless plain drew an empty box. For no label, leave the key out. A tick's empty text is still a mark alone.
 - Refuse a comment in `{ }` or `[ ]`, in every YAML file floe reads, a comment on a line of its own and one in a
   flow over lines too: YAML reads a `#` there as a comment to the line's end, the `}` or `]` on it too, which the
   YAML library told only as missing, at the `[` or the next line. floe tells it at the `#`, and where the innermost
@@ -519,6 +524,17 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a diagram measuring bold text as regular: a table's title, a box's `main` row, a frame's heading, a graph
+  group's heading and a `strong` label are now counted as wide as bold is drawn (0.64 of the size for a narrow
+  character, from 0.6), and a `main code` row at the 12px it is drawn in, from 13. A table, box or graph with no `w`
+  grows, the more the longer its text (a title of 49 characters from 416 to 440), and a diagram that passed may now be
+  refused: a written `w` too narrow, a part at written coordinates overlapping a box that grew or a frame's heading, an
+  edge by hand running through a box that grew, a `level` edge running through a lane's heading, a box straddling the
+  edge of a group's frame, a part sticking out of a written `width` or `height`, or a bold `label` no longer inside its
+  `in`. Level edges keep off the round corner of a box they end at, which grows for them where it was just short. Mistakes and
+  `floe diagram inspect` may name a part in another language, the one now measured widest. Capitals still run wider
+  than counted, so a long title of capitals can pass the edge of its box; only later than before.
+
 - Fix a diagram table measuring its rows' types in code, though they are drawn in the plain font: a table with no
   `w` is sized and a written `w` is checked with the name and the two spaces after it in code and the type not, so a
   long type needs a narrower table than before.
@@ -544,7 +560,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   though it had a name. A part with no name
   is named by its text in the language that decides its width (the widest, English of two as wide), and with no text
   either by where it stands (`frame 10,10 250x150`, a bar with no label `bar 200,37 80x14`); a tree's node so too, in
-  its box and in its edges; a label with `in` and no text, by its region (`label in A`), placed or not.
+  its box and in its edges.
 - Fix a diagram's placement mistake between two parts written by hand (an overlap, a crossing, an edge through a
   box, a part across a frame's edge) told at the line of the one compared first, often the part that was there
   before: it is told at the part written later in `parts` now, which was added or moved last most often. One between

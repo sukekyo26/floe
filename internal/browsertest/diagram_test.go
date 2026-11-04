@@ -459,3 +459,54 @@ func TestUIDiagramGround(t *testing.T) { //nolint:paralleltest // the browser te
 		}
 	}
 }
+
+// faceOf in internal/diagram tells each class as part.css draws it: its size, weight and whether in code.
+const measureFaces = `(() => {
+  const svg = document.querySelector('svg.dg');
+  const text = (parent, cls) => {
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    if (cls) t.setAttribute('class', cls);
+    t.textContent = 'x';
+    parent.append(t);
+    return t;
+  };
+  const plain = getComputedStyle(svg).fontFamily;
+  const face = (t) => {
+    const s = getComputedStyle(t);
+    return s.fontSize + ' ' + s.fontWeight + (s.fontFamily === plain ? '' : ' code');
+  };
+  const out = {};
+  for (const cls of ['main', 'sub', 'main code', 'sub code', 'cell code', 'type', 'label', 'label strong']) {
+    out[cls] = face(text(svg, cls));
+  }
+  for (const cls of ['frame', 'frame grouped']) {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', cls);
+    svg.append(g);
+    out[cls] = face(text(g));
+  }
+  return JSON.stringify(out);
+})()`
+
+func TestUIDiagramFaces(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, themes, _ := k.Names()
+	const want = `{"main":"13px 700","sub":"12px 400","main code":"12px 700 code","sub code":"12px 400 code",` +
+		`"cell code":"12px 400 code","type":"12px 400","label":"12px 400","label strong":"13px 700",` +
+		`"frame":"12px 700","frame grouped":"13px 700"}`
+	for _, theme := range themes {
+		slug := "faces-" + theme
+		page := "template: report\nlang: en\ntheme: " + theme + "\ntitle: Faces\nsections:\n  - heading: Section\n    parts:\n" +
+			"      - diagram: { title: D, width: 200, height: 100, parts: [{ box: { x: 10, y: 10, rows: [A] } }] }\n"
+		s.floe(t, "publish", s.write(t, slug+".yaml", page), "--slug", slug)
+		s.b.navigate("/a/" + slug + "/?raw")
+		s.b.until("the diagram", "document.querySelectorAll('svg.dg').length === 1")
+		if got := s.b.eval(measureFaces); got != want {
+			t.Errorf("in %s, part.css draws the classes of a diagram as\n  %s\nand internal/diagram's faceOf measures them as\n  %s\nchange them together", theme, got, want)
+		}
+	}
+}

@@ -184,3 +184,14 @@ func TestOutlineRandom(t *testing.T) {
 		}
 	}
 }
+
+// rowWidth counts a row's two cells at one size.
+func TestTableCellsOneSize(t *testing.T) {
+	t.Parallel()
+
+	name, _ := faceOf(tableCells[0])
+	typ, _ := faceOf(tableCells[1])
+	if name != typ {
+		t.Errorf("the cells of a table's row are %v and %v: rowWidth counts them at one size", name, typ)
+	}
+}

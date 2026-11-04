@@ -269,7 +269,7 @@ func TestLayoutMistakes(t *testing.T) {
 			`s.yaml:7:5: box "S" overlaps label "across both"`,
 		},
 		// A part with no name is named by its text in the language it is laid out as wide as (by code's widths in a code
-		// row), else by where it stands; a label placed in its region with no text, by its region.
+		// row), else by where it stands.
 		{
 			"  - label: { text: { en: Decide what to build, ja: \"作るものと作らないものを、使う人と話して決める\" }, x: 16, y: 44, anchor: start }\n" +
 				"  - bar: { x1: 200, x2: 280, y: 44 }",
@@ -279,18 +279,31 @@ func TestLayoutMistakes(t *testing.T) {
 			"  - frame: { x: 10, y: 10, w: 250, h: 150 }\n  - frame: { x: 300, y: 100, w: 150, h: 40 }\n  - box: { x: 0, y: 140, w: 80, h: 40, rows: [A] }",
 			"s.yaml:6:5: frame 300,100 150x40 sticks out of the 400x200 canvas\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150",
 		},
-		{"  - label: { text: \"\", x: 160, y: 117 }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", `s.yaml:6:5: box "a" overlaps label 155,108 10x18`},
+		// A label's text is empty in no language, wherever a key takes one; rows and a table's title may be.
+		{"  - box: { name: a, x: 10, y: 30, w: 60, h: 30, rows: [a] }\n  - edge: { from: a, to: [200, 45], label: \"\" }", "s.yaml:6:44: minLength: got 0, want 1"},
+		{"  - box: { name: a, x: 10, y: 30, w: 60, h: 30, rows: [a] }\n  - edge: { from: a, to: [200, 45], label: { en: \"\", ja: あ } }", "s.yaml:6:50: minLength: got 0, want 1"},
+		{"  - edge: { from: [10, 45], to: [200, 45], label: { en: a, ja: \"\" } }", "s.yaml:5:64: minLength: got 0, want 1"},
+		{"  - bar: { x1: 10, x2: 100, y: 85, label: \"\" }", "s.yaml:5:43: minLength: got 0, want 1"},
+		{"  - icon: { icon: aws/amazon-ec2, x: 10, y: 10, label: \"\" }", "s.yaml:5:56: minLength: got 0, want 1"},
+		{"  - frame: { x: 100, y: 100, w: 100, h: 60, label: \"\" }", "s.yaml:5:52: minLength: got 0, want 1"},
+		{"  - label: { text: \"\", x: 100, y: 100 }", "s.yaml:5:20: minLength: got 0, want 1"},
+		{"  - circle: { name: A, cx: 150, cy: 100, r: 60 }\n  - label: { text: \"\", in: [A] }", "s.yaml:6:20: minLength: got 0, want 1"},
+		{"  - graph: { x: 20, y: 20, nodes: [{ box: { name: a, rows: [a] } }], edges: [{ from: a, to: a, label: \"\" }] }", "s.yaml:5:103: minLength: got 0, want 1"},
+		{"  - graph: { x: 20, y: 20, nodes: [{ group: { name: g, label: \"\", nodes: [{ box: { name: a, rows: [a] } }] } }] }", "s.yaml:5:63: minLength: got 0, want 1"},
+		{"  - box: { x: 10, y: 30, rows: [\"\"] }\n  - box: { x: 100, y: 30, rows: [[\"\", sub]] }\n  - table: { x: 200, y: 10, title: \"\", rows: [[\"\", \"\"]] }", ""},
+		// Accepted, as the LIMITs of label and addAxis say: text of spaces, and a tick empty in one language, named by the other.
+		{"  - edge: { from: [10, 45], to: [200, 45], label: \" \" }", ""},
+		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[160, { en: \"\", ja: 月 }]] }\n  - box: { name: b, x: 150, y: 100, w: 60, h: 30, rows: [b] }", `s.yaml:6:5: box "b" overlaps label "月"`},
 		// A tick of no text in any language is a mark alone: nothing overlaps it or sticks out (an edge through it: f13).
 		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, \"\"], [160, \"\"]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
 		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, { en: \"\", ja: \"\" }], [160, { en: \"\", ja: \"\" }]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
 		{"  - axis: { x1: 10, x2: 396, y: 100, ticks: [[10, \"\"], [396, \"\"]] }", ""},
 		// A tick's text between ticks is checked as at one.
-		{"  - axis: { x1: 20, x2: 380, y: 100, ticks: [[20, Mon], [140, \"\"]], labels: between }\n  - box: { name: a, x: 60, y: 105, w: 40, h: 30, rows: [a] }", `s.yaml:6:5: box "a" overlaps label "Mon"`},
+		{"  - axis: { x1: 20, x2: 380, y: 100, ticks: [[20, Mon], [140, \"\"]], labels: between }\n  - box: { name: a, x: 60, y: 105, w: 40, h: 30, rows: [[a, sub]] }", `s.yaml:6:5: box "a" overlaps label "Mon"`},
 		{"  - box: { x: 20, y: 20, rows: [[{ en: \"あいう\", ja: \"abcde\" }, main code]] }\n  - box: { name: b, x: 30, y: 30, w: 80, h: 30, rows: [b] }", `s.yaml:6:5: box "abcde" overlaps box "b"`},
 		{
-			"  - circle: { name: A, cx: 150, cy: 100, r: 20 }\n  - label: { text: a much longer label than fits, in: [A] }\n  - label: { text: \"\", in: [A] }",
-			"s.yaml:6:5: label \"a much longer label than fits\" finds no room inside A and outside the other circles: make that area larger, or the text shorter\n" +
-				"s.yaml:7:5: label in A finds no room inside A and outside the other circles: make that area larger, or the text shorter",
+			"  - circle: { name: A, cx: 150, cy: 100, r: 20 }\n  - label: { text: a much longer label than fits, in: [A] }",
+			"s.yaml:6:5: label \"a much longer label than fits\" finds no room inside A and outside the other circles: make that area larger, or the text shorter",
 		},
 		{"  - circle: { cx: 390, cy: 100, r: 20 }", "s.yaml:5:5: circle 370,80 40x40 sticks out of the 400x200 canvas"},
 		// A label at x and y whose corner is on the circle's edge is in, wherever the circle stands; one 0.001 out is not.
@@ -301,7 +314,6 @@ func TestLayoutMistakes(t *testing.T) {
 			"s.yaml:6:5: label \"Mon\" is not all inside A and outside the other circles: move it, or leave out x and y for floe to place it",
 		},
 		{"  - dot: { name: d, cx: 50, cy: 50 }\n  - box: { name: b, x: 40, y: 40, w: 60, h: 30, rows: [b] }", `s.yaml:6:5: box "b" overlaps dot "d"`},
-		{"  - circle: { name: A, cx: 150, cy: 100, r: 60 }\n  - label: { text: \"\", in: [A] }\n  - box: { x: 100, y: 50, w: 100, h: 100, rows: [B] }", `s.yaml:7:5: box "B" overlaps label in A`},
 		// Each check of the placement on its own.
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - box: { x: 80, y: 40, w: 60, h: 40, rows: [A] }", `s.yaml:6:5: box "A" straddles the edge of frame "F"`},
 		{"  - box: { name: b, x: 150, y: 80, w: 60, h: 40, rows: [B] }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through box "b"`},
@@ -405,6 +417,24 @@ func TestLayoutMistakes(t *testing.T) {
 	}
 }
 
+// A diagram's title is empty in no language; one of spaces alone passes, as draw's LIMIT says.
+func TestTitleNotEmpty(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ title, want string }{
+		{`""`, "s.yaml:1:8: minLength: got 0, want 1"},
+		{`{ en: "", ja: あ }`, "s.yaml:1:14: minLength: got 0, want 1"},
+		{`{ en: a, ja: "" }`, "s.yaml:1:21: minLength: got 0, want 1"},
+		{`" "`, ""},
+		{"T", ""},
+	} {
+		src := "title: " + c.title + "\nwidth: 200\nheight: 80\nparts:\n  - box: { x: 10, y: 10, rows: [a] }\n"
+		if _, got := draw(t, src, render("en")); got != c.want {
+			t.Errorf("title %s:\n  told %q\n  want %q", c.title, got, c.want)
+		}
+	}
+}
+
 type failing struct{ err error }
 
 func (f failing) Lookup(string) ([]byte, error) {
@@ -432,14 +462,15 @@ func TestTooNarrow(t *testing.T) {
 		{"  - table: { x: 20, y: 20, w: 200, title: T, rows: [[id, \"character varying(255)\"]] }", `s.yaml:5:5: table "T": "id  character varying(255)" needs w: 213 or more`},
 		{"  - table: { x: 20, y: 20, w: 216, title: T, rows: [[id, \"character varying(255)\"]] }", ""},
 		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: a, ja: とても長い名前 }, { en: a very long type name, ja: 型 }]] }", `s.yaml:5:5: table "T": "a  a very long type name" needs w: 198 or more`},
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A very long row, ja: 短い }] }", `s.yaml:5:5: box "A very long row": "A very long row" needs w: 149 or more`},
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: あ, ko: 아주 긴 한국어 줄 }] }", `s.yaml:5:5: box "아주 긴 한국어 줄": "아주 긴 한국어 줄" (ko) needs w: 147 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A very long row, ja: 短い }] }", `s.yaml:5:5: box "A very long row": "A very long row" needs w: 157 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: AB, ja: あ, ko: 아주 긴 한국어 줄 }] }", `s.yaml:5:5: box "아주 긴 한국어 줄": "아주 긴 한국어 줄" (ko) needs w: 148 or more`},
 		// Two languages other than English as wide: the first by tag.
 		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A, ja: あいう, ko: 가나다 }] }", `s.yaml:5:5: box "あいう": "あいう" (ja) needs w: 71 or more`},
 		// As wide as English, which is told: in the main row, the sub row, mixed widths and code.
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: ABCDEFGHIJ, ja: あいうえおか }] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 110 or more`},
-		{"  - box: { x: 20, y: 20, w: 40, h: 60, rows: [A, { en: ABCDEFGHIJKLMNO, ja: あいうえおかきくけ }] }", `s.yaml:5:5: box "A": "ABCDEFGHIJKLMNO" needs w: 140 or more`},
-		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: ABCDEFGHIJ, ja: ABCDEあいう }] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 110 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: ABCDEFGHIJKLMNOPQRSTUVWXY, ja: あいうえおかきくけこさしすせそた }] }", `s.yaml:5:5: box "ABCDEFGHIJKLMNOPQRSTUVWXY": "ABCDEFGHIJKLMNOPQRSTUVWXY" needs w: 240 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [[{ en: ABCDEFGHIJ, ja: あいうえおか }, sub]] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 104 or more`},
+		{"  - box: { x: 20, y: 20, w: 48, h: 60, rows: [A, { en: ABCDEFGHIJKLMNO, ja: あいうえおかきくけ }] }", `s.yaml:5:5: box "A": "ABCDEFGHIJKLMNO" needs w: 140 or more`},
+		{"  - box: { x: 20, y: 20, w: 40, rows: [[{ en: ABCDEFGHIJ, ja: ABCDEあいう }, sub]] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 104 or more`},
 		{"  - table: { x: 20, y: 20, w: 80, title: T, rows: [[{ en: " + codeEn + ", ja: " + codeJa + " }]] }", `s.yaml:5:5: table "T": "` + codeEn + `" needs w: 396 or more`},
 		// A separator has no text, in a table sized by its rows too.
 		{"  - table: { x: 20, y: 20, title: T, rows: [a, \"---\", b] }", ""},
@@ -528,7 +559,7 @@ func TestEdges(t *testing.T) {
 			"  - box: { name: a, x: 100, y: 20, w: 80, h: 29, rows: [a] }\n  - box: { name: b, x: 100, y: 120, w: 80, h: 29, rows: [b] }\n  - edge: { from: a, fromSide: left, to: b, toSide: left }",
 			`d="M100,34.5 H80 V134.5 H100"`,
 		},
-		{"  - box: { x: 100, y: 10, origin: centre, rows: [abc] }", `<rect x="72" y="10" width="56" height="29" rx="8"/>`},
+		{"  - box: { x: 100, y: 10, origin: centre, rows: [abc] }", `<rect x="68" y="10" width="64" height="29" rx="8"/>`},
 	} {
 		got, mistakes := draw(t, head+c.parts+"\n", render("en"))
 		if mistakes != "" || !strings.Contains(got, c.want) {
@@ -551,17 +582,17 @@ func TestEdgesHandSides(t *testing.T) {
 		// graph box: right, not the top a→b ends at
 		{"width: 200\nheight: 160\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [100, 0], via: [[100, 60]], to: b }\n", `d="M100,0 V60 V87.5 H68"`},
 		// laid out right: the bottom, not the left
-		{"width: 260\nheight: 160\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      direction: right\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [0, 100], via: [[60, 100]], to: b }\n", `d="M0,100 H60 H104 V68"`},
+		{"width: 260\nheight: 160\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      direction: right\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [0, 100], via: [[60, 100]], to: b }\n", `d="M0,100 H60 H116 V68"`},
 		// a box in a lane
 		{"width: 400\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      lanes:\n        - { name: l1, label: L1, nodes: [{ box: { name: a, rows: [a] } }] }\n        - { name: l2, label: L2, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [300, 0], via: [[300, 100]], to: b }\n", `d="M300,0 V100 V129.5 H218"`},
 		// a tree's child: right, not its top
-		{"width: 260\nheight: 200\ntitle: T\nparts:\n  - tree:\n      x: 90\n      y: 20\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [200, 0], via: [[200, 80]], to: c }\n", `d="M200,0 V80 V103.5 H110"`},
+		{"width: 260\nheight: 200\ntitle: T\nparts:\n  - tree:\n      x: 90\n      y: 20\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [200, 0], via: [[200, 80]], to: c }\n", `d="M200,0 V80 V103.5 H114"`},
 		// a tree's root keeps its top
 		{"width: 260\nheight: 200\ntitle: T\nparts:\n  - tree:\n      x: 44\n      y: 50\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [200, 0], via: [[200, 40]], to: r }\n", `d="M200,0 V40 H44 V50"`},
 		// without via, from the other end
 		{"width: 260\nheight: 240\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 100\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - box: { name: h, x: 60, y: 10, w: 60, h: 30, rows: [h] }\n  - edge: { from: h, to: b }\n", `d="M90,40 V167.5 H68"`},
 		// a group's frame: right, not its top
-		{"width: 300\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: g }\n  - edge: { from: [200, 0], via: [[200, 60]], to: g }\n", `d="M200,0 V60 V120.5 H164"`},
+		{"width: 300\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: g }\n  - edge: { from: [200, 0], via: [[200, 60]], to: g }\n", `d="M200,0 V60 V120.5 H170"`},
 		// two of the graph's edges end at b's top
 		{"width: 300\nheight: 200\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: c, rows: [c] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n        - { from: c, to: b }\n  - edge: { from: [250, 0], via: [[250, 60]], to: b }\n", `d="M250,0 V60 V87.5 H116"`},
 		// a group's frame in the first rank keeps its top, which no edge of the graph ends at
@@ -596,7 +627,7 @@ func TestEdgesVia(t *testing.T) {
 	t.Parallel()
 
 	const head = "width: 560\nheight: 340\ntitle: T\nparts:\n"
-	const c01 = "  - box: { name: c01, x: 60, y: 234, h: 36, rows: [[render, main code]] }\n"
+	const c01 = "  - box: { name: c01, x: 60, y: 234, w: 88, h: 36, rows: [[render, main code]] }\n"
 	const ab = "  - box: { name: a, x: 40, y: 40, w: 100, h: 40, rows: [a] }\n  - box: { name: b, x: 300, y: 140, w: 100, h: 40, rows: [b] }\n"
 	const page = "  - table: { x: 300, y: 40, w: 200, title: Page, rows: [{ name: slug, cells: [slug, PK] }, [title, text]] }\n"
 	for _, c := range []struct {
@@ -681,7 +712,7 @@ func TestEdgesVia(t *testing.T) {
 			`s.yaml:6:5: edge a→[210,0] runs through box "a"`,
 		},
 		{
-			"  - box: { name: k, x: 180, y: 30, w: 40, h: 40, rows: [k] }\n  - edge: { from: [0, 0], via: [[200, 0]], to: [100, 100] }",
+			"  - box: { name: k, x: 180, y: 30, w: 40, h: 40, rows: [[k, sub]] }\n  - edge: { from: [0, 0], via: [[200, 0]], to: [100, 100] }",
 			`s.yaml:6:5: edge [0,0]→[100,100] runs through box "k"`,
 		},
 		{
@@ -820,7 +851,7 @@ func TestCanvasLeftOut(t *testing.T) {
 	}
 
 	for _, c := range []struct{ parts, want string }{
-		{"  - box: { x: -10, y: 20, rows: [Write] }\n", `s.yaml:3:5: box "Write" sticks out of the 82x69 canvas`},
+		{"  - box: { x: -10, y: 20, rows: [Write] }\n", `s.yaml:3:5: box "Write" sticks out of the 90x69 canvas`},
 		{"  - box: { x: -200, y: -100, rows: [Write] }\n", `s.yaml:3:5: box "Write" sticks out of the 20x20 canvas`},
 		{
 			"  - circle: { name: a, cx: -200, cy: 50, r: 50 }\n  - label: { text: x, in: [a] }\n",
@@ -991,12 +1022,12 @@ func TestGraphLabelAbove(t *testing.T) {
 		want       []string
 	}{
 		// above the upper of two level edges, the two a column apart
-		{"level pair", spec(nodes, topA, ask, back), []string{`edge b→a M152,102 H92`, `label "ask" 95,60 31.6x18`}},
+		{"level pair", spec(nodes, topA, ask, back), []string{`edge b→a M164,102 H100`, `label "ask" 103,60 31.6x18`}},
 		// the upper's above, the lower's below with nothing there
 		{
 			"both labelled",
 			spec(nodes, topA, ask, "        - { from: b, to: a, level: true, label: answer }"),
-			[]string{`label "ask" 95,60 31.6x18`, `label "answer" 96.8,114 53.2x18`},
+			[]string{`label "ask" 103,60 31.6x18`, `label "answer" 108.8,114 53.2x18`},
 		},
 		// in lanes
 		{
@@ -1004,7 +1035,7 @@ func TestGraphLabelAbove(t *testing.T) {
 			spec("      lanes:", "        - { name: l1, label: One, nodes: [{ box: { name: a, rows: [Short] } }] }",
 				"        - { name: l2, label: Two, nodes: [{ box: { name: b, rows: [A taller box, two rows] } }] }",
 				"      edges:", ask, back),
-			[]string{`frame "l1" 20,20 180x88`, `label "ask" 155,37 31.6x18`},
+			[]string{`frame "l1" 20,20 192x88`, `label "ask" 163,37 31.6x18`},
 		},
 		// left of a run down, set towards it
 		{
@@ -1014,15 +1045,15 @@ func TestGraphLabelAbove(t *testing.T) {
 				"        - box: { name: e, rows: [xx, A taller box] }", "      edges:", "        - { from: e, to: c }",
 				"        - { from: d, to: e, label: answer }", "        - { from: e, to: b, label: a long label here }",
 				"        - { from: b, to: d, level: true }", "        - { from: d, to: e, label: ok }"),
-			[]string{`edge d→e M344,49 V107`, `label "answer" 278.8,52 53.2x18`, `box "d" 308,20 128x29`},
+			[]string{`edge d→e M356,49 V107`, `label "answer" 290.8,52 53.2x18`, `box "d" 320,20 136x29`},
 		},
 		// nothing below: below
-		{"nothing below", spec(nodes, topA, ask), []string{`label "ask" 95,114 31.6x18`}},
+		{"nothing below", spec(nodes, topA, ask), []string{`label "ask" 103,114 31.6x18`}},
 		// above would stand past the graph's top, moving it off its y: below
 		{
 			"graph top",
 			spec(strings.Replace(nodes, "        - box: { name: top, rows: [Start] }\n", "", 1), ask, back),
-			[]string{`box "a" 20,28.5 72x53`, `label "ask" 95,49 31.6x18`},
+			[]string{`box "a" 20,28.5 80x53`, `label "ask" 103,49 31.6x18`},
 		},
 		// above not clear: below
 		{
@@ -1031,16 +1062,16 @@ func TestGraphLabelAbove(t *testing.T) {
 				"        - box: { name: b, rows: [Short] }", "        - box: { name: c, rows: [Short] }", "      edges:",
 				"        - { from: c, to: b, label: go }", "        - { from: c, to: a, label: ok }",
 				"        - { from: c, to: a, label: retry later }"),
-			[]string{`label "retry later" 95,92 89.2x18`, `box "c" 20,44 72x84`},
+			[]string{`label "retry later" 103,92 89.2x18`, `box "c" 20,44 80x84`},
 		},
 		// a part written by hand above: below, as before
-		{"part above", spec(nodes, topA, ask, back, "  - dot: { cx: 110, cy: 70 }"), []string{`label "ask" 95,102 31.6x18`}},
+		{"part above", spec(nodes, topA, ask, back, "  - dot: { cx: 110, cy: 70 }"), []string{`label "ask" 103,102 31.6x18`}},
 		// the same in the second group, standing right of the first
 		{
 			"part above, second group",
 			spec(strings.Replace(nodes, "nodes:\n", "nodes:\n        - box: { name: z, rows: [z] }\n", 1), topA, ask, back,
 				"  - dot: { cx: 182, cy: 70 }"),
-			[]string{`box "a" 92,81.5 72x53`, `label "ask" 167,102 31.6x18`},
+			[]string{`box "a" 92,81.5 80x53`, `label "ask" 175,102 31.6x18`},
 		},
 		// the middle of three: below
 		{
@@ -1048,7 +1079,7 @@ func TestGraphLabelAbove(t *testing.T) {
 			spec("      nodes:", "        - box: { name: a, rows: [Short] }", "        - box: { name: b, rows: [A taller box, two rows, three] }",
 				"      edges:", "        - { from: a, to: b, level: true }", "        - { from: b, to: a, level: true, label: ask }",
 				"        - { from: a, to: b, level: true }"),
-			[]string{`edge a→b M92,105.5 H152`, `label "ask" 117,81.5 31.6x18`},
+			[]string{`edge a→b M100,105.5 H164`, `label "ask" 129,81.5 31.6x18`},
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -1241,7 +1272,7 @@ parts:
   - bar: { name: decide, x1: 200, x2: 296, y: 44 }
   - bar: { name: design, x1: 328, x2: 408, y: 80 }
   - bar: { name: api, x1: 328, x2: 408, y: 140 }
-  - box: { name: x, x: 270, y: 100, w: 40, h: 30, rows: [x] }
+  - box: { name: x, x: 270, y: 100, w: 40, h: 30, rows: [[x, sub]] }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
   - edge: { from: decide, fromSide: right, to: api, toSide: left }
 `, `edge decide→design M296,44 H316 V80 H328
@@ -1265,7 +1296,7 @@ parts:
   - bar: { name: decide, x1: 200, x2: 296, y: 44 }
   - bar: { name: design, x1: 328, x2: 408, y: 80 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
-  - box: { name: k, x: 268, y: 56, w: 40, h: 30, rows: [k] }
+  - box: { name: k, x: 268, y: 56, w: 40, h: 30, rows: [[k, sub]] }
 `, `edge decide→design M296,44 H316 V80 H328`},
 		// f2: another edge's run along the place nearer holds it.
 		{`width: 500
@@ -1443,5 +1474,105 @@ parts:
 		if mistakes != "" || strings.Join(edges, "\n") != c.want {
 			t.Errorf("%s\n  drew %q %s\n  want %q", c.src, edges, mistakes, c.want)
 		}
+	}
+}
+
+// Text is measured in the class it is drawn in: bold wider than regular, code by its own, at the size part.css gives.
+func TestFaces(t *testing.T) {
+	t.Parallel()
+
+	const head = "width: 800\nheight: 400\ntitle: T\nparts:\n"
+	for _, c := range []struct{ name, parts, want string }{
+		{"a table's title", "  - table: { x: 10, y: 10, title: ABCDEFGHIJ, rows: [[id, int]] }\n", `table "ABCDEFGHIJ" 10,10 120x58` + "\n"},
+		{"a box's first row", "  - box: { x: 10, y: 10, rows: [ABCDEFGHIJ] }\n", `box "ABCDEFGHIJ" 10,10 120x29` + "\n"},
+		{"main", "  - box: { x: 10, y: 10, rows: [[ABCDEFGHIJ, main]] }\n", `box "ABCDEFGHIJ" 10,10 120x29` + "\n"},
+		{"sub", "  - box: { x: 10, y: 10, rows: [[ABCDEFGHIJ, sub]] }\n", `box "ABCDEFGHIJ" 10,10 104x29` + "\n"},
+		{"a second row", "  - box: { x: 10, y: 10, rows: [A, ABCDEFGHIJ] }\n", `box "A" 10,10 104x46` + "\n"},
+		{"main code, at the size of code", "  - box: { x: 10, y: 10, rows: [[render, main code]] }\n", `box "render" 10,10 80x29` + "\n"},
+		{"sub code", "  - box: { x: 10, y: 10, rows: [[ABCDEFGHIJ, sub code]] }\n", `box "ABCDEFGHIJ" 10,10 112x29` + "\n"},
+		{"full-width bold, as regular", "  - box: { x: 10, y: 10, rows: [注文の履歴テーブル] }\n", `box "注文の履歴テーブル" 10,10 152x29` + "\n"},
+		{"a bold label", "  - label: { x: 100, y: 50, text: ABCDEFGHIJ, strong: true }\n", `label "ABCDEFGHIJ" 53.4,41 93.2x18` + "\n"},
+		{"a label", "  - label: { x: 100, y: 50, text: ABCDEFGHIJ }\n", `label "ABCDEFGHIJ" 59,41 82x18` + "\n"},
+	} {
+		if got, told := draw(t, head+c.parts, inspect); got != c.want || told != "" {
+			t.Errorf("%s:\n  inspect %q %q\n  want %q", c.name, got, told, c.want)
+		}
+	}
+	for _, c := range []struct{ name, parts, want string }{
+		{
+			"the room of a frame's heading",
+			"  - frame: { x: 10, y: 10, w: 300, h: 150, label: Developer machine here }\n  - box: { x: 182, y: 16, w: 100, rows: [x] }\n",
+			`s.yaml:6:5: box "x" overlaps the heading of frame "Developer machine here"`,
+		},
+		{
+			"the room of the heading of a frame with an icon",
+			"  - frame: { x: 10, y: 10, w: 340, h: 150, icon: aws/aws-lambda, label: Developer machine here }\n  - box: { x: 226, y: 16, w: 100, rows: [x] }\n",
+			`s.yaml:6:5: box "x" overlaps the heading of frame "Developer machine here"`,
+		},
+		{"a frame's heading", "  - frame: { x: 10, y: 10, w: 60, h: 60, label: ABCDEFGHIJ }\n", `s.yaml:5:5: frame "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 101 or more`},
+		{"the heading of a frame with an icon", "  - frame: { x: 10, y: 10, w: 60, h: 60, icon: aws/aws-lambda, label: ABCDEFGHIJ }\n", `s.yaml:5:5: frame "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 136 or more`},
+		{"a table's title, by a written w", "  - table: { x: 10, y: 10, w: 100, title: ABCDEFGHIJ, rows: [[id, int]] }\n", `s.yaml:5:5: table "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 116 or more`},
+		{"a row, by a written w", "  - box: { x: 10, y: 10, w: 60, rows: [ABCDEFGHIJ] }\n", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 116 or more`},
+		{"main code, by a written w", "  - box: { x: 10, y: 10, w: 60, rows: [[render, main code]] }\n", `s.yaml:5:5: box "render": "render" needs w: 77 or more`},
+	} {
+		if _, told := draw(t, head+c.parts, inspect); told != c.want {
+			t.Errorf("%s:\n  told %q\n  want %q", c.name, told, c.want)
+		}
+	}
+
+	// Just past a frame's heading as it is drawn, at 12px, a part stands clear.
+	const past = "  - frame: { x: 10, y: 10, w: 300, h: 150, label: Developer machine here }\n  - box: { x: 192, y: 16, w: 100, rows: [x] }\n"
+	if _, told := draw(t, head+past, inspect); told != "" {
+		t.Errorf("past a frame's heading: told %q", told)
+	}
+
+	// A group's frame is as wide as its heading is drawn: both where it is kept room and where it is checked.
+	const group = "  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - group:\n            name: g\n" +
+		"            label: " + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + "\n            nodes:\n              - box: { name: a, rows: [[a, sub]] }\n"
+	if got, told := draw(t, head+group, inspect); !strings.HasPrefix(got, `frame "g" 20,20 324x`) || told != "" {
+		t.Errorf("a group's heading:\n  inspect %q %q\n  want the frame 324 wide", got, told)
+	}
+
+	// A lane's heading is measured bold where a level edge is checked against it: regular, this one would not reach it.
+	const lanes = "title: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      direction: right\n      lanes:\n" +
+		"        - { name: u, label: U, nodes: [{ box: { name: a, rows: [Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] } }, { box: { name: z, rows: [Zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz] } }] }\n" +
+		"        - { name: v, label: nnnnnnnnnnnnnnnnnnnnnnn, nodes: [{ box: { name: m, rows: [M] } }] }\n" +
+		"        - { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }\n" +
+		"      edges:\n        - { from: z, to: m }\n        - { from: a, to: b, level: true }\n"
+	want := `s.yaml:13:36: edge a→b: it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`
+	if _, told := draw(t, lanes, inspect); told != want {
+		t.Errorf("a lane's heading:\n  told %q\n  want %q", told, want)
+	}
+}
+
+// A part is named in the language it is measured widest in, so in the class it is drawn in: bold, eight narrow
+// characters are wider than five full-width (256 to 250), and regular narrower (240 to 250).
+func TestFacesNamed(t *testing.T) {
+	t.Parallel()
+
+	const (
+		head = "width: 600\nheight: 400\ntitle: T\nparts:\n"
+		text = "{ en: The page, ja: ページ本体 }"
+	)
+	for _, c := range []struct{ name, parts, want string }{
+		{"a box's first row", "  - box: { x: 10, y: 10, rows: [" + text + "] }\n", `box "The page"`},
+		{"a box's row in sub", "  - box: { x: 10, y: 10, rows: [[" + text + ", sub]] }\n", `box "ページ本体"`},
+		{"a table's title", "  - table: { x: 10, y: 10, title: " + text + ", rows: [[id, int]] }\n", `table "The page"`},
+		{"a frame's heading", "  - frame: { x: 10, y: 10, w: 300, h: 100, label: " + text + " }\n", `frame "The page"`},
+		{"a frame's heading by its icon", "  - frame: { x: 10, y: 10, w: 300, h: 100, icon: aws/aws-lambda, label: " + text + " }\n", `frame "The page"`},
+		{"a tree's node", "  - tree: { x: 200, y: 20, root: { rows: [" + text + "], children: [{ rows: [[k, sub]] }] } }\n", `edge "The page"→"k"`},
+		{"a bold label", "  - label: { x: 100, y: 50, text: " + text + ", strong: true }\n", `label "The page"`},
+		{"a label", "  - label: { x: 100, y: 50, text: " + text + " }\n", `label "ページ本体"`},
+		{"a bold label placed by in", "  - circle: { name: A, cx: 150, cy: 150, r: 88 }\n  - label: { text: " + text + ", in: [A], strong: true }\n", `label "The page"`},
+	} {
+		if got, told := draw(t, head+c.parts, inspect); !strings.Contains(got, c.want) || told != "" {
+			t.Errorf("%s:\n  inspect %q %q\n  want %s", c.name, got, told, c.want)
+		}
+	}
+	// A bold label in that finds no room is named as it is measured too.
+	const small = "  - circle: { name: A, cx: 150, cy: 150, r: 10 }\n  - label: { text: " + text + ", in: [A], strong: true }\n"
+	want := `s.yaml:6:5: label "The page" finds no room inside A and outside the other circles: make that area larger, or the text shorter`
+	if _, told := draw(t, head+small, inspect); told != want {
+		t.Errorf("no room:\n  told %q\n  want %q", told, want)
 	}
 }
