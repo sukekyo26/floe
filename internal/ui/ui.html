@@ -929,6 +929,7 @@
   });
   // The versions read go to the server one request at a time: while one is out, each page's last one waits, its earlier ones dropped.
   // One lost is told again the next time the page is loaded. The slug is the caller's own, never one a page's message names
+  // LIMIT: #error is one place, so that clearing a read's mistake also clears another's shown since, unread. Only while a broken reads.json is mended; as load's loadFailed. Give each its own place if that comes to matter
   const readsWaiting = new Map();
   let readsGoing = false;
   let readFailed = false;
