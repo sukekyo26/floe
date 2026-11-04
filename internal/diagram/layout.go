@@ -634,7 +634,10 @@ func (l *layout) addTable(t *table, at string) {
 }
 
 // iconLabelY is how far below an icon its label's middle stands.
-const iconLabelY = 16
+// LIMIT: a label written to go with an icon's, beside or under it, stands off when this changes; tie them if it matters
+// LIMIT: an edge across the gap, 1 or 2 from the icon and the label, passes; refuse it if such edges come to mislead
+// LIMIT: this moves the middle of target.whole, and so a side floe chooses; write the side if a change comes to matter
+const iconLabelY = 12
 
 func iconSize(i *icon) float64 {
 	if i.Size == 0 {

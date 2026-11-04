@@ -15,7 +15,7 @@ parts:
   - frame: { x: 340, y: 72, w: 240, h: 220, label: { en: Region (AWS_REGION), ja: "リージョン（AWS_REGION）" }, icon: aws/group/region }
   - frame: { x: 620, y: 72, w: 344, h: 220, label: { en: Global inference profile, ja: "global 推論プロファイル" }, square: true }
   - icon: { x: 76, y: 116, icon: aws/res/client, label: Claude Code }
-  - label: { text: { en: writes floe pages, ja: "floe のページを書く" }, x: 100, y: 202 }
+  - label: { text: { en: writes floe pages, ja: "floe のページを書く" }, x: 100, y: 198 }
   - icon: { x: 436, y: 116, icon: aws/amazon-bedrock, label: Amazon Bedrock }
   - box: { x: 632, y: 114, w: 320, h: 52, rows: [Opus 5.5, [global.anthropic.claude-opus-5-5, sub code]] }
   - box: { x: 632, y: 176, w: 320, h: 52, rows: [Sonnet 5.5, [global.anthropic.claude-sonnet-5-5, sub code]] }
