@@ -741,7 +741,7 @@
   <div class="modal-body">
     <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><div><h2 id="find-title">{{.Msg "ui_find"}}</h2><p class="lead find-lead" id="find-lead"><span id="find-cut"></span><span class="k"><kbd>↑</kbd><kbd>↓</kbd> {{.Msg "ui_find_pick"}}</span><span class="k"><kbd>Enter</kbd> {{.Msg "ui_find_open"}}</span></p></div></div>
     <input class="text" type="search" id="find-q" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="find-list" placeholder="{{.Msg "ui_find_placeholder"}}" aria-labelledby="find-title" autocomplete="off">
-    <ul class="find-list" id="find-list" role="listbox" aria-labelledby="find-title"></ul>
+    <ul class="find-list" id="find-list" tabindex="-1" role="listbox" aria-labelledby="find-title"></ul>
     <div class="find-none" id="find-none" hidden><strong>{{.Msg "ui_nomatch"}}</strong>{{.Msg "ui_find_no_files"}}</div>
     <div class="dialog-actions find-foot"><div class="find-acts" id="find-acts" hidden><span class="frame-actions" id="find-actions"></span></div><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
   </div>
@@ -3005,6 +3005,10 @@
     e.stopPropagation();
     closeMenus(null);
   }, true);
+  // A press on what does nothing leaves the focus where it is: in the field, which takes the arrows. The words of an error stay selectable
+  $('find').addEventListener('mousedown', (e) => {
+    if (!e.target.closest('a, button, input, summary, #error')) e.preventDefault();
+  });
   // This comes after the closing, when a key may have opened it again
   $('find').addEventListener('close', () => {
     if ($('find').open) return;

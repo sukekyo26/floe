@@ -878,3 +878,97 @@ func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("openKeys()")
 	check(t, "notes", []string{list, b.eval(note)}, "true false|false true")
 }
+
+// TestUIFindPress leaves the focus in the field after a press on what does nothing, so that the arrows still move over the rows;
+// a drag in the field selects, the scrollbar scrolls, and what can be pressed takes its press.
+func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.stub("Array.from({ length: 40 }, (_, i) => ({ slug: 's' + i, title: 'T' + i, description: '', version: 1, createdAt: at(1), updatedAt: at(9) }))")
+	b.size(1000, 700, false)
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list .title')")
+	b.eval("openFind()")
+	b.still()
+	mouse := func(kind input.DispatchMouseEventType, x, y float64) {
+		t.Helper()
+		p := input.DispatchMouseEventParams{Type: kind, X: x, Y: y, Button: input.MouseButtonLeft, Buttons: 1, ClickCount: 1}
+		if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	drag := func(x0, y0, x1, y1 float64) {
+		t.Helper()
+		mouse(input.DispatchMouseEventTypeMousePressed, x0, y0)
+		mouse(input.DispatchMouseEventTypeMouseMoved, x1, y1)
+		mouse(input.DispatchMouseEventTypeMouseReleased, x1, y1)
+	}
+	at := func(expr string) (float64, float64) {
+		t.Helper()
+		var x, y float64
+		if _, err := fmt.Sscan(b.eval(expr), &x, &y); err != nil {
+			t.Fatal(err)
+		}
+		return x, y
+	}
+	down := func() {
+		t.Helper()
+		if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.ArrowDown)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const reached = "document.activeElement.id + ' ' + document.getElementById('find-q').getAttribute('aria-activedescendant')"
+	out := make([]string, 0, 12)
+	// The heading, the line under it, the modal's edge, and the line over the foot: none of them takes the focus.
+	for i, spot := range []string{"#find h2", "#find-lead", "#find", "#find .find-foot"} {
+		x, y := at(`(() => { const r = document.querySelector(` + js(spot) + `).getBoundingClientRect(); return ` + map[bool]string{true: "(r.left + 8) + ' ' + (r.top + r.height / 2)", false: "(r.left + r.width / 2) + ' ' + (r.top + 8)"}[i == 2] + `; })()`)
+		b.click(x, y)
+		down()
+		out = append(out, b.eval(reached))
+	}
+	// The field goes on taking what is typed.
+	if err := chromedp.Do(b.ctx, chromedp.KeyEvent("T")); err != nil {
+		t.Fatal(err)
+	}
+	out = append(out, b.eval("document.getElementById('find-q').value"))
+	// A drag over its words selects them.
+	x0, y0, x1 := func() (float64, float64, float64) {
+		x, y := at("(() => { const r = document.getElementById('find-q').getBoundingClientRect(); return r.left + ' ' + (r.top + r.height / 2); })()")
+		return x + 40, y, x + 4
+	}()
+	drag(x0, y0, x1, y0)
+	out = append(out, b.eval("(() => { const q = document.getElementById('find-q'); return q.selectionEnd - q.selectionStart; })()"))
+	typeFind(b, "")
+	// The scrollbar's thumb, dragged, moves the rows, and the arrows go on from where they were.
+	x, y := at("(() => { const r = document.getElementById('find-list').getBoundingClientRect(); return (r.right - 5) + ' ' + (r.top + 10); })()")
+	mouse(input.DispatchMouseEventTypeMousePressed, x, y)
+	for i := 1.0; i <= 4; i++ {
+		mouse(input.DispatchMouseEventTypeMouseMoved, x, y+20*i)
+	}
+	mouse(input.DispatchMouseEventTypeMouseReleased, x, y+80)
+	b.until("the rows moved", "document.getElementById('find-list').scrollTop > 0")
+	out = append(out, b.eval("document.activeElement.id"))
+	// Tab goes from the field to the buttons of the foot, not to the box of rows that scrolls.
+	b.eval("document.getElementById('find-q').focus()")
+	if err := chromedp.Do(b.ctx, chromedp.KeyEvent("\t")); err != nil {
+		t.Fatal(err)
+	}
+	out = append(out, b.eval("document.activeElement.matches('#find-actions .star')"))
+	b.eval("document.getElementById('find-q').focus()")
+	// The words of an error can be selected.
+	out = append(out, b.eval("document.getElementById('error').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))"))
+	// What can be pressed takes the press: the star and the menu their focus, and a row opens.
+	x, y = at("(() => { const r = document.querySelector('#find-actions .star').getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()")
+	b.click(x, y)
+	out = append(out, b.eval("document.activeElement.matches('#find-actions .star')"))
+	x, y = at("(() => { const r = document.querySelector('#find-actions summary').getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()")
+	b.click(x, y)
+	out = append(out, b.eval("document.activeElement.matches('#find-actions summary') && document.querySelector('#find-actions .more').open"))
+	b.eval("closeMenus(null)")
+	x, y = at("(() => { const a = document.querySelector('#find-list a'); a.scrollIntoView(); const r = a.getBoundingClientRect(); return (r.left + 4) + ' ' + (r.top + r.height / 2); })()")
+	b.click(x, y)
+	b.until("the page", "location.pathname === '/a/s0/'")
+	check(t, "press", out, strings.Join([]string{
+		"find-q find-1", "find-q find-2", "find-q find-3", "find-q find-4", "T", "1", "find-q", "true", "true", "true", "true",
+	}, "|"))
+}
