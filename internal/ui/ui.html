@@ -963,6 +963,8 @@
       } catch { /* told again the next time; api tells if the server was not reached */ }
     }
     readsGoing = false;
+    // The dot and the counts go now, not at the next look
+    load();
   }
   // The frame's own fragment changed (the address bar, Back): the page moves to that part, in
   // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo.
@@ -1122,7 +1124,7 @@
   }
 
   // The projects of every entry (of any kind, archived or not), most entries first, then by name, each to its place: the
-  // order of the groups and of the projects' colors, which no filter changes
+  // order of the projects on the shelf and of their colors, which no filter changes
   function projectOrder() {
     const counts = new Map();
     for (const a of items) if (a.project) counts.set(a.project, (counts.get(a.project) ?? 0) + 1);
@@ -1246,9 +1248,8 @@
   async function removeSelected() {
     // Of what is selected now: those done leave the selection before the words are made
     const now = bulkKind();
-    const what = () => now;
-    if (arm($('bulk-delete'), t(`ui_${what()}_bulk_confirm`, selected.size))) return;
-    await actOnSelected(deleteOne, (n) => t(`ui_${what()}_bulk_done`, n), (n, why) => t(`ui_${what()}_bulk_failed`, n, why));
+    if (arm($('bulk-delete'), t(`ui_${now}_bulk_confirm`, selected.size))) return;
+    await actOnSelected(deleteOne, (n) => t(`ui_${now}_bulk_done`, n), (n, why) => t(`ui_${now}_bulk_failed`, n, why));
   }
 
   async function archiveSelected() {
@@ -1941,7 +1942,7 @@
       time.dateTime = p.updatedAt;
       time.textContent = ago(p.updatedAt);
       const open = li.querySelector('.open');
-      open.href = `/a/${a.slug}/${p.file.split('/').map(encodeURIComponent).join('/')}`;
+      open.href = rawHref(x);
       open.setAttribute('aria-label', t('ui_open_raw_named', name));
       open.title = t('ui_open_raw');
       const copy = li.querySelector('.copy');
@@ -2203,6 +2204,14 @@
     }
   }
 
+  // What opens a page otherwise leaves j and k to the list it was last on
+  function forgetOrder() {
+    try {
+      sessionStorage.removeItem(ORDER_KEY);
+    } catch {
+      // Without storage, there is none to forget
+    }
+  }
   // Keeps the pages of the list as it is now, for j and k where a page is open whole: a read page leaves the view of the new
   // ones, and they go on through the list as it was
   function keepOrder() {
@@ -2214,7 +2223,7 @@
   }
 
   // The pages j and k go through in the frame: those of the list that opened it, the ones gone since left out. Opened
-  // otherwise (from the URL), the list it was last on, or if it is not on that all entries of its kind, as first found
+  // otherwise (from the URL, the search modal), the list it was last on, or if it is not on that all entries of its kind, as first found
   let frameOrder;
   function pagesInOrder(a) {
     let kept = null;
@@ -2675,7 +2684,10 @@
   let findShown = [];
   const findMark = listKeys($('find-q'), {
     options: () => [...$('find-list').children],
-    choose: (i) => { location.href = $('find-list').children[i].querySelector('a').href; },
+    choose: (i) => {
+      forgetOrder();
+      location.href = $('find-list').children[i].querySelector('a').href;
+    },
     close: () => $('find').close(),
     open: () => {},
     shown: () => true,
@@ -2808,7 +2820,7 @@
         opened.add(slug);
         keepOpen();
       }
-      filter({ view: 'all', kind: '', template: '', project: '', tag: '' });
+      filter({ view: 'all', ...NO_PICKS });
       drawn = '';
       await load();
     } catch (err) {
@@ -2872,6 +2884,8 @@
     });
   } else {
     $('keys-frame').hidden = $('keys-note-frame').hidden = true;
+    // Back on a list, what the one before kept for j and k is over
+    forgetOrder();
     $('manage').hidden = false;
     $('search').hidden = false;
     $('q').value = readState(location.search).q;
@@ -3001,6 +3015,7 @@
     } else if (plainKey(e) && pressKey(e.key)) e.preventDefault();
   });
   $('find-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
+  $('find-list').addEventListener('click', (e) => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) forgetOrder(); });
   $('find-q').addEventListener('input', () => {
     findSlug = null;
     findAt = 0;

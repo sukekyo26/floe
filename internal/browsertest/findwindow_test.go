@@ -1062,3 +1062,59 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 		"find-q", "Open Alpha plan alone in a new tab",
 	}, "|"))
 }
+
+// TestUIFindOrder leaves j and k to the list last on where the search modal opens a page, not the order an earlier list kept.
+func TestUIFindOrder(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.stub("[1, 2, 3, 4, 5].map((n) => ({ slug: 'p' + n, title: 'P' + n, description: '', version: 1, tags: n % 2 ? ['t'] : [], createdAt: at(1), updatedAt: at(9 - n) }))")
+	const row = "[...document.querySelectorAll('#find-list li')].find((li) => li.querySelector('a').textContent === 'P3')"
+	open := map[string]func(){
+		"enter": func() {
+			b.eval("findMark([...document.getElementById('find-list').children].indexOf(" + row + "))")
+			if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Enter)); err != nil {
+				t.Fatal(err)
+			}
+		},
+		"press": func() { b.eval(row + ".querySelector('a').click()") },
+	}
+	out := make([]string, 0, 3)
+	for _, how := range []string{"enter", "press"} {
+		// On the list of the tag, whose next after P3 is P5, with the order of all kept, whose next is P4.
+		b.navigate("/?tag=t")
+		b.until("the rows", "document.querySelector('#list .title')")
+		b.eval(`sessionStorage.setItem('artifacts.order', '["p1","p2","p3","p4","p5"]'); openFind()`)
+		open[how]()
+		b.until("the page", "location.pathname === '/a/p3/'")
+		b.until("the bar", "document.getElementById('frame-title').textContent")
+		keyDown(b, "key: 'j'")
+		b.until("the next page", "location.pathname !== '/a/p3/'")
+		out = append(out, b.eval("location.pathname"))
+	}
+	// Back on a list the order of the one before is over: a page opened by its URL goes through the list last on.
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list .title')")
+	b.eval("keepOrder()")
+	b.navigate("/?tag=t")
+	b.until("the rows", "document.querySelector('#list .title')")
+	b.navigate("/a/p3/")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	keyDown(b, "key: 'j'")
+	b.until("the next page", "location.pathname !== '/a/p3/'")
+	out = append(out, b.eval("location.pathname"))
+	check(t, "order", out, "/a/p5/|/a/p5/|/a/p5/")
+}
+
+// TestUIReadLoads reads the list again as soon as a read is told, so that the dot and the counts do not wait for the next look.
+func TestUIReadLoads(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "read/pv.yaml", "pv", "<p>pv</p>"), "--slug", "pv")
+	b.addScript(`(() => { const f = window.fetch; window.told = 0; window.next = 0;
+		window.fetch = (u, o) => { const read = String(u).endsWith('/read');
+			if (window.told && !window.next && String(u) === '/api/artifacts') window.next = performance.now();
+			return f(u, o).then((r) => { if (read) window.told = performance.now(); return r; }); }; })()`)
+	b.navigate("/a/pv/")
+	b.until("the read told and the list read", "window.told > 0 && window.next > 0")
+	check(t, "at once", []string{b.eval("window.next - window.told < 500")}, "true")
+}
