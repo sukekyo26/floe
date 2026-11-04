@@ -438,12 +438,12 @@ func TestUIDiffScrolls(t *testing.T) { //nolint:paralleltest // the browser test
 	after("n", "moveChange(1); moveChange(1); moveChange(1)")
 	after("p", "moveChange(-1)")
 	// The contents, the words brought to the top left under the columns' heads, of a section in the middle.
-	after("the middle of the contents", "[...document.querySelectorAll('#diff-toc button')].find((x) => x.firstChild.textContent === 'S28').click()")
+	after("the middle of the contents", "[...document.querySelectorAll('#diff-toc button')].find((x) => x.firstChild.textContent === 'S7').click()")
 	if got := b.eval(`(() => {
-		const i = [...document.querySelectorAll('#diff-toc button')].find((x) => x.firstChild.textContent === 'S28').dataset.section;
+		const i = [...document.querySelectorAll('#diff-toc button')].find((x) => x.firstChild.textContent === 'S7').dataset.section;
 		const go = document.querySelector('#diff-body [data-sections~="' + i + '"]').getBoundingClientRect().top;
 		const heads = document.querySelector('.dcols').getBoundingClientRect().bottom;
-		return String(go >= heads - 1 && go < heads + 40 && document.getElementById('diff-body').scrollTop > 0);
+		return go >= heads - 1 && go < heads + 40 && document.getElementById('diff-body').scrollTop > 0 ? 'true' : go + ' under ' + heads + ' at ' + document.getElementById('diff-body').scrollTop;
 	})()`); got != "true" {
 		t.Errorf("the heading went under the columns' heads: %s", got)
 	}
