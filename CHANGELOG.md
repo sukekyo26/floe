@@ -304,6 +304,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Refuse an empty label in a diagram (`label: ""`, the `text` of the part `label`, or `{ en: "", ja: … }`), in the
+  parts `edge`, `bar`, `icon`, `frame` and `label` and a graph's edges and groups. All but a frame's took room, and
+  unless plain drew an empty box. For no label, leave the key out. A tick's empty text is still a mark alone.
 - Refuse a comment in `{ }` or `[ ]`, in every YAML file floe reads, a comment on a line of its own and one in a
   flow over lines too: YAML reads a `#` there as a comment to the line's end, the `}` or `]` on it too, which the
   YAML library told only as missing, at the `[` or the next line. floe tells it at the `#`, and where the innermost
@@ -538,7 +541,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   though it had a name. A part with no name
   is named by its text in the language that decides its width (the widest, English of two as wide), and with no text
   either by where it stands (`frame 10,10 250x150`, a bar with no label `bar 200,37 80x14`); a tree's node so too, in
-  its box and in its edges; a label with `in` and no text, by its region (`label in A`), placed or not.
+  its box and in its edges.
 - Fix a diagram's placement mistake between two parts written by hand (an overlap, a crossing, an edge through a
   box, a part across a frame's edge) told at the line of the one compared first, often the part that was there
   before: it is told at the part written later in `parts` now, which was added or moved last most often. One between

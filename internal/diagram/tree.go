@@ -107,7 +107,7 @@ func (m *measures) childrenSpan(n *node) float64 {
 // LIMIT: two nodes of one text and no name read alike in a mistake that names both; name them if it confuses.
 func nodeWho(b *box) string {
 	text, class := firstRow(b)
-	call, _ := calling(b.Name, text, class, nil, boxRect(b, ""))
+	call, _ := calling(b.Name, text, class, boxRect(b, ""))
 	return call
 }
 
