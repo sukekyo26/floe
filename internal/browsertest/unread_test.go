@@ -162,7 +162,7 @@ func TestUIUnreadKept(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("window.plan.DELETE = [500]; window.shut(); markUnread('p1'); markUnread('p1')")
 	b.eval("window.open_()")
 	sentAll(b)
-	out = append(out, b.eval("keptUnread"))
+	out = append(out, b.eval("keptUnread + ' ' + (document.getElementById('error').textContent === '')"))
 	// A failure of its own lets it go.
 	b.eval("window.plan.DELETE = ['throw']; markUnread('p1')")
 	sentAll(b)
@@ -177,6 +177,16 @@ func TestUIUnreadKept(t *testing.T) { //nolint:paralleltest // the browser tests
 	sentAll(b)
 	isUnseen(b, "p3", true)
 	out = append(out, b.eval("window.toasted.join(',')"))
+	// The answer to a read comes after a move on: no toast of the page left.
+	unreadList(b)
+	b.eval("window.toasted = []; { const f = toast; toast = (m, o) => { window.toasted.push(m); f(m, o); }; }; window.shut()")
+	pickUnread(b, "p1")
+	b.until("told", "readsGoing")
+	pickUnread(b, "l")
+	b.eval("window.open_()")
+	sentAll(b)
+	out = append(out, b.eval("window.toasted.length + ' ' + window.sent.at(-1)"))
+	b.eval("window.toasted.length = 0")
 	// A page marked from its row, the mark waiting behind another, then opened: the read takes its place, with nothing said of it.
 	const said = "window.toasted.filter((m) => m === 'Marked as read').length + ' ' + (document.getElementById('error').textContent === '')"
 	for _, slug := range []string{"p2", "p1"} {
@@ -200,8 +210,8 @@ func TestUIUnreadKept(t *testing.T) { //nolint:paralleltest // the browser tests
 	sentAll(b)
 	out = append(out, b.eval("window.sent.slice("+sent+").filter((x) => x.endsWith('p2')).join(',')"), b.eval(said))
 	check(t, "kept", out, strings.Join([]string{
-		"1", "1", "true p1", "1", "p1", "null true", "Marked as unread. It is marked as read when you open it again.",
-		"DELETE p3,POST p2", "0 true", "POST p2", "0 true",
+		"1", "1", "true p1", "1", "p1 true", "null true", "Marked as unread. It is marked as read when you open it again.",
+		"0 POST p1", "DELETE p3,POST p2", "0 true", "POST p2", "0 true",
 	}, "|"))
 }
 
@@ -263,6 +273,10 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, b.eval(timers)) // the focus still holds it
 	b.eval("document.activeElement.blur()")
 	out = append(out, b.eval(timers))
+	// The focus alone holds it too.
+	b.eval("document.querySelector('.toast.page .btn').focus()")
+	out = append(out, b.eval(timers))
+	b.eval("document.activeElement.blur()")
 	// By a finger: held only while it is down, though :hover stays.
 	touch := func(on bool) {
 		t.Helper()
@@ -304,7 +318,7 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the words in it", "!document.querySelector('.toast.page .btn')")
 	out = append(out, b.eval("document.activeElement.id"))
 	check(t, "toast", out, strings.Join([]string{
-		"8000", "toast-in", "", "8000", "0", "5000", "toast-in", "1", "true", "find-q",
+		"8000", "toast-in", "", "8000", "", "0", "5000", "toast-in", "1", "true", "find-q",
 	}, "|"))
 }
 
