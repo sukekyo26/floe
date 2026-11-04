@@ -16,8 +16,8 @@ import (
 // Rebuild draws every stored page again, with dw, from its copy, and keeps the page drawn where it changed: in a
 // new copy, which its meta.json then names, its updatedAt as it was. A page that no longer draws, or whose copy
 // cannot be read or written, keeps the page it had, its mistakes told with store_rebuild_kept, and the next
-// page is drawn; one published again, removed or renamed meanwhile is left to that. Its meta.json takes the template its
-// data file names, drawn or not. Links are drawn each time they are opened, and are left alone.
+// page is drawn; one published again, removed or renamed meanwhile is left to that. Its meta.json takes the template
+// its data file names, drawn or not. Links are drawn each time they are opened, and are left alone.
 // LIMIT: a page whose copy's data file cannot be read keeps the template it had. Publish it again.
 // LIMIT: the slugs are listed once, before the first page: one renamed meanwhile to a slug not listed is not
 // drawn again. List them again at the end, and draw those not drawn, if that comes to matter.
@@ -76,7 +76,20 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 	if now == nil || now.Source != m.Source {
 		return nil
 	}
-	// Of meta.json as it is now: an edit made while the page was drawn stays.
+	err = s.keepDrawn(slug, now, got, err)
+	if err == nil {
+		return nil
+	}
+	told := make(usererr.List, 0, 2)
+	if failed := told.Add(err); failed != nil {
+		return failed
+	}
+	return append(told, usererr.NewAt(filepath.Join(dir, dataName), 0, 0, "store_rebuild_kept", slug))
+}
+
+// keepDrawn writes what redraw returned, got and err, of the page slug, under the lock: of now, meta.json as it is, so
+// that an edit made while the page was drawn stays. It returns err, or what could not be written.
+func (s *Store) keepDrawn(slug string, now *Meta, got *drawn, err error) error {
 	named := got != nil && got.template != "" && got.template != now.Template
 	if named {
 		now.Template = got.template
@@ -87,14 +100,7 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 	case named:
 		err = usererr.Collect(err, s.WriteMeta(slug, now))
 	}
-	if err == nil {
-		return nil
-	}
-	told := make(usererr.List, 0, 2)
-	if failed := told.Add(err); failed != nil {
-		return failed
-	}
-	return append(told, usererr.NewAt(filepath.Join(dir, dataName), 0, 0, "store_rebuild_kept", slug))
+	return err
 }
 
 // redraw draws slug, whose meta.json is m, from its copy dir: a nil page when the page drawn is the one it has. With a

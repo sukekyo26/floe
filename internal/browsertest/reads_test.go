@@ -77,9 +77,10 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// A site that frames ?raw is told nothing: its message goes to this origin alone, and would come before the load.
 	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
+		//nolint:errcheck // the test's own
 		_, _ = w.Write([]byte(`<!doctype html><title>site</title><script>window.heard = 0;
 			addEventListener('message', (e) => { if (e.data?.artifactRead) window.heard++; });</script>
-			<iframe id="raw" src="` + s.Base + `/a/other/?raw" onload="window.loaded = true"></iframe>`)) //nolint:errcheck // the test's own
+			<iframe id="raw" src="` + s.Base + `/a/other/?raw" onload="window.loaded = true"></iframe>`))
 	}))
 	t.Cleanup(site.Close)
 	b.navigate(site.URL)

@@ -175,7 +175,7 @@ func TestNewsPublished(t *testing.T) {
 		t.Errorf("the same content: %+v", got)
 	}
 	for i := 1; i <= 19; i++ {
-		publish(t, s, dw, "d.yaml", titled("t" + strconv.Itoa(i)), images, store.Options{})
+		publish(t, s, dw, "d.yaml", titled("t"+strconv.Itoa(i)), images, store.Options{})
 	}
 	if got := listedOf(t, s, "d"); got.News != "version" || got.Version != 20 {
 		t.Errorf("19 later: %+v", got)

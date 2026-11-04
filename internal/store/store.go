@@ -424,7 +424,7 @@ func modTime(file string) string {
 // linkTitle returns the title of a linked file, its <title> or first <h1>, or the title: and template: of a data
 // file, cached per version of the file: the management page and the open pages poll the list every few
 // seconds, and a report can be megabytes. A data file with mistakes may have none, but can be read.
-func (s *Store) linkTitle(file string, data bool) (string, string, bool) {
+func (s *Store) linkTitle(file string, data bool) (title, template string, readable bool) {
 	key := files.Mark(file)
 	if key == "-" {
 		return "", "", false
@@ -439,7 +439,6 @@ func (s *Store) linkTitle(file string, data bool) (string, string, bool) {
 	if err != nil {
 		return "", "", false
 	}
-	var title, template string
 	if data {
 		if d, _ := doc.Read(file, b, ""); d != nil { //nolint:errcheck // its mistakes are told when it is drawn
 			title, template = d.Title, d.Template

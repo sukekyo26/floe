@@ -249,7 +249,7 @@ func (s *Store) ReadMark(slug string, m *Meta, n int) (Version, bool) {
 	}
 	_, at, ok := s.versionFile(slug, m, n)
 	if !ok {
-		return Version{}, false //nolint:exhaustruct // none
+		return Version{N: 0, At: "", Mark: ""}, false
 	}
 	return m.Versions[at], true
 }
