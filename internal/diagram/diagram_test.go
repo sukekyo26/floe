@@ -534,10 +534,10 @@ func TestEdgesPastShapes(t *testing.T) {
 	}
 }
 
-// A straight edge joins its points as written, a diagonal too; others turn at right angles.
 // An icon's bottom side is under its label, whichever way the edge runs and however wide or big they are; without a
-// label it is the icon's. The label is in the way of any other run still. The last cases are what the rule costs and
-// lets by (the LIMIT of onSide), kept here so that changing any of them is a choice.
+// label it is the icon's. A side left out is chosen by the icon with its label. The label is in the way of any other run
+// still. The last cases are what the rule costs and lets by (the LIMITs of onSide), kept here so that changing any of
+// them is a choice.
 func TestEdgesIconLabel(t *testing.T) {
 	t.Parallel()
 	const (
@@ -577,19 +577,44 @@ func TestEdgesIconLabel(t *testing.T) {
 			refused: `edge a→b runs through label "a"`,
 		},
 		{
-			name:    "no side, the other top beside the label",
-			parts:   a + "  - box: { name: b, x: 160, y: 72, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
+			name:  "no side, the other's centre as far across as down from the icon with its label",
+			parts: a + "  - box: { name: b, x: 160, y: 72, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
+			want:  "edge a→b M148,44 H190 V72",
+		},
+		{
+			name:  "a via level with the label",
+			parts: a + "  - box: { name: b, x: 300, y: 80, w: 48, h: 30, rows: [b] }\n  - edge: { from: b, fromSide: top, to: a, via: [[324, 70], [200, 70], [200, 80]] }",
+			want:  "edge b→a M324,80 V70 H200 V80 H174 V44 H148",
+		},
+		{
+			name:    "no side, further down, the other's top beside the label",
+			parts:   a + "  - box: { name: b, x: 160, y: 75, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
 			refused: `edge a→b runs through label "a"`,
 		},
 		{
 			name:  "the same, a side written",
-			parts: a + "  - box: { name: b, x: 160, y: 72, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, fromSide: right, to: b }",
-			want:  "edge a→b M148,44 H190 V72",
+			parts: a + "  - box: { name: b, x: 160, y: 75, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, fromSide: right, to: b }",
+			want:  "edge a→b M148,44 H190 V75",
 		},
 		{
-			name:  "the same, the other below the label",
+			name:    "the sides written, the other's side above the label's bottom",
+			parts:   a + "  - box: { name: b, x: 300, y: 55, w: 60, h: 30, rows: [b] }\n  - edge: { from: a, fromSide: bottom, to: b, toSide: left }",
+			refused: `edge a→b runs through label "a"`,
+		},
+		{
+			name:    "the same, the other way",
+			parts:   a + "  - box: { name: b, x: 300, y: 55, w: 60, h: 30, rows: [b] }\n  - edge: { from: b, fromSide: left, to: a, toSide: bottom }",
+			refused: `edge b→a runs through label "a"`,
+		},
+		{
+			name:  "the other's top 2 above the label's bottom, the run in its edge",
 			parts: a + "  - box: { name: b, x: 160, y: 91, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
 			want:  "edge a→b M124,93 V92 H190 V91",
+		},
+		{
+			name:  "the other's top at the label's bottom",
+			parts: a + "  - box: { name: b, x: 160, y: 93, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
+			want:  "edge a→b M124,93 H190",
 		},
 		{
 			name:  "along the label's bottom",
@@ -624,6 +649,7 @@ func TestEdgesIconLabel(t *testing.T) {
 	}
 }
 
+// A straight edge joins its points as written, a diagonal too; others turn at right angles.
 func TestEdges(t *testing.T) {
 	t.Parallel()
 

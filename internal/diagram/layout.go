@@ -78,6 +78,14 @@ type target struct {
 	under     float64  //exhaustruct:optional // how far below r its bottom side stands: an icon's label is part of it
 }
 
+// whole is t's area with what stands below it, the area its sides are chosen by: the bottom side is that area's, while
+// the left and right sides stay at the middle of r.
+func (t target) whole() rect {
+	r := t.r
+	r.h += t.under
+	return r
+}
+
 // layout is a spec laid out once, for every language its text is written in: the areas its checks compare and
 // the elements it draws, so that the checks and the drawing read the same geometry.
 type layout struct {
