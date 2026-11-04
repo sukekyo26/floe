@@ -10,10 +10,22 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// awsIcons are the icons the example aws names, as a set fetched holds them.
+// awsIcons are the icons the examples aws and aws-graph name, as a set fetched holds them.
 var awsIcons = iconsOf{
 	"aws/amazon-bedrock": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), "aws/group/aws-cloud-logo": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
 	"aws/group/region": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), "aws/res/client": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/res/users": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/amazon-route-53": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/amazon-cloudfront": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/amazon-simple-storage-service": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/group/virtual-private-cloud-vpc": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/group/public-subnet": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/group/private-subnet": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/res/elastic-load-balancing-application-load-balancer": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/amazon-elastic-container-service": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/amazon-rds": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/amazon-simple-queue-service": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+	"aws/aws-lambda": []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
 }
 
 func drawWith(lang string, icons diagram.Icons) func(d *diagram.Drawer, v any) (string, error) {
@@ -57,7 +69,7 @@ func TestExampleMistakes(t *testing.T) {
 		want  string
 	}{
 		// The comment puts the mistake on the second line, so that its line and column are of the value.
-		{"# c\nexample: nope\n", nil, "s.yaml:2:10: no example nope; use architecture, aws, class, er, flow, gantt, git, org, quadrant, sequence, state, swimlane, timeline, venn"},
+		{"# c\nexample: nope\n", nil, "s.yaml:2:10: no example nope; use architecture, aws-graph, aws, class, er, flow, gantt, git, org, quadrant, sequence, state, swimlane, timeline, venn"},
 		// A diagram shows no spec.
 		{"example: flow\nsource: true\n", nil, "additional properties 'source' not allowed"},
 		{"source: true\nwidth: 200\nheight: 80\ntitle: t\nparts: []\n", nil, "additional properties 'source' not allowed"},

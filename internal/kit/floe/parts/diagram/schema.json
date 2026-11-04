@@ -299,7 +299,7 @@
     },
     "graphNodes": {
       "type": "array",
-      "description": "Boxes and groups of boxes; a graph holds 200 of them at most, counted through its groups",
+      "description": "Boxes, icons and groups of them; a graph holds 200 of them at most, counted through its groups",
       "minItems": 1,
       "maxItems": 200,
       "items": {
@@ -308,7 +308,7 @@
         "minProperties": 1,
         "maxProperties": 1,
         "additionalProperties": false,
-        "properties": { "box": { "$ref": "#/$defs/graphBox" }, "group": { "$ref": "#/$defs/graphGroup" } }
+        "properties": { "box": { "$ref": "#/$defs/graphBox" }, "icon": { "$ref": "#/$defs/graphIcon" }, "group": { "$ref": "#/$defs/graphGroup" } }
       }
     },
     "graphGroup": {
@@ -320,7 +320,19 @@
         "name": { "$ref": "#/$defs/name" },
         "label": { "$ref": "#/$defs/nonEmptyText" },
         "accent": { "type": "boolean" },
+        "icon": { "type": "string", "minLength": 1, "description": "An icon in the frame's corner, its label to the right of it, the AWS group frame style" },
         "nodes": { "$ref": "#/$defs/graphNodes" }
+      }
+    },
+    "graphIcon": {
+      "type": "object",
+      "description": "An icon of the graph, 48 square with its label below, with no box round it; the n edges at a side end at the points that part it into n+1 equal parts, the icon's own side, or under its label",
+      "required": ["name", "icon"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "icon": { "type": "string", "minLength": 1, "description": "The icon's name, as for the part icon" },
+        "label": { "$ref": "#/$defs/nonEmptyText" }
       }
     },
     "graphBox": {
@@ -349,7 +361,7 @@
         "tone": { "$ref": "#/$defs/tone" },
         "start": { "$ref": "#/$defs/graphMarker" },
         "end": { "$ref": "#/$defs/graphMarker" },
-        "level": { "type": "boolean", "description": "Whether its two boxes stand in one rank, the edge straight between their facing sides: two boxes of one group, standing as written, or directly in two lanes, at their lanes' ends towards each other; on a loop it changes nothing" }
+        "level": { "type": "boolean", "description": "Whether its two boxes stand in one rank, the edge straight between their facing sides (or bent, at an icon whose point on the side stands off its line): two boxes of one group, standing as written, or directly in two lanes, at their lanes' ends towards each other; on a loop it changes nothing" }
       }
     },
     "graphMarker": { "enum": ["none", "arrow"], "description": "An arrowhead or none: the others are wider than the room the edges of a graph keep between them" },

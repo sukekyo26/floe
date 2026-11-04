@@ -76,7 +76,7 @@ func TestDiagram(t *testing.T) {
 		t.Errorf("example er = %q, want it with its Japanese", er)
 	}
 	code, _, errs = runIn(dir, env, "diagram", "example", "pie")
-	if want := "floe: no example pie; use architecture, aws, class, er, flow, gantt, git, org, quadrant, sequence, state, swimlane, timeline, venn\n"; code != 1 || errs != want {
+	if want := "floe: no example pie; use architecture, aws-graph, aws, class, er, flow, gantt, git, org, quadrant, sequence, state, swimlane, timeline, venn\n"; code != 1 || errs != want {
 		t.Errorf("example pie = %d, %q", code, errs)
 	}
 }

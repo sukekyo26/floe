@@ -1,0 +1,48 @@
+frame "cloud" 16,133 858x839
+frame "vpc" 142,296 606x547
+frame "public" 232,330 348x139
+frame "private" 154,505 582x139
+frame "data" 154,692 558x139
+icon "users" 264,28 48x48
+the icon of frame "cloud" 16,133 31x31
+icon "dns" 192,179 48x48
+icon "cdn" 338,179 48x48
+icon "files" 48,376 48x48
+the icon of frame "vpc" 142,296 31x31
+the icon of frame "public" 232,330 31x31
+icon "alb" 444,376 48x48
+the icon of frame "private" 154,505 31x31
+icon "web-a" 436,551 48x48
+icon "web-c" 628,551 48x48
+the icon of frame "data" 154,692 31x31
+icon "main" 388,738 48x48
+icon "standby" 604,738 48x48
+icon "queue" 796,738 48x48
+icon "worker" 796,879 48x48
+edge users→dns M280,97 V109 H256 V167 H216 V179
+edge users→cdn M296,97 V109 H316 V167 H362 V179
+edge cdn→files M354,248 V260 V272 H72 V364 V376
+edge cdn→alb M370,248 V260 V272 H468 V364 V376
+edge alb→web-a M460,445 V457 V539 V551
+edge alb→web-c M476,445 V457 V481 H652 V539 V551
+edge web-a→main M452,620 V632 H400 V726 H404 V738
+edge web-c→main M644,620 V632 V656 H420 V726 V738
+edge main→standby M436,762 H484 H556 H604
+edge web-a→queue M468,620 V632 V668 H812 V726 V738
+edge web-c→queue M660,620 V632 V656 H828 V726 V738
+edge queue→worker M820,807 V819 V867 V879
+label "Users" 265,79 46x18
+label "Route 53" 182.2,230 67.6x18
+label "CloudFront" 321,230 82x18
+label "S3" 59.8,427 24.4x18
+label "ALB" 452.2,427 31.6x18
+label "ECS (zone a)" 411.8,602 96.4x18
+label "ECS (zone c)" 603.8,602 96.4x18
+label "RDS プライマリ" 362.6,789 98.8x18
+label "RDS スタンバイ" 578.6,789 98.8x18
+label "SQS" 804.2,789 31.6x18
+label "Lambda" 793.4,930 53.2x18
+label "DNS" 268,111 31.6x18
+label "HTTPS" 328,111 46x18
+label "SQL" 356.4,646 31.6x18
+label "sync" 487,774 38.8x18

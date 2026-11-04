@@ -214,7 +214,8 @@ func (l *layout) name(at string, p part) {
 			keep(row.Name, target{r: rows[j], kind: "row", handSides: nil})
 		}
 	case p.Icon != nil:
-		keep(p.Icon.Name, target{r: iconRect(p.Icon, at), kind: "icon", handSides: nil, under: iconUnder(p.Icon)})
+		i := p.Icon
+		keep(i.Name, target{r: iconRect(i, at), kind: "icon", handSides: i.handSides, under: iconUnder(i)})
 	case p.Frame != nil:
 		f := p.Frame
 		r := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at}
@@ -678,6 +679,34 @@ func barRect(b *bar, at string) rect {
 		"bar", b.Name, b.Label, labelClass(false))
 }
 
+// Where a frame's heading stands from its top left corner: its text's start and baseline's middle, and, with an icon in
+// the corner, frameIcon square, those right of the icon.
+const (
+	frameHeadX     = 12.0
+	frameHeadY     = 18.0
+	frameIconHeadX = 40.0
+	frameIconHeadY = 15.0
+	frameIcon      = 31.0
+)
+
+// headed is whether group g has a heading to make room for.
+func headed(g *graphGroup) bool { return g.Label != nil || g.Icon != "" }
+
+// headArea is where the heading of group g stands from its frame's top left corner, as addFrame draws it: its text, and
+// its icon with the text.
+func headArea(g *graphGroup) rect {
+	w := 0.0
+	if g.Label != nil {
+		w = textWidth(g.Label, frameClass(g.Icon))
+	}
+	if g.Icon != "" {
+		//nolint:exhaustruct_v5 // an area
+		return rect{x: 0, y: 0, w: max(frameIcon, frameIconHeadX+w), h: frameIcon, what: "", at: ""}
+	}
+	//nolint:exhaustruct_v5 // an area
+	return rect{x: frameHeadX, y: frameHeadY - labelTop, w: w, h: labelH, what: "", at: ""}
+}
+
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
 	class := frameClass(f.Icon)
@@ -685,9 +714,9 @@ func (l *layout) addFrame(f *frame, at string) {
 		"frame", f.Name, f.Label, class)
 	who := fr.what
 	l.frames = append(l.frames, fr)
-	hx, hy := f.X+12, f.Y+18
+	hx, hy := f.X+frameHeadX, f.Y+frameHeadY
 	if f.Icon != "" {
-		hx, hy = f.X+40, f.Y+15
+		hx, hy = f.X+frameIconHeadX, f.Y+frameIconHeadY
 	}
 	if f.Label != nil {
 		hw := textWidth(f.Label, class)
@@ -707,7 +736,10 @@ func (l *layout) addFrame(f *frame, at string) {
 	if f.Icon != "" {
 		// The icon is a part like a box: nothing may overlap it or run through it. It is checked from the frame's
 		// edge, as the 1px of it outside the frame only covers the frame's line (1.2 wide, centred on its edge).
-		ir := rect{x: f.X, y: f.Y, w: 31, h: 31, what: "the icon of " + who, at: at, form: outlineOf(31, 31, "icon")}
+		ir := rect{
+			x: f.X, y: f.Y, w: frameIcon, h: frameIcon, what: "the icon of " + who, at: at, graph: f.graph,
+			form: outlineOf(frameIcon, frameIcon, "icon"),
+		}
 		l.boxes = append(l.boxes, ir)
 		if use, ok := l.image(at, f.Icon, f.X-1, f.Y-1, 32, "the icon of "+who); ok {
 			kids = append(kids, use)
@@ -724,12 +756,14 @@ func (l *layout) addIcon(i *icon, at string) {
 	r := rect{x: i.X, y: i.Y, w: size, h: size, what: "", at: at, form: outlineOf(size, size, "icon")}.named(
 		"icon", i.Name, Text{"en": i.Icon}, "")
 	who := r.what
+	r.graph = i.graph
 	l.boxes = append(l.boxes, r)
 	if use, ok := l.image(at, i.Icon, i.X, i.Y, size, who); ok {
 		l.boxEls = append(l.boxEls, use)
 	}
 	if i.Label != nil {
-		l.label(at, i.Label, i.X+size/2, i.Y+size+iconLabelY, "middle", false, false)
+		n := l.label(at, i.Label, i.X+size/2, i.Y+size+iconLabelY, "middle", false, false)
+		l.labels[n].graph = i.graph
 	}
 }
 
