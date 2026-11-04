@@ -161,7 +161,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.navigate("/")
 	b.size(400, 860, true)
 	b.eval("document.getElementById('add-open').click()")
-	out = append(out, b.eval("(() => { const l = document.querySelector('#add .lead').getBoundingClientRect(), f = document.querySelector('#add .field').getBoundingClientRect(); return [l.bottom <= f.top, getComputedStyle(document.querySelector('#add .lead')).textAlign === 'center'].join(' '); })()"))
+	out = append(out, b.eval("(() => { const l = document.querySelector('#add .lead').getBoundingClientRect(), f = document.querySelector('#add .field').getBoundingClientRect(); const e = document.querySelector('#add .lead'); return [l.bottom <= f.top && e.scrollHeight <= e.clientHeight + 1, getComputedStyle(e).display].join(' '); })()"))
 	b.eval("document.getElementById('add-cancel').click()")
 	// In the dialog of the rest of the shelf, its headings are the shelf's, under the dialog's own.
 	b.eval("document.getElementById('narrow-filter').click()")
@@ -188,7 +188,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true true true", "false true about:blank New ",
 		"vn ?view=new", "vn", "1 new / 1", "New", "n", "true",
 		`["v","n"]`, "/?view=new", "/a/v/",
-		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true false", "true",
+		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true block", "true",
 		"none none flex none true", "flex none",
 	}, "|"))
 }
@@ -313,8 +313,7 @@ func TestUIFrameOrder(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.navigate("/a/" + from + "/")
 		b.until("the bar", "document.getElementById('frame-title').textContent")
 		// Leaving is told at once: beforeunload runs as location is set.
-		b.eval("addEventListener('beforeunload', () => { window.left = true; }); document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
-		check(t, from+" at an end", []string{b.eval("window.left === true")}, "false")
+		check(t, from+" at an end", []string{b.eval("addEventListener('beforeunload', () => { window.left = true; }); document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true })); window.left === true")}, "false")
 	}
 	stays("r")
 	// Archived: the archived.
