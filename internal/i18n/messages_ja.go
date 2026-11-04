@@ -418,7 +418,7 @@ var messagesJA = map[string]string{
 	"ui_all_archived":   "すべてアーカイブしてあります（%d）",
 	"ui_read_blank":     "行を選ぶと、ここに開きます。\nj k で次・前",
 	"ui_list_head":      "新着順 · 未読 %d 件",
-	"ui_news":           "未読 %d",
+	"ui_news":           "すべての未読 %d",
 	"ui_new_version":    "v%d · 新しい版",
 	"ui_day_today":      "今日",
 	"ui_day_yesterday":  "昨日",

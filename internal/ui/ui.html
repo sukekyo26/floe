@@ -2618,7 +2618,9 @@
     $('news').addEventListener('click', (e) => {
       if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
       e.preventDefault();
-      setView('new');
+      // The bar counts all there is, so that what it leads to is that many: nothing narrows them, the search neither
+      $('q').value = '';
+      refilter({ view: 'new', ...NO_PICKS });
     });
     $('add').addEventListener('submit', add);
     // One dialog adds both: the server tells a folder from a file by the path

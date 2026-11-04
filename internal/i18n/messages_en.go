@@ -429,7 +429,7 @@ var messagesEN = map[string]string{
 	"ui_all_archived":   "All are archived (%d)",
 	"ui_read_blank":     "Pick a row to open it here.\nj k: next, previous",
 	"ui_list_head":      "Newest first · %d unread",
-	"ui_news":           "%d unread",
+	"ui_news":           "All unread %d",
 	"ui_new_version":    "v%d · new version",
 	"ui_day_today":      "Today",
 	"ui_day_yesterday":  "Yesterday",

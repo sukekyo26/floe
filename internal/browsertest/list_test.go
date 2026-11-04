@@ -187,12 +187,12 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 
 	check(t, "list", out, strings.Join([]string{
 		"#|v dot 700 ver:v3 · new version kindof:design proj:p tags:t|#|n dot 700 kindof:report proj:q|#|r ring 500 kindof:report proj:p|l mark 500 kindof:Link · HTML path:/tmp/x/l.html|#|d mark 500 kindof:Link · handoff path:/home/you/work/a (1)/v2.0/data-set_#1/deep/deep/deep/deep/deep/deep/deep/deep/deep/name-2.yaml|#|f mark 500 kindof:Folder path:/tmp/x/f|#|g mark 500 kindof:Link · HTML miss:File not found",
-		"Today,Yesterday,Last 7 days", "2 unread / Newest first · 2 unread / 2",
+		"Today,Yesterday,Last 7 days", "All unread 2 / Newest first · 2 unread / 2",
 		"Version\nthe words\np", "v ?q=the+words",
 		"false true about:blank  ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
 		"true false /a/l/?raw Link l", "true false /a/n/?raw New n New",
 		"true true true", "false true about:blank New ",
-		"vn ?view=new", "vn", "1 unread / 1", "New", "n", "true",
+		"vn ?view=new", "vn", "All unread 1 / 1", "New", "n", "true",
 		`["v","n"]`, "/?view=new", "/a/v/",
 		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true block", "true",
 		"none none flex none true", "flex none",
@@ -391,11 +391,21 @@ func TestUIShelfCounts(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, b.eval(unread))
 	b.navigate("/?project=floe")
 	out = append(out, b.eval(unread))
+	// The bar pressed lets go of the picks and the search: as many rows as all three say, and the view stays on pressed again.
+	b.navigate("/?view=fav&project=floe&kind=page&template=report&tag=x&q=alpha")
+	b.eval("document.getElementById('news').click()")
+	const led = "[...document.querySelectorAll('#list > li:not(.group)')].length + ' ' + " + unread + " + ' ' + location.search + ' [' + document.getElementById('q').value + ']'"
+	out = append(out, b.eval(led))
+	b.eval("document.getElementById('news').click()")
+	out = append(out, b.eval(led))
 	// A read row that stays on the view of the unread is not counted.
 	b.navigate("/?view=new")
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((x) => x.slug === 'a' ? { ...x, news: undefined } : x)); drawn = ''; load()")
 	b.until("the row read", "document.querySelector('#list li[data-slug=a] .ring')")
 	out = append(out, b.eval("[...document.querySelectorAll('#list > li:not(.group)')].length + ' ' + document.querySelector('.views [data-view=new] .n').textContent"))
+	// The bar pressed there: as many rows as it says, the read row gone.
+	b.eval("document.getElementById('news').click()")
+	out = append(out, b.eval("[...document.querySelectorAll('#list > li:not(.group)')].length + ' ' + "+unread+" + ' ' + location.search"))
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((x) => x.slug === 'a' ? { ...x, news: 'new' } : x)); drawn = ''; load()")
 	b.until("the row unread", "document.querySelector('#list li[data-slug=a] .dot')")
 	// A row at 0 is quieter, but for the one picked, which reads as picked.
@@ -423,9 +433,12 @@ func TestUIShelfCounts(t *testing.T) { //nolint:paralleltest // the browser test
 		"new:2 all:2 fav:1 archived:0 / floe:1 p:1 / page:2 link:0 / design:0 report:2 / x:1",
 		"new:0 all:2 fav:0 archived:0 / p:0 / page:1 link:0 / report:0 / ",
 		"new:0 all:4 fav:0 archived:0 / floe:1 p:1 / page:2 link:2 / design:2 report:0 / x:0",
-		"2 unread / Newest first · 0 unread / 0",
-		"2 unread / Newest first · 1 unread / 1",
+		"All unread 2 / Newest first · 0 unread / 0",
+		"All unread 2 / Newest first · 1 unread / 1",
+		"2 All unread 2 / Newest first · 2 unread / 2 ?view=new []",
+		"2 All unread 2 / Newest first · 2 unread / 2 ?view=new []",
 		"2 1",
+		"1 All unread 1 / Newest first · 1 unread / 1 ?view=new",
 		"true 0 false",
 		"0 true false true",
 		"1 2",
