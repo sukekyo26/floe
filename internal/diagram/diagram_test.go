@@ -279,7 +279,7 @@ func TestLayoutMistakes(t *testing.T) {
 			"  - frame: { x: 10, y: 10, w: 250, h: 150 }\n  - frame: { x: 300, y: 100, w: 150, h: 40 }\n  - box: { x: 0, y: 140, w: 80, h: 40, rows: [A] }",
 			"s.yaml:6:5: frame 300,100 150x40 sticks out of the 400x200 canvas\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150",
 		},
-		// A label's text is empty in no language, wherever a key takes one; other text may be.
+		// A label's text is empty in no language, wherever a key takes one; rows and a table's title may be.
 		{"  - box: { name: a, x: 10, y: 30, w: 60, h: 30, rows: [a] }\n  - edge: { from: a, to: [200, 45], label: \"\" }", "s.yaml:6:44: minLength: got 0, want 1"},
 		{"  - box: { name: a, x: 10, y: 30, w: 60, h: 30, rows: [a] }\n  - edge: { from: a, to: [200, 45], label: { en: \"\", ja: あ } }", "s.yaml:6:50: minLength: got 0, want 1"},
 		{"  - edge: { from: [10, 45], to: [200, 45], label: { en: a, ja: \"\" } }", "s.yaml:5:64: minLength: got 0, want 1"},
@@ -414,6 +414,24 @@ func TestLayoutMistakes(t *testing.T) {
 	r := usererr.Tell(i18n.EnglishCatalog(), yamlpos.Place(err, "s.yaml", root, nil))
 	if len(r.Mistakes) != 1 || r.Mistakes[0].File != "" {
 		t.Errorf("icons not fetched = %q, want it once, at no place", r.Render("floe: "))
+	}
+}
+
+// A diagram's title is empty in no language; one of spaces alone passes, as draw's LIMIT says.
+func TestTitleNotEmpty(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ title, want string }{
+		{`""`, "s.yaml:1:8: minLength: got 0, want 1"},
+		{`{ en: "", ja: あ }`, "s.yaml:1:14: minLength: got 0, want 1"},
+		{`{ en: a, ja: "" }`, "s.yaml:1:21: minLength: got 0, want 1"},
+		{`" "`, ""},
+		{"T", ""},
+	} {
+		src := "title: " + c.title + "\nwidth: 200\nheight: 80\nparts:\n  - box: { x: 10, y: 10, rows: [a] }\n"
+		if _, got := draw(t, src, render("en")); got != c.want {
+			t.Errorf("title %s:\n  told %q\n  want %q", c.title, got, c.want)
+		}
 	}
 }
 

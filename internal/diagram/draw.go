@@ -188,6 +188,8 @@ func (l *layout) draw(lang i18n.Lang) (template.HTML, error) {
 	}
 	t.Funcs(template.FuncMap{"t": func(x Text) string { return x.in(lang) }})
 	var b strings.Builder
+	// LIMIT: the schema refuses an empty title, not text that shows nothing (spaces, tabs, a zero-width space), which
+	// tells a reader who cannot see the diagram nothing; refuse it too if such titles come up.
 	err = t.ExecuteTemplate(&b, "diagram", map[string]any{
 		"W": l.w, "H": l.h, "MaxH": math.Floor(l.h*maxScale + 0.5), "Title": l.s.Title,
 		"Markers": defs, "Icons": l.iconDefs, "Elems": elems, "Wrap": wrapClass,
