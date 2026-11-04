@@ -31,6 +31,7 @@ const (
 	tableSep  = 9
 	cornerR   = 8 // the corner radius of a box and a table
 	labelH    = 18
+	labelTop  = 9 // how far a label's box stands above the y of its text
 	// canvasPad is the room right of and below what is drawn on a canvas whose width or height is left out: for
 	// text drawn wider than its estimate, and for an edge's marker past its end.
 	canvasPad = 20
@@ -74,6 +75,7 @@ type target struct {
 	r         rect
 	kind      string   // box, table, row, icon, frame, bar, dot, circle
 	handSides []string // the sides left to edges written by hand (box.handSides); nil: any
+	under     float64  //exhaustruct:optional // how far below r its bottom side stands: an icon's label is part of it
 }
 
 // layout is a spec laid out once, for every language its text is written in: the areas its checks compare and
@@ -204,7 +206,7 @@ func (l *layout) name(at string, p part) {
 			keep(row.Name, target{r: rows[j], kind: "row", handSides: nil})
 		}
 	case p.Icon != nil:
-		keep(p.Icon.Name, target{r: iconRect(p.Icon, at), kind: "icon", handSides: nil})
+		keep(p.Icon.Name, target{r: iconRect(p.Icon, at), kind: "icon", handSides: nil, under: iconUnder(p.Icon)})
 	case p.Frame != nil:
 		f := p.Frame
 		r := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at}
@@ -623,6 +625,9 @@ func (l *layout) addTable(t *table, at string) {
 	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "table", Tone: t.Tone, Kids: kids})
 }
 
+// iconLabelY is how far below an icon its label's middle stands.
+const iconLabelY = 16
+
 func iconSize(i *icon) float64 {
 	if i.Size == 0 {
 		return 48
@@ -634,6 +639,14 @@ func iconSize(i *icon) float64 {
 func iconRect(i *icon, at string) rect {
 	size := iconSize(i)
 	return rect{x: i.X, y: i.Y, w: size, h: size, what: "", at: at}
+}
+
+// iconUnder is how far below icon i its label reaches.
+func iconUnder(i *icon) float64 {
+	if i.Label == nil {
+		return 0
+	}
+	return iconLabelY - labelTop + labelH
 }
 
 func dotRect(d *dot, at string) rect {
@@ -667,7 +680,7 @@ func (l *layout) addFrame(f *frame, at string) {
 	}
 	if f.Label != nil {
 		hw := textWidth(f.Label, class)
-		head := rect{x: hx, y: hy - 9, w: hw, h: labelH, what: "the heading of " + who, at: at, graph: f.graph}
+		head := rect{x: hx, y: hy - labelTop, w: hw, h: labelH, what: "the heading of " + who, at: at, graph: f.graph}
 		l.heads = append(l.heads, head)
 		// The heading keeps the margin on its right that it has on its left.
 		l.fit(at, who, f.Label, class, f.W-(hx-f.X)-12, f.W)
@@ -705,7 +718,7 @@ func (l *layout) addIcon(i *icon, at string) {
 		l.boxEls = append(l.boxEls, use)
 	}
 	if i.Label != nil {
-		l.label(at, i.Label, i.X+size/2, i.Y+size+16, "middle", false, false)
+		l.label(at, i.Label, i.X+size/2, i.Y+size+iconLabelY, "middle", false, false)
 	}
 }
 
@@ -764,9 +777,9 @@ func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, st
 	case "end":
 		x0 = x - w + 5
 	}
-	l.labels = append(l.labels, rect{x: x0, y: y - 9, w: w, h: labelH, what: "", at: at}.named("label", "", t, cls))
+	l.labels = append(l.labels, rect{x: x0, y: y - labelTop, w: w, h: labelH, what: "", at: at}.named("label", "", t, cls))
 	if !plain {
-		l.labelEls = append(l.labelEls, elem{Kind: "rect", X: x0, Y: y - 9, W: w, H: labelH, Class: "label-bg"})
+		l.labelEls = append(l.labelEls, elem{Kind: "rect", X: x0, Y: y - labelTop, W: w, H: labelH, Class: "label-bg"})
 	}
 	l.labelEls = append(l.labelEls, elem{Kind: "text", X: x, Y: y, Anchor: anchor, Class: cls, Text: t})
 	return len(l.labels) - 1

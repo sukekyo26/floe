@@ -62,7 +62,13 @@ func (l *layout) endOf(at string, e end, side string, other [2]float64) (anchor,
 }
 
 // onSide is the middle of the side of t, or when side is "", of the side facing other: left or right when it is
-// more across than up or down from the centre of t, and always for a row.
+// more across than up or down from the centre of t, and always for a row. An icon's bottom side is under its label.
+// LIMIT: the side is chosen by the icon alone (towards, facing), and the end stands under the label. An edge with no
+// side whose other end's top is level with the label's top half or just above it then turns back through the label, and
+// a via between the icon and its label is gone back to through it: both are refused; write fromSide: right, or move
+// either below the label. And crossedBy reads a run along an edge as not through it, so these pass, plain on the page:
+// a run along the label's bottom, another edge running exactly there (it reads as a branch, not a crossing), and a part
+// 1 below the label, the marker hidden behind it. Refuse them if they come to mislead.
 func onSide(t target, side string, other [2]float64) anchor {
 	r := t.r
 	cx, cy := r.x+r.w/2, r.y+r.h/2
@@ -83,7 +89,7 @@ func onSide(t target, side string, other [2]float64) anchor {
 	case "top":
 		return anchor{cx, r.y, side, false}
 	default:
-		return anchor{cx, r.y + r.h, side, false}
+		return anchor{cx, r.y + r.h + t.under, side, false}
 	}
 }
 

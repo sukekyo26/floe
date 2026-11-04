@@ -521,6 +521,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix an edge at the bottom side of an icon with a label being refused as running through the label: the side now stands
+  under the label, so an edge named from one icon to the one below it is drawn, and a diagram can flow downwards. An edge
+  turning between an icon and its label, or with no side and the other part's top beside the label's, is now refused; write
+  the side or move it below the label.
 - Fix a diagram measuring bold text as regular: a table's title, a box's `main` row, a frame's heading, a graph
   group's heading and a `strong` label are now counted as wide as bold is drawn (0.64 of the size for a narrow
   character, from 0.6), and a `main code` row at the 12px it is drawn in, from 13. A table, box or graph with no `w`

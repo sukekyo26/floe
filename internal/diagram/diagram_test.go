@@ -535,6 +535,95 @@ func TestEdgesPastShapes(t *testing.T) {
 }
 
 // A straight edge joins its points as written, a diagonal too; others turn at right angles.
+// An icon's bottom side is under its label, whichever way the edge runs and however wide or big they are; without a
+// label it is the icon's. The label is in the way of any other run still. The last cases are what the rule costs and
+// lets by (the LIMIT of onSide), kept here so that changing any of them is a choice.
+func TestEdgesIconLabel(t *testing.T) {
+	t.Parallel()
+	const (
+		head = "width: 800\nheight: 400\ntitle: T\nparts:\n"
+		a    = "  - icon: { name: a, x: 100, y: 20, icon: aws/aws-lambda, label: a }\n"
+		end  = "  - box: { name: b, x: 100, y: 160, w: 48, h: 30, rows: [b] }\n"
+	)
+	for _, c := range []struct {
+		name, parts, want, refused string
+	}{
+		{name: "down", parts: a + end + "  - edge: { from: a, to: b }", want: "edge a→b M124,93 V160"},
+		{name: "up", parts: a + end + "  - edge: { from: b, to: a }", want: "edge b→a M124,160 V93"},
+		{name: "written", parts: a + end + "  - edge: { from: a, fromSide: bottom, to: b, toSide: top }", want: "edge a→b M124,93 V160"},
+		{
+			name:  "no label",
+			parts: "  - icon: { name: a, x: 100, y: 20, icon: aws/aws-lambda }\n" + end + "  - edge: { from: a, to: b }",
+			want:  "edge a→b M124,68 V160",
+		},
+		{
+			name:  "wide label",
+			parts: "  - icon: { name: a, x: 100, y: 20, icon: aws/aws-lambda, label: A long name of an icon }\n" + end + "  - edge: { from: a, to: b }",
+			want:  "edge a→b M124,93 V160",
+		},
+		{
+			name:  "size",
+			parts: "  - icon: { name: a, x: 100, y: 20, size: 80, icon: aws/aws-lambda, label: a }\n" + "  - box: { name: b, x: 116, y: 180, w: 48, h: 30, rows: [b] }\n  - edge: { from: a, to: b }",
+			want:  "edge a→b M140,125 V180",
+		},
+		{
+			name:    "another edge at the label",
+			parts:   a + "  - box: { name: c, x: 20, y: 70, w: 44, h: 30, rows: [c] }\n  - box: { name: d, x: 180, y: 70, w: 44, h: 30, rows: [d] }\n  - edge: { from: c, to: d }",
+			refused: `edge c→d runs through label "a"`,
+		},
+		{
+			name:    "a via between the icon and its label",
+			parts:   a + "  - box: { name: b, x: 220, y: 100, w: 48, h: 30, rows: [b] }\n  - edge: { from: a, to: b, fromSide: bottom, toSide: left, via: [[124, 72], [190, 72], [190, 115]] }",
+			refused: `edge a→b runs through label "a"`,
+		},
+		{
+			name:    "no side, the other top beside the label",
+			parts:   a + "  - box: { name: b, x: 160, y: 72, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
+			refused: `edge a→b runs through label "a"`,
+		},
+		{
+			name:  "the same, a side written",
+			parts: a + "  - box: { name: b, x: 160, y: 72, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, fromSide: right, to: b }",
+			want:  "edge a→b M148,44 H190 V72",
+		},
+		{
+			name:  "the same, the other below the label",
+			parts: a + "  - box: { name: b, x: 160, y: 91, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
+			want:  "edge a→b M124,93 V92 H190 V91",
+		},
+		{
+			name:  "along the label's bottom",
+			parts: a + "  - box: { name: b, x: 300, y: 78, w: 60, h: 30, rows: [b] }\n  - edge: { from: a, fromSide: bottom, to: b, toSide: left }",
+			want:  "edge a→b M124,93 H300",
+		},
+		{
+			name: "another edge along the label's bottom",
+			parts: a + "  - box: { name: c, x: 20, y: 78, w: 44, h: 30, rows: [c] }\n  - box: { name: d, x: 200, y: 78, w: 44, h: 30, rows: [d] }\n" +
+				"  - box: { name: e, x: 100, y: 200, w: 48, h: 30, rows: [e] }\n  - edge: { from: c, to: d }\n  - edge: { from: a, to: e }",
+			want: "edge a→e M124,93 V200",
+		},
+		{
+			name:  "a part 1 below the label",
+			parts: a + "  - box: { name: b, x: 100, y: 94, w: 48, h: 30, rows: [b] }\n  - edge: { from: a, to: b }",
+			want:  "edge a→b M124,93 V94",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			got, mistakes := draw(t, head+c.parts+"\n", inspect)
+			if c.refused != "" {
+				if !strings.Contains(mistakes, c.refused) {
+					t.Errorf("told %q, want %q", mistakes, c.refused)
+				}
+				return
+			}
+			if mistakes != "" || !strings.Contains(got, c.want) {
+				t.Errorf("printed %s, told %q, want %q", got, mistakes, c.want)
+			}
+		})
+	}
+}
+
 func TestEdges(t *testing.T) {
 	t.Parallel()
 
