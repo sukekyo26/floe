@@ -253,8 +253,14 @@ type Read struct {
 	At string `json:"at"`
 }
 
-// markRead keeps that the viewer read a version of the stored page slug: 204, and 404 for a link, a folder or no page,
-// which have no unread. A version the page does not have is kept by nobody, and asks nothing to be mended.
+// readAnswer says whether a read took the page up to its last version, which it had not been at.
+type readAnswer struct {
+	Cleared bool `json:"cleared"`
+}
+
+// markRead keeps that the viewer read a version of the stored page slug, and says what came of it: 404 for a link, a
+// folder or no page, which have no unread. A version the page does not have is kept by nobody, and asks nothing to be
+// mended.
 func (s *Server) markRead(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if !store.ValidSlug(slug) {
@@ -270,7 +276,33 @@ func (s *Server) markRead(w http.ResponseWriter, r *http.Request) {
 	if in == nil {
 		return
 	}
-	err := s.cfg.Store.MarkRead(Viewer, slug, in.N, in.At)
+	cleared, err := s.cfg.Store.MarkRead(Viewer, slug, in.N, in.At)
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	sendJSON(w, http.StatusOK, readAnswer{Cleared: cleared})
+}
+
+// markUnread takes a stored page back to what the viewer had read before: 204, also for one with news, and 404 for a
+// link, a folder or no page. Only the management page's own controls call it: the sandboxed pages (Origin: null) are
+// refused, and no message of a page leads here. It takes no body, as remove.
+func (s *Server) markUnread(w http.ResponseWriter, r *http.Request) {
+	if !s.origins[r.Header.Get("Origin")] {
+		send(w, http.StatusForbidden, "forbidden origin")
+		return
+	}
+	slug := r.PathValue("slug")
+	if !store.ValidSlug(slug) {
+		notFound(w)
+		return
+	}
+	err := s.cfg.Store.MarkUnread(Viewer, slug)
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
 		return

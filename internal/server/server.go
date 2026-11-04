@@ -142,6 +142,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PATCH /api/artifacts/{slug}", s.edit)
 	mux.HandleFunc("DELETE /api/artifacts/{slug}", s.remove)
 	mux.HandleFunc("POST /api/artifacts/{slug}/read", s.markRead)
+	mux.HandleFunc("DELETE /api/artifacts/{slug}/read", s.markUnread)
 	mux.HandleFunc("POST /api/rebuild", s.rebuild)
 	mux.HandleFunc("POST /api/stop", s.stop)
 	mux.HandleFunc("GET /api/artifacts/{slug}/download", s.download)

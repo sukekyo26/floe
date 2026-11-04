@@ -60,11 +60,36 @@ func TestReadAPI(t *testing.T) {
 			text string
 		}{w.Code, w.Body.String()}
 	}
-	if got := read("d", server.Read{N: 0, At: ""}); got.code != http.StatusNoContent || e.newsOf(t, "d") != "new" {
+	if got := read("d", server.Read{N: 0, At: ""}); got.code != http.StatusOK || got.text != `{"cleared":false}` || e.newsOf(t, "d") != "new" {
 		t.Errorf("of no version: %+v, news %q", got, e.newsOf(t, "d"))
 	}
-	if got := read("d", server.Read{N: v.N, At: v.At}); got.code != http.StatusNoContent || got.text != "" || e.newsOf(t, "d") != "" {
+	if got := read("d", server.Read{N: v.N, At: v.At}); got.code != http.StatusOK || got.text != `{"cleared":true}` || e.newsOf(t, "d") != "" {
 		t.Errorf("read: %+v, news %q", got, e.newsOf(t, "d"))
+	}
+	if got := read("d", server.Read{N: v.N, At: v.At}); got.code != http.StatusOK || got.text != `{"cleared":false}` {
+		t.Errorf("read again: %+v", got)
+	}
+	// Marked unread by the management page alone: no body, no other origin, no page in the sandbox. Twice is once.
+	unread := "/api/artifacts/d/read"
+	want(t, e.do(t, http.MethodDelete, unread, ""), http.StatusForbidden, "forbidden origin")
+	want(t, e.do(t, http.MethodDelete, unread, "", "Origin", "null"), http.StatusForbidden, "forbidden origin")
+	want(t, e.do(t, http.MethodDelete, unread, "", "Origin", "https://example.com"), http.StatusForbidden, "forbidden origin")
+	if got := e.newsOf(t, "d"); got != "" {
+		t.Errorf("refused, news %q", got)
+	}
+	for range 2 {
+		if w := e.do(t, http.MethodDelete, unread, "", "Origin", origin); w.Code != http.StatusNoContent || w.Body.Len() != 0 {
+			t.Errorf("marked unread: %d %q", w.Code, w.Body.String())
+		}
+		if got := e.newsOf(t, "d"); got != "new" {
+			t.Errorf("marked unread, news %q", got)
+		}
+	}
+	if got := read("d", server.Read{N: v.N, At: v.At}); got.text != `{"cleared":true}` {
+		t.Errorf("read after the mark: %+v", got)
+	}
+	if w := e.do(t, http.MethodDelete, "/api/artifacts/no-such/read", "", "Origin", origin); w.Code != http.StatusNotFound {
+		t.Errorf("no page: %d", w.Code)
 	}
 
 	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>", "docs/a.html": "<title>a</title>"})
@@ -96,6 +121,9 @@ func TestReadAPI(t *testing.T) {
 	if text := strings.ReplaceAll(w.Body.String(), e.root, "S"); w.Code != http.StatusBadRequest ||
 		text != "S/reads.json: is missing, broken or has no since: run floe stop, then floe serve, which writes it anew" {
 		t.Errorf("no since: %d %q", w.Code, text)
+	}
+	if w := e.do(t, http.MethodDelete, "/api/artifacts/f/read", "", "Origin", origin); w.Code != http.StatusBadRequest {
+		t.Errorf("marked unread with no since: %d", w.Code)
 	}
 	if got := e.newsOf(t, "f"); got != "" {
 		t.Errorf("no since: news %q", got)
