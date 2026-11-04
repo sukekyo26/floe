@@ -63,7 +63,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("localStorage.removeItem('list.open')")
 	b.navigate("/a/docs/")
 	out = append(out, b.until("the folder open", "location.pathname === '/' && document.querySelectorAll('#list li.tree').length > 0 && "+opens))
-	// The folders' tab has no project groups: each folder heads its tree.
+	// The folder's row heads its tree, under its day.
 	out = append(out, b.eval(rows), b.eval("document.querySelectorAll('#list li.group').length + ' groups, ' + document.querySelectorAll('#list li.folder').length + ' folder'"))
 	click("guide")
 	b.until("guide open", "document.querySelectorAll('#list li.tree').length > 3")
@@ -115,8 +115,8 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/a/docs/?file=guide%2Fsetup.html#end")
 	out = append(out, b.until("the frame", "!document.getElementById('frame').hidden && document.getElementById('frame-title').textContent"),
 		b.eval("new URL(document.getElementById('frame').src).pathname + new URL(document.getElementById('frame').src).hash"),
-		b.eval("['frame-star', 'frame-archive', 'frame-download'].map((id) => document.getElementById(id).hidden).join()"),
-		b.eval("[...document.querySelectorAll('#page-pick-list [role=option]')].length === 0 && 'none yet'"))
+		// No state of its own: its path and the page alone, its star and menu on the folder's row.
+		b.eval("[document.querySelector('#frame-actions .star').hidden, document.querySelector('#frame-actions .copy').hidden, document.querySelector('#frame-actions .more-slot').children.length, document.querySelector('#frame-actions .open').getAttribute('href')].join()"))
 	// A move to another part of it, as the page tells it, is written into the frame's URL.
 	// The URL is the frame's own to make: a relative one would be read against the frame URL.
 	// The part it is at goes into the frame's URL, and the frame's own part, from the address bar, to the page.
@@ -126,9 +126,9 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"location.hash === '#top' && window.at === '#top') && location.search + location.hash"))
 	b.eval("location.hash = '#end'")
 	out = append(out, b.until("the part in the page", "window.at === '#end' && 'the page at #end'"))
-	// The bar picks among the pages with the folder's tree hidden: beside it, the tree lists them.
-	b.eval("document.getElementById('side-hide').click(); document.getElementById('frame-pick').click()")
-	out = append(out, b.until("the pages to pick", "[...document.querySelectorAll('#page-pick-list [role=option]')].map((o) => o.textContent + (o.getAttribute('aria-current') ? '*' : '')).join(',')"))
+	// j goes on to the next page of its directory.
+	b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
+	out = append(out, b.until("the next page", "location.search.includes('start') && location.search"))
 	b.navigate("/a/docs/guide/setup.html")
 	out = append(out, b.eval("getComputedStyle(document.querySelector('h1')).color"))
 
@@ -140,32 +140,30 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	if err := os.Rename(docs, docs+"-moved"); err != nil {
 		t.Fatal(err)
 	}
-	b.navigate("/?tab=folders&open=docs")
-	out = append(out, b.until("the folder missing", "document.querySelector('#list .path.missing') !== null && 'tree rows ' + document.querySelectorAll('#list li.tree').length"))
+	b.navigate("/?kind=folder&open=docs")
+	out = append(out, b.until("the folder missing", "document.querySelector('#list .miss') !== null && 'tree rows ' + document.querySelectorAll('#list li.tree').length"))
 	if err := os.Rename(docs+"-moved", docs); err != nil {
 		t.Fatal(err)
 	}
 
 	// Added from the dialog, a folder is opened.
 	s.write(t, "more/m.html", "<title>m</title>")
-	b.navigate("/?tab=links")
-	// Opened for a folder, the dialog shows the folder's icon in place of the link's.
-	b.eval("document.getElementById('add-folder').click()")
-	out = append(out, b.eval("['add-icon-link', 'add-icon-folder'].map((id) => getComputedStyle(document.getElementById(id)).display).join()"))
+	b.navigate("/?kind=link")
+	b.eval("document.getElementById('add-open').click()")
 	b.eval(`document.getElementById('add-path').value = ` + js(filepath.Join(s.Env["HOME"], "more")) + `;
 		document.getElementById('add').requestSubmit()`)
-	out = append(out, b.until("the folder added", rows+".includes('m.html') && new URLSearchParams(location.search).get('tab') + ' ' + "+opens),
+	out = append(out, b.until("the folder added", rows+".includes('m.html') && "+opens),
 		b.eval("document.getElementById('add-title').textContent"))
 	// Once the rows have risen in, every folder's heading and every row of the tree shows whole.
 	b.still()
 	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].map((li) => li.className.split(' ')[0] + ':' + getComputedStyle(li).opacity).join(',')"))
 
 	guide := "dir:docs:guide/deep,page:docs:guide/setup.html,page:docs:guide/start.html"
-	check(t, "folders", out, `["docs"] ?tab=folders|a,b:c+,assets+,big+,guide+,index.html|0 groups, 1 folder|["docs","docs:guide","docs:a,b:c"] ?tab=folders|`+
-		"a,b:c-,odd.html,assets+,big+,guide-,deep+,setup.html,start.html,index.html|"+`["docs","docs:guide","docs:a,b:c"] ?tab=folders|.,a,b:c,guide|`+
+	check(t, "folders", out, `["docs"] ?kind=folder|a,b:c+,assets+,big+,guide+,index.html|1 groups, 1 folder|["docs","docs:guide","docs:a,b:c"] ?kind=folder|`+
+		"a,b:c-,odd.html,assets+,big+,guide-,deep+,setup.html,start.html,index.html|"+`["docs","docs:guide","docs:a,b:c"] ?kind=folder|.,a,b:c,guide|`+
 		guide+" gone, focus guide|"+guide+" new, rose "+guide+"|redrawn, rose 0|"+
-		`a,b:c-,odd.html,assets+,big+,guide+,index.html|["docs","docs:a,b:c"] ?tab=folders|big|`+"a,b:c-,odd.html,assets+,big+,guide+,index.html,new.html|"+
-		"docs / guide/setup.html|/a/docs/guide/setup.html#end|true,true,true|none yet|"+
-		"?file=guide%2Fsetup.html#top|the page at #end|guide/setup.html*,guide/start.html|rgb(1, 2, 3)|docs / big/p1000.html|tree rows 0|"+
-		"none,block|"+`folders ["docs","docs:a,b:c","more"] ?tab=folders|Add a folder|`+"folder:1,tree:1,folder:1"+strings.Repeat(",tree:1", 7))
+		`a,b:c-,odd.html,assets+,big+,guide+,index.html|["docs","docs:a,b:c"] ?kind=folder|big|`+"a,b:c-,odd.html,assets+,big+,guide+,index.html,new.html|"+
+		"docs / guide/setup.html|/a/docs/guide/setup.html#end|true,false,0,/a/docs/guide/setup.html|"+
+		"?file=guide%2Fsetup.html#top|the page at #end|?file=guide%2Fstart.html|rgb(1, 2, 3)|docs / big/p1000.html|tree rows 0|"+
+		`["docs","docs:a,b:c","more"] |Add a link or folder|`+"group:1,folder:1,tree:1,folder:1"+strings.Repeat(",tree:1", 7))
 }
