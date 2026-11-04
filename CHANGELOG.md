@@ -305,8 +305,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Refuse an empty label in a diagram (`label: ""`, the `text` of the part `label`, or `{ en: "", ja: … }`), in the
-  parts `edge`, `bar`, `icon`, `frame` and `label` and a graph's edges and groups: it took room, and on an edge or a bar
-  drew an empty box. For no label, leave the key out. A tick's empty text is still a mark alone.
+  parts `edge`, `bar`, `icon`, `frame` and `label` and a graph's edges and groups. All but a frame's took room, and
+  unless plain drew an empty box. For no label, leave the key out. A tick's empty text is still a mark alone.
 - Refuse a comment in `{ }` or `[ ]`, in every YAML file floe reads, a comment on a line of its own and one in a
   flow over lines too: YAML reads a `#` there as a comment to the line's end, the `}` or `]` on it too, which the
   YAML library told only as missing, at the `[` or the next line. floe tells it at the `#`, and where the innermost

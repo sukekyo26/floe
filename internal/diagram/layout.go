@@ -752,7 +752,8 @@ func (l *layout) image(at, name string, x, y, size float64, who string) (elem, b
 // LIMIT: the box is --bg, so on a coloured shape (a circle, raw's) it shows; a label may say plain (one with in has
 // none unless it says plain: false), but an edge's, an icon's and a bar's cannot. Tell the shape under them if they
 // are drawn there.
-// LIMIT: the schema refuses empty text, not text of spaces alone, which draws an empty box; it shows on the page.
+// LIMIT: the schema refuses empty text, not text of spaces alone, which takes room and is not seen but over a line or a
+// shape; refuse it too if labels of spaces come up.
 func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, strong bool) int {
 	cls := labelClass(strong)
 	w := labelWidth(t, strong)
@@ -810,7 +811,8 @@ func (l *layout) addAxis(a *axis, at string) {
 	}
 	for i, t := range ticks {
 		l.edgeEls = append(l.edgeEls, lineEl(t[0], t[1], t[2], t[3], "axis"))
-		// LIMIT: a tick empty in some languages only is a label in those too, with no text; it shows on the page.
+		// LIMIT: a tick empty in some languages only draws nothing on their pages, yet takes the room of the language
+		// that decides its width; draw no label in those if such ticks come up.
 		if text := a.Ticks[i].Text; words(text, labelClass(false)) != "" {
 			l.label(at, text, tickTextX(a, t[0]), a.Y+17, "middle", true, false)
 		}

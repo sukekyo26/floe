@@ -291,6 +291,9 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - graph: { x: 20, y: 20, nodes: [{ box: { name: a, rows: [a] } }], edges: [{ from: a, to: a, label: \"\" }] }", "s.yaml:5:103: minLength: got 0, want 1"},
 		{"  - graph: { x: 20, y: 20, nodes: [{ group: { name: g, label: \"\", nodes: [{ box: { name: a, rows: [a] } }] } }] }", "s.yaml:5:63: minLength: got 0, want 1"},
 		{"  - box: { x: 10, y: 30, rows: [\"\"] }\n  - box: { x: 100, y: 30, rows: [[\"\", sub]] }\n  - table: { x: 200, y: 10, title: \"\", rows: [[\"\", \"\"]] }", ""},
+		// Accepted, as the LIMITs of label and addAxis say: text of spaces, and a tick empty in one language, named by the other.
+		{"  - edge: { from: [10, 45], to: [200, 45], label: \" \" }", ""},
+		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[160, { en: \"\", ja: 月 }]] }\n  - box: { name: b, x: 150, y: 100, w: 60, h: 30, rows: [b] }", `s.yaml:6:5: box "b" overlaps label "月"`},
 		// A tick of no text in any language is a mark alone: nothing overlaps it or sticks out (an edge through it: f13).
 		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, \"\"], [160, \"\"]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
 		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, { en: \"\", ja: \"\" }], [160, { en: \"\", ja: \"\" }]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
