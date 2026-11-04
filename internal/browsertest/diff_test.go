@@ -273,7 +273,7 @@ func TestUIDiffClose(t *testing.T) { //nolint:paralleltest // the browser tests 
 		const aside = r.left >= views.right && r.top === views.top;
 		return [r.width > 0, r.left >= 0 && r.right <= innerWidth, innerWidth > 400 ? aside : aside || r.top >= views.bottom, top?.id, page.scrollWidth <= innerWidth].join(' ');
 	})()`
-	for _, width := range []int64{1440, 1200, 800, 400} {
+	for _, width := range []int64{1440, 1300, 1250, 1200, 1150, 1100, 1050, 1000, 800, 400} {
 		b.size(width, 800, false)
 		openDiff(b, "/a/d/?diff")
 		if got := b.eval(place); got != "true true true diff-close true" {
@@ -353,11 +353,18 @@ func TestUIDiffToc(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	const kept = "localStorage.getItem('diff.toc')"
 	out := []string{b.eval(state), b.eval(kept + " ?? 'none kept'")}
 
-	r := b.rect(grip)
-	x, y := r.X+r.Width/2, r.Y+r.Height/2
-	b.mouse(chromedp.MousePressed, x, y, 1)
-	b.mouse(chromedp.MouseMoved, 300, y, 0)
-	b.mouse(chromedp.MouseReleased, 300, y, 1)
+	drag := func(to float64) {
+		t.Helper()
+		r := b.rect(grip)
+		x, y := r.X+r.Width/2, r.Y+r.Height/2
+		b.mouse(chromedp.MousePressed, x, y, 1)
+		b.mouse(chromedp.MouseMoved, to, y, 0)
+		b.mouse(chromedp.MouseReleased, to, y, 1)
+	}
+	// Dragged past its bounds it stops at them, the edge in the column it moves and under the head.
+	drag(1000)
+	out = append(out, b.until("at most", state+".startsWith('480') && "+state), b.eval(kept), b.eval(grip+".getBoundingClientRect().top === document.getElementById('diff-main').getBoundingClientRect().top"))
+	drag(300)
 	out = append(out, b.until("dragged", state+".startsWith('300') && "+state), b.eval(kept))
 	b.eval(grip + ".focus()")
 	b.pressKey(kb.ArrowLeft)
@@ -370,6 +377,7 @@ func TestUIDiffToc(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("document.getElementById('diff-toc-hide').click()")
 	const closed = `[document.getElementById('diff-toc-nav').hidden, document.getElementById('diff-toc-grip').hidden, document.getElementById('diff-toc-show').hidden, document.activeElement.id,
 		document.getElementById('diff-toc-show').getBoundingClientRect().right <= document.getElementById('diff-body').getBoundingClientRect().left,
+		document.getElementById('diff-toc-show').getBoundingClientRect().top > document.getElementById('diff-main').getBoundingClientRect().top,
 		document.elementFromPoint(document.getElementById('diff-toc-show').getBoundingClientRect().left + 8, document.getElementById('diff-toc-show').getBoundingClientRect().top + 8)?.closest('button')?.id].join(' ')`
 	out = append(out, b.eval(closed), b.eval(kept), b.eval("localStorage.getItem('frame.side') ?? 'none kept'"))
 	openDiff(b, "/a/d/?diff")
@@ -419,11 +427,12 @@ func TestUIDiffToc(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 	check(t, "toc", out, strings.Join([]string{
 		"240 160 480 240 240 240", "none kept",
+		"480 160 480 480 480 480", `{"width":480,"open":true}`, "true",
 		"300 160 480 300 300 300", `{"width":300,"open":true}`,
 		"284 160 480 284 284 284", `{"width":284,"open":true}`,
 		"284 160 480 284 284 284",
-		"true true false diff-toc-show true diff-toc-show", `{"width":284,"open":false}`, "none kept",
-		"true true false  true diff-toc-show",
+		"true true false diff-toc-show true true diff-toc-show", `{"width":284,"open":false}`, "none kept",
+		"true true false  true true diff-toc-show",
 		"false diff-toc-hide", `{"width":284,"open":true}`,
 		"diff-toc-hide: diff-toc-hide solid", "diff-toc-grip: diff-toc-grip solid",
 		"diff-toc-show",
