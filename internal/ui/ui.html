@@ -427,12 +427,15 @@
   /* The bulk bar, in the head over the list while items are selected: a round band ringed in ink, its last button (clearing the
      selection) at its end. 6px of it round its buttons hold their focus ring off the ink */
   .lhead:has(> .bulk:not([hidden])) { padding-inline: 0.5rem; background: var(--sel); }
-  .bulk { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.25rem; }
+  /* What a font makes too wide for the list scrolls, as the row of views does, the clearing staying in reach; 4px hold the focus ring */
+  .bulk { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.25rem; overflow: auto hidden; padding: 4px; margin: -4px; scrollbar-width: none; }
+  .bulk::-webkit-scrollbar { display: none; }
   /* The count gives way first, cut off, where the bar is too narrow for all */
   .bulk-count { min-width: 0; margin-right: auto; padding-left: 0.5rem; overflow: hidden; text-overflow: ellipsis; font-size: var(--text-small); font-weight: 650; color: var(--fg); white-space: nowrap; }
   .bulk .btn { flex: none; height: 2rem; padding: 0 0.5rem; font-size: var(--text-small); background: none; border-color: transparent; border-radius: 999px; box-shadow: none; white-space: nowrap; }
   .bulk .btn:hover { background: var(--subtle); }
-  .bulk .btn.clear { padding: 0 0.4rem; }
+  .bulk .btn.clear { position: sticky; right: 0; padding: 0 0.4rem; background: var(--sel); }
+  .bulk .btn.clear:hover { background: var(--subtle); }
   .bulk .btn.clear .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   /* The delete is red in its words; its ground only while it waits to be pressed again, in its longer words */
   .bulk .btn.danger { color: var(--danger); }
@@ -440,8 +443,11 @@
   /* A delete pressed once asks in its longer words, the other buttons but the clearing out of its way (they come back as it is
      let go; the clearing lets it go where a click does not move the focus, as on Safari) */
   .bulk:has(.armed) > .btn:not(.armed, .clear) { display: none; }
-  /* The words stay on the narrowest list: the count's end goes first, then the buttons' room */
-  @container bar (max-width: 24rem) { .bulk-count .long { display: none; } }
+  /* The words stay on the narrowest list: the count's end goes first, its number kept, then the buttons' room */
+  @container bar (max-width: 24rem) {
+    .bulk-count { flex: none; }
+    .bulk-count .long { display: none; }
+  }
   @container bar (max-width: 21rem) {
     .bulk { gap: 0.1rem; }
     .bulk .btn:not(.armed, .clear) { padding: 0 0.2rem; }

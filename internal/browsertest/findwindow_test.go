@@ -364,15 +364,19 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	}, "|"))
 }
 
-// bulkFits says whether the bulk bar holds it all, its count whole, with a list of the width and the entries selected.
+// bulkFits says, with a list of the width and the entries selected, what the delete says; that the clearing is in the list, and
+// each button once reached; and that the count's number is whole. How wide the words are is the font's, which differs by machine.
 func bulkFits(b *browser, column int64, slugs ...string) string {
 	b.t.Helper()
 	b.eval("document.getElementById('bulk-clear').click(); setColumn('list', " + fmt.Sprint(column) + ")")
 	for _, slug := range slugs {
 		b.eval("document.querySelector('#list li[data-slug=" + slug + "] .sel').click()")
 	}
-	return b.eval(`(() => { const bar = document.getElementById('bulk'), c = document.getElementById('bulk-count');
-		return [document.querySelector('#bulk-delete .label').textContent, bar.scrollWidth <= bar.clientWidth, document.getElementById('bulk-n').scrollWidth <= c.clientWidth].join(' '); })()`)
+	return b.eval(`(() => { const box = document.getElementById('listcol').getBoundingClientRect(), c = document.getElementById('bulk-count');
+		const within = (e) => { const r = e.getBoundingClientRect(); return r.left >= box.left - 0.5 && r.right <= box.right + 0.5; };
+		const reached = [...document.querySelectorAll('#bulk .btn')].every((e) => { e.scrollIntoView({ inline: 'nearest', block: 'nearest' }); return within(e) && within(document.getElementById('bulk-clear')); });
+		document.getElementById('bulk').scrollLeft = 0;
+		return [document.querySelector('#bulk-delete .label').textContent, reached, document.getElementById('bulk-n').getBoundingClientRect().width > 0 && document.getElementById('bulk-n').scrollWidth <= c.clientWidth].join(' '); })()`)
 }
 
 // TestUIBulkBar draws the bar as a part of the head: words alone, the head of the selected rows' ground, red ground only for
@@ -385,15 +389,19 @@ func TestUIBulkBar(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		{ slug: 'a', title: 'A', description: '', createdAt: at(1), updatedAt: at(7) }]`)
 	b.navigate("/")
 	b.size(1440, 900, false)
-	out := make([]string, 0, 5)
+	out := make([]string, 0, 7)
 	out = append(out, bulkFits(b, 320, "a"), bulkFits(b, 320, "l", "k"), bulkFits(b, 500, "l", "k"))
+	// Words far too wide for it, in any font.
+	b.eval("window.wide = document.head.appendChild(document.createElement('style')); wide.textContent = '#bulk, #bulk .btn { letter-spacing: 0.5em }'")
+	out = append(out, bulkFits(b, 320, "l", "k"), b.eval("document.getElementById('bulk').scrollWidth > document.getElementById('bulk').clientWidth"))
+	b.eval("wide.remove()")
 	const looks = `(() => { const d = getComputedStyle(document.getElementById('bulk-delete')), h = getComputedStyle(document.querySelector('.lhead'));
 		return [d.backgroundColor, d.color, h.backgroundColor, getComputedStyle(document.getElementById('bulk')).boxShadow, document.querySelectorAll('#bulk .btn:not(.clear) svg').length].join(' / '); })()`
 	out = append(out, b.settled(looks))
 	b.eval("document.getElementById('bulk-delete').click()")
 	out = append(out, b.settled("getComputedStyle(document.getElementById('bulk-delete')).backgroundColor"))
 	check(t, "bulk bar", out, strings.Join([]string{
-		"Delete true true", "Unregister true true", "Unregister true true",
+		"Delete true true", "Unregister true true", "Unregister true true", "Unregister true true", "true",
 		"rgba(0, 0, 0, 0) / rgb(184, 51, 43) / rgb(236, 235, 230) / none / 0",
 		"rgb(184, 51, 43)",
 	}, "|"))

@@ -8,8 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Add a window that finds a page, opened by `Ctrl+K` (`⌘K`) anywhere, by `/` on a page open whole, or by the magnifier on a
-  phone's whole page: it finds by title, description, slug, project, path, template and tag, the archived last, opens a row
+- Add a window that searches the pages, opened by `Ctrl+K` (`⌘K`) anywhere, by `/` on a page open whole, or by the magnifier on a
+  phone's whole page: it searches by title, description, slug, project, path, template and tag, the archived last, opens a row
   whole, and acts on the row reached with the buttons of a row. Add a window of the keys, opened by `?` or the button in the
   bar. With the focus in a page, `j`, `k`, `?`, `/` and `Ctrl+K` now work too (`Ctrl+K` alone in a link's HTML and a folder's,
   which may use the letters themselves).
