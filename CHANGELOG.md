@@ -308,8 +308,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Change the gap between an icon and its label in a diagram to 3px from 7: the label, and with it the icon's bottom side,
-  stand 4 higher, and a diagram with its height left out and a label lowest is 4 shorter. A label written by hand level
-  with an icon's label stands off by 4; move it.
+  stand 4 higher, and a diagram with its height left out and a label lowest is 4 shorter. A side floe chooses at such an
+  icon may change, which a part close by can make an edge refused; write the side. A label written by hand to go with an
+  icon's label, beside it or stacked under it, stands off by 4; move it.
 - Change the management page into a list of pages: newest first under its days (today, yesterday, the last 7 days, then by
   month), a blue dot on a stored page not seen, the mark `v3 · new version` on one with a version after the one read, and
   the template, project and tags under each title. A row opens its page beside the list (`j` and `k` or the arrows go on

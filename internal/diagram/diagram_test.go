@@ -592,6 +592,26 @@ func TestEdgesIconLabel(t *testing.T) {
 			refused: `edge a→b runs through label "a"`,
 		},
 		{
+			name:    "the same, a side floe chooses moved by the label's place",
+			parts:   a + "  - box: { name: b, x: 160, y: 72, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
+			refused: `edge a→b runs through box "b"`,
+		},
+		{
+			name:  "the same, further off, the bottom side",
+			parts: a + "  - box: { name: b, x: 160, y: 106, w: 60, h: 30, rows: [b] }\n  - edge: { from: a, to: b }",
+			want:  "edge a→b M124,89 V97.5 H190 V106",
+		},
+		{
+			name:  "above, the right side",
+			parts: "  - icon: { name: a, x: 100, y: 200, icon: aws/aws-lambda, label: a }\n  - box: { name: b, x: 160, y: 154, w: 60, h: 30, rows: [b] }\n  - edge: { from: a, to: b }",
+			want:  "edge a→b M148,224 H154 V169 H160",
+		},
+		{
+			name:  "another edge across the gap",
+			parts: a + "  - box: { name: c, x: 20, y: 55, w: 44, h: 30, rows: [c] }\n  - box: { name: d, x: 180, y: 55, w: 44, h: 30, rows: [d] }\n  - edge: { from: c, to: d }",
+			want:  "edge c→d M64,70 H180",
+		},
+		{
 			name:  "the same, a side written",
 			parts: a + "  - box: { name: b, x: 160, y: 71, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, fromSide: right, to: b }",
 			want:  "edge a→b M148,44 H190 V71",
