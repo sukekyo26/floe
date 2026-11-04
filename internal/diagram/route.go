@@ -62,14 +62,24 @@ func (l *layout) endOf(at string, e end, side string, other [2]float64) (anchor,
 }
 
 // onSide is the middle of the side of t, or when side is "", of the side facing other: left or right when it is
-// more across than up or down from the centre of t, and always for a row.
+// more across than up or down from the centre of t.whole(), and always for a row. An icon's bottom side is under its
+// label; its left and right sides stay at the middle of the icon.
+// LIMIT: an edge at the bottom side going beside the label or above its bottom runs back through the label, and is
+// refused: with no side, when the other part's top is higher than 2 above the label's bottom and its centre further
+// down than across; with the sides written, or with a via between the icon and its label, likewise. Write
+// fromSide: right, or move the other part or the via below the label.
+// LIMIT: crossedBy reads a run along an edge as not through it, so these pass, plain on the page: a run along the
+// label's bottom; another edge running exactly there (it reads as a branch, not a crossing); a part whose top is within
+// 2 of the label's bottom, the across run in it or on its edge and the marker inside it or with no room. Refuse them if
+// they come to mislead.
 func onSide(t target, side string, other [2]float64) anchor {
 	r := t.r
 	cx, cy := r.x+r.w/2, r.y+r.h/2
 	if side == "" {
-		lr, tb := towards(r, other)
+		whole := t.whole()
+		lr, tb := towards(whole, other)
 		switch {
-		case t.kind == "row" || math.Abs(other[0]-cx) >= math.Abs(other[1]-cy):
+		case t.kind == "row" || math.Abs(other[0]-cx) >= math.Abs(other[1]-(whole.y+whole.h/2)):
 			side = lr
 		default:
 			side = tb
@@ -83,7 +93,7 @@ func onSide(t target, side string, other [2]float64) anchor {
 	case "top":
 		return anchor{cx, r.y, side, false}
 	default:
-		return anchor{cx, r.y + r.h, side, false}
+		return anchor{cx, r.y + r.h + t.under, side, false}
 	}
 }
 
@@ -226,7 +236,7 @@ func (l *layout) facing(e end, p [2]float64, across, known bool) string {
 	if e.Point != nil || !ok || t.kind == "dot" || t.kind == "circle" {
 		return ""
 	}
-	r := t.r
+	r := t.whole()
 	lr, tb := towards(r, p)
 	level := p[1] >= r.y && p[1] <= r.y+r.h
 	under := p[0] >= r.x && p[0] <= r.x+r.w

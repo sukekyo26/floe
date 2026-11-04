@@ -156,7 +156,7 @@
     },
     "icon": {
       "type": "object",
-      "description": "An icon of an icon set (aws/…, found with floe icons search) with its top left at x, y",
+      "description": "An icon of an icon set (aws/…, found with floe icons search) with its top left at x, y; with a label, its bottom side, where an edge ends, is under the label",
       "required": ["icon", "x", "y"],
       "additionalProperties": false,
       "properties": {

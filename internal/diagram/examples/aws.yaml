@@ -4,7 +4,8 @@
 #
 # Grid: icons are 48px and the flow runs along y = 140, through the icons' middles. Contents of a
 # frame with an icon start 40 or more below its top. Edges go from the side of one icon to the side
-# of the next; edges that part from one point split on a vertical line between the frames.
+# of the next; edges that part from one point split on a vertical line between the frames. An edge at an icon's
+# bottom side ends under its label.
 width: 1000
 height: 330
 title: { en: How an agent calls Claude through Amazon Bedrock, ja: "エージェントが Amazon Bedrock を通して Claude を呼ぶ構成" }
