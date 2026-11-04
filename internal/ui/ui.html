@@ -145,7 +145,7 @@
   .grip:is(:hover, .dragging, :focus-visible)::after { background: var(--ink); }
   /* While an edge is dragged a page takes no pointer, which would leave the edge's pointer capture inside the iframe */
   html:has(.grip.dragging) :is(.frame, .read-frame) { pointer-events: none; }
-  .side-show { position: fixed; top: calc(var(--bar) + 8px); left: 8px; z-index: 7; background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
+  .side-show { position: fixed; top: calc(var(--bar) + 8px); left: 8px; z-index: 2; background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
   /* An iframe prints what fits one screen of the page in it: a frame's print hides the bar, the frame and the toasts,
      and names the page alone in their place, but on a missing page's frame, which prints its
      state. The screen shows no note.
@@ -161,10 +161,12 @@
   /* LIMIT: so the list prints what fits one screen, cut off without a word. Print it as a whole if that comes to matter */
   html:not(.framed) body { height: 100dvh; display: flex; flex-direction: column; }
   .shell { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--shelf-width) var(--list-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
-  /* The shelf folded: the button that shows it again stands over the head of the list, which makes room for it */
+  /* The filters folded: the button that shows them again, and what they narrow the list to, in the head of the list */
   .shell.shelf-closed { grid-template-columns: var(--list-width) minmax(0, 1fr); }
   .shell.shelf-closed .shelf { display: none; }
-  .shell.shelf-closed .lhead { padding-left: 2.9rem; }
+  .shell:not(.shelf-closed) #shelf-what { display: none; }
+  #shelf-show { flex: none; margin-left: -0.4rem; }
+  #shelf-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
   .shelf-head { display: flex; justify-content: flex-end; margin-bottom: -0.6rem; }
   /* The 4px of room round a button are its focus ring's (1px off, 2px wide) and 1px of ground */
   .shelf { display: grid; align-content: start; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; overflow-y: auto; padding: 0.9rem 10px 1rem; }
@@ -473,8 +475,7 @@
     /* What the shelf's edges and fold leave as they were is of the wide page alone */
     .shell, .shell.shelf-closed { grid-template-columns: 22rem minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
     .shell.shelf-closed .shelf { display: block; }
-    .shell.shelf-closed .lhead { padding-left: 1rem; }
-    #shelf-grip, #list-grip, #shelf-show, .shelf-head { display: none; }
+    #shelf-grip, #list-grip, #shelf-show, #shelf-what, .shelf-head { display: none; }
     .shelf, .shelf:is(:hover, :focus-within) { grid-column: 1 / -1; display: block; overflow: visible; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); }
     .shelf > .shelf-more { display: none; }
     .shelf .views { display: flex; align-items: center; gap: 5px; overflow: auto hidden; padding: 4px; margin: -4px; scrollbar-width: none; }
@@ -571,10 +572,11 @@
     </div>
   </nav>
   <div class="grip" id="shelf-grip" role="separator" aria-orientation="vertical" aria-controls="shelf" aria-label="{{.Msg "ui_shelf_width"}}" tabindex="0"></div>
-  <button type="button" class="icon-btn side-show" id="shelf-show" aria-expanded="false" aria-controls="shelf" title="{{.Msg "ui_shelf_show"}}" aria-label="{{.Msg "ui_shelf_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
   <section class="listcol" id="listcol">
     <div class="lhead">
+      <button type="button" class="icon-btn" id="shelf-show" aria-expanded="false" aria-controls="shelf" title="{{.Msg "ui_shelf_show"}}" aria-label="{{.Msg "ui_shelf_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
       <span class="count" id="count"></span>
+      <button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button>
       <button type="button" class="add-open" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button>
       <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
       <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
@@ -1465,6 +1467,7 @@
     $('news-n').textContent = t('ui_news', n);
   }
 
+  const VIEW_WORDS = { new: 'ui_view_new', fav: 'ui_view_favorites', archived: 'ui_view_archived' };
   // The shelf's views, with their counts
   function renderShelf() {
     // The new ones as they are now: not those read that stay on the view
@@ -1477,6 +1480,10 @@
     // How many picks narrow the list, which the row of views does not show
     const narrowed = [kind, template, project, tag].filter(Boolean).length;
     $('narrow-filter-name').textContent = narrowed ? t('ui_narrow_n', narrowed) : t('ui_narrow');
+    // The filters folded, the head says what they narrow the list to: the view, and how many picks
+    const what = [view === 'all' ? '' : t(VIEW_WORDS[view]), narrowed ? t('ui_narrow_n', narrowed) : ''].filter(Boolean).join(' · ');
+    $('shelf-what').textContent = what;
+    $('shelf-what').hidden = !what;
     // A link added is not archived, so it is added from the lists it goes on
     $('add-open').hidden = view === 'archived';
   }
@@ -2278,39 +2285,50 @@
       keep();
     });
   }
-  // The list's two columns, the viewer's, kept in the browser; without storage the default. The list is held off the page beside it,
-  // which keeps the room it has at its narrowest beside the list where the shelf is a row (56rem less the list's 22rem, 544 px, less the room round it)
-  const SHELF_KEY = 'list.columns';
-  const SHELF_MIN = 160;
-  const SHELF_MAX = 320;
-  const LIST_MIN = 280;
-  const READER_MIN = 520;
-  const columns = { shelf: 200, list: 408, open: true };
+  // The two columns left of the page, the viewer's, kept in the browser: null for the default. All in rem, as the widths that fold them
+  // are, so that a larger text in the browser does not narrow them. The list is held off the page beside it, which keeps the room it
+  // has at its narrowest where the filters are a row (56rem less the list's 22rem, less the room round it); at its narrowest it
+  // still holds a row's menu and the bulk bar
+  const COLUMNS_KEY = 'list.columns';
+  const columns = { shelf: null, list: null, open: true };
   try {
-    const saved = JSON.parse(localStorage.getItem(SHELF_KEY));
+    const saved = JSON.parse(localStorage.getItem(COLUMNS_KEY));
     if (Number.isFinite(saved?.shelf)) columns.shelf = saved.shelf;
     if (Number.isFinite(saved?.list)) columns.list = saved.list;
     if (typeof saved?.open === 'boolean') columns.open = saved.open;
   } catch {
     // Storage is unavailable, or holds something else
   }
-  // Lays the columns out as they are, within the bounds of now (what is kept is not changed by them)
+  // The widths now, within the bounds of now, and those bounds
+  function columnWidths() {
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const within = (value, min, max) => Math.round(Math.min(Math.max(value, min), max));
+    const bounds = { shelfMin: Math.round(10 * rem), shelfMax: Math.round(20 * rem), listMin: Math.round(20 * rem) };
+    const shelf = columns.open ? within(columns.shelf ?? 12.5 * rem, bounds.shelfMin, bounds.shelfMax) : 0;
+    bounds.listMax = Math.max(bounds.listMin, Math.round(innerWidth - shelf - 32.5 * rem));
+    return { ...bounds, shelf, list: within(columns.list ?? 25.5 * rem, bounds.listMin, bounds.listMax) };
+  }
+  // Lays the columns out as they are (what is kept is not changed by the bounds of a window narrower for now)
   function layoutColumns() {
-    const shelf = columns.open ? Math.min(Math.max(columns.shelf, SHELF_MIN), SHELF_MAX) : 0;
-    const max = Math.max(LIST_MIN, innerWidth - shelf - READER_MIN);
-    const list = Math.min(Math.max(columns.list, LIST_MIN), max);
+    const { shelf, list, shelfMin, shelfMax, listMin, listMax } = columnWidths();
     const root = document.documentElement.style;
     root.setProperty('--shelf-width', `${shelf}px`);
     root.setProperty('--list-width', `${list}px`);
     $('manage').classList.toggle('shelf-closed', !columns.open);
     $('shelf-grip').hidden = !columns.open;
     $('shelf-show').hidden = columns.open;
-    edgeAt($('shelf-grip'), shelf, shelf, SHELF_MIN, SHELF_MAX);
-    edgeAt($('list-grip'), shelf + list, list, LIST_MIN, max);
+    edgeAt($('shelf-grip'), shelf, shelf, shelfMin, shelfMax);
+    edgeAt($('list-grip'), shelf + list, list, listMin, listMax);
+  }
+  // The column named takes the width asked for, as far as its bounds let it
+  function setColumn(name, width) {
+    columns[name] = width;
+    columns[name] = columnWidths()[name];
+    layoutColumns();
   }
   function keepColumns() {
     try {
-      localStorage.setItem(SHELF_KEY, JSON.stringify(columns));
+      localStorage.setItem(COLUMNS_KEY, JSON.stringify(columns));
     } catch {
       // Storage is unavailable: the columns are laid out as they are, for now
     }
@@ -2546,23 +2564,11 @@
     $('show-archived').addEventListener('click', () => setView('archived'));
     layoutColumns();
     addEventListener('resize', layoutColumns);
-    dragEdge($('shelf-grip'), {
-      set: (width) => {
-        columns.shelf = Math.min(Math.max(Math.round(width), SHELF_MIN), SHELF_MAX);
-        layoutColumns();
-      },
-      keep: keepColumns,
-    });
-    dragEdge($('list-grip'), {
-      left: () => $('listcol').getBoundingClientRect().left,
-      set: (width) => {
-        columns.list = Math.min(Math.max(Math.round(width), LIST_MIN), Number($('list-grip').getAttribute('aria-valuemax')));
-        layoutColumns();
-      },
-      keep: keepColumns,
-    });
+    dragEdge($('shelf-grip'), { set: (width) => setColumn('shelf', width), keep: keepColumns });
+    dragEdge($('list-grip'), { left: () => $('listcol').getBoundingClientRect().left, set: (width) => setColumn('list', width), keep: keepColumns });
     $('shelf-hide').addEventListener('click', () => showShelf(false));
     $('shelf-show').addEventListener('click', () => showShelf(true));
+    $('shelf-what').addEventListener('click', () => showShelf(true));
     // One column has nothing beside the list: what stays alive there would reload itself, and be told read unseen
     oneColumn.addEventListener('change', () => {
       if (!oneColumn.matches || !picked) return;

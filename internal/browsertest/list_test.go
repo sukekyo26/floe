@@ -345,6 +345,11 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/")
 	b.size(1600, 900, false)
 	b.until("the rows and the window", "document.querySelector('#list li[data-slug=long]') && getComputedStyle(document.documentElement).getPropertyValue('--list-width') === '408px'")
+	// Defaults and bounds go with the browser's text.
+	out := make([]string, 0, 24)
+	b.eval("document.documentElement.style.fontSize = '20px'; layoutColumns()")
+	out = append(out, b.eval("getComputedStyle(document.documentElement).getPropertyValue('--shelf-width') + ' ' + getComputedStyle(document.documentElement).getPropertyValue('--list-width') + ' ' + document.getElementById('list-grip').getAttribute('aria-valuemin')"))
+	b.eval("document.documentElement.style.fontSize = ''; layoutColumns()")
 	const widths = "[getComputedStyle(document.documentElement).getPropertyValue('--shelf-width'), getComputedStyle(document.documentElement).getPropertyValue('--list-width'), Math.round(document.querySelector('.shelf').getBoundingClientRect().width), Math.round(document.getElementById('listcol').getBoundingClientRect().width)].join(' ')"
 	mouse := func(grip string, to float64, release bool) {
 		t.Helper()
@@ -367,7 +372,6 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 	// How much of the path is cut, its box's whole width else.
 	const cut = "(() => { const p = document.querySelector('#list li[data-slug=long] .path'); return p.scrollWidth - p.clientWidth; })()"
-	out := make([]string, 0, 16)
 	out = append(out, b.eval(widths))
 	before, err := strconv.Atoi(b.eval(cut))
 	if err != nil || before <= 0 {
@@ -399,6 +403,23 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		}
 	}
 	out = append(out, b.eval(widths), b.settled(ringOf))
+	// At its narrowest, the list holds a row's menu and the bulk bar, the filters folded as open.
+	const whole = `(() => { const box = document.getElementById('listcol').getBoundingClientRect();
+		const within = (e) => { const r = e.getBoundingClientRect(); return r.left >= box.left - 0.5 && r.right <= box.right + 0.5; };
+		document.querySelector('#list li[data-slug=long] summary').click();
+		const menu = within(document.querySelector('#list li[data-slug=long] .menu'));
+		document.querySelector('#list li[data-slug=long] summary').click();
+		document.querySelector('#list li[data-slug=long] .sel').click();
+		const bar = [...document.querySelectorAll('#bulk .btn')].every(within);
+		document.getElementById('bulk-clear').click();
+		return [menu, bar].join(' '); })()`
+	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Home)); err != nil {
+		t.Fatal(err)
+	}
+	out = append(out, b.eval(whole))
+	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.ArrowRight)); err != nil {
+		t.Fatal(err)
+	}
 	mouse("shelf-grip", 10, true)
 	out = append(out, b.eval(widths))
 	// Dragged, the page beside the list takes no pointer; let go, it does.
@@ -413,6 +434,20 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	const shelf = "[getComputedStyle(document.querySelector('.shelf')).display, document.getElementById('shelf-show').hidden, document.getElementById('shelf-grip').hidden, document.activeElement.id, document.getElementById('shelf-show').getBoundingClientRect().right <= document.getElementById('count').getBoundingClientRect().left].join(' ')"
 	b.eval("document.getElementById('shelf-hide').click()")
 	out = append(out, b.eval(shelf), b.eval("Math.round(document.getElementById('listcol').getBoundingClientRect().left)"))
+	// Folded, the head says what the filters narrow the list to, in its line beside the rest; pressed, they show.
+	const what = "[document.getElementById('shelf-what').hidden, document.getElementById('shelf-what').textContent, document.querySelector('.lhead').scrollWidth <= document.querySelector('.lhead').clientWidth].join(' ')"
+	out = append(out, b.eval(what))
+	b.eval("setView('archived'); refilter({ kind: 'link', tag: 'x' })")
+	out = append(out, b.eval(what))
+	b.eval("document.getElementById('shelf-what').click()")
+	out = append(out, b.eval("getComputedStyle(document.querySelector('.shelf')).display"))
+	b.eval("setView('all'); refilter({ kind: '', tag: '' }); document.getElementById('shelf-hide').click()")
+	// Folded across the widths: the row of the views and no button under 70rem, as a line of a list; folded still above it.
+	b.size(1000, 700, false)
+	const folded = "[getComputedStyle(document.querySelector('.shelf')).display, document.querySelector('.views').getClientRects().length, document.getElementById('shelf-show').getClientRects().length, document.getElementById('shelf-what').getClientRects().length, parseFloat(getComputedStyle(document.querySelector('.lhead')).paddingLeft), getComputedStyle(document.getElementById('manage')).gridTemplateColumns.split(' ').length].join(' ')"
+	out = append(out, b.until("the row of the filters", "matchMedia('(max-width: 70rem)').matches && "+folded))
+	b.size(1600, 900, false)
+	out = append(out, b.until("the filters folded", "!matchMedia('(max-width: 70rem)').matches && "+folded))
 	// Kept across a reload, folded too.
 	kept := b.eval("localStorage.getItem('list.columns')")
 	b.navigate("/")
@@ -425,15 +460,27 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Under 70rem, none of it shows.
 	b.size(1000, 700, false)
 	out = append(out, b.until("the row of the shelf", "matchMedia('(max-width: 70rem)').matches && ['shelf-grip', 'list-grip', 'shelf-show', 'shelf-hide'].map((id) => document.getElementById(id).getClientRects().length).join(' ')"))
+	// What is kept that cannot be a width is the default's, or within the bounds.
+	for _, kept := range []string{"not json", `{"shelf":"x"}`, "null"} {
+		b.eval("localStorage.setItem('list.columns', " + js(kept) + ")")
+		b.navigate("/")
+		out = append(out, b.eval("[getComputedStyle(document.documentElement).getPropertyValue('--shelf-width'), document.getElementById('shelf-show').hidden].join(' ')"))
+	}
+	b.size(1600, 900, false)
+	b.eval(`localStorage.setItem('list.columns', '{"shelf":99999,"list":-5}')`)
+	b.navigate("/")
+	out = append(out, b.until("the bounds", "[getComputedStyle(document.documentElement).getPropertyValue('--shelf-width'), getComputedStyle(document.documentElement).getPropertyValue('--list-width')].join(' ')"))
 	b.unsize()
 	ring := "solid 2px rgb(107, 105, 100) -2px seen"
 	check(t, "columns", out, strings.Join([]string{
-		"200px 408px 200 408", "260px 408px 260 408", "260px 500px 260 500",
+		"250px 510px 400", "200px 408px 200 408", "260px 408px 260 408", "260px 500px 260 500",
 		"260px 820px 260 820 520", "0",
-		"260px 296px 260 296", ring, "160px 296px 160 296",
+		"260px 336px 260 336", ring, "true true", "160px 336px 160 336",
 		"none true", "auto",
 		"none false true shelf-show true", "0",
+		"true  true", "false Archive · Filter 2 true", "grid",
+		"block 1 0 0 16 2", "none 0 1 0 16 2",
 		"true", "none", "grid shelf-hide", "160px 740px 160 740",
-		"520px 740", "0 0 0 0",
+		"520px 740", "0 0 0 0", "200px true", "200px true", "200px true", "320px 320px",
 	}, "|"))
 }
