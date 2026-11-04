@@ -14,7 +14,7 @@ const listList = `(() => {
 		{ slug: 'n', title: 'New', description: '', news: 'new', version: 1, template: 'report', project: 'q', createdAt: day(1), updatedAt: day(1) },
 		{ slug: 'r', title: 'Read', description: '', version: 2, template: 'report', project: 'p', createdAt: day(9), updatedAt: day(3) },
 		{ slug: 'l', title: 'Link', description: '', path: '/tmp/x/l.html', createdAt: day(9), updatedAt: day(7) },
-		{ slug: 'd', title: 'Data', description: '', path: '/tmp/x/d.yaml', template: 'handoff', createdAt: day(9), updatedAt: day(8) },
+		{ slug: 'd', title: 'Data', description: '', path: '/home/you/work/a (1)/v2.0/data-set_#1/deep/deep/deep/deep/deep/deep/deep/deep/deep/name-2.yaml', template: 'handoff', createdAt: day(9), updatedAt: day(8) },
 		{ slug: 'f', title: 'Folder', description: '', path: '/tmp/x/f', folder: true, createdAt: day(9), updatedAt: day(40) },
 		{ slug: 'g', title: 'Gone', description: '', path: '/tmp/x/g.html', missing: true, createdAt: day(400), updatedAt: day(400) },
 		{ slug: 'a', title: 'Kept', description: '', news: 'new', version: 1, archived: true, createdAt: day(9), updatedAt: day(9) },
@@ -128,6 +128,29 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	key("k")
 	out = append(out, b.eval("location.pathname"))
 
+	// The path is cut at its head, the file's name whole at the box's end and its own order kept, marks and numbers too.
+	b.navigate("/")
+	out = append(out, b.eval(`(() => {
+		const box = document.querySelector('#list li[data-slug=d] .path'), text = box.querySelector('bdi').firstChild;
+		const at = (from, to) => { const r = document.createRange(); r.setStart(text, from); r.setEnd(text, to); return r.getBoundingClientRect(); };
+		const n = text.length, b = box.getBoundingClientRect();
+		return [box.scrollWidth > box.clientWidth, Math.abs(at(n - 1, n).right - b.right) <= 1, at(0, 1).left < b.left, at(n - 11, n - 10).left < at(n - 1, n).left, box.title === text.data].join(' ');
+	})()`))
+	// Beside the list above 56rem, the shelf a row under 70rem, the filter right after the views, the bar's count gone.
+	b.size(1000, 700, false)
+	const middle = "[getComputedStyle(document.getElementById('reader')).display, getComputedStyle(document.getElementById('shelf-more')).display, getComputedStyle(document.getElementById('news')).display, " +
+		"document.getElementById('narrow-filter').getBoundingClientRect().left - document.querySelector('.views [data-view=archived]').getBoundingClientRect().right < 10].join(' ')"
+	out = append(out, b.eval(middle))
+	b.eval("document.querySelector('#list li[data-slug=r] .title').click()")
+	out = append(out, b.eval("[location.pathname, document.getElementById('read-frame').hidden].join(' ')"))
+	// At 56rem or less, one column, a row opening whole with the way back, the page's buttons and the search's field still there.
+	b.size(800, 700, false)
+	out = append(out, b.eval("[getComputedStyle(document.getElementById('reader')).display, getComputedStyle(document.querySelector('#q')).color !== 'rgba(0, 0, 0, 0)'].join(' ')"))
+	b.eval("document.querySelector('#list li[data-slug=r] .title').click()")
+	b.until("the row whole", "location.pathname === '/a/r/'")
+	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [getComputedStyle(document.getElementById('back')).display, getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
+	b.unsize()
+
 	// One column: the views in a row with the dialog of the rest, a row opening its page whole, the bar's way back.
 	b.unsize()
 	b.navigate("/")
@@ -135,11 +158,11 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval("[getComputedStyle(document.getElementById('reader')).display, getComputedStyle(document.getElementById('shelf-more')).display, getComputedStyle(document.getElementById('narrow-filter')).display, getComputedStyle(document.getElementById('news')).display, document.documentElement.scrollWidth <= innerWidth].join(' ')"))
 	b.eval("document.querySelector('#list li[data-slug=r] .title').click()")
 	b.until("the row whole", "location.pathname === '/a/r/'")
-	out = append(out, b.eval("getComputedStyle(document.getElementById('back')).display"))
+	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [getComputedStyle(document.getElementById('back')).display, getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
 	b.unsize()
 
 	check(t, "list", out, strings.Join([]string{
-		"#|v dot 700 ver:v3 · new version kindof:design proj:p tags:t|#|n dot 700 kindof:report proj:q|#|r ring 500 kindof:report proj:p|l mark 500 kindof:Link · HTML path:/tmp/x/l.html|#|d mark 500 kindof:Link · handoff path:/tmp/x/d.yaml|#|f mark 500 kindof:Folder path:/tmp/x/f|#|g mark 500 kindof:Link · HTML miss:File not found",
+		"#|v dot 700 ver:v3 · new version kindof:design proj:p tags:t|#|n dot 700 kindof:report proj:q|#|r ring 500 kindof:report proj:p|l mark 500 kindof:Link · HTML path:/tmp/x/l.html|#|d mark 500 kindof:Link · handoff path:/home/you/work/a (1)/v2.0/data-set_#1/deep/deep/deep/deep/deep/deep/deep/deep/deep/name-2.yaml|#|f mark 500 kindof:Folder path:/tmp/x/f|#|g mark 500 kindof:Link · HTML miss:File not found",
 		"Today,Yesterday,Last 7 days", "2 new / Newest first · 2 new / 2",
 		"Version\nthe words", "v ?q=the+words",
 		"false true /none  ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
@@ -147,6 +170,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true true true", "false true blank New ",
 		"vn ?view=new", "vn", "1 new / 1", "New", "n", "true",
 		`["v","n"]`, "/?view=new", "/a/v/",
-		"none none flex none true", "flex",
+		"true true true true true", "flex none none true", "/ false", "none true", "flex flex",
+		"none none flex none true", "flex none",
 	}, "|"))
 }

@@ -280,8 +280,9 @@
   li.picked .ver { background: var(--panel); }
   .kindof { padding: 0 0.3rem; color: var(--muted); border: 1px solid var(--line); border-radius: var(--corner-small); white-space: nowrap; }
   .proj { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* A link's path, the one place how it is cut is decided: on the line of the rest while 8rem is left, cut at its end */
-  .sub .path { flex: 1 1 8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--text-label) var(--mono); }
+  /* A link's path, the one place how it is cut is decided: on the line of the rest while 8rem is left, cut at its head so that the
+     file's name stays. The box runs right to left for that alone, its bdi keeping the path's own order whatever marks it holds */
+  .sub .path { flex: 1 1 8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; font: var(--text-label) var(--mono); }
   .miss { padding: 0 0.5rem; color: var(--chg); background: var(--chg-soft); border-radius: 999px; white-space: nowrap; }
   li.gone a.title { color: var(--muted); text-decoration: line-through; }
   /* Above the title's hit area, as the row's controls are */
@@ -459,7 +460,9 @@
   .field .path { font-family: var(--mono); }
   .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
 
-  /* The shelf gives way to a row of its views and the dialog of the rest; the list and the page chosen share what is left */
+  /* The widths of the list's page, wide to narrow: the shelf, the list and the page chosen; from 70rem the shelf gives way to a
+     row of its views and the dialog of the rest, and the bar's count of new pages, which the row has; from 56rem one column (oneColumn
+     in the script reads the same width); from 40rem the bar folds up too */
   @media (max-width: 70rem) {
     .shell { grid-template-columns: 22rem minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
     .shelf, .shelf:is(:hover, :focus-within) { grid-column: 1 / -1; display: block; overflow: visible; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); }
@@ -475,17 +478,22 @@
     .shelf .views button[aria-pressed="true"] { color: var(--on-ink); background: var(--ink); border-color: var(--ink); box-shadow: none; }
     .shelf .views button[aria-pressed="true"] .n { color: var(--on-ink); }
     .shelf .views button .n { margin-left: 0; }
-    #narrow-filter { display: inline-flex; margin-left: auto; }
+    #narrow-filter { display: inline-flex; }
+    .news { display: none; }
     #narrow-filter svg { color: var(--muted); }
   }
-  /* One column: only the list, a row opening its page whole, and the bar's search as its icon until it is reached */
-  @media (max-width: 40rem) {
+  /* One column: only the list, a row opening its page whole, with the way back */
+  @media (max-width: 56rem) {
     .shell { grid-template-columns: minmax(0, 1fr); }
     .listcol { border: 0; }
     .reader { display: none; }
-    .news { display: none; }
-    .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
     .icon-btn.back { display: inline-flex; }
+  }
+  /* The bar folds up: the search as its icon until it is reached, a page's buttons gone, the filter at the row's end */
+  @media (max-width: 40rem) {
+    #narrow-filter { margin-left: auto; }
+    .framed .frame-actions { display: none; }
+    .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
     .bar-inner:has(> .search:not([hidden])) .bar-end { margin-left: auto; }
     .bar-inner > .search { flex: 0 0 36px; margin-inline: 0; transition: flex-basis 0.15s; }
     .bar-inner > .search:is(:focus-within, :has(input:not(:placeholder-shown))) { flex: 1 1 auto; }
@@ -876,7 +884,7 @@
   let picked = null;
   const isPicked = (x) => picked !== null && x.slug === picked.slug && (x.file ?? '') === picked.file;
   // One column: a row opens its page whole, as nothing is beside the list. The one place the width that decides it is read
-  const oneColumn = matchMedia('(max-width: 40rem)');
+  const oneColumn = matchMedia('(max-width: 56rem)');
   // The list's state as it is now, of the same keys as readState: what the list is arranged by and the URL keeps
   const current = () => ({ view, kind, template, project, tag, q: $('q').value });
   // The selected slugs. Changing a filter clears them (so that nothing unseen is deleted)
@@ -1604,7 +1612,14 @@
     }
     // A link shows the file where it was registered; if the file is gone, the row says so
     if (a.missing) put('miss', t('ui_file_missing')).title = a.path;
-    else if (a.path) put('path', a.path).title = a.path;
+    else if (a.path) {
+      const path = put('path', '');
+      path.title = a.path;
+      const bdi = document.createElement('bdi');
+      bdi.dir = 'ltr';
+      bdi.textContent = a.path;
+      path.append(bdi);
+    }
     const time = li.querySelector('time');
     time.dateTime = a.updatedAt;
     time.textContent = ago(a.updatedAt);
@@ -2031,7 +2046,7 @@
     // Storage is unavailable, or holds something else
   }
   // A narrow frame shows the tree over the page when asked, without its edge, and keeps nothing of it
-  const sideNarrow = oneColumn;
+  const sideNarrow = matchMedia('(max-width: 40rem)');
   let sideOver = false;
 
   // Reads again the directories open in the side's tree, each under ones open, and the page's own, whatever is open,
