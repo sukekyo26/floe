@@ -92,6 +92,8 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// None: no rows, no buttons, no foot, the reason; Enter goes nowhere.
 	typeFind(b, "nothing like it")
 	out = append(out, b.eval(findDrawn), b.eval("document.getElementById('find-none').hidden + ' ' + document.getElementById('find-none').textContent.includes('.')"))
+	// Its way to close stays, as there is none else without a key.
+	out = append(out, b.eval("document.querySelector('#find-foot [data-close]').getBoundingClientRect().width > 0"))
 	keyDown(b, "key: 'Enter'")
 	out = append(out, b.eval("location.pathname"))
 	// What goes to the input method: no row moves, nothing opens or closes.
@@ -127,6 +129,8 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.eval("window.list = " + js("[{\"slug\":\"a\",\"title\":\"A\",\"description\":\"\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}]") + "; " + reload)
 	b.until("the row", "document.querySelector('#find-list li')")
 	out = append(out, b.eval(findDrawn))
+	b.eval("document.querySelector('#find-foot [data-close]').click()")
+	out = append(out, b.eval("document.getElementById('find').open"))
 	// Enter opens the row whole, wherever the window was.
 	b.stub(findList)
 	b.navigate("/")
@@ -144,7 +148,7 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true / a[c]z / Gamma plan / 3 found", "find-1",
 		"true / ac[z] / Zed plan / 3 found", "-1 /a/a/",
 		"true true",
-		"true /  / - / -", "false true",
+		"true /  / - / -", "false true", "true",
 		"/",
 		"true / [a]cz / Alpha plan / 3 found", "/",
 		"true / ab[c]fz / Gamma plan / Newest first",
@@ -154,7 +158,7 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true / a[f] / Folder / Newest first",
 		"true /  / - / -",
 		"/ 0",
-		"true / [a] / A / Newest first",
+		"true / [a] / A / Newest first", "false",
 	}, "|"))
 }
 
@@ -238,7 +242,9 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the rows drawn", "document.querySelector('#find-list a').textContent === 'Alpha plan'")
 	out = append(out, b.eval("document.querySelector('"+menu+" .delete').classList.contains('armed')"))
 
-	// Closed by its key with a delete waiting, it opens anew: the menu shut, nothing waiting.
+	// Closed by its key with a delete waiting, on the row it opens on: it opens anew with the menu shut, nothing waiting.
+	typeFind(b, "")
+	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').click()")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	out = append(out, b.eval("[document.querySelector('"+menu+"').open, document.querySelectorAll('#find-actions .armed').length].join(' ')"))

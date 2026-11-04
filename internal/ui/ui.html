@@ -2678,6 +2678,8 @@
     },
   });
 
+  // LIMIT: the menu opens down, so that on a screen under some 330px high its last items are off it, with nothing to scroll. Open it
+  // up there if such a screen comes to matter
   // The buttons of a row. While its menu is open or its delete waits they stay, as drawing them anew would take that away; the
   // focus in the menu's place goes to the menu as drawn, or to the field where the row it was of has gone
   function drawFindBar(a) {
