@@ -80,7 +80,7 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		out = append(out, fmt.Sprintf("%d %s %v / %s / %s / %s", width, fit, before == after, selected, armed, unlink))
 		// The words show on a bar wider than 46rem, measured.
 		words, clearing, confirm, unlinkConfirm := "", "", msg("ui_delete_bulk_confirm", 2), msg("ui_unlink_bulk_confirm", 2)
-		if b.eval("String(document.querySelector('.lhead').clientWidth > 46 * 16)") == "true" {
+		if b.eval("(() => { const s = getComputedStyle(document.querySelector('.lhead')); return String(document.querySelector('.lhead').clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight) > 46 * 16); })()") == "true" {
 			words, clearing = all, "/"+msg("ui_clear_selection")
 		}
 		want = append(want, fmt.Sprintf("%d true true / 5 true %s true / 2 true %s%s true / 2 true %s%s true", width, words, confirm, clearing, unlinkConfirm, clearing))

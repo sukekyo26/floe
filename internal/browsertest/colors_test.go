@@ -94,6 +94,7 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		measure("the edit dialog")
 		b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.getElementById('bulk-clear').click()")
 		// The row chosen, its version's mark on its ground, the bar over its page, and the words of a link gone beside the list.
+		b.size(1440, 900, false)
 		b.eval("document.querySelector('#list li[data-slug=a] .title').click()")
 		measure("the page beside the list")
 		b.eval("document.querySelector('#list li[data-slug=m] .title').click()")
