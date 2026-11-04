@@ -198,6 +198,8 @@
   /* The marks of the views, the projects and the kinds take one column, so that their words start at one x */
   .views svg, .chip svg { width: var(--shelf-mark); height: var(--shelf-mark); flex: none; color: var(--muted); }
   .views [data-view="fav"] svg { color: var(--star); }
+  /* A row with none left stays where it is, quieter */
+  .views .none:not([aria-pressed="true"]) .label, .chip.none:not([aria-pressed="true"]) .name { color: var(--muted); }
   .views .dot, .views .ring, .chip.project::before { margin-inline: calc((var(--shelf-mark) - 8px) / 2); }
   .views .n, .chip .n { margin-left: auto; font: var(--text-label)/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
   .views button:hover, .chip:hover { background: var(--subtle); }
@@ -1411,34 +1413,42 @@
     count.className = 'n';
     count.textContent = n;
     b.append(count);
+    b.classList.toggle('none', n === 0);
     b.addEventListener('click', pick);
     return b;
   }
 
-  // How many of list have each value of what values gives of an entry; what is picked stays a choice at 0, so that deleting
-  // its last entry does not jump the pick away
-  function tally(list, values, now) {
-    const counts = new Map();
-    for (const a of list) for (const value of values(a)) counts.set(value, (counts.get(value) ?? 0) + 1);
-    if (now && !counts.has(now)) counts.set(now, 0);
-    return counts;
+  // A part of the shelf's rows and counts, by what values gives of an entry. The rows are those of list (the view's), with their
+  // numbers there to order them by, and what is picked at 0, so that no row jumps away as the rest narrows; the count, n, is of
+  // the entries the rest of the shelf, the view and the search leave
+  function tally(list, part, values) {
+    const count = (entries) => {
+      const counts = new Map();
+      for (const a of entries) for (const value of values(a)) counts.set(value, (counts.get(value) ?? 0) + 1);
+      return counts;
+    };
+    const state = current();
+    const rows = count(list);
+    if (state[part] && !rows.has(state[part])) rows.set(state[part], 0);
+    const left = count(arrange({ ...state, [part]: '' }));
+    return { rows, n: (value) => left.get(value) ?? 0 };
   }
 
   // The shelf's projects of list, in the order of ranks (projectOrder)
   function renderChips(list, ranks) {
-    const counts = tally(list, (a) => [a.project ?? NONE], project);
-    const names = [...ranks.keys()].filter((name) => counts.has(name));
+    const { rows, n } = tally(list, 'project', (a) => [a.project ?? NONE]);
+    const names = [...ranks.keys()].filter((name) => rows.has(name));
     // A project dropped from every entry but still picked comes after those in the order
     if (project && project !== NONE && !names.includes(project)) names.push(project);
     // Its dot and its count
-    const projectChip = (label, value, n) => {
-      const b = chip(label, n, { pressed: value === project, pick: () => toggleProject(value), extra: 'project' });
+    const projectChip = (label, value) => {
+      const b = chip(label, n(value), { pressed: value === project, pick: () => toggleProject(value), extra: 'project' });
       b.dataset.project = value;
       b.style.setProperty('--c', projectColor(value, ranks));
       return b;
     };
-    const chips = names.map((name) => projectChip(name, name, counts.get(name)));
-    if (counts.has(NONE)) chips.push(projectChip(t('ui_no_project'), NONE, counts.get(NONE)));
+    const chips = names.map((name) => projectChip(name, name));
+    if (rows.has(NONE)) chips.push(projectChip(t('ui_no_project'), NONE));
     $('chips').replaceChildren(...chips);
     // Projects to choose between, or one chosen
     $('shelf-projects').hidden = chips.length < 2 && !project;
@@ -1447,9 +1457,9 @@
   const KIND_WORDS = { page: 'ui_kind_page', link: 'ui_kind_link', folder: 'ui_kind_folder' };
   // The shelf's kinds: those list has, shown when there are some to choose between, or one chosen
   function renderKinds(list) {
-    const counts = tally(list, (a) => [kindOf(a)], kind);
-    const chips = ['page', 'link', 'folder'].filter((k) => counts.has(k)).map((k) => {
-      const b = chip(t(KIND_WORDS[k]), counts.get(k), { pressed: k === kind, pick: () => toggleKind(k), mark: KIND_MARKS[k] });
+    const { rows, n } = tally(list, 'kind', (a) => [kindOf(a)]);
+    const chips = ['page', 'link', 'folder'].filter((k) => rows.has(k)).map((k) => {
+      const b = chip(t(KIND_WORDS[k]), n(k), { pressed: k === kind, pick: () => toggleKind(k), mark: KIND_MARKS[k] });
       b.dataset.kind = k;
       return b;
     });
@@ -1459,9 +1469,9 @@
 
   // The shelf's templates, the most used first, then by name; none shown when no entry of list has one
   function renderTemplates(list) {
-    const counts = tally(list, (a) => (a.template ? [a.template] : []), template);
-    const chips = [...counts.keys()].sort((x, y) => counts.get(y) - counts.get(x) || x.localeCompare(y, LANG)).map((name) => {
-      const b = chip(name, counts.get(name), { pressed: name === template, pick: () => toggleTemplate(name) });
+    const { rows, n } = tally(list, 'template', (a) => (a.template ? [a.template] : []));
+    const chips = [...rows.keys()].sort((x, y) => rows.get(y) - rows.get(x) || x.localeCompare(y, LANG)).map((name) => {
+      const b = chip(name, n(name), { pressed: name === template, pick: () => toggleTemplate(name) });
       b.dataset.template = name;
       return b;
     });
@@ -1471,9 +1481,9 @@
 
   // The shelf's tags by name, with how many of list have each; none shown when no page of it has one
   function renderTags(list) {
-    const counts = tally(list, (a) => a.tags ?? [], tag);
-    const chips = [...counts.keys()].sort((x, y) => x.localeCompare(y, LANG)).map((name) => {
-      const b = chip(name, counts.get(name), { pressed: name === tag, pick: () => toggleTag(name) });
+    const { rows, n } = tally(list, 'tag', (a) => a.tags ?? []);
+    const chips = [...rows.keys()].sort((x, y) => x.localeCompare(y, LANG)).map((name) => {
+      const b = chip(name, n(name), { pressed: name === tag, pick: () => toggleTag(name) });
       b.dataset.tag = name;
       return b;
     });
@@ -1494,12 +1504,19 @@
   const VIEW_WORDS = { new: 'ui_view_new', fav: 'ui_view_favorites', archived: 'ui_view_archived' };
   // The shelf's views, with their counts
   function renderShelf() {
-    // The new ones as they are now: not those read that stay on the view
-    const counts = Object.fromEntries(['all', 'fav', 'archived'].map((v) => [v, items.filter((a) => inView(a, { view: v })).length]));
-    counts.new = newCount();
+    // Each view with the picks and the search on it. All is what pressing it leaves, the search alone; the new ones are those as
+    // they are now, not those read that stay on the view
+    const state = current();
+    const counts = {
+      all: arrange({ ...state, ...NO_PICKS, view: 'all' }).length,
+      new: arrange({ ...state, view: 'new' }).filter((a) => a.news).length,
+      fav: arrange({ ...state, view: 'fav' }).length,
+      archived: arrange({ ...state, view: 'archived' }).length,
+    };
     for (const b of document.querySelectorAll('.views button[data-view]')) {
       b.setAttribute('aria-pressed', String(viewLit(b.dataset.view)));
       b.querySelector('.n').textContent = counts[b.dataset.view];
+      b.classList.toggle('none', counts[b.dataset.view] === 0);
     }
     // How many picks narrow the list, which the row of views does not show
     const narrowed = picksOn();

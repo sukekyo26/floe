@@ -352,7 +352,80 @@ func TestUIShelfMarks(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.size(1440, 900, false)
 	b.navigate("/")
 	out = append(out, named())
-	check(t, "shelf marks", out, "10 true|true true true true|page:true link:true folder:true|true|true|true|true|true|true|true|true|true|Favorites 1,Archive|Favorites 1,Archive|Favorites 1,Archive 0")
+	check(t, "shelf marks", out, "10 true|true true true true|page:true link:true folder:true|true|true|true|true|true|true|true|true|true|Favorites 0,Archive|Favorites 1,Archive|Favorites 1,Archive 0")
+}
+
+// TestUIShelfCounts: each part of the shelf counts what the other parts, the view and the search leave, its own part let go; the
+// views take the picks and the search, All the search alone; a row at 0 stays where it is, and the bar counts all there is.
+func TestUIShelfCounts(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', news: 'new', project: 'floe', template: 'report', tags: ['x'], createdAt: at(1), updatedAt: at(9) },
+		{ slug: 'b', title: 'Beta', description: '', path: '/tmp/b.html', project: 'floe', template: 'design', createdAt: at(1), updatedAt: at(8) },
+		{ slug: 'c', title: 'Alpha two', description: '', news: 'new', project: 'p', template: 'report', favorite: true, createdAt: at(1), updatedAt: at(7) },
+		{ slug: 'd', title: 'Delta', description: '', path: '/tmp/d.html', project: 'p', template: 'design', createdAt: at(1), updatedAt: at(6) },
+		{ slug: 'e', title: 'Eta', description: '', project: 'floe', template: 'report', archived: true, createdAt: at(1), updatedAt: at(5) },
+		{ slug: 'g', title: 'Gamma', description: '', path: '/tmp/g', folder: true, project: 'p', archived: true, createdAt: at(1), updatedAt: at(4) }]`)
+	b.size(1440, 900, false)
+	// The views, the projects, the kinds, the templates and the tags, as they stand, each with its count.
+	const counts = `['.views button[data-view]', '#chips .chip', '#kinds .chip', '#templates .chip', '#tags .chip'].map((part) => [...document.querySelectorAll(part)]
+		.map((c) => (c.dataset.view ?? c.dataset.project ?? c.dataset.kind ?? c.dataset.template ?? c.dataset.tag) + ':' + c.querySelector('.n').textContent).join(' ')).join(' / ')`
+	at := func(url string) string {
+		b.navigate(url)
+		return b.eval(counts)
+	}
+	out := make([]string, 0, 12)
+	out = append(out, at("/"))
+	// Of floe: the kinds, the templates, the tags and the views narrow; the projects do not; All does not.
+	out = append(out, at("/?project=floe"))
+	// The view counts too, on its own rows: of the archive, a row of no entry of floe at 0.
+	out = append(out, at("/?view=archived&project=floe"))
+	// The search: rows at 0 stay in their order, of the view's numbers, and All takes it too.
+	out = append(out, at("/?q=alpha"))
+	// All is what its press leaves: the search, not the picks or the view.
+	out = append(out, at("/?view=fav&kind=link&q=alpha"))
+	// A kind narrows the projects, as a project does the kinds.
+	out = append(out, at("/?kind=link"))
+	// The bar and the head count all there is.
+	out = append(out, b.eval("document.getElementById('news-n').textContent + ' / ' + document.getElementById('count').textContent"))
+	// A read row that stays on the view of the unread is not counted.
+	b.navigate("/?view=new")
+	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((x) => x.slug === 'a' ? { ...x, news: undefined } : x)); drawn = ''; load()")
+	b.until("the row read", "document.querySelector('#list li[data-slug=a] .ring')")
+	out = append(out, b.eval("[...document.querySelectorAll('#list > li:not(.group)')].length + ' ' + document.querySelector('.views [data-view=new] .n').textContent"))
+	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((x) => x.slug === 'a' ? { ...x, news: 'new' } : x)); drawn = ''; load()")
+	b.until("the row unread", "document.querySelector('#list li[data-slug=a] .dot')")
+	// A row at 0 is quieter, but for the one picked, which reads as picked.
+	b.navigate("/?view=archived&project=floe&kind=folder")
+	out = append(out, b.eval(`(() => {
+		const name = (c) => getComputedStyle(c.querySelector('.name')).color, quiet = getComputedStyle(document.querySelector('.views .n')).color;
+		const folder = document.querySelector('#kinds [data-kind=folder]');
+		return [folder.getAttribute('aria-pressed'), folder.querySelector('.n').textContent, name(folder) === quiet].join(' ');
+	})()`))
+	b.navigate("/?q=alpha")
+	out = append(out, b.eval(`(() => {
+		const link = document.querySelector('#kinds [data-kind=link]'), page = document.querySelector('#kinds [data-kind=page]'), quiet = getComputedStyle(document.querySelector('.views .n')).color;
+		const words = (e, s) => getComputedStyle(e.querySelector(s)).color === quiet;
+		return [link.querySelector('.n').textContent, words(link, '.name'), words(page, '.name'), words(document.querySelector('.views [data-view=archived]'), '.label')].join(' ');
+	})()`))
+	// In the dialog of two columns, the same.
+	b.size(900, 800, false)
+	b.navigate("/?project=floe")
+	b.eval("document.getElementById('narrow-filter').click()")
+	out = append(out, b.eval("document.querySelector('#filter-box #kinds [data-kind=link] .n').textContent + ' ' + document.querySelector('#filter-box #chips [data-project=p] .n').textContent"))
+	check(t, "shelf counts", out, strings.Join([]string{
+		"new:2 all:4 fav:1 archived:2 / floe:2 p:2 / page:2 link:2 / design:2 report:2 / x:1",
+		"new:1 all:4 fav:0 archived:1 / floe:2 p:2 / page:1 link:1 / design:1 report:1 / x:1",
+		"new:1 all:4 fav:0 archived:1 / floe:1 p:1 / page:1 folder:0 / report:1 / ",
+		"new:2 all:2 fav:1 archived:0 / floe:1 p:1 / page:2 link:0 / design:0 report:2 / x:1",
+		"new:0 all:2 fav:0 archived:0 / p:0 / page:1 link:0 / report:0 / ",
+		"new:0 all:4 fav:0 archived:0 / floe:1 p:1 / page:2 link:2 / design:2 report:0 / x:0",
+		"2 unread / Newest first · 2 unread",
+		"2 1",
+		"true 0 false",
+		"0 true false true",
+		"1 2",
+	}, "|"))
 }
 
 // floeRead is reads.json of the site's store.
