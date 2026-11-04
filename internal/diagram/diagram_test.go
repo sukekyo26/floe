@@ -535,9 +535,9 @@ func TestEdgesPastShapes(t *testing.T) {
 }
 
 // An icon's bottom side is under its label, whichever way the edge runs and however wide or big they are; without a
-// label it is the icon's. A side left out is chosen by the icon with its label. The label is in the way of any other run
-// still. The last cases are what the rule costs and lets by (the LIMITs of onSide), kept here so that changing any of
-// them is a choice.
+// label it is the icon's. A side left out is chosen by the icon with its label. The label is in the way of any other
+// run still. The last cases are what the rule costs and lets by (the LIMITs of onSide), kept here so that changing any
+// of them is a choice.
 func TestEdgesIconLabel(t *testing.T) {
 	t.Parallel()
 	const (

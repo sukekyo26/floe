@@ -65,9 +65,9 @@ func (l *layout) endOf(at string, e end, side string, other [2]float64) (anchor,
 // more across than up or down from the centre of t.whole(), and always for a row. An icon's bottom side is under its
 // label; its left and right sides stay at the middle of the icon.
 // LIMIT: an edge at the bottom side going beside the label or above its bottom runs back through the label, and is
-// refused: with no side, when the other part's top is higher than 2 above the label's bottom and its centre further down
-// than across; with the sides written, or with a via between the icon and its label, likewise. Write fromSide: right, or
-// move the other part or the via below the label.
+// refused: with no side, when the other part's top is higher than 2 above the label's bottom and its centre further
+// down than across; with the sides written, or with a via between the icon and its label, likewise. Write
+// fromSide: right, or move the other part or the via below the label.
 // LIMIT: crossedBy reads a run along an edge as not through it, so these pass, plain on the page: a run along the
 // label's bottom; another edge running exactly there (it reads as a branch, not a crossing); a part whose top is within
 // 2 of the label's bottom, the across run in it or on its edge and the marker inside it or with no room. Refuse them if
