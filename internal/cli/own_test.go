@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -463,7 +464,7 @@ func TestServeCannotBegin(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	env := map[string]string{"HOME": filepath.Join(dir, "home"), "FLOE_DIR": root, "FLOE_PORT": "1"}
+	env := map[string]string{"HOME": filepath.Join(dir, "home"), "FLOE_DIR": root, "FLOE_PORT": strconv.Itoa(freePort(t))}
 	code, stdout, stderr := runEnv(dir, env, "serve")
 	if code != 1 || stdout != "" || !strings.HasPrefix(stderr, filepath.Join(root, "reads.json.broken")+": cannot be written (") {
 		t.Errorf("floe serve = %d, %q, %q", code, stdout, stderr)

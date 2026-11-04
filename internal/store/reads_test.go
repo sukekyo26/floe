@@ -18,7 +18,7 @@ import (
 
 const (
 	viewer = "local"
-	unset  = "S/reads.json: is missing, broken or has no since: start floe serve again, which writes it anew"
+	unset  = "S/reads.json: is missing, broken or has no since: run floe stop, then floe serve, which writes it anew"
 )
 
 // hour is a time of a day, by its hour.
@@ -324,6 +324,38 @@ func TestReadsBegin(t *testing.T) {
 		if text != "" && read(t, filepath.Join(root, "reads.json")) != text {
 			t.Errorf("%q: written", text)
 		}
+	}
+}
+
+// A reads.json that cannot be read is told in the system's words, not as one missing; the list counts every page as read.
+func TestReadsUnreadable(t *testing.T) {
+	t.Parallel()
+
+	s, root := begun(t, hour(1))
+	m := made(t, s, root, "d", 2, 2)
+	file := filepath.Join(root, "reads.json")
+	if os.Geteuid() != 0 { // root reads what a mode keeps
+		if err := os.Chmod(file, 0); err != nil {
+			t.Fatal(err)
+		}
+		if got := told(s.MarkRead(viewer, "d", 1, m.Versions[0].At), root); got != "S/reads.json: permission denied" {
+			t.Errorf("told %s", got)
+		}
+		if got := listedOf(t, s, "d"); got.News != "" {
+			t.Errorf("news %q", got.News)
+		}
+		if err := os.Chmod(file, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Remove(file); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(file, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if got := told(s.MarkRead(viewer, "d", 1, m.Versions[0].At), root); !strings.HasPrefix(got, "S/reads.json: ") || got == unset {
+		t.Errorf("a directory: told %s", got)
 	}
 }
 

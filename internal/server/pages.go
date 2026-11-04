@@ -209,8 +209,10 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		read = nil
-		if mark, ok := s.cfg.Store.ReadMark(slug, m, v); ok && rest == "" {
-			read = &Read{N: mark.N, At: mark.At}
+		if rest == "" {
+			if mark, ok := s.cfg.Store.ReadMark(slug, m, v); ok {
+				read = &Read{N: mark.N, At: mark.At}
+			}
 		}
 		// Of the last look, as the version is: one changed since reloads the tab.
 		got, err = s.content(catalog(r), slug, m, rest, v, func() store.Drawing { d, _ := s.now(); return d })
@@ -342,8 +344,10 @@ const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => 
 // tellRead tells the frame the version of a stored page it was served, read as soon as it is loaded. It goes to parent,
 // the frame the iframe is in even when that is framed itself (VS Code's Simple Browser), of this origin only, so that a
 // site that frames ?raw is told nothing. The frame takes it from its own iframe, at the URL it opened.
-// LIMIT: a page that replaces window.parent tells nothing, and a page framed can claim any version of its own: only
-// its own unread is wrong then.
+// LIMIT: a page counts as read as soon as it is loaded, read or not. Wait for a look at it if that comes to mislead.
+// LIMIT: a page that replaces window.parent tells nothing, and a page framed can claim any version of its own, or a
+// value of the right shape the server refuses (n: 1e30), which shows its frame a mistake each time: only its own unread
+// and its own frame suffer from what the sandbox lets it do.
 func tellRead(read *Read) string {
 	if read == nil {
 		return ""

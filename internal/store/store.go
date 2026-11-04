@@ -363,9 +363,7 @@ func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
 	l.Versions = nil
 	if !m.IsLink() {
 		l.News = r.news(slug, m)
-		if len(m.Versions) > 0 {
-			l.Version = m.Versions[len(m.Versions)-1].N
-		}
+		l.Version = m.lastNumber()
 		return l
 	}
 	// What is in a folder is listed when it is opened (Pages): the list is read every few seconds.

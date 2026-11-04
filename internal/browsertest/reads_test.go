@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/sukekyo26/floe/internal/store"
 )
@@ -91,6 +95,53 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if got := news("other"); got != "new" {
 		t.Errorf("framed by a site: news %q", got)
 	}
+
+	// Cut off while the store's lock is held, the server still counts as reached: the time limit is the request's own.
+	s.floe(t, "publish", s.page(t, "read/held.yaml", "held", "<p id=\"p\">held</p>"), "--slug", "held")
+	lock, err := os.OpenFile(filepath.Join(s.Dir, "store", ".lock"), os.O_RDONLY|os.O_CREATE, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Close()
+	if err = unix.Flock(int(lock.Fd()), unix.LOCK_EX); err != nil {
+		t.Fatal(err)
+	}
+	b.navigate("/a/held/")
+	b.until("the mark to go out", "readsGoing === true")
+	b.eval(`new MutationObserver(() => { window.wentDown ||= document.getElementById('server').classList.contains('down'); })
+		.observe(document.getElementById('server'), { attributes: true })`)
+	b.until("the request to be cut off", "readsGoing === false")
+	if got := b.eval("Boolean(window.wentDown) || document.getElementById('server').classList.contains('down')"); got != "false" {
+		t.Error("a request cut off by its time limit showed the server as not reached")
+	}
+	if err = unix.Flock(int(lock.Fd()), unix.LOCK_UN); err != nil {
+		t.Fatal(err)
+	}
+
+	// Refused, the words show as the page's mistakes do, in no toast of success; and go when one is kept.
+	s.floe(t, "publish", s.page(t, "read/bad.yaml", "bad", "<p id=\"p\">bad</p>"), "--slug", "bad")
+	reads := filepath.Join(s.Dir, "store", "reads.json")
+	kept, err := os.ReadFile(reads)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Remove(reads); err != nil {
+		t.Fatal(err)
+	}
+	b.navigate("/a/bad/")
+	shown := "document.getElementById('error').hidden ? '' : document.getElementById('error').textContent"
+	got := b.until("the refusal", shown)
+	if want := "HTTP 400: " + reads + ": is missing, broken or has no since: run floe stop, then floe serve, which writes it anew"; got != want {
+		t.Errorf("shown %q, want %q", got, want)
+	}
+	if got := b.eval("document.querySelectorAll('.toast').length"); got != "0" {
+		t.Errorf("%s toasts of success", got)
+	}
+	if err = os.WriteFile(reads, kept, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	b.eval("document.getElementById('frame').contentWindow.location.replace('?raw')")
+	b.until("the mistake to go", "document.getElementById('error').hidden")
 
 	// The frame framed itself: the list's own page holding it.
 	b.navigate("/")

@@ -21,8 +21,8 @@ const (
 	newsVersion = "version"
 )
 
-// errReadsBroken is a since in reads.json that is no time.
-var errReadsBroken = errors.New("since is not a time")
+// errReadsBroken is a reads.json read that holds no reads.
+var errReadsBroken = errors.New("no reads")
 
 // pageRead is the version of a page a viewer read: its number and when it was made, a number coming again after a
 // removal.
@@ -41,7 +41,7 @@ func (s *Store) readsFile() string {
 	return filepath.Join(s.root, readsName)
 }
 
-// readReads reads reads.json, by viewer: fs.ErrNotExist for none, and a mistake for one that cannot be read as it. It
+// readReads reads reads.json, by viewer: fs.ErrNotExist for none, errReadsBroken for what holds no reads. It
 // takes no lock: a write replaces the file whole, so that a reader has the one before it or the one after.
 func (s *Store) readReads() (map[string]viewerReads, error) {
 	b, _, err := files.Read(s.readsFile())
@@ -50,7 +50,7 @@ func (s *Store) readReads() (map[string]viewerReads, error) {
 	}
 	var all map[string]viewerReads
 	if err := json.Unmarshal(b, &all); err != nil {
-		return nil, err //nolint:wrapcheck // as above
+		return nil, fmt.Errorf("%w: %w", errReadsBroken, err)
 	}
 	for _, v := range all {
 		if _, err := time.Parse(time.RFC3339, v.Since); v.Since != "" && err != nil {
@@ -124,9 +124,17 @@ func timeOf(s string) time.Time {
 	return t
 }
 
-// sameVersion reports whether v is the version n, at, a number alone coming again after a removal.
-func sameVersion(n int, at string) func(Version) bool {
-	return func(v Version) bool { return v.N == n && v.At == at }
+// hasVersion reports whether m has the version n, at, a number alone coming again after a removal.
+func (m *Meta) hasVersion(n int, at string) bool {
+	return slices.ContainsFunc(m.Versions, func(v Version) bool { return v.N == n && v.At == at })
+}
+
+// lastNumber is the number of m's last version, 0 for none.
+func (m *Meta) lastNumber() int {
+	if len(m.Versions) == 0 {
+		return 0
+	}
+	return m.Versions[len(m.Versions)-1].N
 }
 
 // taken is the number of the version of the page slug, whose meta.json is m, the reader takes as read: the one on
@@ -135,7 +143,7 @@ func sameVersion(n int, at string) func(Version) bool {
 // dropped past keepVersions), so that a page whose version read was dropped is new again. Keep a mark of the page if
 // that comes to matter.
 func (r *reader) taken(slug string, m *Meta) int {
-	if rec, ok := r.pages[slug]; ok && slices.ContainsFunc(m.Versions, sameVersion(rec.N, rec.At)) {
+	if rec, ok := r.pages[slug]; ok && m.hasVersion(rec.N, rec.At) {
 		return rec.N
 	}
 	if timeOf(m.CreatedAt).After(r.since) {
@@ -151,14 +159,16 @@ func (r *reader) taken(slug string, m *Meta) int {
 }
 
 // news is what the reader has not seen of the stored page slug, whose meta.json is m: "" for nothing, or for a nil
-// reader, of a reads.json that cannot be read, when every page counts as read rather than all as new.
+// reader.
+// LIMIT: a reads.json that goes bad while the server runs has no reader: every page counts as read, rather than all as
+// new, until floe serve starts again and writes it anew.
 func (r *reader) news(slug string, m *Meta) string {
 	if r == nil || len(m.Versions) == 0 {
 		return ""
 	}
 	n := r.taken(slug, m)
 	switch {
-	case n == m.Versions[len(m.Versions)-1].N:
+	case n == m.lastNumber():
 		return ""
 	case n > 0 || !timeOf(m.CreatedAt).After(r.since):
 		return newsVersion
@@ -168,7 +178,8 @@ func (r *reader) news(slug string, m *Meta) string {
 }
 
 // MarkRead keeps that viewer read the version n, at, of the stored page slug, unless the page has no such version or
-// viewer has read one as new: ErrNotFound for no stored page, store_reads_unset without a since to compare to. One
+// viewer has read one as new: ErrNotFound for no stored page, store_reads_unset without a since to compare to, and
+// what the system says of a reads.json it cannot read. One
 // that changes nothing takes no lock, as a page read before is passed over often.
 func (s *Store) MarkRead(viewer, slug string, n int, at string) error {
 	if _, newer, err := s.newerRead(viewer, slug, n, at); err != nil || !newer {
@@ -202,12 +213,15 @@ func (s *Store) newerRead(viewer, slug string, n int, at string) (map[string]vie
 	if m == nil || m.IsLink() {
 		return nil, false, ErrNotFound
 	}
-	if !slices.ContainsFunc(m.Versions, sameVersion(n, at)) {
+	if !m.hasVersion(n, at) {
 		return nil, false, nil
 	}
 	all, err := s.readReads()
+	if err != nil && !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, errReadsBroken) {
+		return nil, false, usererr.CannotRead(s.readsFile(), err) //nolint:wrapcheck // the system's words, at the file
+	}
 	r := readerIn(all, viewer)
-	if err != nil || r == nil {
+	if r == nil {
 		return nil, false, usererr.NewAt(s.readsFile(), 0, 0, "store_reads_unset")
 	}
 	return all, r.taken(slug, m) < n, nil
@@ -244,8 +258,8 @@ func (s *Store) moveRead(from, to string) {
 // ReadMark is the version n of the stored page slug, whose meta.json is m, as a viewer reads it, 0 for its last: false
 // for a version m does not list, and a link.
 func (s *Store) ReadMark(slug string, m *Meta, n int) (Version, bool) {
-	if n == 0 && len(m.Versions) > 0 {
-		n = m.Versions[len(m.Versions)-1].N
+	if n == 0 {
+		n = m.lastNumber()
 	}
 	_, at, ok := s.versionFile(slug, m, n)
 	if !ok {

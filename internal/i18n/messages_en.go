@@ -175,7 +175,7 @@ var messagesEN = map[string]string{
 	"store_slug_linked":       `slug "%[1]s" is linked to %[2]s; choose another slug, or replace that link with floe publish --link --force`,
 	"store_slug_owned":        `slug "%[1]s" was published from project %[2]s; use another --slug, or add --force to replace that page`,
 	"store_slug_taken":        `slug "%s" is already in use; choose another slug`,
-	"store_reads_unset":       "is missing, broken or has no since: start floe serve again, which writes it anew",
+	"store_reads_unset":       "is missing, broken or has no since: run floe stop, then floe serve, which writes it anew",
 	"store_project_slash":     `a project name cannot be just "/"`,
 	"store_not_data":          "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
 	"store_theme_link":        "--theme picks the theme of a page drawn from a data file: a linked file is shown as it is",

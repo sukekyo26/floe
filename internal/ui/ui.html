@@ -931,6 +931,7 @@
   // One lost is told again the next time the page is loaded. The slug is the caller's own, never one a page's message names
   const readsWaiting = new Map();
   let readsGoing = false;
+  let readFailed = false;
   async function tellRead(slug, read) {
     readsWaiting.set(slug, read);
     if (readsGoing) return;
@@ -942,8 +943,14 @@
         const res = await api(`/api/artifacts/${encodeURIComponent(to)}/read`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(5000),
         });
-        if (!res.ok && res.status !== 404) toast(await res.text());
-      } catch { /* api marked the server as not reached */ }
+        if (!res.ok && res.status !== 404) {
+          readFailed = true;
+          showError(t('ui_http_error', await res.text(), res.status));
+        } else if (readFailed) {
+          readFailed = false;
+          showError('');
+        }
+      } catch { /* told again the next time; api tells if the server was not reached */ }
     }
     readsGoing = false;
   }
@@ -1065,7 +1072,8 @@
       setServer(true);
       return res;
     } catch (e) {
-      setServer(false);
+      // One cut off by its own time limit (the store's lock held long) tells nothing of the server
+      if (e.name !== 'TimeoutError') setServer(false);
       throw e;
     }
   }

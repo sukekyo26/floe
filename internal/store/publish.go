@@ -607,6 +607,9 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 // whose last version's content is mark gets none, and keeps its updatedAt, which moves with the versions alone. Numbers
 // go on from the last of the page replaced.
 // A last version that cannot be read, which nothing serves, is dropped.
+// LIMIT: a publish of the same content (another theme, or after a template or part was mended) does not come up the
+// list and tells no one, as the list is by what changed; one archived comes back at the place it had. The user chose
+// so: publish other content to bring it up.
 func (s *Store) nextVersion(e *Entry, mark string, pre *pressed) *pressed {
 	now := e.Prev
 	n := 1

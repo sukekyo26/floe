@@ -166,7 +166,7 @@ var messagesJA = map[string]string{
 	"store_slug_linked":       "URL 名「%[1]s」は %[2]s のリンクで使われています。別の URL 名にするか、floe publish --link --force でそのリンクを置き換えてください",
 	"store_slug_owned":        "URL 名「%[1]s」はプロジェクト %[2]s から公開されています。--slug で別の URL 名にするか、--force を付けてそのページを置き換えてください",
 	"store_slug_taken":        "URL 名「%s」は使われています。別の URL 名を入力してください",
-	"store_reads_unset":       "無いか、壊れているか、since がありません。floe serve を起こし直すと書き直します",
+	"store_reads_unset":       "無いか、壊れているか、since がありません。floe stop の後に floe serve を起こすと書き直します",
 	"store_project_slash":     "プロジェクト名に / だけは使えません",
 	"store_not_data":          "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
 	"store_theme_link":        "--theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
