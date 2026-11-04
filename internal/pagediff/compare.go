@@ -286,8 +286,8 @@ func numbered(a, b []string) (runesA, runesB []rune, ok bool) {
 // align pairs the keys of two lists: those the same, in order, and between them what is left of each, one by one from
 // the first. d nil,
 // or for too many keys, it goes by place alone.
-// LIMIT: by place, so that sections or blocks moved read as removed and added, and of those left the first are paired
-// whatever they
+// LIMIT: by place: sections or blocks moved read as removed and added, a section added before others of its heading
+// pairs them off by one, so that those not added read as changed, and of those left the first are paired whatever they
 // hold (words tells when they are not alike).
 func align(d *diffmatchpatch.DiffMatchPatch, a, b []string) []pair {
 	var diffs []diffmatchpatch.Diff

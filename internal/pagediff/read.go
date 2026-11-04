@@ -29,7 +29,8 @@ type section struct {
 // LIMIT: the HTML's elements alone are read, not its CSS: a span drawn as a block runs on in its block's words, and a
 // div drawn inline
 // is a block of its own. It only tells how the words read, not whether they differ.
-// LIMIT: words alone are compared: making words bold, a link's target and CSS tell nothing. The steps part says nothing
+// LIMIT: words alone are compared: making words bold, a link's target, a heading's level and CSS tell nothing. The
+// steps part says nothing
 // of its state doing, so that todo to doing tells nothing either: give it words if that comes to trouble someone.
 var (
 	// What is no part of what a reader reads: a nav repeats the headings, a button is a page's control, and what is in a
@@ -42,8 +43,8 @@ var (
 		form header hr label li main menu ol p section summary table tbody tfoot thead ul`)
 	// Elements that mark words within a line: other elements between words are apart, as parts lay out their spans side by
 	// side.
-	wordNames = names(`a abbr b bdi bdo cite code del dfn em i ins kbd mark q rp rt ruby s samp strong sub sup u
-		var wbr`)
+	wordNames = names(`a abbr acronym b bdi bdo big cite code data del dfn em font i ins kbd mark nobr q rb rp rt rtc ruby
+		s samp small strike strong sub sup time tt u var wbr`)
 )
 
 func names(list string) map[string]bool {
@@ -104,10 +105,12 @@ func (r *reader) walk(n *html.Node) {
 	case unread[n.Data]:
 	case n.Namespace == "svg" && n.Data == "svg":
 		r.flush()
-		r.add("svg", svgText(n), svgKey(n))
+		text := svgText(n)
+		r.add("svg", text, svgKey(n))
 	case n.Data == "img":
 		r.flush()
-		r.add("img", squeeze(attr(n, "alt")), digest(attr(n, "src")))
+		alt := squeeze(attr(n, "alt"))
+		r.add("img", alt, alt+"\x00"+digest(attr(n, "src")))
 	case n.Data == "tr":
 		r.flush()
 		text := row(n)
@@ -168,6 +171,11 @@ func flow(n *html.Node, b *strings.Builder) {
 		b.WriteString(n.Data)
 		return
 	}
+	// LIMIT: of an image in a line or a heading, its alt is told, not its src, and of a diagram there, nothing.
+	if n.Data == "img" {
+		b.WriteString(" " + attr(n, "alt") + " ")
+		return
+	}
 	if unread[n.Data] || n.Namespace == "svg" {
 		return
 	}
@@ -218,6 +226,7 @@ func plain(n *html.Node, b *strings.Builder) {
 // screen reader
 // reads go at the head of the line after them.
 // LIMIT: a pre that colours words within a line by elements is cut at them. floe's parts draw none.
+// LIMIT: blank lines at the end of a line's element or of a pre are not lines, and adding them tells nothing.
 func preLines(n *html.Node) []string {
 	box := n
 	if c := n.FirstChild; c != nil && c == n.LastChild && c.Type == html.ElementNode && c.Data == "code" {
@@ -226,6 +235,10 @@ func preLines(n *html.Node) []string {
 	var lines []string
 	head := ""
 	for c := box.FirstChild; c != nil; c = c.NextSibling {
+		// Between elements each a line, the newline that sets them apart in the HTML is no line.
+		if c.Type == html.TextNode && strings.TrimSpace(c.Data) == "" && hasElement(box) {
+			continue
+		}
 		var b strings.Builder
 		plain(c, &b)
 		if c.Type == html.ElementNode && slices.Contains(strings.Fields(attr(c, "class")), "floe-hidden") {
@@ -237,7 +250,19 @@ func preLines(n *html.Node) []string {
 			head = ""
 		}
 	}
+	if head != "" {
+		lines = append(lines, strings.TrimSpace(head))
+	}
 	return lines
+}
+
+func hasElement(n *html.Node) bool {
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == html.ElementNode {
+			return true
+		}
+	}
+	return false
 }
 
 func svgText(n *html.Node) string {
@@ -257,31 +282,60 @@ func digest(s string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// svgKey is the digest of the svg as written, its ids and what names them numbered in its own order: a diagram's ids
-// hold its number
-// in the page, which a diagram added before it changes.
+// svgKey is the digest of the svg as written, its ids numbered in its own order and what names them with them: a
+// diagram's ids hold its number in the page, which a diagram added before it changes. It writes on the tree, read no
+// further.
 func svgKey(n *html.Node) string {
-	ids := []string{}
+	ids := map[string]string{}
 	note := func(m *html.Node) {
-		if id := attr(m, "id"); id != "" && !slices.Contains(ids, id) {
-			ids = append(ids, id)
+		if id := attr(m, "id"); id != "" && ids[id] == "" {
+			ids[id] = "id" + strconv.Itoa(len(ids))
 		}
 	}
 	note(n)
 	for m := range n.Descendants() {
 		note(m)
 	}
-	pairs := make([][2]string, len(ids))
-	for i, id := range ids {
-		pairs[i] = [2]string{id, "\x00" + strconv.Itoa(i) + "\x00"}
+	number := func(m *html.Node) {
+		for i, a := range m.Attr {
+			switch a.Key {
+			case "id":
+				m.Attr[i].Val = ids[a.Val]
+			case "aria-labelledby", "aria-describedby":
+				words := strings.Fields(a.Val)
+				for j, word := range words {
+					words[j] = cmp.Or(ids[word], word)
+				}
+				m.Attr[i].Val = strings.Join(words, " ")
+			default:
+				m.Attr[i].Val = numberedRefs(a.Val, ids)
+			}
+		}
 	}
-	// The longest first, as one id may hold another.
-	slices.SortStableFunc(pairs, func(a, b [2]string) int { return cmp.Compare(len(b[0]), len(a[0])) })
-	flat := make([]string, 0, 2*len(pairs))
-	for _, p := range pairs {
-		flat = append(flat, p[0], p[1])
+	number(n)
+	for m := range n.Descendants() {
+		number(m)
 	}
 	var out bytes.Buffer
 	_ = html.Render(&out, n) //nolint:errcheck // a buffer takes every write, and the parser makes no node it cannot render
-	return digest(strings.NewReplacer(flat...).Replace(out.String()))
+	return digest(out.String())
+}
+
+// numberedRefs is the value with each #id in it, as in href="#id" and url(#id), an id of ids, numbered.
+func numberedRefs(value string, ids map[string]string) string {
+	var b strings.Builder
+	for {
+		before, after, found := strings.Cut(value, "#")
+		b.WriteString(before)
+		if !found {
+			return b.String()
+		}
+		b.WriteByte('#')
+		end := strings.IndexAny(after, " \t\n\f\r)\"',;")
+		if end < 0 {
+			end = len(after)
+		}
+		b.WriteString(cmp.Or(ids[after[:end]], after[:end]))
+		value = after[end:]
+	}
 }

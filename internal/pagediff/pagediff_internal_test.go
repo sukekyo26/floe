@@ -91,6 +91,18 @@ func TestCompare(t *testing.T) {
 			"a diagram added before another", `<h2>A</h2><svg id=dg1><path id=dg1-p /><text>B</text></svg>`, `<h2>A</h2><svg id=dg1><path id=dg1-p /><text>N</text></svg><svg id=dg2><path id=dg2-p /><text>B</text></svg>`,
 			"changed h2 A\n  [svg] {+N+}\n",
 		},
+		{"a colour named as an id", `<h2>A</h2><svg><rect id="red" fill="red"/></svg>`, `<h2>A</h2><svg><rect id="blue" fill="blue"/></svg>`, "changed h2 A\n  [svg reshaped] \n"},
+		{"an id named as an attribute", `<h2>A</h2><svg><rect id="x" x="1"/></svg>`, `<h2>A</h2><svg><rect id="y" x="1"/></svg>`, "same h2 A\n"},
+		{"an id its value's reference", `<h2>A</h2><svg><g id="a"/><use href="#a" fill="url(#a)" aria-labelledby="a"/></svg>`, `<h2>A</h2><svg><g id="b"/><use href="#b" fill="url(#b)" aria-labelledby="b"/></svg>`, "same h2 A\n"},
+		{"a reference to another", `<h2>A</h2><svg><g id="a"/><g id="b"/><use href="#a"/></svg>`, `<h2>A</h2><svg><g id="a"/><g id="b"/><use href="#b"/></svg>`, "changed h2 A\n  [svg reshaped] \n"},
+		{"an image's alt", "<h2>A</h2><img src=a alt='a map of Kyoto'>", "<h2>A</h2><img src=a alt='a map of Osaka'>", "changed h2 A\n  [img] a map of [-Kyoto-]{+Osaka+}\n"},
+		{"an image in a cell", "<h2>A</h2><table><tr><td><img src=a alt='a map of Kyoto'></td></tr></table>", "<h2>A</h2><table><tr><td><img src=a alt='a map of Osaka'></td></tr></table>", "changed h2 A\n  [tr] a map of [-Kyoto-]{+Osaka+}\n"},
+		{"an image in a heading", "<h2>The map <img src=a alt=one></h2>", "<h2>The map <img src=a alt=two></h2>", "changed h2 The map [-one-]{+two+}\n"},
+		{"spaces between lines", "<h2>A</h2><pre><span>a</span>\n<span>b</span></pre>", "<h2>A</h2><pre><span>a</span>\n<span>c</span></pre>", "changed h2 A\n  [pre] [-b-]\n  [pre] {+c+}\n"},
+		{"words last in a pre", `<h2>A</h2><pre><span>a</span><span class="floe-hidden">one</span></pre>`, `<h2>A</h2><pre><span>a</span><span class="floe-hidden">two</span></pre>`, "changed h2 A\n  [pre] [-one-]\n  [pre] {+two+}\n"},
+		{"small marks words", "<h2>A</h2><p><small>大事</small>な話</p>", "<h2>A</h2><p>大事な話</p>", "same h2 A\n"},
+		{"old marks of words", "<h2>A</h2><p><big>大</big><tt>事</tt><font>な</font><strike>話</strike><nobr>し</nobr></p>", "<h2>A</h2><p>大事な話し</p>", "same h2 A\n"},
+		{"a heading's level", "<h2>A</h2><p>a</p>", "<h3>A</h3><p>a</p>", "same h3 A\n"},
 		{"lines not alike", "<h2>A</h2><p>the hotel by the station</p>", "<h2>A</h2><p>at most a thousand yen</p>", "changed h2 A\n  [p] [-the hotel by the station-]\n  [p] {+at most a thousand yen+}\n"},
 		{"of another kind", "<h2>A</h2><p>the same words</p>", "<h2>A</h2><ul><li>the same words</li></ul>", "changed h2 A\n  [p] [-the same words-]\n  [li] {+the same words+}\n"},
 		{"words of tags stay words", "<h2>A</h2><p>&lt;img src=x onerror=alert(1)&gt;</p>", "<h2>A</h2><p>&lt;script&gt;alert(2)&lt;/script&gt;</p>", "changed h2 A\n  [p] [-<img src=x onerror=alert(1)>-]\n  [p] {+<script>alert(2)</script>+}\n"},
@@ -118,6 +130,42 @@ func TestCompare(t *testing.T) {
 				t.Errorf("got\n%swant\n%s", s, tc.want)
 			}
 		})
+	}
+}
+
+// A pre's lines, in its forms: the spaces between elements are none, and blank lines of its words are.
+func TestPreLines(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct{ html, want string }{
+		{"<pre><span>a</span>\n<span>b</span></pre>", "a|b"},
+		{"<pre><code>a\n\nb\n</code></pre>", "a||b"},
+		{`<pre><span class="floe-hidden">run</span><span>a</span>` + "\n" + `<span class="floe-hidden">last</span></pre>`, "run a|last"},
+	} {
+		sections, err := read([]byte(tc.html))
+		if err != nil {
+			t.Fatal(err)
+		}
+		lines := []string{}
+		for _, b := range sections[0].blocks {
+			lines = append(lines, b.text)
+		}
+		if got := strings.Join(lines, "|"); got != tc.want {
+			t.Errorf("%s: got %q, want %q", tc.html, got, tc.want)
+		}
+	}
+}
+
+// One added before others of its heading is told as the LIMIT of align says.
+func TestSameHeadings(t *testing.T) {
+	t.Parallel()
+
+	got, err := Compare([]byte("<h2>Why</h2><p>first reason</p>"), []byte("<h2>Why</h2><p>a new reason</p><h2>Why</h2><p>first reason</p>"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Counts.Changed != 1 || got.Counts.Added != 1 {
+		t.Errorf("got %+v\n%s", got.Counts, told(got))
 	}
 }
 

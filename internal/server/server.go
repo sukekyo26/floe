@@ -327,34 +327,21 @@ func (s *Server) diff(w http.ResponseWriter, r *http.Request) {
 		send(w, http.StatusBadRequest, "from and to must be numbers of versions")
 		return
 	}
-	for range 2 {
-		m := s.cfg.Store.ReadMeta(slug)
-		if m == nil {
-			break
-		}
-		markFrom, okFrom := s.cfg.Store.ReadMark(slug, m, from)
-		markTo, okTo := s.cfg.Store.ReadMark(slug, m, to)
-		if !okFrom || !okTo {
-			break
-		}
-		pageFrom, okFrom := s.cfg.Store.VersionPage(slug, m, from)
-		pageTo, okTo := s.cfg.Store.VersionPage(slug, m, to)
-		if !okFrom || !okTo {
-			continue
-		}
-		result, err := pagediff.Compare(pageFrom, pageTo)
-		if err != nil {
-			refuse(w, r, err)
-			return
-		}
-		sendJSON(w, http.StatusOK, struct {
-			From Read `json:"from"`
-			To   Read `json:"to"`
-			pagediff.Result
-		}{From: Read{N: markFrom.N, At: markFrom.At}, To: Read{N: markTo.N, At: markTo.At}, Result: result})
+	versions, pages, ok := s.cfg.Store.VersionPages(slug, from, to)
+	if !ok {
+		notFound(w)
 		return
 	}
-	notFound(w)
+	result, err := pagediff.Compare(pages[0], pages[1])
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, struct {
+		From Read `json:"from"`
+		To   Read `json:"to"`
+		pagediff.Result
+	}{From: Read{N: from, At: versions[0].At}, To: Read{N: to, At: versions[1].At}, Result: result})
 }
 
 func (*Server) redirect(w http.ResponseWriter, r *http.Request) {
