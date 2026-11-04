@@ -859,6 +859,9 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.pressAt(x, y, 1)
 	b.until("picked", "picked?.slug === 'a2'")
 	out := []string{b.eval(rowAgainPath)}
+	// Read and drawn so, as a redraw closes a menu open.
+	b.until("read", "!document.querySelector("+js(a2)+").classList.contains('unseen') && !readsGoing")
+	b.eval("load().then(() => true)")
 
 	// A menu open, the press closes it.
 	b.eval("document.querySelector(" + js(a2+" .more") + ").open = true")
@@ -1002,7 +1005,7 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	// Outside the list, in the top document: an iframe's press does not reach it.
 	r := b.eval(`(() => {
 		const r = document.getElementById('read-head').getBoundingClientRect();
-		const x = r.left + 2, y = r.top + 2, on = document.elementFromPoint(x, y);
+		const x = r.left + r.width / 2, y = r.top + 2, on = document.elementFromPoint(x, y);
 		return on.closest('#read-head') && !on.closest('a, button, summary') ? JSON.stringify({ X: x, Y: y }) : 'on ' + on.outerHTML;
 	})()`)
 	var at struct{ X, Y float64 }
