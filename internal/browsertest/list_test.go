@@ -437,8 +437,9 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Folded, the head says what the filters narrow the list to, in its line beside the rest; pressed, they show.
 	const what = "[document.getElementById('shelf-what').hidden, document.getElementById('shelf-what').textContent, document.querySelector('.lhead').scrollWidth <= document.querySelector('.lhead').clientWidth].join(' ')"
 	out = append(out, b.eval(what))
-	b.eval("setView('archived'); refilter({ kind: 'link', tag: 'x' })")
-	out = append(out, b.eval(what))
+	b.eval("setColumn('list', 408); setView('archived'); refilter({ kind: 'link', tag: 'x' })")
+	out = append(out, b.eval(what), b.eval("(() => { const e = document.getElementById('shelf-what'); return e.scrollWidth <= e.clientWidth; })()"))
+	b.eval("setColumn('list', 740)")
 	b.eval("document.getElementById('shelf-what').click()")
 	out = append(out, b.eval("getComputedStyle(document.querySelector('.shelf')).display"))
 	b.eval("setView('all'); refilter({ kind: '', tag: '' }); document.getElementById('shelf-hide').click()")
@@ -478,7 +479,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"260px 336px 260 336", ring, "true true", "160px 336px 160 336",
 		"none true", "auto",
 		"none false true shelf-show true", "0",
-		"true  true", "false Archive · Filter 2 true", "grid",
+		"true  true", "false Archive · Filter 2 true", "true", "grid",
 		"block 1 0 0 16 2", "none 0 1 0 16 2",
 		"true", "none", "grid shelf-hide", "160px 740px 160 740",
 		"520px 740", "0 0 0 0", "200px true", "200px true", "200px true", "320px 320px",
