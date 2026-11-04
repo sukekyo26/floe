@@ -1513,6 +1513,7 @@
       fav: arrange({ ...state, view: 'fav' }).length,
       archived: arrange({ ...state, view: 'archived' }).length,
     };
+    $('count').textContent = t('ui_list_head', counts.new);
     for (const b of document.querySelectorAll('.views button[data-view]')) {
       b.setAttribute('aria-pressed', String(viewLit(b.dataset.view)));
       b.querySelector('.n').textContent = counts[b.dataset.view];
@@ -2010,7 +2011,6 @@
     const shown = arrange(state);
     // Entries deleted elsewhere leave the selection
     for (const slug of selected) if (!list.some((a) => a.slug === slug)) selected.delete(slug);
-    $('count').textContent = t('ui_list_head', newCount());
     // Empty: at all (how to add one), with all of it archived (the way to them), or of the view
     const empty = list.length === 0;
     $('empty').hidden = !(empty && view === 'all' && !archivedCount);

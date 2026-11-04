@@ -356,7 +356,7 @@ func TestUIShelfMarks(t *testing.T) { //nolint:paralleltest // the browser tests
 }
 
 // TestUIShelfCounts: each part of the shelf counts what the other parts, the view and the search leave, its own part let go; the
-// views take the picks and the search, All the search alone; a row at 0 stays where it is, and the bar counts all there is.
+// views take the picks and the search, All the search alone; a row at 0 stays where it is; the head says what the view of the unread does, and the bar counts all there is.
 func TestUIShelfCounts(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -386,8 +386,11 @@ func TestUIShelfCounts(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, at("/?view=fav&kind=link&q=alpha"))
 	// A kind narrows the projects, as a project does the kinds.
 	out = append(out, at("/?kind=link"))
-	// The bar and the head count all there is.
-	out = append(out, b.eval("document.getElementById('news-n').textContent + ' / ' + document.getElementById('count').textContent"))
+	// The bar counts all there is; the head says what the view of the unread does.
+	const unread = "document.getElementById('news-n').textContent + ' / ' + document.getElementById('count').textContent + ' / ' + document.querySelector('.views [data-view=new] .n').textContent"
+	out = append(out, b.eval(unread))
+	b.navigate("/?project=floe")
+	out = append(out, b.eval(unread))
 	// A read row that stays on the view of the unread is not counted.
 	b.navigate("/?view=new")
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((x) => x.slug === 'a' ? { ...x, news: undefined } : x)); drawn = ''; load()")
@@ -420,7 +423,8 @@ func TestUIShelfCounts(t *testing.T) { //nolint:paralleltest // the browser test
 		"new:2 all:2 fav:1 archived:0 / floe:1 p:1 / page:2 link:0 / design:0 report:2 / x:1",
 		"new:0 all:2 fav:0 archived:0 / p:0 / page:1 link:0 / report:0 / ",
 		"new:0 all:4 fav:0 archived:0 / floe:1 p:1 / page:2 link:2 / design:2 report:0 / x:0",
-		"2 unread / Newest first · 2 unread",
+		"2 unread / Newest first · 0 unread / 0",
+		"2 unread / Newest first · 1 unread / 1",
 		"2 1",
 		"true 0 false",
 		"0 true false true",
