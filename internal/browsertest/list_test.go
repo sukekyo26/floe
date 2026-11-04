@@ -85,7 +85,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.until("the page to close", "!document.querySelector('#list li[data-slug=n]')")
 	out = append(out, b.eval(reader))
 
-	// The view of the new: a row read stays on it, as a ring, and j goes on from it; picked again, it goes.
+	// The view of the new: a row read stays on it, as a ring, and j goes on from it; the view let go, it is gone on the way back.
 	b.stub(listList)
 	b.eval("document.querySelector('.views [data-view=new]').click()")
 	out = append(out, b.eval("[...document.querySelectorAll('#list > li:not(.group)')].map((li) => li.dataset.slug).join('') + ' ' + location.search"))
@@ -96,7 +96,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.eval("document.querySelector('#list li[data-slug=v] .title').focus()")
 	key("j")
 	out = append(out, b.eval("document.activeElement.textContent"))
-	b.eval("document.querySelector('.views [data-view=new]').click()")
+	b.eval("document.querySelector('.views [data-view=new]').click(); document.querySelector('.views [data-view=new]').click()")
 	out = append(out, b.eval("[...document.querySelectorAll('#list > li:not(.group)')].map((li) => li.dataset.slug).join('')"))
 	// None new: the list says so.
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => ({ ...a, news: undefined }))); load()")
@@ -206,6 +206,87 @@ func asideSite(t *testing.T) *site {
 		s.floe(t, "publish", s.page(t, "aside/"+slug+".yaml", slug, "<p id=\"p\">"+slug+"</p>"), "--slug", slug)
 	}
 	return s
+}
+
+// TestUIViewLit: All is lit with no view and no picks, whatever the search; a pick puts it out. Unlit, All lets go of the view
+// and the picks, lit it does nothing; a view lit lets go of itself alone. A reload lights the same, and two columns do the same.
+func TestUIViewLit(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.stub(`[{ slug: 'a', title: 'A', description: '', news: 'new', project: 'floe', template: 'report', tags: ['x'], createdAt: at(1), updatedAt: at(9) },
+		{ slug: 'b', title: 'B', description: '', project: 'floe', createdAt: at(1), updatedAt: at(8) },
+		{ slug: 'c', title: 'C', description: '', news: 'new', project: 'p', createdAt: at(1), updatedAt: at(7) },
+		{ slug: 'd', title: 'D', description: '', project: 'p', favorite: true, createdAt: at(1), updatedAt: at(6) },
+		{ slug: 'e', title: 'E', description: '', project: 'floe', archived: true, createdAt: at(1), updatedAt: at(5) }]`)
+	b.navigate("/")
+	b.size(1440, 900, false)
+	// What is lit, the rows, the URL and the search.
+	const state = `[[...document.querySelectorAll('.views button[aria-pressed=true], #shelf-more .chip[aria-pressed=true]')].map((c) => c.dataset.view ?? c.dataset.project ?? c.dataset.kind ?? c.dataset.template ?? c.dataset.tag).join('+'),
+		[...document.querySelectorAll('#list > li:not(.group)')].map((li) => li.dataset.slug).sort().join(''), location.search, document.getElementById('q').value].join(' | ')`
+	press := func(selector string) string {
+		b.eval("document.querySelector('" + selector + "').click()")
+		return b.eval(state)
+	}
+	const (
+		all   = ".views [data-view=all]"
+		fresh = ".views [data-view=new]"
+		floe  = "#chips [data-project=floe]"
+	)
+	want := make([]string, 0, 16)
+	out := make([]string, 0, 16)
+	step := func(got, expect string) {
+		out = append(out, got)
+		want = append(want, expect)
+	}
+	step(b.eval(state), "all | abcd |  | ")
+	step(press(floe), "floe | ab | ?project=floe | ")
+	// Unlit, All lets go of the picks.
+	step(press(all), "all | abcd |  | ")
+	// A view and a project narrow together; the view lit lets go of itself alone.
+	press(fresh)
+	step(press(floe), "new+floe | a | ?view=new&project=floe | ")
+	b.navigate("/?view=new&project=floe")
+	step(b.eval(state), "new+floe | a | ?view=new&project=floe | ")
+	step(press(fresh), "floe | ab | ?project=floe | ")
+	press(".views [data-view=fav]")
+	step(press(".views [data-view=fav]"), "floe | ab | ?project=floe | ")
+	press(".views [data-view=archived]")
+	step(press(".views [data-view=archived]"), "floe | ab | ?project=floe | ")
+	// Unlit, All lets go of a view and every kind of pick, and a reload lights it.
+	b.navigate("/?view=fav&project=p&kind=page")
+	step(press(all), "all | abcd |  | ")
+	b.navigate("/?template=report&tag=x")
+	step(b.eval(state), "report+x | a | ?template=report&tag=x | ")
+	step(press(all), "all | abcd |  | ")
+	b.navigate("/")
+	step(b.eval(state), "all | abcd |  | ")
+	// The search stays, and All stays lit with it.
+	b.eval("(() => { const q = document.getElementById('q'); q.value = 'A'; q.dispatchEvent(new Event('input')); })()")
+	step(b.eval(state), "all | a | ?q=A | A")
+	press(floe)
+	step(press(all), "all | a | ?q=A | A")
+	// Lit, All does nothing: not even to the selection.
+	step(b.eval("selected.add('a'); document.querySelector('"+all+"').click(); selected.has('a')"), "true")
+	// The way out of no match keeps the view, and clears the search and the picks.
+	b.navigate("/?view=fav&project=p&q=none")
+	step(press("#clear"), "fav | d | ?view=fav | ")
+
+	// Two columns: the picks are in a dialog, and the button to it, with their number, is lit for them.
+	b.navigate("/?project=floe&tag=x")
+	b.size(900, 800, false)
+	const narrow = `[...document.querySelectorAll('.views button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.view).join('+') + ' | ' +
+		document.getElementById('narrow-filter').classList.contains('narrowed') + ' | ' + document.getElementById('narrow-filter-name').textContent`
+	step(b.eval(narrow), " | true | Filter 2")
+	b.eval("document.querySelector('" + all + "').click()")
+	step(b.eval(narrow), "all | false | Filter")
+	b.eval("document.querySelector('" + fresh + "').click()")
+	b.eval("document.getElementById('narrow-filter').click(); document.querySelector('" + floe + "').click(); document.getElementById('filter-dialog').close()")
+	step(b.eval(narrow), "new | true | Filter 1")
+	b.eval("document.querySelector('" + fresh + "').click()")
+	step(b.eval(narrow), " | true | Filter 1")
+	b.eval("document.querySelector('" + all + "').click()")
+	step(b.eval(narrow), "all | false | Filter")
+	check(t, "lit", out, strings.Join(want, "|"))
 }
 
 // floeRead is reads.json of the site's store.

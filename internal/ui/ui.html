@@ -492,8 +492,8 @@
     .shelf .views .dot, .shelf .views .ring { display: none; }
     .shelf .views [data-view="fav"] .label { display: none; }
     .shelf .views [data-view="archived"] .n { display: none; }
-    .shelf .views button[aria-pressed="true"] { color: var(--on-ink); background: var(--ink); border-color: var(--ink); box-shadow: none; }
-    .shelf .views button[aria-pressed="true"] .n { color: var(--on-ink); }
+    .shelf .views button[aria-pressed="true"], #narrow-filter.narrowed { color: var(--on-ink); background: var(--ink); border-color: var(--ink); box-shadow: none; }
+    .shelf .views button[aria-pressed="true"] .n, #narrow-filter.narrowed svg { color: var(--on-ink); }
     .shelf .views button .n { margin-left: 0; }
     #narrow-filter { display: inline-flex; }
     .news { display: none; }
@@ -848,7 +848,7 @@
   });
   // What an entry is: a folder's link, any other link (by absolute path), or a stored page
   const kindOf = (a) => (a.folder ? 'folder' : a.path ? 'link' : 'page');
-  // The pages of the view "new" seen since it was picked: read, they stay on it, as a dot gone, until it is picked again or the page reloads
+  // The pages of the view "new" seen since it was picked: read, they stay on it, as a dot gone, until the view is let go or picked anew, or the page reloads
   const newSeen = new Set();
   // The entries of a view: the archived on the archive's alone. Every count and list goes through this
   const inView = (a, state) => Boolean(a.archived) === (state.view === 'archived')
@@ -1047,6 +1047,16 @@
   }
 
   const setView = (value) => refilter({ view: value });
+  const NO_PICKS = { kind: '', template: '', project: '', tag: '' };
+  // How many of the shelf's picks narrow the list
+  const picksOn = () => [kind, template, project, tag].filter(Boolean).length;
+  // Whether a view's button is lit: All is no view and no picks, whatever the search, which the bar shows
+  const viewLit = (value) => value === view && (value !== 'all' || picksOn() === 0);
+  // A press of a view's button: lit, a view lets go of itself and All does nothing; unlit, All lets go of the view and the picks
+  function pressView(value) {
+    if (value !== 'all') setView(value === view ? 'all' : value);
+    else if (!viewLit('all')) refilter({ view: 'all', ...NO_PICKS });
+  }
   const setTag = (value) => refilter({ tag: value });
   // What is picked of a part of the shelf, picked again, is let go
   const picker = (name, now) => (value) => refilter({ [name]: value === now() ? '' : value });
@@ -1483,12 +1493,14 @@
     const counts = Object.fromEntries(['all', 'fav', 'archived'].map((v) => [v, items.filter((a) => inView(a, { view: v })).length]));
     counts.new = newCount();
     for (const b of document.querySelectorAll('.views button[data-view]')) {
-      b.setAttribute('aria-pressed', String(b.dataset.view === view));
+      b.setAttribute('aria-pressed', String(viewLit(b.dataset.view)));
       b.querySelector('.n').textContent = counts[b.dataset.view];
     }
     // How many picks narrow the list, which the row of views does not show
-    const narrowed = [kind, template, project, tag].filter(Boolean).length;
+    const narrowed = picksOn();
     $('narrow-filter-name').textContent = narrowed ? t('ui_narrow_n', narrowed) : t('ui_narrow');
+    // Where the picks are in a dialog, this is what is lit of them
+    $('narrow-filter').classList.toggle('narrowed', narrowed > 0);
     // The filters folded, the head says what they narrow the list to: the view, and how many picks
     const what = [view === 'all' ? '' : t(VIEW_WORDS[view]), narrowed ? t('ui_narrow_n', narrowed) : ''].filter(Boolean).join(' · ');
     $('shelf-what').textContent = what;
@@ -2592,7 +2604,7 @@
     };
     $('add-open').addEventListener('click', openAdd);
     $('add-empty').addEventListener('click', openAdd);
-    for (const b of document.querySelectorAll('.views button[data-view]')) b.addEventListener('click', () => setView(b.dataset.view));
+    for (const b of document.querySelectorAll('.views button[data-view]')) b.addEventListener('click', () => pressView(b.dataset.view));
     $('show-archived').addEventListener('click', () => setView('archived'));
     layoutColumns();
     addEventListener('resize', layoutColumns);
@@ -2657,7 +2669,7 @@
     });
     $('clear').addEventListener('click', () => {
       $('q').value = '';
-      refilter({ kind: '', template: '', project: '', tag: '' });
+      refilter(NO_PICKS);
     });
     // Moving between rows focuses the title link and opens its page beside the list; a folder and a directory open with Enter, as a
     // press. A tree's note (empty, cut, unread) has nothing to focus, and is passed over

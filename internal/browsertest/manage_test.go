@@ -444,7 +444,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(order)+" "+b.eval("location.search"))
 	b.navigate("/?template=report&kind=link&view=fav&tab=links&sort=title&page=3")
 	out = append(out, b.eval("[view, kind, template].join(' ')"))
-	b.eval("document.querySelector('.views [data-view=all]').click(); document.querySelector('#kinds [data-kind=link]').click(); document.querySelector('#templates [data-template=report]').click()")
+	b.eval("document.querySelector('.views [data-view=fav]').click(); document.querySelector('#kinds [data-kind=link]').click(); document.querySelector('#templates [data-template=report]').click()")
 	out = append(out, b.eval(order)+" "+b.eval("location.search"))
 	// A project's dot is of its color by projectOrder: as many each, by name.
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
