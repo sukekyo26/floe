@@ -1734,6 +1734,7 @@
     const open = box.querySelector('.open');
     open.href = rawHref({ slug: a.slug, file });
     open.hidden = Boolean(a.missing || a.folder && !file);
+    open.setAttribute('aria-label', t('ui_open_raw_named', file ? baseName(file) : a.title));
     box.querySelector('.more-slot').replaceChildren(...(file ? [] : [moreMenu(a)]));
   }
 

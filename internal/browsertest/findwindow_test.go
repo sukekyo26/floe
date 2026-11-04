@@ -1020,7 +1020,7 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, b.eval("window.starred + ' ' + location.pathname"))
 	// The button that opens a page keeps the focus; on a folder, which has none to open, the focus goes to the field. The rows run to the folder as z, f.
 	b.eval("document.querySelector('#find-actions .open').focus()")
-	out = append(out, press(kb.ArrowDown))
+	out = append(out, press(kb.ArrowDown), b.eval("document.querySelector('#find-actions .open').getAttribute('aria-label')"))
 	out = append(out, press(kb.ArrowDown))
 	// From the close button too.
 	b.eval("document.querySelector('#find [data-close]').focus()")
@@ -1048,13 +1048,17 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 	// The rows gone with the focus on the star, it goes to the field.
 	b.eval("closeMenus(null); document.querySelector('#find-actions .star').focus(); items.length = 0; drawFind()")
 	out = append(out, b.eval("document.activeElement.id"))
+	// The bar of a whole page says the same of its button.
+	b.navigate("/a/a/")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	out = append(out, b.eval("document.querySelector('#frame-actions .open').getAttribute('aria-label')"))
 	check(t, "arrows", out, strings.Join([]string{
 		"find-1 / icon-btn star / Add Beta to favorites", "find-0 / icon-btn star / Add Alpha plan to favorites", "find-4 / icon-btn star / Add Zed plan to favorites",
 		"find-1 / icon-btn star / Add Beta to favorites", "1 /",
-		"find-2 / icon-btn open / Add Gamma plan to favorites", "find-3 / find-q / Add Folder to favorites",
+		"find-2 / icon-btn open / Add Gamma plan to favorites", "Open Gamma plan alone in a new tab", "find-3 / find-q / Add Folder to favorites",
 		"find-2 / btn / Add Gamma plan to favorites", "find-1 / find-q / Add Beta to favorites",
 		"find-1 / icon-btn / Add Beta to favorites", "true", "find-1 / icon-btn edit / Add Beta to favorites", "true",
 		"find-2 / icon-btn star / Add Gamma plan to favorites", "find-3 / icon-btn star / Add Folder to favorites",
-		"find-q",
+		"find-q", "Open Alpha plan alone in a new tab",
 	}, "|"))
 }
