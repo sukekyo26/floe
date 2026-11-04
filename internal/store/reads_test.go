@@ -395,6 +395,10 @@ func TestMarkReadNewer(t *testing.T) {
 		t.Errorf("made again: %+v", got)
 	}
 
+	if err := s.MarkRead(viewer, "none", 1, "x"); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("no page: %v", err)
+	}
+
 	// None to write: no lock, which another holds.
 	holdLock(t, root)
 	done := make(chan error, 1)
@@ -413,10 +417,6 @@ func TestMarkReadNewer(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Error("a mark that changes nothing waited for the lock")
 	}
-
-	if err := s.MarkRead(viewer, "none", 1, "x"); !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("no page: %v", err)
-	}
 }
 
 // What was read follows the slug in a rename and goes with the page, and the key of a page gone goes when another takes
@@ -425,7 +425,7 @@ func TestReadsFollow(t *testing.T) {
 	t.Parallel()
 
 	s, root := newStore(t)
-	writeReads(t, root, `{"local":{"since":"`+hour(1)+`","pages":{"pv":{"n":1,"at":"a"},"pv-old":{"n":2,"at":"b"},"gone":{"n":3,"at":"c"}}}}`)
+	writeReads(t, root, `{"local":{"since":"`+hour(1)+`","pages":{"pv":{"n":1,"at":"a"},"pv-old":{"n":2,"at":"b"},"gone":{"n":3,"at":"c"},"left":{"n":4,"at":"d"}}}}`)
 	made(t, s, root, "pv", 2, 2)
 	made(t, s, root, "pv-old", 2, 2)
 	pages := func() []string {
@@ -448,21 +448,21 @@ func TestReadsFollow(t *testing.T) {
 	if _, err := s.Edit("pv", store.Edit{Title: ptr("t")}); err != nil {
 		t.Fatal(err)
 	}
-	check("not renamed", "gone=3", "pv-old=2", "pv=1")
+	check("not renamed", "gone=3", "left=4", "pv-old=2", "pv=1")
 	if _, err := s.Edit("pv", store.Edit{Slug: ptr("pv2")}); err != nil {
 		t.Fatal(err)
 	}
-	check("renamed", "gone=3", "pv-old=2", "pv2=1")
+	check("renamed", "gone=3", "left=4", "pv-old=2", "pv2=1")
 	if _, err := s.Edit("pv2", store.Edit{Slug: ptr("gone")}); err != nil {
 		t.Fatal(err)
 	}
-	check("onto the key of a page gone", "gone=1", "pv-old=2")
+	check("onto the key of a page gone", "gone=1", "left=4", "pv-old=2")
 
 	made(t, s, root, "fresh", 2, 2)
-	if _, err := s.Edit("fresh", store.Edit{Slug: ptr("other")}); err != nil {
+	if _, err := s.Edit("fresh", store.Edit{Slug: ptr("left")}); err != nil {
 		t.Fatal(err)
 	}
-	check("none to move", "gone=1", "pv-old=2")
+	check("none to move, onto the key of a page gone", "gone=1", "pv-old=2")
 
 	if os.Geteuid() != 0 { // root removes what a mode keeps
 		dir := filepath.Join(root, "gone")
