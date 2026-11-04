@@ -221,7 +221,8 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#list li[data-slug=a] .edit').click()")
 	out = append(out, b.eval("[document.getElementById('edit-dialog').open, document.getElementById('edit-desc').value].join(' ')"))
 	b.eval("document.getElementById('edit-desc').value = 'new'; document.getElementById('edit').requestSubmit()")
-	b.until("the edit modal to close", "!document.getElementById('edit-dialog').open")
+	// Closed, the focus goes back to the row's menu button, as the dialog's close event comes.
+	b.until("the edit modal to close", "!document.getElementById('edit-dialog').open && document.activeElement.matches('#list li[data-slug=a] summary')")
 	out = append(out, b.eval("calls.splice(0).join(',')"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_saved"))+")"))
 	// Only linked files have a copy button for their path.
@@ -834,8 +835,9 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.navigate("/")
 	b.size(1440, 900, false)
 	const place = "['.shelf', '.reader', '.lhead'].map((s) => document.querySelector(s).getBoundingClientRect().top).join(' ')"
-	out := []string{b.eval("document.getElementById('listcol').scrollHeight > document.getElementById('listcol').clientHeight"),
-		b.eval("document.documentElement.scrollHeight === innerHeight")}
+	out := make([]string, 0, 5)
+	out = append(out, b.eval("document.getElementById('listcol').scrollHeight > document.getElementById('listcol').clientHeight"),
+		b.eval("document.documentElement.scrollHeight === innerHeight"))
 	long := b.eval(place)
 	b.eval("document.getElementById('listcol').scrollTo(0, 300)")
 	b.until("the list to scroll", "document.getElementById('listcol').scrollTop === 300")
@@ -917,7 +919,8 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 	case width == 0:
 		t.Fatal("Chrome draws no scrollbar: the flag hide-scrollbars of startChrome no longer works")
 	}
-	out := []string{sb, b.eval("document.documentElement.scrollWidth === innerWidth && document.documentElement.scrollHeight === innerHeight")}
+	out := make([]string, 0, 3)
+	out = append(out, sb, b.eval("document.documentElement.scrollWidth === innerWidth && document.documentElement.scrollHeight === innerHeight"))
 	// The server's list for the frames.
 	b.unstub()
 	// The frame makes its URLs of the slug escaped again: one read from /a/x%3Fy/ is x?y. No page of it: its way to look for one.
