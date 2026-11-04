@@ -837,9 +837,9 @@ func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("openFind()")
 	out = append(out, fmt.Sprint(b.settled(shape) == want))
 	b.eval("document.getElementById('find').close()")
-	// The menu goes up from the foot, within the modal and the screen, down to the low screen its limit names.
+	// The menu goes up from the foot, within the modal and the screen, and the rows stay as wide as the field with their scrollbar on the lower.
 	const menu = `(() => { const r = (e) => e.getBoundingClientRect(), m = r(document.querySelector('#find-actions .menu')), d = r(document.getElementById('find')), o = r(document.querySelector('#find-actions summary'));
-		return [m.bottom <= o.top, m.top >= d.top, m.top >= 0, m.left >= d.left, m.right <= d.right].join(' '); })()`
+		return [m.bottom <= o.top, m.top >= d.top, m.top >= 0, m.left >= d.left, m.right <= d.right, Math.abs(r(document.querySelector('#find-list li')).right - r(document.getElementById('find-q')).right) < 1].join(' '); })()`
 	for _, h := range []int64{620, 400} {
 		b.size(1000, h, false)
 		b.navigate("/")
@@ -852,7 +852,7 @@ func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests
 		"true", "middle", "true", "true true true true", "true", "true true hidden 0 found",
 		"true", "16", "true", "true true true false", "true", "true true hidden 0 found",
 		"true", "true",
-		"true true true true true", "true true true true true",
+		"true true true true true true", "true true true true true true",
 	}, "|"))
 
 	// The filters on a low screen: the rows scroll, the foot stays, the focus on the first row.
