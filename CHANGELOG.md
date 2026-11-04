@@ -304,8 +304,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Refuse a diagram's empty `title` (`title: ""`, or `{ en: "", ja: … }`): it told a reader who cannot see the diagram
-  nothing (`aria-label=""`).
+- Refuse a diagram's `title` empty in any language (`title: ""`, `{ en: "", ja: … }`, `{ en: …, ja: "" }`): it told a
+  reader who cannot see the diagram nothing (`aria-label=""`).
 - Refuse an empty label in a diagram (`label: ""`, the `text` of the part `label`, or `{ en: "", ja: … }`), in the
   parts `edge`, `bar`, `icon`, `frame` and `label` and a graph's edges and groups. All but a frame's took room, and
   unless plain drew an empty box. For no label, leave the key out. A tick's empty text is still a mark alone.

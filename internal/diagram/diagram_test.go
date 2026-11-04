@@ -279,7 +279,7 @@ func TestLayoutMistakes(t *testing.T) {
 			"  - frame: { x: 10, y: 10, w: 250, h: 150 }\n  - frame: { x: 300, y: 100, w: 150, h: 40 }\n  - box: { x: 0, y: 140, w: 80, h: 40, rows: [A] }",
 			"s.yaml:6:5: frame 300,100 150x40 sticks out of the 400x200 canvas\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150",
 		},
-		// A label's text is empty in no language, wherever a key takes one; other text may be.
+		// A label's text is empty in no language, wherever a key takes one; rows and a table's title may be.
 		{"  - box: { name: a, x: 10, y: 30, w: 60, h: 30, rows: [a] }\n  - edge: { from: a, to: [200, 45], label: \"\" }", "s.yaml:6:44: minLength: got 0, want 1"},
 		{"  - box: { name: a, x: 10, y: 30, w: 60, h: 30, rows: [a] }\n  - edge: { from: a, to: [200, 45], label: { en: \"\", ja: あ } }", "s.yaml:6:50: minLength: got 0, want 1"},
 		{"  - edge: { from: [10, 45], to: [200, 45], label: { en: a, ja: \"\" } }", "s.yaml:5:64: minLength: got 0, want 1"},
