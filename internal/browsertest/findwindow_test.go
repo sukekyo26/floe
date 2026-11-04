@@ -955,8 +955,8 @@ func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests 
 	}
 	out = append(out, b.eval("document.activeElement.matches('#find-actions .star')"))
 	b.eval("document.getElementById('find-q').focus()")
-	// The words of an error can be selected.
-	out = append(out, b.eval("document.getElementById('error').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))"))
+	// The words of an error can be selected, and a link keeps its own press.
+	out = append(out, b.eval("['#error', '#find-list a'].every((e) => document.querySelector(e).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })))"))
 	// What can be pressed takes the press: the star and the menu their focus, and a row opens.
 	x, y = at("(() => { const r = document.querySelector('#find-actions .star').getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()")
 	b.click(x, y)
