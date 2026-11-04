@@ -417,6 +417,24 @@ func TestLayoutMistakes(t *testing.T) {
 	}
 }
 
+// A diagram's title is empty in no language; one of spaces alone passes, as draw's LIMIT says.
+func TestTitleNotEmpty(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ title, want string }{
+		{`""`, "s.yaml:1:8: minLength: got 0, want 1"},
+		{`{ en: "", ja: あ }`, "s.yaml:1:14: minLength: got 0, want 1"},
+		{`{ en: a, ja: "" }`, "s.yaml:1:21: minLength: got 0, want 1"},
+		{`" "`, ""},
+		{"T", ""},
+	} {
+		src := "title: " + c.title + "\nwidth: 200\nheight: 80\nparts:\n  - box: { x: 10, y: 10, rows: [a] }\n"
+		if _, got := draw(t, src, render("en")); got != c.want {
+			t.Errorf("title %s:\n  told %q\n  want %q", c.title, got, c.want)
+		}
+	}
+}
+
 type failing struct{ err error }
 
 func (f failing) Lookup(string) ([]byte, error) {
