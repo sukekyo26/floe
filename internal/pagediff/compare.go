@@ -260,8 +260,8 @@ func numbered(a, b []string) (runesA, runesB []rune, ok bool) {
 	number := func(keys []string) ([]rune, bool) {
 		runes := make([]rune, len(keys))
 		for i, key := range keys {
-			r, ok := ids[key]
-			if !ok {
+			r, known := ids[key]
+			if !known {
 				if len(ids) >= mostRunes {
 					return nil, false
 				}

@@ -35,7 +35,8 @@ var (
 	// meter is the words for a browser that cannot draw it, which the part says beside it.
 	unread = names("head script style template noscript nav button progress meter input")
 	// Elements that stand on their own, as HTML draws them by default.
-	blockNames = names(`html body address article aside blockquote caption details dd div dl dt fieldset figcaption figure footer
+	blockNames = names(`html body address article aside blockquote caption details dd div dl dt fieldset figcaption
+		figure footer
 		form header hr label li main menu ol p section summary table tbody tfoot thead ul`)
 	// Elements that mark words within a line: other elements between words are apart, as parts lay out their spans side by
 	// side.
