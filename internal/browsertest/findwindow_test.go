@@ -160,7 +160,8 @@ func TestUIFindCut(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.stub("Array.from({ length: 51 }, (_, i) => ({ slug: 's' + i, title: 'T' + i, description: '', createdAt: at(1), updatedAt: at(9) }))")
 	b.navigate("/")
 	keyDown(b, "key: 'k', ctrlKey: true")
-	out := []string{b.eval("document.querySelectorAll('#find-list li').length + ' ' + document.getElementById('find-cut').textContent")}
+	out := make([]string, 0, 2)
+	out = append(out, b.eval("document.querySelectorAll('#find-list li').length + ' ' + document.getElementById('find-cut').textContent"))
 	b.stub("Array.from({ length: 50 }, (_, i) => ({ slug: 's' + i, title: 'T' + i, description: '', createdAt: at(1), updatedAt: at(9) }))")
 	b.navigate("/")
 	keyDown(b, "key: 'k', ctrlKey: true")
@@ -278,7 +279,8 @@ func TestUIFindTouch(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.navigate("/")
 	acts := "getComputedStyle(document.getElementById('find-acts')).display"
 	keyDown(b, "key: 'k', ctrlKey: true")
-	out := []string{b.eval(acts)}
+	out := make([]string, 0, 2)
+	out = append(out, b.eval(acts))
 	touch := func(on bool) {
 		if _, err := chromedp.Call(b.ctx, emulation.SetTouchEmulationEnabled, emulation.SetTouchEmulationEnabledParams{Enabled: on, MaxTouchPoints: 1}); err != nil {
 			t.Fatal(err)
@@ -383,7 +385,8 @@ func TestUIBulkBar(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		{ slug: 'a', title: 'A', description: '', createdAt: at(1), updatedAt: at(7) }]`)
 	b.navigate("/")
 	b.size(1440, 900, false)
-	out := []string{bulkFits(b, 320, "a"), bulkFits(b, 320, "l", "k"), bulkFits(b, 500, "l", "k")}
+	out := make([]string, 0, 5)
+	out = append(out, bulkFits(b, 320, "a"), bulkFits(b, 320, "l", "k"), bulkFits(b, 500, "l", "k"))
 	const looks = `(() => { const d = getComputedStyle(document.getElementById('bulk-delete')), h = getComputedStyle(document.querySelector('.lhead'));
 		return [d.backgroundColor, d.color, h.backgroundColor, getComputedStyle(document.getElementById('bulk')).boxShadow, document.querySelectorAll('#bulk .btn:not(.clear) svg').length].join(' / '); })()`
 	out = append(out, b.settled(looks))
@@ -512,11 +515,26 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 		do, arg, k string
 		mods       int64
 	}{
-		{"", "", "j", 0}, {"", "", "k", 0}, {"", "", "/", 0}, {"", "", "k", 2}, {"", "", "k", 4},
-		{"focus", "'c'", "j", 0}, {"focus", "'r'", "j", 0}, {"focus", "'f'", "j", 0},
-		{"focus", "'t'", "j", 0}, {"focus", "'t'", "k", 2}, {"focus", "'a'", "j", 0}, {"focus", "'s'", "j", 0}, {"focus", "'e'", "j", 0},
-		{"design", "0", "j", 0}, {"stop", "0", "j", 0},
-		{"", "", "f", 0}, {"", "", "x", 0}, {"", "", "j", 2}, {"", "", "k", 1}, {"", "", "K", 2 | 8},
+		{"", "", "j", 0},
+		{"", "", "k", 0},
+		{"", "", "/", 0},
+		{"", "", "k", 2},
+		{"", "", "k", 4},
+		{"focus", "'c'", "j", 0},
+		{"focus", "'r'", "j", 0},
+		{"focus", "'f'", "j", 0},
+		{"focus", "'t'", "j", 0},
+		{"focus", "'t'", "k", 2},
+		{"focus", "'a'", "j", 0},
+		{"focus", "'s'", "j", 0},
+		{"focus", "'e'", "j", 0},
+		{"design", "0", "j", 0},
+		{"stop", "0", "j", 0},
+		{"", "", "f", 0},
+		{"", "", "x", 0},
+		{"", "", "j", 2},
+		{"", "", "k", 1},
+		{"", "", "K", 2 | 8},
 	} {
 		out = append(out, press("frame", c.do, c.arg, c.k, c.mods))
 	}
