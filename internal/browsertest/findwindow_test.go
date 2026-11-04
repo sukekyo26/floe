@@ -263,7 +263,7 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.navigate("/a/c/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	keyDown(b, "key: 'k', ctrlKey: true")
-	out = append(out, b.eval("[getComputedStyle(document.getElementById('find-actions')).display !== 'none', getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
+	out = append(out, b.eval("[getComputedStyle(document.getElementById('find-actions')).display !== 'none', getComputedStyle(document.querySelector('#frame-actions .star')).display].join(' ')"))
 	b.size(1440, 900, false)
 	// From a whole page: a delete of another page stays there, the focus going to the field.
 	b.navigate("/a/c/")
