@@ -351,7 +351,8 @@ func TestUIDiffToc(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	const grip = "document.getElementById('diff-toc-grip')"
 	const state = "[" + grip + ".getAttribute('aria-valuenow'), " + grip + ".getAttribute('aria-valuemin'), " + grip + ".getAttribute('aria-valuemax'), document.querySelector('.dtoc').offsetWidth, Math.round(" + grip + ".getBoundingClientRect().left + 3), Math.round(document.getElementById('diff-body').getBoundingClientRect().left)].join(' ')"
 	const kept = "localStorage.getItem('diff.toc')"
-	out := []string{b.eval(state), b.eval(kept + " ?? 'none kept'")}
+	out := make([]string, 0, 20)
+	out = append(out, b.eval(state), b.eval(kept+" ?? 'none kept'"))
 
 	drag := func(to float64) {
 		t.Helper()

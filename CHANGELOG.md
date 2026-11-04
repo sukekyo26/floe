@@ -9,7 +9,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Add what changed between two versions of a stored page to the management page: by the words under each heading, side by side, all
-  together or the changes alone, with the two versions to choose, contents, and `n` `p` to go through the changes. `Diff` over a page
+  together or the changes alone, with the two versions to choose, contents to resize or hide, and `n` `p` to go through the changes. `Diff` over a page
   and `d` open it; a page newly at another version says how many sections changed since the one read. Opening it marks nothing read.
   A page's HTML is never brought in: the server reads each version into words, which the page writes as text.
 - Add `icon: { name, icon, label }` to the nodes of a diagram's `graph`, so that an architecture diagram with icons, an AWS one say, needs no coordinate but the graph's `x` and `y`. An icon has no box round it and stays 48 square; the n edges at a side of it end at the points that part the side into n+1 equal parts. A `group` or a lane takes an `icon` too, in its frame's corner. `floe diagram example aws-graph` shows them.
