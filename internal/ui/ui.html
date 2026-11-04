@@ -470,8 +470,9 @@
   .find-list[hidden] { display: none; }
   .find-list li {
     position: relative; display: grid; grid-template-columns: 1.1rem minmax(0, 1fr) auto; grid-template-areas: "lead title time" ". sub sub";
-    column-gap: 0.55rem; row-gap: 0.1rem; align-items: center; padding: 0.45rem 0.6rem; border-radius: calc(var(--corner-menu) - var(--menu-pad));
+    column-gap: 0.55rem; row-gap: 0.1rem; align-items: center; padding: 0.45rem 0.6rem; border: 0; border-radius: calc(var(--corner-menu) - var(--menu-pad)); animation: none;
   }
+  .find-list li::before, .find-list li::after { content: none; }
   .find-list li.reached { background: var(--sel); }
   .find-list .lead { grid-area: lead; display: grid; place-items: center; color: var(--muted); }
   .find-list .lead svg { width: 14px; height: 14px; }
