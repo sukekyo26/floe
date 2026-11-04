@@ -175,7 +175,7 @@ func TestServedKeys(t *testing.T) {
 		link := server.Link{Path: filepath.Join(e.home, "proj", name)} //nolint:exhaustruct // the rest not given
 		want(t, e.write(t, http.MethodPost, "/api/artifacts", link), http.StatusCreated, `"slug":"`)
 	}
-	const letters = "['j', 'k', 'h', '?', '/']"
+	const letters = "['j', 'k', 'h', 'd', '?', '/']"
 	for path, drawn := range map[string]bool{"/a/d/?raw": true, "/a/l/?raw": true, "/a/h/?raw": false, "/a/docs/a.html": false} {
 		body := e.do(t, http.MethodGet, path, "").Body.String()
 		if !strings.Contains(body, "artifactKey: key") || !strings.Contains(body, "artifactKeysWanted") {

@@ -145,7 +145,13 @@ func versionParam(m *store.Meta, rest string, q url.Values) (int, bool) {
 	if m == nil || m.IsLink() || rest != "" || !q.Has("v") {
 		return 0, true
 	}
-	raw := q.Get("v")
+	return versionNumber(q.Get("v"))
+}
+
+// versionNumber reads raw as what can be a version's number: 1 or more, in plain digits. Whether there is such a
+// version is the
+// store's to say.
+func versionNumber(raw string) (int, bool) {
 	n, err := strconv.Atoi(raw)
 	if err != nil || n < 1 || strconv.Itoa(n) != raw {
 		return 0, false
@@ -370,7 +376,7 @@ func tellRead(read *Read) string {
 func tellKeys(drawn bool) string {
 	letters := "[]"
 	if drawn {
-		letters = "['j', 'k', 'h', '?', '/']"
+		letters = "['j', 'k', 'h', 'd', '?', '/']"
 	}
 	return "{const here = location.protocol + '//' + location.host; let wanted = false;" +
 		"window.addEventListener('message', (e) => { if (e.source === window.parent && e.origin === here " +

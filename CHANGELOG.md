@@ -9,6 +9,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Add equal parts for edges written by hand: the n ends on a side of a box, an icon, a table or a frame now stand at the points that part it into n+1 equal parts, instead of all at its middle. An edge running straight stays straight. An edge that would run into something stays in the middle: move a label in the way to part the edges. To branch from one point, write `via` or use a `tree`.
+- Add what changed between two versions of a stored page to the management page: by the words under each heading, side by side, all
+  together or the changes alone, with the two versions to choose, contents to resize or hide, and `n` `p` to go through the changes. `Diff` over a page
+  and `d` open it; a page newly at another version says how many sections changed since the one read. Opening it marks nothing read.
+  A page's HTML is never brought in: the server reads each version into words, which the page writes as text.
 - Add `icon: { name, icon, label }` to the nodes of a diagram's `graph`, so that an architecture diagram with icons, an AWS one say, needs no coordinate but the graph's `x` and `y`. An icon has no box round it and stays 48 square; the n edges at a side of it end at the points that part the side into n+1 equal parts. A `group` or a lane takes an `icon` too, in its frame's corner. `floe diagram example aws-graph` shows them.
 - Add a modal that searches the pages, opened by `Ctrl+K` (`⌘K`) anywhere, by `/` on a page open whole, or by the magnifier on a
   phone's whole page: it searches by title, description, slug, project, path, template and tag, the archived last, opens a row
