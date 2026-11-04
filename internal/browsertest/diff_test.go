@@ -162,7 +162,7 @@ func TestUIDiffURLs(t *testing.T) { //nolint:paralleltest // the browser tests s
 			t.Errorf("%s: text that cannot be read:\n%s", slug, low)
 		}
 		const bar = "document.querySelector('#frame-actions .diff-open')"
-		if got := b.eval(bar + ".hidden + ' ' + " + bar + ".textContent.includes('Close the diff') + ' ' + document.getElementById('frame').hasAttribute('src') + ' ' + document.getElementById('diff-main').hidden"); got != "false true false true" {
+		if got := b.eval(bar + ".hidden + ' ' + " + bar + ".getAttribute('aria-label').includes('Close the diff') + ' ' + document.getElementById('frame').hasAttribute('src') + ' ' + document.getElementById('diff-main').hidden"); got != "false true false true" {
 			t.Errorf("%s: %s", slug, got)
 		}
 		b.pressKey("d")
@@ -211,7 +211,7 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 		out = append(out, b.eval(button+".hidden + ''"))
 	}
 	// Beside the list: the order kept.
-	out = append(out, b.eval(button+".getAttribute('href') + ' ' + "+button+".textContent.includes('Diff')"))
+	out = append(out, b.eval(button+".getAttribute('href') + ' ' + "+button+".getAttribute('aria-label')"))
 	b.eval(strings.ReplaceAll(row, "%s", "e") + ".focus()")
 	b.pressKey("d")
 	b.until("to the diff", "location.pathname === '/a/e/' && location.search === '?diff'")
@@ -253,10 +253,10 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.size(400, 800, false)
 	b.navigate("/a/d/?diff")
 	b.until("what changed narrow", diffShown)
-	out = append(out, b.eval("document.querySelector('[data-diff-view=all]').getAttribute('aria-pressed') + ' ' + getComputedStyle(document.querySelector('.dtoc')).display + ' ' + document.querySelector('#frame-actions .diff-open').innerText"))
+	out = append(out, b.eval("document.querySelector('[data-diff-view=all]').getAttribute('aria-pressed') + ' ' + getComputedStyle(document.querySelector('.dtoc')).display + ' ' + document.querySelector('#frame-actions .diff-open').getAttribute('aria-label') + ' ' + document.querySelector('#frame-actions .diff-open').matches('.closing')"))
 	b.navigate("/a/d/")
 	b.until("its bar narrow", "document.querySelector('#frame-actions .diff-open').offsetWidth > 0")
-	check(t, "ways", out, strings.Join([]string{"true", "true", "false", "/a/e/?diff true", `["e","one"]`, "true none Close"}, "|"))
+	check(t, "ways", out, strings.Join([]string{"true", "true", "false", "/a/e/?diff See what changed (d)", `["e","one"]`, "true none Close the diff (d) true"}, "|"))
 }
 
 // TestUIDiffRead keeps what is shown of one pair: an answer that fails, or has not come, leaves the columns' heads with the words they are
@@ -282,11 +282,11 @@ func TestUIDiffRead(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		b.eval("(() => { const e = document.getElementById('diff-" + name + "'); e.value = " + js(value) + "; e.dispatchEvent(new Event('change')); })()")
 	}
-	const error = "document.getElementById('error')"
+	const failure = "document.getElementById('error')"
 	// It fails: back to the pair shown, in the list and the URL, its words said.
 	b.eval("window.diffRefuse = true")
 	choose("from", "1")
-	b.until("the error", "!"+error+".hidden")
+	b.until("the error", "!"+failure+".hidden")
 	b.eval("document.querySelector('[data-diff-view=all]').click()")
 	b.eval("document.querySelector('[data-diff-view=side]').click()")
 	out := make([]string, 0, 8)
@@ -294,7 +294,7 @@ func TestUIDiffRead(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// The next answer takes the error away.
 	b.eval("window.diffRefuse = false")
 	choose("from", "1")
-	b.until("the error gone", error+".hidden && diffAnswer.from.n === 1")
+	b.until("the error gone", failure+".hidden && diffAnswer.from.n === 1")
 	out = append(out, b.eval(heads))
 	// While an answer is on its way, what is drawn is what was answered.
 	b.eval("window.diffHeld = new Promise((go) => { window.diffGo = go; }); 1")
@@ -420,7 +420,7 @@ func TestUIDiffScrolls(t *testing.T) { //nolint:paralleltest // the browser test
 		for _, view := range []string{"side", "all", "only"} {
 			b.eval("document.querySelector('[data-diff-view=" + view + "]').click()")
 			// Changes only may all fit, with nothing to scroll.
-			if got := b.eval(measure); got != fine && !(view == "only" && strings.HasPrefix(got, "0 0 ")) {
+			if got := b.eval(measure); got != fine && (view != "only" || !strings.HasPrefix(got, "0 0 ")) {
 				t.Errorf("%dx%d %s: %s", size[0], size[1], view, got)
 			}
 		}

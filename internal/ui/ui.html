@@ -121,7 +121,6 @@
   @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 var(--pulse); } 50% { box-shadow: 0 0 0 4px transparent; } }
 
   /* The page of what changed between two versions, and the words over a page that tell it */
-  .word-btn { flex: none; gap: 0; height: 2rem; color: var(--fg); text-decoration: none; padding: 0 0.75rem; font-size: var(--text-small); white-space: nowrap; }
 
   .dnote { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; padding: 0.45rem 1rem; font-size: var(--text-small); color: var(--fg); background: var(--new-soft); border-bottom: 1px solid var(--line); }
   .dnote a { color: var(--new); font-weight: 700; }
@@ -187,7 +186,6 @@
   .diff ins { color: var(--ins); background: var(--ins-mark); text-decoration: none; border-radius: var(--corner-small); }
 
   .dfig { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.5rem; }
-  .narrow-only { display: none; }
   .dtag { flex: none; padding: 0 0.4rem; font-size: var(--text-label); font-weight: 700; color: var(--muted); background: var(--frame-bg); border: 1px solid var(--box-line); border-radius: var(--corner-small); }
   .dfig small { flex-basis: 100%; font-size: var(--text-small); color: var(--muted); }
 
@@ -204,8 +202,6 @@
   @media (max-width: 40rem) {
     .diff:not([hidden]) { display: block; overflow: auto; }
     .dbody { overflow: visible; }
-    .wide-only { display: none; }
-    .narrow-only { display: inline; }
     .dhead { padding: 0.6rem 0.75rem; }
     .dvers, .dver, .dver select { width: 100%; }
     .dver label { flex: none; width: 3.2rem; }
@@ -502,6 +498,9 @@
   .icon-btn[aria-pressed="true"] { color: var(--fg); }
   .icon-btn[aria-pressed="true"] svg { fill: currentColor; }
   .star[aria-pressed="true"] { color: var(--star); }
+  /* The diff open: the button that closes it, in the place of the one that opened it */
+  .diff-open.closing { color: var(--on-ink); background: var(--ink); border-radius: 50%; }
+  .diff-open.closing:hover { color: var(--on-ink); background: var(--ink-hover); }
   .copy .done, .copy.copied > svg { display: none; }
   .copy.copied .done { display: block; color: var(--good); }
   .delete.armed { color: var(--danger); background: var(--danger-soft); border-color: var(--armed-line); font-weight: 650; }
@@ -1016,7 +1015,7 @@
 <!-- The bar over a page, beside the list and in the frame -->
 <template id="page-actions">
   <span class="frame-actions">
-      <a class="btn word-btn diff-open" hidden><span class="wide-only"></span><span class="narrow-only"></span></a>
+      <a class="icon-btn diff-open" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM12 6.5v7M8.5 10h7M8.5 17h7"/></svg></a>
       <button type="button" class="icon-btn star">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
       </button>
@@ -1970,10 +1969,9 @@
     const closing = DIFF && box.id === 'frame-actions';
     open.hidden = !closing && (Boolean(file) || !canDiff(a));
     open.href = closing ? `/a/${a.slug}/` : `/a/${a.slug}/?diff`;
+    open.classList.toggle('closing', closing);
     open.title = t(closing ? 'ui_diff_close_title' : 'ui_diff_title');
-    const [wide, narrow] = open.children;
-    wide.textContent = t(closing ? 'ui_diff_close' : 'ui_diff');
-    narrow.textContent = t(closing ? 'ui_diff_close_short' : 'ui_diff');
+    open.setAttribute('aria-label', open.title);
     // Beside the list, the list's order goes on with j and k; elsewhere the one kept goes on
     open.onclick = box.id === 'read-actions' ? keepOrder : null;
   }
