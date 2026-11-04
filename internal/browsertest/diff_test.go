@@ -259,6 +259,76 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	check(t, "ways", out, strings.Join([]string{"true", "true", "false", "/a/e/?diff See what changed (d)", `["e","one"]`, "true none Close the diff (d) true"}, "|"))
 }
 
+// TestUIDiffClose closes from the button by the three ways to show it: on one line or wrapped, within the window, and what is on top where it
+// is pressed. What has nothing to compare has its own way to the page.
+func TestUIDiffClose(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := diffSite(t)
+	b := s.b
+	const place = `(() => {
+		const r = document.getElementById('diff-close').getBoundingClientRect();
+		const views = document.querySelector('.dviews').getBoundingClientRect();
+		const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+		const page = document.scrollingElement;
+		return [r.width > 0, r.left >= 0 && r.right <= innerWidth, r.top >= views.bottom || (r.left >= views.right && r.top === views.top), top?.id, page.scrollWidth <= innerWidth].join(' ');
+	})()`
+	for _, width := range []int64{1440, 1200, 800, 400} {
+		b.size(width, 800, false)
+		openDiff(b, "/a/d/?diff")
+		if got := b.eval(place); got != "true true true diff-close true" {
+			t.Errorf("at %d: %s", width, got)
+		}
+	}
+	b.eval("document.getElementById('diff-close').click()")
+	b.until("the page", "location.pathname + location.search === '/a/d/' && document.getElementById('frame').hasAttribute('src')")
+
+	b.size(1200, 800, false)
+	b.navigate("/a/one/?diff")
+	b.until("nothing to compare", "!document.getElementById('diff-none').hidden")
+	b.eval("document.getElementById('diff-page').click()")
+	b.until("its page", "location.pathname + location.search === '/a/one/' && document.getElementById('frame').hasAttribute('src')")
+}
+
+// TestUIDiffContents has a section the same as words only in every way to show it, at the place and level of the others: nothing to press,
+// nor to stop at with Tab. A section changed is pressed and brought up.
+func TestUIDiffContents(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	for _, last := range []string{"old", "new"} {
+		s.floe(t, "publish", s.page(t, "diff/c.yaml", "C", "<h2>Top</h2><p>top</p><h3>Same</h3><p>same</p><h3>Early</h3>"+strings.Repeat("<p>"+last+"</p>", 30)+"<h3>Moved</h3><p>"+last+"</p>"), "--slug", "c")
+	}
+	b.size(1440, 300, false)
+	openDiff(b, "/a/c/?diff")
+	const toc = `[...document.querySelectorAll('#diff-toc > div')].map((x) => x.firstChild.localName + ':' + x.firstChild.firstChild.textContent).join(' ')`
+	const stops = `[...document.querySelectorAll('#diff-toc *')].filter((x) => x.tabIndex >= 0 || x.onclick).map((x) => x.firstChild.textContent).join(' ')`
+	for _, view := range []string{"side", "all", "only"} {
+		b.eval("document.querySelector('[data-diff-view=" + view + "]').click()")
+		if got := b.eval(toc) + "|" + b.eval(stops); got != "div:C div:Top div:Same button:Early button:Moved|Early Moved" {
+			t.Errorf("%s: %s", view, got)
+		}
+		left := func(name string) string {
+			return "[...document.querySelectorAll('#diff-toc span')].find((x) => x.textContent === " + js(name) + ").getBoundingClientRect().left"
+		}
+		if got := b.eval(left("Same") + " === " + left("Moved") + " && " + left("Top") + " < " + left("Same")); got != "true" {
+			t.Errorf("%s: the levels are not kept: %s", view, b.eval(left("Top")+" + ' ' + "+left("Same")+" + ' ' + "+left("Moved")))
+		}
+	}
+
+	b.eval("document.querySelector('[data-diff-view=side]').click()")
+	const at = "document.getElementById('diff-body').scrollTop + ' ' + document.querySelectorAll('#diff-toc .on').length"
+	b.eval("[...document.querySelectorAll('#diff-toc div.dtoc-item')].at(-1).click()")
+	if got := b.eval(at); got != "0 0" {
+		t.Errorf("a section the same was pressed: %s", got)
+	}
+	b.eval("[...document.querySelectorAll('#diff-toc button')].at(-1).click()")
+	if got := b.eval("document.getElementById('diff-body').scrollTop > 0 && document.querySelector('#diff-toc .on > span').textContent"); got != "Moved" {
+		t.Errorf("a section changed was pressed: %s", got)
+	}
+	b.still()
+	if low := b.eval(measureContrast); low != "" {
+		t.Errorf("text that cannot be read:\n%s", low)
+	}
+}
+
 // TestUIDiffRead keeps what is shown of one pair: an answer that fails, or has not come, leaves the columns' heads with the words they are
 // of, an error goes with the next answer, and the last of many choices alone is asked to the end, nothing said of the server.
 func TestUIDiffRead(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -330,7 +400,7 @@ func TestUIDiffPlaces(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("document.querySelector('[data-diff-view=side]').click()")
 	b.eval("[...document.querySelectorAll('#diff-toc button')].at(-1).click()")
 	out = append(out, b.eval(`(() => {
-		const go = document.querySelector('#diff-body [data-sections~="' + [...document.querySelectorAll('#diff-toc button')].at(-1).dataset.section + '"]');
+		const go = document.querySelector('#diff-body [data-section="' + [...document.querySelectorAll('#diff-toc button')].at(-1).dataset.section + '"]');
 		return String(go.getBoundingClientRect().top >= document.querySelector('.dcols').getBoundingClientRect().bottom - 1);
 	})()`))
 
@@ -441,7 +511,7 @@ func TestUIDiffScrolls(t *testing.T) { //nolint:paralleltest // the browser test
 	after("the middle of the contents", "[...document.querySelectorAll('#diff-toc button')].find((x) => x.firstChild.textContent === 'S7').click()")
 	if got := b.eval(`(() => {
 		const i = [...document.querySelectorAll('#diff-toc button')].find((x) => x.firstChild.textContent === 'S7').dataset.section;
-		const go = document.querySelector('#diff-body [data-sections~="' + i + '"]').getBoundingClientRect().top;
+		const go = document.querySelector('#diff-body [data-section="' + i + '"]').getBoundingClientRect().top;
 		const heads = document.querySelector('.dcols').getBoundingClientRect().bottom;
 		return go >= heads - 1 && go < heads + 40 && document.getElementById('diff-body').scrollTop > 0 ? 'true' : go + ' under ' + heads + ' at ' + document.getElementById('diff-body').scrollTop;
 	})()`); got != "true" {

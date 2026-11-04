@@ -135,7 +135,7 @@
   .dcount b { font-weight: 700; }
   .dcount .c { color: var(--chg); } .dcount .a { color: var(--ins); } .dcount .r { color: var(--del); } .dcount .s { color: var(--fg); }
   .dviews { margin-left: auto; display: flex; gap: 0.35rem; }
-  .dviews .btn { height: 2rem; padding: 0 0.75rem; font-size: var(--text-small); white-space: nowrap; }
+  .dviews .btn, .dhead > .btn { height: 2rem; padding: 0 0.75rem; font-size: var(--text-small); white-space: nowrap; }
 
   .dmain { flex: 1; min-height: 0; display: grid; grid-template-columns: 15rem minmax(0, 1fr); }
   .dtoc { min-height: 0; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); font-size: var(--text-small); }
@@ -143,12 +143,12 @@
   /* What scrolls holds what is placed in it, so that the .sr-only words, absolute, are cut with the rest and do not widen the page past it */
   .dtoc-list, .dbody { position: relative; }
   .dtoc-list { flex: 1; min-height: 0; overflow: auto; padding: 0 0.5rem; }
-  .dtoc button { width: 100%; font: inherit; text-align: left; cursor: pointer; background: none; border: 0; display: flex; align-items: center; gap: 0.4rem; min-height: 1.75rem; padding: 0.1rem 0.5rem; color: var(--muted); text-decoration: none; border-radius: var(--corner-small); }
-  .dtoc button span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .dtoc button.changed { color: var(--fg); font-weight: 650; }
+  .dtoc-item { width: 100%; display: flex; align-items: center; gap: 0.4rem; min-height: 1.75rem; padding: 0.1rem 0.5rem; color: var(--muted); border-radius: var(--corner-small); }
+  .dtoc-item span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dtoc button { font: inherit; text-align: left; cursor: pointer; background: none; border: 0; color: var(--fg); font-weight: 650; }
   .dtoc button.on { background: var(--sel); }
   .dtoc .mk { margin-left: auto; }
-  .dtoc .lv2 button { padding-left: 1.2rem; } .dtoc .lv3 button { padding-left: 1.9rem; }
+  .dtoc .lv2 > .dtoc-item { padding-left: 1.2rem; } .dtoc .lv3 > .dtoc-item { padding-left: 1.9rem; }
   .dkeys { flex: none; margin: 0; padding: 0.6rem 1rem; color: var(--muted); font-size: var(--text-label); line-height: 1.9; border-top: 1px solid var(--line); }
   .dkeys kbd { margin-right: 0.3rem; font: inherit; padding: 0 0.3rem; background: var(--subtle); border: 1px solid var(--line); border-radius: var(--corner-small); }
 
@@ -206,7 +206,7 @@
     .dvers, .dver, .dver select { width: 100%; }
     .dver label { flex: none; width: 3.2rem; }
     .dviews { margin-left: 0; }
-    .dviews .btn { padding: 0 0.6rem; }
+    .dviews .btn, .dhead > .btn { padding: 0 0.6rem; }
     .dflow { padding-inline: 0.75rem; }
     .drow > div, .dcols > div { padding-inline: 0.5rem; }
     .dnote { padding-inline: 0.75rem; }
@@ -846,6 +846,7 @@
       <button type="button" class="btn" data-diff-view="all">{{.Msg "ui_diff_view_all"}}</button>
       <button type="button" class="btn" data-diff-view="only">{{.Msg "ui_diff_view_only"}}</button>
     </div>
+    <a class="btn" id="diff-close" title="{{.Msg "ui_diff_close_title"}}">{{.Msg "ui_close"}}</a>
   </div>
   <p class="dnote" id="diff-url-note" hidden>{{.Msg "ui_diff_bad_url"}}</p>
   <div class="dmain" id="diff-main">
@@ -1972,6 +1973,7 @@
     open.classList.toggle('closing', closing);
     open.title = t(closing ? 'ui_diff_close_title' : 'ui_diff_title');
     open.setAttribute('aria-label', open.title);
+    if (closing) $('diff-close').href = open.href;
     // Beside the list, the list's order goes on with j and k; elsewhere the one kept goes on
     open.onclick = box.id === 'read-actions' ? keepOrder : null;
   }
@@ -3084,12 +3086,11 @@
     };
     eachRun(sections, (run) => {
       const r = sameRow(run.map((i) => sectionName(sections[i])));
-      r.dataset.sections = run.join(' ');
       box.append(r);
     }, (s, at) => {
       const row = (l, r, change) => {
         const x = tagged('div', `drow${change ? ' ch' : ''}`);
-        x.dataset.sections = at;
+        x.dataset.section = at;
         x.append(l, r);
         box.append(x);
       };
@@ -3123,11 +3124,10 @@
     eachRun(sections, (run) => {
       if (only) return;
       const r = sameRow(run.map((i) => sectionName(sections[i])));
-      r.dataset.sections = run.join(' ');
       col.append(r);
     }, (s, at) => {
       const h = headingOf(s);
-      h.dataset.sections = at;
+      h.dataset.section = at;
       h.classList.toggle('ch', headingChanged(s));
       col.append(h);
       for (const b of s.blocks ?? []) {
@@ -3136,7 +3136,7 @@
         const gone = !b.reshaped && spansOnly(b, 'del');
         const come = !b.reshaped && spansOnly(b, 'ins');
         const w = tagged('div', `bk ${same ? '' : `ch ${gone ? 'del' : come ? 'ins' : 'changed'}`}`);
-        w.dataset.sections = at;
+        w.dataset.section = at;
         w.append(blockBody(b));
         col.append(w);
       }
@@ -3174,19 +3174,21 @@
     const list = $('diff-toc');
     list.replaceChildren();
     sections.forEach((s, i) => {
-      if (diffView === 'only' && s.state === 'same') return;
       const row = tagged('div', `lv${lvOf(s)}`);
-      const go = tagged('button', s.state === 'same' ? '' : 'changed');
-      go.type = 'button';
-      go.dataset.section = i;
-      go.append(tagged('span', '', sectionName(s)));
-      if (s.state !== 'same') go.append(diffMark(s.state));
-      go.addEventListener('click', () => {
-        body.querySelector(`[data-sections~="${i}"]`)?.scrollIntoView({ block: 'start' });
+      const same = s.state === 'same';
+      const item = tagged(same ? 'div' : 'button', 'dtoc-item');
+      item.append(tagged('span', '', sectionName(s)));
+      row.append(item);
+      list.append(row);
+      // A section the same is words only: there is no change to go to
+      if (same) return;
+      item.type = 'button';
+      item.dataset.section = i;
+      item.append(diffMark(s.state));
+      item.addEventListener('click', () => {
+        body.querySelector(`[data-section="${i}"]`)?.scrollIntoView({ block: 'start' });
         tocAt(i);
       });
-      row.append(go);
-      list.append(row);
     });
   }
   function tocAt(i) {
@@ -3198,7 +3200,7 @@
     if (!next) return;
     diffAt += step;
     next.scrollIntoView({ block: 'center' });
-    tocAt(next.dataset.sections);
+    tocAt(next.dataset.section);
   }
   if (DIFF) {
     for (const name of ['from', 'to']) {
