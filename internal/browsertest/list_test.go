@@ -995,7 +995,8 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	list()
 	x, y := rowPoint(t, b, a2, false)
 
-	// The first press, picked though the poll came in the middle of it; then the next poll draws.
+	// The first press, the focus on another row, picked though the poll came in the middle of it; then the next poll draws.
+	b.eval("document.querySelector('#list li[data-slug=a3] .title').focus()")
 	b.mouse(chromedp.MousePressed, x, y, chromedp.ButtonLeft, 1)
 	out := []string{polled()}
 	b.mouse(chromedp.MouseReleased, x, y, chromedp.ButtonLeft, 1)

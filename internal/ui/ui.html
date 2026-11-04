@@ -2763,7 +2763,8 @@
   // LIMIT: a redraw that is no poll's answer (the filters, a new day, the first) may still take a press with it. Hold them too if that comes to trouble someone
   let pressing = false;
   $('list').addEventListener('pointerdown', (e) => { if (e.button === 0) pressing = true; });
-  for (const name of ['pointerup', 'pointercancel', 'blur']) addEventListener(name, () => { pressing = false; }, true);
+  // Not captured: the window's own blur, not an element's as the press moves the focus
+  for (const name of ['pointerup', 'pointercancel', 'blur']) addEventListener(name, () => { pressing = false; });
   async function load() {
     let text;
     try {
