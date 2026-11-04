@@ -467,7 +467,7 @@ func clusterFault(g *graph, l *layout) string {
 			}
 		}
 		if t := clusters[c].g.Label; t != nil {
-			head := rect{x: f.x + 12, y: f.y + 9, w: textWidth(t, sizeSub, false), h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // as addFrame's
+			head := rect{x: f.x + 12, y: f.y + 9, w: textWidth(t, frameClass("")), h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // as addFrame's
 			for _, p := range l.paths {
 				for _, end := range [][2]float64{{p.segs[0][0], p.segs[0][1]}, {p.segs[len(p.segs)-1][2], p.segs[len(p.segs)-1][3]}} {
 					if end[0] >= head.x && end[0] <= head.x+head.w && end[1] >= f.y && end[1] <= head.y+head.h {

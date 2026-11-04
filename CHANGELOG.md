@@ -502,6 +502,15 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a diagram measuring bold text as regular: a table's title, a box's `main` row, a frame's heading, a graph
+  group's heading and a `strong` label are now counted as wide as bold is drawn (0.64 of the size for a narrow
+  character, from 0.6), and a `main code` row at the 12px it is drawn in, from 13. A table, box or graph with no `w`
+  may grow by a step of 8, and a diagram that passed may now be refused: a written `w` too narrow, a part at written
+  coordinates overlapping a box that grew or a frame's heading, a box straddling the edge of a group's frame, a part
+  sticking out of a written `width` or `height`, or a bold `label` no longer inside its `in`. Mistakes and
+  `floe diagram inspect` may name a part in another language, the one now measured widest. Capitals still run wider
+  than counted, so a long title of capitals can pass the edge of its box; only later than before.
+
 - Fix a diagram table measuring its rows' types in code, though they are drawn in the plain font: a table with no
   `w` is sized and a written `w` is checked with the name and the two spaces after it in code and the type not, so a
   long type needs a narrower table than before.

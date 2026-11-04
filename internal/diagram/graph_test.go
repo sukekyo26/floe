@@ -233,7 +233,7 @@ func TestGraphBlame(t *testing.T) {
 		{"an edge by hand through a label of the graph", g2, "  - edge: { from: [110, 113], to: [160, 113] }\n", `edge [110,113]→[160,113] runs through label "yes"`},
 		{
 			"a box in the graph's channel", k33, "  - box: { name: note, x: 24, y: 78, rows: [N] }\n",
-			`edge a→x runs through box "note"` + "\n@: " + `edge b→x runs through box "note"`,
+			`edge a→x runs through box "note"` + "\n@: " + `edge a→y runs through box "note"` + "\n@: " + `edge b→x runs through box "note"`,
 		},
 		{
 			"an edge by hand across the graph's edges", g1, "  - edge: { from: [0, 62], to: [400, 62] }\n",
@@ -321,41 +321,41 @@ func TestGraphLevel(t *testing.T) {
 	for _, c := range []struct {
 		name, src, want string
 	}{
-		{"lanes, down", level3, `frame "u" 20,20 132x201
-frame "v" 176,20 102x201
-frame "w" 302,20 108x201
-box "a" 32,115 40x29
-box "ok" 32,180 48x29
-box "b" 218,115 48x29
-box "q" 224,50 40x29
-box "c" 350,50 48x29
-box "d" 314,180 48x29
-edge c→b M368,79 V91 H242 V115
-edge b→a M218,123.5 H72
-edge a→b M72,135.5 H218
-edge b→d M248,144 V156 H338 V180
-edge d→ok M314,200.5 H80
-label "ask" 184.4,93.5 31.6x18
-label "answer" 83,147.5 53.2x18
-label "ask" 244.4,170.5 31.6x18
+		{"lanes, down", level3, `frame "u" 20,20 144x201
+frame "v" 188,20 108x201
+frame "w" 320,20 108x201
+box "a" 32,115 48x29
+box "ok" 32,180 56x29
+box "b" 236,115 48x29
+box "q" 236,50 48x29
+box "c" 368,50 48x29
+box "d" 332,180 48x29
+edge c→b M380,79 V91 H266 V115
+edge b→a M236,123.5 H80
+edge a→b M80,135.5 H236
+edge b→d M272,144 V156 H362 V180
+edge d→ok M332,200.5 H88
+label "ask" 202.4,93.5 31.6x18
+label "answer" 91,147.5 53.2x18
+label "ask" 262.4,170.5 31.6x18
 `},
-		{"lanes, right", strings.Replace(level3, "      lanes:\n", "      direction: right\n      lanes:\n", 1), `frame "u" 20,20 242x54
-frame "v" 20,98 242x96
-frame "w" 20,218 242x114
-box "a" 126,32 40x29
-box "ok" 202,32 48x29
-box "b" 126,134 40x48
-box "q" 50,152 40x29
-box "c" 50,272 40x48
-box "d" 206,230 40x48
-edge c→b M90,284 H102 V158 H126
-edge b→a M140,134 V61
-edge a→b M152,61 V134
-edge b→d M166,164 H178 V254 H206
-edge d→ok M232,230 V61
-label "ask" 96.4,114 31.6x18
-label "answer" 164,75 53.2x18
-label "ask" 244,198 31.6x18
+		{"lanes, right", strings.Replace(level3, "      lanes:\n", "      direction: right\n      lanes:\n", 1), `frame "u" 20,20 266x54
+frame "v" 20,98 266x96
+frame "w" 20,218 266x114
+box "a" 134,32 48x29
+box "ok" 218,32 56x29
+box "b" 134,134 48x48
+box "q" 50,152 48x29
+box "c" 50,272 48x48
+box "d" 222,230 48x48
+edge c→b M98,284 H110 V158 H134
+edge b→a M152,134 V61
+edge a→b M164,61 V134
+edge b→d M182,164 H194 V254 H222
+edge d→ok M252,230 V61
+label "ask" 108.4,114 31.6x18
+label "answer" 176,75 53.2x18
+label "ask" 264,198 31.6x18
 `},
 		{"a block written apart by the order", `title: T
 parts:
@@ -396,11 +396,11 @@ parts:
         - { from: a, to: b, level: true }
         - { from: b, to: a, level: true }
         - { from: a, to: b, level: true }
-`, `box "a" 124,20 52x29
-box "b" 20,74 260x29
-edge a→b M144,49 V74
-edge b→a M156,74 V49
-edge a→b M168,49 V74
+`, `box "a" 128,20 48x29
+box "b" 20,74 264x29
+edge a→b M146,49 V74
+edge b→a M158,74 V49
+edge a→b M170,48.75 V74
 `},
 	} {
 		if got, told := draw(t, c.src, inspect); got != c.want || told != "" {

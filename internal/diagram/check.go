@@ -318,7 +318,8 @@ func (l *layout) addLabel(lb *label, at string) {
 	}
 	names := strings.Join(lb.In, ", ")
 	x, y, st := l.place(lb, g)
-	call, _ := calling("", lb.Text, false, lb.In, rect{}) //nolint:exhaustruct_v5 // placed nowhere, by its regions
+	//nolint:exhaustruct_v5 // placed nowhere, by its regions
+	call, _ := calling("", lb.Text, labelClass(lb.Strong), lb.In, rect{})
 	who := "label " + call
 	switch {
 	case !st.tried:
