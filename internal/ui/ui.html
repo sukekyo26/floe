@@ -134,8 +134,9 @@
   .dcount { margin: 0; display: flex; flex-wrap: wrap; gap: 0 0.75rem; color: var(--muted); }
   .dcount b { font-weight: 700; }
   .dcount .c { color: var(--chg); } .dcount .a { color: var(--ins); } .dcount .r { color: var(--del); } .dcount .s { color: var(--fg); }
-  .dviews { margin-left: auto; display: flex; gap: 0.35rem; }
-  .dviews .btn, .dhead > .btn { height: 2rem; padding: 0 0.75rem; font-size: var(--text-small); white-space: nowrap; }
+  .dtail { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; }
+  .dviews { display: flex; gap: 0.35rem; }
+  .dviews .btn, .dtail > .btn { height: 2rem; padding: 0 0.75rem; font-size: var(--text-small); white-space: nowrap; }
 
   .dmain { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: var(--toc) minmax(0, 1fr); background: var(--panel); }
   .dmain > .grip { position: absolute; top: 0; }
@@ -208,9 +209,9 @@
     .dbody { overflow: visible; }
     .dhead { padding: 0.6rem 0.75rem; }
     .dvers, .dver, .dver select { width: 100%; }
-    .dver label { flex: none; width: 3.2rem; }
-    .dviews { margin-left: 0; }
-    .dviews .btn, .dhead > .btn { padding: 0 0.6rem; }
+    .dver label { flex: none; min-width: 3.2rem; }
+    .dtail { margin-left: 0; }
+    .dviews .btn, .dtail > .btn { padding: 0 0.6rem; }
     .dflow { padding-inline: 0.75rem; }
     .drow > div, .dcols > div { padding-inline: 0.5rem; }
     .dnote { padding-inline: 0.75rem; }
@@ -315,6 +316,7 @@
     font-weight: 600; background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
     box-shadow: var(--shadow-sm); transition: background-color 0.15s, border-color 0.15s, filter 0.15s;
   }
+  a.btn { color: var(--fg); text-decoration: none; }
   .btn:hover { border-color: var(--faint); }
   .btn.primary {
     color: var(--on-ink); border-color: transparent; background: var(--ink); box-shadow: var(--shadow-sm);
@@ -633,7 +635,6 @@
   .state p { margin: 0; max-width: 34rem; }
   .state strong { color: var(--fg); font-size: 1rem; }
   .state a { color: var(--fg); }
-  .state a.btn { text-decoration: none; }
   .state code { font-family: var(--mono); font-size: 0.8em; background: var(--subtle); padding: 0.1rem 0.35rem; border-radius: var(--corner-small); overflow-wrap: anywhere; }
   .link-btn { background: none; border: 0; padding: 0; color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
   .error { margin: 0; padding: 0.65rem 0.9rem; border-radius: var(--corner-menu); color: var(--danger); background: var(--danger-soft); white-space: pre-wrap; }
@@ -845,12 +846,14 @@
       <div class="dver"><label for="diff-to">{{.Msg "ui_diff_after"}}</label><select id="diff-to"></select><a class="icon-btn" id="diff-to-open" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></div>
     </div>
     <p class="dcount" id="diff-count" role="status"></p>
-    <div class="dviews" role="group" aria-label="{{.Msg "ui_diff_views"}}">
-      <button type="button" class="btn" data-diff-view="side">{{.Msg "ui_diff_view_side"}}</button>
-      <button type="button" class="btn" data-diff-view="all">{{.Msg "ui_diff_view_all"}}</button>
-      <button type="button" class="btn" data-diff-view="only">{{.Msg "ui_diff_view_only"}}</button>
+    <div class="dtail">
+      <div class="dviews" role="group" aria-label="{{.Msg "ui_diff_views"}}">
+        <button type="button" class="btn" data-diff-view="side">{{.Msg "ui_diff_view_side"}}</button>
+        <button type="button" class="btn" data-diff-view="all">{{.Msg "ui_diff_view_all"}}</button>
+        <button type="button" class="btn" data-diff-view="only">{{.Msg "ui_diff_view_only"}}</button>
+      </div>
+      <a class="btn" id="diff-close" title="{{.Msg "ui_diff_close_title"}}">{{.Msg "ui_close"}}</a>
     </div>
-    <a class="btn" id="diff-close" title="{{.Msg "ui_diff_close_title"}}">{{.Msg "ui_close"}}</a>
   </div>
   <p class="dnote" id="diff-url-note" hidden>{{.Msg "ui_diff_bad_url"}}</p>
   <div class="dmain" id="diff-main">

@@ -270,7 +270,8 @@ func TestUIDiffClose(t *testing.T) { //nolint:paralleltest // the browser tests 
 		const views = document.querySelector('.dviews').getBoundingClientRect();
 		const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
 		const page = document.scrollingElement;
-		return [r.width > 0, r.left >= 0 && r.right <= innerWidth, r.top >= views.bottom || (r.left >= views.right && r.top === views.top), top?.id, page.scrollWidth <= innerWidth].join(' ');
+		const aside = r.left >= views.right && r.top === views.top;
+		return [r.width > 0, r.left >= 0 && r.right <= innerWidth, innerWidth > 400 ? aside : aside || r.top >= views.bottom, top?.id, page.scrollWidth <= innerWidth].join(' ');
 	})()`
 	for _, width := range []int64{1440, 1200, 800, 400} {
 		b.size(width, 800, false)
@@ -278,6 +279,13 @@ func TestUIDiffClose(t *testing.T) { //nolint:paralleltest // the browser tests 
 		if got := b.eval(place); got != "true true true diff-close true" {
 			t.Errorf("at %d: %s", width, got)
 		}
+	}
+	const like = `(() => {
+		const a = getComputedStyle(document.getElementById('diff-close')), v = getComputedStyle(document.querySelector('[data-diff-view]:not(.primary)'));
+		return a.textDecorationLine + ' ' + (a.color === v.color && a.height === v.height);
+	})()`
+	if got := b.eval(like); got != "none true" {
+		t.Errorf("not like the buttons beside it: %s", got)
 	}
 	b.eval("document.getElementById('diff-close').click()")
 	b.until("the page", "location.pathname + location.search === '/a/d/' && document.getElementById('frame').hasAttribute('src')")
