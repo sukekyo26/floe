@@ -1078,12 +1078,14 @@ func TestUIFindOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		},
 		"press": func() { b.eval(row + ".querySelector('a').click()") },
 	}
-	out := make([]string, 0, 3)
+	out := make([]string, 0, 5)
 	for _, how := range []string{"enter", "press"} {
 		// On the list of the tag, whose next after P3 is P5, with the order of all kept, whose next is P4.
 		b.navigate("/?tag=t")
 		b.until("the rows", "document.querySelector('#list .title')")
 		b.eval(`sessionStorage.setItem('artifacts.order', '["p1","p2","p3","p4","p5"]'); openFind()`)
+		// A press beside the rows opens nothing, and the order stays.
+		out = append(out, b.eval("document.getElementById('find-list').click(); sessionStorage.getItem('artifacts.order') !== null"))
 		open[how]()
 		b.until("the page", "location.pathname === '/a/p3/'")
 		b.until("the bar", "document.getElementById('frame-title').textContent")
@@ -1102,7 +1104,7 @@ func TestUIFindOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 	keyDown(b, "key: 'j'")
 	b.until("the next page", "location.pathname !== '/a/p3/'")
 	out = append(out, b.eval("location.pathname"))
-	check(t, "order", out, "/a/p5/|/a/p5/|/a/p5/")
+	check(t, "order", out, "true|/a/p5/|true|/a/p5/|/a/p5/")
 }
 
 // TestUIReadLoads reads the list again as soon as a read is told, so that the dot and the counts do not wait for the next look.

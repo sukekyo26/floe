@@ -3015,7 +3015,7 @@
     } else if (plainKey(e) && pressKey(e.key)) e.preventDefault();
   });
   $('find-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
-  $('find-list').addEventListener('click', (e) => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) forgetOrder(); });
+  $('find-list').addEventListener('click', (e) => { if (e.target.closest('a') && !e.ctrlKey && !e.metaKey && !e.shiftKey) forgetOrder(); });
   $('find-q').addEventListener('input', () => {
     findSlug = null;
     findAt = 0;
