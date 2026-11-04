@@ -452,7 +452,7 @@
     .bulk .btn:not(.armed, .clear) { padding: 0 0.2rem; }
   }
 
-  /* The window that finds a page, high up so that its field stays where it is as the rows go */
+  /* The search modal, high up so that its field stays where it is as the rows go */
   #find { width: min(40rem, calc(100% - 32px)); max-height: none; margin-top: 12dvh; overflow: visible; }
   .find-box { display: flex; flex-direction: column; max-height: 70dvh; }
   .find-input { display: flex; align-items: center; gap: 0.6rem; height: 3.25rem; padding: 0 0.75rem 0 1.1rem; }
@@ -498,7 +498,7 @@
   .find-foot .btn { flex: none; height: 2rem; padding: 0 0.8rem; }
   .find-cut { margin-left: auto; }
   .find-foot .k { display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
-  /* The window of the keys */
+  /* The modal of the shortcuts */
   .keys-body { display: grid; gap: 1rem; padding: 1.4rem 1.5rem 1.25rem; }
   .keys-part { display: grid; gap: 1rem; }
   .keys-part[hidden] { display: none; }
@@ -509,7 +509,7 @@
   .keys-body dt i { font-style: normal; font-size: var(--text-label); color: var(--faint); }
   .keys-body dd { margin: 0; }
   .keys-note { margin: 0; font-size: var(--text-small); color: var(--muted); }
-  /* The bar's ways to the two windows: of the keys where there are likely to be keys; of finding where a whole page has no search */
+  /* The bar's ways to the two modals: of the shortcuts where there are likely to be keys; of finding where a whole page has no search */
   #find-open { display: none; flex: none; }
   #keys-open svg, #find-open svg { width: 16px; height: 16px; }
   @media (max-width: 56rem) { #keys-open { display: none; } }
@@ -916,7 +916,7 @@
     if (e.source !== shown.contentWindow || e.origin !== 'null') return;
     // The keys a person presses in the page alone, while the focus is there, wherever in it a link has led
     if (typeof e.data?.artifactKey === 'string' && PAGE_KEYS.has(e.data.artifactKey) && document.activeElement === shown) {
-      // Not back to the iframe when a window it opened closes: a page that keeps sending would open it again, for good
+      // Not back to the iframe when a modal it opened closes: a page that keeps sending would open it again, for good
       shown.blur();
       pressKey(e.data.artifactKey);
     }
@@ -1265,7 +1265,7 @@
   // A key that goes to the input method. 229 as Safari sends its Enter that ends one without isComposing
   const composing = (e) => e.isComposing || e.keyCode === 229;
 
-  // The keys of a field's listbox (the tags' suggestions and the rows of the window that finds), whose options are reached from it by aria-activedescendant, the one
+  // The keys of a field's listbox (the tags' suggestions and the rows of the search modal), whose options are reached from it by aria-activedescendant, the one
   // reached shown (.reached) and aria-selected: ↑↓ (round the ends; opening it, shut), Enter to choose, Escape to close (the
   // listbox, not a dialog it is in) and Tab to close. Home and End are left to move the caret
   function listKeys(target, { options, choose, close, open, shown, tab = close, moved = () => {} }) {
@@ -1664,8 +1664,8 @@
     const edit = box.querySelector('.edit');
     edit.setAttribute('aria-label', t('ui_edit_named', a.title));
     edit.addEventListener('click', () => {
-      // The bar's menu is drawn anew in its place, a row's by its slug. From the window that finds, which closes as no dialog
-      // goes over another, the focus goes back where that window took it from
+      // The bar's menu is drawn anew in its place, a row's by its slug. From the search modal, which closes as no dialog
+      // goes over another, the focus goes back where that modal took it from
       const bar = box.closest('#read-actions, #frame-actions')?.id;
       editBack = () => (bar ? $(bar) : [...$('list').children].find((li) => li.dataset.key === `entry:${editing.slug}`))?.querySelector('summary');
       if (box.closest('#find')) {
@@ -2652,7 +2652,7 @@
     if ($('find').open) drawFind();
   }
 
-  // The window that finds a page: of every entry, the archived after the rest, as they would drown what is in use
+  // The search modal: of every entry, the archived after the rest, as they would drown what is in use
   // LIMIT: the first FIND_ROWS rows only, which it says. Words narrow them; show more if a search comes to need them
   // LIMIT: the files in a folder are not searched, as what is in a folder is read only where it is open
   const FIND_ROWS = 50;
@@ -2991,7 +2991,7 @@
     findAt = 0;
     drawFind();
   });
-  // Escape closes the menu open in it first, not the window as well
+  // Escape closes the menu open in it first, not the modal as well
   $('find').addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || !$('find').querySelector('.more[open]')) return;
     e.preventDefault();

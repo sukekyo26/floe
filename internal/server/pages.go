@@ -358,7 +358,7 @@ func tellRead(read *Read) string {
 		", artifactPath: location.pathname }, location.protocol + '//' + location.host);"
 }
 
-// tellKeys hands the frame the keys pressed in the page that move on or open a window, so that they work with the focus
+// tellKeys hands the frame the keys pressed in the page that move on or open a modal, so that they work with the focus
 // in it: no key that changes an entry, and not Escape, which would keep a dialog of the page from closing. A page floe
 // did not draw hands over Ctrl+K (⌘K) alone, as it may use the letters itself without preventDefault (a coverage
 // report's j and k). Nothing is taken until the frame says it takes them, of this origin, so that a page in another
