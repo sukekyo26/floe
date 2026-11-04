@@ -85,16 +85,22 @@ func onSide(t target, side string, other [2]float64) anchor {
 			side = tb
 		}
 	}
-	switch side {
-	case "left":
-		return anchor{r.x, cy, side, false}
-	case "right":
-		return anchor{r.x + r.w, cy, side, false}
-	case "top":
-		return anchor{cx, r.y, side, false}
-	default:
-		return anchor{cx, r.y + r.h + t.under, side, false}
+	at := cy
+	if vertical(side) {
+		at = cx
 	}
+	p := sidePoint(t, side, at)
+	return anchor{p[0], p[1], side, false}
+}
+
+// sidePoint is where an end stands on side of t at at, an x on the top or bottom, a y on the left or right: on the
+// outline, and on the bottom side within a label's width, under the label.
+func sidePoint(t target, side string, at float64) [2]float64 {
+	p := t.r.form.on(t.r, side, at)
+	if side == "bottom" && math.Abs(at-(t.r.x+t.r.w/2)) <= t.labelW/2 {
+		p[1] += t.under
+	}
+	return p
 }
 
 // towards is the side of r across towards p, left or right by r's centre (right when level with it), and the side up
@@ -383,6 +389,7 @@ func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, free loose, f
 		fromSide = l.clear(e.From, fromSide, toAt, near)
 	}
 	from, fromWho, okFrom := l.endOf(at, e.From, fromSide, toAt)
+	from = l.sharedEnd(e, 0, from)
 	angled := len(e.Via) > 0 && !e.Straight
 	across := false
 	if angled && okFrom {
@@ -398,6 +405,7 @@ func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, free loose, f
 	}
 	// Resolved even when from is not, so that both are told.
 	to, toWho, okTo := l.endOf(at, e.To, toSide, fromAt)
+	to = l.sharedEnd(e, 1, to)
 	if !okFrom || !okTo {
 		return nil, noLoose, "", "", false
 	}
@@ -649,7 +657,8 @@ type rule struct {
 }
 
 // keepOff moves the loose runs of the edges written by hand off the rules. Edges whose loose runs lie on one line
-// and leave one point or reach one (edges out of a part or into one, sharing the run) move as one. They move by steps
+// and leave one point or reach one, or one side of a part (edges out of a part or into one, sharing the run), move as
+// one. They move by steps
 // of ruleGap to the nearest place within all their bounds (the smaller of two as near) where each edge stays on the
 // canvas, runs through no part or text and crosses no edge (as the checks tell), and what is new of it keeps ruleGap
 // off every rule, part's or frame's edge and other edge's run along it; where there is none, they stay. Edges whose
@@ -682,8 +691,8 @@ func (l *layout) keepOff() {
 	}
 }
 
-// sharing are the loose edges from i on whose runs lie on i's line and leave or reach a point one of them does,
-// marked done.
+// sharing are the loose edges from i on whose runs lie on i's line and leave or reach a point or a side of a part one
+// of them does, marked done.
 func (l *layout) sharing(i int, done []bool) []int {
 	group := []int{i}
 	done[i] = true
@@ -695,7 +704,8 @@ func (l *layout) sharing(i int, done []bool) []int {
 			}
 			for _, g := range group {
 				if a, b := l.loose[g], l.loose[j]; a.across == b.across && a.at() == b.at() &&
-					(a.pts[0] == b.pts[0] || a.pts[len(a.pts)-1] == b.pts[len(b.pts)-1]) {
+					(a.pts[0] == b.pts[0] || a.pts[len(a.pts)-1] == b.pts[len(b.pts)-1] ||
+						l.oneSide(a.e, b.e, 0) || l.oneSide(a.e, b.e, 1)) {
 					group, done[j], grew = append(group, j), true, true
 					break
 				}
