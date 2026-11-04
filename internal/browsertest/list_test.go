@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 )
 
 // listList is the list the stub answers for the page list: what is new of each kind, a day each, newest first. day is the
@@ -327,4 +330,110 @@ func TestUIFrameOrder(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.navigate("/")
 	b.eval(`sessionStorage.setItem('artifacts.order', '["v","n"]')`)
 	stays("n")
+}
+
+// TestUIColumns drags the edges of the shelf and the list, by the mouse and the keys, within their bounds, the page beside the
+// list taking no pointer meanwhile; folds the shelf and shows it again; keeps all of it across a reload; and shows more of a
+// path as the list widens, all of it when wide enough. Under 70rem none of it shows.
+func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := asideSite(t)
+	b := s.b
+	b.navigate("/")
+	b.eval("localStorage.removeItem('list.columns')")
+	file := s.write(t, "aside/a (1)/v2.0/data-set_#1/deep/deep/deep/deep/deep/deep/deep/deep/name-2.html", "<title>long</title><p>l</p>")
+	s.floe(t, "publish", "--link", file, "--slug", "long")
+	b.navigate("/")
+	b.size(1600, 900, false)
+	b.until("the rows and the window", "document.querySelector('#list li[data-slug=long]') && getComputedStyle(document.documentElement).getPropertyValue('--list-width') === '408px'")
+	const widths = "[getComputedStyle(document.documentElement).getPropertyValue('--shelf-width'), getComputedStyle(document.documentElement).getPropertyValue('--list-width'), Math.round(document.querySelector('.shelf').getBoundingClientRect().width), Math.round(document.getElementById('listcol').getBoundingClientRect().width)].join(' ')"
+	mouse := func(grip string, to float64, release bool) {
+		t.Helper()
+
+		r := b.rect("document.getElementById(" + js(grip) + ")")
+		x, y := r.X+r.Width/2, r.Y+r.Height/2
+		events := []chromedp.Action[chromedp.Void]{
+			chromedp.MouseEvent(chromedp.MousePressed, x, y, chromedp.ButtonLeft, chromedp.ClickCount(1)),
+			chromedp.MouseEvent(chromedp.MouseMoved, (x+to)/2, y, chromedp.ButtonLeft),
+			chromedp.MouseEvent(chromedp.MouseMoved, to, y, chromedp.ButtonLeft),
+		}
+		if release {
+			events = append(events, chromedp.MouseEvent(chromedp.MouseReleased, to, y, chromedp.ButtonLeft, chromedp.ClickCount(1)))
+		}
+		for _, e := range events {
+			if err := chromedp.Do(b.ctx, e); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	// How much of the path is cut, its box's whole width else.
+	const cut = "(() => { const p = document.querySelector('#list li[data-slug=long] .path'); return p.scrollWidth - p.clientWidth; })()"
+	out := make([]string, 0, 16)
+	out = append(out, b.eval(widths))
+	before, err := strconv.Atoi(b.eval(cut))
+	if err != nil || before <= 0 {
+		t.Fatalf("the path is not cut: %d, %v", before, err)
+	}
+	// The mouse: the shelf's edge, then the list's, from where the list starts. The list held off the page beside it.
+	mouse("shelf-grip", 260, true)
+	out = append(out, b.eval(widths))
+	mouse("list-grip", 760, true)
+	out = append(out, b.eval(widths))
+	after, err := strconv.Atoi(b.eval(cut))
+	if err != nil || after >= before {
+		t.Errorf("the path is cut by %d at the wider list, %d before: %v", after, before, err)
+	}
+	mouse("list-grip", 1590, true)
+	out = append(out, b.eval(widths+" + ' ' + (innerWidth - document.getElementById('reader').getBoundingClientRect().left)"))
+	// Wide enough, all of it shows.
+	b.size(3000, 900, false)
+	b.until("the wide window", "Number(document.getElementById('list-grip').getAttribute('aria-valuemax')) > 2000")
+	mouse("list-grip", 2400, true)
+	out = append(out, b.eval(cut))
+	b.size(1600, 900, false)
+	b.until("the window back", "getComputedStyle(document.documentElement).getPropertyValue('--list-width') === '820px'")
+	// The keys: 16 px, the bounds at Home and End, as the tree's edge.
+	b.eval("document.getElementById('list-grip').focus()")
+	for _, k := range []string{kb.Home, kb.ArrowRight} {
+		if err := chromedp.Do(b.ctx, chromedp.KeyEvent(k)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	out = append(out, b.eval(widths), b.settled(ringOf))
+	mouse("shelf-grip", 10, true)
+	out = append(out, b.eval(widths))
+	// Dragged, the page beside the list takes no pointer; let go, it does.
+	b.eval("document.querySelector('#list li[data-slug=a1] .title').click()")
+	mouse("list-grip", 900, false)
+	out = append(out, b.eval("getComputedStyle(document.getElementById('read-frame')).pointerEvents + ' ' + document.getElementById('list-grip').classList.contains('dragging')"))
+	if err := chromedp.Do(b.ctx, chromedp.MouseEvent(chromedp.MouseReleased, 900, 300, chromedp.ButtonLeft, chromedp.ClickCount(1))); err != nil {
+		t.Fatal(err)
+	}
+	out = append(out, b.until("the edge let go", "!document.getElementById('list-grip').classList.contains('dragging') && getComputedStyle(document.getElementById('read-frame')).pointerEvents"))
+	// Folded and shown again, the focus on the other button; the list's words clear of the button.
+	const shelf = "[getComputedStyle(document.querySelector('.shelf')).display, document.getElementById('shelf-show').hidden, document.getElementById('shelf-grip').hidden, document.activeElement.id, document.getElementById('shelf-show').getBoundingClientRect().right <= document.getElementById('count').getBoundingClientRect().left].join(' ')"
+	b.eval("document.getElementById('shelf-hide').click()")
+	out = append(out, b.eval(shelf), b.eval("Math.round(document.getElementById('listcol').getBoundingClientRect().left)"))
+	// Kept across a reload, folded too.
+	kept := b.eval("localStorage.getItem('list.columns')")
+	b.navigate("/")
+	out = append(out, b.eval("localStorage.getItem('list.columns') === "+js(kept)), b.eval("getComputedStyle(document.querySelector('.shelf')).display"))
+	b.eval("document.getElementById('shelf-show').click()")
+	out = append(out, b.eval("[getComputedStyle(document.querySelector('.shelf')).display, document.activeElement.id].join(' ')"), b.eval(widths))
+	// A window narrower holds the list under what is kept, which stays.
+	b.size(1200, 800, false)
+	out = append(out, b.until("the list held", "getComputedStyle(document.documentElement).getPropertyValue('--list-width') === '520px' && '520px ' + JSON.parse(localStorage.getItem('list.columns')).list"))
+	// Under 70rem, none of it shows.
+	b.size(1000, 700, false)
+	out = append(out, b.until("the row of the shelf", "matchMedia('(max-width: 70rem)').matches && ['shelf-grip', 'list-grip', 'shelf-show', 'shelf-hide'].map((id) => document.getElementById(id).getClientRects().length).join(' ')"))
+	b.unsize()
+	ring := "solid 2px rgb(107, 105, 100) -2px seen"
+	check(t, "columns", out, strings.Join([]string{
+		"200px 408px 200 408", "260px 408px 260 408", "260px 500px 260 500",
+		"260px 820px 260 820 520", "0",
+		"260px 296px 260 296", ring, "160px 296px 160 296",
+		"none true", "auto",
+		"none false true shelf-show true", "0",
+		"true", "none", "grid shelf-hide", "160px 740px 160 740",
+		"520px 740", "0 0 0 0",
+	}, "|"))
 }

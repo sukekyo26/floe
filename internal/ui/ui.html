@@ -139,13 +139,13 @@
   .side .note { padding: 0.22rem 0.5rem 0.22rem calc(0.3rem + var(--d) * 1.1rem + 14px + 0.35rem); color: var(--muted); font-size: var(--text-small); }
   .side .fold.none { visibility: hidden; }
   .side :is(a, button):focus-visible, .grip:focus-visible { outline: var(--ring); outline-offset: -2px; }
-  /* The edge between the tree and the page, to widen or narrow the tree: a line shows while it is dragged or focused */
-  .grip { position: fixed; top: var(--bar); bottom: 0; left: calc(var(--side) - 3px); z-index: 3; width: 6px; cursor: col-resize; touch-action: none; }
+  /* An edge to drag, between the tree and the page and between the list's columns: a line shows while it is dragged or focused. --at is where it stands */
+  .grip { position: fixed; top: var(--bar); bottom: 0; left: calc(var(--at) - 3px); z-index: 6; width: 6px; cursor: col-resize; touch-action: none; }
   .grip::after { content: ""; position: absolute; left: 2px; top: 0; bottom: 0; width: 2px; background: transparent; transition: background-color 0.15s; }
   .grip:is(:hover, .dragging, :focus-visible)::after { background: var(--ink); }
-  /* While the edge is dragged the page takes no pointer, which would leave the edge's pointer capture inside the iframe */
-  html:has(.grip.dragging) .frame { pointer-events: none; }
-  .side-show { position: fixed; top: calc(var(--bar) + 8px); left: 8px; z-index: 2; background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
+  /* While an edge is dragged a page takes no pointer, which would leave the edge's pointer capture inside the iframe */
+  html:has(.grip.dragging) :is(.frame, .read-frame) { pointer-events: none; }
+  .side-show { position: fixed; top: calc(var(--bar) + 8px); left: 8px; z-index: 7; background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
   /* An iframe prints what fits one screen of the page in it: a frame's print hides the bar, the frame and the toasts,
      and names the page alone in their place, but on a missing page's frame, which prints its
      state. The screen shows no note.
@@ -160,7 +160,12 @@
   /* The list's page fills the window under the header bar: the shelf, the list and the page chosen, each scrolled on its own */
   /* LIMIT: so the list prints what fits one screen, cut off without a word. Print it as a whole if that comes to matter */
   html:not(.framed) body { height: 100dvh; display: flex; flex-direction: column; }
-  .shell { flex: 1; min-height: 0; display: grid; grid-template-columns: 12.5rem 25.5rem minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .shell { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--shelf-width) var(--list-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  /* The shelf folded: the button that shows it again stands over the head of the list, which makes room for it */
+  .shell.shelf-closed { grid-template-columns: var(--list-width) minmax(0, 1fr); }
+  .shell.shelf-closed .shelf { display: none; }
+  .shell.shelf-closed .lhead { padding-left: 2.9rem; }
+  .shelf-head { display: flex; justify-content: flex-end; margin-bottom: -0.6rem; }
   /* The 4px of room round a button are its focus ring's (1px off, 2px wide) and 1px of ground */
   .shelf { display: grid; align-content: start; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; overflow-y: auto; padding: 0.9rem 10px 1rem; }
   /* The shelf's thumb shows only while it is pointed at or reached by keys; its room stays, so that nothing in it moves */
@@ -465,7 +470,11 @@
      row of its views and the dialog of the rest, and the bar's count of new pages, which the row has; from 56rem one column (oneColumn
      in the script reads the same width); from 40rem the bar folds up too */
   @media (max-width: 70rem) {
-    .shell { grid-template-columns: 22rem minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    /* What the shelf's edges and fold leave as they were is of the wide page alone */
+    .shell, .shell.shelf-closed { grid-template-columns: 22rem minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .shell.shelf-closed .shelf { display: block; }
+    .shell.shelf-closed .lhead { padding-left: 1rem; }
+    #shelf-grip, #list-grip, #shelf-show, .shelf-head { display: none; }
     .shelf, .shelf:is(:hover, :focus-within) { grid-column: 1 / -1; display: block; overflow: visible; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); }
     .shelf > .shelf-more { display: none; }
     .shelf .views { display: flex; align-items: center; gap: 5px; overflow: auto hidden; padding: 4px; margin: -4px; scrollbar-width: none; }
@@ -485,7 +494,7 @@
   }
   /* One column: only the list, a row opening its page whole, with the way back */
   @media (max-width: 56rem) {
-    .shell { grid-template-columns: minmax(0, 1fr); }
+    .shell, .shell.shelf-closed { grid-template-columns: minmax(0, 1fr); }
     .listcol { border: 0; }
     .reader { display: none; }
     .icon-btn.back { display: inline-flex; }
@@ -534,6 +543,7 @@
   <h1 class="sr-only">floe</h1>
   <!-- Buttons that switch the list. They do not implement WAI-ARIA tabs (arrow keys, tabpanel), so they use aria-pressed -->
   <nav class="shelf" id="shelf" aria-label="{{.Msg "ui_shelf"}}">
+    <div class="shelf-head"><button type="button" class="icon-btn" id="shelf-hide" aria-expanded="true" aria-controls="shelf" title="{{.Msg "ui_shelf_hide"}}" aria-label="{{.Msg "ui_shelf_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
     <div class="views" role="group" aria-label="{{.Msg "ui_shelf"}}">
       <button type="button" data-view="new"><span class="dot"></span><span class="label">{{.Msg "ui_view_new"}}</span><span class="n"></span></button>
       <button type="button" data-view="all"><span class="ring"></span><span class="label">{{.Msg "ui_view_all"}}</span><span class="n"></span></button>
@@ -560,6 +570,8 @@
       </div>
     </div>
   </nav>
+  <div class="grip" id="shelf-grip" role="separator" aria-orientation="vertical" aria-controls="shelf" aria-label="{{.Msg "ui_shelf_width"}}" tabindex="0"></div>
+  <button type="button" class="icon-btn side-show" id="shelf-show" aria-expanded="false" aria-controls="shelf" title="{{.Msg "ui_shelf_show"}}" aria-label="{{.Msg "ui_shelf_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
   <section class="listcol" id="listcol">
     <div class="lhead">
       <span class="count" id="count"></span>
@@ -593,6 +605,7 @@
       <p><button type="button" class="link-btn" id="clear">{{.Msg "ui_clear_filters"}}</button></p>
     </div>
   </section>
+  <div class="grip" id="list-grip" role="separator" aria-orientation="vertical" aria-controls="listcol" aria-label="{{.Msg "ui_list_width"}}" tabindex="0"></div>
   <!-- The page of the row chosen. Lets copy and fullscreen buttons in the page work, as the frame's -->
   <section class="reader" id="reader">
     <div class="rhead" id="read-head" hidden>
@@ -2210,9 +2223,7 @@
     $('side').hidden = !open;
     $('side').classList.toggle('over', sideNarrow.matches);
     $('side-grip').hidden = !open || sideNarrow.matches;
-    $('side-grip').setAttribute('aria-valuenow', String(width));
-    $('side-grip').setAttribute('aria-valuemin', String(SIDE_MIN));
-    $('side-grip').setAttribute('aria-valuemax', String(sideMax()));
+    edgeAt($('side-grip'), width, width, SIDE_MIN, sideMax());
     $('side-show').hidden = open;
   }
   function keepSide() {
@@ -2235,30 +2246,85 @@
     side.width = Math.min(Math.max(Math.round(width), SIDE_MIN), sideMax());
     layoutSide();
   }
-  if (FILE) {
-    $('side-hide').addEventListener('click', () => showSide(false));
-    $('side-show').addEventListener('click', () => showSide(true));
-    const grip = $('side-grip');
+  // Where an edge stands, the width it sets and that width's bounds, for its keys and for screen readers
+  function edgeAt(grip, at, width, min, max) {
+    grip.style.setProperty('--at', `${at}px`);
+    grip.setAttribute('aria-valuenow', String(width));
+    grip.setAttribute('aria-valuemin', String(min));
+    grip.setAttribute('aria-valuemax', String(max));
+  }
+  // An edge to drag or to move by keys: set takes the width asked for, the distance from where the width starts (left) or a step of
+  // 16 px from the width shown, which the window may hold under the one kept, Home and End its bounds; keep, once it stops
+  function dragEdge(grip, { left = () => 0, set, keep }) {
     grip.addEventListener('pointerdown', (e) => {
       if (e.button) return;
       e.preventDefault();
       grip.setPointerCapture(e.pointerId);
       grip.classList.add('dragging');
     });
-    grip.addEventListener('pointermove', (e) => { if (grip.hasPointerCapture(e.pointerId)) sideWidth(e.clientX); });
+    grip.addEventListener('pointermove', (e) => { if (grip.hasPointerCapture(e.pointerId)) set(e.clientX - left()); });
     grip.addEventListener('lostpointercapture', () => {
       grip.classList.remove('dragging');
-      keepSide();
+      keep();
     });
     grip.addEventListener('keydown', (e) => {
-      // From the width shown, which the window may hold under the one kept
       const now = Number(grip.getAttribute('aria-valuenow'));
-      const to = { ArrowLeft: now - 16, ArrowRight: now + 16, Home: SIDE_MIN, End: sideMax() }[e.key];
+      const to = {
+        ArrowLeft: now - 16, ArrowRight: now + 16, Home: Number(grip.getAttribute('aria-valuemin')), End: Number(grip.getAttribute('aria-valuemax')),
+      }[e.key];
       if (to === undefined) return;
       e.preventDefault();
-      sideWidth(to);
-      keepSide();
+      set(to);
+      keep();
     });
+  }
+  // The list's two columns, the viewer's, kept in the browser; without storage the default. The list is held off the page beside it,
+  // which keeps the room it has at its narrowest beside the list where the shelf is a row (56rem less the list's 22rem, 544 px, less the room round it)
+  const SHELF_KEY = 'list.columns';
+  const SHELF_MIN = 160;
+  const SHELF_MAX = 320;
+  const LIST_MIN = 280;
+  const READER_MIN = 520;
+  const columns = { shelf: 200, list: 408, open: true };
+  try {
+    const saved = JSON.parse(localStorage.getItem(SHELF_KEY));
+    if (Number.isFinite(saved?.shelf)) columns.shelf = saved.shelf;
+    if (Number.isFinite(saved?.list)) columns.list = saved.list;
+    if (typeof saved?.open === 'boolean') columns.open = saved.open;
+  } catch {
+    // Storage is unavailable, or holds something else
+  }
+  // Lays the columns out as they are, within the bounds of now (what is kept is not changed by them)
+  function layoutColumns() {
+    const shelf = columns.open ? Math.min(Math.max(columns.shelf, SHELF_MIN), SHELF_MAX) : 0;
+    const max = Math.max(LIST_MIN, innerWidth - shelf - READER_MIN);
+    const list = Math.min(Math.max(columns.list, LIST_MIN), max);
+    const root = document.documentElement.style;
+    root.setProperty('--shelf-width', `${shelf}px`);
+    root.setProperty('--list-width', `${list}px`);
+    $('manage').classList.toggle('shelf-closed', !columns.open);
+    $('shelf-grip').hidden = !columns.open;
+    $('shelf-show').hidden = columns.open;
+    edgeAt($('shelf-grip'), shelf, shelf, SHELF_MIN, SHELF_MAX);
+    edgeAt($('list-grip'), shelf + list, list, LIST_MIN, max);
+  }
+  function keepColumns() {
+    try {
+      localStorage.setItem(SHELF_KEY, JSON.stringify(columns));
+    } catch {
+      // Storage is unavailable: the columns are laid out as they are, for now
+    }
+  }
+  function showShelf(open) {
+    columns.open = open;
+    layoutColumns();
+    keepColumns();
+    $(open ? 'shelf-hide' : 'shelf-show').focus();
+  }
+  if (FILE) {
+    $('side-hide').addEventListener('click', () => showSide(false));
+    $('side-show').addEventListener('click', () => showSide(true));
+    dragEdge($('side-grip'), { set: sideWidth, keep: keepSide });
     addEventListener('resize', () => { if (sideFound) layoutSide(); });
     sideNarrow.addEventListener('change', () => {
       sideOver = false;
@@ -2478,6 +2544,25 @@
     $('add-empty').addEventListener('click', openAdd);
     for (const b of document.querySelectorAll('.views button[data-view]')) b.addEventListener('click', () => setView(b.dataset.view));
     $('show-archived').addEventListener('click', () => setView('archived'));
+    layoutColumns();
+    addEventListener('resize', layoutColumns);
+    dragEdge($('shelf-grip'), {
+      set: (width) => {
+        columns.shelf = Math.min(Math.max(Math.round(width), SHELF_MIN), SHELF_MAX);
+        layoutColumns();
+      },
+      keep: keepColumns,
+    });
+    dragEdge($('list-grip'), {
+      left: () => $('listcol').getBoundingClientRect().left,
+      set: (width) => {
+        columns.list = Math.min(Math.max(Math.round(width), LIST_MIN), Number($('list-grip').getAttribute('aria-valuemax')));
+        layoutColumns();
+      },
+      keep: keepColumns,
+    });
+    $('shelf-hide').addEventListener('click', () => showShelf(false));
+    $('shelf-show').addEventListener('click', () => showShelf(true));
     // One column has nothing beside the list: what stays alive there would reload itself, and be told read unseen
     oneColumn.addEventListener('change', () => {
       if (!oneColumn.matches || !picked) return;
