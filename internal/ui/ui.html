@@ -425,11 +425,10 @@
   .toast svg { width: 16px; height: 16px; flex: none; color: var(--good); }
   @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
   /* One given its own time, which the script takes it away at: animated only as it comes */
-  .toast.timed { animation: toast-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .toast.timed { max-width: calc(100vw - 32px); animation: toast-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
   @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
-  .toast.page { pointer-events: auto; }
-  .toast.timed { max-width: calc(100vw - 32px); }
-  .toast:has(.btn) { padding-block: 0.4rem; padding-right: 0.4rem; }
+  /* Only one with a button takes the pointer from the page under it */
+  .toast:has(.btn) { padding-block: 0.4rem; padding-right: 0.4rem; pointer-events: auto; }
   .toast .btn { margin-left: 0.5rem; padding: 0.3rem 0.7rem; min-height: 2rem; font-size: var(--text-small); white-space: nowrap; }
   /* The bulk bar, in the head over the list while items are selected: the head on the ground of the rows selected */
   .lhead:has(> .bulk:not([hidden])) { padding-inline: 0.5rem; background: var(--sel); }
@@ -953,7 +952,7 @@
   });
   // The versions read go to the server one request at a time: while one is out, each page's last one waits, its earlier ones dropped.
   // One lost is told again the next time the page is loaded. The slug is the caller's own, never one a page's message names
-  // LIMIT: #error is one place, so that clearing a read's mistake also clears another's shown since, unread. Only while a broken reads.json is mended; as load's loadFailed. Give each its own place if that comes to matter
+  // LIMIT: #error is one place, so that clearing a read's mistake also clears another's shown since, unread. Only while a broken reads.json is mended, or after a mark unread failed, whose words go with the next read of any page; as load's loadFailed. Give each its own place if that comes to matter
   const readsWaiting = new Map();
   let readsGoing = false;
   let readFailed = false;
@@ -1220,6 +1219,7 @@
   // LIMIT: of this tab alone: another tab with the page open reads it again as it draws itself anew. Tell the tabs if that comes to matter
   // LIMIT: whole, a page gone back to by the browser (bfcache) tells nothing and stays unread, until opened again
   // LIMIT: the slug of a page open changed, the frame loads it anew: read again, with its toast
+  // LIMIT: at 40rem or less a page open whole has no bar's menu: the focus left on the toast's button falls to the body, and the way to mark it later is the list's row
   // LIMIT: whole, pressed and moved on at once, the mark waiting or on its way goes with the page, saying nothing
   // LIMIT: a browser that sends no focusout as Ctrl+K moves #toasts leaves the toast whose button had the focus, until the next takes its place
   let keptUnread = null;
@@ -2753,6 +2753,7 @@
   let drawn = '';
   let loadFailed = false;
 
+  // LIMIT: the answers are not put in order: one asked before a read or a mark unread and come after it shows the page as it was, until the next look
   async function load() {
     let text;
     try {

@@ -129,11 +129,10 @@ func TestUIUnreadKept(t *testing.T) { //nolint:paralleltest // the browser tests
 	unreadList(b)
 	anew := func() {
 		t.Helper()
-		loaded := "window.anew"
-		b.eval(`window.anew = false; document.getElementById('read-frame').addEventListener('load', () => { window.anew = true; }, { once: true });
+		// Heard here after the frame's own listener, which has by then sent it or kept it back.
+		b.eval(`window.heard = false; addEventListener('message', (e) => { if (e.data?.artifactRead) window.heard = true; }, { once: false });
 			document.getElementById('read-frame').contentWindow.location.replace(readLoaded)`)
-		b.until("drawn anew", loaded)
-		b.eval("new Promise((go) => setTimeout(go, 100))")
+		b.until("told anew", "window.heard")
 		sentAll(b)
 	}
 	posts := func(slug string) string {
@@ -250,7 +249,7 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 	pickUnread(b, "p1")
 	b.until("the toast", "document.querySelector('.toast.page .btn')")
 	b.still()
-	out := make([]string, 0, 11)
+	out := make([]string, 0, 13)
 	out = append(out, b.eval(timers), b.eval("getComputedStyle(document.querySelector('.toast.page')).animationName"))
 	at := func(selector string) (float64, float64) {
 		t.Helper()
@@ -305,9 +304,12 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 	b.eval("markUnread('p1')")
 	b.until("the words", "document.querySelector('.toast.page')")
 	out = append(out, b.eval(timers), b.eval("getComputedStyle(document.querySelector('.toast.page')).animationName"))
+	// With no button it leaves the pointer to the page under it, which one with a button takes.
+	out = append(out, b.eval("getComputedStyle(document.querySelector('.toast.page')).pointerEvents"))
 	// Of a page not shown, the words stand beside the toast of the one shown.
 	pickUnread(b, "p2")
 	b.until("its toast", "document.querySelector('.toast.page .btn')")
+	out = append(out, b.eval("getComputedStyle(document.querySelector('.toast.page')).pointerEvents"))
 	b.eval("markUnread('p3')")
 	b.until("the words of another", "[...document.querySelectorAll('.toast.timed:not(.page)')].length === 1")
 	out = append(out, b.eval("document.querySelectorAll('.toast.page .btn').length"))
@@ -320,7 +322,7 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the words in it", "!document.querySelector('.toast.page .btn')")
 	out = append(out, b.eval("document.activeElement.id"))
 	check(t, "toast", out, strings.Join([]string{
-		"8000", "toast-in", "", "8000", "", "0", "5000", "toast-in", "1", "true", "find-q",
+		"8000", "toast-in", "", "8000", "", "0", "5000", "toast-in", "none", "auto", "1", "true", "find-q",
 	}, "|"))
 }
 
