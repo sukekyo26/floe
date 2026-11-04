@@ -13,7 +13,7 @@ edge [124,140]→[436,140] M124,140 H436
 edge [484,140]→[632,140] M484,140 H632
 edge [484,140]→[632,202] M484,140 H600 V202 H632
 edge [484,140]→[632,264] M484,140 H600 V264 H632
-label "Claude Code" 55.4,171 89.2x18
-label "writes floe pages" 33.8,193 132.4x18
-label "Amazon Bedrock" 404.6,171 110.8x18
+label "Claude Code" 55.4,167 89.2x18
+label "writes floe pages" 33.8,189 132.4x18
+label "Amazon Bedrock" 404.6,167 110.8x18
 label "Inference request" 133.8,131 132.4x18

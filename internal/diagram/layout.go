@@ -634,7 +634,9 @@ func (l *layout) addTable(t *table, at string) {
 }
 
 // iconLabelY is how far below an icon its label's middle stands.
-const iconLabelY = 16
+// LIMIT: a label written by hand level with an icon's does not follow this value, and stands off when it changes; move
+// it by hand. It is not measured: a label written anywhere else is as good.
+const iconLabelY = 12
 
 func iconSize(i *icon) float64 {
 	if i.Size == 0 {
