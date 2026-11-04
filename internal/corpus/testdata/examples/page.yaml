@@ -1,7 +1,7 @@
 template: report
 lang: ja
 title: 図の例
-lead: floe diagram example の 14 種を、名前で描く（floe-diagram-examples の参照の形）。
+lead: floe diagram example の 15 種を、名前で描く（floe-diagram-examples の参照の形）。
 sections:
   - heading: architecture
     parts:
@@ -9,6 +9,9 @@ sections:
   - heading: aws
     parts:
       - diagram: { example: aws }
+  - heading: aws-graph
+    parts:
+      - diagram: { example: aws-graph }
   - heading: class
     parts:
       - diagram: { example: class }

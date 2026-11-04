@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `icon: { name, icon, label }` to the nodes of a diagram's `graph`, so that an architecture diagram with icons, an AWS one say, needs no coordinate but the graph's `x` and `y`. An icon has no box round it and stays 48 square; the n edges at a side of it end at the points that part the side into n+1 equal parts. A `group` or a lane takes an `icon` too, in its frame's corner. `floe diagram example aws-graph` shows them.
 - Add a modal that searches the pages, opened by `Ctrl+K` (`⌘K`) anywhere, by `/` on a page open whole, or by the magnifier on a
   phone's whole page: it searches by title, description, slug, project, path, template and tag, the archived last, opens a row
   whole, and acts on the row reached with the buttons of a row. Add a modal of the keyboard shortcuts, opened by `?` or the button in the

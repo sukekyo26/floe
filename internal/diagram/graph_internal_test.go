@@ -44,7 +44,7 @@ func graphOf(names []string, edges ...string) *graph {
 // laid is g laid out and checked, as the only part of a diagram.
 func laid(g *graph) *layout {
 	l := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: g}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
-		Options{Lang: "en", Icons: NoIcons{Err: nil}, Seq: 1})
+		Options{Lang: "en", Icons: anyIcon{}, Seq: 1})
 	l.check()
 	return l
 }

@@ -35,6 +35,15 @@ type cluster struct {
 // is -1): a node a group or the graph holds, or an end of an edge.
 type gref struct{ box, cl int }
 
+// flatBox is node n at nat in group cl, a box or an icon, read flat as a box.
+func flatBox(n graphNode, nat string, cl int) gbox {
+	if n.Icon != nil {
+		//nolint:exhaustruct_v5 // an icon read flat as a box
+		return gbox{box: &graphBox{icon: n.Icon, Name: n.Icon.Name, Shape: "icon"}, at: nat + "/icon", cl: cl}
+	}
+	return gbox{box: n.Box, at: nat + "/box", cl: cl}
+}
+
 // flatten reads g's nodes, or its lanes, as written, depth first on a stack of its own: its boxes and groups, and the
 // nodes at its top.
 func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []gref) {
@@ -62,9 +71,9 @@ func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []gref)
 			n, nat, cl := lv.nodes[lv.next], lv.at+"/nodes/"+strconv.Itoa(lv.next), lv.cl
 			lv.next++
 			var c gref
-			if n.Box != nil {
+			if n.Box != nil || n.Icon != nil {
 				c = gref{box: len(boxes), cl: -1}
-				boxes = append(boxes, gbox{box: n.Box, at: nat + "/box", cl: cl})
+				boxes = append(boxes, flatBox(n, nat, cl))
 				for p := cl; p >= 0; p = clusters[p].parent {
 					clusters[p].boxes = append(clusters[p].boxes, c.box)
 				}
@@ -223,8 +232,9 @@ func (gr *group) spans() map[int][2]int {
 // LIMIT: an edge between a box of a group and one outside meets the frame's side, not its top or bottom, when the
 // box inside is past the group's first rank (an edge in) or before its last (out): its points pass by the group's
 // marks, not through a port. Give such edges ports too if frames come to look crossed.
-// LIMIT: a long heading widens its group (down), its room standing before the boxes of the first rank, or deepens
-// the first rank (right). Give the heading a rank's room of its own if long labels come to look stretched.
+// LIMIT: a long heading, and an icon with it, widens its group (down), its room standing before the boxes of the first
+// rank, or deepens the first rank (right). Give the heading a rank's room of its own if long labels come to look
+// stretched.
 func (gr *group) mark() {
 	spans := gr.spans()
 	marks := map[[2]int][2]int{} // a group's left and right marks in a rank
@@ -240,8 +250,9 @@ func (gr *group) mark() {
 		for r := spans[c][0]; r <= spans[c][1]; r++ {
 			marks[[2]int{c, r}] = [2]int{add(c, r, kindLeft, 0, 0), add(c, r, kindRight, 0, 0)}
 		}
-		if t := gr.out.clusters[c].g.Label; t != nil {
-			heading[c] = add(c, spans[c][0], kindHeading, math.Ceil(textWidth(t, frameClass(""))), labelH)
+		if g := gr.out.clusters[c].g; headed(g) {
+			a := headArea(g)
+			heading[c] = add(c, spans[c][0], kindHeading, math.Ceil(a.x+a.w-headParts(false, 0).x), a.h)
 		}
 	}
 	gr.list(spans, marks, heading)
@@ -603,11 +614,11 @@ type room struct {
 	of   map[int]float64
 }
 
-// The room above a rank, for each group starting there, by its label, and below one, for each ending there.
-const (
-	roomHeaded = 30.0 // a heading's 18 and its 9 above and 3 below
-	roomBare   = 12.0
-)
+// roomBare is the room above a rank for a group starting there with no heading, and below one for each ending there.
+const roomBare = 12.0
+
+// roomUnder is what a heading keeps below it, above the rank.
+const roomUnder = 3.0
 
 // rooms are the room above and below each rank: a group starting at a rank has its own room above it, and that of
 // the groups nested in it starting there too, outermost highest; one ending, its own below and theirs.
@@ -624,8 +635,9 @@ func (gr *group) rooms() (above, below []room) {
 	var depth func(c, end int, top bool) float64
 	depth = func(c, end int, top bool) float64 {
 		own := roomBare
-		if top && o.clusters[c].g.Label != nil {
-			own = roomHeaded
+		if g := o.clusters[c].g; top && headed(g) {
+			a := headArea(g)
+			own = a.y + a.h + roomUnder
 		}
 		inner := 0.0
 		for _, k := range o.clusters[c].kids {
