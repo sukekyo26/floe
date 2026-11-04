@@ -550,7 +550,7 @@
   <h1 class="sr-only">floe</h1>
   <!-- Buttons that switch the list. They do not implement WAI-ARIA tabs (arrow keys, tabpanel), so they use aria-pressed -->
   <nav class="shelf" id="shelf" aria-label="{{.Msg "ui_shelf"}}">
-    <div class="shelf-head"><button type="button" class="icon-btn" id="shelf-hide" aria-expanded="true" aria-controls="shelf" title="{{.Msg "ui_shelf_hide"}}" aria-label="{{.Msg "ui_shelf_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
+    <div class="shelf-head"><button type="button" class="icon-btn" id="shelf-hide" aria-expanded="true" aria-controls="shelf" title="{{.Msg "ui_shelf_hide"}}" aria-label="{{.Msg "ui_shelf_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button></div>
     <div class="views" role="group" aria-label="{{.Msg "ui_shelf"}}">
       <button type="button" data-view="new"><span class="dot"></span><span class="label">{{.Msg "ui_view_new"}}</span><span class="n"></span></button>
       <button type="button" data-view="all"><span class="ring"></span><span class="label">{{.Msg "ui_view_all"}}</span><span class="n"></span></button>
@@ -581,10 +581,10 @@
   <section class="listcol" id="listcol">
     <div class="lhead">
       <!-- What shows the filters again, in the head of the list, or of the page beside it with the list folded too -->
-      <span class="shelf-tools" id="shelf-tools" hidden><button type="button" class="icon-btn" id="shelf-show" aria-expanded="false" aria-controls="shelf" title="{{.Msg "ui_shelf_show"}}" aria-label="{{.Msg "ui_shelf_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button><button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button></span>
+      <span class="shelf-tools" id="shelf-tools" hidden><button type="button" class="icon-btn" id="shelf-show" aria-expanded="false" aria-controls="shelf" title="{{.Msg "ui_shelf_show"}}" aria-label="{{.Msg "ui_shelf_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button><button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button></span>
       <span class="count" id="count"></span>
       <button type="button" class="add-open" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button>
-      <button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h14"/></svg></button>
+      <button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button>
       <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
       <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
         <span class="bulk-count" id="bulk-count" aria-live="polite"></span>
@@ -618,7 +618,7 @@
   <!-- The page of the row chosen. Lets copy and fullscreen buttons in the page work, as the frame's -->
   <section class="reader" id="reader">
     <div class="rhead" id="read-head" hidden>
-      <button type="button" class="icon-btn" id="list-show" aria-expanded="false" aria-controls="listcol" title="{{.Msg "ui_list_show"}}" aria-label="{{.Msg "ui_list_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h14"/></svg></button>
+      <button type="button" class="icon-btn" id="list-show" aria-expanded="false" aria-controls="listcol" title="{{.Msg "ui_list_show"}}" aria-label="{{.Msg "ui_list_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button>
       <a class="read-title" id="read-title"></a>
       <span class="frame-actions" id="read-actions"></span>
     </div>
