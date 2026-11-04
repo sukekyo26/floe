@@ -13,6 +13,7 @@
   :root {
     --bg: #f4f3f0; --panel: #fbfaf8; --subtle: #efeee9; --hover: #f6f5f1; --sel: #ecebe6;
     --fg: #22211f; --muted: #615f5a; --faint: #6b6964; --line: #e3e1dc;
+    --shelf-mark: 15px;
     --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00;
     /* What is new to the viewer, and a link whose file is gone */
     --new: #2558c4; --new-soft: #eaf1fd; --chg: #8a6100; --chg-soft: #fdf3d6;
@@ -194,7 +195,10 @@
     display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: var(--corner-menu);
     background: none; color: var(--fg); font-weight: 500; text-align: left; overflow-wrap: anywhere;
   }
-  .views svg { width: 15px; height: 15px; flex: none; color: var(--star); }
+  /* The marks of the views and the projects take one column, so that their words start at one x */
+  .views svg { width: var(--shelf-mark); height: var(--shelf-mark); flex: none; color: var(--muted); }
+  .views [data-view="fav"] svg { color: var(--star); }
+  .views .dot, .views .ring, .chip.project::before { margin-inline: calc((var(--shelf-mark) - 8px) / 2); }
   .views .n, .chip .n { margin-left: auto; font: var(--text-label)/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
   .views button:hover, .chip:hover { background: var(--subtle); }
   .views button[aria-pressed="true"], .chip[aria-pressed="true"] { font-weight: 700; background: var(--panel); box-shadow: 0 1px 0 var(--line); }
@@ -493,11 +497,10 @@
     .shelf .views [data-view="fav"] .label { display: none; }
     .shelf .views [data-view="archived"] .n { display: none; }
     .shelf .views button[aria-pressed="true"], #narrow-filter.narrowed { color: var(--on-ink); background: var(--ink); border-color: var(--ink); box-shadow: none; }
-    .shelf .views button[aria-pressed="true"] .n, #narrow-filter.narrowed svg { color: var(--on-ink); }
+    .shelf .views button[aria-pressed="true"] .n, .shelf .views [data-view="archived"][aria-pressed="true"] svg, #narrow-filter.narrowed svg { color: var(--on-ink); }
     .shelf .views button .n { margin-left: 0; }
     #narrow-filter { display: inline-flex; }
     .news { display: none; }
-    #narrow-filter svg { color: var(--muted); }
   }
   /* One column: only the list, a row opening its page whole, with the way back */
   @media (max-width: 56rem) {
@@ -509,6 +512,7 @@
   /* The bar folds up: the search as its icon until it is reached, a page's buttons gone, the filter at the row's end */
   @media (max-width: 40rem) {
     #narrow-filter { margin-left: auto; }
+    .shelf .views [data-view="archived"] .label { display: none; }
     .framed .frame-actions { display: none; }
     .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
     .bar-inner:has(> .search:not([hidden])) .bar-end { margin-left: auto; }
@@ -555,7 +559,7 @@
       <button type="button" data-view="new"><span class="dot"></span><span class="label">{{.Msg "ui_view_new"}}</span><span class="n"></span></button>
       <button type="button" data-view="all"><span class="ring"></span><span class="label">{{.Msg "ui_view_all"}}</span><span class="n"></span></button>
       <button type="button" data-view="fav" aria-label="{{.Msg "ui_view_favorites"}}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span class="label">{{.Msg "ui_view_favorites"}}</span><span class="n"></span></button>
-      <button type="button" data-view="archived"><span class="label">{{.Msg "ui_view_archived"}}</span><span class="n"></span></button>
+      <button type="button" data-view="archived" aria-label="{{.Msg "ui_view_archived"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span class="label">{{.Msg "ui_view_archived"}}</span><span class="n"></span></button>
       <button type="button" id="narrow-filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span id="narrow-filter-name">{{.Msg "ui_narrow"}}</span></button>
     </div>
     <div class="shelf-more" id="shelf-more">
