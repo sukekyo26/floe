@@ -1484,7 +1484,7 @@
     edit.addEventListener('click', () => {
       // The bar's menu is drawn anew in its place, a row's by its slug
       const bar = box.closest('#read-actions, #frame-actions')?.id;
-      editBack = () => (bar ? $(bar) : [...$('list').children].find((li) => li.dataset.key === `entry:${a.slug}`))?.querySelector('summary');
+      editBack = () => (bar ? $(bar) : [...$('list').children].find((li) => li.dataset.key === `entry:${editing.slug}`))?.querySelector('summary');
       openEdit(a);
     });
     const open = box.querySelector('.open');
@@ -1596,7 +1596,7 @@
     link.href = `/a/${a.slug}/`;
     link.textContent = a.title;
     // All the row's words that it may cut or leave out: the title's hit area covers the row, so that no title of what lies under it shows
-    link.title = [a.title, a.description, a.path, a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
+    link.title = [a.title, a.description, a.project, a.path, a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
       .filter(Boolean).join('\n');
     const sub = li.querySelector('.sub');
     const put = (cls, text) => {
@@ -1912,13 +1912,16 @@
       return;
     }
     if (changes.slug) {
+      const was = editing.slug;
+      // The row it goes back to is under the new name
+      editing = { ...editing, slug: changes.slug };
       // The frame's URL is the old name's, which is gone now; the page chosen beside the list is loaded under the new one
       if (framed) {
         location.replace(pageHref({ slug: changes.slug }));
         return;
       }
       // Drawn with the list read below
-      if (picked?.slug === editing.slug) picked.slug = changes.slug;
+      if (picked?.slug === was) picked.slug = changes.slug;
     }
     toast(t('ui_saved'));
     // Drawn before the dialog closes, which gives focus to the row's menu button as drawn

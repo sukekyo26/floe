@@ -51,7 +51,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// The bar and the head count the new off the archive, as the shelf does.
 	out = append(out, b.eval("[document.getElementById('news-n').textContent, document.getElementById('count').textContent, document.querySelector('.views [data-view=new] .n').textContent].join(' / ')"))
 	// The words of the description are the title's alone, searched too.
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=v] .title').title.split('\\n').slice(0, 2).join('\\n')"))
+	out = append(out, b.eval("document.querySelector('#list li[data-slug=v] .title').title.split('\\n').slice(0, 3).join('\\n')"))
 	b.eval("(() => { const q = document.getElementById('q'); q.value = 'the words'; q.dispatchEvent(new Event('input')); })()")
 	out = append(out, b.eval("[...document.querySelectorAll('#list > li:not(.group)')].map((li) => li.dataset.slug).join('') + ' ' + location.search"))
 	b.eval("(() => { const q = document.getElementById('q'); q.value = ''; q.dispatchEvent(new Event('input')); })()")
@@ -182,7 +182,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	check(t, "list", out, strings.Join([]string{
 		"#|v dot 700 ver:v3 · new version kindof:design proj:p tags:t|#|n dot 700 kindof:report proj:q|#|r ring 500 kindof:report proj:p|l mark 500 kindof:Link · HTML path:/tmp/x/l.html|#|d mark 500 kindof:Link · handoff path:/home/you/work/a (1)/v2.0/data-set_#1/deep/deep/deep/deep/deep/deep/deep/deep/deep/name-2.yaml|#|f mark 500 kindof:Folder path:/tmp/x/f|#|g mark 500 kindof:Link · HTML miss:File not found",
 		"Today,Yesterday,Last 7 days", "2 new / Newest first · 2 new / 2",
-		"Version\nthe words", "v ?q=the+words",
+		"Version\nthe words\np", "v ?q=the+words",
 		"false true about:blank  ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
 		"true false /a/l/?raw Link l", "true false /a/n/?raw New n New",
 		"true true true", "false true about:blank New ",
@@ -252,6 +252,11 @@ func TestUIReader(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
 	out = append(out, b.until("the focus back", "document.activeElement.matches('#list li[data-slug=a1] summary') && 'row'"))
 
+	// Renamed from its row, the focus goes back to the row under its new name.
+	b.eval(`document.querySelector('#list li[data-slug=a2] summary').click(); document.querySelector('#list li[data-slug=a2] .edit').click();
+		document.getElementById('edit-slug').value = 'a4'; document.getElementById('edit').requestSubmit()`)
+	out = append(out, b.until("the focus on the row renamed", "document.activeElement.matches('#list li[data-slug=a4] summary') && 'renamed'"))
+
 	// A link's file gone is not loaded beside the list, and is once it is back.
 	file := s.write(t, "aside/h.html", "<title>h</title><p>h</p>")
 	s.floe(t, "publish", "--link", file, "--slug", "h")
@@ -281,7 +286,7 @@ func TestUIReader(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.until("the new version", "document.querySelector('#list li[data-slug=a1] .ver')")
 	out = append(out, strconv.FormatBool(s.floeRead(t) == before))
 	b.unsize()
-	check(t, "reader", out, "true|a3|bar|row|true about:blank|false| about:blank|true")
+	check(t, "reader", out, "true|a3|bar|row|renamed|true about:blank|false| about:blank|true")
 }
 
 // TestUIFrameOrder goes through a list by j in the frame: the list that opened it, a page gone since left out; opened from the
