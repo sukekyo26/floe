@@ -858,7 +858,8 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	x, y := rowPoint(t, b, a2, false)
 	b.pressAt(x, y, 1)
 	b.until("picked", "picked?.slug === 'a2'")
-	out := []string{b.eval(rowAgainPath)}
+	out := make([]string, 0, 7)
+	out = append(out, b.eval(rowAgainPath))
 	// Read and drawn so, as a redraw closes a menu open.
 	b.until("read", "!document.querySelector("+js(a2)+").classList.contains('unseen') && !readsGoing")
 	b.eval("load().then(() => true)")
@@ -951,7 +952,8 @@ func TestUIRowAgainKinds(t *testing.T) { //nolint:paralleltest // the browser te
 	b.pressAt(x, y, 1)
 	b.until("the words why", "picked?.slug === 'gone' && !document.getElementById('read-blank').hidden")
 	b.pressAt(x, y, 1)
-	out := []string{b.eval("picked.slug + ' ' + " + rowAgainPath + " + ' ' + sessionStorage.getItem('artifacts.order')")}
+	out := make([]string, 0, 2)
+	out = append(out, b.eval("picked.slug + ' ' + "+rowAgainPath+" + ' ' + sessionStorage.getItem('artifacts.order')"))
 
 	const expanded = ".querySelector('.title').getAttribute('aria-expanded')"
 	x, y = rowPoint(t, b, folder, false)
@@ -998,7 +1000,8 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	// The first press, the focus on another row, picked though the poll came in the middle of it; then the next poll draws.
 	b.eval("document.querySelector('#list li[data-slug=a3] .title').focus()")
 	b.mouse(chromedp.MousePressed, x, y, chromedp.ButtonLeft, 1)
-	out := []string{polled()}
+	out := make([]string, 0, 5)
+	out = append(out, polled())
 	b.mouse(chromedp.MouseReleased, x, y, chromedp.ButtonLeft, 1)
 	b.until("picked", "picked?.slug === 'a2'")
 	out = append(out, b.eval(fmt.Sprintf(poll, "")))
