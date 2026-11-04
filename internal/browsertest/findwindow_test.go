@@ -972,3 +972,77 @@ func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"find-q find-1", "find-q find-2", "find-q find-3", "find-q find-4", "T", "1", "find-q", "true", "true", "true", "true",
 	}, "|"))
 }
+
+// TestUIFindArrows moves over the rows by the arrows from the foot's buttons too, which keep the focus and say the row they act on,
+// but not with a menu open; Enter stays the button's.
+func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.stub(findList)
+	b.size(1000, 700, false)
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list .title')")
+	b.eval("openFind()")
+	b.still()
+	key := func(k string) {
+		t.Helper()
+		if err := chromedp.Do(b.ctx, chromedp.KeyEvent(k)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const q = "document.getElementById('find-q')"
+	// The row reached, what has the focus, and the name of the star.
+	const state = `[` + q + `.getAttribute('aria-activedescendant'), document.activeElement.id || document.activeElement.className || document.activeElement.tagName,
+		document.querySelector('#find-actions .star').getAttribute('aria-label')].join(' / ')`
+	press := func(k string) string {
+		t.Helper()
+		key(k)
+		return b.eval(state)
+	}
+	out := make([]string, 0, 16)
+	// By Tab to the star: down, up, and round past the first.
+	key("\t")
+	out = append(out, press(kb.ArrowDown), press(kb.ArrowUp), press(kb.ArrowUp))
+	b.eval(q + ".focus()")
+	key(kb.ArrowDown)
+	// After a press on the star, by the mouse.
+	x := b.eval("(() => { const r = document.querySelector('#find-actions .star').getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()")
+	var px, py float64
+	if _, err := fmt.Sscan(x, &px, &py); err != nil {
+		t.Fatal(err)
+	}
+	b.click(px, py)
+	b.until("the star's toast", "document.querySelector('#toasts').textContent")
+	out = append(out, press(kb.ArrowDown))
+	// Enter is the star's still, and no row opens.
+	b.eval("window.starred = 0; document.querySelector('#find-actions .star').addEventListener('click', () => { window.starred++; })")
+	key(kb.Enter)
+	out = append(out, b.eval("window.starred + ' ' + location.pathname"))
+	// The button that opens a page keeps the focus; on a folder, which has none to open, the focus goes to the field. The rows run to the folder as z, f.
+	b.eval("document.querySelector('#find-actions .open').focus()")
+	out = append(out, press(kb.ArrowDown))
+	out = append(out, press(kb.ArrowDown))
+	// From the close button too.
+	b.eval("document.querySelector('#find [data-close]').focus()")
+	out = append(out, press(kb.ArrowUp))
+	// From the menu's button the focus goes to the field, as the menu is another row's.
+	b.eval("document.querySelector('#find-actions summary').focus()")
+	out = append(out, press(kb.ArrowUp))
+	// With the menu open the rows stay, from its button and from within it.
+	b.eval("document.querySelector('#find-actions summary').focus(); document.querySelector('#find-actions summary').click()")
+	const menu = "document.querySelector('#find-actions .more').open"
+	out = append(out, press(kb.ArrowDown), b.eval(menu))
+	b.eval("document.querySelector('#find-actions .menu .edit').focus()")
+	out = append(out, press(kb.ArrowDown), b.eval(menu))
+	// The rows gone with the focus on the star, it goes to the field.
+	b.eval("closeMenus(null); document.querySelector('#find-actions .star').focus(); items.length = 0; drawFind()")
+	out = append(out, b.eval("document.activeElement.id"))
+	check(t, "arrows", out, strings.Join([]string{
+		"find-1 / icon-btn star / Add Beta to favorites", "find-0 / icon-btn star / Add Alpha plan to favorites", "find-4 / icon-btn star / Add Zed plan to favorites",
+		"find-1 / icon-btn star / Add Beta to favorites", "1 /",
+		"find-2 / icon-btn open / Add Gamma plan to favorites", "find-3 / find-q / Add Folder to favorites",
+		"find-2 / btn / Add Gamma plan to favorites", "find-1 / find-q / Add Beta to favorites",
+		"find-1 / icon-btn / Add Beta to favorites", "true", "find-1 / icon-btn edit / Add Beta to favorites", "true",
+		"find-q",
+	}, "|"))
+}

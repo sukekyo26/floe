@@ -1273,7 +1273,7 @@
   // The keys of a field's listbox (the tags' suggestions and the rows of the search modal), whose options are reached from it by aria-activedescendant, the one
   // reached shown (.reached) and aria-selected: ↑↓ (round the ends; opening it, shut), Enter to choose, Escape to close (the
   // listbox, not a dialog it is in) and Tab to close. Home and End are left to move the caret
-  function listKeys(target, { options, choose, close, open, shown, tab = close, moved = () => {} }) {
+  function listKeys(target, { options, choose, close, open, shown, tab = close, moved = () => {}, arrows = target }) {
     let active = -1;
     const mark = (i) => {
       const all = options();
@@ -1289,14 +1289,16 @@
       }
       moved(i);
     };
+    arrows.addEventListener('keydown', (e) => {
+      if (composing(e) || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return;
+      const n = options().length;
+      e.preventDefault();
+      if (!shown()) open();
+      else if (n) mark(e.key === 'ArrowDown' ? (active + 1) % n : (active <= 0 ? n : active) - 1);
+    });
     target.addEventListener('keydown', (e) => {
       if (composing(e)) return;
-      const n = options().length;
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (!shown()) open();
-        else if (n) mark(e.key === 'ArrowDown' ? (active + 1) % n : (active <= 0 ? n : active) - 1);
-      } else if (e.key === 'Enter' && shown() && active >= 0) {
+      if (e.key === 'Enter' && shown() && active >= 0) {
         e.preventDefault();
         choose(active);
       } else if (e.key === 'Escape' && shown()) {
@@ -2677,6 +2679,8 @@
     open: () => {},
     shown: () => true,
     tab: () => {},
+    // The arrows move over the rows from the buttons of the foot too, Enter staying theirs
+    arrows: $('find'),
     moved: (i) => {
       if (i >= 0) findAt = i;
       findSlug = findShown[i]?.slug ?? null;
@@ -2690,11 +2694,12 @@
   // focus in the menu's place goes to the menu as drawn, or to the field where the row it was of has gone
   function drawFindBar(a) {
     const box = $('find-actions');
-    const focused = box.querySelector('.more-slot').contains(document.activeElement);
+    const was = document.activeElement;
+    const focused = box.querySelector('.more-slot').contains(was);
     $('find-acts').hidden = !a;
     if (!a) {
       delete box.dataset.slug;
-      if (focused) $('find-q').focus();
+      if (box.contains(was)) $('find-q').focus();
       return;
     }
     const same = box.dataset.slug === a.slug;
@@ -2702,6 +2707,8 @@
     box.dataset.slug = a.slug;
     drawActions(box, a, '');
     if (focused) (same ? box.querySelector('summary') : $('find-q')).focus();
+    // A folder has no page to open: a focus left on that button would fall out of the modal
+    else if (was.hidden) $('find-q').focus();
   }
 
   function drawFind() {
@@ -2998,14 +3005,17 @@
     findAt = 0;
     drawFind();
   });
-  // Escape closes the menu open in it first, not the modal as well
+  // Escape closes the menu open in it first, not the modal as well; the arrows leave the rows behind a menu still
   $('find').addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || !$('find').querySelector('.more[open]')) return;
+    if (!$('find').querySelector('.more[open]')) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') e.stopPropagation();
+    if (e.key !== 'Escape') return;
     e.preventDefault();
     e.stopPropagation();
     closeMenus(null);
   }, true);
-  // A press on what does nothing leaves the focus where it is: in the field, which takes the arrows. The words of an error stay selectable
+  // A press on what does nothing leaves the focus where it is, as the field takes what is typed. The words of an error stay selectable
+  // LIMIT: the other words in the modal cannot be selected with the mouse; the menu copies a path. Let them if others come to be copied
   $('find').addEventListener('mousedown', (e) => {
     if (!e.target.closest('a, button, input, summary, #error')) e.preventDefault();
   });
