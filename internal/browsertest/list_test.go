@@ -116,7 +116,8 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.stub(strings.Replace(listList, "news: 'version', ", "", 1))
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	key("j")
-	b.until("the next page", "location.pathname === '/a/n/'")
+	// The bar, not the URL alone: a key goes nowhere until the list is read.
+	b.until("the next page", "location.pathname === '/a/n/' && document.getElementById('frame-title').textContent")
 	key("k")
 	b.until("the page before", "location.pathname === '/a/v/'")
 	// From the URL, on no such list: the list it was last on, else all of its kind.
