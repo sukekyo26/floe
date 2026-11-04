@@ -216,6 +216,38 @@ func (s *Store) VersionPage(slug string, m *Meta, n int) ([]byte, bool) {
 	return page, err == nil
 }
 
+// VersionPages is the versions of the numbers of the stored page slug and their pages, all of one meta.json: false when
+// it lists one of them not, or one cannot be read. Read once more for a copy a publish removed after its meta.json was
+// read.
+// LIMIT: that second read is not tested, as nothing can put a publish in the middle of it. Give it a way in if it
+// breaks.
+func (s *Store) VersionPages(slug string, numbers ...int) ([]Version, [][]byte, bool) {
+	for range 2 {
+		m := s.ReadMeta(slug)
+		if m == nil {
+			break
+		}
+		versions := make([]Version, len(numbers))
+		pages := make([][]byte, len(numbers))
+		read := true
+		for i, n := range numbers {
+			v, listed := s.ReadMark(slug, m, n)
+			if !listed {
+				return nil, nil, false
+			}
+			versions[i] = v
+			if pages[i], listed = s.VersionPage(slug, m, n); !listed {
+				read = false
+				break
+			}
+		}
+		if read {
+			return versions, pages, true
+		}
+	}
+	return nil, nil, false
+}
+
 // gzipped is page gzipped, as a version before the last is kept.
 func gzipped(page []byte) []byte {
 	var b bytes.Buffer
@@ -305,14 +337,16 @@ func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 
 // Listed is an entry of the list. A link takes its title and update time from the file, a linked data file its template
 // too; Missing is set for links only, true when the file cannot be served. News (newsNew, newsVersion, "" for nothing
-// unseen) and Version, the number of the last, are of a stored page only.
+// unseen), Version, the number of the last, and VersionCount, how many are kept, are of a stored page only.
 type Listed struct {
 	Slug string `json:"slug"`
 	Meta
 
 	News    string `json:"news,omitempty"`
 	Version int    `json:"version,omitempty"`
-	Missing *bool  `json:"missing,omitempty"`
+	// VersionCount tells whether there are versions to compare, the versions themselves left out of the list.
+	VersionCount int   `json:"versionCount,omitempty"`
+	Missing      *bool `json:"missing,omitempty"`
 }
 
 // slugs returns the slugs of the store, in their order: the names under it that can be one.
@@ -358,12 +392,13 @@ func (s *Store) List(viewer string) ([]Listed, error) {
 }
 
 func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
-	l := Listed{Slug: slug, Meta: *m, News: "", Version: 0, Missing: nil}
+	l := Listed{Slug: slug, Meta: *m, News: "", Version: 0, VersionCount: 0, Missing: nil}
 	// The list is read every few seconds: versions are asked for a page at a time.
 	l.Versions = nil
 	if !m.IsLink() {
 		l.News = r.news(slug, m)
 		l.Version = m.lastNumber()
+		l.VersionCount = len(m.Versions)
 		return l
 	}
 	// What is in a folder is listed when it is opened (Pages): the list is read every few seconds.

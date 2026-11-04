@@ -162,6 +162,14 @@ linters:
           deny:
             - pkg: "github.com/tdewolff/parse/v2"
               desc: "check CSS through internal/css, which reads tdewolff's tokens after CSS Syntax's preprocessing"
+        go-diff-in-pagediff:
+          list-mode: lax
+          files:
+            - "$all"
+            - "!**/internal/pagediff/**"
+          deny:
+            - pkg: "github.com/sergi/go-diff"
+              desc: "compare versions of a page through internal/pagediff, which reads them into their words"
         goldmark-in-kit:
           list-mode: lax
           files:
