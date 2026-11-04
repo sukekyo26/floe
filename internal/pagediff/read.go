@@ -29,8 +29,8 @@ type section struct {
 // LIMIT: the HTML's elements alone are read, not its CSS: a span drawn as a block runs on in its block's words, and a
 // div drawn inline
 // is a block of its own. It only tells how the words read, not whether they differ.
-// LIMIT: words alone are compared: making words bold, a link's target and CSS tell nothing. The steps part says nothing of its state
-// doing, so that todo to doing tells nothing either: give it words if that comes to trouble someone.
+// LIMIT: words alone are compared: making words bold, a link's target and CSS tell nothing. The steps part says nothing
+// of its state doing, so that todo to doing tells nothing either: give it words if that comes to trouble someone.
 var (
 	// What is no part of what a reader reads: a nav repeats the headings, a button is a page's control, and what is in a
 	// progress or a
