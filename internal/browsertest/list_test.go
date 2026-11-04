@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/chromedp/cdproto/accessibility"
+	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 )
@@ -801,4 +802,223 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"block 0 0 0 1", "none", "true", "true", "true true", "true", "false true not (max-width: 70rem)",
 		"200px true true", "200px true true", "200px true true", "320px 320px",
 	}, "|"))
+}
+
+// rowPoint is where in the row of the selector a press lands on its link: at its title's words, or in the margin of the row.
+func rowPoint(t *testing.T, b *browser, row string, margin bool) (float64, float64) {
+	t.Helper()
+
+	var at struct{ X, Y float64 }
+	box := "document.querySelector(" + js(row) + ").getBoundingClientRect()"
+	if !margin {
+		box = "document.querySelector(" + js(row+" .title") + ").getBoundingClientRect()"
+	}
+	got := b.eval("(() => { const r = " + box + "; const x = r.left + " + map[bool]string{true: "2", false: "12"}[margin] + ", y = r.top + " +
+		map[bool]string{true: "2", false: "6"}[margin] + "; if (!document.elementFromPoint(x, y)?.closest('a.title')) return 'not its link: ' + document.elementFromPoint(x, y)?.outerHTML; return JSON.stringify({ X: x, Y: y }); })()")
+	if err := json.Unmarshal([]byte(got), &at); err != nil {
+		t.Fatalf("%s: %s", row, got)
+	}
+	return at.X, at.Y
+}
+
+// mouse sends the press or release of a button at x, y, the click count of a second press of a double one with it.
+func (b *browser) mouse(typ input.DispatchMouseEventType, x, y float64, button chromedp.MouseOption, count int) {
+	b.t.Helper()
+
+	if err := chromedp.Do(b.ctx, chromedp.MouseEvent(typ, x, y, button, chromedp.ClickCount(count))); err != nil {
+		b.t.Fatal(err)
+	}
+}
+
+// pressAt presses and releases the main button at x, y.
+func (b *browser) pressAt(x, y float64, count int) {
+	b.t.Helper()
+
+	b.mouse(chromedp.MousePressed, x, y, chromedp.ButtonLeft, count)
+	b.mouse(chromedp.MouseReleased, x, y, chromedp.ButtonLeft, count)
+}
+
+const rowAgainPath = "location.pathname + location.search"
+
+// TestUIRowAgain opens the page of the row picked whole as it is pressed again, at its title or in its margin, or pressed double, in
+// the order of the list; a press that only closes a menu, or may have missed a box with rows selected, moves nowhere. So does the
+// first, a modified one, which is the link's, and j and k finding no row past the one picked.
+func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := asideSite(t)
+	b := s.b
+	list := func() {
+		t.Helper()
+		b.navigate("/")
+		b.size(1440, 900, false)
+		b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length === 3")
+	}
+	list()
+	const a2 = "#list li[data-slug=a2]"
+	x, y := rowPoint(t, b, a2, false)
+	b.pressAt(x, y, 1)
+	b.until("picked", "picked?.slug === 'a2'")
+	out := []string{b.eval(rowAgainPath)}
+
+	// A menu open, the press closes it.
+	b.eval("document.querySelector(" + js(a2+" .more") + ").open = true")
+	b.pressAt(x, y, 1)
+	b.until("the menu closed", "!document.querySelector('.more[open]')")
+	out = append(out, b.eval(rowAgainPath))
+	// A delete waiting in it, the same.
+	b.eval("document.querySelector(" + js(a2+" .more") + ").open = true; document.querySelector(" + js(a2+" .delete") + ").click()")
+	b.until("armed", "document.querySelector("+js(a2+" .delete.armed")+")")
+	b.pressAt(x, y, 1)
+	b.until("the menu closed again", "!document.querySelector('.more[open]')")
+	out = append(out, b.eval(rowAgainPath))
+	// A row selected, the press leaves it selected.
+	b.eval("document.querySelector('#list li[data-slug=a1] .sel').click()")
+	x, y = rowPoint(t, b, a2, false)
+	b.pressAt(x, y, 1)
+	out = append(out, b.eval("[selected.size, picked.slug, "+rowAgainPath+"].join(' ')"))
+	b.eval("document.querySelector('#list li[data-slug=a1] .sel').click()")
+	// Modified, it is left to the link.
+	out = append(out, b.eval(`(() => {
+		const link = document.querySelector('#list li[data-slug=a2] .title');
+		let kept;
+		const note = (e) => { kept = !e.defaultPrevented; e.preventDefault(); };
+		document.addEventListener('click', note, { once: true });
+		link.dispatchEvent(new MouseEvent('click', { ctrlKey: true, bubbles: true, cancelable: true }));
+		return kept;
+	})()`))
+	// No row past the one picked: k stays, and does not go whole.
+	b.eval("document.querySelector('#list li[data-slug=a3] .title').focus()")
+	b.pressKey("j")
+	b.until("back beside", "picked?.slug === 'a2'")
+	b.pressKey("k")
+	b.until("the first", "picked?.slug === 'a3'")
+	b.pressKey("k")
+	out = append(out, b.eval("picked.slug + ' ' + "+rowAgainPath))
+
+	// Pressed again, whole, the list's order kept for j.
+	x, y = rowPoint(t, b, a2, false)
+	b.pressAt(x, y, 1)
+	b.until("a2 again", "picked?.slug === 'a2'")
+	b.pressAt(x, y, 1)
+	b.until("whole", "location.pathname === '/a/a2/'")
+	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"))
+	b.until("its bar", "document.getElementById('frame').hasAttribute('src')")
+	b.pressKey("j")
+	b.until("on through the list", "location.pathname === '/a/a1/'")
+
+	// In the margin of the row.
+	list()
+	x, y = rowPoint(t, b, a2, true)
+	b.pressAt(x, y, 1)
+	b.until("picked by the margin", "picked?.slug === 'a2'")
+	b.pressAt(x, y, 1)
+	b.until("whole by the margin", "location.pathname === '/a/a2/'")
+
+	// Pressed double, as a person does.
+	list()
+	x, y = rowPoint(t, b, "#list li[data-slug=a3]", false)
+	b.pressAt(x, y, 1)
+	b.pressAt(x, y, 2)
+	b.until("whole by a double press", "location.pathname === '/a/a3/'")
+
+	check(t, "row again", out, strings.Join([]string{
+		"/", "/", "/", "1 a2 /", "true", "a3 /", `["a3","a2","a1"]`,
+	}, "|"))
+}
+
+// TestUIRowAgainKinds opens a folder's page whole by its own URL, closes a folder's tree as its row is pressed again, and leaves a
+// link whose file is gone, which has nowhere to go, and the order with it.
+func TestUIRowAgainKinds(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.write(t, "docs/guide/setup.html", "<title>t</title><p>setup</p>")
+	s.write(t, "docs/index.html", "<title>t</title><p>index</p>")
+	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "docs"), "--slug", "docs")
+	gone := s.write(t, "away/gone.html", "<title>t</title><p>gone</p>")
+	s.floe(t, "publish", "--link", gone, "--slug", "gone")
+	if err := os.Remove(gone); err != nil {
+		t.Fatal(err)
+	}
+	b.navigate("/")
+	b.size(1440, 900, false)
+	const folder, missing = "#list li[data-slug=docs]", "#list li[data-slug=gone].gone"
+	b.until("the rows", "document.querySelector("+js(folder)+") && document.querySelector("+js(missing)+")")
+
+	x, y := rowPoint(t, b, missing, false)
+	b.pressAt(x, y, 1)
+	b.until("the words why", "picked?.slug === 'gone' && !document.getElementById('read-blank').hidden")
+	b.pressAt(x, y, 1)
+	out := []string{b.eval("picked.slug + ' ' + " + rowAgainPath + " + ' ' + sessionStorage.getItem('artifacts.order')")}
+
+	const expanded = ".querySelector('.title').getAttribute('aria-expanded')"
+	x, y = rowPoint(t, b, folder, false)
+	b.pressAt(x, y, 1)
+	b.until("the tree", "document.querySelector("+js(folder)+")"+expanded+" === 'true' && document.querySelector('#list li.page')")
+	const page = "#list li.page[data-file='index.html']"
+	px, py := rowPoint(t, b, page, false)
+	b.pressAt(px, py, 1)
+	b.until("the page picked", "picked?.file === 'index.html'")
+	x, y = rowPoint(t, b, folder, false)
+	b.pressAt(x, y, 1)
+	b.until("the tree closed", "document.querySelector("+js(folder)+")"+expanded+" === 'false'")
+	out = append(out, b.eval(rowAgainPath))
+	b.pressAt(x, y, 1)
+	b.until("the tree back", "document.querySelector("+js(folder)+")"+expanded+" === 'true' && document.querySelector("+js(page)+")")
+	px, py = rowPoint(t, b, page, false)
+	b.pressAt(px, py, 1)
+	b.until("whole by its own URL", "location.pathname + location.search === '/a/docs/?file=index.html'")
+
+	check(t, "row again, kinds", out, "gone / null|/")
+}
+
+// TestUIRowAgainPressed holds off drawing the rows anew from a poll's answer while one is pressed, as the press would be lost, and
+// draws them at the next; a press outside the list, or of the secondary button, whose release a context menu may keep, holds nothing.
+func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := asideSite(t)
+	b := s.b
+	list := func() {
+		t.Helper()
+		b.navigate("/")
+		b.size(1440, 900, false)
+		b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length === 3")
+	}
+	// Whether the rows stayed as a poll's answer came, one that always differs.
+	polled := func() string {
+		t.Helper()
+		return b.eval("(async () => { const row = document.querySelector('#list li[data-slug]'); drawn = ''; await load(); return row.isConnected; })()")
+	}
+	const a2 = "#list li[data-slug=a2]"
+	list()
+	x, y := rowPoint(t, b, a2, false)
+
+	// The first press, picked though the poll came in the middle of it; then the next poll draws.
+	b.mouse(chromedp.MousePressed, x, y, chromedp.ButtonLeft, 1)
+	out := []string{polled()}
+	b.mouse(chromedp.MouseReleased, x, y, chromedp.ButtonLeft, 1)
+	b.until("picked", "picked?.slug === 'a2'")
+	out = append(out, polled())
+
+	// Outside the list.
+	r := b.eval("(() => { const r = document.getElementById('read-frame').getBoundingClientRect(); return JSON.stringify({ X: r.left + 40, Y: r.top + 40 }); })()")
+	var at struct{ X, Y float64 }
+	if err := json.Unmarshal([]byte(r), &at); err != nil {
+		t.Fatal(err)
+	}
+	b.mouse(chromedp.MousePressed, at.X, at.Y, chromedp.ButtonLeft, 1)
+	out = append(out, polled())
+	b.mouse(chromedp.MouseReleased, at.X, at.Y, chromedp.ButtonLeft, 1)
+
+	// The secondary button, its release not sent as a context menu may keep it.
+	x, y = rowPoint(t, b, a2, false)
+	b.mouse(chromedp.MousePressed, x, y, chromedp.ButtonRight, 1)
+	out = append(out, polled())
+	b.mouse(chromedp.MouseReleased, x, y, chromedp.ButtonRight, 1)
+
+	// The second press, whole though the poll came in the middle of it.
+	x, y = rowPoint(t, b, a2, false)
+	b.mouse(chromedp.MousePressed, x, y, chromedp.ButtonLeft, 2)
+	out = append(out, polled())
+	b.mouse(chromedp.MouseReleased, x, y, chromedp.ButtonLeft, 2)
+	b.until("whole", "location.pathname === '/a/a2/'")
+
+	check(t, "row again, pressed", out, "true|false|false|false|true")
 }

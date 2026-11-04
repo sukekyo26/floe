@@ -1222,6 +1222,7 @@
   // LIMIT: at 40rem or less a page open whole has no bar's menu: the focus left on the toast's button falls to the body, and the way to mark it later is the list's row
   // LIMIT: whole, pressed and moved on at once, the mark waiting or on its way goes with the page, saying nothing
   // LIMIT: a browser that sends no focusout as Ctrl+K moves #toasts leaves the toast whose button had the focus, until the next takes its place
+  // LIMIT: a row pressed again once its page is being read (a double press too) takes the toast of the list with it, and the page whole, told it was read already, shows none; its menu still marks it unread. Carry the toast over if that comes to trouble someone
   let keptUnread = null;
   // Whether the next read told is of a page a person opened: the toast says so of no other
   let opening = true;
@@ -1803,10 +1804,13 @@
     return box;
   }
 
-  // Pressed, a row opens its page beside the list, or whole where nothing is beside it; a modified press is the link's, in a new tab
+  // Pressed, a row opens its page beside the list, or whole where nothing is beside it or it is the row picked already; a modified
+  // press is the link's, in a new tab. With a menu open the press closes it, and with rows selected it may have missed a box, which
+  // moving on would lose them for
   function openRow(e, x) {
     if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-    if (oneColumn.matches) {
+    const again = isPicked(x) && e.currentTarget.hasAttribute('href') && !document.querySelector('.more[open]') && selected.size === 0;
+    if (oneColumn.matches || again) {
       keepOrder();
       return;
     }
@@ -2754,6 +2758,12 @@
   let loadFailed = false;
 
   // LIMIT: the answers are not put in order: one asked before a read or a mark unread and come after it shows the page as it was, until the next look
+  // Rows are not redrawn from under a press: Chrome sends neither click nor dblclick for a row gone between press and release. Not
+  // for the secondary button, as a context menu may keep its release
+  // LIMIT: a redraw that is no poll's answer (the filters, a new day, the first) may still take a press with it. Hold them too if that comes to trouble someone
+  let pressing = false;
+  $('list').addEventListener('pointerdown', (e) => { if (e.button === 0) pressing = true; });
+  for (const name of ['pointerup', 'pointercancel', 'blur']) addEventListener(name, () => { pressing = false; }, true);
   async function load() {
     let text;
     try {
@@ -2777,7 +2787,8 @@
       loadFailed = false;
       showError('');
     }
-    if (text === drawn) return;
+    // drawn left behind, the next poll draws it
+    if (text === drawn || pressing) return;
     drawn = text;
     if (framed) renderFrame();
     else render();
