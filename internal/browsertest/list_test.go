@@ -2,6 +2,7 @@ package browsertest_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -981,10 +982,11 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 		b.size(1440, 900, false)
 		b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length === 3")
 	}
-	// Whether the rows stayed as a poll's answer came, one that always differs.
+	// Whether the rows stayed as a poll came: whose answer differs from what is drawn, or as it comes.
+	const poll = "(async () => { const row = document.querySelector('#list li[data-slug]'); %s await load(); return row.isConnected; })()"
 	polled := func() string {
 		t.Helper()
-		return b.eval("(async () => { const row = document.querySelector('#list li[data-slug]'); drawn = ''; await load(); return row.isConnected; })()")
+		return b.eval(fmt.Sprintf(poll, "drawn = '';"))
 	}
 	const a2 = "#list li[data-slug=a2]"
 	list()
@@ -995,23 +997,25 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	out := []string{polled()}
 	b.mouse(chromedp.MouseReleased, x, y, chromedp.ButtonLeft, 1)
 	b.until("picked", "picked?.slug === 'a2'")
-	out = append(out, polled())
+	out = append(out, b.eval(fmt.Sprintf(poll, "")))
 
-	// Outside the list.
-	r := b.eval("(() => { const r = document.getElementById('read-frame').getBoundingClientRect(); return JSON.stringify({ X: r.left + 40, Y: r.top + 40 }); })()")
+	// Outside the list, in the top document: an iframe's press does not reach it.
+	r := b.eval(`(() => {
+		const r = document.getElementById('read-head').getBoundingClientRect();
+		const x = r.left + 2, y = r.top + 2, on = document.elementFromPoint(x, y);
+		return on.closest('#read-head') && !on.closest('a, button, summary') ? JSON.stringify({ X: x, Y: y }) : 'on ' + on.outerHTML;
+	})()`)
 	var at struct{ X, Y float64 }
 	if err := json.Unmarshal([]byte(r), &at); err != nil {
-		t.Fatal(err)
+		t.Fatal(r)
 	}
 	b.mouse(chromedp.MousePressed, at.X, at.Y, chromedp.ButtonLeft, 1)
 	out = append(out, polled())
 	b.mouse(chromedp.MouseReleased, at.X, at.Y, chromedp.ButtonLeft, 1)
 
-	// The secondary button, its release not sent as a context menu may keep it.
-	x, y = rowPoint(t, b, a2, false)
-	b.mouse(chromedp.MousePressed, x, y, chromedp.ButtonRight, 1)
+	// The secondary button: told by the event alone, as Chrome here clears the press itself as its context menu comes up.
+	b.eval("document.querySelector(" + js(a2+" .title") + ").dispatchEvent(new PointerEvent('pointerdown', { button: 2, bubbles: true }))")
 	out = append(out, polled())
-	b.mouse(chromedp.MouseReleased, x, y, chromedp.ButtonRight, 1)
 
 	// The second press, whole though the poll came in the middle of it.
 	x, y = rowPoint(t, b, a2, false)
