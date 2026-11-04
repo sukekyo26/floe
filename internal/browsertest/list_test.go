@@ -489,6 +489,13 @@ func TestUIReader(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.eval("document.querySelector('#read-actions summary').click(); document.querySelector('#read-actions .edit').click()")
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
 	out = append(out, b.until("the focus back", "document.activeElement.matches('#read-actions summary') && 'bar'"))
+	// The list read again, as after a read, draws the bar anew with the focus where it was.
+	b.eval("drawn = ''; load()")
+	b.eval("new Promise((go) => setTimeout(go, 100))")
+	b.still()
+	if got := b.eval("document.activeElement.matches('#read-actions summary')"); got != "true" {
+		t.Errorf("the focus after the bar was drawn anew: %s", got)
+	}
 	b.eval("document.querySelector('#list li[data-slug=a1] summary').click(); document.querySelector('#list li[data-slug=a1] .edit').click()")
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
 	out = append(out, b.until("the focus back", "document.activeElement.matches('#list li[data-slug=a1] summary') && 'row'"))

@@ -1736,7 +1736,11 @@
     open.href = rawHref({ slug: a.slug, file });
     open.hidden = Boolean(a.missing || a.folder && !file);
     open.setAttribute('aria-label', t('ui_open_raw_named', file ? baseName(file) : a.title));
-    box.querySelector('.more-slot').replaceChildren(...(file ? [] : [moreMenu(a)]));
+    const slot = box.querySelector('.more-slot');
+    const focused = slot.contains(document.activeElement);
+    slot.replaceChildren(...(file ? [] : [moreMenu(a)]));
+    // A read draws the bar anew just as a key may have reached its menu
+    if (focused) box.querySelector('summary')?.focus();
   }
 
   // Loads href in the iframe beside the list, in place of its history entry: moved through by j and k, Back is the tab's, and
@@ -2708,7 +2712,7 @@
   function drawFindBar(a) {
     const box = $('find-actions');
     const was = document.activeElement;
-    const focused = box.querySelector('.more-slot').contains(was);
+    const inMenu = box.querySelector('.more-slot').contains(was);
     $('find-acts').hidden = !a;
     if (!a) {
       delete box.dataset.slug;
@@ -2719,9 +2723,8 @@
     if (same && box.querySelector('.more[open], .armed')) return;
     box.dataset.slug = a.slug;
     drawActions(box, a, '');
-    if (focused) (same ? box.querySelector('summary') : $('find-q')).focus();
-    // A folder has no page to open: a focus left on that button would fall out of the modal
-    else if (was.hidden) $('find-q').focus();
+    // On another row the menu is another's; and a folder has no page to open, whose button would drop the focus out of the modal
+    if ((inMenu && !same) || was.hidden) $('find-q').focus();
   }
 
   function drawFind() {
