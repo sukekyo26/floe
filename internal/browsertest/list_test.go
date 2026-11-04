@@ -491,8 +491,6 @@ func TestUIReader(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	out = append(out, b.until("the focus back", "document.activeElement.matches('#read-actions summary') && 'bar'"))
 	// The list read again, as after a read, draws the bar anew with the focus where it was.
 	b.eval("drawn = ''; load()")
-	b.eval("new Promise((go) => setTimeout(go, 100))")
-	b.still()
 	if got := b.eval("document.activeElement.matches('#read-actions summary')"); got != "true" {
 		t.Errorf("the focus after the bar was drawn anew: %s", got)
 	}

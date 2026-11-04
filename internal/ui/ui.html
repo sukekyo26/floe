@@ -1740,6 +1740,7 @@
     const focused = slot.contains(document.activeElement);
     slot.replaceChildren(...(file ? [] : [moreMenu(a)]));
     // A read draws the bar anew just as a key may have reached its menu
+    // LIMIT: a menu open or a delete waiting in a page's bar goes as the list changes, as in a row. Keep them drawn as the search modal does if that comes to trouble someone
     if (focused) box.querySelector('summary')?.focus();
   }
 
