@@ -151,15 +151,17 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.eval("document.getElementById('bulk-tag').click()")
 	b.until("the tags dialog", "document.getElementById('tag-dialog').open")
 	out = append(out, tabTo(".tag-box input"))
+	b.eval("document.getElementById('tag-dialog').close(); openFind()")
+	out = append(out, tabTo("#find-actions .star"))
+	b.eval("document.getElementById('find').close()")
 	ring := "solid 2px rgb(107, 105, 100) 1px seen"
 	check(t, "reached", out, strings.Join([]string{
 		".views button[data-view=all]: " + ring, ".views button[data-view=fav]: " + ring,
 		"#q: " + ring, "#add-open: " + ring, "#list li:not(.group) a.title: solid 2px rgb(107, 105, 100) -2px seen",
 		"#list li:not(.group) .sel: " + ring, "#bulk-clear: " + ring, "#bulk-delete: " + ring, "#bulk-delete.armed: " + ring,
-		".tag-box input: " + ring,
+		".tag-box input: " + ring, "#find-actions .star: " + ring,
 	}, "|"))
 	// The title itself has none, so that a row shows one ring.
-	b.eval("document.querySelector('#tag-dialog [data-close]').click()")
 	tabTo("#list li:not(.group) a.title")
 	check(t, "the title", []string{b.eval("getComputedStyle(document.activeElement).outlineStyle")}, "none")
 }

@@ -93,6 +93,21 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.querySelector('#list li:not(.group) .edit').click()")
 		measure("the edit dialog")
 		b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.getElementById('bulk-clear').click()")
+		// The bulk bar on the ground of the rows selected, its delete waiting or not; the window that finds, a row reached, an
+		// archived one and none; the window of the keys.
+		b.eval("for (const s of [...document.querySelectorAll('#list li:not(.group) .sel')].slice(0, 2)) s.click()")
+		measure("the bulk bar")
+		b.eval("document.getElementById('bulk-delete').click()")
+		measure("the bulk bar, its delete waiting")
+		b.eval("document.getElementById('bulk-clear').click(); openFind()")
+		measure("the window that finds")
+		b.eval("document.querySelector('#find-actions summary').click()")
+		measure("the window that finds, its menu open")
+		b.eval("closeMenus(null); document.getElementById('find-q').value = 'nothing like it'; document.getElementById('find-q').dispatchEvent(new Event('input'))")
+		measure("the window that finds, none")
+		b.eval("document.getElementById('find').close(); openKeys()")
+		measure("the window of the keys")
+		b.eval("document.getElementById('keys').close()")
 		// The row chosen, its version's mark on its ground, the bar over its page, and the words of a link gone beside the list.
 		b.size(1440, 900, false)
 		b.eval("document.querySelector('#list li[data-slug=a] .title').click()")

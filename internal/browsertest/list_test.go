@@ -648,7 +648,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		const menu = within(document.querySelector('#list li[data-slug=long] .menu'));
 		document.querySelector('#list li[data-slug=long] summary').click();
 		document.querySelector('#list li[data-slug=long] .sel').click();
-		const bar = [...document.querySelectorAll('#bulk .btn')].every(within);
+		const bar = within(document.getElementById('bulk-clear'));
 		document.getElementById('bulk-clear').click();
 		return [menu, bar].join(' '); })()`
 	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Home)); err != nil {

@@ -296,7 +296,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	check(t, "extras", out, strings.Join([]string{
 		"Beta,Alpha,Gamma,Linked,Missing", "Gamma fav",
 		`PATCH /api/artifacts/b {"favorite":true}`, label("ui_created_at") + " " + label("ui_updated_at"), "none", "Alpha",
-		msg("ui_selected", 1), "grid", msg("ui_selected", 2), msg("ui_delete_bulk_confirm", 2),
+		msg("ui_selected_n", 1) + msg("ui_selected_more"), "grid", msg("ui_selected_n", 2) + msg("ui_selected_more"), msg("ui_delete_bulk_confirm", 2),
 		"DELETE /api/artifacts/a,DELETE /api/artifacts/b", "none", msg("ui_unlink"),
 		"true old", `PATCH /api/artifacts/a {"description":"new"}`, "true", "true",
 		"copy /tmp/x/l.html", "true", "Missing", `POST /api/artifacts {"path":"/tmp/x/n.html","description":"a link"}`,
@@ -533,7 +533,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.until("the list", "location.pathname === '/'")
 
 	check(t, "shelf", out, strings.Join([]string{
-		"Hbaclm", "true", "Hc fav ?view=fav", "Hzyk archived ?view=archived", "Alpha", msg("ui_selected", 5),
+		"Hbaclm", "true", "Hc fav ?view=fav", "Hzyk archived ?view=archived", "Alpha", msg("ui_selected_n", 5) + msg("ui_selected_more"),
 		"0010", "shown", "shown", "shown", "0",
 		msg("ui_more_named", "Beta"), msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_archive") + " / " + msg("ui_delete"),
 		"false true", "Alpha", "false true", "1", "false true", "true", "true",
@@ -722,7 +722,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("[...document.querySelectorAll('#tags .chip')].filter((c) => c.offsetParent).map((c) => c.dataset.tag).join(',')"))
 	b.eval(plan + ".click()")
 	out = append(out, b.eval(rows), b.eval(plan+".getAttribute('aria-pressed')"))
-	out = append(out, b.eval("document.getElementById('narrow-filter').textContent"))
+	out = append(out, b.eval("document.getElementById('narrow-filter-name').textContent"))
 	b.eval(plan + ".click()")
 	out = append(out, b.eval(rows))
 	b.eval("document.querySelector('#filter-dialog [data-close]').click()")
@@ -803,7 +803,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"plan2:false,設計1:false,設計、実装1:false false", "abcd -",
 		"設計:" + msg("ui_tag_filter_named", "設計") + ",plan:" + msg("ui_tag_filter_named", "plan"), "true",
 		"ab plan", "plan2:true,設計1:false,設計、実装1:false false", "ab plan", "abcd -",
-		"old1:false,plan1:false false", "c 設計、実装", msg("ui_selected", 1), "ac -",
+		"old1:false,plan1:false false", "c 設計、実装", msg("ui_selected_n", 1) + msg("ui_selected_more"), "ac -",
 		"other2:false,plan0:true,設計1:false,設計、実装1:false false", "false", "abcd -",
 		"設計, plan", `PATCH /api/artifacts/a {"tags":["計画","設計"]}`, `PATCH /api/artifacts/c {"title":"G2"}`,
 		msg("ui_tag_bulk_title", 3), "plan:some:−:2/3,設計:some:−:1/3,old:none:+:,設計、実装:none:+:", "false", "plan solid",

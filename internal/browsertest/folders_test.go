@@ -117,6 +117,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		b.eval("new URL(document.getElementById('frame').src).pathname + new URL(document.getElementById('frame').src).hash"),
 		// No state of its own: its path and the page alone, its star and menu on the folder's row.
 		b.eval("[document.querySelector('#frame-actions .star').hidden, document.querySelector('#frame-actions .copy').hidden, document.querySelector('#frame-actions .more-slot').children.length, document.querySelector('#frame-actions .open').getAttribute('href')].join()"))
+	check(t, "the page alone, named", []string{b.eval("document.querySelector('#frame-actions .open').getAttribute('aria-label')")}, "Open setup.html alone in a new tab")
 	// A move to another part of it, as the page tells it, is written into the frame's URL.
 	// The URL is the frame's own to make: a relative one would be read against the frame URL.
 	// The part it is at goes into the frame's URL, and the frame's own part, from the address bar, to the page.
