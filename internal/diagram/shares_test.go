@@ -225,14 +225,22 @@ func TestEdgeSharesFixed(t *testing.T) {
 	for _, c := range []struct {
 		name, parts, want string
 	}{
-		{"a point is not counted", boxes + "  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: c, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: [150, 60], to: b, toSide: top }\n",
-			"edge a→b M70,49 V84.5 H130 V120\nedge c→b M230,49 V84.5 H170 V120\nedge [150,60]→b M150,60 V120"},
-		{"alone with a point it stays in the middle", boxes + "  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: [150, 60], to: b, toSide: top }\n",
-			"edge a→b M70,49 V84.5 H150 V120\nedge [150,60]→b M150,60 V120"},
-		{"via stays in the middle", boxes + "  - edge: { from: a, via: [[70, 80], [150, 80]], to: b, toSide: top }\n  - edge: { from: c, via: [[230, 80], [150, 80]], to: b, toSide: top }\n",
-			"edge a→b M70,49 V80 H150 V120\nedge c→b M230,49 V80 H150 V120"},
-		{"straight stays", boxes + "  - edge: { from: a, to: b, fromSide: bottom, toSide: top, straight: true }\n  - edge: { from: c, to: b, fromSide: bottom, toSide: top, straight: true }\n",
-			"edge a→b M70,49 L150,120\nedge c→b M230,49 L150,120"},
+		{
+			"a point is not counted", boxes + "  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: c, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: [150, 60], to: b, toSide: top }\n",
+			"edge a→b M70,49 V84.5 H130 V120\nedge c→b M230,49 V84.5 H170 V120\nedge [150,60]→b M150,60 V120",
+		},
+		{
+			"alone with a point it stays in the middle", boxes + "  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: [150, 60], to: b, toSide: top }\n",
+			"edge a→b M70,49 V84.5 H150 V120\nedge [150,60]→b M150,60 V120",
+		},
+		{
+			"via stays in the middle", boxes + "  - edge: { from: a, via: [[70, 80], [150, 80]], to: b, toSide: top }\n  - edge: { from: c, via: [[230, 80], [150, 80]], to: b, toSide: top }\n",
+			"edge a→b M70,49 V80 H150 V120\nedge c→b M230,49 V80 H150 V120",
+		},
+		{
+			"straight stays", boxes + "  - edge: { from: a, to: b, fromSide: bottom, toSide: top, straight: true }\n  - edge: { from: c, to: b, fromSide: bottom, toSide: top, straight: true }\n",
+			"edge a→b M70,49 L150,120\nedge c→b M230,49 L150,120",
+		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
