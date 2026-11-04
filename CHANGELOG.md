@@ -318,7 +318,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Change the management page into a list of pages: newest first under its days (today, yesterday, the last 7 days, then by
   month), a blue dot on a stored page not seen, the mark `v3 · new version` on one with a version after the one read, and
   the template, project and tags under each title. A row opens its page beside the list (`j` and `k` or the arrows go on
-  to the next and the one before), and its title or `Enter` opens it whole, where `j` and `k` go through the list that opened
+  to the next and the one before), and its title, `Enter` or pressing the row again (or double) opens it whole, where `j` and `k` go through the list that opened
   it. The shelf picks a view (unread, all, favourites, archive), and narrows by project, kind, template and tag, all in the
   URL. "All" is lit only with no view and no picks: pressed, it lets go of them, and a view pressed again lets go of itself alone. Above 70rem, the edges of the filters and the list drag to widen them and each of them folds, kept in the browser. The sort, the pages of the list, the tabs of kinds, the groups by project and the frame's title that picked a page
   are gone, and the check boxes show only while rows are selected (`x`, or Select in a row's menu).

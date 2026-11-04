@@ -999,7 +999,7 @@
     }
     readsGoing = false;
     // The dot and the counts go now, not at the next look
-    load();
+    load(true);
   }
   // The frame's own fragment changed (the address bar, Back): the page moves to that part, in
   // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo.
@@ -1222,6 +1222,7 @@
   // LIMIT: at 40rem or less a page open whole has no bar's menu: the focus left on the toast's button falls to the body, and the way to mark it later is the list's row
   // LIMIT: whole, pressed and moved on at once, the mark waiting or on its way goes with the page, saying nothing
   // LIMIT: a browser that sends no focusout as Ctrl+K moves #toasts leaves the toast whose button had the focus, until the next takes its place
+  // LIMIT: a row pressed again once its page is being read (a double press too) takes the toast of the list with it, and the page whole, told it was read already, shows none; its menu still marks it unread. Carry the toast over if that comes to trouble someone
   let keptUnread = null;
   // Whether the next read told is of a page a person opened: the toast says so of no other
   let opening = true;
@@ -1803,10 +1804,13 @@
     return box;
   }
 
-  // Pressed, a row opens its page beside the list, or whole where nothing is beside it; a modified press is the link's, in a new tab
+  // Pressed, a row opens its page beside the list, or whole where nothing is beside it or it is the row picked already; a modified
+  // press is the link's, in a new tab. With a menu open the press closes it, and with rows selected it may have missed a box, which
+  // moving on would lose them for
   function openRow(e, x) {
     if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-    if (oneColumn.matches) {
+    const again = isPicked(x) && e.currentTarget.hasAttribute('href') && !document.querySelector('.more[open]') && selected.size === 0;
+    if (oneColumn.matches || again) {
       keepOrder();
       return;
     }
@@ -2754,12 +2758,24 @@
   let loadFailed = false;
 
   // LIMIT: the answers are not put in order: one asked before a read or a mark unread and come after it shows the page as it was, until the next look
-  async function load() {
+  // A poll's answer does not redraw the rows from under a press: Chrome sends neither click nor dblclick for a row gone between press
+  // and release. Only for a while, as a press may never tell its release (a context menu, a drag, a release over the iframe)
+  // LIMIT: a press held longer may lose its click to a redraw
+  // LIMIT: the answer held back is drawn by the next poll, up to 3 seconds after the release: drawn at the release, the rows would go before its click
+  // LIMIT: a redraw that is no poll's answer (the filters, a new day, the first, a folder's tree opening or closing, the directories read for an answer already let through) may still take a press with it. Hold them too if that comes to trouble someone
+  // LIMIT: a press meant to bring the window forward, or the focus back from the page, on the row picked opens it whole; with a menu open a double press closes it, then opens the page
+  const PRESS_MS = 2000;
+  let pressedAt = -Infinity;
+  $('list').addEventListener('pointerdown', () => { pressedAt = performance.now(); });
+  addEventListener('pointerup', () => { pressedAt = -Infinity; });
+  // polled tells one asked by no action of the person's: what an action changed is drawn at once, whatever is pressed
+  async function load(polled = false) {
     let text;
     try {
       const res = await api('/api/artifacts');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       text = await res.text();
+      if (polled && performance.now() - pressedAt < PRESS_MS) return;
       if (text !== drawn) items = JSON.parse(text);
       // The list redrawn when what is open of the folders changed, the frame when the directory of its page did
       if (framed && FILE) {
@@ -3163,8 +3179,8 @@
   }
   // A page gives up its keys only to a frame that says it takes them
   for (const id of ['frame', 'read-frame']) $(id)?.addEventListener('load', (e) => e.target.contentWindow.postMessage({ artifactKeysWanted: true }, '*'));
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
-  setInterval(() => { if (!document.hidden) load(); }, POLL_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
+  setInterval(() => { if (!document.hidden) load(true); }, POLL_MS);
   load();
 </script>
 </body>

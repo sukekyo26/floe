@@ -86,10 +86,6 @@ func TestUIUnread(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	isUnseen(b, "p1", true)
 	out = append(out, b.eval("window.sent.join(',')"), b.eval("document.querySelectorAll('.toast.page .btn').length"),
 		b.eval("document.getElementById('news-n').textContent !== "+js(before)), b.eval("String(window.loads) === "+js(loads)))
-	// The same row again changes nothing.
-	pickUnread(b, "p1")
-	sentAll(b)
-	isUnseen(b, "p1", true)
 	// On to the next: one toast, of that page; back: read, with the toast.
 	pickUnread(b, "p2")
 	b.until("the next toast", "document.querySelector('.toast.page .btn')")
@@ -119,6 +115,28 @@ func TestUIUnread(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		"Marked as read", "Mark as unread / Mark Title p1 as unread", "status false",
 		"POST p1,DELETE p1", "0", "true", "true", "1", "0", "0 false", "true",
 	}, "|"))
+}
+
+// TestUIRowAgainUnread keeps a page marked unread as j finds no row past its own, and opens it whole, read with its toast, as its row
+// is pressed again.
+func TestUIRowAgainUnread(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := unreadSite(t)
+	b := s.b
+	unreadList(b)
+	last := b.eval("[...document.querySelectorAll('#list li[data-slug]')].at(-1).dataset.slug")
+	pickUnread(b, last)
+	b.until("the toast", "document.querySelector('.toast.page .btn')")
+	b.eval("document.querySelector('.toast.page .btn').click()")
+	b.until("the words", "document.querySelector('.toast.page') && !document.querySelector('.toast.page .btn')")
+	isUnseen(b, last, true)
+	b.eval(fmt.Sprintf(unreadRow, last) + ".querySelector('.title').focus()")
+	b.pressKey("j")
+	sentAll(b)
+	isUnseen(b, last, true)
+	check(t, "the last row kept", []string{b.eval("picked.slug === " + js(last) + " && keptUnread === " + js(last) + " && !document.querySelector('.toast.page .btn')")}, "true")
+	pickUnread(b, last)
+	b.until("whole", "location.pathname === "+js("/a/"+last+"/"))
+	b.until("its toast whole", "document.querySelector('.toast.page .btn')")
 }
 
 // TestUIUnreadKept keeps a page marked unread as it draws itself anew, whatever else goes on, until another page is opened; and a

@@ -258,7 +258,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 - The scripts of a page drawn from a data file cannot send what it holds out with `fetch`, XHR, images from elsewhere or forms, its download included. Linked HTML loads what it loads.
 - A page opens at the part its URL names (`/a/<slug>/#part`), and a move to a part inside it is kept in the URL, so that a copy of the URL or a reload opens that part.
 - The management page downloads a page as one file: the stored page, or a linked file, with its CSP in a `<meta>`.
-- The management page takes keys, and `?` lists those that work where you are. `Ctrl+K` (`⌘K`) searches the pages. In the list: `j` `k` or `↑` `↓` move over the rows, `Enter` opens a row whole, `x` selects (as does Select in a row's menu), `f` stars, `/` goes to the search. On a page open whole: `j` `k` go on through the list, `h` goes back to it, `f` stars, `/` searches the pages. After a press inside a page, `j` `k` `h` `?` `/` `Ctrl+K` still work on a page floe drew, and `Ctrl+K` alone on a linked HTML file, which may use the letters itself.
+- The management page takes keys, and `?` lists those that work where you are. `Ctrl+K` (`⌘K`) searches the pages. In the list: `j` `k` or `↑` `↓` move over the rows, `Enter` opens a row whole, `x` selects (as does Select in a row's menu), `f` stars, `/` goes to the search; pressing a row whose page is open beside the list, as a double press does, opens it whole. On a page open whole: `j` `k` go on through the list, `h` goes back to it, `f` stars, `/` searches the pages. After a press inside a page, `j` `k` `h` `?` `/` `Ctrl+K` still work on a page floe drew, and `Ctrl+K` alone on a linked HTML file, which may use the letters itself.
 
 ## Environment variables
 
