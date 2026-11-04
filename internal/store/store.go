@@ -219,7 +219,8 @@ func (s *Store) VersionPage(slug string, m *Meta, n int) ([]byte, bool) {
 // VersionPages is the versions of the numbers of the stored page slug and their pages, all of one meta.json: false when
 // it lists one of them not, or one cannot be read. Read once more for a copy a publish removed after its meta.json was
 // read.
-// LIMIT: that second read is not tested, as nothing can put a publish in the middle of it. Give it a way in if it breaks.
+// LIMIT: that second read is not tested, as nothing can put a publish in the middle of it. Give it a way in if it
+// breaks.
 func (s *Store) VersionPages(slug string, numbers ...int) ([]Version, [][]byte, bool) {
 	for range 2 {
 		m := s.ReadMeta(slug)
