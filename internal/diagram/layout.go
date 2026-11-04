@@ -137,13 +137,8 @@ func newLayout(s *spec, opts Options) *layout {
 
 // layoutWith is newLayout with share, which places the ends of the edges written by hand before they are added.
 func layoutWith(s *spec, opts Options, share func(*layout, []item)) *layout {
-	l := &layout{
-		s: s, opts: opts, id: "", problems: nil, failure: nil, names: map[string]target{}, circles: map[string]circle{},
-		boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, strokes: nil, paths: nil,
-		shares: nil, rules: nil, loose: nil,
-		areaEls: nil, gridEls: nil, edgeEls: nil, boxEls: nil, labelEls: nil, markers: nil, iconDefs: nil,
-		iconIDs: map[string]string{}, stacks: map[string]stack{}, w: written(s.Width), h: written(s.Height), strays: nil,
-	}
+	l := blankLayout(s, opts)
+	l.names, l.circles, l.stacks = map[string]target{}, map[string]circle{}, map[string]stack{}
 	b, _ := json.Marshal(s) //nolint:errcheck,errchkjson // read from JSON, it writes as JSON
 	sum := sha256.Sum256(b)
 	l.id = "dg" + strconv.Itoa(opts.Seq) + "-" + hex.EncodeToString(sum[:3])
@@ -173,6 +168,17 @@ func layoutWith(s *spec, opts Options, share func(*layout, []item)) *layout {
 		l.h = l.reach(func(r rect) float64 { return r.y + r.h }) + canvasPad
 	}
 	return l
+}
+
+// blankLayout is s laid out with nothing added yet.
+func blankLayout(s *spec, opts Options) *layout {
+	return &layout{
+		s: s, opts: opts, id: "", problems: nil, failure: nil, names: nil, circles: nil,
+		boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, strokes: nil, paths: nil,
+		shares: nil, rules: nil, loose: nil,
+		areaEls: nil, gridEls: nil, edgeEls: nil, boxEls: nil, labelEls: nil, markers: nil, iconDefs: nil,
+		iconIDs: map[string]string{}, stacks: nil, w: written(s.Width), h: written(s.Height), strays: nil,
+	}
 }
 
 // written is a canvas's size as written, or +Inf for one left out (0), so that nothing is held within it yet.
@@ -228,7 +234,7 @@ func (l *layout) name(at string, p part) {
 		})
 	case p.Frame != nil:
 		f := p.Frame
-		r := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at}
+		r := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, form: frameOutline(f)}
 		keep(f.Name, target{r: r, kind: "frame", handSides: f.handSides})
 	case p.Bar != nil:
 		keep(p.Bar.Name, target{r: barRect(p.Bar, at), kind: "bar", handSides: nil})
@@ -730,6 +736,14 @@ func headArea(g *graphGroup) rect {
 }
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
+// frameOutline is the outline frame f is drawn in: of round corners, or square with an icon or written so.
+func frameOutline(f *frame) outline {
+	if f.Icon != "" || f.Square {
+		return outline{hex: 0, radius: 0}
+	}
+	return outline{hex: 0, radius: 10}
+}
+
 func (l *layout) addFrame(f *frame, at string) {
 	class := frameClass(f.Icon)
 	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named(
@@ -745,10 +759,7 @@ func (l *layout) addFrame(f *frame, at string) {
 		// The heading keeps the margin on its right that it has on its left.
 		l.fit(at, who, f.Label, class, f.W-(hx-f.X)-12, f.W)
 	}
-	rx, cls := 10.0, class
-	if f.Icon != "" || f.Square {
-		rx = 0
-	}
+	rx, cls := frameOutline(f).radius, class
 	if f.Accent {
 		cls += " accent"
 	}

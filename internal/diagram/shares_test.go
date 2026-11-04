@@ -193,11 +193,22 @@ func TestEdgeSharesStays(t *testing.T) {
 			want: "edge a→b M190,95 V100",
 		},
 		{
-			name: "a label written by hand is told",
-			parts: "  - box: { name: a, x: 100, y: 20, w: 60, h: 90, rows: [a] }\n  - box: { name: b, x: 300, y: 20, w: 60, h: 30, rows: [b] }\n  - box: { name: c, x: 300, y: 80, w: 60, h: 30, rows: [c] }\n" +
-				"  - edge: { from: a, to: b, fromSide: right, toSide: left }\n  - edge: { from: a, to: c, fromSide: right, toSide: left }\n" +
-				"  - label: { text: L, x: 200, y: 50 }\n",
-			told: `runs through label "L"`,
+			name:  "a label written by hand",
+			parts: fan + "  - label: { text: L, x: 110, y: 66 }\n",
+			want:  "edge a→b M80,50 H140 V15 H200\nedge a→c M80,50 H140 V115 H200",
+		},
+		{
+			name: "a frame's heading",
+			parts: "  - frame: { name: f, x: 100, y: 100, w: 300, h: 120, label: A heading of it }\n  - box: { name: b, x: 120, y: 130, w: 260, h: 29, rows: [b] }\n" +
+				"  - box: { name: a, x: 120, y: 20, w: 60, h: 29, rows: [a] }\n  - box: { name: c, x: 220, y: 20, w: 60, h: 29, rows: [c] }\n  - box: { name: d, x: 320, y: 20, w: 60, h: 29, rows: [d] }\n" +
+				"  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: c, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: d, to: b, fromSide: bottom, toSide: top }\n",
+			want: "edge a→b M150,49 V89.5 H250 V130",
+		},
+		{
+			name: "another edge's label at a place of its own",
+			parts: fan + "  - box: { name: p, x: 90, y: 200, w: 60, h: 30, rows: [p] }\n  - box: { name: q, x: 300, y: 200, w: 60, h: 30, rows: [q] }\n" +
+				"  - edge: { from: p, to: q, label: L, at: [110, 66] }\n",
+			want: "edge a→b M80,50 H140 V15 H200\nedge a→c M80,50 H140 V115 H200",
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -291,7 +302,7 @@ func TestEdgeSharesKinds(t *testing.T) {
 			"  - box: { name: a, x: 100, y: 20, w: 90, h: 60, shape: state, rows: [a] }\n" +
 				"  - box: { name: b, x: 300, y: 0, w: 60, h: 30, rows: [b] }\n  - box: { name: c, x: 300, y: 40, w: 60, h: 30, rows: [c] }\n  - box: { name: d, x: 300, y: 90, w: 60, h: 30, rows: [d] }\n  - box: { name: e, x: 300, y: 130, w: 60, h: 30, rows: [e] }\n" +
 				"  - edge: { from: a, to: b, fromSide: right, toSide: left }\n  - edge: { from: a, to: c, fromSide: right, toSide: left }\n  - edge: { from: a, to: d, fromSide: right, toSide: left }\n  - edge: { from: a, to: e, fromSide: right, toSide: left }\n",
-			"edge a→b M185.91,32",
+			"edge a→b M185.91,32 H245 V15 H300\nedge a→c M189.92,44 H245 V55 H300\nedge a→d M189.92,56 H245 V105 H300\nedge a→e M185.91,68 H245 V145 H300",
 		},
 		{
 			"a hexagon's slant",
@@ -299,6 +310,26 @@ func TestEdgeSharesKinds(t *testing.T) {
 				"  - box: { name: b, x: 300, y: 0, w: 60, h: 30, rows: [b] }\n  - box: { name: c, x: 300, y: 80, w: 60, h: 30, rows: [c] }\n" +
 				"  - edge: { from: a, to: b, fromSide: right, toSide: left }\n  - edge: { from: a, to: c, fromSide: right, toSide: left }\n",
 			"edge a→b M",
+		},
+		{
+			"a low box's round corners keep the parts, and one line between",
+			"  - box: { name: a, x: 40, y: 20, w: 100, h: 30, rows: [a] }\n" +
+				"  - box: { name: b, x: 300, y: 0, w: 60, h: 30, rows: [b] }\n  - box: { name: c, x: 300, y: 50, w: 60, h: 30, rows: [c] }\n  - box: { name: d, x: 300, y: 100, w: 60, h: 30, rows: [d] }\n" +
+				"  - edge: { from: a, to: b, fromSide: right, toSide: left }\n  - edge: { from: a, to: c, fromSide: right, toSide: left }\n  - edge: { from: a, to: d, fromSide: right, toSide: left }\n",
+			"edge a→b M139.98,27.5 H220 V15 H300\nedge a→c M140,35 H220 V65 H300\nedge a→d M139.98,42.5 H220 V115 H300",
+		},
+		{
+			"a hexagon keeps one line between",
+			"  - box: { name: a, x: 40, y: 150, w: 100, h: 60, shape: hex, rows: [a] }\n" +
+				"  - box: { name: b, x: 300, y: 100, w: 60, h: 30, rows: [b] }\n  - box: { name: c, x: 300, y: 200, w: 60, h: 30, rows: [c] }\n  - box: { name: d, x: 300, y: 300, w: 60, h: 30, rows: [d] }\n" +
+				"  - edge: { from: a, to: b, fromSide: right, toSide: left }\n  - edge: { from: a, to: c, fromSide: right, toSide: left }\n  - edge: { from: a, to: d, fromSide: right, toSide: left }\n",
+			"H220 V115 H300",
+		},
+		{
+			"a frame's round corner",
+			"  - frame: { name: f, x: 100, y: 20, w: 200, h: 24, label: F }\n  - box: { name: b, x: 400, y: 0, w: 60, h: 30, rows: [b] }\n  - box: { name: c, x: 400, y: 60, w: 60, h: 30, rows: [c] }\n" +
+				"  - edge: { from: f, to: b, fromSide: right, toSide: left }\n  - edge: { from: f, to: c, fromSide: right, toSide: left }\n",
+			"edge f→b M299.8,28",
 		},
 		{
 			"an icon's bottom, under the label",

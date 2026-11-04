@@ -2,6 +2,7 @@ package diagram
 
 import (
 	"cmp"
+	"maps"
 	"math"
 	"slices"
 )
@@ -38,43 +39,45 @@ type sideEnd struct {
 	at    float64
 }
 
-// sharing is what shareEnds reads: all the edges, each edge's points with its ends in the middle of their sides, and
-// what a moved edge keeps off that it kept off there.
+// sharing is what shareEnds reads: each edge's points and sides with its ends in the middle of their sides, and all the
+// rest, laid out on its own with the edges moving left out: what a moved edge keeps off that it kept off there.
 type sharing struct {
 	l      *layout
-	all    []*edge
+	rest   *layout
 	before map[*edge][][2]float64
-	solid  []rect
-	labels []rect
+	sides  map[*edge][2]string
+	own    map[*edge]int
 }
 
 // shareEnds places the ends of the edges written by hand on their sides: the n ends on a side at the points that part
 // it into n+1 equal parts, but for an edge running straight, which stays straight (hold), and the rest evenly between.
 // It leaves out, and so in the middle of their sides as they would be alone, edges with via or a point (written where
 // they are), straight ones, ones back to the side they leave (told as going nowhere), and ends at a dot, a row or a
-// bar. An edge that this would make cross an edge, run through a box or a graph's label, or come to nothing goes back
-// to the middle too, so that the writer has no end of it to answer for, and a graph's hands stay what it kept clear.
-// LIMIT: labels written by hand are not compared, as their writer can move them: an edge that comes to run through one
-// is told. An edge's own label is not compared either.
+// bar. An edge that this would make cross an edge or run through what checkEdges tells of, or come to nothing, goes
+// back to the middle too, so that what lays out with every end in the middle lays out placed, and the writer, who wrote
+// no place for an end, has none to answer for.
+// LIMIT: an edge's own label, which stands by where the edge runs, is not compared: moved, it may land on a part and be
+// told. A label written on a side that wants parting keeps that side's edges in the middle, unsaid: move the label.
 // LIMIT: each edge moved is compared with all edges, so that this is quadratic in the edges, again for each round that
 // sends some back; a diagram of thousands of edges written by hand and sharing sides slows here. Compare by area if so.
 func (l *layout) shareEnds(items []item) {
-	s := sharing{l: l, all: nil, before: map[*edge][][2]float64{}, solid: nil, labels: nil}
+	s := sharing{l: l, rest: nil, before: map[*edge][][2]float64{}, sides: map[*edge][2]string{}, own: map[*edge]int{}}
 	var moving []*edge
 	told := len(l.problems)
 	for _, it := range items {
-		s.note(it)
 		if e := it.p.Edge; e != nil {
-			pts, _, _, _, ok := l.edgePoints(e, it.at)
-			if ok {
-				s.all, s.before[e] = append(s.all, e), pts
-			}
-			if ok && l.moves(e) {
+			if from, to, _, _, _, _, ok := l.edgeEnds(e, it.at); ok && movable(e, from.side, to.side) {
+				pts, _, _, _, _ := l.edgePoints(e, it.at)
+				s.before[e], s.sides[e] = pts, [2]string{from.side, to.side}
 				moving = append(moving, e)
 			}
 		}
 	}
 	l.problems = l.problems[:told] // told when the edges are added
+	if len(moving) == 0 {
+		return
+	}
+	s.layRest(items)
 	for len(moving) > 0 {
 		s.place(moving)
 		back := s.troubled(moving)
@@ -82,53 +85,37 @@ func (l *layout) shareEnds(items []item) {
 			break
 		}
 		l.shares = nil
-		moving = slices.DeleteFunc(moving, func(e *edge) bool { return back[e] })
+		moving = slices.DeleteFunc(moving, func(e *edge) bool {
+			if back[e] {
+				s.rest.paths = append(s.rest.paths, s.line(e, segsOf(s.before[e])))
+			}
+			return back[e]
+		})
 	}
 }
 
-// note keeps what an edge keeps off in the part of it: a box, a table, an icon with its label or a bar, or a graph's
-// label on its edge.
-func (s *sharing) note(it item) {
-	p := it.p
-	switch {
-	case p.Box != nil:
-		s.solid = append(s.solid, boxRect(p.Box, it.at))
-	case p.Table != nil:
-		r, _ := tableRects(p.Table, it.at)
-		s.solid = append(s.solid, r)
-	case p.Bar != nil:
-		s.solid = append(s.solid, barRect(p.Bar, it.at))
-	case p.Icon != nil:
-		r := iconRect(p.Icon, it.at)
-		s.solid = append(s.solid, r)
-		if w := iconLabelW(p.Icon); w > 0 {
-			//nolint:exhaustruct_v5 // an area
-			s.solid = append(s.solid, rect{x: r.x + r.w/2 - w/2, y: r.y + r.h, w: w, h: iconUnder(p.Icon), what: "", at: it.at})
+// layRest lays out on its own all but the edges moving, whose labels at a place of their own are there too.
+func (s *sharing) layRest(items []item) {
+	l := s.l
+	rest := blankLayout(l.s, l.opts)
+	rest.names, rest.circles, rest.stacks = l.names, l.circles, maps.Clone(l.stacks)
+	for _, it := range items {
+		e := it.p.Edge
+		_, moves := s.before[e]
+		switch {
+		case !moves:
+			rest.add(it.at, it.p)
+		case e.Label != nil && e.At != nil:
+			s.own[e] = rest.label(it.at, e.Label, e.At[0], e.At[1], cmp.Or(e.anchor, "middle"), false, false)
 		}
-	case p.Edge != nil && p.Edge.graph != "" && p.Edge.Label != nil && p.Edge.At != nil:
-		e := p.Edge
-		s.labels = append(s.labels, labelArea(e.Label, e.At[0], e.At[1], e.anchor, false, it.at))
 	}
+	s.rest = rest
 }
 
-// moves reports whether e, of ends that can be, is one shareEnds places.
-func (l *layout) moves(e *edge) bool {
-	if e.graph != "" || e.From.Point != nil || e.To.Point != nil || len(e.Via) > 0 || e.Straight {
-		return false
-	}
-	from, to := l.edgeSides(e)
-	return e.From.Name != e.To.Name || from != to
-}
-
-// edgeSides are the sides the ends of e, an edge with no via between two names, take.
-func (l *layout) edgeSides(e *edge) (from, to string) {
-	side := func(n end, written string, other [2]float64) string {
-		if written != "" {
-			return written
-		}
-		return cmp.Or(l.clear(n, "", other, other), onSide(l.names[n.Name], "", other).side)
-	}
-	return side(e.From, e.FromSide, l.centre(e.To)), side(e.To, e.ToSide, l.centre(e.From))
+// movable reports whether shareEnds places e, whose ends take the sides from and to.
+func movable(e *edge, from, to string) bool {
+	return e.graph == "" && e.From.Point == nil && e.To.Point == nil && len(e.Via) == 0 && !e.Straight &&
+		(e.From.Name != e.To.Name || from != to)
 }
 
 // sharedEnd is a, end j of e, where shareEnds places it.
@@ -137,25 +124,29 @@ func (l *layout) sharedEnd(e *edge, j int, a anchor) anchor {
 	if !ok {
 		return a
 	}
-	name := e.From.Name
-	if j == 1 {
-		name = e.To.Name
-	}
-	p := sidePoint(l.names[name], at.side, at.at)
-	return anchor{p[0], p[1], at.side, false}
+	return anchorOn(l.names[endName(e, j)], at.side, at.at)
 }
 
-// oneSide reports whether end j of a and b stand on one side of one part, placed by shareEnds.
-func (l *layout) oneSide(a, b *edge, j int) bool {
-	x, okX := l.shares[handEnd{a, j}]
-	y, okY := l.shares[handEnd{b, j}]
-	if !okX || !okY || x.side != y.side {
-		return false
-	}
+// endName is the name at end j of e.
+func endName(e *edge, j int) string {
 	if j == 0 {
-		return a.From.Name == b.From.Name
+		return e.From.Name
 	}
-	return a.To.Name == b.To.Name
+	return e.To.Name
+}
+
+// oneSide reports whether an end of a and an end of b stand on one side of one part, placed by shareEnds.
+func (l *layout) oneSide(a, b *edge) bool {
+	for _, j := range [2]int{0, 1} {
+		for _, k := range [2]int{0, 1} {
+			x, okX := l.shares[handEnd{a, j}]
+			y, okY := l.shares[handEnd{b, k}]
+			if okX && okY && x.side == y.side && endName(a, j) == endName(b, k) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // place sets where the ends of moving stand.
@@ -164,8 +155,7 @@ func (s *sharing) place(moving []*edge) {
 	var sides []partSide
 	ends := map[handEnd]*sideEnd{}
 	for _, e := range moving {
-		from, to := s.l.edgeSides(e)
-		for j, side := range [2]string{from, to} {
+		for j, side := range s.sides[e] {
 			name, other := e.From.Name, s.l.centre(e.To)
 			if j == 1 {
 				name, other = e.To.Name, s.l.centre(e.From)
@@ -369,46 +359,48 @@ func (s *sharing) meet(e *edge, a, b *sideEnd, on map[partSide][]*sideEnd) {
 	}
 	was := s.l.shares[one.handEnd]
 	s.l.shares[one.handEnd] = shared{was.side, at}
-	pts, _, _, _, ok := s.l.edgePoints(e, "")
-	if !ok || runsThrough(segsOf(pts), s.solid) && !runsThrough(segsOf(s.before[e]), s.solid) {
+	if pts, _, _, _, ok := s.l.edgePoints(e, ""); !ok || s.newlyThrough(e, segsOf(pts)) {
 		s.l.shares[one.handEnd] = was
 	}
 }
 
-// runsThrough reports whether a run of segs passes through one of rs.
-func runsThrough(segs []seg, rs []rect) bool {
-	return slices.ContainsFunc(segs, func(q seg) bool {
-		return slices.ContainsFunc(rs, func(r rect) bool { return crossedBy(q, r) })
-	})
+// line is e as a path to check, on segs.
+func (s *sharing) line(e *edge, segs []seg) path {
+	own := -1
+	if i, ok := s.own[e]; ok {
+		own = i
+	}
+	return path{segs: segs, what: "", at: "", own: own, crossing: e.Crossing, graph: e.graph}
 }
 
-// troubled are the edges of moving that where they now stand cross an edge, or run through a box or a graph's label,
-// where with their ends in the middle they did not, or come to nothing.
+// newlyThrough reports whether e on segs runs through something it does not with its ends in the middle.
+func (s *sharing) newlyThrough(e *edge, segs []seg) bool {
+	was := s.rest.throughs(s.line(e, segsOf(s.before[e])))
+	return slices.ContainsFunc(s.rest.throughs(s.line(e, segs)), func(r rect) bool { return !slices.Contains(was, r) })
+}
+
+// troubled are the edges of moving that where they now stand come to nothing, or run through something or cross an
+// edge they did not with their ends in the middle.
 func (s *sharing) troubled(moving []*edge) map[*edge]bool {
-	now := map[*edge][]seg{}
-	for _, e := range s.all {
-		pts, _, _, _, ok := s.l.edgePoints(e, "")
-		if ok {
-			now[e] = segsOf(pts)
+	now := make(map[*edge]path, len(moving))
+	for _, e := range moving {
+		if pts, _, _, _, ok := s.l.edgePoints(e, ""); ok {
+			now[e] = s.line(e, segsOf(pts))
 		}
-	}
-	line := func(e *edge, segs []seg) path {
-		return path{segs: segs, what: "", at: "", own: -1, crossing: e.Crossing, graph: e.graph}
 	}
 	back := map[*edge]bool{}
 	for _, a := range moving {
-		was := segsOf(s.before[a])
-		if len(now[a]) == 0 ||
-			runsThrough(now[a], s.solid) && !runsThrough(was, s.solid) ||
-			runsThrough(now[a], s.labels) && !runsThrough(was, s.labels) {
+		was := s.line(a, segsOf(s.before[a]))
+		crossed := func(before, current path) bool { return crosses(now[a], current) && !crosses(was, before) }
+		switch {
+		case len(now[a].segs) == 0, s.newlyThrough(a, now[a].segs):
 			back[a] = true
-			continue
-		}
-		for _, b := range s.all {
-			if a != b && crosses(line(a, now[a]), line(b, now[b])) && !crosses(line(a, was), line(b, segsOf(s.before[b]))) {
-				back[a] = true
-				break
-			}
+		case slices.ContainsFunc(s.rest.paths, func(q path) bool { return crossed(q, q) }):
+			back[a] = true
+		case slices.ContainsFunc(moving, func(b *edge) bool {
+			return a != b && crossed(s.line(b, segsOf(s.before[b])), now[b])
+		}):
+			back[a] = true
 		}
 	}
 	return back
