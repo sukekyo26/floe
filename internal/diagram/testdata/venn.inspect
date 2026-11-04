@@ -1,9 +1,9 @@
 circle "publish" 130,30 340x340
 circle "serve" 290,30 340x340
 circle "render" 210,165 340x340
-label "floe publish" 118.2,21 103.6x18
-label "floe serve" 546,21 88x18
-label "floe diagram render" 520.9,481 158.2x18
+label "floe publish" 115.08,21 109.84x18
+label "floe serve" 543.4,21 93.2x18
+label "floe diagram render" 515.96,481 168.08x18
 label "cli, i18n" 340.6,193 74.8x18 in publish, render, serve
 label "usererr, yamlpos" 315.4,211 125.2x18 in publish, render, serve
 label "diagram, icons" 322.6,229 110.8x18 in publish, render, serve

@@ -410,7 +410,7 @@ func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, err
 		}
 		d.frames[c] = drawnOf(f, right)
 		if t := o.clusters[c].g.Label; t != nil {
-			d.heads[c] = textWidth(t, sizeSub, false)
+			d.heads[c] = textWidth(t, frameClass(""))
 		}
 	}
 	box := func(n gnode) int { // the box at an end, or -1 at a frame

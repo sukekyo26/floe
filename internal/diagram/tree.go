@@ -106,8 +106,8 @@ func (m *measures) childrenSpan(n *node) float64 {
 // nodeWho is what node box b is called, as its box is (calling).
 // LIMIT: two nodes of one text and no name read alike in a mistake that names both; name them if it confuses.
 func nodeWho(b *box) string {
-	text, code := firstRow(b)
-	call, _ := calling(b.Name, text, code, nil, boxRect(b, ""))
+	text, class := firstRow(b)
+	call, _ := calling(b.Name, text, class, nil, boxRect(b, ""))
 	return call
 }
 

@@ -256,7 +256,7 @@ func (l *layout) add(at string, p part) {
 func (l *layout) addDot(d *dot, at string) {
 	r := dotR(d)
 	l.marks = append(l.marks, rect{x: d.CX - r, y: d.CY - r, w: r * 2, h: r * 2, what: "", at: at}.named(
-		"dot", d.Name, nil, false, nil))
+		"dot", d.Name, nil, "", nil))
 	cls := "dot"
 	if d.Hollow {
 		cls += " hollow"
@@ -266,7 +266,7 @@ func (l *layout) addDot(d *dot, at string) {
 
 func (l *layout) addCircle(c *circle, at string) {
 	l.areas = append(l.areas, rect{x: c.CX - c.R, y: c.CY - c.R, w: c.R * 2, h: c.R * 2, what: "", at: at}.named(
-		"circle", c.Name, nil, false, nil))
+		"circle", c.Name, nil, "", nil))
 	l.areaEls = append(l.areaEls, elem{Kind: "circle", X: c.CX, Y: c.CY, R: c.R, Class: "venn", Tone: c.Tone})
 }
 
@@ -294,16 +294,15 @@ func cmpOr(s, def string) string {
 	return s
 }
 
-// units is the width of s in fiftieths of its size: a full-width character (U+2E80 and above) is 50, any other 30,
-// or 31 in code.
-// LIMIT: an estimate of no font, as floe draws with the system's; wide letters such as W and M run past it, so a
-// table's name and type may overlap, and a table's written w that was refused while types were measured in code
-// lets them through to overlap. Measure the text if one comes to miss.
-func units(s string, code bool) int {
-	narrow := 30
-	if code {
-		narrow = 31
-	}
+// units is the width of s in fiftieths of its size: a full-width character (U+2E80 and above) is 50, any other narrow
+// (faceOf).
+// LIMIT: an estimate of no font, as floe draws with the system's, and the narrow of bold text is the average ratio to
+// regular measured in Chrome (1.05 to 1.07). Capitals run past it: a box with no w is passed by a title of capitals
+// from 47 characters with spaces and 23 without in Noto Serif, 38 without in Liberation Sans and 57 in Noto Sans; a
+// table's name and type may overlap, and a table's written w that was refused while types were measured in code lets
+// them through to overlap. Mostly lower case is counted wider than drawn, so a w with room to spare may be refused:
+// a frame of w 150 refuses "Developer machine", which is 114 wide. Measure the text if one comes to miss.
+func units(s string, narrow int) int {
 	n := 0
 	for _, c := range s {
 		if c >= 0x2e80 {
@@ -328,19 +327,20 @@ func widestBy(t Text, size float64, n func(lang string) int) (string, float64) {
 }
 
 // widest is the language of t whose text is widest, and its width.
-func widest(t Text, size float64, code bool) (string, float64) {
-	return widestBy(t, size, func(lang string) int { return units(t[lang], code) })
+func widest(t Text, class string) (string, float64) {
+	size, narrow := faceOf(class)
+	return widestBy(t, size, func(lang string) int { return units(t[lang], narrow) })
 }
 
-func textWidth(t Text, size float64, code bool) float64 {
-	_, w := widest(t, size, code)
+func textWidth(t Text, class string) float64 {
+	_, w := widest(t, class)
 	return w
 }
 
-// words is text as a mistake names a part by it: in the language it is laid out as wide as, by code's widths (the
+// words is text as a mistake names a part by it: in the language it is laid out as wide as, drawn in class (the
 // widest, English of two as wide), quoted; "" for none.
-func words(text Text, code bool) string {
-	lang, _ := widest(text, 1, code)
+func words(text Text, class string) string {
+	lang, _ := widest(text, class)
 	if text[lang] == "" {
 		return ""
 	}
@@ -349,8 +349,8 @@ func words(text Text, code bool) string {
 
 // calling is what a part standing at r is called in a mistake and by inspect, but its kind: its name quoted, else its
 // words, else the Venn regions it is placed in (a label's in), else where it stands (byPlace).
-func calling(name string, text Text, code bool, in []string, r rect) (call string, byPlace bool) {
-	switch w := words(text, code); {
+func calling(name string, text Text, class string, in []string, r rect) (call string, byPlace bool) {
+	switch w := words(text, class); {
 	case name != "":
 		return strconv.Quote(name), false
 	case w != "":
@@ -363,16 +363,15 @@ func calling(name string, text Text, code bool, in []string, r rect) (call strin
 }
 
 // named is a with what it is called: its kind, then calling.
-func (a rect) named(kind, name string, text Text, code bool, in []string) rect {
-	call, byPlace := calling(name, text, code, in, a)
+func (a rect) named(kind, name string, text Text, class string, in []string) rect {
+	call, byPlace := calling(name, text, class, in, a)
 	a.what, a.byPlace = kind+" "+call, byPlace
 	return a
 }
 
-// firstRow is box b's first row's text, by which it is named, and whether it is laid out in code's widths.
-func firstRow(b *box) (Text, bool) {
-	_, code := rowSize(b.Rows[0].Style, true)
-	return b.Rows[0].Text, code
+// firstRow is box b's first row's text, by which it is named, and the class it is drawn in.
+func firstRow(b *box) (Text, string) {
+	return b.Rows[0].Text, rowClass(b.Rows[0].Style, true)
 }
 
 // placeOf is where r stands, its top left and size.
@@ -384,8 +383,8 @@ func placeOf(r rect) string {
 // LIMIT: text and the number of rows are not bounded, so a row tens of thousands of characters long asks for a width
 // past what may be written (a million), and a box of 58,824 rows or more for a height past it (diagram_too_short);
 // bound them if one comes to matter.
-func (l *layout) fit(at, who string, t Text, size float64, code bool, room, written float64) {
-	lang, tw := widest(t, size, code)
+func (l *layout) fit(at, who string, t Text, class string, room, written float64) {
+	lang, tw := widest(t, class)
 	l.fitWidth(at, who, t, lang, tw, room, written)
 }
 
@@ -406,16 +405,49 @@ func onGrid(v, step float64, round func(float64) float64) float64 {
 	return round(v/step) * step
 }
 
-// inCode is whether text of class is drawn in code: part.css gives only .code the monospace font.
-func inCode(class string) bool {
-	return strings.HasSuffix(class, "code")
+// faceOf is the size of text drawn in class, as part.css gives it, and the units of its narrow characters: 30, or 32
+// in bold, or 31 in code, bold or not. "" is what draws no text.
+// LIMIT: of what part.css does not write, weight is inherited by every class it does not make bold and letter spacing
+// by all, so a template's weight or spacing around a diagram is not measured. Tell them here if a template comes to
+// write them.
+func faceOf(class string) (size float64, narrow int) {
+	switch class {
+	case "main", "label strong", "frame grouped":
+		return sizeMain, 32
+	case "frame":
+		return sizeSub, 32
+	case "main code", "sub code", "cell code":
+		return sizeSub, 31
+	default:
+		return sizeSub, 30
+	}
 }
 
-func rowSize(style string, first bool) (float64, bool) {
-	if style == "" && first || strings.HasPrefix(style, "main") {
-		return sizeMain, inCode(style)
+// rowClass is the class a box's row is drawn in.
+func rowClass(style string, first bool) string {
+	if style != "" {
+		return style
 	}
-	return sizeSub, inCode(style)
+	if first {
+		return "main"
+	}
+	return "sub"
+}
+
+// labelClass is the class a label's text is drawn in.
+func labelClass(strong bool) string {
+	if strong {
+		return "label strong"
+	}
+	return "label"
+}
+
+// frameClass is the class of a frame, by which its heading is drawn.
+func frameClass(icon string) string {
+	if icon != "" {
+		return "frame grouped"
+	}
+	return "frame"
 }
 
 // inset is how much narrower than a box its text must be: its margins, and a hexagon's points.
@@ -431,8 +463,7 @@ func boxRect(b *box, at string) rect {
 	if w == 0 {
 		widest := 0.0
 		for i, r := range b.Rows {
-			size, code := rowSize(r.Style, i == 0)
-			widest = max(widest, textWidth(r.Text, size, code))
+			widest = max(widest, textWidth(r.Text, rowClass(r.Style, i == 0)))
 		}
 		w = onGrid(widest+inset(b), 8, math.Ceil)
 	}
@@ -448,17 +479,13 @@ func boxRect(b *box, at string) rect {
 }
 
 func (l *layout) addBox(b *box, at string) {
-	text, code := firstRow(b)
-	r := boxRect(b, at).named("box", b.Name, text, code, nil)
+	text, class := firstRow(b)
+	r := boxRect(b, at).named("box", b.Name, text, class, nil)
 	kids := make([]elem, 0, len(b.Rows))
 	for i, row := range b.Rows {
-		size, code := rowSize(row.Style, i == 0)
+		style := rowClass(row.Style, i == 0)
 		if b.W != 0 {
-			l.fit(at, r.what, row.Text, size, code, b.W-inset(b), b.W)
-		}
-		style := row.Style
-		if style == "" {
-			style = map[bool]string{true: "main", false: "sub"}[i == 0]
+			l.fit(at, r.what, row.Text, style, b.W-inset(b), b.W)
 		}
 		y := r.y + r.h/2 + (float64(i)-float64(len(b.Rows)-1)/2)*lineGap
 		kids = append(kids, elem{Kind: "text", X: r.x + r.w/2, Y: y, Anchor: "middle", Class: style, Text: row.Text})
@@ -476,7 +503,7 @@ func tableWidth(t *table) float64 {
 	if t.W != 0 {
 		return t.W
 	}
-	widest := textWidth(t.Title, sizeMain, false) + pad*2
+	widest := textWidth(t.Title, tableTitle) + pad*2
 	for _, row := range t.Rows {
 		_, rw := rowWidth(row)
 		widest = max(widest, rw+24)
@@ -502,6 +529,9 @@ func rowText(row tableRow) Text {
 	return t
 }
 
+// tableTitle is the class a table's title is drawn in.
+const tableTitle = "main"
+
 // tableCells are the classes a row's cells are drawn in, and so measured by.
 var tableCells = [2]string{"cell code", "type"}
 
@@ -509,17 +539,20 @@ var tableCells = [2]string{"cell code", "type"}
 const cellGap = "  "
 
 // rowWidth is the language row is widest in and its width, each cell measured as drawn (tableCells), so code and
-// other text are counted in one row; the gap after the name counts as the name. A separator is 0.
+// other text are counted in one row; the gap after the name counts as the name. A separator is 0. widestBy counts at
+// one size, so both cells must be drawn in it (TestTableCellsOneSize).
 func rowWidth(row tableRow) (string, float64) {
 	if row.Sep {
 		return "en", 0
 	}
-	return widestBy(rowText(row), sizeSub, func(lang string) int {
+	size, nameUnit := faceOf(tableCells[0])
+	_, typeUnit := faceOf(tableCells[1])
+	return widestBy(rowText(row), size, func(lang string) int {
 		name := row.Cells[0].in(i18n.Lang(lang))
 		if len(row.Cells) == 1 {
-			return units(name, inCode(tableCells[0]))
+			return units(name, nameUnit)
 		}
-		return units(name+cellGap, inCode(tableCells[0])) + units(row.Cells[1].in(i18n.Lang(lang)), inCode(tableCells[1]))
+		return units(name+cellGap, nameUnit) + units(row.Cells[1].in(i18n.Lang(lang)), typeUnit)
 	})
 }
 
@@ -545,13 +578,13 @@ func tableRects(t *table, at string) (rect, []rect) {
 	if len(t.Rows) > 0 {
 		h += 6
 	}
-	return rect{x: x, y: t.Y, w: w, h: h, what: "", at: at}.named("table", t.Name, t.Title, false, nil), rows
+	return rect{x: x, y: t.Y, w: w, h: h, what: "", at: at}.named("table", t.Name, t.Title, tableTitle, nil), rows
 }
 
 func (l *layout) addTable(t *table, at string) {
 	r, rows := tableRects(t, at)
 	if t.W != 0 {
-		l.fit(at, r.what, t.Title, sizeMain, false, t.W-pad*2, t.W)
+		l.fit(at, r.what, t.Title, tableTitle, t.W-pad*2, t.W)
 	}
 	x, y, w := r.x, r.y, r.w
 	r.form = outlineOf(r.w, r.h, "table")
@@ -562,7 +595,9 @@ func (l *layout) addTable(t *table, at string) {
 	if len(t.Rows) > 0 {
 		kids = append(kids, lineEl(x, y+tableHead, x+w, y+tableHead, "sep"))
 	}
-	kids = append(kids, elem{Kind: "text", X: x + w/2, Y: y + tableHead/2, Anchor: "middle", Class: "main", Text: t.Title})
+	kids = append(kids, elem{
+		Kind: "text", X: x + w/2, Y: y + tableHead/2, Anchor: "middle", Class: tableTitle, Text: t.Title,
+	})
 	top := y + tableHead
 	for i, row := range t.Rows {
 		if row.Sep {
@@ -618,27 +653,28 @@ func dotR(d *dot) float64 {
 func barRect(b *bar, at string) rect {
 	w := math.Max(math.Abs(b.X2-b.X1), 4)
 	return rect{x: math.Min(b.X1, b.X2), y: b.Y - 7, w: w, h: 14, what: "", at: at}.named(
-		"bar", b.Name, b.Label, false, nil)
+		"bar", b.Name, b.Label, labelClass(false), nil)
 }
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
+	class := frameClass(f.Icon)
 	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named(
-		"frame", f.Name, f.Label, false, nil)
+		"frame", f.Name, f.Label, class, nil)
 	who := fr.what
 	l.frames = append(l.frames, fr)
-	hx, hy, size := f.X+12, f.Y+18, float64(sizeSub)
+	hx, hy := f.X+12, f.Y+18
 	if f.Icon != "" {
-		hx, hy, size = f.X+40, f.Y+15, sizeMain
+		hx, hy = f.X+40, f.Y+15
 	}
 	if f.Label != nil {
-		hw := textWidth(f.Label, size, false)
+		hw := textWidth(f.Label, class)
 		head := rect{x: hx, y: hy - 9, w: hw, h: labelH, what: "the heading of " + who, at: at, graph: f.graph}
 		l.heads = append(l.heads, head)
 		// The heading keeps the margin on its right that it has on its left.
-		l.fit(at, who, f.Label, size, false, f.W-(hx-f.X)-12, f.W)
+		l.fit(at, who, f.Label, class, f.W-(hx-f.X)-12, f.W)
 	}
-	rx, cls := 10.0, "frame"
+	rx, cls := 10.0, class
 	if f.Icon != "" || f.Square {
 		rx = 0
 	}
@@ -647,7 +683,6 @@ func (l *layout) addFrame(f *frame, at string) {
 	}
 	kids := []elem{{Kind: "rect", X: f.X, Y: f.Y, W: f.W, H: f.H, RX: rx}}
 	if f.Icon != "" {
-		cls += " grouped"
 		// The icon is a part like a box: nothing may overlap it or run through it. It is checked from the frame's
 		// edge, as the 1px of it outside the frame only covers the frame's line (1.2 wide, centred on its edge).
 		ir := rect{x: f.X, y: f.Y, w: 31, h: 31, what: "the icon of " + who, at: at, form: outlineOf(31, 31, "icon")}
@@ -665,7 +700,7 @@ func (l *layout) addFrame(f *frame, at string) {
 func (l *layout) addIcon(i *icon, at string) {
 	size := iconSize(i)
 	r := rect{x: i.X, y: i.Y, w: size, h: size, what: "", at: at, form: outlineOf(size, size, "icon")}.named(
-		"icon", i.Name, Text{"en": i.Icon}, false, nil)
+		"icon", i.Name, Text{"en": i.Icon}, "", nil)
 	who := r.what
 	l.boxes = append(l.boxes, r)
 	if use, ok := l.image(at, i.Icon, i.X, i.Y, size, who); ok {
@@ -720,10 +755,7 @@ func (l *layout) image(at, name string, x, y, size float64, who string) (elem, b
 // none unless it says plain: false), but an edge's, an icon's and a bar's cannot. Tell the shape under them if they
 // are drawn there.
 func (l *layout) label(at string, t Text, in []string, x, y float64, anchor string, plain, strong bool) int {
-	cls := "label"
-	if strong {
-		cls = "label strong"
-	}
+	cls := labelClass(strong)
 	w := labelWidth(t, strong)
 	x0 := x - w/2
 	switch anchor {
@@ -732,7 +764,7 @@ func (l *layout) label(at string, t Text, in []string, x, y float64, anchor stri
 	case "end":
 		x0 = x - w + 5
 	}
-	l.labels = append(l.labels, rect{x: x0, y: y - 9, w: w, h: labelH, what: "", at: at}.named("label", "", t, false, in))
+	l.labels = append(l.labels, rect{x: x0, y: y - 9, w: w, h: labelH, what: "", at: at}.named("label", "", t, cls, in))
 	if !plain {
 		l.labelEls = append(l.labelEls, elem{Kind: "rect", X: x0, Y: y - 9, W: w, H: labelH, Class: "label-bg"})
 	}
@@ -742,10 +774,7 @@ func (l *layout) label(at string, t Text, in []string, x, y float64, anchor stri
 
 // labelWidth is how wide a label of t is, with 5px around its text.
 func labelWidth(t Text, strong bool) float64 {
-	if strong {
-		return textWidth(t, sizeMain, false) + 10
-	}
-	return textWidth(t, sizeSub, false) + 10
+	return textWidth(t, labelClass(strong)) + 10
 }
 
 func (l *layout) addBar(b *bar, at string) {
@@ -782,7 +811,7 @@ func (l *layout) addAxis(a *axis, at string) {
 	}
 	for i, t := range ticks {
 		l.edgeEls = append(l.edgeEls, lineEl(t[0], t[1], t[2], t[3], "axis"))
-		if text := a.Ticks[i].Text; words(text, false) != "" {
+		if text := a.Ticks[i].Text; words(text, labelClass(false)) != "" {
 			l.label(at, text, nil, tickTextX(a, t[0]), a.Y+17, "middle", true, false)
 		}
 	}
