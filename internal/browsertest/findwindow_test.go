@@ -768,3 +768,21 @@ func TestUIBackKey(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the list", "location.pathname === '/'")
 	check(t, "back", out, strings.Join([]string{"/?kind=page", "/?kind=page", "?kind=page", "/a/d/", "?kind=page", "true false"}, "|"))
 }
+
+// TestUINarrowFilter leaves the button to the filters its icon and number on a phone, its words read out.
+func TestUINarrowFilter(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.stub(findList)
+	const drawn = `(() => { const name = document.getElementById('narrow-filter-name'), n = document.getElementById('narrow-filter-n');
+		return [name.textContent, name.getBoundingClientRect().width > 1, n.getBoundingClientRect().width > 0 ? n.textContent : '-', n.getAttribute('aria-hidden')].join(' '); })()`
+	out := make([]string, 0, 3)
+	for _, w := range []int64{500, 360} {
+		b.size(w, 700, false)
+		b.navigate("/?project=p&kind=page")
+		out = append(out, b.eval(drawn))
+	}
+	b.navigate("/")
+	out = append(out, b.eval(drawn))
+	check(t, "narrow filter", out, "Filter 2 true - true|Filter 2 false 2 true|Filter false - true")
+}

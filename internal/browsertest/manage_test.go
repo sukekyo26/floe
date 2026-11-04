@@ -722,7 +722,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("[...document.querySelectorAll('#tags .chip')].filter((c) => c.offsetParent).map((c) => c.dataset.tag).join(',')"))
 	b.eval(plan + ".click()")
 	out = append(out, b.eval(rows), b.eval(plan+".getAttribute('aria-pressed')"))
-	out = append(out, b.eval("document.getElementById('narrow-filter').textContent"))
+	out = append(out, b.eval("document.getElementById('narrow-filter-name').textContent"))
 	b.eval(plan + ".click()")
 	out = append(out, b.eval(rows))
 	b.eval("document.querySelector('#filter-dialog [data-close]').click()")
