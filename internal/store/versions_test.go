@@ -361,7 +361,7 @@ func TestVersionPage(t *testing.T) {
 	if b, ok := s.VersionPage("z", link, 1); ok {
 		t.Errorf("a link's version: %q", b)
 	}
-	list, err := s.List()
+	list, err := s.List("local")
 	if err != nil {
 		t.Fatal(err)
 	}

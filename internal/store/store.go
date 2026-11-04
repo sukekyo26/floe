@@ -69,6 +69,8 @@ type Meta struct {
 	// in its repository when linked (docs/v1), else its name.
 	Theme     string `json:"theme,omitempty"`
 	DataTitle string `json:"dataTitle,omitempty"`
+	// Template is the template a stored page is drawn with, read from its data file at each publish and rebuild.
+	Template string `json:"template,omitempty"`
 	// Source is the directory of a stored page's copy, under its own; a new one each publish and rebuild.
 	Source        string `json:"source,omitempty"`
 	Project       string `json:"project,omitempty"`
@@ -126,7 +128,7 @@ type Store struct {
 }
 
 type cachedTitle struct {
-	key, title string
+	key, title, template string
 }
 
 // New returns the store at root.
@@ -301,13 +303,16 @@ func (s *Store) File(slug string, m *Meta, rest string) (string, bool) {
 	return page, true
 }
 
-// Listed is an entry of the list. A link takes its title and update time from the file; Missing is
-// set for links only, true when the file cannot be served.
+// Listed is an entry of the list. A link takes its title and update time from the file, a linked data file its template
+// too; Missing is set for links only, true when the file cannot be served. News (newsNew, newsVersion, "" for nothing
+// unseen) and Version, the number of the last, are of a stored page only.
 type Listed struct {
 	Slug string `json:"slug"`
 	Meta
 
-	Missing *bool `json:"missing,omitempty"`
+	News    string `json:"news,omitempty"`
+	Version int    `json:"version,omitempty"`
+	Missing *bool  `json:"missing,omitempty"`
 }
 
 // slugs returns the slugs of the store, in their order: the names under it that can be one.
@@ -328,20 +333,23 @@ func (s *Store) slugs() ([]string, error) {
 	return slugs, nil
 }
 
-// List returns the pages, newest first. Entries with a missing or broken meta.json are skipped so that
-// one of them does not break the whole list.
-func (s *Store) List() ([]Listed, error) {
+// List returns the pages, newest first, with what viewer has not seen of them. Entries with a missing or broken
+// meta.json are skipped so that one of them does not break the whole list.
+func (s *Store) List(viewer string) ([]Listed, error) {
 	slugs, err := s.slugs()
 	if err != nil {
 		return nil, err
 	}
+	// Whatever cannot be read leaves no reader: every page counts as read.
+	all, _ := s.readReads() //nolint:errcheck // as above
+	reader := readerIn(all, viewer)
 	list := []Listed{}
 	for _, slug := range slugs {
 		m := s.ReadMeta(slug)
 		if m == nil || m.UpdatedAt == "" {
 			continue
 		}
-		list = append(list, s.listed(slug, m))
+		list = append(list, s.listed(slug, m, reader))
 	}
 	slices.SortStableFunc(list, func(a, b Listed) int {
 		return cmp.Compare(b.UpdatedAt, a.UpdatedAt)
@@ -349,11 +357,15 @@ func (s *Store) List() ([]Listed, error) {
 	return list, nil
 }
 
-func (s *Store) listed(slug string, m *Meta) Listed {
-	l := Listed{Slug: slug, Meta: *m, Missing: nil}
+func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
+	l := Listed{Slug: slug, Meta: *m, News: "", Version: 0, Missing: nil}
 	// The list is read every few seconds: versions are asked for a page at a time.
 	l.Versions = nil
 	if !m.IsLink() {
+		l.News = r.news(slug, m)
+		if len(m.Versions) > 0 {
+			l.Version = m.Versions[len(m.Versions)-1].N
+		}
 		return l
 	}
 	// What is in a folder is listed when it is opened (Pages): the list is read every few seconds.
@@ -365,16 +377,18 @@ func (s *Store) listed(slug string, m *Meta) Listed {
 		return l
 	}
 	// A file that is not served is not read either (the same check as File).
-	title, readable := "", false
+	title, template, readable := "", "", false
 	file, ok := s.File(slug, m, "")
 	if ok {
-		title, readable = s.linkTitle(file, m.IsData())
+		title, template, readable = s.linkTitle(file, m.IsData())
 	}
+	l.Template = template
 	if l.Title == "" {
 		l.Title = cmp.Or(title, slug)
 	}
+	// The later of the two: a file written, or linked again, comes up the list.
 	if v := modTime(file); readable && v != "" {
-		l.UpdatedAt = v
+		l.UpdatedAt = max(v, l.UpdatedAt)
 	}
 	missing := !readable
 	l.Missing = &missing
@@ -407,36 +421,36 @@ func modTime(file string) string {
 	return fi.ModTime().UTC().Format(isoMillis)
 }
 
-// linkTitle returns the title of a linked file, its <title> or first <h1>, or the title: of a data
+// linkTitle returns the title of a linked file, its <title> or first <h1>, or the title: and template: of a data
 // file, cached per version of the file: the management page and the open pages poll the list every few
 // seconds, and a report can be megabytes. A data file with mistakes may have none, but can be read.
-func (s *Store) linkTitle(file string, data bool) (string, bool) {
+func (s *Store) linkTitle(file string, data bool) (string, string, bool) {
 	key := files.Mark(file)
 	if key == "-" {
-		return "", false
+		return "", "", false
 	}
 	s.mu.Lock()
 	hit, ok := s.titles[file]
 	s.mu.Unlock()
 	if ok && hit.key == key {
-		return hit.title, true
+		return hit.title, hit.template, true
 	}
 	b, _, err := files.Read(file)
 	if err != nil {
-		return "", false
+		return "", "", false
 	}
-	var title string
+	var title, template string
 	if data {
 		if d, _ := doc.Read(file, b, ""); d != nil { //nolint:errcheck // its mistakes are told when it is drawn
-			title = d.Title
+			title, template = d.Title, d.Template
 		}
 	} else {
 		title = page.Title(string(b))
 	}
 	s.mu.Lock()
-	s.titles[file] = cachedTitle{key: key, title: title}
+	s.titles[file] = cachedTitle{key: key, title: title, template: template}
 	s.mu.Unlock()
-	return title, true
+	return title, template, true
 }
 
 // Now is the time recorded in createdAt and updatedAt.

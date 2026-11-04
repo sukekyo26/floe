@@ -170,6 +170,9 @@ func (a *app) serve(ctx context.Context) error {
 	if err = writable(root); err != nil {
 		return usererr.SettingDir(at.setting(), root, err, usererr.CannotWrite(root, err))
 	}
+	if err = cfg.Store.Begin(server.Viewer, store.Now()); err != nil {
+		return err //nolint:wrapcheck // a usererr, at the file
+	}
 	if cfg.Build, err = daemon.Build(); err != nil {
 		return err //nolint:wrapcheck // already says what failed
 	}

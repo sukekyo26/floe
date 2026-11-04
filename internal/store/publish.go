@@ -339,7 +339,8 @@ func (s *Store) PrepareLink(
 }
 
 // seedMeta is the seed of the Meta settle builds: the link's path ("" for a stored page), and of a page drawn
-// from the data file file of content data (nil for HTML), its title: and the theme it is drawn with.
+// from the data file file of content data (nil for HTML), its title: and the theme it is drawn with, and of a stored
+// page its template: (a link's is read from its file for the list).
 func seedMeta(path, file string, data []byte, theme string) Meta {
 	var m Meta
 	m.Path = path
@@ -347,6 +348,9 @@ func seedMeta(path, file string, data []byte, theme string) Meta {
 		m.Theme = theme
 		if d, _ := doc.Read(file, data, theme); d != nil { //nolint:errcheck // drawn without a mistake already
 			m.DataTitle = d.Title
+			if path == "" {
+				m.Template = d.Template
+			}
 		}
 	}
 	return m
@@ -367,6 +371,7 @@ func (e *Entry) settle(prev *Meta) error {
 	}
 	e.Meta = newMeta(e.opts, was.Path, e.from, base, was.DataTitle, e.Slug)
 	e.Meta.Theme = was.Theme
+	e.Meta.Template = was.Template
 	// A folder's link lost its folder would serve its parent's files.
 	e.Meta.Folder = was.Folder
 	e.Prev = prev
@@ -423,6 +428,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Description:   base.Description,
 		Theme:         "",
 		DataTitle:     own,
+		Template:      "",
 		Source:        "",
 		Project:       from,
 		ProjectEdited: base.ProjectEdited,
@@ -598,7 +604,8 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 // nextVersion adds to e.Meta, settled under the lock, the version the save of a stored page of content mark makes,
 // and returns the page of the version before to keep (nil for none), pre when it is of the copy that is still last.
 // A page replaced, or of no version, gets one whatever its content, its page before being none of its versions; one
-// whose last version's content is mark gets none. Numbers go on from the last of the page replaced.
+// whose last version's content is mark gets none, and keeps its updatedAt, which moves with the versions alone. Numbers
+// go on from the last of the page replaced.
 // A last version that cannot be read, which nothing serves, is dropped.
 func (s *Store) nextVersion(e *Entry, mark string, pre *pressed) *pressed {
 	now := e.Prev
@@ -611,6 +618,7 @@ func (s *Store) nextVersion(e *Entry, mark string, pre *pressed) *pressed {
 	if len(versions) > 0 {
 		last := versions[len(versions)-1]
 		if last.Mark == mark {
+			e.Meta.UpdatedAt = now.UpdatedAt
 			return nil
 		}
 		if pre != nil && pre.source == now.Source && pre.n == last.N {
@@ -833,7 +841,11 @@ func (s *Store) Remove(slug string) error {
 	if s.ReadMeta(slug) == nil {
 		return ErrNotFound
 	}
-	return removePage(dir)
+	if err := removePage(dir); err != nil {
+		return err
+	}
+	s.moveRead(slug, "")
+	return nil
 }
 
 // removePage removes dir, a page's directory, its meta.json last: one that cannot all be removed keeps it, listed
@@ -918,6 +930,7 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 		if err := os.Rename(from, dest); err != nil {
 			return "", usererr.CannotWrite(dest, err) //nolint:wrapcheck // the system's words, at the new name
 		}
+		s.moveRead(slug, to)
 	}
 	return to, nil
 }

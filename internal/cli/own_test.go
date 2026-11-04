@@ -451,3 +451,21 @@ func TestOwnNotFiles(t *testing.T) {
 		}
 	}
 }
+
+// A reads.json that cannot be set aside keeps floe serve from starting, told before it says it serves.
+func TestServeCannotBegin(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	root := filepath.Join(dir, "store")
+	for _, name := range []string{"reads.json", filepath.Join("reads.json.broken", "x")} {
+		if err := os.MkdirAll(filepath.Join(root, name), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	env := map[string]string{"HOME": filepath.Join(dir, "home"), "FLOE_DIR": root, "FLOE_PORT": "1"}
+	code, stdout, stderr := runEnv(dir, env, "serve")
+	if code != 1 || stdout != "" || !strings.HasPrefix(stderr, filepath.Join(root, "reads.json.broken")+": cannot be written (") {
+		t.Errorf("floe serve = %d, %q, %q", code, stdout, stderr)
+	}
+}

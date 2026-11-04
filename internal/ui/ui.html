@@ -922,7 +922,31 @@
     if (typeof hash === 'string' && (hash === '' || hash.startsWith('#')) && e.data.artifactPath === new URL(frameSrc, location.href).pathname) {
       history.replaceState(history.state, '', location.pathname + location.search + hash);
     }
+    const read = e.data?.artifactRead;
+    if (Number.isInteger(read?.n) && typeof read.at === 'string' && e.data.artifactPath === new URL(frameSrc, location.href).pathname) {
+      tellRead(framed, { n: read.n, at: read.at });
+    }
   });
+  // The versions read go to the server one request at a time: while one is out, each page's last one waits, its earlier ones dropped.
+  // One lost is told again the next time the page is loaded. The slug is the caller's own, never one a page's message names
+  const readsWaiting = new Map();
+  let readsGoing = false;
+  async function tellRead(slug, read) {
+    readsWaiting.set(slug, read);
+    if (readsGoing) return;
+    readsGoing = true;
+    // A Map's iteration also visits what is set while it goes
+    for (const [to, body] of readsWaiting) {
+      readsWaiting.delete(to);
+      try {
+        const res = await api(`/api/artifacts/${encodeURIComponent(to)}/read`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(5000),
+        });
+        if (!res.ok && res.status !== 404) toast(await res.text());
+      } catch { /* api marked the server as not reached */ }
+    }
+    readsGoing = false;
+  }
   // The frame's own fragment changed (the address bar, Back): the page moves to that part, in
   // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo.
   // No fragment is the empty one, which moves to the top of the page: the page's URL alone would load it again
