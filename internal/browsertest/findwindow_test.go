@@ -642,6 +642,11 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("document.querySelector('#list li[data-slug=d3] .title').click()")
 	b.until("the page beside to be told the keys are taken", "window.ready")
 	focusIn(b, "read-frame")
+	// h has nothing to go back to here: nothing happens, and the focus stays in the page.
+	b.eval("window.got = []; window.seen = []")
+	realKey(b, "h", 0)
+	b.until("h handed over", "window.got.at(-1) === 'h'")
+	out = append(out, b.eval("document.activeElement.id + ' ' + location.pathname"))
 	b.eval("window.got = []")
 	realKey(b, "f", 0)
 	realKey(b, "j", 0)
@@ -656,7 +661,7 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"0 Escape:false",
 		"h",
 		"Ctrl+K j:false,h:false,k:true", "Ctrl+K j:false,h:false,k:true",
-		".", "/:false,/:false . /a/d1/", ". /a/d1/", "j",
+		".", "/:false,/:false . /a/d1/", ". /a/d1/", "read-frame /", "j",
 	}, "|"))
 }
 

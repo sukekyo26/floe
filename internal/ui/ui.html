@@ -915,7 +915,7 @@
     // page can, of PAGE_KEYS and a move to a whole page; a page's read stops at the path it must be at
     if (e.source !== shown.contentWindow || e.origin !== 'null') return;
     // The keys a person presses in the page alone, while the focus is there, wherever in it a link has led
-    if (typeof e.data?.artifactKey === 'string' && PAGE_KEYS.has(e.data.artifactKey) && document.activeElement === shown) {
+    if (typeof e.data?.artifactKey === 'string' && PAGE_KEYS.has(e.data.artifactKey) && Object.hasOwn(KEYS, e.data.artifactKey) && document.activeElement === shown) {
       // Not back to the iframe when a modal it opened closes: a page that keeps sending would open it again, for good
       shown.blur();
       pressKey(e.data.artifactKey);
