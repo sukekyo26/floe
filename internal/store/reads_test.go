@@ -256,9 +256,9 @@ func TestReadsBegin(t *testing.T) {
 		`{}`, `null`, `{"local":{}}`,
 		`{"other":{"since":"` + hour(5) + `"},"local":{"pages":{"d":{"n":1,"at":"x"}}}}`,
 	} {
-		s, root := newStore(t)
+		fresh, root := newStore(t)
 		writeReads(t, root, text)
-		if err := s.Begin(viewer, hour(1)); err != nil {
+		if err := fresh.Begin(viewer, hour(1)); err != nil {
 			t.Fatal(err)
 		}
 		got := keptReads(t, root)
@@ -272,12 +272,12 @@ func TestReadsBegin(t *testing.T) {
 
 	// Broken: aside, the one there replaced, a new one written.
 	for _, text := range []string{`{`, `[]`, `{"local":{"since":"soon"}}`, `{"local":{"since":3}}`} {
-		s, root := newStore(t)
+		fresh, root := newStore(t)
 		writeReads(t, root, text)
 		if err := os.WriteFile(filepath.Join(root, "reads.json.broken"), []byte("older"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := s.Begin(viewer, hour(1)); err != nil {
+		if err := fresh.Begin(viewer, hour(1)); err != nil {
 			t.Fatal(err)
 		}
 		if got := read(t, filepath.Join(root, "reads.json.broken")); got != text {
@@ -431,8 +431,9 @@ func TestReadsFollow(t *testing.T) {
 	pages := func() []string {
 		t.Helper()
 
-		got := []string{}
-		for slug, r := range keptReads(t, root)[viewer].Pages {
+		kept := keptReads(t, root)[viewer].Pages
+		got := make([]string, 0, len(kept))
+		for slug, r := range kept {
 			got = append(got, slug+"="+strconv.Itoa(r.N))
 		}
 		slices.Sort(got)
