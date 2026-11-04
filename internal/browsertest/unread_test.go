@@ -227,7 +227,8 @@ func TestUIUnreadPublish(t *testing.T) { //nolint:paralleltest // the browser te
 	b.until("read as it drew itself", "window.sent.filter((x) => x === 'POST p1').length === 2")
 	sentAll(b)
 	isUnseen(b, "p1", false)
-	out := []string{b.eval("document.querySelectorAll('.toast.page').length")}
+	out := make([]string, 0, 2)
+	out = append(out, b.eval("document.querySelectorAll('.toast.page').length"))
 	b.eval("markUnread('p1')")
 	isUnseen(b, "p1", true)
 	out = append(out, b.eval(fmt.Sprintf(unreadRow, "p1")+".querySelector('.ver').textContent"))
@@ -249,7 +250,8 @@ func TestUIUnreadToast(t *testing.T) { //nolint:paralleltest // the browser test
 	pickUnread(b, "p1")
 	b.until("the toast", "document.querySelector('.toast.page .btn')")
 	b.still()
-	out := []string{b.eval(timers), b.eval("getComputedStyle(document.querySelector('.toast.page')).animationName")}
+	out := make([]string, 0, 11)
+	out = append(out, b.eval(timers), b.eval("getComputedStyle(document.querySelector('.toast.page')).animationName"))
 	at := func(selector string) (float64, float64) {
 		t.Helper()
 		var x, y float64
@@ -327,24 +329,25 @@ func TestUIUnreadMenu(t *testing.T) { //nolint:paralleltest // the browser tests
 	s := unreadSite(t)
 	b := s.b
 	unreadList(b)
-	item := func(box, _ string) string {
+	item := func(box string) string {
 		t.Helper()
 		return b.eval("document.querySelector(" + js(box+" .mark-unread") + ").hidden")
 	}
-	out := []string{item("#list li[data-slug=p1]", ""), item("#list li[data-slug=l]", "")}
+	out := make([]string, 0, 10)
+	out = append(out, item("#list li[data-slug=p1]"), item("#list li[data-slug=l]"))
 	pickUnread(b, "p1")
 	isUnseen(b, "p1", false)
-	out = append(out, item("#list li[data-slug=p1]", ""), item("#read-actions", ""), b.eval("document.querySelector('#list li[data-slug=p1] .mark-unread').getAttribute('aria-label')"))
+	out = append(out, item("#list li[data-slug=p1]"), item("#read-actions"), b.eval("document.querySelector('#list li[data-slug=p1] .mark-unread').getAttribute('aria-label')"))
 	b.eval("openFind()")
-	out = append(out, item("#find-actions", "")) // the first row, new
+	out = append(out, item("#find-actions")) // the first row, new
 	typeFind(b, "Title p1")
-	out = append(out, item("#find-actions", ""))
+	out = append(out, item("#find-actions"))
 	b.eval("document.getElementById('find').close()")
 	// Pressed in a row's menu, the row drawn anew has the focus on its menu.
 	b.eval("(() => { const s = document.querySelector('#list li[data-slug=p1] summary'); s.focus(); s.click(); document.querySelector('#list li[data-slug=p1] .mark-unread').click(); })()")
 	isUnseen(b, "p1", true)
 	b.still()
-	out = append(out, b.eval("document.activeElement.matches('#list li[data-slug=p1] summary')"), item("#list li[data-slug=p1]", ""), item("#read-actions", ""))
+	out = append(out, b.eval("document.activeElement.matches('#list li[data-slug=p1] summary')"), item("#list li[data-slug=p1]"), item("#read-actions"))
 	// The bar of a page open whole.
 	b.navigate("/a/p1/")
 	b.until("the toast", "document.querySelector('.toast.page .btn')")

@@ -179,10 +179,11 @@ func (r *reader) news(slug string, m *Meta) string {
 	}
 	n := r.taken(slug, m)
 	rec, kept := r.pages[slug]
+	unread := kept && rec.N == 0
 	switch {
 	case n == m.lastNumber():
 		return ""
-	case n > 0 || (!(kept && rec.N == 0) && !timeOf(m.CreatedAt).After(r.since)):
+	case n > 0, !unread && !timeOf(m.CreatedAt).After(r.since):
 		return newsVersion
 	default:
 		return newsNew
@@ -222,9 +223,12 @@ func (s *Store) MarkUnread(viewer, slug string) error {
 	})
 }
 
-// changeRead keeps what next says viewer's record of slug comes to, nil for no change. One that changes nothing takes no
-// lock, as a page read before is passed over often.
-func (s *Store) changeRead(viewer, slug string, next func(*reader, *Meta) *pageRead) error {
+// nextRecord is what a viewer's record of a page comes to, nil for no change.
+type nextRecord func(*reader, *Meta) *pageRead
+
+// changeRead keeps what next says viewer's record of slug comes to. One that changes nothing takes no lock, as a page
+// read before is passed over often.
+func (s *Store) changeRead(viewer, slug string, next nextRecord) error {
 	if _, rec, err := s.nextRead(viewer, slug, next); err != nil || rec == nil {
 		return err
 	}
@@ -251,7 +255,7 @@ func (s *Store) changeRead(viewer, slug string, next func(*reader, *Meta) *pageR
 }
 
 // nextRead is reads.json, and what next says of the stored page slug.
-func (s *Store) nextRead(viewer, slug string, next func(*reader, *Meta) *pageRead) (map[string]viewerReads, *pageRead, error) {
+func (s *Store) nextRead(viewer, slug string, next nextRecord) (map[string]viewerReads, *pageRead, error) {
 	m := s.ReadMeta(slug)
 	if m == nil || m.IsLink() {
 		return nil, nil, ErrNotFound

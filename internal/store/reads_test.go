@@ -68,8 +68,9 @@ type readsOf map[string]struct {
 	} `json:"pages"`
 }
 
-func markRead(s *store.Store, slug string, n int, at string) error {
-	_, err := s.MarkRead(viewer, slug, n, at)
+// markRead reads the version n, at, of the page d.
+func markRead(s *store.Store, n int, at string) error {
+	_, err := s.MarkRead(viewer, "d", n, at)
 	return err //nolint:wrapcheck // for the test to look at
 }
 
@@ -323,7 +324,7 @@ func TestReadsBegin(t *testing.T) {
 		if got := listedOf(t, s, "d"); got.News != "" {
 			t.Errorf("%q: news %q", text, got.News)
 		}
-		if got := told(markRead(s, "d", 1, m.Versions[0].At), root); got != unset {
+		if got := told(markRead(s, 1, m.Versions[0].At), root); got != unset {
 			t.Errorf("%q: told %s", text, got)
 		}
 		_, err := os.Stat(filepath.Join(root, "reads.json"))
@@ -347,7 +348,7 @@ func TestReadsUnreadable(t *testing.T) {
 		if err := os.Chmod(file, 0); err != nil {
 			t.Fatal(err)
 		}
-		if got := told(markRead(s, "d", 1, m.Versions[0].At), root); got != "S/reads.json: permission denied" {
+		if got := told(markRead(s, 1, m.Versions[0].At), root); got != "S/reads.json: permission denied" {
 			t.Errorf("told %s", got)
 		}
 		if got := listedOf(t, s, "d"); got.News != "" {
@@ -363,7 +364,7 @@ func TestReadsUnreadable(t *testing.T) {
 	if err := os.Mkdir(file, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if got := told(markRead(s, "d", 1, m.Versions[0].At), root); !strings.HasPrefix(got, "S/reads.json: ") || got == unset {
+	if got := told(markRead(s, 1, m.Versions[0].At), root); !strings.HasPrefix(got, "S/reads.json: ") || got == unset {
 		t.Errorf("a directory: told %s", got)
 	}
 }
@@ -444,9 +445,9 @@ func TestMarkReadNewer(t *testing.T) {
 	holdLock(t, root)
 	done := make(chan error, 1)
 	go func() {
-		err := markRead(s, "d", 1, again.Versions[0].At)
+		err := markRead(s, 1, again.Versions[0].At)
 		if err == nil {
-			err = markRead(s, "d", 9, "x")
+			err = markRead(s, 9, "x")
 		}
 		done <- err
 	}()
