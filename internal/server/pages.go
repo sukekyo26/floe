@@ -234,7 +234,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	h.Set("X-Content-Type-Options", "nosniff")
 	tail := ""
 	if got.typ == htmlType {
-		tail = servedScript(slug, rest, version, v, read)
+		tail = servedScript(slug, rest, version, v, read, got.drawn)
 	}
 	stream(w, got.typ, got.body, tail)
 }
@@ -358,6 +358,29 @@ func tellRead(read *Read) string {
 		", artifactPath: location.pathname }, location.protocol + '//' + location.host);"
 }
 
+// tellKeys hands the frame the keys pressed in the page that move on or open a window, so that they work with the focus in
+// it: no key that changes an entry, and not Escape, which would keep a dialog of the page from closing. A page floe did not
+// draw hands over Ctrl+K (⌘K) alone, as it may use the letters itself without preventDefault (a coverage report's j and k).
+// Nothing is taken until the frame says it takes them, of this origin, so that a page in another iframe keeps the browser's
+// / and Ctrl+K. It listens on window, after the page's own. Shift is not looked at, as ? is typed with it on most keyboards;
+// Ctrl+Shift+K has the key K. A field is the one to type in; a checkbox and a radio (the part tabs) are not.
+// LIMIT: a field inside a shadow root is seen as its host, and hands the keys over.
+// LIMIT: a page floe drew with a script of its own that takes these keys without preventDefault does both.
+func tellKeys(drawn bool) string {
+	letters := "[]"
+	if drawn {
+		letters = "['j', 'k', '?', '/']"
+	}
+	return "{const here = location.protocol + '//' + location.host; let wanted = false;" +
+		"window.addEventListener('message', (e) => { if (e.source === window.parent && e.origin === here && e.data?.artifactKeysWanted === true) wanted = true; });" +
+		"window.addEventListener('keydown', (e) => {" +
+		"if (!wanted || e.defaultPrevented || e.isComposing || e.keyCode === 229 || e.altKey) return;" +
+		"const on = e.target;" +
+		"if (on.closest?.('input:not([type=\"checkbox\"], [type=\"radio\"]), textarea, select') || on.isContentEditable || window.document.designMode === 'on') return;" +
+		"const key = e.ctrlKey || e.metaKey ? (e.key === 'k' ? 'Ctrl+K' : '') : (" + letters + ".includes(e.key) ? e.key : '');" +
+		"if (!key) return; e.preventDefault(); window.parent.postMessage({ artifactKey: key }, here); });}"
+}
+
 // askEvery is how often a page shown asks whether it changed: about as often as the drawing is watched, and set
 // apart from it so that the page's asking does not follow a test's shorter watching.
 const askEvery = time.Second
@@ -369,9 +392,10 @@ const askEvery = time.Second
 // after 5 s so that one left hanging (a connection half open after sleep) does not stop the asking, and once more
 // when it is shown again. A tab not shown asks nothing, and reloads when shown.
 // A version v of a stored page (0 for none) asks of that version. read is what it tells the frame it served (tellRead).
+// drawn tells a page floe drew (tellKeys).
 // LIMIT: that a tab not shown asks nothing is not checked in a browser: headless Chrome showed no tab hidden. Were it
 // broken, a tab not shown asks every second, holding nothing.
-func servedScript(slug, rest, version string, v int, read *Read) string {
+func servedScript(slug, rest, version string, v int, read *Read, drawn bool) string {
 	u := "/api/changed/" + slug
 	if rest != "" {
 		parts := strings.Split(rest, "/")
@@ -392,7 +416,7 @@ func servedScript(slug, rest, version string, v int, read *Read) string {
 		"if ((await r.text()) === 'changed') { location.reload(); return; } } catch {}" +
 		"busy = false; };" +
 		"window.setInterval(look, " + strconv.FormatInt(askEvery.Milliseconds(), 10) + ");" +
-		"window.document.addEventListener('visibilitychange', look); look();" + leaveFrame + tellRead(read) + "}</script>\n"
+		"window.document.addEventListener('visibilitychange', look); look();" + leaveFrame + tellRead(read) + tellKeys(drawn) + "}</script>\n"
 }
 
 // changed answers whether the page of slug (of rest under a link) is no longer of the version since: "changed" or

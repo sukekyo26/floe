@@ -134,3 +134,33 @@ func TestServedRead(t *testing.T) {
 		}
 	}
 }
+
+// TestServedKeys gives every HTML served the script that hands keys to the frame: of a page floe drew, the letters too; of any
+// other, Ctrl+K alone. What is not HTML has none.
+func TestServedKeys(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one"), nil)
+	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>", "l.yaml": noted("linked"), "docs/a.html": "<title>a</title>", "docs/b.txt": "b"})
+	for _, name := range []string{"h.html", "l.yaml", "docs"} {
+		link := server.Link{Path: filepath.Join(e.home, "proj", name)} //nolint:exhaustruct // the rest not given
+		want(t, e.write(t, http.MethodPost, "/api/artifacts", link), http.StatusCreated, `"slug":"`)
+	}
+	const letters = "['j', 'k', '?', '/']"
+	for path, drawn := range map[string]bool{"/a/d/?raw": true, "/a/l/?raw": true, "/a/h/?raw": false, "/a/docs/a.html": false} {
+		body := e.do(t, http.MethodGet, path, "").Body.String()
+		if !strings.Contains(body, "artifactKey: key") || !strings.Contains(body, "artifactKeysWanted") {
+			t.Errorf("%s has no script for the keys: %q", path, body)
+		}
+		if strings.Contains(body, letters) != drawn {
+			t.Errorf("%s: the letters handed over, want %v", path, drawn)
+		}
+		if strings.Count(body, "</script>") != strings.Count(body, "<script") {
+			t.Errorf("%s: a script cut: %q", path, body)
+		}
+	}
+	if body := e.do(t, http.MethodGet, "/a/docs/b.txt", "").Body.String(); strings.Contains(body, "artifactKey") {
+		t.Errorf("a text file has the script: %q", body)
+	}
+}

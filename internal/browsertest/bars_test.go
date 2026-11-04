@@ -61,7 +61,7 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		const shown = [...document.querySelector('.lhead').children].filter((e) => e.offsetParent).map((e) => e.getBoundingClientRect());
 		return shown.every((r) => r.left >= bar.left - 0.5 && r.right <= bar.right + 0.5) && document.documentElement.scrollWidth <= width;
 	})(%d)`
-	all := strings.Join([]string{msg("ui_select_page"), msg("ui_tags"), msg("ui_archive"), msg("ui_delete"), msg("ui_clear_selection")}, "/")
+	all := strings.Join([]string{msg("ui_select_all"), msg("ui_tags"), msg("ui_archive"), msg("ui_delete")}, "/")
 	b.navigate("about:blank")
 	b.stub(barsList)
 	for _, width := range []int64{320, 390, 660, 700, 768, 1000, 1100, 1440} {
@@ -78,12 +78,9 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 			"for (const slug of ['l', 'k']) document.querySelector(`#list li[data-slug=${slug}] .sel`).click(); document.getElementById('bulk-delete').click()")
 		unlink := b.eval(bulk)
 		out = append(out, fmt.Sprintf("%d %s %v / %s / %s / %s", width, fit, before == after, selected, armed, unlink))
-		// The words show on a bar wider than 46rem, measured.
-		words, clearing, confirm, unlinkConfirm := "", "", msg("ui_delete_bulk_confirm", 2), msg("ui_unlink_bulk_confirm", 2)
-		if b.eval("(() => { const s = getComputedStyle(document.querySelector('.lhead')); return String(document.querySelector('.lhead').clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight) > 46 * 16); })()") == "true" {
-			words, clearing = all, "/"+msg("ui_clear_selection")
-		}
-		want = append(want, fmt.Sprintf("%d true true / 5 true %s true / 2 true %s%s true / 2 true %s%s true", width, words, confirm, clearing, unlinkConfirm, clearing))
+		// The words always show; the clearing is its mark.
+		words, confirm, unlinkConfirm := all, msg("ui_delete_bulk_confirm", 2), msg("ui_unlink_bulk_confirm", 2)
+		want = append(want, fmt.Sprintf("%d true true / 5 true %s true / 2 true %s true / 2 true %s true", width, words, confirm, unlinkConfirm))
 	}
 	b.unsize()
 

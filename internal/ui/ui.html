@@ -28,7 +28,7 @@
     /* Mixed of the colors above: a down server's frame, the live dot's pulse, a primary button pointed at, a check box's frame,
        an armed delete's frame and an armed bulk delete's ground */
     --down-line: color-mix(in srgb, var(--danger) 40%, var(--line)); --pulse: color-mix(in srgb, var(--good) 45%, transparent); --ink-hover: color-mix(in srgb, var(--ink) 82%, var(--bg));
-    --box-line: color-mix(in srgb, var(--faint) 80%, transparent); --armed-line: color-mix(in srgb, var(--danger) 50%, transparent); --armed-bg: color-mix(in srgb, var(--danger) 80%, var(--ink));
+    --box-line: color-mix(in srgb, var(--faint) 80%, transparent); --armed-line: color-mix(in srgb, var(--danger) 50%, transparent);
     --scrim: rgb(34 33 31 / 0.4);
     --shadow-sm: 0 1px 2px rgb(34 33 31 / 0.06);
     --shadow: 0 1px 2px rgb(34 33 31 / 0.04), 0 10px 30px -14px rgb(34 33 31 / 0.16);
@@ -426,24 +426,94 @@
   @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
   /* The bulk bar, in the head over the list while items are selected: a round band ringed in ink, its last button (clearing the
      selection) at its end. 6px of it round its buttons hold their focus ring off the ink */
-  .bulk {
-    flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.4rem; height: 2.75rem; padding: 0 6px 0 1rem;
-    background: var(--panel); border-radius: 999px; box-shadow: inset 0 0 0 2px var(--ink);
-  }
+  .lhead:has(> .bulk:not([hidden])) { padding-inline: 0.5rem; background: var(--sel); }
+  .bulk { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.25rem; }
   /* The count gives way first, cut off, where the bar is too narrow for all */
-  .bulk-count { min-width: 0; margin-right: 0.4rem; overflow: hidden; text-overflow: ellipsis; font-size: var(--text-small); font-weight: 650; white-space: nowrap; }
-  .bulk .btn { flex: none; height: 2rem; padding: 0 0.8rem; border-radius: 999px; box-shadow: none; white-space: nowrap; }
-  .bulk .btn.clear { margin-left: auto; }
-  .bulk .btn.danger { color: var(--on-danger); background: var(--danger); border-color: transparent; }
-  /* A delete pressed once, asking in its longer words, is darker: a ring would be a second one beside the focus ring */
-  .bulk .btn.danger.armed { background: var(--armed-bg); }
+  .bulk-count { min-width: 0; margin-right: auto; padding-left: 0.5rem; overflow: hidden; text-overflow: ellipsis; font-size: var(--text-small); font-weight: 650; color: var(--fg); white-space: nowrap; }
+  .bulk .btn { flex: none; height: 2rem; padding: 0 0.5rem; font-size: var(--text-small); background: none; border-color: transparent; border-radius: 999px; box-shadow: none; white-space: nowrap; }
+  .bulk .btn:hover { background: var(--subtle); }
+  .bulk .btn.clear { padding: 0 0.4rem; }
+  .bulk .btn.clear .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* The delete is red in its words; its ground only while it waits to be pressed again, in its longer words */
+  .bulk .btn.danger { color: var(--danger); }
+  .bulk .btn.danger.armed { padding: 0 0.8rem; color: var(--on-danger); background: var(--danger); }
   /* A delete pressed once asks in its longer words, the other buttons but the clearing out of its way (they come back as it is
      let go; the clearing lets it go where a click does not move the focus, as on Safari) */
   .bulk:has(.armed) > .btn:not(.armed, .clear) { display: none; }
-  /* A bar too narrow for the words shows the buttons' icons alone, the words left for screen readers */
-  @container bar (max-width: 46rem) {
-    .bulk .btn:not(.armed) .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-    .bulk .btn:not(.armed) { padding: 0 0.6rem; }
+  /* The words stay on the narrowest list: the count's end goes first, then the buttons' room */
+  @container bar (max-width: 24rem) { .bulk-count .long { display: none; } }
+  @container bar (max-width: 21rem) {
+    .bulk { gap: 0.1rem; }
+    .bulk .btn:not(.armed, .clear) { padding: 0 0.2rem; }
+  }
+
+  /* The window that finds a page, high up so that its field stays where it is as the rows go */
+  #find { width: min(40rem, calc(100% - 32px)); margin-top: 12dvh; overflow: visible; }
+  .find-box { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; max-height: 70dvh; }
+  .find-input { display: flex; align-items: center; gap: 0.6rem; height: 3.25rem; padding: 0 0.75rem 0 1.1rem; }
+  .find-input > svg { flex: none; width: 16px; height: 16px; color: var(--faint); }
+  .find-input input { flex: 1; min-width: 0; height: 100%; padding: 0; color: var(--fg); background: none; border: 0; outline: 0; }
+  .find-input input::-webkit-search-cancel-button { display: none; }
+  #find kbd, #keys kbd {
+    font: var(--text-label)/1 var(--mono); color: var(--muted); background: var(--subtle);
+    border: 1px solid var(--line); border-radius: var(--corner-small); padding: 0.2rem 0.4rem; white-space: nowrap;
+  }
+  .find-close { display: none; }
+  /* What the buttons act on, and the buttons of a row */
+  .find-acts { display: flex; align-items: center; gap: 0.5rem; height: 2.5rem; padding: 0 0.6rem 0 1.1rem; background: var(--subtle); border-block: 1px solid var(--line); }
+  .find-acts[hidden] { display: none; }
+  .find-on { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-small); color: var(--muted); }
+  .find-acts .frame-actions { flex: none; align-items: center; }
+  /* A finger's press on a row opens it, and there are no arrow keys: the buttons could only act on the first */
+  @media (hover: none) { .find-acts:not([hidden]) { display: none; } }
+  .find-list { min-height: 0; margin: 0; padding: var(--menu-pad); overflow-y: auto; list-style: none; }
+  .find-list[hidden] { display: none; }
+  .find-list li {
+    position: relative; display: grid; grid-template-columns: 1.1rem minmax(0, 1fr) auto; grid-template-areas: "lead title time" ". sub sub";
+    column-gap: 0.55rem; row-gap: 0.1rem; align-items: center; padding: 0.45rem 0.6rem; border-radius: calc(var(--corner-menu) - var(--menu-pad));
+  }
+  .find-list li.reached { background: var(--sel); }
+  .find-list .lead { grid-area: lead; display: grid; place-items: center; color: var(--muted); }
+  .find-list .lead svg { width: 14px; height: 14px; }
+  .find-list .title { grid-area: title; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: var(--fg); text-decoration: none; }
+  /* The whole row is the link */
+  .find-list .title::after { content: ""; position: absolute; inset: 0; }
+  .find-list .unseen .title { font-weight: 700; }
+  .find-list .archived .title { color: var(--muted); }
+  .find-list .time { grid-area: time; display: flex; align-items: center; gap: 0.35rem; font: var(--text-label)/1 var(--mono); color: var(--muted); white-space: nowrap; }
+  .find-list .time svg { width: 12px; height: 12px; color: var(--star); }
+  .find-list .sub { grid-area: sub; flex-wrap: nowrap; }
+  .find-list .sub > :not(.path) { flex: none; }
+  .find-list .badge { padding: 0 0.3rem; font-weight: 400; }
+  .find-none { padding: 2.5rem 1.5rem; text-align: center; color: var(--muted); }
+  .find-none[hidden] { display: none; }
+  .find-none strong { display: block; margin-bottom: 0.25rem; font-size: 1rem; color: var(--fg); }
+  .find-foot { display: flex; align-items: center; gap: 0.9rem; min-height: 2.25rem; padding: 0.3rem 1.1rem; font-size: var(--text-label); color: var(--muted); border-top: 1px solid var(--line); }
+  .find-foot[hidden] { display: none; }
+  .find-cut { margin-left: auto; }
+  .find-foot .k { display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+  /* The window of the keys */
+  .keys-body { display: grid; gap: 1rem; padding: 1.4rem 1.5rem 1.25rem; }
+  .keys-part { display: grid; gap: 1rem; }
+  .keys-part[hidden] { display: none; }
+  .keys-body h2 { margin: 0; font-size: 1.05rem; line-height: 1.3; }
+  .keys-body h3 { margin: 0 0 0.3rem; font-size: var(--text-label); font-weight: 650; color: var(--muted); }
+  .keys-body dl { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 0.4rem 0.75rem; margin: 0; font-size: var(--text-small); align-items: baseline; }
+  .keys-body dt { display: flex; align-items: center; gap: 0.25rem; }
+  .keys-body dt i { font-style: normal; font-size: var(--text-label); color: var(--faint); }
+  .keys-body dd { margin: 0; }
+  .keys-note { margin: 0; font-size: var(--text-small); color: var(--muted); }
+  /* The bar's ways to the two windows: of the keys where there are likely to be keys; of finding where a whole page has no search */
+  #find-open { display: none; flex: none; }
+  #keys-open svg, #find-open svg { width: 16px; height: 16px; }
+  @media (max-width: 56rem) { #keys-open { display: none; } }
+  @media (max-width: 40rem) {
+    .framed #find-open { display: inline-flex; }
+    #find { margin-top: 16px; }
+    .find-box { max-height: calc(100dvh - 32px); }
+    .find-input kbd { display: none; }
+    .find-close { display: inline-flex; }
+    .find-foot .k { display: none; }
   }
 
   .state { display: grid; justify-items: center; gap: 0.5rem; padding: 3.5rem 1.5rem; text-align: center; color: var(--muted); }
@@ -547,6 +617,8 @@
     <div class="bar-end">
       <span class="frame-actions" id="frame-actions" hidden></span>
       <a class="news" id="news" href="/?view=new" hidden><span class="dot"></span><span id="news-n"></span></a>
+      <button type="button" class="icon-btn" id="find-open" aria-label="{{.Msg "ui_find"}}" title="{{.Msg "ui_find"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+      <button type="button" class="icon-btn" id="keys-open" aria-label="{{.Msg "ui_keys"}}" title="{{.Msg "ui_keys_title"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg></button>
       <span class="server" id="server" role="status"></span>
     </div>
   </div>
@@ -593,11 +665,11 @@
       <button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button>
       <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
       <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
-        <span class="bulk-count" id="bulk-count" aria-live="polite"></span>
-        <button type="button" class="btn" id="bulk-page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="m8 12 3 3 5-6"/></svg><span class="label">{{.Msg "ui_select_page"}}</span></button>
-        <button type="button" class="btn" id="bulk-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg><span class="label">{{.Msg "ui_tags"}}</span></button>
-        <button type="button" class="btn" id="bulk-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span class="label"></span></button>
-        <button type="button" class="btn danger" id="bulk-delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg><span class="label"></span></button>
+        <span class="bulk-count" id="bulk-count" aria-live="polite"><span id="bulk-n"></span><span class="long">{{.Msg "ui_selected_more"}}</span></span>
+        <button type="button" class="btn" id="bulk-page" aria-label="{{.Msg "ui_select_page"}}"><span class="label">{{.Msg "ui_select_all"}}</span></button>
+        <button type="button" class="btn" id="bulk-tag"><span class="label">{{.Msg "ui_tags"}}</span></button>
+        <button type="button" class="btn" id="bulk-archive"><span class="label"></span></button>
+        <button type="button" class="btn danger" id="bulk-delete"><span class="label"></span></button>
         <button type="button" class="btn clear" id="bulk-clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg><span class="label">{{.Msg "ui_clear_selection"}}</span></button>
       </div>
     </div>
@@ -654,6 +726,34 @@
   <p id="notfound-detail"></p>
   <p><a class="btn" id="notfound-back" href="/">{{.Msg "ui_back_to_list"}}</a></p>
 </div>
+<dialog id="find" aria-label="{{.Msg "ui_find"}}">
+  <div class="find-box">
+    <div class="find-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="find-q" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="find-list" placeholder="{{.Msg "ui_find_placeholder"}}" aria-label="{{.Msg "ui_find"}}" autocomplete="off"><kbd aria-hidden="true">Esc</kbd><button type="button" class="icon-btn find-close" data-close aria-label="{{.Msg "ui_close"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="find-acts" id="find-acts" hidden><span class="find-on" id="find-on"></span><span class="frame-actions" id="find-actions"></span></div>
+    <ul class="find-list" id="find-list" role="listbox" aria-label="{{.Msg "ui_find"}}"></ul>
+    <div class="find-none" id="find-none" hidden><strong>{{.Msg "ui_nomatch"}}</strong>{{.Msg "ui_find_no_files"}}</div>
+    <div class="find-foot" id="find-foot"><span class="k"><kbd>↑</kbd><kbd>↓</kbd> {{.Msg "ui_find_pick"}}</span><span class="k"><kbd>Enter</kbd> {{.Msg "ui_find_open"}}</span><span class="find-cut" id="find-cut"></span></div>
+  </div>
+</dialog>
+<template id="find-row"><li role="option"><span class="lead"></span><a class="title" tabindex="-1"></a><span class="time"><time></time></span><span class="sub"></span></li></template>
+<dialog id="keys" aria-labelledby="keys-title">
+  <div class="keys-body">
+    <h2 id="keys-title">{{.Msg "ui_keys"}}</h2>
+    <div class="keys-part" id="keys-list">
+      <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↓</kbd></dt><dd>{{.Msg "ui_keys_next_row"}}</dd><dt><kbd>k</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↑</kbd></dt><dd>{{.Msg "ui_keys_prev_row"}}</dd><dt><kbd>Enter</kbd></dt><dd>{{.Msg "ui_keys_whole"}}</dd></dl></section>
+      <section><h3>{{.Msg "ui_keys_row"}}</h3><dl><dt><kbd>x</kbd></dt><dd>{{.Msg "ui_keys_select"}}</dd><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd></dl></section>
+      <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd></dt><dd>{{.Msg "ui_keys_search"}}</dd><dt><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
+      <p class="keys-note">{{.Msg "ui_keys_note_list"}}</p>
+    </div>
+    <div class="keys-part" id="keys-frame">
+      <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd></dt><dd>{{.Msg "ui_keys_next_page"}}</dd><dt><kbd>k</kbd></dt><dd>{{.Msg "ui_keys_prev_page"}}</dd></dl></section>
+      <section><h3>{{.Msg "ui_keys_page"}}</h3><dl><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd></dl></section>
+      <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
+      <p class="keys-note">{{.Msg "ui_keys_note_frame"}}</p>
+    </div>
+    <div class="dialog-actions"><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
+  </div>
+</dialog>
 <dialog id="add-dialog" aria-labelledby="add-title">
   <form class="add" id="add">
     <div class="add-head">
@@ -806,7 +906,10 @@
   // The iframe is the frame's, or the one beside the list; the page is read when it is the one that iframe was given
   addEventListener('message', (e) => {
     const shown = framed ? $('frame') : $('read-frame');
-    if (e.source !== shown.contentWindow) return;
+    // A page is always sandboxed: another origin is one the iframe moved to, out of floe
+    if (e.source !== shown.contentWindow || e.origin !== 'null') return;
+    // The keys a person presses in the page alone, while the focus is there, wherever in it a link has led
+    if (typeof e.data?.artifactKey === 'string' && PAGE_KEYS.has(e.data.artifactKey) && document.activeElement === shown) pressKey(e.data.artifactKey);
     const to = typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
     if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) location.href = to.href;
     const given = framed ? new URL(frameSrc, location.href).pathname : picked && new URL(rawHref(picked), location.href).pathname;
@@ -1093,7 +1196,7 @@
   function renderBulk() {
     $('bulk').hidden = selected.size === 0;
     $('list').classList.toggle('selecting', selected.size > 0);
-    $('bulk-count').textContent = t('ui_selected', selected.size);
+    $('bulk-n').textContent = t('ui_selected_n', selected.size);
     disarmBulk();
   }
 
@@ -1149,10 +1252,13 @@
   // Every page's tag names, by name
   const tagNames = () => [...new Set(items.flatMap((a) => a.tags ?? []))].sort((x, y) => x.localeCompare(y, LANG));
 
-  // The keys of a field's listbox (the tags' suggestions), whose options are reached from it by aria-activedescendant, the one
+  // A key that goes to the input method. 229 as Safari sends its Enter that ends one without isComposing
+  const composing = (e) => e.isComposing || e.keyCode === 229;
+
+  // The keys of a field's listbox (the tags' suggestions and the rows of the window that finds), whose options are reached from it by aria-activedescendant, the one
   // reached shown (.reached) and aria-selected: ↑↓ (round the ends; opening it, shut), Enter to choose, Escape to close (the
   // listbox, not a dialog it is in) and Tab to close. Home and End are left to move the caret
-  function listKeys(target, { options, choose, close, open, shown }) {
+  function listKeys(target, { options, choose, close, open, shown, tab = close, moved = () => {} }) {
     let active = -1;
     const mark = (i) => {
       const all = options();
@@ -1166,8 +1272,10 @@
         target.setAttribute('aria-activedescendant', all[i].id);
         all[i].scrollIntoView({ block: 'nearest' });
       }
+      moved(i);
     };
     target.addEventListener('keydown', (e) => {
+      if (composing(e)) return;
       const n = options().length;
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
@@ -1179,7 +1287,7 @@
       } else if (e.key === 'Escape' && shown()) {
         e.preventDefault();
         close();
-      } else if (e.key === 'Tab') close();
+      } else if (e.key === 'Tab') tab();
     });
     return mark;
   }
@@ -1546,9 +1654,14 @@
     const edit = box.querySelector('.edit');
     edit.setAttribute('aria-label', t('ui_edit_named', a.title));
     edit.addEventListener('click', () => {
-      // The bar's menu is drawn anew in its place, a row's by its slug
+      // The bar's menu is drawn anew in its place, a row's by its slug. From the window that finds, which closes as no dialog
+      // goes over another, the focus goes back where that window took it from
       const bar = box.closest('#read-actions, #frame-actions')?.id;
       editBack = () => (bar ? $(bar) : [...$('list').children].find((li) => li.dataset.key === `entry:${editing.slug}`))?.querySelector('summary');
+      if (box.closest('#find')) {
+        $('find').close();
+        editBack = null;
+      }
       openEdit(a);
     });
     const open = box.querySelector('.open');
@@ -1638,6 +1751,35 @@
     drawActions($('read-actions'), a, picked.file);
   }
 
+  // What a row's first column shows of a
+  const leadOf = (a) => (a.folder ? FOLDER_MARK : a.path ? LINK_MARK : `<span class="${a.news ? 'dot' : 'ring'}"></span>`);
+
+  // A row's second line of a, in sub; middle puts what the place it is in adds before the path
+  function drawSub(sub, a, ranks, middle) {
+    const put = (cls, text) => {
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = text;
+      sub.append(span);
+      return span;
+    };
+    if (a.news === 'version') put('ver', t('ui_new_version', a.version));
+    if (a.folder) put('kindof', t('ui_kind_folder'));
+    else if (a.path) put('kindof', t('ui_kind_of_link', a.template ?? 'HTML'));
+    else if (a.template) put('kindof', a.template);
+    if (a.project && ranks.size > 1) put('proj', a.project);
+    middle(put);
+    // A link shows the file where it was registered; if the file is gone, the row says so
+    if (a.missing) put('miss', t('ui_file_missing'));
+    else if (a.path) {
+      const path = put('path', '');
+      const bdi = document.createElement('bdi');
+      bdi.dir = 'ltr';
+      bdi.textContent = a.path;
+      path.append(bdi);
+    }
+  }
+
   // A row of a, i-th in the list
   function row(a, i, ranks) {
     const li = $('row').content.firstElementChild.cloneNode(true);
@@ -1647,10 +1789,7 @@
     li.classList.toggle('unseen', Boolean(a.news));
     li.classList.toggle('gone', Boolean(a.missing));
     li.classList.toggle('picked', isPicked(a));
-    const lead = li.querySelector('.lead');
-    if (a.folder) lead.innerHTML = FOLDER_MARK;
-    else if (a.path) lead.innerHTML = LINK_MARK;
-    else lead.innerHTML = `<span class="${a.news ? 'dot' : 'ring'}"></span>`;
+    li.querySelector('.lead').innerHTML = leadOf(a);
     const sel = li.querySelector('.sel');
     sel.checked = selected.has(a.slug);
     sel.setAttribute('aria-label', t('ui_select_named', a.title));
@@ -1665,20 +1804,8 @@
     // All the row's words that it may cut or leave out: the title's hit area covers the row, so that no title of what lies under it shows
     link.title = [a.title, a.description, a.project, a.path, a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
       .filter(Boolean).join('\n');
-    const sub = li.querySelector('.sub');
-    const put = (cls, text) => {
-      const span = document.createElement('span');
-      span.className = cls;
-      span.textContent = text;
-      sub.append(span);
-      return span;
-    };
-    if (a.news === 'version') put('ver', t('ui_new_version', a.version));
-    if (a.folder) put('kindof', t('ui_kind_folder'));
-    else if (a.path) put('kindof', t('ui_kind_of_link', a.template ?? 'HTML'));
-    else if (a.template) put('kindof', a.template);
-    if (a.project && ranks.size > 1) put('proj', a.project);
-    if (a.tags?.length) {
+    drawSub(li.querySelector('.sub'), a, ranks, (put) => {
+      if (!a.tags?.length) return;
       const tags = put('tags', '');
       tags.append(...a.tags.map((name) => {
         const b = document.createElement('button');
@@ -1691,16 +1818,7 @@
         b.addEventListener('click', () => { if (name !== tag) setTag(name); });
         return b;
       }));
-    }
-    // A link shows the file where it was registered; if the file is gone, the row says so
-    if (a.missing) put('miss', t('ui_file_missing'));
-    else if (a.path) {
-      const path = put('path', '');
-      const bdi = document.createElement('bdi');
-      bdi.dir = 'ltr';
-      bdi.textContent = a.path;
-      path.append(bdi);
-    }
+    });
     const time = li.querySelector('time');
     time.dateTime = a.updatedAt;
     time.textContent = ago(a.updatedAt);
@@ -1731,6 +1849,7 @@
   const LINK_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
   const FOLDER_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>';
   const PAGE_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6"/></svg>';
+  const STAR_MARK = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>';
   const KIND_MARKS = { page: PAGE_MARK, link: LINK_MARK, folder: FOLDER_MARK };
 
   // What a tree's row begins with, in the list's and the frame's: a directory's fold and icon, a page's room for the fold
@@ -1984,8 +2103,8 @@
       const was = editing.slug;
       // The row it goes back to is under the new name
       editing = { ...editing, slug: changes.slug };
-      // The frame's URL is the old name's, which is gone now; the page chosen beside the list is loaded under the new one
-      if (framed) {
+      // This frame's URL is the old name's, which is gone now; the page chosen beside the list is loaded under the new one
+      if (was === framed) {
         location.replace(pageHref({ slug: changes.slug }));
         return;
       }
@@ -2480,7 +2599,7 @@
       return;
     }
     selected.delete(a.slug);
-    if (framed) {
+    if (a.slug === framed) {
       location.href = `/${savedList()}`;
       return;
     }
@@ -2520,6 +2639,114 @@
     drawn = text;
     if (framed) renderFrame();
     else render();
+    if ($('find').open) drawFind();
+  }
+
+  // The window that finds a page: of every entry, the archived after the rest, as they would drown what is in use
+  // LIMIT: the first FIND_ROWS rows only, which it says. Words narrow them; show more if a search comes to need them
+  // LIMIT: the files in a folder are not searched, as what is in a folder is read only where it is open
+  const FIND_ROWS = 50;
+  const findHits = () => {
+    const q = $('find-q').value.trim().toLowerCase();
+    return items.filter((a) => matches(a, q)).sort((x, y) => Boolean(x.archived) - Boolean(y.archived));
+  };
+  // The row reached, by slug as the rows are drawn anew, and by its place for when it is gone
+  let findSlug = null;
+  let findAt = 0;
+  let findShown = [];
+  const findMark = listKeys($('find-q'), {
+    options: () => [...$('find-list').children],
+    choose: (i) => { location.href = $('find-list').children[i].querySelector('a').href; },
+    close: () => $('find').close(),
+    open: () => {},
+    shown: () => true,
+    tab: () => {},
+    moved: (i) => {
+      findAt = i;
+      findSlug = findShown[i]?.slug ?? null;
+      drawFindBar(findShown[i]);
+    },
+  });
+
+  // The buttons of a row. While its menu is open or its delete waits they stay, as drawing them anew would take that away; the
+  // focus in the menu's place goes to the menu as drawn, or to the field where the row it was of has gone
+  function drawFindBar(a) {
+    const box = $('find-actions');
+    const focused = box.querySelector('.more-slot').contains(document.activeElement);
+    $('find-acts').hidden = !a;
+    if (!a) {
+      delete box.dataset.slug;
+      if (focused) $('find-q').focus();
+      return;
+    }
+    const same = box.dataset.slug === a.slug;
+    if (same && box.querySelector('.more[open], .armed')) return;
+    box.dataset.slug = a.slug;
+    $('find-on').textContent = a.title;
+    drawActions(box, a, '');
+    if (focused) (same ? box.querySelector('summary') : $('find-q')).focus();
+  }
+
+  function drawFind() {
+    const hits = findHits();
+    const ranks = projectOrder();
+    findShown = hits.slice(0, FIND_ROWS);
+    $('find-list').replaceChildren(...findShown.map((a, i) => {
+      const li = $('find-row').content.firstElementChild.cloneNode(true);
+      li.id = `find-${i}`;
+      li.classList.toggle('unseen', Boolean(a.news));
+      li.classList.toggle('archived', Boolean(a.archived));
+      li.querySelector('.lead').innerHTML = leadOf(a);
+      const link = li.querySelector('.title');
+      link.href = pageHref(a);
+      link.textContent = a.title;
+      link.title = a.title;
+      if (a.favorite) li.querySelector('.time').insertAdjacentHTML('afterbegin', STAR_MARK);
+      const time = li.querySelector('time');
+      time.dateTime = a.updatedAt;
+      time.textContent = ago(a.updatedAt);
+      drawSub(li.querySelector('.sub'), a, ranks, (put) => { if (a.archived) put('badge', t('ui_archived_badge')); });
+      return li;
+    }));
+    const none = hits.length === 0;
+    $('find-list').hidden = none;
+    $('find-none').hidden = !none;
+    $('find-foot').hidden = none;
+    const words = $('find-q').value.trim();
+    $('find-cut').textContent = hits.length > FIND_ROWS ? t('ui_find_cut', FIND_ROWS) : words ? t('ui_find_n', hits.length) : t('ui_find_newest');
+    // The same row, or what has come to its place, or the last
+    const at = findShown.findIndex((a) => a.slug === findSlug);
+    findMark(at !== -1 ? at : Math.min(findAt, findShown.length - 1));
+  }
+
+  function openFind() {
+    if (document.querySelector('dialog[open]')) return;
+    $('find-q').value = '';
+    findSlug = null;
+    findAt = 0;
+    drawFind();
+    $('find').showModal();
+    $('find-q').focus();
+  }
+
+  function openKeys() {
+    if (!document.querySelector('dialog[open]')) $('keys').showModal();
+  }
+
+  // The keys, of the list or of a page whole, all pressed through pressKey
+  // LIMIT: a page in the sandbox can claim a key of PAGE_KEYS while the focus is in it, on a timer too: it can move on, which
+  // counts the page moved to as read, and open a window. Nothing that changes an entry is among them
+  // LIMIT: where a page frames this (VS Code's Simple Browser), the frame's owner may take Ctrl+K first, as it does Ctrl+P
+  const KEYS = {
+    '/': () => ($('search').hidden ? openFind() : $('q').focus()),
+    '?': openKeys,
+    'Ctrl+K': () => ($('find').open ? $('find').close() : openFind()),
+  };
+  const PAGE_KEYS = new Set(['j', 'k', '?', '/', 'Ctrl+K']);
+  function pressKey(key) {
+    if (!Object.hasOwn(KEYS, key)) return false;
+    KEYS[key]();
+    return true;
   }
 
   async function add(e) {
@@ -2593,7 +2820,7 @@
     });
   }
   // Not while typing or with a dialog open
-  const plainKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog');
+  const plainKey = (e) => !composing(e) && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog');
   // The search's words on a missing page's bar, and the bar's new pages, go to the list
   if (framed) {
     // The list and the iframe beside it are of the list's page alone
@@ -2602,13 +2829,17 @@
     $('back').hidden = false;
     // The page alone in full, as the browser reads the link to it: a link on paper cannot be followed
     $('print-raw').href = $('print-raw').textContent = new URL(frameSrc, location.href).href;
+    $('keys-list').hidden = true;
     $('q').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') location.href = `/?q=${encodeURIComponent($('q').value.trim())}`;
+      if (e.key === 'Enter' && !composing(e)) location.href = `/?q=${encodeURIComponent($('q').value.trim())}`;
     });
-    document.addEventListener('keydown', (e) => {
-      if ((e.key === 'j' || e.key === 'k') && plainKey(e)) moveFrame(e.key === 'j' ? 1 : -1);
+    Object.assign(KEYS, {
+      j: () => moveFrame(1),
+      k: () => moveFrame(-1),
+      f: () => $('frame-actions').querySelector('.star:not([hidden])')?.click(),
     });
   } else {
+    $('keys-frame').hidden = true;
     $('manage').hidden = false;
     $('search').hidden = false;
     $('q').value = readState(location.search).q;
@@ -2677,7 +2908,7 @@
     $('tag-find').addEventListener('input', drawTagBoxes);
     // Enter in the find field makes the name a tag, rather than apply
     $('tag-find').addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
+      if (e.key !== 'Enter' || composing(e)) return;
       e.preventDefault();
       createTag();
     });
@@ -2688,7 +2919,7 @@
     setInterval(refreshTimes, 60000);
     $('q').addEventListener('input', () => refilter());
     $('q').addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape' || composing(e)) return;
       $('q').value = '';
       $('q').blur();
       refilter();
@@ -2711,30 +2942,52 @@
       const a = items.find((x) => x.slug === li.dataset.slug);
       if (!oneColumn.matches && a && !li.classList.contains('dir') && (!a.folder || li.dataset.file)) pickRow({ slug: a.slug, file: li.dataset.file });
     };
-    const KEYS = {
-      '/': () => $('q').focus(),
+    Object.assign(KEYS, {
       ArrowDown: () => moveRow(1),
       ArrowUp: () => moveRow(-1),
       j: () => moveRow(1),
       k: () => moveRow(-1),
       x: () => currentRow()?.querySelector('.sel')?.click(),
-      f: () => currentRow()?.querySelector('.star')?.click(),
-    };
+      f: () => currentRow()?.querySelector('.star:not([hidden])')?.click(),
+    });
+    // Enter on a row opens its page whole; a folder's, as a press, opens its tree
     document.addEventListener('keydown', (e) => {
-      if (!plainKey(e)) return;
-      // Enter on a row opens its page whole; a folder's, as a press, opens its tree
-      if (e.key === 'Enter' && e.target.matches('#list a.title[href]:not([aria-expanded])')) {
-        e.preventDefault();
-        keepOrder();
-        location.href = e.target.href;
-        return;
-      }
-      const action = KEYS[e.key];
-      if (!action) return;
+      if (!plainKey(e) || e.key !== 'Enter' || !e.target.matches('#list a.title[href]:not([aria-expanded])')) return;
       e.preventDefault();
-      action();
+      keepOrder();
+      location.href = e.target.href;
     });
   }
+  // Ctrl+K works from a field too, where the browser's own goes; the rest as plainKey says
+  document.addEventListener('keydown', (e) => {
+    if (composing(e)) return;
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key === 'k') {
+      e.preventDefault();
+      pressKey('Ctrl+K');
+    } else if (plainKey(e) && pressKey(e.key)) e.preventDefault();
+  });
+  $('find-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
+  $('find-q').addEventListener('input', () => {
+    findSlug = null;
+    findAt = 0;
+    drawFind();
+  });
+  // Escape closes the menu open in it first, not the window as well
+  $('find').addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !$('find').querySelector('.more[open]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    closeMenus(null);
+  }, true);
+  $('find-open').addEventListener('click', openFind);
+  $('keys-open').addEventListener('click', openKeys);
+  // On a Mac the key that goes with k is written as there
+  if (/Mac/.test(navigator.platform)) {
+    for (const e of $('keys').querySelectorAll('.mod')) e.textContent = '⌘';
+    for (const e of $('keys').querySelectorAll('.keys-note')) e.textContent = e.textContent.replace('Ctrl+K', '⌘K');
+  }
+  // A page gives up its keys only to a frame that says it takes them
+  for (const id of ['frame', 'read-frame']) $(id)?.addEventListener('load', (e) => e.target.contentWindow.postMessage({ artifactKeysWanted: true }, '*'));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
   setInterval(() => { if (!document.hidden) load(); }, POLL_MS);
   load();
