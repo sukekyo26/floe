@@ -326,6 +326,20 @@ func TestEdgeSharesKinds(t *testing.T) {
 			"H220 V115 H300",
 		},
 		{
+			"a pill's bottom keeps one line between",
+			"  - box: { name: a, x: 120, y: 20, w: 60, h: 40, shape: pill, rows: [a] }\n" +
+				"  - box: { name: b, x: 0, y: 120, w: 60, h: 30, rows: [b] }\n  - box: { name: c, x: 120, y: 120, w: 60, h: 30, rows: [c] }\n  - box: { name: d, x: 240, y: 120, w: 60, h: 30, rows: [d] }\n" +
+				"  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: a, to: c, fromSide: bottom, toSide: top }\n  - edge: { from: a, to: d, fromSide: bottom, toSide: top }\n",
+			"V90 H30 V120",
+		},
+		{
+			"round the side of a low box, on one line",
+			"  - box: { name: a, x: 40, y: 20, w: 200, h: 30, rows: [a] }\n" +
+				"  - box: { name: b, x: 40, y: 80, w: 60, h: 30, rows: [b] }\n  - box: { name: c, x: 40, y: 130, w: 60, h: 30, rows: [c] }\n  - box: { name: d, x: 40, y: 180, w: 60, h: 30, rows: [d] }\n" +
+				"  - edge: { from: a, to: b, fromSide: right, toSide: right }\n  - edge: { from: a, to: c, fromSide: right, toSide: right }\n  - edge: { from: a, to: d, fromSide: right, toSide: right }\n",
+			"edge a→b M239.98,27.5 H260 V95 H100",
+		},
+		{
 			"a frame's round corner",
 			"  - frame: { name: f, x: 100, y: 20, w: 200, h: 24, label: F }\n  - box: { name: b, x: 400, y: 0, w: 60, h: 30, rows: [b] }\n  - box: { name: c, x: 400, y: 60, w: 60, h: 30, rows: [c] }\n" +
 				"  - edge: { from: f, to: b, fromSide: right, toSide: left }\n  - edge: { from: f, to: c, fromSide: right, toSide: left }\n",
