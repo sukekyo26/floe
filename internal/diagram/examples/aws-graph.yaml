@@ -1,0 +1,59 @@
+# AWS architecture laid out by floe: a web app in two availability zones, with no coordinate but the graph's x and y.
+# A service is an icon node of the graph, its name below it; a group of them takes an icon in its frame's corner.
+# The edges at a side of an icon end at the points that part it equally: one in its middle, two at its thirds, and so
+# on. Find icon names with floe icons search <word>. Write the part icon, with x and y, where you place icons yourself.
+title: { en: A web app on AWS in two availability zones, ja: "2 つのアベイラビリティゾーンで動く AWS の Web アプリ" }
+parts:
+  - graph:
+      x: 16
+      y: 16
+      nodes:
+        - icon: { name: users, icon: aws/res/users, label: { en: Users, ja: "利用者" } }
+        - group:
+            name: cloud
+            label: AWS Cloud
+            icon: aws/group/aws-cloud-logo
+            nodes:
+              - icon: { name: dns, icon: aws/amazon-route-53, label: Route 53 }
+              - icon: { name: cdn, icon: aws/amazon-cloudfront, label: CloudFront }
+              - icon: { name: files, icon: aws/amazon-simple-storage-service, label: S3 }
+              - group:
+                  name: vpc
+                  label: VPC
+                  icon: aws/group/virtual-private-cloud-vpc
+                  nodes:
+                    - group:
+                        name: public
+                        label: { en: Public subnets, ja: "パブリックサブネット" }
+                        icon: aws/group/public-subnet
+                        nodes:
+                          - icon: { name: alb, icon: aws/res/elastic-load-balancing-application-load-balancer, label: ALB }
+                    - group:
+                        name: private
+                        label: { en: Private subnets, ja: "プライベートサブネット" }
+                        icon: aws/group/private-subnet
+                        nodes:
+                          - icon: { name: web-a, icon: aws/amazon-elastic-container-service, label: { en: ECS (zone a), ja: "ECS（a）" } }
+                          - icon: { name: web-c, icon: aws/amazon-elastic-container-service, label: { en: ECS (zone c), ja: "ECS（c）" } }
+                    - group:
+                        name: data
+                        label: { en: Data subnets, ja: "データのサブネット" }
+                        icon: aws/group/private-subnet
+                        nodes:
+                          - icon: { name: main, icon: aws/amazon-rds, label: { en: RDS primary, ja: "RDS プライマリ" } }
+                          - icon: { name: standby, icon: aws/amazon-rds, label: { en: RDS standby, ja: "RDS スタンバイ" } }
+              - icon: { name: queue, icon: aws/amazon-simple-queue-service, label: SQS }
+              - icon: { name: worker, icon: aws/aws-lambda, label: Lambda }
+      edges:
+        - { from: users, to: dns, label: DNS }
+        - { from: users, to: cdn, label: HTTPS }
+        - { from: cdn, to: files }
+        - { from: cdn, to: alb }
+        - { from: alb, to: web-a }
+        - { from: alb, to: web-c }
+        - { from: web-a, to: main, label: SQL }
+        - { from: web-c, to: main }
+        - { from: main, to: standby, level: true, label: { en: sync, ja: "同期" } }
+        - { from: web-a, to: queue }
+        - { from: web-c, to: queue }
+        - { from: queue, to: worker }

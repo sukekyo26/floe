@@ -102,11 +102,11 @@ func TestExamples(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(examples) != 14 {
-		t.Errorf("%d examples, want 14", len(examples))
+	if len(examples) != 15 {
+		t.Errorf("%d examples, want 15", len(examples))
 	}
 	store := iconsOf{}
-	for _, name := range []string{"aws/aws-lambda", "aws/amazon-bedrock", "aws/group/aws-cloud-logo", "aws/group/region", "aws/res/client"} {
+	for _, name := range []string{"aws/aws-lambda", "aws/amazon-bedrock", "aws/group/aws-cloud-logo", "aws/group/region", "aws/res/client", "aws/res/users", "aws/amazon-route-53", "aws/amazon-cloudfront", "aws/amazon-simple-storage-service", "aws/group/virtual-private-cloud-vpc", "aws/group/public-subnet", "aws/group/private-subnet", "aws/res/elastic-load-balancing-application-load-balancer", "aws/amazon-elastic-container-service", "aws/amazon-rds", "aws/amazon-simple-queue-service"} {
 		store[name] = []byte(`<svg xmlns="http://www.w3.org/2000/svg"><title>` + name + `</title></svg>`)
 	}
 	for _, e := range examples {
@@ -1709,5 +1709,38 @@ func TestFacesNamed(t *testing.T) {
 	want := `s.yaml:6:5: label "The page" finds no room inside A and outside the other circles: make that area larger, or the text shorter`
 	if _, told := draw(t, head+small, inspect); told != want {
 		t.Errorf("no room:\n  told %q\n  want %q", told, want)
+	}
+}
+
+// The mistakes of an icon of a graph and of a group's icon, told as those of the part icon, and those of the schema.
+func TestGraphIconMistakes(t *testing.T) {
+	t.Parallel()
+
+	const (
+		head = "title: t\nparts:\n"
+		node = "  - graph: { x: 0, y: 0, nodes: [ { "
+		tail = " } ] }\n"
+	)
+	for _, c := range []struct{ parts, want string }{
+		{node + "icon: { name: a, icon: aws/nope, label: A }" + tail, `s.yaml:3:45: icon "a": no icon "aws/nope" (search with: floe icons search <word>)`},
+		{node + "icon: { name: a, icon: nope, label: A }" + tail, `s.yaml:3:45: icon "a": "nope" needs its icon set in front (aws), like aws/amazon-ec2 (search with: floe icons search <word>)`},
+		{node + "icon: { name: a, icon: aws/aws-lambda, tone: warn }" + tail, "s.yaml:3:45: additional properties 'tone' not allowed"},
+		{node + "icon: { icon: aws/aws-lambda }" + tail, "s.yaml:3:45: missing property 'name'"},
+		{node + `icon: { name: a, icon: "" }` + tail, "s.yaml:3:60: minLength: got 0, want 1"},
+		{node + "group: { name: g, icon: aws/nope, nodes: [ { box: { name: a, rows: [A] } } ] }" + tail, `s.yaml:3:46: the icon of frame "g": no icon "aws/nope" (search with: floe icons search <word>)`},
+		{node + `group: { name: g, icon: "", nodes: [ { box: { name: a, rows: [A] } } ] }` + tail, "s.yaml:3:61: minLength: got 0, want 1"},
+		{"  - box: { x: 0, y: 0, name: a, icon: aws/aws-lambda, rows: [A] }\n", "s.yaml:3:12: additional properties 'icon' not allowed"},
+	} {
+		_, mistakes := draw(t, head+c.parts, drawWith("en", lambda))
+		if mistakes != c.want {
+			t.Errorf("%s\n  told %q\n  want %q", c.parts, mistakes, c.want)
+		}
+	}
+	// What is written by hand over a graph's icon, or over its frame's, is told where it is written.
+	over := head + `  - graph: { x: 20, y: 20, nodes: [ { group: { name: g, icon: aws/aws-lambda, nodes: [ { icon: { name: a, icon: aws/aws-lambda } } ] } } ] }
+  - box: { x: 20, y: 20, w: 20, h: 20, rows: [B] }
+`
+	if _, mistakes := draw(t, over, drawWith("en", lambda)); !strings.HasPrefix(mistakes, "s.yaml:4:5: ") {
+		t.Errorf("a box over a frame's icon: told %q, want it at the box", mistakes)
 	}
 }

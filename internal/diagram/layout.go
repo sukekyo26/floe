@@ -214,7 +214,8 @@ func (l *layout) name(at string, p part) {
 			keep(row.Name, target{r: rows[j], kind: "row", handSides: nil})
 		}
 	case p.Icon != nil:
-		keep(p.Icon.Name, target{r: iconRect(p.Icon, at), kind: "icon", handSides: nil, under: iconUnder(p.Icon)})
+		i := p.Icon
+		keep(i.Name, target{r: iconRect(i, at), kind: "icon", handSides: i.handSides, under: iconUnder(i)})
 	case p.Frame != nil:
 		f := p.Frame
 		r := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at}
@@ -639,6 +640,9 @@ func (l *layout) addTable(t *table, at string) {
 // LIMIT: this moves the middle of target.whole, and so a side floe chooses; write the side if a change comes to matter
 const iconLabelY = 12
 
+// labelRoom is how far below an icon its label reaches.
+const labelRoom = iconLabelY - labelTop + labelH
+
 func iconSize(i *icon) float64 {
 	if i.Size == 0 {
 		return 48
@@ -657,7 +661,7 @@ func iconUnder(i *icon) float64 {
 	if i.Label == nil {
 		return 0
 	}
-	return iconLabelY - labelTop + labelH
+	return labelRoom
 }
 
 func dotRect(d *dot, at string) rect {
@@ -678,6 +682,35 @@ func barRect(b *bar, at string) rect {
 		"bar", b.Name, b.Label, labelClass(false))
 }
 
+// frameIcon is how large a frame's icon stands in its top left corner.
+const frameIcon = 31.0
+
+// headed is whether group g has a heading to make room for.
+func headed(g *graphGroup) bool { return g.Label != nil || g.Icon != "" }
+
+// headParts are where a frame's words of class's width w stand from its top left corner, with an icon or not: right of
+// the icon, or in the corner. The icon stands in the corner, frameIcon square.
+func headParts(hasIcon bool, w float64) rect {
+	if hasIcon {
+		return rect{x: 40, y: 15 - labelTop, w: w, h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // an area
+	}
+	return rect{x: 12, y: 18 - labelTop, w: w, h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // an area
+}
+
+// headArea is all that group g's heading takes from its frame's top left corner, as addFrame draws it.
+func headArea(g *graphGroup) rect {
+	w := 0.0
+	if g.Label != nil {
+		w = textWidth(g.Label, frameClass(g.Icon))
+	}
+	words := headParts(g.Icon != "", w)
+	if g.Icon != "" {
+		//nolint:exhaustruct_v5 // an area
+		return rect{x: 0, y: 0, w: max(frameIcon, words.x+w), h: frameIcon, what: "", at: ""}
+	}
+	return words
+}
+
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
 	class := frameClass(f.Icon)
@@ -685,12 +718,10 @@ func (l *layout) addFrame(f *frame, at string) {
 		"frame", f.Name, f.Label, class)
 	who := fr.what
 	l.frames = append(l.frames, fr)
-	hx, hy := f.X+12, f.Y+18
-	if f.Icon != "" {
-		hx, hy = f.X+40, f.Y+15
-	}
+	words := headParts(f.Icon != "", textWidth(f.Label, class))
+	hx, hy := f.X+words.x, f.Y+words.y+labelTop
 	if f.Label != nil {
-		hw := textWidth(f.Label, class)
+		hw := words.w
 		head := rect{x: hx, y: hy - labelTop, w: hw, h: labelH, what: "the heading of " + who, at: at, graph: f.graph}
 		l.heads = append(l.heads, head)
 		// The heading keeps the margin on its right that it has on its left.
@@ -707,7 +738,10 @@ func (l *layout) addFrame(f *frame, at string) {
 	if f.Icon != "" {
 		// The icon is a part like a box: nothing may overlap it or run through it. It is checked from the frame's
 		// edge, as the 1px of it outside the frame only covers the frame's line (1.2 wide, centred on its edge).
-		ir := rect{x: f.X, y: f.Y, w: 31, h: 31, what: "the icon of " + who, at: at, form: outlineOf(31, 31, "icon")}
+		ir := rect{
+			x: f.X, y: f.Y, w: frameIcon, h: frameIcon, what: "the icon of " + who, at: at, graph: f.graph,
+			form: outlineOf(frameIcon, frameIcon, "icon"),
+		}
 		l.boxes = append(l.boxes, ir)
 		if use, ok := l.image(at, f.Icon, f.X-1, f.Y-1, 32, "the icon of "+who); ok {
 			kids = append(kids, use)
@@ -724,12 +758,14 @@ func (l *layout) addIcon(i *icon, at string) {
 	r := rect{x: i.X, y: i.Y, w: size, h: size, what: "", at: at, form: outlineOf(size, size, "icon")}.named(
 		"icon", i.Name, Text{"en": i.Icon}, "")
 	who := r.what
+	r.graph = i.graph
 	l.boxes = append(l.boxes, r)
 	if use, ok := l.image(at, i.Icon, i.X, i.Y, size, who); ok {
 		l.boxEls = append(l.boxEls, use)
 	}
 	if i.Label != nil {
-		l.label(at, i.Label, i.X+size/2, i.Y+size+iconLabelY, "middle", false, false)
+		n := l.label(at, i.Label, i.X+size/2, i.Y+size+iconLabelY, "middle", false, false)
+		l.labels[n].graph = i.graph
 	}
 }
 
