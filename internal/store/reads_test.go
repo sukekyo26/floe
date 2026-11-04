@@ -256,34 +256,34 @@ func TestReadsBegin(t *testing.T) {
 		`{}`, `null`, `{"local":{}}`,
 		`{"other":{"since":"` + hour(5) + `"},"local":{"pages":{"d":{"n":1,"at":"x"}}}}`,
 	} {
-		fresh, root := newStore(t)
-		writeReads(t, root, text)
+		fresh, dir := newStore(t)
+		writeReads(t, dir, text)
 		if err := fresh.Begin(viewer, hour(1)); err != nil {
 			t.Fatal(err)
 		}
-		got := keptReads(t, root)
+		got := keptReads(t, dir)
 		if got[viewer].Since != hour(1) || strings.Contains(text, "other") && (got["other"].Since != hour(5) || got[viewer].Pages["d"].N != 1) {
 			t.Errorf("%s: %+v", text, got)
 		}
-		if _, err := os.Stat(filepath.Join(root, "reads.json.broken")); err == nil {
+		if _, err := os.Stat(filepath.Join(dir, "reads.json.broken")); err == nil {
 			t.Errorf("%s went aside", text)
 		}
 	}
 
 	// Broken: aside, the one there replaced, a new one written.
 	for _, text := range []string{`{`, `[]`, `{"local":{"since":"soon"}}`, `{"local":{"since":3}}`} {
-		fresh, root := newStore(t)
-		writeReads(t, root, text)
-		if err := os.WriteFile(filepath.Join(root, "reads.json.broken"), []byte("older"), 0o600); err != nil {
+		fresh, dir := newStore(t)
+		writeReads(t, dir, text)
+		if err := os.WriteFile(filepath.Join(dir, "reads.json.broken"), []byte("older"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		if err := fresh.Begin(viewer, hour(1)); err != nil {
 			t.Fatal(err)
 		}
-		if got := read(t, filepath.Join(root, "reads.json.broken")); got != text {
+		if got := read(t, filepath.Join(dir, "reads.json.broken")); got != text {
 			t.Errorf("aside %q, want %q", got, text)
 		}
-		if got := keptReads(t, root)[viewer]; got.Since != hour(1) || got.Pages != nil {
+		if got := keptReads(t, dir)[viewer]; got.Since != hour(1) || got.Pages != nil {
 			t.Errorf("%s: %+v", text, got)
 		}
 	}
