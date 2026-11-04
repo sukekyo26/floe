@@ -1,6 +1,9 @@
 package browsertest_test
 
 import (
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -18,6 +21,7 @@ const listList = `(() => {
 		{ slug: 'f', title: 'Folder', description: '', path: '/tmp/x/f', folder: true, createdAt: day(9), updatedAt: day(40) },
 		{ slug: 'g', title: 'Gone', description: '', path: '/tmp/x/g.html', missing: true, createdAt: day(400), updatedAt: day(400) },
 		{ slug: 'a', title: 'Kept', description: '', news: 'new', version: 1, archived: true, createdAt: day(9), updatedAt: day(9) },
+		{ slug: 'b', title: 'Kept too', description: '', version: 1, archived: true, createdAt: day(9), updatedAt: day(10) },
 	];
 })()`
 
@@ -134,7 +138,9 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		const box = document.querySelector('#list li[data-slug=d] .path'), text = box.querySelector('bdi').firstChild;
 		const at = (from, to) => { const r = document.createRange(); r.setStart(text, from); r.setEnd(text, to); return r.getBoundingClientRect(); };
 		const n = text.length, b = box.getBoundingClientRect();
-		return [box.scrollWidth > box.clientWidth, Math.abs(at(n - 1, n).right - b.right) <= 1, at(0, 1).left < b.left, at(n - 11, n - 10).left < at(n - 1, n).left, box.title === text.data].join(' ');
+		return [box.scrollWidth > box.clientWidth, Math.abs(at(n - 1, n).right - b.right) <= 1, at(0, 1).left < b.left, at(n - 11, n - 10).left < at(n - 1, n).left,
+			// Pointed at, the row's title tells it whole.
+			document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2).closest('a.title').title.split('\n').includes(text.data)].join(' ');
 	})()`))
 	// Beside the list above 56rem, the shelf a row under 70rem, the filter right after the views, the bar's count gone.
 	b.size(1000, 700, false)
@@ -149,6 +155,18 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.eval("document.querySelector('#list li[data-slug=r] .title').click()")
 	b.until("the row whole", "location.pathname === '/a/r/'")
 	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [getComputedStyle(document.getElementById('back')).display, getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
+	b.unsize()
+
+	// A dialog's words are a paragraph, not a row's first column: above the next field, however long.
+	b.navigate("/")
+	b.size(400, 860, true)
+	b.eval("document.getElementById('add-open').click()")
+	out = append(out, b.eval("(() => { const l = document.querySelector('#add .lead').getBoundingClientRect(), f = document.querySelector('#add .field').getBoundingClientRect(); return [l.bottom <= f.top, getComputedStyle(document.querySelector('#add .lead')).textAlign === 'center'].join(' '); })()"))
+	b.eval("document.getElementById('add-cancel').click()")
+	// In the dialog of the rest of the shelf, its headings are the shelf's, under the dialog's own.
+	b.eval("document.getElementById('narrow-filter').click()")
+	out = append(out, b.eval("parseFloat(getComputedStyle(document.querySelector('#shelf-kinds h2')).fontSize) < parseFloat(getComputedStyle(document.getElementById('filter-title')).fontSize)"))
+	b.eval("document.querySelector('#filter-dialog [data-close]').click()")
 	b.unsize()
 
 	// One column: the views in a row with the dialog of the rest, a row opening its page whole, the bar's way back.
@@ -170,7 +188,132 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true true true", "false true blank New ",
 		"vn ?view=new", "vn", "1 new / 1", "New", "n", "true",
 		`["v","n"]`, "/?view=new", "/a/v/",
-		"true true true true true", "flex none none true", "/ false", "none true", "flex flex",
+		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true false", "true",
 		"none none flex none true", "flex none",
 	}, "|"))
+}
+
+// asideSite is a server with pages of its own, for the iframe beside the list.
+func asideSite(t *testing.T) *site {
+	t.Helper()
+
+	s := newSite(t)
+	for _, slug := range []string{"a1", "a2", "a3"} {
+		s.floe(t, "publish", s.page(t, "aside/"+slug+".yaml", slug, "<p id=\"p\">"+slug+"</p>"), "--slug", slug)
+	}
+	return s
+}
+
+// floeRead is reads.json of the site's store.
+func (s *site) floeRead(t *testing.T) string {
+	t.Helper()
+
+	b, err := os.ReadFile(filepath.Join(s.Dir, "store", "reads.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+// TestUIReader keeps the iframe beside the list with the rows: going through them adds nothing to the tab's history, a link's
+// missing file is not loaded and is once it is back, what the edit dialog was opened from has the focus again, and one column
+// leaves nothing alive to be told read.
+func TestUIReader(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := asideSite(t)
+	b := s.b
+	b.navigate("/")
+	b.size(1440, 900, false)
+	b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length === 3")
+	press := func(slug string) {
+		t.Helper()
+
+		b.eval("document.querySelector('#list li[data-slug=" + slug + "] .title').click()")
+	}
+	loaded := func(what, path string) {
+		t.Helper()
+
+		b.until(what, "window.heard.includes("+js(path)+")")
+	}
+	// A page in the iframe tells the path it is at as it loads.
+	b.eval("window.heard = []; addEventListener('message', (e) => { if (e.data?.artifactPath) window.heard.push(e.data.artifactPath); })")
+	out := make([]string, 0, 8)
+	before := b.eval("history.length")
+	for _, slug := range []string{"a1", "a2", "a3"} {
+		press(slug)
+		loaded("the page "+slug, "/a/"+slug+"/")
+	}
+	out = append(out, b.eval("history.length === "+before), b.eval("document.querySelector('#list li.picked').dataset.slug"))
+
+	// Opened from the bar over the page, the edit dialog gives the focus back there; from a row, to the row's.
+	b.eval("document.querySelector('#read-actions summary').click(); document.querySelector('#read-actions .edit').click()")
+	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
+	out = append(out, b.until("the focus back", "document.activeElement.matches('#read-actions summary') && 'bar'"))
+	b.eval("document.querySelector('#list li[data-slug=a1] summary').click(); document.querySelector('#list li[data-slug=a1] .edit').click()")
+	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
+	out = append(out, b.until("the focus back", "document.activeElement.matches('#list li[data-slug=a1] summary') && 'row'"))
+
+	// A link's file gone is not loaded beside the list, and is once it is back.
+	file := s.write(t, "aside/h.html", "<title>h</title><p>h</p>")
+	s.floe(t, "publish", "--link", file, "--slug", "h")
+	b.until("the link", "document.querySelector('#list li[data-slug=h]')")
+	if err := os.Rename(file, file+".moved"); err != nil {
+		t.Fatal(err)
+	}
+	b.until("the file gone", "document.querySelector('#list li[data-slug=h] .miss')")
+	press("h")
+	out = append(out, b.eval("[document.getElementById('read-frame').hidden, readLoaded].join(' ')"))
+	if err := os.Rename(file+".moved", file); err != nil {
+		t.Fatal(err)
+	}
+	b.until("the file back", "!document.querySelector('#list li[data-slug=h] .miss')")
+	loaded("the page of the file back", "/a/h/")
+	out = append(out, b.eval("document.getElementById('read-frame').hidden"))
+
+	// One column: nothing stays alive beside the list. A new version is not told read, nor is anything chosen back.
+	b.eval("window.heard = []")
+	press("a1")
+	loaded("the page a1", "/a/a1/")
+	b.size(800, 700, false)
+	b.until("one column", "document.querySelector('#list li.picked') === null")
+	out = append(out, b.eval("[picked, readLoaded].join(' ')"))
+	before = s.floeRead(t)
+	s.floe(t, "publish", s.page(t, "aside/a1.yaml", "a1", "<p id=\"p\">a1 again</p>"), "--slug", "a1")
+	b.until("the new version", "document.querySelector('#list li[data-slug=a1] .ver')")
+	out = append(out, strconv.FormatBool(s.floeRead(t) == before))
+	b.unsize()
+	check(t, "reader", out, "true|a3|bar|row|true about:blank|false| about:blank|true")
+}
+
+// TestUIFrameOrder goes through a list by j in the frame: the list that opened it, a page gone since left out; opened from the
+// URL, the list it was last on, else all of its kind, archived or not as it is; at an end it stays.
+func TestUIFrameOrder(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.stub(listList)
+	go1 := func(from, order, list, want string) {
+		t.Helper()
+
+		b.navigate("/")
+		b.eval("sessionStorage.setItem('artifacts.order', " + js(order) + "); sessionStorage.setItem('artifacts.list', " + js(list) + ")")
+		b.navigate("/a/" + from + "/")
+		b.until("the bar", "document.getElementById('frame-title').textContent")
+		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
+		b.until(from+" to go to "+want, "location.pathname === "+js("/a/"+want+"/"))
+	}
+	// The list that opened it, a slug no entry has left out.
+	go1("v", `["v","gone","r"]`, "", "r")
+	// None such: the last list, of what it picks.
+	go1("n", "[]", "?template=report", "r")
+	go1("l", "[]", "?kind=link", "d")
+	// Not on the last list: all of its kind.
+	go1("v", "[]", "?kind=link", "n")
+	// Archived: the archived.
+	go1("a", "[]", "?kind=link", "b")
+	// At an end, it stays; k goes back.
+	b.navigate("/")
+	b.eval(`sessionStorage.setItem('artifacts.order', '["v","n"]')`)
+	b.navigate("/a/n/")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true })); window.stayed = true")
+	check(t, "at an end", []string{b.eval("window.stayed === true && location.pathname")}, "/a/n/")
 }

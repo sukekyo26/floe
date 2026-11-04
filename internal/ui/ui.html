@@ -41,12 +41,12 @@
     /* The page's faces */
     --body: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
-    /* The corners: a box (the list, a pop-up, a dialog, a toast), a middle box (a menu, the suggestions, the error) and a small
+    /* The corners: a box (a dialog, a toast), a middle box (a menu, the suggestions, the error) and a small
        square (a field, a key, a link of the side); a pill and a circle are written as shapes (999px, 50%), and a box within a box
        is round by the outer one less the room (TestManageSheet) */
     /* LIMIT: the logo's and the icons' SVG rx are numbers, not read by TestManageSheet */
     --corner: 20px; --corner-menu: 14px; --corner-small: 6px;
-    /* The room inside a pop-up and a menu, which their items' corners take off the box's */
+    /* The room inside a menu, which its items' corners take off the box's */
     /* LIMIT: TestManageSheet does not check that a box whose items read calc(… - var(--menu-pad)) is padded by --menu-pad */
     --menu-pad: 6px;
     /* The text: a label (counts, times, keys, tags), small text (descriptions, menus, fields) and the body's; a heading is 1rem
@@ -146,8 +146,8 @@
   /* While the edge is dragged the page takes no pointer, which would leave the edge's pointer capture inside the iframe */
   html:has(.grip.dragging) .frame { pointer-events: none; }
   .side-show { position: fixed; top: calc(var(--bar) + 8px); left: 8px; z-index: 2; background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
-  /* An iframe prints what fits one screen of the page in it: a frame's print hides the bar, the frame, the toasts and
-     the pages to pick from, and names the page alone in their place, but on a missing page's frame, which prints its
+  /* An iframe prints what fits one screen of the page in it: a frame's print hides the bar, the frame and the toasts,
+     and names the page alone in their place, but on a missing page's frame, which prints its
      state. The screen shows no note.
      LIMIT: VS Code's Simple Browser holds the page in a frame of its own, where Ctrl+P is VS Code's Quick Open, and opens
      a new tab outside it: print the page from a browser */
@@ -158,6 +158,7 @@
   }
 
   /* The list's page fills the window under the header bar: the shelf, the list and the page chosen, each scrolled on its own */
+  /* LIMIT: so the list prints what fits one screen, cut off without a word. Print it as a whole if that comes to matter */
   html:not(.framed) body { height: 100dvh; display: flex; flex-direction: column; }
   .shell { flex: 1; min-height: 0; display: grid; grid-template-columns: 12.5rem 25.5rem minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
   /* The 4px of room round a button are its focus ring's (1px off, 2px wide) and 1px of ground */
@@ -171,7 +172,7 @@
     .shelf:not(:hover, :focus-within) { scrollbar-color: transparent transparent; }
   }
   .shelf-more { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
-  .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 var(--text-label)/1.2 var(--body); color: var(--muted); letter-spacing: 0.08em; }
+  #shelf-more h2 { margin: 0 0 0.3rem 0.65rem; font: 600 var(--text-label)/1.2 var(--body); color: var(--muted); letter-spacing: 0.08em; }
   /* minmax(0, …): no wider than the shelf, so that a long name is cut off rather than widening it */
   /* 4px apart, so that the ring of one does not reach the one filled beside it */
   .views, .chips { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
@@ -250,11 +251,11 @@
   /* A day's heading: no row, and not pressed */
   li.group { display: block; padding: 0.7rem 1rem 0.25rem; font: 700 var(--text-small)/1.2 var(--body); color: var(--muted); border-bottom: 0; animation: none; }
   /* The first column holds what the row is: a dot, a ring, a link's or a folder's mark; while rows are selected, the check box */
-  .lead { grid-area: lead; display: grid; place-items: center; height: 1.4em; color: var(--muted); }
-  .lead svg { width: 14px; height: 14px; }
+  li > .lead { grid-area: lead; display: grid; place-items: center; height: 1.4em; color: var(--muted); }
+  li > .lead svg { width: 14px; height: 14px; }
   .pick { position: relative; z-index: 1; grid-area: lead; display: none; place-items: center; height: 1.4em; cursor: pointer; }
   #list.selecting .pick { display: grid; }
-  #list.selecting .lead { display: none; }
+  #list.selecting li > .lead { display: none; }
   .sel {
     width: 16px; height: 16px; margin: 0; cursor: pointer; appearance: none; background: var(--panel);
     border: 1.5px solid var(--box-line); border-radius: var(--corner-small); transition: background-color 0.12s, border-color 0.12s;
@@ -973,7 +974,7 @@
     return words.replace(/(\d)([\u5e74\u6708])/g, '$1 $2');
   }
 
-  // The projects of every entry (both kinds, archived or not), most entries first, then by name, each to its place: the
+  // The projects of every entry (of any kind, archived or not), most entries first, then by name, each to its place: the
   // order of the groups and of the projects' colors, which no filter changes
   function projectOrder() {
     const counts = new Map();
@@ -1480,7 +1481,12 @@
     }
     const edit = box.querySelector('.edit');
     edit.setAttribute('aria-label', t('ui_edit_named', a.title));
-    edit.addEventListener('click', () => openEdit(a));
+    edit.addEventListener('click', () => {
+      // The bar's menu is drawn anew in its place, a row's by its slug
+      const bar = box.closest('#read-actions, #frame-actions')?.id;
+      editBack = () => (bar ? $(bar) : [...$('list').children].find((li) => li.dataset.key === `entry:${a.slug}`))?.querySelector('summary');
+      openEdit(a);
+    });
     const open = box.querySelector('.open');
     open.href = rawHref(a);
     open.setAttribute('aria-label', t('ui_open_raw_named', a.title));
@@ -1517,7 +1523,6 @@
   function pickRow(x) {
     if (isPicked(x)) return;
     picked = { slug: x.slug, file: x.file ?? '' };
-    $('read-frame').src = rawHref(picked);
     for (const li of $('list').children) li.classList.toggle('picked', li.dataset.slug === picked.slug && (li.dataset.file ?? '') === picked.file);
     drawReader();
   }
@@ -1537,14 +1542,22 @@
     box.querySelector('.more-slot').replaceChildren(...(file ? [] : [moreMenu(a)]));
   }
 
+  // Loads href in the iframe beside the list, in place of its history entry: moved through by j and k, Back is the tab's, and
+  // does not leave the rows on one page and the iframe on another. Nothing else alive there tells that it is read
+  let readLoaded = 'about:blank';
+  function readInto(href) {
+    if (href === readLoaded) return;
+    readLoaded = href;
+    $('read-frame').contentWindow.location.replace(href);
+  }
+
   // What is beside the list, as the row chosen is now: the words how to choose while none is; the words why, of a link whose
   // file is gone. The page in the iframe stays loaded through the list's redraws, reloading itself as it changes
   function drawReader() {
     const a = picked && items.find((x) => x.slug === picked.slug);
-    if (picked && !a) {
-      picked = null;
-      $('read-frame').src = 'about:blank';
-    }
+    if (!a) picked = null;
+    // Loaded only while it is there, as the frame's, so that a link's missing file is no 404 kept when the file is back
+    readInto(a && !a.missing ? rawHref(picked) : 'about:blank');
     $('read-head').hidden = !a;
     $('read-frame').hidden = !a || Boolean(a.missing);
     $('read-blank').hidden = Boolean(a && !a.missing);
@@ -1582,7 +1595,9 @@
     const link = li.querySelector('.title');
     link.href = `/a/${a.slug}/`;
     link.textContent = a.title;
-    link.title = [a.title, a.description].filter(Boolean).join('\n');
+    // All the row's words that it may cut or leave out: the title's hit area covers the row, so that no title of what lies under it shows
+    link.title = [a.title, a.description, a.path, a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
+      .filter(Boolean).join('\n');
     const sub = li.querySelector('.sub');
     const put = (cls, text) => {
       const span = document.createElement('span');
@@ -1595,7 +1610,7 @@
     if (a.folder) put('kindof', t('ui_kind_folder'));
     else if (a.path) put('kindof', t('ui_kind_of_link', a.template ?? 'HTML'));
     else if (a.template) put('kindof', a.template);
-    if (a.project && ranks.size > 1) put('proj', a.project).title = a.project;
+    if (a.project && ranks.size > 1) put('proj', a.project);
     if (a.tags?.length) {
       const tags = put('tags', '');
       tags.append(...a.tags.map((name) => {
@@ -1611,10 +1626,9 @@
       }));
     }
     // A link shows the file where it was registered; if the file is gone, the row says so
-    if (a.missing) put('miss', t('ui_file_missing')).title = a.path;
+    if (a.missing) put('miss', t('ui_file_missing'));
     else if (a.path) {
       const path = put('path', '');
-      path.title = a.path;
       const bdi = document.createElement('bdi');
       bdi.dir = 'ltr';
       bdi.textContent = a.path;
@@ -1623,8 +1637,6 @@
     const time = li.querySelector('time');
     time.dateTime = a.updatedAt;
     time.textContent = ago(a.updatedAt);
-    time.title = [a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
-      .filter(Boolean).join('\n');
     const star = li.querySelector('.star');
     toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
@@ -1716,12 +1728,11 @@
       link.href = pageHref(x);
       link.innerHTML = PAGE_HEAD;
       link.append(name);
-      link.title = p.file;
+      link.title = `${p.file}\n${t('ui_updated_at', fmt(p.updatedAt))}`;
       link.addEventListener('click', (e) => openRow(e, x));
       const time = li.querySelector('time');
       time.dateTime = p.updatedAt;
       time.textContent = ago(p.updatedAt);
-      time.title = t('ui_updated_at', fmt(p.updatedAt));
       const open = li.querySelector('.open');
       open.href = `/a/${a.slug}/${p.file.split('/').map(encodeURIComponent).join('/')}`;
       open.setAttribute('aria-label', t('ui_open_raw_named', name));
@@ -1870,6 +1881,8 @@
 
   // The entry being edited and its values when opened. Only changed fields are sent (so a link's title keeps coming from its file unless edited)
   let editing;
+  // The menu's button it was opened from, as drawn when it closes
+  let editBack;
   const EDIT_FIELDS = { title: 'edit-name', slug: 'edit-slug', project: 'edit-project', description: 'edit-desc' };
 
   function openEdit(a) {
@@ -1904,10 +1917,8 @@
         location.replace(pageHref({ slug: changes.slug }));
         return;
       }
-      if (picked?.slug === editing.slug) {
-        picked.slug = changes.slug;
-        $('read-frame').src = rawHref(picked);
-      }
+      // Drawn with the list read below
+      if (picked?.slug === editing.slug) picked.slug = changes.slug;
     }
     toast(t('ui_saved'));
     // Drawn before the dialog closes, which gives focus to the row's menu button as drawn
@@ -2050,7 +2061,7 @@
   let sideOver = false;
 
   // Reads again the directories open in the side's tree, each under ones open, and the page's own, whatever is open,
-  // for the pages to pick from. One gone for now stays open, to show again when it is back
+  // for j and k. One gone for now stays open, to show again when it is back
   // LIMIT: each directory open is read every 3 s with the list, as readOpen's
   // As readOpen's, the last call's answers win
   let sideReads = 0;
@@ -2147,7 +2158,7 @@
       for (const k of [...sideOpen]) {
         if (k === path || k.startsWith(`${path}/`)) {
           sideOpen.delete(k);
-          // The page's own directory is read whatever is open, for the pages to pick from
+          // The page's own directory is read whatever is open, for j and k
           if (k !== dirOf(FILE)) sideListings.delete(k);
         }
       }
@@ -2416,6 +2427,8 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(null); });
   addEventListener('blur', () => closeMenus(null));
   $('edit').addEventListener('submit', saveEdit);
+  // The edit dialog closed, focus goes back to the menu's button it was opened from rather than to the closed menu's item
+  $('edit-dialog').addEventListener('close', () => editBack?.()?.focus());
   suggestTags($('edit-tags'));
   for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
   // A click on the backdrop (the dialog itself) closes it; the form fills the dialog, so clicks inside never land here
@@ -2462,17 +2475,18 @@
     $('add-empty').addEventListener('click', openAdd);
     for (const b of document.querySelectorAll('.views button[data-view]')) b.addEventListener('click', () => setView(b.dataset.view));
     $('show-archived').addEventListener('click', () => setView('archived'));
+    // One column has nothing beside the list: what stays alive there would reload itself, and be told read unseen
+    oneColumn.addEventListener('change', () => {
+      if (!oneColumn.matches || !picked) return;
+      picked = null;
+      render();
+    });
     // The rest of the shelf goes into the dialog while it is open, on a screen with no room for it beside the list
     $('narrow-filter').addEventListener('click', () => {
       $('filter-box').lastElementChild.before($('shelf-more'));
       $('filter-dialog').showModal();
     });
     $('filter-dialog').addEventListener('close', () => $('shelf').append($('shelf-more')));
-    // The edit dialog closed, focus goes back to its row's menu button rather than to the closed menu's item
-    $('edit-dialog').addEventListener('close', () => {
-      const row = [...$('list').querySelectorAll(':scope > li:not(.group, .tree)')].find((li) => li.dataset.slug === editing?.slug);
-      row?.querySelector('summary').focus();
-    });
     $('bulk-page').addEventListener('click', () => {
       for (const sel of $('list').querySelectorAll('.sel')) sel.checked = true;
       for (const li of $('list').querySelectorAll(':scope > li:not(.group, .tree)')) selected.add(li.dataset.slug);

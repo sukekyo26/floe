@@ -192,8 +192,8 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	b.eval("document.querySelector('#list li:not(.group) .star').click()")
 	out = append(out, b.until("the favourite", "calls.splice(0).join(',')"))
-	// The time's tooltip has both the creation and the update.
-	out = append(out, b.eval("document.querySelector('#list li:not(.group) time').title.split('\\n').map((l) => l.split(' ')[0]).join(' ')"))
+	// The title's tooltip has both the creation and the update.
+	out = append(out, b.eval("document.querySelector('#list li:not(.group) .title').title.split('\\n').slice(1).map((l) => l.split(' ')[0]).join(' ')"))
 	// ↓ moves through the rows by focusing their titles, x selects the focused row, the check boxes showing from then on alone.
 	const boxes = "getComputedStyle(document.querySelector('#list li:not(.group) .pick')).display"
 	out = append(out, b.eval(boxes))
