@@ -640,6 +640,9 @@ func (l *layout) addTable(t *table, at string) {
 // LIMIT: this moves the middle of target.whole, and so a side floe chooses; write the side if a change comes to matter
 const iconLabelY = 12
 
+// labelRoom is how far below an icon its label reaches.
+const labelRoom = iconLabelY - labelTop + labelH
+
 func iconSize(i *icon) float64 {
 	if i.Size == 0 {
 		return 48
@@ -658,7 +661,7 @@ func iconUnder(i *icon) float64 {
 	if i.Label == nil {
 		return 0
 	}
-	return iconLabelY - labelTop + labelH
+	return labelRoom
 }
 
 func dotRect(d *dot, at string) rect {
@@ -679,32 +682,33 @@ func barRect(b *bar, at string) rect {
 		"bar", b.Name, b.Label, labelClass(false))
 }
 
-// Where a frame's heading stands from its top left corner: its text's start and baseline's middle, and, with an icon in
-// the corner, frameIcon square, those right of the icon.
-const (
-	frameHeadX     = 12.0
-	frameHeadY     = 18.0
-	frameIconHeadX = 40.0
-	frameIconHeadY = 15.0
-	frameIcon      = 31.0
-)
+// frameIcon is how large a frame's icon stands in its top left corner.
+const frameIcon = 31.0
 
 // headed is whether group g has a heading to make room for.
 func headed(g *graphGroup) bool { return g.Label != nil || g.Icon != "" }
 
-// headArea is where the heading of group g stands from its frame's top left corner, as addFrame draws it: its text, and
-// its icon with the text.
+// headParts are where a frame's words of class's width w stand from its top left corner, with an icon or not: right of
+// the icon, or in the corner. The icon stands in the corner, frameIcon square.
+func headParts(hasIcon bool, w float64) rect {
+	if hasIcon {
+		return rect{x: 40, y: 15 - labelTop, w: w, h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // an area
+	}
+	return rect{x: 12, y: 18 - labelTop, w: w, h: labelH, what: "", at: ""} //nolint:exhaustruct_v5 // an area
+}
+
+// headArea is all that group g's heading takes from its frame's top left corner, as addFrame draws it.
 func headArea(g *graphGroup) rect {
 	w := 0.0
 	if g.Label != nil {
 		w = textWidth(g.Label, frameClass(g.Icon))
 	}
+	words := headParts(g.Icon != "", w)
 	if g.Icon != "" {
 		//nolint:exhaustruct_v5 // an area
-		return rect{x: 0, y: 0, w: max(frameIcon, frameIconHeadX+w), h: frameIcon, what: "", at: ""}
+		return rect{x: 0, y: 0, w: max(frameIcon, words.x+w), h: frameIcon, what: "", at: ""}
 	}
-	//nolint:exhaustruct_v5 // an area
-	return rect{x: frameHeadX, y: frameHeadY - labelTop, w: w, h: labelH, what: "", at: ""}
+	return words
 }
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
@@ -714,12 +718,10 @@ func (l *layout) addFrame(f *frame, at string) {
 		"frame", f.Name, f.Label, class)
 	who := fr.what
 	l.frames = append(l.frames, fr)
-	hx, hy := f.X+frameHeadX, f.Y+frameHeadY
-	if f.Icon != "" {
-		hx, hy = f.X+frameIconHeadX, f.Y+frameIconHeadY
-	}
+	words := headParts(f.Icon != "", textWidth(f.Label, class))
+	hx, hy := f.X+words.x, f.Y+words.y+labelTop
 	if f.Label != nil {
-		hw := textWidth(f.Label, class)
+		hw := words.w
 		head := rect{x: hx, y: hy - labelTop, w: hw, h: labelH, what: "the heading of " + who, at: at, graph: f.graph}
 		l.heads = append(l.heads, head)
 		// The heading keeps the margin on its right that it has on its left.

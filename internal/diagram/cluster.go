@@ -252,7 +252,7 @@ func (gr *group) mark() {
 		}
 		if g := gr.out.clusters[c].g; headed(g) {
 			a := headArea(g)
-			heading[c] = add(c, spans[c][0], kindHeading, math.Ceil(a.x+a.w-frameHeadX), a.h)
+			heading[c] = add(c, spans[c][0], kindHeading, math.Ceil(a.x+a.w-headParts(false, 0).x), a.h)
 		}
 	}
 	gr.list(spans, marks, heading)

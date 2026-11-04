@@ -361,7 +361,7 @@
         "tone": { "$ref": "#/$defs/tone" },
         "start": { "$ref": "#/$defs/graphMarker" },
         "end": { "$ref": "#/$defs/graphMarker" },
-        "level": { "type": "boolean", "description": "Whether its two boxes stand in one rank, the edge straight between their facing sides (or bent, at an icon whose point on the side stands off its line): two boxes of one group, standing as written, or directly in two lanes, at their lanes' ends towards each other; on a loop it changes nothing" }
+        "level": { "type": "boolean", "description": "Whether its two boxes stand in one rank, the edge straight between their facing sides (or bent, at an icon with more than one edge on a side, whose point stands off its line): two boxes of one group, standing as written, or directly in two lanes, at their lanes' ends towards each other; on a loop it changes nothing" }
       }
     },
     "graphMarker": { "enum": ["none", "arrow"], "description": "An arrowhead or none: the others are wider than the room the edges of a graph keep between them" },

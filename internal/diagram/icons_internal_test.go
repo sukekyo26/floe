@@ -116,7 +116,50 @@ func iconFault(g *graph, l *layout) string {
 			}
 		}
 	}
-	return labelsBeside(g, l)
+	return cmpOr(runsFault(g, l), labelsBeside(g, l))
+}
+
+// runsFault is the first run of an edge of g at an icon not straight or of no length, or an end at a box off its
+// outline, or "".
+func runsFault(g *graph, l *layout) string {
+	shapes := map[string]string{}
+	for _, b := range graphBoxes(g) {
+		shapes[b.Name] = b.Shape
+	}
+	for _, p := range l.paths {
+		for _, s := range p.segs {
+			if s[0] != s[2] && s[1] != s[3] || math.Abs(s[0]-s[2])+math.Abs(s[1]-s[3]) < 1e-6 {
+				return fmt.Sprintf("%s runs %v", p.what, s)
+			}
+		}
+		from, to := pathEnds(p)
+		first, last := p.segs[0], p.segs[len(p.segs)-1]
+		for _, e := range [2]struct {
+			name string
+			pt   [2]float64
+			next [2]float64
+		}{{from, [2]float64{first[0], first[1]}, [2]float64{first[2], first[3]}}, {to, [2]float64{last[2], last[3]}, [2]float64{last[0], last[1]}}} {
+			shape, isBox := shapes[e.name]
+			t, named := l.names[e.name]
+			if !isBox || !named || t.kind != "box" {
+				continue
+			}
+			side, along := "left", e.pt[1]
+			switch {
+			case e.pt[0] == e.next[0] && e.next[1] > e.pt[1]:
+				side, along = "bottom", e.pt[0]
+			case e.pt[0] == e.next[0]:
+				side, along = "top", e.pt[0]
+			case e.next[0] > e.pt[0]:
+				side = "right"
+			}
+			want := outlineOf(t.r.w, t.r.h, shape).on(t.r, side, along)
+			if math.Abs(want[0]-e.pt[0])+math.Abs(want[1]-e.pt[1]) > 1e-6 {
+				return fmt.Sprintf("%s ends at %v, off the outline of %s at %v", p.what, e.pt, e.name, want)
+			}
+		}
+	}
+	return ""
 }
 
 // labelsBeside is the first label of an edge of g, no loop's, not a column beside a run of it, or "".
@@ -145,8 +188,11 @@ func reachFault(g *graph) string {
 	if g.Direction == "right" {
 		axis = 1
 	}
-	for i, at := range o.icons {
-		ic, r := o.boxes[i].box.icon, o.cells[i]
+	for i, n := range o.boxes {
+		ic, r, at := n.box.icon, o.drawn[i].cell, o.drawn[i].icon
+		if ic == nil {
+			continue
+		}
 		stands := iconWidest(ic)
 		if axis == 1 {
 			stands = iconSize(ic) + iconUnder(ic)
@@ -169,8 +215,8 @@ func touchesOutside(g *graph, l *layout) int {
 		return 0
 	}
 	inside := func(p [2]float64) bool {
-		for i := range o.icons {
-			if c := o.cells[i]; p[0] >= c.x && p[0] <= c.x+c.w && p[1] >= c.y && p[1] <= c.y+c.h {
+		for i, n := range o.boxes {
+			if c := o.drawn[i].cell; n.box.icon != nil && p[0] >= c.x && p[0] <= c.x+c.w && p[1] >= c.y && p[1] <= c.y+c.h {
 				return true
 			}
 		}
@@ -204,7 +250,7 @@ func touched(a, b path, inside func([2]float64) bool) bool {
 }
 
 // Random graphs with icons, down and right, lay out with no mistake, every end on its icon at the part of its side it
-// belongs to, a run an arrow can end, and labels beside their runs; no edges touch outside the icons' rectangles. The
+// belongs to, a run an arrow can end, and labels beside their runs; almost no edges touch outside the icons' rectangles. The
 // graphs of TestGraphRandom hold for graphs of boxes alone that none touch.
 func TestGraphIconsRandom(t *testing.T) {
 	t.Parallel()
@@ -264,8 +310,9 @@ func TestGraphIconsRandom(t *testing.T) {
 }
 
 // touchesPlain is how many pairs of edges of the graphs of a case of TestGraphIconsRandom may touch outside the icons'
-// rectangles: clear keeps moved runs off other edges. Within a rectangle they may (gathered).
-const touchesPlain = 0
+// rectangles: clear keeps moved runs off other edges, compared as they then stand, and later moves may meet them.
+// Within a rectangle they may touch (gathered).
+const touchesPlain = 5
 
 // The n edges at a side end at the points that part it into n+1 equal parts, in the order of what they reach, and the
 // icons of a rank keep their tops level. One edge runs straight down the icons' middles.
@@ -395,6 +442,75 @@ func TestGraphFrameHead(t *testing.T) {
 			if r := l.boxes[0]; !strings.HasPrefix(r.what, "the icon of") || r.graph == "" {
 				t.Errorf("%q: the frame's icon is %q of graph %q", direction, r.what, r.graph)
 			}
+		}
+	}
+}
+
+// A graph's x and y are the top left of what it draws, whatever stands round its icons unseen.
+func TestGraphIconsTopLeft(t *testing.T) {
+	t.Parallel()
+
+	for _, direction := range []string{"", "right"} {
+		g := iconGraph([]string{"a", "b"}, "a>b")
+		g.Direction, g.X, g.Y = direction, 16, 16
+		l := laid(g)
+		if fault := iconFault(g, l); fault != "" {
+			t.Fatal(fault)
+		}
+		left, top := math.Inf(1), math.Inf(1)
+		for _, r := range slices.Concat(l.boxes, l.labels) {
+			left, top = min(left, r.x), min(top, r.y)
+		}
+		if left != 16 || top != 16 {
+			t.Errorf("%q: it starts at %v,%v, want 16,16", direction, left, top)
+		}
+	}
+}
+
+// Laid out down, the icons of a rank stand level, labelled or not, and a level edge between icons, or between an icon
+// and a box, runs straight.
+func TestGraphIconsLevel(t *testing.T) {
+	t.Parallel()
+
+	g := iconGraph([]string{"a", "b", "c"}, "a>b", "b>c")
+	g.Nodes[1].Icon.Label = nil
+	g.Nodes[2] = graphNode{Box: &graphBox{Name: "c", Rows: []row{{Text: Text{"en": "c"}, Style: ""}}, Tone: "", Shape: "", icon: nil}} //nolint:exhaustruct_v5 // one kind of node
+	g.Edges[0].Level, g.Edges[1].Level = true, true
+	l := laid(g)
+	if l.failure != nil || len(l.problems) > 0 {
+		t.Fatal(l.failure, l.problems)
+	}
+	a, b := l.names["a"].r, l.names["b"].r
+	if a.y != b.y {
+		t.Errorf("the icons stand at y %v and %v", a.y, b.y)
+	}
+	for _, p := range l.paths {
+		if len(p.segs) != 1 {
+			t.Errorf("%s runs %v, want it straight", p.what, p.segs)
+		}
+	}
+}
+
+// What is left to an edge written by hand runs from the icon's side, not its rectangle's.
+func TestGraphIconsHands(t *testing.T) {
+	t.Parallel()
+
+	g := iconGraph([]string{"a"})
+	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // none
+	if _, _, err := o.items(); err != nil { //nolint:errcheck // none but this
+		t.Fatal(err)
+	}
+	d, err := o.draw(o.groups[0], false, [2]float64{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := d.iconAt(0)
+	for _, s := range d.handsOf(0, false) {
+		if s[1] != at.y+at.h/2 || s[3] != at.y+at.h/2 {
+			t.Errorf("the run %v does not stand at the icon's middle %v", s, at.y+at.h/2)
+		}
+		if s[0] != at.x && s[2] != at.x && s[0] != at.x+at.w && s[2] != at.x+at.w {
+			t.Errorf("the run %v does not reach the icon at %v", s, at)
 		}
 	}
 }

@@ -57,9 +57,10 @@ func (gr *group) place(right bool) (trips, pulls int) {
 // size sizes the group's boxes (turned for right) and its headings' rooms, and sets where a heading stands from its
 // frame's top: 12 in from its left and 9 down from its top (addFrame), along the ranks as drawn.
 func (gr *group) size(right bool) {
-	gr.headAt = frameHeadY - labelTop
+	words := headParts(false, 0)
+	gr.headAt = words.y
 	if right {
-		gr.headAt = frameHeadX
+		gr.headAt = words.x
 	}
 	for i := range gr.nodes {
 		n := &gr.nodes[i]
