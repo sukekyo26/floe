@@ -246,9 +246,9 @@ func (s *Server) frame(w http.ResponseWriter, r *http.Request, slug string) {
 	if m := s.cfg.Store.ReadMeta(slug); m != nil {
 		file := r.URL.Query().Get("file")
 		if m.Folder && file == "" {
-			to := "/?tab=folders&open=" + url.QueryEscape(slug)
+			to := "/?kind=folder&open=" + url.QueryEscape(slug)
 			if m.Archived {
-				to += "&archived=1"
+				to += "&view=archived"
 			}
 			http.Redirect(w, r, to, http.StatusSeeOther)
 			return
