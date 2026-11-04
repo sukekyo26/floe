@@ -1,12 +1,14 @@
 package browsertest_test
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/chromedp/cdproto/accessibility"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 )
@@ -323,9 +325,34 @@ func TestUIShelfMarks(t *testing.T) { //nolint:paralleltest // the browser tests
 			})()`))
 		}
 	}
-	// Words gone on the narrowest, the name stays for one who cannot see the mark.
-	out = append(out, b.eval(`(() => { const a = document.querySelector('.views [data-view=archived]'); return getComputedStyle(a.querySelector('.label')).display + ' ' + Boolean(a.getAttribute('aria-label')); })()`))
-	check(t, "shelf marks", out, "10 true|true true true true|page:true link:true folder:true|true|true|true|true|true|true|true|true|none true")
+	// The names as read out: the words hidden on the narrow are still read, and the count where it shows.
+	named := func() string {
+		tree, err := chromedp.Call(b.ctx, accessibility.GetFullAXTree, accessibility.GetFullAXTreeParams{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		names := make([]string, 0, 4)
+		for _, n := range tree.Nodes {
+			if n.Name != nil && !n.Ignored && n.Role != nil && strings.Contains(string(n.Role.Value), "button") {
+				var name string
+				if err = json.Unmarshal(n.Name.Value, &name); err != nil {
+					t.Fatal(err)
+				}
+				if strings.Contains(name, "Favorites") || strings.Contains(name, "Archive") {
+					names = append(names, name)
+				}
+			}
+		}
+		return strings.Join(names, ",")
+	}
+	out = append(out, b.eval("document.querySelector('.views [data-view=archived] .label').getBoundingClientRect().width <= 1"), named())
+	b.size(1000, 700, false)
+	b.navigate("/")
+	out = append(out, named())
+	b.size(1440, 900, false)
+	b.navigate("/")
+	out = append(out, named())
+	check(t, "shelf marks", out, "10 true|true true true true|page:true link:true folder:true|true|true|true|true|true|true|true|true|true|Favorites 1,Archive|Favorites 1,Archive|Favorites 1,Archive 0")
 }
 
 // floeRead is reads.json of the site's store.
