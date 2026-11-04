@@ -131,6 +131,28 @@
   .dver { display: flex; align-items: center; gap: 0.35rem; min-width: 0; color: var(--muted); }
   .dver label { white-space: nowrap; }
   .dver select { min-width: 0; max-width: 100%; height: 2rem; padding: 0 0.4rem; font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--box-line); border-radius: var(--corner-small); }
+  /* LIMIT: a browser without base-select (Firefox and Safari for now) shows its own list, in the rule above, which works the same */
+  @supports (appearance: base-select) {
+    .dver select, .dver select::picker(select) { appearance: base-select; }
+    .dver select {
+      display: inline-flex; align-items: center; justify-content: space-between; gap: 0.4rem; padding: 0 0.5rem 0 0.75rem; font: 500 var(--text-small)/1.4 var(--body);
+      border-color: var(--line); border-radius: 999px; box-shadow: var(--shadow-sm); cursor: pointer;
+    }
+    .dver select:hover, .dver select:open { border-color: var(--faint); }
+    .dver select:open { outline: none; }
+    .dver select::picker-icon { color: var(--muted); }
+    .dver select::picker(select) {
+      margin-block: 4px; max-height: 14rem; overflow-y: auto; padding: var(--menu-pad);
+      color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-menu); box-shadow: var(--shadow);
+    }
+    .dver option { min-height: 0; padding: 0.4rem 0.6rem; font: 400 var(--text-small)/1.4 var(--body); white-space: nowrap; border-radius: calc(var(--corner-menu) - var(--menu-pad)); cursor: pointer; }
+    .dver option:hover { background: var(--subtle); }
+    .dver option:checked { font-weight: 700; background: none; }
+    .dver option:checked:hover { background: var(--subtle); }
+    /* The one the keys are on, as in .suggest */
+    .dver option:focus-visible { outline: none; background: var(--subtle); box-shadow: inset 2px 0 0 var(--ink); }
+    .dver option:disabled { color: var(--faint); background: none; cursor: default; }
+  }
   .dcount { margin: 0; display: flex; flex-wrap: wrap; gap: 0 0.75rem; color: var(--muted); }
   .dcount b { font-weight: 700; }
   .dcount .c { color: var(--chg); } .dcount .a { color: var(--ins); } .dcount .r { color: var(--del); } .dcount .s { color: var(--fg); }
@@ -3596,7 +3618,7 @@
   }
   // Not while typing or with a dialog open
   // The two versions' choice takes letters to find an item by, each starting with v: these go on as anywhere, with the focus left there
-  const diffPickKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && e.target.closest?.('#diff select') && ['n', 'p', 'd', 'j', 'k'].includes(e.key);
+  const diffPickKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && e.target.matches?.('#diff select') && ['n', 'p', 'd', 'j', 'k'].includes(e.key);
   const plainKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog');
   // The search's words on a missing page's bar, and the bar's new pages, go to the list
   if (framed) {

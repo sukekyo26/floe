@@ -79,11 +79,13 @@ func TestUIDiff(t *testing.T) { //nolint:paralleltest // the browser tests share
 		t.Errorf("side by side: text that cannot be read:\n%s", low)
 	}
 
-	// The list of versions: none not older or newer than the other, and the arrow keys going on from the focus left in it.
+	// The list of versions: none not older or newer than the other, the keys going on from the focus left in it.
 	b.eval("document.getElementById('diff-from').focus()")
 	out = append(out, b.eval("[...document.getElementById('diff-from').options].map((o) => o.value + (o.disabled ? '-' : '')).join(' ')"),
 		b.eval("[...document.getElementById('diff-to').options].map((o) => o.value + (o.disabled ? '-' : '')).join(' ')"))
 	b.pressKey(kb.ArrowDown)
+	b.pressKey(kb.ArrowDown)
+	b.pressKey(kb.Enter)
 	b.until("from v1", "location.search === '?diff&from=1&to=3' && diffAnswer.from.n === 1")
 	out = append(out, b.eval("document.activeElement.id + ' ' + document.getElementById('diff-from-open').getAttribute('href')"))
 
@@ -258,6 +260,108 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/a/d/")
 	b.until("its bar narrow", "document.querySelector('#frame-actions .diff-open').offsetWidth > 0")
 	check(t, "ways", out, strings.Join([]string{"true", "true", "false", "/a/e/?diff See what changed (d)", `["e","one"]`, "true none Close the diff (d) true"}, "|"))
+}
+
+// TestUIDiffPick has the versions chosen from the browser's own list, drawn by the page: the arrows open it and move in it, asking for nothing
+// until Enter, the page's keys wait until it is closed, and a browser that does not read base-select has the list it has always had.
+func TestUIDiffPick(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := diffSite(t)
+	b := s.b
+	b.size(1440, 300, false)
+	openDiff(b, "/a/d/?diff")
+	const state = `(() => {
+		const e = document.getElementById('diff-from');
+		return [e.matches(':open'), e.value, diffAnswer.from.n, diffAt, document.activeElement.localName, window.asked ?? 0].join(' ');
+	})()`
+	b.eval(`(() => { const real = window.fetch; window.fetch = (u, i) => { if (String(u).includes('/diff?')) window.asked = (window.asked ?? 0) + 1; return real(u, i); }; })()`)
+	b.eval("document.getElementById('diff-from').focus()")
+	out := make([]string, 0, 16)
+	out = append(out, b.eval("getComputedStyle(document.getElementById('diff-from')).appearance"), b.eval(state))
+	// Closed, the arrows open it, the version as it was; the versions that cannot be chosen are passed over.
+	b.pressKey(kb.ArrowDown)
+	out = append(out, b.eval(state), b.eval("document.activeElement.value"))
+	b.still()
+	if low := b.eval(measureContrast); low != "" {
+		t.Errorf("open: text that cannot be read:\n%s", low)
+	}
+	// Open, the page has no key, until Escape closes it with nothing chosen.
+	for _, key := range []string{"n", "p", "d", "j", "k"} {
+		b.pressKey(key)
+	}
+	out = append(out, b.eval(state), b.eval("location.pathname + location.search"))
+	b.pressKey(kb.Escape)
+	out = append(out, b.eval(state))
+	// Closed, the page's keys are its own.
+	b.pressKey("n")
+	out = append(out, b.eval(state))
+	b.pressKey("n")
+	b.pressKey("p")
+	out = append(out, b.eval(state))
+	// Opened by the mouse, no key of the page's either.
+	r := b.rect("document.getElementById('diff-from')")
+	b.mouse(chromedp.MousePressed, r.X+r.Width/2, r.Y+r.Height/2, 1)
+	b.mouse(chromedp.MouseReleased, r.X+r.Width/2, r.Y+r.Height/2, 1)
+	b.until("opened", "document.getElementById('diff-from').matches(':open')")
+	b.pressKey("n")
+	out = append(out, b.eval(state))
+	b.pressKey(kb.Escape)
+	// Open, moved and chosen: asked once, and the place goes back to the top with the answer.
+	b.pressKey("n")
+	b.pressKey(kb.ArrowDown)
+	b.pressKey(kb.ArrowDown)
+	out = append(out, b.eval(state))
+	b.pressKey(kb.Enter)
+	out = append(out, b.until("from v1", "diffAnswer.from.n === 1 && "+state))
+	b.pressKey("n")
+	out = append(out, b.eval(state))
+	b.pressKey("d")
+	b.until("closed", "location.search === ''")
+	check(t, "pick", out, strings.Join([]string{
+		"base-select", "false 2 2 -1 select 0",
+		"true 2 2 -1 option 0", "2",
+		"true 2 2 -1 option 0", "/a/d/?diff",
+		"false 2 2 -1 select 0",
+		"false 2 2 0 select 0",
+		"false 2 2 0 select 0",
+		"true 2 2 0 option 0",
+		"true 2 2 1 option 0",
+		"false 1 1 -1 select 1",
+		"false 1 1 0 select 1",
+	}, "|"))
+
+	// At a phone's width the list stays in the window.
+	b.size(400, 800, false)
+	openDiff(b, "/a/d/?diff")
+	b.eval("document.getElementById('diff-from').focus()")
+	b.pressKey(kb.ArrowDown)
+	if got := b.eval(`(() => {
+		const o = document.activeElement.getBoundingClientRect(), e = document.getElementById('diff-from').getBoundingClientRect();
+		return o.left >= 0 && o.right <= innerWidth && o.bottom <= innerHeight && e.right <= innerWidth;
+	})()`); got != "true" {
+		t.Errorf("at a phone's width the list leaves the window")
+	}
+	b.pressKey(kb.Escape)
+
+	// Without the rules for base-select, as a browser that does not read them: the same height and words, the list its own, chosen the same.
+	b.size(1440, 900, false)
+	openDiff(b, "/a/d/?diff")
+	b.eval(`(() => {
+		for (const sheet of document.styleSheets) {
+			for (let i = sheet.cssRules.length - 1; i >= 0; i--) {
+				if (sheet.cssRules[i] instanceof CSSSupportsRule) sheet.deleteRule(i);
+			}
+		}
+		document.getElementById('diff-from').focus();
+	})()`)
+	if got := b.eval("getComputedStyle(document.getElementById('diff-from')).appearance + ' ' + getComputedStyle(document.getElementById('diff-from')).height + ' ' + document.getElementById('diff-from').offsetWidth"); strings.HasPrefix(got, "base-select") || !strings.Contains(got, " 32px ") {
+		t.Errorf("without base-select: %s", got)
+	}
+	b.still()
+	if low := b.eval(measureContrast); low != "" {
+		t.Errorf("without base-select: text that cannot be read:\n%s", low)
+	}
+	b.pressKey(kb.ArrowDown)
+	b.until("from v1 at once", "location.search === '?diff&from=1&to=3' && diffAnswer.from.n === 1")
 }
 
 // TestUIDiffClose closes from the button by the three ways to show it: on one line or wrapped, within the window, and what is on top where it
