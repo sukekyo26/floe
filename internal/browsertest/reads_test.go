@@ -148,3 +148,15 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.eval(`{ const f = document.createElement('iframe'); f.src = '/a/nested/'; document.body.append(f); }`)
 	waitRead("the page to be read in a frame framed", "nested")
 }
+
+// A page opened beside the list is read as in its frame: the list's next read has no dot on it, and the row stays chosen.
+func TestUIReadBeside(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "read/side.yaml", "side", "<p>side</p>"), "--slug", "side")
+	b.navigate("/")
+	b.until("the row", "document.querySelector('#list li[data-slug=side] .dot')")
+	b.eval("document.querySelector('#list li[data-slug=side] .title').click()")
+	b.until("the row read", "document.querySelector('#list li[data-slug=side] .ring') && document.querySelector('#list li.picked')?.dataset.slug === 'side'")
+	check(t, "news", []string{b.eval("document.getElementById('news').hidden")}, "true")
+}

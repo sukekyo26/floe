@@ -101,7 +101,7 @@
   .news { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--new); text-decoration: none; white-space: nowrap; }
   .news:hover { text-decoration: underline; }
   /* The way back to the list on a narrow screen, in place of the logo's room */
-  .back { display: none; }
+  .icon-btn.back { display: none; }
   .badge {
     flex: none; padding: 0.15rem 0.5rem; font-size: var(--text-label); font-weight: 600; color: var(--muted);
     background: var(--subtle); border: 1px solid var(--line); border-radius: 999px;
@@ -431,6 +431,7 @@
   .state p { margin: 0; max-width: 34rem; }
   .state strong { color: var(--fg); font-size: 1rem; }
   .state a { color: var(--fg); }
+  .state a.btn { text-decoration: none; }
   .state code { font-family: var(--mono); font-size: 0.8em; background: var(--subtle); padding: 0.1rem 0.35rem; border-radius: var(--corner-small); overflow-wrap: anywhere; }
   .link-btn { background: none; border: 0; padding: 0; color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
   .error { margin: 0; padding: 0.65rem 0.9rem; border-radius: var(--corner-menu); color: var(--danger); background: var(--danger-soft); white-space: pre-wrap; }
@@ -484,7 +485,7 @@
     .reader { display: none; }
     .news { display: none; }
     .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
-    .back { display: inline-flex; }
+    .icon-btn.back { display: inline-flex; }
     .bar-inner:has(> .search:not([hidden])) .bar-end { margin-left: auto; }
     .bar-inner > .search { flex: 0 0 36px; margin-inline: 0; transition: flex-basis 0.15s; }
     .bar-inner > .search:is(:focus-within, :has(input:not(:placeholder-shown))) { flex: 1 1 auto; }
@@ -938,6 +939,7 @@
   // Whether an entry has the words searched (lowercased) in its title, description, slug, project, path, template or tags; any, for none
   const matches = (a, q) => !q || [a.title, a.description, a.slug, a.project, a.path, a.template, ...(a.tags ?? [])].join(' ').toLowerCase().includes(q);
 
+  // LIMIT: the row chosen is kept in no URL: a reload shows the list with none chosen. Keep it in the URL if that comes to matter
   // Picks the entries by the shelf and the search, in the server's order: the newest first. Shared by the list and by the
   // pages j and k go through in the frame
   function arrange(state) {
