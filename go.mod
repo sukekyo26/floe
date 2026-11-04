@@ -8,6 +8,7 @@ require (
 	github.com/expr-lang/expr v1.17.8
 	github.com/goccy/go-yaml v1.19.2
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
+	github.com/sergi/go-diff v1.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/tdewolff/parse/v2 v2.8.20
 	github.com/yuin/goldmark v1.8.6

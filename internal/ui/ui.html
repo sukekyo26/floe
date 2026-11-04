@@ -17,6 +17,9 @@
     --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00;
     /* What is new to the viewer, and a link whose file is gone */
     --new: #2558c4; --new-soft: #eaf1fd; --chg: #8a6100; --chg-soft: #fdf3d6;
+    /* Words gone and added between two versions: on their line's ground, and marked within it */
+    --del: #a32820; --del-soft: #fbeae8; --del-mark: #f6d3cf;
+    --ins: #0f6b45; --ins-soft: #e6f6ed; --ins-mark: #c9ebd8;
     --danger: #b8332b; --danger-soft: #f8e3e1; --on-danger: #fff; --frame-bg: #fff;
     /* The logo's: its sky, its two lines, its edge and its three faces */
     /* LIMIT: the icon's data URI (the <link rel="icon">) copies these by hand, as a data URI cannot read a variable */
@@ -93,7 +96,7 @@
   .brand .face-front { fill: var(--logo-face-front); }
   .brand svg { width: 26px; height: 26px; flex: none; filter: drop-shadow(0 2px 6px var(--brand-glow)); }
   .bar-end { margin-left: auto; display: flex; align-items: center; gap: 0.6rem; flex: none; }
-  .frame-actions { display: flex; gap: 0.15rem; }
+  .frame-actions { display: flex; align-items: center; gap: 0.15rem; }
   /* The page's title in the frame's bar, set off from the logo by a line */
   .frame-title { position: relative; min-width: 0; margin-left: 0.6rem; padding-left: 0.9rem; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .frame-title::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; border-left: 1px solid var(--line); }
@@ -117,6 +120,125 @@
   .server.down::before { background: var(--danger); animation: none; }
   @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 var(--pulse); } 50% { box-shadow: 0 0 0 4px transparent; } }
 
+  /* The page of what changed between two versions, and the words over a page that tell it */
+
+  .dnote { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; padding: 0.45rem 1rem; font-size: var(--text-small); color: var(--fg); background: var(--new-soft); border-bottom: 1px solid var(--line); }
+  .dnote a { color: var(--new); font-weight: 700; }
+
+  .diff:not([hidden]) { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--frame-bg); }
+  .dhead { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; padding: 0.6rem 1rem; background: var(--bg); border-bottom: 1px solid var(--line); font-size: var(--text-small); }
+  .dvers { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.75rem; }
+  .dver { display: flex; align-items: center; gap: 0.35rem; min-width: 0; color: var(--muted); }
+  .dver label { white-space: nowrap; }
+  .dver select { min-width: 0; max-width: 100%; height: 2rem; padding: 0 0.4rem; font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--box-line); border-radius: var(--corner-small); }
+  /* LIMIT: a browser without base-select (Firefox and Safari for now) shows its own list, in the rule above, which works the same */
+  @supports (appearance: base-select) {
+    .dver select, .dver select::picker(select) { appearance: base-select; }
+    .dver select {
+      display: inline-flex; align-items: center; justify-content: space-between; gap: 0.4rem; padding: 0 0.5rem 0 0.75rem; font: 500 var(--text-small)/1.4 var(--body);
+      border-color: var(--line); border-radius: 999px; box-shadow: var(--shadow-sm); cursor: pointer;
+    }
+    .dver select:hover, .dver select:open { border-color: var(--faint); }
+    .dver select:open { outline: none; }
+    .dver select::picker-icon { color: var(--muted); }
+    .dver select::picker(select) {
+      margin-block: 4px; max-height: 14rem; overflow-y: auto; padding: var(--menu-pad);
+      color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-menu); box-shadow: var(--shadow);
+    }
+    .dver option { min-height: 0; padding: 0.4rem 0.6rem; font: 400 var(--text-small)/1.4 var(--body); white-space: nowrap; border-radius: calc(var(--corner-menu) - var(--menu-pad)); cursor: pointer; }
+    .dver option:hover { background: var(--subtle); }
+    .dver option:checked { font-weight: 700; background: none; }
+    .dver option:checked:hover { background: var(--subtle); }
+    /* The one the keys are on, as in .suggest */
+    .dver option:focus-visible { outline: none; background: var(--subtle); box-shadow: inset 2px 0 0 var(--ink); }
+    .dver option:disabled { color: var(--faint); background: none; cursor: default; }
+  }
+  .dcount { margin: 0; display: flex; flex-wrap: wrap; gap: 0 0.75rem; color: var(--muted); }
+  .dcount b { font-weight: 700; }
+  .dcount .c { color: var(--chg); } .dcount .a { color: var(--ins); } .dcount .r { color: var(--del); } .dcount .s { color: var(--fg); }
+  .dtail { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; }
+  .dviews { display: flex; gap: 0.35rem; }
+  .dviews .btn, .dtail > .btn { height: 2rem; padding: 0 0.75rem; font-size: var(--text-small); white-space: nowrap; }
+
+  .dmain { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: var(--toc) minmax(0, 1fr); background: var(--panel); }
+  .dmain > .grip { position: absolute; top: 0; }
+  .dmain > .side-show { position: absolute; top: 8px; }
+  .dtoc { min-height: 0; display: flex; flex-direction: column; font-size: var(--text-small); }
+  .dtoc .side-head { flex: none; padding-inline: 1rem 0.4rem; }
+  .dtoc h2 { margin: 0; }
+  /* What scrolls holds what is placed in it, so that the .sr-only words, absolute, are cut with the rest and do not widen the page past it */
+  .dtoc-list, .dbody { position: relative; }
+  .dtoc-list { flex: 1; min-height: 0; overflow: auto; padding: 0 0.5rem; }
+  .dtoc-item { width: 100%; display: flex; align-items: center; gap: 0.4rem; min-height: 1.75rem; padding: 0.1rem 0.5rem; color: var(--muted); border-radius: var(--corner-small); }
+  .dtoc-item span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dtoc button { font: inherit; text-align: left; cursor: pointer; background: none; border: 0; color: var(--fg); font-weight: 650; }
+  .dtoc button.on { background: var(--sel); }
+  .dtoc .mk { margin-left: auto; }
+  .dtoc .lv2 > .dtoc-item { padding-left: 1.2rem; } .dtoc .lv3 > .dtoc-item { padding-left: 1.9rem; }
+  .dkeys { flex: none; margin: 0; padding: 0.6rem 1rem; color: var(--muted); font-size: var(--text-label); line-height: 1.9; border-top: 1px solid var(--line); }
+  .dkeys kbd { margin-right: 0.3rem; font: inherit; padding: 0 0.3rem; background: var(--subtle); border: 1px solid var(--line); border-radius: var(--corner-small); }
+
+  .mk { flex: none; display: inline-block; padding: 0 0.35rem; font-size: var(--text-label); font-weight: 700; line-height: 1.5; border-radius: 999px; }
+  .mk.changed { color: var(--chg); background: var(--chg-soft); }
+  .mk.added { color: var(--ins); background: var(--ins-soft); }
+  .mk.removed { color: var(--del); background: var(--del-soft); }
+
+  .dbody { grid-column: 2; min-width: 0; overflow: auto; background: var(--frame-bg); border-left: 1px solid var(--line); font-size: var(--text); line-height: 1.7; }
+  .dcols, .drow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dcols { position: sticky; top: 0; z-index: 1; background: var(--frame-bg); border-bottom: 1px solid var(--line); font-size: var(--text-small); color: var(--muted); }
+  .dcols > div { display: flex; gap: 0.4rem; align-items: center; padding: 0.4rem 1.25rem; }
+  .dcols > div + div, .drow > div + div { border-left: 1px solid var(--line); }
+  .drow, .dsame, .dh, .bk { scroll-margin-top: 2.5rem; }
+  .drow > div { min-width: 0; padding: 0.15rem 1.25rem; }
+  .drow > .del { background: var(--del-soft); }
+  .drow > .ins { background: var(--ins-soft); }
+  .drow > .blank { background: var(--subtle); }
+
+  .dflow { max-width: 46rem; margin-inline: auto; padding: 0 1.25rem 1.5rem; }
+  .dflow .bk { margin-inline: -0.5rem; padding: 0.15rem 0.5rem; border-radius: var(--corner-small); }
+  .dflow .bk.changed { background: var(--chg-soft); }
+  .dflow .bk.del { background: var(--del-soft); }
+  .dflow .bk.ins { background: var(--ins-soft); }
+
+  .dh { margin: 0; padding-top: 0.75rem; font-size: 1rem; font-weight: 700; color: var(--fg); }
+  .dh .mk { margin-left: 0.4rem; vertical-align: 0.1em; }
+  .dh.lv1 { font-size: 1.15rem; }
+  .dh.nohead { font-size: var(--text-small); font-weight: 400; color: var(--muted); }
+  .dtext { color: var(--muted); }
+  .dtext.lit { color: var(--fg); }
+  .dli { display: list-item; margin-left: 1.1rem; }
+  .dpre { font-family: var(--mono); font-size: var(--text-small); white-space: pre-wrap; min-height: 1lh; }
+  .diff del { color: var(--del); background: var(--del-mark); text-decoration: line-through; border-radius: var(--corner-small); }
+  .diff ins { color: var(--ins); background: var(--ins-mark); text-decoration: none; border-radius: var(--corner-small); }
+
+  .dfig { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.5rem; }
+  .dtag { flex: none; padding: 0 0.4rem; font-size: var(--text-label); font-weight: 700; color: var(--muted); background: var(--frame-bg); border: 1px solid var(--box-line); border-radius: var(--corner-small); }
+  .dfig small { flex-basis: 100%; font-size: var(--text-small); color: var(--muted); }
+
+  .dsame { display: flex; align-items: center; gap: 0.75rem; margin: 0.6rem 0; padding: 0 1.25rem; font-size: var(--text-small); color: var(--muted); }
+  .dflow .dsame { padding: 0; }
+  .dsame::before, .dsame::after { content: "" / ""; flex: 1 1 1.5rem; border-top: 1px solid var(--line); }
+  .dsame > span { flex: 0 1 auto; display: flex; min-width: 0; gap: 0.4rem; }
+  .dsame .names { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dsame .word { flex: none; }
+  @media (max-width: 56rem) {
+    .dmain { grid-template-columns: minmax(0, 1fr); }
+    .dtoc, .dmain > .grip, .dmain > .side-show { display: none; }
+    .dbody { grid-column: auto; border-left: 0; }
+  }
+  @media (max-width: 40rem) {
+    .diff:not([hidden]) { display: block; overflow: auto; }
+    .dbody { overflow: visible; }
+    .dhead { padding: 0.6rem 0.75rem; }
+    .dvers, .dver, .dver select { width: 100%; }
+    .dver label { flex: none; min-width: 3.2rem; }
+    .dtail { margin-left: 0; }
+    .dviews .btn, .dtail > .btn { padding: 0 0.6rem; }
+    .dflow { padding-inline: 0.75rem; }
+    .drow > div, .dcols > div { padding-inline: 0.5rem; }
+    .dnote { padding-inline: 0.75rem; }
+  }
+
   /* The frame: the iframe fills the space under the header bar. A page without a background of its own shows on the browser's default white */
   .framed body { height: 100dvh; display: flex; flex-direction: column; }
   /* No color-scheme here or on the root: Chrome hands an iframe's to the page in it as its prefers-color-scheme, the OS's without one */
@@ -129,7 +251,7 @@
   }
   .side.over { box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); width: min(80vw, var(--side-width)); }
   .side-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.1rem 0.45rem 0.5rem; background: var(--panel); }
-  .side-head span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 var(--text-label)/1.2 var(--mono); letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
+  .side-head :is(span, h2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 var(--text-label)/1.2 var(--mono); letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
   .side :is(a, button.dir) {
     display: block; width: 100%; padding: 0.22rem 0.5rem 0.22rem calc(0.3rem + var(--d) * 1.1rem); border: 0; border-radius: var(--corner-small); background: none;
     color: var(--fg); font: inherit; text-align: left; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -154,7 +276,7 @@
      a new tab outside it: print the page from a browser */
   .print-alone { display: none; }
   @media print {
-    .framed :is(.bar, .frame, .toasts, .side, .grip, .side-show) { display: none; }
+    .framed :is(.bar, .frame, .diff, .dnote, .toasts, .side, .grip, .side-show) { display: none; }
     .framed:has(#notfound[hidden]) .print-alone { display: block; margin: 2rem; color: var(--fg); font: 1rem/1.7 var(--body); }
   }
 
@@ -216,6 +338,7 @@
     font-weight: 600; background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
     box-shadow: var(--shadow-sm); transition: background-color 0.15s, border-color 0.15s, filter 0.15s;
   }
+  a.btn { color: var(--fg); text-decoration: none; }
   .btn:hover { border-color: var(--faint); }
   .btn.primary {
     color: var(--on-ink); border-color: transparent; background: var(--ink); box-shadow: var(--shadow-sm);
@@ -403,6 +526,9 @@
   .icon-btn[aria-pressed="true"] { color: var(--fg); }
   .icon-btn[aria-pressed="true"] svg { fill: currentColor; }
   .star[aria-pressed="true"] { color: var(--star); }
+  /* The diff open: the button that closes it, in the place of the one that opened it */
+  .diff-open.closing { color: var(--on-ink); background: var(--ink); border-radius: 50%; }
+  .diff-open.closing:hover { color: var(--on-ink); background: var(--ink-hover); }
   .copy .done, .copy.copied > svg { display: none; }
   .copy.copied .done { display: block; color: var(--good); }
   .delete.armed { color: var(--danger); background: var(--danger-soft); border-color: var(--armed-line); font-weight: 650; }
@@ -531,7 +657,6 @@
   .state p { margin: 0; max-width: 34rem; }
   .state strong { color: var(--fg); font-size: 1rem; }
   .state a { color: var(--fg); }
-  .state a.btn { text-decoration: none; }
   .state code { font-family: var(--mono); font-size: 0.8em; background: var(--subtle); padding: 0.1rem 0.35rem; border-radius: var(--corner-small); overflow-wrap: anywhere; }
   .link-btn { background: none; border: 0; padding: 0; color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
   .error { margin: 0; padding: 0.65rem 0.9rem; border-radius: var(--corner-menu); color: var(--danger); background: var(--danger-soft); white-space: pre-wrap; }
@@ -602,7 +727,7 @@
   @media (max-width: 40rem) {
     #narrow-filter { margin-left: auto; }
     .shelf .views [data-view="archived"] .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-    .framed #frame-actions { display: none; }
+    .framed #frame-actions > :not(.diff-open) { display: none; }
     .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
     .bar-inner:has(> .search:not([hidden])) .bar-end { margin-left: auto; }
     .bar-inner > .search { flex: 0 0 36px; margin-inline: 0; transition: flex-basis 0.15s; }
@@ -735,6 +860,36 @@
 <button type="button" class="icon-btn side-show" id="side-show" aria-expanded="false" aria-controls="side" title="{{.Msg "ui_side_show"}}" aria-label="{{.Msg "ui_side_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
 <!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
 <iframe class="frame" id="frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
+<!-- What changed between two versions, in words the server read from them: never the page's HTML, which runs in the sandbox alone -->
+<main class="diff" id="diff" hidden>
+  <div class="dhead" id="diff-head">
+    <div class="dvers">
+      <div class="dver"><label for="diff-from">{{.Msg "ui_diff_before"}}</label><select id="diff-from"></select><a class="icon-btn" id="diff-from-open" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></div>
+      <div class="dver"><label for="diff-to">{{.Msg "ui_diff_after"}}</label><select id="diff-to"></select><a class="icon-btn" id="diff-to-open" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a></div>
+    </div>
+    <p class="dcount" id="diff-count" role="status"></p>
+    <div class="dtail">
+      <div class="dviews" role="group" aria-label="{{.Msg "ui_diff_views"}}">
+        <button type="button" class="btn" data-diff-view="side">{{.Msg "ui_diff_view_side"}}</button>
+        <button type="button" class="btn" data-diff-view="all">{{.Msg "ui_diff_view_all"}}</button>
+        <button type="button" class="btn" data-diff-view="only">{{.Msg "ui_diff_view_only"}}</button>
+      </div>
+      <a class="btn" id="diff-close" title="{{.Msg "ui_diff_close_title"}}">{{.Msg "ui_close"}}</a>
+    </div>
+  </div>
+  <p class="dnote" id="diff-url-note" hidden>{{.Msg "ui_diff_bad_url"}}</p>
+  <div class="dmain" id="diff-main">
+    <nav class="dtoc" id="diff-toc-nav" aria-labelledby="diff-toc-title">
+      <div class="side-head"><h2 id="diff-toc-title">{{.Msg "ui_diff_toc"}}</h2><button type="button" class="icon-btn" id="diff-toc-hide" aria-expanded="true" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_hide"}}" aria-label="{{.Msg "ui_diff_toc_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
+      <div class="dtoc-list" id="diff-toc"></div>
+      <p class="dkeys"><kbd>n</kbd>{{.Msg "ui_diff_next"}}<br><kbd>p</kbd>{{.Msg "ui_diff_prev"}}<br><kbd>d</kbd>{{.Msg "ui_diff_close"}}</p>
+    </nav>
+    <div class="grip" id="diff-toc-grip" role="separator" aria-orientation="vertical" aria-controls="diff-toc-nav" aria-label="{{.Msg "ui_diff_toc_width"}}" tabindex="0" hidden></div>
+    <button type="button" class="icon-btn side-show" id="diff-toc-show" aria-expanded="false" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_show"}}" aria-label="{{.Msg "ui_diff_toc_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+    <div class="dbody" id="diff-body"></div>
+  </div>
+  <div class="state notfound" id="diff-none" hidden><p>{{.Msg "ui_diff_none"}}</p><a class="btn" id="diff-page">{{.Msg "ui_diff_open_page"}}</a></div>
+</main>
 <p class="print-alone" id="print-alone"><span id="print-alone-text">{{.Msg "ui_print_alone" (.Msg "ui_open_raw")}}</span> <a id="print-raw"></a></p>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="state notfound" id="notfound" hidden>
@@ -758,12 +913,12 @@
     <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></svg><div><h2 id="keys-title">{{.Msg "ui_keys"}}</h2><p class="lead keys-note" id="keys-note-list">{{.Msg "ui_keys_note_list"}}</p><p class="lead keys-note" id="keys-note-frame">{{.Msg "ui_keys_note_frame"}}</p></div></div>
     <div class="keys-part" id="keys-list">
       <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↓</kbd></dt><dd>{{.Msg "ui_keys_next_row"}}</dd><dt><kbd>k</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↑</kbd></dt><dd>{{.Msg "ui_keys_prev_row"}}</dd><dt><kbd>Enter</kbd></dt><dd>{{.Msg "ui_keys_whole"}}</dd></dl></section>
-      <section><h3>{{.Msg "ui_keys_row"}}</h3><dl><dt><kbd>x</kbd></dt><dd>{{.Msg "ui_keys_select"}}</dd><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd></dl></section>
+      <section><h3>{{.Msg "ui_keys_row"}}</h3><dl><dt><kbd>x</kbd></dt><dd>{{.Msg "ui_keys_select"}}</dd><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt class="diff-go"><kbd>d</kbd></dt><dd class="diff-go">{{.Msg "ui_keys_diff"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd></dt><dd>{{.Msg "ui_keys_search"}}</dd><dt><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
     </div>
     <div class="keys-part" id="keys-frame">
       <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd></dt><dd>{{.Msg "ui_keys_next_page"}}</dd><dt><kbd>k</kbd></dt><dd>{{.Msg "ui_keys_prev_page"}}</dd><dt><kbd>h</kbd></dt><dd>{{.Msg "ui_back_to_list"}}</dd></dl></section>
-      <section><h3>{{.Msg "ui_keys_page"}}</h3><dl><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd></dl></section>
+      <section><h3>{{.Msg "ui_keys_page"}}</h3><dl><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt class="diff-go"><kbd>d</kbd></dt><dd class="diff-go">{{.Msg "ui_keys_diff"}}</dd><dt class="diff-key"><kbd>d</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_close"}}</dd><dt class="diff-key"><kbd>n</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_next"}}</dd><dt class="diff-key"><kbd>p</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_prev"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
     </div>
     <div class="dialog-actions"><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
@@ -892,6 +1047,7 @@
 <!-- The bar over a page, beside the list and in the frame -->
 <template id="page-actions">
   <span class="frame-actions">
+      <a class="icon-btn diff-open" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5h7.5v15H3zM13.5 4.5H21v15h-7.5zM5.5 9h2.5M5.5 15h2.5M16 9h2.5M16 15h2.5"/></svg></a>
       <button type="button" class="icon-btn star">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
       </button>
@@ -946,6 +1102,8 @@
       // A person opened it the first time it tells; again, the page drew itself anew
       const say = opening;
       opening = false;
+      // Drawn anew at another version, what the words say and where they lead no longer agree
+      if (noticeTo !== null && noticeTo !== read.n) clearNotice();
       const slug = shownSlug();
       if (slug !== keptUnread) tellRead(slug, { read: { n: read.n, at: read.at }, say });
     }
@@ -991,7 +1149,11 @@
         }
         if (res.status === 404) letGo();
         else if (!value) unreadDone(to);
-        else if (value.say && (await res.json()).cleared && keptUnread !== to && to === shownSlug()) readDone(to);
+        else if (value.say && (await res.json()).cleared && keptUnread !== to && to === shownSlug()) {
+          readDone(to);
+          // Not waited for: it holds up the reads of other pages
+          showNotice(to, value.read.n);
+        }
       } catch (err) {
         // A read is told again the next time it is opened; a mark, only if pressed again. api tells if the server was not reached
         if (!value) fail(t('ui_unread_failed', err.message));
@@ -1060,6 +1222,9 @@
   // The page of a folder the frame shows (?file=), its path under the folder; '' for any other page
   const FILE = framed ? new URLSearchParams(location.search).get('file') ?? '' : '';
   // What the iframe loads: the page at ?raw, a folder's page at its path under the folder
+  // A stored page's two versions compared in the frame, in place of the page: its iframe is not loaded, so that opening it reads nothing
+  const DIFF = Boolean(framed) && !FILE && new URLSearchParams(location.search).has('diff');
+  const canDiff = (a) => !a.path && a.versionCount >= 2;
   const frameSrc = FILE ? FILE.split('/').map(encodeURIComponent).join('/') : '?raw';
   // The frame URL of an entry, or of a folder's page (file), and the page alone at its own URL
   const pageHref = (x) => (x.file ? `/a/${x.slug}/?file=${encodeURIComponent(x.file)}` : `/a/${x.slug}/`);
@@ -1109,7 +1274,8 @@
       return res;
     } catch (e) {
       // One cut off by its own time limit (the store's lock held long) tells nothing of the server
-      if (e.name !== 'TimeoutError') setServer(false);
+      // One called off by its own caller, likewise
+      if (e.name !== 'TimeoutError' && e.name !== 'AbortError') setServer(false);
       throw e;
     }
   }
@@ -1227,7 +1393,10 @@
   // Whether the next read told is of a page a person opened: the toast says so of no other
   let opening = true;
   function markUnread(slug) {
-    if (slug === shownSlug()) keptUnread = slug;
+    if (slug === shownSlug()) {
+      keptUnread = slug;
+      clearNotice();
+    }
     tellRead(slug, null);
   }
   // Kept on screen for the time it takes to read and reach, not moving the focus, so that j and k go on through the list
@@ -1827,11 +1996,24 @@
   }
 
   // The bar over a page, the page's star and links: of a folder's page, its path and the page alone, as it holds no state of its own
+  function drawDiffOpen(box, a, file) {
+    const open = box.querySelector('.diff-open');
+    const closing = DIFF && box.id === 'frame-actions';
+    open.hidden = !closing && (Boolean(file) || !canDiff(a));
+    open.href = closing ? `/a/${a.slug}/` : `/a/${a.slug}/?diff`;
+    open.classList.toggle('closing', closing);
+    open.title = t(closing ? 'ui_diff_close_title' : 'ui_diff_title');
+    open.setAttribute('aria-label', open.title);
+    if (closing) $('diff-close').href = open.href;
+    // Beside the list, the list's order goes on with j and k; elsewhere the one kept goes on
+    open.onclick = box.id === 'read-actions' ? keepOrder : null;
+  }
   function drawActions(box, a, file) {
     const star = box.querySelector('.star');
     star.hidden = Boolean(file);
     toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.onclick = () => toggleFavorite(a);
+    drawDiffOpen(box, a, file);
     const copy = box.querySelector('.copy');
     copy.hidden = !file;
     copy.onclick = () => copyPath(`${a.path}/${file}`, copy);
@@ -1854,6 +2036,7 @@
     if (href === readLoaded) return;
     readLoaded = href;
     keptUnread = null;
+    clearNotice();
     opening = true;
     pageToast()?.remove();
     $('read-frame').contentWindow.location.replace(href);
@@ -2380,17 +2563,22 @@
   const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
   const sideOpen = new Set(FILE ? dirOf(FILE).split('/').map((_, i, all) => all.slice(0, i).join('/')).concat(dirOf(FILE)) : []);
   const sideListings = new Map();
-  // Its width and whether it shows, the viewer's, kept in the browser for every folder; without storage the default
+  // A column's width and whether it shows, the viewer's, kept in the browser; without storage the default
+  function keptSide(key, width) {
+    const kept = { width, open: true };
+    try {
+      const saved = JSON.parse(localStorage.getItem(key));
+      if (Number.isFinite(saved?.width)) kept.width = saved.width;
+      if (typeof saved?.open === 'boolean') kept.open = saved.open;
+    } catch {
+      // Storage is unavailable, or holds something else
+    }
+    return kept;
+  }
+  // The tree's, for every folder
   const SIDE_KEY = 'frame.side';
   const SIDE_MIN = 160;
-  let side = { width: 280, open: true };
-  try {
-    const saved = JSON.parse(localStorage.getItem(SIDE_KEY));
-    if (Number.isFinite(saved?.width)) side.width = saved.width;
-    if (typeof saved?.open === 'boolean') side.open = saved.open;
-  } catch {
-    // Storage is unavailable, or holds something else
-  }
+  const side = keptSide(SIDE_KEY, 280);
   // A narrow frame shows the tree over the page when asked, without its edge, and keeps nothing of it
   const sideNarrow = matchMedia('(max-width: 40rem)');
   let sideOver = false;
@@ -2682,6 +2870,434 @@
     });
   }
 
+  const tagged = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  };
+
+  // The words over a page newly at another version than the one read: only once it was read, as what was read before is known then.
+  // They go as another page loads or this one is marked unread or drawn anew at another version; noticeTurn tells an answer come too late
+  // LIMIT: all of /diff is read for its counts. Add an answer of the counts alone if that comes to weigh
+  let noticeTo = null;
+  let noticeTurn = 0;
+  function clearNotice() {
+    noticeTo = null;
+    noticeTurn++;
+    document.querySelector('.dnote.page-note')?.remove();
+  }
+  async function showNotice(slug, n) {
+    clearNotice();
+    noticeTo = n;
+    const turn = noticeTurn;
+    try {
+      const base = `/api/artifacts/${encodeURIComponent(slug)}`;
+      const { read } = await (await api(`${base}/versions`)).json();
+      if (!read || read >= n) return;
+      const res = await api(`${base}/diff?from=${read}&to=${n}`);
+      if (!res.ok) return;
+      const { counts } = await res.json();
+      const changed = counts.changed + counts.added + counts.removed;
+      if (changed === 0 || turn !== noticeTurn) return;
+      const note = tagged('div', 'dnote page-note', t('ui_diff_notice', read, changed));
+      const go = tagged('a', '', t('ui_diff_notice_go'));
+      go.href = `/a/${slug}/?diff`;
+      if (!framed) go.addEventListener('click', keepOrder);
+      note.append(go);
+      $(framed ? 'frame' : 'read-frame').before(note);
+    } catch {
+      // Words that help, not needed: api has told if the server was not reached
+    }
+  }
+
+  // LIMIT: it does not follow a version published while it is open: reload it, or choose. Printed, it says to print the page alone, as a frame does
+  // LIMIT: every row of the answer is drawn at once, which tens of thousands of changes make heavy. Draw them by section if that comes to trouble someone
+  // LIMIT: the contents follow n, p and a press, not the scrolling
+  let diffOpened = false;
+  let diffVersions = [];
+  let diffRead = 0;
+  let diffPair = { from: 0, to: 0 };
+  let diffAnswer = null;
+  let diffCall = null;
+  let diffFailed = false;
+  // The places n and p go through, the last gone to, and each section's place, by its index
+  let diffChanges = [];
+  let diffAt = -1;
+  const VIEW_KEY = 'diff.view';
+  let diffView = 'all';
+  const diffMonth = (iso) => {
+    const d = new Date(iso);
+    const two = (x) => String(x).padStart(2, '0');
+    return `${two(d.getMonth() + 1)}/${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
+  };
+  function verText(v) {
+    const last = diffVersions.at(-1);
+    const note = v.n === last.n ? t('ui_diff_latest') : v.n === diffRead ? t('ui_diff_read_version') : '';
+    return [`v${v.n}`, diffMonth(v.at), note].filter(Boolean).join(' · ');
+  }
+  const hasVersion = (n) => diffVersions.some((v) => v.n === n);
+  const fromFor = (to) => {
+    const older = diffVersions.filter((v) => v.n < to);
+    return hasVersion(diffRead) && diffRead < to ? diffRead : older.at(-1)?.n;
+  };
+  // The pair of the URL, or what it leaves out; one that cannot be compared gives way to the first pair, which it says
+  function firstPair() {
+    const q = new URLSearchParams(location.search);
+    const asked = (name) => {
+      if (!q.has(name)) return undefined;
+      return /^[1-9][0-9]*$/.test(q.get(name)) ? Number(q.get(name)) : NaN;
+    };
+    const last = diffVersions.at(-1).n;
+    const to = asked('to') ?? last;
+    const from = asked('from') ?? fromFor(to);
+    if (hasVersion(from) && hasVersion(to) && from < to) return { from, to };
+    $('diff-url-note').hidden = false;
+    history.replaceState(history.state, '', `${location.pathname}?diff`);
+    return { from: fromFor(last), to: last };
+  }
+  async function openDiff(a) {
+    if (!canDiff(a)) {
+      $('diff-head').hidden = $('diff-main').hidden = true;
+      $('diff-none').hidden = false;
+      $('diff-page').href = `/a/${a.slug}/`;
+      return;
+    }
+    try {
+      const res = await api(`/api/artifacts/${encodeURIComponent(a.slug)}/versions`);
+      if (!res.ok) throw new Error(await res.text());
+      const listed = await res.json();
+      diffVersions = listed.versions;
+      diffRead = listed.read;
+    } catch (err) {
+      showError(t('ui_diff_failed', err.message));
+      return;
+    }
+    let saved = null;
+    try {
+      saved = localStorage.getItem(VIEW_KEY);
+    } catch {
+      // The first view, without storage
+    }
+    diffView = oneColumn.matches ? 'all' : ['side', 'all', 'only'].includes(saved) ? saved : 'side';
+    diffPair = firstPair();
+    drawDiffPicks();
+    await readDiff();
+  }
+  function writeDiffPair() {
+    history.replaceState(history.state, '', `${location.pathname}?diff&from=${diffPair.from}&to=${diffPair.to}`);
+  }
+  // The versions newest first, one that would not be older than the other not to be chosen
+  function drawDiffPicks() {
+    const newest = [...diffVersions].reverse();
+    for (const [name, off] of [['from', (n) => n >= diffPair.to], ['to', (n) => n <= diffPair.from]]) {
+      const sel = $(`diff-${name}`);
+      sel.replaceChildren(...newest.map((v) => {
+        const o = tagged('option', '', verText(v));
+        o.value = v.n;
+        o.disabled = off(v.n);
+        return o;
+      }));
+      sel.value = diffPair[name];
+      const open = $(`diff-${name}-open`);
+      open.href = `?raw&v=${diffPair[name]}`;
+      open.title = t('ui_diff_open_version', diffPair[name]);
+      open.setAttribute('aria-label', open.title);
+    }
+  }
+  // What is shown is of the pair answered, the columns' heads with the rest, whatever is chosen meanwhile. Chosen again, the question
+  // before is called off (arrow keys go through the versions one by one); one that fails goes back to what is shown
+  async function readDiff() {
+    diffCall?.abort();
+    const call = new AbortController();
+    diffCall = call;
+    try {
+      const res = await api(`/api/artifacts/${encodeURIComponent(framed)}/diff?from=${diffPair.from}&to=${diffPair.to}`, { signal: call.signal });
+      if (!res.ok) throw new Error(await res.text());
+      diffAnswer = await res.json();
+      if (diffFailed) {
+        diffFailed = false;
+        showError('');
+      }
+      drawDiff();
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      diffFailed = true;
+      showError(t('ui_diff_failed', err.message));
+      if (!diffAnswer) return;
+      diffPair = { from: diffAnswer.from.n, to: diffAnswer.to.n };
+      drawDiffPicks();
+      writeDiffPair();
+    }
+  }
+  const spansOnly = (b, op) => b.spans.every((x) => x.op === op);
+  const spansText = (spans, skip) => spans.filter((x) => x.op !== skip).map((x) => x.text).join('');
+  const sectionName = (s) => spansText(s.heading, s.state === 'removed' ? '' : 'del') || t('ui_diff_top');
+  const lvOf = (s) => Math.min(Math.max(s.level, 1), 3);
+  const headingChanged = (s) => s.state !== 'changed' || !s.heading.every((x) => x.op === 'same');
+  const said = (word) => tagged('span', 'sr-only', `${word} `);
+  // Words alone: textContent, as what a page says may look like HTML, and this page may call the API
+  function putSpans(box, spans, side) {
+    for (const x of spans) {
+      if (x.op === 'same') box.append(x.text);
+      else if (x.op === 'del' && side !== 'ins') {
+        const e = tagged('del');
+        e.append(said(t('ui_diff_del')), x.text);
+        box.append(e);
+      } else if (x.op === 'ins' && side !== 'del') {
+        const e = tagged('ins');
+        e.append(said(t('ui_diff_ins')), x.text);
+        box.append(e);
+      }
+    }
+  }
+  const DIFF_MARK = {
+    changed: ['ui_diff_mark_changed', 'ui_diff_said_changed'],
+    added: ['ui_diff_mark_added', 'ui_diff_said_added'],
+    removed: ['ui_diff_mark_removed', 'ui_diff_said_removed'],
+  };
+  function diffMark(state) {
+    const m = tagged('span', `mk ${state}`);
+    const [mark, word] = DIFF_MARK[state];
+    m.append(tagged('span', '', t(mark)), said(t(word)));
+    m.firstChild.setAttribute('aria-hidden', 'true');
+    return m;
+  }
+  const DIFF_TAG = { svg: 'ui_diff_svg', img: 'ui_diff_img' };
+  function blockBody(b, side) {
+    if (DIFF_TAG[b.kind]) {
+      const f = tagged('div', 'dfig');
+      const words = tagged('span');
+      putSpans(words, b.spans, side);
+      f.append(tagged('span', 'dtag', t(DIFF_TAG[b.kind])), words);
+      if (b.reshaped) f.append(tagged('small', '', t('ui_diff_reshaped')));
+      return f;
+    }
+    const changed = b.spans.some((x) => x.op !== 'same');
+    const d = tagged('div', `dtext${changed ? ' lit' : ''}${b.kind === 'li' ? ' dli' : ''}${b.kind === 'pre' ? ' dpre' : ''}`);
+    putSpans(d, b.spans, side);
+    return d;
+  }
+  // A diagram or image of no words, the same in both, is an icon: nothing to read
+  const blockUnsaid = (b) => !b.reshaped && spansOnly(b, 'same') && DIFF_TAG[b.kind] && !spansText(b.spans);
+  function sameRow(names) {
+    const box = tagged('div', 'dsame');
+    const text = names.length <= 3 ? names.join(t('ui_diff_join')) : t('ui_diff_others', names[0], names.length - 1);
+    const inner = tagged('span');
+    inner.append(tagged('span', 'names', text), tagged('span', 'word', t('ui_diff_same')));
+    box.append(inner);
+    return box;
+  }
+  function headingOf(s, side) {
+    const h = tagged('h3', `dh lv${lvOf(s)}${s.level === 0 ? ' nohead' : ''}`);
+    if (s.level === 0) h.textContent = t('ui_diff_top');
+    else putSpans(h, s.heading, side);
+    if (s.state !== 'changed') h.append(diffMark(s.state));
+    return h;
+  }
+  // Calls same with each run of sections the same and other with each other section, its index with them
+  function eachRun(sections, same, other) {
+    let run = [];
+    const flush = () => {
+      if (run.length) same(run);
+      run = [];
+    };
+    sections.forEach((s, i) => {
+      if (s.state === 'same') run.push(i);
+      else {
+        flush();
+        other(s, i);
+      }
+    });
+    flush();
+  }
+  function drawSide(box, sections) {
+    const heads = tagged('div', 'dcols');
+    for (const n of [diffAnswer.from.n, diffAnswer.to.n]) heads.append(tagged('div', '', verText(diffVersions.find((v) => v.n === n))));
+    box.append(heads);
+    const cell = (cls, child) => {
+      const c = tagged('div', cls);
+      if (child) c.append(child);
+      return c;
+    };
+    eachRun(sections, (run) => {
+      const r = sameRow(run.map((i) => sectionName(sections[i])));
+      box.append(r);
+    }, (s, at) => {
+      const row = (l, r, change) => {
+        const x = tagged('div', `drow${change ? ' ch' : ''}`);
+        x.dataset.section = at;
+        x.append(l, r);
+        box.append(x);
+      };
+      row(s.state === 'added' ? cell('blank') : cell('', headingOf(s, 'del')), s.state === 'removed' ? cell('blank') : cell('', headingOf(s, 'ins')), headingChanged(s));
+      const blocks = s.blocks ?? [];
+      for (let i = 0; i < blocks.length;) {
+        const b = blocks[i];
+        if (blockUnsaid(b)) {
+          i++;
+        } else if (b.reshaped || !(spansOnly(b, 'del') || spansOnly(b, 'ins') || spansOnly(b, 'same'))) {
+          row(cell('del', blockBody(b, 'del')), cell('ins', blockBody(b, 'ins')), true);
+          i++;
+        } else if (spansOnly(b, 'same')) {
+          row(cell('', blockBody(b)), cell('', blockBody(b)), false);
+          i++;
+        } else {
+          // Blocks gone and blocks added, one after another, stand on the same rows from the first
+          const gone = [];
+          const come = [];
+          while (i < blocks.length && !blocks[i].reshaped && spansOnly(blocks[i], 'del')) gone.push(blocks[i++]);
+          while (i < blocks.length && !blocks[i].reshaped && spansOnly(blocks[i], 'ins')) come.push(blocks[i++]);
+          for (let k = 0; k < Math.max(gone.length, come.length); k++) {
+            row(gone[k] ? cell('del', blockBody(gone[k], 'del')) : cell('blank'), come[k] ? cell('ins', blockBody(come[k], 'ins')) : cell('blank'), true);
+          }
+        }
+      }
+    });
+  }
+  function drawFlow(box, sections, only) {
+    const col = tagged('div', 'dflow');
+    eachRun(sections, (run) => {
+      if (only) return;
+      const r = sameRow(run.map((i) => sectionName(sections[i])));
+      col.append(r);
+    }, (s, at) => {
+      const h = headingOf(s);
+      h.dataset.section = at;
+      h.classList.toggle('ch', headingChanged(s));
+      col.append(h);
+      for (const b of s.blocks ?? []) {
+        const same = !b.reshaped && spansOnly(b, 'same');
+        if (blockUnsaid(b) || (only && same)) continue;
+        const gone = !b.reshaped && spansOnly(b, 'del');
+        const come = !b.reshaped && spansOnly(b, 'ins');
+        const w = tagged('div', `bk ${same ? '' : `ch ${gone ? 'del' : come ? 'ins' : 'changed'}`}`);
+        w.dataset.section = at;
+        w.append(blockBody(b));
+        col.append(w);
+      }
+    });
+    box.append(col);
+  }
+  function drawDiff() {
+    const { counts, sections } = diffAnswer;
+    const count = $('diff-count');
+    count.replaceChildren();
+    const nothing = counts.changed + counts.added + counts.removed === 0;
+    if (nothing) count.textContent = t('ui_diff_nothing');
+    else {
+      for (const [cls, n, word] of [['c', counts.changed, 'ui_diff_changed_n'], ['a', counts.added, 'ui_diff_added_n'], ['r', counts.removed, 'ui_diff_removed_n'], ['s', counts.same, 'ui_diff_same_n']]) {
+        if (n === 0 && (cls === 'a' || cls === 'r')) continue;
+        const part = tagged('span');
+        part.append(tagged('b', cls, n), ` ${t(word)}`);
+        count.append(part);
+      }
+    }
+    for (const b of document.querySelectorAll('[data-diff-view]')) {
+      b.setAttribute('aria-pressed', String(b.dataset.diffView === diffView));
+      b.classList.toggle('primary', b.dataset.diffView === diffView);
+    }
+    const body = $('diff-body');
+    body.replaceChildren();
+    // Of the one that scrolls: the words, or at a phone's width all of it
+    body.scrollTop = 0;
+    $('diff').scrollTop = 0;
+    if (diffView === 'side') drawSide(body, sections);
+    else drawFlow(body, sections, diffView === 'only');
+    // n and p go by what changed: a run of changes one after another is one place
+    diffChanges = [...body.querySelectorAll('.ch')].filter((e) => !e.previousElementSibling?.classList.contains('ch'));
+    diffAt = -1;
+    const list = $('diff-toc');
+    list.replaceChildren();
+    sections.forEach((s, i) => {
+      const row = tagged('div', `lv${lvOf(s)}`);
+      const same = s.state === 'same';
+      const item = tagged(same ? 'div' : 'button', 'dtoc-item');
+      item.append(tagged('span', '', sectionName(s)));
+      row.append(item);
+      list.append(row);
+      // A section the same is words only: there is no change to go to
+      if (same) return;
+      item.type = 'button';
+      item.dataset.section = i;
+      item.append(diffMark(s.state));
+      item.addEventListener('click', () => {
+        body.querySelector(`[data-section="${i}"]`)?.scrollIntoView({ block: 'start' });
+        tocAt(i);
+      });
+    });
+  }
+  function tocAt(i) {
+    for (const b of $('diff-toc').querySelectorAll('button')) b.classList.toggle('on', b.dataset.section === String(i));
+    $('diff-toc').querySelector('.on')?.scrollIntoView({ block: 'nearest' });
+  }
+  // The contents' width and whether they show, within the tree's bounds. Closed, a column is left for the button to open them, which
+  // would stand over the words. Kept apart from the tree's: closing one does not close the other
+  const TOC_KEY = 'diff.toc';
+  const toc = keptSide(TOC_KEY, 240);
+  function layoutToc() {
+    const width = Math.min(Math.max(toc.width, SIDE_MIN), sideMax());
+    $('diff-main').style.setProperty('--toc', toc.open ? `${width}px` : '2.75rem');
+    $('diff-toc-nav').hidden = $('diff-toc-grip').hidden = !toc.open;
+    edgeAt($('diff-toc-grip'), width, width, SIDE_MIN, sideMax());
+    $('diff-toc-show').hidden = toc.open;
+  }
+  function keepToc() {
+    try {
+      localStorage.setItem(TOC_KEY, JSON.stringify(toc));
+    } catch {
+      // Storage is unavailable: the contents are laid out as they are, for now
+    }
+  }
+  function showToc(open) {
+    toc.open = open;
+    layoutToc();
+    keepToc();
+    $(open ? 'diff-toc-hide' : 'diff-toc-show').focus();
+  }
+  function moveChange(step) {
+    const next = diffChanges[diffAt + step];
+    if (!next) return;
+    diffAt += step;
+    next.scrollIntoView({ block: 'center' });
+    tocAt(next.dataset.section);
+  }
+  if (DIFF) {
+    layoutToc();
+    addEventListener('resize', layoutToc);
+    $('diff-toc-hide').addEventListener('click', () => showToc(false));
+    $('diff-toc-show').addEventListener('click', () => showToc(true));
+    dragEdge($('diff-toc-grip'), {
+      set: (width) => {
+        toc.width = Math.min(Math.max(Math.round(width), SIDE_MIN), sideMax());
+        layoutToc();
+      },
+      keep: keepToc,
+    });
+    for (const name of ['from', 'to']) {
+      $(`diff-${name}`).addEventListener('change', (e) => {
+        diffPair[name] = Number(e.target.value);
+        $('diff-url-note').hidden = true;
+        writeDiffPair();
+        drawDiffPicks();
+        readDiff();
+      });
+    }
+    for (const b of document.querySelectorAll('[data-diff-view]')) {
+      b.addEventListener('click', () => {
+        diffView = b.dataset.diffView;
+        if (!oneColumn.matches) {
+          try {
+            localStorage.setItem(VIEW_KEY, diffView);
+          } catch {
+            // Without storage, the first view next time
+          }
+        }
+        if (diffAnswer) drawDiff();
+      });
+    }
+  }
+
   function renderFrame() {
     const a = items.find((x) => x.slug === framed);
     // A folder's page is there when the server served its frame (its directory's list may leave it out, cut at its bound);
@@ -2694,7 +3310,8 @@
     $('notfound-detail').textContent = a?.missing
       ? t('ui_link_missing', a.path)
       : t('ui_not_found_detail', framed);
-    $('frame').hidden = !found;
+    $('frame').hidden = !found || DIFF;
+    $('diff').hidden = !found || !DIFF;
     $('frame').title = name ?? framed;
     $('frame-title').textContent = found ? name : '';
     if (found && FILE) {
@@ -2722,7 +3339,12 @@
     document.querySelector('.brand').href = list;
     // Load only once found (so a missing page's 404 never flashes). Once loaded, src stays, keeping navigation inside the iframe.
     // The fragment goes with it, so that /a/<slug>/#part opens at that part of the page
-    if (found && !$('frame').hasAttribute('src')) $('frame').src = frameSrc + location.hash;
+    if (found && !DIFF && !$('frame').hasAttribute('src')) $('frame').src = frameSrc + location.hash;
+    // Once too: the list is read every few seconds, and what is chosen, the scrolling and the place n and p reached must stay
+    if (found && DIFF && !diffOpened) {
+      diffOpened = true;
+      openDiff(a);
+    }
   }
 
   function disarm(a, btn) {
@@ -2901,6 +3523,10 @@
   }
 
   function openKeys() {
+    // d, only where it goes somewhere: the same as the button it presses
+    const open = framed ? $('frame-actions') : $('read-actions');
+    const diffable = !DIFF && !open.hidden && open.querySelector('.diff-open:not([hidden])');
+    for (const e of $('keys').querySelectorAll('.diff-go')) e.hidden = !diffable;
     if (!document.querySelector('dialog[open]')) $('keys').showModal();
   }
 
@@ -2913,7 +3539,7 @@
     '?': openKeys,
     'Ctrl+K': () => ($('find').open ? $('find').close() : openFind()),
   };
-  const PAGE_KEYS = new Set(['j', 'k', 'h', '?', '/', 'Ctrl+K']);
+  const PAGE_KEYS = new Set(['j', 'k', 'h', 'd', '?', '/', 'Ctrl+K']);
   function pressKey(key) {
     if (!Object.hasOwn(KEYS, key)) return false;
     KEYS[key]();
@@ -2991,6 +3617,8 @@
     });
   }
   // Not while typing or with a dialog open
+  // The two versions' choice takes letters to find an item by, each starting with v: these go on as anywhere, with the focus left there
+  const diffPickKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && e.target.matches?.('#diff select') && ['n', 'p', 'd', 'j', 'k'].includes(e.key);
   const plainKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog');
   // The search's words on a missing page's bar, and the bar's new pages, go to the list
   if (framed) {
@@ -3010,9 +3638,16 @@
       // The way the back button goes, which holds the list it was last on
       h: () => $('back').click(),
       f: () => $('frame-actions').querySelector('.star:not([hidden])')?.click(),
+      d: () => $('frame-actions').querySelector('.diff-open:not([hidden])')?.click(),
     });
+    if (DIFF) {
+      Object.assign(KEYS, { n: () => moveChange(1), p: () => moveChange(-1) });
+    } else {
+      for (const e of $('keys-frame').querySelectorAll('.diff-key')) e.hidden = true;
+    }
   } else {
     $('keys-frame').hidden = $('keys-note-frame').hidden = true;
+    $('diff').remove();
     // Back on a list, what the one before kept for j and k is over
     forgetOrder();
     $('manage').hidden = false;
@@ -3126,6 +3761,7 @@
       k: () => moveRow(-1),
       x: () => currentRow()?.querySelector('.sel')?.click(),
       f: () => currentRow()?.querySelector('.star:not([hidden])')?.click(),
+      d: () => { if (picked) $('read-actions').querySelector('.diff-open:not([hidden])')?.click(); },
     });
     // Enter on a row opens its page whole; a folder's, as a press, opens its tree
     document.addEventListener('keydown', (e) => {
@@ -3141,7 +3777,7 @@
     if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key === 'k') {
       e.preventDefault();
       pressKey('Ctrl+K');
-    } else if (plainKey(e) && pressKey(e.key)) e.preventDefault();
+    } else if ((plainKey(e) || diffPickKey(e)) && pressKey(e.key)) e.preventDefault();
   });
   $('find-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
   $('find-list').addEventListener('click', (e) => { if (e.target.closest('a') && !e.ctrlKey && !e.metaKey && !e.shiftKey) forgetOrder(); });

@@ -894,3 +894,52 @@ func TestMarkUnreadKept(t *testing.T) {
 		t.Errorf("with news already, a mark changes nothing: kept %+v", rec)
 	}
 }
+
+// ReadBefore is the version read before the last, opening a page reading it at once: the one taken as read, or the one before reading it
+// when that is the last; 0 for none, and never the last, so that a comparison from it compares two.
+func TestReadBefore(t *testing.T) {
+	t.Parallel()
+
+	const since = 12
+	for _, tc := range []struct {
+		name     string
+		versions []int
+		record   string
+		want     int
+	}{
+		{"read v2, reading v3", []int{13, 14, 15}, `{"n":3,"at":"H15","before":{"n":2,"at":"H14"}}`, 2},
+		{"read v2, v3 not opened", []int{13, 14, 15}, `{"n":2,"at":"H14"}`, 2},
+		{"v3 the first read", []int{13, 14, 15}, `{"n":3,"at":"H15"}`, 0},
+		{"marked unread", []int{13, 14, 15}, `{"n":0,"at":""}`, 0},
+		{"no record, v2 by since", []int{8, 9, 15}, ``, 2},
+		{"no record, the last by since", []int{7, 8, 9}, ``, 0},
+		{"no record, made after since", []int{13, 14}, ``, 0},
+		{"a record of no version, the last by since", []int{7, 8, 9}, `{"n":9,"at":"H9","before":{"n":2,"at":"H8"}}`, 0},
+		{"its before dropped", []int{13, 14, 15}, `{"n":3,"at":"H15","before":{"n":1,"at":"H9"}}`, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			s, root := begun(t, hour(since))
+			m := made(t, s, root, "d", tc.versions[0], tc.versions...)
+			if tc.record != "" {
+				for h := 23; h >= 0; h-- {
+					tc.record = strings.ReplaceAll(tc.record, "H"+strconv.Itoa(h), hour(h))
+				}
+				writeReads(t, root, `{"local":{"since":"`+hour(since)+`","pages":{"d":`+tc.record+`}}}`)
+			}
+			if got := s.ReadBefore(viewer, "d", m); got != tc.want {
+				t.Errorf("got %d, want %d", got, tc.want)
+			}
+		})
+	}
+	// No reader, and a link.
+	s, root := begun(t, hour(since))
+	m := made(t, s, root, "d", 13, 13, 14)
+	if got := s.ReadBefore("nobody", "d", m); got != 0 {
+		t.Errorf("no reader: %d", got)
+	}
+	if got := s.ReadBefore(viewer, "d", &store.Meta{Path: "/x/y.html"}); got != 0 {
+		t.Errorf("a link: %d", got)
+	}
+}

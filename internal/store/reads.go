@@ -159,6 +159,27 @@ func (r *reader) taken(slug string, m *Meta) int {
 	return n
 }
 
+// ReadBefore is the number of the version of the stored page slug, whose meta.json is m, viewer read before the last:
+// the one taken as
+// read, or as that is the last, the one before reading it, as opening a page reads it at once. 0 for none, never the
+// last.
+func (s *Store) ReadBefore(viewer, slug string, m *Meta) int {
+	all, _ := s.readReads() //nolint:errcheck // what cannot be read is nothing read, as the list has it
+	r := readerIn(all, viewer)
+	if r == nil || m.IsLink() {
+		return 0
+	}
+	n := r.taken(slug, m)
+	if n != m.lastNumber() {
+		return n
+	}
+	rec, ok := r.pages[slug]
+	if !ok || !m.hasVersion(rec.N, rec.At) || rec.Before == nil || !m.hasVersion(rec.Before.N, rec.Before.At) {
+		return 0
+	}
+	return rec.Before.N
+}
+
 // takenRead is the record of what taken says, nil for nothing read.
 func (r *reader) takenRead(slug string, m *Meta) *pageRead {
 	n := r.taken(slug, m)

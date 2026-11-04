@@ -1,14 +1,19 @@
 package server_test
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"net/http"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/pagediff"
 	"github.com/sukekyo26/floe/internal/server"
 	"github.com/sukekyo26/floe/internal/store"
 )
@@ -29,21 +34,96 @@ func TestVersionsAPI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if w := e.do(t, http.MethodGet, "/api/artifacts/d/versions", ""); w.Code != http.StatusOK || w.Body.String() != string(b) ||
-		!strings.Contains(w.Body.String(), `{"n":2,"at":"`) {
-		t.Errorf("versions %d %s, want %s", w.Code, w.Body, b)
+	if w, wantBody := e.do(t, http.MethodGet, "/api/artifacts/d/versions", ""), `{"versions":`+string(b)+`,"read":0}`; w.Code != http.StatusOK ||
+		w.Body.String() != wantBody || !strings.Contains(w.Body.String(), `{"n":2,"at":"`) {
+		t.Errorf("versions %d %s, want %s", w.Code, w.Body, wantBody)
 	}
 	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>"})
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`) //nolint:exhaustruct // the rest not given
-	if w := e.do(t, http.MethodGet, "/api/artifacts/h/versions", ""); w.Code != http.StatusOK || w.Body.String() != "[]" {
+	if w := e.do(t, http.MethodGet, "/api/artifacts/h/versions", ""); w.Code != http.StatusOK || w.Body.String() != `{"versions":[],"read":0}` {
 		t.Errorf("a link's versions %d %s", w.Code, w.Body)
 	}
 	for _, slug := range []string{"none", "Bad_Slug", "..%2Fd"} {
 		want(t, e.do(t, http.MethodGet, "/api/artifacts/"+slug+"/versions", ""), http.StatusNotFound, "not found")
 	}
-	if w := e.do(t, http.MethodGet, "/api/artifacts", ""); strings.Contains(w.Body.String(), `"versions"`) {
-		t.Errorf("the list carries versions: %s", w.Body)
+	if w := e.do(t, http.MethodGet, "/api/artifacts", ""); strings.Contains(w.Body.String(), `"versions"`) ||
+		!strings.Contains(w.Body.String(), `"versionCount":2`) {
+		t.Errorf("the list carries versions, or not how many: %s", w.Body)
 	}
+}
+
+// The difference of two versions is of the sections by their words, of a stored page alone, and reads nothing as read. from and to
+// are numbers of versions, in either order; the same one differs in nothing.
+func TestDiffAPI(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one two three"), nil)
+	e.publish(t, "d", noted("one two four"), nil)
+	reads := filepath.Join(e.root, "reads.json")
+	before, err := os.ReadFile(reads)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		t.Fatal(err)
+	}
+	type answer struct {
+		From, To struct {
+			N int
+		}
+		Counts   pagediff.Counts
+		Sections []pagediff.Section
+	}
+	get := func(query string) answer {
+		t.Helper()
+
+		w := e.do(t, http.MethodGet, "/api/artifacts/d/diff?"+query, "")
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s: %d %s", query, w.Code, w.Body)
+		}
+		var a answer
+		if err = json.Unmarshal(w.Body.Bytes(), &a); err != nil {
+			t.Fatal(err)
+		}
+		return a
+	}
+	ops := func(a answer) string {
+		var b strings.Builder
+		for _, s := range a.Sections {
+			for _, block := range s.Blocks {
+				for _, span := range block.Spans {
+					if span.Op != "same" {
+						b.WriteString(span.Op + ":" + span.Text + " ")
+					}
+				}
+			}
+		}
+		return b.String()
+	}
+	a := get("from=1&to=2")
+	if a.From.N != 1 || a.To.N != 2 || a.Counts.Changed != 1 || ops(a) != "del:three ins:four " {
+		t.Errorf("from 1 to 2: %+v, %s", a, ops(a))
+	}
+	if a := get("from=2&to=1"); ops(a) != "del:four ins:three " {
+		t.Errorf("from 2 to 1: %s", ops(a))
+	}
+	if a := get("from=2&to=2"); a.Counts.Changed != 0 || a.Counts.Same == 0 {
+		t.Errorf("from 2 to 2: %+v", a)
+	}
+	after, err := os.ReadFile(reads)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Errorf("reads.json changed: %s", after)
+	}
+
+	for _, query := range []string{"", "from=1", "to=2", "from=abc&to=2", "from=0&to=2", "from=01&to=2", "from=-1&to=2", "from=1&to=2x"} {
+		want(t, e.do(t, http.MethodGet, "/api/artifacts/d/diff?"+query, ""), http.StatusBadRequest, "from and to must be numbers of versions")
+	}
+	want(t, e.do(t, http.MethodGet, "/api/artifacts/d/diff?from=1&to=3", ""), http.StatusNotFound, "not found")
+	want(t, e.do(t, http.MethodGet, "/api/artifacts/none/diff?from=1&to=2", ""), http.StatusNotFound, "not found")
+	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>"})
+	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`)
+	want(t, e.do(t, http.MethodGet, "/api/artifacts/h/diff?from=1&to=2", ""), http.StatusNotFound, "not found")
 }
 
 // ?raw&v=<n> of a stored page is its version n, served as the page is; any other number is not found. Elsewhere, ?v=
