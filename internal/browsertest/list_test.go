@@ -51,13 +51,13 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// The bar and the head count the new off the archive, as the shelf does.
 	out = append(out, b.eval("[document.getElementById('news-n').textContent, document.getElementById('count').textContent, document.querySelector('.views [data-view=new] .n').textContent].join(' / ')"))
 	// The words of the description are the title's alone, searched too.
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=v] .title').title"))
+	out = append(out, b.eval("document.querySelector('#list li[data-slug=v] .title').title.split('\\n').slice(0, 2).join('\\n')"))
 	b.eval("(() => { const q = document.getElementById('q'); q.value = 'the words'; q.dispatchEvent(new Event('input')); })()")
 	out = append(out, b.eval("[...document.querySelectorAll('#list > li:not(.group)')].map((li) => li.dataset.slug).join('') + ' ' + location.search"))
 	b.eval("(() => { const q = document.getElementById('q'); q.value = ''; q.dispatchEvent(new Event('input')); })()")
 
 	// Nothing chosen at first, as opening one is reading it: the words how.
-	const reader = "[document.getElementById('read-blank').hidden, document.getElementById('read-frame').hidden, new URL(document.getElementById('read-frame').src || 'http://x/none').pathname + new URL(document.getElementById('read-frame').src || 'http://x/').search, document.getElementById('read-title').textContent, document.querySelector('#list li.picked')?.dataset.slug].join(' ')"
+	const reader = "[document.getElementById('read-blank').hidden, document.getElementById('read-frame').hidden, readLoaded, document.getElementById('read-title').textContent, document.querySelector('#list li.picked')?.dataset.slug].join(' ')"
 	out = append(out, b.eval(reader))
 	// Pressed, a row opens beside the list, the tab where it is; the title over it leads to it whole.
 	b.eval("document.querySelector('#list li[data-slug=r] .title').click()")
@@ -183,9 +183,9 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"#|v dot 700 ver:v3 · new version kindof:design proj:p tags:t|#|n dot 700 kindof:report proj:q|#|r ring 500 kindof:report proj:p|l mark 500 kindof:Link · HTML path:/tmp/x/l.html|#|d mark 500 kindof:Link · handoff path:/home/you/work/a (1)/v2.0/data-set_#1/deep/deep/deep/deep/deep/deep/deep/deep/deep/name-2.yaml|#|f mark 500 kindof:Folder path:/tmp/x/f|#|g mark 500 kindof:Link · HTML miss:File not found",
 		"Today,Yesterday,Last 7 days", "2 new / Newest first · 2 new / 2",
 		"Version\nthe words", "v ?q=the+words",
-		"false true /none  ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
+		"false true about:blank  ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
 		"true false /a/l/?raw Link l", "true false /a/n/?raw New n New",
-		"true true true", "false true blank New ",
+		"true true true", "false true about:blank New ",
 		"vn ?view=new", "vn", "1 new / 1", "New", "n", "true",
 		`["v","n"]`, "/?view=new", "/a/v/",
 		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true false", "true",
@@ -303,17 +303,24 @@ func TestUIFrameOrder(t *testing.T) { //nolint:paralleltest // the browser tests
 	// The list that opened it, a slug no entry has left out.
 	go1("v", `["v","gone","r"]`, "", "r")
 	// None such: the last list, of what it picks.
-	go1("n", "[]", "?template=report", "r")
+	go1("v", "[]", "?project=p", "r")
 	go1("l", "[]", "?kind=link", "d")
-	// Not on the last list: all of its kind.
+	// Not on the last list: all of its kind, which is where a page ends before the links.
 	go1("v", "[]", "?kind=link", "n")
+	stays := func(from string) {
+		t.Helper()
+
+		b.navigate("/a/" + from + "/")
+		b.until("the bar", "document.getElementById('frame-title').textContent")
+		// Leaving is told at once: beforeunload runs as location is set.
+		b.eval("addEventListener('beforeunload', () => { window.left = true; }); document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
+		check(t, from+" at an end", []string{b.eval("window.left === true")}, "false")
+	}
+	stays("r")
 	// Archived: the archived.
 	go1("a", "[]", "?kind=link", "b")
-	// At an end, it stays; k goes back.
+	// At the end of the list that opened it, it stays.
 	b.navigate("/")
 	b.eval(`sessionStorage.setItem('artifacts.order', '["v","n"]')`)
-	b.navigate("/a/n/")
-	b.until("the bar", "document.getElementById('frame-title').textContent")
-	b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true })); window.stayed = true")
-	check(t, "at an end", []string{b.eval("window.stayed === true && location.pathname")}, "/a/n/")
+	stays("n")
 }
