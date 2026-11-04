@@ -106,11 +106,17 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if err = unix.Flock(int(lock.Fd()), unix.LOCK_EX); err != nil {
 		t.Fatal(err)
 	}
+	// Counted and watched from before the page's own script: how long the mark is out depends on the machine.
+	watch := b.addScript(`if (location.pathname === '/a/held/' && !location.search.includes('raw')) {
+		window.cutOff = 0;
+		const f = window.fetch;
+		window.fetch = (u, i) => { const p = f(u, i); if (i?.method === 'POST') p.catch(() => { window.cutOff++; }); return p; };
+		addEventListener('DOMContentLoaded', () => new MutationObserver(() => { window.wentDown ||= document.getElementById('server').classList.contains('down'); })
+			.observe(document.getElementById('server'), { attributes: true }));
+	}`)
 	b.navigate("/a/held/")
-	b.until("the mark to go out", "readsGoing === true")
-	b.eval(`new MutationObserver(() => { window.wentDown ||= document.getElementById('server').classList.contains('down'); })
-		.observe(document.getElementById('server'), { attributes: true })`)
-	b.until("the request to be cut off", "readsGoing === false")
+	b.until("the request to be cut off", "window.cutOff === 1 && readsGoing === false")
+	b.removeScript(watch)
 	if got := b.eval("Boolean(window.wentDown) || document.getElementById('server').classList.contains('down')"); got != "false" {
 		t.Error("a request cut off by its time limit showed the server as not reached")
 	}
