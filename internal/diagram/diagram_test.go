@@ -269,7 +269,7 @@ func TestLayoutMistakes(t *testing.T) {
 			`s.yaml:7:5: box "S" overlaps label "across both"`,
 		},
 		// A part with no name is named by its text in the language it is laid out as wide as (by code's widths in a code
-		// row), else by where it stands; a label placed in its region with no text, by its region.
+		// row), else by where it stands.
 		{
 			"  - label: { text: { en: Decide what to build, ja: \"作るものと作らないものを、使う人と話して決める\" }, x: 16, y: 44, anchor: start }\n" +
 				"  - bar: { x1: 200, x2: 280, y: 44 }",
@@ -279,7 +279,18 @@ func TestLayoutMistakes(t *testing.T) {
 			"  - frame: { x: 10, y: 10, w: 250, h: 150 }\n  - frame: { x: 300, y: 100, w: 150, h: 40 }\n  - box: { x: 0, y: 140, w: 80, h: 40, rows: [A] }",
 			"s.yaml:6:5: frame 300,100 150x40 sticks out of the 400x200 canvas\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150",
 		},
-		{"  - label: { text: \"\", x: 160, y: 117 }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", `s.yaml:6:5: box "a" overlaps label 155,108 10x18`},
+		// A label's text is empty in no language, wherever a key takes one; other text may be.
+		{"  - box: { name: a, x: 10, y: 30, w: 60, h: 30, rows: [a] }\n  - edge: { from: a, to: [200, 45], label: \"\" }", "s.yaml:6:44: minLength: got 0, want 1"},
+		{"  - box: { name: a, x: 10, y: 30, w: 60, h: 30, rows: [a] }\n  - edge: { from: a, to: [200, 45], label: { en: \"\", ja: あ } }", "s.yaml:6:50: minLength: got 0, want 1"},
+		{"  - edge: { from: [10, 45], to: [200, 45], label: { en: a, ja: \"\" } }", "s.yaml:5:64: minLength: got 0, want 1"},
+		{"  - bar: { x1: 10, x2: 100, y: 85, label: \"\" }", "s.yaml:5:43: minLength: got 0, want 1"},
+		{"  - icon: { icon: aws/amazon-ec2, x: 10, y: 10, label: \"\" }", "s.yaml:5:56: minLength: got 0, want 1"},
+		{"  - frame: { x: 100, y: 100, w: 100, h: 60, label: \"\" }", "s.yaml:5:52: minLength: got 0, want 1"},
+		{"  - label: { text: \"\", x: 100, y: 100 }", "s.yaml:5:20: minLength: got 0, want 1"},
+		{"  - circle: { name: A, cx: 150, cy: 100, r: 60 }\n  - label: { text: \"\", in: [A] }", "s.yaml:6:20: minLength: got 0, want 1"},
+		{"  - graph: { x: 20, y: 20, nodes: [{ box: { name: a, rows: [a] } }], edges: [{ from: a, to: a, label: \"\" }] }", "s.yaml:5:103: minLength: got 0, want 1"},
+		{"  - graph: { x: 20, y: 20, nodes: [{ group: { name: g, label: \"\", nodes: [{ box: { name: a, rows: [a] } }] } }] }", "s.yaml:5:63: minLength: got 0, want 1"},
+		{"  - box: { x: 10, y: 30, rows: [\"\"] }\n  - box: { x: 100, y: 30, rows: [[\"\", sub]] }\n  - table: { x: 200, y: 10, title: \"\", rows: [[\"\", \"\"]] }", ""},
 		// A tick of no text in any language is a mark alone: nothing overlaps it or sticks out (an edge through it: f13).
 		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, \"\"], [160, \"\"]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
 		{"  - axis: { x1: 20, x2: 300, y: 100, ticks: [[20, { en: \"\", ja: \"\" }], [160, { en: \"\", ja: \"\" }]] }\n  - box: { name: a, x: 150, y: 100, w: 60, h: 30, rows: [a] }", ""},
@@ -288,9 +299,8 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - axis: { x1: 20, x2: 380, y: 100, ticks: [[20, Mon], [140, \"\"]], labels: between }\n  - box: { name: a, x: 60, y: 105, w: 40, h: 30, rows: [[a, sub]] }", `s.yaml:6:5: box "a" overlaps label "Mon"`},
 		{"  - box: { x: 20, y: 20, rows: [[{ en: \"あいう\", ja: \"abcde\" }, main code]] }\n  - box: { name: b, x: 30, y: 30, w: 80, h: 30, rows: [b] }", `s.yaml:6:5: box "abcde" overlaps box "b"`},
 		{
-			"  - circle: { name: A, cx: 150, cy: 100, r: 20 }\n  - label: { text: a much longer label than fits, in: [A] }\n  - label: { text: \"\", in: [A] }",
-			"s.yaml:6:5: label \"a much longer label than fits\" finds no room inside A and outside the other circles: make that area larger, or the text shorter\n" +
-				"s.yaml:7:5: label in A finds no room inside A and outside the other circles: make that area larger, or the text shorter",
+			"  - circle: { name: A, cx: 150, cy: 100, r: 20 }\n  - label: { text: a much longer label than fits, in: [A] }",
+			"s.yaml:6:5: label \"a much longer label than fits\" finds no room inside A and outside the other circles: make that area larger, or the text shorter",
 		},
 		{"  - circle: { cx: 390, cy: 100, r: 20 }", "s.yaml:5:5: circle 370,80 40x40 sticks out of the 400x200 canvas"},
 		// A label at x and y whose corner is on the circle's edge is in, wherever the circle stands; one 0.001 out is not.
@@ -301,7 +311,6 @@ func TestLayoutMistakes(t *testing.T) {
 			"s.yaml:6:5: label \"Mon\" is not all inside A and outside the other circles: move it, or leave out x and y for floe to place it",
 		},
 		{"  - dot: { name: d, cx: 50, cy: 50 }\n  - box: { name: b, x: 40, y: 40, w: 60, h: 30, rows: [b] }", `s.yaml:6:5: box "b" overlaps dot "d"`},
-		{"  - circle: { name: A, cx: 150, cy: 100, r: 60 }\n  - label: { text: \"\", in: [A] }\n  - box: { x: 100, y: 50, w: 100, h: 100, rows: [B] }", `s.yaml:7:5: box "B" overlaps label in A`},
 		// Each check of the placement on its own.
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - box: { x: 80, y: 40, w: 60, h: 40, rows: [A] }", `s.yaml:6:5: box "A" straddles the edge of frame "F"`},
 		{"  - box: { name: b, x: 150, y: 80, w: 60, h: 40, rows: [B] }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through box "b"`},
@@ -1539,7 +1548,7 @@ func TestFacesNamed(t *testing.T) {
 			t.Errorf("%s:\n  inspect %q %q\n  want %s", c.name, got, told, c.want)
 		}
 	}
-	// A bold label in that finds no room is named as it is measured too (calling, not named).
+	// A bold label in that finds no room is named as it is measured too.
 	const small = "  - circle: { name: A, cx: 150, cy: 150, r: 10 }\n  - label: { text: " + text + ", in: [A], strong: true }\n"
 	want := `s.yaml:6:5: label "The page" finds no room inside A and outside the other circles: make that area larger, or the text shorter`
 	if _, told := draw(t, head+small, inspect); told != want {

@@ -256,7 +256,7 @@ func (l *layout) add(at string, p part) {
 func (l *layout) addDot(d *dot, at string) {
 	r := dotR(d)
 	l.marks = append(l.marks, rect{x: d.CX - r, y: d.CY - r, w: r * 2, h: r * 2, what: "", at: at}.named(
-		"dot", d.Name, nil, "", nil))
+		"dot", d.Name, nil, ""))
 	cls := "dot"
 	if d.Hollow {
 		cls += " hollow"
@@ -266,7 +266,7 @@ func (l *layout) addDot(d *dot, at string) {
 
 func (l *layout) addCircle(c *circle, at string) {
 	l.areas = append(l.areas, rect{x: c.CX - c.R, y: c.CY - c.R, w: c.R * 2, h: c.R * 2, what: "", at: at}.named(
-		"circle", c.Name, nil, "", nil))
+		"circle", c.Name, nil, ""))
 	l.areaEls = append(l.areaEls, elem{Kind: "circle", X: c.CX, Y: c.CY, R: c.R, Class: "venn", Tone: c.Tone})
 }
 
@@ -348,23 +348,21 @@ func words(text Text, class string) string {
 }
 
 // calling is what a part standing at r is called in a mistake and by inspect, but its kind: its name quoted, else its
-// words, else the Venn regions it is placed in (a label's in), else where it stands (byPlace).
-func calling(name string, text Text, class string, in []string, r rect) (call string, byPlace bool) {
+// words, else where it stands (byPlace).
+func calling(name string, text Text, class string, r rect) (call string, byPlace bool) {
 	switch w := words(text, class); {
 	case name != "":
 		return strconv.Quote(name), false
 	case w != "":
 		return w, false
-	case in != nil:
-		return "in " + strings.Join(in, ", "), false
 	default:
 		return placeOf(r), true
 	}
 }
 
 // named is a with what it is called: its kind, then calling.
-func (a rect) named(kind, name string, text Text, class string, in []string) rect {
-	call, byPlace := calling(name, text, class, in, a)
+func (a rect) named(kind, name string, text Text, class string) rect {
+	call, byPlace := calling(name, text, class, a)
 	a.what, a.byPlace = kind+" "+call, byPlace
 	return a
 }
@@ -480,7 +478,7 @@ func boxRect(b *box, at string) rect {
 
 func (l *layout) addBox(b *box, at string) {
 	text, class := firstRow(b)
-	r := boxRect(b, at).named("box", b.Name, text, class, nil)
+	r := boxRect(b, at).named("box", b.Name, text, class)
 	kids := make([]elem, 0, len(b.Rows))
 	for i, row := range b.Rows {
 		style := rowClass(row.Style, i == 0)
@@ -578,7 +576,7 @@ func tableRects(t *table, at string) (rect, []rect) {
 	if len(t.Rows) > 0 {
 		h += 6
 	}
-	return rect{x: x, y: t.Y, w: w, h: h, what: "", at: at}.named("table", t.Name, t.Title, tableTitle, nil), rows
+	return rect{x: x, y: t.Y, w: w, h: h, what: "", at: at}.named("table", t.Name, t.Title, tableTitle), rows
 }
 
 func (l *layout) addTable(t *table, at string) {
@@ -653,14 +651,14 @@ func dotR(d *dot) float64 {
 func barRect(b *bar, at string) rect {
 	w := math.Max(math.Abs(b.X2-b.X1), 4)
 	return rect{x: math.Min(b.X1, b.X2), y: b.Y - 7, w: w, h: 14, what: "", at: at}.named(
-		"bar", b.Name, b.Label, labelClass(false), nil)
+		"bar", b.Name, b.Label, labelClass(false))
 }
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
 	class := frameClass(f.Icon)
 	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named(
-		"frame", f.Name, f.Label, class, nil)
+		"frame", f.Name, f.Label, class)
 	who := fr.what
 	l.frames = append(l.frames, fr)
 	hx, hy := f.X+12, f.Y+18
@@ -700,14 +698,14 @@ func (l *layout) addFrame(f *frame, at string) {
 func (l *layout) addIcon(i *icon, at string) {
 	size := iconSize(i)
 	r := rect{x: i.X, y: i.Y, w: size, h: size, what: "", at: at, form: outlineOf(size, size, "icon")}.named(
-		"icon", i.Name, Text{"en": i.Icon}, "", nil)
+		"icon", i.Name, Text{"en": i.Icon}, "")
 	who := r.what
 	l.boxes = append(l.boxes, r)
 	if use, ok := l.image(at, i.Icon, i.X, i.Y, size, who); ok {
 		l.boxEls = append(l.boxEls, use)
 	}
 	if i.Label != nil {
-		l.label(at, i.Label, nil, i.X+size/2, i.Y+size+16, "middle", false, false)
+		l.label(at, i.Label, i.X+size/2, i.Y+size+16, "middle", false, false)
 	}
 }
 
@@ -754,7 +752,8 @@ func (l *layout) image(at, name string, x, y, size float64, who string) (elem, b
 // LIMIT: the box is --bg, so on a coloured shape (a circle, raw's) it shows; a label may say plain (one with in has
 // none unless it says plain: false), but an edge's, an icon's and a bar's cannot. Tell the shape under them if they
 // are drawn there.
-func (l *layout) label(at string, t Text, in []string, x, y float64, anchor string, plain, strong bool) int {
+// LIMIT: the schema refuses empty text, not text of spaces alone, which draws an empty box; it shows on the page.
+func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, strong bool) int {
 	cls := labelClass(strong)
 	w := labelWidth(t, strong)
 	x0 := x - w/2
@@ -764,7 +763,7 @@ func (l *layout) label(at string, t Text, in []string, x, y float64, anchor stri
 	case "end":
 		x0 = x - w + 5
 	}
-	l.labels = append(l.labels, rect{x: x0, y: y - 9, w: w, h: labelH, what: "", at: at}.named("label", "", t, cls, in))
+	l.labels = append(l.labels, rect{x: x0, y: y - 9, w: w, h: labelH, what: "", at: at}.named("label", "", t, cls))
 	if !plain {
 		l.labelEls = append(l.labelEls, elem{Kind: "rect", X: x0, Y: y - 9, W: w, H: labelH, Class: "label-bg"})
 	}
@@ -785,7 +784,7 @@ func (l *layout) addBar(b *bar, at string) {
 	el.Class, el.Tone = "bar", b.Tone
 	l.boxEls = append(l.boxEls, el)
 	if b.Label != nil {
-		l.label(at, b.Label, nil, r.x+r.w+10, b.Y, "start", false, false)
+		l.label(at, b.Label, r.x+r.w+10, b.Y, "start", false, false)
 	}
 }
 
@@ -811,8 +810,9 @@ func (l *layout) addAxis(a *axis, at string) {
 	}
 	for i, t := range ticks {
 		l.edgeEls = append(l.edgeEls, lineEl(t[0], t[1], t[2], t[3], "axis"))
+		// LIMIT: a tick empty in some languages only is a label in those too, with no text; it shows on the page.
 		if text := a.Ticks[i].Text; words(text, labelClass(false)) != "" {
-			l.label(at, text, nil, tickTextX(a, t[0]), a.Y+17, "middle", true, false)
+			l.label(at, text, tickTextX(a, t[0]), a.Y+17, "middle", true, false)
 		}
 	}
 	runs := slices.Concat([]seg{line}, grid, ticks)
