@@ -419,7 +419,7 @@ var messagesEN = map[string]string{
 	"ui_narrow":         "Filter",
 	"ui_narrow_n":       "Filter %d",
 	"ui_template":       "Template",
-	"ui_kind_page":      "Stored pages",
+	"ui_kind_page":      "Pages",
 	"ui_kind_link":      "Links",
 	"ui_kind_folder":    "Folder",
 	"ui_kind_of_link":   "Link · %s",

@@ -408,7 +408,7 @@ var messagesJA = map[string]string{
 	"ui_narrow":         "絞る",
 	"ui_narrow_n":       "絞る %d",
 	"ui_template":       "テンプレート",
-	"ui_kind_page":      "保存したページ",
+	"ui_kind_page":      "ページ",
 	"ui_kind_link":      "リンク",
 	"ui_kind_folder":    "フォルダ",
 	"ui_kind_of_link":   "リンク · %s",

@@ -195,8 +195,8 @@
     display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: var(--corner-menu);
     background: none; color: var(--fg); font-weight: 500; text-align: left; overflow-wrap: anywhere;
   }
-  /* The marks of the views and the projects take one column, so that their words start at one x */
-  .views svg { width: var(--shelf-mark); height: var(--shelf-mark); flex: none; color: var(--muted); }
+  /* The marks of the views, the projects and the kinds take one column, so that their words start at one x */
+  .views svg, .chip svg { width: var(--shelf-mark); height: var(--shelf-mark); flex: none; color: var(--muted); }
   .views [data-view="fav"] svg { color: var(--star); }
   .views .dot, .views .ring, .chip.project::before { margin-inline: calc((var(--shelf-mark) - 8px) / 2); }
   .views .n, .chip .n { margin-left: auto; font: var(--text-label)/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -1396,12 +1396,13 @@
 
   // A button of the shelf's parts, with its count: pressed when it is the one picked, pick done on a press.
   // The label goes in as text, being a name the API was sent, on one line, and whole as the title
-  function chip(label, n, { pressed, pick, extra = '' }) {
+  function chip(label, n, { pressed, pick, extra = '', mark = '' }) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `chip ${extra}`;
     b.title = label;
     b.setAttribute('aria-pressed', String(pressed));
+    b.innerHTML = mark;
     const name = document.createElement('span');
     name.className = 'name';
     name.textContent = label;
@@ -1448,7 +1449,7 @@
   function renderKinds(list) {
     const counts = tally(list, (a) => [kindOf(a)], kind);
     const chips = ['page', 'link', 'folder'].filter((k) => counts.has(k)).map((k) => {
-      const b = chip(t(KIND_WORDS[k]), counts.get(k), { pressed: k === kind, pick: () => toggleKind(k) });
+      const b = chip(t(KIND_WORDS[k]), counts.get(k), { pressed: k === kind, pick: () => toggleKind(k), mark: KIND_MARKS[k] });
       b.dataset.kind = k;
       return b;
     });
@@ -1711,6 +1712,8 @@
 
   const LINK_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
   const FOLDER_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>';
+  const PAGE_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6"/></svg>';
+  const KIND_MARKS = { page: PAGE_MARK, link: LINK_MARK, folder: FOLDER_MARK };
 
   // What a tree's row begins with, in the list's and the frame's: a directory's fold and icon, a page's room for the fold
   // and its icon; and a directory's note (unread, cut, empty), '' for none

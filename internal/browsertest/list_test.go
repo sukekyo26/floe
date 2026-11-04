@@ -289,22 +289,29 @@ func TestUIViewLit(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	check(t, "lit", out, strings.Join(want, "|"))
 }
 
-// TestUIShelfMarks: the words of the views and the projects start at one x, whichever mark they have, and the row of the views
+// TestUIShelfMarks: the words of the views, the projects and the kinds start at one x, whichever mark they have, and the row of the views
 // on a narrow screen holds the button to the filters, on every width, with the longest view picked.
 func TestUIShelfMarks(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	b.stub(`[{ slug: 'a', title: 'A', description: '', news: 'new', project: 'floe', createdAt: at(1), updatedAt: at(9) },
-		{ slug: 'b', title: 'B', description: '', project: 'p', favorite: true, createdAt: at(1), updatedAt: at(8) }]`)
+		{ slug: 'b', title: 'B', description: '', project: 'p', favorite: true, createdAt: at(1), updatedAt: at(8) },
+		{ slug: 'l', title: 'L', description: '', path: '/tmp/l.html', createdAt: at(1), updatedAt: at(7) },
+		{ slug: 'f', title: 'F', description: '', path: '/tmp/f', folder: true, createdAt: at(1), updatedAt: at(6) }]`)
 	b.navigate("/")
 	b.size(1440, 900, false)
-	out := make([]string, 0, 8)
+	out := make([]string, 0, 16)
 	out = append(out, b.eval(`(() => {
-		const lefts = [...document.querySelectorAll('.views .label, #chips .name')].map((e) => e.getBoundingClientRect().left);
+		const lefts = [...document.querySelectorAll('.views .label, #chips .name, #kinds .name')].map((e) => e.getBoundingClientRect().left);
 		return lefts.length + ' ' + (Math.max(...lefts) - Math.min(...lefts) <= 0.5);
 	})()`))
-	// The archive's mark is quiet, not the star's color.
-	out = append(out, b.eval(`getComputedStyle(document.querySelector('.views [data-view=archived] svg')).color === getComputedStyle(document.querySelector('.views .n')).color`))
+	// The archive's mark and the kinds' are quiet, not the star's color.
+	out = append(out, b.eval(`[...document.querySelectorAll('.views [data-view=archived] svg, #kinds svg')].map((e) => getComputedStyle(e).color === getComputedStyle(document.querySelector('.views .n')).color).join(' ')`))
+	// A link and a folder have the mark of their rows, and a page its own.
+	out = append(out, b.eval(`[...document.querySelectorAll('#kinds .chip')].map((c) => {
+		const path = c.querySelector('path').getAttribute('d'), row = document.querySelector('#list li[data-slug=' + { link: 'l', folder: 'f' }[c.dataset.kind] + '] .lead path');
+		return c.dataset.kind + ':' + (row ? row.getAttribute('d') === path : Boolean(path));
+	}).join(' ')`))
 	// The row holds all, its button to the filters within the window.
 	for _, w := range []int64{1000, 640, 400, 360} {
 		b.size(w, 700, false)
@@ -318,7 +325,7 @@ func TestUIShelfMarks(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 	// Words gone on the narrowest, the name stays for one who cannot see the mark.
 	out = append(out, b.eval(`(() => { const a = document.querySelector('.views [data-view=archived]'); return getComputedStyle(a.querySelector('.label')).display + ' ' + Boolean(a.getAttribute('aria-label')); })()`))
-	check(t, "shelf marks", out, "6 true|true|true|true|true|true|true|true|true|true|none true")
+	check(t, "shelf marks", out, "10 true|true true true true|page:true link:true folder:true|true|true|true|true|true|true|true|true|none true")
 }
 
 // floeRead is reads.json of the site's store.
