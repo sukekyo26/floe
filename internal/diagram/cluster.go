@@ -35,8 +35,8 @@ type cluster struct {
 // is -1): a node a group or the graph holds, or an end of an edge.
 type gref struct{ box, cl int }
 
-// boxOf is node n at nat in group cl, a box or an icon, read flat as a box.
-func boxOf(n graphNode, nat string, cl int) gbox {
+// flatBox is node n at nat in group cl, a box or an icon, read flat as a box.
+func flatBox(n graphNode, nat string, cl int) gbox {
 	if n.Icon != nil {
 		//nolint:exhaustruct_v5 // an icon read flat as a box
 		return gbox{box: &graphBox{icon: n.Icon, Name: n.Icon.Name, Shape: "icon"}, at: nat + "/icon", cl: cl}
@@ -73,7 +73,7 @@ func flatten(g *graph, at string) (boxes []gbox, clusters []cluster, top []gref)
 			var c gref
 			if n.Box != nil || n.Icon != nil {
 				c = gref{box: len(boxes), cl: -1}
-				boxes = append(boxes, boxOf(n, nat, cl))
+				boxes = append(boxes, flatBox(n, nat, cl))
 				for p := cl; p >= 0; p = clusters[p].parent {
 					clusters[p].boxes = append(clusters[p].boxes, c.box)
 				}
