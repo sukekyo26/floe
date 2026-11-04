@@ -194,20 +194,10 @@ func (d *drawing) iconDrawn(i int) rect {
 func (d *drawing) endPoint(e endAt) [2]float64 {
 	i := d.ends[e.edge][e.end]
 	ic, at, place := d.icons[i], d.iconAt(i), d.onIcon[e]
-	along := at.w * place.share
-	switch place.side {
-	case "top":
-		return [2]float64{at.x + along, at.y}
-	case "bottom":
-		x, y := at.x+along, at.y+at.h
-		if ic.Label != nil && math.Abs(along-at.w/2) <= labelWidth(ic.Label, false)/2 {
-			y += iconUnder(ic)
-		}
-		return [2]float64{x, y}
-	case "left":
-		return [2]float64{at.x, at.y + along}
-	}
-	return [2]float64{at.x + at.w, at.y + along}
+	axis := sideAxis(place.side)
+	//nolint:exhaustruct_v5 // an icon, which is all sidePoint reads
+	t := target{r: at, under: iconUnder(ic), labelW: iconLabelW(ic)}
+	return sidePoint(t, place.side, at.lo(axis)+at.size(axis)*place.share)
 }
 
 // iconReach is how far the icon of box i may move across the ranks from the middle of its rectangle, keeping its

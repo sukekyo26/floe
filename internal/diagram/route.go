@@ -9,11 +9,14 @@ import (
 	"strings"
 )
 
-// anchor is where an edge leaves or reaches: a point, and the side it is on ("" for a dot's centre).
+// anchor is where an edge leaves or reaches: a point, and the side it is on ("" for a dot's centre). rim is the line of
+// the side, an x on the left or right and a y on the top or bottom, which the point stands in from on a round corner or
+// a slant: what is placed by the side reads it, so that edges from one side keep to one line wherever they leave it.
 type anchor struct {
 	x, y  float64
 	side  string
 	point bool
+	rim   float64
 }
 
 func horizontal(side string) bool {
@@ -25,7 +28,7 @@ func vertical(side string) bool {
 }
 
 // noEnd is what endOf returns for an end that cannot be one.
-var noEnd = anchor{x: 0, y: 0, side: "", point: false}
+var noEnd = anchor{x: 0, y: 0, side: "", point: false, rim: 0}
 
 // endOf resolves e, an end written with side, against other, the centre of the end at the other side of the
 // edge: the anchor, the words that name it, and false when it cannot be an end (told at at).
@@ -41,7 +44,7 @@ func (l *layout) endOf(at string, e end, side string, other [2]float64) (anchor,
 		if other[0] < p[0] {
 			s = "left"
 		}
-		return anchor{p[0], p[1], s, true}, pointName(p), true
+		return anchor{p[0], p[1], s, true, p[0]}, pointName(p), true
 	}
 	t, ok := l.names[e.Name]
 	switch {
@@ -56,7 +59,7 @@ func (l *layout) endOf(at string, e end, side string, other [2]float64) (anchor,
 		return noEnd, "", false
 	}
 	if t.kind == "dot" {
-		return anchor{t.r.x + t.r.w/2, t.r.y + t.r.h/2, "", false}, e.Name, true
+		return anchor{t.r.x + t.r.w/2, t.r.y + t.r.h/2, "", false, 0}, e.Name, true
 	}
 	return onSide(t, side, other), e.Name, true
 }
@@ -85,16 +88,37 @@ func onSide(t target, side string, other [2]float64) anchor {
 			side = tb
 		}
 	}
+	at := cy
+	if vertical(side) {
+		at = cx
+	}
+	return anchorOn(t, side, at)
+}
+
+// anchorOn is the end on side of t at at.
+func anchorOn(t target, side string, at float64) anchor {
+	p := sidePoint(t, side, at)
+	r := t.r
+	rim := r.y + r.h + t.under
 	switch side {
 	case "left":
-		return anchor{r.x, cy, side, false}
+		rim = r.x
 	case "right":
-		return anchor{r.x + r.w, cy, side, false}
+		rim = r.x + r.w
 	case "top":
-		return anchor{cx, r.y, side, false}
-	default:
-		return anchor{cx, r.y + r.h + t.under, side, false}
+		rim = r.y
 	}
+	return anchor{p[0], p[1], side, false, rim}
+}
+
+// sidePoint is where an end stands on side of t at at, an x on the top or bottom, a y on the left or right: on the
+// outline, and on the bottom side within a label's width, under the label.
+func sidePoint(t target, side string, at float64) [2]float64 {
+	p := t.r.form.on(t.r, side, at)
+	if side == "bottom" && math.Abs(at-(t.r.x+t.r.w/2)) <= t.labelW/2 {
+		p[1] += t.under
+	}
+	return p
 }
 
 // towards is the side of r across towards p, left or right by r's centre (right when level with it), and the side up
@@ -137,11 +161,11 @@ func turns(a, b anchor, marks [2]float64) ([][2]float64, loose) {
 	case a.point && b.point:
 		return [][2]float64{{b.x, a.y}}, noLoose
 	case horizontal(a.side) && horizontal(b.side):
-		mid := (a.x + b.x) / 2
-		return [][2]float64{{mid, a.y}, {mid, b.y}}, between(1, false, a.x, b.x, marks)
+		mid := (a.rim + b.rim) / 2
+		return [][2]float64{{mid, a.y}, {mid, b.y}}, between(1, false, a.rim, b.rim, marks)
 	case vertical(a.side) && vertical(b.side):
-		mid := (a.y + b.y) / 2
-		return [][2]float64{{a.x, mid}, {b.x, mid}}, between(1, true, a.y, b.y, marks)
+		mid := (a.rim + b.rim) / 2
+		return [][2]float64{{a.x, mid}, {b.x, mid}}, between(1, true, a.rim, b.rim, marks)
 	case a.side == "" && horizontal(b.side):
 		// From a dot, up or down first, to reach a side across.
 		return [][2]float64{{a.x, b.y}}, noLoose
@@ -166,16 +190,16 @@ func around(a, b anchor) ([][2]float64, loose) {
 	const out = 20 // how far past the parts it runs
 	switch a.side {
 	case "left":
-		x := min(a.x, b.x) - out
+		x := min(a.rim, b.rim) - out
 		return [][2]float64{{x, a.y}, {x, b.y}}, loose{i: 1, across: false, lo: math.Inf(-1), hi: x, ok: true}
 	case "right":
-		x := max(a.x, b.x) + out
+		x := max(a.rim, b.rim) + out
 		return [][2]float64{{x, a.y}, {x, b.y}}, loose{i: 1, across: false, lo: x, hi: math.Inf(1), ok: true}
 	case "top":
-		y := min(a.y, b.y) - out
+		y := min(a.rim, b.rim) - out
 		return [][2]float64{{a.x, y}, {b.x, y}}, loose{i: 1, across: true, lo: math.Inf(-1), hi: y, ok: true}
 	default:
-		y := max(a.y, b.y) + out
+		y := max(a.rim, b.rim) + out
 		return [][2]float64{{a.x, y}, {b.x, y}}, loose{i: 1, across: true, lo: y, hi: math.Inf(1), ok: true}
 	}
 }
@@ -373,32 +397,8 @@ func pathData(pts [][2]float64) string {
 // via are written and entering the last side by enter.
 // LIMIT: the runs between via go round nothing in the way.
 func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, free loose, fromWho, toWho string, ok bool) {
-	fromSide, toSide := e.FromSide, e.ToSide
-	fromAt, toAt := l.centre(e.From), l.centre(e.To)
-	if fromSide == "" {
-		near := toAt
-		if len(e.Via) > 0 {
-			fromSide, near = l.facing(e.From, e.Via[0], false, false), e.Via[0]
-		}
-		fromSide = l.clear(e.From, fromSide, toAt, near)
-	}
-	from, fromWho, okFrom := l.endOf(at, e.From, fromSide, toAt)
-	angled := len(e.Via) > 0 && !e.Straight
-	across := false
-	if angled && okFrom {
-		pts, across = through([][2]float64{{from.x, from.y}}, e.Via, horizontal(from.side) || from.side == "")
-	}
-	if toSide == "" {
-		near := fromAt
-		if len(e.Via) > 0 {
-			near = e.Via[len(e.Via)-1]
-			toSide = l.facing(e.To, near, across, angled && okFrom)
-		}
-		toSide = l.clear(e.To, toSide, fromAt, near)
-	}
-	// Resolved even when from is not, so that both are told.
-	to, toWho, okTo := l.endOf(at, e.To, toSide, fromAt)
-	if !okFrom || !okTo {
+	from, to, pts, across, fromWho, toWho, ok := l.edgeEnds(e, at)
+	if !ok {
 		return nil, noLoose, "", "", false
 	}
 	startMark, endMark := markerKinds(e)
@@ -415,6 +415,41 @@ func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, free loose, f
 		pts, free = enter(pts, to, across, marks[1])
 	}
 	return pts, free, fromWho, toWho, true
+}
+
+// edgeEnds resolves e's ends and the sides they take, false when an end cannot be one (told at at): with via, also the
+// points from its start through its via, and whether it goes across at the last of them.
+func (l *layout) edgeEnds(e *edge, at string) (
+	from, to anchor, pts [][2]float64, across bool, fromWho, toWho string, ok bool,
+) {
+	fromSide, toSide := e.FromSide, e.ToSide
+	fromAt, toAt := l.centre(e.From), l.centre(e.To)
+	if fromSide == "" {
+		near := toAt
+		if len(e.Via) > 0 {
+			fromSide, near = l.facing(e.From, e.Via[0], false, false), e.Via[0]
+		}
+		fromSide = l.clear(e.From, fromSide, toAt, near)
+	}
+	var okFrom, okTo bool
+	from, fromWho, okFrom = l.endOf(at, e.From, fromSide, toAt)
+	from = l.sharedEnd(e, 0, from)
+	angled := len(e.Via) > 0 && !e.Straight
+	if angled && okFrom {
+		pts, across = through([][2]float64{{from.x, from.y}}, e.Via, horizontal(from.side) || from.side == "")
+	}
+	if toSide == "" {
+		near := fromAt
+		if len(e.Via) > 0 {
+			near = e.Via[len(e.Via)-1]
+			toSide = l.facing(e.To, near, across, angled && okFrom)
+		}
+		toSide = l.clear(e.To, toSide, fromAt, near)
+	}
+	// Resolved even when from is not, so that both are told.
+	to, toWho, okTo = l.endOf(at, e.To, toSide, fromAt)
+	to = l.sharedEnd(e, 1, to)
+	return from, to, pts, across, fromWho, toWho, okFrom && okTo
 }
 
 // atDots is pts, an edge's points as routed, as drawn: each end at a dot it names moved back from the centre towards
@@ -649,7 +684,8 @@ type rule struct {
 }
 
 // keepOff moves the loose runs of the edges written by hand off the rules. Edges whose loose runs lie on one line
-// and leave one point or reach one (edges out of a part or into one, sharing the run) move as one. They move by steps
+// and leave one point or reach one, or one side of a part (edges out of a part or into one, sharing the run), move as
+// one. They move by steps
 // of ruleGap to the nearest place within all their bounds (the smaller of two as near) where each edge stays on the
 // canvas, runs through no part or text and crosses no edge (as the checks tell), and what is new of it keeps ruleGap
 // off every rule, part's or frame's edge and other edge's run along it; where there is none, they stay. Edges whose
@@ -682,8 +718,8 @@ func (l *layout) keepOff() {
 	}
 }
 
-// sharing are the loose edges from i on whose runs lie on i's line and leave or reach a point one of them does,
-// marked done.
+// sharing are the loose edges from i on whose runs lie on i's line and leave or reach a point or a side of a part one
+// of them does, marked done.
 func (l *layout) sharing(i int, done []bool) []int {
 	group := []int{i}
 	done[i] = true
@@ -695,7 +731,8 @@ func (l *layout) sharing(i int, done []bool) []int {
 			}
 			for _, g := range group {
 				if a, b := l.loose[g], l.loose[j]; a.across == b.across && a.at() == b.at() &&
-					(a.pts[0] == b.pts[0] || a.pts[len(a.pts)-1] == b.pts[len(b.pts)-1]) {
+					(a.pts[0] == b.pts[0] || a.pts[len(a.pts)-1] == b.pts[len(b.pts)-1] ||
+						l.oneSide(a.e, b.e)) {
 					group, done[j], grew = append(group, j), true, true
 					break
 				}

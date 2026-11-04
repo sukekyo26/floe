@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add equal parts for edges written by hand: the n ends on a side of a box, an icon, a table or a frame now stand at the points that part it into n+1 equal parts, instead of all at its middle. An edge running straight stays straight. An edge that would run into something stays in the middle: move a label in the way to part the edges. To branch from one point, write `via` or use a `tree`.
 - Add what changed between two versions of a stored page to the management page: by the words under each heading, side by side, all
   together or the changes alone, with the two versions to choose, contents to resize or hide, and `n` `p` to go through the changes. `Diff` over a page
   and `d` open it; a page newly at another version says how many sections changed since the one read. Opening it marks nothing read.

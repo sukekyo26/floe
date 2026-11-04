@@ -76,6 +76,7 @@ type target struct {
 	kind      string   // box, table, row, icon, frame, bar, dot, circle
 	handSides []string // the sides left to edges written by hand (box.handSides); nil: any
 	under     float64  //exhaustruct:optional // how far below r its bottom side stands: an icon's label is part of it
+	labelW    float64  //exhaustruct:optional // how wide the label below r is: an end within it stands under it
 }
 
 // whole is t's area with what stands below it, the area its sides are chosen by: the bottom side is that area's, while
@@ -104,8 +105,9 @@ type layout struct {
 	heads    []rect // frame headings, which edges may not cross
 	strokes  []rect // the spans of edges and lines, which must stay on the canvas
 	paths    []path
-	rules    []rule      // the lines of axes and line parts, which loose runs keep off (keepOff)
-	loose    []loosePath // the edges with a run floe placed
+	shares   map[handEnd]shared // where the ends shareEnds moves stand
+	rules    []rule             // the lines of axes and line parts, which loose runs keep off (keepOff)
+	loose    []loosePath        // the edges with a run floe placed
 	// The elements of the layers, drawn bottom to top; grid lines below every other edge, last first.
 	areaEls, gridEls, edgeEls, boxEls, labelEls []elem
 	markers                                     []string // the marker kinds the edges use, in the order of first use
@@ -130,13 +132,13 @@ func pointer(i int) string {
 
 // newLayout lays out s: names first, as edges and labels name parts written after them.
 func newLayout(s *spec, opts Options) *layout {
-	l := &layout{
-		s: s, opts: opts, id: "", problems: nil, failure: nil, names: map[string]target{}, circles: map[string]circle{},
-		boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, strokes: nil, paths: nil,
-		rules: nil, loose: nil,
-		areaEls: nil, gridEls: nil, edgeEls: nil, boxEls: nil, labelEls: nil, markers: nil, iconDefs: nil,
-		iconIDs: map[string]string{}, stacks: map[string]stack{}, w: written(s.Width), h: written(s.Height), strays: nil,
-	}
+	return layoutWith(s, opts, (*layout).shareEnds)
+}
+
+// layoutWith is newLayout with share, which places the ends of the edges written by hand before they are added.
+func layoutWith(s *spec, opts Options, share func(*layout, []item)) *layout {
+	l := blankLayout(s, opts)
+	l.names, l.circles, l.stacks = map[string]target{}, map[string]circle{}, map[string]stack{}
 	b, _ := json.Marshal(s) //nolint:errcheck,errchkjson // read from JSON, it writes as JSON
 	sum := sha256.Sum256(b)
 	l.id = "dg" + strconv.Itoa(opts.Seq) + "-" + hex.EncodeToString(sum[:3])
@@ -154,6 +156,7 @@ func newLayout(s *spec, opts Options) *layout {
 			l.stacks[regionKey(lb.In)] = st
 		}
 	}
+	share(l, items)
 	for _, it := range items {
 		l.add(it.at, it.p)
 	}
@@ -165,6 +168,17 @@ func newLayout(s *spec, opts Options) *layout {
 		l.h = l.reach(func(r rect) float64 { return r.y + r.h }) + canvasPad
 	}
 	return l
+}
+
+// blankLayout is s laid out with nothing added yet.
+func blankLayout(s *spec, opts Options) *layout {
+	return &layout{
+		s: s, opts: opts, id: "", problems: nil, failure: nil, names: nil, circles: nil,
+		boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, strokes: nil, paths: nil,
+		shares: nil, rules: nil, loose: nil,
+		areaEls: nil, gridEls: nil, edgeEls: nil, boxEls: nil, labelEls: nil, markers: nil, iconDefs: nil,
+		iconIDs: map[string]string{}, stacks: nil, w: written(s.Width), h: written(s.Height), strays: nil,
+	}
 }
 
 // written is a canvas's size as written, or +Inf for one left out (0), so that nothing is held within it yet.
@@ -215,10 +229,12 @@ func (l *layout) name(at string, p part) {
 		}
 	case p.Icon != nil:
 		i := p.Icon
-		keep(i.Name, target{r: iconRect(i, at), kind: "icon", handSides: i.handSides, under: iconUnder(i)})
+		keep(i.Name, target{
+			r: iconRect(i, at), kind: "icon", handSides: i.handSides, under: iconUnder(i), labelW: iconLabelW(i),
+		})
 	case p.Frame != nil:
 		f := p.Frame
-		r := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at}
+		r := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, form: frameOutline(f)}
 		keep(f.Name, target{r: r, kind: "frame", handSides: f.handSides})
 	case p.Bar != nil:
 		keep(p.Bar.Name, target{r: barRect(p.Bar, at), kind: "bar", handSides: nil})
@@ -484,7 +500,7 @@ func boxRect(b *box, at string) rect {
 	if b.Origin == "centre" {
 		x -= w / 2
 	}
-	return rect{x: x, y: b.Y, w: w, h: h, what: "", at: at}
+	return rect{x: x, y: b.Y, w: w, h: h, what: "", at: at, form: outlineOf(w, h, b.Shape)}
 }
 
 func (l *layout) addBox(b *box, at string) {
@@ -502,7 +518,7 @@ func (l *layout) addBox(b *box, at string) {
 	if need := len(b.Rows)*lineGap + 12; float64(need) > r.h {
 		l.problem(at, "diagram_too_short", r.what, need, num(r.h))
 	}
-	r.form, r.graph = outlineOf(r.w, r.h, b.Shape), b.graph
+	r.graph = b.graph
 	l.boxes = append(l.boxes, r)
 	kids = append([]elem{r.form.el(r)}, kids...)
 	l.boxEls = append(l.boxEls, elem{Kind: "g", Class: "box", Tone: b.Tone, Kids: kids})
@@ -587,7 +603,8 @@ func tableRects(t *table, at string) (rect, []rect) {
 	if len(t.Rows) > 0 {
 		h += 6
 	}
-	return rect{x: x, y: t.Y, w: w, h: h, what: "", at: at}.named("table", t.Name, t.Title, tableTitle), rows
+	r := rect{x: x, y: t.Y, w: w, h: h, what: "", at: at, form: outlineOf(w, h, "table")}
+	return r.named("table", t.Name, t.Title, tableTitle), rows
 }
 
 func (l *layout) addTable(t *table, at string) {
@@ -596,7 +613,6 @@ func (l *layout) addTable(t *table, at string) {
 		l.fit(at, r.what, t.Title, tableTitle, t.W-pad*2, t.W)
 	}
 	x, y, w := r.x, r.y, r.w
-	r.form = outlineOf(r.w, r.h, "table")
 	bg := r.form.el(r)
 	outer := bg
 	bg.Class, outer.Class = "bg", "outline"
@@ -653,7 +669,15 @@ func iconSize(i *icon) float64 {
 // iconRect is where icon i stands, but its label; dotRect, where dot d does.
 func iconRect(i *icon, at string) rect {
 	size := iconSize(i)
-	return rect{x: i.X, y: i.Y, w: size, h: size, what: "", at: at}
+	return rect{x: i.X, y: i.Y, w: size, h: size, what: "", at: at, form: outlineOf(size, size, "icon")}
+}
+
+// iconLabelW is how wide the label of icon i stands; 0 for none.
+func iconLabelW(i *icon) float64 {
+	if i.Label == nil {
+		return 0
+	}
+	return labelWidth(i.Label, false)
 }
 
 // iconUnder is how far below icon i its label reaches.
@@ -678,7 +702,7 @@ func dotR(d *dot) float64 {
 
 func barRect(b *bar, at string) rect {
 	w := math.Max(math.Abs(b.X2-b.X1), 4)
-	return rect{x: math.Min(b.X1, b.X2), y: b.Y - 7, w: w, h: 14, what: "", at: at}.named(
+	return rect{x: math.Min(b.X1, b.X2), y: b.Y - 7, w: w, h: 14, what: "", at: at, form: outlineOf(w, 14, "bar")}.named(
 		"bar", b.Name, b.Label, labelClass(false))
 }
 
@@ -712,6 +736,14 @@ func headArea(g *graphGroup) rect {
 }
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
+// frameOutline is the outline frame f is drawn in: of round corners, or square with an icon or written so.
+func frameOutline(f *frame) outline {
+	if f.Icon != "" || f.Square {
+		return outline{hex: 0, radius: 0}
+	}
+	return outline{hex: 0, radius: 10}
+}
+
 func (l *layout) addFrame(f *frame, at string) {
 	class := frameClass(f.Icon)
 	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named(
@@ -727,10 +759,7 @@ func (l *layout) addFrame(f *frame, at string) {
 		// The heading keeps the margin on its right that it has on its left.
 		l.fit(at, who, f.Label, class, f.W-(hx-f.X)-12, f.W)
 	}
-	rx, cls := 10.0, class
-	if f.Icon != "" || f.Square {
-		rx = 0
-	}
+	rx, cls := frameOutline(f).radius, class
 	if f.Accent {
 		cls += " accent"
 	}
@@ -816,6 +845,18 @@ func (l *layout) image(at, name string, x, y, size float64, who string) (elem, b
 // shape; refuse it too if labels of spaces come up.
 func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, strong bool) int {
 	cls := labelClass(strong)
+	r := labelArea(t, x, y, anchor, strong, at)
+	x0, w := r.x, r.w
+	l.labels = append(l.labels, r.named("label", "", t, cls))
+	if !plain {
+		l.labelEls = append(l.labelEls, elem{Kind: "rect", X: x0, Y: y - labelTop, W: w, H: labelH, Class: "label-bg"})
+	}
+	l.labelEls = append(l.labelEls, elem{Kind: "text", X: x, Y: y, Anchor: anchor, Class: cls, Text: t})
+	return len(l.labels) - 1
+}
+
+// labelArea is where a label of t stands at x, y, by anchor.
+func labelArea(t Text, x, y float64, anchor string, strong bool, at string) rect {
 	w := labelWidth(t, strong)
 	x0 := x - w/2
 	switch anchor {
@@ -824,12 +865,7 @@ func (l *layout) label(at string, t Text, x, y float64, anchor string, plain, st
 	case "end":
 		x0 = x - w + 5
 	}
-	l.labels = append(l.labels, rect{x: x0, y: y - labelTop, w: w, h: labelH, what: "", at: at}.named("label", "", t, cls))
-	if !plain {
-		l.labelEls = append(l.labelEls, elem{Kind: "rect", X: x0, Y: y - labelTop, W: w, H: labelH, Class: "label-bg"})
-	}
-	l.labelEls = append(l.labelEls, elem{Kind: "text", X: x, Y: y, Anchor: anchor, Class: cls, Text: t})
-	return len(l.labels) - 1
+	return rect{x: x0, y: y - labelTop, w: w, h: labelH, what: "", at: at}
 }
 
 // labelWidth is how wide a label of t is, with 5px around its text.
@@ -839,7 +875,6 @@ func labelWidth(t Text, strong bool) float64 {
 
 func (l *layout) addBar(b *bar, at string) {
 	r := barRect(b, at)
-	r.form = outlineOf(r.w, r.h, "bar")
 	l.boxes = append(l.boxes, r)
 	el := r.form.el(r)
 	el.Class, el.Tone = "bar", b.Tone
