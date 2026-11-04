@@ -812,12 +812,13 @@ func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests
 		first := b.eval(still)
 		typeFind(b, "plan")
 		out = append(out, fmt.Sprint(b.eval(still) == first))
-		// The rows as wide as the field; of the foot, the buttons left and the close right.
+		// The rows as wide as the field; of the foot, the buttons left and the close right; a row's mark not taken for the head's line.
 		out = append(out, b.eval(`(() => { const r = (e) => e.getBoundingClientRect(), f = r(document.querySelector('#find .find-foot'));
 			return [Math.abs(r(document.querySelector('#find-list li')).right - r(document.getElementById('find-q')).right) < 1,
 				Math.abs(r(document.querySelector('#find-acts .star')).left - f.left) < 12,
 				Math.abs(r(document.querySelector('#find [data-close]')).right - f.right) < 1,
-				r(document.querySelector('#find .k')).width > 0].join(' '); })()`))
+				r(document.querySelector('#find .k')).width > 0,
+				getComputedStyle(document.querySelector('#find-list .lead')).marginTop].join(' '); })()`))
 		typeFind(b, "nothing like it")
 		out = append(out, fmt.Sprint(b.eval(still) == first))
 		out = append(out, b.eval(`[document.getElementById('find-list').hidden, document.getElementById('find-acts').hidden, getComputedStyle(document.querySelector('#find .k')).visibility, document.getElementById('find-cut').textContent].join(' ')`))
@@ -849,8 +850,8 @@ func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.eval("document.getElementById('find').close()")
 	}
 	check(t, "search modal", out, strings.Join([]string{
-		"true", "middle", "true", "true true true true", "true", "true true hidden 0 found",
-		"true", "16", "true", "true true true false", "true", "true true hidden 0 found",
+		"true", "middle", "true", "true true true true 0px", "true", "true true hidden 0 found",
+		"true", "16", "true", "true true true false 0px", "true", "true true hidden 0 found",
 		"true", "true",
 		"true true true true true true", "true true true true true true",
 	}, "|"))
