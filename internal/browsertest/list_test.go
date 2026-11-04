@@ -68,7 +68,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.eval("document.querySelector('#list li[data-slug=r] .title').click()")
 	out = append(out, b.eval(reader), b.eval("location.pathname + ' ' + document.getElementById('read-title').getAttribute('href')"))
 	// The bar over it: its star, the page alone and the same menu as a row's.
-	out = append(out, b.eval("[...document.querySelectorAll('#read-actions .menu > *')].filter((e) => !e.hidden).length === [...document.querySelectorAll('#list li[data-slug=r] .menu > *')].filter((e) => !e.hidden).length"))
+	out = append(out, b.eval("[...document.querySelectorAll('#read-actions .menu > :not(.select)')].filter((e) => !e.hidden).length === [...document.querySelectorAll('#list li[data-slug=r] .menu > :not(.select)')].filter((e) => !e.hidden).length"))
 	// j and k from the row chosen, the list's redraw keeping the row with the focus.
 	b.eval("document.querySelector('#list li[data-slug=r] .title').focus()")
 	key("j")
@@ -489,6 +489,11 @@ func TestUIReader(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.eval("document.querySelector('#read-actions summary').click(); document.querySelector('#read-actions .edit').click()")
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
 	out = append(out, b.until("the focus back", "document.activeElement.matches('#read-actions summary') && 'bar'"))
+	// The list read again, as after a read, draws the bar anew with the focus where it was.
+	b.eval("drawn = ''; load()")
+	if got := b.eval("document.activeElement.matches('#read-actions summary')"); got != "true" {
+		t.Errorf("the focus after the bar was drawn anew: %s", got)
+	}
 	b.eval("document.querySelector('#list li[data-slug=a1] summary').click(); document.querySelector('#list li[data-slug=a1] .edit').click()")
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
 	out = append(out, b.until("the focus back", "document.activeElement.matches('#list li[data-slug=a1] summary') && 'row'"))

@@ -872,6 +872,7 @@
       <details class="more">
         <summary class="icon-btn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></summary>
         <div class="menu">
+          <button type="button" class="icon-btn select" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span class="label">{{.Msg "ui_select"}}</span></button>
           <button type="button" class="icon-btn edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_edit"}}</button>
           <button type="button" class="icon-btn copy" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>{{.Msg "ui_copy_path"}}</button>
           <a class="icon-btn open" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>{{.Msg "ui_open_raw"}}</a>
@@ -963,6 +964,8 @@
       } catch { /* told again the next time; api tells if the server was not reached */ }
     }
     readsGoing = false;
+    // The dot and the counts go now, not at the next look
+    load();
   }
   // The frame's own fragment changed (the address bar, Back): the page moves to that part, in
   // place of its history entry. A fragment written above, from the page's own move, fires no hashchange, so the two do not echo.
@@ -1122,7 +1125,7 @@
   }
 
   // The projects of every entry (of any kind, archived or not), most entries first, then by name, each to its place: the
-  // order of the groups and of the projects' colors, which no filter changes
+  // order of the projects on the shelf and of their colors, which no filter changes
   function projectOrder() {
     const counts = new Map();
     for (const a of items) if (a.project) counts.set(a.project, (counts.get(a.project) ?? 0) + 1);
@@ -1246,9 +1249,8 @@
   async function removeSelected() {
     // Of what is selected now: those done leave the selection before the words are made
     const now = bulkKind();
-    const what = () => now;
-    if (arm($('bulk-delete'), t(`ui_${what()}_bulk_confirm`, selected.size))) return;
-    await actOnSelected(deleteOne, (n) => t(`ui_${what()}_bulk_done`, n), (n, why) => t(`ui_${what()}_bulk_failed`, n, why));
+    if (arm($('bulk-delete'), t(`ui_${now}_bulk_confirm`, selected.size))) return;
+    await actOnSelected(deleteOne, (n) => t(`ui_${now}_bulk_done`, n), (n, why) => t(`ui_${now}_bulk_failed`, n, why));
   }
 
   async function archiveSelected() {
@@ -1735,7 +1737,12 @@
     open.href = rawHref({ slug: a.slug, file });
     open.hidden = Boolean(a.missing || a.folder && !file);
     open.setAttribute('aria-label', t('ui_open_raw_named', file ? baseName(file) : a.title));
-    box.querySelector('.more-slot').replaceChildren(...(file ? [] : [moreMenu(a)]));
+    const slot = box.querySelector('.more-slot');
+    const focused = slot.contains(document.activeElement);
+    slot.replaceChildren(...(file ? [] : [moreMenu(a)]));
+    // A read draws the bar anew just as a key may have reached its menu
+    // LIMIT: a menu open or a delete waiting in a page's bar goes as the list changes, as in a row. Keep them drawn as the search modal does if that comes to trouble someone
+    if (focused) box.querySelector('summary')?.focus();
   }
 
   // Loads href in the iframe beside the list, in place of its history entry: moved through by j and k, Back is the tab's, and
@@ -1845,6 +1852,11 @@
     toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
     li.querySelector('.actions').append(moreMenu(a));
+    // The way to the first row selected with no keys: the boxes show once one is
+    const select = li.querySelector('.menu .select');
+    select.hidden = false;
+    select.setAttribute('aria-label', t('ui_select_named', a.title));
+    select.addEventListener('click', () => { if (!sel.checked) sel.click(); });
     if (a.folder) {
       li.classList.add('folder');
       // A folder's title opens and closes its tree; its URL leads to the list with it open, for a new tab
@@ -1941,7 +1953,7 @@
       time.dateTime = p.updatedAt;
       time.textContent = ago(p.updatedAt);
       const open = li.querySelector('.open');
-      open.href = `/a/${a.slug}/${p.file.split('/').map(encodeURIComponent).join('/')}`;
+      open.href = rawHref(x);
       open.setAttribute('aria-label', t('ui_open_raw_named', name));
       open.title = t('ui_open_raw');
       const copy = li.querySelector('.copy');
@@ -2203,6 +2215,14 @@
     }
   }
 
+  // What opens a page otherwise leaves j and k to the list it was last on
+  function forgetOrder() {
+    try {
+      sessionStorage.removeItem(ORDER_KEY);
+    } catch {
+      // Without storage, there is none to forget
+    }
+  }
   // Keeps the pages of the list as it is now, for j and k where a page is open whole: a read page leaves the view of the new
   // ones, and they go on through the list as it was
   function keepOrder() {
@@ -2214,7 +2234,7 @@
   }
 
   // The pages j and k go through in the frame: those of the list that opened it, the ones gone since left out. Opened
-  // otherwise (from the URL), the list it was last on, or if it is not on that all entries of its kind, as first found
+  // otherwise (from the URL, the search modal), the list it was last on, or if it is not on that all entries of its kind, as first found
   let frameOrder;
   function pagesInOrder(a) {
     let kept = null;
@@ -2675,7 +2695,10 @@
   let findShown = [];
   const findMark = listKeys($('find-q'), {
     options: () => [...$('find-list').children],
-    choose: (i) => { location.href = $('find-list').children[i].querySelector('a').href; },
+    choose: (i) => {
+      forgetOrder();
+      location.href = $('find-list').children[i].querySelector('a').href;
+    },
     close: () => $('find').close(),
     open: () => {},
     shown: () => true,
@@ -2696,7 +2719,7 @@
   function drawFindBar(a) {
     const box = $('find-actions');
     const was = document.activeElement;
-    const focused = box.querySelector('.more-slot').contains(was);
+    const inMenu = box.querySelector('.more-slot').contains(was);
     $('find-acts').hidden = !a;
     if (!a) {
       delete box.dataset.slug;
@@ -2707,9 +2730,8 @@
     if (same && box.querySelector('.more[open], .armed')) return;
     box.dataset.slug = a.slug;
     drawActions(box, a, '');
-    if (focused) (same ? box.querySelector('summary') : $('find-q')).focus();
-    // A folder has no page to open: a focus left on that button would fall out of the modal
-    else if (was.hidden) $('find-q').focus();
+    // On another row the menu is another's; and a folder has no page to open, whose button would drop the focus out of the modal
+    if ((inMenu && !same) || was.hidden) $('find-q').focus();
   }
 
   function drawFind() {
@@ -2808,7 +2830,7 @@
         opened.add(slug);
         keepOpen();
       }
-      filter({ view: 'all', kind: '', template: '', project: '', tag: '' });
+      filter({ view: 'all', ...NO_PICKS });
       drawn = '';
       await load();
     } catch (err) {
@@ -2872,6 +2894,8 @@
     });
   } else {
     $('keys-frame').hidden = $('keys-note-frame').hidden = true;
+    // Back on a list, what the one before kept for j and k is over
+    forgetOrder();
     $('manage').hidden = false;
     $('search').hidden = false;
     $('q').value = readState(location.search).q;
@@ -3001,6 +3025,7 @@
     } else if (plainKey(e) && pressKey(e.key)) e.preventDefault();
   });
   $('find-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
+  $('find-list').addEventListener('click', (e) => { if (e.target.closest('a') && !e.ctrlKey && !e.metaKey && !e.shiftKey) forgetOrder(); });
   $('find-q').addEventListener('input', () => {
     findSlug = null;
     findAt = 0;

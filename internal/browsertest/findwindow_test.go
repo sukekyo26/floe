@@ -1062,3 +1062,111 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 		"find-q", "Open Alpha plan alone in a new tab",
 	}, "|"))
 }
+
+// TestUIFindOrder leaves j and k to the list last on where the search modal opens a page, not the order an earlier list kept.
+func TestUIFindOrder(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.stub("[1, 2, 3, 4, 5].map((n) => ({ slug: 'p' + n, title: 'P' + n, description: '', version: 1, tags: n % 2 ? ['t'] : [], createdAt: at(1), updatedAt: at(9 - n) }))")
+	const row = "[...document.querySelectorAll('#find-list li')].find((li) => li.querySelector('a').textContent === 'P3')"
+	open := map[string]func(){
+		"enter": func() {
+			b.eval("findMark([...document.getElementById('find-list').children].indexOf(" + row + "))")
+			if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Enter)); err != nil {
+				t.Fatal(err)
+			}
+		},
+		"press": func() { b.eval(row + ".querySelector('a').click()") },
+	}
+	out := make([]string, 0, 5)
+	for _, how := range []string{"enter", "press"} {
+		// On the list of the tag, whose next after P3 is P5, with the order of all kept, whose next is P4.
+		b.navigate("/?tag=t")
+		b.until("the rows", "document.querySelector('#list .title')")
+		b.eval(`sessionStorage.setItem('artifacts.order', '["p1","p2","p3","p4","p5"]'); openFind()`)
+		// A press beside the rows opens nothing, and the order stays.
+		out = append(out, b.eval("document.getElementById('find-list').click(); sessionStorage.getItem('artifacts.order') !== null"))
+		open[how]()
+		b.until("the page", "location.pathname === '/a/p3/'")
+		b.until("the bar", "document.getElementById('frame-title').textContent")
+		keyDown(b, "key: 'j'")
+		b.until("the next page", "location.pathname !== '/a/p3/'")
+		out = append(out, b.eval("location.pathname"))
+	}
+	// Back on a list the order of the one before is over: a page opened by its URL goes through the list last on.
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list .title')")
+	b.eval("keepOrder()")
+	b.navigate("/?tag=t")
+	b.until("the rows", "document.querySelector('#list .title')")
+	b.navigate("/a/p3/")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	keyDown(b, "key: 'j'")
+	b.until("the next page", "location.pathname !== '/a/p3/'")
+	out = append(out, b.eval("location.pathname"))
+	check(t, "order", out, "true|/a/p5/|true|/a/p5/|/a/p5/")
+}
+
+// TestUIReadLoads reads the list again as soon as a read is told, so that the dot and the counts do not wait for the next look.
+func TestUIReadLoads(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "read/pv.yaml", "pv", "<p>pv</p>"), "--slug", "pv")
+	b.addScript(`(() => { const f = window.fetch; window.told = 0; window.next = 0;
+		window.fetch = (u, o) => { const read = String(u).endsWith('/read');
+			if (window.told && !window.next && String(u) === '/api/artifacts') window.next = performance.now();
+			return f(u, o).then((r) => { if (read) window.told = performance.now(); return r; }); }; })()`)
+	b.navigate("/a/pv/")
+	b.until("the read told and the list read", "window.told > 0 && window.next > 0")
+	check(t, "at once", []string{b.eval("window.next - window.told < 500")}, "true")
+}
+
+// TestUIRowSelect starts a selection from a row's menu, with no keys and on a touch screen, where the boxes then show for the rest;
+// the menus of the pages' bars and the search modal have no such item.
+func TestUIRowSelect(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.stub(findList)
+	touch := func(on bool) {
+		if _, err := chromedp.Call(b.ctx, emulation.SetTouchEmulationEnabled, emulation.SetTouchEmulationEnabledParams{Enabled: on, MaxTouchPoints: 1}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	touch(true)
+	defer touch(false)
+	b.size(400, 700, false)
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li[data-slug=f]')")
+	press := func(selector string) {
+		t.Helper()
+		var x, y float64
+		if _, err := fmt.Sscan(b.eval("(() => { const e = document.querySelector("+js(selector)+"); e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()"), &x, &y); err != nil {
+			t.Fatal(err)
+		}
+		b.click(x, y)
+	}
+	state := "[...selected].sort().join('') + ' ' + document.getElementById('list').classList.contains('selecting') + ' ' + !document.getElementById('bulk').hidden + ' ' + getComputedStyle(document.querySelector('#list li[data-slug=c] .pick')).display"
+	out := make([]string, 0, 6)
+	out = append(out, b.eval(state))
+	press("#list li[data-slug=a] summary")
+	press("#list li[data-slug=a] .menu .select")
+	out = append(out, b.eval(state), b.eval("document.querySelector('#list li[data-slug=a] .more').open"))
+	// A folder's row too; pressed again, a row stays selected.
+	press("#list li[data-slug=f] summary")
+	press("#list li[data-slug=f] .menu .select")
+	press("#list li[data-slug=f] summary")
+	press("#list li[data-slug=f] .menu .select")
+	out = append(out, b.eval(state))
+	// Named for a screen reader; none in the search modal or the bar of a page.
+	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] .menu .select').getAttribute('aria-label')"))
+	b.eval("document.getElementById('bulk-clear').click(); openFind()")
+	out = append(out, b.eval("document.querySelector('#find-actions .select').hidden"))
+	b.eval("document.getElementById('find').close()")
+	touch(false)
+	b.navigate("/a/a/")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	out = append(out, b.eval("document.querySelector('#frame-actions .select').hidden"))
+	check(t, "select", out, strings.Join([]string{
+		" false false none", "a true true grid", "false", "af true true grid", "Select Alpha plan", "true", "true",
+	}, "|"))
+}
