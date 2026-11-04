@@ -358,7 +358,7 @@ func TestFolder(t *testing.T) {
 		"sibling.html": "beside",
 	})
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: docs}), http.StatusCreated, `"slug":"docs","title":"","prev":null,"folder":true}`) //nolint:exhaustruct // the rest not given
-	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/?tab=folders&open=docs" {
+	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/?kind=folder&open=docs" {
 		t.Errorf("GET /a/docs/ = %d to %q, want 303 to the list with it open", w.Code, w.Header().Get("Location"))
 	}
 	// The frame of a page the server found says so, for the frame to show it whatever its directory's list holds.
@@ -393,7 +393,7 @@ func TestFolder(t *testing.T) {
 	want(t, e.do(t, http.MethodGet, "/api/artifacts/docs/pages?dir=guide", ""), http.StatusOK, `{"dirs":[],"pages":[{"file":"guide/setup.html","updatedAt":"`)
 	// An archived folder's URL leads to the archived list.
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/docs", map[string]any{"archived": true}), http.StatusOK, `"slug":"docs"`)
-	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Header().Get("Location") != "/?tab=folders&open=docs&archived=1" {
+	if w := e.do(t, http.MethodGet, "/a/docs/", ""); w.Header().Get("Location") != "/?kind=folder&open=docs&view=archived" {
 		t.Errorf("GET /a/docs/ archived leads to %q", w.Header().Get("Location"))
 	}
 	// A file's link has no directories to list.

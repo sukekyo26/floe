@@ -88,18 +88,14 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 
 	// Pressed with the mouse: no outline, and the shadow it has without the focus.
 	pressed := []string{
-		".tabs button[data-tab=links]", ".tabs button[data-tab=pages]", ".views button[data-view=fav]", ".views button[data-view=all]",
-		"#list li:not(.group) .sel", "#list li:not(.group) .star",
+		".views button[data-view=fav]", ".views button[data-view=all]", "#list li:not(.group) .star", "#list li:not(.group) .sel",
 	}
 	out := make([]string, 0, 16)
-	// The sort pressed opens its orders, the focus in them, and pressed again closes them, the focus back on it: unringed.
-	// First, as a row selected below puts the bulk bar in its place.
-	r := b.rect("document.getElementById('sort')")
-	b.click(r.X+r.Width/2, r.Y+r.Height/2)
-	b.until("the orders", "document.activeElement.id === 'sort-list'")
-	b.click(r.X+r.Width/2, r.Y+r.Height/2)
-	out = append(out, "#sort: "+b.until("the sort to have the focus", "document.activeElement.id === 'sort' && getComputedStyle(document.activeElement).outlineStyle"))
 	for _, sel := range pressed {
+		// A row selected, the check boxes show.
+		if strings.HasSuffix(sel, ".sel") {
+			b.eval("document.querySelector('#list li[data-slug=p9] .sel').click()")
+		}
 		r := b.rect("document.querySelector(" + js(sel) + ")")
 		b.click(r.X+r.Width/2, r.Y+r.Height/2)
 		focused := b.eval("(() => { const e = document.activeElement; const s = getComputedStyle(e); " +
@@ -110,10 +106,8 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 		out = append(out, sel+": "+strings.SplitN(focused, " ", 3)[1]+" "+strconv.FormatBool(focused == unfocused))
 	}
 	check(t, "pressed", out, strings.Join([]string{
-		"#sort: none",
-		".tabs button[data-tab=links]: none true", ".tabs button[data-tab=pages]: none true",
 		".views button[data-view=fav]: none true", ".views button[data-view=all]: none true",
-		"#list li:not(.group) .sel: none true", "#list li:not(.group) .star: none true",
+		"#list li:not(.group) .star: none true", "#list li:not(.group) .sel: none true",
 	}, "|"))
 
 	// Reached by keyboard: Tab from the top of the page (focus is put on the body, where Tab goes on from) until the control
@@ -133,20 +127,20 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 		t.Fatalf("Tab does not reach %s", sel)
 		return ""
 	}
-	// The shelf's pressed button is filled with ink, the bulk delete with danger: the ring stays off them. A row selected
-	// puts the bulk bar in the place of the kinds and the sort, so it is selected last.
-	b.eval("[...document.querySelectorAll('#list li:not(.group) .sel')].filter((s) => s.checked).forEach((s) => s.click())")
+	// The bulk delete is filled with danger: the ring stays off it. A row selected puts the bulk bar in the place of the head's
+	// add button, so it is selected last.
+	b.eval("document.getElementById('bulk-clear').click()")
 	out = out[:0]
 	for _, sel := range []string{
-		".views button[data-view=all]", ".views button[data-view=fav]", ".tabs button[data-tab=pages]", "#sort", "#q",
-		"#list li:not(.group) a.title", "#list li:not(.group) .sel",
+		".views button[data-view=all]", ".views button[data-view=fav]", "#q", "#add-open",
+		"#list li:not(.group) a.title",
 	} {
 		out = append(out, tabTo(sel))
 	}
 	// In the bulk bar, ringed in ink: the clearing at its end, and the delete, pressed once too, which shows its darker face
 	// and no ring but the focus ring.
 	b.eval("document.querySelector('#list li:not(.group) .sel').click()")
-	out = append(out, tabTo("#bulk-clear"), tabTo("#bulk-delete"))
+	out = append(out, tabTo("#list li:not(.group) .sel"), tabTo("#bulk-clear"), tabTo("#bulk-delete"))
 	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Enter)); err != nil {
 		t.Fatal(err)
 	}
@@ -157,15 +151,17 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.eval("document.getElementById('bulk-tag').click()")
 	b.until("the tags dialog", "document.getElementById('tag-dialog').open")
 	out = append(out, tabTo(".tag-box input"))
+	b.eval("document.getElementById('tag-dialog').close(); openFind()")
+	out = append(out, tabTo("#find-actions .star"))
+	b.eval("document.getElementById('find').close()")
 	ring := "solid 2px rgb(107, 105, 100) 1px seen"
 	check(t, "reached", out, strings.Join([]string{
-		".views button[data-view=all]: " + ring, ".views button[data-view=fav]: " + ring, ".tabs button[data-tab=pages]: " + ring,
-		"#sort: " + ring, "#q: " + ring, "#list li:not(.group) a.title: solid 2px rgb(107, 105, 100) -2px seen",
+		".views button[data-view=all]: " + ring, ".views button[data-view=fav]: " + ring,
+		"#q: " + ring, "#add-open: " + ring, "#list li:not(.group) a.title: solid 2px rgb(107, 105, 100) -2px seen",
 		"#list li:not(.group) .sel: " + ring, "#bulk-clear: " + ring, "#bulk-delete: " + ring, "#bulk-delete.armed: " + ring,
-		".tag-box input: " + ring,
+		".tag-box input: " + ring, "#find-actions .star: " + ring,
 	}, "|"))
 	// The title itself has none, so that a row shows one ring.
-	b.eval("document.querySelector('#tag-dialog [data-close]').click()")
 	tabTo("#list li:not(.group) a.title")
 	check(t, "the title", []string{b.eval("getComputedStyle(document.activeElement).outlineStyle")}, "none")
 }

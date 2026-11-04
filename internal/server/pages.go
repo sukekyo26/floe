@@ -183,7 +183,7 @@ func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing) ([
 // A folder's page at file is framed at ?file=, its iframe loading file under the folder; a folder's URL itself
 // leads to the list with the folder open.
 // ?raw and the files under a link's directory are the page and its files, ?raw&v=<n> a stored page's version n. Its
-// version is taken from the meta.json
+// version, and of a stored page the version it tells its frame it served, are taken from the meta.json
 // its content is served by, before the content: a change in between costs one extra reload, not a miss. A stored
 // page whose copy a publish removed after its meta.json was read is read once more.
 func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
@@ -194,6 +194,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var version string
+	var read *Read
 	var got served
 	var v int
 	err := errNoPage
@@ -206,6 +207,12 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 		version = s.version(slug, m, rest, v)
 		if v > 0 && version == "" {
 			break
+		}
+		read = nil
+		if rest == "" {
+			if mark, ok := s.cfg.Store.ReadMark(slug, m, v); ok {
+				read = &Read{N: mark.N, At: mark.At}
+			}
 		}
 		// Of the last look, as the version is: one changed since reloads the tab.
 		got, err = s.content(catalog(r), slug, m, rest, v, func() store.Drawing { d, _ := s.now(); return d })
@@ -227,7 +234,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	h.Set("X-Content-Type-Options", "nosniff")
 	tail := ""
 	if got.typ == htmlType {
-		tail = servedScript(slug, rest, version, v)
+		tail = servedScript(slug, rest, version, v, read, got.drawn)
 	}
 	stream(w, got.typ, got.body, tail)
 }
@@ -239,9 +246,9 @@ func (s *Server) frame(w http.ResponseWriter, r *http.Request, slug string) {
 	if m := s.cfg.Store.ReadMeta(slug); m != nil {
 		file := r.URL.Query().Get("file")
 		if m.Folder && file == "" {
-			to := "/?tab=folders&open=" + url.QueryEscape(slug)
+			to := "/?kind=folder&open=" + url.QueryEscape(slug)
 			if m.Archived {
-				to += "&archived=1"
+				to += "&view=archived"
 			}
 			http.Redirect(w, r, to, http.StatusSeeOther)
 			return
@@ -334,6 +341,50 @@ const leaveFrame = "if (top !== window) window.addEventListener('click', (e) => 
 	"{ artifactHash: location.hash, artifactPath: location.pathname }, location.protocol + '//' + location.host);" +
 	"tell(); window.addEventListener('hashchange', tell); }"
 
+// tellRead tells the frame the version of a stored page it was served, read as soon as it is loaded. It goes to parent,
+// the frame the iframe is in even when that is framed itself (VS Code's Simple Browser), of this origin only, so that a
+// site that frames ?raw is told nothing. The frame takes it from its own iframe, at the URL it opened.
+// LIMIT: a page counts as read as soon as it is loaded, read or not. Wait for a look at it if that comes to mislead.
+// LIMIT: a page that replaces window.parent tells nothing, and a page framed can claim any version of its own, or a
+// value of the right shape the server refuses (n: 1e30), which shows its frame a mistake each time: only its own unread
+// and its own frame suffer from what the sandbox lets it do.
+func tellRead(read *Read) string {
+	if read == nil {
+		return ""
+	}
+	// Marshal writes no < or >: it stays within the script.
+	lit, _ := json.Marshal(read) //nolint:errcheck // a number and a string always encode
+	return "if (window.parent !== window) window.parent.postMessage({ artifactRead: " + string(lit) +
+		", artifactPath: location.pathname }, location.protocol + '//' + location.host);"
+}
+
+// tellKeys hands the frame the keys pressed in the page that move on or open a modal, so that they work with the focus
+// in it: no key that changes an entry, and not Escape, which would keep a dialog of the page from closing. A page floe
+// did not draw hands over Ctrl+K (⌘K) alone, as it may use the letters itself without preventDefault (a coverage
+// report's j and k). Nothing is taken until the frame says it takes them, of this origin, so that a page in another
+// iframe keeps the browser's / and Ctrl+K. It listens on window, after the page's own. Shift is not looked at, as ? is
+// typed with it on most keyboards; Ctrl+Shift+K has the key K. A field is the one to type in; a checkbox and a radio
+// (the part tabs) are not.
+// LIMIT: a field inside a shadow root is seen as its host, and hands the keys over.
+// LIMIT: a page floe drew with a script of its own that takes these keys without preventDefault does both.
+func tellKeys(drawn bool) string {
+	letters := "[]"
+	if drawn {
+		letters = "['j', 'k', 'h', '?', '/']"
+	}
+	return "{const here = location.protocol + '//' + location.host; let wanted = false;" +
+		"window.addEventListener('message', (e) => { if (e.source === window.parent && e.origin === here " +
+		"&& e.data?.artifactKeysWanted === true) wanted = true; });" +
+		"window.addEventListener('keydown', (e) => {" +
+		"if (!wanted || e.defaultPrevented || e.isComposing || e.keyCode === 229 || e.altKey) return;" +
+		"const on = e.target;" +
+		"if (on.closest?.('input:not([type=\"checkbox\"], [type=\"radio\"]), textarea, select') " +
+		"|| on.isContentEditable || window.document.designMode === 'on') return;" +
+		"const key = e.ctrlKey || e.metaKey ? (e.key === 'k' ? 'Ctrl+K' : '') : " +
+		"(" + letters + ".includes(e.key) ? e.key : '');" +
+		"if (!key) return; e.preventDefault(); window.parent.postMessage({ artifactKey: key }, here); });}"
+}
+
 // askEvery is how often a page shown asks whether it changed: about as often as the drawing is watched, and set
 // apart from it so that the page's asking does not follow a test's shorter watching.
 const askEvery = time.Second
@@ -344,10 +395,11 @@ const askEvery = time.Second
 // shown, it asks every askEvery whether the version it was served from (since) is still the page's, each ask cut off
 // after 5 s so that one left hanging (a connection half open after sleep) does not stop the asking, and once more
 // when it is shown again. A tab not shown asks nothing, and reloads when shown.
-// A version v of a stored page (0 for none) asks of that version.
+// A version v of a stored page (0 for none) asks of that version. read is what it tells the frame it served (tellRead).
+// drawn tells a page floe drew (tellKeys).
 // LIMIT: that a tab not shown asks nothing is not checked in a browser: headless Chrome showed no tab hidden. Were it
 // broken, a tab not shown asks every second, holding nothing.
-func servedScript(slug, rest, version string, v int) string {
+func servedScript(slug, rest, version string, v int, read *Read, drawn bool) string {
 	u := "/api/changed/" + slug
 	if rest != "" {
 		parts := strings.Split(rest, "/")
@@ -368,7 +420,8 @@ func servedScript(slug, rest, version string, v int) string {
 		"if ((await r.text()) === 'changed') { location.reload(); return; } } catch {}" +
 		"busy = false; };" +
 		"window.setInterval(look, " + strconv.FormatInt(askEvery.Milliseconds(), 10) + ");" +
-		"window.document.addEventListener('visibilitychange', look); look();" + leaveFrame + "}</script>\n"
+		"window.document.addEventListener('visibilitychange', look); look();" +
+		leaveFrame + tellRead(read) + tellKeys(drawn) + "}</script>\n"
 }
 
 // changed answers whether the page of slug (of rest under a link) is no longer of the version since: "changed" or

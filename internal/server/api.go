@@ -244,6 +244,45 @@ func (s *Server) rebuild(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Viewer is who reads the pages, the one key of reads.json until viewers are told apart.
+const Viewer = "local"
+
+// Read is the version of a stored page a viewer was served, as the page tells its frame and the frame sends it.
+type Read struct {
+	N  int    `json:"n"`
+	At string `json:"at"`
+}
+
+// markRead keeps that the viewer read a version of the stored page slug: 204, and 404 for a link, a folder or no page,
+// which have no unread. A version the page does not have is kept by nobody, and asks nothing to be mended.
+func (s *Server) markRead(w http.ResponseWriter, r *http.Request) {
+	slug := r.PathValue("slug")
+	if !store.ValidSlug(slug) {
+		notFound(w)
+		return
+	}
+	// Origin is checked before the page is looked for, as in edit.
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok {
+		return
+	}
+	in := decodeStrict[Read](w, body)
+	if in == nil {
+		return
+	}
+	err := s.cfg.Store.MarkRead(Viewer, slug, in.N, in.At)
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // Stop is the request to stop the server whose pid is PID, as floe stop and the replacing of a server of another
 // build send it, naming the server they saw: one started after it is not stopped.
 type Stop struct {

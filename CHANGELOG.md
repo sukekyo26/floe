@@ -8,6 +8,17 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add a modal that searches the pages, opened by `Ctrl+K` (`⌘K`) anywhere, by `/` on a page open whole, or by the magnifier on a
+  phone's whole page: it searches by title, description, slug, project, path, template and tag, the archived last, opens a row
+  whole, and acts on the row reached with the buttons of a row. Add a modal of the keyboard shortcuts, opened by `?` or the button in the
+  bar. On a page open whole, `h` goes back to the list. With the focus in a page, `j`, `k`, `h`, `?`, `/` and `Ctrl+K` now work too (`Ctrl+K` alone in a link's HTML and a folder's,
+  which may use the letters themselves).
+- Add what a viewer has read of the stored pages, kept in `reads.json` in the store. A page opened in its frame tells
+  the frame the version it served, which the frame sends to `POST /api/artifacts/{slug}/read`, and `GET /api/artifacts`
+  gives each stored page `news` (`new` for a page not seen, `version` for a version after the one read) and `version`
+  (the number of its last). Pages from before floe first writes `reads.json` count as read. `GET /api/artifacts` also
+  gives the name of the `template` of a stored page and a linked data file; `floe rebuild` writes it to the meta.json of
+  pages published before.
 - Add the versions of a stored page: a publish of a data file, or images it reads, other than the last version's
   keeps the page before as a version and makes the new page the next one (a rebuild, or a publish of a theme only,
   draws the last again and adds none). A page keeps 20, the oldest going first, those before the last gzipped under
@@ -207,17 +218,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   parts and themes of now, keeping the page it had where it no longer draws.
 - Add `floe list`, `floe rm`, `floe serve` and `floe stop`, and a management
   page in English or Japanese, by the browser's language, that lists, edits,
-  opens and downloads pages: a shelf on the left picks all, the favourites
-  (which head the list of all), the archived, a tag and the project (picked
-  again, let go), a row of buttons on a narrow screen; the bar over the list
-  picks the kind and the order (from a menu of the page's own, by mouse or
-  keys), and holds the actions on the pages selected
-  while there are any; the list groups its pages by project in round cards,
-  each project in a color of its own, those with the most pages first, a row's
-  menu holding its edit, opening, download, archive and delete; and the bar over
-  an open page stars and archives it with buttons of icons alone, filled in while
-  on, and its title opens the pages of the list it was opened from, to search and
-  pick from. Tags are given in a page's edit dialog, to those selected,
+  opens and downloads pages: the bar over the list holds the actions on the
+  pages selected while there are any, each project has a color of its own, a
+  row's menu holds its edit, opening, download, archive and delete, and the bar
+  over an open page stars and archives it with buttons of icons alone, filled in
+  while on. Tags are given in a page's edit dialog, to those selected,
   or as `tags` in `PATCH /api/artifacts/{slug}`; they show under a page's
   title, are searched, and stay when the page is published again. What is
   reached by keyboard shows one thin grey ring, and a button pressed with the
@@ -292,18 +297,27 @@ adheres to [Semantic Versioning](https://semver.org/).
   from sending what it holds out, on the server and in a page `floe render`
   writes or a download gives. Such a page holds one charset, floe's, first in
   its head, in place of those `page.html` writes.
-- Add a folder as a link (`floe publish --link <folder>`, or “Add a folder” on
-  the management page): one row of a new Folders tab, which opens a tree of the
+- Add a folder as a link (`floe publish --link <folder>`, or “Add a link or
+  folder” on the management page): one row of the list, which opens a tree of the
   folder's directories and HTML files, reading only what is opened, and frames
-  each page under the folder's title with the pages of its directory to pick
-  from. Names starting with a dot are left out; one directory shows its first
-  1000 entries. The tabs show an icon before their names, alone on a narrow
-  screen. A folder's page has the folder's tree on its left, whose edge is
+  each page under the folder's title. Names starting with a dot are left out; one
+  directory shows its first 1000 entries. A folder's page has the folder's tree on its left, whose edge is
   dragged or keyed to widen it, and which hides at a button; the browser keeps
   both.
 
 ### Changed
 
+- Change the management page into a list of pages: newest first under its days (today, yesterday, the last 7 days, then by
+  month), a blue dot on a stored page not seen, the mark `v3 · new version` on one with a version after the one read, and
+  the template, project and tags under each title. A row opens its page beside the list (`j` and `k` or the arrows go on
+  to the next and the one before), and its title or `Enter` opens it whole, where `j` and `k` go through the list that opened
+  it. The shelf picks a view (unread, all, favourites, archive), and narrows by project, kind, template and tag, all in the
+  URL. "All" is lit only with no view and no picks: pressed, it lets go of them, and a view pressed again lets go of itself alone. Above 70rem, the edges of the filters and the list drag to widen them and each of them folds, kept in the browser. The sort, the pages of the list, the tabs of kinds, the groups by project and the frame's title that picked a page
+  are gone, and the check boxes show only while rows are selected (`x`, or Select in a row's menu).
+- Change a stored page's `updatedAt` to move only when a publish adds a version: publishing the same content again, or
+  with another theme only, no longer moves it. `floe publish` says `last updated` in place of `last published`.
+- Change the time a linked file is listed at to the later of the file's time and when it was linked, so that linking
+  it again brings it up the list.
 - Refuse a diagram's `title` empty in any language (`title: ""`, `{ en: "", ja: … }`, `{ en: …, ja: "" }`): it told a
   reader who cannot see the diagram nothing (`aria-label=""`).
 - Refuse an empty label in a diagram (`label: ""`, the `text` of the part `label`, or `{ en: "", ja: … }`), in the

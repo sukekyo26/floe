@@ -72,8 +72,12 @@ func Start(t *testing.T, files map[string]string) *Site {
 		t.Fatal(err)
 	}
 	own := func(name string) kit.Dir { return kit.Dir{FS: os.DirFS(dir(name)), Name: dir(name)} }
+	st := store.New(dir("store"))
+	if err = st.Begin(server.Viewer, store.Now()); err != nil {
+		t.Fatal(err)
+	}
 	srv := server.New(server.Config{
-		Store: store.New(dir("store")), Port: port, Build: build,
+		Store: st, Port: port, Build: build,
 		Drawing: func() (store.Drawing, error) {
 			floe, err := kit.Floe()
 			if err != nil {

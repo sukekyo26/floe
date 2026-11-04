@@ -177,6 +177,11 @@ func (a *app) serve(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// With the port taken: a floe that cannot serve writes nothing in the store. Told before it says it serves.
+	if err = cfg.Store.Begin(server.Viewer, store.Now()); err != nil {
+		_ = ln.Close() //nolint:errcheck // nothing served
+		return err     //nolint:wrapcheck // a usererr, at the file
+	}
 	srv := server.New(cfg)
 	a.print("%s", english.Msg("cli_serving", root, daemon.Base(cfg.Port)))
 	return srv.Serve(ctx, ln) //nolint:wrapcheck // already says what failed

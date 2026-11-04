@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -15,8 +16,9 @@ import (
 // Rebuild draws every stored page again, with dw, from its copy, and keeps the page drawn where it changed: in a
 // new copy, which its meta.json then names, its updatedAt as it was. A page that no longer draws, or whose copy
 // cannot be read or written, keeps the page it had, its mistakes told with store_rebuild_kept, and the next
-// page is drawn; one published again, removed or renamed meanwhile is left to that. Links are drawn each time
-// they are opened, and are left alone.
+// page is drawn; one published again, removed or renamed meanwhile is left to that. Its meta.json takes the template
+// its data file names, drawn or not. Links are drawn each time they are opened, and are left alone.
+// LIMIT: a page whose copy's data file cannot be read keeps the template it had. Publish it again.
 // LIMIT: the slugs are listed once, before the first page: one renamed meanwhile to a slug not listed is not
 // drawn again. List them again at the end, and draw those not drawn, if that comes to matter.
 // LIMIT: a mistake without a place (a theme of meta.json that is none) is told once for every page, by Tell's
@@ -39,10 +41,12 @@ func (s *Store) Rebuild(dw Drawing) error {
 	return found.Err()
 }
 
-// drawn is a page drawn again from its copy: the data file, the page and every image of the copy.
+// drawn is a page drawn again from its copy: the data file, the page (nil for the one it has) and every image of the
+// copy, and the template the data file names ("" for none it can tell).
 type drawn struct {
 	src, page []byte
 	images    map[string][]byte
+	template  string
 }
 
 // rebuildPage draws slug again, as Rebuild does.
@@ -56,7 +60,7 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 		return nil
 	}
 	got, err := redraw(dw, slug, m, dir)
-	if err == nil && got == nil {
+	if err == nil && got.page == nil && (got.template == "" || got.template == m.Template) {
 		return nil
 	}
 	unlock, lockErr := s.lock(false)
@@ -72,10 +76,7 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 	if now == nil || now.Source != m.Source {
 		return nil
 	}
-	if err == nil {
-		// Of meta.json as it is now: an edit made while the page was drawn stays.
-		err = s.keepCopy(slug, now, got.src, got.page, got.images, nil)
-	}
+	err = s.keepDrawn(slug, now, got, err)
 	if err == nil {
 		return nil
 	}
@@ -86,17 +87,38 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 	return append(told, usererr.NewAt(filepath.Join(dir, dataName), 0, 0, "store_rebuild_kept", slug))
 }
 
-// redraw draws slug, whose meta.json is m, from its copy dir: nil when the page drawn is the one it has.
+// keepDrawn writes what redraw returned, got and err, of the page slug, under the lock: of now, meta.json as it is, so
+// that an edit made while the page was drawn stays. It returns err, or what could not be written.
+func (s *Store) keepDrawn(slug string, now *Meta, got *drawn, err error) error {
+	named := got != nil && got.template != "" && got.template != now.Template
+	if named {
+		now.Template = got.template
+	}
+	switch {
+	case err == nil && got.page != nil:
+		err = s.keepCopy(slug, now, got.src, got.page, got.images, nil)
+	case named:
+		err = usererr.Collect(err, s.WriteMeta(slug, now))
+	}
+	return err
+}
+
+// redraw draws slug, whose meta.json is m, from its copy dir: a nil page when the page drawn is the one it has. With a
+// mistake, what it could read of the copy, or nil when it could not read the data file.
 func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	data := filepath.Join(dir, dataName)
 	src, err := os.ReadFile(data) //nolint:gosec // G304: a copy of the store's own
 	if err != nil {
 		return nil, usererr.CannotRead(data, err) //nolint:wrapcheck // the system's words, at the copy
 	}
+	got := &drawn{src: src, page: nil, images: nil, template: ""}
+	if d, _ := doc.Read(data, src, m.Theme); d != nil { //nolint:errcheck // its mistakes are told when it is drawn
+		got.template = d.Template
+	}
 	had := filepath.Join(dir, pageName)
 	old, err := os.ReadFile(had) //nolint:gosec // G304: as above
 	if err != nil {
-		return nil, usererr.CannotRead(had, err) //nolint:wrapcheck // as above
+		return got, usererr.CannotRead(had, err) //nolint:wrapcheck // as above
 	}
 	// One path for both, so that the images read are those the mistakes name.
 	imagesDir := filepath.Join(dir, imagesName)
@@ -110,16 +132,17 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	// Its warnings are of the copy, which no one mends: a publish of the data file tells them.
 	page, _, err := tmpl.Draw(dw.Kit, data, src, o)
 	if err != nil {
-		return nil, err //nolint:wrapcheck // its mistakes, or what failed
+		return got, err //nolint:wrapcheck // its mistakes, or what failed
 	}
 	if bytes.Equal(page, old) {
-		return nil, nil //nolint:nilnil // nothing to keep
+		return got, nil
 	}
 	kept, err := everyImage(images, imagesDir)
 	if err != nil {
-		return nil, err
+		return got, err
 	}
-	return &drawn{src: src, page: page, images: kept}, nil
+	got.page, got.images = page, kept
+	return got, nil
 }
 
 // everyImage reads every regular file under images, the directory dir, by its slash-separated path: those

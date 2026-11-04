@@ -361,6 +361,10 @@ func TestPublishToAnotherServer(t *testing.T) {
 		"floe: port "+o.port+" is used by another program; set FLOE_PORT to a free port")
 	wantRun(t, "serve on a busy port", o.run("serve"), 1, "",
 		"floe: port "+o.port+" is in use; stop that program (floe stop, if it is floe's server) or set FLOE_PORT")
+	// It took no port: it writes nothing of what a server keeps.
+	if _, err := os.Stat(filepath.Join(o.vars["FLOE_DIR"], "reads.json")); err == nil {
+		t.Error("a floe that cannot serve wrote reads.json")
+	}
 }
 
 // holdPort listens on a port the system picks, held until the test ends so that no other can take it, and

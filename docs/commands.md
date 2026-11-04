@@ -59,9 +59,10 @@ The stored page stays as it was drawn: changing the template, a part or a theme 
 
 Each page belongs to the project it is published from. The project is the repository name in git's `origin` URL, else the repository's directory (a worktree joins its main checkout), else the working directory's name.
 
-- The same slug from the same project overwrites the page. stderr says so (`updated "plan" (last published …, title "…")`). If the title changed, a warning suggests another `--slug`. The exit code stays 0.
+- The same slug from the same project overwrites the page. stderr says so (`updated "plan" (last updated …, title "…")`). If the title changed, a warning suggests another `--slug`. The exit code stays 0.
 - A slug published from another project is refused unless `--force`. `--force` starts the page afresh: nothing of the old one is kept.
 - A republish keeps what was set on the management page (title, project, favourite, tags), the description and the creation time. `--title` and `--description` override them. An archived page comes back to the lists.
+- A republish of the same content, with another theme or not, draws the page again, but its update time and its place in the list stay; other content moves them up. A linked file is listed at the later of the file's time and when it was linked, so that linking it again brings it up.
 
 ### Linked files
 
@@ -252,10 +253,12 @@ List the fetched icons whose name contains every word (case does not matter), on
 - A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`. `floe list`, `floe rm` and `floe archive` do not draw and take any, but the one that replaces the server after floe is reinstalled is refused with other ones too, as the new server would draw with them.
 - A server serves one store (`FLOE_DIR`) on its port: while it runs, a command for another store is refused. Give that store another `FLOE_PORT`.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
-- A stored page is served as it was drawn; its CSP and sandbox are sent with it. Pages run in the sandbox, so their scripts cannot reach the management page's API.
+- A stored page is served as it was drawn; its CSP and sandbox are sent with it. Pages run in the sandbox, so their scripts cannot reach the management page's API. The frame takes from a page only that it was read and the keys that move on or open a modal.
+- The store keeps which version of each stored page was read in `reads.json`; links and folders have no such record. A stored page from before floe first wrote it counts as read. When `floe serve` cannot read it, it goes to `reads.json.broken` and a new one takes its place, every page then counting as read; mend it by hand to keep what it held.
 - The scripts of a page drawn from a data file cannot send what it holds out with `fetch`, XHR, images from elsewhere or forms, its download included. Linked HTML loads what it loads.
 - A page opens at the part its URL names (`/a/<slug>/#part`), and a move to a part inside it is kept in the URL, so that a copy of the URL or a reload opens that part.
 - The management page downloads a page as one file: the stored page, or a linked file, with its CSP in a `<meta>`.
+- The management page takes keys, and `?` lists those that work where you are. `Ctrl+K` (`⌘K`) searches the pages. In the list: `j` `k` or `↑` `↓` move over the rows, `Enter` opens a row whole, `x` selects (as does Select in a row's menu), `f` stars, `/` goes to the search. On a page open whole: `j` `k` go on through the list, `h` goes back to it, `f` stars, `/` searches the pages. After a press inside a page, `j` `k` `h` `?` `/` `Ctrl+K` still work on a page floe drew, and `Ctrl+K` alone on a linked HTML file, which may use the letters itself.
 
 ## Environment variables
 
