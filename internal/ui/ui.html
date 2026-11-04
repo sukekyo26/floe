@@ -452,29 +452,31 @@
     .bulk .btn:not(.armed, .clear) { padding: 0 0.2rem; }
   }
 
-  /* The search modal, high up so that its field stays where it is as the rows go */
-  #find { width: min(40rem, calc(100% - 32px)); max-height: none; margin-top: 12dvh; overflow: visible; }
-  .find-box { display: flex; flex-direction: column; max-height: 70dvh; }
-  .find-input { display: flex; align-items: center; gap: 0.6rem; height: 3.25rem; padding: 0 0.75rem 0 1.1rem; }
-  .find-input > svg { flex: none; width: 16px; height: 16px; color: var(--faint); }
-  .find-input input { flex: 1; min-width: 0; height: 100%; padding: 0; color: var(--fg); background: none; border: 0; outline: 0; }
-  .find-input input::-webkit-search-cancel-button { display: none; }
+  /* The search modal, of the shape of the others. Its box of results keeps its height, so that the field stays where it is as the rows go */
+  #find-q::-webkit-search-cancel-button { display: none; }
+  #find #error { margin: 0; }
+  .find-lead { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.5rem; }
+  .find-lead .k { display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
+  /* Without rows the arrows have nothing to move over; the line keeps its height */
+  .find-lead.none .k { visibility: hidden; }
   #find kbd, #keys kbd {
     font: var(--text-label)/1 var(--mono); color: var(--muted); background: var(--subtle);
     border: 1px solid var(--line); border-radius: var(--corner-small); padding: 0.2rem 0.4rem; white-space: nowrap;
   }
-  /* What the buttons act on, and the buttons of a row */
-  .find-acts { display: flex; align-items: center; gap: 0.5rem; height: 2.5rem; padding: 0 0.6rem 0 1.1rem; background: var(--subtle); border-block: 1px solid var(--line); }
+  /* The buttons of the row reached, on the left of the foot */
+  .find-acts { display: flex; align-items: center; margin: 0 auto 0 -0.45rem; }
   .find-acts[hidden] { display: none; }
-  .find-on { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-small); color: var(--muted); }
   .find-acts .frame-actions { flex: none; align-items: center; }
   /* A finger's press on a row opens it, and there are no arrow keys: the buttons could only act on the first */
   @media (hover: none) { .find-acts:not([hidden]) { display: none; } }
-  .find-list { flex: 1 1 auto; min-height: 0; margin: 0; padding: var(--menu-pad); overflow-y: auto; list-style: none; }
+  .find-list, .find-none { height: min(20rem, calc(100dvh - 17rem)); }
+  /* The rows as wide as the field, the 10px of the scrollbar in the modal's margin. LIMIT: a scrollbar drawn over the page, as on a
+     phone, leaves the rows 10px wider than the field. Measure the scrollbar if that comes to show */
+  .find-list { margin: 0 -10px 0 0; padding: 0; overflow-y: auto; scrollbar-gutter: stable; list-style: none; }
   .find-list[hidden] { display: none; }
   .find-list li {
     position: relative; display: grid; grid-template-columns: 1.1rem minmax(0, 1fr) auto; grid-template-areas: "lead title time" ". sub sub";
-    column-gap: 0.55rem; row-gap: 0.1rem; align-items: center; padding: 0.45rem 0.6rem; border: 0; border-radius: calc(var(--corner-menu) - var(--menu-pad)); animation: none;
+    column-gap: 0.55rem; row-gap: 0.1rem; align-items: center; padding: 0.45rem 0.75rem; border: 0; border-radius: var(--corner-small); animation: none;
   }
   .find-list li::before, .find-list li::after { content: none; }
   .find-list li.reached { background: var(--sel); }
@@ -490,25 +492,21 @@
   .find-list .sub { grid-area: sub; flex-wrap: nowrap; }
   .find-list .sub > :not(.path) { flex: none; }
   .find-list .badge { padding: 0 0.3rem; font-weight: 400; }
-  .find-none { padding: 2.5rem 1.5rem; text-align: center; color: var(--muted); }
+  .find-none { display: grid; place-content: center; padding: 0 1.5rem; text-align: center; color: var(--muted); }
   .find-none[hidden] { display: none; }
   .find-none strong { display: block; margin-bottom: 0.25rem; font-size: 1rem; color: var(--fg); }
-  .find-foot { display: flex; align-items: center; gap: 0.9rem; min-height: 2.25rem; padding: 0.3rem 1.1rem; font-size: var(--text-label); color: var(--muted); border-top: 1px solid var(--line); }
-  .find-foot.none .k { display: none; }
-  .find-foot .btn { flex: none; height: 2rem; padding: 0 0.8rem; }
-  .find-cut { margin-left: auto; }
-  .find-foot .k { display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+  /* The menu opens up over the results from the left of the foot, within the modal */
+  .find-foot { position: relative; align-items: center; }
+  .find-foot .more { position: static; }
+  .find-foot .menu { top: auto; bottom: calc(100% - 0.5rem); left: 0; right: auto; min-width: min(17.5rem, 100%); max-width: 100%; }
   /* The modal of the shortcuts */
-  .keys-body { display: grid; gap: 1rem; padding: 1.4rem 1.5rem 1.25rem; }
   .keys-part { display: grid; gap: 1rem; }
   .keys-part[hidden] { display: none; }
-  .keys-body h2 { margin: 0; font-size: 1.05rem; line-height: 1.3; }
   .keys-body h3 { margin: 0 0 0.3rem; font-size: var(--text-label); font-weight: 650; color: var(--muted); }
   .keys-body dl { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 0.4rem 0.75rem; margin: 0; font-size: var(--text-small); align-items: baseline; }
   .keys-body dt { display: flex; align-items: center; gap: 0.25rem; }
   .keys-body dt i { white-space: nowrap; font-style: normal; font-size: var(--text-label); color: var(--faint); }
   .keys-body dd { margin: 0; }
-  .keys-note { margin: 0; font-size: var(--text-small); color: var(--muted); }
   /* The bar's ways to the two modals: of the shortcuts where there are likely to be keys; of finding where a whole page has no search */
   #find-open { display: none; flex: none; }
   #keys-open svg, #find-open svg { width: 16px; height: 16px; }
@@ -516,8 +514,7 @@
   @media (max-width: 40rem) {
     .framed #find-open { display: inline-flex; }
     #find { margin-top: 16px; }
-    .find-box { max-height: calc(100dvh - 32px); }
-    .find-foot .k { display: none; }
+    .find-lead .k { display: none; }
   }
 
   .state { display: grid; justify-items: center; gap: 0.5rem; padding: 3.5rem 1.5rem; text-align: center; color: var(--muted); }
@@ -544,17 +541,21 @@
   dialog[open]::backdrop { animation: fade 0.2s ease-out; }
   @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
   @keyframes fade { from { opacity: 0; } }
-  .add { display: grid; gap: 1rem; padding: 1.4rem 1.5rem 1.25rem; }
-  .add-head { display: flex; align-items: center; gap: 0.8rem; }
-  .add-head svg {
+  /* The body and head of every modal */
+  .modal-body { display: grid; gap: 1rem; padding: 1.4rem 1.5rem 1.25rem; }
+  .modal-head { display: flex; align-items: center; gap: 0.8rem; }
+  .modal-head svg {
     width: 38px; height: 38px; padding: 9px; flex: none; color: var(--fg); border-radius: 50%; background: var(--sel);
   }
-  .add h2 { margin: 0; font-size: 1.05rem; line-height: 1.3; letter-spacing: -0.01em; }
-  .add .lead { margin: 0.1rem 0 0; color: var(--muted); font-size: var(--text-small); }
+  .modal-body h2 { margin: 0; font-size: 1.05rem; line-height: 1.3; letter-spacing: -0.01em; }
+  .modal-body .lead { margin: 0.1rem 0 0; color: var(--muted); font-size: var(--text-small); }
   .field { display: grid; gap: 0.35rem; font-size: var(--text-small); font-weight: 600; }
   .field small { font-weight: 400; color: var(--faint); }
   .field .path { font-family: var(--mono); }
   .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
+  /* Only the rows of the filters scroll, their foot in sight: the height a dialog may have, of its own rule in the browser */
+  #filter-box { grid-template-rows: auto minmax(0, 1fr) auto; max-height: calc(100dvh - 6px - 2rem); }
+  #filter-box .shelf-more { min-height: 0; overflow-y: auto; margin-inline: -4px; padding: 4px; }
 
   /* The widths of the list's page, wide to narrow: the shelf, the list and the page chosen; from 70rem the shelf gives way to a
      row of its views and the dialog of the rest, and the bar's count of new pages, which the row has; from 56rem one column (oneColumn
@@ -715,8 +716,8 @@
   </section>
 </main>
 <dialog id="filter-dialog" aria-labelledby="filter-title">
-  <div class="add" id="filter-box">
-    <div class="add-head"><h2 id="filter-title">{{.Msg "ui_narrow"}}</h2></div>
+  <div class="modal-body" id="filter-box">
+    <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><div><h2 id="filter-title">{{.Msg "ui_narrow"}}</h2></div></div>
     <div class="dialog-actions"><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
   </div>
 </dialog>
@@ -736,37 +737,35 @@
   <p id="notfound-detail"></p>
   <p><a class="btn" id="notfound-back" href="/">{{.Msg "ui_back_to_list"}}</a></p>
 </div>
-<dialog id="find" aria-label="{{.Msg "ui_find"}}">
-  <div class="find-box">
-    <div class="find-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="find-q" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="find-list" placeholder="{{.Msg "ui_find_placeholder"}}" aria-label="{{.Msg "ui_find"}}" autocomplete="off"></div>
-    <div class="find-acts" id="find-acts" hidden><span class="find-on" id="find-on"></span><span class="frame-actions" id="find-actions"></span></div>
-    <ul class="find-list" id="find-list" role="listbox" aria-label="{{.Msg "ui_find"}}"></ul>
+<dialog id="find" aria-labelledby="find-title">
+  <div class="modal-body">
+    <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><div><h2 id="find-title">{{.Msg "ui_find"}}</h2><p class="lead find-lead" id="find-lead"><span id="find-cut"></span><span class="k"><kbd>↑</kbd><kbd>↓</kbd> {{.Msg "ui_find_pick"}}</span><span class="k"><kbd>Enter</kbd> {{.Msg "ui_find_open"}}</span></p></div></div>
+    <input class="text" type="search" id="find-q" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="find-list" placeholder="{{.Msg "ui_find_placeholder"}}" aria-labelledby="find-title" autocomplete="off">
+    <ul class="find-list" id="find-list" role="listbox" aria-labelledby="find-title"></ul>
     <div class="find-none" id="find-none" hidden><strong>{{.Msg "ui_nomatch"}}</strong>{{.Msg "ui_find_no_files"}}</div>
-    <div class="find-foot" id="find-foot"><span class="k"><kbd>↑</kbd><kbd>↓</kbd> {{.Msg "ui_find_pick"}}</span><span class="k"><kbd>Enter</kbd> {{.Msg "ui_find_open"}}</span><span class="find-cut" id="find-cut"></span><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
+    <div class="dialog-actions find-foot"><div class="find-acts" id="find-acts" hidden><span class="frame-actions" id="find-actions"></span></div><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
   </div>
 </dialog>
 <template id="find-row"><li role="option"><span class="lead"></span><a class="title" tabindex="-1"></a><span class="time"><time></time></span><span class="sub"></span></li></template>
 <dialog id="keys" aria-labelledby="keys-title">
-  <div class="keys-body">
-    <h2 id="keys-title">{{.Msg "ui_keys"}}</h2>
+  <div class="modal-body keys-body">
+    <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></svg><div><h2 id="keys-title">{{.Msg "ui_keys"}}</h2><p class="lead keys-note" id="keys-note-list">{{.Msg "ui_keys_note_list"}}</p><p class="lead keys-note" id="keys-note-frame">{{.Msg "ui_keys_note_frame"}}</p></div></div>
     <div class="keys-part" id="keys-list">
       <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↓</kbd></dt><dd>{{.Msg "ui_keys_next_row"}}</dd><dt><kbd>k</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↑</kbd></dt><dd>{{.Msg "ui_keys_prev_row"}}</dd><dt><kbd>Enter</kbd></dt><dd>{{.Msg "ui_keys_whole"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_row"}}</h3><dl><dt><kbd>x</kbd></dt><dd>{{.Msg "ui_keys_select"}}</dd><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd></dt><dd>{{.Msg "ui_keys_search"}}</dd><dt><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
-      <p class="keys-note">{{.Msg "ui_keys_note_list"}}</p>
     </div>
     <div class="keys-part" id="keys-frame">
       <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd></dt><dd>{{.Msg "ui_keys_next_page"}}</dd><dt><kbd>k</kbd></dt><dd>{{.Msg "ui_keys_prev_page"}}</dd><dt><kbd>h</kbd></dt><dd>{{.Msg "ui_back_to_list"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_page"}}</h3><dl><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
-      <p class="keys-note">{{.Msg "ui_keys_note_frame"}}</p>
     </div>
     <div class="dialog-actions"><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
   </div>
 </dialog>
 <dialog id="add-dialog" aria-labelledby="add-title">
-  <form class="add" id="add">
-    <div class="add-head">
+  <form class="modal-body" id="add">
+    <div class="modal-head">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
       <div>
         <h2 id="add-title">{{.Msg "ui_add_link"}}</h2>
@@ -793,8 +792,8 @@
   </form>
 </dialog>
 <dialog id="edit-dialog" aria-labelledby="edit-title">
-  <form class="add" id="edit">
-    <div class="add-head">
+  <form class="modal-body" id="edit">
+    <div class="modal-head">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>
       <div>
         <h2 id="edit-title">{{.Msg "ui_edit"}}</h2>
@@ -826,8 +825,8 @@
   </form>
 </dialog>
 <dialog id="tag-dialog" aria-labelledby="tag-title">
-  <form class="add" id="tag-form">
-    <div class="add-head">
+  <form class="modal-body" id="tag-form">
+    <div class="modal-head">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>
       <div>
         <h2 id="tag-title"></h2>
@@ -2685,8 +2684,8 @@
     },
   });
 
-  // LIMIT: the menu opens down, so that on a screen under some 330px high its last items are off it, with nothing to scroll. Open it
-  // up there if such a screen comes to matter
+  // LIMIT: the menu opens up over the results, so that on a screen under some 320px high its first items are off it, with nothing to
+  // scroll. Let it scroll if such a screen comes to matter
   // The buttons of a row. While its menu is open or its delete waits they stay, as drawing them anew would take that away; the
   // focus in the menu's place goes to the menu as drawn, or to the field where the row it was of has gone
   function drawFindBar(a) {
@@ -2701,7 +2700,6 @@
     const same = box.dataset.slug === a.slug;
     if (same && box.querySelector('.more[open], .armed')) return;
     box.dataset.slug = a.slug;
-    $('find-on').textContent = a.title;
     drawActions(box, a, '');
     if (focused) (same ? box.querySelector('summary') : $('find-q')).focus();
   }
@@ -2730,9 +2728,9 @@
     const none = hits.length === 0;
     $('find-list').hidden = none;
     $('find-none').hidden = !none;
-    $('find-foot').classList.toggle('none', none);
+    $('find-lead').classList.toggle('none', none);
     const words = $('find-q').value.trim();
-    $('find-cut').textContent = none ? '' : hits.length > FIND_ROWS ? t('ui_find_cut', FIND_ROWS) : words ? t('ui_find_n', hits.length) : t('ui_find_newest');
+    $('find-cut').textContent = hits.length > FIND_ROWS ? t('ui_find_cut', FIND_ROWS) : words || none ? t('ui_find_n', hits.length) : t('ui_find_newest');
     // The same row, or what has come to its place, or the last
     const at = findShown.findIndex((a) => a.slug === findSlug);
     findMark(at !== -1 ? at : Math.min(findAt, findShown.length - 1));
@@ -2746,7 +2744,7 @@
     // The buttons as they were left go, a menu open, a delete waiting and what they knew of the row
     delete $('find-actions').dataset.slug;
     // What comes of its buttons shows in it: the top layer hides the rest
-    $('find-acts').before($('error'));
+    $('find-list').before($('error'));
     $('find').append($('toasts'));
     drawFind();
     $('find').showModal();
@@ -2853,7 +2851,7 @@
     $('back').hidden = false;
     // The page alone in full, as the browser reads the link to it: a link on paper cannot be followed
     $('print-raw').href = $('print-raw').textContent = new URL(frameSrc, location.href).href;
-    $('keys-list').hidden = true;
+    $('keys-list').hidden = $('keys-note-list').hidden = true;
     $('q').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !composing(e)) location.href = `/?q=${encodeURIComponent($('q').value.trim())}`;
     });
@@ -2865,7 +2863,7 @@
       f: () => $('frame-actions').querySelector('.star:not([hidden])')?.click(),
     });
   } else {
-    $('keys-frame').hidden = true;
+    $('keys-frame').hidden = $('keys-note-frame').hidden = true;
     $('manage').hidden = false;
     $('search').hidden = false;
     $('q').value = readState(location.search).q;
@@ -2914,6 +2912,8 @@
     $('narrow-filter').addEventListener('click', () => {
       $('filter-box').lastElementChild.before($('shelf-more'));
       $('filter-dialog').showModal();
+      // The first row, not the box of rows the browser takes first where it scrolls
+      [...$('shelf-more').querySelectorAll('button')].find((b) => b.offsetParent)?.focus();
     });
     $('filter-dialog').addEventListener('close', () => $('shelf').append($('shelf-more')));
     $('bulk-page').addEventListener('click', () => {

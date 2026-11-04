@@ -26,7 +26,7 @@ const findDrawn = `(() => {
 		const slug = new URL(li.querySelector('a').href).pathname.split('/')[2];
 		return li.classList.contains('reached') ? '[' + slug + ']' : slug;
 	}).join('');
-	return [document.getElementById('find').open, rows, document.getElementById('find-acts').hidden ? '-' : document.getElementById('find-on').textContent,
+	return [document.getElementById('find').open, rows, document.getElementById('find-acts').hidden ? '-' : findShown.find((a) => a.slug === document.getElementById('find-actions').dataset.slug).title,
 		document.getElementById('find-cut').textContent || '-'].join(' / ');
 })()`
 
@@ -93,7 +93,7 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	typeFind(b, "nothing like it")
 	out = append(out, b.eval(findDrawn), b.eval("document.getElementById('find-none').hidden + ' ' + document.getElementById('find-none').textContent.includes('.')"))
 	// Its way to close stays, as there is none else without a key.
-	out = append(out, b.eval("document.querySelector('#find-foot [data-close]').getBoundingClientRect().width > 0"))
+	out = append(out, b.eval("document.querySelector('#find [data-close]').getBoundingClientRect().width > 0"))
 	keyDown(b, "key: 'Enter'")
 	out = append(out, b.eval("location.pathname"))
 	// What goes to the input method: no row moves, nothing opens or closes.
@@ -129,7 +129,7 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.eval("window.list = " + js("[{\"slug\":\"a\",\"title\":\"A\",\"description\":\"\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}]") + "; " + reload)
 	b.until("the row", "document.querySelector('#find-list li')")
 	out = append(out, b.eval(findDrawn))
-	b.eval("document.querySelector('#find-foot [data-close]').click()")
+	b.eval("document.querySelector('#find [data-close]').click()")
 	out = append(out, b.eval("document.getElementById('find').open"))
 	// Enter opens the row whole, wherever the window was.
 	b.stub(findList)
@@ -148,7 +148,7 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true / a[c]z / Gamma plan / 3 found", "find-1",
 		"true / ac[z] / Zed plan / 3 found", "-1 /a/a/",
 		"true true",
-		"true /  / - / -", "false true", "true",
+		"true /  / - / 0 found", "false true", "true",
 		"/",
 		"true / [a]cz / Alpha plan / 3 found", "/",
 		"true / ab[c]fz / Gamma plan / Newest first",
@@ -156,7 +156,7 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true / a[f]z / Folder / Newest first",
 		"true / af[z] / Zed plan / Newest first",
 		"true / a[f] / Folder / Newest first",
-		"true /  / - / -",
+		"true /  / - / 0 found",
 		"/ 0",
 		"true / [a] / A / Newest first", "false",
 	}, "|"))
@@ -312,7 +312,7 @@ func TestUIFindTouch(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.size(400, 800, false)
 	acts := "getComputedStyle(document.getElementById('find-acts')).display"
 	// The foot, with what it says, within the window and the screen.
-	const foot = `(() => { const f = document.getElementById('find-foot').getBoundingClientRect(), w = document.getElementById('find').getBoundingClientRect();
+	const foot = `(() => { const f = document.querySelector('#find .find-foot').getBoundingClientRect(), w = document.getElementById('find').getBoundingClientRect();
 		return f.top >= w.top && f.bottom <= w.bottom + 0.5 && f.bottom <= innerHeight; })()`
 	keyDown(b, "key: 'k', ctrlKey: true")
 	out := make([]string, 0, 4)
@@ -394,7 +394,7 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// On a Mac, the keys as written there.
 	b.addScript("Object.defineProperty(navigator, 'platform', { get: () => 'MacIntel' })")
 	b.navigate("/")
-	out = append(out, b.eval("document.querySelector('#keys-list .mod').textContent + ' ' + document.querySelector('#keys-list .keys-note').textContent.includes('⌘K')"))
+	out = append(out, b.eval("document.querySelector('#keys-list .mod').textContent + ' ' + document.getElementById('keys-note-list').textContent.includes('⌘K')"))
 	check(t, "keys", out, strings.Join([]string{
 		"false", "true", "false true j↓k↑Enterxf/CtrlK?Esc",
 		"false", "true false", "true", "false false", "false false", "false true", "true", "true false",
@@ -785,4 +785,95 @@ func TestUINarrowFilter(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.navigate("/")
 	out = append(out, b.eval(drawn))
 	check(t, "narrow filter", out, "Filter 2 true - true|Filter 2 false 2 true|Filter false - true")
+}
+
+// TestUIModalShape gives the search modal the shape of the modal that adds, in the list, with the list folded and on a whole page,
+// its field still as the rows go, its buttons on the left of the foot, and their menu up within it; the filters scroll inside.
+func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.stub(findList)
+	// The left and right of the modal, its field and foot, and the heights of the field and the button that closes.
+	const shape = `(() => { const d = document.querySelector('dialog[open]'), r = (e) => e.getBoundingClientRect(), q = r(d.querySelector('input.text')), f = r(d.querySelector('.dialog-actions')), m = r(d);
+		return [m.left, m.right, q.left, q.right, q.height, f.left, f.right, r(d.querySelector('.dialog-actions .btn:last-child')).height].map(Math.round).join(' '); })()`
+	const where = `(() => { const m = document.getElementById('find').getBoundingClientRect(); return Math.abs(m.top - (innerHeight - m.bottom)) <= 1 ? 'middle' : Math.round(m.top); })()`
+	// The top of the field and the height of the modal, which the rows do not move.
+	const still = `(() => { const q = document.getElementById('find-q').getBoundingClientRect(), m = document.getElementById('find').getBoundingClientRect(); return Math.round(q.top - m.top) + ' ' + Math.round(m.height); })()`
+	out := make([]string, 0, 32)
+	for _, w := range []int64{1440, 400} {
+		b.size(w, 800, false)
+		b.navigate("/")
+		b.until("the rows", "document.querySelector('#list .title')")
+		b.eval("document.getElementById('add-open').click()")
+		add := b.settled(shape)
+		b.eval("document.getElementById('add-dialog').close(); openFind()")
+		find := b.settled(shape)
+		out = append(out, fmt.Sprint(add == find), b.settled(where))
+		first := b.eval(still)
+		typeFind(b, "plan")
+		out = append(out, fmt.Sprint(b.eval(still) == first))
+		// The rows as wide as the field; of the foot, the buttons left and the close right.
+		out = append(out, b.eval(`(() => { const r = (e) => e.getBoundingClientRect(), f = r(document.querySelector('#find .find-foot'));
+			return [Math.abs(r(document.querySelector('#find-list li')).right - r(document.getElementById('find-q')).right) < 1,
+				Math.abs(r(document.querySelector('#find-acts .star')).left - f.left) < 12,
+				Math.abs(r(document.querySelector('#find [data-close]')).right - f.right) < 1,
+				r(document.querySelector('#find .k')).width > 0].join(' '); })()`))
+		typeFind(b, "nothing like it")
+		out = append(out, fmt.Sprint(b.eval(still) == first))
+		out = append(out, b.eval(`[document.getElementById('find-list').hidden, document.getElementById('find-acts').hidden, getComputedStyle(document.querySelector('#find .k')).visibility, document.getElementById('find-cut').textContent].join(' ')`))
+		b.eval("document.getElementById('find').close()")
+	}
+	// Folded and whole, the same.
+	b.size(1440, 800, false)
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list .title')")
+	b.eval("openFind()")
+	want := b.settled(shape)
+	b.eval("document.getElementById('find').close(); showList(false); openFind()")
+	out = append(out, fmt.Sprint(b.settled(shape) == want))
+	b.eval("document.getElementById('find').close(); showList(true)")
+	b.navigate("/a/a/")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	b.eval("openFind()")
+	out = append(out, fmt.Sprint(b.settled(shape) == want))
+	b.eval("document.getElementById('find').close()")
+	// The menu goes up from the foot, within the modal and the screen, down to the low screen its limit names.
+	const menu = `(() => { const r = (e) => e.getBoundingClientRect(), m = r(document.querySelector('#find-actions .menu')), d = r(document.getElementById('find')), o = r(document.querySelector('#find-actions summary'));
+		return [m.bottom <= o.top, m.top >= d.top, m.top >= 0, m.left >= d.left, m.right <= d.right].join(' '); })()`
+	for _, h := range []int64{620, 400} {
+		b.size(1000, h, false)
+		b.navigate("/")
+		b.until("the rows", "document.querySelector('#list .title')")
+		b.eval("openFind(); document.querySelector('#find-actions summary').click()")
+		out = append(out, b.settled(menu))
+		b.eval("document.getElementById('find').close()")
+	}
+	check(t, "search modal", out, strings.Join([]string{
+		"true", "middle", "true", "true true true true", "true", "true true hidden 0 found",
+		"true", "16", "true", "true true true false", "true", "true true hidden 0 found",
+		"true", "true",
+		"true true true true true", "true true true true true",
+	}, "|"))
+
+	// The filters on a low screen: the rows scroll, the foot stays, the focus on the first row.
+	b.size(400, 420, false)
+	b.navigate("/?project=p")
+	b.until("the rows", "document.querySelector('#narrow-filter')")
+	b.eval("document.getElementById('narrow-filter').click()")
+	check(t, "filters", []string{b.settled(`(() => { const d = document.getElementById('filter-dialog'), m = document.getElementById('shelf-more'), c = d.querySelector('[data-close]').getBoundingClientRect();
+		m.style.minHeight = ''; m.append(Object.assign(document.createElement('div'), { id: 'tall', style: 'height: 900px' }));
+		return [d.scrollHeight === d.clientHeight, m.scrollHeight > m.clientHeight, c.bottom <= innerHeight, document.activeElement.tagName, !!d.querySelector('.modal-head svg')].join(' '); })()`)},
+		"true true true BUTTON true")
+	b.eval("document.getElementById('tall').remove(); document.getElementById('filter-dialog').close()")
+
+	// The shortcuts say in their head the note of where they are.
+	b.size(1440, 800, false)
+	const note = `['list', 'frame'].map((w) => document.getElementById('keys-note-' + w).getBoundingClientRect().height > 0).join(' ')`
+	b.navigate("/")
+	b.eval("openKeys()")
+	list := b.eval(note)
+	b.eval("document.getElementById('keys').close()")
+	b.navigate("/a/a/")
+	b.eval("openKeys()")
+	check(t, "notes", []string{list, b.eval(note)}, "true false|false true")
 }
