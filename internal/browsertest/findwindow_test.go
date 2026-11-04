@@ -1034,6 +1034,17 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, press(kb.ArrowDown), b.eval(menu))
 	b.eval("document.querySelector('#find-actions .menu .edit').focus()")
 	out = append(out, press(kb.ArrowDown), b.eval(menu))
+	// Pressed by the keys, Enter and the space bar, the star keeps the focus through the rows drawn anew, and the arrows go on.
+	for _, k := range []string{kb.Enter, " "} {
+		was := b.eval("window.starred")
+		b.eval("closeMenus(null); " + q + ".focus()")
+		key("\t")
+		key(k)
+		b.until("the star pressed", "window.starred !== "+was)
+		b.still()
+		b.eval("drawFind()")
+		out = append(out, press(kb.ArrowDown))
+	}
 	// The rows gone with the focus on the star, it goes to the field.
 	b.eval("closeMenus(null); document.querySelector('#find-actions .star').focus(); items.length = 0; drawFind()")
 	out = append(out, b.eval("document.activeElement.id"))
@@ -1043,6 +1054,7 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 		"find-2 / icon-btn open / Add Gamma plan to favorites", "find-3 / find-q / Add Folder to favorites",
 		"find-2 / btn / Add Gamma plan to favorites", "find-1 / find-q / Add Beta to favorites",
 		"find-1 / icon-btn / Add Beta to favorites", "true", "find-1 / icon-btn edit / Add Beta to favorites", "true",
+		"find-2 / icon-btn star / Add Gamma plan to favorites", "find-3 / icon-btn star / Add Folder to favorites",
 		"find-q",
 	}, "|"))
 }
