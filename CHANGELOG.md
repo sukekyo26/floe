@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add what changed between two versions of a stored page to the management page: by the words under each heading, side by side, all
+  together or the changes alone, with the two versions to choose, contents, and `n` `p` to go through the changes. `Diff` over a page
+  and `d` open it; a page newly at another version says how many sections changed since the one read. Opening it marks nothing read.
+  A page's HTML is never brought in: the server reads each version into words, which the page writes as text.
 - Add a modal that searches the pages, opened by `Ctrl+K` (`⌘K`) anywhere, by `/` on a page open whole, or by the magnifier on a
   phone's whole page: it searches by title, description, slug, project, path, template and tag, the archived last, opens a row
   whole, and acts on the row reached with the buttons of a row. Add a modal of the keyboard shortcuts, opened by `?` or the button in the
