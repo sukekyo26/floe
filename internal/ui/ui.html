@@ -166,9 +166,9 @@
   .shell.shelf-closed .shelf { display: none; }
   .shell:not(.shelf-closed) #shelf-what { display: none; }
   #shelf-show { flex: none; margin-left: -0.4rem; }
-  /* What it is narrowed to is what must be read: the words before it give way first */
-  .shell.shelf-closed .count { flex-shrink: 1000; }
-  #shelf-what { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
+  /* What it is narrowed to is what must be read: the words before it give way, and it is cut only past the room the buttons leave
+     (not shrunk with them: a sliver of a pixel off its width would cut its last words) */
+  #shelf-what { flex: none; max-width: calc(100% - 13.5rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
   .shelf-head { display: flex; justify-content: flex-end; margin-bottom: -0.6rem; }
   /* The 4px of room round a button are its focus ring's (1px off, 2px wide) and 1px of ground */
   .shelf { display: grid; align-content: start; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; overflow-y: auto; padding: 0.9rem 10px 1rem; }

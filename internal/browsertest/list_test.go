@@ -438,7 +438,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	const what = "[document.getElementById('shelf-what').hidden, document.getElementById('shelf-what').textContent, document.querySelector('.lhead').scrollWidth <= document.querySelector('.lhead').clientWidth].join(' ')"
 	out = append(out, b.eval(what))
 	b.eval("setColumn('list', 408); setView('archived'); refilter({ kind: 'link', tag: 'x' })")
-	out = append(out, b.eval(what), b.eval("(() => { const e = document.getElementById('shelf-what'); return e.scrollWidth <= e.clientWidth; })()"))
+	out = append(out, b.eval(what), b.eval("(() => { const e = document.getElementById('shelf-what'), r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect().width <= e.getBoundingClientRect().width; })()"))
 	b.eval("setColumn('list', 740)")
 	b.eval("document.getElementById('shelf-what').click()")
 	out = append(out, b.eval("getComputedStyle(document.querySelector('.shelf')).display"))
