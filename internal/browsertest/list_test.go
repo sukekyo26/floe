@@ -185,12 +185,12 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 
 	check(t, "list", out, strings.Join([]string{
 		"#|v dot 700 ver:v3 · new version kindof:design proj:p tags:t|#|n dot 700 kindof:report proj:q|#|r ring 500 kindof:report proj:p|l mark 500 kindof:Link · HTML path:/tmp/x/l.html|#|d mark 500 kindof:Link · handoff path:/home/you/work/a (1)/v2.0/data-set_#1/deep/deep/deep/deep/deep/deep/deep/deep/deep/name-2.yaml|#|f mark 500 kindof:Folder path:/tmp/x/f|#|g mark 500 kindof:Link · HTML miss:File not found",
-		"Today,Yesterday,Last 7 days", "2 new / Newest first · 2 new / 2",
+		"Today,Yesterday,Last 7 days", "2 unread / Newest first · 2 unread / 2",
 		"Version\nthe words\np", "v ?q=the+words",
 		"false true about:blank  ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
 		"true false /a/l/?raw Link l", "true false /a/n/?raw New n New",
 		"true true true", "false true about:blank New ",
-		"vn ?view=new", "vn", "1 new / 1", "New", "n", "true",
+		"vn ?view=new", "vn", "1 unread / 1", "New", "n", "true",
 		`["v","n"]`, "/?view=new", "/a/v/",
 		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true block", "true",
 		"none none flex none true", "flex none",
