@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	diffV1 = "<h2>Stay</h2><p>The hotel by the station, two nights for 26,000.</p><h2>Keep</h2><p>Words kept all along.</p>"
-	diffV2 = "<h2>Stay</h2><p>The hotel by the station, two nights for 28,000.</p><h2>Keep</h2><p>Words kept all along.</p>"
-	diffV3 = "<h2>Stay</h2><p>The hotel by the station, two nights for 38,000.</p><p>&lt;img src=x onerror=&quot;window.pwned=1&quot;&gt;</p>" +
+	diffV1 = "<h2>Stay</h2><p>Two beds.</p><p>The hotel by the station, two nights for 26,000.</p><h2>Keep</h2><p>Words kept all along.</p>"
+	diffV2 = "<h2>Stay</h2><p>Two beds.</p><p>The hotel by the station, two nights for 28,000.</p><h2>Keep</h2><p>Words kept all along.</p>"
+	diffV3 = "<h2>Stay</h2><p>Two beds.</p><p>The hotel by the station, two nights for 38,000.</p><p>&lt;img src=x onerror=&quot;window.pwned=1&quot;&gt;</p>" +
 		"<h2>Keep</h2><p>Words kept all along.</p><h2>Rain</h2><p>The museum instead.</p>"
 )
 
@@ -60,14 +60,14 @@ func TestUIDiff(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// Words of a page never become elements, nor run.
 	out = append(out, b.eval("String(document.querySelector('#diff-body img') === null && window.pwned === undefined && document.getElementById('diff-body').textContent.includes('<img src=x'))"))
 	b.eval("document.querySelector('[data-diff-view=all]').click()")
-	out = append(out, b.eval("document.querySelector('.dflow') !== null && document.querySelectorAll('.drow').length === 0"), b.eval("document.querySelector('[data-diff-view=all]').getAttribute('aria-pressed')"))
+	out = append(out, b.eval("document.querySelector('.dflow') !== null && document.querySelectorAll('.drow').length === 0 && document.getElementById('diff-body').textContent.includes('Two beds')"), b.eval("document.querySelector('[data-diff-view=all]').getAttribute('aria-pressed')"))
 	b.still()
 	if low := b.eval(measureContrast); low != "" {
 		t.Errorf("all together: text that cannot be read:\n%s", low)
 	}
 	// Changes only: no section the same, in the words or the contents.
 	b.eval("document.querySelector('[data-diff-view=only]').click()")
-	out = append(out, b.eval("document.querySelectorAll('.dsame').length + ' ' + [...document.querySelectorAll('#diff-toc button > span:first-child')].map((x) => x.textContent).join('|')"))
+	out = append(out, b.eval("document.getElementById('diff-body').textContent.includes('Two beds') + ' ' + document.querySelectorAll('.dsame').length + ' ' + [...document.querySelectorAll('#diff-toc button > span:first-child')].map((x) => x.textContent).join('|')"))
 	// The way to show it is kept, reloaded.
 	openDiff(b, "/a/d/?diff")
 	out = append(out, b.eval("document.querySelector('[data-diff-view=only]').getAttribute('aria-pressed')"))
@@ -95,15 +95,22 @@ func TestUIDiff(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// Drawn once: the list read again leaves what was chosen, the scrolling and n's place.
 	const state = "[diffPair.from, diffPair.to, diffAt, document.getElementById('diff-body').scrollTop].join(' ')"
 	before := b.eval(state)
-	b.eval("(async () => { drawn = ''; await load(true); return 1; })()")
-	if got := b.eval(state); got != before || got == "1 3 1 0" {
-		t.Errorf("the list read again: %s, was %s", got, before)
+	got := b.eval(`(async () => {
+		const real = window.fetch, asked = [];
+		window.fetch = (u, i) => { asked.push(String(u)); return real(u, i); };
+		drawn = '';
+		await load(true);
+		window.fetch = real;
+		return asked.filter((u) => u !== '/api/artifacts').join(' ');
+	})()`)
+	if after := b.eval(state); got != "" || after != before || after == "1 3 1 0" {
+		t.Errorf("the list read again asked %q: %s, was %s", got, after, before)
 	}
 	check(t, "diff", out, strings.Join([]string{
 		"2 3", "1 changed, 1 added, 2 the same", "false", "new",
 		"del:2 ins:3 ins:<img src=x onerror=\"window.pwned=1\"> ins:Rain ins:The museum instead.",
 		"true", "true", "true",
-		"0 Stay|Rain",
+		"false 0 Stay|Rain",
 		"true",
 		"3- 2 1", "3 2- 1-",
 		"diff-from ?raw&v=1",
@@ -253,7 +260,9 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 		t.Helper()
 		s.floe(t, "publish", s.page(t, "diff/n.yaml", "N", html), "--slug", "n")
 	}
+	// Of the same number as n's when the words show: what clears them is not its number.
 	s.floe(t, "publish", s.page(t, "diff/p.yaml", "P", "<p>p</p>"), "--slug", "p")
+	s.floe(t, "publish", s.page(t, "diff/p.yaml", "P", "<p>p2</p>"), "--slug", "p")
 	publish(diffV1)
 	s.b.addScript(`(() => { const real = window.fetch;
 		window.diffHeld = null;
@@ -329,9 +338,23 @@ func TestUIDiffNotice(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("window.diffGo(); window.diffHeld = null")
 	b.until("answered", "window.diffAnswered > 0")
 	settled()
+	b.eval("new Promise((go) => setTimeout(go, 50))")
+	out = append(out, b.eval("String("+note+" === null)"))
+
+	// So too after marked unread, its answer come late.
+	publish(diffV3)
+	b.until("v6", "document.querySelector('#list li[data-slug=n]').classList.contains('unseen')")
+	b.eval("window.diffAnswered = 0; window.diffHeld = new Promise((go) => { window.diffGo = go; }); 1")
+	b.eval("document.querySelector('#list li[data-slug=n] .title').click()")
+	b.until("the toast of v6", "document.querySelector('.toast.page .btn')")
+	b.eval("document.querySelector('.toast.page .btn').click()")
+	b.until("unread", "document.querySelector('#list li[data-slug=n]').classList.contains('unseen') && !readsGoing")
+	b.eval("window.diffGo(); window.diffHeld = null")
+	b.until("answered late", "window.diffAnswered > 0")
+	b.eval("new Promise((go) => setTimeout(go, 50))")
 	out = append(out, b.eval("String("+note+" === null)"))
 
 	check(t, "notice", out, strings.Join([]string{
-		"true", "Sections changed since v1, the version last read: 1 /a/n/?diff", "true", "true",
+		"true", "Sections changed since v1, the version last read: 1 /a/n/?diff", "true", "true", "true",
 	}, "|"))
 }

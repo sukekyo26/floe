@@ -2859,7 +2859,7 @@
       if (!res.ok) return;
       const { counts } = await res.json();
       const changed = counts.changed + counts.added + counts.removed;
-      if (changed === 0 || turn !== noticeTurn || slug !== shownSlug() || slug === keptUnread) return;
+      if (changed === 0 || turn !== noticeTurn) return;
       const note = tagged('div', 'dnote page-note', t('ui_diff_notice', read, changed));
       const go = tagged('a', '', t('ui_diff_notice_go'));
       go.href = `/a/${slug}/?diff`;
@@ -3181,10 +3181,7 @@
         diffPair[name] = Number(e.target.value);
         $('diff-url-note').hidden = true;
         history.replaceState(history.state, '', `${location.pathname}?diff&from=${diffPair.from}&to=${diffPair.to}`);
-        const focused = document.activeElement;
         drawDiffPicks();
-        // Arrow keys go on choosing from where they were
-        focused?.focus();
         readDiff();
       });
     }
