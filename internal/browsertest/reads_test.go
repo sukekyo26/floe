@@ -137,7 +137,7 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if got := b.eval("document.querySelectorAll('.toast').length"); got != "0" {
 		t.Errorf("%s toasts of success", got)
 	}
-	if err = os.WriteFile(reads, kept, 0o600); err != nil {
+	if err = os.WriteFile(reads, kept, 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
 	b.eval("document.getElementById('frame').contentWindow.location.replace('?raw')")
