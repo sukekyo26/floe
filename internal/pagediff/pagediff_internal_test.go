@@ -94,6 +94,7 @@ func TestCompare(t *testing.T) {
 		{"a colour named as an id", `<h2>A</h2><svg><rect id="red" fill="red"/></svg>`, `<h2>A</h2><svg><rect id="blue" fill="blue"/></svg>`, "changed h2 A\n  [svg reshaped] \n"},
 		{"an id named as an attribute", `<h2>A</h2><svg><rect id="x" x="1"/></svg>`, `<h2>A</h2><svg><rect id="y" x="1"/></svg>`, "same h2 A\n"},
 		{"an id its value's reference", `<h2>A</h2><svg><g id="a"/><use href="#a" fill="url(#a)" aria-labelledby="a"/></svg>`, `<h2>A</h2><svg><g id="b"/><use href="#b" fill="url(#b)" aria-labelledby="b"/></svg>`, "same h2 A\n"},
+		{"a reference to the svg's own id", `<h2>A</h2><svg id="a"><use href="#a"/></svg>`, `<h2>A</h2><svg id="b"><use href="#b"/></svg>`, "same h2 A\n"},
 		{"a reference to another", `<h2>A</h2><svg><g id="a"/><g id="b"/><use href="#a"/></svg>`, `<h2>A</h2><svg><g id="a"/><g id="b"/><use href="#b"/></svg>`, "changed h2 A\n  [svg reshaped] \n"},
 		{"an image's alt", "<h2>A</h2><img src=a alt='a map of Kyoto'>", "<h2>A</h2><img src=a alt='a map of Osaka'>", "changed h2 A\n  [img] a map of [-Kyoto-]{+Osaka+}\n"},
 		{"an image in a cell", "<h2>A</h2><table><tr><td><img src=a alt='a map of Kyoto'></td></tr></table>", "<h2>A</h2><table><tr><td><img src=a alt='a map of Osaka'></td></tr></table>", "changed h2 A\n  [tr] a map of [-Kyoto-]{+Osaka+}\n"},
@@ -146,9 +147,9 @@ func TestPreLines(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		lines := []string{}
-		for _, b := range sections[0].blocks {
-			lines = append(lines, b.text)
+		lines := make([]string, len(sections[0].blocks))
+		for i, b := range sections[0].blocks {
+			lines[i] = b.text
 		}
 		if got := strings.Join(lines, "|"); got != tc.want {
 			t.Errorf("%s: got %q, want %q", tc.html, got, tc.want)
