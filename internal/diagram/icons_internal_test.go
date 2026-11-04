@@ -514,3 +514,60 @@ func TestGraphIconsHands(t *testing.T) {
 		}
 	}
 }
+
+// turnsOf is how many times p turns.
+func turnsOf(p path) int {
+	n := 0
+	for i := 1; i < len(p.segs); i++ {
+		if isDown(p.segs[i]) != isDown(p.segs[i-1]) {
+			n++
+		}
+	}
+	return n
+}
+
+// Where it can, an edge at an icon turns no more than its way asks: a run held off by another that moves later moves
+// after it; a loop's runs move, so that it turns twice; a labelled straight edge short of a point turns twice, on one
+// point and by the other's rectangle.
+func TestGraphIconTurns(t *testing.T) {
+	t.Parallel()
+
+	names := []string{"hub", "sink"}
+	var edges []string
+	for i := range 8 {
+		names = append(names, fmt.Sprintf("n%d", i))
+		edges = append(edges, fmt.Sprintf("hub>n%d", i), fmt.Sprintf("n%d>sink", i))
+	}
+	g := iconGraph(names, edges...)
+	l := laid(g)
+	if fault := iconFault(g, l); fault != "" {
+		t.Fatal(fault)
+	}
+	for _, p := range l.paths {
+		if n := turnsOf(p); n > 2 {
+			t.Errorf("eight edges: %s turns %d times: %v", p.what, n, p.segs)
+		}
+	}
+
+	g = iconGraph([]string{"a", "b"}, "a>b", "a>a")
+	l = laid(g)
+	if fault := iconFault(g, l); fault != "" {
+		t.Fatal(fault)
+	}
+	if n := turnsOf(l.paths[1]); n != 2 {
+		t.Errorf("the loop turns %d times, want 2: %v", n, l.paths[1].segs)
+	}
+
+	g = iconGraph([]string{"a", "b", "c", "d"}, "a>b", "b>c", "c>d")
+	g.Nodes[2].Icon.Label = Text{"en": "a label of some width"}
+	g.Edges[2].Label = Text{"en": "words"}
+	l = laid(g)
+	if fault := iconFault(g, l); fault != "" {
+		t.Fatal(fault)
+	}
+	for _, p := range l.paths {
+		if n := turnsOf(p); n > 2 {
+			t.Errorf("in a row: %s turns %d times: %v", p.what, n, p.segs)
+		}
+	}
+}
