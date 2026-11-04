@@ -132,17 +132,24 @@ func pointer(i int) string {
 
 // newLayout lays out s: names first, as edges and labels name parts written after them.
 func newLayout(s *spec, opts Options) *layout {
-	return layoutWith(s, opts, (*layout).shareEnds)
+	return layoutWith(s, opts, placing{(*layout).shareEnds, (*drawing).settleEnds})
 }
 
-// layoutWith is newLayout with share, which places the ends of the edges written by hand before they are added.
-func layoutWith(s *spec, opts Options, share func(*layout, []item)) *layout {
+// placing is what places the ends of edges on the sides of parts: share those written by hand before they are added,
+// settle those of a graph once all of it is placed.
+type placing struct {
+	share  func(*layout, []item)
+	settle func(*drawing)
+}
+
+// layoutWith is newLayout with how.
+func layoutWith(s *spec, opts Options, how placing) *layout {
 	l := blankLayout(s, opts)
 	l.names, l.circles, l.stacks = map[string]target{}, map[string]circle{}, map[string]stack{}
 	b, _ := json.Marshal(s) //nolint:errcheck,errchkjson // read from JSON, it writes as JSON
 	sum := sha256.Sum256(b)
 	l.id = "dg" + strconv.Itoa(opts.Seq) + "-" + hex.EncodeToString(sum[:3])
-	items, found, err := expand(s.Parts)
+	items, found, err := expandSettling(s.Parts, how.settle)
 	l.problems = append(l.problems, found...)
 	l.failure = err
 	for _, it := range items {
@@ -156,7 +163,7 @@ func layoutWith(s *spec, opts Options, share func(*layout, []item)) *layout {
 			l.stacks[regionKey(lb.In)] = st
 		}
 	}
-	share(l, items)
+	how.share(l, items)
 	for _, it := range items {
 		l.add(it.at, it.p)
 	}

@@ -21,6 +21,11 @@ const treeGapX, treeGapY = 24.0, 40.0
 // LIMIT: trees grow down alone, and a subtree's span is not shared with its neighbours' (a wide row of leaves
 // widens every span above it); pack them if wide trees waste room.
 func expand(parts []part) ([]item, usererr.List, error) {
+	return expandSettling(parts, (*drawing).settleEnds)
+}
+
+// expandSettling is expand, each graph's ends moved by settle once all of it is placed.
+func expandSettling(parts []part, settle func(*drawing)) ([]item, usererr.List, error) {
 	var problems usererr.List
 	graphs := map[int]*graphOut{}
 	passed := 0
@@ -28,6 +33,7 @@ func expand(parts []part) ([]item, usererr.List, error) {
 	for i, p := range parts {
 		if p.Graph != nil {
 			o, found := readGraph(p.Graph, pointer(i)+"/graph")
+			o.settle = settle
 			problems = append(problems, found...)
 			o.others = others
 			graphs[i] = o
