@@ -34,7 +34,7 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	state := `[[...document.querySelectorAll('#side-tree > *')].map((e) => e.textContent + (e.getAttribute('aria-expanded') === 'true' ? '-' : e.getAttribute('aria-expanded') ? '+' : '') + (e.getAttribute('aria-current') ? '*' : '')).join(','),
 		['aria-valuenow', 'aria-valuemin', 'aria-valuemax'].map((a) => document.getElementById('side-grip').getAttribute(a)).join('/'),
 		getComputedStyle(document.getElementById('frame')).marginLeft].join(' ')`
-	shown := "[!document.getElementById('side').hidden, !document.getElementById('side-grip').hidden, !document.getElementById('side-show').hidden, document.getElementById('side').classList.contains('over'), !document.getElementById('frame-pick').disabled].join()"
+	shown := "[!document.getElementById('side').hidden, !document.getElementById('side-grip').hidden, !document.getElementById('side-show').hidden, document.getElementById('side').classList.contains('over')].join()"
 	kept := "localStorage.getItem('frame.side')"
 	key := func(k string) {
 		t.Helper()
@@ -140,10 +140,7 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("guide closed", "!document.querySelector('#side-tree [aria-current]')")
 	out = append(out, b.eval("marked.filter((e) => !e.isConnected).map((e) => e.title).join(',') + ' gone, focus ' + document.activeElement.title"))
 	b.eval("document.getElementById('side-hide').click()")
-	b.eval("load()")
-	b.eval("document.getElementById('frame-pick').click()")
-	out = append(out, b.until("the pages to pick", "[...document.querySelectorAll('#page-pick-list [role=option]')].map((o) => o.textContent).join(',')"))
-	b.eval("document.getElementById('page-pick').hidePopover(); document.getElementById('side-show').click()")
+	b.eval("document.getElementById('side-show').click()")
 	// A row with the focus keeps it as the tree is drawn anew; the title drawn is the folder's of now.
 	b.eval("[...document.querySelectorAll('#side-tree button.dir')].find((d) => d.textContent === 'api').focus()")
 	b.eval("items = items.map((x) => x.slug === 'docs' ? { ...x, title: 'Docs anew' } : x); renderFrame()")
@@ -161,19 +158,18 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the window narrowed", "document.getElementById('side-grip').getAttribute('aria-valuenow') === '350'")
 	key(kb.ArrowLeft)
 	out = append(out, b.eval("document.getElementById('side-grip').getAttribute('aria-valuenow')"))
-	// The folder gone, the tree goes, and the bar's pick is pressable again once the page is back.
+	// The folder gone, the tree goes; back, so does the page.
 	b.navigate("/a/docs/?file=guide%2Fsetup.html")
-	b.until("the tree", "document.getElementById('frame-pick').disabled")
+	b.until("the tree", "!document.getElementById('side').hidden")
 	docs := filepath.Join(s.Env["HOME"], "docs")
 	if err := os.Rename(docs, docs+"-moved"); err != nil {
 		t.Fatal(err)
 	}
-	out = append(out, b.until("the folder gone", "document.getElementById('side').hidden && 'disabled ' + document.getElementById('frame-pick').disabled"))
+	out = append(out, b.until("the folder gone", "document.getElementById('side').hidden && 'side gone'"))
 	if err := os.Rename(docs+"-moved", docs); err != nil {
 		t.Fatal(err)
 	}
-	b.eval("document.getElementById('side-hide').click()")
-	out = append(out, b.until("the folder back", "!document.getElementById('frame-pick').hidden && 'disabled ' + document.getElementById('frame-pick').disabled"))
+	out = append(out, b.until("the folder back", "!document.getElementById('frame').hidden && 'page back'"))
 	// A folder's page not found has no tree, whatever the window does.
 	b.navigate("/a/docs/?file=nope.html")
 	b.until("the frame", "!document.getElementById('notfound').hidden")
@@ -182,16 +178,16 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))")
 	out = append(out, b.eval(shown))
 
-	check(t, "side", out, "api+,guide-,deep+,setup.html*,start.html,index.html 280/160/480 280px|true,true,false,false,false|none kept|"+
+	check(t, "side", out, "api+,guide-,deep+,setup.html*,start.html,index.html 280/160/480 280px|true,true,false,false|none kept|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 264/160/480 264px|{\"width\":264,\"open\":true}|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 160/160/480 160px|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 480/160/480 480px|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 300/160/480 300px|{\"width\":300,\"open\":true}|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 480/160/480 480px|"+
-		"false,false,true,false,true 0px side-show|{\"width\":300,\"open\":false}|false,false,true,false,true|"+
+		"false,false,true,false 0px side-show|{\"width\":300,\"open\":false}|false,false,true,false|"+
 		"api+,guide-,deep+,setup.html*,start.html,index.html 300/160/480 300px side-hide|"+
 		"api+,guide-,deep-,x.html,setup.html*,start.html,index.html 300/160/480 300px|true guide/deep/x.html|docs / guide/start.html|"+
 		"side-hide: "+ring+"|side-grip: "+ring+"|none,none,none|"+
-		"false,false,true,true,true|true,false,false,true,true 0px|true|true|guide/deep,guide/setup.html,guide/start.html gone, focus guide|"+
-		"guide/setup.html,guide/start.html|api Docs anew|Docs again|334|disabled false|disabled false|false,false,false,false,true")
+		"false,false,true,true|true,false,false,true 0px|true|true|guide/deep,guide/setup.html,guide/start.html gone, focus guide|"+
+		"api Docs anew|Docs again|334|side gone|page back|false,false,false,false")
 }

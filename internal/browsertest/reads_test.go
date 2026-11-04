@@ -106,11 +106,17 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if err = unix.Flock(int(lock.Fd()), unix.LOCK_EX); err != nil {
 		t.Fatal(err)
 	}
+	// Counted and watched from before the page's own script: how long the mark is out depends on the machine.
+	watch := b.addScript(`if (location.pathname === '/a/held/' && !location.search.includes('raw')) {
+		window.cutOff = 0;
+		const f = window.fetch;
+		window.fetch = (u, i) => { const p = f(u, i); if (i?.method === 'POST') p.catch(() => { window.cutOff++; }); return p; };
+		addEventListener('DOMContentLoaded', () => new MutationObserver(() => { window.wentDown ||= document.getElementById('server').classList.contains('down'); })
+			.observe(document.getElementById('server'), { attributes: true }));
+	}`)
 	b.navigate("/a/held/")
-	b.until("the mark to go out", "readsGoing === true")
-	b.eval(`new MutationObserver(() => { window.wentDown ||= document.getElementById('server').classList.contains('down'); })
-		.observe(document.getElementById('server'), { attributes: true })`)
-	b.until("the request to be cut off", "readsGoing === false")
+	b.until("the request to be cut off", "window.cutOff === 1 && readsGoing === false")
+	b.removeScript(watch)
 	if got := b.eval("Boolean(window.wentDown) || document.getElementById('server').classList.contains('down')"); got != "false" {
 		t.Error("a request cut off by its time limit showed the server as not reached")
 	}
@@ -147,4 +153,18 @@ func TestUIRead(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.navigate("/")
 	b.eval(`{ const f = document.createElement('iframe'); f.src = '/a/nested/'; document.body.append(f); }`)
 	waitRead("the page to be read in a frame framed", "nested")
+}
+
+// A page opened beside the list is read as in its frame: the list's next read has no dot on it, and the row stays chosen.
+func TestUIReadBeside(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "read/side.yaml", "side", "<p>side</p>"), "--slug", "side")
+	b.navigate("/")
+	b.size(1440, 900, false)
+	b.until("the row", "document.querySelector('#list li[data-slug=side] .dot')")
+	b.eval("document.querySelector('#list li[data-slug=side] .title').click()")
+	b.until("the row read", "document.querySelector('#list li[data-slug=side] .ring') && document.querySelector('#list li.picked')?.dataset.slug === 'side'")
+	check(t, "news", []string{b.eval("document.getElementById('news').hidden")}, "true")
+	b.unsize()
 }

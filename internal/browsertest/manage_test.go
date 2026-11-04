@@ -152,24 +152,14 @@ func (b *browser) removeScript(id page.ScriptIdentifier) {
 	}
 }
 
-// picker opens the frame's pages to pick from afresh (shut first, so that it is made from the list as it is now) and reads
-// them: each group's heading, then its pages' titles, the page open now marked *.
-const picker = `(() => {
-	const box = document.getElementById('page-pick');
-	if (box.matches(':popover-open')) box.hidePopover();
-	document.getElementById('frame-pick').click();
-	return [...document.querySelectorAll('#page-pick-list [role=group]')].map((g) => g.querySelector('.gh').textContent + ':' +
-		[...g.querySelectorAll('[role=option]')].map((o) => o.textContent + (o.hasAttribute('aria-current') ? '*' : '')).join(',')).join(' / ');
-})()`
-
 // manyPages is a list of n pages to stub, newest first, alike but for their slug and title.
 func manyPages(n int) string {
 	return "Array.from({ length: " + strconv.Itoa(n) + " }, (_, i) => ({ slug: `p${i}`, title: `P${i}`, description: '', createdAt: at(1), updatedAt: at(1) }))"
 }
 
-// TestUIExtras sorts, filters favourites and the archived, counts each list, moves by keyboard, deletes and
-// archives in bulk, edits in a modal, copies a path, adds a link only to the list it goes on, clears an error once a
-// change succeeds, tells an empty list, and steps through neighbours, against a stubbed list.
+// TestUIExtras filters favourites and the archived, counts each list, moves by keyboard, deletes and archives in bulk,
+// edits in a modal, copies a path, adds a link only to the lists it goes on, clears an error once a change succeeds and
+// tells an empty list, against a stubbed list.
 func TestUIExtras(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	inEveryLanguage(t, uiExtras)
 }
@@ -181,45 +171,38 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.stub(extrasList)
 	b.navigate("/")
 	const titles = "[...document.querySelectorAll('#list .title')].map((a) => a.textContent).join(',')"
-	// What the list counts, and the archived in the URL: the kinds, the project chips and whether they show, the views,
-	// the count and the titles.
-	const counts = "[...document.querySelectorAll('.tabs .n')].map((n) => n.textContent)" +
+	// What the list counts, and the view in the URL: the kinds, the project chips and whether they show, the views,
+	// the head and the titles.
+	const counts = "[...document.querySelectorAll('#kinds .n')].map((n) => n.textContent)" +
 		".concat([...document.querySelectorAll('#chips .chip')].map((c) => c.textContent), document.getElementById('shelf-projects').hidden, " +
 		"[...document.querySelectorAll('.views .n')].map((n) => n.textContent).join(' '), document.getElementById('count').textContent, " + titles + ", " +
-		"new URLSearchParams(location.search).get('archived')).join(' ')"
+		"new URLSearchParams(location.search).get('view')).join(' ')"
 	// Which empty states show, and their words.
-	const empties = "['empty', 'empty-links', 'all-archived', 'empty-favorites', 'empty-archived', 'nomatch']" +
+	const empties = "['empty', 'all-archived', 'empty-new', 'empty-favorites', 'empty-archived', 'nomatch']" +
 		".filter((id) => !document.getElementById(id).hidden).map((id) => id + ':' + document.getElementById(id).querySelector('strong').textContent).join(' ')"
-	sortBy := func(v string) {
-		b.eval("document.getElementById('sort').click(); document.querySelector('#sort-list [data-sort=" + v + "]').click()")
-	}
 	key := func(k string) {
 		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
 	}
 
 	out := make([]string, 0, 32)
 	out = append(out, b.eval(titles))
-	sortBy("created")
-	// Sorted by creation too, the time is the update's: the creation date has its own place beside it.
-	out = append(out, b.eval(titles)+" "+b.eval("new URLSearchParams(location.search).get('sort')")+" "+
-		b.eval("[...document.querySelectorAll('#list li:not(.group)')].every((li) => li.querySelector('time').dateTime === items.find((a) => a.slug === li.dataset.slug).updatedAt)"))
-	sortBy("title")
-	out = append(out, b.eval(titles))
 	// The shelf's favourites narrow to them (kept in the URL); a row's star sends the change.
 	b.eval("document.querySelector('.views [data-view=fav]').click()")
-	out = append(out, b.eval(titles)+" "+b.eval("new URLSearchParams(location.search).get('fav')"))
+	out = append(out, b.eval(titles)+" "+b.eval("new URLSearchParams(location.search).get('view')"))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	b.eval("document.querySelector('#list li:not(.group) .star').click()")
 	out = append(out, b.until("the favourite", "calls.splice(0).join(',')"))
-	// The time's tooltip has both the creation and the update.
-	out = append(out, b.eval("document.querySelector('#list li:not(.group) time').title.split('\\n').map((l) => l.split(' ')[0]).join(' ')"))
-	// ↓ moves through the rows by focusing their titles, x selects the focused row.
+	// The title's tooltip has both the creation and the update.
+	out = append(out, b.eval("document.querySelector('#list li:not(.group) .title').title.split('\\n').slice(1).map((l) => l.split(' ')[0]).join(' ')"))
+	// ↓ moves through the rows by focusing their titles, x selects the focused row, the check boxes showing from then on alone.
+	const boxes = "getComputedStyle(document.querySelector('#list li:not(.group) .pick')).display"
+	out = append(out, b.eval(boxes))
 	key("ArrowDown")
 	key("ArrowDown")
 	out = append(out, b.eval("document.activeElement.textContent"))
 	key("x")
-	out = append(out, b.eval("document.getElementById('bulk-count').textContent"))
-	// With Alpha selected too by a real mouse click (nothing may sit on top of the checkbox), the first
+	out = append(out, b.eval("document.getElementById('bulk-count').textContent"), b.eval(boxes))
+	// With Beta selected too by a real mouse click (nothing may sit on top of the checkbox), the first
 	// click arms and the second deletes both.
 	r := b.rect("document.querySelector('#list li:not(.group) .sel')")
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
@@ -229,23 +212,26 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("document.getElementById('bulk-delete').textContent"))
 	b.eval("document.getElementById('bulk-delete').click()")
 	b.until("the selection to clear", "document.getElementById('bulk').hidden")
-	out = append(out, b.eval("calls.splice(0).sort().join(',')"))
+	out = append(out, b.eval("calls.splice(0).sort().join(',')"), b.eval(boxes))
+	// Links alone say they are unregistered.
+	b.eval("document.querySelector('#list li[data-slug=l] .sel').click()")
+	out = append(out, b.eval("document.getElementById('bulk-delete').textContent"))
+	b.eval("document.getElementById('bulk-clear').click()")
 	// The pencil opens a modal with the current description; saving sends the new one.
 	b.eval("document.querySelector('#list li[data-slug=a] .edit').click()")
 	out = append(out, b.eval("[document.getElementById('edit-dialog').open, document.getElementById('edit-desc').value].join(' ')"))
 	b.eval("document.getElementById('edit-desc').value = 'new'; document.getElementById('edit').requestSubmit()")
-	b.until("the edit modal to close", "!document.getElementById('edit-dialog').open")
+	// Closed, the focus goes back to the row's menu button, as the dialog's close event comes.
+	b.until("the edit modal to close", "!document.getElementById('edit-dialog').open && document.activeElement.matches('#list li[data-slug=a] summary')")
 	out = append(out, b.eval("calls.splice(0).join(',')"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_saved"))+")"))
 	// Only linked files have a copy button for their path.
-	out = append(out, b.eval("document.querySelector('#list li:not(.group) .copy').hidden"))
-	b.eval("document.querySelector('.tabs [data-tab=links]').click()")
-	b.eval("document.querySelector('#list li .copy').click()")
+	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] .copy').hidden"))
+	b.eval("document.querySelector('#list li[data-slug=l] .copy').click()")
 	out = append(out, b.until("the copy", "calls.join(',')"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_path_copied"))+")"))
 	// A link whose file is gone has no href, but ↓ still reaches it.
-	b.eval("document.activeElement.blur()")
-	key("ArrowDown")
+	b.eval("document.querySelector('#list li[data-slug=l] .title').focus()")
 	key("ArrowDown")
 	out = append(out, b.eval("document.activeElement.textContent"))
 	// The add form sends only the fields filled in, trimmed: a field sent is given, empty or not.
@@ -257,8 +243,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		document.getElementById('add').requestSubmit();
 	})()`)
 	out = append(out, b.until("the add to be sent", "calls.splice(0).join(',')"))
-	b.eval("document.getElementById('add-cancel').click()")
-	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
+	b.until("the add dialog to close", "!document.getElementById('add-dialog').open")
 
 	// The archived are off every count and list but their own, which the switch shows (kept in the URL); a row's
 	// menu and the bulk bar send the change, to archive or to give back, and say which; the menu closes.
@@ -269,7 +254,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval(archiveRow)
 	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list .more[open]').length"),
-		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Gamma"))+")"))
+		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Beta"))+")"))
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval(archiveRow)
@@ -285,10 +270,9 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.getElementById('bulk-archive').click()")
 	b.until("the selection to clear", "document.getElementById('bulk').hidden")
 	out = append(out, b.eval("calls.splice(0).sort().join(',')"))
-	// Empty lists: no archived link; all pages archived, which leads to them; nothing at all.
-	b.eval("document.querySelector('.tabs [data-tab=links]').click()")
+	// Empty lists: nothing archived; all archived, which leads to them; nothing at all; no new page.
 	b.stub(`[{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`)
-	// A link is added from the list it goes on, not from the archived.
+	// A link is added from the lists it goes on, not from the archived.
 	out = append(out, b.eval(empties)+" "+b.eval("document.getElementById('add-open').hidden"))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	out = append(out, b.eval("document.getElementById('add-open').hidden"))
@@ -297,48 +281,38 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the favourite to fail", "!document.getElementById('error').hidden && document.getElementById('error').textContent"))
 	b.eval("window.failWrites = false; document.querySelector('#list li:not(.group) .star').click()")
 	out = append(out, b.until("the error to clear", "document.getElementById('error').hidden"))
-	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
 	b.stub(`[{ slug: 'z', title: 'Zeta', description: '', createdAt: at(2), updatedAt: at(6), archived: true }]`)
 	out = append(out, b.eval(empties))
 	b.eval("document.getElementById('show-archived').click()")
-	out = append(out, b.eval(titles+" + ' ' + new URLSearchParams(location.search).get('archived')"))
+	out = append(out, b.eval(titles+" + ' ' + new URLSearchParams(location.search).get('view')"))
+	b.eval("document.querySelector('.views [data-view=new]').click()")
+	out = append(out, b.eval(empties))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	b.stub("[]")
-	out = append(out, b.eval(empties))
-
-	// A page opened from the list picks from that list, in its order, and the logo returns to that list. An archived page
-	// opened from elsewhere picks from the archived.
-	b.eval("sessionStorage.setItem('artifacts.list', '?sort=title')")
-	neighbours := "!document.getElementById('frame-pick').hidden && " + picker + " + ' ' + document.querySelector('.brand').getAttribute('href')"
-	b.stub(extrasList)
-	b.navigate("/a/b/")
-	out = append(out, b.until("the neighbours", neighbours))
-	b.navigate("/a/z/")
-	out = append(out, b.until("the archived neighbours", neighbours))
+	out = append(out, b.eval(empties), b.eval("document.getElementById('add-empty').offsetParent !== null"))
 
 	// The time's tooltip lines start with the label of their format ("Created %s").
 	label := func(key string) string { return strings.Fields(msg(key, ""))[0] }
 	check(t, "extras", out, strings.Join([]string{
-		"Gamma,Beta,Alpha", "Gamma,Beta,Alpha created true", "Gamma,Alpha,Beta", "Gamma 1",
-		`PATCH /api/artifacts/c {"favorite":false}`, label("ui_created_at") + " " + label("ui_updated_at"), "Alpha",
-		msg("ui_selected", 1), msg("ui_selected", 2), msg("ui_delete_bulk_confirm", 2),
-		"DELETE /api/artifacts/a,DELETE /api/artifacts/c", "true old", `PATCH /api/artifacts/a {"description":"new"}`, "true", "true",
+		"Beta,Alpha,Gamma,Linked,Missing", "Gamma fav",
+		`PATCH /api/artifacts/b {"favorite":true}`, label("ui_created_at") + " " + label("ui_updated_at"), "none", "Alpha",
+		msg("ui_selected", 1), "grid", msg("ui_selected", 2), msg("ui_delete_bulk_confirm", 2),
+		"DELETE /api/artifacts/a,DELETE /api/artifacts/b", "none", msg("ui_unlink"),
+		"true old", `PATCH /api/artifacts/a {"description":"new"}`, "true", "true",
 		"copy /tmp/x/l.html", "true", "Missing", `POST /api/artifacts {"path":"/tmp/x/n.html","description":"a link"}`,
-		"3 2 0 " + msg("ui_no_project") + "3 true 3 1 2 " + msg("ui_count_all", 3) + " Gamma,Alpha,Beta ",
-		msg("ui_archive") + " / " + msg("ui_archive_named", "Gamma") + " / " + msg("ui_archive"),
-		`PATCH /api/artifacts/c {"archived":true}`, "0", "true",
-		// The archived, by project: p's Zeta, then Ypsilon of none; two projects, so the shelf shows them.
-		"2 1 0 p1 " + msg("ui_no_project") + "1 false 3 1 2 " + msg("ui_count_all", 2) + " Zeta,Ypsilon 1",
+		"3 2 " + msg("ui_no_project") + "5 true 0 5 1 3 " + msg("ui_list_head", 0) + " Beta,Alpha,Gamma,Linked,Missing ",
+		msg("ui_archive") + " / " + msg("ui_archive_named", "Beta") + " / " + msg("ui_archive"),
+		`PATCH /api/artifacts/b {"archived":true}`, "0", "true",
+		// The archived, by project: p's Zeta and those of none; two projects, so the shelf shows them.
+		"2 1 p1 " + msg("ui_no_project") + "2 false 0 5 1 3 " + msg("ui_list_head", 0) + " Zeta,Ypsilon,Kept archived",
 		msg("ui_unarchive") + " / " + msg("ui_unarchive_named", "Zeta") + " / " + msg("ui_unarchive"),
 		`PATCH /api/artifacts/z {"archived":false}`, "true", msg("ui_unarchive"),
-		`PATCH /api/artifacts/y {"archived":false},PATCH /api/artifacts/z {"archived":false}`,
-		"empty-archived:" + msg("ui_links_none_archived") + " true", "false",
+		`PATCH /api/artifacts/k {"archived":false},PATCH /api/artifacts/y {"archived":false},PATCH /api/artifacts/z {"archived":false}`,
+		"empty-archived:" + msg("ui_none_archived") + " true", "false",
 		msg("ui_favorite_failed", "Failed to fetch"), "true",
-		"all-archived:" + msg("ui_pages_all_archived", 1),
-		"Zeta 1",
-		"empty:" + msg("ui_empty_pages"),
-		msg("ui_group_favorites") + ":Gamma / " + msg("ui_no_project") + ":Alpha,Beta* /?sort=title",
-		"p:Zeta* / " + msg("ui_no_project") + ":Ypsilon /?sort=title",
+		"all-archived:" + msg("ui_all_archived", 1),
+		"Zeta archived", "empty-new:" + msg("ui_no_new"),
+		"empty:" + msg("ui_empty_pages"), "true",
 	}, "|"))
 }
 
@@ -352,9 +326,9 @@ func (b *browser) point(x, y float64) {
 	}
 }
 
-// TestUIShelf picks the list on the shelf, heads the favourites, shows a row's actions where pointed at or reached,
-// keeps a row's menu whole and gives focus back from it, adds a link from any list, folds the shelf into a select on
-// a narrow screen, and acts from the frame's bar, against a stubbed list.
+// TestUIShelf picks the list on the shelf, shows a row's actions where pointed at or reached, keeps a row's menu whole and
+// gives focus back from it, adds a link from any list, folds the shelf into a row and a dialog on a narrow screen, and acts
+// from the frame's bar, against a stubbed list.
 func TestUIShelf(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	inEveryLanguage(t, uiShelf)
 }
@@ -376,35 +350,35 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	const views = "[...document.querySelectorAll('.views button')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.view).join('') + ' ' + location.search"
 
 	out := make([]string, 0, 40)
-	// All of the list heads its favourites and its projects, with how many each has; a heading is no row for a screen reader.
-	out = append(out, b.eval(order), b.eval("[...document.querySelectorAll('#list li.group')].map((li) => "+
-		"[li.getAttribute('role'), li.firstChild.getAttribute('role'), li.firstChild.getAttribute('aria-level'), li.textContent].join(':')).join(',')"))
+	// A heading is no row for a screen reader.
+	out = append(out, b.eval(order), b.eval("[...document.querySelectorAll('#list li.group')].every((li) => "+
+		"li.getAttribute('role') === 'none' && li.firstChild.getAttribute('role') === 'heading' && li.firstChild.getAttribute('aria-level') === '2')"))
 	b.eval("document.querySelector('.views [data-view=fav]').click()")
 	out = append(out, b.eval(order)+" "+b.eval(views))
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval(order)+" "+b.eval(views))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
-	// ↓ goes past a heading; selecting the page selects its rows only.
+	// ↓ goes past a heading; selecting all selects its rows only.
 	key("ArrowDown")
 	key("ArrowDown")
 	out = append(out, b.eval("document.activeElement.textContent"))
 	b.eval("document.getElementById('bulk-page').click()")
 	out = append(out, b.eval("document.getElementById('bulk-count').textContent"))
 	// Shown before they hide, as on a slow machine, which clears the rows long after it selected them.
-	b.until("the selected rows' actions to show", "getComputedStyle(document.querySelector('#list li[data-slug=a] .more')).opacity === '1'")
+	b.until("the selected rows' actions to show", "getComputedStyle(document.querySelector('#list li[data-slug=c] .more')).opacity === '1'")
 	b.eval("document.getElementById('bulk-clear').click(); document.activeElement.blur()")
-	// With a mouse, a row's actions show only where pointed at, reached by keyboard or selected; a pressed star always.
-	out = append(out, b.settled("['a', 'c'].map((slug) => ['.star', '.more'].map((part) => "+
+	// With a mouse, a row's actions show only where pointed at, reached by keyboard, chosen or selected; a pressed star always.
+	out = append(out, b.settled("['b', 'c'].map((slug) => ['.star', '.more'].map((part) => "+
 		"getComputedStyle(document.querySelector(`#list li[data-slug=${slug}] ${part}`)).opacity).join('')).join('')"))
-	r := b.rect("document.querySelector('#list li[data-slug=a] .body')")
+	r := b.rect("document.querySelector('#list li[data-slug=b]')")
 	b.point(r.X+r.Width/2, r.Y+r.Height/2)
-	out = append(out, b.until("the pointed row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=a] .more')).opacity === '1' && 'shown'"))
+	out = append(out, b.until("the pointed row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=b] .more')).opacity === '1' && 'shown'"))
 	b.point(0, 0)
-	b.until("the actions to hide", "getComputedStyle(document.querySelector('#list li[data-slug=a] .more')).opacity === '0'")
-	b.eval("document.querySelector('#list li[data-slug=b] .title').focus()")
-	out = append(out, b.until("the reached row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=b] .more')).opacity === '1' && 'shown'"))
-	b.eval("document.activeElement.blur(); document.querySelector('#list li[data-slug=a] .sel').click()")
-	out = append(out, b.until("the selected row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=a] .more')).opacity === '1' && 'shown'"))
+	b.until("the actions to hide", "getComputedStyle(document.querySelector('#list li[data-slug=b] .more')).opacity === '0'")
+	b.eval("document.querySelector('#list li[data-slug=c] .title').focus()")
+	out = append(out, b.until("the reached row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=c] .more')).opacity === '1' && 'shown'"))
+	b.eval("document.activeElement.blur(); document.querySelector('#list li[data-slug=b] .sel').click()")
+	out = append(out, b.until("the selected row's actions", "getComputedStyle(document.querySelector('#list li[data-slug=b] .more')).opacity === '1' && 'shown'"))
 	b.eval("document.getElementById('bulk-clear').click()")
 	out = append(out, b.eval("[...document.querySelectorAll('#list li:not(.group)')].filter((li) => "+
 		"['.star', '.archive', '.more summary'].some((s) => !li.querySelector(s).getAttribute('aria-label'))).length"))
@@ -424,7 +398,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"document.activeElement === document.querySelector('#list li[data-slug=b] summary')].join(' ')"))
 	// One menu open at a time.
 	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=a] summary').click()")
-	out = append(out, b.eval("[...document.querySelectorAll('#list .more')].map((d) => d.open).join(' ')"))
+	out = append(out, b.eval("[...document.querySelectorAll('#list .more')].filter((d) => d.open).length"))
 	b.eval("document.querySelector('#list li[data-slug=a] summary').click()")
 	// An item closes its menu; the edit dialog, cancelled or saved, gives focus back to the row's menu button.
 	b.eval("document.querySelector('#list li[data-slug=b] summary').click(); document.querySelector('#list li[data-slug=b] .edit').click()")
@@ -451,38 +425,37 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval("Boolean(document.elementFromPoint("+js(fmt.Sprint(d.X+d.Width/2))+", "+js(fmt.Sprint(d.Y+d.Height/2))+")?.closest('.delete'))"))
 	b.eval("calls.length = 0; document.querySelector('#list > li:last-child .delete').click(); document.querySelector('#list > li:last-child .delete').click()")
 	out = append(out, b.until("the delete", "calls.join(',')"))
-	b.eval("scrollTo(0, 0)")
-	// Only favourites: their project's heading, in the favourites' list as in all of it.
-	b.stub(`[{ slug: 'c', title: 'Gamma', description: '', createdAt: at(1), updatedAt: at(9), favorite: true },
-		{ slug: 'd', title: 'Delta', description: '', createdAt: at(1), updatedAt: at(8), favorite: true }]`)
-	out = append(out, b.eval(order))
-	// The creation date beside the time, left of it, of a link when registered, and none without one; nothing under the title for it.
-	date := b.eval("new Date('2026-01-01T00:00:00.000Z').toLocaleDateString(document.documentElement.lang, { dateStyle: 'medium' })")
-	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) },
-		{ slug: 'o', title: 'Old', description: '', updatedAt: at(7) },
-		{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`)
-	out = append(out, b.eval("(() => { const li = document.querySelector('#list li[data-slug=a]'), m = li.querySelector('.made'); "+
-		"return [m.textContent, m.parentElement.classList.contains('meta'), m.getBoundingClientRect().right <= li.querySelector('time').getBoundingClientRect().left, li.querySelector('.sub').hidden].join(' '); })()"),
-		b.eval("document.querySelector('#list li[data-slug=o] .made').hidden"))
-	b.eval("document.querySelector('.tabs [data-tab=links]').click()")
-	out = append(out, b.eval("document.querySelector('#list li[data-slug=l] .made').textContent"))
-	b.eval("document.querySelector('.tabs [data-tab=pages]').click()")
-	// The kinds show with a link, the projects with two or one chosen.
+	b.unsize()
+	// The kinds show with two to choose between, the projects with two or one chosen; the templates with one.
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`)
-	out = append(out, b.eval("[document.getElementById('kinds').hidden, document.getElementById('shelf-projects').hidden].join(' ')"))
-	b.eval("setProject('p')")
-	out = append(out, b.eval("document.getElementById('shelf-projects').hidden"))
-	b.eval("setProject('')")
+	const shelves = "['shelf-projects', 'shelf-kinds', 'shelf-templates', 'shelf-tags'].map((id) => document.getElementById(id).hidden).join(' ')"
+	out = append(out, b.eval(shelves))
+	b.eval("toggleProject('p')")
+	out = append(out, b.eval(shelves))
+	b.eval("toggleProject('p')")
+	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', template: 'report', createdAt: at(1), updatedAt: at(8) },
+		{ slug: 'l', title: 'L', description: '', path: '/tmp/x/l.yaml', template: 'report', createdAt: at(1), updatedAt: at(7) },
+		{ slug: 'd', title: 'D', description: '', template: 'design', createdAt: at(1), updatedAt: at(6) }]`)
+	out = append(out, b.eval(shelves), b.eval("[...document.querySelectorAll('#templates .chip')].map((c) => c.textContent).join(',')"))
+	// Each part picks one, picked again lets it go; the parts narrow together; all in the URL.
+	b.eval("document.querySelector('#templates [data-template=report]').click()")
+	out = append(out, b.eval(order)+" "+b.eval("location.search"))
+	b.eval("document.querySelector('#kinds [data-kind=link]').click()")
+	out = append(out, b.eval(order)+" "+b.eval("location.search"))
+	b.navigate("/?template=report&kind=link&view=fav&tab=links&sort=title&page=3")
+	out = append(out, b.eval("[view, kind, template].join(' ')"))
+	b.eval("document.querySelector('.views [data-view=fav]').click(); document.querySelector('#kinds [data-kind=link]').click(); document.querySelector('#templates [data-template=report]').click()")
+	out = append(out, b.eval(order)+" "+b.eval("location.search"))
 	// A project's dot is of its color by projectOrder: as many each, by name.
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) },
 		{ slug: 'b', title: 'Beta', description: '', project: 'floe', createdAt: at(1), updatedAt: at(7) }]`)
 	out = append(out, b.eval("[...document.querySelectorAll('#chips .chip')].map((c) => c.dataset.project + ':' + c.style.getPropertyValue('--c')).join(',')"))
-	// The favourites count their own: their count, their projects, and none shown when there are none.
+	// The favourites count their own projects, and none shown when there are none.
 	b.stub(`[{ slug: 'c', title: 'Gamma', description: '', project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
 		{ slug: 'b', title: 'Beta', description: '', project: 'q', createdAt: at(1), updatedAt: at(8) }]`)
 	b.eval("document.querySelector('.views [data-view=fav]').click()")
-	out = append(out, b.eval("[document.getElementById('count').textContent, document.getElementById('shelf-projects').hidden].join(' ')"))
-	const empties = "['empty', 'empty-links', 'all-archived', 'empty-favorites', 'empty-archived', 'nomatch']" +
+	out = append(out, b.eval("document.getElementById('shelf-projects').hidden"))
+	const empties = "['empty', 'all-archived', 'empty-favorites', 'empty-archived', 'nomatch']" +
 		".filter((id) => !document.getElementById(id).hidden).join(' ')"
 	b.stub(`[{ slug: 'z', title: 'Zeta', description: '', createdAt: at(1), updatedAt: at(6), favorite: true, archived: true }]`)
 	out = append(out, b.eval(empties))
@@ -491,14 +464,12 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.getElementById('show-archived').click()")
 	out = append(out, b.eval(views))
 	b.stub(extrasList)
-	b.navigate("/?fav=1&archived=1")
-	out = append(out, b.eval(views))
-	// A link is added from any list but the archived, the first one too, and then shown on the links' list, unfiltered by a
-	// project or a search it may not match, drawn once.
+	// A link is added from any list but the archived, and then shown on the whole list, unfiltered by a project or a search it
+	// may not match, drawn once.
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`)
-	out = append(out, b.eval("[document.getElementById('kinds').hidden, document.getElementById('add-open').hidden].join(' ')"))
-	b.eval("setProject('p'); (() => { const q = document.getElementById('q'); q.value = 'Al'; q.dispatchEvent(new Event('input')); })()")
+	out = append(out, b.eval("document.getElementById('add-open').hidden"))
+	b.eval("toggleProject('p'); (() => { const q = document.getElementById('q'); q.value = 'Al'; q.dispatchEvent(new Event('input')); })()")
 	b.eval(`(() => {
 		window.renders = 0;
 		window.draw = render;
@@ -506,7 +477,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		// The server lists the link added.
 		const post = window.fetch;
 		window.fetch = (url, init = {}) => {
-			if (init.method === 'POST') list = JSON.stringify([...JSON.parse(list), { slug: 'n', title: 'New', description: '', path: '/tmp/x/n.html', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-09T00:00:00.000Z' }]);
+			if (init.method === 'POST') list = JSON.stringify([{ slug: 'n', title: 'New', description: '', path: '/tmp/x/n.html', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-09T00:00:00.000Z' }, ...JSON.parse(list)]);
 			return post(url, init);
 		};
 		document.getElementById('add-open').click();
@@ -514,112 +485,66 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		document.getElementById('add').requestSubmit();
 	})()`)
 	// Waited for until drawn: the dialog closes before the list is fetched again.
-	b.until("the link to be added", "!document.getElementById('add-dialog').open && location.search.includes('tab=links')")
-	out = append(out, b.eval("[location.search, document.getElementById('q').value === '', renders, "+
+	b.until("the link to be added", "!document.getElementById('add-dialog').open && document.getElementById('q').value === '' && !location.search.includes('project')")
+	out = append(out, b.until("the link to show", "document.querySelector('#list li[data-slug=n]') && [location.search === '', renders, "+
 		"[...document.querySelectorAll('#list .title')].map((a) => a.textContent)].join(' ')"))
 	b.eval("render = draw")
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval("document.getElementById('add-open').hidden"))
-	b.eval("document.querySelector('.views [data-view=all]').click(); document.querySelector('.tabs [data-tab=pages]').click()")
-	// 50 rows a page unless the viewer chose otherwise.
+	b.eval("document.querySelector('.views [data-view=all]').click()")
+	// An open menu passes under the head stuck at the top as the list scrolls, not over it.
 	b.stub(manyPages(60))
-	out = append(out, b.eval("document.querySelectorAll('#list li:not(.group)').length + ' ' + document.getElementById('pageno').textContent"))
-	// An open menu passes under the bars stuck at the top as the page scrolls, not over them.
 	b.eval("document.querySelector('#list li[data-slug=p5] summary').click()")
 	out = append(out, b.eval(`(() => {
-		const bar = document.querySelector('.toolbar').getBoundingClientRect();
-		scrollBy(0, document.querySelector('#list li[data-slug=p5] .menu').getBoundingClientRect().top - bar.top - 5);
+		const bar = document.querySelector('.lhead').getBoundingClientRect();
+		document.getElementById('listcol').scrollBy(0, document.querySelector('#list li[data-slug=p5] .menu').getBoundingClientRect().top - bar.top - 5);
 		const menu = document.querySelector('#list li[data-slug=p5] .menu').getBoundingClientRect();
-		return Boolean(document.elementFromPoint(menu.left + menu.width / 2, bar.top + 10)?.closest('.toolbar'));
+		return Boolean(document.elementFromPoint(menu.left + menu.width / 2, bar.top + 10)?.closest('.lhead'));
 	})()`))
-	b.eval("document.querySelector('#list li[data-slug=p5] summary').click(); scrollTo(0, 0)")
-	// A narrow screen: the shelf is one row of its buttons, scrolled sideways rather than wrapped, its h2 and add link out of
-	// sight; a view and a project of that name are told apart, pressed as the wide shelf's are.
-	b.size(390, 844, true)
-	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'archived', createdAt: at(1), updatedAt: at(8) },
-		{ slug: 'b', title: 'Beta', description: '', project: 'p', createdAt: at(1), updatedAt: at(7) },
-		{ slug: 'c', title: 'Gamma', description: '', project: 'a<b&"c', createdAt: at(1), updatedAt: at(6) }]`)
-	out = append(out, b.eval("(() => { const s = document.querySelector('.shelf'); return [getComputedStyle(s).display, getComputedStyle(s).position, "+
-		"s.scrollWidth > s.clientWidth, document.documentElement.scrollWidth === document.documentElement.clientWidth].join(' '); })()"),
-		b.eval("[...document.querySelectorAll('.shelf button, .shelf h2')].filter((e) => e.offsetParent).map((e) => e.dataset.view ?? e.dataset.project ?? e.tagName).join(',')"))
-	press := func(value string) {
-		b.eval("[...document.querySelectorAll('#chips .chip')].find((c) => c.dataset.project === " + js(value) + ").click()")
-	}
-	press(`a<b&"c`)
-	out = append(out, b.eval("new URLSearchParams(location.search).get('project')"))
-	press("archived")
-	out = append(out, b.eval(views))
-	press("archived")
-	out = append(out, b.eval("String(new URLSearchParams(location.search).get('project'))"))
+	b.eval("document.querySelector('#list li[data-slug=p5] summary').click(); document.getElementById('listcol').scrollTo(0, 0)")
 	b.unsize()
-	// The frame's bar: the title, archived or not, the star and the archive, which act as the list's do and tell their failure.
-	// The archive, as the star, is an icon alone that toggles: pressed while on, its name (label and title) the same either
-	// way, no words in it.
+	// The frame's bar: the title, archived or not, the star, and the same menu as a row's, which act as the list's do and tell
+	// their failure.
 	frame := "[document.getElementById('frame-title').textContent, document.getElementById('frame-archived').hidden, " +
-		"document.getElementById('frame-star').getAttribute('aria-pressed'), document.getElementById('frame-star').getAttribute('aria-label'), " +
-		"document.getElementById('frame-star').title, document.getElementById('frame-archive').getAttribute('aria-pressed'), " +
-		"document.getElementById('frame-archive').getAttribute('aria-label'), document.getElementById('frame-archive').title, " +
-		"JSON.stringify(document.getElementById('frame-archive').textContent.trim())].join(' / ')"
+		"document.querySelector('#frame-actions .star').getAttribute('aria-pressed'), document.querySelector('#frame-actions .star').getAttribute('aria-label'), " +
+		"document.querySelector('#frame-actions .open').getAttribute('href'), document.querySelector('#frame-actions .archive').textContent.trim()].join(' / ')"
 	b.stub(extrasList)
 	b.navigate("/a/z/")
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
-	// Pressed, the archive is filled in its own color, seen on the bar's ground and on the hover's at 3:1 or more (WCAG's
-	// for a mark that is not text).
-	out = append(out, b.settled(`(() => {
-		const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
-		const hex = (v) => v.trim().slice(1).match(/../g).map((x) => parseInt(x, 16));
-		const lum = (c) => { const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
-		const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-		const root = getComputedStyle(document.documentElement);
-		const fill = getComputedStyle(document.querySelector('#frame-archive svg')).fill;
-		return [fill, ...['--bg', '--subtle'].map((v) => ratio(rgb(fill), hex(root.getPropertyValue(v))) >= 3)].join(' ');
-	})()`))
-	b.eval("document.getElementById('frame-archive').click()")
+	b.eval("document.querySelector('#frame-actions summary').click(); document.querySelector('#frame-actions .archive').click()")
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
-	// Given back, as the server now lists it: the archive lets go, its name the same.
+	// Given back, as the server now lists it: the menu says so.
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'z' ? { ...a, archived: false } : a)); load()")
-	out = append(out, b.until("the archive to let go", "document.getElementById('frame-archive').getAttribute('aria-pressed') === 'false' && "+frame))
-	b.eval("window.failWrites = true; document.getElementById('frame-star').click()")
+	out = append(out, b.until("the menu to say so", "document.getElementById('frame-archived').hidden && "+frame))
+	b.eval("window.failWrites = true; document.querySelector('#frame-actions .star').click()")
 	out = append(out, b.until("the failure to show", "!document.getElementById('error').hidden && document.getElementById('error').offsetHeight > 0 && "+
 		"document.getElementById('error').textContent"))
+	b.eval("window.failWrites = false")
+	// Renamed in the frame, the tab goes to the new name; removed, to the list.
+	b.eval(`(() => {
+		document.querySelector('#frame-actions .edit').click();
+		document.getElementById('edit-slug').value = 'z2';
+		document.getElementById('edit').requestSubmit();
+	})()`)
+	out = append(out, b.until("the new name", "location.pathname === '/a/z2/' && location.pathname"))
 	b.navigate("/a/b/")
-	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
-	// The frame picks from the list it was opened from, which starring it from the bar does not change; a page gone drops out.
-	neighbours := "!document.getElementById('frame-pick').hidden && " + picker
-	b.eval("sessionStorage.setItem('artifacts.list', '?fav=1')")
-	b.navigate("/a/c/")
-	out = append(out, b.until("the favourites' neighbours", neighbours))
-	b.stub(strings.Replace(extrasList, "updatedAt: at(7), favorite: true", "updatedAt: at(7)", 1))
-	out = append(out, b.eval("document.getElementById('frame-star').getAttribute('aria-pressed') + ' ' + ("+neighbours+")"))
-	b.eval("sessionStorage.setItem('artifacts.list', '')")
-	b.stub(extrasList)
-	b.navigate("/a/b/")
-	b.until("the neighbours", neighbours)
-	b.stub(strings.Replace(extrasList, "{ slug: 'a', title: 'Alpha', description: 'old', createdAt: at(1), updatedAt: at(8) },", "", 1))
-	out = append(out, b.until("the gone page to drop out", "!("+picker+").includes('Alpha') && "+neighbours))
+	b.until("the frame's bar", "document.getElementById('frame-title').textContent")
+	b.eval("document.querySelector('#frame-actions .delete').click(); document.querySelector('#frame-actions .delete').click()")
+	b.until("the list", "location.pathname === '/'")
 
 	check(t, "shelf", out, strings.Join([]string{
-		"HcHba", "none:heading:2:" + msg("ui_group_favorites") + msg("ui_count_all", 1) + ",none:heading:2:" + msg("ui_no_project") + msg("ui_count_all", 2),
-		"Hc fav ?fav=1", "HzHy archived ?archived=1",
-		"Beta", msg("ui_selected", 3),
+		"Hbaclm", "true", "Hc fav ?view=fav", "Hzyk archived ?view=archived", "Alpha", msg("ui_selected", 5),
 		"0010", "shown", "shown", "shown", "0",
 		msg("ui_more_named", "Beta"), msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_archive") + " / " + msg("ui_delete"),
-		"false true", "Alpha", "false true", "false false true", "false true", "true", "true",
-		"true", "DELETE /api/artifacts/a", "Hcd",
-		msg("ui_created_at", date) + " true true true", "true", msg("ui_registered_at", date),
-		"true true", "false", "floe:var(--pc0),p:var(--pc1)",
-		msg("ui_count_all", 1) + " true",
-		"empty-favorites", "all-archived", "archived ?archived=1", "archived ?archived=1",
-		"true false", "?tab=links true 1 New", "true",
-		"50 1 / 2", "true",
-		"flex static true true", `all,fav,archived,a<b&"c,archived,p`, `a<b&"c`,
-		"all ?project=archived", "null",
-		"Zeta / false / true / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / true / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`, "rgb(47, 122, 120) true true", `PATCH /api/artifacts/z {"archived":false}`,
-		"Zeta / true / true / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
-		msg("ui_favorite_failed", "Failed to fetch"),
-		"Beta / true / false / " + msg("ui_favorite") + " / " + msg("ui_favorite") + " / false / " + msg("ui_archive") + " / " + msg("ui_archive") + ` / ""`,
-		msg("ui_no_project") + ":Gamma*", "false " + msg("ui_no_project") + ":Gamma*",
-		msg("ui_group_favorites") + ":Gamma / " + msg("ui_no_project") + ":Beta*",
+		"false true", "Alpha", "false true", "1", "false true", "true", "true",
+		"true", "DELETE /api/artifacts/a",
+		"true true true true", "false true true true", "false false false true", "report2,design1",
+		"Hal ?template=report", "Hl ?kind=link&template=report", "fav link report", "Hald ",
+		"floe:var(--pc0),p:var(--pc1)", "true", "empty-favorites", "all-archived", "archived ?view=archived",
+		"false", "true 1 New,Alpha", "true", "true",
+		"Zeta / false / true / " + msg("ui_favorite_named", "Zeta") + " / /a/z/?raw / " + msg("ui_unarchive"), `PATCH /api/artifacts/z {"archived":false}`,
+		"Zeta / true / true / " + msg("ui_favorite_named", "Zeta") + " / /a/z/?raw / " + msg("ui_archive"),
+		msg("ui_favorite_failed", "Failed to fetch"), "/a/z2/",
 	}, "|"))
 }
 
@@ -675,7 +600,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// The shelf names the tags of the list looked at by name, with their counts.
 	out = append(out, b.eval(shelf), b.eval(rows),
 		b.eval("[...document.querySelectorAll('#list li[data-slug=a] .tagpill')].map((p) => p.textContent + ':' + p.getAttribute('aria-label')).join(',')"),
-		b.eval("document.querySelector('#list li[data-slug=d] .tags').hidden"))
+		b.eval("document.querySelector('#list li[data-slug=d] .tags') === null"))
 	// Picked, the rows are its pages, as when the URL has it; picked again it is let go.
 	pickPlan()
 	out = append(out, b.eval(rows), b.eval(shelf))
@@ -790,14 +715,18 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#edit-dialog [data-close]').click()")
 	pickPlan()
 
-	// A narrow screen's row of the shelf has the tags, which pick and let go as the wide shelf's do.
+	// A narrow screen's dialog of the rest of the shelf has the tags, which pick and let go as the wide shelf's do.
 	b.size(390, 844, true)
+	b.eval("document.getElementById('narrow-filter').click()")
 	plan := "[...document.querySelectorAll('#tags .chip')].find((c) => c.dataset.tag === 'plan')"
 	out = append(out, b.eval("[...document.querySelectorAll('#tags .chip')].filter((c) => c.offsetParent).map((c) => c.dataset.tag).join(',')"))
 	b.eval(plan + ".click()")
 	out = append(out, b.eval(rows), b.eval(plan+".getAttribute('aria-pressed')"))
+	out = append(out, b.eval("document.getElementById('narrow-filter').textContent"))
 	b.eval(plan + ".click()")
 	out = append(out, b.eval(rows))
+	b.eval("document.querySelector('#filter-dialog [data-close]').click()")
+	out = append(out, b.until("the dialog to close", "document.querySelector('#shelf-more').parentElement.id === 'shelf' && 'shelf'"))
 	b.unsize()
 
 	// A tag's name goes in as text, wherever it shows, and counts as any.
@@ -884,7 +813,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"plan:all:✓: false", msg("ui_tag_create", "new"), "plan:all:✓:,new:all:✓:,old:none:+:,設計:none:+:,設計、実装:none:+:", "true 0 true", "false",
 		"true 0",
 		"old,設計,設計、実装", "plan, old, ", "設計,設計、実装",
-		"plan,設計,設計、実装", "ab plan", "true", "abcd -",
+		"plan,設計,設計、実装", "ab plan", "true", msg("ui_narrow_n", 1), "abcd -", "shelf",
 		"<b>x</b>1,__proto__1", "<b>x</b>,__proto__", "0", "__proto__:all:✓:,<b>x</b>:all:✓: 0",
 		"combobox list true listbox",
 		"<b>x</b>,plan,xa,計画,設計", "true true", "true", "under", "<b>x</b>",
@@ -897,45 +826,29 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	}, "|"))
 }
 
-// TestUIShelfStays keeps the shelf where it sits, whether the list is long enough to scroll or not, and there once
-// scrolled: sticky only holds it, never pushes it.
+// TestUIShelfStays keeps the shelf and the page beside the list where they sit, the list scrolling in itself, and the window
+// not scrolling, whether the list is long enough to scroll or not.
 func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	b.stub(manyPages(60))
 	b.navigate("/")
-	// The test Chrome's own window is near the width that hides the shelf. The size holds for this test's tab alone.
 	b.size(1440, 900, false)
-	// The shelf's top, then where it sits below what is over it: the shell's top, or the bar's bottom once scrolled,
-	// and the shell's padding.
-	place := func(over, edge string) string {
-		return b.eval("(() => { const pad = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop); " +
-			"return document.querySelector('.shelf').getBoundingClientRect().top + ' ' + " +
-			"(document.querySelector('" + over + "').getBoundingClientRect()." + edge + " + pad); })()")
-	}
-
-	out := make([]string, 0, 6)
-	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval("document.querySelector('.shelf').getBoundingClientRect().height > 0"))
-	long := place(".shell", "top")
-	b.eval("scrollTo(0, 300)")
-	b.until("the page to scroll", "scrollY === 300")
-	scrolled := place(".bar", "bottom")
-	b.eval("scrollTo(0, 0)")
+	const place = "['.shelf', '.reader', '.lhead'].map((s) => document.querySelector(s).getBoundingClientRect().top).join(' ')"
+	out := make([]string, 0, 5)
+	out = append(out, b.eval("document.getElementById('listcol').scrollHeight > document.getElementById('listcol').clientHeight"),
+		b.eval("document.documentElement.scrollHeight === innerHeight"))
+	long := b.eval(place)
+	b.eval("document.getElementById('listcol').scrollTo(0, 300)")
+	b.until("the list to scroll", "document.getElementById('listcol').scrollTop === 300")
+	out = append(out, b.eval(place+" === "+js(long)))
 	b.stub(manyPages(1))
-	short := place(".shell", "top")
-	// Each the shelf's top and where it sits, alike.
-	for _, p := range []string{long, scrolled, short} {
-		top, sits, _ := strings.Cut(p, " ")
-		out = append(out, top, sits)
-	}
-	got := strings.Join(out, "|")
-	want := strings.Join([]string{"true", "true", out[3], out[3], out[5], out[5], out[7], out[7]}, "|")
-	check(t, "shelf stays", []string{got}, want)
+	out = append(out, b.eval("document.documentElement.scrollHeight === innerHeight"), b.eval(place+" === "+js(long)))
+	check(t, "shelf stays", out, "true|true|true|true|true")
 }
 
-// TestUIShelfScrolls holds the shelf to the window under it, scrolling in itself when taller, where it sits however far the
-// page scrolls, its height kept with the bulk bar, with room for its focus rings, its long names on one line, cut off; and a shelf that fits passes the
-// wheel to the page.
+// TestUIShelfScrolls scrolls the shelf in itself when taller than the window, with room for its focus rings, its long names on
+// one line, cut off, its height kept with the bulk bar; a press of the wheel over it leaves the list where it is.
 func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -944,77 +857,46 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 		"tags: i ? [] : ['averylongtagnamewithoutanyspacesorhyphens'], createdAt: at(1), updatedAt: at(1) }))"
 	b.stub(shelfList)
 	b.navigate("/")
-	// A real wheel over the shelf's middle.
-	wheel := func() {
-		t.Helper()
-
-		r := b.rect("document.querySelector('.shelf')")
-		// The protocol wants deltaX sent, which a 0 is left out as: a sliver of a pixel moves nothing sideways.
-		e := input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseWheel, X: r.X + r.Width/2, Y: r.Y + r.Height/2, DeltaX: 1e-6, DeltaY: 100}
-		if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, e); err != nil {
-			t.Fatal(err)
-		}
-	}
-	// Within half a pixel of each other, or how far apart.
-	const near = "const near = (x, y, d = 0.5) => Math.abs(x - y) <= d || `${x} != ${y}`; " +
-		"const shelf = document.querySelector('.shelf'); const r = shelf.getBoundingClientRect(); " +
-		"const shell = parseFloat(getComputedStyle(document.querySelector('.shell')).paddingTop);"
 	b.size(1440, 600, false)
-	out := make([]string, 0, 10)
-	// Where #226 put it, down to the window's bottom less the room above it, scrolling in itself.
-	edges := b.eval("(() => { " + near + " return [r.top, r.bottom].join(' '); })()")
-	out = append(out, b.eval("(() => { "+near+" return [near(r.top, document.querySelector('.shell').getBoundingClientRect().top + shell), "+
-		"near(r.bottom, innerHeight - shell), shelf.scrollHeight > shelf.clientHeight, document.documentElement.scrollHeight > innerHeight].join(' '); })()"))
-	// Scrolled to the page's end, the shelf is not pushed up.
-	b.eval("scrollTo(0, document.documentElement.scrollHeight)")
-	b.until("the page to scroll to its end", "Math.abs(scrollY + innerHeight - document.documentElement.scrollHeight) < 1")
-	out = append(out, b.eval("(() => { "+near+" const [top, bottom] = "+js(edges)+".split(' ').map(Number); return [near(r.top, top, 1), near(r.bottom, bottom, 1)].join(' '); })()"))
-	b.eval("scrollTo(0, 0)")
-	b.until("the page to scroll back", "scrollY === 0")
-	// The wheel scrolls the shelf, not the page; at its end, its last item shows in the window, its focus ring room below (less
-	// what the shelf's whole-pixel scroll leaves of a fraction).
-	wheel()
-	out = append(out, b.until("the shelf to scroll", "document.querySelector('.shelf').scrollTop > 0 && `page at ${scrollY}`"))
-	b.eval("document.querySelector('.shelf').scrollTop = 1e6")
-	out = append(out, b.eval("(() => { "+near+" const a = document.getElementById('add-open').getBoundingClientRect(); "+
-		"return [a.bottom <= innerHeight - shell, r.bottom - a.bottom >= 3.5].join(' '); })()"))
+	const near = "const shelf = document.querySelector('.shelf'); const r = shelf.getBoundingClientRect();"
+	out := make([]string, 0, 6)
+	out = append(out, b.eval("(() => { "+near+" return [Math.abs(r.bottom - innerHeight) <= 0.5, shelf.scrollHeight > shelf.clientHeight].join(' '); })()"))
+	// The wheel scrolls the shelf, not the list.
+	sr := b.rect("document.querySelector('.shelf')")
+	// The protocol wants deltaX sent, which a 0 is left out as: a sliver of a pixel moves nothing sideways.
+	e := input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseWheel, X: sr.X + sr.Width/2, Y: sr.Y + sr.Height/2, DeltaX: 1e-6, DeltaY: 100}
+	if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, e); err != nil {
+		t.Fatal(err)
+	}
+	out = append(out, b.until("the shelf to scroll", "document.querySelector('.shelf').scrollTop > 0 && `list at ${document.getElementById('listcol').scrollTop}`"))
 	// The focus ring's room each side, and a long name on one line, cut off, not scrolling sideways.
 	out = append(out, b.eval("(() => { "+near+" const a = document.querySelector('.views button').getBoundingClientRect(); "+
 		"const long = document.querySelector('#tags .chip .name'); "+
 		"return [a.left - r.left >= 4, r.left + shelf.clientWidth - a.right >= 4, shelf.scrollWidth === shelf.clientWidth, "+
 		"long.scrollWidth > long.clientWidth && long.getClientRects().length === 1].join(' '); })()"))
-	// Pointed at, the shelf is laid out again (its right room 4.01px) for Chrome to draw its thumb; nothing in it moves.
-	hover := "document.querySelector('.views button').getBoundingClientRect().right + ' ' + getComputedStyle(document.querySelector('.shelf')).paddingRight"
+	// Pointed at, the shelf is laid out again for Chrome to draw its thumb; nothing in it moves.
+	hover := "document.querySelector('.views button').getBoundingClientRect().right"
 	b.point(800, 300)
 	away := b.eval(hover)
-	sr := b.rect("document.querySelector('.shelf')")
 	b.point(sr.X+sr.Width/2, sr.Y+sr.Height/2)
 	on := b.until("the shelf to be pointed at", "document.querySelector('.shelf:hover') && ("+hover+")")
 	b.point(800, 300)
-	out = append(out, away+" / "+on+" / "+b.until("the shelf to be left", "!document.querySelector('.shelf:hover') && ("+hover+")"))
-	// With the bulk bar, the shelf ends above it; in a window too low for that, it keeps 10rem, reaching below.
-	// With the bulk bar, in the bar over the list, the shelf keeps its height.
+	out = append(out, strconv.FormatBool(away == on))
+	// With the bulk bar, in the head over the list, the shelf keeps its height.
 	tall := b.eval("document.querySelector('.shelf').getBoundingClientRect().height")
 	b.eval("document.querySelector('#list li:not(.group) .sel').click()")
 	out = append(out, b.until("the bar to show", "(() => { const bar = document.getElementById('bulk').getBoundingClientRect(); "+
-		"return bar.height > 0 && `${document.getElementById('bulk').closest('.toolbar') !== null} ${document.querySelector('.shelf').getBoundingClientRect().height === "+tall+"}`; })()"))
-	b.size(1440, 240, false)
-	out = append(out, b.eval("Math.abs(document.querySelector('.shelf').getBoundingClientRect().height - 10 * parseFloat(getComputedStyle(document.documentElement).fontSize)) <= 0.5"))
-	b.size(1440, 600, false)
+		"return bar.height > 0 && `${document.getElementById('bulk').closest('.lhead') !== null} ${document.querySelector('.shelf').getBoundingClientRect().height === "+tall+"}`; })()"))
 	b.eval("document.getElementById('bulk-clear').click()")
-	// A shelf that fits does not scroll, and passes the wheel to the page.
+	// A shelf that fits does not scroll.
 	b.size(1440, 900, false)
 	b.stub(manyPages(60))
-	out = append(out, b.eval("(() => { "+near+" return [shelf.scrollHeight === shelf.clientHeight, document.documentElement.scrollHeight > innerHeight].join(' '); })()"))
-	wheel()
-	out = append(out, b.until("the page to scroll", "scrollY > 0 && 'scrolled'"))
-	check(t, "shelf scrolls", out, strings.Join([]string{
-		"true true true true", "true true", "page at 0", "true true", "true true true true", "238 4px / 238 4.01px / 238 4px", "true true", "true", "true true", "scrolled",
-	}, "|"))
+	out = append(out, b.eval("(() => { "+near+" return shelf.scrollHeight === shelf.clientHeight; })()"))
+	check(t, "shelf scrolls", out, "true true|list at 0|true true true true|true|true true|true")
 }
 
-// TestUIScrollbar keeps the list where it is whether or not it scrolls, the scrollbar's room kept on the right alone,
-// and the frame, a page's or a missing one's, without that room, as the server draws it so from the start.
+// TestUIScrollbar draws the list's scrollbar as the management page's own, 10px wide, within the list's box, the window
+// scrolling neither way, and makes the frame's URLs of the slug escaped again.
 func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -1037,32 +919,14 @@ func TestUIScrollbar(t *testing.T) { //nolint:paralleltest // the browser tests 
 	case width == 0:
 		t.Fatal("Chrome draws no scrollbar: the flag hide-scrollbars of startChrome no longer works")
 	}
-	// What the body is narrower than the window: the room kept for the scrollbar. Not innerWidth - clientWidth, which
-	// counts the room only while the scrollbar is there.
-	const room = "innerWidth - document.body.getBoundingClientRect().width"
-	// The shelf's first button, not its box, which reaches 4px out for its focus rings.
-	const where = "['.shelf .views button', '.toolbar'].map((s) => document.querySelector(s).getBoundingClientRect().left)" +
-		".concat(document.querySelector('.panel').getBoundingClientRect().right).join(' ')"
-	out := make([]string, 0, 8)
-	b.size(1800, 900, false)
-	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"))
-	long := b.eval(where)
-	b.stub(manyPages(1))
-	out = append(out, b.eval("document.documentElement.scrollHeight > innerHeight"), b.eval(where+" === "+js(long)), b.eval(room))
-	// The room is on the right alone.
-	b.size(1200, 900, false)
-	out = append(out, b.eval(where))
-	// The server's list for the frames: p is a page of the store.
+	out := make([]string, 0, 3)
+	out = append(out, sb, b.eval("document.documentElement.scrollWidth === innerWidth && document.documentElement.scrollHeight === innerHeight"))
+	// The server's list for the frames.
 	b.unstub()
-	for _, path := range []string{"/a/p/", "/a/none/"} {
-		b.navigate(path)
-		out = append(out, b.eval(room))
-	}
-	// The frame makes its URLs of the slug escaped again: one read from /a/x%3Fy/ is x?y.
+	// The frame makes its URLs of the slug escaped again: one read from /a/x%3Fy/ is x?y. No page of it: its way to look for one.
 	b.navigate("/a/x%3Fy/")
-	out = append(out, b.eval("document.getElementById('frame-download').getAttribute('href')"))
-	// The scrollbar is the management page's own, 10px wide.
-	check(t, "scrollbar", out, strings.Join([]string{"true", "false", "true", "10", fmt.Sprintf("16 272 %d", 1200-16-width), "0", "0", "/api/artifacts/x%3Fy/download"}, "|"))
+	out = append(out, b.until("the state of a missing page", "!document.getElementById('notfound').hidden && document.getElementById('notfound-detail').textContent.includes('x?y') && document.getElementById('news').hidden !== undefined && 'told'"))
+	check(t, "scrollbar", out, "10|true|told")
 }
 
 // TestUIStubSlowServer keeps the list stubbed though the server's answer comes late: none of the page's loads, the first

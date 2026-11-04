@@ -9,10 +9,10 @@ import (
 )
 
 // colorsList is the list the stub answers for the colors: a favourite, a description, tags, links (one whose file is
-// gone), a project of its own, and more than the smallest page size, so that the pager shows.
+// gone), a project of its own, what is new, templates, and enough rows to scroll.
 const colorsList = `[
-	{ slug: 'a', title: 'Alpha', description: 'about alpha', tags: ['plan', 'design'], project: 'p', createdAt: at(1), updatedAt: at(9), favorite: true },
-	{ slug: 'b', title: 'Beta', description: '', tags: ['plan'], project: 'q', createdAt: at(1), updatedAt: at(8) },
+	{ slug: 'a', title: 'Alpha', description: 'about alpha', tags: ['plan', 'design'], project: 'p', news: 'version', version: 3, template: 'report', createdAt: at(1), updatedAt: at(9), favorite: true },
+	{ slug: 'b', title: 'Beta', description: '', tags: ['plan'], project: 'q', news: 'new', template: 'design', createdAt: at(1), updatedAt: at(8) },
 	{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) },
 	{ slug: 'm', title: 'Missing', description: '', path: '/tmp/x/m.html', missing: true, createdAt: at(1), updatedAt: at(1) },
 	...Array.from({ length: 10 }, (_, i) => ({ slug: ` + "`p${i}`" + `, title: ` + "`P${i}`" + `, description: '', createdAt: at(2), updatedAt: at(2) })),
@@ -92,35 +92,39 @@ func TestUIColors(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		}
 		b.eval("document.querySelector('#tag-dialog [data-close]').click(); document.querySelector('#list li:not(.group) .edit').click()")
 		measure("the edit dialog")
-		b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.querySelector('.tabs [data-tab=links]').click()")
-		measure("the links")
-		// The sort's orders, open, one of them reached and the one now marked.
-		b.eval("document.getElementById('sort').click()")
-		b.until("the orders", "document.getElementById('sort-menu').matches(':popover-open')")
-		b.eval("document.getElementById('sort-list').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))")
-		measure("the sort's orders")
-		b.eval("document.getElementById('sort-menu').hidePopover()")
+		b.eval("document.querySelector('#edit-dialog [data-close]').click(); document.getElementById('bulk-clear').click()")
+		// The row chosen, its version's mark on its ground, the bar over its page, and the words of a link gone beside the list.
+		b.size(1440, 900, false)
+		b.eval("document.querySelector('#list li[data-slug=a] .title').click()")
+		measure("the page beside the list")
+		b.eval("document.querySelector('#list li[data-slug=m] .title').click()")
+		measure("a link gone beside the list")
+		// The rest of the shelf in its dialog, on a narrow screen, the row of views over the list, one pressed.
+		b.size(390, 844, true)
+		b.eval("document.getElementById('narrow-filter').click()")
+		measure("the narrow shelf's dialog")
+		b.eval("document.querySelector('#filter-dialog [data-close]').click()")
+		measure("the narrow list")
+		b.unsize()
 		// A folder open, its rows of each kind, and one of its pages in the frame under its title: the folder is the server's
 		// too, which frames the page it finds.
 		s.write(t, "f/index.html", "<p>f</p>")
 		s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "f"), "--slug", "f", "--force")
 		b.stub(colorsList[:strings.LastIndex(colorsList, "]")] + "{ slug: 'f', title: 'Folder', description: '', path: '/tmp/x/f', folder: true, createdAt: at(1), updatedAt: at(1) }]")
-		b.navigate("/?tab=folders&open=f")
+		b.navigate("/?kind=folder&open=f")
 		b.until("the folder open", "document.querySelectorAll('#list li.tree').length === 3")
 		measure("the folders")
 		b.navigate("/a/f/?file=index.html")
 		b.until("the folder's page", "!document.getElementById('frame').hidden")
 		measure("a folder's page in the frame")
-		// The frame's pages to pick from, open, one of them reached and the one open now marked.
+		// The frame's bar, its menu open.
 		b.navigate("/a/a/")
-		b.until("the title", "!document.getElementById('frame-pick').hidden")
-		b.eval("document.getElementById('frame-pick').click()")
-		b.until("the pages to pick from", "document.getElementById('page-pick').matches(':popover-open')")
-		b.eval("document.getElementById('page-pick-q').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))")
-		measure("the frame's pages to pick from")
+		b.until("the title", "document.getElementById('frame-title').textContent")
+		b.eval("document.querySelector('#frame-actions summary').click()")
+		measure("the frame's bar")
 		// What a frame prints: the note naming the page alone, with the error under a failed read, and a missing page's.
 		media("print", scheme)
-		b.eval("document.getElementById('page-pick').hidePopover(); showError('failed')")
+		b.eval("showError('failed')")
 		measure("the frame printed")
 		b.navigate("/a/none/")
 		b.until("the missing page", "!document.getElementById('notfound').hidden")

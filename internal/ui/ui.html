@@ -13,7 +13,10 @@
   :root {
     --bg: #f4f3f0; --panel: #fbfaf8; --subtle: #efeee9; --hover: #f6f5f1; --sel: #ecebe6;
     --fg: #22211f; --muted: #615f5a; --faint: #6b6964; --line: #e3e1dc;
-    --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00; --archived: #2f7a78;
+    --shelf-mark: 15px;
+    --ink: #22211f; --on-ink: #fbfaf8; --good: #16a36a; --star: #d99a00;
+    /* What is new to the viewer, and a link whose file is gone */
+    --new: #2558c4; --new-soft: #eaf1fd; --chg: #8a6100; --chg-soft: #fdf3d6;
     --danger: #b8332b; --danger-soft: #f8e3e1; --on-danger: #fff; --frame-bg: #fff;
     /* The logo's: its sky, its two lines, its edge and its three faces */
     /* LIMIT: the icon's data URI (the <link rel="icon">) copies these by hand, as a data URI cannot read a variable */
@@ -39,22 +42,20 @@
     /* The page's faces */
     --body: "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
-    /* The corners: a box (the list, a pop-up, a dialog, a toast), a middle box (a menu, the suggestions, the error) and a small
+    /* The corners: a box (a dialog, a toast), a middle box (a menu, the suggestions, the error) and a small
        square (a field, a key, a link of the side); a pill and a circle are written as shapes (999px, 50%), and a box within a box
        is round by the outer one less the room (TestManageSheet) */
     /* LIMIT: the logo's and the icons' SVG rx are numbers, not read by TestManageSheet */
     --corner: 20px; --corner-menu: 14px; --corner-small: 6px;
-    /* The room inside a pop-up and a menu, which their items' corners take off the box's */
+    /* The room inside a menu, which its items' corners take off the box's */
     /* LIMIT: TestManageSheet does not check that a box whose items read calc(… - var(--menu-pad)) is padded by --menu-pad */
     --menu-pad: 6px;
     /* The text: a label (counts, times, keys, tags), small text (descriptions, menus, fields) and the body's; a heading is 1rem
        or more */
     --text-label: 0.72rem; --text-small: 0.82rem; --text: 0.875rem;
     --bar: 3.5rem;
-    /* The bar over the list, stuck under the header bar */
-    --toolbar: 4rem;
-    /* The room above the list: with --bar, where the shelf sits */
-    --shell-top: 0.75rem;
+    /* The head over the list, and over the page chosen beside it */
+    --lhead: 3.25rem;
   }
   * { box-sizing: border-box; }
   /* Every scrollbar of the page, its own and its boxes': a thin round thumb of the faint color on a clear track. Chrome, Edge and
@@ -68,16 +69,14 @@
   @supports not selector(::-webkit-scrollbar) {
     :root { scrollbar-color: var(--thumb) transparent; }
   }
-  /* The list keeps the scrollbar's room when it does not scroll, so that it does not move when it starts to. Not the frame, whose iframe scrolls */
-  html:not(.framed) { scrollbar-gutter: stable; }
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--fg); font: var(--text)/1.55 var(--body); -webkit-font-smoothing: antialiased; }
   :focus-visible { outline: var(--ring); outline-offset: 1px; }
   button { font: inherit; color: inherit; cursor: pointer; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-  /* The header bar, of the page's own ground: no line under it */
-  .bar { position: sticky; top: 0; z-index: 10; background: var(--bg); }
+  /* The header bar, of the page's own ground */
+  .bar { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--line); }
   /* Full width rather than the text's, so that the list and the frame put things in the same place. The list's search sits
      in its middle */
   .bar-inner { padding: 0 16px; height: var(--bar); display: flex; align-items: center; gap: 0.75rem; }
@@ -95,44 +94,15 @@
   .brand svg { width: 26px; height: 26px; flex: none; filter: drop-shadow(0 2px 6px var(--brand-glow)); }
   .bar-end { margin-left: auto; display: flex; align-items: center; gap: 0.6rem; flex: none; }
   .frame-actions { display: flex; gap: 0.15rem; }
-  /* The page's title in the frame's bar: a button that opens the pages to pick from, set off from the logo by a line */
-  .frame-title {
-    position: relative; display: inline-flex; align-items: center; gap: 0.35rem; min-width: 0; height: 32px; padding: 0 0.6rem;
-    margin-left: 0.6rem; color: var(--fg); font-weight: 650; background: none; border: 0; border-radius: 999px;
-  }
-  .frame-title::before { content: ""; position: absolute; left: -0.6rem; top: 4px; bottom: 4px; border-left: 1px solid var(--line); }
-  .frame-title > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .frame-title > svg { flex: none; width: 16px; height: 16px; color: var(--faint); }
-  .frame-title:hover, .frame-title[aria-expanded="true"] { background: var(--subtle); }
-  /* Beside the folder's tree, the title picks nothing: no chevron, no hover, the words as they are */
-  .frame-title:disabled { cursor: default; background: none; color: inherit; }
-  .frame-title:disabled > svg { display: none; }
-  /* A box opened over the page from a button (menu): the frame's pages to pick from. Its options are reached by keys from the
-     field or the list that has the focus (aria-activedescendant), the one reached on --sel, the current one in bold and ticked */
-  /* LIMIT: it is put under its button's left edge; a button near the window's right edge would push it out, so align it to the
-     button's right then */
-  .pop {
-    position: fixed; inset: auto; margin: 0; padding: var(--menu-pad); width: min(26rem, calc(100vw - 32px)); max-height: min(70dvh, 32rem);
-    flex-direction: column; gap: 6px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner);
-    box-shadow: var(--shadow-lg);
-  }
-  .pop:popover-open { display: flex; }
-  /* Round, so that the focus ring, where the keys put the focus on it (the sort's), follows its corners as its options' */
-  .pop [role="listbox"] { min-height: 0; overflow-y: auto; border-radius: calc(var(--corner) - var(--menu-pad)); }
-  .pop .gh { display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 0.75rem 0.35rem; font: 600 var(--text-label)/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-  .pop .gh::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
-  .pop [role="option"] { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: calc(var(--corner) - var(--menu-pad)); cursor: pointer; }
-  .pop [role="option"] > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pop [role="option"] > svg { flex: none; width: 16px; height: 16px; visibility: hidden; }
-  .pop [role="option"]:hover { background: var(--hover); }
-  .pop [role="option"].reached { background: var(--sel); }
-  /* The one now: the page open (aria-current), the order chosen (a select's aria-selected) */
-  .pop [aria-current], #sort-list [aria-selected="true"] { font-weight: 650; }
-  .pop [aria-current] > svg, #sort-list [aria-selected="true"] > svg { visibility: visible; }
-  .pop-q { position: relative; flex: none; }
-  .pop-q svg { position: absolute; left: 0.75rem; top: 50%; translate: 0 -50%; width: 15px; height: 15px; color: var(--faint); pointer-events: none; }
-  .pop-q .text { padding-inline: 2.2rem 0.75rem; border-radius: 999px; }
-  .pop .none { margin: 0; padding: 0.75rem; color: var(--muted); }
+  /* The page's title in the frame's bar, set off from the logo by a line */
+  .frame-title { position: relative; min-width: 0; margin-left: 0.6rem; padding-left: 0.9rem; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .frame-title::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; border-left: 1px solid var(--line); }
+  .frame-title:empty { display: none; }
+  /* New pages to see: on a narrow screen the shelf's views say it */
+  .news { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--new); text-decoration: none; white-space: nowrap; }
+  .news:hover { text-decoration: underline; }
+  /* The way back to the list on a narrow screen, in place of the logo's room */
+  .icon-btn.back { display: none; }
   .badge {
     flex: none; padding: 0.15rem 0.5rem; font-size: var(--text-label); font-weight: 600; color: var(--muted);
     background: var(--subtle); border: 1px solid var(--line); border-radius: 999px;
@@ -170,87 +140,76 @@
   .side .note { padding: 0.22rem 0.5rem 0.22rem calc(0.3rem + var(--d) * 1.1rem + 14px + 0.35rem); color: var(--muted); font-size: var(--text-small); }
   .side .fold.none { visibility: hidden; }
   .side :is(a, button):focus-visible, .grip:focus-visible { outline: var(--ring); outline-offset: -2px; }
-  /* The edge between the tree and the page, to widen or narrow the tree: a line shows while it is dragged or focused */
-  .grip { position: fixed; top: var(--bar); bottom: 0; left: calc(var(--side) - 3px); z-index: 3; width: 6px; cursor: col-resize; touch-action: none; }
+  /* An edge to drag, between the tree and the page and between the list's columns: a line shows while it is dragged or focused. --at is where it stands */
+  .grip { position: fixed; top: var(--bar); bottom: 0; left: calc(var(--at) - 3px); z-index: 6; width: 6px; cursor: col-resize; touch-action: none; }
   .grip::after { content: ""; position: absolute; left: 2px; top: 0; bottom: 0; width: 2px; background: transparent; transition: background-color 0.15s; }
   .grip:is(:hover, .dragging, :focus-visible)::after { background: var(--ink); }
-  /* While the edge is dragged the page takes no pointer, which would leave the edge's pointer capture inside the iframe */
-  html:has(.grip.dragging) .frame { pointer-events: none; }
+  /* While an edge is dragged a page takes no pointer, which would leave the edge's pointer capture inside the iframe */
+  html:has(.grip.dragging) :is(.frame, .read-frame) { pointer-events: none; }
   .side-show { position: fixed; top: calc(var(--bar) + 8px); left: 8px; z-index: 2; background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
-  /* An iframe prints what fits one screen of the page in it: a frame's print hides the bar, the frame, the toasts and
-     the pages to pick from, and names the page alone in their place, but on a missing page's frame, which prints its
+  /* An iframe prints what fits one screen of the page in it: a frame's print hides the bar, the frame and the toasts,
+     and names the page alone in their place, but on a missing page's frame, which prints its
      state. The screen shows no note.
      LIMIT: VS Code's Simple Browser holds the page in a frame of its own, where Ctrl+P is VS Code's Quick Open, and opens
      a new tab outside it: print the page from a browser */
   .print-alone { display: none; }
   @media print {
-    .framed :is(.bar, .frame, .toasts, #page-pick, .side, .grip, .side-show) { display: none; }
+    .framed :is(.bar, .frame, .toasts, .side, .grip, .side-show) { display: none; }
     .framed:has(#notfound[hidden]) .print-alone { display: block; margin: 2rem; color: var(--fg); font: 1rem/1.7 var(--body); }
   }
 
-  /* The shelf on the left picks which list the right shows; on a narrow screen a row of its buttons over the list. The whole
-     window's width, as the header bar's: the shelf under the logo, the list out to the bar's right end */
-  .shell {
-    padding: var(--shell-top) 16px 0; --shell-bottom: var(--shell-top);
-    display: grid; grid-template-columns: 14.5rem minmax(0, 1fr); align-items: start; column-gap: 1.5rem;
+  /* The list's page fills the window under the header bar: the shelf, the list and the page chosen, each scrolled on its own */
+  /* LIMIT: so the list prints what fits one screen, cut off without a word. Print it as a whole if that comes to matter */
+  html:not(.framed) body { height: 100dvh; display: flex; flex-direction: column; }
+  .shell { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--shelf-width) var(--list-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  /* Folded, on the wide page alone: the columns the filters and the list leave. What folds stays as kept where the columns are others */
+  @media not (max-width: 70rem) {
+    .shell.shelf-closed { grid-template-columns: var(--list-width) minmax(0, 1fr); }
+    .shell.list-closed { grid-template-columns: var(--shelf-width) minmax(0, 1fr); }
+    .shell.shelf-closed.list-closed { grid-template-columns: minmax(0, 1fr); }
+    .shell.shelf-closed .shelf, .shell.list-closed .listcol { display: none; }
   }
-  /* The room under the list is the list's own, so that sticky does not push the shelf up at the page's end */
-  .main { display: grid; gap: 0.9rem; min-width: 0; padding-bottom: 4rem; }
-  /* The bar over the list: the kinds, the sort and the count; while items are selected, the bulk bar in their place, of the
-     same height, so that the list does not move. Its width decides how the bulk bar's buttons show (container bar) */
-  .toolbar {
-    position: sticky; top: var(--bar); z-index: 5; display: flex; align-items: center; gap: 0.6rem; height: var(--toolbar);
-    background: var(--bg); container: bar / inline-size;
-  }
-  .toolbar:has(> .bulk:not([hidden])) > :not(.bulk) { display: none; }
-  .toolbar .count { margin-left: auto; }
-  /* Stuck where it sits (lower, sticky would push it down), and no taller than the window, so that its bottom is reached by scrolling
-     it, not the page; at least 10rem, which a very low window lets reach below. The 4px round it are a focus ring's room (1px off,
-     2px wide) and 1px of ground */
-  /* LIMIT: a project or tag picked below where the shelf shows is not scrolled to when the URL opens it; scroll to it once if that matters */
-  /* LIMIT: the load error above the shell pushes the shelf's bottom out of the window while it shows; make it overlay if that matters */
-  .shelf {
-    position: sticky; top: calc(var(--bar) + var(--shell-top)); display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem;
-    max-height: max(10rem, calc(100dvh - var(--bar) - var(--shell-top) - var(--shell-bottom))); overflow-y: auto;
-    margin-inline: -4px; padding: 0.9rem 4px 4px;
-  }
+  /* What shows the filters again and what they narrow the list to. That must be read: the words beside it give way, and it is cut only past
+     the room the buttons leave (not shrunk with them: a sliver of a pixel off its width would cut its last words) */
+  .shelf-tools { flex: none; display: flex; align-items: center; gap: 0.4rem; max-width: calc(100% - 13.5rem); margin-left: -0.4rem; }
+  #shelf-show { flex: none; }
+  #shelf-what { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
+  /* As high as the list's head and the page's, its button over the counts' right end */
+  .shelf-head { display: flex; align-items: center; justify-content: flex-end; height: var(--lhead); padding-right: 0.2rem; margin-bottom: -0.6rem; border-bottom: 1px solid transparent; }
+  /* The 4px of room round a button are its focus ring's (1px off, 2px wide) and 1px of ground */
+  .shelf { display: grid; align-content: start; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; overflow-y: auto; padding: 0 10px 1rem; }
   /* The shelf's thumb shows only while it is pointed at or reached by keys; its room stays, so that nothing in it moves */
   /* LIMIT: the 0.01px works round Chrome drawing a thumb anew only when its box is laid out again; without it, the thumb stays hidden */
   .shelf:not(:hover, :focus-within)::-webkit-scrollbar-thumb { background: transparent; }
-  .shelf:is(:hover, :focus-within) { padding-right: 4.01px; }
+  .shelf:is(:hover, :focus-within) { padding-right: 10.01px; }
   @supports not selector(::-webkit-scrollbar) {
     .shelf { scrollbar-width: thin; }
     .shelf:not(:hover, :focus-within) { scrollbar-color: transparent transparent; }
   }
-  .shelf h2 { margin: 0 0 0.3rem 0.65rem; font: 600 var(--text-label)/1.2 var(--mono); color: var(--faint); letter-spacing: 0.08em; text-transform: uppercase; }
+  .shelf-more { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
+  #shelf-more h2 { margin: 0 0 0.3rem 0.65rem; font: 600 var(--text-label)/1.2 var(--body); color: var(--muted); letter-spacing: 0.08em; }
   /* minmax(0, …): no wider than the shelf, so that a long name is cut off rather than widening it */
   /* 4px apart, so that the ring of one does not reach the one filled beside it */
-  .shelf .views, .shelf .chips { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
-  .shelf .views button, .shelf .chip {
-    display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: 999px;
-    background: none; color: var(--muted); font-weight: 500; text-align: left; overflow-wrap: anywhere;
+  .views, .chips { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .views button, .chip {
+    display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.42rem 0.65rem; border: 0; border-radius: var(--corner-menu);
+    background: none; color: var(--fg); font-weight: 500; text-align: left; overflow-wrap: anywhere;
   }
-  .shelf .views svg { width: 15px; height: 15px; flex: none; color: var(--faint); }
-  .shelf .n { margin-left: auto; font: var(--text-label)/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
-  .shelf .views button:hover, .shelf .chip:hover { background: var(--subtle); color: var(--fg); }
-  .shelf button[aria-pressed="true"], .shelf button[aria-pressed="true"]:hover { color: var(--on-ink); font-weight: 650; background: var(--ink); }
-  .shelf [aria-pressed="true"] svg, .shelf [aria-pressed="true"] .n { color: var(--on-ink); }
-  .shelf .add-link { display: flex; align-items: center; gap: 0.45rem; margin-left: 0.65rem; padding: 0; font-size: var(--text-small); }
-  .shelf .add-link svg { width: 14px; height: 14px; }
-  .shelf .adds { display: grid; gap: 0.6rem; justify-items: start; }
-  .tabs { display: inline-flex; flex: none; gap: 2px; padding: 3px; background: var(--subtle); border: 1px solid var(--line); border-radius: 999px; }
-  .tabs button {
-    display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.32rem 0.8rem; border: 0; border-radius: 999px;
-    background: none; color: var(--muted); font-weight: 550; transition: background-color 0.15s, color 0.15s;
-  }
-  .tabs button:hover { color: var(--fg); }
-  .tabs button[aria-pressed="true"] { color: var(--fg); background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
-  .tabs .n {
-    min-width: 1.5rem; padding: 0.1rem 0.4rem; border-radius: 999px; text-align: center;
-    font: 500 var(--text-label)/1.3 var(--mono); color: var(--muted); background: var(--line); font-variant-numeric: tabular-nums;
-  }
-  .tabs button[aria-pressed="true"] .n { color: var(--fg); background: var(--sel); }
-  .tabs button > svg { flex: none; width: 15px; height: 15px; margin-right: -0.2rem; }
+  /* The marks of the views, the projects and the kinds take one column, so that their words start at one x */
+  .views svg, .chip svg { width: var(--shelf-mark); height: var(--shelf-mark); flex: none; color: var(--muted); }
+  .views [data-view="fav"] svg { color: var(--star); }
+  /* A row with none left stays where it is, quieter */
+  .views .none:not([aria-pressed="true"]) .label, .chip.none:not([aria-pressed="true"]) .name { color: var(--muted); }
+  .views .dot, .views .ring, .chip.project::before { margin-inline: calc((var(--shelf-mark) - 8px) / 2); }
+  .views .n, .chip .n { margin-left: auto; font: var(--text-label)/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .views button:hover, .chip:hover { background: var(--subtle); }
+  .views button[aria-pressed="true"], .chip[aria-pressed="true"] { font-weight: 700; background: var(--panel); box-shadow: 0 1px 0 var(--line); }
+  /* Under the shelf's views on a narrow screen alone: the rest of the shelf opens in its dialog */
+  #narrow-filter { display: none; }
+  /* What is unseen and what is read, on the shelf and in a row's first column */
+  .dot, .ring { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+  .dot { background: var(--new); }
+  .ring { border: 1.5px solid var(--box-line); }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; height: 36px; padding: 0 0.95rem;
@@ -264,7 +223,6 @@
   .btn.primary:hover { background: var(--ink-hover); }
   .btn:disabled { opacity: 0.6; cursor: progress; }
   .btn svg { width: 15px; height: 15px; }
-  .add-narrow { display: none; }
 
   .search { position: relative; flex: 1 1 18rem; }
   .search svg { position: absolute; left: 0.75rem; top: 50%; translate: 0 -50%; width: 15px; height: 15px; color: var(--faint); pointer-events: none; }
@@ -282,56 +240,43 @@
   .search input:focus + kbd { display: none; }
 
   /* A project's dot, of its color (--c) */
-  .chip.project::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
-  /* A project's or tag's name on one line, cut off where it does not fit (the button's title has it whole); its count three
-     digits' room, right-aligned, so that the counts line up */
+  .chip.project::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  /* A name on one line, cut off where it does not fit (the button's title has it whole); its count three digits' room,
+     right-aligned, so that the counts line up */
   .chip .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .chip .n { flex: none; min-width: 3ch; text-align: right; }
-  .count { flex: none; font: var(--text-label)/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
-  .chip.tag::before { content: "#"; flex: none; color: var(--faint); font-family: var(--mono); }
-  /* Each group a card: its heading rounds the top, its last row the bottom. Not overflow: hidden on a box round them, which
-     would cut off a row's menu at the bottom */
-  .panel > .state { background: var(--panel); border-radius: var(--corner); box-shadow: 0 1px 0 var(--line); }
-  /* Rows share columns through subgrid, so times and actions line up from row to row, and from group to group */
-  ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; }
+
+  /* The list: its head stuck over its rows */
+  .listcol { min-width: 0; overflow-y: auto; background: var(--panel); border-inline: 1px solid var(--line); }
+  .lhead {
+    position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 0.6rem; height: var(--lhead); padding: 0 1rem;
+    font-size: var(--text-small); color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line); container: bar / inline-size;
+  }
+  .lhead:has(> .bulk:not([hidden])) > :not(.bulk) { display: none; }
+  .count { min-width: 0; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .add-open { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-small); font-size: var(--text-small); }
+  .add-open:hover { border-color: var(--faint); }
+  .add-open svg { flex: none; width: 13px; height: 13px; }
+  #list-hide { flex: none; }
+  ul { list-style: none; margin: 0; padding: 0; }
   li {
-    position: relative; grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; column-gap: 0.85rem;
-    min-height: 3.1rem; padding: 0.45rem 0.75rem 0.45rem 18px; transition: background-color 0.15s; background: var(--panel);
+    position: relative; display: grid; grid-template: "lead title time" auto ". sub actions" auto / 12px minmax(0, 1fr) auto; gap: 0.2rem 0.65rem;
+    padding: 0.6rem 1rem; background: var(--panel); border-bottom: 1px solid var(--line); transition: background-color 0.15s;
     animation: rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 16ms);
   }
-  li + li { border-top: 1px solid var(--line); }
-  li.group:not(:first-child) { margin-top: 1.1rem; }
-  li:is(:has(+ li.group), :has(+ li.folder), :last-child) { border-radius: 0 0 var(--corner) var(--corner); box-shadow: 0 1px 0 var(--line); }
-  /* A heading is not pressed, so it is not pointed out */
-  li:not(.group):hover { background: var(--hover); }
-  /* A folder's row is the heading of its tree, on the rows' ground: its title larger and heavier than the tree's names, which
-     step in under it */
-  li.folder a.title { font-size: 1rem; font-weight: 750; }
-  /* Without groups, the list's first row rounds its top as a group's heading does */
-  #list > li.folder:first-child { border-radius: var(--corner) var(--corner) 0 0; }
-  li.folder + li.folder, li.tree + li.folder { margin-top: 0.6rem; border-radius: var(--corner) var(--corner) 0 0; border-top: 0; }
-  /* A folder closed is its block whole */
-  #list > li.folder:is(:has(+ li.folder), :last-child) { border-radius: var(--corner); }
-  li::before {
-    content: ""; position: absolute; left: 0; top: 0.55rem; bottom: 0.55rem; width: 2px; border-radius: 0 999px 999px 0;
-    background: var(--ink); opacity: 0; transition: opacity 0.15s;
-  }
-  li:hover::before { opacity: 1; }
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
   li.kept { animation: none; }
-  /* A group's heading: a block, so that its text does not widen the rows' first column */
-  li.group {
-    display: block; min-height: 0; padding: 14px 18px 10px; font: 700 var(--text-label)/1.2 var(--mono); color: var(--fg); animation: none;
-    letter-spacing: 0.08em; text-transform: uppercase; border-top: 0; border-radius: var(--corner) var(--corner) 0 0;
-  }
-  li.group::before { content: none; }
-  /* Its dot, of the group's color (--c), its name on one line (whole as the title) and its count, never split */
-  li.group > div { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
-  li.group > div::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
-  li.group .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  li.group .n { flex: none; white-space: nowrap; font: 500 var(--text-label)/1 var(--mono); color: var(--faint); font-variant-numeric: tabular-nums; }
-  /* The checkbox sits above the row link's hit area; the label widens what can be clicked */
-  .pick { position: relative; z-index: 1; display: grid; place-items: center; width: 22px; height: 30px; margin-right: -0.35rem; cursor: pointer; }
+  li:not(.group):hover { background: var(--hover); }
+  /* The row chosen, whose page is open on the right */
+  li.picked, li.picked:hover { background: var(--new-soft); box-shadow: inset 3px 0 var(--new); }
+  /* A day's heading: no row, and not pressed */
+  li.group { display: block; padding: 0.7rem 1rem 0.25rem; font: 700 var(--text-small)/1.2 var(--body); color: var(--muted); border-bottom: 0; animation: none; }
+  /* The first column holds what the row is: a dot, a ring, a link's or a folder's mark; while rows are selected, the check box */
+  li > .lead { grid-area: lead; display: grid; place-items: center; height: 1.4em; color: var(--muted); }
+  li > .lead svg { width: 14px; height: 14px; }
+  .pick { position: relative; z-index: 1; grid-area: lead; display: none; place-items: center; height: 1.4em; cursor: pointer; }
+  #list.selecting .pick { display: grid; }
+  #list.selecting li > .lead { display: none; }
   .sel {
     width: 16px; height: 16px; margin: 0; cursor: pointer; appearance: none; background: var(--panel);
     border: 1.5px solid var(--box-line); border-radius: var(--corner-small); transition: background-color 0.12s, border-color 0.12s;
@@ -342,25 +287,31 @@
   /* A row reached by keyboard is outlined as a whole, without an outline on the title itself */
   a.title:focus-visible { outline: none; }
   li:has(a.title:focus-visible) { outline: var(--ring); outline-offset: -2px; }
-  li:has(a.title:focus-visible)::before { opacity: 1; }
-  /* Under the title: the description (and, for a link, its path after it), cut off where it does not fit */
-  .body { display: grid; gap: 0.05rem; min-width: 0; }
-  .body > a.title, .sub > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* The whole row is the link's hit area; only the controls sit above it */
-  a.title { justify-self: start; max-width: 100%; color: var(--fg); font-weight: 600; text-decoration: none; scroll-margin-block: calc(var(--bar) + var(--toolbar) + 0.75rem) 5rem; }
+  /* The whole row is the title's hit area; only the controls sit above it. Two lines at most, the title attribute has it whole */
+  a.title {
+    grid-area: title; min-width: 0; color: var(--fg); font-weight: 500; text-decoration: none; scroll-margin-block: calc(var(--lhead) + 0.5rem) 3rem;
+    overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  }
   a.title::after { content: ""; position: absolute; inset: 0; }
-  /* The dot of the row's project (--c), before its title: ::after is the hit area */
-  a.title::before { content: ""; display: inline-block; width: 7px; height: 7px; margin: 0 0.5rem 0.1em 0; border-radius: 50%; background: var(--c); vertical-align: middle; }
-  .sub { display: flex; align-items: baseline; gap: 0.65rem; min-width: 0; }
-  .desc { flex: 0 1 auto; color: var(--muted); font-size: var(--text-small); }
-  .sub .path { flex: 0 1 auto; font: var(--text-label) var(--mono); color: var(--faint); }
-  .missing { color: var(--danger); }
-  li:has(.missing) a.title { color: var(--muted); text-decoration: line-through; }
-  /* Above the title link's hit area, as the row's controls are */
-  .sub .tags { position: relative; z-index: 1; display: flex; flex: 0 1 auto; gap: 0.3rem; }
+  /* What is unseen is heavier; a link or a folder never is */
+  li.unseen a.title { font-weight: 700; }
+  li > time { grid-area: time; font: var(--text-label)/1.9 var(--mono); color: var(--muted); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+  /* Under the title: what the row is, in a line that wraps */
+  .sub { grid-area: sub; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.4rem; min-width: 0; font-size: var(--text-label); color: var(--muted); }
+  .ver { padding: 0.05rem 0.5rem; font: 700 var(--text-label)/1.5 var(--mono); color: var(--new); background: var(--new-soft); border-radius: 999px; white-space: nowrap; }
+  li.picked .ver { background: var(--panel); }
+  .kindof { padding: 0 0.3rem; color: var(--muted); border: 1px solid var(--line); border-radius: var(--corner-small); white-space: nowrap; }
+  .proj { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* A link's path, the one place how it is cut is decided: on the line of the rest while 8rem is left, cut at its head so that the
+     file's name stays. The box runs right to left for that alone, its bdi keeping the path's own order whatever marks it holds */
+  .sub .path { flex: 1 1 8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; font: var(--text-label) var(--mono); }
+  .miss { padding: 0 0.5rem; color: var(--chg); background: var(--chg-soft); border-radius: 999px; white-space: nowrap; }
+  li.gone a.title { color: var(--muted); text-decoration: line-through; }
+  /* Above the title's hit area, as the row's controls are */
+  .sub .tags { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 0.3rem; }
   .tagpill {
-    flex: none; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0.05rem 0.45rem;
-    font-size: var(--text-label); color: var(--fg); background: var(--panel); border: 0; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line);
+    flex: none; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 0.5rem;
+    font-size: var(--text-label); color: var(--fg); background: var(--subtle); border: 0; border-radius: 999px;
   }
   .tagpill:hover { box-shadow: inset 0 0 0 1px var(--fg); }
   /* A tags field's names, as the row's menu looks: a popover in the top layer, so that no dialog or box cuts it off */
@@ -396,39 +347,26 @@
     border: 1px dashed var(--line); border-radius: 999px; font-size: var(--text-small);
   }
   .tag-new:hover { border-color: var(--ink); }
-  /* The row's project, as a chip of its color, its creation date and its update's time: a column each, shared by every row
-     (subgrid), so that they line up whatever a row's project or however long its time reads. Placed, so that a hidden one
-     leaves its column empty */
-  .meta { grid-column: span 3; display: grid; grid-template-columns: subgrid; align-items: center; column-gap: 0.6rem; min-width: 0; }
-  .meta > .proj { grid-column: 1; justify-self: end; }
-  .meta > .made { grid-column: 2; }
-  .meta > time { grid-column: 3; }
-  .made { font: var(--text-label)/1 var(--mono); color: var(--faint); white-space: nowrap; }
-  .proj {
-    min-width: 0; max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0.05rem 0.5rem; border-radius: 999px;
-    font-size: var(--text-label); font-weight: 600; color: color-mix(in srgb, var(--c) 55%, var(--fg)); background: color-mix(in srgb, var(--c) 14%, var(--panel));
-  }
-  li time { font: var(--text-label)/1 var(--mono); color: var(--faint); white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
-  .actions { position: relative; z-index: 1; display: flex; gap: 2px; }
+  .actions { position: relative; z-index: 1; grid-area: actions; display: flex; align-items: center; gap: 2px; }
   /* A folder's row opens a tree of its directories under it (--d deep), each row a directory or a page of it */
   .fold { display: inline-block; width: 14px; height: 14px; margin-right: 0.35rem; vertical-align: -2px; color: var(--muted); transition: transform 0.15s; }
   [aria-expanded="true"] > .fold { transform: rotate(90deg); }
-  /* A tree's rows are short, many as they may be; each holds the fold's room, empty for a page, so that the names of a
-     directory's directories and pages line up, a step (the fold's width) right of the directory's own */
-  li.tree { min-height: 1.75rem; padding-block: 0.1rem; }
-  /* A step in is the fold's width and a little: deep in, a title still has room */
-  li.tree .body { padding-left: calc((var(--d) - 1) * 1.1rem + 0.2rem); }
-  li.tree .title { font-weight: 500; }
+  li.tree {
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 1rem 0.2rem calc(1.5rem + (var(--d) - 1) * 1.1rem); font-size: var(--text-small);
+  }
+  li.tree .body { flex: 1; min-width: 0; }
+  li.tree time { flex: none; font: var(--text-label)/1 var(--mono); color: var(--muted); white-space: nowrap; }
+  li.tree .actions { flex: none; }
+  li.tree .icon-btn { min-width: 26px; height: 26px; }
+  li.tree .title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   li.tree .fold.none { visibility: hidden; }
-  li.tree .icon-btn { width: 26px; height: 26px; }
   .kind { display: inline-block; width: 16px; height: 16px; margin-right: 0.4rem; vertical-align: -3px; color: var(--muted); }
-  li.tree .title::before { content: none; }
-  li.tree button.title { justify-self: start; max-width: 100%; padding: 0; border: 0; background: none; color: var(--fg); font-weight: 700; text-align: left; cursor: pointer; }
+  li.tree button.title { max-width: 100%; padding: 0; border: 0; background: none; color: var(--fg); font-weight: 500; text-align: left; cursor: pointer; }
   li.tree button.title::after { content: ""; position: absolute; inset: 0; }
   li.tree button.title:focus-visible { outline: none; }
   li:has(button.title:focus-visible) { outline: var(--ring); outline-offset: -2px; }
   /* Under the names of its directory: past the fold's room */
-  li.tree.note .body { padding-left: calc((var(--d) - 1) * 1.1rem + 0.2rem + 14px + 0.35rem); color: var(--muted); font-size: var(--text-small); }
+  li.tree.note .body { padding-left: calc(14px + 0.35rem); color: var(--muted); }
   .crumb { color: var(--muted); font-weight: 500; }
   /* The row's other actions. The row whose menu is open comes forward: each row's rise animation stacks the rows below over it */
   li:has(.more[open]) { z-index: 3; }
@@ -446,10 +384,10 @@
     font-size: var(--text-small); line-height: 1.35; text-align: start; border-radius: calc(var(--corner-menu) - var(--menu-pad));
   }
   .menu .icon-btn svg { flex-shrink: 0; }
-  /* With a mouse, a row's actions show while it is pointed at, reached by keyboard or selected; a pressed star always. Only opacity, so they stay for keys and screen readers */
+  /* With a mouse, a row's actions show while it is pointed at, reached by keyboard or chosen; a pressed star always. Only opacity, so they stay for keys and screen readers */
   @media (hover: hover) {
     li .actions > * { transition: opacity 0.12s; }
-    li:not(:hover, :focus-within, :has(.sel:checked, .more[open])) .actions > :not(.star[aria-pressed="true"]) { opacity: 0; }
+    li:not(.picked, :hover, :focus-within, :has(.sel:checked, .more[open])) .actions > :not(.star[aria-pressed="true"]) { opacity: 0; }
   }
   .icon-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; height: 30px; min-width: 30px; padding-inline: 0.4rem;
@@ -461,42 +399,22 @@
   .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
   .delete:hover { color: var(--danger); }
   .star:hover { color: var(--star); }
-  /* An icon button that toggles (the star, the frame's archive), pressed: its icon filled in, in ink or its own color */
+  /* An icon button that toggles (the star), pressed: its icon filled in, in its own color */
   .icon-btn[aria-pressed="true"] { color: var(--fg); }
   .icon-btn[aria-pressed="true"] svg { fill: currentColor; }
   .star[aria-pressed="true"] { color: var(--star); }
-  .archive[aria-pressed="true"] { color: var(--archived); }
   .copy .done, .copy.copied > svg { display: none; }
   .copy.copied .done { display: block; color: var(--good); }
   .delete.armed { color: var(--danger); background: var(--danger-soft); border-color: var(--armed-line); font-weight: 650; }
 
-  .pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; font-size: var(--text-small); color: var(--muted); }
-  .sizes { display: inline-flex; align-items: center; gap: 0.55rem; }
-  .seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--subtle); border: 1px solid var(--line); border-radius: 999px; }
-  .seg button { padding: 0.18rem 0.6rem; font: var(--text-label)/1.5 var(--mono); color: var(--muted); background: none; border: 0; border-radius: 999px; }
-  .seg button:hover { color: var(--fg); }
-  .seg button[aria-pressed="true"] { color: var(--fg); background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
-  .pages { display: inline-flex; align-items: center; gap: 0.45rem; font: var(--text-label)/1 var(--mono); font-variant-numeric: tabular-nums; }
-  .pages .icon-btn { background: var(--panel); border-color: var(--line); box-shadow: var(--shadow-sm); }
-  .pages .range { color: var(--faint); margin-right: 0.35rem; }
-
-  /* The sort gives way, its words cut off, where the bar is too narrow for all; enough of them left to tell */
-  .sort { flex: 0 1 auto; min-width: 4.5rem; display: flex; }
-  #sort {
-    display: inline-flex; align-items: center; gap: 0.4rem; max-width: 100%; height: 32px; padding: 0 0.6rem 0 0.85rem; font-size: var(--text-small);
-    color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
-  }
-  #sort > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #sort > svg { flex: none; width: 14px; height: 14px; color: var(--faint); }
-  #sort:hover, #sort[aria-expanded="true"] { color: var(--fg); border-color: var(--faint); }
-  .pop.sort-menu { width: 13rem; }
-
-  .keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem 1rem; margin: 0; font-size: var(--text-small); color: var(--faint); }
-  .keys kbd {
-    display: inline-block; min-width: 1.4rem; margin-right: 0.2rem; padding: 0.1rem 0.35rem; text-align: center;
-    font: var(--text-label)/1.4 var(--mono); color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: var(--corner-small);
-  }
-  @media (hover: none) { .keys { display: none; } }
+  /* The page chosen, right of the list */
+  .reader { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .rhead { flex: none; display: flex; align-items: center; gap: 0.6rem; height: var(--lhead); padding: 0 1rem; border-bottom: 1px solid var(--line); }
+  .rhead a.read-title { min-width: 0; color: var(--fg); font-weight: 700; text-decoration: underline transparent; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rhead a.read-title:hover { text-decoration-color: currentColor; }
+  .rhead .frame-actions { margin-left: auto; }
+  .read-frame { flex: 1; min-height: 0; width: 100%; border: 0; background: var(--frame-bg); }
+  .read-blank { flex: 1; display: grid; place-content: center; padding: 1.5rem; text-align: center; color: var(--muted); white-space: pre-line; }
 
   .toasts { position: fixed; right: 16px; bottom: 1.25rem; z-index: 40; display: grid; gap: 0.5rem; justify-items: end; pointer-events: none; }
   .toast {
@@ -506,7 +424,7 @@
   }
   .toast svg { width: 16px; height: 16px; flex: none; color: var(--good); }
   @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
-  /* The bulk bar, in the bar over the list while items are selected: a round band ringed in ink, its last button (clearing the
+  /* The bulk bar, in the head over the list while items are selected: a round band ringed in ink, its last button (clearing the
      selection) at its end. 6px of it round its buttons hold their focus ring off the ink */
   .bulk {
     flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.4rem; height: 2.75rem; padding: 0 6px 0 1rem;
@@ -523,15 +441,6 @@
      let go; the clearing lets it go where a click does not move the focus, as on Safari) */
   .bulk:has(.armed) > .btn:not(.armed, .clear) { display: none; }
   /* A bar too narrow for the words shows the buttons' icons alone, the words left for screen readers */
-  /* A bar too narrow for the kinds' counts, the sort and the add button side by side drops the counts */
-  @container bar (max-width: 27rem) {
-    .tabs .n { display: none; }
-  }
-  /* A bar too narrow for the kinds' words beside the sort shows their icons alone, the words left for screen readers */
-  @container bar (max-width: 36rem) {
-    .tabs .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-    .tabs button > svg { margin-right: 0; }
-  }
   @container bar (max-width: 46rem) {
     .bulk .btn:not(.armed) .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .bulk .btn:not(.armed) { padding: 0 0.6rem; }
@@ -545,6 +454,7 @@
   .state p { margin: 0; max-width: 34rem; }
   .state strong { color: var(--fg); font-size: 1rem; }
   .state a { color: var(--fg); }
+  .state a.btn { text-decoration: none; }
   .state code { font-family: var(--mono); font-size: 0.8em; background: var(--subtle); padding: 0.1rem 0.35rem; border-radius: var(--corner-small); overflow-wrap: anywhere; }
   .link-btn { background: none; border: 0; padding: 0; color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
   .error { margin: 0; padding: 0.65rem 0.9rem; border-radius: var(--corner-menu); color: var(--danger); background: var(--danger-soft); white-space: pre-wrap; }
@@ -572,41 +482,48 @@
   .field .path { font-family: var(--mono); }
   .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
 
-  @media (max-width: 48rem) {
-    .shell { grid-template-columns: minmax(0, 1fr); }
-    .count, .shelf h2, .shelf .add-link { display: none; }
-    .add-narrow { display: inline-flex; }
-    /* The list's header bar takes the search on a second line; all that sits under the bar (--bar) moves down with it */
-    html:not(.framed) { --bar: 6.25rem; }
-    html:not(.framed) .bar-inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 3.5rem 2.75rem; row-gap: 0; align-items: center; }
-    html:not(.framed) .bar-end { grid-row: 1; grid-column: 2; }
-    .bar-inner > .search { grid-row: 2; grid-column: 1 / -1; align-self: start; margin: 0; }
-    /* The shelf, one row of its buttons, scrolled sideways */
-    .shelf, .shelf:is(:hover, :focus-within) {
-      position: static; display: flex; gap: 6px; max-height: none; overflow: auto hidden; padding: 4px; scrollbar-width: none;
+  /* The widths of the list's page, wide to narrow: the shelf, the list and the page chosen; from 70rem the shelf gives way to a
+     row of its views and the dialog of the rest, and the bar's count of new pages, which the row has; from 56rem one column (oneColumn
+     in the script reads the same width); from 40rem the bar folds up too */
+  @media (max-width: 70rem) {
+    .shell { grid-template-columns: 22rem minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    #shelf-grip, #list-grip, .shelf-tools, #list-hide, #list-show, .shelf-head, .rhead.empty { display: none; }
+    .shelf, .shelf:is(:hover, :focus-within) { grid-column: 1 / -1; display: block; overflow: visible; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); }
+    .shelf > .shelf-more { display: none; }
+    .shelf .views { display: flex; align-items: center; gap: 5px; overflow: auto hidden; padding: 4px; margin: -4px; scrollbar-width: none; }
+    .shelf .views::-webkit-scrollbar { display: none; }
+    .shelf .views button {
+      flex: none; width: auto; gap: 0.3rem; padding: 0.2rem 0.55rem; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; white-space: nowrap;
     }
-    .shelf::-webkit-scrollbar { display: none; }
-    .shelf .views, .shelf .chips, #shelf-tags, #shelf-projects { display: flex; flex: none; gap: 6px; }
-    .shelf .views button, .shelf .chip {
-      flex: none; width: auto; padding: 0.35rem 0.8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); white-space: nowrap;
-    }
-    .shelf button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); }
-    .shelf .chip .name { max-width: 12rem; }
+    .shelf .views .dot, .shelf .views .ring { display: none; }
+    .shelf .views [data-view="fav"] .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .shelf .views [data-view="archived"] .n { display: none; }
+    .shelf .views button[aria-pressed="true"], #narrow-filter.narrowed { color: var(--on-ink); background: var(--ink); border-color: var(--ink); box-shadow: none; }
+    .shelf .views button[aria-pressed="true"] .n, .shelf .views [data-view="archived"][aria-pressed="true"] svg, #narrow-filter.narrowed svg { color: var(--on-ink); }
+    .shelf .views button .n { margin-left: 0; }
+    #narrow-filter { display: inline-flex; }
+    .news { display: none; }
   }
-  /* On narrow screens, the project and the time move to a second line */
+  /* One column: only the list, a row opening its page whole, with the way back */
+  @media (max-width: 56rem) {
+    .shell { grid-template-columns: minmax(0, 1fr); }
+    .listcol { border: 0; }
+    .reader { display: none; }
+    .icon-btn.back { display: inline-flex; }
+  }
+  /* The bar folds up: the search as its icon until it is reached, a page's buttons gone, the filter at the row's end */
   @media (max-width: 40rem) {
+    #narrow-filter { margin-left: auto; }
+    .shelf .views [data-view="archived"] .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .framed .frame-actions { display: none; }
     .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
-    /* The title gives way, its button left as the chevron */
-    .frame-title > span:first-child { display: none; }
-    ul { display: block; }
-    li { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 0.3rem; column-gap: 0.6rem; }
-    .pick { grid-column: 1; grid-row: 1 / 3; }
-    .body { grid-column: 2; grid-row: 1; }
-    /* The chip gives way first, cut off, where the line is too narrow */
-    .meta { grid-column: 2; grid-row: 2; display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; }
-    .meta > * { flex: none; }
-    .meta > .proj { flex: 0 1 auto; }
-    .actions { grid-column: 3; grid-row: 1 / 3; }
+    .bar-inner:has(> .search:not([hidden])) .bar-end { margin-left: auto; }
+    .bar-inner > .search { flex: 0 0 36px; margin-inline: 0; transition: flex-basis 0.15s; }
+    .bar-inner > .search:is(:focus-within, :has(input:not(:placeholder-shown))) { flex: 1 1 auto; }
+    .bar-inner > .search kbd { display: none; }
+    .bar-inner > .search input { padding-inline: 2.2rem 0.5rem; }
+    .bar-inner > .search:not(:focus-within, :has(input:not(:placeholder-shown))) input { color: transparent; }
+    .bar-inner > .search:not(:focus-within, :has(input:not(:placeholder-shown))) input::placeholder { color: transparent; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } }
 </style>
@@ -614,12 +531,12 @@
 <body>
 <header class="bar">
   <div class="bar-inner">
+    <a class="icon-btn back" id="back" href="/" aria-label="{{.Msg "ui_back_to_list"}}" title="{{.Msg "ui_back_to_list"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
     <a class="brand" href="/" title="{{.Msg "ui_back_to_list"}}">
       <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="floe-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sky-top"/><stop offset="1" class="sky-bottom"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#floe-sky)"/><path d="M17 47.5H47" fill="none" class="line" stroke-width="2" stroke-linecap="round"/><path d="M24 52.5H40" fill="none" class="line-soft" stroke-width="2" stroke-linecap="round"/><path d="M12 32 22 38 41 37 53 29.5 53 34.5 41 42 22 43 12 37Z" class="edge"/><path d="M12 32 24 21.5 33 28 22 38Z" class="face-left"/><path d="M24 21.5 42 21 53 29.5 33 28Z" class="face-back"/><path d="M33 28 53 29.5 41 37 22 38Z" class="face-front"/></svg>
       floe
     </a>
-    <!-- Named by the title it shows and what it does; on a narrow screen the title gives way, the words stay for screen readers -->
-    <button type="button" class="frame-title" id="frame-pick" popovertarget="page-pick" aria-haspopup="listbox" aria-expanded="false" hidden><span id="frame-title"></span><span class="sr-only">{{.Msg "ui_pick_page"}}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+    <span class="frame-title" id="frame-title"></span>
     <span class="badge" id="frame-archived" hidden>{{.Msg "ui_archived_badge"}}</span>
     <!-- The list's search, shown with the list -->
     <label class="search" id="search" hidden>
@@ -628,70 +545,52 @@
       <kbd aria-hidden="true">/</kbd>
     </label>
     <div class="bar-end">
-      <span class="frame-actions" hidden>
-        <button type="button" class="icon-btn star" id="frame-star"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg></button>
-        <button type="button" class="icon-btn archive" id="frame-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg></button>
-        <a class="icon-btn" id="frame-download" title="{{.Msg "ui_download"}}" aria-label="{{.Msg "ui_download"}}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
-        </a>
-        <a class="icon-btn" id="frame-open" href="?raw" target="_blank" rel="noopener" title="{{.Msg "ui_open_raw"}}" aria-label="{{.Msg "ui_open_raw"}}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
-        </a>
-      </span>
+      <span class="frame-actions" id="frame-actions" hidden></span>
+      <a class="news" id="news" href="/?view=new" hidden><span class="dot"></span><span id="news-n"></span></a>
       <span class="server" id="server" role="status"></span>
     </div>
   </div>
 </header>
-<!-- The sort's orders to pick from, opened from the sort -->
-<div class="pop sort-menu" id="sort-menu" popover>
-  <div role="listbox" id="sort-list" tabindex="-1" aria-labelledby="sort-label">
-    <div role="option" id="sort-updated" data-sort="updated"><span>{{.Msg "ui_sort_updated"}}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
-    <div role="option" id="sort-created" data-sort="created"><span>{{.Msg "ui_sort_created"}}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
-    <div role="option" id="sort-title" data-sort="title"><span>{{.Msg "ui_sort_title"}}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
-  </div>
-</div>
-<!-- The frame's pages to pick from, opened from the title -->
-<div class="pop" id="page-pick" popover>
-  <label class="pop-q"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="text" id="page-pick-q" role="combobox" aria-autocomplete="list" aria-controls="page-pick-list" aria-expanded="true" placeholder="{{.Msg "ui_pick_search"}}" aria-label="{{.Msg "ui_pick_search"}}" autocomplete="off"></label>
-  <div id="page-pick-list" role="listbox" aria-label="{{.Msg "ui_pick_page"}}"></div>
-  <p class="none" id="page-pick-none" hidden>{{.Msg "ui_nomatch"}}</p>
-</div>
 <p class="error" id="error" hidden></p>
 <main class="shell" id="manage" hidden>
   <h1 class="sr-only">floe</h1>
   <!-- Buttons that switch the list. They do not implement WAI-ARIA tabs (arrow keys, tabpanel), so they use aria-pressed -->
-  <nav class="shelf" aria-label="{{.Msg "ui_shelf"}}">
+  <nav class="shelf" id="shelf" aria-label="{{.Msg "ui_shelf"}}">
+    <div class="shelf-head"><button type="button" class="icon-btn" id="shelf-hide" aria-expanded="true" aria-controls="shelf" title="{{.Msg "ui_shelf_hide"}}" aria-label="{{.Msg "ui_shelf_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button></div>
     <div class="views" role="group" aria-label="{{.Msg "ui_shelf"}}">
-      <button type="button" data-view="all"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>{{.Msg "ui_view_all"}}<span class="n"></span></button>
-      <button type="button" data-view="fav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>{{.Msg "ui_view_favorites"}}<span class="n"></span></button>
-      <button type="button" data-view="archived"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg>{{.Msg "ui_view_archived"}}<span class="n"></span></button>
+      <button type="button" data-view="new"><span class="dot"></span><span class="label">{{.Msg "ui_view_new"}}</span><span class="n"></span></button>
+      <button type="button" data-view="all"><span class="ring"></span><span class="label">{{.Msg "ui_view_all"}}</span><span class="n"></span></button>
+      <button type="button" data-view="fav"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span class="label">{{.Msg "ui_view_favorites"}}</span><span class="n"></span></button>
+      <button type="button" data-view="archived"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span class="label">{{.Msg "ui_view_archived"}}</span><span class="n"></span></button>
+      <button type="button" id="narrow-filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span id="narrow-filter-name">{{.Msg "ui_narrow"}}</span></button>
     </div>
-    <div id="shelf-tags">
-      <h2>{{.Msg "ui_tags"}}</h2>
-      <div class="chips" id="tags" role="group" aria-label="{{.Msg "ui_tags"}}"></div>
-    </div>
-    <div id="shelf-projects">
-      <h2>{{.Msg "ui_project"}}</h2>
-      <div class="chips" id="chips" role="group" aria-label="{{.Msg "ui_project"}}"></div>
-    </div>
-    <div class="adds">
-    <button type="button" class="link-btn add-link" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>{{.Msg "ui_add_link"}}</button>
-    <button type="button" class="link-btn add-link" id="add-folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>{{.Msg "ui_add_folder"}}</button>
+    <div class="shelf-more" id="shelf-more">
+      <div id="shelf-projects">
+        <h2>{{.Msg "ui_project"}}</h2>
+        <div class="chips" id="chips" role="group" aria-label="{{.Msg "ui_project"}}"></div>
+      </div>
+      <div id="shelf-kinds">
+        <h2>{{.Msg "ui_kind"}}</h2>
+        <div class="chips" id="kinds" role="group" aria-label="{{.Msg "ui_kind"}}"></div>
+      </div>
+      <div id="shelf-templates">
+        <h2>{{.Msg "ui_template"}}</h2>
+        <div class="chips" id="templates" role="group" aria-label="{{.Msg "ui_template"}}"></div>
+      </div>
+      <div id="shelf-tags">
+        <h2>{{.Msg "ui_tags"}}</h2>
+        <div class="chips" id="tags" role="group" aria-label="{{.Msg "ui_tags"}}"></div>
+      </div>
     </div>
   </nav>
-  <div class="main">
-  <div class="toolbar">
-      <div class="tabs" id="kinds" role="group" aria-label="{{.Msg "ui_kind"}}">
-        <button type="button" data-tab="pages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg><span class="label">{{.Msg "ui_tab_pages"}}</span><span class="n"></span></button>
-        <button type="button" data-tab="links"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span class="label">{{.Msg "ui_tab_links"}}</span><span class="n"></span></button>
-        <button type="button" data-tab="folders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg><span class="label">{{.Msg "ui_tab_folders"}}</span><span class="n"></span></button>
-      </div>
-      <!-- The sort: a button named by what it is and the order now, which opens the orders to pick from -->
-      <span class="sort"><span class="sr-only" id="sort-label">{{.Msg "ui_sort"}}</span>
-        <button type="button" id="sort" popovertarget="sort-menu" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sort-label sort-name"><span id="sort-name"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
-      </span>
+  <div class="grip" id="shelf-grip" role="separator" aria-orientation="vertical" aria-controls="shelf" aria-label="{{.Msg "ui_shelf_width"}}" tabindex="0"></div>
+  <section class="listcol" id="listcol">
+    <div class="lhead">
+      <!-- What shows the filters again, in the head of the list, or of the page beside it with the list folded too -->
+      <span class="shelf-tools" id="shelf-tools" hidden><button type="button" class="icon-btn" id="shelf-show" aria-expanded="false" aria-controls="shelf" title="{{.Msg "ui_shelf_show"}}" aria-label="{{.Msg "ui_shelf_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button><button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button></span>
       <span class="count" id="count"></span>
-      <button type="button" class="btn add-narrow" id="add-narrow" aria-label="{{.Msg "ui_add_link"}}" title="{{.Msg "ui_add_link"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button type="button" class="add-open" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button>
+      <button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button>
       <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
       <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
         <span class="bulk-count" id="bulk-count" aria-live="polite"></span>
@@ -701,67 +600,44 @@
         <button type="button" class="btn danger" id="bulk-delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg><span class="label"></span></button>
         <button type="button" class="btn clear" id="bulk-clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg><span class="label">{{.Msg "ui_clear_selection"}}</span></button>
       </div>
-  </div>
-  <div class="panel">
+    </div>
     <ul id="list"></ul>
     <div class="state" id="empty" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>
       <strong>{{.Msg "ui_empty_pages"}}</strong>
       <p>{{.Msg "ui_empty_pages_hint"}}</p>
-      <p><code>floe publish &lt;file.html&gt;</code></p>
-    </div>
-    <div class="state" id="empty-links" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
-      <strong>{{.Msg "ui_empty_links"}}</strong>
-      <p>{{.Msg "ui_empty_links_hint"}}</p>
-      <p><code>floe publish &lt;file.html&gt; --link</code></p>
-    </div>
-    <div class="state" id="empty-folders" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>
-      <strong>{{.Msg "ui_empty_folders"}}</strong>
-      <p>{{.Msg "ui_empty_folders_hint"}}</p>
-      <p><code>floe publish --link &lt;folder&gt;</code></p>
+      <p><code>floe publish &lt;file.yaml&gt;</code></p>
+      <p><button type="button" class="add-open" id="add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button></p>
     </div>
     <div class="state" id="all-archived" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg>
       <strong></strong>
       <p><button type="button" class="link-btn" id="show-archived">{{.Msg "ui_show_archived"}}</button></p>
     </div>
-    <div class="state" id="empty-favorites" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
-      <strong>{{.Msg "ui_no_favorites"}}</strong>
-    </div>
-    <div class="state" id="empty-archived" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg>
-      <strong></strong>
-    </div>
+    <div class="state" id="empty-new" hidden><strong>{{.Msg "ui_no_new"}}</strong></div>
+    <div class="state" id="empty-favorites" hidden><strong>{{.Msg "ui_no_favorites"}}</strong></div>
+    <div class="state" id="empty-archived" hidden><strong>{{.Msg "ui_none_archived"}}</strong></div>
     <div class="state" id="nomatch" hidden>
       <strong>{{.Msg "ui_nomatch"}}</strong>
       <p><button type="button" class="link-btn" id="clear">{{.Msg "ui_clear_filters"}}</button></p>
     </div>
-  </div>
-  <nav class="pager" id="pager" aria-label="{{.Msg "ui_pager"}}" hidden>
-    <div class="sizes">
-      <span id="sizes-label">{{.Msg "ui_page_size"}}</span>
-      <div class="seg" id="sizes" role="group" aria-labelledby="sizes-label"></div>
+  </section>
+  <div class="grip" id="list-grip" role="separator" aria-orientation="vertical" aria-controls="listcol" aria-label="{{.Msg "ui_list_width"}}" tabindex="0"></div>
+  <!-- The page of the row chosen. Lets copy and fullscreen buttons in the page work, as the frame's -->
+  <section class="reader" id="reader">
+    <div class="rhead" id="read-head" hidden>
+      <button type="button" class="icon-btn" id="list-show" aria-expanded="false" aria-controls="listcol" title="{{.Msg "ui_list_show"}}" aria-label="{{.Msg "ui_list_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button>
+      <a class="read-title" id="read-title"></a>
+      <span class="frame-actions" id="read-actions"></span>
     </div>
-    <div class="pages">
-      <span class="range" id="range"></span>
-      <button type="button" class="icon-btn" id="prev" aria-label="{{.Msg "ui_prev_page"}}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
-      </button>
-      <span id="pageno"></span>
-      <button type="button" class="icon-btn" id="next" aria-label="{{.Msg "ui_next_page"}}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-      </button>
-    </div>
-  </nav>
-  <p class="keys" aria-hidden="true">
-    <span><kbd>↑</kbd><kbd>↓</kbd>{{.Msg "ui_key_move"}}</span><span><kbd>Enter</kbd>{{.Msg "ui_key_open"}}</span><span><kbd>x</kbd>{{.Msg "ui_key_select"}}</span><span><kbd>f</kbd>{{.Msg "ui_key_favorite"}}</span>
-    <span><kbd>←</kbd><kbd>→</kbd>{{.Msg "ui_key_page"}}</span><span><kbd>/</kbd>{{.Msg "ui_search"}}</span>
-  </p>
-  </div>
+    <iframe class="read-frame" id="read-frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
+    <p class="read-blank" id="read-blank">{{.Msg "ui_read_blank"}}</p>
+  </section>
 </main>
+<dialog id="filter-dialog" aria-labelledby="filter-title">
+  <div class="add" id="filter-box">
+    <div class="add-head"><h2 id="filter-title">{{.Msg "ui_narrow"}}</h2></div>
+    <div class="dialog-actions"><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
+  </div>
+</dialog>
 <nav class="side" id="side" hidden>
   <div class="side-head"><span id="side-title"></span><button type="button" class="icon-btn" id="side-hide" aria-expanded="true" aria-controls="side" title="{{.Msg "ui_side_hide"}}" aria-label="{{.Msg "ui_side_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
   <div id="side-tree"></div>
@@ -776,18 +652,18 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5"/></svg>
   <strong>{{.Msg "ui_not_found"}}</strong>
   <p id="notfound-detail"></p>
-  <p><a href="/">{{.Msg "ui_back_to_list"}}</a></p>
+  <p><a class="btn" id="notfound-back" href="/">{{.Msg "ui_back_to_list"}}</a></p>
 </div>
 <dialog id="add-dialog" aria-labelledby="add-title">
   <form class="add" id="add">
     <div class="add-head">
-      <svg id="add-icon-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" id="add-icon-folder" hidden><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
       <div>
         <h2 id="add-title">{{.Msg "ui_add_link"}}</h2>
-        <p class="lead" id="add-lead">{{.Msg "ui_add_lead"}}</p>
+        <p class="lead">{{.Msg "ui_add_lead"}}</p>
       </div>
     </div>
-    <label class="field"><span id="add-path-label">{{.Msg "ui_add_path"}}</span>
+    <label class="field"><span>{{.Msg "ui_add_path"}}</span>
       <input class="text path" id="add-path" required autofocus autocomplete="off" spellcheck="false"
         placeholder="/home/you/project/coverage/index.html">
     </label>
@@ -861,7 +737,7 @@
   <li class="tree">
     <span></span>
     <div class="body"><a class="title"></a></div>
-    <span class="meta"><span></span><span></span><time></time></span>
+    <time></time>
     <div class="actions">
       <a class="icon-btn open" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a>
       <button type="button" class="icon-btn copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></button>
@@ -871,15 +747,19 @@
 <template id="row">
   <li>
     <label class="pick"><input type="checkbox" class="sel"></label>
-    <div class="body">
-      <a class="title"></a>
-      <span class="sub"><span class="tags"></span><span class="desc"></span></span>
-    </div>
-    <span class="meta"><span class="proj"></span><span class="made"></span><time></time></span>
+    <span class="lead"></span>
+    <a class="title"></a>
+    <time></time>
+    <span class="sub"></span>
     <div class="actions">
       <button type="button" class="icon-btn star">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
       </button>
+    </div>
+  </li>
+</template>
+<!-- One menu, of a row and of the bar over a page -->
+<template id="more">
       <details class="more">
         <summary class="icon-btn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></summary>
         <div class="menu">
@@ -891,8 +771,17 @@
           <button type="button" class="icon-btn delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg><span class="label"></span></button>
         </div>
       </details>
-    </div>
-  </li>
+</template>
+<!-- The bar over a page, beside the list and in the frame -->
+<template id="page-actions">
+  <span class="frame-actions">
+      <button type="button" class="icon-btn star">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
+      </button>
+      <button type="button" class="icon-btn copy" title="{{.Msg "ui_copy_path"}}" aria-label="{{.Msg "ui_copy_path"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></button>
+      <a class="icon-btn open" target="_blank" rel="noopener" title="{{.Msg "ui_open_raw"}}" aria-label="{{.Msg "ui_open_raw"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a>
+      <span class="more-slot"></span>
+  </span>
 </template>
 <script>
   const $ = (id) => document.getElementById(id);
@@ -911,21 +800,23 @@
   // The slug of the page this frames, as the server drew it at /a/<slug>/; none for the list
   const framed = document.documentElement.dataset.slug;
   // A link in the page to a frame URL moves the whole tab, on a message from the script added to the page. The sender is the sandboxed page,
-  // so only messages from this iframe naming a frame URL of this origin are followed (never javascript: and the like).
+  // so only messages from its iframe naming a frame URL of this origin are followed (never javascript: and the like).
   // A move to a part of the page (#…) is written into this URL too, while the iframe still shows this page, so that a copy of the URL
-  // and a reload open that part; replaceState changes only the fragment and adds no history, which the iframe's move added already
-  if (framed) addEventListener('message', (e) => {
-    if (e.source !== $('frame').contentWindow) return;
+  // and a reload open that part; replaceState changes only the fragment and adds no history, which the iframe's move added already.
+  // The iframe is the frame's, or the one beside the list; the page is read when it is the one that iframe was given
+  addEventListener('message', (e) => {
+    const shown = framed ? $('frame') : $('read-frame');
+    if (e.source !== shown.contentWindow) return;
     const to = typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
     if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) location.href = to.href;
-    const hash = e.data?.artifactHash;
-    if (typeof hash === 'string' && (hash === '' || hash.startsWith('#')) && e.data.artifactPath === new URL(frameSrc, location.href).pathname) {
+    const given = framed ? new URL(frameSrc, location.href).pathname : picked && new URL(rawHref(picked), location.href).pathname;
+    if (e.data?.artifactPath !== given) return;
+    const hash = e.data.artifactHash;
+    if (framed && typeof hash === 'string' && (hash === '' || hash.startsWith('#'))) {
       history.replaceState(history.state, '', location.pathname + location.search + hash);
     }
-    const read = e.data?.artifactRead;
-    if (Number.isInteger(read?.n) && typeof read.at === 'string' && e.data.artifactPath === new URL(frameSrc, location.href).pathname) {
-      tellRead(framed, { n: read.n, at: read.at });
-    }
+    const read = e.data.artifactRead;
+    if (Number.isInteger(read?.n) && typeof read.at === 'string') tellRead(framed ?? picked.slug, { n: read.n, at: read.at });
   });
   // The versions read go to the server one request at a time: while one is out, each page's last one waits, its earlier ones dropped.
   // One lost is told again the next time the page is loaded. The slug is the caller's own, never one a page's message names
@@ -961,45 +852,35 @@
   if (framed) addEventListener('hashchange', () => {
     if ($('frame').hasAttribute('src')) $('frame').contentWindow.location.replace(frameSrc + (location.hash || '#'));
   });
-  // Stored pages (pages) and links registered by absolute path (links) are on separate tabs
-  // Its tab: a folder's link, any other link (by absolute path), or a stored page
-  const kindOf = (a) => (a.folder ? 'folders' : a.path ? 'links' : 'pages');
-  const inTab = (a, t = tab) => kindOf(a) === t;
-  // The entries of a list: of its tab, and archived or not as it is. Every count and list goes through this, so that the archived stay off the rest
-  const inView = (a, state) => inTab(a, state.tab) && Boolean(a.archived) === state.archived;
-  // The entries of the list shown: inView, and the favourites only when they are what is looked at
-  const inList = (a, state) => inView(a, state) && (!state.fav || a.favorite);
+  // What an entry is: a folder's link, any other link (by absolute path), or a stored page
+  const kindOf = (a) => (a.folder ? 'folder' : a.path ? 'link' : 'page');
+  // The pages of the view "new" seen since it was picked: read, they stay on it, as a dot gone, until the view is let go or picked anew, or the page reloads
+  const newSeen = new Set();
+  // The entries of a view: the archived on the archive's alone. Every count and list goes through this
+  const inView = (a, state) => Boolean(a.archived) === (state.view === 'archived')
+    && (state.view !== 'fav' || a.favorite)
+    && (state.view !== 'new' || a.news || newSeen.has(a.slug));
   // Pages from before the project was recorded. A project is a directory name without /, so this cannot clash
   const NONE = '/';
-  const SIZES = [10, 20, 50, 100];
-  const SIZE_KEY = 'artifacts.pageSize';
-  let size = SIZES[2];
-  // Sort orders. updated keeps the server's order (newest first)
-  const SORTS = {
-    updated: null,
-    created: (x, y) => (y.createdAt ?? '').localeCompare(x.createdAt ?? ''),
-    title: (x, y) => x.title.localeCompare(y.title, LANG),
-  };
-  // The list's state (tab, project, search, sort, page number) lives in the URL, so a reload opens the same list.
-  // It is also kept for the tab, for moving between pages in the frame and for going back to the list
+  // The list's state (the shelf's picks and the search) lives in the URL, so a reload opens the same list.
+  // It is also kept for the tab, for going back to the list from a page
   const LIST_KEY = 'artifacts.list';
+  // The slugs of the list as it was when it opened a page whole, which j and k go through there
+  const ORDER_KEY = 'artifacts.order';
   function readState(search) {
     const p = new URLSearchParams(search);
     return {
-      tab: ['links', 'folders'].includes(p.get('tab')) ? p.get('tab') : 'pages',
+      view: ['new', 'fav', 'archived'].includes(p.get('view')) ? p.get('view') : 'all',
+      kind: ['page', 'link', 'folder'].includes(p.get('kind')) ? p.get('kind') : '',
+      template: p.get('template') ?? '',
       project: p.get('project') ?? '',
       tag: p.get('tag') ?? '',
       q: p.get('q') ?? '',
-      sort: Object.hasOwn(SORTS, p.get('sort')) ? p.get('sort') : 'updated',
-      page: Math.max(1, Number.parseInt(p.get('page'), 10) || 1),
-      // One of all, the favourites and the archived is looked at: with both in the URL, the archived
-      fav: p.get('fav') === '1' && p.get('archived') !== '1',
-      archived: p.get('archived') === '1',
       // A folder's URL (/a/{slug}/) leads here with open= to open it: taken once into what is kept, and left out of the URL
       open: p.getAll('open'),
     };
   }
-  let { tab, project, tag, sort, page, fav, archived } = readState(location.search);
+  let { view, kind, template, project, tag } = readState(location.search);
   // The folders and the directories of them open in the list, as slug or slug:path (a slug has no colon), kept in the
   // browser and not in the URL, which would grow with each one; without storage, all are closed at first
   const OPEN_KEY = 'list.open';
@@ -1025,22 +906,21 @@
   const FILE = framed ? new URLSearchParams(location.search).get('file') ?? '' : '';
   // What the iframe loads: the page at ?raw, a folder's page at its path under the folder
   const frameSrc = FILE ? FILE.split('/').map(encodeURIComponent).join('/') : '?raw';
-  // The frame URL of an entry, or of a folder's page (file)
+  // The frame URL of an entry, or of a folder's page (file), and the page alone at its own URL
   const pageHref = (x) => (x.file ? `/a/${x.slug}/?file=${encodeURIComponent(x.file)}` : `/a/${x.slug}/`);
+  const rawHref = (x) => (x.file ? `/a/${x.slug}/${x.file.split('/').map(encodeURIComponent).join('/')}` : `/a/${x.slug}/?raw`);
   const isFramed = (x) => x.slug === framed && (x.file ?? '') === FILE;
+  // The row whose page is open beside the list: its slug and, of a folder's page, its file; null for none
+  let picked = null;
+  const isPicked = (x) => picked !== null && x.slug === picked.slug && (x.file ?? '') === picked.file;
+  // One column: a row opens its page whole, as nothing is beside the list. The one place the width that decides it is read
+  const oneColumn = matchMedia('(max-width: 56rem)');
   // The list's state as it is now, of the same keys as readState: what the list is arranged by and the URL keeps
-  const current = () => ({ tab, fav, archived, project, tag, q: $('q').value, sort, page });
-  // The selected slugs. Changing a filter or the tab clears them (so that nothing unseen is deleted); a selection across pages stays
+  const current = () => ({ view, kind, template, project, tag, q: $('q').value });
+  // The selected slugs. Changing a filter clears them (so that nothing unseen is deleted)
   const selected = new Set();
   // LIMIT: changes to the list and a recovered connection are picked up by refetching every 3 s. If hundreds of entries make that heavy, push only the changes over SSE
   const POLL_MS = 3000;
-  // The page size is the viewer's preference, kept in the browser; without storage the default applies
-  try {
-    const saved = Number(localStorage.getItem(SIZE_KEY));
-    if (SIZES.includes(saved)) size = saved;
-  } catch {
-    // Storage is unavailable
-  }
 
   const fmt = (iso) => new Date(iso).toLocaleString(LANG, { dateStyle: 'medium', timeStyle: 'short' });
   const rtf = new Intl.RelativeTimeFormat(LANG, { numeric: 'auto' });
@@ -1079,56 +959,51 @@
     }
   }
 
-  // Defaults (the pages tab, all projects and tags, no search, the first page) are left out of the URL
+  // Defaults (all, no pick, no search) are left out of the URL
   function syncUrl() {
     const url = new URL(location.href);
     const now = current();
-    const state = {
-      tab: now.tab === 'pages' ? '' : now.tab, fav: now.fav ? '1' : '', archived: now.archived ? '1' : '', project: now.project, tag: now.tag,
-      q: now.q.trim(), sort: now.sort === 'updated' ? '' : now.sort, page: now.page > 1 ? String(now.page) : '',
-    };
-    for (const [name, value] of Object.entries(state)) {
-      if (value) url.searchParams.set(name, value);
-      else url.searchParams.delete(name);
-    }
-    url.searchParams.delete('open');
+    const state = { ...now, view: now.view === 'all' ? '' : now.view, q: now.q.trim() };
+    // Whatever else it has (open=, once taken) goes
+    url.search = new URLSearchParams(Object.entries(state).filter(([, value]) => value));
     history.replaceState(null, '', url);
     try {
       sessionStorage.setItem(LIST_KEY, url.search);
     } catch {
-      // Without storage, moving between pages in the frame follows all entries by update time
+      // Without storage, the way back to the list is to all of it
     }
   }
 
-  // Whether an entry has the words searched (lowercased) in its title, description, slug, project, path or tags; any, for none.
-  // Shared by the list's search and the frame's pages to pick from
-  const matches = (a, q) => !q || [a.title, a.description, a.slug, a.project, a.path, ...(a.tags ?? [])].join(' ').toLowerCase().includes(q);
+  // Whether an entry has the words searched (lowercased) in its title, description, slug, project, path, template or tags; any, for none
+  const matches = (a, q) => !q || [a.title, a.description, a.slug, a.project, a.path, a.template, ...(a.tags ?? [])].join(' ').toLowerCase().includes(q);
 
-  // Picks and orders the entries by tab, project, tag, search and sort; shared by the list and by the frame's pages to pick from
-  function arrange(state, ranks = projectOrder()) {
+  // LIMIT: the row chosen is kept in no URL: a reload shows the list with none chosen. Keep it in the URL if that comes to matter
+  // Picks the entries by the shelf and the search, in the server's order: the newest first. Shared by the list and by the
+  // pages j and k go through in the frame
+  function arrange(state) {
     const q = state.q.trim().toLowerCase();
-    const shown = items.filter((a) => inList(a, state)
+    return items.filter((a) => inView(a, state)
+      && (!state.kind || kindOf(a) === state.kind)
+      && (!state.template || a.template === state.template)
       && (!state.project || (a.project ?? NONE) === state.project)
       && (!state.tag || (a.tags ?? []).includes(state.tag))
       && matches(a, q));
-    const sorted = SORTS[state.sort] ? shown.sort(SORTS[state.sort]) : shown;
-    if (!grouped(state)) return sorted;
-    // Group by group, each in the order picked (sort is stable): the favourites first, then the projects as projectOrder
-    // has them, those without one last
-    const rank = new Map(sorted.map((a) => {
-      const g = group(a, state);
-      return [a, g === null ? -1 : ranks.get(g) ?? ranks.size];
-    }));
-    return sorted.sort((x, y) => rank.get(x) - rank.get(y));
   }
 
-  // The folders' tab has no groups: each folder heads its own tree, in the order picked
-  const grouped = (state) => state.tab !== 'folders';
-  // The group an entry is listed under: the favourites (null) in all of the list, else its project. A project's name is a
-  // string, NONE too, so none is taken for the favourites
-  const group = (a, state) => (!state.fav && !state.archived && a.favorite ? null : a.project ?? NONE);
+  // The day's heading an entry goes under: today, yesterday, the last 7 days, then its month
+  function dayOf(iso) {
+    const at = new Date(iso);
+    const now = new Date();
+    const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(at.getFullYear(), at.getMonth(), at.getDate())) / 86400000);
+    if (days <= 0) return t('ui_day_today');
+    if (days === 1) return t('ui_day_yesterday');
+    if (days <= 7) return t('ui_day_week');
+    // The browser's words for a month, the year too before this one; with Japanese's space after a number, as the page's other words have
+    const words = at.toLocaleDateString(LANG, at.getFullYear() === now.getFullYear() ? { month: 'long' } : { year: 'numeric', month: 'long' });
+    return words.replace(/(\d)([\u5e74\u6708])/g, '$1 $2');
+  }
 
-  // The projects of every entry (both kinds, archived or not), most entries first, then by name, each to its place: the
+  // The projects of every entry (of any kind, archived or not), most entries first, then by name, each to its place: the
   // order of the groups and of the projects' colors, which no filter changes
   function projectOrder() {
     const counts = new Map();
@@ -1140,9 +1015,6 @@
   // (picked, its last entry gone)
   // LIMIT: from the seventh project on the colors repeat; let the viewer pick them if projects come to be that many
   const projectColor = (name, ranks) => (ranks.has(name) ? `var(--pc${ranks.get(name) % 6})` : 'var(--faint)');
-  // A group's name and color, as group() gives it: in the list's headings and the frame's pages to pick from
-  const groupName = (g) => (g === null ? t('ui_group_favorites') : g === NONE ? t('ui_no_project') : g);
-  const groupColor = (g, ranks) => (g === null ? 'var(--star)' : projectColor(g, ranks));
 
   // An icon button that toggles: its name stays what pressing does, and aria-pressed tells whether it is on (a
   // screen reader says "Archive, pressed"), as a WAI-ARIA toggle button
@@ -1161,53 +1033,48 @@
     setTimeout(() => t.remove(), 3000);
   }
 
-  // The one place the list's filters change: view (all, the favourites or the archived), tab, project and tag, as change has
-  // them. A changed filter starts from the first page and leaves the selection
+  // The one place the list's filters change: the view and the shelf's picks, as change has them. It leaves the selection
   function filter(change) {
     if ('view' in change) {
-      fav = change.view === 'fav';
-      archived = change.view === 'archived';
+      view = change.view;
+      newSeen.clear();
     }
-    if ('tab' in change) tab = change.tab;
+    if ('kind' in change) kind = change.kind;
+    if ('template' in change) template = change.template;
     if ('project' in change) project = change.project;
     if ('tag' in change) tag = change.tag;
-    page = 1;
     selected.clear();
   }
 
   function refilter(change = {}) {
     filter(change);
+    showResults();
     render();
   }
 
-  const setProject = (value) => refilter({ project: value });
-  const setTab = (value) => refilter({ tab: value });
   const setView = (value) => refilter({ view: value });
+  const NO_PICKS = { kind: '', template: '', project: '', tag: '' };
+  // How many of the shelf's picks narrow the list
+  const picksOn = () => [kind, template, project, tag].filter(Boolean).length;
+  // Whether a view's button is lit: All is no view and no picks, whatever the search, which the bar shows
+  const viewLit = (value) => value === view && (value !== 'all' || picksOn() === 0);
+  // A press of a view's button: lit, a view lets go of itself and All does nothing; unlit, All lets go of the view and the picks
+  function pressView(value) {
+    if (value !== 'all') setView(value === view ? 'all' : value);
+    else if (!viewLit('all')) refilter({ view: 'all', ...NO_PICKS });
+  }
   const setTag = (value) => refilter({ tag: value });
-  // The tag picked, picked again, is let go
-  const toggleTag = (value) => setTag(value === tag ? '' : value);
-  // The project picked, picked again, is let go, as a tag is
-  const toggleProject = (value) => setProject(value === project ? '' : value);
-
-  function setSize(value) {
-    size = value;
-    try {
-      localStorage.setItem(SIZE_KEY, String(size));
-    } catch {
-      // Without storage it still applies to this view
-    }
-    refilter();
-  }
-
-  function goPage(n) {
-    page = n;
-    render();
-    scrollTo(0, 0);
-  }
+  // What is picked of a part of the shelf, picked again, is let go
+  const picker = (name, now) => (value) => refilter({ [name]: value === now() ? '' : value });
+  const toggleKind = picker('kind', () => kind);
+  const toggleTemplate = picker('template', () => template);
+  const toggleTag = picker('tag', () => tag);
+  const toggleProject = picker('project', () => project);
 
   // Removing a link leaves its file alone, so it says unregister (ui_unlink_*) rather than delete (ui_delete_*)
-  const kind = (a) => (a.path ? 'unlink' : 'delete');
-  const tabKind = () => (tab === 'pages' ? 'delete' : 'unlink');
+  const removal = (a) => (a.path ? 'unlink' : 'delete');
+  // Selected, links alone say so; any stored page among them, delete
+  const bulkKind = () => ([...selected].every((slug) => items.find((a) => a.slug === slug)?.path) ? 'unlink' : 'delete');
 
   // A button that acts on the second click. The first click arms it and returns true; losing focus disarms it
   function arm(btn, armedLabel) {
@@ -1219,12 +1086,13 @@
 
   function disarmBulk() {
     $('bulk-delete').classList.remove('armed');
-    $('bulk-delete').querySelector('.label').textContent = t(`ui_${tabKind()}`);
-    $('bulk-archive').querySelector('.label').textContent = t(archived ? 'ui_unarchive' : 'ui_archive');
+    $('bulk-delete').querySelector('.label').textContent = t(`ui_${bulkKind()}`);
+    $('bulk-archive').querySelector('.label').textContent = t(view === 'archived' ? 'ui_unarchive' : 'ui_archive');
   }
 
   function renderBulk() {
     $('bulk').hidden = selected.size === 0;
+    $('list').classList.toggle('selecting', selected.size > 0);
     $('bulk-count').textContent = t('ui_selected', selected.size);
     disarmBulk();
   }
@@ -1258,12 +1126,15 @@
   }
 
   async function removeSelected() {
-    if (arm($('bulk-delete'), t(`ui_${tabKind()}_bulk_confirm`, selected.size))) return;
-    await actOnSelected(deleteOne, (n) => t(`ui_${tabKind()}_bulk_done`, n), (n, why) => t(`ui_${tabKind()}_bulk_failed`, n, why));
+    // Of what is selected now: those done leave the selection before the words are made
+    const now = bulkKind();
+    const what = () => now;
+    if (arm($('bulk-delete'), t(`ui_${what()}_bulk_confirm`, selected.size))) return;
+    await actOnSelected(deleteOne, (n) => t(`ui_${what()}_bulk_done`, n), (n, why) => t(`ui_${what()}_bulk_failed`, n, why));
   }
 
   async function archiveSelected() {
-    const to = !archived;
+    const to = view !== 'archived';
     await actOnSelected(
       (slug) => patchOne(slug, { archived: to }),
       (n) => t(to ? 'ui_archive_bulk_done' : 'ui_unarchive_bulk_done', n),
@@ -1278,20 +1149,17 @@
   // Every page's tag names, by name
   const tagNames = () => [...new Set(items.flatMap((a) => a.tags ?? []))].sort((x, y) => x.localeCompare(y, LANG));
 
-  // The keys of a listbox whose options are reached from the element with the focus (target) by aria-activedescendant, the one
-  // reached shown (.reached): ↑↓ (round the ends; opening it, shut), Enter to choose, Escape to close (the listbox, not a dialog
-  // it is in) and Tab to close. From a field (a combobox's), the one reached is also the one aria-selected, and Home and End are
-  // left to move its caret; from the listbox itself (a select's), aria-selected is the caller's (the one chosen), and Home and End
-  // reach the first and the last. Shared by the tags' suggestions, the frame's pages to pick from and the sort
-  function listKeys(target, { options, choose, close, open = () => {}, shown = () => true }) {
-    const field = target.matches('input, textarea');
+  // The keys of a field's listbox (the tags' suggestions), whose options are reached from it by aria-activedescendant, the one
+  // reached shown (.reached) and aria-selected: ↑↓ (round the ends; opening it, shut), Enter to choose, Escape to close (the
+  // listbox, not a dialog it is in) and Tab to close. Home and End are left to move the caret
+  function listKeys(target, { options, choose, close, open, shown }) {
     let active = -1;
     const mark = (i) => {
       const all = options();
       active = i;
       all.forEach((option, j) => {
         option.classList.toggle('reached', j === i);
-        if (field) option.setAttribute('aria-selected', String(j === i));
+        option.setAttribute('aria-selected', String(j === i));
       });
       if (i < 0) target.removeAttribute('aria-activedescendant');
       else {
@@ -1305,9 +1173,6 @@
         e.preventDefault();
         if (!shown()) open();
         else if (n) mark(e.key === 'ArrowDown' ? (active + 1) % n : (active <= 0 ? n : active) - 1);
-      } else if (!field && (e.key === 'Home' || e.key === 'End') && shown() && n) {
-        e.preventDefault();
-        mark(e.key === 'Home' ? 0 : n - 1);
       } else if (e.key === 'Enter' && shown() && active >= 0) {
         e.preventDefault();
         choose(active);
@@ -1317,52 +1182,6 @@
       } else if (e.key === 'Tab') close();
     });
     return mark;
-  }
-
-  // A button that opens a box over the page (popover, auto, from popovertarget): the browser opens and closes it from the button,
-  // closes it on a press outside and Escape, and gives the focus back to the button. It also closes where it would be left
-  // behind: when the window loses the focus (a press in the frame's page, which this page is not told of), changes its width (not
-  // its height alone, which a phone's keyboard changes) or scrolls the button from where it was as it opened (not a scroll that
-  // leaves it in place, as the tail of one before it opened does under a bar stuck to the top). Pressed anywhere in it but a field (an option, a heading),
-  // the focus stays where it is, and so the keys. build fills it before it shows, focus moves in once it shows
-  function menu(trigger, box, { build, focus }) {
-    let width;
-    let at;
-    box.addEventListener('mousedown', (e) => {
-      if (!e.target.closest('input')) e.preventDefault();
-    });
-    box.addEventListener('beforetoggle', (e) => {
-      if (e.newState !== 'open') {
-        trigger.setAttribute('aria-expanded', 'false');
-        return;
-      }
-      build();
-      const r = trigger.getBoundingClientRect();
-      const narrow = matchMedia('(max-width: 40rem)').matches;
-      box.style.top = `${r.bottom + 6}px`;
-      box.style.left = `${narrow ? 16 : r.left}px`;
-      box.style.width = narrow ? 'calc(100vw - 32px)' : '';
-      width = innerWidth;
-      at = r;
-    });
-    // Open is told once it is (an opening stopped on the way leaves it shut); shut, at once as it is about to be, above
-    box.addEventListener('toggle', (e) => {
-      if (e.newState !== 'open') return;
-      trigger.setAttribute('aria-expanded', 'true');
-      focus();
-    });
-    const close = () => {
-      if (box.matches(':popover-open')) box.hidePopover();
-    };
-    addEventListener('blur', close);
-    addEventListener('resize', () => {
-      if (innerWidth !== width) close();
-    });
-    document.addEventListener('scroll', (e) => {
-      const r = trigger.getBoundingClientRect();
-      if (e.target === document && at && (r.top !== at.top || r.left !== at.left)) close();
-    });
-    return close;
   }
 
   // Suggests tag names for a tags field, as a WAI-ARIA combobox: the names that hold what is written between the commas
@@ -1554,7 +1373,7 @@
     // The rest leave the selection unsent, their boxes unticked here: a list that does not change is not drawn again
     for (const slug of [...selected].filter((s) => !next.has(s))) {
       selected.delete(slug);
-      const row = [...$('list').querySelectorAll(':scope > li:not(.group)')].find((li) => li.dataset.slug === slug);
+      const row = [...$('list').querySelectorAll(':scope > li:not(.group, .tree)')].find((li) => li.dataset.slug === slug);
       if (row) row.querySelector('.sel').checked = false;
     }
     if (next.size === 0) {
@@ -1570,19 +1389,22 @@
     );
   }
 
-  // Relative times ("3 minutes ago") advance without redrawing the list
+  // Relative times ("3 minutes ago") advance without redrawing the list; a new day moves the days' headings
+  let drawnDay = '';
   function refreshTimes() {
+    if (new Date().toDateString() !== drawnDay) render();
     for (const t of document.querySelectorAll('#list time')) t.textContent = ago(t.dateTime);
   }
 
-  // A button of the shelf's projects or tags, with its count: pressed when it is the one picked, pick done on a press.
+  // A button of the shelf's parts, with its count: pressed when it is the one picked, pick done on a press.
   // The label goes in as text, being a name the API was sent, on one line, and whole as the title
-  function chip(label, n, { pressed, pick, extra = '' }) {
+  function chip(label, n, { pressed, pick, extra = '', mark = '' }) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `chip ${extra}`;
     b.title = label;
     b.setAttribute('aria-pressed', String(pressed));
+    b.innerHTML = mark;
     const name = document.createElement('span');
     name.className = 'name';
     name.textContent = label;
@@ -1591,41 +1413,77 @@
     count.className = 'n';
     count.textContent = n;
     b.append(count);
+    b.classList.toggle('none', n === 0);
     b.addEventListener('click', pick);
     return b;
   }
 
+  // A part of the shelf's rows and counts, by what values gives of an entry. The rows are those of list (the view's), with their
+  // numbers there to order them by, and what is picked at 0, so that no row jumps away as the rest narrows; the count, n, is of
+  // the entries the rest of the shelf, the view and the search leave
+  function tally(list, part, values) {
+    const count = (entries) => {
+      const counts = new Map();
+      for (const a of entries) for (const value of values(a)) counts.set(value, (counts.get(value) ?? 0) + 1);
+      return counts;
+    };
+    const state = current();
+    const rows = count(list);
+    if (state[part] && !rows.has(state[part])) rows.set(state[part], 0);
+    const left = count(arrange({ ...state, [part]: '' }));
+    return { rows, n: (value) => left.get(value) ?? 0 };
+  }
+
   // The shelf's projects of list, in the order of ranks (projectOrder)
   function renderChips(list, ranks) {
-    const counts = new Map();
-    for (const a of list) counts.set(a.project ?? NONE, (counts.get(a.project ?? NONE) ?? 0) + 1);
-    // Kept as a choice even at 0, so that deleting the last entry does not jump the selection back to all
-    if (project && !counts.has(project)) counts.set(project, 0);
-    const names = [...ranks.keys()].filter((name) => counts.has(name));
+    const { rows, n } = tally(list, 'project', (a) => [a.project ?? NONE]);
+    const names = [...ranks.keys()].filter((name) => rows.has(name));
     // A project dropped from every entry but still picked comes after those in the order
     if (project && project !== NONE && !names.includes(project)) names.push(project);
     // Its dot and its count
-    const projectChip = (label, value, n) => {
-      const b = chip(label, n, { pressed: value === project, pick: () => toggleProject(value), extra: 'project' });
+    const projectChip = (label, value) => {
+      const b = chip(label, n(value), { pressed: value === project, pick: () => toggleProject(value), extra: 'project' });
       b.dataset.project = value;
       b.style.setProperty('--c', projectColor(value, ranks));
       return b;
     };
-    const chips = names.map((name) => projectChip(name, name, counts.get(name)));
-    if (counts.has(NONE)) chips.push(projectChip(t('ui_no_project'), NONE, counts.get(NONE)));
+    const chips = names.map((name) => projectChip(name, name));
+    if (rows.has(NONE)) chips.push(projectChip(t('ui_no_project'), NONE));
     $('chips').replaceChildren(...chips);
     // Projects to choose between, or one chosen
     $('shelf-projects').hidden = chips.length < 2 && !project;
   }
 
+  const KIND_WORDS = { page: 'ui_kind_page', link: 'ui_kind_link', folder: 'ui_kind_folder' };
+  // The shelf's kinds: those list has, shown when there are some to choose between, or one chosen
+  function renderKinds(list) {
+    const { rows, n } = tally(list, 'kind', (a) => [kindOf(a)]);
+    const chips = ['page', 'link', 'folder'].filter((k) => rows.has(k)).map((k) => {
+      const b = chip(t(KIND_WORDS[k]), n(k), { pressed: k === kind, pick: () => toggleKind(k), mark: KIND_MARKS[k] });
+      b.dataset.kind = k;
+      return b;
+    });
+    $('kinds').replaceChildren(...chips);
+    $('shelf-kinds').hidden = chips.length < 2 && !kind;
+  }
+
+  // The shelf's templates, the most used first, then by name; none shown when no entry of list has one
+  function renderTemplates(list) {
+    const { rows, n } = tally(list, 'template', (a) => (a.template ? [a.template] : []));
+    const chips = [...rows.keys()].sort((x, y) => rows.get(y) - rows.get(x) || x.localeCompare(y, LANG)).map((name) => {
+      const b = chip(name, n(name), { pressed: name === template, pick: () => toggleTemplate(name) });
+      b.dataset.template = name;
+      return b;
+    });
+    $('templates').replaceChildren(...chips);
+    $('shelf-templates').hidden = chips.length === 0;
+  }
+
   // The shelf's tags by name, with how many of list have each; none shown when no page of it has one
   function renderTags(list) {
-    const counts = new Map();
-    for (const a of list) for (const name of a.tags ?? []) counts.set(name, (counts.get(name) ?? 0) + 1);
-    // Kept as a choice even at 0, as a project is
-    if (tag && !counts.has(tag)) counts.set(tag, 0);
-    const chips = [...counts.keys()].sort((x, y) => x.localeCompare(y, LANG)).map((name) => {
-      const b = chip(name, counts.get(name), { pressed: name === tag, pick: () => toggleTag(name), extra: 'tag' });
+    const { rows, n } = tally(list, 'tag', (a) => a.tags ?? []);
+    const chips = [...rows.keys()].sort((x, y) => x.localeCompare(y, LANG)).map((name) => {
+      const b = chip(name, n(name), { pressed: name === tag, pick: () => toggleTag(name) });
       b.dataset.tag = name;
       return b;
     });
@@ -1633,63 +1491,166 @@
     $('shelf-tags').hidden = chips.length === 0;
   }
 
-  // The shelf's views and the kinds over the list, with their counts
+  // How many pages are unseen, of those not archived
+  const newCount = () => items.filter((a) => a.news && !a.archived).length;
+
+  // The bar's count of new pages, the way to them; in the list and on a missing page's frame
+  function renderNews() {
+    const n = newCount();
+    $('news').hidden = n === 0;
+    $('news-n').textContent = t('ui_news', n);
+  }
+
+  const VIEW_WORDS = { new: 'ui_view_new', fav: 'ui_view_favorites', archived: 'ui_view_archived' };
+  // The shelf's views, with their counts
   function renderShelf() {
-    const view = archived ? 'archived' : fav ? 'fav' : 'all';
+    // Each view with the picks and the search on it. All is what pressing it leaves, the search alone; the new ones are those as
+    // they are now, not those read that stay on the view
+    const state = current();
     const counts = {
-      all: items.filter((a) => inList(a, { tab, archived: false, fav: false })).length,
-      fav: items.filter((a) => inList(a, { tab, archived: false, fav: true })).length,
-      archived: items.filter((a) => inList(a, { tab, archived: true, fav: false })).length,
+      all: arrange({ ...state, ...NO_PICKS, view: 'all' }).length,
+      new: arrange({ ...state, view: 'new' }).filter((a) => a.news).length,
+      fav: arrange({ ...state, view: 'fav' }).length,
+      archived: arrange({ ...state, view: 'archived' }).length,
     };
-    const views = [...document.querySelectorAll('.views button')];
-    for (const b of views) {
-      b.setAttribute('aria-pressed', String(b.dataset.view === view));
+    $('count').textContent = t('ui_list_head', counts.new);
+    for (const b of document.querySelectorAll('.views button[data-view]')) {
+      b.setAttribute('aria-pressed', String(viewLit(b.dataset.view)));
       b.querySelector('.n').textContent = counts[b.dataset.view];
+      b.classList.toggle('none', counts[b.dataset.view] === 0);
     }
-    const tabs = [...document.querySelectorAll('.tabs button')];
-    for (const b of tabs) {
-      b.setAttribute('aria-pressed', String(b.dataset.tab === tab));
-      b.querySelector('.n').textContent = items.filter((a) => inList(a, { tab: b.dataset.tab, archived, fav })).length;
-    }
-    $('kinds').hidden = tab === 'pages' && !items.some((a) => a.path);
+    // How many picks narrow the list, which the row of views does not show
+    const narrowed = picksOn();
+    $('narrow-filter-name').textContent = narrowed ? t('ui_narrow_n', narrowed) : t('ui_narrow');
+    // Where the picks are in a dialog, this is what is lit of them
+    $('narrow-filter').classList.toggle('narrowed', narrowed > 0);
+    // The filters folded, the head says what they narrow the list to: the view, and how many picks
+    const what = [view === 'all' ? '' : t(VIEW_WORDS[view]), narrowed ? t('ui_narrow_n', narrowed) : ''].filter(Boolean).join(' · ');
+    $('shelf-what').textContent = what;
+    $('shelf-what').hidden = !what;
     // A link added is not archived, so it is added from the lists it goes on
-    $('add-open').hidden = archived;
-    $('add-narrow').hidden = archived;
-    $('add-folder').hidden = archived;
-    // The bar's one button adds what the tab lists: a folder on the folders' tab, else a link
-    const what = tab === 'folders' ? 'ui_add_folder' : 'ui_add_link';
-    $('add-narrow').title = t(what);
-    $('add-narrow').setAttribute('aria-label', t(what));
+    $('add-open').hidden = view === 'archived';
   }
 
-  // If everything fits in the smallest page size, changing the size changes nothing, so the whole pager is hidden
-  function renderPager(total, pages, start) {
-    $('pager').hidden = total <= SIZES[0];
-    $('sizes').replaceChildren(...SIZES.map((n) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = n;
-      b.setAttribute('aria-pressed', String(n === size));
-      b.addEventListener('click', () => setSize(n));
-      return b;
-    }));
-    $('range').textContent = `${start + 1}–${Math.min(start + size, total)} / ${total}`;
-    $('pageno').textContent = `${page} / ${pages}`;
-    $('prev').disabled = page <= 1;
-    $('next').disabled = page >= pages;
+  // The menu of a, in a row and in the bar over its page
+  function moreMenu(a) {
+    const box = $('more').content.firstElementChild.cloneNode(true);
+    box.querySelector('summary').setAttribute('aria-label', t('ui_more_named', a.title));
+    box.querySelector('summary').title = t('ui_more_named', a.title);
+    if (a.path) {
+      const copy = box.querySelector('.copy');
+      copy.hidden = false;
+      copy.setAttribute('aria-label', t('ui_copy_path_named', a.title));
+      copy.addEventListener('click', () => copyPath(a.path, copy));
+    }
+    const edit = box.querySelector('.edit');
+    edit.setAttribute('aria-label', t('ui_edit_named', a.title));
+    edit.addEventListener('click', () => {
+      // The bar's menu is drawn anew in its place, a row's by its slug
+      const bar = box.closest('#read-actions, #frame-actions')?.id;
+      editBack = () => (bar ? $(bar) : [...$('list').children].find((li) => li.dataset.key === `entry:${editing.slug}`))?.querySelector('summary');
+      openEdit(a);
+    });
+    const open = box.querySelector('.open');
+    open.href = rawHref(a);
+    open.setAttribute('aria-label', t('ui_open_raw_named', a.title));
+    const dl = box.querySelector('.download');
+    dl.href = `/api/artifacts/${a.slug}/download`;
+    dl.download = `${a.slug}.html`;
+    dl.setAttribute('aria-label', t('ui_download_named', a.title));
+    // A folder has no page of its own to open alone or download, nor has a link whose file is gone
+    open.hidden = Boolean(a.folder || a.missing);
+    dl.hidden = Boolean(a.folder || a.missing);
+    const arc = box.querySelector('.archive');
+    arc.querySelector('.label').textContent = t(a.archived ? 'ui_unarchive' : 'ui_archive');
+    arc.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
+    arc.addEventListener('click', () => toggleArchived(a));
+    const del = box.querySelector('.delete');
+    disarm(a, del);
+    del.addEventListener('click', () => remove(a, del));
+    del.addEventListener('blur', () => disarm(a, del));
+    return box;
   }
 
-  // A row of a, i-th on the page, its dot and project chip of its project's color by ranks (projectOrder)
+  // Pressed, a row opens its page beside the list, or whole where nothing is beside it; a modified press is the link's, in a new tab
+  function openRow(e, x) {
+    if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    if (oneColumn.matches) {
+      keepOrder();
+      return;
+    }
+    e.preventDefault();
+    pickRow(x);
+  }
+
+  // Opens the page of x beside the list
+  function pickRow(x) {
+    if (isPicked(x)) return;
+    picked = { slug: x.slug, file: x.file ?? '' };
+    for (const li of $('list').children) li.classList.toggle('picked', li.dataset.slug === picked.slug && (li.dataset.file ?? '') === picked.file);
+    drawReader();
+  }
+
+  // The bar over a page, the page's star and links: of a folder's page, its path and the page alone, as it holds no state of its own
+  function drawActions(box, a, file) {
+    const star = box.querySelector('.star');
+    star.hidden = Boolean(file);
+    toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
+    star.onclick = () => toggleFavorite(a);
+    const copy = box.querySelector('.copy');
+    copy.hidden = !file;
+    copy.onclick = () => copyPath(`${a.path}/${file}`, copy);
+    const open = box.querySelector('.open');
+    open.href = rawHref({ slug: a.slug, file });
+    open.hidden = Boolean(a.missing || a.folder && !file);
+    box.querySelector('.more-slot').replaceChildren(...(file ? [] : [moreMenu(a)]));
+  }
+
+  // Loads href in the iframe beside the list, in place of its history entry: moved through by j and k, Back is the tab's, and
+  // does not leave the rows on one page and the iframe on another. Nothing else alive there tells that it is read
+  let readLoaded = 'about:blank';
+  function readInto(href) {
+    if (href === readLoaded) return;
+    readLoaded = href;
+    $('read-frame').contentWindow.location.replace(href);
+  }
+
+  // What is beside the list, as the row chosen is now: the words how to choose while none is; the words why, of a link whose
+  // file is gone. The page in the iframe stays loaded through the list's redraws, reloading itself as it changes
+  function drawReader() {
+    const a = picked && items.find((x) => x.slug === picked.slug);
+    if (!a) picked = null;
+    // Loaded only while it is there, as the frame's, so that a link's missing file is no 404 kept when the file is back
+    readInto(a && !a.missing ? rawHref(picked) : 'about:blank');
+    $('read-head').hidden = !a && columns.listOpen;
+    $('read-head').classList.toggle('empty', !a);
+    $('read-actions').hidden = !a;
+    $('read-frame').hidden = !a || Boolean(a.missing);
+    $('read-blank').hidden = Boolean(a && !a.missing);
+    $('read-blank').textContent = a?.missing ? t('ui_link_missing', a.path) : t('ui_read_blank');
+    $('read-title').hidden = !a;
+    if (!a) return;
+    const name = picked.file || a.title;
+    $('read-title').textContent = name;
+    $('read-title').title = name;
+    $('read-title').href = pageHref(picked);
+    $('read-frame').title = name;
+    drawActions($('read-actions'), a, picked.file);
+  }
+
+  // A row of a, i-th in the list
   function row(a, i, ranks) {
     const li = $('row').content.firstElementChild.cloneNode(true);
-    li.style.setProperty('--i', i);
+    li.style.setProperty('--i', Math.min(i, 30));
     li.dataset.key = `entry:${a.slug}`;
-    li.style.setProperty('--c', projectColor(a.project ?? NONE, ranks));
     li.dataset.slug = a.slug;
-    const proj = li.querySelector('.proj');
-    proj.textContent = a.project ?? '';
-    proj.title = a.project ?? '';
-    proj.hidden = !a.project;
+    li.classList.toggle('unseen', Boolean(a.news));
+    li.classList.toggle('gone', Boolean(a.missing));
+    li.classList.toggle('picked', isPicked(a));
+    const lead = li.querySelector('.lead');
+    if (a.folder) lead.innerHTML = FOLDER_MARK;
+    else if (a.path) lead.innerHTML = LINK_MARK;
+    else lead.innerHTML = `<span class="${a.news ? 'dot' : 'ring'}"></span>`;
     const sel = li.querySelector('.sel');
     sel.checked = selected.has(a.slug);
     sel.setAttribute('aria-label', t('ui_select_named', a.title));
@@ -1701,92 +1662,76 @@
     const link = li.querySelector('.title');
     link.href = `/a/${a.slug}/`;
     link.textContent = a.title;
-    link.title = a.title;
-    li.querySelector('.desc').textContent = a.description;
-    li.querySelector('.desc').title = a.description;
-    li.querySelector('.desc').hidden = !a.description;
-    const tags = li.querySelector('.tags');
-    tags.append(...(a.tags ?? []).map((name) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'tagpill';
-      b.textContent = name;
-      b.title = name;
-      b.setAttribute('aria-label', t('ui_tag_filter_named', name));
-      // The tag picked already, the list stays as it is (its selection and page too)
-      b.addEventListener('click', () => { if (name !== tag) setTag(name); });
-      return b;
-    }));
-    tags.hidden = !a.tags?.length;
-    // The creation date, which a meta.json from before it was recorded does not have
-    const made = li.querySelector('.made');
-    made.textContent = a.createdAt ? t(a.path ? 'ui_registered_at' : 'ui_created_at', new Date(a.createdAt).toLocaleDateString(LANG, { dateStyle: 'medium' })) : '';
-    made.hidden = !a.createdAt;
-    li.querySelector('.sub').hidden = !a.description && !a.path && !a.tags?.length;
-    li.querySelector('.more summary').setAttribute('aria-label', t('ui_more_named', a.title));
-    // The update's, in every order: the creation has its date beside it
+    // All the row's words that it may cut or leave out: the title's hit area covers the row, so that no title of what lies under it shows
+    link.title = [a.title, a.description, a.project, a.path, a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
+      .filter(Boolean).join('\n');
+    const sub = li.querySelector('.sub');
+    const put = (cls, text) => {
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = text;
+      sub.append(span);
+      return span;
+    };
+    if (a.news === 'version') put('ver', t('ui_new_version', a.version));
+    if (a.folder) put('kindof', t('ui_kind_folder'));
+    else if (a.path) put('kindof', t('ui_kind_of_link', a.template ?? 'HTML'));
+    else if (a.template) put('kindof', a.template);
+    if (a.project && ranks.size > 1) put('proj', a.project);
+    if (a.tags?.length) {
+      const tags = put('tags', '');
+      tags.append(...a.tags.map((name) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tagpill';
+        b.textContent = name;
+        b.title = name;
+        b.setAttribute('aria-label', t('ui_tag_filter_named', name));
+        // The tag picked already, the list stays as it is (its selection too)
+        b.addEventListener('click', () => { if (name !== tag) setTag(name); });
+        return b;
+      }));
+    }
+    // A link shows the file where it was registered; if the file is gone, the row says so
+    if (a.missing) put('miss', t('ui_file_missing'));
+    else if (a.path) {
+      const path = put('path', '');
+      const bdi = document.createElement('bdi');
+      bdi.dir = 'ltr';
+      bdi.textContent = a.path;
+      path.append(bdi);
+    }
     const time = li.querySelector('time');
     time.dateTime = a.updatedAt;
     time.textContent = ago(a.updatedAt);
-    time.title = [a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
-      .filter(Boolean).join('\n');
-    // A link shows the file where it was registered; if the file is gone, the row says it cannot be opened
-    if (a.path) {
-      const path = document.createElement('span');
-      path.className = a.missing ? 'path missing' : 'path';
-      path.textContent = a.missing ? t('ui_file_missing', a.path) : a.path;
-      path.title = a.path;
-      li.querySelector('.sub').append(path);
-      const copy = li.querySelector('.copy');
-      copy.hidden = false;
-      copy.setAttribute('aria-label', t('ui_copy_path_named', a.title));
-      copy.addEventListener('click', () => copyPath(a.path, copy));
-    }
     const star = li.querySelector('.star');
     toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
-    const edit = li.querySelector('.edit');
-    edit.setAttribute('aria-label', t('ui_edit_named', a.title));
-    edit.addEventListener('click', () => openEdit(a));
-    const open = li.querySelector('.open');
-    open.href = `/a/${a.slug}/?raw`;
-    open.setAttribute('aria-label', t('ui_open_raw_named', a.title));
-    const dl = li.querySelector('.download');
-    dl.href = `/api/artifacts/${a.slug}/download`;
-    dl.download = `${a.slug}.html`;
-    dl.setAttribute('aria-label', t('ui_download_named', a.title));
+    li.querySelector('.actions').append(moreMenu(a));
     if (a.folder) {
-      // On the folders' tab a folder's row heads its tree, whose rows are its pages
       li.classList.add('folder');
       // A folder's title opens and closes its tree; its URL leads to the list with it open, for a new tab
       link.setAttribute('aria-expanded', String(opened.has(a.slug)));
-      link.insertAdjacentHTML('afterbegin', '<span class="fold"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 6 6 6-6 6\"/></svg></span><svg class=\"kind\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z\"/></svg>');
       link.addEventListener('click', (e) => {
         if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
         toggleOpen(a.slug, '');
       });
-      // A folder has no page of its own to open alone or download
-      open.hidden = true;
-      dl.hidden = true;
+    } else {
+      link.addEventListener('click', (e) => openRow(e, a));
     }
     if (a.missing) {
       link.removeAttribute('href');
       // Without href it cannot take focus and ↑↓ would stop before this row, so scripts can still move to it
       link.tabIndex = -1;
-      open.hidden = true;
-      dl.hidden = true;
     }
-    const arc = li.querySelector('.archive');
-    arc.querySelector('.label').textContent = t(a.archived ? 'ui_unarchive' : 'ui_archive');
-    arc.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
-    arc.addEventListener('click', () => toggleArchived(a));
-    const del = li.querySelector('.delete');
-    disarm(a, del);
-    del.addEventListener('click', () => remove(a, del));
-    del.addEventListener('blur', () => disarm(a, del));
     return li;
   }
+
+  const LINK_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
+  const FOLDER_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/></svg>';
+  const PAGE_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6"/></svg>';
+  const KIND_MARKS = { page: PAGE_MARK, link: LINK_MARK, folder: FOLDER_MARK };
 
   // What a tree's row begins with, in the list's and the frame's: a directory's fold and icon, a page's room for the fold
   // and its icon; and a directory's note (unread, cut, empty), '' for none
@@ -1846,14 +1791,17 @@
       const li = tree(['page'], `page:${openKey(a.slug, p.file)}`);
       const name = baseName(p.file);
       const link = li.querySelector('.title');
-      link.href = pageHref({ slug: a.slug, file: p.file });
+      const x = { slug: a.slug, file: p.file };
+      li.dataset.file = p.file;
+      li.classList.toggle('picked', isPicked(x));
+      link.href = pageHref(x);
       link.innerHTML = PAGE_HEAD;
       link.append(name);
-      link.title = p.file;
+      link.title = `${p.file}\n${t('ui_updated_at', fmt(p.updatedAt))}`;
+      link.addEventListener('click', (e) => openRow(e, x));
       const time = li.querySelector('time');
       time.dateTime = p.updatedAt;
       time.textContent = ago(p.updatedAt);
-      time.title = t('ui_updated_at', fmt(p.updatedAt));
       const open = li.querySelector('.open');
       open.href = `/a/${a.slug}/${p.file.split('/').map(encodeURIComponent).join('/')}`;
       open.setAttribute('aria-label', t('ui_open_raw_named', name));
@@ -2002,6 +1950,8 @@
 
   // The entry being edited and its values when opened. Only changed fields are sent (so a link's title keeps coming from its file unless edited)
   let editing;
+  // The menu's button it was opened from, as drawn when it closes
+  let editBack;
   const EDIT_FIELDS = { title: 'edit-name', slug: 'edit-slug', project: 'edit-project', description: 'edit-desc' };
 
   function openEdit(a) {
@@ -2030,86 +1980,79 @@
       $('edit-error').hidden = false;
       return;
     }
+    if (changes.slug) {
+      const was = editing.slug;
+      // The row it goes back to is under the new name
+      editing = { ...editing, slug: changes.slug };
+      // The frame's URL is the old name's, which is gone now; the page chosen beside the list is loaded under the new one
+      if (framed) {
+        location.replace(pageHref({ slug: changes.slug }));
+        return;
+      }
+      // Drawn with the list read below
+      if (picked?.slug === was) picked.slug = changes.slug;
+    }
     toast(t('ui_saved'));
     // Drawn before the dialog closes, which gives focus to the row's menu button as drawn
     await load();
     $('edit-dialog').close();
   }
 
-  // What a tab says when all of it is archived, and when none is
-  const ARCHIVED = {
-    pages: ['ui_pages_all_archived', 'ui_pages_none_archived'],
-    links: ['ui_links_all_archived', 'ui_links_none_archived'],
-    folders: ['ui_folders_all_archived', 'ui_folders_none_archived'],
-  };
   function render() {
-    const list = items.filter((a) => inList(a, { tab, archived, fav }));
+    const state = current();
+    if (view === 'new') for (const a of items) if (a.news && !a.archived) newSeen.add(a.slug);
+    const list = items.filter((a) => inView(a, state));
     const ranks = projectOrder();
     renderChips(list, ranks);
+    renderKinds(list);
+    renderTemplates(list);
     renderTags(list);
-    const archivedHere = items.filter((a) => inView(a, { tab, archived: true })).length;
-    const state = current();
-    const shown = arrange(state, ranks);
-    $('sort-name').textContent = t(`ui_sort_${sort}`);
-    for (const option of $('sort-list').children) option.setAttribute('aria-selected', String(option.dataset.sort === sort));
+    const archivedCount = items.filter((a) => a.archived).length;
+    const shown = arrange(state);
     // Entries deleted elsewhere leave the selection
     for (const slug of selected) if (!list.some((a) => a.slug === slug)) selected.delete(slug);
-    $('count').textContent = shown.length === list.length ? t('ui_count_all', list.length) : t('ui_count_shown', shown.length, list.length);
-    // Empty: of the kind at all (how to add one), with all of it archived (the way to them), or in the archive
+    // Empty: at all (how to add one), with all of it archived (the way to them), or of the view
     const empty = list.length === 0;
-    const all = !archived && !fav;
-    $('empty').hidden = !(empty && all && !archivedHere && tab === 'pages');
-    $('empty-links').hidden = !(empty && all && !archivedHere && tab === 'links');
-    $('empty-folders').hidden = !(empty && all && !archivedHere && tab === 'folders');
-    $('all-archived').hidden = !(empty && all && archivedHere);
-    $('empty-favorites').hidden = !(empty && fav);
-    $('all-archived').querySelector('strong').textContent = t(ARCHIVED[tab][0], archivedHere);
-    $('empty-archived').hidden = !(empty && archived);
-    $('empty-archived').querySelector('strong').textContent = t(ARCHIVED[tab][1]);
-    $('nomatch').hidden = list.length === 0 || shown.length > 0;
-    // If deleting empties the last page, go back to the last one left
-    const pages = Math.max(1, Math.ceil(shown.length / size));
-    page = Math.min(page, pages);
-    const start = (page - 1) * size;
-    // Each group is headed, a page that starts within one too: its dot, its name and how many it has in all. A heading is
-    // no row (role none)
-    const groups = shown.map((a) => group(a, state));
-    const sizes = new Map();
-    for (const g of groups) sizes.set(g, (sizes.get(g) ?? 0) + 1);
+    $('empty').hidden = !(empty && view === 'all' && !archivedCount);
+    $('all-archived').hidden = !(empty && view === 'all' && archivedCount);
+    $('all-archived').querySelector('strong').textContent = t('ui_all_archived', archivedCount);
+    $('empty-new').hidden = !(empty && view === 'new');
+    $('empty-favorites').hidden = !(empty && view === 'fav');
+    $('empty-archived').hidden = !(empty && view === 'archived');
+    $('nomatch').hidden = empty || shown.length > 0;
     const rows = [];
     // Rows drawn already are drawn anew in place, without rising in again: only a row new to the list rises in
     const had = new Set([...$('list').children].map((li) => li.dataset.key));
-    shown.slice(start, start + size).forEach((a, i) => {
-      const g = groups[start + i];
-      if (grouped(state) && (i === 0 || groups[start + i - 1] !== g)) {
+    // The row with the focus has it again once drawn anew: a page read redraws the list as the keys go through it
+    const focused = $('list').contains(document.activeElement) && document.activeElement.matches('.title')
+      ? document.activeElement.closest('li').dataset.key : null;
+    let day = '';
+    shown.forEach((a, i) => {
+      if (dayOf(a.updatedAt) !== day) {
+        day = dayOf(a.updatedAt);
         const li = document.createElement('li');
         li.className = 'group';
-        li.dataset.key = `group:${JSON.stringify(g)}`;
+        li.dataset.key = `group:${day}`;
         li.setAttribute('role', 'none');
-        li.style.setProperty('--c', groupColor(g, ranks));
         const heading = document.createElement('div');
         heading.setAttribute('role', 'heading');
         heading.setAttribute('aria-level', '2');
-        const count = document.createElement('span');
-        count.className = 'n';
-        count.textContent = t('ui_count_all', sizes.get(g));
-        const name = document.createElement('span');
-        name.className = 'name';
-        name.textContent = groupName(g);
-        heading.title = name.textContent;
-        heading.append(name, count);
+        heading.textContent = day;
         li.append(heading);
         rows.push(li);
       }
       rows.push(row(a, i, ranks));
       if (a.folder && !a.missing && opened.has(a.slug)) treeRows(a, '', 1, rows);
     });
+    drawnDay = new Date().toDateString();
     for (const li of rows) li.classList.toggle('kept', had.has(li.dataset.key));
     // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
-    renderPager(shown.length, pages, start);
+    if (focused !== null) rows.find((li) => li.dataset.key === focused)?.querySelector('.title')?.focus({ preventScroll: true });
     renderShelf();
+    renderNews();
     renderBulk();
+    drawReader();
     syncUrl();
   }
 
@@ -2122,13 +2065,50 @@
     }
   }
 
-  // The pages the frame picks from (framePages): the list the page was opened from, in its groups' order (arrange); if the
-  // page is not in it, all entries of the same kind and archived or not, unfiltered, in their groups by update time. That
-  // list as it was when the page was first found, so that starring or archiving it from the bar does not move it, with the
-  // state it was arranged by (for its groups). A page gone since drops out
+  // Keeps the pages of the list as it is now, for j and k where a page is open whole: a read page leaves the view of the new
+  // ones, and they go on through the list as it was
+  function keepOrder() {
+    try {
+      sessionStorage.setItem(ORDER_KEY, JSON.stringify(arrange(current()).filter((x) => !x.missing && !x.folder).map((x) => x.slug)));
+    } catch {
+      // Without storage, j and k go through the list the URL of the list makes
+    }
+  }
+
+  // The pages j and k go through in the frame: those of the list that opened it, the ones gone since left out. Opened
+  // otherwise (from the URL), the list it was last on, or if it is not on that all entries of its kind, as first found
   let frameOrder;
-  let frameState;
-  // The directory of the folder's page framed, as read (GET /api/artifacts/{slug}/pages): what its pages to pick from are; null
+  function pagesInOrder(a) {
+    let kept = null;
+    try {
+      kept = JSON.parse(sessionStorage.getItem(ORDER_KEY));
+    } catch {
+      // Storage is unavailable, or holds something else
+    }
+    if (Array.isArray(kept) && kept.includes(framed)) frameOrder = kept;
+    if (!frameOrder) {
+      const openable = (state) => arrange(state).filter((x) => !x.missing && !x.folder);
+      let first = openable(readState(savedList()));
+      if (!first.some((x) => x.slug === a.slug)) first = openable({ ...readState(''), kind: kindOf(a), view: a.archived ? 'archived' : 'all' });
+      frameOrder = first.map((x) => x.slug);
+    }
+    return frameOrder.filter((slug) => {
+      const x = items.find((y) => y.slug === slug);
+      return x && !x.missing;
+    });
+  }
+
+  // j and k in the frame: a folder's page goes through the pages of its directory, by name
+  function moveFrame(step) {
+    const a = items.find((x) => x.slug === framed);
+    if (!a) return;
+    const pages = FILE ? (fileListing?.pages ?? []).map((p) => ({ slug: framed, file: p.file })) : pagesInOrder(a).map((slug) => ({ slug }));
+    const at = pages.findIndex(isFramed);
+    const next = at === -1 ? undefined : pages[at + step];
+    if (next) location.href = pageHref(next);
+  }
+
+  // The directory of the folder's page framed, as read (GET /api/artifacts/{slug}/pages): what j and k go through; null
   // when it is gone, undefined until read
   let fileListing;
   // The tree on the frame's left of a folder's page: the directories open in it ('' the top, and those the page is under,
@@ -2151,119 +2131,8 @@
   const sideNarrow = matchMedia('(max-width: 40rem)');
   let sideOver = false;
 
-  // Fixes the frame's order and state once, as the page a is first found
-  function fixFrameOrder(a) {
-    if (frameOrder) return;
-    const openable = (state) => arrange(state).filter((x) => !x.missing);
-    frameState = readState(savedList());
-    let first = openable(frameState);
-    if (!first.some((x) => x.slug === a.slug)) {
-      frameState = { ...readState(''), tab: kindOf(a), archived: Boolean(a.archived) };
-      first = openable(frameState);
-    }
-    frameOrder = first.map((x) => x.slug);
-  }
-
-  // A folder's page picks from the pages of its directory, by name
-  const framePages = () => (FILE
-    ? (fileListing?.pages ?? []).map((p) => ({ ...items.find((x) => x.slug === framed), file: p.file, title: p.file }))
-    : frameOrder.map((slug) => items.find((x) => x.slug === slug)).filter((x) => x && !x.missing));
-
-  // The sort's orders to pick from, opened from the sort: the focus on the list, the order now reached and selected (render
-  // selects it); picked, the list is sorted by it, as the select it replaces did
-  function sortMenu() {
-    const box = $('sort-menu');
-    const list = $('sort-list');
-    const options = () => [...list.children];
-    const pick = (i) => {
-      box.hidePopover();
-      sort = options()[i].dataset.sort;
-      refilter();
-    };
-    const close = menu($('sort'), box, {
-      build: () => mark(options().findIndex((o) => o.dataset.sort === sort)),
-      focus: () => list.focus(),
-    });
-    const mark = listKeys(list, { options, choose: pick, close });
-    options().forEach((option, i) => option.addEventListener('click', () => pick(i)));
-  }
-
-  // The frame's pages to pick from, opened from its title: made as it opens (not as the list is fetched again, which would undo
-  // what is typed and reached), searched as the list is, in the list's groups
-  const FOLDER = Symbol('folder');
-  function pagePicker() {
-    const box = $('page-pick');
-    const q = $('page-pick-q');
-    const list = $('page-pick-list');
-    let pages = [];
-    let shown = [];
-    const options = () => [...list.querySelectorAll('[role="option"]')];
-    // The page open now is not opened again
-    const go = (x) => {
-      if (isFramed(x)) box.hidePopover();
-      else location.href = pageHref(x);
-    };
-    const fill = () => {
-      const ranks = projectOrder();
-      const typed = q.value.trim().toLowerCase();
-      shown = pages.filter((x) => matches(x, typed));
-      const groups = [];
-      for (const x of shown) {
-        // A folder's pages are its own group, under its title
-        const g = x.file ? FOLDER : group(x, frameState);
-        if (groups.at(-1)?.g !== g) groups.push({ g, pages: [] });
-        groups.at(-1).pages.push(x);
-      }
-      let i = 0;
-      list.replaceChildren(...groups.map(({ g, pages: inGroup }, n) => {
-        const el = document.createElement('div');
-        el.setAttribute('role', 'group');
-        el.setAttribute('aria-labelledby', `page-pick-g${n}`);
-        el.style.setProperty('--c', g === FOLDER ? projectColor(inGroup[0].project ?? NONE, ranks) : groupColor(g, ranks));
-        const heading = document.createElement('div');
-        heading.className = 'gh';
-        heading.id = `page-pick-g${n}`;
-        heading.textContent = g === FOLDER ? items.find((x) => x.slug === framed)?.title : groupName(g);
-        el.append(heading, ...inGroup.map((x) => {
-          // A link, so that a middle or modified click opens it in a new tab as the browser does; a plain one goes here
-          const option = document.createElement('a');
-          option.id = `page-pick-${i++}`;
-          option.href = pageHref(x);
-          option.tabIndex = -1;
-          option.setAttribute('role', 'option');
-          if (isFramed(x)) option.setAttribute('aria-current', 'page');
-          option.innerHTML = '<span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
-          option.firstChild.textContent = x.title;
-          option.addEventListener('click', (e) => {
-            if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-            e.preventDefault();
-            go(x);
-          });
-          return option;
-        }));
-        return el;
-      }));
-      $('page-pick-none').hidden = shown.length > 0;
-    };
-    const close = menu($('frame-pick'), box, {
-      build: () => {
-        pages = framePages();
-        q.value = '';
-        fill();
-        mark(shown.findIndex(isFramed));
-      },
-      focus: () => q.focus(),
-    });
-    const mark = listKeys(q, { options, choose: (i) => go(shown[i]), close });
-    // Typed, the first page found is the one Enter opens
-    q.addEventListener('input', () => {
-      fill();
-      mark(shown.length ? 0 : -1);
-    });
-  }
-
   // Reads again the directories open in the side's tree, each under ones open, and the page's own, whatever is open,
-  // for the pages to pick from. One gone for now stays open, to show again when it is back
+  // for j and k. One gone for now stays open, to show again when it is back
   // LIMIT: each directory open is read every 3 s with the list, as readOpen's
   // As readOpen's, the last call's answers win
   let sideReads = 0;
@@ -2360,7 +2229,7 @@
       for (const k of [...sideOpen]) {
         if (k === path || k.startsWith(`${path}/`)) {
           sideOpen.delete(k);
-          // The page's own directory is read whatever is open, for the pages to pick from
+          // The page's own directory is read whatever is open, for j and k
           if (k !== dirOf(FILE)) sideListings.delete(k);
         }
       }
@@ -2409,15 +2278,8 @@
     $('side').hidden = !open;
     $('side').classList.toggle('over', sideNarrow.matches);
     $('side-grip').hidden = !open || sideNarrow.matches;
-    $('side-grip').setAttribute('aria-valuenow', String(width));
-    $('side-grip').setAttribute('aria-valuemin', String(SIDE_MIN));
-    $('side-grip').setAttribute('aria-valuemax', String(sideMax()));
+    edgeAt($('side-grip'), width, width, SIDE_MIN, sideMax());
     $('side-show').hidden = open;
-    // The tree beside the page lists its pages: the bar keeps the page's title but picks nothing while it shows, and picks
-    // again with it hidden, or over the page
-    const tree = open && !sideNarrow.matches;
-    $('frame-pick').disabled = tree;
-    if (tree && $('page-pick').matches(':popover-open')) $('page-pick').hidePopover();
   }
   function keepSide() {
     if (sideNarrow.matches) return;
@@ -2439,30 +2301,116 @@
     side.width = Math.min(Math.max(Math.round(width), SIDE_MIN), sideMax());
     layoutSide();
   }
-  if (FILE) {
-    $('side-hide').addEventListener('click', () => showSide(false));
-    $('side-show').addEventListener('click', () => showSide(true));
-    const grip = $('side-grip');
+  // Where an edge stands, the width it sets and that width's bounds, for its keys and for screen readers
+  function edgeAt(grip, at, width, min, max) {
+    grip.style.setProperty('--at', `${at}px`);
+    grip.setAttribute('aria-valuenow', String(width));
+    grip.setAttribute('aria-valuemin', String(min));
+    grip.setAttribute('aria-valuemax', String(max));
+  }
+  // An edge to drag or to move by keys: set takes the width asked for, the distance from where the width starts (left) or a step of
+  // 16 px from the width shown, which the window may hold under the one kept, Home and End its bounds; keep, once it stops
+  function dragEdge(grip, { left = () => 0, set, keep }) {
     grip.addEventListener('pointerdown', (e) => {
       if (e.button) return;
       e.preventDefault();
       grip.setPointerCapture(e.pointerId);
       grip.classList.add('dragging');
     });
-    grip.addEventListener('pointermove', (e) => { if (grip.hasPointerCapture(e.pointerId)) sideWidth(e.clientX); });
+    grip.addEventListener('pointermove', (e) => { if (grip.hasPointerCapture(e.pointerId)) set(e.clientX - left()); });
     grip.addEventListener('lostpointercapture', () => {
       grip.classList.remove('dragging');
-      keepSide();
+      keep();
     });
     grip.addEventListener('keydown', (e) => {
-      // From the width shown, which the window may hold under the one kept
       const now = Number(grip.getAttribute('aria-valuenow'));
-      const to = { ArrowLeft: now - 16, ArrowRight: now + 16, Home: SIDE_MIN, End: sideMax() }[e.key];
+      const to = {
+        ArrowLeft: now - 16, ArrowRight: now + 16, Home: Number(grip.getAttribute('aria-valuemin')), End: Number(grip.getAttribute('aria-valuemax')),
+      }[e.key];
       if (to === undefined) return;
       e.preventDefault();
-      sideWidth(to);
-      keepSide();
+      set(to);
+      keep();
     });
+  }
+  // The two columns left of the page, the viewer's, kept in the browser: null for the default. All in rem, as the widths that fold them
+  // are, so that a larger text in the browser does not narrow them. The list is held off the page beside it, which keeps the room it
+  // has at its narrowest where the filters are a row (56rem less the list's 22rem, less the room round it); at its narrowest it
+  // still holds a row's menu and the bulk bar
+  const COLUMNS_KEY = 'list.columns';
+  const columns = { shelf: null, list: null, open: true, listOpen: true };
+  try {
+    const saved = JSON.parse(localStorage.getItem(COLUMNS_KEY));
+    if (Number.isFinite(saved?.shelf)) columns.shelf = saved.shelf;
+    if (Number.isFinite(saved?.list)) columns.list = saved.list;
+    if (typeof saved?.open === 'boolean') columns.open = saved.open;
+    if (typeof saved?.listOpen === 'boolean') columns.listOpen = saved.listOpen;
+  } catch {
+    // Storage is unavailable, or holds something else
+  }
+  // The widths now, within the bounds of now, and those bounds
+  function columnWidths() {
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const within = (value, min, max) => Math.round(Math.min(Math.max(value, min), max));
+    const bounds = { shelfMin: Math.round(10 * rem), shelfMax: Math.round(20 * rem), listMin: Math.round(20 * rem) };
+    const shelf = columns.open ? within(columns.shelf ?? 12.5 * rem, bounds.shelfMin, bounds.shelfMax) : 0;
+    bounds.listMax = Math.max(bounds.listMin, Math.round(innerWidth - shelf - 32.5 * rem));
+    return { ...bounds, shelf, list: within(columns.list ?? 25.5 * rem, bounds.listMin, bounds.listMax) };
+  }
+  // Lays the columns out as they are (what is kept is not changed by the bounds of a window narrower for now)
+  function layoutColumns() {
+    const { shelf, list, shelfMin, shelfMax, listMin, listMax } = columnWidths();
+    const root = document.documentElement.style;
+    root.setProperty('--shelf-width', `${shelf}px`);
+    root.setProperty('--list-width', `${list}px`);
+    $('manage').classList.toggle('shelf-closed', !columns.open);
+    $('manage').classList.toggle('list-closed', !columns.listOpen);
+    $('shelf-grip').hidden = !columns.open;
+    $('list-grip').hidden = !columns.listOpen;
+    $('shelf-tools').hidden = columns.open;
+    $('shelf-show').hidden = columns.open;
+    $('list-show').hidden = columns.listOpen;
+    // In the head of what is left: the list's, or the page's beside it
+    const head = columns.listOpen ? document.querySelector('.lhead') : $('read-head');
+    if ($('shelf-tools').parentElement !== head) head.prepend($('shelf-tools'));
+    edgeAt($('shelf-grip'), shelf, shelf, shelfMin, shelfMax);
+    edgeAt($('list-grip'), shelf + list, list, listMin, listMax);
+  }
+  // The column named takes the width asked for, as far as its bounds let it
+  function setColumn(name, width) {
+    columns[name] = width;
+    columns[name] = columnWidths()[name];
+    layoutColumns();
+  }
+  function keepColumns() {
+    try {
+      localStorage.setItem(COLUMNS_KEY, JSON.stringify(columns));
+    } catch {
+      // Storage is unavailable: the columns are laid out as they are, for now
+    }
+  }
+  function showShelf(open) {
+    columns.open = open;
+    layoutColumns();
+    keepColumns();
+    $(open ? 'shelf-hide' : 'shelf-show').focus();
+  }
+  // The head beside the list holds the way back to it, so that it shows with no page chosen too
+  function showList(open) {
+    columns.listOpen = open;
+    layoutColumns();
+    keepColumns();
+    drawReader();
+  }
+  // What the shelf and the search pick is the list's to show: folded, it opens, on the wide page where it can be folded
+  const WIDE = matchMedia('not (max-width: 70rem)');
+  function showResults() {
+    if (WIDE.matches && !columns.listOpen) showList(true);
+  }
+  if (FILE) {
+    $('side-hide').addEventListener('click', () => showSide(false));
+    $('side-show').addEventListener('click', () => showSide(true));
+    dragEdge($('side-grip'), { set: sideWidth, keep: keepSide });
     addEventListener('resize', () => { if (sideFound) layoutSide(); });
     sideNarrow.addEventListener('change', () => {
       sideOver = false;
@@ -2477,16 +2425,13 @@
     const found = Boolean(a && !a.missing && (a.folder ? document.documentElement.hasAttribute('data-served') : !FILE));
     const name = FILE || a?.title;
     document.title = `${name ?? framed} · floe`;
-    document.querySelector('.frame-actions').hidden = !found;
+    $('frame-actions').hidden = !found;
     $('notfound').hidden = found;
     $('notfound-detail').textContent = a?.missing
       ? t('ui_link_missing', a.path)
-      : t('ui_not_found_detail');
+      : t('ui_not_found_detail', framed);
     $('frame').hidden = !found;
     $('frame').title = name ?? framed;
-    $('frame-pick').hidden = !found;
-    // A page gone while its pages to pick from are open closes them, the button that opened them hidden
-    if (!found && $('page-pick').matches(':popover-open')) $('page-pick').hidePopover();
     $('frame-title').textContent = found ? name : '';
     if (found && FILE) {
       const crumb = document.createElement('span');
@@ -2495,28 +2440,22 @@
       $('frame-title').prepend(crumb);
     }
     $('frame-archived').hidden = !(found && a.archived);
-    // A folder's page has no star, archive or download of its own: its folder's row does
-    for (const id of ['frame-star', 'frame-archive', 'frame-download']) $(id).hidden = Boolean(FILE);
+    // A missing page's bar is the list's, to look for it
+    $('search').hidden = found;
+    $('news').hidden = found;
+    if (!found) renderNews();
     sideFound = found && Boolean(FILE);
     if (sideFound) {
       layoutSide();
       renderSide(a);
     } else {
       for (const id of ['side', 'side-grip', 'side-show']) $(id).hidden = true;
-      // Without the tree the bar picks again, should the page come back
-      $('frame-pick').disabled = false;
       document.documentElement.style.setProperty('--side', '0px');
     }
-    if (found) {
-      toggle($('frame-star'), a.favorite, t('ui_favorite'));
-      $('frame-star').onclick = () => toggleFavorite(a);
-      toggle($('frame-archive'), a.archived, t('ui_archive'));
-      $('frame-archive').onclick = () => toggleArchived(a);
-    }
-    if (found) {
-      if (!FILE) fixFrameOrder(a);
-      document.querySelector('.brand').href = `/${savedList()}`;
-    }
+    if (found) drawActions($('frame-actions'), a, FILE);
+    const list = `/${savedList()}`;
+    for (const id of ['back', 'notfound-back']) $(id).href = list;
+    document.querySelector('.brand').href = list;
     // Load only once found (so a missing page's 404 never flashes). Once loaded, src stays, keeping navigation inside the iframe.
     // The fragment goes with it, so that /a/<slug>/#part opens at that part of the page
     if (found && !$('frame').hasAttribute('src')) $('frame').src = frameSrc + location.hash;
@@ -2524,24 +2463,28 @@
 
   function disarm(a, btn) {
     btn.classList.remove('armed');
-    btn.title = t(`ui_${kind(a)}`);
+    btn.title = t(`ui_${removal(a)}`);
     btn.querySelector('.label').textContent = btn.title;
-    btn.setAttribute('aria-label', t(`ui_${kind(a)}_named`, a.title));
+    btn.setAttribute('aria-label', t(`ui_${removal(a)}_named`, a.title));
   }
 
   // The first click arms the button and the second deletes
   async function remove(a, btn) {
-    if (arm(btn, t(`ui_${kind(a)}_confirm`))) {
-      btn.setAttribute('aria-label', t(`ui_${kind(a)}_confirm_named`, a.title));
+    if (arm(btn, t(`ui_${removal(a)}_confirm`))) {
+      btn.setAttribute('aria-label', t(`ui_${removal(a)}_confirm_named`, a.title));
       return;
     }
     const reason = await deleteOne(a.slug);
     if (reason) {
-      showError(t(`ui_${kind(a)}_failed`, a.title, reason));
+      showError(t(`ui_${removal(a)}_failed`, a.title, reason));
       return;
     }
     selected.delete(a.slug);
-    toast(t(`ui_${kind(a)}_done`, a.title));
+    if (framed) {
+      location.href = `/${savedList()}`;
+      return;
+    }
+    toast(t(`ui_${removal(a)}_done`, a.title));
     // Refetch and record what was drawn. Removing the row locally would make the next refetch redraw the list and disarm another row
     await load();
   }
@@ -2602,13 +2545,13 @@
       $('add').reset();
       $('add-dialog').close();
       toast(t(folder ? 'ui_folder_added' : 'ui_link_added', slug));
-      // To the list the link went on, unfiltered, drawn once with it
+      // To the whole list, drawn once with it
       $('q').value = '';
       if (folder) {
         opened.add(slug);
         keepOpen();
       }
-      filter({ view: 'all', tab: folder ? 'folders' : 'links', project: '' });
+      filter({ view: 'all', kind: '', template: '', project: '', tag: '' });
       drawn = '';
       await load();
     } catch (err) {
@@ -2619,69 +2562,103 @@
     }
   }
 
+  // One menu open at a time; Escape, a click elsewhere or an item done closes it, focus going back to its button rather than
+  // to the page (an item that opens a dialog has moved it there). A press in a page, which this page is not told of, leaves the window
+  const closeMenu = (d) => {
+    const focusInside = d.contains(document.activeElement) || document.activeElement === document.body;
+    d.open = false;
+    if (focusInside) d.querySelector('summary').focus();
+  };
+  const closeMenus = (except) => {
+    for (const d of document.querySelectorAll('.more[open]')) if (d !== except) closeMenu(d);
+  };
+  document.addEventListener('toggle', (e) => { if (e.target.open && e.target.matches('.more')) closeMenus(e.target); }, true);
+  // An item done closes its menu; delete stays for its second click
+  document.addEventListener('click', (e) => {
+    const item = e.target.closest('.menu .icon-btn');
+    if (item && !item.classList.contains('delete')) closeMenu(item.closest('.more'));
+    closeMenus(e.target.closest('.more'));
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(null); });
+  addEventListener('blur', () => closeMenus(null));
+  $('edit').addEventListener('submit', saveEdit);
+  // The edit dialog closed, focus goes back to the menu's button it was opened from rather than to the closed menu's item
+  $('edit-dialog').addEventListener('close', () => editBack?.()?.focus());
+  suggestTags($('edit-tags'));
+  for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
+  // A click on the backdrop (the dialog itself) closes it; the form fills the dialog, so clicks inside never land here
+  for (const d of document.querySelectorAll('dialog')) {
+    d.addEventListener('click', (e) => {
+      if (e.target === d) d.close();
+    });
+  }
+  // Not while typing or with a dialog open
+  const plainKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog');
+  // The search's words on a missing page's bar, and the bar's new pages, go to the list
   if (framed) {
-    // The slug as the server read it from the URL, unescaped: escaped again to make one
-    $('frame-download').href = `/api/artifacts/${encodeURIComponent(framed)}/download`;
-    $('frame-download').download = `${framed}.html`;
-    $('frame-open').href = frameSrc;
-    // The page alone in full, as the browser reads the bar's link to it: a link on paper cannot be followed
-    $('print-raw').href = $('print-raw').textContent = $('frame-open').href;
-    pagePicker();
+    // The list and the iframe beside it are of the list's page alone
+    $('manage').remove();
+    $('frame-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
+    $('back').hidden = false;
+    // The page alone in full, as the browser reads the link to it: a link on paper cannot be followed
+    $('print-raw').href = $('print-raw').textContent = new URL(frameSrc, location.href).href;
+    $('q').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') location.href = `/?q=${encodeURIComponent($('q').value.trim())}`;
+    });
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === 'j' || e.key === 'k') && plainKey(e)) moveFrame(e.key === 'j' ? 1 : -1);
+    });
   } else {
     $('manage').hidden = false;
     $('search').hidden = false;
     $('q').value = readState(location.search).q;
+    $('read-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
+    // Pressed, the page chosen opens whole
+    $('read-title').addEventListener('click', keepOrder);
+    $('news').addEventListener('click', (e) => {
+      if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      // The bar counts all there is, so that what it leads to is that many: nothing narrows them, the search neither
+      $('q').value = '';
+      refilter({ view: 'new', ...NO_PICKS });
+    });
     $('add').addEventListener('submit', add);
-    // One dialog adds both: the server tells a folder from a file by the path. Opened for a folder, it is named and told so
-    const openAdd = (folder) => {
-      $('add-title').textContent = t(folder ? 'ui_add_folder' : 'ui_add_link');
-      $('add-lead').textContent = t(folder ? 'ui_add_folder_lead' : 'ui_add_lead');
-      $('add-path-label').textContent = t(folder ? 'ui_add_folder_path' : 'ui_add_path');
-      $('add-path').placeholder = folder ? '/home/you/project/docs' : '/home/you/project/coverage/index.html';
-      $('add-slug').placeholder = t(folder ? 'ui_add_folder_slug_placeholder' : 'ui_add_slug_placeholder');
-      // An svg has no hidden property: its attribute hides it
-      $('add-icon-link').toggleAttribute('hidden', folder);
-      $('add-icon-folder').toggleAttribute('hidden', !folder);
+    // One dialog adds both: the server tells a folder from a file by the path
+    const openAdd = () => {
       $('add-error').hidden = true;
       $('add-dialog').showModal();
     };
-    $('add-open').addEventListener('click', () => openAdd(false));
-    $('add-folder').addEventListener('click', () => openAdd(true));
-    $('add-narrow').addEventListener('click', () => openAdd(tab === 'folders'));
-    $('edit').addEventListener('submit', saveEdit);
-    for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
-    // A click on the backdrop (the dialog itself) closes it; the form fills the dialog, so clicks inside never land here
-    for (const d of document.querySelectorAll('dialog')) {
-      d.addEventListener('click', (e) => {
-        if (e.target === d) d.close();
-      });
-    }
-    for (const b of document.querySelectorAll('.views button')) b.addEventListener('click', () => setView(b.dataset.view));
+    $('add-open').addEventListener('click', openAdd);
+    $('add-empty').addEventListener('click', openAdd);
+    for (const b of document.querySelectorAll('.views button[data-view]')) b.addEventListener('click', () => pressView(b.dataset.view));
     $('show-archived').addEventListener('click', () => setView('archived'));
-    // One menu open at a time; Escape, a click elsewhere or an item done closes it, focus going back to its button rather than
-    // to the page (an item that opens a dialog has moved it there)
-    const closeMenu = (d) => {
-      const focusInside = d.contains(document.activeElement) || document.activeElement === document.body;
-      d.open = false;
-      if (focusInside) d.querySelector('summary').focus();
-    };
-    const closeMenus = (except) => {
-      for (const d of document.querySelectorAll('.more[open]')) if (d !== except) closeMenu(d);
-    };
-    $('list').addEventListener('toggle', (e) => { if (e.target.open) closeMenus(e.target); }, true);
-    // An item done closes its menu; delete stays for its second click
-    $('list').addEventListener('click', (e) => {
-      const item = e.target.closest('.menu .icon-btn');
-      if (item && !item.classList.contains('delete')) closeMenu(item.closest('.more'));
+    layoutColumns();
+    addEventListener('resize', layoutColumns);
+    dragEdge($('shelf-grip'), { set: (width) => setColumn('shelf', width), keep: keepColumns });
+    dragEdge($('list-grip'), { left: () => $('listcol').getBoundingClientRect().left, set: (width) => setColumn('list', width), keep: keepColumns });
+    $('shelf-hide').addEventListener('click', () => showShelf(false));
+    $('shelf-show').addEventListener('click', () => showShelf(true));
+    $('shelf-what').addEventListener('click', () => showShelf(true));
+    $('list-hide').addEventListener('click', () => {
+      showList(false);
+      $('list-show').focus();
     });
-    // The edit dialog closed, focus goes back to its row's menu button rather than to the closed menu's item
-    $('edit-dialog').addEventListener('close', () => {
-      const row = [...$('list').querySelectorAll(':scope > li:not(.group, .tree)')].find((li) => li.dataset.slug === editing?.slug);
-      row?.querySelector('summary').focus();
+    $('list-show').addEventListener('click', () => {
+      showList(true);
+      $('list-hide').focus();
     });
-    document.addEventListener('click', (e) => closeMenus(e.target.closest('.more')));
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(null); });
-    sortMenu();
+    // One column has nothing beside the list: what stays alive there would reload itself, and be told read unseen
+    oneColumn.addEventListener('change', () => {
+      if (!oneColumn.matches || !picked) return;
+      picked = null;
+      render();
+    });
+    // The rest of the shelf goes into the dialog while it is open, on a screen with no room for it beside the list
+    $('narrow-filter').addEventListener('click', () => {
+      $('filter-box').lastElementChild.before($('shelf-more'));
+      $('filter-dialog').showModal();
+    });
+    $('filter-dialog').addEventListener('close', () => $('shelf').append($('shelf-more')));
     $('bulk-page').addEventListener('click', () => {
       for (const sel of $('list').querySelectorAll('.sel')) sel.checked = true;
       for (const li of $('list').querySelectorAll(':scope > li:not(.group, .tree)')) selected.add(li.dataset.slug);
@@ -2692,7 +2669,6 @@
       for (const sel of $('list').querySelectorAll('.sel')) sel.checked = false;
       renderBulk();
     });
-    suggestTags($('edit-tags'));
     $('bulk-tag').addEventListener('click', openTags);
     $('tag-form').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -2710,10 +2686,7 @@
     $('bulk-delete').addEventListener('click', removeSelected);
     $('bulk-delete').addEventListener('blur', disarmBulk);
     setInterval(refreshTimes, 60000);
-    $('prev').addEventListener('click', () => goPage(page - 1));
-    $('next').addEventListener('click', () => goPage(page + 1));
-    for (const b of document.querySelectorAll('.tabs button')) b.addEventListener('click', () => setTab(b.dataset.tab));
-    $('q').addEventListener('input', refilter);
+    $('q').addEventListener('input', () => refilter());
     $('q').addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       $('q').value = '';
@@ -2722,34 +2695,42 @@
     });
     $('clear').addEventListener('click', () => {
       $('q').value = '';
-      refilter({ project: '', tag: '' });
+      refilter(NO_PICKS);
     });
-    // Not while typing or with a dialog open. Moving between rows focuses the title link, so Enter opens it
-    // A tree's note (empty, cut, unread) has nothing to focus, and is passed over
+    // Moving between rows focuses the title link and opens its page beside the list; a folder and a directory open with Enter, as a
+    // press. A tree's note (empty, cut, unread) has nothing to focus, and is passed over
     const rowsShown = () => [...$('list').querySelectorAll(':scope > li:not(.group)')].filter((li) => li.querySelector('.title'));
     const currentRow = () => rowsShown().find((li) => li.contains(document.activeElement));
     const moveRow = (step) => {
       const rows = rowsShown();
       if (rows.length === 0) return;
-      const at = rows.indexOf(currentRow());
-      const next = at === -1 ? (step > 0 ? 0 : rows.length - 1) : Math.max(0, Math.min(rows.length - 1, at + step));
-      rows[next].querySelector('.title').focus();
+      const from = currentRow() ?? rows.find((li) => li.classList.contains('picked'));
+      const at = rows.indexOf(from);
+      const li = rows[at === -1 ? (step > 0 ? 0 : rows.length - 1) : Math.max(0, Math.min(rows.length - 1, at + step))];
+      li.querySelector('.title').focus();
+      const a = items.find((x) => x.slug === li.dataset.slug);
+      if (!oneColumn.matches && a && !li.classList.contains('dir') && (!a.folder || li.dataset.file)) pickRow({ slug: a.slug, file: li.dataset.file });
     };
     const KEYS = {
       '/': () => $('q').focus(),
       ArrowDown: () => moveRow(1),
       ArrowUp: () => moveRow(-1),
+      j: () => moveRow(1),
+      k: () => moveRow(-1),
       x: () => currentRow()?.querySelector('.sel')?.click(),
       f: () => currentRow()?.querySelector('.star')?.click(),
-      ArrowLeft: () => !$('prev').disabled && goPage(page - 1),
-      ArrowRight: () => !$('next').disabled && goPage(page + 1),
     };
     document.addEventListener('keydown', (e) => {
+      if (!plainKey(e)) return;
+      // Enter on a row opens its page whole; a folder's, as a press, opens its tree
+      if (e.key === 'Enter' && e.target.matches('#list a.title[href]:not([aria-expanded])')) {
+        e.preventDefault();
+        keepOrder();
+        location.href = e.target.href;
+        return;
+      }
       const action = KEYS[e.key];
-      // A button that opens a listbox (the sort) keeps ↑↓ from the rows; a listbox, all its keys
-      if (!action || e.ctrlKey || e.metaKey || e.altKey
-        || e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog, [role="listbox"]')
-        || (e.target.closest('[aria-haspopup]') && (e.key === 'ArrowDown' || e.key === 'ArrowUp'))) return;
+      if (!action) return;
       e.preventDefault();
       action();
     });
