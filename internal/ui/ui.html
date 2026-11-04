@@ -26,7 +26,7 @@
     /* The projects' colors, by projectOrder */
     --pc0: #e5533d; --pc1: #2f6bff; --pc2: #16a37a; --pc3: #b04fd6; --pc4: #d99a00; --pc5: #0f9bb5;
     /* Mixed of the colors above: a down server's frame, the live dot's pulse, a primary button pointed at, a check box's frame,
-       an armed delete's frame and an armed bulk delete's ground */
+       an armed delete's frame */
     --down-line: color-mix(in srgb, var(--danger) 40%, var(--line)); --pulse: color-mix(in srgb, var(--good) 45%, transparent); --ink-hover: color-mix(in srgb, var(--ink) 82%, var(--bg));
     --box-line: color-mix(in srgb, var(--faint) 80%, transparent); --armed-line: color-mix(in srgb, var(--danger) 50%, transparent);
     --scrim: rgb(34 33 31 / 0.4);
@@ -424,8 +424,7 @@
   }
   .toast svg { width: 16px; height: 16px; flex: none; color: var(--good); }
   @keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 8%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
-  /* The bulk bar, in the head over the list while items are selected: a round band ringed in ink, its last button (clearing the
-     selection) at its end. 6px of it round its buttons hold their focus ring off the ink */
+  /* The bulk bar, in the head over the list while items are selected: the head on the ground of the rows selected */
   .lhead:has(> .bulk:not([hidden])) { padding-inline: 0.5rem; background: var(--sel); }
   /* What a font makes too wide for the list scrolls, as the row of views does, the clearing staying in reach; 4px hold the focus ring */
   .bulk { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.25rem; overflow: auto hidden; padding: 4px; margin: -4px; scrollbar-width: none; }
@@ -454,8 +453,8 @@
   }
 
   /* The window that finds a page, high up so that its field stays where it is as the rows go */
-  #find { width: min(40rem, calc(100% - 32px)); margin-top: 12dvh; overflow: visible; }
-  .find-box { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; max-height: 70dvh; }
+  #find { width: min(40rem, calc(100% - 32px)); max-height: none; margin-top: 12dvh; overflow: visible; }
+  .find-box { display: flex; flex-direction: column; max-height: 70dvh; }
   .find-input { display: flex; align-items: center; gap: 0.6rem; height: 3.25rem; padding: 0 0.75rem 0 1.1rem; }
   .find-input > svg { flex: none; width: 16px; height: 16px; color: var(--faint); }
   .find-input input { flex: 1; min-width: 0; height: 100%; padding: 0; color: var(--fg); background: none; border: 0; outline: 0; }
@@ -464,7 +463,6 @@
     font: var(--text-label)/1 var(--mono); color: var(--muted); background: var(--subtle);
     border: 1px solid var(--line); border-radius: var(--corner-small); padding: 0.2rem 0.4rem; white-space: nowrap;
   }
-  .find-close { display: none; }
   /* What the buttons act on, and the buttons of a row */
   .find-acts { display: flex; align-items: center; gap: 0.5rem; height: 2.5rem; padding: 0 0.6rem 0 1.1rem; background: var(--subtle); border-block: 1px solid var(--line); }
   .find-acts[hidden] { display: none; }
@@ -472,7 +470,7 @@
   .find-acts .frame-actions { flex: none; align-items: center; }
   /* A finger's press on a row opens it, and there are no arrow keys: the buttons could only act on the first */
   @media (hover: none) { .find-acts:not([hidden]) { display: none; } }
-  .find-list { min-height: 0; margin: 0; padding: var(--menu-pad); overflow-y: auto; list-style: none; }
+  .find-list { flex: 1 1 auto; min-height: 0; margin: 0; padding: var(--menu-pad); overflow-y: auto; list-style: none; }
   .find-list[hidden] { display: none; }
   .find-list li {
     position: relative; display: grid; grid-template-columns: 1.1rem minmax(0, 1fr) auto; grid-template-areas: "lead title time" ". sub sub";
@@ -496,7 +494,8 @@
   .find-none[hidden] { display: none; }
   .find-none strong { display: block; margin-bottom: 0.25rem; font-size: 1rem; color: var(--fg); }
   .find-foot { display: flex; align-items: center; gap: 0.9rem; min-height: 2.25rem; padding: 0.3rem 1.1rem; font-size: var(--text-label); color: var(--muted); border-top: 1px solid var(--line); }
-  .find-foot[hidden] { display: none; }
+  .find-foot.none .k { display: none; }
+  .find-foot .btn { flex: none; height: 2rem; padding: 0 0.8rem; }
   .find-cut { margin-left: auto; }
   .find-foot .k { display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
   /* The window of the keys */
@@ -518,8 +517,6 @@
     .framed #find-open { display: inline-flex; }
     #find { margin-top: 16px; }
     .find-box { max-height: calc(100dvh - 32px); }
-    .find-input kbd { display: none; }
-    .find-close { display: inline-flex; }
     .find-foot .k { display: none; }
   }
 
@@ -592,7 +589,7 @@
   @media (max-width: 40rem) {
     #narrow-filter { margin-left: auto; }
     .shelf .views [data-view="archived"] .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-    .framed .frame-actions { display: none; }
+    .framed #frame-actions { display: none; }
     .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
     .bar-inner:has(> .search:not([hidden])) .bar-end { margin-left: auto; }
     .bar-inner > .search { flex: 0 0 36px; margin-inline: 0; transition: flex-basis 0.15s; }
@@ -735,11 +732,11 @@
 </div>
 <dialog id="find" aria-label="{{.Msg "ui_find"}}">
   <div class="find-box">
-    <div class="find-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="find-q" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="find-list" placeholder="{{.Msg "ui_find_placeholder"}}" aria-label="{{.Msg "ui_find"}}" autocomplete="off"><kbd aria-hidden="true">Esc</kbd><button type="button" class="icon-btn find-close" data-close aria-label="{{.Msg "ui_close"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="find-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="find-q" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="find-list" placeholder="{{.Msg "ui_find_placeholder"}}" aria-label="{{.Msg "ui_find"}}" autocomplete="off"></div>
     <div class="find-acts" id="find-acts" hidden><span class="find-on" id="find-on"></span><span class="frame-actions" id="find-actions"></span></div>
     <ul class="find-list" id="find-list" role="listbox" aria-label="{{.Msg "ui_find"}}"></ul>
     <div class="find-none" id="find-none" hidden><strong>{{.Msg "ui_nomatch"}}</strong>{{.Msg "ui_find_no_files"}}</div>
-    <div class="find-foot" id="find-foot"><span class="k"><kbd>↑</kbd><kbd>↓</kbd> {{.Msg "ui_find_pick"}}</span><span class="k"><kbd>Enter</kbd> {{.Msg "ui_find_open"}}</span><span class="find-cut" id="find-cut"></span></div>
+    <div class="find-foot" id="find-foot"><span class="k"><kbd>↑</kbd><kbd>↓</kbd> {{.Msg "ui_find_pick"}}</span><span class="k"><kbd>Enter</kbd> {{.Msg "ui_find_open"}}</span><span class="find-cut" id="find-cut"></span><button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button></div>
   </div>
 </dialog>
 <template id="find-row"><li role="option"><span class="lead"></span><a class="title" tabindex="-1"></a><span class="time"><time></time></span><span class="sub"></span></li></template>
@@ -753,7 +750,7 @@
       <p class="keys-note">{{.Msg "ui_keys_note_list"}}</p>
     </div>
     <div class="keys-part" id="keys-frame">
-      <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd></dt><dd>{{.Msg "ui_keys_next_page"}}</dd><dt><kbd>k</kbd></dt><dd>{{.Msg "ui_keys_prev_page"}}</dd></dl></section>
+      <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd></dt><dd>{{.Msg "ui_keys_next_page"}}</dd><dt><kbd>k</kbd></dt><dd>{{.Msg "ui_keys_prev_page"}}</dd><dt><kbd>h</kbd></dt><dd>{{.Msg "ui_back_to_list"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_page"}}</h3><dl><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
       <p class="keys-note">{{.Msg "ui_keys_note_frame"}}</p>
@@ -913,10 +910,16 @@
   // The iframe is the frame's, or the one beside the list; the page is read when it is the one that iframe was given
   addEventListener('message', (e) => {
     const shown = framed ? $('frame') : $('read-frame');
-    // A page is always sandboxed: another origin is one the iframe moved to, out of floe
+    // A page of floe is always sandboxed: any other origin is a site the iframe moved to
+    // LIMIT: null does not prove a page of floe: a site that sandboxes itself, or a data: URL, says it too. All it can do is what a
+    // page can, of PAGE_KEYS and a move to a whole page; a page's read stops at the path it must be at
     if (e.source !== shown.contentWindow || e.origin !== 'null') return;
     // The keys a person presses in the page alone, while the focus is there, wherever in it a link has led
-    if (typeof e.data?.artifactKey === 'string' && PAGE_KEYS.has(e.data.artifactKey) && document.activeElement === shown) pressKey(e.data.artifactKey);
+    if (typeof e.data?.artifactKey === 'string' && PAGE_KEYS.has(e.data.artifactKey) && document.activeElement === shown) {
+      // Not back to the iframe when a window it opened closes: a page that keeps sending would open it again, for good
+      shown.blur();
+      pressKey(e.data.artifactKey);
+    }
     const to = typeof e.data?.artifactOpen === 'string' && new URL(e.data.artifactOpen, location.origin);
     if (to && to.origin === location.origin && /^\/(a\/[^/]+\/?)?$/.test(to.pathname) && !to.searchParams.has('raw')) location.href = to.href;
     const given = framed ? new URL(frameSrc, location.href).pathname : picked && new URL(rawHref(picked), location.href).pathname;
@@ -2669,7 +2672,7 @@
     shown: () => true,
     tab: () => {},
     moved: (i) => {
-      findAt = i;
+      if (i >= 0) findAt = i;
       findSlug = findShown[i]?.slug ?? null;
       drawFindBar(findShown[i]);
     },
@@ -2718,9 +2721,9 @@
     const none = hits.length === 0;
     $('find-list').hidden = none;
     $('find-none').hidden = !none;
-    $('find-foot').hidden = none;
+    $('find-foot').classList.toggle('none', none);
     const words = $('find-q').value.trim();
-    $('find-cut').textContent = hits.length > FIND_ROWS ? t('ui_find_cut', FIND_ROWS) : words ? t('ui_find_n', hits.length) : t('ui_find_newest');
+    $('find-cut').textContent = none ? '' : hits.length > FIND_ROWS ? t('ui_find_cut', FIND_ROWS) : words ? t('ui_find_n', hits.length) : t('ui_find_newest');
     // The same row, or what has come to its place, or the last
     const at = findShown.findIndex((a) => a.slug === findSlug);
     findMark(at !== -1 ? at : Math.min(findAt, findShown.length - 1));
@@ -2731,6 +2734,11 @@
     $('find-q').value = '';
     findSlug = null;
     findAt = 0;
+    // The buttons as they were left go, a menu open, a delete waiting and what they knew of the row
+    delete $('find-actions').dataset.slug;
+    // What comes of its buttons shows in it: the top layer hides the rest
+    $('find-acts').before($('error'));
+    $('find').append($('toasts'));
     drawFind();
     $('find').showModal();
     $('find-q').focus();
@@ -2749,7 +2757,7 @@
     '?': openKeys,
     'Ctrl+K': () => ($('find').open ? $('find').close() : openFind()),
   };
-  const PAGE_KEYS = new Set(['j', 'k', '?', '/', 'Ctrl+K']);
+  const PAGE_KEYS = new Set(['j', 'k', 'h', '?', '/', 'Ctrl+K']);
   function pressKey(key) {
     if (!Object.hasOwn(KEYS, key)) return false;
     KEYS[key]();
@@ -2843,6 +2851,8 @@
     Object.assign(KEYS, {
       j: () => moveFrame(1),
       k: () => moveFrame(-1),
+      // The way the back button goes, which holds the list it was last on
+      h: () => $('back').click(),
       f: () => $('frame-actions').querySelector('.star:not([hidden])')?.click(),
     });
   } else {
@@ -2986,6 +2996,12 @@
     e.stopPropagation();
     closeMenus(null);
   }, true);
+  // This comes after the closing, when a key may have opened it again
+  $('find').addEventListener('close', () => {
+    if ($('find').open) return;
+    document.querySelector('.bar').after($('error'));
+    document.body.append($('toasts'));
+  });
   $('find-open').addEventListener('click', openFind);
   $('keys-open').addEventListener('click', openKeys);
   // On a Mac the key that goes with k is written as there

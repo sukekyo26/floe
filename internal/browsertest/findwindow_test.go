@@ -27,7 +27,7 @@ const findDrawn = `(() => {
 		return li.classList.contains('reached') ? '[' + slug + ']' : slug;
 	}).join('');
 	return [document.getElementById('find').open, rows, document.getElementById('find-acts').hidden ? '-' : document.getElementById('find-on').textContent,
-		document.getElementById('find-foot').hidden ? '-' : document.getElementById('find-cut').textContent].join(' / ');
+		document.getElementById('find-cut').textContent || '-'].join(' / ');
 })()`
 
 // keyDown sends the key from what has the focus, as the page's handlers see it.
@@ -123,6 +123,10 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	out = append(out, b.eval(findDrawn))
 	keyDown(b, "key: 'Enter'")
 	out = append(out, b.eval("location.pathname + ' ' + window.errs.length"))
+	// None and then rows, as when it opens before the list is read: the first is reached, and Enter goes.
+	b.eval("window.list = " + js("[{\"slug\":\"a\",\"title\":\"A\",\"description\":\"\",\"updatedAt\":\"2026-01-01T00:00:00.000Z\"}]") + "; " + reload)
+	b.until("the row", "document.querySelector('#find-list li')")
+	out = append(out, b.eval(findDrawn))
 	// Enter opens the row whole, wherever the window was.
 	b.stub(findList)
 	b.navigate("/")
@@ -150,6 +154,7 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true / a[f] / Folder / Newest first",
 		"true /  / - / -",
 		"/ 0",
+		"true / [a] / A / Newest first",
 	}, "|"))
 }
 
@@ -233,6 +238,27 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the rows drawn", "document.querySelector('#find-list a').textContent === 'Alpha plan'")
 	out = append(out, b.eval("document.querySelector('"+menu+" .delete').classList.contains('armed')"))
 
+	// Closed by its key with a delete waiting, it opens anew: the menu shut, nothing waiting.
+	keyDown(b, "key: 'k', ctrlKey: true")
+	keyDown(b, "key: 'k', ctrlKey: true")
+	out = append(out, b.eval("[document.querySelector('"+menu+"').open, document.querySelectorAll('#find-actions .armed').length].join(' ')"))
+	// What comes of the buttons shows over the rest: a toast, a mistake; and they go back with the window.
+	const seen = `((id) => { const e = document.getElementById(id); return document.getElementById('find').contains(e) && !e.hidden && e.getBoundingClientRect().height > 0; })`
+	b.eval("document.querySelector('#find-actions .star').click()")
+	b.until("the toast", seen+"('toasts') && document.querySelector('#toasts .toast')")
+	b.eval("window.failWrites = true; document.querySelector('#find-actions .star').click()")
+	b.until("the mistake", seen+"('error')")
+	out = append(out, b.eval(`(() => { const r = document.getElementById('error').getBoundingClientRect(); return document.getElementById('error').contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); })()`))
+	b.eval("window.failWrites = false; document.getElementById('find').close()")
+	b.until("back", "!document.getElementById('find').contains(document.getElementById('error')) && !document.getElementById('find').contains(document.getElementById('toasts'))")
+	b.eval("showError('')")
+	// The buttons on a narrow whole page, where those of its bar go.
+	b.size(400, 800, false)
+	b.navigate("/a/c/")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	keyDown(b, "key: 'k', ctrlKey: true")
+	out = append(out, b.eval("[getComputedStyle(document.getElementById('find-actions')).display !== 'none', getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
+	b.size(1440, 900, false)
 	// From a whole page: a delete of another page stays there, the focus going to the field.
 	b.navigate("/a/c/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
@@ -266,7 +292,7 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').focus(); document.querySelector('" + menu + " .delete').click(); document.querySelector('" + menu + " .delete').click()")
 	b.until("the list", "location.pathname === '/'")
 	check(t, "actions", out, strings.Join([]string{
-		"true", "true", "true", "true", "false true true", "false", "true", "true",
+		"true", "true", "true", "true", "false true true", "false", "true", "true", "false 0", "true", "true none",
 		"/a/c/ true find-q", "false true", "/a/c/ ",
 	}, "|"))
 }
@@ -275,12 +301,16 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 func TestUIFindTouch(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
-	b.stub(findList)
+	b.stub("Array.from({ length: 40 }, (_, i) => ({ slug: 's' + i, title: 'T' + i, description: '', createdAt: at(1), updatedAt: at(9) }))")
 	b.navigate("/")
+	b.size(400, 800, false)
 	acts := "getComputedStyle(document.getElementById('find-acts')).display"
+	// The foot, with what it says, within the window and the screen.
+	const foot = `(() => { const f = document.getElementById('find-foot').getBoundingClientRect(), w = document.getElementById('find').getBoundingClientRect();
+		return f.top >= w.top && f.bottom <= w.bottom + 0.5 && f.bottom <= innerHeight; })()`
 	keyDown(b, "key: 'k', ctrlKey: true")
-	out := make([]string, 0, 2)
-	out = append(out, b.eval(acts))
+	out := make([]string, 0, 4)
+	out = append(out, b.eval(acts), b.eval(foot))
 	touch := func(on bool) {
 		if _, err := chromedp.Call(b.ctx, emulation.SetTouchEmulationEnabled, emulation.SetTouchEmulationEnabledParams{Enabled: on, MaxTouchPoints: 1}); err != nil {
 			t.Fatal(err)
@@ -288,8 +318,8 @@ func TestUIFindTouch(t *testing.T) { //nolint:paralleltest // the browser tests 
 	}
 	touch(true)
 	defer touch(false)
-	out = append(out, b.eval(acts))
-	check(t, "touch", out, "flex|none")
+	out = append(out, b.eval(acts), b.eval(foot))
+	check(t, "touch", out, "flex|true|none|true")
 }
 
 // TestUIKeys opens the window of the keys and says what works where; f and x press what a row or the bar shows.
@@ -360,7 +390,7 @@ func TestUIKeys(t *testing.T) { //nolint:paralleltest // the browser tests share
 	check(t, "keys", out, strings.Join([]string{
 		"false", "true", "false true j↓k↑Enterxf/CtrlK?Esc",
 		"false", "true false", "true", "false false", "false false", "false true", "true", "true false",
-		"true false jkf/CtrlK?Esc", "true", "1", "q false", "0", "⌘ true",
+		"true false jkhf/CtrlK?Esc", "true", "1", "q false", "0", "⌘ true",
 	}, "|"))
 }
 
@@ -376,7 +406,8 @@ func bulkFits(b *browser, column int64, slugs ...string) string {
 		const within = (e) => { const r = e.getBoundingClientRect(); return r.left >= box.left - 0.5 && r.right <= box.right + 0.5; };
 		const reached = [...document.querySelectorAll('#bulk .btn')].every((e) => { e.scrollIntoView({ inline: 'nearest', block: 'nearest' }); return within(e) && within(document.getElementById('bulk-clear')); });
 		document.getElementById('bulk').scrollLeft = 0;
-		return [document.querySelector('#bulk-delete .label').textContent, reached, document.getElementById('bulk-n').getBoundingClientRect().width > 0 && document.getElementById('bulk-n').scrollWidth <= c.clientWidth].join(' '); })()`)
+		const n = document.getElementById('bulk-n').getBoundingClientRect();
+		return [document.querySelector('#bulk-delete .label').textContent, reached, n.width > 0 && n.right <= c.getBoundingClientRect().right + 0.5].join(' '); })()`)
 }
 
 // TestUIBulkBar draws the bar as a part of the head: words alone, the head of the selected rows' ground, red ground only for
@@ -393,7 +424,7 @@ func TestUIBulkBar(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, bulkFits(b, 320, "a"), bulkFits(b, 320, "l", "k"), bulkFits(b, 500, "l", "k"))
 	// Words far too wide for it, in any font.
 	b.eval("window.wide = document.head.appendChild(document.createElement('style')); wide.textContent = '#bulk, #bulk .btn { letter-spacing: 0.5em }'")
-	out = append(out, bulkFits(b, 320, "l", "k"), b.eval("document.getElementById('bulk').scrollWidth > document.getElementById('bulk').clientWidth"))
+	out = append(out, bulkFits(b, 320, "l", "k"), b.eval("(() => { const bar = document.getElementById('bulk'); bar.scrollLeft = 1000; const scrolled = bar.scrollLeft > 0; bar.scrollLeft = 0; return scrolled; })()"))
 	b.eval("wide.remove()")
 	const looks = `(() => { const d = getComputedStyle(document.getElementById('bulk-delete')), h = getComputedStyle(document.querySelector('.lhead'));
 		return [d.backgroundColor, d.color, h.backgroundColor, getComputedStyle(document.getElementById('bulk')).boxShadow, document.querySelectorAll('#bulk .btn:not(.clear) svg').length].join(' / '); })()`
@@ -500,11 +531,12 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 		b.navigate(path)
 		b.until("the page to be told the keys are taken", "window.ready")
 		// The key's own work is not this test's, but that it is told: the keys go nowhere, and the page stays.
-		b.eval("for (const k of ['j', 'k', '?', '/', 'Ctrl+K', 'f']) KEYS[k] = () => { window.done = (window.done ?? '') + k + ' '; }")
+		b.eval("for (const k of ['j', 'k', '?', '/', 'Ctrl+K', 'f', 'h']) KEYS[k] = () => { window.done = (window.done ?? '') + k + ' '; }")
 		focusIn(b, frame)
 		inPage(b, frame, "rest", "0")
 	}
-	// Pressed, then ? as the mark of what has come before it: what the frame was given by then.
+	// Pressed, then the focus back in the page as a key it told of itself: what the frame was given by then, the focus going
+	// back to the frame with a key that it takes.
 	press := func(frame, do, arg, k string, mods int64) string {
 		b.eval("window.got = []; window.seen = []; window.done = ''")
 		if do != "" {
@@ -512,10 +544,8 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 		}
 		realKey(b, k, mods)
 		inPage(b, frame, "rest", "0")
-		realKey(b, "?", 8)
-		b.until("the mark", "window.seen.at(-1) === '?:true' || window.seen.at(-1) === '?:false'")
-		b.until("the frame told", "window.seen.at(-1) === '?:false' || window.got.at(-1) === '?'")
-		return b.eval("window.got.join(',')")
+		focusIn(b, frame)
+		return b.eval("window.got.join(',') + '.'")
 	}
 	out := make([]string, 0, 32)
 	open("/a/d1/", "frame")
@@ -543,6 +573,8 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 		{"", "", "j", 2},
 		{"", "", "k", 1},
 		{"", "", "K", 2 | 8},
+		{"", "", "?", 8},
+		{"", "", "h", 0},
 	} {
 		out = append(out, press("frame", c.do, c.arg, c.k, c.mods))
 	}
@@ -560,8 +592,9 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 		open(at, "frame")
 		b.eval("window.got = []; window.seen = []")
 		realKey(b, "j", 0)
+		realKey(b, "h", 0)
 		realKey(b, "k", 2)
-		b.until("the page told", "window.seen.length === 2")
+		b.until("the page told", "window.seen.length === 3")
 		out = append(out, b.eval("window.got.join(',') + ' ' + window.seen.join(',')"))
 	}
 	// Forged by a page: not of the list, not while the focus is elsewhere.
@@ -607,14 +640,14 @@ func TestUIPageKeys(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the next row", "picked?.slug === 'd2'")
 	out = append(out, b.eval("window.got.join(',')"))
 	check(t, "page keys", out, strings.Join([]string{
-		"j,?", "k,?", "/,?", "Ctrl+K,?", "Ctrl+K,?",
-		"j,?", "j,?", "j,?",
-		"?", "?", "?", "?", "?",
-		"?", "?",
-		"?", "?", "?", "?", "?",
+		"j.", "k.", "/.", "Ctrl+K.", "Ctrl+K.",
+		"j.", "j.", "j.",
+		".", ".", ".", ".", ".",
+		".", ".",
+		".", ".", ".", ".", ".", "?.", "h.",
 		"0 Escape:false",
-		"?",
-		"Ctrl+K j:false,k:true", "Ctrl+K j:false,k:true",
+		"h",
+		"Ctrl+K j:false,h:false,k:true", "Ctrl+K j:false,h:false,k:true",
 		".", "/:false,/:false . /a/d1/", ". /a/d1/", "j",
 	}, "|"))
 }
@@ -651,4 +684,74 @@ func TestUIComposing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	keyDown(b, "key: 'Enter', isComposing: true")
 	out = append(out, b.eval("location.pathname"))
 	check(t, "composing", out, "al|Alpha plan false|new||/a/no-such/")
+}
+
+// TestUIFindTrap: a page that keeps sending the key and taking the focus cannot keep the window open, which holds all else inert.
+func TestUIFindTrap(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "d.yaml", "d", keysPage+`<script>addEventListener('message', (e) => { if (e.data?.run === 'trap') setInterval(() => { window.focus(); document.getElementById('b').focus(); parent.postMessage({ artifactKey: 'Ctrl+K' }, home); }, 50); });</script>`), "--slug", "d")
+	b.navigate("about:blank")
+	b.addScript(framedCatch)
+	b.navigate("/a/d/")
+	b.until("the page to be told the keys are taken", "window.ready")
+	focusIn(b, "frame")
+	b.eval("window.ranN = 1; document.getElementById('frame').contentWindow.postMessage({ run: 'trap' }, '*')")
+	b.until("the window the page opens", "document.getElementById('find').open")
+	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Escape)); err != nil {
+		t.Fatal(err)
+	}
+	b.until("the window closed", "!document.getElementById('find').open")
+	// It stays so, the page going on; j still works, from the frame.
+	out := make([]string, 0, 2)
+	out = append(out, b.eval("new Promise((go) => setTimeout(() => go(document.getElementById('find').open + ' ' + (document.activeElement.id !== 'frame')), 500))"))
+	check(t, "trap", out, "false true")
+}
+
+// TestUIBackKey goes from a page open whole to the list it was opened from, picks kept, from the page too, as the back button does;
+// not typing in a field, and it is nothing on the list.
+func TestUIBackKey(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "d.yaml", "d", keysPage), "--slug", "d")
+	b.navigate("about:blank")
+	b.addScript(framedCatch)
+	b.size(1440, 900, false)
+	const whole = "document.getElementById('frame-title').textContent"
+	out := make([]string, 0, 8)
+	// On the list, nothing: not the URL, not a window.
+	b.navigate("/?kind=page")
+	keyDown(b, "key: 'h'")
+	out = append(out, b.eval("location.pathname + location.search"))
+	// Whole, from the list: back to it with its picks; in a field, the field's.
+	b.until("the row", "document.querySelector('#list li[data-slug=d] a.title')")
+	b.eval("document.querySelector('#list li[data-slug=d] a.title').focus()")
+	keyDown(b, "key: 'Enter'")
+	b.until("the page whole", "location.pathname === '/a/d/'")
+	b.until("the bar", whole)
+	out = append(out, b.eval("document.getElementById('back').getAttribute('href')"))
+	keyDown(b, "key: 'h'")
+	b.until("the list", "location.pathname === '/'")
+	out = append(out, b.eval("location.search"))
+	// With the focus in the page, the same.
+	b.until("the row", "document.querySelector('#list li[data-slug=d] a.title')")
+	b.eval("document.querySelector('#list li[data-slug=d] a.title').focus()")
+	keyDown(b, "key: 'Enter'")
+	b.until("the page whole", "location.pathname === '/a/d/'")
+	b.until("the page to be told the keys are taken", "window.ready")
+	focusIn(b, "frame")
+	inPage(b, "frame", "focus", "'t'")
+	realKey(b, "h", 0)
+	inPage(b, "frame", "rest", "0")
+	out = append(out, b.eval("location.pathname"))
+	realKey(b, "h", 0)
+	b.until("the list", "location.pathname === '/'")
+	out = append(out, b.eval("location.search"))
+	// A page missing goes back too; the row in the window of the keys is of a page whole alone.
+	b.navigate("/a/no-such/")
+	b.until("the search", "!document.getElementById('search').hidden")
+	out = append(out, b.eval("[...document.querySelectorAll('#keys-frame kbd')].some((k) => k.textContent === 'h') + ' ' + [...document.querySelectorAll('#keys-list kbd')].some((k) => k.textContent === 'h')"))
+	keyDown(b, "key: 'h'")
+	b.until("the list", "location.pathname === '/'")
+	check(t, "back", out, strings.Join([]string{"/?kind=page", "/?kind=page", "?kind=page", "/a/d/", "?kind=page", "true false"}, "|"))
 }

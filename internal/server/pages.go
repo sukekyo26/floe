@@ -370,7 +370,7 @@ func tellRead(read *Read) string {
 func tellKeys(drawn bool) string {
 	letters := "[]"
 	if drawn {
-		letters = "['j', 'k', '?', '/']"
+		letters = "['j', 'k', 'h', '?', '/']"
 	}
 	return "{const here = location.protocol + '//' + location.host; let wanted = false;" +
 		"window.addEventListener('message', (e) => { if (e.source === window.parent && e.origin === here " +
