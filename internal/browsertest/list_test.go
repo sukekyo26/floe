@@ -188,7 +188,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"Version\nthe words\np", "v ?q=the+words",
 		"false true about:blank  ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
 		"true false /a/l/?raw Link l", "true false /a/n/?raw New n New",
-		"true true true", "false true about:blank New ",
+		"true true true", "false true about:blank  ",
 		"vn ?view=new", "vn", "1 new / 1", "New", "n", "true",
 		`["v","n"]`, "/?view=new", "/a/v/",
 		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true block", "true",
