@@ -427,6 +427,8 @@ var messagesJA = map[string]string{
 	"ui_shelf_show":     "絞り込みを出す",
 	"ui_shelf_width":    "絞り込みの幅",
 	"ui_list_width":     "一覧の幅",
+	"ui_list_hide":      "一覧を隠す",
+	"ui_list_show":      "一覧を出す",
 	"ui_shelf":          "絞り込み",
 	"ui_view_all":       "すべて",
 	"ui_view_favorites": "お気に入り",

@@ -161,14 +161,18 @@
   /* LIMIT: so the list prints what fits one screen, cut off without a word. Print it as a whole if that comes to matter */
   html:not(.framed) body { height: 100dvh; display: flex; flex-direction: column; }
   .shell { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--shelf-width) var(--list-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
-  /* The filters folded: the button that shows them again, and what they narrow the list to, in the head of the list */
-  .shell.shelf-closed { grid-template-columns: var(--list-width) minmax(0, 1fr); }
-  .shell.shelf-closed .shelf { display: none; }
-  .shell:not(.shelf-closed) #shelf-what { display: none; }
-  #shelf-show { flex: none; margin-left: -0.4rem; }
-  /* What it is narrowed to is what must be read: the words before it give way, and it is cut only past the room the buttons leave
-     (not shrunk with them: a sliver of a pixel off its width would cut its last words) */
-  #shelf-what { flex: none; max-width: calc(100% - 13.5rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
+  /* Folded, on the wide page alone: the columns the filters and the list leave. What folds stays as kept where the columns are others */
+  @media (min-width: 70.01rem) {
+    .shell.shelf-closed { grid-template-columns: var(--list-width) minmax(0, 1fr); }
+    .shell.list-closed { grid-template-columns: var(--shelf-width) minmax(0, 1fr); }
+    .shell.shelf-closed.list-closed { grid-template-columns: minmax(0, 1fr); }
+    .shell.shelf-closed .shelf, .shell.list-closed .listcol { display: none; }
+  }
+  /* What shows the filters again and what they narrow the list to. That must be read: the words beside it give way, and it is cut only past
+     the room the buttons leave (not shrunk with them: a sliver of a pixel off its width would cut its last words) */
+  .shelf-tools { flex: none; display: flex; align-items: center; gap: 0.4rem; max-width: calc(100% - 13.5rem); margin-left: -0.4rem; }
+  #shelf-show { flex: none; }
+  #shelf-what { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
   .shelf-head { display: flex; justify-content: flex-end; margin-bottom: -0.6rem; }
   /* The 4px of room round a button are its focus ring's (1px off, 2px wide) and 1px of ground */
   .shelf { display: grid; align-content: start; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; overflow-y: auto; padding: 0.9rem 10px 1rem; }
@@ -242,10 +246,11 @@
     font-size: var(--text-small); color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line); container: bar / inline-size;
   }
   .lhead:has(> .bulk:not([hidden])) > :not(.bulk) { display: none; }
-  .count { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .add-open { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-small); font-size: var(--text-small); }
+  .count { min-width: 0; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .add-open { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-small); font-size: var(--text-small); }
   .add-open:hover { border-color: var(--faint); }
-  .add-open svg { width: 13px; height: 13px; }
+  .add-open svg { flex: none; width: 13px; height: 13px; }
+  #list-hide { flex: none; margin-right: -0.4rem; }
   ul { list-style: none; margin: 0; padding: 0; }
   li {
     position: relative; display: grid; grid-template: "lead title time" auto ". sub actions" auto / 12px minmax(0, 1fr) auto; gap: 0.2rem 0.65rem;
@@ -474,10 +479,8 @@
      row of its views and the dialog of the rest, and the bar's count of new pages, which the row has; from 56rem one column (oneColumn
      in the script reads the same width); from 40rem the bar folds up too */
   @media (max-width: 70rem) {
-    /* What the shelf's edges and fold leave as they were is of the wide page alone */
-    .shell, .shell.shelf-closed { grid-template-columns: 22rem minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-    .shell.shelf-closed .shelf { display: block; }
-    #shelf-grip, #list-grip, #shelf-show, #shelf-what, .shelf-head { display: none; }
+    .shell { grid-template-columns: 22rem minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    #shelf-grip, #list-grip, .shelf-tools, #list-hide, #list-show, .shelf-head, .rhead.empty { display: none; }
     .shelf, .shelf:is(:hover, :focus-within) { grid-column: 1 / -1; display: block; overflow: visible; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); }
     .shelf > .shelf-more { display: none; }
     .shelf .views { display: flex; align-items: center; gap: 5px; overflow: auto hidden; padding: 4px; margin: -4px; scrollbar-width: none; }
@@ -497,7 +500,7 @@
   }
   /* One column: only the list, a row opening its page whole, with the way back */
   @media (max-width: 56rem) {
-    .shell, .shell.shelf-closed { grid-template-columns: minmax(0, 1fr); }
+    .shell { grid-template-columns: minmax(0, 1fr); }
     .listcol { border: 0; }
     .reader { display: none; }
     .icon-btn.back { display: inline-flex; }
@@ -576,10 +579,11 @@
   <div class="grip" id="shelf-grip" role="separator" aria-orientation="vertical" aria-controls="shelf" aria-label="{{.Msg "ui_shelf_width"}}" tabindex="0"></div>
   <section class="listcol" id="listcol">
     <div class="lhead">
-      <button type="button" class="icon-btn" id="shelf-show" aria-expanded="false" aria-controls="shelf" title="{{.Msg "ui_shelf_show"}}" aria-label="{{.Msg "ui_shelf_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+      <!-- What shows the filters again, in the head of the list, or of the page beside it with the list folded too -->
+      <span class="shelf-tools" id="shelf-tools" hidden><button type="button" class="icon-btn" id="shelf-show" aria-expanded="false" aria-controls="shelf" title="{{.Msg "ui_shelf_show"}}" aria-label="{{.Msg "ui_shelf_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button><button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button></span>
       <span class="count" id="count"></span>
-      <button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button>
       <button type="button" class="add-open" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button>
+      <button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h14"/></svg></button>
       <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
       <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
         <span class="bulk-count" id="bulk-count" aria-live="polite"></span>
@@ -613,6 +617,7 @@
   <!-- The page of the row chosen. Lets copy and fullscreen buttons in the page work, as the frame's -->
   <section class="reader" id="reader">
     <div class="rhead" id="read-head" hidden>
+      <button type="button" class="icon-btn" id="list-show" aria-expanded="false" aria-controls="listcol" title="{{.Msg "ui_list_show"}}" aria-label="{{.Msg "ui_list_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h14"/></svg></button>
       <a class="read-title" id="read-title"></a>
       <span class="frame-actions" id="read-actions"></span>
     </div>
@@ -1036,6 +1041,7 @@
 
   function refilter(change = {}) {
     filter(change);
+    showResults();
     render();
   }
 
@@ -1580,11 +1586,16 @@
     if (!a) picked = null;
     // Loaded only while it is there, as the frame's, so that a link's missing file is no 404 kept when the file is back
     readInto(a && !a.missing ? rawHref(picked) : 'about:blank');
-    $('read-head').hidden = !a;
+    $('read-head').hidden = !a && columns.listOpen;
+    $('read-head').classList.toggle('empty', !a);
+    $('read-actions').hidden = !a;
     $('read-frame').hidden = !a || Boolean(a.missing);
     $('read-blank').hidden = Boolean(a && !a.missing);
     $('read-blank').textContent = a?.missing ? t('ui_link_missing', a.path) : t('ui_read_blank');
-    if (!a) return;
+    if (!a) {
+      $('read-title').textContent = '';
+      return;
+    }
     const name = picked.file || a.title;
     $('read-title').textContent = name;
     $('read-title').title = name;
@@ -2292,12 +2303,13 @@
   // has at its narrowest where the filters are a row (56rem less the list's 22rem, less the room round it); at its narrowest it
   // still holds a row's menu and the bulk bar
   const COLUMNS_KEY = 'list.columns';
-  const columns = { shelf: null, list: null, open: true };
+  const columns = { shelf: null, list: null, open: true, listOpen: true };
   try {
     const saved = JSON.parse(localStorage.getItem(COLUMNS_KEY));
     if (Number.isFinite(saved?.shelf)) columns.shelf = saved.shelf;
     if (Number.isFinite(saved?.list)) columns.list = saved.list;
     if (typeof saved?.open === 'boolean') columns.open = saved.open;
+    if (typeof saved?.listOpen === 'boolean') columns.listOpen = saved.listOpen;
   } catch {
     // Storage is unavailable, or holds something else
   }
@@ -2317,8 +2329,15 @@
     root.setProperty('--shelf-width', `${shelf}px`);
     root.setProperty('--list-width', `${list}px`);
     $('manage').classList.toggle('shelf-closed', !columns.open);
+    $('manage').classList.toggle('list-closed', !columns.listOpen);
     $('shelf-grip').hidden = !columns.open;
+    $('list-grip').hidden = !columns.listOpen;
+    $('shelf-tools').hidden = columns.open;
     $('shelf-show').hidden = columns.open;
+    $('list-show').hidden = columns.listOpen;
+    // In the head of what is left: the list's, or the page's beside it
+    const head = columns.listOpen ? document.querySelector('.lhead') : $('read-head');
+    if ($('shelf-tools').parentElement !== head) head.prepend($('shelf-tools'));
     edgeAt($('shelf-grip'), shelf, shelf, shelfMin, shelfMax);
     edgeAt($('list-grip'), shelf + list, list, listMin, listMax);
   }
@@ -2340,6 +2359,18 @@
     layoutColumns();
     keepColumns();
     $(open ? 'shelf-hide' : 'shelf-show').focus();
+  }
+  // The head beside the list holds the way back to it, so that it shows with no page chosen too
+  function showList(open) {
+    columns.listOpen = open;
+    layoutColumns();
+    keepColumns();
+    drawReader();
+  }
+  // What the shelf and the search pick is the list's to show: folded, it opens, on the wide page where it can be folded
+  const WIDE = matchMedia('(min-width: 70.01rem)');
+  function showResults() {
+    if (WIDE.matches && !columns.listOpen) showList(true);
   }
   if (FILE) {
     $('side-hide').addEventListener('click', () => showSide(false));
@@ -2571,6 +2602,14 @@
     $('shelf-hide').addEventListener('click', () => showShelf(false));
     $('shelf-show').addEventListener('click', () => showShelf(true));
     $('shelf-what').addEventListener('click', () => showShelf(true));
+    $('list-hide').addEventListener('click', () => {
+      showList(false);
+      $('list-show').focus();
+    });
+    $('list-show').addEventListener('click', () => {
+      showList(true);
+      $('list-hide').focus();
+    });
     // One column has nothing beside the list: what stays alive there would reload itself, and be told read unseen
     oneColumn.addEventListener('change', () => {
       if (!oneColumn.matches || !picked) return;

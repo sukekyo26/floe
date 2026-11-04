@@ -438,6 +438,8 @@ var messagesEN = map[string]string{
 	"ui_shelf_show":     "Show the filters",
 	"ui_shelf_width":    "Width of the filters",
 	"ui_list_width":     "Width of the page list",
+	"ui_list_hide":      "Hide the page list",
+	"ui_list_show":      "Show the page list",
 	"ui_shelf":          "Filters",
 	"ui_view_all":       "All",
 	"ui_view_favorites": "Favorites",

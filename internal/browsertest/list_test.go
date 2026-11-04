@@ -461,11 +461,50 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Under 70rem, none of it shows.
 	b.size(1000, 700, false)
 	out = append(out, b.until("the row of the shelf", "matchMedia('(max-width: 70rem)').matches && ['shelf-grip', 'list-grip', 'shelf-show', 'shelf-hide'].map((id) => document.getElementById(id).getClientRects().length).join(' ')"))
+	// The list folds as the filters do, its button beside the page with no page chosen too; the focus in it goes to the button.
+	b.size(1600, 900, false)
+	b.until("the wide window", "!matchMedia('(max-width: 70rem)').matches")
+	b.eval("localStorage.removeItem('list.columns')")
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")
+	const list = "[getComputedStyle(document.getElementById('listcol')).display, document.getElementById('list-grip').hidden, document.getElementById('list-show').getClientRects().length, document.getElementById('read-head').hidden, document.activeElement.id, Math.round(document.getElementById('reader').getBoundingClientRect().left)].join(' ')"
+	out = append(out, b.eval(list))
+	b.eval("document.querySelector('#list li[data-slug=a1] .title').focus(); document.getElementById('list-hide').click()")
+	out = append(out, b.eval(list), b.eval("document.getElementById('read-blank').hidden + ' ' + document.getElementById('read-actions').hidden"))
+	// Folded, j and k go on through the list, the page changing beside the place it was.
+	key := func(k string) {
+		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
+	}
+	key("j")
+	out = append(out, b.eval("picked.slug"))
+	key("j")
+	out = append(out, b.eval("picked.slug + ' ' + document.getElementById('read-actions').hidden"))
+	// Both folded, both buttons in the head of the page, told apart by their words; the page nearly whole.
+	b.eval("document.getElementById('shelf-hide').click()")
+	out = append(out, b.eval("[...document.querySelectorAll('#read-head .icon-btn')].filter((e) => e.closest('.frame-actions') === null && e.getClientRects().length).map((e) => e.id + ':' + (e.title === e.getAttribute('aria-label'))).join(' ') + ' ' + document.activeElement.id + ' ' + Math.round(document.getElementById('reader').getBoundingClientRect().left)"))
+	// Kept across a reload.
+	b.navigate("/")
+	out = append(out, b.eval("document.getElementById('manage').className"))
+	b.eval("document.getElementById('list-show').click()")
+	out = append(out, b.eval("document.activeElement.id + ' ' + document.getElementById('manage').className + ' ' + document.getElementById('shelf-tools').parentElement.className"))
+	b.eval("document.getElementById('shelf-show').click(); document.getElementById('list-hide').click()")
+	// What the filters pick shows: folded, the list opens; the search too.
+	b.eval("document.querySelector('.views [data-view=fav]').click()")
+	out = append(out, b.eval("getComputedStyle(document.getElementById('listcol')).display"))
+	b.eval("setView('all'); document.getElementById('list-hide').click(); const q = document.getElementById('q'); q.value = 'a'; q.dispatchEvent(new Event('input'))")
+	out = append(out, b.eval("getComputedStyle(document.getElementById('listcol')).display"))
+	b.eval("q.value = ''; q.dispatchEvent(new Event('input')); document.getElementById('list-hide').click()")
+	// Folded across the widths: the list as ever, no buttons, under 70rem; folded still above it.
+	b.size(1000, 700, false)
+	out = append(out, b.until("the list under 70rem", "matchMedia('(max-width: 70rem)').matches && [getComputedStyle(document.getElementById('listcol')).display, ...['list-show', 'list-hide', 'list-grip'].map((id) => document.getElementById(id).getClientRects().length), document.getElementById('read-head').getClientRects().length].join(' ')"))
+	b.size(1600, 900, false)
+	out = append(out, b.until("the list folded", "!matchMedia('(max-width: 70rem)').matches && getComputedStyle(document.getElementById('listcol')).display"))
+
 	// What is kept that cannot be a width is the default's, or within the bounds.
-	for _, kept := range []string{"not json", `{"shelf":"x"}`, "null"} {
+	for _, kept := range []string{"not json", `{"shelf":"x","listOpen":"no"}`, "null"} {
 		b.eval("localStorage.setItem('list.columns', " + js(kept) + ")")
 		b.navigate("/")
-		out = append(out, b.eval("[getComputedStyle(document.documentElement).getPropertyValue('--shelf-width'), document.getElementById('shelf-show').hidden].join(' ')"))
+		out = append(out, b.eval("[getComputedStyle(document.documentElement).getPropertyValue('--shelf-width'), document.getElementById('shelf-show').hidden, document.getElementById('list-show').hidden].join(' ')"))
 	}
 	b.size(1600, 900, false)
 	b.eval(`localStorage.setItem('list.columns', '{"shelf":99999,"list":-5}')`)
@@ -482,6 +521,10 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"true  true", "false Archive · Filter 2 true", "true", "grid",
 		"block 1 0 0 16 2", "none 0 1 0 16 2",
 		"true", "none", "grid shelf-hide", "160px 740px 160 740",
-		"520px 740", "0 0 0 0", "200px true", "200px true", "200px true", "320px 320px",
+		"520px 740", "0 0 0 0", "block false 0 true  608", "none true 1 false list-show 200", "false true",
+		"long", "a3 false", "shelf-show:true list-show:true shelf-show 0",
+		"shell shelf-closed list-closed", "list-hide shell shelf-closed lhead", "block", "block",
+		"block 0 0 0 0", "none",
+		"200px true true", "200px true true", "200px true true", "320px 320px",
 	}, "|"))
 }
