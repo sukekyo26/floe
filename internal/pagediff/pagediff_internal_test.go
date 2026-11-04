@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 var update = flag.Bool("update", false, "write testdata/every-part.golden anew")
@@ -189,6 +190,17 @@ func TestAlignKeys(t *testing.T) {
 	got := align(library(time.Second), []string{"a\nb", "c", "d\n"}, []string{"a\nb", "new", "d\n"})
 	if s, want := fmt.Sprint(got), "[{0 0} {1 1} {2 2}]"; s != want {
 		t.Errorf("got %s, want %s", s, want)
+	}
+	// Past the surrogates, each number a rune.
+	keys := make([]string, surrogates+10)
+	for i := range keys {
+		keys[i] = strconv.Itoa(i)
+	}
+	runes, _, _ := numbered(keys, nil)
+	for _, r := range runes {
+		if !utf8.ValidRune(r) {
+			t.Fatalf("%#x is no rune", r)
+		}
 	}
 	const n = mostRunes + 1
 	many := make([]string, n)
