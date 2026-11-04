@@ -1002,10 +1002,10 @@ func TestUIRowAgainPressed(t *testing.T) { //nolint:paralleltest // the browser 
 	b.mouse(chromedp.MousePressed, x, y, 1)
 	out := make([]string, 0, 6)
 	out = append(out, loaded("load(true)"))
-	b.eval("window.row = document.querySelector('#list li[data-slug=a2]')")
+	b.eval("window.heldRow = document.querySelector('#list li[data-slug=a2]')")
 	b.mouse(chromedp.MouseReleased, x, y, 1)
 	b.until("picked", "picked?.slug === 'a3'")
-	b.until("drawn by the next poll", "!window.row.isConnected")
+	b.until("drawn by the next poll", "!window.heldRow.isConnected")
 
 	// Outside the list, in the top document: an iframe's press does not reach it.
 	r := b.eval(`(() => {
