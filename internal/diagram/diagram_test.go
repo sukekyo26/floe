@@ -437,6 +437,7 @@ func TestTooNarrow(t *testing.T) {
 		// Two languages other than English as wide: the first by tag.
 		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: A, ja: あいう, ko: 가나다 }] }", `s.yaml:5:5: box "あいう": "あいう" (ja) needs w: 71 or more`},
 		// As wide as English, which is told: in the main row, the sub row, mixed widths and code.
+		{"  - box: { x: 20, y: 20, w: 40, rows: [{ en: ABCDEFGHIJKLMNOPQRSTUVWXY, ja: あいうえおかきくけこさしすせそた }] }", `s.yaml:5:5: box "ABCDEFGHIJKLMNOPQRSTUVWXY": "ABCDEFGHIJKLMNOPQRSTUVWXY" needs w: 240 or more`},
 		{"  - box: { x: 20, y: 20, w: 40, rows: [[{ en: ABCDEFGHIJ, ja: あいうえおか }, sub]] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 104 or more`},
 		{"  - box: { x: 20, y: 20, w: 48, h: 60, rows: [A, { en: ABCDEFGHIJKLMNO, ja: あいうえおかきくけ }] }", `s.yaml:5:5: box "A": "ABCDEFGHIJKLMNO" needs w: 140 or more`},
 		{"  - box: { x: 20, y: 20, w: 40, rows: [[{ en: ABCDEFGHIJ, ja: ABCDEあいう }, sub]] }", `s.yaml:5:5: box "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 104 or more`},
@@ -1459,7 +1460,7 @@ func TestFaces(t *testing.T) {
 		{"a second row", "  - box: { x: 10, y: 10, rows: [A, ABCDEFGHIJ] }\n", `box "A" 10,10 104x46` + "\n"},
 		{"main code, at the size of code", "  - box: { x: 10, y: 10, rows: [[render, main code]] }\n", `box "render" 10,10 80x29` + "\n"},
 		{"sub code", "  - box: { x: 10, y: 10, rows: [[ABCDEFGHIJ, sub code]] }\n", `box "ABCDEFGHIJ" 10,10 112x29` + "\n"},
-		{"full-width bold, as regular", "  - box: { x: 10, y: 10, rows: [あいうえお] }\n", `box "あいうえお" 10,10 104x29` + "\n"},
+		{"full-width bold, as regular", "  - box: { x: 10, y: 10, rows: [注文の履歴テーブル] }\n", `box "注文の履歴テーブル" 10,10 152x29` + "\n"},
 		{"a bold label", "  - label: { x: 100, y: 50, text: ABCDEFGHIJ, strong: true }\n", `label "ABCDEFGHIJ" 53.4,41 93.2x18` + "\n"},
 		{"a label", "  - label: { x: 100, y: 50, text: ABCDEFGHIJ }\n", `label "ABCDEFGHIJ" 59,41 82x18` + "\n"},
 	} {
@@ -1468,6 +1469,16 @@ func TestFaces(t *testing.T) {
 		}
 	}
 	for _, c := range []struct{ name, parts, want string }{
+		{
+			"the room of a frame's heading",
+			"  - frame: { x: 10, y: 10, w: 300, h: 150, label: Developer machine here }\n  - box: { x: 182, y: 16, w: 100, rows: [x] }\n",
+			`s.yaml:6:5: box "x" overlaps the heading of frame "Developer machine here"`,
+		},
+		{
+			"the room of the heading of a frame with an icon",
+			"  - frame: { x: 10, y: 10, w: 340, h: 150, icon: aws/aws-lambda, label: Developer machine here }\n  - box: { x: 226, y: 16, w: 100, rows: [x] }\n",
+			`s.yaml:6:5: box "x" overlaps the heading of frame "Developer machine here"`,
+		},
 		{"a frame's heading", "  - frame: { x: 10, y: 10, w: 60, h: 60, label: ABCDEFGHIJ }\n", `s.yaml:5:5: frame "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 101 or more`},
 		{"the heading of a frame with an icon", "  - frame: { x: 10, y: 10, w: 60, h: 60, icon: aws/aws-lambda, label: ABCDEFGHIJ }\n", `s.yaml:5:5: frame "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 136 or more`},
 		{"a table's title, by a written w", "  - table: { x: 10, y: 10, w: 100, title: ABCDEFGHIJ, rows: [[id, int]] }\n", `s.yaml:5:5: table "ABCDEFGHIJ": "ABCDEFGHIJ" needs w: 116 or more`},
@@ -1477,6 +1488,12 @@ func TestFaces(t *testing.T) {
 		if _, told := draw(t, head+c.parts, inspect); told != c.want {
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, told, c.want)
 		}
+	}
+
+	// Just past a frame's heading as it is drawn, at 12px, a part stands clear.
+	const past = "  - frame: { x: 10, y: 10, w: 300, h: 150, label: Developer machine here }\n  - box: { x: 192, y: 16, w: 100, rows: [x] }\n"
+	if _, told := draw(t, head+past, inspect); told != "" {
+		t.Errorf("past a frame's heading: told %q", told)
 	}
 
 	// A group's frame is as wide as its heading is drawn: both where it is kept room and where it is checked.

@@ -307,12 +307,15 @@ func (d *drawing) short(p [2]int) rect {
 }
 
 // growLevels lengthens the rank of each pair of boxes whose shorter side across the ranks is short of its level
-// edges (see drawLevels), cut across its middle as for loops.
+// edges (see drawLevels), cut across its middle as for loops. The outermost stands half a column short of a column per
+// two edges from the middle, and off the box's round corner.
+// LIMIT: the corner of a box and a table; a pill's or a state's end is rounder, so an edge may enter its curve there.
+// Make it the box's own if one comes to look wrong.
 func (d *drawing) growLevels(gr *group) {
 	_, along := d.axes()
 	pairs, byPair := gr.levelPairs()
 	for _, p := range pairs {
-		need := 2 * column * math.Ceil(float64(len(byPair[p]))/2)
+		need := 2 * (column*math.Ceil(float64(len(byPair[p]))/2) - column/2 + cornerR)
 		if s := d.short(p); s.size(along) < need {
 			d.stretch(along, s.lo(along)+s.size(along)/2, onGrid(need-s.size(along), column, math.Ceil))
 		}

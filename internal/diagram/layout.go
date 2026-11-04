@@ -658,8 +658,9 @@ func barRect(b *bar, at string) rect {
 
 // addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
+	class := frameClass(f.Icon)
 	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named(
-		"frame", f.Name, f.Label, frameClass(f.Icon), nil)
+		"frame", f.Name, f.Label, class, nil)
 	who := fr.what
 	l.frames = append(l.frames, fr)
 	hx, hy := f.X+12, f.Y+18
@@ -667,13 +668,13 @@ func (l *layout) addFrame(f *frame, at string) {
 		hx, hy = f.X+40, f.Y+15
 	}
 	if f.Label != nil {
-		hw := textWidth(f.Label, frameClass(f.Icon))
+		hw := textWidth(f.Label, class)
 		head := rect{x: hx, y: hy - 9, w: hw, h: labelH, what: "the heading of " + who, at: at, graph: f.graph}
 		l.heads = append(l.heads, head)
 		// The heading keeps the margin on its right that it has on its left.
-		l.fit(at, who, f.Label, frameClass(f.Icon), f.W-(hx-f.X)-12, f.W)
+		l.fit(at, who, f.Label, class, f.W-(hx-f.X)-12, f.W)
 	}
-	rx, cls := 10.0, frameClass(f.Icon)
+	rx, cls := 10.0, class
 	if f.Icon != "" || f.Square {
 		rx = 0
 	}

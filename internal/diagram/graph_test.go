@@ -383,6 +383,27 @@ edge y→a M128,49 V85
 edge x→p M44,49 V85
 edge a→b M140,105.5 H164
 `},
+		{"four, laid out right", `title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      direction: right
+      nodes:
+        - box: { name: a, rows: [A] }
+        - box: { name: b, rows: [Bbbbbbbbbbbbbbbbbbbbbbbbbbb] }
+      edges:
+        - { from: a, to: b, level: true }
+        - { from: b, to: a, level: true }
+        - { from: a, to: b, level: true }
+        - { from: b, to: a, level: true }
+`, `box "a" 128,20 60x29
+box "b" 20,74 276x29
+edge a→b M140,49 V74
+edge b→a M152,74 V49
+edge a→b M164,49 V74
+edge b→a M176,74 V49
+`},
 		{"three, laid out right", `title: T
 parts:
   - graph:
@@ -396,11 +417,11 @@ parts:
         - { from: a, to: b, level: true }
         - { from: b, to: a, level: true }
         - { from: a, to: b, level: true }
-`, `box "a" 128,20 48x29
-box "b" 20,74 264x29
-edge a→b M146,49 V74
-edge b→a M158,74 V49
-edge a→b M170,48.75 V74
+`, `box "a" 128,20 60x29
+box "b" 20,74 276x29
+edge a→b M152,49 V74
+edge b→a M164,74 V49
+edge a→b M176,49 V74
 `},
 	} {
 		if got, told := draw(t, c.src, inspect); got != c.want || told != "" {
