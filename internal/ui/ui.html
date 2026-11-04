@@ -162,7 +162,7 @@
   html:not(.framed) body { height: 100dvh; display: flex; flex-direction: column; }
   .shell { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--shelf-width) var(--list-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
   /* Folded, on the wide page alone: the columns the filters and the list leave. What folds stays as kept where the columns are others */
-  @media (min-width: 70.01rem) {
+  @media not (max-width: 70rem) {
     .shell.shelf-closed { grid-template-columns: var(--list-width) minmax(0, 1fr); }
     .shell.list-closed { grid-template-columns: var(--shelf-width) minmax(0, 1fr); }
     .shell.shelf-closed.list-closed { grid-template-columns: minmax(0, 1fr); }
@@ -1592,10 +1592,8 @@
     $('read-frame').hidden = !a || Boolean(a.missing);
     $('read-blank').hidden = Boolean(a && !a.missing);
     $('read-blank').textContent = a?.missing ? t('ui_link_missing', a.path) : t('ui_read_blank');
-    if (!a) {
-      $('read-title').textContent = '';
-      return;
-    }
+    $('read-title').hidden = !a;
+    if (!a) return;
     const name = picked.file || a.title;
     $('read-title').textContent = name;
     $('read-title').title = name;
@@ -2368,7 +2366,7 @@
     drawReader();
   }
   // What the shelf and the search pick is the list's to show: folded, it opens, on the wide page where it can be folded
-  const WIDE = matchMedia('(min-width: 70.01rem)');
+  const WIDE = matchMedia('not (max-width: 70rem)');
   function showResults() {
     if (WIDE.matches && !columns.listOpen) showList(true);
   }

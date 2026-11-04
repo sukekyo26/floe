@@ -186,9 +186,9 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"#|v dot 700 ver:v3 · new version kindof:design proj:p tags:t|#|n dot 700 kindof:report proj:q|#|r ring 500 kindof:report proj:p|l mark 500 kindof:Link · HTML path:/tmp/x/l.html|#|d mark 500 kindof:Link · handoff path:/home/you/work/a (1)/v2.0/data-set_#1/deep/deep/deep/deep/deep/deep/deep/deep/deep/name-2.yaml|#|f mark 500 kindof:Folder path:/tmp/x/f|#|g mark 500 kindof:Link · HTML miss:File not found",
 		"Today,Yesterday,Last 7 days", "2 new / Newest first · 2 new / 2",
 		"Version\nthe words\np", "v ?q=the+words",
-		"false true about:blank  ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
+		"false true about:blank New ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
 		"true false /a/l/?raw Link l", "true false /a/n/?raw New n New",
-		"true true true", "false true about:blank  ",
+		"true true true", "false true about:blank New ",
 		"vn ?view=new", "vn", "1 new / 1", "New", "n", "true",
 		`["v","n"]`, "/?view=new", "/a/v/",
 		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true block", "true",
@@ -470,7 +470,13 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	const list = "[getComputedStyle(document.getElementById('listcol')).display, document.getElementById('list-grip').hidden, document.getElementById('list-show').getClientRects().length, document.getElementById('read-head').hidden, document.activeElement.id, Math.round(document.getElementById('reader').getBoundingClientRect().left)].join(' ')"
 	out = append(out, b.eval(list))
 	b.eval("document.querySelector('#list li[data-slug=a1] .title').focus(); document.getElementById('list-hide').click()")
-	out = append(out, b.eval(list), b.eval("document.getElementById('read-blank').hidden + ' ' + document.getElementById('read-actions').hidden"))
+	out = append(out, b.eval(list), b.eval("document.getElementById('read-blank').hidden + ' ' + document.getElementById('read-actions').hidden + ' ' + document.getElementById('read-title').hidden"))
+	// A page chosen and gone leaves no link to it in the head.
+	b.eval("document.querySelector('#list li[data-slug=a2] .title').click()")
+	b.eval("window.fetch = ((f) => async (u, i) => { const r = await f(u, i); if (i?.method || String(u) !== '/api/artifacts') return r; return new Response(JSON.stringify((await r.json()).filter((a) => a.slug !== 'a2'))); })(window.fetch); load()")
+	out = append(out, b.until("the page gone", "!document.querySelector('#list li[data-slug=a2]') && [document.getElementById('read-title').getClientRects().length, picked].join(' ')"))
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li[data-slug=a2]')")
 	// Folded, j and k go on through the list, the page changing beside the place it was.
 	key := func(k string) {
 		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
@@ -503,6 +509,9 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.size(1600, 900, false)
 	out = append(out, b.until("the list folded", "!matchMedia('(max-width: 70rem)').matches && getComputedStyle(document.getElementById('listcol')).display"))
 
+	// Between the widths a zoomed window can fall, one set of rules or the other holds: not only "under 70rem", and not both.
+	out = append(out, b.eval("[matchMedia('(max-width: 70rem)').matches, WIDE.matches, WIDE.media].join(' ')"))
+
 	// What is kept that cannot be a width is the default's, or within the bounds.
 	for _, kept := range []string{"not json", `{"shelf":"x","listOpen":0}`, "null"} {
 		b.eval("localStorage.setItem('list.columns', " + js(kept) + ")")
@@ -524,10 +533,10 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"true  true", "false Archive · Filter 2 true", "true", "grid",
 		"block 1 0 0 16 2", "none 0 1 0 16 2",
 		"true", "none", "grid shelf-hide", "160px 740px 160 740",
-		"520px 740", "0 0 0 0", "block false 0 true  608", "none true 1 false list-show 200", "false true",
+		"520px 740", "0 0 0 0", "block false 0 true  608", "none true 1 false list-show 200", "false true true", "0 ",
 		"long", "a3 false", "shelf-show:true list-show:true shelf-show 0",
 		"shell shelf-closed list-closed", "list-hide shell shelf-closed lhead", "block", "block",
-		"block 0 0 0 1", "none",
+		"block 0 0 0 1", "none", "false true not (max-width: 70rem)",
 		"200px true true", "200px true true", "200px true true", "320px 320px",
 	}, "|"))
 }
