@@ -313,7 +313,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   to the next and the one before), and its title or `Enter` opens it whole, where `j` and `k` go through the list that opened
   it. The shelf picks a view (unread, all, favourites, archive), and narrows by project, kind, template and tag, all in the
   URL. "All" is lit only with no view and no picks: pressed, it lets go of them, and a view pressed again lets go of itself alone. Above 70rem, the edges of the filters and the list drag to widen them and each of them folds, kept in the browser. The sort, the pages of the list, the tabs of kinds, the groups by project and the frame's title that picked a page
-  are gone, and the check boxes show only while rows are selected (`x`).
+  are gone, and the check boxes show only while rows are selected (`x`, or Select in a row's menu).
 - Change a stored page's `updatedAt` to move only when a publish adds a version: publishing the same content again, or
   with another theme only, no longer moves it. `floe publish` says `last updated` in place of `last published`.
 - Change the time a linked file is listed at to the later of the file's time and when it was linked, so that linking

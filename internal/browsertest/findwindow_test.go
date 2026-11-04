@@ -1120,3 +1120,53 @@ func TestUIReadLoads(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.until("the read told and the list read", "window.told > 0 && window.next > 0")
 	check(t, "at once", []string{b.eval("window.next - window.told < 500")}, "true")
 }
+
+// TestUIRowSelect starts a selection from a row's menu, with no keys and on a touch screen, where the boxes then show for the rest;
+// the menus of the pages' bars and the search modal have no such item.
+func TestUIRowSelect(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.stub(findList)
+	touch := func(on bool) {
+		if _, err := chromedp.Call(b.ctx, emulation.SetTouchEmulationEnabled, emulation.SetTouchEmulationEnabledParams{Enabled: on, MaxTouchPoints: 1}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	touch(true)
+	defer touch(false)
+	b.size(400, 700, false)
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li[data-slug=f]')")
+	press := func(selector string) {
+		t.Helper()
+		var x, y float64
+		if _, err := fmt.Sscan(b.eval("(() => { const e = document.querySelector("+js(selector)+"); e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return (r.left + r.width / 2) + ' ' + (r.top + r.height / 2); })()"), &x, &y); err != nil {
+			t.Fatal(err)
+		}
+		b.click(x, y)
+	}
+	state := "[...selected].sort().join('') + ' ' + document.getElementById('list').classList.contains('selecting') + ' ' + !document.getElementById('bulk').hidden + ' ' + getComputedStyle(document.querySelector('#list li[data-slug=c] .pick')).display"
+	out := make([]string, 0, 6)
+	out = append(out, b.eval(state))
+	press("#list li[data-slug=a] summary")
+	press("#list li[data-slug=a] .menu .select")
+	out = append(out, b.eval(state), b.eval("document.querySelector('#list li[data-slug=a] .more').open"))
+	// A folder's row too; pressed again, a row stays selected.
+	press("#list li[data-slug=f] summary")
+	press("#list li[data-slug=f] .menu .select")
+	press("#list li[data-slug=f] summary")
+	press("#list li[data-slug=f] .menu .select")
+	out = append(out, b.eval(state))
+	// Named for a screen reader; none in the search modal or the bar of a page.
+	out = append(out, b.eval("document.querySelector('#list li[data-slug=a] .menu .select').getAttribute('aria-label')"))
+	b.eval("document.getElementById('bulk-clear').click(); openFind()")
+	out = append(out, b.eval("document.querySelector('#find-actions .select').hidden"))
+	b.eval("document.getElementById('find').close()")
+	touch(false)
+	b.navigate("/a/a/")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	out = append(out, b.eval("document.querySelector('#frame-actions .select').hidden"))
+	check(t, "select", out, strings.Join([]string{
+		" false false none", "a true true grid", "false", "af true true grid", "Select Alpha plan", "true", "true",
+	}, "|"))
+}

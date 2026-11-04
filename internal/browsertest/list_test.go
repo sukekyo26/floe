@@ -68,7 +68,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.eval("document.querySelector('#list li[data-slug=r] .title').click()")
 	out = append(out, b.eval(reader), b.eval("location.pathname + ' ' + document.getElementById('read-title').getAttribute('href')"))
 	// The bar over it: its star, the page alone and the same menu as a row's.
-	out = append(out, b.eval("[...document.querySelectorAll('#read-actions .menu > *')].filter((e) => !e.hidden).length === [...document.querySelectorAll('#list li[data-slug=r] .menu > *')].filter((e) => !e.hidden).length"))
+	out = append(out, b.eval("[...document.querySelectorAll('#read-actions .menu > :not(.select)')].filter((e) => !e.hidden).length === [...document.querySelectorAll('#list li[data-slug=r] .menu > :not(.select)')].filter((e) => !e.hidden).length"))
 	// j and k from the row chosen, the list's redraw keeping the row with the focus.
 	b.eval("document.querySelector('#list li[data-slug=r] .title').focus()")
 	key("j")
