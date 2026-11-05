@@ -802,8 +802,8 @@ func TestGraphRandom(t *testing.T) {
 	// Then, graphs with a label on every edge, in English and Japanese, crowding labels into every channel; then,
 	// graphs in lanes; last, graphs with level edges between boxes picked at random, with no group (plain), groups
 	// and lanes, those told only of their level edges skipped, and at least least of them laid out.
-	// LIMIT: each graph lays out several times over, its ends moved or not, and the counts keep the race job within CI's 10
-	// minutes. Raise them if the moves come to be cheaper.
+	// LIMIT: each graph lays out several times over, its ends moved or not, and the counts keep the race job within
+	// CI's 10 minutes. Raise them if the moves come to be cheaper.
 	for _, c := range []struct {
 		direction string
 		seed      [2]uint64
