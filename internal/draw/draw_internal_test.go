@@ -80,23 +80,6 @@ func TestExecuted(t *testing.T) {
 
 // The CSP goes first in the head, after the charset, before what the page's head holds; a page without a
 // head gets it in the head the parser makes. The page holds that charset alone: those it wrote, wherever, go.
-// What the library will not read or write is told at the file given, none for a page kept without a name.
-func TestCutOffPageRefused(t *testing.T) {
-	t.Parallel()
-
-	deep := strings.Repeat("<div>", 600)
-	for _, c := range []struct{ file, page, want string }{
-		{"a.yaml", deep, "a.yaml: html: open stack of elements exceeds 512 nodes"},
-		{"", deep, "html: open stack of elements exceeds 512 nodes"},
-		{"a.yaml", "<svg><col>x</col></svg>", "a.yaml: html: void element <col> has child nodes"},
-	} {
-		_, err := CutOffPage(c.file, []byte(c.page))
-		if got := usererr.Tell(i18n.EnglishCatalog(), err).Render(""); got != c.want {
-			t.Errorf("%q, %.10q: %q, want %q", c.file, c.page, got, c.want)
-		}
-	}
-}
-
 func TestCutOffPage(t *testing.T) {
 	t.Parallel()
 
@@ -107,7 +90,7 @@ func TestCutOffPage(t *testing.T) {
 		`<!doctype html><html><head><meta charset="utf-8"></head><body><p>x<meta charset="utf-8"></p>` +
 			`<template><meta charset="utf-8"></template></body></html>`,
 	} {
-		got, err := CutOffPage("", []byte(page))
+		got, err := CutOffPage([]byte(page))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -134,6 +117,21 @@ func TestCutOffPage(t *testing.T) {
 		}
 		if v, _ := attrOf(csp, "content"); v != CutOff("'none'") {
 			t.Errorf("%q: no CSP second in the head: %q", page, got)
+		}
+	}
+}
+
+// What the library will not read or write of a stored page is told in its words, of no file.
+func TestCutOffPageRefused(t *testing.T) {
+	t.Parallel()
+
+	for page, want := range map[string]string{
+		strings.Repeat("<div>", 600): "html: open stack of elements exceeds 512 nodes",
+		"<svg><col>x</col></svg>":    "html: void element <col> has child nodes",
+	} {
+		_, err := CutOffPage([]byte(page))
+		if got := usererr.Tell(i18n.EnglishCatalog(), err).Render(""); got != want {
+			t.Errorf("%.10q: %q, want %q", page, got, want)
 		}
 	}
 }

@@ -24,17 +24,17 @@ func CutOff(connect string) string {
 		"script-src 'unsafe-inline' " + cdns + "; form-action 'none'; base-uri 'none'; connect-src " + connect
 }
 
-// CutOffPage puts CutOff into src, a page drawn and kept, of file ("" for one kept without a name), for one who
-// opens it without the headers (a download), as withCutOff does.
-// LIMIT: read again, a page drawn may go past the parser's depth (<form><i><nobr><h2></form><div><li> under 500
-// elements), told here and not when it was published; check it when drawn if such pages come to be written.
-func CutOffPage(file string, src []byte) ([]byte, error) {
-	tree, err := parsePage(file, src)
+// CutOffPage puts CutOff into src, a stored page, which has no data file to name, for one who downloads it, as
+// withCutOff does.
+// LIMIT: read again, a page drawn may go past the parser's depth (503 <div> and <form><i><nobr><h2></form><div><li>
+// <button><h1> in them), told here and not when it was published; check it when drawn if such pages come to be written.
+func CutOffPage(src []byte) ([]byte, error) {
+	tree, err := parsePage("", src)
 	if err != nil {
 		return nil, err
 	}
 	withCutOff(tree)
-	return writePage(file, tree)
+	return writePage("", tree)
 }
 
 // withCutOff puts CutOff into tree, nothing connecting: first in its head, read as a browser reads it, since a
@@ -51,9 +51,10 @@ func withCutOff(tree *html.Node) {
 		}
 	}
 	for _, n := range charsets {
-		// The spaces after one in the head show nothing, and would leave an empty line.
-		if t := n.NextSibling; n.Parent.DataAtom == atom.Head && t != nil && t.Type == html.TextNode &&
-			strings.TrimLeft(t.Data, " \t\n\f\r") == "" {
+		// The spaces after one in the head show nothing, and would leave an empty line; an item's marks taken out
+		// leave them in more than one node.
+		for t := n.NextSibling; n.Parent.DataAtom == atom.Head && t != nil && t.Type == html.TextNode &&
+			strings.TrimLeft(t.Data, " \t\n\f\r") == ""; t = n.NextSibling {
 			n.Parent.RemoveChild(t)
 		}
 		n.Parent.RemoveChild(n)

@@ -95,20 +95,96 @@ func TestRenderDoesNotReadAgain(t *testing.T) {
 	}
 }
 
-// A raw SVG the library will not read or write is told at the value, in the library's words.
+// A raw SVG the library will not read or write is told at the value, in the library's words. In a page, one that
+// goes deep only with the page around it is the page's, at the file alone.
 func TestRawNotRead(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range []struct{ svg, want string }{
-		{strings.Repeat("<g>", 511), ""},
-		{strings.Repeat("<g>", 512), "spec.yaml:6:12: " + tooDeep},
-		{"<col>x</col>", "spec.yaml:6:12: html: void element <col> has child nodes\n"},
+	for _, c := range []struct {
+		svg, want string
+		code      int
+	}{
+		{strings.Repeat("<g>", 511), "", 0},
+		{strings.Repeat("<g>", 512), "spec.yaml:6:12: " + tooDeep, 1},
+		{"<col>x</col>", "spec.yaml:6:12: html: void element <col> has child nodes\n", 1},
 	} {
 		dir := write(t, map[string]string{
 			"spec.yaml": "title: t\nwidth: 10\nheight: 10\nparts:\n  - raw:\n      svg: \"" + c.svg + "\"\n",
 		})
-		if _, _, errs := runIn(dir, nil, "diagram", "render", "--no-assets", "spec.yaml"); errs != c.want {
-			t.Errorf("%.20s: %q, want %q", c.svg, errs, c.want)
+		if code, _, errs := runIn(dir, nil, "diagram", "render", "--no-assets", "spec.yaml"); code != c.code || errs != c.want {
+			t.Errorf("%.20s: %d, %q, want %d, %q", c.svg, code, errs, c.code, c.want)
 		}
+	}
+	for _, c := range []struct {
+		deep int
+		want string
+	}{{600, "r.yaml:13:22: " + tooDeep}, {510, "r.yaml: " + tooDeep}} {
+		dir := write(t, map[string]string{
+			"r.yaml": "template: report\nlang: en\ntitle: A\nsections:\n  - heading: A\n    parts:\n      - diagram:\n" +
+				"          title: t\n          width: 10\n          height: 10\n          parts:\n            - raw:\n" +
+				"                svg: \"" + strings.Repeat("<g>", c.deep) + "\"\n",
+		})
+		if code, _, errs := runIn(dir, nil, "render", "r.yaml"); code != 1 || errs != c.want {
+			t.Errorf("%d in a page: %d, %q, want %q", c.deep, code, errs, c.want)
+		}
+	}
+}
+
+// A part of one's own goes as deep as the page around it lets it.
+func TestPartTooDeep(t *testing.T) {
+	t.Parallel()
+
+	for deep, c := range map[int]struct {
+		code int
+		errs string
+	}{509: {0, ""}, 510: {1, "d.yaml: " + tooDeep}} {
+		dir, env := deepPage(t, "{{.Data.mine}}")
+		for file, content := range map[string]string{
+			"templates/deep/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", ` +
+				`"properties": {"mine": {"$ref": "floe:///parts/mine.json"}}}`,
+			"templates/deep/example.yaml": "template: deep\nlang: en\ntitle: E\nmine: {}\n",
+			"d.yaml":                      "template: deep\nlang: en\ntitle: E\nmine: {}\n",
+			"parts/mine/schema.json":      `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+			"parts/mine/part.css":         "",
+			"parts/mine/part.html":        `<div data-floe-part="mine">` + strings.Repeat("<div>", deep) + "</div>",
+		} {
+			path := filepath.Join(dir, file)
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		env["FLOE_PARTS_DIR"] = filepath.Join(dir, "parts")
+		if code, _, errs := runIn(dir, env, "render", "d.yaml"); code != c.code || errs != c.errs {
+			t.Errorf("%d: %d, %q, want %d, %q", deep, code, errs, c.code, c.errs)
+		}
+	}
+}
+
+// The spaces after a charset taken out leave no empty line, though an item's marks taken out split them in two.
+func TestRenderLeavesNoEmptyLine(t *testing.T) {
+	t.Parallel()
+
+	dir := write(t, map[string]string{
+		"d.yaml": "template: h\nlang: en\ntitle: E\nx: \"\"\n",
+		"templates/h/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", ` +
+			`"properties": {"x": {"type": "string", "format": "html"}}}`,
+		"templates/h/example.yaml": "template: h\nlang: en\ntitle: E\nx: \"\"\n",
+		"templates/h/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">\n{{.Data.x}}\n" +
+			"<title>{{.Title}}</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"></head>" +
+			"<body></body></html>\n",
+	})
+	env := map[string]string{"FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
+	if code, _, errs := runIn(dir, env, "render", "d.yaml"); code != 0 || errs != "" {
+		t.Fatalf("render = %d, %q", code, errs)
+	}
+	page, err := os.ReadFile(filepath.Join(dir, "d.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(page, []byte(`"/><title>`)) {
+		t.Errorf("d.html = %q", page[:min(len(page), 400)])
 	}
 }

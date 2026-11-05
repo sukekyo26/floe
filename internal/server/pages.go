@@ -103,7 +103,7 @@ func (s *Server) version(slug string, m *store.Meta, rest string, v int) string 
 // returns. drawn tells a page floe drew, whose CSP cuts it off. errNoPage for none.
 // LIMIT: no Range support. Add it if videos need seeking.
 func (s *Server) content(
-	c *i18n.Catalog, slug string, m *store.Meta, rest string, v int, drawing func() store.Drawing,
+	c *i18n.Catalog, slug string, m *store.Meta, rest string, v int, drawing func() store.Drawing, cut bool,
 ) (served, error) {
 	none := served{body: nil, typ: "", drawn: false}
 	if v > 0 {
@@ -118,7 +118,7 @@ func (s *Server) content(
 		return none, errNoPage
 	}
 	if rest == "" && m.IsData() {
-		page, err := drawLink(slug, m, file, drawing())
+		page, err := drawLink(slug, m, file, drawing(), cut)
 		if err != nil {
 			return served{body: io.NopCloser(bytes.NewReader(mistakesPage(c, slug, err))), typ: htmlType, drawn: true}, err
 		}
@@ -168,7 +168,7 @@ type served struct {
 
 // drawLink draws the linked data file file of slug, whose meta.json is m, with drawing: in its theme, under slug
 // for a page of no title, its images under its real directory.
-func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing) ([]byte, error) {
+func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing, cut bool) ([]byte, error) {
 	if drawing.Err != nil {
 		return nil, drawing.Err
 	}
@@ -178,7 +178,7 @@ func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing) ([
 	}
 	images := files.NewRoot(filepath.Dir(file))
 	defer images.Close() //nolint:errcheck // only read from
-	o := tmpl.Options{Theme: m.Theme, Untitled: slug, Images: images, ImagesDir: "", Icons: drawing.Icons, CutOff: false}
+	o := tmpl.Options{Theme: m.Theme, Untitled: slug, Images: images, ImagesDir: "", Icons: drawing.Icons, CutOff: cut}
 	// Its warnings are the writer's, whom publish and check tell; one who opens the page cannot mend them.
 	page, _, err := tmpl.Draw(drawing.Kit, file, src, o)
 	return page, err //nolint:wrapcheck // its mistakes, or what failed
@@ -221,7 +221,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		// Of the last look, as the version is: one changed since reloads the tab.
-		got, err = s.content(catalog(r), slug, m, rest, v, func() store.Drawing { d, _ := s.now(); return d })
+		got, err = s.content(catalog(r), slug, m, rest, v, func() store.Drawing { d, _ := s.now(); return d }, false)
 	}
 	if errors.Is(err, errNoPage) {
 		notFound(w)
@@ -284,7 +284,7 @@ func (s *Server) askedVersion(slug string, m *store.Meta, q url.Values) string {
 }
 
 // download answers the page of slug as a file, as it was linked or drawn, a page floe drew with its CSP in it
-// (draw.CutOffPage), as no header goes with a file: never the page of a linked data file's mistakes, which are
+// (CutOff when drawn, draw.CutOffPage when stored), as no header goes with a file: never the page of a linked data file's mistakes, which are
 // refused. ?v= asks a version of a stored page, as of its page.
 // LIMIT: the management page's download is a link, so a page refused here (read again, past the parser's depth) shows
 // no reason on the screen; send it through fetch if such pages come to be written.
@@ -301,7 +301,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// A file kept is not mended by the watch: of what the directories hold now.
-	got, err := s.content(catalog(r), slug, m, "", v, s.latest)
+	got, err := s.content(catalog(r), slug, m, "", v, s.latest, true)
 	switch {
 	case errors.Is(err, errNoPage):
 		notFound(w)
@@ -313,10 +313,11 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 	}
 	defer got.body.Close() //nolint:errcheck // read-only
 	body := io.Reader(got.body)
-	if got.drawn {
+	// A linked data file was drawn with its CSP just now; a stored page was drawn when it was published.
+	if !m.IsLink() {
 		page, err := io.ReadAll(got.body)
 		if err == nil {
-			page, err = draw.CutOffPage(m.Path, page)
+			page, err = draw.CutOffPage(page)
 		}
 		if err != nil {
 			refuse(w, r, err)
