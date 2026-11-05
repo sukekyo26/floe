@@ -439,6 +439,7 @@ func newMeta(opts Options, path, from string, base *Meta, own, slug string) Meta
 		Folder:        false,
 		Archived:      false,
 		Tags:          base.Tags,
+		Work:          base.Work,
 		Versions:      base.Versions,
 		CreatedAt:     cmp.Or(base.CreatedAt, now),
 		UpdatedAt:     now,
@@ -886,6 +887,7 @@ type Edit struct {
 	Favorite    *bool
 	Archived    *bool
 	Tags        *[]string
+	Work        *WorkEdit
 }
 
 // Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
@@ -953,6 +955,9 @@ func setMarks(m *Meta, ed Edit) {
 	}
 	if ed.Tags != nil {
 		m.Tags = tagged(*ed.Tags)
+	}
+	if ed.Work != nil {
+		setWork(m, ed.Work)
 	}
 }
 
