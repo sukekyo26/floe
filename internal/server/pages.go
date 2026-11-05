@@ -284,8 +284,8 @@ func (s *Server) askedVersion(slug string, m *store.Meta, q url.Values) string {
 }
 
 // download answers the page of slug as a file, as it was linked or drawn, a page floe drew with its CSP in it
-// (CutOff when drawn, draw.CutOffPage when stored), as no header goes with a file: never the page of a linked data file's mistakes, which are
-// refused. ?v= asks a version of a stored page, as of its page.
+// (CutOff when drawn now, draw.CutOffPage when stored), as no header goes with a file: never the page of a linked
+// data file's mistakes, which are refused. ?v= asks a version of a stored page, as of its page.
 // LIMIT: the management page's download is a link, so a page refused here (read again, past the parser's depth) shows
 // no reason on the screen; send it through fetch if such pages come to be written.
 func (s *Server) download(w http.ResponseWriter, r *http.Request) {
