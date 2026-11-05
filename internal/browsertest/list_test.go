@@ -675,7 +675,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Fatal(err)
 	}
 	out = append(out, b.until("the edge let go", "!document.getElementById('list-grip').classList.contains('dragging') && getComputedStyle(document.getElementById('read-frame')).pointerEvents"))
-	// Folded and shown again, the focus on the other button; the list's words clear of the button.
+	// Folded and shown again, the focus on the other button, the two in one foot.
 	const shelf = "[getComputedStyle(document.querySelector('.shelf')).display, document.getElementById('shelf-show').hidden, document.getElementById('shelf-grip').hidden, document.activeElement.id, document.getElementById('shelf-show').getBoundingClientRect().right <= document.getElementById('list-hide').getBoundingClientRect().left].join(' ')"
 	b.eval("document.getElementById('shelf-hide').click()")
 	out = append(out, b.eval(shelf), b.eval("Math.round(document.getElementById('listcol').getBoundingClientRect().left)"))
@@ -730,14 +730,14 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.eval("picked.slug"))
 	key("j")
 	out = append(out, b.eval("picked.slug + ' ' + document.getElementById('read-actions').hidden"))
-	// Both folded, both buttons in the head of the page, told apart by their words; the page nearly whole.
+	// Both folded, both buttons over the page, told apart by their words; the page whole.
 	b.eval("document.getElementById('shelf-hide').click()")
 	out = append(out, b.eval("[...document.querySelectorAll('#manage > .side-show')].filter((e) => e.getClientRects().length).map((e) => e.id + ':' + (e.title === e.getAttribute('aria-label'))).join(' ') + ' ' + document.activeElement.id + ' ' + Math.round(document.getElementById('reader').getBoundingClientRect().left)"))
 	// Kept across a reload.
 	b.navigate("/")
 	out = append(out, b.eval("document.getElementById('manage').className"))
 	b.eval("document.getElementById('list-show').click()")
-	out = append(out, b.eval("document.activeElement.id + ' ' + document.getElementById('manage').className + ' ' + document.getElementById('shelf-tools').parentElement.className"))
+	out = append(out, b.eval("document.activeElement.id + ' ' + document.getElementById('manage').className + ' ' + document.getElementById('shelf-what').parentElement.className"))
 	b.eval("document.getElementById('shelf-show').click(); document.getElementById('list-hide').click()")
 	// What the filters pick shows: folded, the list opens; the search too.
 	b.eval("document.querySelector('.views [data-view=fav]').click()")
@@ -795,7 +795,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"true  true", "false Archive · Filter 2 true", "true", "flex",
 		"block 1 0 0 16 2", "none 0 1 0 16 2",
 		"true", "none", "flex shelf-hide", "160px 740px 160 740",
-		"520px 740", "0 0 0 0", "flex false 0 true  608", "none true 1 false list-show 200", "false true true", "0 ",
+		"520px 740", "0 0 0 0", "flex false 0 true  608", "none true 1 true list-show 200", "false true true", "0 ",
 		"long", "a3 false", "shelf-show:true list-show:true shelf-show 0",
 		"shell shelf-closed list-closed", "list-hide shell shelf-closed lhead", "flex", "flex",
 		"flex 0 0 0 1", "none", "true", "true", "true", "false true not (max-width: 70rem)",
@@ -828,14 +828,26 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.mouse(input.DispatchMouseEventTypeMousePressed, r.X+r.Width/2, r.Y+r.Height/2, 1)
 		b.mouse(input.DispatchMouseEventTypeMouseReleased, r.X+r.Width/2, r.Y+r.Height/2, 1)
 	}
-	out := make([]string, 0, 20)
+	// The ground and the shadow of what opens a column: over a page, its own; in the list's foot, none, as the button beside it.
+	const panel = "getComputedStyle(document.documentElement).getPropertyValue('--panel').trim()"
+	face := func(id string) string {
+		t.Helper()
+
+		return b.eval(`(() => {
+			const s = getComputedStyle(document.getElementById(` + js(id) + `)), c = document.createElement('i');
+			c.style.color = ` + panel + `; document.body.append(c);
+			const ground = getComputedStyle(c).color; c.remove();
+			return [s.backgroundColor === ground ? 'panel' : s.backgroundColor, s.boxShadow === 'none' ? 'no shadow' : 'shadow'].join(' ');
+		})()`)
+	}
+	out := make([]string, 0, 30)
 
 	// A folder's page: the page takes all the width, folded.
 	b.navigate("/a/docs/?file=index.html")
 	b.until("the tree", "!document.getElementById('side').hidden")
 	out = append(out, at("side-hide"))
 	press("side-hide")
-	out = append(out, at("side-show"), b.eval("document.activeElement.id + ' ' + document.getElementById('frame').getBoundingClientRect().width"))
+	out = append(out, at("side-show"), face("side-show"), b.eval("document.activeElement.id + ' ' + document.getElementById('frame').getBoundingClientRect().width"))
 	press("side-show")
 	out = append(out, b.eval("document.getElementById('side').hidden + ' ' + document.activeElement.id"))
 
@@ -843,9 +855,29 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	openDiff(b, "/a/d/?diff")
 	out = append(out, at("diff-toc-hide"))
 	press("diff-toc-hide")
-	out = append(out, at("diff-toc-show"), b.eval("(() => { const r = document.getElementById('diff-body'); return [r.getBoundingClientRect().left, r.getBoundingClientRect().width, getComputedStyle(r).paddingBottom, getComputedStyle(r).borderLeftWidth].join(' '); })()"))
+	out = append(out, at("diff-toc-show"), face("diff-toc-show"), b.eval("(() => { const r = document.getElementById('diff-body'); return [r.getBoundingClientRect().left, r.getBoundingClientRect().width, getComputedStyle(r).paddingBottom, getComputedStyle(r).borderLeftWidth].join(' '); })()"))
 	press("diff-toc-show")
 	out = append(out, b.eval("document.getElementById('diff-toc-nav').hidden + ' ' + document.activeElement.id"))
+	// In a window too low for the contents and the words under them, the foot stays, and the page does not scroll.
+	b.size(1440, 260, false)
+	out = append(out, b.until("the low window", "innerHeight === 260 && (() => { const f = document.querySelector('.dtoc .col-foot').getBoundingClientRect(); return [f.bottom, document.scrollingElement.scrollHeight - innerHeight].join(' '); })()"))
+	b.size(1440, 900, false)
+	// Narrower, the tree's button and what opens it stay in one place; under 40rem the tree goes over the page.
+	for _, width := range []int64{800, 400} {
+		b.size(width, 900, false)
+		b.navigate("/a/docs/?file=index.html")
+		b.until("the frame", "!document.getElementById('frame').hidden && innerWidth === "+strconv.FormatInt(width, 10))
+		if width == 400 {
+			press("side-show")
+		}
+		out = append(out, at("side-hide"))
+		press("side-hide")
+		out = append(out, at("side-show"))
+		if width == 800 {
+			press("side-show")
+		}
+	}
+	b.size(1440, 900, false)
 
 	// The list's page, its rows more than it can hold: each column alone, then both.
 	b.navigate("about:blank")
@@ -853,6 +885,19 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	defer b.unstub()
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li:not(.group)')")
+	// With no page chosen, folding the list leaves no head, but for the words of the filters to hold.
+	const head = "document.getElementById('read-head').getClientRects().length"
+	press("list-hide")
+	out = append(out, b.eval(head))
+	press("shelf-hide")
+	out = append(out, b.eval(head))
+	b.navigate("/?view=fav")
+	out = append(out, b.until("the words", "!document.getElementById('shelf-what').hidden && "+head))
+	press("shelf-show")
+	out = append(out, b.eval(head))
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li:not(.group)')")
+	press("list-show")
 	b.eval("document.querySelector('#list li:not(.group) .title').click()")
 	b.until("the page", "!document.getElementById('read-frame').hidden")
 	out = append(out, at("shelf-hide"), at("list-hide"))
@@ -861,12 +906,19 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 		return [body.scrollHeight > body.clientHeight, foot.height, foot.bottom === innerHeight, body.getBoundingClientRect().bottom === foot.top, foot.right === col.getBoundingClientRect().left + col.clientLeft + col.clientWidth].join(' ');
 	})()`))
 	press("shelf-hide")
-	out = append(out, at("shelf-show"), at("list-hide"), b.eval("document.activeElement.id"))
+	out = append(out, at("shelf-show"), face("shelf-show"), at("list-hide"), b.eval("document.activeElement.id"))
 	press("shelf-show")
 	press("list-hide")
-	out = append(out, at("list-show"), b.eval("document.activeElement.id"))
+	out = append(out, at("list-show"), face("list-show"), b.eval("document.activeElement.id"))
 	press("shelf-hide")
-	out = append(out, at("shelf-show"), at("list-show"), b.eval("(() => { const r = document.getElementById('read-frame').getBoundingClientRect(); return [r.left, r.width, document.getElementById('read-title').getBoundingClientRect().left].join(' '); })()"))
+	out = append(out, at("shelf-show"), face("shelf-show"), at("list-show"), b.eval("(() => { const r = document.getElementById('read-frame').getBoundingClientRect(); return [r.left, r.width, document.getElementById('read-title').getBoundingClientRect().left].join(' '); })()"))
+	// Over the page, a press opens the filters too; printed, nothing of it lies over the words.
+	press("shelf-show")
+	out = append(out, b.eval("document.activeElement.id"))
+	press("shelf-hide")
+	b.media("print")
+	out = append(out, b.eval("['shelf-show', 'list-show'].map((id) => getComputedStyle(document.getElementById(id)).display).join()"))
+	b.media("")
 	// Nowhere to fold to, under 70rem: neither foot nor what opens, folded as they are kept.
 	b.size(1100, 800, false)
 	out = append(out, b.until("the one row of filters", "matchMedia('(max-width: 70rem)').matches && ['#shelf-show', '#list-show', '.shelf > .col-foot', '.listcol > .col-foot'].map((q) => document.querySelector(q).getClientRects().length).join(' ')"))
@@ -875,12 +927,16 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, b.until("the list again", "!document.querySelector('.list-closed') && document.activeElement.id"))
 
 	check(t, "feet", out, strings.Join([]string{
-		"6 863.5", "6 863.5", "side-show 1440", "false side-hide",
-		"6 863.5", "6 863.5", "0 1440 44px 0px", "false diff-toc-hide",
+		"6 863.5", "6 863.5", "panel shadow", "side-show 1440", "false side-hide",
+		"6 863.5", "6 863.5", "panel shadow", "0 1440 44px 0px", "false diff-toc-hide",
+		"260 0",
+		"6 863.5", "6 863.5", "6 863.5", "6 863.5",
+		"0", "0", "1", "0",
 		"6 863.5", "207 863.5", "true 44 true true true",
-		"6 863.5", "43 863.5", "shelf-show",
-		"207 863.5", "list-show",
-		"6 863.5", "43 863.5", "0 1440 16",
+		"6 863.5", "rgba(0, 0, 0, 0) no shadow", "43 863.5", "shelf-show",
+		"207 863.5", "panel shadow", "list-show",
+		"6 863.5", "panel shadow", "43 863.5", "0 1440 16",
+		"shelf-hide", "none,none",
 		"0 0 0 0", "list-hide",
 	}, "|"))
 }
