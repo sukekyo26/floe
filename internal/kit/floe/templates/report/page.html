@@ -12,8 +12,11 @@
 <p class="eyebrow">{{.}}</p>
 {{- end}}
 <h1>{{.Title}}</h1>
+{{- /* LIMIT: a lead is a line of Markdown, so that, with no mistake, what looks like a tag (<prefix>, Vec<u8>) is left out
+   as raw HTML, marks pair up ("*" and "*", __init__) and a backslash before a mark goes (C:\_x). Tell of it where Markdown
+   is read if writers keep losing words */}}
 {{- with .Data.lead}}
-<p class="lead">{{.}}</p>
+<p class="lead">{{markdownLine .}}</p>
 {{- end}}
 </header>
 {{- range .Data.sections}}
