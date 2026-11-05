@@ -13,6 +13,7 @@ import (
 // Title returns the text of the page's first <title>, else of its first <h1>, as an HTML parser reads
 // them (scripting on, as a browser opens a page), with ASCII whitespace collapsed and trimmed as
 // document.title does; "" when the page has neither.
+// LIMIT: a page past the parser's depth, which a browser opens, has no title here: its slug shows, as with none.
 // LIMIT: the tree is walked whole, the content of a <template> and an <svg>'s <title> or <text> in an
 // <h1> among it, where a browser's document.title does not look; no special case is made for them.
 func Title(doc string) string {

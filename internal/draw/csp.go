@@ -1,8 +1,6 @@
 package draw
 
 import (
-	"bytes"
-	"fmt"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -26,13 +24,25 @@ func CutOff(connect string) string {
 		"script-src 'unsafe-inline' " + cdns + "; form-action 'none'; base-uri 'none'; connect-src " + connect
 }
 
-// CutOffPage puts CutOff into a page opened without the headers (a file floe render writes): first in its
-// head, read as a browser reads it, since a <meta> binds only what comes after it. Nothing connects. A page
-// floe draws is UTF-8, and a page holds one charset: the page's own go, wherever, and floe's goes first, so that
-// the CSP does not push it out of the bytes a browser reads for it. The parser always makes a head.
-// LIMIT: a page the server answers keeps page.html's charsets, its header's utf-8 overriding; take them in tmpl.Draw
+// CutOffPage puts CutOff into src, a stored page, which has no data file to name, for one who downloads it, as
+// withCutOff does.
+// LIMIT: read again, a page drawn may go past the parser's depth (503 <div> and <form><i><nobr><h2></form><div><li>
+// <button><h1> in them), told here and not when it was published; check it when drawn if such pages come to be written.
 func CutOffPage(src []byte) ([]byte, error) {
-	tree, _ := html.Parse(bytes.NewReader(src)) //nolint:errcheck // a bytes.Reader fails no read, Parse's one error
+	tree, err := parsePage("", src)
+	if err != nil {
+		return nil, err
+	}
+	withCutOff(tree)
+	return writePage("", tree)
+}
+
+// withCutOff puts CutOff into tree, nothing connecting: first in its head, read as a browser reads it, since a
+// <meta> binds only what comes after it. A page floe draws is UTF-8, and a page holds one charset: the page's own
+// go, wherever, and floe's goes first, so that the CSP does not push it out of the bytes a browser reads for it. The
+// parser always makes a head.
+// LIMIT: a page the server answers keeps page.html's charsets, its header's utf-8 overriding; take them in tmpl.Draw
+func withCutOff(tree *html.Node) {
 	// Taken out after the walk, which stops at a node taken out.
 	var charsets []*html.Node
 	for n := range tree.Descendants() {
@@ -41,9 +51,10 @@ func CutOffPage(src []byte) ([]byte, error) {
 		}
 	}
 	for _, n := range charsets {
-		// The spaces after one in the head show nothing, and would leave an empty line.
-		if t := n.NextSibling; n.Parent.DataAtom == atom.Head && t != nil && t.Type == html.TextNode &&
-			strings.TrimLeft(t.Data, " \t\n\f\r") == "" {
+		// The spaces after one in the head show nothing, and would leave an empty line; an item's marks taken out
+		// leave them in more than one node.
+		for t := n.NextSibling; n.Parent.DataAtom == atom.Head && t != nil && t.Type == html.TextNode &&
+			strings.TrimLeft(t.Data, " \t\n\f\r") == ""; t = n.NextSibling {
 			n.Parent.RemoveChild(t)
 		}
 		n.Parent.RemoveChild(n)
@@ -61,9 +72,4 @@ func CutOffPage(src []byte) ([]byte, error) {
 		meta.Attr = attrs
 		head.InsertBefore(meta, first)
 	}
-	var out bytes.Buffer
-	if err := html.Render(&out, tree); err != nil {
-		return nil, fmt.Errorf("draw: write the page: %w", err)
-	}
-	return out.Bytes(), nil
 }

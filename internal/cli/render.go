@@ -13,7 +13,6 @@ import (
 
 	"github.com/sukekyo26/floe/internal/diagram"
 	"github.com/sukekyo26/floe/internal/dirs"
-	"github.com/sukekyo26/floe/internal/draw"
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -110,9 +109,7 @@ func (a *app) drawPages(k *kit.Kit, store diagram.Icons, paths []string, out arg
 		}
 		first, p = append(first, t), t.page
 		if err == nil {
-			if p.page, err = draw.CutOffPage(page); err != nil {
-				return nil, err //nolint:wrapcheck // floe's failure, which says what failed
-			}
+			p.page = page
 			pages = append(pages, p)
 		}
 	}

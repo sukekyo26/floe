@@ -5,12 +5,13 @@ import (
 	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 
 	"golang.org/x/net/html"
+
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 // block is what a page holds in one place: a paragraph, an item, a row, a line of code, a diagram or an image.
@@ -56,10 +57,12 @@ func names(list string) map[string]bool {
 }
 
 // read reads the page as a browser does into its sections.
+// LIMIT: a kept version past the parser's depth (read again, see draw.CutOffPage) cannot be compared: the writer cannot
+// mend a version kept, and the words do not say which. Keep them apart here if such pages come to be written.
 func read(page []byte) ([]section, error) {
 	root, err := html.Parse(bytes.NewReader(page))
 	if err != nil {
-		return nil, fmt.Errorf("read a version of the page: %w", err)
+		return nil, usererr.Library(err) //nolint:wrapcheck // the library's words
 	}
 	r := &reader{sections: []section{{heading: "", level: 0, blocks: nil}}, kind: "", words: strings.Builder{}}
 	r.walk(root)
@@ -317,7 +320,10 @@ func svgKey(n *html.Node) string {
 		number(m)
 	}
 	var out bytes.Buffer
-	_ = html.Render(&out, n) //nolint:errcheck // a buffer takes every write, and the parser makes no node it cannot render
+	// LIMIT: Render stops at a void element holding something, so that two versions differing only past it have one
+	// digest, and a change to a diagram leaves the diff unsaid. Only a page read again can hold one, as draw refuses
+	// it when writing; compare the trees if that comes to be seen.
+	_ = html.Render(&out, n) //nolint:errcheck // see above
 	return digest(out.String())
 }
 

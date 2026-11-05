@@ -50,7 +50,8 @@ func checkPage(k *kit.Kit, ns names, d *doc.Data, tree *html.Node) (named, error
 			var args []any
 			if bad == "meta" {
 				var b strings.Builder
-				_ = html.Render(&b, n) //nolint:errcheck // a strings.Builder fails no write
+				// The parser gives a <meta> nothing to hold: closed at once, and out of svg and math, which it leaves.
+				_ = html.Render(&b, n) //nolint:errcheck // see above
 				args = append(args, yamlpos.Head(b.String()))
 			}
 			refuse(refusal[bad], args...)
@@ -124,7 +125,7 @@ func replaced(n *html.Node) string {
 		Type: html.ElementNode, DataAtom: n.DataAtom, Data: n.Data, Namespace: n.Namespace, Attr: n.Attr[i : i+1],
 	}
 	var b strings.Builder
-	_ = html.Render(&b, bare) //nolint:errcheck // a strings.Builder fails no write
+	_ = html.Render(&b, bare) //nolint:errcheck // an element holding nothing, as a void one must
 	tag := b.String()
 	// On one line, whole: Render leaves a line break in a value as it is, and a value cut short may lose ZgotmplZ.
 	return strings.ReplaceAll(tag[:strings.IndexByte(tag, '>')+1], "\n", " ")

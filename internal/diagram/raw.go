@@ -1,7 +1,6 @@
 package diagram
 
 import (
-	"fmt"
 	"html/template"
 	"strings"
 
@@ -30,7 +29,7 @@ func checkRaw(svg string) (template.HTML, error) {
 	}
 	nodes, err := html.ParseFragment(strings.NewReader(svg), context)
 	if err != nil {
-		return "", fmt.Errorf("diagram: read raw SVG: %w", err)
+		return "", err //nolint:wrapcheck // the library's words, told at the value by addRaw
 	}
 	var bad rawElements
 	for _, n := range nodes {
@@ -42,7 +41,7 @@ func checkRaw(svg string) (template.HTML, error) {
 	var b strings.Builder
 	for _, n := range nodes {
 		if err := html.Render(&b, n); err != nil {
-			return "", fmt.Errorf("diagram: write raw SVG: %w", err)
+			return "", err //nolint:wrapcheck // as above
 		}
 	}
 	// Read and written by x/net/html, of SVG's elements alone, none a script or a foreignObject.

@@ -151,6 +151,8 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 - 自分の部品・見た目・共有の schema・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check` と `floe template check` が並べます。
 - 同じ誤りは、何か所から指されても 1 回だけ言います。
 
+ページの中で一度に開いておける要素は 512 までで、`<html>`・`<body>` と、テンプレートや部品が開く要素も数えます。超えると `html: open stack of elements exceeds 512 nodes` で断ります。Markdown・`html` の部品・部品・`page.html` のどれからも深くなるので、場所はデータファイルだけです。図の `raw` がそれだけで超えるときは、その行と列です。入れ子を浅くしてください。
+
 ### 警告
 
 描いたページに警告が付くことがあります。より良い書き方の勧めで、ページは描かれ、終了コードも変わりません（誤りが無ければ 0）。`floe check`・`floe render`・`floe template check`・`floe publish` が、誤りの後に出します:

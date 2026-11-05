@@ -26,6 +26,7 @@ type Options struct {
 	Images    fs.FS         // the data's images, nil for none; its maker closes it
 	ImagesDir string        // the directory mistakes name the images under, "" for the data file's
 	Icons     diagram.Icons // the icons the diagrams show, nil for none kept
+	CutOff    bool          // the page opens without the headers (a file floe render writes): its CSP goes in it
 }
 
 // Draw draws the data file src, file in its mistakes, with the templates, parts and themes of k, as a page:
@@ -42,7 +43,7 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, []*usererr.Er
 		return nil, nil, err
 	}
 	//nolint:wrapcheck // mistakes of the page, or floe's failure
-	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.Images, o.ImagesDir, o.Icons)
+	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.Images, o.ImagesDir, o.Icons, o.CutOff)
 }
 
 // Diagrams returns the data file src, file in its mistakes, read and checked against its template's schema as Draw

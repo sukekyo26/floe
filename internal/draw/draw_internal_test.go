@@ -121,6 +121,21 @@ func TestCutOffPage(t *testing.T) {
 	}
 }
 
+// What the library will not read or write of a stored page is told in its words, of no file.
+func TestCutOffPageRefused(t *testing.T) {
+	t.Parallel()
+
+	for page, want := range map[string]string{
+		strings.Repeat("<div>", 600): "html: open stack of elements exceeds 512 nodes",
+		"<svg><col>x</col></svg>":    "html: void element <col> has child nodes",
+	} {
+		_, err := CutOffPage([]byte(page))
+		if got := usererr.Tell(i18n.EnglishCatalog(), err).Render(""); got != want {
+			t.Errorf("%.10q: %q, want %q", page, got, want)
+		}
+	}
+}
+
 // Where an item's text ends in a tag it does not finish is past the last token read whole, else the last token,
 // which the tokenizer ended at the end.
 func TestUnfinished(t *testing.T) {
