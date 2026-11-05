@@ -317,6 +317,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the bar over a page of the management page to diff, download, open alone, archive, star and `…`, whose menu no longer
+  repeats what the bar shows. At 40rem or less a page open whole keeps diff and `…` in the bar, the rest in the menu, favorites
+  too, and the logo gives its room to the title; a folder's page keeps its path and open alone in the bar.
 - Move the button that folds a column of the management page (the filters, the list, a folder's tree, a diff's contents) to a
   foot at the column's bottom. Folded, the column, its foot and its line go, and only an icon to open it stays in the button's
   place, over the page beside it. The narrow column a diff's contents left behind is gone. Whichever columns are open, one line

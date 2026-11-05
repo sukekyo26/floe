@@ -956,6 +956,201 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	}, "|"))
 }
 
+// TestUIBarActions: what the bar over a page shows, its menu does not, and what leaves the bar is in its menu, for each kind of
+// entry, at both widths where the bar changes. A row has no bar, and its menu has all.
+func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "bar/two.yaml", "Two", "<p>one</p>"), "--slug", "two")
+	s.floe(t, "publish", s.page(t, "bar/two.yaml", "Two", "<p>two</p>"), "--slug", "two")
+	s.floe(t, "publish", s.page(t, "bar/one.yaml", "One", "<p>one</p>"), "--slug", "one")
+	s.floe(t, "publish", s.page(t, "bar/kept.yaml", "Kept", "<p>kept</p>"), "--slug", "kept")
+	s.floe(t, "archive", "kept")
+	s.floe(t, "publish", "--link", s.write(t, "bar/l/link.html", "<title>L</title><p>l</p>"), "--slug", "link")
+	gone := s.write(t, "bar/g/gone.html", "<title>G</title><p>g</p>")
+	s.floe(t, "publish", "--link", gone, "--slug", "gone")
+	if err := os.Remove(gone); err != nil {
+		t.Fatal(err)
+	}
+	s.write(t, "bar/docs/index.html", "<!doctype html><title>t</title><p>page</p>")
+	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "bar/docs"), "--slug", "docs")
+	b.size(1440, 900, false)
+	defer b.unsize()
+
+	// The bar of the box and its menu, opened and closed, by what each thing is: only what is seen.
+	const named = `const name = (e) => ['diff-open', 'fav-item', 'mark-unread', 'select', 'edit', 'copy', 'download', 'open', 'archive', 'star', 'delete'].find((c) => e.classList.contains(c));`
+	shown := func(box string) string {
+		t.Helper()
+
+		bar := b.eval(`(() => { ` + named + `
+			const out = [...document.querySelector(` + js(box) + `).children].filter((e) => e.getClientRects().length).map((e) => (e.matches('.more-slot') ? (e.querySelector('.more') ? 'more' : '') : name(e)));
+			return out.filter(Boolean).join(' ');
+		})()`)
+		menu := b.eval(`(() => { ` + named + `
+			const more = document.querySelector(` + js(box+" .more") + `);
+			if (!more) return '';
+			more.open = true;
+			const out = [...more.querySelectorAll('.menu > *')].filter((e) => e.getClientRects().length).map(name).join(' ');
+			more.open = false;
+			return out;
+		})()`)
+		return bar + " | " + menu
+	}
+	pick := func(slug string) {
+		t.Helper()
+
+		b.eval("pickRow({ slug: " + js(slug) + ", file: '' })")
+		b.until(slug+" beside the list", "picked?.slug === "+js(slug))
+	}
+	out := make([]string, 0, 16)
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li[data-slug=two]')")
+	for _, slug := range []string{"two", "one"} {
+		pick(slug)
+		b.until(slug+" read", "items.find((a) => a.slug === "+js(slug)+") && !items.find((a) => a.slug === "+js(slug)+").news")
+		b.until("its menu", "!document.querySelector('#read-actions .mark-unread').hidden")
+		out = append(out, shown("#read-actions"))
+	}
+	for _, slug := range []string{"link", "gone"} {
+		pick(slug)
+		out = append(out, shown("#read-actions"))
+	}
+	// A row's menu has all, and the bar's kinds in the foot of the modal that finds: a folder, which the list opens nothing of.
+	out = append(out, b.eval(`(() => { `+named+`
+		const more = document.querySelector('#list li[data-slug=one] .more');
+		more.open = true;
+		const got = [...more.querySelectorAll('.menu > *')].filter((e) => e.getClientRects().length).map(name).join(' ');
+		more.open = false;
+		return got;
+	})()`))
+	b.eval("openFind()")
+	typeFind(b, "docs")
+	b.until("the folder's row", "document.getElementById('find-actions').dataset.slug === 'docs'")
+	out = append(out, shown("#find-actions"))
+	typeFind(b, "two")
+	b.until("the page's row", "document.getElementById('find-actions').dataset.slug === 'two'")
+	out = append(out, shown("#find-actions"))
+	b.eval("document.getElementById('find').close()")
+
+	// The whole page: an archived one tells what a press does in its button, and is black while it is.
+	b.navigate("/a/kept/")
+	b.until("the bar", "!document.getElementById('frame-actions').hidden && document.querySelector('#frame-actions .star')")
+	b.until("read", "!document.querySelector('#frame-actions .mark-unread').hidden")
+	out = append(out, shown("#frame-actions"))
+	const archive = "(() => { const a = document.querySelector('#frame-actions > .archive'); return [a.title, a.getAttribute('aria-label'), a.getAttribute('aria-pressed'), a.classList.contains('on'), getComputedStyle(a).backgroundColor === 'rgba(0, 0, 0, 0)'].join(' / '); })()"
+	out = append(out, b.eval(archive))
+	b.eval("document.querySelector('#frame-actions > .archive').focus(); document.querySelector('#frame-actions > .archive').click()")
+	b.until("restored", "!document.querySelector('#frame-actions > .archive').classList.contains('on')")
+	out = append(out, b.settled(archive), b.eval("document.activeElement.matches('#frame-actions > .archive')"))
+	b.navigate("/a/two/")
+	b.until("the bar", "document.querySelector('#frame-actions > .download[href]')")
+	out = append(out, b.eval("(() => { const d = document.querySelector('#frame-actions > .download'); return [new URL(d.href).pathname, d.download].join(' '); })()"))
+	b.navigate("/a/docs/?file=index.html")
+	b.until("the bar", "!document.getElementById('frame-actions').hidden && document.querySelector('#frame-actions .star')")
+	out = append(out, shown("#frame-actions"))
+	// Pressed the other way, twice before the answer: one question and one toast, the words changed, the mark black with what is on it readable.
+	b.navigate("/a/one/")
+	b.until("the bar", "document.querySelector('#frame-actions > .archive[title]')")
+	b.eval(`window.patched = 0; window.fetch = ((f) => (u, i) => { if (i?.method === 'PATCH') window.patched++; return f(u, i); })(window.fetch);
+		document.querySelector('#frame-actions > .archive').focus(); document.querySelector('#frame-actions > .archive').click(); document.querySelector('#frame-actions > .archive').click()`)
+	b.until("archived", "document.querySelector('#frame-actions > .archive').classList.contains('on')")
+	said := b.until("the toast", "document.querySelector('.toast') && [window.patched, [...document.querySelectorAll('.toast')].map((e) => e.textContent).join(), document.activeElement.matches('#frame-actions > .archive')].join(' / ')")
+	out = append(out, b.settled(archive), said)
+	out = append(out, b.settled(`(() => {
+		const lum = (c) => { const [r, g, bl] = c.match(/[\d.]+/g).map((x) => { const v = x / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * bl; };
+		const s = getComputedStyle(document.querySelector('#frame-actions > .archive')), a = lum(s.color), g = lum(s.backgroundColor);
+		return (Math.max(a, g) + 0.05) / (Math.min(a, g) + 0.05) >= 4.5;
+	})()`))
+	b.eval("document.querySelector('#frame-actions > .archive').click()")
+	b.until("given back", "!document.querySelector('#frame-actions > .archive').classList.contains('on')")
+	// Between the widths the bar is as wide.
+	b.size(800, 800, false)
+	b.navigate("/a/two/")
+	b.until("the bar", "innerWidth === 800 && document.querySelector('#frame-actions .more')")
+	out = append(out, shown("#frame-actions"))
+
+	// Narrow: the title takes the logo's room, the rest in the menu, favorites too, and f goes on.
+	b.size(400, 800, false)
+	b.navigate("/a/two/")
+	b.until("the bar", "innerWidth === 400 && !document.getElementById('frame-actions').hidden && document.querySelector('#frame-actions .more')")
+	out = append(out, shown("#frame-actions"))
+	out = append(out, b.eval("[document.querySelector('.brand').getClientRects().length, document.getElementById('back').getClientRects().length, document.documentElement.scrollWidth <= innerWidth].join(' ')"))
+	const fav = "(() => { const f = document.querySelector('#frame-actions .fav-item'); return [f.querySelector('.label').textContent, f.getAttribute('aria-label')].join(' / '); })()"
+	out = append(out, b.eval(fav))
+	b.pressKey("f")
+	out = append(out, b.until("a favorite", "items.find((a) => a.slug === 'two').favorite && "+fav))
+	b.eval("document.querySelector('#frame-actions summary').click(); document.querySelector('#frame-actions .fav-item').click()")
+	out = append(out, b.until("no favorite", "!items.find((a) => a.slug === 'two').favorite && document.querySelector('#frame-actions .fav-item') && "+fav))
+	// Pressed on the toast with the focus on it, a page marked unread gives the focus to the bar's menu.
+	// The menu opens within the window at any width.
+	for _, width := range []int64{400, 320} {
+		b.size(width, 800, false)
+		b.until("the width", "innerWidth === "+strconv.FormatInt(width, 10))
+		b.eval("document.querySelector('#frame-actions .more').open = true")
+		out = append(out, b.eval("(() => { const r = document.querySelector('#frame-actions .menu').getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth; })()"))
+		b.eval("document.querySelector('#frame-actions .more').open = false")
+	}
+	b.size(400, 800, false)
+	// The other kinds, narrow.
+	s.floe(t, "archive", "kept")
+	for _, slug := range []string{"one", "link", "kept"} {
+		b.navigate("/a/" + slug + "/")
+		b.until(slug+"'s bar", "innerWidth === 400 && document.querySelector('#frame-actions .more')")
+		out = append(out, shown("#frame-actions"))
+	}
+	b.navigate("/a/one/")
+	b.until("the bar", "document.querySelector('#frame-actions .more')")
+	b.eval("markUnread('one')")
+	b.until("unread", "items.find((a) => a.slug === 'one').news")
+	b.navigate("/a/one/")
+	b.until("the toast", "document.querySelector('.toast.page .btn')")
+	b.eval("document.querySelector('.toast.page .btn').focus(); document.querySelector('.toast.page .btn').click()")
+	out = append(out, b.until("the focus on the menu", "document.activeElement.matches('#frame-actions summary') && 'on the menu'"))
+	b.navigate("/a/docs/?file=index.html")
+	b.until("the bar", "!document.getElementById('frame-actions').hidden && document.querySelector('#frame-actions .star')")
+	out = append(out, shown("#frame-actions"))
+	// The foot of the modal holds its buttons at this width.
+	b.eval("openFind()")
+	typeFind(b, "two")
+	b.until("the page's row", "document.getElementById('find-actions').dataset.slug === 'two'")
+	out = append(out, b.eval(`(() => {
+		const box = document.getElementById('find').getBoundingClientRect(), close = document.querySelector('.find-foot [data-close]').getBoundingClientRect();
+		const acts = [...document.querySelectorAll('#find-actions > *')].filter((e) => e.getClientRects().length).map((e) => e.getBoundingClientRect());
+		return [acts.every((r) => r.left >= box.left && r.right <= close.left), close.right <= box.right].join(' ');
+	})()`))
+
+	check(t, "bar", out, strings.Join([]string{
+		"diff-open download open archive star more | mark-unread edit delete",
+		"download open archive star more | mark-unread edit delete",
+		"download open archive star more | edit copy delete",
+		"archive star more | edit copy delete",
+		"mark-unread select edit open download archive delete",
+		"archive star more | edit copy delete",
+		"diff-open download open archive star more | mark-unread edit delete",
+		"download open archive star more | mark-unread edit delete",
+		"Restore / Restore Kept to the list /  / true / false",
+		"Archive / Archive Kept /  / false / true", "true",
+		"/api/artifacts/two/download two.html",
+		"copy open | ",
+		"Restore / Restore One to the list /  / true / false",
+		"1 / Archived “One” / true",
+		"true",
+		"diff-open download open archive star more | mark-unread edit delete",
+		"diff-open more | fav-item mark-unread edit open download archive delete",
+		"0 1 true",
+		"Add to favorites / Add Two to favorites",
+		"Remove from favorites / Remove Two from favorites",
+		"Add to favorites / Add Two to favorites",
+		"true", "true",
+		"more | fav-item mark-unread edit open download archive delete",
+		"more | fav-item edit copy open download archive delete",
+		"more | fav-item mark-unread edit open download archive delete",
+		"on the menu",
+		"copy open | ",
+		"true true",
+	}, "|"))
+}
+
 // rowPoint is where in the row of the selector a press lands on its link: at its title's words, or in the margin of the row.
 func rowPoint(t *testing.T, b *browser, row string, margin bool) (float64, float64) {
 	t.Helper()
