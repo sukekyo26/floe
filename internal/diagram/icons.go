@@ -144,7 +144,8 @@ type endSide struct {
 // sortAlong sorts the ends on a side, on axis, by where they stand now.
 func (d *drawing) sortAlong(ends []endAt, axis int) {
 	slices.SortFunc(ends, func(a, b endAt) int {
-		return cmp.Or(cmp.Compare(d.endRun(a)[axis], d.endRun(b)[axis]), cmp.Compare(a.edge, b.edge), cmp.Compare(a.end, b.end))
+		at := cmp.Compare(d.endRun(a)[axis], d.endRun(b)[axis])
+		return cmp.Or(at, cmp.Compare(a.edge, b.edge), cmp.Compare(a.end, b.end))
 	})
 }
 
@@ -451,9 +452,10 @@ func (d *drawing) bend(k int) {
 	}
 }
 
-// keepApart is how near a moved end at a box lets its runs stand beside another edge's: half the column the routes keep.
-// LIMIT: not for ends at icons, whose 8 ends on a side stand 5.33 apart, so edges at icons may run closer. Look again if
-// a diagram comes to show it.
+// keepApart is how near a moved end at a box lets its runs stand beside another edge's: half the column the routes
+// keep.
+// LIMIT: not for ends at icons, whose 8 ends on a side stand 5.33 apart, so edges at icons may run closer. Look again
+// if a diagram comes to show it.
 const keepApart = column / 2
 
 // moveRun moves points at of edge k to q on axis, unless that lands on something or, for an end at a box, crosses more
@@ -475,7 +477,8 @@ func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 			runs = append(runs, segAt(pts, i))
 		}
 	}
-	if d.clear(k, runs) && (d.loops[k] || d.labelFits(k)) && (!boxEnd || d.crossesBelow(k, segsOf(pts)) && d.keepsApart(k, runs)) {
+	if d.clear(k, runs) && (d.loops[k] || d.labelFits(k)) &&
+		(!boxEnd || d.keepsApart(k, runs) && d.crossesBelow(k, segsOf(pts))) {
 		return true
 	}
 
@@ -503,8 +506,8 @@ func (d *drawing) ontoOutlines(k int, at []int, q float64) bool {
 	return moved
 }
 
-// keepsApart is whether runs, of edge k, stand keepApart from the runs of the other edges beside them. Lines read as one
-// however short the stretch they share, so its length is not looked at.
+// keepsApart is whether runs, of edge k, stand keepApart from the runs of the other edges beside them. Lines read as
+// one however short the stretch they share, so its length is not looked at.
 func (d *drawing) keepsApart(k int, runs []seg) bool {
 	for _, s := range runs {
 		for e, q := range d.settling.runs {

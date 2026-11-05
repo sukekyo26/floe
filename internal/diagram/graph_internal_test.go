@@ -802,6 +802,8 @@ func TestGraphRandom(t *testing.T) {
 	// Then, graphs with a label on every edge, in English and Japanese, crowding labels into every channel; then,
 	// graphs in lanes; last, graphs with level edges between boxes picked at random, with no group (plain), groups
 	// and lanes, those told only of their level edges skipped, and at least least of them laid out.
+	// LIMIT: each graph lays out several times over, its ends moved or not, and the counts keep the race job within CI's 10
+	// minutes. Raise them if the moves come to be cheaper.
 	for _, c := range []struct {
 		direction string
 		seed      [2]uint64
@@ -812,12 +814,12 @@ func TestGraphRandom(t *testing.T) {
 		least     int
 		parts     int // the least share of ends at boxes on their equal parts, in percent, a little under what it measures
 	}{
-		{"", [2]uint64{1, 2}, 3000, false, false, "", 0, 69},
-		{"right", [2]uint64{3, 4}, 3000, false, false, "", 0, 77},
-		{"", [2]uint64{5, 6}, 300, true, false, "", 0, 47},
-		{"right", [2]uint64{7, 8}, 300, true, false, "", 0, 64},
-		{"", [2]uint64{9, 10}, 1000, false, true, "", 0, 77},
-		{"right", [2]uint64{11, 12}, 1000, false, true, "", 0, 84},
+		{"", [2]uint64{1, 2}, 1000, false, false, "", 0, 69},
+		{"right", [2]uint64{3, 4}, 1000, false, false, "", 0, 77},
+		{"", [2]uint64{5, 6}, 150, true, false, "", 0, 47},
+		{"right", [2]uint64{7, 8}, 150, true, false, "", 0, 64},
+		{"", [2]uint64{9, 10}, 400, false, true, "", 0, 77},
+		{"right", [2]uint64{11, 12}, 400, false, true, "", 0, 84},
 		{"", [2]uint64{13, 14}, 300, false, false, "plain", 132, 68},
 		{"right", [2]uint64{15, 16}, 300, false, false, "plain", 123, 76},
 		{"", [2]uint64{17, 18}, 300, false, false, "groups", 97, 71},
