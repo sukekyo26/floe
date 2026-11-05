@@ -237,8 +237,8 @@ func (d *drawing) iconDrawn(i int) rect {
 	return rect{x: min(at.x, at.x+at.w/2-w/2), y: at.y, w: max(at.w, w), h: at.h + iconUnder(ic), what: "", at: ""}
 }
 
-// endPoint is where the end e stands on its icon or box. On an icon's bottom side it stands under the label, or under the icon past
-// the label's width: an end there would stand off from all it belongs to.
+// endPoint is where the end e stands on its icon or box. On an icon's bottom side it stands under the label, or under
+// the icon past the label's width: an end there would stand off from all it belongs to.
 // LIMIT: the label's width is an estimate (units), so an end by its edge may touch the words. Measure if that shows.
 func (d *drawing) endPoint(e endAt) [2]float64 {
 	i, place := d.ends[e.edge][e.end], d.places[e]
@@ -462,17 +462,7 @@ func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 		was[j] = pts[i]
 		pts[i][axis] = q
 	}
-	boxEnd := false
-	for j, i := range [2]int{0, len(pts) - 1} {
-		if b := d.ends[k][j]; b >= 0 && d.icons[b] == nil && slices.Contains(at, i) {
-			boxEnd = true
-			next := pts[1]
-			if j == 1 {
-				next = pts[len(pts)-2]
-			}
-			pts[i] = d.boxes[b].form.on(d.boxes[b], leaves(pts[i], next), q)
-		}
-	}
+	boxEnd := d.ontoOutlines(k, at, q)
 	var runs []seg
 	for _, i := range at {
 		if i > 0 && pts[i-1] != pts[i] {
@@ -490,6 +480,24 @@ func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 		pts[i] = was[j]
 	}
 	return false
+}
+
+// ontoOutlines brings the ends at boxes among points at of edge k, moved to q, back onto their outlines, and reports
+// whether there were any: a hexagon's top or a round corner stands off the side.
+func (d *drawing) ontoOutlines(k int, at []int, q float64) bool {
+	pts := d.routes[k]
+	moved := false
+	for j, i := range [2]int{0, len(pts) - 1} {
+		if b := d.ends[k][j]; b >= 0 && d.icons[b] == nil && slices.Contains(at, i) {
+			moved = true
+			next := pts[1]
+			if j == 1 {
+				next = pts[len(pts)-2]
+			}
+			pts[i] = d.boxes[b].form.on(d.boxes[b], leaves(pts[i], next), q)
+		}
+	}
+	return moved
 }
 
 // crossesBelow is whether runs, all of edge k, cross no more of the other edges than k does as last noted.

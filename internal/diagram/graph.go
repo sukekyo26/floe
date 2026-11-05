@@ -410,7 +410,8 @@ func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, err
 	d := &drawing{
 		right: right, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{},
 		ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
-		frames: map[int]rect{}, heads: map[int]rect{}, icons: map[int]*icon{}, places: map[endAt]endPlace{}, slid: map[endAt]bool{},
+		frames: map[int]rect{}, heads: map[int]rect{}, icons: map[int]*icon{}, places: map[endAt]endPlace{},
+		slid:  map[endAt]bool{},
 		moved: map[int]float64{}, settled: map[int]bool{},
 		settling: settling{things: nil, sides: nil, runs: nil, labels: nil},
 		level:    map[int][2]string{}, taken: map[int]map[string]bool{},
