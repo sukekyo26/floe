@@ -39,7 +39,7 @@ type gref struct{ box, cl int }
 func flatBox(n graphNode, nat string, cl int) gbox {
 	if n.Icon != nil {
 		//nolint:exhaustruct_v5 // an icon read flat as a box
-		return gbox{box: &graphBox{icon: n.Icon, Name: n.Icon.Name, Shape: "icon"}, at: nat + "/icon", cl: cl}
+		return gbox{box: &graphBox{icon: n.Icon, Name: n.Icon.Name, With: n.Icon.With, Shape: "icon"}, at: nat + "/icon", cl: cl}
 	}
 	return gbox{box: n.Box, at: nat + "/box", cl: cl}
 }

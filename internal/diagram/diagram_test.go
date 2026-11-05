@@ -3,8 +3,11 @@ package diagram_test
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -1819,4 +1822,252 @@ func TestGraphIconMistakes(t *testing.T) {
 	if _, mistakes := draw(t, over, drawWith("en", lambda)); !strings.HasPrefix(mistakes, "s.yaml:4:5: ") {
 		t.Errorf("a box over a frame's icon: told %q, want it at the box", mistakes)
 	}
+}
+
+// The top of each box and icon of what inspect tells, by name: of one height, the same top is the same rank.
+func topsOf(t *testing.T, got string) map[string]string {
+	t.Helper()
+	tops := map[string]string{}
+	for _, m := range regexp.MustCompile(`(?m)^(?:box|icon) "([^"]+)" [-\d.]+,([-\d.]+) `).FindAllStringSubmatch(got, -1) {
+		tops[m[1]] = m[2]
+	}
+	return tops
+}
+
+// with stands a box or an icon in the rank of the box it names, and takes the edges from boxes into it out of the
+// ranks alone: whatever the order written, up or down as the ranks fall.
+func TestGraphWith(t *testing.T) {
+	t.Parallel()
+
+	const top = "title: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n"
+	b := func(name, with string) string {
+		if with != "" {
+			with = ", with: " + with
+		}
+		return "        - box: { name: " + name + with + ", rows: [" + strings.ToUpper(name) + "] }\n"
+	}
+	spec := func(nodes, edges string) string {
+		if edges == "" {
+			return top + nodes + "      edges: []\n"
+		}
+		return top + nodes + "      edges:\n" + edges
+	}
+	e := func(from, to string) string { return "        - { from: " + from + ", to: " + to + " }\n" }
+	above := func(t *testing.T, tops map[string]string, hi, lo string) {
+		t.Helper()
+		h, _ := strconv.ParseFloat(tops[hi], 64)
+		l, _ := strconv.ParseFloat(tops[lo], 64)
+		if h >= l {
+			t.Errorf("%s stands at %s, %s at %s, want it above", hi, tops[hi], lo, tops[lo])
+		}
+	}
+	level := func(t *testing.T, tops map[string]string, a, c string) {
+		t.Helper()
+		if tops[a] != tops[c] {
+			t.Errorf("%s stands at %s, %s at %s, want them in one rank", a, tops[a], c, tops[c])
+		}
+	}
+	laid := func(t *testing.T, src string) (string, map[string]string) {
+		t.Helper()
+		got, told := draw(t, src, inspect)
+		if told != "" {
+			t.Fatalf("%s: told %s", src, told)
+		}
+		return got, topsOf(t, got)
+	}
+
+	t.Run("whatever the order written", func(t *testing.T) {
+		t.Parallel()
+		x, alb, nat, api := b("x", ""), b("alb", ""), b("nat", "alb"), b("api", "")
+		for _, c := range []struct{ nodes, edges string }{
+			{x + alb + nat + api, e("x", "api") + e("alb", "api") + e("api", "nat")},
+			{alb + nat + x + api, e("x", "api") + e("alb", "api") + e("api", "nat")},
+			{x + alb + nat + api, e("alb", "api") + e("x", "api") + e("api", "nat")},
+		} {
+			_, tops := laid(t, spec(c.nodes, c.edges))
+			level(t, tops, "alb", "nat")
+			above(t, tops, "alb", "api")
+		}
+	})
+	t.Run("an edge up is drawn as written", func(t *testing.T) {
+		t.Parallel()
+		got, tops := laid(t, spec(b("lb", "")+b("api", "")+b("nat", "lb"), e("lb", "api")+e("api", "nat")))
+		level(t, tops, "lb", "nat")
+		above(t, tops, "nat", "api")
+		if want := "edge api→nat M116,85 V49\n"; !strings.Contains(got, want) {
+			t.Errorf("inspect = %s, want %s", got, want)
+		}
+		// Its arrow at nat, the end written, not at api.
+		svg, told := draw(t, spec(b("lb", "")+b("api", "")+b("nat", "lb"), e("lb", "api")+e("api", "nat")), render("en"))
+		if told != "" || !strings.Contains(svg, `d="M116,85 V49"`) {
+			t.Errorf("draw = %s %s, want the edge from api up to nat", svg, told)
+		}
+	})
+	t.Run("an icon", func(t *testing.T) {
+		t.Parallel()
+		icon := func(name, with string) string {
+			if with != "" {
+				with = ", with: " + with
+			}
+			return "        - icon: { name: " + name + with + ", icon: aws/aws-lambda, label: " + name + " }\n"
+		}
+		_, tops := laid(t, spec(icon("u", "")+icon("v", "")+icon("w", "u"), e("u", "v")+e("v", "w")))
+		level(t, tops, "u", "w")
+		above(t, tops, "u", "v")
+		_, told := draw(t, spec(icon("a", "nobody"), ""), inspect)
+		if want := "s.yaml:7:34: with: no box or icon of this graph named \"nobody\""; told != want {
+			t.Errorf("told %q, want %q", told, want)
+		}
+	})
+	t.Run("in another group", func(t *testing.T) {
+		t.Parallel()
+		g := func(name, with, in string) string {
+			if with != "" {
+				with = ", with: " + with
+			}
+			return "        - group: { name: " + name + ", label: " + strings.ToUpper(name) + ", nodes: [ { box: { name: " + in + with +
+				", rows: [" + strings.ToUpper(in) + "] } } ] }\n"
+		}
+		_, tops := laid(t, spec(b("u", "")+g("g", "b", "a")+g("h", "", "b"), e("u", "b")))
+		level(t, tops, "a", "b")
+		_, none := laid(t, spec(b("u", "")+g("g", "", "a")+g("h", "", "b"), e("u", "b")))
+		above(t, none, "a", "b")
+	})
+	t.Run("joining what no edge joins", func(t *testing.T) {
+		t.Parallel()
+		_, tops := laid(t, spec(b("a", "")+b("b", "")+b("c", "b")+b("d", ""), e("a", "b")+e("c", "d")))
+		level(t, tops, "b", "c")
+		above(t, tops, "a", "c")
+		above(t, tops, "c", "d")
+	})
+	t.Run("the order within one group of boxes", func(t *testing.T) {
+		t.Parallel()
+		xs := func(got string) string {
+			var order []string
+			for _, m := range regexp.MustCompile(`(?m)^box "([^"]+)" ([-\d.]+),20 `).FindAllStringSubmatch(got, -1) {
+				order = append(order, fmt.Sprintf("%s@%s", m[1], m[2]))
+			}
+			return strings.Join(order, " ")
+		}
+		// As written, m between the two a with stands in one rank: a row would stand them together.
+		got, _ := laid(t, spec(b("a", "")+b("m", "")+b("b", "a")+b("z", ""), e("a", "z")+e("m", "z")))
+		if want := "a@20 m@92 b@164"; xs(got) != want {
+			t.Errorf("order = %s, want %s", xs(got), want)
+		}
+		// LIMIT of joined: with no edge, m is a group of boxes of its own, past those a with joins.
+		got, _ = laid(t, spec(b("a", "")+b("m", "")+b("b", "a"), ""))
+		if want := "a@20 m@164 b@92"; xs(got) != want {
+			t.Errorf("order = %s, want %s", xs(got), want)
+		}
+	})
+	t.Run("what still decides ranks", func(t *testing.T) {
+		t.Parallel()
+		group := "        - group: { name: g, label: G, nodes: [ { box: { name: i, rows: [I] } } ] }\n"
+		// An edge from a group: the with's other box goes down too.
+		nodes := b("z", "") + group
+		_, tops := laid(t, spec(b("alb", "")+b("nat", "alb")+nodes, e("z", "i")+e("g", "nat")))
+		level(t, tops, "alb", "nat")
+		above(t, tops, "i", "alb")
+		_, none := laid(t, spec(b("alb", "")+b("nat", "")+nodes, e("z", "i")+e("g", "nat")))
+		above(t, none, "alb", "nat")
+		// An edge into a level edge's other box, the same.
+		_, tops = laid(t, spec(b("y", "")+b("alb", "")+b("nat", "alb")+b("x", ""),
+			"        - { from: nat, to: x, level: true }\n"+e("y", "x")))
+		level(t, tops, "alb", "x")
+		above(t, tops, "y", "alb")
+		// An edge out of it: what it reaches stands below.
+		_, tops = laid(t, spec(b("alb", "")+b("nat", "alb")+b("x", ""), e("nat", "x")))
+		above(t, tops, "nat", "x")
+		// And the cycle such an edge makes is turned as written.
+		_, tops = laid(t, spec(b("x", "")+b("alb", "")+b("nat", "alb"), e("nat", "x")+e("x", "alb")))
+		level(t, tops, "alb", "nat")
+		above(t, tops, "x", "alb")
+	})
+	t.Run("what is refused", func(t *testing.T) {
+		t.Parallel()
+		const rank = "with stands its two ends in one rank, where a graph's edge cannot run; drop with, or write the edge by hand beside the graph"
+		group := "        - group: { name: g, label: G, nodes: [ { box: { name: b, rows: [B] } } ] }\n"
+		for _, c := range []struct{ name, src, want string }{
+			{"a name of nothing", spec(b("a", "nobody"), ""), `s.yaml:7:33: with: no box or icon of this graph named "nobody"`},
+			{
+				"a name of nothing, an edge into it deciding ranks", spec(b("a", "")+b("b", "nobody"), e("a", "b")),
+				`s.yaml:8:33: with: no box or icon of this graph named "nobody"`,
+			},
+			{"a group", spec(b("a", "g")+group, ""), `s.yaml:7:33: with: no box or icon of this graph named "g"`},
+			{"an edge within one rank", spec(b("a", "b")+b("b", ""), e("a", "b")), "s.yaml:10:13: edge a→b: " + rank},
+			{
+				"an edge within one rank, across groups", spec(
+					"        - group: { name: h, label: H, nodes: [ { box: { name: a, with: b, rows: [A] } } ] }\n"+group, e("a", "b")),
+				"s.yaml:10:13: edge a→b: " + rank,
+			},
+			{"an edge into one rank by level and with", spec(b("a", "")+b("b", "c")+b("c", ""),
+				"        - { from: a, to: b, level: true }\n"+e("a", "c")), "s.yaml:12:13: edge a→c: " + rank},
+			{
+				"an edge within one rank by level alone", spec(b("a", "")+b("b", "a"),
+					"        - { from: a, to: b, level: true }\n"+e("a", "b")),
+				"s.yaml:11:13: edge a→b: a and b stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them",
+			},
+			{"an edge that falls in one rank", spec(b("y", "")+b("alb", "")+b("nat", "alb")+b("x", ""),
+				"        - { from: nat, to: x, level: true }\n"+e("y", "nat")), "s.yaml:13:13: edge y→nat: " + rank},
+			{"a with of itself", spec(b("a", "")+b("b", "b"), e("a", "b")), "s.yaml:10:13: edge a→b: " + rank},
+			{"a ring of with", spec(b("x", "")+b("a", "b")+b("b", "a"), e("x", "a")), "s.yaml:11:13: edge x→a: " + rank},
+			{"a ring holding the edge", spec(b("a", "b")+b("b", "c")+b("c", "a"), e("a", "c")), "s.yaml:11:13: edge a→c: " + rank},
+			{
+				"a box a with stands among a group", spec(b("e", "a")+
+					"        - group: { name: g, label: G, nodes: [ { box: { name: a, rows: [A] } } ] }\n", e("e", "g")),
+				`s.yaml:10:19: edge e→g: e can stand neither above group "g" nor below it, as a stands no lower than it and a no higher; end the edge at a box in "g"`,
+			},
+		} {
+			if _, told := draw(t, c.src, inspect); told != c.want {
+				t.Errorf("%s: told\n%swant\n%s", c.name, told, c.want)
+			}
+		}
+		// Written by hand beside the graph, as the words say, each is drawn.
+		for _, nodes := range []string{
+			b("a", "b") + b("b", ""),
+			"        - group: { name: h, label: H, nodes: [ { box: { name: a, with: b, rows: [A] } } ] }\n" + group,
+		} {
+			if _, told := draw(t, spec(nodes, "")+"  - edge: { from: a, to: b }\n", inspect); told != "" {
+				t.Errorf("by hand: told %s", told)
+			}
+		}
+		// A ring out of which an edge runs is one rank and the rank below.
+		_, tops := laid(t, spec(b("a", "b")+b("b", "a")+b("c", ""), e("a", "c")))
+		level(t, tops, "a", "b")
+		above(t, tops, "a", "c")
+	})
+	t.Run("as the docs write it", func(t *testing.T) {
+		t.Parallel()
+		src := `title: A gateway in the rank of the balancer
+parts:
+  - graph:
+      x: 20
+      y: 20
+      nodes:
+        - icon: { name: users, icon: aws/aws-lambda, label: Users }
+        - box: { name: pay, with: users, rows: [Payments, an outside API] }
+        - group:
+            name: vpc
+            label: VPC
+            nodes:
+              - icon: { name: alb, icon: aws/aws-lambda, label: ALB }
+              - icon: { name: api, icon: aws/aws-lambda, label: API }
+              - group:
+                  name: public
+                  label: Public
+                  nodes:
+                    - icon: { name: nat, with: alb, icon: aws/aws-lambda, label: NAT }
+      edges:
+        - { from: users, to: alb }
+        - { from: alb, to: api }
+        - { from: api, to: nat, dashed: true }
+        - { from: nat, to: pay, dashed: true }
+`
+		_, tops := laid(t, src)
+		above(t, tops, "users", "alb") // pay is another height: above alb as users is
+		above(t, tops, "pay", "alb")
+		level(t, tops, "alb", "nat")
+		above(t, tops, "pay", "nat")
+		above(t, tops, "nat", "api")
+	})
 }

@@ -74,6 +74,8 @@ type graphOut struct {
 	skip     bool           // too many nodes: told, and not laid out
 	levels   []int          // the edges written level between boxes, but those told (levelMistake)
 	row      []int          // the first box, as written, of each box's row: the boxes level edges stand in one rank
+	ranked   []int          // the box each box takes its rank from: its row's, joined by with
+	withed   map[int]bool   // the boxes of a with that names a box: edges from boxes into them decide no rank
 	facing   map[[2]int]int // where each block stands in its lane (faces)
 	drawn    []drawnBox     // where each box stands, drawn
 	others   []rect         // the parts written by hand a label room makes may stand on (handParts)
@@ -85,7 +87,7 @@ type graphOut struct {
 func readGraph(g *graph, at string, settle func(*drawing)) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
-		loops: nil, skip: false, levels: nil, row: nil, facing: nil, drawn: nil, others: nil,
+		loops: nil, skip: false, levels: nil, row: nil, ranked: nil, withed: nil, facing: nil, drawn: nil, others: nil,
 		settle: settle,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)
@@ -121,6 +123,7 @@ func readGraph(g *graph, at string, settle func(*drawing)) (*graphOut, usererr.L
 	levels, told := out.unlooped(levels)
 	problems = append(problems, told...)
 	out.rows(levels)
+	problems = append(problems, out.withs()...)
 	edges, told = out.across(edges)
 	problems = append(problems, told...)
 	for _, gr := range out.groupsOf(edges, cedges, levels) {
@@ -230,7 +233,9 @@ func (o *graphOut) groupsOf(edges, cedges, levels []int) []*group {
 }
 
 // joined is the root of each box's group of connected boxes: joined by edges, by edges to groups (all the boxes of
-// both ends), by a group at the top (all its boxes) and by lanes (all the boxes).
+// both ends), by standing in one rank (a row, with), by a group at the top (all its boxes) and by lanes (all the boxes).
+// LIMIT: boxes with joins stand as a group of their own, so a box written between them with no edge to either stands
+// past them. Keep the order written across such groups if one comes to need it.
 func (o *graphOut) joined(edges, cedges []int) func(int) int {
 	root := make([]int, len(o.boxes))
 	for i := range root {
@@ -250,6 +255,9 @@ func (o *graphOut) joined(edges, cedges []int) func(int) int {
 	}
 	for _, k := range slices.Concat(edges, cedges) {
 		join(slices.Concat(o.members(o.ends[k][0]), o.members(o.ends[k][1])))
+	}
+	for b, r := range o.ranked {
+		join([]int{b, r})
 	}
 	for _, c := range o.clusters {
 		if c.lane { // every box is in a lane, and all lanes are one

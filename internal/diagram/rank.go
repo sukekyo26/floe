@@ -8,8 +8,13 @@ import (
 
 // rank makes a group of the boxes members (their indexes among the boxes read, as written), its edges between boxes
 // and its edges to groups (cedges; by their indexes in edges), and its level edges: an edge back up a cycle turned
-// round, and each box at the rank of its longest path from a box no edge enters, a row of boxes (rows) ranked as one.
+// round, and each box at the rank of its longest path from a box no edge enters, a row of boxes (rows), or boxes a with joins (withs), ranked as one.
 // The points of the edges passing ranks are made by split, once the diagram's are counted.
+//
+// An edge from a box into a box of a with decides no rank: it joins the arcs once the ranks are set, drawn up or down
+// as they fall, and is told when they fall in one rank.
+// LIMIT: only that edge. An edge from a group, into a level edge's other box, or out of a box of a with still decides
+// ranks, moving the with's other box too, and a cycle they make is turned round as written. Lift more if one misleads.
 func (o *graphOut) rank(members, edges, cedges, levels []int) *group {
 	gr := &group{
 		nodes: nil, links: nil, ranks: nil, chains: map[int][]int{}, reversed: map[int]bool{}, tracks: nil, top: nil,
@@ -26,13 +31,18 @@ func (o *graphOut) rank(members, edges, cedges, levels []int) *group {
 	}
 	stands := map[int]int{} // each box's node to rank by: its row's first box's
 	for b := range local {
-		stands[b] = local[o.row[b]]
+		stands[b] = local[o.ranked[b]]
 	}
 	arcs := make([]arc, 0, len(edges)+len(cedges))
 	stood := make([]arc, 0, len(edges)) // the arcs between the nodes the boxes rank by
 	outs := make([][]int, len(members)) // the arcs out of each such node, as written
+	var late []int                      // the edges into the boxes of a with
 	for _, k := range edges {
 		from, to := o.ends[k][0].box, o.ends[k][1].box
+		if o.withed[to] {
+			late = append(late, k)
+			continue
+		}
 		outs[stands[from]] = append(outs[stands[from]], len(stood))
 		arcs = append(arcs, arc{local[from], local[to], k})
 		stood = append(stood, arc{stands[from], stands[to], k})
@@ -55,6 +65,19 @@ func (o *graphOut) rank(members, edges, cedges, levels []int) *group {
 	}
 	for j, b := range members {
 		gr.nodes[j].rank = gr.nodes[stands[b]].rank
+	}
+	for _, k := range late {
+		from, to := local[o.ends[k][0].box], local[o.ends[k][1].box]
+		switch fr, tr := gr.nodes[from].rank, gr.nodes[to].rank; {
+		case fr < tr:
+			arcs = append(arcs, arc{from, to, k})
+		case fr > tr:
+			arcs = append(arcs, arc{to, from, k})
+			gr.reversed[k] = true
+		default:
+			e := o.g.Edges[k]
+			gr.among = append(gr.among, usererr.NewIn("", edgeAt(o.at, k), "diagram_graph_with_rank", e.From, e.To))
+		}
 	}
 	gr.arcs = arcs
 	return gr
