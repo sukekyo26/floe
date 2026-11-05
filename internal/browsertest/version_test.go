@@ -395,6 +395,23 @@ func TestUIVersionNotes(t *testing.T) { //nolint:paralleltest // the browser tes
 	check(t, "notes", []string{order, b.eval(noteWords)}, "version page|That version cannot be opened, so this shows the latest.")
 }
 
+// TestUIVersionPickAhead chooses the version the list of pages still takes for the latest, that list read before one was published and the
+// choice after: it opens that version, not the latest, and does not tell the latest read.
+func TestUIVersionPickAhead(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := diffSite(t)
+	b := s.b
+	b.size(1440, 900, false)
+	defer b.unsize()
+	b.navigate("/")
+	b.until("the row", "document.querySelector('#list li[data-slug=d]')")
+	b.eval("document.querySelector('#list li[data-slug=d] .title').click()")
+	b.until("the choice", "!document.getElementById('read-version').hidden")
+	b.eval("items.find((a) => a.slug === 'd').version = 2")
+	choose(b, "read-version", 2)
+	b.until("v2", "readLoaded.endsWith('v=2')")
+	check(t, "picked", []string{b.eval("picked.v")}, "2")
+}
+
 // TestUIVersionAnswers: moving to another page takes the choice and words of the one before away at once, and an answer come late, of a page
 // since left, draws nothing.
 func TestUIVersionAnswers(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
