@@ -1111,6 +1111,53 @@ func TestInspect(t *testing.T) {
 			t.Errorf("circles at %s: inspect = %q %s, want its label %q", c.a, got, mistakes, want)
 		}
 	}
+	// A heading stands where an edge is refused for running through it, right of a frame's icon, and in the corner of a
+	// frame without one; a heading's own line follows the frames, and a frame of no label has none.
+	frame := "  - frame: { name: f, x: 20, y: 20, w: 300, h: 150, label: AWS Cloud, icon: aws/aws-lambda }\n" +
+		"  - frame: { name: g, x: 20, y: 180, w: 100, h: 20, label: Az, square: true }\n"
+	got, mistakes = draw(t, head+frame, inspect)
+	if want := "frame \"f\" 20,20 300x150\nframe \"g\" 20,180 100x20\nthe heading of frame \"f\" 60,26 74.88x18\n" +
+		"the heading of frame \"g\" 32,189 15.36x18\nthe icon of frame \"f\" 20,20 31x31\n"; mistakes != "" || got != want {
+		t.Errorf("inspect = %q %s, want %q", got, mistakes, want)
+	}
+	if _, mistakes = draw(t, head+frame+"  - edge: { from: [133, 10], to: [133, 120] }\n", inspect); !strings.Contains(mistakes, `runs through the heading of frame "f"`) {
+		t.Errorf("an edge in the heading told = %q", mistakes)
+	}
+	if _, mistakes = draw(t, head+frame+"  - edge: { from: [135, 10], to: [135, 120] }\n", inspect); mistakes != "" {
+		t.Errorf("an edge past the heading told = %q", mistakes)
+	}
+	// The line of the diagram: its title in the widest language, its canvas as written or as far as what is drawn.
+	lined := func(d *diagram.Drawer, v any) (string, error) {
+		return d.Inspect(v, diagram.Options{Lang: "en", Icons: lambda, Seq: 1})
+	}
+	src = "title: { en: A, ja: あいうえお }\nparts:\n  - box: { name: a, x: 10, y: 10, rows: [A] }\n"
+	got, mistakes = draw(t, src, lined)
+	if want := "diagram \"あいうえお\" 78x59\nbox \"a\" 10,10 48x29\n"; mistakes != "" || got != want {
+		t.Errorf("inspect = %q %s, want %q", got, mistakes, want)
+	}
+	if got, mistakes = draw(t, head, lined); mistakes == "" && !strings.HasPrefix(got, "diagram \"T\" 400x200\n") {
+		t.Errorf("inspect = %q %s, want the canvas written", got, mistakes)
+	}
+	// What the checks refuse is told with the mistakes, and laid out as a spec with a mistake is (newLayout): a guide.
+	// Nothing is drawn of it.
+	bent := "title: S\nparts:\n  - box: { name: a, x: 20, y: 20, w: 100, h: 60, rows: [A] }\n" +
+		"  - box: { name: b, x: 200, y: 40, w: 100, h: 60, rows: [B] }\n  - edge: { from: a, to: b }\n"
+	if got, mistakes = draw(t, bent, inspect); mistakes != "" || !strings.Contains(got, "edge a→b M120,60 H200\n") {
+		t.Errorf("inspect = %q %s, want the edge straight", got, mistakes)
+	}
+	refused := bent + "  - label: { text: x, x: 30, y: 30 }\n"
+	var told string
+	_, mistakes = draw(t, refused, func(d *diagram.Drawer, v any) (string, error) {
+		var err error
+		told, err = inspect(d, v)
+		return told, err
+	})
+	if want := `box "a" overlaps label "x"`; !strings.Contains(mistakes, want) || !strings.Contains(told, "edge a→b M120,50 H160 V70 H200\n") {
+		t.Errorf("inspect of a mistake = %q %q, want %s and the edge bent", told, mistakes, want)
+	}
+	if got, mistakes = draw(t, refused, render("en")); got != "" || mistakes == "" {
+		t.Errorf("draw of a mistake = %q %q, want nothing drawn", got, mistakes)
+	}
 	// A bar is drawn from the smaller of its x, its label right of it, whichever is written first.
 	got, mistakes = draw(t, head+"  - bar: { x1: 200, x2: 20, y: 50, label: back }\n", inspect)
 	for _, want := range []string{`bar "back" 20,43 180x14`, `label "back" 205,41 38.8x18`} {

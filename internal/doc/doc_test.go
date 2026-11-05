@@ -3,6 +3,8 @@ package doc_test
 import (
 	"maps"
 	"reflect"
+	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/doc"
@@ -171,5 +173,34 @@ func TestReadThemeGiven(t *testing.T) {
 	}
 	if d.Theme != "ink" || d.Values["theme"] != "ink" {
 		t.Errorf("Theme = %q, Values[theme] = %#v, want ink", d.Theme, d.Values["theme"])
+	}
+}
+
+// The mistakes of an item are placed in one way: of no place at its value, at a JSON pointer from its value; those of
+// the whole output and with a file of their own stay where they are.
+func TestPlaceItem(t *testing.T) {
+	t.Parallel()
+
+	d, err := doc.Read("a.yaml", []byte("template: t\nlang: en\nitems:\n  - name: x\n    deep:\n      key: 1\n"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = d.PlaceItem([]string{"items", "0", "deep"}, usererr.List{
+		usererr.LibraryAt("", 0, 0, "here"),
+		usererr.NewIn("", "#/key", "doc_no_lang"),
+		usererr.LibraryAt("b.yaml", 2, 3, "there"),
+		usererr.NewWhole("doc_no_lang"),
+	})
+	var got []string
+	var found usererr.List
+	if failed := found.Add(err); failed != nil {
+		t.Fatal(failed)
+	}
+	for _, e := range found {
+		got = append(got, e.File()+":"+strconv.Itoa(e.Line())+":"+strconv.Itoa(e.Column()))
+	}
+	slices.Sort(got)
+	if want := []string{":0:0", "a.yaml:6:12", "a.yaml:6:7", "b.yaml:2:3"}; !slices.Equal(got, want) {
+		t.Errorf("placed at %v, want %v", got, want)
 	}
 }
