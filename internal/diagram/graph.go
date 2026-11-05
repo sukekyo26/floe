@@ -233,7 +233,8 @@ func (o *graphOut) groupsOf(edges, cedges, levels []int) []*group {
 }
 
 // joined is the root of each box's group of connected boxes: joined by edges, by edges to groups (all the boxes of
-// both ends), by standing in one rank (a row, with), by a group at the top (all its boxes) and by lanes (all the boxes).
+// both ends), by standing in one rank (a row, with), by a group at the top (all its boxes) and by lanes (all the
+// boxes).
 // LIMIT: boxes with joins stand as a group of their own, so a box written between them with no edge to either stands
 // past them. Keep the order written across such groups if one comes to need it.
 func (o *graphOut) joined(edges, cedges []int) func(int) int {

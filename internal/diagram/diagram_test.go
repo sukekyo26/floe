@@ -1943,8 +1943,9 @@ func TestGraphWith(t *testing.T) {
 	t.Run("the order within one group of boxes", func(t *testing.T) {
 		t.Parallel()
 		xs := func(got string) string {
-			var order []string
-			for _, m := range regexp.MustCompile(`(?m)^box "([^"]+)" ([-\d.]+),20 `).FindAllStringSubmatch(got, -1) {
+			found := regexp.MustCompile(`(?m)^box "([^"]+)" ([-\d.]+),20 `).FindAllStringSubmatch(got, -1)
+			order := make([]string, 0, len(found))
+			for _, m := range found {
 				order = append(order, fmt.Sprintf("%s@%s", m[1], m[2]))
 			}
 			return strings.Join(order, " ")

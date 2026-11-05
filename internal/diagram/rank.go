@@ -8,7 +8,8 @@ import (
 
 // rank makes a group of the boxes members (their indexes among the boxes read, as written), its edges between boxes
 // and its edges to groups (cedges; by their indexes in edges), and its level edges: an edge back up a cycle turned
-// round, and each box at the rank of its longest path from a box no edge enters, a row of boxes (rows), or boxes a with joins (withs), ranked as one.
+// round, and each box at the rank of its longest path from a box no edge enters, a row of boxes (rows),
+// or boxes a with joins (withs), ranked as one.
 // The points of the edges passing ranks are made by split, once the diagram's are counted.
 //
 // An edge from a box into a box of a with decides no rank: it joins the arcs once the ranks are set, drawn up or down
