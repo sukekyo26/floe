@@ -835,8 +835,8 @@ func TestEdgeViaAxis(t *testing.T) {
 			"edge a→b M80,40 H140 V213.33 H200\nedge c→b M80,226.67 H200",
 		},
 	} {
-		got, mistakes := draw(t, head+c.parts+"\n", inspect)
-		if got := edgeLines(got); mistakes != "" || got != c.want {
+		out, mistakes := draw(t, head+c.parts+"\n", inspect)
+		if got := edgeLines(out); mistakes != "" || got != c.want {
 			t.Errorf("%s\n  drew %q %q\n  want %q", c.parts, got, mistakes, c.want)
 		}
 	}

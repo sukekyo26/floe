@@ -434,9 +434,9 @@ func (l *layout) viaOf(e *edge) [][2]float64 {
 	return pts
 }
 
-// edgeEnds resolves e's ends and the sides they take, false when an end cannot be one (told at at): with via or straight,
-// also the points from its start through its via, turning as written when right-angled, and whether it goes across at the
-// last of them.
+// edgeEnds resolves e's ends and the sides they take, false when an end cannot be one (told at at): with via or
+// straight, also the points from its start through its via, turning as written when right-angled, and whether it goes
+// across at the last of them.
 func (l *layout) edgeEnds(e *edge, at string) (
 	from, to anchor, pts [][2]float64, across bool, fromWho, toWho string, ok bool,
 ) {
