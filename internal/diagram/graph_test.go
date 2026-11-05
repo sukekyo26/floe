@@ -330,10 +330,10 @@ box "b" 236,115 48x29
 box "q" 236,50 48x29
 box "c" 368,50 48x29
 box "d" 332,180 48x29
-edge c→b M380,79 V91 H266 V115
+edge c→b M392,79 V91 H260 V115
 edge b→a M236,123.5 H80
 edge a→b M80,135.5 H236
-edge b→d M272,144 V156 H362 V180
+edge b→d M260,144 V156 H356 V180
 edge d→ok M332,200.5 H88
 label "ask" 202.4,93.5 31.6x18
 label "answer" 91,147.5 53.2x18
@@ -348,10 +348,10 @@ box "b" 134,134 48x48
 box "q" 50,152 48x29
 box "c" 50,272 48x48
 box "d" 222,230 48x48
-edge c→b M98,284 H110 V158 H134
+edge c→b M98,296 H110 V158 H134
 edge b→a M152,134 V61
 edge a→b M164,61 V134
-edge b→d M182,164 H194 V254 H222
+edge b→d M182,158 H194 V254 H222
 edge d→ok M252,230 V61
 label "ask" 108.4,114 31.6x18
 label "answer" 176,75 53.2x18
@@ -378,9 +378,9 @@ box "y" 110,20 48x29
 box "a" 92,85 48x29
 box "p" 20,85 48x29
 box "b" 164,85 48x29
-edge x→b M68,49 V61 H194 V85
+edge x→b M62.67,49 V61 H188 V85
 edge y→a M128,49 V85
-edge x→p M44,49 V85
+edge x→p M41.33,49 V85
 edge a→b M140,105.5 H164
 `},
 		{"four, laid out right", `title: T

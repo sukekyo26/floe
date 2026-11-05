@@ -61,6 +61,7 @@ type group struct {
 // graphOut is a graph read and ranked: its boxes and groups read flat, its groups of connected boxes, and the ranks
 // its edges pass between their ends.
 type graphOut struct {
+	settle   func(*drawing) // what moves the ends once all is placed
 	g        *graph
 	at       string
 	boxes    []gbox
@@ -81,10 +82,11 @@ type graphOut struct {
 // readGraph reads g's boxes and groups, resolves the names of its edges against them, and splits it into groups of
 // connected boxes, each ranked. An edge naming nothing of it, or between a group and what the group holds, is dropped
 // and told; one from a box to itself is a loop, kept out of the groups (drawLoops).
-func readGraph(g *graph, at string) (*graphOut, usererr.List) {
+func readGraph(g *graph, at string, settle func(*drawing)) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
 		loops: nil, skip: false, levels: nil, row: nil, facing: nil, drawn: nil, others: nil,
+		settle: settle,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)
 	if n := len(out.boxes) + len(out.clusters); n > maxNodes {
@@ -408,7 +410,8 @@ func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, err
 	d := &drawing{
 		right: right, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{},
 		ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
-		frames: map[int]rect{}, heads: map[int]rect{}, icons: map[int]*icon{}, onIcon: map[endAt]iconEnd{},
+		frames: map[int]rect{}, heads: map[int]rect{}, icons: map[int]*icon{}, places: map[endAt]endPlace{},
+		slid:  map[endAt]bool{},
 		moved: map[int]float64{}, settled: map[int]bool{},
 		settling: settling{things: nil, sides: nil, runs: nil, labels: nil},
 		level:    map[int][2]string{}, taken: map[int]map[string]bool{},
@@ -463,7 +466,7 @@ func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, err
 			}
 		}
 	}
-	d.settleIcons()
+	o.settle(d)
 	return d, nil
 }
 
@@ -522,7 +525,8 @@ type drawing struct {
 	frames   map[int]rect            // the frames of its groups, by group
 	heads    map[int]rect            // where its groups' headings stand from their frames
 	icons    map[int]*icon           // the icons among its boxes
-	onIcon   map[endAt]iconEnd       // where the ends at its icons go
+	places   map[endAt]endPlace      // where the ends at its icons and boxes go
+	slid     map[endAt]bool          // the ends slide has moved
 	settling settling                // what the ends moved keep off
 	moved    map[int]float64         // how far each icon has moved across the ranks in its rectangle
 	settled  map[int]bool            // the icons straighten has placed
