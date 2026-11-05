@@ -732,7 +732,7 @@ func shrunk(g *graph) *graph {
 			}
 			name := g.Nodes[i].Box.Name
 			try := *g
-			try.Nodes = slices.Delete(slices.Clone(g.Nodes), i, i+1)
+			try.Nodes = withoutWith(slices.Delete(slices.Clone(g.Nodes), i, i+1), name)
 			try.Edges = slices.DeleteFunc(slices.Clone(g.Edges), func(e graphEdge) bool { return e.From == name || e.To == name })
 			if graphFault(&try) != "" {
 				g, changed = &try, true
@@ -740,6 +740,28 @@ func shrunk(g *graph) *graph {
 		}
 	}
 	return g
+}
+
+// withoutWith is nodes, copied, none with a with of name: a graph shrunk fails as it did, not of a with naming nothing.
+func withoutWith(nodes []graphNode, name string) []graphNode {
+	out := slices.Clone(nodes)
+	for i, n := range out {
+		switch {
+		case n.Box != nil && n.Box.With == name:
+			b := *n.Box
+			b.With = ""
+			out[i].Box = &b
+		case n.Icon != nil && n.Icon.With == name:
+			c := *n.Icon
+			c.With = ""
+			out[i].Icon = &c
+		case n.Group != nil:
+			g := *n.Group
+			g.Nodes = withoutWith(g.Nodes, name)
+			out[i].Group = &g
+		}
+	}
+	return out
 }
 
 // randomGraph is a graph as dagro's trials drew them: 2 to 31 boxes of four shapes and words of some length, 1 to
@@ -2849,5 +2871,120 @@ label "wwwwwwww" 58.2,157 67.6x18
 `
 	if got := laid(g).inspect(); got != want {
 		t.Errorf("got\n%swant\n%s", got, want)
+	}
+}
+
+// addWiths gives 1 to 4 boxes of g, at random from rnd, a with of another box.
+func addWiths(rnd *rand.Rand, g *graph) {
+	boxes := graphBoxes(g)
+	for range 1 + rnd.IntN(4) {
+		a, b := boxes[rnd.IntN(len(boxes))], boxes[rnd.IntN(len(boxes))]
+		if a != b {
+			a.With = b.Name
+		}
+	}
+}
+
+// withTold reports whether g is told, and told only of what withs and level edges refuse.
+func withTold(g *graph) bool {
+	l := laid(g)
+	for _, p := range l.problems {
+		if p.Key != "diagram_graph_with_rank" && p.Key != "diagram_graph_among" && !strings.HasPrefix(p.Key, "diagram_graph_level_") {
+			return false
+		}
+	}
+	return l.failure == nil && len(l.problems) > 0
+}
+
+// withFault says which box of g stands in another rank than the box its with names, or "".
+func withFault(g *graph) string {
+	groups, err := grouped(g)
+	if err != nil {
+		return err.Error()
+	}
+	ranks := map[string]int{}
+	for _, gr := range groups {
+		for _, n := range gr.nodes {
+			if n.box != nil {
+				ranks[n.box.Name] = n.rank
+			}
+		}
+	}
+	for _, b := range graphBoxes(g) {
+		if b.With != "" && ranks[b.Name] != ranks[b.With] {
+			return fmt.Sprintf("%s stands in rank %d, its with %s in rank %d", b.Name, ranks[b.Name], b.With, ranks[b.With])
+		}
+	}
+	return ""
+}
+
+// Graphs with boxes of a with at random, half with level edges too, with no group, groups and lanes: none fails, the
+// boxes of a with stand in one rank, and at least least of them are laid out, those told of what with refuses skipped.
+// It is a test of its own, so that its draws leave TestGraphRandom's alone.
+func TestGraphWithRandom(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		direction string
+		seed      uint64
+		groups    bool
+		lanes     bool
+		least     int
+	}{
+		{"", 1, false, false, 88},
+		{"right", 2, false, false, 90},
+		{"", 3, true, false, 89},
+		{"right", 4, true, false, 88},
+		{"", 5, false, true, 85},
+		{"right", 6, false, true, 76},
+	} {
+		t.Run(fmt.Sprintf("%s-%d", cmpOr(c.direction, "down"), c.seed), func(t *testing.T) {
+			t.Parallel()
+
+			rnd := rand.New(rand.NewPCG(c.seed, 7))    //nolint:gosec // G404: graphs to try, no secret
+			groups := rand.New(rand.NewPCG(c.seed, 8)) //nolint:gosec // G404: graphs to try, no secret
+			levels := rand.New(rand.NewPCG(c.seed, 9)) //nolint:gosec // G404: graphs to try, no secret
+			laidOut := 0
+			for i := range 300 {
+				g := randomGraph(rnd, c.direction)
+				if c.groups || c.lanes {
+					addGroups(groups, g)
+				}
+				if c.lanes {
+					inLanes(groups, g)
+				}
+				if i%2 == 0 {
+					addLevels(levels, g)
+				}
+				addWiths(rnd, g)
+				if withTold(g) {
+					continue
+				}
+				laidOut++
+				l := laid(g)
+				if fault := withFault(g); fault != "" {
+					t.Fatalf("seed %d, graph %d: %s", c.seed, i, fault)
+				}
+				if fault := laidFault(g, l); fault != "" {
+					b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson,musttag // the test's own
+					t.Fatalf("seed %d, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
+				}
+			}
+			t.Logf("seed %d: %d laid out", c.seed, laidOut)
+			if laidOut < c.least {
+				t.Errorf("seed %d: %d graphs with withs laid out, fewer than %d", c.seed, laidOut, c.least)
+			}
+		})
+	}
+}
+
+// A graph shrunk drops a with of the box it took off, and fails as it did.
+func TestWithoutWith(t *testing.T) {
+	t.Parallel()
+
+	g := graphOf([]string{"a", "b"})
+	g.Nodes[1].Box.With = "a"
+	if got := withoutWith(g.Nodes, "a"); got[1].Box.With != "" || g.Nodes[1].Box.With != "a" {
+		t.Errorf("with %q of the copy, %q of the graph", got[1].Box.With, g.Nodes[1].Box.With)
 	}
 }

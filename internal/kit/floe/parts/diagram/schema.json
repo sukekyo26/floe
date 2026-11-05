@@ -71,7 +71,7 @@
       "minLength": 1,
       "additionalProperties": { "minLength": 1 }
     },
-    "name": { "type": "string", "minLength": 1, "description": "The name an edge's from or to gives, unique in the diagram" },
+    "name": { "type": "string", "minLength": 1, "description": "The name an edge's from or to, or a graph's with, gives, unique in the diagram" },
     "tone": { "$ref": "floe:///parts/tone.json" },
     "point": { "type": "array", "prefixItems": [{ "$ref": "#/$defs/coord" }, { "$ref": "#/$defs/coord" }], "minItems": 2, "maxItems": 2 },
     "side": { "enum": ["top", "right", "bottom", "left"] },
@@ -331,9 +331,14 @@
       "additionalProperties": false,
       "properties": {
         "name": { "$ref": "#/$defs/name" },
+        "with": { "$ref": "#/$defs/graphWith" },
         "icon": { "type": "string", "minLength": 1, "description": "The icon's name, as for the part icon" },
         "label": { "$ref": "#/$defs/nonEmptyText" }
       }
+    },
+    "graphWith": {
+      "$ref": "#/$defs/name",
+      "description": "The box or icon of the graph this one stands in one rank with, an edge drawn or not. An edge from a box into this one then does not decide ranks, and runs up or down as the ranks fall"
     },
     "graphBox": {
       "type": "object",
@@ -342,6 +347,7 @@
       "additionalProperties": false,
       "properties": {
         "name": { "$ref": "#/$defs/name" },
+        "with": { "$ref": "#/$defs/graphWith" },
         "rows": { "$ref": "#/$defs/box/properties/rows" },
         "tone": { "$ref": "#/$defs/tone" },
         "shape": { "$ref": "#/$defs/box/properties/shape" }

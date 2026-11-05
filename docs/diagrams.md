@@ -35,14 +35,14 @@ A `diagram` part, in a section or in `details`, `tabs` and the `parts` of an ite
 | `label` | `text`, `x` `y`, `anchor` (`middle`; `start`, `end`), `plain` (no background: the default for a label with `in`; `false` gives it one), `strong`, `in` (the names of the circles of a Venn diagram it sits inside, outside the others; without `x` and `y`, floe places it). |
 | `line` | `x1` `y1` `x2` `y2`, `kind` (`line`; `lifeline`, `divider`). It may cross other parts, but not leave the canvas. |
 | `tree` | `x` `y` (the root's centre and top), `root`: a node of `rows`, `name`, `tone`, `shape` as a `box` has them, and `children`, nodes too. floe places each node under its parent, the children side by side and each depth in one row, and draws an edge down from each node to each child. A node's `name` can be the end of an edge written by hand; written without a side, the edge keeps off the sides the tree's edges end at (a node's top below the root, and its bottom when it has children), as at a box of a graph. |
-| `graph` | `x` `y` (the top left of all of it), `nodes`, `edges`, `direction` (`down`; `right`), and `lanes` in place of `nodes`. A node is `box: { name, rows, tone, shape }`, as a `box` has them, its `name` needed, `icon: { name, icon, label }`, an icon with its label below and no box round it, or `group: { name, label, accent, icon, nodes }`, boxes, icons and groups framed together, `icon` in the frame's corner, the AWS group style; an edge is `{ from, to }`, two names of its boxes, icons or groups, with `label`, `dashed`, `bold`, `tone`, `start` and `end` (`arrow` or `none`). floe lays the boxes out in ranks and draws each edge between them, as below. |
+| `graph` | `x` `y` (the top left of all of it), `nodes`, `edges`, `direction` (`down`; `right`), and `lanes` in place of `nodes`. A node is `box: { name, with, rows, tone, shape }`, as a `box` has them, its `name` needed, `icon: { name, with, icon, label }`, an icon with its label below and no box round it, or `group: { name, label, accent, icon, nodes }`, boxes, icons and groups framed together, `icon` in the frame's corner, the AWS group style; an edge is `{ from, to }`, two names of its boxes, icons or groups, with `label`, `dashed`, `bold`, `tone`, `start` and `end` (`arrow` or `none`). floe lays the boxes out in ranks and draws each edge between them, as below. |
 | `raw` | `svg`: SVG that no part can draw, of SVG's elements alone (no script or `foreignObject`), not laid out or checked. |
 
 ## Hand or graph
 
 Write the parts by hand for a diagram read as a picture: you decide where everything stands, so the main flow runs straight, what belongs together lines up, and a label stands on its edge. It is the most to write, and moving a part means moving what was written for it (the `via` and `at` of its edges, the frames round it).
 
-Write a `graph` for a draft, a diagram that often changes, or many connections: you write what joins what, and adding to it takes no coordinates. floe decides where everything stands, and takes more room than a hand would (half as wide again, in an AWS diagram of 25 edges); a diagram wider than the page shrinks to fit, until it is zoomed. Try both `direction`s, as one often comes out far better than the other for the same spec.
+Write a `graph` for a draft, a diagram that often changes, or many connections: you write what joins what, and adding to it takes no coordinates. floe decides where everything stands, and takes more room than a hand would (of an AWS diagram of 25 edges, 1704×1407 against 1400×1005, or 1378×1416 laid out `right`, with `with` written where it helps); a diagram wider than the page shrinks to fit, until it is zoomed. Try both `direction`s, as one often comes out far better than the other for the same spec.
 
 ## Graph
 
@@ -64,13 +64,15 @@ A `graph` holds only how its boxes are joined; floe places them:
 
 ### Ranks
 
-- Each box goes a rank below the boxes its edges come from (an edge back up a cycle is drawn the way it is written), but for the two boxes of an edge written `level` (see below), which stand in one rank; the boxes of a rank are ordered to cross fewer edges, as written when none cross. The same spec is always laid out the same way.
-- An edge decides the ranks by the way it is written. To keep a box from going below one that reaches it, a gateway below the servers that use it say, write the edge the other way and turn its ends round. It draws the same arrow:
+- Each box goes a rank below the boxes its edges come from (an edge back up a cycle is drawn the way it is written), but for the two boxes of an edge written `level` (see below), which stand in one rank, and a box written `with`, below; the boxes of a rank are ordered to cross fewer edges, as written when none cross. The same spec is always laid out the same way.
+- `with: <name>` on a box or an icon stands it in the rank of the box or icon named, with no edge drawn, of another group too. Write it for a box that should not go below what reaches it, a gateway below the servers that use it say, or that should not start a group's frame in the first rank. Edges keep the way they mean: `api → nat`, with `with: alb` on `nat`, runs up from `api`.
 
   ```yaml
-  # an arrow from api to nat, with nat not ranked below api
-  - { from: nat, to: api, start: arrow, end: none }
+  - icon: { name: nat, with: alb, icon: aws/res/amazon-vpc-nat-gateway, label: NAT }
   ```
+
+- `with` takes only an edge from a box into that box out of the ranks: it runs up or down as the ranks fall, and is refused when they fall in one rank. An edge from a group, into a level edge's other box or out of the box still decides ranks, moving the box named too, and an edge of them back up a cycle is drawn the way it is written, the order written deciding which: write the boxes in another order for another.
+- `with` joins boxes no edge joins, which are then laid out together: a box written between them with no edge to either stands past them. Boxes joined by edges keep their order.
 
 ### Where edges end
 
@@ -85,6 +87,7 @@ A `graph` holds only how its boxes are joined; floe places them:
 
 - A `group` keeps its boxes (and its groups') side by side in every rank, with nothing else between, and floe draws a frame around them as a `frame` part, its `label` in the top left corner and `accent` as a frame's. The frame holds the group's boxes and the edges between them, and no other box. An edge between a box inside and one outside crosses the frame's side, and so may an edge between two boxes outside a group, between two of its ranks. A long `label` widens its group (with `right`, deepens its first rank). A group's `name` names the frame: an edge written by hand may end at it.
 - An edge to a group ends at its frame: from a rank above, at the frame's top; else it leaves the frame's bottom (with `right`, the left and right sides), each edge at a point of its own, clear of the heading. An edge between a group and a box or group it holds, or from a group to itself, is refused; so is an edge to a group from a box (or group) that stands between two of its boxes in rank (a box of the group stands no lower than it and another no higher): end the edge at a box of the group.
+- A box `with` stands among a group's ranks takes an edge to the group as any box there does: refused, as it can stand neither above nor below the group. Ended at a box of the group as the words say, the edge is then refused for `with`: what helps is dropping `with`.
 - `lanes` in place of `nodes` lists the graph's lanes, each written as a group is, `{ name, label, accent, icon, nodes }`, with no `group:` key round it, and each is a lane: a band from end to end of the graph along its edges (with `down`, from top to bottom; with `right`, from left to right), in the order written, 24 apart, as wide as what it holds. Its tops and bottoms line up, headed or not. Lanes and the groups nested in them are as groups, but an edge may not end at a lane, which no edge can reach from outside its ranks: end it at a box or a group in the lane.
 
 ### Level edges
@@ -92,6 +95,7 @@ A `graph` holds only how its boxes are joined; floe places them:
 - An edge written `level: true` stands its two boxes in one rank and runs straight between their facing sides, or bends at an icon whose point on the side stands off its line, which more than one edge on a side makes it (with `right`, between the bottom of the one above and the top of the other), half a column off the middle of the shorter side, the edges between the same two boxes a column apart (the shorter box grows for them).
 - Its two boxes are of one group (or of none), or directly in two lanes. Their left and right (with `right`, top and bottom) follow from the spec, not from how ranks are ordered: the boxes level edges join in one group stand side by side as written, and a box directly in a lane with a level edge to another lane stands at its lane's end towards it (at its start when it has edges both ways).
 - So floe refuses, before laying the graph out, an edge written `level` at a group or between other boxes; an edge between two boxes level edges stand in one rank; one whose boxes something stands between in their rank (a box written between them in their row, a box of their row written past the one in a lane, on the side its row faces, a box of a lane between or a group's frame spanning their rank there, another row at the same end of either lane, or, when the first box's row stands at its lane's start, anything else of that lane in the rank); and one taking the side of its first box's loops. Laid out `right`, a lane's heading reaches into the first rank, so a level edge running through one is refused once laid out: shorten the heading.
+- A box `with` stands between a level edge's boxes is refused in the words for any box, which say to move it: what helps is dropping `with`.
 - A loop written `level` is a loop: its box stands in one rank already. Edges written by hand keep off the sides level edges take, as off a loop's side.
 
 ### Loops
@@ -100,7 +104,7 @@ A `graph` holds only how its boxes are joined; floe places them:
 
 ### With parts written by hand
 
-- An edge `level` cannot be, between two zones each a group say, can be written by hand beside the graph. It moves nothing of the graph, so its ends stay in the ranks their other edges give them:
+- An edge `level` cannot be, between two zones each a group say, or between two boxes `with` stands in one rank, can be written by hand beside the graph. It moves nothing of the graph, so its ends stay in the ranks their other edges give them:
 
   ```yaml
   parts:
