@@ -117,7 +117,7 @@ func TestUIDiff(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"false 0 Stay|Rain",
 		"true",
 		"3- 2 1", "3 2- 1-",
-		"diff-from ?raw&v=1",
+		"diff-from /a/d/?raw&v=1",
 		"1 diff-from Rain",
 	}, "|"))
 	// j from within the list, too: on through the pages, whole.

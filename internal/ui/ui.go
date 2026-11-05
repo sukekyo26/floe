@@ -24,13 +24,16 @@ type pageData struct {
 	Framed   string
 	// Served tells that the page of a folder framed is there, as the server found it
 	Served bool
+	// Version is what the frame's ?v= asks, as the server read it: a version's number, 0 for the latest, gone for no such
+	// version; "" where ?v= asks none.
+	Version string
 }
 
 // Page renders the management page, which is also the frame around each page, in the language of c: the frame
 // around the page framed, a slug, or the list for "". served tells that the folder's page it frames is there.
-func Page(c *i18n.Catalog, framed string, served bool) ([]byte, error) {
+func Page(c *i18n.Catalog, framed string, served bool, version string) ([]byte, error) {
 	var b bytes.Buffer
-	data := pageData{Catalog: c, Messages: c.Formats("ui_"), Framed: framed, Served: served}
+	data := pageData{Catalog: c, Messages: c.Formats("ui_"), Framed: framed, Served: served, Version: version}
 	if err := pageTemplate.Execute(&b, data); err != nil {
 		return nil, fmt.Errorf("render ui.html: %w", err)
 	}

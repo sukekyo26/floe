@@ -225,14 +225,15 @@ func notFound(w http.ResponseWriter) {
 }
 
 func serveUI(w http.ResponseWriter, r *http.Request) {
-	sendUI(w, r, http.StatusOK, "")
+	sendUI(w, r, http.StatusOK, "", "")
 }
 
 // sendUI answers with the management page in the reader's language: the frame around the page framed, a slug, or
 // the list for "".
-func sendUI(w http.ResponseWriter, r *http.Request, status int, framed string) {
+func sendUI(w http.ResponseWriter, r *http.Request, status int, framed, version string) {
 	// A folder's page is framed by what the server serves, which a list of its directory cut at its bound may leave out
-	page, err := ui.Page(catalog(r), framed, framed != "" && status == http.StatusOK && r.URL.Query().Get("file") != "")
+	served := framed != "" && status == http.StatusOK && r.URL.Query().Get("file") != ""
+	page, err := ui.Page(catalog(r), framed, served, version)
 	if err != nil {
 		refuse(w, r, err)
 		return
