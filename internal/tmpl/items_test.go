@@ -580,3 +580,30 @@ func TestPartBarsRefused(t *testing.T) {
 		}
 	}
 }
+
+// The parts of an item of entries are stack's and walked as they are: what stack does not take is refused, tabs above
+// all, whose form would stand in tabs' form around it, and a mistake in a part's value is told at its line and column.
+func TestEntriesParts(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ parts, want string }{
+		{"[{code: {text: x}}, {text: y}]", ""},
+		{"[{entries: [{title: f, parts: [{code: {text: x}}]}]}]", ""},
+		{"[]", "d.yaml:4:42: minItems: got 0, want 1"},
+		{"[{tabs: [{title: a, parts: [{text: x}]}, {title: b, parts: [{text: y}]}]}]", "d.yaml:4:44: additional properties 'tabs' not allowed"},
+		{"[{details: {title: a, parts: [{text: x}]}}]", "d.yaml:4:44: additional properties 'details' not allowed"},
+		{"[{table: {columns: [c], rows: [[1]]}}]", "d.yaml:4:74: got number, want string or object"},
+	} {
+		data := "lang: en\ntemplate: report\nsections:\n  - parts: [{entries: [{title: e, parts: " + c.parts + "}]}]\n"
+		page, _, err := tmpl.Draw(floeKit(t), "d.yaml", []byte(data), none)
+		if c.want == "" {
+			if err != nil || page == nil {
+				t.Errorf("%s: %d bytes, %s", c.parts, len(page), told(err))
+			}
+			continue
+		}
+		if got := told(err); got != c.want {
+			t.Errorf("%s: %q, want %q", c.parts, got, c.want)
+		}
+	}
+}

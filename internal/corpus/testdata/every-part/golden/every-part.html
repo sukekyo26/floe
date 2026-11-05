@@ -732,10 +732,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A heading with its tags on the same line, then its text the full width, which a wide block in it (code, a table)
-   does not widen past the panel.
-   LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
-   if pages come to put code in entries */
+/* A heading with its tags on the same line, then its text and its parts the full width, which a wide block in them
+   (code, a table) does not widen past the panel. */
 :scope { display: grid; }
 :scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; }
 :scope dt { min-width: 0; font-weight: 700; }
@@ -745,7 +743,12 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--muted); }
 :scope .tags > span { min-width: 0; }
 :scope .tags code { font-size: 0.86rem; }
-:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); line-height: 1.65; }
+:scope .text, :scope .parts { flex: 1 0 100%; min-width: 0; }
+:scope .text { display: grid; grid-template-columns: minmax(0, 1fr); }
+:scope .text, :scope .parts > div { line-height: 1.65; }
+/* --floe-room from what is above, with the row's gap, and from the rule below, with the row's padding, as far as what
+   the parts draw outside their boxes reaches. On a div of its own: a row that wraps draws its dd's alike */
+:scope .parts > div { padding-block: calc(var(--floe-room) - 0.2rem) calc(var(--floe-room) - var(--floe-row-pad)); }
 /* A long pill wraps rather than overflow the panel */
 :scope .tags { --floe-pill-wrap: normal; }
 }
@@ -754,10 +757,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="entries"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A heading with its tags on the same line, then its text the full width, which a wide block in it (code, a table)
-   does not widen past the panel.
-   LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
-   if pages come to put code in entries */
+/* A heading with its tags on the same line, then its text and its parts the full width, which a wide block in them
+   (code, a table) does not widen past the panel. */
 :scope { display: grid; }
 :scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; }
 :scope dt { min-width: 0; font-weight: 700; }
@@ -767,7 +768,12 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--muted); }
 :scope .tags > span { min-width: 0; }
 :scope .tags code { font-size: 0.86rem; }
-:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); line-height: 1.65; }
+:scope .text, :scope .parts { flex: 1 0 100%; min-width: 0; }
+:scope .text { display: grid; grid-template-columns: minmax(0, 1fr); }
+:scope .text, :scope .parts > div { line-height: 1.65; }
+/* --floe-room from what is above, with the row's gap, and from the rule below, with the row's padding, as far as what
+   the parts draw outside their boxes reaches. On a div of its own: a row that wraps draws its dd's alike */
+:scope .parts > div { padding-block: calc(var(--floe-room) - 0.2rem) calc(var(--floe-room) - var(--floe-row-pad)); }
 /* A long pill wraps rather than overflow the panel */
 :scope .tags { --floe-pill-wrap: normal; }
 }
@@ -997,7 +1003,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* What details and tabs hold */
+/* What details, tabs and an item of entries hold */
 :scope { display: grid; gap: var(--floe-room); }
 /* A word kept whole (a table's on paper) overflows the stack's column instead of widening it */
 :scope > * { min-width: 0; }
@@ -2115,6 +2121,197 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </ul></div></dd></div>
 <div><dt>Search index</dt><dd class="tags"><span><span data-floe-tone="warn" data-floe-part="cell">by hand</span></span><span><span data-floe-tone="bad" data-floe-part="cell">blocked</span></span><span><span data-floe-tone="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><div data-floe-text=""><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p></div></dd></div>
 <div><dt>Old links</dt></div>
+<div><dt>A step with its command</dt><dd class="text"><div data-floe-text=""><p>Run it from the wiki&#39;s folder.</p></div></dd><dd class="parts"><div><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="file">wiki.conf</span><span class="lang">ini</span></figcaption><pre><code data-floe-copy="">mode = read-only</code></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><figure class="bash" data-floe-part="terminal"><figcaption>bash</figcaption><pre><span class="floe-hidden">Command: </span><span class="run" data-floe-copy="">wiki freeze</span></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></div></div></dd></div>
+<div><dt>Parts alone, in the last row</dt><dd class="parts"><div><div data-floe-part="stack"><div data-floe-text=""><p>Text among parts, as tall as an item&#39;s.</p></div><figure data-floe-part="code"><figcaption><span class="lang">sh</span></figcaption><pre><code data-floe-copy="">wiki status</code></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></div></div></dd></div>
 </dl>
 <dl data-floe-part="keys">
 <div><dt><kbd>Ctrl</kbd><span>+</span><kbd>K</kbd></dt><dd>Search the wiki</dd></div>

@@ -18,7 +18,7 @@ paths:
 - **読んだ Kit は変えない**：`Kit` は欄を外へ出さず、`[]byte` も写しを返す。自分のものを重ねるときは、土台を書き換えずに新しい `Kit` を作る（`Floe()` の値をプロセス全体で共有するため）。描くときは、`Template.Page`・`Part.Page` が返す写しを Execute する（Execute は html/template にエスケープの結果を書き込み、その後は写しを作れない）
 - **show が出すのは読んだファイル**：`floe part show` などが出すファイルは、読み手が読んだもの（`readFile` が書き留めたもの）だけで、順は種類ごとの並び 1 つ（`unreadIn` も同じ並びを使う）。show のために別に選ばない
 - **stack は書いた部品を全部描く**：stack の part.html は部品の種類を書き並べず、report の page.html と同じ繰り返しで描く。置ける部品は stack の schema 1 か所で決める。`TestEveryPartDrawsEveryPart`
-- **部品 text はコードの部品と並ぶ Markdown**：部品の並びの Markdown は部品 text で、Go の名前は `kit.TextPart` 1 つ。テンプレートや部品の自分の Markdown の欄は部品 text にしない。text は部品の箱でない外枠 `data-floe-text` に描き、外の面と tone を継ぐ。page.css とテーマの base.css は外枠で止まる
+- **部品 text はコードの部品と並ぶ Markdown**：部品の並びの Markdown は部品 text で、Go の名前は `kit.TextPart` 1 つ。テンプレートや部品の自分の Markdown の欄は部品 text にしない。例外：同じ項目に部品の並びを持つ欄は部品 text にする。text は部品の箱でない外枠 `data-floe-text` に描き、外の面と tone を継ぐ。page.css とテーマの base.css は外枠で止まる
 - **組み込みのテンプレートは汎用**：floe の組み込みのテンプレートは、どのプロジェクトでも使う一般的な文書の形にする。floe の開発の流れだけの段は決まった段にせず、任意の節に書かせる。見本（example.yaml）の中身も一般的な題材にする。必須は、その文書が成り立たない段だけにする
 - **組み込みは schema だけで断る**：組み込みのテンプレートは checks.yaml を持たず、断るのは schema（必須・型・知らない鍵・空の字）だけ。見れば分かる誤り（判断に推しが 2 つ、など）は `LIMIT:` にする
 - **目次の id はテンプレートが付ける**：テンプレートが自分の段へリンクするときは、page.html が言語によらない決まった id を見出しに付ける。floe が見出しの字から作る id に頼らない

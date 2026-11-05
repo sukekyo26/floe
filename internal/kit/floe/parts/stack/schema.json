@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "stack",
-  "description": "Parts one under another, as details and tabs hold them",
+  "description": "Parts one under another, as details, tabs and an item of entries hold them",
   "$comment": "Never tabs: tabs draws a form, and the parser drops a form inside a form, joining the radios of both tabs into one group",
   "type": "array",
   "minItems": 1,

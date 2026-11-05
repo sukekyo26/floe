@@ -106,7 +106,7 @@ func Markdown(text string) (template.HTML, error) {
 	return flow(text, "data-floe-markdown")
 }
 
-// TextPart is the part of Markdown that stands among other parts (any.json, stack), where a code part can stand
+// TextPart is the part of Markdown that stands among other parts (any.json, stack, an item of entries), where a code part can stand
 // beside it: the one whose fences are warned of.
 // LIMIT: text is warned of wherever a schema names it, with no code part beside too; mark its places if that misleads.
 const TextPart = "text"

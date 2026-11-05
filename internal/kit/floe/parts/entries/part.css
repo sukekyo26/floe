@@ -1,7 +1,5 @@
-/* A heading with its tags on the same line, then its text the full width, which a wide block in it (code, a table)
-   does not widen past the panel.
-   LIMIT: a fence in the text is drawn as a plain pre, without a warning, which reads the part text alone; warn here too
-   if pages come to put code in entries */
+/* A heading with its tags on the same line, then its text and its parts the full width, which a wide block in them
+   (code, a table) does not widen past the panel. */
 :scope { display: grid; }
 :scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; }
 :scope dt { min-width: 0; font-weight: 700; }
@@ -11,6 +9,11 @@
 :scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--muted); }
 :scope .tags > span { min-width: 0; }
 :scope .tags code { font-size: 0.86rem; }
-:scope .text { flex: 1 0 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); line-height: 1.65; }
+:scope .text, :scope .parts { flex: 1 0 100%; min-width: 0; }
+:scope .text { display: grid; grid-template-columns: minmax(0, 1fr); }
+:scope .text, :scope .parts > div { line-height: 1.65; }
+/* --floe-room from what is above, with the row's gap, and from the rule below, with the row's padding, as far as what
+   the parts draw outside their boxes reaches. On a div of its own: a row that wraps draws its dd's alike */
+:scope .parts > div { padding-block: calc(var(--floe-room) - 0.2rem) calc(var(--floe-room) - var(--floe-row-pad)); }
 /* A long pill wraps rather than overflow the panel */
 :scope .tags { --floe-pill-wrap: normal; }
