@@ -206,7 +206,9 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 		sent[name] = &fstest.MapFile{Data: b, Mode: 0, ModTime: time.Time{}, Sys: nil}
 	}
 	images := &recorder{fsys: sent, names: nil, seen: map[string]bool{}}
-	o := tmpl.Options{Theme: opts.theme(), Untitled: *opts.Slug, Images: images, ImagesDir: "", Icons: dw.Icons, CutOff: false}
+	o := tmpl.Options{
+		Theme: opts.theme(), Untitled: *opts.Slug, Images: images, ImagesDir: "", Icons: dw.Icons, CutOff: false,
+	}
 	page, warnings, drawErr := tmpl.Draw(dw.Kit, up.File, up.Source, o)
 	var mistakes usererr.List
 	if failed := mistakes.Add(drawErr); failed != nil {

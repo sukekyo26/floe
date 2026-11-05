@@ -33,7 +33,7 @@ import (
 // page.html. The mistakes of the items are told together, a part
 // holding one that failed left undrawn. It checks the page drawn, its items of format html first (items.check),
 // and returns it as the parser read it, with its styles in its head and its headings given ids, when cut with the
-// CSP of a page opened without the headers (cutOff) too, written anew, and the warnings of its items.
+// CSP of a page opened without the headers (withCutOff) too, written anew, and the warnings of its items.
 func Page(
 	k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[string]any, title string,
 	images fs.FS, imagesDir string, icons diagram.Icons, cut bool,
@@ -79,7 +79,7 @@ func Page(
 	withStyles(tree, sheets)
 	withHeadingIDs(tree)
 	if cut {
-		cutOff(tree)
+		withCutOff(tree)
 	}
 	// LIMIT: Render writes no form's pointer: a <form> ended in a <div> or a <table> it opened, read again, owns
 	// other inputs, or drops a nested one. Write the forms apart if a template comes to rely on them (the CSP's
@@ -133,7 +133,7 @@ func readPage(k *kit.Kit, d *doc.Data, s *items, src []byte) (*html.Node, named,
 		return nil, named{}, yamlpos.New(d.File, d.Where["template"], "draw_page_cut")
 	}
 	ns := namesIn(k)
-	if err := s.check(k, ns, d, tree); err != nil {
+	if err = s.check(k, ns, d, tree); err != nil {
 		return nil, named{}, err
 	}
 	if cut {

@@ -24,25 +24,25 @@ func CutOff(connect string) string {
 		"script-src 'unsafe-inline' " + cdns + "; form-action 'none'; base-uri 'none'; connect-src " + connect
 }
 
-// CutOffPage puts CutOff into src, a page drawn and kept, of file ("" for one kept without a name), for one who opens
-// it without the headers (a download), as cutOff does.
-// LIMIT: read again, a page drawn may go past the parser's depth (<form><i><nobr><h2></form><div><li> under 500 elements),
-// told here and not when it was published; check it when drawn if such pages come to be written.
+// CutOffPage puts CutOff into src, a page drawn and kept, of file ("" for one kept without a name), for one who
+// opens it without the headers (a download), as withCutOff does.
+// LIMIT: read again, a page drawn may go past the parser's depth (<form><i><nobr><h2></form><div><li> under 500
+// elements), told here and not when it was published; check it when drawn if such pages come to be written.
 func CutOffPage(file string, src []byte) ([]byte, error) {
 	tree, err := parsePage(file, src)
 	if err != nil {
 		return nil, err
 	}
-	cutOff(tree)
+	withCutOff(tree)
 	return writePage(file, tree)
 }
 
-// cutOff puts CutOff into tree, nothing connecting: first in its head, read as a browser reads it, since a <meta> binds
-// only what comes after it. A page floe draws is UTF-8, and a page holds one charset: the page's own go, wherever, and
-// floe's goes first, so that the CSP does not push it out of the bytes a browser reads for it. The parser always makes
-// a head.
+// withCutOff puts CutOff into tree, nothing connecting: first in its head, read as a browser reads it, since a
+// <meta> binds only what comes after it. A page floe draws is UTF-8, and a page holds one charset: the page's own
+// go, wherever, and floe's goes first, so that the CSP does not push it out of the bytes a browser reads for it. The
+// parser always makes a head.
 // LIMIT: a page the server answers keeps page.html's charsets, its header's utf-8 overriding; take them in tmpl.Draw
-func cutOff(tree *html.Node) {
+func withCutOff(tree *html.Node) {
 	// Taken out after the walk, which stops at a node taken out.
 	var charsets []*html.Node
 	for n := range tree.Descendants() {

@@ -62,7 +62,7 @@ func names(list string) map[string]bool {
 func read(page []byte) ([]section, error) {
 	root, err := html.Parse(bytes.NewReader(page))
 	if err != nil {
-		return nil, usererr.Library(err)
+		return nil, usererr.Library(err) //nolint:wrapcheck // the library's words
 	}
 	r := &reader{sections: []section{{heading: "", level: 0, blocks: nil}}, kind: "", words: strings.Builder{}}
 	r.walk(root)
