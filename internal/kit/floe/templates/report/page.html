@@ -12,8 +12,10 @@
 <p class="eyebrow">{{.}}</p>
 {{- end}}
 <h1>{{.Title}}</h1>
+{{- /* LIMIT: a lead is a line of Markdown, whose raw HTML is left out as in all Markdown: a tag written as text and not
+   in backticks goes with no mistake. Tell of it where Markdown is read if writers keep losing words */}}
 {{- with .Data.lead}}
-<p class="lead">{{.}}</p>
+<p class="lead">{{markdownLine .}}</p>
 {{- end}}
 </header>
 {{- range .Data.sections}}

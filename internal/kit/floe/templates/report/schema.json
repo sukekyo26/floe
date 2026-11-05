@@ -5,7 +5,7 @@
   "type": "object",
   "properties": {
     "eyebrow": { "type": "string", "description": "A short line above the title, such as the kind of page and its date" },
-    "lead": { "type": "string", "description": "A sentence or two under the title that sums the page up" },
+    "lead": { "type": "string", "description": "A sentence or two under the title that sums the page up; a line of Markdown. Raw HTML is left out: write a tag as text in backticks" },
     "sections": {
       "type": "array",
       "items": {
