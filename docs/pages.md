@@ -90,7 +90,7 @@ The parts `report` takes in a section:
 | `code` | Code as it is, under its `file` with its `lang`. A button over it copies the code. Draw no diagram or table in it with characters: write a `diagram`, `table` or `tree`. |
 | `terminal` | Commands (`run`) and what they printed (`out`), at the prompt of its `shell` (`bash`, `sh`, `zsh`, `powershell`, `cmd`). floe draws the prompt, so a `run` that starts with one (`$ ls`) is refused. A button over them copies the commands, a line each, without the prompt or what they printed. |
 | `table` | Rows compared both along and across, each cell short. `columns` and `rows`. A column is its title, or `{ title, num, pills }`: `num: true` for numbers, and `pills`, words with their tones (`{ done: good }`), for a cell of the column that is one of them, whole, to be drawn as that pill. A cell is a line of Markdown, a number in quotes as it is drawn, or a pill `{ pill, tone }`, written as an object, not in quotes. |
-| `entries` | Records one under another, each a `title` (a line of Markdown) with its `tags` beside it (each as a table's cell: a line of Markdown or a pill) and its `text` (Markdown) the full width under them. A tag shows no column's name, so say in it what it is (`merged 2026-10-30`). Code in `text` is drawn as it is, without a copy button; put it in a `code` part after the entries. |
+| `entries` | Records one under another, each a `title` (a line of Markdown) with its `tags` beside it (each as a table's cell: a line of Markdown or a pill) its `text` (Markdown) the full width under them, and its `parts` under that, the parts `details` holds. A tag shows no column's name, so say in it what it is (`merged 2026-10-30`). Write code in `parts`, as `code` and `terminal`; a fenced block in `text` is drawn as plain code and warned of. |
 | `image` | An image, such as a screenshot: its `file` and its `alt`, what it shows ([Images](#images)). |
 | `note`, `stats`, `progress`, `steps`, `checklist` | A note in a tone, large numbers, bars of progress, numbered steps, items ticked once done. |
 | `compare`, `options`, `facts`, `diff`, `tree`, `links` | What changes before and after, options with pros and cons, names with values, a diff (a button over it copies the diff as written), files and folders, links. |
@@ -117,13 +117,13 @@ A data file is one YAML document of keys and values. One with `---` between docu
 
 ## Images
 
-In `report`, an image is a part `image` (`- image: { file: shots/list.png, alt: The list of pages }`), in a section or subsection, `details` or `tabs`: its `file` is the path of the image, and its `alt` what it shows. A template of one's own takes an image as an item of `"format": "image"`, whose value is the path. The path is relative to the data file's directory and under it: one `/` between names, without `./`, `..`, or a `/` at either end. The image goes into the page as a data URI, so that the page holds all it shows: a png, jpeg, gif, webp or svg file, by its name, up to 1 MiB. `floe publish` sends the server the images the page shows.
+In `report`, an image is a part `image` (`- image: { file: shots/list.png, alt: The list of pages }`), in a section or subsection, `details`, `tabs` or the `parts` of an item of `entries`: its `file` is the path of the image, and its `alt` what it shows. A template of one's own takes an image as an item of `"format": "image"`, whose value is the path. The path is relative to the data file's directory and under it: one `/` between names, without `./`, `..`, or a `/` at either end. The image goes into the page as a data URI, so that the page holds all it shows: a png, jpeg, gif, webp or svg file, by its name, up to 1 MiB. `floe publish` sends the server the images the page shows.
 
 An image file Markdown names (`![x](shots/list.png)`) is drawn as written, and the page's CSP does not show it; only a data URI of a png, gif, jpeg or webp written in it shows. Write images in `image`.
 
 ## Diagrams
 
-A `diagram` part, in a section or in `details` and `tabs`, draws a diagram from a spec written in place, checked before the page is drawn: [diagrams.md](diagrams.md) tells how a spec is written.
+A `diagram` part, in a section or in `details`, `tabs` and the `parts` of an item of `entries`, draws a diagram from a spec written in place, checked before the page is drawn: [diagrams.md](diagrams.md) tells how a spec is written.
 
 ## Scripts and HTML
 
@@ -161,5 +161,5 @@ A page drawn may have warnings: advice on a better way to write it, which leaves
 plan.yaml:12:15: warning: this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
 ```
 
-- A fenced block of code in a `text` part, in a section (report's and its subsections, `more` of design, handoff, adr, postmortem and runbook, runbook's `text` of a step, and a slide of slides) or in `details` and `tabs`, is warned of: write it in `code`, or a command in `terminal`.
+- A fenced block of code in a `text` part, in a section (report's and its subsections, `more` of design, handoff, adr, postmortem and runbook, runbook's `text` of a step, and a slide of slides) or in `details`, `tabs` and the `parts` of an item of `entries`, and in the `text` of an item of `entries`, is warned of: write it in `code`, or a command in `terminal`.
 - A file with a mistake is not drawn, so its warnings come once its mistakes are fixed. Those of the other files drawn are told with the mistakes.
