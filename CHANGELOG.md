@@ -324,7 +324,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Change `report`'s `lead` to a line of Markdown, as the `summary` of `design`, `handoff`, `postmortem` and `runbook`: code in backticks, bold and links are drawn, while a heading, a list or a table stays text. Raw HTML in it is left out, so write a tag as text in backticks. A stored page takes this when published again or at `floe rebuild`.
+- Change `report`'s `lead` to a line of Markdown, as the `summary` of `design`, `handoff`, `postmortem` and `runbook`: code in backticks, bold and links are drawn, while a heading, a list or a table stays text. What looks like a tag (`<prefix>`, `Vec<u8>`) is left out and marks such as `*` and `_` are read, so write those as text in backticks. A stored page takes this when published again or at `floe rebuild`, and a linked data file as soon as floe is updated. `floe rebuild` does not draw earlier versions again, so comparing one with the latest shows the `lead` as changed.
 - Warn of a fenced block of code in the `text` of an item of `entries`, as in a `text` part: a page that has one now gets a warning, and is drawn as before with the same exit code.
 - Change `floe diagram inspect` to begin each diagram with a line of where it is written, its title and its canvas (`page.yaml:9:11: diagram "T" 560x190`, `spec.yaml: diagram "T" 560x190`), and to print where the parts went for a diagram the checks refuse too, as a guide, on stdout with its mistakes on stderr and the exit code still 1.
 - `GET /api/artifacts/{slug}/download` takes `?v=<n>` to save that version of a stored page as `<slug>-v<n>.html`, and answers
