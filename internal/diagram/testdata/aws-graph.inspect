@@ -1,8 +1,14 @@
+diagram "2 つのアベイラビリティゾーンで動く AWS の Web アプリ" 894x1085
 frame "cloud" 16,121 858x944
 frame "vpc" 142,305 606x610
 frame "public" 232,339 348x160
 frame "private" 154,535 582x160
 frame "data" 154,743 558x160
+the heading of frame "cloud" 56,127 74.88x18
+the heading of frame "vpc" 182,311 24.96x18
+the heading of frame "public" 272,345 130x18
+the heading of frame "private" 194,541 143x18
+the heading of frame "data" 194,749 117x18
 icon "users" 264,16 48x48
 the icon of frame "cloud" 16,121 31x31
 icon "dns" 192,188 48x48

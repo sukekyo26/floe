@@ -324,6 +324,9 @@ func TestGraphLevel(t *testing.T) {
 		{"lanes, down", level3, `frame "u" 20,20 144x201
 frame "v" 188,20 108x201
 frame "w" 320,20 108x201
+the heading of frame "u" 32,29 7.68x18
+the heading of frame "v" 200,29 7.68x18
+the heading of frame "w" 332,29 7.68x18
 box "a" 32,115 48x29
 box "ok" 32,180 56x29
 box "b" 236,115 48x29
@@ -342,6 +345,9 @@ label "ask" 262.4,170.5 31.6x18
 		{"lanes, right", strings.Replace(level3, "      lanes:\n", "      direction: right\n      lanes:\n", 1), `frame "u" 20,20 266x54
 frame "v" 20,98 266x96
 frame "w" 20,218 266x114
+the heading of frame "u" 32,29 7.68x18
+the heading of frame "v" 32,107 7.68x18
+the heading of frame "w" 32,227 7.68x18
 box "a" 134,32 48x29
 box "ok" 218,32 56x29
 box "b" 134,134 48x48

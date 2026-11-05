@@ -267,6 +267,7 @@ var messagesJA = map[string]string{
 	"diagram_zoom_one_label":   "原寸で表示",
 	"diagram_unknown_example":  "例 %s はありません。%s を使ってください",
 	"cli_wants_spec":           "図の spec（.yaml）",
+	"cli_wants_spec_or_data":   "図の spec かデータファイル（.yaml）",
 	"cli_unknown_part":         `部品 "%s" はありません。%s から選んでください`,
 	"cli_unknown_file":         `%s にファイル "%s" はありません（ファイル: %s）`,
 	"cli_new_exists":           "ここにはこの名前のものがもうあります。別の名前にするか、それを消してください",

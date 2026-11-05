@@ -1,3 +1,4 @@
+diagram "floe が保存するデータ" 1060x300
 table "ページ（meta.json）" 380,40 260x212
 table "プロジェクト" 40,128 200x58
 table "Stored page" 780,40 240x80

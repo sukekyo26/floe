@@ -1,3 +1,4 @@
+diagram "The error types of floe's yamlpos package" 1000x350
 table "error" 210,20 240x58
 table "i18n.Localizer" 550,20 240x58
 table "usererr.Error" 30,168 240x155

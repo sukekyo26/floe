@@ -1,7 +1,12 @@
+diagram "エージェントが Amazon Bedrock を通して Claude を呼ぶ構成" 1000x330
 frame "Developer machine" 16,60 260x200
 frame "AWS Cloud" 316,16 668x300
 frame "リージョン（AWS_REGION）" 340,72 240x220
 frame "Global inference profile" 620,72 344x220
+the heading of frame "Developer machine" 28,69 130.56x18
+the heading of frame "AWS Cloud" 356,22 74.88x18
+the heading of frame "リージョン（AWS_REGION）" 380,78 174.2x18
+the heading of frame "Global inference profile" 632,81 184.32x18
 the icon of frame "AWS Cloud" 316,16 31x31
 the icon of frame "リージョン（AWS_REGION）" 340,72 31x31
 icon "aws/res/client" 76,116 48x48

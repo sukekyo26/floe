@@ -1,3 +1,4 @@
+diagram "From floe publish to a reload" 1040x700
 box "エージェント" 15,12 230x52
 box "Store" 275,12 230x52
 box "サーバー" 535,12 230x52

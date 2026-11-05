@@ -1,3 +1,4 @@
+diagram "Stacked branches of floe's diagram work" 860x260
 box "develop" 15.3,35 96.7x30
 box "feature/diagram-spec" 114,95 202x30
 box "feature/diagram-check" 245.9,155 210.1x30

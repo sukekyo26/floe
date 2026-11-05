@@ -1,3 +1,4 @@
+diagram "The states of floe's server" 1293.6x202
 box "stopped" 20,56 200x72
 box "running" 581.6,26 176x66
 box "outdated" 1097.6,56 176x72

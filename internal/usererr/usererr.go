@@ -331,18 +331,24 @@ func (r Report) Render(name string) string {
 	return strings.Join(lines, "\n")
 }
 
-// line lays t out after where it is: file:line:column, or as much of it as it has, then a JSON pointer; after
-// name when it is at no file.
+// Where writes a place in file: file:line:column, or as much of it as it has; "" at no file.
+func Where(file string, line, column int) string {
+	switch {
+	case file == "":
+		return ""
+	case line == 0:
+		return file
+	case column == 0:
+		return fmt.Sprintf("%s:%d", file, line)
+	}
+	return fmt.Sprintf("%s:%d:%d", file, line, column)
+}
+
+// line lays t out after where it is, then a JSON pointer; after name when it is at no file.
 func (t Told) line(name string) string {
 	var where []string
-	switch {
-	case t.File == "":
-	case t.Line == 0:
-		where = append(where, t.File)
-	case t.Column == 0:
-		where = append(where, fmt.Sprintf("%s:%d", t.File, t.Line))
-	default:
-		where = append(where, fmt.Sprintf("%s:%d:%d", t.File, t.Line, t.Column))
+	if w := Where(t.File, t.Line, t.Column); w != "" {
+		where = append(where, w)
 	}
 	if t.At != "" {
 		where = append(where, t.At)
