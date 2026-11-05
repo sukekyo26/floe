@@ -403,6 +403,20 @@ func TestEdgeStraight(t *testing.T) {
 				"  - edge: { from: a, to: c, fromSide: left, toSide: right }\n",
 			"edge a→c M560,95 H260",
 		},
+		{
+			"not onto the end of an edge", ab + e + "  - edge: { from: [250, 20], to: [250, 70] }\n",
+			"edge a→b M180,80 H300\nedge [250,20]→[250,70] M250,20 V70",
+		},
+		{
+			"not onto the end of a slanting edge", ab + e + "  - edge: { from: [230, 20], to: [300, 70], straight: true }\n",
+			"edge a→b M180,80 H300\nedge [230,20]→[300,70] M230,20 L300,70",
+		},
+		{
+			"through a box, and another edge straight", "  - box: { name: a, x: 100, y: 20, w: 90, h: 30, rows: [a] }\n  - box: { name: b, x: 60, y: 200, w: 90, h: 30, rows: [b] }\n  - box: { x: 108, y: 140, w: 41, h: 29, rows: [x] }\n" +
+				"  - box: { name: c, x: 400, y: 20, w: 120, h: 30, rows: [c] }\n  - box: { name: d, x: 450, y: 110, w: 120, h: 30, rows: [d] }\n" +
+				"  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: c, to: d }\n",
+			"edge a→b M145,50 V125 H105 V200\nedge c→d M485,50 V110",
+		},
 		{"sharing too little", "  - box: { name: a, x: 40, y: 20, w: 100, h: 30, rows: [a] }\n  - box: { name: b, x: 120, y: 110, w: 100, h: 30, rows: [b] }\n  - edge: { from: a, to: b }\n", "edge a→b M90,50 V80 H170 V110"},
 		{
 			"through a box", "  - box: { name: a, x: 100, y: 20, w: 90, h: 30, rows: [a] }\n  - box: { name: b, x: 60, y: 200, w: 90, h: 30, rows: [b] }\n  - box: { name: c, x: 200, y: 200, w: 90, h: 30, rows: [c] }\n  - box: { x: 110, y: 150, w: 41, h: 29, rows: [x] }\n" +
