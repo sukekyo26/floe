@@ -153,6 +153,16 @@
   [dd] by hand blocked next
   [p] Rebuilt by hand after the copy; the steps.
   [dt] Old links
+  [dt] A step with its command
+  [p] Run it from the wiki's folder.
+  [figcaption] wiki.conf ini
+  [pre] mode = read-only
+  [figcaption] bash
+  [pre] Command: wiki freeze
+  [dt] Parts alone, in the last row
+  [p] Text among parts, as tall as an item's.
+  [figcaption] sh
+  [pre] wiki status
   [dt] Ctrl + K
   [dd] Search the wiki
   [dt] g + h
