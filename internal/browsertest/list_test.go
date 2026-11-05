@@ -676,7 +676,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 	out = append(out, b.until("the edge let go", "!document.getElementById('list-grip').classList.contains('dragging') && getComputedStyle(document.getElementById('read-frame')).pointerEvents"))
 	// Folded and shown again, the focus on the other button; the list's words clear of the button.
-	const shelf = "[getComputedStyle(document.querySelector('.shelf')).display, document.getElementById('shelf-show').hidden, document.getElementById('shelf-grip').hidden, document.activeElement.id, document.getElementById('shelf-show').getBoundingClientRect().right <= document.getElementById('count').getBoundingClientRect().left].join(' ')"
+	const shelf = "[getComputedStyle(document.querySelector('.shelf')).display, document.getElementById('shelf-show').hidden, document.getElementById('shelf-grip').hidden, document.activeElement.id, document.getElementById('shelf-show').getBoundingClientRect().right <= document.getElementById('list-hide').getBoundingClientRect().left].join(' ')"
 	b.eval("document.getElementById('shelf-hide').click()")
 	out = append(out, b.eval(shelf), b.eval("Math.round(document.getElementById('listcol').getBoundingClientRect().left)"))
 	// Folded, the head says what the filters narrow the list to, in its line beside the rest; pressed, they show.
@@ -732,7 +732,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.eval("picked.slug + ' ' + document.getElementById('read-actions').hidden"))
 	// Both folded, both buttons in the head of the page, told apart by their words; the page nearly whole.
 	b.eval("document.getElementById('shelf-hide').click()")
-	out = append(out, b.eval("[...document.querySelectorAll('#read-head .icon-btn')].filter((e) => e.closest('.frame-actions') === null && e.getClientRects().length).map((e) => e.id + ':' + (e.title === e.getAttribute('aria-label'))).join(' ') + ' ' + document.activeElement.id + ' ' + Math.round(document.getElementById('reader').getBoundingClientRect().left)"))
+	out = append(out, b.eval("[...document.querySelectorAll('#manage > .side-show')].filter((e) => e.getClientRects().length).map((e) => e.id + ':' + (e.title === e.getAttribute('aria-label'))).join(' ') + ' ' + document.activeElement.id + ' ' + Math.round(document.getElementById('reader').getBoundingClientRect().left)"))
 	// Kept across a reload.
 	b.navigate("/")
 	out = append(out, b.eval("document.getElementById('manage').className"))
@@ -748,13 +748,13 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Folded across the widths: the list as ever, no buttons, under 70rem; folded still above it.
 	// With a page chosen, its head shows.
 	b.size(1000, 700, false)
-	b.until("the list under 70rem", "matchMedia('(max-width: 70rem)').matches && getComputedStyle(document.getElementById('listcol')).display === 'block'")
+	b.until("the list under 70rem", "matchMedia('(max-width: 70rem)').matches && getComputedStyle(document.getElementById('listcol')).display === 'flex'")
 	b.eval("document.querySelector('#list li[data-slug=a1] .title').click()")
 	out = append(out, b.until("the head of the page", "document.getElementById('read-title').textContent && [getComputedStyle(document.getElementById('listcol')).display, ...['list-show', 'list-hide', 'list-grip'].map((id) => document.getElementById(id).getClientRects().length), document.getElementById('read-head').getClientRects().length].join(' ')"))
 	b.size(1600, 900, false)
 	out = append(out, b.until("the list folded", "!matchMedia('(max-width: 70rem)').matches && getComputedStyle(document.getElementById('listcol')).display"))
 
-	// The three heads' buttons stand on one line, open or folded; the list's over the rows' menus, the filters' over their counts.
+	// The two feet's buttons stand on one line, and what opens each column stays on it, folded.
 	b.size(1600, 900, false)
 	b.until("the wide window", "!matchMedia('(max-width: 70rem)').matches")
 	b.eval("localStorage.removeItem('list.columns')")
@@ -762,14 +762,12 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")
 	b.eval("document.querySelector('#list li[data-slug=a1] .title').click()")
 	const lines = `((ids) => ids.map((s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.top + r.height / 2; }).join(' '))`
-	const centre = "(s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.left + r.width / 2; }"
-	open := b.eval(lines + "(['#shelf-hide', '#list-hide', '#read-actions .star'])")
+	open := b.eval(lines + "(['#shelf-hide', '#list-hide'])")
 	b.eval("document.getElementById('list-hide').click(); document.getElementById('shelf-hide').click()")
-	shut := b.eval(lines + "(['#shelf-show', '#list-show', '#read-actions .star'])")
+	shut := b.eval(lines + "(['#shelf-show', '#list-show'])")
 	y, _, _ := strings.Cut(open, " ")
-	out = append(out, strconv.FormatBool(open == y+" "+y+" "+y), strconv.FormatBool(shut == open))
+	out = append(out, strconv.FormatBool(open == y+" "+y), strconv.FormatBool(shut == open))
 	b.eval("document.getElementById('list-show').click(); document.getElementById('shelf-show').click()")
-	out = append(out, b.eval("(() => { const at = "+centre+"; const n = document.querySelector('.views .n').getBoundingClientRect(), i = document.querySelector('#shelf-hide svg').getBoundingClientRect(); return [Math.abs(at('#list-hide') - at('#list li[data-slug=a1] summary')) <= 0.5, Math.abs(n.right - i.right) <= 1].join(' '); })()"))
 	// The rule of the folded columns leaves no width between it and the one under 70rem.
 	out = append(out, b.eval("[...document.styleSheets[0].cssRules].some((r) => r.media?.mediaText === 'not (max-width: 70rem)')"))
 
@@ -794,14 +792,96 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"260px 336px 260 336", ring, "true true", "160px 336px 160 336",
 		"none true", "auto",
 		"none false true shelf-show true", "0",
-		"true  true", "false Archive · Filter 2 true", "true", "grid",
+		"true  true", "false Archive · Filter 2 true", "true", "flex",
 		"block 1 0 0 16 2", "none 0 1 0 16 2",
-		"true", "none", "grid shelf-hide", "160px 740px 160 740",
-		"520px 740", "0 0 0 0", "block false 0 true  608", "none true 1 false list-show 200", "false true true", "0 ",
+		"true", "none", "flex shelf-hide", "160px 740px 160 740",
+		"520px 740", "0 0 0 0", "flex false 0 true  608", "none true 1 false list-show 200", "false true true", "0 ",
 		"long", "a3 false", "shelf-show:true list-show:true shelf-show 0",
-		"shell shelf-closed list-closed", "list-hide shell shelf-closed lhead", "block", "block",
-		"block 0 0 0 1", "none", "true", "true", "true true", "true", "false true not (max-width: 70rem)",
+		"shell shelf-closed list-closed", "list-hide shell shelf-closed lhead", "flex", "flex",
+		"flex 0 0 0 1", "none", "true", "true", "true", "false true not (max-width: 70rem)",
 		"200px true true", "200px true true", "200px true true", "320px 320px",
+	}, "|"))
+}
+
+// TestUIColumnFoot: the button that folds a column stands in its foot, and what opens it stands in the same place, with nothing of the
+// column left: the filters, the list, a folder's tree and a diff's contents. The foot stays under what scrolls, its line reaching the
+// column's edge past the scrollbar. Where a column cannot fold, neither shows.
+func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := diffSite(t)
+	b := s.b
+	s.write(t, "docs/index.html", "<!doctype html><title>t</title><p>page</p>")
+	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "docs"))
+	b.size(1440, 900, false)
+	defer b.unsize()
+	b.navigate("/")
+	b.eval("localStorage.clear()")
+	at := func(id string) string {
+		t.Helper()
+
+		return b.eval("(() => { const r = document.getElementById(" + js(id) + ").getBoundingClientRect(); return r.left + ' ' + r.top; })()")
+	}
+	press := func(id string) {
+		t.Helper()
+
+		// A click where the button is seen, so that one under the page or another box takes nothing.
+		r := b.rect("document.getElementById(" + js(id) + ")")
+		b.mouse(input.DispatchMouseEventTypeMousePressed, r.X+r.Width/2, r.Y+r.Height/2, 1)
+		b.mouse(input.DispatchMouseEventTypeMouseReleased, r.X+r.Width/2, r.Y+r.Height/2, 1)
+	}
+	out := make([]string, 0, 20)
+
+	// A folder's page: the page takes all the width, folded.
+	b.navigate("/a/docs/?file=index.html")
+	b.until("the tree", "!document.getElementById('side').hidden")
+	out = append(out, at("side-hide"))
+	press("side-hide")
+	out = append(out, at("side-show"), b.eval("document.activeElement.id + ' ' + document.getElementById('frame').getBoundingClientRect().width"))
+	press("side-show")
+	out = append(out, b.eval("document.getElementById('side').hidden + ' ' + document.activeElement.id"))
+
+	// A diff: the words take all the width, with room under their last line for what opens the contents.
+	openDiff(b, "/a/d/?diff")
+	out = append(out, at("diff-toc-hide"))
+	press("diff-toc-hide")
+	out = append(out, at("diff-toc-show"), b.eval("(() => { const r = document.getElementById('diff-body'); return [r.getBoundingClientRect().left, r.getBoundingClientRect().width, getComputedStyle(r).paddingBottom, getComputedStyle(r).borderLeftWidth].join(' '); })()"))
+	press("diff-toc-show")
+	out = append(out, b.eval("document.getElementById('diff-toc-nav').hidden + ' ' + document.activeElement.id"))
+
+	// The list's page, its rows more than it can hold: each column alone, then both.
+	b.navigate("about:blank")
+	b.stub(manyPages(60))
+	defer b.unstub()
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li:not(.group)')")
+	b.eval("document.querySelector('#list li:not(.group) .title').click()")
+	b.until("the page", "!document.getElementById('read-frame').hidden")
+	out = append(out, at("shelf-hide"), at("list-hide"))
+	out = append(out, b.eval(`(() => {
+		const body = document.getElementById('list-body'), col = document.getElementById('listcol'), foot = document.querySelector('.listcol > .col-foot').getBoundingClientRect();
+		return [body.scrollHeight > body.clientHeight, foot.height, foot.bottom === innerHeight, body.getBoundingClientRect().bottom === foot.top, foot.right === col.getBoundingClientRect().left + col.clientLeft + col.clientWidth].join(' ');
+	})()`))
+	press("shelf-hide")
+	out = append(out, at("shelf-show"), at("list-hide"), b.eval("document.activeElement.id"))
+	press("shelf-show")
+	press("list-hide")
+	out = append(out, at("list-show"), b.eval("document.activeElement.id"))
+	press("shelf-hide")
+	out = append(out, at("shelf-show"), at("list-show"), b.eval("(() => { const r = document.getElementById('read-frame').getBoundingClientRect(); return [r.left, r.width, document.getElementById('read-title').getBoundingClientRect().left].join(' '); })()"))
+	// Nowhere to fold to, under 70rem: neither foot nor what opens, folded as they are kept.
+	b.size(1100, 800, false)
+	out = append(out, b.until("the one row of filters", "matchMedia('(max-width: 70rem)').matches && ['#shelf-show', '#list-show', '.shelf > .col-foot', '.listcol > .col-foot'].map((q) => document.querySelector(q).getClientRects().length).join(' ')"))
+	b.size(1440, 900, false)
+	press("list-show")
+	out = append(out, b.until("the list again", "!document.querySelector('.list-closed') && document.activeElement.id"))
+
+	check(t, "feet", out, strings.Join([]string{
+		"6 863.5", "6 863.5", "side-show 1440", "false side-hide",
+		"6 863.5", "6 863.5", "0 1440 44px 0px", "false diff-toc-hide",
+		"6 863.5", "207 863.5", "true 44 true true true",
+		"6 863.5", "43 863.5", "shelf-show",
+		"207 863.5", "list-show",
+		"6 863.5", "43 863.5", "0 1440 16",
+		"0 0 0 0", "list-hide",
 	}, "|"))
 }
 
