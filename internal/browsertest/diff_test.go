@@ -481,7 +481,7 @@ func TestUIDiffToc(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Closed and opened, the focus on the button that takes its place, the words where they were left; the tree's own is not touched.
 	b.eval("document.getElementById('diff-toc-hide').click()")
 	const closed = `[document.getElementById('diff-toc-nav').hidden, document.getElementById('diff-toc-grip').hidden, document.getElementById('diff-toc-show').hidden, document.activeElement.id,
-		document.getElementById('diff-toc-show').getBoundingClientRect().right <= document.getElementById('diff-body').getBoundingClientRect().left,
+		parseFloat(getComputedStyle(document.getElementById('diff-body')).paddingBottom) === 44,
 		document.getElementById('diff-toc-show').getBoundingClientRect().top > document.getElementById('diff-main').getBoundingClientRect().top,
 		document.elementFromPoint(document.getElementById('diff-toc-show').getBoundingClientRect().left + 8, document.getElementById('diff-toc-show').getBoundingClientRect().top + 8)?.closest('button')?.id].join(' ')`
 	out = append(out, b.eval(closed), b.eval(kept), b.eval("localStorage.getItem('frame.side') ?? 'none kept'"))
@@ -680,7 +680,8 @@ func TestUIDiffScrolls(t *testing.T) { //nolint:paralleltest // the browser test
 	s.floe(t, "publish", s.page(t, "z.yaml", "Z", kept.String()), "--slug", "z")
 	s.floe(t, "publish", s.page(t, "z.yaml", "Z", kept.String()+"<p>one more</p>"), "--slug", "z")
 	s.floe(t, "publish", s.page(t, "z.yaml", "Z", mended.String()), "--slug", "z")
-	// The page's scrolling, as it can be pushed there too; and of the box, what is left under its last words at its end.
+	// The page's scrolling, as it can be pushed there too; and of the box, what is left under its last words at its end, past the
+	// room kept for what opens the contents, folded.
 	const measure = `(() => {
 		const page = document.scrollingElement;
 		page.scrollTop = 1e6;
@@ -689,7 +690,7 @@ func TestUIDiffScrolls(t *testing.T) { //nolint:paralleltest // the browser test
 		const box = document.getElementById(narrow ? 'diff' : 'diff-body');
 		box.scrollTop = 1e6;
 		const last = document.getElementById('diff-body').lastElementChild.getBoundingClientRect().bottom;
-		const left = Math.round(box.getBoundingClientRect().bottom - last);
+		const left = Math.round(box.getBoundingClientRect().bottom - last - parseFloat(getComputedStyle(document.getElementById('diff-body')).paddingBottom));
 		const r = [moved, page.scrollHeight - page.clientHeight, left > 40 || left < -1 ? 'left ' + left : 'ends'].join(' ');
 		page.scrollTop = 0;
 		return r;

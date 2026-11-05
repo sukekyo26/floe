@@ -164,4 +164,18 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// The title itself has none, so that a row shows one ring.
 	tabTo("#list li:not(.group) a.title")
 	check(t, "the title", []string{b.eval("getComputedStyle(document.activeElement).outlineStyle")}, "none")
+	// The buttons of the columns' feet, and what opens them folded, over a page too.
+	b.size(1440, 900, false)
+	defer b.unsize()
+	b.until("the wide window", "!matchMedia('(max-width: 70rem)').matches")
+	out = out[:0]
+	out = append(out, tabTo("#shelf-hide"), tabTo("#list-hide"))
+	b.eval("document.querySelector('#list li:not(.group) .title').click(); document.getElementById('shelf-hide').click()")
+	out = append(out, tabTo("#shelf-show"))
+	b.eval("document.getElementById('list-hide').click()")
+	out = append(out, tabTo("#shelf-show"), tabTo("#list-show"))
+	b.eval("document.getElementById('list-show').click(); document.getElementById('shelf-show').click()")
+	check(t, "the feet", out, strings.Join([]string{
+		"#shelf-hide: " + ring, "#list-hide: " + ring, "#shelf-show: " + ring, "#shelf-show: " + ring, "#list-show: " + ring,
+	}, "|"))
 }

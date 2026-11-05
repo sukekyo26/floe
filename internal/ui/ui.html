@@ -59,6 +59,12 @@
     --bar: 3.5rem;
     /* The head over the list, and over the page chosen beside it */
     --lhead: 3.25rem;
+    /* A button of icons, and the foot of a column, which holds the button that folds it: where that stands, and what opens the second
+       column stands beside it, past the first's button and the room round it */
+    --icon-btn: 30px;
+    --foot: 2.75rem;
+    --foot-pad: 6px;
+    --foot-next: calc(var(--foot-pad) * 2 + var(--icon-btn));
   }
   * { box-sizing: border-box; }
   /* Every scrollbar of the page, its own and its boxes': a thin round thumb of the faint color on a clear track. Chrome, Edge and
@@ -162,9 +168,13 @@
 
   .dmain { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: var(--toc) minmax(0, 1fr); background: var(--panel); }
   .dmain > .grip { position: absolute; top: 0; }
-  .dmain > .side-show { position: absolute; top: 8px; }
+  .dmain > .side-show { position: absolute; }
+  /* Folded, the contents leave the words the whole width, the button that opens them over the words' last line */
+  @media not (max-width: 56rem) {
+    .dmain:has(> #diff-toc-show:not([hidden])) .dbody { padding-bottom: var(--foot); border-left: 0; }
+  }
   .dtoc { min-height: 0; display: flex; flex-direction: column; font-size: var(--text-small); }
-  .dtoc .side-head { flex: none; padding-inline: 1rem 0.4rem; }
+  .dtoc .side-head { padding-inline: 1rem; }
   .dtoc h2 { margin: 0; }
   /* What scrolls holds what is placed in it, so that the .sr-only words, absolute, are cut with the rest and do not widen the page past it */
   .dtoc-list, .dbody { position: relative; }
@@ -175,7 +185,8 @@
   .dtoc button.on { background: var(--sel); }
   .dtoc .mk { margin-left: auto; }
   .dtoc .lv2 > .dtoc-item { padding-left: 1.2rem; } .dtoc .lv3 > .dtoc-item { padding-left: 1.9rem; }
-  .dkeys { flex: none; margin: 0; padding: 0.6rem 1rem; color: var(--muted); font-size: var(--text-label); line-height: 1.9; border-top: 1px solid var(--line); }
+  /* In a window too low for all of it, what goes first is the list, then these words, the foot staying */
+  .dkeys { flex: 0 1 auto; min-height: 0; overflow: hidden; margin: 0; padding: 0.6rem 1rem; color: var(--muted); font-size: var(--text-label); line-height: 1.9; border-top: 1px solid var(--line); }
   .dkeys kbd { margin-right: 0.3rem; font: inherit; padding: 0 0.3rem; background: var(--subtle); border: 1px solid var(--line); border-radius: var(--corner-small); }
 
   .mk { flex: none; display: inline-block; padding: 0 0.35rem; font-size: var(--text-label); font-weight: 700; line-height: 1.5; border-radius: 999px; }
@@ -246,11 +257,16 @@
   .frame { flex: 1; display: block; width: calc(100% - var(--side, 0px)); margin-left: var(--side, 0px); border: 0; background: var(--frame-bg); }
   .notfound { flex: 1; align-content: center; }
   .side {
-    position: fixed; left: 0; top: var(--bar); bottom: 0; z-index: 2; width: var(--side-width); overflow: hidden auto; padding: 0 0.3rem 0.8rem;
+    position: fixed; left: 0; top: var(--bar); bottom: 0; z-index: 2; width: var(--side-width); display: flex; flex-direction: column;
     background: var(--panel); border-right: 1px solid var(--line);
   }
   .side.over { box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); width: min(80vw, var(--side-width)); }
-  .side-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.1rem 0.45rem 0.5rem; background: var(--panel); }
+  .side-head { flex: none; display: flex; align-items: center; min-height: 2.6rem; padding: 0.55rem 0.8rem 0.45rem; }
+  #side-tree { flex: 1; min-height: 0; overflow: hidden auto; padding: 0 0.3rem 0.8rem; }
+  /* A column's foot, outside the box that scrolls, so that its line reaches the column's edge past the scrollbar. First in the markup, as Tab
+     reaches the button before the rows, however many they are.
+     LIMIT: so Tab goes from the foot back up to the head, against the order seen. Put it last if that comes to trouble someone: Tab then goes through every row first */
+  .col-foot { order: 1; flex: none; display: flex; align-items: center; height: var(--foot); padding-inline: var(--foot-pad); border-top: 1px solid var(--line); }
   .side-head :is(span, h2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 var(--text-label)/1.2 var(--mono); letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
   .side :is(a, button.dir) {
     display: block; width: 100%; padding: 0.22rem 0.5rem 0.22rem calc(0.3rem + var(--d) * 1.1rem); border: 0; border-radius: var(--corner-small); background: none;
@@ -268,7 +284,6 @@
   .grip:is(:hover, .dragging, :focus-visible)::after { background: var(--ink); }
   /* While an edge is dragged a page takes no pointer, which would leave the edge's pointer capture inside the iframe */
   html:has(.grip.dragging) :is(.frame, .read-frame) { pointer-events: none; }
-  .side-show { position: fixed; top: calc(var(--bar) + 8px); left: 8px; z-index: 2; background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
   /* An iframe prints what fits one screen of the page in it: a frame's print hides the bar, the frame and the toasts,
      and names the page alone in their place, but on a missing page's frame, which prints its
      state. The screen shows no note.
@@ -276,7 +291,7 @@
      a new tab outside it: print the page from a browser */
   .print-alone { display: none; }
   @media print {
-    .framed :is(.bar, .frame, .diff, .dnote, .toasts, .side, .grip, .side-show) { display: none; }
+    .framed :is(.bar, .frame, .diff, .dnote, .toasts, .side, .grip) { display: none; }
     .framed:has(#notfound[hidden]) .print-alone { display: block; margin: 2rem; color: var(--fg); font: 1rem/1.7 var(--body); }
   }
 
@@ -291,22 +306,20 @@
     .shell.shelf-closed.list-closed { grid-template-columns: minmax(0, 1fr); }
     .shell.shelf-closed .shelf, .shell.list-closed .listcol { display: none; }
   }
-  /* What shows the filters again and what they narrow the list to. That must be read: the words beside it give way, and it is cut only past
-     the room the buttons leave (not shrunk with them: a sliver of a pixel off its width would cut its last words) */
-  .shelf-tools { flex: none; display: flex; align-items: center; gap: 0.4rem; max-width: calc(100% - 13.5rem); margin-left: -0.4rem; }
-  #shelf-show { flex: none; }
-  #shelf-what { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
-  /* As high as the list's head and the page's, its button over the counts' right end */
-  .shelf-head { display: flex; align-items: center; justify-content: flex-end; height: var(--lhead); padding-right: 0.2rem; margin-bottom: -0.6rem; border-bottom: 1px solid transparent; }
+  /* What the filters narrow the list to. That must be read: the words beside it give way, and it is cut only past
+     the room the button leaves (not shrunk with it: a sliver of a pixel off its width would cut its last words) */
+  #shelf-what { flex: none; max-width: calc(100% - 11rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
   /* The 4px of room round a button are its focus ring's (1px off, 2px wide) and 1px of ground */
-  .shelf { display: grid; align-content: start; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; overflow-y: auto; padding: 0 10px 1rem; }
+  /* Each column draws the line on its right, so that what is left of them keeps one line between two faces and none at the window's edge */
+  .shelf { min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+  .shelf-body { flex: 1; min-height: 0; display: grid; align-content: start; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; overflow-y: auto; padding: 0.75rem 10px 1rem; }
   /* The shelf's thumb shows only while it is pointed at or reached by keys; its room stays, so that nothing in it moves */
   /* LIMIT: the 0.01px works round Chrome drawing a thumb anew only when its box is laid out again; without it, the thumb stays hidden */
-  .shelf:not(:hover, :focus-within)::-webkit-scrollbar-thumb { background: transparent; }
-  .shelf:is(:hover, :focus-within) { padding-right: 10.01px; }
+  .shelf-body:not(:hover, :focus-within)::-webkit-scrollbar-thumb { background: transparent; }
+  .shelf-body:is(:hover, :focus-within) { padding-right: 10.01px; }
   @supports not selector(::-webkit-scrollbar) {
-    .shelf { scrollbar-width: thin; }
-    .shelf:not(:hover, :focus-within) { scrollbar-color: transparent transparent; }
+    .shelf-body { scrollbar-width: thin; }
+    .shelf-body:not(:hover, :focus-within) { scrollbar-color: transparent transparent; }
   }
   .shelf-more { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
   #shelf-more h2 { margin: 0 0 0.3rem 0.65rem; font: 600 var(--text-label)/1.2 var(--body); color: var(--muted); letter-spacing: 0.08em; }
@@ -370,7 +383,14 @@
   .chip .n { flex: none; min-width: 3ch; text-align: right; }
 
   /* The list: its head stuck over its rows */
-  .listcol { min-width: 0; overflow-y: auto; background: var(--panel); border-inline: 1px solid var(--line); }
+  .listcol { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
+  .list-body { flex: 1; min-height: 0; overflow-y: auto; }
+  /* With the filters folded, what opens them stands in this foot, plain as its button */
+  .shell.shelf-closed .listcol > .col-foot { padding-left: var(--foot-next); }
+  .shell.shelf-closed:not(.list-closed) #shelf-show { background: transparent; box-shadow: none; }
+  .shell.shelf-closed:not(.list-closed) #shelf-show:hover { background: var(--subtle); }
+  #list-show { left: calc(var(--shelf-width) + var(--foot-pad)); }
+  .shell.shelf-closed #list-show { left: var(--foot-next); }
   .lhead {
     position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 0.6rem; height: var(--lhead); padding: 0 1rem;
     font-size: var(--text-small); color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line); container: bar / inline-size;
@@ -380,7 +400,6 @@
   .add-open { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-small); font-size: var(--text-small); }
   .add-open:hover { border-color: var(--faint); }
   .add-open svg { flex: none; width: 13px; height: 13px; }
-  #list-hide { flex: none; }
   ul { list-style: none; margin: 0; padding: 0; }
   li {
     position: relative; display: grid; grid-template: "lead title time" auto ". sub actions" auto / 12px minmax(0, 1fr) auto; gap: 0.2rem 0.65rem;
@@ -513,13 +532,19 @@
     li:not(.picked, :hover, :focus-within, :has(.sel:checked, .more[open])) .actions > :not(.star[aria-pressed="true"]) { opacity: 0; }
   }
   .icon-btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; height: 30px; min-width: 30px; padding-inline: 0.4rem;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; height: var(--icon-btn); min-width: var(--icon-btn); padding-inline: 0.4rem;
     color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 999px; text-decoration: none;
     transition: background-color 0.15s, color 0.15s;
   }
   .icon-btn svg { width: 16px; height: 16px; }
   .icon-btn:hover { background: var(--subtle); color: var(--fg); }
   .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
+  /* What opens a column folded, where the button that folded it stood in the foot, on a ground of its own: any page may lie under it.
+     After .icon-btn, whose ground it takes the place of.
+     LIMIT: over a page it hides what lies under it, until the page scrolls or the column opens. Room under the iframe would be the bar a column left behind was: move it if that comes to trouble someone */
+  .side-show { position: fixed; left: var(--foot-pad); bottom: calc((var(--foot) - 1px - var(--icon-btn)) / 2); z-index: 2; background: var(--panel); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
+  .side-show:hover { background: var(--subtle); }
+  @media print { .side-show { display: none; } }
   .delete:hover { color: var(--danger); }
   .star:hover { color: var(--star); }
   /* An icon button that toggles (the star), pressed: its icon filled in, in its own color */
@@ -693,9 +718,10 @@
      in the script reads the same width); from 40rem the bar folds up too */
   @media (max-width: 70rem) {
     .shell { grid-template-columns: 22rem minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-    #shelf-grip, #list-grip, .shelf-tools, #list-hide, #list-show, .shelf-head, .rhead.empty { display: none; }
-    .shelf, .shelf:is(:hover, :focus-within) { grid-column: 1 / -1; display: block; overflow: visible; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); }
-    .shelf > .shelf-more { display: none; }
+    #shelf-grip, #list-grip, #shelf-what, #shelf-show, #list-show, .shelf > .col-foot, .listcol > .col-foot, .rhead.empty { display: none; }
+    .shelf { grid-column: 1 / -1; display: block; border-right: 0; border-bottom: 1px solid var(--line); }
+    .shelf-body, .shelf-body:is(:hover, :focus-within) { display: block; overflow: visible; padding: 0.6rem 0.75rem; }
+    .shelf-body > .shelf-more { display: none; }
     .shelf .views { display: flex; align-items: center; gap: 5px; overflow: auto hidden; padding: 4px; margin: -4px; scrollbar-width: none; }
     .shelf .views::-webkit-scrollbar { display: none; }
     .shelf .views button {
@@ -768,77 +794,84 @@
 <p class="error" id="error" hidden></p>
 <main class="shell" id="manage" hidden>
   <h1 class="sr-only">floe</h1>
+  <!-- What opens a column folded, left where its button was -->
+  <button type="button" class="icon-btn side-show" id="shelf-show" aria-expanded="false" aria-controls="shelf" title="{{.Msg "ui_shelf_show"}}" aria-label="{{.Msg "ui_shelf_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button>
+  <button type="button" class="icon-btn side-show" id="list-show" aria-expanded="false" aria-controls="listcol" title="{{.Msg "ui_list_show"}}" aria-label="{{.Msg "ui_list_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button>
   <!-- Buttons that switch the list. They do not implement WAI-ARIA tabs (arrow keys, tabpanel), so they use aria-pressed -->
   <nav class="shelf" id="shelf" aria-label="{{.Msg "ui_shelf"}}">
-    <div class="shelf-head"><button type="button" class="icon-btn" id="shelf-hide" aria-expanded="true" aria-controls="shelf" title="{{.Msg "ui_shelf_hide"}}" aria-label="{{.Msg "ui_shelf_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button></div>
-    <div class="views" role="group" aria-label="{{.Msg "ui_shelf"}}">
-      <button type="button" data-view="new"><span class="dot"></span><span class="label">{{.Msg "ui_view_new"}}</span><span class="n"></span></button>
-      <button type="button" data-view="all"><span class="ring"></span><span class="label">{{.Msg "ui_view_all"}}</span><span class="n"></span></button>
-      <button type="button" data-view="fav"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span class="label">{{.Msg "ui_view_favorites"}}</span><span class="n"></span></button>
-      <button type="button" data-view="archived"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span class="label">{{.Msg "ui_view_archived"}}</span><span class="n"></span></button>
-      <button type="button" id="narrow-filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span id="narrow-filter-name">{{.Msg "ui_narrow"}}</span><span id="narrow-filter-n" aria-hidden="true"></span></button>
-    </div>
-    <div class="shelf-more" id="shelf-more">
-      <div id="shelf-projects">
-        <h2>{{.Msg "ui_project"}}</h2>
-        <div class="chips" id="chips" role="group" aria-label="{{.Msg "ui_project"}}"></div>
+    <div class="col-foot"><button type="button" class="icon-btn" id="shelf-hide" aria-expanded="true" aria-controls="shelf" title="{{.Msg "ui_shelf_hide"}}" aria-label="{{.Msg "ui_shelf_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button></div>
+    <div class="shelf-body" id="shelf-body">
+      <div class="views" role="group" aria-label="{{.Msg "ui_shelf"}}">
+        <button type="button" data-view="new"><span class="dot"></span><span class="label">{{.Msg "ui_view_new"}}</span><span class="n"></span></button>
+        <button type="button" data-view="all"><span class="ring"></span><span class="label">{{.Msg "ui_view_all"}}</span><span class="n"></span></button>
+        <button type="button" data-view="fav"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span class="label">{{.Msg "ui_view_favorites"}}</span><span class="n"></span></button>
+        <button type="button" data-view="archived"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span class="label">{{.Msg "ui_view_archived"}}</span><span class="n"></span></button>
+        <button type="button" id="narrow-filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span id="narrow-filter-name">{{.Msg "ui_narrow"}}</span><span id="narrow-filter-n" aria-hidden="true"></span></button>
       </div>
-      <div id="shelf-kinds">
-        <h2>{{.Msg "ui_kind"}}</h2>
-        <div class="chips" id="kinds" role="group" aria-label="{{.Msg "ui_kind"}}"></div>
-      </div>
-      <div id="shelf-templates">
-        <h2>{{.Msg "ui_template"}}</h2>
-        <div class="chips" id="templates" role="group" aria-label="{{.Msg "ui_template"}}"></div>
-      </div>
-      <div id="shelf-tags">
-        <h2>{{.Msg "ui_tags"}}</h2>
-        <div class="chips" id="tags" role="group" aria-label="{{.Msg "ui_tags"}}"></div>
+      <div class="shelf-more" id="shelf-more">
+        <div id="shelf-projects">
+          <h2>{{.Msg "ui_project"}}</h2>
+          <div class="chips" id="chips" role="group" aria-label="{{.Msg "ui_project"}}"></div>
+        </div>
+        <div id="shelf-kinds">
+          <h2>{{.Msg "ui_kind"}}</h2>
+          <div class="chips" id="kinds" role="group" aria-label="{{.Msg "ui_kind"}}"></div>
+        </div>
+        <div id="shelf-templates">
+          <h2>{{.Msg "ui_template"}}</h2>
+          <div class="chips" id="templates" role="group" aria-label="{{.Msg "ui_template"}}"></div>
+        </div>
+        <div id="shelf-tags">
+          <h2>{{.Msg "ui_tags"}}</h2>
+          <div class="chips" id="tags" role="group" aria-label="{{.Msg "ui_tags"}}"></div>
+        </div>
       </div>
     </div>
   </nav>
   <div class="grip" id="shelf-grip" role="separator" aria-orientation="vertical" aria-controls="shelf" aria-label="{{.Msg "ui_shelf_width"}}" tabindex="0"></div>
   <section class="listcol" id="listcol">
-    <div class="lhead">
-      <!-- What shows the filters again, in the head of the list, or of the page beside it with the list folded too -->
-      <span class="shelf-tools" id="shelf-tools" hidden><button type="button" class="icon-btn" id="shelf-show" aria-expanded="false" aria-controls="shelf" title="{{.Msg "ui_shelf_show"}}" aria-label="{{.Msg "ui_shelf_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M3 6a2 2 0 0 1 2-2h4v16H5a2 2 0 0 1-2-2Z"/></svg></button><button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button></span>
-      <span class="count" id="count"></span>
-      <button type="button" class="add-open" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button>
-      <button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button>
-      <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
-      <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
-        <span class="bulk-count" id="bulk-count" aria-live="polite"><span id="bulk-n"></span><span class="long">{{.Msg "ui_selected_more"}}</span></span>
-        <button type="button" class="btn" id="bulk-page" aria-label="{{.Msg "ui_select_page"}}"><span class="label">{{.Msg "ui_select_all"}}</span></button>
-        <button type="button" class="btn" id="bulk-tag"><span class="label">{{.Msg "ui_tags"}}</span></button>
-        <button type="button" class="btn" id="bulk-archive"><span class="label"></span></button>
-        <button type="button" class="btn danger" id="bulk-delete"><span class="label"></span></button>
-        <button type="button" class="btn clear" id="bulk-clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg><span class="label">{{.Msg "ui_clear_selection"}}</span></button>
+    <div class="col-foot"><button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button></div>
+    <div class="list-body" id="list-body">
+      <div class="lhead">
+        <!-- What the filters narrow the list to, in the head of the list, or of the page beside it with the list folded too -->
+        <button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button>
+        <span class="count" id="count"></span>
+        <button type="button" class="add-open" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button>
+      
+        <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
+        <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
+          <span class="bulk-count" id="bulk-count" aria-live="polite"><span id="bulk-n"></span><span class="long">{{.Msg "ui_selected_more"}}</span></span>
+          <button type="button" class="btn" id="bulk-page" aria-label="{{.Msg "ui_select_page"}}"><span class="label">{{.Msg "ui_select_all"}}</span></button>
+          <button type="button" class="btn" id="bulk-tag"><span class="label">{{.Msg "ui_tags"}}</span></button>
+          <button type="button" class="btn" id="bulk-archive"><span class="label"></span></button>
+          <button type="button" class="btn danger" id="bulk-delete"><span class="label"></span></button>
+          <button type="button" class="btn clear" id="bulk-clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg><span class="label">{{.Msg "ui_clear_selection"}}</span></button>
+        </div>
       </div>
-    </div>
-    <ul id="list"></ul>
-    <div class="state" id="empty" hidden>
-      <strong>{{.Msg "ui_empty_pages"}}</strong>
-      <p>{{.Msg "ui_empty_pages_hint"}}</p>
-      <p><code>floe publish &lt;file.yaml&gt;</code></p>
-      <p><button type="button" class="add-open" id="add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button></p>
-    </div>
-    <div class="state" id="all-archived" hidden>
-      <strong></strong>
-      <p><button type="button" class="link-btn" id="show-archived">{{.Msg "ui_show_archived"}}</button></p>
-    </div>
-    <div class="state" id="empty-new" hidden><strong>{{.Msg "ui_no_new"}}</strong></div>
-    <div class="state" id="empty-favorites" hidden><strong>{{.Msg "ui_no_favorites"}}</strong></div>
-    <div class="state" id="empty-archived" hidden><strong>{{.Msg "ui_none_archived"}}</strong></div>
-    <div class="state" id="nomatch" hidden>
-      <strong>{{.Msg "ui_nomatch"}}</strong>
-      <p><button type="button" class="link-btn" id="clear">{{.Msg "ui_clear_filters"}}</button></p>
+      <ul id="list"></ul>
+      <div class="state" id="empty" hidden>
+        <strong>{{.Msg "ui_empty_pages"}}</strong>
+        <p>{{.Msg "ui_empty_pages_hint"}}</p>
+        <p><code>floe publish &lt;file.yaml&gt;</code></p>
+        <p><button type="button" class="add-open" id="add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button></p>
+      </div>
+      <div class="state" id="all-archived" hidden>
+        <strong></strong>
+        <p><button type="button" class="link-btn" id="show-archived">{{.Msg "ui_show_archived"}}</button></p>
+      </div>
+      <div class="state" id="empty-new" hidden><strong>{{.Msg "ui_no_new"}}</strong></div>
+      <div class="state" id="empty-favorites" hidden><strong>{{.Msg "ui_no_favorites"}}</strong></div>
+      <div class="state" id="empty-archived" hidden><strong>{{.Msg "ui_none_archived"}}</strong></div>
+      <div class="state" id="nomatch" hidden>
+        <strong>{{.Msg "ui_nomatch"}}</strong>
+        <p><button type="button" class="link-btn" id="clear">{{.Msg "ui_clear_filters"}}</button></p>
+      </div>
     </div>
   </section>
   <div class="grip" id="list-grip" role="separator" aria-orientation="vertical" aria-controls="listcol" aria-label="{{.Msg "ui_list_width"}}" tabindex="0"></div>
   <!-- The page of the row chosen. Lets copy and fullscreen buttons in the page work, as the frame's -->
   <section class="reader" id="reader">
     <div class="rhead" id="read-head" hidden>
-      <button type="button" class="icon-btn" id="list-show" aria-expanded="false" aria-controls="listcol" title="{{.Msg "ui_list_show"}}" aria-label="{{.Msg "ui_list_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button>
       <a class="read-title" id="read-title"></a>
       <span class="frame-actions" id="read-actions"></span>
     </div>
@@ -853,7 +886,8 @@
   </div>
 </dialog>
 <nav class="side" id="side" hidden>
-  <div class="side-head"><span id="side-title"></span><button type="button" class="icon-btn" id="side-hide" aria-expanded="true" aria-controls="side" title="{{.Msg "ui_side_hide"}}" aria-label="{{.Msg "ui_side_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
+  <div class="col-foot"><button type="button" class="icon-btn" id="side-hide" aria-expanded="true" aria-controls="side" title="{{.Msg "ui_side_hide"}}" aria-label="{{.Msg "ui_side_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
+  <div class="side-head"><span id="side-title"></span></div>
   <div id="side-tree"></div>
 </nav>
 <div class="grip" id="side-grip" role="separator" aria-orientation="vertical" aria-controls="side" aria-label="{{.Msg "ui_side_width"}}" tabindex="0" hidden></div>
@@ -880,7 +914,8 @@
   <p class="dnote" id="diff-url-note" hidden>{{.Msg "ui_diff_bad_url"}}</p>
   <div class="dmain" id="diff-main">
     <nav class="dtoc" id="diff-toc-nav" aria-labelledby="diff-toc-title">
-      <div class="side-head"><h2 id="diff-toc-title">{{.Msg "ui_diff_toc"}}</h2><button type="button" class="icon-btn" id="diff-toc-hide" aria-expanded="true" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_hide"}}" aria-label="{{.Msg "ui_diff_toc_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
+      <div class="col-foot"><button type="button" class="icon-btn" id="diff-toc-hide" aria-expanded="true" aria-controls="diff-toc-nav" title="{{.Msg "ui_diff_toc_hide"}}" aria-label="{{.Msg "ui_diff_toc_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
+      <div class="side-head"><h2 id="diff-toc-title">{{.Msg "ui_diff_toc"}}</h2></div>
       <div class="dtoc-list" id="diff-toc"></div>
       <p class="dkeys"><kbd>n</kbd>{{.Msg "ui_diff_next"}}<br><kbd>p</kbd>{{.Msg "ui_diff_prev"}}<br><kbd>d</kbd>{{.Msg "ui_diff_close"}}</p>
     </nav>
@@ -1918,7 +1953,6 @@
     // The filters folded, the head says what they narrow the list to: the view, and how many picks
     const what = [view === 'all' ? '' : t(VIEW_WORDS[view]), narrowed ? t('ui_narrow_n', narrowed) : ''].filter(Boolean).join(' · ');
     $('shelf-what').textContent = what;
-    $('shelf-what').hidden = !what;
     // A link added is not archived, so it is added from the lists it goes on
     $('add-open').hidden = view === 'archived';
   }
@@ -2042,6 +2076,12 @@
     $('read-frame').contentWindow.location.replace(href);
   }
 
+  // What the filters narrow the list to shows with them folded; and the head beside the list, with a page chosen or those words to hold
+  function drawHead() {
+    $('shelf-what').hidden = columns.open || !$('shelf-what').textContent;
+    $('read-head').hidden = !picked && (columns.listOpen || $('shelf-what').hidden);
+  }
+
   // What is beside the list, as the row chosen is now: the words how to choose while none is; the words why, of a link whose
   // file is gone. The page in the iframe stays loaded through the list's redraws, reloading itself as it changes
   function drawReader() {
@@ -2049,7 +2089,7 @@
     if (!a) picked = null;
     // Loaded only while it is there, as the frame's, so that a link's missing file is no 404 kept when the file is back
     readInto(a && !a.missing ? rawHref(picked) : 'about:blank');
-    $('read-head').hidden = !a && columns.listOpen;
+    drawHead();
     $('read-head').classList.toggle('empty', !a);
     $('read-actions').hidden = !a;
     $('read-frame').hidden = !a || Boolean(a.missing);
@@ -2819,12 +2859,12 @@
     $('manage').classList.toggle('list-closed', !columns.listOpen);
     $('shelf-grip').hidden = !columns.open;
     $('list-grip').hidden = !columns.listOpen;
-    $('shelf-tools').hidden = columns.open;
     $('shelf-show').hidden = columns.open;
     $('list-show').hidden = columns.listOpen;
     // In the head of what is left: the list's, or the page's beside it
     const head = columns.listOpen ? document.querySelector('.lhead') : $('read-head');
-    if ($('shelf-tools').parentElement !== head) head.prepend($('shelf-tools'));
+    if ($('shelf-what').parentElement !== head) head.prepend($('shelf-what'));
+    drawHead();
     edgeAt($('shelf-grip'), shelf, shelf, shelfMin, shelfMax);
     edgeAt($('list-grip'), shelf + list, list, listMin, listMax);
   }
@@ -2847,7 +2887,6 @@
     keepColumns();
     $(open ? 'shelf-hide' : 'shelf-show').focus();
   }
-  // The head beside the list holds the way back to it, so that it shows with no page chosen too
   function showList(open) {
     columns.listOpen = open;
     layoutColumns();
@@ -3231,13 +3270,12 @@
     for (const b of $('diff-toc').querySelectorAll('button')) b.classList.toggle('on', b.dataset.section === String(i));
     $('diff-toc').querySelector('.on')?.scrollIntoView({ block: 'nearest' });
   }
-  // The contents' width and whether they show, within the tree's bounds. Closed, a column is left for the button to open them, which
-  // would stand over the words. Kept apart from the tree's: closing one does not close the other
+  // The contents' width and whether they show, within the tree's bounds. Kept apart from the tree's: closing one does not close the other
   const TOC_KEY = 'diff.toc';
   const toc = keptSide(TOC_KEY, 240);
   function layoutToc() {
     const width = Math.min(Math.max(toc.width, SIDE_MIN), sideMax());
-    $('diff-main').style.setProperty('--toc', toc.open ? `${width}px` : '2.75rem');
+    $('diff-main').style.setProperty('--toc', toc.open ? `${width}px` : '0px');
     $('diff-toc-nav').hidden = $('diff-toc-grip').hidden = !toc.open;
     edgeAt($('diff-toc-grip'), width, width, SIDE_MIN, sideMax());
     $('diff-toc-show').hidden = toc.open;
@@ -3701,7 +3739,7 @@
       // The first row, not the box of rows the browser takes first where it scrolls
       [...$('shelf-more').querySelectorAll('button')].find((b) => b.offsetParent)?.focus();
     });
-    $('filter-dialog').addEventListener('close', () => $('shelf').append($('shelf-more')));
+    $('filter-dialog').addEventListener('close', () => $('shelf-body').append($('shelf-more')));
     $('bulk-page').addEventListener('click', () => {
       for (const sel of $('list').querySelectorAll('.sel')) sel.checked = true;
       for (const li of $('list').querySelectorAll(':scope > li:not(.group, .tree)')) selected.add(li.dataset.slug);

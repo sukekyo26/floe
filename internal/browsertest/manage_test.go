@@ -497,11 +497,11 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#list li[data-slug=p5] summary').click()")
 	out = append(out, b.eval(`(() => {
 		const bar = document.querySelector('.lhead').getBoundingClientRect();
-		document.getElementById('listcol').scrollBy(0, document.querySelector('#list li[data-slug=p5] .menu').getBoundingClientRect().top - bar.top - 5);
+		document.getElementById('list-body').scrollBy(0, document.querySelector('#list li[data-slug=p5] .menu').getBoundingClientRect().top - bar.top - 5);
 		const menu = document.querySelector('#list li[data-slug=p5] .menu').getBoundingClientRect();
 		return Boolean(document.elementFromPoint(menu.left + menu.width / 2, bar.top + 10)?.closest('.lhead'));
 	})()`))
-	b.eval("document.querySelector('#list li[data-slug=p5] summary').click(); document.getElementById('listcol').scrollTo(0, 0)")
+	b.eval("document.querySelector('#list li[data-slug=p5] summary').click(); document.getElementById('list-body').scrollTo(0, 0)")
 	b.unsize()
 	// The frame's bar: the title, archived or not, the star, and the same menu as a row's, which act as the list's do and tell
 	// their failure.
@@ -726,7 +726,7 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval(plan + ".click()")
 	out = append(out, b.eval(rows))
 	b.eval("document.querySelector('#filter-dialog [data-close]').click()")
-	out = append(out, b.until("the dialog to close", "document.querySelector('#shelf-more').parentElement.id === 'shelf' && 'shelf'"))
+	out = append(out, b.until("the dialog to close", "document.querySelector('#shelf-more').parentElement.id === 'shelf-body' && 'shelf'"))
 	b.unsize()
 
 	// A tag's name goes in as text, wherever it shows, and counts as any.
@@ -836,11 +836,11 @@ func TestUIShelfStays(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.size(1440, 900, false)
 	const place = "['.shelf', '.reader', '.lhead'].map((s) => document.querySelector(s).getBoundingClientRect().top).join(' ')"
 	out := make([]string, 0, 5)
-	out = append(out, b.eval("document.getElementById('listcol').scrollHeight > document.getElementById('listcol').clientHeight"),
+	out = append(out, b.eval("document.getElementById('list-body').scrollHeight > document.getElementById('list-body').clientHeight"),
 		b.eval("document.documentElement.scrollHeight === innerHeight"))
 	long := b.eval(place)
-	b.eval("document.getElementById('listcol').scrollTo(0, 300)")
-	b.until("the list to scroll", "document.getElementById('listcol').scrollTop === 300")
+	b.eval("document.getElementById('list-body').scrollTo(0, 300)")
+	b.until("the list to scroll", "document.getElementById('list-body').scrollTop === 300")
 	out = append(out, b.eval(place+" === "+js(long)))
 	b.stub(manyPages(1))
 	out = append(out, b.eval("document.documentElement.scrollHeight === innerHeight"), b.eval(place+" === "+js(long)))
@@ -858,9 +858,9 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.stub(shelfList)
 	b.navigate("/")
 	b.size(1440, 600, false)
-	const near = "const shelf = document.querySelector('.shelf'); const r = shelf.getBoundingClientRect();"
+	const near = "const shelf = document.getElementById('shelf-body'); const r = shelf.getBoundingClientRect();"
 	out := make([]string, 0, 6)
-	out = append(out, b.eval("(() => { "+near+" return [Math.abs(r.bottom - innerHeight) <= 0.5, shelf.scrollHeight > shelf.clientHeight].join(' '); })()"))
+	out = append(out, b.eval("(() => { "+near+" return [Math.abs(document.querySelector('.shelf').getBoundingClientRect().bottom - innerHeight) <= 0.5, shelf.scrollHeight > shelf.clientHeight].join(' '); })()"))
 	// The wheel scrolls the shelf, not the list.
 	sr := b.rect("document.querySelector('.shelf')")
 	// The protocol wants deltaX sent, which a 0 is left out as: a sliver of a pixel moves nothing sideways.
@@ -868,7 +868,7 @@ func TestUIShelfScrolls(t *testing.T) { //nolint:paralleltest // the browser tes
 	if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, e); err != nil {
 		t.Fatal(err)
 	}
-	out = append(out, b.until("the shelf to scroll", "document.querySelector('.shelf').scrollTop > 0 && `list at ${document.getElementById('listcol').scrollTop}`"))
+	out = append(out, b.until("the shelf to scroll", "document.getElementById('shelf-body').scrollTop > 0 && `list at ${document.getElementById('list-body').scrollTop}`"))
 	// The focus ring's room each side, and a long name on one line, cut off, not scrolling sideways.
 	out = append(out, b.eval("(() => { "+near+" const a = document.querySelector('.views button').getBoundingClientRect(); "+
 		"const long = document.querySelector('#tags .chip .name'); "+
