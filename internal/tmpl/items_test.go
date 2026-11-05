@@ -586,24 +586,25 @@ func TestPartBarsRefused(t *testing.T) {
 func TestEntriesParts(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range []struct{ parts, want string }{
-		{"[{code: {text: x}}, {text: y}]", ""},
-		{"[{entries: [{title: f, parts: [{code: {text: x}}]}]}]", ""},
-		{"[]", "d.yaml:4:42: minItems: got 0, want 1"},
-		{"[{tabs: [{title: a, parts: [{text: x}]}, {title: b, parts: [{text: y}]}]}]", "d.yaml:4:44: additional properties 'tabs' not allowed"},
-		{"[{details: {title: a, parts: [{text: x}]}}]", "d.yaml:4:44: additional properties 'details' not allowed"},
-		{"[{table: {columns: [c], rows: [[1]]}}]", "d.yaml:4:74: got number, want string or object"},
+	for _, c := range []struct{ item, want string }{
+		{"parts: [{code: {text: x}}, {text: y}]", ""},
+		{"parts: [{entries: [{title: f, parts: [{code: {text: x}}]}]}]", ""},
+		{"text: ''", "d.yaml:4:41: minLength: got 0, want 1"},
+		{"parts: []", "d.yaml:4:42: minItems: got 0, want 1"},
+		{"parts: [{tabs: [{title: a, parts: [{text: x}]}, {title: b, parts: [{text: y}]}]}]", "d.yaml:4:44: additional properties 'tabs' not allowed"},
+		{"parts: [{details: {title: a, parts: [{text: x}]}}]", "d.yaml:4:44: additional properties 'details' not allowed"},
+		{"parts: [{table: {columns: [c], rows: [[1]]}}]", "d.yaml:4:74: got number, want string or object"},
 	} {
-		data := "lang: en\ntemplate: report\nsections:\n  - parts: [{entries: [{title: e, parts: " + c.parts + "}]}]\n"
+		data := "lang: en\ntemplate: report\nsections:\n  - parts: [{entries: [{title: e, " + c.item + "}]}]\n"
 		page, _, err := tmpl.Draw(floeKit(t), "d.yaml", []byte(data), none)
 		if c.want == "" {
 			if err != nil || page == nil {
-				t.Errorf("%s: %d bytes, %s", c.parts, len(page), told(err))
+				t.Errorf("%s: %d bytes, %s", c.item, len(page), told(err))
 			}
 			continue
 		}
 		if got := told(err); got != c.want {
-			t.Errorf("%s: %q, want %q", c.parts, got, c.want)
+			t.Errorf("%s: %q, want %q", c.item, got, c.want)
 		}
 	}
 }

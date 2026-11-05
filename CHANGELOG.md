@@ -8,7 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Add `parts` to the items of the part `entries`: the parts `details` holds, under the item's `text`, so that code in an item is drawn by `code` and `terminal`, under its file or prompt with a copy button. A fenced block of code in an item's `text` is now warned of, as in a `text` part; the page is drawn as before.
+- Add `parts` to the items of the part `entries`: the parts `details` holds, under the item's `text`, so that code in an item is drawn by `code` and `terminal`, under its file or prompt with a copy button.
 - Add data files to `floe diagram inspect`: a file with a key `template` at its top has its diagrams inspected in the order written, in `details` and `tabs` too, after the template's schema, without drawing the page. Add a line for each frame's heading, `the heading of frame "F" x,y WxH`, which tells how far to move an edge told it runs through one.
 - Add straight edges between facing sides that share a height, instead of a bend by the difference of their middles: an edge written by hand, when the straight line would touch nothing, and the edge of a graph at an icon that cannot move far enough, whose end alone on its side stands up to 12 off its point. If that leaves a mistake, a label with no place written landing on something say, all the diagram's edges stay as they were.
 - Add a choice of versions to the right of a stored page's title on the management page. An earlier version shows with the
@@ -323,6 +323,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Warn of a fenced block of code in the `text` of an item of `entries`, as in a `text` part: a page that has one now gets a warning, and is drawn as before with the same exit code.
 - Change `floe diagram inspect` to begin each diagram with a line of where it is written, its title and its canvas (`page.yaml:9:11: diagram "T" 560x190`, `spec.yaml: diagram "T" 560x190`), and to print where the parts went for a diagram the checks refuse too, as a guide, on stdout with its mistakes on stderr and the exit code still 1.
 - `GET /api/artifacts/{slug}/download` takes `?v=<n>` to save that version of a stored page as `<slug>-v<n>.html`, and answers
   404 for a version that is not there. The page's download follows the version shown.
