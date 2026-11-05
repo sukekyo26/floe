@@ -548,6 +548,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a page nested past 512 open elements crashing `floe render` and `floe check`, and cutting the connection in `floe publish`, `floe rebuild`, opening a linked data file and downloading it (`EOF`). It is now refused at the data file with `html: open stack of elements exceeds 512 nodes`. What the HTML library will not write (`<svg><col>x</col></svg>`) and what it will not read or write in a diagram's `raw` are told in its words as mistakes of the page, at the value for `raw`, not as floe's failure. `floe render` now writes the page it checked, without reading it again.
 - Fix an edge at the bottom side of an icon with a label being refused as running through the label: the side now stands
   under the label, so an edge named from one icon to the one below it is drawn, and a diagram can flow downwards. An edge
   turning between an icon and its label, or with no side and the other part's top beside the label's, is now refused; write

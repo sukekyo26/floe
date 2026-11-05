@@ -151,6 +151,8 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 - A mistake of a part, look, shared schema, theme or template of your own stops every page, whether it uses that one or not: the mistake is told at its own file (`~/.config/floe/parts/quote/schema.json:2:1: …`). `floe part check` and `floe template check` list them.
 - A mistake told once is not told again, even if many places name it.
 
+A page holds at most 512 elements open at once, counting `<html>`, `<body>` and what its template and parts open. Past that, the page is refused with `html: open stack of elements exceeds 512 nodes`, at the data file alone, since Markdown, an `html` part, a part or `page.html` may each have gone that deep: nest less.
+
 ### Warnings
 
 A page drawn may have warnings: advice on a better way to write it, which leaves the page drawn and the exit code as it is (0 when there is no mistake). They are printed after the mistakes, by `floe check`, `floe render`, `floe template check` and `floe publish`:
