@@ -791,8 +791,16 @@ func TestEdgeViaAxis(t *testing.T) {
 		{row + "  - edge: { from: r, to: [20, 100], via: [{ x: 450 }] }", "edge r→[20,100] M400,61 H450 V100 H20"},
 		{"  - edge: { from: a, to: b, straight: true, via: [{ x: 140 }] }", "edge a→b M80,40 H140 L200,220"},
 		{"  - edge: { from: a, to: b, via: [{ x: 140, y: 100 }] }", "edge a→b M80,40 H140 V100 H230 V200"},
+		{"  - edge: { from: c, to: [10, 10], via: [{ x: 0 }] }", "edge c→[10,10] M20,220 H0 V10 H10"},
+		{"  - edge: { from: b, to: [10, 10], via: [{ y: 0 }] }", "edge b→[10,10] M230,200 V0 H10 V10"},
+		// The centre of an icon is of its image, not with its label.
+		{"  - icon: { name: i, icon: aws/aws-lambda, x: 20, y: 100, label: L }\n  - edge: { from: i, to: b, fromSide: right, via: [{ x: 150 }] }", "edge i→b M68,124 H150 V220 H200"},
+		{"  - bar: { name: s, x1: 300, x2: 400, y: 40 }\n  - edge: { from: s, to: b, via: [{ y: 120 }] }", "edge s→b M350,47 V120 H230 V200"},
+		{"  - frame: { name: f, x: 300, y: 20, w: 100, h: 100, label: F }\n  - edge: { from: f, to: b, fromSide: bottom, via: [{ y: 150 }] }", "edge f→b M350,120 V150 H230 V200"},
 
-		// The first point written on the axis the edge leaves by.
+		// The first point written on the axis the edge leaves by. A point on the side, as a first point left to the side
+		// would be, runs along the box's edge and is not told.
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [[150, 20]] }", "edge a→b M50,20 H150 V220 H200"},
 		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ y: 10 }, { x: 150 }] }", "edge a→b M50,20 V10 H150 V220 H200"},
 		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ x: 150 }] }", "edge a→b M80,40 H150 H230 V200"},
 
@@ -828,19 +836,22 @@ func TestEdgeViaAxis(t *testing.T) {
 		},
 	} {
 		got, mistakes := draw(t, head+c.parts+"\n", inspect)
-		if mistakes != "" || !strings.Contains(got, c.want) {
-			t.Errorf("%s\n  drew %s %q\n  want %q", c.parts, got, mistakes, c.want)
+		if got := edgeLines(got); mistakes != "" || got != c.want {
+			t.Errorf("%s\n  drew %q %q\n  want %q", c.parts, got, mistakes, c.want)
 		}
 	}
 
-	// A first point on the other axis is told, not drawn along the box's edge as a point on the side would be.
-	for _, c := range []string{
-		"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ x: 150 }] }",
-		"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ y: 150 }] }",
+	// A first point on the other axis, or where a part stands, is told as any via is; a name unknown too.
+	for _, c := range []struct {
+		parts, want string
+	}{
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ x: 150 }] }", `s.yaml:8:5: edge a→b runs through box "a"`},
+		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ y: 150 }] }", `s.yaml:8:5: edge a→b runs through box "a"`},
+		{"  - edge: { from: a, to: b, via: [{ x: 50 }] }", "s.yaml:8:5: edge a→b runs through box \"a\"\ns.yaml:8:5: edge a→b runs through box \"c\""},
+		{"  - edge: { from: nobody, to: b, via: [{ x: 50 }] }", `s.yaml:8:5: edge: no part, row or node named "nobody"`},
 	} {
-		const want = `s.yaml:8:5: edge a→b runs through box "a"`
-		if _, got := draw(t, head+c+"\n", inspect); got != want {
-			t.Errorf("%s\n  told %q\n  want %q", c, got, want)
+		if _, got := draw(t, head+c.parts+"\n", inspect); got != c.want {
+			t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
 		}
 	}
 
@@ -864,22 +875,40 @@ func TestEdgeViaAxis(t *testing.T) {
 		{366, "[710, 374]", "edge api→writer M664,646 H710 V374 H750 V386 H790"},
 		{342, "[710, 374]", "edge api→writer M664,646 H710 V374 V362 H790"},
 	} {
-		if got := moved(c.y, c.via); !strings.Contains(got, c.want) {
-			t.Errorf("writer at %d by %s\n  drew %s\n  want %q", c.y, c.via, got, c.want)
+		if got := edgeLines(moved(c.y, c.via)); got != c.want {
+			t.Errorf("writer at %d by %s\n  drew %q\n  want %q", c.y, c.via, got, c.want)
 		}
 	}
 
-	// Both axes are [x, y], to the id made from the spec too.
-	both := func(via string) string {
+	// The id made from the spec: [x, y] as it was before a point had axes, { x, y } as [x, y], and one axis as itself.
+	idOf := func(via string) string {
 		got, mistakes := draw(t, head+"  - edge: { from: a, to: b, via: ["+via+"] }\n", render("en"))
 		if mistakes != "" {
 			t.Fatalf("%s: %s", via, mistakes)
 		}
-		return got
+		return regexp.MustCompile(`dg1-[0-9a-f]+`).FindString(got)
 	}
-	if pair, keys := both("[140, 100]"), both("{ x: 140, y: 100 }"); pair != keys {
-		t.Errorf("{ x, y } drew otherwise than [x, y]:\n%s\n%s", keys, pair)
+	if got := idOf("[140, 100]"); got != "dg1-12b45c" {
+		t.Errorf("id of [x, y] = %q, want it as before", got)
 	}
+	if got := idOf("{ x: 140, y: 100 }"); got != "dg1-12b45c" {
+		t.Errorf("id of { x, y } = %q, want that of [x, y]", got)
+	}
+	// The same way, written otherwise.
+	if x, y := idOf("{ x: 140 }"), idOf("{ y: 100 }"); x == y || x == idOf("[140, 40]") || y == idOf("[50, 100]") {
+		t.Errorf("ids of one axis = %q, %q, want them of what is written", x, y)
+	}
+}
+
+// edgeLines is what inspect tells of edges alone, a line each.
+func edgeLines(got string) string {
+	var lines []string
+	for line := range strings.Lines(got) {
+		if strings.HasPrefix(line, "edge ") {
+			lines = append(lines, strings.TrimSuffix(line, "\n"))
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func TestEdgesVia(t *testing.T) {
