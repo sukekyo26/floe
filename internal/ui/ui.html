@@ -2307,8 +2307,8 @@
   // The version chosen, of the page shown. Open, the choice has its option focused; focus says to go to it from elsewhere, the words about to go
   function pickVersion(n, focus = false) {
     const sel = $(framed ? 'frame-version' : 'read-version');
-    const a = items.find((x) => x.slug === shownSlug());
-    const v = n === a?.version ? 0 : n;
+    // The latest as the choice lists it: the list of pages, read at other times, may not know of it yet
+    const v = n === versionsRead?.versions.at(-1)?.n ? 0 : n;
     if (framed) {
       keepVersionMove(focus || sel.contains(document.activeElement), keptUnread === framed);
       location.href = pageHref({ slug: framed, v });
