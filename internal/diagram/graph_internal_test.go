@@ -43,8 +43,17 @@ func graphOf(names []string, edges ...string) *graph {
 
 // laid is g laid out and checked, as the only part of a diagram.
 func laid(g *graph) *layout {
-	l := newLayout(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: g}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
-		Options{Lang: "en", Icons: anyIcon{}, Seq: 1})
+	return laidBy(g, placing{(*layout).shareEnds, (*drawing).settleEnds})
+}
+
+// routed is g laid out and checked with its ends where the routes leave them, before settleEnds moves them.
+func routed(g *graph) *layout {
+	return laidBy(g, placing{(*layout).shareEnds, func(*drawing) {}})
+}
+
+func laidBy(g *graph, how placing) *layout {
+	l := layoutWith(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: g}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
+		Options{Lang: "en", Icons: anyIcon{}, Seq: 1}, how)
 	l.check()
 	return l
 }
@@ -63,13 +72,14 @@ func noLoops(g *graph) *graph {
 	return &c
 }
 
-// loopFault is what is wrong with the loops of g laid out as l, or "": a loop not turning 3 times, or another edge
-// turning more or less often than in g laid out with no loop, or more or fewer crossings (a loop crosses nothing).
+// loopFault is what is wrong with the loops of g, l its routes before settleEnds, or "": a loop not turning 3 times, or
+// another edge turning more or less often than in the routes of g with no loop, or more or fewer crossings (a loop
+// crosses nothing).
 func loopFault(g *graph, l *layout) string {
 	if !slices.ContainsFunc(g.Edges, func(e graphEdge) bool { return e.From == e.To }) {
 		return ""
 	}
-	plain := laid(noLoops(g))
+	plain := routed(noLoops(g))
 	if plain.failure != nil {
 		return plain.failure.Error()
 	}
@@ -103,19 +113,20 @@ func unlabelled(g *graph) *graph {
 	return &c
 }
 
-// labelFault is what is wrong with the labels of g laid out as l, or "": an edge turning or crossing another more or
-// less often than in g laid out with no label, or a label not a column beside a run of its own edge.
-func labelFault(g *graph, l *layout) string {
+// labelFault is what is wrong with the labels of g laid out as l, or "", its routes before settleEnds being r: an edge
+// turning or crossing another more or less often than in the routes of g with no label, or a label not a column beside
+// a run of its own edge.
+func labelFault(g *graph, l, r *layout) string {
 	if !slices.ContainsFunc(g.Edges, func(e graphEdge) bool { return e.Label != nil }) {
 		return ""
 	}
-	plain := laid(unlabelled(g))
-	for k, p := range l.paths {
+	plain := routed(unlabelled(g))
+	for k, p := range r.paths {
 		if len(p.segs) != len(plain.paths[k].segs) {
 			return fmt.Sprintf("%s turns %d times labelled, %d times not", p.what, len(p.segs)-1, len(plain.paths[k].segs)-1)
 		}
 	}
-	if a, b := crossings(l), crossings(plain); a != b {
+	if a, b := crossings(r), crossings(plain); a != b {
 		return fmt.Sprintf("%d crossings labelled, %d not", a, b)
 	}
 	// Across the ranks, room made and labels before the boxes move them by whole columns, keeping their grid.
@@ -271,20 +282,80 @@ func touch(a, b path) (bool, int) {
 	return false, n
 }
 
+// settleFault is what settleEnds did wrong, l being g's layout and r its routes before settleEnds, or "": an edge
+// turning more, or more crossings.
+func settleFault(l, r *layout) string {
+	for k, p := range l.paths {
+		if len(p.segs) > len(r.paths[k].segs) {
+			return fmt.Sprintf("%s turns %d times, %d times before its ends moved", p.what, len(p.segs)-1, len(r.paths[k].segs)-1)
+		}
+	}
+	if a, b := crossings(l), crossings(r); a > b {
+		return fmt.Sprintf("%d crossings, %d before the ends moved", a, b)
+	}
+	return ""
+}
+
+// boxParts counts the ends at the boxes of g laid out as l, no loop's or level edge's, and those of them at the part of
+// their side they belong to. Its share of 1/50 of a side is what a share read back from the drawing can be off by.
+func boxParts(g *graph, l *layout) (parted, all int) {
+	type place struct{ name, side string }
+	on := map[place][]float64{}
+	for k, e := range g.Edges {
+		if e.From == e.To || e.Level {
+			continue
+		}
+		segs := l.paths[k].segs
+		first, last := segs[0], segs[len(segs)-1]
+		for j, name := range []string{e.From, e.To} {
+			t, ok := l.names[name]
+			if !ok || t.kind != "box" {
+				continue
+			}
+			p, q := [2]float64{first[0], first[1]}, [2]float64{first[2], first[3]}
+			if j == 1 {
+				p, q = [2]float64{last[2], last[3]}, [2]float64{last[0], last[1]}
+			}
+			side := leaves(p, q)
+			axis := sideAxis(side)
+			on[place{name, side}] = append(on[place{name, side}], (p[axis]-t.r.lo(axis))/t.r.size(axis))
+		}
+	}
+	for _, ends := range on {
+		slices.Sort(ends)
+		for i, v := range ends {
+			all++
+			if math.Abs(v-float64(i+1)/float64(len(ends)+1)) < 0.02 {
+				parted++
+			}
+		}
+	}
+	return parted, all
+}
+
 // graphFault is what is wrong with g laid out, or "": a mistake told, two of its edges sharing a run or touching,
-// an end off its box's outline, or more crossings drawn than its ranks' order has.
+// an end off its box's outline, more crossings drawn than its ranks' order has, or more turns or crossings by moving
+// the ends.
 func graphFault(g *graph) string {
-	l := laid(g)
+	return laidFault(g, laid(g))
+}
+
+// laidFault is graphFault of g, laid out as l.
+func laidFault(g *graph, l *layout) string {
 	if l.failure != nil {
 		return l.failure.Error()
 	}
 	if len(l.problems) > 0 {
 		return l.problems.Error()
 	}
-	if fault := loopFault(g, l); fault != "" {
+	r := routed(g)
+	if fault := loopFault(g, r); fault != "" {
 		return fault
 	}
-	if fault := labelFault(g, l); fault != "" {
+	if fault := labelFault(g, l, r); fault != "" {
+		return fault
+	}
+	if fault := settleFault(l, r); fault != "" {
 		return fault
 	}
 	if fault := levelFault(g, l); fault != "" {
@@ -724,8 +795,8 @@ func addLoops(rnd *rand.Rand, g *graph, every bool) {
 }
 
 // Random graphs, down and right, lay out with no mistake, no two edges sharing a run or touching, every end on its
-// box's outline, no more crossings drawn than their ranks' order has, and the same layout twice; their loops (half of
-// the graphs) leave the other edges as with no loop.
+// box's outline, no more crossings drawn than their ranks' order has, no more turns or crossings by moving the ends,
+// and the same layout twice; their loops (half of the graphs) leave the other edges as with no loop.
 func TestGraphRandom(t *testing.T) {
 	t.Parallel()
 
@@ -740,19 +811,20 @@ func TestGraphRandom(t *testing.T) {
 		lanes     bool
 		level     string
 		least     int
+		parts     int // the least share of ends at boxes on their equal parts, in percent, a little under what it measures
 	}{
-		{"", [2]uint64{1, 2}, 3000, false, false, "", 0},
-		{"right", [2]uint64{3, 4}, 3000, false, false, "", 0},
-		{"", [2]uint64{5, 6}, 300, true, false, "", 0},
-		{"right", [2]uint64{7, 8}, 300, true, false, "", 0},
-		{"", [2]uint64{9, 10}, 1000, false, true, "", 0},
-		{"right", [2]uint64{11, 12}, 1000, false, true, "", 0},
-		{"", [2]uint64{13, 14}, 300, false, false, "plain", 132},
-		{"right", [2]uint64{15, 16}, 300, false, false, "plain", 123},
-		{"", [2]uint64{17, 18}, 300, false, false, "groups", 97},
-		{"right", [2]uint64{19, 20}, 300, false, false, "groups", 107},
-		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 91},
-		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 88},
+		{"", [2]uint64{1, 2}, 3000, false, false, "", 0, 70},
+		{"right", [2]uint64{3, 4}, 3000, false, false, "", 0, 79},
+		{"", [2]uint64{5, 6}, 300, true, false, "", 0, 48},
+		{"right", [2]uint64{7, 8}, 300, true, false, "", 0, 65},
+		{"", [2]uint64{9, 10}, 1000, false, true, "", 0, 78},
+		{"right", [2]uint64{11, 12}, 1000, false, true, "", 0, 85},
+		{"", [2]uint64{13, 14}, 300, false, false, "plain", 132, 69},
+		{"right", [2]uint64{15, 16}, 300, false, false, "plain", 123, 77},
+		{"", [2]uint64{17, 18}, 300, false, false, "groups", 97, 71},
+		{"right", [2]uint64{19, 20}, 300, false, false, "groups", 107, 81},
+		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 91, 79},
+		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 88, 85},
 	} {
 		// A name of no mark -run reads as a pattern: down-1-2 (down for the direction left out); -run
 		// TestGraphRandom/down-1-2$ picks that one alone, as down-1 is down-13-14 and down-17-18 too.
@@ -764,7 +836,7 @@ func TestGraphRandom(t *testing.T) {
 			groups := rand.New(rand.NewPCG(c.seed[0]+20, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
 			lanes := rand.New(rand.NewPCG(c.seed[0]+30, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
 			levels := rand.New(rand.NewPCG(c.seed[0]+40, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
-			laidOut := 0
+			laidOut, parted, ends := 0, 0, 0
 			for i := range c.graphs {
 				g := randomGraph(rnd, c.direction)
 				for k := range g.Edges {
@@ -785,10 +857,16 @@ func TestGraphRandom(t *testing.T) {
 					}
 					laidOut++
 				}
-				if fault := graphFault(g); fault != "" {
+				l := laid(g)
+				if fault := laidFault(g, l); fault != "" {
 					b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
 					t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
 				}
+				on, all := boxParts(g, l)
+				parted, ends = parted+on, ends+all
+			}
+			if share := 100 * parted / ends; share < c.parts {
+				t.Errorf("seed %v: %d of %d ends at boxes on their equal parts, under %d%%", c.seed, parted, ends, c.parts)
 			}
 			if laidOut < c.least {
 				t.Errorf("seed %v: %d graphs with level edges laid out, fewer than %d", c.seed, laidOut, c.least)
@@ -2580,5 +2658,70 @@ func TestGraphHandsOrder(t *testing.T) {
 		if got := d.handsOf(0, c.looped); !slices.Equal(got, c.want) {
 			t.Errorf("right %v, looped %v, %q taken: %v, want %v", c.right, c.looped, c.taken, got, c.want)
 		}
+	}
+}
+
+// The n edges at a box's side end at the points that part it into n+1 equal parts, in the order of what they reach,
+// down and right and on every shape, whose outline they stay on. One edge runs down the boxes' middles, and a straight
+// edge among more, which stays straight, is not held to its part.
+func TestGraphBoxParts(t *testing.T) {
+	t.Parallel()
+
+	for _, direction := range []string{"", "right"} {
+		for _, shape := range []string{"", "pill", "hex", "state"} {
+			for _, n := range []int{1, 2, 3, 5, 8} {
+				names := []string{"hub"}
+				var edges []string
+				for i := range n {
+					names = append(names, fmt.Sprintf("n%d", i))
+					edges = append(edges, fmt.Sprintf("hub>n%d", i), fmt.Sprintf("n%d>sink", i))
+				}
+				g := graphOf(append(names, "sink"), edges...)
+				g.Direction = direction
+				for _, b := range graphBoxes(g) {
+					b.Shape, b.Rows[0].Text["en"] = shape, "box"
+				}
+				at := fmt.Sprintf("%q, %q, %d edges", direction, shape, n)
+				l := laid(g)
+				if fault := laidFault(g, l); fault != "" {
+					t.Fatalf("%s: %s", at, fault)
+				}
+				axis := 0
+				if direction == "right" {
+					axis = 1
+				}
+				hub, sink := l.names["hub"].r, l.names["sink"].r
+				for i := range n {
+					from, to := l.paths[2*i].segs, l.paths[2*i+1].segs
+					want := float64(i+1) / float64(n+1)
+					if got := (from[0][axis] - hub.lo(axis)) / hub.size(axis); (n == 1 || len(from) > 1) && math.Abs(got-want) > 1e-6 {
+						t.Errorf("%s: %s leaves %v along the side, want %v", at, l.paths[2*i].what, got, want)
+					}
+					if got := (to[len(to)-1][2+axis] - sink.lo(axis)) / sink.size(axis); (n == 1 || len(to) > 1) && math.Abs(got-want) > 1e-6 {
+						t.Errorf("%s: %s ends %v along the side, want %v", at, l.paths[2*i+1].what, got, want)
+					}
+				}
+			}
+		}
+	}
+}
+
+// A box's level edges stay where the ranks put them, its other ends parted round them.
+func TestGraphBoxLevelStays(t *testing.T) {
+	t.Parallel()
+
+	g := graphOf([]string{"a", "b", "c", "d"}, "a>b", "b>a", "a>c", "a>d", "b>c", "b>d")
+	g.Edges[0].Level, g.Edges[1].Level = true, true
+	l, r := laid(g), routed(g)
+	if fault := laidFault(g, l); fault != "" {
+		t.Fatal(fault)
+	}
+	for k := range 2 {
+		if !slices.Equal(l.paths[k].segs, r.paths[k].segs) {
+			t.Errorf("%s runs %v, %v before the ends moved", l.paths[k].what, l.paths[k].segs, r.paths[k].segs)
+		}
+	}
+	if on, all := boxParts(g, l); on != all {
+		t.Errorf("%d of %d ends on their equal parts", on, all)
 	}
 }
