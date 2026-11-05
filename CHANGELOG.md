@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `with: <name>` to the boxes and icons of a diagram's `graph`: it stands one in the rank of the box or icon named, with no edge drawn, of another group too, and takes the edges from boxes into it out of the ranks, so that an edge runs the way it means, up from the servers to their gateway. An AWS diagram of 25 edges goes from 2136×1440 to 1704×1407 with it, as boxes outside a group's frame no longer stand beside it.
 - Add data files to `floe diagram inspect`: a file with a key `template` at its top has its diagrams inspected in the order written, in `details` and `tabs` too, after the template's schema, without drawing the page. Add a line for each frame's heading, `the heading of frame "F" x,y WxH`, which tells how far to move an edge told it runs through one.
 - Add straight edges between facing sides that share a height, instead of a bend by the difference of their middles: an edge written by hand, when the straight line would touch nothing, and the edge of a graph at an icon that cannot move far enough, whose end alone on its side stands up to 12 off its point. If that leaves a mistake, a label with no place written landing on something say, all the diagram's edges stay as they were.
 - Add a choice of versions to the right of a stored page's title on the management page. An earlier version shows with the

@@ -113,6 +113,7 @@ type graphGroup struct {
 type graphBox struct {
 	icon  *icon  // the icon a node is, read flat as a box: its Shape is "icon"
 	Name  string `json:"name"`
+	With  string `json:"with,omitempty"` // omitted, so that the ids of a spec without it stay
 	Rows  []row  `json:"rows"`
 	Tone  string `json:"tone"`
 	Shape string `json:"shape"`
@@ -241,6 +242,7 @@ type icon struct {
 	Y         float64  `json:"y"`
 	Label     Text     `json:"label"`
 	Size      float64  `json:"size"`
+	With      string   `json:"with,omitempty"` // a graph's icon alone (see graphBox)
 	graph     string   // the JSON pointer of the graph that laid it out; "" for an icon written by hand
 	handSides []string // the sides left to edges written by hand, for an icon a graph laid out; nil: any
 }
