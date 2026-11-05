@@ -32,4 +32,4 @@ parts:
   - edge: { from: [130, 544], to: [390, 544], label: { en: rewrite (updatedAt moves on), ja: "書き直す（updatedAt が進む）" }, at: [260, 530] }
   - edge: { from: [644, 584], to: [390, 584], label: { en: stat finds a new version, ja: "stat で新しい版を見つける" }, at: [520, 570] }
   - edge: { from: [650, 624], to: [910, 624], dashed: true, label: "changed", at: [780, 610] }
-  - edge: { from: [910, 648], via: [[950, 648], [950, 676]], to: [910, 676], label: location.reload(), at: [892, 662] }
+  - edge: { from: [910, 648], via: [{ x: 950 }], to: [910, 676], label: location.reload(), at: [892, 662] }

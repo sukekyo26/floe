@@ -162,6 +162,13 @@ func TestShapeMistakes(t *testing.T) {
 		{"  - label: { text: a, x: 1 }", "s.yaml:5:14: missing property 'y'"},
 		{"  - circle: { name: c, cx: 1, cy: 1, r: 1 }\n  - label: { text: a, x: 1, in: [c] }", "s.yaml:6:14: properties 'y' required, if 'x' exists"},
 		{"  - edge: { from: [1, 2, 3], to: b }", "s.yaml:5:19: maxItems: got 3, want 2"},
+		// A point of via is either shape, each told in the library's words of its own: oneOf would say none matched.
+		{"  - edge: { from: a, to: b, via: [{}] }", "s.yaml:5:35: minProperties: got 0, want 1"},
+		{"  - edge: { from: a, to: b, via: [{ z: 1 }] }", "s.yaml:5:37: additional properties 'z' not allowed"},
+		{"  - edge: { from: a, to: b, via: [[1]] }", "s.yaml:5:35: minItems: got 1, want 2"},
+		{"  - edge: { from: a, to: b, via: [[1, 2, 3]] }", "s.yaml:5:35: maxItems: got 3, want 2"},
+		{"  - edge: { from: a, to: b, via: [140] }", "s.yaml:5:35: got number, want array or object"},
+		{"  - edge: { from: a, to: b, via: [{ x: a }] }", "s.yaml:5:40: got string, want number"},
 		{"  - axis: { x1: 1, x2: 9, y: 1, ticks: [], labels: Between }", "s.yaml:5:52: value must be one of 'at', 'between'"},
 		{"  - box: { x: 1, y: 1, rows: [a], zz: 1, aa: 1, mm: 1 }", "s.yaml:5:12: additional properties 'aa', 'mm', 'zz' not allowed"},
 		// A label placed by its region takes no anchor; one at x and y does.
@@ -762,6 +769,146 @@ func TestEdgesHandSides(t *testing.T) {
 			t.Errorf("%s\n  drew %s %s\n  want %s", c.spec, got, mistakes, c.want)
 		}
 	}
+}
+
+// A point of via with one axis takes the other from the point before, the first from the centre of the edge's start.
+func TestEdgeViaAxis(t *testing.T) {
+	t.Parallel()
+
+	const head = "width: 500\nheight: 320\ntitle: T\nparts:\n  - box: { name: a, x: 20, y: 20, w: 60, h: 40, rows: [a] }\n" +
+		"  - box: { name: b, x: 200, y: 200, w: 60, h: 40, rows: [b] }\n  - box: { name: c, x: 20, y: 200, w: 60, h: 40, rows: [c] }\n"
+	const row = "  - table: { x: 300, y: 20, w: 100, title: T, rows: [{ name: r, cells: [x, y] }] }\n"
+	const dot = "  - dot: { name: d, cx: 150, cy: 40 }\n"
+	for _, c := range []struct {
+		parts, want string
+	}{
+		{"  - edge: { from: a, to: b, fromSide: right, toSide: left, via: [{ x: 140 }] }", "edge a→b M80,40 H140 V220 H200"},
+		{"  - edge: { from: a, to: b, via: [{ y: 120 }] }", "edge a→b M50,60 V120 H230 V200"},
+		{"  - edge: { from: a, to: b, fromSide: right, toSide: right, via: [{ x: 300 }] }", "edge a→b M80,40 H300 V220 H260"},
+		{"  - edge: { from: a, to: b, via: [{ x: 140 }, { y: 150 }, { x: 180 }] }", "edge a→b M80,40 H140 V150 H180 V220 H200"},
+		{"  - edge: { from: [20, 150], to: b, via: [{ x: 100 }] }", "edge [20,150]→b M20,150 H100 V220 H200"},
+		{dot + "  - edge: { from: d, to: b, via: [{ y: 120 }] }", "edge d→b M150,40 V120 H230 V200"},
+		{row + "  - edge: { from: r, to: [20, 100], via: [{ x: 450 }] }", "edge r→[20,100] M400,61 H450 V100 H20"},
+		{"  - edge: { from: a, to: b, straight: true, via: [{ x: 140 }] }", "edge a→b M80,40 H140 L200,220"},
+		{"  - edge: { from: a, to: b, via: [{ x: 140, y: 100 }] }", "edge a→b M80,40 H140 V100 H230 V200"},
+		{"  - edge: { from: c, to: [10, 10], via: [{ x: 0 }] }", "edge c→[10,10] M20,220 H0 V10 H10"},
+		{"  - edge: { from: b, to: [10, 10], via: [{ y: 0 }] }", "edge b→[10,10] M230,200 V0 H10 V10"},
+		// The centre of an icon is of its image, not with its label.
+		{"  - icon: { name: i, icon: aws/aws-lambda, x: 20, y: 100, label: L }\n  - edge: { from: i, to: b, fromSide: right, via: [{ x: 150 }] }", "edge i→b M68,124 H150 V220 H200"},
+		{"  - bar: { name: s, x1: 300, x2: 400, y: 40 }\n  - edge: { from: s, to: b, via: [{ y: 120 }] }", "edge s→b M350,47 V120 H230 V200"},
+		{"  - frame: { name: f, x: 300, y: 20, w: 100, h: 100, label: F }\n  - edge: { from: f, to: b, fromSide: bottom, via: [{ y: 150 }] }", "edge f→b M350,120 V150 H230 V200"},
+
+		// The first point written on the axis the edge leaves by. A point on the side, as a first point left to the side
+		// would be, runs along the box's edge and is not told.
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [[150, 20]] }", "edge a→b M50,20 H150 V220 H200"},
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ y: 10 }, { x: 150 }] }", "edge a→b M50,20 V10 H150 V220 H200"},
+		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ x: 150 }] }", "edge a→b M80,40 H150 H230 V200"},
+
+		// What may not be left out of via, as the docs tell it: the edge runs another way, and nothing is told.
+		// The first point of an edge with no side written.
+		{"  - edge: { from: a, to: b, toSide: right, via: [[50, 10], [300, 10], [300, 220]] }", "edge a→b M50,20 V10 H300 V220 H260"},
+		{"  - edge: { from: a, to: b, toSide: right, via: [[300, 10]] }", "edge a→b M80,40 H300 V10 H280 V220 H260"},
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: right, via: [[300, 10]] }", "edge a→b M50,20 V10 H300 V220 H260"},
+		{"  - edge: { from: a, to: b, toSide: right, via: [{ y: 10 }, { x: 300 }] }", "edge a→b M50,20 V10 H300 V220 H260"},
+		// The first point of an edge leaving a point or a dot up or down.
+		{"  - edge: { from: [150, 40], to: b, toSide: top, via: [[150, 120], [230, 120]] }", "edge [150,40]→b M150,40 V120 H230 V200"},
+		{"  - edge: { from: [150, 40], to: b, toSide: top, via: [[230, 120]] }", "edge [150,40]→b M150,40 H230 V120 V200"},
+		{"  - edge: { from: [150, 40], to: b, toSide: top, via: [{ y: 120 }, { x: 230 }] }", "edge [150,40]→b M150,40 V120 H230 V200"},
+		{dot + "  - edge: { from: d, to: b, toSide: top, via: [[230, 120]] }", "edge d→b M150,40 H230 V120 V200"},
+		{dot + "  - edge: { from: d, to: b, toSide: top, via: [{ y: 120 }, { x: 230 }] }", "edge d→b M150,40 V120 H230 V200"},
+		// A turn the other way than the edge came.
+		{
+			"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [[130, 100], [300, 100], [300, 150]] }",
+			"edge a→b M80,40 H130 V100 H300 V150 H230 V200",
+		},
+		{
+			"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [[130, 100], [300, 150]] }",
+			"edge a→b M80,40 H130 V100 V150 H300 V175 H230 V200",
+		},
+		// The last point: with no via the edge shares the side.
+		{
+			"  - edge: { from: a, to: b, toSide: left, via: [{ x: 140 }] }\n  - edge: { from: c, to: b }",
+			"edge a→b M80,40 H140 V220 H200\nedge c→b M80,220 H200",
+		},
+		{
+			"  - edge: { from: a, to: b, toSide: left }\n  - edge: { from: c, to: b }",
+			"edge a→b M80,40 H140 V213.33 H200\nedge c→b M80,226.67 H200",
+		},
+	} {
+		out, mistakes := draw(t, head+c.parts+"\n", inspect)
+		if got := edgeLines(out); mistakes != "" || got != c.want {
+			t.Errorf("%s\n  drew %q %q\n  want %q", c.parts, got, mistakes, c.want)
+		}
+	}
+
+	// A first point on the other axis, or where a part stands, is told as any via is; a name unknown too.
+	for _, c := range []struct {
+		parts, want string
+	}{
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ x: 150 }] }", `s.yaml:8:5: edge a→b runs through box "a"`},
+		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ y: 150 }] }", `s.yaml:8:5: edge a→b runs through box "a"`},
+		{"  - edge: { from: a, to: b, via: [{ x: 50 }] }", "s.yaml:8:5: edge a→b runs through box \"a\"\ns.yaml:8:5: edge a→b runs through box \"c\""},
+		{"  - edge: { from: nobody, to: b, via: [{ x: 50 }] }", `s.yaml:8:5: edge: no part, row or node named "nobody"`},
+	} {
+		if _, got := draw(t, head+c.parts+"\n", inspect); got != c.want {
+			t.Errorf("%s\n  told %q\n  want %q", c.parts, got, c.want)
+		}
+	}
+
+	// Moving what the edge goes to: one axis leaves the way chosen, a point copying the other axis bends.
+	moved := func(y int, via string) string {
+		src := "width: 900\nheight: 700\ntitle: T\nparts:\n  - box: { name: api, x: 616, y: 626, w: 48, h: 40, rows: [a] }\n" +
+			"  - box: { name: writer, x: 790, y: " + strconv.Itoa(y) + ", w: 48, h: 40, rows: [w] }\n" +
+			"  - edge: { from: api, to: writer, fromSide: right, toSide: left, via: [" + via + "] }\n"
+		got, mistakes := draw(t, src, inspect)
+		if mistakes != "" {
+			t.Fatalf("%s: %s", via, mistakes)
+		}
+		return got
+	}
+	for _, c := range []struct {
+		y         int
+		via, want string
+	}{
+		{366, "{ x: 710 }", "edge api→writer M664,646 H710 V386 H790"},
+		{342, "{ x: 710 }", "edge api→writer M664,646 H710 V362 H790"},
+		{366, "[710, 374]", "edge api→writer M664,646 H710 V374 H750 V386 H790"},
+		{342, "[710, 374]", "edge api→writer M664,646 H710 V374 V362 H790"},
+	} {
+		if got := edgeLines(moved(c.y, c.via)); got != c.want {
+			t.Errorf("writer at %d by %s\n  drew %q\n  want %q", c.y, c.via, got, c.want)
+		}
+	}
+
+	// The id made from the spec: [x, y] as it was before a point had axes, { x, y } as [x, y], and one axis as itself.
+	idOf := func(via string) string {
+		got, mistakes := draw(t, head+"  - edge: { from: a, to: b, via: ["+via+"] }\n", render("en"))
+		if mistakes != "" {
+			t.Fatalf("%s: %s", via, mistakes)
+		}
+		return regexp.MustCompile(`dg1-[0-9a-f]+`).FindString(got)
+	}
+	if got := idOf("[140, 100]"); got != "dg1-12b45c" {
+		t.Errorf("id of [x, y] = %q, want it as before", got)
+	}
+	if got := idOf("{ x: 140, y: 100 }"); got != "dg1-12b45c" {
+		t.Errorf("id of { x, y } = %q, want that of [x, y]", got)
+	}
+	// The same way, written otherwise.
+	if x, y := idOf("{ x: 140 }"), idOf("{ y: 100 }"); x == y || x == idOf("[140, 40]") || y == idOf("[50, 100]") {
+		t.Errorf("ids of one axis = %q, %q, want them of what is written", x, y)
+	}
+}
+
+// edgeLines is what inspect tells of edges alone, a line each.
+func edgeLines(got string) string {
+	var lines []string
+	for line := range strings.Lines(got) {
+		if strings.HasPrefix(line, "edge ") {
+			lines = append(lines, strings.TrimSuffix(line, "\n"))
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func TestEdgesVia(t *testing.T) {

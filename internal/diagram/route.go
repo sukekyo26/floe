@@ -406,8 +406,8 @@ func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, free loose, f
 	start, last := [][2]float64{{from.x, from.y}}, [2]float64{to.x, to.y}
 	switch {
 	case e.Straight:
-		pts = slices.Concat(start, e.Via, [][2]float64{last})
-	case len(e.Via) == 0:
+		pts = append(pts, last)
+	case len(pts) == 0:
 		var mid [][2]float64
 		mid, free = turns(from, to, marks)
 		pts = slices.Concat(start, mid, [][2]float64{last})
@@ -417,31 +417,54 @@ func (l *layout) edgePoints(e *edge, at string) (pts [][2]float64, free loose, f
 	return pts, free, fromWho, toWho, true
 }
 
-// edgeEnds resolves e's ends and the sides they take, false when an end cannot be one (told at at): with via, also the
-// points from its start through its via, and whether it goes across at the last of them.
+// viaOf is the points of e's via: an axis not written is the point before's, the first point's the centre of e's start,
+// so that the point is known before the side it makes e start from (facing).
+func (l *layout) viaOf(e *edge) [][2]float64 {
+	pts := make([][2]float64, len(e.Via))
+	p := l.centre(e.From)
+	for i, v := range e.Via {
+		if v.X != nil {
+			p[0] = *v.X
+		}
+		if v.Y != nil {
+			p[1] = *v.Y
+		}
+		pts[i] = p
+	}
+	return pts
+}
+
+// edgeEnds resolves e's ends and the sides they take, false when an end cannot be one (told at at): with via or
+// straight, also the points from its start through its via, turning as written when right-angled, and whether it goes
+// across at the last of them.
 func (l *layout) edgeEnds(e *edge, at string) (
 	from, to anchor, pts [][2]float64, across bool, fromWho, toWho string, ok bool,
 ) {
 	fromSide, toSide := e.FromSide, e.ToSide
 	fromAt, toAt := l.centre(e.From), l.centre(e.To)
+	via := l.viaOf(e)
 	if fromSide == "" {
 		near := toAt
-		if len(e.Via) > 0 {
-			fromSide, near = l.facing(e.From, e.Via[0], false, false), e.Via[0]
+		if len(via) > 0 {
+			fromSide, near = l.facing(e.From, via[0], false, false), via[0]
 		}
 		fromSide = l.clear(e.From, fromSide, toAt, near)
 	}
 	var okFrom, okTo bool
 	from, fromWho, okFrom = l.endOf(at, e.From, fromSide, toAt)
 	from = l.sharedEnd(e, 0, from)
-	angled := len(e.Via) > 0 && !e.Straight
-	if angled && okFrom {
-		pts, across = through([][2]float64{{from.x, from.y}}, e.Via, horizontal(from.side) || from.side == "")
+	angled := len(via) > 0 && !e.Straight
+	switch {
+	case !okFrom:
+	case angled:
+		pts, across = through([][2]float64{{from.x, from.y}}, via, horizontal(from.side) || from.side == "")
+	case e.Straight:
+		pts = slices.Concat([][2]float64{{from.x, from.y}}, via)
 	}
 	if toSide == "" {
 		near := fromAt
-		if len(e.Via) > 0 {
-			near = e.Via[len(e.Via)-1]
+		if len(via) > 0 {
+			near = via[len(via)-1]
 			toSide = l.facing(e.To, near, across, angled && okFrom)
 		}
 		toSide = l.clear(e.To, toSide, fromAt, near)

@@ -1386,7 +1386,10 @@ func TestGraphFarOut(t *testing.T) {
 			return fmt.Sprint(b.X+dx, b.Y+dy, b.W, b.H)
 		}
 		e := it.p.Edge
-		pts := append([][2]float64{*e.From.Point}, e.Via...)
+		pts := [][2]float64{*e.From.Point}
+		for _, v := range e.Via {
+			pts = append(pts, [2]float64{*v.X, *v.Y})
+		}
 		pts = append(pts, *e.To.Point)
 		out := ""
 		for _, p := range pts {

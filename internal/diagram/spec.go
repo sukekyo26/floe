@@ -261,24 +261,58 @@ func (e *end) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, e.Point) //nolint:wrapcheck // floe's failure: the schema checked the shape
 }
 
+// viaPoint is a point of an edge's via: [x, y], or one axis with the other left to viaOf.
+type viaPoint struct {
+	X *float64 `json:"x,omitempty"`
+	Y *float64 `json:"y,omitempty"`
+}
+
+// viaAt is the via through pts, both axes written.
+func viaAt(pts ...[2]float64) []viaPoint {
+	via := make([]viaPoint, len(pts))
+	for i, p := range pts {
+		via[i] = viaPoint{X: &p[0], Y: &p[1]}
+	}
+	return via
+}
+
+func (p *viaPoint) UnmarshalJSON(b []byte) error {
+	var at [2]float64
+	if json.Unmarshal(b, &at) == nil {
+		p.X, p.Y = &at[0], &at[1]
+		return nil
+	}
+	type axes viaPoint
+	return json.Unmarshal(b, (*axes)(p)) //nolint:wrapcheck // floe's failure: the schema checked the shape
+}
+
+// MarshalJSON writes both axes as [x, y], however written, as the layout's id is made from what it writes.
+func (p viaPoint) MarshalJSON() ([]byte, error) {
+	if p.X != nil && p.Y != nil {
+		return json.Marshal([2]float64{*p.X, *p.Y}) //nolint:wrapcheck // floe's failure: plain numbers
+	}
+	type axes viaPoint
+	return json.Marshal(axes(p)) //nolint:wrapcheck // floe's failure: plain numbers
+}
+
 type edge struct {
-	From     end          `json:"from"`
-	To       end          `json:"to"`
-	FromSide string       `json:"fromSide"`
-	ToSide   string       `json:"toSide"`
-	Via      [][2]float64 `json:"via"`
-	Straight bool         `json:"straight"`
-	Label    Text         `json:"label"`
-	At       *[2]float64  `json:"at"`
-	Dashed   bool         `json:"dashed"`
-	Bold     bool         `json:"bold"`
-	Tone     string       `json:"tone"`
-	Start    *string      `json:"start"`
-	End      *string      `json:"end"`
-	Crossing bool         `json:"crossing"`
-	who      string       // its words in mistakes and inspect, for an edge a tree draws; else made from its ends
-	graph    string       // the JSON pointer of the graph that laid it out; "" for an edge written by hand
-	anchor   string       // how its label stands at At, as a graph lays it out; "" for middle
+	From     end         `json:"from"`
+	To       end         `json:"to"`
+	FromSide string      `json:"fromSide"`
+	ToSide   string      `json:"toSide"`
+	Via      []viaPoint  `json:"via"`
+	Straight bool        `json:"straight"`
+	Label    Text        `json:"label"`
+	At       *[2]float64 `json:"at"`
+	Dashed   bool        `json:"dashed"`
+	Bold     bool        `json:"bold"`
+	Tone     string      `json:"tone"`
+	Start    *string     `json:"start"`
+	End      *string     `json:"end"`
+	Crossing bool        `json:"crossing"`
+	who      string      // its words in mistakes and inspect, for an edge a tree draws; else made from its ends
+	graph    string      // the JSON pointer of the graph that laid it out; "" for an edge written by hand
+	anchor   string      // how its label stands at At, as a graph lays it out; "" for middle
 }
 
 type dot struct {
