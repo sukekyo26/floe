@@ -61,7 +61,7 @@ func laidBy(g *graph, how placing) *layout {
 // grouped is g read and laid out, its groups kept, as items lays it out.
 func grouped(g *graph) ([]*group, error) {
 	o, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // its mistakes are graphFault's
-	_, _, err := o.items()                  //nolint:errcheck // the mistakes are told by laid
+	_, _, err := o.items()                                         //nolint:errcheck // the mistakes are told by laid
 	return o.groups, err
 }
 
@@ -1378,13 +1378,13 @@ func TestGraphFarOut(t *testing.T) {
 			g.Edges[k].Label = Text{"en": "wwwwww"}
 		}
 		near, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // a graph with no mistake
-		want, _, err := near.items()               //nolint:errcheck // the mistakes are told by laid
+		want, _, err := near.items()                                      //nolint:errcheck // the mistakes are told by laid
 		if err != nil {
 			t.Fatal(err)
 		}
 		g.X, g.Y = 999000, 998000
 		far, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // a graph with no mistake
-		got, _, err := far.items()                //nolint:errcheck // the mistakes are told by laid
+		got, _, err := far.items()                                       //nolint:errcheck // the mistakes are told by laid
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1504,7 +1504,7 @@ func TestGraphLimit(t *testing.T) {
 
 	// Counted before any point is made: graphs whose edges pass far more ranks than the limit make none, and are
 	// refused all told.
-	huge := chainGraph(200, 200)               // 200 edges of 198 points
+	huge := chainGraph(200, 200)                                      // 200 edges of 198 points
 	o, _ := readGraph(huge, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // every name is a box's
 	if gr := o.groups[0]; o.passed != 200*198 || len(gr.nodes) != 200 || len(gr.links) != 0 {
 		t.Errorf("200 boxes: %d ranks passed, %d nodes, %d links; want %d, 200, none made", o.passed, len(gr.nodes), len(gr.links), 200*198)
@@ -1970,7 +1970,7 @@ func TestGraphLabels(t *testing.T) {
 	// right as far as the label stands left of x.
 	par := labelled(graphOf([]string{"a", "b"}, slices.Repeat([]string{"a>b"}, 20)...), "L0", 0)
 	o, _ := readGraph(par, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // every name is a box's
-	items, _, err := o.items()                //nolint:errcheck // the mistakes are told by laid
+	items, _, err := o.items()                                       //nolint:errcheck // the mistakes are told by laid
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2730,11 +2730,8 @@ func TestGraphBoxLevelStays(t *testing.T) {
 func TestGraphBoxSpread(t *testing.T) {
 	t.Parallel()
 
-	g := graphOf([]string{"a", "b", "c"}, "a>c", "b>c", "a>c")
+	g := boxesOf(graphOf([]string{"a", "b", "c"}, "a>c", "b>c", "a>c"), 11, 6, 6)
 	g.Direction = "right"
-	for i, n := range []int{11, 6, 6} {
-		g.Nodes[i].Box.Rows[0].Text["en"] = strings.Repeat("w", n)
-	}
 	want := `box "a" 20,26 128x64
 box "b" 40,116 88x48
 box "c" 184,20 88x72
@@ -2788,5 +2785,65 @@ func TestRunsTouchRounded(t *testing.T) {
 		if got := runsTouch(c.s, c.q); got != c.want {
 			t.Errorf("%s: %v, want %v", c.name, got, c.want)
 		}
+	}
+}
+
+// boxesOf is g with the boxes' words the given lengths in w's, so that their widths are as the layouts below want them.
+func boxesOf(g *graph, lengths ...int) *graph {
+	for i, n := range lengths {
+		g.Nodes[i].Box.Rows[0].Text["en"] = strings.Repeat("w", n)
+	}
+	return g
+}
+
+// A straight edge whose point on the side with more ends the other side does not take runs on the point of the other.
+func TestGraphBoxOtherPoint(t *testing.T) {
+	t.Parallel()
+
+	g := boxesOf(graphOf([]string{"a", "b", "c"}, "a>c", "a>b"), 18, 4, 1)
+	want := `box "a" 20,20 184x29
+box "b" 20,73 72x29
+box "c" 116,73 48x29
+edge a→c M142.67,49 V73
+edge a→b M56,49 V73
+`
+	if got := laid(g).inspect(); got != want {
+		t.Errorf("got\n%swant\n%s", got, want)
+	}
+}
+
+// A labelled edge between boxes that its first end's move leaves straight stays there: it does not slide on to its other
+// end's point, which an edge at an icon, held to its icon's point, does.
+func TestGraphBoxLabelledStays(t *testing.T) {
+	t.Parallel()
+
+	g := boxesOf(graphOf([]string{"a", "b", "c"}, "a>c", "b>c", "b>c", "b>c"), 12, 6, 16)
+	g.Direction = "right"
+	g.Edges[1].Label, g.Edges[2].Label = Text{"en": "yes"}, Text{"en": "yes"}
+	l := laid(g)
+	if fault := laidFault(g, l); fault != "" {
+		t.Fatal(fault)
+	}
+	for _, s := range l.paths[1].segs {
+		if s[1] != 110 || s[3] != 110 {
+			t.Errorf("%s runs %v, want it straight at y 110", l.paths[1].what, l.paths[1].segs)
+		}
+	}
+}
+
+// An edge between a box and an icon does not take the box's point, which would move the icon for nothing and leave the
+// next edge at the icon short of it.
+func TestGraphBoxIconStays(t *testing.T) {
+	t.Parallel()
+
+	g := boxesOf(graphOf([]string{"a", "b"}, "a>b"), 14, 8)
+	g.Nodes[1] = graphNode{Icon: iconNode(g.Nodes[1].Box)} //nolint:exhaustruct_v5 // one kind of node
+	want := `box "a" 20,20 152x29
+icon "b" 68,106 48x48
+edge a→b M92,49 V106
+label "wwwwwwww" 58.2,157 67.6x18
+`
+	if got := laid(g).inspect(); got != want {
+		t.Errorf("got\n%swant\n%s", got, want)
 	}
 }
