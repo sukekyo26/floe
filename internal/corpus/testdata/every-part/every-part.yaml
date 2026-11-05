@@ -169,6 +169,15 @@ sections:
             tags: [{ pill: by hand, tone: warn }, { pill: blocked, tone: bad }, { pill: next, tone: accent }]
             text: Rebuilt by hand after the copy; [the steps](https://example.com/steps).
           - title: Old links
+          - title: A step with its command
+            text: Run it from the wiki's folder.
+            parts:
+              - code: { file: wiki.conf, lang: ini, text: "mode = read-only" }
+              - terminal: { shell: bash, steps: [{ run: wiki freeze }] }
+          - title: Parts alone, in the last row
+            parts:
+              - text: Text among parts, as tall as an item's.
+              - code: { lang: sh, text: wiki status }
       - keys:
           - { keys: [Ctrl, K], text: Search the wiki }
           - { keys: [g, h], text: Go home }

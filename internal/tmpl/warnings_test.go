@@ -11,7 +11,8 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// A fence in a text part is warned of at the value, in a section and in the stack of details and tabs; code in a
+// A fence in a text part is warned of at the value, in a section, in the stack of details and tabs, and in an item of
+// entries, its text and its parts; code in a
 // line and an indented block are not. The page is drawn.
 func TestWarnFence(t *testing.T) {
 	t.Parallel()
@@ -21,12 +22,15 @@ func TestWarnFence(t *testing.T) {
 		"      - text: \"```x``` in a line\"\n" +
 		"      - text: \"Para.\\n\\n    indented\"\n" +
 		"      - details: {title: d, parts: [{text: \"~~~\\nin details\\n~~~\"}]}\n" +
-		"      - tabs: [{title: a, parts: [{text: \"```\\nin tabs\\n```\"}]}, {title: b, parts: [{text: plain}]}]\n"
+		"      - tabs: [{title: a, parts: [{text: \"```\\nin tabs\\n```\"}]}, {title: b, parts: [{text: plain}]}]\n" +
+		"      - entries: [{title: e, text: \"```\\nin an item\\n```\"}]\n" +
+		"      - entries: [{title: e, parts: [{text: \"```\\nin its parts\\n```\"}]}]\n"
 	page, warnings, err := tmpl.Draw(floeKit(t), "d.yaml", []byte(data), none)
 	if err != nil || page == nil {
 		t.Fatalf("Draw = %d bytes, %s", len(page), told(err))
 	}
-	want := "d.yaml:5:15: warning: " + fence + "\nd.yaml:8:44: warning: " + fence + "\nd.yaml:9:42: warning: " + fence
+	want := "d.yaml:5:15: warning: " + fence + "\nd.yaml:8:44: warning: " + fence + "\nd.yaml:9:42: warning: " + fence +
+		"\nd.yaml:10:36: warning: " + fence + "\nd.yaml:11:45: warning: " + fence
 	if got := laid(warnings); got != want {
 		t.Errorf("warnings\n%s\nwant\n%s", got, want)
 	}

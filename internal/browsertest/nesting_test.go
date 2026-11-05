@@ -9,7 +9,8 @@ import (
 // nestingPage draws a card of stats and the cards HTML nests so: in cards, in a panel, in an element of an empty
 // look, in an element that takes cards and the panel, and in a part's box that takes cards. In brutal, a note and a
 // code in a note's box, and in the stacks of details and tabs; and Markdown's h4 and hr in a note and in details,
-// and a part of one's own whose box is a <figure> with no margins of its own, in a note's box.
+// a part of one's own whose box is a <figure> with no margins of its own, in a note's box; and an item of entries that
+// holds parts, and one of parts alone.
 const nestingPage = `template: report
 lang: en
 sections:
@@ -37,7 +38,29 @@ sections:
           - title: u
             parts:
               - text: u
+      - entries:
+          - title: e
+            text: a
+            parts:
+              - code: { text: x }
+              - text: b
+              - code: { text: x }
+          - title: f
+            parts:
+              - code: { text: x }
 `
+
+// measureEntries tells, of an item of entries, the room between its text and its first part and between its last part
+// and the item's end, and under the title of an item of parts alone, in px, and the line heights of its text and of
+// a text in its parts.
+const measureEntries = `(() => {
+  const at = (s) => document.querySelector('[data-floe-part=entries] ' + s), box = (e) => e.getBoundingClientRect();
+  const row = at('> div'), codes = row.querySelectorAll('[data-floe-part=code]'), texts = row.querySelectorAll('[data-floe-text] p');
+  const next = at('> div + div');
+  return [box(codes[0]).top - box(texts[0]).bottom, box(row).bottom - box(codes[1]).bottom,
+    box(next.querySelector('[data-floe-part=code]')).top - box(next.querySelector('dt')).bottom].map(Math.round).join(' ') +
+    ' | ' + [...texts].map((p) => getComputedStyle(p).lineHeight).join(' ');
+})()`
 
 // measureCards tells, of each card the HTML nests, the style that differs from the card of stats.
 const measureCards = `(() => {
@@ -93,4 +116,5 @@ func TestUINesting(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	check(t, "held", []string{b.eval(measureHeld)}, "12px 0px 0px | 0px | 0px")
 	b.navigate("/a/nesting-default/?raw")
 	check(t, "blocks", []string{b.eval(measureBlocks)}, "0px | 0px | 0px | 0px | 12px 0px 0px")
+	check(t, "entries", []string{b.eval(measureEntries)}, "12 12 12 | 26.4px 26.4px")
 }
