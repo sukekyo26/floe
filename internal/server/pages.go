@@ -246,9 +246,10 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 }
 
 // frame answers the frame of slug, 404 when there is no page to frame. A folder has no page of its own: its URL is the
-// list with it open, where publish's URL leads.
+// list with it open, where publish's URL leads. What ?v= asks is told in the frame (askedVersion), which reads no
+// version itself.
 func (s *Server) frame(w http.ResponseWriter, r *http.Request, slug string) {
-	status := http.StatusNotFound
+	status, version := http.StatusNotFound, ""
 	if m := s.cfg.Store.ReadMeta(slug); m != nil {
 		file := r.URL.Query().Get("file")
 		if m.Folder && file == "" {
@@ -260,15 +261,31 @@ func (s *Server) frame(w http.ResponseWriter, r *http.Request, slug string) {
 			return
 		}
 		if _, ok := s.cfg.Store.File(slug, m, file); ok && (file == "" || m.Folder) {
-			status = http.StatusOK
+			status, version = http.StatusOK, s.askedVersion(slug, m, r.URL.Query())
 		}
 	}
-	sendUI(w, r, status, slug)
+	sendUI(w, r, status, slug, version)
+}
+
+// askedVersion is what ?v= of q asks of the page of slug, whose meta.json is m: "" for nothing, the version's number,
+// "0" for the latest, which is the page itself, and "gone" for what is no version of it.
+func (s *Server) askedVersion(slug string, m *store.Meta, q url.Values) string {
+	v, ok := versionParam(m, "", q)
+	switch {
+	case !ok || (v > 0 && s.cfg.Store.VersionMark(slug, m, v) == ""):
+		return "gone"
+	case v == 0:
+		return ""
+	case v == m.LastNumber():
+		return "0"
+	default:
+		return strconv.Itoa(v)
+	}
 }
 
 // download answers the page of slug as a file, as it was linked or drawn, a page floe drew with its CSP in it
 // (draw.CutOffPage), as no header goes with a file: never the page of a linked data file's mistakes, which are
-// refused.
+// refused. ?v= asks a version of a stored page, as of its page.
 func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	m := s.cfg.Store.ReadMeta(slug)
@@ -276,8 +293,13 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
+	v, ok := versionParam(m, "", r.URL.Query())
+	if !ok {
+		notFound(w)
+		return
+	}
 	// A file kept is not mended by the watch: of what the directories hold now.
-	got, err := s.content(catalog(r), slug, m, "", 0, s.latest)
+	got, err := s.content(catalog(r), slug, m, "", v, s.latest)
 	switch {
 	case errors.Is(err, errNoPage):
 		notFound(w)
@@ -300,8 +322,16 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		}
 		body = bytes.NewReader(page)
 	}
-	w.Header().Set("Content-Disposition", `attachment; filename="`+slug+`.html"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="`+downloadName(slug, v)+`"`)
 	stream(w, htmlType, body, "")
+}
+
+// downloadName is the name of the file of slug, of its version v when that is not 0: another name for other words.
+func downloadName(slug string, v int) string {
+	if v == 0 {
+		return slug + ".html"
+	}
+	return slug + "-v" + strconv.Itoa(v) + ".html"
 }
 
 // stream sends f as it is, with tail after it. A read error after the header has gone out can only cut the

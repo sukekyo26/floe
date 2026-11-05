@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{.Lang}}"{{with .Framed}} class="framed" data-slug="{{.}}"{{end}}{{if .Served}} data-served{{end}}>
+<html lang="{{.Lang}}"{{with .Framed}} class="framed" data-slug="{{.}}"{{end}}{{if .Served}} data-served{{end}}{{with .Version}} data-version="{{.}}"{{end}}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -136,29 +136,39 @@
   .dvers { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.75rem; }
   .dver { display: flex; align-items: center; gap: 0.35rem; min-width: 0; color: var(--muted); }
   .dver label { white-space: nowrap; }
-  .dver select { min-width: 0; max-width: 100%; height: 2rem; padding: 0 0.4rem; font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--box-line); border-radius: var(--corner-small); }
+  :is(.dver select, .ver-pick) { min-width: 0; max-width: 100%; height: 2rem; padding: 0 0.4rem; font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--box-line); border-radius: var(--corner-small); }
   /* LIMIT: a browser without base-select (Firefox and Safari for now) shows its own list, in the rule above, which works the same */
   @supports (appearance: base-select) {
-    .dver select, .dver select::picker(select) { appearance: base-select; }
-    .dver select {
+    :is(.dver select, .ver-pick), :is(.dver select, .ver-pick)::picker(select) { appearance: base-select; }
+    :is(.dver select, .ver-pick) {
       display: inline-flex; align-items: center; justify-content: space-between; gap: 0.4rem; padding: 0 0.5rem 0 0.75rem; font: 500 var(--text-small)/1.4 var(--body);
       border-color: var(--line); border-radius: 999px; box-shadow: var(--shadow-sm); cursor: pointer;
     }
-    .dver select:hover, .dver select:open { border-color: var(--faint); }
-    .dver select:open { outline: none; }
-    .dver select::picker-icon { color: var(--muted); }
-    .dver select::picker(select) {
+    :is(.dver select, .ver-pick):is(:hover, :open) { border-color: var(--faint); }
+    :is(.dver select, .ver-pick):open { outline: none; }
+    :is(.dver select, .ver-pick)::picker-icon { color: var(--muted); }
+    :is(.dver select, .ver-pick)::picker(select) {
       margin-block: 4px; max-height: 14rem; overflow-y: auto; padding: var(--menu-pad);
       color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-menu); box-shadow: var(--shadow);
     }
-    .dver option { min-height: 0; padding: 0.4rem 0.6rem; font: 400 var(--text-small)/1.4 var(--body); white-space: nowrap; border-radius: calc(var(--corner-menu) - var(--menu-pad)); cursor: pointer; }
-    .dver option:hover { background: var(--subtle); }
-    .dver option:checked { font-weight: 700; background: none; }
-    .dver option:checked:hover { background: var(--subtle); }
+    :is(.dver, .ver-pick) option { min-height: 0; padding: 0.4rem 0.6rem; font: 400 var(--text-small)/1.4 var(--body); white-space: nowrap; border-radius: calc(var(--corner-menu) - var(--menu-pad)); cursor: pointer; }
+    :is(.dver, .ver-pick) option:hover { background: var(--subtle); }
+    :is(.dver, .ver-pick) option:checked { font-weight: 700; background: none; }
+    :is(.dver, .ver-pick) option:checked:hover { background: var(--subtle); }
     /* The one the keys are on, as in .suggest */
-    .dver option:focus-visible { outline: none; background: var(--subtle); box-shadow: inset 2px 0 0 var(--ink); }
-    .dver option:disabled { color: var(--faint); background: none; cursor: default; }
+    :is(.dver, .ver-pick) option:focus-visible { outline: none; background: var(--subtle); box-shadow: inset 2px 0 0 var(--ink); }
+    :is(.dver, .ver-pick) option:disabled { color: var(--faint); background: none; cursor: default; }
+    /* Closed, the version's number alone */
+    select.ver-pick { gap: 0.25rem; height: 1.75rem; padding: 0 0.3rem 0 0.6rem; }
+    .ver-pick selectedcontent .ver-rest { display: none; }
   }
+  select.ver-pick { flex: none; }
+  /* A version other than the latest, as a line changed in part */
+  select.ver-pick.old { color: var(--chg); background: var(--chg-soft); border-color: var(--chg); font-weight: 700; }
+  .ver-pick.old::picker-icon { color: var(--chg); }
+  .dnote.ver-note { background: var(--chg-soft); }
+  .dnote.ver-note a { color: var(--chg); }
+  .ver-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.25rem 0.9rem; }
   .dcount { margin: 0; display: flex; flex-wrap: wrap; gap: 0 0.75rem; color: var(--muted); }
   .dcount b { font-weight: 700; }
   .dcount .c { color: var(--chg); } .dcount .a { color: var(--ins); } .dcount .r { color: var(--del); } .dcount .s { color: var(--fg); }
@@ -248,6 +258,7 @@
     .dflow { padding-inline: 0.75rem; }
     .drow > div, .dcols > div { padding-inline: 0.5rem; }
     .dnote { padding-inline: 0.75rem; }
+    .ver-actions { margin-left: 0; }
   }
 
   /* The frame: the iframe fills the space under the header bar. A page without a background of its own shows on the browser's default white */
@@ -786,6 +797,7 @@
       floe
     </a>
     <span class="frame-title" id="frame-title"></span>
+    <select class="ver-pick" id="frame-version" aria-label="{{.Msg "ui_version"}}" hidden><button><selectedcontent></selectedcontent></button></select>
     <span class="badge" id="frame-archived" hidden>{{.Msg "ui_archived_badge"}}</span>
     <!-- The list's search, shown with the list -->
     <label class="search" id="search" hidden>
@@ -884,6 +896,7 @@
   <section class="reader" id="reader">
     <div class="rhead" id="read-head" hidden>
       <a class="read-title" id="read-title"></a>
+      <select class="ver-pick" id="read-version" aria-label="{{.Msg "ui_version"}}" hidden><button><selectedcontent></selectedcontent></button></select>
       <span class="frame-actions" id="read-actions"></span>
     </div>
     <iframe class="read-frame" id="read-frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
@@ -1203,6 +1216,7 @@
           // Not waited for: it holds up the reads of other pages
           showNotice(to, value.read.n);
         }
+        if (res.ok && to === shownSlug()) readVersionsAgain();
       } catch (err) {
         // A read is told again the next time it is opened; a mark, only if pressed again. api tells if the server was not reached
         if (!value) fail(t('ui_unread_failed', err.message));
@@ -1274,10 +1288,22 @@
   // A stored page's two versions compared in the frame, in place of the page: its iframe is not loaded, so that opening it reads nothing
   const DIFF = Boolean(framed) && !FILE && new URLSearchParams(location.search).has('diff');
   const canDiff = (a) => !a.path && a.versionCount >= 2;
-  const frameSrc = FILE ? FILE.split('/').map(encodeURIComponent).join('/') : '?raw';
   // The frame URL of an entry, or of a folder's page (file), and the page alone at its own URL
-  const pageHref = (x) => (x.file ? `/a/${x.slug}/?file=${encodeURIComponent(x.file)}` : `/a/${x.slug}/`);
-  const rawHref = (x) => (x.file ? `/a/${x.slug}/${x.file.split('/').map(encodeURIComponent).join('/')}` : `/a/${x.slug}/?raw`);
+  // v is a version of a stored page other than the latest. These alone write a page's URLs
+  const pageHref = (x) => (x.file ? `/a/${x.slug}/?file=${encodeURIComponent(x.file)}` : `/a/${x.slug}/${x.v ? `?v=${x.v}` : ''}`);
+  const rawHref = (x) => (x.file ? `/a/${x.slug}/${x.file.split('/').map(encodeURIComponent).join('/')}` : `/a/${x.slug}/?raw${x.v ? `&v=${x.v}` : ''}`);
+  const diffHref = (slug, from, to) => `/a/${slug}/?diff${from ? `&from=${from}&to=${to}` : ''}`;
+  const downloadHref = (x) => `/api/artifacts/${x.slug}/download${x.v ? `?v=${x.v}` : ''}`;
+  // What the frame shows. The server read ?v= (data-version: a version, 0 for the latest, gone for none), which leaves the URL as soon as it says
+  // no other version; a diff loads no page
+  const askedVersion = DIFF ? undefined : document.documentElement.dataset.version;
+  const frameAt = { slug: framed, file: FILE, v: Number(askedVersion) || 0 };
+  if (askedVersion && !frameAt.v) {
+    const url = new URL(location.href);
+    url.searchParams.delete('v');
+    history.replaceState(history.state, '', url);
+  }
+  const frameSrc = rawHref(frameAt);
   const isFramed = (x) => x.slug === framed && (x.file ?? '') === FILE;
   // The row whose page is open beside the list: its slug and, of a folder's page, its file; null for none
   let picked = null;
@@ -1978,14 +2004,15 @@
     btn.onclick = () => toggleArchived(a);
     return t(a.archived ? 'ui_unarchive' : 'ui_archive');
   }
-  function drawDownload(link, a) {
-    link.href = `/api/artifacts/${a.slug}/download`;
-    link.download = `${a.slug}.html`;
+  // Saved under the name the server gives it (downloadName)
+  function drawDownload(link, a, x) {
+    link.href = downloadHref(x);
+    link.download = '';
     link.setAttribute('aria-label', t('ui_download_named', a.title));
   }
 
   // The menu of a, in a row and in the bar over its page
-  function moreMenu(a) {
+  function moreMenu(a, x = { slug: a.slug }) {
     const box = $('more').content.firstElementChild.cloneNode(true);
     box.querySelector('summary').setAttribute('aria-label', t('ui_more_named', a.title));
     box.querySelector('summary').title = t('ui_more_named', a.title);
@@ -2014,10 +2041,10 @@
       openEdit(a);
     });
     const open = box.querySelector('.open');
-    open.href = rawHref(a);
+    open.href = rawHref(x);
     open.setAttribute('aria-label', t('ui_open_raw_named', a.title));
     const dl = box.querySelector('.download');
-    drawDownload(dl, a);
+    drawDownload(dl, a, x);
     open.hidden = !hasPage(a);
     dl.hidden = !hasPage(a);
     const arc = box.querySelector('.archive');
@@ -2033,13 +2060,25 @@
     return box;
   }
 
+  // Where a row's link opens its page whole: of the row chosen, at the version shown beside the list
+  function wholeHref(link) {
+    const li = link.closest('li');
+    return isPicked({ slug: li.dataset.slug, file: li.dataset.file }) ? pageHref(picked) : link.href;
+  }
+
   // Pressed, a row opens its page beside the list, or whole where nothing is beside it or it is the row picked already; a modified
   // press is the link's, in a new tab. With a menu open the press closes it, and with rows selected it may have missed a box, which
   // moving on would lose them for
   function openRow(e, x) {
     if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
     const again = isPicked(x) && e.currentTarget.hasAttribute('href') && !document.querySelector('.more[open]') && selected.size === 0;
-    if (oneColumn.matches || again) {
+    if (again) {
+      e.preventDefault();
+      keepOrder();
+      location.href = wholeHref(e.currentTarget);
+      return;
+    }
+    if (oneColumn.matches) {
       keepOrder();
       return;
     }
@@ -2050,17 +2089,18 @@
   // Opens the page of x beside the list
   function pickRow(x) {
     if (isPicked(x)) return;
-    picked = { slug: x.slug, file: x.file ?? '' };
+    picked = { slug: x.slug, file: x.file ?? '', v: 0 };
+    versionGone = false;
     for (const li of $('list').children) li.classList.toggle('picked', li.dataset.slug === picked.slug && (li.dataset.file ?? '') === picked.file);
     drawReader();
   }
 
   // The bar over a page, the page's star and links: of a folder's page, its path and the page alone, as it holds no state of its own
-  function drawDiffOpen(box, a, file) {
+  function drawDiffOpen(box, a, x) {
     const open = box.querySelector('.diff-open');
     const closing = DIFF && box.id === 'frame-actions';
-    open.hidden = !closing && (Boolean(file) || !canDiff(a));
-    open.href = closing ? `/a/${a.slug}/` : `/a/${a.slug}/?diff`;
+    open.hidden = !closing && (Boolean(x.file) || !canDiff(a));
+    open.href = closing ? pageHref({ slug: a.slug }) : diffHref(a.slug, x.v, a.version);
     open.classList.toggle('closing', closing);
     open.title = t(closing ? 'ui_diff_close_title' : 'ui_diff_title');
     open.setAttribute('aria-label', open.title);
@@ -2068,23 +2108,25 @@
     // Beside the list, the list's order goes on with j and k; elsewhere the one kept goes on
     open.onclick = box.id === 'read-actions' ? keepOrder : null;
   }
-  function drawActions(box, a, file) {
+  // x is what of a the bar acts on: its slug, a folder's page and a version
+  function drawActions(box, a, x) {
+    const { file } = x;
     const star = box.querySelector('.star');
     star.hidden = Boolean(file);
     toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.onclick = () => toggleFavorite(a);
-    drawDiffOpen(box, a, file);
+    drawDiffOpen(box, a, x);
     const copy = box.querySelector('.copy');
     copy.hidden = !file;
     copy.onclick = () => copyPath(`${a.path}/${file}`, copy);
     const open = box.querySelector('.open');
-    open.href = rawHref({ slug: a.slug, file });
+    open.href = rawHref(x);
     open.hidden = file ? Boolean(a.missing) : !hasPage(a);
     open.setAttribute('aria-label', t('ui_open_raw_named', file ? baseName(file) : a.title));
     const dl = box.querySelector('.download');
     dl.hidden = Boolean(file) || !hasPage(a);
     dl.title = t('ui_download');
-    drawDownload(dl, a);
+    drawDownload(dl, a, x);
     // Its words tell what a press does, so that it is not told as pressed too
     const arc = box.querySelector('.archive');
     arc.hidden = Boolean(file);
@@ -2092,7 +2134,7 @@
     arc.title = drawArchive(arc, a);
     const slot = box.querySelector('.more-slot');
     const focused = slot.contains(document.activeElement);
-    slot.replaceChildren(...(file ? [] : [moreMenu(a)]));
+    slot.replaceChildren(...(file ? [] : [moreMenu(a, x)]));
     // A read draws the bar anew just as a key may have reached its menu
     // LIMIT: a menu open or a delete waiting in a page's bar goes as the list changes, as in a row. Keep them drawn as the search modal does if that comes to trouble someone
     if (focused) box.querySelector('summary')?.focus();
@@ -2101,10 +2143,13 @@
   // Loads href in the iframe beside the list, in place of its history entry: moved through by j and k, Back is the tab's, and
   // does not leave the rows on one page and the iframe on another. Nothing else alive there tells that it is read
   let readLoaded = 'about:blank';
+  let readSlug;
   function readInto(href) {
     if (href === readLoaded) return;
     readLoaded = href;
-    keptUnread = null;
+    // A page marked unread holds through its versions, until another is open. picked is the new one by now
+    if (picked?.slug !== readSlug) keptUnread = null;
+    readSlug = picked?.slug;
     clearNotice();
     opening = true;
     pageToast()?.remove();
@@ -2124,6 +2169,7 @@
     if (!a) picked = null;
     // Loaded only while it is there, as the frame's, so that a link's missing file is no 404 kept when the file is back
     readInto(a && !a.missing ? rawHref(picked) : 'about:blank');
+    drawVersion(picked, a);
     drawHead();
     $('read-head').classList.toggle('empty', !a);
     $('read-actions').hidden = !a;
@@ -2137,7 +2183,172 @@
     $('read-title').title = name;
     $('read-title').href = pageHref(picked);
     $('read-frame').title = name;
-    drawActions($('read-actions'), a, picked.file);
+    drawActions($('read-actions'), a, picked);
+  }
+
+  // What of versions a page has, as last read, and the turn of the last asked: an answer come after another is dropped
+  let versionKey = '';
+  let versionSlug;
+  let versionsRead = null;
+  let versionTurn = 0;
+  // That what was asked of the page shown is no version of it, the latest shown in its place
+  let versionGone = askedVersion === 'gone';
+  // What a move to another version of the frame's page carries over: the focus on the choice, and a page kept unread
+  const VERSION_MOVE = 'version.move';
+  let versionFocus = false;
+  let versionWaits = false;
+  function keepVersionMove(focus, kept) {
+    try {
+      sessionStorage.setItem(VERSION_MOVE, JSON.stringify({ slug: framed, focus, kept }));
+    } catch {
+      // Without storage, the focus falls to the page, and the version is told read
+    }
+  }
+  // The choice of the versions of a, shown as x asks, and the words over a page not the latest. The list is read as a changes: drawn anew every
+  // few seconds, the choice stays open and the focus on it.
+  // LIMIT: a browser without base-select (Firefox and Safari for now) shows the whole words closed, and goes to a version at each arrow key
+  // LIMIT: a list that could not be read is read again only as the list of pages changes; the page shown does not wait for it
+  // LIMIT: a version published while the choice is open closes it, its options changed
+  // LIMIT: the page of a version gone asks first, up to 3 seconds before this, and shows its 404 until then
+  async function drawVersion(x, a) {
+    const sel = $(framed ? 'frame-version' : 'read-version');
+    const turn = ++versionTurn;
+    // Nothing of another page stays while this one's is read, or if it cannot be
+    if (a?.slug !== versionSlug) {
+      versionSlug = a?.slug;
+      versionKey = '';
+      sel.hidden = true;
+      sel.classList.remove('old');
+      delete sel.dataset.numbers;
+      sel.replaceChildren(...sel.querySelectorAll(':scope > button'));
+      drawVersionNote(a, x, []);
+    }
+    if (!a) versionGone = false;
+    if (!a || !x || x.file || DIFF || !(canDiff(a) || x.v)) {
+      sel.hidden = true;
+      sel.classList.remove('old');
+      versionKey = '';
+      drawVersionNote(a, x, []);
+      return;
+    }
+    const key = [a.slug, a.version, a.versionCount, a.news].join();
+    if (key !== versionKey) {
+      try {
+        const res = await api(`/api/artifacts/${encodeURIComponent(a.slug)}/versions`);
+        if (!res.ok) return;
+        const listed = await res.json();
+        if (turn !== versionTurn) return;
+        versionsRead = listed;
+        versionKey = key;
+      } catch {
+        // api has told if the server was not reached
+        return;
+      }
+    }
+    showVersion(sel, x, a, versionsRead);
+  }
+  // A read moves the version last read, which nothing in the list tells of
+  function readVersionsAgain() {
+    versionKey = '';
+    const slug = shownSlug();
+    drawVersion(framed ? frameAt : picked, items.find((a) => a.slug === slug));
+  }
+  function showVersion(sel, x, a, { versions, read }) {
+    const last = versions.at(-1)?.n;
+    if (x.v && (x.v === last || !versions.some((v) => v.n === x.v))) {
+      leaveVersion(x, x.v !== last);
+      return;
+    }
+    const numbers = versions.map((v) => v.n).join();
+    const newest = [...versions].reverse();
+    if (sel.dataset.numbers !== numbers) {
+      sel.dataset.numbers = numbers;
+      sel.replaceChildren(...sel.querySelectorAll(':scope > button'), ...newest.map((v) => {
+        const o = tagged('option');
+        o.value = v.n;
+        o.append(tagged('span', '', `v${v.n}`), tagged('span', 'ver-rest', ` · ${verRest(v, versions, read)}`));
+        return o;
+      }));
+      sel.onchange = () => pickVersion(Number(sel.value));
+    } else {
+      for (const [i, o] of [...sel.options].entries()) o.querySelector('.ver-rest').textContent = ` · ${verRest(newest[i], versions, read)}`;
+    }
+    if (sel.value !== String(x.v || last)) sel.value = x.v || last;
+    sel.classList.toggle('old', x.v > 0);
+    sel.hidden = !canDiff(a);
+    if (versionFocus) {
+      versionFocus = false;
+      sel.focus();
+    }
+    drawVersionNote(a, x, versions);
+  }
+  // The version shown is gone or has come to be the latest, by what floe was told elsewhere: the latest takes its place, no one having asked to
+  // open it, so that it is told read no more than a page marked unread is
+  // LIMIT: a number come again after a removal, its page may ask first and tell it was read, the version it shows being the latest
+  function leaveVersion(x, gone) {
+    if (framed) {
+      // Not from under what is being typed: once the modal has closed
+      const modal = document.querySelector('dialog[open]');
+      if (modal) {
+        if (!versionWaits) modal.addEventListener('close', () => { versionWaits = false; readVersionsAgain(); }, { once: true });
+        versionWaits = true;
+        return;
+      }
+      keepVersionMove(false, true);
+      // The server answers as for a URL that asks for it, and all that follows from the URL goes with it
+      location.reload();
+      return;
+    }
+    keptUnread = x.slug;
+    x.v = 0;
+    versionGone = gone;
+    drawReader();
+  }
+  // The version chosen, of the page shown. Open, the choice has its option focused; focus says to go to it from elsewhere, the words about to go
+  function pickVersion(n, focus = false) {
+    const sel = $(framed ? 'frame-version' : 'read-version');
+    const a = items.find((x) => x.slug === shownSlug());
+    const v = n === a?.version ? 0 : n;
+    if (framed) {
+      keepVersionMove(focus || sel.contains(document.activeElement), keptUnread === framed);
+      location.href = pageHref({ slug: framed, v });
+      return;
+    }
+    picked.v = v;
+    versionGone = false;
+    drawReader();
+    if (focus) sel.focus();
+  }
+  // The words over a page not the latest: its own, as what tells a page newly at another version (page-note) goes under them and on its own turns
+  function drawVersionNote(a, x, versions) {
+    const shown = x?.v ? versions.find((v) => v.n === x.v) : null;
+    const key = versionGone ? 'gone' : shown ? `${x.slug} ${shown.n} ${versions.at(-1).n}` : '';
+    let note = document.querySelector('.dnote.ver-note');
+    if (note?.dataset.key === key) return;
+    note?.remove();
+    if (!key) return;
+    note = tagged('div', 'dnote ver-note');
+    note.dataset.key = key;
+    note.setAttribute('role', 'status');
+    if (versionGone) {
+      note.textContent = t('ui_version_gone');
+    } else {
+      const last = versions.at(-1).n;
+      const latest = tagged('a', '', t('ui_version_latest'));
+      latest.href = pageHref({ slug: x.slug });
+      latest.addEventListener('click', (e) => {
+        if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        pickVersion(last, true);
+      });
+      const go = tagged('a', '', t('ui_version_diff'));
+      go.href = diffHref(x.slug, x.v, last);
+      if (!framed) go.addEventListener('click', keepOrder);
+      const actions = tagged('span', 'ver-actions');
+      actions.append(latest, go);
+      note.append(tagged('span', '', t('ui_version_old', shown.n, diffMonth(shown.at), last)), actions);
+    }
+    (document.querySelector('.dnote.page-note') ?? $(framed ? 'frame' : 'read-frame')).before(note);
   }
 
   // What a row's first column shows of a
@@ -2188,7 +2399,7 @@
       renderBulk();
     });
     const link = li.querySelector('.title');
-    link.href = `/a/${a.slug}/`;
+    link.href = pageHref({ slug: a.slug });
     link.textContent = a.title;
     // All the row's words that it may cut or leave out: the title's hit area covers the row, so that no title of what lies under it shows
     link.title = [a.title, a.description, a.project, a.path, a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
@@ -2477,7 +2688,7 @@
 
   function openEdit(a) {
     editing = a;
-    $('edit-target').textContent = a.path ?? `/a/${a.slug}/`;
+    $('edit-target').textContent = a.path ?? pageHref({ slug: a.slug });
     for (const [key, id] of Object.entries(EDIT_FIELDS)) $(id).value = a[key] ?? '';
     $('edit-tags').value = (a.tags ?? []).join(', ');
     $('edit-name').placeholder = t(a.path ? 'ui_title_from_file' : 'ui_title_from_html');
@@ -2507,7 +2718,7 @@
       editing = { ...editing, slug: changes.slug };
       // This frame's URL is the old name's, which is gone now; the page chosen beside the list is loaded under the new one
       if (was === framed) {
-        location.replace(pageHref({ slug: changes.slug }));
+        location.replace(pageHref({ slug: changes.slug, v: frameAt.v }));
         return;
       }
       // Drawn with the list read below
@@ -2984,7 +3195,7 @@
       if (changed === 0 || turn !== noticeTurn) return;
       const note = tagged('div', 'dnote page-note', t('ui_diff_notice', read, changed));
       const go = tagged('a', '', t('ui_diff_notice_go'));
-      go.href = `/a/${slug}/?diff`;
+      go.href = diffHref(slug);
       if (!framed) go.addEventListener('click', keepOrder);
       note.append(go);
       $(framed ? 'frame' : 'read-frame').before(note);
@@ -3013,11 +3224,12 @@
     const two = (x) => String(x).padStart(2, '0');
     return `${two(d.getMonth() + 1)}/${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
   };
-  function verText(v) {
-    const last = diffVersions.at(-1);
-    const note = v.n === last.n ? t('ui_diff_latest') : v.n === diffRead ? t('ui_diff_read_version') : '';
-    return [`v${v.n}`, diffMonth(v.at), note].filter(Boolean).join(' · ');
+  // What is told of a version v but its number, among versions, read the one read before the last
+  function verRest(v, versions, read) {
+    const note = v.n === versions.at(-1).n ? t('ui_diff_latest') : v.n === read ? t('ui_diff_read_version') : '';
+    return [diffMonth(v.at), note].filter(Boolean).join(' · ');
   }
+  const verText = (v) => `v${v.n} · ${verRest(v, diffVersions, diffRead)}`;
   const hasVersion = (n) => diffVersions.some((v) => v.n === n);
   const fromFor = (to) => {
     const older = diffVersions.filter((v) => v.n < to);
@@ -3035,14 +3247,14 @@
     const from = asked('from') ?? fromFor(to);
     if (hasVersion(from) && hasVersion(to) && from < to) return { from, to };
     $('diff-url-note').hidden = false;
-    history.replaceState(history.state, '', `${location.pathname}?diff`);
+    history.replaceState(history.state, '', diffHref(framed));
     return { from: fromFor(last), to: last };
   }
   async function openDiff(a) {
     if (!canDiff(a)) {
       $('diff-head').hidden = $('diff-main').hidden = true;
       $('diff-none').hidden = false;
-      $('diff-page').href = `/a/${a.slug}/`;
+      $('diff-page').href = pageHref({ slug: a.slug });
       return;
     }
     try {
@@ -3067,7 +3279,7 @@
     await readDiff();
   }
   function writeDiffPair() {
-    history.replaceState(history.state, '', `${location.pathname}?diff&from=${diffPair.from}&to=${diffPair.to}`);
+    history.replaceState(history.state, '', diffHref(framed, diffPair.from, diffPair.to));
   }
   // The versions newest first, one that would not be older than the other not to be chosen
   function drawDiffPicks() {
@@ -3082,7 +3294,7 @@
       }));
       sel.value = diffPair[name];
       const open = $(`diff-${name}-open`);
-      open.href = `?raw&v=${diffPair[name]}`;
+      open.href = rawHref({ slug: framed, v: diffPair[name] });
       open.title = t('ui_diff_open_version', diffPair[name]);
       open.setAttribute('aria-label', open.title);
     }
@@ -3395,6 +3607,7 @@
     $('diff').hidden = !found || !DIFF;
     $('frame').title = name ?? framed;
     $('frame-title').textContent = found ? name : '';
+    $('frame-title').title = found ? name : '';
     if (found && FILE) {
       const crumb = document.createElement('span');
       crumb.className = 'crumb';
@@ -3414,7 +3627,8 @@
       for (const id of ['side', 'side-grip', 'side-show']) $(id).hidden = true;
       document.documentElement.style.setProperty('--side', '0px');
     }
-    if (found) drawActions($('frame-actions'), a, FILE);
+    if (found) drawActions($('frame-actions'), a, frameAt);
+    drawVersion(found ? frameAt : null, a);
     const list = `/${savedList()}`;
     for (const id of ['back', 'notfound-back']) $(id).href = list;
     document.querySelector('.brand').href = list;
@@ -3551,7 +3765,7 @@
     const same = box.dataset.slug === a.slug;
     if (same && box.querySelector('.more[open], .armed')) return;
     box.dataset.slug = a.slug;
-    drawActions(box, a, '');
+    drawActions(box, a, { slug: a.slug, file: '' });
     // On another row the menu is another's; and a folder has no page to open, whose button would drop the focus out of the modal
     if ((inMenu && !same) || was.hidden) $('find-q').focus();
   }
@@ -3700,8 +3914,8 @@
     });
   }
   // Not while typing or with a dialog open
-  // The two versions' choice takes letters to find an item by, each starting with v: these go on as anywhere, with the focus left there
-  const diffPickKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && e.target.matches?.('#diff select') && ['n', 'p', 'd', 'j', 'k'].includes(e.key);
+  // The versions' choices take letters to find an item by, each starting with v: these go on as anywhere, with the focus left there
+  const diffPickKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && e.target.matches?.('#diff select, .ver-pick') && ['n', 'p', 'd', 'j', 'k'].includes(e.key);
   const plainKey = (e) => !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable], dialog');
   // The search's words on a missing page's bar, and the bar's new pages, go to the list
   if (framed) {
@@ -3709,6 +3923,16 @@
     $('manage').remove();
     $('frame-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
     $('back').hidden = false;
+    try {
+      const move = JSON.parse(sessionStorage.getItem(VERSION_MOVE));
+      sessionStorage.removeItem(VERSION_MOVE);
+      if (move?.slug === framed) {
+        versionFocus = move.focus === true;
+        if (move.kept === true) keptUnread = framed;
+      }
+    } catch {
+      // Storage is unavailable, or holds something else
+    }
     // The page alone in full, as the browser reads the link to it: a link on paper cannot be followed
     $('print-raw').href = $('print-raw').textContent = new URL(frameSrc, location.href).href;
     $('keys-list').hidden = $('keys-note-list').hidden = true;
@@ -3851,7 +4075,7 @@
       if (!plainKey(e) || e.key !== 'Enter' || !e.target.matches('#list a.title[href]:not([aria-expanded])')) return;
       e.preventDefault();
       keepOrder();
-      location.href = e.target.href;
+      location.href = wholeHref(e.target);
     });
   }
   // Ctrl+K works from a field too, where the browser's own goes; the rest as plainKey says

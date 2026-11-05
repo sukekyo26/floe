@@ -1130,7 +1130,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		"download open archive star more | mark-unread edit delete",
 		"Restore / Restore Kept to the list /  / true / false",
 		"Archive / Archive Kept /  / false / true", "true",
-		"/api/artifacts/two/download two.html",
+		"/api/artifacts/two/download ",
 		"copy open | ",
 		"Restore / Restore One to the list /  / true / false",
 		"1 / Archived “One” / true",
