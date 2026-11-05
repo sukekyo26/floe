@@ -226,7 +226,7 @@ edge [60,10]→[60,120] M60,10 V120
 - A file with a key `template` at its top is a data file: its diagrams, in `details` and `tabs` too, are read after the template's schema, in the order they are written. Any other file is a spec. A mistake off the diagrams that the schema refuses stops the file, as nothing can be said of what is under it.
 - Each diagram prints a line of where it is written (`file:line:column:`, or `file:` for a spec), its title and its canvas. Then, a line each: a part's area, a frame's heading, an edge's path and the ends it joins, a label's area and the circles it is in.
 - Where is printed on stdout and mistakes on stderr, and the exit code is 1 when there is one. A diagram the checks refuse is printed too, as a guide: fixing it may move its parts and edges, and a `graph` with a mistake has only what it got as far as, or nothing. A diagram that gets no layout (a mistake of its YAML or schema, an `example` there is none of) prints no line.
-- A data file's page is not drawn, and its template's `checks.yaml` and `computed.yaml` do not run, so this may pass a page `floe check` refuses. A diagram that a part of one's own draws with `{{diagram}}` is not among them. A data file lacking `template` is read as a spec, and told so in the words for a spec; a spec with one is read as a page.
+- The checks of a data file's template and parts do not run, and the rest of its page is not checked (its items of format `html`, its images, what its parts' functions refuse): `floe check` checks the whole page. A diagram that a part of one's own draws with `{{diagram}}` is not among them. A data file lacking `template` is read as a spec, and told so in the words for a spec; a spec with one is read as a page.
 
 ## `floe diagram example [kind]`
 

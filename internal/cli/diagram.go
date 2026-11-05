@@ -2,7 +2,6 @@ package cli
 
 import (
 	"errors"
-	"fmt"
 	"slices"
 	"strings"
 	"sync"
@@ -77,9 +76,10 @@ func (a *app) diagramInspectCmd() *cobra.Command {
 		Short: "Check diagrams, of specs or of data files, and print where each part went, without drawing them",
 		Long: `Check each diagram as floe diagram render does, and print where each part went. A file with a
 key template at its top is a data file: its diagrams are read after the template's schema, in the
-order they are written. Its checks and computed values do not run and its page is not drawn, so
-this may pass a page floe check refuses; nor is a diagram a part of one's own draws with
-{{diagram}} among them. Any other file is a spec.
+order they are written. The checks of its template and parts do not run, and the rest of its page
+is not checked (its items of format html, its images, what its parts' functions refuse): floe check
+checks the whole page. A diagram a part of one's own draws with {{diagram}} is not among them. Any
+other file is a spec.
 
 Each diagram prints a line file:line:column: diagram "title" WIDTHxHEIGHT (file: for a spec), then,
 a line each: a part's area, a frame's heading, an edge's path and the ends it joins, a label's area
@@ -227,13 +227,10 @@ func inspectFile(d *diagram.Drawer, own func() (*kit.Kit, error), p arg, o diagr
 // placedAt is what Inspect told, got, its first line, the diagram's, after where in file it is written, as a mistake's
 // place is written: "" for nothing told.
 func placedAt(file string, pos yamlpos.Pos, got string) string {
-	switch {
-	case got == "":
+	if got == "" {
 		return ""
-	case pos.Line == 0:
-		return file + ": " + got
 	}
-	return fmt.Sprintf("%s:%d:%d: %s", file, pos.Line, pos.Column, got)
+	return usererr.Where(file, pos.Line, pos.Column) + ": " + got
 }
 
 func (a *app) diagramExampleCmd() *cobra.Command {

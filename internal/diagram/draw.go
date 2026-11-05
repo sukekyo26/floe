@@ -209,9 +209,7 @@ func (d *Drawer) Inspect(spec any, opts Options) (string, error) {
 	if l == nil {
 		return "", err
 	}
-	//nolint:exhaustruct_v5 // a name alone
-	title := rect{what: ""}.named("diagram", "", l.s.Title, "")
-	return title.what + " " + num(l.w) + "x" + num(l.h) + "\n" + l.inspect(), err
+	return "diagram " + words(l.s.Title, "") + " " + num(l.w) + "x" + num(l.h) + "\n" + l.inspect(), err
 }
 
 func (l *layout) inspect() string {
@@ -247,6 +245,9 @@ func (l *layout) inspect() string {
 			line += " in " + in
 		}
 		lines = append(lines, line)
+	}
+	if len(lines) == 0 {
+		return "" // nothing listed: a line part, a raw part, no part
 	}
 	return strings.Join(lines, "\n") + "\n"
 }

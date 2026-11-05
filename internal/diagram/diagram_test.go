@@ -1135,7 +1135,7 @@ func TestInspect(t *testing.T) {
 	if want := "diagram \"あいうえお\" 78x59\nbox \"a\" 10,10 48x29\n"; mistakes != "" || got != want {
 		t.Errorf("inspect = %q %s, want %q", got, mistakes, want)
 	}
-	if got, mistakes = draw(t, head, lined); mistakes == "" && !strings.HasPrefix(got, "diagram \"T\" 400x200\n") {
+	if got, mistakes = draw(t, head+"  - box: { name: a, x: 10, y: 10, rows: [A] }\n", lined); mistakes != "" || !strings.HasPrefix(got, "diagram \"T\" 400x200\n") {
 		t.Errorf("inspect = %q %s, want the canvas written", got, mistakes)
 	}
 	// What the checks refuse is told with the mistakes, and laid out as a spec with a mistake is (newLayout): a guide.

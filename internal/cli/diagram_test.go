@@ -97,7 +97,7 @@ func TestInspectData(t *testing.T) {
 	diagramOf := func(title string) string { return strings.Replace(box, "%s", title, 1) }
 	const report = "template: report\nlang: en\ntitle: P\nsections:\n  - heading: H\n    parts:\n"
 	dir := write(t, map[string]string{
-		"page.yaml": report + "      - diagram: " + diagramOf("First") + "\n      - tabs:\n          - title: x\n            parts:\n" +
+		"page.yaml": report + "      - diagram: " + diagramOf("First") + "\n      - details:\n          title: d\n          parts:\n            - diagram: " + diagramOf("Folded") + "\n      - tabs:\n          - title: x\n            parts:\n" +
 			"              - diagram: { example: flow }\n          - title: y\n            parts:\n              - text: t\n",
 		"keys.yaml": "template: mine\nlang: en\ntimeline: " + diagramOf("Written first") + "\nmore: " + diagramOf("Written last") + "\n",
 		"keysbad.yaml": "template: mine\nlang: en\ntimeline:\n  title: T\n  parts:\n    - box: { name: a, x: 10, y: 10, rows: [A] }\n    - box: { name: b, x: 12, y: 12, rows: [B] }\n" +
@@ -105,7 +105,10 @@ func TestInspectData(t *testing.T) {
 		"over.yaml": "title: O\nparts:\n  - box: { name: a, x: 10, y: 10, rows: [A] }\n  - box: { name: b, x: 12, y: 12, rows: [B] }\n",
 		"overpage.yaml": report + "      - diagram:\n          title: O\n          parts:\n            - box: { name: a, x: 10, y: 10, rows: [A] }\n" +
 			"            - box: { name: b, x: 12, y: 12, rows: [B] }\n",
-		"whole.yaml":    report + "      - diagram: { title: W }\n",
+		"whole.yaml":    report + "      - diagram: { title: W, parts: [ { icon: { icon: aws/aws-lambda, x: 10, y: 10 } } ] }\n",
+		"icons.yaml":    report + "      - diagram: { example: aws }\n",
+		"line.yaml":     "title: L\nwidth: 100\nheight: 100\nparts:\n  - line: { x1: 10, y1: 10, x2: 90, y2: 10 }\n",
+		"empty.yaml":    "title: E\nwidth: 100\nheight: 100\nparts: []\n",
 		"shape.yaml":    "title: S\nparts:\n  - boxx: {}\n",
 		"example.yaml":  report + "      - diagram: " + diagramOf("Told") + "\n      - diagram: { example: nothing }\n",
 		"good.yaml":     "title: G\nparts:\n  - box: { name: k, x: 10, y: 10, rows: [K] }\n",
@@ -128,7 +131,6 @@ func TestInspectData(t *testing.T) {
 		"broken/parts/bad/schema.json":    "{",
 	})
 	env := map[string]string{"HOME": "/h", "FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates")}
-	flow := "page.yaml:11:28: diagram \"What floe publish checks\" 1092x811\n"
 	const noExample = "no example nothing; use architecture, aws-graph, aws, class, er, flow, gantt, git, org, quadrant, sequence, state, swimlane, timeline, venn"
 	for _, c := range []struct {
 		name string
@@ -208,13 +210,27 @@ func TestInspectData(t *testing.T) {
 			t.Errorf("%s = %d\n%s%s\nwant %d\n%s%s", c.name, code, out, errs, c.code, c.out, c.errs)
 		}
 	}
-	// Details and tabs, and an example, its first line alone here.
+	// In details and tabs, and an example: the lines of the diagrams, in the order written.
 	code, out, errs := runIn(dir, env, "diagram", "inspect", "page.yaml")
-	if want := "page.yaml:7:20: diagram \"First\" 78x59\nbox \"a\" 10,10 48x29\n" + flow; code != 0 || errs != "" || !strings.HasPrefix(out, want) {
-		t.Errorf("inspect of a page = %d\n%s%s\nwant it to begin\n%s", code, out, errs, want)
+	var heads []string
+	for line := range strings.Lines(out) {
+		if strings.Contains(line, ": diagram ") {
+			heads = append(heads, line)
+		}
+	}
+	want := "page.yaml:7:20: diagram \"First\" 78x59\n" + "page.yaml:11:26: diagram \"Folded\" 78x59\n" +
+		"page.yaml:15:28: diagram \"What floe publish checks\" 1092x811\n"
+	if got := strings.Join(heads, ""); code != 0 || errs != "" || got != want {
+		t.Errorf("inspect of a page = %d, %q, its diagrams\n%swant\n%s", code, errs, got, want)
+	}
+	// A diagram of nothing listed is its line alone, no empty line after it.
+	code, out, errs = runIn(dir, env, "diagram", "inspect", "line.yaml", "empty.yaml", "good.yaml")
+	want = "line.yaml: diagram \"L\" 100x100\nempty.yaml: diagram \"E\" 100x100\ngood.yaml: diagram \"G\" 78x59\nbox \"k\" 10,10 48x29\n"
+	if code != 0 || errs != "" || out != want {
+		t.Errorf("inspect of diagrams of nothing listed = %d, %q, %q, want %q", code, out, errs, want)
 	}
 	// Where a refusal is told is where floe check tells it.
-	for _, file := range []string{"overpage.yaml", "whole.yaml"} {
+	for _, file := range []string{"overpage.yaml", "whole.yaml", "example.yaml", "icons.yaml"} {
 		_, _, inspected := runIn(dir, env, "diagram", "inspect", file)
 		_, _, checked := runIn(dir, env, "check", file)
 		if inspected == "" || inspected != checked {
