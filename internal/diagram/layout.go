@@ -90,24 +90,25 @@ func (t target) whole() rect {
 // layout is a spec laid out once, for every language its text is written in: the areas its checks compare and
 // the elements it draws, so that the checks and the drawing read the same geometry.
 type layout struct {
-	s        *spec
-	opts     Options
-	id       string
-	problems usererr.List
-	failure  error
-	names    map[string]target
-	circles  map[string]circle
-	boxes    []rect // edges may not run through these
-	marks    []rect // may not overlap, but edges may reach their centre (dots)
-	frames   []rect
-	areas    []rect // may overlap (Venn circles)
-	labels   []rect
-	heads    []rect // frame headings, which edges may not cross
-	strokes  []rect // the spans of edges and lines, which must stay on the canvas
-	paths    []path
-	shares   map[handEnd]shared // where the ends shareEnds moves stand
-	rules    []rule             // the lines of axes and line parts, which loose runs keep off (keepOff)
-	loose    []loosePath        // the edges with a run floe placed
+	s            *spec
+	opts         Options
+	id           string
+	problems     usererr.List
+	failure      error
+	names        map[string]target
+	circles      map[string]circle
+	straightened int    // the edges shareStraight stood on one line
+	boxes        []rect // edges may not run through these
+	marks        []rect // may not overlap, but edges may reach their centre (dots)
+	frames       []rect
+	areas        []rect // may overlap (Venn circles)
+	labels       []rect
+	heads        []rect // frame headings, which edges may not cross
+	strokes      []rect // the spans of edges and lines, which must stay on the canvas
+	paths        []path
+	shares       map[handEnd]shared // where the ends shareEnds moves stand
+	rules        []rule             // the lines of axes and line parts, which loose runs keep off (keepOff)
+	loose        []loosePath        // the edges with a run floe placed
 	// The elements of the layers, drawn bottom to top; grid lines below every other edge, last first.
 	areaEls, gridEls, edgeEls, boxEls, labelEls []elem
 	markers                                     []string // the marker kinds the edges use, in the order of first use
@@ -131,7 +132,25 @@ func pointer(i int) string {
 }
 
 // newLayout lays out s: names first, as edges and labels name parts written after them.
+// It stands bent edges straight where nothing is in their way (straighten, offPoint), and if that leaves a mistake in
+// the diagram, gives up all of it for this diagram: what is told is of the layout that does not move them, and what
+// lays out that way lays out.
+// LIMIT: a label with no place of its own landing on something leaves all the diagram's edges bent, of about 5% of
+// random diagrams with labels. Giving up one edge can leave it on another that kept off its straight line. Look again
+// if a diagram comes to show it; a place written for the label lets the edges move.
 func newLayout(s *spec, opts Options) *layout {
+	offs := 0
+	l := layoutWith(s, opts, placing{(*layout).shareStraight, func(d *drawing) {
+		d.settleOff()
+		offs += d.offs
+	}})
+	if l.straightened+offs == 0 {
+		return l
+	}
+	l.check()
+	if l.failure == nil && len(l.problems) == 0 {
+		return l
+	}
 	return layoutWith(s, opts, placing{(*layout).shareEnds, (*drawing).settleEnds})
 }
 
@@ -164,17 +183,21 @@ func layoutWith(s *spec, opts Options, how placing) *layout {
 		}
 	}
 	how.share(l, items)
+	l.addAll(items)
+	return l
+}
+
+func (l *layout) addAll(items []item) {
 	for _, it := range items {
 		l.add(it.at, it.p)
 	}
 	l.keepOff()
-	if s.Width == 0 {
+	if l.s.Width == 0 {
 		l.w = l.reach(func(r rect) float64 { return r.x + r.w }) + canvasPad
 	}
-	if s.Height == 0 {
+	if l.s.Height == 0 {
 		l.h = l.reach(func(r rect) float64 { return r.y + r.h }) + canvasPad
 	}
-	return l
 }
 
 // blankLayout is s laid out with nothing added yet.
@@ -182,7 +205,7 @@ func blankLayout(s *spec, opts Options) *layout {
 	return &layout{
 		s: s, opts: opts, id: "", problems: nil, failure: nil, names: nil, circles: nil,
 		boxes: nil, marks: nil, frames: nil, areas: nil, labels: nil, heads: nil, strokes: nil, paths: nil,
-		shares: nil, rules: nil, loose: nil,
+		shares: nil, rules: nil, loose: nil, straightened: 0,
 		areaEls: nil, gridEls: nil, edgeEls: nil, boxEls: nil, labelEls: nil, markers: nil, iconDefs: nil,
 		iconIDs: map[string]string{}, stacks: nil, w: written(s.Width), h: written(s.Height), strays: nil,
 	}

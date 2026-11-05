@@ -47,6 +47,7 @@ type sharing struct {
 	before map[*edge][][2]float64
 	sides  map[*edge][2]string
 	own    map[*edge]int
+	on     map[partSide][]*sideEnd
 }
 
 // shareEnds places the ends of the edges written by hand on their sides: the n ends on a side at the points that part
@@ -61,7 +62,14 @@ type sharing struct {
 // LIMIT: each edge moved is compared with all edges, so that this is quadratic in the edges, again for each round that
 // sends some back; a diagram of thousands of edges written by hand and sharing sides slows here. Compare by area if so.
 func (l *layout) shareEnds(items []item) {
-	s := sharing{l: l, rest: nil, before: map[*edge][][2]float64{}, sides: map[*edge][2]string{}, own: map[*edge]int{}}
+	l.placeEnds(items)
+}
+
+// placeEnds is shareEnds, and returns what straighten reads: the sharing, and the edges left moving.
+func (l *layout) placeEnds(items []item) (*sharing, []*edge) {
+	s := &sharing{
+		l: l, rest: nil, before: map[*edge][][2]float64{}, sides: map[*edge][2]string{}, own: map[*edge]int{}, on: nil,
+	}
 	var moving []*edge
 	told := len(l.problems)
 	for _, it := range items {
@@ -75,7 +83,7 @@ func (l *layout) shareEnds(items []item) {
 	}
 	l.problems = l.problems[:told] // told when the edges are added
 	if len(moving) == 0 {
-		return
+		return s, nil
 	}
 	s.layRest(items)
 	for len(moving) > 0 {
@@ -92,13 +100,104 @@ func (l *layout) shareEnds(items []item) {
 			return back[e]
 		})
 	}
+	return s, moving
+}
+
+// shareStraight is shareEnds, then straighten.
+func (l *layout) shareStraight(items []item) {
+	if s, moving := l.placeEnds(items); len(moving) > 0 {
+		s.straighten(moving)
+	}
+}
+
+// straighten stands each edge bent between facing sides that share a height on one line, in the order written, moving
+// its two ends alone, when the line touches nothing. newLayout checks what comes of it: an edge's label with no place
+// of its own stands by where the edge runs, and only the whole diagram tells what that lands on.
+// LIMIT: the ends left on a side stay at their parts, so the side may look uneven. Part it again if that shows.
+// LIMIT: the order written decides which of two lines in each other's way stands straight.
+// LIMIT: keepOff moves the loose runs of other edges afterwards, so that one may come within keepApart of the line.
+func (s *sharing) straighten(moving []*edge) {
+	bands := s.rest.beside(nil)
+	now := make(map[*edge][]seg, len(moving))
+	for _, e := range moving {
+		if pts, _, _, _, ok := s.l.edgePoints(e, ""); ok {
+			now[e] = segsOf(pts)
+		}
+	}
+	for _, e := range moving {
+		if s.straightenEdge(e, moving, bands, now) {
+			s.l.straightened++
+		}
+	}
+}
+
+// straightenEdge stands e on one line and reports whether it did: at the point of its side with more ends, of the
+// other, or the middle of the height the sides share, whichever of them is in that height and first touches nothing.
+func (s *sharing) straightenEdge(e *edge, moving []*edge, bands []rule, now map[*edge][]seg) bool {
+	l, sides := s.l, s.sides[e]
+	if len(now[e]) != 3 || !opposite(sides[0], sides[1]) ||
+		!parted(l.names[e.From.Name].kind) || !parted(l.names[e.To.Name].kind) {
+		return false
+	}
+	k0, k1 := partSide{e.From.Name, sides[0]}, partSide{e.To.Name, sides[1]}
+	lo0, size0 := s.span(k0)
+	lo1, size1 := s.span(k1)
+	lo, hi := max(lo0, lo1)+inEnd, min(lo0+size0, lo1+size1)-inEnd
+	end0, end1 := handEnd{e, 0}, handEnd{e, 1}
+	was0, was1 := l.shares[end0], l.shares[end1]
+	points := linePoints(was0.at, was1.at, len(s.on[k0]), len(s.on[k1]))
+	for _, at := range [3]float64{points[0], points[1], (lo + hi) / 2} {
+		if at < lo || at > hi {
+			continue
+		}
+		l.shares[end0], l.shares[end1] = shared{sides[0], at}, shared{sides[1], at}
+		if pts, _, _, _, ok := l.edgePoints(e, ""); ok && len(pts) == 2 && s.clear(e, segsOf(pts)[0], moving, bands, now) {
+			now[e] = segsOf(pts)
+			return true
+		}
+	}
+	l.shares[end0], l.shares[end1] = was0, was1
+	return false
+}
+
+// clear is whether line, the straight run of e, runs through nothing, keeps off what keepOff keeps runs off, and
+// neither crosses, touches nor stands within keepApart of another edge.
+// LIMIT: runsTouch and runsClose measure runs across and down, so the end of a slanting edge may stand on the line.
+// Seen in the drawing, and rare.
+func (s *sharing) clear(e *edge, line seg, moving []*edge, bands []rule, now map[*edge][]seg) bool {
+	if inBand(bands, line) || len(s.rest.throughs(s.line(e, []seg{line}))) > 0 {
+		return false
+	}
+	if i, ok := s.own[e]; ok && crossedBy(line, s.rest.labels[i]) {
+		return false
+	}
+	apart := func(q []seg) bool {
+		return !slices.ContainsFunc(q, func(o seg) bool {
+			_, _, crosses := crossing(line, o)
+			return crosses || runsTouch(line, o) || runsClose(line, o) || endsMeet(line, o)
+		})
+	}
+	return !slices.ContainsFunc(s.rest.paths, func(p path) bool { return !apart(p.segs) }) &&
+		!slices.ContainsFunc(moving, func(m *edge) bool { return m != e && !apart(now[m]) })
+}
+
+// endsMeet is whether a and b share an end.
+func endsMeet(a, b seg) bool {
+	for _, p := range [2][2]float64{{a[0], a[1]}, {a[2], a[3]}} {
+		for _, q := range [2][2]float64{{b[0], b[1]}, {b[2], b[3]}} {
+			if near(p[0], q[0]) && near(p[1], q[1]) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // layRest lays out on its own all but the edges moving, whose labels at a place of their own are there too.
 func (s *sharing) layRest(items []item) {
 	l := s.l
 	rest := blankLayout(l.s, l.opts)
-	rest.names, rest.circles, rest.stacks = l.names, l.circles, maps.Clone(l.stacks)
+	rest.names, rest.circles, rest.stacks, rest.rules = l.names, l.circles, maps.Clone(l.stacks), l.rules
 	for _, it := range items {
 		e := it.p.Edge
 		_, moves := s.before[e]
@@ -175,6 +274,7 @@ func (s *sharing) place(moving []*edge) {
 	for _, k := range sides {
 		slices.SortStableFunc(on[k], leavingOrder)
 	}
+	s.on = on
 	for _, e := range moving {
 		s.hold(e, ends[handEnd{e, 0}], ends[handEnd{e, 1}], on)
 	}

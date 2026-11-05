@@ -14,9 +14,10 @@ import (
 // from the side. Laid out down the icon stands in its middle, a label's room above it too, so that the icons of a rank
 // stand level with one another, labelled or not, and with the boxes.
 const (
-	iconRing  = 12.0
-	iconMove  = 12.0
-	iconArrow = 8.0
+	iconRing      = 12.0
+	iconMove      = 12.0
+	iconArrow     = 8.0
+	iconSpareMost = 12.0
 )
 
 // iconCell is the size of the rectangle of icon i, right as laid out right.
@@ -99,6 +100,11 @@ func (d *drawing) settleEnds() {
 	d.noteSides()
 	for _, k := range edges {
 		d.straighten(k)
+	}
+	if d.off {
+		for _, k := range edges {
+			d.offPoint(k)
+		}
 	}
 	d.spreadBoxes()
 	d.noteSides() // the icons have moved, and the runs left to edges written by hand with them
@@ -281,7 +287,7 @@ func inLine(pts [][2]float64) (n, axis int) {
 // between two boxes, which move for nothing, runs on the point of the side with more ends, when both take it and,
 // with more than one end on each side, when the two points are one; else it stays. Edges are not bent for a box.
 // LIMIT: once, and by iconReach at most, so a straight run through icons in a row may find the next short of it, and
-// then bends. Solve a row of icons together if that shows.
+// then stands off its point (offPoint) or bends. Solve a row of icons together if that shows.
 func (d *drawing) straighten(k int) {
 	pts := d.routes[k]
 	n, axis := inLine(pts)
@@ -313,10 +319,7 @@ func (d *drawing) straighten(k int) {
 	if lo > hi {
 		return
 	}
-	all := make([]int, len(pts))
-	for i := range all {
-		all[i] = i
-	}
+	all := allOf(len(pts))
 	if !d.ontoParts(k, all, axis, lo, hi) && !d.moveRun(k, all, axis, max(lo, min(pts[0][axis], hi))) {
 		return
 	}
@@ -454,6 +457,7 @@ func (d *drawing) bend(k int) {
 
 // keepApart is how near a moved end at a box lets its runs stand beside another edge's: half the column the routes
 // keep.
+// straighten keeps edges written by hand as far apart.
 // LIMIT: not for ends at icons, whose 8 ends on a side stand 5.33 apart, so edges at icons may run closer. Look again
 // if a diagram comes to show it.
 const keepApart = column / 2
@@ -726,4 +730,79 @@ func (d *drawing) unseen(axis int) float64 {
 		}
 	}
 	return first - lo
+}
+
+// settleOff is settleEnds with offPoint.
+func (d *drawing) settleOff() {
+	d.off = true
+	d.settleEnds()
+}
+
+// iconSpare is how far from its point an end alone on a side of icon i may stand to run straight: as far as an edge
+// stands in from the ends of a side, and 12 at most.
+func iconSpare(i *icon) float64 {
+	return max(0, min(iconSpareMost, iconSize(i)/2-inEnd))
+}
+
+// offPoint stands straight edge k on one line where its icons, moved as far as they may, do not bring their points onto
+// it: an end alone on its side stands up to iconSpare off its point.
+// LIMIT: an end among others on a side stays at its part, as moving it changes their order, so that edge still bends.
+func (d *drawing) offPoint(k int) {
+	pts := d.routes[k]
+	n, axis := inLine(pts)
+	if n != len(pts) || d.loops[k] {
+		return
+	}
+	across, _ := d.axes()
+	lo, hi := math.Inf(-1), math.Inf(1)
+	at := pts[0][axis]
+	var ends []endAt
+	for j := range 2 {
+		i, e := d.ends[k][j], endAt{k, j}
+		switch {
+		case i < 0:
+		case d.icons[i] == nil:
+			b := d.boxes[i]
+			lo, hi = max(lo, b.lo(axis)+inEnd), min(hi, b.lo(axis)+b.size(axis)-inEnd)
+		case d.places[e].on != 1:
+			return
+		default:
+			q, reach := d.endPoint(e)[axis], 0.0
+			if axis == across && !d.settled[i] {
+				reach = d.iconReach(i)
+			} else {
+				at = q
+			}
+			spare := iconSpare(d.icons[i])
+			lo, hi = max(lo, q-reach-spare), min(hi, q+reach+spare)
+			ends = append(ends, e)
+		}
+	}
+	at = max(lo, min(at, hi))
+	short := slices.ContainsFunc(ends, func(e endAt) bool { return !near(d.endPoint(e)[axis], at) })
+	if !short || lo > hi || !d.moveRun(k, allOf(len(pts)), axis, at) {
+		return
+	}
+	for _, e := range ends {
+		i := d.ends[k][e.end]
+		if axis == across && !d.settled[i] {
+			r := d.iconReach(i)
+			d.moved[i] += max(-r, min(at-d.endPoint(e)[axis], r))
+			d.settled[i] = true
+		}
+		t, place := d.iconAt(i), d.places[e]
+		place.share = (at - t.lo(axis)) / t.size(axis)
+		d.places[e] = place
+	}
+	d.noteEdge(k)
+	d.offs++
+}
+
+// allOf is the indexes of n points.
+func allOf(n int) []int {
+	all := make([]int, n)
+	for i := range all {
+		all[i] = i
+	}
+	return all
 }

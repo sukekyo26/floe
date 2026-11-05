@@ -412,7 +412,7 @@ func (o *graphOut) draw(gr *group, right bool, origin [2]float64) (*drawing, err
 		ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
 		frames: map[int]rect{}, heads: map[int]rect{}, icons: map[int]*icon{}, places: map[endAt]endPlace{},
 		slid:  map[endAt]bool{},
-		moved: map[int]float64{}, settled: map[int]bool{},
+		moved: map[int]float64{}, settled: map[int]bool{}, off: false, offs: 0,
 		settling: settling{things: nil, sides: nil, runs: nil, labels: nil},
 		level:    map[int][2]string{}, taken: map[int]map[string]bool{},
 		others: from(o.others, origin),
@@ -530,6 +530,8 @@ type drawing struct {
 	settling settling                // what the ends moved keep off
 	moved    map[int]float64         // how far each icon has moved across the ranks in its rectangle
 	settled  map[int]bool            // the icons straighten has placed
+	off      bool                    // whether settleEnds runs offPoint
+	offs     int                     // the edges offPoint stood on one line
 	level    map[int][2]string       // the level edges, and the sides of their boxes they take, from the box written first
 	taken    map[int]map[string]bool // the sides of each box level edges take
 	others   []rect                  // the parts written by hand, where they stand from the group's 0,0

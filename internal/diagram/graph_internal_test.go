@@ -41,19 +41,21 @@ func graphOf(names []string, edges ...string) *graph {
 	return g
 }
 
+// graphSpec is g as the only part of a diagram.
+func graphSpec(g *graph) *spec {
+	return &spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: g}}, Example: ""} //nolint:exhaustruct_v5 // one kind of part
+}
+
 // laid is g laid out and checked, as the only part of a diagram.
 func laid(g *graph) *layout {
-	return laidBy(g, placing{(*layout).shareEnds, (*drawing).settleEnds})
+	l := newLayout(graphSpec(g), Options{Lang: "en", Icons: anyIcon{}, Seq: 1})
+	l.check()
+	return l
 }
 
 // routed is g laid out and checked with its ends where the routes leave them, before settleEnds moves them.
 func routed(g *graph) *layout {
-	return laidBy(g, placing{(*layout).shareEnds, func(*drawing) {}})
-}
-
-func laidBy(g *graph, how placing) *layout {
-	l := layoutWith(&spec{Width: 0, Height: 0, Title: Text{"en": "g"}, Parts: []part{{Graph: g}}, Example: ""}, //nolint:exhaustruct_v5 // one kind of part
-		Options{Lang: "en", Icons: anyIcon{}, Seq: 1}, how)
+	l := layoutWith(graphSpec(g), Options{Lang: "en", Icons: anyIcon{}, Seq: 1}, placing{(*layout).shareEnds, func(*drawing) {}})
 	l.check()
 	return l
 }

@@ -86,6 +86,7 @@ func iconFault(g *graph, l *layout) string {
 	}
 	type place struct{ name, side string }
 	on := map[place][]float64{}
+	straight := map[place]bool{}
 	for _, p := range l.paths {
 		from, to := pathEnds(p)
 		first, last := p.segs[0], p.segs[len(p.segs)-1]
@@ -106,12 +107,17 @@ func iconFault(g *graph, l *layout) string {
 				return fmt.Sprintf("end %d of %s runs %v, too short for an arrow", j, p.what, e.run)
 			}
 			on[place{e.name, side}] = append(on[place{e.name, side}], along)
+			straight[place{e.name, side}] = len(p.segs) == 1
 		}
 	}
 	for at, ends := range on {
 		slices.Sort(ends)
 		for i, v := range ends {
-			if want := 48 * float64(i+1) / float64(len(ends)+1); math.Abs(v-want) > 1e-6 {
+			want := 48 * float64(i+1) / float64(len(ends)+1)
+			if len(ends) == 1 && straight[at] && math.Abs(v-want) <= iconSpareMost+1e-6 { // offPoint
+				continue
+			}
+			if math.Abs(v-want) > 1e-6 {
 				return fmt.Sprintf("the ends on the %s of icon %s stand at %v", at.side, at.name, ends)
 			}
 		}
@@ -570,5 +576,44 @@ func TestGraphIconTurns(t *testing.T) {
 		if n := turnsOf(p); n > 2 {
 			t.Errorf("in a row: %s turns %d times: %v", p.what, n, p.segs)
 		}
+	}
+}
+
+// An end alone on its side stands off its point by what its icon's size leaves it, 12 at most.
+func TestIconSpare(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ size, want float64 }{{16, 0}, {24, 0}, {32, 4}, {48, 12}, {96, 12}} {
+		//nolint:exhaustruct_v5 // an icon, which is all iconSpare reads
+		if got := iconSpare(&icon{Size: c.size}); got != c.want {
+			t.Errorf("size %v: %v, want %v", c.size, got, c.want)
+		}
+	}
+}
+
+// labelledChain is three icons in a row, the labels' lengths those given, the first with two edges to the second.
+func labelledChain(lengths ...int) *graph {
+	g := iconGraph([]string{"a", "b", "c"}, "a>b", "b>c", "a>b")
+	for i, n := range lengths {
+		g.Nodes[i].Icon.Label = Text{"en": strings.Repeat("w", n)}
+	}
+	return g
+}
+
+// An icon moved as far as it may short of a straight edge's line leaves the edge straight, its end off its point.
+func TestGraphIconOffPoint(t *testing.T) {
+	t.Parallel()
+
+	l := laid(labelledChain(17, 9, 16))
+	if fault := iconFault(labelledChain(17, 9, 16), l); fault != "" {
+		t.Fatal(fault)
+	}
+	p := l.paths[1]
+	if len(p.segs) != 1 {
+		t.Fatalf("%s runs %v, want one run", p.what, p.segs)
+	}
+	c := l.names["c"].r
+	if off := math.Abs(p.segs[0][0] - (c.x + c.w/2)); off == 0 || off > iconSpareMost {
+		t.Errorf("%s ends %v off the middle of c at %v, want within %v", p.what, off, c.x+c.w/2, iconSpareMost)
 	}
 }

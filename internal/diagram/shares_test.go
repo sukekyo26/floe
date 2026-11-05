@@ -238,11 +238,11 @@ func TestEdgeSharesFixed(t *testing.T) {
 	}{
 		{
 			"a point is not counted", boxes + "  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: c, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: [150, 60], to: b, toSide: top }\n",
-			"edge a→b M70,49 V84.5 H130 V120\nedge c→b M230,49 V84.5 H170 V120\nedge [150,60]→b M150,60 V120",
+			"edge a→b M105,49 V120\nedge c→b M195,49 V120\nedge [150,60]→b M150,60 V120",
 		},
 		{
 			"alone with a point it stays in the middle", boxes + "  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: [150, 60], to: b, toSide: top }\n",
-			"edge a→b M70,49 V84.5 H150 V120\nedge [150,60]→b M150,60 V120",
+			"edge a→b M105,49 V120\nedge [150,60]→b M150,60 V120",
 		},
 		{
 			"via stays in the middle", boxes + "  - edge: { from: a, via: [[70, 80], [150, 80]], to: b, toSide: top }\n  - edge: { from: c, via: [[230, 80], [150, 80]], to: b, toSide: top }\n",
@@ -357,6 +357,89 @@ func TestEdgeSharesKinds(t *testing.T) {
 			got, told := edgesOf(t, c.parts)
 			if told != "" || !strings.Contains(got, c.want) {
 				t.Errorf("drew\n%s\ntold %q, want %s", got, told, c.want)
+			}
+		})
+	}
+}
+
+// An edge between facing sides that share a height runs straight when nothing is in its way, at the point of a side, or
+// the middle of the height; when something is, it stays as it was.
+func TestEdgeStraight(t *testing.T) {
+	t.Parallel()
+
+	const (
+		ab = "  - box: { name: a, x: 100, y: 40, w: 80, h: 60, rows: [a] }\n  - box: { name: b, x: 300, y: 50, w: 80, h: 60, rows: [b] }\n"
+		e  = "  - edge: { from: a, to: b }\n"
+	)
+	for _, c := range []struct{ name, parts, want string }{
+		{
+			"a hexagon", "  - box: { name: a, x: 40, y: 20, w: 100, h: 60, shape: hex, rows: [a] }\n  - box: { name: c, x: 300, y: 40, w: 60, h: 30, rows: [c] }\n" +
+				"  - edge: { from: a, to: c, fromSide: right, toSide: left }\n",
+			"edge a→c M137,55 H300",
+		},
+		{
+			"the ends beside it stay", "  - box: { name: a, x: 40, y: 80, w: 100, h: 60, shape: hex, rows: [a] }\n  - box: { name: b, x: 300, y: 20, w: 60, h: 30, rows: [b] }\n" +
+				"  - box: { name: c, x: 300, y: 100, w: 60, h: 30, rows: [c] }\n  - box: { name: d, x: 300, y: 180, w: 60, h: 30, rows: [d] }\n" +
+				"  - edge: { from: a, to: b, fromSide: right, toSide: left }\n  - edge: { from: a, to: c, fromSide: right, toSide: left }\n  - edge: { from: a, to: d, fromSide: right, toSide: left }\n",
+			"edge a→b M131,95 H220 V35 H300\nedge a→c M137,115 H300\nedge a→d M131,125 H220 V195 H300",
+		},
+		{"down", "  - box: { name: a, x: 40, y: 20, w: 120, h: 30, rows: [a] }\n  - box: { name: b, x: 90, y: 110, w: 120, h: 30, rows: [b] }\n  - edge: { from: a, to: b }\n", "edge a→b M125,50 V110"},
+		{"under a wide box", "  - box: { name: a, x: 40, y: 20, w: 300, h: 30, rows: [a] }\n  - box: { name: b, x: 60, y: 110, w: 60, h: 30, rows: [b] }\n  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n", "edge a→b M90,50 V110"},
+		{
+			"off an edge at points", "  - box: { name: a, x: 130, y: 20, w: 100, h: 30, rows: [a] }\n  - box: { name: b, x: 100, y: 120, w: 100, h: 30, rows: [b] }\n  - edge: { from: a, to: b }\n  - edge: { from: [180, 90], to: [180, 110] }\n",
+			"edge a→b M150,50 V120\nedge [180,90]→[180,110] M180,90 V110",
+		},
+		{"off a line", ab + "  - line: { x1: 250, y1: 70, x2: 290, y2: 70 }\n" + e, "edge a→b M180,80 H300"},
+		{"off an axis", ab + "  - axis: { x1: 200, x2: 280, y: 70, ticks: [] }\n" + e, "edge a→b M180,80 H300"},
+		{"off a frame", ab + "  - frame: { x: 200, y: 70, w: 80, h: 200 }\n" + e, "edge a→b M180,80 H300"},
+		{"off a dot", ab + "  - dot: { cx: 250, cy: 70, r: 3 }\n" + e, "edge a→b M180,80 H300"},
+		{"off its own label", ab + "  - edge: { from: a, to: b, label: sync, at: [270, 68] }\n", "edge a→b M180,80 H300"},
+		{
+			"not across an edge written to cross", ab + e + "  - edge: { from: [250, 20], to: [250, 72], crossing: true }\n",
+			"edge a→b M180,80 H300\nedge [250,20]→[250,72] M250,20 V72",
+		},
+		{
+			"on from a height along a box", "  - box: { name: a, x: 560, y: 60, w: 100, h: 50, rows: [a] }\n  - box: { name: c, x: 200, y: 70, w: 60, h: 50, rows: [c] }\n  - box: { name: x, x: 280, y: 20, w: 100, h: 64, rows: [x] }\n" +
+				"  - edge: { from: a, to: c, fromSide: left, toSide: right }\n",
+			"edge a→c M560,95 H260",
+		},
+		{"sharing too little", "  - box: { name: a, x: 40, y: 20, w: 100, h: 30, rows: [a] }\n  - box: { name: b, x: 120, y: 110, w: 100, h: 30, rows: [b] }\n  - edge: { from: a, to: b }\n", "edge a→b M90,50 V80 H170 V110"},
+		{
+			"through a box", "  - box: { name: a, x: 100, y: 20, w: 90, h: 30, rows: [a] }\n  - box: { name: b, x: 60, y: 200, w: 90, h: 30, rows: [b] }\n  - box: { name: c, x: 200, y: 200, w: 90, h: 30, rows: [c] }\n  - box: { x: 110, y: 150, w: 41, h: 29, rows: [x] }\n" +
+				"  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n  - edge: { from: a, to: c, fromSide: bottom, toSide: top }\n",
+			"edge a→b M130,50 V125 H105 V200\nedge a→c M160,50 V125 H245 V200",
+		},
+		{
+			"two facing edges too close", "  - box: { name: a, x: 40, y: 20, w: 60, h: 40, rows: [a] }\n  - box: { name: b, x: 240, y: 28, w: 60, h: 40, rows: [b] }\n" +
+				"  - edge: { from: a, to: b, fromSide: right, toSide: left }\n  - edge: { from: b, to: a, fromSide: left, toSide: right }\n",
+			"edge a→b M100,33.33 H170 V41.33 H240\nedge b→a M240,54.67 H170 V46.67 H100",
+		},
+		{
+			"one straight already stays", "  - box: { name: p, x: 200, y: 85, w: 200, h: 59, rows: [p] }\n  - box: { name: q, x: 180, y: 210, w: 120, h: 89, rows: [q] }\n  - box: { name: r, x: 420, y: 210, w: 160, h: 29, rows: [r] }\n" +
+				"  - edge: { from: p, to: r }\n  - edge: { from: r, to: p }\n  - edge: { from: q, to: r }\n",
+			"edge p→r M400,104.67 H410 V217.25 H420.04\nedge r→p M420,224.5 H410 V124.33 H400\nedge q→r M300,231.75 H420.04",
+		},
+		{
+			"five between two boxes", "  - box: { name: a, x: 80, y: 255, w: 80, h: 89, shape: state, rows: [a] }\n  - box: { name: b, x: 300, y: 225, w: 80, h: 59, shape: pill, rows: [b] }\n" +
+				"  - edge: { from: b, to: a }\n  - edge: { from: b, to: a }\n  - edge: { from: a, to: b }\n  - edge: { from: a, to: b }\n  - edge: { from: b, to: a }\n",
+			"edge b→a M307.51,234.83 H230 V269.83 H157.48\nedge b→a M301.69,244.67 H230 V284.67 H160\nedge a→b M160,299.5 H230 V254.5 H300\nedge a→b M160,314.33 H230 V264.33 H301.69\nedge b→a M307.51,274.17 H230 V329.17 H157.48",
+		},
+		{"to a bar", "  - box: { name: a, x: 130, y: 20, w: 100, h: 30, rows: [a] }\n  - bar: { name: r, x1: 40, x2: 400, y: 120 }\n  - edge: { from: a, to: r }\n", "edge a→r M180,50 V81.5 H220 V113"},
+		{
+			"given up, a label in the way", "  - box: { name: l, x: 40, y: 255, w: 80, h: 29, shape: state, rows: [l] }\n  - box: { name: t, x: 560, y: 85, w: 160, h: 29, rows: [t] }\n  - box: { name: r, x: 580, y: 255, w: 200, h: 59, shape: state, rows: [r] }\n" +
+				"  - edge: { from: l, to: t }\n  - edge: { from: r, to: t }\n  - edge: { from: r, to: t, label: wwwwww }\n  - edge: { from: l, to: r }\n",
+			"edge l→t M119.17,264.67 H340 V99.5 H560\nedge r→t M646.67,255 V184.5 H613.33 V114\nedge r→t M713.33,255 V184.5 H666.67 V114\nedge l→r M119.17,274.33 H580.87",
+		},
+		{
+			"given up, one line by a part left", "  - box: { name: a, x: 100, y: 20, w: 80, h: 80, rows: [a] }\n  - box: { name: b, x: 420, y: 42, w: 80, h: 83, rows: [b] }\n  - box: { name: k, x: 270, y: 20, w: 60, h: 32, rows: [k] }\n  - box: { name: c, x: 200, y: 69, w: 50, h: 29, rows: [c] }\n" +
+				"  - frame: { name: f, x: 340, y: 40, w: 300, h: 280 }\n  - edge: { from: a, to: b, label: ab }\n  - edge: { from: c, to: f }\n",
+			"edge a→b M180,60 H300 V83.5 H420\nedge c→f M250,83.5 H295 V180 H340",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			if got, told := edgesOf(t, c.parts); got != c.want || told != "" {
+				t.Errorf("drew\n%s\n%s\nwant\n%s", got, told, c.want)
 			}
 		})
 	}
