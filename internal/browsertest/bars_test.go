@@ -93,7 +93,7 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	for range 30 {
 		key("ArrowDown")
 	}
-	b.eval("document.getElementById('listcol').scrollBy(0, [...document.querySelectorAll('#list .title')].find((a) => a.textContent === 'P28').getBoundingClientRect().top - " +
+	b.eval("document.getElementById('list-body').scrollBy(0, [...document.querySelectorAll('#list .title')].find((a) => a.textContent === 'P28').getBoundingClientRect().top - " +
 		"document.querySelector('.lhead').getBoundingClientRect().bottom + 10)")
 	key("ArrowUp")
 	out = append(out, b.eval("[document.activeElement.textContent, document.activeElement.getBoundingClientRect().top >= "+

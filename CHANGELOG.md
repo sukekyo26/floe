@@ -315,6 +315,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Move the button that folds a column of the management page (the filters, the list, a folder's tree, a diff's contents) to a
+  foot at the column's bottom. Folded, the column, its foot and its line go, and only an icon to open it stays in the button's
+  place, over the page beside it. The narrow column a diff's contents left behind is gone. Whichever columns are open, one line
+  parts each from the next, and none stands at the window's edge.
 - Change the gap between an icon and its label in a diagram to 3px from 7: the label, and with it the icon's bottom side,
   stand 4 higher, and a diagram with its height left out and a label lowest is 4 shorter. A side floe chooses at such an
   icon may change, which a part close by can make an edge refused; write the side. A label written by hand to go with an
