@@ -296,26 +296,7 @@ func (d *drawing) straighten(k int) {
 	if n != len(pts) || d.loops[k] || !on0 && !on1 {
 		return
 	}
-	across, _ := d.axes()
-	lo, hi := math.Inf(-1), math.Inf(1)
-	var movers []endAt
-	for j := range 2 {
-		i := d.ends[k][j]
-		e := endAt{k, j}
-		switch {
-		case i < 0:
-		case d.icons[i] == nil:
-			b := d.boxes[i]
-			lo, hi = max(lo, b.lo(axis)+inEnd), min(hi, b.lo(axis)+b.size(axis)-inEnd)
-		case axis == across && !d.settled[i]:
-			q, reach := d.endPoint(e)[axis], d.iconReach(i)
-			lo, hi = max(lo, q-reach), min(hi, q+reach)
-			movers = append(movers, e)
-		default:
-			q := d.endPoint(e)[axis]
-			lo, hi = max(lo, q), min(hi, q)
-		}
-	}
+	lo, hi, movers := d.lineRange(k, axis, d.iconReach, func(int) float64 { return 0 })
 	if lo > hi {
 		return
 	}
@@ -744,19 +725,11 @@ func iconSpare(i *icon) float64 {
 	return max(0, min(iconSpareMost, iconSize(i)/2-inEnd))
 }
 
-// offPoint stands straight edge k on one line where its icons, moved as far as they may, do not bring their points onto
-// it: an end alone on its side stands up to iconSpare off its point.
-// LIMIT: an end among others on a side stays at its part, as moving it changes their order, so that edge still bends.
-func (d *drawing) offPoint(k int) {
-	pts := d.routes[k]
-	n, axis := inLine(pts)
-	if n != len(pts) || d.loops[k] {
-		return
-	}
+// lineRange is where on axis straight edge k may run: within its boxes' sides, and of each icon, its end's point moved
+// by what reach gives an icon free to move (those ends are movers) and stood off it by what spare gives.
+func (d *drawing) lineRange(k, axis int, reach, spare func(i int) float64) (lo, hi float64, movers []endAt) {
 	across, _ := d.axes()
-	lo, hi := math.Inf(-1), math.Inf(1)
-	at := pts[0][axis]
-	var ends []endAt
+	lo, hi = math.Inf(-1), math.Inf(1)
 	for j := range 2 {
 		i, e := d.ends[k][j], endAt{k, j}
 		switch {
@@ -764,18 +737,50 @@ func (d *drawing) offPoint(k int) {
 		case d.icons[i] == nil:
 			b := d.boxes[i]
 			lo, hi = max(lo, b.lo(axis)+inEnd), min(hi, b.lo(axis)+b.size(axis)-inEnd)
-		case d.places[e].on != 1:
-			return
+		case axis == across && !d.settled[i]:
+			q, r := d.endPoint(e)[axis], reach(i)+spare(i)
+			lo, hi = max(lo, q-r), min(hi, q+r)
+			movers = append(movers, e)
 		default:
-			q, reach := d.endPoint(e)[axis], 0.0
-			if axis == across && !d.settled[i] {
-				reach = d.iconReach(i)
-			} else {
-				at = q
-			}
-			spare := iconSpare(d.icons[i])
-			lo, hi = max(lo, q-reach-spare), min(hi, q+reach+spare)
-			ends = append(ends, e)
+			q, r := d.endPoint(e)[axis], spare(i)
+			lo, hi = max(lo, q-r), min(hi, q+r)
+		}
+	}
+	return lo, hi, movers
+}
+
+// aloneAt reports whether the end e is the only one at its icon.
+func (d *drawing) aloneAt(e endAt) bool {
+	for other := range d.places {
+		if other != e && d.ends[other.edge][other.end] == d.ends[e.edge][e.end] {
+			return false
+		}
+	}
+	return true
+}
+
+// offPoint stands straight edge k on one line where its icons, moved as far as they may, do not bring their points onto
+// it: an end alone on its side stands up to iconSpare off its point. An icon with other ends stays where it is, as they
+// run from it.
+// LIMIT: an end among others on a side stays at its part, as moving it changes their order, so that edge still bends.
+func (d *drawing) offPoint(k int) {
+	pts := d.routes[k]
+	n, axis := inLine(pts)
+	ends, alone := d.iconEnds(k)
+	if n != len(pts) || d.loops[k] || !alone {
+		return
+	}
+	reach := func(i int) float64 {
+		if slices.ContainsFunc(ends, func(e endAt) bool { return d.ends[k][e.end] == i && d.aloneAt(e) }) {
+			return d.iconReach(i)
+		}
+		return 0
+	}
+	lo, hi, movers := d.lineRange(k, axis, reach, func(i int) float64 { return iconSpare(d.icons[i]) })
+	at := pts[0][axis]
+	for _, e := range ends {
+		if !slices.Contains(movers, e) {
+			at = d.endPoint(e)[axis]
 		}
 	}
 	at = max(lo, min(at, hi))
@@ -783,19 +788,33 @@ func (d *drawing) offPoint(k int) {
 	if !short || lo > hi || !d.moveRun(k, allOf(len(pts)), axis, at) {
 		return
 	}
-	for _, e := range ends {
+	for _, e := range movers {
 		i := d.ends[k][e.end]
-		if axis == across && !d.settled[i] {
-			r := d.iconReach(i)
-			d.moved[i] += max(-r, min(at-d.endPoint(e)[axis], r))
-			d.settled[i] = true
-		}
-		t, place := d.iconAt(i), d.places[e]
+		r := reach(i)
+		d.moved[i] += max(-r, min(at-d.endPoint(e)[axis], r))
+		d.settled[i] = true
+	}
+	for _, e := range ends {
+		t, place := d.iconAt(d.ends[k][e.end]), d.places[e]
 		place.share = (at - t.lo(axis)) / t.size(axis)
 		d.places[e] = place
 	}
 	d.noteEdge(k)
 	d.offs++
+}
+
+// iconEnds is the ends of edge k at icons, and whether each stands alone on its side.
+func (d *drawing) iconEnds(k int) ([]endAt, bool) {
+	var ends []endAt
+	for j := range 2 {
+		if i, e := d.ends[k][j], (endAt{k, j}); i >= 0 && d.icons[i] != nil {
+			if d.places[e].on != 1 {
+				return nil, false
+			}
+			ends = append(ends, e)
+		}
+	}
+	return ends, true
 }
 
 // allOf is the indexes of n points.

@@ -211,6 +211,9 @@ func straightSpec(rnd *rand.Rand, kind string) *spec {
 			name := fmt.Sprintf("b%d_%d", c, r)
 			names = append(names, name)
 			b := textBox(name, float64(40+c*260+rnd.IntN(4)*20), float64(40+r*170+rnd.IntN(4)*15), float64(80+rnd.IntN(4)*40), float64(29+rnd.IntN(3)*30))
+			if kind == "touching" {
+				b = textBox(name, float64(40+c*100), float64(40+r*80+rnd.IntN(3)*20), 100, float64(40+rnd.IntN(4)*20))
+			}
 			b.Box.Shape = []string{"", "pill", "hex", "state"}[rnd.IntN(4)]
 			parts = append(parts, b)
 		}
@@ -340,7 +343,7 @@ func TestEdgeStraightKeeps(t *testing.T) {
 	t.Parallel()
 
 	opts := Options{Lang: "en", Icons: anyIcon{}, Seq: 1}
-	for _, kind := range []string{"plain", "labels", "straight", "all"} {
+	for _, kind := range []string{"plain", "labels", "straight", "all", "touching"} {
 		t.Run(kind, func(t *testing.T) {
 			t.Parallel()
 			rnd := rand.New(rand.NewPCG(177, uint64(len(kind)))) //nolint:gosec // G404: diagrams to try, no secret

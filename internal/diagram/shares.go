@@ -10,6 +10,8 @@ import (
 // The ends of the edges written by hand on one side of a part stand at the points that part the side into equal
 // parts. Which side an end takes is known only from the edge, and where an end stands on it only from all the ends
 // there, so shareEnds places them all once before any edge is added; edgePoints reads where they stand (sharedEnd).
+// newLayout takes shareStraight, which then stands bent edges straight (straighten); shareEnds alone lays out what it
+// gives up.
 
 // handEnd names an end of an edge written by hand: 0 for from, 1 for to.
 type handEnd struct {
@@ -116,6 +118,8 @@ func (l *layout) shareStraight(items []item) {
 // LIMIT: the ends left on a side stay at their parts, so the side may look uneven. Part it again if that shows.
 // LIMIT: the order written decides which of two lines in each other's way stands straight.
 // LIMIT: keepOff moves the loose runs of other edges afterwards, so that one may come within keepApart of the line.
+// LIMIT: a label with no place of its own moves with its line, and may then stand on a line part, which is not told.
+// Rare, and seen in the drawing.
 func (s *sharing) straighten(moving []*edge) {
 	bands := s.rest.beside(nil)
 	now := make(map[*edge][]seg, len(moving))
@@ -151,7 +155,11 @@ func (s *sharing) straightenEdge(e *edge, moving []*edge, bands []rule, now map[
 			continue
 		}
 		l.shares[end0], l.shares[end1] = shared{sides[0], at}, shared{sides[1], at}
-		if pts, _, _, _, ok := l.edgePoints(e, ""); ok && len(pts) == 2 && s.clear(e, segsOf(pts)[0], moving, bands, now) {
+		pts, _, _, _, ok := l.edgePoints(e, "")
+		if !ok || len(pts) != 2 || runLength(pts) < iconArrow {
+			continue
+		}
+		if s.clear(e, segsOf(pts)[0], moving, bands, now) {
 			now[e] = segsOf(pts)
 			return true
 		}
@@ -179,6 +187,11 @@ func (s *sharing) clear(e *edge, line seg, moving []*edge, bands []rule, now map
 	}
 	return !slices.ContainsFunc(s.rest.paths, func(p path) bool { return !apart(p.segs) }) &&
 		!slices.ContainsFunc(moving, func(m *edge) bool { return m != e && !apart(now[m]) })
+}
+
+// runLength is how long the run from pts[0] to pts[1] is, across or down.
+func runLength(pts [][2]float64) float64 {
+	return math.Abs(pts[0][0]-pts[1][0]) + math.Abs(pts[0][1]-pts[1][1])
 }
 
 // endsMeet is whether a and b share an end.
@@ -217,7 +230,7 @@ func movable(e *edge, from, to string) bool {
 		(e.From.Name != e.To.Name || from != to)
 }
 
-// sharedEnd is a, end j of e, where shareEnds places it.
+// sharedEnd is a, end j of e, where shareEnds or straighten places it.
 func (l *layout) sharedEnd(e *edge, j int, a anchor) anchor {
 	at, ok := l.shares[handEnd{e, j}]
 	if !ok {

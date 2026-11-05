@@ -106,7 +106,7 @@ type layout struct {
 	heads        []rect // frame headings, which edges may not cross
 	strokes      []rect // the spans of edges and lines, which must stay on the canvas
 	paths        []path
-	shares       map[handEnd]shared // where the ends shareEnds moves stand
+	shares       map[handEnd]shared // where the ends shareEnds and straighten move stand
 	rules        []rule             // the lines of axes and line parts, which loose runs keep off (keepOff)
 	loose        []loosePath        // the edges with a run floe placed
 	// The elements of the layers, drawn bottom to top; grid lines below every other edge, last first.
@@ -138,6 +138,7 @@ func pointer(i int) string {
 // LIMIT: a label with no place of its own landing on something leaves all the diagram's edges bent, of about 5% of
 // random diagrams with labels. Giving up one edge can leave it on another that kept off its straight line. Look again
 // if a diagram comes to show it; a place written for the label lets the edges move.
+// LIMIT: what keeps its moves is checked here and again by the caller. Keep the first result if that comes to show.
 func newLayout(s *spec, opts Options) *layout {
 	offs := 0
 	l := layoutWith(s, opts, placing{(*layout).shareStraight, func(d *drawing) {
@@ -183,21 +184,17 @@ func layoutWith(s *spec, opts Options, how placing) *layout {
 		}
 	}
 	how.share(l, items)
-	l.addAll(items)
-	return l
-}
-
-func (l *layout) addAll(items []item) {
 	for _, it := range items {
 		l.add(it.at, it.p)
 	}
 	l.keepOff()
-	if l.s.Width == 0 {
+	if s.Width == 0 {
 		l.w = l.reach(func(r rect) float64 { return r.x + r.w }) + canvasPad
 	}
-	if l.s.Height == 0 {
+	if s.Height == 0 {
 		l.h = l.reach(func(r rect) float64 { return r.y + r.h }) + canvasPad
 	}
+	return l
 }
 
 // blankLayout is s laid out with nothing added yet.

@@ -438,6 +438,16 @@ func TestEdgeStraight(t *testing.T) {
 				"  - edge: { from: b, to: a }\n  - edge: { from: b, to: a }\n  - edge: { from: a, to: b }\n  - edge: { from: a, to: b }\n  - edge: { from: b, to: a }\n",
 			"edge b→a M307.51,234.83 H230 V269.83 H157.48\nedge b→a M301.69,244.67 H230 V284.67 H160\nedge a→b M160,299.5 H230 V254.5 H300\nedge a→b M160,314.33 H230 V264.33 H301.69\nedge b→a M307.51,274.17 H230 V329.17 H157.48",
 		},
+		{
+			"touching boxes, the line too short", "  - box: { name: a, x: 300, y: 280, w: 100, h: 80, shape: state, rows: [a] }\n  - box: { name: b, x: 400, y: 240, w: 100, h: 100, shape: state, rows: [b] }\n" +
+				strings.Repeat("  - edge: { from: a, to: b, fromSide: right, toSide: left }\n", 3),
+			"edge a→b M399.3,300 H400 V265 H400.02\nedge a→b M400,320 V290\nedge a→b M399.3,340 H400 V315 H400.02",
+		},
+		{
+			"at the point of the side with more ends", "  - box: { name: a, x: 40, y: 60, w: 100, h: 80, rows: [a] }\n  - box: { name: b, x: 300, y: 80, w: 100, h: 80, rows: [b] }\n  - box: { name: c, x: 40, y: 200, w: 100, h: 100, rows: [c] }\n" +
+				"  - edge: { from: c, to: b, fromSide: right, toSide: left }\n  - edge: { from: a, to: b, fromSide: right, toSide: left }\n  - edge: { from: a, to: b, fromSide: right, toSide: left }\n",
+			"edge c→b M140,250 H220 V140 H300\nedge a→b M140,100 H300\nedge a→b M140,120 H300",
+		},
 		{"to a bar", "  - box: { name: a, x: 130, y: 20, w: 100, h: 30, rows: [a] }\n  - bar: { name: r, x1: 40, x2: 400, y: 120 }\n  - edge: { from: a, to: r }\n", "edge a→r M180,50 V81.5 H220 V113"},
 		{
 			"given up, a label in the way", "  - box: { name: l, x: 40, y: 255, w: 80, h: 29, shape: state, rows: [l] }\n  - box: { name: t, x: 560, y: 85, w: 160, h: 29, rows: [t] }\n  - box: { name: r, x: 580, y: 255, w: 200, h: 59, shape: state, rows: [r] }\n" +
