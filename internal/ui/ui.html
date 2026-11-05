@@ -1216,6 +1216,7 @@
           // Not waited for: it holds up the reads of other pages
           showNotice(to, value.read.n);
         }
+        if (res.ok && to === shownSlug()) readVersionsAgain();
       } catch (err) {
         // A read is told again the next time it is opened; a mark, only if pressed again. api tells if the server was not reached
         if (!value) fail(t('ui_unread_failed', err.message));
@@ -2187,6 +2188,7 @@
 
   // What of versions a page has, as last read, and the turn of the last asked: an answer come after another is dropped
   let versionKey = '';
+  let versionSlug;
   let versionsRead = null;
   let versionTurn = 0;
   // That what was asked of the page shown is no version of it, the latest shown in its place
@@ -2194,9 +2196,10 @@
   // What a move to another version of the frame's page carries over: the focus on the choice, and a page kept unread
   const VERSION_MOVE = 'version.move';
   let versionFocus = false;
+  let versionWaits = false;
   function keepVersionMove(focus, kept) {
     try {
-      sessionStorage.setItem(VERSION_MOVE, JSON.stringify({ focus, kept }));
+      sessionStorage.setItem(VERSION_MOVE, JSON.stringify({ slug: framed, focus, kept }));
     } catch {
       // Without storage, the focus falls to the page, and the version is told read
     }
@@ -2209,17 +2212,27 @@
   // LIMIT: the page of a version gone asks first, up to 3 seconds before this, and shows its 404 until then
   async function drawVersion(x, a) {
     const sel = $(framed ? 'frame-version' : 'read-version');
+    const turn = ++versionTurn;
+    // Nothing of another page stays while this one's is read, or if it cannot be
+    if (a?.slug !== versionSlug) {
+      versionSlug = a?.slug;
+      versionKey = '';
+      sel.hidden = true;
+      sel.classList.remove('old');
+      delete sel.dataset.numbers;
+      sel.replaceChildren(...sel.querySelectorAll(':scope > button'));
+      drawVersionNote(a, x, []);
+    }
+    if (!a) versionGone = false;
     if (!a || !x || x.file || DIFF || !(canDiff(a) || x.v)) {
       sel.hidden = true;
       sel.classList.remove('old');
       versionKey = '';
-      versionTurn++;
       drawVersionNote(a, x, []);
       return;
     }
     const key = [a.slug, a.version, a.versionCount, a.news].join();
     if (key !== versionKey) {
-      const turn = ++versionTurn;
       try {
         const res = await api(`/api/artifacts/${encodeURIComponent(a.slug)}/versions`);
         if (!res.ok) return;
@@ -2233,6 +2246,12 @@
       }
     }
     showVersion(sel, x, a, versionsRead);
+  }
+  // A read moves the version last read, which nothing in the list tells of
+  function readVersionsAgain() {
+    versionKey = '';
+    const slug = shownSlug();
+    drawVersion(framed ? frameAt : picked, items.find((a) => a.slug === slug));
   }
   function showVersion(sel, x, a, { versions, read }) {
     const last = versions.at(-1)?.n;
@@ -2265,8 +2284,16 @@
   }
   // The version shown is gone or has come to be the latest, by what floe was told elsewhere: the latest takes its place, no one having asked to
   // open it, so that it is told read no more than a page marked unread is
+  // LIMIT: a number come again after a removal, its page may ask first and tell it was read, the version it shows being the latest
   function leaveVersion(x, gone) {
     if (framed) {
+      // Not from under what is being typed: once the modal has closed
+      const modal = document.querySelector('dialog[open]');
+      if (modal) {
+        if (!versionWaits) modal.addEventListener('close', () => { versionWaits = false; readVersionsAgain(); }, { once: true });
+        versionWaits = true;
+        return;
+      }
       keepVersionMove(false, true);
       // The server answers as for a URL that asks for it, and all that follows from the URL goes with it
       location.reload();
@@ -2278,22 +2305,25 @@
     drawReader();
   }
   // The version chosen, of the page shown
-  function pickVersion(n) {
+  // The version chosen, of the page shown. Open, the choice has its option focused; focus says to go to it from elsewhere, the words about to go
+  function pickVersion(n, focus = false) {
+    const sel = $(framed ? 'frame-version' : 'read-version');
     const a = items.find((x) => x.slug === shownSlug());
     const v = n === a?.version ? 0 : n;
     if (framed) {
-      keepVersionMove(document.activeElement === $('frame-version'), keptUnread === framed);
+      keepVersionMove(focus || sel.contains(document.activeElement), keptUnread === framed);
       location.href = pageHref({ slug: framed, v });
       return;
     }
     picked.v = v;
     versionGone = false;
     drawReader();
+    if (focus) sel.focus();
   }
   // The words over a page not the latest: its own, as what tells a page newly at another version (page-note) goes under them and on its own turns
   function drawVersionNote(a, x, versions) {
     const shown = x?.v ? versions.find((v) => v.n === x.v) : null;
-    const key = versionGone ? 'gone' : shown ? `${shown.n} ${versions.at(-1).n}` : '';
+    const key = versionGone ? 'gone' : shown ? `${x.slug} ${shown.n} ${versions.at(-1).n}` : '';
     let note = document.querySelector('.dnote.ver-note');
     if (note?.dataset.key === key) return;
     note?.remove();
@@ -2310,7 +2340,7 @@
       latest.addEventListener('click', (e) => {
         if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
-        pickVersion(last);
+        pickVersion(last, true);
       });
       const go = tagged('a', '', t('ui_version_diff'));
       go.href = diffHref(x.slug, x.v, last);
@@ -3897,8 +3927,10 @@
     try {
       const move = JSON.parse(sessionStorage.getItem(VERSION_MOVE));
       sessionStorage.removeItem(VERSION_MOVE);
-      versionFocus = move?.focus === true;
-      if (move?.kept === true) keptUnread = framed;
+      if (move?.slug === framed) {
+        versionFocus = move.focus === true;
+        if (move.kept === true) keptUnread = framed;
+      }
     } catch {
       // Storage is unavailable, or holds something else
     }
