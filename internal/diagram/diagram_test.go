@@ -1855,8 +1855,14 @@ func TestGraphWith(t *testing.T) {
 	e := func(from, to string) string { return "        - { from: " + from + ", to: " + to + " }\n" }
 	above := func(t *testing.T, tops map[string]string, hi, lo string) {
 		t.Helper()
-		h, _ := strconv.ParseFloat(tops[hi], 64)
-		l, _ := strconv.ParseFloat(tops[lo], 64)
+		h, err := strconv.ParseFloat(tops[hi], 64)
+		if err != nil {
+			t.Fatalf("%s: %v", hi, err)
+		}
+		l, err := strconv.ParseFloat(tops[lo], 64)
+		if err != nil {
+			t.Fatalf("%s: %v", lo, err)
+		}
 		if h >= l {
 			t.Errorf("%s stands at %s, %s at %s, want it above", hi, tops[hi], lo, tops[lo])
 		}
