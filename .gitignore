@@ -2,3 +2,6 @@
 /bin/
 /coverage.out
 /coverage.html
+
+# Worktrees inside the main checkout
+/.claude/worktrees/
