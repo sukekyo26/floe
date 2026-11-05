@@ -293,7 +293,7 @@ func writeAny(rnd *rand.Rand, e *edge, spot func() [2]float64) {
 	case 1:
 		e.Crossing = true
 	case 2:
-		e.Via = [][2]float64{spot()}
+		e.Via = viaAt(spot())
 	case 3:
 		at := spot()
 		e.From = end{Name: "", Point: &at}

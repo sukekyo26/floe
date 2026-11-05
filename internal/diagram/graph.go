@@ -1118,7 +1118,7 @@ func (o *graphOut) edge(k int, pts [][2]float64) *edge {
 	e := o.g.Edges[k]
 	return &edge{
 		From: end{Name: "", Point: &pts[0]}, To: end{Name: "", Point: &pts[len(pts)-1]}, FromSide: "", ToSide: "",
-		Via: pts[1 : len(pts)-1], Straight: true, Label: nil, At: nil, Dashed: e.Dashed, Bold: e.Bold, Tone: e.Tone,
+		Via: viaAt(pts[1:len(pts)-1]...), Straight: true, Label: nil, At: nil, Dashed: e.Dashed, Bold: e.Bold, Tone: e.Tone,
 		Start: e.Start, End: e.End, Crossing: false, who: "edge " + e.From + "→" + e.To, graph: o.at, anchor: "",
 	}
 }

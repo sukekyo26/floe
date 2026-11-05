@@ -149,7 +149,7 @@ func (m *measures) place(out *[]item, n *node, cx, y float64, d int, at string) 
 
 		e := &edge{From: from, To: to, who: who} //nolint:exhaustruct_v5 // the rest as left out
 		if !straight {
-			e.Via = [][2]float64{{cx, turn}, {ccx, turn}}
+			e.Via = viaAt([2]float64{cx, turn}, [2]float64{ccx, turn})
 		}
 		cat := at + "/children/" + strconv.Itoa(i)
 		*out = append(*out, item{cat, part{Edge: e}}) //nolint:exhaustruct_v5 // one kind of part

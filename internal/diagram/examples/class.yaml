@@ -13,11 +13,11 @@ parts:
   - table: { x: 30, y: 168, w: 240, title: usererr.Error, tone: accent, rows: [[Key, string], [Args, "[]any"], [Conflict, bool], "---", [Error(), string], [Localize(c), string]] }
   - table: { x: 380, y: 168, w: 240, title: yamlpos.Error, tone: accent, rows: [[File, string], [Pos, Pos], [Err, "*usererr.Error"], "---", [Error(), string], [Localize(c), string]] }
   - table: { x: 730, y: 168, w: 240, title: yamlpos.Problems, tone: accent, rows: [[{ en: elements, ja: "要素" }, "*Error"], "---", [Error(), string], [Localize(c), string]] }
-  - edge: { from: [150, 168], via: [[150, 123], [330, 123]], to: [330, 78], end: triangle }
-  - edge: { from: [150, 168], via: [[150, 123], [670, 123]], to: [670, 78], end: triangle }
-  - edge: { from: [500, 168], via: [[500, 123], [330, 123]], to: [330, 78], end: triangle }
-  - edge: { from: [500, 168], via: [[500, 123], [670, 123]], to: [670, 78], end: triangle }
-  - edge: { from: [850, 168], via: [[850, 123], [330, 123]], to: [330, 78], end: triangle }
-  - edge: { from: [850, 168], via: [[850, 123], [670, 123]], to: [670, 78], end: triangle }
+  - edge: { from: [150, 168], via: [{ y: 123 }, { x: 330 }], to: [330, 78], end: triangle }
+  - edge: { from: [150, 168], via: [{ y: 123 }, { x: 670 }], to: [670, 78], end: triangle }
+  - edge: { from: [500, 168], via: [{ y: 123 }, { x: 330 }], to: [330, 78], end: triangle }
+  - edge: { from: [500, 168], via: [{ y: 123 }, { x: 670 }], to: [670, 78], end: triangle }
+  - edge: { from: [850, 168], via: [{ y: 123 }, { x: 330 }], to: [330, 78], end: triangle }
+  - edge: { from: [850, 168], via: [{ y: 123 }, { x: 670 }], to: [670, 78], end: triangle }
   - edge: { from: [380, 253], to: [270, 253], start: diamond, end: none, label: Err, at: [325, 241] }
   - edge: { from: [730, 209], to: [620, 209], start: odiamond, end: none, label: { en: holds, ja: "保持" }, at: [675, 197] }

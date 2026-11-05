@@ -22,5 +22,5 @@ parts:
   - box: { x: 632, y: 238, w: 320, h: 52, rows: [Haiku 5.5, [global.anthropic.claude-haiku-5-5, sub code]] }
   - edge: { from: [124, 140], to: [436, 140], label: { en: Inference request, ja: "推論リクエスト" }, at: [200, 140] }
   - edge: { from: [484, 140], to: [632, 140] }
-  - edge: { from: [484, 140], via: [[600, 140], [600, 202]], to: [632, 202] }
-  - edge: { from: [484, 140], via: [[600, 140], [600, 264]], to: [632, 264] }
+  - edge: { from: [484, 140], via: [[600, 202]], to: [632, 202] }
+  - edge: { from: [484, 140], via: [[600, 264]], to: [632, 264] }
