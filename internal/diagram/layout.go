@@ -149,7 +149,7 @@ func layoutWith(s *spec, opts Options, how placing) *layout {
 	b, _ := json.Marshal(s) //nolint:errcheck,errchkjson // read from JSON, it writes as JSON
 	sum := sha256.Sum256(b)
 	l.id = "dg" + strconv.Itoa(opts.Seq) + "-" + hex.EncodeToString(sum[:3])
-	items, found, err := expandSettling(s.Parts, how.settle)
+	items, found, err := expand(s.Parts, how.settle)
 	l.problems = append(l.problems, found...)
 	l.failure = err
 	for _, it := range items {

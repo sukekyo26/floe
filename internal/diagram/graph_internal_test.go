@@ -60,7 +60,7 @@ func laidBy(g *graph, how placing) *layout {
 
 // grouped is g read and laid out, its groups kept, as items lays it out.
 func grouped(g *graph) ([]*group, error) {
-	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are graphFault's
+	o, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // its mistakes are graphFault's
 	_, _, err := o.items()                  //nolint:errcheck // the mistakes are told by laid
 	return o.groups, err
 }
@@ -250,31 +250,10 @@ func touch(a, b path) (bool, int) {
 	n := 0
 	for _, s := range a.segs {
 		for _, q := range b.segs {
-			sv, qv := s[0] == s[2], q[0] == q[2]
-			switch sv {
-			case qv:
-				// Both down, or both across: in one line and meeting.
-				i := 0
-				if sv {
-					i = 1
-				}
-				if s[1-i] == q[1-i] && max(min(s[i], s[i+2]), min(q[i], q[i+2])) <= min(max(s[i], s[i+2]), max(q[i], q[i+2])) {
-					return true, n
-				}
-			default:
-				v, h := s, q
-				if !sv {
-					v, h = q, s
-				}
-				x, y := v[0], h[1]
-				inV := y >= min(v[1], v[3]) && y <= max(v[1], v[3])
-				inH := x >= min(h[0], h[2]) && x <= max(h[0], h[2])
-				if !inV || !inH {
-					continue
-				}
-				if y == v[1] || y == v[3] || x == h[0] || x == h[2] {
-					return true, n
-				}
+			if runsTouch(s, q) {
+				return true, n
+			}
+			if _, _, ok := crossing(s, q); ok {
 				n++
 			}
 		}
@@ -282,8 +261,25 @@ func touch(a, b path) (bool, int) {
 	return false, n
 }
 
+// closeRuns counts the pairs of runs of two edges of l nearer than keepApart along a stretch they share.
+func closeRuns(l *layout) int {
+	n := 0
+	for i, a := range l.paths {
+		for _, b := range l.paths[i+1:] {
+			for _, s := range a.segs {
+				for _, q := range b.segs {
+					if runsClose(s, q) {
+						n++
+					}
+				}
+			}
+		}
+	}
+	return n
+}
+
 // settleFault is what settleEnds did wrong, l being g's layout and r its routes before settleEnds, or "": an edge
-// turning more, or more crossings.
+// turning more, more crossings, or more runs close beside another's.
 func settleFault(l, r *layout) string {
 	for k, p := range l.paths {
 		if len(p.segs) > len(r.paths[k].segs) {
@@ -292,6 +288,9 @@ func settleFault(l, r *layout) string {
 	}
 	if a, b := crossings(l), crossings(r); a > b {
 		return fmt.Sprintf("%d crossings, %d before the ends moved", a, b)
+	}
+	if a, b := closeRuns(l), closeRuns(r); a > b {
+		return fmt.Sprintf("%d pairs of runs nearer than %v, %d before the ends moved", a, float64(keepApart), b)
 	}
 	return ""
 }
@@ -813,18 +812,18 @@ func TestGraphRandom(t *testing.T) {
 		least     int
 		parts     int // the least share of ends at boxes on their equal parts, in percent, a little under what it measures
 	}{
-		{"", [2]uint64{1, 2}, 3000, false, false, "", 0, 70},
-		{"right", [2]uint64{3, 4}, 3000, false, false, "", 0, 79},
-		{"", [2]uint64{5, 6}, 300, true, false, "", 0, 48},
-		{"right", [2]uint64{7, 8}, 300, true, false, "", 0, 65},
-		{"", [2]uint64{9, 10}, 1000, false, true, "", 0, 78},
-		{"right", [2]uint64{11, 12}, 1000, false, true, "", 0, 85},
-		{"", [2]uint64{13, 14}, 300, false, false, "plain", 132, 69},
-		{"right", [2]uint64{15, 16}, 300, false, false, "plain", 123, 77},
+		{"", [2]uint64{1, 2}, 3000, false, false, "", 0, 69},
+		{"right", [2]uint64{3, 4}, 3000, false, false, "", 0, 77},
+		{"", [2]uint64{5, 6}, 300, true, false, "", 0, 47},
+		{"right", [2]uint64{7, 8}, 300, true, false, "", 0, 64},
+		{"", [2]uint64{9, 10}, 1000, false, true, "", 0, 77},
+		{"right", [2]uint64{11, 12}, 1000, false, true, "", 0, 84},
+		{"", [2]uint64{13, 14}, 300, false, false, "plain", 132, 68},
+		{"right", [2]uint64{15, 16}, 300, false, false, "plain", 123, 76},
 		{"", [2]uint64{17, 18}, 300, false, false, "groups", 97, 71},
-		{"right", [2]uint64{19, 20}, 300, false, false, "groups", 107, 81},
-		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 91, 79},
-		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 88, 85},
+		{"right", [2]uint64{19, 20}, 300, false, false, "groups", 107, 80},
+		{"", [2]uint64{21, 22}, 300, false, true, "lanes", 91, 78},
+		{"right", [2]uint64{23, 24}, 300, false, true, "lanes", 88, 84},
 	} {
 		// A name of no mark -run reads as a pattern: down-1-2 (down for the direction left out); -run
 		// TestGraphRandom/down-1-2$ picks that one alone, as down-1 is down-13-14 and down-17-18 too.
@@ -1091,7 +1090,7 @@ func TestGraphTrips(t *testing.T) {
 			[][]string{{"r"}, {"a", "b", "c"}, {"z", "y", "x"}},
 		},
 	} {
-		o, _ := readGraph(c.g, "#/parts/0/graph") //nolint:errcheck // every name is a box's
+		o, _ := readGraph(c.g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // every name is a box's
 		gr := o.groups[0]
 		trips, _ := gr.place(false)
 		var got [][]string
@@ -1133,7 +1132,7 @@ func TestGraphPulls(t *testing.T) {
 		{"swinging", swinging(), maxPulls},
 		{"a diamond", graphOf([]string{"a", "b", "c", "d"}, "a>b", "a>c", "b>d", "c>d"), 3},
 	} {
-		o, _ := readGraph(c.g, "#/parts/0/graph") //nolint:errcheck // every name is a box's
+		o, _ := readGraph(c.g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // every name is a box's
 		if _, pulls := o.groups[0].place(false); pulls != c.pulls {
 			t.Errorf("%s: %d pulls, want %d", c.name, pulls, c.pulls)
 		}
@@ -1378,13 +1377,13 @@ func TestGraphFarOut(t *testing.T) {
 		for k := range g.Edges {
 			g.Edges[k].Label = Text{"en": "wwwwww"}
 		}
-		near, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // a graph with no mistake
+		near, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // a graph with no mistake
 		want, _, err := near.items()               //nolint:errcheck // the mistakes are told by laid
 		if err != nil {
 			t.Fatal(err)
 		}
 		g.X, g.Y = 999000, 998000
-		far, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // a graph with no mistake
+		far, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // a graph with no mistake
 		got, _, err := far.items()                //nolint:errcheck // the mistakes are told by laid
 		if err != nil {
 			t.Fatal(err)
@@ -1464,7 +1463,7 @@ func TestGraphLimit(t *testing.T) {
 	}
 	inLaned(lanes)
 	for _, g := range []*graph{big, exact, two, deep, lanes} {
-		o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // every name is a box's
+		o, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // every name is a box's
 		if o.passed > maxPassed {
 			t.Fatalf("%d boxes: %d points, over %d", len(g.Nodes), o.passed, maxPassed)
 		}
@@ -1477,7 +1476,7 @@ func TestGraphLimit(t *testing.T) {
 			t.Errorf("%d boxes: %v %v", len(g.Nodes), l.failure, l.problems)
 		}
 	}
-	if o, _ := readGraph(exact, "#"); o.passed != maxPassed { //nolint:errcheck // every name is a box's
+	if o, _ := readGraph(exact, "#", (*drawing).settleEnds); o.passed != maxPassed { //nolint:errcheck // every name is a box's
 		t.Errorf("the chain passes %d ranks, want %d", o.passed, maxPassed)
 	}
 
@@ -1499,14 +1498,14 @@ func TestGraphLimit(t *testing.T) {
 		among.Edges = append(among.Edges, graphOf(nil, "g>h").Edges...)
 	}
 	start := time.Now()
-	if _, errs := readGraph(among, "#"); len(errs) != 300 || time.Since(start) > 3*time.Second {
+	if _, errs := readGraph(among, "#", (*drawing).settleEnds); len(errs) != 300 || time.Since(start) > 3*time.Second {
 		t.Errorf("300 edges among: %d mistakes in %v, want 300 within 3s", len(errs), time.Since(start))
 	}
 
 	// Counted before any point is made: graphs whose edges pass far more ranks than the limit make none, and are
 	// refused all told.
 	huge := chainGraph(200, 200)               // 200 edges of 198 points
-	o, _ := readGraph(huge, "#/parts/0/graph") //nolint:errcheck // every name is a box's
+	o, _ := readGraph(huge, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // every name is a box's
 	if gr := o.groups[0]; o.passed != 200*198 || len(gr.nodes) != 200 || len(gr.links) != 0 {
 		t.Errorf("200 boxes: %d ranks passed, %d nodes, %d links; want %d, 200, none made", o.passed, len(gr.nodes), len(gr.links), 200*198)
 	}
@@ -1514,7 +1513,7 @@ func TestGraphLimit(t *testing.T) {
 	for i := range hundred {
 		hundred[i] = part{Graph: chainGraph(200, 200)} //nolint:exhaustruct_v5 // one kind of part
 	}
-	if items, found, err := expand(hundred); err != nil || len(items) != 0 || len(found) != 1 || fmt.Sprint(found[0].Args) != "[3960000 4000]" {
+	if items, found, err := expand(hundred, (*drawing).settleEnds); err != nil || len(items) != 0 || len(found) != 1 || fmt.Sprint(found[0].Args) != "[3960000 4000]" {
 		t.Errorf("a hundred graphs: %d items, %v; want none, one diagram_graph_long", len(items), found)
 	}
 
@@ -1523,7 +1522,7 @@ func TestGraphLimit(t *testing.T) {
 	split := graphOf([]string{"a", "b", "c"}, "a>b", "b>c", "a>c")
 	split.X = 2000
 	for _, parts := range [][]part{{{Graph: over}}, {{Graph: exact}, {Graph: split}}} { //nolint:exhaustruct_v5 // one kind of part
-		items, found, err := expand(parts)
+		items, found, err := expand(parts, (*drawing).settleEnds)
 		if err != nil || len(items) != 0 || len(found) != 1 || found[0].Key != "diagram_graph_long" || found[0].At() != "#" ||
 			fmt.Sprint(found[0].Args) != "[4001 4000]" {
 			t.Errorf("%d graphs: %d items, %v; want none, diagram_graph_long at # of 4001", len(parts), len(items), found)
@@ -1970,7 +1969,7 @@ func TestGraphLabels(t *testing.T) {
 	// Twenty edges side by side, the first labelled: no room right of it, so left, set toward it; the graph moves
 	// right as far as the label stands left of x.
 	par := labelled(graphOf([]string{"a", "b"}, slices.Repeat([]string{"a>b"}, 20)...), "L0", 0)
-	o, _ := readGraph(par, "#/parts/0/graph") //nolint:errcheck // every name is a box's
+	o, _ := readGraph(par, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // every name is a box's
 	items, _, err := o.items()                //nolint:errcheck // the mistakes are told by laid
 	if err != nil {
 		t.Fatal(err)
@@ -2353,7 +2352,7 @@ func addGroups(rnd *rand.Rand, g *graph) {
 		}
 	}
 	for {
-		_, problems := readGraph(g, "#/parts/0/graph")
+		_, problems := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds)
 		var drop []int
 		for _, p := range problems {
 			if p.Key == "diagram_graph_inside" || p.Key == "diagram_graph_among" {
@@ -2574,8 +2573,8 @@ func wideningFault(g *graph) string {
 		}
 		return out
 	}
-	before, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are graphFault's
-	after, _ := readGraph(g, "#/parts/0/graph")  //nolint:errcheck // as above
+	before, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // its mistakes are graphFault's
+	after, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds)  //nolint:errcheck // as above
 	for k, gr := range before.groups {
 		gr.split()
 		gr.size(right)
@@ -2721,8 +2720,8 @@ func TestGraphBoxLevelStays(t *testing.T) {
 			t.Errorf("%s runs %v, %v before the ends moved", l.paths[k].what, l.paths[k].segs, r.paths[k].segs)
 		}
 	}
-	if on, all := boxParts(g, l); on != all {
-		t.Errorf("%d of %d ends on their equal parts", on, all)
+	if from, want := l.paths[2].segs[0], 20+64.0/3; math.Abs(from[0]-want) > 1e-6 {
+		t.Errorf("%s leaves at %v, want %v: the other ends part the side", l.paths[2].what, from[0], want)
 	}
 }
 
@@ -2745,5 +2744,49 @@ edge a→c M148,67 H160 V60 H184
 `
 	if got := laid(g).inspect(); got != want {
 		t.Errorf("got\n%swant\n%s", got, want)
+	}
+}
+
+// A moved end stays where it is rather than run close beside another edge, along however short a stretch: a→d would leave
+// at a's two thirds, x 62.67, and share 12 with b→c, 0.67 from it.
+func TestGraphBoxKeepApart(t *testing.T) {
+	t.Parallel()
+
+	g := graphOf([]string{"a", "b", "c", "d"}, "a>b", "b>a", "a>c", "a>d", "b>c", "b>d")
+	g.Edges[0].Level, g.Edges[1].Level = true, true
+	want := `box "a" 20,20 64x29
+box "b" 110,20 64x29
+box "c" 20,97 64x29
+box "d" 110,97 64x29
+edge a→b M84,28.5 H110
+edge b→a M110,40.5 H84
+edge a→c M41.33,49 V97
+edge a→d M68,49 V73 H131.33 V97
+edge b→c M131.33,49 V61 H62 V97
+edge b→d M152.67,49 V97
+`
+	if got := laid(g).inspect(); got != want {
+		t.Errorf("got\n%swant\n%s", got, want)
+	}
+}
+
+// Two runs a rounding apart are one line when drawn, and touch.
+func TestRunsTouchRounded(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		name string
+		s, q seg
+		want bool
+	}{
+		{"on one line, a rounding apart", seg{0, 120, 50, 120}, seg{10, 119.99999999999998, 40, 119.99999999999998}, true},
+		{"an end on a run, a rounding off", seg{0, 120, 50, 120}, seg{20, 119.99999999999998, 20, 200}, true},
+		{"side by side", seg{0, 120, 50, 120}, seg{10, 121, 40, 121}, false},
+		{"crossing", seg{0, 120, 50, 120}, seg{20, 100, 20, 200}, false},
+		{"end to end on one line", seg{0, 120, 50, 120}, seg{50, 120, 90, 120}, true},
+	} {
+		if got := runsTouch(c.s, c.q); got != c.want {
+			t.Errorf("%s: %v, want %v", c.name, got, c.want)
+		}
 	}
 }

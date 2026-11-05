@@ -241,7 +241,22 @@ func (s *sharing) span(k partSide) (lo, size float64) {
 // takes reports whether x's side takes an end at at: as far in from its ends as a graph's edges stand.
 func (s *sharing) takes(x *sideEnd, at float64) bool {
 	lo, size := s.span(x.on)
+	return sideTakes(lo, size, at)
+}
+
+// sideTakes reports whether the side from lo, size long, takes an end at at: as far in from its ends as a graph's edges
+// stand.
+func sideTakes(lo, size, at float64) bool {
 	return at >= lo+inEnd && at <= lo+size-inEnd
+}
+
+// linePoints are the points a straight edge between two sides tries, each with its side's point and number of ends: the
+// point of the side with more ends, then the other's.
+func linePoints(a, b float64, onA, onB int) [2]float64 {
+	if onB > onA {
+		return [2]float64{b, a}
+	}
+	return [2]float64{a, b}
 }
 
 // hold keeps e straight when it runs straight between its ends in the middle of their sides, a and b (nil for one not
@@ -272,12 +287,8 @@ func (s *sharing) hold(e *edge, a, b *sideEnd, on map[partSide][]*sideEnd) {
 // lineOf is the line the straight edge between a and b holds: the point of the side with more ends, else of the other,
 // when both sides take it, else the line it runs on.
 func (s *sharing) lineOf(a, b *sideEnd, on map[partSide][]*sideEnd, line float64) float64 {
-	first, second := a, b
-	if len(on[b.on]) > len(on[a.on]) {
-		first, second = b, a
-	}
-	for _, x := range []*sideEnd{first, second} {
-		if at := s.parts(x, on); s.takes(a, at) && s.takes(b, at) {
+	for _, at := range linePoints(s.parts(a, on), s.parts(b, on), len(on[a.on]), len(on[b.on])) {
+		if s.takes(a, at) && s.takes(b, at) {
 			return at
 		}
 	}

@@ -82,11 +82,11 @@ type graphOut struct {
 // readGraph reads g's boxes and groups, resolves the names of its edges against them, and splits it into groups of
 // connected boxes, each ranked. An edge naming nothing of it, or between a group and what the group holds, is dropped
 // and told; one from a box to itself is a loop, kept out of the groups (drawLoops).
-func readGraph(g *graph, at string) (*graphOut, usererr.List) {
+func readGraph(g *graph, at string, settle func(*drawing)) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
 		loops: nil, skip: false, levels: nil, row: nil, facing: nil, drawn: nil, others: nil,
-		settle: (*drawing).settleEnds,
+		settle: settle,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)
 	if n := len(out.boxes) + len(out.clusters); n > maxNodes {
