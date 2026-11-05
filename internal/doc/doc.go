@@ -32,6 +32,18 @@ func (d *Data) PosOf(at []string) yamlpos.Pos {
 	return pos
 }
 
+// PlaceItem places the mistakes of the item at the path at in d, a part's value: one of no file and no pointer at the
+// value (one of the whole output takes no place), one at a JSON pointer at what it leads to from the value.
+func (d *Data) PlaceItem(at []string, mistakes usererr.List) error {
+	pos := d.PosOf(at)
+	for i, e := range mistakes {
+		if e.File() == "" && e.At() == "" {
+			mistakes[i] = e.PlacedAt(d.File, pos.Line, pos.Column)
+		}
+	}
+	return yamlpos.Place(mistakes.Err(), d.File, d.Root, at) //nolint:wrapcheck // mistakes placed
+}
+
 // Shared are the keys of a data file floe reads itself, in every template, which the template's schema neither
 // declares nor checks.
 var Shared = []string{"lang", "template", "theme", "title"}

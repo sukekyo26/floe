@@ -4,7 +4,9 @@ import (
 	"errors"
 	"slices"
 	"strings"
+	"sync"
 
+	"github.com/goccy/go-yaml/ast"
 	"github.com/spf13/cobra"
 
 	"github.com/sukekyo26/floe/internal/diagram"
@@ -12,6 +14,7 @@ import (
 	"github.com/sukekyo26/floe/internal/draw"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/kit"
+	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
@@ -46,10 +49,7 @@ The fragment starts with the diagrams' style and the script that zooms them (onc
 enough; more does no harm). --no-assets leaves them out.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			svgs, err := a.diagrams(args, lang, func(d *diagram.Drawer, v any, o diagram.Options) (string, error) {
-				svg, err := d.Draw(v, o)
-				return string(svg), err
-			})
+			svgs, err := a.diagrams(args, lang, "cli_wants_spec", diagramOf)
 			if err != nil {
 				return err
 			}
@@ -72,30 +72,42 @@ enough; more does no harm). --no-assets leaves them out.`,
 
 func (a *app) diagramInspectCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "inspect <spec.yaml>...",
-		Short: "Check diagram specs and print where each part went, without drawing them",
-		Long: `Check each spec as floe diagram render does, and print, a line each, where each part went:
-a part's area, an edge's path and the ends it joins, a label's area and the circles it is in. It
-lets one check that edges meet the rows they mean and labels sit in their areas, without seeing
-the drawing.`,
+		Use:   "inspect <spec.yaml|data.yaml>...",
+		Short: "Check diagrams, of specs or of data files, and print where each part went, without drawing them",
+		Long: `Check each diagram as floe diagram render does, and print where each part went. A file with a
+key template at its top is a data file: its diagrams are read after the template's schema, in the
+order they are written. The checks of its template and parts do not run, and the rest of its page
+is not checked (its items of format html, its images, what its parts' functions refuse): floe check
+checks the whole page. A diagram a part of one's own draws with {{diagram}} is not among them. Any
+other file is a spec.
+
+Each diagram prints a line file:line:column: diagram "title" WIDTHxHEIGHT (file: for a spec), then,
+a line each: a part's area, a frame's heading, an edge's path and the ends it joins, a label's area
+and the circles it is in. It lets one check that edges meet the rows they mean and labels sit in
+their areas, without seeing the drawing.
+
+Where is printed on stdout and mistakes on stderr, and the exit code is 1 when there is one. A
+diagram refused by the checks is printed too, as a guide: fixing it may move its parts and edges. A
+diagram that does not get as far as its layout (a mistake of its YAML or schema, an example there
+is none of) prints no line.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
+			own := sync.OnceValues(func() (*kit.Kit, error) { return a.kit(true) })
 			// The layout is one for every language: inspected in English.
-			found, err := a.diagrams(args, "en", func(d *diagram.Drawer, v any, o diagram.Options) (string, error) {
-				return d.Inspect(v, o)
-			})
-			if err != nil {
-				return err
+			found, err := a.diagrams(args, "en", "cli_wants_spec_or_data",
+				func(d *diagram.Drawer, p arg, o diagram.Options) (string, error) { return inspectFile(d, own, p, o) })
+			if len(found) > 0 {
+				a.print("%s", strings.TrimSuffix(strings.Join(found, ""), "\n"))
 			}
-			a.print("%s", strings.TrimSuffix(strings.Join(found, ""), "\n"))
-			return nil
+			return err
 		},
 	}
 }
 
-// diagrams reads each spec file and does with it, in the language lang, each numbered by its place among them;
-// every mistake of every file, at its line and column.
-func (a *app) diagrams(paths []string, lang string, with func(*diagram.Drawer, any, diagram.Options) (string, error),
+// diagrams does one with each file, in the language lang, each numbered by its place among them, wants the key of what
+// to give: what each gave, and every mistake of every file, at its line and column.
+func (a *app) diagrams(
+	paths []string, lang, wants string, one func(*diagram.Drawer, arg, diagram.Options) (string, error),
 ) ([]string, error) {
 	d, err := draw.Diagrams()
 	if err != nil {
@@ -104,17 +116,16 @@ func (a *app) diagrams(paths []string, lang string, with func(*diagram.Drawer, a
 	store := a.iconStore()
 	var found usererr.List
 	var out []string
-	for i, p := range a.args(paths, "cli_wants_spec") {
-		got, err := diagramOf(d, p, diagram.Options{Lang: i18n.Tag(lang), Icons: store, Seq: i + 1}, with)
+	for i, p := range a.args(paths, wants) {
+		got, err := one(d, p, diagram.Options{Lang: i18n.Tag(lang), Icons: store, Seq: i + 1})
 		if failed := found.Add(err); failed != nil {
 			return nil, failed
 		}
-		out = append(out, got)
+		if got != "" {
+			out = append(out, got)
+		}
 	}
-	if err := found.Err(); err != nil {
-		return nil, err
-	}
-	return out, nil
+	return out, found.Err()
 }
 
 // diagramAssets are what a page holds once for the diagrams of floe diagram render: the script that zooms them,
@@ -150,20 +161,76 @@ func diagramAssets() (string, error) {
 	return script + "\n<style>" + palette + "</style>\n<style>" + draw.Sheet("", p.CSS()) + "</style>", nil
 }
 
-func diagramOf(
-	d *diagram.Drawer, p arg, o diagram.Options, with func(*diagram.Drawer, any, diagram.Options) (string, error),
-) (string, error) {
-	src, err := p.read()
+// diagramOf draws the spec file p.
+func diagramOf(d *diagram.Drawer, p arg, o diagram.Options) (string, error) {
+	_, root, v, err := specOf(p)
 	if err != nil {
 		return "", err
 	}
-	// Read as doc.Read reads a data file: a file of nothing is a spec of nothing, whose lacks the schema tells.
+	svg, err := d.Draw(doc.Ints(v), o)
+	return string(svg), yamlpos.Place(err, p.name, root, nil) //nolint:wrapcheck // mistakes placed
+}
+
+// specOf reads the file p as doc.Read reads a data file: a file of nothing is a spec of nothing, whose lacks the schema
+// tells.
+func specOf(p arg) ([]byte, *ast.MappingNode, map[string]any, error) {
+	src, err := p.read()
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	root, v, err := yamlpos.ParseMap(p.name, src)
 	if err != nil {
-		return "", err //nolint:wrapcheck // a mistake at its line and column
+		return nil, nil, nil, err //nolint:wrapcheck // a mistake at its line and column
 	}
-	got, err := with(d, doc.Ints(v), o)
-	return got, yamlpos.Place(err, p.name, root, nil) //nolint:wrapcheck // mistakes placed
+	return src, root, v, nil
+}
+
+// inspectFile inspects the diagrams of the file p, a data file by the key template at its top, read with own, or else
+// a spec, each under the place it is written at; and every mistake.
+// LIMIT: the key alone tells them: a data file lacking it is told as a spec is, in words that do not say it lacks it,
+// and a spec with it is told as a page. Telling them by more keys is a special case for a mistake plain to see.
+func inspectFile(d *diagram.Drawer, own func() (*kit.Kit, error), p arg, o diagram.Options) (string, error) {
+	src, root, v, err := specOf(p)
+	if err != nil {
+		return "", err
+	}
+	if _, isData := v["template"]; !isData {
+		got, mistakes := d.Inspect(doc.Ints(v), o)
+		pos, _ := yamlpos.Locate(root, nil)
+		//nolint:wrapcheck // mistakes placed
+		return placedAt(p.name, pos, got), yamlpos.Place(mistakes, p.name, root, nil)
+	}
+	k, err := own()
+	if err != nil {
+		return "", err
+	}
+	data, items, err := tmpl.Diagrams(k, p.name, src)
+	if err != nil {
+		return "", err //nolint:wrapcheck // mistakes of the data file, or floe's failure
+	}
+	var out strings.Builder
+	var found usererr.List
+	for _, it := range items {
+		got, told := d.Inspect(it.Value, o)
+		out.WriteString(placedAt(p.name, data.PosOf(it.At), got))
+		var mistakes usererr.List
+		if failed := mistakes.Add(told); failed != nil {
+			return "", failed
+		}
+		if failed := found.Add(data.PlaceItem(it.At, mistakes)); failed != nil {
+			return "", failed
+		}
+	}
+	return out.String(), found.Sorted().Err()
+}
+
+// placedAt is what Inspect told, got, its first line, the diagram's, after where in file it is written, as a mistake's
+// place is written: "" for nothing told.
+func placedAt(file string, pos yamlpos.Pos, got string) string {
+	if got == "" {
+		return ""
+	}
+	return usererr.Where(file, pos.Line, pos.Column) + ": " + got
 }
 
 func (a *app) diagramExampleCmd() *cobra.Command {

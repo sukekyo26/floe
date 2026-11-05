@@ -1,3 +1,4 @@
+diagram "The plan of one version of an app, week by week" 920x330
 bar "decide" 200,37 96x14
 bar "design" 312,73 96x14
 bar "screens" 424,109 224x14

@@ -26,7 +26,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe serve` | Run the server in the foreground |
 | `floe stop` | Stop the background server |
 | `floe diagram render <spec.yaml>...` | Check diagram specs and print them as inline SVG |
-| `floe diagram inspect <spec.yaml>...` | Check diagram specs and print where each part went |
+| `floe diagram inspect <spec.yaml\|data.yaml>...` | Check diagrams, of specs or of data files, and print where each part went |
 | `floe diagram example [kind]` | List the example specs, or print one |
 | `floe icons fetch <set> [zip-or-url]` | Keep an icon set (`aws`) for the `icon` parts of diagrams |
 | `floe icons search <word>...` | List the fetched icons whose name contains every word |
@@ -211,9 +211,22 @@ Check each diagram spec and print the diagrams, in order, as one HTML fragment o
 | `--lang <tag>` | The language to write the diagrams' text in (`en`, `ja`). Defaults to `en`. |
 | `--no-assets` | Print the diagrams without the assets, for a page that already holds them. |
 
-## `floe diagram inspect <spec.yaml>...`
+## `floe diagram inspect <spec.yaml|data.yaml>...`
 
-Check each spec as `floe diagram render` does, and print, a line each, where each part went: a part's area, an edge's path and the ends it joins, a label's area and the circles it is in. It lets one check that edges meet the rows they mean and labels sit in their areas, without seeing the drawing.
+Check each diagram as `floe diagram render` does, and print where each part went. It lets one check that edges meet the rows they mean and labels sit in their areas, without seeing the drawing.
+
+```text
+page.yaml:9:11: diagram "The API" 560x190
+frame "cloud" 20,20 300x150
+the heading of frame "cloud" 60,26 74.88x18
+the icon of frame "cloud" 20,20 31x31
+edge [60,10]→[60,120] M60,10 V120
+```
+
+- A file with a key `template` at its top is a data file: its diagrams, in `details` and `tabs` too, are read after the template's schema, in the order they are written. Any other file is a spec. A mistake off the diagrams that the schema refuses stops the file, as nothing can be said of what is under it.
+- Each diagram prints a line of where it is written (`file:line:column:`, or `file:` for a spec), its title and its canvas. Then, a line each: a part's area, a frame's heading, an edge's path and the ends it joins, a label's area and the circles it is in.
+- Where is printed on stdout and mistakes on stderr, and the exit code is 1 when there is one. A diagram the checks refuse is printed too, as a guide: fixing it may move its parts and edges, and a `graph` with a mistake has only what it got as far as, or nothing. A diagram that gets no layout (a mistake of its YAML or schema, an `example` there is none of) prints no line.
+- The checks of a data file's template and parts do not run, and the rest of its page is not checked (its items of format `html`, its images, what its parts' functions refuse): `floe check` checks the whole page. A diagram that a part of one's own draws with `{{diagram}}` is not among them. A data file lacking `template` is read as a spec, and told so in the words for a spec; a spec with one is read as a page.
 
 ## `floe diagram example [kind]`
 

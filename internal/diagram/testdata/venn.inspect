@@ -1,3 +1,4 @@
+diagram "The packages each floe command runs through" 760x520
 circle "publish" 130,30 340x340
 circle "serve" 290,30 340x340
 circle "render" 210,165 340x340

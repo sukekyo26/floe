@@ -258,3 +258,20 @@ func TestAddWarned(t *testing.T) {
 		t.Errorf("told %+v, want the failure %q", r, want)
 	}
 }
+
+// A place is written as far as it goes, in a mistake and in what floe diagram inspect prints alike.
+func TestWhere(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		file         string
+		line, column int
+		want         string
+	}{
+		{"", 0, 0, ""}, {"a.yaml", 0, 0, "a.yaml"}, {"a.yaml", 3, 0, "a.yaml:3"}, {"a.yaml", 3, 4, "a.yaml:3:4"},
+	} {
+		if got := usererr.Where(c.file, c.line, c.column); got != c.want {
+			t.Errorf("Where(%q, %d, %d) = %q, want %q", c.file, c.line, c.column, got, c.want)
+		}
+	}
+}
