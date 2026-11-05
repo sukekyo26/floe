@@ -541,8 +541,6 @@
   .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
   /* What the bar shows, its menu leaves out, so that nothing is in both: a row has no bar, so that its menu has all */
   .frame-actions .menu :is(.open, .download, .archive), .menu .fav-item { display: none; }
-  .frame-actions > .archive.on, .frame-actions > .archive.on:hover { color: var(--on-ink); background: var(--ink); }
-  .frame-actions > .archive.on:hover { background: var(--ink-hover); }
   /* What opens a column folded, where the button that folded it stood in the foot, on a ground of its own: any page may lie under it.
      After .icon-btn, whose ground it takes the place of.
      LIMIT: over a page it hides what lies under it, until the page scrolls or the column opens. Room under the iframe would be the bar a column left behind was: move it if that comes to trouble someone */
@@ -556,8 +554,8 @@
   .icon-btn[aria-pressed="true"] svg { fill: currentColor; }
   .star[aria-pressed="true"] { color: var(--star); }
   /* The diff open: the button that closes it, in the place of the one that opened it */
-  .diff-open.closing { color: var(--on-ink); background: var(--ink); border-radius: 50%; }
-  .diff-open.closing:hover { color: var(--on-ink); background: var(--ink-hover); }
+  .diff-open.closing, .archive.on { color: var(--on-ink); background: var(--ink); border-radius: 50%; }
+  :is(.diff-open.closing, .archive.on):hover { color: var(--on-ink); background: var(--ink-hover); }
   .copy .done, .copy.copied > svg { display: none; }
   .copy.copied .done { display: block; color: var(--good); }
   .delete.armed { color: var(--danger); background: var(--danger-soft); border-color: var(--armed-line); font-weight: 650; }
@@ -753,7 +751,7 @@
     #narrow-filter-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     #narrow-filter-n { display: inline; }
   }
-  /* The bar folds up: the search as its icon until it is reached, a page's buttons gone, the filter at the row's end */
+  /* The bar folds up: the search as its icon until it is reached, a page's buttons in its menu, the filter at the row's end */
   @media (max-width: 40rem) {
     #narrow-filter { margin-left: auto; }
     .shelf .views [data-view="archived"] .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -762,6 +760,9 @@
     .framed #frame-actions .menu :is(.open, .download, .archive, .fav-item) { display: inline-flex; }
     /* The back button goes to the same list as the logo, whose room the title takes */
     .framed .brand { display: none; }
+    /* The menu stands under the bar, in from the window's right: under its own button, it would run off the left of a narrow window */
+    .framed #frame-actions .more { position: static; }
+    .framed #frame-actions .menu { right: 1rem; min-width: min(17.5rem, calc(100vw - 2rem)); }
     .framed .frame-title { margin-left: 0; padding-left: 0; }
     .framed .frame-title::before { display: none; }
     .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
@@ -1969,6 +1970,14 @@
     $('add-open').hidden = view === 'archived';
   }
 
+  // Whether a has a page of its own to open alone or download: a folder has none, nor has a link whose file is gone
+  const hasPage = (a) => !a.folder && !a.missing;
+  // The button that archives a or gives it back, and the words it goes by
+  function drawArchive(btn, a) {
+    btn.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
+    btn.onclick = () => toggleArchived(a);
+    return t(a.archived ? 'ui_unarchive' : 'ui_archive');
+  }
   function drawDownload(link, a) {
     link.href = `/api/artifacts/${a.slug}/download`;
     link.download = `${a.slug}.html`;
@@ -2009,13 +2018,10 @@
     open.setAttribute('aria-label', t('ui_open_raw_named', a.title));
     const dl = box.querySelector('.download');
     drawDownload(dl, a);
-    // A folder has no page of its own to open alone or download, nor has a link whose file is gone
-    open.hidden = Boolean(a.folder || a.missing);
-    dl.hidden = Boolean(a.folder || a.missing);
+    open.hidden = !hasPage(a);
+    dl.hidden = !hasPage(a);
     const arc = box.querySelector('.archive');
-    arc.querySelector('.label').textContent = t(a.archived ? 'ui_unarchive' : 'ui_archive');
-    arc.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
-    arc.addEventListener('click', () => toggleArchived(a));
+    arc.querySelector('.label').textContent = drawArchive(arc, a);
     const fav = box.querySelector('.fav-item');
     fav.querySelector('.label').textContent = t(a.favorite ? 'ui_unfavorite' : 'ui_favorite');
     fav.setAttribute('aria-label', t(a.favorite ? 'ui_unfavorite_named' : 'ui_favorite_named', a.title));
@@ -2073,19 +2079,17 @@
     copy.onclick = () => copyPath(`${a.path}/${file}`, copy);
     const open = box.querySelector('.open');
     open.href = rawHref({ slug: a.slug, file });
-    open.hidden = Boolean(a.missing || a.folder && !file);
+    open.hidden = file ? Boolean(a.missing) : !hasPage(a);
     open.setAttribute('aria-label', t('ui_open_raw_named', file ? baseName(file) : a.title));
     const dl = box.querySelector('.download');
-    dl.hidden = Boolean(file || a.folder || a.missing);
+    dl.hidden = Boolean(file) || !hasPage(a);
     dl.title = t('ui_download');
     drawDownload(dl, a);
     // Its words tell what a press does, so that it is not told as pressed too
     const arc = box.querySelector('.archive');
     arc.hidden = Boolean(file);
     arc.classList.toggle('on', Boolean(a.archived));
-    arc.title = t(a.archived ? 'ui_unarchive' : 'ui_archive');
-    arc.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
-    arc.onclick = () => toggleArchived(a);
+    arc.title = drawArchive(arc, a);
     const slot = box.querySelector('.more-slot');
     const focused = slot.contains(document.activeElement);
     slot.replaceChildren(...(file ? [] : [moreMenu(a)]));
@@ -2431,14 +2435,22 @@
     await load();
   }
 
+  // Pressed again before the answer, a is as it was and the press would ask the same: the button stays, with the focus, doing nothing
+  const archiving = new Set();
   async function toggleArchived(a) {
-    const reason = await patchOne(a.slug, { archived: !a.archived });
-    if (reason) {
-      showError(t(a.archived ? 'ui_unarchive_failed' : 'ui_archive_failed', a.title, reason));
-      return;
+    if (archiving.has(a.slug)) return;
+    archiving.add(a.slug);
+    try {
+      const reason = await patchOne(a.slug, { archived: !a.archived });
+      if (reason) {
+        showError(t(a.archived ? 'ui_unarchive_failed' : 'ui_archive_failed', a.title, reason));
+        return;
+      }
+      toast(t(a.archived ? 'ui_unarchive_done' : 'ui_archive_done', a.title));
+      await load();
+    } finally {
+      archiving.delete(a.slug);
     }
-    toast(t(a.archived ? 'ui_unarchive_done' : 'ui_archive_done', a.title));
-    await load();
   }
 
   async function copyPath(path, btn) {
@@ -3573,6 +3585,8 @@
     $('find-cut').textContent = hits.length > FIND_ROWS ? t('ui_find_cut', FIND_ROWS) : words || none ? t('ui_find_n', hits.length) : t('ui_find_newest');
     // The same row, or what has come to its place, or the last
     const at = findShown.findIndex((a) => a.slug === findSlug);
+    // The row gone from under the foot's buttons: pressed again, they would act on what has come to its place
+    if (at === -1 && findSlug !== null && $('find-actions').contains(document.activeElement)) $('find-q').focus();
     findMark(at !== -1 ? at : Math.min(findAt, findShown.length - 1));
   }
 

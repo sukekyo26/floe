@@ -973,6 +973,27 @@ func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests 
 	}, "|"))
 }
 
+// TestUIFindRowGone: a row archived out of the rows shown takes the focus off the foot's buttons, which would go on to act on the row
+// come to its place, one more archived by each press.
+func TestUIFindRowGone(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	for i := range 51 {
+		slug := fmt.Sprintf("p%d", i)
+		s.floe(t, "publish", s.page(t, "many/"+slug+".yaml", slug, "<p>p</p>"), "--slug", slug)
+	}
+	b.navigate("/")
+	b.until("the rows", "items.length === 51")
+	b.eval("openFind()")
+	keyDown(b, "key: 'ArrowUp'")
+	b.until("the last row", "findSlug && document.querySelector('#find-actions > .archive[title]')")
+	const at = "document.querySelector('#find-actions').dataset.slug"
+	slug := b.eval(at)
+	b.eval("document.querySelector('#find-actions > .archive').focus(); document.querySelector('#find-actions > .archive').click()")
+	b.until("the row gone", at+" !== "+js(slug))
+	check(t, "gone", []string{b.eval("document.activeElement.id"), b.eval("items.filter((a) => a.archived).map((a) => a.slug).join()")}, "find-q|"+slug)
+}
+
 // TestUIFindArrows moves over the rows by the arrows from the foot's buttons too, which keep the focus and say the row they act on,
 // but not with a menu open; Enter stays the button's.
 func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time

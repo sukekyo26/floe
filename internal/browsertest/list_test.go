@@ -1043,10 +1043,30 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("restored", "!document.querySelector('#frame-actions > .archive').classList.contains('on')")
 	out = append(out, b.settled(archive), b.eval("document.activeElement.matches('#frame-actions > .archive')"))
 	b.navigate("/a/two/")
-	b.until("the bar", "document.querySelector('#frame-actions .star')")
+	b.until("the bar", "document.querySelector('#frame-actions > .download[href]')")
 	out = append(out, b.eval("(() => { const d = document.querySelector('#frame-actions > .download'); return [new URL(d.href).pathname, d.download].join(' '); })()"))
 	b.navigate("/a/docs/?file=index.html")
 	b.until("the bar", "!document.getElementById('frame-actions').hidden && document.querySelector('#frame-actions .star')")
+	out = append(out, shown("#frame-actions"))
+	// Pressed the other way, twice before the answer: one question and one toast, the words changed, the mark black with what is on it readable.
+	b.navigate("/a/one/")
+	b.until("the bar", "document.querySelector('#frame-actions > .archive[title]')")
+	b.eval(`window.patched = 0; window.fetch = ((f) => (u, i) => { if (i?.method === 'PATCH') window.patched++; return f(u, i); })(window.fetch);
+		document.querySelector('#frame-actions > .archive').focus(); document.querySelector('#frame-actions > .archive').click(); document.querySelector('#frame-actions > .archive').click()`)
+	b.until("archived", "document.querySelector('#frame-actions > .archive').classList.contains('on')")
+	said := b.until("the toast", "document.querySelector('.toast') && [window.patched, [...document.querySelectorAll('.toast')].map((e) => e.textContent).join(), document.activeElement.matches('#frame-actions > .archive')].join(' / ')")
+	out = append(out, b.settled(archive), said)
+	out = append(out, b.settled(`(() => {
+		const lum = (c) => { const [r, g, bl] = c.match(/[\d.]+/g).map((x) => { const v = x / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * bl; };
+		const s = getComputedStyle(document.querySelector('#frame-actions > .archive')), a = lum(s.color), g = lum(s.backgroundColor);
+		return (Math.max(a, g) + 0.05) / (Math.min(a, g) + 0.05) >= 4.5;
+	})()`))
+	b.eval("document.querySelector('#frame-actions > .archive').click()")
+	b.until("given back", "!document.querySelector('#frame-actions > .archive').classList.contains('on')")
+	// Between the widths the bar is as wide.
+	b.size(800, 800, false)
+	b.navigate("/a/two/")
+	b.until("the bar", "innerWidth === 800 && document.querySelector('#frame-actions .more')")
 	out = append(out, shown("#frame-actions"))
 
 	// Narrow: the title takes the logo's room, the rest in the menu, favorites too, and f goes on.
@@ -1062,7 +1082,22 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("document.querySelector('#frame-actions summary').click(); document.querySelector('#frame-actions .fav-item').click()")
 	out = append(out, b.until("no favorite", "!items.find((a) => a.slug === 'two').favorite && document.querySelector('#frame-actions .fav-item') && "+fav))
 	// Pressed on the toast with the focus on it, a page marked unread gives the focus to the bar's menu.
-	b.eval("document.querySelector('#frame-actions .fav-item').blur()")
+	// The menu opens within the window at any width.
+	for _, width := range []int64{400, 320} {
+		b.size(width, 800, false)
+		b.until("the width", "innerWidth === "+strconv.FormatInt(width, 10))
+		b.eval("document.querySelector('#frame-actions .more').open = true")
+		out = append(out, b.eval("(() => { const r = document.querySelector('#frame-actions .menu').getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth; })()"))
+		b.eval("document.querySelector('#frame-actions .more').open = false")
+	}
+	b.size(400, 800, false)
+	// The other kinds, narrow.
+	s.floe(t, "archive", "kept")
+	for _, slug := range []string{"one", "link", "kept"} {
+		b.navigate("/a/" + slug + "/")
+		b.until(slug+"'s bar", "innerWidth === 400 && document.querySelector('#frame-actions .more')")
+		out = append(out, shown("#frame-actions"))
+	}
 	b.navigate("/a/one/")
 	b.until("the bar", "document.querySelector('#frame-actions .more')")
 	b.eval("markUnread('one')")
@@ -1097,11 +1132,19 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		"Archive / Archive Kept /  / false / true", "true",
 		"/api/artifacts/two/download two.html",
 		"copy open | ",
+		"Restore / Restore One to the list /  / true / false",
+		"1 / Archived “One” / true",
+		"true",
+		"diff-open download open archive star more | mark-unread edit delete",
 		"diff-open more | fav-item mark-unread edit open download archive delete",
 		"0 1 true",
 		"Add to favorites / Add Two to favorites",
 		"Remove from favorites / Remove Two from favorites",
 		"Add to favorites / Add Two to favorites",
+		"true", "true",
+		"more | fav-item mark-unread edit open download archive delete",
+		"more | fav-item edit copy open download archive delete",
+		"more | fav-item mark-unread edit open download archive delete",
 		"on the menu",
 		"copy open | ",
 		"true true",
