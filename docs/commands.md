@@ -23,6 +23,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe archive <slug>...` | Take pages off the lists, keeping them (`--undo` gives them back) |
+| `floe work [<slug>...]` | Put pages on a task of the dev screen, pin them, or change a task |
 | `floe serve` | Run the server in the foreground |
 | `floe stop` | Stop the background server |
 | `floe diagram render <spec.yaml>...` | Check diagram specs and print them as inline SVG |
@@ -186,6 +187,36 @@ Delete the pages in order through the server (it is started when it is not runni
 ## `floe archive <slug>...`
 
 Archive the pages in order through the server (it is started when it is not running), stopping at the first failure (such as a page that does not exist). An archived page is left off `floe list` and the management page's list, which shows it under "Archive" on its shelf; it is still served at its URL, downloaded and drawn again by `floe rebuild`. Archiving one again changes nothing. `--undo` gives the pages back to the lists, and so does publishing a page again.
+
+## `floe work [<slug>...]`
+
+Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its name; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `work.json` in the store holds each task's title, state, last step, outside link and order of steps.
+
+```sh
+floe work design-notes --item "#130" --step design --state waiting   # the page on the task, and the task's state
+floe work --item "#130" --url https://example.com/issues/482         # the task alone
+floe work --item "#130" --steps design,build,review                  # the order its steps are shown in
+floe work design-notes --pin                                         # pinned, whatever its task
+floe work --item "#130" --forget                                     # the task's row removed
+```
+
+With slugs, the task's project is each page's: `--item` puts the pages on that name in their own projects, and without it each page's own task is changed. Without slugs, `--item` names the task, of `--project` (the working directory's project when left out; `""` for none).
+
+| Flag | Changes | |
+| --- | --- | --- |
+| `--item <name>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their step off. A new name is a task in the state `doing` |
+| `--step <step>` | pages, and the task's last step | With slugs only. `""` takes it off the pages and leaves the task's |
+| `--state <state>` | the task | `waiting`, `doing` or `done` |
+| `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
+| `--title <title>` | the task | `""` takes it off |
+| `--steps a,b,c` | the task | The order of its steps; a step not named comes after them. A step's name cannot hold a comma here. `""` takes it off |
+| `--pin`, `--unpin` | pages | With slugs only |
+| `--clear` | pages | Off their task, and their pin off; the task stays |
+| `--forget` | the task | Without slugs. Refused while a page is on it, an archived one too |
+
+The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at the first failure; a page that does not exist, or is on no task where the flags change one, is told before anything is written. A page that could not be written leaves its task written: the same command given again finishes it. Flags of the pages alone write no task.
+
+A page keeps its `work` when published again, renamed or drawn again. `work.json` that cannot be read, or holds another state, is refused and not written over: mend it by hand. A key of a row floe does not know is lost at the next write.
 
 ## `floe serve`
 
