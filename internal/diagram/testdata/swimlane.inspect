@@ -1,6 +1,10 @@
+diagram "One pull request: the user, the architect and the engineer" 850x784
 frame "user" 20,20 240x744
 frame "architect" 284,20 264x744
 frame "engineer" 572,20 258x744
+the heading of frame "user" 32,29 48x18
+the heading of frame "architect" 296,29 72x18
+the heading of frame "engineer" 584,29 61.44x18
 box "answer" 32,214 136x46
 box "ok" 32,632.5 152x29
 box "order" 392,50 144x46

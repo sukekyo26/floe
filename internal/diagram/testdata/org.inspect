@@ -1,3 +1,4 @@
+diagram "The departments of a company" 960x300
 box "Chief executive" 400,20 160x29
 box "Engineering" 156,89 128x29
 box "アプリ" 64,158 72x29

@@ -1,7 +1,12 @@
+diagram "Feature ideas for a notes app: value by effort" 900x480
 frame "すぐやる" 80,40 400x180
 frame "計画してやる" 480,40 400x180
 frame "When there is time" 80,220 400x180
 frame "Do not do" 480,220 400x180
+the heading of frame "すぐやる" 92,49 48x18
+the heading of frame "計画してやる" 492,49 72x18
+the heading of frame "When there is time" 92,229 138.24x18
+the heading of frame "Do not do" 492,229 69.12x18
 dot 103,93 14x14
 dot 103,145 14x14
 dot 503,93 14x14

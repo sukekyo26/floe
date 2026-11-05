@@ -1,3 +1,4 @@
+diagram "What floe publish checks" 1092x811
 box "publish" 566,20 176x29
 box "resolve" 506,73 296x29
 box "kind" 494,126 320x29

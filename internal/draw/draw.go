@@ -261,15 +261,11 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 				// told at part.html, not the value; the part's schema giving the value its shape has it told at the
 				// item. Tell both if one misleads.
 				mistakes[i] = e.PlacedAt(e.File(), line, column)
-			case e.File() == "" && e.At() == "":
-				// At the value drawn: a function refusing it, or text/template's mistake that says not where in
-				// part.html it is. One of the whole output (the icons of a diagram) takes no place.
-				pos := d.PosOf(it.At)
-				mistakes[i] = e.PlacedAt(d.File, pos.Line, pos.Column)
 			}
 		}
-		// A function's mistakes at a JSON pointer are at one from the root of the part's value.
-		return nil, yamlpos.Place(mistakes.Err(), d.File, d.Root, it.At) //nolint:wrapcheck // mistakes placed
+		// The rest are at the value drawn: a function refusing it, or text/template's mistake that says not where in
+		// part.html it is; a function's mistakes at a JSON pointer are at one from the root of the part's value.
+		return nil, d.PlaceItem(it.At, mistakes) //nolint:wrapcheck // mistakes placed
 	}
 	return template.HTML(strings.TrimSpace(b.String())), nil //nolint:gosec // G203: drawn by html/template
 }

@@ -1,7 +1,12 @@
+diagram "floe がページを配信する仕組み" 1248x512
 frame "Store ~/.local/share/floe" 272,108 256x300
 frame "ローカルサーバー 127.0.0.1:7325" 624,20 280x476
 frame "Browser" 968,20 264x476
 frame "Frame /a/<slug>/" 984,112 232x188
+the heading of frame "Store ~/.local/share/floe" 284,117 192x18
+the heading of frame "ローカルサーバー 127.0.0.1:7325" 636,29 211.2x18
+the heading of frame "Browser" 980,29 53.76x18
+the heading of frame "Frame /a/<slug>/" 996,121 122.88x18
 box "floe publish" 24,64 200x56
 box "<slug>/source-<id>/" 288,152 224x56
 box "<slug>/meta.json" 288,240 224x56

@@ -71,8 +71,11 @@ func render(lang string) func(d *diagram.Drawer, v any) (string, error) {
 	}
 }
 
+// inspect is the lines of the parts Drawer.Inspect tells, without the line of the diagram.
 func inspect(d *diagram.Drawer, v any) (string, error) {
-	return d.Inspect(v, diagram.Options{Lang: "en", Icons: lambda, Seq: 1})
+	got, err := d.Inspect(v, diagram.Options{Lang: "en", Icons: lambda, Seq: 1})
+	_, parts, _ := strings.Cut(got, "\n")
+	return parts, err
 }
 
 func golden(t *testing.T, file, got string) {

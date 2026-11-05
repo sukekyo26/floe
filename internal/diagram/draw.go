@@ -77,6 +77,8 @@ func (d *Drawer) Draw(spec any, opts Options) (template.HTML, error) {
 	return l.draw(opts.Lang)
 }
 
+// layout lays the spec v out and checks it, its mistakes in the error: with the layout when they are those of the
+// checks, which Inspect shows and Draw does not; a nil layout when it did not get as far.
 func (d *Drawer) layout(v any, opts Options) (*layout, error) {
 	if opts.Icons == nil {
 		opts.Icons = NoIcons{Err: nil}
@@ -104,10 +106,7 @@ func (d *Drawer) layout(v any, opts Options) (*layout, error) {
 			return nil, err
 		}
 	}
-	if err := found.Sorted().Err(); err != nil {
-		return nil, err
-	}
-	return l, nil
+	return l, found.Sorted().Err()
 }
 
 // example returns the spec of the built-in example s names, or the mistake, at #/example, that there is none. An
@@ -201,19 +200,22 @@ func (l *layout) draw(lang i18n.Lang) (template.HTML, error) {
 	return template.HTML(b.String()), nil //nolint:gosec // see above
 }
 
-// Inspect lays spec out as Draw does, and tells where each part went, a line each, as the mistakes name them: a
-// part's area,
-// an edge's path and the ends it joins, and the region a label is in.
+// Inspect lays spec out as Draw does, and tells where each part went, a line each, as the mistakes name them: the
+// diagram by its title with its canvas, then a part's area, a frame's heading, an edge's path and the ends it joins,
+// and the region a label is in. With mistakes of the checks it tells them too: what it tells then is a guide, as a
+// spec with a mistake is laid out without its straight edges (newLayout), and a graph that failed is partly there.
 func (d *Drawer) Inspect(spec any, opts Options) (string, error) {
 	l, err := d.layout(spec, opts)
-	if err != nil {
+	if l == nil {
 		return "", err
 	}
-	return l.inspect(), nil
+	//nolint:exhaustruct_v5 // a name alone
+	title := rect{what: ""}.named("diagram", "", l.s.Title, "")
+	return title.what + " " + num(l.w) + "x" + num(l.h) + "\n" + l.inspect(), err
 }
 
 func (l *layout) inspect() string {
-	lines := make([]string, 0, len(l.frames)+len(l.boxes)+len(l.marks)+len(l.areas)+len(l.paths)+len(l.labels))
+	lines := make([]string, 0, len(l.frames)+len(l.heads)+len(l.boxes)+len(l.marks)+len(l.areas)+len(l.paths)+len(l.labels))
 	area := func(r rect) string {
 		if r.byPlace { // named by where it stands already
 			return r.what
@@ -221,6 +223,9 @@ func (l *layout) inspect() string {
 		return r.what + " " + placeOf(r)
 	}
 	for _, r := range l.frames {
+		lines = append(lines, area(r))
+	}
+	for _, r := range l.heads {
 		lines = append(lines, area(r))
 	}
 	for _, r := range l.boxes {

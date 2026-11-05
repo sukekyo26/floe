@@ -1,3 +1,4 @@
+diagram "When floe's PRs were merged" 1100x240
 bar "#1, #2: repository and CI" 193.1,77 4x14
 bar "#3 to #12 (10 PRs)" 459.7,117 61.9x14
 bar "#13, #14 in review" 531.7,157 346.2x14

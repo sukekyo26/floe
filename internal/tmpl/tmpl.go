@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"fmt"
 	"io/fs"
+	"slices"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/diagram"
@@ -32,26 +33,9 @@ type Options struct {
 // its checks, its parts' checks for each item they draw, and its computed values; then drawn (draw.Page), with
 // the warnings of the page drawn.
 func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, []*usererr.Error, error) {
-	d, err := doc.Read(file, src, o.Theme)
-	var found usererr.List
-	if failed := found.Add(err); failed != nil {
-		return nil, nil, failed
-	}
-	if d == nil {
-		return nil, nil, err //nolint:wrapcheck // mistakes of the YAML
-	}
-	t, theme := pick(k, d, &found)
-	if t == nil {
-		return nil, nil, found.Sorted().Err()
-	}
-	if t.Schema() == nil {
-		return nil, nil, fmt.Errorf("tmpl: the template %s has no schema", t.Name()) //nolint:err113 // floe's own mistake
-	}
-	if failed := found.Add(t.Schema().Validate(d)); failed != nil {
-		return nil, nil, failed //nolint:wrapcheck // floe's failure, which says what failed
-	}
-	if found != nil {
-		return nil, nil, found.Sorted().Err()
+	d, t, theme, err := checked(k, file, src, o.Theme)
+	if err != nil {
+		return nil, nil, err
 	}
 	calc, err := run(k, t, d)
 	if err != nil {
@@ -59,6 +43,60 @@ func Draw(k *kit.Kit, file string, src []byte, o Options) ([]byte, []*usererr.Er
 	}
 	//nolint:wrapcheck // mistakes of the page, or floe's failure
 	return draw.Page(k, t, theme, d, calc, cmp.Or(d.Title, o.Untitled), o.Images, o.ImagesDir, o.Icons)
+}
+
+// Diagrams returns the data file src, file in its mistakes, read and checked against its template's schema as Draw
+// does, and the values of its parts diagram in the order they are written (Walk goes by the keys' names). Nothing is
+// drawn, and neither the checks nor the computed values run, so a page they refuse has its diagrams too.
+// LIMIT: only the part diagram: a part of one's own whose part.html calls {{diagram}} is not among them. Collect them
+// while drawing the parts' values if one comes to need it.
+func Diagrams(k *kit.Kit, file string, src []byte) (*doc.Data, []schema.Item, error) {
+	d, t, _, err := checked(k, file, src, "")
+	if err != nil {
+		return nil, nil, err
+	}
+	var items []schema.Item
+	_, err = t.Schema().Walk(d.Values, func(it schema.Item, ready any) (any, error) {
+		if it.Part == "diagram" {
+			items = append(items, it)
+		}
+		return ready, nil
+	})
+	if err != nil {
+		return nil, nil, err //nolint:wrapcheck // floe's failure
+	}
+	slices.SortStableFunc(items, func(a, b schema.Item) int {
+		at, bt := d.PosOf(a.At), d.PosOf(b.At)
+		return cmp.Or(cmp.Compare(at.Line, bt.Line), cmp.Compare(at.Column, bt.Column))
+	})
+	return d, items, nil
+}
+
+// checked is the first stages of a drawing: the data file read, with its template and theme, in the theme given or
+// else its own, and checked against the template's schema; or their mistakes.
+func checked(k *kit.Kit, file string, src []byte, given string) (*doc.Data, *kit.Template, string, error) {
+	d, err := doc.Read(file, src, given)
+	var found usererr.List
+	if failed := found.Add(err); failed != nil {
+		return nil, nil, "", failed
+	}
+	if d == nil {
+		return nil, nil, "", err //nolint:wrapcheck // mistakes of the YAML
+	}
+	t, theme := pick(k, d, &found)
+	if t == nil {
+		return nil, nil, "", found.Sorted().Err()
+	}
+	if t.Schema() == nil {
+		return nil, nil, "", fmt.Errorf("tmpl: the template %s has no schema", t.Name()) //nolint:err113 // floe's own mistake
+	}
+	if failed := found.Add(t.Schema().Validate(d)); failed != nil {
+		return nil, nil, "", failed //nolint:wrapcheck // floe's failure, which says what failed
+	}
+	if found != nil {
+		return nil, nil, "", found.Sorted().Err()
+	}
+	return d, t, theme, nil
 }
 
 // pick returns the template of k that d names and the name of the theme it is drawn with, as doc.Read read
