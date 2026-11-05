@@ -180,8 +180,8 @@ func labelsBeside(g *graph, l *layout) string {
 
 // reachFault is the first icon of g moved past what it may, or "".
 func reachFault(g *graph) string {
-	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are iconFault's
-	if _, _, err := o.items(); err != nil { //nolint:errcheck // its mistakes are iconFault's
+	o, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // its mistakes are iconFault's
+	if _, _, err := o.items(); err != nil {                        //nolint:errcheck // its mistakes are iconFault's
 		return ""
 	}
 	axis := 0
@@ -210,8 +210,8 @@ func reachFault(g *graph) string {
 
 // touchesOutside counts the pairs of edges of g laid out as l touching outside every icon's rectangle.
 func touchesOutside(g *graph, l *layout) int {
-	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // its mistakes are iconFault's
-	if _, _, err := o.items(); err != nil { //nolint:errcheck // its mistakes are iconFault's
+	o, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // its mistakes are iconFault's
+	if _, _, err := o.items(); err != nil {                        //nolint:errcheck // its mistakes are iconFault's
 		return 0
 	}
 	inside := func(p [2]float64) bool {
@@ -497,8 +497,8 @@ func TestGraphIconsHands(t *testing.T) {
 
 	g := iconGraph([]string{"a"})
 	g.Nodes[0].Icon.Label = Text{"en": "a label wider than its icon"}
-	o, _ := readGraph(g, "#/parts/0/graph") //nolint:errcheck // none
-	if _, _, err := o.items(); err != nil { //nolint:errcheck // none but this
+	o, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // none
+	if _, _, err := o.items(); err != nil {                        //nolint:errcheck // none but this
 		t.Fatal(err)
 	}
 	d, err := o.draw(o.groups[0], false, [2]float64{})

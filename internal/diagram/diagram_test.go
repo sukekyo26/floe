@@ -1398,6 +1398,32 @@ parts:
   - edge: { from: decide, fromSide: right, to: api, toSide: left }
 `, `edge decide→design M296,44 H308 V80 H328
 edge decide→api M296,44 H308 V140 H328`},
+		// e4b: the same out of a side of a box, the ends apart on it.
+		{`width: 500
+height: 230
+title: e4b
+parts:
+  - axis: { x1: 200, x2: 424, y: 200, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - box: { name: decide, x: 200, y: 29, w: 96, h: 30, rows: [d] }
+  - box: { name: design, x: 328, y: 65, w: 80, h: 30, rows: [d] }
+  - box: { name: api, x: 328, y: 125, w: 80, h: 30, rows: [a] }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+  - edge: { from: decide, fromSide: right, to: api, toSide: left }
+`, `edge decide→design M296,39 H308 V80 H328
+edge decide→api M296,49 H308 V140 H328`},
+		// e4c: an edge out of a side and an edge into it move as one.
+		{`width: 500
+height: 230
+title: e4c
+parts:
+  - axis: { x1: 200, x2: 424, y: 200, ticks: [[200, ""], [312, ""], [424, ""]], grid: 20 }
+  - box: { name: decide, x: 200, y: 29, w: 96, h: 30, rows: [d] }
+  - box: { name: design, x: 328, y: 65, w: 80, h: 30, rows: [d] }
+  - box: { name: api, x: 328, y: 125, w: 80, h: 30, rows: [a] }
+  - edge: { from: decide, fromSide: right, to: design, toSide: left }
+  - edge: { from: api, fromSide: left, to: decide, toSide: right }
+`, `edge decide→design M296,39 H308 V80 H328
+edge api→decide M328,140 H308 V49 H296`},
 		// e5: both move right when a part holds the left for one of them.
 		{`width: 500
 height: 230

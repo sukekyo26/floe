@@ -18,38 +18,38 @@ box "mistakes" 764,444 288x29
 box "badSlug" 764,509 176x29
 box "otherKind" 776,574 296x29
 box "otherOwner" 776,639 272x29
-edge publish→resolve M656,49 V73
-edge resolve→kind M656,102 V126
-edge kind→linked M584,155 V179
-edge kind→notData M728,155 V179
-edge linked→hidden M464,208 V232
-edge linked→data M608,208 V326 H914 V374
+edge publish→resolve M654,49 V73
+edge resolve→kind M654,102 V126
+edge kind→linked M600.67,155 V179
+edge kind→notData M707.33,155 V179
+edge linked→hidden M475.33,208 V232
+edge linked→data M608,208 V326 H899.33 V374
 edge hidden→top M296,261 V285
-edge hidden→secret M488,261 V285
-edge top→data M296,314 V338 H770 V374
-edge top→whole M284,314 V350 H518 V382.5
+edge hidden→secret M473.33,261 V285
+edge top→data M217.33,314 V338 H792.67 V374
+edge top→whole M118.67,314 V350 H518 V382.5
 edge data→slug M728,420 V448.83
-edge data→mistakes M920,420 V444
-edge slug→taken M512,473 V509
-edge slug→badSlug M728,468.17 V485 H854 V509
-edge taken→owner M512,538 V574
-edge taken→otherKind M728,533.17 V550 H926 V574
-edge owner→server M512,603 V639
-edge owner→otherOwner M728,603 V615 H914 V639
+edge data→mistakes M899.33,420 V444
+edge slug→taken M532,473 V509
+edge slug→badSlug M636,473 V485 H852 V509
+edge taken→owner M532,538 V574
+edge taken→otherKind M636,538 V550 H924 V574
+edge owner→server M531.33,603 V639
+edge owner→otherOwner M640.67,603 V615 H912 V639
 edge server→save M584,668 V692
 edge save→url M584,738 V762
-label "はい" 596,157 34x18
-label "いいえ" 740,157 46x18
-label "はい" 476,210 34x18
+label "はい" 612.67,157 34x18
+label "いいえ" 719.33,157 46x18
+label "はい" 487.33,210 34x18
 label "いいえ" 620,210 46x18
 label "いいえ" 308,263 46x18
-label "はい" 500,263 34x18
-label "いいえ" 308,316 46x18
-label "はい" 238,316 34x18
-label "mistakes" 932,422 67.6x18
-label "はい" 524,475 34x18
-label "いいえ" 866,487 46x18
-label "いいえ" 524,540 46x18
-label "はい" 938,552 34x18
-label "いいえ" 524,605 46x18
-label "はい" 926,617 34x18
+label "はい" 485.33,263 34x18
+label "いいえ" 229.33,316 46x18
+label "はい" 72.67,316 34x18
+label "mistakes" 911.33,422 67.6x18
+label "はい" 544,475 34x18
+label "いいえ" 864,487 46x18
+label "いいえ" 544,540 46x18
+label "はい" 936,552 34x18
+label "いいえ" 543.33,605 46x18
+label "はい" 924,617 34x18

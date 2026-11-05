@@ -8,7 +8,7 @@ import (
 )
 
 // An icon of a graph is laid out as an unseen rectangle round the icon and its label, and only when all is placed do
-// its edges' ends move onto the icon (settleIcons), so that what chooses ranks, routes, loops, level edges and labels
+// its edges' ends move onto the icon (settleEnds), so that what chooses ranks, routes, loops, level edges and labels
 // knows no icons. Along the ranks it keeps iconRing past the icon and its label, where an edge's last run needs its
 // arrow's length; across them iconMove+iconArrow, where the icon moves onto a straight edge and keeps an arrow's length
 // from the side. Laid out down the icon stands in its middle, a label's room above it too, so that the icons of a rank
@@ -38,10 +38,12 @@ func iconWidest(i *icon) float64 {
 // endAt names an end of an edge: its index, and 0 for its first point or 1 for its last.
 type endAt struct{ edge, end int }
 
-// iconEnd is where an end goes on its icon: the side, and how far along the side it stands.
-type iconEnd struct {
+// endPlace is where an end goes on its icon or box: the side, how far along the side it stands, and how many ends stand
+// on the side.
+type endPlace struct {
 	side  string
 	share float64
+	on    int
 }
 
 // settling is what the ends moved keep off: what does not move, and each edge's runs and label as they stand.
@@ -63,27 +65,27 @@ func sideAxis(side string) int {
 	return 1
 }
 
-// sideOf is the side of r that p, an end on r, is on.
-func sideOf(r rect, p [2]float64) string {
-	top, bottom := math.Abs(p[1]-r.y), math.Abs(p[1]-(r.y+r.h))
-	left, right := math.Abs(p[0]-r.x), math.Abs(p[0]-(r.x+r.w))
-	switch min(top, bottom, left, right) {
-	case top:
-		return "top"
-	case bottom:
+// leaves is the side an end at p takes, q the next point of its edge off it: a run leaves a side square, and where on a
+// round corner or a slant the end stands would not tell.
+func leaves(p, q [2]float64) string {
+	switch {
+	case near(p[0], q[0]) && q[1] > p[1]:
 		return "bottom"
-	case left:
-		return "left"
+	case near(p[0], q[0]):
+		return "top"
+	case q[0] > p[0]:
+		return "right"
 	}
-	return "right"
+	return "left"
 }
 
-// settleIcons moves the ends of the edges at the group's icons onto the icons, labels placed and before stand
-// measures the group, so that what moves stays within what it measures.
-func (d *drawing) settleIcons() {
-	if len(d.icons) == 0 {
-		return
-	}
+// settleEnds moves the ends of the edges at the group's icons onto the icons and the ends at its boxes to the equal
+// parts of their sides, labels placed and before stand measures the group, so that what moves stays within what it
+// measures.
+// LIMIT: moving an edge at a box changes what an edge at an icon can move to, and that edge's moves are not held to
+// their crossings, so of graphs of icons and boxes about 1% turn or cross more than with the ends at the boxes unmoved
+// (fewer in all). Look again if a diagram comes to show it.
+func (d *drawing) settleEnds() {
 	d.shareSides()
 	d.settling = settling{things: nil, sides: nil, runs: map[int][]seg{}, labels: map[int]rect{}}
 	d.settling.things = slices.Collect(maps.Values(d.boxes))
@@ -98,8 +100,10 @@ func (d *drawing) settleIcons() {
 	for _, k := range edges {
 		d.straighten(k)
 	}
+	d.spreadBoxes()
 	d.noteSides() // the icons have moved, and the runs left to edges written by hand with them
-	// Again while any moves: a run held off by another that has since moved may move now. Each end moves once.
+	// Again while any moves: a run held off by another that has since moved may move now. slide moves each end once, so
+	// that this ends.
 	for moved := true; moved; {
 		moved = false
 		for _, k := range edges {
@@ -131,33 +135,79 @@ func (d *drawing) noteSides() {
 	d.settling.sides = append(d.settling.sides, d.hands()...)
 }
 
-// shareSides gives each end at an icon its place: the n ends on a side part it into n+1 equal parts, in the order they
-// stand on the rectangle's side, the order wire left them in by what they reach, so that they do not cross by the side.
+// endSide is a side of an icon or a box.
+type endSide struct {
+	box  int
+	name string
+}
+
+// sortAlong sorts the ends on a side, on axis, by where they stand now.
+func (d *drawing) sortAlong(ends []endAt, axis int) {
+	slices.SortFunc(ends, func(a, b endAt) int {
+		at := cmp.Compare(d.endRun(a)[axis], d.endRun(b)[axis])
+		return cmp.Or(at, cmp.Compare(a.edge, b.edge), cmp.Compare(a.end, b.end))
+	})
+}
+
+// endRun is the point the end e stands at now.
+func (d *drawing) endRun(e endAt) [2]float64 {
+	pts := d.routes[e.edge]
+	return pts[e.end*(len(pts)-1)]
+}
+
+// shareSides gives each end at an icon or a box its place: the n ends on a side part it into n+1 equal parts, in the
+// order they stand on the side, the order wire left them in by what they reach, so that they do not cross by the side.
+// A box's loop and its level edges are not counted and stay where loopFit and the ranks put them.
 func (d *drawing) shareSides() {
-	type side struct {
-		box  int
-		name string
-	}
-	on := map[side][]endAt{}
+	on := map[endSide][]endAt{}
 	for k, pts := range d.routes {
-		for j, p := range [2][2]float64{pts[0], pts[len(pts)-1]} {
-			if i := d.ends[k][j]; i >= 0 && d.icons[i] != nil {
-				s := side{i, sideOf(d.boxes[i], p)}
-				on[s] = append(on[s], endAt{k, j})
+		_, level := d.level[k]
+		for j := range 2 {
+			i := d.ends[k][j]
+			if i < 0 || d.icons[i] == nil && (d.loops[k] || level) {
+				continue
 			}
+			p, q := pts[0], pts[1]
+			if j == 1 {
+				p, q = pts[len(pts)-1], pts[len(pts)-2]
+			}
+			s := endSide{i, leaves(p, q)}
+			on[s] = append(on[s], endAt{k, j})
 		}
 	}
-	point := func(e endAt) [2]float64 {
-		pts := d.routes[e.edge]
-		return pts[e.end*(len(pts)-1)]
+	for s, ends := range on {
+		d.sortAlong(ends, sideAxis(s.name))
+		for n, e := range ends {
+			d.places[e] = endPlace{s.name, float64(n+1) / float64(len(ends)+1), len(ends)}
+		}
+	}
+}
+
+// spreadBoxes parts each side of a box anew now the straight edges stand: they hold their lines, and the rest stand
+// evenly between them.
+// LIMIT: an end that then cannot move stands where it does, unheld, so the ends beside it are not spread round it and a
+// side may look uneven. Hold it and part the side again if that shows.
+func (d *drawing) spreadBoxes() {
+	on := map[endSide][]endAt{}
+	for e, place := range d.places {
+		if i := d.ends[e.edge][e.end]; d.icons[i] == nil {
+			on[endSide{i, place.side}] = append(on[endSide{i, place.side}], e)
+		}
 	}
 	for s, ends := range on {
 		axis := sideAxis(s.name)
-		slices.SortFunc(ends, func(a, b endAt) int {
-			return cmp.Or(cmp.Compare(point(a)[axis], point(b)[axis]), cmp.Compare(a.edge, b.edge), cmp.Compare(a.end, b.end))
+		d.sortAlong(ends, axis)
+		b := d.boxes[s.box]
+		lo, size := b.lo(axis), b.size(axis)
+		places := evenly(lo, lo+size, len(ends), func(i int) (float64, bool) {
+			pts := d.routes[ends[i].edge]
+			n, _ := inLine(pts)
+			return d.endRun(ends[i])[axis], n == len(pts)
 		})
-		for n, e := range ends {
-			d.onIcon[e] = iconEnd{s.name, float64(n+1) / float64(len(ends)+1)}
+		for i, e := range ends {
+			place := d.places[e]
+			place.share = (places[i] - lo) / size
+			d.places[e] = place
 		}
 	}
 }
@@ -188,26 +238,18 @@ func (d *drawing) iconDrawn(i int) rect {
 	return rect{x: min(at.x, at.x+at.w/2-w/2), y: at.y, w: max(at.w, w), h: at.h + iconUnder(ic), what: "", at: ""}
 }
 
-// endPoint is where the end e stands on its icon. On the bottom side it stands under the label, or under the icon past
-// the label's width: an end there would stand off from all it belongs to.
+// endPoint is where the end e stands on its icon or box. On an icon's bottom side it stands under the label, or under
+// the icon past the label's width: an end there would stand off from all it belongs to.
 // LIMIT: the label's width is an estimate (units), so an end by its edge may touch the words. Measure if that shows.
 func (d *drawing) endPoint(e endAt) [2]float64 {
-	i := d.ends[e.edge][e.end]
-	ic, at, place := d.icons[i], d.iconAt(i), d.onIcon[e]
-	along := at.w * place.share
-	switch place.side {
-	case "top":
-		return [2]float64{at.x + along, at.y}
-	case "bottom":
-		x, y := at.x+along, at.y+at.h
-		if ic.Label != nil && math.Abs(along-at.w/2) <= labelWidth(ic.Label, false)/2 {
-			y += iconUnder(ic)
-		}
-		return [2]float64{x, y}
-	case "left":
-		return [2]float64{at.x, at.y + along}
+	i, place := d.ends[e.edge][e.end], d.places[e]
+	//nolint:exhaustruct_v5 // an area with what stands below it, which is all sidePoint reads
+	t := target{r: d.boxes[i]}
+	if ic := d.icons[i]; ic != nil {
+		t.r, t.under, t.labelW = d.iconAt(i), iconUnder(ic), iconLabelW(ic)
 	}
-	return [2]float64{at.x + at.w, at.y + along}
+	axis := sideAxis(place.side)
+	return sidePoint(t, place.side, t.r.lo(axis)+t.r.size(axis)*place.share)
 }
 
 // iconReach is how far the icon of box i may move across the ranks from the middle of its rectangle, keeping its
@@ -234,15 +276,17 @@ func inLine(pts [][2]float64) (n, axis int) {
 	return n, axis
 }
 
-// straighten stands a straight edge at an icon on one line: an icon not yet moved moves across the ranks, once, so that
-// its point stands on the line; a box takes it anywhere along its side; a point that cannot move holds the line to it.
+// straighten stands a straight edge on one line: an icon not yet moved moves across the ranks, once, so that its point
+// stands on the line; a point that cannot move holds the line to it; a box takes it anywhere along its side. An edge
+// between two boxes, which move for nothing, runs on the point of the side with more ends, when both take it and,
+// with more than one end on each side, when the two points are one; else it stays. Edges are not bent for a box.
 // LIMIT: once, and by iconReach at most, so a straight run through icons in a row may find the next short of it, and
 // then bends. Solve a row of icons together if that shows.
 func (d *drawing) straighten(k int) {
 	pts := d.routes[k]
 	n, axis := inLine(pts)
-	_, on0 := d.onIcon[endAt{k, 0}]
-	_, on1 := d.onIcon[endAt{k, 1}]
+	_, on0 := d.places[endAt{k, 0}]
+	_, on1 := d.places[endAt{k, 1}]
 	if n != len(pts) || d.loops[k] || !on0 && !on1 {
 		return
 	}
@@ -252,10 +296,9 @@ func (d *drawing) straighten(k int) {
 	for j := range 2 {
 		i := d.ends[k][j]
 		e := endAt{k, j}
-		_, on := d.onIcon[e]
 		switch {
 		case i < 0:
-		case !on:
+		case d.icons[i] == nil:
 			b := d.boxes[i]
 			lo, hi = max(lo, b.lo(axis)+inEnd), min(hi, b.lo(axis)+b.size(axis)-inEnd)
 		case axis == across && !d.settled[i]:
@@ -270,48 +313,48 @@ func (d *drawing) straighten(k int) {
 	if lo > hi {
 		return
 	}
-	line := max(lo, min(pts[0][axis], hi))
 	all := make([]int, len(pts))
 	for i := range all {
 		all[i] = i
 	}
-	if !d.moveRun(k, all, axis, line) {
+	if !d.ontoParts(k, all, axis, lo, hi) && !d.moveRun(k, all, axis, max(lo, min(pts[0][axis], hi))) {
 		return
 	}
+	line := pts[0][axis]
 	for _, e := range movers {
 		i := d.ends[k][e.end]
 		d.moved[i] += line - d.endPoint(e)[axis]
 		d.settled[i] = true
 	}
-	d.ontoBoxes(k, axis, line)
 	d.noteEdge(k)
 }
 
-// ontoBoxes brings the ends of straight edge k at boxes back onto their outlines, on line: a hexagon's top or a round
-// corner stands off the side.
-func (d *drawing) ontoBoxes(k, axis int, line float64) {
-	pts := d.routes[k]
-	for j, at := range [2]int{0, len(pts) - 1} {
-		if i := d.ends[k][j]; i >= 0 && d.icons[i] == nil {
-			b, side := d.boxes[i], "left"
-			switch onward := pts[len(pts)-1-at][1-axis] > pts[at][1-axis]; {
-			case axis == 0 && onward:
-				side = "bottom"
-			case axis == 0:
-				side = "top"
-			case onward:
-				side = "right"
-			}
-			pts[at] = b.form.on(b, side, line)
+// ontoParts moves straight edge k, between two boxes, onto the point of the side with more ends, and reports whether it
+// did.
+func (d *drawing) ontoParts(k int, all []int, axis int, lo, hi float64) bool {
+	a, b := endAt{k, 0}, endAt{k, 1}
+	placeA, onA := d.places[a]
+	placeB, onB := d.places[b]
+	if !onA || !onB || d.icons[d.ends[k][0]] != nil || d.icons[d.ends[k][1]] != nil {
+		return false
+	}
+	atA, atB := d.endPoint(a)[axis], d.endPoint(b)[axis]
+	if placeA.on > 1 && placeB.on > 1 && !near(atA, atB) {
+		return false
+	}
+	for _, at := range linePoints(atA, atB, placeA.on, placeB.on) {
+		if at >= lo && at <= hi && d.moveRun(k, all, axis, at) {
+			return true
 		}
 	}
+	return false
 }
 
 // boxesTake is whether the boxes at the ends of straight edge k take its run on line.
 func (d *drawing) boxesTake(k, axis int, line float64) bool {
 	for j := range 2 {
 		if i := d.ends[k][j]; i >= 0 && d.icons[i] == nil {
-			if b := d.boxes[i]; line < b.lo(axis)+inEnd || line > b.lo(axis)+b.size(axis)-inEnd {
+			if b := d.boxes[i]; !sideTakes(b.lo(axis), b.size(axis), line) {
 				return false
 			}
 		}
@@ -319,9 +362,11 @@ func (d *drawing) boxesTake(k, axis int, line float64) bool {
 	return true
 }
 
-// slide moves the run from each end of edge k at an icon onto the end's point, its label with it, when a turn follows
-// the run, or when it runs straight with a label, which cannot bend, and reports whether any moved. The next run only
+// slide moves the run from each end of edge k onto the end's point, its label with it, when a turn follows the run, or
+// when it runs straight from an icon with a label, which cannot bend, and reports whether any moved. The next run only
 // grows or shrinks.
+// LIMIT: slid holds each end to one move, so that settleEnds ends by its form; no graph has been found that runs on
+// without it, so no test fails for it. Take it off if the moves are shown to end.
 func (d *drawing) slide(k int) bool {
 	if _, level := d.level[k]; level {
 		return false
@@ -333,8 +378,8 @@ func (d *drawing) slide(k int) bool {
 // slideEnd is slide for end j of edge k.
 func (d *drawing) slideEnd(k, j int) bool {
 	e := endAt{k, j}
-	place, on := d.onIcon[e]
-	if !on {
+	place, on := d.places[e]
+	if !on || d.slid[e] {
 		return false
 	}
 	pts := d.routes[k]
@@ -344,7 +389,7 @@ func (d *drawing) slideEnd(k, j int) bool {
 	}
 	n, axis := inLine(from)
 	straight := n == len(pts)
-	if axis != sideAxis(place.side) || straight && (!d.labelled(k) || d.onPoint(k, axis)) {
+	if axis != sideAxis(place.side) || straight && (d.icons[d.ends[k][j]] == nil || !d.labelled(k) || d.onPoint(k, axis)) {
 		return false
 	}
 	run := make([]int, n)
@@ -358,9 +403,7 @@ func (d *drawing) slideEnd(k, j int) bool {
 	if near(from[0][axis], q) || straight && !d.boxesTake(k, axis, q) || !d.moveRun(k, run, axis, q) {
 		return false
 	}
-	if straight {
-		d.ontoBoxes(k, axis, q)
-	}
+	d.slid[e] = true
 	d.noteEdge(k)
 	return true
 }
@@ -369,15 +412,15 @@ func (d *drawing) slideEnd(k, j int) bool {
 func (d *drawing) onPoint(k, axis int) bool {
 	for j := range 2 {
 		e := endAt{k, j}
-		if _, on := d.onIcon[e]; on && near(d.routes[k][0][axis], d.endPoint(e)[axis]) {
+		if _, on := d.places[e]; on && d.icons[d.ends[k][j]] != nil && near(d.routes[k][0][axis], d.endPoint(e)[axis]) {
 			return true
 		}
 	}
 	return false
 }
 
-// bend gives a straight edge with no label, short of its points, one bend in the middle of its run, when nothing stands
-// there. A labelled one stays, the label beside it, and gathered bends it by its rectangles.
+// bend gives a straight edge with no label, short of its icons' points, one bend in the middle of its run, when nothing
+// stands there. A labelled one stays, the label beside it, and gathered bends it by its rectangles.
 func (d *drawing) bend(k int) {
 	pts := d.routes[k]
 	n, axis := inLine(pts)
@@ -386,7 +429,7 @@ func (d *drawing) bend(k int) {
 	}
 	a, b := pts[0], pts[len(pts)-1]
 	for j, p := range []*[2]float64{&a, &b} {
-		if _, on := d.onIcon[endAt{k, j}]; on {
+		if _, on := d.places[endAt{k, j}]; on && d.icons[d.ends[k][j]] != nil {
 			p[axis] = d.endPoint(endAt{k, j})[axis]
 		}
 	}
@@ -409,7 +452,14 @@ func (d *drawing) bend(k int) {
 	}
 }
 
-// moveRun moves points at of edge k to q on axis, unless that lands on something, and reports whether it did.
+// keepApart is how near a moved end at a box lets its runs stand beside another edge's: half the column the routes
+// keep.
+// LIMIT: not for ends at icons, whose 8 ends on a side stand 5.33 apart, so edges at icons may run closer. Look again
+// if a diagram comes to show it.
+const keepApart = column / 2
+
+// moveRun moves points at of edge k to q on axis, unless that lands on something or, for an end at a box, crosses more
+// than before or runs close beside another edge, and reports whether it did. An end at a box stays on its outline.
 func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 	pts := d.routes[k]
 	was := make([][2]float64, len(at))
@@ -417,6 +467,7 @@ func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 		was[j] = pts[i]
 		pts[i][axis] = q
 	}
+	boxEnd := d.ontoOutlines(k, at, q)
 	var runs []seg
 	for _, i := range at {
 		if i > 0 && pts[i-1] != pts[i] {
@@ -426,7 +477,8 @@ func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 			runs = append(runs, segAt(pts, i))
 		}
 	}
-	if d.clear(k, runs) && (d.loops[k] || d.labelFits(k)) {
+	if d.clear(k, runs) && (d.loops[k] || d.labelFits(k)) &&
+		(!boxEnd || d.keepsApart(k, runs) && d.crossesBelow(k, segsOf(pts))) {
 		return true
 	}
 
@@ -434,6 +486,76 @@ func (d *drawing) moveRun(k int, at []int, axis int, q float64) bool {
 		pts[i] = was[j]
 	}
 	return false
+}
+
+// ontoOutlines brings the ends at boxes among points at of edge k, moved to q, back onto their outlines, and reports
+// whether there were any: a hexagon's top or a round corner stands off the side.
+func (d *drawing) ontoOutlines(k int, at []int, q float64) bool {
+	pts := d.routes[k]
+	moved := false
+	for j, i := range [2]int{0, len(pts) - 1} {
+		if b := d.ends[k][j]; b >= 0 && d.icons[b] == nil && slices.Contains(at, i) {
+			moved = true
+			next := pts[1]
+			if j == 1 {
+				next = pts[len(pts)-2]
+			}
+			pts[i] = d.boxes[b].form.on(d.boxes[b], leaves(pts[i], next), q)
+		}
+	}
+	return moved
+}
+
+// keepsApart is whether runs, of edge k, stand keepApart from the runs of the other edges beside them. Lines read as
+// one however short the stretch they share, so its length is not looked at.
+func (d *drawing) keepsApart(k int, runs []seg) bool {
+	for _, s := range runs {
+		for e, q := range d.settling.runs {
+			if e != k && slices.ContainsFunc(q, func(o seg) bool { return runsClose(s, o) }) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// runsClose is whether s and q run the same way, nearer than keepApart, along a stretch they share.
+func runsClose(s, q seg) bool {
+	along := runAlong(s)
+	return along == runAlong(q) && math.Abs(s[1-along]-q[1-along]) < keepApart && overlap(s, q, along) > eps
+}
+
+// runAlong is the axis s runs along.
+func runAlong(s seg) int {
+	if near(s[0], s[2]) {
+		return 1
+	}
+	return 0
+}
+
+// overlap is how long a stretch s and q have in common on axis, less than 0 for a gap between them.
+func overlap(s, q seg, axis int) float64 {
+	return min(max(s[axis], s[axis+2]), max(q[axis], q[axis+2])) - max(min(s[axis], s[axis+2]), min(q[axis], q[axis+2]))
+}
+
+// crossesBelow is whether runs, all of edge k, cross no more of the other edges than k does as last noted.
+func (d *drawing) crossesBelow(k int, runs []seg) bool {
+	count := func(of []seg) int {
+		n := 0
+		for e, q := range d.settling.runs {
+			if e != k {
+				for _, a := range of {
+					for _, b := range q {
+						if _, _, ok := crossing(a, b); ok {
+							n++
+						}
+					}
+				}
+			}
+		}
+		return n
+	}
+	return count(runs) <= count(d.settling.runs[k])
 }
 
 // clear is whether runs, of edge k, keep off what does not move, the other edges' labels and what lies between them and
@@ -516,24 +638,19 @@ func (d *drawing) labelled(k int) bool {
 
 // runsTouch is whether two runs share a stretch, or one ends on the other.
 func runsTouch(s, q seg) bool {
-	down, qDown := s[0] == s[2], q[0] == q[2]
-	if down == qDown {
-		along := 0
-		if down {
-			along = 1
-		}
-		return s[1-along] == q[1-along] && max(min(s[along], s[along+2]), min(q[along], q[along+2])) <=
-			min(max(s[along], s[along+2]), max(q[along], q[along+2]))
+	along := runAlong(s)
+	if along == runAlong(q) {
+		return near(s[1-along], q[1-along]) && overlap(s, q, along) > -eps
 	}
 	v, h := s, q
-	if !down {
+	if along == 0 {
 		v, h = q, s
 	}
 	x, y := v[0], h[1]
-	if y < min(v[1], v[3]) || y > max(v[1], v[3]) || x < min(h[0], h[2]) || x > max(h[0], h[2]) {
+	if y < min(v[1], v[3])-eps || y > max(v[1], v[3])+eps || x < min(h[0], h[2])-eps || x > max(h[0], h[2])+eps {
 		return false
 	}
-	return y == v[1] || y == v[3] || x == h[0] || x == h[2]
+	return near(y, v[1]) || near(y, v[3]) || near(x, h[0]) || near(x, h[2])
 }
 
 // gathered is edge k's points as drawn: with each end at an icon reaching its point, by a bend along the rectangle's
@@ -542,7 +659,7 @@ func runsTouch(s, q seg) bool {
 // LIMIT: two ends bent along one side may share a stretch of it, and take the look of the edge drawn last there.
 func (d *drawing) gathered(k int) [][2]float64 {
 	reach := func(e endAt, pts [][2]float64) [][2]float64 {
-		at, axis := d.endPoint(e), sideAxis(d.onIcon[e].side)
+		at, axis := d.endPoint(e), sideAxis(d.places[e].side)
 		if near(pts[0][axis], at[axis]) {
 			at[axis] = pts[0][axis]
 			return append([][2]float64{at}, pts...)
@@ -552,8 +669,12 @@ func (d *drawing) gathered(k int) [][2]float64 {
 		return append([][2]float64{at, turn}, pts...)
 	}
 	out := slices.Clone(d.routes[k])
-	_, on0 := d.onIcon[endAt{k, 0}]
-	_, on1 := d.onIcon[endAt{k, 1}]
+	at := func(j int) bool {
+		i := d.ends[k][j]
+		_, on := d.places[endAt{k, j}]
+		return on && d.icons[i] != nil
+	}
+	on0, on1 := at(0), at(1)
 	if !on0 && !on1 {
 		return out
 	}
