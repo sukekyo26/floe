@@ -296,23 +296,23 @@ func (p viaPoint) MarshalJSON() ([]byte, error) {
 }
 
 type edge struct {
-	From     end          `json:"from"`
-	To       end          `json:"to"`
-	FromSide string       `json:"fromSide"`
-	ToSide   string       `json:"toSide"`
-	Via      []viaPoint   `json:"via"`
-	Straight bool         `json:"straight"`
-	Label    Text         `json:"label"`
-	At       *[2]float64  `json:"at"`
-	Dashed   bool         `json:"dashed"`
-	Bold     bool         `json:"bold"`
-	Tone     string       `json:"tone"`
-	Start    *string      `json:"start"`
-	End      *string      `json:"end"`
-	Crossing bool         `json:"crossing"`
-	who      string       // its words in mistakes and inspect, for an edge a tree draws; else made from its ends
-	graph    string       // the JSON pointer of the graph that laid it out; "" for an edge written by hand
-	anchor   string       // how its label stands at At, as a graph lays it out; "" for middle
+	From     end         `json:"from"`
+	To       end         `json:"to"`
+	FromSide string      `json:"fromSide"`
+	ToSide   string      `json:"toSide"`
+	Via      []viaPoint  `json:"via"`
+	Straight bool        `json:"straight"`
+	Label    Text        `json:"label"`
+	At       *[2]float64 `json:"at"`
+	Dashed   bool        `json:"dashed"`
+	Bold     bool        `json:"bold"`
+	Tone     string      `json:"tone"`
+	Start    *string     `json:"start"`
+	End      *string     `json:"end"`
+	Crossing bool        `json:"crossing"`
+	who      string      // its words in mistakes and inspect, for an edge a tree draws; else made from its ends
+	graph    string      // the JSON pointer of the graph that laid it out; "" for an edge written by hand
+	anchor   string      // how its label stands at At, as a graph lays it out; "" for middle
 }
 
 type dot struct {
