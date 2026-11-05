@@ -840,22 +840,37 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 			return [s.backgroundColor === ground ? 'panel' : s.backgroundColor, s.boxShadow === 'none' ? 'no shadow' : 'shadow'].join(' ');
 		})()`)
 	}
-	out := make([]string, 0, 30)
+	// The line between each two faces shown, and at the two edges, of the boxes named in order: 1px between, none at an edge.
+	seams := func(boxes ...string) string {
+		t.Helper()
+
+		return b.eval(`(() => {
+			const shown = ` + js(strings.Join(boxes, ",")) + `.split(',').map((q) => document.querySelector(q)).filter((e) => e.getClientRects().length).map((e) => getComputedStyle(e));
+			const between = shown.slice(1).map((s, i) => parseFloat(shown[i].borderRightWidth) + parseFloat(s.borderLeftWidth));
+			return [parseFloat(shown[0].borderLeftWidth), ...between, parseFloat(shown.at(-1).borderRightWidth)].join(' ');
+		})()`)
+	}
+	columns := func() string {
+		t.Helper()
+
+		return seams(".shelf", ".listcol", ".reader")
+	}
+	out := make([]string, 0, 40)
 
 	// A folder's page: the page takes all the width, folded.
 	b.navigate("/a/docs/?file=index.html")
 	b.until("the tree", "!document.getElementById('side').hidden")
-	out = append(out, at("side-hide"))
+	out = append(out, at("side-hide"), seams("#side", "#frame"))
 	press("side-hide")
-	out = append(out, at("side-show"), face("side-show"), b.eval("document.activeElement.id + ' ' + document.getElementById('frame').getBoundingClientRect().width"))
+	out = append(out, seams("#side", "#frame"), at("side-show"), face("side-show"), b.eval("document.activeElement.id + ' ' + document.getElementById('frame').getBoundingClientRect().width"))
 	press("side-show")
 	out = append(out, b.eval("document.getElementById('side').hidden + ' ' + document.activeElement.id"))
 
 	// A diff: the words take all the width, with room under their last line for what opens the contents.
 	openDiff(b, "/a/d/?diff")
-	out = append(out, at("diff-toc-hide"))
+	out = append(out, at("diff-toc-hide"), seams(".dtoc", ".dbody"))
 	press("diff-toc-hide")
-	out = append(out, at("diff-toc-show"), face("diff-toc-show"), b.eval("(() => { const r = document.getElementById('diff-body'); return [r.getBoundingClientRect().left, r.getBoundingClientRect().width, getComputedStyle(r).paddingBottom, getComputedStyle(r).borderLeftWidth].join(' '); })()"))
+	out = append(out, seams(".dtoc", ".dbody"), at("diff-toc-show"), face("diff-toc-show"), b.eval("(() => { const r = document.getElementById('diff-body'); return [r.getBoundingClientRect().left, r.getBoundingClientRect().width, getComputedStyle(r).paddingBottom, getComputedStyle(r).borderLeftWidth].join(' '); })()"))
 	press("diff-toc-show")
 	out = append(out, b.eval("document.getElementById('diff-toc-nav').hidden + ' ' + document.activeElement.id"))
 	// In a window too low for the contents and the words under them, the foot stays, and the page does not scroll.
@@ -900,18 +915,18 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	press("list-show")
 	b.eval("document.querySelector('#list li:not(.group) .title').click()")
 	b.until("the page", "!document.getElementById('read-frame').hidden")
-	out = append(out, at("shelf-hide"), at("list-hide"))
+	out = append(out, at("shelf-hide"), at("list-hide"), columns())
 	out = append(out, b.eval(`(() => {
 		const body = document.getElementById('list-body'), col = document.getElementById('listcol'), foot = document.querySelector('.listcol > .col-foot').getBoundingClientRect();
 		return [body.scrollHeight > body.clientHeight, foot.height, foot.bottom === innerHeight, body.getBoundingClientRect().bottom === foot.top, foot.right === col.getBoundingClientRect().left + col.clientLeft + col.clientWidth].join(' ');
 	})()`))
 	press("shelf-hide")
-	out = append(out, at("shelf-show"), face("shelf-show"), at("list-hide"), b.eval("document.activeElement.id"))
+	out = append(out, at("shelf-show"), face("shelf-show"), at("list-hide"), b.eval("document.activeElement.id"), columns())
 	press("shelf-show")
 	press("list-hide")
-	out = append(out, at("list-show"), face("list-show"), b.eval("document.activeElement.id"))
+	out = append(out, at("list-show"), face("list-show"), b.eval("document.activeElement.id"), columns())
 	press("shelf-hide")
-	out = append(out, at("shelf-show"), face("shelf-show"), at("list-show"), b.eval("(() => { const r = document.getElementById('read-frame').getBoundingClientRect(); return [r.left, r.width, document.getElementById('read-title').getBoundingClientRect().left].join(' '); })()"))
+	out = append(out, at("shelf-show"), face("shelf-show"), at("list-show"), columns(), b.eval("(() => { const r = document.getElementById('read-frame').getBoundingClientRect(); return [r.left, r.width, document.getElementById('read-title').getBoundingClientRect().left].join(' '); })()"))
 	// Over the page, a press opens the filters too; printed, nothing of it lies over the words.
 	press("shelf-show")
 	out = append(out, b.eval("document.activeElement.id"))
@@ -927,15 +942,15 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, b.until("the list again", "!document.querySelector('.list-closed') && document.activeElement.id"))
 
 	check(t, "feet", out, strings.Join([]string{
-		"6 863.5", "6 863.5", "panel shadow", "side-show 1440", "false side-hide",
-		"6 863.5", "6 863.5", "panel shadow", "0 1440 44px 0px", "false diff-toc-hide",
+		"6 863.5", "0 1 0", "0 0", "6 863.5", "panel shadow", "side-show 1440", "false side-hide",
+		"6 863.5", "0 1 0", "0 0", "6 863.5", "panel shadow", "0 1440 44px 0px", "false diff-toc-hide",
 		"260 0",
 		"6 863.5", "6 863.5", "6 863.5", "6 863.5",
 		"0", "0", "1", "0",
-		"6 863.5", "207 863.5", "true 44 true true true",
-		"6 863.5", "rgba(0, 0, 0, 0) no shadow", "43 863.5", "shelf-show",
-		"207 863.5", "panel shadow", "list-show",
-		"6 863.5", "panel shadow", "43 863.5", "0 1440 16",
+		"6 863.5", "206 863.5", "0 1 1 0", "true 44 true true true",
+		"6 863.5", "rgba(0, 0, 0, 0) no shadow", "42 863.5", "shelf-show", "0 1 0",
+		"206 863.5", "panel shadow", "list-show", "0 1 0",
+		"6 863.5", "panel shadow", "42 863.5", "0 0", "0 1440 16",
 		"shelf-hide", "none,none",
 		"0 0 0 0", "list-hide",
 	}, "|"))
@@ -947,7 +962,7 @@ func rowPoint(t *testing.T, b *browser, row string, margin bool) (float64, float
 
 	box, x, y := "document.querySelector("+js(row+" .title")+")", 12, 6
 	if margin {
-		box, x, y = "document.querySelector("+js(row)+")", 2, 2
+		box, x, y = "document.querySelector("+js(row)+")", 4, 2
 	}
 	got := b.eval(fmt.Sprintf(`(() => {
 		const r = %s.getBoundingClientRect(), x = r.left + %d, y = r.top + %d, on = document.elementFromPoint(x, y);

@@ -60,11 +60,11 @@
     /* The head over the list, and over the page chosen beside it */
     --lhead: 3.25rem;
     /* A button of icons, and the foot of a column, which holds the button that folds it: where that stands, and what opens the second
-       column stands beside it, past the first's button and the room round it and the list's edge */
+       column stands beside it, past the first's button and the room round it */
     --icon-btn: 30px;
     --foot: 2.75rem;
     --foot-pad: 6px;
-    --foot-next: calc(var(--foot-pad) * 2 + var(--icon-btn) + 1px);
+    --foot-next: calc(var(--foot-pad) * 2 + var(--icon-btn));
   }
   * { box-sizing: border-box; }
   /* Every scrollbar of the page, its own and its boxes': a thin round thumb of the faint color on a clear track. Chrome, Edge and
@@ -310,7 +310,8 @@
      the room the button leaves (not shrunk with it: a sliver of a pixel off its width would cut its last words) */
   #shelf-what { flex: none; max-width: calc(100% - 11rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
   /* The 4px of room round a button are its focus ring's (1px off, 2px wide) and 1px of ground */
-  .shelf { min-height: 0; display: flex; flex-direction: column; }
+  /* Each column draws the line on its right, so that what is left of them keeps one line between two faces and none at the window's edge */
+  .shelf { min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
   .shelf-body { flex: 1; min-height: 0; display: grid; align-content: start; grid-template-columns: minmax(0, 1fr); gap: 1.1rem; overflow-y: auto; padding: 0.75rem 10px 1rem; }
   /* The shelf's thumb shows only while it is pointed at or reached by keys; its room stays, so that nothing in it moves */
   /* LIMIT: the 0.01px works round Chrome drawing a thumb anew only when its box is laid out again; without it, the thumb stays hidden */
@@ -382,13 +383,13 @@
   .chip .n { flex: none; min-width: 3ch; text-align: right; }
 
   /* The list: its head stuck over its rows */
-  .listcol { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--panel); border-inline: 1px solid var(--line); }
+  .listcol { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
   .list-body { flex: 1; min-height: 0; overflow-y: auto; }
   /* With the filters folded, what opens them stands in this foot, plain as its button */
-  .shell.shelf-closed .listcol > .col-foot { padding-left: calc(var(--foot-next) - 1px); }
+  .shell.shelf-closed .listcol > .col-foot { padding-left: var(--foot-next); }
   .shell.shelf-closed:not(.list-closed) #shelf-show { background: transparent; box-shadow: none; }
   .shell.shelf-closed:not(.list-closed) #shelf-show:hover { background: var(--subtle); }
-  #list-show { left: calc(var(--shelf-width) + 1px + var(--foot-pad)); }
+  #list-show { left: calc(var(--shelf-width) + var(--foot-pad)); }
   .shell.shelf-closed #list-show { left: var(--foot-next); }
   .lhead {
     position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 0.6rem; height: var(--lhead); padding: 0 1rem;
@@ -718,7 +719,7 @@
   @media (max-width: 70rem) {
     .shell { grid-template-columns: 22rem minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
     #shelf-grip, #list-grip, #shelf-what, #shelf-show, #list-show, .shelf > .col-foot, .listcol > .col-foot, .rhead.empty { display: none; }
-    .shelf { grid-column: 1 / -1; display: block; border-bottom: 1px solid var(--line); }
+    .shelf { grid-column: 1 / -1; display: block; border-right: 0; border-bottom: 1px solid var(--line); }
     .shelf-body, .shelf-body:is(:hover, :focus-within) { display: block; overflow: visible; padding: 0.6rem 0.75rem; }
     .shelf-body > .shelf-more { display: none; }
     .shelf .views { display: flex; align-items: center; gap: 5px; overflow: auto hidden; padding: 4px; margin: -4px; scrollbar-width: none; }
