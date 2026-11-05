@@ -143,6 +143,19 @@ func TestWorkCommand(t *testing.T) {
 		t.Errorf(`--step "" of the task: %q`, got)
 	}
 
+	// A page of no project: its task is that of "/".
+	if _, err := s.Edit("b", store.Edit{Project: ptr("")}); err != nil {
+		t.Fatal(err)
+	}
+	run(0, "work", "b", "--item", "#9", "--state", "waiting")
+	if got := tasks()["/"]["#9"].State; got != "waiting" {
+		t.Errorf("a page of no project: %v", tasks())
+	}
+	run(0, "work", "b", "--item", "#2")
+	if _, err := s.Edit("b", store.Edit{Project: ptr("p")}); err != nil {
+		t.Fatal(err)
+	}
+
 	// A link goes the same way; off its task and its pin, the task stays.
 	run(0, "work", "e", "--item", "#1", "--pin")
 	run(0, "work", "e", "--clear")
