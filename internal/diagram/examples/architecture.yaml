@@ -23,13 +23,13 @@ parts:
   - box: { x: 644, y: 416, w: 240, h: 56, rows: [["/api/artifacts", main code], { en: "list, edit, register links", ja: "一覧・編集・リンク登録" }] }
   - box: { x: 1000, y: 152, w: 200, h: 132, tone: accent, rows: [{ en: The page, ja: "ページ本体" }, { en: "an iframe of ?raw", ja: "?raw を読む iframe" }, { en: "sandboxed, origin null", ja: "sandbox・origin null" }] }
   - box: { x: 988, y: 416, w: 224, h: 56, rows: [{ en: Management page, ja: "管理画面" }, { en: origin 127.0.0.1, ja: "127.0.0.1 の origin" }] }
-  - edge: { from: [224, 92], to: [644, 92], label: { en: "1 health", ja: "① 起動確認" }, at: [434, 92] }
+  - edge: { from: [224, 92], to: [644, 92], label: { en: "1 health", ja: "① 起動確認" } }
   - edge: { from: [124, 120], via: [{ y: 180 }], to: [288, 180], label: { en: "2 save", ja: "② 保存" }, at: [200, 180] }
-  - edge: { from: [512, 180], to: [644, 180], label: { en: "3 read", ja: "③ 読む" }, at: [578, 180] }
-  - edge: { from: [512, 268], to: [644, 268], label: { en: "4 version", ja: "④ 版を確認" }, at: [578, 268] }
+  - edge: { from: [512, 180], to: [644, 180], label: { en: "3 read", ja: "③ 読む" } }
+  - edge: { from: [512, 268], to: [644, 268], label: { en: "4 version", ja: "④ 版を確認" } }
   - edge: { from: [400, 296], to: [400, 328], dashed: true, label: path, at: [410, 312] }
   - edge: { from: [884, 180], to: [1000, 180], label: { en: "3 serve", ja: "③ 返す" } }
   - edge: { from: [1000, 268], to: [884, 268], label: { en: "4 listen", ja: "④ 購読" } }
   - edge: { from: [884, 348], to: [1100, 300] }
   - edge: { from: [884, 364], to: [1070, 416] }
-  - edge: { from: [988, 444], to: [884, 444], start: arrow, label: API, at: [936, 444] }
+  - edge: { from: [988, 444], to: [884, 444], start: arrow, label: API }
