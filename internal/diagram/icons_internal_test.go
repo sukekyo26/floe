@@ -637,43 +637,39 @@ func TestGraphIconOffPoint(t *testing.T) {
 	}
 }
 
-// An icon with other ends does not move for an edge standing off its point, as they run from it: alone it does.
-func TestGraphIconOffPointStays(t *testing.T) {
-	t.Parallel()
-
-	g := labelledChain(1, 7, 9)
-	lone := laid(g).names["c"].r
-	g.Edges = append(g.Edges, graphEdge{From: "c", To: "d", Dashed: false, Bold: false, Tone: "", Start: nil, End: nil, Label: nil})                         //nolint:exhaustruct_v5 // the rest as left out
-	g.Nodes = append(g.Nodes, graphNode{Icon: iconNode(&graphBox{Name: "d", Rows: []row{{Text: Text{"en": "wwwwwwwww"}, Style: ""}}, Tone: "", Shape: ""})}) //nolint:exhaustruct_v5 // one kind of node
-	withMore, today := laid(g), asToday(graphSpec(g), Options{Lang: "en", Icons: anyIcon{}, Seq: 1})
-	if got, want := withMore.names["c"].r.x, today.names["c"].r.x; got != want {
-		t.Errorf("c with another end at x %v, %v as today (alone at %v)", got, want, lone.x)
-	}
-}
-
 // No edge of a graph of icons turns more for the icons' ends standing off their points.
 func TestGraphIconOffPointKeeps(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range []struct {
 		direction string
-		seed      uint64
+		seed      [2]uint64
 		every     bool
-	}{{"", 61, false}, {"right", 63, false}, {"", 65, true}, {"right", 67, true}} {
-		t.Run(fmt.Sprintf("%s-%d", cmpOr(c.direction, "down"), c.seed), func(t *testing.T) {
+		plain     bool // the graphs alone: icons among boxes, no loop or group
+	}{
+		{"", [2]uint64{61, 1}, false, false},
+		{"right", [2]uint64{63, 1}, false, false},
+		{"", [2]uint64{65, 1}, true, false},
+		{"right", [2]uint64{67, 1}, true, false},
+		{"", [2]uint64{13, 0}, false, true}, // holds one where an icon with other ends moving bends them
+		{"right", [2]uint64{13, 5}, false, true},
+	} {
+		t.Run(fmt.Sprintf("%s-%d", cmpOr(c.direction, "down"), c.seed[0]), func(t *testing.T) {
 			t.Parallel()
-			rnd := rand.New(rand.NewPCG(c.seed, 1)) //nolint:gosec // G404: graphs to try, no secret
+			rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
 			opts := Options{Lang: "en", Icons: anyIcon{}, Seq: 1}
 			more, fewer := 0, 0
-			for range 300 {
+			for range 400 {
 				g := randomGraph(rnd, c.direction)
 				if c.every {
 					for k := range g.Edges {
 						g.Edges[k].Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(10))}
 					}
 				}
-				addLoops(rnd, g, c.every)
-				addGroups(rnd, g)
+				if !c.plain {
+					addLoops(rnd, g, c.every)
+					addGroups(rnd, g)
+				}
 				iconize(g)
 				a, b := asToday(graphSpec(g), opts), laid(g)
 				if a.failure != nil || len(a.problems) > 0 {
@@ -689,7 +685,7 @@ func TestGraphIconOffPointKeeps(t *testing.T) {
 					}
 				}
 			}
-			t.Logf("OFFKEEPS %s more %d fewer %d", t.Name(), more, fewer)
+			t.Logf("OFFKEEPS %s more %d fewer %d", c.direction, more, fewer)
 			if more > 0 {
 				t.Errorf("%d edges turn more, %d fewer", more, fewer)
 			}
