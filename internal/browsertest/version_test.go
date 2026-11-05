@@ -281,7 +281,7 @@ func TestUIVersionGone(t *testing.T) { //nolint:paralleltest // the browser test
 	for i := range 20 {
 		s.floe(t, "publish", s.page(t, "diff/d.yaml", "D", diffV3+"<p>many "+strconv.Itoa(i)+"</p>"), "--slug", "d")
 	}
-	out = append(out, b.until("the latest", "location.search === '' && "+noteWords+" === "+js(gone)+" && "+frameSaid),
+	out = append(out, b.until("the latest", "location.search === '' && !document.getElementById('frame-version').hidden && "+noteWords+" === "+js(gone)+" && "+frameSaid),
 		b.eval("document.getElementById('print-raw').getAttribute('href').replace(location.origin, '')"), b.eval("document.querySelectorAll('.toast').length"))
 
 	// One version left: no choice; of a page never read since, unread, marked as such.
