@@ -26,7 +26,7 @@
 | `floe serve` | サーバーを前面で動かす |
 | `floe stop` | 裏で動くサーバーを止める |
 | `floe diagram render <spec.yaml>...` | 図の spec を確かめ、inline SVG で出す |
-| `floe diagram inspect <spec.yaml>...` | 図の spec を確かめ、各部品の置かれた所を出す |
+| `floe diagram inspect <spec.yaml\|data.yaml>...` | spec かデータファイルの図を確かめ、各部品の置かれた所を出す |
 | `floe diagram example [種類]` | 見本の spec を並べる、または 1 つ出す |
 | `floe icons fetch <セット> [zip か URL]` | 図の `icon` の部品が使うアイコンのセット（`aws`）を手元に置く |
 | `floe icons search <語>...` | 取ってきたアイコンのうち、名前がどの語も含むものを並べる |
@@ -211,9 +211,22 @@ floe のものか自分のものの、テンプレート・部品（見た目と
 | `--lang <タグ>` | 図の文を書く言語（`en`・`ja`）。既定は `en`。 |
 | `--no-assets` | スタイルと拡大のスクリプトを除いて図を出す。それを持つページ向け。 |
 
-## `floe diagram inspect <spec.yaml>...`
+## `floe diagram inspect <spec.yaml|data.yaml>...`
 
-各 spec を `floe diagram render` と同じに確かめ、各部品の置かれた所を 1 行ずつ出します。部品の範囲、線の道と両端、ラベルの範囲と、それが入る円です。描いた図を見ずに、線が意図した行に着くか、ラベルが範囲に収まるかを確かめられます。
+各図を `floe diagram render` と同じに確かめ、各部品の置かれた所を出します。線が狙った行に着いているか、ラベルが狙った範囲に入っているかを、絵を見ずに確かめられます。
+
+```text
+page.yaml:9:11: diagram "The API" 560x190
+frame "cloud" 20,20 300x150
+the heading of frame "cloud" 60,26 74.88x18
+the icon of frame "cloud" 20,20 31x31
+edge [60,10]→[60,120] M60,10 V120
+```
+
+- 根に鍵 `template` があるファイルはデータファイルで、テンプレートの schema で確かめた後の図を、`details`・`tabs` の中も含めて、書いた順に読みます。ほかのファイルは spec です。図の外でも schema が断る誤りがあればファイルごと止まります（その下にあるものについて何も言えないため）。
+- 図ごとに、書いた場所（`file:line:column:`。spec は `file:`）、題、キャンバスの大きさの行を出します。その下に 1 行ずつ、部品の範囲、枠の見出し、線の道と両端、ラベルの範囲と、それが入る円を出します。
+- 置かれた所は標準出力に、誤りは標準エラーに出し、誤りがあれば終了コードは 1 です。検査で断る図も、参考として出します。直すと部品や線が動くことがあり、誤りのある `graph` は、できた分だけか、丸ごとありません。配置まで届かない図（YAML や schema の誤り、無い `example`）は、1 行も出しません。
+- データファイルのページは描かず、テンプレートの `checks.yaml`・`computed.yaml` も走らせないので、`floe check` が断るページでも通ることがあります。自分の部品が `{{diagram}}` で描く図は出ません。`template` を忘れたデータファイルは spec として読み、spec の言葉で断ります。`template` を書いた spec はページとして読みます。
 
 ## `floe diagram example [種類]`
 
