@@ -2725,3 +2725,25 @@ func TestGraphBoxLevelStays(t *testing.T) {
 		t.Errorf("%d of %d ends on their equal parts", on, all)
 	}
 }
+
+// A straight edge holds its line, off its parts, and the other ends on its sides stand evenly between it and the sides'
+// ends.
+func TestGraphBoxSpread(t *testing.T) {
+	t.Parallel()
+
+	g := graphOf([]string{"a", "b", "c"}, "a>c", "b>c", "a>c")
+	g.Direction = "right"
+	for i, n := range []int{11, 6, 6} {
+		g.Nodes[i].Box.Rows[0].Text["en"] = strings.Repeat("w", n)
+	}
+	want := `box "a" 20,26 128x64
+box "b" 40,116 88x48
+box "c" 184,20 88x72
+edge a→c M148,44 H184
+edge b→c M128,140 H160 V76 H184
+edge a→c M148,67 H160 V60 H184
+`
+	if got := laid(g).inspect(); got != want {
+		t.Errorf("got\n%swant\n%s", got, want)
+	}
+}
