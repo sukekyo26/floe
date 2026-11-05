@@ -1130,8 +1130,8 @@ func TestInspect(t *testing.T) {
 	lined := func(d *diagram.Drawer, v any) (string, error) {
 		return d.Inspect(v, diagram.Options{Lang: "en", Icons: lambda, Seq: 1})
 	}
-	src = "title: { en: A, ja: あいうえお }\nparts:\n  - box: { name: a, x: 10, y: 10, rows: [A] }\n"
-	got, mistakes = draw(t, src, lined)
+	titled := "title: { en: A, ja: あいうえお }\nparts:\n  - box: { name: a, x: 10, y: 10, rows: [A] }\n"
+	got, mistakes = draw(t, titled, lined)
 	if want := "diagram \"あいうえお\" 78x59\nbox \"a\" 10,10 48x29\n"; mistakes != "" || got != want {
 		t.Errorf("inspect = %q %s, want %q", got, mistakes, want)
 	}

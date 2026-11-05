@@ -253,8 +253,7 @@ func drawPart(k *kit.Kit, d *doc.Data, it schema.Item, ready any, s *items) (any
 		}
 		for i, e := range mistakes {
 			e.Args = s.plainArgs(e.Args)
-			switch {
-			case e.File() == p.File("part.html") && line > 0:
+			if e.File() == p.File("part.html") && line > 0 {
 				// One part.html tells of itself (a word its words.yaml has not, text/template's mistake of running
 				// it): at its line and column, told once whatever uses the part.
 				// LIMIT: a mistake a value brings (ranging over text, an index out of range), of floe's parts too, is

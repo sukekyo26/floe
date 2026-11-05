@@ -191,11 +191,11 @@ func TestPlaceItem(t *testing.T) {
 		usererr.LibraryAt("b.yaml", 2, 3, "there"),
 		usererr.NewWhole("doc_no_lang"),
 	})
-	var got []string
 	var found usererr.List
 	if failed := found.Add(err); failed != nil {
 		t.Fatal(failed)
 	}
+	got := make([]string, 0, len(found))
 	for _, e := range found {
 		got = append(got, e.File()+":"+strconv.Itoa(e.Line())+":"+strconv.Itoa(e.Column()))
 	}

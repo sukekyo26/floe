@@ -215,7 +215,8 @@ func (d *Drawer) Inspect(spec any, opts Options) (string, error) {
 }
 
 func (l *layout) inspect() string {
-	lines := make([]string, 0, len(l.frames)+len(l.heads)+len(l.boxes)+len(l.marks)+len(l.areas)+len(l.paths)+len(l.labels))
+	lines := make([]string, 0, len(l.frames)+len(l.heads)+len(l.boxes)+len(l.marks)+len(l.areas)+len(l.paths)+
+		len(l.labels))
 	area := func(r rect) string {
 		if r.byPlace { // named by where it stands already
 			return r.what

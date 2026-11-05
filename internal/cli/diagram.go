@@ -106,7 +106,8 @@ is none of) prints no line.`,
 
 // diagrams does one with each file, in the language lang, each numbered by its place among them, wants the key of what
 // to give: what each gave, and every mistake of every file, at its line and column.
-func (a *app) diagrams(paths []string, lang, wants string, one func(*diagram.Drawer, arg, diagram.Options) (string, error),
+func (a *app) diagrams(
+	paths []string, lang, wants string, one func(*diagram.Drawer, arg, diagram.Options) (string, error),
 ) ([]string, error) {
 	d, err := draw.Diagrams()
 	if err != nil {
@@ -194,9 +195,10 @@ func inspectFile(d *diagram.Drawer, own func() (*kit.Kit, error), p arg, o diagr
 		return "", err
 	}
 	if _, isData := v["template"]; !isData {
-		got, err := d.Inspect(doc.Ints(v), o)
+		got, mistakes := d.Inspect(doc.Ints(v), o)
 		pos, _ := yamlpos.Locate(root, nil)
-		return placedAt(p.name, pos, got), yamlpos.Place(err, p.name, root, nil) //nolint:wrapcheck // mistakes placed
+		//nolint:wrapcheck // mistakes placed
+		return placedAt(p.name, pos, got), yamlpos.Place(mistakes, p.name, root, nil)
 	}
 	k, err := own()
 	if err != nil {
@@ -209,10 +211,10 @@ func inspectFile(d *diagram.Drawer, own func() (*kit.Kit, error), p arg, o diagr
 	var out strings.Builder
 	var found usererr.List
 	for _, it := range items {
-		got, err := d.Inspect(it.Value, o)
+		got, told := d.Inspect(it.Value, o)
 		out.WriteString(placedAt(p.name, data.PosOf(it.At), got))
 		var mistakes usererr.List
-		if failed := mistakes.Add(err); failed != nil {
+		if failed := mistakes.Add(told); failed != nil {
 			return "", failed
 		}
 		if failed := found.Add(data.PlaceItem(it.At, mistakes)); failed != nil {
