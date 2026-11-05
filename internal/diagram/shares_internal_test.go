@@ -13,7 +13,7 @@ func noShares(*layout, []item) {}
 // mistake, and for compared more turns or crossings. It says "" for a spec already told, and counts moved.
 func sharesFault(s *spec, compared bool, moved *int) string {
 	opts := Options{Lang: "en", Icons: anyIcon{}, Seq: 1}
-	plain := layoutWith(s, opts, noShares)
+	plain := layoutWith(s, opts, placing{noShares, (*drawing).settleEnds})
 	plain.check()
 	if plain.failure != nil || len(plain.problems) > 0 {
 		return ""

@@ -7,11 +7,11 @@ edge stopped→running M215.91,68 H581.68
 edge running→outdated M757.52,68 H1101.69
 edge outdated→running M1097.68,80 H753.51
 edge running→stopped M585.69,80 H219.92
-edge outdated→stopped M1101.69,116 H215.91
+edge outdated→stopped M1098.86,110 H218.74
 edge [120,29]→stopped M120,29 V56
 label "start fails (port in use)" 25,164 190x18
 label "publish or serve" 223,38 125.2x18
 label "floe reinstalled" 760.52,38 125.2x18
 label "next publish replaces it" 911.88,92 182.8x18
 label "floe stop, logout or reboot" 374.2,92 204.4x18
-label "floe stop, logout or reboot" 889.29,128 204.4x18
+label "floe stop, logout or reboot" 889.29,122 204.4x18
