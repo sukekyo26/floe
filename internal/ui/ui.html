@@ -539,6 +539,10 @@
   .icon-btn svg { width: 16px; height: 16px; }
   .icon-btn:hover { background: var(--subtle); color: var(--fg); }
   .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
+  /* What the bar shows, its menu leaves out, so that nothing is in both: a row has no bar, so that its menu has all */
+  .frame-actions .menu :is(.open, .download, .archive), .menu .fav-item { display: none; }
+  .frame-actions > .archive.on, .frame-actions > .archive.on:hover { color: var(--on-ink); background: var(--ink); }
+  .frame-actions > .archive.on:hover { background: var(--ink-hover); }
   /* What opens a column folded, where the button that folded it stood in the foot, on a ground of its own: any page may lie under it.
      After .icon-btn, whose ground it takes the place of.
      LIMIT: over a page it hides what lies under it, until the page scrolls or the column opens. Room under the iframe would be the bar a column left behind was: move it if that comes to trouble someone */
@@ -753,7 +757,13 @@
   @media (max-width: 40rem) {
     #narrow-filter { margin-left: auto; }
     .shelf .views [data-view="archived"] .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-    .framed #frame-actions > :not(.diff-open) { display: none; }
+    /* What leaves the bar goes in its menu; a page of a folder has none, and keeps what it has in the bar */
+    .framed #frame-actions:has(.more) > :is(.download, .open, .archive, .star) { display: none; }
+    .framed #frame-actions .menu :is(.open, .download, .archive, .fav-item) { display: inline-flex; }
+    /* The back button goes to the same list as the logo, whose room the title takes */
+    .framed .brand { display: none; }
+    .framed .frame-title { margin-left: 0; padding-left: 0; }
+    .framed .frame-title::before { display: none; }
     .framed .server { font-size: 0; gap: 0; padding: 0.45rem; }
     .bar-inner:has(> .search:not([hidden])) .bar-end { margin-left: auto; }
     .bar-inner > .search { flex: 0 0 36px; margin-inline: 0; transition: flex-basis 0.15s; }
@@ -1068,6 +1078,7 @@
       <details class="more">
         <summary class="icon-btn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></summary>
         <div class="menu">
+          <button type="button" class="icon-btn fav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span class="label"></span></button>
           <button type="button" class="icon-btn mark-unread"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/></svg><span class="label">{{.Msg "ui_mark_unread"}}</span></button>
           <button type="button" class="icon-btn select" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span class="label">{{.Msg "ui_select"}}</span></button>
           <button type="button" class="icon-btn edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_edit"}}</button>
@@ -1083,11 +1094,13 @@
 <template id="page-actions">
   <span class="frame-actions">
       <a class="icon-btn diff-open" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5h7.5v15H3zM13.5 4.5H21v15h-7.5zM5.5 9h2.5M5.5 15h2.5M16 9h2.5M16 15h2.5"/></svg></a>
+      <button type="button" class="icon-btn copy" title="{{.Msg "ui_copy_path"}}" aria-label="{{.Msg "ui_copy_path"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></button>
+      <a class="icon-btn download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg></a>
+      <a class="icon-btn open" target="_blank" rel="noopener" title="{{.Msg "ui_open_raw"}}" aria-label="{{.Msg "ui_open_raw"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a>
+      <button type="button" class="icon-btn archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg></button>
       <button type="button" class="icon-btn star">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
       </button>
-      <button type="button" class="icon-btn copy" title="{{.Msg "ui_copy_path"}}" aria-label="{{.Msg "ui_copy_path"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></button>
-      <a class="icon-btn open" target="_blank" rel="noopener" title="{{.Msg "ui_open_raw"}}" aria-label="{{.Msg "ui_open_raw"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a>
       <span class="more-slot"></span>
   </span>
 </template>
@@ -1420,7 +1433,6 @@
   // LIMIT: of this tab alone: another tab with the page open reads it again as it draws itself anew. Tell the tabs if that comes to matter
   // LIMIT: whole, a page gone back to by the browser (bfcache) tells nothing and stays unread, until opened again
   // LIMIT: the slug of a page open changed, the frame loads it anew: read again, with its toast
-  // LIMIT: at 40rem or less a page open whole has no bar's menu: the focus left on the toast's button falls to the body, and the way to mark it later is the list's row
   // LIMIT: whole, pressed and moved on at once, the mark waiting or on its way goes with the page, saying nothing
   // LIMIT: a browser that sends no focusout as Ctrl+K moves #toasts leaves the toast whose button had the focus, until the next takes its place
   // LIMIT: a row pressed again once its page is being read (a double press too) takes the toast of the list with it, and the page whole, told it was read already, shows none; its menu still marks it unread. Carry the toast over if that comes to trouble someone
@@ -1957,6 +1969,12 @@
     $('add-open').hidden = view === 'archived';
   }
 
+  function drawDownload(link, a) {
+    link.href = `/api/artifacts/${a.slug}/download`;
+    link.download = `${a.slug}.html`;
+    link.setAttribute('aria-label', t('ui_download_named', a.title));
+  }
+
   // The menu of a, in a row and in the bar over its page
   function moreMenu(a) {
     const box = $('more').content.firstElementChild.cloneNode(true);
@@ -1990,9 +2008,7 @@
     open.href = rawHref(a);
     open.setAttribute('aria-label', t('ui_open_raw_named', a.title));
     const dl = box.querySelector('.download');
-    dl.href = `/api/artifacts/${a.slug}/download`;
-    dl.download = `${a.slug}.html`;
-    dl.setAttribute('aria-label', t('ui_download_named', a.title));
+    drawDownload(dl, a);
     // A folder has no page of its own to open alone or download, nor has a link whose file is gone
     open.hidden = Boolean(a.folder || a.missing);
     dl.hidden = Boolean(a.folder || a.missing);
@@ -2000,6 +2016,10 @@
     arc.querySelector('.label').textContent = t(a.archived ? 'ui_unarchive' : 'ui_archive');
     arc.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
     arc.addEventListener('click', () => toggleArchived(a));
+    const fav = box.querySelector('.fav-item');
+    fav.querySelector('.label').textContent = t(a.favorite ? 'ui_unfavorite' : 'ui_favorite');
+    fav.setAttribute('aria-label', t(a.favorite ? 'ui_unfavorite_named' : 'ui_favorite_named', a.title));
+    fav.addEventListener('click', () => toggleFavorite(a));
     const del = box.querySelector('.delete');
     disarm(a, del);
     del.addEventListener('click', () => remove(a, del));
@@ -2055,6 +2075,17 @@
     open.href = rawHref({ slug: a.slug, file });
     open.hidden = Boolean(a.missing || a.folder && !file);
     open.setAttribute('aria-label', t('ui_open_raw_named', file ? baseName(file) : a.title));
+    const dl = box.querySelector('.download');
+    dl.hidden = Boolean(file || a.folder || a.missing);
+    dl.title = t('ui_download');
+    drawDownload(dl, a);
+    // Its words tell what a press does, so that it is not told as pressed too
+    const arc = box.querySelector('.archive');
+    arc.hidden = Boolean(file);
+    arc.classList.toggle('on', Boolean(a.archived));
+    arc.title = t(a.archived ? 'ui_unarchive' : 'ui_archive');
+    arc.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
+    arc.onclick = () => toggleArchived(a);
     const slot = box.querySelector('.more-slot');
     const focused = slot.contains(document.activeElement);
     slot.replaceChildren(...(file ? [] : [moreMenu(a)]));

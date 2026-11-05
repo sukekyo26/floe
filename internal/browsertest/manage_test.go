@@ -385,7 +385,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// The menu: its words, Escape and a click elsewhere close it, focus going back to its button.
 	b.eval("document.querySelector('#list li[data-slug=b] summary').click()")
 	out = append(out, b.eval("document.querySelector('#list li[data-slug=b] summary').getAttribute('aria-label')"),
-		b.eval("[...document.querySelectorAll('#list li[data-slug=b] .menu > *')].filter((e) => !e.hidden).map((e) => e.textContent.trim()).join(' / ')"))
+		b.eval("[...document.querySelectorAll('#list li[data-slug=b] .menu > *')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.textContent.trim()).join(' / ')"))
 	b.eval("document.querySelector('#list li[data-slug=b] .edit').focus()")
 	key("Escape")
 	out = append(out, b.eval("[document.querySelector('#list li[data-slug=b] .more').open, "+
@@ -507,11 +507,11 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// their failure.
 	frame := "[document.getElementById('frame-title').textContent, document.getElementById('frame-archived').hidden, " +
 		"document.querySelector('#frame-actions .star').getAttribute('aria-pressed'), document.querySelector('#frame-actions .star').getAttribute('aria-label'), " +
-		"document.querySelector('#frame-actions .open').getAttribute('href'), document.querySelector('#frame-actions .archive').textContent.trim()].join(' / ')"
+		"document.querySelector('#frame-actions .open').getAttribute('href'), document.querySelector('#frame-actions .menu .archive').textContent.trim()].join(' / ')"
 	b.stub(extrasList)
 	b.navigate("/a/z/")
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
-	b.eval("document.querySelector('#frame-actions summary').click(); document.querySelector('#frame-actions .archive').click()")
+	b.eval("document.querySelector('#frame-actions > .archive').click()")
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
 	// Given back, as the server now lists it: the menu says so.
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'z' ? { ...a, archived: false } : a)); load()")

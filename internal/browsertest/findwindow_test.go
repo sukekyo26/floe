@@ -87,7 +87,7 @@ func TestUIFind(t *testing.T) { //nolint:paralleltest // the browser tests share
 	if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Tab)); err != nil {
 		t.Fatal(err)
 	}
-	out = append(out, b.eval("document.getElementById('find').open + ' ' + document.activeElement.matches('#find-actions .star')"))
+	out = append(out, b.eval("document.getElementById('find').open + ' ' + document.activeElement.matches('#find-actions > .download')"))
 	b.eval("document.getElementById('find-q').focus()")
 	// None: no rows, no buttons, no foot, the reason; Enter goes nowhere.
 	typeFind(b, "nothing like it")
@@ -815,7 +815,7 @@ func TestUIModalShape(t *testing.T) { //nolint:paralleltest // the browser tests
 		// The rows as wide as the field; of the foot, the buttons left and the close right; a row's mark not taken for the head's line.
 		out = append(out, b.eval(`(() => { const r = (e) => e.getBoundingClientRect(), f = r(document.querySelector('#find .find-foot'));
 			return [Math.abs(r(document.querySelector('#find-list li')).right - r(document.getElementById('find-q')).right) < 1,
-				Math.abs(r(document.querySelector('#find-acts .star')).left - f.left) < 12,
+				Math.abs(r(document.querySelector('#find-acts > .frame-actions > :not([hidden])')).left - f.left) < 12,
 				Math.abs(r(document.querySelector('#find [data-close]')).right - f.right) < 1,
 				r(document.querySelector('#find .k')).width > 0,
 				getComputedStyle(document.querySelector('#find-list .lead')).marginTop].join(' '); })()`))
@@ -953,7 +953,7 @@ func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests 
 	if err := chromedp.Do(b.ctx, chromedp.KeyEvent("\t")); err != nil {
 		t.Fatal(err)
 	}
-	out = append(out, b.eval("document.activeElement.matches('#find-actions .star')"))
+	out = append(out, b.eval("document.activeElement.matches('#find-actions > .download')"))
 	b.eval("document.getElementById('find-q').focus()")
 	// The words of an error can be selected, and a link keeps its own press.
 	out = append(out, b.eval("['#error', '#find-list a'].every((e) => document.querySelector(e).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })))"))
@@ -1037,8 +1037,7 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 	// Pressed by the keys, Enter and the space bar, the star keeps the focus through the rows drawn anew, and the arrows go on.
 	for _, k := range []string{kb.Enter, " "} {
 		was := b.eval("window.starred")
-		b.eval("closeMenus(null); " + q + ".focus()")
-		key("\t")
+		b.eval("closeMenus(null); document.querySelector('#find-actions .star').focus()")
 		key(k)
 		b.until("the star pressed", "window.starred !== "+was)
 		b.still()
@@ -1053,7 +1052,7 @@ func TestUIFindArrows(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	out = append(out, b.eval("document.querySelector('#frame-actions .open').getAttribute('aria-label')"))
 	check(t, "arrows", out, strings.Join([]string{
-		"find-1 / icon-btn star / Add Beta to favorites", "find-0 / icon-btn star / Add Alpha plan to favorites", "find-4 / icon-btn star / Add Zed plan to favorites",
+		"find-1 / icon-btn download / Add Beta to favorites", "find-0 / icon-btn download / Add Alpha plan to favorites", "find-4 / icon-btn download / Add Zed plan to favorites",
 		"find-1 / icon-btn star / Add Beta to favorites", "1 /",
 		"find-2 / icon-btn open / Add Gamma plan to favorites", "Open Gamma plan alone in a new tab", "find-3 / find-q / Add Folder to favorites",
 		"find-2 / btn / Add Gamma plan to favorites", "find-1 / find-q / Add Beta to favorites",

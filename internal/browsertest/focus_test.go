@@ -175,6 +175,23 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.eval("document.getElementById('list-hide').click()")
 	out = append(out, tabTo("#shelf-show"), tabTo("#list-show"))
 	b.eval("document.getElementById('list-show').click(); document.getElementById('shelf-show').click()")
+	// The bar's buttons, an archived one black.
+	b.eval("document.querySelector('#list li:not(.group) .title').click()")
+	b.until("the bar", "!document.getElementById('read-actions').hidden")
+	b.eval("document.getElementById('read-title').focus()")
+	for range 6 {
+		if b.eval("String(document.activeElement.matches('#read-actions > .archive'))") == "true" {
+			break
+		}
+		if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Tab)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	bar := "#read-actions > .archive: " + b.settled(ringOf)
+	b.eval("document.querySelector('#read-actions > .archive').classList.add('on')")
+	barOn := b.settled(ringOf)
+	b.eval("document.querySelector('#read-actions > .archive').classList.remove('on')")
+	check(t, "the bar", []string{bar, barOn}, "#read-actions > .archive: "+ring+"|"+ring)
 	check(t, "the feet", out, strings.Join([]string{
 		"#shelf-hide: " + ring, "#list-hide: " + ring, "#shelf-show: " + ring, "#shelf-show: " + ring, "#list-show: " + ring,
 	}, "|"))
