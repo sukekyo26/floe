@@ -2896,6 +2896,28 @@ func withTold(g *graph) bool {
 	return l.failure == nil && len(l.problems) > 0
 }
 
+// withFault says which box of g stands in another rank than the box its with names, or "".
+func withFault(g *graph) string {
+	groups, err := grouped(g)
+	if err != nil {
+		return err.Error()
+	}
+	ranks := map[string]int{}
+	for _, gr := range groups {
+		for _, n := range gr.nodes {
+			if n.box != nil {
+				ranks[n.box.Name] = n.rank
+			}
+		}
+	}
+	for _, b := range graphBoxes(g) {
+		if b.With != "" && ranks[b.Name] != ranks[b.With] {
+			return fmt.Sprintf("%s stands in rank %d, its with %s in rank %d", b.Name, ranks[b.Name], b.With, ranks[b.With])
+		}
+	}
+	return ""
+}
+
 // Graphs with boxes of a with at random, half with level edges too, with no group, groups and lanes: none fails, the
 // boxes of a with stand in one rank, and at least least of them are laid out, those told of what with refuses skipped.
 // It is a test of its own, so that its draws leave TestGraphRandom's alone.
@@ -2940,6 +2962,9 @@ func TestGraphWithRandom(t *testing.T) {
 				}
 				laidOut++
 				l := laid(g)
+				if fault := withFault(g); fault != "" {
+					t.Fatalf("seed %d, graph %d: %s", c.seed, i, fault)
+				}
 				if fault := laidFault(g, l); fault != "" {
 					b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson,musttag // the test's own
 					t.Fatalf("seed %d, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)

@@ -30,7 +30,7 @@ func (o *graphOut) rank(members, edges, cedges, levels []int) *group {
 			outs: nil, written: j,
 		})
 	}
-	stands := map[int]int{} // each box's node to rank by: its row's first box's
+	stands := map[int]int{} // each box's node to rank by: the first box as written of its row and those a with joins
 	for b := range local {
 		stands[b] = local[o.ranked[b]]
 	}
@@ -91,7 +91,8 @@ func (o *graphOut) rank(members, edges, cedges, levels []int) *group {
 // bottom → X's top, drawn up, leaving its frame's bottom; where both make one, X stands among G's ranks: told, and
 // not laid out. Each edge is added in the order written, so that an earlier one takes its way.
 // LIMIT: the way taken is the first that makes no cycle, not the one turning the fewest edges, as with turn.
-// The boxes rank by their nodes (stands), a row by its first box's; the arcs between them are stood.
+// The boxes rank by their nodes (stands), a row and those a with joins by the first box's; the arcs between them are
+// stood.
 func (gr *group) rankWith(arcs, stood []arc, cedges []int, local, stands map[int]int) []arc {
 	rk := newRanking(gr.out, stands, len(gr.nodes))
 	for _, a := range stood {

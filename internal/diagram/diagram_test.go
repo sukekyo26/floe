@@ -1956,9 +1956,14 @@ func TestGraphWith(t *testing.T) {
 			}
 			return strings.Join(order, " ")
 		}
-		// As written, m between the two a with stands in one rank: a row would stand them together.
 		got, _ := laid(t, spec(b("a", "")+b("m", "")+b("b", "a")+b("z", ""), e("a", "z")+e("m", "z")))
 		if want := "a@20 m@92 b@164"; xs(got) != want {
+			t.Errorf("order = %s, want %s", xs(got), want)
+		}
+		// With a level edge in the group of boxes, those of a row stand together: not those of a with, m still between.
+		got, _ = laid(t, spec(b("a", "")+b("m", "")+b("b", "a")+b("z", "")+b("p", "")+b("q", ""),
+			e("a", "z")+e("m", "z")+e("z", "p")+"        - { from: p, to: q, level: true }\n"))
+		if want := "a@26 m@98 b@170"; xs(got) != want {
 			t.Errorf("order = %s, want %s", xs(got), want)
 		}
 		// LIMIT of joined: with no edge, m is a group of boxes of its own, past those a with joins.
@@ -2020,6 +2025,30 @@ func TestGraphWith(t *testing.T) {
 			{"a ring of with", spec(b("x", "")+b("a", "b")+b("b", "a"), e("x", "a")), "s.yaml:11:13: edge x→a: " + rank},
 			{"a ring holding the edge", spec(b("a", "b")+b("b", "c")+b("c", "a"), e("a", "c")), "s.yaml:11:13: edge a→c: " + rank},
 			{
+				"a box a with stands among a group of ranks",
+				spec(b("nat", "alb")+
+					"        - group: { name: vpc, label: VPC, nodes: [ { box: { name: alb, rows: [ALB] } }, { box: { name: api, rows: [API] } } ] }\n",
+					e("alb", "api")+e("vpc", "nat")),
+				`s.yaml:11:28: edge vpc→nat: nat can stand neither above group "vpc" nor below it, as alb stands no lower than it and alb no higher; end the edge at a box in "vpc"`,
+			},
+			{
+				"a box a with stands between a level edge's boxes",
+				`title: T
+parts:
+  - graph:
+      x: 20
+      y: 20
+      lanes:
+        - { name: l0, label: L0, nodes: [ { box: { name: p, rows: [P] } } ] }
+        - { name: l1, label: L1, nodes: [ { box: { name: u, rows: [U] } }, { box: { name: m, with: p, rows: [M] } } ] }
+        - { name: l2, label: L2, nodes: [ { box: { name: q, rows: [Q] } } ] }
+      edges:
+        - { from: u, to: q }
+        - { from: p, to: q, level: true }
+`,
+				`s.yaml:12:36: edge p→q: box "m" stands between its boxes in their rank; drop level, or move it out of the way`,
+			},
+			{
 				"a box a with stands among a group", spec(b("e", "a")+
 					"        - group: { name: g, label: G, nodes: [ { box: { name: a, rows: [A] } } ] }\n", e("e", "g")),
 				`s.yaml:10:19: edge e→g: e can stand neither above group "g" nor below it, as a stands no lower than it and a no higher; end the edge at a box in "g"`,
@@ -2043,7 +2072,7 @@ func TestGraphWith(t *testing.T) {
 		level(t, tops, "a", "b")
 		above(t, tops, "a", "c")
 	})
-	t.Run("as the docs write it", func(t *testing.T) {
+	t.Run("a gateway in the rank of the balancer", func(t *testing.T) {
 		t.Parallel()
 		src := `title: A gateway in the rank of the balancer
 parts:

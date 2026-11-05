@@ -67,19 +67,10 @@ func (o *graphOut) rows(levels []int) {
 	for i := range o.row {
 		o.row[i] = i
 	}
-	find := func(i int) int {
-		for o.row[i] != i {
-			i = o.row[i]
-		}
-		return i
-	}
 	for _, k := range levels {
-		x, y := find(o.ends[k][0].box), find(o.ends[k][1].box)
-		o.row[max(x, y)] = min(x, y)
+		unite(o.row, o.ends[k][0].box, o.ends[k][1].box)
 	}
-	for i := range o.row {
-		o.row[i] = find(i)
-	}
+	rootAll(o.row)
 	o.facing = map[[2]int]int{}
 	for _, k := range levels {
 		for i, j := range [2]int{o.ends[k][0].box, o.ends[k][1].box} {
@@ -103,15 +94,8 @@ func (o *graphOut) block(b int) [2]int {
 // stands side by side and a with does not; and tells a with naming no box or icon of the graph, which does nothing.
 // LIMIT: the words of diagram_graph_among and diagram_graph_level_between do not name a with that stands a box where
 // they tell of it; the next mistake, or dropping the with, tells. Name it if one misleads.
-func (o *graphOut) withs() usererr.List {
+func (o *graphOut) withs(names map[string]gref) usererr.List {
 	o.ranked, o.withed = slices.Clone(o.row), map[int]bool{}
-	find := func(i int) int {
-		for o.ranked[i] != i {
-			i = o.ranked[i]
-		}
-		return i
-	}
-	names := o.names()
 	var told usererr.List
 	for i, b := range o.boxes {
 		if b.box.With == "" {
@@ -122,14 +106,32 @@ func (o *graphOut) withs() usererr.List {
 			told = append(told, usererr.NewIn("", b.at+"/with", "diagram_graph_with_unknown", b.box.With))
 			continue
 		}
-		x, y := find(i), find(e.box)
-		o.ranked[max(x, y)] = min(x, y)
+		unite(o.ranked, i, e.box)
 		o.withed[i] = true
 	}
-	for i := range o.ranked {
-		o.ranked[i] = find(i)
-	}
+	rootAll(o.ranked)
 	return told
+}
+
+// rootOf is the root of i among the sets parent holds.
+func rootOf(parent []int, i int) int {
+	for parent[i] != i {
+		i = parent[i]
+	}
+	return i
+}
+
+// unite joins the sets of x and y, rooted at the smallest index, so that a set's root is its first box as written.
+func unite(parent []int, x, y int) {
+	x, y = rootOf(parent, x), rootOf(parent, y)
+	parent[max(x, y)] = min(x, y)
+}
+
+// rootAll points each index of parent at its set's root.
+func rootAll(parent []int) {
+	for i := range parent {
+		parent[i] = rootOf(parent, i)
+	}
 }
 
 // across is edges, edges between boxes, but those between two boxes of one rank by a row or a with, told: an edge

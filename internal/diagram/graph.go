@@ -123,7 +123,7 @@ func readGraph(g *graph, at string, settle func(*drawing)) (*graphOut, usererr.L
 	levels, told := out.unlooped(levels)
 	problems = append(problems, told...)
 	out.rows(levels)
-	problems = append(problems, out.withs()...)
+	problems = append(problems, out.withs(byName)...)
 	edges, told = out.across(edges)
 	problems = append(problems, told...)
 	for _, gr := range out.groupsOf(edges, cedges, levels) {
@@ -242,16 +242,10 @@ func (o *graphOut) joined(edges, cedges []int) func(int) int {
 	for i := range root {
 		root[i] = i
 	}
-	find := func(i int) int {
-		for root[i] != i {
-			i = root[i]
-		}
-		return i
-	}
+	find := func(i int) int { return rootOf(root, i) }
 	join := func(boxes []int) {
 		for _, b := range boxes[min(1, len(boxes)):] {
-			x, y := find(boxes[0]), find(b)
-			root[max(x, y)] = min(x, y)
+			unite(root, boxes[0], b)
 		}
 	}
 	for _, k := range slices.Concat(edges, cedges) {
