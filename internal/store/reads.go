@@ -130,8 +130,8 @@ func (m *Meta) hasVersion(n int, at string) bool {
 	return slices.ContainsFunc(m.Versions, func(v Version) bool { return v.N == n && v.At == at })
 }
 
-// lastNumber is the number of m's last version, 0 for none.
-func (m *Meta) lastNumber() int {
+// LastNumber is the number of m's last version, 0 for none.
+func (m *Meta) LastNumber() int {
 	if len(m.Versions) == 0 {
 		return 0
 	}
@@ -170,7 +170,7 @@ func (s *Store) ReadBefore(viewer, slug string, m *Meta) int {
 		return 0
 	}
 	n := r.taken(slug, m)
-	if n != m.lastNumber() {
+	if n != m.LastNumber() {
 		return n
 	}
 	rec, ok := r.pages[slug]
@@ -202,7 +202,7 @@ func (r *reader) news(slug string, m *Meta) string {
 	rec, kept := r.pages[slug]
 	unread := kept && rec.N == 0
 	switch {
-	case n == m.lastNumber():
+	case n == m.LastNumber():
 		return ""
 	case n > 0, !unread && !timeOf(m.CreatedAt).After(r.since):
 		return newsVersion
@@ -222,7 +222,7 @@ func (s *Store) MarkRead(viewer, slug string, n int, at string) (bool, error) {
 		if !m.hasVersion(n, at) || r.taken(slug, m) >= n {
 			return nil
 		}
-		cleared = n == m.lastNumber()
+		cleared = n == m.LastNumber()
 		return &pageRead{N: n, At: at, Before: r.takenRead(slug, m)}
 	})
 	return cleared, err
@@ -324,7 +324,7 @@ func (s *Store) moveRead(from, to string) {
 // for a version m does not list, and a link.
 func (s *Store) ReadMark(slug string, m *Meta, n int) (Version, bool) {
 	if n == 0 {
-		n = m.lastNumber()
+		n = m.LastNumber()
 	}
 	_, at, ok := s.versionFile(slug, m, n)
 	if !ok {

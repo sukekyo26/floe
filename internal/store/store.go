@@ -397,7 +397,7 @@ func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
 	l.Versions = nil
 	if !m.IsLink() {
 		l.News = r.news(slug, m)
-		l.Version = m.lastNumber()
+		l.Version = m.LastNumber()
 		l.VersionCount = len(m.Versions)
 		return l
 	}

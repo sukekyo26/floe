@@ -213,3 +213,73 @@ func TestVersionTabMark(t *testing.T) {
 		t.Errorf("answers %q, want %q", strings.Join(got, " "), want)
 	}
 }
+
+// The frame says what its ?v= asks, as versionParam reads it: a version of a stored page, 0 for its last, gone for what is
+// none; nothing where ?v= is not a version's, or there is no page.
+func TestFrameVersion(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one"), nil)
+	e.publish(t, "d", noted("two"), nil)
+	e.publish(t, "only", noted("one"), nil)
+	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>", "docs/a.html": "<p>a</p>"})
+	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`)  //nolint:exhaustruct // the rest not given
+	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: filepath.Join(e.home, "proj", "docs")}), http.StatusCreated, `"slug":"docs"`) //nolint:exhaustruct // the rest not given
+	said := regexp.MustCompile(`data-version="([^"]*)"`)
+	for _, c := range []struct {
+		target string
+		status int
+		want   string
+	}{
+		{"/a/d/", http.StatusOK, ""},
+		{"/a/d/?v=1", http.StatusOK, "1"},
+		{"/a/d/?v=2", http.StatusOK, "0"},
+		{"/a/d/?v=99", http.StatusOK, "gone"},
+		{"/a/d/?v=abc", http.StatusOK, "gone"},
+		{"/a/d/?v=01", http.StatusOK, "gone"},
+		{"/a/d/?v=", http.StatusOK, "gone"},
+		{"/a/d/?v=0", http.StatusOK, "gone"},
+		{"/a/d/?diff&v=1", http.StatusOK, "1"},
+		{"/a/only/?v=1", http.StatusOK, "0"},
+		{"/a/only/?v=2", http.StatusOK, "gone"},
+		{"/a/h/?v=3", http.StatusOK, ""},
+		{"/a/docs/?file=a.html&v=3", http.StatusOK, ""},
+		{"/a/none/?v=3", http.StatusNotFound, ""},
+	} {
+		w := e.do(t, http.MethodGet, c.target, "")
+		got := ""
+		if m := said.FindStringSubmatch(w.Body.String()); m != nil {
+			got = m[1]
+		}
+		if w.Code != c.status || got != c.want {
+			t.Errorf("%s: %d data-version %q; want %d %q", c.target, w.Code, got, c.status, c.want)
+		}
+	}
+}
+
+// A download's ?v= asks a version as the page's does, saved under a name of its own; under a link it is not a version's.
+func TestDownloadVersion(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.publish(t, "d", noted("one"), nil)
+	e.publish(t, "d", noted("two"), nil)
+	writeFiles(t, filepath.Join(e.home, "proj"), map[string]string{"h.html": "<title>h</title>"})
+	want(t, e.write(t, http.MethodPost, "/api/artifacts", server.Link{Path: filepath.Join(e.home, "proj", "h.html")}), http.StatusCreated, `"slug":"h"`) //nolint:exhaustruct // the rest not given
+	for target, c := range map[string]struct{ name, body string }{
+		"/api/artifacts/d/download":     {"d.html", "two"},
+		"/api/artifacts/d/download?v=1": {"d-v1.html", "one"},
+		"/api/artifacts/d/download?v=2": {"d-v2.html", "two"},
+		"/api/artifacts/h/download?v=3": {"h.html", "<title>h</title>"},
+	} {
+		w := e.do(t, http.MethodGet, target, "")
+		want(t, w, http.StatusOK, c.body)
+		if got := w.Header().Get("Content-Disposition"); got != `attachment; filename="`+c.name+`"` {
+			t.Errorf("%s: %s; want %s", target, got, c.name)
+		}
+	}
+	for _, v := range []string{"99", "abc", "01", "", "0"} {
+		want(t, e.do(t, http.MethodGet, "/api/artifacts/d/download?v="+v, ""), http.StatusNotFound, "not found")
+	}
+}
