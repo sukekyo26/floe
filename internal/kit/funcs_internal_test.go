@@ -25,7 +25,7 @@ func TestMarkdown(t *testing.T) {
 	if !ok {
 		t.Fatal("markdownLine is not a func(string) (template.HTML, error)")
 	}
-	for src, want := range map[string]template.HTML{"-": "-", "1. x": "1. x", "**a**\n  b": "<strong>a</strong>\nb"} {
+	for src, want := range map[string]template.HTML{"-": "-", "1. x": "1. x", "# x": "# x", "**a**\n  b": "<strong>a</strong>\nb"} {
 		if got, err := line(src); err != nil || got != want {
 			t.Errorf("markdownLine(%q) = %q, %v; want %q", src, got, err, want)
 		}

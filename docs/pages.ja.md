@@ -61,8 +61,8 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 
 `floe template list` が各テンプレートの説明を出し、`floe template show <テンプレート>` が、取る鍵（説明は `schema.json` に）と、書き始めの `example.yaml` を出します。`"format": "markdown"` の項目と、説明が Markdown と言う項目が Markdown です。鍵のほかにページが見せるもの:
 
-- `report` は `eyebrow`（題の上の短い行）、`lead`（題の下の 1〜2 文）、`sections`（`heading` と `parts` の組の並び）を取ります。節は、部品の後に自分の `sections`（小節。`heading`（`<h3>`）と `parts` の組の並び。1 段だけ）を持てます。小節のある節には見出しが要り、見出しは空の字にできないので、見出しの無い節は鍵を書きません。
-- Markdown でない鍵は、書いたとおりの字で描きます。report の `eyebrow`・`lead`・見出し、design の `status`・`owner`・`date`、handoff の `date`・`from`・`to`・`by`・`ref`・`who`、adr の `number`・`date`・`deciders`、postmortem の `date`・`authors`・`owner`・`ref`、runbook の `owner`・`updated` と手順の `who`、`more` の節の見出しです。
+- `report` は `eyebrow`（題の上の短い行）、`lead`（題の下の 1〜2 文。Markdown の 1 行で、タグに見える字（`<prefix>`、`Vec<u8>` など）は除き、`*` や `_` などの記号は読むので、字として書くならバッククォートで囲む。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ））、`sections`（`heading` と `parts` の組の並び）を取ります。節は、部品の後に自分の `sections`（小節。`heading`（`<h3>`）と `parts` の組の並び。1 段だけ）を持てます。小節のある節には見出しが要り、見出しは空の字にできないので、見出しの無い節は鍵を書きません。
+- Markdown でない鍵は、書いたとおりの字で描きます。report の `eyebrow`・見出し、design の `status`・`owner`・`date`、handoff の `date`・`from`・`to`・`by`・`ref`・`who`、adr の `number`・`date`・`deciders`、postmortem の `date`・`authors`・`owner`・`ref`、runbook の `owner`・`updated` と手順の `who`、`more` の節の見出しです。
 - `handoff` は、済んだもの・進行中・決めること・次の数をページの頭に出し、`asks` に Q1、Q2 … と番号を付けます。
 - `runbook` は、手順の `who` を題の横の札に、`run` を `terminal` のコピーのボタン付きで描き、`rollback` を別の枠に入れます。
 - `slides` は、1 枚ずつを画面の高さか幅いっぱいにし、番号と枚数を隅に出し、印刷では 1 枚ずつ横向きのページにします。部品は `report` と同じ大きさなので、大きくするにはブラウザで拡大します。`direction: across` では、マウスのホイールは下へしか動かず、管理ページの枠の中では枠をクリックしてから ← → のキーが効きます。
