@@ -206,7 +206,7 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 		sent[name] = &fstest.MapFile{Data: b, Mode: 0, ModTime: time.Time{}, Sys: nil}
 	}
 	images := &recorder{fsys: sent, names: nil, seen: map[string]bool{}}
-	o := tmpl.Options{Theme: opts.theme(), Untitled: *opts.Slug, Images: images, ImagesDir: "", Icons: dw.Icons}
+	o := tmpl.Options{Theme: opts.theme(), Untitled: *opts.Slug, Images: images, ImagesDir: "", Icons: dw.Icons, CutOff: false}
 	page, warnings, drawErr := tmpl.Draw(dw.Kit, up.File, up.Source, o)
 	var mistakes usererr.List
 	if failed := mistakes.Add(drawErr); failed != nil {
@@ -312,7 +312,7 @@ func (s *Store) PrepareLink(
 		}
 		data = src
 		images := files.NewRoot(filepath.Dir(path))
-		o := tmpl.Options{Theme: opts.theme(), Untitled: slug, Images: images, ImagesDir: "", Icons: dw.Icons}
+		o := tmpl.Options{Theme: opts.theme(), Untitled: slug, Images: images, ImagesDir: "", Icons: dw.Icons, CutOff: false}
 		_, warnings, err = tmpl.Draw(dw.Kit, path, src, o)
 		_ = images.Close() //nolint:errcheck // only read from
 		if err != nil {

@@ -178,7 +178,7 @@ func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing) ([
 	}
 	images := files.NewRoot(filepath.Dir(file))
 	defer images.Close() //nolint:errcheck // only read from
-	o := tmpl.Options{Theme: m.Theme, Untitled: slug, Images: images, ImagesDir: "", Icons: drawing.Icons}
+	o := tmpl.Options{Theme: m.Theme, Untitled: slug, Images: images, ImagesDir: "", Icons: drawing.Icons, CutOff: false}
 	// Its warnings are the writer's, whom publish and check tell; one who opens the page cannot mend them.
 	page, _, err := tmpl.Draw(drawing.Kit, file, src, o)
 	return page, err //nolint:wrapcheck // its mistakes, or what failed
@@ -286,6 +286,8 @@ func (s *Server) askedVersion(slug string, m *store.Meta, q url.Values) string {
 // download answers the page of slug as a file, as it was linked or drawn, a page floe drew with its CSP in it
 // (draw.CutOffPage), as no header goes with a file: never the page of a linked data file's mistakes, which are
 // refused. ?v= asks a version of a stored page, as of its page.
+// LIMIT: the management page's download is a link, so a page refused here (read again, past the parser's depth) shows
+// no reason on the screen; send it through fetch if such pages come to be written.
 func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	m := s.cfg.Store.ReadMeta(slug)
@@ -314,7 +316,7 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 	if got.drawn {
 		page, err := io.ReadAll(got.body)
 		if err == nil {
-			page, err = draw.CutOffPage(page)
+			page, err = draw.CutOffPage(m.Path, page)
 		}
 		if err != nil {
 			refuse(w, r, err)

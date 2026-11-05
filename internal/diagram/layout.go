@@ -335,7 +335,7 @@ func (l *layout) addRaw(r *raw, at string) {
 			l.problem(at+"/raw/svg", "diagram_raw_element", name)
 		}
 	case err != nil:
-		l.failure = err
+		l.problems = append(l.problems, usererr.LibraryIn("", at+"/raw/svg", err.Error()))
 	default:
 		l.edgeEls = append(l.edgeEls, elem{Kind: "raw", Raw: svg})
 	}

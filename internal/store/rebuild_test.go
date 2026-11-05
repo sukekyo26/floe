@@ -100,6 +100,32 @@ func TestRebuildKept(t *testing.T) {
 	}
 }
 
+// A page past the parser's depth keeps the page it had, told in the library's words, and the others are drawn.
+func TestRebuildTooDeep(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "a.yaml", "lang: en\ntemplate: pic\nneed: 1\n", nil, store.Options{})
+	publish(t, s, dw, "b.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	deep := picKit(t, "{{if .Data.need}}"+strings.Repeat("<div>", 600)+"{{end}}v2", "")
+	pageA := read(t, filepath.Join(copyOf(t, s, root, "a"), "page.html"))
+	copyA := strings.Replace(copyOf(t, s, root, "a"), root, "S", 1)
+	want := lines(
+		copyA+"/data.yaml: html: open stack of elements exceeds 512 nodes",
+		copyA+`/data.yaml: page "a" keeps the page it had: fix the data file it was published from and publish it again, or fix the template`,
+	)
+	if got := told(s.Rebuild(deep), root); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+	if got := read(t, filepath.Join(copyOf(t, s, root, "a"), "page.html")); got != pageA {
+		t.Error("the page that does not draw changed")
+	}
+	if page := read(t, filepath.Join(copyOf(t, s, root, "b"), "page.html")); !strings.Contains(page, "<body>v2") {
+		t.Error("the page that draws was not drawn again")
+	}
+}
+
 // A copy whose page cannot be read (as a store develop wrote, of no page.html), or whose images cannot be, keeps
 // its page, told at what cannot be read.
 func TestRebuildUnreadable(t *testing.T) {

@@ -32,11 +32,11 @@ import (
 // looked up in icons (nil for none kept): each part and item of a format from the inner ones out, then
 // page.html. The mistakes of the items are told together, a part
 // holding one that failed left undrawn. It checks the page drawn, its items of format html first (items.check),
-// and returns it as the parser read it, with its styles in its head and its headings given ids, written anew,
-// and the warnings of its items.
+// and returns it as the parser read it, with its styles in its head and its headings given ids, when cut with the
+// CSP of a page opened without the headers (cutOff) too, written anew, and the warnings of its items.
 func Page(
 	k *kit.Kit, t *kit.Template, theme string, d *doc.Data, calc map[string]any, title string,
-	images fs.FS, imagesDir string, icons diagram.Icons,
+	images fs.FS, imagesDir string, icons diagram.Icons, cut bool,
 ) ([]byte, []*usererr.Error, error) {
 	s := newItems(images, imagesDir, icons)
 	var found usererr.List
@@ -78,14 +78,41 @@ func Page(
 	}
 	withStyles(tree, sheets)
 	withHeadingIDs(tree)
-	var out bytes.Buffer
+	if cut {
+		cutOff(tree)
+	}
 	// LIMIT: Render writes no form's pointer: a <form> ended in a <div> or a <table> it opened, read again, owns
 	// other inputs, or drops a nested one. Write the forms apart if a template comes to rely on them (the CSP's
 	// form-action 'none' sends none anyway).
-	if err := html.Render(&out, tree); err != nil {
-		return nil, nil, fmt.Errorf("draw: write the page: %w", err)
+	out, err := writePage(d.File, tree)
+	if err != nil {
+		return nil, nil, err
 	}
-	return out.Bytes(), s.warnings, nil
+	return out, s.warnings, nil
+}
+
+// parsePage reads src, a page of file ("" for one kept without a name), as a browser does. The parser refuses a page
+// past its depth, so what x/net/html says is a mistake of the page, in its words, at the file alone: Markdown, an item,
+// a part or page.html may each have gone that deep.
+func parsePage(file string, src []byte) (*html.Node, error) {
+	tree, err := html.Parse(bytes.NewReader(src))
+	if err != nil {
+		return nil, usererr.LibraryAt(file, 0, 0, err.Error())
+	}
+	return tree, nil
+}
+
+// writePage writes tree, a page of file ("" for one kept without a name), told as parsePage tells. The page itself can
+// fail to be written, as an <svg> with a <col> that holds something.
+// LIMIT: Render's other errors (an ErrorNode, an unknown node type, a doctype of both quotes) would be floe's own
+// mistake, told as the page's: the parser makes none of them, and floe adds only elements and text. Tell them apart
+// if floe comes to make other nodes.
+func writePage(file string, tree *html.Node) ([]byte, error) {
+	var out bytes.Buffer
+	if err := html.Render(&out, tree); err != nil {
+		return nil, usererr.LibraryAt(file, 0, 0, err.Error())
+	}
+	return out.Bytes(), nil
 }
 
 // readPage reads src, the page drawn from d with the items s, as a browser does, checks its items of format
@@ -94,7 +121,10 @@ func Page(
 func readPage(k *kit.Kit, d *doc.Data, s *items, src []byte) (*html.Node, named, error) {
 	end := s.secret + "end"
 	marked := slices.Concat(src, []byte("<!--"+end+"-->"))
-	tree, _ := html.Parse(bytes.NewReader(marked)) //nolint:errcheck // a bytes.Reader fails no read, Parse's one error
+	tree, err := parsePage(d.File, marked)
+	if err != nil {
+		return nil, named{}, err
+	}
 	// A page cut short, its end mark read as a comment, is checked no further: an item's marks past the cut are
 	// gone, and would tell it changed. Else an item that ate the mark (a tag it left open) is told at it, and a
 	// page cut with no item to blame is told cut.

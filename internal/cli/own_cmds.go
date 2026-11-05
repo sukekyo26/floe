@@ -192,7 +192,7 @@ func (a *app) checkTemplates() error {
 		t, _ := k.Template(name)
 		file := t.File("example.yaml")
 		images := files.NewRoot(t.File("."))
-		o := tmpl.Options{Theme: "", Untitled: name, Images: images, ImagesDir: "", Icons: store}
+		o := tmpl.Options{Theme: "", Untitled: name, Images: images, ImagesDir: "", Icons: store, CutOff: false}
 		_, warnings, err := tmpl.Draw(k, file, t.Example(), o)
 		a.warnings = append(a.warnings, warnings...)
 		_ = images.Close() //nolint:errcheck // only read from
