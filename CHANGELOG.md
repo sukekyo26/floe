@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add straight edges between facing sides that share a height, instead of a bend by the difference of their middles: an edge written by hand, when the straight line would touch nothing, and the edge of a graph at an icon that cannot move far enough, whose end alone on its side stands up to 12 off its point. If that leaves a mistake, a label with no place written landing on something say, all the diagram's edges stay as they were.
 - Add a choice of versions to the right of a stored page's title on the management page. An earlier version shows with the
   choice in yellow and words over the page that lead to the latest and to what differs from it; viewing it does not mark the
   latest as read. The frame's URL takes `?v=<n>`, and a version that is not there shows the latest and says so.

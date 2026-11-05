@@ -86,6 +86,7 @@ func iconFault(g *graph, l *layout) string {
 	}
 	type place struct{ name, side string }
 	on := map[place][]float64{}
+	straight := map[place]bool{}
 	for _, p := range l.paths {
 		from, to := pathEnds(p)
 		first, last := p.segs[0], p.segs[len(p.segs)-1]
@@ -106,12 +107,18 @@ func iconFault(g *graph, l *layout) string {
 				return fmt.Sprintf("end %d of %s runs %v, too short for an arrow", j, p.what, e.run)
 			}
 			on[place{e.name, side}] = append(on[place{e.name, side}], along)
+			straight[place{e.name, side}] = len(p.segs) == 1
 		}
 	}
 	for at, ends := range on {
 		slices.Sort(ends)
 		for i, v := range ends {
-			if want := 48 * float64(i+1) / float64(len(ends)+1); math.Abs(v-want) > 1e-6 {
+			size := l.names[at.name].r.size(sideAxis(at.side))
+			want := size * float64(i+1) / float64(len(ends)+1)
+			if len(ends) == 1 && straight[at] && math.Abs(v-want) <= max(0, min(iconSpareMost, size/2-inEnd))+1e-6 { // offPoint
+				continue
+			}
+			if math.Abs(v-want) > 1e-6 {
 				return fmt.Sprintf("the ends on the %s of icon %s stand at %v", at.side, at.name, ends)
 			}
 		}
@@ -570,5 +577,118 @@ func TestGraphIconTurns(t *testing.T) {
 		if n := turnsOf(p); n > 2 {
 			t.Errorf("in a row: %s turns %d times: %v", p.what, n, p.segs)
 		}
+	}
+}
+
+// An end alone on its side stands off its point by what its icon's size leaves it, 12 at most.
+func TestIconSpare(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct{ size, want float64 }{{16, 0}, {24, 0}, {32, 4}, {48, 12}, {96, 12}} {
+		//nolint:exhaustruct_v5 // an icon, which is all iconSpare reads
+		if got := iconSpare(&icon{Size: c.size}); got != c.want {
+			t.Errorf("size %v: %v, want %v", c.size, got, c.want)
+		}
+	}
+}
+
+// labelledChain is three icons in a row, the labels' lengths those given, the first with two edges to the second.
+func labelledChain(lengths ...int) *graph {
+	g := iconGraph([]string{"a", "b", "c"}, "a>b", "b>c", "a>b")
+	for i, n := range lengths {
+		g.Nodes[i].Icon.Label = Text{"en": strings.Repeat("w", n)}
+	}
+	return g
+}
+
+// An icon moved as far as it may short of a straight edge's line leaves the edge straight, its end off its point by
+// what the icon's size leaves it: none on one of 16, which stays bent.
+func TestGraphIconOffPoint(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		size    float64
+		lengths [3]int
+		off     float64
+	}{{16, [3]int{1, 1, 4}, 0}, {48, [3]int{1, 7, 9}, 1.2}, {96, [3]int{1, 14, 13}, 1.8}} {
+		g := labelledChain(c.lengths[:]...)
+		for i := range g.Nodes {
+			g.Nodes[i].Icon.Size = c.size
+		}
+		l := laid(g)
+		if fault := iconFault(g, l); fault != "" {
+			t.Fatalf("size %v: %s", c.size, fault)
+		}
+		p := l.paths[1]
+		if c.off == 0 {
+			if len(p.segs) == 1 {
+				t.Errorf("size %v: %s runs %v, want it bent", c.size, p.what, p.segs)
+			}
+			continue
+		}
+		if len(p.segs) != 1 {
+			t.Errorf("size %v: %s runs %v, want one run", c.size, p.what, p.segs)
+			continue
+		}
+		r := l.names["c"].r
+		if off := math.Abs(p.segs[0][0] - (r.x + r.w/2)); math.Abs(off-c.off) > 1e-6 {
+			t.Errorf("size %v: %s ends %v off the middle of c, want %v", c.size, p.what, off, c.off)
+		}
+	}
+}
+
+// No edge of a graph of icons turns more for the icons' ends standing off their points.
+func TestGraphIconOffPointKeeps(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		direction string
+		seed      [2]uint64
+		every     bool
+		plain     bool // the graphs alone: icons among boxes, no loop or group
+	}{
+		{"", [2]uint64{61, 1}, false, false},
+		{"right", [2]uint64{63, 1}, false, false},
+		{"", [2]uint64{65, 1}, true, false},
+		{"right", [2]uint64{67, 1}, true, false},
+		{"", [2]uint64{13, 0}, false, true}, // holds one where an icon with other ends moving bends them
+		{"right", [2]uint64{13, 5}, false, true},
+	} {
+		t.Run(fmt.Sprintf("%s-%d", cmpOr(c.direction, "down"), c.seed[0]), func(t *testing.T) {
+			t.Parallel()
+			rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
+			opts := Options{Lang: "en", Icons: anyIcon{}, Seq: 1}
+			more, fewer := 0, 0
+			for range 400 {
+				g := randomGraph(rnd, c.direction)
+				if c.every {
+					for k := range g.Edges {
+						g.Edges[k].Label = Text{"en": strings.Repeat("w", 1+rnd.IntN(10))}
+					}
+				}
+				if !c.plain {
+					addLoops(rnd, g, c.every)
+					addGroups(rnd, g)
+				}
+				iconize(g)
+				a, b := asToday(graphSpec(g), opts), laid(g)
+				if a.failure != nil || len(a.problems) > 0 {
+					continue
+				}
+				for k, p := range b.paths {
+					switch n, was := len(p.segs), len(a.paths[k].segs); {
+					case n > was:
+						more++
+						t.Logf("%s turns %d times, %d before: %v, %v", p.what, n-1, was-1, p.segs, a.paths[k].segs)
+					case n < was:
+						fewer++
+					}
+				}
+			}
+			t.Logf("OFFKEEPS %s more %d fewer %d", c.direction, more, fewer)
+			if more > 0 {
+				t.Errorf("%d edges turn more, %d fewer", more, fewer)
+			}
+		})
 	}
 }
