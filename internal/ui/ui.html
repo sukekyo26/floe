@@ -836,6 +836,10 @@
   select.st.waiting { color: var(--wait); background: var(--wait-soft); border-color: var(--wait); }
   select.st.doing { color: var(--chg); background: var(--chg-soft); border-color: var(--chg); }
   select.st.done { color: var(--ins); background: var(--ins-soft); border-color: var(--ins); }
+  /* On a page's row, the way to its task: dotted, as it is no mark of the page itself; above the title's hit area */
+  .task-tag { position: relative; z-index: 1; padding: 0 0.35rem; color: var(--muted); border: 1px dashed var(--box-line); border-radius: var(--corner-small); text-decoration: none; white-space: nowrap; }
+  .task-tag:hover { color: var(--fg); border-color: var(--faint); }
+  .set-foot .set-out { margin-right: auto; }
   .shell.tasks-failed .lhead, .shell.tasks-failed .views .n, .shell.tasks-failed .chip .n { display: none; }
   .sdot { flex: none; width: 8px; height: 8px; margin-inline: calc((var(--shelf-mark) - 8px) / 2); border-radius: 50%; }
   .sdot.waiting { background: var(--wait); }
@@ -1168,6 +1172,32 @@
     </div>
   </form>
 </dialog>
+<dialog id="set-dialog" aria-labelledby="set-title">
+  <form class="modal-body" id="set">
+    <div class="modal-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+      <div>
+        <h2 id="set-title">{{.Msg "ui_task_set"}}</h2>
+        <p class="lead" id="set-target"></p>
+      </div>
+    </div>
+    <label class="field">{{.Msg "ui_task_name"}}
+      <input class="text" id="set-task" required autocomplete="off" spellcheck="false">
+    </label>
+    <label class="field"><span>{{.Msg "ui_task_step"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <input class="text" id="set-step" autocomplete="off">
+    </label>
+    <label class="field"><span>{{.Msg "ui_task_url"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <input class="text path" id="set-url" autocomplete="off" spellcheck="false" placeholder="https://">
+    </label>
+    <p class="error" id="set-error" hidden></p>
+    <div class="dialog-actions set-foot">
+      <button type="button" class="btn set-out" id="set-out">{{.Msg "ui_task_out"}}</button>
+      <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
+      <button type="submit" class="btn primary" id="set-submit">{{.Msg "ui_save"}}</button>
+    </div>
+  </form>
+</dialog>
 <dialog id="tag-dialog" aria-labelledby="tag-title">
   <form class="modal-body" id="tag-form">
     <div class="modal-head">
@@ -1219,6 +1249,9 @@
           <button type="button" class="icon-btn fav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span class="label"></span></button>
           <button type="button" class="icon-btn mark-unread"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/></svg><span class="label">{{.Msg "ui_mark_unread"}}</span></button>
           <button type="button" class="icon-btn select" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span class="label">{{.Msg "ui_select"}}</span></button>
+          <button type="button" class="icon-btn pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4zM12 16v5"/></svg><span class="label"></span></button>
+          <button type="button" class="icon-btn task-set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>{{.Msg "ui_task_set"}}</button>
+          <a class="icon-btn task-open" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><span class="label"></span></a>
           <button type="button" class="icon-btn edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_edit"}}</button>
           <button type="button" class="icon-btn copy" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 9h10v11H9zM5 15V4h10"/></svg><span class="done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>{{.Msg "ui_copy_path"}}</button>
           <a class="icon-btn open" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>{{.Msg "ui_open_raw"}}</a>
@@ -1801,11 +1834,10 @@
     return mark;
   }
 
-  // Suggests tag names for a tags field, as a WAI-ARIA combobox: the names that hold what is written between the commas
-  // around the caret, those that start with it first, but none the field has already. ↓ opens it, ↑↓ pick, Enter or a
-  // click puts the name in, Escape closes it, as does leaving the field. Drawn only as the field changes, so that the list
-  // read again neither closes it nor moves the name picked
-  function suggestTags(input) {
+  // Suggests names for a field, as a WAI-ARIA combobox: offer says those to show of what is written, each a name or { name, label }, and
+  // put puts one in. ↓ opens it, ↑↓ pick, Enter or a click puts it in, Escape closes it, as does leaving the field. Drawn only as the
+  // field changes, so that the list read again neither closes it nor moves the name picked
+  function suggestNames(input, offer, put) {
     // Not ul and li, which the list's rows style
     const box = document.createElement('div');
     box.id = `${input.id}-names`;
@@ -1818,15 +1850,6 @@
     input.setAttribute('aria-controls', box.id);
     input.setAttribute('aria-expanded', 'false');
     let names = [];
-    // Where a name picked goes: from start to end, after lead
-    let spot;
-    // Where the name at the caret starts and ends, between the commas around it
-    const word = () => {
-      const at = input.selectionStart ?? input.value.length;
-      const start = Math.max(input.value.lastIndexOf(',', at - 1), input.value.lastIndexOf('、', at - 1)) + 1;
-      const end = input.value.slice(at).search(/[,、]/);
-      return { start, end: end === -1 ? input.value.length : at + end };
-    };
     // Under the field, and again once its dialog has stopped moving: measured while it opens, the field is where it passes
     const place = async () => {
       const at = () => {
@@ -1845,39 +1868,25 @@
       mark(-1);
     };
     const choose = (name) => {
-      const before = input.value.slice(0, spot.start);
-      const after = input.value.slice(spot.end);
-      // A name put in last is followed by a comma, for the next
-      const put = `${before}${spot.lead}${name}`;
-      input.value = put + (after || ', ');
-      input.setSelectionRange(put.length + (after ? 0 : 2), put.length + (after ? 0 : 2));
+      put(name);
       // What the field was told, of a name missing, no longer holds
       input.setCustomValidity('');
       close();
     };
     const open = () => {
-      const { start, end } = word();
-      const written = input.value.slice(start, end).trim();
-      // A whole name at the caret, as when the field is pressed on it, is one written: the names offered are the next
-      const whole = tagNames().includes(written);
-      spot = whole ? { start: end, end, lead: ', ' } : { start, end, lead: start ? ' ' : '' };
-      const typed = whole ? '' : written.toLowerCase();
-      const have = splitTags(whole ? input.value : input.value.slice(0, start) + input.value.slice(end));
-      const starts = (name) => name.toLowerCase().startsWith(typed);
-      names = tagNames().filter((name) => !have.includes(name) && name.toLowerCase().includes(typed));
-      names = [...names.filter(starts), ...names.filter((name) => !starts(name))];
+      names = offer();
       if (names.length === 0) {
         close();
         return;
       }
-      box.replaceChildren(...names.map((name, i) => {
+      box.replaceChildren(...names.map((one, i) => {
         const option = document.createElement('div');
         option.id = `${box.id}-${i}`;
         option.setAttribute('role', 'option');
-        option.textContent = name;
+        option.textContent = one.label ?? one;
         // Pressed, the field keeps its focus
         option.addEventListener('mousedown', (e) => e.preventDefault());
-        option.addEventListener('click', () => choose(name));
+        option.addEventListener('click', () => choose(one.name ?? one));
         return option;
       }));
       if (!box.matches(':popover-open')) box.showPopover();
@@ -1886,13 +1895,58 @@
       mark(-1);
     };
     const mark = listKeys(input, {
-      options: () => [...box.children], choose: (i) => choose(names[i]), close, open, shown: () => box.matches(':popover-open'),
+      options: () => [...box.children], choose: (i) => choose(names[i].name ?? names[i]), close, open, shown: () => box.matches(':popover-open'),
     });
     input.addEventListener('input', open);
     // Pressed or reached, the names show at once; pressed, again once the caret is where it was pressed, which focus is before
     input.addEventListener('focus', open);
     input.addEventListener('click', open);
     input.addEventListener('blur', close);
+  }
+
+  // A tags field: the names that hold what is written between the commas around the caret, those that start with it first, but none the
+  // field has already
+  function suggestTags(input) {
+    // Where a name picked goes: from start to end, after lead
+    let spot;
+    // Where the name at the caret starts and ends, between the commas around it
+    const word = () => {
+      const at = input.selectionStart ?? input.value.length;
+      const start = Math.max(input.value.lastIndexOf(',', at - 1), input.value.lastIndexOf('、', at - 1)) + 1;
+      const end = input.value.slice(at).search(/[,、]/);
+      return { start, end: end === -1 ? input.value.length : at + end };
+    };
+    suggestNames(input, () => {
+      const { start, end } = word();
+      const written = input.value.slice(start, end).trim();
+      // A whole name at the caret, as when the field is pressed on it, is one written: the names offered are the next
+      const whole = tagNames().includes(written);
+      spot = whole ? { start: end, end, lead: ', ' } : { start, end, lead: start ? ' ' : '' };
+      const typed = whole ? '' : written.toLowerCase();
+      const have = splitTags(whole ? input.value : input.value.slice(0, start) + input.value.slice(end));
+      const starts = (name) => name.toLowerCase().startsWith(typed);
+      const names = tagNames().filter((name) => !have.includes(name) && name.toLowerCase().includes(typed));
+      return [...names.filter(starts), ...names.filter((name) => !starts(name))];
+    }, (name) => {
+      const before = input.value.slice(0, spot.start);
+      const after = input.value.slice(spot.end);
+      // A name put in last is followed by a comma, for the next
+      const put = `${before}${spot.lead}${name}`;
+      input.value = put + (after || ', ');
+      input.setSelectionRange(put.length + (after ? 0 : 2), put.length + (after ? 0 : 2));
+    });
+  }
+
+  // A field of one name: those that hold what is written, those that start with it first. A name written whole offers the others, to change to
+  function suggestOne(input, all, put) {
+    suggestNames(input, () => {
+      const typed = input.value.trim().toLowerCase();
+      const names = all();
+      const held = names.some((name) => (name.name ?? name).toLowerCase() === typed) ? '' : typed;
+      const word = (one) => (one.name ?? one).toLowerCase();
+      const hits = names.filter((one) => word(one).includes(held));
+      return [...hits.filter((one) => word(one).startsWith(held)), ...hits.filter((one) => !word(one).startsWith(held))];
+    }, put);
   }
 
   // The bulk dialog's tags: how many of the selected each is on as the dialog opened (on), the mark that makes each chip
@@ -2171,6 +2225,16 @@
     link.setAttribute('aria-label', t('ui_download_named', a.title));
   }
 
+  // Where the focus goes as a dialog a menu opened closes: the bar's menu is drawn anew in its place, a row's by its slug. From the search
+  // modal, which closes as no dialog goes over another, back where that modal took it from
+  function menuBack(box, slug) {
+    if (box.closest('#find')) {
+      $('find').close();
+      return null;
+    }
+    const bar = box.closest('#read-actions, #frame-actions')?.id;
+    return () => (bar ? $(bar) : [...$('list').children].find((li) => li.dataset.key === `entry:${slug()}`))?.querySelector('summary');
+  }
   // The menu of a, in a row and in the bar over its page
   function moreMenu(a, x = { slug: a.slug }) {
     const box = $('more').content.firstElementChild.cloneNode(true);
@@ -2187,17 +2251,28 @@
       copy.setAttribute('aria-label', t('ui_copy_path_named', a.title));
       copy.addEventListener('click', () => copyPath(a.path, copy));
     }
+    const pin = box.querySelector('.pin');
+    pin.querySelector('.label').textContent = t(a.work?.pin ? 'ui_unpin' : 'ui_pin');
+    pin.setAttribute('aria-label', t(a.work?.pin ? 'ui_unpin_named' : 'ui_pin_named', a.title));
+    pin.addEventListener('click', () => togglePin(a));
+    const taskSet = box.querySelector('.task-set');
+    taskSet.setAttribute('aria-label', t('ui_task_set_named', a.title));
+    taskSet.addEventListener('click', () => {
+      setBack = menuBack(box, () => a.slug);
+      openTaskSet(a);
+    });
+    // Of its task, unless this is that task's page
+    const taskOpen = box.querySelector('.task-open');
+    const name = a.work?.task;
+    taskOpen.hidden = !name || (name === TASK_NAME && a.taskProject === project);
+    if (name) {
+      taskOpen.href = taskHref({ project: a.taskProject, name });
+      taskOpen.querySelector('.label').textContent = t('ui_task_open', name);
+    }
     const edit = box.querySelector('.edit');
     edit.setAttribute('aria-label', t('ui_edit_named', a.title));
     edit.addEventListener('click', () => {
-      // The bar's menu is drawn anew in its place, a row's by its slug. From the search modal, which closes as no dialog
-      // goes over another, the focus goes back where that modal took it from
-      const bar = box.closest('#read-actions, #frame-actions')?.id;
-      editBack = () => (bar ? $(bar) : [...$('list').children].find((li) => li.dataset.key === `entry:${editing.slug}`))?.querySelector('summary');
-      if (box.closest('#find')) {
-        $('find').close();
-        editBack = null;
-      }
+      editBack = menuBack(box, () => editing.slug);
       openEdit(a);
     });
     const open = box.querySelector('.open');
@@ -2541,6 +2616,11 @@
     }
   }
 
+  function taskTag(href, words) {
+    const link = tagged('a', 'task-tag', words);
+    link.href = href;
+    return link;
+  }
   // A row of a, i-th in the list
   function row(a, i, ranks) {
     const li = $('row').content.firstElementChild.cloneNode(true);
@@ -2565,7 +2645,11 @@
     // All the row's words that it may cut or leave out: the title's hit area covers the row, so that no title of what lies under it shows
     link.title = [a.title, a.description, a.project, a.path, a.createdAt && t(a.path ? 'ui_registered_at' : 'ui_created_at', fmt(a.createdAt)), t('ui_updated_at', fmt(a.updatedAt))]
       .filter(Boolean).join('\n');
-    drawSub(li.querySelector('.sub'), a, ranks, (put) => {
+    const sub = li.querySelector('.sub');
+    drawSub(sub, a, ranks, (put) => {
+      // On the page list, the way to the task it is on, or to the task list it is pinned on
+      if (!TASKS && a.work?.task) sub.append(taskTag(taskHref({ project: a.taskProject, name: a.work.task }), t('ui_task_badge', a.work.task)));
+      if (!TASKS && a.work?.pin) sub.append(taskTag(`${TASKS_PATH}?${new URLSearchParams({ project: a.taskProject })}`, t('ui_pin_badge')));
       if (!a.tags?.length) return;
       const tags = put('tags', '');
       tags.append(...a.tags.map((name) => {
@@ -4229,6 +4313,74 @@
     await load();
   }
 
+  async function togglePin(a) {
+    const reason = await patchOne(a.slug, { work: { pin: !a.work?.pin } });
+    if (reason) showError(t('ui_save_failed', reason));
+    await load();
+  }
+
+  // The page the task dialog is of; whether its URL was changed by hand: only then is it sent, so that one set since it opened stays
+  let setPage;
+  let setUrlTouched = false;
+  let setBack;
+  const setTaskOf = (name) => tasksOf().find((task) => task.project === setPage.taskProject && task.name === name.trim());
+  // The tasks are read as it opens: a page whole does not read them
+  async function openTaskSet(a) {
+    setPage = a;
+    setUrlTouched = false;
+    if (framed) tasksRead = await readTasks();
+    $('set-target').textContent = a.title;
+    $('set-task').value = a.work?.task ?? '';
+    $('set-step').value = a.work?.step ?? '';
+    $('set-url').value = setTaskOf($('set-task').value)?.url ?? '';
+    $('set-out').hidden = !a.work?.task;
+    $('set-error').textContent = tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '';
+    $('set-error').hidden = !tasksRead.error;
+    $('set-dialog').showModal();
+  }
+  // Each name written changes the URL shown to that task's, or none for a new one, unless changed by hand
+  function setTaskChanged() {
+    if (!setUrlTouched) $('set-url').value = setTaskOf($('set-task').value)?.url ?? '';
+  }
+  const setFailed = (reason) => {
+    $('set-error').textContent = t('ui_save_failed', reason);
+    $('set-error').hidden = false;
+  };
+  // The task first and the page then, as floe work writes them.
+  // LIMIT: the page refused, the dialog closed, what was written of the task stays: the URL changed, a new name's row of no page, which --forget removes
+  async function saveTaskSet(e) {
+    e.preventDefault();
+    const btn = $('set-submit');
+    btn.disabled = true;
+    const step = $('set-step').value.trim();
+    const body = { ...(step ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}) };
+    try {
+      const url = `/api/tasks?${new URLSearchParams({ project: setPage.taskProject, task: $('set-task').value })}`;
+      const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) throw new Error(await res.text());
+      const reason = await patchOne(setPage.slug, { work: { task: $('set-task').value, step } });
+      if (reason) throw new Error(reason);
+      toast(t('ui_saved'));
+      await load();
+      $('set-dialog').close();
+    } catch (err) {
+      setFailed(err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  // The page alone: its pin stays, and the task's row
+  async function takeOffTask() {
+    const reason = await patchOne(setPage.slug, { work: { task: '', step: '' } });
+    if (reason) {
+      setFailed(reason);
+      return;
+    }
+    toast(t('ui_saved'));
+    await load();
+    $('set-dialog').close();
+  }
+
   // The list response last drawn. An unchanged one is not redrawn, keeping armed delete buttons and focus
   let drawn = '';
   let loadFailed = false;
@@ -4487,6 +4639,24 @@
   // The edit dialog closed, focus goes back to the menu's button it was opened from rather than to the closed menu's item
   $('edit-dialog').addEventListener('close', () => editBack?.()?.focus());
   suggestTags($('edit-tags'));
+  $('set').addEventListener('submit', saveTaskSet);
+  $('set-out').addEventListener('click', takeOffTask);
+  $('set-dialog').addEventListener('close', () => setBack?.()?.focus());
+  $('set-task').addEventListener('input', setTaskChanged);
+  $('set-url').addEventListener('input', () => { setUrlTouched = true; });
+  suggestOne($('set-task'), () => {
+    const names = tasksOf().filter((task) => task.project === setPage.taskProject).map((task) => task.name).sort((x, y) => x.localeCompare(y, LANG));
+    const typed = $('set-task').value.trim();
+    return typed && !names.includes(typed) ? [...names, { name: typed, label: t('ui_task_new', typed) }] : names;
+  }, (name) => {
+    $('set-task').value = name;
+    setTaskChanged();
+  });
+  suggestOne($('set-step'), () => {
+    const task = setTaskOf($('set-task').value);
+    const steps = [...(task?.steps ?? []), ...[...(task?.pages ?? []), ...(task?.archived ?? [])].map((a) => a.work.step)].filter(Boolean);
+    return [...new Set(steps)];
+  }, (name) => { $('set-step').value = name; });
   for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
   // A click on the backdrop (the dialog itself) closes it; the form fills the dialog, so clicks inside never land here
   for (const d of document.querySelectorAll('dialog')) {

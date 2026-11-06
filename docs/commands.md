@@ -222,6 +222,8 @@ A task's row opens the task's page, at `/tasks?project=…&task=…`: its pages 
 
 A page open whole has a back button beside the logo, which says where it goes: the task's name, the task list or the page list, whichever opened it, and `h` goes there too. The logo always goes to the page list. A page that is not among the rows that opened it (from the search, or another tab) goes back to the page list.
 
+A page's `…` menu does the same by hand: it pins the page or takes the pin off, opens its task, and `Set the task` names its task, step and the task's URL, which is sent only if you changed it. A name of no task is a new task. The page list's rows show a page's task and pin, as a way to them.
+
 A page keeps its `work` when published again, renamed or drawn again. `tasks.json` that cannot be read, or holds another state or a URL other than `http` or `https`, is refused and not written over: mend it by hand. A key of a row floe does not know is lost at the next write.
 
 ## `floe serve`
