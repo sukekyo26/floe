@@ -605,7 +605,7 @@ var messagesJA = map[string]string{
 	"ui_child_take_button": "子にする",
 	"ui_child_make_button": "作る",
 	"ui_task_parent_named": "親 %s",
-	"ui_task_none_kids":    "このタスクと子を全部済みにして、子のページを全部アーカイブすると、このタスクもアーカイブへ移ります",
+	"ui_task_none_kids":    "このタスクを済みにして、子のタスクを全部アーカイブすると、このタスクもアーカイブへ移ります",
 	"ui_task_out":          "タスクから外す",
 	"ui_task_new":          "%s を新しいタスクにする",
 	"ui_pinned":            "「%s」をタスク一覧にピン止めしました",

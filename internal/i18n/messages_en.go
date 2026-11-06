@@ -616,7 +616,7 @@ var messagesEN = map[string]string{
 	"ui_child_take_button": "Make it a child",
 	"ui_child_make_button": "Make",
 	"ui_task_parent_named": "parent %s",
-	"ui_task_none_kids":    "Mark it and its child tasks done and archive all their pages, and this task moves to the archive too",
+	"ui_task_none_kids":    "Mark this task done and archive all its child tasks, and it moves to Archive too.",
 	"ui_task_out":          "Take off the task",
 	"ui_task_new":          "Make %s a new task",
 	"ui_pinned":            "Pinned “%s” to the task list",
