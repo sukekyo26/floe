@@ -200,12 +200,36 @@ func TestWorkCommand(t *testing.T) {
 	if _, ok := tasks()["p"]["#4"]; ok {
 		t.Error("--forget left #4")
 	}
-	if got := run(1, "work", "--task", "#4", "--forget"); got != "floe: no task #4 in project p\n" {
+	if got := run(1, "work", "--task", "#4", "--forget"); got != "floe: no task #4 in project p: --project names another\n" {
 		t.Errorf("no task: %q", got)
 	}
 	if got := run(1, "work", "--task", "#1", "--forget"); !strings.HasPrefix(got, "floe: task #1 of project p still has 1 page(s), such as a:") {
 		t.Errorf("a task with a page: %q", got)
 	}
+
+	// A parent, named with --task alone, written and taken off; refused in the store's words.
+	run(0, "work", "--task", "#20", "--title", "parent")
+	run(0, "work", "--task", "#21", "--parent", "#20")
+	if got := tasks()["p"]["#21"].Parent; got != "#20" {
+		t.Errorf("--parent: %q", got)
+	}
+	if got := run(1, "work", "--task", "#20", "--forget"); !strings.Contains(got, "still has 1 child task(s), such as #21") {
+		t.Errorf("--forget of a parent: %q", got)
+	}
+	run(0, "work", "--task", "#21", "--parent", "")
+	if got := tasks()["p"]["#21"].Parent; got != "" {
+		t.Errorf(`--parent "": %q`, got)
+	}
+	if got := run(1, "work", "--task", "#22", "--parent", ""); got != "floe: no task #22 in project p: --project names another\n" {
+		t.Errorf(`--parent "" of no row: %q`, got)
+	}
+	if got := run(1, "work", "--task", "#22", "--parent", "#7"); !strings.Contains(got, "project p has no task #7 that can be a parent") {
+		t.Errorf("a parent of no row: %q", got)
+	}
+	run(0, "work", "--task", "#22", "--title", "t", "--parent", "")
+	run(0, "work", "--task", "#22", "--forget")
+	run(0, "work", "--task", "#20", "--forget")
+	run(0, "work", "--task", "#21", "--forget")
 
 	// The command line that cannot mean anything.
 	for _, c := range []struct {
@@ -218,6 +242,9 @@ func TestWorkCommand(t *testing.T) {
 		{[]string{"work", "--task", "#1", "--step", "s"}, "floe: --step changes pages: name them by their slugs: run floe --help\n"},
 		{[]string{"work", "a", "--forget"}, "floe: --forget goes with no slug: it names a task: run floe --help\n"},
 		{[]string{"work", "a", "--project", "p"}, "floe: --project goes with no slug: it names a task: run floe --help\n"},
+		// Let through, the first of these would drop the parent and say nothing.
+		{[]string{"work", "a", "--task", "", "--parent", "x"}, "floe: --parent goes with no slug: it names a task: run floe --help\n"},
+		{[]string{"work", "a", "--parent", "x"}, "floe: --parent goes with no slug: it names a task: run floe --help\n"},
 		{[]string{"work", "a"}, "floe: say what to change of the pages: --task, --step, --state, --url, --title, --steps, --pin, --unpin or --clear: run floe --help\n"},
 	} {
 		if got := run(2, c.args...); got != c.want {
@@ -229,6 +256,12 @@ func TestWorkCommand(t *testing.T) {
 	}
 	if got := run(2, "work", "--task", "#1", "--forget", "--state", "done"); !strings.Contains(got, "run floe --help") {
 		t.Errorf("--forget --state: %q", got)
+	}
+	if got := run(2, "work", "--task", "#1", "--forget", "--parent", "x"); !strings.Contains(got, "run floe --help") {
+		t.Errorf("--forget --parent: %q", got)
+	}
+	if got := run(2, "work", "a", "--clear", "--parent", "x"); !strings.Contains(got, "run floe --help") {
+		t.Errorf("--clear --parent: %q", got)
 	}
 	for _, flag := range []string{"--state", "--step"} {
 		want := "floe: --task \"\" takes the pages off their task, so it cannot go with " + flag + ": run floe --help\n"

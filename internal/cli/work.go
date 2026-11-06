@@ -18,8 +18,8 @@ import (
 
 // workFlags are the flags of floe work.
 type workFlags struct {
-	task, project, step, state, url, title, steps string
-	pin, unpin, clear, forget                     bool
+	task, project, step, state, url, title, steps, parent string
+	pin, unpin, clear, forget                             bool
 }
 
 // A task of pages: what a page names by its project and the name given, or its own.
@@ -41,6 +41,7 @@ the first failure. The same command given again finishes what a failure left.
   floe work design-notes --task "#130" --step design --state waiting
   floe work --task "#130" --url https://example.com/issues/482
   floe work --task "#130" --steps design,build,review
+  floe work --task "#130" --parent "#123"
   floe work design-notes --pin
   floe work --task "#130" --forget`,
 		// Asked here, as the flags are read by now: cobra's own asking comes after, unmarked as a usage error.
@@ -62,15 +63,17 @@ the first failure. The same command given again finishes what a failure left.
 	flags.StringVar(&f.url, "url", "", `the task's one outside link, http or https; "" takes it off`)
 	flags.StringVar(&f.title, "title", "", `the task's title; "" takes it off`)
 	flags.StringVar(&f.steps, "steps", "", `the order of the task's steps, separated by commas; "" takes it off`)
+	flags.StringVar(&f.parent, "parent", "", `the task's parent, of its project, without slugs; "" takes it off`)
 	flags.BoolVar(&f.pin, "pin", false, "pin the pages to the top of the task list")
 	flags.BoolVar(&f.unpin, "unpin", false, "take the pages' pin off")
 	flags.BoolVar(&f.clear, "clear", false, "take the pages off their task and take their pin off; the task stays")
-	flags.BoolVar(&f.forget, "forget", false, "remove the task, which no page may be on")
+	flags.BoolVar(&f.forget, "forget", false, "remove the task, which no page or child task may be on")
 	cmd.MarkFlagsMutuallyExclusive("pin", "unpin")
 	for _, other := range []string{"task", "step", "state", "url", "title", "steps", "pin", "unpin"} {
 		cmd.MarkFlagsMutuallyExclusive("clear", other)
 	}
-	for _, other := range []string{"state", "url", "title", "steps"} {
+	cmd.MarkFlagsMutuallyExclusive("clear", "parent")
+	for _, other := range []string{"state", "url", "title", "steps", "parent"} {
 		cmd.MarkFlagsMutuallyExclusive("forget", other)
 	}
 	return cmd
@@ -102,6 +105,9 @@ func taskEdit(cmd *cobra.Command, f workFlags) server.TaskEdit {
 		steps := strings.Split(f.steps, ",")
 		ed.Steps = &steps
 	}
+	if cmd.Flags().Changed("parent") {
+		ed.Parent = &f.parent
+	}
 	return ed
 }
 
@@ -123,12 +129,13 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 		return err
 	}
 	t := a.namedTask(ctx, cmd, f)
-	if !f.forget {
-		return c.do(ctx, http.MethodPatch, taskQuery(t), taskEdit(cmd, f), nil)
+	if f.forget {
+		err = c.do(ctx, http.MethodDelete, taskQuery(t), nil, nil)
+	} else {
+		err = c.do(ctx, http.MethodPatch, taskQuery(t), taskEdit(cmd, f), nil)
 	}
-	err = c.do(ctx, http.MethodDelete, taskQuery(t), nil, nil)
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
-		return usererr.New("store_no_task", t.name, t.project)
+		return usererr.New("cli_work_no_row", t.name, t.project)
 	}
 	return err
 }
@@ -147,7 +154,7 @@ func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) ta
 // write would make a row for a task that has none.
 func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	ctx := cmd.Context()
-	if off := changed(cmd, "forget", "project"); len(off) > 0 {
+	if off := changed(cmd, "forget", "project", "parent"); len(off) > 0 {
 		return usageOf(usererr.New("cli_work_no_pages", off[0]))
 	}
 	onPages := changed(cmd, "task", "step", "pin", "unpin", "clear")

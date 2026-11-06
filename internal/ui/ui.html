@@ -619,8 +619,9 @@
   .bulk .btn.clear:hover { background: var(--subtle); }
   .bulk .btn.clear .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   /* The delete is red in its words; its ground only while it waits to be pressed again, in its longer words */
-  .bulk .btn.danger { color: var(--danger); }
-  .bulk .btn.danger.armed { padding: 0 0.8rem; color: var(--on-danger); background: var(--danger); }
+  .btn.danger, .bulk .btn.danger { color: var(--danger); }
+  .btn.danger.armed, .bulk .btn.danger.armed { color: var(--on-danger); background: var(--danger); }
+  .bulk .btn.danger.armed { padding: 0 0.8rem; }
   /* A delete pressed once asks in its longer words, the other buttons but the clearing out of its way (they come back as it is
      let go; the clearing lets it go where a click does not move the focus, as on Safari) */
   .bulk:has(.armed) > .btn:not(.armed, .clear) { display: none; }
@@ -831,7 +832,8 @@
   .shell.task-missing .reader, .shell.task-missing #list-grip, .shell.task-missing .listcol > .col-foot { display: none; }
   .thead { flex: none; display: grid; gap: 0.35rem; padding: 0.5rem 1rem 0.65rem; background: var(--panel); border-bottom: 1px solid var(--line); }
   .ttop { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-  .up { justify-self: start; display: inline-flex; align-items: center; gap: 0.15rem; margin-left: -0.25rem; font-size: var(--text-small); color: var(--muted); text-decoration: none; }
+  /* A press's height: it stands right under the bar's tabs, which a small one sends the press to */
+  .up { justify-self: start; display: inline-flex; align-items: center; gap: 0.15rem; height: 2.25rem; margin-left: -0.25rem; font-size: var(--text-small); color: var(--muted); text-decoration: none; }
   .up:hover { color: var(--fg); text-decoration: underline; }
   .up svg { width: 14px; height: 14px; }
   .btn.tarc { height: auto; padding: 0.1rem 0.5rem; font-size: var(--text-label); }
@@ -856,6 +858,22 @@
   .sdot.doing { background: var(--chg); }
   .sdot.done { background: var(--ins); }
   @media (max-width: 70rem) { .shelf .views .sdot { display: none; } }
+  .kin { display: inline-flex; align-items: baseline; gap: 0.3rem; min-width: 0; max-width: 100%; color: var(--muted); }
+  .kin .tname { margin: 0; font-weight: 500; }
+  .kin-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  li .kin-title { max-width: 11rem; }
+  .family { display: grid; gap: 0.1rem; margin: 0.35rem -1rem -0.65rem; padding: 0.35rem 1rem 0.5rem; border-top: 1px solid var(--line); }
+  .family-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .family h3 { margin: 0 0 0.15rem; font: 700 var(--text-small)/1.4 var(--body); color: var(--muted); }
+  .kin-row { display: flex; align-items: center; gap: 0.45rem; min-height: 1.9rem; color: var(--fg); font-size: var(--text-small); text-decoration: none; }
+  .kin-row:hover { text-decoration: underline; }
+  .kin-row.unseen { font-weight: 700; }
+  .kin-row .tname { flex: none; margin: 0; }
+  .kin-row .kin-title { flex: 1; }
+  .kid-state { flex: none; padding: 0 0.4rem; font-weight: 700; font-size: var(--text-label); white-space: nowrap; color: var(--muted); background: var(--subtle); border-radius: var(--corner-small); }
+  .kid-state.waiting { color: var(--wait); background: var(--wait-soft); }
+  .kid-state.doing { color: var(--chg); background: var(--chg-soft); }
+  .kid-state.done { color: var(--ins); background: var(--ins-soft); }
   .tname { margin-right: 0.45rem; font: 600 var(--text-small) var(--mono); color: var(--muted); }
   li.unseen .tname { color: var(--fg); }
   .step { padding: 0 0.4rem; color: var(--fg); background: var(--subtle); border-radius: var(--corner-small); white-space: nowrap; }
@@ -983,6 +1001,10 @@
           <span id="task-link"></span>
           <span class="proj" id="task-project"></span>
         </div>
+        <div class="family" id="task-family" hidden>
+          <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="add-open" id="task-child" aria-label="{{.Msg "ui_child_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button></div>
+          <div class="family-rows" id="task-family-rows"></div>
+        </div>
       </div>
       <div class="pins" id="pins" hidden><h2>{{.Msg "ui_pins"}}</h2><button type="button" class="icon-btn pins-help" id="pins-help" popovertarget="pins-tip" aria-label="{{.Msg "ui_pins_help"}}" title="{{.Msg "ui_pins_help"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg></button><span id="pin-list"></span></div>
       <!-- In the top layer: a narrow screen's row of pins scrolls, and would cut it off -->
@@ -1004,7 +1026,7 @@
         </div>
       </div>
       <ul id="list"></ul>
-      <div class="state" id="task-none" hidden><strong>{{.Msg "ui_task_no_pages"}}</strong><p><code id="task-forget"></code></p></div>
+      <div class="state" id="task-none" hidden><strong>{{.Msg "ui_task_no_pages"}}</strong><p id="task-delete-box"><button type="button" class="btn danger" id="task-delete">{{.Msg "ui_task_forget"}}</button></p><p class="error" id="task-delete-error" hidden></p><p id="task-none-kids" hidden>{{.Msg "ui_task_none_kids"}}</p></div>
       <div class="state" id="task-missing" hidden><strong></strong><p><a href="/tasks" id="task-missing-up">{{.Msg "ui_tasks_back"}}</a></p></div>
       <div class="state" id="tasks-none" hidden><strong></strong><p><a href="/tasks" id="tasks-other">{{.Msg "ui_tasks_other"}}</a></p></div>
       <div class="state" id="tasks-failed" hidden><strong>{{.Msg "ui_tasks_unreadable"}}</strong><p><a href="/">{{.Msg "ui_to_page_list"}}</a></p></div>
@@ -1201,6 +1223,9 @@
     <label class="field"><span>{{.Msg "ui_task_step"}} <small>{{.Msg "ui_optional"}}</small></span>
       <input class="text" id="set-step" autocomplete="off">
     </label>
+    <label class="field"><span>{{.Msg "ui_task_parent"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <input class="text" id="set-parent" autocomplete="off" spellcheck="false">
+    </label>
     <label class="field"><span>{{.Msg "ui_task_url"}} <small>{{.Msg "ui_optional"}}</small></span>
       <input class="text path" id="set-url" autocomplete="off" spellcheck="false" placeholder="https://">
     </label>
@@ -1209,6 +1234,29 @@
       <button type="button" class="btn set-out" id="set-out">{{.Msg "ui_task_out"}}</button>
       <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
       <button type="submit" class="btn primary" id="set-submit">{{.Msg "ui_save"}}</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="child-dialog" aria-labelledby="child-heading">
+  <form class="modal-body" id="child">
+    <div class="modal-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <div>
+        <h2 id="child-heading">{{.Msg "ui_child_add_named"}}</h2>
+        <p class="lead" id="child-target"></p>
+      </div>
+    </div>
+    <label class="field">{{.Msg "ui_task_name"}}
+      <input class="text" id="child-task" required autocomplete="off" spellcheck="false">
+    </label>
+    <label class="field"><span>{{.Msg "ui_task_child_title"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <input class="text" id="child-title" autocomplete="off">
+    </label>
+    <p id="child-note" hidden></p>
+    <p class="error" id="child-error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
+      <button type="submit" class="btn primary" id="child-submit"></button>
     </div>
   </form>
 </dialog>
@@ -1965,11 +2013,17 @@
   // A field of one name: those that hold what is written, those that start with it first; a name written whole offers them all, to change
   // to. fresh, when given, is what one that no name is offers, as the last
   function suggestOne(input, all, put, { fresh, onFocus, detail = (name) => ({ name, label: name }) } = {}) {
+    // A name typed whole, that none goes on from, is done with: the names would cover what is under the field. Pressed on one, they show, to take another
+    let typing = false;
+    input.addEventListener('input', () => { typing = true; });
     suggestNames(input, () => {
       const written = input.value.trim();
       const typed = written.toLowerCase();
       const names = all();
       const whole = names.some((name) => name.toLowerCase() === typed);
+      const done = typing && whole && !names.some((name) => name.length > typed.length && name.toLowerCase().startsWith(typed));
+      typing = false;
+      if (done) return [];
       const hits = whole ? names : names.filter((name) => name.toLowerCase().includes(typed));
       const first = hits.filter((name) => name.toLowerCase().startsWith(whole ? '' : typed));
       const rest = hits.filter((name) => !first.includes(name));
@@ -3117,7 +3171,7 @@
     const tasks = new Map();
     const taskAt = (project, name) => {
       const key = JSON.stringify([project, name]);
-      if (!tasks.has(key)) tasks.set(key, { project, name, state: STATES.find((s) => s.new).name, at: '', pages: [], archived: [] });
+      if (!tasks.has(key)) tasks.set(key, { project, name, state: STATES.find((s) => s.new).name, at: '', pages: [], archived: [], children: [] });
       return tasks.get(key);
     };
     for (const [project, rows] of Object.entries(tasksRead.tasks)) {
@@ -3131,10 +3185,24 @@
     for (const task of tasks.values()) {
       if (!task.at) task.at = [...task.pages, ...task.archived].map((a) => a.updatedAt).sort().at(-1);
     }
+    // A child, as the store's childrenOfTask says: of a parent with a row of the same project and no parent itself. The rows are
+    // looked at, as tasks holds tasks of pages alone too
+    // LIMIT: a page moved to another project leaves its task's row, with its parent and children, behind: over there a task of the same name is of no family, and of no row cannot be a parent
+    for (const [project, rows] of Object.entries(tasksRead.tasks)) {
+      for (const [name, { parent }] of Object.entries(rows)) {
+        if (!parent || !Object.hasOwn(rows, parent) || rows[parent].parent) continue;
+        taskAt(project, name).parentTask = taskAt(project, parent);
+        taskAt(project, parent).children.push(taskAt(project, name));
+      }
+    }
     return [...tasks.values()];
   }
   // The shelf's place of a task: what is done and has only archived pages goes to the archive; nothing else leaves its state unseen
-  const taskView = (task) => (task.state === 'done' && task.archived.length > 0 && task.pages.length === 0 ? 'archived' : task.state);
+  // A parent with no page of its own goes by its children, all done with their pages archived: it has none to archive, and they keep it from being forgotten
+  const taskView = (task) => {
+    const by = task.pages.length + task.archived.length > 0 ? [task] : task.children;
+    return task.state === 'done' && by.some((x) => x.archived.length > 0) && by.every((x) => x.state === 'done' && x.pages.length === 0) ? 'archived' : task.state;
+  };
   // A task's URL: by the query, as / may be in either part of its name
   const taskHref = (task) => `${TASKS_PATH}?${new URLSearchParams({ project: task.project, task: task.name })}`;
   const EXTERNAL_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
@@ -3162,6 +3230,20 @@
   }
 
   const taskRowKey = (project, name) => `task:${JSON.stringify([project, name])}`;
+  // Whether tasks.json has the task's row, which one of pages alone has not
+  const hasRow = (task) => Object.hasOwn(tasksRead.tasks[task.project] ?? {}, task.name);
+  const unreadOf = (task) => task.pages.filter((a) => a.news).length;
+  // What a row of the list says of the task's family, the one place that draws it: words, not links. A list of families would change this and what renderTaskList gives drawRows
+  function taskKin(task) {
+    const kin = [];
+    if (task.parentTask) {
+      const up = tagged('span', 'kin');
+      up.append(tagged('span', '', t('ui_task_parent_word')), tagged('span', 'tname', task.parentTask.name), tagged('span', 'kin-title', task.parentTask.title ?? ''));
+      kin.push(up);
+    }
+    if (task.children.length > 0) kin.push(tagged('span', 'task-pages', t('ui_task_kids', task.children.length)));
+    return kin;
+  }
   // A row of a task, of the page's own form with nothing to select or do but open it and its link
   function taskRow(task, i) {
     const li = $('row').content.firstElementChild.cloneNode(true);
@@ -3169,7 +3251,7 @@
     li.querySelector('.actions').remove();
     li.style.setProperty('--i', Math.min(i, 30));
     li.dataset.key = taskRowKey(task.project, task.name);
-    const unread = task.pages.filter((a) => a.news).length;
+    const unread = unreadOf(task);
     li.classList.toggle('unseen', unread > 0);
     li.querySelector('.lead').innerHTML = leadOf({ news: unread > 0 });
     const link = li.querySelector('.title');
@@ -3185,6 +3267,7 @@
     if (task.archived.length > 0) sub.append(tagged('span', 'task-pages', t('ui_task_archived', task.archived.length)));
     if (unread > 0) sub.append(tagged('span', 'ver', t('ui_task_unread', unread)));
     if (task.url) sub.append(xlink(task.url));
+    sub.append(...taskKin(task));
     return li;
   }
 
@@ -3348,11 +3431,96 @@
     $('task-link').replaceChildren(...(task.url ? [xlink(task.url)] : []));
     drawProject($('task-project'), projectWord(task.project), taskProjectColor(task.project));
     $('task-up').href = taskListHref(task);
+    drawTaskFamily(task);
     const archive = $('task-archive');
     const back = task.archived.length > 0 && task.pages.length === 0;
     archive.hidden = !(back || (task.state === 'done' && task.pages.length > 0));
     archive.textContent = t(back ? 'ui_task_unarchive' : 'ui_task_archive');
     archive.onclick = () => archiveTask(task, !back);
+  }
+
+  // A task's family over its pages: its parent, or its children, in one form. Off #list: j and k stay on the pages, and neither drawRows
+  // nor the hold on a press guards them. So drawn anew only as what it says changes, with the focus back on the same task
+  // LIMIT: a press while it changes loses its click. Hold the drawing as load does for #list if that comes to be felt
+  let familyDrawn = '';
+  function drawTaskFamily(task) {
+    const viewAt = (x) => VIEWS.indexOf(taskView(x));
+    const kin = task.parentTask ? [task.parentTask] : [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(STATES.find((s) => s.name === taskView(x))?.oldest)(x, y));
+    const heading = task.parentTask ? t('ui_task_parent') : kin.length > 0 ? t('ui_task_kids_head', kin.length) : t('ui_task_kids_word');
+    // What the store's checkParent would refuse is not offered: a parent written, even one that makes no family, and no row
+    const adds = !task.parent && hasRow(task);
+    $('task-child').hidden = !adds;
+    $('task-child').onclick = () => openChildTask(task);
+    $('task-family').hidden = kin.length === 0 && !adds;
+    $('task-family-word').textContent = heading;
+    const said = JSON.stringify(kin.map((x) => [x.name, x.title, taskView(x), unreadOf(x) > 0]));
+    if (said === familyDrawn) return;
+    familyDrawn = said;
+    const box = $('task-family-rows');
+    const focused = box.contains(document.activeElement) ? document.activeElement.dataset.task : null;
+    const rows = kin.map((x) => {
+      const link = tagged('a', 'kin-row');
+      link.href = taskHref(x);
+      link.dataset.task = x.name;
+      link.classList.toggle('unseen', unreadOf(x) > 0);
+      link.append(tagged('span', unreadOf(x) > 0 ? 'dot' : 'ring'), tagged('span', 'tname', x.name), tagged('span', 'kin-title', x.title ?? ''), tagged('span', `kid-state ${taskView(x)}`, t(VIEW_WORDS[taskView(x)])));
+      return link;
+    });
+    box.replaceChildren(...rows);
+    rows.find((link) => link.dataset.task === focused)?.focus();
+  }
+
+  // A new task under this one. It takes a task's own write: the store says what may be a child
+  function openChildTask(task) {
+    $('child').reset();
+    $('child-target').textContent = t('ui_task_child_of', [task.name, task.title].filter(Boolean).join(' '));
+    $('child-error').hidden = true;
+    childNameChanged();
+    $('child-dialog').showModal();
+  }
+  // What the name written does, said before it is done: a task on the list comes to be a child with what it has, out of another parent's, and any
+  // other is made. One that cannot be, with children or this one, is not said to: pressed, the store refuses it
+  // LIMIT: what is said goes by the tasks last read: one another session made since is taken as written, unsaid
+  const childTaskNamed = () => tasksOf().find((x) => x.project === project && x.name === $('child-task').value.trim());
+  const isOwnChild = (task) => task?.parentTask?.name === TASK_NAME;
+  function childNameChanged() {
+    const task = childTaskNamed();
+    const from = task?.parentTask?.name;
+    const named = task && [task.name, task.title].filter(Boolean).join(' ');
+    $('child-note').hidden = !task || task.children.length > 0 || task.name === TASK_NAME || isOwnChild(task);
+    if (task) $('child-note').textContent = from ? t('ui_task_child_move', named, from) : t('ui_task_child_take', named);
+    $('child-title').closest('label').hidden = Boolean(task);
+    $('child-submit').textContent = t(task ? 'ui_child_take_button' : 'ui_child_make_button');
+  }
+  async function saveChildTask(e) {
+    e.preventDefault();
+    const btn = $('child-submit');
+    btn.disabled = true;
+    const name = $('child-task').value.trim();
+    const title = $('child-title').value.trim();
+    try {
+      const had = childTaskNamed();
+      // Nothing to write, and so nothing to tell
+      if (isOwnChild(had)) {
+        $('child-dialog').close();
+        $('task-child').focus();
+        return;
+      }
+      const url = `/api/tasks?${new URLSearchParams({ project, task: name })}`;
+      const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parent: TASK_NAME, ...(title && !had ? { title } : {}) }) });
+      if (!res.ok) throw new Error(await res.text());
+      const to = tagged('a', 'toast-link', t(had ? 'ui_task_child_took' : 'ui_task_child_made', name));
+      to.href = taskHref({ project, name });
+      toast('', { ms: 8000, button: to });
+      await load();
+      $('child-dialog').close();
+      $('task-child').focus();
+    } catch (err) {
+      $('child-error').textContent = t('ui_save_failed', err.message);
+      $('child-error').hidden = false;
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   // Archives the task's pages, or gives them back: the mark of each page, as floe archive writes it, and nothing of the task
@@ -3388,9 +3556,27 @@
     if (task && taskView(task) !== FIRST_VIEW) to.set('view', taskView(task));
     return `${TASKS_PATH}?${to}`;
   }
-  // A word as a shell reads it whatever it holds: the name of a task may hold $( ) or a quote
-  const shellWord = (word) => `'${word.replaceAll("'", "'\\''")}'`;
   let lastTask;
+
+  // Removes the task's row, a press again as a delete asks, and goes to the list: of a task of no page, which is all it would lose
+  async function forgetTask(task) {
+    const btn = $('task-delete');
+    if (arm(btn, t('ui_task_forget_sure'))) return;
+    $('task-delete-error').hidden = true;
+    try {
+      const res = await api(`/api/tasks?${new URLSearchParams({ project, task: TASK_NAME })}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 404) throw new Error(await res.text());
+      location.href = taskListHref(task);
+    } catch (e) {
+      $('task-delete-error').textContent = t('ui_task_forget_fail', e.message);
+      $('task-delete-error').hidden = false;
+      disarmForget();
+    }
+  }
+  function disarmForget() {
+    $('task-delete').classList.remove('armed');
+    $('task-delete').textContent = t('ui_task_forget');
+  }
 
   // A task's page. Nothing is open at first, whatever is unread: opening it reads nothing
   function renderTaskPage() {
@@ -3408,7 +3594,11 @@
     document.title = `${TASK_NAME} · floe`;
     if (task) drawTaskHead(task);
     else $('task-missing').querySelector('strong').textContent = t('ui_task_missing', TASK_NAME);
-    if (none) $('task-forget').textContent = `floe work --task ${shellWord(TASK_NAME)} --project ${shellWord(project === NONE ? '' : project)} --forget`;
+    // A task with children cannot be forgotten: their pages are how it leaves
+    $('task-delete-box').hidden = Boolean(none && task.children.length > 0);
+    if ($('task-delete-box').hidden) $('task-delete-error').hidden = true;
+    $('task-delete').onclick = () => forgetTask(task);
+    $('task-none-kids').hidden = !(none && task.children.length > 0);
     drawRows(task ? taskGroups(task) : [], (a, i, rows) => {
       const li = row(a, i, new Map());
       // No bulk bar here: nothing to select, by box or menu
@@ -4412,6 +4602,7 @@
     $('set-step').value = a.work?.step ?? '';
     setOpened = { task: $('set-task').value, step: $('set-step').value };
     $('set-url').value = setTaskOf($('set-task').value)?.url ?? '';
+    fillTaskParent();
     $('set-out').hidden = !a.work?.task;
     $('set-error').textContent = tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '';
     $('set-error').hidden = !tasksRead.error;
@@ -4421,6 +4612,13 @@
   function setTaskChanged() {
     setUrlTouched = false;
     $('set-url').value = setTaskOf($('set-task').value)?.url ?? '';
+    fillTaskParent();
+  }
+  // What the field was given, which saving compares with: a parent another session wrote meanwhile is not taken off by a field left alone, nor is an
+  // empty parent sent for a new name, which has no row to take it off
+  function fillTaskParent() {
+    setOpened.parent = setTaskOf($('set-task').value)?.parent ?? '';
+    $('set-parent').value = setOpened.parent;
   }
   const setFailed = (reason) => {
     $('set-error').textContent = t('ui_save_failed', reason);
@@ -4438,8 +4636,9 @@
     // The state it comes to be under stays what it was: said, as it may not be the list the person has in mind
     const state = setTaskOf(task)?.state ?? STATES.find((x) => x.new).name;
     const step = $('set-step').value.trim();
+    const parent = $('set-parent').value.trim();
     const moved = task.trim() !== setOpened.task || step !== setOpened.step;
-    const body = { ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}) };
+    const body = { ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}), ...(parent !== setOpened.parent ? { parent } : {}) };
     try {
       const url = `/api/tasks?${new URLSearchParams({ project: page.taskProject, task })}`;
       const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -4731,25 +4930,44 @@
   $('edit-dialog').addEventListener('close', () => editBack?.()?.focus());
   suggestTags($('edit-tags'));
   $('set').addEventListener('submit', saveTaskSet);
+  $('child').addEventListener('submit', saveChildTask);
+  $('task-delete').addEventListener('blur', disarmForget);
   $('set-out').addEventListener('click', takeOffTask);
   $('set-dialog').addEventListener('close', () => setBack?.()?.focus());
   $('set-task').addEventListener('input', setTaskChanged);
+  // Offers tasks of a project by name, as the fields that name a task do: what each is in, which a long title does not cut (a task done is
+  // under another view than the list's first, and looked for there), and its parent
+  function suggestTasks(input, projectOf, offered, put, more) {
+    let known = new Map();
+    const names = () => {
+      const tasks = tasksOf().filter((x) => x.project === projectOf());
+      known = new Map(tasks.map((x) => [x.name, x]));
+      return tasks.filter(offered).map((x) => x.name).sort((x, y) => x.localeCompare(y, LANG));
+    };
+    suggestOne(input, names, put, {
+      detail: (name) => {
+        const task = known.get(name);
+        const note = t('ui_task_suggest', t(VIEW_WORDS[task.state]));
+        return { name, label: [name, task.title].filter(Boolean).join(' '), note: task.parent ? `${note} ${t('ui_task_suggest', t('ui_task_parent_named', task.parent))}` : note };
+      },
+      // The modal hands the first field the focus as it opens: not over the fields under it
+      onFocus: false,
+      ...more,
+    });
+  }
   $('set-url').addEventListener('input', () => { setUrlTouched = true; });
-  suggestOne($('set-task'), () => {
-    return tasksOf().filter((task) => task.project === setPage.taskProject).map((task) => task.name).sort((x, y) => x.localeCompare(y, LANG));
-  }, (name) => {
+  suggestTasks($('set-task'), () => setPage.taskProject, () => true, (name) => {
     $('set-task').value = name;
     setTaskChanged();
-  }, {
-    fresh: (name) => ({ name, label: t('ui_task_new', name) }),
-    // What it is in, which a long title does not cut: a task done is under another view than the list's first, and looked for there
-    detail: (name) => {
-      const task = setTaskOf(name);
-      return { name, label: [name, task.title].filter(Boolean).join(' '), note: t('ui_task_suggest', t(VIEW_WORDS[task.state])) };
-    },
-    // The modal hands it the focus as it opens: not over the fields under it
-    onFocus: false,
+  }, { fresh: (name) => ({ name, label: t('ui_task_new', name) }) });
+  // What may be a parent: a task with a row, which a task of pages alone has not, no parent of its own, and not this one
+  suggestTasks($('set-parent'), () => setPage.taskProject, (x) => hasRow(x) && !x.parent && x.name !== $('set-task').value.trim(), (name) => { $('set-parent').value = name; }, { onFocus: true });
+  // What may be made a child: no child of its own, not this one, not one already
+  suggestTasks($('child-task'), () => project, (x) => x.children.length === 0 && x.name !== TASK_NAME && !isOwnChild(x), (name) => {
+    $('child-task').value = name;
+    childNameChanged();
   });
+  $('child-task').addEventListener('input', childNameChanged);
   suggestOne($('set-step'), () => {
     const task = setTaskOf($('set-task').value);
     const steps = [...(task?.steps ?? []), ...[...(task?.pages ?? []), ...(task?.archived ?? [])].map((a) => a.work.step)].filter(Boolean);

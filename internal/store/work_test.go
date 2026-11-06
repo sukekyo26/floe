@@ -329,3 +329,191 @@ func TestStates(t *testing.T) {
 		t.Errorf("StateNames = %q", got)
 	}
 }
+
+// A parent is a task of the same project with a row and no parent of its own, of a task with no children; what is
+// refused writes nothing, a new task's row too. The same again changes nothing, and "" takes a parent off a row that is
+// there.
+func TestWorkParent(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	for _, c := range []struct{ project, name string }{{"p", "#1"}, {"p", "#2"}, {"p", "#9"}, {"q", "#8"}} {
+		if err := s.EditTask(c.project, c.name, store.TaskEdit{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	parentOf := func(name string) string {
+		t.Helper()
+		all, err := s.ReadTasks()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return all["p"][name].Parent
+	}
+	if err := s.EditTask("p", "#2", store.TaskEdit{Parent: ptr(" #1 ")}); err != nil {
+		t.Fatal(err)
+	}
+	if got := parentOf("#2"); got != "#1" {
+		t.Errorf("a parent with spaces round it: %q", got)
+	}
+	// A child of no row yet comes to be, doing.
+	if err := s.EditTask("p", "#3", store.TaskEdit{Parent: ptr("#1")}); err != nil {
+		t.Fatal(err)
+	}
+	if got := parentOf("#3"); got != "#1" {
+		t.Errorf("a new child: %q", got)
+	}
+	for _, c := range []struct {
+		name, parent, want string
+	}{
+		{"#1", " #1 ", "task #1 cannot be its own parent"},
+		{"#4", "#7", "project p has no task #7 that can be a parent"},
+		{"#4", "#8", "project p has no task #8 that can be a parent"},
+		{"#4", "#2", "task #2 has a parent itself (#1), so it cannot be a parent"},
+		{"#1", "#2", "task #2 has a parent itself (#1), so it cannot be a parent"},
+		{"#1", "#9", "task #1 has child tasks, such as #2, so it cannot have a parent"},
+		{"#4", "  ", "a task needs a name"},
+		{"#4", "\xff", "a task's project and name must be UTF-8"},
+	} {
+		err := s.EditTask("p", c.name, store.TaskEdit{Parent: &c.parent})
+		if err == nil || !strings.Contains(told(err, root), c.want) {
+			t.Errorf("%s under %q = %v, want %s", c.name, c.parent, err, c.want)
+		}
+	}
+	// A parent taken off a task of no row, a name mistyped, is not found; with anything else it is a new task.
+	if err := s.EditTask("p", "#4", store.TaskEdit{Parent: ptr("")}); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf(`"" of no row: %v`, err)
+	}
+	all, err := s.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := all["p"]["#4"]; ok || all["p"]["#1"].Parent != "" {
+		t.Errorf("after the refusals: %v", all["p"])
+	}
+	if wrote := s.EditTask("p", "#5", store.TaskEdit{Title: ptr("t"), Parent: ptr("")}); wrote != nil {
+		t.Errorf(`"" with a title, of no row: %v`, wrote)
+	}
+	// The same again, to another parent, and off, of a task with none too.
+	at := all["p"]["#2"].At
+	for _, c := range []struct{ name, parent, want string }{
+		{"#2", "#1", "#1"}, {"#2", "#9", "#9"}, {"#2", "", ""}, {"#2", "", ""},
+	} {
+		if wrote := s.EditTask("p", c.name, store.TaskEdit{Parent: &c.parent}); wrote != nil {
+			t.Errorf("%s under %q: %v", c.name, c.parent, wrote)
+		}
+		if got := parentOf(c.name); got != c.want {
+			t.Errorf("%s under %q came to be under %q", c.name, c.parent, got)
+		}
+	}
+	if all, err = s.ReadTasks(); err != nil || all["p"]["#2"].At != at {
+		t.Errorf("its time moved with its parent: %v, %v", all["p"]["#2"], err)
+	}
+}
+
+// A parent keeps its row while it has a child, whose row may go; the pages on it are told with its children. A page of a
+// task and a child of it are of one task, and of no other project's of the same name.
+func TestWorkForgetParent(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	for _, c := range []struct {
+		project, name string
+		ed            store.TaskEdit
+	}{
+		{"p", "#1", store.TaskEdit{}},
+		{"q", "#1", store.TaskEdit{}},
+		{"p", "#3", store.TaskEdit{Parent: ptr("#1")}},
+		{"p", "#2", store.TaskEdit{Parent: ptr("#1")}},
+	} {
+		if err := s.EditTask(c.project, c.name, c.ed); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pageOn(t, s, root, "kept", "p", false)
+	err := s.ForgetTask("p", "#1")
+	got := ""
+	if err != nil {
+		got = told(err, root)
+	}
+	for _, want := range []string{
+		"task #1 of project p still has 1 page(s), such as kept",
+		"task #1 of project p still has 2 child task(s), such as #2: take them off it or remove them first",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("forget a parent = %q, want %s", got, want)
+		}
+	}
+	if err := s.ForgetTask("q", "#1"); err != nil {
+		t.Errorf("of another project: %v", err)
+	}
+	if err := os.RemoveAll(filepath.Join(root, "kept")); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ForgetTask("p", "#2"); err != nil {
+		t.Errorf("a child: %v", err)
+	}
+	if err := s.EditTask("p", "#3", store.TaskEdit{Parent: ptr("")}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ForgetTask("p", "#1"); err != nil {
+		t.Errorf("with none left: %v", err)
+	}
+}
+
+// A parent written by hand is read as it is, keeps no other row from being written, and is mended by a write; what
+// childrenOfTask does not count as a child keeps nothing: a task of itself, one of a parent with a parent, either of a
+// pair each the other's, one of a parent gone.
+func TestWorkParentByHand(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	row := func(parent string) string {
+		return `{"state": "doing", "at": "2026-01-02T00:00:00Z", "parent": "` + parent + `"}`
+	}
+	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(`{"p": {
+		"self": `+row("self")+`,
+		"a": {"state": "doing", "at": "2026-01-02T00:00:00Z"}, "b": `+row("a")+`, "c": `+row("b")+`,
+		"x": `+row("y")+`, "y": `+row("x")+`,
+		"lost": `+row("gone")+`,
+		"plain": {"state": "doing", "at": "2026-01-02T00:00:00Z"}
+	}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s := store.New(root)
+	all, err := s.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if all["p"]["lost"].Parent != "gone" {
+		t.Errorf("read: %+v", all["p"]["lost"])
+	}
+	if err := s.EditTask("p", "plain", store.TaskEdit{Title: ptr("t")}); err != nil {
+		t.Errorf("another row: %v", err)
+	}
+	// A task of itself has no child, so that it takes another parent.
+	if err := s.EditTask("p", "self", store.TaskEdit{Parent: ptr("plain")}); err != nil {
+		t.Errorf("a task of itself: %v", err)
+	}
+	// A parent gone has no children for what names it, so that a task of that name takes a parent.
+	if err := s.EditTask("p", "gone", store.TaskEdit{Parent: ptr("plain")}); err != nil {
+		t.Errorf("a parent gone: %v", err)
+	}
+	if err := s.EditTask("p", "lost", store.TaskEdit{Parent: ptr("")}); err != nil {
+		t.Errorf("mended: %v", err)
+	}
+	// a has b for a child, which has a parent: c is no child of b, so that b goes.
+	if err := s.ForgetTask("p", "a"); err == nil || !strings.Contains(told(err, root), "such as b") {
+		t.Errorf("a parent: %v", err)
+	}
+	for _, name := range []string{"b", "x", "y"} {
+		if err := s.ForgetTask("p", name); err != nil {
+			t.Errorf("forget %s: %v", name, err)
+		}
+	}
+}
