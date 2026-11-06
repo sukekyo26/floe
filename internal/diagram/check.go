@@ -441,9 +441,10 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 		}
 		st.tried = x0 >= x1 || y0 >= y1 ||
 			max(x0, 0) < min(x1, l.w) && max(y0, 0) < min(y1, l.h)
-		xs, ys := grid(x0, x1, l.w), grid(y0, y1, l.h)
+		mx, my := (x0+x1)/2, (y0+y1)/2
+		xs, ys := grid(x0, x1, mx, l.w), grid(y0, y1, my, l.h)
 		var best float64
-		best, st.x, st.top = g.most(xs, ys, w, h, (x0+x1)/2, (y0+y1)/2)
+		best, st.x, st.top = g.most(xs, ys, w, h, mx, my)
 		// A region whose most room is eps or less holds no label: floe places none touching an edge.
 		st.found = best > eps
 	}
@@ -453,22 +454,25 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 	return st.x, st.top + labelH*float64(n) + labelH/2, st
 }
 
-// grid is at most 501 points from lo to hi within 0 and size, step apart, step being 4 or more: counted from lo,
-// so that the canvas cuts the grid and does not move it, or the one point where the canvas cuts it when the range
-// is narrower than a step past it.
-func grid(lo, hi, size float64) []float64 {
+// grid is at most 501 points from lo to hi within 0 and size, step apart, step being 4 or more: counted from mid,
+// the middle of lo and hi, so that mid is one when the canvas holds it, and the canvas cutting the range moves no
+// point while step is 4; or, when the range the canvas leaves holds no point mid and whole steps away, the one
+// point where the canvas cuts it.
+// LIMIT: step grows with the range within the canvas past 2000, so the canvas cutting it moves the points there.
+func grid(lo, hi, mid, size float64) []float64 {
 	from, to := max(lo, 0), min(hi, size)
 	if from > to {
 		return nil
 	}
 	step := max(4, (to-from)/500)
-	start := lo + math.Ceil((from-lo)/step)*step
-	if start > to {
-		start = from
+	// Each point is mid and a whole number of steps, so that mid itself is one exactly.
+	first := math.Ceil((from - mid) / step)
+	if mid+first*step > to {
+		return []float64{from}
 	}
 	var out []float64
 	for i := range 501 {
-		p := start + float64(i)*step
+		p := mid + (first+float64(i))*step
 		if p > to {
 			break
 		}
@@ -480,9 +484,10 @@ func grid(lo, hi, size float64) []float64 {
 // most is the room of the point of xs and ys where a block w by h, centred on it, keeps the most room, and where
 // the block goes then (its middle and top), 0 for none of room: of points of one room, the one nearest mx, my,
 // the middle of the circles' boxes, as room told by the point of a box nearest a circle is one while the box
-// covers its centre, and a label stays on the axis of a Venn diagram of one when the middle is a point of the grid.
-// LIMIT: the grid counts 4 apart from where the circles' boxes start, so a middle off it leaves the label off the
-// axis, above or below as the radius goes; try the middle itself first if diagrams come to need it.
+// covers its centre, and a label stays on the axis of a Venn diagram of one, the middle being a point of the grid.
+// LIMIT: the label stands on the axis only when the circles in and out of its region are all symmetric about it and
+// the most room is not split into two points either side of it: then the left one is picked, off the axis. Pick
+// the point nearer the axis among those if diagrams need it.
 func (g region) most(xs, ys []float64, w, h, mx, my float64) (best, x, top float64) {
 	tries := make([]try, 0, len(xs)*len(ys))
 	for _, px := range xs {

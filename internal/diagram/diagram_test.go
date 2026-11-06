@@ -1308,14 +1308,14 @@ func TestInspect(t *testing.T) {
 			t.Errorf("a circle at %s: inspect = %q %s, want it to end %q", c.cx, got, mistakes, want)
 		}
 	}
-	// A label floe places in a region of circles symmetric about a line off its grid goes to one side, wherever they stand.
-	for _, c := range []struct{ a, b, c, want string }{{"300", "460", "380", "340.6"}, {"377.7", "537.7", "457.7", "418.3"}, {"455.55", "615.55", "535.55", "496.15"}} {
+	// A label floe places in a region of circles symmetric about a line stands on the line, wherever they stand.
+	for _, c := range []struct{ a, b, c, want string }{{"300", "460", "380", "342.6"}, {"377.7", "537.7", "457.7", "420.3"}, {"455.55", "615.55", "535.55", "498.15"}} {
 		src := "width: 1200\nheight: 520\ntitle: T\nparts:\n  - circle: { name: a, cx: " + c.a + ", cy: 200, r: 170 }\n" +
 			"  - circle: { name: b, cx: " + c.b + ", cy: 200, r: 170 }\n  - circle: { name: c, cx: " + c.c + ", cy: 335, r: 170 }\n" +
 			"  - label: { text: \"cli, i18n\", in: [a, b, c] }\n"
 		got, mistakes = draw(t, src, inspect)
 		_, label, _ := strings.Cut(got, "\nlabel ")
-		if want := `"cli, i18n" ` + c.want + ",220 74.8x18 in a, b, c\n"; mistakes != "" || label != want {
+		if want := `"cli, i18n" ` + c.want + ",218.5 74.8x18 in a, b, c\n"; mistakes != "" || label != want {
 			t.Errorf("circles at %s: inspect = %q %s, want its label %q", c.a, got, mistakes, want)
 		}
 	}
