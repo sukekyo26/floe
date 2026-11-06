@@ -5,6 +5,7 @@ import (
 	"maps"
 	"math"
 	"slices"
+	"strconv"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -21,15 +22,15 @@ func (o *graphOut) levelMistake(k int, ends [2]gref) *usererr.Error {
 	e := o.g.Edges[k]
 	for i, end := range ends {
 		if end.box < 0 {
-			return usererr.NewIn("", edgeAt(o.at, k)+"/"+[2]string{"from", "to"}[i], "diagram_graph_level_group", e.From,
-				e.To, o.endName(end))
+			return edgeMistake(edgeAt(o.at, k)+"/"+[2]string{"from", "to"}[i], "diagram_graph_level_group", e,
+				o.endName(end))
 		}
 	}
 	// LIMIT: two boxes of one group, or right in two lanes, whose left and right the order written or the lanes'
 	// order tells; a group's place among its siblings is the order's. Lift it if groups come to stand as written.
 	a, b := o.boxes[ends[0].box].cl, o.boxes[ends[1].box].cl
 	if a != b && (!o.lane(a) || !o.lane(b)) {
-		return usererr.NewIn("", edgeAt(o.at, k)+"/level", "diagram_graph_level_apart", e.From, e.To)
+		return edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_apart", e)
 	}
 	return nil
 }
@@ -53,8 +54,8 @@ func (o *graphOut) unlooped(levels []int) ([]int, usererr.List) {
 			return false
 		}
 		e := o.g.Edges[k]
-		told = append(told, usererr.NewIn("", edgeAt(o.at, k)+"/level", "diagram_graph_level_loop", e.From, e.To,
-			side, o.boxes[first].box.Name))
+		told = append(told, edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_loop", e, side,
+			strconv.Quote(o.boxes[first].box.Name)))
 		return true
 	}), told
 }
@@ -147,11 +148,11 @@ func (o *graphOut) across(edges []int) ([]int, usererr.List) {
 		}
 		e := o.g.Edges[k]
 		if o.row[a] != o.row[b] {
-			told = append(told, usererr.NewIn("", edgeAt(o.at, k), "diagram_graph_with_rank", e.From, e.To))
+			told = append(told, edgeMistake(edgeAt(o.at, k), "diagram_graph_with_rank", e))
 			return true
 		}
-		told = append(told, usererr.NewIn("", edgeAt(o.at, k), "diagram_graph_level_rank", e.From, e.To,
-			o.boxes[a].box.Name, o.boxes[b].box.Name))
+		told = append(told, edgeMistake(edgeAt(o.at, k), "diagram_graph_level_rank", e,
+			strconv.Quote(o.boxes[a].box.Name), strconv.Quote(o.boxes[b].box.Name)))
 		return true
 	}), told
 }
@@ -206,7 +207,7 @@ func (gr *group) levelMistakes() usererr.List {
 		at := edgeAt(o.at, k) + "/level"
 		first, second := o.sides(k)
 		if what := gr.between(first, second, rankOf); what != "" {
-			told = append(told, usererr.NewIn("", at, "diagram_graph_level_between", e.From, e.To, what))
+			told = append(told, edgeMistake(at, "diagram_graph_level_between", e, what))
 			return true
 		}
 		return false
@@ -224,7 +225,7 @@ func (gr *group) between(first, second int, rankOf map[int]int) string {
 	}
 	for m := first + 1; m < second; m++ {
 		if o.inBlock(m, first) {
-			return `box "` + o.boxes[m].box.Name + `"`
+			return "box " + strconv.Quote(o.boxes[m].box.Name)
 		}
 	}
 	return ""
@@ -239,7 +240,7 @@ func (gr *group) laneBetween(first, second int, rankOf map[int]int) string {
 	r := rankOf[first]
 	for _, m := range slices.Sorted(maps.Keys(rankOf)) {
 		if rankOf[m] == r && m != first && m != second && o.inWay(m, first, second) {
-			return `box "` + o.boxes[m].box.Name + `"`
+			return "box " + strconv.Quote(o.boxes[m].box.Name)
 		}
 	}
 	return gr.laneFrame(first, second, rankOf)
@@ -278,7 +279,7 @@ func (gr *group) laneFrame(first, second int, rankOf map[int]int) string {
 		}
 		in := o.laneOf(cl.boxes[0])
 		if !o.lane(c) && lo <= r && r <= hi && (lf < in && in < ls || in == lf && o.faces(first) < 0) {
-			return `group "` + cl.g.Name + `"`
+			return "group " + strconv.Quote(cl.g.Name)
 		}
 	}
 	return ""
@@ -436,8 +437,7 @@ func (d *drawing) headed(o *graphOut, gr *group) usererr.List {
 			//nolint:exhaustruct_v5 // as addFrame's
 			if head := headRect(f, d.heads[c]); crossedBy(segAt(pts, 0), head) {
 				e := o.g.Edges[k]
-				told = append(told, usererr.NewIn("", edgeAt(o.at, k)+"/level", "diagram_graph_level_heading", e.From,
-					e.To, o.clusters[c].g.Name))
+				told = append(told, edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_heading", e, o.clusters[c].g.Name))
 				delete(d.routes, k)
 				delete(d.spots, k)
 				delete(d.level, k)

@@ -19,26 +19,26 @@ box "mistakes" 764,516 288x29
 box "badSlug" 764,587 176x29
 box "otherKind" 776,658 296x29
 box "otherOwner" 776,729 272x29
-edge publish→resolve M654,49 V73
-edge resolve→kind M654,102 V126
-edge kind→linked M600.67,155 V197
-edge kind→notData M707.33,155 V197
-edge linked→hidden M475.33,226 V268
-edge linked→data M608,226 V380 H899.33 V428
-edge hidden→top M296,297 V339
-edge hidden→secret M473.33,297 V339
-edge top→data M217.33,368 V392 H792.67 V428
-edge top→whole M118.67,368 V404 H518 V436.5
-edge data→slug M728,474 V520.83
-edge data→mistakes M899.33,474 V516
-edge slug→taken M532,545 V587
-edge slug→badSlug M636,545 V563 H852 V587
-edge taken→owner M532,616 V658
-edge taken→otherKind M636,616 V634 H924 V658
-edge owner→server M531.33,687 V729
-edge owner→otherOwner M640.67,687 V705 H912 V729
-edge server→save M584,758 V782
-edge save→url M584,828 V852
+edge "publish"→"resolve" M654,49 V73
+edge "resolve"→"kind" M654,102 V126
+edge "kind"→"linked" M600.67,155 V197
+edge "kind"→"notData" M707.33,155 V197
+edge "linked"→"hidden" M475.33,226 V268
+edge "linked"→"data" M608,226 V380 H899.33 V428
+edge "hidden"→"top" M296,297 V339
+edge "hidden"→"secret" M473.33,297 V339
+edge "top"→"data" M217.33,368 V392 H792.67 V428
+edge "top"→"whole" M118.67,368 V404 H518 V436.5
+edge "data"→"slug" M728,474 V520.83
+edge "data"→"mistakes" M899.33,474 V516
+edge "slug"→"taken" M532,545 V587
+edge "slug"→"badSlug" M636,545 V563 H852 V587
+edge "taken"→"owner" M532,616 V658
+edge "taken"→"otherKind" M636,616 V634 H924 V658
+edge "owner"→"server" M531.33,687 V729
+edge "owner"→"otherOwner" M640.67,687 V705 H912 V729
+edge "server"→"save" M584,758 V782
+edge "save"→"url" M584,828 V852
 label "はい" 583.67,167 34x18
 label "いいえ" 684.33,167 46x18
 label "はい" 458.33,238 34x18

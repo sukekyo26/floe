@@ -310,7 +310,7 @@ type edge struct {
 	Start    *string     `json:"start"`
 	End      *string     `json:"end"`
 	Crossing bool        `json:"crossing"`
-	who      string      // its words in mistakes and inspect, for an edge a tree draws; else made from its ends
+	who      string      // edgeWho, for an edge a tree or graph draws; else made from its ends
 	graph    string      // the JSON pointer of the graph that laid it out; "" for an edge written by hand
 	beside   bool        // its label stands beside it, at At its text's start, as a graph lays out a loop's
 }

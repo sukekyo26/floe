@@ -143,7 +143,7 @@ func (m *measures) place(out *[]item, n *node, cx, y float64, d int, at string) 
 		}
 		from := end{Point: &[2]float64{cx, bottom}} //nolint:exhaustruct_v5 // a point
 		to := end{Point: &[2]float64{ccx, cy}}      //nolint:exhaustruct_v5 // a point
-		who := "edge " + parent + "→" + nodeWho(nodeBox(c, ccx, cy))
+		who := edgeWho(parent, nodeWho(nodeBox(c, ccx, cy)))
 
 		e := &edge{From: from, To: to, who: who} //nolint:exhaustruct_v5 // the rest as left out
 		if !straight {

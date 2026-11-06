@@ -16,17 +16,17 @@ box "build" 788,308 232x46
 box "fix" 788,472 136x46
 box "ci" 788,636 128x46
 box "merge" 788,718 168x46
-edge order→design M428,96 V108 H876 V132
-edge design→dreview M876,178 V190 H396 V214
-edge dreview→answer M296,231 H168
-edge answer→dreview M168,255 H296
-edge dreview→build M396,272 V284 H904 V308
-edge build→review M904,354 V366 H418 V390
-edge review→fix M418,436 V448 H856 V472
-edge fix→ready M856,518 V530 H416 V554
-edge ready→ci M416,600 V612 H852 V636
-edge ci→ok M788,665 H184
-edge ok→merge M108,673.5 V694 H872 V718
+edge "order"→"design" M428,96 V108 H876 V132
+edge "design"→"dreview" M876,178 V190 H396 V214
+edge "dreview"→"answer" M296,231 H168
+edge "answer"→"dreview" M168,255 H296
+edge "dreview"→"build" M396,272 V284 H904 V308
+edge "build"→"review" M904,354 V366 H418 V390
+edge "review"→"fix" M418,436 V448 H856 V472
+edge "fix"→"ready" M856,518 V530 H416 V554
+edge "ready"→"ci" M416,600 V612 H852 V636
+edge "ci"→"ok" M788,665 H184
+edge "ok"→"merge" M108,673.5 V694 H872 V718
 label "聞く" 227,222 34x18
 label "answer" 229.4,246 53.2x18
 label "OK" 637.8,275 24.4x18

@@ -6,14 +6,14 @@ bar "api" 312,145 224x14
 bar "test" 664,181 96x14
 bar "help" 552,217 192x14
 dot "release" 785,253 14x14
-edge decide→design M296,44 H304 V80 H312
-edge design→screens M408,80 H416 V116 H424
-edge decide→api M296,44 H304 V152 H312
-edge api→test M536,152 H600 V188 H664
-edge screens→test M648,116 H656 V188 H664
-edge api→help M536,152 H544 V224 H552
-edge test→release M760,188 H792 V260
-edge help→release M744,224 H792 V260
+edge "decide"→"design" M296,44 H304 V80 H312
+edge "design"→"screens" M408,80 H416 V116 H424
+edge "decide"→"api" M296,44 H304 V152 H312
+edge "api"→"test" M536,152 H600 V188 H664
+edge "screens"→"test" M648,116 H656 V188 H664
+edge "api"→"help" M536,152 H544 V224 H552
+edge "test"→"release" M760,188 H792 V260
+edge "help"→"release" M744,224 H792 V260
 label "Week 1" 229.4,302 53.2x18
 label "Week 2" 341.4,302 53.2x18
 label "Week 3" 453.4,302 53.2x18

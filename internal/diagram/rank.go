@@ -2,6 +2,7 @@ package diagram
 
 import (
 	"slices"
+	"strconv"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -78,7 +79,7 @@ func (o *graphOut) rank(members, edges, cedges, levels []int) *group {
 			gr.reversed[k] = true
 		default:
 			e := o.g.Edges[k]
-			gr.among = append(gr.among, usererr.NewIn("", edgeAt(o.at, k), "diagram_graph_with_rank", e.From, e.To))
+			gr.among = append(gr.among, edgeMistake(edgeAt(o.at, k), "diagram_graph_with_rank", e))
 		}
 	}
 	gr.arcs = arcs
@@ -293,9 +294,9 @@ func (gr *group) amid(k int, local map[int]int, reached func(from ...int) map[in
 		}
 	}
 	e := o.g.Edges[k]
-	name := o.endName(ends[g])
-	return usererr.NewIn("", edgeAt(o.at, k)+"/"+key, "diagram_graph_among",
-		e.From, e.To, o.endName(ends[x]), name, before, after, name)
+	name := o.clusters[ends[g].cl].g.Name
+	return edgeMistake(edgeAt(o.at, k)+"/"+key, "diagram_graph_among", e,
+		o.endName(ends[x]), name, strconv.Quote(before), strconv.Quote(after), name)
 }
 
 // passed is how many ranks the group's arcs pass between their ends: the points split makes.

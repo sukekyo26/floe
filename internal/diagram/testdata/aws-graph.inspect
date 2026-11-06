@@ -25,18 +25,18 @@ icon "main" 396.2,810 48x48
 icon "standby" 604,810 48x48
 icon "queue" 796,810 48x48
 icon "worker" 796,972 48x48
-edge users→dns M280,85 V97 H216 V188
-edge users→cdn M296,85 V155 H377 V188
-edge cdn→files M369,257 V281 H72 V406
-edge cdn→alb M385,257 V406
-edge alb→web-a M377,475 V528 H420.2 V602
-edge alb→web-c M393,475 V511 H652 V602
-edge web-a→main M412.2,671 V810
-edge web-c→main M644,671 V707 H428.2 V810
-edge main→standby M444.2,834 H604
-edge web-a→queue M428.2,671 V683 H544 V719 H812 V810
-edge web-c→queue M660,671 V707 H828 V810
-edge queue→worker M820,879 V972
+edge "users"→"dns" M280,85 V97 H216 V188
+edge "users"→"cdn" M296,85 V155 H377 V188
+edge "cdn"→"files" M369,257 V281 H72 V406
+edge "cdn"→"alb" M385,257 V406
+edge "alb"→"web-a" M377,475 V528 H420.2 V602
+edge "alb"→"web-c" M393,475 V511 H652 V602
+edge "web-a"→"main" M412.2,671 V810
+edge "web-c"→"main" M644,671 V707 H428.2 V810
+edge "main"→"standby" M444.2,834 H604
+edge "web-a"→"queue" M428.2,671 V683 H544 V719 H812 V810
+edge "web-c"→"queue" M660,671 V707 H828 V810
+edge "queue"→"worker" M820,879 V972
 label "Users" 265,67 46x18
 label "Route 53" 182.2,239 67.6x18
 label "CloudFront" 336,239 82x18

@@ -1662,8 +1662,8 @@ func TestGraphTold(t *testing.T) {
 	frame := func(x float64, graph string) rect {
 		return rect{x: x, y: 0, w: 100, h: 100, what: "frame at " + num(x), at: graph + "/nodes/1/group", graph: graph} //nolint:exhaustruct_v5 // a frame
 	}
-	across := path{segs: []seg{{0, 20, 100, 20}}, what: "edge a→b", at: ga + "/edges/0", own: -1, crossing: false, graph: ga}
-	down := path{segs: []seg{{50, -10, 50, 100}}, what: "edge c→d", at: gb + "/edges/0", own: -1, crossing: false, graph: gb}
+	across := path{segs: []seg{{0, 20, 100, 20}}, what: "edge \"a\"→\"b\"", at: ga + "/edges/0", own: -1, crossing: false, graph: ga}
+	down := path{segs: []seg{{50, -10, 50, 100}}, what: "edge \"c\"→\"d\"", at: gb + "/edges/0", own: -1, crossing: false, graph: gb}
 	hand := down
 	hand.at, hand.graph, hand.what = "#/parts/1", "", "edge [50,-10]→[50,100]"
 	handBox := box(20, "")
@@ -1834,10 +1834,10 @@ func TestGraphShapes(t *testing.T) {
 		turns map[string]int // the most turns of the edges named; of every edge, none, when nil
 	}{
 		{"testdata/graph/flow.yaml", nil},
-		{"testdata/graph/fan.yaml", map[string]int{"edge c→hub": 0, "edge x→a": 2}},
+		{"testdata/graph/fan.yaml", map[string]int{"edge \"c\"→\"hub\"": 0, "edge \"x\"→\"a\"": 2}},
 		{"examples/state.yaml", map[string]int{
-			"edge stopped→running": 0, "edge running→outdated": 0, "edge outdated→running": 0, "edge running→stopped": 0,
-			"edge outdated→stopped": 0,
+			"edge \"stopped\"→\"running\"": 0, "edge \"running\"→\"outdated\"": 0, "edge \"outdated\"→\"running\"": 0, "edge \"running\"→\"stopped\"": 0,
+			"edge \"outdated\"→\"stopped\"": 0,
 		}},
 	} {
 		src, err := os.ReadFile(filepath.FromSlash(c.file))
@@ -2694,7 +2694,7 @@ func TestGraphGroupStraight(t *testing.T) {
 		g = inGroup(g, "db", "Database", "disk")
 		g.Direction = direction
 		for _, p := range laid(g).paths {
-			if p.what == "edge cli→page" && len(p.segs) != 1 {
+			if p.what == "edge \"cli\"→\"page\"" && len(p.segs) != 1 {
 				t.Errorf("%q: cli→page beside the frame turns: %v", direction, p.segs)
 			}
 		}
@@ -2912,9 +2912,9 @@ func TestGraphBoxSpread(t *testing.T) {
 	want := `box "a" 20,26 128x64
 box "b" 40,116 88x48
 box "c" 184,20 88x72
-edge a→c M148,44 H184
-edge b→c M128,140 H160 V76 H184
-edge a→c M148,67 H160 V60 H184
+edge "a"→"c" M148,44 H184
+edge "b"→"c" M128,140 H160 V76 H184
+edge "a"→"c" M148,67 H160 V60 H184
 `
 	if got := laid(g).inspect(); got != want {
 		t.Errorf("got\n%swant\n%s", got, want)
@@ -2932,12 +2932,12 @@ func TestGraphBoxKeepApart(t *testing.T) {
 box "b" 110,20 64x29
 box "c" 20,97 64x29
 box "d" 110,97 64x29
-edge a→b M84,28.5 H110
-edge b→a M110,40.5 H84
-edge a→c M41.33,49 V97
-edge a→d M68,49 V73 H131.33 V97
-edge b→c M131.33,49 V61 H62 V97
-edge b→d M152.67,49 V97
+edge "a"→"b" M84,28.5 H110
+edge "b"→"a" M110,40.5 H84
+edge "a"→"c" M41.33,49 V97
+edge "a"→"d" M68,49 V73 H131.33 V97
+edge "b"→"c" M131.33,49 V61 H62 V97
+edge "b"→"d" M152.67,49 V97
 `
 	if got := laid(g).inspect(); got != want {
 		t.Errorf("got\n%swant\n%s", got, want)
@@ -2981,8 +2981,8 @@ func TestGraphBoxOtherPoint(t *testing.T) {
 	want := `box "a" 20,20 184x29
 box "b" 20,73 72x29
 box "c" 116,73 48x29
-edge a→c M142.67,49 V73
-edge a→b M56,49 V73
+edge "a"→"c" M142.67,49 V73
+edge "a"→"b" M56,49 V73
 `
 	if got := laid(g).inspect(); got != want {
 		t.Errorf("got\n%swant\n%s", got, want)
@@ -3015,7 +3015,7 @@ func TestGraphBoxIconStays(t *testing.T) {
 	g.Nodes[1] = graphNode{Icon: iconNode(g.Nodes[1].Box)} //nolint:exhaustruct_v5 // one kind of node
 	want := `box "a" 20,20 152x29
 icon "b" 68,106 48x48
-edge a→b M92,49 V106
+edge "a"→"b" M92,49 V106
 label "wwwwwwww" 58.2,157 67.6x18
 `
 	if got := laid(g).inspect(); got != want {
