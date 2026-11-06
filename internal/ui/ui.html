@@ -468,7 +468,7 @@
     flex: none; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 0.5rem;
     font-size: var(--text-label); color: var(--fg); background: var(--subtle); border: 0; border-radius: 999px;
   }
-  .tagpill:hover { box-shadow: inset 0 0 0 1px var(--fg); }
+  button.tagpill:hover { box-shadow: inset 0 0 0 1px var(--fg); }
   /* A tags field's names, as the row's menu looks: a popover in the top layer, so that no dialog or box cuts it off */
   .suggest {
     position: fixed; inset: auto; margin: 0; display: grid; gap: 1px; max-height: 14rem; overflow-y: auto; padding: var(--menu-pad);
@@ -2298,6 +2298,7 @@
   function drawReader() {
     const a = picked && items.find((x) => x.slug === picked.slug);
     if (!a) picked = null;
+    if (TASK_PAGE) layoutColumns();
     // Loaded only while it is there, as the frame's, so that a link's missing file is no 404 kept when the file is back
     readInto(a && !a.missing ? rawHref(picked) : 'about:blank');
     drawVersion(picked, a);
@@ -2539,11 +2540,11 @@
       if (!a.tags?.length) return;
       const tags = put('tags', '');
       tags.append(...a.tags.map((name) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'tagpill';
-        b.textContent = name;
+        // On a task's page there is no list of a tag to go to
+        const b = tagged(TASK_PAGE ? 'span' : 'button', 'tagpill', name);
         b.title = name;
+        if (TASK_PAGE) return b;
+        b.type = 'button';
         b.setAttribute('aria-label', t('ui_tag_filter_named', name));
         // The tag picked already, the list stays as it is (its selection too)
         b.addEventListener('click', () => { if (name !== tag) setTag(name); });
@@ -3075,7 +3076,7 @@
   // and last what is archived. Within each, as first published
   // LIMIT: when a step first came is not kept: a step's oldest page says it, so that a new step on an old page comes earlier. --steps orders it
   function taskGroups(task) {
-    const made = (a) => Date.parse(a.createdAt ?? a.updatedAt);
+    const made = (a) => Date.parse(a.createdAt || a.updatedAt);
     const steps = new Map();
     const none = [];
     for (const a of [...task.pages].sort((x, y) => made(x) - made(y))) {
@@ -3094,13 +3095,11 @@
 
   // Over the rows of a task: its name, its state and how to change it, its link and the way to archive it or give it back
   function drawTaskHead(task) {
-    const failed = Boolean(tasksRead.error);
-    const sel = $('task-state');
-    // What was drawn stays while the tasks cannot be read: a task of no row would say the state of a new one
-    if (failed && sel.dataset.state) return;
     $('task-title').replaceChildren(tagged('span', 'tname', task.name), task.title ?? '');
-    sel.hidden = failed;
-    if (!selectOpen(sel)) {
+    const sel = $('task-state');
+    // Drawn again at the next look, which may find them closed
+    if (selectOpen(sel)) drawn = '';
+    else {
       sel.value = task.state;
       sel.dataset.state = task.state;
       sel.className = `ver-pick st ${task.state}`;
@@ -3114,7 +3113,7 @@
     $('task-project').textContent = task.project === NONE ? t('ui_no_project') : task.project;
     const archive = $('task-archive');
     const back = task.archived.length > 0 && task.pages.length === 0;
-    archive.hidden = failed || !(back || (task.state === 'done' && task.pages.length > 0));
+    archive.hidden = !(back || (task.state === 'done' && task.pages.length > 0));
     archive.textContent = t(back ? 'ui_task_unarchive' : 'ui_task_archive');
     archive.onclick = () => archiveTask(task, !back);
   }
@@ -3132,6 +3131,8 @@
 
   async function changeTaskState() {
     const sel = $('task-state');
+    // A select keeps the keys: h, j and k go on from the page
+    sel.blur();
     const url = `/api/tasks?${new URLSearchParams({ project, task: TASK_NAME })}`;
     try {
       const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ state: sel.value }) });
@@ -3144,19 +3145,27 @@
     await load();
   }
 
+  // A word as a shell reads it whatever it holds: the name of a task may hold $( ) or a quote
+  const shellWord = (word) => `'${word.replaceAll("'", "'\\''")}'`;
+  let lastTask;
+
   // A task's page. Nothing is open at first, whatever is unread: opening it reads nothing
   function renderTaskPage() {
-    const task = tasksOf().find((x) => x.project === project && x.name === TASK_NAME);
+    const found = tasksOf().find((x) => x.project === project && x.name === TASK_NAME);
+    const failed = Boolean(tasksRead.error);
+    if (!failed) lastTask = found;
+    // Unreadable, the task is as last read, with its pages as they are now; what is not known is not said to be missing
+    const task = failed && lastTask ? { ...lastTask, pages: found?.pages ?? [], archived: found?.archived ?? [] } : !failed && found;
     const none = task && task.pages.length === 0 && task.archived.length === 0;
-    $('manage').classList.toggle('task-missing', !task);
+    $('manage').classList.toggle('task-missing', !task && !failed);
     $('manage').classList.toggle('task-none', Boolean(none));
     $('task-head').hidden = !task;
-    $('task-missing').hidden = Boolean(task);
+    $('task-missing').hidden = Boolean(task) || failed;
     $('task-none').hidden = !none;
     document.title = `${TASK_NAME} · floe`;
     if (task) drawTaskHead(task);
     else $('task-missing').querySelector('strong').textContent = t('ui_task_missing', TASK_NAME);
-    if (none) $('task-forget').textContent = `floe work --task ${JSON.stringify(TASK_NAME)} --forget`;
+    if (none) $('task-forget').textContent = `floe work --task ${shellWord(TASK_NAME)} --project ${shellWord(project === NONE ? '' : project)} --forget`;
     drawRows(task ? taskGroups(task) : [], (a, i, rows) => {
       const li = row(a, i, new Map());
       // No bulk bar here: nothing to select, by box or menu
@@ -3531,7 +3540,8 @@
   const COLUMNS_KEY = 'list.columns';
   const columns = { shelf: null, list: null, open: true, listOpen: true };
   // The task list has nothing but the list to fold it into; what is kept stays for the list's page
-  const listOpen = () => TASK_LIST || columns.listOpen;
+  // A task's page keeps its rows, and its head, until a page is there to take their place
+  const listOpen = () => TASK_LIST || columns.listOpen || (TASK_PAGE && !picked);
   try {
     const saved = JSON.parse(localStorage.getItem(COLUMNS_KEY));
     if (Number.isFinite(saved?.shelf)) columns.shelf = saved.shelf;
@@ -3562,6 +3572,7 @@
     $('list-grip').hidden = !listOpen();
     $('shelf-show').hidden = columns.open;
     $('list-show').hidden = listOpen();
+    $('list-hide').hidden = TASK_PAGE && !picked;
     // In the head of what is left: the list's, or the page's beside it
     const head = listOpen() ? document.querySelector('.lhead') : $('read-head');
     if ($('shelf-what').parentElement !== head) head.prepend($('shelf-what'));

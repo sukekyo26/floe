@@ -247,6 +247,16 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks?project=proj&task=%2399")
 	b.until("the error", "!document.getElementById('error').hidden")
 	say("unreadable, first", "document.getElementById('task-head').hidden + ' ' + document.getElementById('task-none').hidden + ' ' + document.getElementById('task-missing').hidden")
+	// Of a task done, whose pages are known still: its archive can be pressed.
+	if err = os.WriteFile(file, mended, 0o600); err != nil { //nolint:gosec // G703: a path the test names
+		t.Fatal(err)
+	}
+	opened("#120", "/tasks?project=proj&task=%23120")
+	if err = os.WriteFile(file, []byte("{ broken"), 0o600); err != nil { //nolint:gosec // G703: a path the test names
+		t.Fatal(err)
+	}
+	b.until("the error", "!document.getElementById('error').hidden")
+	say("unreadable, done", archive)
 	if err = os.WriteFile(file, mended, 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
 	}
@@ -310,7 +320,14 @@ of no rows: / / null
 done: Archive the task
 archived: [Archive] | T x1
 the shelf's archive: #120
+folded, none chosen: true true
+while open: waiting
+the command: floe work --task 'it'\''s $(touch made)' --project '' --forget
+a tag: SPAN t
 waiting has no archive button: none
-no pages: This task has no pages floe work --task "#99" --forget true
+no pages: This task has no pages floe work --task '#99' --project 'proj' --forget true
+unreadable, drawn: false false true
+unreadable, first: true true true
+unreadable, done: Archive the task
 no task: No task #999 true 0
 refused: waiting false true`
