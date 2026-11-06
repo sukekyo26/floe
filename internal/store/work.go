@@ -366,6 +366,8 @@ func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed 
 	if parent == name {
 		return usererr.New("store_parent_self", name)
 	}
+	// LIMIT: a parent taken to be there and gone meanwhile is refused as no parent (400), not as stale: the screen does not read the
+	// tasks again. Tell it apart by its pages, read under the lock, if that comes to mislead
 	if _, ok := rows[parent]; !ok && ed.ParentNew != nil && !*ed.ParentNew {
 		return usererr.New("store_parent_none", parent, project)
 	}
