@@ -849,6 +849,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .floe-zoom.zoomed:active { cursor: grabbing; }
+/* An img is laid out shrunk to the frame, as the whole, and scaled from its top left, as the script's sums take it */
+.floe-zoom > img { display: block; max-width: 100%; height: auto; transform-origin: 0 0; }
 .floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
 /* display: flex above wins over the browser's [hidden] */
 .floe-zoom-tools[hidden] { display: none; }
@@ -871,11 +873,10 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="image"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A thin frame keeps a screenshot's white apart from the page's. The frame spans the body's width, as the image
-   would, not the image's: an svg without a size of its own lies at no width in a box as wide as what it holds.
-   While zoomed, the image's line is dropped (scaled, it would thicken) and the frame rounds its corners instead */
+   would, not the image's: an svg without a size of its own lies at no width in a box as wide as what it holds. The
+   frame rounds its corners as the image does, for a zoomed image, which has no line */
 :scope .floe-zoom { border-radius: var(--radius-small); }
-:scope img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius-small); transform-origin: 0 0; }
-:scope .floe-zoom.zoomed img { border-color: transparent; }
+:scope img { border: 1px solid var(--line); border-radius: var(--radius-small); }
 :scope figcaption { margin-top: 0.4rem; font-size: var(--floe-text-aside); color: var(--muted); }
 }
 }
@@ -2577,7 +2578,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
     if (wrap.dataset.zoomable) return;
     const first = wrap.firstElementChild;
     const svg = first?.localName === 'svg' ? first : null;
-    const img = svg || !first ? null : first.localName === 'img' ? first : first.querySelector('img');
+    const img = first?.localName === 'img' ? first : null;
     if (!svg && !img) return;
     if (img && !img.complete) {
       wrap.dataset.zoomable = 'pending';
@@ -2598,6 +2599,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
     let offered;
     const fit = () => (svg ? Math.min(wrap.clientWidth / W, wrap.clientHeight / H) : img.clientWidth / W);
     const min = () => Math.min(fit(), 1);
+    const shrunk = () => (svg ? Math.min(wrap.offsetWidth / W, wrap.offsetHeight / H) : fit()) < 1;
     const tools = document.createElement('div');
     tools.className = toolsClass;
     tools.hidden = true;
@@ -2641,11 +2643,13 @@ banner = &#34;This wiki has moved to the new host.&#34;
         return;
       }
       if (fitted || printing) {
-        first.style.transform = '';
+        img.style.transform = '';
+        img.style.borderColor = '';
         return;
       }
       const k = s / fit(), ox = img.clientLeft, oy = img.clientTop;
-      first.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
+      img.style.borderColor = 'transparent';
+      img.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
     };
 
     const render = () => {
@@ -2664,7 +2668,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
       cy = clamp(cy, vh, H);
       show(cx - vw / 2, cy - vh / 2, vw, vh);
       wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
-      offer(!fitted || fit() < 1);
+      offer(!fitted || shrunk());
       button('in').disabled = s >= MAX;
       button('out').disabled = s <= min();
       button('fit').disabled = fitted;

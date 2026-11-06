@@ -210,6 +210,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .floe-zoom.zoomed:active { cursor: grabbing; }
+/* An img is laid out shrunk to the frame, as the whole, and scaled from its top left, as the script's sums take it */
+.floe-zoom > img { display: block; max-width: 100%; height: auto; transform-origin: 0 0; }
 .floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
 /* display: flex above wins over the browser's [hidden] */
 .floe-zoom-tools[hidden] { display: none; }
@@ -320,7 +322,7 @@ body { margin: 0; }
     if (wrap.dataset.zoomable) return;
     const first = wrap.firstElementChild;
     const svg = first?.localName === 'svg' ? first : null;
-    const img = svg || !first ? null : first.localName === 'img' ? first : first.querySelector('img');
+    const img = first?.localName === 'img' ? first : null;
     if (!svg && !img) return;
     if (img && !img.complete) {
       wrap.dataset.zoomable = 'pending';
@@ -341,6 +343,7 @@ body { margin: 0; }
     let offered;
     const fit = () => (svg ? Math.min(wrap.clientWidth / W, wrap.clientHeight / H) : img.clientWidth / W);
     const min = () => Math.min(fit(), 1);
+    const shrunk = () => (svg ? Math.min(wrap.offsetWidth / W, wrap.offsetHeight / H) : fit()) < 1;
     const tools = document.createElement('div');
     tools.className = toolsClass;
     tools.hidden = true;
@@ -384,11 +387,13 @@ body { margin: 0; }
         return;
       }
       if (fitted || printing) {
-        first.style.transform = '';
+        img.style.transform = '';
+        img.style.borderColor = '';
         return;
       }
       const k = s / fit(), ox = img.clientLeft, oy = img.clientTop;
-      first.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
+      img.style.borderColor = 'transparent';
+      img.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
     };
 
     const render = () => {
@@ -407,7 +412,7 @@ body { margin: 0; }
       cy = clamp(cy, vh, H);
       show(cx - vw / 2, cy - vh / 2, vw, vh);
       wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
-      offer(!fitted || fit() < 1);
+      offer(!fitted || shrunk());
       button('in').disabled = s >= MAX;
       button('out').disabled = s <= min();
       button('fit').disabled = fitted;
