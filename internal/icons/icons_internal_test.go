@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -348,14 +349,17 @@ func TestShortNames(t *testing.T) { //nolint:paralleltest // it reads the enviro
 	if root == "" {
 		t.Skip("FLOE_ICONS_DIR names no fetched set")
 	}
-	set := New(root, false, "FLOE_ICONS_DIR")
 	for _, k := range kits {
-		idx, err := set.readIndex(k)
+		raw, err := os.ReadFile(filepath.Join(root, k.name, "index.json")) //nolint:gosec // the file the person running this names
+		if errors.Is(err, os.ErrNotExist) {
+			t.Skipf("%s is not fetched in %s", k.name, root)
+		}
 		if err != nil {
 			t.Fatal(err)
 		}
-		if idx == nil {
-			t.Skipf("%s is not fetched in %s", k.name, root)
+		var idx index
+		if err := json.Unmarshal(raw, &idx); err != nil {
+			t.Fatal(err)
 		}
 		for word, names := range k.short {
 			for _, name := range names {
