@@ -54,11 +54,11 @@ vet:
 test:
     go test -shuffle=on {{pkgs}}
 
-# Run tests with the race detector (needs CGO and a C compiler)
+# Run tests with the race detector (needs CGO and a C compiler); the heaviest random tests of internal/diagram run a fifth of their graphs
 test-race:
     CGO_ENABLED=1 go test -race -shuffle=on {{pkgs}}
 
-# Run tests with the race detector but the browser tests, as CI's test job does
+# Run tests with the race detector but the browser tests, as CI's test job does; the heaviest random tests of internal/diagram run a fifth of their graphs
 # -timeout stays under CI's 10 minutes, so that a slow or stuck run names the tests still running, not just a cancelled job.
 test-race-core:
     CGO_ENABLED=1 go test -race -shuffle=on -timeout 9m $({{core_pkgs}})
@@ -110,6 +110,7 @@ cover-check:
     min_coverage="${MIN_COVERAGE:-90}"
     # The browser tests are left out: without Chrome (skipped) they would lower the total, so that it would not be CI's.
     # set, as it runs without -race (which makes go count atomic): only whether a line ran counts, and set is the fastest
+    # -timeout stays under CI's 10 minutes, as in test-race-core; this job runs all of the random graphs, so reproduce a failure here without -race.
     go test -shuffle=on -timeout 9m -covermode=set -coverpkg=./internal/... -coverprofile={{cover_file}} $({{core_pkgs}})
     total=$(go tool cover -func={{cover_file}} | awk '/^total:/ {gsub("%","",$3); print $3}')
     echo "Total coverage: ${total}% (threshold: ${min_coverage}%)"
