@@ -322,7 +322,11 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("document.getElementById('set-dialog').close()")
 	// The parent as written, spaces round it, left alone: not sent, nor written again.
 	byHand("#7", " #9")
+	b.until("read", "tasksRead.tasks.proj['#7'].parent === ' #9'")
 	setDialog()
+	if got := b.eval("document.getElementById('set-parent').value"); got != " #9" {
+		t.Errorf("the parent's field: %q", got)
+	}
 	b.eval("document.getElementById('set-step').value = 'build'")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("saved", "!document.getElementById('set-dialog').open")
