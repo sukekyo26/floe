@@ -11,8 +11,8 @@ import (
 
 // check reports the layout's mistakes: text too wide or tall for its box or frame (as it was laid out), parts
 // (edges, lines and axes too) sticking out of the canvas, overlapping (frame headings too), boxes, marks and the
-// labels their writer put where they are straddling the edge of a frame, edges running through boxes, labels or frame
-// headings, and edges crossing. A frame's own box is compared with no other frame's, and a frame's heading is not
+// labels kept off a frame's edge straddling it, edges running through boxes, labels or frame headings, and edges
+// crossing. A frame's own box is compared with no other frame's, and a frame's heading is not
 // kept within the frame's height or a canvas written (its width is, by addFrame): frames may cross on purpose (a group
 // over two columns, bands that cross), and on the page a heading out of its frame shows below it, one out of a canvas
 // written cut short or gone (a canvas left out reaches it). A frame's icon is a box and its heading a text, each
@@ -33,13 +33,19 @@ func (l *layout) checked() error {
 }
 
 // checkPlacement reports parts sticking out of the canvas; boxes (a frame's icon among them), marks, labels and
-// frame headings overlapping; and boxes, marks and the labels their writer put where they are (pinned: a label part
-// written at an x and y, an edge's written at) straddling a frame, a label by its box (5 wider each side than its
-// text, with no background too, as for overlaps). Frames are not compared with one another, so a label heading a
-// band across frames that cross it straddles them, as a box there does.
-// LIMIT: the labels floe places (an edge's in the middle of the edge, which may cross frames, a graph's, an icon's, a
-// bar's and an axis's, a label part's in its region of a Venn diagram, minding only circles) are not kept off a
-// frame's edge; keep them off too if one strays.
+// frame headings overlapping; and boxes, marks and the labels kept off a frame's edge (offEdge: the ones their writer
+// put where they stand, a label part at an x and y and an edge's at at; and the ones of a part that may not straddle a
+// frame itself, an icon and a bar) straddling a frame, told once for each edge crossed, a label by its box (5 wider
+// each side than its text, with no background too, as for overlaps). Frames are not compared with one another, so a
+// label heading a band across frames that cross it straddles them, as a box there does.
+// LIMIT: the other labels are not kept off a frame's edge: an edge's with no at (in the middle of the edge, which may
+// cross frames), an axis's (which may too), a graph edge's, and a label part's in its region of a Venn diagram, minding
+// only circles. Keep them off too if one strays.
+// LIMIT: the numbers told are rounded by num to 2 places, so with coordinates of 3 places or more an edge within 0.005
+// of a part's end reads as that end (at x 140, spanning 140 to 180), and a frame written to the numbers told may still
+// be refused; round the coordinates to mend it. Tell more places if writers come to need them.
+// LIMIT: the edges one part crosses are told in the order of their words (usererr.Sorted compares text), so at x 140
+// comes before at x 20. Sort them by number if the order comes to matter.
 func (l *layout) checkPlacement() {
 	canvas := l.canvas()
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
@@ -60,14 +66,40 @@ func (l *layout) checkPlacement() {
 			}
 		}
 	}
-	pinned := slices.DeleteFunc(slices.Clone(l.labels), func(r rect) bool { return !r.pinned })
-	for _, b := range slices.Concat(l.boxes, l.marks, pinned) {
+	offEdge := slices.DeleteFunc(slices.Clone(l.labels), func(r rect) bool { return !r.offEdge })
+	for _, b := range slices.Concat(l.boxes, l.marks, offEdge) {
 		for _, f := range l.frames {
-			if b.overlaps(f) && !b.inside(f) {
-				l.tell("diagram_straddle", []placed{{b.at, b.graph}, {f.at, f.graph}}, b.what, f.what)
+			if !b.overlaps(f) {
+				continue
+			}
+			things := []placed{{b.at, b.graph}, {f.at, f.graph}}
+			for _, c := range edgesCrossed(b, f) {
+				l.tell("diagram_straddle", things, b.what, f.what, c.axis, num(c.at), num(c.lo), num(c.hi))
 			}
 		}
 	}
+}
+
+// edgeCrossed is an edge of a frame across a part: where it stands on axis, and where the part spans on it.
+type edgeCrossed struct {
+	axis       string
+	at, lo, hi float64
+}
+
+// edgesCrossed are the edges of frame f that a, overlapping f, runs across. An end within eps of an edge does not cross
+// it: a frame written to the numbers told must pass, though a sum of a label's place and width is off them by float
+// error.
+func edgesCrossed(a, f rect) []edgeCrossed {
+	var out []edgeCrossed
+	for axis, name := range []string{"x", "y"} {
+		lo, hi := a.lo(axis), a.lo(axis)+a.size(axis)
+		for _, at := range []float64{f.lo(axis), f.lo(axis) + f.size(axis)} {
+			if lo < at-eps && at+eps < hi {
+				out = append(out, edgeCrossed{name, at, lo, hi})
+			}
+		}
+	}
+	return out
 }
 
 // checkEdges reports edges running through boxes, labels or frame headings: an edge across a label hides part
@@ -313,7 +345,7 @@ func (l *layout) addLabel(lb *label, at string) {
 			l.problem(at, "diagram_label_region", l.labels[i].what, strings.Join(lb.In, ", "))
 			return
 		}
-		l.labels[i].pinned = true
+		l.labels[i].offEdge = true
 		return
 	}
 	names := strings.Join(lb.In, ", ")

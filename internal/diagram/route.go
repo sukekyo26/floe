@@ -610,7 +610,7 @@ func (l *layout) addEdge(e *edge, at string) {
 		// checked against it like any other.
 		inGraph := e.graph != ""
 		i := l.label(at, e.Label, x, y, cmp.Or(e.anchor, "middle"), inGraph, false)
-		l.labels[i].graph, l.labels[i].pinned = e.graph, e.At != nil && !inGraph
+		l.labels[i].graph, l.labels[i].offEdge = e.graph, e.At != nil && !inGraph
 		if !inGraph {
 			p.own = i
 		}
