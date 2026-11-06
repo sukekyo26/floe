@@ -1,2 +1,7 @@
-/* A thin frame keeps a screenshot's white apart from the page's */
-:scope img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius-small); }
+/* A thin frame keeps a screenshot's white apart from the page's. The frame spans the body's width, as the image
+   would, not the image's: an svg without a size of its own lies at no width in a box as wide as what it holds.
+   While zoomed, the image's line is dropped (scaled, it would thicken) and the frame rounds its corners instead */
+:scope .floe-zoom { border-radius: var(--radius-small); }
+:scope img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius-small); transform-origin: 0 0; }
+:scope .floe-zoom.zoomed img { border-color: transparent; }
+:scope figcaption { margin-top: 0.4rem; font-size: var(--floe-text-aside); color: var(--muted); }

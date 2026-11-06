@@ -262,6 +262,62 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="diagram"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The frame clips what it zooms. It takes a finger's pan and pinch only while it may zoom (can-zoom): one that may
+   not leaves the page to pinch */
+.floe-zoom { position: relative; overflow: hidden; }
+.floe-zoom.can-zoom { touch-action: pan-y; }
+.floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
+.floe-zoom.zoomed:active { cursor: grabbing; }
+.floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
+/* display: flex above wins over the browser's [hidden] */
+.floe-zoom-tools[hidden] { display: none; }
+.floe-zoom-tools span { color: var(--muted); margin-right: auto; }
+@media (max-width: 640px) { .floe-zoom-tools span { display: none; } }
+/* Buttons do nothing on paper */
+@media print { .floe-zoom-tools { display: none; } }
+/* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */
+.floe-zoom-tools button {
+  --floe-tool-alpha: 100%; min-width: 2.2rem; padding: 2px 8px; font: inherit; border-radius: var(--radius-small); cursor: pointer;
+  color: color-mix(in srgb, var(--fg) var(--floe-tool-alpha), transparent); background: color-mix(in srgb, var(--surface) var(--floe-tool-alpha), transparent);
+  border: 1px solid color-mix(in srgb, var(--line) var(--floe-tool-alpha), transparent);
+}
+.floe-zoom-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.floe-zoom-tools button:disabled { --floe-tool-alpha: 40%; cursor: default; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="diagram"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The frame clips what it zooms. It takes a finger's pan and pinch only while it may zoom (can-zoom): one that may
+   not leaves the page to pinch */
+.floe-zoom { position: relative; overflow: hidden; }
+.floe-zoom.can-zoom { touch-action: pan-y; }
+.floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
+.floe-zoom.zoomed:active { cursor: grabbing; }
+.floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
+/* display: flex above wins over the browser's [hidden] */
+.floe-zoom-tools[hidden] { display: none; }
+.floe-zoom-tools span { color: var(--muted); margin-right: auto; }
+@media (max-width: 640px) { .floe-zoom-tools span { display: none; } }
+/* Buttons do nothing on paper */
+@media print { .floe-zoom-tools { display: none; } }
+/* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */
+.floe-zoom-tools button {
+  --floe-tool-alpha: 100%; min-width: 2.2rem; padding: 2px 8px; font: inherit; border-radius: var(--radius-small); cursor: pointer;
+  color: color-mix(in srgb, var(--fg) var(--floe-tool-alpha), transparent); background: color-mix(in srgb, var(--surface) var(--floe-tool-alpha), transparent);
+  border: 1px solid color-mix(in srgb, var(--line) var(--floe-tool-alpha), transparent);
+}
+.floe-zoom-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.floe-zoom-tools button:disabled { --floe-tool-alpha: 40%; cursor: default; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="diagram"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Diagrams take the colours of the page's CSS variables, so they follow the theme. text-anchor is
    set as an attribute: in CSS it would win over the attribute and undo each text's own anchor */
 /* The frame spans the body's width. Its height follows the diagram's aspect ratio, capped by the
@@ -272,23 +328,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    diagram, and a fragment of floe diagram render on another page paints default's --bg, a light box on a dark page
    (its docs tell to set --bg on the roots); to let the ground through, cut the lines under what hides them (a mask)
    instead of painting one */
-.dg-wrap { position: relative; width: 100%; overflow: hidden; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); touch-action: pan-y; }
-.dg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
-.dg-wrap.zoomed:active { cursor: grabbing; }
-.dg-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
-.dg-tools span { color: var(--muted); margin-right: auto; }
-@media (max-width: 640px) { .dg-tools span { display: none; } }
-/* Buttons do nothing on paper */
-@media print { .dg-tools { display: none; } }
-/* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */
-.dg-tools button {
-  --floe-tool-alpha: 100%; min-width: 2.2rem; padding: 2px 8px; font: inherit; border-radius: var(--radius-small); cursor: pointer;
-  color: color-mix(in srgb, var(--fg) var(--floe-tool-alpha), transparent); background: color-mix(in srgb, var(--surface) var(--floe-tool-alpha), transparent);
-  border: 1px solid color-mix(in srgb, var(--line) var(--floe-tool-alpha), transparent);
-}
-.dg-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.dg-tools button:disabled { --floe-tool-alpha: 40%; cursor: default; }
+.floe-zoom { width: 100%; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); }
 /* What has no tone draws in its shape's own colours, written after var(): the diagram's root holds no tone, unlike
    a part's box, and what has one (data-floe-tone) takes its colours */
 .dg { --tone: initial; --tone-soft: initial; position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--font); }
@@ -345,23 +385,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    diagram, and a fragment of floe diagram render on another page paints default's --bg, a light box on a dark page
    (its docs tell to set --bg on the roots); to let the ground through, cut the lines under what hides them (a mask)
    instead of painting one */
-.dg-wrap { position: relative; width: 100%; overflow: hidden; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); touch-action: pan-y; }
-.dg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.dg-wrap.zoomed { cursor: grab; touch-action: none; user-select: none; }
-.dg-wrap.zoomed:active { cursor: grabbing; }
-.dg-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
-.dg-tools span { color: var(--muted); margin-right: auto; }
-@media (max-width: 640px) { .dg-tools span { display: none; } }
-/* Buttons do nothing on paper */
-@media print { .dg-tools { display: none; } }
-/* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */
-.dg-tools button {
-  --floe-tool-alpha: 100%; min-width: 2.2rem; padding: 2px 8px; font: inherit; border-radius: var(--radius-small); cursor: pointer;
-  color: color-mix(in srgb, var(--fg) var(--floe-tool-alpha), transparent); background: color-mix(in srgb, var(--surface) var(--floe-tool-alpha), transparent);
-  border: 1px solid color-mix(in srgb, var(--line) var(--floe-tool-alpha), transparent);
-}
-.dg-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.dg-tools button:disabled { --floe-tool-alpha: 40%; cursor: default; }
+.floe-zoom { width: 100%; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-small); }
 /* What has no tone draws in its shape's own colours, written after var(): the diagram's root holds no tone, unlike
    a part's box, and what has one (data-floe-tone) takes its colours */
 .dg { --tone: initial; --tone-soft: initial; position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-family: var(--font); }
@@ -550,27 +574,44 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </header>
 <section>
 <h2 id="流れ">流れ</h2>
-<div data-floe-part="diagram"><script>(function zoomable({ words, wrap: wrapClass, tools: toolsClass }) {
+<div data-floe-part="diagram"><script>(function zoomable({ words, frame: frameClass, tools: toolsClass }) {
   const MAX = 4;
   const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
   const msg = words[lang] || words[lang.split('-')[0]] || words.en;
   const setup = (wrap) => {
-    const svg = wrap.querySelector('svg');
-    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
-    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    if (wrap.dataset.zoomable) return;
+    const first = wrap.firstElementChild;
+    const svg = first?.localName === 'svg' ? first : null;
+    const img = svg || !first ? null : first.localName === 'img' ? first : first.querySelector('img');
+    if (!svg && !img) return;
+    if (img && !img.complete) {
+      wrap.dataset.zoomable = 'pending';
+      const again = () => {
+        delete wrap.dataset.zoomable;
+        setup(wrap);
+      };
+      img.addEventListener('load', again, { once: true });
+      img.addEventListener('error', again, { once: true });
+      return;
+    }
+    const [W, H] = svg ? (svg.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number).slice(2) : [img.naturalWidth, img.naturalHeight];
+    if (!(W > 0 && H > 0)) return;
     wrap.dataset.zoomable = 'on';
+    if (img) img.draggable = false;
     let s = 1, cx = W / 2, cy = H / 2, fitted = true;
     let printing = false;
-    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    let offered;
+    const fit = () => (svg ? Math.min(wrap.clientWidth / W, wrap.clientHeight / H) : img.clientWidth / W);
     const min = () => Math.min(fit(), 1);
     const tools = document.createElement('div');
     tools.className = toolsClass;
+    tools.hidden = true;
     const hint = document.createElement('span');
-    hint.textContent = msg.diagram_zoom_hint;
+    hint.textContent = msg.zoom_hint;
     tools.append(hint);
     for (const [k, text, label] of [
-      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
-      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+      ['in', '+', msg.zoom_in], ['out', '−', msg.zoom_out],
+      ['fit', msg.zoom_fit, msg.zoom_fit_label], ['one', msg.zoom_one, msg.zoom_one_label],
     ]) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -583,22 +624,52 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
     wrap.before(tools);
     const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
 
+    const offer = (can) => {
+      if (can === offered) return;
+      offered = can;
+      const focused = wrap.contains(document.activeElement) || tools.contains(document.activeElement);
+      tools.hidden = !can;
+      wrap.classList.toggle('can-zoom', can);
+      wrap.tabIndex = can ? 0 : -1;
+      if (can) {
+        wrap.setAttribute('role', 'group');
+        wrap.setAttribute('aria-label', msg.zoom_frame);
+      } else {
+        wrap.removeAttribute('role');
+        wrap.removeAttribute('aria-label');
+        if (focused) wrap.focus();
+      }
+    };
+    const show = (x, y, w, h) => {
+      if (svg) {
+        svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+        return;
+      }
+      if (fitted || printing) {
+        first.style.transform = '';
+        return;
+      }
+      const k = s / fit(), ox = img.clientLeft, oy = img.clientTop;
+      first.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
+    };
+
     const render = () => {
       if (printing) {
-        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        show(0, 0, W, H);
         wrap.classList.remove('zoomed');
         return;
       }
       const w = wrap.clientWidth, h = wrap.clientHeight;
       if (!w || !h) return;
       if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
-      s = Math.min(Math.max(s, min()), MAX);
+      else s = Math.min(Math.max(s, min()), MAX);
       const vw = w / s, vh = h / s;
-      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      const clamp = (c, v, size) => (v >= size ? (svg ? size / 2 : v / 2) : Math.min(Math.max(c, v / 2), size - v / 2));
       cx = clamp(cx, vw, W);
       cy = clamp(cy, vh, H);
-      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      show(cx - vw / 2, cy - vh / 2, vw, vh);
       wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      offer(!fitted || fit() < 1);
       button('in').disabled = s >= MAX;
       button('out').disabled = s <= min();
       button('fit').disabled = fitted;
@@ -629,7 +700,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       }
     });
     wrap.addEventListener('wheel', (e) => {
-      if (!e.ctrlKey && !e.metaKey) return;
+      if (!offered || (!e.ctrlKey && !e.metaKey)) return;
       e.preventDefault();
       const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
       zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
@@ -641,7 +712,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
     };
     wrap.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      if (!offered || e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
       e.preventDefault();
       wrap.setPointerCapture(e.pointerId);
       points.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -658,11 +729,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
     });
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
 
-    wrap.tabIndex = 0;
-    wrap.setAttribute('role', 'group');
-    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
     wrap.addEventListener('keydown', (e) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!offered || e.ctrlKey || e.metaKey || e.altKey) return;
       const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
       if (zoom) {
         e.preventDefault();
@@ -687,34 +755,51 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       render();
     });
   };
-  const init = () => document.querySelectorAll('.' + wrapClass).forEach(setup);
+  const init = () => document.querySelectorAll('.' + frameClass).forEach(setup);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-})({"tools":"dg-tools","words":{"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}},"wrap":"dg-wrap"});</script><div class="dg-wrap" style="aspect-ratio: 420 / 100; max-height: min(85vh, 123px)"><svg viewBox="0 0 420 100" class="dg" role="img" aria-label="写し"><defs><marker id="dg1-fdc981_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-fill"></path></marker></defs><path d="M180,50 H240" class="edge" marker-end="url(#dg1-fdc981_arrow)"></path><g class="box"><rect x="20" y="24" width="160" height="52" rx="8"></rect><text x="100" y="50" text-anchor="middle" class="main">古いサーバー</text></g><g class="box" data-floe-tone="good"><rect x="240" y="24" width="160" height="52" rx="8"></rect><text x="320" y="50" text-anchor="middle" class="main">新しいホスト</text></g></svg></div></div>
+})({"frame":"floe-zoom","tools":"floe-zoom-tools","words":{"en":{"zoom_fit":"Fit","zoom_fit_label":"Show the whole figure","zoom_frame":"Zoomable figure","zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the figure; drag or use the arrow keys to move while zoomed","zoom_in":"Zoom in","zoom_one":"1:1","zoom_one_label":"Show at actual size","zoom_out":"Zoom out"},"ja":{"zoom_fit":"全体","zoom_fit_label":"全体を表示","zoom_frame":"拡大できる図","zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","zoom_in":"拡大","zoom_one":"原寸","zoom_one_label":"原寸で表示","zoom_out":"縮小"}}});</script><div class="floe-zoom" style="aspect-ratio: 420 / 100; max-height: min(85vh, 123px)"><svg viewBox="0 0 420 100" class="dg" role="img" aria-label="写し"><defs><marker id="dg1-fdc981_arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-fill"></path></marker></defs><path d="M180,50 H240" class="edge" marker-end="url(#dg1-fdc981_arrow)"></path><g class="box"><rect x="20" y="24" width="160" height="52" rx="8"></rect><text x="100" y="50" text-anchor="middle" class="main">古いサーバー</text></g><g class="box" data-floe-tone="good"><rect x="240" y="24" width="160" height="52" rx="8"></rect><text x="320" y="50" text-anchor="middle" class="main">新しいホスト</text></g></svg></div></div>
 </section>
 <section>
 <h2 id="アイコン">アイコン</h2>
-<div data-floe-part="diagram"><script>(function zoomable({ words, wrap: wrapClass, tools: toolsClass }) {
+<div data-floe-part="diagram"><script>(function zoomable({ words, frame: frameClass, tools: toolsClass }) {
   const MAX = 4;
   const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
   const msg = words[lang] || words[lang.split('-')[0]] || words.en;
   const setup = (wrap) => {
-    const svg = wrap.querySelector('svg');
-    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
-    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    if (wrap.dataset.zoomable) return;
+    const first = wrap.firstElementChild;
+    const svg = first?.localName === 'svg' ? first : null;
+    const img = svg || !first ? null : first.localName === 'img' ? first : first.querySelector('img');
+    if (!svg && !img) return;
+    if (img && !img.complete) {
+      wrap.dataset.zoomable = 'pending';
+      const again = () => {
+        delete wrap.dataset.zoomable;
+        setup(wrap);
+      };
+      img.addEventListener('load', again, { once: true });
+      img.addEventListener('error', again, { once: true });
+      return;
+    }
+    const [W, H] = svg ? (svg.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number).slice(2) : [img.naturalWidth, img.naturalHeight];
+    if (!(W > 0 && H > 0)) return;
     wrap.dataset.zoomable = 'on';
+    if (img) img.draggable = false;
     let s = 1, cx = W / 2, cy = H / 2, fitted = true;
     let printing = false;
-    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    let offered;
+    const fit = () => (svg ? Math.min(wrap.clientWidth / W, wrap.clientHeight / H) : img.clientWidth / W);
     const min = () => Math.min(fit(), 1);
     const tools = document.createElement('div');
     tools.className = toolsClass;
+    tools.hidden = true;
     const hint = document.createElement('span');
-    hint.textContent = msg.diagram_zoom_hint;
+    hint.textContent = msg.zoom_hint;
     tools.append(hint);
     for (const [k, text, label] of [
-      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
-      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+      ['in', '+', msg.zoom_in], ['out', '−', msg.zoom_out],
+      ['fit', msg.zoom_fit, msg.zoom_fit_label], ['one', msg.zoom_one, msg.zoom_one_label],
     ]) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -727,22 +812,52 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
     wrap.before(tools);
     const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
 
+    const offer = (can) => {
+      if (can === offered) return;
+      offered = can;
+      const focused = wrap.contains(document.activeElement) || tools.contains(document.activeElement);
+      tools.hidden = !can;
+      wrap.classList.toggle('can-zoom', can);
+      wrap.tabIndex = can ? 0 : -1;
+      if (can) {
+        wrap.setAttribute('role', 'group');
+        wrap.setAttribute('aria-label', msg.zoom_frame);
+      } else {
+        wrap.removeAttribute('role');
+        wrap.removeAttribute('aria-label');
+        if (focused) wrap.focus();
+      }
+    };
+    const show = (x, y, w, h) => {
+      if (svg) {
+        svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+        return;
+      }
+      if (fitted || printing) {
+        first.style.transform = '';
+        return;
+      }
+      const k = s / fit(), ox = img.clientLeft, oy = img.clientTop;
+      first.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
+    };
+
     const render = () => {
       if (printing) {
-        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        show(0, 0, W, H);
         wrap.classList.remove('zoomed');
         return;
       }
       const w = wrap.clientWidth, h = wrap.clientHeight;
       if (!w || !h) return;
       if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
-      s = Math.min(Math.max(s, min()), MAX);
+      else s = Math.min(Math.max(s, min()), MAX);
       const vw = w / s, vh = h / s;
-      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      const clamp = (c, v, size) => (v >= size ? (svg ? size / 2 : v / 2) : Math.min(Math.max(c, v / 2), size - v / 2));
       cx = clamp(cx, vw, W);
       cy = clamp(cy, vh, H);
-      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      show(cx - vw / 2, cy - vh / 2, vw, vh);
       wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      offer(!fitted || fit() < 1);
       button('in').disabled = s >= MAX;
       button('out').disabled = s <= min();
       button('fit').disabled = fitted;
@@ -773,7 +888,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       }
     });
     wrap.addEventListener('wheel', (e) => {
-      if (!e.ctrlKey && !e.metaKey) return;
+      if (!offered || (!e.ctrlKey && !e.metaKey)) return;
       e.preventDefault();
       const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
       zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
@@ -785,7 +900,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
     };
     wrap.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      if (!offered || e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
       e.preventDefault();
       wrap.setPointerCapture(e.pointerId);
       points.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -802,11 +917,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
     });
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
 
-    wrap.tabIndex = 0;
-    wrap.setAttribute('role', 'group');
-    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
     wrap.addEventListener('keydown', (e) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!offered || e.ctrlKey || e.metaKey || e.altKey) return;
       const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
       if (zoom) {
         e.preventDefault();
@@ -831,10 +943,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       render();
     });
   };
-  const init = () => document.querySelectorAll('.' + wrapClass).forEach(setup);
+  const init = () => document.querySelectorAll('.' + frameClass).forEach(setup);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-})({"tools":"dg-tools","words":{"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}},"wrap":"dg-wrap"});</script><div class="dg-wrap" style="aspect-ratio: 200 / 120; max-height: min(85vh, 148px)"><svg viewBox="0 0 200 120" class="dg" role="img" aria-label="Lambda"><defs><image id="dg2-ec31a3_icon-0" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjZWQ3MTAwIi8+PC9zdmc+Cg==" width="48" height="48"></image></defs><use href="#dg2-ec31a3_icon-0" x="76" y="20"></use><rect x="59" y="71" width="82" height="18" class="label-bg"></rect><text x="100" y="80" text-anchor="middle" class="label">AWS Lambda</text></svg></div></div>
+})({"frame":"floe-zoom","tools":"floe-zoom-tools","words":{"en":{"zoom_fit":"Fit","zoom_fit_label":"Show the whole figure","zoom_frame":"Zoomable figure","zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the figure; drag or use the arrow keys to move while zoomed","zoom_in":"Zoom in","zoom_one":"1:1","zoom_one_label":"Show at actual size","zoom_out":"Zoom out"},"ja":{"zoom_fit":"全体","zoom_fit_label":"全体を表示","zoom_frame":"拡大できる図","zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","zoom_in":"拡大","zoom_one":"原寸","zoom_one_label":"原寸で表示","zoom_out":"縮小"}}});</script><div class="floe-zoom" style="aspect-ratio: 200 / 120; max-height: min(85vh, 148px)"><svg viewBox="0 0 200 120" class="dg" role="img" aria-label="Lambda"><defs><image id="dg2-ec31a3_icon-0" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjZWQ3MTAwIi8+PC9zdmc+Cg==" width="48" height="48"></image></defs><use href="#dg2-ec31a3_icon-0" x="76" y="20"></use><rect x="59" y="71" width="82" height="18" class="label-bg"></rect><text x="100" y="80" text-anchor="middle" class="label">AWS Lambda</text></svg></div></div>
 </section>
 <section>
 <h2 id="タブと折りたたみ">タブと折りたたみ</h2>
@@ -845,27 +957,44 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <tr><td>古いサーバー</td><td>新しいホスト</td></tr>
 </tbody>
 </table></div></div>
-<label><input type="radio" name="tab"/>図</label><div data-floe-part="stack"><div data-floe-part="diagram"><script>(function zoomable({ words, wrap: wrapClass, tools: toolsClass }) {
+<label><input type="radio" name="tab"/>図</label><div data-floe-part="stack"><div data-floe-part="diagram"><script>(function zoomable({ words, frame: frameClass, tools: toolsClass }) {
   const MAX = 4;
   const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
   const msg = words[lang] || words[lang.split('-')[0]] || words.en;
   const setup = (wrap) => {
-    const svg = wrap.querySelector('svg');
-    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
-    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    if (wrap.dataset.zoomable) return;
+    const first = wrap.firstElementChild;
+    const svg = first?.localName === 'svg' ? first : null;
+    const img = svg || !first ? null : first.localName === 'img' ? first : first.querySelector('img');
+    if (!svg && !img) return;
+    if (img && !img.complete) {
+      wrap.dataset.zoomable = 'pending';
+      const again = () => {
+        delete wrap.dataset.zoomable;
+        setup(wrap);
+      };
+      img.addEventListener('load', again, { once: true });
+      img.addEventListener('error', again, { once: true });
+      return;
+    }
+    const [W, H] = svg ? (svg.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number).slice(2) : [img.naturalWidth, img.naturalHeight];
+    if (!(W > 0 && H > 0)) return;
     wrap.dataset.zoomable = 'on';
+    if (img) img.draggable = false;
     let s = 1, cx = W / 2, cy = H / 2, fitted = true;
     let printing = false;
-    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    let offered;
+    const fit = () => (svg ? Math.min(wrap.clientWidth / W, wrap.clientHeight / H) : img.clientWidth / W);
     const min = () => Math.min(fit(), 1);
     const tools = document.createElement('div');
     tools.className = toolsClass;
+    tools.hidden = true;
     const hint = document.createElement('span');
-    hint.textContent = msg.diagram_zoom_hint;
+    hint.textContent = msg.zoom_hint;
     tools.append(hint);
     for (const [k, text, label] of [
-      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
-      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+      ['in', '+', msg.zoom_in], ['out', '−', msg.zoom_out],
+      ['fit', msg.zoom_fit, msg.zoom_fit_label], ['one', msg.zoom_one, msg.zoom_one_label],
     ]) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -878,22 +1007,52 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
     wrap.before(tools);
     const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
 
+    const offer = (can) => {
+      if (can === offered) return;
+      offered = can;
+      const focused = wrap.contains(document.activeElement) || tools.contains(document.activeElement);
+      tools.hidden = !can;
+      wrap.classList.toggle('can-zoom', can);
+      wrap.tabIndex = can ? 0 : -1;
+      if (can) {
+        wrap.setAttribute('role', 'group');
+        wrap.setAttribute('aria-label', msg.zoom_frame);
+      } else {
+        wrap.removeAttribute('role');
+        wrap.removeAttribute('aria-label');
+        if (focused) wrap.focus();
+      }
+    };
+    const show = (x, y, w, h) => {
+      if (svg) {
+        svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+        return;
+      }
+      if (fitted || printing) {
+        first.style.transform = '';
+        return;
+      }
+      const k = s / fit(), ox = img.clientLeft, oy = img.clientTop;
+      first.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
+    };
+
     const render = () => {
       if (printing) {
-        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        show(0, 0, W, H);
         wrap.classList.remove('zoomed');
         return;
       }
       const w = wrap.clientWidth, h = wrap.clientHeight;
       if (!w || !h) return;
       if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
-      s = Math.min(Math.max(s, min()), MAX);
+      else s = Math.min(Math.max(s, min()), MAX);
       const vw = w / s, vh = h / s;
-      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      const clamp = (c, v, size) => (v >= size ? (svg ? size / 2 : v / 2) : Math.min(Math.max(c, v / 2), size - v / 2));
       cx = clamp(cx, vw, W);
       cy = clamp(cy, vh, H);
-      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      show(cx - vw / 2, cy - vh / 2, vw, vh);
       wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      offer(!fitted || fit() < 1);
       button('in').disabled = s >= MAX;
       button('out').disabled = s <= min();
       button('fit').disabled = fitted;
@@ -924,7 +1083,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       }
     });
     wrap.addEventListener('wheel', (e) => {
-      if (!e.ctrlKey && !e.metaKey) return;
+      if (!offered || (!e.ctrlKey && !e.metaKey)) return;
       e.preventDefault();
       const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
       zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
@@ -936,7 +1095,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
     };
     wrap.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      if (!offered || e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
       e.preventDefault();
       wrap.setPointerCapture(e.pointerId);
       points.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -953,11 +1112,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
     });
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
 
-    wrap.tabIndex = 0;
-    wrap.setAttribute('role', 'group');
-    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
     wrap.addEventListener('keydown', (e) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!offered || e.ctrlKey || e.metaKey || e.altKey) return;
       const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
       if (zoom) {
         e.preventDefault();
@@ -982,32 +1138,49 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       render();
     });
   };
-  const init = () => document.querySelectorAll('.' + wrapClass).forEach(setup);
+  const init = () => document.querySelectorAll('.' + frameClass).forEach(setup);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-})({"tools":"dg-tools","words":{"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}},"wrap":"dg-wrap"});</script><div class="dg-wrap" style="aspect-ratio: 200 / 80; max-height: min(85vh, 98px)"><svg viewBox="0 0 200 80" class="dg" role="img" aria-label="タブの中の図"><defs></defs><g class="box"><rect x="20" y="14" width="160" height="52" rx="8"></rect><text x="100" y="40" text-anchor="middle" class="main">新しいホスト</text></g></svg></div></div></div>
+})({"frame":"floe-zoom","tools":"floe-zoom-tools","words":{"en":{"zoom_fit":"Fit","zoom_fit_label":"Show the whole figure","zoom_frame":"Zoomable figure","zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the figure; drag or use the arrow keys to move while zoomed","zoom_in":"Zoom in","zoom_one":"1:1","zoom_one_label":"Show at actual size","zoom_out":"Zoom out"},"ja":{"zoom_fit":"全体","zoom_fit_label":"全体を表示","zoom_frame":"拡大できる図","zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","zoom_in":"拡大","zoom_one":"原寸","zoom_one_label":"原寸で表示","zoom_out":"縮小"}}});</script><div class="floe-zoom" style="aspect-ratio: 200 / 80; max-height: min(85vh, 98px)"><svg viewBox="0 0 200 80" class="dg" role="img" aria-label="タブの中の図"><defs></defs><g class="box"><rect x="20" y="14" width="160" height="52" rx="8"></rect><text x="100" y="40" text-anchor="middle" class="main">新しいホスト</text></g></svg></div></div></div>
 </form>
-<details data-floe-part="details"><summary>畳んだ図</summary><div data-floe-part="stack"><div data-floe-part="diagram"><script>(function zoomable({ words, wrap: wrapClass, tools: toolsClass }) {
+<details data-floe-part="details"><summary>畳んだ図</summary><div data-floe-part="stack"><div data-floe-part="diagram"><script>(function zoomable({ words, frame: frameClass, tools: toolsClass }) {
   const MAX = 4;
   const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
   const msg = words[lang] || words[lang.split('-')[0]] || words.en;
   const setup = (wrap) => {
-    const svg = wrap.querySelector('svg');
-    const [, , W, H] = (svg?.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
-    if (wrap.dataset.zoomable || !(W > 0 && H > 0)) return;
+    if (wrap.dataset.zoomable) return;
+    const first = wrap.firstElementChild;
+    const svg = first?.localName === 'svg' ? first : null;
+    const img = svg || !first ? null : first.localName === 'img' ? first : first.querySelector('img');
+    if (!svg && !img) return;
+    if (img && !img.complete) {
+      wrap.dataset.zoomable = 'pending';
+      const again = () => {
+        delete wrap.dataset.zoomable;
+        setup(wrap);
+      };
+      img.addEventListener('load', again, { once: true });
+      img.addEventListener('error', again, { once: true });
+      return;
+    }
+    const [W, H] = svg ? (svg.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number).slice(2) : [img.naturalWidth, img.naturalHeight];
+    if (!(W > 0 && H > 0)) return;
     wrap.dataset.zoomable = 'on';
+    if (img) img.draggable = false;
     let s = 1, cx = W / 2, cy = H / 2, fitted = true;
     let printing = false;
-    const fit = () => Math.min(wrap.clientWidth / W, wrap.clientHeight / H);
+    let offered;
+    const fit = () => (svg ? Math.min(wrap.clientWidth / W, wrap.clientHeight / H) : img.clientWidth / W);
     const min = () => Math.min(fit(), 1);
     const tools = document.createElement('div');
     tools.className = toolsClass;
+    tools.hidden = true;
     const hint = document.createElement('span');
-    hint.textContent = msg.diagram_zoom_hint;
+    hint.textContent = msg.zoom_hint;
     tools.append(hint);
     for (const [k, text, label] of [
-      ['in', '+', msg.diagram_zoom_in], ['out', '\u2212', msg.diagram_zoom_out],
-      ['fit', msg.diagram_zoom_fit, msg.diagram_zoom_fit_label], ['one', msg.diagram_zoom_one, msg.diagram_zoom_one_label],
+      ['in', '+', msg.zoom_in], ['out', '−', msg.zoom_out],
+      ['fit', msg.zoom_fit, msg.zoom_fit_label], ['one', msg.zoom_one, msg.zoom_one_label],
     ]) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -1020,22 +1193,52 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
     wrap.before(tools);
     const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
 
+    const offer = (can) => {
+      if (can === offered) return;
+      offered = can;
+      const focused = wrap.contains(document.activeElement) || tools.contains(document.activeElement);
+      tools.hidden = !can;
+      wrap.classList.toggle('can-zoom', can);
+      wrap.tabIndex = can ? 0 : -1;
+      if (can) {
+        wrap.setAttribute('role', 'group');
+        wrap.setAttribute('aria-label', msg.zoom_frame);
+      } else {
+        wrap.removeAttribute('role');
+        wrap.removeAttribute('aria-label');
+        if (focused) wrap.focus();
+      }
+    };
+    const show = (x, y, w, h) => {
+      if (svg) {
+        svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+        return;
+      }
+      if (fitted || printing) {
+        first.style.transform = '';
+        return;
+      }
+      const k = s / fit(), ox = img.clientLeft, oy = img.clientTop;
+      first.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
+    };
+
     const render = () => {
       if (printing) {
-        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        show(0, 0, W, H);
         wrap.classList.remove('zoomed');
         return;
       }
       const w = wrap.clientWidth, h = wrap.clientHeight;
       if (!w || !h) return;
       if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
-      s = Math.min(Math.max(s, min()), MAX);
+      else s = Math.min(Math.max(s, min()), MAX);
       const vw = w / s, vh = h / s;
-      const clamp = (c, v, size) => (v >= size ? size / 2 : Math.min(Math.max(c, v / 2), size - v / 2));
+      const clamp = (c, v, size) => (v >= size ? (svg ? size / 2 : v / 2) : Math.min(Math.max(c, v / 2), size - v / 2));
       cx = clamp(cx, vw, W);
       cy = clamp(cy, vh, H);
-      svg.setAttribute('viewBox', `${cx - vw / 2} ${cy - vh / 2} ${vw} ${vh}`);
+      show(cx - vw / 2, cy - vh / 2, vw, vh);
       wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      offer(!fitted || fit() < 1);
       button('in').disabled = s >= MAX;
       button('out').disabled = s <= min();
       button('fit').disabled = fitted;
@@ -1066,7 +1269,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       }
     });
     wrap.addEventListener('wheel', (e) => {
-      if (!e.ctrlKey && !e.metaKey) return;
+      if (!offered || (!e.ctrlKey && !e.metaKey)) return;
       e.preventDefault();
       const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
       zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
@@ -1078,7 +1281,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
     };
     wrap.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      if (!offered || e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
       e.preventDefault();
       wrap.setPointerCapture(e.pointerId);
       points.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1095,11 +1298,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
     });
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
 
-    wrap.tabIndex = 0;
-    wrap.setAttribute('role', 'group');
-    wrap.setAttribute('aria-label', svg.getAttribute('aria-label') ?? '');
     wrap.addEventListener('keydown', (e) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!offered || e.ctrlKey || e.metaKey || e.altKey) return;
       const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
       if (zoom) {
         e.preventDefault();
@@ -1124,10 +1324,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       render();
     });
   };
-  const init = () => document.querySelectorAll('.' + wrapClass).forEach(setup);
+  const init = () => document.querySelectorAll('.' + frameClass).forEach(setup);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-})({"tools":"dg-tools","words":{"en":{"diagram_zoom_fit":"Fit","diagram_zoom_fit_label":"Show the whole diagram","diagram_zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the diagram; drag or use the arrow keys to move while zoomed","diagram_zoom_in":"Zoom in","diagram_zoom_one":"1:1","diagram_zoom_one_label":"Show at actual size","diagram_zoom_out":"Zoom out"},"ja":{"diagram_zoom_fit":"全体","diagram_zoom_fit_label":"全体を表示","diagram_zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","diagram_zoom_in":"拡大","diagram_zoom_one":"原寸","diagram_zoom_one_label":"原寸で表示","diagram_zoom_out":"縮小"}},"wrap":"dg-wrap"});</script><div class="dg-wrap" style="aspect-ratio: 200 / 80; max-height: min(85vh, 98px)"><svg viewBox="0 0 200 80" class="dg" role="img" aria-label="折りたたみの中の図"><defs></defs><g class="box"><rect x="20" y="14" width="160" height="52" rx="8"></rect><text x="100" y="40" text-anchor="middle" class="main">古いサーバー</text></g></svg></div></div></div></details>
+})({"frame":"floe-zoom","tools":"floe-zoom-tools","words":{"en":{"zoom_fit":"Fit","zoom_fit_label":"Show the whole figure","zoom_frame":"Zoomable figure","zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the figure; drag or use the arrow keys to move while zoomed","zoom_in":"Zoom in","zoom_one":"1:1","zoom_one_label":"Show at actual size","zoom_out":"Zoom out"},"ja":{"zoom_fit":"全体","zoom_fit_label":"全体を表示","zoom_frame":"拡大できる図","zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","zoom_in":"拡大","zoom_one":"原寸","zoom_one_label":"原寸で表示","zoom_out":"縮小"}}});</script><div class="floe-zoom" style="aspect-ratio: 200 / 80; max-height: min(85vh, 98px)"><svg viewBox="0 0 200 80" class="dg" role="img" aria-label="折りたたみの中の図"><defs></defs><g class="box"><rect x="20" y="14" width="160" height="52" rx="8"></rect><text x="100" y="40" text-anchor="middle" class="main">古いサーバー</text></g></svg></div></div></div></details>
 </section>
 </main>
 
