@@ -585,6 +585,8 @@ var messagesJA = map[string]string{
 	"ui_task_new":          "%s を新しいタスクにする",
 	"ui_pinned":            "「%s」をタスク一覧にピン止めしました",
 	"ui_unpinned":          "「%s」のピンを外しました",
+	"ui_task_suggest":      "· %s",
+	"ui_task_put":          "%[1]s（%[2]s）に入れました",
 	"ui_view_archived":     "アーカイブ",
 	"ui_no_favorites":      "お気に入りはありません",
 	"ui_more_named":        "%s のその他の操作",

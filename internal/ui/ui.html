@@ -478,6 +478,9 @@
   }
   .suggest:not(:popover-open) { display: none; }
   .suggest [role="option"] { padding: 0.4rem 0.6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 var(--text-small)/1.4 var(--body); border-radius: calc(var(--corner-menu) - var(--menu-pad)); cursor: pointer; }
+  .suggest [role="option"]:has(> .names-note) { display: flex; gap: 0.35rem; }
+  .names-word { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .names-note { flex: none; color: var(--muted); }
   .suggest [role="option"]:hover, .suggest [aria-selected="true"] { background: var(--subtle); }
   .suggest [aria-selected="true"] { color: var(--fg); box-shadow: inset 2px 0 0 var(--ink); }
   /* The bulk dialog's tags, a chip each, wrapping: on all the selected (filled), on some (dashed) or on none, told by the chip's
@@ -840,6 +843,8 @@
   .task-tag { position: relative; z-index: 1; padding: 0 0.35rem; color: var(--muted); border: 1px dashed var(--box-line); border-radius: var(--corner-small); text-decoration: none; white-space: nowrap; }
   .task-tag:hover { color: var(--fg); border-color: var(--faint); }
   .set-foot .set-out { margin-right: auto; }
+  /* The toasts let a press through, but for what is in them to press */
+  .toast-link { color: inherit; pointer-events: auto; }
   .shell.tasks-failed .lhead, .shell.tasks-failed .views .n, .shell.tasks-failed .chip .n { display: none; }
   .sdot { flex: none; width: 8px; height: 8px; margin-inline: calc((var(--shelf-mark) - 8px) / 2); border-radius: 50%; }
   .sdot.waiting { background: var(--wait); }
@@ -1884,7 +1889,8 @@
         const option = document.createElement('div');
         option.id = `${box.id}-${i}`;
         option.setAttribute('role', 'option');
-        option.textContent = one.label;
+        option.append(tagged('span', 'names-word', one.label), ...(one.note ? [tagged('span', 'names-note', one.note)] : []));
+        option.title = option.textContent;
         // Pressed, the field keeps its focus
         option.addEventListener('mousedown', (e) => e.preventDefault());
         option.addEventListener('click', () => choose(one.name));
@@ -1940,7 +1946,7 @@
 
   // A field of one name: those that hold what is written, those that start with it first; a name written whole offers them all, to change
   // to. fresh, when given, is what one that no name is offers, as the last
-  function suggestOne(input, all, put, { fresh, onFocus } = {}) {
+  function suggestOne(input, all, put, { fresh, onFocus, detail = (name) => ({ name, label: name }) } = {}) {
     suggestNames(input, () => {
       const written = input.value.trim();
       const typed = written.toLowerCase();
@@ -1949,7 +1955,7 @@
       const hits = whole ? names : names.filter((name) => name.toLowerCase().includes(typed));
       const first = hits.filter((name) => name.toLowerCase().startsWith(whole ? '' : typed));
       const rest = hits.filter((name) => !first.includes(name));
-      return [...first, ...rest, ...(fresh && written && !whole ? [fresh(written)] : [])];
+      return [...[...first, ...rest].map(detail), ...(fresh && written && !whole ? [fresh(written)] : [])];
     }, put, onFocus);
   }
 
@@ -3115,16 +3121,25 @@
       // Without storage, the list opens with no row focused
     }
   }
+  function taskRowKept() {
+    try {
+      return JSON.parse(sessionStorage.getItem(FROM_KEY));
+    } catch {
+      return null;
+    }
+  }
+  function forgetTaskRow() {
+    try {
+      sessionStorage.removeItem(FROM_KEY);
+    } catch {
+      // Without storage, there is none to forget
+    }
+  }
   // The focus on the row come back to; of one gone, the next, and of the last, the one before. Once
   // LIMIT: the row kept is of the tab, whichever way the list is opened next: the switch does as h does. Tell them apart if it comes to trouble someone
   function focusTaskRow() {
-    let from = null;
-    try {
-      from = JSON.parse(sessionStorage.getItem(FROM_KEY));
-      sessionStorage.removeItem(FROM_KEY);
-    } catch {
-      // Storage is unavailable, or holds something else
-    }
+    const from = taskRowKept();
+    forgetTaskRow();
     if (!Array.isArray(from?.keys)) return;
     const at = from.keys.indexOf(from.key);
     const rows = new Map([...$('list').children].map((li) => [li.dataset.key, li]));
@@ -3314,10 +3329,12 @@
     await load();
   }
 
-  // The list of a task's page: the one it came from when of this project, else this project's at the view the task is under
+  // The list of a task's page: the one kept when a row of it was pressed to come here, so that the next waiting is there whatever became of
+  // this one; come by any other way, this project's at the view the task is under, where it is to be found
   function taskListHref(task) {
+    const key = `task:${JSON.stringify([project, TASK_NAME])}`;
     const saved = savedTasks();
-    if (new URLSearchParams(saved).get('project') === project) return `${TASKS_PATH}${saved}`;
+    if (taskRowKept()?.key === key && new URLSearchParams(saved).get('project') === project) return `${TASKS_PATH}${saved}`;
     const to = new URLSearchParams({ project });
     if (task && taskView(task) !== FIRST_VIEW) to.set('view', taskView(task));
     return `${TASKS_PATH}?${to}`;
@@ -4369,6 +4386,8 @@
     // What was asked to be saved, whatever is typed while it goes
     const page = setPage;
     const task = $('set-task').value;
+    // The state it comes to be under stays what it was: said, as it may not be the list the person has in mind
+    const state = setTaskOf(task)?.state ?? STATES.find((x) => x.new).name;
     const step = $('set-step').value.trim();
     const moved = task.trim() !== setOpened.task || step !== setOpened.step;
     const body = { ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}) };
@@ -4378,7 +4397,12 @@
       if (!res.ok) throw new Error(await res.text());
       const reason = await patchOne(page.slug, { work: { task, step } });
       if (reason) throw new Error(reason);
-      toast(t('ui_saved'));
+      if (task.trim() === setOpened.task) toast(t('ui_saved'));
+      else {
+        const to = tagged('a', 'toast-link', t('ui_task_put', task.trim(), t(VIEW_WORDS[state])));
+        to.href = taskHref({ project: page.taskProject, name: task.trim() });
+        toast('', { ms: 8000, button: to });
+      }
       await load();
       $('set-dialog').close();
     } catch (err) {
@@ -4669,6 +4693,11 @@
     setTaskChanged();
   }, {
     fresh: (name) => ({ name, label: t('ui_task_new', name) }),
+    // What it is in, which a long title does not cut: a task done is under another view than the list's first, and looked for there
+    detail: (name) => {
+      const task = setTaskOf(name);
+      return { name, label: [name, task.title].filter(Boolean).join(' '), note: t('ui_task_suggest', t(VIEW_WORDS[task.state])) };
+    },
     // The modal hands it the focus as it opens: not over the fields under it
     onFocus: false,
   });
@@ -4731,6 +4760,8 @@
     $('diff').remove();
     // Back on a list, what the one before kept for j and k is over
     forgetOrder();
+    // And on the page list, the row of the task list a task's page was opened from
+    if (!TASKS) forgetTaskRow();
     $('manage').hidden = false;
     $('search').hidden = TASKS;
     $('q').value = readState(location.search).q;

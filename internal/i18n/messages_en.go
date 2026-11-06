@@ -596,6 +596,8 @@ var messagesEN = map[string]string{
 	"ui_task_new":          "Make %s a new task",
 	"ui_pinned":            "Pinned “%s” to the task list",
 	"ui_unpinned":          "Took the pin off “%s”",
+	"ui_task_suggest":      "· %s",
+	"ui_task_put":          "Put on %[1]s (%[2]s)",
 	"ui_view_archived":     "Archive",
 	"ui_no_favorites":      "No favorites",
 	"ui_more_named":        "More for %s",

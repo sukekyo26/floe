@@ -330,3 +330,103 @@ unreadable, first: true true true
 unreadable, done: Archive the task
 no task: No task #999 true 0
 refused: waiting false true`
+
+// The way up of a task's page: to the list a row of it was pressed from, through a reload, j and k, and a page whole and back, whatever
+// became of the task there; by any other way, to where the task is to be found. What the page list opens forgets the row.
+func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	st := store.New(s.Env["FLOE_DIR"])
+	project := "proj"
+	for _, slug := range []string{"a", "b", "c"} {
+		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
+		if _, err := st.Edit(slug, store.Edit{Project: &project}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.floe(t, "work", "a", "b", "--task", "#1", "--state", "waiting")
+	s.floe(t, "work", "c", "--task", "#2", "--state", "done")
+	b.size(1400, 800, false)
+	defer b.unsize()
+
+	var out []string
+	const up = "document.getElementById('task-up').getAttribute('href')"
+	say := func(what string) {
+		t.Helper()
+		out = append(out, what+": "+b.eval(up))
+	}
+	press := func(expr string) {
+		t.Helper()
+		r := b.rect(expr)
+		b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	}
+	const task1 = "location.search === '?project=proj&task=%231' && " + taskPageShown
+	const task2 = "location.search === '?project=proj&task=%232' && " + taskPageShown
+
+	// By a row of the list: there again, whatever the task became, and however long it was away.
+	b.navigate("/tasks?project=proj")
+	b.until("the rows", "document.querySelector('#list > li .title')")
+	press("document.querySelector('#list > li .title')")
+	b.until("the task's page", task1)
+	say("a row")
+	b.navigate("/tasks?project=proj&task=%231")
+	b.until("reloaded", task1)
+	say("reloaded")
+	b.pressKey("j")
+	b.until("the page beside", "picked?.slug")
+	b.pressKey("j")
+	b.until("the next", "picked?.slug === 'b'")
+	say("j j")
+	b.eval("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
+	b.until("the page whole", "location.pathname === '/a/b/' && document.getElementById('frame-title').textContent")
+	out = append(out, "the page whole: "+b.eval("document.getElementById('back').getAttribute('href')"))
+	realKey(b, "h", 0)
+	b.until("the task's page", task1)
+	say("back from it")
+	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "done")
+	b.navigate("/tasks?project=proj&task=%231")
+	b.until("reloaded", task1)
+	say("the task done since")
+	press("document.querySelector('#task-up')")
+	b.until("the list", "location.pathname + location.search === '/tasks?project=proj'")
+
+	// By the list, the row forgotten once back: by the URL, where the task is.
+	b.navigate("/tasks?project=proj&task=%231")
+	b.until("the task's page", task1)
+	say("the URL, of a task done")
+
+	// By a badge on the page list, though a row led to this task earlier: the page list forgets it.
+	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "waiting")
+	b.navigate("/tasks?project=proj")
+	b.until("the rows", "document.querySelector('#list > li .title')")
+	press("document.querySelector('#list > li .title')")
+	b.until("the task's page", task1)
+	s.floe(t, "work", "--task", "#1", "--project", "proj", "--state", "doing")
+	press("document.querySelector('.brand')")
+	b.until("the page list", "location.pathname === '/' && document.querySelector('#list li[data-slug=a] .task-tag')")
+	press("document.querySelector('#list li[data-slug=a] .task-tag')")
+	b.until("the task's page", task1)
+	say("a badge")
+
+	// By the way in a menu, to a done task of a list last seen at the first view.
+	b.navigate("/?project=proj")
+	b.until("the rows", "document.querySelector('#list li[data-slug=c]')")
+	b.eval("document.querySelector('#list li[data-slug=c] .more').open = true")
+	press("document.querySelector('#list li[data-slug=c] .task-open')")
+	b.until("the task's page", task2)
+	say("the menu")
+
+	if got, want := strings.Join(out, "\n"), taskUpWant; got != want {
+		t.Errorf("the way up:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+const taskUpWant = `a row: /tasks?project=proj
+reloaded: /tasks?project=proj
+j j: /tasks?project=proj
+the page whole: /tasks?project=proj&task=%231
+back from it: /tasks?project=proj
+the task done since: /tasks?project=proj
+the URL, of a task done: /tasks?project=proj&view=done
+a badge: /tasks?project=proj&view=doing
+the menu: /tasks?project=proj&view=done`

@@ -221,7 +221,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("waited longest", "location.search")
 	writeTasks(taskWork)
 
-	// The way up of a task's page: the list it came from when of its project, else its project's, at the task's view.
+	// The way up of a task's page opened by its URL: its project's list, at the task's view, whatever list was last seen.
 	const up = "document.getElementById('task-up').getAttribute('href')"
 	for _, c := range []struct{ list, task string }{
 		{"?view=doing&project=shop", "?project=shop&task=%231"},
@@ -453,7 +453,7 @@ folded: false shop
 the kept gone: ?project=shop
 none waiting: ?project=shop
 waited longest: ?project=blog
-up ?view=doing&project=shop ?project=shop&task=%231: /tasks?view=doing&project=shop
+up ?view=doing&project=shop ?project=shop&task=%231: /tasks?project=shop
 up ?project=blog ?project=shop&task=%231: /tasks?project=shop
 up ?project=blog ?project=shop&task=%235: /tasks?project=shop&view=doing
 up ?project=blog ?project=shop&task=%236: /tasks?project=shop&view=archived
