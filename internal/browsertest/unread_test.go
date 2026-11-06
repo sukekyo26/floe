@@ -43,7 +43,7 @@ const (
 
 func pickUnread(b *browser, slug string) {
 	b.t.Helper()
-	b.eval(fmt.Sprintf(unreadRow, slug) + ".querySelector('.title').click()")
+	b.moving(fmt.Sprintf(unreadRow, slug) + ".querySelector('.title').click()")
 }
 
 func isUnseen(b *browser, slug string, want bool) {

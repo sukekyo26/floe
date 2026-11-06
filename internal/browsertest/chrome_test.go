@@ -185,15 +185,20 @@ func (b *browser) try(expr string) (string, error) {
 	return chromedp.Run(b.ctx, chromedp.Evaluate[string]("(async () => String(await (0, eval)("+js(expr)+")))()", await)) //nolint:wrapcheck // the caller's to tell
 }
 
-// eval returns JavaScript's String() of expr. What moves to another page may leave before the answer comes: no answer then, what the
-// test waits for next telling whether it went.
+// moving runs expr, which moves to another page and may leave before the answer comes. Nothing is answered: what the test waits for
+// next tells whether it went.
+func (b *browser) moving(expr string) {
+	b.t.Helper()
+
+	if _, err := b.try(expr); err != nil && !strings.Contains(err.Error(), "Inspected target navigated") {
+		b.t.Fatalf("%s: %v", expr, err)
+	}
+}
+
 func (b *browser) eval(expr string) string {
 	b.t.Helper()
 
 	s, err := b.try(expr)
-	if err != nil && strings.Contains(err.Error(), "Inspected target navigated") {
-		return ""
-	}
 	if err != nil {
 		b.t.Fatalf("%s: %v", expr, err)
 	}

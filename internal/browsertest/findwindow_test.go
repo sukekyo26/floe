@@ -33,7 +33,7 @@ const findDrawn = `(() => {
 // keyDown sends the key from what has the focus, as the page's handlers see it.
 func keyDown(b *browser, init string) {
 	b.t.Helper()
-	b.eval("(document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, " + init + " }))")
+	b.moving("(document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, " + init + " }))")
 }
 
 func typeFind(b *browser, words string) {
@@ -289,13 +289,13 @@ func TestUIFindActions(t *testing.T) { //nolint:paralleltest // the browser test
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "gamma")
 	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .edit').click()")
-	b.eval("document.getElementById('edit-slug').value = 'c2'; document.getElementById('edit-submit').click()")
+	b.moving("document.getElementById('edit-slug').value = 'c2'; document.getElementById('edit-submit').click()")
 	b.until("the new URL", "location.pathname === '/a/c2/'")
 	b.navigate("/a/c/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	keyDown(b, "key: 'k', ctrlKey: true")
 	typeFind(b, "gamma")
-	b.eval("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').focus(); document.querySelector('" + menu + " .delete').click(); document.querySelector('" + menu + " .delete').click()")
+	b.moving("document.querySelector('" + menu + " summary').click(); document.querySelector('" + menu + " .delete').focus(); document.querySelector('" + menu + " .delete').click(); document.querySelector('" + menu + " .delete').click()")
 	b.until("the list", "location.pathname === '/'")
 	check(t, "actions", out, strings.Join([]string{
 		"true", "true", "true", "true", "false true true", "false", "true", "true", "false 0", "true", "true none",
@@ -1099,7 +1099,7 @@ func TestUIFindOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 				t.Fatal(err)
 			}
 		},
-		"press": func() { b.eval(row + ".querySelector('a').click()") },
+		"press": func() { b.moving(row + ".querySelector('a').click()") },
 	}
 	out := make([]string, 0, 5)
 	for _, how := range []string{"enter", "press"} {

@@ -50,7 +50,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.navigate("/")
 	b.size(1440, 900, false)
 	key := func(k string) {
-		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
+		b.moving("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '" + k + "', bubbles: true }))")
 	}
 	out := make([]string, 0, 24)
 	out = append(out, b.eval(rowsDrawn))
@@ -114,7 +114,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.stub(listList)
 	b.eval("document.querySelector('.views [data-view=new]').click()")
 	b.eval("document.querySelector('#list li[data-slug=v] .title').focus()")
-	b.eval("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
+	b.moving("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
 	// The bar too: the logo's link is drawn with it, once the list is read.
 	b.until("the page whole", "location.pathname === '/a/v/' && document.getElementById('frame-title').textContent")
 	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"), b.eval("document.querySelector('.brand').getAttribute('href')"))
@@ -161,7 +161,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// At 56rem or less, one column, a row opening whole with the way back, the page's buttons and the search's field still there.
 	b.size(800, 700, false)
 	out = append(out, b.eval("[getComputedStyle(document.getElementById('reader')).display, getComputedStyle(document.querySelector('#q')).color !== 'rgba(0, 0, 0, 0)'].join(' ')"))
-	b.eval("document.querySelector('#list li[data-slug=r] .title').click()")
+	b.moving("document.querySelector('#list li[data-slug=r] .title').click()")
 	b.until("the row whole", "location.pathname === '/a/r/'")
 	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [getComputedStyle(document.getElementById('back')).display, getComputedStyle(document.getElementById('frame-actions')).display].join(' ')"))
 	b.unsize()
@@ -183,7 +183,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.navigate("/")
 	b.size(400, 860, true)
 	out = append(out, b.eval("[getComputedStyle(document.getElementById('reader')).display, getComputedStyle(document.getElementById('shelf-more')).display, getComputedStyle(document.getElementById('narrow-filter')).display, getComputedStyle(document.getElementById('news')).display, document.documentElement.scrollWidth <= innerWidth].join(' ')"))
-	b.eval("document.querySelector('#list li[data-slug=r] .title').click()")
+	b.moving("document.querySelector('#list li[data-slug=r] .title').click()")
 	b.until("the row whole", "location.pathname === '/a/r/'")
 	out = append(out, b.until("the bar", "document.getElementById('frame-title').textContent && [getComputedStyle(document.getElementById('back')).display, getComputedStyle(document.querySelector('#frame-actions .star')).display].join(' ')"))
 	b.unsize()
@@ -551,7 +551,7 @@ func TestUIFrameOrder(t *testing.T) { //nolint:paralleltest // the browser tests
 		b.eval("sessionStorage.setItem('artifacts.order', " + js(`{"order":`+order+`,"shown":`+order+`,"back":"/"}`) + "); sessionStorage.setItem('artifacts.list', " + js(list) + ")")
 		b.navigate("/a/" + from + "/")
 		b.until("the bar", "document.getElementById('frame-title').textContent")
-		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
+		b.moving("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
 		b.until(from+" to go to "+want, "location.pathname === "+js("/a/"+want+"/"))
 	}
 	// The list that opened it, a slug no entry has left out.

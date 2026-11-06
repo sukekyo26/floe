@@ -522,7 +522,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"document.getElementById('error').textContent"))
 	b.eval("window.failWrites = false")
 	// Renamed in the frame, the tab goes to the new name; removed, to the list.
-	b.eval(`(() => {
+	b.moving(`(() => {
 		document.querySelector('#frame-actions .edit').click();
 		document.getElementById('edit-slug').value = 'z2';
 		document.getElementById('edit').requestSubmit();
@@ -530,7 +530,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the new name", "location.pathname === '/a/z2/' && location.pathname"))
 	b.navigate("/a/b/")
 	b.until("the frame's bar", "document.getElementById('frame-title').textContent")
-	b.eval("document.querySelector('#frame-actions .delete').click(); document.querySelector('#frame-actions .delete').click()")
+	b.moving("document.querySelector('#frame-actions .delete').click(); document.querySelector('#frame-actions .delete').click()")
 	b.until("the list", "location.pathname === '/'")
 
 	check(t, "shelf", out, strings.Join([]string{

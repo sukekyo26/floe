@@ -93,7 +93,7 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("[...document.querySelectorAll('#side-tree button.dir')].find((d) => d.textContent === 'deep').click()")
 	out = append(out, b.until("deep open", "document.querySelector('#side-tree [title=\"guide/deep/x.html\"]') && "+state),
 		b.eval("marked.every((e) => e.isConnected) + ' ' + [...document.querySelectorAll('#side-tree > *')].filter((e) => !marked.includes(e)).map((e) => e.title).join(',')"))
-	b.eval("document.querySelector('#side-tree [title=\"guide/start.html\"]').click()")
+	b.moving("document.querySelector('#side-tree [title=\"guide/start.html\"]').click()")
 	out = append(out, b.until("the page picked", "location.search === '?file=guide%2Fstart.html' && document.getElementById('frame-title').textContent"))
 
 	// The edge and the hide button take the ring, reached by keyboard; print leaves the tree out.

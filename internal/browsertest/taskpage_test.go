@@ -61,11 +61,11 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	key := func(k string) {
 		t.Helper()
-		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: " + js(k) + ", bubbles: true }))")
+		b.moving("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: " + js(k) + ", bubbles: true }))")
 	}
 	enter := func() {
 		t.Helper()
-		b.eval("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
+		b.moving("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
 	}
 	const whole = "document.getElementById('back').getAttribute('href') + ' ' + document.querySelector('.brand').getAttribute('href') + ' ' + sessionStorage.getItem('artifacts.order')"
 	opened := func(task, path string) {
@@ -136,13 +136,13 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks?view=doing&project=proj")
 	b.until("the rows", "document.querySelector('#list > li')")
 	say("the list kept", "sessionStorage.getItem('artifacts.tasks')")
-	b.eval("document.querySelector('.pin').click()")
+	b.moving("document.querySelector('.pin').click()")
 	b.until("the pin whole", "location.pathname.startsWith('/a/p') && document.getElementById('frame-title').textContent")
 	say("pin", "location.pathname + ' ' + "+whole)
 	key("h")
 	b.until("the filtered list", "location.pathname + location.search === '/tasks?view=doing&project=proj'")
 	b.until("the rows", "document.querySelector('#list > li')")
-	b.eval("[...document.querySelectorAll('#list .title')].find((a) => a.textContent.startsWith('#130')).click()")
+	b.moving("[...document.querySelectorAll('#list .title')].find((a) => a.textContent.startsWith('#130')).click()")
 	b.until("the task's page", "location.search.includes('task=') && "+taskPageShown)
 	say("up goes to the task's state", "document.getElementById('task-up').getAttribute('href')")
 
@@ -158,7 +158,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("document.querySelector('#list .title').focus()")
 	enter()
 	b.until("the page whole", "location.pathname === '/a/c1/' && document.getElementById('frame-title').textContent")
-	b.eval("openEdit(items.find((a) => a.slug === 'c1')); document.getElementById('edit-slug').value = 'c2'; document.getElementById('edit').requestSubmit()")
+	b.moving("openEdit(items.find((a) => a.slug === 'c1')); document.getElementById('edit-slug').value = 'c2'; document.getElementById('edit').requestSubmit()")
 	b.until("the new name", "location.pathname === '/a/c2/' && document.getElementById('frame-title').textContent")
 	say("renamed whole", whole)
 	b.eval("sessionStorage.removeItem('artifacts.order')")
@@ -379,7 +379,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	b.pressKey("j")
 	b.until("the next", "picked?.slug === 'b'")
 	say("j j")
-	b.eval("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
+	b.moving("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
 	b.until("the page whole", "location.pathname === '/a/b/' && document.getElementById('frame-title').textContent")
 	out = append(out, "the page whole: "+b.eval("document.getElementById('back').getAttribute('href')"))
 	realKey(b, "h", 0)

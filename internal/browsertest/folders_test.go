@@ -128,7 +128,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("location.hash = '#end'")
 	out = append(out, b.until("the part in the page", "window.at === '#end' && 'the page at #end'"))
 	// j goes on to the next page of its directory.
-	b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
+	b.moving("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
 	out = append(out, b.until("the next page", "location.search.includes('start') && location.search"))
 	b.navigate("/a/docs/guide/setup.html")
 	out = append(out, b.eval("getComputedStyle(document.querySelector('h1')).color"))
