@@ -863,6 +863,16 @@
   .family h3 { margin: 0 0 0.15rem; font: 700 var(--text-small)/1.4 var(--body); color: var(--muted); }
   .kin-row { display: flex; align-items: center; gap: 0.45rem; min-height: 1.9rem; color: var(--fg); font-size: var(--text-small); text-decoration: none; }
   .kin-row:hover { text-decoration: underline; }
+  .family-part { display: grid; gap: 0.1rem; }
+  .family-part + .family-part { margin-top: 0.35rem; }
+  .kin-line { display: flex; align-items: center; gap: 0.25rem; }
+  .kin-line .kin-row { flex: 1; min-width: 0; }
+  .unlink { flex: none; height: 28px; min-width: 28px; padding: 0; }
+  /* As a row's actions: with a mouse, shown while the row is pointed at or reached by keyboard; only opacity, so it keeps its place */
+  @media (hover: hover) {
+    .unlink { transition: opacity 0.12s; }
+    .kin-line:not(:hover, :focus-within) .unlink { opacity: 0; }
+  }
   .kin-row.unseen { font-weight: 700; }
   .kin-row .tname { flex: none; margin: 0; }
   .kin-row .kin-title { flex: 1; }
@@ -998,8 +1008,14 @@
           <span class="proj" id="task-project"></span>
         </div>
         <div class="family" id="task-family" hidden>
-          <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="btn add-open" id="task-child" aria-label="{{.Msg "ui_child_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button></div>
-          <div class="family-rows" id="task-family-rows"></div>
+          <div class="family-part" id="task-up-part" hidden>
+            <div class="family-head"><h3>{{.Msg "ui_task_parent"}}</h3><button type="button" class="btn add-open" id="task-parent-add" aria-label="{{.Msg "ui_up_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button><button type="button" class="btn add-open" id="task-parent-change" aria-label="{{.Msg "ui_up_change_named"}}" hidden>{{.Msg "ui_task_up_change"}}</button></div>
+            <div class="family-rows" id="task-up-rows"></div>
+          </div>
+          <div class="family-part" id="task-kids-part" hidden>
+            <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="btn add-open" id="task-child" aria-label="{{.Msg "ui_child_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button></div>
+            <div class="family-rows" id="task-family-rows"></div>
+          </div>
         </div>
       </div>
       <div class="pins" id="pins" hidden><h2>{{.Msg "ui_pins"}}</h2><button type="button" class="icon-btn pins-help" id="pins-help" popovertarget="pins-tip" aria-label="{{.Msg "ui_pins_help"}}" title="{{.Msg "ui_pins_help"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg></button><span id="pin-list"></span></div>
@@ -1236,26 +1252,26 @@
     </div>
   </form>
 </dialog>
-<dialog id="child-dialog" aria-labelledby="child-heading">
-  <form class="modal-body" id="child">
+<dialog id="kin-dialog" aria-labelledby="kin-heading">
+  <form class="modal-body" id="kin">
     <div class="modal-head">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       <div>
-        <h2 id="child-heading">{{.Msg "ui_child_add_named"}}</h2>
-        <p class="lead" id="child-target"></p>
+        <h2 id="kin-heading"></h2>
+        <p class="lead" id="kin-target"></p>
       </div>
     </div>
     <label class="field">{{.Msg "ui_task_name"}}
-      <input class="text" id="child-task" required autocomplete="off" spellcheck="false" placeholder="{{.Msg "ui_task_id_example"}}">
+      <input class="text" id="kin-task" required autocomplete="off" spellcheck="false" placeholder="{{.Msg "ui_task_id_example"}}">
     </label>
     <label class="field">{{.Msg "ui_task_title"}}
-      <input class="text" id="child-title" autocomplete="off">
+      <input class="text" id="kin-title" autocomplete="off">
     </label>
-    <p id="child-note" hidden></p>
-    <p class="error" id="child-error" hidden></p>
+    <p id="kin-note" hidden></p>
+    <p class="error" id="kin-error" hidden></p>
     <div class="dialog-actions">
       <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
-      <button type="submit" class="btn primary" id="child-submit"></button>
+      <button type="submit" class="btn primary" id="kin-submit"></button>
     </div>
   </form>
 </dialog>
@@ -3438,94 +3454,197 @@
     archive.onclick = () => archiveTask(task, !back);
   }
 
-  // A task's family over its pages: its parent, or its children, in one form. Off #list: j and k stay on the pages, and neither drawRows
-  // nor the hold on a press guards them. So drawn anew only as what it says changes, with the focus back on the same task
+  // A task's family over its pages, in two parts: its parent, offered while it has no children, and its children, offered while it has no
+  // parent and a row. Off #list: j and k stay on the pages, and neither drawRows nor the hold on a press guards them. So drawn anew only as what
+  // it says changes, with the focus back on the same row or button
   // LIMIT: a press while it changes loses its click. Hold the drawing as load does for #list if that comes to be felt
   let familyDrawn = '';
   function drawTaskFamily(task) {
     const viewAt = (x) => VIEWS.indexOf(taskView(x));
-    const kin = task.parentTask ? [task.parentTask] : [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(STATES.find((s) => s.name === taskView(x))?.oldest)(x, y));
-    const heading = task.parentTask ? t('ui_task_parent') : kin.length > 0 ? t('ui_task_kids_head', kin.length) : t('ui_task_kids_word');
-    // What the store's checkParent would refuse is not offered: a parent written, even one that makes no family, and no row
+    const kids = [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(STATES.find((s) => s.name === taskView(x))?.oldest)(x, y));
+    // What the store's checkParent would refuse is not offered. The parent as written, one that makes no family too, is changed, not added to
+    const ups = task.children.length === 0;
     const adds = !task.parent && hasRow(task);
+    $('task-up-part').hidden = !ups;
+    $('task-parent-add').hidden = Boolean(task.parent);
+    $('task-parent-change').hidden = !task.parent;
+    $('task-parent-add').onclick = () => openKin(task, 'parent');
+    $('task-parent-change').onclick = () => openKin(task, 'parent');
+    $('task-kids-part').hidden = kids.length === 0 && !adds;
     $('task-child').hidden = !adds;
-    $('task-child').onclick = () => openChildTask(task);
-    $('task-family').hidden = kin.length === 0 && !adds;
-    $('task-family-word').textContent = heading;
-    const said = JSON.stringify(kin.map((x) => [x.name, x.title, taskView(x), unreadOf(x) > 0]));
+    $('task-child').onclick = () => openKin(task, 'child');
+    $('task-family').hidden = !ups && kids.length === 0 && !adds;
+    $('task-family-word').textContent = kids.length > 0 ? t('ui_task_kids_head', kids.length) : t('ui_task_kids_word');
+    const up = task.parentTask;
+    const said = JSON.stringify([task.name, task.parent, [up, ...kids].map((x) => x && [x.name, x.title, x.parent, taskView(x), unreadOf(x) > 0])]);
     if (said === familyDrawn) return;
     familyDrawn = said;
-    const box = $('task-family-rows');
-    const focused = box.contains(document.activeElement) ? document.activeElement.dataset.task : null;
-    const rows = kin.map((x) => {
-      const link = tagged('a', 'kin-row');
-      link.href = taskHref(x);
-      link.dataset.task = x.name;
-      link.classList.toggle('unseen', unreadOf(x) > 0);
-      link.append(tagged('span', unreadOf(x) > 0 ? 'dot' : 'ring'), tagged('span', 'tname', x.name), tagged('span', 'kin-title', x.title ?? ''), tagged('span', `kid-state ${taskView(x)}`, t(VIEW_WORDS[taskView(x)])));
-      return link;
-    });
-    box.replaceChildren(...rows);
-    rows.find((link) => link.dataset.task === focused)?.focus();
+    const on = $('task-family').contains(document.activeElement) ? document.activeElement : null;
+    $('task-up-rows').replaceChildren(...(up ? [kinRow(up, task, up.name)] : []));
+    $('task-family-rows').replaceChildren(...kids.map((x) => kinRow(x, x, task.name)));
+    if (on?.dataset.task) $('task-family').querySelector(`${on.classList.contains('unlink') ? '.unlink' : '.kin-row'}[data-task="${CSS.escape(on.dataset.task)}"]`)?.focus();
   }
+  // A row of the family: x, a link to its page, and the button that takes child off its parent, outside the link
+  function kinRow(x, child, parent) {
+    const line = tagged('div', 'kin-line');
+    const link = tagged('a', 'kin-row');
+    link.href = taskHref(x);
+    link.dataset.task = x.name;
+    link.classList.toggle('unseen', unreadOf(x) > 0);
+    link.append(tagged('span', unreadOf(x) > 0 ? 'dot' : 'ring'), tagged('span', 'tname', x.name), tagged('span', 'kin-title', x.title ?? ''), tagged('span', `kid-state ${taskView(x)}`, t(VIEW_WORDS[taskView(x)])));
+    const off = tagged('button', 'icon-btn unlink');
+    off.type = 'button';
+    off.dataset.task = x.name;
+    const label = child === x ? t('ui_task_unlink_kid', x.name) : t('ui_task_unlink_up', parent);
+    off.setAttribute('aria-label', label);
+    off.title = label;
+    off.innerHTML = UNLINK_MARK;
+    // From the keys (no pointer, so no detail), the focus goes to the toast's way back, the far end of the page
+    off.addEventListener('click', (e) => unlinkTask(child, parent, e.detail === 0));
+    line.append(link, off);
+    return line;
+  }
+  const UNLINK_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71"/><path d="M8 2v3M2 8h3M16 22v-3M22 16h-3"/></svg>';
 
-  // A new task under this one. It takes a task's own write: the store says what may be a child
-  function openChildTask(task) {
-    resetTaskForm($('child'));
-    $('child-target').textContent = t('ui_task_child_of', [task.name, task.title].filter(Boolean).join(' '));
-    $('child-error').hidden = true;
-    childNameChanged();
-    $('child-dialog').showModal();
+  // Where the focus goes once a row is gone from under it: the button of its part
+  const familyButton = () => [$('task-child'), $('task-parent-add'), $('task-parent-change')].find((b) => !b.hidden && !b.closest('[hidden]'));
+  // The child taken off its parent, as the screen saw them (parentWas): one moved meanwhile is refused, not taken off another
+  async function unlinkTask(child, parent, fromKeys) {
+    const res = await writeTask(child.project, child.name, { new: false, parent: '', parentWas: child.parent });
+    if (!res.ok) {
+      showError(t('ui_save_failed', res.status === 409 ? res.stale : res.text));
+      return;
+    }
+    undoToast(t('ui_task_unlinked', child.name, parent), { project: child.project, name: child.name, parent, was: '' }, fromKeys);
+    await load();
+    if (!fromKeys && !document.activeElement?.closest('#task-family')) familyButton()?.focus();
   }
-  // What the name written does, said before it is done: a task on the list comes to be a child with what it has, out of another parent's, and any
-  // other is made. One that cannot be, with children or this one, is not said to: pressed, the store refuses it
-  // LIMIT: what is said goes by the tasks last read. Whether a task is there the store checks (new), but not its parent: one another session gave a
-  // parent since is taken from it, said to come from the one before. Send the parent read if that comes to mislead
-  const childTaskNamed = () => tasksOf().find((x) => x.project === project && x.name === $('child-task').value.trim());
-  const isOwnChild = (task) => task?.parentTask?.name === TASK_NAME;
-  // The task the dialog last showed for the name, which saving sends as new or not: tasks read meanwhile change nothing unseen, and the store
-  // refuses what is no longer so
-  let childShown;
-  function childNameChanged() {
-    const task = childTaskNamed();
-    childShown = task;
-    const from = task?.parentTask?.name;
-    const named = task && [task.name, task.title].filter(Boolean).join(' ');
-    $('child-note').hidden = !task || task.children.length > 0 || task.name === TASK_NAME || isOwnChild(task);
-    if (task) $('child-note').textContent = from ? t('ui_task_child_move', named, from) : t('ui_task_child_take', named);
-    titleField($('child-title'), !task);
-    $('child-submit').textContent = t(task ? 'ui_child_take_button' : 'ui_child_make_button');
-  }
-  async function saveChildTask(e) {
-    e.preventDefault();
-    const btn = $('child-submit');
-    btn.disabled = true;
-    const name = $('child-task').value.trim();
-    const title = $('child-title').value.trim();
-    try {
-      if (!taskFormReady($('child'), $('child-error'))) return;
-      const had = childShown;
-      // Nothing to write, and so nothing to tell
-      if (isOwnChild(had)) {
-        $('child-dialog').close();
-        $('task-child').focus();
+  // The toast of a change to a parent, and its way back: the parent before written again, over the one written now. Pressed, a refusal (the
+  // parent before has come to be a child, say) is said as the store says it
+  function undoToast(said, back, fromKeys) {
+    const button = tagged('button', 'btn undo', t('ui_undo'));
+    button.type = 'button';
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      const res = await writeTask(back.project, back.name, { new: false, parent: back.parent, parentWas: back.was, parentNew: false });
+      button.closest('.toast')?.remove();
+      if (!res.ok) {
+        showError(t('ui_save_failed', res.status === 409 ? res.stale : res.text));
         return;
       }
-      const res = await writeTask(project, name, { parent: TASK_NAME, new: !had, ...(had ? {} : { title }) });
+      toast(t('ui_undone'));
+      await load();
+      $('task-family').querySelector(`.unlink[data-task="${CSS.escape(back.name === TASK_NAME ? back.parent : back.name)}"]`)?.focus();
+    });
+    button.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      button.closest('.toast').remove();
+      familyButton()?.focus();
+    });
+    toast(said, { ms: 8000, button });
+    if (fromKeys) button.focus();
+  }
+
+  // The dialog of a task's family: a child of the task of the page, or its parent, of one form of fields; KIN_FORMS says what differs.
+  // Each write says what the dialog showed (new, parentWas, parentNew): what has changed since is refused, and read again
+  const named = (x) => [x.name, x.title].filter(Boolean).join(' ');
+  const isOwnChild = (x) => x?.parentTask?.name === TASK_NAME;
+  // What may be a parent: a task with a row, which a task of pages alone has not, no parent of its own, and not the one it is for
+  const mayParent = (x, of) => hasRow(x) && !x.parent && x.name !== of;
+  const KIN_FORMS = {
+    // A task named comes to be a child with what it has, out of another parent's, and any other is made. One that cannot be, with children or
+    // this one, is not said to: pressed, the store refuses it
+    child: {
+      heading: () => t('ui_child_add_named'),
+      target: (task) => t('ui_task_child_of', named(task)),
+      offered: (task, x) => x.children.length === 0 && x.name !== task.name && !isOwnChild(x),
+      note: (task, x) => (x.children.length > 0 || x.name === task.name ? '' : x.parent ? t('ui_task_child_move', named(x), x.parent) : t('ui_task_child_take', named(x))),
+      same: (task, x) => isOwnChild(x),
+      take: 'ui_child_take_button',
+      opener: () => $('task-child'),
+      // LIMIT: this task's row gone meanwhile, its pages left, it is there still: refused as no parent (400), not read again, as a parent not known
+      write: (task, name, x, title) => writeTask(task.project, name, { new: !x, ...(x ? {} : { title }), parent: task.name, parentWas: x?.parent ?? '', parentNew: false }),
+      done: (task, name, x) => {
+        const to = tagged('a', 'toast-link', t(x ? 'ui_task_child_took' : 'ui_task_child_made', name));
+        to.href = taskHref({ project: task.project, name });
+        toast('', { ms: 8000, button: to });
+      },
+    },
+    // A task named comes to be the parent, the one before said; any other is made with it, in the same write (parentTitle)
+    parent: {
+      heading: (task) => t(task.parent ? 'ui_up_change_named' : 'ui_up_add_named'),
+      target: (task) => t('ui_task_parent_of', named(task)),
+      offered: (task, x) => mayParent(x, task.name),
+      note: (task, x) => (task.parent && task.parent !== x.name ? t('ui_task_parent_move', named(x), task.parent) : t('ui_task_parent_take', named(x))),
+      same: (task, x) => x?.name === task.parent,
+      take: 'ui_up_take_button',
+      opener: (task) => (task.parent ? $('task-parent-change') : $('task-parent-add')),
+      write: (task, name, x, title) => writeTask(task.project, task.name, { new: false, parent: name, parentWas: task.parent ?? '', parentNew: !x, ...(x ? {} : { parentTitle: title }) }),
+      // Changed, the way back is offered while the parent before makes a family: one written by hand that makes none the store would refuse
+      done: (task, name) => {
+        if (task.parent) {
+          if (task.parentTask?.name === task.parent) undoToast(t('ui_task_parent_moved', task.parent, name), { project: task.project, name: task.name, parent: task.parent, was: name }, false);
+          else toast(t('ui_task_parent_moved', task.parent, name), { ms: 8000 });
+          return;
+        }
+        const to = tagged('a', 'toast-link', t('ui_task_parent_put', name));
+        to.href = taskHref({ project: task.project, name });
+        toast('', { ms: 8000, button: to });
+      },
+    },
+  };
+  // The dialog's task and form, and the task it last showed for the name, which saving sends as new or not
+  let kinOf;
+  let kinShown;
+  function openKin(task, form) {
+    kinOf = { task, form: KIN_FORMS[form] };
+    resetTaskForm($('kin'));
+    $('kin-heading').textContent = kinOf.form.heading(task);
+    $('kin-target').textContent = kinOf.form.target(task);
+    $('kin-error').hidden = true;
+    kinNameChanged();
+    $('kin-dialog').showModal();
+  }
+  function kinNameChanged() {
+    const { task, form } = kinOf;
+    const x = tasksOf().find((y) => y.project === task.project && y.name === $('kin-task').value.trim());
+    kinShown = x;
+    const note = x && !form.same(task, x) ? form.note(task, x) : '';
+    $('kin-note').hidden = !note;
+    $('kin-note').textContent = note;
+    titleField($('kin-title'), !x);
+    $('kin-submit').textContent = t(x ? form.take : 'ui_child_make_button');
+  }
+  async function saveKin(e) {
+    e.preventDefault();
+    const btn = $('kin-submit');
+    btn.disabled = true;
+    const { task, form } = kinOf;
+    const name = $('kin-task').value.trim();
+    const title = $('kin-title').value.trim();
+    try {
+      if (!taskFormReady($('kin'), $('kin-error'))) return;
+      const x = kinShown;
+      // Nothing to write, and so nothing to tell
+      if (form.same(task, x)) {
+        $('kin-dialog').close();
+        form.opener(task).focus();
+        return;
+      }
+      const res = await form.write(task, name, x, title);
       if (res.status === 409) {
-        childNameChanged();
+        kinNameChanged();
         throw new Error(res.stale);
       }
       if (!res.ok) throw new Error(res.text);
-      const to = tagged('a', 'toast-link', t(had ? 'ui_task_child_took' : 'ui_task_child_made', name));
-      to.href = taskHref({ project, name });
-      toast('', { ms: 8000, button: to });
+      form.done(task, name, x);
       await load();
-      $('child-dialog').close();
-      $('task-child').focus();
+      $('kin-dialog').close();
+      form.opener(task).focus();
     } catch (err) {
-      $('child-error').textContent = t('ui_save_failed', err.message);
-      $('child-error').hidden = false;
+      $('kin-error').textContent = t('ui_save_failed', err.message);
+      $('kin-error').hidden = false;
     } finally {
       btn.disabled = false;
     }
@@ -4694,7 +4813,10 @@
     const fresh = !setShown;
     const body = {
       new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : {}),
-      ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}), ...(parent !== setOpened.parent ? { parent } : {}),
+      ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}),
+      // The parent sent only as changed, with what was seen of it. Whether the one named is there is said only when it is known: a name not
+      // known may be mistyped, which the store refuses as no parent
+      ...(parent !== setOpened.parent ? { parent, parentWas: setOpened.parent, ...(parent && setTaskOf(parent) ? { parentNew: false } : {}) } : {}),
     };
     try {
       if (!taskFormReady($('set'), $('set-error'))) return;
@@ -4993,8 +5115,8 @@
   suggestTags($('edit-tags'));
   $('set').addEventListener('submit', saveTaskSet);
   // A field marked blank is free again as it is typed in
-  for (const form of [$('set'), $('child')]) form.addEventListener('input', (e) => e.target.setCustomValidity?.(''));
-  $('child').addEventListener('submit', saveChildTask);
+  for (const form of [$('set'), $('kin')]) form.addEventListener('input', (e) => e.target.setCustomValidity?.(''));
+  $('kin').addEventListener('submit', saveKin);
   $('task-delete').addEventListener('blur', disarmForget);
   $('set-out').addEventListener('click', takeOffTask);
   $('set-dialog').addEventListener('close', () => setBack?.()?.focus());
@@ -5024,14 +5146,12 @@
     $('set-task').value = name;
     setTaskChanged();
   }, { fresh: (name) => ({ name, label: t('ui_task_new', name) }) });
-  // What may be a parent: a task with a row, which a task of pages alone has not, no parent of its own, and not this one
-  suggestTasks($('set-parent'), () => setPage.taskProject, (x) => hasRow(x) && !x.parent && x.name !== $('set-task').value.trim(), (name) => { $('set-parent').value = name; }, { onFocus: true });
-  // What may be made a child: no child of its own, not this one, not one already
-  suggestTasks($('child-task'), () => project, (x) => x.children.length === 0 && x.name !== TASK_NAME && !isOwnChild(x), (name) => {
-    $('child-task').value = name;
-    childNameChanged();
+  suggestTasks($('set-parent'), () => setPage.taskProject, (x) => mayParent(x, $('set-task').value.trim()), (name) => { $('set-parent').value = name; }, { onFocus: true });
+  suggestTasks($('kin-task'), () => kinOf.task.project, (x) => kinOf.form.offered(kinOf.task, x), (name) => {
+    $('kin-task').value = name;
+    kinNameChanged();
   });
-  $('child-task').addEventListener('input', childNameChanged);
+  $('kin-task').addEventListener('input', kinNameChanged);
   suggestOne($('set-step'), () => {
     const task = setTaskOf($('set-task').value);
     const steps = [...(task?.steps ?? []), ...[...(task?.pages ?? []), ...(task?.archived ?? [])].map((a) => a.work.step)].filter(Boolean);
