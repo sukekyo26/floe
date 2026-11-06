@@ -152,7 +152,7 @@ func (l *layout) sharesLabel(p path, r rect) bool {
 		return false
 	}
 	own := l.paths[at]
-	if p.graph != "" || own.graph != "" || !p.endsAtOnePart(own) || (p.own >= 0 && own.runsThrough(l.labels[p.own])) {
+	if !p.endsAtOnePart(own) || (p.own >= 0 && own.runsThrough(l.labels[p.own])) {
 		return false
 	}
 	return !slices.ContainsFunc(p.segs, func(s seg) bool {
@@ -160,7 +160,8 @@ func (l *layout) sharesLabel(p path, r rect) bool {
 	})
 }
 
-// endsAtOnePart reports whether p and q have an end at one part named.
+// endsAtOnePart reports whether p and q have an end at one part named: never an edge of a graph or tree, ending at
+// points.
 func (p path) endsAtOnePart(q path) bool {
 	return slices.ContainsFunc(p.ends[:], func(n string) bool { return n != "" && slices.Contains(q.ends[:], n) })
 }
