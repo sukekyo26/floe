@@ -67,7 +67,7 @@ sections:
 	}
 	uri := "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
 	for _, alt := range []string{"The list", "Before", "Folded"} {
-		if want := `<figure data-floe-part="image"><img src="` + uri + `" alt="` + alt + `"/></figure>`; !bytes.Contains(page, []byte(want)) {
+		if want := `<div class="floe-zoom"><img src="` + uri + `" alt="` + alt + `"/></div></figure>`; !bytes.Contains(page, []byte(want)) {
 			t.Errorf("no %s in\n%s", want, page)
 		}
 	}

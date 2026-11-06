@@ -227,7 +227,7 @@ sections:
             - diff: { text: "+a\n-b\n" }
             - entries:
                 - { title: Copied, tags: [412 pages], text: Every page but the drafts. }
-            - image: { file: shots/moved.png, alt: The wiki after the move }
+            - image: { file: shots/moved.png, alt: The wiki after the move, caption: "Figure 1: the wiki on the new host, at `wiki.example.com`" }
       - asks:
           - question: Copy in one go?
             options: [One go, 'By space, with `sync --space`']

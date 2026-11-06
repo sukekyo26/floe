@@ -55,6 +55,10 @@ floe の部品が描くのに使う関数も使えます。floe の部品の `pa
 
 `{{diagram}}` は引数を取らず、部品の値の全体を図として描きます。値は、部品 `diagram` と同じ spec そのものでなければならず、横に別の鍵（`caption` など）を置くと、図の schema が断ります。
 
+### `zoom`
+
+`{{zoom}}` は、拡大の script を描きます。部品 `image` と `diagram` が使うものと同じです。部品の箱の中で、`class="floe-zoom"` の枠の前に置き、`part.yaml` で見た目 `zoom` を借ります（`looks: [zoom]`。`<figure data-floe-part="shot">{{zoom}}<div class="floe-zoom"><img src="{{.file}}" alt="{{.alt}}"></div></figure>`）。枠の最初の要素は、拡大するもの（`svg` か `img`）そのものにします（包む要素は動かしません）。`svg` は `viewBox` を、`img` は `transform` で動かし、大きさは `viewBox` か絵の大きさから取ります。見た目 `zoom` が `img` を枠の幅に縮めて並べるので（`display: block; max-width: 100%; height: auto`）、上の例をそのまま写せば拡大できます。拡大中は絵の枠線を透明にします。原寸より小さく描かれている間と拡大している間だけ、枠の前に道具の並びを出し、枠を Tab で止めます。枠の大きさは部品の CSS が決めます。script は使う部品ごとに入り、ページに何回あっても枠ごとに 1 回だけ動きます。
+
 ### `script`
 
 `{{script .js .data}}` は、要素と、関数 `.js` をそれと `.data` で呼ぶ script を描きます。部品 `script` と同じです。
@@ -93,7 +97,7 @@ floe の部品が描くのに使う関数も使えます。floe の部品の `pa
 
 ## 見た目と共有の schema
 
-- 見た目だけのものは、`part.css`（と、`description:`・借りる見た目・`marks:` を書く `part.yaml`）だけで schema の無いディレクトリです。何も描かず、借りる部品や要素にスタイルを貸します。floe の見た目だけのものは `panel`・`rows`・`cards`・`band`・`numbered`・`marked` です（それぞれが何を描くかは [templates.ja.md](templates.ja.md#借りられる見た目) にあります）。
+- 見た目だけのものは、`part.css`（と、`description:`・借りる見た目・`marks:` を書く `part.yaml`）だけで schema の無いディレクトリです。何も描かず、借りる部品や要素にスタイルを貸します。floe の見た目だけのものは `panel`・`rows`・`cards`・`band`・`numbered`・`marked`・`zoom` です（`zoom` のほかのそれぞれが何を描くかは [templates.ja.md](templates.ja.md#借りられる見た目) にあります。`zoom` は拡大の枠と道具の並びで、関数 [`zoom`](#zoom) と一緒に部品が借ります）。
 - 部品は `part.yaml` の `looks: [panel]` でほかの見た目を借り、その見た目が借りるものも、自分より先に順に借りて、その上で整えます。
 - 共有の schema は、テンプレートか部品の schema が、いつもその根を名指す `<名前>.json`（`floe:///parts/<名前>.json`）です。floe のものは `tone.json`（`accent`・`good`・`warn`・`bad`・`muted`）と `any.json`（どの種類の部品でも 1 つ）です。その中の schema は、テンプレートと同じく、その根から確かめます。持つ部品と floe の format は、根から `properties` と `items` で辿れる所で、テンプレートから指しても部品から指しても描きます。
 - `any.json` の値は、テンプレートの `page.html` と同じく、全部の種類の map で `part.html` に来ます。書いた種類には描いた部品が入り、ほかは nil です。`{{.x}}` と書くと map を字で書くので、`{{range .x}}{{.}}{{end}}` で描きます。schema の根が `any.json` なら `{{range .}}{{.}}{{end}}` です（1 つの種類だけを描く書き方は [templates.ja.md](templates.ja.md#テンプレートの中の部品)）。

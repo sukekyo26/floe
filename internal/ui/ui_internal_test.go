@@ -119,13 +119,14 @@ var notFetched = map[string]bool{
 }
 
 // builtinSources reads ui.html, floe's own templates, parts and themes (what template authors start from), and
-// the diagram's script and SVG every page with a diagram holds, by their names. They are read from the source
-// tree, not the embedded files: those of kit and diagram are not exported, and the tree holds all that is embedded.
+// the zoom script and the diagram's SVG every page with a diagram or image holds, by their names. They are read from
+// the source tree, not the embedded files: those of kit, zoom and diagram are not exported, and the tree holds all
+// that is embedded.
 func builtinSources(t *testing.T) map[string]string {
 	t.Helper()
 
 	sources := map[string]string{"ui.html": pageSource}
-	for _, dir := range []string{"kit/floe", "diagram/assets"} {
+	for _, dir := range []string{"kit/floe", "zoom"} {
 		root := os.DirFS("../" + dir)
 		n := 0
 		err := fs.WalkDir(root, ".", func(name string, e fs.DirEntry, err error) error {

@@ -866,8 +866,42 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="image"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A thin frame keeps a screenshot's white apart from the page's */
-:scope img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius-small); }
+/* The frame clips what it zooms. It takes a finger's pan and pinch only while it may zoom (can-zoom): one that may
+   not leaves the page to pinch */
+.floe-zoom { position: relative; overflow: hidden; }
+.floe-zoom.can-zoom { touch-action: pan-y; }
+.floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
+.floe-zoom.zoomed:active { cursor: grabbing; }
+/* An img is laid out shrunk to the frame, as the whole, and scaled from its top left, as the script's sums take it */
+.floe-zoom > img { display: block; max-width: 100%; height: auto; transform-origin: 0 0; }
+.floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
+/* display: flex above wins over the browser's [hidden] */
+.floe-zoom-tools[hidden] { display: none; }
+.floe-zoom-tools span { color: var(--muted); margin-right: auto; }
+@media (max-width: 640px) { .floe-zoom-tools span { display: none; } }
+/* Buttons do nothing on paper */
+@media print { .floe-zoom-tools { display: none; } }
+/* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */
+.floe-zoom-tools button {
+  --floe-tool-alpha: 100%; min-width: 2.2rem; padding: 2px 8px; font: inherit; border-radius: var(--radius-small); cursor: pointer;
+  color: color-mix(in srgb, var(--fg) var(--floe-tool-alpha), transparent); background: color-mix(in srgb, var(--surface) var(--floe-tool-alpha), transparent);
+  border: 1px solid color-mix(in srgb, var(--line) var(--floe-tool-alpha), transparent);
+}
+.floe-zoom-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.floe-zoom-tools button:disabled { --floe-tool-alpha: 40%; cursor: default; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="image"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A thin frame keeps a screenshot's white apart from the page's. The frame spans the body's width, as the image
+   would, not the image's: an svg without a size of its own lies at no width in a box as wide as what it holds. The
+   frame rounds its corners as the image does, for a zoomed image, which has no line */
+:scope .floe-zoom { border-radius: var(--radius-small); }
+:scope img { border: 1px solid var(--line); border-radius: var(--radius-small); }
+:scope figcaption { margin-top: 0.4rem; font-size: var(--floe-text-aside); color: var(--muted); }
 }
 }
 </style>
@@ -2560,7 +2594,194 @@ banner = &#34;This wiki has moved to the new host.&#34;
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><dl data-floe-part="entries">
 <div><dt>Copied</dt><dd class="tags"><span>412 pages</span></dd><dd class="text"><div data-floe-text=""><p>Every page but the drafts.</p></div></dd></div>
-</dl><figure data-floe-part="image"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAAJElEQVR42mOwqTgxIIhh1OJRi0ctHrV41OJRi0ctHrV45FgMAGfIo72jTm6ZAAAAAElFTkSuQmCC" alt="The wiki after the move"/></figure></div></details>
+</dl><figure data-floe-part="image"><script>(function zoomable({ words, frame: frameClass, tools: toolsClass }) {
+  const MAX = 4;
+  const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
+  const msg = words[lang] || words[lang.split('-')[0]] || words.en;
+  const setup = (wrap) => {
+    if (wrap.dataset.zoomable) return;
+    const first = wrap.firstElementChild;
+    const svg = first?.localName === 'svg' ? first : null;
+    const img = first?.localName === 'img' ? first : null;
+    if (!svg && !img) return;
+    if (img && !img.complete) {
+      wrap.dataset.zoomable = 'pending';
+      const again = () => {
+        delete wrap.dataset.zoomable;
+        setup(wrap);
+      };
+      img.addEventListener('load', again, { once: true });
+      img.addEventListener('error', again, { once: true });
+      return;
+    }
+    const [W, H] = svg ? (svg.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number).slice(2) : [img.naturalWidth, img.naturalHeight];
+    if (!(W > 0 && H > 0)) return;
+    wrap.dataset.zoomable = 'on';
+    if (img) img.draggable = false;
+    let s = 1, cx = W / 2, cy = H / 2, fitted = true;
+    let printing = false;
+    let offered;
+    const fit = () => (svg ? Math.min(wrap.clientWidth / W, wrap.clientHeight / H) : img.clientWidth / W);
+    const min = () => Math.min(fit(), 1);
+    const shrunk = () => (svg ? Math.min(wrap.offsetWidth / W, wrap.offsetHeight / H) : fit()) < 1;
+    const tools = document.createElement('div');
+    tools.className = toolsClass;
+    tools.hidden = true;
+    const hint = document.createElement('span');
+    hint.textContent = msg.zoom_hint;
+    tools.append(hint);
+    for (const [k, text, label] of [
+      ['in', '+', msg.zoom_in], ['out', '−', msg.zoom_out],
+      ['fit', msg.zoom_fit, msg.zoom_fit_label], ['one', msg.zoom_one, msg.zoom_one_label],
+    ]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.zoom = k;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.textContent = text;
+      tools.append(b);
+    }
+    wrap.before(tools);
+    const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+
+    const offer = (can) => {
+      if (can === offered) return;
+      offered = can;
+      const focused = wrap.contains(document.activeElement) || tools.contains(document.activeElement);
+      tools.hidden = !can;
+      wrap.classList.toggle('can-zoom', can);
+      wrap.tabIndex = can ? 0 : -1;
+      if (can) {
+        wrap.setAttribute('role', 'group');
+        wrap.setAttribute('aria-label', msg.zoom_frame);
+      } else {
+        wrap.removeAttribute('role');
+        wrap.removeAttribute('aria-label');
+        if (focused) wrap.focus();
+      }
+    };
+    const show = (x, y, w, h) => {
+      if (svg) {
+        svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+        return;
+      }
+      if (fitted || printing) {
+        img.style.transform = '';
+        img.style.borderColor = '';
+        return;
+      }
+      const k = s / fit(), ox = img.clientLeft, oy = img.clientTop;
+      img.style.borderColor = 'transparent';
+      img.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
+    };
+
+    const render = () => {
+      if (printing) {
+        show(0, 0, W, H);
+        wrap.classList.remove('zoomed');
+        return;
+      }
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h) return;
+      if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
+      s = Math.min(Math.max(s, min()), MAX);
+      const vw = w / s, vh = h / s;
+      const clamp = (c, v, size) => (v >= size ? (svg ? size / 2 : v / 2) : Math.min(Math.max(c, v / 2), size - v / 2));
+      cx = clamp(cx, vw, W);
+      cy = clamp(cy, vh, H);
+      show(cx - vw / 2, cy - vh / 2, vw, vh);
+      wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
+      offer(!fitted || shrunk());
+      button('in').disabled = s >= MAX;
+      button('out').disabled = s <= min();
+      button('fit').disabled = fitted;
+      button('one').disabled = Math.abs(s - 1) < 1e-3;
+    };
+    const local = (x, y) => {
+      const r = wrap.getBoundingClientRect();
+      return [x - r.left - wrap.clientLeft, y - r.top - wrap.clientTop];
+    };
+    const zoomAt = (k, ax = wrap.clientWidth / 2, ay = wrap.clientHeight / 2) => {
+      const ns = Math.min(Math.max(s * k, min()), MAX);
+      const dx = ax - wrap.clientWidth / 2, dy = ay - wrap.clientHeight / 2;
+      cx += dx / s - dx / ns;
+      cy += dy / s - dy / ns;
+      s = ns;
+      fitted = Math.abs(ns / fit() - 1) < 1e-9;
+      render();
+    };
+
+    tools.addEventListener('click', (e) => {
+      const k = e.target.closest('button')?.dataset.zoom;
+      if (k === 'in') zoomAt(1.25);
+      if (k === 'out') zoomAt(0.8);
+      if (k === 'one') zoomAt(1 / s);
+      if (k === 'fit') {
+        fitted = true;
+        render();
+      }
+    });
+    wrap.addEventListener('wheel', (e) => {
+      if (!offered || (!e.ctrlKey && !e.metaKey)) return;
+      e.preventDefault();
+      const dy = e.deltaY * [1, 16, wrap.clientHeight][e.deltaMode];
+      zoomAt(Math.exp(-dy * 0.002), ...local(e.clientX, e.clientY));
+    }, { passive: false });
+
+    const points = new Map();
+    const gesture = () => {
+      const [a, b = a] = [...points.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) };
+    };
+    wrap.addEventListener('pointerdown', (e) => {
+      if (!offered || e.button !== 0 || (e.pointerType === 'mouse' && !wrap.classList.contains('zoomed'))) return;
+      e.preventDefault();
+      wrap.setPointerCapture(e.pointerId);
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    });
+    wrap.addEventListener('pointermove', (e) => {
+      if (!points.has(e.pointerId)) return;
+      const before = gesture();
+      points.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const after = gesture();
+      cx -= (after.x - before.x) / s;
+      cy -= (after.y - before.y) / s;
+      if (before.d && after.d) zoomAt(after.d / before.d, ...local(after.x, after.y));
+      else render();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) wrap.addEventListener(type, (e) => points.delete(e.pointerId));
+
+    wrap.addEventListener('keydown', (e) => {
+      if (!offered || e.ctrlKey || e.metaKey || e.altKey) return;
+      const zoom = { '+': 'in', '=': 'in', '-': 'out', 0: 'fit' }[e.key];
+      if (zoom) {
+        e.preventDefault();
+        button(zoom).click();
+        return;
+      }
+      const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!step || !wrap.classList.contains('zoomed')) return;
+      e.preventDefault();
+      cx += (step[0] * 40) / s;
+      cy += (step[1] * 40) / s;
+      render();
+    });
+    render();
+    new ResizeObserver(render).observe(wrap);
+    addEventListener('beforeprint', () => {
+      printing = true;
+      render();
+    });
+    addEventListener('afterprint', () => {
+      printing = false;
+      render();
+    });
+  };
+  const init = () => document.querySelectorAll('.' + frameClass).forEach(setup);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})({"frame":"floe-zoom","tools":"floe-zoom-tools","words":{"en":{"zoom_fit":"Fit","zoom_fit_label":"Show the whole figure","zoom_frame":"Zoomable figure","zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the figure; drag or use the arrow keys to move while zoomed","zoom_in":"Zoom in","zoom_one":"1:1","zoom_one_label":"Show at actual size","zoom_out":"Zoom out"},"ja":{"zoom_fit":"全体","zoom_fit_label":"全体を表示","zoom_frame":"拡大できる図","zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","zoom_in":"拡大","zoom_one":"原寸","zoom_one_label":"原寸で表示","zoom_out":"縮小"}}});</script><div class="floe-zoom"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAAJElEQVR42mOwqTgxIIhh1OJRi0ctHrV41OJRi0ctHrV45FgMAGfIo72jTm6ZAAAAAElFTkSuQmCC" alt="The wiki after the move"/></div><figcaption>Figure 1: the wiki on the new host, at <code>wiki.example.com</code></figcaption></figure></div></details>
 <ul data-floe-part="asks">
 <li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Copy in one go?</div></div><ul class="choices"><li data-floe-tone="accent" class="marked"><span>One go</span><span data-floe-tone="accent" data-floe-part="cell">Recommended</span></li><li><span>By space, with <code>sync --space</code></span></li></ul><p>Two days of read-only</p><p>Who decides: The platform team</p></li>
 <li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Keep the old host?</div><span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5 6.7 11.5 12.5 4.5"></path></svg></span></div><ul class="choices"><li data-floe-tone="good" class="marked"><span>A month</span><span data-floe-tone="good" data-floe-part="cell">Decided</span></li><li class="other"><span>For good</span></li></ul></li>

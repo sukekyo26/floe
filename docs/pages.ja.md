@@ -91,7 +91,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `terminal` | コマンド（`run`）と出力（`out`）を、`shell`（`bash`・`sh`・`zsh`・`powershell`・`cmd`）のプロンプトで。プロンプトは floe が描くので、プロンプトで始まる `run`（`$ ls`）は断る。右上のボタンで、コマンドを 1 行ずつ、プロンプトと出力を除いてコピーできる。 |
 | `table` | 行でも列でも見比べる、升の短い並び。`columns` と `rows`。列は題の字か `{ title, num, pills }`。`num: true` は数の列、`pills` は言葉とその色（`{ 済: good }`）で、その列の升が言葉と丸ごと同じなら、その pill で描く。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`（引用符で囲まず、オブジェクトのまま書く）。 |
 | `entries` | 記録を縦に並べます。1 つが `title`（Markdown の 1 行）とその横の `tags`（それぞれ表のセルと同じく Markdown の 1 行か pill）、その下の全部の幅の `text`（Markdown）、その下の `parts`（`details` と同じ部品の並び）。札には列の名前が出ないので、何の値かを札の中で言います（`マージ 2026-10-30`）。コードは `parts` に `code`・`terminal` で書きます。`text` の中の囲んだコードは、ただのコードとして描き、警告します。 |
-| `image` | 画面の写しなどの画像。`file` と、何を写すかの `alt`（[画像](#画像)）。 |
+| `image` | 画面の写しなどの画像。`file` と、何を写すかの `alt`、任意で絵の下に出す説明 `caption`（[画像](#画像)）。 |
 | `note`・`stats`・`steps`・`checklist` | 色の付いた注、大きな数、番号付きの手順、済めば印の付く項目。 |
 | `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |
 | `asks` | 読み手に判断を頼む問い。Q1、Q2 … と番号が付きます。`question`、案の `options`、勧めの `recommend` と理由の `why`、決める人の `by`、決まったら `decided`。`recommend`・`decided` と同じ字の案に枠と札が付き、どの案とも違えば別の行に出ます。決まった問いは右上に丸い ✓ が付き、枠は決定の案だけで、ほかの案は薄い字になります（勧めの案の札は残ります）。 |
@@ -119,7 +119,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 
 ## 画像
 
-`report` では、画像は部品 `image`（`- image: { file: shots/list.png, alt: ページの一覧 }`）で、節・小節・`details`・`tabs`・`columns`・`entries` の項目の `parts` に置けます。`file` は画像のパス、`alt` は何を写すかです。自分のテンプレートでは `"format": "image"` の項目で取り、その値が画像のパスです。パスは、データファイルのディレクトリからの相対パスで、その下だけです。名前の間は `/` 1 つで、`./`・`..`・両端の `/` を使いません。画像は data URI でページに入るので、ページは見せるものを全部持ちます。png・jpeg・gif・webp・svg のファイルを名前で見分け、1 MiB までです。`floe publish` は、ページが見せる画像をサーバーに送ります。
+`report` では、画像は部品 `image`（`- image: { file: shots/list.png, alt: ページの一覧 }`）で、節・小節・`details`・`tabs`・`columns`・`entries` の項目の `parts` に置けます。`file` は画像のパス、`alt` は何を写すか（読み上げと、絵が出ない所のため）です。`caption` を書くと、絵の下に説明を出します（1 行の Markdown。`caption: 図 1：ページの一覧`）。列より大きく縮んで描かれた画像は、図と同じく、上の道具の並び、Ctrl / ⌘ + ホイール、ピンチ、`+ - 0` のキーで拡大し、拡大中はドラッグか矢印キーで動かせます。`viewBox` だけで `width`・`height` の無い SVG は大きさが分からないので、拡大できません。自分のテンプレートでは `"format": "image"` の項目で取り、その値が画像のパスです。パスは、データファイルのディレクトリからの相対パスで、その下だけです。名前の間は `/` 1 つで、`./`・`..`・両端の `/` を使いません。画像は data URI でページに入るので、ページは見せるものを全部持ちます。png・jpeg・gif・webp・svg のファイルを名前で見分け、1 MiB までです。`floe publish` は、ページが見せる画像をサーバーに送ります。
 
 Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書いたまま描かれ、ページの CSP で出ません。出るのは、Markdown に直に書いた png・gif・jpeg・webp の data URI だけです。画像は `image` に書いてください。
 

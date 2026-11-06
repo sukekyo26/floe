@@ -17,6 +17,7 @@ import (
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 	"github.com/sukekyo26/floe/internal/yamlpos"
+	"github.com/sukekyo26/floe/internal/zoom"
 )
 
 func (a *app) diagramCmd() *cobra.Command {
@@ -129,12 +130,12 @@ func (a *app) diagrams(
 }
 
 // diagramAssets are what a page holds once for the diagrams of floe diagram render: the script that zooms them,
-// default's palette and the tones' colours on the diagrams' roots alone, in its layer, and the CSS of floe's part
-// diagram, unscoped, as a page without floe's parts takes it.
+// default's palette and the tones' colours on the diagrams' roots alone, in its layer, and the CSS of floe's look
+// zoom and part diagram, unscoped, as a page without floe's parts takes it.
 // LIMIT: a browser that does not read @scope drops the palette, and the diagrams are drawn without colours; the
 // docs ask for the browsers the README names.
 func diagramAssets() (string, error) {
-	script, err := diagram.Script()
+	script, err := zoom.Script()
 	if err != nil {
 		return "", err //nolint:wrapcheck // floe's own, which its tests check
 	}
@@ -145,6 +146,10 @@ func diagramAssets() (string, error) {
 	p, ok := k.Part("diagram")
 	if !ok {
 		return "", errors.New("diagram: floe has no part diagram") //nolint:err113 // floe's own mistake
+	}
+	z, ok := k.Look("zoom")
+	if !ok {
+		return "", errors.New("diagram: floe has no look zoom") //nolint:err113 // floe's own mistake
 	}
 	t, ok := k.Theme(kit.DefaultTheme)
 	if !ok {
@@ -157,8 +162,9 @@ func diagramAssets() (string, error) {
 		return "", err //nolint:wrapcheck // as above
 	}
 	colours := slices.Concat(t.Palette(), draw.Tones(tones))
-	palette := draw.Sheet("floe.palette", draw.InScope("("+diagram.Roots+")", colours))
-	return script + "\n<style>" + palette + "</style>\n<style>" + draw.Sheet("", p.CSS()) + "</style>", nil
+	palette := draw.Sheet("floe.palette", draw.InScope("("+zoom.Roots+")", colours))
+	css := slices.Concat(z.CSS(), []byte("\n"), p.CSS())
+	return string(script) + "\n<style>" + palette + "</style>\n<style>" + draw.Sheet("", css) + "</style>", nil
 }
 
 // diagramOf draws the spec file p.
