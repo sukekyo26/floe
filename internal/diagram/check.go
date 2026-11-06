@@ -456,7 +456,8 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 
 // grid is at most 501 points from lo to hi within 0 and size, step apart, step being 4 or more: counted from mid,
 // the middle of lo and hi, so that mid is one when the canvas holds it, and the canvas cutting the range moves no
-// point while step is 4; or, when no such point is within the canvas, the one point where the canvas cuts it.
+// point while step is 4; or, when the range the canvas leaves holds no point mid and whole steps away, the one
+// point where the canvas cuts it.
 // LIMIT: step grows with the range within the canvas past 2000, so the canvas cutting it moves the points there.
 func grid(lo, hi, mid, size float64) []float64 {
 	from, to := max(lo, 0), min(hi, size)

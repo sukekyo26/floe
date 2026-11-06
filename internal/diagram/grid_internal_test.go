@@ -24,7 +24,7 @@ func TestGridBounded(t *testing.T) {
 		{"to hi", 0, 8, 100, 3, 8},
 		{"one point", 10, 10, 100, 1, 10},
 		{"narrower than step", -1, 2, 100, 1, 0.5},
-		{"narrower than step past the middle", -100, 2, 100, 1, 0},
+		{"no point the canvas leaves", -100, 2, 100, 1, 0},
 		{"no range", 50, 10, 100, 0, math.NaN()},
 		{"out of the canvas", 120, 130, 100, 0, math.NaN()},
 	} {
