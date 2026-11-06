@@ -38,16 +38,17 @@ func TestGridBounded(t *testing.T) {
 			t.Errorf("%s: grid gives %d points, the last %v; want %d, %v", tt.name, len(got), last, tt.n, tt.last)
 		}
 		if why := gridBroken(got, tt.lo, tt.hi, tt.size); why != "" {
-			t.Errorf("%s: grid(%v, %v, %v) %s", tt.name, tt.lo, tt.hi, tt.size, why)
+			t.Errorf("%s: grid(%v, %v, %v, %v) %s", tt.name, tt.lo, tt.hi, mid, tt.size, why)
 		}
-		if mid >= max(tt.lo, 0) && mid <= min(tt.hi, tt.size) && !slices.Contains(got, mid) {
+		from, to := max(tt.lo, 0), min(tt.hi, tt.size)
+		onMid := func(p float64) bool { return math.Abs(p-mid) <= rounding(from, to) }
+		if mid >= from && mid <= to && !slices.ContainsFunc(got, onMid) {
 			t.Errorf("%s: grid has no point at the middle %v", tt.name, mid)
 		}
 	}
 }
 
-// gridBroken tells how points, of grid(lo, hi, size), break its rules; "" for none. The room left for rounding
-// is four of the float's spacing at the range's ends.
+// gridBroken tells how points, of grid(lo, hi, mid, size), break its rules; "" for none, with room for rounding.
 func gridBroken(points []float64, lo, hi, size float64) string {
 	from, to := max(lo, 0), min(hi, size)
 	switch {
@@ -61,8 +62,7 @@ func gridBroken(points []float64, lo, hi, size float64) string {
 	case len(points) > 501:
 		return "has over 501 points"
 	}
-	edge := max(math.Abs(from), math.Abs(to))
-	most := max(4, (to-from)/500) + 4*(math.Nextafter(edge, math.Inf(1))-edge)
+	most := max(4, (to-from)/500) + rounding(from, to)
 	at := from
 	for _, p := range points {
 		switch {
@@ -77,4 +77,10 @@ func gridBroken(points []float64, lo, hi, size float64) string {
 		return "ends over step before the range does"
 	}
 	return ""
+}
+
+// rounding is the room left for rounding in a grid from from to to: four of the float's spacing at its ends.
+func rounding(from, to float64) float64 {
+	edge := max(math.Abs(from), math.Abs(to))
+	return 4 * (math.Nextafter(edge, math.Inf(1)) - edge)
 }

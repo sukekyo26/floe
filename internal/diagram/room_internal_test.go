@@ -44,8 +44,8 @@ func TestPick(t *testing.T) {
 		mx    float64
 		want  float64 // the x picked
 	}{
-		{"room rounded apart", []try{{378, 0, 5}, {382, 0, 5 + 1e-13}}, 380, 378},
-		{"nearness rounded apart", []try{{378, 0, 5}, {382, 0, 5}}, 380 + 1e-13, 378},
+		{"room rounded apart", []try{{10, 0, 5}, {14, 0, 5 + 1e-13}}, 12, 10},
+		{"nearness rounded apart", []try{{10, 0, 5}, {14, 0, 5}}, 12 + 1e-13, 10},
 		{"a chain of rooms each within eps", []try{{370, 0, 5}, {379, 0, 5 + 0.9*eps}, {400, 0, 5 + 1.5*eps}}, 380, 379},
 		{"more room, farther", []try{{380, 0, 5}, {400, 0, 6}}, 380, 400},
 		{"none of room", []try{{380, 0, -1}}, 380, 0},
