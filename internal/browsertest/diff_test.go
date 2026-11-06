@@ -224,7 +224,7 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("document.querySelector('#frame-actions .diff-open').click()")
 	b.until("closed", "location.pathname === '/a/e/' && location.search === ''")
 	// From a page whole, the order stays what it was.
-	b.eval("sessionStorage.setItem('artifacts.order', '[\"e\",\"one\"]')")
+	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["e","one"],"shown":["e","one"],"back":"/"}')`)
 	b.navigate("/a/e/")
 	b.until("its bar", "!document.querySelector('#frame-actions .diff-open').hidden")
 	b.eval("document.querySelector('#frame-actions .diff-open').click()")
@@ -259,7 +259,7 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, b.eval("document.querySelector('[data-diff-view=all]').getAttribute('aria-pressed') + ' ' + getComputedStyle(document.querySelector('.dtoc')).display + ' ' + document.querySelector('#frame-actions .diff-open').getAttribute('aria-label') + ' ' + document.querySelector('#frame-actions .diff-open').matches('.closing')"))
 	b.navigate("/a/d/")
 	b.until("its bar narrow", "document.querySelector('#frame-actions .diff-open').offsetWidth > 0")
-	check(t, "ways", out, strings.Join([]string{"true", "true", "false", "/a/e/?diff See what changed (d)", `["e","one"]`, "true none Close the diff (d) true"}, "|"))
+	check(t, "ways", out, strings.Join([]string{"true", "true", "false", "/a/e/?diff See what changed (d)", `{"order":["e","one"],"shown":["e","one"],"back":"/"}`, "true none Close the diff (d) true"}, "|"))
 }
 
 // TestUIDiffPick has the versions chosen from the browser's own list, drawn by the page: the arrows open it and move in it, asking for nothing

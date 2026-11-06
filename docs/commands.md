@@ -218,6 +218,8 @@ The tasks are written first, once for each different task the pages are on, and 
 
 The task list, at `/tasks` of the server, lists the tasks by state and project: waiting ones the longest first, the others the latest changed first, each with its last step, its pages, how many are unread and its link, under the pages pinned. A task that is done and whose pages are all archived goes under Archive; one waiting or in progress stays, and so does one of no page. The switch to it stands beside the logo once a page is on a task or pinned, or a task has a row.
 
+A task's row opens the task's page, at `/tasks?project=…&task=…`: its pages under their steps, in the order `--steps` wrote and then as they first came, those of no step first and the archived last, and over them its state to change, its link, and, once it is done, a button that archives its pages. Opening it reads nothing, and a page opened whole from it goes back to it, as one from the pins goes back to the task list. `h` goes back to the task list, to the row it came from, or the next where that left the list.
+
 A page keeps its `work` when published again, renamed or drawn again. `tasks.json` that cannot be read, or holds another state or a URL other than `http` or `https`, is refused and not written over: mend it by hand. A key of a row floe does not know is lost at the next write.
 
 ## `floe serve`

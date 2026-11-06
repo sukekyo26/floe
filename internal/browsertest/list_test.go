@@ -133,7 +133,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// An end stays where it is.
 	b.navigate("/a/v/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	b.eval("sessionStorage.setItem('artifacts.order', '[\"v\"]')")
+	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["v"],"shown":["v"],"back":"/"}')`)
 	b.navigate("/a/v/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	key("j")
@@ -195,7 +195,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true false /a/l/?raw Link l", "true false /a/n/?raw New n New",
 		"true true true", "false true about:blank New ",
 		"vn ?view=new", "vn", "All unread 1 / 1", "New", "n", "true",
-		`["v","n"]`, "/?view=new", "/a/v/",
+		`{"order":["v","n"],"shown":["v","n"],"back":"/?view=new"}`, "/?view=new", "/a/v/",
 		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true block", "true",
 		"none none flex none true", "flex none",
 	}, "|"))
@@ -547,7 +547,7 @@ func TestUIFrameOrder(t *testing.T) { //nolint:paralleltest // the browser tests
 		t.Helper()
 
 		b.navigate("/")
-		b.eval("sessionStorage.setItem('artifacts.order', " + js(order) + "); sessionStorage.setItem('artifacts.list', " + js(list) + ")")
+		b.eval("sessionStorage.setItem('artifacts.order', " + js(`{"order":`+order+`,"shown":`+order+`,"back":"/"}`) + "); sessionStorage.setItem('artifacts.list', " + js(list) + ")")
 		b.navigate("/a/" + from + "/")
 		b.until("the bar", "document.getElementById('frame-title').textContent")
 		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
@@ -573,7 +573,7 @@ func TestUIFrameOrder(t *testing.T) { //nolint:paralleltest // the browser tests
 	go1("a", "[]", "?kind=link", "b")
 	// At the end of the list that opened it, it stays.
 	b.navigate("/")
-	b.eval(`sessionStorage.setItem('artifacts.order', '["v","n"]')`)
+	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["v","n"],"shown":["v","n"],"back":"/"}')`)
 	stays("n")
 }
 
@@ -1271,7 +1271,7 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("whole by a double press", "location.pathname === '/a/a3/'")
 
 	check(t, "row again", out, strings.Join([]string{
-		"/", "/", "/", "1 a2 /", "true", "a3 /", `["a3","a2","a1"]`,
+		"/", "/", "/", "1 a2 /", "true", "a3 /", `{"order":["a3","a2","a1"],"shown":["a3","a2","a1"],"back":"/"}`,
 	}, "|"))
 }
 
