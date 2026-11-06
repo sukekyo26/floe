@@ -80,7 +80,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.until("the tree again", rows+".includes('odd.html') && "+rows),
 		b.until("the keys gone", "!localStorage.getItem('list.open').includes('nope') && "+opens), b.eval(read))
 	// Closed and opened again, the rows under guide go and come, the others the same elements, the focus where it was;
-	// only the rows added rise in, and a redraw raises none.
+	// only the rows added rise in, in no set order, and a redraw raises none.
 	b.still()
 	b.eval(`window.marked = [...document.querySelectorAll('#list > li')]; window.rose = [];
 		document.getElementById('list').addEventListener('animationstart', (e) => rose.push(e.target.dataset.key));
@@ -91,7 +91,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	click("guide")
 	b.until("guide open", "rose.length > 0")
 	b.still()
-	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].filter((li) => !marked.includes(li)).map((li) => li.dataset.key).join(',') + ' new, rose ' + rose.join(',')"))
+	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].filter((li) => !marked.includes(li)).map((li) => li.dataset.key).join(',') + ' new, rose ' + rose.sort().join(',')"))
 	b.eval("rose = []; render()")
 	b.still()
 	out = append(out, b.eval("'redrawn, rose ' + rose.length"))
@@ -128,7 +128,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("location.hash = '#end'")
 	out = append(out, b.until("the part in the page", "window.at === '#end' && 'the page at #end'"))
 	// j goes on to the next page of its directory.
-	b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
+	b.moving("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
 	out = append(out, b.until("the next page", "location.search.includes('start') && location.search"))
 	b.navigate("/a/docs/guide/setup.html")
 	out = append(out, b.eval("getComputedStyle(document.querySelector('h1')).color"))

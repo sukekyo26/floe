@@ -20,7 +20,9 @@ const (
 // choose picks the version n in the select of id, as a press on its item does.
 func choose(b *browser, id string, n int) {
 	b.t.Helper()
-	b.eval("(() => { const s = document.getElementById(" + js(id) + "); s.value = " + strconv.Itoa(n) + "; s.dispatchEvent(new Event('change', { bubbles: true })); })()")
+	// The list of versions comes after the page is picked, the choice empty until then
+	b.until("the option", "document.querySelector('#"+id+" option[value=\""+strconv.Itoa(n)+"\"]')")
+	b.moving("(() => { const s = document.getElementById(" + js(id) + "); s.value = " + strconv.Itoa(n) + "; s.dispatchEvent(new Event('change', { bubbles: true })); })()")
 }
 
 // TestUIVersionPick chooses a version of a page beside the list: it stays through the list drawn anew and a version published, the latest
@@ -50,7 +52,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 			document.querySelector('#read-actions > .diff-open').getAttribute('href'), document.querySelector('#read-actions .menu .open').getAttribute('href')].join(' ')`))
 	// The words' way to the latest leaves the focus on the choice, the words gone.
 	b.eval("[...document.querySelectorAll('.dnote.ver-note a')].find((a) => a.textContent.includes('latest')).click()")
-	out = append(out, b.until("the latest", "readLoaded === '/a/d/?raw' && [document.activeElement.id, document.querySelector('.dnote.ver-note') === null].join(' ')"))
+	out = append(out, b.until("the latest", "readLoaded === '/a/d/?raw' && document.querySelector('.dnote.ver-note') === null && document.activeElement.id"))
 	choose(b, "read-version", 2)
 	b.until("v2 again", "readLoaded.endsWith('v=2') && document.querySelector('.dnote.ver-note')")
 	b.eval("document.querySelector('.toast.page')?.remove()")
@@ -124,7 +126,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 		"/a/d/?raw&v=2 / false / true / Showing v2 (at). The latest is v3.Open the latest versionSee what differs from the latest",
 		"v2", "BODY",
 		"/a/d/?v=2 /a/d/?raw&v=2 /api/artifacts/d/download?v=2 true /a/d/?diff&from=2&to=3 /a/d/?raw&v=2",
-		"read-version true",
+		"read-version",
 		"/a/d/?raw&v=2",
 		"/a/d/?raw&v=2 / false / true / Showing v2 (at). The latest is v4.Open the latest versionSee what differs from the latest", "version", "0",
 		"/a/d/",
@@ -158,6 +160,8 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 
 		b.navigate(path)
 		b.until("the bar", "!document.getElementById('frame-actions').hidden && document.querySelector('#frame-actions .diff-open')")
+		// The choice is drawn as the list of versions comes, after the bar
+		b.until("the versions", "(() => { const a = items.find((x) => x.slug === framed); return !a || !canDiff(a) || document.getElementById('frame-version').dataset.numbers; })()")
 		b.still()
 		return b.eval(frameSaid)
 	}
@@ -194,14 +198,14 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.pressKey(kb.ArrowUp)
 	b.pressKey(kb.Enter)
 	b.until("v2 by the key", "location.search === '?v=2' && !document.getElementById('frame-version').hidden && document.activeElement.id === 'frame-version'")
-	b.eval("history.back()")
+	b.moving("history.back()")
 	b.until("v1 back", "location.search === '?v=1' && !document.getElementById('frame-version').hidden")
 	out = append(out, b.eval("[document.getElementById('frame-version').value, frameAt.v].join(' ')"))
 	choose(b, "frame-version", 2)
 	b.until("v2", "location.search === '?v=2' && !document.getElementById('frame-version').hidden")
 	choose(b, "frame-version", 1)
 	b.until("v1", "location.search === '?v=1' && !document.getElementById('frame-version').hidden")
-	b.eval("history.back()")
+	b.moving("history.back()")
 	b.until("back", "location.search === '?v=2' && !document.getElementById('frame-version').hidden")
 	out = append(out, b.eval(frameSaid))
 	// Yellow, its words read and it takes the ring.
@@ -220,7 +224,7 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("unread", newsOfD)
 	choose(b, "frame-version", 2)
 	b.until("v2", "location.search === '?v=2' && document.querySelector('.dnote.ver-note')")
-	b.eval("[...document.querySelectorAll('.dnote.ver-note a')].find((a) => a.textContent.includes('latest')).click()")
+	b.moving("[...document.querySelectorAll('.dnote.ver-note a')].find((a) => a.textContent.includes('latest')).click()")
 	b.until("the latest", "location.search === '' && !document.getElementById('frame-version').hidden && document.activeElement.id === 'frame-version'")
 	b.still()
 	out = append(out, b.eval("Boolean("+newsOfD+")"), b.eval("document.querySelectorAll('.toast').length"), b.eval("sessionStorage.getItem('reads') ?? '0'"))
@@ -232,7 +236,7 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 
 	// A slug changed keeps the version.
 	open("/a/d/?v=2")
-	b.eval("document.querySelector('#frame-actions .edit').click(); document.getElementById('edit-slug').value = 'd3'; document.getElementById('edit').requestSubmit()")
+	b.moving("document.querySelector('#frame-actions .edit').click(); document.getElementById('edit-slug').value = 'd3'; document.getElementById('edit').requestSubmit()")
 	out = append(out, b.until("the new name", "location.pathname !== '/a/d/' && location.pathname + location.search"))
 
 	check(t, "url", out, strings.Join([]string{
@@ -323,7 +327,7 @@ func TestUIVersionGone(t *testing.T) { //nolint:paralleltest // the browser test
 	b.eval("load()")
 	b.until("the list", "versionWaits")
 	out = append(out, b.eval("[document.getElementById('edit-dialog').open, document.getElementById('edit-name').value, location.search].join(' ')"))
-	b.eval("document.getElementById('edit-dialog').close()")
+	b.moving("document.getElementById('edit-dialog').close()")
 	out = append(out, b.until("the latest", "location.search === '' && "+noteWords+" === "+js(gone)+" && "+frameSaid))
 
 	// Beside the list, with the list's look held back across the removal, whose answer in between would let the row go.

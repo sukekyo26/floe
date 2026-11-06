@@ -221,13 +221,13 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the order", "sessionStorage.getItem('artifacts.order')?.includes('e')")
 	// Closed by the bar's button.
 	b.until("the bar", "!document.querySelector('#frame-actions .diff-open').hidden")
-	b.eval("document.querySelector('#frame-actions .diff-open').click()")
+	b.moving("document.querySelector('#frame-actions .diff-open').click()")
 	b.until("closed", "location.pathname === '/a/e/' && location.search === ''")
 	// From a page whole, the order stays what it was.
 	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["e","one"],"shown":["e","one"],"back":"/"}')`)
 	b.navigate("/a/e/")
 	b.until("its bar", "!document.querySelector('#frame-actions .diff-open').hidden")
-	b.eval("document.querySelector('#frame-actions .diff-open').click()")
+	b.moving("document.querySelector('#frame-actions .diff-open').click()")
 	b.until("from whole", "location.search === '?diff'")
 	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"))
 	b.until("what changed", diffShown)
@@ -391,13 +391,13 @@ func TestUIDiffClose(t *testing.T) { //nolint:paralleltest // the browser tests 
 	if got := b.eval(like); got != "none true" {
 		t.Errorf("not like the buttons beside it: %s", got)
 	}
-	b.eval("document.getElementById('diff-close').click()")
+	b.moving("document.getElementById('diff-close').click()")
 	b.until("the page", "location.pathname + location.search === '/a/d/' && document.getElementById('frame').hasAttribute('src')")
 
 	b.size(1200, 800, false)
 	b.navigate("/a/one/?diff")
 	b.until("nothing to compare", "!document.getElementById('diff-none').hidden")
-	b.eval("document.getElementById('diff-page').click()")
+	b.moving("document.getElementById('diff-page').click()")
 	b.until("its page", "location.pathname + location.search === '/a/one/' && document.getElementById('frame').hasAttribute('src')")
 }
 
