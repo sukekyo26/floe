@@ -148,14 +148,17 @@ func TestCopyButton(t *testing.T) {
 	}
 }
 
-// A bar's width is its share of the longest value, and every bar is 0 wide when all the values are 0; a value below
-// 0, which would make a width CSS drops, is refused, and -0 is 0 wide. An item not written as keys and values is
-// refused, told by its number.
+// A bar's width is its share of its of, when written, else of the longest value of the bars without of, and every
+// such bar is 0 wide when all their values are 0; a value below 0, which would make a width CSS drops, is refused,
+// and -0 is 0 wide; so are an of not above 0 and a value over its of. An of of nil, as Walk sets one the data leaves
+// out, is none. The mistakes of every item are told, each with its bar's label; an item not written as keys and
+// values is refused, told by its number.
 func TestBarsOf(t *testing.T) {
 	t.Parallel()
 
 	item := func(v any) any { return map[string]any{"label": "x", "value": v} }
-	notItem := "bars takes items written as keys and values (label, value, tone); item 2 is not"
+	of := func(label string, v, of any) any { return map[string]any{"label": label, "value": v, "of": of} }
+	notItem := "bars takes items written as keys and values (label, value, of, tone); item 2 is not"
 	for _, c := range []struct {
 		items []any
 		want  string
@@ -163,15 +166,24 @@ func TestBarsOf(t *testing.T) {
 		{[]any{item(1), item(4), item(2.5)}, "25 100 62.5"},
 		{[]any{item(0), item(0)}, "0 0"},
 		{[]any{item(math.Copysign(0, -1)), item(4)}, "0 100"},
-		{[]any{item(3), item(-2)}, "bars takes a number of 0 or more, not -2"},
-		{[]any{item(3), item(-0.5)}, "bars takes a number of 0 or more, not -0.5"},
-		{[]any{item(3), item("x")}, `bars takes a number, not "x"`},
-		{[]any{item(3), item(nil)}, "bars takes a number; none is written, or it is null"},
-		{[]any{item(3), map[string]any{"label": "x"}}, "bars takes a number; none is written, or it is null"},
+		{[]any{item(3), item(-2)}, `bars: bar "x"'s value takes a number of 0 or more, not -2`},
+		{[]any{item(3), item(-0.5)}, `bars: bar "x"'s value takes a number of 0 or more, not -0.5`},
+		{[]any{item(3), item("x")}, `bars: bar "x"'s value takes a number, not "x"`},
+		{[]any{item(3), item(nil)}, `bars: bar "x"'s value takes a number; none is written, or it is null`},
+		{[]any{item(3), map[string]any{"label": "x"}}, `bars: bar "x"'s value takes a number; none is written, or it is null`},
 		{[]any{item(1), 3}, notItem},
 		{[]any{item(1), ""}, notItem},
 		{[]any{item(1), nil}, notItem},
 		{[]any{item(1), []any{1, 2}}, notItem},
+		// A bar with of is not a share of the longest, nor counted in it: c would be 1875 wide, b 13.33.
+		{[]any{item(2), item(4), of("c", 30, 40)}, "50 100 75"},
+		{[]any{of("a", 5, 8), of("b", 3, 3), of("c", 0, 5), of("d", 1, 2.5)}, "62.5 100 0 40"},
+		{[]any{of("a", 2, nil), item(4)}, "50 100"},
+		{[]any{of("a", 1, 0)}, `bars: bar "a"'s of takes a number above 0, not 0`},
+		{[]any{of("a", 1, -2)}, `bars: bar "a"'s of takes a number above 0, not -2`},
+		{[]any{of("a", 1, "8")}, `bars: bar "a"'s of takes a number, not "8"`},
+		{[]any{of("a", 5, 3), of("b", 1, 2), of("c", 9, 4)}, `bars: bar "a": 5 is over its of 3; write a value no greater than of, the whole` + "\n" +
+			`bars: bar "c": 9 is over its of 4; write a value no greater than of, the whole`},
 	} {
 		bars, err := barsOf(c.items)
 		widths := make([]string, 0, len(bars))
@@ -184,6 +196,30 @@ func TestBarsOf(t *testing.T) {
 		}
 		if got != c.want {
 			t.Errorf("barsOf(%v) = %q; want %q", c.items, got, c.want)
+		}
+	}
+}
+
+// Now and Max, a bar's value and of for aria, are plain digits as num writes them, without its commas: a whole
+// number beyond 2^53 keeps its digits, and a large or small float has no exponent.
+func TestBarsAria(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		value, of any
+		want      string
+	}{
+		{9007199254740993, 9007199254740995, "9007199254740993 9007199254740995"},
+		{1e21, 2e21, "1000000000000000000000 2000000000000000000000"},
+		{1e-7, 2e-7, "0.0000001 0.0000002"},
+		{1500000, 2000000, "1500000 2000000"},
+	} {
+		bars, err := barsOf([]any{map[string]any{"label": "x", "value": c.value, "of": c.of}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := bars[0].Now + " " + bars[0].Max; got != c.want {
+			t.Errorf("barsOf(%v of %v) = %q; want %q", c.value, c.of, got, c.want)
 		}
 	}
 }

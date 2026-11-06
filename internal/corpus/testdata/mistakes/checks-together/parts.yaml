@@ -7,5 +7,5 @@ sections:
     parts:
       - table: {columns: [{title: x}], rows: [[a, b]]}
       - table: {columns: [{title: x}], rows: [[a, b]]}
-      - progress: [{label: p, done: 5, of: 3}]
+      - tree: [{path: /}]
       - text: "```\ncode\n```"

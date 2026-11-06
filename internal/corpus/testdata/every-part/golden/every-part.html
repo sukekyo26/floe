@@ -154,7 +154,7 @@ blockquote > * + * { margin-top: 0.6rem; }
 :scope {
   --bg: #f4f3f0; --surface: #fff; --fg: #22211f; --muted: #615f5a; --line: #dad7d0;
   --muted-soft: color-mix(in srgb, var(--fg) 8%, var(--surface));
-  /* A quiet ground within a box of the surface: a table's head, a bar's track, progress's ground, a keycap.
+  /* A quiet ground within a box of the surface: a table's head, a bar's track, a keycap.
      LIMIT: one melting into its box's ground is seen, not measured; a theme that paints a box near it sets it there */
   --quiet: color-mix(in srgb, var(--line) 45%, var(--surface));
   --accent: #1d6670; --accent-soft: #dcebec;
@@ -217,7 +217,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="bars"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="faq"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="progress"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="tree"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="bars"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="tree"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
@@ -262,11 +262,11 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="bars"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A bar's length is set on it, as a share of the longest */
+/* A bar's length is set on it, as a share of its of or of the longest */
 :scope { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.6rem 1rem; align-items: center; padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > div { display: contents; color: var(--tone); }
 :scope .label { color: var(--fg); font-size: var(--floe-text-small); }
-/* The track is the quiet ground (--quiet), as a table's head, progress's and a keycap's.
+/* The track is the quiet ground (--quiet), as a table's head and a keycap's.
    LIMIT: a quiet ground melting into its box's ground is seen, not measured; a theme that paints a box near --quiet
    sets --quiet on that box */
 :scope .track { height: 0.85rem; border-radius: var(--radius-small); background: var(--quiet); }
@@ -322,7 +322,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="faq"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Rows in a panel, a theme's frame of the box around them: a list that is a part's box or takes the look has no
    marks, padding or room between its items (floe lays it out so, under the parts' layers for a part's box and the
    looks' for an element that takes the look). Each row is padded above
@@ -794,30 +794,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="faq"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Each question a row; Q leads it, and its answer opens under it. The question reaches over its row's padding at the
-   sides, so a click opens it, and its ring is drawn, the row's width across.
-   LIMIT: the rows' padding above and below is the details', outside the summary, where a click opens nothing. Pad the summary of
-   every part drawn as rows alike, not faq's alone, if it comes to be missed */
-:scope { display: grid; --faq-q: 1.4rem; --faq-q-gap: 0.5rem; }
-:scope summary {
-  display: grid; grid-template-columns: var(--faq-q) minmax(0, 1fr) auto; gap: var(--faq-q-gap);
-  margin-inline: calc(-1 * var(--floe-pad-inline)); padding-inline: var(--floe-pad-inline);
-  cursor: pointer; font-weight: 700; list-style: none;
-}
-:scope summary::-webkit-details-marker { display: none; }
-/* LIMIT: Q is a letter in the CSS, past words.yaml, so it stays in English on a page in any language; make it a mark
-   or a word of the page's language once a part's CSS can take its text from words.yaml */
-:scope summary::before { content: "Q"; content: "Q" / ""; color: var(--accent); }
-:scope summary::after { content: "+"; content: "+" / ""; color: var(--muted); font-weight: 400; }
-:scope details[open] summary::after { content: "−"; content: "−" / ""; }
-:scope summary:focus-visible { outline-offset: -2px; }
-:scope details > div { display: grid; padding: 0.5rem 0 0 calc(var(--faq-q) + var(--faq-q-gap)); color: var(--muted); }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
 @scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the table's look, without a heading: the name over its type, what it is over its default */
 :scope td.name { width: 30%; }
@@ -976,29 +952,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .option li.pro { color: var(--on-face, var(--fg)); }
 .option li.pro::before { content: "+"; content: "+" / ""; color: var(--on-face, var(--good)); }
 .option li.con::before { content: "−"; content: "−" / ""; color: var(--on-face, var(--bad)); }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="progress"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope {
-  display: grid; gap: 1rem; padding: var(--floe-pad-block) var(--floe-pad-inline);
-}
-.bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 1rem; align-items: baseline; color: var(--tone); }
-.bar .label { color: var(--fg); }
-.bar .count {
-  font-family: var(--mono);
-  font-size: var(--floe-text-small); font-variant-numeric: tabular-nums; color: var(--muted);
-}
-.bar progress {
-  grid-column: 1 / -1; appearance: none; width: 100%; height: 0.6rem; border: 0; border-radius: var(--radius-pill); overflow: hidden;
-  background: var(--quiet); color: inherit;
-}
-/* Each engine's own pseudo-element, in a rule of its own: one it does not know would drop the whole rule */
-.bar progress::-webkit-progress-bar { background: none; }
-.bar progress::-webkit-progress-value { background: currentColor; border-radius: var(--radius-pill); }
-.bar progress::-moz-progress-bar { background: currentColor; border-radius: var(--radius-pill); }
 }
 }
 </style>
@@ -1228,7 +1181,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="bars"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="faq"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="progress"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="tree"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="bars"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="compare"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="details"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="tree"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
 :scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
@@ -1284,7 +1237,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="faq"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="checklist"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="entries"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="keys"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { padding: var(--default-pad); }
 :scope > * {
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
@@ -2038,13 +1991,19 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div data-floe-tone="bad"><span class="label">Broken</span><span class="track"><span style="width: 6.521739130434782%"></span></span><span class="value">120</span></div>
 <div data-floe-tone="muted"><span class="label">Skipped</span><span class="track"><span style="width: 3.260869565217391%"></span></span><span class="value">60</span></div>
 </div>
-<div data-floe-part="progress">
-<label class="bar"><span class="label">Pages</span><span class="count">1200 / 1840</span><progress value="1200" max="1840">1200 / 1840</progress></label>
-<label class="bar" data-floe-tone="good"><span class="label">Images</span><span class="count">30 / 30</span><progress value="30" max="30">30 / 30</progress></label>
-<label class="bar" data-floe-tone="accent"><span class="label">Spaces</span><span class="count">4 / 12</span><progress value="4" max="12">4 / 12</progress></label>
-<label class="bar" data-floe-tone="warn"><span class="label">Owners</span><span class="count">1 / 4</span><progress value="1" max="4">1 / 4</progress></label>
-<label class="bar" data-floe-tone="bad"><span class="label">Links</span><span class="count">10 / 120</span><progress value="10" max="120">10 / 120</progress></label>
-<label class="bar" data-floe-tone="muted"><span class="label">Drafts</span><span class="count">2 / 6</span><progress value="2" max="6">2 / 6</progress></label>
+<div data-floe-part="bars">
+<div><span class="label">Pages</span><span class="track" role="progressbar" aria-label="Pages" aria-valuemin="0" aria-valuenow="1200" aria-valuemax="1840" aria-valuetext="1,200 / 1,840"><span style="width: 65.21739130434783%"></span></span><span class="value">1,200 / 1,840</span></div>
+<div data-floe-tone="good"><span class="label">Images</span><span class="track" role="progressbar" aria-label="Images" aria-valuemin="0" aria-valuenow="30" aria-valuemax="30" aria-valuetext="30 / 30"><span style="width: 100%"></span></span><span class="value">30 / 30</span></div>
+<div data-floe-tone="accent"><span class="label">Spaces</span><span class="track" role="progressbar" aria-label="Spaces" aria-valuemin="0" aria-valuenow="4" aria-valuemax="12" aria-valuetext="4 / 12"><span style="width: 33.33333333333333%"></span></span><span class="value">4 / 12</span></div>
+<div data-floe-tone="warn"><span class="label">Owners</span><span class="track" role="progressbar" aria-label="Owners" aria-valuemin="0" aria-valuenow="1" aria-valuemax="4" aria-valuetext="1 / 4"><span style="width: 25%"></span></span><span class="value">1 / 4</span></div>
+<div data-floe-tone="bad"><span class="label">Links</span><span class="track" role="progressbar" aria-label="Links" aria-valuemin="0" aria-valuenow="10" aria-valuemax="120" aria-valuetext="10 / 120"><span style="width: 8.333333333333332%"></span></span><span class="value">10 / 120</span></div>
+<div data-floe-tone="muted"><span class="label">Drafts</span><span class="track" role="progressbar" aria-label="Drafts" aria-valuemin="0" aria-valuenow="2" aria-valuemax="6" aria-valuetext="2 / 6"><span style="width: 33.33333333333333%"></span></span><span class="value">2 / 6</span></div>
+<div><span class="label">Words</span><span class="track" role="progressbar" aria-label="Words" aria-valuemin="0" aria-valuenow="1500000" aria-valuemax="2000000" aria-valuetext="1,500,000 / 2,000,000"><span style="width: 75%"></span></span><span class="value">1,500,000 / 2,000,000</span></div>
+</div>
+<div data-floe-part="bars">
+<div><span class="label">Kept</span><span class="track"><span style="width: 50%"></span></span><span class="value">2</span></div>
+<div><span class="label">Moved</span><span class="track"><span style="width: 100%"></span></span><span class="value">4</span></div>
+<div data-floe-tone="good"><span class="label">Copied</span><span class="track" role="progressbar" aria-label="Copied" aria-valuemin="0" aria-valuenow="30" aria-valuemax="40" aria-valuetext="30 / 40"><span style="width: 75%"></span></span><span class="value">30 / 40</span></div>
 </div>
 <ul data-floe-part="checklist">
 <li class="done"><span><span class="floe-hidden">Done: </span>Freeze edits</span></li>
@@ -2319,8 +2278,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div><dt><kbd>Ctrl</kbd><span>+</span><kbd>K</kbd></dt><dd>Search the wiki</dd></div>
 <div><dt><kbd>g</kbd><span>+</span><kbd>h</kbd></dt><dd>Go home</dd></div>
 </dl>
-<div data-floe-part="faq">
-<details open=""><summary>Can I edit during the freeze?</summary><div><div data-floe-text=""><p>No: edits are lost.</p>
+<details data-floe-part="details" open=""><summary>Can I edit during the freeze?</summary><div data-floe-part="stack"><div data-floe-text=""><p>No: edits are lost.</p>
 <div data-floe-part="table"><table>
 <thead>
 <tr>
@@ -2336,8 +2294,6 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </tbody>
 </table></div>
 <p>Wait for the new host.</p></div></div></details>
-<details><summary>Where do old links go?</summary><div><div data-floe-text=""><p>To the same page on the new host.</p></div></div></details>
-</div>
 <ul data-floe-part="links">
 <li class="card" data-floe-look="panel"><a href="https://example.com/guide">Migration guide</a><p>How the copy works</p><span class="url">https://example.com/guide</span></li>
 <li class="card" data-floe-look="panel"><a href="https://wiki.example.com/">Old wiki</a><span class="url">https://wiki.example.com/</span></li>

@@ -66,24 +66,9 @@ func formatBytes(v any) (string, error) {
 // decimal writes v grouped, rounded to digits significant digits unless digits is 0. A whole number
 // is written exactly, beyond the 2^53 a float holds, and rounded as one.
 func decimal(fn string, v any, digits int) (string, error) {
-	var text string
-	if i, ok := whole(v); ok {
-		if digits > 0 {
-			i = roundWhole(i, digits)
-		}
-		text = i.String()
-	} else {
-		f, err := float(fn, v)
-		if err != nil {
-			return "", err
-		}
-		if digits > 0 {
-			f = roundFloat(f, digits)
-		}
-		if f == 0 {
-			f = 0 // not -0
-		}
-		text = strconv.FormatFloat(f, 'f', -1, 64)
+	text, err := plain(fn, v, digits)
+	if err != nil {
+		return "", err
 	}
 	sign := ""
 	if t, ok := strings.CutPrefix(text, "-"); ok {
@@ -102,6 +87,27 @@ func decimal(fn string, v any, digits int) (string, error) {
 		b.WriteString("." + fraction)
 	}
 	return b.String(), nil
+}
+
+// plain writes v in decimal digits, ungrouped and without an exponent, rounded as decimal rounds it.
+func plain(fn string, v any, digits int) (string, error) {
+	if i, ok := whole(v); ok {
+		if digits > 0 {
+			i = roundWhole(i, digits)
+		}
+		return i.String(), nil
+	}
+	f, err := float(fn, v)
+	if err != nil {
+		return "", err
+	}
+	if digits > 0 {
+		f = roundFloat(f, digits)
+	}
+	if f == 0 {
+		f = 0 // not -0
+	}
+	return strconv.FormatFloat(f, 'f', -1, 64), nil
 }
 
 // whole returns v as an integer, when it is a whole number.

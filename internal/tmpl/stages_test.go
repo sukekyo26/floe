@@ -72,11 +72,11 @@ func TestStageFour(t *testing.T) {
 	report := "lang: ja\ntemplate: report\ntitle: t\nsections:\n  - heading: a\n    parts:\n" +
 		"      - table: {columns: [{title: x}], rows: [[a, b]]}\n" +
 		"      - table: {columns: [{title: x}], rows: [[a, b]]}\n" +
-		"      - progress: [{label: p, done: 5, of: 3}]\n"
+		"      - tree: [{path: /}]\n"
 	if got, want := drawn(t, floeKit(t), report, none), lines(
 		"d.yaml:7:46: write as many cells in each row as there are columns",
 		"d.yaml:8:46: write as many cells in each row as there are columns",
-		`d.yaml:9:37: write done no greater than of, the whole ("5")`,
+		`d.yaml:9:23: write a path naming a file or a folder, such as internal/tmpl/part.go ("/")`,
 	); got != want {
 		t.Errorf("report told\n%s\nwant\n%s", got, want)
 	}

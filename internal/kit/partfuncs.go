@@ -87,43 +87,88 @@ func diagramOf() (template.HTML, error) {
 	return "", fmt.Errorf("%w: diagram: not bound to a page", ErrFunc)
 }
 
-// bar is an item of a bars part, and the width of its bar, a percentage of the longest's.
+// bar is an item of a bars part, and the width of its bar, a percentage of its whole: of when written, else the
+// largest value of the bars without of. Now and Max are its value and of in plain digits, for aria.
 type bar struct {
 	Label, Tone string
-	Value       any
+	Value, Of   any
+	Now, Max    string
 	Width       float64
 }
 
-// barsOf gives each of the items of a bars part, each written as keys and values, a label and a value no less
-// than 0, its width.
+// barsOf gives each of the items of a bars part, each written as keys and values, a label, a value no less than 0
+// and an of above 0 and no less than the value, or none (nil: Walk sets a key the schema declares and the data
+// leaves out to nil, as null), its width. It tells the mistakes of every item.
+// LIMIT: the mistakes are at the part's value, not at the item, with the bar's label (an item not written as keys
+// and values by its number in the list given to bars): bars knows not where in the part's value the list is. Place
+// them at the item if a part's bars of the same labels misleads.
 func barsOf(items []any) ([]bar, error) {
 	bars := make([]bar, 0, len(items))
+	var found usererr.List
 	longest := 0.0
-	// LIMIT: i counts in the list given to bars, which a part.html may call twice or give a list under its value;
-	// say where the list is if one misleads.
 	for i, item := range items {
-		m, ok := item.(map[string]any)
-		if !ok {
-			return nil, usererr.New("kit_bar_item", "bars", i+1)
+		b, err := barOf(i, item)
+		if failed := found.Add(err); failed != nil {
+			return nil, failed
 		}
-		n, err := float("bars", m["value"])
 		if err != nil {
-			return nil, err
+			continue
 		}
-		// Its width is its share of the longest: one below 0 would be no width, which CSS drops, drawing the bar whole.
-		if n < 0 {
-			return nil, usererr.New("kit_below_zero", "bars", fmt.Sprint(m["value"]))
+		if b.Of == nil {
+			longest = max(longest, b.Width)
 		}
-		n = max(n, 0) // -0, which n < 0 lets through, as 0
-		longest = max(longest, n)
-		bars = append(bars, bar{Label: stringOf(m["label"]), Tone: stringOf(m["tone"]), Value: m["value"], Width: n})
+		bars = append(bars, b)
+	}
+	if found != nil {
+		return nil, found.Err()
 	}
 	for i := range bars {
-		if longest > 0 {
+		if bars[i].Of == nil && longest > 0 {
 			bars[i].Width = bars[i].Width / longest * 100
 		}
 	}
 	return bars, nil
+}
+
+// barOf reads the item at i of a bars part: its width is its value, or a percentage of its of, when written.
+func barOf(i int, item any) (bar, error) {
+	m, ok := item.(map[string]any)
+	if !ok {
+		return bar{}, usererr.New("kit_bar_item", "bars", i+1)
+	}
+	b := bar{Label: stringOf(m["label"]), Tone: stringOf(m["tone"]), Value: m["value"], Of: m["of"]}
+	name := fmt.Sprintf("bars: bar %q", b.Label)
+	n, err := float(name+"'s value", b.Value)
+	if err != nil {
+		return bar{}, err
+	}
+	// Its width is a share: one below 0 would be no width, which CSS drops, drawing the bar whole.
+	if n < 0 {
+		return bar{}, usererr.New("kit_below_zero", name+"'s value", fmt.Sprint(b.Value))
+	}
+	b.Width = max(n, 0) // -0, which n < 0 lets through, as 0
+	if b.Now, err = plain(name+"'s value", b.Value, 0); err != nil {
+		return bar{}, err
+	}
+	if b.Of == nil {
+		return b, nil
+	}
+	of, err := float(name+"'s of", b.Of)
+	if err != nil {
+		return bar{}, err
+	}
+	// An of of 0 would make the width infinite, one below 0 below 0, and one below the value wider than the track.
+	if of <= 0 {
+		return bar{}, usererr.New("kit_bar_of", name+"'s of", fmt.Sprint(b.Of))
+	}
+	if n > of {
+		return bar{}, usererr.New("kit_bar_over", name, fmt.Sprint(b.Value), fmt.Sprint(b.Of))
+	}
+	b.Width = b.Width / of * 100
+	if b.Max, err = plain(name+"'s of", b.Of, 0); err != nil {
+		return bar{}, err
+	}
+	return b, nil
 }
 
 // diffLine is a line of a diff and its kind, the class it is drawn in: add, del, hunk (@@), meta (outside a
