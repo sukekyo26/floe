@@ -1836,15 +1836,16 @@
 
   // Suggests names for a field, as a WAI-ARIA combobox: offer says those to show of what is written, each a name or { name, label }, and
   // put puts one in. ↓ opens it, ↑↓ pick, Enter or a click puts it in, Escape closes it, as does leaving the field. Drawn only as the
-  // field changes, so that the list read again neither closes it nor moves the name picked
-  function suggestNames(input, offer, put) {
+  // field changes, so that the list read again neither closes it nor moves the name picked. onFocus tells whether being reached opens it
+  function suggestNames(input, offer, put, onFocus = true) {
     // Not ul and li, which the list's rows style
     const box = document.createElement('div');
     box.id = `${input.id}-names`;
     box.className = 'suggest';
     box.popover = 'manual';
     box.setAttribute('role', 'listbox');
-    input.after(box);
+    // Out of the label: a press in it would be sent on to the field, and open it again
+    (input.closest('label') ?? input).after(box);
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-autocomplete', 'list');
     input.setAttribute('aria-controls', box.id);
@@ -1874,7 +1875,7 @@
       close();
     };
     const open = () => {
-      names = offer();
+      names = offer().map((one) => (typeof one === 'string' ? { name: one, label: one } : one));
       if (names.length === 0) {
         close();
         return;
@@ -1883,10 +1884,10 @@
         const option = document.createElement('div');
         option.id = `${box.id}-${i}`;
         option.setAttribute('role', 'option');
-        option.textContent = one.label ?? one;
+        option.textContent = one.label;
         // Pressed, the field keeps its focus
         option.addEventListener('mousedown', (e) => e.preventDefault());
-        option.addEventListener('click', () => choose(one.name ?? one));
+        option.addEventListener('click', () => choose(one.name));
         return option;
       }));
       if (!box.matches(':popover-open')) box.showPopover();
@@ -1895,11 +1896,11 @@
       mark(-1);
     };
     const mark = listKeys(input, {
-      options: () => [...box.children], choose: (i) => choose(names[i].name ?? names[i]), close, open, shown: () => box.matches(':popover-open'),
+      options: () => [...box.children], choose: (i) => choose(names[i].name), close, open, shown: () => box.matches(':popover-open'),
     });
     input.addEventListener('input', open);
     // Pressed or reached, the names show at once; pressed, again once the caret is where it was pressed, which focus is before
-    input.addEventListener('focus', open);
+    if (onFocus) input.addEventListener('focus', open);
     input.addEventListener('click', open);
     input.addEventListener('blur', close);
   }
@@ -1937,16 +1938,19 @@
     });
   }
 
-  // A field of one name: those that hold what is written, those that start with it first. A name written whole offers the others, to change to
-  function suggestOne(input, all, put) {
+  // A field of one name: those that hold what is written, those that start with it first; a name written whole offers them all, to change
+  // to. fresh, when given, is what one that no name is offers, as the last
+  function suggestOne(input, all, put, { fresh, onFocus } = {}) {
     suggestNames(input, () => {
-      const typed = input.value.trim().toLowerCase();
+      const written = input.value.trim();
+      const typed = written.toLowerCase();
       const names = all();
-      const held = names.some((name) => (name.name ?? name).toLowerCase() === typed) ? '' : typed;
-      const word = (one) => (one.name ?? one).toLowerCase();
-      const hits = names.filter((one) => word(one).includes(held));
-      return [...hits.filter((one) => word(one).startsWith(held)), ...hits.filter((one) => !word(one).startsWith(held))];
-    }, put);
+      const whole = names.some((name) => name.toLowerCase() === typed);
+      const hits = whole ? names : names.filter((name) => name.toLowerCase().includes(typed));
+      const first = hits.filter((name) => name.toLowerCase().startsWith(whole ? '' : typed));
+      const rest = hits.filter((name) => !first.includes(name));
+      return [...first, ...rest, ...(fresh && written && !whole ? [fresh(written)] : [])];
+    }, put, onFocus);
   }
 
   // The bulk dialog's tags: how many of the selected each is on as the dialog opened (on), the mark that makes each chip
@@ -2252,6 +2256,8 @@
       copy.addEventListener('click', () => copyPath(a.path, copy));
     }
     const pin = box.querySelector('.pin');
+    // Archived it leaves the pins, and comes back with its pin as it is given back
+    pin.hidden = Boolean(a.archived);
     pin.querySelector('.label').textContent = t(a.work?.pin ? 'ui_unpin' : 'ui_pin');
     pin.setAttribute('aria-label', t(a.work?.pin ? 'ui_unpin_named' : 'ui_pin_named', a.title));
     pin.addEventListener('click', () => togglePin(a));
@@ -2649,7 +2655,7 @@
     drawSub(sub, a, ranks, (put) => {
       // On the page list, the way to the task it is on, or to the task list it is pinned on
       if (!TASKS && a.work?.task) sub.append(taskTag(taskHref({ project: a.taskProject, name: a.work.task }), t('ui_task_badge', a.work.task)));
-      if (!TASKS && a.work?.pin) sub.append(taskTag(`${TASKS_PATH}?${new URLSearchParams({ project: a.taskProject })}`, t('ui_pin_badge')));
+      if (!TASKS && a.work?.pin && !a.archived) sub.append(taskTag(`${TASKS_PATH}?${new URLSearchParams({ project: a.taskProject })}`, t('ui_pin_badge')));
       if (!a.tags?.length) return;
       const tags = put('tags', '');
       tags.append(...a.tags.map((name) => {
@@ -4315,12 +4321,18 @@
 
   async function togglePin(a) {
     const reason = await patchOne(a.slug, { work: { pin: !a.work?.pin } });
-    if (reason) showError(t('ui_save_failed', reason));
+    if (reason) {
+      showError(t('ui_save_failed', reason));
+      return;
+    }
+    toast(t(a.work?.pin ? 'ui_unpinned' : 'ui_pinned', a.title));
     await load();
   }
 
-  // The page the task dialog is of; whether its URL was changed by hand: only then is it sent, so that one set since it opened stays
+  // The page the task dialog is of, its task and step as opened: a step is sent only when changed, as the task's last may be a later one
+  // than this page's. Whether its URL was changed by hand: only then is it sent, so that one set since it opened stays
   let setPage;
+  let setOpened;
   let setUrlTouched = false;
   let setBack;
   const setTaskOf = (name) => tasksOf().find((task) => task.project === setPage.taskProject && task.name === name.trim());
@@ -4332,15 +4344,17 @@
     $('set-target').textContent = a.title;
     $('set-task').value = a.work?.task ?? '';
     $('set-step').value = a.work?.step ?? '';
+    setOpened = { task: $('set-task').value, step: $('set-step').value };
     $('set-url').value = setTaskOf($('set-task').value)?.url ?? '';
     $('set-out').hidden = !a.work?.task;
     $('set-error').textContent = tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '';
     $('set-error').hidden = !tasksRead.error;
     $('set-dialog').showModal();
   }
-  // Each name written changes the URL shown to that task's, or none for a new one, unless changed by hand
+  // Each name written shows that task's URL, or none for a new one; one changed by hand was of the name before, and would take that task's away unseen
   function setTaskChanged() {
-    if (!setUrlTouched) $('set-url').value = setTaskOf($('set-task').value)?.url ?? '';
+    setUrlTouched = false;
+    $('set-url').value = setTaskOf($('set-task').value)?.url ?? '';
   }
   const setFailed = (reason) => {
     $('set-error').textContent = t('ui_save_failed', reason);
@@ -4352,13 +4366,17 @@
     e.preventDefault();
     const btn = $('set-submit');
     btn.disabled = true;
+    // What was asked to be saved, whatever is typed while it goes
+    const page = setPage;
+    const task = $('set-task').value;
     const step = $('set-step').value.trim();
-    const body = { ...(step ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}) };
+    const moved = task.trim() !== setOpened.task || step !== setOpened.step;
+    const body = { ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}) };
     try {
-      const url = `/api/tasks?${new URLSearchParams({ project: setPage.taskProject, task: $('set-task').value })}`;
+      const url = `/api/tasks?${new URLSearchParams({ project: page.taskProject, task })}`;
       const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
       if (!res.ok) throw new Error(await res.text());
-      const reason = await patchOne(setPage.slug, { work: { task: $('set-task').value, step } });
+      const reason = await patchOne(page.slug, { work: { task, step } });
       if (reason) throw new Error(reason);
       toast(t('ui_saved'));
       await load();
@@ -4645,12 +4663,14 @@
   $('set-task').addEventListener('input', setTaskChanged);
   $('set-url').addEventListener('input', () => { setUrlTouched = true; });
   suggestOne($('set-task'), () => {
-    const names = tasksOf().filter((task) => task.project === setPage.taskProject).map((task) => task.name).sort((x, y) => x.localeCompare(y, LANG));
-    const typed = $('set-task').value.trim();
-    return typed && !names.includes(typed) ? [...names, { name: typed, label: t('ui_task_new', typed) }] : names;
+    return tasksOf().filter((task) => task.project === setPage.taskProject).map((task) => task.name).sort((x, y) => x.localeCompare(y, LANG));
   }, (name) => {
     $('set-task').value = name;
     setTaskChanged();
+  }, {
+    fresh: (name) => ({ name, label: t('ui_task_new', name) }),
+    // The modal hands it the focus as it opens: not over the fields under it
+    onFocus: false,
   });
   suggestOne($('set-step'), () => {
     const task = setTaskOf($('set-task').value);

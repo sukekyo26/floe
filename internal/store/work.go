@@ -257,6 +257,11 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	if err != nil {
 		return err
 	}
+	// A URL as pasted, with spaces round it, is that URL; of spaces alone, none, which the check refuses as a way to take it off
+	if ed.URL != nil && strings.TrimSpace(*ed.URL) != "" {
+		trimmed := strings.TrimSpace(*ed.URL)
+		ed.URL = &trimmed
+	}
 	if err = checkTaskEdit(ed); err != nil {
 		return err
 	}

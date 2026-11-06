@@ -256,7 +256,7 @@ pinned: {"pin":true}
 a page of none:  /  /  / out false
 the name of a task brings its URL: #1 /  / https://example.com/a/one / out false
 a new name takes it away: #3 /  /  / out false
-offered: #1, #2, Make #3 a new task
+offered: Make #3 a new task
 new task: {"task":"#3","step":"first","pin":true}
 #1 doing design https://example.com/a/one; #2 doing build ; #3 doing first 
 a page of a task: #1 / design / https://example.com/a/one / out true
@@ -269,5 +269,18 @@ saved again: {"task":"#2","step":"review"}
 off: {"pin":true}
 #1 doing design ; #2 doing review ; #3 doing first 
 off, no pin: null
+as it opens: false
+a suggestion pressed: #2 / design / https://example.com/a/two / out true
+it stays closed: false
+offered of #9: Make #9 a new task
+offered of #: #1, #2, #3, Make # a new task
+a URL changed, then the name: #2 / design / https://example.com/a/two / out true
+saved: #1 doing design https://example.com/a/one; #2 doing review https://example.com/a/two; #3 doing first 
+the URL alone: #1 doing later https://example.com/a/url-only; #2 doing review https://example.com/a/two; #3 doing first  | {"task":"#1","step":"design"}
+typed while saving: {"task":"#1","step":"design"}
+pasted: #1 doing later https://example.com/a/pasted; #2 doing review https://example.com/a/two; #3 doing first 
+an archived page: true 0
+pinned, told: Pinned “T b” to the task list
+refused, told: Could not save: HTTP 500: no
 whole: #1 / design / https://example.com/a/whole / out true
 on its own task: true 0`
