@@ -1421,7 +1421,7 @@
   const LIST_KEY = 'artifacts.list';
   // The slugs of the list as it was when it opened a page whole, which j and k go through there
   const ORDER_KEY = 'artifacts.order';
-  // The task row pressed and the rows then, for the focus when the task list opens next
+  // The task whose page the task list was gone back to from, for the focus as it opens
   const FROM_KEY = 'artifacts.tasks.from';
   // The task list's own, as LIST_KEY: it never holds what the list's page goes by
   const TASKS_KEY = 'artifacts.tasks';
@@ -3086,19 +3086,19 @@
     return link;
   }
 
+  const taskRowKey = (project, name) => `task:${JSON.stringify([project, name])}`;
   // A row of a task, of the page's own form with nothing to select or do but open it and its link
   function taskRow(task, i) {
     const li = $('row').content.firstElementChild.cloneNode(true);
     li.querySelector('.pick').remove();
     li.querySelector('.actions').remove();
     li.style.setProperty('--i', Math.min(i, 30));
-    li.dataset.key = `task:${JSON.stringify([task.project, task.name])}`;
+    li.dataset.key = taskRowKey(task.project, task.name);
     const unread = task.pages.filter((a) => a.news).length;
     li.classList.toggle('unseen', unread > 0);
     li.querySelector('.lead').innerHTML = leadOf({ news: unread > 0 });
     const link = li.querySelector('.title');
     link.href = taskHref(task);
-    link.addEventListener('click', () => keepTaskRow(li));
     link.title = [task.name, task.title, projectWord(task.project), task.url].filter(Boolean).join('\n');
     link.append(tagged('span', 'tname', task.name), task.title ?? '');
     const time = li.querySelector('time');
@@ -3113,38 +3113,16 @@
     return li;
   }
 
-  // Keeps the row pressed and the rows then, as the row may leave the list before it opens again
-  function keepTaskRow(li) {
+  // The task list opened from a task's page has the focus on that task's row
+  function focusTaskRow() {
+    let key = null;
     try {
-      sessionStorage.setItem(FROM_KEY, JSON.stringify({ key: li.dataset.key, keys: [...$('list').children].map((row) => row.dataset.key) }));
+      key = sessionStorage.getItem(FROM_KEY);
+      sessionStorage.removeItem(FROM_KEY);
     } catch {
       // Without storage, the list opens with no row focused
     }
-  }
-  function taskRowKept() {
-    try {
-      return JSON.parse(sessionStorage.getItem(FROM_KEY));
-    } catch {
-      return null;
-    }
-  }
-  function forgetTaskRow() {
-    try {
-      sessionStorage.removeItem(FROM_KEY);
-    } catch {
-      // Without storage, there is none to forget
-    }
-  }
-  // The focus on the row come back to; of one gone, the next, and of the last, the one before. Once
-  // LIMIT: the row kept is of the tab, whichever way the list is opened next: the switch does as h does. Tell them apart if it comes to trouble someone
-  function focusTaskRow() {
-    const from = taskRowKept();
-    forgetTaskRow();
-    if (!Array.isArray(from?.keys)) return;
-    const at = from.keys.indexOf(from.key);
-    const rows = new Map([...$('list').children].map((li) => [li.dataset.key, li]));
-    const key = [...from.keys.slice(at), ...from.keys.slice(0, at).reverse()].find((k) => rows.has(k));
-    if (key) rows.get(key).querySelector('.title').focus();
+    [...$('list').children].find((li) => li.dataset.key === key)?.querySelector('.title').focus();
   }
 
   // The pages pinned, which leave as they are archived, and how to pin one when none is
@@ -3329,12 +3307,8 @@
     await load();
   }
 
-  // The list of a task's page: the one kept when a row of it was pressed to come here, so that the next waiting is there whatever became of
-  // this one; come by any other way, this project's at the view the task is under, where it is to be found
+  // The list of a task's page: this project's, at the view the task is under now, where it is to be found whatever way it was come to
   function taskListHref(task) {
-    const key = `task:${JSON.stringify([project, TASK_NAME])}`;
-    const saved = savedTasks();
-    if (taskRowKept()?.key === key && new URLSearchParams(saved).get('project') === project) return `${TASKS_PATH}${saved}`;
     const to = new URLSearchParams({ project });
     if (task && taskView(task) !== FIRST_VIEW) to.set('view', taskView(task));
     return `${TASKS_PATH}?${to}`;
@@ -4760,8 +4734,6 @@
     $('diff').remove();
     // Back on a list, what the one before kept for j and k is over
     forgetOrder();
-    // And on the page list, the row of the task list a task's page was opened from
-    if (!TASKS) forgetTaskRow();
     $('manage').hidden = false;
     $('search').hidden = TASKS;
     $('q').value = readState(location.search).q;
@@ -4789,6 +4761,13 @@
       h.append(tagged('kbd', '', 'h'));
       $('keys-enter').after(h, tagged('dd', '', t('ui_tasks_back')));
       KEYS.h = () => $('task-up').click();
+      $('task-up').addEventListener('click', () => {
+        try {
+          sessionStorage.setItem(FROM_KEY, taskRowKey(project, TASK_NAME));
+        } catch {
+          // Without storage, the list opens with no row focused
+        }
+      });
     }
     if (TASK_LIST) {
       // The shelf's views are the task's states, and only they and the project narrow it
@@ -4925,7 +4904,6 @@
     document.addEventListener('keydown', (e) => {
       if (!plainKey(e) || e.key !== 'Enter' || !e.target.matches('#list a.title[href]:not([aria-expanded])')) return;
       e.preventDefault();
-      if (TASK_LIST) keepTaskRow(e.target.closest('li'));
       keepOrder();
       location.href = wholeHref(e.target);
     });
