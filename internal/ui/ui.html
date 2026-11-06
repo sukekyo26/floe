@@ -869,7 +869,8 @@
   .shell.tasks #narrow-filter-n { display: none; }
   @media (max-width: 40rem) {
     .shell.tasks #narrow-filter { flex: 0 1 auto; min-width: 0; }
-    .shell.tasks #narrow-filter-name { max-width: 4.5rem; }
+    /* The row of views scrolls: the name stays some of itself rather than going to nothing */
+    .shell.tasks #narrow-filter-name { min-width: 2em; max-width: 4.5rem; }
   }
   @media (max-width: 40rem) {
     .pins { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }

@@ -302,4 +302,79 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 }
 
 // taskListWant is what TestUITaskList reads of the list, in the order it reads it.
-const taskListWant = ``
+const taskListWant = `no work, list: switch hidden: true
+no work, tasks: switch hidden: true
+no work, tasks: shelf shown: false
+a row alone, list: current: page
+opened: ?project=shop shop
+waiting: #2Two [0 page(s)]; #1One [design, 2 page(s), 2 unread, b/c]
+views: waiting 2, doing 3, done 2, archived 1
+head: 2 · longest in Waiting first
+pins: pinned /a/pinned/
+hrefs: /tasks?project=shop&task=%232 /tasks?project=shop&task=%231
+a row's project, in its title alone: #2 / Two / shop
+link: b/c https://example.com/a/b/c _blank noopener https://example.com/a/b/c
+current: page
+search shown: true true
+chips: shop2 true var(--pc0), blog1 false var(--pc1), pin0 false var(--pc2), solo1 false var(--pc3), Not set1 false var(--faint)
+j: #2Two
+j j: #1One
+j j k: #2Two
+nothing picked: true
+doing: #11 [1 page(s), 1 unread]; #5 [0 page(s)]; #4 [0 page(s)]
+doing head: 3 · latest change first
+doing url: ?view=doing&project=shop ?view=doing&project=shop
+doing chips: 3 0 0 0 0
+done: #8 [1 page(s), 1 archived, 1 unread]; #7 [0 page(s)]
+done head: 2 · latest change first
+done url: ?view=done&project=shop ?view=done&project=shop
+done chips: 2 0 0 0 0
+archived: #6 [0 page(s), 1 archived]
+archived head: 1 · latest change first
+archived url: ?view=archived&project=shop ?view=archived&project=shop
+archived chips: 1 0 0 0 0
+the list's own key untouched: 
+switch hrefs: / /tasks?view=archived&project=shop
+the first view is left out: ?project=shop
+to blog: ?project=blog blog
+blog again: ?project=blog true
+the one kept, the view kept: ?view=doing&project=blog
+?project=shop: #2Two [0 page(s)]; #1One [design, 2 page(s), 2 unread, b/c]
+?project=shop none: 
+?project=shop pins: pinned | undefined
+?project=shop kept: shop
+?project=%2F: #10 [1 page(s), 1 unread]
+?project=%2F none: 
+?project=%2F pins:  | None
+?project=%2F kept: /
+?project=pin: 
+?project=pin none: No tasks: Waiting / false
+?project=pin pins: pinonly | undefined
+?project=pin kept: pin
+?project=shop&view=archived: #6 [0 page(s), 1 archived]
+?project=shop&view=archived none: 
+?project=shop&view=archived pins: pinned | undefined
+?project=shop&view=archived kept: shop
+?project=old&view=doing: 
+?project=old&view=doing none: No tasks in old / true
+?project=old&view=doing pins:  | None
+?project=old&view=doing kept: shop
+gone, on the shelf: old0
+the kept gone: ?project=shop
+none waiting: ?project=shop
+up ?view=doing&project=shop ?project=shop&task=%231: /tasks?view=doing&project=shop
+up ?project=blog ?project=shop&task=%231: /tasks?project=shop
+up ?project=blog ?project=shop&task=%235: /tasks?project=shop&view=doing
+up ?project=blog ?project=shop&task=%236: /tasks?project=shop&view=archived
+up ?project=blog ?project=%2F&task=%2310: /tasks?project=%2F
+page list chips: shop5 var(--pc0), pin1 var(--pc2), Not set1 var(--faint)
+page list, its query kept: ?project=shop /?project=shop
+page list, let go: 
+help: Pinned pagesKeep pages you open again and again, such as an overview or a runbook, here. Only this project's pages are listed. To add one, choose "Pin to the task list" in a page's "…" menu.
+broken, list: error hidden: true
+broken, tasks: failed shown: true true
+broken, tasks: ?project=shop blog waiting,doing,done,archived pins 1 rows 0
+broken, tasks: says why: true
+broken, the one kept: ?project=blog blog
+broken, none kept:  true
+mended: ?project=shop true`
