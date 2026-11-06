@@ -59,9 +59,9 @@ func (l *layout) endOf(at string, e end, side string, other [2]float64) (anchor,
 		return noEnd, "", false
 	}
 	if t.kind == "dot" {
-		return anchor{t.r.x + t.r.w/2, t.r.y + t.r.h/2, "", false, 0}, e.Name, true
+		return anchor{t.r.x + t.r.w/2, t.r.y + t.r.h/2, "", false, 0}, strconv.Quote(e.Name), true
 	}
-	return onSide(t, side, other), e.Name, true
+	return onSide(t, side, other), strconv.Quote(e.Name), true
 }
 
 // onSide is the middle of the side of t, or when side is "", of the side facing other: left or right when it is
@@ -569,6 +569,11 @@ func pull(r float64, kind string) (back, keep float64) {
 	return r, 0
 }
 
+// edgeWho is what an edge is called in a mistake and by inspect, from what its ends are.
+func edgeWho(from, to string) string {
+	return "edge " + from + "→" + to
+}
+
 func (l *layout) addEdge(e *edge, at string) {
 	pts, free, fromWho, toWho, ok := l.edgePoints(e, at)
 	if !ok {
@@ -577,7 +582,7 @@ func (l *layout) addEdge(e *edge, at string) {
 	segs := segsOf(pts)
 	who := e.who
 	if who == "" {
-		who = "edge " + fromWho + "→" + toWho
+		who = edgeWho(fromWho, toWho)
 	}
 	if len(segs) == 0 {
 		l.problem(at, "diagram_edge_nowhere", who)

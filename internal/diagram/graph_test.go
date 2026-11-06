@@ -166,20 +166,20 @@ parts:
 	}{
 		{"an empty group", strings.Replace(strings.Replace(gg, "                  nodes:\n                    - box: { name: store, rows: [Store] }\n", "                  nodes: []\n", 1), "        - { from: api, to: store }\n", "", 1), `s.yaml:15:26: minItems: got 0, want 1`},
 		{"a name of none", edge("{ from: cli, to: servr }"), `s.yaml:21:28: edge: no box or group of this graph named "servr"`},
-		{"from a box the group holds", edge("{ from: api, to: server }"), `s.yaml:21:19: edge api→server: both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
-		{"to a box the group holds", edge("{ from: server, to: store }"), `s.yaml:21:31: edge server→store: both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
-		{"from a group to itself", edge("{ from: server, to: server }"), `s.yaml:21:31: edge server→server: both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
-		{"to a group nested in it", edge("{ from: server, to: data }"), `s.yaml:21:31: edge server→data: both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
-		{"a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: x, to: server }"), `s.yaml:23:19: edge x→server: x can stand neither above group "server" nor below it, as api stands no lower than it and store no higher; end the edge at a box in "server"`},
-		{"to a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: server, to: x }"), `s.yaml:23:31: edge server→x: x can stand neither above group "server" nor below it, as api stands no lower than it and store no higher; end the edge at a box in "server"`},
-		{"a group among another's ranks", tangled, `s.yaml:12:19: edge h→g: h can stand neither above group "g" nor below it, as g1 stands no lower than it and g2 no higher; end the edge at a box in "g"`},
+		{"from a box the group holds", edge("{ from: api, to: server }"), `s.yaml:21:19: edge "api"→"server": both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
+		{"to a box the group holds", edge("{ from: server, to: store }"), `s.yaml:21:31: edge "server"→"store": both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
+		{"from a group to itself", edge("{ from: server, to: server }"), `s.yaml:21:31: edge "server"→"server": both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
+		{"to a group nested in it", edge("{ from: server, to: data }"), `s.yaml:21:31: edge "server"→"data": both ends are group "server" or inside it; end the edge at a box or another group outside "server"`},
+		{"a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: x, to: server }"), `s.yaml:23:19: edge "x"→"server": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box in "server"`},
+		{"to a box among the group's ranks", edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: server, to: x }"), `s.yaml:23:31: edge "server"→"x": "x" can stand neither above group "server" nor below it, as "api" stands no lower than it and "store" no higher; end the edge at a box in "server"`},
+		{"a group among another's ranks", tangled, `s.yaml:12:19: edge "h"→"g": "h" can stand neither above group "g" nor below it, as "g1" stands no lower than it and "g2" no higher; end the edge at a box in "g"`},
 		{"a group named as a box before it", strings.Replace(gg, "name: server", "name: cli", 1), `s.yaml:9:13: the name "cli" is given before: give each part, row and node its own name`},
 		{"a box named as a group before it", strings.Replace(gg, "name: x,", "name: server,", 1), `s.yaml:17:18: the name "server" is given before: give each part, row and node its own name`},
 		{"202 boxes and groups", many.String(), `s.yaml:4:7: graph: 202 boxes and groups, past 200; split it into graphs`},
-		{"from a lane", lane("{ from: user, to: build }"), `s.yaml:16:19: edge user→build: user is a lane, from end to end of the graph; end the edge at a box or a group in it`},
-		{"to a lane", lane("{ from: ask, to: dev }"), `s.yaml:16:28: edge ask→dev: dev is a lane, from end to end of the graph; end the edge at a box or a group in it`},
-		{"from a lane to a lane", lane("{ from: user, to: dev }"), `s.yaml:16:19: edge user→dev: user is a lane, from end to end of the graph; end the edge at a box or a group in it`},
-		{"from a lane to a box it holds", lane("{ from: dev, to: build }"), `s.yaml:16:28: edge dev→build: both ends are group "dev" or inside it; end the edge at a box or another group outside "dev"`},
+		{"from a lane", lane("{ from: user, to: build }"), `s.yaml:16:19: edge "user"→"build": "user" is a lane, from end to end of the graph; end the edge at a box or a group in it`},
+		{"to a lane", lane("{ from: ask, to: dev }"), `s.yaml:16:28: edge "ask"→"dev": "dev" is a lane, from end to end of the graph; end the edge at a box or a group in it`},
+		{"from a lane to a lane", lane("{ from: user, to: dev }"), `s.yaml:16:19: edge "user"→"dev": "user" is a lane, from end to end of the graph; end the edge at a box or a group in it`},
+		{"from a lane to a box it holds", lane("{ from: dev, to: build }"), `s.yaml:16:28: edge "dev"→"build": both ends are group "dev" or inside it; end the edge at a box or another group outside "dev"`},
 		{"a box among the lanes", strings.Replace(lanes, "      lanes:\n", "      lanes:\n        - box: { name: z, rows: [Z] }\n", 1), "s.yaml:7:11: additional properties 'box' not allowed\ns.yaml:7:11: missing property 'nodes'"},
 		{"to a group in a lane", lane("{ from: ask, to: tools }"), ""},
 		{"nodes beside lanes", strings.Replace(lanes, "      edges:\n", "      nodes:\n        - box: { name: z, rows: [Z] }\n      edges:\n", 1), `s.yaml:15:9: false schema`},
@@ -187,6 +187,13 @@ parts:
 		if _, got := draw(t, c.src, inspect); got != c.want {
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
 		}
+	}
+
+	// The Japanese words number their arguments, and take each name where its English does.
+	among := edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: x, to: server }")
+	const amongJa = `s.yaml:23:19: edge "x"→"server": "x" はまとまり「server」の上にも下にも立てません（"api" が "x" と同じ段か上に、"store" が同じ段か下に立ちます）。「server」の中の箱で終えてください`
+	if got := toldInJapanese(t, among); got != amongJa {
+		t.Errorf("told %q\n  want %q", got, amongJa)
 	}
 }
 
@@ -225,17 +232,17 @@ func TestGraphBlame(t *testing.T) {
 	}{
 		{"a box over a box of the graph", g1, "  - box: { name: note, x: 100, y: 0, rows: [N] }\n", `box "write" overlaps box "note"`},
 		{"a frame a box of the graph straddles", g1, "  - frame: { name: f, x: 0, y: 0, w: 100, h: 40 }\n", `box "write" straddles the edge of frame "f" at x 100, spanning 26 to 178` + "\n@: " + `box "write" straddles the edge of frame "f" at y 40, spanning 20 to 49`},
-		{"a label in the graph's channel", g1, "  - label: { text: L, x: 68, y: 61, anchor: middle }\n", `edge write→check runs through label "L"; move one of them, or go round it by via`},
+		{"a label in the graph's channel", g1, "  - label: { text: L, x: 68, y: 61, anchor: middle }\n", `edge "write"→"check" runs through label "L"; move one of them, or go round it by via`},
 		{"a box over a label of the graph", g2, "  - box: { name: note, x: 106, y: 125, rows: [N] }\n", `box "note" overlaps label "yes"`},
 		{"an edge by hand through a label of the graph", g2, "  - edge: { from: [110, 141], to: [160, 141] }\n", `edge [110,141]→[160,141] runs through label "yes"; move one of them, or go round it by via`},
 		{
 			"a box in the graph's channel", k33, "  - box: { name: note, x: 24, y: 78, rows: [N] }\n",
-			`edge a→x runs through box "note"; move one of them, or go round it by via` + "\n@: " + `edge a→y runs through box "note"; move one of them, or go round it by via` + "\n@: " + `edge b→x runs through box "note"; move one of them, or go round it by via`,
+			`edge "a"→"x" runs through box "note"; move one of them, or go round it by via` + "\n@: " + `edge "a"→"y" runs through box "note"; move one of them, or go round it by via` + "\n@: " + `edge "b"→"x" runs through box "note"; move one of them, or go round it by via`,
 		},
 		{
 			"an edge by hand across the graph's edges", g1, "  - edge: { from: [0, 62], to: [400, 62] }\n",
-			"edge check→write crosses edge [0,62]→[400,62] at 140,62; move one of them, or add crossing: true to one if it cannot be avoided\n" +
-				"@: edge write→check crosses edge [0,62]→[400,62] at 68,62; move one of them, or add crossing: true to one if it cannot be avoided",
+			"edge \"check\"→\"write\" crosses edge [0,62]→[400,62] at 140,62; move one of them, or add crossing: true to one if it cannot be avoided\n" +
+				"@: edge \"write\"→\"check\" crosses edge [0,62]→[400,62] at 68,62; move one of them, or add crossing: true to one if it cannot be avoided",
 		},
 	} {
 		lines := strings.Count(c.graph, "\n") + 1
@@ -265,7 +272,7 @@ func TestGraphBlame(t *testing.T) {
 	second := strings.NewReplacer("x: 20", "x: 100", "y: 20", "y: 125", "write", "write2", "check", "check2", "show", "show2").
 		Replace(strings.TrimPrefix(g2, "title: T\nparts:\n"))
 	if _, got := draw(t, g2+second, inspect); got != `s.yaml:15:7: box "write2" overlaps label "yes" of another graph; move one of the graphs by its x and y`+"\n"+
-		`s.yaml:15:7: edge write2→check2 runs through box "show" of another graph; move one of the graphs by its x and y` {
+		`s.yaml:15:7: edge "write2"→"check2" runs through box "show" of another graph; move one of the graphs by its x and y` {
 		t.Errorf("two graphs: told %q", got)
 	}
 
@@ -339,11 +346,11 @@ box "b" 200,115 48x41
 box "q" 200,50 48x29
 box "c" 296,50 48x29
 box "d" 296,192 48x29
-edge c→b M320,79 V91 H224 V115
-edge b→a M200,123.5 H80
-edge a→b M80,147.5 H200
-edge b→d M224,156 V168 H320 V192
-edge d→ok M296,212.5 H88
+edge "c"→"b" M320,79 V91 H224 V115
+edge "b"→"a" M200,123.5 H80
+edge "a"→"b" M80,147.5 H200
+edge "b"→"d" M224,156 V168 H320 V192
+edge "d"→"ok" M296,212.5 H88
 label "ask" 130.2,114.5 31.6x18
 label "answer" 131.4,138.5 53.2x18
 label "ask" 176.2,203.5 31.6x18
@@ -360,11 +367,11 @@ box "b" 134,134 84x48
 box "q" 50,152 48x29
 box "c" 50,272 48x48
 box "d" 258,230 48x48
-edge c→b M98,296 H110 V158 H134
-edge b→a M152,134 V61
-edge a→b M200,61 V134
-edge b→d M218,158 H230 V254 H258
-edge d→ok M288,230 V61
+edge "c"→"b" M98,296 H110 V158 H134
+edge "b"→"a" M152,134 V61
+edge "a"→"b" M200,61 V134
+edge "b"→"d" M218,158 H230 V254 H258
+edge "d"→"ok" M288,230 V61
 label "ask" 136.2,100.5 31.6x18
 label "answer" 173.4,100.5 53.2x18
 label "ask" 272.2,136.5 31.6x18
@@ -390,10 +397,10 @@ box "y" 110,20 48x29
 box "a" 92,85 48x29
 box "p" 20,85 48x29
 box "b" 164,85 48x29
-edge x→b M62.67,49 V61 H188 V85
-edge y→a M128,49 V85
-edge x→p M41.33,49 V85
-edge a→b M140,105.5 H164
+edge "x"→"b" M62.67,49 V61 H188 V85
+edge "y"→"a" M128,49 V85
+edge "x"→"p" M41.33,49 V85
+edge "a"→"b" M140,105.5 H164
 `},
 		{"four, laid out right", `title: T
 parts:
@@ -411,10 +418,10 @@ parts:
         - { from: b, to: a, level: true }
 `, `box "a" 128,20 60x29
 box "b" 20,74 276x29
-edge a→b M140,49 V74
-edge b→a M152,74 V49
-edge a→b M164,49 V74
-edge b→a M176,74 V49
+edge "a"→"b" M140,49 V74
+edge "b"→"a" M152,74 V49
+edge "a"→"b" M164,49 V74
+edge "b"→"a" M176,74 V49
 `},
 		{"three, laid out right", `title: T
 parts:
@@ -431,9 +438,9 @@ parts:
         - { from: a, to: b, level: true }
 `, `box "a" 128,20 60x29
 box "b" 20,74 276x29
-edge a→b M152,49 V74
-edge b→a M164,74 V49
-edge a→b M176,49 V74
+edge "a"→"b" M152,49 V74
+edge "b"→"a" M164,74 V49
+edge "a"→"b" M176,49 V74
 `},
 	} {
 		if got, told := draw(t, c.src, inspect); got != c.want || told != "" {
@@ -464,7 +471,7 @@ parts:
         - group: { name: g, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: a, to: g, level: true }
-`, `s.yaml:10:26: edge a→g: g is a group, and level stands two boxes in one rank; end the edge at a box, or drop level`},
+`, `s.yaml:10:26: edge "a"→"g": "g" is a group, and level stands two boxes in one rank; end the edge at a box, or drop level`},
 		{"a level edge between a group's box and one outside", `title: T
 parts:
   - graph:
@@ -475,7 +482,7 @@ parts:
         - group: { name: g, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: a, to: b, level: true }
-`, `s.yaml:10:36: edge a→b: level joins two boxes of one group, or two boxes directly in two lanes; move one of them, or drop level`},
+`, `s.yaml:10:36: edge "a"→"b": level joins two boxes of one group, or two boxes directly in two lanes; move one of them, or drop level`},
 		{"an edge across a row", `title: T
 parts:
   - graph:
@@ -487,7 +494,7 @@ parts:
       edges:
         - { from: a, to: b, level: true }
         - { from: a, to: b }
-`, `s.yaml:11:13: edge a→b: a and b stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them`},
+`, `s.yaml:11:13: edge "a"→"b": "a" and "b" stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them`},
 		{"a box of the block written between", `title: T
 parts:
   - graph:
@@ -500,7 +507,7 @@ parts:
       edges:
         - { from: a, to: c, level: true }
         - { from: a, to: b, level: true }
-`, `s.yaml:11:36: edge a→c: box "b" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:11:36: edge "a"→"c": box "b" stands between its boxes in their rank; drop level, or move it out of the way`},
 		{"a box of the block on the side it faces", `title: T
 parts:
   - graph:
@@ -512,7 +519,7 @@ parts:
       edges:
         - { from: a, to: b, level: true }
         - { from: b, to: c, level: true }
-`, `s.yaml:10:36: edge a→b: box "c" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:10:36: edge "a"→"b": box "c" stands between its boxes in their rank; drop level, or move it out of the way`},
 		{"a group of a lane whose block faces both ways", `title: T
 parts:
   - graph:
@@ -528,7 +535,7 @@ parts:
         - { from: x, to: m2 }
         - { from: a, to: b, level: true }
         - { from: b, to: c, level: true }
-`, `s.yaml:15:36: edge b→c: group "h" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:15:36: edge "b"→"c": group "h" stands between its boxes in their rank; drop level, or move it out of the way`},
 		{"a box of a lane between", `title: T
 parts:
   - graph:
@@ -540,7 +547,7 @@ parts:
         - { name: e, nodes: [{ box: { name: b, rows: [B] } }] }
       edges:
         - { from: a, to: b, level: true }
-`, `s.yaml:11:36: edge a→b: box "m" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:11:36: edge "a"→"b": box "m" stands between its boxes in their rank; drop level, or move it out of the way`},
 		{"a group's frame in a lane between", `title: T
 parts:
   - graph:
@@ -556,7 +563,7 @@ parts:
         - { from: m1, to: x }
         - { from: x, to: m2 }
         - { from: a, to: b, level: true }
-`, `s.yaml:15:36: edge a→b: group "h" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:15:36: edge "a"→"b": group "h" stands between its boxes in their rank; drop level, or move it out of the way`},
 		{"two handoffs between two lanes in a rank", `title: T
 parts:
   - graph:
@@ -568,8 +575,8 @@ parts:
       edges:
         - { from: p, to: r, level: true }
         - { from: q, to: s, level: true }
-`, `s.yaml:10:36: edge p→r: box "q" stands between its boxes in their rank; drop level, or move it out of the way
-s.yaml:11:36: edge q→s: box "p" stands between its boxes in their rank; drop level, or move it out of the way`},
+`, `s.yaml:10:36: edge "p"→"r": box "q" stands between its boxes in their rank; drop level, or move it out of the way
+s.yaml:11:36: edge "q"→"s": box "p" stands between its boxes in their rank; drop level, or move it out of the way`},
 		{"loops on the side the edge takes, from", `title: T
 parts:
   - graph:
@@ -581,7 +588,7 @@ parts:
       edges:
         - { from: a, to: b, level: true }
         - { from: a, to: a }
-`, `s.yaml:10:36: edge a→b: it takes side right of a, where a's loops are; drop level or the loops`},
+`, `s.yaml:10:36: edge "a"→"b": it takes side right of "a", where "a"'s loops are; drop level or the loops`},
 		{"loops on the side the edge takes, to", `title: T
 parts:
   - graph:
@@ -593,7 +600,7 @@ parts:
       edges:
         - { from: b, to: a, level: true }
         - { from: a, to: a }
-`, `s.yaml:10:36: edge b→a: it takes side right of a, where a's loops are; drop level or the loops`},
+`, `s.yaml:10:36: edge "b"→"a": it takes side right of "a", where "a"'s loops are; drop level or the loops`},
 		{"a lane's heading between, laid out right", `title: T
 parts:
   - graph:
@@ -607,7 +614,7 @@ parts:
       edges:
         - { from: z, to: m }
         - { from: a, to: b, level: true }
-`, `s.yaml:13:36: edge a→b: it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`},
+`, `s.yaml:13:36: edge "a"→"b": it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`},
 		{"the heading of the lane the edge enters, laid out right", `title: T
 parts:
   - graph:
@@ -621,7 +628,7 @@ parts:
       edges:
         - { from: z, to: m }
         - { from: a, to: b, level: true }
-`, `s.yaml:13:36: edge a→b: it runs through the heading of lane "e", which reaches into the first rank laid out right; drop level, or shorten the heading`},
+`, `s.yaml:13:36: edge "a"→"b": it runs through the heading of lane "e", which reaches into the first rank laid out right; drop level, or shorten the heading`},
 		{"a box among a group's ranks by a row", `title: T
 parts:
   - graph:
@@ -636,7 +643,7 @@ parts:
         - { from: y, to: p }
         - { from: q, to: x }
         - { from: x, to: g }
-`, `s.yaml:14:19: edge x→g: x can stand neither above group "g" nor below it, as q stands no lower than it and p no higher; end the edge at a box in "g"`},
+`, `s.yaml:14:19: edge "x"→"g": "x" can stand neither above group "g" nor below it, as "q" stands no lower than it and "p" no higher; end the edge at a box in "g"`},
 		{"loops, and an edge across the row of the level edge refused", `title: T
 parts:
   - graph:
@@ -649,7 +656,7 @@ parts:
         - { from: a, to: a }
         - { from: a, to: b, level: true }
         - { from: a, to: b }
-`, `s.yaml:11:36: edge a→b: it takes side right of a, where a's loops are; drop level or the loops`},
+`, `s.yaml:11:36: edge "a"→"b": it takes side right of "a", where "a"'s loops are; drop level or the loops`},
 		{"a row of one lane", `title: T
 parts:
   - graph:
@@ -803,7 +810,7 @@ func TestGraphHeadRoom(t *testing.T) {
 the heading of frame "g" 32,29 245.76x18
 box "a" 32,50 48x29
 box "c" 32,115 48x29
-edge a→c M56,79 V115
+edge "a"→"c" M56,79 V115
 `},
 		{"no line in: the frame holds the heading", "title: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n" + group(box("a")), `frame "g" 20,20 270x71
 the heading of frame "g" 32,29 245.76x18
@@ -813,13 +820,13 @@ box "a" 32,50 48x29
 the heading of frame "g" 32,94 245.76x18
 box "top" 20,20 64x29
 box "a" 302,115 48x29
-edge top→a M52,49 V61 H326 V115
+edge "top"→"a" M52,49 V61 H326 V115
 `},
 		{"a line to the frame: where it enters is right of the heading", graph("", top+group(box("a")), "        - { from: top, to: g }\n"), `frame "g" 20,85 312x71
 the heading of frame "g" 32,94 245.76x18
 box "top" 20,20 64x29
 box "a" 32,115 48x29
-edge top→g M52,49 V61 H308 V85
+edge "top"→"g" M52,49 V61 H308 V85
 `},
 		{"a line past the first rank: its point is right of the heading", graph("", top+group(box("a"), box("b")),
 			"        - { from: top, to: a }\n        - { from: a, to: b }\n        - { from: top, to: b }\n"), `frame "g" 20,85 384x136
@@ -827,9 +834,9 @@ the heading of frame "g" 32,94 245.76x18
 box "top" 290,20 64x29
 box "a" 302,115 48x29
 box "b" 290,180 64x29
-edge top→a M326,49 V115
-edge a→b M326,144 V156 H311.33 V180
-edge top→b M340,49 V61 H380 V156 H332.67 V180
+edge "top"→"a" M326,49 V115
+edge "a"→"b" M326,144 V156 H311.33 V180
+edge "top"→"b" M340,49 V61 H380 V156 H332.67 V180
 `},
 		{"written first, with no line in: under the heading", graph("", top+group("box: { name: f, with: e, rows: [f] }", box("e")),
 			"        - { from: top, to: e }\n"), `frame "g" 20,85 342x71
@@ -837,7 +844,7 @@ the heading of frame "g" 32,94 245.76x18
 box "top" 20,20 64x29
 box "f" 32,115 48x29
 box "e" 302,115 48x29
-edge top→e M52,49 V61 H326 V115
+edge "top"→"e" M52,49 V61 H326 V115
 `},
 		{"written after one with a line in: past it", graph("", top+group(box("e"), "box: { name: f, with: e, rows: [f] }"),
 			"        - { from: top, to: e }\n"), `frame "g" 20,85 414x71
@@ -845,7 +852,7 @@ the heading of frame "g" 32,94 245.76x18
 box "top" 20,20 64x29
 box "e" 302,115 48x29
 box "f" 374,115 48x29
-edge top→e M52,49 V61 H326 V115
+edge "top"→"e" M52,49 V61 H326 V115
 `},
 		{"nested: a line in keeps right of both headings", graph("", top+"        - group:\n            name: o\n            label: "+heading+"\n            nodes:\n"+
 			"              - group: { name: i, label: i, nodes: [{ "+box("a")+" }] }\n", "        - { from: top, to: a }\n"), `frame "o" 20,85 354x113
@@ -854,13 +861,13 @@ the heading of frame "o" 32,94 245.76x18
 the heading of frame "i" 44,124 7.68x18
 box "top" 20,20 64x29
 box "a" 302,145 48x29
-edge top→a M52,49 V61 H326 V145
+edge "top"→"a" M52,49 V61 H326 V145
 `},
 		{"laid out right: the heading keeps its place", graph("      direction: right\n", group(box("a"))+"        - "+box("c")+"\n", "        - { from: a, to: c }\n"), `frame "g" 20,20 270x114
 the heading of frame "g" 32,29 245.76x18
 box "a" 140,74 48x48
 box "c" 314,74 48x48
-edge a→c M188,98 H314
+edge "a"→"c" M188,98 H314
 `},
 	} {
 		if got, told := draw(t, c.src, inspect); got != c.want || told != "" {
@@ -876,7 +883,7 @@ func TestGraphHeadRoomByHand(t *testing.T) {
 	const src = "width: 500\nheight: 300\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 60\n      nodes:\n" +
 		"        - group: { name: g, label: A long heading of the frame here, nodes: [{ box: { name: a, rows: [a] } }] }\n" +
 		"  - edge: { from: [300, 0], to: a%s }\n"
-	want := `s.yaml:10:5: edge [300,0]→a runs through the heading of frame "g"; move one of them, or go round it by via`
+	want := `s.yaml:10:5: edge [300,0]→"a" runs through the heading of frame "g"; move one of them, or go round it by via`
 	if _, told := draw(t, fmt.Sprintf(src, ""), inspect); told != want {
 		t.Errorf("told %q, want %q", told, want)
 	}
