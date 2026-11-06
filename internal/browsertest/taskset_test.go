@@ -259,7 +259,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		b.click(box.X+10, box.Y+box.Height/2)
 		b.until("the suggestions", "document.getElementById('set-task-names').matches(':popover-open')")
 		b.still()
-		within := b.eval("[...document.querySelectorAll('#set-task-names .names-note')].every((e) => e.getBoundingClientRect().right <= document.getElementById('set-task-names').getBoundingClientRect().right + 0.5 && e.getBoundingClientRect().width > 1) && document.getElementById('set-task-names').getBoundingClientRect().right <= innerWidth")
+		within := b.eval("[...document.querySelectorAll('#set-task-names .names-note')].every((e) => e.getBoundingClientRect().right <= document.getElementById('set-task-names').getBoundingClientRect().right + 0.5 && e.scrollWidth <= e.clientWidth) && document.getElementById('set-task-names').getBoundingClientRect().right <= innerWidth")
 		if within != "true" {
 			t.Errorf("width %d: a suggestion's state is cut", width)
 		}
