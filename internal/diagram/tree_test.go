@@ -81,7 +81,7 @@ func TestTreeMistakes(t *testing.T) {
 		{
 			"  - tree:\n      x: 200\n      y: 10\n      root:\n        rows: [{ en: Top, ja: \"いちばん上の節\" }]\n        children:\n          - rows: [{ en: Kid, ja: \"子の節\" }]\n" +
 				"  - box: { name: b, x: 180, y: 50, w: 60, h: 30, rows: [b] }\n",
-			`s.yaml:12:5: edge "いちばん上の節"→"子の節" runs through box "b"`,
+			`s.yaml:12:5: edge "いちばん上の節"→"子の節" runs through box "b"; move one of them, or go round it by via`,
 		},
 		{
 			"  - tree:\n      x: 20\n      y: 10\n      root:\n        rows: [A]\n        children:\n          - rows: [B]\n          - rows: [Wide child]\n",

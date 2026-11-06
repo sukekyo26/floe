@@ -54,17 +54,15 @@ func (gr *group) place(right bool) (trips, pulls int) {
 	return trips, pulls
 }
 
-// size sizes the group's boxes (turned for right) and its headings' rooms, and sets where a heading stands from its
-// frame's top: 12 in from its left and 9 down from its top (addFrame), along the ranks as drawn.
+// size sizes the group's boxes (turned for right), and for right turns its headings' rooms and sets where one stands
+// from its frame's top along the ranks: 12 in from its left (addFrame).
 func (gr *group) size(right bool) {
-	words := headParts(false, 0)
-	gr.headAt = words.y
 	if right {
-		gr.headAt = words.x
+		gr.headAt = headParts(false, 0).x
 	}
 	for i := range gr.nodes {
 		n := &gr.nodes[i]
-		if n.kind == kindHeading && right {
+		if n.kind == kindHeading {
 			n.w, n.h = n.h, n.w
 		}
 		if n.box == nil {
@@ -186,6 +184,7 @@ func (gr *group) pullOne(r, i int, down bool) bool {
 		o := gr.nodes[beside[at+1]]
 		hi = onGrid(o.x-gr.gap(i, beside[at+1])-n.w, 6, math.Floor)
 	}
+	lo = max(lo, onGrid(gr.headFloor(i), 6, math.Ceil))
 	x := min(max(onGrid(want-n.w/2, 6, math.Round), lo), hi)
 	if x == n.x {
 		return false

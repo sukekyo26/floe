@@ -275,7 +275,7 @@ var messagesEN = map[string]string{
 	"diagram_outside":            "%s sticks out of the %sx%s canvas",
 	"diagram_overlap":            "%s overlaps %s",
 	"diagram_straddle":           "%s straddles the edge of %s at %s %s, spanning %s to %s",
-	"diagram_runs_through":       "%s runs through %s",
+	"diagram_runs_through":       "%s runs through %s; move one of them, or go round it by via",
 	"diagram_crossing":           "%s crosses %s at %s,%s; move one of them, or add crossing: true to one if it cannot be avoided",
 	"diagram_label_not_circle":   `label: in names "%s", which is no circle's name`,
 	"diagram_label_region":       "%s is not all inside %s and outside the other circles: move it, or leave out x and y for floe to place it",

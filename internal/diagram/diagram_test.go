@@ -263,8 +263,8 @@ func TestLayoutMistakes(t *testing.T) {
 			"s.yaml:7:5: dot 103,93 14x14 overlaps dot 103,105 14x14\ns.yaml:8:5: label \"Dark mode\" overlaps label \"Share a note\"",
 		},
 		{"  - label: { text: a note, x: 150, y: 100 }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: box "a" overlaps label "a note"`},
-		{"  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }\n  - edge: { from: [20, 100], to: [300, 100] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"`},
-		{"  - edge: { from: [20, 100], to: [300, 100] }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"`},
+		{"  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }\n  - edge: { from: [20, 100], to: [300, 100] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"; move one of them, or go round it by via`},
+		{"  - edge: { from: [20, 100], to: [300, 100] }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"; move one of them, or go round it by via`},
 		{"  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }\n  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: box "a" straddles the edge of frame "F" at x 210, spanning 180 to 260`},
 		{"  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }\n  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }", `s.yaml:6:5: box "a" straddles the edge of frame "F" at x 210, spanning 180 to 260`},
 		{
@@ -329,7 +329,7 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - dot: { name: d, cx: 50, cy: 50 }\n  - box: { name: b, x: 40, y: 40, w: 60, h: 30, rows: [b] }", `s.yaml:6:5: box "b" overlaps dot "d"`},
 		// Each check of the placement on its own.
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - box: { x: 80, y: 40, w: 60, h: 40, rows: [A] }", `s.yaml:6:5: box "A" straddles the edge of frame "F" at x 110, spanning 80 to 140`},
-		{"  - box: { name: b, x: 150, y: 80, w: 60, h: 40, rows: [B] }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through box "b"`},
+		{"  - box: { name: b, x: 150, y: 80, w: 60, h: 40, rows: [B] }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through box "b"; move one of them, or go round it by via`},
 		// A label part written at an x and y straddles a frame as a box does, by its box; inside or outside one, or
 		// across frames that cross, as a box would.
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - label: { text: across, x: 100, y: 50 }", `s.yaml:6:5: label "across" straddles the edge of frame "F" at x 110, spanning 73.4 to 126.6`},
@@ -408,7 +408,7 @@ func TestLayoutMistakes(t *testing.T) {
 				"      edges:\n        - { from: a, to: b, label: a graph label }\n  - frame: { x: 120, y: 5, w: 200, h: 150, label: F }",
 			"",
 		},
-		{"  - label: { text: L, x: 200, y: 100 }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through label "L"`},
+		{"  - label: { text: L, x: 200, y: 100 }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through label "L"; move one of them, or go round it by via`},
 		{"  - box: { x: 20, y: 20, w: 80, h: 20, rows: [A, B] }", `s.yaml:5:5: box "A": its text needs a height of 46px or more; the box has 20px`},
 		{"  - box: { x: 20, y: -5, w: 60, h: 40, rows: [A] }", `s.yaml:5:5: box "A" sticks out of the 400x200 canvas`},
 		{"  - box: { x: 20, y: 180, w: 60, h: 40, rows: [A] }", `s.yaml:5:5: box "A" sticks out of the 400x200 canvas`},
@@ -579,15 +579,15 @@ func TestEdgesPastShapes(t *testing.T) {
 		"to: [102, 382]", "to: [106, 386]", "to: [101.3, 464.3]", "to: [103, 466]", "to: [405, 30]", "to: [415, 60]",
 		"from: [130, 21], to: [270, 21]", "from: [60, 46], to: [340, 46]").Replace(shapes)
 	want := strings.Join([]string{
-		`s.yaml:6:5: edge [95,15]→[112,32] runs through box "h"`,
-		`s.yaml:7:5: edge [310,10]→[290,34] runs through box "h"`,
-		`s.yaml:9:5: edge [60,105]→[110,121] runs through box "s"`,
-		`s.yaml:11:5: edge [60,215]→[110,231] runs through box "p"`,
-		`s.yaml:13:5: edge [90,290]→[106,306] runs through box "r"`,
-		`s.yaml:15:5: edge [90,370]→[106,386] runs through table "t"`,
-		`s.yaml:17:5: edge [90,455]→[103,466] runs through bar "b"`,
-		`s.yaml:19:5: edge [390,15]→[415,60] runs through box "tall"`,
-		`s.yaml:20:5: edge [60,46]→[340,46] runs through box "h"`,
+		`s.yaml:6:5: edge [95,15]→[112,32] runs through box "h"; move one of them, or go round it by via`,
+		`s.yaml:7:5: edge [310,10]→[290,34] runs through box "h"; move one of them, or go round it by via`,
+		`s.yaml:9:5: edge [60,105]→[110,121] runs through box "s"; move one of them, or go round it by via`,
+		`s.yaml:11:5: edge [60,215]→[110,231] runs through box "p"; move one of them, or go round it by via`,
+		`s.yaml:13:5: edge [90,290]→[106,306] runs through box "r"; move one of them, or go round it by via`,
+		`s.yaml:15:5: edge [90,370]→[106,386] runs through table "t"; move one of them, or go round it by via`,
+		`s.yaml:17:5: edge [90,455]→[103,466] runs through bar "b"; move one of them, or go round it by via`,
+		`s.yaml:19:5: edge [390,15]→[415,60] runs through box "tall"; move one of them, or go round it by via`,
+		`s.yaml:20:5: edge [60,46]→[340,46] runs through box "h"; move one of them, or go round it by via`,
 	}, "\n")
 	if _, got := draw(t, inward, inspect); got != want {
 		t.Errorf("edges 4 in = %q, want %q", got, want)
@@ -629,12 +629,12 @@ func TestEdgesIconLabel(t *testing.T) {
 		{
 			name:    "another edge at the label",
 			parts:   a + "  - box: { name: c, x: 20, y: 70, w: 44, h: 30, rows: [c] }\n  - box: { name: d, x: 180, y: 70, w: 44, h: 30, rows: [d] }\n  - edge: { from: c, to: d }",
-			refused: `edge c→d runs through label "a"`,
+			refused: `edge c→d runs through label "a"; move one of them, or go round it by via`,
 		},
 		{
 			name:    "a via between the icon and its label",
 			parts:   a + "  - box: { name: b, x: 220, y: 100, w: 48, h: 30, rows: [b] }\n  - edge: { from: a, to: b, fromSide: bottom, toSide: left, via: [[124, 70], [190, 70], [190, 115]] }",
-			refused: `edge a→b runs through label "a"`,
+			refused: `edge a→b runs through label "a"; move one of them, or go round it by via`,
 		},
 		{
 			name:  "no side, the other's centre as far across as down from the icon with its label",
@@ -649,12 +649,12 @@ func TestEdgesIconLabel(t *testing.T) {
 		{
 			name:    "no side, further down, the other's top beside the label",
 			parts:   a + "  - box: { name: b, x: 160, y: 71, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
-			refused: `edge a→b runs through label "a"`,
+			refused: `edge a→b runs through label "a"; move one of them, or go round it by via`,
 		},
 		{
 			name:    "the same, a side floe chooses moved by the label's place",
 			parts:   a + "  - box: { name: b, x: 160, y: 72, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
-			refused: `edge a→b runs through box "b"`,
+			refused: `edge a→b runs through box "b"; move one of them, or go round it by via`,
 		},
 		{
 			name:  "the same, further off, the bottom side",
@@ -679,12 +679,12 @@ func TestEdgesIconLabel(t *testing.T) {
 		{
 			name:    "the sides written, the other's side above the label's bottom",
 			parts:   a + "  - box: { name: b, x: 300, y: 55, w: 60, h: 30, rows: [b] }\n  - edge: { from: a, fromSide: bottom, to: b, toSide: left }",
-			refused: `edge a→b runs through label "a"`,
+			refused: `edge a→b runs through label "a"; move one of them, or go round it by via`,
 		},
 		{
 			name:    "the same, the other way",
 			parts:   a + "  - box: { name: b, x: 300, y: 55, w: 60, h: 30, rows: [b] }\n  - edge: { from: b, fromSide: left, to: a, toSide: bottom }",
-			refused: `edge b→a runs through label "a"`,
+			refused: `edge b→a runs through label "a"; move one of them, or go round it by via`,
 		},
 		{
 			name:  "the other's top 2 above the label's bottom, the run in its edge",
@@ -779,7 +779,7 @@ func TestEdgesHandSides(t *testing.T) {
 		// laid out right: the bottom, not the left
 		{"width: 260\nheight: 160\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      direction: right\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [0, 100], via: [[60, 100]], to: b }\n", `d="M0,100 H60 H116 V68"`},
 		// a box in a lane
-		{"width: 400\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      lanes:\n        - { name: l1, label: L1, nodes: [{ box: { name: a, rows: [a] } }] }\n        - { name: l2, label: L2, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [300, 0], via: [[300, 100]], to: b }\n", `d="M300,0 V100 V129.5 H218"`},
+		{"width: 400\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      lanes:\n        - { name: l1, label: L1, nodes: [{ box: { name: a, rows: [a] } }] }\n        - { name: l2, label: L2, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [300, 0], via: [[300, 100]], to: b }\n", `d="M300,0 V100 V129.5 H176"`},
 		// a tree's child: right, not its top
 		{"width: 260\nheight: 200\ntitle: T\nparts:\n  - tree:\n      x: 90\n      y: 20\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [200, 0], via: [[200, 80]], to: c }\n", `d="M200,0 V80 V103.5 H114"`},
 		// a tree's root keeps its top
@@ -787,11 +787,11 @@ func TestEdgesHandSides(t *testing.T) {
 		// without via, from the other end
 		{"width: 260\nheight: 240\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 100\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - box: { name: h, x: 60, y: 10, w: 60, h: 30, rows: [h] }\n  - edge: { from: h, to: b }\n", `d="M90,40 V167.5 H68"`},
 		// a group's frame: right, not its top
-		{"width: 300\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: g }\n  - edge: { from: [200, 0], via: [[200, 60]], to: g }\n", `d="M200,0 V60 V120.5 H170"`},
+		{"width: 300\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: g }\n  - edge: { from: [200, 0], via: [[200, 60]], to: g }\n", `d="M200,0 V60 V120.5 H134"`},
 		// two of the graph's edges end at b's top
 		{"width: 300\nheight: 200\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: c, rows: [c] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n        - { from: c, to: b }\n  - edge: { from: [250, 0], via: [[250, 60]], to: b }\n", `d="M250,0 V60 V87.5 H116"`},
 		// a group's frame in the first rank keeps its top, which no edge of the graph ends at
-		{"width: 300\nheight: 240\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 40\n      nodes:\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n        - box: { name: a, rows: [a] }\n      edges:\n        - { from: g, to: a }\n  - edge: { from: [250, 0], via: [[250, 20]], to: g }\n", `d="M250,0 V20 H86 V40"`},
+		{"width: 300\nheight: 240\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 40\n      nodes:\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n        - box: { name: a, rows: [a] }\n      edges:\n        - { from: g, to: a }\n  - edge: { from: [250, 0], via: [[250, 20]], to: g }\n", `d="M250,0 V20 H68 V40"`},
 		// a lane's outer side, which no edge of the graph crosses, is left
 		{"width: 400\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      lanes:\n        - { name: l1, label: L1, nodes: [{ box: { name: a, rows: [a] } }] }\n        - { name: l2, label: L2, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [0, 200], via: [[10, 200]], to: l1 }\n", `d="M0,200 H10 V88 H20"`},
 		// across first: right, though the top is left too
@@ -892,9 +892,9 @@ func TestEdgeViaAxis(t *testing.T) {
 	for _, c := range []struct {
 		parts, want string
 	}{
-		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ x: 150 }] }", `s.yaml:8:5: edge a→b runs through box "a"`},
-		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ y: 150 }] }", `s.yaml:8:5: edge a→b runs through box "a"`},
-		{"  - edge: { from: a, to: b, via: [{ x: 50 }] }", "s.yaml:8:5: edge a→b runs through box \"a\"\ns.yaml:8:5: edge a→b runs through box \"c\""},
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ x: 150 }] }", `s.yaml:8:5: edge a→b runs through box "a"; move one of them, or go round it by via`},
+		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ y: 150 }] }", `s.yaml:8:5: edge a→b runs through box "a"; move one of them, or go round it by via`},
+		{"  - edge: { from: a, to: b, via: [{ x: 50 }] }", "s.yaml:8:5: edge a→b runs through box \"a\"; move one of them, or go round it by via\ns.yaml:8:5: edge a→b runs through box \"c\"; move one of them, or go round it by via"},
 		{"  - edge: { from: nobody, to: b, via: [{ x: 50 }] }", `s.yaml:8:5: edge: no part, row or node named "nobody"`},
 	} {
 		if _, got := draw(t, head+c.parts+"\n", inspect); got != c.want {
@@ -1036,19 +1036,19 @@ func TestEdgesVia(t *testing.T) {
 		{
 			"  - frame: { name: f, x: 200, y: 40, w: 280, h: 200, label: F }\n  - box: { name: a, x: 260, y: 120, w: 100, h: 40, rows: [a] }\n" +
 				"  - edge: { from: a, via: [[420, 140], [420, 200]], to: f }",
-			`s.yaml:7:5: edge a→f runs through box "a"`,
+			`s.yaml:7:5: edge a→f runs through box "a"; move one of them, or go round it by via`,
 		},
 		{
 			"  - box: { name: b, x: 300, y: 100, w: 100, h: 40, rows: [b] }\n  - edge: { from: [450, 300], via: [[500, 300]], to: b, toSide: top }",
-			`s.yaml:6:5: edge [450,300]→b runs through box "b"`,
+			`s.yaml:6:5: edge [450,300]→b runs through box "b"; move one of them, or go round it by via`,
 		},
 		{
 			"  - box: { name: a, x: 40, y: 140, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 220]], to: [210, 0] }",
-			`s.yaml:6:5: edge a→[210,0] runs through box "a"`,
+			`s.yaml:6:5: edge a→[210,0] runs through box "a"; move one of them, or go round it by via`,
 		},
 		{
 			"  - box: { name: k, x: 180, y: 30, w: 40, h: 40, rows: [[k, sub]] }\n  - edge: { from: [0, 0], via: [[200, 0]], to: [100, 100] }",
-			`s.yaml:6:5: edge [0,0]→[100,100] runs through box "k"`,
+			`s.yaml:6:5: edge [0,0]→[100,100] runs through box "k"; move one of them, or go round it by via`,
 		},
 		{
 			"  - edge: { from: nope1, via: [[30, 200]], to: nope2 }",
@@ -1844,8 +1844,8 @@ func TestFaces(t *testing.T) {
 	// A group's frame is as wide as its heading is drawn: both where it is kept room and where it is checked.
 	const group = "  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - group:\n            name: g\n" +
 		"            label: " + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + "\n            nodes:\n              - box: { name: a, rows: [[a, sub]] }\n"
-	if got, told := draw(t, head+group, inspect); !strings.HasPrefix(got, `frame "g" 20,20 324x`) || told != "" {
-		t.Errorf("a group's heading:\n  inspect %q %q\n  want the frame 324 wide", got, told)
+	if got, told := draw(t, head+group, inspect); !strings.HasPrefix(got, `frame "g" 20,20 258x`) || told != "" {
+		t.Errorf("a group's heading:\n  inspect %q %q\n  want the frame 258 wide", got, told)
 	}
 
 	// A lane's heading is measured bold where a level edge is checked against it: regular, this one would not reach it.
