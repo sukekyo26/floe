@@ -462,7 +462,6 @@ func onFrameSide(r rect, p [2]float64, right bool) bool {
 	if right {
 		along, across = 1, 0
 	}
-	near := func(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
 	return (near(p[across], r.lo(across)) || near(p[across], r.lo(across)+r.size(across))) &&
 		p[along] > r.lo(along) && p[along] < r.lo(along)+r.size(along)
 }
@@ -2278,6 +2277,20 @@ func TestGraphLabelRoom(t *testing.T) {
 	}
 	if sp, ok := band.seek(0, 70); !ok || band.spots[0] != sp || sp.at != 63 {
 		t.Errorf("the label from %v, seek finds %v %v, want from 63", band.spots[0].at, sp.at, ok)
+	}
+
+	// Placed again once the ends have settled, a level edge's label on a run too short stays: its boxes do not move.
+	level := &drawing{
+		right: false, boxes: map[int]rect{
+			0: {x: 0, y: 0, w: 48, h: 20, what: "", at: ""},  //nolint:exhaustruct_v5 // a box
+			1: {x: 58, y: 0, w: 48, h: 20, what: "", at: ""}, //nolint:exhaustruct_v5 // a box
+		}, shapes: map[int]string{0: "", 1: ""}, routes: map[int][][2]float64{0: {{48, 10}, {58, 10}}},
+		ends: map[int][2]int{0: {0, 1}}, back: map[int]bool{}, level: map[int][2]string{0: {"right", "left"}},
+		spots: map[int]spot{0: {edge: 0, seg: 0, beside: false, at: 48, w: 10}},
+	}
+	level.reseat([]int{0})
+	if x := level.boxes[1].x; x != 58 || level.spots[0].at != 48 {
+		t.Errorf("box at %v, label from %v, want 58, 48", x, level.spots[0].at)
 	}
 
 	short := &drawing{

@@ -567,10 +567,10 @@ const labelEnds = 12
 
 // place places edge k's label, w wide, on its edge: where seek finds it; else it makes room by a run, the longest first
 // that takes it (see room). It fails when none takes it: floe's fault, as a graph's bounds keep a band in reach.
-// LIMIT: each spot is compared with every box, label and run of the group (0.25s for the largest graph allowed,
-// every edge labelled); compare only the things near a spot if larger graphs come to need it. Room made grows the group
-// and widens the boxes a cut crosses beyond their text, and minds no edge written by hand: a band made over the middle
-// of a box's side may stand in the way of one, told at it.
+// LIMIT: each spot is compared with every box, label and run of the group (0.25s for the largest graph allowed, every
+// edge labelled); compare only the things near a spot if larger graphs come to need it. Room made grows the group and
+// widens the boxes a cut crosses beyond their text, and minds no edge written by hand: a band made over the middle of a
+// box's side may stand in the way of one, told at it.
 // LIMIT: a labelled edge may keep its run where its ends cannot reach their equal parts straight, and bends once by the
 // box; let the run move with its label if that shows. Among icons an edge may turn twice or more beyond its turns with
 // no label, as it may with none of this: only graphs of boxes are tested for it (turnFault).
@@ -643,26 +643,13 @@ func offLine(runs []seg, s seg) []seg {
 	})
 }
 
-// fits is whether a label at sp still stands where seek would take it: labelEnds in from its run's ends, and clear.
-func (d *drawing) fits(k int, sp spot) bool {
-	s := d.runOf(sp)
-	along := runAxis(s)
-	if sp.at < min(s[along], s[along+2])+labelEnds-eps ||
-		sp.at+labelSize(s, sp.w)[1] > max(s[along], s[along+2])-labelEnds+eps {
-		return false
-	}
-	things, runs, own := d.keptOff(k)
-	r := heldRect(s, sp)
-	return free(r, things, runs) && free(r, nil, offLine(own, s))
-}
-
 // reseat places the labels on ks's runs again, in the order written, now that the ends have settled: where seek finds
-// it; else, unless it fits where it stands, lengthening its run to find it; else it stays. It makes no room across a run
-// and cuts through no box, not a level edge's either: that would widen a box and leave the ends settled on it.
-// LIMIT: a label stays with less than labelEnds of its run, as little as none, where the ends have shortened its run and
-// lengthening finds no place (about 0.1% of the labels of crowded graphs), and a run drawn may reach it there, floe's
-// failure (1 of 2500 of the most crowded graphs tried; 2 before labels stood on runs); make room across the run if that
-// shows, minding the icons' rectangles. A label's place a later label frees is not taken.
+// it; else lengthening its run by what it lacks, which is nothing if it still fits there; else it stays. It makes no
+// room across a run and cuts no level edge's boxes apart: that would move the ends settled on them.
+// LIMIT: a label stays with less than labelEnds of its run, as little as none, where the ends have shortened its run
+// and lengthening finds no place (about 0.1% of the labels of crowded graphs), and a run drawn may reach it there,
+// floe's failure (1 of 2500 of the most crowded graphs tried; 2 before labels stood on runs); make room across the run
+// if that shows, minding the icons' rectangles. A label's place a later label frees is not taken.
 func (d *drawing) reseat(ks []int) {
 	for _, k := range ks {
 		sp, ok := d.spots[k]
@@ -670,7 +657,7 @@ func (d *drawing) reseat(ks []int) {
 			continue
 		}
 		to, found := d.seek(k, sp.w)
-		if _, level := d.level[k]; !found && !level && !d.fits(k, sp) && d.lengthen(k, sp.seg, sp.w) {
+		if _, level := d.level[k]; !found && !level && d.lengthen(k, sp.seg, sp.w) {
 			to, found = d.seek(k, sp.w)
 		}
 		if found {
@@ -707,10 +694,10 @@ func starts(s seg, long float64) []float64 {
 // room makes room for edge k's label on run i of its edge and returns where it stands: where seek finds it after each
 // step. First the run is lengthened by what it lacks (lengthen). Then what stands within the label's reach across the
 // run is pushed off, each side (push). Last a band as long as the label and labelEnds each side is cut across the run
-// and what stands in it pushed off: in the band lie only runs that cross it and what labels leave short of the room, and
-// seek's steps of 6 fall within it, so it finds a place; it fails when it does not, floe's fault. No cut bends a run or
-// makes two things meet: a straight run stays straight, and a run across a cut grows longer. With no cut past the run's
-// end nearer the box, it reports false.
+// and what stands in it pushed off: in the band lie only runs that cross it and what labels leave short of the room,
+// and seek's steps of 6 fall within it, so it finds a place; it fails when it does not, floe's fault. No cut bends a
+// run or makes two things meet: a straight run stays straight, and a run across a cut grows longer. With no cut past
+// the run's end nearer the box, it reports false.
 // LIMIT: a run starting deep on a hexagon's slant, up to hexInset inside its rectangle, has less clear of the box than
 // it seems, so lengthening it finds no place and the whole band opens; measure from the rectangle if that shows.
 func (d *drawing) room(k, i int, w float64) (spot, bool, error) {
@@ -719,13 +706,13 @@ func (d *drawing) room(k, i int, w float64) (spot, bool, error) {
 		return spot{edge: k, seg: 0, beside: false, at: 0, w: 0}, false, nil
 	}
 	d.lengthen(k, i, w)
-	if sp, ok := d.seek(k, w); ok {
+	if sp, found := d.seek(k, w); found {
 		return sp, true, nil
 	}
 	s := segAt(d.routes[k], i)
 	along, size := runAxis(s), labelSize(s, w)
 	d.push(k, i, spot{edge: k, seg: i, beside: false, at: (s[along] + s[along+2] - size[1]) / 2, w: w})
-	if sp, ok := d.seek(k, w); ok {
+	if sp, found := d.seek(k, w); found {
 		return sp, true, nil
 	}
 	cross := segAt(d.routes[k], i)[1-along]
