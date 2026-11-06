@@ -578,6 +578,7 @@ var messagesEN = map[string]string{
 	"ui_task_unarchive":    "Bring the archive back",
 	"ui_state_failed":      "The state could not be changed: %s",
 	"ui_task_arc_failed":   "%d could not be changed (%s).",
+	"ui_back_to_task":      "Back to %s",
 	"ui_view_archived":     "Archive",
 	"ui_no_favorites":      "No favorites",
 	"ui_more_named":        "More for %s",

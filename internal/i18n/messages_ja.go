@@ -567,6 +567,7 @@ var messagesJA = map[string]string{
 	"ui_task_unarchive":    "アーカイブを戻す",
 	"ui_state_failed":      "状態を変えられませんでした：%s",
 	"ui_task_arc_failed":   "%d 件を変えられませんでした（%s）。",
+	"ui_back_to_task":      "%s へ戻る",
 	"ui_view_archived":     "アーカイブ",
 	"ui_no_favorites":      "お気に入りはありません",
 	"ui_more_named":        "%s のその他の操作",

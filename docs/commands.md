@@ -220,6 +220,8 @@ The task list, at `/tasks` of the server, lists the tasks by state and project: 
 
 A task's row opens the task's page, at `/tasks?project=…&task=…`: its pages under their steps, in the order `--steps` wrote and then as they first came, those of no step first and the archived last, and over them its state to change, its link, and, once it is done, a button that archives its pages. Opening it reads nothing, and a page opened whole from it goes back to it, as one from the pins goes back to the task list. `h` goes back to the task list, to the row it came from, or the next where that left the list.
 
+A page open whole has a back button beside the logo, which says where it goes: the task's name, the task list or the page list, whichever opened it, and `h` goes there too. The logo always goes to the page list. A page opened otherwise (from the search, its URL, another tab) goes back to the page list.
+
 A page keeps its `work` when published again, renamed or drawn again. `tasks.json` that cannot be read, or holds another state or a URL other than `http` or `https`, is refused and not written over: mend it by hand. A key of a row floe does not know is lost at the next write.
 
 ## `floe serve`

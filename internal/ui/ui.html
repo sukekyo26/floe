@@ -112,8 +112,8 @@
   /* New pages to see: on a narrow screen the shelf's views say it */
   .news { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--new); text-decoration: none; white-space: nowrap; }
   .news:hover { text-decoration: underline; }
-  /* The way back to the list on a narrow screen, in place of the logo's room */
-  .icon-btn.back { display: none; }
+  /* The way back to where the page was opened from, which the logo is not; a narrow screen has its mark alone, and a name's end goes */
+  .back-word { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .badge {
     flex: none; padding: 0.15rem 0.5rem; font-size: var(--text-label); font-weight: 600; color: var(--muted);
     background: var(--subtle); border: 1px solid var(--line); border-radius: 999px;
@@ -756,7 +756,7 @@
     .shell { grid-template-columns: minmax(0, 1fr); }
     .listcol { border: 0; }
     .reader { display: none; }
-    .icon-btn.back { display: inline-flex; }
+    .back-word { display: none; }
   }
   /* A phone's row of views holds the button to the filters as its icon and number, its words for screen readers */
   #narrow-filter-n { display: none; }
@@ -868,11 +868,11 @@
 <body>
 <header class="bar">
   <div class="bar-inner">
-    <a class="icon-btn back" id="back" href="/" aria-label="{{.Msg "ui_back_to_list"}}" title="{{.Msg "ui_back_to_list"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
     <a class="brand" href="/" title="{{.Msg "ui_to_page_list"}}">
       <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="floe-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sky-top"/><stop offset="1" class="sky-bottom"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#floe-sky)"/><path d="M17 47.5H47" fill="none" class="line" stroke-width="2" stroke-linecap="round"/><path d="M24 52.5H40" fill="none" class="line-soft" stroke-width="2" stroke-linecap="round"/><path d="M12 32 22 38 41 37 53 29.5 53 34.5 41 42 22 43 12 37Z" class="edge"/><path d="M12 32 24 21.5 33 28 22 38Z" class="face-left"/><path d="M24 21.5 42 21 53 29.5 33 28Z" class="face-back"/><path d="M33 28 53 29.5 41 37 22 38Z" class="face-front"/></svg>
       floe
     </a>
+    <a class="icon-btn back" id="back" href="/" aria-label="{{.Msg "ui_back_to_list"}}" title="{{.Msg "ui_back_to_list"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg><span class="back-word" id="back-word"></span></a>
     <nav class="screens" id="screens" aria-label="{{.Msg "ui_screens"}}" hidden><a id="to-list" href="/">{{.Msg "ui_screen_pages"}}</a><a id="to-tasks">{{.Msg "ui_screen_tasks"}}</a></nav>
     <span class="frame-title" id="frame-title"></span>
     <select class="ver-pick" id="frame-version" aria-label="{{.Msg "ui_version"}}" hidden><button><selectedcontent></selectedcontent></button></select>
@@ -1079,7 +1079,7 @@
       <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd></dt><dd>{{.Msg "ui_keys_search"}}</dd><dt><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
     </div>
     <div class="keys-part" id="keys-frame">
-      <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd></dt><dd>{{.Msg "ui_keys_next_page"}}</dd><dt><kbd>k</kbd></dt><dd>{{.Msg "ui_keys_prev_page"}}</dd><dt><kbd>h</kbd></dt><dd>{{.Msg "ui_back_to_list"}}</dd></dl></section>
+      <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd></dt><dd>{{.Msg "ui_keys_next_page"}}</dd><dt><kbd>k</kbd></dt><dd>{{.Msg "ui_keys_prev_page"}}</dd><dt><kbd>h</kbd></dt><dd id="keys-back">{{.Msg "ui_back_to_list"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_page"}}</h3><dl><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt class="diff-go"><kbd>d</kbd></dt><dd class="diff-go">{{.Msg "ui_keys_diff"}}</dd><dt class="diff-key"><kbd>d</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_close"}}</dd><dt class="diff-key"><kbd>n</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_next"}}</dd><dt class="diff-key"><kbd>p</kbd></dt><dd class="diff-key">{{.Msg "ui_diff_prev"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
     </div>
@@ -3262,6 +3262,19 @@
     const kept = keptOrder();
     return kept?.shown.includes(framed) ? kept.back : `/${savedList()}`;
   };
+  // The back button as keptBack sends it: its word, and what it says in full, of the screen it goes to
+  function drawBack() {
+    const to = new URL(keptBack(), location.origin);
+    const task = to.pathname === TASKS_PATH ? to.searchParams.get('task') : null;
+    const word = to.pathname !== TASKS_PATH ? t('ui_screen_pages') : task ?? t('ui_screen_tasks');
+    const whole = to.pathname !== TASKS_PATH ? t('ui_to_page_list') : task ? t('ui_back_to_task', task) : t('ui_tasks_back');
+    const back = $('back');
+    back.href = to.pathname + to.search;
+    back.title = whole;
+    back.setAttribute('aria-label', whole);
+    $('back-word').textContent = word;
+    $('keys-back').textContent = whole;
+  }
   // A page renamed whole is still of the rows that opened it
   function renameKept(was, now) {
     const kept = keptOrder();
@@ -4088,7 +4101,6 @@
     if (found) drawActions($('frame-actions'), a, frameAt);
     drawVersion(found ? frameAt : null, a);
     const list = `/${savedList()}`;
-    $('back').href = keptBack();
     $('notfound-back').href = list;
     document.querySelector('.brand').href = list;
     // Load only once found (so a missing page's 404 never flashes). Once loaded, src stays, keeping navigation inside the iframe.
@@ -4404,6 +4416,7 @@
     $('manage').remove();
     $('frame-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
     $('back').hidden = false;
+    drawBack();
     try {
       const move = JSON.parse(sessionStorage.getItem(VERSION_MOVE));
       sessionStorage.removeItem(VERSION_MOVE);
