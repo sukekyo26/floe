@@ -9,15 +9,18 @@ import (
 )
 
 // shadowsExtra is a section added to every-part: panels one after another in a note's box, between its text, cards
-// of html, and quotes at the end of a note and of an answer, where a theme's quote casts its shadow out of the part.
+// of html, and quotes at the end of a note and of a text in details, where a theme's quote casts its shadow out of the part.
 const shadowsExtra = `  - heading: Nested boxes
     parts:
       - html: |
           <div data-floe-part="note"><p>Text before</p><div data-floe-look="panel"><p>A panel in a note</p></div><div data-floe-look="panel"><p>Another</p></div><p>Text after</p></div>
           <div data-floe-look="cards"><div class="card" data-floe-look="panel">One</div><div class="card" data-floe-look="panel">Two</div></div>
       - note: { text: "Text before.\n\n> A quote at the end of a note." }
-      - faq:
-          - { q: A question?, a: "An answer.\n\n> A quote at the end of an answer.", open: true }
+      - details:
+          title: A question?
+          open: true
+          parts:
+            - text: "An answer.\n\n> A quote at the end of an answer."
 `
 
 // shadowsMore is a section of a template's more, its parts one after another at the least room between them, and an

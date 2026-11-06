@@ -87,13 +87,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add `data-floe-mark` to an item of the look `numbered`: `ring` rings it in
   its tone, `solid` fills it and its line in the tone.
 - Add `--quiet` to the palette, the quiet ground within a box: a table's head,
-  a bar's track, progress's ground and a keycap read it.
+  a bar's track and a keycap read it.
 - Add `--radius`, `--radius-small` and `--radius-pill` to the palette, one
   length each: the round of a box's corners, a small box's within one and a
   pill's. Parts, templates, floe's base and themes read them, and a theme sets
   its corners in its palette alone.
 - Add the tone `muted`, a quiet one in `--muted` on `--muted-soft`, wherever
-  a tone is written (note, a pill, a table's pills, bars, progress, stats,
+  a tone is written (note, a pill, a table's pills, bars, stats,
   timeline, a diagram); adr's deprecated and superseded, postmortem's low
   severity and fields' type are drawn in it.
 - Add `--tone-fill`, a theme's own fill of a tone, from `--<tone>-fill` in its
@@ -251,8 +251,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add floe's template `report`: a header over sections, each a heading over
   parts and then subsections, one level of a heading (an `<h3>`) over parts (a
   heading, when written, is not empty, and a section with subsections has
-  one); and thirty parts a template refers to as
-  `floe:///parts/<name>.json` (`floe part list` lists them): twenty-eight that a
+  one); and twenty-eight parts a template refers to as
+  `floe:///parts/<name>.json` (`floe part list` lists them): twenty-six that a
   section of report takes beside Markdown `text` and `html`, from `code`,
   `terminal`, `table` and `image` (an image of the data file's directory,
   such as a screenshot) to `findings`, `decision`, `entries`, `timeline`,
@@ -288,7 +288,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   checked from its root, whether a schema names it or not. A part's
   `part.html` may call the functions floe's parts draw with (`copyButton`,
   `bars`, `diff`, `tree`, `diagram`, `script`); `bars` refuses an item not
-  written as keys and values, and a value that is not a number or is below 0.
+  written as keys and values, a value that is not a number or is below 0, an
+  `of` that is not a number or not above 0, and a value over its `of`, telling
+  every item's mistake together, each with its bar's number and label.
   text/template's mistake of running a `part.html` (a key its schema does not
   declare) is told at its line and column, as one of a `page.html` is; a
   function refusing a value (`num`, `bars`) is told at the value.
@@ -386,10 +388,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   smaller; the text of code keeps code's size. A theme does not set the two. A theme's small text that fell below a
   part's step now reads the step, 0.8rem: blueprint's code head, table heading, note title and card number (0.7rem and
   0.72rem before), and default's card number and ink's note title (0.75rem before).
-- Change the Markdown a part holds (a note's text, an entry's, a faq's answer, a card's text in options and decision,
+- Change the Markdown a part holds (a note's text, an entry's, a card's text in options and decision,
   a step's and a timeline item's, an item of format `markdown` in a part's own value) to stand in a text's box, as a
   text's does: its paragraphs, tables, quotes and lists are `--floe-room` (12px) apart in every part, where each part
-  spaced them its own way before (2.4px in steps and timeline, 5.6px in entries, 6.4px in options, 8px in note, faq and
+  spaced them its own way before (2.4px in steps and timeline, 5.6px in entries, 6.4px in options, 8px in note and
   decision). A part's own `part.html` that draws `{{markdown .x}}` gets the box too: its CSS reaches the blocks in it by
   `:scope p`, not `:scope > p`, and writes no room between them. A template's own Markdown is drawn as before.
 - Change where a right-angled edge with `via` turns at a via when going on the way it came would run back over
@@ -449,11 +451,10 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Change the padding of a box among parts to one pair, 1.1rem above and below and 1.3rem at the sides, in every
   theme: cards (options', stats' and decision's from 1.15rem above and below; links' from 0.9rem and 1.1rem at the
   left), bars, tree (default's white box within its frame too), note (editorial's too), details, and the boxes of
-  design, runbook and handoff. The look `rows` pads its rows by 1.3rem at the sides (entries, keys, checklist and faq
-  from 1.2rem; design's decided list from 1rem; an element of your own HTML that takes it from none); faq's question
-  still opens across its row. A part or a template of your own reads `--floe-pad-block` and `--floe-pad-inline`. A part of your
+  design, runbook and handoff. The look `rows` pads its rows by 1.3rem at the sides (entries, keys and checklist
+  from 1.2rem; design's decided list from 1rem; an element of your own HTML that takes it from none). A part or a template of your own reads `--floe-pad-block` and `--floe-pad-inline`. A part of your
   own that takes `rows` drops the padding it writes at the sides of an element in a row (a `summary`, a `div`), which
-  now sits twice as far in, and widens an element that opens the row across by a negative margin, as faq does; a
+  now sits twice as far in, and widens an element that opens the row across by a negative margin; a
   decoration in the `::after` of its box has the sides' padding too.
 - Change a long pill that wraps (entries' tags) to a label of round corners, not
   an oval stretched up and down; a pill of one line stays round at both ends
@@ -502,8 +503,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   stands in from the column's left as the others do. A card's number keeps the
   terms of a row's mark: sized by `--floe-mark` (on the card or the number),
   hidden by `content: none`, plain text by `--floe-mark: auto`.
-- Change progress's ground to the quiet ground, a little lighter (the line's
-  colour 45% into the surface, as bars' track, not 60%), and a keycap's to it
+- Change a keycap's ground to the quiet ground
   (from the page's ground, or aurora's surface): keys no longer melt into
   swiss's panel, brutal's are a mid grey as its tracks, and default's are white
   on its grey panels and grey on its white rows. A table's head where the theme
@@ -516,8 +516,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   fields' types, code in a line and its language, links' and cards' marks) are
   6px, square in blueprint, brutal and swiss, 3px in editorial and washi; a
   tab's title is drawn as a pill (round in default, aurora, retro, soft and
-  notebook, 6px in app and ink, 3px in editorial and washi); progress's bar and
-  handoff's and runbook's pills take the theme's pill; runbook's box of rolling
+  notebook, 6px in app and ink, 3px in editorial and washi); handoff's and runbook's pills take the theme's pill; runbook's box of rolling
   back takes the theme's box; notebook's note and code take its panel's
   hand-drawn corners; a note's mark drawn as a rounded square is 6px (washi's
   seal 3px); the ring round a focused title of details follows its box's
@@ -687,7 +686,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   whose links, titles, marks and focus rings red on it: they draw in the band's
   text colour.
 - Fix a page that grew wider than a phone's screen when a long line of code or a
-  wide table stood in a list's item or a quote (in a text, a faq's answer, a
+  wide table stood in a list's item or a quote (in a text, a
   card of options or of a decision, a step, a tab): on screen, code, tables and
   trees now scroll inside their box at any place, and widen nothing around
   them. Print is as before.

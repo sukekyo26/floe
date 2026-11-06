@@ -107,13 +107,18 @@ sections:
           - { label: Pending, value: 400, tone: warn }
           - { label: Broken, value: 120, tone: bad }
           - { label: Skipped, value: 60, tone: muted }
-      - progress:
-          - { label: Pages, done: 1200, of: 1840 }
-          - { label: Images, done: 30, of: 30, tone: good }
-          - { label: Spaces, done: 4, of: 12, tone: accent }
-          - { label: Owners, done: 1, of: 4, tone: warn }
-          - { label: Links, done: 10, of: 120, tone: bad }
-          - { label: Drafts, done: 2, of: 6, tone: muted }
+      - bars:
+          - { label: Pages, value: 1200, of: 1840 }
+          - { label: Images, value: 30, of: 30, tone: good }
+          - { label: Spaces, value: 4, of: 12, tone: accent }
+          - { label: Owners, value: 1, of: 4, tone: warn }
+          - { label: Links, value: 10, of: 120, tone: bad }
+          - { label: Drafts, value: 2, of: 6, tone: muted }
+          - { label: Words, value: 1500000, of: 2000000 }
+      - bars:
+          - { label: Kept, value: 2 }
+          - { label: Moved, value: 4 }
+          - { label: Copied, value: 30, of: 40, tone: good }
       - checklist:
           - { text: Freeze edits, done: true }
           - text: Copy the **attachments**
@@ -181,9 +186,11 @@ sections:
       - keys:
           - { keys: [Ctrl, K], text: Search the wiki }
           - { keys: [g, h], text: Go home }
-      - faq:
-          - { q: Can I edit during the freeze?, a: "No: edits are lost.\n\n| Edit | Kept |\n| --- | --- |\n| Page | no |\n\nWait for the new host.", open: true }
-          - { q: Where do old links go?, a: To the same page on the new host. }
+      - details:
+          title: Can I edit during the freeze?
+          open: true
+          parts:
+            - text: "No: edits are lost.\n\n| Edit | Kept |\n| --- | --- |\n| Page | no |\n\nWait for the new host."
       - links:
           - { title: Migration guide, url: 'https://example.com/guide', text: How the copy works }
           - { title: Old wiki, url: 'https://wiki.example.com/' }

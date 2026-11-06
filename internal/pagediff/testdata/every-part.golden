@@ -90,12 +90,16 @@
   [div] Pending 400
   [div] Broken 120
   [div] Skipped 60
-  [label] Pages 1200 / 1840
-  [label] Images 30 / 30
-  [label] Spaces 4 / 12
-  [label] Owners 1 / 4
-  [label] Links 10 / 120
-  [label] Drafts 2 / 6
+  [div] Pages 1,200 / 1,840
+  [div] Images 30 / 30
+  [div] Spaces 4 / 12
+  [div] Owners 1 / 4
+  [div] Links 10 / 120
+  [div] Drafts 2 / 6
+  [div] Words 1,500,000 / 2,000,000
+  [div] Kept 2
+  [div] Moved 4
+  [div] Copied 30 / 40
   [li] Done: Freeze edits
   [li] Not done: Copy the attachments
   [li] 2030-04-05
@@ -172,8 +176,6 @@
   [tr] Edit | Kept
   [tr] Page | no
   [p] Wait for the new host.
-  [summary] Where do old links go?
-  [p] To the same page on the new host.
   [li] Migration guide
   [p] How the copy works
   [li] https://example.com/guide

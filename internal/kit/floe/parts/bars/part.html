@@ -1,5 +1,5 @@
 <div data-floe-part="bars">
 {{- range bars .}}
-<div{{with .Tone}} data-floe-tone="{{.}}"{{end}}><span class="label">{{.Label}}</span><span class="track"><span style="width: {{.Width}}%"></span></span><span class="value">{{num .Value}}</span></div>
+<div{{with .Tone}} data-floe-tone="{{.}}"{{end}}><span class="label">{{.Label}}</span><span class="track"{{if .Of}} role="progressbar" aria-label="{{.Label}}" aria-valuemin="0" aria-valuenow="{{.Now}}" aria-valuemax="{{.Max}}" aria-valuetext="{{num .Value}} / {{num .Of}}"{{end}}><span style="width: {{.Width}}%"></span></span><span class="value">{{num .Value}}{{with .Of}} / {{num .}}{{end}}</span></div>
 {{- end}}
 </div>
