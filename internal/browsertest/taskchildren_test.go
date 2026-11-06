@@ -180,6 +180,43 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.eval("document.getElementById('child-dialog').close()")
 	task("proj", "#99", "--parent", "")
 
+	// By real presses: a new name makes a child, and the focus is back on the button. A name that is a task already is
+	// refused with the dialog as written, and the task as it was: a child of another parent stays there.
+	press := func(id string) {
+		t.Helper()
+		b.still()
+		r := b.rect("document.getElementById(" + js(id) + ")")
+		b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	}
+	write := func(name, title string) {
+		t.Helper()
+		press("task-child")
+		b.until("the dialog", "document.getElementById('child-dialog').open")
+		b.eval("document.getElementById('child-task').value = " + js(name) + "; document.getElementById('child-title').value = " + js(title))
+		press("child-submit")
+	}
+	open("#99")
+	write("#103", "")
+	b.until("saved", "!document.getElementById('child-dialog').open")
+	b.until("its row", "document.querySelector('#task-family .kin-row[data-task=\"#103\"]')")
+	if got := b.eval("document.activeElement.id"); got != "task-child" {
+		t.Errorf("the focus after making one: %q", got)
+	}
+	write(" #4 ", "kept")
+	b.until("refused", "!document.getElementById('child-error').hidden")
+	want := `#4 is a task already: its parent field in "Set the task" makes it a child | #4 | kept | true`
+	if got := b.eval("[document.getElementById('child-error').textContent, document.getElementById('child-task').value.trim(), document.getElementById('child-title').value, document.getElementById('child-dialog').open].join(' | ')"); got != want {
+		t.Errorf("a task already: %q", got)
+	}
+	b.eval("document.getElementById('child-dialog').close()")
+	if made, err = st.ReadTasks(); err != nil {
+		t.Fatal(err)
+	}
+	if got := made["proj"]["#4"]; got.Parent != "#1" || got.Title != "doing child" {
+		t.Errorf("#4 after the refusal: %+v", got)
+	}
+	task("proj", "#103", "--forget")
+
 	// Written by hand: only what the store counts is a family.
 	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
 	text, err := os.ReadFile(file) //nolint:gosec // G304: a path the test names
@@ -224,6 +261,28 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Errorf("a task the store keeps has its command")
 	}
 	s.floe(t, "work", "--project", "proj", "--task", "pa", "--forget")
+
+	// A task of pages alone is on the list, so that its name is refused, and it stays of no row.
+	open("gp")
+	openChild()
+	child("t-pages", "")
+	b.until("refused", "!document.getElementById('child-error').hidden")
+	if got := b.eval("document.getElementById('child-error').textContent"); !strings.Contains(got, "t-pages is a task already") {
+		t.Errorf("of pages alone: %q", got)
+	}
+	b.eval("document.getElementById('child-dialog').close()")
+
+	// A task of pages alone has the button, and is refused in the store's words.
+	open("t-pages")
+	if got := b.eval(adds); got != "false" {
+		t.Errorf("no way from a task of no row: %s", got)
+	}
+	openChild()
+	child("#102", "")
+	b.until("refused", "!document.getElementById('child-error').hidden")
+	if got := b.eval("document.getElementById('child-error').textContent"); !strings.Contains(got, "task t-pages has no row in project proj") {
+		t.Errorf("no row: %q", got)
+	}
 }
 
 // The field of a parent: given the task's, changed by the name, sent only when it differs from what it was given; what

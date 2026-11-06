@@ -1001,7 +1001,7 @@
           <span class="proj" id="task-project"></span>
         </div>
         <div class="family" id="task-family" hidden>
-          <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="btn" id="task-child" hidden>{{.Msg "ui_task_child_add"}}</button></div>
+          <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="btn" id="task-child" aria-label="{{.Msg "ui_task_child_add_named"}}" hidden>{{.Msg "ui_task_child_add"}}</button></div>
           <div class="family-rows" id="task-family-rows"></div>
         </div>
       </div>
@@ -3460,13 +3460,15 @@
   }
 
   // A new task under this one. It takes a task's own write: the store says what may be a child
-  // LIMIT: a name that is a task already is made this one's child, its title replaced if one is written: what floe work --parent does
+  // LIMIT: a task of pages alone, with no row, has the button, and pressing it is refused in the store's words. Hide it by the row if that comes to mislead
   function openChildTask(task) {
     $('child').reset();
     $('child-target').textContent = t('ui_task_child_of', [task.name, task.title].filter(Boolean).join(' '));
     $('child-error').hidden = true;
     $('child-dialog').showModal();
   }
+  // A name on this project's list, of a task of pages alone too, is refused here, by the tasks read just now: the write would move it from any parent it has, unsaid.
+  // LIMIT: one written between that read and this write is moved all the same. The store cannot tell a new task's write from floe work --parent; give the write a way to say new if that comes to matter
   async function saveChildTask(e) {
     e.preventDefault();
     const btn = $('child-submit');
@@ -3474,6 +3476,12 @@
     const name = $('child-task').value.trim();
     const title = $('child-title').value.trim();
     try {
+      tasksRead = await readTasks();
+      if (tasksOf().some((x) => x.project === project && x.name === name)) {
+        $('child-error').textContent = t('ui_task_child_exists', name);
+        $('child-error').hidden = false;
+        return;
+      }
       const url = `/api/tasks?${new URLSearchParams({ project, task: name })}`;
       const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parent: TASK_NAME, ...(title ? { title } : {}) }) });
       if (!res.ok) throw new Error(await res.text());
@@ -3482,6 +3490,7 @@
       toast('', { ms: 8000, button: to });
       await load();
       $('child-dialog').close();
+      $('task-child').focus();
     } catch (err) {
       $('child-error').textContent = t('ui_save_failed', err.message);
       $('child-error').hidden = false;
