@@ -5,6 +5,7 @@ import (
 	"maps"
 	"math"
 	"slices"
+	"strconv"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -21,15 +22,15 @@ func (o *graphOut) levelMistake(k int, ends [2]gref) *usererr.Error {
 	e := o.g.Edges[k]
 	for i, end := range ends {
 		if end.box < 0 {
-			return usererr.NewIn("", edgeAt(o.at, k)+"/"+[2]string{"from", "to"}[i], "diagram_graph_level_group", e.From,
-				e.To, o.endName(end))
+			return edgeMistake(edgeAt(o.at, k)+"/"+[2]string{"from", "to"}[i], "diagram_graph_level_group", e,
+				strconv.Quote(o.endName(end)))
 		}
 	}
 	// LIMIT: two boxes of one group, or right in two lanes, whose left and right the order written or the lanes'
 	// order tells; a group's place among its siblings is the order's. Lift it if groups come to stand as written.
 	a, b := o.boxes[ends[0].box].cl, o.boxes[ends[1].box].cl
 	if a != b && (!o.lane(a) || !o.lane(b)) {
-		return usererr.NewIn("", edgeAt(o.at, k)+"/level", "diagram_graph_level_apart", e.From, e.To)
+		return edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_apart", e)
 	}
 	return nil
 }
@@ -53,8 +54,8 @@ func (o *graphOut) unlooped(levels []int) ([]int, usererr.List) {
 			return false
 		}
 		e := o.g.Edges[k]
-		told = append(told, usererr.NewIn("", edgeAt(o.at, k)+"/level", "diagram_graph_level_loop", e.From, e.To,
-			side, o.boxes[first].box.Name))
+		told = append(told, edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_loop", e, side,
+			strconv.Quote(o.boxes[first].box.Name)))
 		return true
 	}), told
 }
@@ -147,11 +148,11 @@ func (o *graphOut) across(edges []int) ([]int, usererr.List) {
 		}
 		e := o.g.Edges[k]
 		if o.row[a] != o.row[b] {
-			told = append(told, usererr.NewIn("", edgeAt(o.at, k), "diagram_graph_with_rank", e.From, e.To))
+			told = append(told, edgeMistake(edgeAt(o.at, k), "diagram_graph_with_rank", e))
 			return true
 		}
-		told = append(told, usererr.NewIn("", edgeAt(o.at, k), "diagram_graph_level_rank", e.From, e.To,
-			o.boxes[a].box.Name, o.boxes[b].box.Name))
+		told = append(told, edgeMistake(edgeAt(o.at, k), "diagram_graph_level_rank", e,
+			strconv.Quote(o.boxes[a].box.Name), strconv.Quote(o.boxes[b].box.Name)))
 		return true
 	}), told
 }
@@ -206,7 +207,7 @@ func (gr *group) levelMistakes() usererr.List {
 		at := edgeAt(o.at, k) + "/level"
 		first, second := o.sides(k)
 		if what := gr.between(first, second, rankOf); what != "" {
-			told = append(told, usererr.NewIn("", at, "diagram_graph_level_between", e.From, e.To, what))
+			told = append(told, edgeMistake(at, "diagram_graph_level_between", e, what))
 			return true
 		}
 		return false
@@ -436,8 +437,8 @@ func (d *drawing) headed(o *graphOut, gr *group) usererr.List {
 			//nolint:exhaustruct_v5 // as addFrame's
 			if head := headRect(f, d.heads[c]); crossedBy(segAt(pts, 0), head) {
 				e := o.g.Edges[k]
-				told = append(told, usererr.NewIn("", edgeAt(o.at, k)+"/level", "diagram_graph_level_heading", e.From,
-					e.To, o.clusters[c].g.Name))
+				told = append(told, edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_heading", e,
+					strconv.Quote(o.clusters[c].g.Name)))
 				delete(d.routes, k)
 				delete(d.spots, k)
 				delete(d.level, k)

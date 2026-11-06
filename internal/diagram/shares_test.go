@@ -593,3 +593,30 @@ func TestEdgeSharedLabel(t *testing.T) {
 		})
 	}
 }
+
+// A name with a quote in it is named alike wherever it is told: at an edge's end and in the words of a graph's mistake.
+func TestEdgeNameQuoted(t *testing.T) {
+	t.Parallel()
+	t.Run("by hand", func(t *testing.T) {
+		t.Parallel()
+		got, told := edgesOf(t, "  - box: { name: 'a\"b', x: 20, y: 20, w: 60, h: 30, rows: [a] }\n  - box: { name: c, x: 200, y: 20, w: 60, h: 30, rows: [c] }\n"+
+			"  - edge: { from: 'a\"b', to: c }\n")
+		if want := `edge "a\"b"→"c" M80,35 H200`; got != want || told != "" {
+			t.Errorf("drew %s\n%s\n  want %s", got, told, want)
+		}
+	})
+	lanes := "  - graph:\n      x: 0\n      y: 0\n      lanes:\n        - { name: 'l\"1', label: L, nodes: [{ box: { name: 'b\"1', rows: [b] } }] }\n" +
+		"        - { name: m, label: M, nodes: [{ box: { name: c, rows: [c] } }] }\n      edges:\n"
+	for _, c := range []struct{ name, edge, want string }{
+		{"a name in the words", "{ from: c, to: 'l\"1' }", `edge "c"→"l\"1": "l\"1" is a lane`},
+		{"a group's name", "{ from: 'b\"1', to: 'l\"1' }", `edge "b\"1"→"l\"1": both ends are group "l\"1" or inside it; end the edge at a box or another group outside "l\"1"`},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			_, told := edgesOf(t, lanes+"        - "+c.edge+"\n")
+			if !strings.Contains(told, c.want) {
+				t.Errorf("told %q\n  want %q", told, c.want)
+			}
+		})
+	}
+}

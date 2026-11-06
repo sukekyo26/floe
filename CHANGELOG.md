@@ -560,6 +560,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a diagram's mistakes and `floe diagram inspect` naming an edge's ends in two ways: an edge written by hand and an
+  edge of a graph now quote the names at their ends, as a tree's did (`edge "b"→"c"`), and a graph's mistakes quote
+  the names of the boxes they speak of too.
 - Fix a diagram refusing an edge's label on a run it shares with another edge written by hand, as where two edges
   join at one part or part from one. Such an edge is no longer told as running through the label, when it runs on
   exactly the same line from side to side of the label; `edge b→c runs through label "SQL"` stays for any other edge.
