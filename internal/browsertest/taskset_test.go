@@ -136,6 +136,21 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 	b.eval("document.getElementById('set-dialog').close()")
 
+	// A name left empty, or of spaces, saves nothing: taking a page off is the button's. No toast comes of it.
+	dialog("b")
+	b.eval("document.querySelectorAll('.toast').forEach((e) => e.remove())")
+	field("set-task", "")
+	b.eval("document.getElementById('set').requestSubmit()")
+	say("an empty name", "document.getElementById('set-dialog').open + ' ' + document.getElementById('set-task').validity.valueMissing + ' ' + document.querySelectorAll('.toast').length")
+	field("set-task", "   ")
+	b.eval("document.getElementById('set').requestSubmit()")
+	b.until("the refusal", "!document.getElementById('set-error').hidden")
+	say("a name of spaces", "document.getElementById('set-dialog').open + ' ' + document.getElementById('set-error').textContent + ' ' + document.querySelectorAll('.toast').length")
+	if got := work("b"); got != was {
+		t.Errorf("an empty name changed the page: %s", got)
+	}
+	b.eval("document.getElementById('set-dialog').close()")
+
 	// Saved in order: the page's write refused, the task's is there, and saving again finishes it.
 	dialog("c")
 	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (String(url).includes('/api/artifacts/c') && init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : window.realFetch(url, init))`)
@@ -318,6 +333,8 @@ a URL set meanwhile: #1 doing design https://example.com/later; #2 doing build ;
 a URL changed: #1 doing design https://example.com/mine; #2 doing build ; #3 doing first 
 a URL emptied: #1 doing design ; #2 doing build ; #3 doing first 
 refused: true Could not save: "javascript:alert(1)" is not an http or https URL
+an empty name: true true 0
+a name of spaces: true Could not save: a task needs a name 0
 the page refused: #1 doing design ; #2 doing review ; #3 doing first  | {"task":"#2","step":"build"}
 saved again: {"task":"#2","step":"review"}
 off: {"pin":true}
