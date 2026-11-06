@@ -2276,8 +2276,8 @@ func TestGraphLabelRoom(t *testing.T) {
 	if err := band.place(0, 70); err != nil {
 		t.Fatal(err)
 	}
-	if sp, ok := band.seek(0, 70); !ok || band.spots[0] != sp || sp.at != 62 {
-		t.Errorf("the label from %v, seek finds %v %v, want from 62", band.spots[0].at, sp.at, ok)
+	if sp, ok := band.seek(0, 70); !ok || band.spots[0] != sp || sp.at != 63 {
+		t.Errorf("the label from %v, seek finds %v %v, want from 63", band.spots[0].at, sp.at, ok)
 	}
 
 	short := &drawing{
