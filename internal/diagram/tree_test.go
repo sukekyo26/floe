@@ -41,7 +41,7 @@ edge "B"→"D" M128,125 V165
 edge "a"→"C" M200,39 V59 H260 V79
 edge "C"→"E" M260,108 V145 H224 V165
 edge "C"→"F" M260,108 V145 H296 V165
-edge z→a M340,24.5 H224
+edge "z"→"a" M340,24.5 H224
 `
 	if mistakes != "" || got != want {
 		t.Errorf("inspect =\n%s%s\nwant\n%s", got, mistakes, want)

@@ -59,9 +59,9 @@ func (l *layout) endOf(at string, e end, side string, other [2]float64) (anchor,
 		return noEnd, "", false
 	}
 	if t.kind == "dot" {
-		return anchor{t.r.x + t.r.w/2, t.r.y + t.r.h/2, "", false, 0}, e.Name, true
+		return anchor{t.r.x + t.r.w/2, t.r.y + t.r.h/2, "", false, 0}, strconv.Quote(e.Name), true
 	}
-	return onSide(t, side, other), e.Name, true
+	return onSide(t, side, other), strconv.Quote(e.Name), true
 }
 
 // onSide is the middle of the side of t, or when side is "", of the side facing other: left or right when it is

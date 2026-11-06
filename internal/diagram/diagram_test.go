@@ -415,7 +415,7 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - edge: { from: [10, 10], to: [10, 10] }", "s.yaml:5:5: edge [10,10]→[10,10] starts where it ends: end it at another part or point"},
 		{
 			"  - box: { name: a, x: 100, y: 20, w: 80, h: 29, rows: [a] }\n  - edge: { from: a, fromSide: left, to: a, toSide: left }",
-			"s.yaml:6:5: edge a→a starts where it ends: end it at another part or point",
+			"s.yaml:6:5: edge \"a\"→\"a\" starts where it ends: end it at another part or point",
 		},
 		{
 			"  - circle: { name: c, cx: 100, cy: 100, r: 60 }\n  - circle: { name: c, cx: 300, cy: 100, r: 5 }\n  - label: { text: x, in: [c] }",
@@ -608,109 +608,109 @@ func TestEdgesIconLabel(t *testing.T) {
 	for _, c := range []struct {
 		name, parts, want, refused string
 	}{
-		{name: "down", parts: a + end + "  - edge: { from: a, to: b }", want: "edge a→b M124,89 V160"},
-		{name: "up", parts: a + end + "  - edge: { from: b, to: a }", want: "edge b→a M124,160 V89"},
-		{name: "written", parts: a + end + "  - edge: { from: a, fromSide: bottom, to: b, toSide: top }", want: "edge a→b M124,89 V160"},
+		{name: "down", parts: a + end + "  - edge: { from: a, to: b }", want: "edge \"a\"→\"b\" M124,89 V160"},
+		{name: "up", parts: a + end + "  - edge: { from: b, to: a }", want: "edge \"b\"→\"a\" M124,160 V89"},
+		{name: "written", parts: a + end + "  - edge: { from: a, fromSide: bottom, to: b, toSide: top }", want: "edge \"a\"→\"b\" M124,89 V160"},
 		{
 			name:  "no label",
 			parts: "  - icon: { name: a, x: 100, y: 20, icon: aws/aws-lambda }\n" + end + "  - edge: { from: a, to: b }",
-			want:  "edge a→b M124,68 V160",
+			want:  "edge \"a\"→\"b\" M124,68 V160",
 		},
 		{
 			name:  "wide label",
 			parts: "  - icon: { name: a, x: 100, y: 20, icon: aws/aws-lambda, label: A long name of an icon }\n" + end + "  - edge: { from: a, to: b }",
-			want:  "edge a→b M124,89 V160",
+			want:  "edge \"a\"→\"b\" M124,89 V160",
 		},
 		{
 			name:  "size",
 			parts: "  - icon: { name: a, x: 100, y: 20, size: 80, icon: aws/aws-lambda, label: a }\n" + "  - box: { name: b, x: 116, y: 180, w: 48, h: 30, rows: [b] }\n  - edge: { from: a, to: b }",
-			want:  "edge a→b M140,121 V180",
+			want:  "edge \"a\"→\"b\" M140,121 V180",
 		},
 		{
 			name:    "another edge at the label",
 			parts:   a + "  - box: { name: c, x: 20, y: 70, w: 44, h: 30, rows: [c] }\n  - box: { name: d, x: 180, y: 70, w: 44, h: 30, rows: [d] }\n  - edge: { from: c, to: d }",
-			refused: `edge c→d runs through label "a"; move one of them, or go round it by via`,
+			refused: `edge "c"→"d" runs through label "a"; move one of them, or go round it by via`,
 		},
 		{
 			name:    "a via between the icon and its label",
 			parts:   a + "  - box: { name: b, x: 220, y: 100, w: 48, h: 30, rows: [b] }\n  - edge: { from: a, to: b, fromSide: bottom, toSide: left, via: [[124, 70], [190, 70], [190, 115]] }",
-			refused: `edge a→b runs through label "a"; move one of them, or go round it by via`,
+			refused: `edge "a"→"b" runs through label "a"; move one of them, or go round it by via`,
 		},
 		{
 			name:  "no side, the other's centre as far across as down from the icon with its label",
 			parts: a + "  - box: { name: b, x: 160, y: 70.5, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
-			want:  "edge a→b M148,44 H190 V70.5",
+			want:  "edge \"a\"→\"b\" M148,44 H190 V70.5",
 		},
 		{
 			name:  "a via level with the label",
 			parts: a + "  - box: { name: b, x: 300, y: 80, w: 48, h: 30, rows: [b] }\n  - edge: { from: b, fromSide: top, to: a, via: [[324, 70], [200, 70], [200, 80]] }",
-			want:  "edge b→a M324,80 V70 H200 V80 H174 V44 H148",
+			want:  "edge \"b\"→\"a\" M324,80 V70 H200 V80 H174 V44 H148",
 		},
 		{
 			name:    "no side, further down, the other's top beside the label",
 			parts:   a + "  - box: { name: b, x: 160, y: 71, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
-			refused: `edge a→b runs through label "a"; move one of them, or go round it by via`,
+			refused: `edge "a"→"b" runs through label "a"; move one of them, or go round it by via`,
 		},
 		{
 			name:    "the same, a side floe chooses moved by the label's place",
 			parts:   a + "  - box: { name: b, x: 160, y: 72, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
-			refused: `edge a→b runs through box "b"; move one of them, or go round it by via`,
+			refused: `edge "a"→"b" runs through box "b"; move one of them, or go round it by via`,
 		},
 		{
 			name:  "the same, further off, the bottom side",
 			parts: a + "  - box: { name: b, x: 160, y: 106, w: 60, h: 30, rows: [b] }\n  - edge: { from: a, to: b }",
-			want:  "edge a→b M124,89 V97.5 H190 V106",
+			want:  "edge \"a\"→\"b\" M124,89 V97.5 H190 V106",
 		},
 		{
 			name:  "above, the right side",
 			parts: "  - icon: { name: a, x: 100, y: 200, icon: aws/aws-lambda, label: a }\n  - box: { name: b, x: 160, y: 154, w: 60, h: 30, rows: [b] }\n  - edge: { from: a, to: b }",
-			want:  "edge a→b M148,224 H154 V169 H160",
+			want:  "edge \"a\"→\"b\" M148,224 H154 V169 H160",
 		},
 		{
 			name:  "another edge across the gap",
 			parts: a + "  - box: { name: c, x: 20, y: 55, w: 44, h: 30, rows: [c] }\n  - box: { name: d, x: 180, y: 55, w: 44, h: 30, rows: [d] }\n  - edge: { from: c, to: d }",
-			want:  "edge c→d M64,70 H180",
+			want:  "edge \"c\"→\"d\" M64,70 H180",
 		},
 		{
 			name:  "the same, a side written",
 			parts: a + "  - box: { name: b, x: 160, y: 71, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, fromSide: right, to: b }",
-			want:  "edge a→b M148,44 H190 V71",
+			want:  "edge \"a\"→\"b\" M148,44 H190 V71",
 		},
 		{
 			name:    "the sides written, the other's side above the label's bottom",
 			parts:   a + "  - box: { name: b, x: 300, y: 55, w: 60, h: 30, rows: [b] }\n  - edge: { from: a, fromSide: bottom, to: b, toSide: left }",
-			refused: `edge a→b runs through label "a"; move one of them, or go round it by via`,
+			refused: `edge "a"→"b" runs through label "a"; move one of them, or go round it by via`,
 		},
 		{
 			name:    "the same, the other way",
 			parts:   a + "  - box: { name: b, x: 300, y: 55, w: 60, h: 30, rows: [b] }\n  - edge: { from: b, fromSide: left, to: a, toSide: bottom }",
-			refused: `edge b→a runs through label "a"; move one of them, or go round it by via`,
+			refused: `edge "b"→"a" runs through label "a"; move one of them, or go round it by via`,
 		},
 		{
 			name:  "the other's top 2 above the label's bottom, the run in its edge",
 			parts: a + "  - box: { name: b, x: 160, y: 87, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
-			want:  "edge a→b M124,89 V88 H190 V87",
+			want:  "edge \"a\"→\"b\" M124,89 V88 H190 V87",
 		},
 		{
 			name:  "the other's top at the label's bottom",
 			parts: a + "  - box: { name: b, x: 160, y: 89, w: 60, h: 100, rows: [b] }\n  - edge: { from: a, to: b }",
-			want:  "edge a→b M124,89 H190",
+			want:  "edge \"a\"→\"b\" M124,89 H190",
 		},
 		{
 			name:  "along the label's bottom",
 			parts: a + "  - box: { name: b, x: 300, y: 74, w: 60, h: 30, rows: [b] }\n  - edge: { from: a, fromSide: bottom, to: b, toSide: left }",
-			want:  "edge a→b M124,89 H300",
+			want:  "edge \"a\"→\"b\" M124,89 H300",
 		},
 		{
 			name: "another edge along the label's bottom",
 			parts: a + "  - box: { name: c, x: 20, y: 74, w: 44, h: 30, rows: [c] }\n  - box: { name: d, x: 200, y: 74, w: 44, h: 30, rows: [d] }\n" +
 				"  - box: { name: e, x: 100, y: 200, w: 48, h: 30, rows: [e] }\n  - edge: { from: c, to: d }\n  - edge: { from: a, to: e }",
-			want: "edge a→e M124,89 V200",
+			want: "edge \"a\"→\"e\" M124,89 V200",
 		},
 		{
 			name:  "a part 1 below the label",
 			parts: a + "  - box: { name: b, x: 100, y: 90, w: 48, h: 30, rows: [b] }\n  - edge: { from: a, to: b }",
-			want:  "edge a→b M124,89 V90",
+			want:  "edge \"a\"→\"b\" M124,89 V90",
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -803,12 +803,12 @@ func TestEdgesHandSides(t *testing.T) {
 		// a's bottom, where a→d leaves, is not left though c→a ends at its top: the level edge's side kept, and told.
 		{
 			"width: 400\nheight: 320\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: c, rows: [c] }\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n        - box: { name: d, rows: [d] }\n      edges:\n        - { from: c, to: a }\n        - { from: a, to: d }\n        - { from: a, to: b, level: true }\n  - edge: { from: [200, 140], via: [[80, 140]], to: a }\n",
-			"s.yaml:17:5: edge a→b crosses edge [200,140]→a at 80,94; move one of them, or add crossing: true to one if it cannot be avoided",
+			"s.yaml:17:5: edge \"a\"→\"b\" crosses edge [200,140]→\"a\" at 80,94; move one of them, or add crossing: true to one if it cannot be avoided",
 		},
 		// No side left with the via outside it: the side kept, crossing the loop, is told.
 		{
 			"width: 260\nheight: 200\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n        - { from: b, to: b }\n  - edge: { from: [200, 0], via: [[200, 100]], to: b }\n",
-			"s.yaml:14:5: edge b→b crosses edge [200,0]→b at 92,88; move one of them, or add crossing: true to one if it cannot be avoided",
+			"s.yaml:14:5: edge \"b\"→\"b\" crosses edge [200,0]→\"b\" at 92,88; move one of them, or add crossing: true to one if it cannot be avoided",
 		},
 	} {
 		got, mistakes := draw(t, c.spec, render("en"))
@@ -829,57 +829,57 @@ func TestEdgeViaAxis(t *testing.T) {
 	for _, c := range []struct {
 		parts, want string
 	}{
-		{"  - edge: { from: a, to: b, fromSide: right, toSide: left, via: [{ x: 140 }] }", "edge a→b M80,40 H140 V220 H200"},
-		{"  - edge: { from: a, to: b, via: [{ y: 120 }] }", "edge a→b M50,60 V120 H230 V200"},
-		{"  - edge: { from: a, to: b, fromSide: right, toSide: right, via: [{ x: 300 }] }", "edge a→b M80,40 H300 V220 H260"},
-		{"  - edge: { from: a, to: b, via: [{ x: 140 }, { y: 150 }, { x: 180 }] }", "edge a→b M80,40 H140 V150 H180 V220 H200"},
-		{"  - edge: { from: [20, 150], to: b, via: [{ x: 100 }] }", "edge [20,150]→b M20,150 H100 V220 H200"},
-		{dot + "  - edge: { from: d, to: b, via: [{ y: 120 }] }", "edge d→b M150,40 V120 H230 V200"},
-		{row + "  - edge: { from: r, to: [20, 100], via: [{ x: 450 }] }", "edge r→[20,100] M400,61 H450 V100 H20"},
-		{"  - edge: { from: a, to: b, straight: true, via: [{ x: 140 }] }", "edge a→b M80,40 H140 L200,220"},
-		{"  - edge: { from: a, to: b, via: [{ x: 140, y: 100 }] }", "edge a→b M80,40 H140 V100 H230 V200"},
-		{"  - edge: { from: c, to: [10, 10], via: [{ x: 0 }] }", "edge c→[10,10] M20,220 H0 V10 H10"},
-		{"  - edge: { from: b, to: [10, 10], via: [{ y: 0 }] }", "edge b→[10,10] M230,200 V0 H10 V10"},
+		{"  - edge: { from: a, to: b, fromSide: right, toSide: left, via: [{ x: 140 }] }", "edge \"a\"→\"b\" M80,40 H140 V220 H200"},
+		{"  - edge: { from: a, to: b, via: [{ y: 120 }] }", "edge \"a\"→\"b\" M50,60 V120 H230 V200"},
+		{"  - edge: { from: a, to: b, fromSide: right, toSide: right, via: [{ x: 300 }] }", "edge \"a\"→\"b\" M80,40 H300 V220 H260"},
+		{"  - edge: { from: a, to: b, via: [{ x: 140 }, { y: 150 }, { x: 180 }] }", "edge \"a\"→\"b\" M80,40 H140 V150 H180 V220 H200"},
+		{"  - edge: { from: [20, 150], to: b, via: [{ x: 100 }] }", "edge [20,150]→\"b\" M20,150 H100 V220 H200"},
+		{dot + "  - edge: { from: d, to: b, via: [{ y: 120 }] }", "edge \"d\"→\"b\" M150,40 V120 H230 V200"},
+		{row + "  - edge: { from: r, to: [20, 100], via: [{ x: 450 }] }", "edge \"r\"→[20,100] M400,61 H450 V100 H20"},
+		{"  - edge: { from: a, to: b, straight: true, via: [{ x: 140 }] }", "edge \"a\"→\"b\" M80,40 H140 L200,220"},
+		{"  - edge: { from: a, to: b, via: [{ x: 140, y: 100 }] }", "edge \"a\"→\"b\" M80,40 H140 V100 H230 V200"},
+		{"  - edge: { from: c, to: [10, 10], via: [{ x: 0 }] }", "edge \"c\"→[10,10] M20,220 H0 V10 H10"},
+		{"  - edge: { from: b, to: [10, 10], via: [{ y: 0 }] }", "edge \"b\"→[10,10] M230,200 V0 H10 V10"},
 		// The centre of an icon is of its image, not with its label.
-		{"  - icon: { name: i, icon: aws/aws-lambda, x: 20, y: 100, label: L }\n  - edge: { from: i, to: b, fromSide: right, via: [{ x: 150 }] }", "edge i→b M68,124 H150 V220 H200"},
-		{"  - bar: { name: s, x1: 300, x2: 400, y: 40 }\n  - edge: { from: s, to: b, via: [{ y: 120 }] }", "edge s→b M350,47 V120 H230 V200"},
-		{"  - frame: { name: f, x: 300, y: 20, w: 100, h: 100, label: F }\n  - edge: { from: f, to: b, fromSide: bottom, via: [{ y: 150 }] }", "edge f→b M350,120 V150 H230 V200"},
+		{"  - icon: { name: i, icon: aws/aws-lambda, x: 20, y: 100, label: L }\n  - edge: { from: i, to: b, fromSide: right, via: [{ x: 150 }] }", "edge \"i\"→\"b\" M68,124 H150 V220 H200"},
+		{"  - bar: { name: s, x1: 300, x2: 400, y: 40 }\n  - edge: { from: s, to: b, via: [{ y: 120 }] }", "edge \"s\"→\"b\" M350,47 V120 H230 V200"},
+		{"  - frame: { name: f, x: 300, y: 20, w: 100, h: 100, label: F }\n  - edge: { from: f, to: b, fromSide: bottom, via: [{ y: 150 }] }", "edge \"f\"→\"b\" M350,120 V150 H230 V200"},
 
 		// The first point written on the axis the edge leaves by. A point on the side, as a first point left to the side
 		// would be, runs along the box's edge and is not told.
-		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [[150, 20]] }", "edge a→b M50,20 H150 V220 H200"},
-		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ y: 10 }, { x: 150 }] }", "edge a→b M50,20 V10 H150 V220 H200"},
-		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ x: 150 }] }", "edge a→b M80,40 H150 H230 V200"},
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [[150, 20]] }", "edge \"a\"→\"b\" M50,20 H150 V220 H200"},
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ y: 10 }, { x: 150 }] }", "edge \"a\"→\"b\" M50,20 V10 H150 V220 H200"},
+		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ x: 150 }] }", "edge \"a\"→\"b\" M80,40 H150 H230 V200"},
 
 		// What may not be left out of via, as the docs tell it: the edge runs another way, and nothing is told.
 		// The first point of an edge with no side written.
-		{"  - edge: { from: a, to: b, toSide: right, via: [[50, 10], [300, 10], [300, 220]] }", "edge a→b M50,20 V10 H300 V220 H260"},
-		{"  - edge: { from: a, to: b, toSide: right, via: [[300, 10]] }", "edge a→b M80,40 H300 V10 H280 V220 H260"},
-		{"  - edge: { from: a, to: b, fromSide: top, toSide: right, via: [[300, 10]] }", "edge a→b M50,20 V10 H300 V220 H260"},
-		{"  - edge: { from: a, to: b, toSide: right, via: [{ y: 10 }, { x: 300 }] }", "edge a→b M50,20 V10 H300 V220 H260"},
+		{"  - edge: { from: a, to: b, toSide: right, via: [[50, 10], [300, 10], [300, 220]] }", "edge \"a\"→\"b\" M50,20 V10 H300 V220 H260"},
+		{"  - edge: { from: a, to: b, toSide: right, via: [[300, 10]] }", "edge \"a\"→\"b\" M80,40 H300 V10 H280 V220 H260"},
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: right, via: [[300, 10]] }", "edge \"a\"→\"b\" M50,20 V10 H300 V220 H260"},
+		{"  - edge: { from: a, to: b, toSide: right, via: [{ y: 10 }, { x: 300 }] }", "edge \"a\"→\"b\" M50,20 V10 H300 V220 H260"},
 		// The first point of an edge leaving a point or a dot up or down.
-		{"  - edge: { from: [150, 40], to: b, toSide: top, via: [[150, 120], [230, 120]] }", "edge [150,40]→b M150,40 V120 H230 V200"},
-		{"  - edge: { from: [150, 40], to: b, toSide: top, via: [[230, 120]] }", "edge [150,40]→b M150,40 H230 V120 V200"},
-		{"  - edge: { from: [150, 40], to: b, toSide: top, via: [{ y: 120 }, { x: 230 }] }", "edge [150,40]→b M150,40 V120 H230 V200"},
-		{dot + "  - edge: { from: d, to: b, toSide: top, via: [[230, 120]] }", "edge d→b M150,40 H230 V120 V200"},
-		{dot + "  - edge: { from: d, to: b, toSide: top, via: [{ y: 120 }, { x: 230 }] }", "edge d→b M150,40 V120 H230 V200"},
+		{"  - edge: { from: [150, 40], to: b, toSide: top, via: [[150, 120], [230, 120]] }", "edge [150,40]→\"b\" M150,40 V120 H230 V200"},
+		{"  - edge: { from: [150, 40], to: b, toSide: top, via: [[230, 120]] }", "edge [150,40]→\"b\" M150,40 H230 V120 V200"},
+		{"  - edge: { from: [150, 40], to: b, toSide: top, via: [{ y: 120 }, { x: 230 }] }", "edge [150,40]→\"b\" M150,40 V120 H230 V200"},
+		{dot + "  - edge: { from: d, to: b, toSide: top, via: [[230, 120]] }", "edge \"d\"→\"b\" M150,40 H230 V120 V200"},
+		{dot + "  - edge: { from: d, to: b, toSide: top, via: [{ y: 120 }, { x: 230 }] }", "edge \"d\"→\"b\" M150,40 V120 H230 V200"},
 		// A turn the other way than the edge came.
 		{
 			"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [[130, 100], [300, 100], [300, 150]] }",
-			"edge a→b M80,40 H130 V100 H300 V150 H230 V200",
+			"edge \"a\"→\"b\" M80,40 H130 V100 H300 V150 H230 V200",
 		},
 		{
 			"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [[130, 100], [300, 150]] }",
-			"edge a→b M80,40 H130 V100 V150 H300 V175 H230 V200",
+			"edge \"a\"→\"b\" M80,40 H130 V100 V150 H300 V175 H230 V200",
 		},
 		// The last point: with no via the edge shares the side.
 		{
 			"  - edge: { from: a, to: b, toSide: left, via: [{ x: 140 }] }\n  - edge: { from: c, to: b }",
-			"edge a→b M80,40 H140 V220 H200\nedge c→b M80,220 H200",
+			"edge \"a\"→\"b\" M80,40 H140 V220 H200\nedge \"c\"→\"b\" M80,220 H200",
 		},
 		{
 			"  - edge: { from: a, to: b, toSide: left }\n  - edge: { from: c, to: b }",
-			"edge a→b M80,40 H140 V213.33 H200\nedge c→b M80,226.67 H200",
+			"edge \"a\"→\"b\" M80,40 H140 V213.33 H200\nedge \"c\"→\"b\" M80,226.67 H200",
 		},
 	} {
 		out, mistakes := draw(t, head+c.parts+"\n", inspect)
@@ -892,9 +892,9 @@ func TestEdgeViaAxis(t *testing.T) {
 	for _, c := range []struct {
 		parts, want string
 	}{
-		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ x: 150 }] }", `s.yaml:8:5: edge a→b runs through box "a"; move one of them, or go round it by via`},
-		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ y: 150 }] }", `s.yaml:8:5: edge a→b runs through box "a"; move one of them, or go round it by via`},
-		{"  - edge: { from: a, to: b, via: [{ x: 50 }] }", "s.yaml:8:5: edge a→b runs through box \"a\"; move one of them, or go round it by via\ns.yaml:8:5: edge a→b runs through box \"c\"; move one of them, or go round it by via"},
+		{"  - edge: { from: a, to: b, fromSide: top, toSide: left, via: [{ x: 150 }] }", `s.yaml:8:5: edge "a"→"b" runs through box "a"; move one of them, or go round it by via`},
+		{"  - edge: { from: a, to: b, fromSide: right, toSide: top, via: [{ y: 150 }] }", `s.yaml:8:5: edge "a"→"b" runs through box "a"; move one of them, or go round it by via`},
+		{"  - edge: { from: a, to: b, via: [{ x: 50 }] }", "s.yaml:8:5: edge \"a\"→\"b\" runs through box \"a\"; move one of them, or go round it by via\ns.yaml:8:5: edge \"a\"→\"b\" runs through box \"c\"; move one of them, or go round it by via"},
 		{"  - edge: { from: nobody, to: b, via: [{ x: 50 }] }", `s.yaml:8:5: edge: no part, row or node named "nobody"`},
 	} {
 		if _, got := draw(t, head+c.parts+"\n", inspect); got != c.want {
@@ -917,10 +917,10 @@ func TestEdgeViaAxis(t *testing.T) {
 		y         int
 		via, want string
 	}{
-		{366, "{ x: 710 }", "edge api→writer M664,646 H710 V386 H790"},
-		{342, "{ x: 710 }", "edge api→writer M664,646 H710 V362 H790"},
-		{366, "[710, 374]", "edge api→writer M664,646 H710 V374 H750 V386 H790"},
-		{342, "[710, 374]", "edge api→writer M664,646 H710 V374 V362 H790"},
+		{366, "{ x: 710 }", "edge \"api\"→\"writer\" M664,646 H710 V386 H790"},
+		{342, "{ x: 710 }", "edge \"api\"→\"writer\" M664,646 H710 V362 H790"},
+		{366, "[710, 374]", "edge \"api\"→\"writer\" M664,646 H710 V374 H750 V386 H790"},
+		{342, "[710, 374]", "edge \"api\"→\"writer\" M664,646 H710 V374 V362 H790"},
 	} {
 		if got := edgeLines(moved(c.y, c.via)); got != c.want {
 			t.Errorf("writer at %d by %s\n  drew %q\n  want %q", c.y, c.via, got, c.want)
@@ -1036,15 +1036,15 @@ func TestEdgesVia(t *testing.T) {
 		{
 			"  - frame: { name: f, x: 200, y: 40, w: 280, h: 200, label: F }\n  - box: { name: a, x: 260, y: 120, w: 100, h: 40, rows: [a] }\n" +
 				"  - edge: { from: a, via: [[420, 140], [420, 200]], to: f }",
-			`s.yaml:7:5: edge a→f runs through box "a"; move one of them, or go round it by via`,
+			`s.yaml:7:5: edge "a"→"f" runs through box "a"; move one of them, or go round it by via`,
 		},
 		{
 			"  - box: { name: b, x: 300, y: 100, w: 100, h: 40, rows: [b] }\n  - edge: { from: [450, 300], via: [[500, 300]], to: b, toSide: top }",
-			`s.yaml:6:5: edge [450,300]→b runs through box "b"; move one of them, or go round it by via`,
+			`s.yaml:6:5: edge [450,300]→"b" runs through box "b"; move one of them, or go round it by via`,
 		},
 		{
 			"  - box: { name: a, x: 40, y: 140, w: 100, h: 40, rows: [a] }\n  - edge: { from: a, via: [[200, 220]], to: [210, 0] }",
-			`s.yaml:6:5: edge a→[210,0] runs through box "a"; move one of them, or go round it by via`,
+			`s.yaml:6:5: edge "a"→[210,0] runs through box "a"; move one of them, or go round it by via`,
 		},
 		{
 			"  - box: { name: k, x: 180, y: 30, w: 40, h: 40, rows: [[k, sub]] }\n  - edge: { from: [0, 0], via: [[200, 0]], to: [100, 100] }",
@@ -1339,7 +1339,7 @@ func TestInspect(t *testing.T) {
 	// Nothing is drawn of it.
 	bent := "title: S\nparts:\n  - box: { name: a, x: 20, y: 20, w: 100, h: 60, rows: [A] }\n" +
 		"  - box: { name: b, x: 200, y: 40, w: 100, h: 60, rows: [B] }\n  - edge: { from: a, to: b }\n"
-	if got, mistakes = draw(t, bent, inspect); mistakes != "" || !strings.Contains(got, "edge a→b M120,60 H200\n") {
+	if got, mistakes = draw(t, bent, inspect); mistakes != "" || !strings.Contains(got, "edge \"a\"→\"b\" M120,60 H200\n") {
 		t.Errorf("inspect = %q %s, want the edge straight", got, mistakes)
 	}
 	refused := bent + "  - label: { text: x, x: 30, y: 30 }\n"
@@ -1349,7 +1349,7 @@ func TestInspect(t *testing.T) {
 		told, err = inspect(d, v)
 		return told, err
 	})
-	if want := `box "a" overlaps label "x"`; !strings.Contains(mistakes, want) || !strings.Contains(told, "edge a→b M120,50 H160 V70 H200\n") {
+	if want := `box "a" overlaps label "x"`; !strings.Contains(mistakes, want) || !strings.Contains(told, "edge \"a\"→\"b\" M120,50 H160 V70 H200\n") {
 		t.Errorf("inspect of a mistake = %q %q, want %s and the edge bent", told, mistakes, want)
 	}
 	if got, mistakes = draw(t, refused, render("en")); got != "" || mistakes == "" {
@@ -1415,7 +1415,7 @@ func TestEdgesAtDots(t *testing.T) {
 		{"a point at the centre", d + "  - edge: { from: [20, 20], via: [[300, 20]], to: [300, 100] }", `d="M20,20 H300 V100"`},
 		{
 			"checked as routed", d + "  - edge: { from: [100, 103], to: [340, 103] }\n  - edge: { from: [300, 150], to: d }",
-			"s.yaml:7:5: edge [100,103]→[340,103] crosses edge [300,150]→d at 300,103; move one of them, or add crossing: true to one if it cannot be avoided",
+			"s.yaml:7:5: edge [100,103]→[340,103] crosses edge [300,150]→\"d\" at 300,103; move one of them, or add crossing: true to one if it cannot be avoided",
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -1478,7 +1478,7 @@ parts:
   - bar: { name: decide, x1: 200, x2: 296, y: 44 }
   - bar: { name: design, x1: 328, x2: 408, y: 80 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
-`, `edge decide→design M296,44 H308 V80 H328`},
+`, `edge "decide"→"design" M296,44 H308 V80 H328`},
 		// g2: a run round two sides of one way moves outward only; a line written after the edge is kept off too.
 		{`width: 500
 height: 160
@@ -1488,7 +1488,7 @@ parts:
   - box: { name: b, x: 20, y: 100, w: 60, h: 30, rows: [b] }
   - edge: { from: a, fromSide: right, to: b, toSide: right }
   - line: { x1: 100, y1: 0, x2: 100, y2: 160 }
-`, `edge a→b M80,35 H104 V115 H80`},
+`, `edge "a"→"b" M80,35 H104 V115 H80`},
 		// g3: a run across on an axis with no ticks moves above it.
 		{`width: 300
 height: 200
@@ -1498,7 +1498,7 @@ parts:
   - box: { name: b, x: 160, y: 140, w: 60, h: 30, rows: [b] }
   - edge: { from: a, fromSide: bottom, to: b, toSide: top }
   - axis: { x1: 10, x2: 290, y: 95, ticks: [] }
-`, `edge a→b M50,50 V91 H190 V140`},
+`, `edge "a"→"b" M50,50 V91 H190 V140`},
 		// g4: a run between facing sides on a line part.
 		{`width: 300
 height: 160
@@ -1508,7 +1508,7 @@ parts:
   - box: { name: b, x: 120, y: 100, w: 60, h: 30, rows: [b] }
   - line: { x1: 100, y1: 0, x2: 100, y2: 160 }
   - edge: { from: a, fromSide: right, to: b, toSide: left }
-`, `edge a→b M80,35 H96 V115 H120`},
+`, `edge "a"→"b" M80,35 H96 V115 H120`},
 		// e1: no room between the ends inside their markers: it stays.
 		{`width: 300
 height: 160
@@ -1518,7 +1518,7 @@ parts:
   - box: { name: b, x: 88, y: 100, w: 60, h: 30, rows: [b] }
   - line: { x1: 84, y1: 0, x2: 84, y2: 160 }
   - edge: { from: a, fromSide: right, to: b, toSide: left }
-`, `edge a→b M80,35 H84 V115 H88`},
+`, `edge "a"→"b" M80,35 H84 V115 H88`},
 		// e2: outward is off the canvas written: it stays.
 		{`width: 102
 height: 160
@@ -1528,7 +1528,7 @@ parts:
   - box: { name: b, x: 20, y: 100, w: 60, h: 30, rows: [b] }
   - edge: { from: a, fromSide: right, to: b, toSide: right }
   - line: { x1: 100, y1: 0, x2: 100, y2: 160 }
-`, `edge a→b M80,35 H100 V115 H80`},
+`, `edge "a"→"b" M80,35 H100 V115 H80`},
 		// e3: an axis with ticks is kept off past them below, so the run moves above.
 		{`width: 300
 height: 200
@@ -1538,7 +1538,7 @@ parts:
   - box: { name: b, x: 160, y: 150, w: 60, h: 30, rows: [b] }
   - edge: { from: a, fromSide: bottom, to: b, toSide: top }
   - axis: { x1: 10, x2: 290, y: 100, ticks: [[10, "0"], [150, "1"], [290, "2"]] }
-`, `edge a→b M50,50 V96 H190 V150`},
+`, `edge "a"→"b" M50,50 V96 H190 V150`},
 		// e4: two edges out of one part sharing the run move as one.
 		{`width: 500
 height: 230
@@ -1550,8 +1550,8 @@ parts:
   - bar: { name: api, x1: 328, x2: 408, y: 140 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
   - edge: { from: decide, fromSide: right, to: api, toSide: left }
-`, `edge decide→design M296,44 H308 V80 H328
-edge decide→api M296,44 H308 V140 H328`},
+`, `edge "decide"→"design" M296,44 H308 V80 H328
+edge "decide"→"api" M296,44 H308 V140 H328`},
 		// e4b: the same out of a side of a box, the ends apart on it.
 		{`width: 500
 height: 230
@@ -1563,8 +1563,8 @@ parts:
   - box: { name: api, x: 328, y: 125, w: 80, h: 30, rows: [a] }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
   - edge: { from: decide, fromSide: right, to: api, toSide: left }
-`, `edge decide→design M296,39 H308 V80 H328
-edge decide→api M296,49 H308 V140 H328`},
+`, `edge "decide"→"design" M296,39 H308 V80 H328
+edge "decide"→"api" M296,49 H308 V140 H328`},
 		// e4c: an edge out of a side and an edge into it move as one.
 		{`width: 500
 height: 230
@@ -1576,8 +1576,8 @@ parts:
   - box: { name: api, x: 328, y: 125, w: 80, h: 30, rows: [a] }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
   - edge: { from: api, fromSide: left, to: decide, toSide: right }
-`, `edge decide→design M296,39 H308 V80 H328
-edge api→decide M328,140 H308 V49 H296`},
+`, `edge "decide"→"design" M296,39 H308 V80 H328
+edge "api"→"decide" M328,140 H308 V49 H296`},
 		// e5: both move right when a part holds the left for one of them.
 		{`width: 500
 height: 230
@@ -1590,8 +1590,8 @@ parts:
   - box: { name: x, x: 270, y: 100, w: 40, h: 30, rows: [[x, sub]] }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
   - edge: { from: decide, fromSide: right, to: api, toSide: left }
-`, `edge decide→design M296,44 H316 V80 H328
-edge decide→api M296,44 H316 V140 H328`},
+`, `edge "decide"→"design" M296,44 H316 V80 H328
+edge "decide"→"api" M296,44 H316 V140 H328`},
 		// e6: the label stands on the run that would move: it stays.
 		{`width: 500
 height: 140
@@ -1601,7 +1601,7 @@ parts:
   - bar: { name: decide, x1: 200, x2: 296, y: 44 }
   - bar: { name: design, x1: 328, x2: 408, y: 80 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left, label: next }
-`, `edge decide→design M296,44 H312 V80 H328`},
+`, `edge "decide"→"design" M296,44 H312 V80 H328`},
 		// f1: a part's edge along the place nearer holds it.
 		{`width: 500
 height: 140
@@ -1612,7 +1612,7 @@ parts:
   - bar: { name: design, x1: 328, x2: 408, y: 80 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
   - box: { name: k, x: 268, y: 56, w: 40, h: 30, rows: [[k, sub]] }
-`, `edge decide→design M296,44 H316 V80 H328`},
+`, `edge "decide"→"design" M296,44 H316 V80 H328`},
 		// f2: another edge's run along the place nearer holds it.
 		{`width: 500
 height: 140
@@ -1623,7 +1623,7 @@ parts:
   - bar: { name: design, x1: 328, x2: 408, y: 80 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
   - edge: { from: [308, 52], to: [308, 76], straight: true, end: none }
-`, `edge decide→design M296,44 H316 V80 H328
+`, `edge "decide"→"design" M296,44 H316 V80 H328
 edge [308,52]→[308,76] M308,52 V76`},
 		// f3: moving it changes the run the label stands on: it stays.
 		{`width: 400
@@ -1634,7 +1634,7 @@ parts:
   - box: { name: b, x: 300, y: 100, w: 60, h: 30, rows: [b] }
   - line: { x1: 190, y1: 0, x2: 190, y2: 160 }
   - edge: { from: a, fromSide: right, to: b, toSide: left, label: next }
-`, `edge a→b M80,35 H190 V115 H300`},
+`, `edge "a"→"b" M80,35 H190 V115 H300`},
 		// f4: the run made longer would lie along a line part: it stays.
 		{`width: 500
 height: 160
@@ -1645,7 +1645,7 @@ parts:
   - edge: { from: a, fromSide: right, to: b, toSide: right }
   - line: { x1: 100, y1: 0, x2: 100, y2: 160 }
   - line: { x1: 101, y1: 35, x2: 200, y2: 35 }
-`, `edge a→b M80,35 H100 V115 H80`},
+`, `edge "a"→"b" M80,35 H100 V115 H80`},
 		// f5: an axis with no ticks is kept off by ruleGap below.
 		{`width: 300
 height: 200
@@ -1655,7 +1655,7 @@ parts:
   - box: { name: b, x: 160, y: 144, w: 60, h: 30, rows: [b] }
   - edge: { from: a, fromSide: bottom, to: b, toSide: top }
   - axis: { x1: 10, x2: 290, y: 95, ticks: [] }
-`, `edge a→b M50,50 V99 H190 V144`},
+`, `edge "a"→"b" M50,50 V99 H190 V144`},
 		// f6: with ticks, past them below.
 		{`width: 300
 height: 200
@@ -1665,7 +1665,7 @@ parts:
   - box: { name: b, x: 160, y: 144, w: 60, h: 30, rows: [b] }
   - edge: { from: a, fromSide: bottom, to: b, toSide: top }
   - axis: { x1: 10, x2: 290, y: 95, ticks: [[10, ""], [290, ""]] }
-`, `edge a→b M50,50 V91 H190 V144`},
+`, `edge "a"→"b" M50,50 V91 H190 V144`},
 		// f7: a canvas whose size is left out holds anything below and right.
 		{`title: f7
 parts:
@@ -1673,7 +1673,7 @@ parts:
   - bar: { name: decide, x1: 200, x2: 296, y: 44 }
   - bar: { name: design, x1: 328, x2: 408, y: 80 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
-`, `edge decide→design M296,44 H308 V80 H328`},
+`, `edge "decide"→"design" M296,44 H308 V80 H328`},
 		// h1: the two turns halfway into a side, after via, move as well.
 		{`width: 300
 height: 200
@@ -1682,7 +1682,7 @@ parts:
   - box: { name: b, x: 200, y: 100, w: 60, h: 30, rows: [b] }
   - line: { x1: 185, y1: 0, x2: 185, y2: 200 }
   - edge: { from: [170, 150], via: [[170, 60]], to: b, toSide: left }
-`, `edge [170,150]→b M170,150 V60 H181 V115 H200`},
+`, `edge [170,150]→"b" M170,150 V60 H181 V115 H200`},
 		// h2: a run ruleGap off a line stays.
 		{`width: 500
 height: 140
@@ -1692,7 +1692,7 @@ parts:
   - bar: { name: decide, x1: 200, x2: 296, y: 44 }
   - bar: { name: design, x1: 328, x2: 408, y: 80 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
-`, `edge decide→design M296,44 H312 V80 H328`},
+`, `edge "decide"→"design" M296,44 H312 V80 H328`},
 		// h3: a slanting line is no rule.
 		{`width: 300
 height: 160
@@ -1702,7 +1702,7 @@ parts:
   - box: { name: b, x: 120, y: 100, w: 60, h: 30, rows: [b] }
   - line: { x1: 60, y1: 0, x2: 140, y2: 160 }
   - edge: { from: a, fromSide: right, to: b, toSide: left }
-`, `edge a→b M80,35 H100 V115 H120`},
+`, `edge "a"→"b" M80,35 H100 V115 H120`},
 		// f8: a start's marker keeps the run off that end too: no room, it stays.
 		{`width: 300
 height: 160
@@ -1712,7 +1712,7 @@ parts:
   - box: { name: b, x: 104, y: 100, w: 60, h: 30, rows: [b] }
   - line: { x1: 92, y1: 0, x2: 92, y2: 160 }
   - edge: { from: a, fromSide: right, to: b, toSide: left, start: arrow }
-`, `edge a→b M80,35 H92 V115 H104`},
+`, `edge "a"→"b" M80,35 H92 V115 H104`},
 		// f8b: with no marker at the start, the run moves nearer it.
 		{`width: 300
 height: 160
@@ -1722,7 +1722,7 @@ parts:
   - box: { name: b, x: 104, y: 100, w: 60, h: 30, rows: [b] }
   - line: { x1: 92, y1: 0, x2: 92, y2: 160 }
   - edge: { from: a, fromSide: right, to: b, toSide: left }
-`, `edge a→b M80,35 H88 V115 H104`},
+`, `edge "a"→"b" M80,35 H88 V115 H104`},
 		// f9: the place nearer runs through a label: it moves the other way.
 		{`width: 500
 height: 140
@@ -1733,7 +1733,7 @@ parts:
   - bar: { name: design, x1: 328, x2: 408, y: 80 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
   - label: { text: x, x: 306, y: 62, anchor: end }
-`, `edge decide→design M296,44 H316 V80 H328`},
+`, `edge "decide"→"design" M296,44 H316 V80 H328`},
 		// f10: the place nearer crosses another edge: it moves the other way.
 		{`width: 500
 height: 140
@@ -1744,7 +1744,7 @@ parts:
   - bar: { name: design, x1: 328, x2: 408, y: 80 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
   - edge: { from: [302, 62], to: [310, 62], end: none }
-`, `edge decide→design M296,44 H316 V80 H328
+`, `edge "decide"→"design" M296,44 H316 V80 H328
 edge [302,62]→[310,62] M302,62 H310`},
 		// f12: a tick of no text is no label to keep off: the run moves to the nearer place.
 		{`width: 320
@@ -1756,7 +1756,7 @@ parts:
   - edge: { from: a, fromSide: bottom, to: b, toSide: top }
   - axis: { x1: 10, x2: 300, y: 95, ticks: [[150, ""]] }
   - line: { x1: 10, y1: 112, x2: 300, y2: 112 }
-`, `edge a→b M50,50 V108 H250 V174`},
+`, `edge "a"→"b" M50,50 V108 H250 V174`},
 		// f13: an edge runs through a tick of no text, no label.
 		{`width: 400
 height: 200
@@ -1766,7 +1766,7 @@ parts:
   - box: { name: b, x: 140, y: 150, w: 60, h: 30, rows: [b] }
   - edge: { from: a, fromSide: bottom, to: b, toSide: top }
   - axis: { x1: 10, x2: 390, y: 95, ticks: [[50, ""], [170, ""]] }
-`, `edge a→b M50,50 V104 H170 V150`},
+`, `edge "a"→"b" M50,50 V104 H170 V150`},
 		// f11: the place nearer runs over a dot: it moves the other way.
 		{`width: 500
 height: 140
@@ -1777,7 +1777,7 @@ parts:
   - bar: { name: design, x1: 328, x2: 408, y: 80 }
   - edge: { from: decide, fromSide: right, to: design, toSide: left }
   - dot: { cx: 304, cy: 62 }
-`, `edge decide→design M296,44 H316 V80 H328`},
+`, `edge "decide"→"design" M296,44 H316 V80 H328`},
 	} {
 		got, mistakes := draw(t, c.src, inspect)
 		var edges []string
@@ -1854,7 +1854,7 @@ func TestFaces(t *testing.T) {
 		"        - { name: v, label: nnnnnnnnnnnnnnnnnnnnnnn, nodes: [{ box: { name: m, rows: [M] } }] }\n" +
 		"        - { name: e, label: E, nodes: [{ box: { name: b, rows: [B] } }] }\n" +
 		"      edges:\n        - { from: z, to: m }\n        - { from: a, to: b, level: true }\n"
-	want := `s.yaml:13:36: edge a→b: it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`
+	want := `s.yaml:13:36: edge "a"→"b": it runs through the heading of lane "v", which reaches into the first rank laid out right; drop level, or shorten the heading`
 	if _, told := draw(t, lanes, inspect); told != want {
 		t.Errorf("a lane's heading:\n  told %q\n  want %q", told, want)
 	}
@@ -2001,7 +2001,7 @@ func TestGraphWith(t *testing.T) {
 		got, tops := laid(t, spec(b("lb", "")+b("api", "")+b("nat", "lb"), e("lb", "api")+e("api", "nat")))
 		level(t, tops, "lb", "nat")
 		above(t, tops, "nat", "api")
-		if want := "edge api→nat M116,85 V49\n"; !strings.Contains(got, want) {
+		if want := "edge \"api\"→\"nat\" M116,85 V49\n"; !strings.Contains(got, want) {
 			t.Errorf("inspect = %s, want %s", got, want)
 		}
 		// Its arrow at nat, the end written, not at api.
@@ -2107,30 +2107,30 @@ func TestGraphWith(t *testing.T) {
 				`s.yaml:8:33: with: no box or icon of this graph named "nobody"`,
 			},
 			{"a group", spec(b("a", "g")+group, ""), `s.yaml:7:33: with: no box or icon of this graph named "g"`},
-			{"an edge within one rank", spec(b("a", "b")+b("b", ""), e("a", "b")), "s.yaml:10:13: edge a→b: " + rank},
+			{"an edge within one rank", spec(b("a", "b")+b("b", ""), e("a", "b")), "s.yaml:10:13: edge \"a\"→\"b\": " + rank},
 			{
 				"an edge within one rank, across groups", spec(
 					"        - group: { name: h, label: H, nodes: [ { box: { name: a, with: b, rows: [A] } } ] }\n"+group, e("a", "b")),
-				"s.yaml:10:13: edge a→b: " + rank,
+				"s.yaml:10:13: edge \"a\"→\"b\": " + rank,
 			},
 			{"an edge into one rank by level and with", spec(b("a", "")+b("b", "c")+b("c", ""),
-				"        - { from: a, to: b, level: true }\n"+e("a", "c")), "s.yaml:12:13: edge a→c: " + rank},
+				"        - { from: a, to: b, level: true }\n"+e("a", "c")), "s.yaml:12:13: edge \"a\"→\"c\": " + rank},
 			{
 				"an edge within one rank by level alone", spec(b("a", "")+b("b", "a"),
 					"        - { from: a, to: b, level: true }\n"+e("a", "b")),
-				"s.yaml:11:13: edge a→b: a and b stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them",
+				"s.yaml:11:13: edge \"a\"→\"b\": \"a\" and \"b\" stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them",
 			},
 			{"an edge that falls in one rank", spec(b("y", "")+b("alb", "")+b("nat", "alb")+b("x", ""),
-				"        - { from: nat, to: x, level: true }\n"+e("y", "nat")), "s.yaml:13:13: edge y→nat: " + rank},
-			{"a with of itself", spec(b("a", "")+b("b", "b"), e("a", "b")), "s.yaml:10:13: edge a→b: " + rank},
-			{"a ring of with", spec(b("x", "")+b("a", "b")+b("b", "a"), e("x", "a")), "s.yaml:11:13: edge x→a: " + rank},
-			{"a ring holding the edge", spec(b("a", "b")+b("b", "c")+b("c", "a"), e("a", "c")), "s.yaml:11:13: edge a→c: " + rank},
+				"        - { from: nat, to: x, level: true }\n"+e("y", "nat")), "s.yaml:13:13: edge \"y\"→\"nat\": " + rank},
+			{"a with of itself", spec(b("a", "")+b("b", "b"), e("a", "b")), "s.yaml:10:13: edge \"a\"→\"b\": " + rank},
+			{"a ring of with", spec(b("x", "")+b("a", "b")+b("b", "a"), e("x", "a")), "s.yaml:11:13: edge \"x\"→\"a\": " + rank},
+			{"a ring holding the edge", spec(b("a", "b")+b("b", "c")+b("c", "a"), e("a", "c")), "s.yaml:11:13: edge \"a\"→\"c\": " + rank},
 			{
 				"a box a with stands among a group of ranks",
 				spec(b("nat", "alb")+
 					"        - group: { name: vpc, label: VPC, nodes: [ { box: { name: alb, rows: [ALB] } }, { box: { name: api, rows: [API] } } ] }\n",
 					e("alb", "api")+e("vpc", "nat")),
-				`s.yaml:11:28: edge vpc→nat: nat can stand neither above group "vpc" nor below it, as alb stands no lower than it and alb no higher; end the edge at a box in "vpc"`,
+				`s.yaml:11:28: edge "vpc"→"nat": "nat" can stand neither above group "vpc" nor below it, as "alb" stands no lower than it and "alb" no higher; end the edge at a box in "vpc"`,
 			},
 			{
 				"a box a with stands between a level edge's boxes",
@@ -2147,12 +2147,12 @@ parts:
         - { from: u, to: q }
         - { from: p, to: q, level: true }
 `,
-				`s.yaml:12:36: edge p→q: box "m" stands between its boxes in their rank; drop level, or move it out of the way`,
+				`s.yaml:12:36: edge "p"→"q": box "m" stands between its boxes in their rank; drop level, or move it out of the way`,
 			},
 			{
 				"a box a with stands among a group", spec(b("e", "a")+
 					"        - group: { name: g, label: G, nodes: [ { box: { name: a, rows: [A] } } ] }\n", e("e", "g")),
-				`s.yaml:10:19: edge e→g: e can stand neither above group "g" nor below it, as a stands no lower than it and a no higher; end the edge at a box in "g"`,
+				`s.yaml:10:19: edge "e"→"g": "e" can stand neither above group "g" nor below it, as "a" stands no lower than it and "a" no higher; end the edge at a box in "g"`,
 			},
 		} {
 			if _, told := draw(t, c.src, inspect); told != c.want {

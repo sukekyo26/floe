@@ -3,13 +3,13 @@ box "stopped" 20,56 200x84
 box "running" 444.31,26 176x78
 box "outdated" 1029.74,56 176x84
 dot 113,15 14x14
-edge stopped→stopped M70,140 V164 H170 V140
-edge stopped→running M215.91,68 H444.31
-edge running→outdated M620.31,68 H1033.83
-edge outdated→running M1029.74,92 H616.22
-edge running→stopped M448.4,92 H220
-edge outdated→stopped M1030.23,119 H219.51
-edge [120,29]→stopped M120,29 V56
+edge "stopped"→"stopped" M70,140 V164 H170 V140
+edge "stopped"→"running" M215.91,68 H444.31
+edge "running"→"outdated" M620.31,68 H1033.83
+edge "outdated"→"running" M1029.74,92 H616.22
+edge "running"→"stopped" M448.4,92 H220
+edge "outdated"→"stopped" M1030.23,119 H219.51
+edge [120,29]→"stopped" M120,29 V56
 label "start fails (port in use)" 25,176 190x18
 label "publish or serve" 267.51,59 125.2x18
 label "floe reinstalled" 764.47,59 125.2x18
