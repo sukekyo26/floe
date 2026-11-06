@@ -568,15 +568,15 @@ func TestPartBarsRefused(t *testing.T) {
 	}
 	k := ownKit(t, parts, mine(htmlPage("{{.Data.b}}"), head+`{"b": {"$ref": "floe:///parts/pb.json"}}}`, nil))
 	for _, tt := range []struct{ item, want string }{
-		{"{label: b, value: -2}", `d.yaml:4:3: bars: bar "b"'s value takes a number of 0 or more, not -2`},
-		{"{label: b, value: x}", `d.yaml:4:3: bars: bar "b"'s value takes a number, not "x"`},
-		{"{label: b}", `d.yaml:4:3: bars: bar "b"'s value takes a number; none is written, or it is null`},
-		{"{label: b, value: null}", `d.yaml:4:3: bars: bar "b"'s value takes a number; none is written, or it is null`},
+		{"{label: b, value: -2}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number of 0 or more, not -2`},
+		{"{label: b, value: x}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number, not "x"`},
+		{"{label: b}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
+		{"{label: b, value: null}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
 		{"{label: b, value: 0}", ""},
 		{"{label: b, value: 1, of: null}", ""},
-		{"{label: b, value: 1, of: 0}", `d.yaml:4:3: bars: bar "b"'s of takes a number above 0, not 0`},
-		{"{label: b, value: 1, of: x}", `d.yaml:4:3: bars: bar "b"'s of takes a number, not "x"`},
-		{"{label: b, value: 5, of: 3}", `d.yaml:4:3: bars: bar "b": 5 is over its of 3; write a value no greater than of, the whole`},
+		{"{label: b, value: 1, of: 0}", `d.yaml:4:3: bars: bar 2 "b"'s of takes a number above 0, not 0`},
+		{"{label: b, value: 1, of: x}", `d.yaml:4:3: bars: bar 2 "b"'s of takes a number, not "x"`},
+		{"{label: b, value: 5, of: 3}", `d.yaml:4:3: bars: bar 2 "b": 5 is over its of 3; write a value no greater than of, the whole`},
 		{"3", "d.yaml:4:3: bars takes items written as keys and values (label, value, of, tone); item 2 is not"},
 	} {
 		data := "lang: en\ntemplate: mine\nb:\n  items:\n    - {label: a, value: 3}\n    - " + tt.item + "\n"

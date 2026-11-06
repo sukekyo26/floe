@@ -151,7 +151,8 @@ func TestCopyButton(t *testing.T) {
 // A bar's width is its share of its of, when written, else of the longest value of the bars without of, and every
 // such bar is 0 wide when all their values are 0; a value below 0, which would make a width CSS drops, is refused,
 // and -0 is 0 wide; so are an of not above 0 and a value over its of. An of of nil, as Walk sets one the data leaves
-// out, is none. The mistakes of every item are told, each with its bar's label; an item not written as keys and
+// out, is none. The mistakes of every item are told, each with its bar's number and label, and its numbers as num
+// writes them; an item not written as keys and
 // values is refused, told by its number.
 func TestBarsOf(t *testing.T) {
 	t.Parallel()
@@ -166,11 +167,11 @@ func TestBarsOf(t *testing.T) {
 		{[]any{item(1), item(4), item(2.5)}, "25 100 62.5"},
 		{[]any{item(0), item(0)}, "0 0"},
 		{[]any{item(math.Copysign(0, -1)), item(4)}, "0 100"},
-		{[]any{item(3), item(-2)}, `bars: bar "x"'s value takes a number of 0 or more, not -2`},
-		{[]any{item(3), item(-0.5)}, `bars: bar "x"'s value takes a number of 0 or more, not -0.5`},
-		{[]any{item(3), item("x")}, `bars: bar "x"'s value takes a number, not "x"`},
-		{[]any{item(3), item(nil)}, `bars: bar "x"'s value takes a number; none is written, or it is null`},
-		{[]any{item(3), map[string]any{"label": "x"}}, `bars: bar "x"'s value takes a number; none is written, or it is null`},
+		{[]any{item(3), item(-2)}, `bars: bar 2 "x"'s value takes a number of 0 or more, not -2`},
+		{[]any{item(3), item(-0.5)}, `bars: bar 2 "x"'s value takes a number of 0 or more, not -0.5`},
+		{[]any{item(3), item("x")}, `bars: bar 2 "x"'s value takes a number, not "x"`},
+		{[]any{item(3), item(nil)}, `bars: bar 2 "x"'s value takes a number; none is written, or it is null`},
+		{[]any{item(3), map[string]any{"label": "x"}}, `bars: bar 2 "x"'s value takes a number; none is written, or it is null`},
 		{[]any{item(1), 3}, notItem},
 		{[]any{item(1), ""}, notItem},
 		{[]any{item(1), nil}, notItem},
@@ -179,11 +180,17 @@ func TestBarsOf(t *testing.T) {
 		{[]any{item(2), item(4), of("c", 30, 40)}, "50 100 75"},
 		{[]any{of("a", 5, 8), of("b", 3, 3), of("c", 0, 5), of("d", 1, 2.5)}, "62.5 100 0 40"},
 		{[]any{of("a", 2, nil), item(4)}, "50 100"},
-		{[]any{of("a", 1, 0)}, `bars: bar "a"'s of takes a number above 0, not 0`},
-		{[]any{of("a", 1, -2)}, `bars: bar "a"'s of takes a number above 0, not -2`},
-		{[]any{of("a", 1, "8")}, `bars: bar "a"'s of takes a number, not "8"`},
-		{[]any{of("a", 5, 3), of("b", 1, 2), of("c", 9, 4)}, `bars: bar "a": 5 is over its of 3; write a value no greater than of, the whole` + "\n" +
-			`bars: bar "c": 9 is over its of 4; write a value no greater than of, the whole`},
+		{[]any{of("a", 1, 0)}, `bars: bar 1 "a"'s of takes a number above 0, not 0`},
+		{[]any{of("a", 1, -2)}, `bars: bar 1 "a"'s of takes a number above 0, not -2`},
+		{[]any{of("a", 1, "8")}, `bars: bar 1 "a"'s of takes a number, not "8"`},
+		{[]any{of("a", 5, 3), of("b", 1, 2), of("c", 9, 4)}, `bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole` + "\n" +
+			`bars: bar 3 "c": 9 is over its of 4; write a value no greater than of, the whole`},
+		// Past 2^53, a float holds both as one number: they are compared as integers.
+		{[]any{of("a", 9007199254740993, 9007199254740992)},
+			`bars: bar 1 "a": 9,007,199,254,740,993 is over its of 9,007,199,254,740,992; write a value no greater than of, the whole`},
+		{[]any{of("a", 3e21, 2e21)}, `bars: bar 1 "a": 3,000,000,000,000,000,000,000 is over its of 2,000,000,000,000,000,000,000; write a value no greater than of, the whole`},
+		// No label: told by the number.
+		{[]any{item(1), map[string]any{"value": 2, "of": 1}}, `bars: bar 2 "": 2 is over its of 1; write a value no greater than of, the whole`},
 	} {
 		bars, err := barsOf(c.items)
 		widths := make([]string, 0, len(bars))

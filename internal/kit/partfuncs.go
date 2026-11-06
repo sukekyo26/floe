@@ -99,9 +99,10 @@ type bar struct {
 // barsOf gives each of the items of a bars part, each written as keys and values, a label, a value no less than 0
 // and an of above 0 and no less than the value, or none (nil: Walk sets a key the schema declares and the data
 // leaves out to nil, as null), its width. It tells the mistakes of every item.
-// LIMIT: the mistakes are at the part's value, not at the item, with the bar's label (an item not written as keys
-// and values by its number in the list given to bars): bars knows not where in the part's value the list is. Place
-// them at the item if a part's bars of the same labels misleads.
+// LIMIT: the mistakes are at the part's value, not at the item, told by the item's number in the list given to bars
+// and its label: bars knows not where in the part's value the list is. Place them at the item if that misleads.
+// LIMIT: an item with of and no label, which floe's bars refuses by its schema, is a progressbar of no name; refuse
+// it here if a part of one's own comes to draw one.
 func barsOf(items []any) ([]bar, error) {
 	bars := make([]bar, 0, len(items))
 	var found usererr.List
@@ -139,7 +140,7 @@ func barOf(i int, item any) (bar, error) {
 	b := bar{
 		Label: stringOf(m["label"]), Tone: stringOf(m["tone"]), Value: m["value"], Of: m["of"], Now: "", Max: "", Width: 0,
 	}
-	name := fmt.Sprintf("bars: bar %q", b.Label)
+	name := fmt.Sprintf("bars: bar %d %q", i+1, b.Label)
 	n, err := float(name+"'s value", b.Value)
 	if err != nil {
 		return bar{}, err
@@ -149,9 +150,6 @@ func barOf(i int, item any) (bar, error) {
 		return bar{}, usererr.New("kit_below_zero", name+"'s value", fmt.Sprint(b.Value))
 	}
 	b.Width = max(n, 0) // -0, which n < 0 lets through, as 0
-	if b.Now, err = plain(name+"'s value", b.Value, 0); err != nil {
-		return bar{}, err
-	}
 	if b.Of == nil {
 		return b, nil
 	}
@@ -163,14 +161,26 @@ func barOf(i int, item any) (bar, error) {
 	if of <= 0 {
 		return bar{}, usererr.New("kit_bar_of", name+"'s of", fmt.Sprint(b.Of))
 	}
-	if n > of {
-		return bar{}, usererr.New("kit_bar_over", name, fmt.Sprint(b.Value), fmt.Sprint(b.Of))
+	if over(b.Value, b.Of, n, of) {
+		value, _ := decimal("", b.Value, 0)
+		whole, _ := decimal("", b.Of, 0)
+		return bar{}, usererr.New("kit_bar_over", name, value, whole)
 	}
 	b.Width = b.Width / of * 100
-	if b.Max, err = plain(name+"'s of", b.Of, 0); err != nil {
-		return bar{}, err
-	}
+	b.Now, _ = plain("", b.Value, 0)
+	b.Max, _ = plain("", b.Of, 0)
 	return b, nil
+}
+
+// over is whether a bar's value v, read as n, goes past its of w, read as of: compared as integers when both are
+// whole, which a float rounds past 2^53.
+func over(v, w any, n, of float64) bool {
+	if a, ok := whole(v); ok {
+		if b, ok := whole(w); ok {
+			return a.Cmp(b) > 0
+		}
+	}
+	return n > of
 }
 
 // diffLine is a line of a diff and its kind, the class it is drawn in: add, del, hunk (@@), meta (outside a
