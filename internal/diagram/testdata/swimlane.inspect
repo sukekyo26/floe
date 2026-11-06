@@ -1,35 +1,35 @@
-diagram "One pull request: the user, the architect and the engineer" 850x784
-frame "user" 20,20 240x744
-frame "architect" 284,20 264x744
-frame "engineer" 572,20 258x744
+diagram "One pull request: the user, the architect and the engineer" 1090x796
+frame "user" 20,20 180x756
+frame "architect" 224,20 564x756
+frame "engineer" 812,20 258x756
 the heading of frame "user" 32,29 48x18
-the heading of frame "architect" 296,29 72x18
-the heading of frame "engineer" 584,29 61.44x18
-box "answer" 32,214 136x46
-box "ok" 32,632.5 152x29
+the heading of frame "architect" 236,29 72x18
+the heading of frame "engineer" 824,29 61.44x18
+box "answer" 32,214 136x58
+box "ok" 32,644.5 152x29
 box "order" 392,50 144x46
-box "dreview" 332,214 200x46
-box "review" 374,378 160x46
-box "ready" 368,542 168x46
-box "design" 584,132 176x46
-box "build" 584,296 232x46
-box "fix" 584,460 136x46
-box "ci" 584,624 128x46
-box "merge" 584,706 168x46
-edge order→design M464,96 V108 H672 V132
-edge design→dreview M672,178 V190 H432 V214
+box "dreview" 332,214 200x58
+box "review" 374,390 160x46
+box "ready" 368,554 168x46
+box "design" 824,132 176x46
+box "build" 824,308 232x46
+box "fix" 824,472 136x46
+box "ci" 824,636 128x46
+box "merge" 824,718 168x46
+edge order→design M464,96 V108 H912 V132
+edge design→dreview M912,178 V190 H432 V214
 edge dreview→answer M332,231 H168
-edge answer→dreview M168,243 H332
-edge dreview→build M432,260 V272 H700 V296
-edge build→review M700,342 V354 H454 V378
-edge review→fix M454,424 V436 H652 V460
-edge fix→ready M652,506 V518 H452 V542
-edge ready→ci M452,588 V600 H648 V624
-edge ci→ok M584,653 H184
-edge ok→merge M108,661.5 V682 H668 V706
-label "聞く" 296,201 34x18
-label "answer" 187,255 53.2x18
-label "OK" 514,284 24.4x18
-label "findings" 574,406 67.6x18
-label "ready to merge" 660,602 110.8x18
-label "聞く" 512,623 34x18
+edge answer→dreview M168,255 H332
+edge dreview→build M432,272 V284 H940 V308
+edge build→review M940,354 V366 H454 V390
+edge review→fix M454,436 V448 H892 V472
+edge fix→ready M892,518 V530 H452 V554
+edge ready→ci M452,600 V612 H888 V636
+edge ci→ok M824,665 H184
+edge ok→merge M108,673.5 V694 H908 V718
+label "聞く" 233,222 34x18
+label "answer" 229.4,246 53.2x18
+label "OK" 673.8,275 24.4x18
+label "findings" 639.2,439 67.6x18
+label "ready to merge" 614.6,603 110.8x18
+label "聞く" 487,656 34x18

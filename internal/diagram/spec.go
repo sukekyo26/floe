@@ -312,7 +312,7 @@ type edge struct {
 	Crossing bool        `json:"crossing"`
 	who      string      // its words in mistakes and inspect, for an edge a tree draws; else made from its ends
 	graph    string      // the JSON pointer of the graph that laid it out; "" for an edge written by hand
-	anchor   string      // how its label stands at At, as a graph lays it out; "" for middle
+	beside   bool        // its label stands beside it, at At its text's start, as a graph lays out a loop's
 }
 
 type dot struct {
