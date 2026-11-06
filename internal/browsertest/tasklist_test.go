@@ -191,6 +191,12 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
 	say("none waiting", "location.search")
+	// With the longest wait in another project than the shelf's first, that one.
+	b.eval("localStorage.removeItem('artifacts.taskProject')")
+	writeTasks(strings.ReplaceAll(taskWork, "2026-01-03T00:00:00Z\"}},", "2025-01-03T00:00:00Z\"}},"))
+	b.navigate("/tasks")
+	b.until("a project", "location.search.includes('project=')")
+	say("waited longest", "location.search")
 	writeTasks(taskWork)
 
 	// The way up of a task's page: the list it came from when of its project, else its project's, at the task's view.
@@ -362,6 +368,7 @@ the one kept, the view kept: ?view=doing&project=blog
 gone, on the shelf: old0
 the kept gone: ?project=shop
 none waiting: ?project=shop
+waited longest: ?project=blog
 up ?view=doing&project=shop ?project=shop&task=%231: /tasks?view=doing&project=shop
 up ?project=blog ?project=shop&task=%231: /tasks?project=shop
 up ?project=blog ?project=shop&task=%235: /tasks?project=shop&view=doing
