@@ -453,16 +453,17 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 	return st.x, st.top + labelH*float64(n) + labelH/2, st
 }
 
-// grid is at most 501 points from lo to hi within 0 and size, step apart, step being 4 or more: counted from lo,
-// so that the canvas cuts the grid and does not move it, or the one point where the canvas cuts it when the range
-// is narrower than a step past it.
+// grid is at most 501 points from lo to hi within 0 and size, step apart, step being 4 or more: counted from the
+// middle of lo and hi, so that the canvas cuts the grid and does not move it, and a range symmetric about a line has
+// a point on it; or the one point where the canvas cuts it when the range is narrower than a step past it.
 func grid(lo, hi, size float64) []float64 {
 	from, to := max(lo, 0), min(hi, size)
 	if from > to {
 		return nil
 	}
 	step := max(4, (to-from)/500)
-	start := lo + math.Ceil((from-lo)/step)*step
+	mid := (lo + hi) / 2
+	start := mid + math.Ceil((from-mid)/step)*step
 	if start > to {
 		start = from
 	}
@@ -480,9 +481,7 @@ func grid(lo, hi, size float64) []float64 {
 // most is the room of the point of xs and ys where a block w by h, centred on it, keeps the most room, and where
 // the block goes then (its middle and top), 0 for none of room: of points of one room, the one nearest mx, my,
 // the middle of the circles' boxes, as room told by the point of a box nearest a circle is one while the box
-// covers its centre, and a label stays on the axis of a Venn diagram of one when the middle is a point of the grid.
-// LIMIT: the grid counts 4 apart from where the circles' boxes start, so a middle off it leaves the label off the
-// axis, above or below as the radius goes; try the middle itself first if diagrams come to need it.
+// covers its centre, and a label stays on the axis of a Venn diagram of one, the middle being a point of the grid.
 func (g region) most(xs, ys []float64, w, h, mx, my float64) (best, x, top float64) {
 	tries := make([]try, 0, len(xs)*len(ys))
 	for _, px := range xs {

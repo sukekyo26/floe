@@ -18,9 +18,9 @@ func TestGridBounded(t *testing.T) {
 	}{
 		{"far from 0", 999000 - 100, 999000 + 100, 1e7, 51, 999100},
 		{"the largest radius", -2e6, 2e6, 1e7, 501, 2e6},
-		{"to a point", 817.1, 1045.1, 1907, 58, 1045.1},
+		{"to a point", 817.1, 1045.1, 1907, 57, 1043.1},
 		{"one point", 10, 10, 100, 1, 10},
-		{"narrower than step", -1, 2, 100, 1, 0},
+		{"narrower than step", -1, 2, 100, 1, 0.5},
 		{"no range", 50, 10, 100, 0, math.NaN()},
 		{"out of the canvas", 120, 130, 100, 0, math.NaN()},
 	} {
