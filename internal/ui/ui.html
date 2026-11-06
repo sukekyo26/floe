@@ -3581,6 +3581,8 @@
       same: (task, x) => x?.name === task.parent,
       take: 'ui_up_take_button',
       up: true,
+      // LIMIT: whether the one named has come to have a parent or children meanwhile is not said: the store refuses it as it is now (400),
+      // and the words say so, with nothing read again
       write: (task, name, x, title) => writeTask(task.project, task.name, { new: false, parent: name, parentWas: task.parent ?? '', parentNew: !x, ...(x ? {} : { parentTitle: title }) }),
       // Changed, the way back is offered while the parent before makes a family: one written by hand that makes none the store would refuse
       done: (task, name) => {
