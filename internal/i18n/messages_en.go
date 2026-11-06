@@ -556,6 +556,7 @@ var messagesEN = map[string]string{
 	"ui_screen_tasks":      "Task list",
 	"ui_state_waiting":     "Waiting",
 	"ui_state_doing":       "In progress",
+	"ui_state_todo":        "To do",
 	"ui_state_done":        "Done",
 	"ui_pins":              "Pinned pages",
 	"ui_pins_none":         "None",

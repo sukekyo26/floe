@@ -362,6 +362,9 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		reader := b.eval("document.getElementById('reader').offsetParent !== null") == "true"
 		// Narrow, the button says the project, at every width, not lit as narrowed
 		if c.narrow {
+			if got := b.eval("document.getElementById('narrow-filter').getBoundingClientRect().right <= innerWidth"); got != "true" {
+				t.Errorf("width %d: the button is off the screen", c.width)
+			}
 			name := b.eval(taskFilterName)
 			if name != "shop true  false" {
 				t.Errorf("width %d: the button: %s", c.width, name)
@@ -395,7 +398,7 @@ no work, tasks: shelf shown: false
 a row alone, list: current: page
 opened: ?project=shop shop
 waiting: #2Two [0 page(s)]; #1One [design, 2 page(s), 2 unread, b/c]
-views: waiting 2, doing 3, done 2, archived 1
+views: todo 1, doing 2, waiting 2, done 2, archived 1
 head: 2 · longest in Waiting first
 pins: pinned /a/pinned/
 hrefs: /tasks?project=shop&task=%232 /tasks?project=shop&task=%231
@@ -408,10 +411,10 @@ j: #2Two
 j j: #1One
 j j k: #2Two
 nothing picked: true
-doing: #11 [1 page(s), 1 unread]; #5 [0 page(s)]; #4 [0 page(s)]
-doing head: 3 · latest change first
+doing: #5 [0 page(s)]; #4 [0 page(s)]
+doing head: 2 · latest change first
 doing url: ?view=doing&project=shop ?view=doing&project=shop
-doing chips: 3 0 0 0 0
+doing chips: 2 0 0 0 0
 done: #8 [1 page(s), 1 archived, 1 unread]; #7 [0 page(s)]
 done head: 2 · latest change first
 done url: ?view=done&project=shop ?view=done&project=shop
@@ -464,7 +467,7 @@ page list, let go:
 help: Pinned pagesKeep pages you open again and again, such as an overview or a runbook, here. Only this project's pages are listed. To add one, choose "Pin to the task list" in a page's "…" menu.
 broken, list: error hidden: true
 broken, tasks: failed shown: true true
-broken, tasks: ?project=shop blog waiting,doing,done,archived pins 1 rows 0
+broken, tasks: ?project=shop blog todo,doing,waiting,done,archived pins 1 rows 0
 broken, tasks: says why: true
 broken, the one kept:  blog
 broken, none kept:  true
