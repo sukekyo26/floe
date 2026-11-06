@@ -17,13 +17,26 @@ import (
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/zoom"
 )
 
 // partFuncs are the functions floe's parts draw with, besides those of page.html and over them: markdown draws in a
 // text's box, as all a part holds of Markdown is (MarkdownFlow).
 var partFuncs = template.FuncMap{
 	"bars": barsOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf, "markdown": MarkdownFlow,
-	"script": scriptOf, "tree": treeOf, "written": writtenOf,
+	"script": scriptOf, "tree": treeOf, "written": writtenOf, "zoom": zoomScript,
+}
+
+// zoomScript is the function zoom of a part.html: the script that zooms the frames of class floe-zoom, as the
+// diagram has it.
+// LIMIT: the script goes into each part that zooms, as the copy button's does (some 7 KB each). Put it into the page
+// once if pages of many images come to weigh.
+func zoomScript() (template.HTML, error) {
+	s, err := zoom.Script()
+	if err != nil {
+		return "", fmt.Errorf("%w: zoom: %w", ErrFunc, err)
+	}
+	return s, nil
 }
 
 // copyButtonOf holds the name of the function that draws the copy button of a part, which Part.Page binds anew in

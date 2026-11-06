@@ -1,0 +1,24 @@
+/* The frame clips what it zooms. It takes a finger's pan and pinch only while it may zoom (can-zoom): one that may
+   not leaves the page to pinch */
+.floe-zoom { position: relative; overflow: hidden; }
+.floe-zoom.can-zoom { touch-action: pan-y; }
+.floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
+.floe-zoom.zoomed:active { cursor: grabbing; }
+/* An img is laid out shrunk to the frame, as the whole, and scaled from its top left, as the script's sums take it */
+.floe-zoom > img { display: block; max-width: 100%; height: auto; transform-origin: 0 0; }
+.floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
+/* display: flex above wins over the browser's [hidden] */
+.floe-zoom-tools[hidden] { display: none; }
+.floe-zoom-tools span { color: var(--muted); margin-right: auto; }
+@media (max-width: 640px) { .floe-zoom-tools span { display: none; } }
+/* Buttons do nothing on paper */
+@media print { .floe-zoom-tools { display: none; } }
+/* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */
+.floe-zoom-tools button {
+  --floe-tool-alpha: 100%; min-width: 2.2rem; padding: 2px 8px; font: inherit; border-radius: var(--radius-small); cursor: pointer;
+  color: color-mix(in srgb, var(--fg) var(--floe-tool-alpha), transparent); background: color-mix(in srgb, var(--surface) var(--floe-tool-alpha), transparent);
+  border: 1px solid color-mix(in srgb, var(--line) var(--floe-tool-alpha), transparent);
+}
+.floe-zoom-tools button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.floe-zoom-tools button:disabled { --floe-tool-alpha: 40%; cursor: default; }
