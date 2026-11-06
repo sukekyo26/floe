@@ -137,47 +137,61 @@ func (l *layout) throughs(p path) []rect {
 	return out
 }
 
-// sharesLabel reports whether p may run through r: r is the label of another edge written by hand, the two have an end
-// at one part, and wherever p meets r both run from side to side of it on one line, unless the other edge's runs meet
-// a label of p, when neither label could be told from the other. Only the final check asks: an edge floe moves still
-// keeps off every label.
-// LIMIT: the label of a shared run reads as either edge's, as its writer asked: refuse it if that comes to mislead.
-// LIMIT: runs across and down, on exactly one line, along one run of the label's edge: a slanting run, or a label over
-// a point of via, is refused. An edge floe moves off the label leaves the other refused, in the words of any edge
-// through a label, not saying the move: a via keeps it there. Say so if writers come to miss that.
+// sharesLabel reports whether p may run through r: r is the label of another edge written by hand, the two go to one
+// part named alike or come from one, p's ends stand off r, and wherever p meets r both run on one line from side to
+// side of it, unless the other edge's runs meet a label of p, when neither label could be told from the other. Only
+// the final check asks: an edge floe moves still keeps off every label.
+// LIMIT: the label of a shared run reads as either edge's, as its writer asked. Refuse it if that comes to mislead.
+// LIMIT: edges from one part that meet, share a run and part again pass too, though no join or parting. Refuse them if
+// their labels come to mislead.
+// LIMIT: only runs across and down on exactly one line, along one run of the label's edge: a slanting run, or a label
+// over a point of via, is refused. Take them in if writers come to need them.
+// LIMIT: a label left by an edge floe moves off it refuses the other in the usual words, not saying the move: a via
+// keeps the edge there. Say the move if writers come to miss that.
 func (l *layout) sharesLabel(p path, r rect) bool {
 	i := slices.Index(l.labels, r)
-	at := slices.IndexFunc(l.paths, func(o path) bool { return i >= 0 && o.own == i })
+	if i < 0 {
+		return false
+	}
+	at := slices.IndexFunc(l.paths, func(o path) bool { return o.own == i })
 	if at < 0 {
 		return false
 	}
 	own := l.paths[at]
-	if !p.endsAtOnePart(own) || (p.own >= 0 && own.runsThrough(l.labels[p.own])) {
+	if !p.sameWay(own) || (p.own >= 0 && own.runsThrough(l.labels[p.own])) {
 		return false
 	}
-	return !slices.ContainsFunc(p.segs, func(s seg) bool {
+	return p.endsOff(r) && !slices.ContainsFunc(p.segs, func(s seg) bool {
 		return crossedBy(s, r) && !slices.ContainsFunc(own.segs, func(o seg) bool { return alongAcross(s, o, r) })
 	})
 }
 
-// endsAtOnePart reports whether p and q have an end at one part named: never an edge of a graph or tree, ending at
-// points.
-func (p path) endsAtOnePart(q path) bool {
-	return slices.ContainsFunc(p.ends[:], func(n string) bool { return n != "" && slices.Contains(q.ends[:], n) })
+// sameWay reports whether p and q go to one name or come from one: never an edge of a graph or tree, ending at points.
+func (p path) sameWay(q path) bool {
+	return (p.ends[0] != "" && p.ends[0] == q.ends[0]) || (p.ends[1] != "" && p.ends[1] == q.ends[1])
 }
 
-// alongAcross reports whether s and o lie on one line and each runs from side to side of r, as crossedBy measures it.
+// alongAcross reports whether s and o lie on one line, s from side to side of r, turns outside it, and o too as crossedBy
+// measures it.
 func alongAcross(s, o seg, r rect) bool {
 	a := runAlong(s)
 	start, size := r.x, r.w
 	if a == 1 {
 		start, size = r.y, r.h
 	}
-	across := func(q seg) bool {
+	across := func(q seg, past float64) bool {
 		return q[1-a] == s[1-a] && q[3-a] == s[1-a] &&
-			min(q[a], q[a+2]) <= start+1 && max(q[a], q[a+2]) >= start+size-1
+			min(q[a], q[a+2]) <= start-past && max(q[a], q[a+2]) >= start+size+past
 	}
-	return across(s) && across(o)
+	return across(s, 0) && across(o, -1)
+}
+
+// endsOff reports whether p's two ends stand off r by the longest marker's length, so that no marker hides behind it.
+func (p path) endsOff(r rect) bool {
+	m := longestMark()
+	off := func(x, y float64) bool { return x <= r.x-m || x >= r.x+r.w+m || y <= r.y-m || y >= r.y+r.h+m }
+	first, last := p.segs[0], p.segs[len(p.segs)-1]
+	return off(first[0], first[1]) && off(last[2], last[3])
 }
 
 // canvas is the canvas as a rect, for what must stay within it.

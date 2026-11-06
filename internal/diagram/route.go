@@ -674,6 +674,15 @@ func markLength(kind string) float64 {
 	return 0
 }
 
+// longestMark is the length of the longest marker.
+func longestMark() float64 {
+	longest := 0.0
+	for _, m := range markers {
+		longest = max(longest, m.W)
+	}
+	return longest
+}
+
 // loose is a run of an edge that floe places, not where it is written: the run from pts[i] to pts[i+1], across (at
 // one y) or down (at one x), which may move within lo to hi; ok false for none.
 type loose struct {

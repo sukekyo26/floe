@@ -521,6 +521,33 @@ func TestEdgeSharedLabel(t *testing.T) {
 		{name: "half off the line", parts: ac + "  - edge: { from: b, to: c, fromSide: right, toSide: left, via: [[120, 135], [120, 85.5], [280, 85.5], [280, 85]] }\n", refused: bc},
 		{name: "an edge with no part in common", parts: abc + "  - box: { name: d, x: 300, y: 170, w: 60, h: 30, rows: [d] }\n  - edge: { from: a, to: c, fromSide: right, toSide: left, via: [[120, 35], [120, 85]], label: L, at: [200, 85] }\n  - edge: { from: b, to: d, fromSide: right, toSide: left, via: [[120, 135], [120, 85], [260, 85], [260, 185]] }\n", refused: "edge b→d " + told},
 		{name: "ending at points", parts: ac + "  - edge: { from: [130, 85], to: [270, 85] }\n", refused: "edge [130,85]→[270,85] " + told},
+		{
+			name:    "points alike name no part",
+			parts:   "  - edge: { from: [20, 85], to: [300, 85], label: L, at: [200, 85] }\n  - edge: { from: [30, 85], to: [290, 85] }\n",
+			refused: "edge [30,85]→[290,85] " + told,
+		},
+		{
+			name: "one going to the part the other comes from",
+			parts: abc + "  - edge: { from: a, to: c, fromSide: right, toSide: left, via: [[120, 35], [120, 85]], label: L, at: [200, 85] }\n" +
+				"  - edge: { from: c, to: b, fromSide: left, toSide: right, via: [[120, 85], [120, 135]] }\n",
+			refused: "edge c→b " + told,
+		},
+		{
+			name:  "ending off the label by the longest marker",
+			parts: ac + "  - edge: { from: a, to: [233, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n",
+			want:  "edge a→c M80,35 H120 V85 H300\nedge a→[233,85] M80,35 H120 V85 H233",
+		},
+		{
+			name: "turning beside the label",
+			parts: abc + "  - edge: { from: a, to: c, fromSide: right, toSide: left, via: [[120, 35], [120, 85]], label: L, at: [130, 85] }\n" +
+				"  - edge: { from: b, to: c, fromSide: right, toSide: left, " + via + " }\n",
+			want: "edge a→c M80,35 H120 V85 H300\nedge b→c M80,135 H120 V85 H300",
+		},
+		{name: "ending short of the longest marker", parts: ac + "  - edge: { from: a, to: [232, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n", refused: told},
+		{name: "starting short of the longest marker", parts: ac + "  - edge: { from: [170, 85], to: c, toSide: left }\n", refused: told},
+		{name: "its arrow part hidden", parts: ac + "  - edge: { from: a, to: [209, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n", refused: told},
+		{name: "ending just inside", parts: ac + "  - edge: { from: a, to: [208, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n", refused: told},
+		{name: "starting just inside", parts: ac + "  - edge: { from: [192, 85], to: c, toSide: left }\n", refused: told},
 		{name: "its arrow hidden", parts: ac + "  - edge: { from: a, to: [200, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n", refused: told},
 		{name: "its start hidden", parts: ac + "  - edge: { from: [200, 85], to: c, toSide: left }\n", refused: told},
 		{name: "wholly hidden", parts: ac + "  - edge: { from: [195, 85], to: [205, 85] }\n", refused: told},
