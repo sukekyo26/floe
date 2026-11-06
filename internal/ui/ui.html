@@ -18,7 +18,7 @@
     /* What is new to the viewer, and a link whose file is gone */
     --new: #2558c4; --new-soft: #eaf1fd; --chg: #8a6100; --chg-soft: #fdf3d6;
     /* A task waiting for its reader */
-    --wait: #b4441a;
+    --wait: #b4441a; --wait-soft: #fbece4;
     /* Words gone and added between two versions: on their line's ground, and marked within it */
     --del: #a32820; --del-soft: #fbeae8; --del-mark: #f6d3cf;
     --ins: #0f6b45; --ins-soft: #e6f6ed; --ins-mark: #c9ebd8;
@@ -468,7 +468,7 @@
     flex: none; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 0.5rem;
     font-size: var(--text-label); color: var(--fg); background: var(--subtle); border: 0; border-radius: 999px;
   }
-  .tagpill:hover { box-shadow: inset 0 0 0 1px var(--fg); }
+  button.tagpill:hover { box-shadow: inset 0 0 0 1px var(--fg); }
   /* A tags field's names, as the row's menu looks: a popover in the top layer, so that no dialog or box cuts it off */
   .suggest {
     position: fixed; inset: auto; margin: 0; display: grid; gap: 1px; max-height: 14rem; overflow-y: auto; padding: var(--menu-pad);
@@ -806,6 +806,34 @@
   }
   .shell.tasks-empty .shelf, .shell.tasks-empty #shelf-grip, .shell.tasks-empty #shelf-show, .shell.tasks-empty .lhead, .shell.tasks-empty .pins, .shell.tasks-empty .listcol > .col-foot { display: none; }
   .shell.tasks-empty { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  /* A task's page: the column of rows and the page beside it, as the page list has them, with no shelf */
+  .shell.task-page .shelf, .shell.task-page #shelf-grip, .shell.task-page #shelf-show, .shell.task-page .lhead { display: none; }
+  .shell.task-page { grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  @media not (max-width: 70rem) {
+    .shell.task-page { grid-template-columns: var(--list-width) minmax(0, 1fr); }
+    .shell.task-page.list-closed { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 56rem) { .shell.task-page { grid-template-columns: minmax(0, 1fr); } }
+  .shell.task-page.shelf-closed .listcol > .col-foot { padding-left: var(--foot-pad); }
+  .shell.task-page #list-show { left: var(--foot-pad); }
+  .shell.task-none #read-blank { display: none; }
+  .shell.task-missing { grid-template-columns: minmax(0, 1fr); }
+  .shell.task-missing .reader, .shell.task-missing #list-grip, .shell.task-missing .listcol > .col-foot { display: none; }
+  .thead { flex: none; display: grid; gap: 0.35rem; padding: 0.5rem 1rem 0.65rem; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .ttop { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .up { justify-self: start; display: inline-flex; align-items: center; gap: 0.15rem; margin-left: -0.25rem; font-size: var(--text-small); color: var(--muted); text-decoration: none; }
+  .up:hover { color: var(--fg); text-decoration: underline; }
+  .up svg { width: 14px; height: 14px; }
+  .btn.tarc { height: auto; padding: 0.1rem 0.5rem; font-size: var(--text-label); }
+  .thead h2 { margin: 0; font: 700 1rem/1.4 var(--body); }
+  .thead h2 .tname { font-size: var(--text); }
+  .tstate { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.6rem; font-size: var(--text-small); color: var(--muted); }
+  .tstate time { font: var(--text-label) var(--mono); }
+  .tstate .proj { margin-left: auto; font-size: var(--text-label); }
+  select.ver-pick.st { flex: none; font-weight: 700; }
+  select.st.waiting { color: var(--wait); background: var(--wait-soft); border-color: var(--wait); }
+  select.st.doing { color: var(--chg); background: var(--chg-soft); border-color: var(--chg); }
+  select.st.done { color: var(--ins); background: var(--ins-soft); border-color: var(--ins); }
   .shell.tasks-failed .lhead, .shell.tasks-failed .views .n, .shell.tasks-failed .chip .n { display: none; }
   .sdot { flex: none; width: 8px; height: 8px; margin-inline: calc((var(--shelf-mark) - 8px) / 2); border-radius: 50%; }
   .sdot.waiting { background: var(--wait); }
@@ -905,6 +933,20 @@
   <section class="listcol" id="listcol">
     <div class="col-foot"><button type="button" class="icon-btn" id="list-hide" aria-expanded="true" aria-controls="listcol" title="{{.Msg "ui_list_hide"}}" aria-label="{{.Msg "ui_list_hide"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/><path fill="currentColor" stroke="none" d="M9 4h6v16H9Z"/></svg></button></div>
     <div class="list-body" id="list-body">
+      <!-- The way back stands in the markup: h may be pressed before the first answer -->
+      <div class="thead" id="task-head" hidden>
+        <div class="ttop">
+          <a class="up" id="task-up" href="/tasks" title="{{.Msg "ui_tasks_back"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{{.Msg "ui_screen_tasks"}}</a>
+          <button type="button" class="btn tarc" id="task-archive" hidden></button>
+        </div>
+        <h2 id="task-title"></h2>
+        <div class="tstate">
+          <select class="ver-pick st" id="task-state" aria-label="{{.Msg "ui_task_state"}}"><button><selectedcontent></selectedcontent></button></select>
+          <time id="task-at"></time>
+          <span id="task-link"></span>
+          <span class="proj" id="task-project"></span>
+        </div>
+      </div>
       <div class="pins" id="pins" hidden><h2>{{.Msg "ui_pins"}}</h2><span id="pin-list"></span></div>
       <div class="lhead">
         <!-- What the filters narrow the list to, in the head of the list, or of the page beside it with the list folded too -->
@@ -923,6 +965,8 @@
         </div>
       </div>
       <ul id="list"></ul>
+      <div class="state" id="task-none" hidden><strong>{{.Msg "ui_task_no_pages"}}</strong><p><code id="task-forget"></code></p></div>
+      <div class="state" id="task-missing" hidden><strong></strong><p><a href="/tasks" id="task-missing-up">{{.Msg "ui_tasks_back"}}</a></p></div>
       <div class="state" id="tasks-none" hidden><strong></strong><p><button type="button" class="link-btn" id="tasks-all">{{.Msg "ui_show_all_projects"}}</button></p></div>
       <div class="state" id="tasks-failed" hidden><strong>{{.Msg "ui_tasks_unreadable"}}</strong><p><a href="/">{{.Msg "ui_to_page_list"}}</a></p></div>
       <div class="state" id="tasks-empty" hidden>
@@ -1031,7 +1075,7 @@
     <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></svg><div><h2 id="keys-title">{{.Msg "ui_keys"}}</h2><p class="lead keys-note" id="keys-note-list">{{.Msg "ui_keys_note_list"}}</p><p class="lead keys-note" id="keys-note-frame">{{.Msg "ui_keys_note_frame"}}</p></div></div>
     <div class="keys-part" id="keys-list">
       <section><h3>{{.Msg "ui_keys_move"}}</h3><dl><dt><kbd>j</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↓</kbd></dt><dd>{{.Msg "ui_keys_next_row"}}</dd><dt><kbd>k</kbd><i>{{.Msg "ui_keys_or"}}</i><kbd>↑</kbd></dt><dd>{{.Msg "ui_keys_prev_row"}}</dd><dt><kbd>Enter</kbd></dt><dd id="keys-enter">{{.Msg "ui_keys_whole"}}</dd></dl></section>
-      <section id="keys-row"><h3>{{.Msg "ui_keys_row"}}</h3><dl><dt><kbd>x</kbd></dt><dd>{{.Msg "ui_keys_select"}}</dd><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt class="diff-go"><kbd>d</kbd></dt><dd class="diff-go">{{.Msg "ui_keys_diff"}}</dd></dl></section>
+      <section id="keys-row"><h3>{{.Msg "ui_keys_row"}}</h3><dl><dt class="select-key"><kbd>x</kbd></dt><dd class="select-key">{{.Msg "ui_keys_select"}}</dd><dt><kbd>f</kbd></dt><dd>{{.Msg "ui_view_favorites"}}</dd><dt class="diff-go"><kbd>d</kbd></dt><dd class="diff-go">{{.Msg "ui_keys_diff"}}</dd></dl></section>
       <section><h3>{{.Msg "ui_keys_open_part"}}</h3><dl><dt><kbd>/</kbd></dt><dd>{{.Msg "ui_keys_search"}}</dd><dt><kbd class="mod">Ctrl</kbd><kbd>K</kbd></dt><dd>{{.Msg "ui_keys_find"}}</dd><dt><kbd>?</kbd></dt><dd>{{.Msg "ui_keys_this"}}</dd><dt><kbd>Esc</kbd></dt><dd>{{.Msg "ui_keys_close"}}</dd></dl></section>
     </div>
     <div class="keys-part" id="keys-frame">
@@ -1199,6 +1243,10 @@
   // LIMIT: a link to it in a page stays in the page's iframe: leaveFrame, which every page holds, takes / and /a/… alone. Add it there, with the pages drawn anew, if pages come to link here
   const TASKS_PATH = '/tasks';
   const TASKS = !framed && location.pathname === TASKS_PATH;
+  // The name of the task whose page this is, on that screen; null on its list
+  const TASK_NAME = TASKS ? new URLSearchParams(location.search).get('task') : null;
+  const TASK_PAGE = TASK_NAME !== null;
+  const TASK_LIST = TASKS && !TASK_PAGE;
   // The states of a task, the server's one table (store.States)
   const STATES = {{.States}};
   // A link in the page to a frame URL moves the whole tab, on a message from the script added to the page. The sender is the sandboxed page,
@@ -1314,6 +1362,8 @@
   const LIST_KEY = 'artifacts.list';
   // The slugs of the list as it was when it opened a page whole, which j and k go through there
   const ORDER_KEY = 'artifacts.order';
+  // The task row pressed and the rows then, for the focus when the task list opens next
+  const FROM_KEY = 'artifacts.tasks.from';
   // The task list's own, as LIST_KEY: it never holds what the list's page goes by
   const TASKS_KEY = 'artifacts.tasks';
   const STATE_NAMES = STATES.map((s) => s.name);
@@ -1438,7 +1488,7 @@
     url.search = new URLSearchParams(Object.entries(state).filter(([, value]) => value));
     history.replaceState(null, '', url);
     try {
-      sessionStorage.setItem(TASKS ? TASKS_KEY : LIST_KEY, url.search);
+      sessionStorage.setItem(TASK_LIST ? TASKS_KEY : LIST_KEY, url.search);
     } catch {
       // Without storage, the way back to the list is to all of it
     }
@@ -1593,7 +1643,7 @@
   const viewLit = (value) => value === view && (value !== 'all' || picksOn() === 0);
   // A press of a view's button: lit, a view lets go of itself and All does nothing; unlit, All lets go of the view and the picks
   function pressView(value) {
-    if (TASKS) {
+    if (TASK_LIST) {
       if (value !== view) setView(value);
     } else if (value !== 'all') setView(value === view ? 'all' : value);
     else if (!viewLit('all')) refilter({ view: 'all', ...NO_PICKS });
@@ -2248,6 +2298,7 @@
   function drawReader() {
     const a = picked && items.find((x) => x.slug === picked.slug);
     if (!a) picked = null;
+    if (TASK_PAGE) layoutColumns();
     // Loaded only while it is there, as the frame's, so that a link's missing file is no 404 kept when the file is back
     readInto(a && !a.missing ? rawHref(picked) : 'about:blank');
     drawVersion(picked, a);
@@ -2489,11 +2540,11 @@
       if (!a.tags?.length) return;
       const tags = put('tags', '');
       tags.append(...a.tags.map((name) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'tagpill';
-        b.textContent = name;
+        // On a task's page there is no list of a tag to go to
+        const b = tagged(TASK_PAGE ? 'span' : 'button', 'tagpill', name);
         b.title = name;
+        if (TASK_PAGE) return b;
+        b.type = 'button';
         b.setAttribute('aria-label', t('ui_tag_filter_named', name));
         // The tag picked already, the list stays as it is (its selection too)
         b.addEventListener('click', () => { if (name !== tag) setTag(name); });
@@ -2799,6 +2850,7 @@
       editing = { ...editing, slug: changes.slug };
       // This frame's URL is the old name's, which is gone now; the page chosen beside the list is loaded under the new one
       if (was === framed) {
+        renameKept(was, changes.slug);
         location.replace(pageHref({ slug: changes.slug, v: frameAt.v }));
         return;
       }
@@ -2812,7 +2864,8 @@
   }
 
   function render() {
-    if (TASKS) renderTaskList();
+    if (TASK_PAGE) renderTaskPage();
+    else if (TASK_LIST) renderTaskList();
     else renderList();
     drawScreens();
   }
@@ -2920,6 +2973,7 @@
     li.querySelector('.lead').innerHTML = leadOf({ news: unread > 0 });
     const link = li.querySelector('.title');
     link.href = taskHref(task);
+    link.addEventListener('click', () => keepTaskRow(li));
     const projectName = task.project === NONE ? t('ui_no_project') : task.project;
     link.title = [task.name, task.title, projectName, task.url].filter(Boolean).join('\n');
     link.append(tagged('span', 'tname', task.name), task.title ?? '');
@@ -2936,14 +2990,42 @@
     return li;
   }
 
+  // Keeps the row pressed and the rows then, as the row may leave the list before it opens again
+  function keepTaskRow(li) {
+    try {
+      sessionStorage.setItem(FROM_KEY, JSON.stringify({ key: li.dataset.key, keys: [...$('list').children].map((row) => row.dataset.key) }));
+    } catch {
+      // Without storage, the list opens with no row focused
+    }
+  }
+  // The focus on the row come back to; of one gone, the next, and of the last, the one before. Once
+  // LIMIT: the row kept is of the tab, whichever way the list is opened next: the switch does as h does. Tell them apart if it comes to trouble someone
+  function focusTaskRow() {
+    let from = null;
+    try {
+      from = JSON.parse(sessionStorage.getItem(FROM_KEY));
+      sessionStorage.removeItem(FROM_KEY);
+    } catch {
+      // Storage is unavailable, or holds something else
+    }
+    if (!Array.isArray(from?.keys)) return;
+    const at = from.keys.indexOf(from.key);
+    const rows = new Map([...$('list').children].map((li) => [li.dataset.key, li]));
+    const key = [...from.keys.slice(at), ...from.keys.slice(0, at).reverse()].find((k) => rows.has(k));
+    if (key) rows.get(key).querySelector('.title').focus();
+  }
+
   // The pages pinned, which leave as they are archived, and how to pin one when none is
   // LIMIT: a folder pinned leads to the page list, where it opens (its URL), and not back here
   function drawPins() {
-    const pins = items.filter((a) => a.work?.pin && !a.archived).map((a) => {
+    const pinned = items.filter((a) => a.work?.pin && !a.archived);
+    const pins = pinned.map((a) => {
       const link = document.createElement('a');
       link.className = 'pin';
       link.classList.toggle('unseen', Boolean(a.news));
       link.href = pageHref({ slug: a.slug });
+      // j and k go through the pins, and the way back is to this list
+      link.addEventListener('click', () => keepRows(pinned.filter((x) => !x.folder).map((x) => x.slug), pinned.map((x) => x.slug)));
       link.title = a.title;
       link.innerHTML = PIN_MARK;
       link.append(tagged('span', 'pin-title', a.title));
@@ -2983,6 +3065,117 @@
     drawRows([{ entries: shown }], (task, i, rows) => rows.push(taskRow(task, i)));
     renderNews();
     syncUrl();
+    if (!cameBack) {
+      cameBack = true;
+      focusTaskRow();
+    }
+  }
+  let cameBack = false;
+
+  // The rows of a task's page, under their steps: the steps written, then those not, as they first came; before them what has no step,
+  // and last what is archived. Within each, as first published
+  // LIMIT: when a step first came is not kept: a step's oldest page says it, so that a new step on an old page comes earlier. --steps orders it
+  function taskGroups(task) {
+    const made = (a) => Date.parse(a.createdAt || a.updatedAt);
+    const steps = new Map();
+    const none = [];
+    for (const a of [...task.pages].sort((x, y) => made(x) - made(y))) {
+      if (!a.work.step) none.push(a);
+      else steps.set(a.work.step, [...(steps.get(a.work.step) ?? []), a]);
+    }
+    const written = (task.steps ?? []).filter((step) => steps.has(step));
+    const groups = [{ entries: none }];
+    for (const heading of [...written, ...[...steps.keys()].filter((step) => !written.includes(step))]) groups.push({ heading, entries: steps.get(heading) });
+    if (task.archived.length > 0) groups.push({ heading: t('ui_view_archived'), entries: [...task.archived].sort((x, y) => made(x) - made(y)) });
+    return groups;
+  }
+
+  // A browser without base-select has no :open, and its own list goes on over what is drawn
+  const selectOpen = (sel) => CSS.supports('selector(:open)') && sel.matches(':open');
+
+  // Over the rows of a task: its name, its state and how to change it, its link and the way to archive it or give it back
+  function drawTaskHead(task) {
+    $('task-title').replaceChildren(tagged('span', 'tname', task.name), task.title ?? '');
+    const sel = $('task-state');
+    // Drawn again at the next look, which may find them closed
+    if (selectOpen(sel)) drawn = '';
+    else {
+      sel.value = task.state;
+      sel.dataset.state = task.state;
+      sel.className = `ver-pick st ${task.state}`;
+    }
+    $('task-at').hidden = !task.at;
+    if (task.at) {
+      $('task-at').dateTime = task.at;
+      $('task-at').textContent = ago(task.at);
+    }
+    $('task-link').replaceChildren(...(task.url ? [xlink(task.url)] : []));
+    $('task-project').textContent = task.project === NONE ? t('ui_no_project') : task.project;
+    const archive = $('task-archive');
+    const back = task.archived.length > 0 && task.pages.length === 0;
+    archive.hidden = !(back || (task.state === 'done' && task.pages.length > 0));
+    archive.textContent = t(back ? 'ui_task_unarchive' : 'ui_task_archive');
+    archive.onclick = () => archiveTask(task, !back);
+  }
+
+  // Archives the task's pages, or gives them back: the mark of each page, as floe archive writes it, and nothing of the task
+  async function archiveTask(task, archived) {
+    const slugs = (archived ? task.pages : task.archived).map((a) => a.slug);
+    await actOnSelected(
+      (slug) => patchOne(slug, { archived }),
+      (n) => t(archived ? 'ui_archive_bulk_done' : 'ui_unarchive_bulk_done', n),
+      (n, why) => t('ui_task_arc_failed', n, why),
+      slugs,
+    );
+  }
+
+  async function changeTaskState() {
+    const sel = $('task-state');
+    // A select keeps the keys: h, j and k go on from the page
+    sel.blur();
+    const url = `/api/tasks?${new URLSearchParams({ project, task: TASK_NAME })}`;
+    try {
+      const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ state: sel.value }) });
+      if (!res.ok) throw new Error(await res.text());
+      showError('');
+    } catch (e) {
+      sel.value = sel.dataset.state;
+      showError(t('ui_state_failed', e.message));
+    }
+    await load();
+  }
+
+  // A word as a shell reads it whatever it holds: the name of a task may hold $( ) or a quote
+  const shellWord = (word) => `'${word.replaceAll("'", "'\\''")}'`;
+  let lastTask;
+
+  // A task's page. Nothing is open at first, whatever is unread: opening it reads nothing
+  function renderTaskPage() {
+    const found = tasksOf().find((x) => x.project === project && x.name === TASK_NAME);
+    const failed = Boolean(tasksRead.error);
+    if (!failed) lastTask = found;
+    // Unreadable, the task is as last read, with its pages as they are now; what is not known is not said to be missing
+    const task = failed && lastTask ? { ...lastTask, pages: found?.pages ?? [], archived: found?.archived ?? [] } : !failed && found;
+    const none = task && task.pages.length === 0 && task.archived.length === 0;
+    $('manage').classList.toggle('task-missing', !task && !failed);
+    $('manage').classList.toggle('task-none', Boolean(none));
+    $('task-head').hidden = !task;
+    $('task-missing').hidden = Boolean(task) || failed;
+    $('task-none').hidden = !none;
+    document.title = `${TASK_NAME} · floe`;
+    if (task) drawTaskHead(task);
+    else $('task-missing').querySelector('strong').textContent = t('ui_task_missing', TASK_NAME);
+    if (none) $('task-forget').textContent = `floe work --task ${shellWord(TASK_NAME)} --project ${shellWord(project === NONE ? '' : project)} --forget`;
+    drawRows(task ? taskGroups(task) : [], (a, i, rows) => {
+      const li = row(a, i, new Map());
+      // No bulk bar here: nothing to select, by box or menu
+      li.querySelector('.pick').remove();
+      li.querySelector('.menu .select').hidden = true;
+      rows.push(li);
+      if (a.folder && !a.missing && opened.has(a.slug)) treeRows(a, '', 1, rows);
+    });
+    renderNews();
+    drawReader();
   }
 
   function renderList() {
@@ -3043,13 +3236,42 @@
       // Without storage, there is none to forget
     }
   }
-  // Keeps the pages of the list as it is now, for j and k where a page is open whole: a read page leaves the view of the new
-  // ones, and they go on through the list as it was
-  function keepOrder() {
+  // What a page open whole goes by: order for j and k, shown for telling that this page is of them, and back for where it came from
+  function keepRows(order, shown) {
     try {
-      sessionStorage.setItem(ORDER_KEY, JSON.stringify(arrange(current()).filter((x) => !x.missing && !x.folder).map((x) => x.slug)));
+      sessionStorage.setItem(ORDER_KEY, JSON.stringify({ order, shown, back: location.pathname + location.search }));
     } catch {
       // Without storage, j and k go through the list the URL of the list makes
+    }
+  }
+  // Keeps the rows as drawn now, of whichever screen: a read page leaves the view of the new ones, and they go on through the list as it was
+  function keepOrder() {
+    const rows = [...$('list').children].filter((li) => li.dataset.slug && !li.classList.contains('tree'));
+    keepRows(rows.filter((li) => !li.classList.contains('folder') && !li.classList.contains('gone')).map((li) => li.dataset.slug), rows.map((li) => li.dataset.slug));
+  }
+  function keptOrder() {
+    try {
+      const kept = JSON.parse(sessionStorage.getItem(ORDER_KEY));
+      return Array.isArray(kept?.order) && Array.isArray(kept.shown) && typeof kept.back === 'string' ? kept : null;
+    } catch {
+      return null;
+    }
+  }
+  // Where a page whole goes back to: the screen that opened it, or the page list
+  const keptBack = () => {
+    const kept = keptOrder();
+    return kept?.shown.includes(framed) ? kept.back : `/${savedList()}`;
+  };
+  // A page renamed whole is still of the rows that opened it
+  function renameKept(was, now) {
+    const kept = keptOrder();
+    if (!kept) return;
+    const named = (slug) => (slug === was ? now : slug);
+    const back = kept.back;
+    try {
+      sessionStorage.setItem(ORDER_KEY, JSON.stringify({ order: kept.order.map(named), shown: kept.shown.map(named), back }));
+    } catch {
+      // Without storage, there was none to keep
     }
   }
 
@@ -3057,13 +3279,8 @@
   // otherwise (from the URL, the search modal), the list it was last on, or if it is not on that all entries of its kind, as first found
   let frameOrder;
   function pagesInOrder(a) {
-    let kept = null;
-    try {
-      kept = JSON.parse(sessionStorage.getItem(ORDER_KEY));
-    } catch {
-      // Storage is unavailable, or holds something else
-    }
-    if (Array.isArray(kept) && kept.includes(framed)) frameOrder = kept;
+    const kept = keptOrder();
+    if (kept?.order.includes(framed)) frameOrder = kept.order;
     if (!frameOrder) {
       const openable = (state) => arrange(state).filter((x) => !x.missing && !x.folder);
       let first = openable(readState(savedList()));
@@ -3323,7 +3540,8 @@
   const COLUMNS_KEY = 'list.columns';
   const columns = { shelf: null, list: null, open: true, listOpen: true };
   // The task list has nothing but the list to fold it into; what is kept stays for the list's page
-  const listOpen = () => TASKS || columns.listOpen;
+  // A task's page keeps its rows, and its head, until a page is there to take their place
+  const listOpen = () => TASK_LIST || columns.listOpen || (TASK_PAGE && !picked);
   try {
     const saved = JSON.parse(localStorage.getItem(COLUMNS_KEY));
     if (Number.isFinite(saved?.shelf)) columns.shelf = saved.shelf;
@@ -3338,7 +3556,7 @@
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
     const within = (value, min, max) => Math.round(Math.min(Math.max(value, min), max));
     const bounds = { shelfMin: Math.round(10 * rem), shelfMax: Math.round(20 * rem), listMin: Math.round(20 * rem) };
-    const shelf = columns.open ? within(columns.shelf ?? 12.5 * rem, bounds.shelfMin, bounds.shelfMax) : 0;
+    const shelf = columns.open && !TASK_PAGE ? within(columns.shelf ?? 12.5 * rem, bounds.shelfMin, bounds.shelfMax) : 0;
     bounds.listMax = Math.max(bounds.listMin, Math.round(innerWidth - shelf - 32.5 * rem));
     return { ...bounds, shelf, list: within(columns.list ?? 25.5 * rem, bounds.listMin, bounds.listMax) };
   }
@@ -3354,6 +3572,7 @@
     $('list-grip').hidden = !listOpen();
     $('shelf-show').hidden = columns.open;
     $('list-show').hidden = listOpen();
+    $('list-hide').hidden = TASK_PAGE && !picked;
     // In the head of what is left: the list's, or the page's beside it
     const head = listOpen() ? document.querySelector('.lhead') : $('read-head');
     if ($('shelf-what').parentElement !== head) head.prepend($('shelf-what'));
@@ -3869,7 +4088,8 @@
     if (found) drawActions($('frame-actions'), a, frameAt);
     drawVersion(found ? frameAt : null, a);
     const list = `/${savedList()}`;
-    for (const id of ['back', 'notfound-back']) $(id).href = list;
+    $('back').href = keptBack();
+    $('notfound-back').href = list;
     document.querySelector('.brand').href = list;
     // Load only once found (so a missing page's 404 never flashes). Once loaded, src stays, keeping navigation inside the iframe.
     // The fragment goes with it, so that /a/<slug>/#part opens at that part of the page
@@ -3901,7 +4121,7 @@
     }
     selected.delete(a.slug);
     if (a.slug === framed) {
-      location.href = `/${savedList()}`;
+      location.href = keptBack();
       return;
     }
     toast(t(`ui_${removal(a)}_done`, a.title));
@@ -3953,7 +4173,7 @@
         const was = sameListings(sideListings);
         await readSide();
         if (sameListings(sideListings) !== was) drawn = '';
-      } else if (!framed && !TASKS && await readOpen()) drawn = '';
+      } else if (!framed && !TASK_LIST && await readOpen()) drawn = '';
     } catch (e) {
       loadFailed = true;
       showError(t('ui_load_failed', e.message));
@@ -4225,6 +4445,28 @@
     // Pressed, the page chosen opens whole
     $('read-title').addEventListener('click', keepOrder);
     if (TASKS) {
+      $('find-open').classList.add('shown');
+      $('to-tasks').setAttribute('aria-current', 'page');
+    } else {
+      $('to-list').setAttribute('aria-current', 'page');
+    }
+    if (TASK_PAGE) {
+      $('manage').classList.add('task-page');
+      $('task-up').href = `${TASKS_PATH}${savedTasks()}`;
+      $('task-missing-up').href = $('task-up').href;
+      $('task-state').append(...STATES.map(({ name }) => {
+        const o = tagged('option', '', t(`ui_state_${name}`));
+        o.value = name;
+        return o;
+      }));
+      $('task-state').addEventListener('change', changeTaskState);
+      for (const e of $('keys').querySelectorAll('.select-key')) e.hidden = true;
+      const h = tagged('dt');
+      h.append(tagged('kbd', '', 'h'));
+      $('keys-enter').after(h, tagged('dd', '', t('ui_tasks_back')));
+      KEYS.h = () => $('task-up').click();
+    }
+    if (TASK_LIST) {
       // The shelf's views are the task's states, and only they and the project narrow it
       for (const b of document.querySelectorAll('.views button[data-view]:not([data-view="archived"])')) b.remove();
       document.querySelector('.views button[data-view="archived"]').before(...STATES.map(({ name }) => {
@@ -4236,13 +4478,9 @@
       }));
       for (const id of ['shelf-kinds', 'shelf-templates', 'shelf-tags']) $(id).remove();
       $('manage').classList.add('tasks');
-      $('find-open').classList.add('shown');
       $('keys-row').hidden = true;
       $('keys-enter').textContent = t('ui_keys_open_task');
-      $('to-tasks').setAttribute('aria-current', 'page');
       $('tasks-all').addEventListener('click', () => refilter({ project: '' }));
-    } else {
-      $('to-list').setAttribute('aria-current', 'page');
     }
     // On the task list it leads to the list of them
     if (!TASKS) $('news').addEventListener('click', (e) => {
@@ -4356,6 +4594,7 @@
     document.addEventListener('keydown', (e) => {
       if (!plainKey(e) || e.key !== 'Enter' || !e.target.matches('#list a.title[href]:not([aria-expanded])')) return;
       e.preventDefault();
+      if (TASK_LIST) keepTaskRow(e.target.closest('li'));
       keepOrder();
       location.href = wholeHref(e.target);
     });
