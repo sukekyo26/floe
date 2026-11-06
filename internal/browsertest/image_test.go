@@ -121,6 +121,10 @@ func TestUIImageZoom(t *testing.T) { //nolint:paralleltest // the browser tests 
 	if got := b.eval(frameOf("A") + ".offsetHeight"); got != height {
 		t.Errorf("at actual size: the frame is %s px high, want %s", got, height)
 	}
+	line := `getComputedStyle(document.querySelector('img[alt=A]')).borderTopColor`
+	if got := b.eval(line); got != "rgba(0, 0, 0, 0)" {
+		t.Errorf("at actual size: the image's line is %s, want it dropped", got)
+	}
 
 	// The arrow keys move the view by 40 px, and 0 shows the whole
 	b.eval(frameOf("A") + ".focus(), 1")
@@ -133,6 +137,9 @@ func TestUIImageZoom(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.pressKey("0")
 	if got := b.eval(zoomState("A")); got != offers {
 		t.Errorf("0 pressed: %s, want %s", got, offers)
+	}
+	if got := b.eval(line); got == "rgba(0, 0, 0, 0)" {
+		t.Error("shown whole: the image's line is still dropped")
 	}
 
 	// A mouse moves a zoomed image, and the browser does not drag the image away
