@@ -833,6 +833,8 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	face := func(id string) string {
 		t.Helper()
 
+		// As it rests: the pointer on it after a press, its ground would be that of a hover
+		b.point(0, 0)
 		return b.settled(`(() => {
 			const s = getComputedStyle(document.getElementById(` + js(id) + `)), c = document.createElement('i');
 			c.style.color = ` + panel + `; document.body.append(c);
