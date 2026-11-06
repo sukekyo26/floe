@@ -72,6 +72,8 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	const fields = "['set-task', 'set-step', 'set-url'].map((id) => document.getElementById(id).value).join(' / ') + ' / out ' + !document.getElementById('set-out').hidden"
 	save := func() {
 		t.Helper()
+		// A new task asks a title: one is given where none is typed, the asking itself tested apart
+		b.eval("const ti = document.getElementById('set-task-title'); if (!ti.closest('[hidden]') && !ti.value) ti.value = 'a title'")
 		b.eval("document.getElementById('set').requestSubmit()")
 		b.until("saved", "!document.getElementById('set-dialog').open")
 	}
@@ -142,10 +144,11 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	field("set-task", "")
 	b.eval("document.getElementById('set').requestSubmit()")
 	say("an empty name", "document.getElementById('set-dialog').open + ' ' + document.getElementById('set-task').validity.valueMissing + ' ' + document.querySelectorAll('.toast').length")
+	// Of spaces, the dialog stops it, the spaces kept, and sends nothing
 	field("set-task", "   ")
+	field("set-task-title", "a title")
 	b.eval("document.getElementById('set').requestSubmit()")
-	b.until("the refusal", "!document.getElementById('set-error').hidden")
-	say("a name of spaces", "document.getElementById('set-dialog').open + ' ' + document.getElementById('set-error').textContent + ' ' + document.querySelectorAll('.toast').length")
+	say("a name of spaces", "document.getElementById('set-dialog').open + ' ' + document.getElementById('set-task').validationMessage + ' ' + document.getElementById('set-task').value.length + ' ' + document.querySelectorAll('.toast').length")
 	if got := work("b"); got != was {
 		t.Errorf("an empty name changed the page: %s", got)
 	}
@@ -334,7 +337,7 @@ a URL changed: #1 todo design https://example.com/mine; #2 todo build ; #3 todo 
 a URL emptied: #1 todo design ; #2 todo build ; #3 todo first 
 refused: true Could not save: "javascript:alert(1)" is not an http or https URL
 an empty name: true true 0
-a name of spaces: true Could not save: a task needs a name 0
+a name of spaces: true Write more than spaces 3 0
 the page refused: #1 todo design ; #2 todo review ; #3 todo first  | {"task":"#2","step":"build"}
 saved again: {"task":"#2","step":"review"}
 off: {"pin":true}
@@ -344,7 +347,7 @@ as it opens: false
 a suggestion pressed: #2 / design / https://example.com/a/two / out true
 it stays closed: false
 offered of #9: Make #9 a new task
-offered of #: #1· To do, #2· To do, #3· To do, Make # a new task
+offered of #: #1· To do, #2· To do, #3 a title· To do, Make # a new task
 a URL changed, then the name: #2 / design / https://example.com/a/two / out true
 saved: #1 todo design https://example.com/a/one; #2 todo review https://example.com/a/two; #3 todo first 
 the URL alone: #1 todo later https://example.com/a/url-only; #2 todo review https://example.com/a/two; #3 todo first  | {"task":"#1","step":"design"}
@@ -355,8 +358,8 @@ pinned, told: Pinned “T b” to the task list
 refused, told: Could not save: HTTP 500: no
 whole: #1 / design / https://example.com/a/whole / out true
 on its own task: true 0
-#1· To do, #2· To do, #3· To do, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
-#1· To do, #2· To do, #3· To do, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
+#1· To do, #2· To do, #3 a title· To do, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
+#1· To do, #2· To do, #3 a title· To do, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
 put on a task: Put on #5 (Done) /tasks?project=proj&task=%235
 its state as it was: done
 the state written: #1 todo later https://example.com/a/whole; #2 todo review https://example.com/a/two; #3 todo first 

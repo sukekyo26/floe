@@ -135,6 +135,8 @@ type TaskEdit struct {
 	Steps *[]string
 	// An empty Parent takes it off.
 	Parent *string
+	// New, when said, is whether the writer takes the task to be new: refused, as Conflict, when it is there, or not.
+	New *bool
 }
 
 func validState(name string) bool {
@@ -295,6 +297,31 @@ func checkParent(project string, rows map[string]Task, name string, ed TaskEdit)
 	return nil
 }
 
+// checkThere refuses a write that takes the task name to be new while it is there, or there while it is not, as a
+// screen read before it says: there is on the task list, of a row or of a page on it, an archived one too, as the
+// management page's tasksOf has it. The pages are read only for a name of no row. The pages are written under the same
+// lock.
+func (s *Store) checkThere(project string, rows map[string]Task, name string, ed TaskEdit) error {
+	if ed.New == nil {
+		return nil
+	}
+	_, there := rows[name]
+	if !there {
+		count, _, err := s.pagesOfTask(project, name)
+		if err != nil {
+			return err
+		}
+		there = count > 0
+	}
+	switch {
+	case *ed.New && there:
+		return conflict(usererr.New("store_task_there", name))
+	case !*ed.New && !there:
+		return conflict(usererr.New("store_task_gone", name))
+	}
+	return nil
+}
+
 // stepsOf is steps as a task keeps them: each trimmed, without the empty and a name twice, in the order given; nil for
 // none.
 func stepsOf(steps []string) []string {
@@ -343,6 +370,9 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	defer unlock()
 	all, err := s.ReadTasks()
 	if err != nil {
+		return err
+	}
+	if err = s.checkThere(project, all[project], name, ed); err != nil {
 		return err
 	}
 	if err = checkParent(project, all[project], name, ed); err != nil {

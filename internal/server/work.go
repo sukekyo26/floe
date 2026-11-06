@@ -15,6 +15,7 @@ type TaskEdit struct {
 	URL    *string   `json:"url,omitzero"`
 	Steps  *[]string `json:"steps,omitzero"`
 	Parent *string   `json:"parent,omitzero"`
+	New    *bool     `json:"new,omitzero"`
 }
 
 // tasks answers the tasks.

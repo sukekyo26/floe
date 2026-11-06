@@ -107,9 +107,9 @@ func TestWorkRefused(t *testing.T) {
 		{"p", "#1", store.TaskEdit{URL: ptr("https:")}, `"https:" is not an http or https URL`},
 		{"", "#1", store.TaskEdit{}, `a task needs its project: "/" for none`},
 		{"  ", "#1", store.TaskEdit{}, `a task needs its project: "/" for none`},
-		{"p", " ", store.TaskEdit{}, "a task needs a name"},
-		{"\xff", "#1", store.TaskEdit{}, "a task's project and name must be UTF-8"},
-		{"p", "\xff", store.TaskEdit{}, "a task's project and name must be UTF-8"},
+		{"p", " ", store.TaskEdit{}, "a task needs an ID"},
+		{"\xff", "#1", store.TaskEdit{}, "a task's project and ID must be UTF-8"},
+		{"p", "\xff", store.TaskEdit{}, "a task's project and ID must be UTF-8"},
 	} {
 		err := s.EditTask(c.project, c.name, c.ed)
 		if err == nil || !strings.Contains(told(err, root), c.want) {
@@ -376,8 +376,8 @@ func TestWorkParent(t *testing.T) {
 		{"#4", "#2", "task #2 has a parent itself (#1), so it cannot be a parent"},
 		{"#1", "#2", "task #2 has a parent itself (#1), so it cannot be a parent"},
 		{"#1", "#9", "task #1 has child tasks, such as #2, so it cannot have a parent"},
-		{"#4", "  ", "a task needs a name"},
-		{"#4", "\xff", "a task's project and name must be UTF-8"},
+		{"#4", "  ", "a task needs an ID"},
+		{"#4", "\xff", "a task's project and ID must be UTF-8"},
 	} {
 		err := s.EditTask("p", c.name, store.TaskEdit{Parent: &c.parent})
 		if err == nil || !strings.Contains(told(err, root), c.want) {
@@ -519,4 +519,76 @@ func TestWorkParentByHand(t *testing.T) {
 			t.Errorf("forget %s: %v", name, err)
 		}
 	}
+}
+
+// A write that says whether it takes the task to be new is refused, as a Conflict that writes nothing, when the task is
+// there or not otherwise: there is of a row, or of a page on it with no row. One that says nothing is as the CLI's.
+func TestWorkNew(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	yes, no := true, false
+	if err := s.EditTask("p", "#1", store.TaskEdit{Title: ptr("one")}); err != nil {
+		t.Fatal(err)
+	}
+	pageOn(t, s, root, "kept", "p", true)
+	refused := func(name string, ed store.TaskEdit, want string) {
+		t.Helper()
+		before, err := s.ReadTasks()
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = s.EditTask("p", name, ed)
+		if _, conflict := errors.AsType[*store.Conflict](err); !conflict || !strings.Contains(told(err, root), want) {
+			t.Errorf("%s %+v = %v, want a Conflict of %s", name, ed, err, want)
+		}
+		if after, _ := s.ReadTasks(); fmt.Sprint(after) != fmt.Sprint(before) {
+			t.Errorf("%s written: %v", name, after)
+		}
+	}
+	// #1 of a row, and pageOn's task #1 of p: drop the row to have a task of a page alone.
+	refused("#1", store.TaskEdit{New: &yes, Title: ptr("other")}, "task #1 is there already")
+	if err := s.ForgetTask("p", "#1"); err == nil {
+		t.Fatal("a task with a page was forgotten")
+	}
+	refused("#9", store.TaskEdit{New: &no, Parent: ptr("#1")}, "task #9 is no longer there")
+	if err := s.EditTask("p", "#2", store.TaskEdit{New: &yes, Title: ptr("two")}); err != nil {
+		t.Errorf("a new one: %v", err)
+	}
+	if err := s.EditTask("p", "#2", store.TaskEdit{New: &no, Title: ptr("still")}); err != nil {
+		t.Errorf("one there: %v", err)
+	}
+	if err := s.EditTask("p", "#2", store.TaskEdit{Title: ptr("by the CLI")}); err != nil || taskTitle(t, s, "#2") != "by the CLI" {
+		t.Errorf("one with no word of new: %v", err)
+	}
+}
+
+// A task of pages alone, of no row, is there.
+func TestWorkNewOfPages(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	yes, no := true, false
+	pageOn(t, s, root, "kept", "p", true)
+	err := s.EditTask("p", "#1", store.TaskEdit{New: &yes, Title: ptr("t")})
+	if _, conflict := errors.AsType[*store.Conflict](err); !conflict {
+		t.Errorf("new, of a page alone: %v", err)
+	}
+	if all, _ := s.ReadTasks(); len(all) != 0 {
+		t.Errorf("written: %v", all)
+	}
+	if err = s.EditTask("p", "#1", store.TaskEdit{New: &no, Parent: ptr("")}); err != nil {
+		t.Errorf("there, of a page alone: %v", err)
+	}
+}
+
+func taskTitle(t *testing.T, s *store.Store, name string) string {
+	t.Helper()
+	all, err := s.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return all["p"][name].Title
 }

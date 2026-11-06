@@ -147,6 +147,10 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	child := func(name, title string) {
 		t.Helper()
+		// A new task asks a title: one is given where none is, the asking itself tested apart
+		if title == "" {
+			title = "a title"
+		}
 		b.eval("document.getElementById('child-task').value = " + js(name) + "; document.getElementById('child-title').value = " + js(title) + "; document.getElementById('child').requestSubmit()")
 	}
 	open("#99")
@@ -200,11 +204,11 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Helper()
 		press("task-child")
 		b.until("the dialog", "document.getElementById('child-dialog').open")
-		b.eval("document.getElementById('child-task').value = " + js(name) + "; document.getElementById('child-title').value = " + js(title))
+		b.eval("document.getElementById('child-task').value = " + js(name) + "; document.getElementById('child-task').dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('child-title').value = " + js(title))
 		press("child-submit")
 	}
 	open("#99")
-	write("#103", "")
+	write("#103", "made")
 	b.until("saved", "!document.getElementById('child-dialog').open")
 	b.until("its row", "document.querySelector('#task-family .kin-row[data-task=\"#103\"]')")
 	if got := b.eval("document.activeElement.id"); got != "task-child" {
@@ -456,6 +460,8 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 	}
 	save := func() {
 		t.Helper()
+		// A new task asks a title: one is given where none is typed, the asking itself tested apart
+		b.eval("const ti = document.getElementById('set-task-title'); if (!ti.closest('[hidden]') && !ti.value) ti.value = 'a title'")
 		b.eval("document.getElementById('set').requestSubmit()")
 		b.until("saved", "!document.getElementById('set-dialog').open")
 	}
