@@ -662,7 +662,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       const w = wrap.clientWidth, h = wrap.clientHeight;
       if (!w || !h) return;
       if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
-      else s = Math.min(Math.max(s, min()), MAX);
+      s = Math.min(Math.max(s, min()), MAX);
       const vw = w / s, vh = h / s;
       const clamp = (c, v, size) => (v >= size ? (svg ? size / 2 : v / 2) : Math.min(Math.max(c, v / 2), size - v / 2));
       cx = clamp(cx, vw, W);
@@ -850,7 +850,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       const w = wrap.clientWidth, h = wrap.clientHeight;
       if (!w || !h) return;
       if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
-      else s = Math.min(Math.max(s, min()), MAX);
+      s = Math.min(Math.max(s, min()), MAX);
       const vw = w / s, vh = h / s;
       const clamp = (c, v, size) => (v >= size ? (svg ? size / 2 : v / 2) : Math.min(Math.max(c, v / 2), size - v / 2));
       cx = clamp(cx, vw, W);
@@ -1045,7 +1045,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       const w = wrap.clientWidth, h = wrap.clientHeight;
       if (!w || !h) return;
       if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
-      else s = Math.min(Math.max(s, min()), MAX);
+      s = Math.min(Math.max(s, min()), MAX);
       const vw = w / s, vh = h / s;
       const clamp = (c, v, size) => (v >= size ? (svg ? size / 2 : v / 2) : Math.min(Math.max(c, v / 2), size - v / 2));
       cx = clamp(cx, vw, W);
@@ -1231,7 +1231,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
       const w = wrap.clientWidth, h = wrap.clientHeight;
       if (!w || !h) return;
       if (fitted) [s, cx, cy] = [fit(), W / 2, H / 2];
-      else s = Math.min(Math.max(s, min()), MAX);
+      s = Math.min(Math.max(s, min()), MAX);
       const vw = w / s, vh = h / s;
       const clamp = (c, v, size) => (v >= size ? (svg ? size / 2 : v / 2) : Math.min(Math.max(c, v / 2), size - v / 2));
       cx = clamp(cx, vw, W);
