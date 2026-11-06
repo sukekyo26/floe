@@ -748,9 +748,9 @@
     .shelf { grid-column: 1 / -1; display: block; border-right: 0; border-bottom: 1px solid var(--line); }
     .shelf-body, .shelf-body:is(:hover, :focus-within) { display: block; overflow: visible; padding: 0.6rem 0.75rem; }
     .shelf-body > .shelf-more { display: none; }
-    /* Positioned, for the labels kept for screen readers to scroll with the row and not widen the page */
-    .shelf .views { position: relative; display: flex; align-items: center; gap: 5px; overflow: auto hidden; padding: 4px; margin: -4px; scrollbar-width: none; }
-    .shelf .views::-webkit-scrollbar { display: none; }
+    /* The row folds, so that every view and the way to the filters show without a scroll that hides them. Positioned, for the labels kept
+       for screen readers to stay in it and not widen the page */
+    .shelf .views { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 4px; margin: -4px; }
     .shelf .views button {
       flex: none; width: auto; gap: 0.3rem; padding: 0.2rem 0.55rem; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; white-space: nowrap;
     }
@@ -760,7 +760,7 @@
     .shelf .views button[aria-pressed="true"], #narrow-filter.narrowed { color: var(--on-ink); background: var(--ink); border-color: var(--ink); box-shadow: none; }
     .shelf .views button[aria-pressed="true"] .n, .shelf .views [data-view="archived"][aria-pressed="true"] svg, #narrow-filter.narrowed svg { color: var(--on-ink); }
     .shelf .views button .n { margin-left: 0; }
-    #narrow-filter { display: inline-flex; }
+    #narrow-filter { display: inline-flex; min-width: 0; max-width: 100%; }
     .news { display: none; }
   }
   /* One column: only the list, a row opening its page whole, with the way back */
@@ -780,8 +780,7 @@
   }
   /* The bar folds up: the search as its icon until it is reached, a page's buttons in its menu, the filter at the row's end */
   @media (max-width: 40rem) {
-    /* The views may be wider than the row: the way to the filters stays in reach over them */
-    #narrow-filter { position: sticky; right: 0; margin-left: auto; }
+    #narrow-filter { margin-left: auto; }
     .shelf .views [data-view="archived"] .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     /* What leaves the bar goes in its menu; a page of a folder has none, and keeps what it has in the bar */
     .framed #frame-actions:has(.more) > :is(.download, .open, .archive, .star) { display: none; }
