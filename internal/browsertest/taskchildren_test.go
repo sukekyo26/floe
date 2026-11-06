@@ -299,6 +299,42 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.eval("document.getElementById('child-dialog').close()")
 	task("proj", "#103", "--forget")
 
+	// A new child asks a title: of spaces it is stopped, the spaces kept; opened again, nothing of that is left.
+	press("task-child")
+	b.until("the dialog", "document.getElementById('child-dialog').open")
+	field("#105")
+	b.eval("document.getElementById('child-title').value = '   '")
+	press("child-submit")
+	const titleState = "(document.getElementById('child-title').validity.customError ? document.getElementById('child-title').validationMessage : '') + '|' + document.getElementById('child-title').value + '|' + document.getElementById('child-dialog').open"
+	if got := b.eval(titleState); got != "Write more than spaces|   |true" {
+		t.Errorf("a title of spaces: %q", got)
+	}
+	b.eval("document.getElementById('child-dialog').close()")
+	press("task-child")
+	b.until("the dialog", "document.getElementById('child-dialog').open")
+	if got := b.eval(titleState); got != "||true" {
+		t.Errorf("opened again: %q", got)
+	}
+	// Made meanwhile under another parent: refused as stale, read again and said so; pressed again, it is taken.
+	field("#106")
+	b.eval("document.getElementById('child-title').value = 'mine'")
+	task("proj", "#106", "--parent", "#1")
+	press("child-submit")
+	b.until("refused", "!document.getElementById('child-error').hidden")
+	if got := b.eval("document.getElementById('child-error').textContent + '|' + document.getElementById('child-note').textContent + '|' + document.getElementById('child-title').closest('label').hidden"); got != "Could not save: task #106 is there already: the tasks are read again, so check and save again|#106 becomes a child, moving from its parent #1|true" {
+		t.Errorf("made meanwhile: %q", got)
+	}
+	press("child-submit")
+	b.until("saved", "!document.getElementById('child-dialog').open")
+	if made, err = st.ReadTasks(); err != nil {
+		t.Fatal(err)
+	}
+	if got := made["proj"]["#106"]; got.Parent != "#99" || got.Title != "" {
+		t.Errorf("#106 taken: %+v", got)
+	}
+	task("proj", "#106", "--parent", "")
+	task("proj", "#106", "--forget")
+
 	// Removed by two presses and back at the list; refused, it says why and stays. A task with children has no button.
 	pressForget := func() {
 		t.Helper()
@@ -546,6 +582,13 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 		t.Errorf("written meanwhile: %q", got)
 	}
 
+	// The fields' words, and the example the catalog gives.
+	dialog("a")
+	if got := b.eval("[document.getElementById('set-task').placeholder, document.getElementById('set-parent').placeholder, document.getElementById('set-task').closest('label').textContent.trim(), document.getElementById('set-task-title').closest('label').textContent.trim()].join('|')"); got != "e.g. #128|e.g. #128|Task ID|Title" {
+		t.Errorf("the fields: %q", got)
+	}
+	b.eval("document.getElementById('set-dialog').close()")
+
 	// A new name, its parent typed and emptied, is refused nothing.
 	dialog("a")
 	field("set-task", "#7")
@@ -554,5 +597,98 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 	save()
 	if got := st.ReadMeta("a").Work.Task; got != "#7" {
 		t.Errorf("a new name: %q", got)
+	}
+
+	// A new task's title of spaces is stopped, kept; a name there hides the field and its mark, and saves.
+	shown := "(document.getElementById('set-task-title').closest('[hidden]') === null)"
+	dialog("b")
+	field("set-task", "#77")
+	field("set-task-title", "   ")
+	b.eval("document.getElementById('set').requestSubmit()")
+	if got := b.eval("document.getElementById('set-task-title').validationMessage + '|' + " + shown); got != "Write more than spaces|true" {
+		t.Errorf("a title of spaces: %q", got)
+	}
+	field("set-task", "#1")
+	if got := b.eval("document.getElementById('set-task-title').validity.customError + '|' + " + shown); got != "false|false" {
+		t.Errorf("a name there: %q", got)
+	}
+	save()
+	if got := st.ReadMeta("b").Work.Task; got != "#1" {
+		t.Errorf("saved on #1: %q", got)
+	}
+	// Opened again, the title typed before is gone, and a task there asks none.
+	dialog("b")
+	field("set-task", "#88")
+	field("set-task-title", "typed")
+	b.eval("document.getElementById('set-dialog').close()")
+	dialog("c")
+	if got := b.eval("document.getElementById('set-task-title').value + '|' + " + shown); got != "|false" {
+		t.Errorf("opened again: %q", got)
+	}
+	b.eval("document.getElementById('set-dialog').close()")
+
+	// Stale either way: refused, read again, and saved as it is now at the second press.
+	stale := func(slug, name, made, gone string, then func()) {
+		t.Helper()
+		dialog(slug)
+		field("set-task", name)
+		field("set-task-title", made)
+		then()
+		b.eval("document.getElementById('set').requestSubmit()")
+		b.until("refused", "!document.getElementById('set-error').hidden")
+		if got := b.eval("document.getElementById('set-error').textContent"); !strings.Contains(got, gone) {
+			t.Errorf("%s: %q", name, got)
+		}
+		save()
+	}
+	stale("c", "#90", "mine", "task #90 is there already: the tasks are read again", func() {
+		s.floe(t, "work", "--project", project, "--task", "#90", "--title", "theirs")
+	})
+	s.floe(t, "work", "--project", project, "--task", "#91")
+	b.eval("load()")
+	b.until("#91 read", "tasksOf().some((x) => x.name === '#91')")
+	stale("c", "#91", "", "task #91 is no longer there: the tasks are read again", func() {
+		s.floe(t, "work", "--project", project, "--task", "#91", "--forget")
+	})
+	all, err := st.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if all["proj"]["#90"].Title != "theirs" || all["proj"]["#91"].Title != "a title" {
+		t.Errorf("after the stale: %+v %+v", all["proj"]["#90"], all["proj"]["#91"])
+	}
+
+	// A page whole reads no tasks as its list is read: refused, it reads them itself.
+	b.navigate("/a/a/")
+	b.until("the bar", "document.querySelector('#frame-actions .task-set')")
+	b.eval("document.querySelector('#frame-actions .more').open = true; document.querySelector('#frame-actions .task-set').click()")
+	b.until("the dialog", "document.getElementById('set-dialog').open")
+	field("set-task", "#92")
+	field("set-task-title", "mine")
+	s.floe(t, "work", "--project", project, "--task", "#92")
+	b.eval("document.getElementById('set').requestSubmit()")
+	b.until("refused", "!document.getElementById('set-error').hidden")
+	save()
+
+	// Unreadable, nothing is asked or sent: it says so.
+	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
+	good, err := os.ReadFile(file) //nolint:gosec // G304: a path the test names
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(file, []byte("{ broken"), 0o600); err != nil { //nolint:gosec // G703: a path the test names
+		t.Fatal(err)
+	}
+	b.navigate("/?project=proj")
+	b.until("unreadable", "tasksRead.error")
+	dialog("c")
+	field("set-task", "#93")
+	b.eval("document.getElementById('set').requestSubmit()")
+	if got := b.eval("document.getElementById('set-dialog').open + '|' + !document.getElementById('set-error').hidden + '|' + document.getElementById('set-task-title').required"); got != "true|true|false" {
+		t.Errorf("unreadable: %q", got)
+	}
+	b.eval("document.getElementById('set-dialog').close()")
+	if err = os.WriteFile(file, good, 0o600); err != nil { //nolint:gosec // G703: a path the test names
+		t.Fatal(err)
 	}
 }
