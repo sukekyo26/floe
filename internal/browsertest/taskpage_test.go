@@ -421,6 +421,7 @@ func TestUITaskUp(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	}
 }
 
+//nolint:gosec // G101: where the way up goes, not a secret
 const taskUpWant = `a row: /tasks?project=proj
 reloaded: /tasks?project=proj
 j j: /tasks?project=proj

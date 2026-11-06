@@ -1890,7 +1890,7 @@
         option.id = `${box.id}-${i}`;
         option.setAttribute('role', 'option');
         option.append(tagged('span', 'names-word', one.label), ...(one.note ? [tagged('span', 'names-note', one.note)] : []));
-        option.title = option.textContent;
+        option.title = [one.label, one.note].filter(Boolean).join(' ');
         // Pressed, the field keeps its focus
         option.addEventListener('mousedown', (e) => e.preventDefault());
         option.addEventListener('click', () => choose(one.name));

@@ -170,7 +170,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	input := b.rect("document.getElementById('set-task')")
 	b.click(input.X+10, input.Y+input.Height/2)
 	b.until("the suggestions", "document.getElementById('set-task-names').matches(':popover-open')")
-	option := b.rect("[...document.getElementById('set-task-names').children].find((e) => e.textContent.startsWith('#2 '))")
+	option := b.rect("[...document.getElementById('set-task-names').children].find((e) => e.querySelector('.names-word').textContent === '#2')")
 	b.click(option.X+10, option.Y+option.Height/2)
 	b.until("it closed", "!document.getElementById('set-task-names').matches(':popover-open')")
 	say("a suggestion pressed", fields)
@@ -327,7 +327,7 @@ as it opens: false
 a suggestion pressed: #2 / design / https://example.com/a/two / out true
 it stays closed: false
 offered of #9: Make #9 a new task
-offered of #: #1, #2, #3, Make # a new task
+offered of #: #1· In progress, #2· In progress, #3· In progress, Make # a new task
 a URL changed, then the name: #2 / design / https://example.com/a/two / out true
 saved: #1 doing design https://example.com/a/one; #2 doing review https://example.com/a/two; #3 doing first 
 the URL alone: #1 doing later https://example.com/a/url-only; #2 doing review https://example.com/a/two; #3 doing first  | {"task":"#1","step":"design"}
@@ -337,4 +337,11 @@ an archived page: true 0
 pinned, told: Pinned “T b” to the task list
 refused, told: Could not save: HTTP 500: no
 whole: #1 / design / https://example.com/a/whole / out true
-on its own task: true 0`
+on its own task: true 0
+#1· In progress, #2· In progress, #3· In progress, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
+#1· In progress, #2· In progress, #3· In progress, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
+put on a task: Put on #5 (Done) /tasks?project=proj&task=%235
+its state as it was: done
+the state written: #1 doing later https://example.com/a/whole; #2 doing review https://example.com/a/two; #3 doing first 
+the same task: Saved
+up, come by the toast: /tasks?project=proj&view=doing`
