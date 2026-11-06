@@ -69,9 +69,10 @@ $XDG_DATA_HOME/floe-icons, or ~/.local/share/floe-icons.`,
 func (a *app) iconsSearchCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "search <word>...",
-		Short: "List the fetched icons whose name contains every word",
+		Short: "List the fetched icons whose name contains every word, or a short name such as alb",
 		Long: `List the fetched icons whose name contains every word, one per line as the name to give
-an icon part (aws/…) and its category, tab-separated.`,
+an icon part (aws/…) and its category, tab-separated. A common short name of a service (alb, s3,
+ecs) finds the service first, then its resources.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			at, err := a.iconsDir()

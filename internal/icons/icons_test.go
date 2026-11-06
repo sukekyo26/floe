@@ -137,7 +137,7 @@ func TestFetchAndSearch(t *testing.T) {
 		t.Errorf("Search aws/aws-lambda = %v, %v, want aws/aws-lambda", hits, serr)
 	}
 	_, err = set.Search([]string{"lambda", "nothing"})
-	if want := `floe: no icon name contains all of "lambda" "nothing"; try a shorter word`; told(err) != want {
+	if want := `floe: no icon name contains all of "lambda" "nothing"; try fewer words, or a word of the full name (floe icons search aws lists them all)`; told(err) != want {
 		t.Errorf("Search without a hit = %s, want %s", told(err), want)
 	}
 

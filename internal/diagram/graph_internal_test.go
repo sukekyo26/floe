@@ -825,8 +825,8 @@ func TestGraphRandom(t *testing.T) {
 	// Then, graphs with a label on every edge, in English and Japanese, crowding labels into every channel; then,
 	// graphs in lanes; last, graphs with level edges between boxes picked at random, with no group (plain), groups
 	// and lanes, those told only of their level edges skipped, and at least least of them laid out.
-	// LIMIT: each graph lays out several times over, its ends moved or not, and the counts keep the race job within
-	// CI's 10 minutes. Raise them if the moves come to be cheaper.
+	// LIMIT: each graph lays out several times over, its ends moved or not, and the time of the job that runs them all
+	// (Coverage gate) sets the counts. Raise them if the moves come to be cheaper.
 	for _, c := range []struct {
 		direction string
 		seed      [2]uint64
@@ -861,7 +861,7 @@ func TestGraphRandom(t *testing.T) {
 			lanes := rand.New(rand.NewPCG(c.seed[0]+30, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
 			levels := rand.New(rand.NewPCG(c.seed[0]+40, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
 			laidOut, parted, ends, short, written := 0, 0, 0, 0, 0
-			for i := range c.graphs {
+			for i := range tries(c.graphs) {
 				g := randomGraph(rnd, c.direction)
 				for k := range g.Edges {
 					if c.every {
@@ -886,22 +886,26 @@ func TestGraphRandom(t *testing.T) {
 					b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
 					t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
 				}
-				on, all := boxParts(g, l)
-				parted, ends = parted+on, ends+all
 				if fault := turnFault(g, l); fault != "" {
 					t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
 				}
-				clipped, labels := endsClipped(g, l)
-				short, written = short+clipped, written+labels
+				if !underRace {
+					on, all := boxParts(g, l)
+					parted, ends = parted+on, ends+all
+					clipped, labels := endsClipped(g, l)
+					short, written = short+clipped, written+labels
+				}
 			}
-			if 1000*short > 5*written {
-				t.Errorf("seed %v: %d of %d labels leave less than %v of their run at an end, over 0.5%%", c.seed, short, written, labelEnds)
-			}
-			if share := 100 * parted / ends; share < c.parts {
-				t.Errorf("seed %v: %d of %d ends at boxes on their equal parts, under %d%%", c.seed, parted, ends, c.parts)
-			}
-			if laidOut < c.least {
-				t.Errorf("seed %v: %d graphs with level edges laid out, fewer than %d", c.seed, laidOut, c.least)
+			if !underRace { // measured on all of the graphs
+				if 1000*short > 5*written {
+					t.Errorf("seed %v: %d of %d labels leave less than %v of their run at an end, over 0.5%%", c.seed, short, written, labelEnds)
+				}
+				if share := 100 * parted / ends; share < c.parts {
+					t.Errorf("seed %v: %d of %d ends at boxes on their equal parts, under %d%%", c.seed, parted, ends, c.parts)
+				}
+				if laidOut < c.least {
+					t.Errorf("seed %v: %d graphs with level edges laid out, fewer than %d", c.seed, laidOut, c.least)
+				}
 			}
 		})
 	}
@@ -1106,7 +1110,7 @@ func TestGraphWrittenOrder(t *testing.T) {
 	t.Parallel()
 
 	rnd := rand.New(rand.NewPCG(7, 8)) //nolint:gosec // G404: graphs to try, no secret
-	for i := range 1000 {
+	for i := range tries(1000) {
 		g, want := writtenOrder(rnd)
 		groups, err := grouped(g)
 		if err != nil || len(groups) != 1 {
@@ -1265,7 +1269,7 @@ func TestWireChannel(t *testing.T) {
 	t.Parallel()
 
 	rnd := rand.New(rand.NewPCG(9, 10)) //nolint:gosec // G404: channels to try, no secret
-	for run := range 200000 {
+	for run := range tries(200000) {
 		gr, ordered := channel(rnd)
 		gr.wire()
 		paths := make([]path, len(gr.links))
@@ -3090,7 +3094,7 @@ func TestGraphWithRandom(t *testing.T) {
 			groups := rand.New(rand.NewPCG(c.seed, 8)) //nolint:gosec // G404: graphs to try, no secret
 			levels := rand.New(rand.NewPCG(c.seed, 9)) //nolint:gosec // G404: graphs to try, no secret
 			laidOut := 0
-			for i := range 300 {
+			for i := range tries(300) {
 				g := randomGraph(rnd, c.direction)
 				if c.groups || c.lanes {
 					addGroups(groups, g)
@@ -3116,7 +3120,7 @@ func TestGraphWithRandom(t *testing.T) {
 				}
 			}
 			t.Logf("seed %d: %d laid out", c.seed, laidOut)
-			if laidOut < c.least {
+			if !underRace && laidOut < c.least {
 				t.Errorf("seed %d: %d graphs with withs laid out, fewer than %d", c.seed, laidOut, c.least)
 			}
 		})
