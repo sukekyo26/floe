@@ -315,7 +315,6 @@ var messagesEN = map[string]string{
 	"diagram_graph_level_heading": `edge %s→%s: it runs through the heading of lane "%s", which reaches into the first rank laid out right; drop level, or shorten the heading`,
 
 	// ui: the management page (ui.html), which renders them itself
-	"ui_back_to_list":         "Back to the list",
 	"ui_download":             "Download",
 	"ui_download_named":       "Download %s",
 	"ui_open_raw":             "Open the page alone in a new tab",

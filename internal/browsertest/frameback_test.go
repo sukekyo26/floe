@@ -113,8 +113,69 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.navigate("/a/a/")
 	b.size(800, 800, false)
 	b.until("the bar", "document.getElementById('frame-title').textContent")
+	b.size(360, 800, true)
+	b.until("the narrow bar", "innerWidth === 360")
+	out = append(out, "phone: "+b.eval("(document.querySelector('.brand').offsetParent !== null) + ' ' + document.querySelector('.brand').getAttribute('href') + ' ' + (document.querySelector('.brand svg').getBoundingClientRect().width === 26) + ' ' + (document.getElementById('server').getBoundingClientRect().right <= innerWidth) + ' ' + (document.documentElement.scrollWidth <= innerWidth)"))
+	b.size(800, 800, false)
 	out = append(out, "narrow: "+b.eval("(document.getElementById('back').offsetParent !== null) + ' ' + (document.getElementById('back-word').offsetParent === null) + ' ' + document.getElementById('back').getAttribute('aria-label')"))
 	b.size(1400, 800, false)
+
+	// A long title gives way: the mark and a short name stay whole.
+	longTitle := strings.Repeat("A very long title of a page ", 8)
+	if _, err := st.Edit("b", store.Edit{Title: &longTitle}); err != nil {
+		t.Fatal(err)
+	}
+	opened(task)
+	b.eval("document.querySelector('#list li[data-slug=b] .title').focus()")
+	b.pressKey("\r")
+	wholeAt("a long title", "/a/b/")
+	for _, width := range []int64{1400, 1100, 900} {
+		b.size(width, 800, false)
+		whole := b.eval("(() => { const e = document.getElementById('back-word'); return e.scrollWidth <= e.clientWidth && document.querySelector('#back svg').getBoundingClientRect().width === 16; })()")
+		if whole != "true" {
+			t.Errorf("width %d: the back button gave way", width)
+		}
+	}
+	b.size(1400, 800, false)
+
+	// The other ways a page whole may be: of a version, its diff, and with its name changed there.
+	opened(task)
+	b.eval("document.querySelector('#list li[data-slug=a] .title').focus()")
+	b.pressKey("\r")
+	b.until("the page whole", "location.pathname === '/a/a/' && document.getElementById('frame-title').textContent")
+	s.floe(t, "publish", s.write(t, "a.yaml", "template: report\nlang: en\ntitle: T a\nsections:\n  - heading: two\n"), "--slug", "a")
+	b.navigate("/a/a/?v=1")
+	wholeAt("of a version", "/a/a/")
+	b.navigate("/a/a/?diff")
+	b.until("the diff", "document.getElementById('back-word').textContent")
+	out = append(out, "its diff: "+b.eval(frameBack))
+	b.navigate("/a/a/")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	b.eval("openEdit(items.find((a) => a.slug === 'a')); document.getElementById('edit-slug').value = 'a2'; document.getElementById('edit').requestSubmit()")
+	wholeAt("renamed", "/a/a2/")
+	b.eval("openEdit(items.find((a) => a.slug === 'a2')); document.getElementById('edit-slug').value = 'a'; document.getElementById('edit').requestSubmit()")
+	wholeAt("named back", "/a/a/")
+
+	// Come back to from the browser's memory, what was kept since is drawn.
+	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["a"],"shown":["a"],"back":"/tasks?project=proj"}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
+	out = append(out, "from the browser's memory: "+b.eval(frameBack))
+
+	// A task of no project, and a list at a view.
+	s.floe(t, "publish", s.page(t, "none.yaml", "T none", ""), "--slug", "none")
+	none := ""
+	if _, err := st.Edit("none", store.Edit{Project: &none}); err != nil {
+		t.Fatal(err)
+	}
+	s.floe(t, "work", "none", "--task", "#7", "--state", "doing")
+	opened("/tasks?project=%2F&task=%237")
+	b.eval("document.querySelector('#list li[data-slug=none] .title').focus()")
+	b.pressKey("\r")
+	wholeAt("a task of no project", "/a/none/")
+	opened("/tasks?view=doing&project=proj&task=%23128")
+	b.navigate("/tasks?view=doing&project=proj")
+	b.until("the pin", "document.querySelector('.pin')")
+	b.eval("document.querySelector('.pin').click()")
+	wholeAt("a pin of a list at a view", "/a/pin/")
 
 	// A long name is cut, with nothing past the edge, down to the narrowest width that has the word.
 	long := "#" + strings.Repeat("a long task name ", 6)
@@ -146,4 +207,13 @@ reloaded: /a/b/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back t
 pin: /a/pin/ | /tasks?project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /
 page list row: /a/loose/ | /?project=proj | Page list | Back to the page list | Back to the page list | Back to the page list | /?project=proj
 another tab: /a/a/ | / | Page list | Back to the page list | Back to the page list | Back to the page list | /
-narrow: true true Back to the page list`
+phone: true / true true true
+narrow: true true Back to the page list
+a long title: /a/b/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+of a version: /a/a/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+its diff: /a/a/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+renamed: /a/a2/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+named back: /a/a/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
+from the browser's memory: /a/a/ | /tasks?project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /
+a task of no project: /a/none/ | /tasks?project=%2F&task=%237 | #7 | Back to #7 | Back to #7 | Back to #7 | /
+a pin of a list at a view: /a/pin/ | /tasks?view=doing&project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /`

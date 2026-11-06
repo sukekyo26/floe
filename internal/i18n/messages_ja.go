@@ -304,7 +304,6 @@ var messagesJA = map[string]string{
 	"diagram_graph_level_heading": "edge %s→%s: 帯「%s」の見出しを横切ります。right では見出しが最初の段に伸びます。level を外すか、見出しを短くしてください",
 
 	// ui
-	"ui_back_to_list":         "一覧へ戻る",
 	"ui_download":             "ダウンロード",
 	"ui_download_named":       "%s をダウンロード",
 	"ui_open_raw":             "ページだけを新しいタブで開く",
