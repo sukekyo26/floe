@@ -25,12 +25,9 @@ parts:
         - { from: check, to: write }
 `
 
-// g2 is g1 with labels on the edges out of check, written from line 3 to 13: "yes" at 116,104 31.6x18, right of
-// check→show; g2r is g2 laid out right, written to line 14, its "no" at 189,80 24.4x18, below check→write.
-var (
-	g2  = strings.NewReplacer("to: show }", `to: show, label: "yes" }`, "to: write }", `to: write, label: "no" }`).Replace(g1)
-	g2r = strings.Replace(g2, "      y: 20\n", "      y: 20\n      direction: right\n", 1)
-)
+// g2 is g1 with labels on the edges out of check, written from line 3 to 13: "yes" at 88.2,132 31.6x18, on
+// check→show, its background cutting it.
+var g2 = strings.NewReplacer("to: show }", `to: show, label: "yes" }`, "to: write }", `to: write, label: "no" }`).Replace(g1)
 
 // A graph's mistakes are told in the words of the parts written by hand, at the graph's own values: an edge naming
 // no box of its graph is dropped alone, and the limit of the ranks passed is told at the diagram's root.
@@ -229,8 +226,8 @@ func TestGraphBlame(t *testing.T) {
 		{"a box over a box of the graph", g1, "  - box: { name: note, x: 100, y: 0, rows: [N] }\n", `box "write" overlaps box "note"`},
 		{"a frame a box of the graph straddles", g1, "  - frame: { name: f, x: 0, y: 0, w: 100, h: 40 }\n", `box "write" straddles the edge of frame "f" at x 100, spanning 26 to 178` + "\n@: " + `box "write" straddles the edge of frame "f" at y 40, spanning 20 to 49`},
 		{"a label in the graph's channel", g1, "  - label: { text: L, x: 68, y: 61, anchor: middle }\n", `edge write→check runs through label "L"`},
-		{"a box over a label of the graph", g2r, "  - box: { name: note, x: 176, y: 86, rows: [N] }\n", `box "note" overlaps label "no"`},
-		{"an edge by hand through a label of the graph", g2, "  - edge: { from: [110, 113], to: [160, 113] }\n", `edge [110,113]→[160,113] runs through label "yes"`},
+		{"a box over a label of the graph", g2, "  - box: { name: note, x: 106, y: 125, rows: [N] }\n", `box "note" overlaps label "yes"`},
+		{"an edge by hand through a label of the graph", g2, "  - edge: { from: [110, 141], to: [160, 141] }\n", `edge [110,141]→[160,141] runs through label "yes"`},
 		{
 			"a box in the graph's channel", k33, "  - box: { name: note, x: 24, y: 78, rows: [N] }\n",
 			`edge a→x runs through box "note"` + "\n@: " + `edge a→y runs through box "note"` + "\n@: " + `edge b→x runs through box "note"`,
@@ -263,11 +260,12 @@ func TestGraphBlame(t *testing.T) {
 		t.Errorf("an icon's label across another graph's frame:\n  told %q", got)
 	}
 
-	// A box of one graph over a box and a label of another is told at the graph of the first box, to move a graph.
-	second := strings.NewReplacer("x: 20", "x: 132", "y: 20", "y: 104", "write", "write2", "check", "check2", "show", "show2").
+	// A box of one graph over a label of another and an edge through a box of another are told at the graph of the first
+	// box, to move a graph.
+	second := strings.NewReplacer("x: 20", "x: 100", "y: 20", "y: 125", "write", "write2", "check", "check2", "show", "show2").
 		Replace(strings.TrimPrefix(g2, "title: T\nparts:\n"))
-	if _, got := draw(t, g2+second, inspect); got != `s.yaml:4:7: box "show" overlaps box "write2" of another graph; move one of the graphs by its x and y`+"\n"+
-		`s.yaml:15:7: box "write2" overlaps label "yes" of another graph; move one of the graphs by its x and y` {
+	if _, got := draw(t, g2+second, inspect); got != `s.yaml:15:7: box "write2" overlaps label "yes" of another graph; move one of the graphs by its x and y`+"\n"+
+		`s.yaml:15:7: edge write2→check2 runs through box "show" of another graph; move one of the graphs by its x and y` {
 		t.Errorf("two graphs: told %q", got)
 	}
 
@@ -329,47 +327,47 @@ func TestGraphLevel(t *testing.T) {
 	for _, c := range []struct {
 		name, src, want string
 	}{
-		{"lanes, down", level3, `frame "u" 20,20 144x201
-frame "v" 188,20 108x201
-frame "w" 320,20 108x201
+		{"lanes, down", level3, `frame "u" 20,20 168x213
+frame "v" 212,20 108x213
+frame "w" 344,20 108x213
 the heading of frame "u" 32,29 7.68x18
-the heading of frame "v" 200,29 7.68x18
-the heading of frame "w" 332,29 7.68x18
-box "a" 32,115 48x29
-box "ok" 32,180 56x29
-box "b" 236,115 48x29
-box "q" 236,50 48x29
-box "c" 368,50 48x29
-box "d" 332,180 48x29
-edge c→b M392,79 V91 H260 V115
-edge b→a M236,123.5 H80
-edge a→b M80,135.5 H236
-edge b→d M260,144 V156 H356 V180
-edge d→ok M332,200.5 H88
-label "ask" 202.4,93.5 31.6x18
-label "answer" 91,147.5 53.2x18
-label "ask" 262.4,170.5 31.6x18
+the heading of frame "v" 224,29 7.68x18
+the heading of frame "w" 356,29 7.68x18
+box "a" 32,115 48x41
+box "ok" 32,192 56x29
+box "b" 260,115 48x41
+box "q" 260,50 48x29
+box "c" 392,50 48x29
+box "d" 356,192 48x29
+edge c→b M416,79 V91 H284 V115
+edge b→a M260,123.5 H80
+edge a→b M80,147.5 H260
+edge b→d M284,156 V168 H380 V192
+edge d→ok M356,212.5 H88
+label "ask" 154.2,114.5 31.6x18
+label "answer" 131.4,138.5 53.2x18
+label "ask" 212.2,203.5 31.6x18
 `},
-		{"lanes, right", strings.Replace(level3, "      lanes:\n", "      direction: right\n      lanes:\n", 1), `frame "u" 20,20 266x54
-frame "v" 20,98 266x96
-frame "w" 20,218 266x114
+		{"lanes, right", strings.Replace(level3, "      lanes:\n", "      direction: right\n      lanes:\n", 1), `frame "u" 20,20 302x54
+frame "v" 20,98 302x96
+frame "w" 20,218 302x114
 the heading of frame "u" 32,29 7.68x18
 the heading of frame "v" 32,107 7.68x18
 the heading of frame "w" 32,227 7.68x18
-box "a" 134,32 48x29
-box "ok" 218,32 56x29
-box "b" 134,134 48x48
+box "a" 134,32 84x29
+box "ok" 254,32 56x29
+box "b" 134,134 84x48
 box "q" 50,152 48x29
 box "c" 50,272 48x48
-box "d" 222,230 48x48
+box "d" 258,230 48x48
 edge c→b M98,296 H110 V158 H134
 edge b→a M152,134 V61
-edge a→b M164,61 V134
-edge b→d M182,158 H194 V254 H222
-edge d→ok M252,230 V61
-label "ask" 108.4,114 31.6x18
-label "answer" 176,75 53.2x18
-label "ask" 264,198 31.6x18
+edge a→b M200,61 V134
+edge b→d M218,158 H230 V254 H258
+edge d→ok M288,230 V61
+label "ask" 136.2,100.5 31.6x18
+label "answer" 173.4,100.5 53.2x18
+label "ask" 272.2,136.5 31.6x18
 `},
 		{"a block written apart by the order", `title: T
 parts:

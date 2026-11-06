@@ -606,12 +606,16 @@ func (l *layout) addEdge(e *edge, at string) {
 		if e.At != nil {
 			x, y = e.At[0], e.At[1]
 		}
-		// A graph's label stands beside its own line, not on it: nothing to hide under it, and its own line is
-		// checked against it like any other.
-		inGraph := e.graph != ""
-		i := l.label(at, e.Label, x, y, cmp.Or(e.anchor, "middle"), inGraph, false)
-		l.labels[i].graph, l.labels[i].offEdge = e.graph, e.At != nil && !inGraph
-		if !inGraph {
+		// A loop's label stands beside its line, so on nothing to hide and with its own line checked against it.
+		// LIMIT: a graph's label is not checked against a frame written by hand (offEdge), and its ground cuts the
+		// frame's line; tell it if writers come to miss that.
+		anchor := "middle"
+		if e.beside {
+			anchor = "start"
+		}
+		i := l.label(at, e.Label, x, y, anchor, e.beside, false)
+		l.labels[i].graph, l.labels[i].offEdge = e.graph, e.At != nil && e.graph == ""
+		if !e.beside {
 			p.own = i
 		}
 	}
@@ -638,7 +642,7 @@ func segsOf(pts [][2]float64) []seg {
 func middle(segs []seg) (x, y float64) {
 	longest, best := -1.0, seg{}
 	for _, s := range segs {
-		if n := math.Hypot(s[2]-s[0], s[3]-s[1]); n > longest {
+		if n := segLength(s); n > longest {
 			longest, best = n, s
 		}
 	}

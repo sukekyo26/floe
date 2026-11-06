@@ -1,5 +1,5 @@
-# Labels on a graph's edges, right: one back up a cycle, one wider in Japanese, and three out of one box, the later
-# pushed and stepping under their text.
+# Labels on a graph's edges, right: one back up a cycle, one wider in Japanese, and three out of one box, each on its
+# own edge, the edges pushed apart.
 title: { en: Labels, ja: ラベル }
 parts:
   - graph:

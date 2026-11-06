@@ -218,7 +218,7 @@ func (s *sharing) layRest(items []item) {
 		case !moves:
 			rest.add(it.at, it.p)
 		case e.Label != nil && e.At != nil:
-			s.own[e] = rest.label(it.at, e.Label, e.At[0], e.At[1], cmp.Or(e.anchor, "middle"), false, false)
+			s.own[e] = rest.label(it.at, e.Label, e.At[0], e.At[1], "middle", false, false)
 		}
 	}
 	s.rest = rest

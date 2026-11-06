@@ -58,9 +58,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   each rank to cross fewer edges and draws each edge at right angles between
   points of its boxes' sides of its own, straight where it can: a box a
   column short of an edge's way widens into the room beside it, and an edge
-  passing ranks turns once where it must leave its column. An edge's `label` stands beside a
-  straight run of it, where floe makes room if there is none without bending
-  the edge; an edge from a box to itself is a loop out of the side the
+  passing ranks turns once where it must leave its column. An edge's `label` stands on it, on the diagram's
+  ground and cutting the line, at the middle of its longest run where that is
+  clear, where floe makes room if there is none without bending the edge; an edge from a box to itself is a loop out of the side the
   graph's edges do not use. A `group` of its nodes keeps its boxes side by
   side in every rank, framed as a `frame` with its `label` (groups nest), and
   an edge may end at a group, at its frame's top or bottom. Written as
@@ -631,11 +631,6 @@ adheres to [Semantic Versioning](https://semver.org/).
   their lines now (a table shares the paper's width among its columns, its words kept whole); a table whose longest
   words are wider than the paper, or a field's long name, still widens the page, which Chrome prints smaller, and such
   a table in a card side by side with others reaches past its card, over the next one.
-- Fix a graph edge's label floe made room for below its run (right of a run down) when something there was in the
-  way, pushing the drawing apart across the run even where the same place above it (left of it) was clear. It stands
-  there now, where that is clear of the parts written by hand too and moves the graph off none of its `x` and `y`.
-  Of two labelled level edges between the same boxes, the upper's label stood between them, the two 36 apart rather
-  than 12; it stands above the upper one now, and the labels of such a pair stand outside it where there is room.
 - Fix an edge written by hand to a box of a graph or a tree, or a group's or a lane's frame, with no side written,
   which could end at the middle of a side one of their edges ends at and run over it. With `via` or without, it takes
   a side their edges leave, with the via next to it (or the other end) outside it, across first; with none, the side

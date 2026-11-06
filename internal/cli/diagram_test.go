@@ -219,7 +219,7 @@ func TestInspectData(t *testing.T) {
 		}
 	}
 	want := "page.yaml:7:20: diagram \"First\" 78x59\n" + "page.yaml:11:26: diagram \"Folded\" 78x59\n" +
-		"page.yaml:15:28: diagram \"What floe publish checks\" 1092x811\n"
+		"page.yaml:15:28: diagram \"What floe publish checks\" 1092x901\n"
 	if got := strings.Join(heads, ""); code != 0 || errs != "" || got != want {
 		t.Errorf("inspect of a page = %d, %q, its diagrams\n%swant\n%s", code, errs, got, want)
 	}

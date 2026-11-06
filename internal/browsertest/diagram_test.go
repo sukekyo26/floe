@@ -283,7 +283,8 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 
 // measureBoxes returns a line for each box of the page's diagrams whose text, as the browser draws it, is not inside
 // its shape, for each two boxes of a diagram that overlap, and for each label or frame's heading whose text overlaps
-// a box, another's text or an edge (loops too): the width floe estimates for text against the width drawn.
+// a box, another's text or an edge (loops too; a label on its background has its own edge through it, and overlaps a
+// second), or sticks out of its background: the width floe estimates for text against the width drawn.
 const measureBoxes = `(() => {
   const out = [];
   for (const svg of document.querySelectorAll('svg.dg')) {
@@ -305,7 +306,14 @@ const measureBoxes = `(() => {
       }
     }
     const meet = (a, c) => a.x < c.x + c.width && c.x < a.x + a.width && a.y < c.y + c.height && c.y < a.y + a.height;
-    const labels = [...svg.querySelectorAll('text.label, g.frame > text')].map((t) => ({ text: t.textContent, r: t.getBBox() }));
+    const labels = [...svg.querySelectorAll('text.label, g.frame > text')].map((t) => {
+      const ground = t.previousElementSibling && t.previousElementSibling.matches('rect.label-bg') ? t.previousElementSibling.getBBox() : null;
+      const r = t.getBBox();
+      if (ground && (r.x < ground.x || r.x + r.width > ground.x + ground.width)) {
+        out.push('label "' + t.textContent + '" sticks out of its ground');
+      }
+      return { text: t.textContent, r, ground };
+    });
     for (let i = 0; i < labels.length; i++) {
       for (const b of boxes) {
         if (meet(labels[i].r, b.shape)) {
@@ -318,11 +326,14 @@ const measureBoxes = `(() => {
         }
       }
       const r = labels[i].r;
+      let through = 0;
       for (const e of svg.querySelectorAll('path.edge')) {
         for (let at = 0, n = e.getTotalLength(); at <= n; at++) {
           const p = e.getPointAtLength(at);
           if (p.x > r.x && p.x < r.x + r.width && p.y > r.y && p.y < r.y + r.height) {
-            out.push('label "' + labels[i].text + '" overlaps the edge ' + e.getAttribute('d'));
+            if (!labels[i].ground || ++through > 1) {
+              out.push('label "' + labels[i].text + '" overlaps the edge ' + e.getAttribute('d'));
+            }
             break;
           }
         }
@@ -361,6 +372,21 @@ func TestUIGraph(t *testing.T) { //nolint:paralleltest // the browser tests shar
 		b.until("the diagrams", "document.querySelectorAll('svg.dg').length === "+strconv.Itoa(len(files)))
 		if got := b.eval(measureBoxes); got != "" {
 			t.Errorf("%s:\n  %s", lang, strings.ReplaceAll(got, "\n", "\n  "))
+		}
+	}
+	// The check itself: a second edge through a label on its edge, and a label sticking out of its background.
+	got := b.eval(`(() => {
+	  const g = document.querySelector('rect.label-bg + text.label');
+	  const r = g.getBBox();
+	  const p = g.closest('svg').querySelector('path.edge').cloneNode();
+	  p.setAttribute('d', 'M' + (r.x + r.width / 2) + ',' + r.y + ' V' + (r.y + r.height));
+	  g.closest('svg').appendChild(p);
+	  g.previousElementSibling.setAttribute('width', 1);
+	  return ` + measureBoxes + `;
+	})()`)
+	for _, want := range []string{"sticks out of its ground", "overlaps the edge"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("measureBoxes tells %q, want %q", got, want)
 		}
 	}
 }
