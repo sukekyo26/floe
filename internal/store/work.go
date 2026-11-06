@@ -63,6 +63,8 @@ type WorkEdit struct {
 // setWork applies ed to m. A step is of its task: a page that moves to another task leaves it, unless ed gives the
 // step it takes there; a page off a task has none, and one neither on a task nor pinned has no Work. PageItem has
 // checked ed.
+// LIMIT: a page moved to another project's task of the same name, by an edit or a publish, keeps its step: names of steps
+// mostly hold there. Take it off in the two ways if that comes to mislead.
 func setWork(m *Meta, ed *WorkEdit) {
 	var w Work
 	if m.Work != nil {
