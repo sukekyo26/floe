@@ -221,7 +221,7 @@ func (b *browser) until(what, expr string) string {
 		time.Sleep(50 * time.Millisecond)
 	}
 	// What the page threw, and what it drew: a draw that threw stays as it is until the data changes.
-	seen, seenErr := b.try("[(window.thrown ?? []).join(' / '), document.getElementById('list')?.innerText?.replaceAll('\\n', ' | ')].join(' ## ')")
+	seen, seenErr := b.try("[location.pathname + location.search, document.activeElement?.tagName + '#' + document.activeElement?.id, [...document.querySelectorAll('select')].filter((e) => e.matches(':open')).map((e) => e.id + ':open').join(), (window.thrown ?? []).join(' / '), document.getElementById('list')?.innerText?.replaceAll('\\n', ' | ')].join(' ## ')")
 	b.t.Fatalf("timed out waiting for %s: last %q, %v; the page: %s, %v", what, last, err, seen, seenErr)
 	return ""
 }
@@ -286,9 +286,24 @@ func (b *browser) pressKey(k string) {
 	}
 }
 
+// click presses at (x, y) once the pointer is on what lies there. Chrome sends input by what it last drew, which on a busy
+// machine may lag behind the page: a press on a list of choices just opened would reach the iframe drawn under it, and the
+// page's own :hover says it went where it should. What is in an iframe answers in its own document: hover waits for that.
 func (b *browser) click(x, y float64) {
 	b.t.Helper()
 
+	reached := fmt.Sprintf("(() => { const e = document.elementFromPoint(%v, %v); return !e || e.tagName === 'IFRAME' || e.matches(':hover'); })()", x, y)
+	var last string
+	var err error
+	for deadline := time.Now().Add(waitLimit); ; time.Sleep(50 * time.Millisecond) {
+		b.point(x, y)
+		if last, err = b.try(reached); err == nil && truthy(last) {
+			break
+		}
+		if time.Now().After(deadline) {
+			b.t.Fatalf("timed out waiting for the pointer to reach (%v, %v): last %q, %v", x, y, last, err)
+		}
+	}
 	if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(x, y)); err != nil {
 		b.t.Fatal(err)
 	}

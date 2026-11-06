@@ -833,7 +833,7 @@ func TestUIColumnFoot(t *testing.T) { //nolint:paralleltest // the browser tests
 	face := func(id string) string {
 		t.Helper()
 
-		return b.eval(`(() => {
+		return b.settled(`(() => {
 			const s = getComputedStyle(document.getElementById(` + js(id) + `)), c = document.createElement('i');
 			c.style.color = ` + panel + `; document.body.append(c);
 			const ground = getComputedStyle(c).color; c.remove();

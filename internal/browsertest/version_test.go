@@ -50,7 +50,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 			document.querySelector('#read-actions > .diff-open').getAttribute('href'), document.querySelector('#read-actions .menu .open').getAttribute('href')].join(' ')`))
 	// The words' way to the latest leaves the focus on the choice, the words gone.
 	b.eval("[...document.querySelectorAll('.dnote.ver-note a')].find((a) => a.textContent.includes('latest')).click()")
-	out = append(out, b.until("the latest", "readLoaded === '/a/d/?raw' && [document.activeElement.id, document.querySelector('.dnote.ver-note') === null].join(' ')"))
+	out = append(out, b.until("the latest", "readLoaded === '/a/d/?raw' && document.querySelector('.dnote.ver-note') === null && document.activeElement.id"))
 	choose(b, "read-version", 2)
 	b.until("v2 again", "readLoaded.endsWith('v=2') && document.querySelector('.dnote.ver-note')")
 	b.eval("document.querySelector('.toast.page')?.remove()")
@@ -124,7 +124,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 		"/a/d/?raw&v=2 / false / true / Showing v2 (at). The latest is v3.Open the latest versionSee what differs from the latest",
 		"v2", "BODY",
 		"/a/d/?v=2 /a/d/?raw&v=2 /api/artifacts/d/download?v=2 true /a/d/?diff&from=2&to=3 /a/d/?raw&v=2",
-		"read-version true",
+		"read-version",
 		"/a/d/?raw&v=2",
 		"/a/d/?raw&v=2 / false / true / Showing v2 (at). The latest is v4.Open the latest versionSee what differs from the latest", "version", "0",
 		"/a/d/",
