@@ -1024,7 +1024,7 @@
         </div>
       </div>
       <ul id="list"></ul>
-      <div class="state" id="task-none" hidden><strong>{{.Msg "ui_task_no_pages"}}</strong><p><code id="task-forget"></code></p><p id="task-none-kids" hidden>{{.Msg "ui_task_none_kids"}}</p></div>
+      <div class="state" id="task-none" hidden><strong>{{.Msg "ui_task_no_pages"}}</strong><p id="task-delete-box"><button type="button" class="btn danger" id="task-delete">{{.Msg "ui_task_forget"}}</button></p><p class="error" id="task-delete-error" hidden></p><p id="task-none-kids" hidden>{{.Msg "ui_task_none_kids"}}</p></div>
       <div class="state" id="task-missing" hidden><strong></strong><p><a href="/tasks" id="task-missing-up">{{.Msg "ui_tasks_back"}}</a></p></div>
       <div class="state" id="tasks-none" hidden><strong></strong><p><a href="/tasks" id="tasks-other">{{.Msg "ui_tasks_other"}}</a></p></div>
       <div class="state" id="tasks-failed" hidden><strong>{{.Msg "ui_tasks_unreadable"}}</strong><p><a href="/">{{.Msg "ui_to_page_list"}}</a></p></div>
@@ -3545,9 +3545,25 @@
     if (task && taskView(task) !== FIRST_VIEW) to.set('view', taskView(task));
     return `${TASKS_PATH}?${to}`;
   }
-  // A word as a shell reads it whatever it holds: the name of a task may hold $( ) or a quote
-  const shellWord = (word) => `'${word.replaceAll("'", "'\\''")}'`;
   let lastTask;
+
+  // Removes the task's row, a press again as a delete asks, and goes to the list: of a task of no page, which is all it would lose
+  async function forgetTask(task) {
+    const btn = $('task-delete');
+    if (arm(btn, t('ui_task_forget_confirm'))) return;
+    const res = await api(`/api/tasks?${new URLSearchParams({ project, task: TASK_NAME })}`, { method: 'DELETE' });
+    if (res.ok || res.status === 404) {
+      location.href = taskListHref(task);
+      return;
+    }
+    $('task-delete-error').textContent = t('ui_task_forget_failed', await res.text());
+    $('task-delete-error').hidden = false;
+    disarmForget();
+  }
+  function disarmForget() {
+    $('task-delete').classList.remove('armed');
+    $('task-delete').textContent = t('ui_task_forget');
+  }
 
   // A task's page. Nothing is open at first, whatever is unread: opening it reads nothing
   function renderTaskPage() {
@@ -3566,9 +3582,9 @@
     if (task) drawTaskHead(task);
     else $('task-missing').querySelector('strong').textContent = t('ui_task_missing', TASK_NAME);
     // A task with children cannot be forgotten: their pages are how it leaves
-    $('task-forget').parentElement.hidden = Boolean(none && task.children.length > 0);
+    $('task-delete-box').hidden = Boolean(none && task.children.length > 0);
+    $('task-delete').onclick = () => forgetTask(task);
     $('task-none-kids').hidden = !(none && task.children.length > 0);
-    if (none) $('task-forget').textContent = `floe work --task ${shellWord(TASK_NAME)} --project ${shellWord(project === NONE ? '' : project)} --forget`;
     drawRows(task ? taskGroups(task) : [], (a, i, rows) => {
       const li = row(a, i, new Map());
       // No bulk bar here: nothing to select, by box or menu
@@ -4901,6 +4917,7 @@
   suggestTags($('edit-tags'));
   $('set').addEventListener('submit', saveTaskSet);
   $('child').addEventListener('submit', saveChildTask);
+  $('task-delete').addEventListener('blur', disarmForget);
   $('set-out').addEventListener('click', takeOffTask);
   $('set-dialog').addEventListener('close', () => setBack?.()?.focus());
   $('set-task').addEventListener('input', setTaskChanged);

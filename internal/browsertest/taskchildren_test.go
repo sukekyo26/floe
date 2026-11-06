@@ -119,12 +119,12 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 
 	// A parent of no page: words in place of a command that would be refused; nothing beside it says to choose a row.
 	open("#20")
-	if got := b.eval("[document.getElementById('task-none').hidden, document.getElementById('task-forget').parentElement.hidden, document.getElementById('task-none-kids').hidden, getComputedStyle(document.getElementById('read-blank')).display].join(' ')"); got != "false true false none" {
+	if got := b.eval("[document.getElementById('task-none').hidden, document.getElementById('task-delete-box').hidden, document.getElementById('task-none-kids').hidden, getComputedStyle(document.getElementById('read-blank')).display].join(' ')"); got != "false true false none" {
 		t.Errorf("a parent of no page: %q", got)
 	}
 	task("proj", "#99", "--title", "no page, no child")
 	open("#99")
-	if got := b.eval("[document.getElementById('task-forget').parentElement.hidden, document.getElementById('task-none-kids').hidden, document.getElementById('task-family').hidden].join(' ')"); got != "false true false" {
+	if got := b.eval("[document.getElementById('task-delete-box').hidden, document.getElementById('task-none-kids').hidden, document.getElementById('task-family').hidden].join(' ')"); got != "false true false" {
 		t.Errorf("no page, no child: %q", got)
 	}
 
@@ -271,6 +271,34 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.eval("document.getElementById('child-dialog').close()")
 	task("proj", "#103", "--forget")
 
+	// Removed by two presses and back at the list; refused, it says why and stays. A task with children has no button.
+	pressForget := func() {
+		t.Helper()
+		press("task-delete")
+		b.until("armed", "document.getElementById('task-delete').classList.contains('armed')")
+		press("task-delete")
+	}
+	task("proj", "#104", "--title", "to remove", "--state", "waiting")
+	open("#104")
+	b.eval("window.realFetch = window.fetch; window.fetch = (url, init) => (init?.method === 'DELETE' ? Promise.resolve(new Response('it has a page', { status: 400 })) : window.realFetch(url, init))")
+	pressForget()
+	b.until("refused", "!document.getElementById('task-delete-error').hidden")
+	if got := b.eval("document.getElementById('task-delete-error').textContent + ' | ' + document.getElementById('task-delete').textContent"); got != "Could not remove it: it has a page | Remove the task" {
+		t.Errorf("refused: %q", got)
+	}
+	b.eval("window.fetch = window.realFetch")
+	pressForget()
+	b.until("the list", "location.pathname === '/tasks' && !location.search.includes('task=')")
+	if got := b.eval("location.search"); got != "?project=proj" {
+		t.Errorf("after removing: %q", got)
+	}
+	if made, err = st.ReadTasks(); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := made["proj"]["#104"]; ok {
+		t.Error("#104 is still there")
+	}
+
 	// Written by hand: only what the store counts is a family.
 	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
 	text, err := os.ReadFile(file) //nolint:gosec // G304: a path the test names
@@ -307,11 +335,11 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	// What the store forgets is what the page offers to.
 	open("pa")
-	if got := b.eval("document.getElementById('task-forget').parentElement.hidden + ''"); got != "false" {
+	if got := b.eval("document.getElementById('task-delete-box').hidden + ''"); got != "false" {
 		t.Errorf("a task the store forgets has no command")
 	}
 	open("gp")
-	if got := b.eval("document.getElementById('task-forget').parentElement.hidden + ''"); got != "true" {
+	if got := b.eval("document.getElementById('task-delete-box').hidden + ''"); got != "true" {
 		t.Errorf("a task the store keeps has its command")
 	}
 	s.floe(t, "work", "--project", "proj", "--task", "pa", "--forget")

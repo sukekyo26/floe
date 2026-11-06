@@ -3,7 +3,6 @@ package browsertest_test
 import (
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -202,28 +201,22 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the state drawn", "document.getElementById('task-state').value === 'done'")
 	s.floe(t, "work", "--task", "#142", "--project", "proj", "--state", "waiting")
 
-	// What is written over a task of no pages works as written, its name and project whatever they hold.
+	// A task of no pages is removed by two presses, its name and project whatever they hold.
 	s.floe(t, "work", "--task", "it's $(touch made)", "--project", "")
 	b.navigate("/tasks?project=%2F&task=" + url.QueryEscape("it's $(touch made)"))
 	b.until("no pages", "!document.getElementById('task-none').hidden")
-	line := b.eval("document.getElementById('task-forget').textContent")
-	out = append(out, "the command: "+line)
-	cmd := exec.CommandContext(t.Context(), "sh", "-c", `printf '%s\n' `+strings.TrimPrefix(line, "floe ")) //nolint:gosec // G204: what the test draws
-	cmd.Dir = s.Env["HOME"]
-	args, err := cmd.Output()
-	if err != nil {
-		t.Fatal(err)
+	for range 2 {
+		b.still()
+		r := b.rect("document.getElementById('task-delete')")
+		b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	}
-	s.floe(t, strings.Split(strings.TrimSuffix(string(args), "\n"), "\n")...)
+	b.until("the list", "!location.search.includes('task=')")
 	if all, readErr := st.ReadTasks(); readErr != nil || len(all["/"]) != 0 {
-		t.Errorf("forgetting as it says: %v, %v", all["/"], readErr)
-	}
-	if _, statErr := os.Stat(filepath.Join(s.Env["HOME"], "made")); statErr == nil {
-		t.Error("the command ran what the name holds")
+		t.Errorf("removing: %v, %v", all["/"], readErr)
 	}
 
 	// A tag on a task's page has nothing to narrow.
-	if _, err = st.Edit("y1", store.Edit{Tags: &[]string{"t"}}); err != nil {
+	if _, err := st.Edit("y1", store.Edit{Tags: &[]string{"t"}}); err != nil {
 		t.Fatal(err)
 	}
 	opened("#142", "/tasks?project=proj&task=%23142")
@@ -234,7 +227,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("waiting has no archive button", archive)
 	b.navigate("/tasks?project=proj&task=%2399")
 	b.until("no pages", "!document.getElementById('task-none').hidden")
-	say("no pages", "document.querySelector('#task-none strong').textContent + ' ' + document.getElementById('task-forget').textContent + ' ' + document.getElementById('task-archive').hidden")
+	say("no pages", "document.querySelector('#task-none strong').textContent + ' ' + document.getElementById('task-delete').textContent + ' ' + document.getElementById('task-archive').hidden")
 	// Unreadable, what was drawn stays: it does not say there are no pages, or no such task. A page opened anew says why alone.
 	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
 	mended, err := os.ReadFile(file)
@@ -323,10 +316,9 @@ archived: [Archive] | T x1
 the shelf's archive: #120
 folded, none chosen: true true
 while open: waiting
-the command: floe work --task 'it'\''s $(touch made)' --project '' --forget
 a tag: SPAN t
 waiting has no archive button: none
-no pages: This task has no pages floe work --task '#99' --project 'proj' --forget true
+no pages: This task has no pages Remove the task true
 unreadable, drawn: false false true
 unreadable, first: true true true
 unreadable, done: Archive the task
