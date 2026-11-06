@@ -286,14 +286,14 @@ func (b *browser) pressKey(k string) {
 	}
 }
 
-// click presses at (x, y) until the page has the press. Chrome sends a press by what it last drew, which on a busy machine lags
-// behind the page: a press on a list of choices just opened reaches the iframe drawn under it, though the pointer moving there
-// reaches the list. A press meant for the iframe has no way to tell: hover waits for that page first.
+// click presses at (x, y) until the page has the release of it. Chrome sends a press and its release by what it last drew, which
+// on a busy machine lags behind the page: over a list of choices just opened, either reaches the iframe drawn under it, though the
+// pointer moving there reaches the list. A press meant for the iframe has no way to tell: hover waits for that page first.
 func (b *browser) click(x, y float64) {
 	b.t.Helper()
 
 	armed := fmt.Sprintf("(() => { if (document.elementFromPoint(%v, %v)?.tagName === 'IFRAME') return false; "+
-		"window.pressWaits = true; addEventListener('pointerdown', () => { window.pressWaits = false; }, { capture: true, once: true }); return true; })()", x, y)
+		"window.pressWaits = true; addEventListener('pointerup', () => { window.pressWaits = false; }, { capture: true, once: true }); return true; })()", x, y)
 	proven := b.eval(armed) == "true"
 	for deadline := time.Now().Add(waitLimit); ; time.Sleep(50 * time.Millisecond) {
 		if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(x, y)); err != nil {

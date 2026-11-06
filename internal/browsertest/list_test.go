@@ -115,7 +115,8 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.eval("document.querySelector('.views [data-view=new]').click()")
 	b.eval("document.querySelector('#list li[data-slug=v] .title').focus()")
 	b.eval("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))")
-	b.until("the page whole", "location.pathname === '/a/v/'")
+	// The bar too: the logo's link is drawn with it, once the list is read.
+	b.until("the page whole", "location.pathname === '/a/v/' && document.getElementById('frame-title').textContent")
 	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"), b.eval("document.querySelector('.brand').getAttribute('href')"))
 	b.stub(strings.Replace(listList, "news: 'version', ", "", 1))
 	b.until("the bar", "document.getElementById('frame-title').textContent")
