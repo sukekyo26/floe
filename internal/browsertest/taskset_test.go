@@ -327,38 +327,38 @@ the name of a task brings its URL: #1 /  / https://example.com/a/one / out false
 a new name takes it away: #3 /  /  / out false
 offered: Make #3 a new task
 new task: {"task":"#3","step":"first","pin":true}
-#1 doing design https://example.com/a/one; #2 doing build ; #3 doing first 
+#1 todo design https://example.com/a/one; #2 todo build ; #3 todo first 
 a page of a task: #1 / design / https://example.com/a/one / out true
-a URL set meanwhile: #1 doing design https://example.com/later; #2 doing build ; #3 doing first 
-a URL changed: #1 doing design https://example.com/mine; #2 doing build ; #3 doing first 
-a URL emptied: #1 doing design ; #2 doing build ; #3 doing first 
+a URL set meanwhile: #1 todo design https://example.com/later; #2 todo build ; #3 todo first 
+a URL changed: #1 todo design https://example.com/mine; #2 todo build ; #3 todo first 
+a URL emptied: #1 todo design ; #2 todo build ; #3 todo first 
 refused: true Could not save: "javascript:alert(1)" is not an http or https URL
 an empty name: true true 0
 a name of spaces: true Could not save: a task needs a name 0
-the page refused: #1 doing design ; #2 doing review ; #3 doing first  | {"task":"#2","step":"build"}
+the page refused: #1 todo design ; #2 todo review ; #3 todo first  | {"task":"#2","step":"build"}
 saved again: {"task":"#2","step":"review"}
 off: {"pin":true}
-#1 doing design ; #2 doing review ; #3 doing first 
+#1 todo design ; #2 todo review ; #3 todo first 
 off, no pin: null
 as it opens: false
 a suggestion pressed: #2 / design / https://example.com/a/two / out true
 it stays closed: false
 offered of #9: Make #9 a new task
-offered of #: #1· In progress, #2· In progress, #3· In progress, Make # a new task
+offered of #: #1· To do, #2· To do, #3· To do, Make # a new task
 a URL changed, then the name: #2 / design / https://example.com/a/two / out true
-saved: #1 doing design https://example.com/a/one; #2 doing review https://example.com/a/two; #3 doing first 
-the URL alone: #1 doing later https://example.com/a/url-only; #2 doing review https://example.com/a/two; #3 doing first  | {"task":"#1","step":"design"}
+saved: #1 todo design https://example.com/a/one; #2 todo review https://example.com/a/two; #3 todo first 
+the URL alone: #1 todo later https://example.com/a/url-only; #2 todo review https://example.com/a/two; #3 todo first  | {"task":"#1","step":"design"}
 typed while saving: {"task":"#1","step":"design"}
-pasted: #1 doing later https://example.com/a/pasted; #2 doing review https://example.com/a/two; #3 doing first 
+pasted: #1 todo later https://example.com/a/pasted; #2 todo review https://example.com/a/two; #3 todo first 
 an archived page: true 0
 pinned, told: Pinned “T b” to the task list
 refused, told: Could not save: HTTP 500: no
 whole: #1 / design / https://example.com/a/whole / out true
 on its own task: true 0
-#1· In progress, #2· In progress, #3· In progress, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
-#1· In progress, #2· In progress, #3· In progress, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
+#1· To do, #2· To do, #3· To do, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
+#1· To do, #2· To do, #3· To do, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
 put on a task: Put on #5 (Done) /tasks?project=proj&task=%235
 its state as it was: done
-the state written: #1 doing later https://example.com/a/whole; #2 doing review https://example.com/a/two; #3 doing first 
+the state written: #1 todo later https://example.com/a/whole; #2 todo review https://example.com/a/two; #3 todo first 
 the same task: Saved
-up, come by the toast: /tasks?project=proj&view=doing`
+up, come by the toast: /tasks?project=proj&view=todo`

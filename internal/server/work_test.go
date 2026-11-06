@@ -48,8 +48,8 @@ func TestWorkAPI(t *testing.T) {
 	if code, _ := patch(task(" shop ", " #1 "), `{}`); code != http.StatusNoContent {
 		t.Errorf("an empty write = %d", code)
 	}
-	if got := tasks()["shop"]["#1"]; got.State != "doing" {
-		t.Errorf("trimmed, made doing: %+v", tasks())
+	if got := tasks()["shop"]["#1"]; got.State != "todo" {
+		t.Errorf("trimmed, made todo: %+v", tasks())
 	}
 	if code, body := patch(task("shop", "#c"), `{"parent":"#1"}`); code != http.StatusNoContent {
 		t.Errorf("a parent = %d, %s", code, body)
@@ -72,7 +72,7 @@ func TestWorkAPI(t *testing.T) {
 		{"/api/tasks?task=x", `{}`, `a task needs its project: "/" for none`},
 		{task("  ", "x"), `{}`, `a task needs its project: "/" for none`},
 		{"/api/tasks?project=p", `{}`, "a task needs a name"},
-		{task("p", "x"), `{"state":"nope"}`, `unknown state "nope": use waiting, doing, done`},
+		{task("p", "x"), `{"state":"nope"}`, `unknown state "nope": use todo, doing, waiting, done`},
 		{task("p", "x"), `{"url":"javascript:alert(1)"}`, `"javascript:alert(1)" is not an http or https URL`},
 		{"/api/tasks?project=p&task=%FF", `{}`, "a task's project and name must be UTF-8"},
 		{"/api/tasks?project=%FF&task=x", `{}`, "a task's project and name must be UTF-8"},

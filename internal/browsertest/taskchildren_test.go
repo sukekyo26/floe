@@ -95,7 +95,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 
 	// The children by view; j and k stay on the pages, and a press goes to the child's page.
 	open("#1")
-	if got := b.eval(kids); got != "#2 Waiting, #4 In progress, #3 Archive" {
+	if got := b.eval(kids); got != "#4 In progress, #2 Waiting, #3 Archive" {
 		t.Errorf("the children: %q", got)
 	}
 	b.eval("document.querySelector('#list a.title').focus()")
@@ -164,7 +164,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := made["proj"]["#100"]; got.Parent != "#99" || got.Title != "made here" || got.State != "doing" {
+	if got := made["proj"]["#100"]; got.Parent != "#99" || got.Title != "made here" || got.State != "todo" {
 		t.Errorf("made: %+v", got)
 	}
 	open("#100")
