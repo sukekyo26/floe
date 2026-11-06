@@ -30,7 +30,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe diagram inspect <spec.yaml\|data.yaml>...` | Check diagrams, of specs or of data files, and print where each part went |
 | `floe diagram example [kind]` | List the example specs, or print one |
 | `floe icons fetch <set> [zip-or-url]` | Keep an icon set (`aws`) for the `icon` parts of diagrams |
-| `floe icons search <word>...` | List the fetched icons whose name contains every word |
+| `floe icons search <word>...` | List the fetched icons whose name contains every word, or a short name such as `alb` |
 | `floe completion <shell>` | Print the completion script for a shell (Cobra builtin) |
 | `floe version` | Print the version (also `floe --version`) |
 | `floe help [command]` | Print help (Cobra builtin) |
@@ -291,7 +291,7 @@ Keep an icon set in `FLOE_ICONS_DIR/<set>` for the `icon` parts of diagrams. flo
 
 ## `floe icons search <word>...`
 
-List the fetched icons whose name contains every word (case does not matter), one per line: the name to give an `icon` part (`aws/…`) and its category, tab-separated. A common short name of a service (`alb`, `s3`, `ecs`) finds the service too, listed first; floe keeps a short list of these, and any other word is matched only against the names.
+List the fetched icons whose name contains every word (case does not matter), one per line: the name to give an `icon` part (`aws/…`) and its category, tab-separated. A common short name of a service (`alb`, `s3`, `ecs`) finds the service first, then its resources (`s3 bucket`); floe keeps a short list of these, and any other word is matched only against the names.
 
 ---
 

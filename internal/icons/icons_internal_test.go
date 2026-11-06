@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -304,31 +304,37 @@ func TestURLs(t *testing.T) {
 	}
 }
 
-// A short name finds what it means first, then what holds it, each by name; a word finds nothing more than it is.
+// A short name finds what it means first, then its resources and what holds the word, each by name; a word finds
+// nothing more than it is.
 func TestSearchShort(t *testing.T) {
 	t.Parallel()
 
 	set := New(t.TempDir(), false, "")
 	set.indexes["aws"] = &index{Version: "", Source: "", Icons: map[string]entry{
-		"amazon-simple-storage-service": {Category: "Storage"},
-		"amazon-s3-on-outposts":         {Category: "Storage"},
-		"aws-auto-scaling":              {Category: "Management"},
-		"amazon-ec2-auto-scaling":       {Category: "Compute"},
-		"res/amazon-vpc-nat-gateway":    {Category: "Networking"},
-		"res/amazon-nat-other":          {Category: "Networking"},
-		"res/zz-alb-in-its-name":        {Category: "Networking"},
+		"amazon-simple-storage-service":            {Category: "Storage"},
+		"res/amazon-simple-storage-service-bucket": {Category: "Storage"},
+		"amazon-s3-on-outposts":                    {Category: "Storage"},
+		"aws-auto-scaling":                         {Category: "Management"},
+		"amazon-ec2-auto-scaling":                  {Category: "Compute"},
+		"res/amazon-vpc-nat-gateway":               {Category: "Networking"},
+		"res/amazon-vpc-nat-gateway-spare":         {Category: "Networking"},
+		"res/amazon-nat-other":                     {Category: "Networking"},
+		"res/zz-alb-in-its-name":                   {Category: "Networking"},
+		"amazon-other-storage-service":             {Category: "Storage"},
 	}}
+	bucket, s3 := "aws/res/amazon-simple-storage-service-bucket", "aws/amazon-simple-storage-service"
 	for _, c := range []struct {
 		name  string
 		words []string
 		want  []string
 	}{
-		{"meant first, what holds it kept", []string{"s3"}, []string{"aws/amazon-simple-storage-service", "aws/amazon-s3-on-outposts"}},
-		{"in any case", []string{"S3"}, []string{"aws/amazon-simple-storage-service", "aws/amazon-s3-on-outposts"}},
+		{"meant first, its resources and what holds it", []string{"s3"}, []string{s3, "aws/amazon-s3-on-outposts", bucket}},
+		{"in any case", []string{"S3"}, []string{s3, "aws/amazon-s3-on-outposts", bucket}},
+		{"a resource of the service", []string{"s3", "bucket"}, []string{bucket}},
 		{"two meant, by name", []string{"asg"}, []string{"aws/amazon-ec2-auto-scaling", "aws/aws-auto-scaling"}},
-		{"meant and held, once", []string{"nat"}, []string{"aws/res/amazon-vpc-nat-gateway", "aws/res/amazon-nat-other"}},
+		{"meant and held, once", []string{"nat"}, []string{"aws/res/amazon-vpc-nat-gateway", "aws/res/amazon-nat-other", "aws/res/amazon-vpc-nat-gateway-spare"}},
 		{"every word holds", []string{"s3", "outposts"}, []string{"aws/amazon-s3-on-outposts"}},
-		{"one word meant is first", []string{"s3", "amazon"}, []string{"aws/amazon-simple-storage-service", "aws/amazon-s3-on-outposts"}},
+		{"one word meant is first", []string{"s3", "amazon"}, []string{s3, "aws/amazon-s3-on-outposts", bucket}},
 		{"a target not in the set", []string{"alb"}, []string{"aws/res/zz-alb-in-its-name"}},
 		{"not the whole word", []string{"aws/s3"}, nil},
 		{"part of a short name", []string{"sg"}, nil},
@@ -338,30 +344,52 @@ func TestSearchShort(t *testing.T) {
 		for _, h := range hits {
 			got = append(got, h.Name)
 		}
-		if !reflect.DeepEqual(got, c.want) || (err != nil) != (c.want == nil) {
-			t.Errorf("%s: Search %v = %v, %v, want %v", c.name, c.words, got, err, c.want)
+		var told *usererr.Error
+		if c.want == nil && (!errors.As(err, &told) || told.Key != "icons_no_match") || c.want != nil && err != nil {
+			t.Errorf("%s: Search %v tells %v", c.name, c.words, err)
+		}
+		if !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: Search %v = %v, want %v", c.name, c.words, got, c.want)
 		}
 	}
 }
 
-// Every icon a short name means is in the set FLOE_ICONS_DIR holds. CI holds no real set, so this runs only by hand.
-func TestShortNames(t *testing.T) { //nolint:paralleltest // it reads the environment
+// A short name is written as a word is compared: in lower case.
+func TestShortNamesLower(t *testing.T) {
+	t.Parallel()
+
+	for _, k := range kits {
+		for word := range k.short {
+			if word != strings.ToLower(word) {
+				t.Errorf("%s: the short name %q is never matched, as a word is lowered first", k.name, word)
+			}
+		}
+	}
+}
+
+// Every icon a short name means is in the sets FLOE_ICONS_DIR holds. CI holds no real set, so this runs only by hand.
+func TestShortNames(t *testing.T) {
+	t.Parallel()
+
 	root := os.Getenv("FLOE_ICONS_DIR")
 	if root == "" {
 		t.Skip("FLOE_ICONS_DIR names no fetched set")
 	}
+	checked := 0
 	for _, k := range kits {
-		raw, err := os.ReadFile(filepath.Join(root, k.name, "index.json")) //nolint:gosec // the file the person running this names
+		file := filepath.Join(root, k.name, "index.json")
+		b, _, err := files.Read(file)
 		if errors.Is(err, os.ErrNotExist) {
-			t.Skipf("%s is not fetched in %s", k.name, root)
+			continue
 		}
 		if err != nil {
 			t.Fatal(err)
 		}
-		var idx index
-		if err := json.Unmarshal(raw, &idx); err != nil {
+		idx, err := parseIndex(file, b, k)
+		if err != nil {
 			t.Fatal(err)
 		}
+		checked++
 		for word, names := range k.short {
 			for _, name := range names {
 				if _, ok := idx.Icons[name]; !ok {
@@ -369,5 +397,8 @@ func TestShortNames(t *testing.T) { //nolint:paralleltest // it reads the enviro
 				}
 			}
 		}
+	}
+	if checked == 0 {
+		t.Skipf("no set is fetched in %s", root)
 	}
 }

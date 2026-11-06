@@ -38,7 +38,7 @@ type kit struct {
 	link       *regexp.Regexp
 	version    *regexp.Regexp // the package's version in its URL
 	iconOf     func(path string) (packed, bool)
-	short      map[string][]string // the icons a short name of a service means, which their names do not hold
+	short      map[string][]string // the icons a word means as a service's short name
 }
 
 // packed is an icon in a package: dark marks its variant for dark backgrounds, kept only for an icon
@@ -139,15 +139,24 @@ func (s *Store) readIndex(k *kit) (*index, error) {
 	if err != nil {
 		return nil, s.cannotRead(file, err, k)
 	}
+	idx, err := parseIndex(file, b, k)
+	if err != nil {
+		return nil, err
+	}
+	s.indexes[k.name] = idx
+	return idx, nil
+}
+
+// parseIndex is the index file holding b.
+func parseIndex(file string, b []byte, k *kit) (*index, error) {
 	var idx index
-	if err = json.Unmarshal(b, &idx); err != nil {
+	if err := json.Unmarshal(b, &idx); err != nil {
 		return nil, broken(file, b, err, k)
 	}
 	// JSON of another shape (null, {}) is no index a fetch wrote: each holds its version.
 	if idx.Version == "" {
 		return nil, usererr.NewAt(file, 0, 0, "icons_index_no_version", k.name)
 	}
-	s.indexes[k.name] = &idx
 	return &idx, nil
 }
 
@@ -507,20 +516,17 @@ type Hit struct {
 	Category string
 }
 
-// Search returns the icons of the fetched sets whose name (set/name) contains every word, or is what the word means as
-// a short name (alb, s3), by name: those meant by a short name first, so that a first line is what was asked for. With
-// no set fetched, it tells each not fetched.
-// LIMIT: the short names are kept by hand. A name a new package changes stops being found by its short name, and no
-// one is told: CI holds no real set, and TestShortNames runs only with FLOE_ICONS_DIR set. A word not among them is
-// searched as any word; add a line when an abbreviation is missed.
+// Search returns the icons of the fetched sets whose name (set/name) contains every word, or, for a word that is a
+// short name (alb, s3), the name of an icon it means: the icons a word means first, then the rest, each by name, so
+// that a first line is what was asked for. With no set fetched, it tells each not fetched.
 func (s *Store) Search(words []string) ([]Hit, error) {
 	terms := make([]string, len(words))
 	for i, w := range words {
 		terms[i] = strings.ToLower(w)
 	}
 	var missing usererr.List
-	var hits []Hit
-	meant := map[string]bool{} // the hits a word means as a short name
+	// LIMIT: short names are kept by hand; a renamed icon loses its short name, unnoticed (no real set in CI).
+	var meant, rest []Hit
 	for _, k := range kits {
 		idx, err := s.readIndex(k)
 		if err != nil {
@@ -533,29 +539,33 @@ func (s *Store) Search(words []string) ([]Hit, error) {
 		for name, e := range idx.Icons {
 			// Matched as printed, set and all, so that a name copied from a spec finds itself.
 			full := k.name + "/" + name
-			isMeant := func(t string) bool { return slices.Contains(k.short[t], name) }
-			if !slices.ContainsFunc(terms, func(t string) bool { return !strings.Contains(full, t) && !isMeant(t) }) {
-				hits = append(hits, Hit{Name: full, Category: e.Category})
-				meant[full] = slices.ContainsFunc(terms, isMeant)
+			if slices.ContainsFunc(terms, func(t string) bool { return !strings.Contains(full, t) && !k.holdsMeant(t, name) }) {
+				continue
+			}
+			if slices.ContainsFunc(terms, func(t string) bool { return slices.Contains(k.short[t], name) }) {
+				meant = append(meant, Hit{Name: full, Category: e.Category})
+			} else {
+				rest = append(rest, Hit{Name: full, Category: e.Category})
 			}
 		}
 	}
 	if len(missing) == len(kits) {
 		return nil, missing.Err()
 	}
-	if len(hits) == 0 {
+	if len(meant)+len(rest) == 0 {
 		return nil, usererr.New("icons_no_match", `"`+strings.Join(terms, `" "`)+`"`)
 	}
-	slices.SortFunc(hits, func(a, b Hit) int {
-		if meant[a.Name] != meant[b.Name] {
-			if meant[a.Name] {
-				return -1
-			}
-			return 1
-		}
-		return strings.Compare(a.Name, b.Name)
+	byName := func(a, b Hit) int { return strings.Compare(a.Name, b.Name) }
+	slices.SortFunc(meant, byName)
+	slices.SortFunc(rest, byName)
+	return slices.Concat(meant, rest), nil
+}
+
+// holdsMeant is whether name holds the name, its folder aside, of an icon word means: the service's own resources.
+func (k *kit) holdsMeant(word, name string) bool {
+	return slices.ContainsFunc(k.short[word], func(m string) bool {
+		return strings.Contains(name, strings.TrimPrefix(m, "res/"))
 	})
-	return hits, nil
 }
 
 // Lookup returns the SVG of the icon of name, its set in front (aws/amazon-ec2). A name without a known set in
