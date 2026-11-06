@@ -225,12 +225,33 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if got := b.eval("[...document.getElementById('child-task-names').children].find((e) => e.textContent.startsWith('#4')).textContent"); !strings.Contains(got, "· In progress · parent #1") {
 		t.Errorf("what is said of #4: %q", got)
 	}
+	// A name typed whole closes the names, which would cover what is said; no title goes with a task that has one.
 	field("#4")
+	const said = "[document.getElementById('child-task-names').matches(':popover-open'), document.getElementById('child-note').hidden ? '' : document.getElementById('child-note').textContent, document.getElementById('child-submit').textContent, document.getElementById('child-title').closest('label').hidden].join(' | ')"
+	if got := b.eval(said); got != "false | #4 doing child becomes a child, moving from its parent #1 | Make it a child | true" {
+		t.Errorf("#4 typed: %q", got)
+	}
+	// One that cannot be a child is not said to be; a name of none is made, with a title.
+	field("#20")
+	if got := b.eval(said); got != "false |  | Make it a child | true" {
+		t.Errorf("#20, with children: %q", got)
+	}
+	field("#99")
+	if got := b.eval(said); got != "false |  | Make it a child | true" {
+		t.Errorf("itself: %q", got)
+	}
+	field("#777")
+	if got := b.eval(said); got != "false |  | Make | false" {
+		t.Errorf("a new name: %q", got)
+	}
+	// Chosen by a press, as typed.
+	field("#")
 	r := b.rect("[...document.getElementById('child-task-names').children].find((e) => e.textContent.startsWith('#4'))")
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
-	if got := b.eval("document.getElementById('child-task').value + ' | ' + document.getElementById('child-note').textContent + ' | ' + document.getElementById('child-submit').textContent"); got != "#4 | #4 becomes a child, moving from its parent #1 | Make it a child" {
+	if got := b.eval(said); got != "false | #4 doing child becomes a child, moving from its parent #1 | Make it a child | true" {
 		t.Errorf("#4 chosen: %q", got)
 	}
+	b.eval("document.getElementById('child-title').value = 'not sent'")
 	press("child-submit")
 	b.until("saved", "!document.getElementById('child-dialog').open")
 	b.until("the toast", "document.querySelector('.toast-link')?.textContent === 'Made #4 a child task'")
@@ -241,9 +262,9 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Errorf("#4 taken: %+v", got)
 	}
 	task("proj", "#4", "--parent", "#1")
-	write("#20", "kept")
+	write("#20", "")
 	b.until("refused", "!document.getElementById('child-error').hidden")
-	want := "Could not save: task #20 has child tasks, such as #21, so it cannot have a parent: tasks have one level of children | #20 | kept | true"
+	want := "Could not save: task #20 has child tasks, such as #21, so it cannot have a parent: tasks have one level of children | #20 |  | true"
 	if got := b.eval("[document.getElementById('child-error').textContent, document.getElementById('child-task').value, document.getElementById('child-title').value, document.getElementById('child-dialog').open].join(' | ')"); got != want {
 		t.Errorf("a task with children: %q", got)
 	}
@@ -305,6 +326,19 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("refused", "!document.getElementById('child-error').hidden")
 	if got := b.eval("document.getElementById('child-error').textContent"); !strings.Contains(got, "task t-pages has no row in project proj") {
 		t.Errorf("no row: %q", got)
+	}
+	b.eval("document.getElementById('child-dialog').close()")
+
+	// Named from another task's page, it comes to have a row and be a child.
+	open("gp")
+	openChild()
+	child("t-pages", "")
+	b.until("saved", "!document.getElementById('child-dialog').open")
+	if made, err = st.ReadTasks(); err != nil {
+		t.Fatal(err)
+	}
+	if got := made["proj"]["t-pages"].Parent; got != "gp" {
+		t.Errorf("a task of pages alone: %q", got)
 	}
 }
 
@@ -375,6 +409,10 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 	field("set-parent", "#")
 	if got := b.eval("[...document.getElementById('set-parent-names').children].map((e) => e.textContent.split('·')[0].trim()).join(', ')"); got != "#1 one, #2" {
 		t.Errorf("offered: %q", got)
+	}
+	field("set-parent", "#1")
+	if got := b.eval("document.getElementById('set-parent-names').matches(':popover-open') + ''"); got != "false" {
+		t.Errorf("offered of a whole name: %s", got)
 	}
 	field("set-parent", "#9")
 	if got := b.eval("document.getElementById('set-parent-names').matches(':popover-open') + ''"); got != "false" {

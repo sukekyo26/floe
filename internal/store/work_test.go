@@ -494,6 +494,10 @@ func TestWorkParentByHand(t *testing.T) {
 	if err := s.EditTask("p", "self", store.TaskEdit{Parent: ptr("plain")}); err != nil {
 		t.Errorf("a task of itself: %v", err)
 	}
+	// A parent gone has no children for what names it, so that a task of that name takes a parent.
+	if err := s.EditTask("p", "gone", store.TaskEdit{Parent: ptr("plain")}); err != nil {
+		t.Errorf("a parent gone: %v", err)
+	}
 	if err := s.EditTask("p", "lost", store.TaskEdit{Parent: ptr("")}); err != nil {
 		t.Errorf("mended: %v", err)
 	}

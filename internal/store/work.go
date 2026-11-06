@@ -248,7 +248,7 @@ func checkTaskEdit(ed TaskEdit) error {
 // other's, a grandchild and a parent gone, written by hand, make no child. The management page's tasksOf says the same.
 func childrenOfTask(rows map[string]Task, name string) []string {
 	var children []string
-	if rows[name].Parent != "" {
+	if t, ok := rows[name]; !ok || t.Parent != "" {
 		return nil
 	}
 	for child, t := range rows {

@@ -2011,8 +2011,14 @@
   // A field of one name: those that hold what is written, those that start with it first; a name written whole offers them all, to change
   // to. fresh, when given, is what one that no name is offers, as the last
   function suggestOne(input, all, put, { fresh, onFocus, detail = (name) => ({ name, label: name }) } = {}) {
+    // A name typed whole is done with: the names would cover what is under the field. Pressed on one, they show, to take another
+    let typing = false;
+    input.addEventListener('input', () => { typing = true; });
     suggestNames(input, () => {
       const written = input.value.trim();
+      const done = typing && all().includes(written);
+      typing = false;
+      if (done) return [];
       const typed = written.toLowerCase();
       const names = all();
       const whole = names.some((name) => name.toLowerCase() === typed);
@@ -3468,14 +3474,17 @@
     childNameChanged();
     $('child-dialog').showModal();
   }
-  // What the name written does, said before it is done: a task on the list comes to be a child, out of another parent's, and any other is made
+  // What the name written does, said before it is done: a task on the list comes to be a child with what it has, out of another parent's, and any
+  // other is made. One that cannot be, with children or this one, is not said to: pressed, the store refuses it
   // LIMIT: what is said goes by the tasks last read: one another session made since is taken as written, unsaid
   const childTaskNamed = () => tasksOf().find((x) => x.project === project && x.name === $('child-task').value.trim());
   function childNameChanged() {
     const task = childTaskNamed();
     const from = task?.parentTask && task.parentTask.name !== TASK_NAME ? task.parentTask.name : '';
-    $('child-note').hidden = !task;
-    if (task) $('child-note').textContent = from ? t('ui_task_child_move', task.name, from) : t('ui_task_child_take', task.name);
+    const named = task && [task.name, task.title].filter(Boolean).join(' ');
+    $('child-note').hidden = !task || task.children.length > 0 || task.name === TASK_NAME;
+    if (task) $('child-note').textContent = from ? t('ui_task_child_move', named, from) : t('ui_task_child_take', named);
+    $('child-title').closest('label').hidden = Boolean(task);
     $('child-submit').textContent = t(task ? 'ui_task_child_take_button' : 'ui_task_child_make_button');
   }
   async function saveChildTask(e) {
@@ -3487,7 +3496,7 @@
     try {
       const had = childTaskNamed();
       const url = `/api/tasks?${new URLSearchParams({ project, task: name })}`;
-      const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parent: TASK_NAME, ...(title ? { title } : {}) }) });
+      const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parent: TASK_NAME, ...(title && !had ? { title } : {}) }) });
       if (!res.ok) throw new Error(await res.text());
       const to = tagged('a', 'toast-link', t(had ? 'ui_task_child_took' : 'ui_task_child_made', name));
       to.href = taskHref({ project, name });
