@@ -23,6 +23,13 @@ var manageCorners = []string{
 // manageSteps are the steps :root sets, which no other rule sets again.
 var manageSteps = []string{"--corner", "--corner-menu", "--corner-small", "--menu-pad", "--text-label", "--text-small", "--text"}
 
+// withoutMix is value but its color-mix functions, the names of them alone: what is mixed is read as any other token is.
+func withoutMix(value []token) []token {
+	return slices.DeleteFunc(slices.Clone(value), func(t token) bool {
+		return t.tt == css.FunctionToken && strings.EqualFold(string(t.data), "color-mix(")
+	})
+}
+
 // manageText are the management page's steps of text; a heading of 1rem or more and an em of 1 or more are written as
 // numbers.
 var manageText = []string{"var(--text-label)", "var(--text-small)", "var(--text)", "inherit", "0"}
@@ -30,6 +37,10 @@ var manageText = []string{"var(--text-label)", "var(--text-small)", "var(--text)
 // manageEm is the one size the management page writes in em under 1, by the rule that writes it: a line's code, sized by
 // the text round it.
 var manageEm = map[string]string{".state code": "0.8em"}
+
+// manageMixed is the one rule that mixes colors outside :root: a project's color is each row's, which :root cannot know. It
+// writes no other color: colors of :root and color-mix alone.
+const manageMixed = ".proj-tint"
 
 // colorFunctions are the functions that make a color.
 var colorFunctions = []string{
@@ -105,7 +116,7 @@ func manageCheck(t *testing.T, where string, sheet []byte) {
 				}
 			default:
 			}
-			if !inRoot && colored(d.value) {
+			if !inRoot && (d.rule == manageMixed && colored(withoutMix(d.value)) || d.rule != manageMixed && colored(d.value)) {
 				t.Errorf("%s: %s: %s in %q; give the color a variable in :root", where, name, value, d.rule)
 			}
 		}

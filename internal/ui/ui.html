@@ -417,7 +417,7 @@
   .add-open svg { flex: none; width: 13px; height: 13px; }
   ul { list-style: none; margin: 0; padding: 0; }
   li {
-    position: relative; display: grid; grid-template: "lead title time" auto ". sub actions" auto / 12px minmax(0, 1fr) auto; gap: 0.2rem 0.65rem;
+    position: relative; display: grid; grid-template: "lead title title time" auto ". sub actions actions" auto / 12px minmax(0, 1fr) auto auto; gap: 0.2rem 0.65rem;
     padding: 0.6rem 1rem; background: var(--panel); border-bottom: 1px solid var(--line); transition: background-color 0.15s;
     animation: rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 16ms);
   }
@@ -458,7 +458,12 @@
   .ver { padding: 0.05rem 0.5rem; font: 700 var(--text-label)/1.5 var(--mono); color: var(--new); background: var(--new-soft); border-radius: 999px; white-space: nowrap; }
   li.picked .ver { background: var(--panel); }
   .kindof { padding: 0 0.3rem; color: var(--muted); border: 1px solid var(--line); border-radius: var(--corner-small); white-space: nowrap; }
-  .proj { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* A project's name in the color of its chip on the shelf (drawProject) */
+  .proj { display: inline-flex; align-items: center; gap: 0.3rem; max-width: 10rem; padding: 0 0.5rem; font-weight: 500; white-space: nowrap; border-radius: 999px; }
+  .proj::before, #narrow-filter.proj-tint #narrow-filter-name::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+  .proj-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  /* The one color mixed outside :root: --c is each row's, unknown to :root */
+  .proj-tint { --tint-ink: color-mix(in srgb, var(--c) 50%, var(--fg)); --tint: color-mix(in srgb, var(--c) 16%, var(--panel)); color: var(--tint-ink); background: var(--tint); }
   /* A link's path, the one place how it is cut is decided: on the line of the rest while 8rem is left, cut at its head so that the
      file's name stays. The box runs right to left for that alone, its bdi keeping the path's own order whatever marks it holds */
   .sub .path { flex: 1 1 8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; font: var(--text-label) var(--mono); }
@@ -557,8 +562,8 @@
   .icon-btn svg { width: 16px; height: 16px; }
   .icon-btn:hover { background: var(--subtle); color: var(--fg); }
   .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
-  /* What the bar shows, its menu leaves out, so that nothing is in both: a row has no bar, so that its menu has all */
-  .frame-actions .menu :is(.open, .download, .archive), .menu .fav-item { display: none; }
+  /* What the bar or the row shows, its menu leaves out, so that nothing is in both */
+  .frame-actions .menu :is(.open, .download), .menu :is(.fav-item, .archive) { display: none; }
   /* What opens a column folded, where the button that folded it stood in the foot, on a ground of its own: any page may lie under it.
      After .icon-btn, whose ground it takes the place of.
      LIMIT: over a page it hides what lies under it, until the page scrolls or the column opens. Room under the iframe would be the bar a column left behind was: move it if that comes to trouble someone */
@@ -879,6 +884,10 @@
   /* There is always a project: the button says it, the words never cut to a count, and it is not lit as narrowed */
   .shell.tasks #narrow-filter-name { position: static; width: auto; height: auto; clip-path: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .shell.tasks #narrow-filter-n { display: none; }
+  /* The task list's project: the button and the head are the pill themselves, as one inside a button would be two capsules */
+  :is(#narrow-filter, #shelf-what).proj-tint { color: var(--tint-ink); background: var(--tint); border-color: transparent; font-weight: 500; text-decoration: none; }
+  #shelf-what.proj { padding: 0 0.5rem; font-size: var(--text-label); line-height: 1.5; }
+  #narrow-filter.proj-tint #narrow-filter-name::before { display: inline-block; margin-right: 0.3rem; }
   @media (max-width: 40rem) {
     .shell.tasks #narrow-filter { flex: 0 1 auto; min-width: 0; }
     /* The row of views scrolls: the name stays some of itself rather than going to nothing.
@@ -1240,6 +1249,7 @@
     <time></time>
     <span class="sub"></span>
     <div class="actions">
+      <button type="button" class="icon-btn archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg></button>
       <button type="button" class="icon-btn star">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
       </button>
@@ -1595,6 +1605,14 @@
   // (picked, its last entry gone)
   // LIMIT: from the seventh project on the colors repeat; let the viewer pick them if projects come to be that many
   const projectColor = (name, ranks) => (ranks.has(name) ? `var(--pc${ranks.get(name) % 6})` : 'var(--faint)');
+  // What the task screens draw of a project, in the color of its chip on the task list
+  const taskProjectColor = (name) => projectColor(name, projectOrder(taskProjects(tasksOf())));
+  // el as a project's pill, in its color: its words cut at the pill's end
+  function drawProject(el, word, color) {
+    el.classList.add('proj', 'proj-tint');
+    el.style.setProperty('--c', color);
+    el.replaceChildren(tagged('span', 'proj-name', word));
+  }
 
   // An icon button that toggles: its name stays what pressing does, and aria-pressed tells whether it is on (a
   // screen reader says "Archive, pressed"), as a WAI-ARIA toggle button
@@ -2215,17 +2233,22 @@
     $('narrow-filter-n').textContent = narrowed || '';
     // Where the picks are in a dialog, this is what is lit of them
     $('narrow-filter').classList.toggle('narrowed', narrowed > 0);
+    const projectHead = TASK_LIST && project;
+    $('narrow-filter').classList.toggle('proj-tint', Boolean(projectHead));
+    if (projectHead) $('narrow-filter').style.setProperty('--c', taskProjectColor(project));
     // The filters folded, the head says what they narrow the list to: the view, and how many picks
     const what = [view === FIRST_VIEW ? '' : t(VIEW_WORDS[view]), narrowed ? t('ui_narrow_n', narrowed) : ''].filter(Boolean).join(' · ');
-    $('shelf-what').textContent = TASK_LIST ? projectWord(project) : what;
+    $('shelf-what').classList.remove('proj', 'proj-tint');
+    if (projectHead) drawProject($('shelf-what'), projectWord(project), taskProjectColor(project));
+    else $('shelf-what').textContent = TASK_LIST ? '' : what;
   }
 
   // Whether a has a page of its own to open alone or download: a folder has none, nor has a link whose file is gone
   const hasPage = (a) => !a.folder && !a.missing;
-  // The button that archives a or gives it back, and the words it goes by
-  function drawArchive(btn, a) {
+  // The button that archives a or gives it back, and the words it goes by. On a row, what the keys press leaves them nowhere to go on from
+  function drawArchive(btn, a, onRow = false) {
     btn.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
-    btn.onclick = () => toggleArchived(a);
+    btn.onclick = (e) => setArchived(a, !a.archived, onRow && e.detail === 0);
     return t(a.archived ? 'ui_unarchive' : 'ui_archive');
   }
   // Saved under the name the server gives it (downloadName)
@@ -2615,7 +2638,7 @@
     if (a.folder) put('kindof', t('ui_kind_folder'));
     else if (a.path) put('kindof', t('ui_kind_of_link', a.template ?? 'HTML'));
     else if (a.template) put('kindof', a.template);
-    if (a.project && ranks.size > 1) put('proj', a.project);
+    if (a.project && ranks.size > 1) drawProject(put('proj', ''), a.project, projectColor(a.project, ranks));
     middle(put);
     // A link shows the file where it was registered; if the file is gone, the row says so
     if (a.missing) put('miss', t('ui_file_missing'));
@@ -2682,6 +2705,9 @@
     const star = li.querySelector('.star');
     toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
+    const arc = li.querySelector('.actions > .archive');
+    arc.classList.toggle('on', Boolean(a.archived));
+    arc.title = drawArchive(arc, a, true);
     li.querySelector('.actions').append(moreMenu(a));
     // The way to the first row selected with no keys: the boxes show once one is
     const select = li.querySelector('.menu .select');
@@ -2903,21 +2929,59 @@
     await load();
   }
 
-  // Pressed again before the answer, a is as it was and the press would ask the same: the button stays, with the focus, doing nothing
+  // The row gone from under the pointer, and the next one's button there: the way back is at hand, long enough to read and reach.
+  // From the keys it has the focus, as #toasts is the far end of the page from a row; it stays while it does, and Escape leaves it
+  function archivedDone(a, focus) {
+    const after = rowAfter(a)?.dataset.key;
+    const button = tagged('button', 'btn undo', t('ui_unarchive'));
+    button.type = 'button';
+    button.dataset.slug = a.slug;
+    button.setAttribute('aria-label', t('ui_unarchive_named', a.title));
+    button.addEventListener('click', () => setArchived(a, false));
+    button.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      button.closest('.toast').remove();
+      (rowAt(after) ?? lastRow([...($('list')?.children ?? [])]))?.querySelector('.title')?.focus();
+    });
+    toast(t('ui_archive_done', a.title), { ms: 8000, button });
+    if (focus) button.focus();
+  }
+  // None on a page open whole, which has no list
+  const rowAt = (key) => [...($('list')?.children ?? [])].find((li) => li.dataset.key === key);
+  const entryRow = (a) => rowAt(`entry:${a.slug}`);
+  function rowAfter(a) {
+    let li = entryRow(a)?.nextElementSibling;
+    while (li && !li.querySelector('.title')) li = li.nextElementSibling;
+    return li;
+  }
+  // Given back, the way back goes, the focus on what came back if it was there
+  function dropUndo(a) {
+    const buttons = [...$('toasts').querySelectorAll('.undo')].filter((b) => b.dataset.slug === a.slug);
+    const had = buttons.includes(document.activeElement);
+    for (const b of buttons) b.closest('.toast').remove();
+    return had;
+  }
+  // Pressed again before the list has it, a is as it was and the press would ask the same: the button stays, with the focus, doing nothing.
+  // The other way goes on: the toast's way back shows before the list is read
   const archiving = new Set();
-  async function toggleArchived(a) {
-    if (archiving.has(a.slug)) return;
-    archiving.add(a.slug);
+  async function setArchived(a, to, focusUndo = false) {
+    const asked = `${to} ${a.slug}`;
+    if (archiving.has(asked)) return;
+    archiving.add(asked);
     try {
-      const reason = await patchOne(a.slug, { archived: !a.archived });
+      const reason = await patchOne(a.slug, { archived: to });
       if (reason) {
-        showError(t(a.archived ? 'ui_unarchive_failed' : 'ui_archive_failed', a.title, reason));
+        showError(t(to ? 'ui_archive_failed' : 'ui_unarchive_failed', a.title, reason));
         return;
       }
-      toast(t(a.archived ? 'ui_unarchive_done' : 'ui_archive_done', a.title));
+      const hadFocus = !to && dropUndo(a);
+      if (to) archivedDone(a, focusUndo);
+      else toast(t('ui_unarchive_done', a.title));
       await load();
+      if (hadFocus) ($('find').open ? $('find-q') : entryRow(a)?.querySelector('.title') ?? document.querySelector('#frame-actions > .archive'))?.focus();
     } finally {
-      archiving.delete(a.slug);
+      archiving.delete(asked);
     }
   }
 
@@ -2996,14 +3060,25 @@
   }
 
   // Draws #list: each group's heading, if it has one, and what rowOf pushes of each of its entries (an entry's place among them, the rows)
+  // The row with the focus, on what had it. A row that left, or whose button moved it, as archiving moves one on a task's page, leaves the
+  // focus on the title of the row after it, or the last: on the same button, a key held down or a press more would go on to the next page
+  const lastRow = (rows) => rows.findLast((li) => li.querySelector('.title'));
+  function focusRowAgain(rows, was, key, on) {
+    const byKey = new Map(rows.map((li) => [li.dataset.key, li]));
+    const row = byKey.get(key);
+    const place = (keys, kept) => keys.filter((k) => kept.has(k)).indexOf(key);
+    const stayed = row && (on === '.title' || on === 'summary' || place(was, byKey) === place([...byKey.keys()], new Set(was)));
+    const to = stayed ? row.querySelector(on) : (was.slice(was.indexOf(key) + 1).map((k) => byKey.get(k)).find((li) => li?.querySelector('.title'))
+      ?? lastRow(rows))?.querySelector('.title');
+    to?.focus({ preventScroll: true });
+  }
   function drawRows(groups, rowOf) {
     const rows = [];
     // Rows drawn already are drawn anew in place, without rising in again: only a row new to the list rises in
     const had = new Set([...$('list').children].map((li) => li.dataset.key));
     // The row with the focus has it again once drawn anew: a page read redraws the list as the keys go through it
-    const focused = $('list').contains(document.activeElement) && document.activeElement.matches('.title, summary')
-      ? document.activeElement.closest('li').dataset.key : null;
-    const focusedOn = document.activeElement.matches('summary') ? 'summary' : '.title';
+    const focusedOn = $('list').contains(document.activeElement) ? ['.title', 'summary', '.star', '.actions > .archive'].find((on) => document.activeElement.matches(on)) : null;
+    const focused = focusedOn ? document.activeElement.closest('li').dataset.key : null;
     let i = 0;
     for (const { heading, entries } of groups) {
       if (heading) {
@@ -3024,7 +3099,7 @@
     for (const li of rows) li.classList.toggle('kept', had.has(li.dataset.key));
     // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
-    if (focused !== null) rows.find((li) => li.dataset.key === focused)?.querySelector(focusedOn)?.focus({ preventScroll: true });
+    if (focused !== null) focusRowAgain(rows, [...had], focused, focusedOn);
   }
 
   // Whether anything is there for the task list: a page on a task or pinned, or a task's row with no page left
@@ -3271,7 +3346,7 @@
       $('task-at').textContent = ago(task.at);
     }
     $('task-link').replaceChildren(...(task.url ? [xlink(task.url)] : []));
-    $('task-project').textContent = projectWord(task.project);
+    drawProject($('task-project'), projectWord(task.project), taskProjectColor(task.project));
     $('task-up').href = taskListHref(task);
     const archive = $('task-archive');
     const back = task.archived.length > 0 && task.pages.length === 0;
