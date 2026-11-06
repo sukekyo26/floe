@@ -208,11 +208,12 @@ With slugs, the task's project is each page's: `--task` puts the pages on that n
 | `--step <step>` | pages, and the task's last step | With slugs only. `""` takes it off the pages and leaves the task's |
 | `--state <state>` | the task | `waiting`, `doing` or `done` |
 | `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
+| `--parent <task>` | the task | Without slugs. A task of its project with a row and no parent of its own; a task with children takes none: one level only. `""` takes it off |
 | `--title <title>` | the task | `""` takes it off |
 | `--steps a,b,c` | the task | The order of its steps; a step not named comes after them. A step's name cannot hold a comma here. `""` takes it off |
 | `--pin`, `--unpin` | pages | With slugs only |
 | `--clear` | pages | Off their task, and their pin off; the task stays |
-| `--forget` | the task | Without slugs. Refused while a page is on it, an archived one too |
+| `--forget` | the task | Without slugs. Refused while a page is on it, an archived one too, or it has a child task |
 
 The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at the first failure; a page that does not exist, or is on no task where the flags change one, is told before anything is written. A page that could not be written leaves its task written: the same command given again finishes it. Flags of the pages alone write no task.
 
@@ -223,6 +224,8 @@ A task's row opens the task's page, at `/tasks?project=…&task=…`: its pages 
 A page open whole has a back button beside the logo, which says where it goes: the task's name, the task list or the page list, whichever opened it, and `h` goes there too. The logo always goes to the page list. A page that is not among the rows that opened it (from the search, or another tab) goes back to the page list.
 
 A page's `…` menu does the same by hand: it pins the page or takes the pin off, opens its task, and `Set the task` names its task, step and the task's URL, which is sent only if you changed it. The names offered say each task's state, and a page put on a task is told so, with a link to it. A name of no task is a new task. The page list's rows show a page's task and pin, as a way to them.
+
+**Child tasks**: a parent is set with `--parent`, or the parent field of "Set task", on the page's task. A parent and a child are separate tasks, each under its own state on the list. A child's row names its parent in words, and a parent's row says how many children it has. A task's page shows its children, or its parent, with their states over its pages, under a heading; pressing one opens that task's page (`j` and `k` do not stop on them). Changing a parent's state changes nothing of its children. Whether a task moves to the archive is its own too, and "Archive task" touches that task's pages alone, except for a parent with no page of its own, which goes by its children's: done, with one of their pages archived and none not. A `parent` written by hand that breaks these (a task of no row, itself, a task with a parent) is not refused: the task shows as having no parent. Changing a page's project does not move its task's row, so the family stays in the first project.
 
 A page keeps its `work` when published again, renamed or drawn again. `tasks.json` that cannot be read, or holds another state or a URL other than `http` or `https`, is refused and not written over: mend it by hand. A key of a row floe does not know is lost at the next write.
 

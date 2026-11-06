@@ -860,15 +860,13 @@
   .kin .tname { margin: 0; font-weight: 500; }
   .kin-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   li .kin-title { max-width: 11rem; }
-  a.kin { justify-self: start; font-size: var(--text-small); text-decoration: none; }
-  a.kin:hover { color: var(--fg); text-decoration: underline; }
-  .kids { display: grid; gap: 0.1rem; margin: 0.35rem -1rem -0.65rem; padding: 0.35rem 1rem 0.5rem; border-top: 1px solid var(--line); }
-  .kids h3 { margin: 0 0 0.15rem; font: 700 var(--text-small)/1.4 var(--body); color: var(--muted); }
-  .kid { display: flex; align-items: center; gap: 0.45rem; min-height: 1.9rem; color: var(--fg); font-size: var(--text-small); text-decoration: none; }
-  .kid:hover { text-decoration: underline; }
-  .kid.unseen { font-weight: 700; }
-  .kid .tname { flex: none; margin: 0; }
-  .kid .kin-title { flex: 1; }
+  .family { display: grid; gap: 0.1rem; margin: 0.35rem -1rem -0.65rem; padding: 0.35rem 1rem 0.5rem; border-top: 1px solid var(--line); }
+  .family h3 { margin: 0 0 0.15rem; font: 700 var(--text-small)/1.4 var(--body); color: var(--muted); }
+  .kin-row { display: flex; align-items: center; gap: 0.45rem; min-height: 1.9rem; color: var(--fg); font-size: var(--text-small); text-decoration: none; }
+  .kin-row:hover { text-decoration: underline; }
+  .kin-row.unseen { font-weight: 700; }
+  .kin-row .tname { flex: none; margin: 0; }
+  .kin-row .kin-title { flex: 1; }
   .kid-state { flex: none; padding: 0 0.4rem; font-weight: 700; font-size: var(--text-label); white-space: nowrap; color: var(--muted); background: var(--subtle); border-radius: var(--corner-small); }
   .kid-state.waiting { color: var(--wait); background: var(--wait-soft); }
   .kid-state.doing { color: var(--chg); background: var(--chg-soft); }
@@ -993,7 +991,6 @@
           <a class="up" id="task-up" href="/tasks" title="{{.Msg "ui_tasks_back"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{{.Msg "ui_screen_tasks"}}</a>
           <button type="button" class="btn tarc" id="task-archive" hidden></button>
         </div>
-        <a class="kin" id="task-parent" hidden></a>
         <h2 id="task-title"></h2>
         <div class="tstate">
           <select class="ver-pick st" id="task-state" aria-label="{{.Msg "ui_task_state"}}"><button><selectedcontent></selectedcontent></button></select>
@@ -1001,7 +998,7 @@
           <span id="task-link"></span>
           <span class="proj" id="task-project"></span>
         </div>
-        <div class="kids" id="task-kids" hidden></div>
+        <div class="family" id="task-family" hidden></div>
       </div>
       <div class="pins" id="pins" hidden><h2>{{.Msg "ui_pins"}}</h2><button type="button" class="icon-btn pins-help" id="pins-help" popovertarget="pins-tip" aria-label="{{.Msg "ui_pins_help"}}" title="{{.Msg "ui_pins_help"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg></button><span id="pin-list"></span></div>
       <!-- In the top layer: a narrow screen's row of pins scrolls, and would cut it off -->
@@ -3199,15 +3196,14 @@
 
   const taskRowKey = (project, name) => `task:${JSON.stringify([project, name])}`;
   const unreadOf = (task) => task.pages.filter((a) => a.news).length;
-  // A task's parent in words: its name and title, in what holds them
-  function drawParent(box, parent) {
-    box.replaceChildren(tagged('span', '', t('ui_task_parent_word')), tagged('span', 'tname', parent.name), tagged('span', 'kin-title', parent.title ?? ''));
-    return box;
-  }
   // What a row of the list says of the task's family, the one place that draws it: words, not links. A list of families would change this and what renderTaskList gives drawRows
   function taskKin(task) {
     const kin = [];
-    if (task.parentTask) kin.push(drawParent(tagged('span', 'kin'), task.parentTask));
+    if (task.parentTask) {
+      const up = tagged('span', 'kin');
+      up.append(tagged('span', '', t('ui_task_parent_word')), tagged('span', 'tname', task.parentTask.name), tagged('span', 'kin-title', task.parentTask.title ?? ''));
+      kin.push(up);
+    }
     if (task.children.length > 0) kin.push(tagged('span', 'task-pages', t('ui_task_kids', task.children.length)));
     return kin;
   }
@@ -3398,12 +3394,7 @@
     $('task-link').replaceChildren(...(task.url ? [xlink(task.url)] : []));
     drawProject($('task-project'), projectWord(task.project), taskProjectColor(task.project));
     $('task-up').href = taskListHref(task);
-    $('task-parent').hidden = !task.parentTask;
-    if (task.parentTask) {
-      drawParent($('task-parent'), task.parentTask);
-      $('task-parent').href = taskHref(task.parentTask);
-    }
-    drawTaskKids(task);
+    drawTaskFamily(task);
     const archive = $('task-archive');
     const back = task.archived.length > 0 && task.pages.length === 0;
     archive.hidden = !(back || (task.state === 'done' && task.pages.length > 0));
@@ -3411,28 +3402,29 @@
     archive.onclick = () => archiveTask(task, !back);
   }
 
-  // The children over a parent's pages, off #list: j and k stay on its pages, and neither drawRows nor the hold on a press guards them.
-  // So drawn anew only as what they say changes, with the focus back on the same child
-  // LIMIT: a press while they change loses its click. Hold the drawing as load does for #list if that comes to be felt
-  let kidsDrawn = '';
-  function drawTaskKids(task) {
+  // A task's family over its pages: its parent, or its children, in one form. Off #list: j and k stay on the pages, and neither drawRows
+  // nor the hold on a press guards them. So drawn anew only as what it says changes, with the focus back on the same task
+  // LIMIT: a press while it changes loses its click. Hold the drawing as load does for #list if that comes to be felt
+  let familyDrawn = '';
+  function drawTaskFamily(task) {
     const viewAt = (x) => VIEWS.indexOf(taskView(x));
-    const kids = [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(STATES.find((s) => s.name === taskView(x))?.oldest)(x, y));
-    const said = JSON.stringify(kids.map((kid) => [kid.name, kid.title, taskView(kid), unreadOf(kid) > 0]));
-    if (said === kidsDrawn) return;
-    kidsDrawn = said;
-    const box = $('task-kids');
+    const kin = task.parentTask ? [task.parentTask] : [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(STATES.find((s) => s.name === taskView(x))?.oldest)(x, y));
+    const heading = task.parentTask ? t('ui_task_parent') : t('ui_task_kids_head', kin.length);
+    const said = JSON.stringify([heading, ...kin.map((x) => [x.name, x.title, taskView(x), unreadOf(x) > 0])]);
+    if (said === familyDrawn) return;
+    familyDrawn = said;
+    const box = $('task-family');
     const focused = box.contains(document.activeElement) ? document.activeElement.dataset.task : null;
-    const rows = kids.map((kid) => {
-      const link = tagged('a', 'kid');
-      link.href = taskHref(kid);
-      link.dataset.task = kid.name;
-      link.classList.toggle('unseen', unreadOf(kid) > 0);
-      link.append(tagged('span', unreadOf(kid) > 0 ? 'dot' : 'ring'), tagged('span', 'tname', kid.name), tagged('span', 'kin-title', kid.title ?? ''), tagged('span', `kid-state ${taskView(kid)}`, t(VIEW_WORDS[taskView(kid)])));
+    const rows = kin.map((x) => {
+      const link = tagged('a', 'kin-row');
+      link.href = taskHref(x);
+      link.dataset.task = x.name;
+      link.classList.toggle('unseen', unreadOf(x) > 0);
+      link.append(tagged('span', unreadOf(x) > 0 ? 'dot' : 'ring'), tagged('span', 'tname', x.name), tagged('span', 'kin-title', x.title ?? ''), tagged('span', `kid-state ${taskView(x)}`, t(VIEW_WORDS[taskView(x)])));
       return link;
     });
-    box.hidden = kids.length === 0;
-    box.replaceChildren(...(kids.length > 0 ? [tagged('h3', '', t('ui_task_kids_head', kids.length)), ...rows] : []));
+    box.hidden = kin.length === 0;
+    box.replaceChildren(...(kin.length > 0 ? [tagged('h3', '', heading), ...rows] : []));
     rows.find((link) => link.dataset.task === focused)?.focus();
   }
 

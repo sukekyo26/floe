@@ -63,7 +63,7 @@ the first failure. The same command given again finishes what a failure left.
 	flags.StringVar(&f.url, "url", "", `the task's one outside link, http or https; "" takes it off`)
 	flags.StringVar(&f.title, "title", "", `the task's title; "" takes it off`)
 	flags.StringVar(&f.steps, "steps", "", `the order of the task's steps, separated by commas; "" takes it off`)
-	flags.StringVar(&f.parent, "parent", "", `the task's parent, a task of its project with no parent, without slugs; "" takes it off`)
+	flags.StringVar(&f.parent, "parent", "", `the task's parent, of its project, without slugs; "" takes it off`)
 	flags.BoolVar(&f.pin, "pin", false, "pin the pages to the top of the task list")
 	flags.BoolVar(&f.unpin, "unpin", false, "take the pages' pin off")
 	flags.BoolVar(&f.clear, "clear", false, "take the pages off their task and take their pin off; the task stays")

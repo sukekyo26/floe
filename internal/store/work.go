@@ -162,7 +162,8 @@ func (s *Store) tasksFile() string {
 // by hand.
 // It takes no lock: a write replaces the file whole.
 // LIMIT: a parent written by hand that childrenOfTask does not count is not refused, unlike a state: the writes that
-// would mend it read through here, and the page shows such a task as of no parent. Tell of it if hand edits come to hide it.
+// would mend it read through here, and the page shows such a task as of no parent. Tell of it if hand edits come to
+// hide it.
 // LIMIT: a key of a row floe does not know is lost at the next write. Keep them if tasks.json comes to be hand-edited.
 func (s *Store) ReadTasks() (Tasks, error) {
 	b, _, err := files.Read(s.tasksFile())
@@ -242,9 +243,9 @@ func checkTaskEdit(ed TaskEdit) error {
 	return nil
 }
 
-// childrenOfTask is the names of the children of the task name, in order: a task is a child of the one its parent names
-// when that one has a row of the same project and no parent itself, so that a parent of itself, a pair each the other's,
-// a grandchild and a parent gone, written by hand, make no child. The management page's tasksOf says the same.
+// childrenOfTask is the names of the children of the task name, in order: a task is a child of the one its parent
+// names when that one has a row of the same project and no parent itself, so that a parent of itself, a pair each the
+// other's, a grandchild and a parent gone, written by hand, make no child. The management page's tasksOf says the same.
 func childrenOfTask(rows map[string]Task, name string) []string {
 	var children []string
 	if rows[name].Parent != "" {
@@ -259,9 +260,15 @@ func childrenOfTask(rows map[string]Task, name string) []string {
 	return children
 }
 
-// checkParent refuses what would make the task name the child of parent. Only that row is looked at: another row broken
-// by hand does not keep this one from being written.
+// checkParent refuses what would make the task name the child of parent, or take a parent off a task of no row, which a
+// write would make. Only that row is looked at: another row broken by hand does not keep this one from being written.
 func checkParent(project string, rows map[string]Task, name, parent string) error {
+	if parent == "" {
+		if _, had := rows[name]; !had {
+			return usererr.New("store_no_task", name, project)
+		}
+		return nil
+	}
 	if parent == name {
 		return usererr.New("store_task_parent_self", name)
 	}
@@ -312,8 +319,8 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 		return err
 	}
 	if ed.Parent != nil {
-		parent, err := TaskName(*ed.Parent)
-		if err != nil {
+		var parent string
+		if parent, err = TaskName(*ed.Parent); err != nil {
 			return err
 		}
 		ed.Parent = &parent
@@ -327,11 +334,7 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	if err != nil {
 		return err
 	}
-	t, had := all[project][name]
-	if ed.Parent != nil && *ed.Parent == "" && !had {
-		return usererr.New("store_no_task", name, project)
-	}
-	if ed.Parent != nil && *ed.Parent != "" {
+	if ed.Parent != nil {
 		if err = checkParent(project, all[project], name, *ed.Parent); err != nil {
 			return err
 		}
@@ -339,10 +342,17 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	if all[project] == nil {
 		all[project] = map[string]Task{}
 	}
+	t, had := all[project][name]
 	if !had {
 		fresh := States[slices.IndexFunc(States, func(s State) bool { return s.New })]
 		t = Task{Title: "", State: fresh.Name, Step: "", At: Now(), URL: "", Steps: nil, Parent: ""}
 	}
+	all[project][name] = t.edited(ed)
+	return s.writeTasks(all)
+}
+
+// edited is t as ed changes it, which has been checked.
+func (t Task) edited(ed TaskEdit) Task {
 	if ed.State != nil && *ed.State != t.State {
 		t.State, t.At = *ed.State, Now()
 	}
@@ -361,8 +371,7 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	if ed.Parent != nil {
 		t.Parent = *ed.Parent
 	}
-	all[project][name] = t
-	return s.writeTasks(all)
+	return t
 }
 
 // pagesOfTask counts the pages on the task (project, name), the archived too, and names one of them.
