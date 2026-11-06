@@ -3159,20 +3159,16 @@ func TestGraphHeadPlaces(t *testing.T) {
 	}
 }
 
-// A box widened for each link in turn stops at the headings over it, so that it draws no link under them.
+// A box is not widened left past the headings over it, where a link would enter straight by a column (TestGraphWiden).
 func TestWidenHeadFloor(t *testing.T) {
 	t.Parallel()
 
 	gr := &group{ //nolint:exhaustruct_v5 // what widen reads
 		nodes: []gnode{
-			{box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: 0, kind: kindPlain, cl: 0, rank: 1, w: 64, h: 29, x: 100, y: 0, ins: []int{0, 1, 2}, outs: nil, written: 0},
+			{box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: 0, kind: kindPlain, cl: 0, rank: 1, w: 64, h: 29, x: 100, y: 0, ins: []int{0}, outs: nil, written: 0},
 			{box: nil, of: 0, kind: kindLeft, cl: 0, rank: 1, w: 0, h: 0, x: 0, y: 0, ins: nil, outs: nil, written: 1},
 		},
-		links: []glink{
-			{from: 9, to: 0, edge: 0, exit: 100, entry: 0, straight: false, track: 0},
-			{from: 9, to: 0, edge: 1, exit: 88, entry: 0, straight: false, track: 0},
-			{from: 9, to: 0, edge: 2, exit: 76, entry: 0, straight: false, track: 0},
-		},
+		links: []glink{{from: 9, to: 0, edge: 0, exit: 100, entry: 0, straight: false, track: 0}},
 		heads: map[int]headRoom{0: {left: 1, w: 64}},
 		out:   &graphOut{clusters: []cluster{{parent: -1}}}, //nolint:exhaustruct_v5 // what headsOver reads
 	}
