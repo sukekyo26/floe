@@ -912,8 +912,8 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	if m == nil {
 		return "", ErrNotFound
 	}
-	if ed.Work != nil && ed.Work.Item != nil {
-		if _, err = PageItem(*ed.Work.Item); err != nil {
+	if ed.Work != nil && ed.Work.Task != nil {
+		if _, err = TaskName(*ed.Work.Task); err != nil {
 			return "", err
 		}
 	}

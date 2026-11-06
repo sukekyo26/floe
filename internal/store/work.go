@@ -15,14 +15,14 @@ import (
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// workName is the file of the tasks in the store, the one thing that holds a task's state: its pages name it, and it
+// tasksName is the file of the tasks in the store, the one thing that holds a task's state: its pages name it, and it
 // names no page.
-const workName = "work.json"
+const tasksName = "tasks.json"
 
-// noProject is the project of a task whose pages have none, in work.json, the API and the management page's URLs.
+// noProject is the project of a task whose pages have none, in tasks.json, the API and the management page's URLs.
 const noProject = "/"
 
-// ProjectKey is the project of a page as work.json has it: trimmed, as a directory's name may not be. It is the one
+// ProjectKey is the project of a page as tasks.json has it: trimmed, as a directory's name may not be. It is the one
 // place that says what a page's project is there: a page's list entry carries it (Listed.TaskProject) for what cannot
 // call this.
 func ProjectKey(project string) string {
@@ -33,12 +33,12 @@ func ProjectKey(project string) string {
 	return project
 }
 
-// PageItem is the name of a page's task as written: trimmed, "" taking the page off its task. A name of spaces alone is
+// TaskName is the name of a page's task as written: trimmed, "" taking the page off its task. A name of spaces alone is
 // no way to say that, and is refused.
-func PageItem(item string) (string, error) {
-	trimmed := strings.TrimSpace(item)
-	if item != "" && trimmed == "" {
-		return "", usererr.New("store_task_item")
+func TaskName(name string) (string, error) {
+	trimmed := strings.TrimSpace(name)
+	if name != "" && trimmed == "" {
+		return "", usererr.New("store_task_name")
 	}
 	if !utf8.ValidString(trimmed) {
 		return "", usererr.New("store_task_utf8")
@@ -48,20 +48,20 @@ func PageItem(item string) (string, error) {
 
 // Work is what a page holds of its place on the dev screen: the task it is on, its step there, whether it is pinned.
 type Work struct {
-	Item string `json:"item,omitempty"`
+	Task string `json:"task,omitempty"`
 	Step string `json:"step,omitempty"`
 	Pin  bool   `json:"pin,omitempty"`
 }
 
 // WorkEdit is what an edit changes of a page's Work, each left as it is when nil.
 type WorkEdit struct {
-	Item *string `json:"item,omitzero"`
+	Task *string `json:"task,omitzero"`
 	Step *string `json:"step,omitzero"`
 	Pin  *bool   `json:"pin,omitzero"`
 }
 
 // setWork applies ed to m. A step is of its task: a page that moves to another task leaves it, unless ed gives the
-// step it takes there; a page off a task has none, and one neither on a task nor pinned has no Work. PageItem has
+// step it takes there; a page off a task has none, and one neither on a task nor pinned has no Work. TaskName has
 // checked ed.
 // LIMIT: a page moved to another project's task of the same name, by an edit or a publish, keeps its step: names of
 // steps mostly hold there. Take it off in the two ways if that comes to mislead.
@@ -70,12 +70,12 @@ func setWork(m *Meta, ed *WorkEdit) {
 	if m.Work != nil {
 		w = *m.Work
 	}
-	if ed.Item != nil {
-		item := strings.TrimSpace(*ed.Item)
-		if item != w.Item {
+	if ed.Task != nil {
+		name := strings.TrimSpace(*ed.Task)
+		if name != w.Task {
 			w.Step = ""
 		}
-		w.Item = item
+		w.Task = name
 	}
 	if ed.Step != nil {
 		w.Step = strings.TrimSpace(*ed.Step)
@@ -83,16 +83,16 @@ func setWork(m *Meta, ed *WorkEdit) {
 	if ed.Pin != nil {
 		w.Pin = *ed.Pin
 	}
-	if w.Item == "" {
+	if w.Task == "" {
 		w.Step = ""
 	}
 	m.Work = &w
-	if w.Item == "" && !w.Pin {
+	if w.Task == "" && !w.Pin {
 		m.Work = nil
 	}
 }
 
-// Task is a task's row of work.json. At is when it was made or its state last changed; Step the last step written of
+// Task is a task's row of tasks.json. At is when it was made or its state last changed; Step the last step written of
 // it that was not empty. Parent is read and written back alone: nothing sets it yet.
 type Task struct {
 	Title  string   `json:"title,omitempty"`
@@ -104,7 +104,7 @@ type Task struct {
 	Parent string   `json:"parent,omitempty"`
 }
 
-// Tasks is work.json: the tasks by project (ProjectKey), then by name.
+// Tasks is tasks.json: the tasks by project (ProjectKey), then by name.
 type Tasks map[string]map[string]Task
 
 // State is a state a task can be in: whether the list of it shows the longest in it first, and whether a task new or
@@ -151,25 +151,25 @@ func StateNames() string {
 	return strings.Join(names, ", ")
 }
 
-func (s *Store) workFile() string {
-	return filepath.Join(s.root, workName)
+func (s *Store) tasksFile() string {
+	return filepath.Join(s.root, tasksName)
 }
 
-// ReadWork reads work.json, none being no tasks. What cannot be read, or holds what no write may (checkTaskEdit), is
+// ReadTasks reads tasks.json, none being no tasks. What cannot be read, or holds what no write may (checkTaskEdit), is
 // refused and not made anew as reads.json is: the states and URLs in it are not to be had again, so that it is mended
 // by hand.
 // It takes no lock: a write replaces the file whole.
-// LIMIT: a key of a row floe does not know is lost at the next write. Keep them if work.json comes to be hand-edited.
-func (s *Store) ReadWork() (Tasks, error) {
-	b, _, err := files.Read(s.workFile())
+// LIMIT: a key of a row floe does not know is lost at the next write. Keep them if tasks.json comes to be hand-edited.
+func (s *Store) ReadTasks() (Tasks, error) {
+	b, _, err := files.Read(s.tasksFile())
 	if errors.Is(err, fs.ErrNotExist) {
 		return Tasks{}, nil
 	}
 	if err != nil {
-		return nil, usererr.CannotRead(s.workFile(), err) //nolint:wrapcheck // the system's words, at the file
+		return nil, usererr.CannotRead(s.tasksFile(), err) //nolint:wrapcheck // the system's words, at the file
 	}
 	broken := func(format string, args ...any) error {
-		return usererr.NewAt(s.workFile(), 0, 0, "store_work_broken", fmt.Sprintf(format, args...))
+		return usererr.NewAt(s.tasksFile(), 0, 0, "store_tasks_broken", fmt.Sprintf(format, args...))
 	}
 	var all Tasks
 	if err := json.Unmarshal(b, &all); err != nil {
@@ -182,25 +182,25 @@ func (s *Store) ReadWork() (Tasks, error) {
 		if rows == nil {
 			return nil, broken("project %s holds null, not its tasks", project)
 		}
-		for item, t := range rows {
+		for name, t := range rows {
 			if !validState(t.State) {
-				return nil, broken("task %s of project %s has the state %q", item, project, t.State)
+				return nil, broken("task %s of project %s has the state %q", name, project, t.State)
 			}
 			if t.URL != "" && !validURL(t.URL) {
-				return nil, broken("task %s of project %s has the URL %q, not http or https", item, project, t.URL)
+				return nil, broken("task %s of project %s has the URL %q, not http or https", name, project, t.URL)
 			}
 		}
 	}
 	return all, nil
 }
 
-func (s *Store) writeWork(all Tasks) error {
+func (s *Store) writeTasks(all Tasks) error {
 	b, err := json.MarshalIndent(all, "", "  ")
 	if err != nil {
-		return fmt.Errorf("encode %s: %w", workName, err)
+		return fmt.Errorf("encode %s: %w", tasksName, err)
 	}
-	if err := files.WriteAtomic(s.workFile(), append(b, '\n'), 0o600, nil); err != nil {
-		return usererr.CannotWrite(s.workFile(), err) //nolint:wrapcheck // the system's words, at the file
+	if err := files.WriteAtomic(s.tasksFile(), append(b, '\n'), 0o600, nil); err != nil {
+		return usererr.CannotWrite(s.tasksFile(), err) //nolint:wrapcheck // the system's words, at the file
 	}
 	return nil
 }
@@ -208,18 +208,18 @@ func (s *Store) writeWork(all Tasks) error {
 // taskKey is the project and name that name a task, each as a page's is written. An empty project is refused, not read
 // as no project's: that is "/", and an empty one is a query left out. A byte that is no UTF-8, which only a query can
 // bring, would come to be another name as JSON writes it.
-func taskKey(project, item string) (key, name string, err error) {
+func taskKey(project, raw string) (key, name string, err error) {
 	if strings.TrimSpace(project) == "" {
 		return "", "", usererr.New("store_task_project")
 	}
 	if !utf8.ValidString(project) {
 		return "", "", usererr.New("store_task_utf8")
 	}
-	if name, err = PageItem(item); err != nil {
+	if name, err = TaskName(raw); err != nil {
 		return "", "", err
 	}
 	if name == "" {
-		return "", "", usererr.New("store_task_item")
+		return "", "", usererr.New("store_task_name")
 	}
 	return ProjectKey(project), name, nil
 }
@@ -248,9 +248,9 @@ func stepsOf(steps []string) []string {
 	return kept
 }
 
-// EditTask applies ed to the row of the task (project, item), making it of the state doing when there is none.
-func (s *Store) EditTask(project, item string, ed TaskEdit) error {
-	project, item, err := taskKey(project, item)
+// EditTask applies ed to the row of the task (project, name), making it of the state doing when there is none.
+func (s *Store) EditTask(project, name string, ed TaskEdit) error {
+	project, name, err := taskKey(project, name)
 	if err != nil {
 		return err
 	}
@@ -262,14 +262,14 @@ func (s *Store) EditTask(project, item string, ed TaskEdit) error {
 		return err
 	}
 	defer unlock()
-	all, err := s.ReadWork()
+	all, err := s.ReadTasks()
 	if err != nil {
 		return err
 	}
 	if all[project] == nil {
 		all[project] = map[string]Task{}
 	}
-	t, had := all[project][item]
+	t, had := all[project][name]
 	if !had {
 		fresh := States[slices.IndexFunc(States, func(s State) bool { return s.New })]
 		t = Task{Title: "", State: fresh.Name, Step: "", At: Now(), URL: "", Steps: nil, Parent: ""}
@@ -289,20 +289,20 @@ func (s *Store) EditTask(project, item string, ed TaskEdit) error {
 	if ed.Steps != nil {
 		t.Steps = stepsOf(*ed.Steps)
 	}
-	all[project][item] = t
-	return s.writeWork(all)
+	all[project][name] = t
+	return s.writeTasks(all)
 }
 
-// pagesOfTask counts the pages on the task (project, item), the archived too, and names one of them. It is the one
+// pagesOfTask counts the pages on the task (project, name), the archived too, and names one of them. It is the one
 // place that says what keeps a task from being forgotten.
-func (s *Store) pagesOfTask(project, item string) (count int, first string, err error) {
+func (s *Store) pagesOfTask(project, name string) (count int, first string, err error) {
 	slugs, err := s.slugs()
 	if err != nil {
 		return 0, "", err
 	}
 	for _, slug := range slugs {
 		m := s.ReadMeta(slug)
-		if m != nil && m.Work != nil && m.Work.Item == item && ProjectKey(m.Project) == project {
+		if m != nil && m.Work != nil && m.Work.Task == name && ProjectKey(m.Project) == project {
 			if count == 0 {
 				first = slug
 			}
@@ -312,9 +312,9 @@ func (s *Store) pagesOfTask(project, item string) (count int, first string, err 
 	return count, first, nil
 }
 
-// ForgetTask removes the row of the task (project, item): ErrNotFound for none, and refused while a page is on it.
-func (s *Store) ForgetTask(project, item string) error {
-	project, item, err := taskKey(project, item)
+// ForgetTask removes the row of the task (project, name): ErrNotFound for none, and refused while a page is on it.
+func (s *Store) ForgetTask(project, name string) error {
+	project, name, err := taskKey(project, name)
 	if err != nil {
 		return err
 	}
@@ -326,23 +326,23 @@ func (s *Store) ForgetTask(project, item string) error {
 		return err
 	}
 	defer unlock()
-	all, err := s.ReadWork()
+	all, err := s.ReadTasks()
 	if err != nil {
 		return err
 	}
-	if _, ok := all[project][item]; !ok {
+	if _, ok := all[project][name]; !ok {
 		return ErrNotFound
 	}
-	count, first, err := s.pagesOfTask(project, item)
+	count, first, err := s.pagesOfTask(project, name)
 	if err != nil {
 		return err
 	}
 	if count > 0 {
-		return usererr.New("store_task_pages", item, project, count, first)
+		return usererr.New("store_task_pages", name, project, count, first)
 	}
-	delete(all[project], item)
+	delete(all[project], name)
 	if len(all[project]) == 0 {
 		delete(all, project)
 	}
-	return s.writeWork(all)
+	return s.writeTasks(all)
 }

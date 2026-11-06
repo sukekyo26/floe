@@ -190,21 +190,21 @@ Archive the pages in order through the server (it is started when it is not runn
 
 ## `floe work [<slug>...]`
 
-Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its name; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `work.json` in the store holds each task's title, state, last step, outside link and order of steps.
+Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its name; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `tasks.json` in the store holds each task's title, state, last step, outside link and order of steps.
 
 ```sh
-floe work design-notes --item "#130" --step design --state waiting   # the page on the task, and the task's state
-floe work --item "#130" --url https://example.com/issues/482         # the task alone
-floe work --item "#130" --steps design,build,review                  # the order its steps are shown in
+floe work design-notes --task "#130" --step design --state waiting   # the page on the task, and the task's state
+floe work --task "#130" --url https://example.com/issues/482         # the task alone
+floe work --task "#130" --steps design,build,review                  # the order its steps are shown in
 floe work design-notes --pin                                         # pinned, whatever its task
-floe work --item "#130" --forget                                     # the task's row removed
+floe work --task "#130" --forget                                     # the task's row removed
 ```
 
-With slugs, the task's project is each page's: `--item` puts the pages on that name in their own projects, and without it each page's own task is changed. Without slugs, `--item` names the task, of `--project` (the working directory's project when left out; `""` for none).
+With slugs, the task's project is each page's: `--task` puts the pages on that name in their own projects, and without it each page's own task is changed. Without slugs, `--task` names the task, of `--project` (the working directory's project when left out; `""` for none).
 
 | Flag | Changes | |
 | --- | --- | --- |
-| `--item <name>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their step off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--steps`, a step). A page moved to another task leaves its step, unless `--step` gives it one there. A new name is a task in the state `doing` |
+| `--task <name>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their step off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--steps`, a step). A page moved to another task leaves its step, unless `--step` gives it one there. A new name is a task in the state `doing` |
 | `--step <step>` | pages, and the task's last step | With slugs only. `""` takes it off the pages and leaves the task's |
 | `--state <state>` | the task | `waiting`, `doing` or `done` |
 | `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
@@ -216,7 +216,7 @@ With slugs, the task's project is each page's: `--item` puts the pages on that n
 
 The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at the first failure; a page that does not exist, or is on no task where the flags change one, is told before anything is written. A page that could not be written leaves its task written: the same command given again finishes it. Flags of the pages alone write no task.
 
-A page keeps its `work` when published again, renamed or drawn again. `work.json` that cannot be read, or holds another state or a URL other than `http` or `https`, is refused and not written over: mend it by hand. A key of a row floe does not know is lost at the next write.
+A page keeps its `work` when published again, renamed or drawn again. `tasks.json` that cannot be read, or holds another state or a URL other than `http` or `https`, is refused and not written over: mend it by hand. A key of a row floe does not know is lost at the next write.
 
 ## `floe serve`
 
