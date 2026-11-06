@@ -136,7 +136,9 @@ func barOf(i int, item any) (bar, error) {
 	if !ok {
 		return bar{}, usererr.New("kit_bar_item", "bars", i+1)
 	}
-	b := bar{Label: stringOf(m["label"]), Tone: stringOf(m["tone"]), Value: m["value"], Of: m["of"]}
+	b := bar{
+		Label: stringOf(m["label"]), Tone: stringOf(m["tone"]), Value: m["value"], Of: m["of"], Now: "", Max: "", Width: 0,
+	}
 	name := fmt.Sprintf("bars: bar %q", b.Label)
 	n, err := float(name+"'s value", b.Value)
 	if err != nil {
