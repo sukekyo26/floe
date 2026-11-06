@@ -140,7 +140,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	key("h")
 	b.until("the filtered list", "location.pathname + location.search === '/tasks?view=doing&project=proj'")
 	b.until("the rows", "document.querySelector('#list > li')")
-	b.eval("document.querySelector('#list .title').click()")
+	b.eval("[...document.querySelectorAll('#list .title')].find((a) => a.textContent.startsWith('#130')).click()")
 	b.until("the task's page", "location.search.includes('task=') && "+taskPageShown)
 	say("up goes to the list it came from", "document.getElementById('task-up').getAttribute('href')")
 
