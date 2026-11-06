@@ -2125,7 +2125,7 @@ func TestGraphLabelOnLongest(t *testing.T) {
 
 	d := &drawing{
 		right: false, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{
-			0: {{0, 0}, {0, 40}, {200, 40}, {200, 60}},
+			0: {{0, 0}, {0, 60}, {200, 60}, {200, 80}},
 		}, ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{}, spots: map[int]spot{},
 	}
 	if err := d.place(0, 40); err != nil {
@@ -2134,13 +2134,23 @@ func TestGraphLabelOnLongest(t *testing.T) {
 	if sp := d.spots[0]; sp.seg != 1 || sp.at != 80 {
 		t.Errorf("on run %d from %v, want run 1 from 80", sp.seg, sp.at)
 	}
-	d.routes[1], d.spots[1] = [][2]float64{{100, 0}, {100, 80}}, spot{edge: 1, seg: 0, beside: false, at: 31, w: 18}
+	d.routes[1] = [][2]float64{{100, 0}, {100, 100}}
 	delete(d.spots, 0)
 	if err := d.place(0, 40); err != nil {
 		t.Fatal(err)
 	}
 	if sp := d.spots[0]; sp.seg != 1 || sp.at == 80 {
 		t.Errorf("with a run across its middle: on run %d from %v", sp.seg, sp.at)
+	}
+
+	// Another edge along the very run: the label does not stand on both.
+	both := &drawing{
+		right: false, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{
+			0: {{0, 0}, {0, 200}}, 1: {{0, 0}, {0, 200}},
+		}, ends: map[int][2]int{0: {0, 0}, 1: {0, 0}}, back: map[int]bool{}, spots: map[int]spot{},
+	}
+	if sp, ok := both.seek(0, 40); ok {
+		t.Errorf("a label on a run another edge shares, at %v", sp.at)
 	}
 }
 

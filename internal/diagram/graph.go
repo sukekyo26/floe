@@ -795,11 +795,11 @@ func (d *drawing) crossed(along int, cut, lo, hi float64) (stays, moves float64)
 	return stays, moves
 }
 
-// reach is where to cut along the run at cross, and how far on across, for r by it, on the side of the run sign says
-// (1 past it, -1 short of it): the nearest thing that way within r's span along it (a run, a box, a label held to its
-// run, where an edge written by hand leaves a box) stands short of r's far end by need, and a little; the cut is
-// between the run and that thing, a quarter column from the run or halfway, the nearer, so that nothing within r's span
-// stays between the run and the cut. A cut short of the run moves the run and r with it. need is 0 when nothing stands in r's
+// reach is where to cut along the run at cross, and how far on across, for r by it, on the side of the run sign says (1
+// past it, -1 short of it): the nearest thing that way within r's span along it (a run, a box, a label held to its run,
+// where an edge written by hand leaves a box) stands short of r's far end by need, and a little; the cut is between the
+// run and that thing, a quarter column from the run or halfway, the nearer, so that nothing within r's span stays
+// between the run and the cut. A cut short of the run moves the run and r with it. need is 0 when nothing stands in r's
 // way.
 func (d *drawing) reach(r rect, cross float64, along int, sign float64) (at, need float64) {
 	across := 1 - along
