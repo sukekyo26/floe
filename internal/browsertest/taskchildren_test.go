@@ -600,7 +600,7 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 
 	// The fields' words, and the example the catalog gives.
 	dialog("a")
-	if got := b.eval("[document.getElementById('set-task').placeholder, document.getElementById('set-parent').placeholder, document.getElementById('set-task').closest('label').textContent.trim(), document.getElementById('set-task-title').closest('label').textContent.trim()].join('|')"); got != "e.g. #128|e.g. #128|Task ID|Title" {
+	if got := b.eval("[document.getElementById('set-task').placeholder, document.getElementById('set-parent').placeholder, document.getElementById('set-task').closest('label').textContent.trim(), document.getElementById('set-task-title').closest('label').textContent.trim(), document.getElementById('set-step').placeholder].join('|')"); got != "e.g. #128|e.g. #128|Task ID|Title|e.g. design, build, review" {
 		t.Errorf("the fields: %q", got)
 	}
 	b.eval("document.getElementById('set-dialog').close()")

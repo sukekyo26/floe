@@ -613,6 +613,7 @@ var messagesEN = map[string]string{
 	"ui_task_child_of":     "Under %s",
 	"ui_task_title":        "Title",
 	"ui_task_id_example":   "e.g. #128",
+	"ui_task_step_example": "e.g. design, build, review",
 	"ui_task_stale":        "%s: the tasks are read again, so check and save again",
 	"ui_field_blank":       "Write more than spaces",
 	"ui_task_child_made":   "Made the child task %s",
