@@ -41,8 +41,9 @@ func (l *layout) checked() error {
 // LIMIT: the other labels are not kept off a frame's edge: an edge's with no at (in the middle of the edge, which may
 // cross frames), an axis's (which may too), a graph edge's, and a label part's in its region of a Venn diagram, minding
 // only circles. Keep them off too if one strays.
-// LIMIT: the numbers told are rounded by num to 2 places, so an edge within 0.005 of a part's end reads as that end
-// (at x 140, spanning 140 to 180). Tell more places if one misleads.
+// LIMIT: the numbers told are rounded by num to 2 places, so with coordinates of 3 places or more an edge within 0.005
+// of a part's end reads as that end (at x 140, spanning 140 to 180), and a frame written to the numbers told may still
+// be refused; round the coordinates to mend it. Tell more places if writers come to need them.
 // LIMIT: the edges one part crosses are told in the order of their words (usererr.Sorted compares text), so at x 140
 // comes before at x 20. Sort them by number if the order comes to matter.
 func (l *layout) checkPlacement() {
