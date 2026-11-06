@@ -12,7 +12,7 @@ import (
 // columns (keys' text beside its keycaps, the language of code and the counts of a diff beside a long file
 // name), a path in a table, in a tree's note (beside a deep tree) and in a text's Markdown table and code (and a long word in a table's cell), which scroll instead, and entries with a long URL for a title, a
 // long path, a long pill and a long line of code in its text. A long block and a table also stand in an item of a
-// list and in a quote, in a text, a faq's answer, a card of options and of a decision, a step and a tab, where an
+// list and in a quote, in a text, a text in details, a card of options and of a decision, a step and a tab, where an
 // item of a grid or a flex row around them takes their width unless the box that scrolls tells nothing of it.
 const wrapPage = `template: report
 lang: en
@@ -70,27 +70,28 @@ sections:
           > | file | what | where | when | who |
           > | --- | --- | --- | --- | --- |
           > | internal/kit/floe/parts/findings/part_internal_test.go | a test of the findings | in the kit | on Sunday | the team |
-      - faq:
-          - q: An answer holding a long block
-            open: true
-            a: |
-              > A quote holding a long block:
-              >
-              > ` + "```" + `
-              > floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml
-              > ` + "```" + `
+      - details:
+          title: A details holding a long block
+          open: true
+          parts:
+            - text: |
+                > A quote holding a long block:
+                >
+                > ` + "```" + `
+                > floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml
+                > ` + "```" + `
 
-              - an item:
+                - an item:
 
-                ` + "```" + `
-                floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml
-                ` + "```" + `
+                  ` + "```" + `
+                  floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml
+                  ` + "```" + `
 
-              > A quote holding a table:
-              >
-              > | file | what | where | when | who |
-              > | --- | --- | --- | --- | --- |
-              > | internal/kit/floe/parts/findings/part_internal_test.go | a test of the findings | in the kit | on Sunday | the team |
+                > A quote holding a table:
+                >
+                > | file | what | where | when | who |
+                > | --- | --- | --- | --- | --- |
+                > | internal/kit/floe/parts/findings/part_internal_test.go | a test of the findings | in the kit | on Sunday | the team |
       - options:
           - title: An option holding a long block
             text: |

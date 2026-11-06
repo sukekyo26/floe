@@ -92,10 +92,10 @@ The parts `report` takes in a section:
 | `table` | Rows compared both along and across, each cell short. `columns` and `rows`. A column is its title, or `{ title, num, pills }`: `num: true` for numbers, and `pills`, words with their tones (`{ done: good }`), for a cell of the column that is one of them, whole, to be drawn as that pill. A cell is a line of Markdown, a number in quotes as it is drawn, or a pill `{ pill, tone }`, written as an object, not in quotes. |
 | `entries` | Records one under another, each a `title` (a line of Markdown) with its `tags` beside it (each as a table's cell: a line of Markdown or a pill), its `text` (Markdown) the full width under them, and its `parts` under that, the parts `details` holds. A tag shows no column's name, so say in it what it is (`merged 2026-10-30`). Write code in `parts`, as `code` and `terminal`; a fenced block in `text` is drawn as plain code and warned of. |
 | `image` | An image, such as a screenshot: its `file` and its `alt`, what it shows ([Images](#images)). |
-| `note`, `stats`, `progress`, `steps`, `checklist` | A note in a tone, large numbers, bars of progress, numbered steps, items ticked once done. |
+| `note`, `stats`, `steps`, `checklist` | A note in a tone, large numbers, numbered steps, items ticked once done. |
 | `compare`, `options`, `facts`, `diff`, `tree`, `links` | What changes before and after, options with pros and cons, names with values, a diff (a button over it copies the diff as written), files and folders, links. |
 | `findings`, `decision`, `fields` | What a review found, a decision, the keys of a setting. |
-| `timeline`, `bars`, `faq`, `keys` | Dates in order, bars of values, questions and answers, keys to press. |
+| `timeline`, `bars`, `keys` | Dates in order, bars of values, keys to press. A bar with `of` is filled as far as its `value` goes of that whole and reads `5 / 8`, for how far a piece of work has gone; the others are shares of the largest value among them. |
 | `details`, `tabs` | Parts folded under a title, or shown one at a time under tabs; they hold `text`, `code`, `terminal`, `diff`, `note`, `table`, `entries`, `image` and `diagram`. |
 | `diagram` | A diagram, checked and drawn as inline SVG ([diagrams.md](diagrams.md)). |
 | `script` | Something that moves ([Scripts and HTML](#scripts-and-html)). |

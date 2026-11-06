@@ -19,13 +19,13 @@ var bandKit = map[string]string{
 		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{if .Data.note}}<div data-floe-part=\"note\"><p>A borrowed note, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>{{end}}{{.Data.note}}{{.Data.text}}{{.Data.words}}{{.Data.details}}{{.Data.options}}<div data-floe-look=\"cards\"><div class=\"card\" data-floe-look=\"panel\"><p>A card of the template's own.</p></div></div>" +
 		"<div data-floe-look=\"panel\"><p>A panel of the template's own, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>" +
 		"<div data-floe-look=\"table\"><table><tr><th>A <a href=\"https://example.com/\">table</a></th></tr><tr><td>of its own, <code>code</code></td></tr></table></div>" +
-		"{{.Data.table}}{{.Data.code}}{{.Data.progress}}{{.Data.tree}}{{.Data.timeline}}{{.Data.tabs}}{{.Data.links}}</header>\n</body></html>\n",
+		"{{.Data.table}}{{.Data.code}}{{.Data.bars}}{{.Data.tree}}{{.Data.timeline}}{{.Data.tabs}}{{.Data.links}}</header>\n</body></html>\n",
 	"templates/mine/page.css": "header { display: grid; gap: 1rem; padding: 2rem; }\n",
 	"templates/mine/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"note": {"$ref": "floe:///parts/note.json"}, "text": {"type": "string", "format": "markdown"},
 "table": {"$ref": "floe:///parts/table.json"}, "code": {"$ref": "floe:///parts/code.json"},
 "words": {"$ref": "floe:///parts/text.json"}, "details": {"$ref": "floe:///parts/details.json"},
-"options": {"$ref": "floe:///parts/options.json"}, "progress": {"$ref": "floe:///parts/progress.json"},
+"options": {"$ref": "floe:///parts/options.json"}, "bars": {"$ref": "floe:///parts/bars.json"},
 "tree": {"$ref": "floe:///parts/tree.json"}, "timeline": {"$ref": "floe:///parts/timeline.json"},
 "tabs": {"$ref": "floe:///parts/tabs.json"}, "links": {"$ref": "floe:///parts/links.json"}}}`,
 	"templates/mine/example.yaml": "lang: en\ntemplate: mine\n",
@@ -50,9 +50,9 @@ var bandParts = bandText + bandHeld +
 	"code: { file: a.conf, text: \"wide" + strings.Repeat(" wide", 60) + "\\n\" }\n"
 
 // bandColours is parts in a band that draw some of their text in colours of their own (muted, a tone, the page's
-// text colour): progress's label and count, a tree's note and change, a timeline's date; tabs, whose titles have no
+// text colour): bars' label and value, a tree's note and change, a timeline's date; tabs, whose titles have no
 // ground, and links, whose cards' rings are drawn around them.
-var bandColours = "progress: [{ label: Copied, done: 40, of: 100 }]\n" +
+var bandColours = "bars: [{ label: Copied, value: 40, of: 100 }]\n" +
 	"tree: [{ path: pages/, note: what export writes }, { path: pages/home.md, change: changed }]\n" +
 	"timeline: [{ date: '03-01', title: Started, text: The copy began. }]\n" +
 	"tabs: [{ title: One, parts: [{ text: First. }] }, { title: Two, parts: [{ text: Second. }] }]\n" +
