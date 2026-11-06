@@ -74,7 +74,7 @@ func TestUIColumnsPart(t *testing.T) { //nolint:paralleltest // the browser test
 		if json.Unmarshal(n.Role.Value, &role) != nil || json.Unmarshal(n.Name.Value, &name) != nil {
 			continue
 		}
-		if role == "group" && name != "" {
+		if role == "group" {
 			groups = append(groups, name)
 		}
 	}
