@@ -192,3 +192,42 @@ func TestUIImageZoom(t *testing.T) { //nolint:paralleltest // the browser tests 
 		t.Error("B shown whole by its button: the focus is not on the frame")
 	}
 }
+
+// shotKit is the part shot of docs/parts.md's example of zoom, as it is written there, and a template that places it.
+var shotKit = map[string]string{
+	"parts/shot/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"file": {"type": "string", "format": "image"}, "alt": {"type": "string"}}}`,
+	"parts/shot/part.html": `<figure data-floe-part="shot">{{zoom}}<div class="floe-zoom"><img src="{{.file}}" alt="{{.alt}}"></div></figure>`,
+	"parts/shot/part.css":  "",
+	"parts/shot/part.yaml": "looks: [zoom]\n",
+	"templates/shots/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +
+		"<title>{{.Title}}</title></head>\n<body style=\"width: 300px\">\n{{.Data.shot}}\n</body></html>\n",
+	"templates/shots/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"shot": {"$ref": "floe:///parts/shot.json"}}}`,
+	"templates/shots/example.yaml": "lang: en\ntemplate: shots\n",
+}
+
+// TestUIZoomOwnPart draws a part of one's own written as the docs' example of zoom, an image 600 px wide in a body
+// of 300: it is laid out shrunk, offers zoom, and at its actual size its middle stays in the frame's middle.
+func TestUIZoomOwnPart(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.own(t, shotKit)
+	s.write(t, "own/shots/a.png", pngOf(t, 600, 300))
+	s.floe(t, "publish", s.write(t, "own/shot.yaml", "template: shots\nlang: en\ntitle: Shot\nshot: { file: shots/a.png, alt: A }\n"), "--slug", "shot")
+	b.size(1440, 900, false)
+	b.navigate("/a/shot/?raw")
+	b.until("the frame set up", `document.querySelector('.floe-zoom[data-zoomable=on]') !== null`)
+	if got := b.eval(zoomState("A")); got != "1, shown flex, tab 0, role group, label Zoomable figure, touch pan-y, transform none" {
+		t.Errorf("shot: %s, want its image shrunk to 300 px and zoom offered", got)
+	}
+	b.eval(frameOf("A") + `.parentElement.querySelector('[data-zoom=one]').click(), 1`)
+	if got := b.eval(zoomOfA); got != "2.000" {
+		t.Errorf("shot at its actual size: scale %s, want 2.000", got)
+	}
+	middle := `(() => { const i = document.querySelector('img[alt=A]').getBoundingClientRect(), f = ` + frameOf("A") +
+		`.getBoundingClientRect(); return Math.abs(i.x + i.width / 2 - (f.x + f.width / 2)).toFixed(0); })()`
+	if got := b.eval(middle); got != "0" {
+		t.Errorf("shot at its actual size: its middle is %s px from the frame's", got)
+	}
+}

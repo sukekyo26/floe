@@ -1,5 +1,5 @@
 // Zooms and pans what a frame holds, which first shows it whole: a diagram's svg, whose viewBox is rewritten to the
-// frame's aspect ratio, or an image, which keeps the place and size the page gives it and is moved by a transform.
+// frame's aspect ratio, or an img, which keeps the place and size the page gives it and is moved by a transform.
 // words holds the wording by language, which the lang attribute of the page's root picks; frame and tools are the
 // classes of the frame and the toolbar.
 function zoomable({ words, frame: frameClass, tools: toolsClass }) {
@@ -11,10 +11,10 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
     // A page may hold this script more than once (a part each, fragments rendered apart); a frame another run set up,
     // or waits on an image for, is left alone
     if (wrap.dataset.zoomable) return;
-    // The frame's first element is an svg, or what moves: an image, or what holds one
+    // The frame's first element is what it zooms: an svg or an img
     const first = wrap.firstElementChild;
     const svg = first?.localName === 'svg' ? first : null;
-    const img = svg || !first ? null : first.localName === 'img' ? first : first.querySelector('img');
+    const img = first?.localName === 'img' ? first : null;
     if (!svg && !img) return;
     if (img && !img.complete) {
       // Marked before waiting, so that the other runs do not wait too
@@ -44,6 +44,9 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
     const fit = () => (svg ? Math.min(wrap.clientWidth / W, wrap.clientHeight / H) : img.clientWidth / W);
     // Zooming out stops at the whole or the actual size, whichever is smaller
     const min = () => Math.min(fit(), 1);
+    // Drawn smaller than its actual size. A diagram's frame keeps its aspect ratio with its line, which takes 2 px out
+    // of what the diagram is drawn in: one as wide as the column is not shrunk by that
+    const shrunk = () => (svg ? Math.min(wrap.offsetWidth / W, wrap.offsetHeight / H) : fit()) < 1;
     const tools = document.createElement('div');
     tools.className = toolsClass;
     tools.hidden = true;
@@ -89,13 +92,16 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
         return;
       }
       if (fitted || printing) {
-        first.style.transform = '';
+        img.style.transform = '';
+        img.style.borderColor = '';
         return;
       }
       // The image lies at the whole's size, its pixels from its frame line in; scaled by k from its corner, a pixel
       // (px, py) is put where the view shows it, s px a pixel from (x, y), as the diagram's viewBox puts it
       const k = s / fit(), ox = img.clientLeft, oy = img.clientTop;
-      first.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
+      // Its line, scaled, would thicken: zoomed, it is dropped, over whatever layer of CSS draws it
+      img.style.borderColor = 'transparent';
+      img.style.transform = `translate(${ox * (1 - k) - x * s}px, ${oy * (1 - k) - y * s}px) scale(${k})`;
     };
 
     const render = () => {
@@ -117,7 +123,7 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
       cy = clamp(cy, vh, H);
       show(cx - vw / 2, cy - vh / 2, vw, vh);
       wrap.classList.toggle('zoomed', vw < W - 0.5 || vh < H - 0.5);
-      offer(!fitted || fit() < 1);
+      offer(!fitted || shrunk());
       button('in').disabled = s >= MAX;
       button('out').disabled = s <= min();
       button('fit').disabled = fitted;

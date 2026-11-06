@@ -5,6 +5,8 @@
 .floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .floe-zoom.zoomed:active { cursor: grabbing; }
+/* An img is laid out shrunk to the frame, as the whole, and scaled from its top left, as the script's sums take it */
+.floe-zoom > img { display: block; max-width: 100%; height: auto; transform-origin: 0 0; }
 .floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
 /* display: flex above wins over the browser's [hidden] */
 .floe-zoom-tools[hidden] { display: none; }

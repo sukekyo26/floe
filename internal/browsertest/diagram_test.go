@@ -78,6 +78,16 @@ func TestUIDiagram(t *testing.T) { //nolint:paralleltest // the browser tests sh
 			t.Errorf("at %d px:\n  %s", size.width, strings.ReplaceAll(got, "\n", "\n  "))
 		}
 	}
+	// A diagram as wide as the body is not shrunk by its frame's line, which the diagram is drawn inside
+	s.floe(t, "publish", s.write(t, "wide.yaml", "lang: en\ntemplate: mine\ntitle: Wide\n"+
+		"plain: { width: 740, height: 60, title: w, parts: [ { box: { x: 20, y: 5, w: 120, h: 50, rows: [wide] } } ] }\n"+
+		"pic: { width: 300, height: 100, title: p, parts: [ { box: { x: 20, y: 20, w: 120, h: 50, rows: [pic] } } ] }\n"), "--slug", "wide")
+	b.size(756, 900, false)
+	b.navigate("/a/wide/?raw")
+	b.until("the frames set up", "document.querySelectorAll('.floe-zoom[data-zoomable=on]').length === 2")
+	if got := b.eval(measureDiagrams); got != "page: no toolbar\npic: no toolbar" {
+		t.Errorf("a diagram as wide as the body:\n  %s", strings.ReplaceAll(got, "\n", "\n  "))
+	}
 }
 
 const tabsPage = `template: report
