@@ -36,7 +36,7 @@ const measurePartRoom = `(() => {
   let markdown = 0;
   for (const c of document.body.querySelectorAll('*')) {
     if (c.matches('[data-floe-part=tabs]') || !/grid|flex/.test(getComputedStyle(c).display)) continue;
-    if (!(c.matches('[data-floe-part=stack], [data-floe-text], [data-floe-markdown]') || [...c.children].some((k) => k.matches('.card')) ||
+    if (!(c.matches('[data-floe-part=stack], [data-floe-part=columns], [data-floe-part=columns] > div, [data-floe-text], [data-floe-markdown]') || [...c.children].some((k) => k.matches('.card')) ||
       ([...c.children].some(box) && !c.closest('[data-floe-part]')))) continue;
     const kids = [...c.children].filter(block), mark = getComputedStyle(c, '::before');
     if (c.matches('[data-floe-markdown]') && kids.length > 1) markdown++;

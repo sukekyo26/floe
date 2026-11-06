@@ -67,10 +67,11 @@ code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(
    its lines, and a part that scrolls on screen folds what it holds within the paper's width.
    LIMIT: what folds no word on paper (a table's heads and cells, a column of numbers or of pills, a tree's note and its
    depth, a field's name, a finding's level) reaches past the paper when its longest words are wider, and Chrome prints
-   the whole page smaller. In a grid's column of a fixed least width (cards side by side) it reaches past its card
-   instead, over the next card or out of the theme's frame, the page no wider.
-   LIMIT: a box a grid's item holds, sent on to the next page at a page's end, leaves the item as short as before, and
-   what follows is drawn over it; a grid's fragmentation, not a box's scrolling.
+   the whole page smaller. In a grid's column of a fixed least width (cards side by side, columns) it reaches past its
+   card or column instead, over the next or out of the theme's frame, the page no wider until it reaches past the paper
+   there, when the whole page prints smaller again.
+   LIMIT: a box a grid's item holds (cards', or columns' long code or table), sent on to the next page at a page's end,
+   leaves the item as short as before, and what follows is drawn over it; a grid's fragmentation, not a box's scrolling.
    LIMIT: such a box shrinks to its border and padding (code's pre, which leaves its padding to its lines, to its border
    alone) on screen where its content sets the width; give the place a width if floe places one so.
    Such places: an inline-block, a float, an absolute or other shrink-to-fit box, a width of min-content, max-content
@@ -121,8 +122,8 @@ blockquote > * + * { margin-top: 0.6rem; }
    ancestor positioned) if a phone's screen reader comes to be used */
 .floe-copy-status, .floe-hidden { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
-/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves
-   --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
+/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, columns, a column's
+   title and parts, cards) floe leaves --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
    side, so that it never meets another box nor the page's edge: nothing makes room for it. A box casts its theme's one
    shadow, --floe-shadow-x, -y, -blur and -spread (inherited from the palette, in px or rem), in the colour
    --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
@@ -533,6 +534,23 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    draws over the ring is not measured. */
 :scope > pre:focus-visible { outline: none; }
 :scope:has(> pre:focus-visible) { outline: 2px solid var(--on-face); outline-offset: -2px; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="columns"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* As many as fit, of one width each so that they compare, one under another where they don't. The tracks' least width is
+   definite, so that a wide thing in a column takes no width from the others; min() keeps a column inside a box or a
+   screen narrower than it. Where any column has a title, each stands on two of the root's rows, title and parts, so that
+   the parts start level whatever the titles' lines, a column with no title leaving the first empty.
+   LIMIT: such a column under another, where they don't fit, stands the empty row's room further down; a title on each,
+   or on none, is level either way */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--floe-room); align-items: start; }
+:scope > div { display: grid; gap: var(--floe-room); align-items: start; }
+:scope:has(> div > .title) > div { grid-row: span 2; grid-template-rows: subgrid; }
+:scope:has(> div > .title) > div > [data-floe-part] { grid-row: 2; }
+:scope > div > .title { font-size: var(--floe-text-aside); font-weight: 600; }
 }
 }
 </style>
@@ -958,7 +976,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* What details, tabs and an item of entries hold */
+/* What details, tabs, columns and an item of entries hold */
 :scope { display: grid; gap: var(--floe-room); }
 /* A word kept whole (a table's on paper) overflows the stack's column instead of widening it */
 :scope > * { min-width: 0; }
@@ -2519,6 +2537,74 @@ banner = &#34;This wiki has moved to the new host.&#34;
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><dl data-floe-part="entries">
 <div><dt>Copied</dt><dd class="tags"><span>412 pages</span></dd><dd class="text"><div data-floe-text=""><p>Every page but the drafts.</p></div></dd></div>
 </dl><figure data-floe-part="image"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAAJElEQVR42mOwqTgxIIhh1OJRi0ctHrV41OJRi0ctHrV45FgMAGfIo72jTm6ZAAAAAElFTkSuQmCC" alt="The wiki after the move"/></figure></div></details>
+<div data-floe-part="columns">
+<div role="group" aria-label="Before"><div class="title" aria-hidden="true">Before</div><div data-floe-part="stack"><div data-floe-text=""><p>The list before.</p></div><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code data-floe-copy="">export WIKI=old</code></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></div></div>
+<div role="group"><div data-floe-part="stack"><div data-floe-text=""><p>A column with no title.</p></div></div></div>
+<div role="group" aria-label="After"><div class="title" aria-hidden="true">After</div><div data-floe-part="stack"><div data-floe-tone="good" data-floe-part="note"><span class="floe-hidden">Good: </span><strong class="title">Done</strong><div data-floe-text=""><p>The list after.</p></div></div></div></div>
+</div>
 <form data-floe-part="tabs">
 <label><input type="radio" name="tab" checked=""/>bash</label><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code data-floe-copy="">export WIKI=new</code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
