@@ -460,7 +460,7 @@
   .kindof { padding: 0 0.3rem; color: var(--muted); border: 1px solid var(--line); border-radius: var(--corner-small); white-space: nowrap; }
   /* A project's name in the color of its chip on the shelf (drawProject) */
   .proj { display: inline-flex; align-items: center; gap: 0.3rem; max-width: 10rem; padding: 0 0.5rem; font-weight: 500; white-space: nowrap; border-radius: 999px; }
-  .proj::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+  .proj::before, #narrow-filter.proj-tint #narrow-filter-name::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
   .proj-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   /* The one color mixed outside :root: --c is each row's, unknown to :root */
   .proj-tint { --tint-ink: color-mix(in srgb, var(--c) 50%, var(--fg)); --tint: color-mix(in srgb, var(--c) 16%, var(--panel)); color: var(--tint-ink); background: var(--tint); }
@@ -887,7 +887,7 @@
   /* The task list's project: the button and the head are the pill themselves, as one inside a button would be two capsules */
   :is(#narrow-filter, #shelf-what).proj-tint { color: var(--tint-ink); background: var(--tint); border-color: transparent; font-weight: 500; text-decoration: none; }
   #shelf-what.proj { padding: 0 0.5rem; font-size: var(--text-label); line-height: 1.5; }
-  #narrow-filter.proj-tint #narrow-filter-name::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 0.3rem; border-radius: 50%; background: var(--c); }
+  #narrow-filter.proj-tint #narrow-filter-name::before { display: inline-block; margin-right: 0.3rem; }
   @media (max-width: 40rem) {
     .shell.tasks #narrow-filter { flex: 0 1 auto; min-width: 0; }
     /* The row of views scrolls: the name stays some of itself rather than going to nothing.
@@ -2245,10 +2245,10 @@
 
   // Whether a has a page of its own to open alone or download: a folder has none, nor has a link whose file is gone
   const hasPage = (a) => !a.folder && !a.missing;
-  // The button that archives a or gives it back, and the words it goes by
-  function drawArchive(btn, a) {
+  // The button that archives a or gives it back, and the words it goes by. On a row, what the keys press leaves them nowhere to go on from
+  function drawArchive(btn, a, onRow = false) {
     btn.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
-    btn.onclick = () => setArchived(a, !a.archived);
+    btn.onclick = (e) => setArchived(a, !a.archived, onRow && e.detail === 0);
     return t(a.archived ? 'ui_unarchive' : 'ui_archive');
   }
   // Saved under the name the server gives it (downloadName)
@@ -2707,7 +2707,7 @@
     star.addEventListener('click', () => toggleFavorite(a));
     const arc = li.querySelector('.actions > .archive');
     arc.classList.toggle('on', Boolean(a.archived));
-    arc.title = drawArchive(arc, a);
+    arc.title = drawArchive(arc, a, true);
     li.querySelector('.actions').append(moreMenu(a));
     // The way to the first row selected with no keys: the boxes show once one is
     const select = li.querySelector('.menu .select');
@@ -2929,33 +2929,57 @@
     await load();
   }
 
-  // The row gone from under the pointer, and the next one's button there: the way back is at hand, long enough to read and reach
-  function archivedDone(a) {
-    const button = tagged('button', 'btn', t('ui_unarchive'));
+  // The row gone from under the pointer, and the next one's button there: the way back is at hand, long enough to read and reach.
+  // From the keys it has the focus, as #toasts is the far end of the page from a row; it stays while it does, and Escape leaves it
+  function archivedDone(a, focus) {
+    const after = rowAfter(a)?.dataset.key;
+    const button = tagged('button', 'btn undo', t('ui_unarchive'));
     button.type = 'button';
+    button.dataset.slug = a.slug;
     button.setAttribute('aria-label', t('ui_unarchive_named', a.title));
-    button.addEventListener('click', () => {
+    button.addEventListener('click', () => setArchived(a, false));
+    button.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
       button.closest('.toast').remove();
-      setArchived(a, false);
+      [...$('list').children].find((li) => li.dataset.key === after)?.querySelector('.title')?.focus();
     });
     toast(t('ui_archive_done', a.title), { ms: 8000, button });
+    if (focus) button.focus();
   }
-  // Pressed again before the answer, a is as it was and the press would ask the same: the button stays, with the focus, doing nothing
+  const entryRow = (a) => [...$('list').children].find((li) => li.dataset.key === `entry:${a.slug}`);
+  function rowAfter(a) {
+    let li = entryRow(a)?.nextElementSibling;
+    while (li && !li.querySelector('.title')) li = li.nextElementSibling;
+    return li;
+  }
+  // Given back, the way back goes, the focus on what came back if it was there
+  function dropUndo(a) {
+    const buttons = [...$('toasts').querySelectorAll('.undo')].filter((b) => b.dataset.slug === a.slug);
+    const had = buttons.includes(document.activeElement);
+    for (const b of buttons) b.closest('.toast').remove();
+    return had;
+  }
+  // Pressed again before the list has it, a is as it was and the press would ask the same: the button stays, with the focus, doing nothing.
+  // The other way goes on: the toast's way back shows before the list is read
   const archiving = new Set();
-  async function setArchived(a, to) {
-    if (archiving.has(a.slug)) return;
-    archiving.add(a.slug);
+  async function setArchived(a, to, focusUndo = false) {
+    const asked = `${to} ${a.slug}`;
+    if (archiving.has(asked)) return;
+    archiving.add(asked);
     try {
       const reason = await patchOne(a.slug, { archived: to });
       if (reason) {
         showError(t(to ? 'ui_archive_failed' : 'ui_unarchive_failed', a.title, reason));
         return;
       }
-      if (to) archivedDone(a);
+      const hadFocus = !to && dropUndo(a);
+      if (to) archivedDone(a, focusUndo);
       else toast(t('ui_unarchive_done', a.title));
       await load();
+      if (hadFocus) ($('find').open ? $('find-q') : entryRow(a)?.querySelector('.title') ?? document.querySelector('#frame-actions > .archive'))?.focus();
     } finally {
-      archiving.delete(a.slug);
+      archiving.delete(asked);
     }
   }
 
@@ -3034,6 +3058,17 @@
   }
 
   // Draws #list: each group's heading, if it has one, and what rowOf pushes of each of its entries (an entry's place among them, the rows)
+  // The row with the focus, on what had it. A row that left, or whose button moved it, as archiving moves one on a task's page, leaves the
+  // focus on the title of the row after it, or the last: on the same button, a key held down or a press more would go on to the next page
+  function focusRowAgain(rows, was, key, on) {
+    const byKey = new Map(rows.map((li) => [li.dataset.key, li]));
+    const row = byKey.get(key);
+    const place = (keys, kept) => keys.filter((k) => kept.has(k)).indexOf(key);
+    const stayed = row && (on === '.title' || on === 'summary' || place(was, byKey) === place([...byKey.keys()], new Set(was)));
+    const to = stayed ? row.querySelector(on) : (was.slice(was.indexOf(key) + 1).map((k) => byKey.get(k)).find((li) => li?.querySelector('.title'))
+      ?? rows.findLast((li) => li.querySelector('.title')))?.querySelector('.title');
+    to?.focus({ preventScroll: true });
+  }
   function drawRows(groups, rowOf) {
     const rows = [];
     // Rows drawn already are drawn anew in place, without rising in again: only a row new to the list rises in
@@ -3061,13 +3096,7 @@
     for (const li of rows) li.classList.toggle('kept', had.has(li.dataset.key));
     // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
-    if (focused !== null) {
-      // A row that left the list, as one archived does, leaves the focus on the same button of the row after it, or the last
-      const keys = [...had];
-      const after = keys.slice(keys.indexOf(focused)).map((key) => rows.find((li) => li.dataset.key === key));
-      const to = after.find((li) => li?.querySelector(focusedOn)) ?? rows.findLast((li) => li.querySelector(focusedOn));
-      to?.querySelector(focusedOn).focus({ preventScroll: true });
-    }
+    if (focused !== null) focusRowAgain(rows, [...had], focused, focusedOn);
   }
 
   // Whether anything is there for the task list: a page on a task or pinned, or a task's row with no page left
