@@ -200,7 +200,7 @@ func TestWorkCommand(t *testing.T) {
 	if _, ok := tasks()["p"]["#4"]; ok {
 		t.Error("--forget left #4")
 	}
-	if got := run(1, "work", "--task", "#4", "--forget"); got != "floe: no task #4 in project p\n" {
+	if got := run(1, "work", "--task", "#4", "--forget"); got != "floe: no task #4 in project p: name its project with --project\n" {
 		t.Errorf("no task: %q", got)
 	}
 	if got := run(1, "work", "--task", "#1", "--forget"); !strings.HasPrefix(got, "floe: task #1 of project p still has 1 page(s), such as a:") {

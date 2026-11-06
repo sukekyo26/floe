@@ -93,7 +93,7 @@ func setWork(m *Meta, ed *WorkEdit) {
 }
 
 // Task is a task's row of tasks.json. At is when it was made or its state last changed; Step the last step written of
-// it that was not empty. Parent is read and written back alone: nothing sets it yet.
+// it that was not empty; Parent the task it is a child of, of the same project (childrenOfTask).
 type Task struct {
 	Title  string   `json:"title,omitempty"`
 	State  string   `json:"state"`
@@ -130,6 +130,8 @@ type TaskEdit struct {
 	Step  *string
 	URL   *string
 	Steps *[]string
+	// An empty Parent takes it off.
+	Parent *string
 }
 
 func validState(name string) bool {
@@ -159,6 +161,8 @@ func (s *Store) tasksFile() string {
 // refused and not made anew as reads.json is: the states and URLs in it are not to be had again, so that it is mended
 // by hand.
 // It takes no lock: a write replaces the file whole.
+// LIMIT: a parent written by hand that childrenOfTask does not count is not refused, unlike a state: the writes that
+// would mend it read through here, and the page shows such a task as of no parent. Tell of it if hand edits come to hide it.
 // LIMIT: a key of a row floe does not know is lost at the next write. Keep them if tasks.json comes to be hand-edited.
 func (s *Store) ReadTasks() (Tasks, error) {
 	b, _, err := files.Read(s.tasksFile())
@@ -238,6 +242,42 @@ func checkTaskEdit(ed TaskEdit) error {
 	return nil
 }
 
+// childrenOfTask is the names of the children of the task name, in order: a task is a child of the one its parent names
+// when that one has a row of the same project and no parent itself, so that a parent of itself, a pair each the other's,
+// a grandchild and a parent gone, written by hand, make no child. The management page's tasksOf says the same.
+func childrenOfTask(rows map[string]Task, name string) []string {
+	var children []string
+	if rows[name].Parent != "" {
+		return nil
+	}
+	for child, t := range rows {
+		if t.Parent == name {
+			children = append(children, child)
+		}
+	}
+	slices.Sort(children)
+	return children
+}
+
+// checkParent refuses what would make the task name the child of parent. Only that row is looked at: another row broken
+// by hand does not keep this one from being written.
+func checkParent(project string, rows map[string]Task, name, parent string) error {
+	if parent == name {
+		return usererr.New("store_task_parent_self", name)
+	}
+	up, ok := rows[parent]
+	if !ok {
+		return usererr.New("store_task_parent_none", parent, project)
+	}
+	if up.Parent != "" {
+		return usererr.New("store_task_parent_nested", parent, up.Parent)
+	}
+	if children := childrenOfTask(rows, name); len(children) > 0 {
+		return usererr.New("store_task_parent_children", name, children[0])
+	}
+	return nil
+}
+
 // stepsOf is steps as a task keeps them: each trimmed, without the empty and a name twice, in the order given; nil for
 // none.
 func stepsOf(steps []string) []string {
@@ -271,6 +311,13 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	if err = checkTaskEdit(ed); err != nil {
 		return err
 	}
+	if ed.Parent != nil {
+		parent, err := TaskName(*ed.Parent)
+		if err != nil {
+			return err
+		}
+		ed.Parent = &parent
+	}
 	unlock, err := s.lock(true)
 	if err != nil {
 		return err
@@ -280,10 +327,18 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	if err != nil {
 		return err
 	}
+	t, had := all[project][name]
+	if ed.Parent != nil && *ed.Parent == "" && !had {
+		return usererr.New("store_no_task", name, project)
+	}
+	if ed.Parent != nil && *ed.Parent != "" {
+		if err = checkParent(project, all[project], name, *ed.Parent); err != nil {
+			return err
+		}
+	}
 	if all[project] == nil {
 		all[project] = map[string]Task{}
 	}
-	t, had := all[project][name]
 	if !had {
 		fresh := States[slices.IndexFunc(States, func(s State) bool { return s.New })]
 		t = Task{Title: "", State: fresh.Name, Step: "", At: Now(), URL: "", Steps: nil, Parent: ""}
@@ -303,12 +358,14 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	if ed.Steps != nil {
 		t.Steps = stepsOf(*ed.Steps)
 	}
+	if ed.Parent != nil {
+		t.Parent = *ed.Parent
+	}
 	all[project][name] = t
 	return s.writeTasks(all)
 }
 
-// pagesOfTask counts the pages on the task (project, name), the archived too, and names one of them. It is the one
-// place that says what keeps a task from being forgotten.
+// pagesOfTask counts the pages on the task (project, name), the archived too, and names one of them.
 func (s *Store) pagesOfTask(project, name string) (count int, first string, err error) {
 	slugs, err := s.slugs()
 	if err != nil {
@@ -326,7 +383,8 @@ func (s *Store) pagesOfTask(project, name string) (count int, first string, err 
 	return count, first, nil
 }
 
-// ForgetTask removes the row of the task (project, name): ErrNotFound for none, and refused while a page is on it.
+// ForgetTask removes the row of the task (project, name): ErrNotFound for none, and refused while a page is on it or it
+// has a child. It is the one place that says what keeps a task from being forgotten.
 func (s *Store) ForgetTask(project, name string) error {
 	project, name, err := taskKey(project, name)
 	if err != nil {
@@ -351,8 +409,15 @@ func (s *Store) ForgetTask(project, name string) error {
 	if err != nil {
 		return err
 	}
+	var kept usererr.List
 	if count > 0 {
-		return usererr.New("store_task_pages", name, project, count, first)
+		kept = append(kept, usererr.New("store_task_pages", name, project, count, first))
+	}
+	if children := childrenOfTask(all[project], name); len(children) > 0 {
+		kept = append(kept, usererr.New("store_task_children", name, project, len(children), children[0]))
+	}
+	if err = kept.Sorted().Err(); err != nil {
+		return err
 	}
 	delete(all[project], name)
 	if len(all[project]) == 0 {

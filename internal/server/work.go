@@ -9,11 +9,12 @@ import (
 
 // TaskEdit is what PATCH /api/tasks sends: each nil is left as it is.
 type TaskEdit struct {
-	Title *string   `json:"title,omitzero"`
-	State *string   `json:"state,omitzero"`
-	Step  *string   `json:"step,omitzero"`
-	URL   *string   `json:"url,omitzero"`
-	Steps *[]string `json:"steps,omitzero"`
+	Title  *string   `json:"title,omitzero"`
+	State  *string   `json:"state,omitzero"`
+	Step   *string   `json:"step,omitzero"`
+	URL    *string   `json:"url,omitzero"`
+	Steps  *[]string `json:"steps,omitzero"`
+	Parent *string   `json:"parent,omitzero"`
 }
 
 // tasks answers the tasks.
@@ -46,7 +47,7 @@ func (s *Server) editTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// forgetTask removes the task the query names: not found for none, refused while a page is on it.
+// forgetTask removes the task the query names: not found for none, refused while a page or a child is on it.
 func (s *Server) forgetTask(w http.ResponseWriter, r *http.Request) {
 	if !s.origins[r.Header.Get("Origin")] {
 		send(w, http.StatusForbidden, "forbidden origin")
