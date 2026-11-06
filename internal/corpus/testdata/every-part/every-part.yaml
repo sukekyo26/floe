@@ -228,6 +228,19 @@ sections:
             - entries:
                 - { title: Copied, tags: [412 pages], text: Every page but the drafts. }
             - image: { file: shots/moved.png, alt: The wiki after the move }
+      - asks:
+          - question: Copy in one go?
+            options: [One go, 'By space, with `sync --space`']
+            recommend: One go
+            why: Two days of read-only
+            by: The platform team
+          - question: Keep the old host?
+            options: [A month, For good]
+            decided: A month
+          - question: Who writes the notice?
+          - question: Which day?
+            recommend: A Saturday
+            decided: Sunday
       - columns:
           - title: Before
             parts:

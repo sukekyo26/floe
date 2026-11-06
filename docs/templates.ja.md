@@ -93,7 +93,7 @@ memo/
 
 - floe は `@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *)` で包みます。部品の箱と text の外枠までは届いて置けますが、その中には届きません。
 - 根は `:scope` です。ページの変数は `:scope` に書きます。`:root` や `html` は scope の外です。
-- `@keyframes`・`@counter-style`・`@font-face` が作る名前は、scope に閉じず、ページ全体のものです。自分のテンプレートの名前を頭に付けます（`handoff` の `floe-handoff-q`）。部品やテーマの部品ごとのファイルが同じ名前を作ると、層が高いので、そちらが勝ちます。テーマの `base.css` と `markdown.css` には、自分の名前が勝ちます。
+- `@keyframes`・`@counter-style`・`@font-face` が作る名前は、scope に閉じず、ページ全体のものです。自分のテンプレートの名前を頭に付けます（テンプレート `memo` なら `memo-q`）。部品やテーマの部品ごとのファイルが同じ名前を作ると、層が高いので、そちらが勝ちます。テーマの `base.css` と `markdown.css` には、自分の名前が勝ちます。
 - どのブロックも閉じない `}` と `@import` は、その行で断ります。Google Fonts のようなスタイルシートは `page.html` の `<link>` で読みます。
 - パレットの変数（`var(--muted)`）で描くと、データファイルが選んだテーマに従います。
 - 続けて並ぶ部品の間（節の中、項目の中）は、floe のどこもと同じく `var(--floe-room)`（0.75rem）をあけます。テーマの影が箱の外へ出る、一番大きい長さです。部品 text の外枠も部品と同じくそこに並び、中の段落や見出しは floe が同じ間で並べます。テンプレート自身の Markdown の包み（`data-floe-markdown`）も同じ間で並びますが、text の外枠と違い、自分の `page.css` が中に届きます。

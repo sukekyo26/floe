@@ -93,7 +93,7 @@ It sees:
 
 - floe puts it in `@scope (:root) to ([data-floe-part] > *, [data-floe-text] > *)`: it reaches a part's box and a text's box, so that it places them, but not what they hold.
 - Its root is `:scope`. Write the page's variables on `:scope`, not on `:root` or `html`, which are outside the scope.
-- The names `@keyframes`, `@counter-style` and `@font-face` make are the page's, not held by the scope: name yours with your template's name (`floe-handoff-q`, `handoff`'s). A part's or a theme's file of a part that makes the same name wins over yours, as its layer is higher; yours wins over the theme's `base.css` and `markdown.css`.
+- The names `@keyframes`, `@counter-style` and `@font-face` make are the page's, not held by the scope: name yours with your template's name (`memo-q`, for a template `memo`). A part's or a theme's file of a part that makes the same name wins over yours, as its layer is higher; yours wins over the theme's `base.css` and `markdown.css`.
 - A `}` that closes no block, and an `@import`, are refused at their line: load a stylesheet, such as Google Fonts, with a `<link>` in `page.html`.
 - Draw with the palette's variables (`var(--muted)`), so that the page follows the theme the data file picks.
 - Leave `var(--floe-room)` (0.75rem) between parts that stand one after another (in a section, in an item), as every place of floe's does, the most a theme's shadow reaches outside a box. A part text's box stands there as a part does, and floe spaces its paragraphs and headings by the same room in it. The box of your template's own Markdown (`data-floe-markdown`) is spaced so too, but your `page.css` reaches in it, as it does not in a text's.

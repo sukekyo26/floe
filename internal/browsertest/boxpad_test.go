@@ -8,7 +8,9 @@ import (
 
 // boxParts are the parts that draw a box of their own: those that take the look cards, and those that take the look
 // panel or paint their own ground.
-const boxParts = `  - options:
+const boxParts = `  - asks:
+      - { question: A question }
+  - options:
       - { title: One, text: first }
       - { title: Two, text: second }
   - stats:
@@ -53,13 +55,13 @@ var boxPadKit = map[string]string{
 func measureBoxPad(names string) string {
 	return `((names) => {
   const boxes = {
-    options: '[data-floe-part=options] .card', stats: '[data-floe-part=stats] .card', facts: '[data-floe-part=facts] .card',
+    options: '[data-floe-part=options] .card', asks: '[data-floe-part=asks] .card', stats: '[data-floe-part=stats] .card', facts: '[data-floe-part=facts] .card',
     links: '[data-floe-part=links] .card', decision: '[data-floe-part=decision] .card',
     steps: '[data-floe-part=steps]', timeline: '[data-floe-part=timeline]',
     bars: '[data-floe-part=bars]', tree: '[data-floe-part=tree]', note: '[data-floe-part=note]',
     'details title': '[data-floe-part=details] > summary', 'details body': '[data-floe-part=details] > div',
     'design aside': 'aside[data-floe-look=panel]', 'runbook needs': '.needs', 'runbook rollback': '.rollback',
-    'handoff asks': '.asks', 'handoff board': '.board section',
+    'handoff board': '.board section',
   };
   const ground = (e) => { const c = getComputedStyle(e); return c.backgroundColor !== 'rgba(0, 0, 0, 0)' || c.backgroundImage !== 'none'; };
   const out = [];
@@ -76,7 +78,7 @@ func measureBoxPad(names string) string {
 }
 
 // partBoxes are the boxes boxParts draw.
-const partBoxes = "options, stats, facts, links, decision, steps, timeline, bars, tree, note, details title, details body"
+const partBoxes = "options, asks, stats, facts, links, decision, steps, timeline, bars, tree, note, details title, details body"
 
 // boxPadWant is what measureBoxPad returns for boxParts, each box padded block above and below and inline at the
 // left and the right: facts' cards are rows (TestUIRowPad), details' title is as tall as a row of its own, and frame
@@ -84,7 +86,7 @@ const partBoxes = "options, stats, facts, links, decision, steps, timeline, bars
 func boxPadWant(block, inline, frame string) string {
 	box := block + " " + inline + " " + block + " " + inline
 	return strings.Join([]string{
-		"options " + box, "stats " + box, "facts 6.4px " + inline + " 6.4px " + inline, "links " + box, "decision " + box,
+		"options " + box, "asks " + box, "stats " + box, "facts 6.4px " + inline + " 6.4px " + inline, "links " + box, "decision " + box,
 		"steps " + box, "timeline " + box, "bars " + box, "tree " + frame + box, "note " + box,
 		"details title 12.8px " + inline + " 12.8px " + inline, "details body 0px " + inline + " " + block + " " + inline,
 	}, ", ")
@@ -104,7 +106,7 @@ func TestUIBoxPad(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	}
 	page := s.write(t, "boxes.yaml", "template: report\nlang: en\ntitle: Boxes\nsections:\n  - heading: Boxes\n    parts:\n"+
 		indent(boxParts, "    "))
-	samples := map[string]string{"design": "design aside", "runbook": "runbook needs, runbook rollback", "handoff": "handoff asks, handoff board"}
+	samples := map[string]string{"design": "design aside", "runbook": "runbook needs, runbook rollback", "handoff": "handoff board"}
 	files := map[string]string{}
 	for name := range samples {
 		data, err := os.ReadFile("../corpus/testdata/example/" + name + ".yaml")

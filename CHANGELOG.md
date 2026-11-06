@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the part `asks`: questions put to the reader, numbered Q1, Q2 and on, with their options, what is recommended and why, who decides, and `decided` for what was. `handoff` draws its `asks` by it, so that each question is now a card, an option recommended is ringed among the options, `decided` may be written there too, and the count at the head of the page is of the questions still to decide.
 - Add one form to the buttons of words on the management page: square corners, a thin edge, 2rem high and 2.25rem at a modal's foot; round stays for the buttons of an icon. The Set the task and child task dialogs name their fields Task ID and Title, with an example, as the step field has too, and a new task needs a title; a task saved from a screen read before another change is refused, and the tasks are read again.
 - Add the part `columns`: parts side by side, to see at once, such as a screen before and after. Each column is an optional `title` over `parts`, which hold what `details` holds; they are of one width, and fold under one another where they don't fit.
 - Add the task state `todo`. A new task starts in it, whichever way it is made. The list's column goes in the order of the work, To do, In progress, Waiting, Done, Archive, opening on Waiting as before, and To do lists the latest to come to it first.

@@ -62,8 +62,8 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 `floe template list` が各テンプレートの説明を出し、`floe template show <テンプレート>` が、取る鍵（説明は `schema.json` に）と、書き始めの `example.yaml` を出します。`"format": "markdown"` の項目と、説明が Markdown と言う項目が Markdown です。鍵のほかにページが見せるもの:
 
 - `report` は `eyebrow`（題の上の短い行）、`lead`（題の下の 1〜2 文。Markdown の 1 行で、タグに見える字（`<prefix>`、`Vec<u8>` など）は除き、`*` や `_` などの記号は読むので、字として書くならバッククォートで囲む。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ））、`sections`（`heading` と `parts` の組の並び）を取ります。節は、部品の後に自分の `sections`（小節。`heading`（`<h3>`）と `parts` の組の並び。1 段だけ）を持てます。小節のある節には見出しが要り、見出しは空の字にできないので、見出しの無い節は鍵を書きません。
-- Markdown でない鍵は、書いたとおりの字で描きます。report の `eyebrow`・見出し、design の `status`・`owner`・`date`、handoff の `date`・`from`・`to`・`by`・`ref`・`who`、adr の `number`・`date`・`deciders`、postmortem の `date`・`authors`・`owner`・`ref`、runbook の `owner`・`updated` と手順の `who`、`more` の節の見出しです。
-- `handoff` は、済んだもの・進行中・決めること・次の数をページの頭に出し、`asks` に Q1、Q2 … と番号を付けます。
+- Markdown でない鍵は、書いたとおりの字で描きます。report の `eyebrow`・見出し、design の `status`・`owner`・`date`、handoff の `date`・`from`・`to`・`ref`・`who`、部品 `asks` の `by`、adr の `number`・`date`・`deciders`、postmortem の `date`・`authors`・`owner`・`ref`、runbook の `owner`・`updated` と手順の `who`、`more` の節の見出しです。
+- `handoff` は、済んだもの・進行中・決めること（`decided` の無い問い）・次の数をページの頭に出し、`asks` を部品 `asks` で描きます。
 - `runbook` は、手順の `who` を題の横の札に、`run` を `terminal` のコピーのボタン付きで描き、`rollback` を別の枠に入れます。
 - `slides` は、1 枚ずつを画面の高さか幅いっぱいにし、番号と枚数を隅に出し、印刷では 1 枚ずつ横向きのページにします。部品は `report` と同じ大きさなので、大きくするにはブラウザで拡大します。`direction: across` では、マウスのホイールは下へしか動かず、管理ページの枠の中では枠をクリックしてから ← → のキーが効きます。
 
@@ -75,7 +75,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 
 - 1 行に 1 つ：`text` の Markdown の箇条書き。
 - 名前と、それより長い文（要件、リスクとその手当て、用語。表では長い文が細い列に押し込まれる）：`entries`。状態は札に書く。
-- 判断：理由と退けた案を添えて 1 つを伝えるなら `decision`、案を利点と欠点で横に比べるなら `options`、短い判断を並べるだけなら `entries`（選んだものを札に）。
+- 判断：理由と退けた案を添えて 1 つを伝えるなら `decision`、案を利点と欠点で横に比べるなら `options`、読み手に判断を頼み、決まったら決定を書くなら `asks`、短い判断を並べるだけなら `entries`（選んだものを札に）。
 - 時の順に起きたこと：`timeline`。
 - 言葉と意味：Markdown の箇条書き。意味が長いなら `entries`。
 - 前と後の 1 つずつ：`compare`。
@@ -94,6 +94,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `image` | 画面の写しなどの画像。`file` と、何を写すかの `alt`（[画像](#画像)）。 |
 | `note`・`stats`・`steps`・`checklist` | 色の付いた注、大きな数、番号付きの手順、済めば印の付く項目。 |
 | `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |
+| `asks` | 読み手に判断を頼む問い。Q1、Q2 … と番号が付きます。`question`、案の `options`、勧めの `recommend` と理由の `why`、決める人の `by`、決まったら `decided`。`recommend`・`decided` と同じ字の案に枠と札が付き、どの案とも違えば別の行に出ます。決まった問いは番号の横に ✓ が付き、ほかの案は薄い字になります。 |
 | `findings`・`decision`・`fields` | レビューで見つけたもの、決めたこと、設定の鍵。 |
 | `timeline`・`bars`・`keys` | 日付の順の出来事、値の棒、押すキー。`of` を書いた棒は、その全体のうち `value` までを塗り、`5 / 8` と出します（作業の進みに）。ほかの棒は、その中で一番大きい値に対する割合です。 |
 | `details`・`tabs` | 題の下に畳んだ部品、または 1 つずつ読めばよいものをタブで見せる部品。中に `text`・`code`・`terminal`・`diff`・`note`・`table`・`entries`・`image`・`diagram` を置ける。 |

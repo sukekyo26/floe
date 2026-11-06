@@ -1,0 +1,15 @@
+/* One question to a row, its letter a word of the page's language and its number the counter's, which reads out. A question
+   decided has a check by its number; its option decided a ring in its tone and a pill in words, and the others are quiet, a
+   ring alone telling nothing without colour. An option has a ground of its own, off a face around it.
+   LIMIT: words.yaml keeps Q in Japanese too, on purpose, and a screen reader reads the letter as it is */
+:scope { grid-template-columns: minmax(0, 1fr); counter-reset: floe-asks; }
+:scope > .card { counter-increment: floe-asks; gap: var(--floe-room); }
+:scope .no { font-family: var(--mono); color: var(--on-face, var(--accent)); }
+:scope .no::after { content: counter(floe-asks); content: counter(floe-asks) / counter(floe-asks); }
+:scope .check { display: inline-grid; place-items: center; width: 1.4em; height: 1.4em; vertical-align: -0.15em; border-radius: 50%; background: var(--tone-soft); color: var(--tone); font-family: var(--font); font-weight: 700; }
+:scope .check::before { content: "✓"; content: "✓" / ""; }
+:scope .choices { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--floe-room); font-size: inherit; }
+:scope .choices > li { padding: var(--floe-row-pad) var(--floe-pad-inline); border: 1px solid var(--line); border-radius: var(--radius-small); --face: initial; --on-face: initial; background: var(--surface); color: var(--fg); }
+:scope .choices > li.marked { outline: 2px solid var(--tone); outline-offset: -1px; }
+:scope .choices > li.other { color: var(--muted); }
+:scope .line { color: var(--on-face, var(--fg)); font-size: inherit; }
