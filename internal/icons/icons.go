@@ -562,6 +562,7 @@ func (s *Store) Search(words []string) ([]Hit, error) {
 }
 
 // holdsMeant is whether name holds the name, its folder aside, of an icon word means: the service's own resources.
+// LIMIT: resources named otherwise than the icon are not found (iam: identity-access, not identity-and-access).
 func (k *kit) holdsMeant(word, name string) bool {
 	return slices.ContainsFunc(k.short[word], func(m string) bool {
 		return strings.Contains(name, strings.TrimPrefix(m, "res/"))
