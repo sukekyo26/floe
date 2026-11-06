@@ -64,8 +64,10 @@ func (gr *group) positions() []int {
 	return pos
 }
 
-// places are the positions sweep orders by: a heading laid out down counts as a place after its left mark, though it
-// takes none, so that the order is the same as with a heading in the rank.
+// places are the positions sweep and align order by: a heading laid out down counts as a place after its left mark,
+// though it takes none, so that the order is the same as with a heading in the rank.
+// LIMIT: a place for a node no rank holds. Drop it when the ordering changes anyway: with positions, 16 of 1550 random
+// graphs change, the sum of the areas by 0.08%, one by half.
 func (gr *group) places() []int {
 	pos := gr.positions()
 	for _, h := range gr.heads {

@@ -3139,41 +3139,43 @@ func TestWithoutWith(t *testing.T) {
 }
 
 // The order of a rank is the same as with a heading in it: laid out down, a heading takes no place, yet sweep counts it,
-// or this graph's last rank would change its order and the graph grow by half.
+// or n13 would come before n7 here, in the first rank.
 func TestGraphHeadPlaces(t *testing.T) {
 	t.Parallel()
 
-	rnd := rand.New(rand.NewPCG(1, 2))     //nolint:gosec // G404: graphs to try, no secret
-	groups := rand.New(rand.NewPCG(21, 2)) //nolint:gosec // G404: graphs to try, no secret
-	var g *graph
-	for range 647 {
-		g = randomGraph(rnd, "")
-		addGroups(groups, g)
+	g := inGroup(graphOf([]string{"n7", "n9", "n10", "n13", "n14"}, "n7>n9", "n13>n14", "g0>n10", "n14>n9", "n7>n10"), "g0", "g0", "n14")
+	o, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // its mistakes are graphFault's
+	gr := o.groups[0]
+	gr.split()
+	gr.size(false)
+	gr.order()
+	first := make([]string, 0, 2)
+	for _, i := range gr.boxesOf(gr.ranks[0]) {
+		first = append(first, gr.nodes[i].box.Name)
 	}
-	at := map[string]float64{}
-	for _, b := range laid(g).boxes {
-		at[b.what] = b.x
-	}
-	if at[`box "n0"`] >= at[`box "n4"`] {
-		t.Errorf("n0 at %v, n4 at %v: the order changed", at[`box "n0"`], at[`box "n4"`])
+	if !slices.Equal(first, []string{"n7", "n13"}) {
+		t.Errorf("first rank %v, want n7 before n13", first)
 	}
 }
 
-// A box is not widened left past the headings over it, where a link would enter straight by a column (TestGraphWiden).
-func TestWidenHeadFloor(t *testing.T) {
+// A box may widen left under the headings over it, its link right of them.
+func TestWidenUnderHead(t *testing.T) {
 	t.Parallel()
 
 	gr := &group{ //nolint:exhaustruct_v5 // what widen reads
 		nodes: []gnode{
-			{box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: 0, kind: kindPlain, cl: 0, rank: 1, w: 64, h: 29, x: 100, y: 0, ins: []int{0}, outs: nil, written: 0},
+			{box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: 0, kind: kindPlain, cl: 0, rank: 1, w: 128, h: 29, x: 100, y: 0, ins: []int{0}, outs: nil, written: 0},
 			{box: nil, of: 0, kind: kindLeft, cl: 0, rank: 1, w: 0, h: 0, x: 0, y: 0, ins: nil, outs: nil, written: 1},
 		},
 		links: []glink{{from: 9, to: 0, edge: 0, exit: 100, entry: 0, straight: false, track: 0}},
 		heads: map[int]headRoom{0: {left: 1, w: 64}},
 		out:   &graphOut{clusters: []cluster{{parent: -1}}}, //nolint:exhaustruct_v5 // what headsOver reads
 	}
+	if floor := gr.headFloor(0); floor != 100 {
+		t.Fatalf("floor %v, want 100", floor)
+	}
 	gr.widen([]int{1, 0}, 1, 0, 500)
-	if n := gr.nodes[0]; n.x != 100 {
-		t.Errorf("widened past the heading: x %v w %v, want x 100", n.x, n.w)
+	if n := gr.nodes[0]; n.x != 88 || n.w != 140 {
+		t.Errorf("x %v w %v, want 88 140", n.x, n.w)
 	}
 }

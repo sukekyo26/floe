@@ -264,7 +264,7 @@ var messagesJA = map[string]string{
 	"diagram_outside":            "%sが %s×%s のキャンバスからはみ出しています",
 	"diagram_overlap":            "%sが%sと重なっています",
 	"diagram_straddle":           "%sが%sの %s %s の縁をまたいでいます（%s から %s まで）",
-	"diagram_runs_through":       "%sが%sを通っています",
+	"diagram_runs_through":       "%sが%sを通っています。どちらかを動かすか、via で避けてください",
 	"diagram_crossing":           "%sが%sと %s,%s で交差しています。どちらかを動かすか、避けられないならどちらかに crossing: true を付けてください",
 	"diagram_label_not_circle":   "label: in の「%s」は円の名前ではありません",
 	"diagram_label_region":       "%sが%sの内側とほかの円の外側に収まっていません。動かすか、x と y を書かずに floe に置かせてください",

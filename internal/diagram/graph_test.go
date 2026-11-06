@@ -225,12 +225,12 @@ func TestGraphBlame(t *testing.T) {
 	}{
 		{"a box over a box of the graph", g1, "  - box: { name: note, x: 100, y: 0, rows: [N] }\n", `box "write" overlaps box "note"`},
 		{"a frame a box of the graph straddles", g1, "  - frame: { name: f, x: 0, y: 0, w: 100, h: 40 }\n", `box "write" straddles the edge of frame "f" at x 100, spanning 26 to 178` + "\n@: " + `box "write" straddles the edge of frame "f" at y 40, spanning 20 to 49`},
-		{"a label in the graph's channel", g1, "  - label: { text: L, x: 68, y: 61, anchor: middle }\n", `edge write→check runs through label "L"`},
+		{"a label in the graph's channel", g1, "  - label: { text: L, x: 68, y: 61, anchor: middle }\n", `edge write→check runs through label "L"; move one of them, or go round it by via`},
 		{"a box over a label of the graph", g2, "  - box: { name: note, x: 106, y: 125, rows: [N] }\n", `box "note" overlaps label "yes"`},
-		{"an edge by hand through a label of the graph", g2, "  - edge: { from: [110, 141], to: [160, 141] }\n", `edge [110,141]→[160,141] runs through label "yes"`},
+		{"an edge by hand through a label of the graph", g2, "  - edge: { from: [110, 141], to: [160, 141] }\n", `edge [110,141]→[160,141] runs through label "yes"; move one of them, or go round it by via`},
 		{
 			"a box in the graph's channel", k33, "  - box: { name: note, x: 24, y: 78, rows: [N] }\n",
-			`edge a→x runs through box "note"` + "\n@: " + `edge a→y runs through box "note"` + "\n@: " + `edge b→x runs through box "note"`,
+			`edge a→x runs through box "note"; move one of them, or go round it by via` + "\n@: " + `edge a→y runs through box "note"; move one of them, or go round it by via` + "\n@: " + `edge b→x runs through box "note"; move one of them, or go round it by via`,
 		},
 		{
 			"an edge by hand across the graph's edges", g1, "  - edge: { from: [0, 62], to: [400, 62] }\n",
@@ -866,5 +866,21 @@ edge a→c M188,98 H314
 		if got, told := draw(t, c.src, inspect); got != c.want || told != "" {
 			t.Errorf("%s:\n%s%s\nwant\n%s", c.name, got, told, c.want)
 		}
+	}
+}
+
+// A line written by hand may come to run through a heading as a box stands under it: told, with the way round it.
+func TestGraphHeadRoomByHand(t *testing.T) {
+	t.Parallel()
+
+	const src = "width: 500\nheight: 300\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 60\n      nodes:\n" +
+		"        - group: { name: g, label: A long heading of the frame here, nodes: [{ box: { name: a, rows: [a] } }] }\n" +
+		"  - edge: { from: [300, 0], to: a%s }\n"
+	want := `s.yaml:10:5: edge [300,0]→a runs through the heading of frame "g"; move one of them, or go round it by via`
+	if _, told := draw(t, fmt.Sprintf(src, ""), inspect); told != want {
+		t.Errorf("told %q, want %q", told, want)
+	}
+	if _, told := draw(t, fmt.Sprintf(src, ", via: [[300, 95]]"), inspect); told != "" {
+		t.Errorf("by via: told %q", told)
 	}
 }

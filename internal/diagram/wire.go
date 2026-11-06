@@ -49,8 +49,8 @@ func (gr *group) wire() {
 }
 
 // rise sets the tops and bottoms of the ranks and the nodes' tops, as laid out down: a rank as tall as its tallest
-// box (and its headings' rooms), the room above it for the frames starting there and below it for those ending,
-// then its channel's tracks.
+// box (and, laid out right, its headings' rooms), the room above it for the frames starting there and below it for
+// those ending, then its channel's tracks.
 func (gr *group) rise() {
 	gr.top, gr.bottom = make([]float64, len(gr.ranks)), make([]float64, len(gr.ranks))
 	above, below := gr.rooms()
@@ -75,8 +75,8 @@ func (gr *group) rise() {
 }
 
 // stand sets the tops of the nodes of rank r, and the tops and bottoms of the frames starting and ending there: a
-// box in the middle of the rank, a point along it, a heading its offset below its frame's top, and where an edge
-// enters or leaves a frame on its top or bottom.
+// box in the middle of the rank, a point along it, a heading's room (laid out right) its offset below its frame's top,
+// and where an edge enters or leaves a frame on its top or bottom.
 func (gr *group) stand(r int, above, below room) {
 	top, bottom := gr.top[r], gr.bottom[r]
 	for _, i := range gr.ranks[r] {
@@ -293,9 +293,6 @@ func (gr *group) widen(rank []int, k int, lo, hi float64) {
 		p := before[len(before)-1]
 		lo = gr.nodes[p].x + gr.nodes[p].w + gr.gap(p, v)
 	}
-	// LIMIT: only a group built by hand reaches this: widened for each link in turn, a box could draw its links under a
-	// heading. No random graph has. Drop it if widen comes to look at more than one link.
-	lo = max(lo, gr.headFloor(v))
 	if after := rank[k+1:]; len(after) > 0 {
 		hi = gr.nodes[after[0]].x - gr.gap(v, after[0])
 	}

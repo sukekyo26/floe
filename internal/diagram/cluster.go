@@ -2,6 +2,7 @@ package diagram
 
 import (
 	"cmp"
+	"iter"
 	"math"
 	"slices"
 	"strconv"
@@ -239,8 +240,10 @@ func (gr *group) spans() map[int][2]int {
 // to look stretched.
 // LIMIT: boxes under a heading start a layout elsewhere, and widen and pull may then widen a few graphs, as narrowing
 // a heading alone does: of 1550 random graphs laid out down, the area of 30 grows, of one by 29%, and of 410 shrinks.
+// Look into widen if laid-out graphs come to look stretched.
 // LIMIT: a line written by hand from above into a box of a group's first rank that no edge of the graph reaches may run
-// through the heading, as this does not read those edges, and is told; go round it by via.
+// through the heading, as this does not read those edges, and is told; go round it by via. Read those edges here if
+// writers come to meet it often.
 func (gr *group) mark() {
 	spans := gr.spans()
 	marks := map[[2]int][2]int{} // a group's left and right marks in a rank
@@ -418,7 +421,7 @@ func (gr *group) sortIn(seq []int, c int, keys map[int]float64) []int {
 // align orders the groups nested in each group (or in the graph) one way in every rank, by where their left marks
 // stand on average (ties as written), so that their frames, each one rectangle, keep apart.
 func (gr *group) align() {
-	pos := gr.positions()
+	pos := gr.places()
 	sum, count := map[int]float64{}, map[int]int{}
 	for i, n := range gr.nodes {
 		if n.kind == kindLeft {
@@ -547,24 +550,25 @@ func (h headRoom) clear() float64 { return inEnd + h.w + nodeGap }
 
 // headsOver are the headings over node i, if a line reaches it from above its rank: a point, where an edge enters a
 // frame, a box with an edge in.
-func (gr *group) headsOver(i int) []headRoom {
-	n := gr.nodes[i]
-	if len(gr.heads) == 0 || !n.settles() && (n.box == nil || len(n.ins) == 0) {
-		return nil
-	}
-	var over []headRoom
-	for c := n.cl; c >= 0; c = gr.out.clusters[c].parent {
-		if h, ok := gr.heads[c]; ok && gr.nodes[h.left].rank == n.rank {
-			over = append(over, h)
+func (gr *group) headsOver(i int) iter.Seq[headRoom] {
+	return func(yield func(headRoom) bool) {
+		n := gr.nodes[i]
+		if len(gr.heads) == 0 || !n.settles() && (n.box == nil || len(n.ins) == 0) {
+			return
+		}
+		for c := n.cl; c >= 0; c = gr.out.clusters[c].parent {
+			if h, ok := gr.heads[c]; ok && gr.nodes[h.left].rank == n.rank && !yield(h) {
+				return
+			}
 		}
 	}
-	return over
 }
 
-// headFloor is how far left node i may stand for the headings over it. settle keeps to it by bounds and widen.
+// headFloor is how far left node i may stand for the headings over it. settle keeps to it by bounds. widen need not:
+// a link it widens a box left for stands at most a column from the box's end, so at its left or further right.
 func (gr *group) headFloor(i int) float64 {
 	lo := math.Inf(-1)
-	for _, h := range gr.headsOver(i) {
+	for h := range gr.headsOver(i) {
 		lo = max(lo, gr.nodes[h.left].x+h.clear())
 	}
 	return lo
@@ -585,7 +589,7 @@ func (gr *group) packArcs(n int, at map[int]int, slot func(int) int) (next [][]p
 		}
 	}
 	for i := range gr.nodes {
-		for _, h := range gr.headsOver(i) {
+		for h := range gr.headsOver(i) {
 			arc(slot(h.left), slot(i), h.clear())
 		}
 	}
