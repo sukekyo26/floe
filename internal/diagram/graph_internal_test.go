@@ -1624,14 +1624,14 @@ func TestGraphTold(t *testing.T) {
 		l       *layout
 		key, at string
 	}{
-		{"two graphs' boxes", &layout{boxes: []rect{box(0, ga), box(20, gb)}, w: 500, h: 500}, "diagram_graph_overlap", ga},                                     //nolint:exhaustruct_v5 // what it checks
-		{"a graph's box and one by hand", &layout{boxes: []rect{box(0, ga), handBox}, w: 500, h: 500}, "diagram_overlap", "#/parts/1"},                          //nolint:exhaustruct_v5 // what it checks
-		{"an edge through another graph's box", &layout{boxes: []rect{box(30, gb)}, paths: []path{across}, w: 500, h: 500}, "diagram_graph_through", ga},        //nolint:exhaustruct_v5 // what it checks
-		{"two graphs' edges", &layout{paths: []path{across, down}, w: 500, h: 500}, "diagram_graph_crossing", ga},                                               //nolint:exhaustruct_v5 // what it checks
-		{"the other first", &layout{paths: []path{down, across}, w: 500, h: 500}, "diagram_graph_crossing", gb},                                                 //nolint:exhaustruct_v5 // what it checks
-		{"a graph's edge and one by hand", &layout{paths: []path{across, hand}, w: 500, h: 500}, "diagram_crossing", "#/parts/1"},                               //nolint:exhaustruct_v5 // what it checks
-		{"a graph's box off the canvas", &layout{boxes: []rect{box(480, ga)}, w: 500, h: 500}, "diagram_graph_outside", ga},                                     //nolint:exhaustruct_v5 // what it checks
-		{"a graph's frame and a box by hand", &layout{boxes: []rect{handBox}, frames: []rect{frame(40, ga)}, w: 500, h: 500}, "diagram_straddle", "#/parts/1"},  //nolint:exhaustruct_v5 // what it checks
+		{"two graphs' boxes", &layout{boxes: []rect{box(0, ga), box(20, gb)}, w: 500, h: 500}, "diagram_graph_overlap", ga},                                      //nolint:exhaustruct_v5 // what it checks
+		{"a graph's box and one by hand", &layout{boxes: []rect{box(0, ga), handBox}, w: 500, h: 500}, "diagram_overlap", "#/parts/1"},                           //nolint:exhaustruct_v5 // what it checks
+		{"an edge through another graph's box", &layout{boxes: []rect{box(30, gb)}, paths: []path{across}, w: 500, h: 500}, "diagram_graph_through", ga},         //nolint:exhaustruct_v5 // what it checks
+		{"two graphs' edges", &layout{paths: []path{across, down}, w: 500, h: 500}, "diagram_graph_crossing", ga},                                                //nolint:exhaustruct_v5 // what it checks
+		{"the other first", &layout{paths: []path{down, across}, w: 500, h: 500}, "diagram_graph_crossing", gb},                                                  //nolint:exhaustruct_v5 // what it checks
+		{"a graph's edge and one by hand", &layout{paths: []path{across, hand}, w: 500, h: 500}, "diagram_crossing", "#/parts/1"},                                //nolint:exhaustruct_v5 // what it checks
+		{"a graph's box off the canvas", &layout{boxes: []rect{box(480, ga)}, w: 500, h: 500}, "diagram_graph_outside", ga},                                      //nolint:exhaustruct_v5 // what it checks
+		{"a graph's frame and a box by hand", &layout{boxes: []rect{handBox}, frames: []rect{frame(40, ga)}, w: 500, h: 500}, "diagram_straddle", "#/parts/1"},   //nolint:exhaustruct_v5 // what it checks
 		{"a graph's frame and another's box", &layout{boxes: []rect{box(120, gb)}, frames: []rect{frame(40, ga)}, w: 500, h: 500}, "diagram_graph_straddle", gb}, //nolint:exhaustruct_v5 // what it checks
 	} {
 		c.l.check()

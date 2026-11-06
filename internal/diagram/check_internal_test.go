@@ -3,6 +3,7 @@ package diagram
 import (
 	"math/rand/v2"
 	"slices"
+	"strconv"
 	"testing"
 )
 
@@ -30,7 +31,29 @@ func TestEdgesCrossed(t *testing.T) {
 		}
 	}
 
-	// Whatever straddles a frame crosses an edge of it: a mistake is never lost for want of one.
+	// A frame written to the numbers told passes, though a label's end is off them by float error.
+	var off int
+	for _, text := range []string{"DNS", "Lambda", "Internet Gateway", "a long label on a bar", "ab", "abc", "the middle"} {
+		for x := 100.0; x < 400; x++ {
+			a := labelArea(Text{"en": text}, x, 60, "middle", false, "")
+			edge, err := strconv.ParseFloat(num(a.x+a.w), 64)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if edge != a.x+a.w {
+				off++
+			}
+			to := rect{x: 0, y: 0, w: edge, h: 200} //nolint:exhaustruct_v5 // its place
+			if got := edgesCrossed(a, to); got != nil {
+				t.Errorf("%q at x %v, in a frame to %v: %v", text, x, edge, got)
+			}
+		}
+	}
+	if off == 0 {
+		t.Error("no label's end was off its number, so nothing was tried")
+	}
+
+	// Whatever straddles a frame by more than float error crosses an edge of it: a mistake is never lost for want of one.
 	rnd := rand.New(rand.NewPCG(1, 2)) //nolint:gosec // G404: rectangles to try, no secret
 	straddling := 0
 	for range 5000 {

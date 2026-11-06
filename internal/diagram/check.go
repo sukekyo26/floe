@@ -43,6 +43,8 @@ func (l *layout) checked() error {
 // only circles. Keep them off too if one strays.
 // LIMIT: the numbers told are rounded by num to 2 places, so an edge within 0.005 of a part's end reads as that end
 // (at x 140, spanning 140 to 180). Tell more places if one misleads.
+// LIMIT: the edges one part crosses are told in the order of their words (usererr.Sorted compares text), so at x 140
+// comes before at x 20. Sort them by number if the order comes to matter.
 func (l *layout) checkPlacement() {
 	canvas := l.canvas()
 	for _, r := range slices.Concat(l.boxes, l.marks, l.labels, l.frames, l.areas, l.strokes) {
@@ -66,10 +68,12 @@ func (l *layout) checkPlacement() {
 	offEdge := slices.DeleteFunc(slices.Clone(l.labels), func(r rect) bool { return !r.offEdge })
 	for _, b := range slices.Concat(l.boxes, l.marks, offEdge) {
 		for _, f := range l.frames {
-			if b.overlaps(f) && !b.inside(f) {
-				for _, c := range edgesCrossed(b, f) {
-					l.tell("diagram_straddle", []placed{{b.at, b.graph}, {f.at, f.graph}}, b.what, f.what, c.axis, num(c.at), num(c.lo), num(c.hi))
-				}
+			if !b.overlaps(f) {
+				continue
+			}
+			things := []placed{{b.at, b.graph}, {f.at, f.graph}}
+			for _, c := range edgesCrossed(b, f) {
+				l.tell("diagram_straddle", things, b.what, f.what, c.axis, num(c.at), num(c.lo), num(c.hi))
 			}
 		}
 	}
@@ -81,14 +85,17 @@ type edgeCrossed struct {
 	at, lo, hi float64
 }
 
-// edgesCrossed are the edges of frame f that a, overlapping f and not inside it, runs across.
+// edgesCrossed are the edges of frame f that a, overlapping f, runs across. An end within eps of an edge does not cross
+// it: a frame written to the numbers told must pass, though a sum of a label's place and width is off them by float
+// error.
 func edgesCrossed(a, f rect) []edgeCrossed {
 	var out []edgeCrossed
-	for _, c := range []edgeCrossed{
-		{"x", f.x, a.x, a.x + a.w}, {"x", f.x + f.w, a.x, a.x + a.w}, {"y", f.y, a.y, a.y + a.h}, {"y", f.y + f.h, a.y, a.y + a.h},
-	} {
-		if c.lo < c.at && c.at < c.hi {
-			out = append(out, c)
+	for axis, name := range []string{"x", "y"} {
+		lo, hi := a.lo(axis), a.lo(axis)+a.size(axis)
+		for _, at := range []float64{f.lo(axis), f.lo(axis) + f.size(axis)} {
+			if lo < at-eps && at+eps < hi {
+				out = append(out, edgeCrossed{name, at, lo, hi})
+			}
 		}
 	}
 	return out

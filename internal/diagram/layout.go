@@ -45,8 +45,10 @@ type rect struct {
 	what, at   string
 	form       outline //exhaustruct:optional
 	graph      string  //exhaustruct:optional
-	offEdge    bool    //exhaustruct:optional // a label kept off a frame's edge as a box is: put where it stands by its writer, or of a part that may not straddle a frame itself
-	byPlace    bool    //exhaustruct:optional // named by where it stands (named)
+	// offEdge is a label kept off a frame's edge as a box is: put where it stands by its writer, or of a part that may
+	// not straddle a frame itself.
+	offEdge bool //exhaustruct:optional
+	byPlace bool //exhaustruct:optional // named by where it stands (named)
 }
 
 func (a rect) overlaps(b rect) bool {
