@@ -227,7 +227,7 @@ func TestGraphBlame(t *testing.T) {
 		name, graph, part, want string
 	}{
 		{"a box over a box of the graph", g1, "  - box: { name: note, x: 100, y: 0, rows: [N] }\n", `box "write" overlaps box "note"`},
-		{"a frame a box of the graph straddles", g1, "  - frame: { name: f, x: 0, y: 0, w: 100, h: 40 }\n", `box "write" straddles the edge of frame "f"`},
+		{"a frame a box of the graph straddles", g1, "  - frame: { name: f, x: 0, y: 0, w: 100, h: 40 }\n", `box "write" straddles the edge of frame "f" at x 100, spanning 26 to 178` + "\n@: " + `box "write" straddles the edge of frame "f" at y 40, spanning 20 to 49`},
 		{"a label in the graph's channel", g1, "  - label: { text: L, x: 68, y: 61, anchor: middle }\n", `edge write→check runs through label "L"`},
 		{"a box over a label of the graph", g2r, "  - box: { name: note, x: 176, y: 86, rows: [N] }\n", `box "note" overlaps label "no"`},
 		{"an edge by hand through a label of the graph", g2, "  - edge: { from: [110, 113], to: [160, 113] }\n", `edge [110,113]→[160,113] runs through label "yes"`},
@@ -253,6 +253,14 @@ func TestGraphBlame(t *testing.T) {
 		if len(told) != strings.Count(c.want, "\n")+1 || slices.ContainsFunc(told, func(s string) bool { return !strings.HasPrefix(s, "s.yaml:3:5: ") }) {
 			t.Errorf("%s, written first:\n  told %q\n  want each at line 3", c.name, got)
 		}
+	}
+
+	// An icon's label across the frame of another graph is told at its graph, once for each edge crossed.
+	const across = "title: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - group: { name: g1, label: g1, nodes: [{ box: { name: a, rows: [A] } }] }\n" +
+		"  - graph:\n      x: 30\n      y: 34\n      nodes:\n        - icon: { name: l, icon: aws/aws-lambda, label: A long Lambda function name that is wide }\n"
+	if _, got := draw(t, across, inspect); got != `s.yaml:9:7: label "A long Lambda function name that is wide" straddles the edge of frame "g1" of another graph at x 134, spanning 30 to 328; move one of the graphs by its x and y`+"\n"+
+		`s.yaml:9:7: label "A long Lambda function name that is wide" straddles the edge of frame "g1" of another graph at y 91, spanning 85 to 103; move one of the graphs by its x and y` {
+		t.Errorf("an icon's label across another graph's frame:\n  told %q", got)
 	}
 
 	// A box of one graph over a box and a label of another is told at the graph of the first box, to move a graph.
