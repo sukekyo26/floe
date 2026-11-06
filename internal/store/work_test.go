@@ -119,6 +119,12 @@ func TestWorkRefused(t *testing.T) {
 	if got := taskIn(t, s, "p"); got.At != was.At || got.State != was.State {
 		t.Errorf("after the refusals: %+v", got)
 	}
+	if err := s.EditTask("p", "#1", store.TaskEdit{URL: ptr("  https://example.com/a  ")}); err != nil {
+		t.Fatal(err)
+	}
+	if got := taskIn(t, s, "p").URL; got != "https://example.com/a" {
+		t.Errorf("a URL as pasted: %q", got)
+	}
 	if err := s.ForgetTask("p", "\xff"); err == nil || !strings.Contains(told(err, root), "must be UTF-8") {
 		t.Errorf("forget of no UTF-8: %v", err)
 	}
