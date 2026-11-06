@@ -63,6 +63,7 @@ func fake(list string) string {
 		if (!init.method && String(url).includes('/pages')) {
 			return Promise.resolve(new Response('{"dirs":["guide"],"pages":[{"file":"index.html","updatedAt":"' + at(3) + '"}],"more":1200}'));
 		}
+		if (!init.method && String(url).includes('/api/tasks')) return Promise.resolve(new Response('{}'));
 		if (!init.method) {
 			window.gets++;
 			return Promise.resolve(new Response(window.list));

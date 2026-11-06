@@ -23,7 +23,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe archive <slug>...` | Take pages off the lists, keeping them (`--undo` gives them back) |
-| `floe work [<slug>...]` | Put pages on a task of the dev screen, pin them, or change a task |
+| `floe work [<slug>...]` | Put pages on a task of the task list, pin them, or change a task |
 | `floe serve` | Run the server in the foreground |
 | `floe stop` | Stop the background server |
 | `floe diagram render <spec.yaml>...` | Check diagram specs and print them as inline SVG |
@@ -215,6 +215,8 @@ With slugs, the task's project is each page's: `--task` puts the pages on that n
 | `--forget` | the task | Without slugs. Refused while a page is on it, an archived one too |
 
 The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at the first failure; a page that does not exist, or is on no task where the flags change one, is told before anything is written. A page that could not be written leaves its task written: the same command given again finishes it. Flags of the pages alone write no task.
+
+The task list, at `/tasks` of the server, lists the tasks by state and project: waiting ones the longest first, the others the latest changed first, each with its last step, its pages, how many are unread and its link, under the pages pinned. A task that is done and whose pages are all archived goes under Archive; one waiting or in progress stays, and so does one of no page. The switch to it stands beside the logo once a page is on a task or pinned, or a task has a row.
 
 A page keeps its `work` when published again, renamed or drawn again. `tasks.json` that cannot be read, or holds another state or a URL other than `http` or `https`, is refused and not written over: mend it by hand. A key of a row floe does not know is lost at the next write.
 

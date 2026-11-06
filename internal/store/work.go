@@ -46,7 +46,7 @@ func TaskName(name string) (string, error) {
 	return trimmed, nil
 }
 
-// Work is what a page holds of its place on the dev screen: the task it is on, its step there, whether it is pinned.
+// Work is what a page holds of its place on the task list: the task it is on, its step there, whether it is pinned.
 type Work struct {
 	Task string `json:"task,omitempty"`
 	Step string `json:"step,omitempty"`
@@ -185,6 +185,9 @@ func (s *Store) ReadTasks() (Tasks, error) {
 		for name, t := range rows {
 			if !validState(t.State) {
 				return nil, broken("task %s of project %s has the state %q", name, project, t.State)
+			}
+			if timeOf(t.At).IsZero() {
+				return nil, broken("task %s of project %s has the time %q, not one like 2026-01-02T15:04:05Z", name, project, t.At)
 			}
 			if t.URL != "" && !validURL(t.URL) {
 				return nil, broken("task %s of project %s has the URL %q, not http or https", name, project, t.URL)

@@ -136,6 +136,7 @@ func (s *Server) latest() store.Drawing {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", serveUI)
+	mux.HandleFunc("GET /tasks", serveUI)
 	mux.HandleFunc("GET /api/health", s.health)
 	mux.HandleFunc("GET /api/artifacts", s.list)
 	mux.HandleFunc("POST /api/artifacts", s.addLink)
