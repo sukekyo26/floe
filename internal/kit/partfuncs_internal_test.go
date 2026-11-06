@@ -186,8 +186,10 @@ func TestBarsOf(t *testing.T) {
 		{[]any{of("a", 5, 3), of("b", 1, 2), of("c", 9, 4)}, `bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole` + "\n" +
 			`bars: bar 3 "c": 9 is over its of 4; write a value no greater than of, the whole`},
 		// Past 2^53, a float holds both as one number: they are compared as integers.
-		{[]any{of("a", 9007199254740993, 9007199254740992)},
-			`bars: bar 1 "a": 9,007,199,254,740,993 is over its of 9,007,199,254,740,992; write a value no greater than of, the whole`},
+		{
+			[]any{of("a", 9007199254740993, 9007199254740992)},
+			`bars: bar 1 "a": 9,007,199,254,740,993 is over its of 9,007,199,254,740,992; write a value no greater than of, the whole`,
+		},
 		{[]any{of("a", 3e21, 2e21)}, `bars: bar 1 "a": 3,000,000,000,000,000,000,000 is over its of 2,000,000,000,000,000,000,000; write a value no greater than of, the whole`},
 		// No label: told by the number.
 		{[]any{item(1), map[string]any{"value": 2, "of": 1}}, `bars: bar 2 "": 2 is over its of 1; write a value no greater than of, the whole`},

@@ -162,13 +162,22 @@ func barOf(i int, item any) (bar, error) {
 		return bar{}, usererr.New("kit_bar_of", name+"'s of", fmt.Sprint(b.Of))
 	}
 	if over(b.Value, b.Of, n, of) {
-		value, _ := decimal("", b.Value, 0)
-		whole, _ := decimal("", b.Of, 0)
+		var value, whole string
+		if value, err = decimal(name+"'s value", b.Value, 0); err != nil {
+			return bar{}, err
+		}
+		if whole, err = decimal(name+"'s of", b.Of, 0); err != nil {
+			return bar{}, err
+		}
 		return bar{}, usererr.New("kit_bar_over", name, value, whole)
 	}
 	b.Width = b.Width / of * 100
-	b.Now, _ = plain("", b.Value, 0)
-	b.Max, _ = plain("", b.Of, 0)
+	if b.Now, err = plain(name+"'s value", b.Value, 0); err != nil {
+		return bar{}, err
+	}
+	if b.Max, err = plain(name+"'s of", b.Of, 0); err != nil {
+		return bar{}, err
+	}
 	return b, nil
 }
 
