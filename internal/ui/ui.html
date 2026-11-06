@@ -2942,12 +2942,14 @@
       if (e.key !== 'Escape') return;
       e.stopPropagation();
       button.closest('.toast').remove();
-      [...$('list').children].find((li) => li.dataset.key === after)?.querySelector('.title')?.focus();
+      rowAt(after)?.querySelector('.title')?.focus();
     });
     toast(t('ui_archive_done', a.title), { ms: 8000, button });
     if (focus) button.focus();
   }
-  const entryRow = (a) => [...$('list').children].find((li) => li.dataset.key === `entry:${a.slug}`);
+  // None on a page open whole, which has no list
+  const rowAt = (key) => [...($('list')?.children ?? [])].find((li) => li.dataset.key === key);
+  const entryRow = (a) => rowAt(`entry:${a.slug}`);
   function rowAfter(a) {
     let li = entryRow(a)?.nextElementSibling;
     while (li && !li.querySelector('.title')) li = li.nextElementSibling;

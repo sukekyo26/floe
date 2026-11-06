@@ -141,6 +141,14 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, "the modal: "+b.until("the search", "document.querySelector('.undo') === null && document.activeElement.id"))
 	b.pressKey(kb.Escape)
 
+	// A page open whole: its bar's button has the focus again.
+	b.navigate("/a/d/")
+	b.until("the bar", "document.querySelector('#frame-actions > .archive[title]')")
+	b.eval("document.querySelector('#frame-actions > .archive').click()")
+	b.until("d's way back", undo("d"))
+	b.eval(undo("d") + ".focus(); " + undo("d") + ".click()")
+	out = append(out, "whole: "+b.until("the bar's button", undo("d")+" === null && document.activeElement.matches('#frame-actions > .archive') && document.activeElement.title"))
+
 	// A task's page: the row moves under the archived, keeping its key, and the focus goes on.
 	for _, slug := range []string{"a", "e"} {
 		b.eval(`fetch('/api/artifacts/` + slug + `', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' })`)
@@ -169,4 +177,4 @@ const rowActionsWant = "the rows: fedcba|a pill's dot in its chip's color: true|
 	"the row's buttons: archive star more|the menu leaves it out: none|its words: Archive / Archive T a|pressed: d title|the last: b title|by the keys: undo|" +
 	"its words: Restore / Restore T c to the list|given back: c title|no way back then: true|left: b title|failed, it stays: true|" +
 	`the list held: {"archived":true},{"archived":false}|an archived row's button: true Restore|given back, no way back: true|the star: true|` +
-	"the modal's pill: true|the modal: find-q|the task's head: one true|a task's row: b title|the filter button: one true|the folded head: one true|the page list's are words: false false"
+	"the modal's pill: true|the modal: find-q|whole: Archive|the task's head: one true|a task's row: b title|the filter button: one true|the folded head: one true|the page list's are words: false false"
