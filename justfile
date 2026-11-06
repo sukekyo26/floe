@@ -58,8 +58,8 @@ test:
 test-race:
     CGO_ENABLED=1 go test -race -shuffle=on {{pkgs}}
 
-# Run tests with the race detector but the browser tests, as CI's test job does; the heaviest random tests of internal/diagram run a fifth of their graphs
 # -timeout stays under CI's 10 minutes, so that a slow or stuck run names the tests still running, not just a cancelled job.
+# Run tests with the race detector but the browser tests, as CI's test job does; the heaviest random tests of internal/diagram run a fifth of their graphs
 test-race-core:
     CGO_ENABLED=1 go test -race -shuffle=on -timeout 9m $({{core_pkgs}})
 
