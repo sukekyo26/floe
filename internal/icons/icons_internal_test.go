@@ -331,6 +331,7 @@ func TestSearchShort(t *testing.T) {
 		{"one word meant is first", []string{"s3", "amazon"}, []string{"aws/amazon-simple-storage-service", "aws/amazon-s3-on-outposts"}},
 		{"a target not in the set", []string{"alb"}, []string{"aws/res/zz-alb-in-its-name"}},
 		{"not the whole word", []string{"aws/s3"}, nil},
+		{"part of a short name", []string{"sg"}, nil},
 	} {
 		hits, err := set.Search(c.words)
 		var got []string
