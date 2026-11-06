@@ -2240,7 +2240,7 @@
     const what = [view === FIRST_VIEW ? '' : t(VIEW_WORDS[view]), narrowed ? t('ui_narrow_n', narrowed) : ''].filter(Boolean).join(' · ');
     $('shelf-what').classList.remove('proj', 'proj-tint');
     if (projectHead) drawProject($('shelf-what'), projectWord(project), taskProjectColor(project));
-    else $('shelf-what').textContent = what;
+    else $('shelf-what').textContent = TASK_LIST ? '' : what;
   }
 
   // Whether a has a page of its own to open alone or download: a folder has none, nor has a link whose file is gone
@@ -2942,7 +2942,7 @@
       if (e.key !== 'Escape') return;
       e.stopPropagation();
       button.closest('.toast').remove();
-      rowAt(after)?.querySelector('.title')?.focus();
+      (rowAt(after) ?? lastRow([...($('list')?.children ?? [])]))?.querySelector('.title')?.focus();
     });
     toast(t('ui_archive_done', a.title), { ms: 8000, button });
     if (focus) button.focus();
@@ -3062,13 +3062,14 @@
   // Draws #list: each group's heading, if it has one, and what rowOf pushes of each of its entries (an entry's place among them, the rows)
   // The row with the focus, on what had it. A row that left, or whose button moved it, as archiving moves one on a task's page, leaves the
   // focus on the title of the row after it, or the last: on the same button, a key held down or a press more would go on to the next page
+  const lastRow = (rows) => rows.findLast((li) => li.querySelector('.title'));
   function focusRowAgain(rows, was, key, on) {
     const byKey = new Map(rows.map((li) => [li.dataset.key, li]));
     const row = byKey.get(key);
     const place = (keys, kept) => keys.filter((k) => kept.has(k)).indexOf(key);
     const stayed = row && (on === '.title' || on === 'summary' || place(was, byKey) === place([...byKey.keys()], new Set(was)));
     const to = stayed ? row.querySelector(on) : (was.slice(was.indexOf(key) + 1).map((k) => byKey.get(k)).find((li) => li?.querySelector('.title'))
-      ?? rows.findLast((li) => li.querySelector('.title')))?.querySelector('.title');
+      ?? lastRow(rows))?.querySelector('.title');
     to?.focus({ preventScroll: true });
   }
   function drawRows(groups, rowOf) {

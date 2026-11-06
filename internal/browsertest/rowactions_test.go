@@ -87,6 +87,14 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval(`fetch('/api/artifacts/c', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
 	b.until("c back again", there("c"))
 
+	// The last row has none after it: the row that is last now takes the focus.
+	keys(archive("b"))
+	b.until("b archived", "!"+there("b")+" && document.activeElement.matches('.undo')")
+	b.pressKey(kb.Escape)
+	out = append(out, "left, the last: "+b.until("the toast gone", undo("b")+" === null && "+focus))
+	b.eval(`fetch('/api/artifacts/b', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"archived":false}' }).then(() => load())`)
+	b.until("b back", there("b"))
+
 	// The way back fails: it stays to press again. The list slow to come: it can be pressed all the same.
 	mouse(archive("c"))
 	b.until("c archived again", "!"+there("c")+" && "+undo("c"))
@@ -166,6 +174,9 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the task list", "document.querySelector('#narrow-filter.proj-tint')")
 	say("the filter button", "document.getElementById('narrow-filter-name').textContent + ' ' + document.getElementById('narrow-filter').style.getPropertyValue('--c').startsWith('var(--pc')")
 	say("the folded head", "document.getElementById('shelf-what').textContent + ' ' + document.getElementById('shelf-what').classList.contains('proj-tint')")
+	// No project known yet, as while the tasks cannot be read: the head has no words, whatever the view.
+	b.eval("view = 'doing'; project = ''; renderShelf()")
+	say("no project, no head", "document.getElementById('shelf-what').textContent === '' && !document.getElementById('narrow-filter').classList.contains('proj-tint')")
 	b.navigate("/")
 	b.until("the list's button", "document.getElementById('narrow-filter')")
 	say("the page list's are words", "document.getElementById('narrow-filter').classList.contains('proj-tint') + ' ' + document.getElementById('shelf-what').classList.contains('proj-tint')")
@@ -175,6 +186,6 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 
 const rowActionsWant = "the rows: fedcba|a pill's dot in its chip's color: true|each project's own: true|the ground of the color too: true|a long name cut within the pill: true|" +
 	"the row's buttons: archive star more|the menu leaves it out: none|its words: Archive / Archive T a|pressed: d title|the last: b title|by the keys: undo|" +
-	"its words: Restore / Restore T c to the list|given back: c title|no way back then: true|left: b title|failed, it stays: true|" +
+	"its words: Restore / Restore T c to the list|given back: c title|no way back then: true|left: b title|left, the last: c title|failed, it stays: true|" +
 	`the list held: {"archived":true},{"archived":false}|an archived row's button: true Restore|given back, no way back: true|the star: true|` +
-	"the modal's pill: true|the modal: find-q|whole: Archive|the task's head: one true|a task's row: b title|the filter button: one true|the folded head: one true|the page list's are words: false false"
+	"the modal's pill: true|the modal: find-q|whole: Archive|the task's head: one true|a task's row: b title|the filter button: one true|the folded head: one true|no project, no head: true|the page list's are words: false false"
