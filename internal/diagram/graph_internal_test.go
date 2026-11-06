@@ -3137,3 +3137,47 @@ func TestWithoutWith(t *testing.T) {
 		t.Errorf("with %q of the copy, %q of the graph", got[1].Box.With, g.Nodes[1].Box.With)
 	}
 }
+
+// The order of a rank is the same as with a heading in it: laid out down, a heading takes no place, yet sweep counts it,
+// or this graph's last rank would change its order and the graph grow by half.
+func TestGraphHeadPlaces(t *testing.T) {
+	t.Parallel()
+
+	rnd := rand.New(rand.NewPCG(1, 2))     //nolint:gosec // G404: graphs to try, no secret
+	groups := rand.New(rand.NewPCG(21, 2)) //nolint:gosec // G404: graphs to try, no secret
+	var g *graph
+	for range 647 {
+		g = randomGraph(rnd, "")
+		addGroups(groups, g)
+	}
+	at := map[string]float64{}
+	for _, b := range laid(g).boxes {
+		at[b.what] = b.x
+	}
+	if at[`box "n0"`] >= at[`box "n4"`] {
+		t.Errorf("n0 at %v, n4 at %v: the order changed", at[`box "n0"`], at[`box "n4"`])
+	}
+}
+
+// A box widened for each link in turn stops at the headings over it, so that it draws no link under them.
+func TestWidenHeadFloor(t *testing.T) {
+	t.Parallel()
+
+	gr := &group{ //nolint:exhaustruct_v5 // what widen reads
+		nodes: []gnode{
+			{box: &graphBox{Name: "", Rows: nil, Tone: "", Shape: ""}, of: 0, kind: kindPlain, cl: 0, rank: 1, w: 64, h: 29, x: 100, y: 0, ins: []int{0, 1, 2}, outs: nil, written: 0},
+			{box: nil, of: 0, kind: kindLeft, cl: 0, rank: 1, w: 0, h: 0, x: 0, y: 0, ins: nil, outs: nil, written: 1},
+		},
+		links: []glink{
+			{from: 9, to: 0, edge: 0, exit: 100, entry: 0, straight: false, track: 0},
+			{from: 9, to: 0, edge: 1, exit: 88, entry: 0, straight: false, track: 0},
+			{from: 9, to: 0, edge: 2, exit: 76, entry: 0, straight: false, track: 0},
+		},
+		heads: map[int]headRoom{0: {left: 1, w: 64}},
+		out:   &graphOut{clusters: []cluster{{parent: -1}}}, //nolint:exhaustruct_v5 // what headsOver reads
+	}
+	gr.widen([]int{1, 0}, 1, 0, 500)
+	if n := gr.nodes[0]; n.x != 100 {
+		t.Errorf("widened past the heading: x %v w %v, want x 100", n.x, n.w)
+	}
+}

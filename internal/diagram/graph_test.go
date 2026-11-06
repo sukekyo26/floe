@@ -255,7 +255,7 @@ func TestGraphBlame(t *testing.T) {
 	// An icon's label across the frame of another graph is told at its graph, once for each edge crossed.
 	const across = "title: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - group: { name: g1, label: g1, nodes: [{ box: { name: a, rows: [A] } }] }\n" +
 		"  - graph:\n      x: 30\n      y: 34\n      nodes:\n        - icon: { name: l, icon: aws/aws-lambda, label: A long Lambda function name that is wide }\n"
-	if _, got := draw(t, across, inspect); got != `s.yaml:9:7: label "A long Lambda function name that is wide" straddles the edge of frame "g1" of another graph at x 134, spanning 30 to 328; move one of the graphs by its x and y`+"\n"+
+	if _, got := draw(t, across, inspect); got != `s.yaml:9:7: label "A long Lambda function name that is wide" straddles the edge of frame "g1" of another graph at x 92, spanning 30 to 328; move one of the graphs by its x and y`+"\n"+
 		`s.yaml:9:7: label "A long Lambda function name that is wide" straddles the edge of frame "g1" of another graph at y 91, spanning 85 to 103; move one of the graphs by its x and y` {
 		t.Errorf("an icon's label across another graph's frame:\n  told %q", got)
 	}
@@ -327,26 +327,26 @@ func TestGraphLevel(t *testing.T) {
 	for _, c := range []struct {
 		name, src, want string
 	}{
-		{"lanes, down", level3, `frame "u" 20,20 168x213
-frame "v" 212,20 108x213
-frame "w" 344,20 108x213
+		{"lanes, down", level3, `frame "u" 20,20 84x213
+frame "v" 128,20 132x213
+frame "w" 284,20 72x213
 the heading of frame "u" 32,29 7.68x18
-the heading of frame "v" 224,29 7.68x18
-the heading of frame "w" 356,29 7.68x18
+the heading of frame "v" 140,29 7.68x18
+the heading of frame "w" 296,29 7.68x18
 box "a" 32,115 48x41
 box "ok" 32,192 56x29
-box "b" 260,115 48x41
-box "q" 260,50 48x29
-box "c" 392,50 48x29
-box "d" 356,192 48x29
-edge c→b M416,79 V91 H284 V115
-edge b→a M260,123.5 H80
-edge a→b M80,147.5 H260
-edge b→d M284,156 V168 H380 V192
-edge d→ok M356,212.5 H88
-label "ask" 154.2,114.5 31.6x18
+box "b" 200,115 48x41
+box "q" 200,50 48x29
+box "c" 296,50 48x29
+box "d" 296,192 48x29
+edge c→b M320,79 V91 H224 V115
+edge b→a M200,123.5 H80
+edge a→b M80,147.5 H200
+edge b→d M224,156 V168 H320 V192
+edge d→ok M296,212.5 H88
+label "ask" 130.2,114.5 31.6x18
 label "answer" 131.4,138.5 53.2x18
-label "ask" 212.2,203.5 31.6x18
+label "ask" 176.2,203.5 31.6x18
 `},
 		{"lanes, right", strings.Replace(level3, "      lanes:\n", "      direction: right\n      lanes:\n", 1), `frame "u" 20,20 302x54
 frame "v" 20,98 302x96
@@ -777,6 +777,94 @@ parts:
 	} {
 		if _, got := draw(t, c.src, inspect); got != c.want {
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
+		}
+	}
+}
+
+// Laid out down, a heading takes no place in its frame's first rank: only what a line reaches from above keeps right of
+// it, in the rank's order as written, and the frame holds it. Laid out right, it keeps its place.
+func TestGraphHeadRoom(t *testing.T) {
+	t.Parallel()
+
+	const heading = "A long heading of the frame here"
+	graph := func(direction, nodes, edges string) string {
+		return "title: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n" + direction + "      nodes:\n" + nodes + "      edges:\n" + edges
+	}
+	group := func(boxes ...string) string {
+		return "        - group:\n            name: g\n            label: " + heading + "\n            nodes:\n" +
+			"              - " + strings.Join(boxes, "\n              - ") + "\n"
+	}
+	box := func(name string) string { return "box: { name: " + name + ", rows: [" + name + "] }" }
+	top := "        - " + box("top") + "\n"
+	for _, c := range []struct {
+		name, src, want string
+	}{
+		{"no line in: under the heading", graph("", group(box("a"))+"        - "+box("c")+"\n", "        - { from: a, to: c }\n"), `frame "g" 20,20 270x71
+the heading of frame "g" 32,29 245.76x18
+box "a" 32,50 48x29
+box "c" 32,115 48x29
+edge a→c M56,79 V115
+`},
+		{"no line in: the frame holds the heading", "title: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n" + group(box("a")), `frame "g" 20,20 270x71
+the heading of frame "g" 32,29 245.76x18
+box "a" 32,50 48x29
+`},
+		{"a line in: right of the heading", graph("", top+group(box("a")), "        - { from: top, to: a }\n"), `frame "g" 20,85 342x71
+the heading of frame "g" 32,94 245.76x18
+box "top" 20,20 64x29
+box "a" 302,115 48x29
+edge top→a M52,49 V61 H326 V115
+`},
+		{"a line to the frame: where it enters is right of the heading", graph("", top+group(box("a")), "        - { from: top, to: g }\n"), `frame "g" 20,85 312x71
+the heading of frame "g" 32,94 245.76x18
+box "top" 20,20 64x29
+box "a" 32,115 48x29
+edge top→g M52,49 V61 H308 V85
+`},
+		{"a line past the first rank: its point is right of the heading", graph("", top+group(box("a"), box("b")),
+			"        - { from: top, to: a }\n        - { from: a, to: b }\n        - { from: top, to: b }\n"), `frame "g" 20,85 384x136
+the heading of frame "g" 32,94 245.76x18
+box "top" 290,20 64x29
+box "a" 302,115 48x29
+box "b" 290,180 64x29
+edge top→a M326,49 V115
+edge a→b M326,144 V156 H311.33 V180
+edge top→b M340,49 V61 H380 V156 H332.67 V180
+`},
+		{"written first, with no line in: under the heading", graph("", top+group("box: { name: f, with: e, rows: [f] }", box("e")),
+			"        - { from: top, to: e }\n"), `frame "g" 20,85 342x71
+the heading of frame "g" 32,94 245.76x18
+box "top" 20,20 64x29
+box "f" 32,115 48x29
+box "e" 302,115 48x29
+edge top→e M52,49 V61 H326 V115
+`},
+		{"written after one with a line in: past it", graph("", top+group(box("e"), "box: { name: f, with: e, rows: [f] }"),
+			"        - { from: top, to: e }\n"), `frame "g" 20,85 414x71
+the heading of frame "g" 32,94 245.76x18
+box "top" 20,20 64x29
+box "e" 302,115 48x29
+box "f" 374,115 48x29
+edge top→e M52,49 V61 H326 V115
+`},
+		{"nested: a line in keeps right of both headings", graph("", top+"        - group:\n            name: o\n            label: "+heading+"\n            nodes:\n"+
+			"              - group: { name: i, label: i, nodes: [{ "+box("a")+" }] }\n", "        - { from: top, to: a }\n"), `frame "o" 20,85 354x113
+frame "i" 32,115 330x71
+the heading of frame "o" 32,94 245.76x18
+the heading of frame "i" 44,124 7.68x18
+box "top" 20,20 64x29
+box "a" 302,145 48x29
+edge top→a M52,49 V61 H326 V145
+`},
+		{"laid out right: the heading keeps its place", graph("      direction: right\n", group(box("a"))+"        - "+box("c")+"\n", "        - { from: a, to: c }\n"), `frame "g" 20,20 270x114
+the heading of frame "g" 32,29 245.76x18
+box "a" 140,74 48x48
+box "c" 314,74 48x48
+edge a→c M188,98 H314
+`},
+	} {
+		if got, told := draw(t, c.src, inspect); got != c.want || told != "" {
+			t.Errorf("%s:\n%s%s\nwant\n%s", c.name, got, told, c.want)
 		}
 	}
 }

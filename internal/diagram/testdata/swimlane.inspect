@@ -1,35 +1,35 @@
-diagram "One pull request: the user, the architect and the engineer" 1090x796
+diagram "One pull request: the user, the architect and the engineer" 1054x796
 frame "user" 20,20 180x756
-frame "architect" 224,20 564x756
-frame "engineer" 812,20 258x756
+frame "architect" 224,20 528x756
+frame "engineer" 776,20 258x756
 the heading of frame "user" 32,29 48x18
 the heading of frame "architect" 236,29 72x18
-the heading of frame "engineer" 824,29 61.44x18
+the heading of frame "engineer" 788,29 61.44x18
 box "answer" 32,214 136x58
 box "ok" 32,644.5 152x29
-box "order" 392,50 144x46
-box "dreview" 332,214 200x58
-box "review" 374,390 160x46
-box "ready" 368,554 168x46
-box "design" 824,132 176x46
-box "build" 824,308 232x46
-box "fix" 824,472 136x46
-box "ci" 824,636 128x46
-box "merge" 824,718 168x46
-edge order→design M464,96 V108 H912 V132
-edge design→dreview M912,178 V190 H432 V214
-edge dreview→answer M332,231 H168
-edge answer→dreview M168,255 H332
-edge dreview→build M432,272 V284 H940 V308
-edge build→review M940,354 V366 H454 V390
-edge review→fix M454,436 V448 H892 V472
-edge fix→ready M892,518 V530 H452 V554
-edge ready→ci M452,600 V612 H888 V636
-edge ci→ok M824,665 H184
-edge ok→merge M108,673.5 V694 H908 V718
-label "聞く" 233,222 34x18
+box "order" 356,50 144x46
+box "dreview" 296,214 200x58
+box "review" 338,390 160x46
+box "ready" 332,554 168x46
+box "design" 788,132 176x46
+box "build" 788,308 232x46
+box "fix" 788,472 136x46
+box "ci" 788,636 128x46
+box "merge" 788,718 168x46
+edge order→design M428,96 V108 H876 V132
+edge design→dreview M876,178 V190 H396 V214
+edge dreview→answer M296,231 H168
+edge answer→dreview M168,255 H296
+edge dreview→build M396,272 V284 H904 V308
+edge build→review M904,354 V366 H418 V390
+edge review→fix M418,436 V448 H856 V472
+edge fix→ready M856,518 V530 H416 V554
+edge ready→ci M416,600 V612 H852 V636
+edge ci→ok M788,665 H184
+edge ok→merge M108,673.5 V694 H872 V718
+label "聞く" 227,222 34x18
 label "answer" 229.4,246 53.2x18
-label "OK" 673.8,275 24.4x18
-label "findings" 639.2,439 67.6x18
-label "ready to merge" 614.6,603 110.8x18
-label "聞く" 487,656 34x18
+label "OK" 637.8,275 24.4x18
+label "findings" 603.2,439 67.6x18
+label "ready to merge" 578.6,603 110.8x18
+label "聞く" 469,656 34x18

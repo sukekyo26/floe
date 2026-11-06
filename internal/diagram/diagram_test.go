@@ -779,7 +779,7 @@ func TestEdgesHandSides(t *testing.T) {
 		// laid out right: the bottom, not the left
 		{"width: 260\nheight: 160\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      direction: right\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [0, 100], via: [[60, 100]], to: b }\n", `d="M0,100 H60 H116 V68"`},
 		// a box in a lane
-		{"width: 400\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      lanes:\n        - { name: l1, label: L1, nodes: [{ box: { name: a, rows: [a] } }] }\n        - { name: l2, label: L2, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [300, 0], via: [[300, 100]], to: b }\n", `d="M300,0 V100 V129.5 H218"`},
+		{"width: 400\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      lanes:\n        - { name: l1, label: L1, nodes: [{ box: { name: a, rows: [a] } }] }\n        - { name: l2, label: L2, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [300, 0], via: [[300, 100]], to: b }\n", `d="M300,0 V100 V129.5 H176"`},
 		// a tree's child: right, not its top
 		{"width: 260\nheight: 200\ntitle: T\nparts:\n  - tree:\n      x: 90\n      y: 20\n      root: { name: r, rows: [r], children: [{ name: c, rows: [c] }] }\n  - edge: { from: [200, 0], via: [[200, 80]], to: c }\n", `d="M200,0 V80 V103.5 H114"`},
 		// a tree's root keeps its top
@@ -787,11 +787,11 @@ func TestEdgesHandSides(t *testing.T) {
 		// without via, from the other end
 		{"width: 260\nheight: 240\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 100\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n  - box: { name: h, x: 60, y: 10, w: 60, h: 30, rows: [h] }\n  - edge: { from: h, to: b }\n", `d="M90,40 V167.5 H68"`},
 		// a group's frame: right, not its top
-		{"width: 300\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: g }\n  - edge: { from: [200, 0], via: [[200, 60]], to: g }\n", `d="M200,0 V60 V120.5 H170"`},
+		{"width: 300\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: g }\n  - edge: { from: [200, 0], via: [[200, 60]], to: g }\n", `d="M200,0 V60 V120.5 H134"`},
 		// two of the graph's edges end at b's top
 		{"width: 300\nheight: 200\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: c, rows: [c] }\n        - box: { name: b, rows: [b] }\n      edges:\n        - { from: a, to: b }\n        - { from: c, to: b }\n  - edge: { from: [250, 0], via: [[250, 60]], to: b }\n", `d="M250,0 V60 V87.5 H116"`},
 		// a group's frame in the first rank keeps its top, which no edge of the graph ends at
-		{"width: 300\nheight: 240\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 40\n      nodes:\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n        - box: { name: a, rows: [a] }\n      edges:\n        - { from: g, to: a }\n  - edge: { from: [250, 0], via: [[250, 20]], to: g }\n", `d="M250,0 V20 H86 V40"`},
+		{"width: 300\nheight: 240\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 40\n      nodes:\n        - group: { name: g, label: G, nodes: [{ box: { name: b, rows: [b] } }] }\n        - box: { name: a, rows: [a] }\n      edges:\n        - { from: g, to: a }\n  - edge: { from: [250, 0], via: [[250, 20]], to: g }\n", `d="M250,0 V20 H68 V40"`},
 		// a lane's outer side, which no edge of the graph crosses, is left
 		{"width: 400\nheight: 220\ntitle: T\nparts:\n  - graph:\n      x: 20\n      y: 20\n      lanes:\n        - { name: l1, label: L1, nodes: [{ box: { name: a, rows: [a] } }] }\n        - { name: l2, label: L2, nodes: [{ box: { name: b, rows: [b] } }] }\n      edges:\n        - { from: a, to: b }\n  - edge: { from: [0, 200], via: [[10, 200]], to: l1 }\n", `d="M0,200 H10 V88 H20"`},
 		// across first: right, though the top is left too
@@ -1844,8 +1844,8 @@ func TestFaces(t *testing.T) {
 	// A group's frame is as wide as its heading is drawn: both where it is kept room and where it is checked.
 	const group = "  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - group:\n            name: g\n" +
 		"            label: " + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + "\n            nodes:\n              - box: { name: a, rows: [[a, sub]] }\n"
-	if got, told := draw(t, head+group, inspect); !strings.HasPrefix(got, `frame "g" 20,20 324x`) || told != "" {
-		t.Errorf("a group's heading:\n  inspect %q %q\n  want the frame 324 wide", got, told)
+	if got, told := draw(t, head+group, inspect); !strings.HasPrefix(got, `frame "g" 20,20 258x`) || told != "" {
+		t.Errorf("a group's heading:\n  inspect %q %q\n  want the frame 258 wide", got, told)
 	}
 
 	// A lane's heading is measured bold where a level edge is checked against it: regular, this one would not reach it.
