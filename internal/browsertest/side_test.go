@@ -49,6 +49,7 @@ func TestUIFolderSide(t *testing.T) { //nolint:paralleltest // the browser tests
 
 		r := b.rect("document.getElementById('side-grip')")
 		x, y := r.X+r.Width/2, r.Y+r.Height/2
+		b.painted()
 		for _, e := range []chromedp.Action[chromedp.Void]{
 			chromedp.MouseEvent(chromedp.MousePressed, x, y, chromedp.ButtonLeft, chromedp.ClickCount(1)),
 			chromedp.MouseEvent(chromedp.MouseMoved, (x+to)/2, y, chromedp.ButtonLeft),

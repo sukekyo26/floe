@@ -892,6 +892,9 @@ func TestUIFindPress(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.still()
 	mouse := func(kind input.DispatchMouseEventType, x, y float64) {
 		t.Helper()
+		if kind == input.DispatchMouseEventTypeMousePressed {
+			b.painted()
+		}
 		p := input.DispatchMouseEventParams{Type: kind, X: x, Y: y, Button: input.MouseButtonLeft, Buttons: 1, ClickCount: 1}
 		if _, err := chromedp.Call(b.ctx, input.DispatchMouseEvent, p); err != nil {
 			t.Fatal(err)

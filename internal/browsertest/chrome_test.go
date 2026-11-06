@@ -185,10 +185,15 @@ func (b *browser) try(expr string) (string, error) {
 	return chromedp.Run(b.ctx, chromedp.Evaluate[string]("(async () => String(await (0, eval)("+js(expr)+")))()", await)) //nolint:wrapcheck // the caller's to tell
 }
 
+// eval returns JavaScript's String() of expr. What moves to another page may leave before the answer comes: no answer then, what the
+// test waits for next telling whether it went.
 func (b *browser) eval(expr string) string {
 	b.t.Helper()
 
 	s, err := b.try(expr)
+	if err != nil && strings.Contains(err.Error(), "Inspected target navigated") {
+		return ""
+	}
 	if err != nil {
 		b.t.Fatalf("%s: %v", expr, err)
 	}
@@ -221,7 +226,7 @@ func (b *browser) until(what, expr string) string {
 		time.Sleep(50 * time.Millisecond)
 	}
 	// What the page threw, and what it drew: a draw that threw stays as it is until the data changes.
-	seen, seenErr := b.try("[location.pathname + location.search, document.activeElement?.tagName + '#' + document.activeElement?.id, [...document.querySelectorAll('select')].filter((e) => e.matches(':open')).map((e) => e.id + ':open').join(), (window.thrown ?? []).join(' / '), document.getElementById('list')?.innerText?.replaceAll('\\n', ' | ')].join(' ## ')")
+	seen, seenErr := b.try("[location.pathname + location.search, document.activeElement?.tagName + '#' + document.activeElement?.id, [...document.querySelectorAll(':is(:open, :popover-open)')].map((e) => e.tagName + '#' + e.id).join(), (window.thrown ?? []).join(' / '), document.getElementById('list')?.innerText?.replaceAll('\\n', ' | ')].join(' ## ')")
 	b.t.Fatalf("timed out waiting for %s: last %q, %v; the page: %s, %v", what, last, err, seen, seenErr)
 	return ""
 }
@@ -286,26 +291,23 @@ func (b *browser) pressKey(k string) {
 	}
 }
 
-// click presses at (x, y) until the page has the release of it. Chrome sends a press and its release by what it last drew, which
-// on a busy machine lags behind the page: over a list of choices just opened, either reaches the iframe drawn under it, though the
-// pointer moving there reaches the list. A press meant for the iframe has no way to tell: hover waits for that page first.
+// painted waits for what the page holds now to be on the screen, by having Chrome take a picture of one pixel of it. Chrome sends a
+// press and its release by what it last put there, which on a busy machine lags behind the page: over a list of choices just opened,
+// either reaches the iframe under it, though the pointer moving there reaches the list, and two animation frames are not enough. Every
+// press goes through here. A page leaving cannot be pictured and has nothing to wait for, so that the error tells nothing.
+func (b *browser) painted() {
+	b.t.Helper()
+
+	clip := &page.Viewport{X: 0, Y: 0, Width: 1, Height: 1, Scale: 1}
+	_, _ = chromedp.Call(b.ctx, page.CaptureScreenshot, page.CaptureScreenshotParams{Clip: clip}) //nolint:errcheck // see above
+}
+
 func (b *browser) click(x, y float64) {
 	b.t.Helper()
 
-	armed := fmt.Sprintf("(() => { if (document.elementFromPoint(%v, %v)?.tagName === 'IFRAME') return false; "+
-		"window.pressWaits = true; addEventListener('pointerup', () => { window.pressWaits = false; }, { capture: true, once: true }); return true; })()", x, y)
-	proven := b.eval(armed) == "true"
-	for deadline := time.Now().Add(waitLimit); ; time.Sleep(50 * time.Millisecond) {
-		if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(x, y)); err != nil {
-			b.t.Fatal(err)
-		}
-		// A press that moved to another page has left no mark; while it moves the page cannot answer, and it is not pressed again
-		if last, err := b.try("window.pressWaits === true"); !proven || err != nil || last != "true" {
-			return
-		}
-		if time.Now().After(deadline) {
-			b.t.Fatalf("timed out waiting for the page to have the press at (%v, %v)", x, y)
-		}
+	b.painted()
+	if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(x, y)); err != nil {
+		b.t.Fatal(err)
 	}
 }
 

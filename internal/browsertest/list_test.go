@@ -602,6 +602,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 		r := b.rect("document.getElementById(" + js(grip) + ")")
 		x, y := r.X+r.Width/2, r.Y+r.Height/2
+		b.painted()
 		events := []chromedp.Action[chromedp.Void]{
 			chromedp.MouseEvent(chromedp.MousePressed, x, y, chromedp.ButtonLeft, chromedp.ClickCount(1)),
 			chromedp.MouseEvent(chromedp.MouseMoved, (x+to)/2, y, chromedp.ButtonLeft),
@@ -1177,6 +1178,9 @@ func rowPoint(t *testing.T, b *browser, row string, margin bool) (float64, float
 func (b *browser) mouse(typ input.DispatchMouseEventType, x, y float64, count int) {
 	b.t.Helper()
 
+	if typ == input.DispatchMouseEventTypeMousePressed {
+		b.painted()
+	}
 	if err := chromedp.Do(b.ctx, chromedp.MouseEvent(typ, x, y, chromedp.ButtonLeft, chromedp.ClickCount(count))); err != nil {
 		b.t.Fatal(err)
 	}
@@ -1268,6 +1272,7 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	asideList(b)
 	x, y = rowPoint(t, b, "#list li[data-slug=a3]", false)
 	b.click(x, y)
+	b.painted()
 	if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(x, y, chromedp.ClickCount(2))); err != nil {
 		t.Fatal(err)
 	}

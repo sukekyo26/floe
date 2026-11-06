@@ -198,14 +198,14 @@ func TestUIVersionURL(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.pressKey(kb.ArrowUp)
 	b.pressKey(kb.Enter)
 	b.until("v2 by the key", "location.search === '?v=2' && !document.getElementById('frame-version').hidden && document.activeElement.id === 'frame-version'")
-	b.eval("setTimeout(() => history.back())") // after the answer: the page leaving would cut it off
+	b.eval("history.back()")
 	b.until("v1 back", "location.search === '?v=1' && !document.getElementById('frame-version').hidden")
 	out = append(out, b.eval("[document.getElementById('frame-version').value, frameAt.v].join(' ')"))
 	choose(b, "frame-version", 2)
 	b.until("v2", "location.search === '?v=2' && !document.getElementById('frame-version').hidden")
 	choose(b, "frame-version", 1)
 	b.until("v1", "location.search === '?v=1' && !document.getElementById('frame-version').hidden")
-	b.eval("setTimeout(() => history.back())") // after the answer: the page leaving would cut it off
+	b.eval("history.back()")
 	b.until("back", "location.search === '?v=2' && !document.getElementById('frame-version').hidden")
 	out = append(out, b.eval(frameSaid))
 	// Yellow, its words read and it takes the ring.
