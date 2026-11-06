@@ -290,7 +290,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   `bars`, `diff`, `tree`, `diagram`, `script`); `bars` refuses an item not
   written as keys and values, a value that is not a number or is below 0, an
   `of` that is not a number or not above 0, and a value over its `of`, telling
-  every item's mistake together, each with its bar's label.
+  every item's mistake together, each with its bar's number and label.
   text/template's mistake of running a `part.html` (a key its schema does not
   declare) is told at its line and column, as one of a `page.html` is; a
   function refusing a value (`num`, `bars`) is told at the value.

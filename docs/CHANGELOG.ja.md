@@ -204,7 +204,7 @@ floe の主要な変更を記録します。フォーマットは
   部品の `part.html` は、floe の部品が使う関数（`copyButton`・`bars`・`diff`・`tree`・
   `diagram`・`script`）を呼べる。`bars` は、キーと値で書いていない項目、
   数でないか 0 より小さい値、数でないか 0 以下の `of`、`of` を超える値を断り、全部の項目の誤りを
-  棒の label を添えて一度に言う。`part.html` を走らせた text/template の誤り（schema が
+  棒の番号と label を添えて一度に言う。`part.html` を走らせた text/template の誤り（schema が
   宣言していない鍵など）は、`page.html` と同じくその行と列で言い、関数が値を断る誤り
   （`num`・`bars`）は、その値の位置で言う。
   テーマの `base.css` は、テンプレートの `page.css` と同じくページに当たり、部品の中と text の
