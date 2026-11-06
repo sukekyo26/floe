@@ -196,6 +196,8 @@ var messagesEN = map[string]string{
 	"store_task_there":        `task %s is there already`,
 	"store_task_gone":         `task %s is no longer there`,
 	"store_task_children":     `task %[1]s of project %[2]s still has %[3]d child task(s), such as %[4]s: take them off it or remove them first`,
+	"store_parent_fields":     `parentWas, parentNew and parentTitle go with a parent; a new parent (parentNew true) needs a parentTitle of more than spaces, and a parentTitle needs parentNew true; taking a parent off (an empty parent) takes parentWas alone`,
+	"store_parent_was":        `the parent of task %s has changed since it was read`,
 	"store_parent_self":       `task %s cannot be its own parent`,
 	"store_parent_none":       `project %[2]s has no task %[1]s that can be a parent`,
 	"store_parent_nested":     `task %[1]s has a parent itself (%[2]s), so it cannot be a parent: tasks have one level of children`,

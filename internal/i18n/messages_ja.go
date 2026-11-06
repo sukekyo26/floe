@@ -187,6 +187,8 @@ var messagesJA = map[string]string{
 	"store_task_there":        "タスク %s はもうあります",
 	"store_task_gone":         "タスク %s はもうありません",
 	"store_task_children":     "プロジェクト %[2]s のタスク %[1]s には、まだ %[3]d 個の子のタスクがあります（%[4]s など）。先に親から外すか、消してください",
+	"store_parent_fields":     "parentWas・parentNew・parentTitle は parent と一緒に送ります。新しい親（parentNew が true）には空白だけでない parentTitle が要り、parentTitle は parentNew が true のときだけ送ります。親を外す（parent が空）ときに一緒に送れるのは parentWas だけです",
+	"store_parent_was":        "タスク %s の親が、読んだ後に変わりました",
 	"store_parent_self":       "タスク %s は自分の親になれません",
 	"store_parent_none":       "プロジェクト %[2]s に、親にできるタスク %[1]s がありません",
 	"store_parent_nested":     "タスク %[1]s には親（%[2]s）があるので、親にできません。親子は 1 段だけです",
