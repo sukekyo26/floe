@@ -156,7 +156,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// As it opens, no suggestions over the fields; a suggestion pressed, as a person does, goes in and closes; a tag's too.
 	dialog("b")
 	say("as it opens", "document.getElementById('set-task-names').matches(':popover-open')")
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--step", "review", "--url", "https://example.com/a/one")
+	s.floe(t, "work", "--task", "#1", "--project", "proj", "--url", "https://example.com/a/one")
 	s.floe(t, "work", "--task", "#2", "--project", "proj", "--url", "https://example.com/a/two")
 	b.eval("document.getElementById('set-dialog').close()")
 	b.navigate("/?project=proj")
