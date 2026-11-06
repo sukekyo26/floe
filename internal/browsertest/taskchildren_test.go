@@ -194,8 +194,11 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	task("proj", "#99", "--parent", "")
 
 	// By real presses: a new name makes a child, and the focus is back on the button.
+	// Into view first: a modal taller than the window scrolls, and a button cut by its edge is pressed on the backdrop,
+	// which closes it. The window's height without b.size is Chrome's own, which its versions change.
 	press := func(id string) {
 		t.Helper()
+		b.eval("document.getElementById(" + js(id) + ").scrollIntoView({ block: 'nearest' })")
 		b.still()
 		r := b.rect("document.getElementById(" + js(id) + ")")
 		b.click(r.X+r.Width/2, r.Y+r.Height/2)
