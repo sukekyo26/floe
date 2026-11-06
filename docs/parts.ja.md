@@ -123,7 +123,7 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 
 `@keyframes`・`@counter-style`・`@font-face` が作る名前は、scope に閉じず、ページ全体のものです。自分の部品の名前を頭に付けます（`mypart-fade`）。同じ名前を 2 つのファイルが作ると、使う所によらず、層の優先の高い方が勝ちます（部品はテンプレートに、外の部品は中の部品に勝つ）。`@font-face` が置き換わるのは、descriptors（`font-weight`・`font-style`・`font-stretch`・`unicode-range` など）が全部同じ face だけで、違うものは同じ family にまとまります。
 
-部品は自分の箱に margin を書きません。部品の箱になりうるブロック（`p`・`ul`・`ol`・`dl`・`figure`・`form`・`menu`・`fieldset` など）の margin は floe の base が 0 にし、部品の間は置く側（テンプレートの節、stack、note）が、隣と `--floe-room` あけて空けます。部品の箱に margin を書くと、置く側の間に勝ってしまいます。部品の中の Markdown の流れ（段落の間と、その中の部品の箱の前後。Markdown の表など）の間は、部品が決めます。
+部品は自分の箱に margin を書きません。部品の箱になりうるブロック（`p`・`ul`・`ol`・`dl`・`figure`・`form`・`menu`・`fieldset` など）の margin は floe の base が 0 にし、部品の間は置く側（テンプレートの節、stack、columns、note）が、隣と `--floe-room` あけて空けます。部品の箱に margin を書くと、置く側の間に勝ってしまいます。部品の中の Markdown の流れ（段落の間と、その中の部品の箱の前後。Markdown の表など）の間は、部品が決めます。
 
 部品の間に、地や枠を持つ箱（カード、見た目 panel を借りる部品や要素、note）を描く部品・テンプレートは、floe のものと同じく、その箱の縁から字までの余白を `var(--floe-pad-block) var(--floe-pad-inline)`（floe の base で 1.1rem と 1.3rem）で書き、自分の長さを書きません。見た目 `panel` 自身は余白を持ちません（表・rows・details は、行を箱の縁まで引くため）。
 

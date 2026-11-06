@@ -67,10 +67,11 @@ code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(
    its lines, and a part that scrolls on screen folds what it holds within the paper's width.
    LIMIT: what folds no word on paper (a table's heads and cells, a column of numbers or of pills, a tree's note and its
    depth, a field's name, a finding's level) reaches past the paper when its longest words are wider, and Chrome prints
-   the whole page smaller. In a grid's column of a fixed least width (cards side by side) it reaches past its card
-   instead, over the next card or out of the theme's frame, the page no wider.
-   LIMIT: a box a grid's item holds, sent on to the next page at a page's end, leaves the item as short as before, and
-   what follows is drawn over it; a grid's fragmentation, not a box's scrolling.
+   the whole page smaller. In a grid's column of a fixed least width (cards side by side, columns) it reaches past its
+   card or column instead, over the next or out of the theme's frame, the page no wider until it reaches past the paper
+   there, when the whole page prints smaller again.
+   LIMIT: a box a grid's item holds (cards', or columns' long code or table), sent on to the next page at a page's end,
+   leaves the item as short as before, and what follows is drawn over it; a grid's fragmentation, not a box's scrolling.
    LIMIT: such a box shrinks to its border and padding (code's pre, which leaves its padding to its lines, to its border
    alone) on screen where its content sets the width; give the place a width if floe places one so.
    Such places: an inline-block, a float, an absolute or other shrink-to-fit box, a width of min-content, max-content
@@ -121,8 +122,8 @@ blockquote > * + * { margin-top: 0.6rem; }
    ancestor positioned) if a phone's screen reader comes to be used */
 .floe-copy-status, .floe-hidden { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media print { .floe-copy { display: none; } :root { --floe-copy-room: 0px; } }
-/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, cards) floe leaves
-   --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
+/* Between parts that stand one after another (a template's sections, a stack, the panel of tabs, columns, a column's
+   title and parts, cards) floe leaves --floe-room, and what a box draws outside itself (its shadow, a pseudo-element, an outline) reaches no further on any
    side, so that it never meets another box nor the page's edge: nothing makes room for it. A box casts its theme's one
    shadow, --floe-shadow-x, -y, -blur and -spread (inherited from the palette, in px or rem), in the colour
    --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
@@ -472,7 +473,7 @@ blockquote {
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* What details, tabs and an item of entries hold */
+/* What details, tabs, columns and an item of entries hold */
 :scope { display: grid; gap: var(--floe-room); }
 /* A word kept whole (a table's on paper) overflows the stack's column instead of widening it */
 :scope > * { min-width: 0; }
