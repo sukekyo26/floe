@@ -1,7 +1,12 @@
 package browsertest_test
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
+
+	"github.com/chromedp/cdproto/accessibility"
+	"github.com/chromedp/chromedp"
 
 	"github.com/sukekyo26/floe/internal/kit"
 )
@@ -28,7 +33,34 @@ func TestUIAsksHead(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 }
 
-// TestUIAsksPills measures the pills beside an option's words, in every theme and as wide as a phone: their middles level, but for a pill folded under the words.
+// TestUIAsksMark reads a question decided as a screen reader is given it: its check by the word for it, the sign itself left
+// out, once in a question with no option to bear the word too.
+func TestUIAsksMark(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	const page = "template: report\nlang: en\ntitle: Mark\nsections:\n  - heading: Mark\n    parts:\n      - asks:\n" +
+		"          - { question: q, decided: done }\n          - { question: r }\n"
+	s.floe(t, "publish", s.write(t, "mark.yaml", page), "--slug", "mark")
+	s.b.navigate("/a/mark/?raw")
+	tree, err := chromedp.Call(s.b.ctx, accessibility.GetFullAXTree, accessibility.GetFullAXTreeParams{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	counts := map[string]int{}
+	for _, n := range tree.Nodes {
+		if n.Ignored || n.Name == nil {
+			continue
+		}
+		var name string
+		if json.Unmarshal(n.Name.Value, &name) == nil {
+			counts[strings.TrimSpace(name)]++
+		}
+	}
+	if counts["✓"] != 0 || counts["Decided"] == 0 {
+		t.Errorf("read: Decided %d times, the sign %d times; want the word and no sign", counts["Decided"], counts["✓"])
+	}
+}
+
+// TestUIAsksPills measures the pills beside an option's words, in every theme and as wide as a phone: their middles level, but for a pill folded under the words; a question's check at the right, clear of a long title.
 func TestUIAsksPills(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	k, err := kit.Floe()
@@ -36,8 +68,9 @@ func TestUIAsksPills(t *testing.T) { //nolint:paralleltest // the browser tests 
 		t.Fatal(err)
 	}
 	_, _, themes, _ := k.Names()
-	const asks = "template: report\nlang: en\ntitle: Pills\nsections:\n  - heading: Pills\n    parts:\n      - asks:\n" +
-		"          - { question: q, options: [a, 'b `c`'], recommend: 'b `c`', decided: 'b `c`' }\n"
+	asks := "template: report\nlang: en\ntitle: Pills\nsections:\n  - heading: Pills\n    parts:\n      - asks:\n" +
+		"          - { question: q, options: [a, 'b `c`'], recommend: 'b `c`', decided: 'b `c`' }\n" +
+		"          - { question: " + strings.Repeat("a question long enough to fold ", 12) + ", decided: done }\n"
 	defer s.b.unsize()
 	for _, theme := range themes {
 		s.floe(t, "publish", s.write(t, "pills.yaml", asks), "--slug", "pills-"+theme, "--theme", theme)
@@ -48,11 +81,18 @@ func TestUIAsksPills(t *testing.T) { //nolint:paralleltest // the browser tests 
   const middle = (e) => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; };
   const pills = [...document.querySelectorAll('[data-floe-part=asks] .choices [data-floe-part=cell]')];
   if (pills.length !== 2) return pills.length + ' pills';
+  for (const c of document.querySelectorAll('[data-floe-part=asks] .check')) {
+    const title = c.previousElementSibling.getBoundingClientRect(), r = c.getBoundingClientRect(), card = c.closest('.card');
+    const right = card.getBoundingClientRect().right - parseFloat(getComputedStyle(card).paddingRight) - parseFloat(getComputedStyle(card).borderRightWidth);
+    if (r.left < title.right) return 'the check stands over the title';
+    if (Math.abs(r.right - right) > 1.5) return 'the check stands ' + (right - r.right) + ' px off the right';
+  }
   const beside = pills.filter((p) => p.getBoundingClientRect().top < p.parentElement.firstElementChild.getBoundingClientRect().bottom);
-  return beside.map((p) => middle(p) - middle(p.parentElement.firstElementChild)).filter((d) => Math.abs(d) > 0.75).join(' ');
+  const off = beside.map((p) => middle(p) - middle(p.parentElement.firstElementChild)).filter((d) => Math.abs(d) > 0.75);
+  return off.length ? 'a pill stands off the words by ' + off.join(' ') : '';
 })()`)
 			if got != "" {
-				t.Errorf("%s at %d px: a pill's middle stands off the words' by %s", theme, w, got)
+				t.Errorf("%s at %d px: %s", theme, w, got)
 			}
 		}
 	}
