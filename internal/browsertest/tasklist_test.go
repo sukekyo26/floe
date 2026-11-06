@@ -183,7 +183,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		say(query+" kept", "localStorage.getItem('artifacts.taskProject')")
 	}
 	say("gone, on the shelf", "document.querySelector('.chip[aria-pressed=true]').textContent")
-	b.eval("localStorage.setItem('artifacts.taskProject', 'blog'); document.getElementById('tasks-other').click()")
+	b.moving("localStorage.setItem('artifacts.taskProject', 'blog'); document.getElementById('tasks-other').click()")
 	b.until("the project kept", "location.pathname === '/tasks' && location.search === '?project=blog'")
 
 	// What another window chose is not taken back at the next look.
@@ -248,7 +248,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	// On the task list the bar's unread leads to the page list, narrowing nothing here.
 	b.navigate("/tasks")
 	b.until("the bar's unread", "!document.getElementById('news').hidden")
-	b.eval("document.getElementById('news').click()")
+	b.moving("document.getElementById('news').click()")
 	b.until("the page list of the new", "location.pathname === '/' && location.search === '?view=new'")
 
 	// The ? beside the pins: opened under its button, within the window; Esc and the button close it.

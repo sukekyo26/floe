@@ -76,7 +76,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	r = row("a")
 	b.click(r.X+10, r.Y+r.Height/2)
 	b.until("the title", "picked?.slug === 'a' && document.getElementById('read-title').getAttribute('href')")
-	b.eval("document.getElementById('read-title').click()")
+	b.moving("document.getElementById('read-title').click()")
 	wholeAt("the title over the page", "/a/a/")
 
 	// By Enter, and a reload there.
@@ -90,7 +90,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	// A pin on the task list.
 	opened("/tasks?project=proj")
 	b.until("the pin", "document.querySelector('.pin')")
-	b.eval("document.querySelector('.pin').click()")
+	b.moving("document.querySelector('.pin').click()")
 	wholeAt("pin", "/a/pin/")
 	realKey(b, "h", 0)
 	b.until("h to the task list", "location.pathname + location.search === '/tasks?project=proj'")
@@ -151,9 +151,9 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	out = append(out, "its diff: "+b.eval(frameBack))
 	b.navigate("/a/a/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	b.eval("openEdit(items.find((a) => a.slug === 'a')); document.getElementById('edit-slug').value = 'a2'; document.getElementById('edit').requestSubmit()")
+	b.moving("openEdit(items.find((a) => a.slug === 'a')); document.getElementById('edit-slug').value = 'a2'; document.getElementById('edit').requestSubmit()")
 	wholeAt("renamed", "/a/a2/")
-	b.eval("openEdit(items.find((a) => a.slug === 'a2')); document.getElementById('edit-slug').value = 'a'; document.getElementById('edit').requestSubmit()")
+	b.moving("openEdit(items.find((a) => a.slug === 'a2')); document.getElementById('edit-slug').value = 'a'; document.getElementById('edit').requestSubmit()")
 	wholeAt("named back", "/a/a/")
 
 	// Come back to from the browser's memory, what was kept since is drawn.
@@ -174,7 +174,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	opened("/tasks?view=doing&project=proj&task=%23128")
 	b.navigate("/tasks?view=doing&project=proj")
 	b.until("the pin", "document.querySelector('.pin')")
-	b.eval("document.querySelector('.pin').click()")
+	b.moving("document.querySelector('.pin').click()")
 	wholeAt("a pin of a list at a view", "/a/pin/")
 
 	// A long name is cut, with nothing past the edge, down to the narrowest width that has the word.

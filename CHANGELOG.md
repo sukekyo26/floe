@@ -326,6 +326,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change `floe icons search` to find a service by its common short name, listed first: `alb`, `sqs`, `s3`, `ecs` and 26 more, from a table floe keeps. `s3` used to list only icons with `s3` in their names, and not Amazon S3 itself, and `alb` found nothing. When nothing is found, the message now says to try fewer words or a word of the full name, and that `floe icons search aws` lists them all.
 - Show a row's project as a pill in the color of its chip on the shelf, and put the button that archives a page, or gives it back, on its row beside the star, in place of the item in the row's menu.
 - Show the way back on a page open whole at every width: beside the logo it says where it goes, the task's name, the task list or the page list, whichever opened the page; on a narrow screen its mark alone, as before.
 - Change `report`'s `lead` to a line of Markdown, as the `summary` of `design`, `handoff`, `postmortem` and `runbook`: code in backticks, bold and links are drawn, while a heading, a list or a table stays text. What looks like a tag (`<prefix>`, `Vec<u8>`) is left out and marks such as `*` and `_` are read, so write those as text in backticks. A stored page takes this when published again or at `floe rebuild`, and a linked data file as soon as floe is updated. `floe rebuild` does not draw earlier versions again, so comparing one with the latest shows the `lead` as changed.
