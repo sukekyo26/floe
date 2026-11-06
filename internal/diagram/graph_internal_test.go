@@ -886,25 +886,26 @@ func TestGraphRandom(t *testing.T) {
 					b, _ := json.Marshal(map[string]any{"title": "kept", "parts": []any{map[string]any{"graph": shrunk(g)}}}) //nolint:errcheck,errchkjson // plain values
 					t.Fatalf("seed %v, graph %d: %s; shrunk, to keep in testdata/graph:\n%s", c.seed, i, fault, b)
 				}
-				on, all := boxParts(g, l)
-				parted, ends = parted+on, ends+all
 				if fault := turnFault(g, l); fault != "" {
 					t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
 				}
-				clipped, labels := endsClipped(g, l)
-				short, written = short+clipped, written+labels
+				if !underRace {
+					on, all := boxParts(g, l)
+					parted, ends = parted+on, ends+all
+					clipped, labels := endsClipped(g, l)
+					short, written = short+clipped, written+labels
+				}
 			}
-			if underRace {
-				return // the bounds below are measured on all of the graphs
-			}
-			if 1000*short > 5*written {
-				t.Errorf("seed %v: %d of %d labels leave less than %v of their run at an end, over 0.5%%", c.seed, short, written, labelEnds)
-			}
-			if share := 100 * parted / ends; share < c.parts {
-				t.Errorf("seed %v: %d of %d ends at boxes on their equal parts, under %d%%", c.seed, parted, ends, c.parts)
-			}
-			if laidOut < c.least {
-				t.Errorf("seed %v: %d graphs with level edges laid out, fewer than %d", c.seed, laidOut, c.least)
+			if !underRace { // measured on all of the graphs
+				if 1000*short > 5*written {
+					t.Errorf("seed %v: %d of %d labels leave less than %v of their run at an end, over 0.5%%", c.seed, short, written, labelEnds)
+				}
+				if share := 100 * parted / ends; share < c.parts {
+					t.Errorf("seed %v: %d of %d ends at boxes on their equal parts, under %d%%", c.seed, parted, ends, c.parts)
+				}
+				if laidOut < c.least {
+					t.Errorf("seed %v: %d graphs with level edges laid out, fewer than %d", c.seed, laidOut, c.least)
+				}
 			}
 		})
 	}

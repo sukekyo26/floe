@@ -289,7 +289,7 @@ func TestGraphIconsRandom(t *testing.T) {
 			rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
 			touching := 0
 			graphs := c.graphs
-			if c.only == nil {
+			if c.only == nil { // a graph named by only must be reached under race too
 				graphs = tries(graphs)
 			}
 			for i := range graphs {
@@ -661,7 +661,7 @@ func TestGraphIconOffPointKeeps(t *testing.T) {
 		{"right", [2]uint64{63, 1}, false, false},
 		{"", [2]uint64{65, 1}, true, false},
 		{"right", [2]uint64{67, 1}, true, false},
-		{"", [2]uint64{13, 0}, false, true}, // holds one where an icon with other ends moving bends them
+		{"", [2]uint64{13, 0}, false, true}, // holds one where an icon with other ends moving bends them, when all of the graphs run
 		{"right", [2]uint64{13, 5}, false, true},
 	} {
 		t.Run(fmt.Sprintf("%s-%d", cmpOr(c.direction, "down"), c.seed[0]), func(t *testing.T) {
