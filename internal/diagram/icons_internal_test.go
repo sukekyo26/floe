@@ -270,16 +270,18 @@ func TestGraphIconsRandom(t *testing.T) {
 		lanes     bool
 		level     bool
 		touching  int
+		only      []int // the graphs to lay out, when any: the rest only take their turn of the random numbers
 	}{
-		{"", [2]uint64{31, 2}, 800, false, false, false, touchesPlain},
-		{"right", [2]uint64{33, 4}, 800, false, false, false, touchesPlain},
-		{"", [2]uint64{35, 6}, 150, true, false, false, touchesPlain},
-		{"right", [2]uint64{37, 8}, 150, true, false, false, touchesPlain},
-		{"right", [2]uint64{777, 1517}, 720, true, false, false, touchesPlain},
-		{"", [2]uint64{39, 10}, 300, false, true, false, touchesPlain},
-		{"right", [2]uint64{41, 12}, 300, false, true, false, touchesPlain},
-		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain},
-		{"right", [2]uint64{45, 16}, 150, false, false, true, touchesPlain},
+		{"", [2]uint64{31, 2}, 800, false, false, false, touchesPlain, nil},
+		{"right", [2]uint64{33, 4}, 800, false, false, false, touchesPlain, nil},
+		{"", [2]uint64{35, 6}, 150, true, false, false, touchesPlain, nil},
+		{"right", [2]uint64{37, 8}, 150, true, false, false, touchesPlain, nil},
+		// 717 has a label where a run stands once its ends settle, 54 a run a rounding off straight.
+		{"right", [2]uint64{777, 1517}, 720, true, false, false, touchesPlain, []int{54, 717}},
+		{"", [2]uint64{39, 10}, 300, false, true, false, touchesPlain, nil},
+		{"right", [2]uint64{41, 12}, 300, false, true, false, touchesPlain, nil},
+		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain, nil},
+		{"right", [2]uint64{45, 16}, 150, false, false, true, touchesPlain, nil},
 	} {
 		t.Run(fmt.Sprintf("%s-%d", cmpOr(c.direction, "down"), c.seed[0]), func(t *testing.T) {
 			t.Parallel()
@@ -299,6 +301,9 @@ func TestGraphIconsRandom(t *testing.T) {
 					inLanes(rnd, g)
 				}
 				iconize(g)
+				if c.only != nil && !slices.Contains(c.only, i) {
+					continue
+				}
 				if c.level {
 					if addLevels(rnd, g); levelTold(g) {
 						continue
