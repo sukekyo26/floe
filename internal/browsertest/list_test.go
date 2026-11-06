@@ -189,7 +189,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	b.unsize()
 
 	check(t, "list", out, strings.Join([]string{
-		"#|v dot 700 ver:v3 · new version kindof:design proj:p tags:t|#|n dot 700 kindof:report proj:q|#|r ring 500 kindof:report proj:p|l mark 500 kindof:Link · HTML path:/tmp/x/l.html|#|d mark 500 kindof:Link · handoff path:/home/you/work/a (1)/v2.0/data-set_#1/deep/deep/deep/deep/deep/deep/deep/deep/deep/name-2.yaml|#|f mark 500 kindof:Folder path:/tmp/x/f|#|g mark 500 kindof:Link · HTML miss:File not found",
+		"#|v dot 700 ver:v3 · new version kindof:design proj proj-tint:p tags:t|#|n dot 700 kindof:report proj proj-tint:q|#|r ring 500 kindof:report proj proj-tint:p|l mark 500 kindof:Link · HTML path:/tmp/x/l.html|#|d mark 500 kindof:Link · handoff path:/home/you/work/a (1)/v2.0/data-set_#1/deep/deep/deep/deep/deep/deep/deep/deep/deep/name-2.yaml|#|f mark 500 kindof:Folder path:/tmp/x/f|#|g mark 500 kindof:Link · HTML miss:File not found",
 		"Today,Yesterday,Last 7 days", "All unread 2 / Newest first · 2 unread / 2",
 		"Version\nthe words\np", "v ?q=the+words",
 		"false true about:blank  ", "true false /a/r/?raw Read r", "/ /a/r/", "true",
@@ -355,7 +355,7 @@ func TestUIShelfMarks(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.size(1440, 900, false)
 	b.navigate("/")
 	out = append(out, named())
-	check(t, "shelf marks", out, "10 true|true true true true|page:true link:true folder:true|true|true|true|true|true|true|true|true|true|Favorites 0,Archive|Favorites 1,Archive|Favorites 1,Archive 0")
+	check(t, "shelf marks", out, "10 true|true true true true|page:true link:true folder:true|true|true|true|true|true|true|true|true|true|Favorites 0,Archive,Archive A|Favorites 1,Archive,Archive A,Archive B,Archive L,Archive F|Favorites 1,Archive 0,Archive A,Archive B,Archive L,Archive F")
 }
 
 // TestUIShelfCounts: each part of the shelf counts what the other parts, the view and the search leave, its own part let go; the
@@ -629,11 +629,12 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.eval(widths))
 	mouse("list-grip", 760, true)
 	out = append(out, b.eval(widths))
+	mouse("list-grip", 1590, true)
+	// At the widest: a little wider, the path goes up onto the line of the rest, and has less room there than on its own line.
 	after, err := strconv.Atoi(b.eval(cut))
 	if err != nil || after >= before {
-		t.Errorf("the path is cut by %d at the wider list, %d before: %v", after, before, err)
+		t.Errorf("the path is cut by %d at the widest list, %d before: %v", after, before, err)
 	}
-	mouse("list-grip", 1590, true)
 	out = append(out, b.eval(widths+" + ' ' + (innerWidth - document.getElementById('reader').getBoundingClientRect().left)"))
 	// Wide enough, all of it shows.
 	b.size(3000, 900, false)
@@ -1128,7 +1129,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		"download open archive star more | mark-unread pin-item task-set edit delete",
 		"download open archive star more | pin-item task-set edit copy delete",
 		"archive star more | pin-item task-set edit copy delete",
-		"mark-unread select pin-item task-set edit open download archive delete",
+		"mark-unread select pin-item task-set edit open download delete",
 		"archive star more | pin-item task-set edit copy delete",
 		"diff-open download open archive star more | mark-unread pin-item task-set edit delete",
 		"download open archive star more | mark-unread task-set edit delete",
@@ -1137,7 +1138,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		"/api/artifacts/two/download ",
 		"copy open | ",
 		"Restore / Restore One to the list /  / true / false",
-		"1 / Archived “One” / true",
+		"1 / Archived “One”Restore / true",
 		"true",
 		"diff-open download open archive star more | mark-unread pin-item task-set edit delete",
 		"diff-open more | fav-item mark-unread pin-item task-set edit open download archive delete",
