@@ -247,7 +247,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="asks"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* One question to a row, its letter a word of the page's language and its number the counter's, which reads out. A question
-   decided has a round check at its right, whose word is read and not seen; its option decided a ring in its tone and a pill
+   decided has a round check at its right, a drawn shape as a sign of a font stands off the middle, whose word is read and not
+   seen; its option decided a ring in its tone and a pill
    in words, and the others are quiet, a ring alone telling nothing without colour.
    LIMIT: words.yaml keeps Q in Japanese too, on purpose, and a screen reader reads the letter as it is */
 :scope { grid-template-columns: minmax(0, 1fr); counter-reset: floe-asks; }
@@ -257,7 +258,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope .head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--floe-room); }
 :scope .head > .title { min-width: 0; }
 :scope .check { flex: none; display: grid; place-items: center; width: 1.4em; height: 1.4em; border-radius: 50%; background: var(--tone-soft); color: var(--tone); font-family: var(--font); font-weight: 700; }
-:scope .check::before { content: "✓"; content: "✓" / ""; }
+:scope .check svg { display: block; width: 0.9em; height: 0.9em; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 :scope .choices { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--floe-room); font-size: inherit; }
 :scope .choices > li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.4rem; padding: var(--floe-row-pad) var(--floe-pad-inline); border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface); color: var(--fg); }
 :scope .choices > li.marked { outline: 2px solid var(--tone); outline-offset: -1px; }
@@ -503,7 +504,7 @@ main > section { display: grid; gap: var(--floe-room); }
 <ul data-floe-part="asks">
 <li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Ask for a phone number at checkout?</div></div><ul class="choices"><li><span>Always</span></li><li data-floe-tone="accent" class="marked"><span>Only for delivery</span><span data-floe-tone="accent" data-floe-part="cell">Recommended</span></li><li><span>Never</span></li></ul><p>Couriers call when they cannot find the door; nobody else uses it</p><p>Who decides: Product</p></li>
 <li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Ship the new checkout behind a flag, or to everyone at once?</div></div><p>Who decides: Engineering lead</p></li>
-<li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Keep the old card form for a release?</div><span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span></span></div><ul class="choices"><li class="other"><span>One release</span></li><li data-floe-tone="good" class="marked"><span>Remove it now</span><span data-floe-tone="good" data-floe-part="cell">Decided</span></li></ul></li>
+<li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Keep the old card form for a release?</div><span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5 6.7 11.5 12.5 4.5"></path></svg></span></div><ul class="choices"><li class="other"><span>One release</span></li><li data-floe-tone="good" class="marked"><span>Remove it now</span><span data-floe-tone="good" data-floe-part="cell">Decided</span></li></ul></li>
 </ul>
 </section>
 <div class="board">

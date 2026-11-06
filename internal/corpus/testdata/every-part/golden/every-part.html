@@ -247,7 +247,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="asks"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* One question to a row, its letter a word of the page's language and its number the counter's, which reads out. A question
-   decided has a round check at its right, whose word is read and not seen; its option decided a ring in its tone and a pill
+   decided has a round check at its right, a drawn shape as a sign of a font stands off the middle, whose word is read and not
+   seen; its option decided a ring in its tone and a pill
    in words, and the others are quiet, a ring alone telling nothing without colour.
    LIMIT: words.yaml keeps Q in Japanese too, on purpose, and a screen reader reads the letter as it is */
 :scope { grid-template-columns: minmax(0, 1fr); counter-reset: floe-asks; }
@@ -257,7 +258,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope .head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--floe-room); }
 :scope .head > .title { min-width: 0; }
 :scope .check { flex: none; display: grid; place-items: center; width: 1.4em; height: 1.4em; border-radius: 50%; background: var(--tone-soft); color: var(--tone); font-family: var(--font); font-weight: 700; }
-:scope .check::before { content: "✓"; content: "✓" / ""; }
+:scope .check svg { display: block; width: 0.9em; height: 0.9em; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 :scope .choices { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--floe-room); font-size: inherit; }
 :scope .choices > li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.4rem; padding: var(--floe-row-pad) var(--floe-pad-inline); border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface); color: var(--fg); }
 :scope .choices > li.marked { outline: 2px solid var(--tone); outline-offset: -1px; }
@@ -2562,9 +2563,9 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </dl><figure data-floe-part="image"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAAJElEQVR42mOwqTgxIIhh1OJRi0ctHrV41OJRi0ctHrV45FgMAGfIo72jTm6ZAAAAAElFTkSuQmCC" alt="The wiki after the move"/></figure></div></details>
 <ul data-floe-part="asks">
 <li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Copy in one go?</div></div><ul class="choices"><li data-floe-tone="accent" class="marked"><span>One go</span><span data-floe-tone="accent" data-floe-part="cell">Recommended</span></li><li><span>By space, with <code>sync --space</code></span></li></ul><p>Two days of read-only</p><p>Who decides: The platform team</p></li>
-<li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Keep the old host?</div><span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span></span></div><ul class="choices"><li data-floe-tone="good" class="marked"><span>A month</span><span data-floe-tone="good" data-floe-part="cell">Decided</span></li><li class="other"><span>For good</span></li></ul></li>
+<li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Keep the old host?</div><span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5 6.7 11.5 12.5 4.5"></path></svg></span></div><ul class="choices"><li data-floe-tone="good" class="marked"><span>A month</span><span data-floe-tone="good" data-floe-part="cell">Decided</span></li><li class="other"><span>For good</span></li></ul></li>
 <li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Who writes the notice?</div></div></li>
-<li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Which day?</div><span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span></span></div><p class="line"><b>Decision:</b> Sunday</p><p class="line"><b>Recommended:</b> A Saturday</p></li>
+<li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Which day?</div><span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5 6.7 11.5 12.5 4.5"></path></svg></span></div><p class="line"><b>Decision:</b> Sunday</p><p class="line"><b>Recommended:</b> A Saturday</p></li>
 </ul>
 <div data-floe-part="columns">
 <div role="group" aria-label="Before"><div class="title" aria-hidden="true">Before</div><div data-floe-part="stack"><div data-floe-text=""><p>The list before.</p></div><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code data-floe-copy="">export WIKI=old</code></pre><script>(function copyButton(words) {

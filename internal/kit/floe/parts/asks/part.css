@@ -1,5 +1,6 @@
 /* One question to a row, its letter a word of the page's language and its number the counter's, which reads out. A question
-   decided has a round check at its right, whose word is read and not seen; its option decided a ring in its tone and a pill
+   decided has a round check at its right, a drawn shape as a sign of a font stands off the middle, whose word is read and not
+   seen; its option decided a ring in its tone and a pill
    in words, and the others are quiet, a ring alone telling nothing without colour.
    LIMIT: words.yaml keeps Q in Japanese too, on purpose, and a screen reader reads the letter as it is */
 :scope { grid-template-columns: minmax(0, 1fr); counter-reset: floe-asks; }
@@ -9,7 +10,7 @@
 :scope .head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--floe-room); }
 :scope .head > .title { min-width: 0; }
 :scope .check { flex: none; display: grid; place-items: center; width: 1.4em; height: 1.4em; border-radius: 50%; background: var(--tone-soft); color: var(--tone); font-family: var(--font); font-weight: 700; }
-:scope .check::before { content: "✓"; content: "✓" / ""; }
+:scope .check svg { display: block; width: 0.9em; height: 0.9em; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 :scope .choices { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--floe-room); font-size: inherit; }
 :scope .choices > li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.4rem; padding: var(--floe-row-pad) var(--floe-pad-inline); border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface); color: var(--fg); }
 :scope .choices > li.marked { outline: 2px solid var(--tone); outline-offset: -1px; }

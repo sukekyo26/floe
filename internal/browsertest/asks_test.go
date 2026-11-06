@@ -33,8 +33,8 @@ func TestUIAsksHead(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 }
 
-// TestUIAsksMark reads a question decided as a screen reader is given it: its check by the word for it, the sign itself left
-// out, once in a question with no option to bear the word too.
+// TestUIAsksMark reads a question decided as a screen reader is given it: its check by the word for it, in a question with no
+// option to bear the word too.
 func TestUIAsksMark(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	const page = "template: report\nlang: en\ntitle: Mark\nsections:\n  - heading: Mark\n    parts:\n      - asks:\n" +
@@ -55,12 +55,12 @@ func TestUIAsksMark(t *testing.T) { //nolint:paralleltest // the browser tests s
 			counts[strings.TrimSpace(name)]++
 		}
 	}
-	if counts["✓"] != 0 || counts["Decided"] == 0 {
-		t.Errorf("read: Decided %d times, the sign %d times; want the word and no sign", counts["Decided"], counts["✓"])
+	if counts["Decided"] == 0 {
+		t.Errorf("read: Decided %d times; want the word", counts["Decided"])
 	}
 }
 
-// TestUIAsksPills measures the pills beside an option's words, in every theme and as wide as a phone: their middles level, but for a pill folded under the words; a question's check at the right, clear of a long title.
+// TestUIAsksPills measures the pills beside an option's words, in every theme and as wide as a phone: their middles level, but for a pill folded under the words; a question's check at the right, clear of a long title, its sign in the middle of its circle.
 func TestUIAsksPills(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	k, err := kit.Floe()
@@ -86,6 +86,9 @@ func TestUIAsksPills(t *testing.T) { //nolint:paralleltest // the browser tests 
     const right = card.getBoundingClientRect().right - parseFloat(getComputedStyle(card).paddingRight) - parseFloat(getComputedStyle(card).borderRightWidth);
     if (r.left < title.right) return 'the check stands over the title';
     if (Math.abs(r.right - right) > 1.5) return 'the check stands ' + (right - r.right) + ' px off the right';
+    const sign = c.querySelector('path').getBoundingClientRect();
+    const dx = sign.left + sign.width / 2 - (r.left + r.width / 2), dy = sign.top + sign.height / 2 - (r.top + r.height / 2);
+    if (Math.abs(dx) > 0.75 || Math.abs(dy) > 0.75) return 'the sign stands off its circle by ' + dx + ' ' + dy;
   }
   const beside = pills.filter((p) => p.getBoundingClientRect().top < p.parentElement.firstElementChild.getBoundingClientRect().bottom);
   const off = beside.map((p) => middle(p) - middle(p.parentElement.firstElementChild)).filter((d) => Math.abs(d) > 0.75);
