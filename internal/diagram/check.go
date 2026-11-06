@@ -103,10 +103,14 @@ func edgesCrossed(a, f rect) []edgeCrossed {
 }
 
 // checkEdges reports edges running through boxes, labels or frame headings: an edge across a label hides part
-// of it behind the label's background, and one across text without a background strikes through it.
+// of it behind the label's background, and one across text without a background strikes through it. An edge sharing a
+// line with another's label passes (sharesLabel).
 func (l *layout) checkEdges() {
 	for _, p := range l.paths {
 		for _, r := range l.throughs(p) {
+			if l.sharesLabel(p, r) {
+				continue
+			}
 			l.tell("diagram_runs_through", []placed{{p.at, p.graph}, {r.at, r.graph}}, p.what, r.what)
 		}
 	}
@@ -131,6 +135,48 @@ func (l *layout) throughs(p path) []rect {
 		}
 	}
 	return out
+}
+
+// sharesLabel reports whether p may run through r: r is the label of another edge written by hand, the two have an end
+// at one part, and wherever p meets r both run from side to side of it on one line, unless the other edge's runs meet
+// a label of p, when neither label could be told from the other. Only the final check asks: an edge floe moves still
+// keeps off every label.
+// LIMIT: the label of a shared run reads as either edge's, as its writer asked: refuse it if that comes to mislead.
+// LIMIT: runs across and down, on exactly one line, along one run of the label's edge: a slanting run, or a label over
+// a point of via, is refused. An edge floe moves off the label leaves the other refused, in the words of any edge
+// through a label, not saying the move: a via keeps it there. Say so if writers come to miss that.
+func (l *layout) sharesLabel(p path, r rect) bool {
+	i := slices.Index(l.labels, r)
+	at := slices.IndexFunc(l.paths, func(o path) bool { return i >= 0 && o.own == i })
+	if at < 0 {
+		return false
+	}
+	own := l.paths[at]
+	if p.graph != "" || own.graph != "" || !p.endsAtOnePart(own) || (p.own >= 0 && own.runsThrough(l.labels[p.own])) {
+		return false
+	}
+	return !slices.ContainsFunc(p.segs, func(s seg) bool {
+		return crossedBy(s, r) && !slices.ContainsFunc(own.segs, func(o seg) bool { return alongAcross(s, o, r) })
+	})
+}
+
+// endsAtOnePart reports whether p and q have an end at one part named.
+func (p path) endsAtOnePart(q path) bool {
+	return slices.ContainsFunc(p.ends[:], func(n string) bool { return n != "" && slices.Contains(q.ends[:], n) })
+}
+
+// alongAcross reports whether s and o lie on one line and each runs from side to side of r, as crossedBy measures it.
+func alongAcross(s, o seg, r rect) bool {
+	a := runAlong(s)
+	start, size := r.x, r.w
+	if a == 1 {
+		start, size = r.y, r.h
+	}
+	across := func(q seg) bool {
+		return q[1-a] == s[1-a] && q[3-a] == s[1-a] &&
+			min(q[a], q[a+2]) <= start+1 && max(q[a], q[a+2]) >= start+size-1
+	}
+	return across(s) && across(o)
 }
 
 // canvas is the canvas as a rect, for what must stay within it.

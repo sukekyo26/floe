@@ -600,7 +600,7 @@ func (l *layout) addEdge(e *edge, at string) {
 		})
 	}
 	l.edgeEls = append(l.edgeEls, el)
-	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing, graph: e.graph}
+	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing, graph: e.graph, ends: [2]string{e.From.Name, e.To.Name}}
 	if e.Label != nil {
 		x, y := middle(segs)
 		if e.At != nil {

@@ -70,6 +70,7 @@ type path struct {
 	own      int
 	crossing bool
 	graph    string
+	ends     [2]string //exhaustruct:optional // the names its ends are at, "" for a point
 }
 
 // target is what an edge's end may name: a part's area, a table's row, or a dot's centre.
