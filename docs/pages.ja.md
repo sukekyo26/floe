@@ -92,10 +92,10 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `table` | 行でも列でも見比べる、升の短い並び。`columns` と `rows`。列は題の字か `{ title, num, pills }`。`num: true` は数の列、`pills` は言葉とその色（`{ 済: good }`）で、その列の升が言葉と丸ごと同じなら、その pill で描く。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`（引用符で囲まず、オブジェクトのまま書く）。 |
 | `entries` | 記録を縦に並べます。1 つが `title`（Markdown の 1 行）とその横の `tags`（それぞれ表のセルと同じく Markdown の 1 行か pill）、その下の全部の幅の `text`（Markdown）、その下の `parts`（`details` と同じ部品の並び）。札には列の名前が出ないので、何の値かを札の中で言います（`マージ 2026-10-30`）。コードは `parts` に `code`・`terminal` で書きます。`text` の中の囲んだコードは、ただのコードとして描き、警告します。 |
 | `image` | 画面の写しなどの画像。`file` と、何を写すかの `alt`（[画像](#画像)）。 |
-| `note`・`stats`・`progress`・`steps`・`checklist` | 色の付いた注、大きな数、進みの棒、番号付きの手順、済めば印の付く項目。 |
+| `note`・`stats`・`steps`・`checklist` | 色の付いた注、大きな数、番号付きの手順、済めば印の付く項目。 |
 | `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |
 | `findings`・`decision`・`fields` | レビューで見つけたもの、決めたこと、設定の鍵。 |
-| `timeline`・`bars`・`faq`・`keys` | 日付の順の出来事、値の棒、問いと答え、押すキー。 |
+| `timeline`・`bars`・`keys` | 日付の順の出来事、値の棒、押すキー。`of` を書いた棒は、その全体のうち `value` までを塗り、`5 / 8` と出します（作業の進みに）。ほかの棒は、その中で一番大きい値に対する割合です。 |
 | `details`・`tabs` | 題の下に畳んだ部品、または 1 つずつ読めばよいものをタブで見せる部品。中に `text`・`code`・`terminal`・`diff`・`note`・`table`・`entries`・`image`・`diagram` を置ける。 |
 | `columns` | 部品を横に並べ、同時に見せます。前と後の画面、データと説明など。列は、省ける `title` とその下の `parts`（`details` と同じ部品）。列はどれも同じ幅で、幅は 16rem 以上なので、何列が横に並ぶかは本文の幅で決まり（`report` で最大 5 列、`adr`・`runbook` で 3 列）、残りは下に折り返します。 |
 | `diagram` | 確かめてから inline SVG で描く図（[diagrams.ja.md](diagrams.ja.md)）。 |

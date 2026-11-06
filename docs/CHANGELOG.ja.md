@@ -60,13 +60,13 @@ floe の主要な変更を記録します。フォーマットは
   handoff の済んだ作業が借りる。
 - 追加：見た目 `numbered` の項目の `data-floe-mark`。`ring` は縁を tone に、`solid` は丸と
   線を tone で塗る。
-- 追加：パレットの `--quiet`（箱の中の静かな地）。表の頭、棒の溝、progress の地、キーが
+- 追加：パレットの `--quiet`（箱の中の静かな地）。表の頭、棒の溝、キーが
   読む。
 - 追加：パレットの角の丸さの変数 `--radius`・`--radius-small`・`--radius-pill`（どれも
   1 つの長さ）。箱、箱の中の小さな升、札の丸さ。部品・テンプレート・floe の base・テーマが
   読み、テーマは丸さをパレットだけで決める。
 - 追加：静かな tone `muted`（`--muted-soft` の地に `--muted` の色）。tone を書ける
-  所（note、pill、表の pills、bars、progress、stats、timeline、図）のどこでも書ける。
+  所（note、pill、表の pills、bars、stats、timeline、図）のどこでも書ける。
   adr の deprecated・superseded、postmortem の重さ low、fields の型はこの色で描く。
 - 追加：`--tone-fill`。テーマが tone を塗る色で、パレットの `--<tone>-fill`
   （`--good-fill`）から、無ければその tone の `-soft` から。
@@ -178,8 +178,8 @@ floe の主要な変更を記録します。フォーマットは
   細い灰色の輪を 1 つ出し、マウスで押したボタンには出さない。
 - 追加：floe のテンプレート `report`（見出しの下に節を並べ、節ごとに見出しと部品と、その後に 1 段だけの
   小節（見出し `<h3>` と部品）を置く。見出しは、書くなら空の字にできず、小節のある節には要る）と、
-  テンプレートが `floe:///parts/<name>.json` で指す 30 の部品（`floe part list` が並べる）。
-  そのうち 28 は report の節が Markdown の `text`・`html` と並べて取るもの（`code`・
+  テンプレートが `floe:///parts/<name>.json` で指す 28 の部品（`floe part list` が並べる）。
+  そのうち 26 は report の節が Markdown の `text`・`html` と並べて取るもの（`code`・
   `terminal`・`table`・`image`（画面の写しなど、データファイルのディレクトリの画像）から
   `findings`・`decision`・`entries`・`timeline`・`tabs`・`diagram`・`script` まで）、`cell` と `stack` はほかの部品が中に持つもの。
   部品は、自分が置かれる段を知らないので見出しを描かない。`options` と `decision` の題も見出しでなく、
@@ -203,8 +203,9 @@ floe の主要な変更を記録します。フォーマットは
   format（`html`・`markdown`・`image`）と、それを持つ共有の schema を取れる。
   共有の schema は、どれかの schema が名指すかによらず、その根から確かめる。
   部品の `part.html` は、floe の部品が使う関数（`copyButton`・`bars`・`diff`・`tree`・
-  `diagram`・`script`）を呼べる。`bars` は、キーと値で書いていない項目と、
-  数でないか 0 より小さい値を断る。`part.html` を走らせた text/template の誤り（schema が
+  `diagram`・`script`）を呼べる。`bars` は、キーと値で書いていない項目、
+  数でないか 0 より小さい値、数でないか 0 以下の `of`、`of` を超える値を断り、全部の項目の誤りを
+  棒の番号と label を添えて一度に言う。`part.html` を走らせた text/template の誤り（schema が
   宣言していない鍵など）は、`page.html` と同じくその行と列で言い、関数が値を断る誤り
   （`num`・`bars`）は、その値の位置で言う。
   テーマの `base.css` は、テンプレートの `page.css` と同じくページに当たり、部品の中と text の
@@ -269,9 +270,9 @@ floe の主要な変更を記録します。フォーマットは
   並びの上の小さな題（decision の退けた案）・タブの名前・値の単位は `--floe-text-aside`（0.9rem）。言語の札や fields の `required`、decision の退けた案の題は前より少し大きく、
   表の見出しや stats の名前、bars の棒の名前は少し小さくなる。code の本文は code の大きさのまま。テーマは 2 つを置き直さない。テーマの小さい字のうち、部品の段より小さかったものは
   段を読んで 0.8rem になる：blueprint の code の頭・表の見出し・note の題・カードの番号（前は 0.7rem と 0.72rem）、default のカードの番号と ink の note の題（前は 0.75rem）。
-- 変更：部品の中の Markdown（note の中身、entries の説明、faq の答え、options・decision のカードの文、steps・timeline の項目の
+- 変更：部品の中の Markdown（note の中身、entries の説明、options・decision のカードの文、steps・timeline の項目の
   文、部品の値の中の format `markdown` の項目）を、部品 text と同じ text の外枠に描く。段落・表・引用・並びの間は、どの部品でも
-  `--floe-room`（12px）になる（前は部品ごとに、steps・timeline 2.4px、entries 5.6px、options 6.4px、note・faq・decision 8px）。
+  `--floe-room`（12px）になる（前は部品ごとに、steps・timeline 2.4px、entries 5.6px、options 6.4px、note・decision 8px）。
   自分の部品の `part.html` が `{{markdown .x}}` で描く Markdown も外枠に包まれ、その CSS は中のブロックに `:scope p` で届き、
   `:scope > p` では届かない。ブロックの間は書かない。テンプレート自身の Markdown は今までどおり。
 - 変更：`via` を書いた直角の線が、via で来た向きのまま進むと来た線を戻るとき、もう一方の向きから先に曲がるので、曲がり角の場所が
@@ -319,9 +320,9 @@ floe の主要な変更を記録します。フォーマットは
 - 変更：部品の間に置く箱の余白を、どのテーマでも上下 1.1rem・左右 1.3rem の 1 組にそろえた。カード（options・stats・
   decision は上下 1.15rem から、links は上下 0.9rem・左 1.1rem から）、bars、tree（default の外枠の中の白い箱も）、
   note（editorial も）、details、design・runbook・handoff の箱。見た目 `rows` は行の左右にも 1.3rem の余白を付ける
-  （entries・keys・checklist・faq は 1.2rem から、design の決めたことの並びは 1rem から、自分の HTML で借りる要素は 0 から）。
-  faq の問いは今までどおり行の幅で押せる。自分の部品・テンプレートは `--floe-pad-block` と `--floe-pad-inline` を読める。`rows` を借りる自分の部品は、
-  行の中の要素（`summary`・`div`）の左右の余白を消す（字が 2 倍下がる）。行の幅で押せる要素は、faq と同じく負の margin で
+  （entries・keys・checklist は 1.2rem から、design の決めたことの並びは 1rem から、自分の HTML で借りる要素は 0 から）。
+  自分の部品・テンプレートは `--floe-pad-block` と `--floe-pad-inline` を読める。`rows` を借りる自分の部品は、
+  行の中の要素（`summary`・`div`）の左右の余白を消す（字が 2 倍下がる）。行の幅で押せる要素は、負の margin で
   広げる。箱の `::after` に描く飾りにも左右の余白が付く。
 - 変更：折り返す長い pill（entries の tags）は、上下に伸びた楕円でなく、角の丸い札で
   描く。1 行の pill は今どおり両端が丸い（notebook は自分の角のまま）。自分の部品や
@@ -355,8 +356,7 @@ floe の主要な変更を記録します。フォーマットは
   余白の上に。swiss はカードの余白を部品に任せ、最初のカードの字もほかと同じく列の左端から
   内へ寄る。カードの番号の札は行の印と同じ約束（大きさは `--floe-mark`（カードか札に置く）、
   消すのは `content: none`、字は `--floe-mark: auto`）。
-- 変更：progress の地を静かな地に（線の色を `--surface` に 60% でなく 45%、bars の溝と
-  同じで、少し明るい）、キーの地を静かな地に（ページの地、aurora は `--surface` から）。swiss
+- 変更：キーの地を静かな地に（ページの地、aurora は `--surface` から）。swiss
   のキーが panel に溶けなくなり、brutal のキーは溝と同じ中くらいの灰、default のキーは灰色の
   panel の上で白、白い行の上で灰。テーマが自分の頭を描かない表の頭（soft・自分の
   テーマ）と soft の引用も静かな地（40% でなく 45%）。
@@ -365,8 +365,7 @@ floe の主要な変更を記録します。フォーマットは
   部品 code の中の code 14px）。箱の中の小さな升（キー・棒・画像・図の枠・fields の型・
   行の中の code とその言葉・links と cards の印）は 6px で、blueprint・brutal・swiss
   では四角、editorial・washi では 3px。タブの名前は札の形（default・aurora・retro・
-  soft・notebook は丸く、app・ink は 6px、editorial・washi は 3px）。progress の棒と
-  handoff・runbook の札はテーマの札の形、runbook の戻す手順の囲みはテーマの箱の形。
+  soft・notebook は丸く、app・ink は 6px、editorial・washi は 3px）。handoff・runbook の札はテーマの札の形、runbook の戻す手順の囲みはテーマの箱の形。
   notebook の note と code は panel と同じ手書きの角。角の丸い四角に描く note の印は
   6px（washi の判は 3px）。details の題に focus したときの輪は、箱の角に沿う。
 - 変更：組み込みのテンプレートの状態の札と注意を、部品 cell・note として描く。adr の
@@ -481,7 +480,7 @@ floe の主要な変更を記録します。フォーマットは
 - 修正：swiss で帯の中に置いた部品（note、details、表）とテンプレートのパネル・表の
   字と線が赤い帯の上の暗い色に、リンク・題・印・フォーカスの輪が赤の上の赤になり、
   読めなかった。帯の字の色で描く。
-- 修正：並びの項目や引用の中（text、faq の答え、options・decision のカード、steps、
+- 修正：並びの項目や引用の中（text、options・decision のカード、steps、
   tabs の中）に長い行の code や広い表を書くと、ページがスマートフォンの画面より
   広くなった。画面では、code・表・tree は、どこに置いても自分の箱の中で横に流れ、
   まわりを広げない。印刷は前のまま。

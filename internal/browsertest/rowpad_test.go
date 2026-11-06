@@ -37,9 +37,6 @@ const rowParts = `  - table:
   - checklist:
       - { text: CI passes, done: true }
       - text: Write the plan
-  - faq:
-      - { q: Where is it?, a: Here. }
-      - { q: Does it run on Windows?, a: No. }
   - facts:
       - { name: Owner, value: Agent }
   - html: |
@@ -72,8 +69,8 @@ var rowPadKit = map[string]string{
 // measureRowPad returns, for each kind of row, its part's name (or the look it takes outside a part), its padding
 // above and below, at the left and the right but in a table, whose cells' sides are its columns' gaps a theme may
 // change, and its line height, "page" when it is the page's: a table's cells, its head's ("head") and its
-// body's, but not its number columns, whose font a theme may change (swiss); the rows of the look rows, and faq's
-// questions ("question"), which take none above and below of their own and reach over their row's sides (TestUIMarks measures checklist's mark on its first line). It
+// body's, but not its number columns, whose font a theme may change (swiss); and the rows of the look rows (TestUIMarks
+// measures checklist's mark on its first line). It
 // adds the padding of checklist's count, a row its box draws as ::after, and
 // whether the box of every part and element drawn as rows is padded on every side as that of html's rows in the same
 // page.
@@ -81,13 +78,13 @@ const measureRowPad = `(() => {
   const ratio = (e) => { const c = getComputedStyle(e); return parseFloat(c.lineHeight) / parseFloat(c.fontSize); };
   const page = ratio(document.body);
   const name = (e) => { const p = e.parentElement.closest('[data-floe-part], [data-floe-look]');
-    return (p.dataset.floePart || 'look ' + p.dataset.floeLook) + (e.matches('thead th') ? ' head' : e.matches('summary') ? ' question' : ''); };
+    return (p.dataset.floePart || 'look ' + p.dataset.floeLook) + (e.matches('thead th') ? ' head' : ''); };
   const edge = (e) => { const c = getComputedStyle(e);
     return c.paddingTop + '/' + c.paddingBottom + (e.matches('th, td') ? '' : ' ' + c.paddingLeft + '/' + c.paddingRight); };
   const row = (e) => name(e) + ' ' + edge(e) + ' ' + (Math.abs(ratio(e) - page) < 0.005 ? 'page' : ratio(e).toFixed(2));
   const rows = [...document.querySelectorAll(':is([data-floe-part], [data-floe-look~="table"]) :is(thead th, tbody td):not(.num), ' +
-    '[data-floe-look~="rows"] > *, :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], ' +
-    '[data-floe-part="faq"]) > *, [data-floe-part="faq"] summary, [data-floe-part="facts"] > .card')];
+    '[data-floe-look~="rows"] > *, :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"]) > *, ' +
+    '[data-floe-part="facts"] > .card')];
   const out = [...new Set(rows.map(row))].sort();
   for (const list of document.querySelectorAll('[data-floe-part="checklist"]')) {
     const count = getComputedStyle(list, '::after');
@@ -95,7 +92,7 @@ const measureRowPad = `(() => {
   }
   const html = document.querySelector('div[data-floe-look="rows"]'), box = (e) => getComputedStyle(e).padding;
   const odd = [...document.querySelectorAll('[data-floe-look~="rows"], ' +
-    ':is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], [data-floe-part="faq"])')]
+    ':is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"])')]
     .filter((e) => box(e) !== box(html)).map((e) => (e.dataset.floePart || e.className) + ' ' + box(e));
   out.push('boxes ' + (odd.length ? odd.join(' ') + ', html rows ' + box(html) : 'as html rows'));
   return out.join(', ');
@@ -107,7 +104,7 @@ func rowPadWant(pad, side string) string {
 	both, row := pad+"/"+pad+" page", pad+"/"+pad+" "+side+"/"+side+" page"
 	rows := []string{
 		"checklist " + row, "compare " + both, "compare head " + both, "entries " + row, "facts " + row,
-		"faq " + row, "faq question 0px/0px " + side + "/" + side + " page", "fields " + both, "findings " + both,
+		"fields " + both, "findings " + both,
 		"keys " + row, "look rows " + row, "table " + both, "table head " + both,
 	}
 	slices.Sort(rows)

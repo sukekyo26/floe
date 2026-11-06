@@ -68,7 +68,7 @@ func TestHTMLItems(t *testing.T) {
 		{section, `<svg><title><meta http-equiv="refresh" content="0"></title></svg>`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{section, "<style>p{}</style>", "d.yaml:2:11: the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css"},
 		{section, "<noscript><p>x</p></noscript>", "d.yaml:2:11: the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out"},
-		{section, `<span data-floe-part="nope">x</span>`, "d.yaml:3:4: the page drawn from this file names the part nope, which there is none of; use bars, cell, checklist, code, columns, compare, decision, details, diagram, diff, entries, facts, faq, fields, findings, image, keys, links, note, options, progress, script, stack, stats, steps, table, tabs, terminal, text, timeline, tree"},
+		{section, `<span data-floe-part="nope">x</span>`, "d.yaml:3:4: the page drawn from this file names the part nope, which there is none of; use bars, cell, checklist, code, columns, compare, decision, details, diagram, diff, entries, facts, fields, findings, image, keys, links, note, options, script, stack, stats, steps, table, tabs, terminal, text, timeline, tree"},
 		{htmlPage("<p>{{.Data.h}}</p>"), "<table><tr><td>x</td></tr></table>", "d.yaml:3:4: HTML changes the page around it at </p>: close in it each element and comment it opens, and close no element it did not open"},
 		{htmlPage("<p><b>{{.Data.t}}</p><div>{{.Data.h}}</div>"), "plain", ""},
 		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), "<tr><td>x</td></tr>", ""},
@@ -554,8 +554,9 @@ func TestPartExecPlaced(t *testing.T) {
 	}
 }
 
-// An item of a part of one's own that bars refuses, one not written as keys and values or a value below 0, not a
-// number or missing, is told at the part's value: bars knows only what it is given, not where that is in the part's value.
+// An item of a part of one's own that bars refuses, one not written as keys and values, a value below 0, not a
+// number or missing, or an of not a number, not above 0 or below the value, is told at the part's value, an of of
+// null drawn as none: bars knows only what it is given, not where that is in the part's value.
 func TestPartBarsRefused(t *testing.T) {
 	t.Parallel()
 
@@ -567,12 +568,16 @@ func TestPartBarsRefused(t *testing.T) {
 	}
 	k := ownKit(t, parts, mine(htmlPage("{{.Data.b}}"), head+`{"b": {"$ref": "floe:///parts/pb.json"}}}`, nil))
 	for _, tt := range []struct{ item, want string }{
-		{"{label: b, value: -2}", "d.yaml:4:3: bars takes a number of 0 or more, not -2"},
-		{"{label: b, value: x}", `d.yaml:4:3: bars takes a number, not "x"`},
-		{"{label: b}", "d.yaml:4:3: bars takes a number; none is written, or it is null"},
-		{"{label: b, value: null}", "d.yaml:4:3: bars takes a number; none is written, or it is null"},
+		{"{label: b, value: -2}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number of 0 or more, not -2`},
+		{"{label: b, value: x}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number, not "x"`},
+		{"{label: b}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
+		{"{label: b, value: null}", `d.yaml:4:3: bars: bar 2 "b"'s value takes a number; none is written, or it is null`},
 		{"{label: b, value: 0}", ""},
-		{"3", "d.yaml:4:3: bars takes items written as keys and values (label, value, tone); item 2 is not"},
+		{"{label: b, value: 1, of: null}", ""},
+		{"{label: b, value: 1, of: 0}", `d.yaml:4:3: bars: bar 2 "b"'s of takes a number above 0, not 0`},
+		{"{label: b, value: 1, of: x}", `d.yaml:4:3: bars: bar 2 "b"'s of takes a number, not "x"`},
+		{"{label: b, value: 5, of: 3}", `d.yaml:4:3: bars: bar 2 "b": 5 is over its of 3; write a value no greater than of, the whole`},
+		{"3", "d.yaml:4:3: bars takes items written as keys and values (label, value, of, tone); item 2 is not"},
 	} {
 		data := "lang: en\ntemplate: mine\nb:\n  items:\n    - {label: a, value: 3}\n    - " + tt.item + "\n"
 		if got := drawn(t, k, data, none); got != tt.want {
