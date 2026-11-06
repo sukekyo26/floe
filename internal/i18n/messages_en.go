@@ -315,7 +315,6 @@ var messagesEN = map[string]string{
 	"diagram_graph_level_heading": `edge %s→%s: it runs through the heading of lane "%s", which reaches into the first rank laid out right; drop level, or shorten the heading`,
 
 	// ui: the management page (ui.html), which renders them itself
-	"ui_back_to_list":         "Back to the list",
 	"ui_download":             "Download",
 	"ui_download_named":       "Download %s",
 	"ui_open_raw":             "Open the page alone in a new tab",
@@ -577,6 +576,7 @@ var messagesEN = map[string]string{
 	"ui_task_unarchive":    "Bring the archive back",
 	"ui_state_failed":      "The state could not be changed: %s",
 	"ui_task_arc_failed":   "%d could not be changed (%s).",
+	"ui_back_to_task":      "Back to %s",
 	"ui_pins_help":         "About pinned pages",
 	"ui_pins_help_text":    "Keep pages you open again and again, such as an overview or a runbook, here. Only this project's pages are listed. To add one, choose \"Pin to the task list\" in a page's \"…\" menu.",
 	"ui_tasks_other":       "Open another project",

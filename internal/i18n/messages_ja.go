@@ -304,7 +304,6 @@ var messagesJA = map[string]string{
 	"diagram_graph_level_heading": "edge %s→%s: 帯「%s」の見出しを横切ります。right では見出しが最初の段に伸びます。level を外すか、見出しを短くしてください",
 
 	// ui
-	"ui_back_to_list":         "一覧へ戻る",
 	"ui_download":             "ダウンロード",
 	"ui_download_named":       "%s をダウンロード",
 	"ui_open_raw":             "ページだけを新しいタブで開く",
@@ -566,6 +565,7 @@ var messagesJA = map[string]string{
 	"ui_task_unarchive":    "アーカイブを戻す",
 	"ui_state_failed":      "状態を変えられませんでした：%s",
 	"ui_task_arc_failed":   "%d 件を変えられませんでした（%s）。",
+	"ui_back_to_task":      "%s へ戻る",
 	"ui_pins_help":         "ページのピン止めの説明",
 	"ui_pins_help_text":    "全体設計や手順書など、タスクが変わっても何度も開くページを、ここに置いておけます。このプロジェクトのページだけが並びます。ページの「…」の「タスク一覧にピン止め」で追加します。",
 	"ui_tasks_other":       "ほかのプロジェクトを開く",

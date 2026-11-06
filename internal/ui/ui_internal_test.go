@@ -20,7 +20,7 @@ import (
 func TestPageRendersInTheReadersLanguage(t *testing.T) {
 	t.Parallel()
 
-	for lang, want := range map[i18n.Lang]string{"en": "Back to the list", "ja": "一覧へ戻る"} {
+	for lang, want := range map[i18n.Lang]string{"en": "Back to the page list", "ja": "ページ一覧へ戻る"} {
 		b, err := Page(i18n.New(lang), "", false, "")
 		if err != nil {
 			t.Fatal(err)
