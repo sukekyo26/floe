@@ -8,22 +8,7 @@
     "from": { "type": "string", "minLength": 1, "description": "Who hands the work over" },
     "to": { "type": "string", "minLength": 1, "description": "Who takes it" },
     "summary": { "type": "string", "minLength": 1, "description": "A sentence or two under the title; a line of Markdown" },
-    "asks": {
-      "type": "array", "minItems": 1,
-      "description": "What the reader is asked to decide, first on the page",
-      "items": {
-        "type": "object",
-        "properties": {
-          "question": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
-          "options": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1, "description": "A line of Markdown" } },
-          "recommend": { "type": "string", "minLength": 1, "description": "The option recommended, on a line of its own; a line of Markdown" },
-          "why": { "type": "string", "minLength": 1, "description": "Why it is recommended; a line of Markdown" },
-          "by": { "type": "string", "minLength": 1, "description": "Who is to decide" }
-        },
-        "required": ["question"],
-        "additionalProperties": false
-      }
-    },
+    "asks": { "$ref": "floe:///parts/asks.json", "description": "What the reader is asked to decide, first on the page" },
     "done": {
       "type": "array", "minItems": 1,
       "items": {

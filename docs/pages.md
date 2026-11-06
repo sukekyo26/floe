@@ -62,8 +62,8 @@ The rest is the template's. floe's templates:
 `floe template list` describes each, and `floe template show <template>` prints its keys, each described in its `schema.json`, and an `example.yaml` to start from: an item of `"format": "markdown"`, or described as Markdown, is Markdown. What a page shows beyond its keys:
 
 - `report` takes `eyebrow` (a short line above the title), `lead` (a sentence or two under it, a line of Markdown: what looks like a tag (`<prefix>`, `Vec<u8>`) is left out and marks such as `*` and `_` are read, so write those as text in backticks; an image file named in it is not shown, only a data URI of a png, gif, jpeg or webp) and `sections`, each a `heading` over `parts`, and `sections` of its own after the parts: subsections, each a `heading` (an `<h3>`) over `parts`, one level only. A section with subsections has a heading; a heading is never empty, so a section with none leaves the key out.
-- The keys that are not Markdown are drawn as written: report's `eyebrow` and headings; design's `status`, `owner` and `date`; handoff's `date`, `from`, `to`, `by`, `ref` and `who`; adr's `number`, `date` and `deciders`; postmortem's `date`, `authors`, `owner` and `ref`; runbook's `owner`, `updated` and a step's `who`; and the heading of a section of `more`.
-- `handoff` heads the page with the counts of what is done, in progress, to decide and next, and numbers `asks` Q1, Q2 and on.
+- The keys that are not Markdown are drawn as written: report's `eyebrow` and headings; design's `status`, `owner` and `date`; handoff's `date`, `from`, `to`, `ref` and `who`; the part `asks`' `by`; adr's `number`, `date` and `deciders`; postmortem's `date`, `authors`, `owner` and `ref`; runbook's `owner`, `updated` and a step's `who`; and the heading of a section of `more`.
+- `handoff` heads the page with the counts of what is done, in progress, to decide (the questions with no `decided`) and next, and draws `asks` by the part `asks`.
 - `runbook` draws a step's `who` as a badge beside its title, its `run` with the copy button of `terminal`, and `rollback` in a frame of its own.
 - `slides` shows each slide as tall or wide as the screen with its number and the count in the corner, and prints each on a page of its own, sideways. Its parts are as large as in `report`: zoom in with the browser to make them larger. With `direction: across`, a mouse's wheel scrolls down only, and in the management page's frame the ← → keys work once the frame is clicked.
 
@@ -75,7 +75,7 @@ To list things, pick the part by what the rows are:
 
 - One line each: a Markdown list in `text`.
 - A name and its longer text, which a table squeezes into a narrow column, such as requirements, risks and what is done about them, or terms: `entries`, a state in a tag.
-- A decision: `decision` for one told with its reasons and the options set aside, `options` for options weighed side by side with their pros and cons, and `entries` for a run of short decisions, the pick in a tag.
+- A decision: `decision` for one told with its reasons and the options set aside, `options` for options weighed side by side with their pros and cons, `asks` for questions put to the reader, each with its options, what is recommended and, once decided, what was, and `entries` for a run of short decisions, the pick in a tag.
 - What happened in order: `timeline`.
 - Words and what they mean: a Markdown list, or `entries` when a meaning is long.
 - A thing before and after: `compare`.
@@ -94,6 +94,7 @@ The parts `report` takes in a section:
 | `image` | An image, such as a screenshot: its `file`, its `alt`, what it shows, and a `caption` under it if you like ([Images](#images)). |
 | `note`, `stats`, `steps`, `checklist` | A note in a tone, large numbers, numbered steps, items ticked once done. |
 | `compare`, `options`, `facts`, `diff`, `tree`, `links` | What changes before and after, options with pros and cons, names with values, a diff (a button over it copies the diff as written), files and folders, links. |
+| `asks` | Questions put to the reader, numbered Q1, Q2 and on: a `question`, its `options`, the one to `recommend` and `why`, who decides (`by`), and what was `decided`. An option written the same as `recommend` or `decided` takes a ring and a pill; one that matches no option stands on a line of its own. A question decided has a round check at its top right and a ring on its decision alone; its other options are quiet, the one recommended keeping its pill. |
 | `findings`, `decision`, `fields` | What a review found, a decision, the keys of a setting. |
 | `timeline`, `bars`, `keys` | Dates in order, bars of values, keys to press. A bar with `of` is filled as far as its `value` goes of that whole and reads `5 / 8`, for how far a piece of work has gone; the others are shares of the largest value among them. |
 | `details`, `tabs` | Parts folded under a title, or shown one at a time under tabs, for things read one at a time; they hold `text`, `code`, `terminal`, `diff`, `note`, `table`, `entries`, `image` and `diagram`. |

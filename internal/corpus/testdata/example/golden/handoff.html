@@ -3,7 +3,7 @@
 <title>Checkout redesign</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
-@layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
+@layer floe.looks.boxes, floe.looks.depth2, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth2, floe.parts.depth1, floe.parts.depth0;
 @layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.base {
@@ -217,6 +217,57 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="asks"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
+   any parts.
+   LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
+:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
+.card {
+  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+}
+/* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
+.card { --face: initial; --on-face: initial; }
+/* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
+   sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
+   LIMIT: whether a decoration keeps off the text is seen, not measured */
+:scope.numbered > .card { --floe-mark: 1.75rem; }
+:scope.numbered > .card::before {
+  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
+  display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
+  background: var(--accent-soft); color: var(--accent); font-size: var(--floe-text-small); font-weight: 700;
+}
+/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
+.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
+.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="asks"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* One question to a row, its letter a word of the page's language and its number the counter's, which reads out. A question
+   decided has a round check at its right, a drawn shape as a sign of a font stands off the middle, whose word is read and not
+   seen; its option decided a ring in its tone and a pill
+   in words, and the others are quiet, a ring alone telling nothing without colour.
+   LIMIT: words.yaml keeps Q in Japanese too, on purpose, and a screen reader reads the letter as it is */
+:scope { grid-template-columns: minmax(0, 1fr); counter-reset: floe-asks; }
+:scope > .card { counter-increment: floe-asks; gap: var(--floe-room); }
+:scope .no { font-family: var(--mono); color: var(--accent); }
+:scope .no::after { content: counter(floe-asks); content: counter(floe-asks) / counter(floe-asks); }
+:scope .head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--floe-room); }
+:scope .head > .title { min-width: 0; }
+:scope .check { flex: none; display: grid; place-items: center; width: 1.9em; height: 1.9em; border-radius: 50%; background: var(--tone-soft); color: var(--tone); font-family: var(--font); font-weight: 700; }
+:scope .check svg { display: block; width: 1.3em; height: 1.3em; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+:scope .choices { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--floe-room); font-size: inherit; }
+:scope .choices > li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.4rem; padding: var(--floe-row-pad) var(--floe-pad-inline); border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface); color: var(--fg); }
+:scope .choices > li.marked { outline: 2px solid var(--tone); outline-offset: -1px; }
+:scope .choices > li.other { color: var(--muted); }
+:scope .line { color: var(--fg); font-size: inherit; }
+}
+}
+</style>
+<style>
 @layer floe.looks.depth0 {
 @scope ([data-floe-look~="band"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A band filled with the accent, a face (base.css): its text, links, code and focus ring in the colour on a fill */
@@ -245,29 +296,16 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
-   any parts.
-   LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
-:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
-.card {
-  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
+   --floe-pill-wrap: normal; one that wraps is a label of round corners (base.css's --floe-pill-end) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: var(--floe-text-small); font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);
+  background: var(--tone-soft); color: var(--tone);
 }
-/* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
-.card { --face: initial; --on-face: initial; }
-/* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
-   sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
-   LIMIT: whether a decoration keeps off the text is seen, not measured */
-:scope.numbered > .card { --floe-mark: 1.75rem; }
-:scope.numbered > .card::before {
-  counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
-  display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
-  background: var(--accent-soft); color: var(--accent); font-size: var(--floe-text-small); font-weight: 700;
-}
-/* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
-.card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
-.card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
 }
 }
 </style>
@@ -335,16 +373,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
-@layer floe.parts.depth1 {
-@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
-:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-}
-}
-</style>
-<style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="asks"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
 :scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
@@ -355,6 +385,22 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
   font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
 }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 }
 }
 </style>
@@ -420,22 +466,8 @@ h1 { font-size: clamp(1.7rem, 4vw, 2.2rem); font-weight: 800; }
 .counts li.hot { background: var(--tone-soft); color: var(--tone); border-color: var(--tone-soft); }
 main { display: grid; gap: 2rem; padding-block: 2rem; }
 main h2 { font-size: 1.15rem; }
-.asks { padding: var(--floe-pad-block) var(--floe-pad-inline); border-left: 6px solid var(--warn); display: grid; gap: 0.8rem; }
+.asks { display: grid; gap: var(--floe-room); }
 .asks h2 { color: var(--warn); font-size: 1.3rem; }
-/* Q1, Q2 … are the list's own numbers: each li stays a list item, its layout inside it. The name is the page's
-   alone, as a counter style is not held by @scope.
-   LIMIT: up to Q99 fits the pad; a hundredth question spills left of it.
-   LIMIT: the prefix Q is letters a screen reader reads as they are, in any page's language, as a counter style's prefix
-   takes no text in its place. To tell the number in words, put a word of words.yaml at each li's head as hidden text
-   (.floe-hidden) and the Q in ::marker's content, read out by / "" */
-@counter-style floe-handoff-q { system: extends decimal; prefix: "Q"; suffix: " "; }
-.asks ol { list-style-type: floe-handoff-q; padding-left: 3rem; gap: 1.1rem; }
-.asks ol > li::marker { color: var(--warn); font-family: var(--mono); font-weight: 700; }
-.ask { display: grid; gap: 0.35rem; }
-.question { font-weight: 700; font-size: 1.05rem; }
-.options { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.options li { border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 0 0.8rem; background: var(--surface); }
-.why, .by { color: var(--muted); font-size: 0.92rem; }
 /* As many columns as the sections written, side by side while each has 16rem */
 .board { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: 1rem; align-items: start; }
 .board section { padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.6rem; }
@@ -468,11 +500,12 @@ main > section { display: grid; gap: var(--floe-room); }
 </div>
 </header>
 <main class="floe-column">
-<section class="asks" data-floe-look="panel"><h2 id="asks">To decide</h2>
-<ol>
-<li><div class="ask"><p class="question">Ask for a phone number at checkout?</p><ul class="options"><li>Always</li><li>Only for delivery</li><li>Never</li></ul><p class="recommend"><b>Recommended:</b> Only for delivery</p><p class="why">Couriers call when they cannot find the door; nobody else uses it</p><p class="by">Who decides: Product</p></div></li>
-<li><div class="ask"><p class="question">Ship the new checkout behind a flag, or to everyone at once?</p><p class="by">Who decides: Engineering lead</p></div></li>
-</ol>
+<section class="asks"><h2 id="asks">To decide</h2>
+<ul data-floe-part="asks">
+<li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Ask for a phone number at checkout?</div></div><ul class="choices"><li><span>Always</span></li><li data-floe-tone="accent" class="marked"><span>Only for delivery</span><span data-floe-tone="accent" data-floe-part="cell">Recommended</span></li><li><span>Never</span></li></ul><p>Couriers call when they cannot find the door; nobody else uses it</p><p>Who decides: Product</p></li>
+<li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Ship the new checkout behind a flag, or to everyone at once?</div></div><p>Who decides: Engineering lead</p></li>
+<li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Keep the old card form for a release?</div><span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5 6.7 11.5 12.5 4.5"></path></svg></span></div><ul class="choices"><li class="other"><span>One release</span></li><li data-floe-tone="good" class="marked"><span>Remove it now</span><span data-floe-tone="good" data-floe-part="cell">Decided</span></li></ul></li>
+</ul>
 </section>
 <div class="board">
 <section data-floe-look="panel"><h2 id="done">Done</h2>

@@ -16,6 +16,9 @@ asks:
     by: Product
   - question: Ship the new checkout behind a flag, or to everyone at once?
     by: Engineering lead
+  - question: Keep the old card form for a release?
+    options: [One release, Remove it now]
+    decided: Remove it now
 done:
   - { what: 'Card form validation, with the error under each field', ref: '#412' }
   - { what: Saved cards shown first, ref: '#415' }

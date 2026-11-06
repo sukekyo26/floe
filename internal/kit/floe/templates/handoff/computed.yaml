@@ -1,0 +1,2 @@
+# How many questions are still to decide, for the head of the page: a part reaches page.html drawn
+asks_open: count(asks ?? [], .decided == nil)

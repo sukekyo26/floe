@@ -19,24 +19,15 @@
 <ul class="counts">
 <li>{{with .Data.done}}<a href="#done"><b>{{len .}}</b> {{word "done"}}</a>{{else}}<b>0</b> {{word "done"}}{{end}}</li>
 <li>{{with .Data.doing}}<a href="#doing"><b>{{len .}}</b> {{word "doing"}}</a>{{else}}<b>0</b> {{word "doing"}}{{end}}</li>
-<li{{if .Data.asks}} class="hot" data-floe-tone="warn"{{end}}>{{with .Data.asks}}<a href="#asks"><b>{{len .}}</b> {{word "asks"}}</a>{{else}}<b>0</b> {{word "asks"}}{{end}}</li>
+<li{{if .Calc.asks_open}} class="hot" data-floe-tone="warn"{{end}}>{{with .Data.asks}}<a href="#asks"><b>{{$.Calc.asks_open}}</b> {{word "asks"}}</a>{{else}}<b>0</b> {{word "asks"}}{{end}}</li>
 <li>{{with .Data.next}}<a href="#next"><b>{{len .}}</b> {{word "next"}}</a>{{else}}<b>0</b> {{word "next"}}{{end}}</li>
 </ul>
 </div>
 </header>
 <main class="floe-column">
 {{- with .Data.asks}}
-<section class="asks" data-floe-look="panel"><h2 id="asks">{{word "asks"}}</h2>
-<ol>
-{{- range .}}
-<li><div class="ask"><p class="question">{{markdownLine .question}}</p>
-{{- with .options}}<ul class="options">{{range .}}<li>{{markdownLine .}}</li>{{end}}</ul>{{end}}
-{{- /* LIMIT: a recommendation that is none of the options is not told of; it is shown on a line of its own */}}
-{{- with .recommend}}<p class="recommend"><b>{{word "recommend"}}</b> {{markdownLine .}}</p>{{end}}
-{{- with .why}}<p class="why">{{markdownLine .}}</p>{{end}}
-{{- with .by}}<p class="by">{{word "by"}} {{.}}</p>{{end}}</div></li>
-{{- end}}
-</ol>
+<section class="asks"><h2 id="asks">{{word "asks"}}</h2>
+{{.}}
 </section>
 {{- end}}
 {{- if or .Data.done .Data.doing .Data.next}}

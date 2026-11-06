@@ -207,6 +207,22 @@
   [p] Every page but the drafts.
   [img] The wiki after the move
   [figcaption] Figure 1: the wiki on the new host, at wiki.example.com
+  [div] Q Copy in one go?
+  [li] One go Recommended
+  [li] By space, with sync --space
+  [p] Two days of read-only
+  [p] Who decides: The platform team
+  [div] Q Keep the old host?
+  [div] Decided
+  [svg] 
+  [li] A month Decided
+  [li] For good
+  [div] Q Who writes the notice?
+  [div] Q Which day?
+  [div] Decided
+  [svg] 
+  [p] Decision: Sunday
+  [p] Recommended: A Saturday
   [div] Before
   [p] The list before.
   [figcaption] bash
