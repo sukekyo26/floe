@@ -130,8 +130,9 @@ func TestWorkBroken(t *testing.T) {
 	t.Parallel()
 
 	for _, text := range []string{
-		"{ broken", "null", `{"p": null}`, `{"p": {"#1": {"state": "paused", "at": "x"}}}`,
-		`{"p": {"#1": {"state": "doing", "at": "x", "url": "javascript:alert(1)"}}}`,
+		"{ broken", "null", `{"p": null}`, `{"p": {"#1": {"state": "paused", "at": "2026-01-02T00:00:00Z"}}}`,
+		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "url": "javascript:alert(1)"}}}`,
+		`{"p": {"#1": {"state": "doing"}}}`, `{"p": {"#1": {"state": "doing", "at": "soon"}}}`,
 	} {
 		root := filepath.Join(t.TempDir(), "S")
 		if err := os.MkdirAll(root, 0o700); err != nil {

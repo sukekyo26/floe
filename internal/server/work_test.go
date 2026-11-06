@@ -110,7 +110,7 @@ func TestWorkAPI(t *testing.T) {
 
 	// What it cannot read it says, and writes nothing over: a link of another scheme goes no further than here.
 	file := filepath.Join(e.root, "tasks.json")
-	for _, text := range []string{"null", `{"p":{"x":{"state":"doing","at":"t","url":"javascript:alert(1)"}}}`} {
+	for _, text := range []string{"null", `{"p":{"x":{"state":"doing","at":"2026-01-02T00:00:00Z","url":"javascript:alert(1)"}}}`} {
 		if err := os.WriteFile(file, []byte(text), 0o600); err != nil {
 			t.Fatal(err)
 		}

@@ -763,9 +763,8 @@
   @media (max-width: 24rem) {
     #narrow-filter-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     #narrow-filter-n { display: inline; }
-    /* The tabs take the room of the logo's word, which is the link's own text */
+    /* The logo's word goes, whether the bar has tabs or not: it is the link's own text, and the tabs take its room */
     .brand { font-size: 0; gap: 0; }
-    .screens a { padding-inline: 0.5rem; }
   }
   /* The bar folds up: the search as its icon until it is reached, a page's buttons in its menu, the filter at the row's end */
   @media (max-width: 40rem) {
@@ -781,7 +780,8 @@
     .framed #frame-actions .menu { right: 1rem; min-width: min(17.5rem, calc(100vw - 2rem)); }
     .framed .frame-title { margin-left: 0; padding-left: 0; }
     .framed .frame-title::before { display: none; }
-    .server { font-size: 0; gap: 0; padding: 0.45rem; }
+    /* Connected, the list's bar keeps the room .server:not(.down) gives it */
+    :is(.framed .server, .server.down) { font-size: 0; gap: 0; padding: 0.45rem; }
     .bar-inner:has(> .search:not([hidden])) .bar-end { margin-left: auto; }
     .bar-inner > .search { flex: 0 0 36px; margin-inline: 0; transition: flex-basis 0.15s; }
     .bar-inner > .search:is(:focus-within, :has(input:not(:placeholder-shown))) { flex: 1 1 auto; }
@@ -793,6 +793,7 @@
   /* The task list: the shelf and the column of tasks, nothing beside them */
   .screens { flex: none; display: inline-flex; gap: 2px; padding: 2px; background: var(--subtle); border-radius: 999px; font-size: var(--text-small); font-weight: 600; }
   .screens a { padding: 0.18rem 0.75rem; color: var(--muted); text-decoration: none; border-radius: 999px; }
+  @media (max-width: 24rem) { .screens a { padding-inline: 0.5rem; } }
   .screens a[aria-current] { color: var(--fg); background: var(--panel); box-shadow: var(--shadow-sm); font-weight: 700; }
   /* No search on the bar: the way to the search modal stands there */
   #find-open.shown { display: inline-flex; }
@@ -836,7 +837,7 @@
   @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } }
 </style>
 </head>
-<body data-states="{{.States}}">
+<body>
 <header class="bar">
   <div class="bar-inner">
     <a class="icon-btn back" id="back" href="/" aria-label="{{.Msg "ui_back_to_list"}}" title="{{.Msg "ui_back_to_list"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
@@ -1199,7 +1200,7 @@
   const TASKS_PATH = '/tasks';
   const TASKS = !framed && location.pathname === TASKS_PATH;
   // The states of a task, the server's one table (store.States)
-  const STATES = JSON.parse(document.body.dataset.states);
+  const STATES = {{.States}};
   // A link in the page to a frame URL moves the whole tab, on a message from the script added to the page. The sender is the sandboxed page,
   // so only messages from its iframe naming a frame URL of this origin are followed (never javascript: and the like).
   // A move to a part of the page (#…) is written into this URL too, while the iframe still shows this page, so that a copy of the URL
@@ -1960,8 +1961,8 @@
 
   // A part of the shelf's rows and counts, by what values gives of an entry. The rows are those of list (the view's), with their
   // numbers there to order them by, and what is picked at 0, so that no row jumps away as the rest narrows; the count, n, is of
-  // the entries the rest of the shelf, the view and the search leave, or those of others
-  function tally(list, part, values, others) {
+  // the entries the rest of the shelf, the view and the search leave; on the task list, of its project alone, those of list
+  function tally(list, part, values) {
     const count = (entries) => {
       const counts = new Map();
       for (const a of entries) for (const value of values(a)) counts.set(value, (counts.get(value) ?? 0) + 1);
@@ -1970,13 +1971,13 @@
     const state = current();
     const rows = count(list);
     if (state[part] && !rows.has(state[part])) rows.set(state[part], 0);
-    const left = count(others ?? arrange({ ...state, [part]: '' }));
+    const left = count(TASKS ? list : arrange({ ...state, [part]: '' }));
     return { rows, n: (value) => left.get(value) ?? 0 };
   }
 
   // The shelf's projects of list, in the order of ranks (projectOrder); a task's project is named as a page's
-  function renderChips(list, ranks, others) {
-    const { rows, n } = tally(list, 'project', (a) => [a.project ?? NONE], others);
+  function renderChips(list, ranks) {
+    const { rows, n } = tally(list, 'project', (a) => [a.project ?? NONE]);
     const names = [...ranks.keys()].filter((name) => rows.has(name));
     // A project dropped from every entry but still picked comes after those in the order
     if (project && project !== NONE && !names.includes(project)) names.push(project);
@@ -2857,9 +2858,8 @@
     $('to-tasks').href = `${TASKS_PATH}${savedTasks()}`;
   }
 
-  // Each task of work.json and of the pages that name it, as a parent and its children. A page whose project changed may
+  // Each task of tasks.json and of the pages that name it. A page whose project changed may
   // name a task with no row: it shows in the state of a new one, from its last page's time, and nothing is written.
-  // LIMIT: no task has children yet. Child tasks are added here, and the rows drawn of each pair take them from there
   function tasksOf() {
     const tasks = new Map();
     const taskAt = (project, name) => {
@@ -2878,7 +2878,7 @@
     for (const task of tasks.values()) {
       if (!task.at) task.at = [...task.pages, ...task.archived].map((a) => a.updatedAt).sort().at(-1);
     }
-    return [...tasks.values()].map((task) => ({ task, children: [] }));
+    return [...tasks.values()];
   }
   // The shelf's place of a task: what is done and has only archived pages goes to the archive; nothing else leaves its state unseen
   const taskView = (task) => (task.state === 'done' && task.archived.length > 0 && task.pages.length === 0 ? 'archived' : task.state);
@@ -2959,14 +2959,14 @@
     const failed = Boolean(tasksRead.error);
     const nothing = !failed && !anyTasks();
     const tasks = failed ? [] : tasksOf();
-    const inProject = ({ task }) => !project || task.project === project;
-    const ofView = tasks.filter(({ task }) => taskView(task) === view);
+    const inProject = (task) => !project || task.project === project;
+    const ofView = tasks.filter((task) => taskView(task) === view);
     const shown = ofView.filter(inProject);
     const oldest = STATES.find((s) => s.name === view)?.oldest;
-    const when = ({ task }) => Date.parse(task.at);
-    shown.sort((x, y) => (oldest ? when(x) - when(y) : when(y) - when(x)) || x.task.name.localeCompare(y.task.name, LANG));
-    renderChips(ofView.map(({ task }) => task), projectOrder(tasks.map(({ task }) => task.project)), ofView.map(({ task }) => task));
-    const counts = Object.fromEntries(VIEWS.map((value) => [value, tasks.filter((x) => taskView(x.task) === value && inProject(x)).length]));
+    const when = (task) => Date.parse(task.at);
+    shown.sort((x, y) => (oldest ? when(x) - when(y) : when(y) - when(x)) || x.name.localeCompare(y.name, LANG));
+    renderChips(ofView, projectOrder(tasks.map((task) => task.project)));
+    const counts = Object.fromEntries(VIEWS.map((value) => [value, tasks.filter((task) => taskView(task) === value && inProject(task)).length]));
     drawViews(counts);
     if (project) $('narrow-filter-name').textContent = project === NONE ? t('ui_no_project') : project;
     $('manage').classList.toggle('tasks-empty', nothing);
@@ -2980,7 +2980,7 @@
     $('tasks-all').hidden = !project;
     const gone = project && !tasks.some(inProject);
     $('tasks-none').querySelector('strong').textContent = gone ? t('ui_task_none', project === NONE ? t('ui_no_project') : project) : t('ui_task_none_state', t(VIEW_WORDS[view]));
-    drawRows([{ entries: shown.flatMap(({ task, children }) => [task, ...children]) }], (task, i, rows) => rows.push(taskRow(task, i)));
+    drawRows([{ entries: shown }], (task, i, rows) => rows.push(taskRow(task, i)));
     renderNews();
     syncUrl();
   }

@@ -276,8 +276,8 @@ func TestManagementPageAndFrame(t *testing.T) {
 		t.Fatal(err)
 	}
 	frame := "frame-ancestors 'self' vscode-webview: vscode-file:"
-	// The task list is the same page, with the states of a task for it to read when work.json cannot be; /tasks/ is no path.
-	want(t, e.do(t, http.MethodGet, "/tasks", ""), http.StatusOK, `<body data-states="[{&#34;name&#34;:&#34;waiting&#34;`)
+	// The task list is the same page, with the states of a task for it to read when tasks.json cannot be; /tasks/ is no path.
+	want(t, e.do(t, http.MethodGet, "/tasks", ""), http.StatusOK, `const STATES = [{"name":"waiting"`)
 	want(t, e.do(t, http.MethodGet, "/tasks/", ""), http.StatusNotFound, "not found")
 	for target, status := range map[string]int{
 		"/": http.StatusOK, "/a/d/": http.StatusOK, "/a/none/": http.StatusNotFound, "/a/Bad_Slug/": http.StatusNotFound,

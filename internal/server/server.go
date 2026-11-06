@@ -237,12 +237,7 @@ func serveUI(w http.ResponseWriter, r *http.Request) {
 func sendUI(w http.ResponseWriter, r *http.Request, status int, framed, version string) {
 	// A folder's page is framed by what the server serves, which a list of its directory cut at its bound may leave out
 	served := framed != "" && status == http.StatusOK && r.URL.Query().Get("file") != ""
-	states, err := json.Marshal(store.States)
-	if err != nil {
-		refuse(w, r, err)
-		return
-	}
-	page, err := ui.Page(catalog(r), framed, served, version, string(states))
+	page, err := ui.Page(catalog(r), framed, served, version)
 	if err != nil {
 		refuse(w, r, err)
 		return

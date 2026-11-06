@@ -186,6 +186,9 @@ func (s *Store) ReadTasks() (Tasks, error) {
 			if !validState(t.State) {
 				return nil, broken("task %s of project %s has the state %q", name, project, t.State)
 			}
+			if timeOf(t.At).IsZero() {
+				return nil, broken("task %s of project %s has the time %q, not one like 2026-01-02T15:04:05Z", name, project, t.At)
+			}
 			if t.URL != "" && !validURL(t.URL) {
 				return nil, broken("task %s of project %s has the URL %q, not http or https", name, project, t.URL)
 			}
