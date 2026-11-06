@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/store"
@@ -58,6 +59,8 @@ func TestWorkAPI(t *testing.T) {
 		{"/api/work?project=p", `{}`, "a task needs a name"},
 		{task("p", "x"), `{"state":"nope"}`, `unknown state "nope": use waiting, doing, done`},
 		{task("p", "x"), `{"url":"javascript:alert(1)"}`, `"javascript:alert(1)" is not an http or https URL`},
+		{"/api/work?project=p&item=%FF", `{}`, "a task's project and name must be UTF-8"},
+		{"/api/work?project=%FF&item=x", `{}`, "a task's project and name must be UTF-8"},
 	} {
 		if code, body := patch(c.path, c.body); code != http.StatusBadRequest || body != c.want {
 			t.Errorf("PATCH %s %s = %d, %q, want %q", c.path, c.body, code, body, c.want)
@@ -86,6 +89,14 @@ func TestWorkAPI(t *testing.T) {
 		w := e.do(t, http.MethodDelete, task(project, item), "", "Origin", origin)
 		return w.Code, w.Body.String()
 	}
+	w := e.do(t, http.MethodPatch, "/api/artifacts/d", `{"work":{"item":"   "}}`, "Origin", origin, "Content-Type", jsonType)
+	if w.Code != http.StatusBadRequest || w.Body.String() != "a task needs a name" {
+		t.Errorf("a name of spaces = %d, %s", w.Code, w.Body)
+	}
+	w = e.do(t, http.MethodDelete, "/api/work?project=shop&item=%FF", "", "Origin", origin)
+	if w.Code != http.StatusBadRequest || w.Body.String() != "a task's project and name must be UTF-8" {
+		t.Errorf("forget of no UTF-8 = %d, %s", w.Code, w.Body)
+	}
 	if code, body := forget("shop", "#1"); code != http.StatusBadRequest || body != "task #1 of project shop still has 1 page(s), such as d: take them off it or remove them first" {
 		t.Errorf("a task with a page = %d, %q", code, body)
 	}
@@ -97,8 +108,16 @@ func TestWorkAPI(t *testing.T) {
 		t.Errorf("a task of no page = %d", code)
 	}
 
-	// What it cannot read it says, and writes nothing over.
+	// What it cannot read it says, and writes nothing over: a link of another scheme goes no further than here.
 	file := filepath.Join(e.root, "work.json")
+	for _, text := range []string{"null", `{"p":{"x":{"state":"doing","at":"t","url":"javascript:alert(1)"}}}`} {
+		if err := os.WriteFile(file, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if w := e.do(t, http.MethodGet, "/api/work", ""); w.Code != http.StatusBadRequest || strings.Contains(w.Body.String(), `"url"`) {
+			t.Errorf("GET of %s = %d, %s", text, w.Code, w.Body)
+		}
+	}
 	if err := os.WriteFile(file, []byte("{ broken"), 0o600); err != nil {
 		t.Fatal(err)
 	}

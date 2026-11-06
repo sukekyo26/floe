@@ -108,6 +108,8 @@ func TestWorkRefused(t *testing.T) {
 		{"", "#1", store.TaskEdit{}, `a task needs its project: "/" for none`},
 		{"  ", "#1", store.TaskEdit{}, `a task needs its project: "/" for none`},
 		{"p", " ", store.TaskEdit{}, "a task needs a name"},
+		{"\xff", "#1", store.TaskEdit{}, "a task's project and name must be UTF-8"},
+		{"p", "\xff", store.TaskEdit{}, "a task's project and name must be UTF-8"},
 	} {
 		err := s.EditTask(c.project, c.item, c.ed)
 		if err == nil || !strings.Contains(told(err, root), c.want) {
@@ -117,6 +119,9 @@ func TestWorkRefused(t *testing.T) {
 	if got := taskIn(t, s, "p"); got.At != was.At || got.State != was.State {
 		t.Errorf("after the refusals: %+v", got)
 	}
+	if err := s.ForgetTask("p", "\xff"); err == nil || !strings.Contains(told(err, root), "must be UTF-8") {
+		t.Errorf("forget of no UTF-8: %v", err)
+	}
 }
 
 // A work.json that cannot be read, or holds a state of no table, is refused to read and to write, and stays as it is
@@ -124,7 +129,10 @@ func TestWorkRefused(t *testing.T) {
 func TestWorkBroken(t *testing.T) {
 	t.Parallel()
 
-	for _, text := range []string{"{ broken", `{"p": {"#1": {"state": "paused", "at": "x"}}}`} {
+	for _, text := range []string{
+		"{ broken", "null", `{"p": null}`, `{"p": {"#1": {"state": "paused", "at": "x"}}}`,
+		`{"p": {"#1": {"state": "doing", "at": "x", "url": "javascript:alert(1)"}}}`,
+	} {
 		root := filepath.Join(t.TempDir(), "S")
 		if err := os.MkdirAll(root, 0o700); err != nil {
 			t.Fatal(err)
@@ -149,14 +157,14 @@ func TestWorkBroken(t *testing.T) {
 	}
 }
 
-// pageOn writes a page of the project on the task.
-func pageOn(t *testing.T, s *store.Store, root, slug, project, item string, archived bool) {
+// pageOn writes a page of the project on the task #1.
+func pageOn(t *testing.T, s *store.Store, root, slug, project string, archived bool) {
 	t.Helper()
 
 	if err := os.MkdirAll(filepath.Join(root, slug), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	m := &store.Meta{Project: project, Archived: archived, CreatedAt: hour(1), UpdatedAt: hour(1), Work: &store.Work{Item: item}}
+	m := &store.Meta{Project: project, Archived: archived, CreatedAt: hour(1), UpdatedAt: hour(1), Work: &store.Work{Item: "#1"}}
 	if err := s.WriteMeta(slug, m); err != nil {
 		t.Fatal(err)
 	}
@@ -180,9 +188,14 @@ func TestWorkForget(t *testing.T) {
 	if err := s.ForgetTask("p", "#2"); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("of no task: %v", err)
 	}
-	pageOn(t, s, root, "kept", "p", "#1", true)
-	pageOn(t, s, root, "none", "", "#1", false)
-	pageOn(t, s, root, "other", "q", "#1", false)
+	pageOn(t, s, root, "kept", "p", true)
+	pageOn(t, s, root, "none", "", false)
+	pageOn(t, s, root, "other", "q", false)
+	// A directory's name may end in a space, as no task's project does.
+	if err := s.EditTask("spaced ", "#1", store.TaskEdit{}); err != nil {
+		t.Fatal(err)
+	}
+	pageOn(t, s, root, "spaced", "spaced ", false)
 	refused := func(project, want string) {
 		t.Helper()
 		if err := s.ForgetTask(project, "#1"); err == nil || !strings.Contains(told(err, root), want) {
@@ -192,6 +205,7 @@ func TestWorkForget(t *testing.T) {
 	}
 	refused("p", "task #1 of project p still has 1 page(s), such as kept")
 	refused("/", "task #1 of project / still has 1 page(s), such as none")
+	refused("spaced", "task #1 of project spaced still has 1 page(s), such as spaced")
 	if err := os.RemoveAll(filepath.Join(root, "kept")); err != nil {
 		t.Fatal(err)
 	}
@@ -232,13 +246,21 @@ func TestPageWork(t *testing.T) {
 	}
 	work(store.WorkEdit{Item: ptr(" #1 "), Step: ptr(" 設計 ")}, `{"item":"#1","step":"設計"}`)
 	work(store.WorkEdit{Pin: ptr(true)}, `{"item":"#1","step":"設計","pin":true}`)
-	work(store.WorkEdit{Item: ptr("#2")}, `{"item":"#2","step":"設計","pin":true}`)
-	work(store.WorkEdit{Step: ptr("")}, `{"item":"#2","pin":true}`)
-	work(store.WorkEdit{Step: ptr("実装")}, `{"item":"#2","step":"実装","pin":true}`)
+	work(store.WorkEdit{Item: ptr(" #1 ")}, `{"item":"#1","step":"設計","pin":true}`)
+	work(store.WorkEdit{Item: ptr("#2"), Step: ptr("実装")}, `{"item":"#2","step":"実装","pin":true}`)
+	work(store.WorkEdit{Item: ptr("#3")}, `{"item":"#3","pin":true}`)
+	work(store.WorkEdit{Step: ptr("設計")}, `{"item":"#3","step":"設計","pin":true}`)
+	work(store.WorkEdit{Step: ptr("")}, `{"item":"#3","pin":true}`)
 	work(store.WorkEdit{Item: ptr("")}, `{"pin":true}`)
 	work(store.WorkEdit{Step: ptr("off a task")}, `{"pin":true}`)
 	work(store.WorkEdit{Pin: ptr(false)}, "null")
 	work(store.WorkEdit{Item: ptr("#3"), Step: ptr("s")}, `{"item":"#3","step":"s"}`)
+	for _, item := range []string{"   ", "\xff"} {
+		if _, err := s.Edit("d", store.Edit{Work: &store.WorkEdit{Item: ptr(item)}}); err == nil {
+			t.Errorf("a page on the task %q", item)
+		}
+	}
+	work(store.WorkEdit{}, `{"item":"#3","step":"s"}`)
 
 	project := func(want string) {
 		t.Helper()
@@ -274,5 +296,29 @@ func TestPageWork(t *testing.T) {
 	}
 	if got := s.ReadMeta("e").Work; got == nil || got.Item != "#3" {
 		t.Errorf("renamed: %+v", got)
+	}
+}
+
+// A page of no project, and a directory's name with spaces round it, are each one project in work.json.
+func TestProjectKey(t *testing.T) {
+	t.Parallel()
+
+	for in, want := range map[string]string{"": "/", "  ": "/", "p": "p", " p ": "p"} {
+		if got := store.ProjectKey(in); got != want {
+			t.Errorf("ProjectKey(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// The table says the one state a new task takes.
+func TestStates(t *testing.T) {
+	t.Parallel()
+
+	fresh := slices.DeleteFunc(slices.Clone(store.States), func(s store.State) bool { return !s.New })
+	if len(fresh) != 1 {
+		t.Errorf("new tasks take %v", fresh)
+	}
+	if got := store.StateNames(); got != "waiting, doing, done" {
+		t.Errorf("StateNames = %q", got)
 	}
 }

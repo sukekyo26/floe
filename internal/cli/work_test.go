@@ -89,6 +89,12 @@ func TestWorkCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// A step of spaces is no step: the page's flag alone, of a page on no task as well.
+	run(0, "work", "a", "--step", "  ")
+	if got := tasks(); len(got) != 0 {
+		t.Errorf("--step of spaces wrote a task: %v", got)
+	}
+
 	// Refused before anything is written: a page of no task, or none.
 	if got := run(1, "work", "a", "b", "--state", "done"); got != "floe: page \"a\" is on no task: name one with --item\n" {
 		t.Errorf("no task: %q", got)
@@ -130,7 +136,12 @@ func TestWorkCommand(t *testing.T) {
 	if got := workOf(t, env, "c"); got != `{"item":"#3"}` {
 		t.Errorf("c: %s", got)
 	}
-	// A step kept, and taken off the page alone.
+	// A step goes with a move to another task, stays on the same one, and is taken off the page alone.
+	run(0, "work", "a", "--item", "#9")
+	if got := workOf(t, env, "a"); got != `{"item":"#9"}` {
+		t.Errorf("--item to another task: %s", got)
+	}
+	run(0, "work", "a", "--item", "#1", "--step", "設計")
 	run(0, "work", "a", "--item", "#1")
 	if got := workOf(t, env, "a"); got != `{"item":"#1","step":"設計"}` {
 		t.Errorf("--item keeps the step: %s", got)
@@ -218,6 +229,15 @@ func TestWorkCommand(t *testing.T) {
 	}
 	if got := run(2, "work", "--item", "#1", "--forget", "--state", "done"); !strings.Contains(got, "run floe --help") {
 		t.Errorf("--forget --state: %q", got)
+	}
+	for _, flag := range []string{"--state", "--step"} {
+		want := "floe: --item \"\" takes the pages off their task, so it cannot go with " + flag + ": run floe --help\n"
+		if got := run(2, "work", "a", "--item", "", flag, "done"); got != want {
+			t.Errorf("--item \"\" %s: %q", flag, got)
+		}
+	}
+	if got := run(0, "work", "--help"); !strings.Contains(got, "the task's state: waiting, doing, done") {
+		t.Errorf("help: %q", got)
 	}
 	if got := run(1, "work", "a", "--item", "  "); got != "floe: a task needs a name\n" {
 		t.Errorf("a blank name: %q", got)

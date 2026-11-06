@@ -912,6 +912,11 @@ func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	if m == nil {
 		return "", ErrNotFound
 	}
+	if ed.Work != nil && ed.Work.Item != nil {
+		if _, err = PageItem(*ed.Work.Item); err != nil {
+			return "", err
+		}
+	}
 	setMarks(m, ed)
 	if ed.Project != nil {
 		// "/" is the management page's value for "no project".

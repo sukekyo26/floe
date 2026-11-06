@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -21,13 +22,28 @@ const workName = "work.json"
 // noProject is the project of a task whose pages have none, in work.json, the API and the management page's URLs.
 const noProject = "/"
 
-// ProjectKey is the project of a page as work.json has it. It is the one place that says what a page of no project is
-// there: a page's list entry carries it (Listed.TaskProject) for what cannot call this.
+// ProjectKey is the project of a page as work.json has it: trimmed, as a directory's name may not be. It is the one
+// place that says what a page's project is there: a page's list entry carries it (Listed.TaskProject) for what cannot
+// call this.
 func ProjectKey(project string) string {
+	project = strings.TrimSpace(project)
 	if project == "" {
 		return noProject
 	}
 	return project
+}
+
+// PageItem is the name of a page's task as written: trimmed, "" taking the page off its task. A name of spaces alone is
+// no way to say that, and is refused.
+func PageItem(item string) (string, error) {
+	trimmed := strings.TrimSpace(item)
+	if item != "" && trimmed == "" {
+		return "", usererr.New("store_task_item")
+	}
+	if !utf8.ValidString(trimmed) {
+		return "", usererr.New("store_task_utf8")
+	}
+	return trimmed, nil
 }
 
 // Work is what a page holds of its place on the dev screen: the task it is on, its step there, whether it is pinned.
@@ -44,14 +60,20 @@ type WorkEdit struct {
 	Pin  *bool   `json:"pin,omitzero"`
 }
 
-// setWork applies ed to m. A page off a task has no step of it, and one neither on a task nor pinned has no Work.
+// setWork applies ed to m. A step is of its task: a page that moves to another task leaves it, unless ed gives the
+// step it takes there; a page off a task has none, and one neither on a task nor pinned has no Work. PageItem has
+// checked ed.
 func setWork(m *Meta, ed *WorkEdit) {
 	var w Work
 	if m.Work != nil {
 		w = *m.Work
 	}
 	if ed.Item != nil {
-		w.Item = strings.TrimSpace(*ed.Item)
+		item := strings.TrimSpace(*ed.Item)
+		if item != w.Item {
+			w.Step = ""
+		}
+		w.Item = item
 	}
 	if ed.Step != nil {
 		w.Step = strings.TrimSpace(*ed.Step)
@@ -83,16 +105,20 @@ type Task struct {
 // Tasks is work.json: the tasks by project (ProjectKey), then by name.
 type Tasks map[string]map[string]Task
 
-// State is a state a task can be in, and whether the list of it shows the longest in it first.
+// State is a state a task can be in: whether the list of it shows the longest in it first, and whether a task new or
+// of no row is in it.
 type State struct {
 	Name   string `json:"name"`
 	Oldest bool   `json:"oldest"`
+	New    bool   `json:"new"`
 }
 
 // States is the one table of the states of a task: what is written is checked by it, and the management page reads it.
-var States = []State{{Name: "waiting", Oldest: true}, {Name: "doing", Oldest: false}, {Name: "done", Oldest: false}}
-
-const newTaskState = "doing"
+var States = []State{
+	{Name: "waiting", Oldest: true, New: false},
+	{Name: "doing", Oldest: false, New: true},
+	{Name: "done", Oldest: false, New: false},
+}
 
 // TaskEdit is what a write changes of a task's row, each left as it is when nil. An empty URL or Steps takes it off; an
 // empty Step leaves the last one written.
@@ -108,7 +134,14 @@ func validState(name string) bool {
 	return slices.ContainsFunc(States, func(s State) bool { return s.Name == name })
 }
 
-func stateNames() string {
+// validURL tells a URL a row may hold, which goes to the browser as a link's href: http and https alone.
+func validURL(raw string) bool {
+	u, err := url.Parse(raw)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
+}
+
+// StateNames is the states' names in the words of what is told of them.
+func StateNames() string {
 	names := make([]string, len(States))
 	for i, s := range States {
 		names[i] = s.Name
@@ -120,8 +153,9 @@ func (s *Store) workFile() string {
 	return filepath.Join(s.root, workName)
 }
 
-// ReadWork reads work.json, none being no tasks. What cannot be read, or holds a state of no State, is refused and not
-// made anew as reads.json is: the states and URLs in it are not to be had again, so that it is mended by hand.
+// ReadWork reads work.json, none being no tasks. What cannot be read, or holds what no write may (checkTaskEdit), is
+// refused and not made anew as reads.json is: the states and URLs in it are not to be had again, so that it is mended
+// by hand.
 // It takes no lock: a write replaces the file whole.
 // LIMIT: a key of a row floe does not know is lost at the next write. Keep them if work.json comes to be hand-edited.
 func (s *Store) ReadWork() (Tasks, error) {
@@ -132,15 +166,26 @@ func (s *Store) ReadWork() (Tasks, error) {
 	if err != nil {
 		return nil, usererr.CannotRead(s.workFile(), err) //nolint:wrapcheck // the system's words, at the file
 	}
-	all := Tasks{}
+	broken := func(format string, args ...any) error {
+		return usererr.NewAt(s.workFile(), 0, 0, "store_work_broken", fmt.Sprintf(format, args...))
+	}
+	var all Tasks
 	if err := json.Unmarshal(b, &all); err != nil {
-		return nil, usererr.NewAt(s.workFile(), 0, 0, "store_work_broken", err.Error())
+		return nil, broken("%s", err.Error())
+	}
+	if all == nil {
+		return nil, broken("it holds null, not the projects")
 	}
 	for project, rows := range all {
+		if rows == nil {
+			return nil, broken("project %s holds null, not its tasks", project)
+		}
 		for item, t := range rows {
 			if !validState(t.State) {
-				reason := fmt.Sprintf("task %s of project %s has the state %q", item, project, t.State)
-				return nil, usererr.NewAt(s.workFile(), 0, 0, "store_work_broken", reason)
+				return nil, broken("task %s of project %s has the state %q", item, project, t.State)
+			}
+			if t.URL != "" && !validURL(t.URL) {
+				return nil, broken("task %s of project %s has the URL %q, not http or https", item, project, t.URL)
 			}
 		}
 	}
@@ -158,29 +203,32 @@ func (s *Store) writeWork(all Tasks) error {
 	return nil
 }
 
-// taskKey is the project and name that name a task, as Edit reads a project: each trimmed. An empty project is no
-// project's: that is "/", which would otherwise make a task no page's project can reach.
-func taskKey(project, item string) (trimmedProject, trimmedItem string, err error) {
-	project, item = strings.TrimSpace(project), strings.TrimSpace(item)
-	if project == "" {
+// taskKey is the project and name that name a task, each as a page's is written. An empty project is refused, not read
+// as no project's: that is "/", and an empty one is a query left out. A byte that is no UTF-8, which only a query can
+// bring, would come to be another name as JSON writes it.
+func taskKey(project, item string) (key, name string, err error) {
+	if strings.TrimSpace(project) == "" {
 		return "", "", usererr.New("store_task_project")
 	}
-	if item == "" {
+	if !utf8.ValidString(project) {
+		return "", "", usererr.New("store_task_utf8")
+	}
+	if name, err = PageItem(item); err != nil {
+		return "", "", err
+	}
+	if name == "" {
 		return "", "", usererr.New("store_task_item")
 	}
-	return project, item, nil
+	return ProjectKey(project), name, nil
 }
 
-// checkTaskEdit refuses what no row may hold. A URL goes to the browser as a link's href: http and https alone.
+// checkTaskEdit refuses what no row may hold.
 func checkTaskEdit(ed TaskEdit) error {
 	if ed.State != nil && !validState(*ed.State) {
-		return usererr.New("store_task_state", *ed.State, stateNames())
+		return usererr.New("store_task_state", *ed.State, StateNames())
 	}
-	if ed.URL != nil && *ed.URL != "" {
-		u, err := url.Parse(*ed.URL)
-		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-			return usererr.New("store_task_url", *ed.URL)
-		}
+	if ed.URL != nil && *ed.URL != "" && !validURL(*ed.URL) {
+		return usererr.New("store_task_url", *ed.URL)
 	}
 	return nil
 }
@@ -221,7 +269,8 @@ func (s *Store) EditTask(project, item string, ed TaskEdit) error {
 	}
 	t, had := all[project][item]
 	if !had {
-		t = Task{Title: "", State: newTaskState, Step: "", At: Now(), URL: "", Steps: nil, Parent: ""}
+		fresh := States[slices.IndexFunc(States, func(s State) bool { return s.New })]
+		t = Task{Title: "", State: fresh.Name, Step: "", At: Now(), URL: "", Steps: nil, Parent: ""}
 	}
 	if ed.State != nil && *ed.State != t.State {
 		t.State, t.At = *ed.State, Now()

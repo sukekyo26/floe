@@ -46,6 +46,8 @@ the first failure. The same command given again finishes what a failure left.
 		// Asked here, as the flags are read by now: cobra's own asking comes after, unmarked as a usage error.
 		Args: usage(func(cmd *cobra.Command, _ []string) error { return cmd.ValidateFlagGroups() }),
 		RunE: func(cmd *cobra.Command, slugs []string) error {
+			// A step of spaces is the empty one from here on, as the server reads it.
+			f.step = strings.TrimSpace(f.step)
 			if len(slugs) == 0 {
 				return a.workTask(cmd, f)
 			}
@@ -56,7 +58,7 @@ the first failure. The same command given again finishes what a failure left.
 	flags.StringVar(&f.item, "item", "", `the task's name; with slugs, "" takes the pages off their task`)
 	flags.StringVar(&f.project, "project", "", `the task's project, without slugs; "" for none`)
 	flags.StringVar(&f.step, "step", "", `the pages' step on the task; "" takes it off them`)
-	flags.StringVar(&f.state, "state", "", "the task's state: waiting, doing or done")
+	flags.StringVar(&f.state, "state", "", "the task's state: "+store.StateNames())
 	flags.StringVar(&f.url, "url", "", `the task's one outside link, http or https; "" takes it off`)
 	flags.StringVar(&f.title, "title", "", `the task's title; "" takes it off`)
 	flags.StringVar(&f.steps, "steps", "", `the order of the task's steps, separated by commas; "" takes it off`)
@@ -137,7 +139,7 @@ func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) ta
 	if !cmd.Flags().Changed("project") {
 		name = project.Name(ctx, a.env.Dir)
 	}
-	return taskOf{project: store.ProjectKey(strings.TrimSpace(name)), item: f.item}
+	return taskOf{project: store.ProjectKey(name), item: f.item}
 }
 
 // workPages puts the pages slugs on a task and changes it: all checked before anything is written, so that a page of
@@ -154,8 +156,16 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 		return usageOf(usererr.New("cli_work_nothing"))
 	}
 	named := cmd.Flags().Changed("item")
-	if item := strings.TrimSpace(f.item); named && f.item != "" && item == "" {
-		return usererr.New("store_task_item")
+	item, err := store.PageItem(f.item)
+	if err != nil {
+		return err //nolint:wrapcheck // the store's words
+	}
+	onTask := onTasks
+	if f.step != "" {
+		onTask = append(onTask, "step")
+	}
+	if named && item == "" && len(onTask) > 0 {
+		return usageOf(usererr.New("cli_work_item_off", onTask[0]))
 	}
 	c, err := a.client(ctx, true)
 	if err != nil {
@@ -165,7 +175,7 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	if err = c.do(ctx, http.MethodGet, "/api/artifacts", nil, &list); err != nil {
 		return err
 	}
-	tasks, err := tasksOfPages(list, slugs, f, named, len(onTasks) > 0 || f.step != "")
+	tasks, err := tasksOfPages(list, slugs, item, named, len(onTask) > 0)
 	if err != nil {
 		return err
 	}
@@ -182,7 +192,7 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 
 // tasksOfPages is the different tasks the pages slugs are on, the first of each first: of the name given, or each
 // page's own. Each of slugs must be listed, and be on a task where the flags change one (wanted).
-func tasksOfPages(list []store.Listed, slugs []string, f workFlags, named, wanted bool) ([]taskOf, error) {
+func tasksOfPages(list []store.Listed, slugs []string, named string, isNamed, wanted bool) ([]taskOf, error) {
 	var tasks []taskOf
 	for _, slug := range slugs {
 		at := slices.IndexFunc(list, func(l store.Listed) bool { return l.Slug == slug })
@@ -194,8 +204,8 @@ func tasksOfPages(list []store.Listed, slugs []string, f workFlags, named, wante
 		if page.Work != nil {
 			item = page.Work.Item
 		}
-		if named {
-			item = strings.TrimSpace(f.item)
+		if isNamed {
+			item = named
 		}
 		if item == "" {
 			if wanted {
@@ -203,7 +213,7 @@ func tasksOfPages(list []store.Listed, slugs []string, f workFlags, named, wante
 			}
 			continue
 		}
-		if !named && !wanted {
+		if !isNamed && !wanted {
 			continue
 		}
 		if t := (taskOf{project: page.TaskProject, item: item}); !slices.Contains(tasks, t) {
