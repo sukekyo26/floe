@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
 )
 
@@ -32,6 +33,10 @@ const taskWork = `{
 // taskRows says the rows of the list, each its title and the words under it.
 const taskRows = `[...document.querySelectorAll('#list > li')].map((li) => li.querySelector('.title').textContent + ' [' +
   [...li.querySelector('.sub').children].map((e) => e.textContent).join(', ') + ']').join('; ')`
+
+// taskFilterName says the button of the narrow screen: its name, that at least 2em of it shows, its count and whether it is lit.
+const taskFilterName = `(() => { const name = document.getElementById('narrow-filter-name');
+  return [name.textContent, name.getBoundingClientRect().width >= 2 * parseFloat(getComputedStyle(name).fontSize) - 0.5, document.getElementById('narrow-filter-n').textContent, document.getElementById('narrow-filter').classList.contains('narrowed')].join(' '); })()`
 
 // mustInt reads a number the page said.
 func mustInt(t *testing.T, s string) int {
@@ -181,6 +186,21 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("localStorage.setItem('artifacts.taskProject', 'blog'); document.getElementById('tasks-other').click()")
 	b.until("the project kept", "location.pathname === '/tasks' && location.search === '?project=blog'")
 
+	// What another window chose is not taken back at the next look.
+	b.navigate("/tasks?project=shop")
+	b.until("the rows", rowsDrawn)
+	b.eval("localStorage.setItem('artifacts.taskProject', 'blog'); drawn = ''; load()")
+	b.until("the next look", "document.querySelector('#list > li')")
+	b.still()
+	say("another window's", "localStorage.getItem('artifacts.taskProject')")
+
+	// The shelf folded: the head says the project.
+	b.eval("localStorage.setItem('list.columns', JSON.stringify({ open: false }))")
+	b.navigate("/tasks?project=shop")
+	b.until("the rows", rowsDrawn)
+	say("folded", "document.getElementById('shelf-what').hidden + ' ' + document.getElementById('shelf-what').textContent")
+	b.eval("localStorage.removeItem('list.columns')")
+
 	// One kept that is gone is passed over; with no task waiting, the shelf's first.
 	b.eval("localStorage.setItem('artifacts.taskProject', 'gone')")
 	b.navigate("/tasks")
@@ -247,6 +267,20 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the words open", tip)
 	b.click(help.X+help.Width/2, help.Y+help.Height/2)
 	b.until("the button to close", "!"+tip)
+	// Narrow, within the window too, 16px from its edge.
+	for _, width := range []int64{400, 360} {
+		b.size(width, 800, false)
+		narrow := b.rect("document.getElementById('pins-help')")
+		b.click(narrow.X+narrow.Width/2, narrow.Y+narrow.Height/2)
+		b.until("the words open", tip)
+		box = b.rect("document.getElementById('pins-tip')")
+		if box.X < 15.5 || box.X+box.Width > float64(width)-15.5 {
+			t.Errorf("width %d: the words at %+v", width, box)
+		}
+		b.pressKey("\x1b")
+		b.until("Esc to close", "!"+tip)
+	}
+	b.size(1440, 800, false)
 
 	// What cannot be read says so on the task list alone, and goes when mended. The project in use stays, not called gone, and the one
 	// kept is not written over; with neither there is none, and no pins.
@@ -271,6 +305,30 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	writeTasks(taskWork)
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
 	say("mended", "location.search + ' ' + document.getElementById('tasks-failed').hidden")
+	// The kept one written nowhere while unreadable, so that the project mended is the one the tasks choose.
+	writeTasks("{ broken")
+	b.eval("localStorage.setItem('artifacts.taskProject', 'gone')")
+	b.navigate("/tasks")
+	b.until("the error", "!document.getElementById('error').hidden")
+	say("broken, gone kept", "location.search + ' ' + sessionStorage.getItem('artifacts.tasks') + ' ' + localStorage.getItem('artifacts.taskProject')")
+	writeTasks(taskWork)
+	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
+	say("mended, chosen anew", "location.search + ' ' + localStorage.getItem('artifacts.taskProject')")
+
+	// A pin archived is no project: no switch, and no words that the list is empty against it.
+	writeTasks("{}")
+	for _, slug := range []string{"p1", "p2", "p3", "p6", "p8", "p8a", "p10", "p11", "pinned", "pinonly"} {
+		s.floe(t, "rm", slug)
+	}
+	b.navigate("/")
+	b.until("the list read", "!document.getElementById('all-archived').hidden")
+	say("an archived pin alone, list: switch hidden", screens)
+	b.navigate("/tasks")
+	b.until("the guide", "!document.getElementById('tasks-empty').hidden")
+	say("an archived pin alone: switch hidden", screens)
+	s.floe(t, "publish", s.page(t, "p1.yaml", "p1", ""), "--slug", "p1")
+	s.floe(t, "work", "p1", "--task", "#1", "--state", "waiting")
+	writeTasks(taskWork)
 
 	if got, want := strings.Join(out, "\n"), taskListWant; got != want {
 		t.Errorf("the task list:\n%s\nwant:\n%s", got, want)
@@ -292,7 +350,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		reader := b.eval("document.getElementById('reader').offsetParent !== null") == "true"
 		// Narrow, the button says the project, at every width, not lit as narrowed
 		if c.narrow {
-			name := b.eval("[document.getElementById('narrow-filter-name').textContent, document.getElementById('narrow-filter-name').getBoundingClientRect().width > 1, document.getElementById('narrow-filter-n').textContent, document.getElementById('narrow-filter').classList.contains('narrowed')].join(' ')")
+			name := b.eval(taskFilterName)
 			if name != "shop true  false" {
 				t.Errorf("width %d: the button: %s", c.width, name)
 			}
@@ -305,6 +363,17 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		}
 	}
 	b.unsize()
+
+	// In every language, on the narrowest: the name, at least 2em of it.
+	for _, lang := range i18n.Langs() {
+		other := newBrowser(t, s.Base, lang)
+		other.size(360, 800, false)
+		other.navigate("/tasks?project=shop")
+		other.until("the rows", rowsDrawn)
+		if got := other.eval(taskFilterName); got != "shop true  false" {
+			t.Errorf("%s at 360: the button: %s", lang, got)
+		}
+	}
 }
 
 // taskListWant is what TestUITaskList reads of the list, in the order it reads it.
@@ -366,6 +435,8 @@ the one kept, the view kept: ?view=doing&project=blog
 ?project=old&view=doing pins:  | None
 ?project=old&view=doing kept: shop
 gone, on the shelf: old0
+another window's: blog
+folded: false shop
 the kept gone: ?project=shop
 none waiting: ?project=shop
 waited longest: ?project=blog
@@ -382,6 +453,10 @@ broken, list: error hidden: true
 broken, tasks: failed shown: true true
 broken, tasks: ?project=shop blog waiting,doing,done,archived pins 1 rows 0
 broken, tasks: says why: true
-broken, the one kept: ?project=blog blog
+broken, the one kept:  blog
 broken, none kept:  true
-mended: ?project=shop true`
+mended: ?project=shop true
+broken, gone kept:  ?project=shop gone
+mended, chosen anew: ?project=shop shop
+an archived pin alone, list: switch hidden: true
+an archived pin alone: switch hidden: true`

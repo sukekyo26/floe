@@ -860,7 +860,8 @@
   .pins-help { flex: none; width: 24px; height: 24px; margin-left: -0.4rem; }
   .pins-help svg { width: 16px; height: 16px; }
   .pins-tip {
-    position: fixed; inset: auto; margin: 0; width: min(20rem, 100vw - 2rem); padding: 0.6rem 0.75rem; font-size: var(--text-small);
+    --width: min(20rem, 100vw - 2rem);
+    position: fixed; inset: auto; left: max(16px, min(var(--from), 100vw - 16px - var(--width))); margin: 0; width: var(--width); padding: 0.6rem 0.75rem; font-size: var(--text-small);
     color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-menu); box-shadow: var(--shadow);
   }
   .pins-tip p { margin: 0.25rem 0 0; color: var(--muted); }
@@ -869,7 +870,8 @@
   .shell.tasks #narrow-filter-n { display: none; }
   @media (max-width: 40rem) {
     .shell.tasks #narrow-filter { flex: 0 1 auto; min-width: 0; }
-    /* The row of views scrolls: the name stays some of itself rather than going to nothing */
+    /* The row of views scrolls: the name stays some of itself rather than going to nothing.
+       LIMIT: on the narrowest screens that may be 2em of it, whole in the dialog the button opens. Give it the row's room if that comes to trouble someone */
     .shell.tasks #narrow-filter-name { min-width: 2em; max-width: 4.5rem; }
   }
   @media (max-width: 40rem) {
@@ -1672,7 +1674,12 @@
   const toggleTemplate = picker('template', () => template);
   const toggleTag = picker('tag', () => tag);
   // The task list always shows one project: picked again, nothing changes
-  const toggleProject = TASK_LIST ? (value) => { if (value !== project) refilter({ project: value }); } : picker('project', () => project);
+  const toggleProject = TASK_LIST ? (value) => {
+    if (value === project) return;
+    borrowed = false;
+    if (!tasksRead.error) keepProject(value);
+    refilter({ project: value });
+  } : picker('project', () => project);
 
   // Removing a link leaves its file alone, so it says unregister (ui_unlink_*) rather than delete (ui_delete_*)
   const removal = (a) => (a.path ? 'unlink' : 'delete');
@@ -2060,7 +2067,7 @@
       return b;
     };
     const chips = names.map((name) => projectChip(name, name));
-    if ((there ?? rows).has(NONE) || (there && project === NONE)) chips.push(projectChip(t('ui_no_project'), NONE));
+    if ((there ?? rows).has(NONE) || (there && project === NONE)) chips.push(projectChip(projectWord(NONE), NONE));
     $('chips').replaceChildren(...chips);
     // Projects to choose between, or one chosen
     $('shelf-projects').hidden = !there && chips.length < 2 && !project;
@@ -2924,7 +2931,7 @@
   }
 
   // Whether anything is there for the task list: a page on a task or pinned, or a task's row with no page left
-  const anyTasks = () => items.some((a) => a.work) || Object.values(tasksRead.tasks).some((rows) => Object.keys(rows).length > 0);
+  const anyTasks = () => taskProjects(tasksOf()).size > 0;
   // The bar's way between the two screens, for those who use tasks; on the task list when it cannot tell, too, the way back
   function drawScreens() {
     $('screens').hidden = !(anyTasks() || (TASKS && tasksRead.error));
@@ -3056,7 +3063,9 @@
     $('pin-list').replaceChildren(...(pins.length > 0 ? pins : [tagged('span', 'pins-none', t('ui_pins_none'))]));
   }
 
-  // The task list's list. Nothing of the shelf's but the view and the project narrows it
+  // Tasks by when their state last changed, the longest first or the latest, then by name
+  const taskOrder = (oldest) => (x, y) => (oldest ? Date.parse(x.at) - Date.parse(y.at) : Date.parse(y.at) - Date.parse(x.at)) || x.name.localeCompare(y.name, LANG);
+
   // The projects there are for the task list: of its tasks, and of the pages pinned
   function taskProjects(tasks) {
     return new Set([...tasks.map((task) => task.project), ...items.filter((a) => a.work?.pin && !a.archived).map((a) => a.taskProject)]);
@@ -3070,39 +3079,55 @@
       return null;
     }
   }
+  // Written when the list opens and when a project is pressed, not at each look, which would take back what another window chose
+  function keepProject(name) {
+    try {
+      localStorage.setItem(PROJECT_KEY, name);
+    } catch {
+      // Without storage, the next opening chooses anew
+    }
+  }
+  let projectKept = false;
+  let borrowed = false;
   // The project the task list opens with no project named: the one kept while it is there, or where a task has waited longest, or the
   // shelf's first. Unreadable, tasks are not known, so that only what was kept can be said
   function openingProject(tasks, there, ranks) {
     const kept = keptProject();
     if (tasksRead.error) return kept ?? '';
     if (there.has(kept)) return kept;
-    const waiting = tasks.filter((task) => taskView(task) === FIRST_VIEW).sort((x, y) => Date.parse(x.at) - Date.parse(y.at));
+    const waiting = tasks.filter((task) => taskView(task) === FIRST_VIEW).sort(taskOrder(true));
     return waiting[0]?.project ?? [...ranks.keys(), NONE].find((name) => there.has(name)) ?? '';
   }
 
+  // The task list's list. Nothing of the shelf's but the view and the project narrows it
   function renderTaskList() {
     const failed = Boolean(tasksRead.error);
     const tasks = failed ? [] : tasksOf();
     const there = taskProjects(tasks);
     const ranks = projectOrder(there);
-    if (!project) project = openingProject(tasks, there, ranks);
-    if (!failed && there.has(project)) {
-      try {
-        localStorage.setItem(PROJECT_KEY, project);
-      } catch {
-        // Without storage, the next opening chooses anew
-      }
+    // Unreadable, what was kept is used for now and written nowhere: the project may be gone, which only the tasks can tell
+    if (borrowed && !failed) {
+      project = '';
+      borrowed = false;
     }
-    const nothing = !failed && there.size === 0;
+    if (!project) {
+      project = openingProject(tasks, there, ranks);
+      borrowed = failed;
+    }
+    if (!failed && !projectKept) {
+      projectKept = true;
+      if (there.has(project)) keepProject(project);
+    }
+    const nothing = !failed && !anyTasks();
     const inProject = (task) => task.project === project;
     const ofView = tasks.filter((task) => taskView(task) === view);
     const shown = ofView.filter(inProject);
     const oldest = STATES.find((s) => s.name === view)?.oldest;
-    const when = (task) => Date.parse(task.at);
-    shown.sort((x, y) => (oldest ? when(x) - when(y) : when(y) - when(x)) || x.name.localeCompare(y.name, LANG));
+    shown.sort(taskOrder(oldest));
     renderChips(ofView, ranks, there);
     const counts = Object.fromEntries(VIEWS.map((value) => [value, tasks.filter((task) => taskView(task) === value && inProject(task)).length]));
     drawViews(counts);
+    drawHead();
     $('manage').classList.toggle('tasks-empty', nothing);
     $('manage').classList.toggle('tasks-failed', failed);
     drawPins();
@@ -3116,7 +3141,7 @@
     $('tasks-none').querySelector('strong').textContent = gone ? t('ui_task_none', projectWord(project)) : t('ui_task_none_state', t(VIEW_WORDS[view]));
     drawRows([{ entries: shown }], (task, i, rows) => rows.push(taskRow(task, i)));
     renderNews();
-    syncUrl();
+    if (!failed) syncUrl();
     if (!cameBack) {
       cameBack = true;
       focusTaskRow();
@@ -4541,12 +4566,13 @@
       $('manage').classList.add('tasks');
       $('keys-row').hidden = true;
       $('keys-enter').textContent = t('ui_keys_open_task');
-      // Under its button, within the window: worked out as it opens
+      // Under its button; the sheet keeps it within the window
+      // LIMIT: j and k move through the rows with the words open, as the keys do not know of them. Close them on a key if that comes to trouble someone
       $('pins-tip').addEventListener('beforetoggle', (e) => {
         if (e.newState !== 'open') return;
         const at = $('pins-help').getBoundingClientRect();
         $('pins-tip').style.top = `${at.bottom + 4}px`;
-        $('pins-tip').style.left = `${Math.max(16, Math.min(at.left, innerWidth - 16 - $('pins-tip').offsetWidth))}px`;
+        $('pins-tip').style.setProperty('--from', `${at.left}px`);
       });
     }
     // On the task list it leads to the list of them

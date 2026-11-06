@@ -170,7 +170,9 @@ func newBrowser(t *testing.T, base string, lang i18n.Lang) *browser {
 	if _, err := chromedp.Call(ctx, network.SetExtraHTTPHeaders, headers); err != nil {
 		t.Fatalf("set Accept-Language: %v", err)
 	}
-	return &browser{t: t, ctx: ctx, base: base}
+	b := &browser{t: t, ctx: ctx, base: base}
+	b.addScript("window.thrown = []; for (const type of ['error', 'unhandledrejection']) addEventListener(type, (e) => window.thrown.push(String(e.error ?? e.reason ?? e.message)));")
+	return b
 }
 
 // try evaluates the script expr (its last statement's value, awaited when a promise) and returns
@@ -218,7 +220,9 @@ func (b *browser) until(what, expr string) string {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	b.t.Fatalf("timed out waiting for %s: last %q, %v", what, last, err)
+	// What the page threw, and what it drew: a draw that threw stays as it is until the data changes.
+	seen, seenErr := b.try("[(window.thrown ?? []).join(' / '), document.getElementById('list')?.innerText?.replaceAll('\\n', ' | ')].join(' ## ')")
+	b.t.Fatalf("timed out waiting for %s: last %q, %v; the page: %s, %v", what, last, err, seen, seenErr)
 	return ""
 }
 
