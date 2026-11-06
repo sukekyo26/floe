@@ -459,6 +459,9 @@
   li.picked .ver { background: var(--panel); }
   .kindof { padding: 0 0.3rem; color: var(--muted); border: 1px solid var(--line); border-radius: var(--corner-small); white-space: nowrap; }
   .proj { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* A row's project in the color of its chip on the shelf */
+  .sub .proj { padding: 0 0.5rem; color: var(--fg); background: color-mix(in srgb, var(--c) 14%, var(--panel)); border-radius: 999px; }
+  .sub .proj::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 0.3rem; vertical-align: 0.1em; border-radius: 50%; background: var(--c); }
   /* A link's path, the one place how it is cut is decided: on the line of the rest while 8rem is left, cut at its head so that the
      file's name stays. The box runs right to left for that alone, its bdi keeping the path's own order whatever marks it holds */
   .sub .path { flex: 1 1 8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; font: var(--text-label) var(--mono); }
@@ -557,8 +560,8 @@
   .icon-btn svg { width: 16px; height: 16px; }
   .icon-btn:hover { background: var(--subtle); color: var(--fg); }
   .icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--muted); }
-  /* What the bar shows, its menu leaves out, so that nothing is in both: a row has no bar, so that its menu has all */
-  .frame-actions .menu :is(.open, .download, .archive), .menu .fav-item { display: none; }
+  /* What the bar or the row shows, its menu leaves out, so that nothing is in both */
+  .frame-actions .menu :is(.open, .download), .menu :is(.fav-item, .archive) { display: none; }
   /* What opens a column folded, where the button that folded it stood in the foot, on a ground of its own: any page may lie under it.
      After .icon-btn, whose ground it takes the place of.
      LIMIT: over a page it hides what lies under it, until the page scrolls or the column opens. Room under the iframe would be the bar a column left behind was: move it if that comes to trouble someone */
@@ -1240,6 +1243,7 @@
     <time></time>
     <span class="sub"></span>
     <div class="actions">
+      <button type="button" class="icon-btn archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg></button>
       <button type="button" class="icon-btn star">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
       </button>
@@ -2615,7 +2619,7 @@
     if (a.folder) put('kindof', t('ui_kind_folder'));
     else if (a.path) put('kindof', t('ui_kind_of_link', a.template ?? 'HTML'));
     else if (a.template) put('kindof', a.template);
-    if (a.project && ranks.size > 1) put('proj', a.project);
+    if (a.project && ranks.size > 1) put('proj', a.project).style.setProperty('--c', projectColor(a.project, ranks));
     middle(put);
     // A link shows the file where it was registered; if the file is gone, the row says so
     if (a.missing) put('miss', t('ui_file_missing'));
@@ -2682,6 +2686,9 @@
     const star = li.querySelector('.star');
     toggle(star, a.favorite, t('ui_favorite'), t('ui_favorite_named', a.title));
     star.addEventListener('click', () => toggleFavorite(a));
+    const arc = li.querySelector('.actions > .archive');
+    arc.classList.toggle('on', Boolean(a.archived));
+    arc.title = drawArchive(arc, a);
     li.querySelector('.actions').append(moreMenu(a));
     // The way to the first row selected with no keys: the boxes show once one is
     const select = li.querySelector('.menu .select');
@@ -3001,9 +3008,8 @@
     // Rows drawn already are drawn anew in place, without rising in again: only a row new to the list rises in
     const had = new Set([...$('list').children].map((li) => li.dataset.key));
     // The row with the focus has it again once drawn anew: a page read redraws the list as the keys go through it
-    const focused = $('list').contains(document.activeElement) && document.activeElement.matches('.title, summary')
-      ? document.activeElement.closest('li').dataset.key : null;
-    const focusedOn = document.activeElement.matches('summary') ? 'summary' : '.title';
+    const focusedOn = $('list').contains(document.activeElement) ? ['.title', 'summary', '.star', '.actions > .archive'].find((on) => document.activeElement.matches(on)) : null;
+    const focused = focusedOn ? document.activeElement.closest('li').dataset.key : null;
     let i = 0;
     for (const { heading, entries } of groups) {
       if (heading) {
@@ -3024,7 +3030,13 @@
     for (const li of rows) li.classList.toggle('kept', had.has(li.dataset.key));
     // LIMIT: a row's menu open while the list changes closes with the redraw. Reopen it by its slug if that comes to matter
     $('list').replaceChildren(...rows);
-    if (focused !== null) rows.find((li) => li.dataset.key === focused)?.querySelector(focusedOn)?.focus({ preventScroll: true });
+    if (focused !== null) {
+      // A row that left the list, as one archived does, leaves the focus on the same button of the row after it, or the last
+      const keys = [...had];
+      const after = keys.slice(keys.indexOf(focused)).map((key) => rows.find((li) => li.dataset.key === key));
+      const to = after.find((li) => li?.querySelector(focusedOn)) ?? rows.findLast((li) => li.querySelector(focusedOn));
+      to?.querySelector(focusedOn).focus({ preventScroll: true });
+    }
   }
 
   // Whether anything is there for the task list: a page on a task or pinned, or a task's row with no page left

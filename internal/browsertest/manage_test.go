@@ -247,11 +247,11 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.until("the add dialog to close", "!document.getElementById('add-dialog').open")
 
 	// The archived are off every count and list but their own, which the switch shows (kept in the URL); a row's
-	// menu and the bulk bar send the change, to archive or to give back, and say which; the menu closes.
-	archiveWords := "(() => { const a = document.querySelector('#list li:not(.group) .archive'); document.getElementById('bulk-page').click(); " +
-		"const words = [a.textContent.trim(), a.getAttribute('aria-label'), document.getElementById('bulk-archive').textContent]; " +
+	// button and the bulk bar send the change, to archive or to give back, and say which.
+	archiveWords := "(() => { const a = document.querySelector('#list li:not(.group) .actions > .archive'); document.getElementById('bulk-page').click(); " +
+		"const words = [a.title, a.getAttribute('aria-label'), document.getElementById('bulk-archive').textContent]; " +
 		"document.getElementById('bulk-clear').click(); return words.join(' / '); })()"
-	const archiveRow = "document.querySelector('#list li:not(.group) .more summary').click(); document.querySelector('#list li:not(.group) .archive').click()"
+	const archiveRow = "document.querySelector('#list li:not(.group) .actions > .archive').click()"
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval(archiveRow)
 	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list .more[open]').length"),
@@ -260,11 +260,10 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval(archiveRow)
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
-	// An item of the menu done by keys, the menu closes, focus going back to its button: there still when the change fails.
-	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .more summary').click(); " +
-		"document.querySelector('#list li:not(.group) .archive').focus(); document.querySelector('#list li:not(.group) .archive').click()")
+	// The change failing, the row stays with the focus on its button.
+	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .actions > .archive').focus(); document.querySelector('#list li:not(.group) .actions > .archive').click()")
 	out = append(out, b.until("the give back to fail", "!document.getElementById('error').hidden && "+
-		"String(document.activeElement === document.querySelector('#list li:not(.group) .more summary'))"))
+		"String(document.activeElement === document.querySelector('#list li:not(.group) .actions > .archive'))"))
 	b.eval("window.failWrites = false")
 	b.eval("document.getElementById('bulk-page').click()")
 	out = append(out, b.eval("document.getElementById('bulk-archive').textContent"))
@@ -536,7 +535,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	check(t, "shelf", out, strings.Join([]string{
 		"Hbaclm", "true", "Hc fav ?view=fav", "Hzyk archived ?view=archived", "Alpha", msg("ui_selected_n", 5) + msg("ui_selected_more"),
 		"0010", "shown", "shown", "shown", "0",
-		msg("ui_more_named", "Beta"), msg("ui_mark_unread") + " / " + msg("ui_select") + " / " + msg("ui_pin") + " / " + msg("ui_task_set") + " / " + msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_archive") + " / " + msg("ui_delete"),
+		msg("ui_more_named", "Beta"), msg("ui_mark_unread") + " / " + msg("ui_select") + " / " + msg("ui_pin") + " / " + msg("ui_task_set") + " / " + msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_delete"),
 		"false true", "Alpha", "false true", "1", "false true", "true", "true",
 		"true", "DELETE /api/artifacts/a",
 		"true true true true", "false true true true", "false false false true", "report2,design1",

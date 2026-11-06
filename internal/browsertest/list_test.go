@@ -354,7 +354,7 @@ func TestUIShelfMarks(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.size(1440, 900, false)
 	b.navigate("/")
 	out = append(out, named())
-	check(t, "shelf marks", out, "10 true|true true true true|page:true link:true folder:true|true|true|true|true|true|true|true|true|true|Favorites 0,Archive|Favorites 1,Archive|Favorites 1,Archive 0")
+	check(t, "shelf marks", out, "10 true|true true true true|page:true link:true folder:true|true|true|true|true|true|true|true|true|true|Favorites 0,Archive,Archive A|Favorites 1,Archive,Archive A,Archive B,Archive L,Archive F|Favorites 1,Archive 0,Archive A,Archive B,Archive L,Archive F")
 }
 
 // TestUIShelfCounts: each part of the shelf counts what the other parts, the view and the search leave, its own part let go; the
@@ -1124,7 +1124,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		"download open archive star more | mark-unread pin-item task-set edit delete",
 		"download open archive star more | pin-item task-set edit copy delete",
 		"archive star more | pin-item task-set edit copy delete",
-		"mark-unread select pin-item task-set edit open download archive delete",
+		"mark-unread select pin-item task-set edit open download delete",
 		"archive star more | pin-item task-set edit copy delete",
 		"diff-open download open archive star more | mark-unread pin-item task-set edit delete",
 		"download open archive star more | mark-unread task-set edit delete",
