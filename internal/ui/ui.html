@@ -417,7 +417,7 @@
   .add-open svg { flex: none; width: 13px; height: 13px; }
   ul { list-style: none; margin: 0; padding: 0; }
   li {
-    position: relative; display: grid; grid-template: "lead title time" auto ". sub actions" auto / 12px minmax(0, 1fr) auto; gap: 0.2rem 0.65rem;
+    position: relative; display: grid; grid-template: "lead title title time" auto ". sub actions actions" auto / 12px minmax(0, 1fr) auto auto; gap: 0.2rem 0.65rem;
     padding: 0.6rem 1rem; background: var(--panel); border-bottom: 1px solid var(--line); transition: background-color 0.15s;
     animation: rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 16ms);
   }
@@ -458,10 +458,12 @@
   .ver { padding: 0.05rem 0.5rem; font: 700 var(--text-label)/1.5 var(--mono); color: var(--new); background: var(--new-soft); border-radius: 999px; white-space: nowrap; }
   li.picked .ver { background: var(--panel); }
   .kindof { padding: 0 0.3rem; color: var(--muted); border: 1px solid var(--line); border-radius: var(--corner-small); white-space: nowrap; }
-  .proj { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* A row's project in the color of its chip on the shelf */
-  .sub .proj { padding: 0 0.5rem; color: var(--fg); background: color-mix(in srgb, var(--c) 14%, var(--panel)); border-radius: 999px; }
-  .sub .proj::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 0.3rem; vertical-align: 0.1em; border-radius: 50%; background: var(--c); }
+  /* A project's name in the color of its chip on the shelf (drawProject) */
+  .proj { display: inline-flex; align-items: center; gap: 0.3rem; max-width: 10rem; padding: 0 0.5rem; font-weight: 500; white-space: nowrap; border-radius: 999px; }
+  .proj::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+  .proj-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  /* The one color mixed outside :root: --c is each row's, unknown to :root */
+  .proj-tint { --tint-ink: color-mix(in srgb, var(--c) 50%, var(--fg)); --tint: color-mix(in srgb, var(--c) 16%, var(--panel)); color: var(--tint-ink); background: var(--tint); }
   /* A link's path, the one place how it is cut is decided: on the line of the rest while 8rem is left, cut at its head so that the
      file's name stays. The box runs right to left for that alone, its bdi keeping the path's own order whatever marks it holds */
   .sub .path { flex: 1 1 8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; font: var(--text-label) var(--mono); }
@@ -882,6 +884,10 @@
   /* There is always a project: the button says it, the words never cut to a count, and it is not lit as narrowed */
   .shell.tasks #narrow-filter-name { position: static; width: auto; height: auto; clip-path: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .shell.tasks #narrow-filter-n { display: none; }
+  /* The task list's project: the button and the head are the pill themselves, as one inside a button would be two capsules */
+  :is(#narrow-filter, #shelf-what).proj-tint { color: var(--tint-ink); background: var(--tint); border-color: transparent; font-weight: 500; text-decoration: none; }
+  #shelf-what.proj { font-size: var(--text-label); line-height: 1.5; }
+  #narrow-filter.proj-tint #narrow-filter-name::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 0.3rem; border-radius: 50%; background: var(--c); }
   @media (max-width: 40rem) {
     .shell.tasks #narrow-filter { flex: 0 1 auto; min-width: 0; }
     /* The row of views scrolls: the name stays some of itself rather than going to nothing.
@@ -1599,6 +1605,14 @@
   // (picked, its last entry gone)
   // LIMIT: from the seventh project on the colors repeat; let the viewer pick them if projects come to be that many
   const projectColor = (name, ranks) => (ranks.has(name) ? `var(--pc${ranks.get(name) % 6})` : 'var(--faint)');
+  // What the task screens draw of a project, in the color of its chip on the task list
+  const taskProjectColor = (name) => projectColor(name, projectOrder(taskProjects(tasksOf())));
+  // el as a project's pill, in its color: its words cut at the pill's end
+  function drawProject(el, word, color) {
+    el.classList.add('proj', 'proj-tint');
+    el.style.setProperty('--c', color);
+    el.replaceChildren(tagged('span', 'proj-name', word));
+  }
 
   // An icon button that toggles: its name stays what pressing does, and aria-pressed tells whether it is on (a
   // screen reader says "Archive, pressed"), as a WAI-ARIA toggle button
@@ -2219,9 +2233,14 @@
     $('narrow-filter-n').textContent = narrowed || '';
     // Where the picks are in a dialog, this is what is lit of them
     $('narrow-filter').classList.toggle('narrowed', narrowed > 0);
+    const projectHead = TASK_LIST && project;
+    $('narrow-filter').classList.toggle('proj-tint', Boolean(projectHead));
+    if (projectHead) $('narrow-filter').style.setProperty('--c', taskProjectColor(project));
     // The filters folded, the head says what they narrow the list to: the view, and how many picks
     const what = [view === FIRST_VIEW ? '' : t(VIEW_WORDS[view]), narrowed ? t('ui_narrow_n', narrowed) : ''].filter(Boolean).join(' · ');
-    $('shelf-what').textContent = TASK_LIST ? projectWord(project) : what;
+    $('shelf-what').classList.remove('proj', 'proj-tint');
+    if (projectHead) drawProject($('shelf-what'), projectWord(project), taskProjectColor(project));
+    else $('shelf-what').textContent = what;
   }
 
   // Whether a has a page of its own to open alone or download: a folder has none, nor has a link whose file is gone
@@ -2229,7 +2248,7 @@
   // The button that archives a or gives it back, and the words it goes by
   function drawArchive(btn, a) {
     btn.setAttribute('aria-label', t(a.archived ? 'ui_unarchive_named' : 'ui_archive_named', a.title));
-    btn.onclick = () => toggleArchived(a);
+    btn.onclick = () => setArchived(a, !a.archived);
     return t(a.archived ? 'ui_unarchive' : 'ui_archive');
   }
   // Saved under the name the server gives it (downloadName)
@@ -2619,7 +2638,7 @@
     if (a.folder) put('kindof', t('ui_kind_folder'));
     else if (a.path) put('kindof', t('ui_kind_of_link', a.template ?? 'HTML'));
     else if (a.template) put('kindof', a.template);
-    if (a.project && ranks.size > 1) put('proj', a.project).style.setProperty('--c', projectColor(a.project, ranks));
+    if (a.project && ranks.size > 1) drawProject(put('proj', ''), a.project, projectColor(a.project, ranks));
     middle(put);
     // A link shows the file where it was registered; if the file is gone, the row says so
     if (a.missing) put('miss', t('ui_file_missing'));
@@ -2910,18 +2929,30 @@
     await load();
   }
 
+  // The row gone from under the pointer, and the next one's button there: the way back is at hand, long enough to read and reach
+  function archivedDone(a) {
+    const button = tagged('button', 'btn', t('ui_unarchive'));
+    button.type = 'button';
+    button.setAttribute('aria-label', t('ui_unarchive_named', a.title));
+    button.addEventListener('click', () => {
+      button.closest('.toast').remove();
+      setArchived(a, false);
+    });
+    toast(t('ui_archive_done', a.title), { ms: 8000, button });
+  }
   // Pressed again before the answer, a is as it was and the press would ask the same: the button stays, with the focus, doing nothing
   const archiving = new Set();
-  async function toggleArchived(a) {
+  async function setArchived(a, to) {
     if (archiving.has(a.slug)) return;
     archiving.add(a.slug);
     try {
-      const reason = await patchOne(a.slug, { archived: !a.archived });
+      const reason = await patchOne(a.slug, { archived: to });
       if (reason) {
-        showError(t(a.archived ? 'ui_unarchive_failed' : 'ui_archive_failed', a.title, reason));
+        showError(t(to ? 'ui_archive_failed' : 'ui_unarchive_failed', a.title, reason));
         return;
       }
-      toast(t(a.archived ? 'ui_unarchive_done' : 'ui_archive_done', a.title));
+      if (to) archivedDone(a);
+      else toast(t('ui_unarchive_done', a.title));
       await load();
     } finally {
       archiving.delete(a.slug);
@@ -3283,7 +3314,7 @@
       $('task-at').textContent = ago(task.at);
     }
     $('task-link').replaceChildren(...(task.url ? [xlink(task.url)] : []));
-    $('task-project').textContent = projectWord(task.project);
+    drawProject($('task-project'), projectWord(task.project), taskProjectColor(task.project));
     $('task-up').href = taskListHref(task);
     const archive = $('task-archive');
     const back = task.archived.length > 0 && task.pages.length === 0;

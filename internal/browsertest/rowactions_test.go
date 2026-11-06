@@ -44,7 +44,7 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	say("a pill's dot in its chip's color", dot("a")+" === "+chip("one")+" && "+dot("c")+" === "+chip("two"))
 	say("each project's own", dot("a")+" !== "+dot("c"))
 	say("the ground of the color too", "getComputedStyle("+pill("a")+").backgroundColor !== getComputedStyle("+pill("c")+").backgroundColor")
-	say("a long name cut within the pill", "(() => { const e = "+pill("d")+"; return e.scrollWidth > e.clientWidth && e.offsetWidth <= 10 * parseFloat(getComputedStyle(document.documentElement).fontSize); })()")
+	say("a long name cut within the pill", "(() => { const e = "+pill("d")+", name = e.querySelector('.proj-name'); return name.scrollWidth > name.clientWidth && e.offsetWidth <= 10 * parseFloat(getComputedStyle(document.documentElement).fontSize); })()")
 	say("the row's buttons", "[...document.querySelector('#list li[data-slug=a] .actions').children].map((e) => e.classList[1] ?? e.className).join(' ')")
 	b.eval("document.querySelector('#list li[data-slug=a] .more').open = true")
 	say("the menu leaves it out", "getComputedStyle(document.querySelector('#list li[data-slug=a] .menu .archive')).display")
@@ -65,6 +65,16 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("c given back", "!document.querySelector('#list li[data-slug=c]')")
 	say("the last left", "document.querySelector('#list li[data-slug]').dataset.slug + ' ' + document.activeElement.classList[1]")
 
+	// Archived, the toast gives it back, not archiving it again from what the press knew of it.
+	b.navigate("/")
+	b.until("the rows after that", pill("d"))
+	press(archive("d"))
+	b.until("d archived", "!document.querySelector('#list li[data-slug=d]') && document.querySelector('.toast .btn')")
+	say("the toast's button", "document.querySelector('.toast .btn').textContent + ' / ' + document.querySelector('.toast .btn').getAttribute('aria-label')")
+	b.eval("document.querySelector('.toast .btn').click()")
+	b.until("d back", "items.find((a) => a.slug === 'd').archived !== true")
+	say("no button on the toast of giving back", "document.querySelector('.toast .btn') === null")
+
 	// An item of the menu done by keys: the menu closes, the focus going back to its button.
 	b.navigate("/")
 	b.until("the rows again", "document.querySelector('#list li[data-slug=c]')")
@@ -78,7 +88,20 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.until("the modal's rows", "document.querySelector('#find-list .proj')")
 	say("the modal's pill", "getComputedStyle(document.querySelector('#find-list .proj'), '::before').backgroundColor !== 'rgba(0, 0, 0, 0)'")
 
+	// The task screens: the head of a task's page, and of the task list with the column folded and the filters behind a button.
+	s.floe(t, "work", "c", "--task", "#1")
+	b.navigate("/tasks?project=two&task=%231")
+	b.until("the task's page", "document.querySelector('#task-project .proj-name')")
+	say("the task's head", "document.querySelector('#task-project').textContent + ' ' + (getComputedStyle(document.querySelector('#task-project')).backgroundColor !== 'rgba(0, 0, 0, 0)')")
+	b.navigate("/tasks?project=two")
+	b.until("the task list", "document.querySelector('#narrow-filter.proj-tint')")
+	say("the filter button", "document.getElementById('narrow-filter-name').textContent + ' ' + document.getElementById('narrow-filter').style.getPropertyValue('--c').startsWith('var(--pc')")
+	say("the folded head", "document.getElementById('shelf-what').textContent + ' ' + document.getElementById('shelf-what').classList.contains('proj-tint')")
+	b.navigate("/")
+	b.until("the list's button", "document.getElementById('narrow-filter')")
+	say("the page list's are words", "document.getElementById('narrow-filter').classList.contains('proj-tint') + ' ' + document.getElementById('shelf-what').classList.contains('proj-tint')")
+
 	check(t, "row actions", out, rowActionsWant)
 }
 
-const rowActionsWant = "the rows: dcba|a pill's dot in its chip's color: true|each project's own: true|the ground of the color too: true|a long name cut within the pill: true|the row's buttons: archive star more|the menu leaves it out: none|its words: Archive / Archive T a|the row after: b archive|the last row: b archive|an archived row's button: true Restore|the last left: a archive|the menu's item: c|the modal's pill: true"
+const rowActionsWant = "the rows: dcba|a pill's dot in its chip's color: true|each project's own: true|the ground of the color too: true|a long name cut within the pill: true|the row's buttons: archive star more|the menu leaves it out: none|its words: Archive / Archive T a|the row after: b archive|the last row: b archive|an archived row's button: true Restore|the last left: a archive|the toast's button: Restore / Restore T d to the list|no button on the toast of giving back: true|the menu's item: c|the modal's pill: true|the task's head: two true|the filter button: two true|the folded head: two true|the page list's are words: false false"

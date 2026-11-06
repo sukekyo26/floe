@@ -31,6 +31,9 @@ var manageText = []string{"var(--text-label)", "var(--text-small)", "var(--text)
 // the text round it.
 var manageEm = map[string]string{".state code": "0.8em"}
 
+// manageMixed is the one rule that mixes colors outside :root: a project's color is each row's, which :root cannot know.
+const manageMixed = ".proj-tint"
+
 // colorFunctions are the functions that make a color.
 var colorFunctions = []string{
 	"rgb(", "rgba(", "hsl(", "hsla(", "hwb(", "lab(", "lch(", "oklab(", "oklch(", "color(", "color-mix(", "light-dark(",
@@ -105,7 +108,7 @@ func manageCheck(t *testing.T, where string, sheet []byte) {
 				}
 			default:
 			}
-			if !inRoot && colored(d.value) {
+			if !inRoot && d.rule != manageMixed && colored(d.value) {
 				t.Errorf("%s: %s: %s in %q; give the color a variable in :root", where, name, value, d.rule)
 			}
 		}
