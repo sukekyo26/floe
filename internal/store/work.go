@@ -301,6 +301,8 @@ func checkParent(project string, rows map[string]Task, name string, ed TaskEdit)
 // screen read before it says: there is on the task list, of a row or of a page on it, an archived one too, as the
 // management page's tasksOf has it. The pages are read only for a name of no row. The pages are written under the same
 // lock.
+// LIMIT: a new name, of no row, reads every page's meta.json under the lock. Fine at hundreds of pages; at thousands,
+// keep an index of the pages' tasks.
 func (s *Store) checkThere(project string, rows map[string]Task, name string, ed TaskEdit) error {
 	if ed.New == nil {
 		return nil

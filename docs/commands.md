@@ -208,7 +208,7 @@ With slugs, the task's project is each page's: `--task` puts the pages on that n
 | `--step <step>` | pages, and the task's last step | With slugs only. `""` takes it off the pages and leaves the task's |
 | `--state <state>` | the task | `todo`, `doing`, `waiting` or `done` |
 | `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
-| `--parent <task>` | the task | Without slugs. A task of its project with a row and no parent of its own; a task with children takes none: one level only. `""` takes it off |
+| `--parent <task ID>` | the task | Without slugs. A task of its project with a row and no parent of its own; a task with children takes none: one level only. `""` takes it off |
 | `--title <title>` | the task | `""` takes it off |
 | `--steps a,b,c` | the task | The order of its steps; a step not named comes after them. A step's name cannot hold a comma here. `""` takes it off |
 | `--pin`, `--unpin` | pages | With slugs only |

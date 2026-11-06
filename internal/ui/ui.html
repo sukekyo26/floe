@@ -618,7 +618,7 @@
   .bulk .btn.danger.armed { padding: 0 0.8rem; }
   /* A delete pressed once asks in its longer words, the other buttons but the clearing out of its way (they come back as it is
      let go; the clearing lets it go where a click does not move the focus, as on Safari) */
-  .bulk:has(.armed) > .btn:not(.armed, .clear) { display: none; }
+  .bulk:has(.armed) > .btn:not(.armed) { display: none; }
   /* The words stay on the narrowest list: the count's end goes first, its number kept, then the buttons' room */
   @container bar (max-width: 24rem) {
     .bulk-count { flex: none; }
@@ -626,7 +626,7 @@
   }
   @container bar (max-width: 21rem) {
     .bulk { gap: 0.1rem; }
-    .bulk .btn:not(.armed, .clear) { padding: 0 0.2rem; }
+    .bulk .btn:not(.armed) { padding: 0 0.2rem; }
   }
 
   /* The search modal, of the shape of the others. Its box of results keeps its height, so that the field stays where it is as the rows go */
@@ -1269,7 +1269,7 @@
     </div>
     <input class="text" id="tag-find" type="search" autocomplete="off" placeholder="{{.Msg "ui_tag_find"}}" aria-label="{{.Msg "ui_tag_find"}}" aria-controls="tag-boxes">
     <div class="tag-boxes" id="tag-boxes" role="group" aria-labelledby="tag-title">
-      <button type="button" class="btn tag-new" id="tag-new" hidden></button>
+      <button type="button" class="btn" id="tag-new" hidden></button>
     </div>
     <div class="dialog-actions">
       <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
@@ -3483,8 +3483,12 @@
   // parent since is taken from it, said to come from the one before. Send the parent read if that comes to mislead
   const childTaskNamed = () => tasksOf().find((x) => x.project === project && x.name === $('child-task').value.trim());
   const isOwnChild = (task) => task?.parentTask?.name === TASK_NAME;
+  // The task the dialog last showed for the name, which saving sends as new or not: tasks read meanwhile change nothing unseen, and the store
+  // refuses what is no longer so
+  let childShown;
   function childNameChanged() {
     const task = childTaskNamed();
+    childShown = task;
     const from = task?.parentTask?.name;
     const named = task && [task.name, task.title].filter(Boolean).join(' ');
     $('child-note').hidden = !task || task.children.length > 0 || task.name === TASK_NAME || isOwnChild(task);
@@ -3500,7 +3504,7 @@
     const title = $('child-title').value.trim();
     try {
       if (!taskFormReady($('child'), $('child-error'))) return;
-      const had = childTaskNamed();
+      const had = childShown;
       // Nothing to write, and so nothing to tell
       if (isOwnChild(had)) {
         $('child-dialog').close();
@@ -4593,6 +4597,8 @@
   // than this page's. Whether its URL was changed by hand: only then is it sent, so that one set since it opened stays
   let setPage;
   let setOpened;
+  // The task the dialog last showed for the name, which saving sends as new or not, as the child's dialog does
+  let setShown;
   let setUrlTouched = false;
   let setBack;
   const setTaskOf = (name) => tasksOf().find((task) => task.project === setPage.taskProject && task.name === name.trim());
@@ -4606,9 +4612,7 @@
     $('set-task').value = a.work?.task ?? '';
     $('set-step').value = a.work?.step ?? '';
     setOpened = { task: $('set-task').value, step: $('set-step').value };
-    $('set-url').value = setTaskOf($('set-task').value)?.url ?? '';
-    fillTaskParent();
-    setTaskKnown();
+    setTaskChanged();
     $('set-out').hidden = !a.work?.task;
     $('set-error').textContent = tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '';
     $('set-error').hidden = !tasksRead.error;
@@ -4622,7 +4626,10 @@
     setTaskKnown();
   }
   // Whether the name is of a task there, which asks no title, as the store checks it (new): of the fields, only the title's
-  const setTaskKnown = () => titleField($('set-task-title'), !setTaskOf($('set-task').value));
+  function setTaskKnown() {
+    setShown = setTaskOf($('set-task').value);
+    titleField($('set-task-title'), !setShown);
+  }
   // What the field was given, which saving compares with: a parent another session wrote meanwhile is not taken off by a field left alone, nor is an
   // empty parent sent for a new name, which has no row to take it off
   function fillTaskParent() {
@@ -4661,7 +4668,7 @@
     const res = await api(`/api/tasks?${new URLSearchParams({ project, task: name })}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const text = res.ok ? '' : await res.text();
     if (res.status === 409) {
-      tasksRead = await readTasks();
+      if (framed) tasksRead = await readTasks();
       await load();
     }
     return { ok: res.ok, status: res.status, text, stale: t('ui_task_stale', text) };
@@ -4680,11 +4687,11 @@
     const page = setPage;
     const task = $('set-task').value;
     // The state it comes to be under stays what it was: said, as it may not be the list the person has in mind
-    const state = setTaskOf(task)?.state ?? STATES.find((x) => x.new).name;
+    const state = setShown?.state ?? STATES.find((x) => x.new).name;
     const step = $('set-step').value.trim();
     const parent = $('set-parent').value.trim();
     const moved = task.trim() !== setOpened.task || step !== setOpened.step;
-    const fresh = !setTaskOf(task);
+    const fresh = !setShown;
     const body = {
       new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : {}),
       ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}), ...(parent !== setOpened.parent ? { parent } : {}),
@@ -4692,8 +4699,9 @@
     try {
       if (!taskFormReady($('set'), $('set-error'))) return;
       const res = await writeTask(page.taskProject, task, body);
+      // Each field as it opens for the name, as the URL and parent shown were of what is no longer so
       if (res.status === 409) {
-        setTaskKnown();
+        setTaskChanged();
         throw new Error(res.stale);
       }
       if (!res.ok) throw new Error(res.text);

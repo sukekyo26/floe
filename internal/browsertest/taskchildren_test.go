@@ -151,7 +151,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		if title == "" {
 			title = "a title"
 		}
-		b.eval("document.getElementById('child-task').value = " + js(name) + "; document.getElementById('child-title').value = " + js(title) + "; document.getElementById('child').requestSubmit()")
+		b.eval("document.getElementById('child-task').value = " + js(name) + "; document.getElementById('child-task').dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('child-title').value = " + js(title) + "; document.getElementById('child').requestSubmit()")
 	}
 	open("#99")
 	if got := b.eval(adds); got != "false" {
@@ -334,6 +334,22 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	task("proj", "#106", "--parent", "")
 	task("proj", "#106", "--forget")
+	// Shown there, then gone and read before the press: sent as there, as shown, and refused, not made of no title.
+	task("proj", "#107", "--title", "theirs")
+	b.eval("load()")
+	b.until("#107 read", "tasksOf().some((x) => x.name === '#107')")
+	press("task-child")
+	b.until("the dialog", "document.getElementById('child-dialog').open")
+	field("#107")
+	task("proj", "#107", "--forget")
+	b.eval("load()")
+	b.until("#107 gone", "!tasksOf().some((x) => x.name === '#107')")
+	press("child-submit")
+	b.until("refused", "!document.getElementById('child-error').hidden")
+	if got := b.eval("document.getElementById('child-error').textContent + '|' + document.getElementById('child-title').closest('label').hidden"); got != "Could not save: task #107 is no longer there: the tasks are read again, so check and save again|false" {
+		t.Errorf("gone meanwhile: %q", got)
+	}
+	b.eval("document.getElementById('child-dialog').close()")
 
 	// Removed by two presses and back at the list; refused, it says why and stays. A task with children has no button.
 	pressForget := func() {
@@ -657,6 +673,21 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 	if all["proj"]["#90"].Title != "theirs" || all["proj"]["#91"].Title != "a title" {
 		t.Errorf("after the stale: %+v %+v", all["proj"]["#90"], all["proj"]["#91"])
 	}
+	// Shown new, then made and read before the press: sent as new, as shown, and refused, not put on theirs unseen.
+	// Refused, every field is as it opens for the name: the URL and the parent are theirs.
+	s.floe(t, "work", "--project", project, "--task", "#1", "--url", "https://example.com/one")
+	dialog("c")
+	field("set-task", "#93")
+	field("set-task-title", "mine")
+	s.floe(t, "work", "--project", project, "--task", "#93", "--title", "theirs", "--url", "https://example.com/theirs", "--parent", "#1")
+	b.eval("load()")
+	b.until("#93 read", "tasksOf().some((x) => x.name === '#93')")
+	b.eval("document.getElementById('set').requestSubmit()")
+	b.until("refused", "!document.getElementById('set-error').hidden")
+	if got := b.eval("document.getElementById('set-error').textContent.includes('task #93 is there already') + '|' + " + shown + " + '|' + document.getElementById('set-url').value + '|' + document.getElementById('set-parent').value"); got != "true|false|https://example.com/theirs|#1" {
+		t.Errorf("made meanwhile: %q", got)
+	}
+	b.eval("document.getElementById('set-dialog').close()")
 
 	// A page whole reads no tasks as its list is read: refused, it reads them itself.
 	b.navigate("/a/a/")
