@@ -455,9 +455,8 @@ func (l *layout) place(lb *label, g region) (x, y float64, st stack) {
 }
 
 // grid is at most 501 points from lo to hi within 0 and size, step apart, step being 4 or more: counted from mid,
-// the middle of lo and hi, so that a range symmetric about a line has a point on it, and so that the canvas cutting
-// the range moves no point while step is 4; or the one point where the canvas cuts it when the range is narrower
-// than a step past it.
+// the middle of lo and hi, so that mid is one when the canvas holds it, and the canvas cutting the range moves no
+// point while step is 4; or, when no such point is within the canvas, the one point where the canvas cuts it.
 // LIMIT: step grows with the range within the canvas past 2000, so the canvas cutting it moves the points there.
 func grid(lo, hi, mid, size float64) []float64 {
 	from, to := max(lo, 0), min(hi, size)
@@ -465,13 +464,14 @@ func grid(lo, hi, mid, size float64) []float64 {
 		return nil
 	}
 	step := max(4, (to-from)/500)
-	start := mid + math.Ceil((from-mid)/step)*step
-	if start > to {
-		start = from
+	// Each point is mid and a whole number of steps, so that mid itself is one exactly.
+	first := math.Ceil((from - mid) / step)
+	if mid+first*step > to {
+		return []float64{from}
 	}
 	var out []float64
 	for i := range 501 {
-		p := start + float64(i)*step
+		p := mid + (first+float64(i))*step
 		if p > to {
 			break
 		}
@@ -484,8 +484,9 @@ func grid(lo, hi, mid, size float64) []float64 {
 // the block goes then (its middle and top), 0 for none of room: of points of one room, the one nearest mx, my,
 // the middle of the circles' boxes, as room told by the point of a box nearest a circle is one while the box
 // covers its centre, and a label stays on the axis of a Venn diagram of one, the middle being a point of the grid.
-// LIMIT: a region cut by circles it is out of may keep more room either side of the axis than on it, and the left
-// one of two such points is picked, off the axis. Pick the point nearer the axis among those if diagrams need it.
+// LIMIT: the label stands on the axis only when the circles in and out of its region are all symmetric about it and
+// the most room is not split into two points either side of it: then the left one is picked, off the axis. Pick
+// the point nearer the axis among those if diagrams need it.
 func (g region) most(xs, ys []float64, w, h, mx, my float64) (best, x, top float64) {
 	tries := make([]try, 0, len(xs)*len(ys))
 	for _, px := range xs {
