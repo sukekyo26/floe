@@ -286,50 +286,26 @@ func (b *browser) pressKey(k string) {
 	}
 }
 
-// click presses at (x, y) once the pointer is on what lies there. Chrome sends input by what it last drew, which on a busy
-// machine may lag behind the page: a press on a list of choices just opened would reach the iframe drawn under it, and the
-// page's own :hover says it went where it should. What is in an iframe answers in its own document: hover waits for that.
+// click presses at (x, y) until the page has the press. Chrome sends a press by what it last drew, which on a busy machine lags
+// behind the page: a press on a list of choices just opened reaches the iframe drawn under it, though the pointer moving there
+// reaches the list. A press meant for the iframe has no way to tell: hover waits for that page first.
 func (b *browser) click(x, y float64) {
 	b.t.Helper()
 
-	reached := fmt.Sprintf("(() => { const e = document.elementFromPoint(%v, %v); return !e || e.tagName === 'IFRAME' || e.matches(':hover'); })()", x, y)
-	var last string
-	var err error
+	armed := fmt.Sprintf("(() => { if (document.elementFromPoint(%v, %v)?.tagName === 'IFRAME') return false; "+
+		"window.pressWaits = true; addEventListener('pointerdown', () => { window.pressWaits = false; }, { capture: true, once: true }); return true; })()", x, y)
+	proven := b.eval(armed) == "true"
 	for deadline := time.Now().Add(waitLimit); ; time.Sleep(50 * time.Millisecond) {
-		b.point(x, y)
-		if last, err = b.try(reached); err == nil && truthy(last) {
-			break
+		if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(x, y)); err != nil {
+			b.t.Fatal(err)
+		}
+		// A press that moved to another page has left no mark; while it moves the page cannot answer, and it is not pressed again
+		if last, err := b.try("window.pressWaits === true"); !proven || err != nil || last != "true" {
+			return
 		}
 		if time.Now().After(deadline) {
-			b.t.Fatalf("timed out waiting for the pointer to reach (%v, %v): last %q, %v", x, y, last, err)
+			b.t.Fatalf("timed out waiting for the page to have the press at (%v, %v)", x, y)
 		}
-	}
-	if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(x, y)); err != nil {
-		b.t.Fatal(err)
-	}
-}
-
-// clickOn presses the middle of the element expr finds, once the page says the pointer is on it: where it lies is read anew at
-// each try, as a list of choices just opened may not have come to rest under the pointer yet.
-func (b *browser) clickOn(expr string) {
-	b.t.Helper()
-
-	var r rect
-	var last string
-	var err error
-	for deadline := time.Now().Add(waitLimit); ; time.Sleep(50 * time.Millisecond) {
-		r = b.rect(expr)
-		b.point(r.X+r.Width/2, r.Y+r.Height/2)
-		on := fmt.Sprintf("(() => { const e = %s; return e.contains(document.elementFromPoint(%v, %v)) && e.matches(':hover'); })()", expr, r.X+r.Width/2, r.Y+r.Height/2)
-		if last, err = b.try(on); err == nil && truthy(last) {
-			break
-		}
-		if time.Now().After(deadline) {
-			b.t.Fatalf("timed out waiting for the pointer to reach %s at %+v: last %q, %v", expr, r, last, err)
-		}
-	}
-	if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(r.X+r.Width/2, r.Y+r.Height/2)); err != nil {
-		b.t.Fatal(err)
 	}
 }
 
