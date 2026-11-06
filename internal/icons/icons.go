@@ -510,9 +510,9 @@ type Hit struct {
 // Search returns the icons of the fetched sets whose name (set/name) contains every word, or is what the word means as
 // a short name (alb, s3), by name: those meant by a short name first, so that a first line is what was asked for. With
 // no set fetched, it tells each not fetched.
-// LIMIT: the short names are kept by hand. A name a new package changes stops being found by its short name, and no one
-// is told: CI holds no real set, and TestShortNames runs only with FLOE_ICONS_DIR set. A word not among them is searched
-// as any word; add a line when an abbreviation is missed.
+// LIMIT: the short names are kept by hand. A name a new package changes stops being found by its short name, and no
+// one is told: CI holds no real set, and TestShortNames runs only with FLOE_ICONS_DIR set. A word not among them is
+// searched as any word; add a line when an abbreviation is missed.
 func (s *Store) Search(words []string) ([]Hit, error) {
 	terms := make([]string, len(words))
 	for i, w := range words {
