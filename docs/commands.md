@@ -291,7 +291,7 @@ Keep an icon set in `FLOE_ICONS_DIR/<set>` for the `icon` parts of diagrams. flo
 
 ## `floe icons search <word>...`
 
-List the fetched icons whose name contains every word (case does not matter), one per line: the name to give an `icon` part (`aws/…`) and its category, tab-separated.
+List the fetched icons whose name contains every word (case does not matter), one per line: the name to give an `icon` part (`aws/…`) and its category, tab-separated. A common short name of a service (`alb`, `s3`, `ecs`) finds the service too, listed first; floe keeps a short list of these, and any other word is matched only against the names.
 
 ---
 

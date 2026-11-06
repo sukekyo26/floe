@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -298,6 +299,70 @@ func TestURLs(t *testing.T) {
 	} {
 		if aws.tells(at, "01022030") != want {
 			t.Errorf("tells(%s) = %v", at, !want)
+		}
+	}
+}
+
+// A short name finds what it means first, then what holds it, each by name; a word finds nothing more than it is.
+func TestSearchShort(t *testing.T) {
+	t.Parallel()
+
+	set := New(t.TempDir(), false, "")
+	set.indexes["aws"] = &index{Version: "", Source: "", Icons: map[string]entry{
+		"amazon-simple-storage-service": {Category: "Storage"},
+		"amazon-s3-on-outposts":         {Category: "Storage"},
+		"aws-auto-scaling":              {Category: "Management"},
+		"amazon-ec2-auto-scaling":       {Category: "Compute"},
+		"res/amazon-vpc-nat-gateway":    {Category: "Networking"},
+		"res/amazon-nat-other":          {Category: "Networking"},
+		"res/zz-alb-in-its-name":        {Category: "Networking"},
+	}}
+	for _, c := range []struct {
+		name  string
+		words []string
+		want  []string
+	}{
+		{"meant first, what holds it kept", []string{"s3"}, []string{"aws/amazon-simple-storage-service", "aws/amazon-s3-on-outposts"}},
+		{"in any case", []string{"S3"}, []string{"aws/amazon-simple-storage-service", "aws/amazon-s3-on-outposts"}},
+		{"two meant, by name", []string{"asg"}, []string{"aws/amazon-ec2-auto-scaling", "aws/aws-auto-scaling"}},
+		{"meant and held, once", []string{"nat"}, []string{"aws/res/amazon-vpc-nat-gateway", "aws/res/amazon-nat-other"}},
+		{"every word holds", []string{"s3", "outposts"}, []string{"aws/amazon-s3-on-outposts"}},
+		{"one word meant is first", []string{"s3", "amazon"}, []string{"aws/amazon-simple-storage-service", "aws/amazon-s3-on-outposts"}},
+		{"a target not in the set", []string{"alb"}, []string{"aws/res/zz-alb-in-its-name"}},
+		{"not the whole word", []string{"aws/s3"}, nil},
+	} {
+		hits, err := set.Search(c.words)
+		var got []string
+		for _, h := range hits {
+			got = append(got, h.Name)
+		}
+		if !reflect.DeepEqual(got, c.want) || (err != nil) != (c.want == nil) {
+			t.Errorf("%s: Search %v = %v, %v, want %v", c.name, c.words, got, err, c.want)
+		}
+	}
+}
+
+// Every icon a short name means is in the set FLOE_ICONS_DIR holds. CI holds no real set, so this runs only by hand.
+func TestShortNames(t *testing.T) { //nolint:paralleltest // it reads the environment
+	root := os.Getenv("FLOE_ICONS_DIR")
+	if root == "" {
+		t.Skip("FLOE_ICONS_DIR names no fetched set")
+	}
+	set := New(root, false, "FLOE_ICONS_DIR")
+	for _, k := range kits {
+		idx, err := set.readIndex(k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if idx == nil {
+			t.Skipf("%s is not fetched in %s", k.name, root)
+		}
+		for word, names := range k.short {
+			for _, name := range names {
+				if _, ok := idx.Icons[name]; !ok {
+					t.Errorf("%s: %s means %s, not in the set of version %s", k.name, word, name, idx.Version)
+				}
+			}
 		}
 	}
 }

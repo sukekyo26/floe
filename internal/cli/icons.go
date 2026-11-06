@@ -71,7 +71,8 @@ func (a *app) iconsSearchCmd() *cobra.Command {
 		Use:   "search <word>...",
 		Short: "List the fetched icons whose name contains every word",
 		Long: `List the fetched icons whose name contains every word, one per line as the name to give
-an icon part (aws/…) and its category, tab-separated.`,
+an icon part (aws/…) and its category, tab-separated. A common short name of a service (alb, s3,
+ecs) finds the service too, listed first.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			at, err := a.iconsDir()

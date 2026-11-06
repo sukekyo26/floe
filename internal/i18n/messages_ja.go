@@ -237,7 +237,7 @@ var messagesJA = map[string]string{
 	"icons_too_many":           "アイコンが %d 個を超え、アイコン集よりはるかに多いです。ファイルが正しいか確かめてください",
 	"icons_written_too_large":  "中のアイコンの合計が %dMB を超え、アイコン集よりはるかに大きいです。ファイルが正しいか確かめてください",
 	"icons_none_in_zip":        "%s のアイコンがありません。%s のアイコン集の zip を渡してください",
-	"icons_no_match":           "%s をすべて含むアイコンの名前はありません。短い語で試してください",
+	"icons_no_match":           "%s をすべて含むアイコンの名前はありません。語を減らすか、正式な名前の語で試してください（floe icons search aws で全部出ます）",
 	"icons_fetched":            "%[2]s のアイコン %[1]d 個（%[3]s）を %[4]s に取得しました",
 	"icons_already":            "%s のアイコン %s はすでに %s にあります（取り直すなら --force を付けてください）",
 
