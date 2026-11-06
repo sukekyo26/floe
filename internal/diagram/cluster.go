@@ -224,18 +224,23 @@ func (gr *group) spans() map[int][2]int {
 	return out
 }
 
-// mark puts each group's left and right marks in every rank it spans, and the room of its heading (its label's
-// width, rounded up so that the frame holds it measured again, by a row, turned for right later by place) first in
-// its first rank, then lists each rank as the groups hold it: in each group, its left mark and its heading, its nodes
-// as written (a box, or a group nested), its points and ports by their edges' order, and its right mark, so that a
-// group stands side by side in every rank.
+// mark puts each group's left and right marks in every rank it spans, and notes its heading (its label's width, rounded
+// up so that the frame holds it measured again, by a row): laid out down in heads, above the rank (headRoom); laid out
+// right as a room first in its first rank, turned later by place, as a heading may reach into the rank there. It then
+// lists each rank as the groups hold it: in each group, its left mark and any heading's room, its nodes as written (a
+// box, or a group nested), its points and ports by their edges' order, and its right mark, so that a group stands side
+// by side in every rank.
 //
 // LIMIT: an edge between a box of a group and one outside meets the frame's side, not its top or bottom, when the
 // box inside is past the group's first rank (an edge in) or before its last (out): its points pass by the group's
 // marks, not through a port. Give such edges ports too if frames come to look crossed.
-// LIMIT: a long heading, and an icon with it, widens its group (down), its room standing before the boxes of the first
-// rank, or deepens the first rank (right). Give the heading a rank's room of its own if long labels come to look
-// stretched.
+// LIMIT: a long heading, and an icon with it, widens its group as far as it holds the heading and what a line reaches
+// from above (down), or deepens the first rank (right). Give the heading a rank's room of its own if long labels come
+// to look stretched.
+// LIMIT: boxes under a heading start a layout elsewhere, and widen and pull may then widen a few graphs, as narrowing
+// a heading alone does: of 1550 random graphs laid out down, the area of 30 grows, of one by 29%, and of 410 shrinks.
+// LIMIT: a line written by hand from above into a box of a group's first rank that no edge of the graph reaches may run
+// through the heading, as this does not read those edges, and is told; go round it by via.
 func (gr *group) mark() {
 	spans := gr.spans()
 	marks := map[[2]int][2]int{} // a group's left and right marks in a rank
@@ -253,7 +258,12 @@ func (gr *group) mark() {
 		}
 		if g := gr.out.clusters[c].g; headed(g) {
 			a := headArea(g)
-			heading[c] = add(c, spans[c][0], kindHeading, math.Ceil(a.x+a.w-headParts(false, 0).x), a.h)
+			w := math.Ceil(a.x + a.w - headParts(false, 0).x)
+			if gr.out.g.Direction == "right" {
+				heading[c] = add(c, spans[c][0], kindHeading, w, a.h)
+			} else {
+				gr.heads[c] = headRoom{left: marks[[2]int{c, spans[c][0]}][0], w: w}
+			}
 		}
 	}
 	gr.list(spans, marks, heading)
@@ -501,15 +511,7 @@ func (gr *group) pack(floor map[int]float64) {
 		}
 		return i
 	}
-	next := make([][]packArc, n+2*len(gr.cls))
-	into := make([]int, len(next))
-	for _, rank := range gr.ranks {
-		for k := 1; k < len(rank); k++ {
-			a, b := rank[k-1], rank[k]
-			next[slot(a)] = append(next[slot(a)], packArc{slot(b), gr.room(a) + gr.gap(a, b)})
-			into[slot(b)]++
-		}
-	}
+	next, into := gr.packArcs(n, at, slot)
 	x := make([]float64, len(next))
 	var was []float64 // packed again: where each stands, nothing moving left of it, nor a point left of its floor
 	if floor != nil {
@@ -531,6 +533,68 @@ func (gr *group) pack(floor map[int]float64) {
 	for i := range gr.nodes {
 		gr.nodes[i].x = x[slot(i)]
 	}
+}
+
+// headRoom is a heading laid out down: it stands above its group's first rank, whose left mark is left, and takes no
+// place in it, what a line reaches from above keeping right of it and the frame holding it (headsOver, pack).
+type headRoom struct {
+	left int
+	w    float64
+}
+
+// clear is how far right of the frame's left what a line reaches from above stands.
+func (h headRoom) clear() float64 { return inEnd + h.w + nodeGap }
+
+// headsOver are the headings over node i, if a line reaches it from above its rank: a point, where an edge enters a
+// frame, a box with an edge in.
+func (gr *group) headsOver(i int) []headRoom {
+	n := gr.nodes[i]
+	if len(gr.heads) == 0 || !n.settles() && (n.box == nil || len(n.ins) == 0) {
+		return nil
+	}
+	var over []headRoom
+	for c := n.cl; c >= 0; c = gr.out.clusters[c].parent {
+		if h, ok := gr.heads[c]; ok && gr.nodes[h.left].rank == n.rank {
+			over = append(over, h)
+		}
+	}
+	return over
+}
+
+// headFloor is how far left node i may stand for the headings over it. settle keeps to it by bounds and widen.
+func (gr *group) headFloor(i int) float64 {
+	lo := math.Inf(-1)
+	for _, h := range gr.headsOver(i) {
+		lo = max(lo, gr.nodes[h.left].x+h.clear())
+	}
+	return lo
+}
+
+// packArcs are the constraints of pack among its slots: each node past the one before it in its rank, what a line
+// reaches from above past the headings over it, and each group's right mark past its heading.
+func (gr *group) packArcs(n int, at map[int]int, slot func(int) int) (next [][]packArc, into []int) {
+	next = make([][]packArc, n+2*len(gr.cls))
+	into = make([]int, len(next))
+	arc := func(from, to int, by float64) {
+		next[from] = append(next[from], packArc{to, by})
+		into[to]++
+	}
+	for _, rank := range gr.ranks {
+		for k := 1; k < len(rank); k++ {
+			arc(slot(rank[k-1]), slot(rank[k]), gr.room(rank[k-1])+gr.gap(rank[k-1], rank[k]))
+		}
+	}
+	for i := range gr.nodes {
+		for _, h := range gr.headsOver(i) {
+			arc(slot(h.left), slot(i), h.clear())
+		}
+	}
+	for _, c := range gr.cls {
+		if h, ok := gr.heads[c]; ok {
+			arc(slot(h.left), n+2*at[c]+1, h.w+2*inEnd)
+		}
+	}
+	return next, into
 }
 
 // wanted is how far right each point at the graph's top, outside every group, should stand when packed again, so

@@ -186,6 +186,7 @@ func (gr *group) pullOne(r, i int, down bool) bool {
 		o := gr.nodes[beside[at+1]]
 		hi = onGrid(o.x-gr.gap(i, beside[at+1])-n.w, 6, math.Floor)
 	}
+	lo = max(lo, onGrid(gr.headFloor(i), 6, math.Ceil))
 	x := min(max(onGrid(want-n.w/2, 6, math.Round), lo), hi)
 	if x == n.x {
 		return false

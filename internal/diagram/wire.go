@@ -293,6 +293,9 @@ func (gr *group) widen(rank []int, k int, lo, hi float64) {
 		p := before[len(before)-1]
 		lo = gr.nodes[p].x + gr.nodes[p].w + gr.gap(p, v)
 	}
+	// LIMIT: only a group built by hand reaches this: widened for each link in turn, a box could draw its links under a
+	// heading. No random graph has. Drop it if widen comes to look at more than one link.
+	lo = max(lo, gr.headFloor(v))
 	if after := rank[k+1:]; len(after) > 0 {
 		hi = gr.nodes[after[0]].x - gr.gap(v, after[0])
 	}
@@ -349,7 +352,7 @@ func (gr *group) bounds(r, k, last int, right float64) (lo, hi float64) {
 		p := rank[prev]
 		between := gr.boxesOf(rank[prev+1 : k])
 		for _, b := range between {
-			at = onGrid(at+gr.gap(p, b), 6, math.Ceil) + gr.nodes[b].w
+			at = max(onGrid(at+gr.gap(p, b), 6, math.Ceil), onGrid(gr.headFloor(b), 6, math.Ceil)) + gr.nodes[b].w
 			p = b
 		}
 		lo = at + gr.gap(p, v)
@@ -357,6 +360,7 @@ func (gr *group) bounds(r, k, last int, right float64) (lo, hi float64) {
 			lo = onGrid(lo, 6, math.Ceil)
 		}
 	}
+	lo = max(lo, gr.headFloor(v))
 	hi = math.Inf(1)
 	for j := k + 1; j < len(rank); j++ {
 		if !gr.nodes[rank[j]].rigid() {
