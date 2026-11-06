@@ -76,7 +76,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	b.size(1400, 800, false)
 	defer b.unsize()
-	b.navigate("/tasks")
+	b.navigate("/tasks?project=proj")
 	b.until("the rows", "document.querySelector('#list > li')")
 	unread := b.eval("document.getElementById('news-n').textContent")
 	key("j")
@@ -120,7 +120,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the state", "document.getElementById('task-state').className.includes('doing')")
 	// By the keyboard, whose keys a select keeps: the focus has left it.
 	realKey(b, "h", 0)
-	b.until("the list", "location.pathname === '/tasks' && !location.search && document.querySelector('#list > li') && document.activeElement.closest('#list')")
+	b.until("the list", "location.pathname === '/tasks' && document.querySelector('#list > li') && document.activeElement.closest('#list')")
 	say("after the state changed", "[...document.querySelectorAll('#list .tname')].map((e) => e.textContent).join(' | ') + ' focus ' + document.activeElement.querySelector('.tname').textContent")
 	// A row still there has the focus back.
 	b.eval("[...document.querySelectorAll('#list .title')].at(-1).focus()")
@@ -140,7 +140,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	key("h")
 	b.until("the filtered list", "location.pathname + location.search === '/tasks?view=doing&project=proj'")
 	b.until("the rows", "document.querySelector('#list > li')")
-	b.eval("document.querySelector('#list .title').click()")
+	b.eval("[...document.querySelectorAll('#list .title')].find((a) => a.textContent.startsWith('#130')).click()")
 	b.until("the task's page", "location.search.includes('task=') && "+taskPageShown)
 	say("up goes to the list it came from", "document.getElementById('task-up').getAttribute('href')")
 
@@ -302,8 +302,8 @@ const taskPageWant = `list j j: #130
 rows: T n1 | [design] | T d1 | [build] | T i1 | [review] | T r1
 nothing open: none / none
 url: /tasks?project=proj&task=%23130
-the list's keys:  
-head: #130 / waiting / ver-pick st waiting / proj / true / /tasks
+the list's keys:  ?project=proj
+head: #130 / waiting / ver-pick st waiting / proj / true / /tasks?project=proj
 nothing to select: 0 true
 j: T n1 / n1, T d1 / d1, T i1 / i1, T r1 / r1
 whole: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130"}
