@@ -561,6 +561,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a diagram refusing an edge's label on a run it shares with another edge written by hand, as where two edges
+  join at one part or part from one. Such an edge is no longer told as running through the label, when it runs on
+  exactly the same line from side to side of the label; `edge b→c runs through label "SQL"` stays for any other edge.
 - Fix a page nested past 512 open elements crashing `floe render` and `floe check`, and cutting the connection (`EOF`)
   in `floe publish`, `floe rebuild`, opening a linked data file and downloading a page. It is now refused with
   `html: open stack of elements exceeds 512 nodes`, at the data file, or at the value of a diagram's `raw` that goes that

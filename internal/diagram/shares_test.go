@@ -468,3 +468,128 @@ func TestEdgeStraight(t *testing.T) {
 		})
 	}
 }
+
+// An edge written by hand may run through the label of another with an end at one part, on one line from side to side
+// of it; any other run through a label is told.
+func TestEdgeSharedLabel(t *testing.T) {
+	t.Parallel()
+	const (
+		abc = "  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }\n  - box: { name: b, x: 20, y: 120, w: 60, h: 30, rows: [b] }\n" +
+			"  - box: { name: c, x: 300, y: 70, w: 60, h: 30, rows: [c] }\n"
+		via   = "via: [[120, 135], [120, 85]]"
+		ac    = abc + "  - edge: { from: a, to: c, fromSide: right, toSide: left, via: [[120, 35], [120, 85]], label: L, at: [200, 85] }\n"
+		joins = ac + "  - edge: { from: b, to: c, fromSide: right, toSide: left, " + via + " }\n"
+		told  = "runs through label \"L\""
+		bc    = "edge b→c " + told
+	)
+	for _, c := range []struct {
+		name, parts, want, refused string
+	}{
+		{name: "joining", parts: joins, want: "edge a→c M80,35 H120 V85 H300\nedge b→c M80,135 H120 V85 H300"},
+		{
+			name: "the label's edge has no via",
+			parts: "  - box: { name: a, x: 20, y: 70, w: 60, h: 30, rows: [a] }\n  - box: { name: b, x: 20, y: 120, w: 60, h: 30, rows: [b] }\n" +
+				"  - box: { name: c, x: 300, y: 70, w: 60, h: 30, rows: [c] }\n  - edge: { from: a, to: c, fromSide: right, toSide: left, label: L, at: [200, 85] }\n" +
+				"  - edge: { from: b, to: c, fromSide: right, toSide: left, " + via + " }\n",
+			want: "edge a→c M80,85 H300\nedge b→c M80,135 H120 V85 H300",
+		},
+		{
+			name: "parting",
+			parts: abc + "  - edge: { from: c, to: a, fromSide: left, toSide: right, via: [[120, 85], [120, 35]], label: L, at: [200, 85] }\n" +
+				"  - edge: { from: c, to: b, fromSide: left, toSide: right, via: [[120, 85], [120, 135]] }\n",
+			want: "edge c→a M300,85 H120 V35 H80\nedge c→b M300,85 H120 V135 H80",
+		},
+		{
+			name: "down",
+			parts: "  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }\n  - box: { name: b, x: 200, y: 20, w: 60, h: 30, rows: [b] }\n" +
+				"  - box: { name: c, x: 110, y: 200, w: 60, h: 30, rows: [c] }\n  - edge: { from: a, to: c, fromSide: right, toSide: top, via: [[140, 35]], label: L, at: [140, 130] }\n" +
+				"  - edge: { from: b, to: c, fromSide: left, toSide: top, via: [[140, 35]] }\n",
+			want: "edge a→c M80,35 H140 V200\nedge b→c M200,35 H140 V200",
+		},
+		{
+			name: "no via: they part, and meet no label",
+			parts: abc + "  - edge: { from: a, to: c, fromSide: right, toSide: left, label: L, at: [200, 40] }\n" +
+				"  - edge: { from: b, to: c, fromSide: right, toSide: left }\n",
+			want: "edge a→c M80,35 H190 V80 H300\nedge b→c M80,135 H190 V90 H300",
+		},
+		{
+			name: "two labels apart on one run",
+			parts: abc + "  - edge: { from: a, to: c, fromSide: right, toSide: left, via: [[120, 35], [120, 85]], label: L, at: [160, 85] }\n" +
+				"  - edge: { from: b, to: c, fromSide: right, toSide: left, " + via + ", label: M, at: [260, 85] }\n",
+			refused: bc,
+		},
+		{name: "half off the line", parts: ac + "  - edge: { from: b, to: c, fromSide: right, toSide: left, via: [[120, 135], [120, 85.5], [280, 85.5], [280, 85]] }\n", refused: bc},
+		{name: "an edge with no part in common", parts: abc + "  - box: { name: d, x: 300, y: 170, w: 60, h: 30, rows: [d] }\n  - edge: { from: a, to: c, fromSide: right, toSide: left, via: [[120, 35], [120, 85]], label: L, at: [200, 85] }\n  - edge: { from: b, to: d, fromSide: right, toSide: left, via: [[120, 135], [120, 85], [260, 85], [260, 185]] }\n", refused: "edge b→d " + told},
+		{name: "ending at points", parts: ac + "  - edge: { from: [130, 85], to: [270, 85] }\n", refused: "edge [130,85]→[270,85] " + told},
+		{
+			name:    "points alike name no part",
+			parts:   "  - edge: { from: [20, 85], to: [300, 85], label: L, at: [200, 85] }\n  - edge: { from: [30, 85], to: [290, 85] }\n",
+			refused: "edge [30,85]→[290,85] " + told,
+		},
+		{
+			name: "one going to the part the other comes from",
+			parts: abc + "  - edge: { from: a, to: c, fromSide: right, toSide: left, via: [[120, 35], [120, 85]], label: L, at: [200, 85] }\n" +
+				"  - edge: { from: c, to: b, fromSide: left, toSide: right, via: [[120, 85], [120, 135]] }\n",
+			refused: "edge c→b " + told,
+		},
+		{
+			name:  "ending off the label by the longest marker",
+			parts: ac + "  - edge: { from: a, to: [233, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n",
+			want:  "edge a→c M80,35 H120 V85 H300\nedge a→[233,85] M80,35 H120 V85 H233",
+		},
+		{
+			name: "turning beside the label",
+			parts: abc + "  - edge: { from: a, to: c, fromSide: right, toSide: left, via: [[120, 35], [120, 85]], label: L, at: [130, 85] }\n" +
+				"  - edge: { from: b, to: c, fromSide: right, toSide: left, " + via + " }\n",
+			want: "edge a→c M80,35 H120 V85 H300\nedge b→c M80,135 H120 V85 H300",
+		},
+		{name: "ending short of the longest marker", parts: ac + "  - edge: { from: a, to: [232, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n", refused: told},
+		{name: "starting short of the longest marker", parts: ac + "  - edge: { from: [170, 85], to: c, toSide: left }\n", refused: told},
+		{name: "its arrow part hidden", parts: ac + "  - edge: { from: a, to: [209, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n", refused: told},
+		{name: "ending just inside", parts: ac + "  - edge: { from: a, to: [208, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n", refused: told},
+		{name: "starting just inside", parts: ac + "  - edge: { from: [192, 85], to: c, toSide: left }\n", refused: told},
+		{name: "slanting off the line", parts: ac + "  - edge: { from: [120, 85], to: c, toSide: bottom, straight: true }\n", refused: told},
+		{name: "its arrow hidden", parts: ac + "  - edge: { from: a, to: [200, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n", refused: told},
+		{name: "its start hidden", parts: ac + "  - edge: { from: [200, 85], to: c, toSide: left }\n", refused: told},
+		{name: "wholly hidden", parts: ac + "  - edge: { from: [195, 85], to: [205, 85] }\n", refused: told},
+		{name: "turning in the label", parts: ac + "  - edge: { from: b, to: c, fromSide: right, toSide: left, via: [[200, 135], [200, 85]] }\n", refused: bc},
+		{
+			name: "slanting",
+			parts: "  - box: { name: a, x: 20, y: 20, w: 60, h: 30, rows: [a] }\n  - box: { name: c, x: 200, y: 200, w: 60, h: 30, rows: [c] }\n" +
+				"  - edge: { from: a, to: c, straight: true, label: L }\n  - edge: { from: a, to: c, straight: true }\n",
+			refused: "edge a→c " + told,
+		},
+		{
+			name: "over a point of the label's edge's via",
+			parts: abc + "  - edge: { from: a, to: c, fromSide: right, toSide: left, via: [[120, 35], [120, 85], [200, 85]], label: L, at: [200, 85] }\n" +
+				"  - edge: { from: b, to: c, fromSide: right, toSide: left, " + via + " }\n",
+			refused: bc,
+		},
+		{
+			name: "the label's edge moved off",
+			parts: abc + "  - box: { name: d, x: 20, y: 200, w: 60, h: 30, rows: [d] }\n  - edge: { from: a, to: c, fromSide: right, toSide: left, label: L, at: [200, 85] }\n" +
+				"  - edge: { from: b, to: c, fromSide: right, toSide: left, " + via + " }\n  - edge: { from: d, to: c, fromSide: right, toSide: left }\n",
+			refused: bc,
+		},
+		{
+			name: "on a graph's edge",
+			parts: "  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n" +
+				"      edges:\n        - { from: a, to: b, label: L }\n  - edge: { from: a, to: b, fromSide: bottom, toSide: top }\n",
+			refused: "edge a→b " + told,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			got, said := edgesOf(t, c.parts)
+			if c.refused != "" {
+				if !strings.Contains(said, c.refused) {
+					t.Errorf("%s\n  told %q\n  want %q", c.parts, said, c.refused)
+				}
+				return
+			}
+			if got != c.want || said != "" {
+				t.Errorf("%s\n  drew\n%s\n%s\n  want\n%s", c.parts, got, said, c.want)
+			}
+		})
+	}
+}

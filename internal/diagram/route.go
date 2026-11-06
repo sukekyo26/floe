@@ -600,7 +600,10 @@ func (l *layout) addEdge(e *edge, at string) {
 		})
 	}
 	l.edgeEls = append(l.edgeEls, el)
-	p := path{segs: segs, what: who, at: at, own: -1, crossing: e.Crossing, graph: e.graph}
+	p := path{
+		segs: segs, what: who, at: at, own: -1, crossing: e.Crossing, graph: e.graph,
+		ends: [2]string{e.From.Name, e.To.Name},
+	}
 	if e.Label != nil {
 		x, y := middle(segs)
 		if e.At != nil {
@@ -669,6 +672,15 @@ func markLength(kind string) float64 {
 		}
 	}
 	return 0
+}
+
+// longestMark is the length of the longest marker.
+func longestMark() float64 {
+	longest := 0.0
+	for _, m := range markers {
+		longest = max(longest, m.W)
+	}
+	return longest
 }
 
 // loose is a run of an edge that floe places, not where it is written: the run from pts[i] to pts[i+1], across (at

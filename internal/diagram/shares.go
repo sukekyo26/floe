@@ -494,7 +494,10 @@ func (s *sharing) line(e *edge, segs []seg) path {
 	if i, ok := s.own[e]; ok {
 		own = i
 	}
-	return path{segs: segs, what: "", at: "", own: own, crossing: e.Crossing, graph: e.graph}
+	return path{
+		segs: segs, what: "", at: "", own: own, crossing: e.Crossing, graph: e.graph,
+		ends: [2]string{e.From.Name, e.To.Name},
+	}
 }
 
 // newlyThrough reports whether e on segs runs through something it does not with its ends in the middle.
