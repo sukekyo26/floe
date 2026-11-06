@@ -288,7 +288,11 @@ func TestGraphIconsRandom(t *testing.T) {
 
 			rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
 			touching := 0
-			for i := range c.graphs {
+			graphs := c.graphs
+			if c.only == nil {
+				graphs = tries(graphs)
+			}
+			for i := range graphs {
 				g := randomGraph(rnd, c.direction)
 				if c.every {
 					for k := range g.Edges {
@@ -665,7 +669,7 @@ func TestGraphIconOffPointKeeps(t *testing.T) {
 			rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
 			opts := Options{Lang: "en", Icons: anyIcon{}, Seq: 1}
 			more, fewer := 0, 0
-			for range 400 {
+			for range tries(400) {
 				g := randomGraph(rnd, c.direction)
 				if c.every {
 					for k := range g.Edges {
