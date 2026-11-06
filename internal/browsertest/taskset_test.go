@@ -154,6 +154,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, "off, no pin: "+work("c"))
 
 	// From a page whole, which reads the tasks as it opens.
+	s.floe(t, "work", "--task", "#1", "--project", "proj", "--url", "https://example.com/a/whole")
 	b.navigate("/a/b/")
 	b.until("the bar", "document.querySelector('#frame-actions .task-set')")
 	b.eval("document.querySelector('#frame-actions .more').open = true; document.querySelector('#frame-actions .task-set').click()")
@@ -194,5 +195,5 @@ saved again: {"task":"#2","step":"review"}
 off: {"pin":true}
 #1 doing design ; #2 doing review ; #3 doing first 
 off, no pin: null
-whole: #1 / design /  / out true
+whole: #1 / design / https://example.com/a/whole / out true
 on its own task: true 0`
