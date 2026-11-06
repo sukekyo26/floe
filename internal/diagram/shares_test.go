@@ -548,6 +548,7 @@ func TestEdgeSharedLabel(t *testing.T) {
 		{name: "its arrow part hidden", parts: ac + "  - edge: { from: a, to: [209, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n", refused: told},
 		{name: "ending just inside", parts: ac + "  - edge: { from: a, to: [208, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n", refused: told},
 		{name: "starting just inside", parts: ac + "  - edge: { from: [192, 85], to: c, toSide: left }\n", refused: told},
+		{name: "slanting off the line", parts: ac + "  - edge: { from: [120, 85], to: c, toSide: bottom, straight: true }\n", refused: told},
 		{name: "its arrow hidden", parts: ac + "  - edge: { from: a, to: [200, 85], fromSide: right, via: [[120, 35], [120, 85]] }\n", refused: told},
 		{name: "its start hidden", parts: ac + "  - edge: { from: [200, 85], to: c, toSide: left }\n", refused: told},
 		{name: "wholly hidden", parts: ac + "  - edge: { from: [195, 85], to: [205, 85] }\n", refused: told},

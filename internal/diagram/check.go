@@ -138,9 +138,9 @@ func (l *layout) throughs(p path) []rect {
 }
 
 // sharesLabel reports whether p may run through r: r is the label of another edge written by hand, the two go to one
-// part named alike or come from one, p's ends stand off r, and wherever p meets r both run on one line from side to
-// side of it, unless the other edge's runs meet a label of p, when neither label could be told from the other. Only
-// the final check asks: an edge floe moves still keeps off every label.
+// part named alike or come from one, p's ends stand off r, and all of p in r lies on a run of the other from side to
+// side of r, unless the other edge's runs meet a label of p, when neither label could be told from the other. Only the
+// final check asks: an edge floe moves still keeps off every label.
 // LIMIT: the label of a shared run reads as either edge's, as its writer asked. Refuse it if that comes to mislead.
 // LIMIT: edges from one part that meet, share a run and part again pass too, though no join or parting. Refuse them if
 // their labels come to mislead.
@@ -162,7 +162,7 @@ func (l *layout) sharesLabel(p path, r rect) bool {
 		return false
 	}
 	return p.endsOff(r) && !slices.ContainsFunc(p.segs, func(s seg) bool {
-		return crossedBy(s, r) && !slices.ContainsFunc(own.segs, func(o seg) bool { return alongAcross(s, o, r) })
+		return crossedBy(s, r) && !slices.ContainsFunc(own.segs, func(o seg) bool { return onOwnRun(s, o, r) })
 	})
 }
 
@@ -171,19 +171,15 @@ func (p path) sameWay(q path) bool {
 	return (p.ends[0] != "" && p.ends[0] == q.ends[0]) || (p.ends[1] != "" && p.ends[1] == q.ends[1])
 }
 
-// alongAcross reports whether s and o lie on one line, s from side to side of r, turns outside it, and o too as crossedBy
-// measures it.
-func alongAcross(s, o seg, r rect) bool {
+// onOwnRun reports whether s and o lie on one line across or down, o from side to side of r as crossedBy measures it.
+func onOwnRun(s, o seg, r rect) bool {
 	a := runAlong(s)
 	start, size := r.x, r.w
 	if a == 1 {
 		start, size = r.y, r.h
 	}
-	across := func(q seg, past float64) bool {
-		return q[1-a] == s[1-a] && q[3-a] == s[1-a] &&
-			min(q[a], q[a+2]) <= start-past && max(q[a], q[a+2]) >= start+size+past
-	}
-	return across(s, 0) && across(o, -1)
+	return s[3-a] == s[1-a] && o[1-a] == s[1-a] && o[3-a] == s[1-a] &&
+		min(o[a], o[a+2]) <= start+1 && max(o[a], o[a+2]) >= start+size-1
 }
 
 // endsOff reports whether p's two ends stand off r by the longest marker's length, so that no marker hides behind it.
