@@ -1,1 +1,1 @@
-<figure data-floe-part="image"><img src="{{.file}}" alt="{{.alt}}"></figure>
+<figure data-floe-part="image">{{zoom}}<div class="floe-zoom"><img src="{{.file}}" alt="{{.alt}}"></div>{{with .caption}}<figcaption>{{markdownLine .}}</figcaption>{{end}}</figure>

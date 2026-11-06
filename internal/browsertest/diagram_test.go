@@ -31,7 +31,7 @@ pic: { width: 300, height: 100, title: p, parts: [ { box: { x: 20, y: 20, w: 120
 `
 
 // measureDiagrams returns a line for each diagram whose toolbar is not 0.4rem above its frame, or whose frame and
-// toolbar part.css does not reach: they are found from the SVG, not by the classes Go gives them, which part.css
+// toolbar part.css does not reach, and one for each drawn no smaller than its actual size, which offers no zoom: they are found from the SVG, not by the classes Go gives them, which part.css
 // writes by hand.
 const measureDiagrams = `(() => {
   const out = [];
@@ -41,6 +41,12 @@ const measureDiagrams = `(() => {
     const box = wrap.closest('[data-floe-part="diagram"]');
     const name = box.parentElement.closest('[data-floe-part]')?.dataset.floePart ?? 'page';
     const tools = wrap.previousElementSibling;
+    if (tools.hidden) {
+      const offers = getComputedStyle(tools).display !== 'none' || wrap.hasAttribute('role') || wrap.hasAttribute('aria-label') ||
+        wrap.tabIndex !== -1 || getComputedStyle(wrap).touchAction !== 'auto';
+      out.push(name + (offers ? ': a hidden toolbar shows, or its frame still offers to zoom' : ': no toolbar'));
+      continue;
+    }
     if (getComputedStyle(wrap).overflow !== 'hidden' || getComputedStyle(tools).display !== 'flex') {
       out.push(name + ': part.css does not reach the frame (' + wrap.className + ') or the toolbar (' + tools.className + ')');
     }
@@ -52,8 +58,9 @@ const measureDiagrams = `(() => {
   return out.join('\n');
 })()`
 
-// TestUIDiagram draws a diagram of a template and one in a part of one's own, wide and as wide as a phone: each
-// has its toolbar a little above its frame, not over it, and part.css reaches both.
+// TestUIDiagram draws a diagram of a template and one in a part of one's own, wide and as wide as a phone: the
+// template's, drawn smaller than its actual size, has its toolbar a little above its frame, not over it, and the look
+// zoom reaches both; the part's, drawn no smaller, has none and does not offer to zoom.
 func TestUIDiagram(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -66,9 +73,20 @@ func TestUIDiagram(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		b.size(size.width, size.height, size.mobile)
 		b.navigate("/a/diagrams/?raw")
 		b.until("the toolbars", "[...document.querySelectorAll('svg.dg')].filter((s) => s.parentElement.previousElementSibling).length === 2")
-		if got := b.eval(measureDiagrams); got != "" {
+		// pic, 300 px wide, is drawn at its actual size or larger at both
+		if got := b.eval(measureDiagrams); got != "pic: no toolbar" {
 			t.Errorf("at %d px:\n  %s", size.width, strings.ReplaceAll(got, "\n", "\n  "))
 		}
+	}
+	// A diagram as wide as the body is not shrunk by its frame's line, which the diagram is drawn inside
+	s.floe(t, "publish", s.write(t, "wide.yaml", "lang: en\ntemplate: mine\ntitle: Wide\n"+
+		"plain: { width: 740, height: 60, title: w, parts: [ { box: { x: 20, y: 5, w: 120, h: 50, rows: [wide] } } ] }\n"+
+		"pic: { width: 300, height: 100, title: p, parts: [ { box: { x: 20, y: 20, w: 120, h: 50, rows: [pic] } } ] }\n"), "--slug", "wide")
+	b.size(756, 900, false)
+	b.navigate("/a/wide/?raw")
+	b.until("the frames set up", "document.querySelectorAll('.floe-zoom[data-zoomable=on]').length === 2")
+	if got := b.eval(measureDiagrams); got != "page: no toolbar\npic: no toolbar" {
+		t.Errorf("a diagram as wide as the body:\n  %s", strings.ReplaceAll(got, "\n", "\n  "))
 	}
 }
 
@@ -95,7 +113,7 @@ sections:
 // (the button that fits it disabled) and zoomed.
 func folded(part string) string {
 	return `(() => {
-  const w = document.querySelector('[data-floe-part=` + part + `] .dg-wrap');
+  const w = document.querySelector('[data-floe-part=` + part + `] .floe-zoom');
   const fit = w.previousElementSibling.querySelector('[data-zoom=fit]');
   return w.querySelector('svg').getAttribute('viewBox') + ' ' + (w.clientWidth > 0 && w.clientHeight > 0 ? 'sized' : 'unsized') +
     (fit.disabled ? ' fitted' : '') + (w.classList.contains('zoomed') ? ' zoomed' : '');
@@ -113,7 +131,7 @@ func TestUIDiagramInTabs(t *testing.T) { //nolint:paralleltest // the browser te
 	b := s.b
 	s.floe(t, "publish", s.write(t, "tabs.yaml", tabsPage), "--slug", "tabs")
 	b.navigate("/a/tabs/?raw")
-	b.until("the toolbars", "document.querySelectorAll('.dg-tools').length === 2")
+	b.until("the toolbars", "document.querySelectorAll('.floe-zoom-tools').length === 2")
 	if got := b.eval(folded("tabs")); got != "0 0 600 200 unsized" {
 		t.Errorf("hidden: %s, want 0 0 600 200 unsized", got)
 	}
@@ -159,11 +177,11 @@ func diagramColours(root string) string {
     const cs = getComputedStyle(e);
     out.push(sel + ' ' + i + ': ' + props.map((p) => cs.getPropertyValue(p)).join(' '));
   });
-  read('.dg-wrap', ['border-top-color', 'background-color', 'color']);
+  read('.floe-zoom', ['border-top-color', 'background-color', 'color']);
   read('.dg', ['font-family']);
   read('.dg *', ['fill', 'stroke']);
-  read('.dg-tools span', ['color']);
-  read('.dg-tools button', ['color', 'background-color', 'border-top-color']);
+  read('.floe-zoom-tools span', ['color']);
+  read('.floe-zoom-tools button', ['color', 'background-color', 'border-top-color']);
   return out.join('\n');
 })(` + root + `)`
 }
@@ -217,7 +235,7 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 	fragment := s.floe(t, append([]string{"diagram", "render"}, specs...)...)
 	s.floe(t, "publish", s.write(t, "diagrams.yaml", data.String()), "--slug", "diagrams")
 	b.navigate("/a/diagrams/?raw")
-	b.until("the toolbars", "document.querySelectorAll('.dg-tools').length === "+strconv.Itoa(len(specs)))
+	b.until("the toolbars", "document.querySelectorAll('.floe-zoom-tools').length === "+strconv.Itoa(len(specs)))
 	if got := b.eval(unpainted); got != "" {
 		t.Errorf("shapes part.css leaves unpainted in floe's page:\n%s", got)
 	}
@@ -236,7 +254,7 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 	}
 
 	open("bare.html", "", fragment)
-	b.until("the toolbars", "document.querySelectorAll('.dg-tools').length === "+strconv.Itoa(len(specs)))
+	b.until("the toolbars", "document.querySelectorAll('.floe-zoom-tools').length === "+strconv.Itoa(len(specs)))
 	if got := b.eval(diagramColours("document")); got != want {
 		t.Errorf("in a page without a palette:\n%s\nwant, as in floe's page:\n%s", got, want)
 	}
@@ -246,7 +264,7 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 	inShadow := b.eval(diagramColours("document.getElementById('h').shadowRoot"))
 	var wantShadow []string
 	for line := range strings.Lines(want) {
-		if !strings.HasPrefix(line, ".dg-tools") { // the zoom script finds no diagram in a shadow root
+		if !strings.HasPrefix(line, ".floe-zoom-tools") { // the zoom script finds no diagram in a shadow root
 			wantShadow = append(wantShadow, strings.TrimSuffix(line, "\n"))
 		}
 	}
@@ -262,13 +280,13 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 	open("alone.html", own, `<p class="probe">p</p>`)
 	alone := b.eval(outside)
 	open("around.html", own, `<p class="probe">p</p>`+fragment)
-	b.until("the toolbar", "document.querySelector('.dg-tools')")
+	b.until("the toolbar", "document.querySelector('.floe-zoom-tools')")
 	if got := b.eval(outside); got != alone {
 		t.Errorf("outside the diagram: %s, want %s, as without it", got, alone)
 	}
 
 	const accent = "rgb(1, 2, 3)"
-	rule := "<style>.dg-tools, .dg-wrap { --accent: " + accent + "; }</style>"
+	rule := "<style>.floe-zoom-tools, .floe-zoom { --accent: " + accent + "; }</style>"
 	stroke := "getComputedStyle(document.querySelector('.dg .box[data-floe-tone=accent] rect')).stroke"
 	for _, page := range []struct{ name, head, body string }{
 		{"before.html", rule, fragment},
@@ -431,7 +449,7 @@ func groundParts(n int) string {
 // with a box under more labels than its bar's.
 const measureGround = `(() => {
   const out = [];
-  document.querySelectorAll('.dg-wrap').forEach((wrap, i) => {
+  document.querySelectorAll('.floe-zoom').forEach((wrap, i) => {
     let e = wrap;
     while (e && getComputedStyle(e).backgroundColor === 'rgba(0, 0, 0, 0)' && getComputedStyle(e).backgroundImage === 'none') {
       e = e.parentElement;

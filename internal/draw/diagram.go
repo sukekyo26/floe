@@ -11,6 +11,7 @@ import (
 	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/zoom"
 )
 
 // Diagrams is the drawer of the diagrams of pages and of floe diagram: floe's part diagram's schema, compiled
@@ -47,11 +48,11 @@ func (s *items) diagramOf(d *doc.Data, it schema.Item) func() (template.HTML, er
 		if err != nil {
 			return "", err //nolint:wrapcheck // mistakes at their pointers, which draw places
 		}
-		script, err := diagram.Script()
+		script, err := zoom.Script()
 		if err != nil {
 			return "", fmt.Errorf("%w: diagram: %w", kit.ErrFunc, err)
 		}
 		//nolint:gosec // G203: drawn by diagram, its values escaped, and floe's script
-		return template.HTML(`<div data-floe-part="diagram">` + script + string(svg) + `</div>`), nil
+		return template.HTML(`<div data-floe-part="diagram">` + string(script) + string(svg) + `</div>`), nil
 	}
 }

@@ -2,7 +2,7 @@ package diagram
 
 import (
 	"cmp"
-	_ "embed" // the template and the zoom script
+	_ "embed" // the template
 	"errors"
 	"fmt"
 	"html/template"
@@ -10,20 +10,15 @@ import (
 	"math"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/sukekyo26/floe/internal/i18n"
-	"github.com/sukekyo26/floe/internal/page"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/zoom"
 )
 
-var (
-	//go:embed diagram.svg.tmpl
-	svgTemplate string
-	//go:embed assets/zoom.js
-	zoomJS string
-)
+//go:embed diagram.svg.tmpl
+var svgTemplate string
 
 // svgPage is the template of a diagram, its text written in a language as each draw binds t.
 var svgPage = template.Must(template.New("svg").Funcs(template.FuncMap{
@@ -191,7 +186,7 @@ func (l *layout) draw(lang i18n.Lang) (template.HTML, error) {
 	// tells a reader who cannot see the diagram nothing; refuse it too if such titles come up.
 	err = t.ExecuteTemplate(&b, "diagram", map[string]any{
 		"W": l.w, "H": l.h, "MaxH": math.Floor(l.h*maxScale + 0.5), "Title": l.s.Title,
-		"Markers": defs, "Icons": l.iconDefs, "Elems": elems, "Wrap": wrapClass,
+		"Markers": defs, "Icons": l.iconDefs, "Elems": elems, "Wrap": zoom.Frame,
 	})
 	if err != nil {
 		return "", fmt.Errorf("diagram: draw: %w", err)
@@ -273,33 +268,4 @@ func segsData(segs []seg) string {
 		pts = append(pts, [2]float64{s[2], s[3]})
 	}
 	return pathData(pts)
-}
-
-// The classes of what a diagram is drawn as: its frame, which diagram.svg.tmpl writes, and its toolbar, which the
-// zoom script puts before it. part.css writes them too.
-const (
-	wrapClass  = "dg-wrap"
-	toolsClass = "dg-tools"
-)
-
-// Roots selects what a diagram is drawn as, the roots of what its CSS styles.
-const Roots = "." + toolsClass + ", ." + wrapClass
-
-// Script is the script that zooms the diagrams of a page, its toolbar worded in every language for the page's
-// <html lang> to pick from. A page may hold it more than once: a second run does nothing.
-var Script = sync.OnceValues(func() (string, error) {
-	words := map[i18n.Lang]map[string]string{}
-	for _, lang := range i18n.Langs() {
-		c := i18n.New(lang)
-		words[lang] = map[string]string{}
-		for _, k := range zoomKeys {
-			words[lang][k] = c.Msg(k)
-		}
-	}
-	return page.Script(zoomJS, map[string]any{"words": words, "wrap": wrapClass, "tools": toolsClass})
-})
-
-var zoomKeys = []string{
-	"diagram_zoom_hint", "diagram_zoom_in", "diagram_zoom_out", "diagram_zoom_fit", "diagram_zoom_fit_label",
-	"diagram_zoom_one", "diagram_zoom_one_label",
 }

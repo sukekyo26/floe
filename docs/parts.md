@@ -55,6 +55,10 @@ It has the functions floe's parts draw with too. floe's parts show them in their
 
 `{{diagram}}` takes nothing and draws the part's whole value as a diagram. The value is a spec as the part `diagram` takes it, nothing else: a key beside the spec (a `caption`) is refused by the diagram's schema.
 
+### `zoom`
+
+`{{zoom}}` draws the script that zooms, the one the parts `image` and `diagram` use. Put it in the part's box, before a frame of `class="floe-zoom"`, and take the look `zoom` in `part.yaml` (`looks: [zoom]`; `<figure data-floe-part="shot">{{zoom}}<div class="floe-zoom"><img src="{{.file}}" alt="{{.alt}}"></div></figure>`). The frame's first element is what it zooms, an `svg` or an `img` itself (an element that holds one is not moved): an `svg` by its `viewBox`, an `img` by a `transform`, its size taken from the `viewBox` or the image. The look `zoom` lays an `img` out shrunk to the frame's width (`display: block; max-width: 100%; height: auto`), so the example above, copied as it is, zooms. While zoomed, the image's line is dropped. Only while what it holds is drawn smaller than its actual size, or zoomed, is there a toolbar before the frame and a tab stop on it. The part's CSS sizes the frame. The script goes into each part that uses it, and however many times a page holds it, it sets up each frame once.
+
 ### `script`
 
 `{{script .js .data}}` draws an element, and a script that calls `.js`, a function, with it and `.data`, as the part `script` does.
@@ -93,7 +97,7 @@ Put it in the schema of the list `part.html` gives to `bars`: for `bars .items`,
 
 ## Looks and shared schemas
 
-- A look alone is a directory of a `part.css` (and a `part.yaml` with its `description:`, the looks it takes and its `marks:`), without a schema: it draws nothing, and lends its style to parts and elements that take it. floe's looks alone are `panel`, `rows`, `cards`, `band`, `numbered` and `marked` ([templates.md](templates.md#looks-to-borrow) tells what each draws).
+- A look alone is a directory of a `part.css` (and a `part.yaml` with its `description:`, the looks it takes and its `marks:`), without a schema: it draws nothing, and lends its style to parts and elements that take it. floe's looks alone are `panel`, `rows`, `cards`, `band`, `numbered`, `marked` and `zoom` ([templates.md](templates.md#looks-to-borrow) tells what each but `zoom` draws; `zoom` is the frame that zooms and its toolbar, which a part takes with the function [`zoom`](#zoom)).
 - A part takes the looks of others by its `part.yaml`, `looks: [panel]`, and the looks those take in turn, each before it, which it adjusts.
 - A part's or look's `part.yaml` tells by `marks:` which of its elements are rows with a mark at their left, which floe lays out: `box` (a part's box; a look's element that takes it, and the box of a part that takes it), `items` (each `li` child of that, alone: a row of `div`s takes no mark) or `joined` (`items`, a line running from each mark to the next). One of a part or look and the looks it takes, theirs too, writes `marks:`; `floe part check` refuses a second. A look that takes one (`looks: [numbered]`) makes rows of the elements that take it. Do not give one element two of them in HTML (`data-floe-look="numbered marked"`, or a box of `links` that takes `marked`): both rules reach its rows, and that is not refused.
 - A shared schema is a `<name>.json` a template's or a part's schema names (`floe:///parts/<name>.json`), always at its root. floe's are `tone.json` (`accent`, `good`, `warn`, `bad`, `muted`) and `any.json` (a part of any kind). Its schemas are checked as a template's are, from its own root: a part or a format of floe's it holds is drawn where `properties` and `items` reach it from there, in a template's page or a part's alike.
