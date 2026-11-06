@@ -251,8 +251,8 @@ func stepsOf(steps []string) []string {
 	return kept
 }
 
-// pastedURL is a URL with the spaces round it gone, as one pasted has them. Of spaces alone it stays, as checkTaskEdit refuses it: "" is
-// what takes a URL off.
+// pastedURL is a URL with the spaces round it gone, as one pasted has them. Of spaces alone it stays, as checkTaskEdit
+// refuses it: "" is what takes a URL off.
 func pastedURL(raw *string) *string {
 	if raw == nil || strings.TrimSpace(*raw) == "" {
 		return raw
