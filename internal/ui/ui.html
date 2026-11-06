@@ -861,6 +861,8 @@
   .kin-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   li .kin-title { max-width: 11rem; }
   .family { display: grid; gap: 0.1rem; margin: 0.35rem -1rem -0.65rem; padding: 0.35rem 1rem 0.5rem; border-top: 1px solid var(--line); }
+  .family-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .family-head .btn { min-height: 0; padding: 0.15rem 0.6rem; font-size: var(--text-small); }
   .family h3 { margin: 0 0 0.15rem; font: 700 var(--text-small)/1.4 var(--body); color: var(--muted); }
   .kin-row { display: flex; align-items: center; gap: 0.45rem; min-height: 1.9rem; color: var(--fg); font-size: var(--text-small); text-decoration: none; }
   .kin-row:hover { text-decoration: underline; }
@@ -998,7 +1000,10 @@
           <span id="task-link"></span>
           <span class="proj" id="task-project"></span>
         </div>
-        <div class="family" id="task-family" hidden></div>
+        <div class="family" id="task-family" hidden>
+          <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="btn" id="task-child" hidden>{{.Msg "ui_task_child_add"}}</button></div>
+          <div class="family-rows" id="task-family-rows"></div>
+        </div>
       </div>
       <div class="pins" id="pins" hidden><h2>{{.Msg "ui_pins"}}</h2><button type="button" class="icon-btn pins-help" id="pins-help" popovertarget="pins-tip" aria-label="{{.Msg "ui_pins_help"}}" title="{{.Msg "ui_pins_help"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg></button><span id="pin-list"></span></div>
       <!-- In the top layer: a narrow screen's row of pins scrolls, and would cut it off -->
@@ -1228,6 +1233,28 @@
       <button type="button" class="btn set-out" id="set-out">{{.Msg "ui_task_out"}}</button>
       <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
       <button type="submit" class="btn primary" id="set-submit">{{.Msg "ui_save"}}</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="child-dialog" aria-labelledby="child-heading">
+  <form class="modal-body" id="child">
+    <div class="modal-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <div>
+        <h2 id="child-heading">{{.Msg "ui_task_child_make"}}</h2>
+        <p class="lead" id="child-target"></p>
+      </div>
+    </div>
+    <label class="field">{{.Msg "ui_task_name"}}
+      <input class="text" id="child-task" required autocomplete="off" spellcheck="false">
+    </label>
+    <label class="field"><span>{{.Msg "ui_task_child_title"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <input class="text" id="child-title" autocomplete="off">
+    </label>
+    <p class="error" id="child-error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
+      <button type="submit" class="btn primary" id="child-submit">{{.Msg "ui_save"}}</button>
     </div>
   </form>
 </dialog>
@@ -3409,11 +3436,16 @@
   function drawTaskFamily(task) {
     const viewAt = (x) => VIEWS.indexOf(taskView(x));
     const kin = task.parentTask ? [task.parentTask] : [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(STATES.find((s) => s.name === taskView(x))?.oldest)(x, y));
-    const heading = task.parentTask ? t('ui_task_parent') : t('ui_task_kids_head', kin.length);
-    const said = JSON.stringify([heading, ...kin.map((x) => [x.name, x.title, taskView(x), unreadOf(x) > 0])]);
+    const heading = task.parentTask ? t('ui_task_parent') : kin.length > 0 ? t('ui_task_kids_head', kin.length) : t('ui_task_kids_word');
+    // A task with a parent written, even one that makes no family, cannot be a parent, as the store's checkParent says
+    $('task-child').hidden = Boolean(task.parent);
+    $('task-child').onclick = () => openChildTask(task);
+    $('task-family').hidden = kin.length === 0 && Boolean(task.parent);
+    $('task-family-word').textContent = heading;
+    const said = JSON.stringify(kin.map((x) => [x.name, x.title, taskView(x), unreadOf(x) > 0]));
     if (said === familyDrawn) return;
     familyDrawn = said;
-    const box = $('task-family');
+    const box = $('task-family-rows');
     const focused = box.contains(document.activeElement) ? document.activeElement.dataset.task : null;
     const rows = kin.map((x) => {
       const link = tagged('a', 'kin-row');
@@ -3423,9 +3455,39 @@
       link.append(tagged('span', unreadOf(x) > 0 ? 'dot' : 'ring'), tagged('span', 'tname', x.name), tagged('span', 'kin-title', x.title ?? ''), tagged('span', `kid-state ${taskView(x)}`, t(VIEW_WORDS[taskView(x)])));
       return link;
     });
-    box.hidden = kin.length === 0;
-    box.replaceChildren(...(kin.length > 0 ? [tagged('h3', '', heading), ...rows] : []));
+    box.replaceChildren(...rows);
     rows.find((link) => link.dataset.task === focused)?.focus();
+  }
+
+  // A new task under this one. It takes a task's own write: the store says what may be a child
+  // LIMIT: a name that is a task already is made this one's child, its title replaced if one is written: what floe work --parent does
+  function openChildTask(task) {
+    $('child').reset();
+    $('child-target').textContent = t('ui_task_child_of', [task.name, task.title].filter(Boolean).join(' '));
+    $('child-error').hidden = true;
+    $('child-dialog').showModal();
+  }
+  async function saveChildTask(e) {
+    e.preventDefault();
+    const btn = $('child-submit');
+    btn.disabled = true;
+    const name = $('child-task').value.trim();
+    const title = $('child-title').value.trim();
+    try {
+      const url = `/api/tasks?${new URLSearchParams({ project, task: name })}`;
+      const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parent: TASK_NAME, ...(title ? { title } : {}) }) });
+      if (!res.ok) throw new Error(await res.text());
+      const to = tagged('a', 'toast-link', t('ui_task_child_made', name));
+      to.href = taskHref({ project, name });
+      toast('', { ms: 8000, button: to });
+      await load();
+      $('child-dialog').close();
+    } catch (err) {
+      $('child-error').textContent = t('ui_save_failed', err.message);
+      $('child-error').hidden = false;
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   // Archives the task's pages, or gives them back: the mark of each page, as floe archive writes it, and nothing of the task
@@ -4816,6 +4878,7 @@
   $('edit-dialog').addEventListener('close', () => editBack?.()?.focus());
   suggestTags($('edit-tags'));
   $('set').addEventListener('submit', saveTaskSet);
+  $('child').addEventListener('submit', saveChildTask);
   $('set-out').addEventListener('click', takeOffTask);
   $('set-dialog').addEventListener('close', () => setBack?.()?.focus());
   $('set-task').addEventListener('input', setTaskChanged);

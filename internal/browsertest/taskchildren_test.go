@@ -124,9 +124,61 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	task("proj", "#99", "--title", "no page, no child")
 	open("#99")
-	if got := b.eval("[document.getElementById('task-forget').parentElement.hidden, document.getElementById('task-none-kids').hidden, document.getElementById('task-family').hidden].join(' ')"); got != "false true true" {
+	if got := b.eval("[document.getElementById('task-forget').parentElement.hidden, document.getElementById('task-none-kids').hidden, document.getElementById('task-family').hidden].join(' ')"); got != "false true false" {
 		t.Errorf("no page, no child: %q", got)
 	}
+
+	// A child made from a task's page, of no page: it stays there, with the new row and a way to it; of a task with a
+	// parent there is no way, and one that comes to have one meanwhile is refused in the dialog.
+	const adds = "document.getElementById('task-child').hidden + ''"
+	openChild := func() {
+		t.Helper()
+		b.eval("document.getElementById('task-child').click()")
+		b.until("the dialog", "document.getElementById('child-dialog').open")
+	}
+	child := func(name, title string) {
+		t.Helper()
+		b.eval("document.getElementById('child-task').value = " + js(name) + "; document.getElementById('child-title').value = " + js(title) + "; document.getElementById('child').requestSubmit()")
+	}
+	open("#99")
+	if got := b.eval(adds); got != "false" {
+		t.Errorf("no way from a task of no page: %s", got)
+	}
+	openChild()
+	child(" #100 ", "made here")
+	b.until("saved", "!document.getElementById('child-dialog').open")
+	b.until("its row", "document.querySelector('#task-family .kin-row[data-task=\"#100\"]')")
+	if got := b.eval("new URLSearchParams(location.search).get('task') + ' ' + document.querySelector('.toast-link').textContent + ' ' + document.querySelector('.toast-link').getAttribute('href')"); got != "#99 Made the child task #100 /tasks?project=proj&task=%23100" {
+		t.Errorf("after making: %q", got)
+	}
+	made, err := st.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := made["proj"]["#100"]; got.Parent != "#99" || got.Title != "made here" || got.State != "doing" {
+		t.Errorf("made: %+v", got)
+	}
+	open("#100")
+	if got := b.eval(adds); got != "true" {
+		t.Errorf("a way from a child: %s", got)
+	}
+	task("proj", "#100", "--forget")
+	open("#99")
+	openChild()
+	task("proj", "#99", "--parent", "#1")
+	child("#101", "")
+	b.until("refused", "!document.getElementById('child-error').hidden")
+	if got := b.eval("document.getElementById('child-error').textContent + ' ' + document.getElementById('child-dialog').open"); !strings.Contains(got, "task #99 has a parent itself (#1)") || !strings.HasSuffix(got, "true") {
+		t.Errorf("refused: %q", got)
+	}
+	if made, err = st.ReadTasks(); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := made["proj"]["#101"]; ok {
+		t.Error("the refused child has a row")
+	}
+	b.eval("document.getElementById('child-dialog').close()")
+	task("proj", "#99", "--parent", "")
 
 	// Written by hand: only what the store counts is a family.
 	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
