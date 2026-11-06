@@ -309,6 +309,30 @@ func (b *browser) click(x, y float64) {
 	}
 }
 
+// clickOn presses the middle of the element expr finds, once the page says the pointer is on it: where it lies is read anew at
+// each try, as a list of choices just opened may not have come to rest under the pointer yet.
+func (b *browser) clickOn(expr string) {
+	b.t.Helper()
+
+	var r rect
+	var last string
+	var err error
+	for deadline := time.Now().Add(waitLimit); ; time.Sleep(50 * time.Millisecond) {
+		r = b.rect(expr)
+		b.point(r.X+r.Width/2, r.Y+r.Height/2)
+		on := fmt.Sprintf("(() => { const e = %s; return e.contains(document.elementFromPoint(%v, %v)) && e.matches(':hover'); })()", expr, r.X+r.Width/2, r.Y+r.Height/2)
+		if last, err = b.try(on); err == nil && truthy(last) {
+			break
+		}
+		if time.Now().After(deadline) {
+			b.t.Fatalf("timed out waiting for the pointer to reach %s at %+v: last %q, %v", expr, r, last, err)
+		}
+	}
+	if err := chromedp.Do(b.ctx, chromedp.MouseClickXY(r.X+r.Width/2, r.Y+r.Height/2)); err != nil {
+		b.t.Fatal(err)
+	}
+}
+
 // media draws this test's tab for the medium ("print", or "" for the screen) with the features (prefers-color-scheme
 // and the like), as a browser would; a call takes the place of the one before.
 func (b *browser) media(medium string, features ...*emulation.MediaFeature) {
