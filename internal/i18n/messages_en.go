@@ -248,7 +248,7 @@ var messagesEN = map[string]string{
 	"icons_too_many":           "holds over %d icons, far more than an icon package; check that it is the right file",
 	"icons_written_too_large":  "the icons in it come to over %dMB, far more than an icon package; check that it is the right file",
 	"icons_none_in_zip":        "holds no %s icons; pass the zip of the package on %s",
-	"icons_no_match":           "no icon name contains all of %s; try a shorter word",
+	"icons_no_match":           "no icon name contains all of %s; try fewer words, or a word of the full name (floe icons search aws lists them all)",
 	"icons_fetched":            "fetched %d %s icons (%s) into %s",
 	"icons_already":            "%s icons %s are already in %s (add --force to fetch them again)",
 

@@ -10,11 +10,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -299,5 +301,104 @@ func TestURLs(t *testing.T) {
 		if aws.tells(at, "01022030") != want {
 			t.Errorf("tells(%s) = %v", at, !want)
 		}
+	}
+}
+
+// A short name finds what it means first, then its resources and what holds the word, each by name; a word finds
+// nothing more than it is.
+func TestSearchShort(t *testing.T) {
+	t.Parallel()
+
+	set := New(t.TempDir(), false, "")
+	set.indexes["aws"] = &index{Version: "", Source: "", Icons: map[string]entry{
+		"amazon-simple-storage-service":            {Category: "Storage"},
+		"res/amazon-simple-storage-service-bucket": {Category: "Storage"},
+		"amazon-s3-on-outposts":                    {Category: "Storage"},
+		"aws-auto-scaling":                         {Category: "Management"},
+		"amazon-ec2-auto-scaling":                  {Category: "Compute"},
+		"res/amazon-vpc-nat-gateway":               {Category: "Networking"},
+		"res/amazon-vpc-nat-gateway-spare":         {Category: "Networking"},
+		"res/amazon-nat-other":                     {Category: "Networking"},
+		"res/zz-alb-in-its-name":                   {Category: "Networking"},
+		"amazon-other-storage-service":             {Category: "Storage"},
+	}}
+	bucket, s3 := "aws/res/amazon-simple-storage-service-bucket", "aws/amazon-simple-storage-service"
+	for _, c := range []struct {
+		name  string
+		words []string
+		want  []string
+	}{
+		{"meant first, its resources and what holds it", []string{"s3"}, []string{s3, "aws/amazon-s3-on-outposts", bucket}},
+		{"in any case", []string{"S3"}, []string{s3, "aws/amazon-s3-on-outposts", bucket}},
+		{"a resource of the service", []string{"s3", "bucket"}, []string{bucket}},
+		{"two meant, by name", []string{"asg"}, []string{"aws/amazon-ec2-auto-scaling", "aws/aws-auto-scaling"}},
+		{"meant and held, once", []string{"nat"}, []string{"aws/res/amazon-vpc-nat-gateway", "aws/res/amazon-nat-other", "aws/res/amazon-vpc-nat-gateway-spare"}},
+		{"every word holds", []string{"s3", "outposts"}, []string{"aws/amazon-s3-on-outposts"}},
+		{"one word meant is first", []string{"s3", "amazon"}, []string{s3, "aws/amazon-s3-on-outposts", bucket}},
+		{"a target not in the set", []string{"alb"}, []string{"aws/res/zz-alb-in-its-name"}},
+		{"not the whole word", []string{"aws/s3"}, nil},
+		{"part of a short name", []string{"sg"}, nil},
+	} {
+		hits, err := set.Search(c.words)
+		var got []string
+		for _, h := range hits {
+			got = append(got, h.Name)
+		}
+		var told *usererr.Error
+		if c.want == nil && (!errors.As(err, &told) || told.Key != "icons_no_match") || c.want != nil && err != nil {
+			t.Errorf("%s: Search %v tells %v", c.name, c.words, err)
+		}
+		if !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: Search %v = %v, want %v", c.name, c.words, got, c.want)
+		}
+	}
+}
+
+// A short name is written as a word is compared: in lower case.
+func TestShortNamesLower(t *testing.T) {
+	t.Parallel()
+
+	for _, k := range kits {
+		for word := range k.short {
+			if word != strings.ToLower(word) {
+				t.Errorf("%s: the short name %q is never matched, as a word is lowered first", k.name, word)
+			}
+		}
+	}
+}
+
+// Every icon a short name means is in the sets FLOE_ICONS_DIR holds. CI holds no real set, so this runs only by hand.
+func TestShortNames(t *testing.T) {
+	t.Parallel()
+
+	root := os.Getenv("FLOE_ICONS_DIR")
+	if root == "" {
+		t.Skip("FLOE_ICONS_DIR names no fetched set")
+	}
+	checked := 0
+	for _, k := range kits {
+		file := filepath.Join(root, k.name, "index.json")
+		b, _, err := files.Read(file)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		idx, err := parseIndex(file, b, k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		checked++
+		for word, names := range k.short {
+			for _, name := range names {
+				if _, ok := idx.Icons[name]; !ok {
+					t.Errorf("%s: %s means %s, not in the set of version %s", k.name, word, name, idx.Version)
+				}
+			}
+		}
+	}
+	if checked == 0 {
+		t.Skipf("no set is fetched in %s", root)
 	}
 }
