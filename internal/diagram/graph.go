@@ -699,6 +699,9 @@ func (d *drawing) room(k, i int, w float64) (spot, bool) {
 	d.stretch(along, cut, d.onRanks(k, along, stays+size[1]+2*labelEnds+moves))
 	sp := spot{edge: k, seg: i, beside: false, at: cut + stays + labelEnds, w: w}
 	d.push(k, i, sp)
+	if to, ok := d.seek(k, w); ok {
+		return to, true
+	}
 	return sp, true
 }
 
