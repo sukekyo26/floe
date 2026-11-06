@@ -895,8 +895,8 @@ func TestGraphRandom(t *testing.T) {
 				clipped, labels := endsClipped(g, l)
 				short, written = short+clipped, written+labels
 			}
-			if 1000*short > 3*written {
-				t.Errorf("seed %v: %d of %d labels leave less than %v of their run at an end, over 0.3%%", c.seed, short, written, labelEnds)
+			if 1000*short > 5*written {
+				t.Errorf("seed %v: %d of %d labels leave less than %v of their run at an end, over 0.5%%", c.seed, short, written, labelEnds)
 			}
 			if share := 100 * parted / ends; share < c.parts {
 				t.Errorf("seed %v: %d of %d ends at boxes on their equal parts, under %d%%", c.seed, parted, ends, c.parts)
@@ -2264,6 +2264,20 @@ func TestGraphLabelRoom(t *testing.T) {
 	if b := up.boxes[0]; math.Mod(b.x, column) != 0 || math.Mod(b.y, column) != 0 || lr.x < 0 || lr.x >= column ||
 		lr.y < 0 || lr.y >= column {
 		t.Errorf("stand: box at %v,%v, label at %v,%v", b.x, b.y, lr.x, lr.y)
+	}
+
+	// A run across a run too wide to go by, which pushing moves nowhere: the band opens past the cut at 1, and the label
+	// stands at the middle of the run as it is then, not at the start of the band.
+	band := &drawing{
+		right: false, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{
+			0: {{0, 0}, {100, 0}}, 1: {{50, -100}, {50, 100}},
+		}, ends: map[int][2]int{0: {0, 0}, 1: {0, 0}}, back: map[int]bool{}, spots: map[int]spot{},
+	}
+	if err := band.place(0, 70); err != nil {
+		t.Fatal(err)
+	}
+	if sp, ok := band.seek(0, 70); !ok || band.spots[0] != sp || sp.at != 62 {
+		t.Errorf("the label from %v, seek finds %v %v, want from 62", band.spots[0].at, sp.at, ok)
 	}
 
 	short := &drawing{

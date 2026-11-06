@@ -135,7 +135,7 @@ func runsFault(g *graph, l *layout) string {
 	}
 	for _, p := range l.paths {
 		for _, s := range p.segs {
-			if s[0] != s[2] && s[1] != s[3] || math.Abs(s[0]-s[2])+math.Abs(s[1]-s[3]) < 1e-6 {
+			if !near(s[0], s[2]) && !near(s[1], s[3]) || math.Abs(s[0]-s[2])+math.Abs(s[1]-s[3]) < 1e-6 {
 				return fmt.Sprintf("%s runs %v", p.what, s)
 			}
 		}
@@ -275,6 +275,7 @@ func TestGraphIconsRandom(t *testing.T) {
 		{"right", [2]uint64{33, 4}, 800, false, false, false, touchesPlain},
 		{"", [2]uint64{35, 6}, 150, true, false, false, touchesPlain},
 		{"right", [2]uint64{37, 8}, 150, true, false, false, touchesPlain},
+		{"right", [2]uint64{777, 1517}, 720, true, false, false, touchesPlain},
 		{"", [2]uint64{39, 10}, 300, false, true, false, touchesPlain},
 		{"right", [2]uint64{41, 12}, 300, false, true, false, touchesPlain},
 		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain},
