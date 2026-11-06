@@ -56,7 +56,7 @@ the first failure. The same command given again finishes what a failure left.
 		},
 	}
 	flags := cmd.Flags()
-	flags.StringVar(&f.task, "task", "", `the task's name; with slugs, "" takes the pages off their task`)
+	flags.StringVar(&f.task, "task", "", `the task's ID; with slugs, "" takes the pages off their task`)
 	flags.StringVar(&f.project, "project", "", `the task's project, without slugs; "" for none`)
 	flags.StringVar(&f.step, "step", "", `the pages' step on the task; "" takes it off them`)
 	flags.StringVar(&f.state, "state", "", "the task's state: "+store.StateNames())

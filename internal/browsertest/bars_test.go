@@ -48,7 +48,7 @@ func uiBars(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// the clearing gone.
 	const bulk = `(() => {
 		const bar = document.getElementById('bulk'), r = bar.getBoundingClientRect();
-		const shown = [...bar.querySelectorAll('.btn')].filter((e) => e.offsetParent);
+		const shown = [...bar.querySelectorAll('button')].filter((e) => e.offsetParent);
 		const within = (x, y) => x.left >= y.left - 0.5 && x.right <= y.right + 0.5 && x.top >= y.top - 0.5 && x.bottom <= y.bottom + 0.5;
 		const inside = within(r, document.querySelector('.lhead').getBoundingClientRect()) && shown.every((e) => within(e.getBoundingClientRect(), r));
 		const words = shown.map((e) => e.querySelector('.label')).filter((l) => l.getBoundingClientRect().width > 1).map((l) => l.textContent);

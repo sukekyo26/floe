@@ -60,6 +60,15 @@ func TestWorkAPI(t *testing.T) {
 	if code, body := patch(task("shop", "#1"), `{"parent":"#1"}`); code != http.StatusBadRequest || !strings.Contains(body, "its own parent") {
 		t.Errorf("its own parent = %d, %s", code, body)
 	}
+	if code, body := patch(task("shop", "#1"), `{"new":true}`); code != http.StatusConflict || body != "task #1 is there already" {
+		t.Errorf("new, of one there = %d, %q", code, body)
+	}
+	if code, body := patch(task("shop", "#fresh"), `{"new":false}`); code != http.StatusConflict || body != "task #fresh is no longer there" {
+		t.Errorf("there, of none = %d, %q", code, body)
+	}
+	if code, _ := patch(task("shop", "#fresh"), `{"new":true,"title":"t"}`); code != http.StatusNoContent {
+		t.Errorf("new = %d", code)
+	}
 	if code, _ := patch(task("shop", "#none"), `{"parent":""}`); code != http.StatusNotFound {
 		t.Errorf("a parent off no row = %d", code)
 	}
@@ -71,11 +80,11 @@ func TestWorkAPI(t *testing.T) {
 	}{
 		{"/api/tasks?task=x", `{}`, `a task needs its project: "/" for none`},
 		{task("  ", "x"), `{}`, `a task needs its project: "/" for none`},
-		{"/api/tasks?project=p", `{}`, "a task needs a name"},
+		{"/api/tasks?project=p", `{}`, "a task needs an ID"},
 		{task("p", "x"), `{"state":"nope"}`, `unknown state "nope": use todo, doing, waiting, done`},
 		{task("p", "x"), `{"url":"javascript:alert(1)"}`, `"javascript:alert(1)" is not an http or https URL`},
-		{"/api/tasks?project=p&task=%FF", `{}`, "a task's project and name must be UTF-8"},
-		{"/api/tasks?project=%FF&task=x", `{}`, "a task's project and name must be UTF-8"},
+		{"/api/tasks?project=p&task=%FF", `{}`, "a task's project and ID must be UTF-8"},
+		{"/api/tasks?project=%FF&task=x", `{}`, "a task's project and ID must be UTF-8"},
 	} {
 		if code, body := patch(c.path, c.body); code != http.StatusBadRequest || body != c.want {
 			t.Errorf("PATCH %s %s = %d, %q, want %q", c.path, c.body, code, body, c.want)
@@ -105,11 +114,11 @@ func TestWorkAPI(t *testing.T) {
 		return w.Code, w.Body.String()
 	}
 	w := e.do(t, http.MethodPatch, "/api/artifacts/d", `{"work":{"task":"   "}}`, "Origin", origin, "Content-Type", jsonType)
-	if w.Code != http.StatusBadRequest || w.Body.String() != "a task needs a name" {
+	if w.Code != http.StatusBadRequest || w.Body.String() != "a task needs an ID" {
 		t.Errorf("a name of spaces = %d, %s", w.Code, w.Body)
 	}
 	w = e.do(t, http.MethodDelete, "/api/tasks?project=shop&task=%FF", "", "Origin", origin)
-	if w.Code != http.StatusBadRequest || w.Body.String() != "a task's project and name must be UTF-8" {
+	if w.Code != http.StatusBadRequest || w.Body.String() != "a task's project and ID must be UTF-8" {
 		t.Errorf("forget of no UTF-8 = %d, %s", w.Code, w.Body)
 	}
 	if code, body := forget("shop", "#1"); code != http.StatusBadRequest || body != "task #1 of project shop still has 1 page(s), such as d: take them off it or remove them first" {

@@ -272,7 +272,7 @@ func TestWorkCommand(t *testing.T) {
 	if got := run(0, "work", "--help"); !strings.Contains(got, "the task's state: todo, doing, waiting, done") {
 		t.Errorf("help: %q", got)
 	}
-	if got := run(1, "work", "a", "--task", "  "); got != "floe: a task needs a name\n" {
+	if got := run(1, "work", "a", "--task", "  "); got != "floe: a task needs an ID\n" {
 		t.Errorf("a blank name: %q", got)
 	}
 }

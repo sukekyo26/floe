@@ -178,7 +178,7 @@
   .dcount .c { color: var(--chg); } .dcount .a { color: var(--ins); } .dcount .r { color: var(--del); } .dcount .s { color: var(--fg); }
   .dtail { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; }
   .dviews { display: flex; gap: 0.35rem; }
-  .dviews .btn, .dtail > .btn { height: 2rem; padding: 0 0.75rem; font-size: var(--text-small); white-space: nowrap; }
+  .dviews .btn, .dtail > .btn { white-space: nowrap; }
 
   .dmain { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: var(--toc) minmax(0, 1fr); background: var(--panel); }
   .dmain > .grip { position: absolute; top: 0; }
@@ -361,16 +361,16 @@
   .dot { background: var(--new); }
   .ring { border: 1.5px solid var(--box-line); }
 
+  /* Every button of words is of this one form, a modal's foot taller; round stays for the buttons of an icon and what is not a button */
   .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; height: 36px; padding: 0 0.95rem;
-    font-weight: 600; background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
-    box-shadow: var(--shadow-sm); transition: background-color 0.15s, border-color 0.15s, filter 0.15s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; height: 2rem; padding: 0 0.65rem;
+    font-size: var(--text-small); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-small);
+    transition: background-color 0.15s, border-color 0.15s, filter 0.15s;
   }
+  .dialog-actions .btn { height: 2.25rem; padding: 0 0.9rem; font-size: var(--text); }
   a.btn { color: var(--fg); text-decoration: none; }
   .btn:hover { border-color: var(--faint); }
-  .btn.primary {
-    color: var(--on-ink); border-color: transparent; background: var(--ink); box-shadow: var(--shadow-sm);
-  }
+  .btn.primary { font-weight: 600; color: var(--on-ink); border-color: transparent; background: var(--ink); }
   .btn.primary:hover { background: var(--ink-hover); }
   .btn:disabled { opacity: 0.6; cursor: progress; }
   .btn svg { width: 15px; height: 15px; }
@@ -412,8 +412,7 @@
   }
   .lhead:has(> .bulk:not([hidden])) > :not(.bulk) { display: none; }
   .count { min-width: 0; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .add-open { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.65rem; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-small); font-size: var(--text-small); }
-  .add-open:hover { border-color: var(--faint); }
+  .add-open { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; }
   .add-open svg { flex: none; width: 13px; height: 13px; }
   ul { list-style: none; margin: 0; padding: 0; }
   li {
@@ -507,11 +506,6 @@
   .tag-box:has(input:indeterminate) .mark::before { content: "−"; }
   .tag-box .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tag-box .n { font: var(--text-label)/1 var(--mono); font-variant-numeric: tabular-nums; }
-  .tag-new {
-    display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.28rem 0.7rem; color: var(--fg); background: none;
-    border: 1px dashed var(--line); border-radius: 999px; font-size: var(--text-small);
-  }
-  .tag-new:hover { border-color: var(--ink); }
   .actions { position: relative; z-index: 1; grid-area: actions; display: flex; align-items: center; gap: 2px; }
   /* A folder's row opens a tree of its directories under it (--d deep), each row a directory or a page of it */
   .fold { display: inline-block; width: 14px; height: 14px; margin-right: 0.35rem; vertical-align: -2px; color: var(--muted); transition: transform 0.15s; }
@@ -605,7 +599,7 @@
   @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
   /* Only one with a button takes the pointer from the page under it */
   .toast:has(.btn) { padding-block: 0.4rem; padding-right: 0.4rem; pointer-events: auto; }
-  .toast .btn { margin-left: 0.5rem; padding: 0.3rem 0.7rem; min-height: 2rem; font-size: var(--text-small); white-space: nowrap; }
+  .toast .btn { margin-left: 0.5rem; white-space: nowrap; }
   /* The bulk bar, in the head over the list while items are selected: the head on the ground of the rows selected */
   .lhead:has(> .bulk:not([hidden])) { padding-inline: 0.5rem; background: var(--sel); }
   /* What a font makes too wide for the list scrolls, as the row of views does, the clearing staying in reach; 4px hold the focus ring */
@@ -613,18 +607,18 @@
   .bulk::-webkit-scrollbar { display: none; }
   /* The count gives way first, cut off, where the bar is too narrow for all */
   .bulk-count { min-width: 0; margin-right: auto; padding-left: 0.5rem; overflow: hidden; text-overflow: ellipsis; font-size: var(--text-small); font-weight: 650; color: var(--fg); white-space: nowrap; }
-  .bulk .btn { flex: none; height: 2rem; padding: 0 0.5rem; font-size: var(--text-small); background: none; border-color: transparent; border-radius: 999px; box-shadow: none; white-space: nowrap; }
+  .bulk .btn { flex: none; padding: 0 0.5rem; background: none; border-color: transparent; white-space: nowrap; }
   .bulk .btn:hover { background: var(--subtle); }
-  .bulk .btn.clear { position: sticky; right: 0; padding: 0 0.4rem; background: var(--sel); }
-  .bulk .btn.clear:hover { background: var(--subtle); }
-  .bulk .btn.clear .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .bulk .clear { flex: none; position: sticky; right: 0; background: var(--sel); }
+  .bulk .clear:hover { background: var(--subtle); }
+  .bulk .clear .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   /* The delete is red in its words; its ground only while it waits to be pressed again, in its longer words */
   .btn.danger, .bulk .btn.danger { color: var(--danger); }
   .btn.danger.armed, .bulk .btn.danger.armed { color: var(--on-danger); background: var(--danger); }
   .bulk .btn.danger.armed { padding: 0 0.8rem; }
   /* A delete pressed once asks in its longer words, the other buttons but the clearing out of its way (they come back as it is
      let go; the clearing lets it go where a click does not move the focus, as on Safari) */
-  .bulk:has(.armed) > .btn:not(.armed, .clear) { display: none; }
+  .bulk:has(.armed) > .btn:not(.armed) { display: none; }
   /* The words stay on the narrowest list: the count's end goes first, its number kept, then the buttons' room */
   @container bar (max-width: 24rem) {
     .bulk-count { flex: none; }
@@ -632,7 +626,7 @@
   }
   @container bar (max-width: 21rem) {
     .bulk { gap: 0.1rem; }
-    .bulk .btn:not(.armed, .clear) { padding: 0 0.2rem; }
+    .bulk .btn:not(.armed) { padding: 0 0.2rem; }
   }
 
   /* The search modal, of the shape of the others. Its box of results keeps its height, so that the field stays where it is as the rows go */
@@ -837,7 +831,6 @@
   .up { justify-self: start; display: inline-flex; align-items: center; gap: 0.15rem; height: 2.25rem; margin-left: -0.25rem; font-size: var(--text-small); color: var(--muted); text-decoration: none; }
   .up:hover { color: var(--fg); text-decoration: underline; }
   .up svg { width: 14px; height: 14px; }
-  .btn.tarc { height: auto; padding: 0.1rem 0.5rem; font-size: var(--text-label); }
   .thead h2 { margin: 0; font: 700 1rem/1.4 var(--body); }
   .thead h2 .tname { font-size: var(--text); }
   .tstate { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.6rem; font-size: var(--text-small); color: var(--muted); }
@@ -995,7 +988,7 @@
       <div class="thead" id="task-head" hidden>
         <div class="ttop">
           <a class="up" id="task-up" href="/tasks" title="{{.Msg "ui_tasks_back"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{{.Msg "ui_screen_tasks"}}</a>
-          <button type="button" class="btn tarc" id="task-archive" hidden></button>
+          <button type="button" class="btn" id="task-archive" hidden></button>
         </div>
         <h2 id="task-title"></h2>
         <div class="tstate">
@@ -1005,7 +998,7 @@
           <span class="proj" id="task-project"></span>
         </div>
         <div class="family" id="task-family" hidden>
-          <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="add-open" id="task-child" aria-label="{{.Msg "ui_child_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button></div>
+          <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="btn add-open" id="task-child" aria-label="{{.Msg "ui_child_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button></div>
           <div class="family-rows" id="task-family-rows"></div>
         </div>
       </div>
@@ -1016,7 +1009,7 @@
         <!-- What the filters narrow the list to, in the head of the list, or of the page beside it with the list folded too -->
         <button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button>
         <span class="count" id="count"></span>
-        <button type="button" class="add-open" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button>
+        <button type="button" class="btn add-open" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button>
       
         <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
         <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
@@ -1025,7 +1018,7 @@
           <button type="button" class="btn" id="bulk-tag"><span class="label">{{.Msg "ui_tags"}}</span></button>
           <button type="button" class="btn" id="bulk-archive"><span class="label"></span></button>
           <button type="button" class="btn danger" id="bulk-delete"><span class="label"></span></button>
-          <button type="button" class="btn clear" id="bulk-clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg><span class="label">{{.Msg "ui_clear_selection"}}</span></button>
+          <button type="button" class="icon-btn clear" id="bulk-clear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg><span class="label">{{.Msg "ui_clear_selection"}}</span></button>
         </div>
       </div>
       <ul id="list"></ul>
@@ -1043,7 +1036,7 @@
         <strong>{{.Msg "ui_empty_pages"}}</strong>
         <p>{{.Msg "ui_empty_pages_hint"}}</p>
         <p><code>floe publish &lt;file.yaml&gt;</code></p>
-        <p><button type="button" class="add-open" id="add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button></p>
+        <p><button type="button" class="btn add-open" id="add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button></p>
       </div>
       <div class="state" id="all-archived" hidden>
         <strong></strong>
@@ -1221,13 +1214,16 @@
       </div>
     </div>
     <label class="field">{{.Msg "ui_task_name"}}
-      <input class="text" id="set-task" required autocomplete="off" spellcheck="false">
+      <input class="text" id="set-task" required autocomplete="off" spellcheck="false" placeholder="{{.Msg "ui_task_id_example"}}">
+    </label>
+    <label class="field" id="set-name-title-field">{{.Msg "ui_task_title"}}
+      <input class="text" id="set-task-title" autocomplete="off">
     </label>
     <label class="field"><span>{{.Msg "ui_task_step"}} <small>{{.Msg "ui_optional"}}</small></span>
-      <input class="text" id="set-step" autocomplete="off">
+      <input class="text" id="set-step" autocomplete="off" placeholder="{{.Msg "ui_task_step_example"}}">
     </label>
     <label class="field"><span>{{.Msg "ui_task_parent"}} <small>{{.Msg "ui_optional"}}</small></span>
-      <input class="text" id="set-parent" autocomplete="off" spellcheck="false">
+      <input class="text" id="set-parent" autocomplete="off" spellcheck="false" placeholder="{{.Msg "ui_task_id_example"}}">
     </label>
     <label class="field"><span>{{.Msg "ui_task_url"}} <small>{{.Msg "ui_optional"}}</small></span>
       <input class="text path" id="set-url" autocomplete="off" spellcheck="false" placeholder="https://">
@@ -1250,9 +1246,9 @@
       </div>
     </div>
     <label class="field">{{.Msg "ui_task_name"}}
-      <input class="text" id="child-task" required autocomplete="off" spellcheck="false">
+      <input class="text" id="child-task" required autocomplete="off" spellcheck="false" placeholder="{{.Msg "ui_task_id_example"}}">
     </label>
-    <label class="field"><span>{{.Msg "ui_task_child_title"}} <small>{{.Msg "ui_optional"}}</small></span>
+    <label class="field">{{.Msg "ui_task_title"}}
       <input class="text" id="child-title" autocomplete="off">
     </label>
     <p id="child-note" hidden></p>
@@ -1273,7 +1269,7 @@
     </div>
     <input class="text" id="tag-find" type="search" autocomplete="off" placeholder="{{.Msg "ui_tag_find"}}" aria-label="{{.Msg "ui_tag_find"}}" aria-controls="tag-boxes">
     <div class="tag-boxes" id="tag-boxes" role="group" aria-labelledby="tag-title">
-      <button type="button" class="tag-new" id="tag-new" hidden></button>
+      <button type="button" class="btn" id="tag-new" hidden></button>
     </div>
     <div class="dialog-actions">
       <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
@@ -3475,7 +3471,7 @@
 
   // A new task under this one. It takes a task's own write: the store says what may be a child
   function openChildTask(task) {
-    $('child').reset();
+    resetTaskForm($('child'));
     $('child-target').textContent = t('ui_task_child_of', [task.name, task.title].filter(Boolean).join(' '));
     $('child-error').hidden = true;
     childNameChanged();
@@ -3483,16 +3479,21 @@
   }
   // What the name written does, said before it is done: a task on the list comes to be a child with what it has, out of another parent's, and any
   // other is made. One that cannot be, with children or this one, is not said to: pressed, the store refuses it
-  // LIMIT: what is said goes by the tasks last read: one another session made since is taken as written, unsaid
+  // LIMIT: what is said goes by the tasks last read. Whether a task is there the store checks (new), but not its parent: one another session gave a
+  // parent since is taken from it, said to come from the one before. Send the parent read if that comes to mislead
   const childTaskNamed = () => tasksOf().find((x) => x.project === project && x.name === $('child-task').value.trim());
   const isOwnChild = (task) => task?.parentTask?.name === TASK_NAME;
+  // The task the dialog last showed for the name, which saving sends as new or not: tasks read meanwhile change nothing unseen, and the store
+  // refuses what is no longer so
+  let childShown;
   function childNameChanged() {
     const task = childTaskNamed();
+    childShown = task;
     const from = task?.parentTask?.name;
     const named = task && [task.name, task.title].filter(Boolean).join(' ');
     $('child-note').hidden = !task || task.children.length > 0 || task.name === TASK_NAME || isOwnChild(task);
     if (task) $('child-note').textContent = from ? t('ui_task_child_move', named, from) : t('ui_task_child_take', named);
-    $('child-title').closest('label').hidden = Boolean(task);
+    titleField($('child-title'), !task);
     $('child-submit').textContent = t(task ? 'ui_child_take_button' : 'ui_child_make_button');
   }
   async function saveChildTask(e) {
@@ -3502,16 +3503,20 @@
     const name = $('child-task').value.trim();
     const title = $('child-title').value.trim();
     try {
-      const had = childTaskNamed();
+      if (!taskFormReady($('child'), $('child-error'))) return;
+      const had = childShown;
       // Nothing to write, and so nothing to tell
       if (isOwnChild(had)) {
         $('child-dialog').close();
         $('task-child').focus();
         return;
       }
-      const url = `/api/tasks?${new URLSearchParams({ project, task: name })}`;
-      const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parent: TASK_NAME, ...(title && !had ? { title } : {}) }) });
-      if (!res.ok) throw new Error(await res.text());
+      const res = await writeTask(project, name, { parent: TASK_NAME, new: !had, ...(had ? {} : { title }) });
+      if (res.status === 409) {
+        childNameChanged();
+        throw new Error(res.stale);
+      }
+      if (!res.ok) throw new Error(res.text);
       const to = tagged('a', 'toast-link', t(had ? 'ui_task_child_took' : 'ui_task_child_made', name));
       to.href = taskHref({ project, name });
       toast('', { ms: 8000, button: to });
@@ -4592,6 +4597,8 @@
   // than this page's. Whether its URL was changed by hand: only then is it sent, so that one set since it opened stays
   let setPage;
   let setOpened;
+  // The task the dialog last showed for the name, which saving sends as new or not, as the child's dialog does
+  let setShown;
   let setUrlTouched = false;
   let setBack;
   const setTaskOf = (name) => tasksOf().find((task) => task.project === setPage.taskProject && task.name === name.trim());
@@ -4600,12 +4607,12 @@
     setPage = a;
     setUrlTouched = false;
     if (framed) tasksRead = await readTasks();
+    resetTaskForm($('set'));
     $('set-target').textContent = a.title;
     $('set-task').value = a.work?.task ?? '';
     $('set-step').value = a.work?.step ?? '';
     setOpened = { task: $('set-task').value, step: $('set-step').value };
-    $('set-url').value = setTaskOf($('set-task').value)?.url ?? '';
-    fillTaskParent();
+    setTaskChanged();
     $('set-out').hidden = !a.work?.task;
     $('set-error').textContent = tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '';
     $('set-error').hidden = !tasksRead.error;
@@ -4616,12 +4623,55 @@
     setUrlTouched = false;
     $('set-url').value = setTaskOf($('set-task').value)?.url ?? '';
     fillTaskParent();
+    setTaskKnown();
+  }
+  // Whether the name is of a task there, which asks no title, as the store checks it (new): of the fields, only the title's
+  function setTaskKnown() {
+    setShown = setTaskOf($('set-task').value);
+    titleField($('set-task-title'), !setShown);
   }
   // What the field was given, which saving compares with: a parent another session wrote meanwhile is not taken off by a field left alone, nor is an
   // empty parent sent for a new name, which has no row to take it off
   function fillTaskParent() {
     setOpened.parent = setTaskOf($('set-task').value)?.parent ?? '';
     $('set-parent').value = setOpened.parent;
+  }
+  // A task's fields as they open: none of what was typed before, nor a field's blank mark
+  function resetTaskForm(form) {
+    form.reset();
+    for (const input of form.querySelectorAll('input')) input.setCustomValidity('');
+  }
+  // The title's field, asked of a new task alone: hidden, it is not required, nor marked blank. Unreadable, a task's being there is not known,
+  // and nothing is asked: the save stops at what cannot be read
+  function titleField(input, shown) {
+    input.closest('label').hidden = !shown;
+    input.required = shown && !tasksRead.error;
+    if (!shown) input.setCustomValidity('');
+  }
+  // Whether a task's form may be sent: tasks.json read, as there is no saying whether the task is there without it, and no field required that
+  // has spaces alone, which required lets through. The words typed stay, marked until typed again
+  function taskFormReady(form, error) {
+    if (tasksRead.error) {
+      error.textContent = t('ui_tasks_failed', tasksRead.error);
+      error.hidden = false;
+      return false;
+    }
+    const blank = [...form.querySelectorAll('input[required]')].find((input) => !input.closest('[hidden]') && !input.value.trim());
+    if (!blank) return true;
+    blank.setCustomValidity(t('ui_field_blank'));
+    blank.reportValidity();
+    return false;
+  }
+  // A task's write from a modal, which says whether it takes the task to be new. Refused as stale (409), the tasks are read again, a page whole
+  // too, whose load reads none; the refusal comes with what to do next
+  async function writeTask(project, name, body) {
+    const res = await api(`/api/tasks?${new URLSearchParams({ project, task: name })}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const text = res.ok ? '' : await res.text();
+    if (res.status === 409) {
+      if (framed) tasksRead = await readTasks();
+      await load();
+    }
+    return { ok: res.ok, status: res.status, text, stale: t('ui_task_stale', text) };
   }
   const setFailed = (reason) => {
     $('set-error').textContent = t('ui_save_failed', reason);
@@ -4637,15 +4687,24 @@
     const page = setPage;
     const task = $('set-task').value;
     // The state it comes to be under stays what it was: said, as it may not be the list the person has in mind
-    const state = setTaskOf(task)?.state ?? STATES.find((x) => x.new).name;
+    const state = setShown?.state ?? STATES.find((x) => x.new).name;
     const step = $('set-step').value.trim();
     const parent = $('set-parent').value.trim();
     const moved = task.trim() !== setOpened.task || step !== setOpened.step;
-    const body = { ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}), ...(parent !== setOpened.parent ? { parent } : {}) };
+    const fresh = !setShown;
+    const body = {
+      new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : {}),
+      ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}), ...(parent !== setOpened.parent ? { parent } : {}),
+    };
     try {
-      const url = `/api/tasks?${new URLSearchParams({ project: page.taskProject, task })}`;
-      const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error(await res.text());
+      if (!taskFormReady($('set'), $('set-error'))) return;
+      const res = await writeTask(page.taskProject, task, body);
+      // Each field as it opens for the name, as the URL and parent shown were of what is no longer so
+      if (res.status === 409) {
+        setTaskChanged();
+        throw new Error(res.stale);
+      }
+      if (!res.ok) throw new Error(res.text);
       const reason = await patchOne(page.slug, { work: { task, step } });
       if (reason) throw new Error(reason);
       if (task.trim() === setOpened.task) toast(t('ui_saved'));
@@ -4933,6 +4992,8 @@
   $('edit-dialog').addEventListener('close', () => editBack?.()?.focus());
   suggestTags($('edit-tags'));
   $('set').addEventListener('submit', saveTaskSet);
+  // A field marked blank is free again as it is typed in
+  for (const form of [$('set'), $('child')]) form.addEventListener('input', (e) => e.target.setCustomValidity?.(''));
   $('child').addEventListener('submit', saveChildTask);
   $('task-delete').addEventListener('blur', disarmForget);
   $('set-out').addEventListener('click', takeOffTask);
