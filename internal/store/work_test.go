@@ -368,19 +368,22 @@ func TestWorkParent(t *testing.T) {
 		name, parent, want string
 	}{
 		{"#1", " #1 ", "task #1 cannot be its own parent"},
-		{"#4", "#7", "task #7 has no row in project p, so it cannot be a parent"},
-		{"#4", "#8", "task #8 has no row in project p, so it cannot be a parent"},
+		{"#4", "#7", "project p has no task #7 that can be a parent"},
+		{"#4", "#8", "project p has no task #8 that can be a parent"},
 		{"#4", "#2", "task #2 has a parent itself (#1), so it cannot be a parent"},
 		{"#1", "#2", "task #2 has a parent itself (#1), so it cannot be a parent"},
 		{"#1", "#9", "task #1 has child tasks, such as #2, so it cannot have a parent"},
 		{"#4", "  ", "a task needs a name"},
 		{"#4", "\xff", "a task's project and name must be UTF-8"},
-		{"#4", "", "no task #4 in project p"},
 	} {
 		err := s.EditTask("p", c.name, store.TaskEdit{Parent: &c.parent})
 		if err == nil || !strings.Contains(told(err, root), c.want) {
 			t.Errorf("%s under %q = %v, want %s", c.name, c.parent, err, c.want)
 		}
+	}
+	// A parent taken off a task of no row, a name mistyped, is not found; with anything else it is a new task.
+	if err := s.EditTask("p", "#4", store.TaskEdit{Parent: ptr("")}); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf(`"" of no row: %v`, err)
 	}
 	all, err := s.ReadTasks()
 	if err != nil {
@@ -388,6 +391,9 @@ func TestWorkParent(t *testing.T) {
 	}
 	if _, ok := all["p"]["#4"]; ok || all["p"]["#1"].Parent != "" {
 		t.Errorf("after the refusals: %v", all["p"])
+	}
+	if wrote := s.EditTask("p", "#5", store.TaskEdit{Title: ptr("t"), Parent: ptr("")}); wrote != nil {
+		t.Errorf(`"" with a title, of no row: %v`, wrote)
 	}
 	// The same again, to another parent, and off, of a task with none too.
 	at := all["p"]["#2"].At
@@ -434,7 +440,7 @@ func TestWorkForgetParent(t *testing.T) {
 	}
 	for _, want := range []string{
 		"task #1 of project p still has 1 page(s), such as kept",
-		`task #1 of project p still has 2 child task(s), such as #2: take each off with --parent ""`,
+		"task #1 of project p still has 2 child task(s), such as #2: take them off it or remove them first",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("forget a parent = %q, want %s", got, want)

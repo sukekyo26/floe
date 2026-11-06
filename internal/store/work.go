@@ -260,27 +260,34 @@ func childrenOfTask(rows map[string]Task, name string) []string {
 	return children
 }
 
-// checkParent refuses what would make the task name the child of parent, or take a parent off a task of no row, which a
-// write would make. Only that row is looked at: another row broken by hand does not keep this one from being written.
-func checkParent(project string, rows map[string]Task, name, parent string) error {
+// checkParent refuses what ed would make of the parent of the task name. Only that row is looked at: another row broken
+// by hand does not keep this one from being written. A parent taken off and nothing else, of a task of no row, is
+// ErrNotFound: a name mistyped would make a row.
+func checkParent(project string, rows map[string]Task, name string, ed TaskEdit) error {
+	if ed.Parent == nil {
+		return nil
+	}
+	parent := *ed.Parent
 	if parent == "" {
-		if _, had := rows[name]; !had {
-			return usererr.New("store_no_task", name, project)
+		var nothing TaskEdit
+		ed.Parent = nil
+		if _, had := rows[name]; !had && ed == nothing {
+			return ErrNotFound
 		}
 		return nil
 	}
 	if parent == name {
-		return usererr.New("store_task_parent_self", name)
+		return usererr.New("store_parent_self", name)
 	}
 	up, ok := rows[parent]
 	if !ok {
-		return usererr.New("store_task_parent_none", parent, project)
+		return usererr.New("store_parent_none", parent, project)
 	}
 	if up.Parent != "" {
-		return usererr.New("store_task_parent_nested", parent, up.Parent)
+		return usererr.New("store_parent_nested", parent, up.Parent)
 	}
 	if children := childrenOfTask(rows, name); len(children) > 0 {
-		return usererr.New("store_task_parent_children", name, children[0])
+		return usererr.New("store_parent_kids", name, children[0])
 	}
 	return nil
 }
@@ -308,7 +315,8 @@ func pastedURL(raw *string) *string {
 	return &trimmed
 }
 
-// EditTask applies ed to the row of the task (project, name), making it of the state doing when there is none.
+// EditTask applies ed to the row of the task (project, name), making it of the state doing when there is none, but for
+// checkParent's ErrNotFound.
 func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	project, name, err := taskKey(project, name)
 	if err != nil {
@@ -334,10 +342,8 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	if err != nil {
 		return err
 	}
-	if ed.Parent != nil {
-		if err = checkParent(project, all[project], name, *ed.Parent); err != nil {
-			return err
-		}
+	if err = checkParent(project, all[project], name, ed); err != nil {
+		return err
 	}
 	if all[project] == nil {
 		all[project] = map[string]Task{}

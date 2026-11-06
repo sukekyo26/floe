@@ -60,6 +60,9 @@ func TestWorkAPI(t *testing.T) {
 	if code, body := patch(task("shop", "#1"), `{"parent":"#1"}`); code != http.StatusBadRequest || !strings.Contains(body, "its own parent") {
 		t.Errorf("its own parent = %d, %s", code, body)
 	}
+	if code, _ := patch(task("shop", "#none"), `{"parent":""}`); code != http.StatusNotFound {
+		t.Errorf("a parent off no row = %d", code)
+	}
 	if code, body := patch(task("shop", "#c"), `{"parent":""}`); code != http.StatusNoContent || tasks()["shop"]["#c"].Parent != "" {
 		t.Errorf("off = %d, %s, %v", code, body, tasks()["shop"]["#c"])
 	}

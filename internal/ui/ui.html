@@ -619,8 +619,9 @@
   .bulk .btn.clear:hover { background: var(--subtle); }
   .bulk .btn.clear .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   /* The delete is red in its words; its ground only while it waits to be pressed again, in its longer words */
-  .bulk .btn.danger { color: var(--danger); }
-  .bulk .btn.danger.armed { padding: 0 0.8rem; color: var(--on-danger); background: var(--danger); }
+  .btn.danger, .bulk .btn.danger { color: var(--danger); }
+  .btn.danger.armed, .bulk .btn.danger.armed { color: var(--on-danger); background: var(--danger); }
+  .bulk .btn.danger.armed { padding: 0 0.8rem; }
   /* A delete pressed once asks in its longer words, the other buttons but the clearing out of its way (they come back as it is
      let go; the clearing lets it go where a click does not move the focus, as on Safari) */
   .bulk:has(.armed) > .btn:not(.armed, .clear) { display: none; }
@@ -1000,7 +1001,7 @@
           <span class="proj" id="task-project"></span>
         </div>
         <div class="family" id="task-family" hidden>
-          <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="add-open" id="task-child" aria-label="{{.Msg "ui_task_child_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button></div>
+          <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="add-open" id="task-child" aria-label="{{.Msg "ui_child_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button></div>
           <div class="family-rows" id="task-family-rows"></div>
         </div>
       </div>
@@ -1240,7 +1241,7 @@
     <div class="modal-head">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       <div>
-        <h2 id="child-heading">{{.Msg "ui_task_child_add_named"}}</h2>
+        <h2 id="child-heading">{{.Msg "ui_child_add_named"}}</h2>
         <p class="lead" id="child-target"></p>
       </div>
     </div>
@@ -2011,17 +2012,17 @@
   // A field of one name: those that hold what is written, those that start with it first; a name written whole offers them all, to change
   // to. fresh, when given, is what one that no name is offers, as the last
   function suggestOne(input, all, put, { fresh, onFocus, detail = (name) => ({ name, label: name }) } = {}) {
-    // A name typed whole is done with: the names would cover what is under the field. Pressed on one, they show, to take another
+    // A name typed whole, that none goes on from, is done with: the names would cover what is under the field. Pressed on one, they show, to take another
     let typing = false;
     input.addEventListener('input', () => { typing = true; });
     suggestNames(input, () => {
       const written = input.value.trim();
-      const done = typing && all().includes(written);
-      typing = false;
-      if (done) return [];
       const typed = written.toLowerCase();
       const names = all();
       const whole = names.some((name) => name.toLowerCase() === typed);
+      const done = typing && whole && !names.some((name) => name.length > typed.length && name.toLowerCase().startsWith(typed));
+      typing = false;
+      if (done) return [];
       const hits = whole ? names : names.filter((name) => name.toLowerCase().includes(typed));
       const first = hits.filter((name) => name.toLowerCase().startsWith(whole ? '' : typed));
       const rest = hits.filter((name) => !first.includes(name));
@@ -3196,10 +3197,10 @@
     return [...tasks.values()];
   }
   // The shelf's place of a task: what is done and has only archived pages goes to the archive; nothing else leaves its state unseen
-  // A parent with no page of its own goes by its children's pages: it has none to archive, and its children keep it from being forgotten
+  // A parent with no page of its own goes by its children, all done with their pages archived: it has none to archive, and they keep it from being forgotten
   const taskView = (task) => {
     const by = task.pages.length + task.archived.length > 0 ? [task] : task.children;
-    return task.state === 'done' && by.some((x) => x.archived.length > 0) && by.every((x) => x.pages.length === 0) ? 'archived' : task.state;
+    return task.state === 'done' && by.some((x) => x.archived.length > 0) && by.every((x) => x.state === 'done' && x.pages.length === 0) ? 'archived' : task.state;
   };
   // A task's URL: by the query, as / may be in either part of its name
   const taskHref = (task) => `${TASKS_PATH}?${new URLSearchParams({ project: task.project, task: task.name })}`;
@@ -3228,6 +3229,8 @@
   }
 
   const taskRowKey = (project, name) => `task:${JSON.stringify([project, name])}`;
+  // Whether tasks.json has the task's row, which one of pages alone has not
+  const hasRow = (task) => Object.hasOwn(tasksRead.tasks[task.project] ?? {}, task.name);
   const unreadOf = (task) => task.pages.filter((a) => a.news).length;
   // What a row of the list says of the task's family, the one place that draws it: words, not links. A list of families would change this and what renderTaskList gives drawRows
   function taskKin(task) {
@@ -3443,10 +3446,11 @@
     const viewAt = (x) => VIEWS.indexOf(taskView(x));
     const kin = task.parentTask ? [task.parentTask] : [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(STATES.find((s) => s.name === taskView(x))?.oldest)(x, y));
     const heading = task.parentTask ? t('ui_task_parent') : kin.length > 0 ? t('ui_task_kids_head', kin.length) : t('ui_task_kids_word');
-    // A task with a parent written, even one that makes no family, cannot be a parent, as the store's checkParent says
-    $('task-child').hidden = Boolean(task.parent);
+    // What the store's checkParent would refuse is not offered: a parent written, even one that makes no family, and no row
+    const adds = !task.parent && hasRow(task);
+    $('task-child').hidden = !adds;
     $('task-child').onclick = () => openChildTask(task);
-    $('task-family').hidden = kin.length === 0 && Boolean(task.parent);
+    $('task-family').hidden = kin.length === 0 && !adds;
     $('task-family-word').textContent = heading;
     const said = JSON.stringify(kin.map((x) => [x.name, x.title, taskView(x), unreadOf(x) > 0]));
     if (said === familyDrawn) return;
@@ -3466,7 +3470,6 @@
   }
 
   // A new task under this one. It takes a task's own write: the store says what may be a child
-  // LIMIT: a task of pages alone, with no row, has the button, and pressing it is refused in the store's words. Hide it by the row if that comes to mislead
   function openChildTask(task) {
     $('child').reset();
     $('child-target').textContent = t('ui_task_child_of', [task.name, task.title].filter(Boolean).join(' '));
@@ -3478,14 +3481,15 @@
   // other is made. One that cannot be, with children or this one, is not said to: pressed, the store refuses it
   // LIMIT: what is said goes by the tasks last read: one another session made since is taken as written, unsaid
   const childTaskNamed = () => tasksOf().find((x) => x.project === project && x.name === $('child-task').value.trim());
+  const isOwnChild = (task) => task?.parentTask?.name === TASK_NAME;
   function childNameChanged() {
     const task = childTaskNamed();
-    const from = task?.parentTask && task.parentTask.name !== TASK_NAME ? task.parentTask.name : '';
+    const from = task?.parentTask?.name;
     const named = task && [task.name, task.title].filter(Boolean).join(' ');
-    $('child-note').hidden = !task || task.children.length > 0 || task.name === TASK_NAME;
+    $('child-note').hidden = !task || task.children.length > 0 || task.name === TASK_NAME || isOwnChild(task);
     if (task) $('child-note').textContent = from ? t('ui_task_child_move', named, from) : t('ui_task_child_take', named);
     $('child-title').closest('label').hidden = Boolean(task);
-    $('child-submit').textContent = t(task ? 'ui_task_child_take_button' : 'ui_task_child_make_button');
+    $('child-submit').textContent = t(task ? 'ui_child_take_button' : 'ui_child_make_button');
   }
   async function saveChildTask(e) {
     e.preventDefault();
@@ -3495,6 +3499,12 @@
     const title = $('child-title').value.trim();
     try {
       const had = childTaskNamed();
+      // Nothing to write, and so nothing to tell
+      if (isOwnChild(had)) {
+        $('child-dialog').close();
+        $('task-child').focus();
+        return;
+      }
       const url = `/api/tasks?${new URLSearchParams({ project, task: name })}`;
       const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parent: TASK_NAME, ...(title && !had ? { title } : {}) }) });
       if (!res.ok) throw new Error(await res.text());
@@ -3550,15 +3560,17 @@
   // Removes the task's row, a press again as a delete asks, and goes to the list: of a task of no page, which is all it would lose
   async function forgetTask(task) {
     const btn = $('task-delete');
-    if (arm(btn, t('ui_task_forget_confirm'))) return;
-    const res = await api(`/api/tasks?${new URLSearchParams({ project, task: TASK_NAME })}`, { method: 'DELETE' });
-    if (res.ok || res.status === 404) {
+    if (arm(btn, t('ui_task_forget_sure'))) return;
+    $('task-delete-error').hidden = true;
+    try {
+      const res = await api(`/api/tasks?${new URLSearchParams({ project, task: TASK_NAME })}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 404) throw new Error(await res.text());
       location.href = taskListHref(task);
-      return;
+    } catch (e) {
+      $('task-delete-error').textContent = t('ui_task_forget_fail', e.message);
+      $('task-delete-error').hidden = false;
+      disarmForget();
     }
-    $('task-delete-error').textContent = t('ui_task_forget_failed', await res.text());
-    $('task-delete-error').hidden = false;
-    disarmForget();
   }
   function disarmForget() {
     $('task-delete').classList.remove('armed');
@@ -3583,6 +3595,7 @@
     else $('task-missing').querySelector('strong').textContent = t('ui_task_missing', TASK_NAME);
     // A task with children cannot be forgotten: their pages are how it leaves
     $('task-delete-box').hidden = Boolean(none && task.children.length > 0);
+    if ($('task-delete-box').hidden) $('task-delete-error').hidden = true;
     $('task-delete').onclick = () => forgetTask(task);
     $('task-none-kids').hidden = !(none && task.children.length > 0);
     drawRows(task ? taskGroups(task) : [], (a, i, rows) => {
@@ -4923,10 +4936,16 @@
   $('set-task').addEventListener('input', setTaskChanged);
   // Offers tasks of a project by name, as the fields that name a task do: what each is in, which a long title does not cut (a task done is
   // under another view than the list's first, and looked for there), and its parent
-  function suggestTasks(input, projectOf, names, put, more) {
+  function suggestTasks(input, projectOf, offered, put, more) {
+    let known = new Map();
+    const names = () => {
+      const tasks = tasksOf().filter((x) => x.project === projectOf());
+      known = new Map(tasks.map((x) => [x.name, x]));
+      return tasks.filter(offered).map((x) => x.name).sort((x, y) => x.localeCompare(y, LANG));
+    };
     suggestOne(input, names, put, {
       detail: (name) => {
-        const task = tasksOf().find((x) => x.project === projectOf() && x.name === name);
+        const task = known.get(name);
         const note = t('ui_task_suggest', t(VIEW_WORDS[task.state]));
         return { name, label: [name, task.title].filter(Boolean).join(' '), note: task.parent ? `${note} ${t('ui_task_suggest', t('ui_task_parent_named', task.parent))}` : note };
       },
@@ -4936,22 +4955,14 @@
     });
   }
   $('set-url').addEventListener('input', () => { setUrlTouched = true; });
-  suggestTasks($('set-task'), () => setPage.taskProject, () => {
-    return tasksOf().filter((task) => task.project === setPage.taskProject).map((task) => task.name).sort((x, y) => x.localeCompare(y, LANG));
-  }, (name) => {
+  suggestTasks($('set-task'), () => setPage.taskProject, () => true, (name) => {
     $('set-task').value = name;
     setTaskChanged();
   }, { fresh: (name) => ({ name, label: t('ui_task_new', name) }) });
   // What may be a parent: a task with a row, which a task of pages alone has not, no parent of its own, and not this one
-  suggestTasks($('set-parent'), () => setPage.taskProject, () => {
-    const rows = tasksRead.tasks[setPage.taskProject] ?? {};
-    const self = $('set-task').value.trim();
-    return Object.keys(rows).filter((name) => !rows[name].parent && name !== self).sort((x, y) => x.localeCompare(y, LANG));
-  }, (name) => { $('set-parent').value = name; }, { onFocus: true });
-  // What may be made a child: no parent itself, not this one, not one already
-  suggestTasks($('child-task'), () => project, () => {
-    return tasksOf().filter((x) => x.project === project && x.children.length === 0 && x.name !== TASK_NAME && x.parentTask?.name !== TASK_NAME).map((x) => x.name).sort((x, y) => x.localeCompare(y, LANG));
-  }, (name) => {
+  suggestTasks($('set-parent'), () => setPage.taskProject, (x) => hasRow(x) && !x.parent && x.name !== $('set-task').value.trim(), (name) => { $('set-parent').value = name; }, { onFocus: true });
+  // What may be made a child: no child of its own, not this one, not one already
+  suggestTasks($('child-task'), () => project, (x) => x.children.length === 0 && x.name !== TASK_NAME && !isOwnChild(x), (name) => {
     $('child-task').value = name;
     childNameChanged();
   });

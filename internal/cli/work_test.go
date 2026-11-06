@@ -200,7 +200,7 @@ func TestWorkCommand(t *testing.T) {
 	if _, ok := tasks()["p"]["#4"]; ok {
 		t.Error("--forget left #4")
 	}
-	if got := run(1, "work", "--task", "#4", "--forget"); got != "floe: no task #4 in project p: name its project with --project\n" {
+	if got := run(1, "work", "--task", "#4", "--forget"); got != "floe: no task #4 in project p: --project names another\n" {
 		t.Errorf("no task: %q", got)
 	}
 	if got := run(1, "work", "--task", "#1", "--forget"); !strings.HasPrefix(got, "floe: task #1 of project p still has 1 page(s), such as a:") {
@@ -220,12 +220,14 @@ func TestWorkCommand(t *testing.T) {
 	if got := tasks()["p"]["#21"].Parent; got != "" {
 		t.Errorf(`--parent "": %q`, got)
 	}
-	if got := run(1, "work", "--task", "#22", "--parent", ""); got != "floe: no task #22 in project p: name its project with --project\n" {
+	if got := run(1, "work", "--task", "#22", "--parent", ""); got != "floe: no task #22 in project p: --project names another\n" {
 		t.Errorf(`--parent "" of no row: %q`, got)
 	}
-	if got := run(1, "work", "--task", "#22", "--parent", "#7"); !strings.Contains(got, "task #7 has no row in project p") {
+	if got := run(1, "work", "--task", "#22", "--parent", "#7"); !strings.Contains(got, "project p has no task #7 that can be a parent") {
 		t.Errorf("a parent of no row: %q", got)
 	}
+	run(0, "work", "--task", "#22", "--title", "t", "--parent", "")
+	run(0, "work", "--task", "#22", "--forget")
 	run(0, "work", "--task", "#20", "--forget")
 	run(0, "work", "--task", "#21", "--forget")
 

@@ -39,7 +39,12 @@ func (s *Server) editTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
-	if err := s.cfg.Store.EditTask(q.Get("project"), q.Get("task"), store.TaskEdit(*in)); err != nil {
+	err := s.cfg.Store.EditTask(q.Get("project"), q.Get("task"), store.TaskEdit(*in))
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
 		refuse(w, r, err)
 		return
 	}

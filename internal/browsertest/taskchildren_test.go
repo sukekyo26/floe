@@ -77,6 +77,15 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		}
 	}
 
+	// A child not done keeps a parent of no page from the archive, with none of its pages to say so.
+	task("proj", "#12", "--state", "doing", "--title", "at work")
+	task("proj", "#12", "--parent", "#10")
+	if got := rows("done"); got != "#10 (2 child task(s)), #20 (1 child task(s))" {
+		t.Errorf("a child at work under a parent of no page: %q", got)
+	}
+	task("proj", "#12", "--parent", "")
+	task("proj", "#12", "--forget")
+
 	open := func(name string) {
 		t.Helper()
 		b.navigate("/tasks?project=proj&task=" + strings.ReplaceAll(name, "#", "%23"))
@@ -262,6 +271,21 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Errorf("#4 taken: %+v", got)
 	}
 	task("proj", "#4", "--parent", "#1")
+	// One that is a child here already is not said to be made one: the press writes nothing, and tells nothing.
+	open("#1")
+	write("#4", "")
+	b.until("closed", "!document.getElementById('child-dialog').open")
+	if got := b.eval("(document.querySelector('.toast-link')?.textContent ?? '') + '|' + document.activeElement.id"); got != "|task-child" {
+		t.Errorf("a child here already: %q", got)
+	}
+	press("task-child")
+	b.until("the dialog", "document.getElementById('child-dialog').open")
+	field("#4")
+	if got := b.eval(said); got != "false |  | Make it a child | true" {
+		t.Errorf("a child here already, typed: %q", got)
+	}
+	b.eval("document.getElementById('child-dialog').close()")
+	open("#99")
 	write("#20", "")
 	b.until("refused", "!document.getElementById('child-error').hidden")
 	want := "Could not save: task #20 has child tasks, such as #21, so it cannot have a parent: tasks have one level of children | #20 |  | true"
@@ -280,12 +304,19 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	task("proj", "#104", "--title", "to remove", "--state", "waiting")
 	open("#104")
+	if got := b.eval("getComputedStyle(document.getElementById('task-delete')).color === getComputedStyle(document.getElementById('bulk-delete')).color"); got != "true" {
+		t.Error("the button is not of a delete's color")
+	}
 	b.eval("window.realFetch = window.fetch; window.fetch = (url, init) => (init?.method === 'DELETE' ? Promise.resolve(new Response('it has a page', { status: 400 })) : window.realFetch(url, init))")
 	pressForget()
 	b.until("refused", "!document.getElementById('task-delete-error').hidden")
 	if got := b.eval("document.getElementById('task-delete-error').textContent + ' | ' + document.getElementById('task-delete').textContent"); got != "Could not remove it: it has a page | Remove the task" {
 		t.Errorf("refused: %q", got)
 	}
+	// The connection lost says so too, and the next press takes the words off.
+	b.eval("window.fetch = (url, init) => (init?.method === 'DELETE' ? Promise.reject(new Error('no way')) : window.realFetch(url, init))")
+	pressForget()
+	b.until("no way", "document.getElementById('task-delete-error').textContent.includes('no way')")
 	b.eval("window.fetch = window.realFetch")
 	pressForget()
 	b.until("the list", "location.pathname === '/tasks' && !location.search.includes('task=')")
@@ -344,18 +375,11 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 	s.floe(t, "work", "--project", "proj", "--task", "pa", "--forget")
 
-	// A task of pages alone has the button, and is refused in the store's words.
+	// A task of pages alone cannot be a parent, so that it has no way to make a child.
 	open("t-pages")
-	if got := b.eval(adds); got != "false" {
-		t.Errorf("no way from a task of no row: %s", got)
+	if got := b.eval(adds + " + document.getElementById('task-family').hidden"); got != "truetrue" {
+		t.Errorf("a way from a task of no row: %s", got)
 	}
-	openChild()
-	child("#102", "")
-	b.until("refused", "!document.getElementById('child-error').hidden")
-	if got := b.eval("document.getElementById('child-error').textContent"); !strings.Contains(got, "task t-pages has no row in project proj") {
-		t.Errorf("no row: %q", got)
-	}
-	b.eval("document.getElementById('child-dialog').close()")
 
 	// Named from another task's page, it comes to have a row and be a child.
 	open("gp")
@@ -387,6 +411,8 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 	s.floe(t, "work", "b", "--task", "#2")
 	s.floe(t, "work", "c", "--task", "#3")
 	s.floe(t, "work", "--project", "proj", "--task", "#3", "--parent", "#1")
+	s.floe(t, "work", "--project", "proj", "--task", "#12")
+	s.floe(t, "work", "--project", "proj", "--task", "#AB")
 	b.size(1400, 800, false)
 	defer b.unsize()
 	parents := func() string {
@@ -435,12 +461,23 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 
 	// Offered: of a row, of no parent, not itself; no new name.
 	field("set-parent", "#")
-	if got := b.eval("[...document.getElementById('set-parent-names').children].map((e) => e.textContent.split('·')[0].trim()).join(', ')"); got != "#1 one, #2" {
+	if got := b.eval("[...document.getElementById('set-parent-names').children].map((e) => e.textContent.split('·')[0].trim()).join(', ')"); got != "#1 one, #12, #2, #AB" {
 		t.Errorf("offered: %q", got)
 	}
-	field("set-parent", "#1")
-	if got := b.eval("document.getElementById('set-parent-names').matches(':popover-open') + ''"); got != "false" {
-		t.Errorf("offered of a whole name: %s", got)
+	open := func(value string) string {
+		t.Helper()
+		field("set-parent", value)
+		return b.eval("document.getElementById('set-parent-names').matches(':popover-open') + ''")
+	}
+	// Closed on a whole name, in any case, but one that goes on to another.
+	if got := open("#1"); got != "true" {
+		t.Errorf("#1, of which #12 goes on: %s", got)
+	}
+	if got := open("#12"); got != "false" {
+		t.Errorf("#12: %s", got)
+	}
+	if got := open("#ab"); got != "false" {
+		t.Errorf("#ab: %s", got)
 	}
 	field("set-parent", "#9")
 	if got := b.eval("document.getElementById('set-parent-names').matches(':popover-open') + ''"); got != "false" {

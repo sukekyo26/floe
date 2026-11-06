@@ -129,12 +129,13 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 		return err
 	}
 	t := a.namedTask(ctx, cmd, f)
-	if !f.forget {
-		return c.do(ctx, http.MethodPatch, taskQuery(t), taskEdit(cmd, f), nil)
+	if f.forget {
+		err = c.do(ctx, http.MethodDelete, taskQuery(t), nil, nil)
+	} else {
+		err = c.do(ctx, http.MethodPatch, taskQuery(t), taskEdit(cmd, f), nil)
 	}
-	err = c.do(ctx, http.MethodDelete, taskQuery(t), nil, nil)
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
-		return usererr.New("store_no_task", t.name, t.project)
+		return usererr.New("cli_work_no_row", t.name, t.project)
 	}
 	return err
 }
