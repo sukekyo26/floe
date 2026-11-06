@@ -19,8 +19,8 @@ func TestWorkAPI(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
-	task := func(project, item string) string {
-		return "/api/work?" + url.Values{"project": {project}, "item": {item}}.Encode()
+	task := func(project, name string) string {
+		return "/api/tasks?" + url.Values{"project": {project}, "task": {name}}.Encode()
 	}
 	patch := func(path, body string) (int, string) {
 		t.Helper()
@@ -29,10 +29,10 @@ func TestWorkAPI(t *testing.T) {
 	}
 	tasks := func() store.Tasks {
 		t.Helper()
-		w := e.do(t, http.MethodGet, "/api/work", "")
+		w := e.do(t, http.MethodGet, "/api/tasks", "")
 		var all store.Tasks
 		if err := json.Unmarshal(w.Body.Bytes(), &all); err != nil || w.Code != http.StatusOK {
-			t.Fatalf("GET /api/work = %d, %s, %v", w.Code, w.Body, err)
+			t.Fatalf("GET /api/tasks = %d, %s, %v", w.Code, w.Body, err)
 		}
 		return all
 	}
@@ -54,13 +54,13 @@ func TestWorkAPI(t *testing.T) {
 	for _, c := range []struct {
 		path, body, want string
 	}{
-		{"/api/work?item=x", `{}`, `a task needs its project: "/" for none`},
+		{"/api/tasks?task=x", `{}`, `a task needs its project: "/" for none`},
 		{task("  ", "x"), `{}`, `a task needs its project: "/" for none`},
-		{"/api/work?project=p", `{}`, "a task needs a name"},
+		{"/api/tasks?project=p", `{}`, "a task needs a name"},
 		{task("p", "x"), `{"state":"nope"}`, `unknown state "nope": use waiting, doing, done`},
 		{task("p", "x"), `{"url":"javascript:alert(1)"}`, `"javascript:alert(1)" is not an http or https URL`},
-		{"/api/work?project=p&item=%FF", `{}`, "a task's project and name must be UTF-8"},
-		{"/api/work?project=%FF&item=x", `{}`, "a task's project and name must be UTF-8"},
+		{"/api/tasks?project=p&task=%FF", `{}`, "a task's project and name must be UTF-8"},
+		{"/api/tasks?project=%FF&task=x", `{}`, "a task's project and name must be UTF-8"},
 	} {
 		if code, body := patch(c.path, c.body); code != http.StatusBadRequest || body != c.want {
 			t.Errorf("PATCH %s %s = %d, %q, want %q", c.path, c.body, code, body, c.want)
@@ -83,17 +83,17 @@ func TestWorkAPI(t *testing.T) {
 			t.Fatalf("PATCH d %s = %d, %s", body, w.Code, w.Body)
 		}
 	}
-	edit(`{"project":"shop","work":{"item":"#1","step":"s"}}`)
-	forget := func(project, item string) (int, string) {
+	edit(`{"project":"shop","work":{"task":"#1","step":"s"}}`)
+	forget := func(project, name string) (int, string) {
 		t.Helper()
-		w := e.do(t, http.MethodDelete, task(project, item), "", "Origin", origin)
+		w := e.do(t, http.MethodDelete, task(project, name), "", "Origin", origin)
 		return w.Code, w.Body.String()
 	}
-	w := e.do(t, http.MethodPatch, "/api/artifacts/d", `{"work":{"item":"   "}}`, "Origin", origin, "Content-Type", jsonType)
+	w := e.do(t, http.MethodPatch, "/api/artifacts/d", `{"work":{"task":"   "}}`, "Origin", origin, "Content-Type", jsonType)
 	if w.Code != http.StatusBadRequest || w.Body.String() != "a task needs a name" {
 		t.Errorf("a name of spaces = %d, %s", w.Code, w.Body)
 	}
-	w = e.do(t, http.MethodDelete, "/api/work?project=shop&item=%FF", "", "Origin", origin)
+	w = e.do(t, http.MethodDelete, "/api/tasks?project=shop&task=%FF", "", "Origin", origin)
 	if w.Code != http.StatusBadRequest || w.Body.String() != "a task's project and name must be UTF-8" {
 		t.Errorf("forget of no UTF-8 = %d, %s", w.Code, w.Body)
 	}
@@ -103,25 +103,25 @@ func TestWorkAPI(t *testing.T) {
 	if code, _ := forget("shop", "#2"); code != http.StatusNotFound {
 		t.Errorf("no task = %d", code)
 	}
-	edit(`{"work":{"item":""}}`)
+	edit(`{"work":{"task":""}}`)
 	if code, _ := forget("shop", "#1"); code != http.StatusNoContent {
 		t.Errorf("a task of no page = %d", code)
 	}
 
 	// What it cannot read it says, and writes nothing over: a link of another scheme goes no further than here.
-	file := filepath.Join(e.root, "work.json")
+	file := filepath.Join(e.root, "tasks.json")
 	for _, text := range []string{"null", `{"p":{"x":{"state":"doing","at":"t","url":"javascript:alert(1)"}}}`} {
 		if err := os.WriteFile(file, []byte(text), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if w := e.do(t, http.MethodGet, "/api/work", ""); w.Code != http.StatusBadRequest || strings.Contains(w.Body.String(), `"url"`) {
+		if w := e.do(t, http.MethodGet, "/api/tasks", ""); w.Code != http.StatusBadRequest || strings.Contains(w.Body.String(), `"url"`) {
 			t.Errorf("GET of %s = %d, %s", text, w.Code, w.Body)
 		}
 	}
 	if err := os.WriteFile(file, []byte("{ broken"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if w := e.do(t, http.MethodGet, "/api/work", ""); w.Code != http.StatusBadRequest {
+	if w := e.do(t, http.MethodGet, "/api/tasks", ""); w.Code != http.StatusBadRequest {
 		t.Errorf("GET of a broken file = %d, %s", w.Code, w.Body)
 	}
 	if code, _ := patch(task("p", "x"), `{}`); code != http.StatusBadRequest {

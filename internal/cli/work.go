@@ -18,13 +18,13 @@ import (
 
 // workFlags are the flags of floe work.
 type workFlags struct {
-	item, project, step, state, url, title, steps string
+	task, project, step, state, url, title, steps string
 	pin, unpin, clear, forget                     bool
 }
 
 // A task of pages: what a page names by its project and the name given, or its own.
 type taskOf struct {
-	project, item string
+	project, name string
 }
 
 func (a *app) workCmd() *cobra.Command {
@@ -32,17 +32,17 @@ func (a *app) workCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "work [<slug>...]",
 		Short: "Put pages on a task of the dev screen, pin them, or change a task's state, step, URL, title or steps' order",
-		Long: `With slugs, put the pages on a task and change that task; without, change the task --item names, of
+		Long: `With slugs, put the pages on a task and change that task; without, change the task --task names, of
 --project (the project of the working directory when left out; "" for none).
 
 The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at
 the first failure. The same command given again finishes what a failure left.
 
-  floe work design-notes --item "#130" --step design --state waiting
-  floe work --item "#130" --url https://example.com/issues/482
-  floe work --item "#130" --steps design,build,review
+  floe work design-notes --task "#130" --step design --state waiting
+  floe work --task "#130" --url https://example.com/issues/482
+  floe work --task "#130" --steps design,build,review
   floe work design-notes --pin
-  floe work --item "#130" --forget`,
+  floe work --task "#130" --forget`,
 		// Asked here, as the flags are read by now: cobra's own asking comes after, unmarked as a usage error.
 		Args: usage(func(cmd *cobra.Command, _ []string) error { return cmd.ValidateFlagGroups() }),
 		RunE: func(cmd *cobra.Command, slugs []string) error {
@@ -55,7 +55,7 @@ the first failure. The same command given again finishes what a failure left.
 		},
 	}
 	flags := cmd.Flags()
-	flags.StringVar(&f.item, "item", "", `the task's name; with slugs, "" takes the pages off their task`)
+	flags.StringVar(&f.task, "task", "", `the task's name; with slugs, "" takes the pages off their task`)
 	flags.StringVar(&f.project, "project", "", `the task's project, without slugs; "" for none`)
 	flags.StringVar(&f.step, "step", "", `the pages' step on the task; "" takes it off them`)
 	flags.StringVar(&f.state, "state", "", "the task's state: "+store.StateNames())
@@ -67,7 +67,7 @@ the first failure. The same command given again finishes what a failure left.
 	flags.BoolVar(&f.clear, "clear", false, "take the pages off their task and take their pin off; the task stays")
 	flags.BoolVar(&f.forget, "forget", false, "remove the task, which no page may be on")
 	cmd.MarkFlagsMutuallyExclusive("pin", "unpin")
-	for _, other := range []string{"item", "step", "state", "url", "title", "steps", "pin", "unpin"} {
+	for _, other := range []string{"task", "step", "state", "url", "title", "steps", "pin", "unpin"} {
 		cmd.MarkFlagsMutuallyExclusive("clear", other)
 	}
 	for _, other := range []string{"state", "url", "title", "steps"} {
@@ -106,13 +106,13 @@ func taskEdit(cmd *cobra.Command, f workFlags) server.TaskEdit {
 }
 
 func taskQuery(t taskOf) string {
-	return "/api/work?" + url.Values{"project": {t.project}, "item": {t.item}}.Encode()
+	return "/api/tasks?" + url.Values{"project": {t.project}, "task": {t.name}}.Encode()
 }
 
-// workTask changes the task --item names, or forgets it.
+// workTask changes the task --task names, or forgets it.
 func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	ctx := cmd.Context()
-	if !cmd.Flags().Changed("item") {
+	if !cmd.Flags().Changed("task") {
 		return usageOf(usererr.New("cli_work_no_task"))
 	}
 	if onPages := changed(cmd, "step", "pin", "unpin", "clear"); len(onPages) > 0 {
@@ -128,35 +128,35 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	}
 	err = c.do(ctx, http.MethodDelete, taskQuery(t), nil, nil)
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
-		return usererr.New("store_no_task", t.item, t.project)
+		return usererr.New("store_no_task", t.name, t.project)
 	}
 	return err
 }
 
-// namedTask is the task of --item and --project, whose project is the working directory's when left out.
+// namedTask is the task of --task and --project, whose project is the working directory's when left out.
 func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) taskOf {
 	name := f.project
 	if !cmd.Flags().Changed("project") {
 		name = project.Name(ctx, a.env.Dir)
 	}
-	return taskOf{project: store.ProjectKey(name), item: f.item}
+	return taskOf{project: store.ProjectKey(name), name: f.task}
 }
 
 // workPages puts the pages slugs on a task and changes it: all checked before anything is written, so that a page of
-// no task, or none at all, leaves the rest as they were. Flags of the pages alone ask nothing of work.json: an empty
+// no task, or none at all, leaves the rest as they were. Flags of the pages alone ask nothing of tasks.json: an empty
 // write would make a row for a task that has none.
 func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	ctx := cmd.Context()
 	if off := changed(cmd, "forget", "project"); len(off) > 0 {
 		return usageOf(usererr.New("cli_work_no_pages", off[0]))
 	}
-	onPages := changed(cmd, "item", "step", "pin", "unpin", "clear")
+	onPages := changed(cmd, "task", "step", "pin", "unpin", "clear")
 	onTasks := changed(cmd, "state", "url", "title", "steps")
 	if len(onPages)+len(onTasks) == 0 {
 		return usageOf(usererr.New("cli_work_nothing"))
 	}
-	named := cmd.Flags().Changed("item")
-	item, err := store.PageItem(f.item)
+	named := cmd.Flags().Changed("task")
+	name, err := store.TaskName(f.task)
 	if err != nil {
 		return err //nolint:wrapcheck // the store's words
 	}
@@ -164,8 +164,8 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	if f.step != "" {
 		onTask = append(onTask, "step")
 	}
-	if named && item == "" && len(onTask) > 0 {
-		return usageOf(usererr.New("cli_work_item_off", onTask[0]))
+	if named && name == "" && len(onTask) > 0 {
+		return usageOf(usererr.New("cli_work_task_off", onTask[0]))
 	}
 	c, err := a.client(ctx, true)
 	if err != nil {
@@ -175,7 +175,7 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	if err = c.do(ctx, http.MethodGet, "/api/artifacts", nil, &list); err != nil {
 		return err
 	}
-	tasks, err := tasksOfPages(list, slugs, item, named, len(onTask) > 0)
+	tasks, err := tasksOfPages(list, slugs, name, named, len(onTask) > 0)
 	if err != nil {
 		return err
 	}
@@ -200,23 +200,23 @@ func tasksOfPages(list []store.Listed, slugs []string, named string, isNamed, wa
 			return nil, usererr.New("store_no_page", slug)
 		}
 		page := list[at]
-		item := ""
+		name := ""
 		if page.Work != nil {
-			item = page.Work.Item
+			name = page.Work.Task
 		}
 		if isNamed {
-			item = named
+			name = named
 		}
-		if item == "" {
+		if name == "" {
 			if wanted {
-				return nil, usererr.New("cli_work_no_item", slug)
+				return nil, usererr.New("cli_work_page_no_task", slug)
 			}
 			continue
 		}
 		if !isNamed && !wanted {
 			continue
 		}
-		if t := (taskOf{project: page.TaskProject, item: item}); !slices.Contains(tasks, t) {
+		if t := (taskOf{project: page.TaskProject, name: name}); !slices.Contains(tasks, t) {
 			tasks = append(tasks, t)
 		}
 	}
@@ -229,10 +229,10 @@ func pageWorkEdit(cmd *cobra.Command, f workFlags) server.Edit {
 	if f.clear {
 		off := false
 		empty := ""
-		work.Item, work.Step, work.Pin = &empty, &empty, &off
+		work.Task, work.Step, work.Pin = &empty, &empty, &off
 	}
-	if cmd.Flags().Changed("item") {
-		work.Item = &f.item
+	if cmd.Flags().Changed("task") {
+		work.Task = &f.task
 	}
 	if cmd.Flags().Changed("step") {
 		work.Step = &f.step

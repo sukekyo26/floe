@@ -17,7 +17,7 @@ import (
 func taskIn(t *testing.T, s *store.Store, project string) store.Task {
 	t.Helper()
 
-	all, err := s.ReadWork()
+	all, err := s.ReadTasks()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,8 +35,8 @@ func TestWorkWrite(t *testing.T) {
 
 	root := filepath.Join(t.TempDir(), "S")
 	s := store.New(root)
-	if all, err := s.ReadWork(); err != nil || len(all) != 0 {
-		t.Fatalf("no work.json = %v, %v", all, err)
+	if all, err := s.ReadTasks(); err != nil || len(all) != 0 {
+		t.Fatalf("no tasks.json = %v, %v", all, err)
 	}
 	if err := s.EditTask("p", "#1", store.TaskEdit{}); err != nil {
 		t.Fatal(err)
@@ -47,7 +47,7 @@ func TestWorkWrite(t *testing.T) {
 	// By hand: a parent, which no write sets, and a time no write can make by chance.
 	long := hour(1)
 	hand := fmt.Sprintf(`{"p": {"#1": {"state": "doing", "at": %q, "parent": "#0"}}}`, long)
-	if err := os.WriteFile(filepath.Join(root, "work.json"), []byte(hand), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(hand), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	// As Edit reads a project: trimmed, so that this is the same task.
@@ -97,7 +97,7 @@ func TestWorkRefused(t *testing.T) {
 	}
 	was := taskIn(t, s, "p")
 	for _, c := range []struct {
-		project, item string
+		project, name string
 		ed            store.TaskEdit
 		want          string
 	}{
@@ -111,7 +111,7 @@ func TestWorkRefused(t *testing.T) {
 		{"\xff", "#1", store.TaskEdit{}, "a task's project and name must be UTF-8"},
 		{"p", "\xff", store.TaskEdit{}, "a task's project and name must be UTF-8"},
 	} {
-		err := s.EditTask(c.project, c.item, c.ed)
+		err := s.EditTask(c.project, c.name, c.ed)
 		if err == nil || !strings.Contains(told(err, root), c.want) {
 			t.Errorf("%+v = %v, want %s", c, err, c.want)
 		}
@@ -124,7 +124,7 @@ func TestWorkRefused(t *testing.T) {
 	}
 }
 
-// A work.json that cannot be read, or holds a state of no table, is refused to read and to write, and stays as it is
+// A tasks.json that cannot be read, or holds a state of no table, is refused to read and to write, and stays as it is
 // for a person to mend.
 func TestWorkBroken(t *testing.T) {
 	t.Parallel()
@@ -137,12 +137,12 @@ func TestWorkBroken(t *testing.T) {
 		if err := os.MkdirAll(root, 0o700); err != nil {
 			t.Fatal(err)
 		}
-		file := filepath.Join(root, "work.json")
+		file := filepath.Join(root, "tasks.json")
 		if err := os.WriteFile(file, []byte(text), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		s := store.New(root)
-		if _, err := s.ReadWork(); err == nil {
+		if _, err := s.ReadTasks(); err == nil {
 			t.Errorf("read %s", text)
 		}
 		if err := s.EditTask("p", "#2", store.TaskEdit{}); err == nil || !strings.Contains(told(err, root), "mend it by hand") {
@@ -164,7 +164,7 @@ func pageOn(t *testing.T, s *store.Store, root, slug, project string, archived b
 	if err := os.MkdirAll(filepath.Join(root, slug), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	m := &store.Meta{Project: project, Archived: archived, CreatedAt: hour(1), UpdatedAt: hour(1), Work: &store.Work{Item: "#1"}}
+	m := &store.Meta{Project: project, Archived: archived, CreatedAt: hour(1), UpdatedAt: hour(1), Work: &store.Work{Task: "#1"}}
 	if err := s.WriteMeta(slug, m); err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func TestWorkForget(t *testing.T) {
 	if err := s.ForgetTask("p", "#1"); err != nil {
 		t.Error(err)
 	}
-	all, err := s.ReadWork()
+	all, err := s.ReadTasks()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,23 +244,23 @@ func TestPageWork(t *testing.T) {
 			t.Errorf("%+v: %s, want %s", ed, b, want)
 		}
 	}
-	work(store.WorkEdit{Item: ptr(" #1 "), Step: ptr(" 設計 ")}, `{"item":"#1","step":"設計"}`)
-	work(store.WorkEdit{Pin: ptr(true)}, `{"item":"#1","step":"設計","pin":true}`)
-	work(store.WorkEdit{Item: ptr(" #1 ")}, `{"item":"#1","step":"設計","pin":true}`)
-	work(store.WorkEdit{Item: ptr("#2"), Step: ptr("実装")}, `{"item":"#2","step":"実装","pin":true}`)
-	work(store.WorkEdit{Item: ptr("#3")}, `{"item":"#3","pin":true}`)
-	work(store.WorkEdit{Step: ptr("設計")}, `{"item":"#3","step":"設計","pin":true}`)
-	work(store.WorkEdit{Step: ptr("")}, `{"item":"#3","pin":true}`)
-	work(store.WorkEdit{Item: ptr("")}, `{"pin":true}`)
+	work(store.WorkEdit{Task: ptr(" #1 "), Step: ptr(" 設計 ")}, `{"task":"#1","step":"設計"}`)
+	work(store.WorkEdit{Pin: ptr(true)}, `{"task":"#1","step":"設計","pin":true}`)
+	work(store.WorkEdit{Task: ptr(" #1 ")}, `{"task":"#1","step":"設計","pin":true}`)
+	work(store.WorkEdit{Task: ptr("#2"), Step: ptr("実装")}, `{"task":"#2","step":"実装","pin":true}`)
+	work(store.WorkEdit{Task: ptr("#3")}, `{"task":"#3","pin":true}`)
+	work(store.WorkEdit{Step: ptr("設計")}, `{"task":"#3","step":"設計","pin":true}`)
+	work(store.WorkEdit{Step: ptr("")}, `{"task":"#3","pin":true}`)
+	work(store.WorkEdit{Task: ptr("")}, `{"pin":true}`)
 	work(store.WorkEdit{Step: ptr("off a task")}, `{"pin":true}`)
 	work(store.WorkEdit{Pin: ptr(false)}, "null")
-	work(store.WorkEdit{Item: ptr("#3"), Step: ptr("s")}, `{"item":"#3","step":"s"}`)
-	for _, item := range []string{"   ", "\xff"} {
-		if _, err := s.Edit("d", store.Edit{Work: &store.WorkEdit{Item: ptr(item)}}); err == nil {
-			t.Errorf("a page on the task %q", item)
+	work(store.WorkEdit{Task: ptr("#3"), Step: ptr("s")}, `{"task":"#3","step":"s"}`)
+	for _, name := range []string{"   ", "\xff"} {
+		if _, err := s.Edit("d", store.Edit{Work: &store.WorkEdit{Task: ptr(name)}}); err == nil {
+			t.Errorf("a page on the task %q", name)
 		}
 	}
-	work(store.WorkEdit{}, `{"item":"#3","step":"s"}`)
+	work(store.WorkEdit{}, `{"task":"#3","step":"s"}`)
 
 	project := func(want string) {
 		t.Helper()
@@ -282,24 +282,24 @@ func TestPageWork(t *testing.T) {
 
 	// It goes on through what writes the page anew, and with its name.
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\ntitle: two\n", nil, store.Options{})
-	if got := s.ReadMeta("d").Work; got == nil || got.Item != "#3" || got.Step != "s" {
+	if got := s.ReadMeta("d").Work; got == nil || got.Task != "#3" || got.Step != "s" {
 		t.Errorf("published again: %+v", got)
 	}
 	if err := s.Rebuild(picKit(t, "v2", "")); err != nil {
 		t.Fatal(err)
 	}
-	if got := s.ReadMeta("d").Work; got == nil || got.Item != "#3" {
+	if got := s.ReadMeta("d").Work; got == nil || got.Task != "#3" {
 		t.Errorf("drawn again: %+v", got)
 	}
 	if _, err := s.Edit("d", store.Edit{Slug: ptr("e")}); err != nil {
 		t.Fatal(err)
 	}
-	if got := s.ReadMeta("e").Work; got == nil || got.Item != "#3" {
+	if got := s.ReadMeta("e").Work; got == nil || got.Task != "#3" {
 		t.Errorf("renamed: %+v", got)
 	}
 }
 
-// A page of no project, and a directory's name with spaces round it, are each one project in work.json.
+// A page of no project, and a directory's name with spaces round it, are each one project in tasks.json.
 func TestProjectKey(t *testing.T) {
 	t.Parallel()
 
