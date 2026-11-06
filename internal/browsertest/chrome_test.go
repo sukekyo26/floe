@@ -291,15 +291,15 @@ func (b *browser) pressKey(k string) {
 	}
 }
 
-// painted waits for what the page holds now to be on the screen, by having Chrome take a picture of one pixel of it. Chrome sends a
-// press and its release by what it last put there, which on a busy machine lags behind the page: over a list of choices just opened,
-// either reaches the iframe under it, though the pointer moving there reaches the list, and two animation frames are not enough. Every
-// press goes through here. A page leaving cannot be pictured and has nothing to wait for, so that the error tells nothing.
+// painted waits for what the page holds now to be on the screen, by having Chrome take a picture of it, of the whole window: one with
+// a clip resizes the page for it, and a press in an iframe is lost. Chrome sends a press and its release by what it last put on the
+// screen, which on a busy machine lags behind the page: over a list of choices just opened, either reaches the iframe under it, though
+// the pointer moving there reaches the list, and two animation frames are not enough. Every press goes through here. A page leaving
+// cannot be pictured and has nothing to wait for, so that the error tells nothing.
 func (b *browser) painted() {
 	b.t.Helper()
 
-	clip := &page.Viewport{X: 0, Y: 0, Width: 1, Height: 1, Scale: 1}
-	_, _ = chromedp.Call(b.ctx, page.CaptureScreenshot, page.CaptureScreenshotParams{Clip: clip}) //nolint:errcheck // see above
+	_, _ = chromedp.Call(b.ctx, page.CaptureScreenshot, page.CaptureScreenshotParams{}) //nolint:errcheck // see above
 }
 
 func (b *browser) click(x, y float64) {
