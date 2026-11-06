@@ -374,6 +374,21 @@ func TestUIGraph(t *testing.T) { //nolint:paralleltest // the browser tests shar
 			t.Errorf("%s:\n  %s", lang, strings.ReplaceAll(got, "\n", "\n  "))
 		}
 	}
+	// The check itself: a second edge through a label on its edge, and a label sticking out of its background.
+	got := b.eval(`(() => {
+	  const g = document.querySelector('rect.label-bg + text.label');
+	  const r = g.getBBox();
+	  const p = g.closest('svg').querySelector('path.edge').cloneNode();
+	  p.setAttribute('d', 'M' + (r.x + r.width / 2) + ',' + r.y + ' V' + (r.y + r.height));
+	  g.closest('svg').appendChild(p);
+	  g.previousElementSibling.setAttribute('width', 1);
+	  return ` + measureBoxes + `;
+	})()`)
+	for _, want := range []string{"sticks out of its ground", "overlaps the edge"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("measureBoxes tells %q, want %q", got, want)
+		}
+	}
 }
 
 // groundSpecs are two diagrams drawing what hides what lies under it: a hand-written edge's label, a hollow end and a

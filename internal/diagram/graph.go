@@ -843,10 +843,10 @@ func (d *drawing) nearest(lo, hi float64, along int, away func(a, b float64) flo
 }
 
 // nearestHand is how far the nearest place within r's span along where an edge written by hand leaves a box stands, by
-// away. Past the run (sign 1) it reaches back from a box past the cut at, maybe over the run, and moves with it: it adds
-// to need from where it starts, though the cut stands short of the nearest box, run or label; a hand of a box short of
-// the cut does not move, and room made is checked after. Short of the run (sign -1), a hand past it moves with the run,
-// and is not counted.
+// away. Past the run (sign 1) it reaches back from a box past the cut at, maybe over the run, and moves with it: it
+// adds to need from where it starts, though the cut stands short of the nearest box, run or label; a hand of a box
+// short of the cut does not move, and room made is checked after. Short of the run (sign -1), a hand past it moves with
+// the run, and is not counted.
 func (d *drawing) nearestHand(r rect, along int, sign, at float64, away func(a, b float64) float64) float64 {
 	across := 1 - along
 	lo, hi := r.lo(along), r.lo(along)+r.size(along)
