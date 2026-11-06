@@ -113,6 +113,8 @@
   .news { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--new); text-decoration: none; white-space: nowrap; }
   .news:hover { text-decoration: underline; }
   /* The way back to where the page was opened from, which the logo is not; a narrow screen has its mark alone, and a name's end goes */
+  /* The page's title gives way to it, not its mark */
+  .icon-btn.back, .icon-btn.back svg { flex: none; }
   .back-word { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .badge {
     flex: none; padding: 0.15rem 0.5rem; font-size: var(--text-label); font-weight: 600; color: var(--muted);
