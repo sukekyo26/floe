@@ -8,7 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Add the task list at `/tasks`: the tasks by state and project, longest waiting first, with their step, pages, unread and outside link, the pages pinned over them, and a switch to it beside the logo once a page is on a task or pinned. A row opens the task's page: its pages under their steps, its state to change, and a button that archives them once it is done.
+- Add the task list at `/tasks`: the tasks of one project by state, longest waiting first, with their step, pages, unread and outside link, that project's pinned pages over them, and a switch to it beside the logo once a page is on a task or pinned. A row opens the task's page: its pages under their steps, its state to change, and a button that archives them once it is done.
 - Add `floe work`, which says which task a page is on, its step and pin, and a task's state, outside link, title and order of steps, held in `tasks.json` in the store. Pages keep it when published again, renamed or drawn again.
 - Add one axis to the points of an edge's `via` in a diagram: `{ x: 710 }` or `{ y: 218 }`, the other axis being the point before's, or that of the centre of the edge's start, so that the point does not copy where a part stands. The docs now tell to write only the turns you choose, and which points cannot be left out.
 - Add `parts` to the items of the part `entries`: the parts `details` holds, under the item's `text`, so that code in an item is drawn by `code` and `terminal`, under its file or prompt with a copy button.
