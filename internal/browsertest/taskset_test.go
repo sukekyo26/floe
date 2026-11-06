@@ -153,6 +153,80 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("off the task", "!document.getElementById('set-dialog').open")
 	out = append(out, "off, no pin: "+work("c"))
 
+	// As it opens, no suggestions over the fields; a suggestion pressed, as a person does, goes in and closes; a tag's too.
+	dialog("b")
+	say("as it opens", "document.getElementById('set-task-names').matches(':popover-open')")
+	s.floe(t, "work", "--task", "#1", "--project", "proj", "--step", "review", "--url", "https://example.com/a/one")
+	s.floe(t, "work", "--task", "#2", "--project", "proj", "--url", "https://example.com/a/two")
+	b.eval("document.getElementById('set-dialog').close()")
+	b.navigate("/?project=proj")
+	b.until("the rows", "document.querySelector('#list li[data-slug=b]')")
+	dialog("b")
+	input := b.rect("document.getElementById('set-task')")
+	b.click(input.X+10, input.Y+input.Height/2)
+	b.until("the suggestions", "document.getElementById('set-task-names').matches(':popover-open')")
+	option := b.rect("[...document.getElementById('set-task-names').children].find((e) => e.textContent === '#2')")
+	b.click(option.X+10, option.Y+option.Height/2)
+	b.until("it closed", "!document.getElementById('set-task-names').matches(':popover-open')")
+	say("a suggestion pressed", fields)
+	b.still()
+	say("it stays closed", "document.getElementById('set-task-names').matches(':popover-open')")
+	// What is offered holds what is written.
+	field("set-task", "#9")
+	say("offered of #9", "[...document.getElementById('set-task-names').children].map((e) => e.textContent).join(', ')")
+	field("set-task", "#")
+	say("offered of #", "[...document.getElementById('set-task-names').children].map((e) => e.textContent).join(', ')")
+	// A URL changed, the name then changed: the URL is that task's, and nothing of it is sent.
+	field("set-url", "https://example.com/mine")
+	field("set-task", "#2")
+	say("a URL changed, then the name", fields)
+	field("set-task", "#1")
+	save()
+	out = append(out, "saved: "+tasks())
+
+	// Saved with nothing of the step changed, the task's last step stays: the page's own is older.
+	s.floe(t, "work", "c", "--task", "#1", "--step", "later")
+	dialog("b")
+	field("set-url", "https://example.com/a/url-only")
+	save()
+	out = append(out, "the URL alone: "+tasks()+" | "+work("b"))
+	// While saving, what is typed next goes nowhere.
+	dialog("b")
+	b.eval(`window.realFetch = window.fetch; window.fetch = async (url, init) => { const res = await window.realFetch(url, init); if (String(url).includes('/api/tasks') && init?.method === 'PATCH') document.getElementById('set-task').value = '#2'; return res; }`)
+	b.eval("document.getElementById('set').requestSubmit()")
+	b.until("saved", "!document.getElementById('set-dialog').open")
+	b.eval("window.fetch = window.realFetch")
+	out = append(out, "typed while saving: "+work("b"))
+
+	// A URL with spaces round it, as pasted, is that URL.
+	dialog("b")
+	field("set-url", "  https://example.com/a/pasted  ")
+	save()
+	out = append(out, "pasted: "+tasks())
+
+	// An archived page has no pin to give: the shelf of pins leaves it out.
+	s.floe(t, "archive", "a")
+	b.navigate("/?view=archived&project=proj")
+	b.until("the archive", "document.querySelector('#list li[data-slug=a]')")
+	say("an archived page", "document.querySelector('#list li[data-slug=a] .pin').hidden + ' ' + document.querySelectorAll('#list li[data-slug=a] .task-tag').length")
+	s.floe(t, "archive", "--undo", "a")
+	if got := work("a"); got != `{"pin":true}` {
+		t.Errorf("archived and back: %s", got)
+	}
+
+	// A pin says it was done, in the bar's menu, where no badge shows it; refused, it says why.
+	b.navigate("/?project=proj")
+	b.until("the rows", "document.querySelector('#list li[data-slug=b]')")
+	menu("b", "pin")
+	b.until("the toast", "document.querySelector('.toast')")
+	say("pinned, told", "document.querySelector('.toast').textContent")
+	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : window.realFetch(url, init))`)
+	menu("b", "pin")
+	b.until("the refusal", "!document.getElementById('error').hidden")
+	say("refused, told", "document.getElementById('error').textContent")
+	b.eval("window.fetch = window.realFetch; showError('')")
+	s.floe(t, "work", "b", "--unpin")
+
 	// From a page whole, which reads the tasks as it opens.
 	s.floe(t, "work", "--task", "#1", "--project", "proj", "--url", "https://example.com/a/whole")
 	b.navigate("/a/b/")
