@@ -404,7 +404,7 @@ func (d *drawing) onPoint(k, axis int) bool {
 }
 
 // bend gives a straight edge with no label, short of its icons' points, one bend in the middle of its run, when nothing
-// stands there. A labelled one stays, the label beside it, and gathered bends it by its rectangles.
+// stands there. A labelled one stays, the label on it, and gathered bends it by its rectangles.
 func (d *drawing) bend(k int) {
 	pts := d.routes[k]
 	n, axis := inLine(pts)
@@ -575,7 +575,7 @@ func (d *drawing) labelFits(k int) bool {
 	for e, sp := range d.spots {
 		if e == k || sp.edge == k {
 			run := d.runOf(sp)
-			r, _ := d.rect(e)
+			r := d.rect(e)
 			along := runAxis(run)
 			if r.lo(along) < min(run[along], run[along+2]) || r.lo(along)+r.size(along) > max(run[along], run[along+2]) ||
 				!d.labelClear(k, e, heldRect(run, sp)) {
@@ -592,7 +592,9 @@ func (d *drawing) labelClear(k, e int, held rect) bool {
 	held = rect{x: held.x - 1, y: held.y - 1, w: held.w + 2, h: held.h + 2, what: "", at: ""}
 	touches := func(s seg) bool { return crossedBy(s, held) }
 	if slices.ContainsFunc(d.settling.things, held.overlaps) || slices.ContainsFunc(d.settling.sides, touches) ||
-		slices.ContainsFunc(segsOf(d.routes[k]), touches) {
+		slices.ContainsFunc(segsOf(d.routes[k]), func(s seg) bool {
+			return touches(s) && (d.spots[e].beside || s != d.runOf(d.spots[e]))
+		}) {
 		return false
 	}
 	for o, r := range d.settling.labels {
@@ -702,7 +704,7 @@ func (d *drawing) unseen(axis int) float64 {
 		first = min(first, f.lo(axis))
 	}
 	for k := range d.spots {
-		r, _ := d.rect(k)
+		r := d.rect(k)
 		first = min(first, r.lo(axis))
 	}
 	for _, pts := range d.routes {

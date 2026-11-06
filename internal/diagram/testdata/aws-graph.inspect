@@ -48,7 +48,7 @@ label "RDS プライマリ" 362.6,861 98.8x18
 label "RDS スタンバイ" 578.6,861 98.8x18
 label "SQS" 804.2,861 31.6x18
 label "Lambda" 793.4,1023 53.2x18
-label "DNS" 228,99 31.6x18
-label "HTTPS" 308,99 46x18
-label "SQL" 360.4,697 31.6x18
-label "sync" 487,846 38.8x18
+label "DNS" 200.2,123 31.6x18
+label "HTTPS" 273,123 46x18
+label "SQL" 388.2,721 31.6x18
+label "sync" 500.6,825 38.8x18

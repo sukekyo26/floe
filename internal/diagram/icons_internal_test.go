@@ -76,7 +76,7 @@ func sidePlace(t target, pt [2]float64) (string, float64) {
 }
 
 // iconFault is what is wrong with g laid out as l, or "": a mistake told, an end at an icon off the icon, the ends on a
-// side not parting it equally, a run at an icon too short for an arrow, or a label not a column beside a run of its edge.
+// side not parting it equally, a run at an icon too short for an arrow, or a label not on a run of its edge.
 func iconFault(g *graph, l *layout) string {
 	if l.failure != nil {
 		return l.failure.Error()
@@ -123,7 +123,7 @@ func iconFault(g *graph, l *layout) string {
 			}
 		}
 	}
-	return cmpOr(runsFault(g, l), labelsBeside(g, l))
+	return cmpOr(runsFault(g, l), labelsOn(g, l))
 }
 
 // runsFault is the first run of an edge of g at an icon not straight or of no length, or an end at a box off its
@@ -169,17 +169,17 @@ func runsFault(g *graph, l *layout) string {
 	return ""
 }
 
-// labelsBeside is the first label of an edge of g, no loop's, not a column beside a run of it, or "".
-func labelsBeside(g *graph, l *layout) string {
+// labelsOn is the first label of an edge of g, no loop's, not on a run of it, or "".
+func labelsOn(g *graph, l *layout) string {
 	for k, e := range g.Edges {
 		if e.Label == nil || e.From == e.To {
 			continue
 		}
 		if !slices.ContainsFunc(l.labels, func(r rect) bool {
 			return (r.what == `label "`+e.Label["en"]+`"` || r.what == `label "`+e.Label["ja"]+`"`) &&
-				slices.ContainsFunc(l.paths[k].segs, func(s seg) bool { return beside(r, s) })
+				slices.ContainsFunc(l.paths[k].segs, func(s seg) bool { return onRun(r, s) })
 		}) {
-			return "the label of " + l.paths[k].what + " is not a column beside a run of it"
+			return "the label of " + l.paths[k].what + " is not on a run of it"
 		}
 	}
 	return ""
@@ -223,7 +223,7 @@ func touchesOutside(g *graph, l *layout) int {
 	}
 	inside := func(p [2]float64) bool {
 		for i, n := range o.boxes {
-			if c := o.drawn[i].cell; n.box.icon != nil && p[0] >= c.x && p[0] <= c.x+c.w && p[1] >= c.y && p[1] <= c.y+c.h {
+			if c := o.drawn[i].cell; n.box.icon != nil && p[0] >= c.x-eps && p[0] <= c.x+c.w+eps && p[1] >= c.y-eps && p[1] <= c.y+c.h+eps {
 				return true
 			}
 		}
@@ -508,7 +508,7 @@ func TestGraphIconsHands(t *testing.T) {
 	if _, _, err := o.items(); err != nil {                        //nolint:errcheck // none but this
 		t.Fatal(err)
 	}
-	d, err := o.draw(o.groups[0], false, [2]float64{})
+	d, err := o.draw(o.groups[0], false)
 	if err != nil {
 		t.Fatal(err)
 	}

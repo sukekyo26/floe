@@ -157,8 +157,8 @@ func labelFault(g *graph, l, r *layout) string {
 			}
 			continue
 		}
-		if !slices.ContainsFunc(l.paths[k].segs, func(s seg) bool { return beside(r, s) }) {
-			return fmt.Sprintf("the label of %s at %v, %v not a column beside a run of it", l.paths[k].what, r.x, r.y)
+		if !slices.ContainsFunc(l.paths[k].segs, func(s seg) bool { return onRun(r, s) }) {
+			return fmt.Sprintf("the label of %s at %v, %v not on a run of it", l.paths[k].what, r.x, r.y)
 		}
 	}
 	return ""
@@ -211,7 +211,7 @@ func handFault(g *graph, l *layout) string {
 			parts = append(parts, part{Edge: &edge{
 				From: end{Name: n.Box.Name, Point: nil}, To: end{Name: "", Point: &p}, //nolint:exhaustruct_v5 // one kind of part
 				FromSide: side, ToSide: "", Via: nil, Straight: true, Label: nil, At: nil, Dashed: false, Bold: false, Tone: "",
-				Start: nil, End: nil, Crossing: true, who: "", graph: "", anchor: "",
+				Start: nil, End: nil, Crossing: true, who: "", graph: "", beside: false,
 			}})
 		}
 	}
@@ -226,12 +226,12 @@ func handFault(g *graph, l *layout) string {
 	return ""
 }
 
-// beside reports whether r stands a column beside run s, within its length.
-func beside(r rect, s seg) bool {
+// onRun reports whether r stands on run s, its middle on the line, within its length.
+func onRun(r rect, s seg) bool {
 	along := runAxis(s)
 	across := 1 - along
 	lo, hi := min(s[along], s[along+2]), max(s[along], s[along+2])
-	near := math.Abs(r.lo(across)-s[across]-column) < 1e-6 || math.Abs(s[across]-column-r.lo(across)-r.size(across)) < 1e-6
+	near := math.Abs(r.lo(across)+r.size(across)/2-s[across]) < 1e-6
 	return near && r.lo(along) >= lo && r.lo(along)+r.size(along) <= hi
 }
 
@@ -861,7 +861,7 @@ func TestGraphRandom(t *testing.T) {
 			groups := rand.New(rand.NewPCG(c.seed[0]+20, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
 			lanes := rand.New(rand.NewPCG(c.seed[0]+30, c.seed[1]))  //nolint:gosec // G404: graphs to try, no secret
 			levels := rand.New(rand.NewPCG(c.seed[0]+40, c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
-			laidOut, parted, ends := 0, 0, 0
+			laidOut, parted, ends, short, written := 0, 0, 0, 0, 0
 			for i := range c.graphs {
 				g := randomGraph(rnd, c.direction)
 				for k := range g.Edges {
@@ -889,6 +889,14 @@ func TestGraphRandom(t *testing.T) {
 				}
 				on, all := boxParts(g, l)
 				parted, ends = parted+on, ends+all
+				if fault := turnFault(g, l); fault != "" {
+					t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
+				}
+				clipped, labels := endsClipped(g, l)
+				short, written = short+clipped, written+labels
+			}
+			if 1000*short > 3*written {
+				t.Errorf("seed %v: %d of %d labels leave less than %v of their run at an end, over 0.3%%", c.seed, short, written, labelEnds)
 			}
 			if share := 100 * parted / ends; share < c.parts {
 				t.Errorf("seed %v: %d of %d ends at boxes on their equal parts, under %d%%", c.seed, parted, ends, c.parts)
@@ -898,6 +906,44 @@ func TestGraphRandom(t *testing.T) {
 			}
 		})
 	}
+}
+
+// turnFault is an edge of g, of boxes only, laid out as l, turning more than once beyond its turns with no label, or "".
+// Among icons an edge may turn more, with labels or not (LIMIT in graph.go).
+func turnFault(g *graph, l *layout) string {
+	plain := laid(unlabelled(g))
+	for k, p := range l.paths {
+		if more := len(p.segs) - len(plain.paths[k].segs); more > 1 {
+			return fmt.Sprintf("%s turns %d more times labelled: %v, %v", p.what, more, p.segs, plain.paths[k].segs)
+		}
+	}
+	return ""
+}
+
+// endsClipped is how many labels of g on edges, no loop's, laid out as l, leave less than labelEnds of their run at an
+// end, and how many there are.
+func endsClipped(g *graph, l *layout) (clipped, labels int) {
+	j := 0
+	for k, e := range g.Edges {
+		if e.Label == nil {
+			continue
+		}
+		r := l.labels[j]
+		j++
+		if e.From == e.To {
+			continue
+		}
+		labels++
+		for _, s := range l.paths[k].segs {
+			if along := runAxis(s); onRun(r, s) {
+				if r.lo(along)-min(s[along], s[along+2]) < labelEnds-1e-6 || max(s[along], s[along+2])-r.lo(along)-r.size(along) < labelEnds-1e-6 {
+					clipped++
+				}
+				break
+			}
+		}
+	}
+	return clipped, labels
 }
 
 // levelSides are the sides of box name its level edges take, laid out as l: towards the other box.
@@ -936,7 +982,7 @@ func levelFault(g *graph, l *layout) string {
 			continue
 		}
 		a, b := l.names[e.From].r, l.names[e.To].r
-		if len(l.paths[k].segs) != 1 || a.lo(along)+a.size(along)/2 != b.lo(along)+b.size(along)/2 {
+		if len(l.paths[k].segs) != 1 || math.Abs(a.lo(along)+a.size(along)/2-b.lo(along)-b.size(along)/2) > eps {
 			return fmt.Sprintf("%s runs %v between %v and %v", l.paths[k].what, l.paths[k].segs, a, b)
 		}
 	}
@@ -1963,11 +2009,10 @@ func labelled(g *graph, text string, ks ...int) *graph {
 	return g
 }
 
-// A graph's labels stand beside their runs, from the box their edges are written from: right of a run down, else
-// left with the text set toward it; below a run across, else above; a run up or left from its end nearer that box.
-// With no room beside an edge, room is made, its edges as straight as with no label. A label in another language
-// takes the room of the widest, its text by its run; a graph's label has no background, one by hand has. A label
-// left of the boxes moves the graph right, its left at x, and a label of one group stands clear of the next.
+// A graph's labels stand on their edges, at the middle of the longest run where it is clear, on a background as one by
+// hand. With no room on a run, room is made, its edges as straight as with no label. A label in another language takes
+// the room of the widest. A label left of the boxes moves the graph right, its left at x, and a label of one group
+// stands clear of the next.
 func TestGraphLabels(t *testing.T) {
 	t.Parallel()
 
@@ -1976,27 +2021,19 @@ func TestGraphLabels(t *testing.T) {
 		g.Edges[2].Label, g.Direction = Text{"en": "no"}, dir
 		return g
 	}
-	for _, c := range []struct {
-		name, dir string
-		k         int
-		side      int // the axis the label stands a column past its first run on: 0 right of it, 1 below it
-	}{
-		{"down, right of check→show", "", 1, 0},
-		{"down, up check→write, by check", "", 2, 0},
-		{"right, below check→show", "right", 1, 1},
-		{"right, left along check→write, by check", "right", 2, 1},
-	} {
-		l := laid(g2(c.dir))
-		r, s := l.labels[c.k-1], l.paths[c.k].segs[0]
-		along := 1 - c.side
-		near := min(math.Abs(r.lo(along)-s[along]), math.Abs(r.lo(along)+r.size(along)-s[along]))
-		if r.lo(c.side) != s[c.side]+column || near >= column/2 {
-			t.Errorf("%s: label at %v,%v, its first run %v", c.name, r.x, r.y, s)
+	for _, dir := range []string{"", "right"} {
+		l := laid(g2(dir))
+		for j, k := range []int{1, 2} {
+			r, s := l.labels[j], longestSeg(l.paths[k].segs)
+			along := runAxis(s)
+			if !onRun(r, s) || r.lo(along)+r.size(along)/2 != (s[along]+s[along+2])/2 {
+				t.Errorf("%q: label of %s at %v,%v, its longest run %v", dir, l.paths[k].what, r.x, r.y, s)
+			}
 		}
 	}
 
-	// Twenty edges side by side, the first labelled: no room right of it, so left, set toward it; the graph moves
-	// right as far as the label stands left of x.
+	// Twenty edges side by side, the first labelled: room is made about it, and the graph moves right as far as the
+	// label stands left of x.
 	par := labelled(graphOf([]string{"a", "b"}, slices.Repeat([]string{"a>b"}, 20)...), "L0", 0)
 	o, _ := readGraph(par, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // every name is a box's
 	items, _, err := o.items()                                       //nolint:errcheck // the mistakes are told by laid
@@ -2005,23 +2042,12 @@ func TestGraphLabels(t *testing.T) {
 	}
 	e := items[2].p.Edge
 	run := e.From.Point[0]
-	if left := e.At[0] + 5 - labelWidth(e.Label, false); e.anchor != "end" || e.At[0] != run-column-5 || left < par.X || left >= par.X+column {
-		t.Errorf("parallel: label at %v (%s), run at %v, x %v", e.At, e.anchor, run, par.X)
+	if left := e.At[0] - labelWidth(e.Label, false)/2; e.beside || e.At[0] != run || left < par.X || left >= par.X+column {
+		t.Errorf("parallel: label at %v, run at %v, x %v", e.At, run, par.X)
 	}
 
-	// Back up four ranks: the label next to d, which it is written from.
-	back := labelled(graphOf([]string{"a", "b", "c", "d"}, "a>b", "b>c", "c>d", "d>a"), "no", 3)
-	for _, dir := range []string{"", "right"} {
-		back.Direction = dir
-		l := laid(back)
-		d, r := boxIn(l, "d"), l.labels[0]
-		if dir == "" && r.y+r.h != d.y-2 || dir == "right" && r.x+r.w != d.x-2 {
-			t.Errorf("%q: d→a's label at %v,%v, d at %v,%v", dir, r.x, r.y, d.x, d.y)
-		}
-	}
-
-	// Three edges between two boxes, the middle one labelled: no room between its neighbours a column off, so room
-	// is made, and every edge runs straight.
+	// Three edges between two boxes, the middle one labelled: no room between its neighbours, so room is made, and
+	// every edge runs straight.
 	three := labelled(graphOf([]string{"a", "b"}, "a>b", "a>b", "a>b"), "label", 1)
 	l := laid(three)
 	for _, p := range l.paths {
@@ -2029,8 +2055,8 @@ func TestGraphLabels(t *testing.T) {
 			t.Errorf("three: %s turns: %v", p.what, p.segs)
 		}
 	}
-	if !beside(l.labels[0], l.paths[1].segs[0]) {
-		t.Errorf("three: label at %v,%v, not beside %v", l.labels[0].x, l.labels[0].y, l.paths[1].segs[0])
+	if !onRun(l.labels[0], l.paths[1].segs[0]) {
+		t.Errorf("three: label at %v,%v, not on %v", l.labels[0].x, l.labels[0].y, l.paths[1].segs[0])
 	}
 
 	// Two groups: the first's label reaching right, the second past it.
@@ -2065,18 +2091,72 @@ parts:
 		case el.Class == "label-bg":
 			bg++
 		case el.Kind == "text" && el.Text["en"] == "yes":
-			if x := en.paths[1].segs[0][0]; el.Anchor == "start" && el.X != x+column+5 || el.Anchor == "end" && el.X != x-column-5 {
+			if x := en.paths[1].segs[0][0]; el.Anchor != "middle" || el.X != x {
 				t.Errorf("yes drawn at %v (%s), its run at %v", el.X, el.Anchor, x)
 			}
 		}
 	}
-	if bg != 1 {
-		t.Errorf("%d labels on a background, want the one by hand", bg)
+	if bg != 3 {
+		t.Errorf("%d labels on a background, want the graph's two and the one by hand", bg)
+	}
+
+	// A loop's label stands beside its line, on no background.
+	loop := laid(labelled(graphOf([]string{"a"}, "a>a"), "again", 0))
+	if slices.ContainsFunc(loop.labelEls, func(el elem) bool { return el.Class == "label-bg" }) {
+		t.Errorf("a loop's label on a background: %v", loop.inspect())
+	}
+}
+
+// longestSeg is the longest of segs, the first of those of one length.
+func longestSeg(segs []seg) seg {
+	best := segs[0]
+	for _, s := range segs {
+		if segLength(s) > segLength(best) {
+			best = s
+		}
+	}
+	return best
+}
+
+// A label stands on the longest run of its edge; with something at its middle it moves along the run, and with room
+// made for it, it stands at the middle of the run as lengthened, not by the cut.
+func TestGraphLabelOnLongest(t *testing.T) {
+	t.Parallel()
+
+	d := &drawing{
+		right: false, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{
+			0: {{0, 0}, {0, 40}, {200, 40}, {200, 60}},
+		}, ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{}, spots: map[int]spot{},
+	}
+	if err := d.place(0, 40); err != nil {
+		t.Fatal(err)
+	}
+	if sp := d.spots[0]; sp.seg != 1 || sp.at != 80 {
+		t.Errorf("on run %d from %v, want run 1 from 80", sp.seg, sp.at)
+	}
+	d.routes[1], d.spots[1] = [][2]float64{{100, 0}, {100, 80}}, spot{edge: 1, seg: 0, beside: false, at: 31, w: 18}
+	delete(d.spots, 0)
+	if err := d.place(0, 40); err != nil {
+		t.Fatal(err)
+	}
+	if sp := d.spots[0]; sp.seg != 1 || sp.at == 80 {
+		t.Errorf("with a run across its middle: on run %d from %v", sp.seg, sp.at)
+	}
+}
+
+func TestGraphLabelMiddle(t *testing.T) {
+	t.Parallel()
+
+	g := labelled(graphOf([]string{"a", "b"}, "a>b"), "go", 0)
+	l := laid(g)
+	r, s := l.labels[0], l.paths[0].segs[0]
+	if r.y+r.h/2 != (s[1]+s[3])/2 || s[3]-s[1] != labelH+2*labelEnds {
+		t.Errorf("label at y %v on a run %v: want the run just long enough, the label at its middle", r.y, s)
 	}
 }
 
 // crowd is a drawing down: a box at 0,0 48x30, edge 0 a short run out of its bottom at x 24, edge 2 a run beside it
-// at x 12, and edge 1 a run across from x 25 at y, its label below it from x 26, on a box far off.
+// at x 12, and edge 1 a run across from x 25 at y, its label on it from x 26, on a box far off.
 func crowd(y float64) *drawing {
 	far := rect{x: 1000, y: 1000, w: 10, h: 10, what: "", at: ""} //nolint:exhaustruct_v5 // a box
 	d := &drawing{right: false, boxes: map[int]rect{
@@ -2085,7 +2165,7 @@ func crowd(y float64) *drawing {
 	}, shapes: map[int]string{0: "", 1: ""}, routes: map[int][][2]float64{
 		0: {{24, 30}, {24, 60}}, 1: {{25, y}, {200, y}}, 2: {{12, -100}, {12, 300}},
 	}, ends: map[int][2]int{0: {0, 1}, 1: {1, 1}, 2: {1, 1}}, back: map[int]bool{}, spots: map[int]spot{
-		1: {edge: 1, seg: 0, side: 1, at: 26, w: 30},
+		1: {edge: 1, seg: 0, beside: false, at: 26, w: 30},
 	}}
 	return d
 }
@@ -2098,28 +2178,28 @@ func TestGraphLabelRoom(t *testing.T) {
 	box := rect{x: 0, y: 0, w: 48, h: 30, what: "", at: "", form: outline{hex: 0, radius: 0}} //nolint:exhaustruct_v5 // a box
 	d := &drawing{
 		right: false, boxes: map[int]rect{0: box}, shapes: map[int]string{0: ""},
-		routes: map[int][][2]float64{0: {{60, 0}, {60, 200}}}, ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{},
+		routes: map[int][][2]float64{0: {{60, 0}, {60, 40}}}, ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{},
 		spots: map[int]spot{},
 	}
 	if err := d.place(0, 20); err != nil {
 		t.Fatal(err)
 	}
-	if r, _ := d.rect(0); r.y <= box.y+box.h/2 && box.y+box.h/2 <= r.y+r.h {
+	if r := d.rect(0); r.y <= box.y+box.h/2 && box.y+box.h/2 <= r.y+r.h {
 		t.Errorf("label at %v,%v, across the middle of the box's right side at %v", r.x, r.y, box.y+box.h/2)
 	}
 
 	// A short run down out of a box, blocked left by a run beside it, and right by the label of a run across, which
-	// starts just right of it at y (the cut a unit past the box is at 31): room is made below that label, which stays
-	// with its run, whole, partly past the cut (y 28) or from the cut on (y 30).
-	// A label far across from where the new one goes, from x 150, leaves nothing in its way.
-	for _, c := range []struct{ y, side, at, stays, moves float64 }{
-		{28, 1, 26, 27, 0}, {30, 1, 26, 29, 0}, {50, -1, 26, 0, 11}, {28, 1, 150, 0, 0},
+	// starts just right of it at y (the cut a unit past the box is at 31): room is made past that label, which stays
+	// with its run, whole, partly past the cut (y 28), or moves with it, partly short of the cut (y 35), or stands clear
+	// of the cut (y 50). A label far across from where the new one goes, from x 150, leaves nothing in its way.
+	for _, c := range []struct{ y, at, stays, moves float64 }{
+		{28, 26, 6, 0}, {35, 26, 0, 5}, {50, 26, 0, 0}, {28, 150, 0, 0},
 	} {
 		d := crowd(c.y)
-		d.spots[1] = spot{edge: 1, seg: 0, side: c.side, at: c.at, w: 30}
+		d.spots[1] = spot{edge: 1, seg: 0, beside: false, at: c.at, w: 30}
 		if stays, moves := d.crossed(1, 31, 25, 66); stays != c.stays || moves != c.moves {
-			t.Errorf("y %v, side %v: the cut at 31 leaves %v of the label before the room, %v after; want %v, %v",
-				c.y, c.side, stays, moves, c.stays, c.moves)
+			t.Errorf("y %v: the cut at 31 leaves %v of the label before the room, %v after; want %v, %v",
+				c.y, stays, moves, c.stays, c.moves)
 		}
 	}
 	for _, y := range []float64{28, 30} {
@@ -2127,20 +2207,20 @@ func TestGraphLabelRoom(t *testing.T) {
 		if err := d.place(0, 30); err != nil {
 			t.Fatalf("y %v: %v", y, err)
 		}
-		mine, _ := d.rect(0)
-		theirs, _ := d.rect(1)
-		if mine.overlaps(theirs) || !beside(mine, segAt(d.routes[0], 0)) {
+		mine, theirs := d.rect(0), d.rect(1)
+		if mine.overlaps(theirs) || !onRun(mine, segAt(d.routes[0], 0)) {
 			t.Errorf("y %v: label at %v, the other at %v, the run %v", y, mine, theirs, d.routes[0])
 		}
 	}
 
-	// A run down 2 right of a run, in the way of a label beside it: the cut along the run falls between them,
-	// so that the run in the way moves on with the rest, past the label.
+	// A run down 2 right of a run, in the way of a label on it: the cut along the run falls between them, so that the
+	// run in the way moves on with the rest, past the label.
 	way := &drawing{right: false, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{
 		0: {{24, 0}, {24, 300}}, 1: {{26, 0}, {26, 300}},
 	}, ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}}
-	r := spotRect(segAt(way.routes[0], 0), spot{edge: 0, seg: 0, side: 1, at: 100, w: 30})
-	at, need := way.reach(r, 24, 1)
+	sp := spot{edge: 0, seg: 0, beside: false, at: 100, w: 30}
+	r := spotRect(segAt(way.routes[0], 0), sp)
+	at, need := way.reach(r, 24, 1, 1)
 	if at <= 24 || at >= 26 || need <= 0 {
 		t.Fatalf("reach: cut at %v, %v on", at, need)
 	}
@@ -2149,15 +2229,28 @@ func TestGraphLabelRoom(t *testing.T) {
 		t.Errorf("the run in the way at %v, the label to %v", x, r.x+r.w)
 	}
 
+	// A run down 2 left of a run: the cut falls between them, and the run and the label on it move on past it.
+	back := &drawing{right: false, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{
+		0: {{24, 0}, {24, 300}}, 1: {{22, 0}, {22, 300}},
+	}, ends: map[int][2]int{}, back: map[int]bool{}, spots: map[int]spot{}}
+	at, need = back.reach(spotRect(segAt(back.routes[0], 0), sp), 24, 1, -1)
+	if at <= 22 || at >= 24 || need <= 0 {
+		t.Fatalf("reach back: cut at %v, %v on", at, need)
+	}
+	back.stretch(0, at, onGrid(need, column, math.Ceil))
+	if b := spotRect(segAt(back.routes[0], 0), sp); b.x <= 22 {
+		t.Errorf("the label from %v, the run in the way at 22", b.x)
+	}
+
 	// A label above and left of the box: the group moves right and down by whole columns, keeping its grid, the
 	// label's left and top within a column of 0.
 	up := &drawing{
 		right: false, boxes: map[int]rect{0: {x: 0, y: 0, w: 48, h: 30, what: "", at: ""}}, //nolint:exhaustruct_v5 // a box
 		shapes: map[int]string{0: ""}, routes: map[int][][2]float64{0: {{12, 0}, {180, 0}}}, ends: map[int][2]int{0: {0, 0}},
-		back: map[int]bool{}, spots: map[int]spot{0: {edge: 0, seg: 0, side: -1, at: -13, w: 30}}, loops: map[int]bool{},
+		back: map[int]bool{}, spots: map[int]spot{0: {edge: 0, seg: 0, beside: false, at: -13, w: 30}}, loops: map[int]bool{},
 	}
 	up.stand(0, 0)
-	lr, _ := up.rect(0)
+	lr := up.rect(0)
 	if b := up.boxes[0]; math.Mod(b.x, column) != 0 || math.Mod(b.y, column) != 0 || lr.x < 0 || lr.x >= column ||
 		lr.y < 0 || lr.y >= column {
 		t.Errorf("stand: box at %v,%v, label at %v,%v", b.x, b.y, lr.x, lr.y)
@@ -2303,10 +2396,24 @@ func TestGraphReachHands(t *testing.T) {
 		d.boxes[i] = b
 	}
 	r := rect{x: 91, y: 95, w: 40, h: 10, what: "", at: ""} //nolint:exhaustruct_v5 // a label beside the run
-	at, need := d.reach(r, 90, 1)
+	at, need := d.reach(r, 90, 1, 1)
 	d.stretch(0, at, need)
 	if !free(r, nil, d.hands()) {
 		t.Errorf("cut at %v, moved on %v: %v is not clear of the hands %v", at, need, r, d.hands())
+	}
+
+	// So short of the run, laid out right, a box's hand from its top reaching along the label: the run and the label
+	// move past it.
+	short := &drawing{
+		right: true, boxes: map[int]rect{}, shapes: map[int]string{}, routes: map[int][][2]float64{0: {{90, 0}, {90, 200}}},
+		ends: map[int][2]int{0: {0, 0}}, back: map[int]bool{}, spots: map[int]spot{}, loops: map[int]bool{},
+	}
+	short.boxes[0] = rect{x: 40, y: 100, w: 40, h: 20, what: "", at: ""} //nolint:exhaustruct_v5 // a box, its top hand at x 60
+	sp := spot{edge: 0, seg: 0, beside: false, at: 80, w: 70}
+	at, need = short.reach(spotRect(segAt(short.routes[0], 0), sp), 90, 1, -1)
+	short.stretch(0, at, need)
+	if r := spotRect(segAt(short.routes[0], 0), sp); !free(r, nil, short.hands()) {
+		t.Errorf("cut at %v, moved on %v: %v is not clear of the hands %v", at, need, r, short.hands())
 	}
 }
 
@@ -2841,8 +2948,8 @@ edge a→b M56,49 V73
 	}
 }
 
-// A labelled edge between boxes that its first end's move leaves straight stays there: it does not slide on to its other
-// end's point, which an edge at an icon, held to its icon's point, does.
+// A labelled edge between boxes turns no more than once beyond its turns with no label: it may not slide on to its other
+// end's point, and bends once there.
 func TestGraphBoxLabelledStays(t *testing.T) {
 	t.Parallel()
 
@@ -2853,10 +2960,8 @@ func TestGraphBoxLabelledStays(t *testing.T) {
 	if fault := laidFault(g, l); fault != "" {
 		t.Fatal(fault)
 	}
-	for _, s := range l.paths[1].segs {
-		if s[1] != 110 || s[3] != 110 {
-			t.Errorf("%s runs %v, want it straight at y 110", l.paths[1].what, l.paths[1].segs)
-		}
+	if fault := turnFault(g, l); fault != "" {
+		t.Error(fault)
 	}
 }
 

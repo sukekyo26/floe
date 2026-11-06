@@ -1,56 +1,56 @@
-diagram "What floe publish checks" 1092x811
+diagram "What floe publish checks" 1092x901
 box "publish" 566,20 176x29
 box "resolve" 506,73 296x29
 box "kind" 494,126 320x29
-box "linked" 398,179 232x29
-box "hidden" 260,232 320x29
-box "top" 20,285 296x29
-box "data" 686,374 320x46
-box "slug" 428,444 312x29
-box "taken" 428,509 312x29
-box "owner" 422,574 328x29
-box "server" 416,639 336x29
-box "save" 428,692 312x46
-box "url" 512,762 144x29
-box "notData" 656,179 272x29
-box "secret" 344,285 240x29
-box "whole" 374,382.5 288x29
-box "mistakes" 764,444 288x29
-box "badSlug" 764,509 176x29
-box "otherKind" 776,574 296x29
-box "otherOwner" 776,639 272x29
+box "linked" 398,197 232x29
+box "hidden" 260,268 320x29
+box "top" 20,339 296x29
+box "data" 686,428 320x46
+box "slug" 428,516 312x29
+box "taken" 428,587 312x29
+box "owner" 422,658 328x29
+box "server" 416,729 336x29
+box "save" 428,782 312x46
+box "url" 512,852 144x29
+box "notData" 656,197 272x29
+box "secret" 344,339 240x29
+box "whole" 374,436.5 288x29
+box "mistakes" 764,516 288x29
+box "badSlug" 764,587 176x29
+box "otherKind" 776,658 296x29
+box "otherOwner" 776,729 272x29
 edge publish→resolve M654,49 V73
 edge resolve→kind M654,102 V126
-edge kind→linked M600.67,155 V179
-edge kind→notData M707.33,155 V179
-edge linked→hidden M475.33,208 V232
-edge linked→data M608,208 V326 H899.33 V374
-edge hidden→top M296,261 V285
-edge hidden→secret M473.33,261 V285
-edge top→data M217.33,314 V338 H792.67 V374
-edge top→whole M118.67,314 V350 H518 V382.5
-edge data→slug M728,420 V448.83
-edge data→mistakes M899.33,420 V444
-edge slug→taken M532,473 V509
-edge slug→badSlug M636,473 V485 H852 V509
-edge taken→owner M532,538 V574
-edge taken→otherKind M636,538 V550 H924 V574
-edge owner→server M531.33,603 V639
-edge owner→otherOwner M640.67,603 V615 H912 V639
-edge server→save M584,668 V692
-edge save→url M584,738 V762
-label "はい" 612.67,157 34x18
-label "いいえ" 719.33,157 46x18
-label "はい" 487.33,210 34x18
-label "いいえ" 620,210 46x18
-label "いいえ" 308,263 46x18
-label "はい" 485.33,263 34x18
-label "いいえ" 229.33,316 46x18
-label "はい" 72.67,316 34x18
-label "mistakes" 911.33,422 67.6x18
-label "はい" 544,475 34x18
-label "いいえ" 864,487 46x18
-label "いいえ" 544,540 46x18
-label "はい" 936,552 34x18
-label "いいえ" 543.33,605 46x18
-label "はい" 924,617 34x18
+edge kind→linked M600.67,155 V197
+edge kind→notData M707.33,155 V197
+edge linked→hidden M475.33,226 V268
+edge linked→data M608,226 V380 H899.33 V428
+edge hidden→top M296,297 V339
+edge hidden→secret M473.33,297 V339
+edge top→data M217.33,368 V392 H792.67 V428
+edge top→whole M118.67,368 V404 H518 V436.5
+edge data→slug M728,474 V520.83
+edge data→mistakes M899.33,474 V516
+edge slug→taken M532,545 V587
+edge slug→badSlug M636,545 V563 H852 V587
+edge taken→owner M532,616 V658
+edge taken→otherKind M636,616 V634 H924 V658
+edge owner→server M531.33,687 V729
+edge owner→otherOwner M640.67,687 V705 H912 V729
+edge server→save M584,758 V782
+edge save→url M584,828 V852
+label "はい" 583.67,167 34x18
+label "いいえ" 684.33,167 46x18
+label "はい" 458.33,238 34x18
+label "いいえ" 730.67,371 46x18
+label "いいえ" 273,309 46x18
+label "はい" 456.33,309 34x18
+label "いいえ" 482,383 46x18
+label "はい" 301.33,395 34x18
+label "mistakes" 865.53,486 67.6x18
+label "はい" 515,557 34x18
+label "いいえ" 721,554 46x18
+label "いいえ" 509,628 46x18
+label "はい" 763,625 34x18
+label "いいえ" 508.33,699 46x18
+label "はい" 759.33,696 34x18

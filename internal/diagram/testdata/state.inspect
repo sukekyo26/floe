@@ -1,18 +1,18 @@
-diagram "The states of floe's server" 1293.6x202
-box "stopped" 20,56 200x72
-box "running" 581.6,26 176x66
-box "outdated" 1097.6,56 176x72
+diagram "The states of floe's server" 1225.74x214
+box "stopped" 20,56 200x84
+box "running" 444.31,26 176x78
+box "outdated" 1029.74,56 176x84
 dot 113,15 14x14
-edge stopped→stopped M70,128 V152 H170 V128
-edge stopped→running M215.91,68 H581.68
-edge running→outdated M757.52,68 H1101.69
-edge outdated→running M1097.68,80 H753.51
-edge running→stopped M585.69,80 H219.92
-edge outdated→stopped M1098.86,110 H218.74
+edge stopped→stopped M70,140 V164 H170 V140
+edge stopped→running M215.91,68 H444.31
+edge running→outdated M620.31,68 H1033.83
+edge outdated→running M1029.74,92 H616.22
+edge running→stopped M448.4,92 H220
+edge outdated→stopped M1030.23,119 H219.51
 edge [120,29]→stopped M120,29 V56
-label "start fails (port in use)" 25,164 190x18
-label "publish or serve" 223,38 125.2x18
-label "floe reinstalled" 760.52,38 125.2x18
-label "next publish replaces it" 911.88,92 182.8x18
-label "floe stop, logout or reboot" 374.2,92 204.4x18
-label "floe stop, logout or reboot" 889.29,122 204.4x18
+label "start fails (port in use)" 25,176 190x18
+label "publish or serve" 267.51,59 125.2x18
+label "floe reinstalled" 764.47,59 125.2x18
+label "next publish replaces it" 731.58,83 182.8x18
+label "floe stop, logout or reboot" 232,83 204.4x18
+label "floe stop, logout or reboot" 534.67,110 204.4x18
