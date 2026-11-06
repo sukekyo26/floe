@@ -23,6 +23,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe archive <slug>...` | Take pages off the lists, keeping them (`--undo` gives them back) |
+| `floe work [<slug>...]` | Put pages on a task of the dev screen, pin them, or change a task |
 | `floe serve` | Run the server in the foreground |
 | `floe stop` | Stop the background server |
 | `floe diagram render <spec.yaml>...` | Check diagram specs and print them as inline SVG |
@@ -187,6 +188,36 @@ Delete the pages in order through the server (it is started when it is not runni
 
 Archive the pages in order through the server (it is started when it is not running), stopping at the first failure (such as a page that does not exist). An archived page is left off `floe list` and the management page's list, which shows it under "Archive" on its shelf; it is still served at its URL, downloaded and drawn again by `floe rebuild`. Archiving one again changes nothing. `--undo` gives the pages back to the lists, and so does publishing a page again.
 
+## `floe work [<slug>...]`
+
+Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its name; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `work.json` in the store holds each task's title, state, last step, outside link and order of steps.
+
+```sh
+floe work design-notes --item "#130" --step design --state waiting   # the page on the task, and the task's state
+floe work --item "#130" --url https://example.com/issues/482         # the task alone
+floe work --item "#130" --steps design,build,review                  # the order its steps are shown in
+floe work design-notes --pin                                         # pinned, whatever its task
+floe work --item "#130" --forget                                     # the task's row removed
+```
+
+With slugs, the task's project is each page's: `--item` puts the pages on that name in their own projects, and without it each page's own task is changed. Without slugs, `--item` names the task, of `--project` (the working directory's project when left out; `""` for none).
+
+| Flag | Changes | |
+| --- | --- | --- |
+| `--item <name>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their step off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--steps`, a step). A page moved to another task leaves its step, unless `--step` gives it one there. A new name is a task in the state `doing` |
+| `--step <step>` | pages, and the task's last step | With slugs only. `""` takes it off the pages and leaves the task's |
+| `--state <state>` | the task | `waiting`, `doing` or `done` |
+| `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
+| `--title <title>` | the task | `""` takes it off |
+| `--steps a,b,c` | the task | The order of its steps; a step not named comes after them. A step's name cannot hold a comma here. `""` takes it off |
+| `--pin`, `--unpin` | pages | With slugs only |
+| `--clear` | pages | Off their task, and their pin off; the task stays |
+| `--forget` | the task | Without slugs. Refused while a page is on it, an archived one too |
+
+The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at the first failure; a page that does not exist, or is on no task where the flags change one, is told before anything is written. A page that could not be written leaves its task written: the same command given again finishes it. Flags of the pages alone write no task.
+
+A page keeps its `work` when published again, renamed or drawn again. `work.json` that cannot be read, or holds another state or a URL other than `http` or `https`, is refused and not written over: mend it by hand. A key of a row floe does not know is lost at the next write.
+
 ## `floe serve`
 
 Run the server in the foreground on `127.0.0.1` until SIGTERM, SIGINT or `floe stop`; it stops once the requests under way are done (10 seconds at most), and a second signal ends it at once. The commands [The server](#the-server) lists start the same server in the background, so this is mainly for seeing its errors. A background server that does not start is told as `the server did not start; run "floe serve" to see the error`.
@@ -258,12 +289,12 @@ List the fetched icons whose name contains every word (case does not matter), on
 
 ## The server
 
-- `floe publish`, `floe rebuild`, `floe list`, `floe rm` and `floe archive` start the server when it is not running, and keep using it otherwise.
+- `floe publish`, `floe rebuild`, `floe list`, `floe rm`, `floe archive` and `floe work` start the server when it is not running, and keep using it otherwise.
 - They ask the server to check, save, draw, list and delete pages: the server is the only one that writes the store. A publish sends the data file (and the images the server asks for), and the server checks and draws it with its own templates, parts, themes and icons.
 - After floe is reinstalled (another version, or a rebuilt binary), the next of them replaces the running server.
 - The server keeps running until `floe stop`, logout or reboot.
 - The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_ICONS_DIR` of the command that started it: set them in the shell's environment, where every command takes them, rather than on one command.
-- A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`. `floe list`, `floe rm` and `floe archive` do not draw and take any, but the one that replaces the server after floe is reinstalled is refused with other ones too, as the new server would draw with them.
+- A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`. `floe list`, `floe rm`, `floe archive` and `floe work` do not draw and take any, but the one that replaces the server after floe is reinstalled is refused with other ones too, as the new server would draw with them.
 - A server serves one store (`FLOE_DIR`) on its port: while it runs, a command for another store is refused. Give that store another `FLOE_PORT`.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
 - A stored page is served as it was drawn; its CSP and sandbox are sent with it. Pages run in the sandbox, so their scripts cannot reach the management page's API. The frame takes from a page only that it was read and the keys that move on or open a modal.

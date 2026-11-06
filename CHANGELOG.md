@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `floe work`, which says which task a page is on, its step and pin, and a task's state, outside link, title and order of steps, held in `work.json` in the store. Pages keep it when published again, renamed or drawn again.
 - Add one axis to the points of an edge's `via` in a diagram: `{ x: 710 }` or `{ y: 218 }`, the other axis being the point before's, or that of the centre of the edge's start, so that the point does not copy where a part stands. The docs now tell to write only the turns you choose, and which points cannot be left out.
 - Add `parts` to the items of the part `entries`: the parts `details` holds, under the item's `text`, so that code in an item is drawn by `code` and `terminal`, under its file or prompt with a copy button.
 - Add `with: <name>` to the boxes and icons of a diagram's `graph`: it stands one in the rank of the box or icon named, with no edge drawn, of another group too, and takes the edges from boxes into it out of the ranks, so that an edge runs the way it means, up from the servers to their gateway. An AWS diagram of 25 edges goes from 2136×1440 to 1704×1407 with it, as boxes outside a group's frame no longer stand beside it.
