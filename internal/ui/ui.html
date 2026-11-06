@@ -1249,7 +1249,7 @@
           <button type="button" class="icon-btn fav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span class="label"></span></button>
           <button type="button" class="icon-btn mark-unread"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/></svg><span class="label">{{.Msg "ui_mark_unread"}}</span></button>
           <button type="button" class="icon-btn select" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span class="label">{{.Msg "ui_select"}}</span></button>
-          <button type="button" class="icon-btn pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4zM12 16v5"/></svg><span class="label"></span></button>
+          <button type="button" class="icon-btn pin-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4zM12 16v5"/></svg><span class="label"></span></button>
           <button type="button" class="icon-btn task-set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>{{.Msg "ui_task_set"}}</button>
           <a class="icon-btn task-open" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><span class="label"></span></a>
           <button type="button" class="icon-btn edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_edit"}}</button>
@@ -2255,7 +2255,7 @@
       copy.setAttribute('aria-label', t('ui_copy_path_named', a.title));
       copy.addEventListener('click', () => copyPath(a.path, copy));
     }
-    const pin = box.querySelector('.pin');
+    const pin = box.querySelector('.pin-item');
     // Archived it leaves the pins, and comes back with its pin as it is given back
     pin.hidden = Boolean(a.archived);
     pin.querySelector('.label').textContent = t(a.work?.pin ? 'ui_unpin' : 'ui_pin');

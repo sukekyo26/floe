@@ -251,17 +251,23 @@ func stepsOf(steps []string) []string {
 	return kept
 }
 
+// pastedURL is a URL with the spaces round it gone, as one pasted has them. Of spaces alone it stays, as checkTaskEdit refuses it: "" is
+// what takes a URL off.
+func pastedURL(raw *string) *string {
+	if raw == nil || strings.TrimSpace(*raw) == "" {
+		return raw
+	}
+	trimmed := strings.TrimSpace(*raw)
+	return &trimmed
+}
+
 // EditTask applies ed to the row of the task (project, name), making it of the state doing when there is none.
 func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	project, name, err := taskKey(project, name)
 	if err != nil {
 		return err
 	}
-	// A URL as pasted, with spaces round it, is that URL; of spaces alone, none, which the check refuses as a way to take it off
-	if ed.URL != nil && strings.TrimSpace(*ed.URL) != "" {
-		trimmed := strings.TrimSpace(*ed.URL)
-		ed.URL = &trimmed
-	}
+	ed.URL = pastedURL(ed.URL)
 	if err = checkTaskEdit(ed); err != nil {
 		return err
 	}

@@ -84,11 +84,16 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("items of a page on none", strings.ReplaceAll(items, "SLUG", "a"))
 	say("open the task", "document.querySelector('#list li[data-slug=b] .task-open').textContent + ' ' + document.querySelector('#list li[data-slug=b] .task-open').getAttribute('href')")
 
+	// Its items look alike, the pin's too.
+	b.eval("document.querySelector('#list li[data-slug=b] .more').open = true")
+	say("the items' looks", "[...new Set(['pin-item', 'task-set', 'edit'].map((name) => { const c = getComputedStyle(document.querySelector('#list li[data-slug=b] .menu .' + name)); return [c.borderTopWidth, c.borderTopColor, c.backgroundColor, c.paddingLeft, c.height, c.borderRadius].join(' '); }))].length")
+	b.eval("document.querySelector('#list li[data-slug=b] .more').open = false")
+
 	// A pin on and off, from the menu.
-	menu("a", "pin")
+	menu("a", "pin-item")
 	b.until("pinned", "items.find((x) => x.slug === 'a').work?.pin")
 	b.until("drawn", "document.querySelector('#list li[data-slug=a] .task-tag')")
-	say("pinned", "document.querySelector('#list li[data-slug=a] .task-tag').textContent + ' ' + document.querySelector('#list li[data-slug=a] .task-tag').getAttribute('href') + ' ' + document.querySelector('#list li[data-slug=a] .pin').textContent")
+	say("pinned", "document.querySelector('#list li[data-slug=a] .task-tag').textContent + ' ' + document.querySelector('#list li[data-slug=a] .task-tag').getAttribute('href') + ' ' + document.querySelector('#list li[data-slug=a] .pin-item').textContent")
 	out = append(out, "pinned: "+work("a"))
 
 	// A name of no task: new, doing, with no URL though the page before showed one; the suggestions name what there is, and say it is new.
@@ -208,7 +213,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	s.floe(t, "archive", "a")
 	b.navigate("/?view=archived&project=proj")
 	b.until("the archive", "document.querySelector('#list li[data-slug=a]')")
-	say("an archived page", "document.querySelector('#list li[data-slug=a] .pin').hidden + ' ' + document.querySelectorAll('#list li[data-slug=a] .task-tag').length")
+	say("an archived page", "document.querySelector('#list li[data-slug=a] .pin-item').hidden + ' ' + document.querySelectorAll('#list li[data-slug=a] .task-tag').length")
 	s.floe(t, "archive", "--undo", "a")
 	if got := work("a"); got != `{"pin":true}` {
 		t.Errorf("archived and back: %s", got)
@@ -217,11 +222,11 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// A pin says it was done, in the bar's menu, where no badge shows it; refused, it says why.
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=b]')")
-	menu("b", "pin")
+	menu("b", "pin-item")
 	b.until("the toast", "document.querySelector('.toast')")
 	say("pinned, told", "document.querySelector('.toast').textContent")
 	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 500 })) : window.realFetch(url, init))`)
-	menu("b", "pin")
+	menu("b", "pin-item")
 	b.until("the refusal", "!document.getElementById('error').hidden")
 	say("refused, told", "document.getElementById('error').textContent")
 	b.eval("window.fetch = window.realFetch; showError('')")
@@ -248,9 +253,10 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 // taskSetWant is what TestUITaskSet reads, in the order it does things.
 const taskSetWant = `tags: Task #2 /tasks?project=proj&task=%232, Task #1 /tasks?project=proj&task=%231
-items of a page on a task: fav-item select pin task-set task-open edit open download archive delete
-items of a page on none: fav-item select pin task-set edit open download archive delete
+items of a page on a task: fav-item select pin-item task-set task-open edit open download archive delete
+items of a page on none: fav-item select pin-item task-set edit open download archive delete
 open the task: Open task #1 /tasks?project=proj&task=%231
+the items' looks: 1
 pinned: Pinned /tasks?project=proj Take the pin off
 pinned: {"pin":true}
 a page of none:  /  /  / out false
