@@ -80,7 +80,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the head", "!document.getElementById('task-archive').hidden")
 	check("a task done")
-	modal("child-dialog", "document.getElementById('task-child').click()")
+	modal("kin-dialog", "document.getElementById('task-child').click()")
 	b.navigate("/tasks?project=proj&task=%232")
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	check("a task of no page")
