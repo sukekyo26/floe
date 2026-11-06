@@ -204,6 +204,14 @@
   [dd] 412 pages
   [p] Every page but the drafts.
   [img] The wiki after the move
+  [div] Before
+  [p] The list before.
+  [figcaption] bash
+  [pre] export WIKI=old
+  [p] A column with no title.
+  [div] After
+  [div] Good: Done
+  [p] The list after.
   [label] bash
   [figcaption] bash
   [pre] export WIKI=new

@@ -1,0 +1,5 @@
+<div data-floe-part="columns">
+{{- range .}}
+<div{{with .title}} role="group" aria-label="{{.}}"{{end}}>{{with .title}}<div class="title">{{.}}</div>{{end}}{{.parts}}</div>
+{{- end}}
+</div>

@@ -221,6 +221,16 @@ sections:
             - entries:
                 - { title: Copied, tags: [412 pages], text: Every page but the drafts. }
             - image: { file: shots/moved.png, alt: The wiki after the move }
+      - columns:
+          - title: Before
+            parts:
+              - text: The list before.
+              - code: { lang: bash, text: "export WIKI=old" }
+          - parts:
+              - text: A column with no title.
+          - title: After
+            parts:
+              - note: { tone: good, title: Done, text: The list after. }
       - tabs:
           - title: bash
             parts:
