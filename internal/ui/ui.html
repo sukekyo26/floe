@@ -3506,8 +3506,9 @@
   }
   const UNLINK_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71"/><path d="M8 2v3M2 8h3M16 22v-3M22 16h-3"/></svg>';
 
-  // Where the focus goes once a row is gone from under it: the button of its part
-  const familyButton = () => [$('task-child'), $('task-parent-add'), $('task-parent-change')].find((b) => !b.hidden && !b.closest('[hidden]'));
+  // Where the focus goes once a row is gone from under it, or a dialog is done: the button of its part, the parent's (up) or the children's,
+  // as drawn now
+  const partButton = (up) => (up ? [$('task-parent-change'), $('task-parent-add')] : [$('task-child')]).find((b) => !b.hidden && !b.closest('[hidden]'));
   // The child taken off its parent, as the screen saw them (parentWas): one moved meanwhile is refused, not taken off another
   async function unlinkTask(child, parent, fromKeys) {
     const res = await writeTask(child.project, child.name, { new: false, parent: '', parentWas: child.parent });
@@ -3517,7 +3518,7 @@
     }
     undoToast(t('ui_task_unlinked', child.name, parent), { project: child.project, name: child.name, parent, was: '' }, fromKeys);
     await load();
-    if (!fromKeys && !document.activeElement?.closest('#task-family')) familyButton()?.focus();
+    if (!fromKeys && !document.activeElement?.closest('#task-family')) partButton(child.name === TASK_NAME)?.focus();
   }
   // The toast of a change to a parent, and its way back: the parent before written again, over the one written now. Pressed, a refusal (the
   // parent before has come to be a child, say) is said as the store says it
@@ -3540,7 +3541,7 @@
       if (e.key !== 'Escape') return;
       e.stopPropagation();
       button.closest('.toast').remove();
-      familyButton()?.focus();
+      partButton(back.name === TASK_NAME)?.focus();
     });
     toast(said, { ms: 8000, button });
     if (fromKeys) button.focus();
@@ -3562,7 +3563,7 @@
       note: (task, x) => (x.children.length > 0 || x.name === task.name ? '' : x.parent ? t('ui_task_child_move', named(x), x.parent) : t('ui_task_child_take', named(x))),
       same: (task, x) => isOwnChild(x),
       take: 'ui_child_take_button',
-      opener: () => $('task-child'),
+      up: false,
       // LIMIT: this task's row gone meanwhile, its pages left, it is there still: refused as no parent (400), not read again, as a parent not known
       write: (task, name, x, title) => writeTask(task.project, name, { new: !x, ...(x ? {} : { title }), parent: task.name, parentWas: x?.parent ?? '', parentNew: false }),
       done: (task, name, x) => {
@@ -3579,7 +3580,7 @@
       note: (task, x) => (task.parent && task.parent !== x.name ? t('ui_task_parent_move', named(x), task.parent) : t('ui_task_parent_take', named(x))),
       same: (task, x) => x?.name === task.parent,
       take: 'ui_up_take_button',
-      opener: (task) => (task.parent ? $('task-parent-change') : $('task-parent-add')),
+      up: true,
       write: (task, name, x, title) => writeTask(task.project, task.name, { new: false, parent: name, parentWas: task.parent ?? '', parentNew: !x, ...(x ? {} : { parentTitle: title }) }),
       // Changed, the way back is offered while the parent before makes a family: one written by hand that makes none the store would refuse
       done: (task, name) => {
@@ -3629,7 +3630,7 @@
       // Nothing to write, and so nothing to tell
       if (form.same(task, x)) {
         $('kin-dialog').close();
-        form.opener(task).focus();
+        partButton(form.up)?.focus();
         return;
       }
       const res = await form.write(task, name, x, title);
@@ -3641,7 +3642,7 @@
       form.done(task, name, x);
       await load();
       $('kin-dialog').close();
-      form.opener(task).focus();
+      partButton(form.up)?.focus();
     } catch (err) {
       $('kin-error').textContent = t('ui_save_failed', err.message);
       $('kin-error').hidden = false;
