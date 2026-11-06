@@ -1675,10 +1675,9 @@
   const toggleTag = picker('tag', () => tag);
   // The task list always shows one project: picked again, nothing changes
   const toggleProject = TASK_LIST ? (value) => {
-    if (value === project) return;
     borrowed = false;
     if (!tasksRead.error) keepProject(value);
-    refilter({ project: value });
+    if (value !== project) refilter({ project: value });
   } : picker('project', () => project);
 
   // Removing a link leaves its file alone, so it says unregister (ui_unlink_*) rather than delete (ui_delete_*)

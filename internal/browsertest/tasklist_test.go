@@ -193,6 +193,8 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the next look", "document.querySelector('#list > li')")
 	b.still()
 	say("another window's", "localStorage.getItem('artifacts.taskProject')")
+	b.eval("document.querySelector('.chip[data-project=shop]').click()")
+	say("pressed, it is kept", "localStorage.getItem('artifacts.taskProject')")
 
 	// The shelf folded: the head says the project.
 	b.eval("localStorage.setItem('list.columns', JSON.stringify({ open: false }))")
@@ -315,6 +317,16 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
 	say("mended, chosen anew", "location.search + ' ' + localStorage.getItem('artifacts.taskProject')")
 
+	// Pressed while unreadable, the project borrowed is the one chosen.
+	writeTasks("{ broken")
+	b.eval("localStorage.setItem('artifacts.taskProject', 'blog')")
+	b.navigate("/tasks")
+	b.until("the error", "!document.getElementById('error').hidden && document.querySelector('.chip[data-project=blog]')")
+	b.eval("document.querySelector('.chip[data-project=blog]').click()")
+	writeTasks(taskWork)
+	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
+	say("pressed while unreadable", "location.search")
+
 	// A pin archived is no project: no switch, and no words that the list is empty against it.
 	writeTasks("{}")
 	for _, slug := range []string{"p1", "p2", "p3", "p6", "p8", "p8a", "p10", "p11", "pinned", "pinonly"} {
@@ -436,6 +448,7 @@ the one kept, the view kept: ?view=doing&project=blog
 ?project=old&view=doing kept: shop
 gone, on the shelf: old0
 another window's: blog
+pressed, it is kept: shop
 folded: false shop
 the kept gone: ?project=shop
 none waiting: ?project=shop
@@ -458,5 +471,6 @@ broken, none kept:  true
 mended: ?project=shop true
 broken, gone kept:  ?project=shop gone
 mended, chosen anew: ?project=shop shop
+pressed while unreadable: ?project=blog
 an archived pin alone, list: switch hidden: true
 an archived pin alone: switch hidden: true`
