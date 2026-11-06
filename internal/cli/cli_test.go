@@ -142,7 +142,8 @@ func TestHelp(t *testing.T) {
 		"stop\tStop the background server\n" +
 		"template\tList the templates, show one, make one of your own, and check yours\n" +
 		"theme\tList the themes and show one\n" +
-		"version\tPrint the floe version\n:4\n"
+		"version\tPrint the floe version\n" +
+		"work\tPut pages on a task of the task list, pin them, or change a task's state, step, URL, title or steps' order\n:4\n"
 	if code, got, _ := run("", "__complete", "help", ""); code != 0 || !strings.HasPrefix(got, want) {
 		t.Errorf("floe __complete help \"\" = %d, %q, want %q", code, got, want)
 	}

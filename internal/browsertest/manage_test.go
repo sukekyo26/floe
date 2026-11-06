@@ -63,6 +63,7 @@ func fake(list string) string {
 		if (!init.method && String(url).includes('/pages')) {
 			return Promise.resolve(new Response('{"dirs":["guide"],"pages":[{"file":"index.html","updatedAt":"' + at(3) + '"}],"more":1200}'));
 		}
+		if (!init.method && String(url).includes('/api/tasks')) return Promise.resolve(new Response('{}'));
 		if (!init.method) {
 			window.gets++;
 			return Promise.resolve(new Response(window.list));
@@ -535,7 +536,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	check(t, "shelf", out, strings.Join([]string{
 		"Hbaclm", "true", "Hc fav ?view=fav", "Hzyk archived ?view=archived", "Alpha", msg("ui_selected_n", 5) + msg("ui_selected_more"),
 		"0010", "shown", "shown", "shown", "0",
-		msg("ui_more_named", "Beta"), msg("ui_mark_unread") + " / " + msg("ui_select") + " / " + msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_archive") + " / " + msg("ui_delete"),
+		msg("ui_more_named", "Beta"), msg("ui_mark_unread") + " / " + msg("ui_select") + " / " + msg("ui_pin") + " / " + msg("ui_task_set") + " / " + msg("ui_edit") + " / " + msg("ui_open_raw") + " / " + msg("ui_download") + " / " + msg("ui_archive") + " / " + msg("ui_delete"),
 		"false true", "Alpha", "false true", "1", "false true", "true", "true",
 		"true", "DELETE /api/artifacts/a",
 		"true true true true", "false true true true", "false false false true", "report2,design1",

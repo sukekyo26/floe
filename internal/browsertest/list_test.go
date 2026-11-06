@@ -125,7 +125,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	key("k")
 	b.until("the page before", "location.pathname === '/a/v/'")
 	// From the URL, on no such list: the list it was last on, else all of its kind.
-	b.eval("sessionStorage.setItem('artifacts.order', '[]'); sessionStorage.setItem('artifacts.list', '')")
+	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":[],"shown":[],"back":"/"}'); sessionStorage.setItem('artifacts.list', '')`)
 	b.navigate("/a/r/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	key("j")
@@ -133,7 +133,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	// An end stays where it is.
 	b.navigate("/a/v/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
-	b.eval("sessionStorage.setItem('artifacts.order', '[\"v\"]')")
+	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["v"],"shown":["v"],"back":"/"}')`)
 	b.navigate("/a/v/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	key("j")
@@ -195,7 +195,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true false /a/l/?raw Link l", "true false /a/n/?raw New n New",
 		"true true true", "false true about:blank New ",
 		"vn ?view=new", "vn", "All unread 1 / 1", "New", "n", "true",
-		`["v","n"]`, "/?view=new", "/a/v/",
+		`{"order":["v","n"],"shown":["v","n"],"back":"/?view=new"}`, "/?view=new", "/a/v/",
 		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true block", "true",
 		"none none flex none true", "flex none",
 	}, "|"))
@@ -547,7 +547,7 @@ func TestUIFrameOrder(t *testing.T) { //nolint:paralleltest // the browser tests
 		t.Helper()
 
 		b.navigate("/")
-		b.eval("sessionStorage.setItem('artifacts.order', " + js(order) + "); sessionStorage.setItem('artifacts.list', " + js(list) + ")")
+		b.eval("sessionStorage.setItem('artifacts.order', " + js(`{"order":`+order+`,"shown":`+order+`,"back":"/"}`) + "); sessionStorage.setItem('artifacts.list', " + js(list) + ")")
 		b.navigate("/a/" + from + "/")
 		b.until("the bar", "document.getElementById('frame-title').textContent")
 		b.eval("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true }))")
@@ -573,7 +573,7 @@ func TestUIFrameOrder(t *testing.T) { //nolint:paralleltest // the browser tests
 	go1("a", "[]", "?kind=link", "b")
 	// At the end of the list that opened it, it stays.
 	b.navigate("/")
-	b.eval(`sessionStorage.setItem('artifacts.order', '["v","n"]')`)
+	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["v","n"],"shown":["v","n"],"back":"/"}')`)
 	stays("n")
 }
 
@@ -978,7 +978,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	defer b.unsize()
 
 	// The bar of the box and its menu, opened and closed, by what each thing is: only what is seen.
-	const named = `const name = (e) => ['diff-open', 'fav-item', 'mark-unread', 'select', 'edit', 'copy', 'download', 'open', 'archive', 'star', 'delete'].find((c) => e.classList.contains(c));`
+	const named = `const name = (e) => ['diff-open', 'fav-item', 'mark-unread', 'select', 'pin-item', 'task-set', 'task-open', 'edit', 'copy', 'download', 'open', 'archive', 'star', 'delete'].find((c) => e.classList.contains(c));`
 	shown := func(box string) string {
 		t.Helper()
 
@@ -1120,14 +1120,14 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	})()`))
 
 	check(t, "bar", out, strings.Join([]string{
-		"diff-open download open archive star more | mark-unread edit delete",
-		"download open archive star more | mark-unread edit delete",
-		"download open archive star more | edit copy delete",
-		"archive star more | edit copy delete",
-		"mark-unread select edit open download archive delete",
-		"archive star more | edit copy delete",
-		"diff-open download open archive star more | mark-unread edit delete",
-		"download open archive star more | mark-unread edit delete",
+		"diff-open download open archive star more | mark-unread pin-item task-set edit delete",
+		"download open archive star more | mark-unread pin-item task-set edit delete",
+		"download open archive star more | pin-item task-set edit copy delete",
+		"archive star more | pin-item task-set edit copy delete",
+		"mark-unread select pin-item task-set edit open download archive delete",
+		"archive star more | pin-item task-set edit copy delete",
+		"diff-open download open archive star more | mark-unread pin-item task-set edit delete",
+		"download open archive star more | mark-unread task-set edit delete",
 		"Restore / Restore Kept to the list /  / true / false",
 		"Archive / Archive Kept /  / false / true", "true",
 		"/api/artifacts/two/download ",
@@ -1135,16 +1135,16 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		"Restore / Restore One to the list /  / true / false",
 		"1 / Archived “One” / true",
 		"true",
-		"diff-open download open archive star more | mark-unread edit delete",
-		"diff-open more | fav-item mark-unread edit open download archive delete",
-		"0 1 true",
+		"diff-open download open archive star more | mark-unread pin-item task-set edit delete",
+		"diff-open more | fav-item mark-unread pin-item task-set edit open download archive delete",
+		"1 1 true",
 		"Add to favorites / Add Two to favorites",
 		"Remove from favorites / Remove Two from favorites",
 		"Add to favorites / Add Two to favorites",
 		"true", "true",
-		"more | fav-item mark-unread edit open download archive delete",
-		"more | fav-item edit copy open download archive delete",
-		"more | fav-item mark-unread edit open download archive delete",
+		"more | fav-item mark-unread pin-item task-set edit open download archive delete",
+		"more | fav-item pin-item task-set edit copy open download archive delete",
+		"more | fav-item mark-unread task-set edit open download archive delete",
 		"on the menu",
 		"copy open | ",
 		"true true",
@@ -1271,7 +1271,7 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("whole by a double press", "location.pathname === '/a/a3/'")
 
 	check(t, "row again", out, strings.Join([]string{
-		"/", "/", "/", "1 a2 /", "true", "a3 /", `["a3","a2","a1"]`,
+		"/", "/", "/", "1 a2 /", "true", "a3 /", `{"order":["a3","a2","a1"],"shown":["a3","a2","a1"],"back":"/"}`,
 	}, "|"))
 }
 

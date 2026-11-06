@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the task screens. `floe work` says which task a page is on, its step and pin, and a task's state, outside link, title and order of steps, held in `tasks.json` in the store; pages keep it when published again, renamed or drawn again. The task list at `/tasks` shows one project's tasks by state, longest waiting first, with their step, pages, unread and link, that project's pinned pages over them, and a switch to it beside the logo once a page is on a task or pinned. A row opens the task's page: its pages under their steps, its state to change, and a button that archives them once it is done. A page's `…` menu pins it, opens its task and sets its task, step and URL, and the page list's rows show a page's task and pin.
 - Add one axis to the points of an edge's `via` in a diagram: `{ x: 710 }` or `{ y: 218 }`, the other axis being the point before's, or that of the centre of the edge's start, so that the point does not copy where a part stands. The docs now tell to write only the turns you choose, and which points cannot be left out.
 - Add `parts` to the items of the part `entries`: the parts `details` holds, under the item's `text`, so that code in an item is drawn by `code` and `terminal`, under its file or prompt with a copy button.
 - Add `with: <name>` to the boxes and icons of a diagram's `graph`: it stands one in the rank of the box or icon named, with no edge drawn, of another group too, and takes the edges from boxes into it out of the ranks, so that an edge runs the way it means, up from the servers to their gateway. An AWS diagram of 25 edges goes from 2136×1440 to 1704×1407 with it, as boxes outside a group's frame no longer stand beside it.
@@ -325,6 +326,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Show the way back on a page open whole at every width: beside the logo it says where it goes, the task's name, the task list or the page list, whichever opened the page; on a narrow screen its mark alone, as before.
 - Change `report`'s `lead` to a line of Markdown, as the `summary` of `design`, `handoff`, `postmortem` and `runbook`: code in backticks, bold and links are drawn, while a heading, a list or a table stays text. What looks like a tag (`<prefix>`, `Vec<u8>`) is left out and marks such as `*` and `_` are read, so write those as text in backticks. A stored page takes this when published again or at `floe rebuild`, and a linked data file as soon as floe is updated. `floe rebuild` does not draw earlier versions again, so comparing one with the latest shows the `lead` as changed.
 - Warn of a fenced block of code in the `text` of an item of `entries`, as in a `text` part: a page that has one now gets a warning, and is drawn as before with the same exit code.
 - Change `floe diagram inspect` to begin each diagram with a line of where it is written, its title and its canvas (`page.yaml:9:11: diagram "T" 560x190`, `spec.yaml: diagram "T" 560x190`), and to print where the parts went for a diagram the checks refuse too, as a guide, on stdout with its mistakes on stderr and the exit code still 1.

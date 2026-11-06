@@ -23,6 +23,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe archive <slug>...` | Take pages off the lists, keeping them (`--undo` gives them back) |
+| `floe work [<slug>...]` | Put pages on a task of the task list, pin them, or change a task |
 | `floe serve` | Run the server in the foreground |
 | `floe stop` | Stop the background server |
 | `floe diagram render <spec.yaml>...` | Check diagram specs and print them as inline SVG |
@@ -187,6 +188,44 @@ Delete the pages in order through the server (it is started when it is not runni
 
 Archive the pages in order through the server (it is started when it is not running), stopping at the first failure (such as a page that does not exist). An archived page is left off `floe list` and the management page's list, which shows it under "Archive" on its shelf; it is still served at its URL, downloaded and drawn again by `floe rebuild`. Archiving one again changes nothing. `--undo` gives the pages back to the lists, and so does publishing a page again.
 
+## `floe work [<slug>...]`
+
+Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its name; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `tasks.json` in the store holds each task's title, state, last step, outside link and order of steps.
+
+```sh
+floe work design-notes --task "#130" --step design --state waiting   # the page on the task, and the task's state
+floe work --task "#130" --url https://example.com/issues/482         # the task alone
+floe work --task "#130" --steps design,build,review                  # the order its steps are shown in
+floe work design-notes --pin                                         # pinned, whatever its task
+floe work --task "#130" --forget                                     # the task's row removed
+```
+
+With slugs, the task's project is each page's: `--task` puts the pages on that name in their own projects, and without it each page's own task is changed. Without slugs, `--task` names the task, of `--project` (the working directory's project when left out; `""` for none).
+
+| Flag | Changes | |
+| --- | --- | --- |
+| `--task <name>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their step off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--steps`, a step). A page moved to another task leaves its step, unless `--step` gives it one there. A new name is a task in the state `doing` |
+| `--step <step>` | pages, and the task's last step | With slugs only. `""` takes it off the pages and leaves the task's |
+| `--state <state>` | the task | `waiting`, `doing` or `done` |
+| `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
+| `--title <title>` | the task | `""` takes it off |
+| `--steps a,b,c` | the task | The order of its steps; a step not named comes after them. A step's name cannot hold a comma here. `""` takes it off |
+| `--pin`, `--unpin` | pages | With slugs only |
+| `--clear` | pages | Off their task, and their pin off; the task stays |
+| `--forget` | the task | Without slugs. Refused while a page is on it, an archived one too |
+
+The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at the first failure; a page that does not exist, or is on no task where the flags change one, is told before anything is written. A page that could not be written leaves its task written: the same command given again finishes it. Flags of the pages alone write no task.
+
+The task list, at `/tasks` of the server, lists the tasks of one project by state. Opened without one, it takes the project you last had in this browser while it is there, else the one with the task that has waited longest, else the first on the shelf, and writes it in the URL. Waiting ones the longest first, the others the latest changed first, each with its last step, its pages, how many are unread and its link, under the pages of that project that are pinned. A task that is done and whose pages are all archived goes under Archive; one waiting or in progress stays, and so does one of no page. The switch to it stands beside the logo once a page is on a task or pinned, or a task has a row.
+
+A task's row opens the task's page, at `/tasks?project=…&task=…`: its pages under their steps, in the order `--steps` wrote and then as they first came, those of no step first and the archived last, and over them its state to change, its link, and, once it is done, a button that archives its pages. Opening it reads nothing, and a page opened whole from it goes back to it, as one from the pins goes back to the task list. `h` and the link over its rows go to the project's list at the state the task is in now, with the focus on the task's row.
+
+A page open whole has a back button beside the logo, which says where it goes: the task's name, the task list or the page list, whichever opened it, and `h` goes there too. The logo always goes to the page list. A page that is not among the rows that opened it (from the search, or another tab) goes back to the page list.
+
+A page's `…` menu does the same by hand: it pins the page or takes the pin off, opens its task, and `Set the task` names its task, step and the task's URL, which is sent only if you changed it. The names offered say each task's state, and a page put on a task is told so, with a link to it. A name of no task is a new task. The page list's rows show a page's task and pin, as a way to them.
+
+A page keeps its `work` when published again, renamed or drawn again. `tasks.json` that cannot be read, or holds another state or a URL other than `http` or `https`, is refused and not written over: mend it by hand. A key of a row floe does not know is lost at the next write.
+
 ## `floe serve`
 
 Run the server in the foreground on `127.0.0.1` until SIGTERM, SIGINT or `floe stop`; it stops once the requests under way are done (10 seconds at most), and a second signal ends it at once. The commands [The server](#the-server) lists start the same server in the background, so this is mainly for seeing its errors. A background server that does not start is told as `the server did not start; run "floe serve" to see the error`.
@@ -258,12 +297,12 @@ List the fetched icons whose name contains every word (case does not matter), on
 
 ## The server
 
-- `floe publish`, `floe rebuild`, `floe list`, `floe rm` and `floe archive` start the server when it is not running, and keep using it otherwise.
+- `floe publish`, `floe rebuild`, `floe list`, `floe rm`, `floe archive` and `floe work` start the server when it is not running, and keep using it otherwise.
 - They ask the server to check, save, draw, list and delete pages: the server is the only one that writes the store. A publish sends the data file (and the images the server asks for), and the server checks and draws it with its own templates, parts, themes and icons.
 - After floe is reinstalled (another version, or a rebuilt binary), the next of them replaces the running server.
 - The server keeps running until `floe stop`, logout or reboot.
 - The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_ICONS_DIR` of the command that started it: set them in the shell's environment, where every command takes them, rather than on one command.
-- A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`. `floe list`, `floe rm` and `floe archive` do not draw and take any, but the one that replaces the server after floe is reinstalled is refused with other ones too, as the new server would draw with them.
+- A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`. `floe list`, `floe rm`, `floe archive` and `floe work` do not draw and take any, but the one that replaces the server after floe is reinstalled is refused with other ones too, as the new server would draw with them.
 - A server serves one store (`FLOE_DIR`) on its port: while it runs, a command for another store is refused. Give that store another `FLOE_PORT`.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
 - A stored page is served as it was drawn; its CSP and sandbox are sent with it. Pages run in the sandbox, so their scripts cannot reach the management page's API. The frame takes from a page only that it was read and the keys that move on or open a modal.
@@ -274,7 +313,7 @@ List the fetched icons whose name contains every word (case does not matter), on
 - The management page downloads a page as one file: the stored page, or a linked file, with its CSP in a `<meta>`.
 - A stored page of two versions or more shows what changed between any two of them, by their words under their headings: side by side, all together or the changes alone. It opens from `Diff` over the page, and a page newly at another version says what changed since the one read. Opening it reads nothing; closing it opens the page, which reads it. A link and a folder have no versions. Bold, a link's target and CSS do not show; a diagram or image whose words are the same is told as changed in shape.
 - Printed from its frame, a page comes out one screen long, with a note to open it alone and print it there.
-- The management page takes keys, and `?` lists those that work where you are. `Ctrl+K` (`⌘K`) searches the pages. In the list: `j` `k` or `↑` `↓` move over the rows, `Enter` opens a row whole, `x` selects (as does Select in a row's menu), `f` stars, `/` goes to the search; pressing a row whose page is open beside the list, as a double press does, opens it whole; `d` opens what changed in the page open. On a page open whole: `j` `k` go on through the list, `h` goes back to it, `f` stars, `d` opens what changed since the version read, whose `n` `p` go to the next and previous change and `d` closes, `/` searches the pages. After a press inside a page, `j` `k` `h` `d` `?` `/` `Ctrl+K` still work on a page floe drew, and `Ctrl+K` alone on a linked HTML file, which may use the letters itself.
+- The management page takes keys, and `?` lists those that work where you are. `Ctrl+K` (`⌘K`) searches the pages. In the list: `j` `k` or `↑` `↓` move over the rows, `Enter` opens a row whole, `x` selects (as does Select in a row's menu), `f` stars, `/` goes to the search; pressing a row whose page is open beside the list, as a double press does, opens it whole; `d` opens what changed in the page open. On a page open whole: `j` `k` go on through the rows that opened it, `h` goes where its back button goes, `f` stars, `d` opens what changed since the version read, whose `n` `p` go to the next and previous change and `d` closes, `/` searches the pages. After a press inside a page, `j` `k` `h` `d` `?` `/` `Ctrl+K` still work on a page floe drew, and `Ctrl+K` alone on a linked HTML file, which may use the letters itself.
 
 ## Environment variables
 

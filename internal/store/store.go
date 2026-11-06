@@ -84,6 +84,8 @@ type Meta struct {
 	Archived bool `json:"archived,omitempty"`
 	// Tags are the page's tags, as tagged keeps them.
 	Tags []string `json:"tags,omitempty"`
+	// Work is its place on the task list; its task's state is in tasks.json.
+	Work *Work `json:"work,omitempty"`
 	// Versions are a stored page's versions, oldest first: a publish of other content than the last's adds one.
 	Versions  []Version `json:"versions,omitempty"`
 	CreatedAt string    `json:"createdAt"`
@@ -342,8 +344,10 @@ type Listed struct {
 	Slug string `json:"slug"`
 	Meta
 
-	News    string `json:"news,omitempty"`
-	Version int    `json:"version,omitempty"`
+	// TaskProject is the project of a task of this page, as tasks.json has it (ProjectKey).
+	TaskProject string `json:"taskProject"`
+	News        string `json:"news,omitempty"`
+	Version     int    `json:"version,omitempty"`
 	// VersionCount tells whether there are versions to compare, the versions themselves left out of the list.
 	VersionCount int   `json:"versionCount,omitempty"`
 	Missing      *bool `json:"missing,omitempty"`
@@ -392,7 +396,9 @@ func (s *Store) List(viewer string) ([]Listed, error) {
 }
 
 func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
-	l := Listed{Slug: slug, Meta: *m, News: "", Version: 0, VersionCount: 0, Missing: nil}
+	l := Listed{
+		Slug: slug, Meta: *m, TaskProject: ProjectKey(m.Project), News: "", Version: 0, VersionCount: 0, Missing: nil,
+	}
 	// The list is read every few seconds: versions are asked for a page at a time.
 	l.Versions = nil
 	if !m.IsLink() {

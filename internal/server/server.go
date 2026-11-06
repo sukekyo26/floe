@@ -136,6 +136,7 @@ func (s *Server) latest() store.Drawing {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", serveUI)
+	mux.HandleFunc("GET /tasks", serveUI)
 	mux.HandleFunc("GET /api/health", s.health)
 	mux.HandleFunc("GET /api/artifacts", s.list)
 	mux.HandleFunc("POST /api/artifacts", s.addLink)
@@ -144,6 +145,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/artifacts/{slug}", s.remove)
 	mux.HandleFunc("POST /api/artifacts/{slug}/read", s.markRead)
 	mux.HandleFunc("DELETE /api/artifacts/{slug}/read", s.markUnread)
+	mux.HandleFunc("GET /api/tasks", s.tasks)
+	mux.HandleFunc("PATCH /api/tasks", s.editTask)
+	mux.HandleFunc("DELETE /api/tasks", s.forgetTask)
 	mux.HandleFunc("POST /api/rebuild", s.rebuild)
 	mux.HandleFunc("POST /api/stop", s.stop)
 	mux.HandleFunc("GET /api/artifacts/{slug}/download", s.download)

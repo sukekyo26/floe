@@ -8,6 +8,7 @@ import (
 	"html/template"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/store"
 )
 
 //go:embed ui.html
@@ -27,13 +28,17 @@ type pageData struct {
 	// Version is what the frame's ?v= asks, as the server read it: a version's number, 0 for the latest, gone for no such
 	// version; "" where ?v= asks none.
 	Version string
+	// States is the states of a task, for the task list to read when tasks.json cannot be
+	States []store.State
 }
 
 // Page renders the management page, which is also the frame around each page, in the language of c: the frame
 // around the page framed, a slug, or the list for "". served tells that the folder's page it frames is there.
 func Page(c *i18n.Catalog, framed string, served bool, version string) ([]byte, error) {
 	var b bytes.Buffer
-	data := pageData{Catalog: c, Messages: c.Formats("ui_"), Framed: framed, Served: served, Version: version}
+	data := pageData{
+		Catalog: c, Messages: c.Formats("ui_"), Framed: framed, Served: served, Version: version, States: store.States,
+	}
 	if err := pageTemplate.Execute(&b, data); err != nil {
 		return nil, fmt.Errorf("render ui.html: %w", err)
 	}

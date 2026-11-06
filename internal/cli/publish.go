@@ -277,7 +277,7 @@ func (a *app) archiveCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			archived := !undo
 			body := server.Edit{
-				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: &archived, Tags: nil,
+				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: &archived, Tags: nil, Work: nil,
 			}
 			return a.eachPage(cmd, args, http.MethodPatch, body)
 		},
