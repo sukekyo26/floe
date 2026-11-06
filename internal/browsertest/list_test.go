@@ -1143,7 +1143,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		"Add to favorites / Add Two to favorites",
 		"true", "true",
 		"more | fav-item mark-unread pin task-set edit open download archive delete",
-		"more | fav-item edit copy open download archive delete",
+		"more | fav-item pin task-set edit copy open download archive delete",
 		"more | fav-item mark-unread pin task-set edit open download archive delete",
 		"on the menu",
 		"copy open | ",
