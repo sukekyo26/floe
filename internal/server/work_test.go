@@ -69,6 +69,19 @@ func TestWorkAPI(t *testing.T) {
 	if code, _ := patch(task("shop", "#fresh"), `{"new":true,"title":"t"}`); code != http.StatusNoContent {
 		t.Errorf("new = %d", code)
 	}
+	// What the screen saw of the parent: a parent made with the child, one moved meanwhile, and the fields alone.
+	if code, body := patch(task("shop", "#fresh"), `{"new":false,"parent":"#made","parentWas":"","parentNew":true,"parentTitle":"m"}`); code != http.StatusNoContent || tasks()["shop"]["#made"].Title != "m" || tasks()["shop"]["#fresh"].Parent != "#made" {
+		t.Errorf("a parent made = %d, %s", code, body)
+	}
+	if code, body := patch(task("shop", "#fresh"), `{"parent":"","parentWas":"#1"}`); code != http.StatusConflict || body != "the parent of task #fresh has changed since it was read" {
+		t.Errorf("a parent moved meanwhile = %d, %q", code, body)
+	}
+	if code, body := patch(task("shop", "#fresh"), `{"parentTitle":"m"}`); code != http.StatusBadRequest || !strings.Contains(body, "go with a parent") {
+		t.Errorf("a title alone = %d, %q", code, body)
+	}
+	if code, _ := patch(task("shop", "#fresh"), `{"parent":"","parentWas":"#made"}`); code != http.StatusNoContent {
+		t.Errorf("taken off = %d", code)
+	}
 	if code, _ := patch(task("shop", "#none"), `{"parent":""}`); code != http.StatusNotFound {
 		t.Errorf("a parent off no row = %d", code)
 	}

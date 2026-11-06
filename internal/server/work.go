@@ -16,6 +16,10 @@ type TaskEdit struct {
 	Steps  *[]string `json:"steps,omitzero"`
 	Parent *string   `json:"parent,omitzero"`
 	New    *bool     `json:"new,omitzero"`
+	// What the screen saw of the parent: store.TaskEdit says each.
+	ParentWas   *string `json:"parentWas,omitzero"`
+	ParentNew   *bool   `json:"parentNew,omitzero"`
+	ParentTitle *string `json:"parentTitle,omitzero"`
 }
 
 // tasks answers the tasks.
