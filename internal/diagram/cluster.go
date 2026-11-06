@@ -118,12 +118,12 @@ func (o *graphOut) lane(c int) bool {
 	return c >= 0 && o.clusters[c].lane
 }
 
-// endName is how a mistake names end e.
+// endName is how a mistake names end e: its name, quoted.
 func (o *graphOut) endName(e gref) string {
 	if e.box >= 0 {
-		return o.boxes[e.box].box.Name
+		return strconv.Quote(o.boxes[e.box].box.Name)
 	}
-	return o.clusters[e.cl].g.Name
+	return strconv.Quote(o.clusters[e.cl].g.Name)
 }
 
 // inside is the mistake of edge k between a group and what it holds, at the end held (at its to when it is the
@@ -143,7 +143,7 @@ func (o *graphOut) inside(k int, ends [2]gref) *usererr.Error {
 		}
 		key := [2]string{"from", "to"}[held]
 		return edgeMistake(edgeAt(o.at, k)+"/"+key, "diagram_graph_inside", e,
-			strconv.Quote(o.endName(g)), strconv.Quote(o.endName(g)))
+			o.clusters[g.cl].g.Name, o.clusters[g.cl].g.Name)
 	}
 	return nil
 }

@@ -23,7 +23,7 @@ func (o *graphOut) levelMistake(k int, ends [2]gref) *usererr.Error {
 	for i, end := range ends {
 		if end.box < 0 {
 			return edgeMistake(edgeAt(o.at, k)+"/"+[2]string{"from", "to"}[i], "diagram_graph_level_group", e,
-				strconv.Quote(o.endName(end)))
+				o.endName(end))
 		}
 	}
 	// LIMIT: two boxes of one group, or right in two lanes, whose left and right the order written or the lanes'
@@ -225,7 +225,7 @@ func (gr *group) between(first, second int, rankOf map[int]int) string {
 	}
 	for m := first + 1; m < second; m++ {
 		if o.inBlock(m, first) {
-			return `box "` + o.boxes[m].box.Name + `"`
+			return "box " + strconv.Quote(o.boxes[m].box.Name)
 		}
 	}
 	return ""
@@ -240,7 +240,7 @@ func (gr *group) laneBetween(first, second int, rankOf map[int]int) string {
 	r := rankOf[first]
 	for _, m := range slices.Sorted(maps.Keys(rankOf)) {
 		if rankOf[m] == r && m != first && m != second && o.inWay(m, first, second) {
-			return `box "` + o.boxes[m].box.Name + `"`
+			return "box " + strconv.Quote(o.boxes[m].box.Name)
 		}
 	}
 	return gr.laneFrame(first, second, rankOf)
@@ -279,7 +279,7 @@ func (gr *group) laneFrame(first, second int, rankOf map[int]int) string {
 		}
 		in := o.laneOf(cl.boxes[0])
 		if !o.lane(c) && lo <= r && r <= hi && (lf < in && in < ls || in == lf && o.faces(first) < 0) {
-			return `group "` + cl.g.Name + `"`
+			return "group " + strconv.Quote(cl.g.Name)
 		}
 	}
 	return ""
@@ -437,8 +437,7 @@ func (d *drawing) headed(o *graphOut, gr *group) usererr.List {
 			//nolint:exhaustruct_v5 // as addFrame's
 			if head := headRect(f, d.heads[c]); crossedBy(segAt(pts, 0), head) {
 				e := o.g.Edges[k]
-				told = append(told, edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_heading", e,
-					strconv.Quote(o.clusters[c].g.Name)))
+				told = append(told, edgeMistake(edgeAt(o.at, k)+"/level", "diagram_graph_level_heading", e, o.clusters[c].g.Name))
 				delete(d.routes, k)
 				delete(d.spots, k)
 				delete(d.level, k)

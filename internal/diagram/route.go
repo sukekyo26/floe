@@ -569,6 +569,11 @@ func pull(r float64, kind string) (back, keep float64) {
 	return r, 0
 }
 
+// edgeWho is what an edge is called in a mistake and by inspect, from what its ends are.
+func edgeWho(from, to string) string {
+	return "edge " + from + "→" + to
+}
+
 func (l *layout) addEdge(e *edge, at string) {
 	pts, free, fromWho, toWho, ok := l.edgePoints(e, at)
 	if !ok {
@@ -577,7 +582,7 @@ func (l *layout) addEdge(e *edge, at string) {
 	segs := segsOf(pts)
 	who := e.who
 	if who == "" {
-		who = "edge " + fromWho + "→" + toWho
+		who = edgeWho(fromWho, toWho)
 	}
 	if len(segs) == 0 {
 		l.problem(at, "diagram_edge_nowhere", who)

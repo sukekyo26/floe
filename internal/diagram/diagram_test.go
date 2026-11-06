@@ -67,6 +67,17 @@ func draw(t *testing.T, src string, how func(d *diagram.Drawer, v any) (string, 
 	return out, ""
 }
 
+// toldInJapanese is what drawing src tells, in the Japanese catalog.
+func toldInJapanese(t *testing.T, src string) string {
+	t.Helper()
+	root, v, err := yamlpos.ParseMap("s.yaml", []byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = render("ja")(drawer(t), doc.Ints(v))
+	return usererr.Tell(i18n.New("ja"), yamlpos.Place(err, "s.yaml", root, nil)).Render("floe: ")
+}
+
 func render(lang string) func(d *diagram.Drawer, v any) (string, error) {
 	return func(d *diagram.Drawer, v any) (string, error) {
 		svg, err := d.Draw(v, diagram.Options{Lang: i18n.Lang(lang), Icons: lambda, Seq: 1})

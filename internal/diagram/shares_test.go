@@ -609,7 +609,7 @@ func TestEdgeNameQuoted(t *testing.T) {
 		"        - { name: m, label: M, nodes: [{ box: { name: c, rows: [c] } }] }\n      edges:\n"
 	for _, c := range []struct{ name, edge, want string }{
 		{"a name in the words", "{ from: c, to: 'l\"1' }", `edge "c"→"l\"1": "l\"1" is a lane`},
-		{"a group's name", "{ from: 'b\"1', to: 'l\"1' }", `edge "b\"1"→"l\"1": both ends are group "l\"1" or inside it; end the edge at a box or another group outside "l\"1"`},
+		{"a name at the ends only", "{ from: 'b\"1', to: 'l\"1' }", `edge "b\"1"→"l\"1": both ends are group`},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()

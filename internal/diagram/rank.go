@@ -294,9 +294,9 @@ func (gr *group) amid(k int, local map[int]int, reached func(from ...int) map[in
 		}
 	}
 	e := o.g.Edges[k]
-	name := strconv.Quote(o.endName(ends[g]))
+	name := o.clusters[ends[g].cl].g.Name
 	return edgeMistake(edgeAt(o.at, k)+"/"+key, "diagram_graph_among", e,
-		strconv.Quote(o.endName(ends[x])), name, strconv.Quote(before), strconv.Quote(after), name)
+		o.endName(ends[x]), name, strconv.Quote(before), strconv.Quote(after), name)
 }
 
 // passed is how many ranks the group's arcs pass between their ends: the points split makes.

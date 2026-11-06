@@ -183,7 +183,7 @@ func (o *graphOut) endsOf(k int, byName map[string]gref) ([2]gref, usererr.List)
 	for i, end := range ends {
 		if o.lane(end.cl) {
 			at := edgeAt(o.at, k) + "/" + [2]string{"from", "to"}[i]
-			return ends, usererr.List{edgeMistake(at, "diagram_graph_lane", e, strconv.Quote(o.endName(end)))}
+			return ends, usererr.List{edgeMistake(at, "diagram_graph_lane", e, o.endName(end))}
 		}
 	}
 	return ends, nil
@@ -1225,7 +1225,7 @@ func (o *graphOut) edge(k int, pts [][2]float64) *edge {
 		From: end{Name: "", Point: &pts[0]}, To: end{Name: "", Point: &pts[len(pts)-1]}, FromSide: "", ToSide: "",
 		Via: viaAt(pts[1 : len(pts)-1]...), Straight: true, Label: nil, At: nil, Dashed: e.Dashed, Bold: e.Bold, Tone: e.Tone,
 		Start: e.Start, End: e.End, Crossing: false, graph: o.at, beside: false,
-		who: "edge " + strconv.Quote(e.From) + "→" + strconv.Quote(e.To),
+		who: edgeWho(strconv.Quote(e.From), strconv.Quote(e.To)),
 	}
 }
 

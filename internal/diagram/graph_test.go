@@ -188,6 +188,13 @@ parts:
 			t.Errorf("%s:\n  told %q\n  want %q", c.name, got, c.want)
 		}
 	}
+
+	// The Japanese words number their arguments, and take each name where its English does.
+	among := edge("{ from: api, to: x }\n        - { from: x, to: store }\n        - { from: x, to: server }")
+	const amongJa = `s.yaml:23:19: edge "x"→"server": "x" はまとまり「server」の上にも下にも立てません（"api" が "x" と同じ段か上に、"store" が同じ段か下に立ちます）。「server」の中の箱で終えてください`
+	if got := toldInJapanese(t, among); got != amongJa {
+		t.Errorf("told %q\n  want %q", got, amongJa)
+	}
 }
 
 // k33 is a graph of three boxes over three, each edge to each, its channel four tracks tall.

@@ -260,8 +260,8 @@ var messagesEN = map[string]string{
 	"diagram_graph_unknown":      `edge: no box or group of this graph named "%s"`,
 	"diagram_graph_lane":         `edge %s→%s: %s is a lane, from end to end of the graph; end the edge at a box or a group in it`,
 	"diagram_graph_many":         "graph: %d boxes and groups, past %d; split it into graphs",
-	"diagram_graph_inside":       `edge %s→%s: both ends are group %s or inside it; end the edge at a box or another group outside %s`,
-	"diagram_graph_among":        `edge %s→%s: %s can stand neither above group %s nor below it, as %s stands no lower than it and %s no higher; end the edge at a box in %s`,
+	"diagram_graph_inside":       `edge %s→%s: both ends are group "%s" or inside it; end the edge at a box or another group outside "%s"`,
+	"diagram_graph_among":        `edge %s→%s: %s can stand neither above group "%s" nor below it, as %s stands no lower than it and %s no higher; end the edge at a box in "%s"`,
 	"diagram_graph_long":         "graph: the edges of this diagram's graphs pass %d ranks between their ends, more than %d: split the diagram",
 	"diagram_graph_crossing":     "%s crosses %s of another graph at %s,%s; move one of the graphs by its x and y",
 	"diagram_graph_overlap":      "%s overlaps %s of another graph; move one of the graphs by its x and y",
@@ -312,7 +312,7 @@ var messagesEN = map[string]string{
 	"diagram_graph_level_rank":    "edge %s→%s: %s and %s stand in one rank by level edges, so this edge cannot run from one rank to another; end it elsewhere, or drop level from the edges joining them",
 	"diagram_graph_level_between": "edge %s→%s: %s stands between its boxes in their rank; drop level, or move it out of the way",
 	"diagram_graph_level_loop":    "edge %[1]s→%[2]s: it takes side %[3]s of %[4]s, where %[4]s's loops are; drop level or the loops",
-	"diagram_graph_level_heading": `edge %s→%s: it runs through the heading of lane %s, which reaches into the first rank laid out right; drop level, or shorten the heading`,
+	"diagram_graph_level_heading": `edge %s→%s: it runs through the heading of lane "%s", which reaches into the first rank laid out right; drop level, or shorten the heading`,
 
 	// ui: the management page (ui.html), which renders them itself
 	"ui_download":             "Download",
