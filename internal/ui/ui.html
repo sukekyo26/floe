@@ -862,7 +862,6 @@
   li .kin-title { max-width: 11rem; }
   .family { display: grid; gap: 0.1rem; margin: 0.35rem -1rem -0.65rem; padding: 0.35rem 1rem 0.5rem; border-top: 1px solid var(--line); }
   .family-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-  .family-head .btn { min-height: 0; padding: 0.15rem 0.6rem; font-size: var(--text-small); }
   .family h3 { margin: 0 0 0.15rem; font: 700 var(--text-small)/1.4 var(--body); color: var(--muted); }
   .kin-row { display: flex; align-items: center; gap: 0.45rem; min-height: 1.9rem; color: var(--fg); font-size: var(--text-small); text-decoration: none; }
   .kin-row:hover { text-decoration: underline; }
@@ -1001,7 +1000,7 @@
           <span class="proj" id="task-project"></span>
         </div>
         <div class="family" id="task-family" hidden>
-          <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="btn" id="task-child" aria-label="{{.Msg "ui_task_child_add_named"}}" hidden>{{.Msg "ui_task_child_add"}}</button></div>
+          <div class="family-head"><h3 id="task-family-word"></h3><button type="button" class="add-open" id="task-child" aria-label="{{.Msg "ui_task_child_add_named"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_child_add"}}</button></div>
           <div class="family-rows" id="task-family-rows"></div>
         </div>
       </div>
@@ -1241,7 +1240,7 @@
     <div class="modal-head">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       <div>
-        <h2 id="child-heading">{{.Msg "ui_task_child_make"}}</h2>
+        <h2 id="child-heading">{{.Msg "ui_task_child_add_named"}}</h2>
         <p class="lead" id="child-target"></p>
       </div>
     </div>
@@ -1251,10 +1250,11 @@
     <label class="field"><span>{{.Msg "ui_task_child_title"}} <small>{{.Msg "ui_optional"}}</small></span>
       <input class="text" id="child-title" autocomplete="off">
     </label>
+    <p id="child-note" hidden></p>
     <p class="error" id="child-error" hidden></p>
     <div class="dialog-actions">
       <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
-      <button type="submit" class="btn primary" id="child-submit">{{.Msg "ui_save"}}</button>
+      <button type="submit" class="btn primary" id="child-submit"></button>
     </div>
   </form>
 </dialog>
@@ -3465,10 +3465,19 @@
     $('child').reset();
     $('child-target').textContent = t('ui_task_child_of', [task.name, task.title].filter(Boolean).join(' '));
     $('child-error').hidden = true;
+    childNameChanged();
     $('child-dialog').showModal();
   }
-  // A name on this project's list, of a task of pages alone too, is refused here, by the tasks read just now: the write would move it from any parent it has, unsaid.
-  // LIMIT: one written between that read and this write is moved all the same. The store cannot tell a new task's write from floe work --parent; give the write a way to say new if that comes to matter
+  // What the name written does, said before it is done: a task on the list comes to be a child, out of another parent's, and any other is made
+  // LIMIT: what is said goes by the tasks last read: one another session made since is taken as written, unsaid
+  const childTaskNamed = () => tasksOf().find((x) => x.project === project && x.name === $('child-task').value.trim());
+  function childNameChanged() {
+    const task = childTaskNamed();
+    const from = task?.parentTask && task.parentTask.name !== TASK_NAME ? task.parentTask.name : '';
+    $('child-note').hidden = !task;
+    if (task) $('child-note').textContent = from ? t('ui_task_child_move', task.name, from) : t('ui_task_child_take', task.name);
+    $('child-submit').textContent = t(task ? 'ui_task_child_take_button' : 'ui_task_child_make_button');
+  }
   async function saveChildTask(e) {
     e.preventDefault();
     const btn = $('child-submit');
@@ -3476,16 +3485,11 @@
     const name = $('child-task').value.trim();
     const title = $('child-title').value.trim();
     try {
-      tasksRead = await readTasks();
-      if (tasksOf().some((x) => x.project === project && x.name === name)) {
-        $('child-error').textContent = t('ui_task_child_exists', name);
-        $('child-error').hidden = false;
-        return;
-      }
+      const had = childTaskNamed();
       const url = `/api/tasks?${new URLSearchParams({ project, task: name })}`;
       const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parent: TASK_NAME, ...(title ? { title } : {}) }) });
       if (!res.ok) throw new Error(await res.text());
-      const to = tagged('a', 'toast-link', t('ui_task_child_made', name));
+      const to = tagged('a', 'toast-link', t(had ? 'ui_task_child_took' : 'ui_task_child_made', name));
       to.href = taskHref({ project, name });
       toast('', { ms: 8000, button: to });
       await load();
@@ -4891,29 +4895,41 @@
   $('set-out').addEventListener('click', takeOffTask);
   $('set-dialog').addEventListener('close', () => setBack?.()?.focus());
   $('set-task').addEventListener('input', setTaskChanged);
-  // What it is in, which a long title does not cut: a task done is under another view than the list's first, and looked for there
-  const taskSuggestion = (name) => {
-    const task = setTaskOf(name);
-    return { name, label: [name, task.title].filter(Boolean).join(' '), note: t('ui_task_suggest', t(VIEW_WORDS[task.state])) };
-  };
+  // Offers tasks of a project by name, as the fields that name a task do: what each is in, which a long title does not cut (a task done is
+  // under another view than the list's first, and looked for there), and its parent
+  function suggestTasks(input, projectOf, names, put, more) {
+    suggestOne(input, names, put, {
+      detail: (name) => {
+        const task = tasksOf().find((x) => x.project === projectOf() && x.name === name);
+        const note = t('ui_task_suggest', t(VIEW_WORDS[task.state]));
+        return { name, label: [name, task.title].filter(Boolean).join(' '), note: task.parent ? `${note} ${t('ui_task_suggest', t('ui_task_parent_named', task.parent))}` : note };
+      },
+      // The modal hands the first field the focus as it opens: not over the fields under it
+      onFocus: false,
+      ...more,
+    });
+  }
   $('set-url').addEventListener('input', () => { setUrlTouched = true; });
-  suggestOne($('set-task'), () => {
+  suggestTasks($('set-task'), () => setPage.taskProject, () => {
     return tasksOf().filter((task) => task.project === setPage.taskProject).map((task) => task.name).sort((x, y) => x.localeCompare(y, LANG));
   }, (name) => {
     $('set-task').value = name;
     setTaskChanged();
-  }, {
-    fresh: (name) => ({ name, label: t('ui_task_new', name) }),
-    detail: taskSuggestion,
-    // The modal hands it the focus as it opens: not over the fields under it
-    onFocus: false,
-  });
+  }, { fresh: (name) => ({ name, label: t('ui_task_new', name) }) });
   // What may be a parent: a task with a row, which a task of pages alone has not, no parent of its own, and not this one
-  suggestOne($('set-parent'), () => {
+  suggestTasks($('set-parent'), () => setPage.taskProject, () => {
     const rows = tasksRead.tasks[setPage.taskProject] ?? {};
     const self = $('set-task').value.trim();
     return Object.keys(rows).filter((name) => !rows[name].parent && name !== self).sort((x, y) => x.localeCompare(y, LANG));
-  }, (name) => { $('set-parent').value = name; }, { detail: taskSuggestion });
+  }, (name) => { $('set-parent').value = name; }, { onFocus: true });
+  // What may be made a child: no parent itself, not this one, not one already
+  suggestTasks($('child-task'), () => project, () => {
+    return tasksOf().filter((x) => x.project === project && x.children.length === 0 && x.name !== TASK_NAME && x.parentTask?.name !== TASK_NAME).map((x) => x.name).sort((x, y) => x.localeCompare(y, LANG));
+  }, (name) => {
+    $('child-task').value = name;
+    childNameChanged();
+  });
+  $('child-task').addEventListener('input', childNameChanged);
   suggestOne($('set-step'), () => {
     const task = setTaskOf($('set-task').value);
     const steps = [...(task?.steps ?? []), ...[...(task?.pages ?? []), ...(task?.archived ?? [])].map((a) => a.work.step)].filter(Boolean);

@@ -180,8 +180,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.eval("document.getElementById('child-dialog').close()")
 	task("proj", "#99", "--parent", "")
 
-	// By real presses: a new name makes a child, and the focus is back on the button. A name that is a task already is
-	// refused with the dialog as written, and the task as it was: a child of another parent stays there.
+	// By real presses: a new name makes a child, and the focus is back on the button.
 	press := func(id string) {
 		t.Helper()
 		b.still()
@@ -202,19 +201,53 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if got := b.eval("document.activeElement.id"); got != "task-child" {
 		t.Errorf("the focus after making one: %q", got)
 	}
-	write(" #4 ", "kept")
-	b.until("refused", "!document.getElementById('child-error').hidden")
-	want := `#4 is a task already: its parent field in "Set the task" makes it a child | #4 | kept | true`
-	if got := b.eval("[document.getElementById('child-error').textContent, document.getElementById('child-task').value.trim(), document.getElementById('child-title').value, document.getElementById('child-dialog').open].join(' | ')"); got != want {
-		t.Errorf("a task already: %q", got)
+	// A task on the list is offered, and said before it is done: chosen by a press, it moves from its parent, keeping its
+	// state and its title with none written. One with children, typed, is refused with the dialog as written.
+	press("task-child")
+	b.until("the dialog", "document.getElementById('child-dialog').open")
+	if got := b.eval("document.getElementById('child-submit').textContent"); got != "Make" {
+		t.Errorf("the button of no name: %q", got)
 	}
-	b.eval("document.getElementById('child-dialog').close()")
+	field := func(value string) {
+		t.Helper()
+		b.eval("document.getElementById('child-task').value = " + js(value) + "; document.getElementById('child-task').dispatchEvent(new Event('input', { bubbles: true }))")
+	}
+	field("#")
+	offered := b.eval("[...document.getElementById('child-task-names').children].map((e) => e.querySelector('.names-word').textContent.split(' ')[0]).join(' ')")
+	for _, name := range []string{" #1 ", " #10 ", " #103 ", " #99 "} {
+		if strings.Contains(" "+offered+" ", name) {
+			t.Errorf("offered %s: %q", name, offered)
+		}
+	}
+	if !strings.Contains(" "+offered+" ", " #4 ") {
+		t.Errorf("not offered #4: %q", offered)
+	}
+	if got := b.eval("[...document.getElementById('child-task-names').children].find((e) => e.textContent.startsWith('#4')).textContent"); !strings.Contains(got, "· In progress · parent #1") {
+		t.Errorf("what is said of #4: %q", got)
+	}
+	field("#4")
+	r := b.rect("[...document.getElementById('child-task-names').children].find((e) => e.textContent.startsWith('#4'))")
+	b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	if got := b.eval("document.getElementById('child-task').value + ' | ' + document.getElementById('child-note').textContent + ' | ' + document.getElementById('child-submit').textContent"); got != "#4 | #4 becomes a child, moving from its parent #1 | Make it a child" {
+		t.Errorf("#4 chosen: %q", got)
+	}
+	press("child-submit")
+	b.until("saved", "!document.getElementById('child-dialog').open")
+	b.until("the toast", "document.querySelector('.toast-link')?.textContent === 'Made #4 a child task'")
 	if made, err = st.ReadTasks(); err != nil {
 		t.Fatal(err)
 	}
-	if got := made["proj"]["#4"]; got.Parent != "#1" || got.Title != "doing child" {
-		t.Errorf("#4 after the refusal: %+v", got)
+	if got := made["proj"]["#4"]; got.Parent != "#99" || got.State != "doing" || got.Title != "doing child" {
+		t.Errorf("#4 taken: %+v", got)
 	}
+	task("proj", "#4", "--parent", "#1")
+	write("#20", "kept")
+	b.until("refused", "!document.getElementById('child-error').hidden")
+	want := "Could not save: task #20 has child tasks, such as #21, so it cannot have a parent: tasks have one level of children | #20 | kept | true"
+	if got := b.eval("[document.getElementById('child-error').textContent, document.getElementById('child-task').value, document.getElementById('child-title').value, document.getElementById('child-dialog').open].join(' | ')"); got != want {
+		t.Errorf("a task with children: %q", got)
+	}
+	b.eval("document.getElementById('child-dialog').close()")
 	task("proj", "#103", "--forget")
 
 	// Written by hand: only what the store counts is a family.
@@ -261,16 +294,6 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 		t.Errorf("a task the store keeps has its command")
 	}
 	s.floe(t, "work", "--project", "proj", "--task", "pa", "--forget")
-
-	// A task of pages alone is on the list, so that its name is refused, and it stays of no row.
-	open("gp")
-	openChild()
-	child("t-pages", "")
-	b.until("refused", "!document.getElementById('child-error').hidden")
-	if got := b.eval("document.getElementById('child-error').textContent"); !strings.Contains(got, "t-pages is a task already") {
-		t.Errorf("of pages alone: %q", got)
-	}
-	b.eval("document.getElementById('child-dialog').close()")
 
 	// A task of pages alone has the button, and is refused in the store's words.
 	open("t-pages")
