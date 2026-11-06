@@ -622,7 +622,8 @@ func TestWorkParentNew(t *testing.T) {
 		{name: "a title of spaces", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{New: &no, Parent: ptr("#200"), ParentWas: ptr(""), ParentNew: &yes, ParentTitle: ptr("  ")}, want: "parentWas, parentNew and parentTitle go with a parent"},
 		{name: "a title alone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{ParentTitle: ptr("pay")}, want: "parentWas, parentNew and parentTitle go with a parent"},
 		{name: "taken off, said new", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{Parent: ptr(""), ParentWas: ptr("#123"), ParentNew: &no}, want: "parentWas, parentNew and parentTitle go with a parent"},
-		{name: "the parent gone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{New: &no, Parent: ptr("#180"), ParentWas: ptr(""), ParentNew: &no}, want: "task #180 is no longer there", stale: true},
+		// Of no row, it can be no parent: refused so before the pages are read, gone or of pages alone.
+		{name: "the parent gone", rows: []row{{"#130", ""}}, task: "#130", ed: store.TaskEdit{New: &no, Parent: ptr("#180"), ParentWas: ptr(""), ParentNew: &no}, want: "project p has no task #180 that can be a parent"},
 		{name: "taken off, moved meanwhile", rows: []row{{"#123", ""}, {"#180", ""}, {"#130", "#180"}}, task: "#130", ed: store.TaskEdit{New: &no, Parent: ptr(""), ParentWas: ptr("#123")}, want: "the parent of task #130 has changed", stale: true},
 		{name: "taken off", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{New: &no, Parent: ptr(""), ParentWas: ptr("#123")}, after: map[string]string{"#123": "", "#130": ""}},
 		{name: "a step alone", rows: []row{{"#123", ""}, {"#130", "#123"}}, task: "#130", ed: store.TaskEdit{Step: ptr("build")}, after: map[string]string{"#123": "", "#130": "#123"}},
@@ -707,6 +708,10 @@ func TestWorkParentWasByHand(t *testing.T) {
 	}
 	if err = os.WriteFile(file, text, 0o600); err != nil { //nolint:gosec // G703: a path the test names
 		t.Fatal(err)
+	}
+	// A name of no row taken off its parent is not found, said seen or not: a name mistyped makes no row.
+	if err = s.EditTask("p", "#77", store.TaskEdit{Parent: ptr(""), ParentWas: ptr("")}); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("a parent taken off a name of no row: %v", err)
 	}
 	ed := store.TaskEdit{New: &no, Parent: ptr("#123"), ParentWas: ptr("#9"), ParentNew: &no}
 	if _, conflict := errors.AsType[*store.Conflict](s.EditTask("p", "#130", ed)); !conflict {

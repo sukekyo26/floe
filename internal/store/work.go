@@ -297,19 +297,23 @@ func checkParent(project string, rows map[string]Task, name string, ed TaskEdit)
 	}
 	parent := *ed.Parent
 	if parent == "" {
+		// What the screen saw is no change: a task of no row taken off its parent, and nothing else, is not found still
 		var nothing TaskEdit
-		ed.Parent = nil
+		ed.Parent, ed.ParentWas, ed.ParentNew, ed.ParentTitle = nil, nil, nil, nil
 		if _, had := rows[name]; !had && ed == nothing {
 			return ErrNotFound
 		}
 		return nil
 	}
-	up, ok := rows[parent]
-	if !ok {
-		return usererr.New("store_parent_none", parent, project)
-	}
-	if up.Parent != "" {
-		return usererr.New("store_parent_nested", parent, up.Parent)
+	// A parent made (ParentNew true) has no row yet, nor a parent of its own
+	if ed.ParentNew == nil || !*ed.ParentNew {
+		up, ok := rows[parent]
+		if !ok {
+			return usererr.New("store_parent_none", parent, project)
+		}
+		if up.Parent != "" {
+			return usererr.New("store_parent_nested", parent, up.Parent)
+		}
 	}
 	if children := childrenOfTask(rows, name); len(children) > 0 {
 		return usererr.New("store_parent_kids", name, children[0])
@@ -346,8 +350,8 @@ func (s *Store) checkThere(project string, rows map[string]Task, name string, ta
 
 // checkSeen refuses, before checkParent, a parent ed names that is not as the screen saw it: the task's parent read
 // (ParentWas, compared as written, as a screen sends what it read), the parent named there or new (ParentNew). A parent
-// made (ParentNew true) is put in rows, of the title ParentTitle, for checkParent to find and EditTask to write. A
-// parent of itself is refused first, which would else be said to be there.
+// of itself is refused first, which would else be said to be there; one taken to be there of no row next, as it can be
+// no parent, before its pages are read.
 func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed TaskEdit) error {
 	if ed.Parent == nil {
 		return nil
@@ -362,15 +366,10 @@ func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed 
 	if parent == name {
 		return usererr.New("store_parent_self", name)
 	}
-	if err := s.checkThere(project, rows, parent, ed.ParentNew); err != nil {
-		return err
+	if _, ok := rows[parent]; !ok && ed.ParentNew != nil && !*ed.ParentNew {
+		return usererr.New("store_parent_none", parent, project)
 	}
-	if ed.ParentNew != nil && *ed.ParentNew {
-		made := newTaskRow()
-		made.Title = strings.TrimSpace(*ed.ParentTitle)
-		rows[parent] = made
-	}
-	return nil
+	return s.checkThere(project, rows, parent, ed.ParentNew)
 }
 
 // newTaskRow is the row a task starts with: of the state New, from now.
@@ -442,6 +441,11 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	}
 	if err = checkParent(project, rows, name, ed); err != nil {
 		return err
+	}
+	if ed.ParentNew != nil && *ed.ParentNew {
+		made := newTaskRow()
+		made.Title = strings.TrimSpace(*ed.ParentTitle)
+		rows[*ed.Parent] = made
 	}
 	t, had := rows[name]
 	if !had {

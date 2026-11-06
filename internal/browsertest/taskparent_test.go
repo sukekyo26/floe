@@ -197,16 +197,20 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 	b.eval("document.getElementById('toasts').replaceChildren()")
 
-	// Moved meanwhile, the list read before: refused as changed, not taken off the other; read again.
+	// Moved meanwhile, the list read before (held, as a poll would read it): refused as changed, not taken off the other; read again.
+	hold := func() {
+		t.Helper()
+		b.eval(`window.realFetch ??= window.fetch; window.held = false;
+			window.fetch = async (url, init) => {
+				if (init?.method === 'PATCH') window.held = false;
+				if (window.held && String(url).startsWith('/api/tasks') && !init?.method) return new Response(window.heldTasks);
+				return window.realFetch(url, init);
+			};
+			window.realFetch('/api/tasks').then((r) => r.text()).then((x) => { window.heldTasks = x; window.held = true; })`)
+		b.until("held", "window.held === true")
+	}
 	open("#2")
-	b.eval(`window.realFetch = window.fetch; window.heldTasks = null;
-		window.fetch = async (url, init) => {
-			if (init?.method === 'PATCH') window.held = false;
-			if (window.held && String(url).startsWith('/api/tasks') && !init?.method) return new Response(window.heldTasks);
-			return window.realFetch(url, init);
-		};
-		window.realFetch('/api/tasks').then((r) => r.text()).then((x) => { window.heldTasks = x; window.held = true; })`)
-	b.until("held", "window.held === true")
+	hold()
 	task("#2", "--parent", "#4")
 	press("document.querySelector('#task-up-rows .unlink')")
 	b.until("refused", "!document.getElementById('error').hidden")
@@ -214,28 +218,80 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 		t.Errorf("moved meanwhile: %q, %q", got, parentOf("#2"))
 	}
 	b.until("read again", "document.querySelector('#task-up-rows .kin-row[data-task=\"#4\"]')")
-	b.eval("window.fetch = window.realFetch")
+	b.eval("document.getElementById('error').hidden = true")
 
-	// A parent by hand that makes no family: changed, said so, with no way back the store would refuse.
-	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
-	text, err := os.ReadFile(file) //nolint:gosec // G304: a path the test names
-	if err != nil {
-		t.Fatal(err)
+	// The dialog too: refused, it takes the task as read again, and the next press goes.
+	hold()
+	b.eval("document.getElementById('task-parent-change').click()")
+	kin("#40", "")
+	task("#2", "--parent", "#3")
+	b.eval("document.getElementById('kin').requestSubmit()")
+	b.until("refused", "!document.getElementById('kin-error').hidden")
+	if got := b.eval("document.getElementById('kin-note').textContent"); got != "#40 made becomes the parent, in place of #3" {
+		t.Errorf("read again in the dialog: %q", got)
 	}
-	var raw map[string]map[string]map[string]any
-	if err = json.Unmarshal(text, &raw); err != nil {
-		t.Fatal(err)
+	b.eval("document.getElementById('kin').requestSubmit()")
+	b.until("saved", "!document.getElementById('kin-dialog').open")
+	if parentOf("#2") != "#40" {
+		t.Errorf("pressed again: %q", parentOf("#2"))
 	}
-	raw[project]["#7"]["parent"] = "#9"
-	if text, err = json.Marshal(raw); err != nil {
-		t.Fatal(err)
+	b.eval("window.fetch = window.realFetch; document.getElementById('toasts').replaceChildren()")
+
+	// Pressed twice as it goes: taken off once, nothing refused.
+	b.until("drawn", "document.querySelector('#task-up-rows .unlink[data-task=\"#40\"]')")
+	b.eval("const u = document.querySelector('#task-up-rows .unlink'); u.click(); u.click()")
+	b.until("taken off", "document.querySelector('#toasts').textContent.includes('Took')")
+	b.still()
+	if got := b.eval("document.getElementById('error').hidden + ' ' + document.querySelectorAll('#toasts .toast').length"); got != "true 1" || parentOf("#2") != "" {
+		t.Errorf("pressed twice: %q, %q", got, parentOf("#2"))
 	}
-	if err = os.WriteFile(file, text, 0o600); err != nil { //nolint:gosec // G703: a path the test names
-		t.Fatal(err)
+	b.eval("document.getElementById('toasts').replaceChildren()")
+
+	// A name that may not be the parent is not said to be: itself, one with a parent.
+	task("#5", "--parent", "#4")
+	open("#1")
+	b.eval("document.getElementById('task-parent-change').click()")
+	for _, name := range []string{"#1", "#5"} {
+		kin(name, "")
+		if got := b.eval("document.getElementById('kin-note').hidden + ''"); got != "true" {
+			t.Errorf("%s said: %q", name, b.eval("document.getElementById('kin-note').textContent"))
+		}
 	}
+	b.eval("document.getElementById('kin-dialog').close()")
+
+	// A parent by hand that makes no family: named again, nothing is written; changed, said so, with no way back the store would refuse.
+	byHand := func(name, parent string) {
+		t.Helper()
+		file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
+		text, err := os.ReadFile(file) //nolint:gosec // G304: a path the test names
+		if err != nil {
+			t.Fatal(err)
+		}
+		var raw map[string]map[string]map[string]any
+		if err = json.Unmarshal(text, &raw); err != nil {
+			t.Fatal(err)
+		}
+		raw[project][name]["parent"] = parent
+		if text, err = json.Marshal(raw); err != nil {
+			t.Fatal(err)
+		}
+		if err = os.WriteFile(file, text, 0o600); err != nil { //nolint:gosec // G703: a path the test names
+			t.Fatal(err)
+		}
+	}
+	byHand("#7", "#9")
 	open("#7")
 	if got := parts() + " " + b.eval("document.getElementById('task-up-rows').children.length + ''"); got != "true false true false false 0" {
 		t.Errorf("a parent by hand: %q", got)
+	}
+	b.eval("document.getElementById('task-parent-change').click()")
+	kin("#9", "")
+	if got := b.eval(said); got != "Change the parent task|Child: #7 by hand||true|Make it the parent" {
+		t.Errorf("the parent by hand named again: %q", got)
+	}
+	saved()
+	if parentOf("#7") != "#9" {
+		t.Errorf("named again, written: %q", parentOf("#7"))
 	}
 	b.eval("document.getElementById('task-parent-change').click()")
 	kin("#3", "")
@@ -264,11 +320,16 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 		t.Errorf("set, moved meanwhile: %q, %q", got, parentOf("#7"))
 	}
 	b.eval("document.getElementById('set-dialog').close()")
+	// The parent as written, spaces round it, left alone: not sent, nor written again.
+	byHand("#7", " #9")
 	setDialog()
 	b.eval("document.getElementById('set-step').value = 'build'")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("saved", "!document.getElementById('set-dialog').open")
 	if got := st.ReadMeta("p7").Work.Step; got != "build" {
 		t.Errorf("a step alone: %q", got)
+	}
+	if got := parentOf("#7"); got != " #9" {
+		t.Errorf("the parent left alone: %q", got)
 	}
 }

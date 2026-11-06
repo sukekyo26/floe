@@ -3510,15 +3510,23 @@
   // as drawn now
   const partButton = (up) => (up ? [$('task-parent-change'), $('task-parent-add')] : [$('task-child')]).find((b) => !b.hidden && !b.closest('[hidden]'));
   // The child taken off its parent, as the screen saw them (parentWas): one moved meanwhile is refused, not taken off another
+  // Pressed again while it goes, nothing more is asked: the second, of what is no longer so, would be refused
+  const unlinking = new Set();
   async function unlinkTask(child, parent, fromKeys) {
-    const res = await writeTask(child.project, child.name, { new: false, parent: '', parentWas: child.parent });
-    if (!res.ok) {
-      showError(t('ui_save_failed', res.status === 409 ? res.stale : res.text));
-      return;
+    if (unlinking.has(child.name)) return;
+    unlinking.add(child.name);
+    try {
+      const res = await writeTask(child.project, child.name, { new: false, parent: '', parentWas: child.parent });
+      if (!res.ok) {
+        showError(t('ui_save_failed', res.status === 409 ? res.stale : res.text));
+        return;
+      }
+      undoToast(t('ui_task_unlinked', child.name, parent), { project: child.project, name: child.name, parent, was: '' }, fromKeys);
+      await load();
+      if (!fromKeys && !document.activeElement?.closest('#task-family')) partButton(child.name === TASK_NAME)?.focus();
+    } finally {
+      unlinking.delete(child.name);
     }
-    undoToast(t('ui_task_unlinked', child.name, parent), { project: child.project, name: child.name, parent, was: '' }, fromKeys);
-    await load();
-    if (!fromKeys && !document.activeElement?.closest('#task-family')) partButton(child.name === TASK_NAME)?.focus();
   }
   // The toast of a change to a parent, and its way back: the parent before written again, over the one written now. Pressed, a refusal (the
   // parent before has come to be a child, say) is said as the store says it
@@ -3548,20 +3556,20 @@
   }
 
   // The dialog of a task's family: a child of the task of the page, or its parent, of one form of fields; KIN_FORMS says what differs.
-  // Each write says what the dialog showed (new, parentWas, parentNew): what has changed since is refused, and read again
+  // Each write says what the dialog showed (new, parentWas, parentNew): what has changed since is refused, and read again. A task named that
+  // may be what is asked (offered, as the suggestions are) is said before; one that may not is not, and pressed, the store refuses it
   const named = (x) => [x.name, x.title].filter(Boolean).join(' ');
   const isOwnChild = (x) => x?.parentTask?.name === TASK_NAME;
   // What may be a parent: a task with a row, which a task of pages alone has not, no parent of its own, and not the one it is for
   const mayParent = (x, of) => hasRow(x) && !x.parent && x.name !== of;
   const KIN_FORMS = {
-    // A task named comes to be a child with what it has, out of another parent's, and any other is made. One that cannot be, with children or
-    // this one, is not said to: pressed, the store refuses it
+    // A task named comes to be a child with what it has, out of another parent's, and any other is made
     child: {
       heading: () => t('ui_child_add_named'),
       target: (task) => t('ui_task_child_of', named(task)),
       offered: (task, x) => x.children.length === 0 && x.name !== task.name && !isOwnChild(x),
-      note: (task, x) => (x.children.length > 0 || x.name === task.name ? '' : x.parent ? t('ui_task_child_move', named(x), x.parent) : t('ui_task_child_take', named(x))),
-      same: (task, x) => isOwnChild(x),
+      note: (task, x) => (x.parent ? t('ui_task_child_move', named(x), x.parent) : t('ui_task_child_take', named(x))),
+      same: (task, name, x) => isOwnChild(x),
       take: 'ui_child_take_button',
       up: false,
       // LIMIT: this task's row gone meanwhile, its pages left, it is there still: refused as no parent (400), not read again, as a parent not known
@@ -3578,7 +3586,8 @@
       target: (task) => t('ui_task_parent_of', named(task)),
       offered: (task, x) => mayParent(x, task.name),
       note: (task, x) => (task.parent && task.parent !== x.name ? t('ui_task_parent_move', named(x), task.parent) : t('ui_task_parent_take', named(x))),
-      same: (task, x) => x?.name === task.parent,
+      // The parent as written, one that makes no family too, named again is no change
+      same: (task, name) => Boolean(task.parent) && name === task.parent.trim(),
       take: 'ui_up_take_button',
       up: true,
       // LIMIT: whether the one named has come to have a parent or children meanwhile is not said: the store refuses it as it is now (400),
@@ -3603,21 +3612,30 @@
   function openKin(task, form) {
     kinOf = { task, form: KIN_FORMS[form] };
     resetTaskForm($('kin'));
-    $('kin-heading').textContent = kinOf.form.heading(task);
-    $('kin-target').textContent = kinOf.form.target(task);
     $('kin-error').hidden = true;
-    kinNameChanged();
+    kinTaskChanged();
     $('kin-dialog').showModal();
+  }
+  // The dialog's task as the tasks read now have it, its parent written above all, and what it says of it: as it opens, and refused as
+  // stale, as the set dialog's setTaskChanged
+  function kinTaskChanged() {
+    const { task, form } = kinOf;
+    kinOf.task = tasksOf().find((y) => y.project === task.project && y.name === task.name) ?? task;
+    $('kin-heading').textContent = form.heading(kinOf.task);
+    $('kin-target').textContent = form.target(kinOf.task);
+    kinNameChanged();
   }
   function kinNameChanged() {
     const { task, form } = kinOf;
-    const x = tasksOf().find((y) => y.project === task.project && y.name === $('kin-task').value.trim());
+    const name = $('kin-task').value.trim();
+    const x = tasksOf().find((y) => y.project === task.project && y.name === name);
     kinShown = x;
-    const note = x && !form.same(task, x) ? form.note(task, x) : '';
+    const same = form.same(task, name, x);
+    const note = x && !same && form.offered(task, x) ? form.note(task, x) : '';
     $('kin-note').hidden = !note;
     $('kin-note').textContent = note;
-    titleField($('kin-title'), !x);
-    $('kin-submit').textContent = t(x ? form.take : 'ui_child_make_button');
+    titleField($('kin-title'), !x && !same);
+    $('kin-submit').textContent = t(x || same ? form.take : 'ui_child_make_button');
   }
   async function saveKin(e) {
     e.preventDefault();
@@ -3630,14 +3648,14 @@
       if (!taskFormReady($('kin'), $('kin-error'))) return;
       const x = kinShown;
       // Nothing to write, and so nothing to tell
-      if (form.same(task, x)) {
+      if (form.same(task, name, x)) {
         $('kin-dialog').close();
         partButton(form.up)?.focus();
         return;
       }
       const res = await form.write(task, name, x, title);
       if (res.status === 409) {
-        kinNameChanged();
+        kinTaskChanged();
         throw new Error(res.stale);
       }
       if (!res.ok) throw new Error(res.text);
@@ -4819,7 +4837,7 @@
       ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}),
       // The parent sent only as changed, with what was seen of it. Whether the one named is there is said only when it is known: a name not
       // known may be mistyped, which the store refuses as no parent
-      ...(parent !== setOpened.parent ? { parent, parentWas: setOpened.parent, ...(parent && setTaskOf(parent) ? { parentNew: false } : {}) } : {}),
+      ...(parent !== setOpened.parent.trim() ? { parent, parentWas: setOpened.parent, ...(parent && setTaskOf(parent) ? { parentNew: false } : {}) } : {}),
     };
     try {
       if (!taskFormReady($('set'), $('set-error'))) return;
