@@ -213,15 +213,15 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	s.floe(t, strings.Split(strings.TrimSuffix(string(args), "\n"), "\n")...)
-	if all, err := st.ReadTasks(); err != nil || len(all["/"]) != 0 {
-		t.Errorf("forgetting as it says: %v, %v", all["/"], err)
+	if all, readErr := st.ReadTasks(); readErr != nil || len(all["/"]) != 0 {
+		t.Errorf("forgetting as it says: %v, %v", all["/"], readErr)
 	}
-	if _, err := os.Stat(filepath.Join(s.Env["HOME"], "made")); err == nil {
+	if _, statErr := os.Stat(filepath.Join(s.Env["HOME"], "made")); statErr == nil {
 		t.Error("the command ran what the name holds")
 	}
 
 	// A tag on a task's page has nothing to narrow.
-	if _, err := st.Edit("y1", store.Edit{Tags: &[]string{"t"}}); err != nil {
+	if _, err = st.Edit("y1", store.Edit{Tags: &[]string{"t"}}); err != nil {
 		t.Fatal(err)
 	}
 	opened("#142", "/tasks?project=proj&task=%23142")
@@ -288,7 +288,6 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if got, want := strings.Join(out, "\n"), taskPageWant; got != want {
 		t.Errorf("the task's page:\n%s\nwant:\n%s", got, want)
 	}
-
 }
 
 // taskPageShown tells a task's page drew its rows.
