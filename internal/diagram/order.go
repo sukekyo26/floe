@@ -64,10 +64,26 @@ func (gr *group) positions() []int {
 	return pos
 }
 
+// places are the positions sweep and align order by: a heading laid out down counts as a place after its left mark,
+// though it takes none, so that the order is the same as with a heading in the rank.
+// LIMIT: a place for a node no rank holds. Drop it when the ordering changes anyway: with positions, 16 of 1550 random
+// graphs change, the sum of the areas by 0.08%, one by half.
+func (gr *group) places() []int {
+	pos := gr.positions()
+	for _, h := range gr.heads {
+		for _, i := range gr.ranks[gr.nodes[h.left].rank] {
+			if pos[i] > pos[h.left] {
+				pos[i]++
+			}
+		}
+	}
+	return pos
+}
+
 // sweep orders rank r by the median position of its nodes' links in the rank above (down) or below: a node with
 // no link there keeps its place, and the others fill the places left, stably, so that ties keep their order.
 func (gr *group) sweep(r int, down bool) {
-	pos := gr.positions()
+	pos := gr.places()
 	keys := make(map[int]float64, len(gr.ranks[r]))
 	var moving []int
 	for _, n := range gr.ranks[r] {

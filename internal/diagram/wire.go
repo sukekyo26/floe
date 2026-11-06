@@ -49,8 +49,8 @@ func (gr *group) wire() {
 }
 
 // rise sets the tops and bottoms of the ranks and the nodes' tops, as laid out down: a rank as tall as its tallest
-// box (and its headings' rooms), the room above it for the frames starting there and below it for those ending,
-// then its channel's tracks.
+// box (and, laid out right, its headings' rooms), the room above it for the frames starting there and below it for
+// those ending, then its channel's tracks.
 func (gr *group) rise() {
 	gr.top, gr.bottom = make([]float64, len(gr.ranks)), make([]float64, len(gr.ranks))
 	above, below := gr.rooms()
@@ -75,8 +75,8 @@ func (gr *group) rise() {
 }
 
 // stand sets the tops of the nodes of rank r, and the tops and bottoms of the frames starting and ending there: a
-// box in the middle of the rank, a point along it, a heading its offset below its frame's top, and where an edge
-// enters or leaves a frame on its top or bottom.
+// box in the middle of the rank, a point along it, a heading's room (laid out right) its offset below its frame's top,
+// and where an edge enters or leaves a frame on its top or bottom.
 func (gr *group) stand(r int, above, below room) {
 	top, bottom := gr.top[r], gr.bottom[r]
 	for _, i := range gr.ranks[r] {
@@ -349,7 +349,7 @@ func (gr *group) bounds(r, k, last int, right float64) (lo, hi float64) {
 		p := rank[prev]
 		between := gr.boxesOf(rank[prev+1 : k])
 		for _, b := range between {
-			at = onGrid(at+gr.gap(p, b), 6, math.Ceil) + gr.nodes[b].w
+			at = max(onGrid(at+gr.gap(p, b), 6, math.Ceil), onGrid(gr.headFloor(b), 6, math.Ceil)) + gr.nodes[b].w
 			p = b
 		}
 		lo = at + gr.gap(p, v)
@@ -357,6 +357,7 @@ func (gr *group) bounds(r, k, last int, right float64) (lo, hi float64) {
 			lo = onGrid(lo, 6, math.Ceil)
 		}
 	}
+	lo = max(lo, gr.headFloor(v))
 	hi = math.Inf(1)
 	for j := k + 1; j < len(rank); j++ {
 		if !gr.nodes[rank[j]].rigid() {

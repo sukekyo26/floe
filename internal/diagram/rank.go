@@ -19,7 +19,8 @@ import (
 func (o *graphOut) rank(members, edges, cedges, levels []int) *group {
 	gr := &group{
 		nodes: nil, links: nil, ranks: nil, chains: map[int][]int{}, reversed: map[int]bool{}, tracks: nil, top: nil,
-		bottom: nil, arcs: nil, out: o, among: nil, cls: nil, frames: map[int][2]float64{}, botRoom: nil, headAt: 0,
+		bottom: nil, arcs: nil, out: o, among: nil, cls: nil, frames: map[int][2]float64{}, botRoom: nil,
+		heads: map[int]headRoom{}, headAt: 0,
 		levels: levels,
 	}
 	local := map[int]int{}

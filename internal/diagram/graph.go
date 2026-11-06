@@ -55,6 +55,7 @@ type group struct {
 	cls      []int              // the groups of boxes within it, as written
 	frames   map[int][2]float64 // each group's frame's top and bottom, as laid out down
 	botRoom  []float64          // the room below each rank for the frames ending there
+	heads    map[int]headRoom   // laid out down, each headed group's heading
 	headAt   float64            // how far a heading's room stands from its frame's top, along the ranks
 	levels   []int              // its level edges, by their indexes in edges, but those told
 }
