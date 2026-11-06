@@ -857,6 +857,20 @@
   .pin svg { flex: none; width: 13px; height: 13px; color: var(--muted); }
   .pin.unseen { font-weight: 700; }
   .pins-none { color: var(--muted); }
+  .pins-help { flex: none; width: 24px; height: 24px; margin-left: -0.4rem; }
+  .pins-help svg { width: 16px; height: 16px; }
+  .pins-tip {
+    position: fixed; inset: auto; margin: 0; width: min(20rem, 100vw - 2rem); padding: 0.6rem 0.75rem; font-size: var(--text-small);
+    color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-menu); box-shadow: var(--shadow);
+  }
+  .pins-tip p { margin: 0.25rem 0 0; color: var(--muted); }
+  /* There is always a project: the button says it, the words never cut to a count, and it is not lit as narrowed */
+  .shell.tasks #narrow-filter-name { position: static; width: auto; height: auto; clip-path: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .shell.tasks #narrow-filter-n { display: none; }
+  @media (max-width: 40rem) {
+    .shell.tasks #narrow-filter { flex: 0 1 auto; min-width: 0; }
+    .shell.tasks #narrow-filter-name { max-width: 4.5rem; }
+  }
   @media (max-width: 40rem) {
     .pins { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
     .pins::-webkit-scrollbar { display: none; }
@@ -947,7 +961,9 @@
           <span class="proj" id="task-project"></span>
         </div>
       </div>
-      <div class="pins" id="pins" hidden><h2>{{.Msg "ui_pins"}}</h2><span id="pin-list"></span></div>
+      <div class="pins" id="pins" hidden><h2>{{.Msg "ui_pins"}}</h2><button type="button" class="icon-btn pins-help" id="pins-help" popovertarget="pins-tip" aria-label="{{.Msg "ui_pins_help"}}" title="{{.Msg "ui_pins_help"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg></button><span id="pin-list"></span></div>
+      <!-- In the top layer: a narrow screen's row of pins scrolls, and would cut it off -->
+      <div class="pins-tip" id="pins-tip" popover="auto"><strong>{{.Msg "ui_pins"}}</strong><p>{{.Msg "ui_pins_help_text"}}</p></div>
       <div class="lhead">
         <!-- What the filters narrow the list to, in the head of the list, or of the page beside it with the list folded too -->
         <button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button>
@@ -967,7 +983,7 @@
       <ul id="list"></ul>
       <div class="state" id="task-none" hidden><strong>{{.Msg "ui_task_no_pages"}}</strong><p><code id="task-forget"></code></p></div>
       <div class="state" id="task-missing" hidden><strong></strong><p><a href="/tasks" id="task-missing-up">{{.Msg "ui_tasks_back"}}</a></p></div>
-      <div class="state" id="tasks-none" hidden><strong></strong><p><button type="button" class="link-btn" id="tasks-all">{{.Msg "ui_show_all_projects"}}</button></p></div>
+      <div class="state" id="tasks-none" hidden><strong></strong><p><a href="/tasks" id="tasks-other">{{.Msg "ui_tasks_other"}}</a></p></div>
       <div class="state" id="tasks-failed" hidden><strong>{{.Msg "ui_tasks_unreadable"}}</strong><p><a href="/">{{.Msg "ui_to_page_list"}}</a></p></div>
       <div class="state" id="tasks-empty" hidden>
         <strong>{{.Msg "ui_tasks_empty"}}</strong>
@@ -1654,7 +1670,8 @@
   const toggleKind = picker('kind', () => kind);
   const toggleTemplate = picker('template', () => template);
   const toggleTag = picker('tag', () => tag);
-  const toggleProject = picker('project', () => project);
+  // The task list always shows one project: picked again, nothing changes
+  const toggleProject = TASK_LIST ? (value) => { if (value !== project) refilter({ project: value }); } : picker('project', () => project);
 
   // Removing a link leaves its file alone, so it says unregister (ui_unlink_*) rather than delete (ui_delete_*)
   const removal = (a) => (a.path ? 'unlink' : 'delete');
@@ -2025,10 +2042,13 @@
     return { rows, n: (value) => left.get(value) ?? 0 };
   }
 
-  // The shelf's projects of list, in the order of ranks (projectOrder); a task's project is named as a page's
-  function renderChips(list, ranks) {
+  // A project's name as the screen says it
+  const projectWord = (name) => (name === NONE ? t('ui_no_project') : name);
+  // The shelf's projects of list, in the order of ranks (projectOrder); a task's project is named as a page's. there is the task
+  // list's, which has them all at any count; the page list has those of list
+  function renderChips(list, ranks, there) {
     const { rows, n } = tally(list, 'project', (a) => [a.project ?? NONE]);
-    const names = [...ranks.keys()].filter((name) => rows.has(name));
+    const names = [...ranks.keys()].filter((name) => (there ?? rows).has(name));
     // A project dropped from every entry but still picked comes after those in the order
     if (project && project !== NONE && !names.includes(project)) names.push(project);
     // Its dot and its count
@@ -2039,10 +2059,10 @@
       return b;
     };
     const chips = names.map((name) => projectChip(name, name));
-    if (rows.has(NONE)) chips.push(projectChip(t('ui_no_project'), NONE));
+    if ((there ?? rows).has(NONE) || (there && project === NONE)) chips.push(projectChip(t('ui_no_project'), NONE));
     $('chips').replaceChildren(...chips);
     // Projects to choose between, or one chosen
-    $('shelf-projects').hidden = chips.length < 2 && !project;
+    $('shelf-projects').hidden = !there && chips.length < 2 && !project;
   }
 
   const KIND_WORDS = { page: 'ui_kind_page', link: 'ui_kind_link', folder: 'ui_kind_folder' };
@@ -2117,14 +2137,14 @@
       b.classList.toggle('none', counts[b.dataset.view] === 0);
     }
     // How many picks narrow the list, which the row of views does not show
-    const narrowed = picksOn();
-    $('narrow-filter-name').textContent = narrowed ? t('ui_narrow_n', narrowed) : t('ui_narrow');
+    const narrowed = TASK_LIST ? 0 : picksOn();
+    $('narrow-filter-name').textContent = TASK_LIST && project ? projectWord(project) : narrowed ? t('ui_narrow_n', narrowed) : t('ui_narrow');
     $('narrow-filter-n').textContent = narrowed || '';
     // Where the picks are in a dialog, this is what is lit of them
     $('narrow-filter').classList.toggle('narrowed', narrowed > 0);
     // The filters folded, the head says what they narrow the list to: the view, and how many picks
     const what = [view === FIRST_VIEW ? '' : t(VIEW_WORDS[view]), narrowed ? t('ui_narrow_n', narrowed) : ''].filter(Boolean).join(' · ');
-    $('shelf-what').textContent = what;
+    $('shelf-what').textContent = TASK_LIST ? projectWord(project) : what;
   }
 
   // Whether a has a page of its own to open alone or download: a folder has none, nor has a link whose file is gone
@@ -2974,8 +2994,7 @@
     const link = li.querySelector('.title');
     link.href = taskHref(task);
     link.addEventListener('click', () => keepTaskRow(li));
-    const projectName = task.project === NONE ? t('ui_no_project') : task.project;
-    link.title = [task.name, task.title, projectName, task.url].filter(Boolean).join('\n');
+    link.title = [task.name, task.title, projectWord(task.project), task.url].filter(Boolean).join('\n');
     link.append(tagged('span', 'tname', task.name), task.title ?? '');
     const time = li.querySelector('time');
     time.dateTime = task.at;
@@ -2985,7 +3004,6 @@
     sub.append(tagged('span', 'task-pages', t('ui_task_pages', task.pages.length)));
     if (task.archived.length > 0) sub.append(tagged('span', 'task-pages', t('ui_task_archived', task.archived.length)));
     if (unread > 0) sub.append(tagged('span', 'ver', t('ui_task_unread', unread)));
-    if (!project && task.project !== NONE) sub.append(tagged('span', 'proj', task.project));
     if (task.url) sub.append(xlink(task.url));
     return li;
   }
@@ -3018,7 +3036,7 @@
   // The pages pinned, which leave as they are archived, and how to pin one when none is
   // LIMIT: a folder pinned leads to the page list, where it opens (its URL), and not back here
   function drawPins() {
-    const pinned = items.filter((a) => a.work?.pin && !a.archived);
+    const pinned = items.filter((a) => a.work?.pin && !a.archived && a.taskProject === project);
     const pins = pinned.map((a) => {
       const link = document.createElement('a');
       link.className = 'pin';
@@ -3032,25 +3050,58 @@
       if (a.news) link.append(tagged('span', 'dot'));
       return link;
     });
-    $('pins').hidden = false;
+    // No project yet (the tasks unreadable, none remembered) has no pins of its own to say
+    $('pins').hidden = !project;
     $('pin-list').replaceChildren(...(pins.length > 0 ? pins : [tagged('span', 'pins-none', t('ui_pins_none'))]));
   }
 
   // The task list's list. Nothing of the shelf's but the view and the project narrows it
+  // The projects there are for the task list: of its tasks, and of the pages pinned
+  function taskProjects(tasks) {
+    return new Set([...tasks.map((task) => task.project), ...items.filter((a) => a.work?.pin && !a.archived).map((a) => a.taskProject)]);
+  }
+  // The viewer's last project, kept in the browser: whose it is, not the store's
+  const PROJECT_KEY = 'artifacts.taskProject';
+  function keptProject() {
+    try {
+      return localStorage.getItem(PROJECT_KEY);
+    } catch {
+      return null;
+    }
+  }
+  // The project the task list opens with no project named: the one kept while it is there, or where a task has waited longest, or the
+  // shelf's first. Unreadable, tasks are not known, so that only what was kept can be said
+  function openingProject(tasks, there, ranks) {
+    const kept = keptProject();
+    if (tasksRead.error) return kept ?? '';
+    if (there.has(kept)) return kept;
+    const waiting = tasks.filter((task) => taskView(task) === FIRST_VIEW).sort((x, y) => Date.parse(x.at) - Date.parse(y.at));
+    return waiting[0]?.project ?? [...ranks.keys(), NONE].find((name) => there.has(name)) ?? '';
+  }
+
   function renderTaskList() {
     const failed = Boolean(tasksRead.error);
-    const nothing = !failed && !anyTasks();
     const tasks = failed ? [] : tasksOf();
-    const inProject = (task) => !project || task.project === project;
+    const there = taskProjects(tasks);
+    const ranks = projectOrder(there);
+    if (!project) project = openingProject(tasks, there, ranks);
+    if (!failed && there.has(project)) {
+      try {
+        localStorage.setItem(PROJECT_KEY, project);
+      } catch {
+        // Without storage, the next opening chooses anew
+      }
+    }
+    const nothing = !failed && there.size === 0;
+    const inProject = (task) => task.project === project;
     const ofView = tasks.filter((task) => taskView(task) === view);
     const shown = ofView.filter(inProject);
     const oldest = STATES.find((s) => s.name === view)?.oldest;
     const when = (task) => Date.parse(task.at);
     shown.sort((x, y) => (oldest ? when(x) - when(y) : when(y) - when(x)) || x.name.localeCompare(y.name, LANG));
-    renderChips(ofView, projectOrder(tasks.map((task) => task.project)));
+    renderChips(ofView, ranks, there);
     const counts = Object.fromEntries(VIEWS.map((value) => [value, tasks.filter((task) => taskView(task) === value && inProject(task)).length]));
     drawViews(counts);
-    if (project) $('narrow-filter-name').textContent = project === NONE ? t('ui_no_project') : project;
     $('manage').classList.toggle('tasks-empty', nothing);
     $('manage').classList.toggle('tasks-failed', failed);
     drawPins();
@@ -3059,9 +3110,9 @@
     $('tasks-failed').hidden = !failed;
     const none = !nothing && !failed && shown.length === 0;
     $('tasks-none').hidden = !none;
-    $('tasks-all').hidden = !project;
-    const gone = project && !tasks.some(inProject);
-    $('tasks-none').querySelector('strong').textContent = gone ? t('ui_task_none', project === NONE ? t('ui_no_project') : project) : t('ui_task_none_state', t(VIEW_WORDS[view]));
+    const gone = !there.has(project);
+    $('tasks-other').hidden = !gone;
+    $('tasks-none').querySelector('strong').textContent = gone ? t('ui_task_none', projectWord(project)) : t('ui_task_none_state', t(VIEW_WORDS[view]));
     drawRows([{ entries: shown }], (task, i, rows) => rows.push(taskRow(task, i)));
     renderNews();
     syncUrl();
@@ -3110,7 +3161,8 @@
       $('task-at').textContent = ago(task.at);
     }
     $('task-link').replaceChildren(...(task.url ? [xlink(task.url)] : []));
-    $('task-project').textContent = task.project === NONE ? t('ui_no_project') : task.project;
+    $('task-project').textContent = projectWord(task.project);
+    $('task-up').href = taskListHref(task);
     const archive = $('task-archive');
     const back = task.archived.length > 0 && task.pages.length === 0;
     archive.hidden = !(back || (task.state === 'done' && task.pages.length > 0));
@@ -3145,6 +3197,14 @@
     await load();
   }
 
+  // The list of a task's page: the one it came from when of this project, else this project's at the view the task is under
+  function taskListHref(task) {
+    const saved = savedTasks();
+    if (new URLSearchParams(saved).get('project') === project) return `${TASKS_PATH}${saved}`;
+    const to = new URLSearchParams({ project });
+    if (task && taskView(task) !== FIRST_VIEW) to.set('view', taskView(task));
+    return `${TASKS_PATH}?${to}`;
+  }
   // A word as a shell reads it whatever it holds: the name of a task may hold $( ) or a quote
   const shellWord = (word) => `'${word.replaceAll("'", "'\\''")}'`;
   let lastTask;
@@ -4452,7 +4512,7 @@
     }
     if (TASK_PAGE) {
       $('manage').classList.add('task-page');
-      $('task-up').href = `${TASKS_PATH}${savedTasks()}`;
+      $('task-up').href = taskListHref();
       $('task-missing-up').href = $('task-up').href;
       $('task-state').append(...STATES.map(({ name }) => {
         const o = tagged('option', '', t(`ui_state_${name}`));
@@ -4480,7 +4540,13 @@
       $('manage').classList.add('tasks');
       $('keys-row').hidden = true;
       $('keys-enter').textContent = t('ui_keys_open_task');
-      $('tasks-all').addEventListener('click', () => refilter({ project: '' }));
+      // Under its button, within the window: worked out as it opens
+      $('pins-tip').addEventListener('beforetoggle', (e) => {
+        if (e.newState !== 'open') return;
+        const at = $('pins-help').getBoundingClientRect();
+        $('pins-tip').style.top = `${at.bottom + 4}px`;
+        $('pins-tip').style.left = `${Math.max(16, Math.min(at.left, innerWidth - 16 - $('pins-tip').offsetWidth))}px`;
+      });
     }
     // On the task list it leads to the list of them
     if (!TASKS) $('news').addEventListener('click', (e) => {
