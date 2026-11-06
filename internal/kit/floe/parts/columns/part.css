@@ -1,8 +1,11 @@
 /* As many as fit, of one width each so that they compare, one under another where they don't. The tracks' least width is
    definite, so that a wide thing in a column takes no width from the others; min() keeps a column inside a box or a
-   screen narrower than it.
-   LIMIT: a title of two lines, or none beside one, leaves the parts below at different heights; plain to see, and short
-   titles or a title on each fix it. Lay the titles and the parts on the root's rows if that comes to matter */
+   screen narrower than it. Where any column has a title, each stands on two of the root's rows, title and parts, so that
+   the parts start level whatever the titles' lines, a column with no title leaving the first empty.
+   LIMIT: such a column under another, where they don't fit, stands the empty row's room further down; a title on each,
+   or on none, is level either way */
 :scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--floe-room); align-items: start; }
-:scope > div { display: grid; gap: var(--floe-room); }
+:scope > div { display: grid; gap: var(--floe-room); align-items: start; }
+:scope:has(> div > .title) > div { grid-row: span 2; grid-template-rows: subgrid; }
+:scope:has(> div > .title) > div > [data-floe-part] { grid-row: 2; }
 :scope > div > .title { font-size: var(--floe-text-aside); font-weight: 600; }

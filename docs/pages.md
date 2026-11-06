@@ -97,7 +97,7 @@ The parts `report` takes in a section:
 | `findings`, `decision`, `fields` | What a review found, a decision, the keys of a setting. |
 | `timeline`, `bars`, `faq`, `keys` | Dates in order, bars of values, questions and answers, keys to press. |
 | `details`, `tabs` | Parts folded under a title, or shown one at a time under tabs, for things read one at a time; they hold `text`, `code`, `terminal`, `diff`, `note`, `table`, `entries`, `image` and `diagram`. |
-| `columns` | Parts side by side, to see at once: a screen before and after, data beside its reading. Each column is an optional `title` over `parts`, which hold what `details` holds. Columns are of one width, and stand one under another where they don't fit. |
+| `columns` | Parts side by side, to see at once: a screen before and after, data beside its reading. Each column is an optional `title` over `parts`, which hold what `details` holds. Columns are of one width, 16rem at the least, so that how many stand side by side follows the width of the page's text (five at most in `report`, three in `adr` and `runbook`), and the rest fold under them. |
 | `diagram` | A diagram, checked and drawn as inline SVG ([diagrams.md](diagrams.md)). |
 | `script` | Something that moves ([Scripts and HTML](#scripts-and-html)). |
 | `html` | HTML that goes in as it is: a key of `any.json`, not a part of its own, so `floe part show` has none ([Scripts and HTML](#scripts-and-html)). |
