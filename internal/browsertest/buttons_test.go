@@ -39,7 +39,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Helper()
 		b.still()
 		n, bad, _ := strings.Cut(b.eval(measure), "|")
-		if count, _ := strconv.Atoi(n); count == 0 || bad != "" {
+		if count, err := strconv.Atoi(n); err != nil || count == 0 || bad != "" {
 			t.Errorf("%s: %s buttons, of another form: %s", scene, n, bad)
 		}
 	}

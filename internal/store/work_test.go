@@ -543,8 +543,8 @@ func TestWorkNew(t *testing.T) {
 		if _, conflict := errors.AsType[*store.Conflict](err); !conflict || !strings.Contains(told(err, root), want) {
 			t.Errorf("%s %+v = %v, want a Conflict of %s", name, ed, err, want)
 		}
-		if after, _ := s.ReadTasks(); fmt.Sprint(after) != fmt.Sprint(before) {
-			t.Errorf("%s written: %v", name, after)
+		if after, readErr := s.ReadTasks(); readErr != nil || fmt.Sprint(after) != fmt.Sprint(before) {
+			t.Errorf("%s written: %v, %v", name, after, readErr)
 		}
 	}
 	// #1 of a row, and pageOn's task #1 of p: drop the row to have a task of a page alone.
@@ -576,8 +576,8 @@ func TestWorkNewOfPages(t *testing.T) {
 	if _, conflict := errors.AsType[*store.Conflict](err); !conflict {
 		t.Errorf("new, of a page alone: %v", err)
 	}
-	if all, _ := s.ReadTasks(); len(all) != 0 {
-		t.Errorf("written: %v", all)
+	if all, readErr := s.ReadTasks(); readErr != nil || len(all) != 0 {
+		t.Errorf("written: %v, %v", all, readErr)
 	}
 	if err = s.EditTask("p", "#1", store.TaskEdit{New: &no, Parent: ptr("")}); err != nil {
 		t.Errorf("there, of a page alone: %v", err)
