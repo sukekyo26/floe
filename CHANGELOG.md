@@ -619,10 +619,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   other marker) on the outline. It is still drawn to the centre when that run is too short for the marker, between
   two dots that touch or overlap, and when the end is written as a point at the centre. The edge is checked, and its
   label placed, as before. The built-in gantt example draws its arrows into the release again.
-- Refuse a diagram's label written where it stands, at an `x` and `y` or an edge's at `at`, straddling the edge of a
-  frame, as a box or a dot there is (`label "…" straddles the edge of frame "…"`); it was drawn across it. A label is
-  checked by its box, 5 wider each side than its text. The labels floe places (an edge's with no `at`, an icon's, a
-  bar's, an axis's, and one in its region with `in` alone) are not checked against frames.
+- Refuse a diagram's label straddling the edge of a frame, as a box or a dot there is, when it is written where it
+  stands (at an `x` and `y`, or an edge's at `at`) or belongs to a part that may not straddle a frame itself (an icon,
+  by hand or in a `graph`, or a bar); it was drawn across it. A label is checked by its box, 5 wider each side than its
+  text. The other labels (an edge's with no `at`, an axis's, a `graph` edge's, and one in its region with `in` alone)
+  are not checked against frames. The mistake is told once for each edge crossed, with where that edge stands and where
+  the part spans on that axis (`label "…" straddles the edge of frame "…" at x 140, spanning 114.2 to 145.8`), for boxes
+  and dots too.
 - Fix printing cutting what scrolls sideways on screen: a long line of code, a diff or a terminal, Markdown's code, a
   wide table and a deep tree were cut at the paper's right edge, with a scrollbar drawn on paper. On paper they fold
   their lines now (a table shares the paper's width among its columns, its words kept whole); a table whose longest

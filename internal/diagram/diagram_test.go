@@ -265,8 +265,8 @@ func TestLayoutMistakes(t *testing.T) {
 		{"  - label: { text: a note, x: 150, y: 100 }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: box "a" overlaps label "a note"`},
 		{"  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }\n  - edge: { from: [20, 100], to: [300, 100] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"`},
 		{"  - edge: { from: [20, 100], to: [300, 100] }\n  - box: { name: a, x: 120, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: edge [20,100]→[300,100] runs through box "a"`},
-		{"  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }\n  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: box "a" straddles the edge of frame "F"`},
-		{"  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }\n  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }", `s.yaml:6:5: box "a" straddles the edge of frame "F"`},
+		{"  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }\n  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }", `s.yaml:6:5: box "a" straddles the edge of frame "F" at x 210, spanning 180 to 260`},
+		{"  - box: { name: a, x: 180, y: 80, w: 80, h: 40, rows: [a] }\n  - frame: { x: 10, y: 10, w: 200, h: 180, label: F }", `s.yaml:6:5: box "a" straddles the edge of frame "F" at x 210, spanning 180 to 260`},
 		{
 			"  - box: { name: a, x: 20, y: 20, w: 100, h: 40, rows: [a] }\n  - box: { name: b, x: 200, y: 20, w: 100, h: 40, rows: [b] }\n" +
 				"  - box: { name: c, x: 60, y: 30, w: 200, h: 30, rows: [c] }",
@@ -290,7 +290,7 @@ func TestLayoutMistakes(t *testing.T) {
 		},
 		{
 			"  - frame: { x: 10, y: 10, w: 250, h: 150 }\n  - frame: { x: 300, y: 100, w: 150, h: 40 }\n  - box: { x: 0, y: 140, w: 80, h: 40, rows: [A] }",
-			"s.yaml:6:5: frame 300,100 150x40 sticks out of the 400x200 canvas\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150",
+			"s.yaml:6:5: frame 300,100 150x40 sticks out of the 400x200 canvas\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150 at x 10, spanning 0 to 80\ns.yaml:7:5: box \"A\" straddles the edge of frame 10,10 250x150 at y 160, spanning 140 to 180",
 		},
 		// A label's text is empty in no language, wherever a key takes one; rows and a table's title may be.
 		{"  - box: { name: a, x: 10, y: 30, w: 60, h: 30, rows: [a] }\n  - edge: { from: a, to: [200, 45], label: \"\" }", "s.yaml:6:44: minLength: got 0, want 1"},
@@ -328,20 +328,20 @@ func TestLayoutMistakes(t *testing.T) {
 		},
 		{"  - dot: { name: d, cx: 50, cy: 50 }\n  - box: { name: b, x: 40, y: 40, w: 60, h: 30, rows: [b] }", `s.yaml:6:5: box "b" overlaps dot "d"`},
 		// Each check of the placement on its own.
-		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - box: { x: 80, y: 40, w: 60, h: 40, rows: [A] }", `s.yaml:6:5: box "A" straddles the edge of frame "F"`},
+		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - box: { x: 80, y: 40, w: 60, h: 40, rows: [A] }", `s.yaml:6:5: box "A" straddles the edge of frame "F" at x 110, spanning 80 to 140`},
 		{"  - box: { name: b, x: 150, y: 80, w: 60, h: 40, rows: [B] }\n  - edge: { from: [100, 100], to: [300, 100] }", `s.yaml:6:5: edge [100,100]→[300,100] runs through box "b"`},
 		// A label part written at an x and y straddles a frame as a box does, by its box; inside or outside one, or
 		// across frames that cross, as a box would.
-		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - label: { text: across, x: 100, y: 50 }", `s.yaml:6:5: label "across" straddles the edge of frame "F"`},
+		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - label: { text: across, x: 100, y: 50 }", `s.yaml:6:5: label "across" straddles the edge of frame "F" at x 110, spanning 73.4 to 126.6`},
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - label: { text: in, x: 50, y: 50 }", ""},
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - label: { text: out, x: 200, y: 50 }", ""},
 		{
 			"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - frame: { x: 120, y: 10, w: 100, h: 100, label: G }\n  - frame: { x: 5, y: 60, w: 230, h: 40, square: true }\n" +
 				"  - label: { text: a heading across both, x: 20, y: 80, anchor: start }",
-			"s.yaml:8:5: label \"a heading across both\" straddles the edge of frame \"F\"\n" +
-				"s.yaml:8:5: label \"a heading across both\" straddles the edge of frame \"G\"",
+			"s.yaml:8:5: label \"a heading across both\" straddles the edge of frame \"F\" at x 110, spanning 15 to 176.2\n" +
+				"s.yaml:8:5: label \"a heading across both\" straddles the edge of frame \"G\" at x 120, spanning 15 to 176.2",
 		},
-		{"  - circle: { name: c, cx: 100, cy: 100, r: 90 }\n  - frame: { x: 10, y: 10, w: 100, h: 180, label: F }\n  - label: { text: across, x: 110, y: 100, in: [c] }", `s.yaml:7:5: label "across" straddles the edge of frame "F"`},
+		{"  - circle: { name: c, cx: 100, cy: 100, r: 90 }\n  - frame: { x: 10, y: 10, w: 100, h: 180, label: F }\n  - label: { text: across, x: 110, y: 100, in: [c] }", `s.yaml:7:5: label "across" straddles the edge of frame "F" at x 110, spanning 83.4 to 136.6`},
 		// One out of its region is told so alone.
 		{
 			"  - circle: { name: c, cx: 100, cy: 100, r: 90 }\n  - frame: { x: 10, y: 10, w: 100, h: 180, label: F }\n  - label: { text: across, x: 110, y: 20, in: [c] }",
@@ -350,12 +350,59 @@ func TestLayoutMistakes(t *testing.T) {
 		// An edge's label written at an x and y, as a label part.
 		{
 			"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - edge: { from: [20, 150], to: [200, 150], label: a long note, at: [100, 50] }",
-			`s.yaml:6:5: label "a long note" straddles the edge of frame "F"`,
+			`s.yaml:6:5: label "a long note" straddles the edge of frame "F" at x 110, spanning 55.4 to 144.6`,
 		},
-		// Not one floe places: an edge's in its middle, a label part's in its region (LIMIT in checkPlacement): not compared.
+		// Of a part that may not straddle a frame itself, as a box: an icon's, by hand or in a graph, and a bar's; told at
+		// the last written, the frame after the part at the frame's line.
+		{
+			"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - icon: { name: a, x: 56, y: 50, icon: aws/aws-lambda, label: Lambda function }",
+			`s.yaml:6:5: label "Lambda function" straddles the edge of frame "f" at y 110, spanning 101 to 119`,
+		},
+		{
+			"  - icon: { name: a, x: 56, y: 50, icon: aws/aws-lambda, label: Lambda function }\n  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }",
+			`s.yaml:6:5: label "Lambda function" straddles the edge of frame "f" at y 110, spanning 101 to 119`,
+		},
+		{"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - icon: { name: a, x: 56, y: 41, icon: aws/aws-lambda, label: Lambda function }", ""},
+		{"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - icon: { name: a, x: 200, y: 50, icon: aws/aws-lambda, label: Lambda function }", ""},
+		{
+			"  - frame: { name: f, x: 0, y: 0, w: 300, h: 80 }\n  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - icon: { name: l, icon: aws/aws-lambda, label: Lambda function name }",
+			`s.yaml:5:5: label "Lambda function name" straddles the edge of frame "f" at y 80, spanning 71 to 89`,
+		},
+		{
+			"  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - group: { name: g, label: G, nodes: [{ icon: { name: l, icon: aws/aws-lambda, label: A very long Lambda function name } }] }",
+			"",
+		},
+		{
+			"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - bar: { x1: 20, x2: 80, y: 50, label: a long bar label }",
+			`s.yaml:6:5: label "a long bar label" straddles the edge of frame "F" at x 110, spanning 85 to 210.2`,
+		},
+		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - bar: { x1: 20, x2: 40, y: 50, label: ok }", ""},
+		// Once for each edge crossed: a corner, a box wider than the frame; one that only touches an edge is not told.
+		{
+			"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - box: { name: a, x: 100, y: 90, w: 80, h: 40, rows: [a] }",
+			`s.yaml:6:5: box "a" straddles the edge of frame "f" at x 140, spanning 100 to 180` + "\n" +
+				`s.yaml:6:5: box "a" straddles the edge of frame "f" at y 110, spanning 90 to 130`,
+		},
+		{
+			"  - frame: { name: f, x: 20, y: 50, w: 120, h: 90 }\n  - box: { name: a, x: 10, y: 80, w: 200, h: 40, rows: [a] }",
+			`s.yaml:6:5: box "a" straddles the edge of frame "f" at x 140, spanning 10 to 210` + "\n" +
+				`s.yaml:6:5: box "a" straddles the edge of frame "f" at x 20, spanning 10 to 210`,
+		},
+		{"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - box: { name: a, x: 140, y: 40, w: 80, h: 40, rows: [a] }", ""},
+		// A dot and a bar, of no x and y to write, spanned as any part.
+		{
+			"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - dot: { name: a, cx: 140, cy: 60 }",
+			`s.yaml:6:5: dot "a" straddles the edge of frame "f" at x 140, spanning 133 to 147`,
+		},
+		{
+			"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - bar: { x1: 100, x2: 200, y: 60 }",
+			`s.yaml:6:5: bar 100,53 100x14 straddles the edge of frame "f" at x 140, spanning 100 to 200`,
+		},
+		// Not of those: an edge's in its middle, an axis's, a graph edge's, a label part's in its region (LIMIT in
+		// checkPlacement): not compared.
+		{"  - frame: { name: f, x: 20, y: 20, w: 120, h: 90 }\n  - axis: { x1: 10, x2: 300, y: 60, ticks: [[135, a tick label]], labels: at }", ""},
 		{"  - circle: { name: c, cx: 100, cy: 100, r: 90 }\n  - frame: { x: 10, y: 10, w: 100, h: 180, label: F }\n  - label: { text: placed across the edge, in: [c] }", ""},
 		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - frame: { x: 150, y: 10, w: 100, h: 100, label: G }\n  - edge: { from: [20, 60], to: [240, 60], label: an edge label }", ""},
-		{"  - frame: { x: 10, y: 10, w: 100, h: 100, label: F }\n  - bar: { x1: 20, x2: 80, y: 50, label: a long bar label }", ""},
 		{
 			"  - graph:\n      x: 20\n      y: 20\n      nodes:\n        - box: { name: a, rows: [a] }\n        - box: { name: b, rows: [b] }\n" +
 				"      edges:\n        - { from: a, to: b, label: a graph label }\n  - frame: { x: 100, y: 5, w: 200, h: 150, label: F }",

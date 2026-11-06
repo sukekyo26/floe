@@ -1611,7 +1611,7 @@ func TestGraphTold(t *testing.T) {
 		return rect{x: x, y: 0, w: 40, h: 40, what: "box at " + num(x), at: graph + "/nodes/0/box", form: outline{hex: 0, radius: 0}, graph: graph}
 	}
 	frame := func(x float64, graph string) rect {
-		return rect{x: x, y: 10, w: 100, h: 100, what: "frame at " + num(x), at: graph + "/nodes/1/group", graph: graph} //nolint:exhaustruct_v5 // a frame
+		return rect{x: x, y: 0, w: 100, h: 100, what: "frame at " + num(x), at: graph + "/nodes/1/group", graph: graph} //nolint:exhaustruct_v5 // a frame
 	}
 	across := path{segs: []seg{{0, 20, 100, 20}}, what: "edge a→b", at: ga + "/edges/0", own: -1, crossing: false, graph: ga}
 	down := path{segs: []seg{{50, -10, 50, 100}}, what: "edge c→d", at: gb + "/edges/0", own: -1, crossing: false, graph: gb}
@@ -1632,7 +1632,7 @@ func TestGraphTold(t *testing.T) {
 		{"a graph's edge and one by hand", &layout{paths: []path{across, hand}, w: 500, h: 500}, "diagram_crossing", "#/parts/1"},                               //nolint:exhaustruct_v5 // what it checks
 		{"a graph's box off the canvas", &layout{boxes: []rect{box(480, ga)}, w: 500, h: 500}, "diagram_graph_outside", ga},                                     //nolint:exhaustruct_v5 // what it checks
 		{"a graph's frame and a box by hand", &layout{boxes: []rect{handBox}, frames: []rect{frame(40, ga)}, w: 500, h: 500}, "diagram_straddle", "#/parts/1"},  //nolint:exhaustruct_v5 // what it checks
-		{"a graph's frame and another's box", &layout{boxes: []rect{box(80, gb)}, frames: []rect{frame(40, ga)}, w: 500, h: 500}, "diagram_graph_straddle", gb}, //nolint:exhaustruct_v5 // what it checks
+		{"a graph's frame and another's box", &layout{boxes: []rect{box(120, gb)}, frames: []rect{frame(40, ga)}, w: 500, h: 500}, "diagram_graph_straddle", gb}, //nolint:exhaustruct_v5 // what it checks
 	} {
 		c.l.check()
 		if len(c.l.problems) != 1 || c.l.problems[0].Key != c.key || c.l.problems[0].At() != c.at {

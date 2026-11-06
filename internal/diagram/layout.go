@@ -45,7 +45,7 @@ type rect struct {
 	what, at   string
 	form       outline //exhaustruct:optional
 	graph      string  //exhaustruct:optional
-	pinned     bool    //exhaustruct:optional // a label its writer put where it is, kept off a frame's edge as a box is
+	offEdge    bool    //exhaustruct:optional // a label kept off a frame's edge as a box is: put where it stands by its writer, or of a part that may not straddle a frame itself
 	byPlace    bool    //exhaustruct:optional // named by where it stands (named)
 }
 
@@ -821,7 +821,7 @@ func (l *layout) addIcon(i *icon, at string) {
 	}
 	if i.Label != nil {
 		n := l.label(at, i.Label, i.X+size/2, i.Y+size+iconLabelY, "middle", false, false)
-		l.labels[n].graph = i.graph
+		l.labels[n].graph, l.labels[n].offEdge = i.graph, true
 	}
 }
 
@@ -907,7 +907,8 @@ func (l *layout) addBar(b *bar, at string) {
 	el.Class, el.Tone = "bar", b.Tone
 	l.boxEls = append(l.boxEls, el)
 	if b.Label != nil {
-		l.label(at, b.Label, r.x+r.w+10, b.Y, "start", false, false)
+		n := l.label(at, b.Label, r.x+r.w+10, b.Y, "start", false, false)
+		l.labels[n].offEdge = true
 	}
 }
 
