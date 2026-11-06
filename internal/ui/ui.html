@@ -832,8 +832,10 @@
   .shell.task-missing .reader, .shell.task-missing #list-grip, .shell.task-missing .listcol > .col-foot { display: none; }
   .thead { flex: none; display: grid; gap: 0.35rem; padding: 0.5rem 1rem 0.65rem; background: var(--panel); border-bottom: 1px solid var(--line); }
   .ttop { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-  .up { justify-self: start; display: inline-flex; align-items: center; gap: 0.15rem; margin-left: -0.25rem; font-size: var(--text-small); color: var(--muted); text-decoration: none; }
-  .up:hover { color: var(--fg); text-decoration: underline; }
+  /* The way back is the column's width and a press's height: it stands right under the bar's tabs, which a small one sends the press to */
+  .up { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.15rem; height: 2.25rem; margin: 0 -1rem; padding: 0 1rem 0 0.75rem; font-size: var(--text-small); color: var(--muted); text-decoration: none; }
+  .ttop:has(.tarc:not([hidden])) .up { margin-right: 0; }
+  .up:hover { color: var(--fg); background: var(--subtle); }
   .up svg { width: 14px; height: 14px; }
   .btn.tarc { height: auto; padding: 0.1rem 0.5rem; font-size: var(--text-label); }
   .thead h2 { margin: 0; font: 700 1rem/1.4 var(--body); }

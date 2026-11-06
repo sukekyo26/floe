@@ -394,6 +394,26 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	}
 }
 
+// The way back from a task's page is the column's width and a press's height, wide and narrow, clear of the bar's tabs.
+func TestUITaskUpRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	b.navigate("/")
+	s.floe(t, "work", "--project", "proj", "--task", "#1")
+	defer b.unsize()
+	for _, width := range []int64{1400, 400} {
+		b.size(width, 800, width == 400)
+		b.navigate("/tasks?project=proj&task=%231")
+		b.until("the head", "!document.getElementById('task-head').hidden")
+		const up = "document.getElementById('task-up').getBoundingClientRect()"
+		const col = "document.getElementById('listcol').getBoundingClientRect()"
+		got := b.eval("[" + up + ".height >= 36, Math.abs(" + up + ".width - " + col + ".width) <= 1, " + up + ".top - document.getElementById('screens').getBoundingClientRect().bottom >= 8].join(' ')")
+		if got != "true true true" {
+			t.Errorf("at %d: tall, wide, clear of the tabs = %s", width, got)
+		}
+	}
+}
+
 // The field of a parent: given the task's, changed by the name, sent only when it differs from what it was given; what
 // may be a parent is offered; a refusal keeps the dialog and the page as they were.
 func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
