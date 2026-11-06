@@ -1,11 +1,12 @@
-<ol data-floe-part="asks">
+<ul data-floe-part="asks">
 {{- range .}}{{$a := .}}{{$r := .recommend}}{{$d := .decided}}{{range .options}}{{if eq . $a.recommend}}{{$r = ""}}{{end}}{{if eq . $a.decided}}{{$d = ""}}{{end}}{{end}}
 <li class="card" data-floe-look="panel"><div class="title"><span class="no">{{word "q"}}</span>{{if .decided}} <span class="check" data-floe-tone="good"><span class="floe-hidden">{{word "decided"}}</span></span>{{end}} {{markdownLine .question}}</div>
-{{- with .options}}<ul class="choices">{{range .}}<li{{if eq . $a.decided}} data-floe-tone="good" class="marked"{{else if $a.decided}} class="other"{{else if eq . $a.recommend}} data-floe-tone="accent" class="marked"{{end}}>{{markdownLine .}}{{if eq . $a.decided}} <span data-floe-tone="good" data-floe-part="cell">{{word "decided"}}</span>{{end}}{{if eq . $a.recommend}} <span data-floe-tone="accent" data-floe-part="cell">{{word "recommend"}}</span>{{end}}</li>{{end}}</ul>{{end}}
+{{- with .options}}<ul class="choices">{{range .}}<li{{if eq . $a.decided}} data-floe-tone="good" class="marked"{{else if $a.decided}} class="other"{{else if eq . $a.recommend}} data-floe-tone="accent" class="marked"{{end}}><span>{{markdownLine .}}</span>{{if eq . $a.decided}}<span data-floe-tone="good" data-floe-part="cell">{{word "decided"}}</span>{{end}}{{if eq . $a.recommend}}<span data-floe-tone="accent" data-floe-part="cell">{{word "recommend"}}</span>{{end}}</li>{{end}}</ul>{{end}}
+{{- /* LIMIT: the number is the counter's, as part.html adds nothing up, so that a diff of the page reads Q alone and a question put between tells no number changed. The list is no ol, for a screen reader to read the number once */}}
 {{- /* LIMIT: a recommend or a decided that is none of the options as written (**A** for A, a slip) is not told of; it is shown on a line of its own, which also serves an answer outside the options */}}
 {{- with $d}}<p class="line"><b>{{word "decision_line"}}</b> {{markdownLine .}}</p>{{end}}
 {{- with $r}}<p class="line"><b>{{word "recommend_line"}}</b> {{markdownLine .}}</p>{{end}}
 {{- with .why}}<p>{{markdownLine .}}</p>{{end}}
 {{- with .by}}<p>{{word "by"}} {{.}}</p>{{end}}</li>
 {{- end}}
-</ol>
+</ul>

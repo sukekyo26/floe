@@ -248,19 +248,19 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @scope ([data-floe-part="asks"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* One question to a row, its letter a word of the page's language and its number the counter's, which reads out. A question
    decided has a check by its number; its option decided a ring in its tone and a pill in words, and the others are quiet, a
-   ring alone telling nothing without colour. An option has a ground of its own, off a face around it.
+   ring alone telling nothing without colour.
    LIMIT: words.yaml keeps Q in Japanese too, on purpose, and a screen reader reads the letter as it is */
 :scope { grid-template-columns: minmax(0, 1fr); counter-reset: floe-asks; }
 :scope > .card { counter-increment: floe-asks; gap: var(--floe-room); }
-:scope .no { font-family: var(--mono); color: var(--on-face, var(--accent)); }
+:scope .no { font-family: var(--mono); color: var(--accent); }
 :scope .no::after { content: counter(floe-asks); content: counter(floe-asks) / counter(floe-asks); }
 :scope .check { display: inline-grid; place-items: center; width: 1.4em; height: 1.4em; vertical-align: -0.15em; border-radius: 50%; background: var(--tone-soft); color: var(--tone); font-family: var(--font); font-weight: 700; }
 :scope .check::before { content: "✓"; content: "✓" / ""; }
 :scope .choices { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--floe-room); font-size: inherit; }
-:scope .choices > li { padding: var(--floe-row-pad) var(--floe-pad-inline); border: 1px solid var(--line); border-radius: var(--radius-small); --face: initial; --on-face: initial; background: var(--surface); color: var(--fg); }
+:scope .choices > li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.4rem; padding: var(--floe-row-pad) var(--floe-pad-inline); border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface); color: var(--fg); }
 :scope .choices > li.marked { outline: 2px solid var(--tone); outline-offset: -1px; }
 :scope .choices > li.other { color: var(--muted); }
-:scope .line { color: var(--on-face, var(--fg)); font-size: inherit; }
+:scope .line { color: var(--fg); font-size: inherit; }
 }
 }
 </style>
@@ -2558,12 +2558,12 @@ banner = &#34;This wiki has moved to the new host.&#34;
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><dl data-floe-part="entries">
 <div><dt>Copied</dt><dd class="tags"><span>412 pages</span></dd><dd class="text"><div data-floe-text=""><p>Every page but the drafts.</p></div></dd></div>
 </dl><figure data-floe-part="image"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAAJElEQVR42mOwqTgxIIhh1OJRi0ctHrV41OJRi0ctHrV45FgMAGfIo72jTm6ZAAAAAElFTkSuQmCC" alt="The wiki after the move"/></figure></div></details>
-<ol data-floe-part="asks">
-<li class="card" data-floe-look="panel"><div class="title"><span class="no">Q</span> Copy in one go?</div><ul class="choices"><li data-floe-tone="accent" class="marked">One go <span data-floe-tone="accent" data-floe-part="cell">Recommended</span></li><li>By space, with <code>sync --space</code></li></ul><p>Two days of read-only</p><p>Who decides: The platform team</p></li>
-<li class="card" data-floe-look="panel"><div class="title"><span class="no">Q</span> <span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span></span> Keep the old host?</div><ul class="choices"><li data-floe-tone="good" class="marked">A month <span data-floe-tone="good" data-floe-part="cell">Decided</span></li><li class="other">For good</li></ul></li>
+<ul data-floe-part="asks">
+<li class="card" data-floe-look="panel"><div class="title"><span class="no">Q</span> Copy in one go?</div><ul class="choices"><li data-floe-tone="accent" class="marked"><span>One go</span><span data-floe-tone="accent" data-floe-part="cell">Recommended</span></li><li><span>By space, with <code>sync --space</code></span></li></ul><p>Two days of read-only</p><p>Who decides: The platform team</p></li>
+<li class="card" data-floe-look="panel"><div class="title"><span class="no">Q</span> <span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span></span> Keep the old host?</div><ul class="choices"><li data-floe-tone="good" class="marked"><span>A month</span><span data-floe-tone="good" data-floe-part="cell">Decided</span></li><li class="other"><span>For good</span></li></ul></li>
 <li class="card" data-floe-look="panel"><div class="title"><span class="no">Q</span> Who writes the notice?</div></li>
 <li class="card" data-floe-look="panel"><div class="title"><span class="no">Q</span> <span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span></span> Which day?</div><p class="line"><b>Decision:</b> Sunday</p><p class="line"><b>Recommended:</b> A Saturday</p></li>
-</ol>
+</ul>
 <div data-floe-part="columns">
 <div role="group" aria-label="Before"><div class="title" aria-hidden="true">Before</div><div data-floe-part="stack"><div data-floe-text=""><p>The list before.</p></div><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code data-floe-copy="">export WIKI=old</code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
