@@ -206,7 +206,7 @@ With slugs, the task's project is each page's: `--task` puts the pages on that n
 | --- | --- | --- |
 | `--task <name>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their step off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--steps`, a step). A page moved to another task leaves its step, unless `--step` gives it one there. A new name is a task in the state `todo` |
 | `--step <step>` | pages, and the task's last step | With slugs only. `""` takes it off the pages and leaves the task's |
-| `--state <state>` | the task | `waiting`, `doing`, `todo` or `done` |
+| `--state <state>` | the task | `todo`, `doing`, `waiting` or `done` |
 | `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
 | `--parent <task>` | the task | Without slugs. A task of its project with a row and no parent of its own; a task with children takes none: one level only. `""` takes it off |
 | `--title <title>` | the task | `""` takes it off |

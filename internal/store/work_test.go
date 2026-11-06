@@ -101,7 +101,7 @@ func TestWorkRefused(t *testing.T) {
 		ed            store.TaskEdit
 		want          string
 	}{
-		{"p", "#1", store.TaskEdit{State: ptr("WAITING")}, `unknown state "WAITING": use waiting, doing, todo, done`},
+		{"p", "#1", store.TaskEdit{State: ptr("WAITING")}, `unknown state "WAITING": use todo, doing, waiting, done`},
 		{"p", "#1", store.TaskEdit{URL: ptr("javascript:alert(1)")}, `"javascript:alert(1)" is not an http or https URL`},
 		{"p", "#1", store.TaskEdit{URL: ptr("   ")}, `"   " is not an http or https URL`},
 		{"p", "#1", store.TaskEdit{URL: ptr("https:")}, `"https:" is not an http or https URL`},
@@ -322,10 +322,13 @@ func TestStates(t *testing.T) {
 	t.Parallel()
 
 	fresh := slices.DeleteFunc(slices.Clone(store.States), func(s store.State) bool { return !s.New })
+	if first := slices.DeleteFunc(slices.Clone(store.States), func(s store.State) bool { return !s.First }); len(first) != 1 || first[0].Name != "waiting" {
+		t.Errorf("the list opens on %v", first)
+	}
 	if len(fresh) != 1 {
 		t.Errorf("new tasks take %v", fresh)
 	}
-	if got := store.StateNames(); got != "waiting, doing, todo, done" {
+	if got := store.StateNames(); got != "todo, doing, waiting, done" {
 		t.Errorf("StateNames = %q", got)
 	}
 }

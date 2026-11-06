@@ -1489,7 +1489,7 @@
   const STATE_NAMES = STATES.map((s) => s.name);
   // The views the URL may name, and the one it leaves out
   const VIEWS = TASKS ? [...STATE_NAMES, 'archived'] : ['new', 'fav', 'archived'];
-  const FIRST_VIEW = TASKS ? STATE_NAMES[0] : 'all';
+  const FIRST_VIEW = TASKS ? STATES.find((s) => s.first).name : 'all';
   function readState(search) {
     const p = new URLSearchParams(search);
     if (TASKS) for (const key of ['kind', 'template', 'tag', 'q']) p.delete(key);

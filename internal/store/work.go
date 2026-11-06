@@ -107,20 +107,22 @@ type Task struct {
 // Tasks is tasks.json: the tasks by project (ProjectKey), then by name.
 type Tasks map[string]map[string]Task
 
-// State is a state a task can be in: whether the list of it shows the longest in it first, and whether a task new or
-// of no row is in it.
+// State is a state a task can be in: whether the list of it shows the longest in it first, whether a task new or of no
+// row is in it, and whether the task list opens on it.
 type State struct {
 	Name   string `json:"name"`
 	Oldest bool   `json:"oldest"`
 	New    bool   `json:"new"`
+	First  bool   `json:"first"`
 }
 
-// States is the one table of the states of a task: what is written is checked by it, and the management page reads it.
+// States is the one table of the states of a task, in the order of the work: what is written is checked by it, and the
+// management page reads it, in this order.
 var States = []State{
-	{Name: "waiting", Oldest: true, New: false},
-	{Name: "doing", Oldest: false, New: false},
-	{Name: "todo", Oldest: false, New: true},
-	{Name: "done", Oldest: false, New: false},
+	{Name: "todo", Oldest: false, New: true, First: false},
+	{Name: "doing", Oldest: false, New: false, First: false},
+	{Name: "waiting", Oldest: true, New: false, First: true},
+	{Name: "done", Oldest: false, New: false, First: false},
 }
 
 // TaskEdit is what a write changes of a task's row, each left as it is when nil. An empty URL or Steps takes it off; an

@@ -398,7 +398,7 @@ no work, tasks: shelf shown: false
 a row alone, list: current: page
 opened: ?project=shop shop
 waiting: #2Two [0 page(s)]; #1One [design, 2 page(s), 2 unread, b/c]
-views: waiting 2, doing 2, todo 1, done 2, archived 1
+views: todo 1, doing 2, waiting 2, done 2, archived 1
 head: 2 · longest in Waiting first
 pins: pinned /a/pinned/
 hrefs: /tasks?project=shop&task=%232 /tasks?project=shop&task=%231
@@ -467,7 +467,7 @@ page list, let go:
 help: Pinned pagesKeep pages you open again and again, such as an overview or a runbook, here. Only this project's pages are listed. To add one, choose "Pin to the task list" in a page's "…" menu.
 broken, list: error hidden: true
 broken, tasks: failed shown: true true
-broken, tasks: ?project=shop blog waiting,doing,todo,done,archived pins 1 rows 0
+broken, tasks: ?project=shop blog todo,doing,waiting,done,archived pins 1 rows 0
 broken, tasks: says why: true
 broken, the one kept:  blog
 broken, none kept:  true
