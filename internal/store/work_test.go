@@ -28,7 +28,7 @@ func taskIn(t *testing.T, s *store.Store, project string) store.Task {
 	return row
 }
 
-// A new task is doing; its time moves with its state alone, its step with what is not empty; a key it does not set is
+// A new task is todo; its time moves with its state alone, its step with what is not empty; a key it does not set is
 // written back; an order of steps is kept clean, and an empty URL or order takes it off.
 func TestWorkWrite(t *testing.T) {
 	t.Parallel()
@@ -41,7 +41,7 @@ func TestWorkWrite(t *testing.T) {
 	if err := s.EditTask("p", "#1", store.TaskEdit{}); err != nil {
 		t.Fatal(err)
 	}
-	if first := taskIn(t, s, "p"); first.State != "doing" || first.At == "" {
+	if first := taskIn(t, s, "p"); first.State != "todo" || first.At == "" {
 		t.Errorf("new task %+v", first)
 	}
 	// By hand: a parent, which no write sets, and a time no write can make by chance.
@@ -101,7 +101,7 @@ func TestWorkRefused(t *testing.T) {
 		ed            store.TaskEdit
 		want          string
 	}{
-		{"p", "#1", store.TaskEdit{State: ptr("WAITING")}, `unknown state "WAITING": use waiting, doing, done`},
+		{"p", "#1", store.TaskEdit{State: ptr("WAITING")}, `unknown state "WAITING": use waiting, doing, todo, done`},
 		{"p", "#1", store.TaskEdit{URL: ptr("javascript:alert(1)")}, `"javascript:alert(1)" is not an http or https URL`},
 		{"p", "#1", store.TaskEdit{URL: ptr("   ")}, `"   " is not an http or https URL`},
 		{"p", "#1", store.TaskEdit{URL: ptr("https:")}, `"https:" is not an http or https URL`},
@@ -325,7 +325,7 @@ func TestStates(t *testing.T) {
 	if len(fresh) != 1 {
 		t.Errorf("new tasks take %v", fresh)
 	}
-	if got := store.StateNames(); got != "waiting, doing, done" {
+	if got := store.StateNames(); got != "waiting, doing, todo, done" {
 		t.Errorf("StateNames = %q", got)
 	}
 }
@@ -357,7 +357,7 @@ func TestWorkParent(t *testing.T) {
 	if got := parentOf("#2"); got != "#1" {
 		t.Errorf("a parent with spaces round it: %q", got)
 	}
-	// A child of no row yet comes to be, doing.
+	// A child of no row yet comes to be, todo.
 	if err := s.EditTask("p", "#3", store.TaskEdit{Parent: ptr("#1")}); err != nil {
 		t.Fatal(err)
 	}

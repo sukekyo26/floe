@@ -748,7 +748,8 @@
     .shelf { grid-column: 1 / -1; display: block; border-right: 0; border-bottom: 1px solid var(--line); }
     .shelf-body, .shelf-body:is(:hover, :focus-within) { display: block; overflow: visible; padding: 0.6rem 0.75rem; }
     .shelf-body > .shelf-more { display: none; }
-    .shelf .views { display: flex; align-items: center; gap: 5px; overflow: auto hidden; padding: 4px; margin: -4px; scrollbar-width: none; }
+    /* Positioned, for the labels kept for screen readers to scroll with the row and not widen the page */
+    .shelf .views { position: relative; display: flex; align-items: center; gap: 5px; overflow: auto hidden; padding: 4px; margin: -4px; scrollbar-width: none; }
     .shelf .views::-webkit-scrollbar { display: none; }
     .shelf .views button {
       flex: none; width: auto; gap: 0.3rem; padding: 0.2rem 0.55rem; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; white-space: nowrap;
@@ -779,7 +780,8 @@
   }
   /* The bar folds up: the search as its icon until it is reached, a page's buttons in its menu, the filter at the row's end */
   @media (max-width: 40rem) {
-    #narrow-filter { margin-left: auto; }
+    /* The views may be wider than the row: the way to the filters stays in reach over them */
+    #narrow-filter { position: sticky; right: 0; margin-left: auto; }
     .shelf .views [data-view="archived"] .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     /* What leaves the bar goes in its menu; a page of a folder has none, and keeps what it has in the bar */
     .framed #frame-actions:has(.more) > :is(.download, .open, .archive, .star) { display: none; }
@@ -845,6 +847,7 @@
   select.ver-pick.st { flex: none; font-weight: 700; }
   select.st.waiting { color: var(--wait); background: var(--wait-soft); border-color: var(--wait); }
   select.st.doing { color: var(--chg); background: var(--chg-soft); border-color: var(--chg); }
+  select.st.todo { color: var(--muted); background: var(--subtle); border-color: var(--line); }
   select.st.done { color: var(--ins); background: var(--ins-soft); border-color: var(--ins); }
   /* On a page's row, the way to its task: dotted, as it is no mark of the page itself; above the title's hit area */
   .task-tag { position: relative; z-index: 1; padding: 0 0.35rem; color: var(--muted); border: 1px dashed var(--box-line); border-radius: var(--corner-small); text-decoration: none; white-space: nowrap; }
@@ -856,6 +859,7 @@
   .sdot { flex: none; width: 8px; height: 8px; margin-inline: calc((var(--shelf-mark) - 8px) / 2); border-radius: 50%; }
   .sdot.waiting { background: var(--wait); }
   .sdot.doing { background: var(--chg); }
+  .sdot.todo { background: var(--faint); }
   .sdot.done { background: var(--ins); }
   @media (max-width: 70rem) { .shelf .views .sdot { display: none; } }
   .kin { display: inline-flex; align-items: baseline; gap: 0.3rem; min-width: 0; max-width: 100%; color: var(--muted); }

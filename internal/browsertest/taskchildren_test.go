@@ -164,7 +164,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := made["proj"]["#100"]; got.Parent != "#99" || got.Title != "made here" || got.State != "doing" {
+	if got := made["proj"]["#100"]; got.Parent != "#99" || got.Title != "made here" || got.State != "todo" {
 		t.Errorf("made: %+v", got)
 	}
 	open("#100")

@@ -303,7 +303,7 @@ nothing to select: 0 true
 j: T n1 / n1, T d1 / d1, T i1 / i1, T r1 / r1
 whole: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130"}
 k: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130"}
-after the state changed: ?view=doing&project=proj #130 | #99 focus #130
+after the state changed: ?view=doing&project=proj #130 focus #130
 the row come back to: #142
 the list kept: ?view=doing&project=proj
 pin: /a/p2/ /tasks?view=doing&project=proj / {"order":["p2","p1"],"shown":["p2","p1"],"back":"/tasks?view=doing&project=proj"}

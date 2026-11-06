@@ -118,7 +118,8 @@ type State struct {
 // States is the one table of the states of a task: what is written is checked by it, and the management page reads it.
 var States = []State{
 	{Name: "waiting", Oldest: true, New: false},
-	{Name: "doing", Oldest: false, New: true},
+	{Name: "doing", Oldest: false, New: false},
+	{Name: "todo", Oldest: false, New: true},
 	{Name: "done", Oldest: false, New: false},
 }
 
@@ -315,8 +316,8 @@ func pastedURL(raw *string) *string {
 	return &trimmed
 }
 
-// EditTask applies ed to the row of the task (project, name), making it of the state doing when there is none, but for
-// checkParent's ErrNotFound.
+// EditTask applies ed to the row of the task (project, name), making it of the state of a new one when there is none,
+// but for checkParent's ErrNotFound.
 func (s *Store) EditTask(project, name string, ed TaskEdit) error {
 	project, name, err := taskKey(project, name)
 	if err != nil {
