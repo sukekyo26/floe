@@ -2,11 +2,13 @@ package diagram
 
 import (
 	"math"
+	"slices"
 	"testing"
 )
 
 // grid gives at most 501 points, each within the range, the first, each next and the last at most step from where
-// the one before is, and one at least for a range there is, at the ends of what may be written too.
+// the one before is, one at least for a range there is, at the ends of what may be written too, and the middle of the
+// range when it is in the canvas.
 func TestGridBounded(t *testing.T) {
 	t.Parallel()
 
@@ -19,12 +21,15 @@ func TestGridBounded(t *testing.T) {
 		{"far from 0", 999000 - 100, 999000 + 100, 1e7, 51, 999100},
 		{"the largest radius", -2e6, 2e6, 1e7, 501, 2e6},
 		{"to a point", 817.1, 1045.1, 1907, 57, 1043.1},
+		{"to hi", 0, 8, 100, 3, 8},
 		{"one point", 10, 10, 100, 1, 10},
 		{"narrower than step", -1, 2, 100, 1, 0.5},
+		{"narrower than step past the middle", -100, 2, 100, 1, 0},
 		{"no range", 50, 10, 100, 0, math.NaN()},
 		{"out of the canvas", 120, 130, 100, 0, math.NaN()},
 	} {
-		got := grid(tt.lo, tt.hi, tt.size)
+		mid := (tt.lo + tt.hi) / 2
+		got := grid(tt.lo, tt.hi, mid, tt.size)
 		last := math.NaN()
 		if len(got) > 0 {
 			last = got[len(got)-1]
@@ -34,6 +39,9 @@ func TestGridBounded(t *testing.T) {
 		}
 		if why := gridBroken(got, tt.lo, tt.hi, tt.size); why != "" {
 			t.Errorf("%s: grid(%v, %v, %v) %s", tt.name, tt.lo, tt.hi, tt.size, why)
+		}
+		if mid >= max(tt.lo, 0) && mid <= min(tt.hi, tt.size) && !slices.Contains(got, mid) {
+			t.Errorf("%s: grid has no point at the middle %v", tt.name, mid)
 		}
 	}
 }

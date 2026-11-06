@@ -561,6 +561,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix a Venn diagram's label placed by its region standing 2 off the axis of a region symmetric about one: the
+  points tried for it are now counted from the middle of where its circles are, not from their edge. Every label
+  placed by its region may move by up to 2 across and down, in the drawing and in `floe diagram inspect`.
 - Fix a diagram's mistakes and `floe diagram inspect` naming an edge's ends in two ways: an edge written by hand and an
   edge of a graph now quote the names at their ends, as a tree's did (`edge "b"→"c"`), and a graph's mistakes quote
   the names of the boxes they speak of too.
