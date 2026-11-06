@@ -59,8 +59,8 @@ test-race:
     CGO_ENABLED=1 go test -race -shuffle=on {{pkgs}}
 
 # Run tests with the race detector but the browser tests, as CI's test job does
+# -timeout stays under CI's 10 minutes, so that a slow or stuck run names the tests still running, not just a cancelled job.
 test-race-core:
-    # Under CI's 10 minutes, so that a slow or stuck run names the tests still running, not just a cancelled job.
     CGO_ENABLED=1 go test -race -shuffle=on -timeout 9m $({{core_pkgs}})
 
 # LIMIT: without Chrome every test skips and it passes; it runs what CI does on a machine with Chrome alone.
