@@ -11,3 +11,4 @@ paths:
 - **1 つの辺の線は等分**：1 つの辺に来る n 本の線は辺を n+1 等分した点に置き、点を決めるのは `sidePoint` 1 か所。手で書いた線は `shareEnds`、graph の線は `settleEnds`。dot・行・bar は真ん中のまま（ユーザーが決めた）
 - **図の字は描く class で測る**：図の字の大きさ・太字・等幅を知るのは `faceOf(class)` 1 つで、part.css と 1 対 1 に書く（part.css の字を変えたら `faceOf` も直す）。描く所も測る所も同じ class の値を読み、呼ぶ側は太字かを選ばない。`TestUIDiagramFaces`
 - **図は自分の地を塗る**：部品 diagram の枠は地を `--bg`、字を `--fg` で塗り、下を隠すものも `--bg` で塗る。図の外の地は読まない。`TestUIDiagramGround`
+- **ランダムのテストの個数**：race の時間を占めるランダムのテストの個数は `tries` で読む。race のときだけ 1/5 になり、全部の個数は race なしのジョブが走らせる。割合の検査は全部の個数のときだけ
