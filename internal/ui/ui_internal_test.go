@@ -13,6 +13,7 @@ import (
 
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
@@ -20,7 +21,7 @@ func TestPageRendersInTheReadersLanguage(t *testing.T) {
 	t.Parallel()
 
 	for lang, want := range map[i18n.Lang]string{"en": "Back to the list", "ja": "一覧へ戻る"} {
-		b, err := Page(i18n.New(lang), "", false, "")
+		b, err := Page(i18n.New(lang), "", false, "", "[]")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -188,6 +189,14 @@ func TestPageMessages(t *testing.T) {
 			if _, ok := formats[key]; !ok {
 				t.Errorf("ui.html names %s, which no catalog has", key)
 			}
+		}
+	}
+	// A state's word is named by its value in the table, as the page reads it.
+	for _, state := range store.States {
+		key := "ui_state_" + state.Name
+		used[key] = true
+		if _, ok := formats[key]; !ok {
+			t.Errorf("the state %s has no word %s", state.Name, key)
 		}
 	}
 	for _, lang := range i18n.Langs() {

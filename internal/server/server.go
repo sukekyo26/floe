@@ -136,6 +136,7 @@ func (s *Server) latest() store.Drawing {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", serveUI)
+	mux.HandleFunc("GET /tasks", serveUI)
 	mux.HandleFunc("GET /api/health", s.health)
 	mux.HandleFunc("GET /api/artifacts", s.list)
 	mux.HandleFunc("POST /api/artifacts", s.addLink)
@@ -236,7 +237,12 @@ func serveUI(w http.ResponseWriter, r *http.Request) {
 func sendUI(w http.ResponseWriter, r *http.Request, status int, framed, version string) {
 	// A folder's page is framed by what the server serves, which a list of its directory cut at its bound may leave out
 	served := framed != "" && status == http.StatusOK && r.URL.Query().Get("file") != ""
-	page, err := ui.Page(catalog(r), framed, served, version)
+	states, err := json.Marshal(store.States)
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	page, err := ui.Page(catalog(r), framed, served, version, string(states))
 	if err != nil {
 		refuse(w, r, err)
 		return

@@ -46,7 +46,7 @@ func TaskName(name string) (string, error) {
 	return trimmed, nil
 }
 
-// Work is what a page holds of its place on the dev screen: the task it is on, its step there, whether it is pinned.
+// Work is what a page holds of its place on the task list: the task it is on, its step there, whether it is pinned.
 type Work struct {
 	Task string `json:"task,omitempty"`
 	Step string `json:"step,omitempty"`

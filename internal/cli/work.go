@@ -31,7 +31,7 @@ func (a *app) workCmd() *cobra.Command {
 	var f workFlags
 	cmd := &cobra.Command{
 		Use:   "work [<slug>...]",
-		Short: "Put pages on a task of the dev screen, pin them, or change a task's state, step, URL, title or steps' order",
+		Short: "Put pages on a task of the task list, pin them, or change a task's state, step, URL, title or steps' order",
 		Long: `With slugs, put the pages on a task and change that task; without, change the task --task names, of
 --project (the project of the working directory when left out; "" for none).
 
@@ -62,7 +62,7 @@ the first failure. The same command given again finishes what a failure left.
 	flags.StringVar(&f.url, "url", "", `the task's one outside link, http or https; "" takes it off`)
 	flags.StringVar(&f.title, "title", "", `the task's title; "" takes it off`)
 	flags.StringVar(&f.steps, "steps", "", `the order of the task's steps, separated by commas; "" takes it off`)
-	flags.BoolVar(&f.pin, "pin", false, "pin the pages to the top of the dev screen")
+	flags.BoolVar(&f.pin, "pin", false, "pin the pages to the top of the task list")
 	flags.BoolVar(&f.unpin, "unpin", false, "take the pages' pin off")
 	flags.BoolVar(&f.clear, "clear", false, "take the pages off their task and take their pin off; the task stays")
 	flags.BoolVar(&f.forget, "forget", false, "remove the task, which no page may be on")
