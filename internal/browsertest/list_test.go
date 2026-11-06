@@ -125,7 +125,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 	key("k")
 	b.until("the page before", "location.pathname === '/a/v/'")
 	// From the URL, on no such list: the list it was last on, else all of its kind.
-	b.eval("sessionStorage.setItem('artifacts.order', '[]'); sessionStorage.setItem('artifacts.list', '')")
+	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":[],"shown":[],"back":"/"}'); sessionStorage.setItem('artifacts.list', '')`)
 	b.navigate("/a/r/")
 	b.until("the bar", "document.getElementById('frame-title').textContent")
 	key("j")

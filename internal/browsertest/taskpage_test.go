@@ -1,7 +1,9 @@
 package browsertest_test
 
 import (
+	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -73,6 +75,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 
 	b.size(1400, 800, false)
+	defer b.unsize()
 	b.navigate("/tasks")
 	b.until("the rows", "document.querySelector('#list > li')")
 	unread := b.eval("document.getElementById('news-n').textContent")
@@ -113,9 +116,10 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the task's page again", "location.search === '?project=proj&task=%23130' && "+taskPageShown)
 
 	// The state changed: the row leaves the list, whose next row takes the focus.
-	b.eval("document.getElementById('task-state').value = 'doing'; document.getElementById('task-state').dispatchEvent(new Event('change'))")
+	b.eval("document.getElementById('task-state').focus(); document.getElementById('task-state').value = 'doing'; document.getElementById('task-state').dispatchEvent(new Event('change'))")
 	b.until("the state", "document.getElementById('task-state').className.includes('doing')")
-	key("h")
+	// By the keyboard, whose keys a select keeps: the focus has left it.
+	realKey(b, "h", 0)
 	b.until("the list", "location.pathname === '/tasks' && !location.search && document.querySelector('#list > li') && document.activeElement.closest('#list')")
 	say("after the state changed", "[...document.querySelectorAll('#list .tname')].map((e) => e.textContent).join(' | ') + ' focus ' + document.activeElement.querySelector('.tname').textContent")
 	// A row still there has the focus back.
@@ -174,12 +178,78 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.eval("document.getElementById('task-archive').click()")
 	b.until("given back", "document.getElementById('task-archive').textContent === 'Archive the task'")
 
+	// A task's page with the list folded on the page list: the rows until a page is chosen.
+	b.eval("localStorage.setItem('list.columns', JSON.stringify({ listOpen: false }))")
+	opened("#128", "/tasks?project=proj&task=%23128")
+	say("folded, none chosen", "(document.getElementById('listcol').offsetParent !== null) + ' ' + document.getElementById('list-hide').hidden")
+	b.eval("document.querySelector('#list .title').click()")
+	b.until("the page chosen", "picked && document.getElementById('listcol').offsetParent === null")
+	b.eval("localStorage.removeItem('list.columns')")
+
+	// A state changed while the choices are open is drawn once they close.
+	b.navigate("/tasks?project=proj&task=%23142")
+	b.until("#142's page", taskPageShown)
+	state := b.rect("document.getElementById('task-state')")
+	b.click(state.X+state.Width/2, state.Y+state.Height/2)
+	b.until("the choices", "document.getElementById('task-state').matches(':open')")
+	s.floe(t, "work", "--task", "#142", "--project", "proj", "--state", "done")
+	b.until("a look at the tasks", "tasksRead.raw.includes('done') && tasksRead.tasks.proj['#142'].state === 'done'")
+	say("while open", "document.getElementById('task-state').value")
+	b.pressKey("\x1b")
+	b.until("the choices closed", "!document.getElementById('task-state').matches(':open')")
+	b.until("the state drawn", "document.getElementById('task-state').value === 'done'")
+	s.floe(t, "work", "--task", "#142", "--project", "proj", "--state", "waiting")
+
+	// What is written over a task of no pages works as written, its name and project whatever they hold.
+	s.floe(t, "work", "--task", "it's $(touch made)", "--project", "")
+	b.navigate("/tasks?project=%2F&task=" + url.QueryEscape("it's $(touch made)"))
+	b.until("no pages", "!document.getElementById('task-none').hidden")
+	line := b.eval("document.getElementById('task-forget').textContent")
+	out = append(out, "the command: "+line)
+	cmd := exec.CommandContext(t.Context(), "sh", "-c", `printf '%s\n' `+strings.TrimPrefix(line, "floe ")) //nolint:gosec // G204: what the test draws
+	cmd.Dir = s.Env["HOME"]
+	args, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.floe(t, strings.Split(strings.TrimSuffix(string(args), "\n"), "\n")...)
+	if all, err := st.ReadTasks(); err != nil || len(all["/"]) != 0 {
+		t.Errorf("forgetting as it says: %v, %v", all["/"], err)
+	}
+	if _, err := os.Stat(filepath.Join(s.Env["HOME"], "made")); err == nil {
+		t.Error("the command ran what the name holds")
+	}
+
+	// A tag on a task's page has nothing to narrow.
+	if _, err := st.Edit("y1", store.Edit{Tags: &[]string{"t"}}); err != nil {
+		t.Fatal(err)
+	}
+	opened("#142", "/tasks?project=proj&task=%23142")
+	say("a tag", "document.querySelector('#list .tagpill').tagName + ' ' + document.querySelector('#list .tagpill').textContent")
+
 	// What is not there, and what cannot be written.
 	opened("#128", "/tasks?project=proj&task=%23128")
 	say("waiting has no archive button", archive)
 	b.navigate("/tasks?project=proj&task=%2399")
 	b.until("no pages", "!document.getElementById('task-none').hidden")
 	say("no pages", "document.querySelector('#task-none strong').textContent + ' ' + document.getElementById('task-forget').textContent + ' ' + document.getElementById('task-archive').hidden")
+	// Unreadable, what was drawn stays: it does not say there are no pages, or no such task. A page opened anew says why alone.
+	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
+	mended, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(file, []byte("{ broken"), 0o600); err != nil { //nolint:gosec // G703: a path the test names
+		t.Fatal(err)
+	}
+	b.until("the error", "!document.getElementById('error').hidden")
+	say("unreadable, drawn", "document.getElementById('task-head').hidden + ' ' + document.getElementById('task-none').hidden + ' ' + document.getElementById('task-missing').hidden")
+	b.navigate("/tasks?project=proj&task=%2399")
+	b.until("the error", "!document.getElementById('error').hidden")
+	say("unreadable, first", "document.getElementById('task-head').hidden + ' ' + document.getElementById('task-none').hidden + ' ' + document.getElementById('task-missing').hidden")
+	if err = os.WriteFile(file, mended, 0o600); err != nil { //nolint:gosec // G703: a path the test names
+		t.Fatal(err)
+	}
 	b.navigate("/tasks?project=proj&task=%23999")
 	b.until("no task", "!document.getElementById('task-missing').hidden")
 	say("no task", "document.querySelector('#task-missing strong').textContent + ' ' + document.getElementById('task-head').hidden + ' ' + document.querySelectorAll('#list > li').length")
@@ -189,6 +259,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	b.eval("document.getElementById('task-state').value = 'done'; document.getElementById('task-state').dispatchEvent(new Event('change'))")
 	b.until("the refusal", "!document.getElementById('error').hidden")
+	// The pages are told still, so a done task's archive can be pressed while its state cannot be read.
 	say("refused", "document.getElementById('task-state').value + ' ' + document.getElementById('task-state').hidden + ' ' + document.getElementById('error').textContent.includes('mend it by hand')")
 
 	// The widths: the column beside the page; the column alone. No shelf in any.
@@ -208,7 +279,6 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Errorf("the task's page:\n%s\nwant:\n%s", got, want)
 	}
 
-	b.unsize()
 }
 
 // taskPageShown tells a task's page drew its rows.

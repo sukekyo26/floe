@@ -1103,7 +1103,7 @@ func TestUIFindOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		// On the list of the tag, whose next after P3 is P5, with the order of all kept, whose next is P4.
 		b.navigate("/?tag=t")
 		b.until("the rows", "document.querySelector('#list .title')")
-		b.eval(`sessionStorage.setItem('artifacts.order', '["p1","p2","p3","p4","p5"]'); openFind()`)
+		b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["p1","p2","p3","p4","p5"],"shown":["p1","p2","p3","p4","p5"],"back":"/"}'); openFind()`)
 		// A press beside the rows opens nothing, and the order stays.
 		out = append(out, b.eval("document.getElementById('find-list').click(); sessionStorage.getItem('artifacts.order') !== null"))
 		open[how]()
