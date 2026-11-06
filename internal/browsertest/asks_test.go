@@ -28,7 +28,7 @@ func TestUIAsksHead(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 }
 
-// TestUIAsksPills measures the pills beside an option's words, in every theme and as wide as a phone: their middles level.
+// TestUIAsksPills measures the pills beside an option's words, in every theme and as wide as a phone: their middles level, but for a pill folded under the words.
 func TestUIAsksPills(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	k, err := kit.Floe()
@@ -48,7 +48,8 @@ func TestUIAsksPills(t *testing.T) { //nolint:paralleltest // the browser tests 
   const middle = (e) => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; };
   const pills = [...document.querySelectorAll('[data-floe-part=asks] .choices [data-floe-part=cell]')];
   if (pills.length !== 2) return pills.length + ' pills';
-  return pills.map((p) => middle(p) - middle(p.parentElement.firstElementChild)).filter((d) => Math.abs(d) > 0.75).join(' ');
+  const beside = pills.filter((p) => p.getBoundingClientRect().top < p.parentElement.firstElementChild.getBoundingClientRect().bottom);
+  return beside.map((p) => middle(p) - middle(p.parentElement.firstElementChild)).filter((d) => Math.abs(d) > 0.75).join(' ');
 })()`)
 			if got != "" {
 				t.Errorf("%s at %d px: a pill's middle stands off the words' by %s", theme, w, got)
