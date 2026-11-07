@@ -76,6 +76,8 @@ const measureChecks = `(() => {
   if (!near(list.getBoundingClientRect().top - total.getBoundingClientRect().bottom, room)) out.push('room under the total');
   const ls = getComputedStyle(list);
   if (ls.listStyleType !== 'none' || parseFloat(ls.paddingLeft) !== 0) out.push('list: ' + ls.listStyleType + ' ' + ls.paddingLeft);
+  const rs = getComputedStyle(root), inside = root.clientWidth - parseFloat(rs.paddingLeft) - parseFloat(rs.paddingRight);
+  if (!near(list.getBoundingClientRect().width, inside)) out.push('the list is ' + list.getBoundingClientRect().width + ' wide in ' + inside);
   const rows = [...list.children], tones = {};
   rows.forEach((row, i) => {
     const r = row.getBoundingClientRect(), line = getComputedStyle(row, '::before'), pill = row.querySelector('[data-floe-part=cell]'), title = row.querySelector('.title');
@@ -88,6 +90,10 @@ const measureChecks = `(() => {
       if (!near(e.getBoundingClientRect().width, Math.min(inner, max || inner))) out.push('row ' + i + ': ' + (e.dataset.floePart || e.tagName) + ' is ' + e.getBoundingClientRect().width + ' wide in ' + inner);
     }
     if (pill.getBoundingClientRect().right > title.getBoundingClientRect().left + 0.5) out.push('row ' + i + ': the pill stands over the title');
+    if (!(parseFloat(line.width) > 0) || pill.getBoundingClientRect().left <= r.left + parseFloat(line.width)) out.push('row ' + i + ': the line ' + line.width + ' wide, the pill ' + (pill.getBoundingClientRect().left - r.left) + ' from the row\'s left');
+    const stack = row.querySelector('.parts [data-floe-part=stack]'), how = row.querySelector('.how');
+    if (stack && how && !near(how.getBoundingClientRect().top - stack.getBoundingClientRect().bottom, room)) out.push('row ' + i + ': room over how');
+    if (stack && !how && !near(r.bottom, stack.getBoundingClientRect().bottom)) out.push('row ' + i + ': room under the parts');
     const line1 = document.createRange(); line1.selectNodeContents(title);
     const first = line1.getClientRects()[0], p = pill.getBoundingClientRect(), off = p.top + p.height / 2 - (first.top + first.height / 2);
     if (Math.abs(off) > 1) out.push('row ' + i + ': the pill off the title by ' + off);
@@ -160,7 +166,7 @@ func TestUIChecksPart(t *testing.T) { //nolint:paralleltest // the browser tests
 		}
 		lists = append(lists, items)
 	}
-	if len(lists) != 2 || lists[0] != 7 {
+	if len(lists) != 2 || lists[0] != 7 || lists[1] != 2 {
 		t.Errorf("lists of %v items; want the 7 rows, then the 2 of the Markdown in one", lists)
 	}
 }
