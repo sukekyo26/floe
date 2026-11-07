@@ -14,6 +14,7 @@ paths:
 - **写すボタンは `copyButton` 1 つ**：part.html の `{{copyButton}}` だけが描き、写す要素は `data-floe-copy` で決める。部品ごとに script・ボタン・言葉・ボタンの形を書かない。部品の CSS が決めるのは置き場所だけで、大きさと間は base.css の `--floe-copy-*`
 - **拡大は `zoom` 1 つ**：枠の中で拡大する図と絵は、`part.html` の `{{zoom}}` と、見た目 `zoom` の枠 `.floe-zoom` で描く。部品ごとに script・道具の並び・言葉を書かない。部品の CSS が書くのは枠の大きさと中身の形だけ
 - **code の一族は code の変数で描く**：code の見た目を借りる部品（diff・terminal）は、行の余白と薄い字を code が根に置く `--floe-code-*` で描く。行は `pre` の子の要素か、`<code class="lines">` の子の要素にし、行に padding を書かず、数と `:has(> .floe-copy)` を写さない（行に書くと code の余白が黙って消える）。テーマは置き直さない。`TestCodeLookCopiesNothing`
+- **目次は見た目 `toc` 1 つ**：テンプレートの目次は `data-floe-look="toc"` で借り、今の節は一覧のすぐ後の `{{contents}}` が付ける。page.css は置き場所と貼り付きを書き、見た目を変えるときは page.css で上書きして、見た目 `toc` の規則を書き写さない
 - **opacity は 0 だけ**：floe の CSS は `opacity` を 0 にだけ使い、薄く描くのは色（`color-mix(… transparent)`）で書く。`TestOpacity`
 - **CSS の記号は読ませず、数は読ませてよい**：`content` は `/` の後ろに読み上げを書く。記号は `/ ""`、数は前の `counter()` の並びで、字の文字列は書かない。記号だけが持つ意味は `.floe-hidden` の見えない字で書く（言葉は words.yaml）。`TestMarkSpeech`・`TestUISpeech`
 - **本文の列は `.floe-column`**：テンプレートの本文の列は class で付け、列の字（max-width・margin-inline・padding-inline）を page.css に書かない。幅は `--column-width` で、置くのは page.css だけ（テーマは置かない）。`--page-width`・`--text-width`・`--page-pad` はパレット 1 か所だけ。字の大きさはページで決めない。列は見た目にしない

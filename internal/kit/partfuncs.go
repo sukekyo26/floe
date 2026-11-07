@@ -47,6 +47,19 @@ func copyButtonOf() (template.HTML, error) {
 	return "", fmt.Errorf("%w: copyButton: not bound to a page", ErrFunc)
 }
 
+//go:embed contents.js
+var contentsJS string
+
+// contentsScript returns the script that marks, in the contents just before it, the place a page is read at.
+func contentsScript() (template.HTML, error) {
+	script, err := page.Script(contentsJS, nil)
+	if err != nil {
+		return "", fmt.Errorf("%w: contents: %w", ErrFunc, err)
+	}
+	//nolint:gosec // G203: floe's script, of no words
+	return template.HTML(script), nil
+}
+
 //go:embed copy.js
 var copyJS string
 

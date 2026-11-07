@@ -11,6 +11,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	gmtext "github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 )
@@ -19,26 +20,31 @@ import (
 // words.yaml gives, is added where they are read.
 var funcs = template.FuncMap{
 	"bytes":    formatBytes,
+	"contents": contentsScript,
 	"num":      formatNum,
 	"markdown": Markdown,
 	// markdownLine writes a line of Markdown, such as a table cell, as HTML without a paragraph around it.
-	"markdownLine": func(text string) (template.HTML, error) {
-		// The text is made one paragraph of unbroken lines: a blank line would split it, an indented line
-		// would open no block, as markdownLine reads no indented code, and two spaces at the end of a line
-		// would break it.
-		var lines []string
-		for line := range strings.Lines(text) {
-			if line = strings.TrimSpace(line); line != "" {
-				lines = append(lines, line)
-			}
+	"markdownLine": func(text string) (template.HTML, error) { return line(markdownLine, "markdownLine", text) },
+	// markdownLabel writes a line of Markdown as markdownLine does, its links as their words: a label that goes in a link.
+	"markdownLabel": func(text string) (template.HTML, error) { return line(markdownLabel, "markdownLabel", text) },
+}
+
+// line writes text, a line of Markdown, by md, without a paragraph around it. The text is made one paragraph of
+// unbroken lines: a blank line would split it, an indented line would open no block, as md reads no indented code,
+// and two spaces at the end of a line would break it.
+func line(md goldmark.Markdown, name, text string) (template.HTML, error) {
+	var lines []string
+	for line := range strings.Lines(text) {
+		if line = strings.TrimSpace(line); line != "" {
+			lines = append(lines, line)
 		}
-		html, err := convert(markdownLine, "markdownLine", strings.Join(lines, "\n"))
-		if err != nil {
-			return "", err
-		}
-		html = strings.TrimSuffix(strings.TrimPrefix(html, "<p>"), "</p>\n")
-		return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
-	},
+	}
+	html, err := convert(md, name, strings.Join(lines, "\n"))
+	if err != nil {
+		return "", err
+	}
+	html = strings.TrimSuffix(strings.TrimPrefix(html, "<p>"), "</p>\n")
+	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 }
 
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
@@ -52,6 +58,33 @@ var markdownLine = goldmark.New(
 	)),
 	goldmark.WithExtensions(extension.Strikethrough, extension.Linkify),
 )
+
+// markdownLabel reads as markdownLine does and writes a link, one written or one Linkify finds, as its words alone.
+var markdownLabel = goldmark.New(
+	goldmark.WithParser(parser.NewParser(
+		parser.WithBlockParsers(util.Prioritized(parser.NewParagraphParser(), 1000)),
+		parser.WithInlineParsers(parser.DefaultInlineParsers()...),
+	)),
+	goldmark.WithExtensions(extension.Strikethrough, extension.Linkify),
+	goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(wordsOfLinks{}, 0))),
+)
+
+// wordsOfLinks renders a link as what it holds and an autolink as its text.
+type wordsOfLinks struct{}
+
+func (wordsOfLinks) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
+	r.Register(ast.KindLink, func(util.BufWriter, []byte, ast.Node, bool) (ast.WalkStatus, error) {
+		return ast.WalkContinue, nil
+	})
+	r.Register(ast.KindAutoLink, func(w util.BufWriter, src []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if link, ok := n.(*ast.AutoLink); ok && entering {
+			if _, err := w.Write(util.EscapeHTML(link.Label(src))); err != nil {
+				return ast.WalkStop, fmt.Errorf("%w: markdownLabel: %w", ErrFunc, err)
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+}
 
 // markdownPart is the part whose look Markdown's tables take, the one part Markdown names.
 const markdownPart = "table"

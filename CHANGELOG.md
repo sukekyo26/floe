@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add contents to `report`: on a page of 4 sections with a heading or more, or as its new key `toc` says, the sections and their subsections stand beside them on a screen 1000px wide or more, where the page takes the whole window, the section being read marked as the page scrolls; on a narrower screen the sections alone stand over them, and paper holds none. A template of your own takes them by the look `toc` and the function `contents`, and `markdownLabel` writes a line of Markdown with its links as their words.
 - Add `title`, `start` and `mark` to the part `code`: `title` says what the code shows, in words, above it beside its `file`; `start` numbers the lines from that number, and `mark` marks lines by those numbers, with a line at their side, a ground to the end of the longest line and a word a screen reader reads. The copy button copies the code as written, without the numbers. A page writing none of them looks as it did.
 - Add rows written by the columns' ids to the part `table`: a column takes an `id`, and a row is `{ state: done, who: walter }`, a column left out drawn empty and a key that is no column's `id` refused. Rows in the order of the columns stay as they are, and a table may hold both. Parts and formats may now stand under `additionalProperties` in a schema of one's own, where floe draws them; not at the root's, which would draw `lang` and `title` too.
 - Add `from` and `better` to the part `stats`: `from` is the number before, drawn as `3.1 → 1.3` with the change under it, exact and in its colour, for the better or the worse as `better` says. Pages without `from` are drawn as before.
@@ -343,6 +344,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change `report`'s section headings to a line of Markdown, as `lead` is: their ids are made of the words drawn, so a tag, a mark such as `__init__`, a backslash, a character reference or a link's address changes them.
+- Change `design`'s contents to the look `toc`: a quiet list on a line, the section being read marked, and none on paper.
 - Change the part `links` from two columns of cards to rows: a sign, the title and a few words on a line and the URL under them, whole rather than cut, on paper too. The title alone is a link now, so the words and the URL can be selected. A theme's decoration of a card no longer reaches `links`.
 - Stop placing the `::after` of a row of `marks: box` or `items` over its mark: floe's own parts no longer draw one. In your own part, one with no `position` is an item of the row's grid: it adds a row under the text, in the mark's column, and one wider than the mark moves the text too. To lay it over the mark, write `position: absolute` and `position-anchor: --floe-mark`.
 - Show the zoom toolbar of a diagram or an image as its buttons alone: how to zoom moves from a line over the frame to the frame's tooltip, and to a line under the frame while the keyboard is on it, which is also its description (`aria-describedby`), so that images side by side in `columns` no longer stand under two lines of tools. A touch screen no longer shows how to zoom.

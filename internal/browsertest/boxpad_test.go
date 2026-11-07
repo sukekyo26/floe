@@ -61,7 +61,7 @@ func measureBoxPad(names string) string {
     steps: '[data-floe-part=steps]', timeline: '[data-floe-part=timeline]',
     bars: '[data-floe-part=bars]', tree: '[data-floe-part=tree]', note: '[data-floe-part=note]',
     'details title': '[data-floe-part=details] > summary', 'details body': '[data-floe-part=details] > div',
-    'design aside': 'aside[data-floe-look=panel]', 'runbook needs': '.needs', 'runbook rollback': '.rollback',
+    'runbook needs': '.needs', 'runbook rollback': '.rollback',
     'handoff board': '.board section',
   };
   const ground = (e) => { const c = getComputedStyle(e); return c.backgroundColor !== 'rgba(0, 0, 0, 0)' || c.backgroundImage !== 'none'; };
@@ -107,7 +107,7 @@ func TestUIBoxPad(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	}
 	page := s.write(t, "boxes.yaml", "template: report\nlang: en\ntitle: Boxes\nsections:\n  - heading: Boxes\n    parts:\n"+
 		indent(boxParts, "    "))
-	samples := map[string]string{"design": "design aside", "runbook": "runbook needs, runbook rollback", "handoff": "handoff board"}
+	samples := map[string]string{"runbook": "runbook needs, runbook rollback", "handoff": "handoff board"}
 	files := map[string]string{}
 	for name := range samples {
 		data, err := os.ReadFile("../corpus/testdata/example/" + name + ".yaml")
@@ -125,7 +125,7 @@ func TestUIBoxPad(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		b.navigate("/a/boxes-" + name + "/?raw")
 		out = append(out, name+": "+b.eval(measureBoxPad(partBoxes)))
 		want = append(want, name+": "+boxPadWant("17.6px", "20.8px", frames[name]))
-		for _, sample := range []string{"design", "runbook", "handoff"} {
+		for _, sample := range []string{"runbook", "handoff"} {
 			slug := "boxes-" + sample + "-" + name
 			s.floe(t, "publish", files[sample], "--slug", slug, "--theme", name)
 			b.navigate("/a/" + slug + "/?raw")

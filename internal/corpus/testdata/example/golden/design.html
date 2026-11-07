@@ -311,7 +311,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.looks.depth0 {
-@scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="rows"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-look~="rows"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
@@ -412,6 +412,27 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.looks.depth0 {
+@scope ([data-floe-look~="toc"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Contents: a quiet list on a line down its side, the place a page is read at (aria-current, by {{contents}}'s script) in
+   the accent. Where it stands and when it sticks are the template's. A ring keeps inside the links, as what sticks
+   scrolls and clips what stands out of it. Paper holds no place to go to */
+:scope { border-left: 1px solid var(--on-face, var(--line)); padding-left: 0.9rem; line-height: 1.45; }
+:scope .title { font-size: var(--floe-text-aside); color: var(--on-face, var(--muted)); margin-bottom: 0.3rem; }
+:scope ol, :scope ul { display: block; list-style: none; margin: 0; padding: 0; }
+:scope a {
+  display: block; padding-block: 0.16rem; margin-left: -0.9rem; padding-left: 0.9rem; border-left: 2px solid transparent;
+  color: var(--on-face, var(--fg)); text-decoration: none; outline-offset: -2px;
+}
+:scope li li a { margin-left: -0.9rem; padding-left: 1.7rem; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+:scope a:hover { color: var(--on-face, var(--accent)); text-decoration: underline; }
+:scope a[aria-current] { border-left-color: var(--on-face, var(--accent)); color: var(--on-face, var(--accent)); font-weight: 700; }
+:scope code { background: none; box-shadow: none; padding: 0; color: inherit; font-size: inherit; }
+@media print { :scope { display: none; } }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
@@ -445,7 +466,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.looks.depth0 {
-@scope ([data-floe-look~="panel"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="rows"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-look~="rows"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-look~="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
 :scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
@@ -538,13 +559,13 @@ main > section > h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px
 /* The question is set as the text around it is, not as the headings are */
 .decision > h3 { margin-top: 0.4rem; font-size: 1.05rem; line-height: inherit; text-wrap: wrap; }
 .non-goals { color: var(--muted); }
-aside { position: sticky; top: 1rem; align-self: start; padding: var(--floe-pad-block) var(--floe-pad-inline); }
-aside h2 { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
-aside ul { list-style: none; padding: 0; gap: 0.15rem; }
-aside a { text-decoration: none; }
+aside { position: sticky; top: 1rem; align-self: start; }
 @media (max-width: 800px) {
   .body { grid-template-columns: 1fr; }
   aside { position: static; grid-row: 1; }
+}
+@media print {
+  .body { grid-template-columns: minmax(0, 1fr); }
 }
 }
 }
@@ -608,13 +629,47 @@ page answers. When the mail provider is slow, so is the page, and a provider out
 </ol>
 </section>
 </main>
-<aside data-floe-look="panel">
-<nav aria-labelledby="contents"><h2 id="contents">Contents</h2>
+<aside>
+<nav data-floe-look="toc" aria-label="Contents"><p class="title" aria-hidden="true">Contents</p>
 <ul>
 <li><a href="#background">Background</a></li>
 <li><a href="#goals">Goals</a></li><li><a href="#non-goals">Non-goals</a></li><li><a href="#decisions">Options</a></li><li><a href="#decided">Decided</a></li><li><a href="#impact">Impact</a></li><li><a href="#more-0">Rollout</a></li>
 </ul>
-</nav>
+</nav><script>(function contents() {
+  const nav = document.currentScript.previousElementSibling;
+  const links = [...nav.querySelectorAll('a')].filter((a) => (a.getAttribute('href') || '').startsWith('#'));
+  let spots = [];
+  let pressed = null;
+  const mark = () => {
+    let at = -1;
+    spots.forEach((spot, i) => {
+      if (spot && spot.getBoundingClientRect().top <= innerHeight * 0.3) at = i;
+    });
+    if (scrollY <= 0) at = 0;
+    else if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) at = spots.length - 1;
+    const sight = pressed !== null && spots[pressed] && spots[pressed].getBoundingClientRect();
+    if (sight && sight.top >= -1 && sight.top < innerHeight) at = pressed;
+    else pressed = null;
+    links.forEach((a, i) => (i === Math.max(at, 0) ? a.setAttribute('aria-current', 'location') : a.removeAttribute('aria-current')));
+    const link = links[Math.max(at, 0)];
+    if (link && nav.scrollHeight > nav.clientHeight) {
+      const box = nav.getBoundingClientRect();
+      const r = link.getBoundingClientRect();
+      if (r.top < box.top + 24 || r.bottom > box.bottom - 24) nav.scrollTop += r.top - box.top - box.height / 2;
+    }
+  };
+  nav.addEventListener('click', (e) => {
+    pressed = links.indexOf(e.target.closest('a'));
+    if (pressed < 0) pressed = null;
+  });
+  addEventListener('DOMContentLoaded', () => {
+    spots = links.map((a) => document.getElementById(a.getAttribute('href').slice(1)));
+    mark();
+  });
+  addEventListener('scroll', mark, { passive: true });
+  addEventListener('hashchange', mark);
+  addEventListener('resize', mark);
+})(null);</script>
 </aside>
 </div>
 
