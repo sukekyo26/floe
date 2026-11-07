@@ -254,11 +254,10 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	const archiveRow = "document.querySelector('#list li:not(.group) .actions > .archive').click()"
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval(archiveRow)
-	out = append(out, b.until("the archive", "calls.splice(0).join(',')"))
+	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list .more[open]').length"),
+		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Beta"))+")"))
 	// Sent, the list is read again after it: the rows drawn so are what the next steps press
 	b.until("the archive done", "archiving.size === 0")
-	out = append(out, b.eval("document.querySelectorAll('#list .more[open]').length"),
-		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Beta"))+")"))
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval(archiveRow)
