@@ -1,0 +1,3 @@
+:scope li { --list-mark: 3rem; } /* want "sets --list-mark on :scope li: move it to list's root, :scope (narrowed on that element by a class or :has(), if need be)" */
+:scope { --list-gap: 1rem !important; } /* want "sets --list-gap !important: a theme sets a part's variable as the part does, on its root; leave !important out" */
+:scope { --list-c: blue; } /* want "sets --list-c, list's own, which switches between its elements: remove it" */

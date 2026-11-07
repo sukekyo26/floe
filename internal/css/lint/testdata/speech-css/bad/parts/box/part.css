@@ -1,0 +1,14 @@
+.a::after { content: counter(a) " / " counter(b) / counter(a); } /* want "content: counter(a) \" / \" counter(b) / counter(a) in .a::after reads counter(a); read \"\" or the counters before / alone, all of them once" */
+.b::before { content: "✓"; } /* want "content: \"✓\" in .b::before is read out; write / \"\" after a mark, or the counters before / after a number" */
+.c::before { content: "✓" / "✓"; } /* want "content: \"✓\" / \"✓\" in .c::before reads \"✓\"; read \"\" or the counters before / alone, all of them once" */
+.d::before { content: "✓" / "done"; } /* want "content: \"✓\" / \"done\" in .d::before reads \"done\"; read \"\" or the counters before / alone, all of them once" */
+.e::before { content: "Step " counter(x) / "Step " counter(x); } /* want "content: \"Step \" counter(x) / \"Step \" counter(x) in .e::before reads \"Step \" counter(x); read \"\" or the counters before / alone, all of them once" */
+.f::after { content: counter(a) " / " counter(b) / counter(a) " / " counter(b); } /* want "content: counter(a) \" / \" counter(b) / counter(a) \" / \" counter(b) in .f::after reads counter(a) \" / \" counter(b); read \"\" or the counters before / alone, all of them once" */
+.g::before { content: counter(a) / counter(b); } /* want "content: counter(a) / counter(b) in .g::before reads counter(b); read \"\" or the counters before / alone, all of them once" */
+.h::before { content: "✓" / ""; } .h::before { content: "✓"; } /* want "content: \"✓\" in .h::before is read out; write / \"\" after a mark, or the counters before / after a number" */
+@media print { .i::before { content: "✓"; } .i.x::after { content: "+" / ""; } } /* want "content: \"✓\" in @media print { .i::before is read out; write / \"\" after a mark, or the counters before / after a number" */
+.j { content: "✓"; &::after { content: "+" / ""; } } /* want "content: \"✓\" in .j is read out; write / \"\" after a mark, or the counters before / after a number" */
+.k::before { content: "✓" / ""; content: "✓"; } /* want "content: \"✓\" in .k::before is read out; write / \"\" after a mark, or the counters before / after a number" */
+.l::before { content: counter(a) / counter(a) counter(a); } /* want "content: counter(a) / counter(a) counter(a) in .l::before reads counter(a) counter(a); read \"\" or the counters before / alone, all of them once" */
+.m::before { content: counter(a) "." counter(b) / counter(b); } /* want "content: counter(a) \".\" counter(b) / counter(b) in .m::before reads counter(b); read \"\" or the counters before / alone, all of them once" */
+.n::before { content/**/: "✓"; } /* want "content: \"✓\" in .n::before is read out; write / \"\" after a mark, or the counters before / after a number" */

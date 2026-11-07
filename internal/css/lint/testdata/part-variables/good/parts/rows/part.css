@@ -1,0 +1,2 @@
+:scope { --rows-gap: 1rem; }
+:scope > li { gap: var(--rows-gap); }

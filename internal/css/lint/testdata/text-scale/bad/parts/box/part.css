@@ -1,0 +1,11 @@
+.a { font-size: ; } /* want "font-size:  in .a writes no size; write a part's small text by one of base.css's steps var(--floe-text-small), var(--floe-text-aside)" */
+.b { font: caption; } /* want "font: caption in .b writes no size; write a part's small text by one of base.css's steps var(--floe-text-small), var(--floe-text-aside)" */
+.c { font: bold small sans-serif; } /* want "font: bold small sans-serif in .c writes no size; write a part's small text by one of base.css's steps var(--floe-text-small), var(--floe-text-aside)" */
+.d { font: initial; } /* want "font: initial in .d writes no size; write a part's small text by one of base.css's steps var(--floe-text-small), var(--floe-text-aside)" */
+.e { font: 0 serif; } /* want "font: 0 serif in .e writes no size; write a part's small text by one of base.css's steps var(--floe-text-small), var(--floe-text-aside)" */
+.f { font: 0.7rem sans-serif; } /* want "font: 0.7rem sans-serif in .f has the size \"0.7rem\"; write a part's small text by one of base.css's steps var(--floe-text-small), var(--floe-text-aside)" */
+.g { font-size: small; } /* want "font-size: small in .g has the size \"small\"; write a part's small text by one of base.css's steps var(--floe-text-small), var(--floe-text-aside)" */
+.h { font: bold small/1.4 serif; } /* want "font: bold small/1.4 serif in .h has the size \"small\"; write a part's small text by one of base.css's steps var(--floe-text-small), var(--floe-text-aside)" */
+.i { font-size: 0.8rem; } /* want "font-size: 0.8rem in .i has the size \"0.8rem\"; write a part's small text by one of base.css's steps var(--floe-text-small), var(--floe-text-aside)" */
+.j { font-size/**/: 0.8rem; } /* want "font-size: 0.8rem in .j has the size \"0.8rem\"; write a part's small text by one of base.css's steps var(--floe-text-small), var(--floe-text-aside)" */
+.k { font-size: 11px; } /* want "font-size: 11px in .k has the size \"11px\"; write a part's small text by one of base.css's steps var(--floe-text-small), var(--floe-text-aside)" */

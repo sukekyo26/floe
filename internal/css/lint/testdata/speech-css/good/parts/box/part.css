@@ -1,0 +1,7 @@
+li::before { content: "✓"; content: "✓" / ""; }
+li::after { content: counter(a); content: counter(a) / counter(a); }
+.a::after { content: counter(a) " / " counter(b) / ""; }
+.b::before { content: ""; } .b::after { content: none; }
+.c::before { content: counter(a) "." counter(b) / counter(a) counter(b); }
+.d::before { content: "" counter(a); content: counter(a) / ""; }
+.e::before { content: counter( a ) / counter(a); }

@@ -1,0 +1,7 @@
+ui.html "<div style>: color: #000 in style; give the colour a variable in :root"
+ui.html "<rect fill=\"#f00\">: give the colour a variable in :root and set it from the style"
+ui.html:3 "color: #333 in .a; give the colour a variable in :root"
+ui.html:4 "background: rgb(0 0 0) in .b; give the colour a variable in :root"
+ui.html:5 "color: #fff in .c; give the colour a variable in :root"
+ui.html:6 "background: color-mix(in srgb, #f00 20%, white) in .proj-tint; give the colour a variable in :root"
+ui.html:7 "background: color-mix(in srgb, var(--accent) 20%, white) in .d; give the colour a variable in :root"
