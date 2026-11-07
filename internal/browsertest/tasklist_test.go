@@ -450,7 +450,7 @@ up ?project=blog ?project=%2F&task=%2310: /tasks?project=%2F
 page list chips: shop5 var(--pc0), pin1 var(--pc2), Not set1 var(--faint)
 page list, its query kept: ?project=shop /?project=shop
 page list, let go: 
-help: Pinned pagesKeep pages you open again and again, such as an overview or a runbook, here. Only this project's pages are listed. To add one, choose "Pin to the task list" in a page's "…" menu.
+help: Pinned pagesKeep pages you open again and again, such as an overview or a runbook, here. Only this project's pages are listed. To add one, choose "Pin to the task list" in a page's "…" menu; the × on a pin takes it off.
 broken, list: error hidden: true
 broken, tasks: failed shown: true true
 broken, tasks: ?project=shop blog todo,doing,waiting,done,archived pins 1 rows 0
