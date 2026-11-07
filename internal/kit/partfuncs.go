@@ -284,35 +284,35 @@ var newlines = strings.NewReplacer("\r\n", "\n", "\r", "\n")
 // LIMIT: the mistakes are at the part's value, not at the number: codeOf knows not where in it the values are.
 // LIMIT: the range of a number is the schema's, as the part code's is. A part of one's own with no such schema may
 // number from 0, or past a CSS counter's end near 2^31, where its lines would all show one number: the page shows it.
+// A number past an int (start: 18446744073709551615) reads as another, and a start below 0 may show more digits than
+// Digits, which is the last line's: floe's part has its schema refuse both.
 func codeOf(text string, start, mark any) (codeText, error) {
 	c := codeText{Lines: nil, Before: 0, Digits: 0, Numbered: false}
+	var found usererr.List
 	first := 1
 	if start != nil {
 		n, err := lineNumber("start", start)
-		if err != nil {
-			return c, err
+		if failed := found.Add(err); failed != nil {
+			return c, failed
 		}
 		first, c.Numbered = n, true
 	}
 	marks := map[int]bool{}
-	if mark != nil {
-		list, ok := mark.([]any)
-		if !ok {
-			return c, usererr.New("kit_code_mark", fmt.Sprint(mark))
+	list, isList := mark.([]any)
+	if mark != nil && !isList {
+		if failed := found.Add(usererr.New("kit_code_mark", fmt.Sprint(mark))); failed != nil {
+			return c, failed
 		}
-		var found usererr.List
-		for _, v := range list {
-			n, err := lineNumber("mark", v)
-			if failed := found.Add(err); failed != nil {
-				return c, failed
-			}
-			if err == nil {
-				marks[n] = true
-			}
+	}
+	for _, v := range list {
+		n, err := lineNumber("mark", v)
+		if failed := found.Add(err); failed != nil {
+			return c, failed
 		}
-		if found != nil {
-			return c, found.Err()
-		}
+		marks[n] = true
+	}
+	if found != nil {
+		return c, found.Err()
 	}
 	n := first
 	for line := range strings.Lines(newlines.Replace(text)) {

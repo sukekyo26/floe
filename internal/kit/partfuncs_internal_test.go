@@ -304,6 +304,8 @@ func TestCodeOfRefuses(t *testing.T) {
 		{nil, []any{"1"}, line("mark", "1")},
 		{nil, []any{nil}, line("mark", "<nil>")},
 		{nil, []any{1.5, "a"}, line("mark", "1.5") + "\n" + line("mark", "a")},
+		{1.5, []any{"a", 2.5}, line("start", "1.5") + "\n" + line("mark", "a") + "\n" + line("mark", "2.5")},
+		{1.5, 2, line("start", "1.5") + "\ncode's mark takes a list of line numbers, not 2"},
 	} {
 		_, err := codeOf("a\n", tt.start, tt.mark)
 		if got := strings.TrimSpace(usererr.Tell(i18n.EnglishCatalog(), err).Render("")); got != tt.want {

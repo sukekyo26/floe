@@ -321,7 +321,9 @@ blockquote {
    the room left of the line, whose width it takes off by its margin: a tab counts from the line's start, and what a
    line folds to on paper stands right of the number. Same weight as .lines and after it, which sets the room to 0.
    LIMIT: the number scrolls with the code; keep it at the left if readers come to lose it, on a ground of its own.
-   LIMIT: floe's page diff (preLines) reads no CSS, and tells nothing of a page whose start alone changes. */
+   LIMIT: floe's page diff (preLines) reads no CSS, and tells nothing of a page whose start alone changes.
+   LIMIT: on paper, a line that starts with a long word with no space (a URL, minified code) leaves its number alone on
+   the first row, as the number is inline-block; all of it reads. Print is seldom used: hang the number if it matters. */
 :scope .numbered { --floe-code-gutter: calc((var(--digits) + 2) * 1ch); }
 :scope .numbered > :not(.floe-hidden) { counter-increment: line; }
 :scope .numbered > :not(.floe-hidden)::before {
