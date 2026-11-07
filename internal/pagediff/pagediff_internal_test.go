@@ -287,10 +287,8 @@ func TestReadEveryPart(t *testing.T) {
 	const fix = "run `just golden` and read the change in git diff"
 	golden := filepath.Join("testdata", "every-part.golden")
 	if *update {
-		if !t.Failed() {
-			if err = os.WriteFile(golden, []byte(b.String()), 0o600); err != nil {
-				t.Fatal(err)
-			}
+		if err = os.WriteFile(golden, []byte(b.String()), 0o600); err != nil {
+			t.Fatal(err)
 		}
 		return
 	}

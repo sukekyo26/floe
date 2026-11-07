@@ -108,7 +108,7 @@ func golden(t *testing.T, file, got string) {
 		t.Fatalf("%v; %s", err, fix)
 	}
 	if got != string(want) {
-		t.Errorf("%s differs from what is drawn now; %s", file, fix)
+		t.Errorf("%s differs from what is drawn now; %s", path, fix)
 	}
 }
 
