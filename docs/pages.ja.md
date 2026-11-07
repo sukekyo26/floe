@@ -76,6 +76,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 - 1 行に 1 つ：`text` の Markdown の箇条書き。
 - 名前と、それより長い文（要件、リスクとその手当て、用語。表では長い文が細い列に押し込まれる）：`entries`。状態は札に書く。
 - 判断：理由と退けた案を添えて 1 つを伝えるなら `decision`、案を利点と欠点で横に比べるなら `options`、読み手に判断を頼み、決まったら決定を書くなら `asks`、短い判断を並べるだけなら `entries`（選んだものを札に）。
+- 確かめたことと実際の結果（調査、テスト）：`checks`。1 件ずつ OK・NG・未確認を付ける。
 - 時の順に起きたこと：`timeline`。
 - 言葉と意味：Markdown の箇条書き。意味が長いなら `entries`。
 - 前と後の 1 つずつ：`compare`。
@@ -95,6 +96,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `note`・`stats`・`steps`・`checklist` | 色の付いた注、大きな数、番号付きの手順、済めば印の付く項目。 |
 | `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |
 | `asks` | 読み手に判断を頼む問い。Q1、Q2 … と番号が付きます。`question`、案の `options`、勧めの `recommend` と理由の `why`、決める人の `by`、決まったら `decided`。`recommend`・`decided` と同じ字の案に枠と札が付き、どの案とも違えば別の行に出ます。決まった問いは右上に丸い ✓ が付き、枠は決定の案だけで、ほかの案は薄い字になります（勧めの案の札は残ります）。 |
+| `checks` | 調査やテストで確かめたことと実際の結果。書いた順に並び、上に結果ごとの数が出ます。1 件は、題の `title`、結果の `result`（`ok`・`ng`・`unchecked`。日本語のページでは OK・NG・未確認と描く）、実際の結果の `actual`（Markdown）、その下の `parts`（`details` が持てるもの。`code` など）、確かめ方の `how`。`unchecked` の `actual` には、確かめていない理由を書きます。これからやることは `checklist`、レビューの指摘は `findings` に書きます。 |
 | `findings`・`decision`・`fields` | レビューで見つけたもの、決めたこと、設定の鍵。 |
 | `timeline`・`bars`・`keys` | 日付の順の出来事、値の棒、押すキー。`of` を書いた棒は、その全体のうち `value` までを塗り、`5 / 8` と出します（作業の進みに）。ほかの棒は、その中で一番大きい値に対する割合です。 |
 | `details`・`tabs` | 題の下に畳んだ部品、または 1 つずつ読めばよいものをタブで見せる部品。中に `text`・`code`・`terminal`・`diff`・`note`・`table`・`entries`・`image`・`diagram` を置ける。 |
@@ -119,13 +121,13 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 
 ## 画像
 
-`report` では、画像は部品 `image`（`- image: { file: shots/list.png, alt: ページの一覧 }`）で、節・小節・`details`・`tabs`・`columns`・`entries` の項目の `parts` に置けます。`file` は画像のパス、`alt` は何を写すか（読み上げと、絵が出ない所のため）です。`caption` を書くと、絵の下に説明を出します（1 行の Markdown。`caption: 図 1：ページの一覧`）。列より大きく縮んで描かれた画像は、図と同じく、上の道具の並び、Ctrl / ⌘ + ホイール、ピンチ、`+ - 0` のキーで拡大し、拡大中はドラッグか矢印キーで動かせます。道具の並びはボタンだけで、この操作は、枠に重ねたときの説明と、キーボードで枠を選んでいる間に枠の下に出る文で伝えます。文は枠の説明（`aria-describedby`）でもあります。`viewBox` だけで `width`・`height` の無い SVG は大きさが分からないので、拡大できません。自分のテンプレートでは `"format": "image"` の項目で取り、その値が画像のパスです。パスは、データファイルのディレクトリからの相対パスで、その下だけです。名前の間は `/` 1 つで、`./`・`..`・両端の `/` を使いません。画像は data URI でページに入るので、ページは見せるものを全部持ちます。png・jpeg・gif・webp・svg のファイルを名前で見分け、1 MiB までです。`floe publish` は、ページが見せる画像をサーバーに送ります。
+`report` では、画像は部品 `image`（`- image: { file: shots/list.png, alt: ページの一覧 }`）で、節・小節・`details`・`tabs`・`columns`・`entries`・`checks` の項目の `parts` に置けます。`file` は画像のパス、`alt` は何を写すか（読み上げと、絵が出ない所のため）です。`caption` を書くと、絵の下に説明を出します（1 行の Markdown。`caption: 図 1：ページの一覧`）。列より大きく縮んで描かれた画像は、図と同じく、上の道具の並び、Ctrl / ⌘ + ホイール、ピンチ、`+ - 0` のキーで拡大し、拡大中はドラッグか矢印キーで動かせます。道具の並びはボタンだけで、この操作は、枠に重ねたときの説明と、キーボードで枠を選んでいる間に枠の下に出る文で伝えます。文は枠の説明（`aria-describedby`）でもあります。`viewBox` だけで `width`・`height` の無い SVG は大きさが分からないので、拡大できません。自分のテンプレートでは `"format": "image"` の項目で取り、その値が画像のパスです。パスは、データファイルのディレクトリからの相対パスで、その下だけです。名前の間は `/` 1 つで、`./`・`..`・両端の `/` を使いません。画像は data URI でページに入るので、ページは見せるものを全部持ちます。png・jpeg・gif・webp・svg のファイルを名前で見分け、1 MiB までです。`floe publish` は、ページが見せる画像をサーバーに送ります。
 
 Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書いたまま描かれ、ページの CSP で出ません。出るのは、Markdown に直に書いた png・gif・jpeg・webp の data URI だけです。画像は `image` に書いてください。
 
 ## 図
 
-部品 `diagram` は、節や `details`・`tabs`・`columns`・`entries` の項目の `parts` の中に書いた spec から図を描き、ページを描く前に確かめます。spec の書き方は [diagrams.ja.md](diagrams.ja.md) にあります。
+部品 `diagram` は、節や `details`・`tabs`・`columns`・`entries`・`checks` の項目の `parts` の中に書いた spec から図を描き、ページを描く前に確かめます。spec の書き方は [diagrams.ja.md](diagrams.ja.md) にあります。
 
 ## スクリプトと HTML
 
@@ -163,5 +165,5 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 plan.yaml:12:15: warning: this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
 ```
 
-- `text` の部品（report の節と小節、design・handoff・adr・postmortem・runbook の `more` の中、runbook の手順の `text`、slides の枚、`details`・`tabs`・`columns`・`entries` の項目の `parts` の中も）と `entries` の項目の `text` の、囲んだコードのブロックを警告します。コードは `code` に、コマンドは `terminal` に書きます。
+- `text` の部品（report の節と小節、design・handoff・adr・postmortem・runbook の `more` の中、runbook の手順の `text`、slides の枚、`details`・`tabs`・`columns`・`entries`・`checks` の項目の `parts` の中も）、`entries` の項目の `text`、`checks` の項目の `actual` の、囲んだコードのブロックを警告します。コードは `code` に、コマンドは `terminal` に書きます。
 - 誤りのあるファイルは描かないので、その警告は誤りを直した後に出ます。ほかの描けたファイルの警告は、誤りと一緒に出します。

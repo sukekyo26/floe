@@ -1,0 +1,2 @@
+en: { ok: Pass, ng: Fail, unchecked: Not checked, how: "How: " }
+ja: { ok: OK, ng: NG, unchecked: 未確認, how: 確かめ方： }

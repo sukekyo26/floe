@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "checks",
+  "description": "What was checked and what came of it, in a survey or a test, each with its result of ok, ng or unchecked and what actually happened, the count of each on top. For what is still to do, write checklist; for what a review found, findings; code goes in parts",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "title": { "type": "string", "minLength": 1, "description": "What was checked; a line of Markdown" },
+      "result": { "enum": ["ok", "ng", "unchecked"], "description": "ok, ng, or unchecked, for one not checked yet, whose actual says why" },
+      "actual": { "$ref": "floe:///parts/text.json", "minLength": 1, "description": "What actually happened" },
+      "parts": { "$ref": "floe:///parts/stack.json", "description": "Parts under actual, such as code and terminal" },
+      "how": { "type": "string", "minLength": 1, "description": "How it was checked; a line of Markdown" }
+    },
+    "required": ["title", "result", "actual"],
+    "additionalProperties": false
+  }
+}
