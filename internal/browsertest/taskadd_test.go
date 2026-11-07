@@ -86,14 +86,14 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 	s.floe(t, "work", "--task", "#0", "--project", "", "--forget")
 
-	// With no task but pages, their projects are offered, the one with the most first.
+	// With no task but pages, their projects are offered, the one with the most first; chosen, the list goes to it from the one in the URL.
 	for slug, project := range map[string]string{"a1": "alpha", "b1": "beta", "b2": "beta", "n1": ""} {
 		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
 		if _, err := st.Edit(slug, store.Edit{Project: &project}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	b.navigate("/tasks")
+	b.navigate("/tasks?project=alpha")
 	b.until("the words", "!document.getElementById('tasks-empty').hidden")
 	open("task-add-empty")
 	want("the projects, in projectOrder", "[...document.getElementById('kin-project').options].map((o) => o.value).join(' ')", "/ beta alpha")
@@ -124,7 +124,6 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	want("the dialog", said, "Add task | Project: beta | - | - | title true | Make")
 	want("the project field hidden", shown("kin-project"), "false")
 	name("#2", "two")
-	want("nothing suggested", "document.querySelectorAll('#kin .suggest li, #kin [role=option]').length + ''", "0")
 
 	// Made from another state's list: the list goes to the state it is in, the row marked until the rows are drawn anew.
 	saved()
@@ -141,6 +140,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 	open("task-add")
 	name("#1", "")
+	want("nothing suggested", "document.querySelectorAll('.suggest:popover-open').length + ''", "0")
 	want("an ID there", said, "Add task | Project: beta | #1 one is already there (To do) | - | title false | Open the task")
 	b.eval("document.getElementById('kin').requestSubmit()")
 	b.until("the task's page", "location.search.includes('task=%231')")
