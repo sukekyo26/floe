@@ -100,6 +100,27 @@
   [div] Kept 2
   [div] Moved 4
   [div] Copied 30 / 40
+  [figcaption] Pages copied pages
+  [li] Copied
+  [li] Checked
+  [li] Failed
+  [li] Skipped
+  [svg] 0 / 500 / 1,000 / 1,500 / Mon / Tue / Wed / Thu / Fri / Copied 1,200 / Checked 950 / Failed 20 / Skipped 100
+  [summary] The numbers
+  [tr] Name | Copied | Checked | Failed | Skipped
+  [tr] Mon | 120 | 80 | 10 | 5
+  [tr] Tue | 340 | 200 | 30 | 15
+  [tr] Wed | 610 | 400 | 25 | 60
+  [tr] Thu | 980 | 700 | 40 | 80
+  [tr] Fri | 1,200 | 950 | 20 | 100
+  [figcaption] Attachments by size
+  [li] Files
+  [svg] 0 / 100 / 200 / 300 / 400 / 500 / Small / Medium / Large / 420 / 180 / 35
+  [summary] The numbers
+  [tr] Name | Files
+  [tr] Small | 420
+  [tr] Medium | 180
+  [tr] Large | 35
   [li] Done: Freeze edits
   [li] Not done: Copy the attachments
   [li] 2030-04-05
@@ -195,6 +216,13 @@
   [pre]  banner = "Moved"
 ## h2 Folded
   [summary] The whole log
+  [figcaption] Copied by hour
+  [li] Pages
+  [svg] 0 / 100 / 200 / 300 / 400 / 500 / 1:00 / 2:00 / 420 / 180
+  [summary] The numbers
+  [tr] Name | Pages
+  [tr] 1:00 | 420
+  [tr] 2:00 | 180
   [p] What the copy printed.
   [p] Every page, with the count and count.sh.
   [pre] Command: wiki export

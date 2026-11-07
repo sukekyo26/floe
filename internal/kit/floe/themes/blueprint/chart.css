@@ -1,0 +1,1 @@
+:scope { --chart-ground: var(--surface); --chart-line: 1.5px; --chart-dash: 6 4; --chart-dot-fill: var(--surface); --chart-dot-edge: currentColor; --chart-dot-line: 1.5px; --chart-bar-fill: color-mix(in srgb, currentColor 22%, transparent); --chart-bar-edge: currentColor; --chart-bar-line: 1.5px; }

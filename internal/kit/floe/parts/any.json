@@ -25,6 +25,7 @@
     "fields": { "$ref": "floe:///parts/fields.json" },
     "timeline": { "$ref": "floe:///parts/timeline.json" },
     "bars": { "$ref": "floe:///parts/bars.json" },
+    "chart": { "$ref": "floe:///parts/chart.json" },
     "entries": { "$ref": "floe:///parts/entries.json" },
     "keys": { "$ref": "floe:///parts/keys.json" },
     "tabs": { "$ref": "floe:///parts/tabs.json" },

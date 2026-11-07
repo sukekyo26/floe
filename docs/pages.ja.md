@@ -77,6 +77,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 - 名前と、それより長い文（要件、リスクとその手当て、用語。表では長い文が細い列に押し込まれる）：`entries`。状態は札に書く。
 - 判断：理由と退けた案を添えて 1 つを伝えるなら `decision`、案を利点と欠点で横に比べるなら `options`、読み手に判断を頼み、決まったら決定を書くなら `asks`、短い判断を並べるだけなら `entries`（選んだものを札に）。
 - 確かめたことと実際の結果（調査、テスト）：`checks`。1 件ずつ OK・NG・未確認を付ける。
+- 数の移り変わりや比べ：`chart`。線か縦の棒で描く。
 - 時の順に起きたこと：`timeline`。
 - 言葉と意味：Markdown の箇条書き。意味が長いなら `entries`。
 - 前と後の 1 つずつ：`compare`。
@@ -97,9 +98,10 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |
 | `asks` | 読み手に判断を頼む問い。Q1、Q2 … と番号が付きます。`question`、案の `options`、勧めの `recommend` と理由の `why`、決める人の `by`、決まったら `decided`。`recommend`・`decided` と同じ字の案に枠と札が付き、どの案とも違えば別の行に出ます。決まった問いは右上に丸い ✓ が付き、枠は決定の案だけで、ほかの案は薄い字になります（勧めの案の札は残ります）。 |
 | `checks` | 調査やテストで確かめたことと実際の結果。書いた順に並び、上に結果ごとの数が出ます。1 件は、題の `title`、結果の `result`（`ok`・`ng`・`unchecked`。日本語のページでは OK・NG・未確認と描く）、実際の結果の `actual`（Markdown）、その下の `parts`（`details` が持てるもの。`code` など）、確かめ方の `how`。`unchecked` の `actual` には、確かめていない理由を書きます。これからやることは `checklist`、レビューの指摘は `findings` に書きます。 |
+| `chart` | 名前の並びの上の数を、移り変わりは線（`kind: line`）で、比べは縦の棒（`kind: bar`）で描き、数は畳んだ表にも置きます。`title`・`unit`、引用符で書く名前の並び `x`、4 つまでの `series`（`name` と、`x` の 1 つごとに数を 1 つ書く `values`）を取ります。目盛りは 0 から始まります。線は `min` でそこから始められ、`min` より小さい値があると `min` は使わず、0 とすべての値を含む目盛りになります。棒は `min` を取らず、書くと `false schema` で断ります。字はどの幅でもページの大きさのままで、`34rem` より狭い箱では線の右の字は値だけになります。`8rem` を超える `x` の名前は … で切り、9 桁を超える数は丸めるか指数で書きます。表と重ねたときの説明には全部あります。目盛りの字はその線の値で、5 桁で見分けられない、または言えない目盛りは字を描きません。凡例は系列が 1 つでも名前を出します。 |
 | `findings`・`decision`・`fields` | レビューで見つけたもの、決めたこと、設定の鍵。 |
 | `timeline`・`bars`・`keys` | 日付の順の出来事、値の棒、押すキー。`of` を書いた棒は、その全体のうち `value` までを塗り、`5 / 8` と出します（作業の進みに）。ほかの棒は、その中で一番大きい値に対する割合です。 |
-| `details`・`tabs` | 題の下に畳んだ部品、または 1 つずつ読めばよいものをタブで見せる部品。中に `text`・`code`・`terminal`・`diff`・`note`・`table`・`entries`・`image`・`diagram` を置ける。 |
+| `details`・`tabs` | 題の下に畳んだ部品、または 1 つずつ読めばよいものをタブで見せる部品。中に `text`・`code`・`terminal`・`diff`・`note`・`table`・`entries`・`image`・`chart`・`diagram` を置ける。 |
 | `columns` | 部品を横に並べ、同時に見せます。前と後の画面、データと説明など。列は、省ける `title` とその下の `parts`（`details` と同じ部品）。列はどれも同じ幅で、幅は 16rem 以上なので、何列が横に並ぶかは本文の幅で決まり（`report` で最大 5 列、`adr`・`runbook` で 3 列）、残りは下に折り返します。 |
 | `diagram` | 確かめてから inline SVG で描く図（[diagrams.ja.md](diagrams.ja.md)）。 |
 | `script` | 動くもの（[スクリプトと HTML](#スクリプトと-html)）。 |

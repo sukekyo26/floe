@@ -1,1 +1,3 @@
-:scope { --radius: 14px; }
+:scope {
+  --chart-1: #149a88; --chart-2: #c86b3c; --chart-3: #7a64c9; --chart-4: #c2507f;
+  --radius: 14px; }

@@ -213,7 +213,7 @@ func TestRadius(t *testing.T) {
 				}
 			}
 		}
-		for prop, values := range declarations(src, func(p string) bool { return strings.HasSuffix(p, "radius") && !strings.HasPrefix(p, "--") }) {
+		for prop, values := range declarations(src, func(p string) bool { return p == "rx" || strings.HasSuffix(p, "radius") && !strings.HasPrefix(p, "--") }) {
 			for _, d := range values {
 				value := d.value
 				if slices.Contains(radiusShapes, text(src, value)) {

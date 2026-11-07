@@ -1,0 +1,10 @@
+$ floe check chart.yaml
+exit 1
+--- stderr
+chart.yaml:14:36: chart: series 2 "mid" has 2 values for the 3 names of x; write a value for each name
+chart.yaml:15:36: chart: series 3 "low" has 4 values for the 3 names of x; write a value for each name
+$ floe render --out-dir $TMP/pages/chart.yaml chart.yaml
+exit 1
+--- stderr
+chart.yaml:14:36: chart: series 2 "mid" has 2 values for the 3 names of x; write a value for each name
+chart.yaml:15:36: chart: series 3 "low" has 4 values for the 3 names of x; write a value for each name

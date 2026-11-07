@@ -93,6 +93,13 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	head("no page, given back")
 	out = append(out, "said: "+toast())
 
+	// Of no page, drawn by the press itself: the looks at the list are held, so that none draws it for it.
+	task("#still", "--state", "done")
+	open("#still")
+	b.eval("pressedAt = performance.now() + 1e9; " + button + ".click()")
+	b.until("the head drawn by the press", button+".textContent === 'Bring the archive back'")
+	b.eval("pressedAt = -Infinity")
+
 	// Of pages: the pages go with it, and come back with it.
 	open("#pages")
 	press("Bring the archive back")
