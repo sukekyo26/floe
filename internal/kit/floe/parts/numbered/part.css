@@ -7,8 +7,8 @@
    LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand.
    LIMIT: what takes the look and sets its rings' colours over ::before or ::after, rather than by the tone and
    data-floe-mark, is not refused: told apart from writing a ring's content (a tick) it is not, by the CSS's words */
-:scope { counter-reset: floe-step; }
-:scope > li { --floe-mark: 2rem; --floe-mark-gap: 1rem; counter-increment: floe-step; padding: 0.2rem 0 1.3rem; }
+:scope { --floe-mark: 2rem; --floe-mark-gap: 1rem; counter-reset: floe-step; }
+:scope > li { counter-increment: floe-step; padding: 0.2rem 0 1.3rem; }
 :scope > li:last-child { padding-bottom: 0.2rem; }
 :scope > li > * + * { margin-top: 0.15rem; }
 :scope > li::before {

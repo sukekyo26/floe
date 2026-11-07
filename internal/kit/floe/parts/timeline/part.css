@@ -1,8 +1,7 @@
 /* The date at the left of a dot on a line that runs down to the next, each item a row (marks: joined) that floe lays
    out, the date in a column of its own (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
-:scope { padding: var(--floe-pad-block) var(--floe-pad-inline); }
+:scope { --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > li {
-  --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem;
   grid-template:
     [mark-start] auto [mark-end] / [date-start] auto [date-end mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
   padding-bottom: 1.1rem;
@@ -22,8 +21,8 @@
 :scope > li::after { background: var(--line); }
 :scope li > div > :not(strong) { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
 @media (max-width: 36rem) {
+  :scope { --floe-mark-gap: 0.9rem; }
   :scope > li {
-    --floe-mark-gap: 0.9rem;
     grid-template: auto [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
   }
   :scope .date { grid-area: 1 / text; text-align: left; }

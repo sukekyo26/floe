@@ -1,7 +1,7 @@
 /* A heading with its tags on the same line, then its text and its parts the full width, which a wide block in them
    (code, a table) does not widen past the panel. */
-:scope { display: grid; }
-:scope > div { --entries-row-gap: 0.2rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--entries-row-gap) 0.7rem; }
+:scope { --entries-row-gap: 0.2rem; display: grid; }
+:scope > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--entries-row-gap) 0.7rem; }
 :scope dt { min-width: 0; font-weight: 700; }
 :scope dd { margin: 0; }
 :scope .text, :scope .parts { flex: 1 0 100%; min-width: 0; }

@@ -1,13 +1,13 @@
 /* One check to a row, in the order written: a line of its result's tone at the left, its result's pill by what was checked,
    then what came of it the full width. The count of each result stands on top, its number in the result's tone.
    The line is the row's ::before, not its border, which would make the row a framed box a code's shadow must stay in */
-:scope { display: grid; gap: var(--floe-room); padding: var(--floe-pad-block) var(--floe-pad-inline); }
+:scope { --checks-gap: 0.35rem; display: grid; gap: var(--floe-room); padding: var(--floe-pad-block) var(--floe-pad-inline); }
 /* Each count large over its word, in the face and size of stats' value: a count of the whole, told apart from the rows' pills */
 :scope > .total { display: flex; flex-wrap: wrap; gap: 0.35rem 1.5rem; }
 :scope > .total > span { display: grid; font-size: var(--floe-text-small); color: var(--muted); }
 :scope > .total b { font-family: var(--mono); font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; color: var(--tone); }
 :scope > ul { display: grid; list-style: none; padding: 0; gap: var(--floe-room); }
-:scope > ul > li { --checks-gap: 0.35rem; position: relative; display: grid; gap: var(--checks-gap); padding-left: var(--floe-pad-inline); }
+:scope > ul > li { position: relative; display: grid; gap: var(--checks-gap); padding-left: var(--floe-pad-inline); }
 :scope > ul > li::before { content: ""; position: absolute; inset-block: 0; left: 0; width: 0.25rem; background: var(--tone); }
 /* The pill in the middle of the title's first line, however many it folds onto: a theme's pill of a mark and words has the
    mark's baseline, off the words, so a baseline would not level them */

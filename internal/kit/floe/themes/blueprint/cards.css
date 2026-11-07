@@ -1,6 +1,7 @@
+:scope.numbered { --floe-mark: auto; }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero);
-  --floe-mark: auto; background: none; color: var(--accent);
+  background: none; color: var(--accent);
   font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400; letter-spacing: 0.12em;
 }
 .card .title { color: var(--accent); }

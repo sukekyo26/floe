@@ -479,9 +479,11 @@ blockquote {
 /* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
 .card { --face: initial; --on-face: initial; }
 /* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
-   sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
-   LIMIT: whether a decoration keeps off the text is seen, not measured */
-:scope.numbered > .card { --floe-mark: 1.75rem; }
+   sets --floe-mark: auto on :scope.numbered and no background. A theme's decoration of a card lies over its padding and takes no room.
+   LIMIT: whether a decoration keeps off the text is seen, not measured
+   LIMIT: the number's --floe-mark on the root reaches what a card holds, a theme's auto too: a mark of one's own that
+   reads it, not set on its own root, draws at no size there. floe's marks set their own; docs/parts.md asks it */
+:scope.numbered { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
@@ -678,9 +680,10 @@ blockquote {
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="options"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope.numbered { --floe-mark: auto; }
 :scope.numbered > .card::before {
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero);
-  --floe-mark: auto; background: none; color: inherit; font-size: 2.4rem; font-weight: 900; line-height: 1;
+  background: none; color: inherit; font-size: 2.4rem; font-weight: 900; line-height: 1;
 }
 /* Options take the primary faces in turn; numbers and facts stay on the surface */
 :scope.numbered > .card { --face: var(--brutal-yellow); --on-face: var(--brutal-ink); background: var(--face); color: var(--on-face); }

@@ -253,7 +253,7 @@ func (b *browser) marksIn(where string, narrow bool) []string {
 	if mark, _ := b.pseudoBoxes("#wrapped > li"); m.Wrapped != 1 || m.WrappedLeft <= mark[2] {
 		amiss = append(amiss, fmt.Sprintf("%s: #wrapped's text in %d lines, from %.1f, its mark ending at %.1f", where, m.Wrapped, m.WrappedLeft, mark[2]))
 	}
-	// A card's number is as big as --floe-mark, frame within, set on the card or on the number, unless a theme draws
+	// A card's number is as big as --floe-mark, frame within, set on the part's root, unless a theme draws
 	// it as text (auto), hides it or draws another thing there (notebook's tape).
 	for _, card := range []string{"[data-floe-part=options] > .card", "#sizedcards > .card"} {
 		mark, _ := b.pseudoBoxes(card)
