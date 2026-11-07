@@ -18,8 +18,9 @@ func TestPaletteInDocs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var names []string
-	for name := range declarations(src, func(p string) bool { return strings.HasPrefix(p, "--") }) {
+	found := declarations(src, func(p string) bool { return strings.HasPrefix(p, "--") })
+	names := make([]string, 0, len(found))
+	for name := range found {
 		names = append(names, name)
 	}
 	if len(names) == 0 {
