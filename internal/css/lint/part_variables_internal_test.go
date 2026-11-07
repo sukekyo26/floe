@@ -142,7 +142,7 @@ var partVariables = Rule{Name: "part-variables", Check: func(in *Input) []Findin
 				file, line := s.at(d.at)
 				var why string
 				switch {
-				case len(switching[v]) > 0:
+				case reachesOwner(in, s.For, names, switching[v]):
 					why = "sets " + v + ", " + strings.Join(switching[v], " and ") + "'s own, which switches between its elements: remove it"
 				case !partVar[v]:
 					continue
@@ -171,6 +171,19 @@ var partVariables = Rule{Name: "part-variables", Check: func(in *Input) []Findin
 	{"code --digits", "the digits of the last line's number, from the data (the style of <code class=\"lines\">)"},
 	{"zoom --floe-tool-alpha", "a button's colours, faded while it is disabled"},
 }}
+
+// reachesOwner is whether a theme's file for the part or look name (or for none of them: base.css, the palette, the
+// markdown, which reach every part) reaches one of the parts owners, whose exception a variable is: the part itself, or a
+// look it takes.
+func reachesOwner(in *Input, name string, names, owners []string) bool {
+	if len(owners) == 0 {
+		return false
+	}
+	if !slices.Contains(names, name) {
+		return true
+	}
+	return slices.ContainsFunc(owners, func(o string) bool { return o == name || slices.Contains(in.Taken(o), name) })
+}
 
 // floesOwn returns the variables out of partVariables: floesOwnWays, what floe's base.css sets on its :root or registers
 // by @property, and what the default palette sets.

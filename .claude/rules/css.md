@@ -26,8 +26,8 @@ paths:
 - **パレットの無いページへ出す CSS は自分の根だけに** [fragment-root]：パレットの無いページへ出す CSS は自分の根だけに当てる（`diagramAssets`）。`TestUIDiagramFragment`
 - **パレットの変数は docs の表に名前で書く** [palette-in-docs]：default の palette.css の変数は、docs/templates.md の「The palette」の表（英・日）に、まとめずに名前を字のまま書く（raw と自分のテーマが頼る約束なので）。`TestLintRule/palette-in-docs`
 - **tone は `data-floe-tone` と、floe が tone.json から組み立てる変数** [tone]：tone の印は class でなく `data-floe-tone`。名前を色に写すのは style.go の `Tones` だけで、部品・テーマ・テンプレートは `--tone`・`--tone-soft`・`--tone-fill` を読む。tone ごとのセレクタは tone の色でないものにだけ書く。テーマが自分の色で塗るときはパレットに `--<tone>-fill` を置く。`TestUITone`
-- **部品の箱の並びの見た目は floe が外す** [lists-off]：`ul`・`ol`・`menu` の印・左の余白・項目の間は style.go の `boxes` が外し、grid で並べる。`TestUILists`
-- **部品と見た目は並びの見た目を外す規則を書かない** [lists-unwritten]：部品の箱である並びの印・左の余白を外す規則は、部品と見た目に書かない（floe が外す）
+- **部品の箱と見た目の並びは floe が外す** [lists-off]：`ul`・`ol`・`menu` の印・左の余白・項目の間は style.go の `boxes` が外し、grid で並べる。`TestUILists`
+- **部品と見た目は並びの見た目を外す規則を書かない** [lists-unwritten]：部品の箱と見た目の並びの印・左の余白・項目の間を外す規則は、部品と見た目に書かない（floe が外す）
 - **色で塗った帯は見た目 `band` 1 つ** [band]：テンプレートは、`--accent` で塗った帯を page.css に書かず、`data-floe-look="band"` で借りる。page.css が書くのは帯の余白と中の並びだけ
 - **塗った面は `--face` と `--on-face`** [face]：地と字の色を自分で決め、中にリンク・行の code・フォーカスの輪が来る面は、2 つの変数を置いて `background: var(--face); color: var(--on-face)` で塗る。中の色は base.css 1 か所が決め、面ごとに書かない。部品の中身は base.css が変数を外すので、部品の根を面にするときは根と根の子に置く。自分の地を塗る見た目・部品は、地と一緒に `color: var(--fg)` を書き、面の変数を外す。地を塗らずに字や輪の色を書くときは、面の中に来うるなら `var(--on-face, …)` で書く。部品の箱の字の色を外から直す規則は書かない
 - **字と輪は読める** [contrast]：floe のページの字は WCAG AA で、フォーカスの輪は 3:1 で、下の地から読める。`TestUIContrast`
@@ -36,7 +36,7 @@ paths:
 - **入れ子では外が勝つ** [nesting]：部品や見た目の中の部品の箱は、入れ子の外の規則に負け、同じ形に描く。`TestUINesting`
 - **Markdown の見た目は markdown.css** [markdown-css]：テーマの base.css はページの段で部品の箱と text の外枠で止まり、Markdown の見た目は markdown.css に書く（ページ全体に届くので、部品が描かない要素だけ）
 - **状態と頭はテーマが変数で塗る** [states]：表の頭、選んだタブ、code の頭は、部品が `var(--x, 既定)` で読む変数をテーマが塗る。テーマは状態（`:checked`）と印刷を知る規則を書かない。画面だけの状態は部品が `@media screen` で塗る
-- **テンプレートが部品の形で描くものは、部品の箱として置く** [template-boxes]：札や注意の囲みは見た目として借りず、page.html に部品の箱（`data-floe-part="cell"`・`"note"`）で置き、色は `data-floe-tone`。page.css は箱の置き場所だけを書く。書き手の自由な字は cell にしない（長さに上限が無い）
+- **テンプレートが部品の形で描くものは、部品の箱として置く** [template-boxes]：札や注意の囲みは見た目として借りず、page.html に部品の箱（`data-floe-part="cell"`・`"note"`）で置き、色は `data-floe-tone`。page.css は箱の置き場所だけを書く。書き手の自由な字は cell にしない（長さに上限が無い）。`TestUIPills`
 - **番号と線の手順は見た目 `numbered` 1 つ** [numbered]：丸い番号と線を part.css・page.css に書かず、`numbered` を借りる。丸の色は tone と `data-floe-mark` で決め、`::before`・`::after` の色を上書きしない
 - **項目に添える短い値の並びは見た目 `tags`** [tags]：部品の 1 つの項目に、cell の書き方の値の配列を並べるときは、間・折り返し・字の形を part.css に書かず `data-floe-look="tags"` を借り、値を 1 つずつ `<span>` に包む（pill は cell の箱のまま）。表の行、floe が組み立てる並び、配列でない値の組は外
 - **カードの中の間は `--cards-gap`** [cards-gap]：見た目 cards のカードの中の間は `--cards-gap` で書き、0.4rem を写さない。テーマは `.card` に gap を書かず、この変数で変える。`TestUIOptionsRows`
