@@ -7,7 +7,8 @@ import (
 )
 
 // stepsTagsPage holds steps in each state with tags of every kind (a link, words, code, a pill of no tone and one of
-// a tone), a step without tags, a step of tags too long for a narrow page, and entries with the same tags to match.
+// a tone), a step without tags, a step of tags too long for a narrow page, entries with the same tags to match, and a
+// table whose cell's code the tags' code is as large as.
 var stepsTagsPage = `template: report
 lang: en
 title: Steps tags
@@ -24,19 +25,26 @@ sections:
     parts:
       - entries:
           - { title: Same tags, tags: ['[PR #428](https://example.com/428)', words, '` + "`just ci`" + `', { pill: plain }] }
+      - table:
+          columns: [Run]
+          rows: [['` + "`just ci`" + `']]
 `
 
 // measureStepsTags returns a line for each thing the steps' tags draw wrong: tags not in the text's column, past the
-// row or the page, not between the title and the text, of a look other than entries' tags, of colours that change with
-// the step's state, a pill of no tone in another colour than outside, or a row of tags on a step without them.
+// row or the page, not between the title and the text, of a look other than entries' tags, code in them of another size
+// than in a table's cell, of colours that change with the step's state, a pill of no tone in another colour than
+// outside, or a row of tags on a step without them.
 const measureStepsTags = `(() => {
   const out = [], steps = [...document.querySelectorAll('[data-floe-part=steps] > li')];
   const entries = document.querySelector('[data-floe-part=entries] [data-floe-look~=tags]');
+  if (!entries) return 'entries draw no tags';
   if (document.documentElement.scrollWidth > document.documentElement.clientWidth) out.push('the page scrolls sideways');
   const look = (e) => { const s = getComputedStyle(e); return [s.display, s.flexWrap, s.alignItems, s.rowGap, s.columnGap, s.fontSize, s.color].join(' '); };
   const colour = (e) => e ? getComputedStyle(e).color : 'none';
   const kinds = (tags) => [tags.querySelector('a'), [...tags.children].find((s) => !s.firstElementChild), tags.querySelector('code'), tags.querySelector('[data-floe-part=cell]:not([data-floe-tone])')].map(colour).join(', ');
-  const want = { look: look(entries), code: getComputedStyle(entries.querySelector('code')).fontSize, kinds: kinds(entries) };
+  const want = { look: look(entries), code: getComputedStyle(document.querySelector('[data-floe-part=table] td code')).fontSize, kinds: kinds(entries) };
+  const own = getComputedStyle(entries.querySelector('code')).fontSize;
+  if (own !== want.code) out.push('entries: code ' + own + ', a table cell\'s ' + want.code);
   steps.forEach((li, i) => {
     const tags = li.querySelector(':scope > [data-floe-look~=tags]');
     if (li.querySelector('strong').textContent === 'No tags') {
@@ -54,7 +62,7 @@ const measureStepsTags = `(() => {
     if (next && next.getBoundingClientRect().top < t.bottom - 1) out.push('step ' + i + ': tags under the text');
     if (look(tags) !== want.look) out.push('step ' + i + ': ' + look(tags) + ', entries\' tags ' + want.look);
     const code = tags.querySelector('code');
-    if (code && getComputedStyle(code).fontSize !== want.code) out.push('step ' + i + ': code ' + getComputedStyle(code).fontSize + ', entries\' ' + want.code);
+    if (code && getComputedStyle(code).fontSize !== want.code) out.push('step ' + i + ': code ' + getComputedStyle(code).fontSize + ', a table cell\'s ' + want.code);
     if (code && kinds(tags) !== want.kinds) out.push('step ' + i + ' (' + li.className + '): link, words, code, pill ' + kinds(tags) + ', entries\' ' + want.kinds);
   });
   return out.join('\n');
