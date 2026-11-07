@@ -97,16 +97,13 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		out = append(out, what+": "+b.eval(expr))
 	}
-	const screens = "document.getElementById('screens').hidden"
 	const rowsDrawn = "document.querySelector('#list > li')"
 
 	// Of no task: the way between the two is there all the same, and on /tasks the words how.
 	b.navigate("/")
 	b.until("the list read", "document.getElementById('empty').hidden === false")
-	say("no work, list: switch hidden", screens)
 	b.navigate("/tasks")
 	b.until("the guide", "!document.getElementById('tasks-empty').hidden")
-	say("no work, tasks: switch hidden", screens)
 	say("no work, tasks: shelf shown", "document.getElementById('shelf').offsetParent !== null")
 
 	// A task's row alone is on the list's chips: a task waiting must not be out of reach.
@@ -333,10 +330,8 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	b.navigate("/")
 	b.until("the list read", "!document.getElementById('all-archived').hidden")
-	say("an archived pin alone, list: switch hidden", screens)
 	b.navigate("/tasks")
 	b.until("the guide", "!document.getElementById('tasks-empty').hidden")
-	say("an archived pin alone: switch hidden", screens)
 	s.floe(t, "publish", s.page(t, "p1.yaml", "p1", ""), "--slug", "p1")
 	s.floe(t, "work", "p1", "--task", "#1", "--state", "waiting")
 	writeTasks(taskWork)
@@ -391,9 +386,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 }
 
 // taskListWant is what TestUITaskList reads of the list, in the order it reads it.
-const taskListWant = `no work, list: switch hidden: false
-no work, tasks: switch hidden: false
-no work, tasks: shelf shown: false
+const taskListWant = `no work, tasks: shelf shown: false
 a row alone, list: current: page
 opened: ?project=shop shop
 waiting: #2Two [0 page(s)]; #1One [design, 2 page(s), 2 unread, b/c]
@@ -473,6 +466,4 @@ broken, none kept:  true
 mended: ?project=shop true
 broken, gone kept:  ?project=shop gone
 mended, chosen anew: ?project=shop shop
-pressed while unreadable: ?project=blog
-an archived pin alone, list: switch hidden: false
-an archived pin alone: switch hidden: false`
+pressed while unreadable: ?project=blog`

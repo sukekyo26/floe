@@ -97,6 +97,16 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the words", "!document.getElementById('tasks-empty').hidden")
 	open("task-add-empty")
 	want("the projects, in projectOrder", "[...document.getElementById('kin-project').options].map((o) => o.value).join(' ')", "/ beta alpha")
+	want("the project of the URL first chosen", "document.getElementById('kin-project').value", "alpha")
+	b.eval(dialog + ".close()")
+	for _, path := range []string{"/tasks", "/tasks?project=typo"} {
+		b.navigate(path)
+		open("task-add-empty")
+		want(path+": none chosen", "document.getElementById('kin-project').value", "/")
+		b.eval(dialog + ".close()")
+	}
+	b.navigate("/tasks?project=alpha")
+	open("task-add-empty")
 	b.eval("const f = document.getElementById('kin-project'); f.value = 'beta'; f.dispatchEvent(new Event('change', { bubbles: true }))")
 	name("#1", "one")
 	saved()
@@ -183,7 +193,24 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Errorf("stale: %s", got)
 	}
 	want("stale: the dialog stays", dialog+".open + ''", "true")
+	name("#10", "")
+	want("another ID: the refusal gone", "document.getElementById('kin-error').hidden + ''", "true")
 	b.eval(dialog + ".close()")
+
+	// Drawn once, with the new task: never the words of a list with none, from the tasks before.
+	s.floe(t, "work", "--project", "gamma", "--task", "#40", "--state", "waiting")
+	b.navigate("/tasks?project=gamma&view=waiting")
+	open("task-add")
+	b.eval("window.noneShown = false; new MutationObserver(() => { window.noneShown ||= !document.getElementById('tasks-none').hidden; }).observe(document.getElementById('tasks-none'), { attributes: true })")
+	name("#41", "new")
+	saved()
+	b.until("the row", "document.querySelector('#list li.fresh')")
+	want("drawn once", "window.noneShown + ''", "false")
+
+	// A project with no task is not one to make a task in from here: the name may be a mistake.
+	b.navigate("/tasks?project=typo")
+	b.until("the words", "!document.getElementById('tasks-none').hidden")
+	want("a project not there", shown("task-add"), "false")
 
 	// Not where a task made would not show, nor on the page list.
 	b.navigate("/tasks?project=alpha&view=archived")
