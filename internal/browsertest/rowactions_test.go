@@ -110,6 +110,8 @@ func TestUIRowActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, "the list held: "+b.until("the way back asked", "window.patches.length === 2 && window.patches.join()"))
 	b.eval("window.release(); window.fetch = window.realFetch; " + undo("c") + ".click()")
 	b.until("all back", there("b")+" && "+there("c"))
+	// The rows drawn again by the reads still on the way would take the next press with them
+	b.until("the ways back done", "archiving.size === 0")
 
 	// The archived.
 	mouse(archive("b"))
