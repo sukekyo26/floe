@@ -3797,10 +3797,9 @@
     const sel = $('task-state');
     // A select keeps the keys: h, j and k go on from the page
     sel.blur();
-    const url = `/api/tasks?${new URLSearchParams({ project, task: TASK_NAME })}`;
     try {
-      const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ state: sel.value }) });
-      if (!res.ok) throw new Error(await res.text());
+      const res = await writeTask(project, TASK_NAME, { new: false, state: sel.value });
+      if (!res.ok) throw new Error(res.status === 409 ? res.stale : res.text);
       showError('');
     } catch (e) {
       sel.value = sel.dataset.state;

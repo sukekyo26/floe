@@ -2,6 +2,8 @@ package browsertest_test
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -307,3 +309,48 @@ closed: true false
 the focus on the choices: task-archive
 the latest first: #second,#first,#focused
 a child by the button: #added To do,#kid3 To do,#kid In progress,#kid2 Archive`
+
+// The state changed on a task forgotten elsewhere is refused as what was seen is not there, says so and reads the tasks again, and does
+// not make the task again; on a task of pages alone, of no row, it is there.
+func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	st := store.New(s.Env["FLOE_DIR"])
+	project := "proj"
+	s.floe(t, "work", "--project", project, "--task", "#gone", "--state", "done")
+	s.floe(t, "publish", s.page(t, "p.yaml", "T p", ""), "--slug", "p")
+	if _, err := st.Edit("p", store.Edit{Project: &project}); err != nil {
+		t.Fatal(err)
+	}
+	s.floe(t, "work", "p", "--task", "#pages")
+	// No row for #pages, which the command made.
+	if err := os.WriteFile(filepath.Join(s.Env["FLOE_DIR"], "tasks.json"), []byte(`{"proj": {"#gone": {"state": "done", "at": "2026-01-01T00:00:00Z"}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	const change = "(() => { const sel = document.getElementById('task-state'); sel.value = 'doing'; sel.dispatchEvent(new Event('change', { bubbles: true })); })()"
+
+	b.navigate("/tasks?project=proj&task=%23gone")
+	b.until("the head", "!document.getElementById('task-head').hidden")
+	s.floe(t, "work", "--project", project, "--task", "#gone", "--forget")
+	b.eval(change)
+	b.until("the refusal", "!document.getElementById('error').hidden")
+	if got, want := b.eval("document.getElementById('error').textContent"), "The state could not be changed: task #gone is no longer there: the tasks are read again, so check and save again"; got != want {
+		t.Errorf("forgotten: %q, want %q", got, want)
+	}
+	b.until("read again", "!document.getElementById('task-missing').hidden")
+	tasks, err := st.ReadTasks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, there := tasks["proj"]["#gone"]; there {
+		t.Error("the task forgotten was made again")
+	}
+
+	b.navigate("/tasks?project=proj&task=%23pages")
+	b.until("the head", "!document.getElementById('task-head').hidden")
+	b.eval(change)
+	b.until("the state", "tasksRead.tasks.proj?.['#pages']?.state === 'doing'")
+	if got := b.eval("document.getElementById('error').hidden"); got != "true" {
+		t.Errorf("a task of pages alone: error shown is %s", got)
+	}
+}
