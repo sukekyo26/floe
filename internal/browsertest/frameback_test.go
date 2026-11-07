@@ -217,3 +217,135 @@ named back: /a/a/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back
 from the browser's memory: /a/a/ | /tasks?project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /
 a task of no project: /a/none/ | /tasks?project=%2F&task=%237 | #7 | Back to #7 | Back to #7 | Back to #7 | /
 a pin of a list at a view: /a/pin/ | /tasks?view=doing&project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /`
+
+// A page opened whole and gone back from has its row picked and focused on the list that opened it, by the back button, by h and by the
+// browser's own way back, on a task's page and on the page list. Moved on by j, the row is the page last read. A row no longer there, or
+// a list the page was not opened from, picks nothing. A page marked unread there is not read by coming back, and a pin has the focus itself.
+func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	st := store.New(s.Env["FLOE_DIR"])
+	project := "proj"
+	for _, slug := range []string{"a", "b", "c"} {
+		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
+		if _, err := st.Edit(slug, store.Edit{Project: &project}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.floe(t, "work", "a", "b", "c", "--task", "#1", "--state", "doing")
+	b.size(1400, 800, false)
+	defer b.unsize()
+
+	const (
+		task  = "/tasks?project=proj&task=%231"
+		pages = "/?project=proj"
+	)
+	var out []string
+	// whole waits for the page whole, read.
+	whole := func(slug string) {
+		t.Helper()
+		b.until("the page whole", "location.pathname === '/a/"+slug+"/' && document.getElementById('frame-title').textContent && !document.querySelector('#frame-actions .mark-unread').hidden")
+	}
+	// open opens the row whole by a double press, as a person does.
+	open := func(list, slug string) {
+		t.Helper()
+		b.navigate(list)
+		sel := "document.querySelector('#list li[data-slug=" + slug + "] .title')"
+		b.until("the row of "+slug, sel)
+		r := b.rect(sel)
+		for _, count := range []int{1, 2} {
+			b.mouse(input.DispatchMouseEventTypeMousePressed, r.X+10, r.Y+r.Height/2, count)
+			b.mouse(input.DispatchMouseEventTypeMouseReleased, r.X+10, r.Y+r.Height/2, count)
+		}
+		whole(slug)
+	}
+	// read says what the list came back to has, once its rows are drawn.
+	read := func(what, list string) {
+		t.Helper()
+		b.until(what+": the list", "location.pathname + location.search === "+js(list)+" && document.querySelector('#list li[data-slug]')")
+		out = append(out, what+": "+b.eval(`[document.activeElement.closest?.('#list li')?.dataset.slug ?? 'no focus', picked?.slug ?? 'nothing picked',
+			[...document.querySelectorAll('#list li.picked')].map((li) => li.dataset.slug).join()].join(' | ')`))
+	}
+	pressBack := func() {
+		t.Helper()
+		r := b.rect("document.getElementById('back')")
+		b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	}
+
+	open(task, "b")
+	pressBack()
+	read("task page, the back button", task)
+	open(task, "c")
+	realKey(b, "h", 0)
+	read("task page, h", task)
+	open(task, "b")
+	b.moving("history.back()")
+	read("task page, the browser's way back", task)
+	open(task, "a")
+	realKey(b, "j", 0)
+	whole("b")
+	pressBack()
+	read("task page, moved on by j", task)
+	open(pages, "b")
+	pressBack()
+	read("page list, the back button", pages)
+	open(pages, "b")
+	b.moving("history.back()")
+	read("page list, the browser's way back", pages)
+
+	// Reloaded, the list is as it opens.
+	b.navigate(pages)
+	read("page list, reloaded", pages)
+	// Opened from the task's page, the page list has no part in it.
+	open(task, "b")
+	b.navigate(pages)
+	read("another list", pages)
+	// A row that is no longer there.
+	open(task, "c")
+	s.floe(t, "work", "c", "--task", "")
+	pressBack()
+	read("a row gone", task)
+
+	// Marked unread there, it stays unread: the row has the focus, with nothing beside it to read it.
+	open(pages, "b")
+	b.eval("document.querySelector('#frame-actions .mark-unread').click()")
+	b.until("marked unread", "document.querySelector('#frame-actions .mark-unread').hidden")
+	pressBack()
+	read("marked unread", pages)
+	// One column has nothing beside the list.
+	b.size(800, 800, false)
+	b.navigate(pages)
+	b.until("the row", "document.querySelector('#list li[data-slug=a] .title')")
+	b.eval("document.querySelector('#list li[data-slug=a] .title').focus()")
+	b.pressKey("\r")
+	whole("a")
+	b.moving("document.getElementById('back').click()")
+	read("one column", pages)
+	b.size(1400, 800, false)
+	// A pin has no page beside it: the pin has the focus.
+	s.floe(t, "work", "a", "--pin")
+	b.navigate("/tasks?project=proj")
+	b.until("the pin", "document.querySelector('.pin')")
+	b.moving("document.querySelector('.pin').click()")
+	whole("a")
+	pressBack()
+	b.until("the task list", "location.pathname === '/tasks' && document.querySelector('.pin')")
+	out = append(out, "a pin: "+b.eval("document.activeElement.getAttribute('href')"))
+
+	if got := strings.Join(out, "\n"); got != frameBackFocusWant {
+		t.Errorf("what the list has on the way back:\n%s\nwant:\n%s", got, frameBackFocusWant)
+	}
+}
+
+const frameBackFocusWant = `task page, the back button: b | b | b
+task page, h: c | c | c
+task page, the browser's way back: b | b | b
+task page, moved on by j: b | b | b
+page list, the back button: b | b | b
+page list, the browser's way back: b | b | b
+page list, reloaded: no focus | nothing picked | 
+another list: no focus | nothing picked | 
+a row gone: no focus | nothing picked | 
+marked unread: b | nothing picked | 
+one column: a | nothing picked | 
+a pin: /a/a/`

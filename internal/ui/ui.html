@@ -3898,11 +3898,38 @@
       return null;
     }
   }
+  // The page whole gone back from, on the list that opened it. Its row comes back with the focus, and beside the list unless that would
+  // read a page left unread. A pin comes back as a pin has no page beside it
+  // LIMIT: a row no longer drawn (a read page out of the new ones, a folder's page with its folder shut) leaves no focus. Draw it if that comes to matter
+  let cameFrom = null;
+  function backToRow() {
+    const at = cameFrom;
+    cameFrom = null;
+    if (!at) return;
+    if (TASK_LIST) {
+      [...$('pin-list').children].find((pin) => pin.getAttribute('href') === pageHref({ slug: at.slug }))?.focus();
+      return;
+    }
+    const li = [...$('list').children].find((x) => x.dataset.slug === at.slug && (x.dataset.file ?? '') === at.file);
+    if (!li) return;
+    li.querySelector('.title')?.focus();
+    if (!oneColumn.matches && !li.classList.contains('folder') && !items.find((a) => a.slug === at.slug)?.news) pickRow(at);
+  }
   // Where a page whole goes back to: the screen that opened it, or the page list
   const keptBack = () => {
     const kept = keptOrder();
     return kept?.shown.includes(framed) ? kept.back : `/${savedList()}`;
   };
+  // The page whole as the rows that opened it know it, which j and k move on, or none where it is not of them
+  function keepAt() {
+    const kept = keptOrder();
+    if (!kept) return;
+    try {
+      sessionStorage.setItem(ORDER_KEY, JSON.stringify({ ...kept, at: kept.shown.includes(framed) ? { slug: framed, file: FILE } : null }));
+    } catch {
+      // Without storage, there was none to keep
+    }
+  }
   // The back button as keptBack sends it: its word, and what it says in full, of the screen it goes to
   // LIMIT: the name is the one in the URL kept: a task gone since, or a page moved to another, still says it; the screen it leads to tells. Read the task if that comes to mislead
   function drawBack() {
@@ -3922,9 +3949,8 @@
     const kept = keptOrder();
     if (!kept) return;
     const named = (slug) => (slug === was ? now : slug);
-    const back = kept.back;
     try {
-      sessionStorage.setItem(ORDER_KEY, JSON.stringify({ order: kept.order.map(named), shown: kept.shown.map(named), back }));
+      sessionStorage.setItem(ORDER_KEY, JSON.stringify({ ...kept, order: kept.order.map(named), shown: kept.shown.map(named), at: kept.at && { ...kept.at, slug: named(kept.at.slug) } }));
     } catch {
       // Without storage, there was none to keep
     }
@@ -5004,7 +5030,10 @@
     if (text === drawn) return;
     drawn = text;
     if (framed) renderFrame();
-    else render();
+    else {
+      render();
+      backToRow();
+    }
     if ($('find').open) drawFind();
   }
 
@@ -5265,6 +5294,7 @@
     $('frame-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
     $('back').hidden = false;
     drawBack();
+    keepAt();
     // A page come back to from the browser's memory has what it drew then; what was kept may have changed since
     addEventListener('pageshow', (e) => { if (e.persisted) drawBack(); });
     try {
@@ -5299,6 +5329,8 @@
   } else {
     $('keys-frame').hidden = $('keys-note-frame').hidden = true;
     $('diff').remove();
+    const kept = keptOrder();
+    if (kept?.at && kept.back === location.pathname + location.search) cameFrom = kept.at;
     // Back on a list, what the one before kept for j and k is over
     forgetOrder();
     $('manage').hidden = false;
