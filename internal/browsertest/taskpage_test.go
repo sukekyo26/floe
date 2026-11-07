@@ -170,7 +170,8 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	const archive = "(() => { const e = document.getElementById('task-archive'); return e.hidden ? 'none' : e.textContent; })()"
 	say("done", archive)
 	b.eval("document.getElementById('task-archive').click()")
-	b.until("archived", "document.getElementById('task-archive').textContent === 'Bring the archive back'")
+	// The words change before the pages are archived: archivingTask holds until they are, and the rows drawn so
+	b.until("archived", "document.getElementById('task-archive').textContent === 'Bring the archive back' && !archivingTask")
 	say("archived", taskPageRows)
 	b.navigate("/tasks?view=archived")
 	b.until("the archive", "document.querySelector('#list > li')")
