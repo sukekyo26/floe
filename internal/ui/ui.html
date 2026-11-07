@@ -3470,9 +3470,12 @@
     // What the store's checkParent would refuse is not offered. The parent as written, one that makes no family too, is changed, not added to
     const ups = task.children.length === 0;
     const adds = !task.parent && hasRow(task);
+    const focused = document.activeElement;
     $('task-up-part').hidden = !ups;
     $('task-parent-add').hidden = Boolean(task.parent);
     $('task-parent-change').hidden = !task.parent;
+    // The focus left on the button that goes, as Escape on the way back leaves it while the page is read again, is not lost with it
+    if ((focused === $('task-parent-add') || focused === $('task-parent-change')) && focused.hidden) partButton(true)?.focus();
     $('task-parent-add').onclick = () => openKin(task, 'parent');
     $('task-parent-change').onclick = () => openKin(task, 'parent');
     $('task-kids-part').hidden = kids.length === 0 && !adds;
