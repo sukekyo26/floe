@@ -170,10 +170,10 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--accent`, `--accent-soft` | The colour that stands out, and its pale ground; the colours of the tone `accent` |
 | `--good`, `--warn`, `--bad`, `--good-soft`, `--warn-soft`, `--bad-soft` | Good, warning and bad, and their pale grounds: the colours of those tones |
 | `--on-fill` | Text on a face filled with `--accent` or a tone's colour, such as a pill |
-| `--<tone>-fill` | A theme's own fill for a tone (`--good-fill`), which `--tone-fill` takes; left out, the tone's `-soft` |
+| `--accent-fill`, `--good-fill`, `--warn-fill`, `--bad-fill`, `--muted-fill` | A theme's own fill for a tone (`--good-fill`), which `--tone-fill` takes; left out, the tone's `-soft` |
 | `--tone`, `--tone-soft`, `--tone-fill` | The colours of the tone of the element they are read in (`data-floe-tone`, [parts.md](parts.md#the-css-layers-and-scope)), from those above; accent's outside a tone. A template marks a tone so too |
 | `--shadow` | A colour for shadows; a box casts one only when its theme sets `--floe-shadow-color` on it ([parts.md](parts.md#themes)) |
-| `--floe-shadow-x`, `-y`, `-blur`, `-spread` | The theme's one shadow, in px or rem (none by default) |
+| `--floe-shadow-x`, `--floe-shadow-y`, `--floe-shadow-blur`, `--floe-shadow-spread` | The theme's one shadow, in px or rem (none by default) |
 | `--radius`, `--radius-small`, `--radius-pill` | How round corners are, one length each: a box's (a panel, a note, code, a quote), a small box's within one (a key, a bar, an image, code in a line), and a pill's (a cell, a tab's title; a cell that wraps rounds no more than floe's `--floe-pill-end`). A box along the edge of another, a gap `p` within it, rounds by `calc(var(--radius) - p)` |
 | `--font`, `--display`, `--mono` | The text's typeface, the headings', and the fixed-width one. Name a face before `monospace` in `--mono`: a page sets no font size, and a browser sizes text in `monospace` alone from 13px |
 | `--code-bg`, `--code-fg`, `--code-prompt` | The ground of code and a terminal, always dark; their text; a terminal's prompt |
@@ -182,7 +182,7 @@ The page's colours and faces are CSS variables that the theme's `palette.css` se
 | `--page-bg` | The whole page's ground, a pattern such as squares too (`--bg` by default) |
 | `--rule` | The `border` of a rule across the page, such as between sections |
 | `--text-width` | The width of a page of one column, which a template sets its column to by `--column-width: var(--text-width)` (as `adr` and `runbook` do), and of a note. Text itself takes the width of the column or the box it is in |
-| `--page-width`・`--page-pad` | The column a page is centred in (`.floe-column`): its width, unless the template sets `--column-width`, and the pad each side of it, inside the column's box |
+| `--page-width`, `--page-pad` | The column a page is centred in (`.floe-column`): its width, unless the template sets `--column-width`, and the pad each side of it, inside the column's box |
 
 floe's base draws the page's ground, colour and face on its root with them (`:root { background: var(--page-bg); color: var(--fg); font-family: var(--font); }`), which `page.css` may set otherwise on `:scope`. A theme of your own may set them too ([parts.md](parts.md#themes)). In print, every ground is kept as the screen draws it.
 
