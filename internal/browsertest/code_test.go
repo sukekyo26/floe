@@ -88,8 +88,9 @@ const measureCode = `(() => {` + codeHelpers + `
     }
   });
   const tabs = lines(parts[3]), a = textAt(tabs[0], 0), w = ch(parts[3]);
-  const steps = [textAt(tabs[1], 1), textAt(tabs[2], 2)].map((x) => ((x - a) / w).toFixed(2)).join(' ');
-  if (steps !== '4.00 8.00') out.add('tabs of ' + steps + ' characters');
+  // Within a tenth of a character: a font's widths round the tab stops.
+  const steps = [textAt(tabs[1], 1), textAt(tabs[2], 2)].map((x) => (x - a) / w);
+  if (Math.abs(steps[0] - 4) > 0.1 || Math.abs(steps[1] - 8) > 0.1) out.add('tabs of ' + steps.map((n) => n.toFixed(2)).join(' ') + ' characters');
   const markedOf = (p) => [...p.querySelectorAll('.mark')].map((e) => e.textContent);
   const marks = JSON.stringify(parts.map(markedOf));
   if (marks !== JSON.stringify([['\t\thttp.Error()\n'], ['\treturn err\n', '}\n'], [lines(parts[2])[1].textContent, 'mid\n'], [], ['let a = 1'], []])) out.add('marks ' + marks);
