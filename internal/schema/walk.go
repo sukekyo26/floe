@@ -11,12 +11,15 @@ import (
 )
 
 // Step is how floe goes one step from a schema to the values under it: the part (its URL and the root of its
-// schema) or the format that draws the value, else the schema of each property by name, and of the items.
+// schema) or the format that draws the value, else the schema of each property by name, of the other keys, and of the
+// items.
 type Step struct {
 	Part, Format string
 	PartRoot     *jsonschema.Schema
 	Props        map[string]*jsonschema.Schema
 	Items        *jsonschema.Schema
+	Rest         *jsonschema.Schema // of the keys of no property, but those a pattern of restIn takes
+	restIn       *jsonschema.Schema
 	closed       []*jsonschema.Schema // those gone through with additionalProperties: false
 }
 
@@ -25,26 +28,42 @@ type Step struct {
 // jsonschema reads them. A schema of additionalProperties that refuses all ({"not": {}}) is not taken.
 func (st Step) Forbids(key string) bool {
 	for _, s := range st.closed {
-		if _, ok := s.Properties[key]; ok {
-			continue
-		}
-		if !slices.ContainsFunc(slices.Collect(maps.Keys(s.PatternProperties)), func(re jsonschema.Regexp) bool {
-			return re.MatchString(key)
-		}) {
+		if _, ok := s.Properties[key]; !ok && !patterned(s, key) {
 			return true
 		}
 	}
 	return false
 }
 
+// patterned reports whether a patternProperties of s takes the key, as jsonschema reads it.
+func patterned(s *jsonschema.Schema, key string) bool {
+	return slices.ContainsFunc(slices.Collect(maps.Keys(s.PatternProperties)), func(re jsonschema.Regexp) bool {
+		return re.MatchString(key)
+	})
+}
+
+// of returns the schema of the key under the step, nil for none: additionalProperties takes what the properties and
+// the patternProperties beside it do not.
+// LIMIT: a key a $ref's properties declare beside an additionalProperties of s takes the $ref's alone, and what the
+// additionalProperties would draw stays as written. Take both if a part comes to need it.
+func (st Step) of(key string) *jsonschema.Schema {
+	if s, ok := st.Props[key]; ok {
+		return s
+	}
+	if st.Rest != nil && !patterned(st.restIn, key) {
+		return st.Rest
+	}
+	return nil
+}
+
 // Follow returns the step of s, looking in this order: one of Formats on s stops there (drawn by floe,
 // whatever $ref s has); a $ref of s to a Part's root stops there (drawn by the part); a $ref of s to the same
 // file or to a Shared schema is followed first, and when the step there is a Part or a format, that is the
 // step of s too (the properties beside the $ref are not taken: the value is drawn whole); else the
-// Properties and Items2020 (Items before 2020-12) of s, together with those of the step the $ref names: a
-// name s declares itself is taken from s, the rest from the $ref. Nothing else is a step (allOf, anyOf,
-// oneOf, additionalProperties, patternProperties, prefixItems, if/then/else, dependencies, ...). A $ref back
-// to a schema it followed ends there.
+// Properties, additionalProperties and Items2020 (Items before 2020-12) of s, together with those of the step the
+// $ref names: a name s declares itself is taken from s, the rest from the $ref. Nothing else is a step (allOf, anyOf,
+// oneOf, patternProperties, prefixItems, if/then/else, dependencies, ...). A $ref back to a schema it followed ends
+// there.
 // LIMIT: what floe draws under allOf and the like, and under the array form of items and additionalItems
 // (2019-09), is refused as unreached, not drawn.
 func (c *Compiled) Follow(s *jsonschema.Schema) Step {
@@ -63,19 +82,19 @@ func (c *Compiled) Follow(s *jsonschema.Schema) Step {
 func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) (Step, []*jsonschema.Schema) {
 	through := make([]*jsonschema.Schema, 1, 2)
 	through[0] = s
-	own := Step{Part: "", Format: "", PartRoot: nil, Props: s.Properties, Items: itemsOf(s), closed: nil}
+	own := Step{Part: "", Format: "", PartRoot: nil, Props: s.Properties, Items: itemsOf(s), Rest: restOf(s), restIn: s, closed: nil}
 	if seen[s] {
-		return Step{Part: "", Format: "", PartRoot: nil, Props: nil, Items: nil, closed: nil}, through
+		return Step{Part: "", Format: "", PartRoot: nil, Props: nil, Items: nil, Rest: nil, restIn: nil, closed: nil}, through
 	}
 	seen[s] = true
 	if f := floeFormat(s); f != "" {
-		return Step{Part: "", Format: f, PartRoot: nil, Props: nil, Items: nil, closed: nil}, through
+		return Step{Part: "", Format: f, PartRoot: nil, Props: nil, Items: nil, Rest: nil, restIn: nil, closed: nil}, through
 	}
 	if s.Ref == nil {
 		return own, through
 	}
 	if part, ok := c.partRoot(s.Ref); ok {
-		return Step{Part: part, Format: "", PartRoot: s.Ref, Props: nil, Items: nil, closed: nil}, through
+		return Step{Part: part, Format: "", PartRoot: s.Ref, Props: nil, Items: nil, Rest: nil, restIn: nil, closed: nil}, through
 	}
 	if !c.followed(s, s.Ref) {
 		return own, through
@@ -92,6 +111,9 @@ func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) 
 	maps.Copy(props, s.Properties)
 	if own.Items == nil {
 		own.Items = st.Items
+	}
+	if own.Rest == nil {
+		own.Rest, own.restIn = st.Rest, st.restIn
 	}
 	own.Props = props
 	return own, through
@@ -149,7 +171,7 @@ func (w *walk) under(st Step, v any, at []string, inPart bool) (any, error) {
 			ready[k] = nil
 		}
 		for _, k := range slices.Sorted(maps.Keys(v)) {
-			if ready[k], err = w.in(st.Props[k], v[k], at, k, inPart); err != nil {
+			if ready[k], err = w.in(st.of(k), v[k], at, k, inPart); err != nil {
 				return nil, err
 			}
 		}
@@ -183,6 +205,12 @@ func itemsOf(s *jsonschema.Schema) *jsonschema.Schema {
 		return one
 	}
 	return nil
+}
+
+// restOf returns the schema of the additionalProperties of s, nil for none or for true or false.
+func restOf(s *jsonschema.Schema) *jsonschema.Schema {
+	rest, _ := s.AdditionalProperties.(*jsonschema.Schema)
+	return rest
 }
 
 // floeFormat returns the name of one of Formats s has, "" for none.
@@ -225,8 +253,8 @@ func (r reached) stops() bool {
 	return len(r.atPart) > 0 || len(r.atFormat) > 0
 }
 
-// followFrom repeats Follow from starts, breadth first, into the schemas of the properties and items of
-// each step.
+// followFrom repeats Follow from starts, breadth first, into the schemas of the properties, the other keys and the
+// items of each step.
 func (c *Compiled) followFrom(starts ...*jsonschema.Schema) reached {
 	r := reached{
 		passed: map[*jsonschema.Schema]bool{}, atPart: map[*jsonschema.Schema]bool{},
@@ -258,6 +286,9 @@ func (c *Compiled) followFrom(starts ...*jsonschema.Schema) reached {
 		}
 		if st.Items != nil {
 			queue = append(queue, st.Items)
+		}
+		if st.Rest != nil {
+			queue = append(queue, st.Rest)
 		}
 	}
 	return r
@@ -337,8 +368,8 @@ func (w *walker) value(from *jsonschema.Schema, v reflect.Value) {
 // Forbidding returns the first of steps, a path of keys from the root of c, that a schema on the way forbids
 // (Step.Forbids), and false for none. A list on the way is gone through by its items, the step kept, as a
 // check's for is; a part's value from its schema's root. Where the steps lead to what Follow does not know
-// (a format, a schema of neither the key nor items, one met again in going through items), the rest is not
-// known to be forbidden, nor is a key declared where items are too, as the value may be a list.
+// (a format, a schema of neither the key nor items, one of additionalProperties, one met again in going through
+// items), the rest is not known to be forbidden, nor is a key declared where items are too, as the value may be a list.
 func (c *Compiled) Forbidding(steps []string) (string, bool) {
 	s := c.Root
 	for _, key := range steps {
@@ -363,6 +394,9 @@ func (c *Compiled) Forbidding(steps []string) (string, bool) {
 			case declared:
 				s = next
 				break step
+			case st.Rest != nil:
+				// Undeclared where a value of keys takes any: known only by the value.
+				return "", false
 			case st.Items != nil:
 				s = st.Items
 			case st.Forbids(key):

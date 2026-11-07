@@ -108,7 +108,18 @@ func (c *Compiled) checkTemplate() error {
 		found = append(found, c.mistake(c.Root, "schema_root_drawn", by))
 	}
 	found = append(found, c.sharedKeys()...)
+	found = append(found, c.rootRest()...)
 	return found.Sorted().Err()
+}
+
+// rootRest refuses an additionalProperties of the root that holds parts or formats: Walk is given the keys floe reads
+// itself (doc.Shared) with the rest of the data, and would draw them.
+func (c *Compiled) rootRest() usererr.List {
+	rest := c.Follow(c.Root).Rest
+	if rest == nil || !c.followFrom(rest).stops() {
+		return nil
+	}
+	return usererr.List{c.mistake(rest, "schema_root_rest")}
 }
 
 // checkOwn returns the mistakes checkNode tells of each schema of the file compiled, and of each $ref, through

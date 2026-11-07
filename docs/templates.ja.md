@@ -112,7 +112,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ## テンプレートの中の部品
 
-部品はデータの項目を描きます。`floe part list` が並べ、`floe part show <名前>` が取るものを出します。schema は `properties` か `items` の下で、`$ref` で名指します。
+部品はデータの項目を描きます。`floe part list` が並べ、`floe part show <名前>` が取るものを出します。schema は `properties`・`additionalProperties`・`items` の下で、`$ref` で名指します。
 
 ```json
 "findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }
@@ -189,8 +189,8 @@ floe の土台は、ページの根にこれらで地・色・書体を描きま
 データファイルの項目の [JSON Schema](https://json-schema.org/)（2020-12）です。書き損じた鍵を断るように `"additionalProperties": false` を書きます。`floe template new` が作る `schema.json` には無いので、自分で足します。
 
 - `lang`・`template`・`theme`・`title` は floe が読むので、宣言せず、必須にもしません。
-- floe に文の描き方を伝える `format` は `markdown`・`html`・`image` です。floe が辿る `properties` か `items` の下で宣言します。
-- `$ref` は、部品か共有の schema の全体（`floe:///parts/table.json`）を `properties` か `items` の下で、または自分のファイルの中の場所（`#/$defs/row`）を名指します。floe の外（`file://`・`https://`）や部品の中を指すものは断ります。schema の根には `$id` を書きません。
+- floe に文の描き方を伝える `format` は `markdown`・`html`・`image` です。floe が辿る `properties`・`additionalProperties`・`items` の下で宣言します。根の `additionalProperties` には置けません（floe が自分で読む `lang` や `title` まで描くことになるため）。
+- `$ref` は、部品か共有の schema の全体（`floe:///parts/table.json`）を `properties`・`additionalProperties`・`items` の下で、または自分のファイルの中の場所（`#/$defs/row`）を名指します。floe の外（`file://`・`https://`）や部品の中を指すものは断ります。schema の根には `$id` を書きません。
 
 `"format": "markdown"` の項目は Markdown の文で、`{{.Data.text}}` が HTML で描きます。`{{markdown}}` と同じく、テンプレート自身の Markdown の包み（`<div data-floe-markdown>`）に描きます。floe の base が、text と同じくブロックの間を `--floe-room` にし、見出しを text と同じ大きさ（1.2em・1.1em）にします。text の外枠と違い、自分の `page.css` とテーマの `base.css` は中に届き、整えられます。自分の見出しは、包みの外の形（`header h1`・`section > h2`）で指し、要素の名前だけ（`h2 { … }`）では書きません。書き手の見出しにも当たるためです。部品の箱（`note`）の中に置くと、間は部品の決めた間でなく同じく `--floe-room` になり、`page.css` は部品の箱で止まります。
 
