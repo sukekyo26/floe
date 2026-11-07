@@ -268,9 +268,11 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
 :scope .file { color: var(--floe-code-head-faint); }
 /* The title and the file fold under each other, the language staying at the right: it has a shape of its own, which a
-   row that folds may not draw by place */
+   row that folds may not draw by place.
+   LIMIT: .names, .file, .lang, .lines, .mark and .numbered reach a part that takes this look too, its text of those names
+   drawn so unsaid; name them for code alone if one comes to use them for its own. */
 :scope .names { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; min-width: 0; }
-:scope .title { font-family: var(--font); font-size: var(--floe-text-aside); font-weight: 700; }
+:scope .names > .title { font-family: var(--font); font-size: var(--floe-text-aside); font-weight: 700; }
 :scope .lang {
   flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
   background: var(--code-prompt); color: var(--code-bg);
@@ -287,11 +289,12 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @media print { :scope pre > * { width: auto; } }
 /* Lines each an element in one code of class lines (code's and diff's): each paints its ground to the end of the longest
    line, so the room moves from the code onto each. An element beside them is a hidden word, left out of a selection
-   as it is of what the button copies */
+   as it is of what the button copies.
+   LIMIT: Safari takes only -webkit-user-select, and the browser tests run in Chrome alone, so nothing measures it there. */
 :scope pre > .lines { padding-inline: 0; }
 :scope .lines { --floe-code-gutter: 0px; }
 :scope .lines > :not(.floe-hidden) { display: block; padding-inline: calc(var(--floe-code-pad) + var(--floe-code-gutter)) var(--floe-code-room); }
-:scope .lines > .floe-hidden { user-select: none; }
+:scope .lines > .floe-hidden { -webkit-user-select: none; user-select: none; }
 /* A border, which no setting of print or forced colours takes off as it does a ground; its width comes off the room, so
    that a marked line's text stays in line */
 :scope .lines > .mark {

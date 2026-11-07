@@ -273,10 +273,6 @@ type codeText struct {
 	Numbered       bool
 }
 
-// maxLine is the largest number of a line: a CSS counter stops near 2^31, where its lines would all show one number.
-// The part code's schema says the same.
-const maxLine = 1_000_000_000
-
 // newlines makes CR and CRLF LF before the lines are cut, as HTML does to what it reads: else what a CR alone breaks
 // would draw as two lines under one number.
 var newlines = strings.NewReplacer("\r\n", "\n", "\r", "\n")
@@ -286,6 +282,8 @@ var newlines = strings.NewReplacer("\r\n", "\n", "\r", "\n")
 // LIMIT: a number no line has marks nothing, and a start changed alone moves what mark names: the page shows both. Tell
 // them apart here, which counts the lines, if the page comes not to be looked at.
 // LIMIT: the mistakes are at the part's value, not at the number: codeOf knows not where in it the values are.
+// LIMIT: the range of a number is the schema's, as the part code's is. A part of one's own with no such schema may number
+// from 0, or past a CSS counter's end near 2^31, where its lines would all show one number: the page shows it.
 func codeOf(text string, start, mark any) (codeText, error) {
 	c := codeText{Lines: nil, Before: 0, Digits: 0, Numbered: false}
 	first := 1
@@ -325,16 +323,15 @@ func codeOf(text string, start, mark any) (codeText, error) {
 	return c, nil
 }
 
-// lineNumber reads v as the number of a line, which the part's schema takes: a whole number from 1 to maxLine.
+// lineNumber reads v as the number of a line: a whole number, of the kinds YAML reads one as.
 func lineNumber(key string, v any) (int, error) {
-	n, err := float("code's "+key, v)
-	if err != nil {
-		return 0, err
+	if i, ok := whole(v); ok {
+		return int(i.Int64()), nil
 	}
-	if n < 1 || n > maxLine || n != math.Trunc(n) {
-		return 0, usererr.New("kit_code_line", key, fmt.Sprint(v))
+	if f, ok := v.(float64); ok && f == math.Trunc(f) {
+		return int(f), nil
 	}
-	return int(n), nil
+	return 0, usererr.New("kit_code_line", key, fmt.Sprint(v))
 }
 
 // hunkHead is the start of a hunk's head, @@ -a,b +c,d @@, b and d its lengths, 1 when left out.

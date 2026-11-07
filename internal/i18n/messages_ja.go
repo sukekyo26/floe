@@ -80,7 +80,7 @@ var messagesJA = map[string]string{
 	"kit_stat_item":              "部品 stats の項目はキーと値で書きます（label、value など）。%d 番目はそうなっていません",
 	"kit_bar_item":               "%s は、キーと値で書いた項目（label・value・of・tone）を取ります。%d 番目の項目が、キーと値で書かれていません",
 	"kit_bar_of":                 "%s は 0 より大きい数を取ります。%s は 0 以下です",
-	"kit_code_line":              "code の %s は 1 から 1,000,000,000 までの整数を取ります。%s は違います",
+	"kit_code_line":              "code の %s は整数を取ります。%s は違います",
 	"kit_code_mark":              "code の mark は行の番号の並びを取ります。%s は違います",
 	"kit_chart_length":           "chart：系列 %d %q の値は %d 個で、x の名前は %d 個です。名前ごとに値を書いてください",
 	"kit_chart_shape":            "chart は kind（line か bar）・x（名前）・series（name と、名前ごとの数の values）を取ります。%s がその形ではありません",

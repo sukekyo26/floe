@@ -69,7 +69,7 @@ It has the functions floe's parts draw with too. floe's parts show them in their
 
 ### `code`
 
-`{{$c := code .text .start .mark}}` cuts text into lines, as the part `code` does: `$c.Lines`, each with `.Text` (its line break kept) and `.Mark`, whether `.mark`, a list of line numbers or nothing, names it. `.start`, a line number or nothing, is the number of the first line: written, `$c.Numbered` is true, and `$c.Before` is the count before the first line and `$c.Digits` the digits of the last line's number. A line number is a whole number from 1 to 1,000,000,000, and anything else is refused. A number no line has marks nothing.
+`{{$c := code .text .start .mark}}` cuts text into lines, as the part `code` does: `$c.Lines`, each with `.Text` (its line break kept) and `.Mark`, whether `.mark`, a list of line numbers or nothing, names it. `.start`, a line number or nothing, is the number of the first line: written, `$c.Numbered` is true, and `$c.Before` is the count before the first line and `$c.Digits` the digits of the last line's number. A line number is a whole number, and anything else is refused; its range is for your schema to set, as the part `code`'s does (from 1 to 1,000,000,000). A number no line has marks nothing.
 
 ### `bars`
 

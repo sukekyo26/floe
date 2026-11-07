@@ -223,11 +223,9 @@ func plain(n *html.Node, b *strings.Builder) {
 	}
 }
 
-// preLines cuts what is in a pre into lines, its spaces kept: code's are told by its newlines, the lines of diff and
-// terminal by
-// their elements (the code family writes each line as a child of its pre, or of the one code in it). Words only a
-// screen reader
-// reads go at the head of the line after them.
+// preLines cuts what is in a pre into lines, its spaces kept: those of code, diff and terminal by their elements (the
+// code family writes each line as a child of its pre, or of the one code in it), a plain pre's by its newlines. Words
+// only a screen reader reads go at the head of the line after them.
 // LIMIT: a pre that colours words within a line by elements is cut at them. floe's parts draw none.
 // LIMIT: blank lines at the end of a line's element or of a pre are not lines, and adding them tells nothing; code's
 // are lines, each its own element.

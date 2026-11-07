@@ -287,33 +287,32 @@ func TestCodeOf(t *testing.T) {
 	}
 }
 
-// What a part of one's own hands code is refused whole: floe's part has its schema say so first.
+// What a part of one's own hands code is refused when it is no whole number or no list; the range is its schema's.
 func TestCodeOfRefuses(t *testing.T) {
 	t.Parallel()
 
-	line := func(key, value string) string {
-		return "code's " + key + " takes a whole number from 1 to 1,000,000,000, not " + value
-	}
+	line := func(key, value string) string { return "code's " + key + " takes a whole number, not " + value }
 	for _, tt := range []struct {
 		start, mark any
 		want        string
 	}{
-		{0, nil, line("start", "0")},
-		{-1, nil, line("start", "-1")},
 		{12.5, nil, line("start", "12.5")},
-		{2_000_000_000, nil, line("start", "2000000000")},
-		{"a", nil, `code's start takes a number, not "a"`},
+		{"a", nil, line("start", "a")},
 		{nil, 2, "code's mark takes a list of line numbers, not 2"},
 		{nil, "2", "code's mark takes a list of line numbers, not 2"},
 		{nil, []any{1.5}, line("mark", "1.5")},
-		{nil, []any{0}, line("mark", "0")},
-		{nil, []any{2_000_000_000}, line("mark", "2000000000")},
-		{nil, []any{"1"}, `code's mark takes a number, not "1"`},
-		{nil, []any{0, 2.5}, line("mark", "0") + "\n" + line("mark", "2.5")},
+		{nil, []any{"1"}, line("mark", "1")},
+		{nil, []any{nil}, line("mark", "<nil>")},
+		{nil, []any{1.5, "a"}, line("mark", "1.5") + "\n" + line("mark", "a")},
 	} {
 		_, err := codeOf("a\n", tt.start, tt.mark)
 		if got := strings.TrimSpace(usererr.Tell(i18n.EnglishCatalog(), err).Render("")); got != tt.want {
 			t.Errorf("start %v, mark %v: told %q, want %q", tt.start, tt.mark, got, tt.want)
+		}
+	}
+	for _, start := range []any{0, -1, 2_000_000_000} {
+		if _, err := codeOf("a\n", start, []any{0, 2_000_000_000}); err != nil {
+			t.Errorf("start %v: %v, want the range left to the schema", start, err)
 		}
 	}
 }
