@@ -3951,7 +3951,7 @@
     cameFrom = null;
     if (!at) return;
     if (TASK_LIST) {
-      [...$('pin-list').children].find((pin) => pin.getAttribute('href') === pageHref({ slug: at.slug }))?.focus();
+      [...$('pin-list').children].find((chip) => chip.dataset.slug === at.slug)?.querySelector('.pin').focus();
       return;
     }
     const li = focusRow(at.file ? `page:${openKey(at.slug, at.file)}` : `entry:${at.slug}`);
