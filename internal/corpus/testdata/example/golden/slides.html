@@ -369,7 +369,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope { padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > li.done::before { content: "✓"; content: "✓" / ""; }
 :scope > li > strong { line-height: 1.6; }
-:scope > li > :not(strong) { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+/* LIMIT: a step's number written in a tag (after 1) stays as written when the steps move, as the rings are numbered
+   anew; it is the writer's words. Name steps if that comes to trouble someone */
+:scope > li > :not(strong, [data-floe-look="tags"]) { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
 }
 }
 </style>

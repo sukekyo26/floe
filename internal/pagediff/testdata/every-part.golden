@@ -39,11 +39,13 @@
   [tr] Day | What
   [tr] Saturday | copy the pages
   [li] Done: Freeze edits on the old wiki
+  [div] PR #428 merged
   [p] On Friday evening.
   [tr] Day | Pages
   [tr] Friday | 1,840
   [p] Nothing is edited after.
   [li] Copy the pages and check the links
+  [div] PR #431 after #428 linkcheck waiting
   [p] Broken links first: the report.
   [li] Point the team's bookmarks at the new host
   [li] Close the old server
