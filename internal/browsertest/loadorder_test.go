@@ -11,17 +11,18 @@ import (
 func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
-	for _, slug := range []string{"a", "b", "c", "d", "e"} {
+	for _, slug := range []string{"a", "b", "c", "d", "e", "f", "g", "h"} {
 		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
 	}
 	more := filepath.Dir(s.write(t, "more/m.html", "<title>m</title>"))
+	two := filepath.Dir(s.write(t, "two/t.html", "<title>t</title>"))
 	b.navigate("/")
-	b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length === 5")
+	b.until("the rows", "document.querySelectorAll('#list li[data-slug]').length === 8")
 	got := b.eval(`(async () => {
 		const real = window.fetch;
 		// The next read of the list (or of a write) waits for its release: served tells the server answered, fail answers 500
 		const marks = [];
-		let hang = false, slowMarks = false, limited = false, gets = 0, holdRead = null, holdWrite = null, holdFolder = null;
+		let pagesLimited = null, hang = false, slowMarks = false, limited = false, gets = 0, holdRead = null, holdWrite = null, holdFolder = null;
 		const hold = (fail = false) => {
 			const h = { fail };
 			h.held = new Promise((r) => { h.release = r; });
@@ -44,10 +45,11 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 					return res.then((r) => h.held.then(() => r));
 				}
 			}
+			if (String(u).includes('/pages?')) pagesLimited = Boolean(i?.signal);
 			if (String(u).includes('/pages?') && holdFolder) {
 				const h = holdFolder;
 				holdFolder = null;
-				const res = real(u, i);
+				const res = h.fail ? Promise.resolve(new Response('', { status: 404 })) : real(u, i);
 				res.then(h.serve);
 				return res.then((r) => h.held.then(() => r));
 			}
@@ -162,10 +164,11 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		READ_MS = 300;
 		hang = true;
 		const cut = await Promise.race([load().then(() => 'returned'), new Promise((r) => setTimeout(() => r('stuck'), 3000))]);
+		const said = document.getElementById('error').textContent === t('ui_load_slow', READ_MS / 1000, POLL_MS / 1000);
 		READ_MS = 10000;
 		const failed = !document.getElementById('error').hidden;
 		const next = await Promise.race([load().then(() => 'returned'), new Promise((r) => setTimeout(() => r('stuck'), 3000))]);
-		out.push('cut off: ' + cut + ', error: ' + shownBefore + ' then ' + failed + ', the next: ' + next);
+		out.push('cut off: ' + cut + ', error: ' + shownBefore + ' then ' + failed + ', the next: ' + next + ', said why: ' + said);
 
 		// A page that keeps telling its read, each mark slow enough that the next is always waiting: the marks wait for a load reading,
 		// which draws
@@ -190,6 +193,43 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		await noMarks();
 		out.push('marks sent: ' + marks.join());
 
+		// A write sent by what runs on another write's answer, before the load that waits for that answer goes on: the load waits for it too
+		h = holdWrite = hold();
+		const wa = api('/api/artifacts/f', archive);
+		const hb = hold();
+		let wb;
+		noWrites().then(() => {
+			holdWrite = hb;
+			wb = api('/api/artifacts/g', archive);
+		});
+		const l11 = load(true);
+		h.release();
+		await wa;
+		await tick();
+		hb.release();
+		await wb;
+		await l11;
+		out.push('g there: ' + has('g'));
+
+		// A folder's read in the first round, a write meanwhile, and a press in the second round: nothing of the first round is kept
+		const added2 = await api('/api/artifacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: ` + js(two) + ` }) });
+		const { slug: slug2 } = await added2.json();
+		opened.add(slug2);
+		await load();
+		h = holdFolder = hold(true);
+		const l12 = load(true);
+		await served(h);
+		await api('/api/artifacts/h', archive);
+		pressedAt = performance.now();
+		h.release();
+		await l12;
+		pressedAt = -Infinity;
+		out.push('held in the second round, folder open: ' + opened.has(slug2));
+
+		// A read outside a load (a folder opened by hand, versions, a diff) has no time limit
+		await readListing(slug2, '');
+		out.push('a read outside a load limited: ' + pagesLimited);
+
 		window.fetch = real;
 		return out.join('|');
 	})()`)
@@ -203,8 +243,11 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"joined, e there: false",
 		"thrown: broken draw, the next: went on",
 		"read with a time limit: true",
-		"cut off: returned, error: false then true, the next: returned",
+		"cut off: returned, error: false then true, the next: returned, said why: true",
 		"under read marks: drawn",
 		`marks sent: {"n":2,"at":"x"}`,
+		"g there: false",
+		"held in the second round, folder open: true",
+		"a read outside a load limited: false",
 	}, "|"))
 }
