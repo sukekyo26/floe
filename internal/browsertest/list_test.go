@@ -738,6 +738,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.eval("[...document.querySelectorAll('#manage > .side-show')].filter((e) => e.getClientRects().length).map((e) => e.id + ':' + (e.title === e.getAttribute('aria-label'))).join(' ') + ' ' + document.activeElement.id + ' ' + Math.round(document.getElementById('reader').getBoundingClientRect().left)"))
 	// Kept across a reload.
 	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")
 	out = append(out, b.eval("document.getElementById('manage').className"))
 	b.eval("document.getElementById('list-show').click()")
 	out = append(out, b.eval("document.activeElement.id + ' ' + document.getElementById('manage').className + ' ' + document.getElementById('shelf-what').parentElement.className"))
@@ -1256,8 +1257,9 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("a2 again", "picked?.slug === 'a2'")
 	b.click(x, y)
 	b.until("whole", "location.pathname === '/a/a2/'")
-	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"))
+	// The URL is the new page's before its script has kept where it is; the frame's src comes after that
 	b.until("its bar", "document.getElementById('frame').hasAttribute('src')")
+	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"))
 	b.pressKey("j")
 	b.until("on through the list", "location.pathname === '/a/a1/'")
 

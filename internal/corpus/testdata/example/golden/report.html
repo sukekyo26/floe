@@ -3,7 +3,7 @@
 <title>Moving the team wiki</title>
 <style>
 @layer floe.palette, floe.base, floe.theme, floe.looks, floe.marks, floe.page, floe.parts;
-@layer floe.looks.boxes, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth1, floe.parts.depth0;
+@layer floe.looks.boxes, floe.looks.depth2, floe.looks.depth1, floe.looks.depth0, floe.parts.boxes, floe.parts.depth2, floe.parts.depth1, floe.parts.depth0;
 @layer floe.parts.boxes { :is(ul, ol, menu)[data-floe-part] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.looks.boxes { :is(ul, ol, menu)[data-floe-look] { display: grid; list-style: none; padding: 0; gap: 0; } }
 @layer floe.base {
@@ -220,6 +220,20 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
+   --floe-pill-wrap: normal; one that wraps is a label of round corners (base.css's --floe-pill-end) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: var(--floe-text-small); font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);
+  background: var(--tone-soft); color: var(--tone);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
    fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
    --floe-pill-wrap: normal; one that wraps is a label of round corners (base.css's --floe-pill-end) */
@@ -516,11 +530,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope > div { --entries-row-gap: 0.2rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--entries-row-gap) 0.7rem; }
 :scope dt { min-width: 0; font-weight: 700; }
 :scope dd { margin: 0; }
-/* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
-   them, which stays as large as in a table's cell */
-:scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--muted); }
-:scope .tags > span { min-width: 0; }
-:scope .tags code { font-size: 0.86rem; }
 :scope .text, :scope .parts { flex: 1 0 100%; min-width: 0; }
 :scope .text { display: grid; grid-template-columns: minmax(0, 1fr); }
 :scope .text, :scope .parts > div { line-height: 1.65; }
@@ -528,8 +537,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    the parts draw outside their boxes reaches. On a div of its own: a row that wraps draws its dd's alike.
    LIMIT: parts of blank text alone draw an empty row with this room, plain on the page; no check is added for it */
 :scope .parts > div { padding-block: calc(var(--floe-room) - var(--entries-row-gap)) calc(var(--floe-room) - var(--floe-row-pad)); }
-/* A long pill wraps rather than overflow the panel */
-:scope .tags { --floe-pill-wrap: normal; }
 }
 }
 </style>
@@ -646,7 +653,19 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope { padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > li.done::before { content: "✓"; content: "✓" / ""; }
 :scope > li > strong { line-height: 1.6; }
-:scope > li > :not(strong) { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+:scope > li > [data-floe-text] { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="tags"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Short values in a row, spaced, not parted by a character, which a wrapped line would begin with. The words are
+   smaller, not the code in them, which stays as large as in a table's cell. A long pill wraps rather than overflow: set
+   on each value, as base.css sets it back on what a part's box holds, the values themselves when a part takes the look */
+:scope { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--on-face, var(--muted)); }
+:scope > span { min-width: 0; --floe-pill-wrap: normal; }
+:scope code { font-size: 0.86rem; }
 }
 }
 </style>
@@ -695,6 +714,14 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
 :scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 }
@@ -1080,9 +1107,9 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 <section id="section.2">
 <h2 id="who-does-what">Who does what</h2>
 <dl data-floe-part="entries">
-<div><dt>Copy</dt><dd class="tags"><span>Saturday</span><span><span data-floe-tone="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><div data-floe-text=""><p>Copies the pages and keeps a list of what failed.</p></div></dd></div>
-<div><dt>Links</dt><dd class="tags"><span>Sunday</span><span><span data-floe-tone="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><div data-floe-text=""><p>Runs the link check and fixes what it finds.</p></div></dd></div>
-<div><dt>Bookmarks</dt><dd class="tags"><span>Monday morning</span></dd><dd class="text"><div data-floe-text=""><p>Sends the new address to the team.</p></div></dd></div>
+<div><dt>Copy</dt><dd data-floe-look="tags"><span>Saturday</span><span><span data-floe-tone="good" data-floe-part="cell">ready</span></span></dd><dd class="text"><div data-floe-text=""><p>Copies the pages and keeps a list of what failed.</p></div></dd></div>
+<div><dt>Links</dt><dd data-floe-look="tags"><span>Sunday</span><span><span data-floe-tone="warn" data-floe-part="cell">waits on the copy</span></span></dd><dd class="text"><div data-floe-text=""><p>Runs the link check and fixes what it finds.</p></div></dd></div>
+<div><dt>Bookmarks</dt><dd data-floe-look="tags"><span>Monday morning</span></dd><dd class="text"><div data-floe-text=""><p>Sends the new address to the team.</p></div></dd></div>
 </dl>
 </section>
 <section id="section.3">

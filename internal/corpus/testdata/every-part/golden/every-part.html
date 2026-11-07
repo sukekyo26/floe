@@ -1031,11 +1031,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope > div { --entries-row-gap: 0.2rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--entries-row-gap) 0.7rem; }
 :scope dt { min-width: 0; font-weight: 700; }
 :scope dd { margin: 0; }
-/* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
-   them, which stays as large as in a table's cell */
-:scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--muted); }
-:scope .tags > span { min-width: 0; }
-:scope .tags code { font-size: 0.86rem; }
 :scope .text, :scope .parts { flex: 1 0 100%; min-width: 0; }
 :scope .text { display: grid; grid-template-columns: minmax(0, 1fr); }
 :scope .text, :scope .parts > div { line-height: 1.65; }
@@ -1043,8 +1038,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    the parts draw outside their boxes reaches. On a div of its own: a row that wraps draws its dd's alike.
    LIMIT: parts of blank text alone draw an empty row with this room, plain on the page; no check is added for it */
 :scope .parts > div { padding-block: calc(var(--floe-room) - var(--entries-row-gap)) calc(var(--floe-room) - var(--floe-row-pad)); }
-/* A long pill wraps rather than overflow the panel */
-:scope .tags { --floe-pill-wrap: normal; }
 }
 }
 </style>
@@ -1057,11 +1050,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope > div { --entries-row-gap: 0.2rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--entries-row-gap) 0.7rem; }
 :scope dt { min-width: 0; font-weight: 700; }
 :scope dd { margin: 0; }
-/* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
-   them, which stays as large as in a table's cell */
-:scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--muted); }
-:scope .tags > span { min-width: 0; }
-:scope .tags code { font-size: 0.86rem; }
 :scope .text, :scope .parts { flex: 1 0 100%; min-width: 0; }
 :scope .text { display: grid; grid-template-columns: minmax(0, 1fr); }
 :scope .text, :scope .parts > div { line-height: 1.65; }
@@ -1069,8 +1057,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    the parts draw outside their boxes reaches. On a div of its own: a row that wraps draws its dd's alike.
    LIMIT: parts of blank text alone draw an empty row with this room, plain on the page; no check is added for it */
 :scope .parts > div { padding-block: calc(var(--floe-room) - var(--entries-row-gap)) calc(var(--floe-room) - var(--floe-row-pad)); }
-/* A long pill wraps rather than overflow the panel */
-:scope .tags { --floe-pill-wrap: normal; }
 }
 }
 </style>
@@ -1343,7 +1329,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope { padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > li.done::before { content: "✓"; content: "✓" / ""; }
 :scope > li > strong { line-height: 1.6; }
-:scope > li > :not(strong) { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+:scope > li > [data-floe-text] { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
 }
 }
 </style>
@@ -1385,6 +1371,30 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   :scope > label { flex-basis: 100%; padding-inline: 0; color: var(--tabs-print); }
   :scope > div { display: grid; order: 0; }
 }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="tags"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Short values in a row, spaced, not parted by a character, which a wrapped line would begin with. The words are
+   smaller, not the code in them, which stays as large as in a table's cell. A long pill wraps rather than overflow: set
+   on each value, as base.css sets it back on what a part's box holds, the values themselves when a part takes the look */
+:scope { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--on-face, var(--muted)); }
+:scope > span { min-width: 0; --floe-pill-wrap: normal; }
+:scope code { font-size: 0.86rem; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth3 {
+@scope ([data-floe-look~="tags"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Short values in a row, spaced, not parted by a character, which a wrapped line would begin with. The words are
+   smaller, not the code in them, which stays as large as in a table's cell. A long pill wraps rather than overflow: set
+   on each value, as base.css sets it back on what a part's box holds, the values themselves when a part takes the look */
+:scope { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--on-face, var(--muted)); }
+:scope > span { min-width: 0; --floe-pill-wrap: normal; }
+:scope code { font-size: 0.86rem; }
 }
 }
 </style>
@@ -1928,7 +1938,7 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 </table></div></div>
 <!-- raw HTML omitted -->
 <ol data-floe-part="steps">
-<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong><span class="floe-hidden">Done: </span>Freeze edits on the old wiki</strong><div data-floe-text=""><p>On <strong>Friday evening</strong>.</p>
+<li class="done" data-floe-mark="solid" data-floe-tone="good"><strong><span class="floe-hidden">Done: </span>Freeze edits on the old wiki</strong><div data-floe-look="tags"><span><a href="https://example.com/428">PR #428</a></span><span><span data-floe-tone="good" data-floe-part="cell">merged</span></span></div><div data-floe-text=""><p>On <strong>Friday evening</strong>.</p>
 <div data-floe-part="table"><table>
 <thead>
 <tr>
@@ -1944,7 +1954,7 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 </tbody>
 </table></div>
 <p>Nothing is edited after.</p></div></li>
-<li class="doing" data-floe-mark="ring" aria-current="step"><strong>Copy the pages and check the links</strong><div data-floe-text=""><blockquote>
+<li class="doing" data-floe-mark="ring" aria-current="step"><strong>Copy the pages and check the links</strong><div data-floe-look="tags"><span><a href="https://example.com/431">PR #431</a></span><span>after #428</span><span><code>linkcheck</code></span><span><span data-floe-part="cell">waiting</span></span></div><div data-floe-text=""><blockquote>
 <p>Broken links first: <a href="https://example.com/report">the report</a>.</p>
 </blockquote></div></li>
 <li class="todo"><strong>Point the team&#39;s bookmarks at the new host</strong></li>
@@ -2640,13 +2650,13 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 </tbody>
 </table></div>
 <dl data-floe-part="entries">
-<div><dt><code>export</code></dt><dd class="tags"><span>Runs nightly</span><span><code>wiki.conf</code></span><span><span data-floe-part="cell">on track</span></span><span><span data-floe-tone="good" data-floe-part="cell">done</span></span></dd><dd class="text"><div data-floe-text=""><p>Writes every page as Markdown, with its history, into <code>pages/</code>.</p>
+<div><dt><code>export</code></dt><dd data-floe-look="tags"><span>Runs nightly</span><span><code>wiki.conf</code></span><span><span data-floe-part="cell">on track</span></span><span><span data-floe-tone="good" data-floe-part="cell">done</span></span></dd><dd class="text"><div data-floe-text=""><p>Writes every page as Markdown, with its history, into <code>pages/</code>.</p>
 <h4 id="left-out">Left out</h4>
 <ul>
 <li>Pages under <strong>drafts</strong> are left out</li>
 <li>Images go to <code>pages/images/</code></li>
 </ul></div></dd></div>
-<div><dt>Search index</dt><dd class="tags"><span><span data-floe-tone="warn" data-floe-part="cell">by hand</span></span><span><span data-floe-tone="bad" data-floe-part="cell">blocked</span></span><span><span data-floe-tone="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><div data-floe-text=""><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p></div></dd></div>
+<div><dt>Search index</dt><dd data-floe-look="tags"><span><span data-floe-tone="warn" data-floe-part="cell">by hand</span></span><span><span data-floe-tone="bad" data-floe-part="cell">blocked</span></span><span><span data-floe-tone="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><div data-floe-text=""><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p></div></dd></div>
 <div><dt>Old links</dt></div>
 <div><dt>A step with its command</dt><dd class="text"><div data-floe-text=""><p>Run it from the wiki&#39;s folder.</p></div></dd><dd class="parts"><div><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="names"><span class="file">wiki.conf</span></span><span class="lang">ini</span></figcaption><pre><code class="lines"><span data-floe-copy="">mode = read-only</span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
@@ -3090,7 +3100,7 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><dl data-floe-part="entries">
-<div><dt>Copied</dt><dd class="tags"><span>412 pages</span></dd><dd class="text"><div data-floe-text=""><p>Every page but the drafts.</p></div></dd></div>
+<div><dt>Copied</dt><dd data-floe-look="tags"><span>412 pages</span></dd><dd class="text"><div data-floe-text=""><p>Every page but the drafts.</p></div></dd></div>
 </dl><figure data-floe-part="image"><script>(function zoomable({ words, frame: frameClass, tools: toolsClass }) {
   const MAX = 4;
   const lang = (document.documentElement.lang || 'en').toLowerCase().replace(/_/g, '-');
@@ -3568,7 +3578,7 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><dl data-floe-part="entries">
-<div><dt>New window</dt><dd class="tags"><span>PowerShell 7</span></dd><dd class="text"><div data-floe-text=""><p>The variable holds in that window alone.</p></div></dd></div>
+<div><dt>New window</dt><dd data-floe-look="tags"><span>PowerShell 7</span></dd><dd class="text"><div data-floe-text=""><p>The variable holds in that window alone.</p></div></dd></div>
 </dl><div data-floe-tone="good" data-floe-part="note"><span class="floe-hidden">Good: </span><div data-floe-text=""><p>Run it in a new window; <a href="https://example.com/steps">the steps</a> and <code>run.sh</code>.</p></div></div><div data-floe-part="table"><table>
 <thead><tr><th scope="col">Shell</th><th scope="col" class="num">Lines</th></tr></thead>
 <tbody>

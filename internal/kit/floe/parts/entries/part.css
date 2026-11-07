@@ -4,11 +4,6 @@
 :scope > div { --entries-row-gap: 0.2rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--entries-row-gap) 0.7rem; }
 :scope dt { min-width: 0; font-weight: 700; }
 :scope dd { margin: 0; }
-/* Spaced, not parted by a character, which a wrapped line would begin with. The words are smaller, not the code in
-   them, which stays as large as in a table's cell */
-:scope .tags { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--muted); }
-:scope .tags > span { min-width: 0; }
-:scope .tags code { font-size: 0.86rem; }
 :scope .text, :scope .parts { flex: 1 0 100%; min-width: 0; }
 :scope .text { display: grid; grid-template-columns: minmax(0, 1fr); }
 :scope .text, :scope .parts > div { line-height: 1.65; }
@@ -16,5 +11,3 @@
    the parts draw outside their boxes reaches. On a div of its own: a row that wraps draws its dd's alike.
    LIMIT: parts of blank text alone draw an empty row with this room, plain on the page; no check is added for it */
 :scope .parts > div { padding-block: calc(var(--floe-room) - var(--entries-row-gap)) calc(var(--floe-room) - var(--floe-row-pad)); }
-/* A long pill wraps rather than overflow the panel */
-:scope .tags { --floe-pill-wrap: normal; }

@@ -13,6 +13,20 @@ import (
 // taskPageRows says the rows of a task's page: a step's heading in brackets, a page by its title.
 const taskPageRows = `[...document.querySelectorAll('#list > li')].map((li) => li.classList.contains('group') ? '[' + li.textContent + ']' : li.querySelector('.title').textContent).join(' | ')`
 
+// pressTaskArchive presses the task's archive button and waits until it says word and the pages are archived or given back
+// too: the words change before that, as archiveTask writes the task first.
+func pressTaskArchive(b *browser, word string) {
+	b.t.Helper()
+
+	if got := b.eval("typeof archivingTask"); got != "boolean" {
+		b.t.Fatalf("archivingTask is %s: the page no longer tells when its archive is done", got)
+	}
+	r := b.rect("document.getElementById('task-archive')")
+	b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	b.until("the button says "+word, "document.getElementById('task-archive').textContent === "+js(word))
+	b.until("the press done", "!archivingTask")
+}
+
 // taskPageAt says where the focus and the page chosen are.
 const taskPageAt = `(document.activeElement.closest?.('li')?.querySelector('.title')?.textContent ?? 'none') + ' / ' + (picked?.slug ?? 'none')`
 
@@ -24,6 +38,8 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
 	b.navigate("/")
+	// Drawn, the list keeps its query, which the task page's way back reads
+	b.until("the empty list", "!document.getElementById('empty').hidden")
 	page := func(slug string, args ...string) {
 		t.Helper()
 		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
@@ -169,8 +185,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	opened("#120", "/tasks?project=proj&task=%23120")
 	const archive = "(() => { const e = document.getElementById('task-archive'); return e.hidden ? 'none' : e.textContent; })()"
 	say("done", archive)
-	b.eval("document.getElementById('task-archive').click()")
-	b.until("archived", "document.getElementById('task-archive').textContent === 'Bring the archive back'")
+	pressTaskArchive(b, "Bring the archive back")
 	say("archived", taskPageRows)
 	b.navigate("/tasks?view=archived")
 	b.until("the archive", "document.querySelector('#list > li')")
