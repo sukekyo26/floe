@@ -108,9 +108,9 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 	// A task's row alone is on the list's chips: a task waiting must not be out of reach.
 	s.floe(t, "work", "--task", "#99", "--project", "solo")
-	b.navigate("/")
-	b.until("the current", "document.getElementById('to-list').getAttribute('aria-current')")
-	say("a row alone, list: current", "document.getElementById('to-list').getAttribute('aria-current')")
+	b.navigate("/tasks")
+	b.until("the chips", "document.querySelector('#chips .chip')")
+	say("a row alone: chips", "[...document.querySelectorAll('#chips .chip')].map((c) => c.dataset.project).join(' ')")
 	s.floe(t, "work", "--task", "#99", "--project", "solo", "--forget")
 
 	taskPages(t, s)
@@ -387,7 +387,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 // taskListWant is what TestUITaskList reads of the list, in the order it reads it.
 const taskListWant = `no work, tasks: shelf shown: false
-a row alone, list: current: page
+a row alone: chips: solo
 opened: ?project=shop shop
 waiting: #2Two [0 page(s)]; #1One [design, 2 page(s), 2 unread, b/c]
 views: todo 1, doing 2, waiting 2, done 2, archived 1

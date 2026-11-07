@@ -3400,7 +3400,7 @@
     const none = !nothing && !failed && shown.length === 0;
     $('tasks-none').hidden = !none;
     const gone = !there.has(project);
-    // A task made goes to the states of work, which the archived list is not; and a project with no task may be a name mistyped in the URL
+    // A task made goes to the states of work, which the archived list is not; and a project not on the list may be a name mistyped in the URL
     $('task-add').hidden = view === 'archived' || gone;
     $('tasks-other').hidden = !gone;
     $('tasks-none').querySelector('strong').textContent = gone ? t('ui_task_none', projectWord(project)) : t('ui_task_none_state', t(VIEW_WORDS[view]));
@@ -3625,12 +3625,14 @@
       offered: () => false,
       there: (task, name, x) => x && { button: 'ui_task_open_button', act: 'open', note: t('ui_task_there', named(x), t(VIEW_WORDS[taskView(x)])) },
       write: (task, name, x, title) => writeTask(task.project, name, { new: true, title }),
-      // The list goes where the row went, drawn by the load that follows: drawn now, it would say the state has no task
+      // The list goes where the row went, drawn by the load that follows: drawn now, it would say the state has no task. That load is to draw
+      // even what a poll has read of the new task and drawn on the list as it was
       done: (task, name) => {
         linkToast(t('ui_task_made', name), task.project, name);
         borrowed = false;
         keepProject(task.project);
         filter({ project: task.project, view: STATES.find((s) => s.new).name });
+        drawn = '';
       },
       back: (task, name) => focusRow(taskRowKey(task.project, name))?.classList.add('fresh'),
     },
@@ -4962,14 +4964,17 @@
   }
 
   let tasksFailed = false;
+  // The loads an action has asked: a poll asked before one may be of the time before the action wrote, and that load draws it anyway
+  let actionLoads = 0;
   // polled tells one asked by no action of the person's: what an action changed is drawn at once, whatever is pressed
   async function load(polled = false) {
+    const asked = polled ? actionLoads : ++actionLoads;
     let text;
     try {
       const [res, read] = await Promise.all([api('/api/artifacts'), framed ? null : readTasks()]);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const list = await res.text();
-      if (polled && performance.now() - pressedAt < PRESS_MS) return;
+      if (polled && (asked !== actionLoads || performance.now() - pressedAt < PRESS_MS)) return;
       text = list + (read?.raw ?? '');
       if (text !== drawn) items = JSON.parse(list);
       if (read) tasksRead = read;
