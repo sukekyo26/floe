@@ -110,7 +110,7 @@ func TestUIChecksPart(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 	_, _, themes, _ := k.Names()
 	var shot bytes.Buffer
-	if err := png.Encode(&shot, image.NewGray(image.Rect(0, 0, 3000, 20))); err != nil {
+	if err = png.Encode(&shot, image.NewGray(image.Rect(0, 0, 3000, 20))); err != nil {
 		t.Fatal(err)
 	}
 	s.write(t, "wide.png", shot.String())
