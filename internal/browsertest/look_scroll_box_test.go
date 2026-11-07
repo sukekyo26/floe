@@ -268,11 +268,11 @@ const measureScrollGround = `(() => {
   return out.join('\n');
 })()`
 
-// TestLookRuleScrollBox draws a page as wide as a phone (390 px), and as a narrow window (620 px), wider than where parts lay
+// lookScrollBox draws a page as wide as a phone (390 px), and as a narrow window (620 px), wider than where parts lay
 // out for a phone: a path or a URL breaks rather than overflow its card, and no other word breaks for it. It draws the
 // page in every theme too, as wide as a phone, to find a box that scrolls sideways and tells its width outside, and a
 // ground in such a box that stops short of what it holds.
-func TestLookRuleScrollBox(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookScrollBox(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	s.floe(t, "publish", s.write(t, "wrap.yaml", wrapPage), "--slug", "wrap")

@@ -83,12 +83,12 @@ const measureHeld = `['#in-note', '[data-floe-part=details] [data-floe-part=note
 const measureBlocks = `['[data-floe-part=note] h4', '[data-floe-part=note] hr', '[data-floe-part=stack] h4', '[data-floe-part=stack] hr', '#fig']
   .map((at) => getComputedStyle(document.querySelector(at)).margin).join(' | ')`
 
-// TestLookRuleNesting checks, in the browser, that what nests the outer wins over what it holds, in every theme: the
+// lookNesting checks, in the browser, that what nests the outer wins over what it holds, in every theme: the
 // cards a cards of the HTML holds are drawn as the cards of a part are, whatever looks nest around them and
 // whatever the depth; and a stack or a note gives the boxes it holds no margins of its own but the note's gap between
 // them, --floe-room next to a part's box, in brutal too, whose shadows take no room; the blocks a browser gives margins
 // of its own (h4, hr) have none in a part's Markdown, spaced by its text's box, nor a <figure> box but the note's.
-func TestLookRuleNesting(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookNesting(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	themes, err := os.ReadDir("../kit/floe/themes")

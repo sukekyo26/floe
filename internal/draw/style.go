@@ -291,7 +291,7 @@ func cssOf(k *kit.Kit, name string) []byte {
 // next (::after). Colours, corners and content are theirs.
 // LIMIT: a template's page.css, a part's part.css, a look a part takes and a theme's file of a part, all in layers
 // over floe.marks, that write a row's display, gap or grid-template win over it unsaid; the look rule marks
-// (TestLookRuleMarks) measures floe's.
+// (TestLookRule/marks) measures floe's.
 // LIMIT: the ::after of a row of box or items is left to what draws it: with no position it is an item of the grid, a
 // row more in the column mark, and one wider than the mark moves the text; over the mark it writes position and the
 // anchor.

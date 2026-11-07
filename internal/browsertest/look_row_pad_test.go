@@ -72,7 +72,7 @@ var rowPadKit = map[string]string{
 // measureRowPad returns, for each kind of row, its part's name (or the look it takes outside a part), its padding
 // above and below, at the left and the right but in a table, whose cells' sides are its columns' gaps a theme may
 // change, and its line height, "page" when it is the page's: a table's cells, its head's ("head") and its
-// body's, but not its number columns, whose font a theme may change (swiss); and the rows of the look rows (TestLookRuleMarks
+// body's, but not its number columns, whose font a theme may change (swiss); and the rows of the look rows (TestLookRule/marks
 // measures checklist's mark on its first line). It
 // adds the padding of checklist's count, a row its box draws as ::after, and
 // whether the box of every part and element drawn as rows is padded on every side as that of html's rows in the same
@@ -117,11 +117,11 @@ func rowPadWant(pad, side string) string {
 // rowsSection is a section of design's and postmortem's more holding an element of html that takes the look rows.
 const rowsSection = "  - heading: Rows\n    parts:\n      - html: |\n          <div data-floe-look=\"rows\"><p>One</p><p>Two</p></div>\n"
 
-// TestLookRuleRowPad measures the rows of every part and look drawn as rows: each is padded --floe-row-pad (0.4rem) above
+// lookRowPad measures the rows of every part and look drawn as rows: each is padded --floe-row-pad (0.4rem) above
 // and below and, but a table's, --floe-pad-inline (1.3rem) at the left and the right, in the page's line height, in every theme, on the screen and printed, which leaves the variables as they are
 // (a theme's base.css could set them, being over floe.base). A template whose page's line height is not report's
 // (design: its decided list and its table; postmortem: its table) pads them the same; and a template of one's own setting the variables in its page.css pads them all by them.
-func TestLookRuleRowPad(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookRowPad(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	themes, err := os.ReadDir("../kit/floe/themes")

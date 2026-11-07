@@ -179,14 +179,14 @@ func exampleWidths(tmpl string) []int64 {
 	return []int64{480, 1600}
 }
 
-// TestLookRuleShadows draws every part, and floe's templates with their parts one after another at the least room floe
+// lookShadows draws every part, and floe's templates with their parts one after another at the least room floe
 // leaves between parts, in every theme and in one of one's own whose shadow reaches that room on every side, at the
 // widths of a phone, a laptop, the column at its widest and slides on a wide screen: nothing a box draws outside
 // itself (a shadow, a strip of tape, an outline) reaches the page's edge, another box or the box it stands in;
 // every box that sets a shadow's colour casts it.
 // A box in one that casts a shadow casts none (the colour is the box's alone), and retro's cards keep the stripes
 // they draw inside themselves with --floe-inset.
-func TestLookRuleShadows(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookShadows(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	s.own(t, shadowsKit)

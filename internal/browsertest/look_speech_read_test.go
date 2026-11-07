@@ -116,12 +116,12 @@ func bare(s string) string {
 	return strings.ToLower(strings.Join(strings.Fields(s), ""))
 }
 
-// TestLookRuleSpeechRead reads, in every page of floe's parts and templates in every theme, what a screen reader is given in
+// lookSpeechRead reads, in every page of floe's parts and templates in every theme, what a screen reader is given in
 // each element CSS draws content in: a mark is not read and a hidden word is, so that it is the element's text;
 // where the reading after / is a counter, its number is read too (and in what holds such an element, a number may be
 // read that its text does not have). A hidden word stands in a row's text, not in the
 // row.
-func TestLookRuleSpeechRead(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookSpeechRead(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	var amiss []string

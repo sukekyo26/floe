@@ -76,11 +76,11 @@ const measureTones = `((tones) => {
   return [...new Set(out)].sort().join('\n');
 })`
 
-// TestLookRuleTone draws every part in every tone and in none, with a pill without a tone in a note of one and a diagram's
+// lookTone draws every part in every tone and in none, with a pill without a tone in a note of one and a diagram's
 // boxes, in every theme, and the templates that draw a tone: each tone of tone.json has its colours in every palette;
 // what is marked with a tone takes them, and draws in them from --tone and --tone-soft; a part's box without a tone, and the page, take accent's (stats --muted, the diagram its
 // shapes' own).
-func TestLookRuleTone(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookTone(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	k, err := kit.Floe()

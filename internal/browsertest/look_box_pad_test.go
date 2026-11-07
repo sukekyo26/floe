@@ -82,7 +82,7 @@ func measureBoxPad(names string) string {
 const partBoxes = "options, asks, checks, chart, stats, facts, decision, steps, timeline, bars, tree, note, details title, details body"
 
 // boxPadWant is what measureBoxPad returns for boxParts, each box padded block above and below and inline at the
-// left and the right: facts' cards are rows (TestLookRuleRowPad), details' title is as tall as a row of its own, and frame
+// left and the right: facts' cards are rows (TestLookRule/row-pad), details' title is as tall as a row of its own, and frame
 // is the padding of the frame a theme draws around the tree, as measureBoxPad returns it ("" when it draws none).
 func boxPadWant(block, inline, frame string) string {
 	box := block + " " + inline + " " + block + " " + inline
@@ -93,12 +93,12 @@ func boxPadWant(block, inline, frame string) string {
 	}, ", ")
 }
 
-// TestLookRuleBoxPad measures the padding of the box of every part that draws one, in every theme: it is the variables'
+// lookBoxPad measures the padding of the box of every part that draws one, in every theme: it is the variables'
 // of floe's base.css (1.1rem above and below, 1.3rem at the sides), which a theme leaves as they are and writes no
 // padding over (a theme's decorations lie over it), so a theme that set either variable or padded a box fails. The
 // built-in templates' boxes are padded the same in every theme, and a template of one's own setting the variables in its
 // page.css pads every part's box by them.
-func TestLookRuleBoxPad(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookBoxPad(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	themes, err := os.ReadDir("../kit/floe/themes")

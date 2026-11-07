@@ -64,7 +64,7 @@ var layersKit = map[string]string{
 	"themes/column/base.css":        "body { margin: 5px; }\n.floe-column { padding-left: 3px; }\n",
 }
 
-// TestLookRuleLayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its
+// lookLayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its
 // selectors are the more specific, loses to the part's style and to the theme's style of the part, and still styles
 // what neither of them does, such as where a part stands. It reaches the part's element but not what the part holds,
 // whose colour it gives by inheritance alone, to a part of no ground of its own: one that paints its ground (a note)
@@ -76,7 +76,7 @@ var layersKit = map[string]string{
 // outer look and the outer part win, as deep as they stand. floe's layout of the rows with a mark (floe.marks) is
 // under the template's page.css and over the looks' files. floe's start of every page (the body's margin, the column
 // .floe-column) is under the template's page.css and over the theme's base.css, and stops at a part's box.
-func TestLookRuleLayers(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookLayers(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	s.own(t, layersKit)

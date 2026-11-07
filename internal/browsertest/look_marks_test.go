@@ -308,13 +308,13 @@ func mustJSON(v any) string {
 	return string(b)
 }
 
-// TestLookRuleMarks measures the marks beside the first line of a row (links, note, steps, timeline, the look numbered, and
+// lookMarks measures the marks beside the first line of a row (links, note, steps, timeline, the look numbered, and
 // the letters of the look marked in decision, options and checklist), in every theme, in a theme of one's own that pads the rows above and sets their line height, and,
 // for timeline, on a narrow screen too: each stands on its first line's baseline, wherever a theme or the row's
 // padding puts that line, its --floe-mark-gap from the text, or takes no room when a theme leaves it out, and each line to the next mark runs from 0.35rem
 // below its mark to 0.35rem above its row's end, however big the mark or the title and whatever the row starts with;
 // a theme that leaves the rings out leaves out their lines; and the runbook's rollback rings and lines its steps in bad.
-func TestLookRuleMarks(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookMarks(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	themes, err := os.ReadDir("../kit/floe/themes")

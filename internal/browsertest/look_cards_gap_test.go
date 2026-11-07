@@ -92,13 +92,13 @@ const measureOptions = `(() => {
   return out.join('\n');
 })()`
 
-// TestLookRuleCardsGap draws options holding parts in every theme, at a laptop's width (three cards on a line), a
+// lookCardsGap draws options holding parts in every theme, at a laptop's width (three cards on a line), a
 // phone's (one) and on paper, and options without parts beside them: the cards on a line start their parts and
 // their words at one height, --floe-room from the title and from the lowest parts, a small picture keeps its size and
 // its box is not stretched to the row's, a theme's number stands where it stands without parts, a card of parts alone
 // ends at them; options without parts keep their words the cards' gap under the title. A theme of one's own setting
 // --cards-gap on its cards.css's :scope sets the gaps in a card by it.
-func TestLookRuleCardsGap(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookCardsGap(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	themes, err := os.ReadDir("../kit/floe/themes")

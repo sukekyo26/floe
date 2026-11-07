@@ -104,7 +104,7 @@ const paperWidth = 718
 // slidesWidth is an A4 sheet's length, in CSS px: slides prints on a landscape sheet with no margin (its @page).
 const slidesWidth = 1122
 
-// TestLookRulePaper draws every page of floePages, and printPage, for print as wide as an A4 sheet's text (slides as wide
+// lookPaper draws every page of floePages, and printPage, for print as wide as an A4 sheet's text (slides as wide
 // as its landscape sheet), and finds each on paper (measurePaper): nothing scrolls sideways there, as what scrolls is
 // not read on paper, and folds onto lines within it, but what folds no word there (LIMIT: a table's heads and cells, a
 // column of numbers or of pills, a tree's note and its depth, a field's name, a finding's level) may still reach past
@@ -113,7 +113,7 @@ const slidesWidth = 1122
 // It finds tabs whose picked title is drawn apart from the others, as tabs paints the picked one on the screen alone.
 // LIMIT: tabs is the only part whose state print draws otherwise; check a part's that comes to do so too.
 // LIMIT: it tells the picked title drawn apart alone, not a ground a theme gives every title alike outside @media screen.
-func TestLookRulePaper(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookPaper(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	s.b.size(paperWidth, 1000, false)
 	defer s.b.unsize()

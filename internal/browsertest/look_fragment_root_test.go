@@ -8,12 +8,12 @@ import (
 	"testing"
 )
 
-// TestLookRuleFragmentRoot pastes the fragment of floe diagram render, a diagram of each tone and every built-in example,
+// lookFragmentRoot pastes the fragment of floe diagram render, a diagram of each tone and every built-in example,
 // into pages of one's own, their style in the head before it. In a page without a palette, the diagram is painted as in a page of floe's default theme, its toolbar
 // too, and in a shadow root as well. The page outside the diagrams keeps what it draws: its palette in a layer of its
 // own, its color-scheme of a meta, the variables it reads with a fallback. A page's colours written on the
 // diagrams' roots win, before the fragment or after it.
-func TestLookRuleFragmentRoot(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookFragmentRoot(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	// The diagrams: one of each tone, then every built-in example but the AWS ones, which draw every kind of part

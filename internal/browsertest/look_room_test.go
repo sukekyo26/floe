@@ -59,11 +59,11 @@ const measurePartRoom = `(() => {
   return JSON.stringify({ amiss: [...out].sort(), markdown });
 })()`
 
-// TestLookRuleRoom draws every part and floe's templates' examples in every theme, details open, at the widths of a phone
+// lookRoom draws every part and floe's templates' examples in every theme, details open, at the widths of a phone
 // (cards in one column) and a laptop: wherever parts stand one after another (a template's section, a step, a stack,
 // cards, tabs' names and panel), the room between them, and between a heading or a paragraph and a part there, is
 // --floe-room. A template's own Markdown is measured in its box, in an example whose field holds two blocks or more.
-func TestLookRuleRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookRoom(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	var amiss []string
 	markdown := 0

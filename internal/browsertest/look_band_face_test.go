@@ -105,14 +105,14 @@ const measureBand = `(() => {` + colours + `
   return out.join('\n');
 })()`
 
-// TestLookRuleBandFace draws Markdown, pills and parts a template places in the look band, in every theme: a part on a ground
+// lookBandFace draws Markdown, pills and parts a template places in the look band, in every theme: a part on a ground
 // of its own is in the page's text colour (swiss's boxes, of no ground elsewhere, are on the surface in a band) and one
 // of none in the band's, only a line's code is framed,
 // and every text and focus ring in the band reads on the ground under it, as measureContrast and measureRings measure;
 // a text there is in the band's text colour, its heading unmarked, pills of a theme that gives them no ground too. The
 // template places a panel and a table of its own too, as looks on elements that are no part's box.
 // Aurora's glass would let the band through but for its band.css.
-func TestLookRuleBandFace(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookBandFace(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	s.own(t, bandKit)
 	k, err := kit.Floe()

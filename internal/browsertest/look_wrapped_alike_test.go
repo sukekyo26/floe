@@ -60,12 +60,12 @@ const measureWrapped = `(() => {
   return [...out].join('\n')
 })()`
 
-// TestLookRuleWrappedAlike draws every part and floe's templates' examples in every theme at a phone's width and a wide
+// lookWrappedAlike draws every part and floe's templates' examples in every theme at a phone's width and a wide
 // screen's, and finds the children of one kind in every row that wraps drawn alike (measureWrapped): which child
 // begins a line is the width's, so no CSS marks a child by its place in such a row.
 // LIMIT: a row is found only where the samples draw it with two children or more, at these two widths, and one's own
 // parts and templates are not drawn; a row a sample does not reach is seen on the page
-func TestLookRuleWrappedAlike(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookWrappedAlike(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	b.size(480, 900, false)

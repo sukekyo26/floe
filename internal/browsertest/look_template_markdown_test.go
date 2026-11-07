@@ -85,13 +85,13 @@ func prepend(t *testing.T, v any, at []string, text string) {
 	}
 }
 
-// TestLookRuleTemplateMarkdown draws the example of each floe template with headings at the head of each of its own fields
+// lookTemplateMarkdown draws the example of each floe template with headings at the head of each of its own fields
 // of format markdown, in every theme: each heading is drawn as the same Markdown is in a text, its size, weight,
 // frame and padding, not as the template's own headings, its title's and its sections'. A rule of the template's
 // page.css that names its headings by the element alone reaches the author's too.
 // LIMIT: a field the example leaves out goes unmeasured, and the look but of headings (a rule of page.css that
 // reaches a paragraph in a field arranges the template's own Markdown, as it may).
-func TestLookRuleTemplateMarkdown(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+func lookTemplateMarkdown(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b
 	k, err := kit.Floe()
