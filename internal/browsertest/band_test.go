@@ -51,7 +51,7 @@ var bandParts = bandText + bandHeld + "chart: { kind: line, title: T, x: [a, b],
 
 // bandColours is parts in a band that draw some of their text in colours of their own (muted, a tone, the page's
 // text colour): bars' label and value, a tree's note and change, a timeline's date; tabs, whose titles have no
-// ground, and links, whose cards' rings are drawn around them.
+// ground, and links, whose title, words and URL draw in colours of their own.
 var bandColours = "bars: [{ label: Copied, value: 40, of: 100 }]\n" +
 	"tree: [{ path: pages/, note: what export writes }, { path: pages/home.md, change: changed }]\n" +
 	"timeline: [{ date: '03-01', title: Started, text: The copy began. }]\n" +
@@ -62,6 +62,9 @@ var bandColours = "bars: [{ label: Copied, value: 40, of: 100 }]\n" +
 // line's code without its frame (a shadow every code has, seen only in a face), or code in a fenced block with one.
 const measureBand = `(() => {` + colours + `
   const out = [];
+  document.querySelectorAll('[data-floe-part=links] .url').forEach((url) => {
+    if (url.getBoundingClientRect().top - url.previousElementSibling.getBoundingClientRect().bottom < 1) out.push('a links URL against its title');
+  });
   const framed = (e) => { const c = getComputedStyle(e).boxShadow.match(/^(rgba?\([^)]*\)|color\([^)]*\))/); return c !== null && rgba(c[1])[3] > 0; };
   const probe = document.body.appendChild(document.createElement('p'));
   const want = getComputedStyle(probe).color;

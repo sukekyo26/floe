@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "links",
-  "description": "Links to pages, pull requests and papers that bear on this one, each a card of its title over a few words",
+  "description": "Links to pages, pull requests and papers that bear on this one, each a row of its title and a few words, its URL under them",
   "type": "array",
   "minItems": 1,
   "items": {

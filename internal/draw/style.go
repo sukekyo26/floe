@@ -287,25 +287,21 @@ func cssOf(k *kit.Kit, name string) []byte {
 
 // marks is the layout of the rows with a mark at their left, in the layer floe.marks: of the parts and looks the
 // page names, and the looks they take, those whose part.yaml's marks: says so (box, items or joined), each row under
-// the root of the name the page names. It places and sizes the mark (::before) and, in a row of box or items, a mark
-// over it (::after); in one of joined the line to the next (::after). Colours, corners and content are theirs.
+// the root of the name the page names. It places and sizes the mark (::before); in a row of joined the line to the
+// next (::after). Colours, corners and content are theirs.
 // LIMIT: a template's page.css, a part's part.css, a look a part takes and a theme's file of a part, all in layers
 // over floe.marks, that write a row's display, gap or grid-template win over it unsaid; TestUIMarks measures floe's.
-// LIMIT: the ::after of a row of box or items is the slot of a mark over the mark: a decoration of its own drawn in it
-// moves over the mark unsaid (links alone draws one, the sign over its box).
 // LIMIT: kit refuses two marks: down one part.yaml's looks alone; an element that HTML gives two of them (an ol of
 // data-floe-look="numbered marked", a part's box that takes marked) has both rules on its rows, not refused.
 func marks(k *kit.Kit, n named) []byte {
-	var rows, stacked, joined []string
+	var rows, joined []string
 	add := func(name, root string) {
 		for _, m := range append([]string{name}, k.Taken(name)...) {
 			switch k.Marks(m) {
 			case "box":
 				rows = append(rows, root)
-				stacked = append(stacked, root)
 			case "items":
 				rows = append(rows, root+" > li")
-				stacked = append(stacked, root+" > li")
 			case "joined":
 				rows = append(rows, root+" > li")
 				joined = append(joined, root+" > li")
@@ -321,8 +317,6 @@ func marks(k *kit.Kit, n named) []byte {
 	if len(rows) == 0 {
 		return nil
 	}
-	const mark = `grid-area: mark; align-self: first baseline; display: grid; place-items: center;
-  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);`
 	r := ":where(" + strings.Join(rows, ", ") + ")"
 	css := r + ` {
   position: relative; anchor-scope: --floe-mark; display: grid; gap: 0;
@@ -330,12 +324,10 @@ func marks(k *kit.Kit, n named) []byte {
 }
 ` + r + ` > * { grid-column: text; align-self: first baseline; }
 ` + r + `::before {
-  anchor-name: --floe-mark; ` + mark + `
+  anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
+  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
 }
 `
-	if len(stacked) > 0 {
-		css += ":where(" + strings.Join(stacked, ", ") + ")::after {\n  " + mark + "\n}\n"
-	}
 	if len(joined) > 0 {
 		css += ":where(" + strings.Join(joined, ", ") + `):not(:last-child)::after {
   content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
