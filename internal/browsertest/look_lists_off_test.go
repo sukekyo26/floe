@@ -30,9 +30,13 @@ const listsOf = `(() => [...document.querySelectorAll(':is(ul, ol, menu):is([dat
   .join('\n'))()`
 
 // listsMarked tells each list that is a part's box or takes a look, shown or not, and still draws a list's marks.
-const listsMarked = `(() => [...document.querySelectorAll(':is(ul, ol, menu):is([data-floe-part], [data-floe-look])')]
-  .filter((e) => getComputedStyle(e).listStyleType !== 'none')
-  .map((e) => (e.dataset.floePart || e.dataset.floeLook) + ': ' + getComputedStyle(e).listStyleType).join('\n'))()`
+// measureListsMarked returns {seen, amiss}: the lists that are a part's box or a look it measured, and for each one
+// that shows marks its part (or look) and the marks' style.
+const measureListsMarked = `(() => {
+  const lists = [...document.querySelectorAll(':is(ul, ol, menu):is([data-floe-part], [data-floe-look])')];
+  return JSON.stringify({ seen: lists.length, amiss: lists.filter((e) => getComputedStyle(e).listStyleType !== 'none')
+    .map((e) => ({ at: e.dataset.floePart || e.dataset.floeLook, text: 'shows ' + getComputedStyle(e).listStyleType })) });
+})()`
 
 // listsDecision is a decision whose text holds a list of Markdown, beside the options it set aside.
 const listsDecision = `template: report
@@ -135,15 +139,7 @@ func lookListsOff(t *testing.T) { //nolint:paralleltest,thelper // a subtest of 
 		t.Errorf("a look's list under its template's rule for lists: %s, want flex upper-roman 32px 16px, the template's", got)
 	}
 
-	// No marks on such lists, in every theme and template; the part's own arrangement over floe's.
-	var marked []string
-	s.floePages(t, func(what string) {
-		for line := range strings.Lines(b.eval(listsMarked)) {
-			marked = append(marked, what+": "+strings.TrimSuffix(line, "\n"))
-		}
-	})
-	check(t, "marked", marked, "")
-
+	// The part's own arrangement over floe's.
 	s.floe(t, "publish", s.write(t, "look.yaml", "lang: en\ntemplate: lists-look\ntitle: Look\n"), "--slug", "lists-look")
 	b.navigate("/a/lists-look/?raw")
 	look := `(() => { const c = getComputedStyle(document.querySelector('[data-floe-look=lists-gap]')); return c.rowGap + ' ' + c.paddingInlineStart; })()`
@@ -166,4 +162,24 @@ func lookListsOff(t *testing.T) { //nolint:paralleltest,thelper // a subtest of 
 	if got := b.eval(marks); got != `disc none, none "×" / ""` {
 		t.Errorf("decision's list in its text and the options set aside: %s, want disc none, none \"×\" / \"\"", got)
 	}
+}
+
+const lookListsMarkedFix = "leave a list that is a part's box or a look unmarked: floe's boxes take its marks off, and no rule puts them back"
+
+// lookListsMarked measures every page of floePages as measureListsMarked does.
+func lookListsMarked(t *testing.T, s *site) measured {
+	t.Helper()
+
+	var m measured
+	s.floePages(t, func(what string) { m.add(s.b.measure(what, measureListsMarked)) })
+	return m
+}
+
+// brokenListsMarked draws a part of one's own whose box is a list it marks.
+func brokenListsMarked(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	html := `<ul data-floe-part="listy"><li>a</li><li>b</li></ul>`
+	s.brokenPage(t, ownPart("listy", html, ":scope { list-style: disc; padding-inline-start: 2em; }\n"), htmlPage(html))
+	return "listy", s.b.measure("broken", measureListsMarked)
 }
