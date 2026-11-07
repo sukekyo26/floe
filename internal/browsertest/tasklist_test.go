@@ -13,14 +13,14 @@ import (
 )
 
 // taskWork is tasks.json of TestUITaskList: each state's order by its times, tasks of no page, one project of no page, and
-// the project of none. #6 is done with archived pages alone, #3 waiting with them, and #8 done with one page left.
+// the project of none. #6 is archived, #3 waiting with archived pages alone, and #8 done with one page left.
 const taskWork = `{
   "shop": {
     "#1": {"title": "One", "state": "waiting", "step": "design", "at": "2026-01-02T00:00:00Z", "url": "https://example.com/a/b/c"},
     "#2": {"title": "Two", "state": "waiting", "at": "2026-01-01T00:00:00Z"},
     "#4": {"state": "doing", "at": "2026-01-01T00:00:00Z"},
     "#5": {"state": "doing", "at": "2026-01-02T00:00:00Z"},
-    "#6": {"state": "done", "at": "2026-01-01T00:00:00Z"},
+    "#6": {"state": "archived", "at": "2026-01-01T00:00:00Z"},
     "#7": {"state": "done", "at": "2026-01-02T00:00:00Z"},
     "#8": {"state": "done", "at": "2026-01-03T00:00:00Z"}
   },
@@ -81,7 +81,7 @@ func taskPages(t *testing.T, s *site) {
 }
 
 // The task list: nothing of it where nothing is on a task; j and k move the focus alone, reading nothing; each state in
-// its own order; what is done and archived whole goes to the archive, nothing else; projects as the page list picks them.
+// its own order; what is archived goes to the archive, nothing else; projects as the page list picks them.
 func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -450,7 +450,7 @@ up ?project=blog ?project=%2F&task=%2310: /tasks?project=%2F
 page list chips: shop5 var(--pc0), pin1 var(--pc2), Not set1 var(--faint)
 page list, its query kept: ?project=shop /?project=shop
 page list, let go: 
-help: Pinned pagesKeep pages you open again and again, such as an overview or a runbook, here. Only this project's pages are listed. To add one, choose "Pin to the task list" in a page's "…" menu.
+help: Pinned pagesKeep pages you open again and again, such as an overview or a runbook, here. Only this project's pages are listed. To add one, choose "Pin to the task list" in a page's "…" menu; the × on a pin takes it off.
 broken, list: error hidden: true
 broken, tasks: failed shown: true true
 broken, tasks: ?project=shop blog todo,doing,waiting,done,archived pins 1 rows 0

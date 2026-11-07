@@ -123,6 +123,7 @@ var States = []State{
 	{Name: "doing", Oldest: false, New: false, First: false},
 	{Name: "waiting", Oldest: true, New: false, First: true},
 	{Name: "done", Oldest: false, New: false, First: false},
+	{Name: "archived", Oldest: false, New: false, First: false},
 }
 
 // TaskEdit is what a write changes of a task's row, each left as it is when nil. An empty URL or Steps takes it off; an

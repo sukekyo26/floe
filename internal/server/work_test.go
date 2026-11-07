@@ -94,7 +94,7 @@ func TestWorkAPI(t *testing.T) {
 		{"/api/tasks?task=x", `{}`, `a task needs its project: "/" for none`},
 		{task("  ", "x"), `{}`, `a task needs its project: "/" for none`},
 		{"/api/tasks?project=p", `{}`, "a task needs an ID"},
-		{task("p", "x"), `{"state":"nope"}`, `unknown state "nope": use todo, doing, waiting, done`},
+		{task("p", "x"), `{"state":"nope"}`, `unknown state "nope": use todo, doing, waiting, done, archived`},
 		{task("p", "x"), `{"url":"javascript:alert(1)"}`, `"javascript:alert(1)" is not an http or https URL`},
 		{"/api/tasks?project=p&task=%FF", `{}`, "a task's project and ID must be UTF-8"},
 		{"/api/tasks?project=%FF&task=x", `{}`, "a task's project and ID must be UTF-8"},
