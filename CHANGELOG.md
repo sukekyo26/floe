@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `tags` to the part `steps`: short values under a step's title, each a line of Markdown or a pill, as entries' tags are, such as the PR a step is done in. Both draw them by a new look `tags`, which one's own parts and templates may take too. A page writing none looks as it did.
 - Add `title`, `start` and `mark` to the part `code`: `title` says what the code shows, in words, above it beside its `file`; `start` numbers the lines from that number, and `mark` marks lines by those numbers, with a line at their side, a ground to the end of the longest line and a word a screen reader reads. The copy button copies the code as written, without the numbers. A page writing none of them looks as it did.
 - Add rows written by the columns' ids to the part `table`: a column takes an `id`, and a row is `{ state: done, who: walter }`, a column left out drawn empty and a key that is no column's `id` refused. Rows in the order of the columns stay as they are, and a table may hold both. Parts and formats may now stand under `additionalProperties` in a schema of one's own, where floe draws them; not at the root's, which would draw `lang` and `title` too.
 - Add `from` and `better` to the part `stats`: `from` is the number before, drawn as `3.1 → 1.3` with the change under it, exact and in its colour, for the better or the worse as `better` says. Pages without `from` are drawn as before.
