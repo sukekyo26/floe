@@ -44,6 +44,12 @@ func TestUIPinOff(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		if whole != "true true true true true true true true" {
 			t.Errorf("width %d: the pin is out of shape: %s", width, whole)
 		}
+		if width == 360 {
+			// Where the pins scroll, each keeps its width instead of pressing the others.
+			if got := b.eval(chip + ".getBoundingClientRect().width"); got != "208" {
+				t.Errorf("a long pin on a phone is %s wide, want 13rem", got)
+			}
+		}
 	}
 	b.size(1440, 900, false)
 	b.until("the width", "innerWidth === 1440")
