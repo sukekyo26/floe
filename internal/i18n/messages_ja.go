@@ -285,7 +285,7 @@ var messagesJA = map[string]string{
 	"diagram_icon_unknown":       "%s: アイコン「%s」はありません（floe icons search <語> で探せます）",
 	"copy_button":                "コピー",
 	"copy_failed":                "コピーできませんでした",
-	"zoom_hint":                  "Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動",
+	"zoom_hint":                  "Ctrl / ⌘ + ホイール・ピンチで拡大。クリックか Tab で図を選ぶと + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動",
 	"zoom_in":                    "拡大",
 	"zoom_out":                   "縮小",
 	"zoom_fit":                   "全体",

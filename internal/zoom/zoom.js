@@ -64,9 +64,18 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
     }
     wrap.before(tools);
     const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+    // How it is used: its tooltip for a mouse, and for the keyboard, which shows no tooltip, a line over the frame while
+    // it has the focus (part.css), which is also its description. A title the frame was written with stays.
+    // LIMIT: a touch screen shows neither, at any width. A title of an element in the frame wins over the frame's in the
+    // tooltip; the line says the same. Show the line on touch (pointer: coarse) if readers there come to miss it.
+    const written = wrap.hasAttribute('title');
+    const hint = document.createElement('div');
+    hint.className = `${frameClass}-hint`;
+    hint.id = `${frameClass}-hint-${document.querySelectorAll(`.${hint.className}`).length}`;
+    hint.textContent = msg.zoom_hint;
+    wrap.append(hint);
 
-    // The toolbar, the tab stop, the frame's role, name and how it is used (its title, shown on hover and read as its
-    // description) and touch-action go with whether it may be zoomed. Focus
+    // The toolbar, the tab stop, the frame's role, name, description and tooltip and touch-action go with whether it may be zoomed. Focus
     // in a toolbar that hides moves to the frame, which keeps -1 to hold it, not to the page's start
     const offer = (can) => {
       if (can === offered) return;
@@ -78,11 +87,13 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
       if (can) {
         wrap.setAttribute('role', 'group');
         wrap.setAttribute('aria-label', msg.zoom_frame);
-        wrap.title = msg.zoom_hint;
+        wrap.setAttribute('aria-describedby', hint.id);
+        if (!written) wrap.title = msg.zoom_hint;
       } else {
         wrap.removeAttribute('role');
         wrap.removeAttribute('aria-label');
-        wrap.removeAttribute('title');
+        wrap.removeAttribute('aria-describedby');
+        if (!written) wrap.removeAttribute('title');
         if (focused) wrap.focus();
       }
     };

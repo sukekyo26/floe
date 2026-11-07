@@ -3,6 +3,14 @@
 .floe-zoom { position: relative; overflow: hidden; }
 .floe-zoom.can-zoom { touch-action: pan-y; }
 .floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* How it is used, over the frame's foot while the keyboard is on it. It takes no room and no press.
+   LIMIT: it covers that foot while it shows, and a frame lower than its lines clips it; both pass when the focus leaves */
+.floe-zoom-hint {
+  display: none; position: absolute; inset-inline: 0.4rem; bottom: 0.4rem; padding: 0.3rem 0.6rem; pointer-events: none;
+  font-size: var(--floe-text-small); line-height: 1.4; color: var(--fg); background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius-small);
+}
+@media screen { .floe-zoom.can-zoom:focus-visible > .floe-zoom-hint { display: block; } }
 .floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .floe-zoom.zoomed:active { cursor: grabbing; }
 /* An img is laid out shrunk to the frame, as the whole, and scaled from its top left, as the script's sums take it */
