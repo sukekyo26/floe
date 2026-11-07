@@ -19,6 +19,7 @@ paths:
 - **CSS の記号は読ませず、数は読ませてよい**：`content` は `/` の後ろに読み上げを書く。記号は `/ ""`、数は前の `counter()` の並びで、字の文字列は書かない。記号だけが持つ意味は `.floe-hidden` の見えない字で書く（言葉は words.yaml）。`TestMarkSpeech`・`TestUISpeech`
 - **本文の列は `.floe-column`**：テンプレートの本文の列は class で付け、列の字（max-width・margin-inline・padding-inline）を page.css に書かない。幅は `--column-width` で、置くのは page.css だけ（テーマは置かない）。`--page-width`・`--text-width`・`--page-pad` はパレット 1 か所だけ。字の大きさはページで決めない。列は見た目にしない
 - **部品はパレットの変数をそのまま読む**：部品・見た目の CSS は `var(--accent)` のように既定なしで読み、値を写さない。パレットの根は `:scope`。パレットの無いページへ出す CSS は自分の根だけに当てる（`diagramAssets`。`TestUIDiagramFragment`）
+- **パレットの変数は docs の表に名前で書く**：default の palette.css に変数を足す・名前を変えるときは、docs/templates.md の「The palette」の表（英・日）に、まとめずに名前を字のまま書く（raw と自分のテーマが頼る約束なので）。`TestPaletteInDocs`
 - **tone は `data-floe-tone` と、floe が tone.json から組み立てる変数**：tone の印は class でなく `data-floe-tone`。名前を色に写すのは style.go の `Tones` だけで、部品・テーマ・テンプレートは `--tone`・`--tone-soft`・`--tone-fill` を読む。tone ごとのセレクタは tone の色でないものにだけ書く。テーマが自分の色で塗るときはパレットに `--<tone>-fill` を置く。`TestUITone`
 - **部品の箱と見た目の並びは floe が外す**：`ul`・`ol`・`menu` の印・左の余白・項目の間は style.go の `boxes` が外し、grid で並べる。部品と見た目は並びの見た目を外す規則を書かない。`TestUILists`
 - **色で塗った帯は見た目 `band` 1 つ**：テンプレートは、`--accent` で塗った帯を page.css に書かず、`data-floe-look="band"` で借りる。page.css が書くのは帯の余白と中の並びだけ
