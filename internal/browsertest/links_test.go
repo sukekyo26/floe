@@ -88,8 +88,24 @@ func TestUILinksPart(t *testing.T) { //nolint:paralleltest // the browser tests 
 	}
 	file := s.write(t, "links.yaml", linksPage)
 	defer s.b.unsize()
-	// A theme of one's own draws the rows in lines lower than the sign's 1rem.
-	s.own(t, map[string]string{"themes/low/links.css": ":scope > li { font-size: 0.8rem; line-height: 1.1; }\n"})
+	// A theme of one's own draws the rows in lines lower than the sign's 1rem; a template of one's own holds them in a
+	// face it paints, where swiss's panel, of no ground, keeps the face's text colour.
+	s.own(t, map[string]string{
+		"themes/low/links.css":        ":scope > li { font-size: 0.8rem; line-height: 1.1; }\n",
+		"templates/face/page.html":    "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\"><title>{{.Title}}</title></head>\n<body><div class=\"face\">{{.Data.links}}</div></body></html>\n",
+		"templates/face/page.css":     ".face { --face: #123a5c; --on-face: #fff; background: var(--face); color: var(--on-face); }\n",
+		"templates/face/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"links": {"$ref": "floe:///parts/links.json"}}}`,
+		"templates/face/example.yaml": "lang: en\ntemplate: face\n",
+	})
+	s.floe(t, "publish", s.write(t, "face.yaml", "lang: en\ntemplate: face\ntheme: swiss\ntitle: Face\nlinks:\n  - { title: Guide, url: 'https://example.com/guide', text: How it works }\n"), "--slug", "links-face")
+	s.b.navigate("/a/links-face/?raw")
+	colours := `(() => {
+  const row = document.querySelector('[data-floe-part=links] > li');
+  return ['.text', '.url', 'a'].map((sel) => getComputedStyle(row.querySelector(sel)).color).concat(getComputedStyle(row, '::before').backgroundColor).join(', ');
+})()`
+	if got, want := s.b.eval(colours), strings.TrimSuffix(strings.Repeat("rgb(255, 255, 255), ", 4), ", "); got != want {
+		t.Errorf("words, URL, title and sign on a painted face in swiss = %s, want %s", got, want)
+	}
 	s.floe(t, "publish", file, "--slug", "links-low", "--theme", "low")
 	s.b.navigate("/a/links-low/?raw")
 	signs := `[...document.querySelectorAll('[data-floe-part=links] > li')].map((row) => getComputedStyle(row, '::before'))
