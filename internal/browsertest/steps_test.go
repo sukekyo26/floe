@@ -32,9 +32,9 @@ sections:
 `
 
 // measureStepsTags returns a line for each thing the steps' tags draw wrong: tags not in the text's column, past the
-// row or the page, not between the title and the text (which is in the size of an aside), of a look other than entries' tags, code in them of another size
-// than in a table's cell, of colours that change with the step's state, a pill of no tone in another colour than
-// outside, or a row of tags on a step without them.
+// row or the page, not between the title and the text (which is in the size of an aside), of a look other than entries'
+// tags, code in them of another size than in a table's cell, of colours that change with the step's state, a pill of no
+// tone in another colour than outside, or a row of tags on a step without them.
 const measureStepsTags = `(() => {
   const out = [], steps = [...document.querySelectorAll('[data-floe-part=steps] > li')];
   const entries = document.querySelector('[data-floe-part=entries] [data-floe-look~=tags]');
