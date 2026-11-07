@@ -53,7 +53,7 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    what it holds, and page.css stops at the part's box there; floe's templates place none so */
 [data-floe-text], [data-floe-markdown] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
 a { color: var(--on-face, var(--accent)); }
-/* LIMIT: a part draws a ring of focus or a pick by outline on its box (links' and options' cards): a theme that draws a
+/* LIMIT: a part draws a ring of focus or a pick by outline on its box (options' cards): a theme that draws a
    decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
    or ::before */
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
@@ -645,9 +645,9 @@ blockquote {
 /* A card in two rules, the inner one drawn over a card's padding (base.css's two variables), short of its text (facts' rows).
    LIMIT: it stands 5px in, within --floe-row-pad (0.4rem); a template of one's own setting the variable under 5px
    draws facts' text over it.
-   LIMIT: drawn within the box (--floe-inset, not an outline, which links' focus ring and options' pick take), its band
-   between the rules is --surface: a card, floe's or one's own, painted on another ground shows that band. A card's
-   ::before and ::after are links' marks, and inset shadows cannot leave the band clear.
+   LIMIT: drawn within the box (--floe-inset, not an outline, which options' pick takes), its band
+   between the rules is --surface: a card, floe's or one's own, painted on another ground shows that band.
+   Inset shadows cannot leave the band clear.
    LIMIT: base.css draws --floe-inset on a box alone (a part's, or an element that takes a look): a card of one's own
    that takes no panel has the outer rule alone. floe's cards all take the panel */
 .card { position: relative; border: 1px solid var(--fg); --floe-inset: inset 0 0 0 2px var(--surface), inset 0 0 0 3px var(--fg); }
@@ -678,10 +678,6 @@ blockquote {
 :where([data-floe-part="note"]) > * { grid-column: text; align-self: first baseline; }
 :where([data-floe-part="note"])::before {
   anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
-  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-}
-:where([data-floe-part="note"])::after {
-  grid-area: mark; align-self: first baseline; display: grid; place-items: center;
   box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
 }
 }

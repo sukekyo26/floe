@@ -272,7 +272,6 @@ func TestMarks(t *testing.T) {
 	got := string(marks(k, named{boxes: []string{"note"}, looks: []string{"foo"}}))
 	for _, want := range []string{
 		`:where([data-floe-part="note"], [data-floe-look~="foo"] > li) {`,
-		`:where([data-floe-part="note"])::after {`,
 		`:where([data-floe-look~="foo"] > li):not(:last-child)::after {`,
 	} {
 		if !strings.Contains(got, want) {

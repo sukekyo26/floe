@@ -59,7 +59,7 @@ var markRows = []struct {
 	name, row, line string
 	bare            bool
 }{
-	{"links", "[data-floe-part=links] > li", "[data-floe-part=links] > li > a", false},
+	{"links", "[data-floe-part=links] > li", "[data-floe-part=links] > li > .line > .title > a", false},
 	{"note", "[data-floe-part=note]", "[data-floe-part=note] > .title", true},
 	{"note without a title", "#plainnote", "#plainnote > p", true},
 	{

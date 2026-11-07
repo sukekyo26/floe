@@ -219,10 +219,10 @@
   [tr] Edit | Kept
   [tr] Page | no
   [p] Wait for the new host.
-  [li] Migration guide
-  [p] How the copy works
+  [div] Migration guide How the copy works
   [li] https://example.com/guide
-  [li] Old wiki https://wiki.example.com/
+  [div] Old wiki
+  [li] https://wiki.example.com/
   [tr] must | wiki.conf:3 fixed The banner names the old host
   [tr] should | The search index is rebuilt by hand
   [tr] nit | Two pages have the same title Left as the owners asked

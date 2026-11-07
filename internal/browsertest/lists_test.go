@@ -153,9 +153,9 @@ func TestUILists(t *testing.T) { //nolint:paralleltest // the browser tests shar
 
 	b.navigate("/a/lists-plain/?raw")
 	ownWay := `(() => [getComputedStyle(document.querySelector('[data-floe-part=timeline]')).paddingInlineStart,
-  getComputedStyle(document.querySelector('[data-floe-part=links]')).columnGap].join(' '))()`
+  getComputedStyle(document.querySelector('[data-floe-part=options]')).columnGap].join(' '))()`
 	if got := b.eval(ownWay); got != "20.8px 12px" {
-		t.Errorf("timeline's padding and links' gap: %s, want 20.8px 12px, the parts' own", got)
+		t.Errorf("timeline's padding and options' gap: %s, want 20.8px 12px, the parts' own", got)
 	}
 
 	s.floe(t, "publish", s.write(t, "decision.yaml", listsDecision), "--slug", "lists-decision")
