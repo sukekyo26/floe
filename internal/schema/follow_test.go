@@ -7,6 +7,26 @@ import (
 	"testing"
 )
 
+// Rest is the schema of additionalProperties, not true or false, taken through a $ref unless s has its own.
+func TestFollowRest(t *testing.T) {
+	t.Parallel()
+
+	const rest = `"additionalProperties": {"type": "string"}`
+	for _, tt := range []struct {
+		name, prop string
+		want       bool
+	}{{"a schema", "schema", true}, {"true", "yes", false}, {"false", "no", false}, {"none", "none", false}, {"through a $ref", "ref", true}, {"at a part", "part", false}} {
+		c, err := compile(t, `"properties": {"schema": {`+rest+`}, "yes": {"additionalProperties": true}, "no": {"additionalProperties": false}, "none": {},
+"ref": {"$ref": "#/$defs/r"}, "part": `+N+`}, "$defs": {"r": {`+rest+`}}`)
+		if c == nil {
+			t.Fatalf("%s: %s", tt.name, told(err))
+		}
+		if st := c.Follow(c.Root.Properties[tt.prop]); (st.Rest != nil) != tt.want {
+			t.Errorf("%s: Rest = %v, want it %v", tt.name, st.Rest, tt.want)
+		}
+	}
+}
+
 // Follow stops at a format before a $ref, at a part, follows a $ref to the same file or to a Shared schema
 // with the properties beside it (its own first), and takes Properties and Items, Items of one schema in
 // 2019-09; nothing else, and a $ref back to what it followed ends.
@@ -76,6 +96,8 @@ func TestForbidding(t *testing.T) {
 		{"into a part", `"properties": {"n": ` + N + `}`, "n.zz", "zz"},
 		// Of no type, keys and items, beside a closed $ref: rows may be a list of objects with k.
 		{"keys and items, then a step", `"properties": {"rows": {"properties": {"a": {` + closed + `"properties": {"x": {}}}}, "items": {"properties": {"a": {"properties": {"y": {}}}}}}}`, "rows.a.y", ""},
+		{"another key, closed items, additionalProperties", `"properties": {"rows": {"items": {` + closed + `"properties": {"a": {}}}, "additionalProperties": {}}}`, "rows.foo", ""},
+		{"closed beside a $ref to additionalProperties", `"properties": {"a": {"$ref": "#/$defs/open", ` + closed + `"properties": {"k": {}}}}, "$defs": {"open": {"additionalProperties": {}}}`, "a.zz", "zz"},
 		{"keys and items", `"properties": {"rows": {"$ref": "#/$defs/c", "properties": {"k": {}}, "items": {"properties": {"k": {}}}}}, "$defs": {"c": {` + closed + `"properties": {}}}`, "rows.k", ""},
 	} {
 		c, err := compile(t, tt.body)

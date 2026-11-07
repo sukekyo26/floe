@@ -9,8 +9,9 @@
       "minItems": 1,
       "items": {
         "type": ["string", "object"],
-        "description": "Its title, a line of Markdown; or { title, num, pills } for a column holding more than its title",
+        "description": "Its title, a line of Markdown; or { id, title, num, pills } for a column holding more than its title",
         "properties": {
+          "id": { "type": "string", "minLength": 1, "description": "The key that names this column in a row written by keys" },
           "title": { "type": "string", "description": "A line of Markdown" },
           "num": { "type": "boolean", "description": "Numbers: aligned right, in a fixed-width font" },
           "pills": {
@@ -27,11 +28,13 @@
     },
     "rows": {
       "type": "array",
-      "description": "Rows of cells, as many as the columns",
+      "description": "Rows, each its cells in the order of the columns, as many as the columns, or its cells by the ids of the columns ({ id: cell }), a column left out drawn empty; a table may hold both",
       "items": {
-        "type": "array",
+        "type": ["array", "object"],
         "items": { "$ref": "floe:///parts/cell.json" },
-        "minItems": 1
+        "minItems": 1,
+        "additionalProperties": { "$ref": "floe:///parts/cell.json" },
+        "minProperties": 1
       },
       "minItems": 1
     }

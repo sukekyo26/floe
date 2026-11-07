@@ -200,7 +200,7 @@ func TestWritten(t *testing.T) {
 	column := map[string]any{"title": "a", "pills": map[string]any{"x": "good"}}
 	value := map[string]any{"columns": []any{column}, "rows": []any{[]any{"x"}, []any{"y"}}}
 	ready := map[string]any{
-		"columns": []any{map[string]any{"title": "a", "num": nil, "pills": map[string]any{"x": "good"}}},
+		"columns": []any{map[string]any{"id": nil, "title": "a", "num": nil, "pills": map[string]any{"x": "good"}}},
 		"rows":    []any{[]any{template.HTML("drawn x")}, []any{template.HTML("drawn y")}},
 	}
 	it := schema.Item{At: []string{"b"}, Part: "table", Format: "", Value: value}
