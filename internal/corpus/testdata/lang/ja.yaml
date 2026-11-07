@@ -26,3 +26,7 @@ sections:
           x: [a, b]
           series:
             - { name: 件数, values: [1, 2] }
+      - stats:
+          - { label: ページ, value: '1', from: '2', better: lower }
+          - { label: ページ, value: '3', from: '2', better: lower }
+          - { label: ページ, value: '2', from: '2', better: lower }

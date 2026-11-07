@@ -10,6 +10,16 @@
   [dd] -35 since the last check
   [dt] Downtime
   [dd] 0 hours
+  [dt] Slow pages
+  [dd] Before 9 → After 4
+  [dd] -5 better
+  [dt] Copied
+  [dd] Before 95.5 → After 80 %
+  [dd] -15.5 worse
+  [dt] Owners
+  [dd] Before 3 → After 3
+  [dd] no change
+  [dd] The same three
   [dt] Spaces
   [dd] 12
   [dt] Owners left

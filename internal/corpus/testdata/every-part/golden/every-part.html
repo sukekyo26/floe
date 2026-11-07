@@ -1244,6 +1244,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
 }
 .stat .unit { margin-left: 0.3em; font-size: var(--floe-text-aside); font-weight: 400; color: var(--muted); }
+.stat .moved { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.35rem; }
+.stat .from { font-size: 1.15rem; font-weight: 400; color: var(--muted); }
+.stat .arrow { font-size: 1rem; font-weight: 400; color: var(--muted); }
 .stat .note { font-size: var(--floe-text-small); font-weight: 600; color: var(--tone); }
 }
 }
@@ -1723,6 +1726,12 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value">1,840</dd></div>
 <div class="card stat" data-floe-tone="good" data-floe-look="panel"><dt>Broken links</dt><dd class="value">120</dd><dd class="note">-35 since the last check</dd></div>
 <div class="card stat" data-floe-look="panel"><dt>Downtime</dt><dd class="value">0<span class="unit">hours</span></dd></div>
+<div class="card stat" data-floe-look="panel"><dt>Slow pages</dt><dd class="value moved"><span class="from"><span class="floe-hidden">Before </span>9</span><span class="arrow" aria-hidden="true">→</span><span><span class="floe-hidden">After </span>4</span></dd>
+<dd class="note" data-floe-tone="good">-5 better</dd></div>
+<div class="card stat" data-floe-look="panel"><dt>Copied</dt><dd class="value moved"><span class="from"><span class="floe-hidden">Before </span>95.5</span><span class="arrow" aria-hidden="true">→</span><span><span class="floe-hidden">After </span>80<span class="unit">%</span></span></dd>
+<dd class="note" data-floe-tone="bad">-15.5 worse</dd></div>
+<div class="card stat" data-floe-look="panel"><dt>Owners</dt><dd class="value moved"><span class="from"><span class="floe-hidden">Before </span>3</span><span class="arrow" aria-hidden="true">→</span><span><span class="floe-hidden">After </span>3</span></dd>
+<dd class="note" data-floe-tone="muted">no change</dd><dd class="note">The same three</dd></div>
 <div class="card stat" data-floe-tone="accent" data-floe-look="panel"><dt>Spaces</dt><dd class="value">12</dd></div>
 <div class="card stat" data-floe-tone="warn" data-floe-look="panel"><dt>Owners left</dt><dd class="value">3</dd></div>
 <div class="card stat" data-floe-tone="bad" data-floe-look="panel"><dt>Lost pages</dt><dd class="value">1</dd></div>

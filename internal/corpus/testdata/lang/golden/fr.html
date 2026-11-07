@@ -336,7 +336,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
    any parts.
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
@@ -480,6 +480,26 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* In the faces of cards, unnumbered; a card without a tone notes in --muted */
+:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); --tone: var(--muted); --tone-soft: var(--muted-soft); }
+:scope > div { gap: 0.15rem; }
+.stat dt { font-size: var(--floe-text-small); color: var(--muted); }
+.stat dd { margin: 0; }
+.stat .value {
+  font-family: var(--mono);
+  font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
+}
+.stat .unit { margin-left: 0.3em; font-size: var(--floe-text-aside); font-weight: 400; color: var(--muted); }
+.stat .moved { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.35rem; }
+.stat .from { font-size: 1.15rem; font-weight: 400; color: var(--muted); }
+.stat .arrow { font-size: 1rem; font-weight: 400; color: var(--muted); }
+.stat .note { font-size: var(--floe-text-small); font-weight: 600; color: var(--tone); }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
@@ -521,7 +541,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
 :scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
 /* A tile of the surface on the panel of the cards */
@@ -645,6 +665,14 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </svg>
 <details data-floe-part="details"><summary>The numbers</summary><div><div data-floe-part="table"><table><thead><tr><th scope="col">Name</th><th scope="col" class="num">Copied</th></tr></thead><tbody><tr><td>a</td><td class="num">1</td></tr><tr><td>b</td><td class="num">2</td></tr></tbody></table></div></div></details>
 </figure>
+<dl data-floe-part="stats">
+<div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value moved"><span class="from"><span class="floe-hidden">Before </span>2</span><span class="arrow" aria-hidden="true">→</span><span><span class="floe-hidden">After </span>1</span></dd>
+<dd class="note" data-floe-tone="good">-1 better</dd></div>
+<div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value moved"><span class="from"><span class="floe-hidden">Before </span>2</span><span class="arrow" aria-hidden="true">→</span><span><span class="floe-hidden">After </span>3</span></dd>
+<dd class="note" data-floe-tone="bad">+1 worse</dd></div>
+<div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value moved"><span class="from"><span class="floe-hidden">Before </span>2</span><span class="arrow" aria-hidden="true">→</span><span><span class="floe-hidden">After </span>2</span></dd>
+<dd class="note" data-floe-tone="muted">no change</dd></div>
+</dl>
 </section>
 </main>
 

@@ -24,7 +24,8 @@ import (
 // text's box, as all a part holds of Markdown is (MarkdownFlow).
 var partFuncs = template.FuncMap{
 	"bars": barsOf, "chart": chartOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf,
-	"markdown": MarkdownFlow, "script": scriptOf, "tree": treeOf, "written": writtenOf, "zoom": zoomScript,
+	"markdown": MarkdownFlow, "script": scriptOf, "stats": statsOf, "tree": treeOf, "written": writtenOf,
+	"zoom": zoomScript,
 }
 
 // zoomScript is the function zoom of a part.html: the script that zooms the frames of class floe-zoom, as the

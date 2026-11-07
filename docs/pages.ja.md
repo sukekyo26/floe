@@ -94,7 +94,8 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `table` | 行でも列でも見比べる、升の短い並び。`columns` と `rows`。列は題の字か `{ title, num, pills }`。`num: true` は数の列、`pills` は言葉とその色（`{ 済: good }`）で、その列の升が言葉と丸ごと同じなら、その pill で描く。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`（引用符で囲まず、オブジェクトのまま書く）。 |
 | `entries` | 記録を縦に並べます。1 つが `title`（Markdown の 1 行）とその横の `tags`（それぞれ表のセルと同じく Markdown の 1 行か pill）、その下の全部の幅の `text`（Markdown）、その下の `parts`（`details` と同じ部品の並び）。札には列の名前が出ないので、何の値かを札の中で言います（`マージ 2026-10-30`）。コードは `parts` に `code`・`terminal` で書きます。`text` の中の囲んだコードは、ただのコードとして描き、警告します。 |
 | `image` | 画面の写しなどの画像。`file` と、何を写すかの `alt`、任意で絵の下に出す説明 `caption`（[画像](#画像)）。 |
-| `note`・`stats`・`steps`・`checklist` | 色の付いた注、大きな数、番号付きの手順、済めば印の付く項目。 |
+| `stats` | 大きな数を横に並べます。`label`・`value`・`unit` と、`tone` の色の `note` を取ります。前の数 `from` を書くと `3.1 → 1.3` と描き、下に `-1.8` のような差と、良くなったか悪くなったかをその色で（同じなら数なしで）描きます。`from` には、どちらが良いかを言う `better: lower` か `higher` を必ず添え、`from` と `value` は引用符で囲んだ数字だけで書きます（`'-3.5'`。`1,234` は、誤りの文の pattern のとおり断ります）。差の桁は 2 つの数の小数の桁の多い方で、全部の桁を描きます。割合は描かないので、要るなら `note` に書きます。 |
+| `note`・`steps`・`checklist` | 色の付いた注、番号付きの手順、済めば印の付く項目。 |
 | `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |
 | `asks` | 読み手に判断を頼む問い。Q1、Q2 … と番号が付きます。`question`、案の `options`、勧めの `recommend` と理由の `why`、決める人の `by`、決まったら `decided`。`recommend`・`decided` と同じ字の案に枠と札が付き、どの案とも違えば別の行に出ます。決まった問いは右上に丸い ✓ が付き、枠は決定の案だけで、ほかの案は薄い字になります（勧めの案の札は残ります）。 |
 | `checks` | 調査やテストで確かめたことと実際の結果。書いた順に並び、上に結果ごとの数が出ます。1 件は、題の `title`、結果の `result`（`ok`・`ng`・`unchecked`。日本語のページでは OK・NG・未確認と描く）、実際の結果の `actual`（Markdown）、その下の `parts`（`details` が持てるもの。`code` など）、確かめ方の `how`。`unchecked` の `actual` には、確かめていない理由を書きます。これからやることは `checklist`、レビューの指摘は `findings` に書きます。 |

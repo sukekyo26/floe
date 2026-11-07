@@ -87,6 +87,10 @@ floe の部品が描くのに使う関数も使えます。floe の部品の `pa
 
 これは、`part.html` が `bars` に渡す並びの schema に置きます。`bars .items` なら `properties.items` の下に `properties.items.items` として置き、根に置いても並びは確かめられません。
 
+### `stats`
+
+`{{range stats .}}` は、キーと値で書いた項目（`label`・`value`・`unit`・`note`・`tone`・`from`・`better`）のリストを読みます。それぞれ `.Label`、書いたままの `.Value`、`.Unit`・`.Note`・`.Tone`・`.From`、`better`・`worse`・`same` のどれかの `.Way` と `good`・`bad`・`muted` のどれかの `.WayTone`（`from` が無ければ空）、`value` から `from` を引いた符号付きの厳密な `.Change`（小数の桁は 2 つの多い方。同じなら空）になります。`from` があるときは、`from` と `value` は数字だけの字（`^-?[0-9]+([.][0-9]+)?$`）、`better` は `lower` か `higher` で、ほかは部品の値に置き、項目の番号と label を言って断ります。ほかの鍵は部品の schema が決めます。
+
 ### `chart`
 
 `{{$c := chart .}}` は、部品の値の全体から部品 `chart` の座標を計算し、その `part.html` が SVG を書きます。あの部品のための関数で、欄と、欄が前提にする高さ・字・class は保証しません。座標を決められない値（`kind` が `line`・`bar` でない、`x` か `series` が空、`values` の数が `x` と違う、数でない値や `min`）は断ります。`values` の数の違いと、数でない値や `min` は書いた所に置き、ほかは部品の値に置きます。
