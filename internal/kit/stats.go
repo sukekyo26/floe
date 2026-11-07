@@ -9,8 +9,6 @@ import (
 )
 
 // stat is what part.html draws of an item of stats. Value is as written, as a bar's.
-// LIMIT: of the other keys, a part of one's own whose schema lets them be other than text draws them empty, and it
-// may write better without from, which is not read.
 // LIMIT: a change has no unit, the value's being read just before it, and how a screen reader reads its - is left
 // to it.
 type stat struct {
@@ -66,6 +64,8 @@ func statOf(i int, item any, found *usererr.List) (stat, error) {
 	if !ok {
 		return stat{}, found.Add(usererr.New("kit_stat_item", i+1))
 	}
+	// LIMIT: a part of one's own whose schema lets label, unit, note or tone be other than text draws them empty, plain
+	// on the page, and better without from is not read: what they may be is its schema's to say.
 	s := stat{
 		Value: m["value"], Label: stringOf(m["label"]), Unit: stringOf(m["unit"]), Note: stringOf(m["note"]),
 		Tone: stringOf(m["tone"]), From: stringOf(m["from"]), Change: "", Way: "", WayTone: "",
