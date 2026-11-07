@@ -9,7 +9,8 @@ import (
 	"github.com/chromedp/chromedp/kb"
 )
 
-// contentsPage is a report of 8 sections, the first with subsections, the last two short, which the contents list;
+// contentsPage is a report of 9 sections, the first with subsections, the last two short, which the contents list,
+// and one headed by a tag alone, which they leave out;
 // a link to another page among the words of a heading, which the contents write as its words.
 var contentsPage = func() string {
 	long := strings.TrimSpace(strings.Repeat("A paragraph that goes on for a while to fill the page. ", 40))
@@ -21,6 +22,7 @@ var contentsPage = func() string {
 	for i := 1; i < 6; i++ {
 		fmt.Fprintf(&b, "  - heading: Long %d\n    parts: [ { text: \"%s\" } ]\n", i, long)
 	}
+	b.WriteString("  - heading: <T>\n    parts: [ { text: A tag alone. } ]\n")
 	b.WriteString("  - heading: Short A\n    parts: [ { text: A line. } ]\n  - heading: Short B\n    parts: [ { text: A line. } ]\n")
 	return b.String()
 }()
@@ -39,6 +41,7 @@ const measureContents = `(() => {
   if (lead.getBoundingClientRect().width > probe.getBoundingClientRect().width + 1) out.push('the lead wider than a text');
   probe.remove();
   if (nav.querySelector('a a, a[href^=http]')) out.push('a link of another page in the contents');
+  if ([...nav.querySelectorAll('a')].some((a) => a.textContent.trim() === '')) out.push('a link of no words in the contents');
   return out.join('\n');
 })()`
 
