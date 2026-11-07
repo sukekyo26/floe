@@ -151,8 +151,9 @@ func startChrome(path string) (context.Context, error) {
 	return shared.ctx, shared.err
 }
 
-// The window of a tab that asks for no other size, as Chrome 156 of CI has it. It is set on each tab, not with --window-size: that sets the
-// outer window, and what Chrome keeps of it above the page differs by version (of 800x600, 400 high on 156 and 457 on 157).
+// The window of a tab that asks for no other size. It is set on each tab, not with --window-size: that sets the outer window, and what Chrome
+// keeps of it above the page differs by version (of 800x600, 400 high on 156 and 457 on 157).
+// LIMIT: the tabs newBrowser opens alone: a popup a page opens has Chrome's own window. Set it there too if a test comes to measure one
 const (
 	windowWidth  = 780
 	windowHeight = 380

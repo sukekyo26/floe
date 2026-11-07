@@ -416,9 +416,8 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// A row's menu is not cut off by the list's box: with one row, the menu reaches below it, its delete the topmost at its
 	// middle, which deletes on a second click.
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', createdAt: at(1), updatedAt: at(8) }]`)
-	// A window tall enough for the menu below the one row, whatever the test Chrome's own window is (CI's is shorter): the
-	// width of that window, as the rest of the test sees it.
-	b.size(780, 800, false)
+	// A window tall enough for the menu below the one row, of the width the rest of the test sees.
+	b.size(windowWidth, 800, false)
 	// Not scrollIntoView, which would scroll a box that cuts it off to bring it in.
 	b.eval("document.querySelector('#list > li:last-child summary').click()")
 	d := b.rect("document.querySelector('#list > li:last-child .delete')")
