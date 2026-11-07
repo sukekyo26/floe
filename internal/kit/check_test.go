@@ -79,7 +79,7 @@ func TestCheckMistakes(t *testing.T) {
 		)},
 		{
 			"a part's schema with floe's format where floe does not follow", with(map[string]string{"p/schema.json": `{"type": "object", "properties": {"h": {"anyOf": [{"type": "string", "format": "html"}]}}}`}), nil, nil,
-			"own/parts/p/schema.json: #/properties/h/anyOf/0: the format html marks an item to draw; declare it under properties or items, which floe follows",
+			"own/parts/p/schema.json: #/properties/h/anyOf/0: the format html marks an item to draw; declare it under properties, additionalProperties or items, which floe follows",
 		},
 		{
 			"escaping", with(map[string]string{"p/part.html": `<div data-floe-part="p"><a href="{{.t}}>x</a></div>`}), nil, nil,

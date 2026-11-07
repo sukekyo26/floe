@@ -56,6 +56,38 @@ func mine(page, schema string, more map[string]string) map[string]string {
 	return files
 }
 
+// A function's mistake in a part under additionalProperties is told at the value, by its key as written.
+func TestRestPartMistake(t *testing.T) {
+	t.Parallel()
+
+	schema := `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"note": {"additionalProperties": {"$ref": "floe:///parts/bars.json"}}}}`
+	k := ownKit(t, nil, mine(minePage, schema, nil))
+	data := "lang: en\ntemplate: mine\nnote:\n  x/y:\n    - { label: a, value: 5, of: 3 }\n"
+	want := lines(`d.yaml:5:5: bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole`)
+	if got := drawn(t, k, data, none); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A template's root whose $ref brings an additionalProperties of parts is told at the template, not at the shared schema.
+func TestRootRestOfShared(t *testing.T) {
+	t.Parallel()
+
+	const head = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", `
+	parts := map[string]string{"sh.json": head + `"additionalProperties": {"$ref": "floe:///parts/note.json"}}`}
+	templates := mine(minePage, head+`"$ref": "floe:///parts/sh.json"}`, nil)
+	src := kit.Sources{
+		Parts: kit.Dir{FS: mapFS(parts), Name: "parts"}, Themes: kit.Dir{FS: nil, Name: ""},
+		Templates: kit.Dir{FS: mapFS(templates), Name: "templates"},
+	}
+	_, err := kit.Load(floeKit(t), src)
+	want := "templates/mine/schema.json: #: the additionalProperties of the root, floe:///parts/sh.json#/additionalProperties, holds parts or items of floe's formats, which would draw the keys floe reads itself (lang, template, theme, title) too; declare the items of the page under properties"
+	if got := told(err); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
 const minePage = "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head>\n<body>\n{{with .Data.note}}{{.}}{{end}}\n</body></html>\n"
 
 const mineSchema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
@@ -74,8 +106,8 @@ func TestStageFour(t *testing.T) {
 		"      - table: {columns: [{title: x}], rows: [[a, b]]}\n" +
 		"      - tree: [{path: /}]\n"
 	if got, want := drawn(t, floeKit(t), report, none), lines(
-		"d.yaml:7:46: write as many cells in each row as there are columns",
-		"d.yaml:8:46: write as many cells in each row as there are columns",
+		"d.yaml:7:47: write as many cells in each row as there are columns",
+		"d.yaml:8:47: write as many cells in each row as there are columns",
 		`d.yaml:9:23: write a path naming a file or a folder, such as internal/tmpl/part.go ("/")`,
 	); got != want {
 		t.Errorf("report told\n%s\nwant\n%s", got, want)
@@ -90,7 +122,7 @@ func TestStageFour(t *testing.T) {
 	data := "lang: en\ntemplate: mine\nn: abc\nitems: []\nt: {columns: [{title: x}], rows: [[a, b]]}\n"
 	if got, want := drawn(t, k, data, none), lines(
 		"d.yaml: write an item",
-		"d.yaml:5:34: write as many cells in each row as there are columns",
+		"d.yaml:5:35: write as many cells in each row as there are columns",
 		"templates/mine/computed.yaml:1:9: less cannot be computed from d.yaml: invalid operation: string - int",
 	); got != want {
 		t.Errorf("own told\n%s\nwant\n%s", got, want)

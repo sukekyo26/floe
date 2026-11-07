@@ -82,6 +82,28 @@ sections:
             - [New host, Low, '0', Nothing, { pill: ready, tone: accent }]
       - table:
           columns:
+            - { id: state, title: State, pills: { done: good, open: accent } }
+            - { id: what, title: What }
+            - { id: who, title: Who }
+            - { id: pages, title: Pages, num: true }
+          rows:
+            - { state: open, what: 'The `copy`', who: Ann, pages: '12' }
+            - { who: Ben, state: done, what: '**The index**' }
+            - { state: { pill: late, tone: bad }, what: The links }
+            - { what: No state written, who: Cy }
+            - state: open
+              what: On two lines
+      - table:
+          columns:
+            - { id: a, title: By a key }
+            - Its title alone
+            - { id: a.b, title: A dot }
+            - { id: 'x/y', title: A slash }
+          rows:
+            - [in order, of the columns, c, d]
+            - { a: by key, a.b: dot, 'x/y': slash }
+      - table:
+          columns:
             - Change
             - { title: Size, num: true }
             - Note

@@ -112,7 +112,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ## Parts in a template
 
-A part draws an item of the data: `floe part list` lists them, and `floe part show <name>` prints what one takes. The schema names it with `$ref`, under `properties` or `items`:
+A part draws an item of the data: `floe part list` lists them, and `floe part show <name>` prints what one takes. The schema names it with `$ref`, under `properties`, `additionalProperties` (not the root's) or `items`:
 
 ```json
 "findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }
@@ -189,8 +189,8 @@ An element that fills itself with a colour and holds text, as a band or a filled
 A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused: the `schema.json` that `floe template new` makes has none, so add it yourself.
 
 - `lang`, `template`, `theme` and `title` are read by floe and are not declared, nor required.
-- A `format` that tells floe how to draw a text: `markdown`, `html` or `image`. Declare it under `properties` or `items`, where floe follows.
-- A `$ref` names a part or a schema the parts share, whole (`floe:///parts/table.json`), under `properties` or `items`, or a place in the schema's own file (`#/$defs/row`). One out of floe (`file://`, `https://`) or into a part is refused. The root of the schema takes no `$id`.
+- A `format` that tells floe how to draw a text: `markdown`, `html` or `image`. Declare it under `properties`, `additionalProperties` or `items`, where floe follows; the `additionalProperties` of the root holds neither (it would draw the keys floe reads itself, `lang` and `title` too).
+- A `$ref` names a part or a schema the parts share, whole (`floe:///parts/table.json`), under `properties`, `additionalProperties` (not the root's) or `items`, or a place in the schema's own file (`#/$defs/row`). One out of floe (`file://`, `https://`) or into a part is refused. The root of the schema takes no `$id`.
 
 An item of `"format": "markdown"` is Markdown text: `{{.Data.text}}` draws it as HTML, in the box of a template's own Markdown (`<div data-floe-markdown>`), as `{{markdown}}` does. floe's base spaces its blocks `--floe-room` apart, as a text's, and sizes its headings as a text's (1.2em and 1.1em). Unlike a text's box, your `page.css` and the theme's `base.css` reach in it, to arrange it; name your own headings outside it (`header h1`, `section > h2`), not by the element alone (`h2 { … }`), which would reach the author's headings too. Placed in a part's box (a `note`), it is spaced so too, not as the part spaces what it holds, and `page.css` stops at the part's box.
 
