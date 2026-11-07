@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add rows written by the columns' ids to the part `table`: a column takes an `id`, and a row is `{ state: done, who: walter }`, a column left out drawn empty and a key that is no column's `id` refused. Rows in the order of the columns stay as they are, and a table may hold both. Parts and formats may now stand under `additionalProperties` in a schema of one's own, where floe draws them; not at the root's, which would draw `lang` and `title` too.
 - Add `from` and `better` to the part `stats`: `from` is the number before, drawn as `3.1 → 1.3` with the change under it, exact and in its colour, for the better or the worse as `better` says. Pages without `from` are drawn as before.
 - Add the task state `archived`, so that a task of no page can be archived: "Archive the task" now shows on any task that is done, and `floe work --task X --state archived` writes it. **A task's place on the list is now its state alone**: archiving all a task's pages with `floe archive` no longer moves the task, and a task of the archive with a page published again stays there, with its unread shown. The button no longer gives back the pages of a task not done: use their rows, or the page list's archive.
 - Add a × to each pin on the task list, which takes the pin off there, without going to the page list or the page.
@@ -574,6 +575,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix where a row of too many or too few cells of a `table` is told: at each such row, not once at the start of `rows`.
 - Fix changing a task's state on its page after the task was removed elsewhere: it made the task again, and now refuses, says so and reads the tasks again.
 - Fix going back from a page opened whole, by the back button, `h` or the browser's own: the list that opened it, the page list or a task's page, now has that page's row focused and the page beside the list, or the pin focused on the task list. A page left unread stays unread: only its row has the focus.
 - Fix a Venn diagram's label placed by its region standing 2 off the axis of a region symmetric about one: the

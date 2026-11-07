@@ -6,8 +6,10 @@
 {{- /* The pills of a column are found by the cell as written, and its word drawn as text, as cell draws a pill: . holds the cells as cell drew them */}}
 {{- $rows := (written).rows}}
 {{- range $r, $row := .rows}}
-<tr>{{range $i, $cell := $row}}{{$col := index $.columns $i}}{{$num := false}}{{$pills := false}}{{if ne (printf "%T" $col) "string"}}{{$num = $col.num}}{{$pills = $col.pills}}{{end}}
-{{- $word := index $rows $r $i}}{{$tone := ""}}{{if and $pills (eq (printf "%T" $word) "string")}}{{$tone = index $pills $word}}{{end -}}
+{{- $keyed := ne (printf "%T" $row) "[]interface {}"}}
+<tr>{{range $i, $col := $.columns}}{{$num := false}}{{$pills := false}}{{$id := false}}{{if ne (printf "%T" $col) "string"}}{{$num = $col.num}}{{$pills = $col.pills}}{{$id = $col.id}}{{end}}
+{{- $cell := ""}}{{$word := ""}}{{if not $keyed}}{{$cell = index $row $i}}{{$word = index $rows $r $i}}{{else if $id}}{{$cell = index $row $id}}{{$word = index $rows $r $id}}{{end}}
+{{- $tone := ""}}{{if and $pills (eq (printf "%T" $word) "string")}}{{$tone = index $pills $word}}{{end -}}
 <td{{if $num}} class="num"{{end}}>
 {{- /* The pill as cell's part.html draws one */}}
 {{- if $tone}}<span data-floe-tone="{{$tone}}" data-floe-part="cell">{{$word}}</span>{{else}}{{$cell}}{{end -}}

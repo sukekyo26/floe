@@ -56,6 +56,20 @@ func mine(page, schema string, more map[string]string) map[string]string {
 	return files
 }
 
+// A function's mistake in a part under additionalProperties is told at the value, by its key as written.
+func TestRestPartMistake(t *testing.T) {
+	t.Parallel()
+
+	schema := `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"note": {"additionalProperties": {"$ref": "floe:///parts/bars.json"}}}}`
+	k := ownKit(t, nil, mine(minePage, schema, nil))
+	data := "lang: en\ntemplate: mine\nnote:\n  x/y:\n    - { label: a, value: 5, of: 3 }\n"
+	want := lines(`d.yaml:5:5: bars: bar 1 "a": 5 is over its of 3; write a value no greater than of, the whole`)
+	if got := drawn(t, k, data, none); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
 const minePage = "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head>\n<body>\n{{with .Data.note}}{{.}}{{end}}\n</body></html>\n"
 
 const mineSchema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
@@ -74,8 +88,8 @@ func TestStageFour(t *testing.T) {
 		"      - table: {columns: [{title: x}], rows: [[a, b]]}\n" +
 		"      - tree: [{path: /}]\n"
 	if got, want := drawn(t, floeKit(t), report, none), lines(
-		"d.yaml:7:46: write as many cells in each row as there are columns",
-		"d.yaml:8:46: write as many cells in each row as there are columns",
+		"d.yaml:7:47: write as many cells in each row as there are columns",
+		"d.yaml:8:47: write as many cells in each row as there are columns",
 		`d.yaml:9:23: write a path naming a file or a folder, such as internal/tmpl/part.go ("/")`,
 	); got != want {
 		t.Errorf("report told\n%s\nwant\n%s", got, want)
@@ -90,7 +104,7 @@ func TestStageFour(t *testing.T) {
 	data := "lang: en\ntemplate: mine\nn: abc\nitems: []\nt: {columns: [{title: x}], rows: [[a, b]]}\n"
 	if got, want := drawn(t, k, data, none), lines(
 		"d.yaml: write an item",
-		"d.yaml:5:34: write as many cells in each row as there are columns",
+		"d.yaml:5:35: write as many cells in each row as there are columns",
 		"templates/mine/computed.yaml:1:9: less cannot be computed from d.yaml: invalid operation: string - int",
 	); got != want {
 		t.Errorf("own told\n%s\nwant\n%s", got, want)
