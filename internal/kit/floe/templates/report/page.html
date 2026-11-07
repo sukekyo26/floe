@@ -22,14 +22,15 @@
 {{- /* The contents link to ids of the sections' elements, of a dot no heading's id holds, so that the ids floe makes of
    the headings' text stay as they were.
    LIMIT: a heading is a line of Markdown and its id is made of the words drawn, so a tag, a mark, a backslash, a
-   character reference or a link's address in it changes the id it had. On a narrow screen the contents hold the
+   character reference or a link's address in it changes the id it had, and a heading of a tag alone draws empty, left
+   out of the contents (S235). On a narrow screen the contents hold the
    sections alone, a long list on a page of very many sections */}}
 {{- if .Calc.contents}}
 <div class="body">
 <nav data-floe-look="toc" aria-label="{{word "contents"}}"><p class="title" aria-hidden="true">{{word "contents"}}</p>
 <ol>
 {{- range $i, $s := .Data.sections}}{{with $s.heading}}
-<li><a href="#section.{{$i}}">{{markdownLabel .}}</a>{{if $s.sections}}<ol>{{range $j, $t := $s.sections}}<li><a href="#section.{{$i}}.{{$j}}">{{markdownLabel $t.heading}}</a></li>{{end}}</ol>{{end}}</li>
+{{with markdownLabel .}}<li><a href="#section.{{$i}}">{{.}}</a>{{if $s.sections}}<ol>{{range $j, $t := $s.sections}}{{with markdownLabel $t.heading}}<li><a href="#section.{{$i}}.{{$j}}">{{.}}</a></li>{{end}}{{end}}</ol>{{end}}</li>{{end}}
 {{- end}}{{end}}
 </ol>
 </nav>{{contents}}

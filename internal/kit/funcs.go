@@ -34,9 +34,9 @@ var funcs = template.FuncMap{
 // and two spaces at the end of a line would break it.
 func line(md goldmark.Markdown, name, text string) (template.HTML, error) {
 	var lines []string
-	for line := range strings.Lines(text) {
-		if line = strings.TrimSpace(line); line != "" {
-			lines = append(lines, line)
+	for l := range strings.Lines(text) {
+		if l = strings.TrimSpace(l); l != "" {
+			lines = append(lines, l)
 		}
 	}
 	html, err := convert(md, name, strings.Join(lines, "\n"))
@@ -59,7 +59,8 @@ var markdownLine = goldmark.New(
 	goldmark.WithExtensions(extension.Strikethrough, extension.Linkify),
 )
 
-// markdownLabel reads as markdownLine does and writes a link, one written or one Linkify finds, as its words alone.
+// markdownLabel reads as markdownLine does and writes a link, one written or one Linkify finds, as its words alone, and
+// raw HTML as nothing, not even the comment markdownLine leaves: a label of a tag alone is empty.
 var markdownLabel = goldmark.New(
 	goldmark.WithParser(parser.NewParser(
 		parser.WithBlockParsers(util.Prioritized(parser.NewParagraphParser(), 1000)),
@@ -69,12 +70,15 @@ var markdownLabel = goldmark.New(
 	goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(wordsOfLinks{}, 0))),
 )
 
-// wordsOfLinks renders a link as what it holds and an autolink as its text.
+// wordsOfLinks renders a link as what it holds, an autolink as its text and raw HTML as nothing.
 type wordsOfLinks struct{}
 
 func (wordsOfLinks) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
 	r.Register(ast.KindLink, func(util.BufWriter, []byte, ast.Node, bool) (ast.WalkStatus, error) {
 		return ast.WalkContinue, nil
+	})
+	r.Register(ast.KindRawHTML, func(util.BufWriter, []byte, ast.Node, bool) (ast.WalkStatus, error) {
+		return ast.WalkSkipChildren, nil
 	})
 	r.Register(ast.KindAutoLink, func(w util.BufWriter, src []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if link, ok := n.(*ast.AutoLink); ok && entering {

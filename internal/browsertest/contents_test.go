@@ -110,6 +110,10 @@ func TestUIContents(t *testing.T) { //nolint:paralleltest // the browser tests s
 	at("Short B", "Short B pressed", press(9))
 	at("Short A", "Short A pressed again", press(8))
 	at("See the guide", "the top again", scroll("0"))
+	// Pressed at the end, where the page scrolls no further: the link pressed, though nothing scrolls.
+	scroll("document.documentElement.scrollHeight")
+	at("Short A", "Short A pressed at the end", press(8))
+	at("Short A", "Short A pressed again where it is", press(8))
 	// A low window: the contents scroll within, the place in sight.
 	b.size(1440, 500, false)
 	scroll("document.getElementById('section.5').offsetTop")
@@ -124,6 +128,10 @@ func TestUIContents(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if got := b.eval("document.activeElement.closest('[data-floe-look~=toc]') !== null && getComputedStyle(document.activeElement).outlineOffset"); got != "-2px" {
 		amiss = append(amiss, "the first Tab: "+got)
 	}
+	// At 700 the subsections are hidden: one read there marks the section it stands in.
+	b.size(700, 900, false)
+	b.navigate("/a/contents-default/?raw")
+	at("See the guide", "a hidden subsection, at 700", scroll("document.getElementById('section.0.1').offsetTop"))
 	// A narrow window: the sections alone over the sections, nothing past the window.
 	b.size(400, 800, false)
 	if got := b.eval(`(() => { const n = document.querySelector('[data-floe-look~=toc]');
