@@ -82,7 +82,9 @@ func (c *Compiled) Follow(s *jsonschema.Schema) Step {
 func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) (Step, []*jsonschema.Schema) {
 	through := make([]*jsonschema.Schema, 1, 2)
 	through[0] = s
-	own := Step{Part: "", Format: "", PartRoot: nil, Props: s.Properties, Items: itemsOf(s), Rest: restOf(s), restIn: s, closed: nil}
+	own := Step{
+		Part: "", Format: "", PartRoot: nil, Props: s.Properties, Items: itemsOf(s), Rest: restOf(s), restIn: s, closed: nil,
+	}
 	if seen[s] {
 		return Step{Part: "", Format: "", PartRoot: nil, Props: nil, Items: nil, Rest: nil, restIn: nil, closed: nil}, through
 	}
@@ -94,7 +96,8 @@ func (c *Compiled) step(s *jsonschema.Schema, seen map[*jsonschema.Schema]bool) 
 		return own, through
 	}
 	if part, ok := c.partRoot(s.Ref); ok {
-		return Step{Part: part, Format: "", PartRoot: s.Ref, Props: nil, Items: nil, Rest: nil, restIn: nil, closed: nil}, through
+		st := Step{Part: part, Format: "", PartRoot: s.Ref, Props: nil, Items: nil, Rest: nil, restIn: nil, closed: nil}
+		return st, through
 	}
 	if !c.followed(s, s.Ref) {
 		return own, through
@@ -209,8 +212,10 @@ func itemsOf(s *jsonschema.Schema) *jsonschema.Schema {
 
 // restOf returns the schema of the additionalProperties of s, nil for none or for true or false.
 func restOf(s *jsonschema.Schema) *jsonschema.Schema {
-	rest, _ := s.AdditionalProperties.(*jsonschema.Schema)
-	return rest
+	if rest, ok := s.AdditionalProperties.(*jsonschema.Schema); ok {
+		return rest
+	}
+	return nil
 }
 
 // floeFormat returns the name of one of Formats s has, "" for none.
