@@ -181,6 +181,7 @@ func diagramColours(root string) string {
   read('.dg', ['font-family']);
   read('.dg *', ['fill', 'stroke']);
   read('.floe-zoom-tools button', ['color', 'background-color', 'border-top-color']);
+  read('.floe-zoom-hint', ['color', 'background-color', 'border-top-color']);
   return out.join('\n');
 })(` + root + `)`
 }
@@ -263,7 +264,7 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 	inShadow := b.eval(diagramColours("document.getElementById('h').shadowRoot"))
 	var wantShadow []string
 	for line := range strings.Lines(want) {
-		if !strings.HasPrefix(line, ".floe-zoom-tools") { // the zoom script finds no diagram in a shadow root
+		if !strings.HasPrefix(line, ".floe-zoom-tools") && !strings.HasPrefix(line, ".floe-zoom-hint") { // the zoom script finds no diagram in a shadow root
 			wantShadow = append(wantShadow, strings.TrimSuffix(line, "\n"))
 		}
 	}
