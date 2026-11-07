@@ -63,13 +63,6 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 			document.getElementById('task-archived').hidden ? 'no word' : document.getElementById('task-archived').textContent,
 			'rows ' + [...document.querySelectorAll('#list li[data-slug]')].map((li) => li.dataset.slug + (items.find((a) => a.slug === li.dataset.slug).archived ? '*' : '')).join(), document.activeElement.id].join(' | ')`))
 	}
-	press := func(word string) {
-		t.Helper()
-		r := b.rect(button)
-		b.click(r.X+r.Width/2, r.Y+r.Height/2)
-		b.until("the button says "+word, button+".textContent === "+js(word))
-		b.until("the press done", "!archivingTask")
-	}
 	toast := func() string {
 		return b.eval("[...document.querySelectorAll('.toast')].at(-1).textContent")
 	}
@@ -89,11 +82,11 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	// Of no page: the button is there, and the same button gives it back.
 	open("#none")
 	head("no page")
-	press("Bring the archive back")
+	pressTaskArchive(b, "Bring the archive back")
 	head("no page, archived")
 	out = append(out, "said: "+toast())
 	out = append(out, "the way up: "+b.eval("document.getElementById('task-up').getAttribute('href')"))
-	press("Archive the task")
+	pressTaskArchive(b, "Archive the task")
 	head("no page, given back")
 	out = append(out, "said: "+toast())
 
@@ -130,19 +123,19 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 
 	// Of pages: the pages go with it, and come back with it.
 	open("#pages")
-	press("Bring the archive back")
+	pressTaskArchive(b, "Bring the archive back")
 	b.until("the pages", "items.filter((a) => a.work?.task === '#pages' && a.archived).length === 2")
 	head("pages, archived")
 	shelf("with #pages in the archive")
 	open("#pages")
-	press("Archive the task")
+	pressTaskArchive(b, "Archive the task")
 	b.until("the pages back", "items.filter((a) => a.work?.task === '#pages' && !a.archived).length === 2")
 	head("pages, given back")
 
 	// Its pages archived do not move it: it is done, and archived by its button.
 	open("#marked")
 	head("pages archived by floe archive")
-	press("Bring the archive back")
+	pressTaskArchive(b, "Bring the archive back")
 	head("those, archived")
 
 	// A page given back or published again leaves it in the archive, with its unread on its row.
@@ -160,7 +153,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	const kids = "[...document.querySelectorAll('#task-family .kin-row')].map((e) => e.dataset.task + ' ' + e.querySelector('.kid-state').textContent).join()"
 	b.until("the children", kids)
 	out = append(out, "the children: "+b.eval(kids))
-	press("Bring the archive back")
+	pressTaskArchive(b, "Bring the archive back")
 	out = append(out, "the parent archived: "+b.eval(kids))
 	task("#kid3", "--state", "todo", "--parent", "#up")
 	b.until("a child more", "document.querySelectorAll('#task-family .kin-row').length === 3")
@@ -258,7 +251,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 
 	// At every width the word and the button stay in the window.
 	open("#none")
-	press("Bring the archive back")
+	pressTaskArchive(b, "Bring the archive back")
 	for _, width := range []int64{1440, 1100, 900, 800, 360} {
 		b.size(width, 900, width == 360)
 		b.until("the width", fmt.Sprintf("innerWidth === %d", width))
