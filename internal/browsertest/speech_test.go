@@ -55,7 +55,9 @@ const marked = `(() => {
     if (e.matches(unnumbered)) counted = false;
     if (counted) e.dataset.speechCounted = '';
     e.dataset.speech = String(i++);
-    const copy = e.cloneNode(true);
+    // What is not drawn is not read: a part a card holds may hide some of its own (zoom's tools on a small image).
+    const copy = e.cloneNode(true), copies = [...copy.querySelectorAll('*')];
+    [...e.querySelectorAll('*')].forEach((k, j) => { if (getComputedStyle(k).display === 'none') copies[j].remove(); });
     copy.querySelectorAll('script, style').forEach((s) => s.remove());
     const part = e.closest('[data-floe-part]');
     out.push({ name: (part ? part.dataset.floePart + ' ' : '') + e.tagName.toLowerCase() + [...e.classList].map((c) => '.' + c).join(''), counted, text: copy.textContent, e });

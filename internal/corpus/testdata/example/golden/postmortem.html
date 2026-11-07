@@ -252,8 +252,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    any parts.
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
 :scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
+/* --cards-gap is the room between what a card holds, which a part laying out its cards' rows (options) reads too */
 .card {
-  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+  --cards-gap: 0.4rem; padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--cards-gap); align-content: start; min-width: 0;
 }
 /* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
 .card { --face: initial; --on-face: initial; }

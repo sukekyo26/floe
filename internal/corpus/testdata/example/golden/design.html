@@ -263,8 +263,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    any parts.
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
 :scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
+/* --cards-gap is the room between what a card holds, which a part laying out its cards' rows (options) reads too */
 .card {
-  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: 0.4rem; align-content: start; min-width: 0;
+  --cards-gap: 0.4rem; padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--cards-gap); align-content: start; min-width: 0;
 }
 /* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
 .card { --face: initial; --on-face: initial; }
@@ -295,6 +296,31 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .option li.pro { color: var(--on-face, var(--fg)); }
 .option li.pro::before { content: "+"; content: "+" / ""; color: var(--on-face, var(--good)); }
 .option li.con::before { content: "−"; content: "−" / ""; color: var(--on-face, var(--bad)); }
+/* The text and the pros and cons in one box, one under another as a card's children are */
+.option > .body { display: grid; gap: var(--cards-gap); align-content: start; }
+/* --floe-room from the title and from the words, as between parts; parts as tall as their own, not as the row */
+.option > .parts { align-self: start; margin-block: calc(var(--floe-room) - var(--cards-gap)); }
+/* Options holding parts: the cards on a line share four rows (the number, the title, the parts, the words), so that
+   the parts and the words of each start at one height. The rows have no gap of their own: the number keeps the cards'
+   gap below it, and takes no row by name, so that a theme laying it out of the rows (position: absolute) keeps it
+   placed against the card.
+   LIMIT: a row no card on a line fills still takes the gap between the lines of cards (--floe-room): half of it above
+   the title where the number takes no room in the rows (a theme's content: none or position: absolute), the whole
+   between the title and the words on a line of no parts (one card a line, a line wrapped). Plain on the page, a
+   little room more, it is not measured. Options holding no parts are drawn as before, and so are all in a browser
+   that reads no subgrid.
+   LIMIT: a theme's cards.css that writes a gap on a card is lost in options holding parts, whose rows have none: a
+   theme sets --cards-gap instead */
+@supports (grid-template-rows: subgrid) {
+  :scope:has(> .option > .parts) > .option { grid-row: span 4; grid-template-rows: subgrid; row-gap: 0; }
+  :scope:has(> .option > .parts) > .option::before { margin-bottom: var(--cards-gap); }
+  :scope:has(> .option > .parts) > .option > .title { grid-row: 2; }
+  :scope:has(> .option > .parts) > .option > .parts { grid-row: 3; margin-block: var(--floe-room); }
+  :scope:has(> .option > .parts) > .option > .body { grid-row: 4; }
+  /* On paper a card goes to the next page whole, not its title left at the foot of one and its parts on the next.
+     LIMIT: a card taller than a page still breaks where the browser breaks it */
+  @media print { :scope:has(> .option > .parts) > .option { break-inside: avoid; } }
+}
 }
 }
 </style>
@@ -599,14 +625,14 @@ page answers. When the mail provider is slow, so is the page, and a provider out
 <section><h2 id="decisions">Options</h2>
 <section class="decision" aria-labelledby="question-0"><h3 id="question-0">Which queue</h3>
 <div class="numbered" data-floe-part="options">
-<div class="card option pick" data-floe-look="panel"><div class="title">A table in the database we have <span data-floe-part="cell">Recommended</span></div><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>No new service to run or watch</span></li><li class="pro"><span><span class="floe-hidden">Pro: </span>Written in the same transaction as the comment</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Polling adds load to the database</span></li></ul></div>
-<div class="card option" data-floe-look="panel"><div class="title">A message broker</div><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>Made for this, and scales further</span></li><li class="con"><span><span class="floe-hidden">Con: </span>A new service to run, watch and back up</span></li></ul></div>
+<div class="card option pick" data-floe-look="panel"><div class="title">A table in the database we have <span data-floe-part="cell">Recommended</span></div><div class="body"><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>No new service to run or watch</span></li><li class="pro"><span><span class="floe-hidden">Pro: </span>Written in the same transaction as the comment</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Polling adds load to the database</span></li></ul></div></div>
+<div class="card option" data-floe-look="panel"><div class="title">A message broker</div><div class="body"><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>Made for this, and scales further</span></li><li class="con"><span><span class="floe-hidden">Con: </span>A new service to run, watch and back up</span></li></ul></div></div>
 </div>
 </section>
 <section class="decision" aria-labelledby="question-1"><h3 id="question-1">How to try a failed <code>send</code> again</h3>
 <div class="numbered" data-floe-part="options">
-<div class="card option" data-floe-look="panel"><div class="title">Back off exponentially</div><div data-floe-text=""><p>1 minute, then 2, 4 and on, up to a day.</p></div></div>
-<div class="card option" data-floe-look="panel"><div class="title">A fixed delay</div><div data-floe-text=""><p>Every 5 minutes, up to 50 times.</p></div></div>
+<div class="card option" data-floe-look="panel"><div class="title">Back off exponentially</div><div class="body"><div data-floe-text=""><p>1 minute, then 2, 4 and on, up to a day.</p></div></div></div>
+<div class="card option" data-floe-look="panel"><div class="title">A fixed delay</div><div class="body"><div data-floe-text=""><p>Every 5 minutes, up to 50 times.</p></div></div></div>
 </div>
 </section>
 </section>
