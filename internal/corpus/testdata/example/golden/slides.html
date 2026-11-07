@@ -53,7 +53,7 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    what it holds, and page.css stops at the part's box there; floe's templates place none so */
 [data-floe-text], [data-floe-markdown] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
 a { color: var(--on-face, var(--accent)); }
-/* LIMIT: a part draws a ring of focus or a pick by outline on its box (links' and options' cards): a theme that draws a
+/* LIMIT: a part draws a ring of focus or a pick by outline on its box (options' cards): a theme that draws a
    decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
    or ::before */
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
@@ -225,7 +225,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A part on a ground of its own (a panel, a note) sets its text's colour with it; one of none draws in the band's,
    its tone told by its word alone (a pill of a theme that gives it no ground), as in any face.
    LIMIT: in a part of one's own that takes this look (looks: [band]), base.css takes the band's face away from what the
-   part holds, so tabs' titles and rings and links' rings there are in their own colours, not the band's.
+   part holds, so tabs' titles and rings and a link's ring there are in their own colours, not the band's.
    LIMIT: a theme whose faces let what is under them through (aurora's glass) lets the accent through them too, where
    the text sinks: such a theme makes its faces opaque in a band, in its band.css, as aurora does */
 }
@@ -233,7 +233,63 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Rows in a panel, a theme's frame of the box around them: a list that is a part's box or takes the look has no
+   marks, padding or room between its items (floe lays it out so, under the parts' layers for a part's box and the
+   looks' for an element that takes the look). Each row is padded above
+   and below by --floe-row-pad and at the sides by --floe-pad-inline (base.css), and so is a row the box draws last as
+   ::after (checklist's count); what takes it writes no padding of its rows. A rule parts each row from the next */
+:scope > *, :scope::after { padding: var(--floe-row-pad) var(--floe-pad-inline); }
+:scope > * + * { border-top: 1px solid var(--line); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A row to each link: its sign, its title and a few words on the line, the words under the title where they don't fit.
+   One element holds the title and the words, as floe lays out each child of a row (marks: items) on a line of its own.
+   The title holds the link, as a flex item is a block: inline, the link's reach and ring are its words */
+:scope > li { --floe-mark: 1lh; --floe-mark-gap: 0.25rem; }
+:scope > li::before {
+  content: "\200b"; content: "\200b" / "";
+  background: var(--on-face, var(--accent)); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / min(1rem, var(--floe-mark)) no-repeat;
+}
+:scope > li > * + * { margin-top: 0.1rem; }
+:scope .line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.7rem; }
+:scope a { font-weight: 700; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+:scope a:hover { text-decoration-thickness: 2px; }
+:scope .text { font-size: var(--floe-text-aside); color: var(--on-face, var(--muted)); }
+/* Under the title and whole, however long, to read, select and print */
+:scope .url { font-family: var(--mono); font-size: var(--floe-text-small); color: var(--on-face, var(--muted)); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
    any parts.
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
@@ -255,58 +311,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A card's title is no heading, as a part knows not the level it is put at; it takes the face of an h3 */
 .card .title { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.05rem; line-height: 1.35; text-wrap: balance; }
 .card :is(p, ul, ol) { margin: 0; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the faces of cards, a link's mark at the left in place of a number; the whole card follows its link. The ring
-   around a card is drawn on what is around the cards, in the colour on a face there, taken at the root (base.css takes
-   faces away below it) */
-:scope { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); --links-ring: var(--on-face, var(--accent)); }
-:scope > li {
-  --floe-mark: 1.9rem; --floe-mark-gap: 0.7rem; gap: 0;
-}
-:scope > li > * + * { margin-top: 0.1rem; }
-/* Each item is a row (marks: items), which floe lays out: the mark is a box, and over it (::after) the link's sign.
-   The card's gap (the look cards) is the row's to set, as floe.marks is under it */
-:scope > li::before, :scope > li::after { content: "\200b"; content: "\200b" / ""; overflow: hidden; }
-:scope > li::before { border-radius: var(--radius-small); background: var(--accent-soft); }
-:scope a { font-weight: 700; color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
-:scope > li::after {
-  background: var(--accent); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / 1rem no-repeat;
-}
-:scope a::after { content: ""; position: absolute; inset: 0; }
-:scope > li:hover a { text-decoration-thickness: 2px; }
-:scope a:focus-visible { outline: none; }
-:scope > li:has(a:focus-visible) { outline: 2px solid var(--links-ring); outline-offset: 2px; }
-:scope .url {
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--floe-text-small); color: var(--muted);
-  font-family: var(--mono);
-}
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
-   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
-   box's ring staying in the face around it */
-:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
-}
-}
-</style>
-<style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
-   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
-   box's ring staying in the face around it */
-:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
 }
 }
 </style>
@@ -407,23 +411,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
-:scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
-/* A tile of the surface on the panel of the cards */
-.card {
-  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
-  --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
-:scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
-  font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
-}
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="steps"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
 :scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
@@ -438,6 +426,36 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="links"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { padding: var(--default-pad); }
+:scope > * {
+  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
+  --default-quote-quiet: var(--surface);
+}
+:scope > :first-child { border-radius: var(--default-inner) var(--default-inner) 0 0; }
+:scope > :last-child { border-radius: 0 0 var(--default-inner) var(--default-inner); }
+:scope > :only-child { border-radius: var(--default-inner); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
+:scope { background: var(--default-panel); color: var(--fg); --face: initial; --on-face: initial; --quiet: var(--surface); border-radius: var(--radius); padding: var(--floe-room); }
+/* A tile of the surface on the panel of the cards */
+.card {
+  background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
+  --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
+:scope.numbered > .card::before {
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
+  font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
+}
+}
+}
+</style>
+<style>
 @layer floe.marks {
 :where([data-floe-part="links"] > li, [data-floe-part="steps"] > li, [data-floe-part="timeline"] > li) {
   position: relative; anchor-scope: --floe-mark; display: grid; gap: 0;
@@ -446,10 +464,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :where([data-floe-part="links"] > li, [data-floe-part="steps"] > li, [data-floe-part="timeline"] > li) > * { grid-column: text; align-self: first baseline; }
 :where([data-floe-part="links"] > li, [data-floe-part="steps"] > li, [data-floe-part="timeline"] > li)::before {
   anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
-  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-}
-:where([data-floe-part="links"] > li)::after {
-  grid-area: mark; align-self: first baseline; display: grid; place-items: center;
   box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
 }
 :where([data-floe-part="steps"] > li, [data-floe-part="timeline"] > li):not(:last-child)::after {
@@ -569,7 +583,7 @@ body { line-height: 1.6; }
 <h2 id="next-time-the-runbook-certs-runbook">Next time: the <code>runbook-certs</code> runbook</h2>
 <div class="content">
 <ul data-floe-part="links">
-<li class="card" data-floe-look="panel"><a href="/a/runbook-certs/">Issue and deploy a new certificate</a><p>Twenty minutes; checkout keeps working throughout</p><span class="url">/a/runbook-certs/</span></li>
+<li><div class="line"><span class="title"><a href="/a/runbook-certs/">Issue and deploy a new certificate</a></span><span class="text">Twenty minutes; checkout keeps working throughout</span></div><span class="url">/a/runbook-certs/</span></li>
 </ul>
 </div>
 </li>

@@ -37,7 +37,7 @@ const measureTabs = `(() => {
 // that clips what it holds sideways (overflow hidden or clip, as code's box rounds its corners) wider than itself.
 // A box's scrollWidth is not read where nothing clips: a decoration drawn out of a box (washi's seal on a card) is
 // within --floe-room by the rules, and reaches no further than the paper. A word hidden to the eye (base.css's
-// .floe-hidden) is clipped to a pixel by design, and what ends in an ellipsis (links' URL) is cut on purpose.
+// .floe-hidden) is clipped to a pixel by design.
 const measurePaper = `(() => {
   const out = [], w = innerWidth;
   if (document.documentElement.scrollWidth > w) out.push('the page is ' + document.documentElement.scrollWidth + ' px wide on ' + w);
@@ -46,7 +46,7 @@ const measurePaper = `(() => {
     if (e.matches('.floe-hidden, .floe-copy-status') || !e.getClientRects().length) continue;
     const x = getComputedStyle(e).overflowX;
     if (['auto', 'scroll'].includes(x)) out.push('scrolls: ' + name(e));
-    else if (['hidden', 'clip'].includes(x) && getComputedStyle(e).textOverflow !== 'ellipsis' && e.scrollWidth > e.clientWidth + 1) out.push('clips: ' + name(e));
+    else if (['hidden', 'clip'].includes(x) && e.scrollWidth > e.clientWidth + 1) out.push('clips: ' + name(e));
     else if (e.getBoundingClientRect().right > w + 1) out.push('past the paper: ' + name(e));
   }
   return out.join('\n');
@@ -93,6 +93,8 @@ sections:
               ` + "```" + `
               floe render --out-dir internal/kit/floe/parts/findings/testdata/golden internal/kit/floe/parts/findings/example.yaml --end
               ` + "```" + `
+      - links:
+          - { title: A guide, url: 'https://example.com/unbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbrokenunbroken' }
 `
 
 // paperWidth is an A4 sheet's width less Chrome's margins of 1cm, in CSS px: 190mm. The window draws no scrollbar,

@@ -1,5 +1,5 @@
 <ul data-floe-part="links">
 {{- range .}}
-<li class="card" data-floe-look="panel"><a href="{{.url}}">{{.title}}</a>{{with .text}}<p>{{.}}</p>{{end}}<span class="url">{{.url}}</span></li>
+<li><div class="line"><span class="title"><a href="{{.url}}">{{.title}}</a></span>{{with .text}}<span class="text">{{.}}</span>{{end}}</div><span class="url">{{.url}}</span></li>
 {{- end}}
 </ul>
