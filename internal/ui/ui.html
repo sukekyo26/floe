@@ -3560,7 +3560,7 @@
     try {
       const res = await writeTask(child.project, child.name, { new: false, parent: '', parentWas: child.parent });
       if (!res.ok) {
-        showError(t('ui_save_failed', res.status === 409 ? res.stale : res.text));
+        showError(t('ui_save_failed', res.text));
         return;
       }
       undoToast(t('ui_task_unlinked', child.name, parent), { project: child.project, name: child.name, parent, was: '' }, fromKeys);
@@ -3580,7 +3580,7 @@
       const res = await writeTask(back.project, back.name, { new: false, parent: back.parent, parentWas: back.was, parentNew: false });
       button.closest('.toast')?.remove();
       if (!res.ok) {
-        showError(t('ui_save_failed', res.status === 409 ? res.stale : res.text));
+        showError(t('ui_save_failed', res.text));
         return;
       }
       toast(t('ui_undone'));
@@ -3778,7 +3778,8 @@
     try {
       const res = await writeTask(task.project, task.name, { new: false, state: archived ? 'archived' : 'done' });
       if (!res.ok) {
-        showError(t('ui_save_failed', res.status === 409 ? res.stale : res.text));
+        if (res.status !== 409) await load();
+        showError(t('ui_save_failed', res.text));
         return;
       }
       toast(t(archived ? 'ui_task_arc_done' : 'ui_task_unarc_done', task.name));
@@ -3787,6 +3788,7 @@
       const slugs = ((archived ? now?.pages : now?.archived) ?? []).map((a) => a.slug);
       await actOnSelected((slug) => patchOne(slug, { archived }), null, (n, why) => t('ui_task_arc_failed', n, why), slugs);
     } catch (err) {
+      await load();
       showError(t('ui_save_failed', err.message));
     } finally {
       archivingTask = false;
@@ -3797,16 +3799,21 @@
     const sel = $('task-state');
     // A select keeps the keys: h, j and k go on from the page
     sel.blur();
-    const url = `/api/tasks?${new URLSearchParams({ project, task: TASK_NAME })}`;
+    let why = null;
+    let readAgain = true;
     try {
-      const res = await api(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ state: sel.value }) });
-      if (!res.ok) throw new Error(await res.text());
-      showError('');
+      const res = await writeTask(project, TASK_NAME, { new: false, state: sel.value });
+      if (!res.ok) {
+        why = res.text;
+        readAgain = res.status !== 409;
+      }
     } catch (e) {
-      sel.value = sel.dataset.state;
-      showError(t('ui_state_failed', e.message));
+      why = e.message;
     }
-    await load();
+    if (why !== null) sel.value = sel.dataset.state;
+    // Before the words: what writeTask read on a 409 is not read twice, and a read does not take the refusal away
+    if (readAgain) await load();
+    showError(why === null ? '' : t('ui_state_failed', why));
   }
 
   // The list of a task's page: this project's, at the view the task is under now, where it is to be found whatever way it was come to
@@ -4937,8 +4944,8 @@
     blank.reportValidity();
     return false;
   }
-  // A task's write from a modal, which says whether it takes the task to be new. Refused as stale (409), the tasks are read again, a page whole
-  // too, whose load reads none; the refusal comes with what to do next
+  // A task's write from the screen, a modal, the state's choices or the archive button, which says whether it takes the task to be new. Refused
+  // as stale (409), the tasks are read again, a page whole too, whose load reads none; stale is the refusal with what to do next in a modal, which can save again
   async function writeTask(project, name, body) {
     const res = await api(`/api/tasks?${new URLSearchParams({ project, task: name })}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const text = res.ok ? '' : await res.text();
