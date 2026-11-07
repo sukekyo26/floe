@@ -1,5 +1,6 @@
 /* Short values in a row, spaced, not parted by a character, which a wrapped line would begin with. The words are
-   smaller, not the code in them, which stays as large as in a table's cell. A long pill wraps rather than overflow */
-:scope { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--on-face, var(--muted)); --floe-pill-wrap: normal; }
-:scope > span { min-width: 0; }
+   smaller, not the code in them, which stays as large as in a table's cell. A long pill wraps rather than overflow: set
+   on each value, as base.css sets it back on what a part's box holds, the values themselves when a part takes the look */
+:scope { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--on-face, var(--muted)); }
+:scope > span { min-width: 0; --floe-pill-wrap: normal; }
 :scope code { font-size: 0.86rem; }

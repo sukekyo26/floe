@@ -653,9 +653,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope { padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > li.done::before { content: "✓"; content: "✓" / ""; }
 :scope > li > strong { line-height: 1.6; }
-/* LIMIT: a step's number written in a tag (after 1) stays as written when the steps move, as the rings are numbered
-   anew; it is the writer's words. Name steps if that comes to trouble someone */
-:scope > li > :not(strong, [data-floe-look="tags"]) { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+:scope > li > [data-floe-text] { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
 }
 }
 </style>
@@ -663,9 +661,10 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @layer floe.looks.depth1 {
 @scope ([data-floe-look~="tags"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Short values in a row, spaced, not parted by a character, which a wrapped line would begin with. The words are
-   smaller, not the code in them, which stays as large as in a table's cell. A long pill wraps rather than overflow */
-:scope { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--on-face, var(--muted)); --floe-pill-wrap: normal; }
-:scope > span { min-width: 0; }
+   smaller, not the code in them, which stays as large as in a table's cell. A long pill wraps rather than overflow: set
+   on each value, as base.css sets it back on what a part's box holds, the values themselves when a part takes the look */
+:scope { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; font-size: var(--floe-text-small); color: var(--on-face, var(--muted)); }
+:scope > span { min-width: 0; --floe-pill-wrap: normal; }
 :scope code { font-size: 0.86rem; }
 }
 }

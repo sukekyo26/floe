@@ -1,9 +1,10 @@
 package browsertest_test
 
 import (
-	"os"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/kit"
 )
 
 // stepsTagsPage holds steps in each state with tags of every kind (a link, words, code, a pill of no tone and one of
@@ -31,7 +32,7 @@ sections:
 `
 
 // measureStepsTags returns a line for each thing the steps' tags draw wrong: tags not in the text's column, past the
-// row or the page, not between the title and the text, of a look other than entries' tags, code in them of another size
+// row or the page, not between the title and the text (which is in the size of an aside), of a look other than entries' tags, code in them of another size
 // than in a table's cell, of colours that change with the step's state, a pill of no tone in another colour than
 // outside, or a row of tags on a step without them.
 const measureStepsTags = `(() => {
@@ -45,7 +46,14 @@ const measureStepsTags = `(() => {
   const want = { look: look(entries), code: getComputedStyle(document.querySelector('[data-floe-part=table] td code')).fontSize, kinds: kinds(entries) };
   const own = getComputedStyle(entries.querySelector('code')).fontSize;
   if (own !== want.code) out.push('entries: code ' + own + ', a table cell\'s ' + want.code);
+  const probe = document.createElement('span');
+  probe.style.fontSize = 'var(--floe-text-aside)';
+  document.querySelector('[data-floe-part=steps]').append(probe);
+  const aside = getComputedStyle(probe).fontSize;
+  probe.remove();
   steps.forEach((li, i) => {
+    const words = li.querySelector(':scope > [data-floe-text]');
+    if (words && getComputedStyle(words).fontSize !== aside) out.push('step ' + i + ': its text ' + getComputedStyle(words).fontSize + ', not ' + aside);
     const tags = li.querySelector(':scope > [data-floe-look~=tags]');
     if (li.querySelector('strong').textContent === 'No tags') {
       if (li.querySelector('[data-floe-look~=tags], .tags')) out.push('step ' + i + ': tags it was not given');
@@ -68,26 +76,55 @@ const measureStepsTags = `(() => {
   return out.join('\n');
 })()`
 
+// tagsKit is a part of one's own whose box takes the look tags (looks: [tags]), its values its box's children, and a
+// template that holds it.
+var tagsKit = map[string]string{
+	"templates/labelled/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\">" +
+		"<title>{{.Title}}</title></head>\n<body>\n{{.Data.labels}}\n</body></html>\n",
+	"templates/labelled/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
+"properties": {"labels": {"$ref": "floe:///parts/labels.json"}}}`,
+	"templates/labelled/example.yaml": "lang: en\ntemplate: labelled\n",
+	"parts/labels/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "array",
+"items": {"$ref": "floe:///parts/cell.json"}}`,
+	"parts/labels/part.html": `<div data-floe-part="labels">{{range .}}<span>{{.}}</span>{{end}}</div>`,
+	"parts/labels/part.yaml": "looks: [tags]\n",
+	"parts/labels/part.css":  ":scope { min-width: 0; }\n",
+}
+
 // TestUIStepsTags draws the steps' tags in every theme, on a wide page and a narrow one: under the title in the text's
 // column clear of the ring and its line, within the row, drawn as entries' tags are and in the same colours whatever
-// the step's state.
+// the step's state; and a long pill in a part that takes the look by looks: wrapped within the page.
 func TestUIStepsTags(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
-	themes, err := os.ReadDir("../kit/floe/themes")
+	s.own(t, tagsKit)
+	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
 	}
+	_, _, themes, _ := k.Names()
 	file := s.write(t, "steps.yaml", stepsTagsPage)
 	defer s.b.unsize()
 	for _, theme := range themes {
-		slug := "steps-tags-" + theme.Name()
-		s.floe(t, "publish", file, "--slug", slug, "--theme", theme.Name())
+		slug := "steps-tags-" + theme
+		s.floe(t, "publish", file, "--slug", slug, "--theme", theme)
 		for _, w := range []int64{1440, 320} {
 			s.b.size(w, 900, false)
 			s.b.navigate("/a/" + slug + "/?raw")
 			if got := s.b.eval(measureStepsTags); got != "" {
-				t.Errorf("%s at %d px:\n%s", theme.Name(), w, got)
+				t.Errorf("%s at %d px:\n%s", theme, w, got)
 			}
 		}
+	}
+	s.floe(t, "publish", s.write(t, "labels.yaml", "lang: en\ntemplate: labelled\ntitle: Labels\nlabels: [a label, { pill: "+
+		strings.TrimSpace(strings.Repeat("a long pill ", 12))+", tone: warn }]\n"), "--slug", "labels")
+	s.b.size(320, 900, false)
+	s.b.navigate("/a/labels/?raw")
+	wide := `(() => {
+  const pill = document.querySelector('[data-floe-part=labels] [data-floe-part=cell]').getBoundingClientRect();
+  return document.documentElement.scrollWidth > document.documentElement.clientWidth || pill.right > document.documentElement.clientWidth ?
+    'the long pill past the page, its right at ' + pill.right : '';
+})()`
+	if got := s.b.eval(wide); got != "" {
+		t.Errorf("a part taking tags by looks: at 320 px: %s", got)
 	}
 }
