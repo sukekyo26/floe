@@ -94,6 +94,8 @@ func inspect(d *diagram.Drawer, v any) (string, error) {
 
 func golden(t *testing.T, file, got string) {
 	t.Helper()
+
+	const fix = "run `just golden` and read the change in git diff"
 	path := filepath.Join("testdata", file)
 	if *update {
 		if err := os.WriteFile(path, []byte(got), 0o600); err != nil {
@@ -103,10 +105,10 @@ func golden(t *testing.T, file, got string) {
 	}
 	want, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v; %s", err, fix)
 	}
 	if got != string(want) {
-		t.Errorf("%s differs from what is drawn now; run just golden and read the change", file)
+		t.Errorf("%s differs from what is drawn now; %s", file, fix)
 	}
 }
 

@@ -284,18 +284,21 @@ func TestReadEveryPart(t *testing.T) {
 			fmt.Fprintf(&b, "  [%s] %s\n", block.kind, block.text)
 		}
 	}
+	const fix = "run `just golden` and read the change in git diff"
 	golden := filepath.Join("testdata", "every-part.golden")
 	if *update {
-		if err = os.WriteFile(golden, []byte(b.String()), 0o600); err != nil {
-			t.Fatal(err)
+		if !t.Failed() {
+			if err = os.WriteFile(golden, []byte(b.String()), 0o600); err != nil {
+				t.Fatal(err)
+			}
 		}
 		return
 	}
 	want, err := os.ReadFile(golden)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v; %s", err, fix)
 	}
 	if b.String() != string(want) {
-		t.Errorf("got\n%s", b.String())
+		t.Errorf("%s differs from what is read now; %s", golden, fix)
 	}
 }
