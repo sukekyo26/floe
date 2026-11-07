@@ -77,6 +77,8 @@ memo/
 | `.Calc` | `computed.yaml` の値。名前で引く |
 | `markdown` | Markdown の文を HTML に（`{{markdown .text}}`）。中の生の HTML は除く。`page.html` ではテンプレート自身の Markdown の包みに（下）、部品の `part.html` では text の外枠に包む（[parts.ja.md](parts.ja.md)） |
 | `markdownLine` | 表のセルのような Markdown の 1 行を、段落で囲まない HTML に |
+| `markdownLabel` | `markdownLine` と同じ Markdown の 1 行を、リンク（書いたもの、URL のように見つけたもの）を字にして。テンプレート自身のリンクの中に置く字に |
+| `contents` | すぐ前の目次（`<nav data-floe-look="toc">…</nav>{{contents}}`）で、今読んでいる所へのリンクに `aria-current="location"` を付ける script |
 | `num` | 数を桁区切りで（`{{.Calc.total \| num}}` は `1,234,567`）、または有効数字で丸めて（`{{.Calc.rate \| num 3}}` は `0.00648`） |
 | `bytes` | バイト数を 2 進の単位で（`{{.Calc.size \| bytes}}` は `1.5 KiB`） |
 | `asset` | テンプレートの `assets/` の画像を data URI で（`<img src="{{asset "logo.svg"}}">`） |
@@ -148,6 +150,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 - `cards`：`class="card"` の子を横に並べ、子はそれぞれ `data-floe-look="panel"` でパネルにし、題を `class="title"` の要素（見出しなら `<h3 class="title">`）で書きます。`class="numbered"` を付けると、場所の番号を付けます（`options` と同じ）。
 - `band`：アクセントの色で塗った帯。中の字・リンク・code・フォーカスの輪を、塗った面の上の字の色にします。design の結論や handoff の頭のように。
 - `numbered`：`<ol>` に付けると、項目に丸い番号を付けて線でつなぎます。部品 `steps` と runbook の手順のように。項目の字は要素で包みます（`<li><p>Restart <code>api</code> now</p></li>`）。項目に直に書いた字は、字の続きと要素ごとに grid の別の項目になって崩れます。項目は字で始めます。字の無いもの（画像、空のブロック）で始まると、丸はその下の縁に来ます。丸の色は tone（`data-floe-tone`。自分のか外のもの）から `data-floe-mark` で取ります。`ring` は縁を tone に、`solid` は丸とそこからの線を tone で塗ります（`<li data-floe-mark="solid" data-floe-tone="good">`）。付けなければ線の色の丸です。`::before` を上書きせずにこうして塗れば、tone を自分の色で塗るテーマでも、そのテーマの色で描かれます。
+- `toc`：ページの目次の `<nav>` に付けると、左に線 1 本の静かな一覧にし、今読んでいる所へのリンクをアクセントの色にします（すぐ後の `{{contents}}` が付ける）。report と design の目次のように。置き場所と貼り付きは page.css が書き、画面にだけ出て紙には出ません。リンクはテンプレートの決まった id へ張り、floe が見出しの字から作る id には張りません。
 - `tags`：短い値の並びの要素に付けると、1 つずつ `<span>` に包んだ値（表のセルと同じく Markdown の 1 行か pill）を、間を空けて折り返し、小さい字の大きさと静かな色で並べます。entries と steps の札のように。長い pill は中で折り返します。部品の `looks:` で借りると、部品の箱そのものがこの並びになります。箱が値だけを持つ部品のときに、そう借ります。
 - `marked`：`<ul>` に付けると、項目の前の字を行の印にします。decision の不採用や handoff の済んだ作業のように。`page.css` が字と色を書き（`.done > li::before { content: "✓"; color: var(--good) }`）、項目の字は 1 つの要素に包みます（`<li><span>…</span></li>`）。
 

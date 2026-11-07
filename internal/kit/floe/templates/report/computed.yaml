@@ -1,0 +1,2 @@
+# Whether the page holds contents: as toc says, or from 4 sections with a heading up.
+contents: toc ?? (len(filter(sections ?? [], .heading != nil)) >= 4)

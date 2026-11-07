@@ -12,6 +12,7 @@ import (
 const columnsPage = `template: report
 lang: en
 title: Columns
+toc: false
 sections:
   - heading: Two
     parts:

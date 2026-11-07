@@ -32,6 +32,29 @@ func TestMarkdown(t *testing.T) {
 	}
 }
 
+// markdownLabel draws a line as markdownLine does, a link written or found as its words, and raw HTML as nothing.
+func TestMarkdownLabel(t *testing.T) {
+	t.Parallel()
+
+	label, ok := funcs["markdownLabel"].(func(string) (template.HTML, error))
+	if !ok {
+		t.Fatal("markdownLabel is not a func(string) (template.HTML, error)")
+	}
+	for src, want := range map[string]template.HTML{
+		"See [the guide](https://example.com/g)": "See the guide",
+		"See https://x.com":                      "See https://x.com",
+		"<https://x>":                            "https://x",
+		"a@example.com":                          "a@example.com",
+		"**bold** and `code`":                    "<strong>bold</strong> and <code>code</code>",
+		"Vec<u8> parsing":                        "Vec parsing",
+		"<T>":                                    "",
+	} {
+		if got, err := label(src); err != nil || got != want {
+			t.Errorf("markdownLabel(%q) = %q, %v; want %q", src, got, err, want)
+		}
+	}
+}
+
 // MarkdownFlow draws Markdown in a text's box and Markdown in the box of a template's own Markdown, and what draws no
 // block (empty, raw HTML alone, once or twice) as it is, with no box; part.html's markdown is MarkdownFlow, page.html's
 // Markdown.

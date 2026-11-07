@@ -19,24 +19,52 @@
 <p class="lead">{{markdownLine .}}</p>
 {{- end}}
 </header>
-{{- range .Data.sections}}
-<section>
-{{- with .heading}}
-<h2>{{.}}</h2>
+{{- /* The contents link to ids of the sections' elements, of a dot no heading's id holds, so that the ids floe makes of
+   the headings' text stay as they were.
+   LIMIT: a heading is a line of Markdown and its id is made of the words drawn, so a tag, a mark, a backslash, a
+   character reference or a link's address in it changes the id it had, and a heading of a tag alone draws empty, left
+   out of the contents (S235), its subsections standing in its place. On a narrow screen the contents hold the
+   sections alone, a long list on a page of very many sections. toc: true on a page of no heading draws an empty list
+   in an empty column: the writer asked for it, and nothing refuses it */}}
+{{- if .Calc.contents}}
+<div class="body">
+<nav data-floe-look="toc" aria-label="{{word "contents"}}"><p class="title" aria-hidden="true">{{word "contents"}}</p>
+<ol>
+{{- range $i, $s := .Data.sections}}
+{{- $label := ""}}{{with $s.heading}}{{$label = markdownLabel .}}{{end}}
+{{- $subs := false}}{{range $s.sections}}{{if markdownLabel .heading}}{{$subs = true}}{{end}}{{end}}
+{{- if $label}}
+<li><a href="#section.{{$i}}">{{$label}}</a>{{if $subs}}<ol>{{range $j, $t := $s.sections}}{{with markdownLabel $t.heading}}<li><a href="#section.{{$i}}.{{$j}}">{{.}}</a></li>{{end}}{{end}}</ol>{{end}}</li>
+{{- else}}{{range $j, $t := $s.sections}}{{with markdownLabel $t.heading}}
+<li><a href="#section.{{$i}}.{{$j}}">{{.}}</a></li>{{end}}{{end}}
 {{- end}}
-{{- range .parts}}{{range .}}{{with .}}
+{{- end}}
+</ol>
+</nav>{{contents}}
+<div class="sections">
+{{- end}}
+{{- range $i, $s := .Data.sections}}
+<section{{if $.Calc.contents}} id="section.{{$i}}"{{end}}>
+{{- with $s.heading}}
+<h2>{{markdownLine .}}</h2>
+{{- end}}
+{{- range $s.parts}}{{range .}}{{with .}}
 {{.}}{{end}}{{end}}{{end}}
 {{- /* LIMIT: subsections are one level, drawn after the section's parts. For a deeper level or parts after them, draw a
    section by a defined template that takes its level, and place its mistakes at page.html's lines, as draw does those
    of page.html */}}
-{{- range .sections}}
-<section class="sub">
-<h3>{{.heading}}</h3>
+{{- range $j, $t := $s.sections}}
+<section class="sub"{{if $.Calc.contents}} id="section.{{$i}}.{{$j}}"{{end}}>
+<h3>{{markdownLine $t.heading}}</h3>
 {{- range .parts}}{{range .}}{{with .}}
 {{.}}{{end}}{{end}}{{end}}
 </section>
 {{- end}}
 </section>
+{{- end}}
+{{- if .Calc.contents}}
+</div>
+</div>
 {{- end}}
 </main>
 </body>

@@ -73,8 +73,8 @@
 </section>
 {{- end}}
 </main>
-<aside data-floe-look="panel">
-<nav aria-labelledby="contents"><h2 id="contents">{{word "contents"}}</h2>
+<aside>
+<nav data-floe-look="toc" aria-label="{{word "contents"}}"><p class="title" aria-hidden="true">{{word "contents"}}</p>
 <ul>
 <li><a href="#background">{{word "background"}}</a></li>
 <li><a href="#goals">{{word "goals"}}</a></li>
@@ -84,7 +84,7 @@
 {{- if .Data.impact}}<li><a href="#impact">{{word "impact"}}</a></li>{{end}}
 {{- range $i, $m := .Data.more}}<li><a href="#more-{{$i}}">{{$m.heading}}</a></li>{{end}}
 </ul>
-</nav>
+</nav>{{contents}}
 </aside>
 </div>
 </body>

@@ -1477,6 +1477,27 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.looks.depth0 {
+@scope ([data-floe-look~="toc"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Contents: a quiet list on a line down its side, the place a page is read at (aria-current, by {{contents}}'s script) in
+   the accent. Where it stands and when it sticks are the template's. A ring keeps inside the links, as what sticks
+   scrolls and clips what stands out of it. Paper holds no place to go to */
+:scope { border-left: 1px solid var(--on-face, var(--line)); padding-left: 0.9rem; line-height: 1.45; }
+:scope .title { font-size: var(--floe-text-aside); color: var(--on-face, var(--muted)); margin-bottom: 0.3rem; }
+:scope ol, :scope ul { display: block; list-style: none; margin: 0; padding: 0; }
+:scope a {
+  display: block; padding-block: 0.16rem; margin-left: -0.9rem; padding-left: 0.9rem; border-left: 2px solid transparent;
+  color: var(--on-face, var(--fg)); text-decoration: none; outline-offset: -2px;
+}
+:scope li li a { margin-left: -0.9rem; padding-left: 1.7rem; color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+:scope a:hover { color: var(--on-face, var(--accent)); text-decoration: underline; }
+:scope a[aria-current] { border-left-color: var(--on-face, var(--accent)); color: var(--on-face, var(--accent)); font-weight: 700; }
+:scope code { background: none; box-shadow: none; padding: 0; color: inherit; font-size: inherit; }
+@media print { :scope { display: none; } }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="tree"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A folder's contents hang from a rule under it; the marks of files and folders are masks in the text's colour. A deep
@@ -1772,6 +1793,25 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 .eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .lead { color: var(--muted); font-size: 1.05rem; }
 .muted { color: var(--muted); }
+/* The contents beside the sections on a wide screen, stuck in sight and scrolling within where they are longer; over the
+   sections with the sections alone in them on a narrow one, where a long list would push the page down. Each column
+   keeps what it holds from widening it */
+section { scroll-margin-top: 1rem; }
+main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-columns: minmax(0, 1fr); }
+.body > .sections { align-content: start; }
+@media screen and (min-width: 1000px) {
+  main > .body { grid-template-columns: 16rem minmax(0, 1fr); }
+  main > .body > nav { position: sticky; top: 1rem; align-self: start; max-height: calc(100vh - 2rem); overflow-y: auto; scrollbar-width: thin; }
+}
+@media screen and (max-width: 999.98px) {
+  main > .body > nav li li { display: none; }
+}
+/* With contents the page takes the whole window, the contents and the sections side by side; the lead keeps to the
+   width of a text, as the sections' text does */
+@media screen {
+  main:has(> .body) { --column-width: 100%; }
+  main:has(> .body) .lead { max-width: var(--text-width); }
+}
 }
 }
 </style>
@@ -1783,7 +1823,74 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <h1 id="every-part">Every part</h1>
 <p class="lead">The wiki moves to the new host in two weekends, with the old one read-only in between.</p>
 </header>
-<section>
+<div class="body">
+<nav data-floe-look="toc" aria-label="Contents"><p class="title" aria-hidden="true">Contents</p>
+<ol>
+<li><a href="#section.0">At a glance</a></li>
+<li><a href="#section.1">Steps</a></li>
+<li><a href="#section.2">Risks</a></li>
+<li><a href="#section.3">Progress</a></li>
+<li><a href="#section.4">Choices</a></li>
+<li><a href="#section.5">Reference</a></li>
+<li><a href="#section.6">Folded</a></li>
+</ol>
+</nav><script>(function contents() {
+  const nav = document.currentScript.previousElementSibling;
+  if (!nav || nav.localName !== 'nav') return;
+  const links = [...nav.querySelectorAll('a')].filter((a) => (a.getAttribute('href') || '').startsWith('#'));
+  let spots = [];
+  let pressed = null;
+  let marked = null;
+  let waiting = false;
+  const mark = () => {
+    waiting = false;
+    let at = -1;
+    spots.forEach((spot, i) => {
+      if (spot && spot.getBoundingClientRect().top <= innerHeight * 0.3) at = i;
+    });
+    if (scrollY <= 0) at = 0;
+    else if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) at = spots.length - 1;
+    const sight = pressed !== null && spots[pressed] && spots[pressed].getBoundingClientRect();
+    if (sight && sight.top >= -1 && sight.top < innerHeight) at = pressed;
+    else pressed = null;
+    let link = links[Math.max(at, 0)];
+    while (link && link.getClientRects().length === 0) {
+      const outer = link.parentElement.parentElement.closest('li');
+      link = outer && outer.querySelector(':scope > a');
+    }
+    if (!link) return;
+    if (link !== marked) {
+      if (marked) marked.removeAttribute('aria-current');
+      link.setAttribute('aria-current', 'location');
+      marked = link;
+    }
+    if (nav.scrollHeight > nav.clientHeight) {
+      const box = nav.getBoundingClientRect();
+      const r = link.getBoundingClientRect();
+      if (r.top < box.top + 24 || r.bottom > box.bottom - 24) nav.scrollTop += r.top - box.top - box.height / 2;
+    }
+  };
+  const later = () => {
+    if (!waiting) {
+      waiting = true;
+      requestAnimationFrame(mark);
+    }
+  };
+  nav.addEventListener('click', (e) => {
+    pressed = links.indexOf(e.target.closest('a'));
+    if (pressed < 0) pressed = null;
+    later();
+  });
+  addEventListener('DOMContentLoaded', () => {
+    spots = links.map((a) => document.getElementById(a.getAttribute('href').slice(1)));
+    mark();
+  });
+  addEventListener('scroll', later, { passive: true });
+  addEventListener('hashchange', later);
+  addEventListener('resize', later);
+})(null);</script>
+<div class="sections">
+<section id="section.0">
 <h2 id="at-a-glance">At a glance</h2>
 <dl data-floe-part="stats">
 <div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value">1,840</dd></div>
@@ -1809,7 +1916,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </tbody>
 </table></div>
 </section>
-<section>
+<section id="section.1">
 <h2 id="steps">Steps</h2>
 <div data-floe-text=""><p>The pages move over <strong>one weekend</strong>; the old wiki stays readable until the new one opens.</p>
 <blockquote>
@@ -2372,7 +2479,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 </section>
-<section>
+<section id="section.2">
 <h2 id="risks">Risks</h2>
 <div data-floe-part="table"><table>
 <thead><tr><th scope="col">Risk</th><th scope="col">Likelihood</th><th scope="col" class="num">Pages</th><th scope="col">What we do (<a href="https://example.com/linkcheck">a check</a>, <code>linkcheck</code>)</th><th scope="col">State</th></tr></thead>
@@ -2431,7 +2538,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <p>A quote with <a href="https://example.com/quote">a link</a> and <code>quote.sh</code>.</p>
 </blockquote></div>
 </section>
-<section>
+<section id="section.3">
 <h2 id="progress">Progress</h2>
 <div data-floe-part="bars">
 <div data-floe-tone="good"><span class="label">Copied</span><span class="track"><span style="width: 100%"></span></span><span class="value">1,840</span></div>
@@ -2502,7 +2609,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <li><span class="date">2030-04-30</span><div><strong>Old server off</strong></div></li>
 </ol>
 </section>
-<section>
+<section id="section.4">
 <h2 id="choices">Choices</h2>
 <div class="numbered" data-floe-part="options">
 <div class="card option pick" data-floe-look="panel"><div class="title">Copy in one go <span data-floe-part="cell">Recommended</span></div><div data-floe-text=""><p>Two days of read-only, as <a href="https://example.com/plan">the plan</a> says: <code>export --all</code>.</p></div><ul class="points" data-floe-look="marked"><li class="pro"><span><span class="floe-hidden">Pro: </span>Simple</span></li><li class="con"><span><span class="floe-hidden">Con: </span>Longer freeze</span></li></ul></div>
@@ -2529,7 +2636,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </table></div>
 <p>The new host is supported for five years.</p></div><p class="set-aside">Set aside</p><ul class="rejected" data-floe-look="marked"><li><span>Stay on the old server</span></li><li><span>Move to a hosted wiki</span></li></ul></div></div>
 </section>
-<section>
+<section id="section.5">
 <h2 id="reference">Reference</h2>
 <dl data-floe-part="facts">
 <div class="card" data-floe-look="panel"><dt>Owner</dt><dd>The platform team</dd></div>
@@ -2852,7 +2959,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
 </section>
-<section>
+<section id="section.6">
 <h2 id="folded">Folded</h2>
 <details data-floe-part="details" open=""><summary>The whole log</summary><div data-floe-part="stack"><figure data-floe-part="chart">
 <figcaption class="head"><span class="title">Copied by hour</span>
@@ -3486,6 +3593,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ;floeScript(document.currentScript.previousElementSibling, JSON.parse("{\"__proto__\":\"\\u003cb\\u003e\",\"pages\":1840}"));}</script>
 </section>
+</div>
+</div>
 </main>
 
 
