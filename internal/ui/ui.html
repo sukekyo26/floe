@@ -700,7 +700,6 @@
   .state p { margin: 0; max-width: 34rem; }
   .state strong { color: var(--fg); font-size: 1rem; }
   .state a { color: var(--fg); }
-  .state code { font-family: var(--mono); font-size: 0.8em; background: var(--subtle); padding: 0.1rem 0.35rem; border-radius: var(--corner-small); overflow-wrap: anywhere; }
   .link-btn { background: none; border: 0; padding: 0; color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
   .error { margin: 0; padding: 0.65rem 0.9rem; border-radius: var(--corner-menu); color: var(--danger); background: var(--danger-soft); white-space: pre-wrap; }
   /* Under the header bar, in the list and in the frame alike */
@@ -1044,14 +1043,12 @@
       <div class="state" id="tasks-empty" hidden>
         <strong>{{.Msg "ui_tasks_empty"}}</strong>
         <p>{{.Msg "ui_tasks_empty_hint"}}</p>
-        <p><code>floe work &lt;slug&gt; --task "#123" --step {{.Msg "ui_tasks_empty_step"}}</code></p>
         <p><a href="/">{{.Msg "ui_to_page_list"}}</a></p>
         <p><button type="button" class="btn add-open" id="task-add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_add"}}</button></p>
       </div>
       <div class="state" id="empty" hidden>
         <strong>{{.Msg "ui_empty_pages"}}</strong>
         <p>{{.Msg "ui_empty_pages_hint"}}</p>
-        <p><code>floe publish &lt;file.yaml&gt;</code></p>
         <p><button type="button" class="btn add-open" id="add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button></p>
       </div>
       <div class="state" id="all-archived" hidden>

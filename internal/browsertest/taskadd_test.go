@@ -69,7 +69,8 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	press("#to-tasks")
 	b.until("the words", "!document.getElementById('tasks-empty').hidden")
 	want("the words", "document.querySelector('#tasks-empty strong').textContent + ' | ' + document.querySelector('#tasks-empty p').textContent",
-		"No tasks yet | Make one with Add task. You can also put a page on a task with floe work.")
+		"No tasks yet | Make one with Add task.")
+	want("no command on the screens", "document.querySelectorAll('.state code').length + ''", "0")
 	want("the head's button with no task", shown("task-add"), "false")
 	want("the icon, the size of the others", "document.querySelector('#task-add-empty svg').getBoundingClientRect().width + ''", "13")
 
