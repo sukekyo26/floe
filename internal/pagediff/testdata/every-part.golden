@@ -223,6 +223,31 @@
   [svg] 
   [p] Decision: Sunday
   [p] Recommended: A Saturday
+  [p] 3 Pass 2 Fail 1 Not checked
+  [div] Pass
+  [div] Do names in Japanese go through?
+  [p] Saved as UTF-8, and found by a search.
+  [p] How: curl, adding and searching
+  [div] Fail
+  [div] Does it run in an old browser?
+  [p] Safari 15 has no :has(), and the rows of the list break:
+  [li] from Safari 16 they are right
+  [li] a fifth of the machines are on 15
+  [p] How: By hand in each browser
+  [div] Pass
+  [div] Can the old data be read?
+  [p] The export of 2023 reads, its dates converted.
+  [figcaption] sh
+  [pre] wiki import old.zip --date-format legacy
+  [div] Fail
+  [div] Does a wrong password stop after five?
+  [p] After four; >= is written for >.
+  [div] Pass
+  [div] Does the search answer in a second?
+  [p] 420 ms on average.
+  [div] Not checked
+  [div] Does it go through the proxy?
+  [p] Not from here; the network team was asked.
   [div] Before
   [p] The list before.
   [figcaption] bash

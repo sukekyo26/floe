@@ -459,7 +459,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* What details, tabs, columns and an item of entries hold */
+/* What details, tabs, columns and an item of entries or checks hold */
 :scope { display: grid; gap: var(--floe-room); }
 /* A word kept whole (a table's on paper) overflows the stack's column instead of widening it */
 :scope > * { min-width: 0; }

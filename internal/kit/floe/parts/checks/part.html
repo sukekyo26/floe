@@ -1,0 +1,12 @@
+{{- /* part.html adds nothing up: each count is the length of a string one longer for each check of that result */ -}}
+{{- $ok := ""}}{{$ng := ""}}{{$unchecked := ""}}{{range .}}{{if eq .result "ok"}}{{$ok = print $ok "."}}{{else if eq .result "ng"}}{{$ng = print $ng "."}}{{else}}{{$unchecked = print $unchecked "."}}{{end}}{{end -}}
+<div data-floe-part="checks">
+<p class="total"><span data-floe-tone="good"><b>{{len $ok}}</b> {{word "ok"}}</span> <span data-floe-tone="bad"><b>{{len $ng}}</b> {{word "ng"}}</span> <span data-floe-tone="muted"><b>{{len $unchecked}}</b> {{word "unchecked"}}</span></p>
+{{- /* LIMIT: a title, an actual or a how that draws nothing (a blank, raw HTML alone) passes minLength, and its check is counted over an empty line: plain on the page, it is not checked */}}
+{{- /* role="list" keeps it a list to Safari and VoiceOver, which drop a list without its marks */}}
+<ul role="list">
+{{- range .}}{{$tone := "muted"}}{{if eq .result "ok"}}{{$tone = "good"}}{{else if eq .result "ng"}}{{$tone = "bad"}}{{end}}
+<li data-floe-tone="{{$tone}}"><div class="head"><span class="result"><span data-floe-tone="{{$tone}}" data-floe-part="cell">{{word .result}}</span></span><div class="title">{{markdownLine .title}}</div></div><div class="actual">{{.actual}}</div>{{with .parts}}<div class="parts">{{.}}</div>{{end}}{{with .how}}<p class="how">{{word "how"}}{{markdownLine .}}</p>{{end}}</li>
+{{- end}}
+</ul>
+</div>
