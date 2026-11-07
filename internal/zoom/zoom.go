@@ -20,8 +20,8 @@ const (
 	Tools = "floe-zoom-tools"
 )
 
-// Roots selects a frame and its toolbar, the roots of what the look zoom styles.
-const Roots = "." + Tools + ", ." + Frame
+// Roots selects a frame, its toolbar and the line under it, the roots of what the look zoom styles.
+const Roots = "." + Tools + ", ." + Frame + ", ." + Frame + "-hint"
 
 // keys are the words of the toolbar and the frame.
 var keys = []string{

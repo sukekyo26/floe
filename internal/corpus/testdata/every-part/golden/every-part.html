@@ -873,13 +873,18 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
 .floe-zoom.zoomed:active { cursor: grabbing; }
+/* How it is used, under the frame while the keyboard is on it: over the frame it would hide what is moved there, and a low
+   frame would clip it.
+   LIMIT: what is under the frame moves down while it shows, not the frame. Lay it over them if that comes to mislead.
+   LIMIT: in a fragment of floe diagram render, without base.css's steps of small text, the line and the toolbar take the
+   size of the page around, larger than here: under the frame, it still reads whole. Give the fragment the steps if one is too large */
+.floe-zoom-hint { display: none; margin-top: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; color: var(--muted); }
+@media screen { .floe-zoom.can-zoom:focus-visible + .floe-zoom-hint { display: block; } }
 /* An img is laid out shrunk to the frame, as the whole, and scaled from its top left, as the script's sums take it */
 .floe-zoom > img { display: block; max-width: 100%; height: auto; transform-origin: 0 0; }
 .floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
 /* display: flex above wins over the browser's [hidden] */
 .floe-zoom-tools[hidden] { display: none; }
-.floe-zoom-tools span { color: var(--muted); margin-right: auto; }
-@media (max-width: 640px) { .floe-zoom-tools span { display: none; } }
 /* Buttons do nothing on paper */
 @media print { .floe-zoom-tools { display: none; } }
 /* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */
@@ -2627,9 +2632,6 @@ banner = &#34;This wiki has moved to the new host.&#34;
     const tools = document.createElement('div');
     tools.className = toolsClass;
     tools.hidden = true;
-    const hint = document.createElement('span');
-    hint.textContent = msg.zoom_hint;
-    tools.append(hint);
     for (const [k, text, label] of [
       ['in', '+', msg.zoom_in], ['out', '−', msg.zoom_out],
       ['fit', msg.zoom_fit, msg.zoom_fit_label], ['one', msg.zoom_one, msg.zoom_one_label],
@@ -2644,6 +2646,12 @@ banner = &#34;This wiki has moved to the new host.&#34;
     }
     wrap.before(tools);
     const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+    const title = wrap.hasAttribute('title'), described = wrap.hasAttribute('aria-describedby');
+    const hint = document.createElement('div');
+    hint.className = `${frameClass}-hint`;
+    hint.id = `${frameClass}-hint-${document.querySelectorAll(`.${hint.className}`).length}`;
+    hint.textContent = msg.zoom_hint;
+    wrap.after(hint);
 
     const offer = (can) => {
       if (can === offered) return;
@@ -2655,9 +2663,13 @@ banner = &#34;This wiki has moved to the new host.&#34;
       if (can) {
         wrap.setAttribute('role', 'group');
         wrap.setAttribute('aria-label', msg.zoom_frame);
+        if (!described) wrap.setAttribute('aria-describedby', hint.id);
+        if (!title) wrap.title = msg.zoom_hint;
       } else {
         wrap.removeAttribute('role');
         wrap.removeAttribute('aria-label');
+        if (!described) wrap.removeAttribute('aria-describedby');
+        if (!title) wrap.removeAttribute('title');
         if (focused) wrap.focus();
       }
     };
@@ -2781,7 +2793,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
   const init = () => document.querySelectorAll('.' + frameClass).forEach(setup);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-})({"frame":"floe-zoom","tools":"floe-zoom-tools","words":{"en":{"zoom_fit":"Fit","zoom_fit_label":"Show the whole figure","zoom_frame":"Zoomable figure","zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the figure; drag or use the arrow keys to move while zoomed","zoom_in":"Zoom in","zoom_one":"1:1","zoom_one_label":"Show at actual size","zoom_out":"Zoom out"},"ja":{"zoom_fit":"全体","zoom_fit_label":"全体を表示","zoom_frame":"拡大できる図","zoom_hint":"Ctrl / ⌘ + ホイール・ピンチ、または図の上で + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","zoom_in":"拡大","zoom_one":"原寸","zoom_one_label":"原寸で表示","zoom_out":"縮小"}}});</script><div class="floe-zoom"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAAJElEQVR42mOwqTgxIIhh1OJRi0ctHrV41OJRi0ctHrV45FgMAGfIo72jTm6ZAAAAAElFTkSuQmCC" alt="The wiki after the move"/></div><figcaption>Figure 1: the wiki on the new host, at <code>wiki.example.com</code></figcaption></figure></div></details>
+})({"frame":"floe-zoom","tools":"floe-zoom-tools","words":{"en":{"zoom_fit":"Fit","zoom_fit_label":"Show the whole figure","zoom_frame":"Zoomable figure","zoom_hint":"Ctrl / ⌘ + wheel or pinch to zoom. Click or Tab to the figure, then + - 0 to zoom in, out and fit. Drag or use the arrow keys to move while zoomed","zoom_in":"Zoom in","zoom_one":"1:1","zoom_one_label":"Show at actual size","zoom_out":"Zoom out"},"ja":{"zoom_fit":"全体","zoom_fit_label":"全体を表示","zoom_frame":"拡大できる図","zoom_hint":"Ctrl / ⌘ + ホイール・ピンチで拡大。クリックか Tab で図を選ぶと + - 0 で拡大・縮小・全体。拡大中はドラッグか矢印キーで移動","zoom_in":"拡大","zoom_one":"原寸","zoom_one_label":"原寸で表示","zoom_out":"縮小"}}});</script><div class="floe-zoom"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAAJElEQVR42mOwqTgxIIhh1OJRi0ctHrV41OJRi0ctHrV45FgMAGfIo72jTm6ZAAAAAElFTkSuQmCC" alt="The wiki after the move"/></div><figcaption>Figure 1: the wiki on the new host, at <code>wiki.example.com</code></figcaption></figure></div></details>
 <ul data-floe-part="asks">
 <li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Copy in one go?</div></div><ul class="choices"><li data-floe-tone="accent" class="marked"><span>One go</span><span data-floe-tone="accent" data-floe-part="cell">Recommended</span></li><li><span>By space, with <code>sync --space</code></span></li></ul><p>Two days of read-only</p><p>Who decides: The platform team</p></li>
 <li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Keep the old host?</div><span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5 6.7 11.5 12.5 4.5"></path></svg></span></div><ul class="choices"><li data-floe-tone="good" class="marked"><span>A month</span><span data-floe-tone="good" data-floe-part="cell">Decided</span></li><li class="other"><span>For good</span></li></ul></li>
