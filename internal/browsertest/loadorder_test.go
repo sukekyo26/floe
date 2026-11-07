@@ -147,14 +147,16 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		pressedAt = -Infinity;
 		out.push('joined, e there: ' + has('e'));
 
-		// A draw that throws: the error goes to its caller, and the loads after it go on
+		// A draw that throws, of this load or of a poll going: the loads after it go on
 		const realRender = render;
+		let thrown = 'none';
 		render = () => {
 			render = realRender;
-			throw new Error('broken draw');
+			thrown = 'broken draw';
+			throw new Error(thrown);
 		};
 		drawn = '';
-		const thrown = await load().then(() => 'none', (e) => e.message);
+		await load().catch(() => {});
 		const after = await Promise.race([load().then(() => 'went on', () => 'stopped'), new Promise((r) => setTimeout(() => r('stuck'), 2000))]);
 		out.push('thrown: ' + thrown + ', the next: ' + after);
 		out.push('read with a time limit: ' + limited);
