@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/chromedp/cdproto/input"
 
 	"github.com/sukekyo26/floe/internal/store"
 )
@@ -63,8 +66,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 		r := b.rect(button)
 		b.click(r.X+r.Width/2, r.Y+r.Height/2)
 		b.until("the button says "+word, button+".textContent === "+js(word))
-		b.until("the toast", "document.querySelector('.toast')")
-		b.until("the rows drawn", "!tasksRead.error")
+		b.until("the press done", "!archivingTask")
 	}
 	toast := func() string {
 		return b.eval("[...document.querySelectorAll('.toast')].at(-1).textContent")
@@ -98,6 +100,30 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	open("#still")
 	b.eval("pressedAt = performance.now() + 1e9; " + button + ".click()")
 	b.until("the head drawn by the press", button+".textContent === 'Bring the archive back'")
+	b.eval("pressedAt = -Infinity")
+
+	// A double press: the second lands on the button turned the other way, and is no press more.
+	task("#double", "--state", "done")
+	open("#double")
+	r := b.rect(button)
+	x, y := r.X+r.Width/2, r.Y+r.Height/2
+	b.mouse(input.DispatchMouseEventTypeMousePressed, x, y, 1)
+	b.mouse(input.DispatchMouseEventTypeMouseReleased, x, y, 1)
+	b.until("the press done", button+".textContent === 'Bring the archive back' && !archivingTask")
+	b.mouse(input.DispatchMouseEventTypeMousePressed, x, y, 2)
+	b.mouse(input.DispatchMouseEventTypeMouseReleased, x, y, 2)
+	b.painted()
+	b.until("no press more", "!archivingTask")
+	out = append(out, "a double press: "+b.eval(button+".textContent + ' ' + tasksOf().find((x) => x.name === '#double').state"))
+
+	// A page put on it since it was drawn goes with it, the pages read after the task is written.
+	page("l1", "--task", "#late", "--state", "done")
+	open("#late")
+	b.eval("pressedAt = performance.now() + 1e9")
+	page("l2", "--task", "#late")
+	b.eval(button + ".click()")
+	b.until("the pages", "!archivingTask && items.filter((a) => a.work?.task === '#late').length === 2")
+	out = append(out, "a page since: "+b.eval("items.filter((a) => a.work?.task === '#late').map((a) => a.slug + (a.archived ? '*' : '')).sort().join()"))
 	b.eval("pressedAt = -Infinity")
 
 	// Of pages: the pages go with it, and come back with it.
@@ -163,10 +189,25 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, "refused: "+b.eval("document.getElementById('error').textContent"))
 	head("refused, as it was")
 
+	// The server not reached: said, and nothing written.
+	open("#refused")
+	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' ? Promise.reject(new Error('no server')) : realFetch(u, o)); ` + button + `.click()`)
+	b.until("said", "!archivingTask && !document.getElementById('error').hidden")
+	out = append(out, "not reached: "+b.eval("document.getElementById('error').textContent + ' | ' + tasksOf().find((x) => x.name === '#refused').state"))
+	b.eval("fetch = realFetch; showError('')")
+
+	// Every page refused: the task as written, said so, and each page on its row.
+	page("f4", "--task", "#allpages", "--state", "done")
+	open("#allpages")
+	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' && String(u).startsWith('/api/artifacts') ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); ` + button + `.click()`)
+	b.until("the refusal", "!archivingTask && !document.getElementById('error').hidden")
+	out = append(out, "every page refused: "+b.eval("[...document.querySelectorAll('.toast')].at(-1).textContent + ' | ' + document.getElementById('error').textContent + ' | ' + tasksOf().find((x) => x.name === '#allpages').state"))
+	b.eval("fetch = realFetch; showError('')")
+
 	// A page refused: the task as written, and the page on its row.
 	open("#part")
 	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' && String(u).startsWith('/api/artifacts/f3') ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); ` + button + `.click()`)
-	b.until("the refusal", "!document.getElementById('error').hidden")
+	b.until("the refusal", "!archivingTask && !document.getElementById('error').hidden")
 	b.until("the other page", "items.find((a) => a.slug === 'f2').archived")
 	out = append(out, "a page refused: "+b.eval("document.getElementById('error').textContent"))
 	b.until("the head", button+".textContent === 'Bring the archive back'")
@@ -176,7 +217,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	// Archived elsewhere with the choices open: they stay until closed, and the word takes their place then.
 	task("#open", "--state", "done")
 	open("#open")
-	r := b.rect("document.getElementById('task-state')")
+	r = b.rect("document.getElementById('task-state')")
 	b.click(r.X+r.Width/2, r.Y+r.Height/2)
 	b.until("the choices", "document.getElementById('task-state').matches(':open')")
 	task("#open", "--state", "archived")
@@ -186,6 +227,32 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("the choices closed", "!document.getElementById('task-state').matches(':open')")
 	b.until("the word", "!document.getElementById('task-archived').hidden")
 	out = append(out, "closed: "+b.eval("document.getElementById('task-state').hidden + ' ' + document.getElementById('task-archived').hidden"))
+
+	// Archived elsewhere with the focus on the choices, closed: it goes to the button beside the word.
+	task("#focused", "--state", "done")
+	open("#focused")
+	b.eval("document.getElementById('task-state').focus()")
+	task("#focused", "--state", "archived")
+	b.until("the word", "!document.getElementById('task-archived').hidden")
+	out = append(out, "the focus on the choices: "+b.eval("document.activeElement.id"))
+
+	// The archive's latest first, by when each went there.
+	task("#first", "--state", "archived")
+	time.Sleep(2 * time.Millisecond) // the times are of milliseconds, and the same two go by name
+	task("#second", "--state", "archived")
+	b.navigate("/tasks?project=proj&view=archived")
+	b.until("the rows", "document.querySelector('#list li .title .tname')")
+	out = append(out, "the latest first: "+b.eval("[...document.querySelectorAll('#list li .title .tname')].map((e) => e.textContent).slice(0, 3).join()"))
+
+	// A child added by the button of a parent archived.
+	open("#up")
+	r = b.rect("document.getElementById('task-child')")
+	b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	b.until("the dialog", "document.getElementById('kin-dialog').open")
+	b.eval("document.getElementById('kin-task').value = '#added'; document.getElementById('kin-task').dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('kin-title').value = 'added'")
+	b.eval("document.getElementById('kin').requestSubmit()")
+	b.until("saved", "!document.getElementById('kin-dialog').open && document.querySelector('#task-family .kin-row[data-task=\"#added\"]')")
+	out = append(out, "a child by the button: "+b.eval(kids))
 
 	// At every width the word and the button stay in the window.
 	open("#none")
@@ -213,8 +280,10 @@ said: Archived #none
 the way up: /tasks?project=proj&view=archived
 no page, given back: Archive the task | done | no word | rows  | task-archive
 said: Brought #none back from the archive
+a double press: Bring the archive back archived
+a page since: l1*,l2*
 pages, archived: Bring the archive back | no select | Archive | rows p1*,p2* | task-archive
-with #pages in the archive: done #forgot,#marked,#none,#part,#refused,#up | archive #kid2,#pages,#still
+with #pages in the archive: done #forgot,#marked,#none,#part,#refused,#up | archive #double,#kid2,#late,#pages,#still
 pages, given back: Archive the task | done | no word | rows p1,p2 | task-archive
 pages archived by floe archive: Archive the task | done | no word | rows m1* | 
 those, archived: Bring the archive back | no select | Archive | rows m1* | task-archive
@@ -225,11 +294,16 @@ the parent archived: #kid In progress,#kid2 Archive
 a child added: #kid3 To do,#kid In progress,#kid2 Archive
 the child: doing
 its parent, from the child: #up
-with the parent in the archive: done #forgot,#none,#pages,#part,#refused | archive #kid2,#marked,#still,#up
+with the parent in the archive: done #forgot,#none,#pages,#part,#refused | archive #double,#kid2,#late,#marked,#still,#up
 forgotten: Could not save: task #forgot is no longer there: the tasks are read again, so check and save again
 refused: Could not save: no
 refused, as it was: Archive the task | done | no word | rows f1 | 
+not reached: Could not save: no server | done
+every page refused: Archived #allpages | 1 could not be changed (HTTP 500: no). | archived
 a page refused: 1 could not be changed (HTTP 500: no).
 a page refused, the task archived: Bring the archive back | no select | Archive | rows f3,f2* | 
 archived elsewhere, open: false true
-closed: true false`
+closed: true false
+the focus on the choices: task-archive
+the latest first: #second,#first,#focused
+a child by the button: #added To do,#kid3 To do,#kid In progress,#kid2 Archive`

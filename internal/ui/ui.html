@@ -1851,7 +1851,7 @@
     const reasons = await Promise.all(slugs.map(act));
     slugs.forEach((slug, i) => { if (!reasons[i]) selected.delete(slug); });
     const why = reasons.filter(Boolean);
-    if (why.length < slugs.length) toast(done(slugs.length - why.length));
+    if (done && why.length < slugs.length) toast(done(slugs.length - why.length));
     showError(why.length ? failed(why.length, why[0]) : '');
     await load();
     renderBulk();
@@ -3437,8 +3437,11 @@
     // Drawn again at the next look, which may find them closed
     if (selectOpen(sel)) drawn = '';
     else {
+      const had = document.activeElement === sel;
       sel.hidden = task.state === 'archived';
       $('task-archived').hidden = !sel.hidden;
+      // Archived elsewhere: the word takes no focus, and the button is there beside it
+      if (had && sel.hidden) $('task-archive').focus();
       sel.value = task.state;
       sel.dataset.state = task.state;
       sel.className = `ver-pick st ${task.state}`;
@@ -3456,7 +3459,7 @@
     const back = task.state === 'archived';
     archive.hidden = !back && task.state !== 'done';
     archive.textContent = t(back ? 'ui_task_unarchive' : 'ui_task_archive');
-    archive.onclick = () => archiveTask(task, !back);
+    archive.onclick = (e) => archiveTask(e, task, !back);
   }
 
   // A task's family over its pages, in two parts: its parent, offered while it has no children, and its children, offered while it has no
@@ -3731,23 +3734,32 @@
     }
   }
 
-  // Archives the task, or gives it back, with its pages: the task first and its pages then, as floe work and floe archive write them.
+  // Archives the task, or gives it back, with its pages: the task first and its pages then, as floe work and floe archive write them. Its
+  // pages are read after the task is written, for one put on it since it was drawn. A second press of a double one would land on the button
+  // turned the other way
+  // LIMIT: given back it is done, whatever it was: what it was before would be a state more to keep
+  // LIMIT: given back, all its pages come back, those archived one by one before too. Tell them apart if that comes to trouble someone
   // LIMIT: a page refused leaves the task as written, its button the other way round, and the page on its row to press. Offer the rest on the button if that comes to trouble someone
-  async function archiveTask(task, archived) {
-    const res = await writeTask(task.project, task.name, { new: false, state: archived ? 'archived' : 'done' });
-    if (!res.ok) {
-      showError(t('ui_save_failed', res.status === 409 ? res.stale : res.text));
-      return;
-    }
-    const said = t(archived ? 'ui_task_archive_done' : 'ui_task_unarchive_done', task.name);
-    const slugs = (archived ? task.pages : task.archived).map((a) => a.slug);
-    if (slugs.length === 0) {
-      showError('');
-      toast(said);
+  let archivingTask = false;
+  async function archiveTask(e, task, archived) {
+    if (e.detail > 1 || archivingTask) return;
+    archivingTask = true;
+    try {
+      const res = await writeTask(task.project, task.name, { new: false, state: archived ? 'archived' : 'done' });
+      if (!res.ok) {
+        showError(t('ui_save_failed', res.status === 409 ? res.stale : res.text));
+        return;
+      }
+      toast(t(archived ? 'ui_task_archive_done' : 'ui_task_unarchive_done', task.name));
       await load();
-      return;
+      const now = tasksOf().find((x) => x.project === task.project && x.name === task.name);
+      const slugs = ((archived ? now?.pages : now?.archived) ?? []).map((a) => a.slug);
+      await actOnSelected((slug) => patchOne(slug, { archived }), null, (n, why) => t('ui_task_arc_failed', n, why), slugs);
+    } catch (err) {
+      showError(t('ui_save_failed', err.message));
+    } finally {
+      archivingTask = false;
     }
-    await actOnSelected((slug) => patchOne(slug, { archived }), () => said, (n, why) => t('ui_task_arc_failed', n, why), slugs);
   }
 
   async function changeTaskState() {

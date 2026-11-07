@@ -87,6 +87,28 @@ func TestWorkWrite(t *testing.T) {
 
 // What no row may hold is refused and leaves the file as it was: a state of no table, a URL of another scheme or of no
 // host, a task of no project or name.
+// Archived is a state as any: written, its time is when it went there, and read back.
+func TestWorkArchived(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "S")
+	s := store.New(root)
+	if err := s.EditTask("p", "#1", store.TaskEdit{}); err != nil {
+		t.Fatal(err)
+	}
+	long := hour(1)
+	if err := os.WriteFile(filepath.Join(root, "tasks.json"), []byte(fmt.Sprintf(`{"p": {"#1": {"state": "done", "at": %q}}}`, long)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	state := "archived"
+	if err := s.EditTask("p", "#1", store.TaskEdit{State: &state}); err != nil {
+		t.Fatal(err)
+	}
+	if got := taskIn(t, s, "p"); got.State != "archived" || got.At == long {
+		t.Errorf("archived %+v, its time before %s", got, long)
+	}
+}
+
 func TestWorkRefused(t *testing.T) {
 	t.Parallel()
 
