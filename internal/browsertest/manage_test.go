@@ -694,8 +694,9 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	selectOnly("b")
 	b.eval("list = JSON.stringify(JSON.parse(list).filter((a) => a.slug !== 'b')); document.getElementById('bulk-tag').click(); " +
 		box("old") + ".click(); document.getElementById('tag-apply').click()")
-	out = append(out, b.until("the gone page to drop", "document.getElementById('bulk').hidden && "+
-		"[document.getElementById('toasts').textContent.includes("+js(msg("ui_tag_bulk_none"))+"), calls.length].join(' ')"))
+	// The toast comes after the selection is cleared: the words joined are true before it
+	none := "document.getElementById('toasts').textContent.includes(" + js(msg("ui_tag_bulk_none")) + ")"
+	out = append(out, b.until("the gone page to drop", "document.getElementById('bulk').hidden && "+none+" && ["+none+", calls.length].join(' ')"))
 	b.stub(tagsList)
 	// Narrowed to a tag, the edit dialog's field holds it whole: pressed, the field offers the other names (reported by the user).
 	pickPlan()
