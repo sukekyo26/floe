@@ -154,7 +154,8 @@ func TestUIDiagramInTabs(t *testing.T) { //nolint:paralleltest // the browser te
 	}
 }
 
-// tonesSpec is a diagram with a box and an edge of each tone, as a spec of floe diagram render.
+// tonesSpec is a diagram with a box and an edge of each tone, and raw SVG coloured as the docs tell (a palette's
+// variable, a tone of a <g> in it, text in currentColor), as a spec of floe diagram render.
 const tonesSpec = `width: 420
 height: 200
 title: Tones
@@ -166,6 +167,7 @@ parts:
   - box: { x: 160, y: 120, w: 100, h: 40, rows: [plain] }
   - edge: { from: [120, 40], to: [160, 40], tone: accent }
   - edge: { from: [260, 140], to: [300, 140] }
+  - raw: { svg: '<rect x="300" y="120" width="30" height="40" fill="var(--accent-soft)" stroke="var(--accent)"/><g data-floe-tone="bad"><rect x="340" y="120" width="30" height="40" fill="var(--tone)"/></g><text x="380" y="140" font-size="12" fill="currentColor">r</text>' }
 `
 
 // diagramColours lists, in the tree root names (document, or a shadow root), what the diagram's CSS paints:
