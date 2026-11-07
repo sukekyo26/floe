@@ -16,7 +16,7 @@ parts:
   - line: { x1: 650, y1: 64, x2: 650, y2: 688, kind: lifeline }
   - box: { x: 795, y: 12, w: 230, h: 52, tone: accent, rows: [{ en: Browser, ja: "ブラウザ" }, [{ en: "the page's tab", ja: "ページのタブ" }, sub]] }
   - line: { x1: 910, y1: 64, x2: 910, y2: 688, kind: lifeline }
-  - raw: { svg: "<rect x=\"644\" y=\"420\" width=\"12\" height=\"190\" class=\"band\"/>" }
+  - raw: { svg: "<rect x=\"644\" y=\"420\" width=\"12\" height=\"190\" fill=\"var(--accent-soft)\" stroke=\"var(--accent)\"/>" }
   - edge: { from: [130, 104], to: [650, 104], label: GET /api/health, at: [390, 90] }
   - edge: { from: [130, 144], to: [650, 144], label: { en: start floe serve if it is stopped, ja: "止まっていれば floe serve を起動" }, at: [390, 130] }
   - edge: { from: [650, 184], to: [130, 184], dashed: true, label: { en: wait until health answers, ja: "health が応答するまで待つ" }, at: [390, 170] }
