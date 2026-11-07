@@ -27,3 +27,4 @@ sections:
           - { label: Pages, value: '1', from: '2', better: lower }
           - { label: Pages, value: '3', from: '2', better: lower }
           - { label: Pages, value: '2', from: '2', better: lower }
+      - code: { title: Lignes, start: 3, mark: [4], text: "a\nb\n" }

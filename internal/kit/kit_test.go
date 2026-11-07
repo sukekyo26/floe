@@ -105,7 +105,7 @@ func TestEntryFiles(t *testing.T) {
 		entries    func() []kit.Entry
 		name, want string
 	}{
-		{k.Parts, "code", "schema.json, part.html, part.css"},
+		{k.Parts, "code", "schema.json, part.html, part.css, words.yaml"},
 		{k.Parts, "bars", "schema.json, part.yaml, part.html, part.css"},
 		{k.Parts, "panel", "part.yaml, part.css"},
 		{k.Parts, "tone", "tone.json"},

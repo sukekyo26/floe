@@ -34,6 +34,9 @@ const rowParts = `  - table:
   - keys:
       - { keys: [Ctrl, K], text: Find a page }
       - { keys: [J], text: Next }
+  - links:
+      - { title: Docs, url: "https://example.com/docs", text: read }
+      - { title: Wiki, url: "https://example.com/wiki" }
   - checklist:
       - { text: CI passes, done: true }
       - text: Write the plan
@@ -83,7 +86,7 @@ const measureRowPad = `(() => {
     return c.paddingTop + '/' + c.paddingBottom + (e.matches('th, td') ? '' : ' ' + c.paddingLeft + '/' + c.paddingRight); };
   const row = (e) => name(e) + ' ' + edge(e) + ' ' + (Math.abs(ratio(e) - page) < 0.005 ? 'page' : ratio(e).toFixed(2));
   const rows = [...document.querySelectorAll(':is([data-floe-part], [data-floe-look~="table"]) :is(thead th, tbody td):not(.num), ' +
-    '[data-floe-look~="rows"] > *, :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"]) > *, ' +
+    '[data-floe-look~="rows"] > *, :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], [data-floe-part="links"]) > *, ' +
     '[data-floe-part="facts"] > .card')];
   const out = [...new Set(rows.map(row))].sort();
   for (const list of document.querySelectorAll('[data-floe-part="checklist"]')) {
@@ -92,7 +95,7 @@ const measureRowPad = `(() => {
   }
   const html = document.querySelector('div[data-floe-look="rows"]'), box = (e) => getComputedStyle(e).padding;
   const odd = [...document.querySelectorAll('[data-floe-look~="rows"], ' +
-    ':is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"])')]
+    ':is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], [data-floe-part="links"])')]
     .filter((e) => box(e) !== box(html)).map((e) => (e.dataset.floePart || e.className) + ' ' + box(e));
   out.push('boxes ' + (odd.length ? odd.join(' ') + ', html rows ' + box(html) : 'as html rows'));
   return out.join(', ');
@@ -105,7 +108,7 @@ func rowPadWant(pad, side string) string {
 	rows := []string{
 		"checklist " + row, "compare " + both, "compare head " + both, "entries " + row, "facts " + row,
 		"fields " + both, "findings " + both,
-		"keys " + row, "look rows " + row, "table " + both, "table head " + both,
+		"keys " + row, "links " + row, "look rows " + row, "table " + both, "table head " + both,
 	}
 	slices.Sort(rows)
 	return strings.Join(rows, ", ") + ", checklist count " + pad + "/" + pad + " " + side + "/" + side + ", boxes as html rows"
@@ -145,7 +148,7 @@ func TestUIRowPad(t *testing.T) { //nolint:paralleltest // the browser tests sha
 
 	for _, sample := range []struct{ name, want string }{
 		{"design", "look rows 6.4px/6.4px 20.8px/20.8px page, look table 6.4px/6.4px page, look table head 6.4px/6.4px page, boxes as html rows"},
-		{"postmortem", "facts 6.4px/6.4px 20.8px/20.8px page, look rows 6.4px/6.4px 20.8px/20.8px page, look table 6.4px/6.4px page, look table head 6.4px/6.4px page, boxes as html rows"},
+		{"postmortem", "facts 6.4px/6.4px 20.8px/20.8px page, links 6.4px/6.4px 20.8px/20.8px page, look rows 6.4px/6.4px 20.8px/20.8px page, look table 6.4px/6.4px page, look table head 6.4px/6.4px page, boxes as html rows"},
 	} {
 		data, err := os.ReadFile("../corpus/testdata/example/" + sample.name + ".yaml")
 		if err != nil {

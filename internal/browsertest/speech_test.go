@@ -25,7 +25,7 @@ const marked = `(() => {
   const numbered = '[data-floe-look~="numbered"] > li:not(.done), .numbered > .card';
   const unnumbered = '.slides > li, [data-floe-part=checklist]';
   const worded = '[data-floe-part=steps] > li.done > strong, [data-floe-part=checklist] > li > span, .option li > span, ' +
-    '[data-floe-part=tree] li:is(.added, .removed, .changed) > .name, [data-floe-part=terminal] .run, ' +
+    '[data-floe-part=tree] li:is(.added, .removed, .changed) > .name, [data-floe-part=terminal] .run, [data-floe-part=code] .mark, ' +
     '[data-floe-part=note]:not([class]), [data-floe-part=note].caution > p';
   const reading = (content) => {
     let depth = 0, quote = '', at = -1;
@@ -62,7 +62,7 @@ const marked = `(() => {
   }
   for (const o of out) { o.inner = !!o.e.querySelector('[data-speech-counted]'); delete o.e; }
   const rows = [...document.querySelectorAll('li > .floe-hidden')].map((e) => e.textContent);
-  const told = (e) => { const h = e.matches('.run') ? e.previousElementSibling : e.querySelector(':scope > .floe-hidden'); return h?.matches('.floe-hidden') ? h : null; };
+  const told = (e) => { const h = e.matches('.run, .mark') ? e.previousElementSibling : e.querySelector(':scope > .floe-hidden'); return h?.matches('.floe-hidden') ? h : null; };
   const unworded = [...document.querySelectorAll(worded)].filter((e) => e.checkVisibility() && !(told(e)?.textContent.trim()))
     .map((e) => e.closest('[data-floe-part]').dataset.floePart + ' ' + e.tagName.toLowerCase() + [...(e.closest('li') || e).classList].map((c) => '.' + c).join(''));
   return JSON.stringify({ out, rows, unworded });

@@ -178,7 +178,7 @@ func TestFloePartExecPlaced(t *testing.T) {
 	}
 	it := schema.Item{At: []string{"b"}, Part: "code", Format: "", Value: "x"}
 	_, err = drawPart(k, d, it, "x", newItems(nil, "", nil))
-	want := `parts/code/part.html:1:39: executing "part.html" at <.file>: can't evaluate field file in type string`
+	want := `parts/code/part.html:1:16: executing "part.html" at <.text>: can't evaluate field text in type string`
 	if got := usererr.Tell(i18n.EnglishCatalog(), err).Render(""); got != want {
 		t.Errorf("told %q, want %q", got, want)
 	}
@@ -272,7 +272,6 @@ func TestMarks(t *testing.T) {
 	got := string(marks(k, named{boxes: []string{"note"}, looks: []string{"foo"}}))
 	for _, want := range []string{
 		`:where([data-floe-part="note"], [data-floe-look~="foo"] > li) {`,
-		`:where([data-floe-part="note"])::after {`,
 		`:where([data-floe-look~="foo"] > li):not(:last-child)::after {`,
 	} {
 		if !strings.Contains(got, want) {

@@ -53,7 +53,7 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
    what it holds, and page.css stops at the part's box there; floe's templates place none so */
 [data-floe-text], [data-floe-markdown] { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); }
 a { color: var(--on-face, var(--accent)); }
-/* LIMIT: a part draws a ring of focus or a pick by outline on its box (links' and options' cards): a theme that draws a
+/* LIMIT: a part draws a ring of focus or a pick by outline on its box (options' cards): a theme that draws a
    decoration there by outline loses it to the ring. Nothing checks it; a theme draws such a decoration by --floe-inset
    or ::before */
 :focus-visible { outline: 2px solid var(--on-face, var(--accent)); outline-offset: 2px; }
@@ -267,6 +267,12 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 @media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
 :scope .file { color: var(--floe-code-head-faint); }
+/* The title and the file fold under each other, the language staying at the right: it has a shape of its own, which a
+   row that folds may not draw by place.
+   LIMIT: .names, .file, .lang, .lines, .mark and .numbered reach a part that takes this look too, its text of those names
+   drawn so unsaid; name them for code alone if one comes to use them for its own. */
+:scope .names { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; min-width: 0; }
+:scope .names > .title { font-family: var(--font); font-size: var(--floe-text-aside); font-weight: 700; }
 :scope .lang {
   flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
   background: var(--code-prompt); color: var(--code-bg);
@@ -277,10 +283,39 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    line keeps it after it.
    LIMIT: a part that takes this look and writes a line's padding drops this room, its rule written after this one;
    text pre holds outside an element has no room, and one inline among it has room around it. Lines are elements, and
-   a part whose lines differ moves the room onto them by these variables, as diff does; nothing checks it. Make this
+   a part whose lines differ takes the rule of class lines below, as diff does, or moves the room onto them by these variables; nothing checks it. Make this
    rule outweigh a part's if one comes to write a line's padding by mistake. */
 :scope pre > * { width: max-content; min-width: 100%; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
 @media print { :scope pre > * { width: auto; } }
+/* Lines each an element in one code of class lines (code's and diff's): each paints its ground to the end of the longest
+   line, so the room moves from the code onto each. An element beside them is a hidden word, left out of a selection
+   as it is of what the button copies.
+   LIMIT: Safari takes only -webkit-user-select, and the browser tests run in Chrome alone, so nothing measures it there. */
+:scope pre > .lines { padding-inline: 0; }
+:scope .lines { --floe-code-gutter: 0px; }
+:scope .lines > :not(.floe-hidden) { display: block; padding-inline: calc(var(--floe-code-pad) + var(--floe-code-gutter)) var(--floe-code-room); }
+:scope .lines > .floe-hidden { -webkit-user-select: none; user-select: none; }
+/* A border, which no setting of print or forced colours takes off as it does a ground; its width comes off the room, so
+   that a marked line's text stays in line */
+:scope .lines > .mark {
+  border-inline-start: 3px solid var(--code-prompt); padding-inline-start: calc(var(--floe-code-pad) + var(--floe-code-gutter) - 3px);
+  background: color-mix(in srgb, var(--code-prompt) 16%, transparent);
+}
+/* A number is a counter, in no text copied or selected. --digits and the count's start are the part.html's. It hangs in
+   the room left of the line, whose width it takes off by its margin: a tab counts from the line's start, and what a
+   line folds to on paper stands right of the number. Same weight as .lines and after it, which sets the room to 0.
+   LIMIT: the number scrolls with the code; keep it at the left if readers come to lose it, on a ground of its own.
+   LIMIT: floe's page diff (preLines) reads no CSS, and tells nothing of a page whose start alone changes.
+   LIMIT: on paper, a line that starts with a long word with no space (a URL, minified code) leaves its number alone on
+   the first row, as the number is inline-block; all of it reads. Print is seldom used: hang the number if it matters. */
+:scope .numbered { --floe-code-gutter: calc((var(--digits) + 2) * 1ch); }
+:scope .numbered > :not(.floe-hidden) { counter-increment: line; }
+:scope .numbered > :not(.floe-hidden)::before {
+  content: counter(line); content: counter(line) / counter(line);
+  display: inline-block; width: calc(var(--digits) * 1ch); margin-inline: calc(-1 * var(--floe-code-gutter)) 2ch; text-align: end;
+  color: var(--floe-code-faint);
+}
+:scope .numbered > .mark::before { color: inherit; font-weight: 700; }
 /* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
    it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
    Where it draws the button, a line keeps the button's room after it: scrolled to the end, a line ends left of the
@@ -733,10 +768,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   anchor-name: --floe-mark; grid-area: mark; align-self: first baseline; display: grid; place-items: center;
   box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
 }
-:where([data-floe-part="note"])::after {
-  grid-area: mark; align-self: first baseline; display: grid; place-items: center;
-  box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); margin-inline-end: var(--floe-mark-gap);
-}
 :where([data-floe-part="steps"] > li):not(:last-child)::after {
   content: ""; position: absolute; top: calc(anchor(--floe-mark bottom) + 0.35rem); bottom: 0.35rem;
   left: calc(anchor(--floe-mark center) - 1px); width: 2px;
@@ -871,10 +902,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <section class="sub">
 <h3 id="the-old-wiki">The old wiki</h3>
 <div data-floe-text=""><p>It answers until the new one opens, with edits turned off.</p></div>
-<figure data-floe-part="code"><figcaption><span class="file">old-wiki.conf</span></figcaption><pre><code data-floe-copy=""># Read-only from Friday evening
-read_only = true
-banner = &#34;This wiki has moved to the new host.&#34;
-</code></pre><script>(function copyButton(words) {
+<figure data-floe-part="code"><figcaption><span class="names"><span class="file">old-wiki.conf</span></span></figcaption><pre><code class="lines"><span data-floe-copy=""># Read-only from Friday evening
+</span><span data-floe-copy="">read_only = true
+</span><span data-floe-copy="">banner = &#34;This wiki has moved to the new host.&#34;
+</span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
