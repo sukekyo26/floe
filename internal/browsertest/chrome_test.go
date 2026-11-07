@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/network"
@@ -152,6 +151,13 @@ func startChrome(path string) (context.Context, error) {
 	return shared.ctx, shared.err
 }
 
+// The window of a tab that asks for no other size, as Chrome 156 of CI has it. It is set on each tab, not with --window-size: that sets the
+// outer window, and what Chrome keeps of it above the page differs by version (of 800x600, 400 high on 156 and 457 on 157).
+const (
+	windowWidth  = 780
+	windowHeight = 380
+)
+
 // newBrowser opens a tab of the shared Chrome in a browser context of its own (its own cookies and storage),
 // whose requests ask for lang (Accept-Language) as a reader of that language would.
 func newBrowser(t *testing.T, base string, lang i18n.Lang) *browser {
@@ -171,6 +177,7 @@ func newBrowser(t *testing.T, base string, lang i18n.Lang) *browser {
 		t.Fatalf("set Accept-Language: %v", err)
 	}
 	b := &browser{t: t, ctx: ctx, base: base}
+	b.unsize()
 	b.addScript("window.thrown = []; for (const type of ['error', 'unhandledrejection']) addEventListener(type, (e) => window.thrown.push(String(e.error ?? e.reason ?? e.message)));")
 	return b
 }
@@ -327,7 +334,7 @@ func (b *browser) media(medium string, features ...*emulation.MediaFeature) {
 }
 
 // size gives this test's tab a window of width by height, a phone's (touch, its own viewport) when mobile; unsize gives the
-// tab Chrome's own window back. Either holds for this test's tab alone.
+// tab the window it opened with. Either holds for this test's tab alone.
 func (b *browser) size(width, height int64, mobile bool) {
 	b.t.Helper()
 
@@ -350,9 +357,7 @@ func (b *browser) scrollbars(hidden bool) {
 func (b *browser) unsize() {
 	b.t.Helper()
 
-	if _, err := chromedp.Call(b.ctx, emulation.ClearDeviceMetricsOverride, cdp.Empty{}); err != nil {
-		b.t.Fatal(err)
-	}
+	b.size(windowWidth, windowHeight, false)
 }
 
 type rect struct {
