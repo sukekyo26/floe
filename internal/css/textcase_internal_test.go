@@ -27,7 +27,8 @@ func caseChanges(src []byte) []declaration {
 // file name or code copied from a page would come out as other text.
 // LIMIT: the .css files under internal/kit/floe alone are read: not one's own parts, themes and templates, nor the
 // style= attributes of floe's part.html and page.html, nor the CSS internal/draw/style.go builds. Nor is
-// font-variant-caps (small-caps), which looks like capitals but copies as written.
+// font-variant-caps (small-caps), which looks like capitals but copies as written. Nor is the management page's
+// <style> in internal/ui/ui.html, whose .side-head still sets uppercase: the management page redesign fixes it.
 func TestTextCase(t *testing.T) {
 	t.Parallel()
 
