@@ -4,7 +4,8 @@
 .card {
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
   --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
+:scope.numbered { --floe-mark: auto; }
 :scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); background: none;
   font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
 }

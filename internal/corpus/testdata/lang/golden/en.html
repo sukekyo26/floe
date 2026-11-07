@@ -314,13 +314,13 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* One check to a row, in the order written: a line of its result's tone at the left, its result's pill by what was checked,
    then what came of it the full width. The count of each result stands on top, its number in the result's tone.
    The line is the row's ::before, not its border, which would make the row a framed box a code's shadow must stay in */
-:scope { display: grid; gap: var(--floe-room); padding: var(--floe-pad-block) var(--floe-pad-inline); }
+:scope { --checks-gap: 0.35rem; display: grid; gap: var(--floe-room); padding: var(--floe-pad-block) var(--floe-pad-inline); }
 /* Each count large over its word, in the face and size of stats' value: a count of the whole, told apart from the rows' pills */
 :scope > .total { display: flex; flex-wrap: wrap; gap: 0.35rem 1.5rem; }
 :scope > .total > span { display: grid; font-size: var(--floe-text-small); color: var(--muted); }
 :scope > .total b { font-family: var(--mono); font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; color: var(--tone); }
 :scope > ul { display: grid; list-style: none; padding: 0; gap: var(--floe-room); }
-:scope > ul > li { --checks-gap: 0.35rem; position: relative; display: grid; gap: var(--checks-gap); padding-left: var(--floe-pad-inline); }
+:scope > ul > li { position: relative; display: grid; gap: var(--checks-gap); padding-left: var(--floe-pad-inline); }
 :scope > ul > li::before { content: ""; position: absolute; inset-block: 0; left: 0; width: 0.25rem; background: var(--tone); }
 /* The pill in the middle of the title's first line, however many it folds onto: a theme's pill of a mark and words has the
    mark's baseline, off the words, so a baseline would not level them */
@@ -457,9 +457,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
 .card { --face: initial; --on-face: initial; }
 /* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
-   sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
+   sets --floe-mark: auto on :scope.numbered and no background. A theme's decoration of a card lies over its padding and takes no room.
    LIMIT: whether a decoration keeps off the text is seen, not measured */
-:scope.numbered > .card { --floe-mark: 1.75rem; }
+:scope.numbered { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
@@ -584,7 +584,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* Each item's sign, which the part that takes the look writes, stands as a row's mark (marks: items) of
    --floe-mark across, --floe-mark-gap from the item's text; that text is in one element, so that a line of text and
    code flows as one */
-:scope > li { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
+:scope { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
 :scope > li::before { line-height: 1; font-weight: 800; }
 }
 }
@@ -667,8 +667,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .card {
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
   --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
+:scope.numbered { --floe-mark: auto; }
 :scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); background: none;
   font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
 }
 }

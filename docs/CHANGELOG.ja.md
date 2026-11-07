@@ -251,6 +251,8 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：テーマが変えられる部品の変数を、部品の根（`:scope`）に置くようにした。自分のテーマが、floe のテーマと同じく部品・見た目のファイルの `:scope` に置いた値が効く（numbered・marked・timeline・links・checklist の `--floe-mark`・`--floe-mark-gap`、cards の番号の `:scope.numbered`、`--checks-gap`、`--entries-row-gap`）。floe のページの見た目は変わらない。
+
 - 変更：docs と図の schema が、raw の SVG をテーマの色に合わせる書き方を言う。パレットの変数（`fill="var(--accent)"`）と、`data-floe-tone` の下の `var(--tone)` で書く。部品の class は raw に使わず、例 `sequence` だけが使っていた class `band` は無くなった（書いた raw は黒になる）。
 - 変更：`report` の節の見出しを、`lead` と同じ Markdown の 1 行に。id は描いた字から作るので、タグ、`__init__` のような記号、バックスラッシュ、文字参照、リンクの URL で変わる。
 - 変更：`design` の目次を見た目 `toc` に。線 1 本の静かな一覧にし、今読んでいる節に印を付け、紙には出さない。

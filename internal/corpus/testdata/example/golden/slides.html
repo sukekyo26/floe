@@ -272,7 +272,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A row to each link: its sign, its title and a few words on the line, the words under the title where they don't fit.
    One element holds the title and the words, as floe lays out each child of a row (marks: items) on a line of its own.
    The title holds the link, as a flex item is a block: inline, the link's reach and ring are its words */
-:scope > li { --floe-mark: 1lh; --floe-mark-gap: 0.25rem; }
+:scope { --floe-mark: 1lh; --floe-mark-gap: 0.25rem; }
 :scope > li::before {
   content: "\200b"; content: "\200b" / "";
   background: var(--on-face, var(--accent)); mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12a4 4 0 0 0 6 0l2.5-2.5a4 4 0 0 0-6-6L9.5 4.5M12 8a4 4 0 0 0-6 0L3.5 10.5a4 4 0 0 0 6 6l1-1'/%3E%3C/svg%3E") center / min(1rem, var(--floe-mark)) no-repeat;
@@ -302,9 +302,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
 .card { --face: initial; --on-face: initial; }
 /* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
-   sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
+   sets --floe-mark: auto on :scope.numbered and no background. A theme's decoration of a card lies over its padding and takes no room.
    LIMIT: whether a decoration keeps off the text is seen, not measured */
-:scope.numbered > .card { --floe-mark: 1.75rem; }
+:scope.numbered { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
@@ -348,8 +348,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    LIMIT: an older browser that reads no anchor positioning misplaces the line alone; the ring and the text stand.
    LIMIT: what takes the look and sets its rings' colours over ::before or ::after, rather than by the tone and
    data-floe-mark, is not refused: told apart from writing a ring's content (a tick) it is not, by the CSS's words */
-:scope { counter-reset: floe-step; }
-:scope > li { --floe-mark: 2rem; --floe-mark-gap: 1rem; counter-increment: floe-step; padding: 0.2rem 0 1.3rem; }
+:scope { --floe-mark: 2rem; --floe-mark-gap: 1rem; counter-reset: floe-step; }
+:scope > li { counter-increment: floe-step; padding: 0.2rem 0 1.3rem; }
 :scope > li:last-child { padding-bottom: 0.2rem; }
 :scope > li > * + * { margin-top: 0.15rem; }
 :scope > li::before {
@@ -380,9 +380,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @scope ([data-floe-part="timeline"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* The date at the left of a dot on a line that runs down to the next, each item a row (marks: joined) that floe lays
    out, the date in a column of its own (LIMIT: an older browser that reads no anchor positioning misplaces the line alone) */
-:scope { padding: var(--floe-pad-block) var(--floe-pad-inline); }
+:scope { --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem; padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > li {
-  --floe-mark: 0.7rem; --floe-mark-gap: 0.65rem;
   grid-template:
     [mark-start] auto [mark-end] / [date-start] auto [date-end mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
   padding-bottom: 1.1rem;
@@ -402,8 +401,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope > li::after { background: var(--line); }
 :scope li > div > :not(strong) { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
 @media (max-width: 36rem) {
+  :scope { --floe-mark-gap: 0.9rem; }
   :scope > li {
-    --floe-mark-gap: 0.9rem;
     grid-template: auto [mark-start] auto [mark-end] / [mark-start] auto [mark-end text-start] minmax(0, 1fr) [text-end];
   }
   :scope .date { grid-area: 1 / text; text-align: left; }
@@ -450,8 +449,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .card {
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
   --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
+:scope.numbered { --floe-mark: auto; }
 :scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); background: none;
   font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
 }
 }

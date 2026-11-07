@@ -1,5 +1,5 @@
 /* Each item's sign, which the part that takes the look writes, stands as a row's mark (marks: items) of
    --floe-mark across, --floe-mark-gap from the item's text; that text is in one element, so that a line of text and
    code flows as one */
-:scope > li { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
+:scope { --floe-mark: 1.15rem; --floe-mark-gap: 0.3rem; }
 :scope > li::before { line-height: 1; font-weight: 800; }

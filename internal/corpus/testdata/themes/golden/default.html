@@ -463,9 +463,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
 .card { --face: initial; --on-face: initial; }
 /* The number keeps the terms of a row's mark: sized by --floe-mark, hidden by content: none; a theme drawing it as text
-   sets --floe-mark: auto and no background. A theme's decoration of a card lies over its padding and takes no room.
+   sets --floe-mark: auto on :scope.numbered and no background. A theme's decoration of a card lies over its padding and takes no room.
    LIMIT: whether a decoration keeps off the text is seen, not measured */
-:scope.numbered > .card { --floe-mark: 1.75rem; }
+:scope.numbered { --floe-mark: 1.75rem; }
 :scope.numbered > .card::before {
   counter-increment: floe-card; content: counter(floe-card); content: counter(floe-card) / counter(floe-card);
   display: grid; place-items: center; justify-self: start; box-sizing: border-box; width: var(--floe-mark); height: var(--floe-mark); border-radius: var(--radius-small);
@@ -660,8 +660,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .card {
   background: var(--surface); --quiet: var(--default-panel); --default-quote: var(--default-panel);
   --default-quote-quiet: var(--surface); border-radius: calc(var(--radius) - var(--floe-room)); }
+:scope.numbered { --floe-mark: auto; }
 :scope.numbered > .card::before {
-  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
+  content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); background: none;
   font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
 }
 }
