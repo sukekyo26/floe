@@ -172,9 +172,14 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 	b.eval("document.getElementById('toasts').replaceChildren()")
 
-	// By the keys: the focus to the way back; Escape leaves it for the part's button.
+	// By the keys: the focus to the way back once the page is drawn, however soon a key comes; Escape leaves it for the part's button,
+	// which only the page drawn says. The reads after the write are held, to come after the key.
 	b.eval("document.querySelector('#task-up-rows .unlink').focus()")
+	b.eval("window.realFetch = window.fetch; window.held = []; window.fetch = (u, o) => (o?.method === 'PATCH' ? window.realFetch(u, o).then((r) => { window.holding = true; return r; }) : window.realFetch(u, o).then((r) => (window.holding ? new Promise((go) => { window.held.push(() => go(r)); }) : r)))")
 	b.pressKey(kb.Enter)
+	b.until("the reads held", "window.held.length >= 2")
+	b.pressKey(kb.Escape)
+	b.eval("window.fetch = window.realFetch; window.holding = false; window.held.forEach((go) => go()), 1")
 	b.until("taken off", "document.activeElement.matches('#toasts .undo')")
 	b.pressKey(kb.Escape)
 	b.until("left", "document.activeElement.id === 'task-parent-add'")
