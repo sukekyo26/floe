@@ -179,18 +179,20 @@ func TestUIContents(t *testing.T) { //nolint:paralleltest // the browser tests s
 		}
 	}
 	b.size(1440, 900, false)
-	// A template's contents mark the links to its own parts alone, not one to another page; a script after no nav does nothing.
+	// A template's contents mark the links to its own parts alone, not one to another page; a script after no element, or after one that is no nav, does nothing.
 	s.own(t, map[string]string{
-		"templates/out/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\"><title>{{.Title}}</title></head>\n<body>" +
+		"templates/out/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\"><title>{{.Title}}</title></head>\n<body>{{contents}}" +
 			"<nav data-floe-look=\"toc\" aria-label=\"Contents\"><a href=\"https://example.com/x#a\">Out</a><a href=\"#a\">A</a></nav>{{contents}}" +
 			"<h2 id=\"a\">A</h2><p style=\"height: 3000px\">x</p><p>alone</p>{{contents}}<p id=\"after\">after</p></body></html>\n",
 		"templates/out/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
 		"templates/out/example.yaml": "lang: en\ntemplate: out\n",
 	})
 	s.floe(t, "publish", s.write(t, "out.yaml", "lang: en\ntemplate: out\ntitle: Out\n"), "--slug", "out")
+	errs := b.addScript("window.scriptErrors = []; addEventListener('error', (e) => window.scriptErrors.push(e.message));")
 	b.navigate("/a/out/?raw")
+	b.removeScript(errs)
 	at("A", "a template's contents with a link of another page", b.current())
-	if got := b.eval("document.getElementById('after') !== null && window.onerror === null"); got != "true" {
+	if got := b.eval("window.scriptErrors.join('|')"); got != "" {
 		amiss = append(amiss, "a script after no contents: "+got)
 	}
 	// design marks its section too.
