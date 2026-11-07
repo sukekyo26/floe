@@ -55,7 +55,10 @@ const marked = `(() => {
     if (e.matches(unnumbered)) counted = false;
     if (counted) e.dataset.speechCounted = '';
     e.dataset.speech = String(i++);
-    const copy = e.cloneNode(true);
+    // Zoom's tools and hint, hidden by a small image or until the keyboard is on it, are not read: a card holds them
+    // when it holds an image (options' parts).
+    const zoom = '.floe-zoom-tools, .floe-zoom-hint', copy = e.cloneNode(true), hidden = [...copy.querySelectorAll(zoom)];
+    e.querySelectorAll(zoom).forEach((k, j) => { if (getComputedStyle(k).display === 'none') hidden[j].remove(); });
     copy.querySelectorAll('script, style').forEach((s) => s.remove());
     const part = e.closest('[data-floe-part]');
     out.push({ name: (part ? part.dataset.floePart + ' ' : '') + e.tagName.toLowerCase() + [...e.classList].map((c) => '.' + c).join(''), counted, text: copy.textContent, e });

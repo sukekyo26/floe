@@ -1,4 +1,4 @@
-/* What details, tabs, columns and an item of entries or checks hold */
+/* What details, tabs, columns and an item of entries, checks or options hold */
 :scope { display: grid; gap: var(--floe-room); }
 /* A word kept whole (a table's on paper) overflows the stack's column instead of widening it */
 :scope > * { min-width: 0; }
