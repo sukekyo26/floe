@@ -223,10 +223,11 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 /* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
    any parts.
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
-:scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
-/* --cards-gap is the room between what a card holds, which a part laying out its cards' rows (options) reads too */
+/* --cards-gap is the room between what a card holds, which a part laying out its cards' rows (options) reads too; a
+   theme sets it on the :scope of its cards.css */
+:scope { --cards-gap: 0.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
 .card {
-  --cards-gap: 0.4rem; padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--cards-gap); align-content: start; min-width: 0;
+  padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--cards-gap); align-content: start; min-width: 0;
 }
 /* A card draws on a ground of its own, as a part does, off a face around it (a band's) */
 .card { --face: initial; --on-face: initial; }
@@ -1311,28 +1312,33 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 .option li.con::before { content: "−"; content: "−" / ""; color: var(--on-face, var(--bad)); }
 /* The text and the pros and cons in one box, one under another as a card's children are */
 .option > .body { display: grid; gap: var(--cards-gap); align-content: start; }
-/* --floe-room from the title and from the words, as between parts; parts as tall as their own, not as the row */
-.option > .parts { align-self: start; margin-block: calc(var(--floe-room) - var(--cards-gap)); }
+/* --floe-room from the title and from the words, as between parts, never less than the card's gap; parts as tall as
+   their own, not as the row */
+.option > .parts { align-self: start; margin-top: max(0px, calc(var(--floe-room) - var(--cards-gap))); }
+.option > .parts + .body { margin-top: max(0px, calc(var(--floe-room) - var(--cards-gap))); }
+/* On paper a card holding parts goes to the next page whole, not its title left at the foot of one and its parts on
+   the next.
+   LIMIT: a card taller than a page still breaks where the browser breaks it */
+@media print { :scope:has(> .option > .parts) > .option { break-inside: avoid; } }
 /* Options holding parts: the cards on a line share four rows (the number, the title, the parts, the words), so that
    the parts and the words of each start at one height. The rows have no gap of their own: the number keeps the cards'
    gap below it, and takes no row by name, so that a theme laying it out of the rows (position: absolute) keeps it
-   placed against the card.
+   placed against the card. The words keep their room from the lowest parts by the parts' margin, kept in the parts'
+   row; options of no words keep none, ending a card at its parts.
    LIMIT: a row no card on a line fills still takes the gap between the lines of cards (--floe-room): half of it above
    the title where the number takes no room in the rows (a theme's content: none or position: absolute), the whole
-   between the title and the words on a line of no parts (one card a line, a line wrapped). Plain on the page, a
-   little room more, it is not measured. Options holding no parts are drawn as before, and so are all in a browser
-   that reads no subgrid.
+   between the title and the words on a line of no parts (one card a line, a line wrapped), and --floe-room more
+   under a line of parts alone in options holding words elsewhere. Plain on the page, a little room more, it is not
+   measured. Options holding no parts are drawn as before, and so are all in a browser that reads no subgrid.
    LIMIT: a theme's cards.css that writes a gap on a card is lost in options holding parts, whose rows have none: a
    theme sets --cards-gap instead */
 @supports (grid-template-rows: subgrid) {
   :scope:has(> .option > .parts) > .option { grid-row: span 4; grid-template-rows: subgrid; row-gap: 0; }
   :scope:has(> .option > .parts) > .option::before { margin-bottom: var(--cards-gap); }
   :scope:has(> .option > .parts) > .option > .title { grid-row: 2; }
-  :scope:has(> .option > .parts) > .option > .parts { grid-row: 3; margin-block: var(--floe-room); }
-  :scope:has(> .option > .parts) > .option > .body { grid-row: 4; }
-  /* On paper a card goes to the next page whole, not its title left at the foot of one and its parts on the next.
-     LIMIT: a card taller than a page still breaks where the browser breaks it */
-  @media print { :scope:has(> .option > .parts) > .option { break-inside: avoid; } }
+  :scope:has(> .option > .parts) > .option > .parts { grid-row: 3; margin-top: var(--floe-room); }
+  :scope:has(> .option > .parts):has(> .option > .body) > .option > .parts { margin-bottom: var(--floe-room); }
+  :scope:has(> .option > .parts) > .option > .body { grid-row: 4; margin-top: 0; }
 }
 }
 }
