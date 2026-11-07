@@ -63,7 +63,7 @@ const measureLinks = `(() => {
   });
   scrollTo(0, 0);
   const line = (i) => [rows[i].querySelector('a').getBoundingClientRect(), rows[i].querySelector('.text').getBoundingClientRect()];
-  const [first, words] = line(0), [, long] = line(4), [longLink] = line(4);
+  const [first, words] = line(0), [longLink, long] = line(4);
   if (long.top < longLink.bottom - 1) out.push('row 4: the long words beside the link');
   if (innerWidth >= 390) {
     if (words.top >= first.bottom - 1) out.push('row 0: the words under the link');
