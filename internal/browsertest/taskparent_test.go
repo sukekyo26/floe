@@ -214,7 +214,6 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	b.eval("window.fetch = window.realFetch, 1")
 	b.until("read again", "document.activeElement.id === 'task-parent-add'")
 
-
 	// From the parent's page, a child taken off; the focus on a button stays as the family is drawn anew.
 	open("#4")
 	b.eval("document.querySelector('#task-family-rows .unlink').focus()")
