@@ -1,5 +1,7 @@
 /* Red and black in print, in a grotesque face, its sections ruled heavy */
 :scope {
+  --chart-1: #e3000f; --chart-2: #0057b8; --chart-3: #00875a; --chart-4: #a85f00;
+ 
   --bg: #f7f7f5; --surface: #fff; --fg: #111; --muted: #555; --line: #d0d0d0;
   --accent: #e3000f; --accent-soft: #fff4f5;
   --good: #2a763b; --good-soft: #e0efe3; --warn: #9c5800; --warn-soft: #f7e9d4; --bad: #9e0008; --bad-soft: #fbe0e2;

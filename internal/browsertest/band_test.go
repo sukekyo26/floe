@@ -19,7 +19,7 @@ var bandKit = map[string]string{
 		"<title>{{.Title}}</title></head>\n<body>\n<header data-floe-look=\"band\"><p>" + bandPillsHTML + "</p>{{if .Data.note}}<div data-floe-part=\"note\"><p>A borrowed note, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>{{end}}{{.Data.note}}{{.Data.text}}{{.Data.words}}{{.Data.details}}{{.Data.options}}<div data-floe-look=\"cards\"><div class=\"card\" data-floe-look=\"panel\"><p>A card of the template's own.</p></div></div>" +
 		"<div data-floe-look=\"panel\"><p>A panel of the template's own, <a href=\"https://example.com/\">a link</a> and <code>code</code>.</p></div>" +
 		"<div data-floe-look=\"table\"><table><tr><th>A <a href=\"https://example.com/\">table</a></th></tr><tr><td>of its own, <code>code</code></td></tr></table></div>" +
-		"{{.Data.table}}{{.Data.code}}{{.Data.bars}}{{.Data.tree}}{{.Data.timeline}}{{.Data.tabs}}{{.Data.links}}</header>\n</body></html>\n",
+		"{{.Data.table}}{{.Data.code}}{{.Data.chart}}{{.Data.bars}}{{.Data.tree}}{{.Data.timeline}}{{.Data.tabs}}{{.Data.links}}</header>\n</body></html>\n",
 	"templates/mine/page.css": "header { display: grid; gap: 1rem; padding: 2rem; }\n",
 	"templates/mine/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
 "properties": {"note": {"$ref": "floe:///parts/note.json"}, "text": {"type": "string", "format": "markdown"},
@@ -27,7 +27,7 @@ var bandKit = map[string]string{
 "words": {"$ref": "floe:///parts/text.json"}, "details": {"$ref": "floe:///parts/details.json"},
 "options": {"$ref": "floe:///parts/options.json"}, "bars": {"$ref": "floe:///parts/bars.json"},
 "tree": {"$ref": "floe:///parts/tree.json"}, "timeline": {"$ref": "floe:///parts/timeline.json"},
-"tabs": {"$ref": "floe:///parts/tabs.json"}, "links": {"$ref": "floe:///parts/links.json"}}}`,
+"tabs": {"$ref": "floe:///parts/tabs.json"}, "links": {"$ref": "floe:///parts/links.json"}, "chart": {"$ref": "floe:///parts/chart.json"}}}`,
 	"templates/mine/example.yaml": "lang: en\ntemplate: mine\n",
 }
 
@@ -43,7 +43,7 @@ var bandHeld = "details: { title: Held, open: true, parts: [{ text: \"## Held\\n
 
 // bandParts is parts in a band: a note with a title, a link and a line's code, a table with a link in its heading and as wide
 // as to scroll, and code as wide as to scroll.
-var bandParts = bandText + bandHeld +
+var bandParts = bandText + bandHeld + "chart: { kind: line, title: T, x: [a, b], series: [ { name: n, values: [1, 2] }, { name: m, values: [2, 1] } ] }\n" +
 	"note: { title: Said, text: \"A note with [a link](https://example.com/) and `code`.\" }\n" +
 	"table:\n  columns: [{ title: \"Name [t](https://example.com/)\" }" + strings.Repeat(", { title: Wide }", 16) + "]\n" +
 	"  rows: [[a" + strings.Repeat(", b", 16) + "]]\n" +

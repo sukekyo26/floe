@@ -1,5 +1,7 @@
 /* Black on cream, flat primaries, its sections ruled thick */
 :scope {
+  --chart-1: #285cdb; --chart-2: #d6420b; --chart-3: #0d8a4a; --chart-4: #b3199e;
+ 
   /* Width and style of this theme's box frames, and of lines drawn inside boxes alike */
   --brutal-frame: 3px solid;
   --bg: #f5f0e6; --surface: #fff; --fg: #0a0a0a; --muted: #3d3d3d; --line: #0a0a0a;

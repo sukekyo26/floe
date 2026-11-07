@@ -11,3 +11,15 @@ sections:
           - { title: One, result: ok, actual: It held., how: By hand }
           - { title: Two, result: ng, actual: It broke. }
           - { title: Three, result: unchecked, actual: Not yet. }
+      - chart:
+          kind: line
+          title: Pages
+          x: [a, b]
+          series:
+            - { name: Copied, values: [1, 2] }
+      - chart:
+          kind: bar
+          title: Pages
+          x: [a, b]
+          series:
+            - { name: Copied, values: [1, 2] }
