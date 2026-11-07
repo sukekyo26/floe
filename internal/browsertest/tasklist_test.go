@@ -100,7 +100,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	const screens = "document.getElementById('screens').hidden"
 	const rowsDrawn = "document.querySelector('#list > li')"
 
-	// Of no task: the page list as it was, and on /tasks the words how, with no way between the two.
+	// Of no task: the way between the two is there all the same, and on /tasks the words how.
 	b.navigate("/")
 	b.until("the list read", "document.getElementById('empty').hidden === false")
 	say("no work, list: switch hidden", screens)
@@ -109,10 +109,10 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("no work, tasks: switch hidden", screens)
 	say("no work, tasks: shelf shown", "document.getElementById('shelf').offsetParent !== null")
 
-	// A task's row alone is a way there: a task waiting must not be out of reach.
+	// A task's row alone is on the list's chips: a task waiting must not be out of reach.
 	s.floe(t, "work", "--task", "#99", "--project", "solo")
 	b.navigate("/")
-	b.until("the switch", "!"+screens)
+	b.until("the current", "document.getElementById('to-list').getAttribute('aria-current')")
 	say("a row alone, list: current", "document.getElementById('to-list').getAttribute('aria-current')")
 	s.floe(t, "work", "--task", "#99", "--project", "solo", "--forget")
 
@@ -289,7 +289,6 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	writeTasks("{ broken")
 	b.navigate("/")
 	b.until("the page list", rowsDrawn)
-	b.until("a look at the tasks", "document.getElementById('list').children.length > 0 && !document.getElementById('screens').hidden")
 	say("broken, list: error hidden", "document.getElementById('error').hidden")
 	b.eval("localStorage.setItem('artifacts.taskProject', 'blog')")
 	b.navigate("/tasks?project=shop")
@@ -327,7 +326,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("mended", "document.getElementById('error').hidden && "+rowsDrawn)
 	say("pressed while unreadable", "location.search")
 
-	// A pin archived is no project: no switch, and no words that the list is empty against it.
+	// A pin archived is no project, and no words that the list is empty against it.
 	writeTasks("{}")
 	for _, slug := range []string{"p1", "p2", "p3", "p6", "p8", "p8a", "p10", "p11", "pinned", "pinonly"} {
 		s.floe(t, "rm", slug)
@@ -392,8 +391,8 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 }
 
 // taskListWant is what TestUITaskList reads of the list, in the order it reads it.
-const taskListWant = `no work, list: switch hidden: true
-no work, tasks: switch hidden: true
+const taskListWant = `no work, list: switch hidden: false
+no work, tasks: switch hidden: false
 no work, tasks: shelf shown: false
 a row alone, list: current: page
 opened: ?project=shop shop
@@ -475,5 +474,5 @@ mended: ?project=shop true
 broken, gone kept:  ?project=shop gone
 mended, chosen anew: ?project=shop shop
 pressed while unreadable: ?project=blog
-an archived pin alone, list: switch hidden: true
-an archived pin alone: switch hidden: true`
+an archived pin alone, list: switch hidden: false
+an archived pin alone: switch hidden: false`
