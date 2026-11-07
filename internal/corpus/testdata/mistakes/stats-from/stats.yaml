@@ -1,0 +1,14 @@
+# With from, better is needed, and from and value are digits; better is taken only with from.
+lang: en
+template: report
+title: Stats
+sections:
+  - heading: a
+    parts:
+      - stats:
+          - { label: a, value: '1', from: '2' }
+          - { label: b, value: '1', better: lower }
+          - { label: c, value: '1', from: '2', better: down }
+          - { label: d, value: 1, from: 2, better: lower }
+          - { label: e, value: '14.9k', from: '2', better: lower }
+          - { label: f, value: '1', from: '1,234', better: lower }

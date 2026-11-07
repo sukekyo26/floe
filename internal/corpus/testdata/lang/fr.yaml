@@ -23,3 +23,7 @@ sections:
           x: [a, b]
           series:
             - { name: Copied, values: [1, 2] }
+      - stats:
+          - { label: Pages, value: '1', from: '2', better: lower }
+          - { label: Pages, value: '3', from: '2', better: lower }
+          - { label: Pages, value: '2', from: '2', better: lower }

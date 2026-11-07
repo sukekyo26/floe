@@ -1,5 +1,9 @@
 <dl data-floe-part="stats">
-{{- range .}}
-<div class="card stat"{{with .tone}} data-floe-tone="{{.}}"{{end}} data-floe-look="panel"><dt>{{.label}}</dt><dd class="value">{{.value}}{{with .unit}}<span class="unit">{{.}}</span>{{end}}</dd>{{with .note}}<dd class="note">{{.}}</dd>{{end}}</div>
+{{- range stats .}}
+<div class="card stat"{{with .Tone}} data-floe-tone="{{.}}"{{end}} data-floe-look="panel"><dt>{{.Label}}</dt>
+{{- if .From}}<dd class="value moved"><span class="from"><span class="floe-hidden">{{word "before"}} </span>{{.From}}</span><span class="arrow" aria-hidden="true">→</span><span><span class="floe-hidden">{{word "after"}} </span>{{.Value}}{{with .Unit}}<span class="unit">{{.}}</span>{{end}}</span></dd>
+<dd class="note" data-floe-tone="{{.WayTone}}">{{with .Change}}{{.}} {{end}}{{word .Way}}</dd>
+{{- else}}<dd class="value">{{.Value}}{{with .Unit}}<span class="unit">{{.}}</span>{{end}}</dd>{{end}}
+{{- with .Note}}<dd class="note">{{.}}</dd>{{end}}</div>
 {{- end}}
 </dl>
