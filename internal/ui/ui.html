@@ -804,7 +804,7 @@
   .shell.tasks { grid-template-columns: minmax(0, 1fr); }
   .shell.tasks .listcol { border-right: 0; }
   @media not (max-width: 70rem) {
-    .shell.tasks:not(.shelf-closed) { grid-template-columns: var(--shelf-width) minmax(0, 1fr); }
+    .shell.tasks:not(.shelf-closed, .tasks-empty) { grid-template-columns: var(--shelf-width) minmax(0, 1fr); }
     .shell.tasks:not(.shelf-closed) .listcol > .col-foot { display: none; }
   }
   .shell.tasks-empty .shelf, .shell.tasks-empty #shelf-grip, .shell.tasks-empty #shelf-show, .shell.tasks-empty .lhead, .shell.tasks-empty .pins, .shell.tasks-empty .listcol > .col-foot { display: none; }

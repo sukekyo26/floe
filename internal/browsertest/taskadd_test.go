@@ -74,6 +74,24 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	want("the head's button with no task", shown("task-add"), "false")
 	want("the icon, the size of the others", "document.querySelector('#task-add-empty svg').getBoundingClientRect().width + ''", "13")
 
+	// The screen of no task has the whole width, wide and narrow, the shelf folded or not, its words at the middle.
+	for _, c := range []struct {
+		width  int64
+		mobile bool
+		kept   string
+	}{{1440, false, ""}, {1440, false, `{"open":false}`}, {400, true, ""}} {
+		b.size(c.width, 800, c.mobile)
+		b.eval("localStorage.setItem('list.columns', " + js(c.kept) + ")")
+		b.navigate("/tasks")
+		b.until("the words", "!document.getElementById('tasks-empty').hidden")
+		b.still()
+		want("the words at the middle", "(() => { const r = document.getElementById('tasks-empty').getBoundingClientRect(); return (Math.abs(r.width - innerWidth) < 2) + ' ' + (Math.abs(r.left + r.width / 2 - innerWidth / 2) < 2); })()", "true true")
+	}
+	b.unsize()
+	b.eval("localStorage.removeItem('list.columns')")
+	b.navigate("/tasks")
+	b.until("the words", "!document.getElementById('tasks-empty').hidden")
+
 	// With no project on a page, the one choice is none, and what comes of it is in no project.
 	open("task-add-empty")
 	want("no task, no page: the project field", "[...document.getElementById('kin-project').options].map((o) => o.value + '=' + o.textContent).join(', ')", "/=Not set")
