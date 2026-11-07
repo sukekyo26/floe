@@ -891,7 +891,7 @@
   .pin-chip { display: inline-flex; align-items: center; max-width: 18rem; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; }
   .pin-chip:hover { border-color: var(--faint); }
   .pin { display: inline-flex; align-items: center; gap: 0.35rem; min-width: 0; padding: 0.18rem 0.1rem 0.18rem 0.65rem; color: var(--fg); border-radius: 999px; text-decoration: none; }
-  .pin-chip .pin-off { flex: none; min-width: 22px; width: 22px; height: 22px; margin-right: 0.15rem; padding: 0; }
+  .pin-chip .pin-off { flex: none; min-width: 28px; width: 28px; height: 28px; padding: 0; }
   .pin-off svg { width: 12px; height: 12px; }
   .pin .pin-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pin svg { flex: none; width: 13px; height: 13px; color: var(--muted); }
@@ -953,7 +953,7 @@
     </div>
   </div>
 </header>
-<p class="error" id="error" hidden></p>
+<p class="error" id="error" role="alert" hidden></p>
 <main class="shell" id="manage" hidden>
   <h1 class="sr-only">floe</h1>
   <!-- What opens a column folded, left where its button was -->
@@ -3305,13 +3305,33 @@
     focusRow(key);
   }
 
-  // The pin taken off leaves the focus on the next pin's button, or the last, or the help where none is left
-  async function unpin(a, pinned) {
-    const next = pinned[pinned.indexOf(a) + 1] ?? pinned.at(-2);
-    await togglePin(a);
-    if (items.some((x) => x.slug === a.slug && x.work?.pin)) return;
-    const chip = [...$('pin-list').children].find((x) => x.dataset.slug === next?.slug);
-    (chip?.querySelector('.pin-off') ?? $('pins-help')).focus();
+  // A second press of a double one is not a press more: the next pin has moved under it, and no pin comes back but by its page's menu
+  const unpinning = new Set();
+  async function unpin(e, a) {
+    if (e.detail > 1 || unpinning.has(a.slug)) return;
+    unpinning.add(a.slug);
+    try {
+      await togglePin(a);
+    } finally {
+      unpinning.delete(a.slug);
+    }
+  }
+  // Drawn anew only as what they say changes, as another session's publish draws the list anew. The focus stays on what had it; of a pin
+  // gone, it goes to the title of the one in its place, not its ×: a key held down would go on to take the next off, or to the help where none is left
+  let pinsDrawn = null;
+  function drawChips(pinned, chips) {
+    const said = JSON.stringify(pinned.map((a) => [a.slug, a.title, Boolean(a.news), Boolean(a.folder)]));
+    if (said === pinsDrawn) return;
+    pinsDrawn = said;
+    const list = $('pin-list');
+    const was = list.contains(document.activeElement) ? document.activeElement : null;
+    const place = was && [...list.children].indexOf(was.closest('.pin-chip'));
+    const slug = was?.closest('.pin-chip').dataset.slug;
+    list.replaceChildren(...(chips.length > 0 ? chips : [tagged('span', 'pins-none', t('ui_pins_none'))]));
+    if (!was) return;
+    const same = chips.find((chip) => chip.dataset.slug === slug);
+    if (same) same.querySelector(was.classList.contains('pin-off') ? '.pin-off' : '.pin').focus();
+    else (chips[Math.min(place, chips.length - 1)]?.querySelector('.pin') ?? $('pins-help')).focus();
   }
   // The pages pinned, which leave as they are archived, and how to pin one when none is
   // LIMIT: a folder pinned leads to the page list, where it opens (its URL), and not back here
@@ -3333,7 +3353,7 @@
       off.innerHTML = PIN_OFF_MARK;
       off.title = t('ui_unpin_named', a.title);
       off.setAttribute('aria-label', off.title);
-      off.addEventListener('click', () => unpin(a, pinned));
+      off.addEventListener('click', (e) => unpin(e, a));
       const chip = tagged('span', 'pin-chip');
       chip.dataset.slug = a.slug;
       chip.append(link, off);
@@ -3341,7 +3361,7 @@
     });
     // No project yet (the tasks unreadable, none remembered) has no pins of its own to say
     $('pins').hidden = !project;
-    $('pin-list').replaceChildren(...(pins.length > 0 ? pins : [tagged('span', 'pins-none', t('ui_pins_none'))]));
+    drawChips(pinned, pins);
   }
 
   // Tasks by when their state last changed, the longest first or the latest, then by name
@@ -4970,7 +4990,7 @@
   // LIMIT: a press meant to bring the window forward, or the focus back from the page, on the row picked opens it whole; with a menu open a double press closes it, then opens the page
   const PRESS_MS = 2000;
   let pressedAt = -Infinity;
-  $('list').addEventListener('pointerdown', () => { pressedAt = performance.now(); });
+  for (const held of [$('list'), $('pin-list')]) held.addEventListener('pointerdown', () => { pressedAt = performance.now(); });
   addEventListener('pointerup', () => { pressedAt = -Infinity; });
   // The tasks, which never fail a load: the list of pages goes on without them, and the task list says why
   // LIMIT: read at each look, as the list is, but for a page whole; a small JSON. Answer the two as one if that comes to weigh
