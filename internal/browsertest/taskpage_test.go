@@ -38,6 +38,8 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
 	b.navigate("/")
+	// Drawn, the list keeps its query, which the task page's way back reads
+	b.until("the empty list", "!document.getElementById('empty').hidden")
 	page := func(slug string, args ...string) {
 		t.Helper()
 		s.floe(t, "publish", s.page(t, slug+".yaml", "T "+slug, ""), "--slug", slug)
