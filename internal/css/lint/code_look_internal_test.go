@@ -18,6 +18,7 @@ var codeLook = Rule{Name: "code-look", Check: func(in *Input) []Finding {
 		if s.Kind != kindPart || !slices.Contains(in.Taken(s.Owner), "code") {
 			continue
 		}
+		in.Saw()
 		for prop, ds := range declarations(s.Src, func(p string) bool { return strings.HasPrefix(p, "padding") || p == "color" }) {
 			for _, d := range ds {
 				for _, t := range d.value {

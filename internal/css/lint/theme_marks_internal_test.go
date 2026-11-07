@@ -53,6 +53,7 @@ var themeMarks = Rule{Name: "theme-marks", Check: func(in *Input) []Finding {
 		if s.Kind != kindTheme {
 			continue
 		}
+		in.Saw()
 		named := map[int]bool{} // where the strings of typefaces' names start
 		for prop, ds := range declarations(s.Src, func(string) bool { return true }) {
 			for _, d := range ds {

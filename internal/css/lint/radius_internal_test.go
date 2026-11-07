@@ -46,6 +46,7 @@ var radiusRule = Rule{Name: "radius", Check: func(in *Input) []Finding {
 			return p == "rx" || strings.HasSuffix(p, "radius") && !strings.HasPrefix(p, "--")
 		}) {
 			for _, d := range ds {
+				in.Saw()
 				v := text(s.Src, d.value)
 				if slices.Contains(cornerShapes, v) {
 					continue

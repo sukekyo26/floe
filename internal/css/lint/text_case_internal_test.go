@@ -9,6 +9,7 @@ import "strings"
 var textCase = Rule{Name: "text-case", Check: func(in *Input) []Finding {
 	var found []Finding
 	for _, s := range in.Sheets() {
+		in.Saw()
 		for _, d := range declarations(s.Src, func(p string) bool { return p == "text-transform" })["text-transform"] {
 			if v := text(s.Src, d.value); !strings.EqualFold(v, "none") {
 				file, line := s.at(d.at)

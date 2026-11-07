@@ -27,26 +27,29 @@ type decl struct {
 }
 
 // rules returns, for each token, the preludes of the rules it is in, outermost first and joined by " { ", comments left
-// out, and the place of the innermost { it is in (-1 outside every block).
-func rules(toks []token) ([]string, []int) {
-	in, blocks := make([]string, len(toks)), make([]int, len(toks))
+// out, the place of the innermost { of a rule it is in (-1 outside every rule), and whether it is a rule's {, ;, or the }
+// that closes a rule. A rule's { is one with no ( nor [ around it in its rule (its Depth is the rules it is in); a {, ;
+// or } within a function or a bracket is a token of its value.
+func rules(toks []token) ([]string, []int, []bool) {
+	in, blocks, ruling := make([]string, len(toks)), make([]int, len(toks)), make([]bool, len(toks))
 	var open []string
 	var at []int
 	var prelude strings.Builder
 	for k, t := range toks {
-		switch t.Type {
-		case css.LeftBraceToken:
+		switch {
+		case t.Type == css.LeftBraceToken && t.Depth == len(open):
 			open = append(open, strings.TrimSpace(prelude.String()))
 			at = append(at, k)
 			prelude.Reset()
-		case css.RightBraceToken:
-			if len(open) > 0 {
-				open, at = open[:len(open)-1], at[:len(at)-1]
-			}
+			ruling[k] = true
+		case t.Type == css.RightBraceToken && len(open) > 0 && t.Depth == len(open)-1:
+			open, at = open[:len(open)-1], at[:len(at)-1]
 			prelude.Reset()
-		case css.SemicolonToken:
+			ruling[k] = true
+		case t.Type == css.SemicolonToken && t.Depth == len(open):
 			prelude.Reset()
-		case css.CommentToken:
+			ruling[k] = true
+		case t.Type == css.CommentToken:
 		default:
 			prelude.Write(t.Data)
 		}
@@ -55,26 +58,26 @@ func rules(toks []token) ([]string, []int) {
 			in[k], blocks[k] = strings.Join(open, " { "), at[len(at)-1]
 		}
 	}
-	return in, blocks
+	return in, blocks, ruling
 }
 
 // skipped is whether a token is one CSS Syntax drops between a declaration's parts: whitespace or a comment.
 func skipped(t token) bool { return t.Type == css.WhitespaceToken || t.Type == css.CommentToken }
 
-// declarations returns each declaration in src of a property that want takes, by name: a name at the start of a block or
-// after a ;, a colon (whitespace and comments before it, as CSS Syntax drops them), and the value up to the ; or } of the
+// declarations returns each declaration in src of a property that want takes, by name: a name at the start of a rule's
+// block or after its ; (rules), a colon (whitespace and comments before it, as CSS Syntax drops them), and the value up to the ; or } of the
 // name's depth. What reaches a { of that depth is a rule's prelude (li:has(…) {), not a declaration. A property's name is
 // lowered, a variable's kept as written: CSS tells --Radius from --radius.
 func declarations(src []byte, want func(name string) bool) map[string][]decl {
 	found := map[string][]decl{}
 	toks := tokensOf(src)
-	in, blocks := rules(toks)
+	in, blocks, ruling := rules(toks)
 	start := true
 	for i := 0; i < len(toks); i++ {
 		switch {
 		case skipped(toks[i]):
 			continue
-		case toks[i].Type == css.LeftBraceToken || toks[i].Type == css.SemicolonToken || toks[i].Type == css.RightBraceToken:
+		case ruling[i]:
 			start = true
 			continue
 		}
@@ -392,7 +395,8 @@ func large(v string) bool {
 var cornerShapes = []string{"0", "50%", "999px"}
 
 // TestDeclarations reads declarations as CSS Syntax does: a comment before the colon is dropped, a value ends at a ; of
-// its depth or at the } that closes its block, !important is taken off its end, and a prelude's colon is no declaration.
+// its depth or at the } that closes its block, !important is taken off its end, a prelude's colon is no declaration,
+// and a ;, { or } within a function or a bracket is the value's, starting no declaration and closing no rule.
 func TestDeclarations(t *testing.T) {
 	t.Parallel()
 
@@ -406,6 +410,9 @@ func TestDeclarations(t *testing.T) {
 		"@media print { .a { opacity: 1 } }":      "1 false @media print { .a",
 		".a { &:hover { opacity: 1; } }":          "1 false .a { &:hover",
 		"li:has(a[x=';']) { opacity: 1 }":         "1 false li:has(a[x=';'])",
+		":scope { --x: f(}); opacity: .5 }":       ".5 false :scope",
+		":scope { --x: f(a; opacity: 1); opacity: .5 }": ".5 false :scope",
+		":scope { --x: [a; opacity: 1]; opacity: .5 }":  ".5 false :scope",
 	} {
 		var got []string
 		for _, d := range declarations([]byte(src), func(p string) bool { return p == "opacity" })["opacity"] {
@@ -492,5 +499,23 @@ func TestLengthless(t *testing.T) {
 		if got := lengthless(d[0].value); got != want {
 			t.Errorf("%s: lengthless %v, want %v", value, got, want)
 		}
+	}
+}
+
+// TestUIParts reads each <style> of the management page from the line it starts on, two of one text too.
+func TestUIParts(t *testing.T) {
+	t.Parallel()
+
+	ui := floecss.Preprocess([]byte("<style>\r\n.a { color: red }\r\n</style>\r\n<style>\r\n.a { color: red }\r\n</style><p style=\"x: 1\">"))
+	sheets, _, err := uiParts(ui)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []int
+	for _, s := range sheets {
+		got = append(got, s.line)
+	}
+	if want := []int{0, 3, 5}; !slices.Equal(got, want) {
+		t.Errorf("lines before the sheets %v, want %v", got, want)
 	}
 }

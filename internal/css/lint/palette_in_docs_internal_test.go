@@ -44,6 +44,7 @@ var paletteInDocs = Rule{Name: "palette-in-docs", Check: func(in *Input) []Findi
 			found = append(found, Finding{doc.file, 0, "palette-in-docs", err})
 			continue
 		}
+		in.Saw()
 		for _, name := range names {
 			if !strings.HasPrefix(name, "--") || strings.ContainsAny(name, "<>") {
 				found = append(found, Finding{doc.file, 0, "palette-in-docs", "the table of the palette names " + name + ": write each variable's name whole"})

@@ -2,6 +2,9 @@ package lint
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
+	"io"
 	"maps"
 	"regexp"
 	"slices"
@@ -11,53 +14,72 @@ import (
 	"golang.org/x/net/html"
 )
 
-// uiSheet is a piece of the management page's CSS: a <style>, with the line of ui.html it starts on, or an element's
-// style attribute (line 0), written as a rule of its own.
+// uiSheet is a piece of the management page's CSS: a <style>, or an element's style attribute written as a rule of its
+// own, with the line of ui.html before it starts (a style attribute's: before its element's tag).
 type uiSheet struct {
 	where string // what it is, for a finding: "" for a <style>, "<tag style>" for an attribute
 	line  int
 	src   []byte
 }
 
-// uiParts returns the management page's CSS and its SVG attributes that take a colour, read by x/net/html.
-func uiParts(ui []byte) ([]uiSheet, []html.Attribute, []string, error) {
-	doc, err := html.Parse(bytes.NewReader(ui))
-	if err != nil {
-		return nil, nil, nil, err
-	}
+// uiAttr is an SVG attribute that takes a colour, its element and the line of its tag.
+type uiAttr struct {
+	tag, key, val string
+	line          int
+}
+
+// uiParts returns the management page's CSS and its SVG attributes that take a colour, read by x/net/html's tokenizer,
+// which tells where each token starts.
+func uiParts(ui []byte) ([]uiSheet, []uiAttr, error) {
 	var sheets []uiSheet
-	var attrs []html.Attribute
-	var tags []string
-	for n := range doc.Descendants() {
-		if n.Type != html.ElementNode {
-			continue
-		}
-		if n.Data == "style" && n.FirstChild != nil {
-			src := []byte(n.FirstChild.Data)
-			line := 0
-			if at := bytes.Index(ui, src); at >= 0 {
-				line = lineOf(ui, at) - 1
+	var attrs []uiAttr
+	z := html.NewTokenizer(bytes.NewReader(ui))
+	at, style := 0, false
+	for {
+		tt := z.Next()
+		raw := len(z.Raw())
+		line := lineOf(ui, at) - 1
+		switch tt {
+		case html.ErrorToken:
+			if err := z.Err(); !errors.Is(err, io.EOF) {
+				return nil, nil, fmt.Errorf("ui.html: %w", err)
 			}
-			sheets = append(sheets, uiSheet{line: line, src: src})
-		}
-		for _, a := range n.Attr {
-			if slices.Contains(svgColors, a.Key) {
-				attrs, tags = append(attrs, a), append(tags, n.Data)
+			return sheets, attrs, nil
+		case html.TextToken:
+			if style {
+				sheets = append(sheets, uiSheet{where: "", line: line, src: bytes.Clone(z.Text())})
 			}
-			if a.Key == "style" {
-				sheets = append(sheets, uiSheet{where: "<" + n.Data + " style>", src: []byte("style {" + a.Val + "}")})
+		case html.StartTagToken, html.SelfClosingTagToken:
+			tok := z.Token()
+			style = tok.Data == "style" && tt == html.StartTagToken
+			for _, a := range tok.Attr {
+				if slices.Contains(svgColors, a.Key) {
+					attrs = append(attrs, uiAttr{tok.Data, a.Key, a.Val, line + 1})
+				}
+				if a.Key == "style" {
+					sheets = append(sheets, uiSheet{where: "<" + tok.Data + " style>", line: line, src: []byte("style {" + a.Val + "}")})
+				}
 			}
+		default:
+			style = false
 		}
+		at += raw
 	}
-	return sheets, attrs, tags, nil
 }
 
 // uiFinding is a finding of the rule at the byte at of s.
 func uiFinding(rule string, s uiSheet, at int, text string) Finding {
 	if s.where != "" {
-		return Finding{"ui.html", 0, rule, s.where + ": " + text}
+		return Finding{"ui.html", s.line + 1, rule, s.where + ": " + text}
 	}
 	return Finding{"ui.html", s.line + lineOf(s.src, at), rule, text}
+}
+
+// bareRoot is whether rule sets a declaration on :root itself, unnarrowed (by @media and the like alone): where the
+// management page's steps and colours are.
+func bareRoot(rule string) bool {
+	preludes := strings.Split(rule, " { ")
+	return rootOf(rule, ":root") == onTheRoot && strings.TrimSpace(preludes[len(preludes)-1]) == ":root"
 }
 
 // colorFunctions are the functions that make a colour.
@@ -81,21 +103,22 @@ func colored(value []token) bool {
 // writes no other colour.
 // LIMIT: a colour's name (white) is not read, nor the HTML the script builds in its strings.
 var manageColours = Rule{Name: "manage-colours", Check: func(in *Input) []Finding {
-	sheets, attrs, tags, err := uiParts(in.UI())
+	sheets, attrs, err := uiParts(in.UI())
 	if err != nil {
 		return []Finding{{"ui.html", 0, "manage-colours", err.Error()}}
 	}
 	var found []Finding
-	for i, a := range attrs {
-		if colored(tokensOf([]byte(a.Val))) {
-			found = append(found, Finding{"ui.html", 0, "manage-colours", "<" + tags[i] + " " + a.Key + "=\"" + a.Val + "\">: give the colour a variable in :root and set it from the style"})
+	for _, a := range attrs {
+		if colored(tokensOf([]byte(a.val))) {
+			found = append(found, Finding{"ui.html", a.line, "manage-colours", "<" + a.tag + " " + a.key + "=\"" + a.val + "\">: give the colour a variable in :root and set it from the style"})
 		}
 	}
 	for _, s := range sheets {
 		all := declarations(s.src, func(string) bool { return true })
 		for _, name := range slices.Sorted(maps.Keys(all)) {
 			for _, d := range all[name] {
-				if rootOf(d.rule, ":root") == onTheRoot {
+				in.Saw()
+				if bareRoot(d.rule) {
 					continue
 				}
 				value := d.value
@@ -136,7 +159,7 @@ var radiusProperty = regexp.MustCompile(`^border(-[a-z]+)*-radius$`)
 // exception's Key is a rule's prelude and the size it writes (".x code: 0.8em").
 // LIMIT: corners are read in border-…-radius alone, not in -webkit-border-radius nor clip-path's inset(… round …).
 var manageCornersRule = Rule{Name: "manage-corners", Check: func(in *Input) []Finding {
-	sheets, _, _, err := uiParts(in.UI())
+	sheets, _, err := uiParts(in.UI())
 	if err != nil {
 		return []Finding{{"ui.html", 0, "manage-corners", err.Error()}}
 	}
@@ -145,9 +168,10 @@ var manageCornersRule = Rule{Name: "manage-corners", Check: func(in *Input) []Fi
 		all := declarations(s.src, func(string) bool { return true })
 		for _, name := range slices.Sorted(maps.Keys(all)) {
 			for _, d := range all[name] {
+				in.Saw()
 				value := text(s.src, d.value)
 				switch {
-				case slices.Contains(manageSteps, name) && rootOf(d.rule, ":root") != onTheRoot:
+				case slices.Contains(manageSteps, name) && !bareRoot(d.rule):
 					found = append(found, uiFinding("manage-corners", s, d.at, "sets "+name+" in "+d.rule+"; only :root sets the steps"))
 				case radiusProperty.MatchString(name):
 					for _, c := range items(d.value) {

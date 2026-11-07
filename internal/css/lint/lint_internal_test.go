@@ -17,6 +17,7 @@ import (
 
 	"github.com/tdewolff/parse/v2/css"
 
+	floecss "github.com/sukekyo26/floe/internal/css"
 	"github.com/sukekyo26/floe/internal/kit"
 )
 
@@ -35,7 +36,7 @@ func floeInput(t *testing.T) *Input {
 	}
 	return &Input{
 		kit: k, base: k.BaseCSS(), docs: os.DirFS("../../../docs"),
-		pages: os.DirFS("../../corpus/testdata/every-part/golden"), ui: ui,
+		pages: os.DirFS("../../corpus/testdata/every-part/golden"), ui: floecss.Preprocess(ui),
 	}
 }
 
@@ -62,8 +63,12 @@ func dirInput(t *testing.T, dir string) *Input {
 		t.Fatalf("%s: %v", dir, err)
 	}
 	in := &Input{kit: k, docs: sub(dir, "docs"), pages: sub(dir, "pages"), allow: map[string]string{}}
-	in.base = readIf(t, filepath.Join(dir, "base.css"))
-	in.ui = readIf(t, filepath.Join(dir, "ui.html"))
+	if base := readIf(t, filepath.Join(dir, "base.css")); base != nil {
+		in.base = floecss.Preprocess(base)
+	}
+	if ui := readIf(t, filepath.Join(dir, "ui.html")); ui != nil {
+		in.ui = floecss.Preprocess(ui)
+	}
 	for line := range strings.Lines(string(readIf(t, filepath.Join(dir, "allow.txt")))) {
 		key, rest, err := quoted(strings.TrimSpace(line))
 		if err != nil || strings.TrimSpace(rest) == "" {
@@ -190,6 +195,9 @@ func TestLintRule(t *testing.T) {
 			for _, f := range written(rule.Check(in)) {
 				t.Error(f)
 			}
+			if in.seen == 0 {
+				t.Error("saw nothing it checks in floe's files: what it checks is renamed or gone, or the rule reads it no more")
+			}
 			for _, key := range slices.Sorted(maps.Keys(in.allow)) {
 				if !in.used[key] {
 					t.Errorf("the exception %q is not used on floe's own files: remove it", key)
@@ -198,11 +206,11 @@ func TestLintRule(t *testing.T) {
 
 			dir := filepath.Join("testdata", rule.Name)
 			good := dirInput(t, filepath.Join(dir, "good"))
-			if len(good.Sheets()) == 0 && good.ui == nil {
-				t.Errorf("%s/good holds no CSS: write CSS that keeps the rule", dir)
-			}
 			for _, f := range written(rule.Check(good)) {
 				t.Errorf("good: %s", f)
+			}
+			if good.seen == 0 {
+				t.Errorf("%s/good: the rule saw nothing it checks: write what it checks, kept", dir)
 			}
 
 			bad := dirInput(t, filepath.Join(dir, "bad"))

@@ -34,6 +34,7 @@ var textScale = Rule{Name: "text-scale", Check: func(in *Input) []Finding {
 		sizes := declarations(s.Src, func(p string) bool { return p == "font-size" || p == "font" })
 		for _, prop := range slices.Sorted(maps.Keys(sizes)) {
 			for _, d := range sizes[prop] {
+				in.Saw()
 				v, ok := sizeOf(prop, d.value)
 				var why string
 				switch {

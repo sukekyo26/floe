@@ -72,7 +72,12 @@ type Input struct {
 	ui    []byte            // the management page, ui.html
 	allow map[string]string // the exceptions in force: a key and its reason
 	used  map[string]bool   // the keys of allow looked up and found
+	seen  int               // what the rule looked at (Saw)
 }
+
+// Saw notes that the rule looked at one more thing it checks (a declaration, a file): TestLintRule fails a rule that
+// looks at nothing on floe's files or its good example, as when what it checks is renamed or gone.
+func (in *Input) Saw() { in.seen++ }
 
 // Sheets returns every CSS file of in: base.css, then each part's and look's, each theme's and each template's, in the
 // order of their names.

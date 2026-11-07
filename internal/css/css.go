@@ -58,11 +58,12 @@ type Token struct {
 	Depth int
 }
 
-// Tokens reads src as Check does, by tdewolff's tokens and the nesting of their blocks: the one reading of CSS that the
-// tests of floe's CSS rules (internal/css/lint) take, so that they read no CSS of their own.
+// Tokens reads src as Check does, after Preprocess, by tdewolff's tokens and the nesting of their blocks: the one
+// reading of CSS that the tests of floe's CSS rules (internal/css/lint) take, so that they read no CSS of their own. At
+// counts in Preprocess(src), which is src itself when src is made by Preprocess, as the CSS of a Kit is.
 func Tokens(src []byte) []Token {
 	var open nest
-	toks := lex(src)
+	toks := lex(Preprocess(src))
 	out := make([]Token, 0, len(toks))
 	for _, t := range toks {
 		depth := len(open)

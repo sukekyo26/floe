@@ -10,6 +10,9 @@ import (
 
 	"github.com/tdewolff/parse/v2/css"
 	"golang.org/x/net/html"
+
+	floecss "github.com/sukekyo26/floe/internal/css"
+	"github.com/sukekyo26/floe/internal/kit"
 )
 
 // floesOwnWays are the variables of floe's own ways, set by rules of their own and out of this rule, that floe's base.css
@@ -36,10 +39,10 @@ var partVariables = Rule{Name: "part-variables", Check: func(in *Input) []Findin
 	sheets := in.Sheets()
 	own := floesOwn(sheets)
 	ours := func(v string) bool { return !own[v] }
-	switching := map[string]string{} // a switching variable: its part
+	switching := map[string][]string{} // a switching variable: the parts it is an exception of
 	for _, key := range in.Exceptions() {
 		if part, v, ok := strings.Cut(key, " "); ok {
-			switching[v] = part
+			switching[v] = append(switching[v], part)
 		}
 	}
 	styles, marks, err := drawn(in.Pages())
@@ -65,6 +68,7 @@ var partVariables = Rule{Name: "part-variables", Check: func(in *Input) []Findin
 		if s.Kind != kindPart && s.Kind != kindLook {
 			continue
 		}
+		in.Saw()
 		maps.Copy(of[s.Owner], reads(s.Src))
 		for v, ds := range declarations(s.Src, func(p string) bool { return strings.HasPrefix(p, "--") }) {
 			of[s.Owner][v] = true
@@ -77,7 +81,7 @@ var partVariables = Rule{Name: "part-variables", Check: func(in *Input) []Findin
 					found = append(found, Finding{file, line, "part-variables", s.Owner + " sets " + v + " !important on " + d.rule +
 						", which a theme's value cannot win over: leave !important out"})
 				}
-				if switching[v] == s.Owner && in.Allowed(s.Owner+" "+v) {
+				if in.Allowed(s.Owner + " " + v) {
 					continue
 				}
 				if fix := rootFix(d.rule, ":scope", s.Owner, "set it on its :scope, which a theme's value on the root then reaches; "+
@@ -93,7 +97,7 @@ var partVariables = Rule{Name: "part-variables", Check: func(in *Input) []Findin
 				if of[name] != nil {
 					of[name][v] = true
 				}
-				if ours(v) && (switching[v] != name || !in.Allowed(name+" "+v)) {
+				if ours(v) && !in.Allowed(name+" "+v) {
 					found = append(found, Finding{page, 0, "part-variables", name + " sets " + v + " in an element's style: a style wins over a theme's value; " +
 						"set it on its :scope, or, made from the data on each element, make it an exception of this rule, \"" + name + " " + v + "\", with its reason"})
 				}
@@ -138,8 +142,8 @@ var partVariables = Rule{Name: "part-variables", Check: func(in *Input) []Findin
 				file, line := s.at(d.at)
 				var why string
 				switch {
-				case switching[v] != "":
-					why = "sets " + v + ", " + switching[v] + "'s own, which switches between its elements: remove it"
+				case len(switching[v]) > 0:
+					why = "sets " + v + ", " + strings.Join(switching[v], " and ") + "'s own, which switches between its elements: remove it"
 				case !partVar[v]:
 					continue
 				case !reach[s.For][v]:
@@ -197,7 +201,7 @@ func floesOwn(sheets []Sheet) map[string]bool {
 					}
 				}
 			}
-		case s.Kind == kindTheme && s.Owner == "default" && s.For == "palette":
+		case s.Kind == kindTheme && s.Owner == kit.DefaultTheme && s.For == "palette":
 			for v := range declarations(s.Src, func(p string) bool { return strings.HasPrefix(p, "--") }) {
 				own[v] = true
 			}
@@ -229,7 +233,7 @@ func drawn(pages fs.FS) (map[string]map[string]map[string]bool, []sheetOf, error
 		if err != nil {
 			return nil, nil, err
 		}
-		doc, err := html.Parse(bytes.NewReader(src))
+		doc, err := html.Parse(bytes.NewReader(floecss.Preprocess(src)))
 		if err != nil {
 			return nil, nil, err
 		}

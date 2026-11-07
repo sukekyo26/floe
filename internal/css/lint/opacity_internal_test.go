@@ -6,6 +6,7 @@ package lint
 var opacityRule = Rule{Name: "opacity", Check: func(in *Input) []Finding {
 	var found []Finding
 	for _, s := range in.Sheets() {
+		in.Saw()
 		for _, d := range declarations(s.Src, func(p string) bool { return p == "opacity" })["opacity"] {
 			if v := text(s.Src, d.value); v != "0" {
 				file, line := s.at(d.at)

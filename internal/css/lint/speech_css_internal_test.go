@@ -16,6 +16,7 @@ import (
 var speechCSS = Rule{Name: "speech-css", Check: func(in *Input) []Finding {
 	var found []Finding
 	for _, s := range in.Sheets() {
+		in.Saw()
 		last := map[int]decl{}
 		var order []int
 		for _, d := range declarations(s.Src, func(p string) bool { return p == "content" })["content"] {
