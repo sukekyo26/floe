@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add the task state `archived`, so that a task of no page can be archived: "Archive the task" now shows on any task that is done, and `floe work --task X --state archived` writes it. **A task's place on the list is now its state alone**: archiving all a task's pages with `floe archive` no longer moves the task, and a task of the archive with a page published again stays there, with its unread shown. The button no longer gives back the pages of a task not done: use their rows, or the page list's archive.
 - Add a × to each pin on the task list, which takes the pin off there, without going to the page list or the page.
 - Add the part `chart`: numbers over a row of names, as a line or as upright bars, with up to 4 series, on one scale from 0 (`min` moves a line's start), at the page's text size at every width, with the numbers in a folded table. Each theme has its own four colours, `--chart-1` to `--chart-4`; brutal, blueprint, notebook, retro and washi draw their lines and bars in their own shapes.
 - Add the part `checks`: what was checked and what came of it, in a survey or a test, each with ok, ng or unchecked, the actual result and how it was checked, in the order written, the count of each result on top.

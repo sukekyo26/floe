@@ -967,7 +967,7 @@
         <button type="button" data-view="new"><span class="dot"></span><span class="label">{{.Msg "ui_view_new"}}</span><span class="n"></span></button>
         <button type="button" data-view="all"><span class="ring"></span><span class="label">{{.Msg "ui_view_all"}}</span><span class="n"></span></button>
         <button type="button" data-view="fav"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span class="label">{{.Msg "ui_view_favorites"}}</span><span class="n"></span></button>
-        <button type="button" data-view="archived"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span class="label">{{.Msg "ui_view_archived"}}</span><span class="n"></span></button>
+        <button type="button" data-view="archived"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v4H4zM5 9v10h14V9M10 13h4"/></svg><span class="label">{{.Msg "ui_state_archived"}}</span><span class="n"></span></button>
         <button type="button" id="narrow-filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span id="narrow-filter-name">{{.Msg "ui_narrow"}}</span><span id="narrow-filter-n" aria-hidden="true"></span></button>
       </div>
       <div class="shelf-more" id="shelf-more">
@@ -1002,7 +1002,7 @@
         </div>
         <h2 id="task-title"></h2>
         <div class="tstate">
-          <select class="ver-pick st" id="task-state" aria-label="{{.Msg "ui_task_state"}}"><button><selectedcontent></selectedcontent></button></select>
+          <select class="ver-pick st" id="task-state" aria-label="{{.Msg "ui_task_state"}}"><button><selectedcontent></selectedcontent></button></select><span class="kid-state" id="task-archived" hidden>{{.Msg "ui_state_archived"}}</span>
           <time id="task-at"></time>
           <span id="task-link"></span>
           <span class="proj" id="task-project"></span>
@@ -1502,8 +1502,10 @@
   // The task list's own, as LIST_KEY: it never holds what the list's page goes by
   const TASKS_KEY = 'artifacts.tasks';
   const STATE_NAMES = STATES.map((s) => s.name);
+  // What a task's state is changed to by hand and what has a dot on the shelf: the archive has its button for that, which writes its pages too
+  const WORK_STATES = STATES.filter((s) => s.name !== 'archived');
   // The views the URL may name, and the one it leaves out
-  const VIEWS = TASKS ? [...STATE_NAMES, 'archived'] : ['new', 'fav', 'archived'];
+  const VIEWS = TASKS ? STATE_NAMES : ['new', 'fav', 'archived'];
   const FIRST_VIEW = TASKS ? STATES.find((s) => s.first).name : 'all';
   function readState(search) {
     const p = new URLSearchParams(search);
@@ -1852,7 +1854,7 @@
     const reasons = await Promise.all(slugs.map(act));
     slugs.forEach((slug, i) => { if (!reasons[i]) selected.delete(slug); });
     const why = reasons.filter(Boolean);
-    if (why.length < slugs.length) toast(done(slugs.length - why.length));
+    if (done && why.length < slugs.length) toast(done(slugs.length - why.length));
     showError(why.length ? failed(why.length, why[0]) : '');
     await load();
     renderBulk();
@@ -2275,7 +2277,7 @@
     $('news-n').textContent = t('ui_news', n);
   }
 
-  const VIEW_WORDS = { new: 'ui_view_new', fav: 'ui_view_favorites', archived: 'ui_view_archived', ...Object.fromEntries(STATE_NAMES.map((name) => [name, `ui_state_${name}`])) };
+  const VIEW_WORDS = { new: 'ui_view_new', fav: 'ui_view_favorites', ...Object.fromEntries(STATE_NAMES.map((name) => [name, `ui_state_${name}`])) };
   // The shelf's views, with their counts
   function renderShelf() {
     // Each view with the picks and the search on it. All is what pressing it leaves, the search alone; the new ones are those as
@@ -3215,12 +3217,6 @@
     }
     return [...tasks.values()];
   }
-  // The shelf's place of a task: what is done and has only archived pages goes to the archive; nothing else leaves its state unseen
-  // A parent with no page of its own goes by its children, all done with their pages archived: it has none to archive, and they keep it from being forgotten
-  const taskView = (task) => {
-    const by = task.pages.length + task.archived.length > 0 ? [task] : task.children;
-    return task.state === 'done' && by.some((x) => x.archived.length > 0) && by.every((x) => x.state === 'done' && x.pages.length === 0) ? 'archived' : task.state;
-  };
   // A task's URL: by the query, as / may be in either part of its name
   const taskHref = (task) => `${TASKS_PATH}?${new URLSearchParams({ project: task.project, task: task.name })}`;
   const EXTERNAL_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
@@ -3388,7 +3384,7 @@
     const kept = keptProject();
     if (tasksRead.error) return kept ?? '';
     if (there.has(kept)) return kept;
-    const waiting = tasks.filter((task) => taskView(task) === FIRST_VIEW).sort(taskOrder(true));
+    const waiting = tasks.filter((task) => task.state === FIRST_VIEW).sort(taskOrder(true));
     return waiting[0]?.project ?? [...ranks.keys(), NONE].find((name) => there.has(name)) ?? '';
   }
 
@@ -3413,12 +3409,12 @@
     }
     const nothing = !failed && !anyTasks();
     const inProject = (task) => task.project === project;
-    const ofView = tasks.filter((task) => taskView(task) === view);
+    const ofView = tasks.filter((task) => task.state === view);
     const shown = ofView.filter(inProject);
     const oldest = STATES.find((s) => s.name === view)?.oldest;
     shown.sort(taskOrder(oldest));
     renderChips(ofView, ranks, there);
-    const counts = Object.fromEntries(VIEWS.map((value) => [value, tasks.filter((task) => taskView(task) === value && inProject(task)).length]));
+    const counts = Object.fromEntries(VIEWS.map((value) => [value, tasks.filter((task) => task.state === value && inProject(task)).length]));
     drawViews(counts);
     drawHead();
     $('manage').classList.toggle('tasks-empty', nothing);
@@ -3458,7 +3454,7 @@
     const written = (task.steps ?? []).filter((step) => steps.has(step));
     const groups = [{ entries: none }];
     for (const heading of [...written, ...[...steps.keys()].filter((step) => !written.includes(step))]) groups.push({ heading, entries: steps.get(heading) });
-    if (task.archived.length > 0) groups.push({ heading: t('ui_view_archived'), entries: [...task.archived].sort((x, y) => made(x) - made(y)) });
+    if (task.archived.length > 0) groups.push({ heading: t('ui_state_archived'), entries: [...task.archived].sort((x, y) => made(x) - made(y)) });
     return groups;
   }
 
@@ -3469,9 +3465,12 @@
   function drawTaskHead(task) {
     $('task-title').replaceChildren(tagged('span', 'tname', task.name), task.title ?? '');
     const sel = $('task-state');
+    const onState = document.activeElement === sel;
     // Drawn again at the next look, which may find them closed
     if (selectOpen(sel)) drawn = '';
     else {
+      sel.hidden = task.state === 'archived';
+      $('task-archived').hidden = !sel.hidden;
       sel.value = task.state;
       sel.dataset.state = task.state;
       sel.className = `ver-pick st ${task.state}`;
@@ -3486,10 +3485,12 @@
     $('task-up').href = taskListHref(task);
     drawTaskFamily(task);
     const archive = $('task-archive');
-    const back = task.archived.length > 0 && task.pages.length === 0;
-    archive.hidden = !(back || (task.state === 'done' && task.pages.length > 0));
+    const back = task.state === 'archived';
+    archive.hidden = !back && task.state !== 'done';
     archive.textContent = t(back ? 'ui_task_unarchive' : 'ui_task_archive');
-    archive.onclick = () => archiveTask(task, !back);
+    archive.onclick = (e) => archiveTask(e, task, !back);
+    // Archived elsewhere: the word takes no focus, and the button is there beside it
+    if (onState && sel.hidden) archive.focus();
   }
 
   // A task's family over its pages, in two parts: its parent, offered while it has no children, and its children, offered while it has no
@@ -3498,8 +3499,8 @@
   // LIMIT: a press while it changes loses its click. Hold the drawing as load does for #list if that comes to be felt
   let familyDrawn = '';
   function drawTaskFamily(task) {
-    const viewAt = (x) => VIEWS.indexOf(taskView(x));
-    const kids = [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(STATES.find((s) => s.name === taskView(x))?.oldest)(x, y));
+    const viewAt = (x) => VIEWS.indexOf(x.state);
+    const kids = [...task.children].sort((x, y) => viewAt(x) - viewAt(y) || taskOrder(STATES.find((s) => s.name === x.state)?.oldest)(x, y));
     // What the store's checkParent would refuse is not offered. The parent as written, one that makes no family too, is changed, not added to
     const ups = task.children.length === 0;
     const adds = !task.parent && hasRow(task);
@@ -3517,7 +3518,7 @@
     $('task-family').hidden = !ups && kids.length === 0 && !adds;
     $('task-family-word').textContent = kids.length > 0 ? t('ui_task_kids_head', kids.length) : t('ui_task_kids_word');
     const up = task.parentTask;
-    const said = JSON.stringify([task.name, task.parent, [up, ...kids].map((x) => x && [x.name, x.title, x.parent, taskView(x), unreadOf(x) > 0])]);
+    const said = JSON.stringify([task.name, task.parent, [up, ...kids].map((x) => x && [x.name, x.title, x.parent, x.state, unreadOf(x) > 0])]);
     if (said === familyDrawn) return;
     familyDrawn = said;
     const on = $('task-family').contains(document.activeElement) ? document.activeElement : null;
@@ -3532,7 +3533,7 @@
     link.href = taskHref(x);
     link.dataset.task = x.name;
     link.classList.toggle('unseen', unreadOf(x) > 0);
-    link.append(tagged('span', unreadOf(x) > 0 ? 'dot' : 'ring'), tagged('span', 'tname', x.name), tagged('span', 'kin-title', x.title ?? ''), tagged('span', `kid-state ${taskView(x)}`, t(VIEW_WORDS[taskView(x)])));
+    link.append(tagged('span', unreadOf(x) > 0 ? 'dot' : 'ring'), tagged('span', 'tname', x.name), tagged('span', 'kin-title', x.title ?? ''), tagged('span', `kid-state ${x.state}`, t(VIEW_WORDS[x.state])));
     const off = tagged('button', 'icon-btn unlink');
     off.type = 'button';
     off.dataset.task = x.name;
@@ -3656,7 +3657,7 @@
       heading: () => t('ui_task_add'),
       target: (task, ask) => (ask ? '' : t('ui_task_add_project', projectWord(task.project))),
       offered: () => false,
-      there: (task, name, x) => x && { button: 'ui_task_open_button', act: 'open', note: t('ui_task_there', named(x), t(VIEW_WORDS[taskView(x)])) },
+      there: (task, name, x) => x && { button: 'ui_task_open_button', act: 'open', note: t('ui_task_there', named(x), t(VIEW_WORDS[x.state])) },
       write: (task, name, x, title) => writeTask(task.project, name, { new: true, title }),
       // The list goes where the row went, drawn by the load that follows: drawn now, it would say the state has no task. That load is to draw
       // even what a poll has read of the new task and drawn on the list as it was
@@ -3764,15 +3765,32 @@
     }
   }
 
-  // Archives the task's pages, or gives them back: the mark of each page, as floe archive writes it, and nothing of the task
-  async function archiveTask(task, archived) {
-    const slugs = (archived ? task.pages : task.archived).map((a) => a.slug);
-    await actOnSelected(
-      (slug) => patchOne(slug, { archived }),
-      (n) => t(archived ? 'ui_archive_bulk_done' : 'ui_unarchive_bulk_done', n),
-      (n, why) => t('ui_task_arc_failed', n, why),
-      slugs,
-    );
+  // Archives the task, or gives it back, with its pages: the task first and its pages then, as floe work and floe archive write them. Its
+  // pages are read after the task is written, for one put on it since it was drawn. A second press of a double one would land on the button
+  // turned the other way
+  // LIMIT: given back it is done, whatever it was: what it was before would be a state more to keep
+  // LIMIT: given back, all its pages come back, those archived one by one before too. Tell them apart if that comes to trouble someone
+  // LIMIT: a page refused leaves the task as written, its button the other way round, and the page on its row to press. Offer the rest on the button if that comes to trouble someone
+  let archivingTask = false;
+  async function archiveTask(e, task, archived) {
+    if (e.detail > 1 || archivingTask) return;
+    archivingTask = true;
+    try {
+      const res = await writeTask(task.project, task.name, { new: false, state: archived ? 'archived' : 'done' });
+      if (!res.ok) {
+        showError(t('ui_save_failed', res.status === 409 ? res.stale : res.text));
+        return;
+      }
+      toast(t(archived ? 'ui_task_arc_done' : 'ui_task_unarc_done', task.name));
+      await load();
+      const now = tasksOf().find((x) => x.project === task.project && x.name === task.name);
+      const slugs = ((archived ? now?.pages : now?.archived) ?? []).map((a) => a.slug);
+      await actOnSelected((slug) => patchOne(slug, { archived }), null, (n, why) => t('ui_task_arc_failed', n, why), slugs);
+    } catch (err) {
+      showError(t('ui_save_failed', err.message));
+    } finally {
+      archivingTask = false;
+    }
   }
 
   async function changeTaskState() {
@@ -3794,7 +3812,7 @@
   // The list of a task's page: this project's, at the view the task is under now, where it is to be found whatever way it was come to
   function taskListHref(task) {
     const to = new URLSearchParams({ project });
-    if (task && taskView(task) !== FIRST_VIEW) to.set('view', taskView(task));
+    if (task && task.state !== FIRST_VIEW) to.set('view', task.state);
     return `${TASKS_PATH}?${to}`;
   }
   let lastTask;
@@ -3835,7 +3853,7 @@
     document.title = `${TASK_NAME} · floe`;
     if (task) drawTaskHead(task);
     else $('task-missing').querySelector('strong').textContent = t('ui_task_missing', TASK_NAME);
-    // A task with children cannot be forgotten: their pages are how it leaves
+    // A task with children cannot be forgotten, as ForgetTask says
     $('task-delete-box').hidden = Boolean(none && task.children.length > 0);
     if ($('task-delete-box').hidden) $('task-delete-error').hidden = true;
     $('task-delete').onclick = () => forgetTask(task);
@@ -5391,7 +5409,7 @@
       $('manage').classList.add('task-page');
       $('task-up').href = taskListHref();
       $('task-missing-up').href = $('task-up').href;
-      $('task-state').append(...STATES.map(({ name }) => {
+      $('task-state').append(...WORK_STATES.map(({ name }) => {
         const o = tagged('option', '', t(`ui_state_${name}`));
         o.value = name;
         return o;
@@ -5413,7 +5431,7 @@
     if (TASK_LIST) {
       // The shelf's views are the task's states, and only they and the project narrow it
       for (const b of document.querySelectorAll('.views button[data-view]:not([data-view="archived"])')) b.remove();
-      document.querySelector('.views button[data-view="archived"]').before(...STATES.map(({ name }) => {
+      document.querySelector('.views button[data-view="archived"]').before(...WORK_STATES.map(({ name }) => {
         const b = tagged('button');
         b.type = 'button';
         b.dataset.view = name;

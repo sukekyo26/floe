@@ -39,20 +39,18 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	for _, child := range []string{"#2", "#3", "#4"} {
 		task("proj", child, "--parent", "#1")
 	}
-	s.floe(t, "archive", "c3")
-	// No page of its own: its children's say whether it is archived.
-	task("proj", "#10", "--state", "done", "--title", "gone by its child")
-	page("proj", "c11", "--task", "#11", "--state", "done")
+	task("proj", "#3", "--state", "archived")
+	// No page of its own: its state says, as of any task.
+	task("proj", "#10", "--state", "archived", "--title", "gone by its child")
+	page("proj", "c11", "--task", "#11", "--state", "archived")
 	task("proj", "#11", "--parent", "#10")
-	s.floe(t, "archive", "c11")
 	task("proj", "#20", "--state", "done", "--title", "kept by its child")
 	page("proj", "c21", "--task", "#21", "--state", "doing")
 	task("proj", "#21", "--parent", "#20")
-	// Its own page says, a child at work or not.
-	page("proj", "p30", "--task", "#30", "--state", "done")
+	// Its state says, a child at work or not.
+	page("proj", "p30", "--task", "#30", "--state", "archived")
 	page("proj", "c31", "--task", "#31", "--state", "doing")
 	task("proj", "#31", "--parent", "#30")
-	s.floe(t, "archive", "p30")
 	// Of the same name in another project: nothing of it shows here.
 	page("other", "o1", "--task", "#1", "--state", "doing")
 	task("other", "#5", "--parent", "#1")
@@ -76,15 +74,6 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 			t.Errorf("%s = %q, want %q", c.view, got, c.want)
 		}
 	}
-
-	// A child not done keeps a parent of no page from the archive, with none of its pages to say so.
-	task("proj", "#12", "--state", "doing", "--title", "at work")
-	task("proj", "#12", "--parent", "#10")
-	if got := rows("done"); got != "#10 (2 child task(s)), #20 (1 child task(s))" {
-		t.Errorf("a child at work under a parent of no page: %q", got)
-	}
-	task("proj", "#12", "--parent", "")
-	task("proj", "#12", "--forget")
 
 	open := func(name string) {
 		t.Helper()
