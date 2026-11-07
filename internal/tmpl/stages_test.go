@@ -70,6 +70,24 @@ func TestRestPartMistake(t *testing.T) {
 	}
 }
 
+// A template's root whose $ref brings an additionalProperties of parts is told at the template, not at the shared schema.
+func TestRootRestOfShared(t *testing.T) {
+	t.Parallel()
+
+	const head = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", `
+	parts := map[string]string{"sh.json": head + `"additionalProperties": {"$ref": "floe:///parts/note.json"}}`}
+	templates := mine(minePage, head+`"$ref": "floe:///parts/sh.json"}`, nil)
+	src := kit.Sources{
+		Parts: kit.Dir{FS: mapFS(parts), Name: "parts"}, Themes: kit.Dir{FS: nil, Name: ""},
+		Templates: kit.Dir{FS: mapFS(templates), Name: "templates"},
+	}
+	_, err := kit.Load(floeKit(t), src)
+	want := "templates/mine/schema.json: #: the additionalProperties of the root, floe:///parts/sh.json#/additionalProperties, holds parts or items of floe's formats, which would draw the keys floe reads itself (lang, template, theme, title) too; declare the items of the page under properties"
+	if got := told(err); got != want {
+		t.Errorf("told\n%s\nwant\n%s", got, want)
+	}
+}
+
 const minePage = "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head>\n<body>\n{{with .Data.note}}{{.}}{{end}}\n</body></html>\n"
 
 const mineSchema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",

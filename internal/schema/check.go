@@ -112,14 +112,14 @@ func (c *Compiled) checkTemplate() error {
 	return found.Sorted().Err()
 }
 
-// rootRest refuses an additionalProperties of the root that holds parts or formats, as the walk went past them: Walk is
-// given the keys floe reads itself (doc.Shared) with the rest of the data, and would draw them.
+// rootRest refuses, at the root, an additionalProperties of it that holds parts or formats, whichever file it is
+// written in: Walk is given the keys floe reads itself (doc.Shared) with the rest of the data, and would draw them.
 func (c *Compiled) rootRest() usererr.List {
 	rest := c.Follow(c.Root).Rest
 	if rest == nil || !c.followFrom(rest).stops() {
 		return nil
 	}
-	return usererr.List{c.mistake(rest, "schema_ref_unreached", c.written(rest.Location))}
+	return usererr.List{c.mistake(c.Root, "schema_root_rest", c.written(rest.Location))}
 }
 
 // checkOwn returns the mistakes checkNode tells of each schema of the file compiled, and of each $ref, through
@@ -130,6 +130,8 @@ func (c *Compiled) rootRest() usererr.List {
 // property of its name, its additionalProperties or its items, whose parts or formats are then not drawn there,
 // unsaid; a value is refused by the two schemas together, or drawn as written, which shows. Tell it at the property or
 // items if one of one's own comes to need it.
+// LIMIT: an additionalProperties beside a $ref to the same file hides the one the $ref names too, and what that one
+// holds is refused as unreached, in words that do not name the one beside. Name it if that comes to mislead.
 // LIMIT: one cause may be told twice or more, at the $ref a walk does not reach and at the part or format past
 // it; both are true, at other places. Tell it once if that comes to mislead.
 func (c *Compiled) checkOwn() usererr.List {
