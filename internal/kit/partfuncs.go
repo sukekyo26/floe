@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,7 +24,7 @@ import (
 // partFuncs are the functions floe's parts draw with, besides those of page.html and over them: markdown draws in a
 // text's box, as all a part holds of Markdown is (MarkdownFlow).
 var partFuncs = template.FuncMap{
-	"bars": barsOf, "chart": chartOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf,
+	"bars": barsOf, "chart": chartOf, "code": codeOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf,
 	"markdown": MarkdownFlow, "script": scriptOf, "stats": statsOf, "tree": treeOf, "written": writtenOf,
 	"zoom": zoomScript,
 }
@@ -256,6 +257,84 @@ func diffOf(text string) diffText {
 		d.Lines = append(d.Lines, diffLine{Kind: kind, Text: line})
 	}
 	return d
+}
+
+// codeLine is a line of a code part, keeping its newline, and whether the part marks it.
+type codeLine struct {
+	Text string
+	Mark bool
+}
+
+// codeText is a code part's text by lines. Numbered is whether start is written; Before is the count before the first
+// line, and Digits the digits of the last line's number.
+type codeText struct {
+	Lines          []codeLine
+	Before, Digits int
+	Numbered       bool
+}
+
+// maxLine is the largest number of a line: a CSS counter stops near 2^31, where its lines would all show one number.
+// The part code's schema says the same.
+const maxLine = 1_000_000_000
+
+// newlines makes CR and CRLF LF before the lines are cut, as HTML does to what it reads: else what a CR alone breaks
+// would draw as two lines under one number.
+var newlines = strings.NewReplacer("\r\n", "\n", "\r", "\n")
+
+// codeOf cuts text into lines, each keeping its newline, numbered from start, or from 1 when it is nil, and marks the
+// lines mark, nil or a list, names by those numbers. It tells every wrong number of mark.
+// LIMIT: a number no line has marks nothing, and a start changed alone moves what mark names: the page shows both. Tell
+// them apart here, which counts the lines, if the page comes not to be looked at.
+// LIMIT: the mistakes are at the part's value, not at the number: codeOf knows not where in it the values are.
+func codeOf(text string, start, mark any) (codeText, error) {
+	c := codeText{}
+	first := 1
+	if start != nil {
+		n, err := lineNumber("start", start)
+		if err != nil {
+			return c, err
+		}
+		first, c.Numbered = n, true
+	}
+	marks := map[int]bool{}
+	if mark != nil {
+		list, ok := mark.([]any)
+		if !ok {
+			return c, usererr.New("kit_code_mark", fmt.Sprint(mark))
+		}
+		var found usererr.List
+		for _, v := range list {
+			n, err := lineNumber("mark", v)
+			if failed := found.Add(err); failed != nil {
+				return c, failed
+			}
+			if err == nil {
+				marks[n] = true
+			}
+		}
+		if found != nil {
+			return c, found.Err()
+		}
+	}
+	n := first
+	for line := range strings.Lines(newlines.Replace(text)) {
+		c.Lines = append(c.Lines, codeLine{Text: line, Mark: marks[n]})
+		n++
+	}
+	c.Before, c.Digits = first-1, len(strconv.Itoa(n-1))
+	return c, nil
+}
+
+// lineNumber reads v as the number of a line, which the part's schema takes: a whole number from 1 to maxLine.
+func lineNumber(key string, v any) (int, error) {
+	n, err := float("code's "+key, v)
+	if err != nil {
+		return 0, err
+	}
+	if n < 1 || n > maxLine || n != math.Trunc(n) {
+		return 0, usererr.New("kit_code_line", key, fmt.Sprint(v))
+	}
+	return int(n), nil
 }
 
 // hunkHead is the start of a hunk's head, @@ -a,b +c,d @@, b and d its lengths, 1 when left out.

@@ -63,6 +63,9 @@
   [pre] # Read-only from Friday evening
   [pre] read_only = true
   [pre] banner = "This wiki has moved to the new host."
+  [figcaption] The line that turns the wiki read-only new-wiki.conf ini
+  [pre] # Read-only from Friday evening
+  [pre] Marked line: read_only = true
   [pre] rsync --archive --delete --exclude '*.tmp' --exclude 'cache/' --log-file=copy.log old-wiki:/srv/wiki/pages/ /srv/new-wiki/pages/
 ## h2 Risks
   [tr] Risk | Likelihood | Pages | What we do (a check, linkcheck) | State

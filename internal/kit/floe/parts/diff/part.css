@@ -1,7 +1,5 @@
-/* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls: the code is as
-   wide as that line (code's part.css), and code's room moves from it onto each line, the button's inside its face */
-:scope pre > code { padding-inline: 0; }
-:scope code > span { display: block; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
+/* In the look of code, whose rule for lines in a code of class lines brings a line's face to the edges and as far as the
+   longest line when it scrolls, the button's room inside it */
 :scope .add { background: color-mix(in srgb, var(--code-add) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add); }
 :scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
 :scope .hunk { color: var(--code-prompt); }

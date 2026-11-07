@@ -17,7 +17,8 @@ import (
 	"github.com/chromedp/chromedp/kb"
 )
 
-// copyPage is a page of lang with a part of each kind that copies: code ending in a line break, a terminal whose
+// copyPage is a page of lang with a part of each kind that copies: code ending in a line break, its lines numbered and
+// one marked, neither of which is copied, a terminal whose
 // last command ends in one, and a diff that does not, whose head's faded line runs under the copy button. Its script reports the copy button of the code, as the
 // center of its box, its status, and whether it has the focus and shows it, to a frame around it.
 const copyPage = `template: report
@@ -26,7 +27,7 @@ title: Copy
 sections:
   - heading: Copy
     parts:
-      - code: { file: main.go, lang: go, text: "package main\n\nfunc main() {}\n" }
+      - code: { title: Main, file: main.go, lang: go, start: 7, mark: [9], text: "package main\n\nfunc main() {}\n" }
       - terminal:
           shell: zsh
           steps:

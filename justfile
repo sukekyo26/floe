@@ -7,7 +7,7 @@ core_pkgs  := "go list " + pkgs + " | grep -v /internal/browsertest$"
 # The browser tests CI runs on one machine (test-browser looks); the rest run on another. Chosen by adding the heaviest
 # first (go test -race -json, each test's time) while the sum nears half of all: choose again so when a test is added.
 # LIMIT: how even the two are is not checked; CI's two jobs' times show it.
-browser_looks := "TestUIWrappedAlike|TestUIShadows|TestUISpeech|TestUIRoom|TestUIContrast|TestUIPrint|TestUILists|TestUIStats"
+browser_looks := "TestUIWrappedAlike|TestUIShadows|TestUISpeech|TestUIRoom|TestUIContrast|TestUIPrint|TestUILists|TestUIStats|TestUICode$"
 # Default version is the trimmed contents of VERSION; override with `VERSION=1.2.3 just build`.
 version    := env_var_or_default("VERSION", trim(`cat VERSION 2>/dev/null || echo 0.0.0-dev`))
 ldflags    := "-s -w -X github.com/sukekyo26/floe/internal/version.Version=" + version

@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `title`, `start` and `mark` to the part `code`: `title` says what the code shows, in words, above it beside its `file`; `start` numbers the lines from that number, and `mark` marks lines by those numbers, with a line at their side, a ground to the end of the longest line and a word a screen reader reads. The copy button copies the code as written, without the numbers. A page writing none of them looks as it did.
 - Add `from` and `better` to the part `stats`: `from` is the number before, drawn as `3.1 → 1.3` with the change under it, exact and in its colour, for the better or the worse as `better` says. Pages without `from` are drawn as before.
 - Add the task state `archived`, so that a task of no page can be archived: "Archive the task" now shows on any task that is done, and `floe work --task X --state archived` writes it. **A task's place on the list is now its state alone**: archiving all a task's pages with `floe archive` no longer moves the task, and a task of the archive with a page published again stays there, with its unread shown. The button no longer gives back the pages of a task not done: use their rows, or the page list's archive.
 - Add a × to each pin on the task list, which takes the pin off there, without going to the page list or the page.

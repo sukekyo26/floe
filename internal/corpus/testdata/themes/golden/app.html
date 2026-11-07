@@ -275,6 +275,9 @@ blockquote { border-left: 4px solid var(--on-face, var(--accent)); padding: 0.2r
 }
 @media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
 :scope .file { color: var(--floe-code-head-faint); }
+/* Only under a title may the heading fold: one with none stays as it was, its file name folding beside the language */
+:scope figcaption:has(> .title) { flex-wrap: wrap; row-gap: 0.25rem; }
+:scope .title { font-family: var(--font); font-size: var(--floe-text-aside); font-weight: 700; }
 :scope .lang {
   flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
   background: var(--code-prompt); color: var(--code-bg);
@@ -289,6 +292,32 @@ blockquote { border-left: 4px solid var(--on-face, var(--accent)); padding: 0.2r
    rule outweigh a part's if one comes to write a line's padding by mistake. */
 :scope pre > * { width: max-content; min-width: 100%; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
 @media print { :scope pre > * { width: auto; } }
+/* Lines each an element in one code of class lines (code's and diff's): each paints its ground to the end of the longest
+   line, so the room moves from the code onto each. An element beside them is a hidden word, left out of a selection
+   as it is of what the button copies */
+:scope pre > .lines { padding-inline: 0; }
+:scope .lines { --floe-code-gutter: 0px; }
+:scope .lines > :not(.floe-hidden) { display: block; padding-inline: calc(var(--floe-code-pad) + var(--floe-code-gutter)) var(--floe-code-room); }
+:scope .lines > .floe-hidden { user-select: none; }
+/* A border, which no setting of print or forced colours takes off as it does a ground; its width comes off the room, so
+   that a marked line's text stays in line */
+:scope .lines > .mark {
+  border-inline-start: 3px solid var(--code-prompt); padding-inline-start: calc(var(--floe-code-pad) + var(--floe-code-gutter) - 3px);
+  background: color-mix(in srgb, var(--code-prompt) 16%, transparent);
+}
+/* A number is a counter, in no text copied or selected. --digits and the count's start are the part.html's. It hangs in
+   the room left of the line, whose width it takes off by its margin: a tab counts from the line's start, and what a
+   line folds to on paper stands right of the number. Same weight as .lines and after it, which sets the room to 0.
+   LIMIT: the number scrolls with the code; keep it at the left if readers come to lose it, on a ground of its own.
+   LIMIT: floe's page diff (preLines) reads no CSS, and tells nothing of a page whose start alone changes. */
+:scope .numbered { --floe-code-gutter: calc((var(--digits) + 2) * 1ch); }
+:scope .numbered > :not(.floe-hidden) { counter-increment: line; }
+:scope .numbered > :not(.floe-hidden)::before {
+  content: counter(line); content: counter(line) / counter(line);
+  display: inline-block; width: calc(var(--digits) * 1ch); margin-inline: calc(-1 * var(--floe-code-gutter)) 2ch; text-align: end;
+  color: var(--floe-code-faint);
+}
+:scope .numbered > .mark::before { color: inherit; font-weight: 700; }
 /* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
    it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
    Where it draws the button, a line keeps the button's room after it: scrolled to the end, a line ends left of the
@@ -315,10 +344,8 @@ blockquote { border-left: 4px solid var(--on-face, var(--accent)); padding: 0.2r
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls: the code is as
-   wide as that line (code's part.css), and code's room moves from it onto each line, the button's inside its face */
-:scope pre > code { padding-inline: 0; }
-:scope code > span { display: block; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
+/* In the look of code, whose rule for lines in a code of class lines brings a line's face to the edges and as far as the
+   longest line when it scrolls, the button's room inside it */
 :scope .add { background: color-mix(in srgb, var(--code-add) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add); }
 :scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
 :scope .hunk { color: var(--code-prompt); }
@@ -650,8 +677,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <tr><td>Links</td><td class="num">120</td><td><span data-floe-tone="bad" data-floe-part="cell">open</span></td></tr>
 </tbody>
 </table></div>
-<figure data-floe-part="code"><figcaption><span class="file">a.conf</span><span class="lang">ini</span></figcaption><pre><code data-floe-copy="">read_only = true
-</code></pre><script>(function copyButton(words) {
+<figure data-floe-part="code"><figcaption><span class="file">a.conf</span><span class="lang">ini</span></figcaption><pre><code class="lines"><span data-floe-copy="">read_only = true
+</span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -787,7 +814,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <label><input type="radio" name="tab" checked=""/>One</label><div data-floe-part="stack"><div data-floe-text=""><p>First.</p></div></div>
 <label><input type="radio" name="tab"/>Two</label><div data-floe-part="stack"><div data-floe-text=""><p>Second.</p></div></div>
 </form>
-<figure data-floe-part="diff"><figcaption><span class="file">a.conf</span><span class="added">+1</span><span class="removed">−1</span><span class="lang">ini</span></figcaption><pre><code data-floe-copy=""><span class="hunk">@@ -1 +1 @@
+<figure data-floe-part="diff"><figcaption><span class="file">a.conf</span><span class="added">+1</span><span class="removed">−1</span><span class="lang">ini</span></figcaption><pre><code class="lines" data-floe-copy=""><span class="hunk">@@ -1 +1 @@
 </span><span class="del">-read_only = false
 </span><span class="add">+read_only = true
 </span></code></pre><script>(function copyButton(words) {

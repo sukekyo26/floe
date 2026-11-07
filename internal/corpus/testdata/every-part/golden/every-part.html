@@ -593,6 +593,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 @media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
 :scope .file { color: var(--floe-code-head-faint); }
+/* Only under a title may the heading fold: one with none stays as it was, its file name folding beside the language */
+:scope figcaption:has(> .title) { flex-wrap: wrap; row-gap: 0.25rem; }
+:scope .title { font-family: var(--font); font-size: var(--floe-text-aside); font-weight: 700; }
 :scope .lang {
   flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
   background: var(--code-prompt); color: var(--code-bg);
@@ -607,6 +610,32 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    rule outweigh a part's if one comes to write a line's padding by mistake. */
 :scope pre > * { width: max-content; min-width: 100%; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
 @media print { :scope pre > * { width: auto; } }
+/* Lines each an element in one code of class lines (code's and diff's): each paints its ground to the end of the longest
+   line, so the room moves from the code onto each. An element beside them is a hidden word, left out of a selection
+   as it is of what the button copies */
+:scope pre > .lines { padding-inline: 0; }
+:scope .lines { --floe-code-gutter: 0px; }
+:scope .lines > :not(.floe-hidden) { display: block; padding-inline: calc(var(--floe-code-pad) + var(--floe-code-gutter)) var(--floe-code-room); }
+:scope .lines > .floe-hidden { user-select: none; }
+/* A border, which no setting of print or forced colours takes off as it does a ground; its width comes off the room, so
+   that a marked line's text stays in line */
+:scope .lines > .mark {
+  border-inline-start: 3px solid var(--code-prompt); padding-inline-start: calc(var(--floe-code-pad) + var(--floe-code-gutter) - 3px);
+  background: color-mix(in srgb, var(--code-prompt) 16%, transparent);
+}
+/* A number is a counter, in no text copied or selected. --digits and the count's start are the part.html's. It hangs in
+   the room left of the line, whose width it takes off by its margin: a tab counts from the line's start, and what a
+   line folds to on paper stands right of the number. Same weight as .lines and after it, which sets the room to 0.
+   LIMIT: the number scrolls with the code; keep it at the left if readers come to lose it, on a ground of its own.
+   LIMIT: floe's page diff (preLines) reads no CSS, and tells nothing of a page whose start alone changes. */
+:scope .numbered { --floe-code-gutter: calc((var(--digits) + 2) * 1ch); }
+:scope .numbered > :not(.floe-hidden) { counter-increment: line; }
+:scope .numbered > :not(.floe-hidden)::before {
+  content: counter(line); content: counter(line) / counter(line);
+  display: inline-block; width: calc(var(--digits) * 1ch); margin-inline: calc(-1 * var(--floe-code-gutter)) 2ch; text-align: end;
+  color: var(--floe-code-faint);
+}
+:scope .numbered > .mark::before { color: inherit; font-weight: 700; }
 /* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
    it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
    Where it draws the button, a line keeps the button's room after it: scrolled to the end, a line ends left of the
@@ -666,6 +695,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 @media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
 :scope .file { color: var(--floe-code-head-faint); }
+/* Only under a title may the heading fold: one with none stays as it was, its file name folding beside the language */
+:scope figcaption:has(> .title) { flex-wrap: wrap; row-gap: 0.25rem; }
+:scope .title { font-family: var(--font); font-size: var(--floe-text-aside); font-weight: 700; }
 :scope .lang {
   flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
   background: var(--code-prompt); color: var(--code-bg);
@@ -680,6 +712,32 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    rule outweigh a part's if one comes to write a line's padding by mistake. */
 :scope pre > * { width: max-content; min-width: 100%; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
 @media print { :scope pre > * { width: auto; } }
+/* Lines each an element in one code of class lines (code's and diff's): each paints its ground to the end of the longest
+   line, so the room moves from the code onto each. An element beside them is a hidden word, left out of a selection
+   as it is of what the button copies */
+:scope pre > .lines { padding-inline: 0; }
+:scope .lines { --floe-code-gutter: 0px; }
+:scope .lines > :not(.floe-hidden) { display: block; padding-inline: calc(var(--floe-code-pad) + var(--floe-code-gutter)) var(--floe-code-room); }
+:scope .lines > .floe-hidden { user-select: none; }
+/* A border, which no setting of print or forced colours takes off as it does a ground; its width comes off the room, so
+   that a marked line's text stays in line */
+:scope .lines > .mark {
+  border-inline-start: 3px solid var(--code-prompt); padding-inline-start: calc(var(--floe-code-pad) + var(--floe-code-gutter) - 3px);
+  background: color-mix(in srgb, var(--code-prompt) 16%, transparent);
+}
+/* A number is a counter, in no text copied or selected. --digits and the count's start are the part.html's. It hangs in
+   the room left of the line, whose width it takes off by its margin: a tab counts from the line's start, and what a
+   line folds to on paper stands right of the number. Same weight as .lines and after it, which sets the room to 0.
+   LIMIT: the number scrolls with the code; keep it at the left if readers come to lose it, on a ground of its own.
+   LIMIT: floe's page diff (preLines) reads no CSS, and tells nothing of a page whose start alone changes. */
+:scope .numbered { --floe-code-gutter: calc((var(--digits) + 2) * 1ch); }
+:scope .numbered > :not(.floe-hidden) { counter-increment: line; }
+:scope .numbered > :not(.floe-hidden)::before {
+  content: counter(line); content: counter(line) / counter(line);
+  display: inline-block; width: calc(var(--digits) * 1ch); margin-inline: calc(-1 * var(--floe-code-gutter)) 2ch; text-align: end;
+  color: var(--floe-code-faint);
+}
+:scope .numbered > .mark::before { color: inherit; font-weight: 700; }
 /* The copy button (its look is floe's base) lies over the top right of the code, whether or not a heading is above
    it, wherever its script puts it in the part; the part's isolation keeps it from drawing over the page outside.
    Where it draws the button, a line keeps the button's room after it: scrolled to the end, a line ends left of the
@@ -925,10 +983,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls: the code is as
-   wide as that line (code's part.css), and code's room moves from it onto each line, the button's inside its face */
-:scope pre > code { padding-inline: 0; }
-:scope code > span { display: block; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
+/* In the look of code, whose rule for lines in a code of class lines brings a line's face to the edges and as far as the
+   longest line when it scrolls, the button's room inside it */
 :scope .add { background: color-mix(in srgb, var(--code-add) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add); }
 :scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
 :scope .hunk { color: var(--code-prompt); }
@@ -942,10 +998,8 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth2 {
 @scope ([data-floe-part="diff"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* In the look of code; a line's face reaches the edges, and as far as the longest line when it scrolls: the code is as
-   wide as that line (code's part.css), and code's room moves from it onto each line, the button's inside its face */
-:scope pre > code { padding-inline: 0; }
-:scope code > span { display: block; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
+/* In the look of code, whose rule for lines in a code of class lines brings a line's face to the edges and as far as the
+   longest line when it scrolls, the button's room inside it */
 :scope .add { background: color-mix(in srgb, var(--code-add) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-add); }
 :scope .del { background: color-mix(in srgb, var(--code-del) 14%, transparent); box-shadow: inset 3px 0 0 var(--code-del); }
 :scope .hunk { color: var(--code-prompt); }
@@ -2110,10 +2164,10 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
-<figure data-floe-part="code"><figcaption><span class="file">old-wiki.conf</span></figcaption><pre><code data-floe-copy=""># Read-only from Friday evening
-read_only = true
-banner = &#34;This wiki has moved to the new host.&#34;
-</code></pre><script>(function copyButton(words) {
+<figure data-floe-part="code"><figcaption><span class="file">old-wiki.conf</span></figcaption><pre><code class="lines"><span data-floe-copy=""># Read-only from Friday evening
+</span><span data-floe-copy="">read_only = true
+</span><span data-floe-copy="">banner = &#34;This wiki has moved to the new host.&#34;
+</span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -2177,8 +2231,74 @@ banner = &#34;This wiki has moved to the new host.&#34;
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
-<figure data-floe-part="code"><pre><code data-floe-copy="">rsync --archive --delete --exclude &#39;*.tmp&#39; --exclude &#39;cache/&#39; --log-file=copy.log old-wiki:/srv/wiki/pages/ /srv/new-wiki/pages/
-</code></pre><script>(function copyButton(words) {
+<figure data-floe-part="code"><figcaption><span class="title">The line that turns the wiki read-only</span><span class="file">new-wiki.conf</span><span class="lang">ini</span></figcaption><pre><code class="lines numbered" style="counter-reset: line 40; --digits: 2"><span data-floe-copy=""># Read-only from Friday evening
+</span><span class="floe-hidden">Marked line:</span><span class="mark" data-floe-copy="">read_only = true
+</span></code></pre><script>(function copyButton(words) {
+  const part = document.currentScript.closest('[data-floe-part]');
+  const icon = (d) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    `stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'floe-copy';
+  button.innerHTML = icon('M9 9h10v11H9zM5 15V4h10') + icon('m5 12.5 4.5 4.5L19 7.5');
+  const status = document.createElement('span');
+  status.className = 'floe-copy-status';
+  status.setAttribute('role', 'status');
+  let timer;
+  let presses = 0;
+  const show = (label, copied) => {
+    button.classList.toggle('copied', copied);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  };
+  const text = () =>
+    [...part.querySelectorAll('[data-floe-copy]')]
+      .map((e) => (e.textContent.endsWith('\n') ? e.textContent : e.textContent + '\n'))
+      .join('');
+  const command = (s) => {
+    const put = (e) => {
+      e.clipboardData.setData('text/plain', s);
+      e.preventDefault();
+    };
+    document.addEventListener('copy', put);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      document.removeEventListener('copy', put);
+    }
+  };
+  button.addEventListener('click', async () => {
+    const press = ++presses;
+    clearTimeout(timer);
+    show(words.copy, false);
+    status.textContent = '';
+    const s = text();
+    let ok;
+    try {
+      await navigator.clipboard.writeText(s);
+      ok = true;
+    } catch {
+      ok = command(s);
+    }
+    if (press !== presses) return;
+    const label = ok ? words.copied : words.failed;
+    show(label, ok);
+    setTimeout(() => {
+      status.textContent = label;
+    }, 0);
+    timer = setTimeout(() => {
+      show(words.copy, false);
+      status.textContent = '';
+    }, 1500);
+  });
+  show(words.copy, false);
+  document.currentScript.after(button, status);
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure>
+<figure data-floe-part="code"><pre><code class="lines"><span data-floe-copy="">rsync --archive --delete --exclude &#39;*.tmp&#39; --exclude &#39;cache/&#39; --log-file=copy.log old-wiki:/srv/wiki/pages/ /srv/new-wiki/pages/
+</span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -2405,7 +2525,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </ul></div></dd></div>
 <div><dt>Search index</dt><dd class="tags"><span><span data-floe-tone="warn" data-floe-part="cell">by hand</span></span><span><span data-floe-tone="bad" data-floe-part="cell">blocked</span></span><span><span data-floe-tone="accent" data-floe-part="cell">next</span></span></dd><dd class="text"><div data-floe-text=""><p>Rebuilt by hand after the copy; <a href="https://example.com/steps">the steps</a>.</p></div></dd></div>
 <div><dt>Old links</dt></div>
-<div><dt>A step with its command</dt><dd class="text"><div data-floe-text=""><p>Run it from the wiki&#39;s folder.</p></div></dd><dd class="parts"><div><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="file">wiki.conf</span><span class="lang">ini</span></figcaption><pre><code data-floe-copy="">mode = read-only</code></pre><script>(function copyButton(words) {
+<div><dt>A step with its command</dt><dd class="text"><div data-floe-text=""><p>Run it from the wiki&#39;s folder.</p></div></dd><dd class="parts"><div><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="file">wiki.conf</span><span class="lang">ini</span></figcaption><pre><code class="lines"><span data-floe-copy="">mode = read-only</span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -2532,7 +2652,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></div></div></dd></div>
-<div><dt>Parts alone, in the last row</dt><dd class="parts"><div><div data-floe-part="stack"><div data-floe-text=""><p>Text among parts, as tall as an item&#39;s.</p></div><figure data-floe-part="code"><figcaption><span class="lang">sh</span></figcaption><pre><code data-floe-copy="">wiki status</code></pre><script>(function copyButton(words) {
+<div><dt>Parts alone, in the last row</dt><dd class="parts"><div><div data-floe-part="stack"><div data-floe-text=""><p>Text among parts, as tall as an item&#39;s.</p></div><figure data-floe-part="code"><figcaption><span class="lang">sh</span></figcaption><pre><code class="lines"><span data-floe-copy="">wiki status</span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -2637,7 +2757,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </ul></li>
 </ul></li>
 </ul></div>
-<figure data-floe-part="diff"><figcaption><span class="file">wiki.conf</span><span class="added">+1</span><span class="removed">−1</span><span class="lang">ini</span></figcaption><pre><code data-floe-copy=""><span class="hunk">@@ -1,2 +1,2 @@
+<figure data-floe-part="diff"><figcaption><span class="file">wiki.conf</span><span class="added">+1</span><span class="removed">−1</span><span class="lang">ini</span></figcaption><pre><code class="lines" data-floe-copy=""><span class="hunk">@@ -1,2 +1,2 @@
 </span><span class="del">-read_only = false
 </span><span class="add">+read_only = true
 </span><span> banner = &#34;Moved&#34;
@@ -2781,7 +2901,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
   });
   show(words.copy, false);
   document.currentScript.after(button, status);
-})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><figure data-floe-part="diff"><figcaption><span class="added">+1</span><span class="removed">−1</span></figcaption><pre><code data-floe-copy=""><span class="add">+a
+})({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure><figure data-floe-part="diff"><figcaption><span class="added">+1</span><span class="removed">−1</span></figcaption><pre><code class="lines" data-floe-copy=""><span class="add">+a
 </span><span class="del">-b
 </span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
@@ -3058,8 +3178,8 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <li>from Safari 16 they are right</li>
 <li>a fifth of the machines are on 15</li>
 </ul></div></div><p class="how">How: By hand in each browser</p></li>
-<li data-floe-tone="good"><div class="head"><span class="result"><span data-floe-tone="good" data-floe-part="cell">Pass</span></span><div class="title">Can the old data be read?</div></div><div class="actual"><div data-floe-text=""><p>The export of 2023 reads, its dates converted.</p></div></div><div class="parts"><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">sh</span></figcaption><pre><code data-floe-copy="">wiki import old.zip --date-format legacy
-</code></pre><script>(function copyButton(words) {
+<li data-floe-tone="good"><div class="head"><span class="result"><span data-floe-tone="good" data-floe-part="cell">Pass</span></span><div class="title">Can the old data be read?</div></div><div class="actual"><div data-floe-text=""><p>The export of 2023 reads, its dates converted.</p></div></div><div class="parts"><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">sh</span></figcaption><pre><code class="lines"><span data-floe-copy="">wiki import old.zip --date-format legacy
+</span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -3129,7 +3249,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 </ul>
 </div>
 <div data-floe-part="columns">
-<div role="group" aria-label="Before"><div class="title" aria-hidden="true">Before</div><div data-floe-part="stack"><div data-floe-text=""><p>The list before.</p></div><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code data-floe-copy="">export WIKI=old</code></pre><script>(function copyButton(words) {
+<div role="group" aria-label="Before"><div class="title" aria-hidden="true">Before</div><div data-floe-part="stack"><div data-floe-text=""><p>The list before.</p></div><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code class="lines"><span data-floe-copy="">export WIKI=old</span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -3197,7 +3317,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <div role="group" aria-label="After"><div class="title" aria-hidden="true">After</div><div data-floe-part="stack"><div data-floe-tone="good" data-floe-part="note"><span class="floe-hidden">Good: </span><strong class="title">Done</strong><div data-floe-text=""><p>The list after.</p></div></div></div></div>
 </div>
 <form data-floe-part="tabs">
-<label><input type="radio" name="tab" checked=""/>bash</label><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code data-floe-copy="">export WIKI=new</code></pre><script>(function copyButton(words) {
+<label><input type="radio" name="tab" checked=""/>bash</label><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">bash</span></figcaption><pre><code class="lines"><span data-floe-copy="">export WIKI=new</span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
@@ -3261,7 +3381,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
   show(words.copy, false);
   document.currentScript.after(button, status);
 })({"copied":"Copied","copy":"Copy","failed":"Could not copy"});</script></figure></div>
-<label><input type="radio" name="tab"/>PowerShell</label><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">powershell</span></figcaption><pre><code data-floe-copy="">$env:WIKI = &#39;new&#39;</code></pre><script>(function copyButton(words) {
+<label><input type="radio" name="tab"/>PowerShell</label><div data-floe-part="stack"><figure data-floe-part="code"><figcaption><span class="lang">powershell</span></figcaption><pre><code class="lines"><span data-floe-copy="">$env:WIKI = &#39;new&#39;</span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +

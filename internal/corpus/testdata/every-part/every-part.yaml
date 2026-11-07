@@ -56,6 +56,15 @@ sections:
             # Read-only from Friday evening
             read_only = true
             banner = "This wiki has moved to the new host."
+      - code:
+          title: The line that turns the wiki read-only
+          file: new-wiki.conf
+          lang: ini
+          start: 41
+          mark: [42]
+          text: |
+            # Read-only from Friday evening
+            read_only = true
       - code: { text: "rsync --archive --delete --exclude '*.tmp' --exclude 'cache/' --log-file=copy.log old-wiki:/srv/wiki/pages/ /srv/new-wiki/pages/\n" }
   - heading: Risks
     parts:

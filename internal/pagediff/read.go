@@ -229,7 +229,9 @@ func plain(n *html.Node, b *strings.Builder) {
 // screen reader
 // reads go at the head of the line after them.
 // LIMIT: a pre that colours words within a line by elements is cut at them. floe's parts draw none.
-// LIMIT: blank lines at the end of a line's element or of a pre are not lines, and adding them tells nothing.
+// LIMIT: blank lines at the end of a line's element or of a pre are not lines, and adding them tells nothing; code's
+// are lines, each its own element.
+// LIMIT: what CSS draws is no text here: a page whose code's start alone changes, its numbers a counter, tells nothing.
 func preLines(n *html.Node) []string {
 	box := n
 	if c := n.FirstChild; c != nil && c == n.LastChild && c.Type == html.ElementNode && c.Data == "code" {

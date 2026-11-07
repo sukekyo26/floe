@@ -86,6 +86,8 @@ var messagesEN = map[string]string{
 	"kit_stat_item":              "stats takes items written as keys and values (label, value and the like); item %d is not",
 	"kit_bar_item":               "%s takes items written as keys and values (label, value, of, tone); item %d is not",
 	"kit_bar_of":                 "%s takes a number above 0, not %s",
+	"kit_code_line":              "code's %s takes a whole number from 1 to 1,000,000,000, not %s",
+	"kit_code_mark":              "code's mark takes a list of line numbers, not %s",
 	"kit_chart_length":           "chart: series %d %q has %d values for the %d names of x; write a value for each name",
 	"kit_chart_shape":            "chart takes kind (line or bar), x (names) and series (each of name and values, a number for each name); %s is not so",
 	"kit_bar_over":               "%s: %s is over its of %s; write a value no greater than of, the whole",
