@@ -1435,7 +1435,10 @@
     if (readsGoing) return;
     readsGoing = true;
     // A Map's iteration also visits what is set while it goes
-    for (const [to, value] of readsWaiting) {
+    for (const [to] of readsWaiting) {
+      // Taken once the load's reading ends, so that the page's last mark is the one sent
+      while (reading) await reading;
+      const value = readsWaiting.get(to);
       readsWaiting.delete(to);
       const url = `/api/artifacts/${encodeURIComponent(to)}/read`;
       const signal = AbortSignal.timeout(5000);
@@ -1602,8 +1605,23 @@
     $('server').classList.toggle('down', !ok);
   }
 
+  // The writes (any request but a GET) sent, and those not answered yet: load reads the list only while none goes
+  let writesSent = 0;
+  let writesGoing = 0;
+  const writesDone = [];
+  const noWrites = () => (writesGoing ? new Promise((go) => writesDone.push(go)) : null);
+  // A load's reading, while it goes: a read mark waits for it, so that a page that keeps telling its read never keeps the list from being drawn
+  let reading = null;
+  // A read (a GET) given no signal of its caller's is cut off at this, to fail the load rather than hold every one after it; a let, for
+  // the tests to shorten
+  let READ_MS = 10000;
   // The connection state only says whether the server was reached; an HTTP error is still an answer
   async function api(url, init) {
+    const write = Boolean(init?.method && init.method !== 'GET');
+    if (write) {
+      writesSent++;
+      writesGoing++;
+    } else if (!init?.signal) init = { ...init, signal: AbortSignal.timeout(READ_MS) };
     try {
       const res = await fetch(url, init);
       setServer(true);
@@ -1613,6 +1631,8 @@
       // One called off by its own caller, likewise
       if (e.name !== 'TimeoutError' && e.name !== 'AbortError') setServer(false);
       throw e;
+    } finally {
+      if (write && --writesGoing === 0) for (const go of writesDone.splice(0)) go();
     }
   }
 
@@ -2907,21 +2927,21 @@
     return res.json();
   }
 
-  // Reads again the directories open of the folders listed, each under folders and directories open: whether any changed.
+  // Reads again the directories open of the folders in list (the entries as just read), each under folders and directories open: whether any changed.
   // One gone leaves what is open, and the URL
   // LIMIT: each directory open is read every 3 s with the list. Send a mark of each, to read it only once changed, if many open are heavy
   // The last call's answers win: an earlier one, slower, would take away what was opened since
   let openReads = 0;
-  async function readOpen() {
+  async function readOpen(list) {
     const n = ++openReads;
     const before = sameListings(listings);
     // A folder no longer registered leaves what is kept
     const was = opened.size;
-    for (const key of [...opened]) if (!items.some((x) => x.folder && x.slug === key.split(/:(.*)/s)[0])) opened.delete(key);
+    for (const key of [...opened]) if (!list.some((x) => x.folder && x.slug === key.split(/:(.*)/s)[0])) opened.delete(key);
     if (opened.size !== was) keepOpen();
     const shown = (key) => {
       const [slug, dir = ''] = key.split(/:(.*)/s);
-      const a = items.find((x) => x.slug === slug);
+      const a = list.find((x) => x.slug === slug);
       if (!a?.folder || a.missing || !opened.has(slug)) return false;
       const parts = dir ? dir.split('/') : [];
       return parts.slice(0, -1).every((_, i) => opened.has(openKey(slug, parts.slice(0, i + 1).join('/'))));
@@ -5022,7 +5042,6 @@
   let drawn = '';
   let loadFailed = false;
 
-  // LIMIT: the answers are not put in order: one asked before a read or a mark unread and come after it shows the page as it was, until the next look
   // A poll's answer does not redraw the rows from under a press: Chrome sends neither click nor dblclick for a row gone between press
   // and release. Only for a while, as a press may never tell its release (a context menu, a drag, a release over the iframe)
   // LIMIT: a press held longer may lose its click to a redraw
@@ -5046,31 +5065,73 @@
   }
 
   let tasksFailed = false;
-  // The loads an action has asked: a poll asked before one may be of the time before the action wrote, and that load draws it anyway
-  let actionLoads = 0;
+  // One load at a time: one asked while another goes waits for it, and every ask meanwhile joins the one waiting, so no answer
+  // overtakes another. await load() returns once a load begun after the call has drawn, failed, or, a poll's, given way to a press
+  let loadWaiting = null;
+  let loadLast = Promise.resolve();
+  function load(polled = false) {
+    if (loadWaiting) {
+      loadWaiting.polled &&= polled;
+      return loadWaiting.done;
+    }
+    const next = { polled };
+    loadWaiting = next;
+    next.done = loadLast.then(() => {
+      loadWaiting = null;
+      return readAndDraw(next.polled);
+    });
+    loadLast = next.done.catch(() => {});
+    return next.done;
+  }
+  // Draws only a list read with no write going or sent meanwhile, which is of the time after every write sent before it answered;
+  // read meanwhile, it is read again
+  // LIMIT: a write that never answers holds every load: of the writes, only a read mark has a time limit. Give each one if that comes to matter
+  // LIMIT: a write cut off by its time limit (a read mark's) counts as answered: written by the server after a load read, the page shows
+  // as it was until the next look. Hold the next load until the server tells it is written if that comes to matter
   // polled tells one asked by no action of the person's: what an action changed is drawn at once, whatever is pressed
-  async function load(polled = false) {
-    const asked = polled ? actionLoads : ++actionLoads;
-    let text;
+  async function readAndDraw(polled) {
+    let list;
+    let entries;
+    let read;
+    let changed = false;
+    let doneReading;
+    reading = new Promise((go) => { doneReading = go; });
     try {
-      const [res, read] = await Promise.all([api('/api/artifacts'), framed ? null : readTasks()]);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const list = await res.text();
-      if (polled && (asked !== actionLoads || performance.now() - pressedAt < PRESS_MS)) return;
-      text = list + (read?.raw ?? '');
-      if (text !== drawn) items = JSON.parse(list);
-      if (read) tasksRead = read;
-      // The list redrawn when what is open of the folders changed, the frame when the directory of its page did
-      if (framed && FILE) {
-        const was = sameListings(sideListings);
-        await readSide();
-        if (sameListings(sideListings) !== was) drawn = '';
-      } else if (!framed && !TASK_LIST && await readOpen()) drawn = '';
+      for (;;) {
+        await noWrites();
+        const sent = writesSent;
+        const [res, tasks] = await Promise.all([api('/api/artifacts'), framed ? null : readTasks()]);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        list = await res.text();
+        entries = JSON.parse(list);
+        read = tasks;
+        // readOpen closes the folders not in the list: never by one of the time before a write
+        if (writesSent !== sent) continue;
+        // Held back from under a press before the folders are read, so that what is open and the rows stay of one answer
+        if (polled && performance.now() - pressedAt < PRESS_MS) {
+          if (changed) drawn = '';
+          return;
+        }
+        // The list redrawn when what is open of the folders changed, the frame when the directory of its page did
+        if (framed && FILE) {
+          const was = sameListings(sideListings);
+          await readSide();
+          if (sameListings(sideListings) !== was) changed = true;
+        } else if (!framed && !TASK_LIST && await readOpen(entries)) changed = true;
+        if (writesSent === sent) break;
+      }
     } catch (e) {
       loadFailed = true;
       showError(t('ui_load_failed', e.message));
       return;
+    } finally {
+      reading = null;
+      doneReading();
     }
+    if (changed) drawn = '';
+    const text = list + (read?.raw ?? '');
+    if (text !== drawn) items = entries;
+    if (read) tasksRead = read;
     // Only a load failure is cleared here; a failed delete and the like stays until the next action
     if (loadFailed) {
       loadFailed = false;

@@ -585,6 +585,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix the management page drawing an older list over a newer one: an answer that came late, or one read while an archive, a read mark or another change was on its way, could bring back a row just archived or removed, for a moment or until the next look. The list is now read one load at a time, only while no change is on its way, and read again when a change is sent meanwhile; a read that does not answer in 10 seconds fails and says so, rather than holding the reads after it.
 - The theme blueprint draws the heads of code, diffs and terminals, a note's title and a table's heads, and the template report its eyebrow, in the case they are written in, not in capitals: a browser copies the capitals, so a file name or code copied from them came out as other text.
 - Fix where a row of too many or too few cells of a `table` is told: at each such row, not once at the start of `rows`.
 - Fix changing a task's state on its page after the task was removed elsewhere: it made the task again, and now refuses, says so and reads the tasks again.
