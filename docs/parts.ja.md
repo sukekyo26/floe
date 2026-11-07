@@ -57,7 +57,7 @@ floe の部品が描くのに使う関数も使えます。floe の部品の `pa
 
 ### `zoom`
 
-`{{zoom}}` は、拡大の script を描きます。部品 `image` と `diagram` が使うものと同じです。部品の箱の中で、`class="floe-zoom"` の枠の前に置き、`part.yaml` で見た目 `zoom` を借ります（`looks: [zoom]`。`<figure data-floe-part="shot">{{zoom}}<div class="floe-zoom"><img src="{{.file}}" alt="{{.alt}}"></div></figure>`）。枠の最初の要素は、拡大するもの（`svg` か `img`）そのものにします（包む要素は動かしません）。`svg` は `viewBox` を、`img` は `transform` で動かし、大きさは `viewBox` か絵の大きさから取ります。見た目 `zoom` が `img` を枠の幅に縮めて並べるので（`display: block; max-width: 100%; height: auto`）、上の例をそのまま写せば拡大できます。拡大中は絵の枠線を透明にします。原寸より小さく描かれている間と拡大している間だけ、枠の前に道具の並びを出し、枠を Tab で止めます。枠の大きさは部品の CSS が決めます。script は使う部品ごとに入り、ページに何回あっても枠ごとに 1 回だけ動きます。
+`{{zoom}}` は、拡大の script を描きます。部品 `image` と `diagram` が使うものと同じです。部品の箱の中で、`class="floe-zoom"` の枠の前に置き、`part.yaml` で見た目 `zoom` を借ります（`looks: [zoom]`。`<figure data-floe-part="shot">{{zoom}}<div class="floe-zoom"><img src="{{.file}}" alt="{{.alt}}"></div></figure>`）。枠の最初の要素は、拡大するもの（`svg` か `img`）そのものにします（包む要素は動かしません）。`svg` は `viewBox` を、`img` は `transform` で動かし、大きさは `viewBox` か絵の大きさから取ります。見た目 `zoom` が `img` を枠の幅に縮めて並べるので（`display: block; max-width: 100%; height: auto`）、上の例をそのまま写せば拡大できます。拡大中は絵の枠線を透明にします。原寸より小さく描かれている間と拡大している間だけ、枠の前に道具の並びを出し、枠を Tab で止めます。枠の大きさは部品の CSS が決めます。script は使う部品ごとに入り、ページに何回あっても枠ごとに 1 回だけ動きます。枠に `title` を書くと、その `title` が残り、拡大の操作を伝える説明の代わりになります。枠の中の要素の `title` は、その要素に重ねている間、枠の説明より優先されます。拡大の案内の文は枠の次の要素として script が入れ、キーボードで枠を選んでいる間だけ出ます。そのため `.floe-zoom + p` のような隣接セレクタは文に当たらず効かなくなり、grid や flex の親に枠を直に置くと、選んでいる間だけ文が並びの新しい項目になります。枠はそれだけを持つ箱に入れてください。
 
 ### `script`
 

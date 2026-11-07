@@ -50,9 +50,6 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
     const tools = document.createElement('div');
     tools.className = toolsClass;
     tools.hidden = true;
-    const hint = document.createElement('span');
-    hint.textContent = msg.zoom_hint;
-    tools.append(hint);
     for (const [k, text, label] of [
       ['in', '+', msg.zoom_in], ['out', '−', msg.zoom_out],
       ['fit', msg.zoom_fit, msg.zoom_fit_label], ['one', msg.zoom_one, msg.zoom_one_label],
@@ -67,8 +64,21 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
     }
     wrap.before(tools);
     const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
+    // How it is used: its tooltip for a mouse, and for the keyboard, which shows no tooltip, a line under the frame while
+    // it has the focus (part.css), which is also its description. What the frame was written with stays.
+    // LIMIT: a touch screen shows neither, at any width. A title of an element in the frame wins over the frame's in the
+    // tooltip; the line says the same. Show the line on touch (pointer: coarse) if readers there come to miss it.
+    // LIMIT: the line is the frame's next element, which a part of one's own that lays a frame out in a grid or a flex, or
+    // writes .floe-zoom + x, has to allow for (docs/parts.md); a frame in a box of its own holds it. Move it in the toolbar
+    // if a part of floe's comes to do so.
+    const title = wrap.hasAttribute('title'), described = wrap.hasAttribute('aria-describedby');
+    const hint = document.createElement('div');
+    hint.className = `${frameClass}-hint`;
+    hint.id = `${frameClass}-hint-${document.querySelectorAll(`.${hint.className}`).length}`;
+    hint.textContent = msg.zoom_hint;
+    wrap.after(hint);
 
-    // The toolbar, the tab stop, the frame's role and name and touch-action go with whether it may be zoomed. Focus
+    // The toolbar, the tab stop, the frame's role, name, description and tooltip and touch-action go with whether it may be zoomed. Focus
     // in a toolbar that hides moves to the frame, which keeps -1 to hold it, not to the page's start
     const offer = (can) => {
       if (can === offered) return;
@@ -80,9 +90,13 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
       if (can) {
         wrap.setAttribute('role', 'group');
         wrap.setAttribute('aria-label', msg.zoom_frame);
+        if (!described) wrap.setAttribute('aria-describedby', hint.id);
+        if (!title) wrap.title = msg.zoom_hint;
       } else {
         wrap.removeAttribute('role');
         wrap.removeAttribute('aria-label');
+        if (!described) wrap.removeAttribute('aria-describedby');
+        if (!title) wrap.removeAttribute('title');
         if (focused) wrap.focus();
       }
     };

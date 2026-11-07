@@ -296,7 +296,7 @@ var messagesEN = map[string]string{
 	"diagram_icon_unknown":       `%s: no icon "%s" (search with: floe icons search <word>)`,
 	"copy_button":                "Copy",
 	"copy_failed":                "Could not copy",
-	"zoom_hint":                  "Ctrl / ⌘ + wheel or pinch to zoom, or + - 0 on the figure; drag or use the arrow keys to move while zoomed",
+	"zoom_hint":                  "Ctrl / ⌘ + wheel or pinch to zoom. Click or Tab to the figure, then + - 0 to zoom in, out and fit. Drag or use the arrow keys to move while zoomed",
 	"zoom_in":                    "Zoom in",
 	"zoom_out":                   "Zoom out",
 	"zoom_fit":                   "Fit",
