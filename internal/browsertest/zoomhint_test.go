@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/chromedp/cdproto/accessibility"
+	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
@@ -175,6 +176,20 @@ func TestUIZoomHint(t *testing.T) { //nolint:paralleltest // the browser tests s
 		if got := b.eval(`document.activeElement.classList.contains('zoomed') + ' ' + ` + zoomHintShown); got != "true shown" {
 			t.Errorf("zoomed by a key: %s", got)
 		}
+		// Zoomed, a finger and a mouse move it: it takes the drag from the page and from selecting text, and shows it can.
+		const zoomedLook = `(() => { const c = getComputedStyle(document.activeElement); return [c.cursor, c.touchAction, c.userSelect].join(' '); })()`
+		if got, want := b.eval(zoomedLook), "grab none none"; got != want {
+			t.Errorf("zoomed: %s, want %s", got, want)
+		}
+		held := b.eval(`(() => { const r = document.activeElement.getBoundingClientRect(); return (r.left + 20) + ' ' + (r.top + 20); })()`)
+		if _, err := fmt.Sscan(held, &x, &y); err != nil {
+			t.Fatal(err)
+		}
+		b.mouse(input.DispatchMouseEventTypeMousePressed, x, y, 1)
+		if got, want := b.eval(`getComputedStyle(document.activeElement).cursor`), "grabbing"; got != want {
+			t.Errorf("held: %s, want %s", got, want)
+		}
+		b.mouse(input.DispatchMouseEventTypeMouseReleased, x, y, 1)
 		b.unsize()
 	})
 }

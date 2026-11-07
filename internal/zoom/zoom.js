@@ -68,6 +68,9 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
     // it has the focus (part.css), which is also its description. What the frame was written with stays.
     // LIMIT: a touch screen shows neither, at any width. A title of an element in the frame wins over the frame's in the
     // tooltip; the line says the same. Show the line on touch (pointer: coarse) if readers there come to miss it.
+    // LIMIT: the line is the frame's next element, which a part of one's own that lays a frame out in a grid or a flex, or
+    // writes .floe-zoom + x, has to allow for (docs/parts.md); a frame in a box of its own holds it. Move it in the toolbar
+    // if a part of floe's comes to do so.
     const title = wrap.hasAttribute('title'), described = wrap.hasAttribute('aria-describedby');
     const hint = document.createElement('div');
     hint.className = `${frameClass}-hint`;

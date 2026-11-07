@@ -208,6 +208,8 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-zoom { position: relative; overflow: hidden; }
 .floe-zoom.can-zoom { touch-action: pan-y; }
 .floe-zoom:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.floe-zoom.zoomed { cursor: grab; touch-action: none; user-select: none; }
+.floe-zoom.zoomed:active { cursor: grabbing; }
 /* How it is used, under the frame while the keyboard is on it: over the frame it would hide what is moved there, and a low
    frame would clip it.
    LIMIT: what is under the frame moves down while it shows, not the frame. Lay it over them if that comes to mislead.
