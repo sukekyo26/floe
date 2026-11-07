@@ -301,15 +301,15 @@ the list's keys:  ?project=proj
 head: #130 / waiting / ver-pick st waiting / proj / true / /tasks?project=proj
 nothing to select: 0 true
 j: T n1 / n1, T d1 / d1, T i1 / i1, T r1 / r1
-whole: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130"}
-k: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130"}
+whole: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130","at":{"slug":"r1","file":"","v":0}}
+k: /tasks?project=proj&task=%23130 / {"order":["n1","d1","i1","r1"],"shown":["n1","d1","i1","r1"],"back":"/tasks?project=proj&task=%23130","at":{"slug":"i1","file":"","v":0}}
 after the state changed: ?view=doing&project=proj #130 focus #130
 the row come back to: #142
 the list kept: ?view=doing&project=proj
-pin: /a/p2/ /tasks?view=doing&project=proj / {"order":["p2","p1"],"shown":["p2","p1"],"back":"/tasks?view=doing&project=proj"}
+pin: /a/p2/ /tasks?view=doing&project=proj / {"order":["p2","p1"],"shown":["p2","p1"],"back":"/tasks?view=doing&project=proj","at":{"slug":"p2","file":"","v":0}}
 up goes to the task's state: /tasks?project=proj&view=doing
-in the folder: /tasks?project=proj&task=%231 / {"order":[],"shown":["fold"],"back":"/tasks?project=proj&task=%231"}
-renamed whole: /tasks?project=proj&task=%23128 / {"order":["c2"],"shown":["c2"],"back":"/tasks?project=proj&task=%23128"}
+in the folder: /tasks?project=proj&task=%231 / {"order":[],"shown":["fold"],"back":"/tasks?project=proj&task=%231","at":{"slug":"fold","file":"one.html","v":0}}
+renamed whole: /tasks?project=proj&task=%23128 / {"order":["c2"],"shown":["c2"],"back":"/tasks?project=proj&task=%23128","at":{"slug":"c2","file":"","v":0}}
 of no rows: / / null
 done: Archive the task
 archived: [Archive] | T x1

@@ -196,7 +196,7 @@ func TestUIList(t *testing.T) { //nolint:paralleltest // the browser tests share
 		"true false /a/l/?raw Link l", "true false /a/n/?raw New n New",
 		"true true true", "false true about:blank New ",
 		"vn ?view=new", "vn", "All unread 1 / 1", "New", "n", "true",
-		`{"order":["v","n"],"shown":["v","n"],"back":"/?view=new"}`, "/?view=new", "/a/v/",
+		`{"order":["v","n"],"shown":["v","n"],"back":"/?view=new","at":{"slug":"v","file":"","v":0}}`, "/?view=new", "/a/v/",
 		"true true true true true", "flex none none true", "/ false", "none true", "flex flex", "true block", "true",
 		"none none flex none true", "flex none",
 	}, "|"))
@@ -1280,7 +1280,7 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("whole by a double press", "location.pathname === '/a/a3/'")
 
 	check(t, "row again", out, strings.Join([]string{
-		"/", "/", "/", "1 a2 /", "true", "a3 /", `{"order":["a3","a2","a1"],"shown":["a3","a2","a1"],"back":"/"}`,
+		"/", "/", "/", "1 a2 /", "true", "a3 /", `{"order":["a3","a2","a1"],"shown":["a3","a2","a1"],"back":"/","at":{"slug":"a2","file":"","v":0}}`,
 	}, "|"))
 }
 
