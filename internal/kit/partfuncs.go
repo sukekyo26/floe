@@ -287,7 +287,7 @@ var newlines = strings.NewReplacer("\r\n", "\n", "\r", "\n")
 // them apart here, which counts the lines, if the page comes not to be looked at.
 // LIMIT: the mistakes are at the part's value, not at the number: codeOf knows not where in it the values are.
 func codeOf(text string, start, mark any) (codeText, error) {
-	c := codeText{}
+	c := codeText{Lines: nil, Before: 0, Digits: 0, Numbered: false}
 	first := 1
 	if start != nil {
 		n, err := lineNumber("start", start)

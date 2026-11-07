@@ -275,8 +275,9 @@ blockquote { border-left: 4px solid var(--on-face, var(--accent)); padding: 0.2r
 }
 @media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
 :scope .file { color: var(--floe-code-head-faint); }
-/* Only under a title may the heading fold: one with none stays as it was, its file name folding beside the language */
-:scope figcaption:has(> .title) { flex-wrap: wrap; row-gap: 0.25rem; }
+/* The title and the file fold under each other, the language staying at the right: it has a shape of its own, which a
+   row that folds may not draw by place */
+:scope .names { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; min-width: 0; }
 :scope .title { font-family: var(--font); font-size: var(--floe-text-aside); font-weight: 700; }
 :scope .lang {
   flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
@@ -677,7 +678,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <tr><td>Links</td><td class="num">120</td><td><span data-floe-tone="bad" data-floe-part="cell">open</span></td></tr>
 </tbody>
 </table></div>
-<figure data-floe-part="code"><figcaption><span class="file">a.conf</span><span class="lang">ini</span></figcaption><pre><code class="lines"><span data-floe-copy="">read_only = true
+<figure data-floe-part="code"><figcaption><span class="names"><span class="file">a.conf</span></span><span class="lang">ini</span></figcaption><pre><code class="lines"><span data-floe-copy="">read_only = true
 </span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
   const icon = (d) =>

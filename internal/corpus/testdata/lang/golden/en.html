@@ -370,8 +370,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 @media screen { :scope pre { overflow-x: auto; contain: inline-size; } }
 :scope .file { color: var(--floe-code-head-faint); }
-/* Only under a title may the heading fold: one with none stays as it was, its file name folding beside the language */
-:scope figcaption:has(> .title) { flex-wrap: wrap; row-gap: 0.25rem; }
+/* The title and the file fold under each other, the language staying at the right: it has a shape of its own, which a
+   row that folds may not draw by place */
+:scope .names { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; min-width: 0; }
 :scope .title { font-family: var(--font); font-size: var(--floe-text-aside); font-weight: 700; }
 :scope .lang {
   flex: none; margin-left: auto; font-size: var(--floe-text-small); font-weight: 700; padding: 0.05rem 0.5rem; border-radius: var(--radius-small);
@@ -784,7 +785,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <div class="card stat" data-floe-look="panel"><dt>Pages</dt><dd class="value moved"><span class="from"><span class="floe-hidden">Before </span>2</span><span class="arrow" aria-hidden="true">→</span><span><span class="floe-hidden">After </span>2</span></dd>
 <dd class="note" data-floe-tone="muted">no change</dd></div>
 </dl>
-<figure data-floe-part="code"><figcaption><span class="title">Lines</span></figcaption><pre><code class="lines numbered" style="counter-reset: line 2; --digits: 1"><span data-floe-copy="">a
+<figure data-floe-part="code"><figcaption><span class="names"><span class="title">Lines</span></span></figcaption><pre><code class="lines numbered" style="counter-reset: line 2; --digits: 1"><span data-floe-copy="">a
 </span><span class="floe-hidden">Marked line:</span><span class="mark" data-floe-copy="">b
 </span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');

@@ -252,15 +252,18 @@ func TestCodeOf(t *testing.T) {
 		{"CR", "a\rb", nil, nil, codeText{Lines: []codeLine{line("a\n"), line("b")}, Before: 0, Digits: 1, Numbered: false}},
 		{"mark from 1", "a\nb\n", nil, []any{2}, codeText{Lines: []codeLine{line("a\n"), marked("b\n")}, Before: 0, Digits: 1, Numbered: false}},
 		{
-			"mark from start", "a\nb\nc\n", 12, []any{13},
+			"mark from start", "a\nb\nc\n", 12,
+			[]any{13},
 			codeText{Lines: []codeLine{line("a\n"), marked("b\n"), line("c\n")}, Before: 11, Digits: 2, Numbered: true},
 		},
 		{
-			"a number of the text's count marks nothing under start", "a\nb\n", 12, []any{1, 99},
+			"a number of the text's count marks nothing under start", "a\nb\n", 12,
+			[]any{1, 99},
 			codeText{Lines: []codeLine{line("a\n"), line("b\n")}, Before: 11, Digits: 2, Numbered: true},
 		},
 		{
-			"read from YAML as float or uint64", "a\nb\n", 5.0, []any{6.0, uint64(5)},
+			"read from YAML as float or uint64", "a\nb\n", 5.0,
+			[]any{6.0, uint64(5)},
 			codeText{Lines: []codeLine{marked("a\n"), marked("b\n")}, Before: 4, Digits: 1, Numbered: true},
 		},
 		{
@@ -268,7 +271,8 @@ func TestCodeOf(t *testing.T) {
 			codeText{Lines: []codeLine{line("a\n"), line("b\n")}, Before: 8, Digits: 2, Numbered: true},
 		},
 		{
-			"the largest number", "a\n", 1_000_000_000, []any{1_000_000_000},
+			"the largest number", "a\n", 1_000_000_000,
+			[]any{1_000_000_000},
 			codeText{Lines: []codeLine{marked("a\n")}, Before: 999_999_999, Digits: 10, Numbered: true},
 		},
 	} {

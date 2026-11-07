@@ -101,10 +101,10 @@ const measureCode = `(() => {` + codeHelpers + `
   for (const i of [1, 4, 5]) if (getComputedStyle(lines(parts[i])[0], '::before').content !== 'none') out.add(i + ' numbers its lines with no start');
   const counts = parts.map((p) => getComputedStyle(p.querySelector('code')).counterReset).join();
   if (counts !== 'line 11,none,line 97,line 99,none,none') out.add('counts from ' + counts);
-  for (const t of document.querySelectorAll('[data-floe-part=code] .title')) if (t.tagName !== 'SPAN' || t.parentElement.tagName !== 'FIGCAPTION') out.add('a title in ' + t.parentElement.tagName + ' as ' + t.tagName);
+  for (const t of document.querySelectorAll('[data-floe-part=code] .title')) if (t.tagName !== 'SPAN' || !t.closest('figcaption')) out.add('a title as ' + t.tagName + ' under ' + t.parentElement.tagName);
   for (const c of document.querySelectorAll('[data-floe-part=code] figcaption')) {
     const box = c.getBoundingClientRect();
-    for (const e of c.children) { const r = e.getBoundingClientRect(); if (r.left < box.left - 0.5 || r.right > box.right + 0.5) out.add(e.className + ' out of the heading'); }
+    for (const e of c.querySelectorAll('span')) { const r = e.getBoundingClientRect(); if (r.left < box.left - 0.5 || r.right > box.right + 0.5) out.add(e.className + ' out of the heading'); }
   }
   return [...out].join('\n');
 })()`

@@ -503,7 +503,7 @@ const measureLines = `(() => {
   const out = new Set();
   for (const part of document.querySelectorAll('[data-floe-part=code], [data-floe-part=terminal], [data-floe-part=diff]')) {
     const name = part.dataset.floePart, pre = getComputedStyle(part.querySelector('pre'));
-    const lines = [...part.querySelectorAll(name === 'diff' ? 'pre > code > span' : 'pre > *')];
+    const lines = [...part.querySelectorAll(name === 'terminal' ? 'pre > *' : '.lines > :not(.floe-hidden)')];
     out.add(name + ' pre ' + pre.paddingLeft + ' ' + pre.paddingRight + ' line ' + [...new Set(lines.map((e) => getComputedStyle(e).paddingLeft))].join(' '));
   }
   const alpha = (c) => { const m = c.match(/\/ ([\d.]+)\)$/) || c.match(/^rgba\(.*, ([\d.]+)\)$/); return m ? Number(m[1]) : 1; };
@@ -515,8 +515,8 @@ const measureLines = `(() => {
 })()`
 
 // TestCopyRoom scrolls each long line of code, a terminal and a diff to its end: it ends left of the copy button, in
-// every theme; a short one does not scroll (within a pixel, which rounding a rem may take), a short diff's line still
-// reaching the right edge. Without a button, in a part of one's own in code's look, a long line keeps 1.1rem after it.
+// every theme; a short one does not scroll (within a pixel, which rounding a rem may take), a short code's or diff's line
+// still reaching the right edge. Without a button, in a part of one's own in code's look, a long line keeps 1.1rem after it.
 // The room at a line's sides is on the line, 1.1rem, and none on pre, and the faint text is faded by its colour.
 // Printed, with the button hidden, a line keeps the code's own padding after it, 1.1rem.
 func TestCopyRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -542,11 +542,11 @@ func TestCopyRoom(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		// brutal's terminal.css gives a terminal's heading its full colour
 		head := map[bool]string{false: "head faint", true: "head not faint"}[name == "brutal"]
 		want = append(want, name+": bare room, bare short",
-			name+": code ok, code ok, terminal ok, diff ok, code short, diff short reaches, terminal short, diff ok",
+			name+": code ok, code ok, terminal ok, diff ok, code short reaches, diff short reaches, terminal short, diff ok",
 			name+": code pre 0px 0px line 17.6px, terminal pre 0px 0px line 17.6px, diff pre 0px 0px line 17.6px, file faint, "+head+", out faint, meta faint")
 	}
 	b.media("print")
-	out = append(out, "printed: "+b.eval("[...new Set([...document.querySelectorAll('[data-floe-part=code] pre > *, [data-floe-part=terminal] pre > *, [data-floe-part=diff] code > span')]"+
+	out = append(out, "printed: "+b.eval("[...new Set([...document.querySelectorAll('[data-floe-part=terminal] pre > *, .lines > :not(.floe-hidden)')]"+
 		".map((e) => getComputedStyle(e).paddingRight))].join(' ')"))
 	want = append(want, "printed: 17.6px")
 	check(t, "room", out, strings.Join(want, "|"))

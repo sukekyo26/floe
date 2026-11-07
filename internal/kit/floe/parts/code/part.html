@@ -1,4 +1,4 @@
 {{- $c := code .text .start .mark -}}
-<figure data-floe-part="code">{{if or .title .file .lang}}<figcaption>{{with .title}}<span class="title">{{.}}</span>{{end}}{{with .file}}<span class="file">{{.}}</span>{{end}}{{with .lang}}<span class="lang">{{.}}</span>{{end}}</figcaption>{{end}}<pre><code class="lines{{if $c.Numbered}} numbered{{end}}"{{if $c.Numbered}} style="counter-reset: line {{$c.Before}}; --digits: {{$c.Digits}}"{{end}}>
+<figure data-floe-part="code">{{if or .title .file .lang}}<figcaption>{{if or .title .file}}<span class="names">{{with .title}}<span class="title">{{.}}</span>{{end}}{{with .file}}<span class="file">{{.}}</span>{{end}}</span>{{end}}{{with .lang}}<span class="lang">{{.}}</span>{{end}}</figcaption>{{end}}<pre><code class="lines{{if $c.Numbered}} numbered{{end}}"{{if $c.Numbered}} style="counter-reset: line {{$c.Before}}; --digits: {{$c.Digits}}"{{end}}>
 {{- range $c.Lines}}{{if .Mark}}<span class="floe-hidden">{{word "marked"}}</span>{{end}}<span{{if .Mark}} class="mark"{{end}} data-floe-copy>{{.Text}}</span>{{end -}}
 </code></pre>{{copyButton}}</figure>
