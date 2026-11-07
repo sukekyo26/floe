@@ -76,6 +76,7 @@ To list things, pick the part by what the rows are:
 - One line each: a Markdown list in `text`.
 - A name and its longer text, which a table squeezes into a narrow column, such as requirements, risks and what is done about them, or terms: `entries`, a state in a tag.
 - A decision: `decision` for one told with its reasons and the options set aside, `options` for options weighed side by side with their pros and cons, `asks` for questions put to the reader, each with its options, what is recommended and, once decided, what was, and `entries` for a run of short decisions, the pick in a tag.
+- What was checked and what came of it, a survey's or a test's: `checks`, each with ok, ng or unchecked.
 - What happened in order: `timeline`.
 - Words and what they mean: a Markdown list, or `entries` when a meaning is long.
 - A thing before and after: `compare`.
@@ -95,6 +96,7 @@ The parts `report` takes in a section:
 | `note`, `stats`, `steps`, `checklist` | A note in a tone, large numbers, numbered steps, items ticked once done. |
 | `compare`, `options`, `facts`, `diff`, `tree`, `links` | What changes before and after, options with pros and cons, names with values, a diff (a button over it copies the diff as written), files and folders, links. |
 | `asks` | Questions put to the reader, numbered Q1, Q2 and on: a `question`, its `options`, the one to `recommend` and `why`, who decides (`by`), and what was `decided`. An option written the same as `recommend` or `decided` takes a ring and a pill; one that matches no option stands on a line of its own. A question decided has a round check at its top right and a ring on its decision alone; its other options are quiet, the one recommended keeping its pill. |
+| `checks` | What was checked and what came of it, in a survey or a test, in the order written, the count of each result on top. Each has a `title`, a `result` of `ok`, `ng` or `unchecked` (drawn in the page's language, such as Pass, Fail and Not checked in English), the `actual` result (Markdown), `parts` under it (what `details` holds, such as `code`), and `how` it was checked. `actual` says why for `unchecked`. For what is still to do, write `checklist`; for what a review found, `findings`. |
 | `findings`, `decision`, `fields` | What a review found, a decision, the keys of a setting. |
 | `timeline`, `bars`, `keys` | Dates in order, bars of values, keys to press. A bar with `of` is filled as far as its `value` goes of that whole and reads `5 / 8`, for how far a piece of work has gone; the others are shares of the largest value among them. |
 | `details`, `tabs` | Parts folded under a title, or shown one at a time under tabs, for things read one at a time; they hold `text`, `code`, `terminal`, `diff`, `note`, `table`, `entries`, `image` and `diagram`. |
@@ -119,13 +121,13 @@ A data file is one YAML document of keys and values. One with `---` between docu
 
 ## Images
 
-In `report`, an image is a part `image` (`- image: { file: shots/list.png, alt: The list of pages }`), in a section or subsection, `details`, `tabs`, `columns` or the `parts` of an item of `entries`: its `file` is the path of the image, and its `alt` what it shows (for a screen reader, and where it cannot be shown). A `caption` is shown under the image (a line of Markdown: `caption: Figure 1: the list of pages`). An image drawn smaller than its size, to fit the column, zooms as a diagram does: with the toolbar over it, Ctrl / ⌘ + wheel, a pinch or the keys `+ - 0`, and moves while zoomed by a drag or the arrow keys. An svg with a `viewBox` alone, without `width` and `height`, has no size to zoom from, and does not zoom. A template of one's own takes an image as an item of `"format": "image"`, whose value is the path. The path is relative to the data file's directory and under it: one `/` between names, without `./`, `..`, or a `/` at either end. The image goes into the page as a data URI, so that the page holds all it shows: a png, jpeg, gif, webp or svg file, by its name, up to 1 MiB. `floe publish` sends the server the images the page shows.
+In `report`, an image is a part `image` (`- image: { file: shots/list.png, alt: The list of pages }`), in a section or subsection, `details`, `tabs`, `columns` or the `parts` of an item of `entries` or `checks`: its `file` is the path of the image, and its `alt` what it shows (for a screen reader, and where it cannot be shown). A `caption` is shown under the image (a line of Markdown: `caption: Figure 1: the list of pages`). An image drawn smaller than its size, to fit the column, zooms as a diagram does: with the toolbar over it, Ctrl / ⌘ + wheel, a pinch or the keys `+ - 0`, and moves while zoomed by a drag or the arrow keys. An svg with a `viewBox` alone, without `width` and `height`, has no size to zoom from, and does not zoom. A template of one's own takes an image as an item of `"format": "image"`, whose value is the path. The path is relative to the data file's directory and under it: one `/` between names, without `./`, `..`, or a `/` at either end. The image goes into the page as a data URI, so that the page holds all it shows: a png, jpeg, gif, webp or svg file, by its name, up to 1 MiB. `floe publish` sends the server the images the page shows.
 
 An image file Markdown names (`![x](shots/list.png)`) is drawn as written, and the page's CSP does not show it; only a data URI of a png, gif, jpeg or webp written in it shows. Write images in `image`.
 
 ## Diagrams
 
-A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts` of an item of `entries`, draws a diagram from a spec written in place, checked before the page is drawn: [diagrams.md](diagrams.md) tells how a spec is written.
+A `diagram` part, in a section or in `details`, `tabs`, `columns` and the `parts` of an item of `entries` or `checks`, draws a diagram from a spec written in place, checked before the page is drawn: [diagrams.md](diagrams.md) tells how a spec is written.
 
 ## Scripts and HTML
 
@@ -163,5 +165,5 @@ A page drawn may have warnings: advice on a better way to write it, which leaves
 plan.yaml:12:15: warning: this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
 ```
 
-- A fenced block of code in a `text` part, in a section (report's and its subsections, `more` of design, handoff, adr, postmortem and runbook, runbook's `text` of a step, and a slide of slides) or in `details`, `tabs`, `columns` and the `parts` of an item of `entries`, and in the `text` of an item of `entries`, is warned of: write it in `code`, or a command in `terminal`.
+- A fenced block of code in a `text` part, in a section (report's and its subsections, `more` of design, handoff, adr, postmortem and runbook, runbook's `text` of a step, and a slide of slides) or in `details`, `tabs`, `columns` and the `parts` of an item of `entries` or `checks`, in the `text` of an item of `entries`, and in the `actual` of an item of `checks`, is warned of: write it in `code`, or a command in `terminal`.
 - A file with a mistake is not drawn, so its warnings come once its mistakes are fixed. Those of the other files drawn are told with the mistakes.

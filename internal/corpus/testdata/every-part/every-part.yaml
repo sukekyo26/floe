@@ -241,6 +241,33 @@ sections:
           - question: Which day?
             recommend: A Saturday
             decided: Sunday
+      - checks:
+          - title: Do names in Japanese go through?
+            result: ok
+            actual: Saved as UTF-8, and found by a search.
+            how: '`curl`, adding and searching'
+          - title: Does it run in an old browser?
+            result: ng
+            actual: |
+              Safari 15 has no `:has()`, and the rows of the list break:
+
+              - from Safari 16 they are right
+              - a fifth of the machines are on 15
+            how: By hand in each browser
+          - title: Can the old data be read?
+            result: ok
+            actual: The export of 2023 reads, its dates converted.
+            parts:
+              - code: { lang: sh, text: "wiki import old.zip --date-format legacy\n" }
+          - title: Does a wrong password stop after five?
+            result: ng
+            actual: After four; `>=` is written for `>`.
+          - title: Does the search answer in a second?
+            result: ok
+            actual: 420 ms on average.
+          - title: Does it go through the proxy?
+            result: unchecked
+            actual: Not from here; the network team was asked.
       - columns:
           - title: Before
             parts:

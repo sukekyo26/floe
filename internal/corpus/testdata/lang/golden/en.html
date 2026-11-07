@@ -217,6 +217,64 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A pill: a short status in the colour of its tone, in the text's own face wherever it stands (a template's line of
+   fixed-width text too). It keeps to one line, in a table's or a grid's column too, unless what holds it sets
+   --floe-pill-wrap: normal; one that wraps is a label of round corners (base.css's --floe-pill-end) */
+:scope {
+  display: inline-block; font-family: var(--font); font-size: var(--floe-text-small); font-weight: 600; letter-spacing: normal; line-height: 1.6;
+  padding: 0.1em 0.75em; border-radius: min(var(--radius-pill), var(--floe-pill-end)); white-space: var(--floe-pill-wrap, nowrap);
+  background: var(--tone-soft); color: var(--tone);
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="checks"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="checks"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* One check to a row, in the order written: a line of its result's tone at the left, its result's pill by what was checked,
+   then what came of it the full width. The count of each result stands on top.
+   The line is the row's ::before, not its border, which would make the row a framed box a code's shadow must stay in */
+:scope { display: grid; gap: var(--floe-room); padding: var(--floe-pad-block) var(--floe-pad-inline); }
+:scope > .total { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; font-weight: 700; }
+:scope > ul { list-style: none; padding: 0; gap: var(--floe-room); }
+:scope > ul > li { --checks-gap: 0.35rem; position: relative; display: grid; gap: var(--checks-gap); padding-left: var(--floe-pad-inline); }
+:scope > ul > li::before { content: ""; position: absolute; inset-block: 0; left: 0; width: 0.25rem; background: var(--tone); }
+/* The pill in the middle of the title's first line, however many it folds onto: a theme's pill of a mark and words has the
+   mark's baseline, off the words, so a baseline would not level them */
+:scope .head { display: flex; align-items: flex-start; gap: 0.5rem; }
+:scope .result { display: flex; align-items: center; height: 1lh; }
+:scope .title { font-weight: 700; }
+/* --floe-room from what is next to it, with the row's gap, as far as what the parts draw outside their boxes reaches */
+:scope .parts { padding-block: calc(var(--floe-room) - var(--checks-gap)); }
+:scope .how { font-size: var(--floe-text-aside); color: var(--muted); }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* Each card is numbered by its place, as the steps of a plan are. The room between cards is --floe-room, as between
@@ -254,28 +312,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope .set-aside { margin-top: 0.3rem; font-size: var(--floe-text-aside); font-weight: 600; }
 :scope .rejected { gap: 0.15rem; }
 :scope .rejected > li::before { content: "×"; content: "×" / ""; color: var(--bad); }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
-   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
-   box's ring staying in the face around it */
-:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
-}
-}
-</style>
-<style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
-   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
-   box's ring staying in the face around it */
-:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
-:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
 }
 }
 </style>
@@ -335,6 +371,30 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="cell"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { display: inline-flex; align-items: center; gap: 0.45em; padding-left: 0.6em; }
+:scope::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="checks"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
+}
+}
+</style>
+<style>
+@layer floe.looks.depth1 {
+@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="decision"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* The grey panel around the cards: a ground, so it takes no face from around it (a band's), for what it holds */
@@ -347,22 +407,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   content: counter(floe-card, decimal-leading-zero); content: counter(floe-card, decimal-leading-zero) / counter(floe-card, decimal-leading-zero); --floe-mark: auto; background: none;
   font-family: var(--mono); font-size: var(--floe-text-small); font-weight: 400;
 }
-}
-}
-</style>
-<style>
-@layer floe.parts.depth0 {
-@scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
-}
-}
-</style>
-<style>
-@layer floe.looks.depth1 {
-@scope ([data-floe-look~="panel"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* A face of the panel's ground, on which what is quiet is of the surface */
-:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
 }
 </style>
@@ -439,6 +483,14 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </tbody>
 </table></div>
 <div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta">decided<span>2030-03-28</span></p><div class="title">Move</div><p class="set-aside">Set aside</p><ul class="rejected" data-floe-look="marked"><li><span>Stay</span></li></ul></div></div>
+<div data-floe-part="checks">
+<p class="total"><span>Pass 1</span> <span>Fail 1</span> <span>Not checked 1</span></p>
+<ul role="list">
+<li data-floe-tone="good"><div class="head"><span class="result"><span data-floe-tone="good" data-floe-part="cell">Pass</span></span><div class="title">One</div></div><div class="actual"><div data-floe-text=""><p>It held.</p></div></div><p class="how">How: By hand</p></li>
+<li data-floe-tone="bad"><div class="head"><span class="result"><span data-floe-tone="bad" data-floe-part="cell">Fail</span></span><div class="title">Two</div></div><div class="actual"><div data-floe-text=""><p>It broke.</p></div></div></li>
+<li data-floe-tone="muted"><div class="head"><span class="result"><span data-floe-tone="muted" data-floe-part="cell">Not checked</span></span><div class="title">Three</div></div><div class="actual"><div data-floe-text=""><p>Not yet.</p></div></div></li>
+</ul>
+</div>
 </section>
 </main>
 

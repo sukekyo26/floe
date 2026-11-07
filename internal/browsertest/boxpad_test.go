@@ -10,6 +10,8 @@ import (
 // panel or paint their own ground.
 const boxParts = `  - asks:
       - { question: A question }
+  - checks:
+      - { title: A check, result: ok, actual: It held }
   - options:
       - { title: One, text: first }
       - { title: Two, text: second }
@@ -55,7 +57,7 @@ var boxPadKit = map[string]string{
 func measureBoxPad(names string) string {
 	return `((names) => {
   const boxes = {
-    options: '[data-floe-part=options] .card', asks: '[data-floe-part=asks] .card', stats: '[data-floe-part=stats] .card', facts: '[data-floe-part=facts] .card',
+    options: '[data-floe-part=options] .card', asks: '[data-floe-part=asks] .card', checks: '[data-floe-part=checks]', stats: '[data-floe-part=stats] .card', facts: '[data-floe-part=facts] .card',
     links: '[data-floe-part=links] .card', decision: '[data-floe-part=decision] .card',
     steps: '[data-floe-part=steps]', timeline: '[data-floe-part=timeline]',
     bars: '[data-floe-part=bars]', tree: '[data-floe-part=tree]', note: '[data-floe-part=note]',
@@ -78,7 +80,7 @@ func measureBoxPad(names string) string {
 }
 
 // partBoxes are the boxes boxParts draw.
-const partBoxes = "options, asks, stats, facts, links, decision, steps, timeline, bars, tree, note, details title, details body"
+const partBoxes = "options, asks, checks, stats, facts, links, decision, steps, timeline, bars, tree, note, details title, details body"
 
 // boxPadWant is what measureBoxPad returns for boxParts, each box padded block above and below and inline at the
 // left and the right: facts' cards are rows (TestUIRowPad), details' title is as tall as a row of its own, and frame
@@ -86,7 +88,7 @@ const partBoxes = "options, asks, stats, facts, links, decision, steps, timeline
 func boxPadWant(block, inline, frame string) string {
 	box := block + " " + inline + " " + block + " " + inline
 	return strings.Join([]string{
-		"options " + box, "asks " + box, "stats " + box, "facts 6.4px " + inline + " 6.4px " + inline, "links " + box, "decision " + box,
+		"options " + box, "asks " + box, "checks " + box, "stats " + box, "facts 6.4px " + inline + " 6.4px " + inline, "links " + box, "decision " + box,
 		"steps " + box, "timeline " + box, "bars " + box, "tree " + frame + box, "note " + box,
 		"details title 12.8px " + inline + " 12.8px " + inline, "details body 0px " + inline + " " + block + " " + inline,
 	}, ", ")

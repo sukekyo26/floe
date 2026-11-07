@@ -7,6 +7,10 @@ sections:
       - fields:
           - { name: port, type: number, required: true, default: '8080' }
       - decision: { title: Move, status: decided, date: 2030-03-28, rejected: [Stay] }
+      - checks:
+          - { title: One, result: ok, actual: It held., how: By hand }
+          - { title: Two, result: ng, actual: It broke. }
+          - { title: Three, result: unchecked, actual: Not yet. }
   - heading: 日本語の見出し
     parts:
       - text: 日本語の**本文**と、[見出しへのリンク](#日本語の見出し)。
