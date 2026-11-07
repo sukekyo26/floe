@@ -3305,17 +3305,6 @@
     focusRow(key);
   }
 
-  // A second press of a double one is not a press more: the next pin has moved under it, and no pin comes back but by its page's menu
-  const unpinning = new Set();
-  async function unpin(e, a) {
-    if (e.detail > 1 || unpinning.has(a.slug)) return;
-    unpinning.add(a.slug);
-    try {
-      await togglePin(a);
-    } finally {
-      unpinning.delete(a.slug);
-    }
-  }
   // Drawn anew only as what they say changes, as another session's publish draws the list anew. The focus stays on what had it; of a pin
   // gone, it goes to the title of the one in its place, not its ×: a key held down would go on to take the next off, or to the help where none is left
   let pinsDrawn = null;
@@ -3353,7 +3342,8 @@
       off.innerHTML = PIN_OFF_MARK;
       off.title = t('ui_unpin_named', a.title);
       off.setAttribute('aria-label', off.title);
-      off.addEventListener('click', (e) => unpin(e, a));
+      // The second press of a double one lands on the next pin, moved under it, and no pin comes back but by its page's menu
+      off.addEventListener('click', (e) => { if (e.detail <= 1) togglePin(a); });
       const chip = tagged('span', 'pin-chip');
       chip.dataset.slug = a.slug;
       chip.append(link, off);
