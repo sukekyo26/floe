@@ -90,6 +90,17 @@ func TestUIContents(t *testing.T) { //nolint:paralleltest // the browser tests s
 		}
 	}
 	at("See the guide", "the top", b.current())
+	short := "template: report\nlang: en\ntitle: Short\nsections:\n" + strings.Repeat("  - { heading: S, parts: [ { text: x } ] }\n", 4)
+	s.floe(t, "publish", s.write(t, "short.yaml", short), "--slug", "short")
+	b.navigate("/a/short/?raw")
+	at("S", "the top of a page that cannot scroll", b.eval("[...document.querySelectorAll('[data-floe-look~=toc] a')].findIndex((a) => a.hasAttribute('aria-current')) === 0 ? 'S' : 'another'"))
+	b.size(1920, 1000, false)
+	b.navigate("/a/contents-default/?raw")
+	if got := b.eval(measureContents); got != "" {
+		amiss = append(amiss, "1920:\n"+got)
+	}
+	b.size(1440, 900, false)
+	b.navigate("/a/contents-default/?raw")
 	at("Short B", "the end", scroll("document.documentElement.scrollHeight"))
 	press := func(i int) string {
 		b.eval("[...document.querySelectorAll('[data-floe-look~=toc] a')][" + fmt.Sprint(i) + "].click()")
@@ -135,6 +146,17 @@ func TestUIContents(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if got := b.eval("!!document.querySelector('[data-floe-look~=toc]') + ' ' + (document.querySelector('main').getBoundingClientRect().width < innerWidth)"); got != "false true" {
 		amiss = append(amiss, "toc: false: contents, a narrower column = "+got)
 	}
+	// A template's contents mark the links to its own parts alone, not one to another page.
+	s.own(t, map[string]string{
+		"templates/out/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\"><title>{{.Title}}</title></head>\n<body>" +
+			"<nav data-floe-look=\"toc\" aria-label=\"Contents\"><a href=\"https://example.com/x#a\">Out</a><a href=\"#a\">A</a></nav>{{contents}}" +
+			"<h2 id=\"a\">A</h2><p style=\"height: 3000px\">x</p></body></html>\n",
+		"templates/out/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
+		"templates/out/example.yaml": "lang: en\ntemplate: out\n",
+	})
+	s.floe(t, "publish", s.write(t, "out.yaml", "lang: en\ntemplate: out\ntitle: Out\n"), "--slug", "out")
+	b.navigate("/a/out/?raw")
+	at("A", "a template's contents with a link of another page", b.current())
 	// design marks its section too.
 	b.size(1440, 900, false)
 	design, err := os.ReadFile("../corpus/testdata/example/design.yaml")
