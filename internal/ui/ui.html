@@ -888,8 +888,11 @@
   .pins { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.5rem; padding: 0.6rem 1rem; background: var(--bg); border-bottom: 1px solid var(--line); font-size: var(--text-small); }
   .pins > h2 { margin: 0 0.4rem 0 0; font: 600 var(--text-label)/1.2 var(--body); color: var(--muted); white-space: nowrap; }
   #pin-list { display: contents; }
-  .pin { display: inline-flex; align-items: center; gap: 0.35rem; max-width: 18rem; padding: 0.18rem 0.65rem; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; text-decoration: none; }
-  .pin:hover { border-color: var(--faint); }
+  .pin-chip { display: inline-flex; align-items: center; max-width: 18rem; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; }
+  .pin-chip:hover { border-color: var(--faint); }
+  .pin { display: inline-flex; align-items: center; gap: 0.35rem; min-width: 0; padding: 0.18rem 0.1rem 0.18rem 0.65rem; color: var(--fg); border-radius: 999px; text-decoration: none; }
+  .pin-chip .pin-off { flex: none; min-width: 28px; width: 28px; height: 28px; padding: 0; }
+  .pin-off svg { width: 12px; height: 12px; }
   .pin .pin-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pin svg { flex: none; width: 13px; height: 13px; color: var(--muted); }
   .pin.unseen { font-weight: 700; }
@@ -918,7 +921,7 @@
   @media (max-width: 40rem) {
     .pins { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
     .pins::-webkit-scrollbar { display: none; }
-    .pin { flex: none; max-width: 13rem; }
+    .pin-chip { flex: none; max-width: 13rem; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; animation: none !important; } }
 </style>
@@ -950,7 +953,7 @@
     </div>
   </div>
 </header>
-<p class="error" id="error" hidden></p>
+<p class="error" id="error" role="alert" hidden></p>
 <main class="shell" id="manage" hidden>
   <h1 class="sr-only">floe</h1>
   <!-- What opens a column folded, left where its button was -->
@@ -3221,6 +3224,7 @@
   // A task's URL: by the query, as / may be in either part of its name
   const taskHref = (task) => `${TASKS_PATH}?${new URLSearchParams({ project: task.project, task: task.name })}`;
   const EXTERNAL_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6m0-6-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
+  const PIN_OFF_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   const PIN_MARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4zM12 16v5"/></svg>';
   // The end of a task's URL, what tells one from another; whole in the link's title
   function urlEnd(url) {
@@ -3303,6 +3307,23 @@
     focusRow(key);
   }
 
+  // Drawn anew only as what they say changes, as another session's publish draws the list anew. The focus stays on what had it; of a pin
+  // gone, it goes to the title of the one in its place, not its ×: a key held down would go on to take the next off, or to the help where none is left
+  let pinsDrawn = null;
+  function drawChips(pinned, chips) {
+    const said = JSON.stringify(pinned.map((a) => [a.slug, a.title, Boolean(a.news), Boolean(a.folder)]));
+    if (said === pinsDrawn) return;
+    pinsDrawn = said;
+    const list = $('pin-list');
+    const was = list.contains(document.activeElement) ? document.activeElement : null;
+    const place = was && [...list.children].indexOf(was.closest('.pin-chip'));
+    const slug = was?.closest('.pin-chip').dataset.slug;
+    list.replaceChildren(...(chips.length > 0 ? chips : [tagged('span', 'pins-none', t('ui_pins_none'))]));
+    if (!was) return;
+    const same = chips.find((chip) => chip.dataset.slug === slug);
+    if (same) same.querySelector(was.classList.contains('pin-off') ? '.pin-off' : '.pin').focus();
+    else (chips[Math.min(place, chips.length - 1)]?.querySelector('.pin') ?? $('pins-help')).focus();
+  }
   // The pages pinned, which leave as they are archived, and how to pin one when none is
   // LIMIT: a folder pinned leads to the page list, where it opens (its URL), and not back here
   function drawPins() {
@@ -3318,11 +3339,21 @@
       link.innerHTML = PIN_MARK;
       link.append(tagged('span', 'pin-title', a.title));
       if (a.news) link.append(tagged('span', 'dot'));
-      return link;
+      const off = tagged('button', 'icon-btn pin-off');
+      off.type = 'button';
+      off.innerHTML = PIN_OFF_MARK;
+      off.title = t('ui_unpin_named', a.title);
+      off.setAttribute('aria-label', off.title);
+      // The second press of a double one lands on the next pin, moved under it, and no pin comes back but by its page's menu
+      off.addEventListener('click', (e) => { if (e.detail <= 1) togglePin(a); });
+      const chip = tagged('span', 'pin-chip');
+      chip.dataset.slug = a.slug;
+      chip.append(link, off);
+      return chip;
     });
     // No project yet (the tasks unreadable, none remembered) has no pins of its own to say
     $('pins').hidden = !project;
-    $('pin-list').replaceChildren(...(pins.length > 0 ? pins : [tagged('span', 'pins-none', t('ui_pins_none'))]));
+    drawChips(pinned, pins);
   }
 
   // Tasks by when their state last changed, the longest first or the latest, then by name
@@ -3920,7 +3951,7 @@
     cameFrom = null;
     if (!at) return;
     if (TASK_LIST) {
-      [...$('pin-list').children].find((pin) => pin.getAttribute('href') === pageHref({ slug: at.slug }))?.focus();
+      [...$('pin-list').children].find((chip) => chip.dataset.slug === at.slug)?.querySelector('.pin').focus();
       return;
     }
     const li = focusRow(at.file ? `page:${openKey(at.slug, at.file)}` : `entry:${at.slug}`);
@@ -4975,7 +5006,7 @@
   // LIMIT: a press meant to bring the window forward, or the focus back from the page, on the row picked opens it whole; with a menu open a double press closes it, then opens the page
   const PRESS_MS = 2000;
   let pressedAt = -Infinity;
-  $('list').addEventListener('pointerdown', () => { pressedAt = performance.now(); });
+  for (const held of [$('list'), $('pin-list')]) held.addEventListener('pointerdown', () => { pressedAt = performance.now(); });
   addEventListener('pointerup', () => { pressedAt = -Infinity; });
   // The tasks, which never fail a load: the list of pages goes on without them, and the task list says why
   // LIMIT: read at each look, as the list is, but for a page whole; a small JSON. Answer the two as one if that comes to weigh
