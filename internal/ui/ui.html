@@ -2425,10 +2425,12 @@
     pickRow(x);
   }
 
-  // Opens the page of x beside the list
+  // Whether a row of the entry a has a page to open beside the list
+  const rowOpens = (li, a) => !oneColumn.matches && a && !li.classList.contains('dir') && (!a.folder || li.dataset.file);
+  // Opens the page of x beside the list, at its version or the latest
   function pickRow(x) {
     if (isPicked(x)) return;
-    picked = { slug: x.slug, file: x.file ?? '', v: 0 };
+    picked = { slug: x.slug, file: x.file ?? '', v: x.v ?? 0 };
     versionGone = false;
     for (const li of $('list').children) li.classList.toggle('picked', li.dataset.slug === picked.slug && (li.dataset.file ?? '') === picked.file);
     drawReader();
@@ -3878,13 +3880,18 @@
     }
   }
   // What a page open whole goes by: order for j and k, shown for telling that this page is of them, and back for where it came from
-  function keepRows(order, shown) {
+  function writeKept(kept) {
     try {
-      sessionStorage.setItem(ORDER_KEY, JSON.stringify({ order, shown, back: location.pathname + location.search }));
+      sessionStorage.setItem(ORDER_KEY, JSON.stringify(kept));
     } catch {
-      // Without storage, j and k go through the list the URL of the list makes
+      // Without storage, j and k go through the list the URL of the list makes, and nothing tells where they came from
     }
   }
+  function editKept(change) {
+    const kept = keptOrder();
+    if (kept) writeKept({ ...kept, ...change(kept) });
+  }
+  const keepRows = (order, shown) => writeKept({ order, shown, back: location.pathname + location.search });
   // Keeps the rows as drawn now, of whichever screen: a read page leaves the view of the new ones, and they go on through the list as it was
   function keepOrder() {
     const rows = [...$('list').children].filter((li) => li.dataset.slug && !li.classList.contains('tree'));
@@ -3898,11 +3905,37 @@
       return null;
     }
   }
+  // The page whole gone back from, on the list that opened it: by its back button or h, which leave their mark, or the browser's own way
+  // back; the logo or a URL to the same list is no way back. Its row comes back with the focus, and beside the list at its version unless
+  // that would read a page left unread; with the list folded, the focus goes to what opens it. A pin has no page beside it
+  // LIMIT: a row no longer drawn (a read page out of the new ones, a folder's page with its folder shut) leaves no focus. Draw it if that comes to matter
+  let cameFrom = null;
+  function comeBack(returned) {
+    const kept = keptOrder();
+    if (kept?.at && (kept.pressed || returned) && kept.back === location.pathname + location.search) cameFrom = kept.at;
+    forgetOrder();
+  }
+  function backToRow() {
+    const at = cameFrom;
+    cameFrom = null;
+    if (!at) return;
+    if (TASK_LIST) {
+      [...$('pin-list').children].find((pin) => pin.getAttribute('href') === pageHref({ slug: at.slug }))?.focus();
+      return;
+    }
+    const li = focusRow(at.file ? `page:${openKey(at.slug, at.file)}` : `entry:${at.slug}`);
+    if (!li) return;
+    const a = items.find((x) => x.slug === at.slug);
+    if (rowOpens(li, a) && !a.news) pickRow(at);
+    if (!li.offsetParent) $('list-show').focus();
+  }
   // Where a page whole goes back to: the screen that opened it, or the page list
   const keptBack = () => {
     const kept = keptOrder();
     return kept?.shown.includes(framed) ? kept.back : `/${savedList()}`;
   };
+  // The page whole as the rows that opened it know it, which j and k move on, or none where it is not of them
+  const keepAt = () => editKept((kept) => ({ at: kept.shown.includes(framed) ? frameAt : null }));
   // The back button as keptBack sends it: its word, and what it says in full, of the screen it goes to
   // LIMIT: the name is the one in the URL kept: a task gone since, or a page moved to another, still says it; the screen it leads to tells. Read the task if that comes to mislead
   function drawBack() {
@@ -3919,15 +3952,8 @@
   }
   // A page renamed whole is still of the rows that opened it
   function renameKept(was, now) {
-    const kept = keptOrder();
-    if (!kept) return;
     const named = (slug) => (slug === was ? now : slug);
-    const back = kept.back;
-    try {
-      sessionStorage.setItem(ORDER_KEY, JSON.stringify({ order: kept.order.map(named), shown: kept.shown.map(named), back }));
-    } catch {
-      // Without storage, there was none to keep
-    }
+    editKept((kept) => ({ order: kept.order.map(named), shown: kept.shown.map(named), at: kept.at && { ...kept.at, slug: named(kept.at.slug) } }));
   }
 
   // The pages j and k go through in the frame: those of the list that opened it, the ones gone since left out. Opened
@@ -5004,7 +5030,10 @@
     if (text === drawn) return;
     drawn = text;
     if (framed) renderFrame();
-    else render();
+    else {
+      render();
+      backToRow();
+    }
     if ($('find').open) drawFind();
   }
 
@@ -5265,8 +5294,15 @@
     $('frame-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
     $('back').hidden = false;
     drawBack();
+    keepAt();
+    // A modified press is the link's, in a new tab: this tab goes nowhere
+    $('back').addEventListener('click', (e) => { if (!e.button && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) editKept(() => ({ pressed: true })); });
     // A page come back to from the browser's memory has what it drew then; what was kept may have changed since
-    addEventListener('pageshow', (e) => { if (e.persisted) drawBack(); });
+    addEventListener('pageshow', (e) => {
+      if (!e.persisted) return;
+      drawBack();
+      keepAt();
+    });
     try {
       const move = JSON.parse(sessionStorage.getItem(VERSION_MOVE));
       sessionStorage.removeItem(VERSION_MOVE);
@@ -5300,7 +5336,12 @@
     $('keys-frame').hidden = $('keys-note-frame').hidden = true;
     $('diff').remove();
     // Back on a list, what the one before kept for j and k is over
-    forgetOrder();
+    comeBack(performance.getEntriesByType('navigation')[0]?.type === 'back_forward');
+    addEventListener('pageshow', (e) => {
+      if (!e.persisted) return;
+      comeBack(true);
+      backToRow();
+    });
     $('manage').hidden = false;
     // The bar's way between the two screens, there with no task too: that is how one finds the task list
     $('screens').hidden = false;
@@ -5458,7 +5499,7 @@
       const li = rows[at === -1 ? (step > 0 ? 0 : rows.length - 1) : Math.max(0, Math.min(rows.length - 1, at + step))];
       li.querySelector('.title').focus();
       const a = items.find((x) => x.slug === li.dataset.slug);
-      if (!oneColumn.matches && a && !li.classList.contains('dir') && (!a.folder || li.dataset.file)) pickRow({ slug: a.slug, file: li.dataset.file });
+      if (rowOpens(li, a)) pickRow({ slug: a.slug, file: li.dataset.file });
     };
     Object.assign(KEYS, {
       ArrowDown: () => moveRow(1),

@@ -571,6 +571,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Fix going back from a page opened whole, by the back button, `h` or the browser's own: the list that opened it, the page list or a task's page, now has that page's row focused and the page beside the list, or the pin focused on the task list. A page left unread stays unread: only its row has the focus.
 - Fix a Venn diagram's label placed by its region standing 2 off the axis of a region symmetric about one: the
   points tried for it are now counted from the middle of where its circles are, not from their edge. Every label
   placed by its region may move, in the drawing and in `floe diagram inspect`: mostly by 2 or less across and down,

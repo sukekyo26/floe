@@ -259,7 +259,7 @@ func TestUIDiffWays(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, b.eval("document.querySelector('[data-diff-view=all]').getAttribute('aria-pressed') + ' ' + getComputedStyle(document.querySelector('.dtoc')).display + ' ' + document.querySelector('#frame-actions .diff-open').getAttribute('aria-label') + ' ' + document.querySelector('#frame-actions .diff-open').matches('.closing')"))
 	b.navigate("/a/d/")
 	b.until("its bar narrow", "document.querySelector('#frame-actions .diff-open').offsetWidth > 0")
-	check(t, "ways", out, strings.Join([]string{"true", "true", "false", "/a/e/?diff See what changed (d)", `{"order":["e","one"],"shown":["e","one"],"back":"/"}`, "true none Close the diff (d) true"}, "|"))
+	check(t, "ways", out, strings.Join([]string{"true", "true", "false", "/a/e/?diff See what changed (d)", `{"order":["e","one"],"shown":["e","one"],"back":"/","at":{"slug":"e","file":"","v":0}}`, "true none Close the diff (d) true"}, "|"))
 }
 
 // TestUIDiffPick has the versions chosen from the browser's own list, drawn by the page: the arrows open it and move in it, asking for nothing
