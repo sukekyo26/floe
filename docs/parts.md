@@ -87,6 +87,10 @@ It has the functions floe's parts draw with too. floe's parts show them in their
 
 Put it in the schema of the list `part.html` gives to `bars`: for `bars .items`, under `properties.items`, as `properties.items.items`; at the root it checks nothing of the list.
 
+### `stats`
+
+`{{range stats .}}` reads a list of items, each written as keys and values: `label`, `value`, `unit`, `note`, `tone`, `from` and `better`. Each comes as `.Label`, `.Value` as written, `.Unit`, `.Note`, `.Tone` and `.From`; `.Way`, `better`, `worse` or `same`, and `.WayTone`, `good`, `bad` or `muted`, empty without `from`; and `.Change`, `value` less `from`, signed and exact, to the decimals of the longer of the two, empty when they are the same. With `from`, `from` and `value` are text of digits alone (`^-?[0-9]+([.][0-9]+)?$`) and `better` is `lower` or `higher`: the function refuses others, each at the key written, naming the item by its number and label. The other keys are for the part's schema to say.
+
 ### `chart`
 
 `{{$c := chart .}}` counts the places of the part `chart` from the part's whole value, for its `part.html` to write the SVG. It is for that part: its fields, and the height, text and class they assume, are not promised. It refuses a value it cannot place: `kind` other than `line` or `bar`, an empty `x` or `series`, a number of `values` other than that of `x`, or a value or `min` not a number. A number of `values` and a value or `min` not a number are told where they are written in the part's value, the others at the part's value.

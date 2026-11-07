@@ -82,6 +82,8 @@ var messagesEN = map[string]string{
 	"kit_name_theme_file":        "%s names a file of every theme (%[1]s.css), which a theme's CSS for this part would be read as: give it another name",
 	"kit_asset_unknown":          `assets/ has no "%s": name a file under it, as a path from assets/ like img/logo.svg`,
 	"kit_below_zero":             "%s takes a number of 0 or more, not %s",
+	"kit_stat_change":            "stats: item %d %q: with from, write from and value as digits in quotes, and better as lower or higher; %s is not so",
+	"kit_stat_item":              "stats takes items written as keys and values (label, value and the like); item %d is not",
 	"kit_bar_item":               "%s takes items written as keys and values (label, value, of, tone); item %d is not",
 	"kit_bar_of":                 "%s takes a number above 0, not %s",
 	"kit_chart_length":           "chart: series %d %q has %d values for the %d names of x; write a value for each name",

@@ -10,6 +10,9 @@ sections:
           - { label: Pages, value: '1,840' }
           - { label: Broken links, value: '120', note: '-35 since the last check', tone: good }
           - { label: Downtime, value: '0', unit: hours }
+          - { label: Slow pages, value: '4', from: '9', better: lower }
+          - { label: Copied, value: '80', from: '95.5', unit: '%', better: higher }
+          - { label: Owners, value: '3', from: '3', better: higher, note: The same three }
           - { label: Spaces, value: '12', tone: accent }
           - { label: Owners left, value: '3', tone: warn }
           - { label: Lost pages, value: '1', tone: bad }

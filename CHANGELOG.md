@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `from` and `better` to the part `stats`: `from` is the number before, drawn as `3.1 → 1.3` with the change under it, exact and in its colour, for the better or the worse as `better` says. Pages without `from` are drawn as before.
 - Add the part `chart`: numbers over a row of names, as a line or as upright bars, with up to 4 series, on one scale from 0 (`min` moves a line's start), at the page's text size at every width, with the numbers in a folded table. Each theme has its own four colours, `--chart-1` to `--chart-4`; brutal, blueprint, notebook, retro and washi draw their lines and bars in their own shapes.
 - Add the part `checks`: what was checked and what came of it, in a survey or a test, each with ok, ng or unchecked, the actual result and how it was checked, in the order written, the count of each result on top.
 - Add "+ Add task" at the top right of the task list: it makes a task of the project shown from a task ID and a title, then goes to To do with the new row marked; an ID already there offers "Open the task". The screen of no task anywhere has the same button and asks for a project. The "Page list | Task list" switch now shows with no task too, and the words of the screen of no task say how to make one. The screens of no task and of no page no longer show a command

@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/files"
+	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/tmpl"
 )
 
@@ -617,6 +619,103 @@ func TestChartMistakes(t *testing.T) {
 		if got := drawn(t, k, data, none); got != tt.want {
 			t.Errorf("%s: told %q, want %q", tt.value, got, tt.want)
 		}
+	}
+}
+
+// statsKit is a kit with a part that draws the function stats of its whole value, whose schema says nothing of its items,
+// and one that gives it a piece of its value.
+func statsKit(t *testing.T) *kit.Kit {
+	t.Helper()
+	const head = `{"$schema": "https://json-schema.org/draft/2020-12/schema", `
+	parts := map[string]string{
+		"ps/schema.json": head + `"type": "array"}`,
+		"ps/part.html":   `<div data-floe-part="ps">{{range stats .}}[{{.Value}}]{{end}}</div>`,
+		"ps/part.css":    "",
+		"pi/schema.json": head + `"type": "object"}`,
+		"pi/part.html":   `<div data-floe-part="pi">{{range stats .items}}[{{.Value}}]{{end}}</div>`,
+		"pi/part.css":    "",
+	}
+	page := htmlPage("{{.Data.c}}{{.Data.d}}")
+	return ownKit(t, parts, mine(page, head+`"type": "object", "properties": {"c": {"$ref": "floe:///parts/ps.json"}, `+
+		`"d": {"$ref": "floe:///parts/pi.json"}}}`, nil))
+}
+
+// The form of from and value is written twice, in the part's schema and in the function for a part of one's own: each
+// of these is taken or refused by both.
+func TestStatNumbers(t *testing.T) {
+	t.Parallel()
+
+	own := statsKit(t)
+	floe, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		value string
+		good  bool
+	}{
+		{"0", true},
+		{"-1", true},
+		{"007", true},
+		{"1.50", true},
+		{"-0.5", true},
+		{"+1", false},
+		{".5", false},
+		{"1.", false},
+		{"1e3", false},
+		{"1/2", false},
+		{"0x10", false},
+		{"１", false},
+		{"1_000", false},
+		{"1,234", false},
+		{"", false},
+		{"-", false},
+		{"--1", false},
+		{" 1", false},
+		{"1 ", false},
+		{"1\n", false},
+		{"\n1", false},
+	} {
+		item := "{label: a, value: " + strconv.Quote(tt.value) + ", from: '2', better: lower}\n"
+		function := drawn(t, own, "lang: en\ntemplate: mine\nc:\n  - "+item, none)
+		part := drawn(t, floe, "lang: en\ntemplate: report\ntitle: t\nsections:\n  - heading: a\n    parts:\n      - stats:\n          - "+item, none)
+		// The function refuses after the schema, whose words alone show that the schema did.
+		if (function == "") != tt.good || (part == "") != tt.good || (!tt.good && !strings.Contains(part, "does not match pattern")) {
+			t.Errorf("%q: the function told %q, the schema %q, want taken %v", tt.value, function, part, tt.good)
+		}
+	}
+}
+
+// What stats cannot count is refused for a part of one's own, all of an item's and each item's, at where it is written
+// and naming the item when the function is given a piece of the value; the rest is its schema's to say.
+func TestPartStatsRefused(t *testing.T) {
+	t.Parallel()
+
+	const head = `stats: item 1 "a": with from, write from and value as digits in quotes, and better as lower or higher; `
+	k := statsKit(t)
+	for _, tt := range []struct{ item, want string }{
+		{"3", "d.yaml:4:3: stats takes items written as keys and values (label, value and the like); item 1 is not"},
+		{"{label: a, value: '1', from: 'x', better: lower}", "d.yaml:4:34: " + head + "from is not so"},
+		{"{label: a, value: 'x', from: '1', better: lower}", "d.yaml:4:23: " + head + "value is not so"},
+		{"{label: a, value: '1', from: '2'}", "d.yaml:4:6: " + head + "better is not so"},
+		{"{label: a, value: '1', from: '2', better: down}", "d.yaml:4:6: " + head + "better is not so"},
+		{"{label: a, value: 3, from: 2, better: lower}", "d.yaml:4:23: " + head + "value is not so\nd.yaml:4:32: " + head + "from is not so"},
+		{"{label: a, value: 3}", ""},
+		{"{label: a, value: '1', better: lower}", ""},
+	} {
+		if got := drawn(t, k, "lang: en\ntemplate: mine\nc:\n  - "+tt.item+"\n", none); got != tt.want {
+			t.Errorf("%s: told %q, want %q", tt.item, got, tt.want)
+		}
+	}
+	const two = "lang: en\ntemplate: mine\nd:\n  items:\n    - {label: a, value: '1', from: x, better: lower}\n" +
+		"    - {label: b, value: '1', from: y, better: lower}\n"
+	want := "d.yaml:4:3: " + head + "from is not so\nd.yaml:4:3: " + strings.Replace(head, `item 1 "a"`, `item 2 "b"`, 1) + "from is not so"
+	if got := drawn(t, k, two, none); got != want {
+		t.Errorf("a piece of the value: told %q, want %q", got, want)
+	}
+	page, _, err := tmpl.Draw(k, "d.yaml", []byte("lang: en\ntemplate: mine\nc:\n  - {label: a, value: 3}\n"), none)
+	if err != nil || !strings.Contains(string(page), "[3]") {
+		t.Errorf("a value of no from, not text, draws %s, %v", page, err)
 	}
 }
 
