@@ -55,8 +55,16 @@ func TestChartScale(t *testing.T) {
 		{"a fraction", nil, []any{0.1, 0.3}, []string{"0", "0.1", "0.2", "0.3"}},
 		{"past 9 digits", nil, []any{uint64(18446744073709551615), uint64(9007199254740993)}, []string{"0", "5e+18", "1e+19", "1.5e+19", "2e+19"}},
 		{
-			"as many digits as tell them apart", 1230000000000, []any{1230000000000, 1231000000000},
+			"as many digits as tell them apart", 1230000000000,
+			[]any{1230000000000, 1231000000000},
 			[]string{"1.23e+12", "1.2302e+12", "1.2304e+12", "1.2306e+12", "1.2308e+12", "1.231e+12"},
+		},
+		{"a min off the step", 1.5, []any{2, 10}, []string{"1.5", "3.5", "5.5", "7.5", "9.5", "11.5"}},
+		{"a min off the step past 0", 90.5, []any{120, 141}, []string{"90.5", "110.5", "130.5", "150.5"}},
+		{
+			"past 9 digits, off the step", 1234567890123,
+			[]any{1234567890123, 2234567890123},
+			[]string{"1.235e+12", "1.435e+12", "1.635e+12", "1.835e+12", "2.035e+12", "2.235e+12"},
 		},
 		{"13 digits close", 1730000000000, []any{1730000000000, 1730000000900}, nil},
 		{"past a float's step", 1e15, []any{1e15 + 0.125, 1e15 + 0.25}, nil},
@@ -71,6 +79,35 @@ func TestChartScale(t *testing.T) {
 		}
 		if !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("%s: ticks %q, want %q", tt.name, got, tt.want)
+		}
+	}
+}
+
+// A scale across 0 has a line for it, though no tick falls on it, and a word only where one does.
+func TestChartZeroLine(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		lowest any
+		values []any
+		word   string
+	}{
+		{-0.3, []any{1, 2}, ""},
+		{-1, []any{1, 2}, "0"},
+		{nil, []any{-1, 2}, "0"},
+	} {
+		c, err := chartOf(lineOf(tt.lowest, tt.values...))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var zero []chartTick
+		for _, k := range c.Ticks {
+			if k.Zero {
+				zero = append(zero, k)
+			}
+		}
+		if len(zero) != 1 || zero[0].Text != tt.word {
+			t.Errorf("min %v, %v: the lines of 0 are %+v, want one with %q", tt.lowest, tt.values, zero, tt.word)
 		}
 	}
 }
@@ -209,7 +246,7 @@ func TestChartLabels(t *testing.T) {
 			narrow++
 		}
 	}
-	if !c.Dense || len(c.Labels) == 30 || narrow == 0 || narrow == len(c.Labels) {
+	if !c.Dense || len(c.Labels) == 30 || narrow < 2 || narrow == len(c.Labels) {
 		t.Errorf("30 of x: Dense %v, %d labels, %d of them at a narrow box", c.Dense, len(c.Labels), narrow)
 	}
 	c, err = chartOf(map[string]any{"kind": "bar", "title": "t", "x": xs, "series": series(4)})

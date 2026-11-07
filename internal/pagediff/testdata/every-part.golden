@@ -114,6 +114,7 @@
   [tr] Thu | 980 | 700 | 40 | 80
   [tr] Fri | 1,200 | 950 | 20 | 100
   [figcaption] Attachments by size
+  [li] Files
   [svg] 0 / 100 / 200 / 300 / 400 / 500 / Small / Medium / Large / 420 / 180 / 35
   [summary] The numbers
   [tr] Name | Files
@@ -216,6 +217,7 @@
 ## h2 Folded
   [summary] The whole log
   [figcaption] Copied by hour
+  [li] Pages
   [svg] 0 / 100 / 200 / 300 / 400 / 500 / 1:00 / 2:00 / 420 / 180
   [summary] The numbers
   [tr] Name | Pages

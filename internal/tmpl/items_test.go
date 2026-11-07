@@ -609,8 +609,8 @@ func TestChartMistakes(t *testing.T) {
 		{"{kind: line, x: [a, b], series: [{name: a, values: [1]}]}", `d.yaml:3:55: chart: series 1 "a" has 1 values for the 2 names of x; write a value for each name`},
 		{"{kind: line, x: [a, b], series: [{name: a, values: [1]}, {name: b, values: [1, 2, 3]}]}", `d.yaml:3:55: chart: series 1 "a" has 1 values for the 2 names of x; write a value for each name` + "\n" +
 			`d.yaml:3:79: chart: series 2 "b" has 3 values for the 2 names of x; write a value for each name`},
-		{"{kind: line, x: [a], series: [{name: a, values: [x]}]}", `d.yaml:3:5: chart: series 1 "a" takes a number, not "x"`},
-		{"{kind: line, min: x, x: [a], series: [{name: a, values: [1]}]}", `d.yaml:3:5: chart: min takes a number, not "x"`},
+		{"{kind: line, x: [a], series: [{name: a, values: [x]}]}", `d.yaml:3:53: chart: series 1 "a" takes a number, not "x"`},
+		{"{kind: line, min: x, x: [a], series: [{name: a, values: [1]}]}", `d.yaml:3:22: chart: min takes a number, not "x"`},
 		{"{kind: bar, min: x, title: T, x: [a], series: [{name: a, values: [1]}]}", ""},
 	} {
 		data := "lang: en\ntemplate: mine\nc: " + tt.value + "\n"

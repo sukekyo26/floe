@@ -57,6 +57,7 @@ sections:
             - { name: B, values: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30] }
             - { name: C, values: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30] }
             - { name: D, values: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30] }
+      - chart: { kind: line, title: A title long enough for the legend under it to go on a line of its own at any width of a page, x: [a, b], series: [ { name: One, values: [1, 2] } ] }
       - chart: { kind: line, title: Digits, x: [a, b], series: [ { name: Long name of a series, values: [123456789, 123499999] }, { name: B, values: [1234567890123, 12] } ] }
       - chart: { kind: line, title: Close, min: 1730000000000, x: [a, b], series: [ { name: A, values: [1730000000000, 1730000000900] } ] }
       - chart: { kind: line, title: Long ticks, x: ['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'], series: [ { name: A, values: [999999999, 1] } ] }
@@ -138,7 +139,7 @@ const measureChart = `(() => {
       if (t.matches('.x') && r.width > 10 * rem) out.add('x not cut near 8rem: ' + t.textContent);
       if (ratio(f, ground) < 4.5) out.add('text ' + t.textContent + ' ' + ratio(f, ground).toFixed(2));
       if (r.left < box.left - 0.5 || r.right > box.right + 0.5) out.add('text out of its box: ' + t.textContent); }
-    const seen = texts.filter((t) => t.matches('.x, .end'));
+    const seen = texts.filter((t) => t.matches('.x, .end, .val, .tick'));
     for (let i = 0; i < seen.length; i++) for (let j = i + 1; j < seen.length; j++) { const a = seen[i].getBoundingClientRect(), b = seen[j].getBoundingClientRect();
       if (a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 2 && b.top < a.bottom - 2) out.add('text over text: ' + seen[i].textContent + ' / ' + seen[j].textContent); }
     for (const d of svg.querySelectorAll('.dot')) { const r = d.getBoundingClientRect(), s = getComputedStyle(d);
@@ -158,7 +159,10 @@ const measureChart = `(() => {
     if (svg.getBoundingClientRect().width - parseFloat(getComputedStyle(svg).paddingLeft) - parseFloat(getComputedStyle(svg).paddingRight) < 30) out.add('no room for the plot: ' + c.textContent.slice(0, 20));
 
     const names = [...svg.querySelectorAll('.name')].filter((n) => n.getBoundingClientRect().width > 0).length;
-    const narrow = c.clientWidth < 34 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const pad = getComputedStyle(c), narrow = c.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight) < 34 * rem;
+    if ([...c.querySelectorAll('.legend li')].filter((l) => l.getBoundingClientRect().width > 0).length !== svg.querySelectorAll(':scope > g').length) out.add('a series not in the legend: ' + c.textContent.slice(0, 20));
+    const legend = c.querySelector('.legend li').getBoundingClientRect(), title = c.querySelector('.title').getBoundingClientRect();
+    if (legend.top >= title.bottom && Math.abs(legend.left - title.left) > 0.5) out.add('a legend on its own line off the title by ' + (legend.left - title.left));
     if (svg.querySelector('.name') && (narrow ? names !== 0 : names === 0)) out.add('names shown ' + names + ' at ' + c.clientWidth);
   }
   if ([...document.querySelectorAll('[data-floe-part=chart] svg *')].some((e) => [...e.attributes].some((a) => /NaN|Inf/.test(a.value)))) out.add('a place not a number');

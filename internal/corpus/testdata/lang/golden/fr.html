@@ -233,7 +233,29 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="checks"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="chart"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="checks"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="details"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
+   colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
+   box's ring staying in the face around it */
+:scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
+:scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="table"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A panel: a face of the surface in a thin frame, its corners round, lifted a little. On its ground it sets its text's
    colour and takes no face from around it (a band's); on a part's box base.css does that for what the box holds, the
    box's ring staying in the face around it */
@@ -250,6 +272,39 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    box's ring staying in the face around it */
 :scope { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius); }
 :scope:where(:not([data-floe-part])) { --face: initial; --on-face: initial; }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth0 {
+@scope ([data-floe-part="chart"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* Sizes in rem, as chart.go counts the room of the labels and the height of the plot in them */
+:scope { container-type: inline-size; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; overflow-wrap: anywhere; padding: var(--floe-pad-block) var(--floe-pad-inline); }
+:scope .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
+:scope .title { font-weight: 700; }
+:scope .unit { font-size: var(--floe-text-small); color: var(--muted); }
+:scope .legend { display: flex; flex-wrap: wrap; gap: 0.25rem 0.9rem; font-size: var(--floe-text-small); list-style: none; padding: 0; }
+:scope .legend li { display: flex; align-items: center; gap: 0.35rem; }
+:scope .key { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--c); }
+:scope .s1 { --c: var(--chart-1); } :scope .s2 { --c: var(--chart-2); } :scope .s3 { --c: var(--chart-3); } :scope .s4 { --c: var(--chart-4); }
+:scope svg { display: block; box-sizing: border-box; width: 100%; height: 16.5rem; padding: 1rem var(--right) 2rem var(--left); background: var(--chart-ground, none); overflow: visible; font-size: var(--floe-text-small); }
+:scope svg text { dominant-baseline: central; fill: currentColor; color: var(--muted); }
+:scope .end, :scope .val { color: var(--fg); }
+:scope .tick, :scope .val, :scope .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+:scope .grid { stroke: color-mix(in srgb, var(--fg) 14%, transparent); stroke-width: 1; }
+:scope .zero { stroke: var(--muted); }
+:scope svg g { color: var(--c); }
+:scope .seg { stroke: currentColor; stroke-width: var(--chart-line, 2px); stroke-dasharray: var(--chart-dash, none); stroke-linecap: round; }
+:scope .dot { r: var(--chart-dot, 4px); fill: var(--chart-dot-fill, currentColor); stroke: var(--chart-dot-edge, var(--surface)); stroke-width: var(--chart-dot-line, 2px); }
+:scope .hit { fill: transparent; }
+:scope rect { fill: var(--chart-bar-fill, currentColor); stroke: var(--chart-bar-edge, none); stroke-width: var(--chart-bar-line, 0); rx: var(--radius-small); }
+:scope .thin rect { fill: currentColor; stroke: none; rx: 0; }
+@container (max-width: 34rem) {
+  :scope svg { padding-inline-end: var(--right-narrow); }
+  :scope .name, :scope .wide { display: none; }
+  /* Go knows not how wide a bar comes out here, as low as a few px: a frame would be all of one */
+  :scope rect { fill: currentColor; stroke: none; }
+}
 }
 }
 </style>
@@ -321,8 +376,57 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 }
 </style>
 <style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="details"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* The mark before the title turns down when open */
+:scope > summary {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem var(--floe-pad-inline); cursor: pointer; font-weight: 700; list-style: none;
+}
+:scope > summary::-webkit-details-marker { display: none; }
+:scope > summary::before {
+  content: ""; flex: none; width: 0.5rem; height: 0.5rem; margin-left: 0.15rem; border: solid var(--muted);
+  border-width: 0 2px 2px 0; transform: rotate(-45deg); transition: transform 0.15s;
+}
+:scope[open] > summary::before { transform: rotate(45deg); margin-top: -0.25rem; }
+/* The ring follows the box's corners at the top, and at the bottom too while it is shut.
+   LIMIT: the corner is the box's outer one, not less its frame; a frame of a few px leaves the ring a little rounder */
+:scope > summary:focus-visible { outline-offset: -2px; border-radius: var(--radius); }
+:scope[open] > summary:focus-visible { border-end-start-radius: 0; border-end-end-radius: 0; }
+:scope > div { padding: 0 var(--floe-pad-inline) var(--floe-pad-block); }
+}
+}
+</style>
+<style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
+   its width outside (base.css's pre has the LIMIT); on paper its columns share the paper's width, words kept whole */
+@media screen { :scope { overflow-x: auto; contain: inline-size; } }
+:scope table { border-collapse: collapse; width: 100%; overflow-wrap: normal; }
+:scope :is(th, td) { text-align: left; vertical-align: baseline; padding: var(--floe-row-pad) 0.8rem; }
+@media screen {
+  :scope :is(th, td):not(.num) { min-width: 7em; }
+  /* A num column's heading wraps as long as it needs, but not a character a line */
+  :scope th.num { min-width: 6em; }
+}
+:scope thead th {
+  font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted));
+  background: var(--table-head-bg, var(--quiet));
+}
+/* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
+   --table-rule (none for no rule) */
+:scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
+:scope .num { text-align: right; }
+:scope td.num {
+  min-width: auto; font-family: var(--mono);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="table"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* On narrow screens, the table scrolls sideways inside its element instead of squeezing its columns, telling nothing of
    its width outside (base.css's pre has the LIMIT); on paper its columns share the paper's width, words kept whole */
 @media screen { :scope { overflow-x: auto; contain: inline-size; } }
@@ -385,7 +489,23 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 </style>
 <style>
 @layer floe.parts.depth0 {
-@scope ([data-floe-part="checks"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+@scope ([data-floe-part="chart"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="checks"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth1 {
+@scope ([data-floe-part="details"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+/* A face of the panel's ground, on which what is quiet is of the surface */
+:scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="table"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* A face of the panel's ground, on which what is quiet is of the surface */
 :scope { background: var(--default-panel); border: 0; --quiet: var(--surface); --default-quote: var(--surface); --default-quote-quiet: var(--default-panel); }
 }
@@ -418,6 +538,19 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="fields"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
+:scope { padding: var(--default-pad); --table-head-bg: none; }
+:scope table { border-collapse: separate; border-spacing: 0; }
+:scope tbody td { background: var(--surface); --quiet: var(--default-panel); }
+:scope tbody tr:first-child td:first-child { border-top-left-radius: var(--default-inner); }
+:scope tbody tr:first-child td:last-child { border-top-right-radius: var(--default-inner); }
+:scope tbody tr:last-child td:first-child { border-bottom-left-radius: var(--default-inner); }
+:scope tbody tr:last-child td:last-child { border-bottom-right-radius: var(--default-inner); }
+}
+}
+</style>
+<style>
+@layer floe.parts.depth2 {
+@scope ([data-floe-part="table"]:where(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { padding: var(--default-pad); --table-head-bg: none; }
 :scope table { border-collapse: separate; border-spacing: 0; }
 :scope tbody td { background: var(--surface); --quiet: var(--default-panel); }
@@ -496,6 +629,22 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 <li data-floe-tone="muted"><div class="head"><span class="result"><span data-floe-tone="muted" data-floe-part="cell">Not checked</span></span><div class="title">Three</div></div><div class="actual"><div data-floe-text=""><p>Not yet.</p></div></div></li>
 </ul>
 </div>
+<figure data-floe-part="chart">
+<figcaption class="head"><span class="title">Pages</span>
+<ul class="legend"><li class="s1"><span class="key"></span>Copied</li></ul></figcaption>
+<svg role="img" aria-label="Line chart: Pages" style="--left: 2.19rem; --right: 4.87rem; --right-narrow: 1.4rem"><line class="grid zero" x1="0" x2="100%" y1="100%" y2="100%"></line><text class="tick" x="0" y="100%" dx="-0.5em" text-anchor="end">0</text><line class="grid" x1="0" x2="100%" y1="75%" y2="75%"></line><text class="tick" x="0" y="75%" dx="-0.5em" text-anchor="end">0.5</text><line class="grid" x1="0" x2="100%" y1="50%" y2="50%"></line><text class="tick" x="0" y="50%" dx="-0.5em" text-anchor="end">1</text><line class="grid" x1="0" x2="100%" y1="25%" y2="25%"></line><text class="tick" x="0" y="25%" dx="-0.5em" text-anchor="end">1.5</text><line class="grid" x1="0" x2="100%" y1="0%" y2="0%"></line><text class="tick" x="0" y="0%" dx="-0.5em" text-anchor="end">2</text><text class="x" x="0%" y="100%" dy="1.5em" text-anchor="middle">a</text><text class="x" x="100%" y="100%" dy="1.5em" text-anchor="middle">b</text><g class="s1"><line class="seg" x1="0%" y1="50%" x2="100%" y2="0%"></line><g><title>a Copied 1</title><circle class="hit" cx="0%" cy="50%" r="12"></circle><circle class="dot" cx="0%" cy="50%" r="4"></circle></g><g><title>b Copied 2</title><circle class="hit" cx="100%" cy="0%" r="12"></circle><circle class="dot" cx="100%" cy="0%" r="4"></circle></g><text class="end" x="100%" y="0%" dx="0.7em"><tspan class="name">Copied </tspan><tspan class="num">2</tspan></text>
+</g>
+</svg>
+<details data-floe-part="details"><summary>The numbers</summary><div><div data-floe-part="table"><table><thead><tr><th scope="col">Name</th><th scope="col" class="num">Copied</th></tr></thead><tbody><tr><td>a</td><td class="num">1</td></tr><tr><td>b</td><td class="num">2</td></tr></tbody></table></div></div></details>
+</figure>
+<figure data-floe-part="chart">
+<figcaption class="head"><span class="title">Pages</span>
+<ul class="legend"><li class="s1"><span class="key"></span>Copied</li></ul></figcaption>
+<svg role="img" aria-label="Bar chart: Pages" style="--left: 2.19rem; --right: 0.2rem; --right-narrow: 0.2rem"><line class="grid zero" x1="0" x2="100%" y1="100%" y2="100%"></line><text class="tick" x="0" y="100%" dx="-0.5em" text-anchor="end">0</text><line class="grid" x1="0" x2="100%" y1="75%" y2="75%"></line><text class="tick" x="0" y="75%" dx="-0.5em" text-anchor="end">0.5</text><line class="grid" x1="0" x2="100%" y1="50%" y2="50%"></line><text class="tick" x="0" y="50%" dx="-0.5em" text-anchor="end">1</text><line class="grid" x1="0" x2="100%" y1="25%" y2="25%"></line><text class="tick" x="0" y="25%" dx="-0.5em" text-anchor="end">1.5</text><line class="grid" x1="0" x2="100%" y1="0%" y2="0%"></line><text class="tick" x="0" y="0%" dx="-0.5em" text-anchor="end">2</text><text class="x" x="25%" y="100%" dy="1.5em" text-anchor="middle">a</text><text class="x" x="75%" y="100%" dy="1.5em" text-anchor="middle">b</text><g class="s1"><g><title>a Copied 1</title><rect x="14.2%" y="50%" width="21.6%" height="50%"></rect><text class="val" x="25%" y="50%" text-anchor="middle" dy="-0.7em">1</text></g><g><title>b Copied 2</title><rect x="64.2%" y="0%" width="21.6%" height="100%"></rect><text class="val" x="75%" y="0%" text-anchor="middle" dy="-0.7em">2</text></g>
+</g>
+</svg>
+<details data-floe-part="details"><summary>The numbers</summary><div><div data-floe-part="table"><table><thead><tr><th scope="col">Name</th><th scope="col" class="num">Copied</th></tr></thead><tbody><tr><td>a</td><td class="num">1</td></tr><tr><td>b</td><td class="num">2</td></tr></tbody></table></div></div></details>
+</figure>
 </section>
 </main>
 

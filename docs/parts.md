@@ -89,7 +89,7 @@ Put it in the schema of the list `part.html` gives to `bars`: for `bars .items`,
 
 ### `chart`
 
-`{{$c := chart .}}` counts the places of the part `chart` from the part's whole value, for its `part.html` to write the SVG. It is for that part: its fields, and the height, text and class they assume, are not promised. It refuses a value it cannot place: `kind` other than `line` or `bar`, an empty `x` or `series`, a number of `values` other than that of `x`, or a value not a number, at the place of the mistake in the part's value.
+`{{$c := chart .}}` counts the places of the part `chart` from the part's whole value, for its `part.html` to write the SVG. It is for that part: its fields, and the height, text and class they assume, are not promised. It refuses a value it cannot place: `kind` other than `line` or `bar`, an empty `x` or `series`, a number of `values` other than that of `x`, or a value or `min` not a number. A number of `values` and a value or `min` not a number are told where they are written in the part's value, the others at the part's value.
 
 ### `written`
 

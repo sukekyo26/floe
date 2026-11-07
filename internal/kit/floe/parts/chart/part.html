@@ -1,7 +1,7 @@
 {{- $c := chart . -}}
 <figure data-floe-part="chart">
 <figcaption class="head"><span class="title">{{$c.Title}}</span>{{with $c.Unit}}<span class="unit">{{.}}</span>{{end}}
-{{- if $c.Legend}}<ul class="legend">{{range $c.Series}}<li class="s{{.N}}"><span class="key"></span>{{.Name}}</li>{{end}}</ul>{{end}}</figcaption>
+<ul class="legend">{{range $c.Series}}<li class="s{{.N}}"><span class="key"></span>{{.Name}}</li>{{end}}</ul></figcaption>
 <svg{{if $c.Thin}} class="thin"{{end}} role="img" aria-label="{{word $c.Kind}}: {{$c.Title}}{{with $c.Unit}} ({{.}}){{end}}" style="--left: {{$c.Left}}rem; --right: {{$c.Right}}rem; --right-narrow: {{$c.RightNarrow}}rem">
 {{- range $t := $c.Ticks}}<line class="grid{{if .Zero}} zero{{end}}" x1="0" x2="100%" y1="{{.Y}}%" y2="{{.Y}}%"></line>{{with .Text}}<text class="tick" x="0" y="{{$t.Y}}%" dx="-0.5em" text-anchor="end">{{.}}</text>{{end}}{{end}}
 {{- range $c.Labels}}<text class="x{{if .Wide}} wide{{end}}" x="{{.X}}%" y="100%" dy="1.5em" text-anchor="middle">{{.Text}}</text>{{end}}

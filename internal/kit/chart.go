@@ -2,22 +2,27 @@ package kit
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"math"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
-// The plot's height and the room of its labels, in rem, as part.css sets them.
+// The plot's height and the room of its labels, in rem, as part.css and base.css set them.
+// LIMIT: a chart in a box in a column has less than narrowBox, and its labels may meet; the table holds them.
 const (
-	plotHeight  = 13.5 // height 16.5rem less the padding 1rem + 2rem
+	plotHeight  = 16.5 - 1 - 2 // the svg's height less its padding
 	labelHeight = 1.15
 	charNarrow  = 0.8 * 0.62 // an ASCII character in the mono face at --floe-text-small
 	charWide    = 0.8
-	wideBox     = 31.0 // what is in a box at 34rem, where part.css's @container turns, less its padding
-	narrowBox   = 13.0 // and in the narrowest, a column of 16rem
+	padInline   = 1.3              // --floe-pad-inline, either side of the box's content
+	wideBox     = 34.0             // the content's width where part.css's @container turns
+	narrowBox   = 16 - 2*padInline // the content's width in a column at its least, 16rem
+	barShare    = 0.9              // of a series' width in a group of bars, the rest parting them
 )
 
 type chartTick struct {
@@ -67,13 +72,13 @@ type chartRow struct {
 // LIMIT: its fields are counted for the part chart's height, text and narrow class alone, so that other CSS comes out
 // silently wrong; docs promise neither. Fix the fields and what they assume if own parts come to need to draw charts.
 type chart struct {
-	Kind, Title, Unit                  string
-	Legend, Sparse, Dense, Names, Thin bool
-	Left, Right, RightNarrow           float64
-	Ticks                              []chartTick
-	Labels                             []chartLabel
-	Series                             []chartSeries
-	Rows                               []chartRow
+	Kind, Title, Unit          string
+	Sparse, Dense, Names, Thin bool
+	Left, Right, RightNarrow   float64
+	Ticks                      []chartTick
+	Labels                     []chartLabel
+	Series                     []chartSeries
+	Rows                       []chartRow
 }
 
 // chartValues is a series as written: its numbers, as num writes them whole, and as a label writes them.
@@ -170,16 +175,25 @@ func shortLabel(s string) string {
 	return s
 }
 
-// chartNumbers reads a series' values into found's mistakes, returning a failure of floe's.
-func chartNumbers(where, name string, vs []any, found *usererr.List) (chartValues, error) {
+// placed is err at a place in the part's value, when it is one the user can fix.
+func placed(err error, at string) error {
+	var e *usererr.Error
+	if errors.As(err, &e) {
+		return e.PlacedIn(at)
+	}
+	return err
+}
+
+// chartNumbers reads series i's values into found's mistakes, returning a failure of floe's.
+func chartNumbers(i int, name string, vs []any, found *usererr.List) (chartValues, error) {
 	got := chartValues{name: name, numbers: nil, whole: nil, shown: nil}
-	for _, n := range vs {
-		f, err := float(where, n)
+	for j, n := range vs {
+		f, err := float(fmt.Sprintf("chart: series %d %q", i+1, name), n)
 		var text string
 		if err == nil {
 			text, err = decimal("num", n, 0)
 		}
-		if failed := found.Add(err); failed != nil {
+		if failed := found.Add(placed(err, fmt.Sprintf("#/series/%d/values/%d", i, j))); failed != nil {
 			return got, failed
 		}
 		if err == nil {
@@ -213,7 +227,7 @@ func chartValuesOf(list []any, names int) ([]chartValues, error) {
 			}
 			continue
 		}
-		got, failed := chartNumbers(fmt.Sprintf("chart: series %d %q", i+1, name), name, vs, &found)
+		got, failed := chartNumbers(i, name, vs, &found)
 		if failed != nil {
 			return nil, failed
 		}
@@ -248,9 +262,19 @@ func chartInputOf(v any) (chartInput, error) {
 	return in, err
 }
 
-// chartRange is the scale of the values. A min above a value is not drawn from: the scale would lose both it and 0.
+// chartPlot places what is drawn, in percent of the plot, and its ticks: at whole steps from the start, written to
+// digits decimals. The values are divided before they are compared, as the difference of two floats at their ends is
+// past a float.
+type chartPlot struct {
+	bar              bool
+	n, digits        int
+	from, to, by, at float64
+}
+
+// chartPlotOf is the scale of the values. A min above a value is not drawn from: the scale would lose both it and 0.
+// A min written takes the decimals it is written in, as the ticks go on from it.
 // LIMIT: compared as floats, so that a difference past 2^53 reads as none.
-func chartRange(in chartInput) (from, to, step float64, err error) {
+func chartPlotOf(in chartInput) (chartPlot, error) {
 	lowest, highest := math.Inf(1), math.Inf(-1)
 	for _, s := range in.series {
 		for _, f := range s.numbers {
@@ -261,13 +285,14 @@ func chartRange(in chartInput) (from, to, step float64, err error) {
 	if in.lowest != nil && in.kind == "line" {
 		written, err := float("chart: min", in.lowest)
 		if err != nil {
-			return 0, 0, 0, err
+			return chartPlot{}, placed(err, "#/min") //nolint:exhaustruct // no plot
 		}
 		if written <= lowest {
 			lo, hi, hasMin = written, highest, true
 		}
 	}
-	from, to, step = chartScale(lo, hi)
+	from, to, step := chartScale(lo, hi)
+	digits := max(0, int(-math.Floor(math.Log10(step))))
 	if hasMin {
 		from = lo
 		to = min(from+math.Ceil(hi/step-from/step)*step, math.MaxFloat64)
@@ -277,16 +302,20 @@ func chartRange(in chartInput) (from, to, step float64, err error) {
 		if to <= from {
 			from = to - step
 		}
+		digits = max(digits, decimalsOf(from))
 	}
-	return from, to, step, nil
+	return chartPlot{
+		bar: in.kind == "bar", n: len(in.x), digits: digits,
+		from: from, to: to, by: max(math.Abs(from), math.Abs(to)), at: step,
+	}, nil
 }
 
-// chartPlot places what is drawn, in percent of the plot. The values are divided before they are compared, as the
-// difference of two floats at their ends is past a float.
-type chartPlot struct {
-	bar          bool
-	n            int
-	from, to, by float64
+func decimalsOf(f float64) int {
+	s := strconv.FormatFloat(f, 'f', -1, 64)
+	if i := strings.IndexByte(s, '.'); i >= 0 {
+		return len(s) - i - 1
+	}
+	return 0
 }
 
 func (p chartPlot) y(f float64) float64 {
@@ -303,40 +332,60 @@ func (p chartPlot) x(i int) float64 {
 	return round2(float64(i) / float64(p.n-1) * 100)
 }
 
-// chartTicks is the ticks and the room of their words.
-// LIMIT: past 9 digits, in as few digits as tell the ticks apart, to 5; beyond those no words, as a tick read wrong is
-// worse than the lines alone, the numbers being in the table. Draw from a base if such charts come to be needed.
-func chartTicks(p chartPlot, step float64) ([]chartTick, float64, error) {
-	digits := max(0, int(-math.Floor(math.Log10(step))))
-	long := false
-	var at []float64
-	var words []string
+// tickValues is the values of the ticks and their words as num writes them, long when one has more digits than a
+// label takes.
+func tickValues(p chartPlot) (at []float64, words []string, long bool, err error) {
 	// By count, not t += step: a step below the values' precision would never end.
-	for i, count := 0, int(math.Round(p.to/step-p.from/step)); i <= count; i++ {
-		t := min(p.from+float64(i)*step, p.to)
+	for i, count := 0, int(math.Round(p.to/p.at-p.from/p.at)); i <= count; i++ {
+		t := min(p.from+float64(i)*p.at, p.to)
 		if len(at) > 0 && t == at[len(at)-1] {
 			continue
 		}
-		text, err := decimal("num", roundTo(t, digits), 0)
+		v := roundTo(t, p.digits)
+		text, err := decimal("num", v, 0)
 		if err != nil {
-			return nil, 0, err
+			return nil, nil, false, err
 		}
-		at, words = append(at, t), append(words, text)
+		at, words = append(at, v), append(words, text)
 		long = long || digitsOf(text) > 9
 		if t >= p.to {
 			break
 		}
 	}
-	told := !long
+	return at, words, long, nil
+}
+
+// wordsTell says that no two words are alike and that each reads as its line's value, by less than the scale can show.
+func wordsTell(at []float64, words []string, step float64) bool {
+	seen := map[string]bool{}
+	for i, word := range words {
+		f, err := strconv.ParseFloat(strings.ReplaceAll(word, ",", ""), 64)
+		if err != nil || seen[word] || math.Abs(f-at[i]) > step/100 {
+			return false
+		}
+		seen[word] = true
+	}
+	return true
+}
+
+// chartTicks is the ticks and the room of their words, each of which says the value of its line. A line for 0 stands
+// on any scale across it, with no word if no tick falls on 0.
+// LIMIT: past 9 digits, in as few digits as tell the ticks apart and read as their lines, to 5; beyond those no words,
+// as a tick read wrong is worse than the lines alone, the numbers being in the table. Draw from a base if such charts
+// come to be needed.
+func chartTicks(p chartPlot) ([]chartTick, float64, error) {
+	at, words, long, err := tickValues(p)
+	if err != nil {
+		return nil, 0, err
+	}
+	told := !long && wordsTell(at, words, p.at)
 	for prec := 3; prec <= 5 && !told; prec++ {
-		seen := map[string]bool{}
 		for i, t := range at {
 			words[i] = strconv.FormatFloat(t, 'g', prec, 64)
-			seen[words[i]] = true
 		}
-		told = len(seen) == len(at)
+		told = wordsTell(at, words, p.at)
 	}
-	ticks := make([]chartTick, 0, len(at))
+	ticks := make([]chartTick, 0, len(at)+1)
 	room := 0.0
 	for i, t := range at {
 		text := words[i]
@@ -345,6 +394,9 @@ func chartTicks(p chartPlot, step float64) ([]chartTick, float64, error) {
 		}
 		ticks = append(ticks, chartTick{Y: p.y(t), Text: text, Zero: t == 0})
 		room = max(room, labelWidth(text))
+	}
+	if p.from < 0 && p.to > 0 && !slices.Contains(at, 0) {
+		ticks = append(ticks, chartTick{Y: p.y(0), Text: "", Zero: true})
 	}
 	return ticks, room, nil
 }
@@ -365,15 +417,16 @@ func (c *chart) drawBars(in chartInput, p chartPlot) {
 	width := group / float64(len(in.series))
 	// A bar under 4px at the wide box has no room for a frame: drawn with one, it would be frame alone. In a narrow box
 	// part.css takes every bar's frame off.
-	c.Thin = width*(wideBox-c.Left)*16/100 < 4
+	wide := wideBox - c.Left - c.Right
+	c.Thin = width*barShare*wide*16/100 < 4
 	drawn := false
 	if len(in.series) == 1 {
 		room := 0.0
 		for _, t := range in.series[0].shown {
 			room = max(room, labelWidth(t))
 		}
-		c.Sparse = n*(room+0.3) > narrowBox-c.Left
-		drawn = n*(room+0.3) <= wideBox-c.Left
+		c.Sparse = n*(room+0.3) > narrowBox-c.Left-c.Right
+		drawn = n*(room+0.3) <= wide
 	}
 	for i, values := range in.series {
 		s := chartSeries{N: i + 1, Name: values.name, Segments: nil, Points: nil, Bars: nil, End: nil}
@@ -385,8 +438,8 @@ func (c *chart) drawBars(in chartInput, p chartPlot) {
 				text = values.shown[j]
 			}
 			s.Bars = append(s.Bars, chartBar{
-				X: round2(x + width*0.05), Y: y0, W: round2(width * 0.9), H: round2(y1 - y0), Mid: round2(x + width/2),
-				Title: in.hoverTitle(i, j), Text: text,
+				X: round2(x + width*(1-barShare)/2), Y: y0, W: round2(width * barShare), H: round2(y1 - y0),
+				Mid: round2(x + width/2), Title: in.hoverTitle(i, j), Text: text,
 			})
 		}
 		c.Series = append(c.Series, s)
@@ -402,7 +455,8 @@ func (c *chart) drawLines(in chartInput, p chartPlot, edge float64) {
 		for j, f := range values.numbers {
 			s.Points = append(s.Points, chartPoint{X: p.x(j), Y: p.y(f), Title: in.hoverTitle(i, j)})
 			if j > 0 {
-				s.Segments = append(s.Segments, chartSegment{X1: p.x(j - 1), Y1: p.y(values.numbers[j-1]), X2: p.x(j), Y2: p.y(f)})
+				before := values.numbers[j-1]
+				s.Segments = append(s.Segments, chartSegment{X1: p.x(j - 1), Y1: p.y(before), X2: p.x(j), Y2: p.y(f)})
 			}
 		}
 		last := len(values.numbers) - 1
@@ -426,6 +480,8 @@ func (c *chart) drawLines(in chartInput, p chartPlot, edge float64) {
 func (c *chart) drawLabels(in chartInput, p chartPlot, longest float64) {
 	stride := func(room float64) int { return max(1, int(math.Ceil(float64(p.n)*(longest+0.8)/max(room, 1)))) }
 	wide, narrow := stride(wideBox-c.Left-c.Right), stride(narrowBox-c.Left-c.RightNarrow)
+	// The narrow box shows some of those the wide one does: a stride of its own would keep only where both fall.
+	narrow = (narrow + wide - 1) / wide * wide
 	for i, name := range in.x {
 		if i%wide == 0 {
 			c.Labels = append(c.Labels, chartLabel{X: p.x(i), Text: shortLabel(name), Wide: i%narrow != 0})
@@ -443,12 +499,11 @@ func chartOf(v any) (*chart, error) {
 	if err != nil {
 		return nil, err
 	}
-	from, to, step, err := chartRange(in)
+	p, err := chartPlotOf(in)
 	if err != nil {
 		return nil, err
 	}
-	p := chartPlot{bar: in.kind == "bar", n: len(in.x), from: from, to: to, by: max(math.Abs(from), math.Abs(to))}
-	ticks, room, err := chartTicks(p, step)
+	ticks, room, err := chartTicks(p)
 	if err != nil {
 		return nil, err
 	}
@@ -470,7 +525,7 @@ func chartOf(v any) (*chart, error) {
 	}
 	c := &chart{
 		Kind: in.kind, Title: in.title, Unit: in.unit,
-		Legend: len(in.series) > 1, Sparse: false, Dense: p.n > 12, Names: false, Thin: false,
+		Sparse: false, Dense: p.n > 12, Names: false, Thin: false,
 		Left: round2(max(room+0.7, 2, edge)), Right: round2(edge + 0.2), RightNarrow: round2(edge + 0.2),
 		Ticks: ticks, Labels: nil, Series: nil, Rows: rows,
 	}
