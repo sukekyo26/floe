@@ -98,10 +98,12 @@ test-browser part:
     done
     CGO_ENABLED=1 go test -race -shuffle=on "$pick" '^({{browser_looks}})$' ./internal/browsertest
 
-# Write the golden files of internal/corpus and internal/diagram anew from what floe prints and draws now; read the change in git diff
+# LIMIT: the tests are named here, corpus first, as pagediff's golden is read from corpus's golden page: a new test of golden files is missed unless it is added here
+# Write every golden file anew from what floe prints and draws now; read the change in git diff
 golden:
     go test ./internal/corpus -run TestCorpus -update
     go test ./internal/diagram -run TestExamples -update
+    go test ./internal/pagediff -run TestReadEveryPart -update
 
 # Fail when total coverage of internal/ is below MIN_COVERAGE (default 90)
 cover-check:
