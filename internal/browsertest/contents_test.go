@@ -22,7 +22,7 @@ var contentsPage = func() string {
 	for i := 1; i < 6; i++ {
 		fmt.Fprintf(&b, "  - heading: Long %d\n    parts: [ { text: \"%s\" } ]\n", i, long)
 	}
-	b.WriteString("  - heading: <T>\n    parts: [ { text: A tag alone. } ]\n")
+	b.WriteString("  - heading: <T>\n    parts: [ { text: A tag alone. } ]\n    sections: [ { heading: Under a tag, parts: [ { text: x } ] } ]\n")
 	b.WriteString("  - heading: Short A\n    parts: [ { text: A line. } ]\n  - heading: Short B\n    parts: [ { text: A line. } ]\n")
 	return b.String()
 }()
@@ -42,6 +42,8 @@ const measureContents = `(() => {
   probe.remove();
   if (nav.querySelector('a a, a[href^=http]')) out.push('a link of another page in the contents');
   if ([...nav.querySelectorAll('a')].some((a) => a.textContent.trim() === '')) out.push('a link of no words in the contents');
+  if (![...nav.querySelectorAll('a')].some((a) => a.textContent === 'Under a tag')) out.push('the subsection under a heading of no words left out');
+  if (nav.querySelector('ol:empty')) out.push('an empty list in the contents');
   return out.join('\n');
 })()`
 
@@ -105,18 +107,18 @@ func TestUIContents(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.size(1440, 900, false)
 	b.navigate("/a/contents-default/?raw")
 	at("Short B", "the end", scroll("document.documentElement.scrollHeight"))
-	press := func(i int) string {
-		b.eval("[...document.querySelectorAll('[data-floe-look~=toc] a')][" + fmt.Sprint(i) + "].click()")
+	press := func(words string) string {
+		b.eval("[...document.querySelectorAll('[data-floe-look~=toc] a')].find((a) => a.textContent === '" + words + "').click()")
 		return b.current()
 	}
-	at("Short A", "Short A pressed", press(8))
-	at("Short B", "Short B pressed", press(9))
-	at("Short A", "Short A pressed again", press(8))
+	at("Short A", "Short A pressed", press("Short A"))
+	at("Short B", "Short B pressed", press("Short B"))
+	at("Short A", "Short A pressed again", press("Short A"))
 	at("See the guide", "the top again", scroll("0"))
 	// Pressed at the end, where the page scrolls no further: the link pressed, though nothing scrolls.
 	scroll("document.documentElement.scrollHeight")
-	at("Short A", "Short A pressed at the end", press(8))
-	at("Short A", "Short A pressed again where it is", press(8))
+	at("Short A", "Short A pressed at the end", press("Short A"))
+	at("Short A", "Short A pressed again where it is", press("Short A"))
 	// A low window: the contents scroll within, the place in sight.
 	b.size(1440, 500, false)
 	scroll("document.getElementById('section.5').offsetTop")
@@ -143,31 +145,54 @@ func TestUIContents(t *testing.T) { //nolint:paralleltest // the browser tests s
       document.documentElement.scrollWidth <= innerWidth].join(); })()`); got != "true,true,true" {
 		amiss = append(amiss, "a narrow window: over the sections, the sections alone, within the window = "+got)
 	}
-	// Paper: no contents, the page as wide as the paper.
+	// Paper: no contents, the column as the column of a page without them.
 	b.size(718, 1000, false)
 	b.media("print")
+	column := "getComputedStyle(document.querySelector('main')).maxWidth"
+	withContents := b.eval(column)
 	if got := b.eval("getComputedStyle(document.querySelector('[data-floe-look~=toc]')).display + ' ' + (document.querySelector('main').getBoundingClientRect().width === document.documentElement.clientWidth)"); got != "none true" {
 		amiss = append(amiss, "paper: "+got)
 	}
 	b.media("")
-	// A page without contents keeps its column.
+	// A page without contents keeps its column; a nav that is a part's box is no contents, neither stuck nor cut.
 	b.size(1920, 1000, false)
 	s.floe(t, "publish", s.write(t, "plain.yaml", strings.Replace(contentsPage, "lead:", "toc: false\nlead:", 1)), "--slug", "plain")
 	b.navigate("/a/plain/?raw")
+	b.media("print")
+	if got := b.eval(column); got != withContents {
+		amiss = append(amiss, "paper: the column "+withContents+" with contents, "+got+" without")
+	}
+	b.media("")
 	if got := b.eval("!!document.querySelector('[data-floe-look~=toc]') + ' ' + (document.querySelector('main').getBoundingClientRect().width < innerWidth)"); got != "false true" {
 		amiss = append(amiss, "toc: false: contents, a narrower column = "+got)
 	}
-	// A template's contents mark the links to its own parts alone, not one to another page.
+	// A nav that is a part's box in the sections, at 1440 and at 700: the contents' rules reach it not, neither
+	// stuck nor its items hidden (no part of floe's draws one now; one of one's own would).
+	b.navigate("/a/contents-default/?raw")
+	part := `(() => { let n = document.getElementById('part-nav');
+    if (!n) { document.getElementById('section.2').insertAdjacentHTML('beforeend', '<nav id="part-nav" data-floe-part="menu"><ul><li>Top<ul><li>Inner</li></ul></li></ul></nav>'); n = document.getElementById('part-nav'); }
+    return getComputedStyle(n).position + ' ' + (n.querySelector('li li').getBoundingClientRect().height > 0); })()`
+	for _, w := range []int64{1440, 700} {
+		b.size(w, 900, false)
+		if got := b.eval(part); got != "static true" {
+			amiss = append(amiss, fmt.Sprintf("a part's nav at %d: %s", w, got))
+		}
+	}
+	b.size(1440, 900, false)
+	// A template's contents mark the links to its own parts alone, not one to another page; a script after no nav does nothing.
 	s.own(t, map[string]string{
 		"templates/out/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\"><title>{{.Title}}</title></head>\n<body>" +
 			"<nav data-floe-look=\"toc\" aria-label=\"Contents\"><a href=\"https://example.com/x#a\">Out</a><a href=\"#a\">A</a></nav>{{contents}}" +
-			"<h2 id=\"a\">A</h2><p style=\"height: 3000px\">x</p></body></html>\n",
+			"<h2 id=\"a\">A</h2><p style=\"height: 3000px\">x</p><p>alone</p>{{contents}}<p id=\"after\">after</p></body></html>\n",
 		"templates/out/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"}`,
 		"templates/out/example.yaml": "lang: en\ntemplate: out\n",
 	})
 	s.floe(t, "publish", s.write(t, "out.yaml", "lang: en\ntemplate: out\ntitle: Out\n"), "--slug", "out")
 	b.navigate("/a/out/?raw")
 	at("A", "a template's contents with a link of another page", b.current())
+	if got := b.eval("document.getElementById('after') !== null && window.onerror === null"); got != "true" {
+		amiss = append(amiss, "a script after no contents: "+got)
+	}
 	// design marks its section too.
 	b.size(1440, 900, false)
 	design, err := os.ReadFile("../corpus/testdata/example/design.yaml")

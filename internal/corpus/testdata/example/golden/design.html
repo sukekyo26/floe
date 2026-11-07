@@ -637,6 +637,7 @@ page answers. When the mail provider is slow, so is the page, and a provider out
 </ul>
 </nav><script>(function contents() {
   const nav = document.currentScript.previousElementSibling;
+  if (!nav || nav.localName !== 'nav') return;
   const links = [...nav.querySelectorAll('a')].filter((a) => (a.getAttribute('href') || '').startsWith('#'));
   let spots = [];
   let pressed = null;

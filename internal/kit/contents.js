@@ -7,6 +7,8 @@
 // LIMIT: the targets are measured at each frame that scrolls; a page of hundreds of headings has not been timed.
 function contents() {
   const nav = document.currentScript.previousElementSibling;
+  // A template that puts it after no contents of its own has it do nothing
+  if (!nav || nav.localName !== 'nav') return;
   const links = [...nav.querySelectorAll('a')].filter((a) => (a.getAttribute('href') || '').startsWith('#'));
   let spots = [];
   let pressed = null;

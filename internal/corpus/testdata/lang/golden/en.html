@@ -741,19 +741,21 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
    sections with the sections alone in them on a narrow one, where a long list would push the page down. Each column
    keeps what it holds from widening it */
 section { scroll-margin-top: 1rem; }
-.body, .sections { display: grid; gap: 2.5rem; grid-template-columns: minmax(0, 1fr); }
-.sections { align-content: start; }
+main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-columns: minmax(0, 1fr); }
+.body > .sections { align-content: start; }
 @media screen and (min-width: 1000px) {
-  .body { grid-template-columns: 16rem minmax(0, 1fr); }
-  nav { position: sticky; top: 1rem; align-self: start; max-height: calc(100vh - 2rem); overflow-y: auto; scrollbar-width: thin; }
+  main > .body { grid-template-columns: 16rem minmax(0, 1fr); }
+  main > .body > nav { position: sticky; top: 1rem; align-self: start; max-height: calc(100vh - 2rem); overflow-y: auto; scrollbar-width: thin; }
 }
 @media screen and (max-width: 999.98px) {
-  nav li li { display: none; }
+  main > .body > nav li li { display: none; }
 }
 /* With contents the page takes the whole window, the contents and the sections side by side; the lead keeps to the
    width of a text, as the sections' text does */
-main:has(> .body) { --column-width: 100%; }
-main:has(> .body) .lead { max-width: var(--text-width); }
+@media screen {
+  main:has(> .body) { --column-width: 100%; }
+  main:has(> .body) .lead { max-width: var(--text-width); }
+}
 }
 }
 </style>
