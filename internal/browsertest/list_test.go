@@ -1256,8 +1256,9 @@ func TestUIRowAgain(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("a2 again", "picked?.slug === 'a2'")
 	b.click(x, y)
 	b.until("whole", "location.pathname === '/a/a2/'")
-	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"))
+	// The URL is the new page's before its script has kept where it is; the frame's src comes after that
 	b.until("its bar", "document.getElementById('frame').hasAttribute('src')")
+	out = append(out, b.eval("sessionStorage.getItem('artifacts.order')"))
 	b.pressKey("j")
 	b.until("on through the list", "location.pathname === '/a/a1/'")
 
