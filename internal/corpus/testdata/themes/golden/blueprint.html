@@ -592,7 +592,7 @@ blockquote::before { content: ""; display: block; width: 2rem; height: 0; margin
 @scope ([data-floe-part="code"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="diff"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="terminal"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { border: var(--bp-frame) var(--accent); --code-head-bg: none; }
 :scope figcaption {
-  border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 40%, transparent); font-size: var(--floe-text-small); letter-spacing: 0.1em; text-transform: uppercase;
+  border-bottom: 1px solid color-mix(in srgb, var(--code-fg) 40%, transparent); font-size: var(--floe-text-small); letter-spacing: 0.1em;
 }
 :scope .lang { background: none; border: 1.5px solid var(--code-prompt); color: var(--code-prompt); }
 }
@@ -623,7 +623,7 @@ blockquote::before { content: ""; display: block; width: 2rem; height: 0; margin
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 :scope { --table-head-bg: none; --table-head-fg: var(--accent); --table-rule: none; }
 :scope :is(th, td) { border: 1px solid var(--accent); }
-:scope thead th { font-family: var(--mono); font-size: var(--floe-text-small); letter-spacing: 0.12em; text-transform: uppercase; }
+:scope thead th { font-family: var(--mono); font-size: var(--floe-text-small); letter-spacing: 0.12em; }
 }
 }
 </style>
@@ -635,7 +635,7 @@ blockquote::before { content: ""; display: block; width: 2rem; height: 0; margin
   background: var(--bp-squares), var(--surface); border: 1.5px dashed var(--tone); --floe-mark: 1.75rem;
 }
 :scope::before { background: none; border: 1.5px solid currentColor; color: var(--tone); font-family: var(--mono); }
-.title { font-family: var(--mono); font-size: var(--floe-text-small); letter-spacing: 0.12em; text-transform: uppercase; }
+.title { font-family: var(--mono); font-size: var(--floe-text-small); letter-spacing: 0.12em; }
 }
 }
 </style>
@@ -695,7 +695,7 @@ section { display: grid; gap: var(--floe-room); }
 section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 .sub { margin-top: 0.5rem; }
 .sub > h3 { font-size: 1.15rem; }
-.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; color: var(--muted); }
 .lead { color: var(--muted); font-size: 1.05rem; }
 .muted { color: var(--muted); }
 }
