@@ -135,6 +135,15 @@ func (b *browser) unstub() {
 	b.faked = ""
 }
 
+// untilActed waits until expr is truthy and no archive or way back of a row is on its way, the read of the list after it included: a
+// redraw of the rows takes a press with them, and an answer come late shows there. A load the test starts itself is waited for by
+// eval, which awaits what it returns.
+func (b *browser) untilActed(what, expr string) string {
+	b.t.Helper()
+
+	return b.until(what, "archiving.size === 0 && ("+expr+")")
+}
+
 func (b *browser) addScript(script string) page.ScriptIdentifier {
 	b.t.Helper()
 
@@ -254,15 +263,15 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	const archiveRow = "document.querySelector('#list li:not(.group) .actions > .archive').click()"
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval(archiveRow)
-	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list .more[open]').length"))
-	// Sent, the toast comes with the answer and the list is read again after it: the rows drawn so are what the next steps press
-	b.until("the archive done", "archiving.size === 0")
-	out = append(out, b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Beta"))+")"))
+	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list .more[open]').length"),
+		// With the answer, before the list is read again; it goes after 8 seconds
+		b.until("the toast", "document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Beta"))+")"))
+	b.untilActed("the archive done", "true")
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval(archiveRow)
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
-	b.until("the give back done", "archiving.size === 0")
+	b.untilActed("the give back done", "true")
 	// The change failing, the row stays with the focus on its button.
 	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .actions > .archive').focus(); document.querySelector('#list li:not(.group) .actions > .archive').click()")
 	out = append(out, b.until("the give back to fail", "!document.getElementById('error').hidden && "+
@@ -515,7 +524,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
 	b.eval("document.querySelector('#frame-actions > .archive').click()")
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
-	b.until("the give back done", "archiving.size === 0")
+	b.untilActed("the give back done", "true")
 	// Given back, as the server now lists it: the menu says so.
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'z' ? { ...a, archived: false } : a)); load()")
 	out = append(out, b.until("the menu to say so", "document.getElementById('frame-archived').hidden && "+frame))
