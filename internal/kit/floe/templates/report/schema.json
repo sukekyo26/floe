@@ -5,13 +5,14 @@
   "type": "object",
   "properties": {
     "eyebrow": { "type": "string", "description": "A short line above the title, such as the kind of page and its date" },
+    "toc": { "type": "boolean", "description": "Whether the page holds its contents, its sections and subsections beside it on a wide screen. Left out, a page of 4 sections with a heading or more holds them" },
     "lead": { "type": "string", "description": "A sentence or two under the title that sums the page up; a line of Markdown. What looks like a tag (<prefix>, Vec<u8>) is left out and marks such as * and _ are read: write those as text in backticks" },
     "sections": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "heading": { "type": "string", "minLength": 1 },
+          "heading": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
           "parts": { "$ref": "#/$defs/parts" },
           "sections": {
             "type": "array",
@@ -20,7 +21,7 @@
             "items": {
               "type": "object",
               "properties": {
-                "heading": { "type": "string", "minLength": 1 },
+                "heading": { "type": "string", "minLength": 1, "description": "A line of Markdown" },
                 "parts": { "$ref": "#/$defs/parts" }
               },
               "required": ["heading"],

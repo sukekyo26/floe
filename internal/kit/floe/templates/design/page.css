@@ -22,11 +22,11 @@ main > section > h2 { font-size: 1.25rem; padding-left: 0.7rem; border-left: 4px
 /* The question is set as the text around it is, not as the headings are */
 .decision > h3 { margin-top: 0.4rem; font-size: 1.05rem; line-height: inherit; text-wrap: wrap; }
 .non-goals { color: var(--muted); }
-aside { position: sticky; top: 1rem; align-self: start; padding: var(--floe-pad-block) var(--floe-pad-inline); }
-aside h2 { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
-aside ul { list-style: none; padding: 0; gap: 0.15rem; }
-aside a { text-decoration: none; }
+aside { position: sticky; top: 1rem; align-self: start; }
 @media (max-width: 800px) {
   .body { grid-template-columns: 1fr; }
   aside { position: static; grid-row: 1; }
+}
+@media print {
+  .body { grid-template-columns: minmax(0, 1fr); }
 }
