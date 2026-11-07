@@ -676,18 +676,20 @@ func TestStatNumbers(t *testing.T) {
 		{"1\n", false},
 		{"\n1", false},
 	} {
-		item := "{label: a, value: " + strconv.Quote(tt.value) + ", from: '2', better: lower}\n"
-		function := drawn(t, own, "lang: en\ntemplate: mine\nc:\n  - "+item, none)
-		part := drawn(t, floe, "lang: en\ntemplate: report\ntitle: t\nsections:\n  - heading: a\n    parts:\n      - stats:\n          - "+item, none)
-		// The function refuses after the schema, whose words alone show that the schema did.
-		if (function == "") != tt.good || (part == "") != tt.good || (!tt.good && !strings.Contains(part, "does not match pattern")) {
-			t.Errorf("%q: the function told %q, the schema %q, want taken %v", tt.value, function, part, tt.good)
+		q := strconv.Quote(tt.value)
+		for _, item := range []string{"{label: a, value: " + q + ", from: '2', better: lower}\n", "{label: a, value: '2', from: " + q + ", better: lower}\n"} {
+			function := drawn(t, own, "lang: en\ntemplate: mine\nc:\n  - "+item, none)
+			part := drawn(t, floe, "lang: en\ntemplate: report\ntitle: t\nsections:\n  - heading: a\n    parts:\n      - stats:\n          - "+item, none)
+			// The function refuses after the schema, whose words alone show that the schema did.
+			if (function == "") != tt.good || (part == "") != tt.good || (!tt.good && !strings.Contains(part, "does not match pattern")) {
+				t.Errorf("%s: the function told %q, the schema %q, want taken %v", item, function, part, tt.good)
+			}
 		}
 	}
 }
 
-// What stats cannot count is refused for a part of one's own, all of an item's and each item's, at where it is written
-// and naming the item when the function is given a piece of the value; the rest is its schema's to say.
+// What stats cannot count is refused for a part of one's own, all of an item's and each item's, at the part's value
+// and naming the item; the rest is its schema's to say.
 func TestPartStatsRefused(t *testing.T) {
 	t.Parallel()
 
@@ -695,11 +697,11 @@ func TestPartStatsRefused(t *testing.T) {
 	k := statsKit(t)
 	for _, tt := range []struct{ item, want string }{
 		{"3", "d.yaml:4:3: stats takes items written as keys and values (label, value and the like); item 1 is not"},
-		{"{label: a, value: '1', from: 'x', better: lower}", "d.yaml:4:34: " + head + "from is not so"},
-		{"{label: a, value: 'x', from: '1', better: lower}", "d.yaml:4:23: " + head + "value is not so"},
-		{"{label: a, value: '1', from: '2'}", "d.yaml:4:6: " + head + "better is not so"},
-		{"{label: a, value: '1', from: '2', better: down}", "d.yaml:4:6: " + head + "better is not so"},
-		{"{label: a, value: 3, from: 2, better: lower}", "d.yaml:4:23: " + head + "value is not so\nd.yaml:4:32: " + head + "from is not so"},
+		{"{label: a, value: '1', from: 'x', better: lower}", "d.yaml:3:4: " + head + "from is not so"},
+		{"{label: a, value: 'x', from: '1', better: lower}", "d.yaml:3:4: " + head + "value is not so"},
+		{"{label: a, value: '1', from: '2'}", "d.yaml:3:4: " + head + "better is not so"},
+		{"{label: a, value: '1', from: '2', better: down}", "d.yaml:3:4: " + head + "better is not so"},
+		{"{label: a, value: 3, from: 2, better: lower}", "d.yaml:3:4: " + head + "value is not so\nd.yaml:4:32: " + head + "from is not so"},
 		{"{label: a, value: 3}", ""},
 		{"{label: a, value: '1', better: lower}", ""},
 	} {

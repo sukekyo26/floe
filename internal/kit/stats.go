@@ -1,7 +1,6 @@
 package kit
 
 import (
-	"fmt"
 	"math/big"
 	"regexp"
 	"strings"
@@ -38,7 +37,8 @@ func decimalsIn(s string) int {
 // statChange is value less from, two numbers of statNumber's form, and its sign, written to the decimals of the longer
 // of the two: exact, as a float would write 1.8000000000000000444 for 3.1 to 1.3, and in whole numbers, which have no
 // bound, as a fraction cannot read a million decimals.
-// LIMIT: no bound on the digits, a page only growing (2.2 s for a million decimals).
+// LIMIT: no bound on the digits, and the time grows as their square (1.2 s at a million decimals, 13.2 s at four
+// million): a page is its writer's own, under the API's 32 MiB. Bound the digits if pages come to hold such numbers.
 func statChange(from, value string) (string, int) {
 	decimals := max(decimalsIn(from), decimalsIn(value))
 	diff := new(big.Int).Sub(scaled(value, decimals), scaled(from, decimals))
@@ -76,19 +76,18 @@ func statOf(i int, item any, found *usererr.List) (stat, error) {
 	value, better := stringOf(m["value"]), stringOf(m["better"])
 	counted := true
 	for _, c := range []struct {
-		key, at string
-		good    bool
+		key  string
+		good bool
 	}{
-		{"from", "/from", statNumber.MatchString(s.From)},
-		{"value", "/value", statNumber.MatchString(value)},
-		{"better", "", better == "lower" || better == "higher"},
+		{"from", statNumber.MatchString(s.From)},
+		{"value", statNumber.MatchString(value)},
+		{"better", better == "lower" || better == "higher"},
 	} {
 		if c.good {
 			continue
 		}
 		counted = false
-		err := usererr.New("kit_stat_change", i+1, s.Label, c.key).PlacedIn(fmt.Sprintf("#/%d%s", i, c.at))
-		if failed := found.Add(err); failed != nil {
+		if failed := found.Add(usererr.New("kit_stat_change", i+1, s.Label, c.key)); failed != nil {
 			return stat{}, failed
 		}
 	}
@@ -109,7 +108,8 @@ func statOf(i int, item any, found *usererr.List) (stat, error) {
 	return s, nil
 }
 
-// LIMIT: given a piece of a part's value, the places of its mistakes are at the part's value; they name the item.
+// LIMIT: mistakes are told at the part's value, naming the item by its number and label, as with bars: stats knows not
+// where in the part's value the list is. Place them at the item if that misleads.
 func statsOf(items []any) ([]stat, error) {
 	stats := make([]stat, 0, len(items))
 	var found usererr.List

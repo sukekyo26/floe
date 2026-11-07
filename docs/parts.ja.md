@@ -89,7 +89,7 @@ floe の部品が描くのに使う関数も使えます。floe の部品の `pa
 
 ### `stats`
 
-`{{range stats .}}` は、キーと値で書いた項目（`label`・`value`・`unit`・`note`・`tone`・`from`・`better`）のリストを読みます。それぞれ `.Label`、書いたままの `.Value`、`.Unit`・`.Note`・`.Tone`・`.From`、`better`・`worse`・`same` のどれかの `.Way` と `good`・`bad`・`muted` のどれかの `.WayTone`（`from` が無ければ空）、`value` から `from` を引いた符号付きの厳密な `.Change`（小数の桁は 2 つの多い方。同じなら空）になります。`from` があるときは、`from` と `value` は数字だけの字（`^-?[0-9]+([.][0-9]+)?$`）、`better` は `lower` か `higher` で、ほかは書いた所に置き、項目の番号と label を言って断ります。ほかの鍵は部品の schema が決めます。
+`{{range stats .}}` は、キーと値で書いた項目（`label`・`value`・`unit`・`note`・`tone`・`from`・`better`）のリストを読みます。それぞれ `.Label`、書いたままの `.Value`、`.Unit`・`.Note`・`.Tone`・`.From`、`better`・`worse`・`same` のどれかの `.Way` と `good`・`bad`・`muted` のどれかの `.WayTone`（`from` が無ければ空）、`value` から `from` を引いた符号付きの厳密な `.Change`（小数の桁は 2 つの多い方。同じなら空）になります。`from` があるときは、`from` と `value` は数字だけの字（`^-?[0-9]+([.][0-9]+)?$`）、`better` は `lower` か `higher` で、ほかは部品の値に置き、項目の番号と label を言って断ります。ほかの鍵は部品の schema が決めます。
 
 ### `chart`
 

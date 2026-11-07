@@ -89,7 +89,7 @@ Put it in the schema of the list `part.html` gives to `bars`: for `bars .items`,
 
 ### `stats`
 
-`{{range stats .}}` reads a list of items, each written as keys and values: `label`, `value`, `unit`, `note`, `tone`, `from` and `better`. Each comes as `.Label`, `.Value` as written, `.Unit`, `.Note`, `.Tone` and `.From`; `.Way`, `better`, `worse` or `same`, and `.WayTone`, `good`, `bad` or `muted`, empty without `from`; and `.Change`, `value` less `from`, signed and exact, to the decimals of the longer of the two, empty when they are the same. With `from`, `from` and `value` are text of digits alone (`^-?[0-9]+([.][0-9]+)?$`) and `better` is `lower` or `higher`: the function refuses others, each at the key written, naming the item by its number and label. The other keys are for the part's schema to say.
+`{{range stats .}}` reads a list of items, each written as keys and values: `label`, `value`, `unit`, `note`, `tone`, `from` and `better`. Each comes as `.Label`, `.Value` as written, `.Unit`, `.Note`, `.Tone` and `.From`; `.Way`, `better`, `worse` or `same`, and `.WayTone`, `good`, `bad` or `muted`, empty without `from`; and `.Change`, `value` less `from`, signed and exact, to the decimals of the longer of the two, empty when they are the same. With `from`, `from` and `value` are text of digits alone (`^-?[0-9]+([.][0-9]+)?$`) and `better` is `lower` or `higher`: the function refuses others at the part's value, naming the item by its number and label. The other keys are for the part's schema to say.
 
 ### `chart`
 

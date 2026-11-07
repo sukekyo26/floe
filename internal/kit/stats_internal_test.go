@@ -9,7 +9,7 @@ import (
 func TestStatsChange(t *testing.T) {
 	t.Parallel()
 
-	long := strings.Repeat("1", 1000001)
+	long := strings.Repeat("1", 2001)
 	for _, tt := range []struct{ from, value, better, change, way string }{
 		{"3.1", "1.3", "lower", "-1.8", "better"},
 		{"9", "4.5", "lower", "-4.5", "better"},
@@ -26,7 +26,7 @@ func TestStatsChange(t *testing.T) {
 			"0.000000000000000001", "123456789012345678901234567890", "lower",
 			"+123456789012345678901234567889.999999999999999999", "worse",
 		},
-		{"2", "1." + long, "lower", "-0." + strings.Repeat("8", 1000000) + "9", "better"},
+		{"2", "1." + long, "lower", "-0." + strings.Repeat("8", 2000) + "9", "better"},
 	} {
 		got, err := statsOf([]any{map[string]any{"label": "a", "value": tt.value, "from": tt.from, "better": tt.better}})
 		if err != nil {

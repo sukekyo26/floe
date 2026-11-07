@@ -25,6 +25,7 @@ sections:
           - { label: Four, value: '9', from: '12', better: lower, note: A note, tone: bad }
           - { label: Five, value: '1,840' }
           - { label: Six, value: '123456789012345678901234567890', from: '0.000000000000000001', unit: bytes, better: lower }
+          - { label: Seven, value: '5', from: '5', better: lower, tone: bad }
 `
 
 // measureStats tells what no other test measures of the numbers before and after: the change's colour, whatever the
@@ -34,7 +35,12 @@ const measureStats = `(() => {
   if (document.documentElement.scrollWidth > document.documentElement.clientWidth) out.add('the page scrolls sideways');
   const colour = (tone, card) => { const e = document.createElement('i'); e.dataset.floeTone = tone; e.style.color = 'var(--tone)'; card.append(e); const c = getComputedStyle(e).color; e.remove(); return c; };
   const cards = [...document.querySelectorAll('[data-floe-part=stats] .card')];
-  const words = { '-1.8': 'good', '+20': 'bad', '-3': 'good' };
+  const changes = { 0: 'good', 1: 'bad', 2: 'muted', 3: 'good', 5: 'bad', 6: 'muted' };
+  for (const [i, tone] of Object.entries(changes)) {
+    const change = cards[i] && cards[i].querySelector('.moved + .note');
+    if (!change) { out.add('card ' + i + ' has no change'); continue; }
+    if (getComputedStyle(change).color !== colour(tone, cards[i])) out.add(change.textContent + ' in ' + getComputedStyle(change).color + ', not ' + tone);
+  }
   const big = getComputedStyle(cards[4].querySelector('.value')).fontSize;
   for (const c of cards) {
     const box = c.getBoundingClientRect();
@@ -43,8 +49,6 @@ const measureStats = `(() => {
     const move = c.querySelector('.moved');
     if (!move) continue;
     if (getComputedStyle(move.lastElementChild).fontSize !== big) out.add('a number after of ' + getComputedStyle(move.lastElementChild).fontSize + ', not ' + big);
-    const change = move.nextElementSibling, tone = words[change.textContent.split(' ')[0]];
-    if (tone && getComputedStyle(change).color !== colour(tone, c)) out.add(change.textContent + ' in ' + getComputedStyle(change).color + ', not ' + tone);
   }
   if (cards[4].querySelector('.moved, .from, .arrow')) out.add('a number with no from has what from draws');
   const note = [...cards[3].querySelectorAll('.note')].pop();
