@@ -246,7 +246,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	task("#2", "--parent", "#4")
 	press("document.querySelector('#task-up-rows .unlink')")
 	b.until("refused", "!document.getElementById('error').hidden")
-	if got := b.eval("document.getElementById('error').textContent"); got != "Could not save: the parent of task #2 has changed since it was read: the tasks are read again, so check and save again" || parentOf("#2") != "#4" {
+	if got := b.eval("document.getElementById('error').textContent"); got != "Could not save: the parent of task #2 has changed since it was read" || parentOf("#2") != "#4" {
 		t.Errorf("moved meanwhile: %q, %q", got, parentOf("#2"))
 	}
 	b.until("read again", "document.querySelector('#task-up-rows .kin-row[data-task=\"#4\"]')")
