@@ -76,7 +76,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("document.querySelector('#list li[data-slug=b] .actions > .archive').click()")
 	b.until("the toast", "document.querySelector('.toast .btn')")
 	// The toast comes before the list is read again, which draws the rows anew
-	b.until("the archive done", "archiving.size === 0")
+	b.untilActed("the archive done", "true")
 	check("the toast")
 
 	b.navigate("/tasks?project=proj")
