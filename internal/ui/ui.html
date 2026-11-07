@@ -5130,6 +5130,7 @@
     }
     if (changed) drawn = '';
     const text = list + (read?.raw ?? '');
+    // Into items only now, the list read meeting every check: what reads items meanwhile has the list drawn last
     if (text !== drawn) items = entries;
     if (read) tasksRead = read;
     // Only a load failure is cleared here; a failed delete and the like stays until the next action
