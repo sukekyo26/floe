@@ -97,6 +97,7 @@ func TestForbidding(t *testing.T) {
 		// Of no type, keys and items, beside a closed $ref: rows may be a list of objects with k.
 		{"keys and items, then a step", `"properties": {"rows": {"properties": {"a": {` + closed + `"properties": {"x": {}}}}, "items": {"properties": {"a": {"properties": {"y": {}}}}}}}`, "rows.a.y", ""},
 		{"another key, closed items, additionalProperties", `"properties": {"rows": {"items": {` + closed + `"properties": {"a": {}}}, "additionalProperties": {}}}`, "rows.foo", ""},
+		{"closed beside a $ref to additionalProperties", `"properties": {"a": {"$ref": "#/$defs/open", ` + closed + `"properties": {"k": {}}}}, "$defs": {"open": {"additionalProperties": {}}}`, "a.zz", "zz"},
 		{"keys and items", `"properties": {"rows": {"$ref": "#/$defs/c", "properties": {"k": {}}, "items": {"properties": {"k": {}}}}}, "$defs": {"c": {` + closed + `"properties": {}}}`, "rows.k", ""},
 	} {
 		c, err := compile(t, tt.body)

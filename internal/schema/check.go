@@ -112,24 +112,24 @@ func (c *Compiled) checkTemplate() error {
 	return found.Sorted().Err()
 }
 
-// rootRest refuses an additionalProperties of the root that holds parts or formats: Walk is given the keys floe reads
-// itself (doc.Shared) with the rest of the data, and would draw them.
+// rootRest refuses an additionalProperties of the root that holds parts or formats, as the walk went past them: Walk is
+// given the keys floe reads itself (doc.Shared) with the rest of the data, and would draw them.
 func (c *Compiled) rootRest() usererr.List {
 	rest := c.Follow(c.Root).Rest
 	if rest == nil || !c.followFrom(rest).stops() {
 		return nil
 	}
-	return usererr.List{c.mistake(rest, "schema_root_rest")}
+	return usererr.List{c.mistake(rest, "schema_ref_unreached", c.written(rest.Location))}
 }
 
 // checkOwn returns the mistakes checkNode tells of each schema of the file compiled, and of each $ref, through
 // the Shared schemas it refers to too, to a schema floe does not hold. A Shared schema is checked from its own
 // root (CheckPart), not from what refers to it, which refers to its root alone (intoMistake); a $ref to it a
 // walk does not follow is told where it is (unreachedRef).
-// LIMIT: a property or items declared beside a $ref to a Shared schema hides the Shared schema's property of
-// its name or its items, whose parts or formats are then not drawn there, unsaid; a value is refused by the two
-// schemas together, or drawn as written, which shows. Tell it at the property or items if one of one's own comes
-// to need it.
+// LIMIT: a property, additionalProperties or items declared beside a $ref to a Shared schema hides the Shared schema's
+// property of its name, its additionalProperties or its items, whose parts or formats are then not drawn there,
+// unsaid; a value is refused by the two schemas together, or drawn as written, which shows. Tell it at the property or
+// items if one of one's own comes to need it.
 // LIMIT: one cause may be told twice or more, at the $ref a walk does not reach and at the part or format past
 // it; both are true, at other places. Tell it once if that comes to mislead.
 func (c *Compiled) checkOwn() usererr.List {

@@ -607,11 +607,11 @@ func TestCheckShared(t *testing.T) {
 		parts fstest.MapFS
 		want  string
 	}{
-		{"referred to by none", fstest.MapFS{"sh.json": {Data: []byte(inAnyOf)}}, "own/parts/sh.json: #/properties/m/anyOf/0: the part note draws no item here: floe draws what properties, additionalProperties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"},
+		{"referred to by none", fstest.MapFS{"sh.json": {Data: []byte(inAnyOf)}}, "own/parts/sh.json: #/properties/m/anyOf/0: the part note draws no item here: floe draws what properties, additionalProperties (not the root's) and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"},
 		{"referred to by a shared schema", fstest.MapFS{
 			"sh.json":  {Data: []byte(head + `"properties": {"t": {"$ref": "floe:///parts/sh2.json"}}}`)},
 			"sh2.json": {Data: []byte(inAnyOf)},
-		}, "own/parts/sh2.json: #/properties/m/anyOf/0: the part note draws no item here: floe draws what properties, additionalProperties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"},
+		}, "own/parts/sh2.json: #/properties/m/anyOf/0: the part note draws no item here: floe draws what properties, additionalProperties (not the root's) and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn"},
 		{"right", fstest.MapFS{"sh.json": {Data: []byte(head + `"properties": {"m": {"$ref": "floe:///parts/note.json"}}}`)}}, ""},
 	} {
 		if _, err := kit.Load(floe(t), kit.Sources{Parts: kit.Dir{FS: tt.parts, Name: "own/parts"}}); told(err) != tt.want {

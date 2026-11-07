@@ -37,14 +37,13 @@ var messagesEN = map[string]string{
 	"schema_id_relative":      "this $id, %s, has no scheme, which a part or a schema the parts share may not have, as it may land under floe:///parts/ and take the place of another: write an absolute URL of your own, like https://example.com/item.json, or leave $id out",
 	"schema_id_root":          "the root of a schema takes no $id: floe gives it its URL; leave $id out",
 	"schema_ref_templates":    "%s is no file floe holds: a template refers to a part as floe:///parts/<name>.json, and inside its own schema.json as #/…",
-	"schema_part_unreached":   "the part %s draws no item here: floe draws what properties, additionalProperties and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn",
-	"schema_ref_unreached":    "%s holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, additionalProperties, items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref",
-	"schema_format_unreached": "the format %s marks an item to draw; declare it under properties, additionalProperties or items, which floe follows",
+	"schema_part_unreached":   "the part %s draws no item here: floe draws what properties, additionalProperties (not the root's) and items reach from the root, through a $ref when nothing beside it draws; the item here is checked but not drawn",
+	"schema_ref_unreached":    "%s holds parts or items of floe's formats, which floe draws only where its walk from the root reaches them, through properties, additionalProperties (not the root's), items and $refs, and stops at a format of floe's; refer to it where the walk goes, with no format of floe's beside the $ref",
+	"schema_format_unreached": "the format %s marks an item to draw; declare it under properties, additionalProperties (not the root's) or items, which floe follows",
 	"schema_part_into":        "%s points into a part of floe's or a schema the parts share, which would be checked but not drawn as written; refer to the whole of it, %s",
 	"schema_dynamic_ref":      "floe does not follow %s: write a $ref",
 	"schema_root_drawn":       "the root of the schema is drawn whole by %s; declare the items of the page under properties, and name a part under one of them",
 	"schema_shared_declared":  "%s is read by floe itself: remove it from the schema's properties; to add a rule for it, write a check in checks.yaml",
-	"schema_root_rest":        "the additionalProperties of the root holds parts or items of floe's formats, which would draw the keys floe reads itself (lang, template, theme, title) too; declare the items of the page under properties",
 	"schema_shared_key":       "the schema requires %s, which floe reads from every data file itself (lang, template, theme, title) and leaves out of what the schema checks: require other items",
 
 	// doc: the keys every data file shares

@@ -37,15 +37,19 @@ func (st Step) Forbids(key string) bool {
 
 // patterned reports whether a patternProperties of s takes the key, as jsonschema reads it.
 func patterned(s *jsonschema.Schema, key string) bool {
-	return slices.ContainsFunc(slices.Collect(maps.Keys(s.PatternProperties)), func(re jsonschema.Regexp) bool {
-		return re.MatchString(key)
-	})
+	for re := range s.PatternProperties {
+		if re.MatchString(key) {
+			return true
+		}
+	}
+	return false
 }
 
 // of returns the schema of the key under the step, nil for none: additionalProperties takes what the properties and
 // the patternProperties beside it do not.
-// LIMIT: a key a $ref's properties declare beside an additionalProperties of s takes the $ref's alone, and what the
-// additionalProperties would draw stays as written. Take both if a part comes to need it.
+// LIMIT: of a $ref and what stands beside it, a key takes one: a key the $ref's properties declare takes not the
+// additionalProperties beside the $ref, nor a key declared beside it the $ref's additionalProperties, though both check
+// it; what the other would draw stays as written, plain on the page. Take both if a part comes to need it.
 func (st Step) of(key string) *jsonschema.Schema {
 	if s, ok := st.Props[key]; ok {
 		return s
@@ -399,7 +403,7 @@ func (c *Compiled) Forbidding(steps []string) (string, bool) {
 			case declared:
 				s = next
 				break step
-			case st.Rest != nil:
+			case st.Rest != nil && !st.Forbids(key):
 				// Undeclared where a value of keys takes any: known only by the value.
 				return "", false
 			case st.Items != nil:
