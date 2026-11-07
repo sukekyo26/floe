@@ -401,16 +401,16 @@ func TestDeclarations(t *testing.T) {
 	t.Parallel()
 
 	for src, want := range map[string]string{
-		".a { opacity: .5; }":                     ".5 false .a",
-		".a { opacity/**/: .5 }":                  ".5 false .a",
-		".a { opacity /* x */ : .5 } .b { x: 1 }": ".5 false .a",
-		".a { opacity: 0 ! IMPORTANT; }":          "0 true .a",
-		".a { opacity: 0!important }":             "0 true .a",
-		".a { b { c: 1 } opacity: .5 }":           ".5 false .a",
-		"@media print { .a { opacity: 1 } }":      "1 false @media print { .a",
-		".a { &:hover { opacity: 1; } }":          "1 false .a { &:hover",
-		"li:has(a[x=';']) { opacity: 1 }":         "1 false li:has(a[x=';'])",
-		":scope { --x: f(}); opacity: .5 }":       ".5 false :scope",
+		".a { opacity: .5; }":                           ".5 false .a",
+		".a { opacity/**/: .5 }":                        ".5 false .a",
+		".a { opacity /* x */ : .5 } .b { x: 1 }":       ".5 false .a",
+		".a { opacity: 0 ! IMPORTANT; }":                "0 true .a",
+		".a { opacity: 0!important }":                   "0 true .a",
+		".a { b { c: 1 } opacity: .5 }":                 ".5 false .a",
+		"@media print { .a { opacity: 1 } }":            "1 false @media print { .a",
+		".a { &:hover { opacity: 1; } }":                "1 false .a { &:hover",
+		"li:has(a[x=';']) { opacity: 1 }":               "1 false li:has(a[x=';'])",
+		":scope { --x: f(}); opacity: .5 }":             ".5 false :scope",
 		":scope { --x: f(a; opacity: 1); opacity: .5 }": ".5 false :scope",
 		":scope { --x: [a; opacity: 1]; opacity: .5 }":  ".5 false :scope",
 	} {
@@ -511,7 +511,7 @@ func TestUIParts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got []int
+	got := make([]int, 0, len(sheets))
 	for _, s := range sheets {
 		got = append(got, s.line)
 	}
