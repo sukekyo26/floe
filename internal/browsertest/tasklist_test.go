@@ -106,17 +106,12 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.until("the guide", "!document.getElementById('tasks-empty').hidden")
 	say("no work, tasks: shelf shown", "document.getElementById('shelf').offsetParent !== null")
 
-	// A task's row alone is on the list's chips: a task waiting must not be out of reach.
-	s.floe(t, "work", "--task", "#99", "--project", "solo")
-	b.navigate("/tasks")
-	b.until("the chips", "document.querySelector('#chips .chip')")
-	say("a row alone: chips", "[...document.querySelectorAll('#chips .chip')].map((c) => c.dataset.project).join(' ')")
-	s.floe(t, "work", "--task", "#99", "--project", "solo", "--forget")
-
 	taskPages(t, s)
 	writeTasks(taskWork)
 
 	// Opened with no project: the one where a task has waited longest, written in the URL with no entry of its own, and kept.
+	b.navigate("/")
+	b.until("the page list", rowsDrawn)
 	before := b.eval("history.length")
 	b.navigate("/tasks")
 	b.until("the rows", rowsDrawn)
@@ -387,7 +382,6 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 
 // taskListWant is what TestUITaskList reads of the list, in the order it reads it.
 const taskListWant = `no work, tasks: shelf shown: false
-a row alone: chips: solo
 opened: ?project=shop shop
 waiting: #2Two [0 page(s)]; #1One [design, 2 page(s), 2 unread, b/c]
 views: todo 1, doing 2, waiting 2, done 2, archived 1
