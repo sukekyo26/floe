@@ -167,7 +167,7 @@ parts:
   - box: { x: 160, y: 120, w: 100, h: 40, rows: [plain] }
   - edge: { from: [120, 40], to: [160, 40], tone: accent }
   - edge: { from: [260, 140], to: [300, 140] }
-  - raw: { svg: '<rect x="300" y="120" width="30" height="40" fill="var(--accent-soft)" stroke="var(--accent)"/><g data-floe-tone="bad"><rect x="340" y="120" width="30" height="40" fill="var(--tone)"/></g><text x="380" y="140" font-size="12" fill="currentColor">r</text>' }
+  - raw: { svg: '<rect x="300" y="120" width="30" height="40" fill="var(--accent-soft)" stroke="var(--accent)" data-want="fill=--accent-soft stroke=--accent"/><g data-floe-tone="bad"><rect x="340" y="120" width="30" height="40" fill="var(--tone)" data-want="fill=--bad"/></g><text x="380" y="140" font-size="12" fill="currentColor" data-want="fill=--fg">r</text>' }
 `
 
 // diagramColours lists, in the tree root names (document, or a shadow root), what the diagram's CSS paints:
@@ -187,6 +187,24 @@ func diagramColours(root string) string {
   return out.join('\n');
 })(` + root + `)`
 }
+
+// rawOff lists the raw SVG whose colours are not the palette's that its data-want names (fill=--bad), each variable
+// read as a colour in the page's body, outside the diagrams.
+const rawOff = `(() => {
+  const out = [];
+  for (const e of document.querySelectorAll('svg.dg [data-want]')) {
+    const c = getComputedStyle(e);
+    for (const pair of e.dataset.want.split(' ')) {
+      const [prop, name] = pair.split('=');
+      const probe = document.body.appendChild(document.createElement('span'));
+      probe.style.color = 'var(' + name + ')';
+      const want = getComputedStyle(probe).color;
+      probe.remove();
+      if (c.getPropertyValue(prop) !== want) out.push(e.tagName + ' ' + prop + ': ' + c.getPropertyValue(prop) + ', want ' + name + ' ' + want);
+    }
+  }
+  return out.join('\n');
+})()`
 
 // unpainted lists the shapes of the diagrams that a rule of part.css leaves in the browser's defaults, as one that
 // reads a variable no palette sets: a line without a stroke, another shape black, or with neither fill nor stroke.
@@ -240,6 +258,9 @@ func TestUIDiagramFragment(t *testing.T) { //nolint:paralleltest // the browser 
 	b.until("the toolbars", "document.querySelectorAll('.floe-zoom-tools').length === "+strconv.Itoa(len(specs)))
 	if got := b.eval(unpainted); got != "" {
 		t.Errorf("shapes part.css leaves unpainted in floe's page:\n%s", got)
+	}
+	if got := b.eval(rawOff); got != "" {
+		t.Errorf("raw SVG not in the palette's colours it reads, in floe's page:\n%s", got)
 	}
 	want := b.eval(diagramColours("document"))
 
