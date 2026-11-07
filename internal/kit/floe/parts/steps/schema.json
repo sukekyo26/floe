@@ -1,13 +1,19 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "steps",
-  "description": "Steps in order, each numbered under a line to the next, ticked once done and ringed while being done",
+  "description": "Steps in order, each numbered under a line to the next, ticked once done and ringed while being done, with its tags under its title",
   "type": "array",
   "minItems": 1,
   "items": {
     "type": "object",
     "properties": {
       "title": { "type": "string", "minLength": 1 },
+      "tags": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "$ref": "floe:///parts/cell.json" },
+        "description": "Short values under the title, each a line of Markdown or a pill, as a table's cells; say in it what it is, such as PR #428, and name a step by what does not change when the steps move (after #428, not after 1)"
+      },
       "text": { "type": "string", "minLength": 1, "description": "Markdown" },
       "state": { "enum": ["done", "doing", "todo"], "description": "todo when left out" }
     },
