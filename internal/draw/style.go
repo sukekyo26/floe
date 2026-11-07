@@ -291,6 +291,8 @@ func cssOf(k *kit.Kit, name string) []byte {
 // next (::after). Colours, corners and content are theirs.
 // LIMIT: a template's page.css, a part's part.css, a look a part takes and a theme's file of a part, all in layers
 // over floe.marks, that write a row's display, gap or grid-template win over it unsaid; TestUIMarks measures floe's.
+// LIMIT: the ::after of a row of box or items is left to what draws it: with no position it is an item of the grid, in
+// the column mark, and one wider than the mark moves the text unsaid.
 // LIMIT: kit refuses two marks: down one part.yaml's looks alone; an element that HTML gives two of them (an ol of
 // data-floe-look="numbered marked", a part's box that takes marked) has both rules on its rows, not refused.
 func marks(k *kit.Kit, n named) []byte {

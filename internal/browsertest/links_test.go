@@ -55,6 +55,7 @@ const measureLinks = `(() => {
       if (past && past.closest('a')) out.push('row ' + i + ': the blank after a folded title follows its link');
     }
     const sign = getComputedStyle(row, '::before');
+    if (parseFloat(sign.maskSize) > parseFloat(sign.height) + 0.5) out.push('row ' + i + ': the sign ' + sign.maskSize + ' in a box ' + sign.height + ' high');
     if (sign.content === 'none' || sign.backgroundColor === 'rgba(0, 0, 0, 0)') out.push('row ' + i + ': no sign');
     if (!getComputedStyle(row.querySelector('a')).textDecorationLine.includes('underline')) out.push('row ' + i + ': the link not underlined');
     const t = text && text.getBoundingClientRect();
@@ -88,6 +89,13 @@ func TestUILinksPart(t *testing.T) { //nolint:paralleltest // the browser tests 
 	}
 	file := s.write(t, "links.yaml", linksPage)
 	defer s.b.unsize()
+	// A theme of one's own draws the rows in lines lower than the sign's 1rem.
+	s.own(t, map[string]string{"themes/low/links.css": ":scope > li { font-size: 0.8rem; line-height: 1.1; }\n"})
+	s.floe(t, "publish", file, "--slug", "links-low", "--theme", "low")
+	s.b.navigate("/a/links-low/?raw")
+	if got := s.b.eval(measureLinks); got != "" {
+		t.Errorf("low lines:\n%s", got)
+	}
 	for _, theme := range entries {
 		slug := "links-" + theme.Name()
 		s.floe(t, "publish", file, "--slug", slug, "--theme", theme.Name())
