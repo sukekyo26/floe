@@ -3434,14 +3434,12 @@
   function drawTaskHead(task) {
     $('task-title').replaceChildren(tagged('span', 'tname', task.name), task.title ?? '');
     const sel = $('task-state');
+    const onState = document.activeElement === sel;
     // Drawn again at the next look, which may find them closed
     if (selectOpen(sel)) drawn = '';
     else {
-      const had = document.activeElement === sel;
       sel.hidden = task.state === 'archived';
       $('task-archived').hidden = !sel.hidden;
-      // Archived elsewhere: the word takes no focus, and the button is there beside it
-      if (had && sel.hidden) $('task-archive').focus();
       sel.value = task.state;
       sel.dataset.state = task.state;
       sel.className = `ver-pick st ${task.state}`;
@@ -3460,6 +3458,8 @@
     archive.hidden = !back && task.state !== 'done';
     archive.textContent = t(back ? 'ui_task_unarchive' : 'ui_task_archive');
     archive.onclick = (e) => archiveTask(e, task, !back);
+    // Archived elsewhere: the word takes no focus, and the button is there beside it
+    if (onState && sel.hidden) archive.focus();
   }
 
   // A task's family over its pages, in two parts: its parent, offered while it has no children, and its children, offered while it has no

@@ -229,7 +229,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, "closed: "+b.eval("document.getElementById('task-state').hidden + ' ' + document.getElementById('task-archived').hidden"))
 
 	// Archived elsewhere with the focus on the choices, closed: it goes to the button beside the word.
-	task("#focused", "--state", "done")
+	task("#focused", "--state", "doing")
 	open("#focused")
 	b.eval("document.getElementById('task-state').focus()")
 	task("#focused", "--state", "archived")
