@@ -1,5 +1,5 @@
 /* Sizes in rem, as chart.go counts the room of the labels and the height of the plot in them */
-:scope { container-type: inline-size; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; overflow-wrap: anywhere; padding: var(--floe-pad-block) var(--floe-pad-inline); }
+:scope { container-type: inline-size; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); overflow-wrap: anywhere; padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
 :scope .title { font-weight: 700; }
 :scope .unit { font-size: var(--floe-text-small); color: var(--muted); }
