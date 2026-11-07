@@ -579,6 +579,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The theme blueprint draws the heads of code, diffs and terminals, a note's title and a table's heads, and the template report its eyebrow, in the case they are written in, not in capitals: a browser copies the capitals, so a file name or code copied from them came out as other text.
 - Fix where a row of too many or too few cells of a `table` is told: at each such row, not once at the start of `rows`.
 - Fix changing a task's state on its page after the task was removed elsewhere: it made the task again, and now refuses, says so and reads the tasks again.
 - Fix going back from a page opened whole, by the back button, `h` or the browser's own: the list that opened it, the page list or a task's page, now has that page's row focused and the page beside the list, or the pin focused on the task list. A page left unread stays unread: only its row has the focus.

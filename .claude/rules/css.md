@@ -34,3 +34,4 @@ paths:
 - **静かな地は `--quiet`**：箱の中の静かな地はパレットの `--quiet` を読み、部品が割合を混ぜない。テーマだけの変数はパレットか base.css の `:scope` に置く（default の palette.css はどのテーマの下にも入るので、default だけのものは base.css に）
 - **テーマの飾りは場所を取らない**：padding を広げず、地の色や透明の枠で場所を作らず、今ある余白の上に重ねて描く（地、`--floe-inset`、`::before`）。部品が輪や印を outline で描く箱に、飾りの outline を書かない（輪に置き換わって消える）
 - **テーマの飾りは傾けず、言葉を書かない**：テーマの CSS は受ける形だけを書く：変形は `translate` の類と `none` だけ、文字列は記号だけで、字は書体の名前にだけ（CSS の字は words.yaml を通らない）、数え方は decimal の類と形だけ。`TestThemeMarks`
+- **字の大文字と小文字は変えない**：floe の CSS（部品・見た目・テーマ・テンプレート）は `text-transform` を `none` のほか書かない。大文字にしたい字は字そのもので書く。`TestTextCase`
