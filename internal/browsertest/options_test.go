@@ -109,7 +109,8 @@ func TestUIOptionsRows(t *testing.T) { //nolint:paralleltest // the browser test
 	s.write(t, "small.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90"><rect width="160" height="90" fill="#999"/></svg>`)
 	page := s.write(t, "options.yaml", optionsPage)
 	s.own(t, map[string]string{"themes/gapped/cards.css": ":scope { --cards-gap: 1rem; }\n"})
-	names := []string{"gapped"}
+	names := make([]string, 0, 1+len(themes))
+	names = append(names, "gapped")
 	for _, theme := range themes {
 		names = append(names, theme.Name())
 	}
