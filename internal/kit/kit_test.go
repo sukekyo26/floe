@@ -45,7 +45,7 @@ func TestFloe(t *testing.T) {
 		t.Error("Floe read floe's own twice")
 	}
 	parts, looks, themes, templates := k.Names()
-	if len(parts) != 31 || !slices.Equal(looks, []string{"band", "cards", "marked", "numbered", "panel", "rows", "zoom"}) || len(themes) != 12 ||
+	if len(parts) != 32 || !slices.Equal(looks, []string{"band", "cards", "marked", "numbered", "panel", "rows", "zoom"}) || len(themes) != 12 ||
 		!slices.Equal(templates, []string{"adr", "design", "handoff", "postmortem", "report", "runbook", "slides"}) {
 		t.Errorf("Names = %v, %v, %v, %v", parts, looks, themes, templates)
 	}
@@ -110,7 +110,7 @@ func TestEntryFiles(t *testing.T) {
 		{k.Parts, "panel", "part.yaml, part.css"},
 		{k.Parts, "tone", "tone.json"},
 		{k.Templates, "design", "schema.json, computed.yaml, example.yaml, page.html, page.css, words.yaml"},
-		{k.Themes, "retro", "palette.css, base.css, markdown.css, cards.css, cell.css, note.css, panel.css, table.css"},
+		{k.Themes, "retro", "palette.css, base.css, markdown.css, cards.css, cell.css, chart.css, note.css, panel.css, table.css"},
 		{k.Themes, "ink", "palette.css, markdown.css, cards.css, cell.css, code.css, note.css, panel.css, table.css"},
 	} {
 		if got := names(tt.entries(), tt.name); got != tt.want {

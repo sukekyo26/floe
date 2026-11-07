@@ -87,6 +87,10 @@ floe の部品が描くのに使う関数も使えます。floe の部品の `pa
 
 これは、`part.html` が `bars` に渡す並びの schema に置きます。`bars .items` なら `properties.items` の下に `properties.items.items` として置き、根に置いても並びは確かめられません。
 
+### `chart`
+
+`{{$c := chart .}}` は、部品の値の全体から部品 `chart` の座標を計算し、その `part.html` が SVG を書きます。あの部品のための関数で、欄と、欄が前提にする高さ・字・class は保証しません。座標を決められない値（`kind` が `line`・`bar` でない、`x` か `series` が空、`values` の数が `x` と違う、数でない値や `min`）は断ります。`values` の数の違いと、数でない値や `min` は書いた所に置き、ほかは部品の値に置きます。
+
 ### `written`
 
 `{{written}}` は、部品の値を書いたままで返します。`part.html` が比べるか、pill の字のように字のまま描くためのもので、Markdown や HTML として描く項目は `.` から取ります。中の部品と format は描いていないので `eq`・`index` に渡せます。値が書いていない鍵は nil でなく無いので、`note` を省いた値で `{{(written).note}}` は誤りです（`index` か `with` で引きます）。floe の `table` は、列の `pills` の升をこれで比べます。
@@ -174,6 +178,7 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 - テーマも tone を `var(--tone)`・`var(--tone-soft)` で描き、tone ごとの規則を書きません。tone をテーマの色で塗るテーマ（brutal・notebook）は、`palette.css` に `--good-fill` などで 1 回だけ置き（tone の無いものは `--accent-fill`）、`var(--tone-fill)` で描きます。floe が `--<tone>-fill` から置き、テーマが名指さない tone では `--<tone>-soft` になります。テーマの部品ごとのファイルは、部品の `part.css` と同じ深さの層に後ろから入るので、同じ詳しさなら勝ち、詳しいセレクタなら詳しさで決まります。
 - 表の頭、選んだタブ、code の頭は、部品が変数から塗ります。どれも置かれていなければ floe の値で読み、テーマはその部品のファイルの `:scope`（ページ全体なら `base.css` の `:scope`）に置きます。表の頭は `--table-head-bg` と `--table-head-fg`、行の間の線は `--table-rule`（線なしは `none`）。選んだタブは `--tabs-picked-bg`、`--tabs-picked-fg`、`--tabs-picked-ring`（`box-shadow`）。code の頭（diff・terminal も）は `--code-head-bg` と `--code-head-fg`、その上の diff の数は `--code-head-add` と `--code-head-del`、写すボタンの地は `--code-ground`（code の行は code の地の上にあります。テーマが `:scope pre` で行を自分の地で塗るときは、同じ色を `--code-ground` に置きます）。テーマは、状態（`:checked`）や印刷を知る規則も、ほかの部品のために頭の色を選び直す規則も書きません。code の頭を明るくするテーマは、数の色も一緒に置きます。terminal の頭は、テーマがどの色を置いても `--code-head-fg` の 85% で薄く描かれます。頭の `color` を規則で書くテーマでは、terminal の頭もその色になります。選んだタブの輪は、テーマが全部のタブの名前に付けた影の上に描かれます。選んだタブにもその影を付けるなら、輪に置きます。頭の線と字の形（書体・大きさ・太さ）は、テーマの規則（`:scope thead th`・`:scope figcaption`）のままです。テーマが自分の地で塗る頭は面（`--face`・`--on-face`）にします。
 - 箱の中の静かな地（表の頭、棒の溝、キー）は `var(--quiet)` です。箱をそれに近い地で塗るテーマは、その箱で `--quiet` を置き直します（default は、灰色の panel の上では白、その中の白い面の上では灰色に）。
+- グラフの形も変数で、それぞれ未設定なら floe の値で読みます。テーマは自分の `chart.css` の `:scope` に置き、場所を取りません：`--chart-line`・`--chart-dash`（線の太さと破線）、`--chart-dot`・`--chart-dot-fill`・`--chart-dot-edge`・`--chart-dot-line`（点の半径、塗り、縁、縁の太さ）、`--chart-bar-fill`・`--chart-bar-edge`・`--chart-bar-line`（棒の塗り、枠、枠の太さ）、`--chart-ground`（線の場所の地。箱の模様が目盛りとぶつかるときに）。`currentColor` が系列の色です。線は 3px、点の半径は 5px、点の縁と棒の枠は 2px までにします（字はその外に置かれます）。枠より細い棒は枠なしで描きます。
 - 角の丸さはパレットのものです。テーマは `palette.css` に `--radius`・`--radius-small`・`--radius-pill` を 1 つの長さで書き、ほかのファイルは丸さを書きません。ほかの形の角（notebook の手書きなど）は、`palette.css` か `base.css` の `:scope` にテーマ自身の名前の変数で置き、テーマのファイルが読みます。3 つに 4 つの角や `/` を入れると、1 つの角として読む規則や `calc()`・`min()` の中で無効になります。角は 2 つの変数の小さい方を取ってもよいです（札の `min(var(--radius-pill), var(--floe-pill-end))`）。自分の部品も 3 つを読み、形（`0`・`50%`・`999px`）のほかに長さを書きません。
 - 影は、テーマの 1 組です。`palette.css` に `--floe-shadow-x`・`-y`・`-blur`・`-spread` で 1 回だけ書き（px か rem。em は箱の字の大きさで変わり、% は影が無くなります）、影を落とす箱に、部品か見た目のファイルで色 `--floe-shadow-color` を置きます（`.card { --floe-shadow-color: var(--fg); }`）。色は中の箱に届きません。箱の中に描く影は `--floe-inset` に置きます（打ち消すのは `initial`。`none` を書くと、箱の影も一緒に消えます）。部品の箱・見た目を借りる要素・引用に `box-shadow` を書きません。floe の base がこれらから書き、上から書くと消えます。
 - 箱の外へ描くもの（影、外へ出る疑似要素、outline）のために場所は空けません。四方とも、floe が部品の間に空ける `--floe-room`（0.75rem）以下にし、ほかの箱やページの端に届かないようにします。大きさは箱の大きさによらない値にします。傾きや拡大のように、箱が大きいほど外へ出る変形は使いません。テーマは部品の間を書きません。間はどこも `--floe-room` で、部品とテンプレートが決めます。テーマの `cards.css` や `tabs.css` が根に `gap` を書くと、間がずれます。

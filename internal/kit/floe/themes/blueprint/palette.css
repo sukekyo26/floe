@@ -1,5 +1,7 @@
 /* Blue ink on squared paper, its sections ruled in the ink */
 :scope {
+  --chart-1: #1f56b5; --chart-2: #c2570f; --chart-3: #008f8f; --chart-4: #7a45c4;
+ 
   /* Width and style of this theme's box frames, and of lines drawn inside boxes alike */
   --bp-frame: 1.5px solid;
   --bg: #eef4fc; --surface: #f7faff; --fg: #12284d; --muted: #4a5f80; --line: #c5d5ec;

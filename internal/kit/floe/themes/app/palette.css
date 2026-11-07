@@ -1,5 +1,7 @@
 /* An app's screen: cool grey ground, white cards raised by soft shadows, a raspberry accent */
 :scope {
+  --chart-1: #c2185b; --chart-2: #1e6fd9; --chart-3: #0e8a6b; --chart-4: #b86a00;
+ 
   --bg: #eef1f6; --surface: #ffffff; --fg: #1a2233; --muted: #5a6478; --line: #e1e6ee;
   --accent: #c2185b; --accent-soft: #fce4ee;
   --good: #137a4a; --good-soft: #dff3e8; --warn: #8f5800; --warn-soft: #fdecd2; --bad: #c62828; --bad-soft: #fde2e2;

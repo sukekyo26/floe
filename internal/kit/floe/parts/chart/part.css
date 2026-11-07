@@ -1,0 +1,27 @@
+/* Sizes in rem, as chart.go counts the room of the labels and the height of the plot in them */
+:scope { container-type: inline-size; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--floe-room); overflow-wrap: anywhere; padding: var(--floe-pad-block) var(--floe-pad-inline); }
+:scope .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
+:scope .title { font-weight: 700; }
+:scope .unit { font-size: var(--floe-text-small); color: var(--muted); }
+:scope .legend { display: flex; flex-wrap: wrap; gap: 0.25rem 0.9rem; font-size: var(--floe-text-small); list-style: none; padding: 0; }
+:scope .legend li { display: flex; align-items: center; gap: 0.35rem; }
+:scope .key { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--c); }
+:scope .s1 { --c: var(--chart-1); } :scope .s2 { --c: var(--chart-2); } :scope .s3 { --c: var(--chart-3); } :scope .s4 { --c: var(--chart-4); }
+:scope svg { display: block; box-sizing: border-box; width: 100%; height: 16.5rem; padding: 1rem var(--right) 2rem var(--left); background: var(--chart-ground, none); overflow: visible; font-size: var(--floe-text-small); }
+:scope svg text { dominant-baseline: central; fill: currentColor; color: var(--muted); }
+:scope .end, :scope .val { color: var(--fg); }
+:scope .tick, :scope .val, :scope .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+:scope .grid { stroke: color-mix(in srgb, var(--fg) 14%, transparent); stroke-width: 1; }
+:scope .zero { stroke: var(--muted); }
+:scope svg g { color: var(--c); }
+:scope .seg { stroke: currentColor; stroke-width: var(--chart-line, 2px); stroke-dasharray: var(--chart-dash, none); stroke-linecap: round; }
+:scope .dot { r: var(--chart-dot, 4px); fill: var(--chart-dot-fill, currentColor); stroke: var(--chart-dot-edge, var(--surface)); stroke-width: var(--chart-dot-line, 2px); }
+:scope .hit { fill: transparent; }
+:scope rect { fill: var(--chart-bar-fill, currentColor); stroke: var(--chart-bar-edge, none); stroke-width: var(--chart-bar-line, 0); rx: var(--radius-small); }
+:scope .thin rect { fill: currentColor; stroke: none; rx: 0; }
+@container (max-width: 34rem) {
+  :scope svg { padding-inline-end: var(--right-narrow); }
+  :scope .name, :scope .wide { display: none; }
+  /* Go knows not how wide a bar comes out here, as low as a few px: a frame would be all of one */
+  :scope rect { fill: currentColor; stroke: none; }
+}

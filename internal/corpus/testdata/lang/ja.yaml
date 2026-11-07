@@ -14,3 +14,15 @@ sections:
   - heading: 日本語の見出し
     parts:
       - text: 日本語の**本文**と、[見出しへのリンク](#日本語の見出し)。
+      - chart:
+          kind: line
+          title: ページ
+          x: [a, b]
+          series:
+            - { name: 件数, values: [1, 2] }
+      - chart:
+          kind: bar
+          title: ページ
+          x: [a, b]
+          series:
+            - { name: 件数, values: [1, 2] }

@@ -1,5 +1,7 @@
 /* A dawn sky behind frosted glass: a wash of lavender, peach and mint, faces of clouded white, a violet accent */
 :scope {
+  --chart-1: #6234c8; --chart-2: #0e8f86; --chart-3: #c96f0a; --chart-4: #d0397f;
+ 
   --bg: #f3f0fa; --surface: #fdfcff; --fg: #231d38; --muted: #554e70; --line: #ddd6ee;
   --accent: #6234c8; --accent-soft: #ebe3ff;
   --good: #156a42; --good-soft: #daf3e6; --warn: #844f00; --warn-soft: #fbead0; --bad: #ab2146; --bad-soft: #fde1e8;

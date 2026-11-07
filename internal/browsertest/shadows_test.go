@@ -130,6 +130,7 @@ func (b *browser) shadowsIn(where string, width int64) []string {
 
 	b.size(width, 900, false)
 	defer b.unsize()
+	b.eval("document.querySelectorAll('details').forEach((d) => { d.open = true; }); ''")
 	var n int
 	if _, err := fmt.Sscan(b.eval(markProbed), &n); err != nil {
 		b.t.Fatal(err)
