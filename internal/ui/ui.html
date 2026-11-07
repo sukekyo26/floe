@@ -3778,7 +3778,7 @@
     try {
       const res = await writeTask(task.project, task.name, { new: false, state: archived ? 'archived' : 'done' });
       if (!res.ok) {
-        showError(t('ui_save_failed', res.status === 409 ? res.stale : res.text));
+        showError(t('ui_save_failed', res.text));
         return;
       }
       toast(t(archived ? 'ui_task_arc_done' : 'ui_task_unarc_done', task.name));
@@ -3799,11 +3799,12 @@
     sel.blur();
     try {
       const res = await writeTask(project, TASK_NAME, { new: false, state: sel.value });
-      if (!res.ok) throw new Error(res.status === 409 ? res.stale : res.text);
+      if (!res.ok) throw new Error(res.text);
       showError('');
     } catch (e) {
       sel.value = sel.dataset.state;
       showError(t('ui_state_failed', e.message));
+      return;
     }
     await load();
   }
@@ -4936,8 +4937,8 @@
     blank.reportValidity();
     return false;
   }
-  // A task's write from a modal, which says whether it takes the task to be new. Refused as stale (409), the tasks are read again, a page whole
-  // too, whose load reads none; the refusal comes with what to do next
+  // A task's write from the screen, a modal, the state's choices or the archive button, which says whether it takes the task to be new. Refused
+  // as stale (409), the tasks are read again, a page whole too, whose load reads none; stale is the refusal with what to do next in a modal, which can save again
   async function writeTask(project, name, body) {
     const res = await api(`/api/tasks?${new URLSearchParams({ project, task: name })}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const text = res.ok ? '' : await res.text();

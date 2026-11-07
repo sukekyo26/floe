@@ -297,7 +297,7 @@ a child added: #kid3 To do,#kid In progress,#kid2 Archive
 the child: doing
 its parent, from the child: #up
 with the parent in the archive: done #forgot,#none,#pages,#part,#refused | archive #double,#kid2,#late,#marked,#still,#up
-forgotten: Could not save: task #forgot is no longer there: the tasks are read again, so check and save again
+forgotten: Could not save: task #forgot is no longer there
 refused: Could not save: no
 refused, as it was: Archive the task | done | no word | rows f1 | 
 not reached: Could not save: no server | done
@@ -334,10 +334,10 @@ func TestUITaskStateGone(t *testing.T) { //nolint:paralleltest // the browser te
 	s.floe(t, "work", "--project", project, "--task", "#gone", "--forget")
 	b.eval(change)
 	b.until("the refusal", "!document.getElementById('error').hidden")
-	if got, want := b.eval("document.getElementById('error').textContent"), "The state could not be changed: task #gone is no longer there: the tasks are read again, so check and save again"; got != want {
+	b.until("read again", "!document.getElementById('task-missing').hidden")
+	if got, want := b.eval("document.getElementById('error').textContent"), "The state could not be changed: task #gone is no longer there"; got != want {
 		t.Errorf("forgotten: %q, want %q", got, want)
 	}
-	b.until("read again", "!document.getElementById('task-missing').hidden")
 	tasks, err := st.ReadTasks()
 	if err != nil {
 		t.Fatal(err)
