@@ -1,5 +1,5 @@
 <ol data-floe-part="steps">
 {{- range .}}{{$state := or .state "todo"}}
-<li class="{{$state}}"{{if eq $state "done"}} data-floe-mark="solid" data-floe-tone="good"{{else if eq $state "doing"}} data-floe-mark="ring" aria-current="step"{{end}}><strong>{{if eq $state "done"}}<span class="floe-hidden">{{word "done"}}</span>{{end}}{{.title}}</strong>{{with .text}}{{markdown .}}{{end}}</li>
+<li class="{{$state}}"{{if eq $state "done"}} data-floe-mark="solid" data-floe-tone="good"{{else if eq $state "doing"}} data-floe-mark="ring" aria-current="step"{{end}}><strong>{{if eq $state "done"}}<span class="floe-hidden">{{word "done"}}</span>{{end}}{{.title}}</strong>{{with .tags}}<div data-floe-look="tags">{{range .}}<span>{{.}}</span>{{end}}</div>{{end}}{{with .text}}{{markdown .}}{{end}}</li>
 {{- end}}
 </ol>

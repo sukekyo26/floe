@@ -3,4 +3,4 @@
 :scope { padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > li.done::before { content: "✓"; content: "✓" / ""; }
 :scope > li > strong { line-height: 1.6; }
-:scope > li > :not(strong) { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }
+:scope > li > [data-floe-text] { color: var(--on-face, var(--muted)); font-size: var(--floe-text-aside); }

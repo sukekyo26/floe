@@ -15,11 +15,11 @@ import (
 var textSteps = []string{"var(--floe-text-small)", "var(--floe-text-aside)"}
 
 // codeText is the text of code, which follows code's size rather than a step: a file under parts, the rule it writes
-// the size in, and the size (code's lines, a tree's names, the code in an entry's tags).
+// the size in, and the size (code's lines, a tree's names, the code in a row of tags).
 var codeText = map[[2]string]string{
-	{"code/part.css", ":scope pre"}:           "0.875rem",
-	{"tree/part.css", ":scope .name"}:         "0.86rem",
-	{"entries/part.css", ":scope .tags code"}: "0.86rem",
+	{"code/part.css", ":scope pre"}:   "0.875rem",
+	{"tree/part.css", ":scope .name"}: "0.86rem",
+	{"tags/part.css", ":scope code"}:  "0.86rem",
 }
 
 // TestTextScale keeps the size of parts' and looks' text, in font-size and in font, to base.css's steps of small text
