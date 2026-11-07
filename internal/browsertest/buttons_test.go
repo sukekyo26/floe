@@ -77,6 +77,10 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("the toast", "document.querySelector('.toast .btn')")
 	check("the toast")
 
+	b.navigate("/tasks?project=proj")
+	b.until("the task list's button", "document.getElementById('task-add').getClientRects().length")
+	check("the task list")
+
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the head", "!document.getElementById('task-archive').hidden")
 	check("a task done")
