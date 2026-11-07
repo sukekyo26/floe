@@ -27,6 +27,7 @@ paths:
 - **パレットの変数は docs の表に名前で書く** [palette-in-docs]：default の palette.css の変数は、docs/templates.md の「The palette」の表（英・日）に、まとめずに名前を字のまま書く（raw と自分のテーマが頼る約束なので）。`TestLintRule/palette-in-docs`
 - **tone は `data-floe-tone` と、floe が tone.json から組み立てる変数** [tone]：tone の印は class でなく `data-floe-tone`。名前を色に写すのは style.go の `Tones` だけで、部品・テーマ・テンプレートは `--tone`・`--tone-soft`・`--tone-fill` を読む。tone ごとのセレクタは tone の色でないものにだけ書く。テーマが自分の色で塗るときはパレットに `--<tone>-fill` を置く。`TestLookRule/tone`
 - **部品の箱と見た目の並びは floe が外す** [lists-off]：`ul`・`ol`・`menu` の印・左の余白・項目の間は style.go の `boxes` が外し、grid で並べる。`TestLookRule/lists-off`
+- **部品の箱と見た目の並びは印を出さない** [lists-marked]：部品の箱か見た目である `ul`・`ol`・`menu` は、どのテーマ・テンプレートでも印を出さない。`TestLookRule/lists-marked`
 - **部品と見た目は並びの見た目を外す規則を書かない** [lists-unwritten]：部品の箱と見た目の並びの印・左の余白・項目の間を外す規則は、部品と見た目に書かない（floe が外す）
 - **色で塗った帯は見た目 `band` 1 つ** [band]：テンプレートは、`--accent` で塗った帯を page.css に書かず、`data-floe-look="band"` で借りる。page.css が書くのは帯の余白と中の並びだけ
 - **塗った面は `--face` と `--on-face`** [face]：地と字の色を自分で決め、中にリンク・行の code・フォーカスの輪が来る面は、2 つの変数を置いて `background: var(--face); color: var(--on-face)` で塗る。中の色は base.css 1 か所が決め、面ごとに書かない。部品の中身は base.css が変数を外すので、部品の根を面にするときは根と根の子に置く。自分の地を塗る見た目・部品は、地と一緒に `color: var(--fg)` を書き、面の変数を外す。地を塗らずに字や輪の色を書くときは、面の中に来うるなら `var(--on-face, …)` で書く。部品の箱の字の色を外から直す規則は書かない

@@ -149,7 +149,7 @@ func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			continue
 		}
 		t.Run(l.name, func(t *testing.T) {
-			t.Run("floe", func(t *testing.T) {
+			t.Run("floe", func(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome
 				m := l.floe(t, newSite(t))
 				if m.seen == 0 {
 					t.Fatalf("%s measured nothing on floe's pages: what it measures is renamed or gone", l.name)
@@ -161,7 +161,7 @@ func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			if l.broken == nil {
 				return
 			}
-			t.Run("broken", func(t *testing.T) {
+			t.Run("broken", func(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome
 				at, m := l.broken(t, newSite(t))
 				if at == "" {
 					t.Fatalf("%s's broken page names no place it broke", l.name)
@@ -179,12 +179,12 @@ func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests sha
 	}
 }
 
-// brokenPage publishes data over the files own (parts and themes of one's own), with args to publish, and opens it.
-func (s *site) brokenPage(t *testing.T, own map[string]string, data string, args ...string) {
+// brokenPage publishes data over the files own (parts and themes of one's own) and opens it.
+func (s *site) brokenPage(t *testing.T, own map[string]string, data string) {
 	t.Helper()
 
 	s.own(t, own)
-	s.floe(t, append([]string{"publish", s.write(t, "broken.yaml", data), "--slug", "broken"}, args...)...)
+	s.floe(t, "publish", s.write(t, "broken.yaml", data), "--slug", "broken")
 	s.b.navigate("/a/broken/?raw")
 }
 
