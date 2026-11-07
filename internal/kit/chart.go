@@ -477,6 +477,8 @@ func (c *chart) drawLines(in chartInput, p chartPlot, edge float64) {
 
 // drawLabels puts the names of x in c, each width's by the room it leaves, so that they do not meet however long the
 // numbers beside them.
+// LIMIT: with no room for two, as for long names in a column, one name stands alone, the others being in the table;
+// two would meet.
 func (c *chart) drawLabels(in chartInput, p chartPlot, longest float64) {
 	stride := func(room float64) int { return max(1, int(math.Ceil(float64(p.n)*(longest+0.8)/max(room, 1)))) }
 	wide, narrow := stride(wideBox-c.Left-c.Right), stride(narrowBox-c.Left-c.RightNarrow)
