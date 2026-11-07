@@ -266,7 +266,7 @@ blockquote { padding-left: 1.4rem; border-left: 3px solid var(--accent); color: 
    line keeps it after it.
    LIMIT: a part that takes this look and writes a line's padding drops this room, its rule written after this one;
    text pre holds outside an element has no room, and one inline among it has room around it. Lines are elements, and
-   a part whose lines differ moves the room onto them by these variables, as diff does; nothing checks it. Make this
+   a part whose lines differ takes the rule of class lines below, as diff does, or moves the room onto them by these variables; nothing checks it. Make this
    rule outweigh a part's if one comes to write a line's padding by mistake. */
 :scope pre > * { width: max-content; min-width: 100%; padding-inline: var(--floe-code-pad) var(--floe-code-room); }
 @media print { :scope pre > * { width: auto; } }
