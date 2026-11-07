@@ -1,3 +1,9 @@
-- field: rows
-  expr: all(item.rows, len(#) == len(item.columns))
+# LIMIT: a key that is no column's id is told at its row, not at the key, and not by name: a check's field is a fixed
+# path. Tell the key if rows of many lines come to hide it.
+# LIMIT: two columns of one id draw the one value twice, plain on the page; refused nowhere.
+- for: rows
+  expr: type(item) != "array" || len(item) == len(doc.columns)
   message: write as many cells in each row as there are columns
+- for: rows
+  expr: 'let ids = map(filter(doc.columns, type(#) == "map"), #.id); type(item) != "map" || all(keys(item), # in ids)'
+  message: write each key of a row as the id of a column

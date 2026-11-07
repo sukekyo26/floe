@@ -10,6 +10,41 @@ import (
 	"github.com/sukekyo26/floe/internal/schema"
 )
 
+// Walk draws by additionalProperties the keys its schema does not leave to properties or to a patternProperties beside
+// it, one a $ref brings too, and tells the key as written in At.
+func TestWalkRest(t *testing.T) {
+	t.Parallel()
+
+	const rest = `"patternProperties": {"^x-": {"type": "number"}}, "additionalProperties": ` + N
+	c, err := compile(t, `"properties": {"a": {"properties": {"own": {"type": "string"}}, `+rest+`}, "b": {"$ref": "#/$defs/r"}}, "$defs": {"r": {`+rest+`}}`)
+	if c == nil {
+		t.Fatal(told(err))
+	}
+	note := map[string]any{"text": "t"}
+	values := map[string]any{
+		"a": map[string]any{"own": "o", "x-n": 3, "x/y": note},
+		"b": map[string]any{"x-n": 3, "y": note},
+	}
+	var at []string
+	ready, err := c.Walk(values, func(it schema.Item, _ any) (any, error) {
+		at = append(at, strings.Join(it.At, " ")+"="+it.Part)
+		return "drawn", nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"a x/y=note", "b y=note"}; !slices.Equal(at, want) {
+		t.Errorf("items %v, want %v", at, want)
+	}
+	want := map[string]any{
+		"a": map[string]any{"own": "o", "x-n": 3, "x/y": "drawn"},
+		"b": map[string]any{"x-n": 3, "y": "drawn"},
+	}
+	if !reflect.DeepEqual(ready, want) {
+		t.Errorf("ready %#v, want %#v", ready, want)
+	}
+}
+
 // Walk goes through the values a step of Follow at a time, into a part's value from the root of its schema,
 // through a $ref of the same file to a part too, and calls fn with each item from the inner ones out; the
 // values it returns hold what fn returned, and nil for an item declared and left out.

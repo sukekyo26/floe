@@ -1,0 +1,23 @@
+# A row by keys: each key the id of a column, as a row in order holds as many cells as there are columns.
+lang: en
+template: report
+title: Keys
+sections:
+  - heading: a
+    parts:
+      - table:
+          columns:
+            - { id: state, title: State }
+            - { id: 'x/y', title: Slash }
+            - Title alone
+          rows:
+            - { state: a, 'x/y': b }
+            - { state: a, whoo: b }
+            - state: a
+              State: b
+            - { Slash: a }
+            - { Title alone: a }
+            - [a, b, c]
+            - [a, b]
+            - [a, b, c, d]
+      - table: {columns: [a, b], rows: [{a: x}]}
