@@ -50,9 +50,6 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
     const tools = document.createElement('div');
     tools.className = toolsClass;
     tools.hidden = true;
-    const hint = document.createElement('span');
-    hint.textContent = msg.zoom_hint;
-    tools.append(hint);
     for (const [k, text, label] of [
       ['in', '+', msg.zoom_in], ['out', '−', msg.zoom_out],
       ['fit', msg.zoom_fit, msg.zoom_fit_label], ['one', msg.zoom_one, msg.zoom_one_label],
@@ -68,7 +65,8 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
     wrap.before(tools);
     const button = (k) => tools.querySelector(`[data-zoom="${k}"]`);
 
-    // The toolbar, the tab stop, the frame's role and name and touch-action go with whether it may be zoomed. Focus
+    // The toolbar, the tab stop, the frame's role, name and how it is used (its title, shown on hover and read as its
+    // description) and touch-action go with whether it may be zoomed. Focus
     // in a toolbar that hides moves to the frame, which keeps -1 to hold it, not to the page's start
     const offer = (can) => {
       if (can === offered) return;
@@ -80,9 +78,11 @@ function zoomable({ words, frame: frameClass, tools: toolsClass }) {
       if (can) {
         wrap.setAttribute('role', 'group');
         wrap.setAttribute('aria-label', msg.zoom_frame);
+        wrap.title = msg.zoom_hint;
       } else {
         wrap.removeAttribute('role');
         wrap.removeAttribute('aria-label');
+        wrap.removeAttribute('title');
         if (focused) wrap.focus();
       }
     };

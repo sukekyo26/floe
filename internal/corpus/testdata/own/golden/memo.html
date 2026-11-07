@@ -215,8 +215,6 @@ blockquote > * + * { margin-top: 0.6rem; }
 .floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
 /* display: flex above wins over the browser's [hidden] */
 .floe-zoom-tools[hidden] { display: none; }
-.floe-zoom-tools span { color: var(--muted); margin-right: auto; }
-@media (max-width: 640px) { .floe-zoom-tools span { display: none; } }
 /* Buttons do nothing on paper */
 @media print { .floe-zoom-tools { display: none; } }
 /* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */
@@ -347,9 +345,6 @@ body { margin: 0; }
     const tools = document.createElement('div');
     tools.className = toolsClass;
     tools.hidden = true;
-    const hint = document.createElement('span');
-    hint.textContent = msg.zoom_hint;
-    tools.append(hint);
     for (const [k, text, label] of [
       ['in', '+', msg.zoom_in], ['out', '−', msg.zoom_out],
       ['fit', msg.zoom_fit, msg.zoom_fit_label], ['one', msg.zoom_one, msg.zoom_one_label],
@@ -375,9 +370,11 @@ body { margin: 0; }
       if (can) {
         wrap.setAttribute('role', 'group');
         wrap.setAttribute('aria-label', msg.zoom_frame);
+        wrap.title = msg.zoom_hint;
       } else {
         wrap.removeAttribute('role');
         wrap.removeAttribute('aria-label');
+        wrap.removeAttribute('title');
         if (focused) wrap.focus();
       }
     };

@@ -10,8 +10,6 @@
 .floe-zoom-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; margin-bottom: 0.4rem; font-size: var(--floe-text-small); line-height: 1.4; }
 /* display: flex above wins over the browser's [hidden] */
 .floe-zoom-tools[hidden] { display: none; }
-.floe-zoom-tools span { color: var(--muted); margin-right: auto; }
-@media (max-width: 640px) { .floe-zoom-tools span { display: none; } }
 /* Buttons do nothing on paper */
 @media print { .floe-zoom-tools { display: none; } }
 /* Its colours once, each faded by --floe-tool-alpha, which a disabled button sets alone */

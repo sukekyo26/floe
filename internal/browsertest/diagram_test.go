@@ -180,7 +180,6 @@ func diagramColours(root string) string {
   read('.floe-zoom', ['border-top-color', 'background-color', 'color']);
   read('.dg', ['font-family']);
   read('.dg *', ['fill', 'stroke']);
-  read('.floe-zoom-tools span', ['color']);
   read('.floe-zoom-tools button', ['color', 'background-color', 'border-top-color']);
   return out.join('\n');
 })(` + root + `)`
