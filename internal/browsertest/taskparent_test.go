@@ -172,20 +172,48 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 	b.eval("document.getElementById('toasts').replaceChildren()")
 
-	// By the keys: the focus to the way back once the page is drawn, however soon a key comes; Escape leaves it for the part's button,
-	// which only the page drawn says. The reads after the write are held, to come after the key.
-	b.eval("document.querySelector('#task-up-rows .unlink').focus()")
-	b.eval("window.realFetch = window.fetch; window.held = []; window.fetch = (u, o) => (o?.method === 'PATCH' ? window.realFetch(u, o).then((r) => { window.holding = true; return r; }) : window.realFetch(u, o).then((r) => (window.holding ? new Promise((go) => { window.held.push(() => go(r)); }) : r)))")
-	b.pressKey(kb.Enter)
-	b.until("the reads held", "window.held.length >= 2")
-	b.pressKey(kb.Escape)
-	b.eval("window.fetch = window.realFetch; window.holding = false; window.held.forEach((go) => go()), 1")
-	b.until("taken off", "document.activeElement.matches('#toasts .undo')")
-	b.pressKey(kb.Escape)
-	b.until("left", "document.activeElement.id === 'task-parent-add'")
-	if got := b.eval("document.querySelectorAll('#toasts .toast').length + ''"); got != "0" {
-		t.Errorf("Escape left %s toasts", got)
+	// By the keys: the focus to the way back at once. Escape before the page is read again leaves it for the button there is, and when that
+	// goes with the drawing, for the one that takes its place. The reads after the write are held, to come after the key.
+	const toastsLeft = "document.querySelectorAll('#toasts .undo').length + ' ' + document.activeElement.id"
+	byKeys := func() {
+		t.Helper()
+		b.eval("document.querySelector('#task-up-rows .unlink').focus()")
+		b.pressKey(kb.Enter)
+		b.until("the way back", "document.activeElement.matches('#toasts .undo')")
 	}
+	b.eval("window.realFetch = window.fetch; window.fetch = (u, o) => (o?.method === 'PATCH' ? window.realFetch(u, o).then((r) => { window.holding = true; return r; }) : window.realFetch(u, o).then((r) => (window.holding ? new Promise((go) => { window.heldAnswers = [...(window.heldAnswers ?? []), () => go(r)]; }) : r)))")
+	byKeys()
+	b.pressKey(kb.Escape)
+	if got := b.eval(toastsLeft); got != "0 task-parent-change" {
+		t.Errorf("Escape before the reading: %q", got)
+	}
+	b.eval("window.fetch = window.realFetch; window.holding = false; (window.heldAnswers ?? []).forEach((go) => go()), 1")
+	b.until("left", "document.activeElement.id === 'task-parent-add'")
+	if parentOf("#1") != "" {
+		t.Errorf("taken off: parent %q", parentOf("#1"))
+	}
+
+	// The reading failing: the task is off its parent, so the way back is there and works, and Escape still leaves the focus on a button.
+	const unread = "window.realFetch = window.fetch; window.fetch = (u, o) => (o?.method ? window.realFetch(u, o) : Promise.reject(new TypeError('down'))), 1"
+	s.floe(t, "work", "--project", "proj", "--task", "#1", "--parent", "#3")
+	open("#1")
+	b.eval(unread)
+	byKeys()
+	b.until("the reading failed", "!document.getElementById('error').hidden")
+	b.pressKey(kb.Enter)
+	b.until("given back", "document.querySelector('#toasts').textContent.includes('Undone')")
+	if parentOf("#1") != "#3" {
+		t.Errorf("given back with the reading failing: parent %q", parentOf("#1"))
+	}
+	byKeys()
+	b.until("the reading failed", "!document.getElementById('error').hidden")
+	b.pressKey(kb.Escape)
+	if got := b.eval(toastsLeft); got != "0 task-parent-change" {
+		t.Errorf("Escape with the reading failed: %q", got)
+	}
+	b.eval("window.fetch = window.realFetch, 1")
+	b.until("read again", "document.activeElement.id === 'task-parent-add'")
+
 
 	// From the parent's page, a child taken off; the focus on a button stays as the family is drawn anew.
 	open("#4")
