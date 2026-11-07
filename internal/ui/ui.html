@@ -1612,16 +1612,13 @@
   const noWrites = () => (writesGoing ? new Promise((go) => writesDone.push(go)) : null);
   // A load's reading, while it goes: a read mark waits for it, so that a page that keeps telling its read never keeps the list from being drawn
   let reading = null;
-  // A read (a GET) given no signal of its caller's is cut off at this, to fail the load rather than hold every one after it; a let, for
-  // the tests to shorten
-  let READ_MS = 10000;
   // The connection state only says whether the server was reached; an HTTP error is still an answer
   async function api(url, init) {
     const write = Boolean(init?.method && init.method !== 'GET');
     if (write) {
       writesSent++;
       writesGoing++;
-    } else if (!init?.signal) init = { ...init, signal: AbortSignal.timeout(READ_MS) };
+    }
     try {
       const res = await fetch(url, init);
       setServer(true);
@@ -2920,45 +2917,48 @@
   }
 
   // GET /api/artifacts/{slug}/pages of dir: null for one that is not there (any more)
-  async function readListing(slug, dir) {
-    const res = await api(`/api/artifacts/${encodeURIComponent(slug)}/pages?dir=${encodeURIComponent(dir)}`);
+  async function readListing(slug, dir, signal) {
+    const res = await api(`/api/artifacts/${encodeURIComponent(slug)}/pages?dir=${encodeURIComponent(dir)}`, { signal });
     if (res.status === 404) return null;
     if (!res.ok) return new Error(t('ui_http_error', await res.text(), res.status));
     return res.json();
   }
 
-  // Reads again the directories open of the folders in list (the entries as just read), each under folders and directories open: whether any changed.
-  // One gone leaves what is open, and the URL
+  // Reads again the directories open of the folders in list (the entries as just read), each under folders and directories open. It
+  // changes nothing: it returns what keeps its answers, for load to call as it draws that list (whether what is drawn changed), or null
+  // when a later read began. One gone leaves what is open, and the URL
   // LIMIT: each directory open is read every 3 s with the list. Send a mark of each, to read it only once changed, if many open are heavy
   // The last call's answers win: an earlier one, slower, would take away what was opened since
   let openReads = 0;
-  async function readOpen(list) {
+  async function readOpen(list, signal) {
     const n = ++openReads;
-    const before = sameListings(listings);
     // A folder no longer registered leaves what is kept
-    const was = opened.size;
-    for (const key of [...opened]) if (!list.some((x) => x.folder && x.slug === key.split(/:(.*)/s)[0])) opened.delete(key);
-    if (opened.size !== was) keepOpen();
+    const kept = new Set([...opened].filter((key) => list.some((x) => x.folder && x.slug === key.split(/:(.*)/s)[0])));
     const shown = (key) => {
       const [slug, dir = ''] = key.split(/:(.*)/s);
       const a = list.find((x) => x.slug === slug);
-      if (!a?.folder || a.missing || !opened.has(slug)) return false;
+      if (!a?.folder || a.missing || !kept.has(slug)) return false;
       const parts = dir ? dir.split('/') : [];
-      return parts.slice(0, -1).every((_, i) => opened.has(openKey(slug, parts.slice(0, i + 1).join('/'))));
+      return parts.slice(0, -1).every((_, i) => kept.has(openKey(slug, parts.slice(0, i + 1).join('/'))));
     };
-    const keys = [...opened].filter(shown);
+    const keys = [...kept].filter(shown);
     const read = await Promise.all(keys.map((key) => {
       const [slug, dir = ''] = key.split(/:(.*)/s);
-      return readListing(slug, dir);
+      return readListing(slug, dir, signal);
     }));
-    if (n !== openReads) return false;
-    listings.clear();
-    keys.forEach((key, i) => {
-      if (read[i] === null) opened.delete(key);
-      else listings.set(key, read[i]);
-    });
-    if (read.includes(null)) keepOpen();
-    return sameListings(listings) !== before;
+    if (n !== openReads) return null;
+    return () => {
+      const before = sameListings(listings);
+      const was = opened.size;
+      for (const key of [...opened]) if (!kept.has(key)) opened.delete(key);
+      listings.clear();
+      keys.forEach((key, i) => {
+        if (read[i] === null) opened.delete(key);
+        else listings.set(key, read[i]);
+      });
+      if (opened.size !== was) keepOpen();
+      return sameListings(listings) !== before;
+    };
   }
 
   // Opens or closes the directory dir ('' for the top) of the folder slug; closed, what is open under it closes too. Only
@@ -4091,17 +4091,21 @@
   // Reads again the directories open in the side's tree, each under ones open, and the page's own, whatever is open,
   // for j and k. One gone for now stays open, to show again when it is back
   // LIMIT: each directory open is read every 3 s with the list, as readOpen's
-  // As readOpen's, the last call's answers win
+  // As readOpen's, the last call's answers win, and it returns what keeps them, for load to call as it draws
   let sideReads = 0;
-  async function readSide() {
+  async function readSide(signal) {
     const n = ++sideReads;
     const keys = [...new Set([...sideOpen].filter((dir) => !dir || sideOpen.has(dirOf(dir))).concat(dirOf(FILE)))];
-    const read = await Promise.all(keys.map((dir) => readListing(framed, dir)));
-    if (n !== sideReads) return;
-    sideListings.clear();
-    keys.forEach((dir, i) => { if (read[i] !== null) sideListings.set(dir, read[i]); });
-    const l = sideListings.get(dirOf(FILE));
-    fileListing = l instanceof Error ? undefined : l;
+    const read = await Promise.all(keys.map((dir) => readListing(framed, dir, signal)));
+    if (n !== sideReads) return null;
+    return () => {
+      const was = sameListings(sideListings);
+      sideListings.clear();
+      keys.forEach((dir, i) => { if (read[i] !== null) sideListings.set(dir, read[i]); });
+      const l = sideListings.get(dirOf(FILE));
+      fileListing = l instanceof Error ? undefined : l;
+      return sameListings(sideListings) !== was;
+    };
   }
 
   // The side's rows of the directory dir, d deep, and of its directories open, as read
@@ -5054,9 +5058,9 @@
   addEventListener('pointerup', () => { pressedAt = -Infinity; });
   // The tasks, which never fail a load: the list of pages goes on without them, and the task list says why
   // LIMIT: read at each look, as the list is, but for a page whole; a small JSON. Answer the two as one if that comes to weigh
-  async function readTasks() {
+  async function readTasks(signal) {
     try {
-      const res = await api('/api/tasks');
+      const res = await api('/api/tasks', { signal });
       const raw = await res.text();
       return res.ok ? { error: '', tasks: JSON.parse(raw), raw } : { error: raw, tasks: {}, raw };
     } catch (e) {
@@ -5083,56 +5087,54 @@
     loadLast = next.done.catch(() => {});
     return next.done;
   }
+  // The reads of a load, cut off together at this, to fail it rather than hold every one after it; a let, for the tests to shorten
+  let READ_MS = 10000;
   // Draws only a list read with no write going or sent meanwhile, which is of the time after every write sent before it answered;
   // read meanwhile, it is read again
-  // LIMIT: a write that never answers holds every load: of the writes, only a read mark has a time limit. Give each one if that comes to matter
+  // LIMIT: a write that never answers holds every load, and every read mark after it, which waits for a load reading: of the writes,
+  // only a read mark has a time limit. Give each one if that comes to matter
   // LIMIT: a write cut off by its time limit (a read mark's) counts as answered: written by the server after a load read, the page shows
-  // as it was until the next look. Hold the next load until the server tells it is written if that comes to matter
+  // as it was until the next look
   // polled tells one asked by no action of the person's: what an action changed is drawn at once, whatever is pressed
   async function readAndDraw(polled) {
     let list;
     let entries;
     let read;
-    let changed = false;
+    let keep;
     let doneReading;
     reading = new Promise((go) => { doneReading = go; });
     try {
       for (;;) {
-        await noWrites();
+        // A write sent by what ran on another write's answer goes too
+        while (writesGoing) await noWrites();
         const sent = writesSent;
-        const [res, tasks] = await Promise.all([api('/api/artifacts'), framed ? null : readTasks()]);
+        const signal = AbortSignal.timeout(READ_MS);
+        const [res, tasks] = await Promise.all([api('/api/artifacts', { signal }), framed ? null : readTasks(signal)]);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         list = await res.text();
         entries = JSON.parse(list);
         read = tasks;
-        // readOpen closes the folders not in the list: never by one of the time before a write
-        if (writesSent !== sent) continue;
-        // Held back from under a press before the folders are read, so that what is open and the rows stay of one answer
-        if (polled && performance.now() - pressedAt < PRESS_MS) {
-          if (changed) drawn = '';
-          return;
-        }
-        // The list redrawn when what is open of the folders changed, the frame when the directory of its page did
-        if (framed && FILE) {
-          const was = sameListings(sideListings);
-          await readSide();
-          if (sameListings(sideListings) !== was) changed = true;
-        } else if (!framed && !TASK_LIST && await readOpen(entries)) changed = true;
+        if (polled && performance.now() - pressedAt < PRESS_MS) return;
+        // What is open of the folders, or the frame's tree, kept only as this list is drawn
+        if (framed && FILE) keep = await readSide(signal);
+        else if (!framed && !TASK_LIST) keep = await readOpen(entries, signal);
         if (writesSent === sent) break;
       }
     } catch (e) {
       loadFailed = true;
-      showError(t('ui_load_failed', e.message));
+      showError(e.name === 'TimeoutError' ? t('ui_load_slow', READ_MS / 1000, POLL_MS / 1000) : t('ui_load_failed', e.message));
       return;
     } finally {
       reading = null;
       doneReading();
     }
-    if (changed) drawn = '';
+    // Into items only now, the list read meeting every check: what reads items meanwhile has the list drawn last. What is open of the
+    // folders (opened, listings and the browser's storage) or the frame's tree (sideListings) goes in with it, of the same answer
     const text = list + (read?.raw ?? '');
-    // Into items only now, the list read meeting every check: what reads items meanwhile has the list drawn last
     if (text !== drawn) items = entries;
     if (read) tasksRead = read;
+    // The list redrawn when what is open of the folders changed, the frame when the directory of its page did
+    if (keep?.()) drawn = '';
     // Only a load failure is cleared here; a failed delete and the like stays until the next action
     if (loadFailed) {
       loadFailed = false;
