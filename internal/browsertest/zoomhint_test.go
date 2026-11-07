@@ -70,7 +70,7 @@ func atLeastColumns(t *testing.T, b *browser) {
 
 	wide := b.eval(`(() => { const c = document.querySelector('[data-floe-part=columns]'), g = parseFloat(getComputedStyle(c).columnGap),
 	  rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
-	  return String(Math.ceil(5 * 16 * rem + 4 * g + innerWidth - c.getBoundingClientRect().width)); })()`)
+	  return String(Math.ceil(5 * 16 * rem + 4 * g + document.documentElement.clientWidth - c.getBoundingClientRect().width)); })()`)
 	var width int64
 	if _, err := fmt.Sscan(wide, &width); err != nil {
 		t.Fatal(err)
