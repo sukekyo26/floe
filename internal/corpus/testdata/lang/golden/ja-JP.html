@@ -256,10 +256,13 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="checks"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* One check to a row, in the order written: a line of its result's tone at the left, its result's pill by what was checked,
-   then what came of it the full width. The count of each result stands on top.
+   then what came of it the full width. The count of each result stands on top, its number in the result's tone.
    The line is the row's ::before, not its border, which would make the row a framed box a code's shadow must stay in */
 :scope { display: grid; gap: var(--floe-room); padding: var(--floe-pad-block) var(--floe-pad-inline); }
-:scope > .total { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; font-weight: 700; }
+/* Each count large over its word, in the face and size of stats' value: a count of the whole, told apart from the rows' pills */
+:scope > .total { display: flex; flex-wrap: wrap; gap: 0.35rem 1.5rem; }
+:scope > .total > span { display: grid; font-size: var(--floe-text-small); color: var(--muted); }
+:scope > .total b { font-family: var(--mono); font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; color: var(--tone); }
 :scope > ul { display: grid; list-style: none; padding: 0; gap: var(--floe-room); }
 :scope > ul > li { --checks-gap: 0.35rem; position: relative; display: grid; gap: var(--checks-gap); padding-left: var(--floe-pad-inline); }
 :scope > ul > li::before { content: ""; position: absolute; inset-block: 0; left: 0; width: 0.25rem; background: var(--tone); }
@@ -485,7 +488,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 </table></div>
 <div data-floe-part="decision"><div class="card" data-floe-look="panel"><p class="meta">decided<span>2030-03-28</span></p><div class="title">Move</div><p class="set-aside">退けた案</p><ul class="rejected" data-floe-look="marked"><li><span>Stay</span></li></ul></div></div>
 <div data-floe-part="checks">
-<p class="total"><span>OK 1</span> <span>NG 1</span> <span>未確認 1</span></p>
+<p class="total"><span data-floe-tone="good"><b>1</b> OK</span> <span data-floe-tone="bad"><b>1</b> NG</span> <span data-floe-tone="muted"><b>1</b> 未確認</span></p>
 <ul role="list">
 <li data-floe-tone="good"><div class="head"><span class="result"><span data-floe-tone="good" data-floe-part="cell">OK</span></span><div class="title">One</div></div><div class="actual"><div data-floe-text=""><p>It held.</p></div></div><p class="how">確かめ方：By hand</p></li>
 <li data-floe-tone="bad"><div class="head"><span class="result"><span data-floe-tone="bad" data-floe-part="cell">NG</span></span><div class="title">Two</div></div><div class="actual"><div data-floe-text=""><p>It broke.</p></div></div></li>

@@ -446,10 +446,13 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="checks"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* One check to a row, in the order written: a line of its result's tone at the left, its result's pill by what was checked,
-   then what came of it the full width. The count of each result stands on top.
+   then what came of it the full width. The count of each result stands on top, its number in the result's tone.
    The line is the row's ::before, not its border, which would make the row a framed box a code's shadow must stay in */
 :scope { display: grid; gap: var(--floe-room); padding: var(--floe-pad-block) var(--floe-pad-inline); }
-:scope > .total { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; font-weight: 700; }
+/* Each count large over its word, in the face and size of stats' value: a count of the whole, told apart from the rows' pills */
+:scope > .total { display: flex; flex-wrap: wrap; gap: 0.35rem 1.5rem; }
+:scope > .total > span { display: grid; font-size: var(--floe-text-small); color: var(--muted); }
+:scope > .total b { font-family: var(--mono); font-size: 1.9rem; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; color: var(--tone); }
 :scope > ul { display: grid; list-style: none; padding: 0; gap: var(--floe-room); }
 :scope > ul > li { --checks-gap: 0.35rem; position: relative; display: grid; gap: var(--checks-gap); padding-left: var(--floe-pad-inline); }
 :scope > ul > li::before { content: ""; position: absolute; inset-block: 0; left: 0; width: 0.25rem; background: var(--tone); }
@@ -2824,7 +2827,7 @@ banner = &#34;This wiki has moved to the new host.&#34;
 <li class="card" data-floe-look="panel"><div class="head"><div class="title"><span class="no">Q</span> Which day?</div><span class="check" data-floe-tone="good"><span class="floe-hidden">Decided</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5 6.7 11.5 12.5 4.5"></path></svg></span></div><p class="line"><b>Decision:</b> Sunday</p><p class="line"><b>Recommended:</b> A Saturday</p></li>
 </ul>
 <div data-floe-part="checks">
-<p class="total"><span>Pass 3</span> <span>Fail 2</span> <span>Not checked 1</span></p>
+<p class="total"><span data-floe-tone="good"><b>3</b> Pass</span> <span data-floe-tone="bad"><b>2</b> Fail</span> <span data-floe-tone="muted"><b>1</b> Not checked</span></p>
 <ul role="list">
 <li data-floe-tone="good"><div class="head"><span class="result"><span data-floe-tone="good" data-floe-part="cell">Pass</span></span><div class="title">Do names in Japanese go through?</div></div><div class="actual"><div data-floe-text=""><p>Saved as UTF-8, and found by a search.</p></div></div><p class="how">How: <code>curl</code>, adding and searching</p></li>
 <li data-floe-tone="bad"><div class="head"><span class="result"><span data-floe-tone="bad" data-floe-part="cell">Fail</span></span><div class="title">Does it run in an old browser?</div></div><div class="actual"><div data-floe-text=""><p>Safari 15 has no <code>:has()</code>, and the rows of the list break:</p>

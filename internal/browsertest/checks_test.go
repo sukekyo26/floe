@@ -62,7 +62,7 @@ sections:
           - { title: Not yet, result: unchecked, actual: Not from here. }
 `
 
-// measureChecks returns a line for what stands amiss in the part: the counts; a thing wider than its row or than the
+// measureChecks returns a line for what stands amiss in the part: the counts, large over their words, each in its result's tone; a thing wider than its row or than the
 // page, or a part in a check not as wide as its row; a pill over its title, or off the middle of its first line; the room around the rows; the line, the height of its
 // row at its left and of the row's tone, each result's its own, its pill's the same.
 const measureChecks = `(() => {
@@ -72,7 +72,7 @@ const measureChecks = `(() => {
   const room = probe.getBoundingClientRect().width;
   probe.remove();
   const root = document.querySelector('[data-floe-part=checks]'), total = root.querySelector('.total'), list = root.querySelector('ul');
-  if (total.textContent !== 'Pass 4 Fail 2 Not checked 1') out.push('total: ' + total.textContent);
+  if (total.textContent !== '4 Pass 2 Fail 1 Not checked') out.push('total: ' + total.textContent);
   if (!near(list.getBoundingClientRect().top - total.getBoundingClientRect().bottom, room)) out.push('room under the total');
   const ls = getComputedStyle(list);
   if (ls.listStyleType !== 'none' || parseFloat(ls.paddingLeft) !== 0) out.push('list: ' + ls.listStyleType + ' ' + ls.paddingLeft);
@@ -101,6 +101,13 @@ const measureChecks = `(() => {
     if (getComputedStyle(row).getPropertyValue('--tone') !== getComputedStyle(pill).getPropertyValue('--tone')) out.push('row ' + i + ': the pill is not of the line\'s tone');
     tones[row.dataset.floeTone] = line.backgroundColor;
   });
+  const body = parseFloat(getComputedStyle(rows[0]).fontSize);
+  for (const c of total.children) {
+    const n = getComputedStyle(c.querySelector('b'));
+    if (n.color !== tones[c.dataset.floeTone]) out.push('the count of ' + c.dataset.floeTone + ': ' + n.color + ', its lines ' + tones[c.dataset.floeTone]);
+    if (!(parseFloat(n.fontSize) > body)) out.push('the count of ' + c.dataset.floeTone + ' is ' + n.fontSize + ' in ' + body);
+    if (c.querySelector('b').getBoundingClientRect().bottom > c.getBoundingClientRect().bottom - 2) out.push('the count of ' + c.dataset.floeTone + ' has no word under it');
+  }
   if (Object.keys(tones).length !== 3 || new Set(Object.values(tones)).size !== 3) out.push('the lines: ' + JSON.stringify(tones));
   if (document.documentElement.scrollWidth > innerWidth) out.push('the page is ' + document.documentElement.scrollWidth + ' wide on ' + innerWidth);
   return out.join('\n');
