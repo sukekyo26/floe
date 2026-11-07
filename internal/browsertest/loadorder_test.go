@@ -229,8 +229,11 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		out.push('held in the second round, folder open: ' + opened.has(slug2));
 
 		// A read outside a load (a folder opened by hand, versions, a diff) has no time limit
-		await readListing(slug2, '');
-		out.push('a read outside a load limited: ' + pagesLimited);
+		// Its fetch is called at once, before a poll's read of the folder can come between
+		const outside = readListing(slug2, '');
+		const outsideLimited = pagesLimited;
+		await outside;
+		out.push('a read outside a load limited: ' + outsideLimited);
 
 		window.fetch = real;
 		return out.join('|');
