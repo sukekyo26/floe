@@ -347,6 +347,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The docs and the diagram's schema tell how raw SVG takes the theme's colours: the palette's variables (`fill="var(--accent)"`), and `var(--tone)` under `data-floe-tone`. A part's classes are not for raw, and the class `band`, which only the example `sequence` drew with, is gone: raw that wrote it draws black.
 - Change `report`'s section headings to a line of Markdown, as `lead` is: their ids are made of the words drawn, so a tag, a mark such as `__init__`, a backslash, a character reference or a link's address changes them.
 - Change `design`'s contents to the look `toc`: a quiet list on a line, the section being read marked, and none on paper.
 - Change the part `links` from two columns of cards to rows: a sign, the title and a few words on a line and the URL under them, whole rather than cut, on paper too. The title alone is a link now, so the words and the URL can be selected. A theme's decoration of a card no longer reaches `links`.

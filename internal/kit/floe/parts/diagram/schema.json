@@ -383,7 +383,7 @@
     "graphMarker": { "enum": ["none", "arrow"], "description": "An arrowhead or none: the others are wider than the room the edges of a graph keep between them" },
     "raw": {
       "type": "object",
-      "description": "SVG no part draws, of SVG's elements alone, without script or foreignObject (which a page takes elsewhere) or an element a page refuses, left out of the checks",
+      "description": "SVG no part draws, of SVG's elements alone, without script or foreignObject (which a page takes elsewhere) or an element a page refuses, left out of the checks. Colour it with the variables of the palette's table in the docs (fill=\"var(--accent)\"), and in a tone by data-floe-tone on it or on a <g> around it within the raw SVG and var(--tone). Give text fill=\"currentColor\" (--fg) and font-size=\"12\": without them it draws black at the page's size. A part's classes, data-floe-look and data-floe-part are floe's own",
       "required": ["svg"],
       "additionalProperties": false,
       "properties": { "svg": { "type": "string" } }
