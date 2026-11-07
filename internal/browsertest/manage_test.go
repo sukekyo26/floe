@@ -138,10 +138,10 @@ func (b *browser) unstub() {
 // untilActed waits until expr is truthy and no archive or way back of a row is on its way, the read of the list after it included: a
 // redraw of the rows takes a press with them, and an answer come late shows there. A load the test starts itself is waited for by
 // eval, which awaits what it returns.
-func (b *browser) untilActed(what, expr string) string {
+func (b *browser) untilActed(what, expr string) {
 	b.t.Helper()
 
-	return b.until(what, "archiving.size === 0 && ("+expr+")")
+	b.until(what, "archiving.size === 0 && ("+expr+")")
 }
 
 func (b *browser) addScript(script string) page.ScriptIdentifier {
