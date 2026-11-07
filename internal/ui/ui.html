@@ -49,11 +49,11 @@
     --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
     /* The corners: a box (a dialog, a toast), a middle box (a menu, the suggestions, the error) and a small
        square (a field, a key, a link of the side); a pill and a circle are written as shapes (999px, 50%), and a box within a box
-       is round by the outer one less the room (TestManageSheet) */
-    /* LIMIT: the logo's and the icons' SVG rx are numbers, not read by TestManageSheet */
+       is round by the outer one less the room (TestLintRule/manage-corners) */
+    /* LIMIT: the logo's and the icons' SVG rx are numbers, not read by TestLintRule/manage-corners */
     --corner: 20px; --corner-menu: 14px; --corner-small: 6px;
     /* The room inside a menu, which its items' corners take off the box's */
-    /* LIMIT: TestManageSheet does not check that a box whose items read calc(… - var(--menu-pad)) is padded by --menu-pad */
+    /* LIMIT: TestLintRule/manage-corners does not check that a box whose items read calc(… - var(--menu-pad)) is padded by --menu-pad */
     --menu-pad: 6px;
     /* The text: a label (counts, times, keys, tags), small text (descriptions, menus, fields) and the body's; a heading is 1rem
        or more */
