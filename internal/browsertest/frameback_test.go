@@ -221,6 +221,7 @@ a pin of a list at a view: /a/pin/ | /tasks?view=doing&project=proj | Task list 
 // A page opened whole and gone back from has its row picked and focused on the list that opened it, by the back button, by h and by the
 // browser's own way back, on a task's page and on the page list. Moved on by j, the row is the page last read. A row no longer there, or
 // a list the page was not opened from, picks nothing. A page marked unread there is not read by coming back, and a pin has the focus itself.
+// The logo and a URL are no way back; a version seen whole stays, the list folded gives the focus to what opens it, and the browser's memory goes the same way.
 func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -332,6 +333,52 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	b.until("the task list", "location.pathname === '/tasks' && document.querySelector('.pin')")
 	out = append(out, "a pin: "+b.eval("document.activeElement.getAttribute('href')"))
 
+	// The logo and a URL to the same list are no way back.
+	open(pages, "b")
+	r := b.rect("document.querySelector('.brand')")
+	b.click(r.X+r.Width/2, r.Y+r.Height/2)
+	read("the logo", pages)
+	open(pages, "b")
+	b.navigate(pages)
+	read("the same list's URL", pages)
+
+	// The version seen whole is the one beside the list.
+	s.floe(t, "publish", s.write(t, "b.yaml", "template: report\nlang: en\ntitle: T b\nsections:\n  - heading: two\n"), "--slug", "b")
+	open(pages, "b")
+	b.navigate("/a/b/?v=1")
+	b.until("the version whole", "document.getElementById('frame-title').textContent")
+	pressBack()
+	read("of a version", pages)
+	b.until("the version beside", "readLoaded.endsWith('v=1')")
+	out = append(out, "its version: "+b.eval("picked.v + ' ' + document.getElementById('read-version').value"))
+
+	// The list folded leaves when a row is open: the focus goes to what opens it.
+	b.navigate(task)
+	sel := "document.querySelector('#list li[data-slug=a] .title')"
+	b.until("the row", sel)
+	r = b.rect(sel)
+	b.click(r.X+10, r.Y+r.Height/2)
+	b.until("the title", "picked?.slug === 'a' && document.getElementById('read-title').getAttribute('href')")
+	b.eval("document.getElementById('list-hide').click()")
+	b.moving("document.getElementById('read-title').click()")
+	whole("a")
+	pressBack()
+	b.until("the list", "location.pathname === '/tasks' && picked?.slug === 'a'")
+	out = append(out, "folded: "+b.eval("document.activeElement.id + ' ' + document.getElementById('listcol').offsetParent"))
+	b.eval("document.getElementById('list-show').click()")
+
+	// Come back to from the browser's memory: the page whole knows it is there, and the list picks the row as any way back does.
+	b.navigate(pages)
+	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"c","file":"","v":0}}')`)
+	b.navigate("/a/a/")
+	b.until("the bar", "document.getElementById('frame-title').textContent")
+	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"c","file":"","v":0}}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
+	out = append(out, "whole, from the memory: "+b.eval("JSON.parse(sessionStorage.getItem('artifacts.order')).at.slug"))
+	b.navigate(pages)
+	b.until("the rows", "document.querySelector('#list li[data-slug=a]')")
+	b.eval(`sessionStorage.setItem('artifacts.order', '{"order":["a"],"shown":["a"],"back":"/?project=proj","at":{"slug":"a","file":"","v":0}}'); dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))`)
+	read("list, from the memory", pages)
+
 	if got := strings.Join(out, "\n"); got != frameBackFocusWant {
 		t.Errorf("what the list has on the way back:\n%s\nwant:\n%s", got, frameBackFocusWant)
 	}
@@ -348,4 +395,11 @@ another list: no focus | nothing picked |
 a row gone: no focus | nothing picked | 
 marked unread: b | nothing picked | 
 one column: a | nothing picked | 
-a pin: /a/a/`
+a pin: /a/a/
+the logo: no focus | nothing picked | 
+the same list's URL: no focus | nothing picked | 
+of a version: b | b | b
+its version: 1 1
+folded: list-show null
+whole, from the memory: a
+list, from the memory: a | a | a`
