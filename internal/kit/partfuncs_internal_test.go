@@ -232,3 +232,89 @@ func TestBarsAria(t *testing.T) {
 		}
 	}
 }
+
+// A code's lines keep their text, and mark counts as the numbers shown do: from start, or from 1 without it.
+func TestCodeOf(t *testing.T) {
+	t.Parallel()
+
+	line := func(text string) codeLine { return codeLine{Text: text, Mark: false} }
+	marked := func(text string) codeLine { return codeLine{Text: text, Mark: true} }
+	for _, tt := range []struct {
+		name        string
+		text        string
+		start, mark any
+		want        codeText
+	}{
+		{"plain", "a\nb\n", nil, nil, codeText{Lines: []codeLine{line("a\n"), line("b\n")}, Before: 0, Digits: 1, Numbered: false}},
+		{"no last newline", "a\nb", nil, nil, codeText{Lines: []codeLine{line("a\n"), line("b")}, Before: 0, Digits: 1, Numbered: false}},
+		{"blank lines", "\na\n\n", nil, nil, codeText{Lines: []codeLine{line("\n"), line("a\n"), line("\n")}, Before: 0, Digits: 1, Numbered: false}},
+		{"CRLF", "a\r\nb\r\n", nil, nil, codeText{Lines: []codeLine{line("a\n"), line("b\n")}, Before: 0, Digits: 1, Numbered: false}},
+		{"CR", "a\rb", nil, nil, codeText{Lines: []codeLine{line("a\n"), line("b")}, Before: 0, Digits: 1, Numbered: false}},
+		{"mark from 1", "a\nb\n", nil, []any{2}, codeText{Lines: []codeLine{line("a\n"), marked("b\n")}, Before: 0, Digits: 1, Numbered: false}},
+		{
+			"mark from start", "a\nb\nc\n", 12,
+			[]any{13},
+			codeText{Lines: []codeLine{line("a\n"), marked("b\n"), line("c\n")}, Before: 11, Digits: 2, Numbered: true},
+		},
+		{
+			"a number of the text's count marks nothing under start", "a\nb\n", 12,
+			[]any{1, 99},
+			codeText{Lines: []codeLine{line("a\n"), line("b\n")}, Before: 11, Digits: 2, Numbered: true},
+		},
+		{
+			"read from YAML as float or uint64", "a\nb\n", 5.0,
+			[]any{6.0, uint64(5)},
+			codeText{Lines: []codeLine{marked("a\n"), marked("b\n")}, Before: 4, Digits: 1, Numbered: true},
+		},
+		{
+			"digits of the last line", "a\nb\n", 9, nil,
+			codeText{Lines: []codeLine{line("a\n"), line("b\n")}, Before: 8, Digits: 2, Numbered: true},
+		},
+		{
+			"the largest number", "a\n", 1_000_000_000,
+			[]any{1_000_000_000},
+			codeText{Lines: []codeLine{marked("a\n")}, Before: 999_999_999, Digits: 10, Numbered: true},
+		},
+	} {
+		got, err := codeOf(tt.text, tt.start, tt.mark)
+		if err != nil {
+			t.Errorf("%s: %v", tt.name, err)
+			continue
+		}
+		if fmt.Sprintf("%+v", got) != fmt.Sprintf("%+v", tt.want) {
+			t.Errorf("%s: got %+v, want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// What a part of one's own hands code is refused when it is no whole number or no list; the range is its schema's.
+func TestCodeOfRefuses(t *testing.T) {
+	t.Parallel()
+
+	line := func(key, value string) string { return "code's " + key + " takes a whole number, not " + value }
+	for _, tt := range []struct {
+		start, mark any
+		want        string
+	}{
+		{12.5, nil, line("start", "12.5")},
+		{"a", nil, line("start", "a")},
+		{nil, 2, "code's mark takes a list of line numbers, not 2"},
+		{nil, "2", "code's mark takes a list of line numbers, not 2"},
+		{nil, []any{1.5}, line("mark", "1.5")},
+		{nil, []any{"1"}, line("mark", "1")},
+		{nil, []any{nil}, line("mark", "<nil>")},
+		{nil, []any{1.5, "a"}, line("mark", "1.5") + "\n" + line("mark", "a")},
+		{1.5, []any{"a", 2.5}, line("start", "1.5") + "\n" + line("mark", "a") + "\n" + line("mark", "2.5")},
+		{1.5, 2, line("start", "1.5") + "\ncode's mark takes a list of line numbers, not 2"},
+	} {
+		_, err := codeOf("a\n", tt.start, tt.mark)
+		if got := strings.TrimSpace(usererr.Tell(i18n.EnglishCatalog(), err).Render("")); got != tt.want {
+			t.Errorf("start %v, mark %v: told %q, want %q", tt.start, tt.mark, got, tt.want)
+		}
+	}
+	for _, start := range []any{0, -1, 2_000_000_000} {
+		if _, err := codeOf("a\n", start, []any{0, 2_000_000_000}); err != nil {
+			t.Errorf("start %v: %v, want the range left to the schema", start, err)
+		}
+	}
+}

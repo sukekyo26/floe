@@ -1,0 +1,20 @@
+# A line's number is a whole number from 1; a number no line has marks nothing, and passes.
+lang: en
+template: report
+title: Code
+sections:
+  - heading: a
+    parts:
+      - code: { start: 0, text: "a\n" }
+      - code: { start: "12", text: "a\n" }
+      - code: { start: 12.5, text: "a\n" }
+      - code: { start: 1000000001, text: "a\n" }
+      - code: { mark: 2, text: "a\n" }
+      - code: { mark: [], text: "a\n" }
+      - code: { mark: ["2"], text: "a\n" }
+      - code: { mark: [0], text: "a\n" }
+      - code: { mark: [-1], text: "a\n" }
+      - code: { mark: [1.5], text: "a\n" }
+      - code: { mark: [1000000001], text: "a\n" }
+      - code: { title: "", text: "a\n" }
+      - code: { mark: [99], text: "a\n" }

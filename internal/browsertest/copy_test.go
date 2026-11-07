@@ -17,7 +17,8 @@ import (
 	"github.com/chromedp/chromedp/kb"
 )
 
-// copyPage is a page of lang with a part of each kind that copies: code ending in a line break, a terminal whose
+// copyPage is a page of lang with a part of each kind that copies: code ending in a line break, its lines numbered and
+// one marked, neither of which is copied, a terminal whose
 // last command ends in one, and a diff that does not, whose head's faded line runs under the copy button. Its script reports the copy button of the code, as the
 // center of its box, its status, and whether it has the focus and shows it, to a frame around it.
 const copyPage = `template: report
@@ -26,7 +27,7 @@ title: Copy
 sections:
   - heading: Copy
     parts:
-      - code: { file: main.go, lang: go, text: "package main\n\nfunc main() {}\n" }
+      - code: { title: Main, file: main.go, lang: go, start: 7, mark: [9], text: "package main\n\nfunc main() {}\n" }
       - terminal:
           shell: zsh
           steps:
@@ -480,12 +481,24 @@ const measureRoom = `(() => {
     if (pre.scrollWidth - pre.clientWidth <= 1) {
       const line = pre.querySelector('code > span:last-child');
       const edge = pre.getBoundingClientRect().left + pre.clientLeft + pre.clientWidth;
-      return part.dataset.floePart + ' short' + (line ? ' ' + (Math.abs(line.getBoundingClientRect().right - edge) < 0.5 ? 'reaches' : 'stops short') : '');
+      return part.dataset.floePart + ' short' + (line ? ' ' + (Math.abs(line.getBoundingClientRect().right - edge) < 0.5 ? 'reaches' : 'stops short') : '') +
+        (textEnd(pre) < button.left ? '' : ' under the button');
     }
     pre.scrollLeft = pre.scrollWidth;
     const clear = button.left - textEnd(pre);
     return part.dataset.floePart + ' ' + (clear > 0 ? 'ok' : 'under by ' + Math.round(-clear));
-  }).concat([...document.querySelectorAll('[data-floe-part=bare]')].map((part) => {
+  }).concat([...document.querySelectorAll('[data-floe-part=code]:has(> .floe-copy)')].slice(0, 1).map((part) => {
+    // A line that would just fit with no room for the button: the room makes it scroll, so that its end is clear of it.
+    const pre = part.querySelector('pre');
+    pre.scrollLeft = 0;
+    const r = document.createRange(); r.selectNodeContents(pre.querySelector('[data-floe-copy]'));
+    const box = r.getBoundingClientRect(), pad = box.left - pre.getBoundingClientRect().left;
+    part.style.width = (part.getBoundingClientRect().width - pre.clientWidth + 2 * pad + box.width + 5) + 'px';
+    pre.scrollLeft = pre.scrollWidth;
+    const clear = part.querySelector('.floe-copy').getBoundingClientRect().left - textEnd(pre);
+    part.style.width = '';
+    return 'near ' + (clear > 0 ? 'ok' : 'under by ' + Math.round(-clear));
+  })).concat([...document.querySelectorAll('[data-floe-part=bare]')].map((part) => {
     const pre = part.querySelector('pre');
     if (pre.scrollWidth - pre.clientWidth <= 1) return 'bare short';
     pre.scrollLeft = pre.scrollWidth;
@@ -502,7 +515,7 @@ const measureLines = `(() => {
   const out = new Set();
   for (const part of document.querySelectorAll('[data-floe-part=code], [data-floe-part=terminal], [data-floe-part=diff]')) {
     const name = part.dataset.floePart, pre = getComputedStyle(part.querySelector('pre'));
-    const lines = [...part.querySelectorAll(name === 'diff' ? 'pre > code > span' : 'pre > *')];
+    const lines = [...part.querySelectorAll(name === 'terminal' ? 'pre > *' : '.lines > :not(.floe-hidden)')];
     out.add(name + ' pre ' + pre.paddingLeft + ' ' + pre.paddingRight + ' line ' + [...new Set(lines.map((e) => getComputedStyle(e).paddingLeft))].join(' '));
   }
   const alpha = (c) => { const m = c.match(/\/ ([\d.]+)\)$/) || c.match(/^rgba\(.*, ([\d.]+)\)$/); return m ? Number(m[1]) : 1; };
@@ -514,8 +527,9 @@ const measureLines = `(() => {
 })()`
 
 // TestCopyRoom scrolls each long line of code, a terminal and a diff to its end: it ends left of the copy button, in
-// every theme; a short one does not scroll (within a pixel, which rounding a rem may take), a short diff's line still
-// reaching the right edge. Without a button, in a part of one's own in code's look, a long line keeps 1.1rem after it.
+// every theme; a short one does not scroll (within a pixel, which rounding a rem may take), a short code's or diff's line
+// still reaching the right edge, and its text clear of the button, measured by its text, as a line's box always reaches
+// the edge. A line that would just fit with no room for the button scrolls instead, its end clear of it. Without a button, in a part of one's own in code's look, a long line keeps 1.1rem after it.
 // The room at a line's sides is on the line, 1.1rem, and none on pre, and the faint text is faded by its colour.
 // Printed, with the button hidden, a line keeps the code's own padding after it, 1.1rem.
 func TestCopyRoom(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
@@ -541,11 +555,11 @@ func TestCopyRoom(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		// brutal's terminal.css gives a terminal's heading its full colour
 		head := map[bool]string{false: "head faint", true: "head not faint"}[name == "brutal"]
 		want = append(want, name+": bare room, bare short",
-			name+": code ok, code ok, terminal ok, diff ok, code short, diff short reaches, terminal short, diff ok",
+			name+": code ok, code ok, terminal ok, diff ok, code short reaches, diff short reaches, terminal short, diff ok, near ok",
 			name+": code pre 0px 0px line 17.6px, terminal pre 0px 0px line 17.6px, diff pre 0px 0px line 17.6px, file faint, "+head+", out faint, meta faint")
 	}
 	b.media("print")
-	out = append(out, "printed: "+b.eval("[...new Set([...document.querySelectorAll('[data-floe-part=code] pre > *, [data-floe-part=terminal] pre > *, [data-floe-part=diff] code > span')]"+
+	out = append(out, "printed: "+b.eval("[...new Set([...document.querySelectorAll('[data-floe-part=terminal] pre > *, .lines > :not(.floe-hidden)')]"+
 		".map((e) => getComputedStyle(e).paddingRight))].join(' ')"))
 	want = append(want, "printed: 17.6px")
 	check(t, "room", out, strings.Join(want, "|"))

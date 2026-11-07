@@ -30,3 +30,4 @@ sections:
           - { label: ページ, value: '1', from: '2', better: lower }
           - { label: ページ, value: '3', from: '2', better: lower }
           - { label: ページ, value: '2', from: '2', better: lower }
+      - code: { title: 行, start: 3, mark: [4], text: "a\nb\n" }

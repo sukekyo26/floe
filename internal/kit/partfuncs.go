@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,7 +24,7 @@ import (
 // partFuncs are the functions floe's parts draw with, besides those of page.html and over them: markdown draws in a
 // text's box, as all a part holds of Markdown is (MarkdownFlow).
 var partFuncs = template.FuncMap{
-	"bars": barsOf, "chart": chartOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf,
+	"bars": barsOf, "chart": chartOf, "code": codeOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf,
 	"markdown": MarkdownFlow, "script": scriptOf, "stats": statsOf, "tree": treeOf, "written": writtenOf,
 	"zoom": zoomScript,
 }
@@ -256,6 +257,81 @@ func diffOf(text string) diffText {
 		d.Lines = append(d.Lines, diffLine{Kind: kind, Text: line})
 	}
 	return d
+}
+
+// codeLine is a line of a code part, keeping its newline, and whether the part marks it.
+type codeLine struct {
+	Text string
+	Mark bool
+}
+
+// codeText is a code part's text by lines. Numbered is whether start is written; Before is the count before the first
+// line, and Digits the digits of the last line's number.
+type codeText struct {
+	Lines          []codeLine
+	Before, Digits int
+	Numbered       bool
+}
+
+// newlines makes CR and CRLF LF before the lines are cut, as HTML does to what it reads: else what a CR alone breaks
+// would draw as two lines under one number.
+var newlines = strings.NewReplacer("\r\n", "\n", "\r", "\n")
+
+// codeOf cuts text into lines, each keeping its newline, numbered from start, or from 1 when it is nil, and marks the
+// lines mark, nil or a list, names by those numbers. It tells every wrong number of mark.
+// LIMIT: a number no line has marks nothing, and a start changed alone moves what mark names: the page shows both. Tell
+// them apart here, which counts the lines, if the page comes not to be looked at.
+// LIMIT: the mistakes are at the part's value, not at the number: codeOf knows not where in it the values are.
+// LIMIT: the range of a number is the schema's, as the part code's is. A part of one's own with no such schema may
+// number from 0, or past a CSS counter's end near 2^31, where its lines would all show one number: the page shows it.
+// A number past an int (start: 18446744073709551615) reads as another, and a start below 0 may show more digits than
+// Digits, which is the last line's: floe's part has its schema refuse both.
+func codeOf(text string, start, mark any) (codeText, error) {
+	c := codeText{Lines: nil, Before: 0, Digits: 0, Numbered: false}
+	var found usererr.List
+	first := 1
+	if start != nil {
+		n, err := lineNumber("start", start)
+		if failed := found.Add(err); failed != nil {
+			return c, failed
+		}
+		first, c.Numbered = n, true
+	}
+	marks := map[int]bool{}
+	list, isList := mark.([]any)
+	if mark != nil && !isList {
+		if failed := found.Add(usererr.New("kit_code_mark", fmt.Sprint(mark))); failed != nil {
+			return c, failed
+		}
+	}
+	for _, v := range list {
+		n, err := lineNumber("mark", v)
+		if failed := found.Add(err); failed != nil {
+			return c, failed
+		}
+		marks[n] = true
+	}
+	if found != nil {
+		return c, found.Err()
+	}
+	n := first
+	for line := range strings.Lines(newlines.Replace(text)) {
+		c.Lines = append(c.Lines, codeLine{Text: line, Mark: marks[n]})
+		n++
+	}
+	c.Before, c.Digits = first-1, len(strconv.Itoa(n-1))
+	return c, nil
+}
+
+// lineNumber reads v as the number of a line: a whole number, of the kinds YAML reads one as.
+func lineNumber(key string, v any) (int, error) {
+	if i, ok := whole(v); ok {
+		return int(i.Int64()), nil
+	}
+	if f, ok := v.(float64); ok && f == math.Trunc(f) {
+		return int(f), nil
+	}
+	return 0, usererr.New("kit_code_line", key, fmt.Sprint(v))
 }
 
 // hunkHead is the start of a hunk's head, @@ -a,b +c,d @@, b and d its lengths, 1 when left out.
