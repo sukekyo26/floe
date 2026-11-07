@@ -425,6 +425,8 @@
   li:not(.group):hover { background: var(--hover); }
   /* The row chosen, whose page is open on the right */
   li.picked, li.picked:hover { background: var(--new-soft); box-shadow: inset 3px 0 var(--new); }
+  /* The task just made, until the rows are drawn anew */
+  li.fresh, li.fresh:hover { background: var(--sel); }
   /* A day's heading: no row, and not pressed */
   li.group { display: block; padding: 0.7rem 1rem 0.25rem; font: 700 var(--text-small)/1.2 var(--body); color: var(--muted); border-bottom: 0; animation: none; }
   /* The first column holds what the row is: a dot, a ring, a link's or a folder's mark; while rows are selected, the check box */
@@ -695,14 +697,9 @@
   }
 
   .state { display: grid; justify-items: center; gap: 0.5rem; padding: 3.5rem 1.5rem; text-align: center; color: var(--muted); }
-  .state svg {
-    width: 52px; height: 52px; padding: 12px; margin-bottom: 0.25rem; color: var(--muted);
-    background: var(--sel); border-radius: 50%;
-  }
   .state p { margin: 0; max-width: 34rem; }
   .state strong { color: var(--fg); font-size: 1rem; }
   .state a { color: var(--fg); }
-  .state code { font-family: var(--mono); font-size: 0.8em; background: var(--subtle); padding: 0.1rem 0.35rem; border-radius: var(--corner-small); overflow-wrap: anywhere; }
   .link-btn { background: none; border: 0; padding: 0; color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
   .error { margin: 0; padding: 0.65rem 0.9rem; border-radius: var(--corner-menu); color: var(--danger); background: var(--danger-soft); white-space: pre-wrap; }
   /* Under the header bar, in the list and in the frame alike */
@@ -803,11 +800,11 @@
   .screens a[aria-current] { color: var(--fg); background: var(--panel); box-shadow: var(--shadow-sm); font-weight: 700; }
   /* No search on the bar: the way to the search modal stands there */
   #find-open.shown { display: inline-flex; }
-  .shell.tasks .reader, .shell.tasks #list-grip, .shell.tasks #list-show, .shell.tasks #list-hide, .shell.tasks .add-open { display: none; }
+  .shell.tasks .reader, .shell.tasks #list-grip, .shell.tasks #list-show, .shell.tasks #list-hide, .shell.tasks #add-open { display: none; }
   .shell.tasks { grid-template-columns: minmax(0, 1fr); }
   .shell.tasks .listcol { border-right: 0; }
   @media not (max-width: 70rem) {
-    .shell.tasks:not(.shelf-closed) { grid-template-columns: var(--shelf-width) minmax(0, 1fr); }
+    .shell.tasks:not(.shelf-closed, .tasks-empty) { grid-template-columns: var(--shelf-width) minmax(0, 1fr); }
     .shell.tasks:not(.shelf-closed) .listcol > .col-foot { display: none; }
   }
   .shell.tasks-empty .shelf, .shell.tasks-empty #shelf-grip, .shell.tasks-empty #shelf-show, .shell.tasks-empty .lhead, .shell.tasks-empty .pins, .shell.tasks-empty .listcol > .col-foot { display: none; }
@@ -934,7 +931,7 @@
       floe
     </a>
     <a class="icon-btn back" id="back" href="/" aria-label="{{.Msg "ui_to_page_list"}}" title="{{.Msg "ui_to_page_list"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg><span class="back-word" id="back-word"></span></a>
-    <nav class="screens" id="screens" aria-label="{{.Msg "ui_screens"}}" hidden><a id="to-list" href="/">{{.Msg "ui_screen_pages"}}</a><a id="to-tasks">{{.Msg "ui_screen_tasks"}}</a></nav>
+    <nav class="screens" id="screens" aria-label="{{.Msg "ui_screens"}}" hidden><a id="to-list" href="/">{{.Msg "ui_screen_pages"}}</a><a id="to-tasks" href="/tasks">{{.Msg "ui_screen_tasks"}}</a></nav>
     <span class="frame-title" id="frame-title"></span>
     <select class="ver-pick" id="frame-version" aria-label="{{.Msg "ui_version"}}" hidden><button><selectedcontent></selectedcontent></button></select>
     <span class="badge" id="frame-archived" hidden>{{.Msg "ui_archived_badge"}}</span>
@@ -1026,6 +1023,7 @@
         <button type="button" class="link-btn" id="shelf-what" title="{{.Msg "ui_shelf_show"}}" hidden></button>
         <span class="count" id="count"></span>
         <button type="button" class="btn add-open" id="add-open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button>
+        <button type="button" class="btn add-open" id="task-add" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_add"}}</button>
       
         <!-- Each button's words in .label, which a narrow bar hides from sight but not from screen readers -->
         <div class="bulk" id="bulk" role="region" aria-label="{{.Msg "ui_bulk_region"}}" hidden>
@@ -1045,13 +1043,12 @@
       <div class="state" id="tasks-empty" hidden>
         <strong>{{.Msg "ui_tasks_empty"}}</strong>
         <p>{{.Msg "ui_tasks_empty_hint"}}</p>
-        <p><code>floe work &lt;slug&gt; --task "#123" --step {{.Msg "ui_tasks_empty_step"}}</code></p>
         <p><a href="/">{{.Msg "ui_to_page_list"}}</a></p>
+        <p><button type="button" class="btn add-open" id="task-add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_task_add"}}</button></p>
       </div>
       <div class="state" id="empty" hidden>
         <strong>{{.Msg "ui_empty_pages"}}</strong>
         <p>{{.Msg "ui_empty_pages_hint"}}</p>
-        <p><code>floe publish &lt;file.yaml&gt;</code></p>
         <p><button type="button" class="btn add-open" id="add-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{.Msg "ui_add_link"}}</button></p>
       </div>
       <div class="state" id="all-archived" hidden>
@@ -1261,6 +1258,9 @@
         <p class="lead" id="kin-target"></p>
       </div>
     </div>
+    <label class="field" hidden>{{.Msg "ui_project"}}
+      <select class="text" id="kin-project"></select>
+    </label>
     <label class="field">{{.Msg "ui_task_name"}}
       <input class="text" id="kin-task" required autocomplete="off" spellcheck="false" placeholder="{{.Msg "ui_task_id_example"}}">
     </label>
@@ -3173,9 +3173,7 @@
 
   // Whether anything is there for the task list: a page on a task or pinned, or a task's row with no page left
   const anyTasks = () => taskProjects(tasksOf()).size > 0;
-  // The bar's way between the two screens, for those who use tasks; on the task list when it cannot tell, too, the way back
   function drawScreens() {
-    $('screens').hidden = !(anyTasks() || (TASKS && tasksRead.error));
     $('to-list').href = `/${savedList()}`;
     $('to-tasks').href = `${TASKS_PATH}${savedTasks()}`;
   }
@@ -3286,6 +3284,11 @@
     return li;
   }
 
+  function focusRow(key) {
+    const row = [...$('list').children].find((li) => li.dataset.key === key);
+    row?.querySelector('.title').focus();
+    return row;
+  }
   // The task list opened from a task's page has the focus on that task's row
   function focusTaskRow() {
     let key = null;
@@ -3295,7 +3298,7 @@
     } catch {
       // Without storage, the list opens with no row focused
     }
-    [...$('list').children].find((li) => li.dataset.key === key)?.querySelector('.title').focus();
+    focusRow(key);
   }
 
   // The pages pinned, which leave as they are archived, and how to pin one when none is
@@ -3394,6 +3397,8 @@
     const none = !nothing && !failed && shown.length === 0;
     $('tasks-none').hidden = !none;
     const gone = !there.has(project);
+    // A task made goes to the states of work, which the archived list is not; and a project not on the list may be a name mistyped in the URL
+    $('task-add').hidden = view === 'archived' || gone;
     $('tasks-other').hidden = !gone;
     $('tasks-none').querySelector('strong').textContent = gone ? t('ui_task_none', projectWord(project)) : t('ui_task_none_state', t(VIEW_WORDS[view]));
     drawRows([{ entries: shown }], (task, i, rows) => rows.push(taskRow(task, i)));
@@ -3562,34 +3567,41 @@
   const isOwnChild = (x) => x?.parentTask?.name === TASK_NAME;
   // What may be a parent: a task with a row, which a task of pages alone has not, no parent of its own, and not the one it is for
   const mayParent = (x, of) => hasRow(x) && !x.parent && x.name !== of;
+  function linkToast(words, project, name) {
+    const to = tagged('a', 'toast-link', words);
+    to.href = taskHref({ project, name });
+    toast('', { ms: 8000, button: to });
+  }
   const KIN_FORMS = {
     // A task named comes to be a child with what it has, out of another parent's, and any other is made
     child: {
       heading: () => t('ui_child_add_named'),
       target: (task) => t('ui_task_child_of', named(task)),
       offered: (task, x) => x.children.length === 0 && x.name !== task.name && !isOwnChild(x),
-      note: (task, x) => (x.parent ? t('ui_task_child_move', named(x), x.parent) : t('ui_task_child_take', named(x))),
-      same: (task, name, x) => isOwnChild(x),
-      take: 'ui_child_take_button',
-      up: false,
+      there: (task, name, x) => {
+        if (!x) return null;
+        if (isOwnChild(x)) return { button: 'ui_child_take_button', act: 'none' };
+        const said = x.parent ? t('ui_task_child_move', named(x), x.parent) : t('ui_task_child_take', named(x));
+        return { button: 'ui_child_take_button', act: 'write', note: KIN_FORMS.child.offered(task, x) ? said : '' };
+      },
+      back: () => partButton(false)?.focus(),
       // LIMIT: this task's row gone meanwhile, its pages left, it is there still: refused as no parent (400), not read again, as a parent not known
       write: (task, name, x, title) => writeTask(task.project, name, { new: !x, ...(x ? {} : { title }), parent: task.name, parentWas: x?.parent ?? '', parentNew: false }),
-      done: (task, name, x) => {
-        const to = tagged('a', 'toast-link', t(x ? 'ui_task_child_took' : 'ui_task_child_made', name));
-        to.href = taskHref({ project: task.project, name });
-        toast('', { ms: 8000, button: to });
-      },
+      done: (task, name, x) => linkToast(t(x ? 'ui_task_child_took' : 'ui_task_child_made', name), task.project, name),
     },
     // A task named comes to be the parent, the one before said; any other is made with it, in the same write (parentTitle)
     parent: {
       heading: (task) => t(task.parent ? 'ui_up_change_named' : 'ui_up_add_named'),
       target: (task) => t('ui_task_parent_of', named(task)),
       offered: (task, x) => mayParent(x, task.name),
-      note: (task, x) => (task.parent && task.parent !== x.name ? t('ui_task_parent_move', named(x), task.parent) : t('ui_task_parent_take', named(x))),
-      // The parent as written, one that makes no family too, named again is no change
-      same: (task, name) => Boolean(task.parent) && name === task.parent.trim(),
-      take: 'ui_up_take_button',
-      up: true,
+      there: (task, name, x) => {
+        // The parent as written, one that makes no family too, named again is no change
+        if (task.parent && name === task.parent.trim()) return { button: 'ui_up_take_button', act: 'none' };
+        if (!x) return null;
+        const said = task.parent && task.parent !== x.name ? t('ui_task_parent_move', named(x), task.parent) : t('ui_task_parent_take', named(x));
+        return { button: 'ui_up_take_button', act: 'write', note: KIN_FORMS.parent.offered(task, x) ? said : '' };
+      },
+      back: () => partButton(true)?.focus(),
       // LIMIT: whether the one named has come to have a parent or children meanwhile is not said: the store refuses it as it is now (400),
       // and the words say so, with nothing read again
       write: (task, name, x, title) => writeTask(task.project, task.name, { new: false, parent: name, parentWas: task.parent ?? '', parentNew: !x, ...(x ? {} : { parentTitle: title }) }),
@@ -3600,42 +3612,83 @@
           else toast(t('ui_task_parent_moved', task.parent, name), { ms: 8000 });
           return;
         }
-        const to = tagged('a', 'toast-link', t('ui_task_parent_put', name));
-        to.href = taskHref({ project: task.project, name });
-        toast('', { ms: 8000, button: to });
+        linkToast(t('ui_task_parent_put', name), task.project, name);
       },
     },
+    // A new task, from the task list. A task named is there already, which is said, and pressing opens it with nothing written
+    add: {
+      heading: () => t('ui_task_add'),
+      target: (task, ask) => (ask ? '' : t('ui_task_add_project', projectWord(task.project))),
+      offered: () => false,
+      there: (task, name, x) => x && { button: 'ui_task_open_button', act: 'open', note: t('ui_task_there', named(x), t(VIEW_WORDS[taskView(x)])) },
+      write: (task, name, x, title) => writeTask(task.project, name, { new: true, title }),
+      // The list goes where the row went, drawn by the load that follows: drawn now, it would say the state has no task. That load is to draw
+      // even what a poll has read of the new task and drawn on the list as it was
+      done: (task, name) => {
+        linkToast(t('ui_task_made', name), task.project, name);
+        borrowed = false;
+        keepProject(task.project);
+        filter({ project: task.project, view: STATES.find((s) => s.new).name });
+        drawn = '';
+      },
+      back: (task, name) => focusRow(taskRowKey(task.project, name))?.classList.add('fresh'),
+    },
   };
-  // The dialog's task and form, and the task it last showed for the name, which saving sends as new or not
+  // The dialog's task and form and whether it asks the project; the task it last showed for the name, which saving sends as new or not, and
+  // what pressing does (act): a form's there says it of a name that is no new task, button and note too
   let kinOf;
   let kinShown;
-  function openKin(task, form) {
-    kinOf = { task, form: KIN_FORMS[form] };
+  function openKin(task, form, ask = false) {
+    kinOf = { task, form: KIN_FORMS[form], ask };
+    $('kin-project').closest('label').hidden = !ask;
     resetTaskForm($('kin'));
-    $('kin-error').hidden = true;
     kinTaskChanged();
     $('kin-dialog').showModal();
+  }
+  // With no task anywhere there is no project on the screen to make it in: it is asked, of the projects the pages have, so that the name is
+  // the store's (taskProject) and not what was typed. One no page has is for floe work --project
+  // LIMIT: the first task made, the other projects are not on the screen to make one in: a page's "Set task" makes one in its project and floe work
+  // --project in any. Ask the project every time if that comes to trouble someone
+  function openTaskAdd() {
+    if (anyTasks()) {
+      openKin({ project }, 'add');
+      return;
+    }
+    const names = [...new Set(items.map((a) => a.taskProject))].filter((name) => name !== NONE);
+    const ranks = projectOrder(names);
+    names.sort((x, y) => ranks.get(x) - ranks.get(y));
+    const chosen = names.includes(project) ? project : NONE;
+    $('kin-project').replaceChildren(...[NONE, ...names].map((name) => {
+      const option = tagged('option', '', projectWord(name));
+      option.value = name;
+      option.defaultSelected = name === chosen;
+      return option;
+    }));
+    openKin({ project: chosen }, 'add', true);
   }
   // The dialog's task as the tasks read now have it, its parent written above all, and what it says of it: as it opens, and refused as
   // stale, as the set dialog's setTaskChanged
   function kinTaskChanged() {
-    const { task, form } = kinOf;
+    const { task, form, ask } = kinOf;
     kinOf.task = tasksOf().find((y) => y.project === task.project && y.name === task.name) ?? task;
     $('kin-heading').textContent = form.heading(kinOf.task);
-    $('kin-target').textContent = form.target(kinOf.task);
+    $('kin-target').textContent = form.target(kinOf.task, ask);
+    $('kin-target').hidden = !$('kin-target').textContent;
     kinNameChanged();
   }
   function kinNameChanged() {
     const { task, form } = kinOf;
     const name = $('kin-task').value.trim();
     const x = tasksOf().find((y) => y.project === task.project && y.name === name);
-    kinShown = x;
-    const same = form.same(task, name, x);
-    const note = x && !same && form.offered(task, x) ? form.note(task, x) : '';
+    const there = form.there(task, name, x);
+    kinShown = { x, act: there?.act ?? 'write' };
+    const note = there?.note ?? '';
     $('kin-note').hidden = !note;
     $('kin-note').textContent = note;
-    titleField($('kin-title'), !x && !same);
-    $('kin-submit').textContent = t(x || same ? form.take : 'ui_child_make_button');
+    // What was refused was of another name: refused as stale, the catch says it after
+    $('kin-error').hidden = true;
+    titleField($('kin-title'), !there);
+    $('kin-submit').textContent = t(there?.button ?? 'ui_child_make_button');
   }
   async function saveKin(e) {
     e.preventDefault();
@@ -3646,11 +3699,15 @@
     const title = $('kin-title').value.trim();
     try {
       if (!taskFormReady($('kin'), $('kin-error'))) return;
-      const x = kinShown;
+      const { x, act } = kinShown;
+      if (act === 'open') {
+        location.href = taskHref({ project: task.project, name });
+        return;
+      }
       // Nothing to write, and so nothing to tell
-      if (form.same(task, name, x)) {
+      if (act === 'none') {
         $('kin-dialog').close();
-        partButton(form.up)?.focus();
+        form.back(task, name);
         return;
       }
       const res = await form.write(task, name, x, title);
@@ -3662,7 +3719,7 @@
       form.done(task, name, x);
       await load();
       $('kin-dialog').close();
-      partButton(form.up)?.focus();
+      form.back(task, name);
     } catch (err) {
       $('kin-error').textContent = t('ui_save_failed', err.message);
       $('kin-error').hidden = false;
@@ -4904,14 +4961,17 @@
   }
 
   let tasksFailed = false;
+  // The loads an action has asked: a poll asked before one may be of the time before the action wrote, and that load draws it anyway
+  let actionLoads = 0;
   // polled tells one asked by no action of the person's: what an action changed is drawn at once, whatever is pressed
   async function load(polled = false) {
+    const asked = polled ? actionLoads : ++actionLoads;
     let text;
     try {
       const [res, read] = await Promise.all([api('/api/artifacts'), framed ? null : readTasks()]);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const list = await res.text();
-      if (polled && performance.now() - pressedAt < PRESS_MS) return;
+      if (polled && (asked !== actionLoads || performance.now() - pressedAt < PRESS_MS)) return;
       text = list + (read?.raw ?? '');
       if (text !== drawn) items = JSON.parse(list);
       if (read) tasksRead = read;
@@ -5173,6 +5233,12 @@
     kinNameChanged();
   });
   $('kin-task').addEventListener('input', kinNameChanged);
+  $('kin-project').addEventListener('change', (e) => {
+    kinOf.task = { project: e.target.value };
+    kinNameChanged();
+  });
+  $('task-add').addEventListener('click', openTaskAdd);
+  $('task-add-empty').addEventListener('click', openTaskAdd);
   suggestOne($('set-step'), () => {
     const task = setTaskOf($('set-task').value);
     const steps = [...(task?.steps ?? []), ...[...(task?.pages ?? []), ...(task?.archived ?? [])].map((a) => a.work.step)].filter(Boolean);
@@ -5233,6 +5299,8 @@
     // Back on a list, what the one before kept for j and k is over
     forgetOrder();
     $('manage').hidden = false;
+    // The bar's way between the two screens, there with no task too: that is how one finds the task list
+    $('screens').hidden = false;
     $('search').hidden = TASKS;
     $('q').value = readState(location.search).q;
     $('read-actions').append(...$('page-actions').content.firstElementChild.cloneNode(true).childNodes);
