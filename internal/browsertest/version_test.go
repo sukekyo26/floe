@@ -68,6 +68,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	x, y := rowPoint(t, b, "#list li[data-slug=d]", false)
 	b.click(x, y)
 	out = append(out, b.until("whole", "location.pathname === '/a/d/' && location.search"))
+	b.eval("sessionStorage.removeItem('artifacts.order')")
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=d]')")
 	b.eval("document.querySelector('#list li[data-slug=d] .title').click()")
@@ -78,6 +79,7 @@ func TestUIVersionPick(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, b.until("whole by the key", "location.pathname === '/a/d/' && location.search"))
 
 	// The keys go on from the choice.
+	b.eval("sessionStorage.removeItem('artifacts.order')")
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug=d]')")
 	b.eval("document.querySelector('#list li[data-slug=d] .title').click()")
