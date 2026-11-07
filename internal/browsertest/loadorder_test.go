@@ -290,10 +290,22 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		tasksBroken = false;
 		await load();
 		const none = error();
+		// Both at once: the draw's goes first
+		tasksBroken = true;
+		renders = 0;
+		drawn = '';
+		await load().catch(() => {});
+		const first = error() === t('ui_draw_failed', 'broken draw');
+		tasksBroken = false;
+		await load();
+		// Another's mistake (a failed delete) stays through a load that says none
+		showError('a delete failed');
+		await load();
+		const kept = error();
 		render = realRender;
 		load = realLoad;
 		window.fetch = real;
-		return 'the draw: ' + draw + ', then the tasks: ' + tasks + ', then: ' + none;
+		return 'the draw: ' + draw + ', then the tasks: ' + tasks + ', then: ' + none + ', both: the draw first ' + first + ', kept: ' + kept;
 	})()`)
-	check(t, "load mistakes", []string{got}, "the draw: true, then the tasks: true, then: none")
+	check(t, "load mistakes", []string{got}, "the draw: true, then the tasks: true, then: none, both: the draw first true, kept: a delete failed")
 }
