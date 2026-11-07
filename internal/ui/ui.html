@@ -1422,7 +1422,7 @@
   });
   // The versions read go to the server one request at a time: while one is out, each page's last one waits, its earlier ones dropped.
   // One lost is told again the next time the page is loaded. The slug is the caller's own, never one a page's message names
-  // LIMIT: #error is one place, so that clearing a read's mistake also clears another's shown since, unread. Only while a broken reads.json is mended, or after a mark unread failed, whose words go with the next read of any page; as load's loadFailed. Give each its own place if that comes to matter
+  // LIMIT: #error is one place, so that clearing a read's mistake also clears another's shown since, unread. Only while a broken reads.json is mended, or after a mark unread failed, whose words go with the next read of any page; as load's mistakes are by sayLoad. Give each its own place if that comes to matter
   const readsWaiting = new Map();
   let readsGoing = false;
   let readFailed = false;
@@ -5042,9 +5042,19 @@
     $('set-dialog').close();
   }
 
-  // The list response last drawn. An unchanged one is not redrawn, keeping armed delete buttons and focus
+  // The list response last drawn, or '' for one to draw again at the next look: a draw that threw, or one that left a part for later. An
+  // unchanged one is not redrawn, keeping armed delete buttons and focus
   let drawn = '';
-  let loadFailed = false;
+  // The load's mistakes, its read's and its draw's (one that threw), said with the tasks' by sayLoad alone: the first of them goes in
+  // #error, which is cleared only when one was said, so that a failed delete and the like stays until the next action
+  let readWhy = '';
+  let drawWhy = '';
+  let loadSaid = '';
+  function sayLoad() {
+    const why = readWhy || drawWhy || (TASKS && tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '');
+    if (why || loadSaid) showError(why);
+    loadSaid = why;
+  }
 
   // A poll's answer does not redraw the rows from under a press: Chrome sends neither click nor dblclick for a row gone between press
   // and release. Only for a while, as a press may never tell its release (a context menu, a drag, a release over the iframe)
@@ -5068,7 +5078,6 @@
     }
   }
 
-  let tasksFailed = false;
   // One load at a time: one asked while another goes waits for it, and every ask meanwhile joins the one waiting, so no answer
   // overtakes another. await load() returns once a load begun after the call has drawn, failed, or, a poll's, given way to a press
   let loadWaiting = null;
@@ -5121,8 +5130,8 @@
         if (writesSent === sent) break;
       }
     } catch (e) {
-      loadFailed = true;
-      showError(e.name === 'TimeoutError' ? t('ui_load_slow', READ_MS / 1000, POLL_MS / 1000) : t('ui_load_failed', e.message));
+      readWhy = e.name === 'TimeoutError' ? t('ui_load_slow', READ_MS / 1000, POLL_MS / 1000) : t('ui_load_failed', e.message);
+      sayLoad();
       return;
     } finally {
       reading = null;
@@ -5135,26 +5144,29 @@
     if (read) tasksRead = read;
     // The list redrawn when what is open of the folders changed, the frame when the directory of its page did
     if (keep?.()) drawn = '';
-    // Only a load failure is cleared here; a failed delete and the like stays until the next action
-    if (loadFailed) {
-      loadFailed = false;
-      showError('');
+    readWhy = '';
+    if (text === drawn) {
+      sayLoad();
+      return;
     }
-    if (TASKS && tasksRead.error) {
-      tasksFailed = true;
-      showError(t('ui_tasks_failed', tasksRead.error));
-    } else if (tasksFailed) {
-      tasksFailed = false;
-      showError('');
-    }
-    if (text === drawn) return;
     drawn = text;
-    if (framed) renderFrame();
-    else {
-      render();
-      backToRow();
+    try {
+      if (framed) renderFrame();
+      else {
+        render();
+        backToRow();
+      }
+      if ($('find').open) drawFind();
+    } catch (e) {
+      // Said, and drawn again at each look until it draws
+      // LIMIT: backToRow has let its row go before it focuses or picks it: one that throws there is not taken back to the row again
+      drawn = '';
+      drawWhy = t('ui_draw_failed', e.message);
+      sayLoad();
+      throw e;
     }
-    if ($('find').open) drawFind();
+    drawWhy = '';
+    sayLoad();
   }
 
   // The search modal: of every entry, the archived after the rest, as they would drown what is in use
