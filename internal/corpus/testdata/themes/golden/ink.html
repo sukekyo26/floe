@@ -501,7 +501,7 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
    the parts and the words of each start at one height. The rows have no gap of their own: the number keeps the cards'
    gap below it, and takes no row by name, so that a theme laying it out of the rows (position: absolute) keeps it
    placed against the card. The words keep their room from the lowest parts by the parts' margin, kept in the parts'
-   row; options of no words keep none, ending a card at its parts.
+   row; options of no words keep none and no row for them, ending a card at its parts.
    LIMIT: a row no card on a line fills still takes the gap between the lines of cards (--floe-room): half of it above
    the title where the number takes no room in the rows (a theme's content: none or position: absolute), the whole
    between the title and the words on a line of no parts (one card a line, a line wrapped), and --floe-room more
@@ -511,6 +511,7 @@ blockquote { --face: var(--fg); --on-face: var(--bg); border: 0; padding: 1.1rem
    theme sets --cards-gap instead */
 @supports (grid-template-rows: subgrid) {
   :scope:has(> .option > .parts) > .option { grid-row: span 4; grid-template-rows: subgrid; row-gap: 0; }
+  :scope:has(> .option > .parts):not(:has(> .option > .body)) > .option { grid-row: span 3; }
   :scope:has(> .option > .parts) > .option::before { margin-bottom: var(--cards-gap); }
   :scope:has(> .option > .parts) > .option > .title { grid-row: 2; }
   :scope:has(> .option > .parts) > .option > .parts { grid-row: 3; margin-top: var(--floe-room); }
