@@ -48,6 +48,33 @@ func lex(src []byte) []token {
 	}
 }
 
+// Token is a token of a CSS file as floe reads it: its type and bytes, the byte it starts at, and Depth, the blocks
+// and functions it is in, as CSS Syntax nests them ({, (, a function and [, each closed by its own closer alone). An
+// opener's Depth is that of what is around it, and so is that of the closer that closes it.
+type Token struct {
+	Type  css.TokenType
+	Data  []byte
+	At    int
+	Depth int
+}
+
+// Tokens reads src as Check does, after Preprocess, by tdewolff's tokens and the nesting of their blocks: the one
+// reading of CSS that the tests of floe's CSS rules (internal/css/lint) take, so that they read no CSS of their own. At
+// counts in Preprocess(src), which is src itself when src is made by Preprocess, as the CSS of a Kit is.
+func Tokens(src []byte) []Token {
+	var open nest
+	toks := lex(Preprocess(src))
+	out := make([]Token, 0, len(toks))
+	for _, t := range toks {
+		depth := len(open)
+		if open.step(t) {
+			depth = len(open)
+		}
+		out = append(out, Token{Type: t.tt, Data: t.data, At: t.at, Depth: depth})
+	}
+	return out
+}
+
 // sheet is a CSS file read into tokens, and the mistakes told of it.
 type sheet struct {
 	file  string

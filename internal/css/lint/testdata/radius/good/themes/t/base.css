@@ -1,0 +1,2 @@
+:scope { --corner-x: 3px; }
+@supports (x) { :scope.on { --corner-y: 2px; } }

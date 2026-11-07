@@ -1,0 +1,1 @@
+:scope { --list-mark: 1rem; } /* want "sets --list-mark, which only the files of the parts and looks that set or read it set: move it to the :scope of list" */
