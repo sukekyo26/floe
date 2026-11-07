@@ -23,8 +23,8 @@ import (
 // partFuncs are the functions floe's parts draw with, besides those of page.html and over them: markdown draws in a
 // text's box, as all a part holds of Markdown is (MarkdownFlow).
 var partFuncs = template.FuncMap{
-	"bars": barsOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf, "markdown": MarkdownFlow,
-	"script": scriptOf, "tree": treeOf, "written": writtenOf, "zoom": zoomScript,
+	"bars": barsOf, "chart": chartOf, "copyButton": copyButtonOf, "diagram": diagramOf, "diff": diffOf,
+	"markdown": MarkdownFlow, "script": scriptOf, "tree": treeOf, "written": writtenOf, "zoom": zoomScript,
 }
 
 // zoomScript is the function zoom of a part.html: the script that zooms the frames of class floe-zoom, as the

@@ -1,0 +1,17 @@
+{{- $c := chart . -}}
+<figure data-floe-part="chart">
+<figcaption class="head"><span class="title">{{$c.Title}}</span>{{with $c.Unit}}<span class="unit">{{.}}</span>{{end}}
+{{- if $c.Legend}}<ul class="legend">{{range $c.Series}}<li class="s{{.N}}"><span class="key"></span>{{.Name}}</li>{{end}}</ul>{{end}}</figcaption>
+<svg{{if $c.Thin}} class="thin"{{end}} role="img" aria-label="{{word $c.Kind}}: {{$c.Title}}{{with $c.Unit}} ({{.}}){{end}}" style="--left: {{$c.Left}}rem; --right: {{$c.Right}}rem; --right-narrow: {{$c.RightNarrow}}rem">
+{{- range $t := $c.Ticks}}<line class="grid{{if .Zero}} zero{{end}}" x1="0" x2="100%" y1="{{.Y}}%" y2="{{.Y}}%"></line>{{with .Text}}<text class="tick" x="0" y="{{$t.Y}}%" dx="-0.5em" text-anchor="end">{{.}}</text>{{end}}{{end}}
+{{- range $c.Labels}}<text class="x{{if .Wide}} wide{{end}}" x="{{.X}}%" y="100%" dy="1.5em" text-anchor="middle">{{.Text}}</text>{{end}}
+{{- range $s := $c.Series}}<g class="s{{.N}}">
+{{- range .Segments}}<line class="seg" x1="{{.X1}}%" y1="{{.Y1}}%" x2="{{.X2}}%" y2="{{.Y2}}%"></line>{{end}}
+{{- range .Bars}}<g><title>{{.Title}}</title><rect x="{{.X}}%" y="{{.Y}}%" width="{{.W}}%" height="{{.H}}%"></rect>{{if .Text}}<text class="val{{if $c.Sparse}} wide{{end}}" x="{{.Mid}}%" y="{{.Y}}%" text-anchor="middle" dy="-0.7em">{{.Text}}</text>{{end}}</g>{{end}}
+{{- range .Points}}<g><title>{{.Title}}</title><circle class="hit" cx="{{.X}}%" cy="{{.Y}}%" r="12"></circle>{{if not $c.Dense}}<circle class="dot" cx="{{.X}}%" cy="{{.Y}}%" r="4"></circle>{{end}}</g>{{end}}
+{{- with .End}}<text class="end" x="100%" y="{{.Y}}%" dx="0.7em">{{if $c.Names}}<tspan class="name">{{.Name}} </tspan>{{end}}<tspan class="num">{{.Value}}</tspan></text>{{end}}
+</g>{{end}}
+</svg>
+<details data-floe-part="details"><summary>{{word "numbers"}}</summary><div><div data-floe-part="table"><table><thead><tr><th scope="col">{{word "name"}}</th>{{range $c.Series}}<th scope="col" class="num">{{.Name}}</th>{{end}}</tr></thead><tbody>
+{{- range $c.Rows}}<tr><td>{{.Name}}</td>{{range .Values}}<td class="num">{{.}}</td>{{end}}</tr>{{end}}</tbody></table></div></div></details>
+</figure>

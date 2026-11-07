@@ -68,7 +68,7 @@ func TestHTMLItems(t *testing.T) {
 		{section, `<svg><title><meta http-equiv="refresh" content="0"></title></svg>`, `d.yaml:2:11: the page drawn from this file has <meta http-equiv="refresh" content="0"/>, which page.html, a part's part.html or an item of format html writes: a page floe draws is static, and takes a <meta> for its charset or its viewport alone; leave it out`},
 		{section, "<style>p{}</style>", "d.yaml:2:11: the page drawn from this file has a <style>, which page.html, a part's part.html or an item of format html writes: write the CSS in the template's page.css, which floe puts into the page in a layer under the parts' and the theme's, or in the part's part.css"},
 		{section, "<noscript><p>x</p></noscript>", "d.yaml:2:11: the page drawn from this file has a <noscript>, which page.html, a part's part.html or an item of format html writes: floe does not check what it holds, which works where scripts are off; leave it out"},
-		{section, `<span data-floe-part="nope">x</span>`, "d.yaml:3:4: the page drawn from this file names the part nope, which there is none of; use asks, bars, cell, checklist, checks, code, columns, compare, decision, details, diagram, diff, entries, facts, fields, findings, image, keys, links, note, options, script, stack, stats, steps, table, tabs, terminal, text, timeline, tree"},
+		{section, `<span data-floe-part="nope">x</span>`, "d.yaml:3:4: the page drawn from this file names the part nope, which there is none of; use asks, bars, cell, chart, checklist, checks, code, columns, compare, decision, details, diagram, diff, entries, facts, fields, findings, image, keys, links, note, options, script, stack, stats, steps, table, tabs, terminal, text, timeline, tree"},
 		{htmlPage("<p>{{.Data.h}}</p>"), "<table><tr><td>x</td></tr></table>", "d.yaml:3:4: HTML changes the page around it at </p>: close in it each element and comment it opens, and close no element it did not open"},
 		{htmlPage("<p><b>{{.Data.t}}</p><div>{{.Data.h}}</div>"), "plain", ""},
 		{htmlPage("<table><tbody>{{.Data.h}}</tbody></table>"), "<tr><td>x</td></tr>", ""},
@@ -582,6 +582,40 @@ func TestPartBarsRefused(t *testing.T) {
 		data := "lang: en\ntemplate: mine\nb:\n  items:\n    - {label: a, value: 3}\n    - " + tt.item + "\n"
 		if got := drawn(t, k, data, none); got != tt.want {
 			t.Errorf("item %s: told %q, want %q", tt.item, got, tt.want)
+		}
+	}
+}
+
+// What chart cannot place is refused, for a part of one's own too, whose schema says nothing of it: a mistake in a
+// series at its values, each such told, and the rest at the part's value.
+func TestChartMistakes(t *testing.T) {
+	t.Parallel()
+
+	const head = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object"`
+	parts := map[string]string{
+		"pc/schema.json": head + `}`,
+		"pc/part.html":   `<div data-floe-part="pc">{{(chart .).Title}}</div>`,
+		"pc/part.css":    "",
+	}
+	k := ownKit(t, parts, mine(htmlPage("{{.Data.c}}"), head+`, "properties": {"c": {"$ref": "floe:///parts/pc.json"}}}`, nil))
+	const shape = "chart takes kind (line or bar), x (names) and series (each of name and values, a number for each name); "
+	for _, tt := range []struct{ value, want string }{
+		{"3", "d.yaml:3:4: got number, want object"},
+		{"{kind: line, x: [], series: [{name: a, values: []}]}", "d.yaml:3:5: " + shape + "x is not so"},
+		{"{kind: line, x: [a], series: []}", "d.yaml:3:5: " + shape + "series is not so"},
+		{"{kind: pie, x: [a], series: [{name: a, values: [1]}]}", "d.yaml:3:5: " + shape + "kind is not so"},
+		{"{kind: line, x: [a], series: [3]}", "d.yaml:3:5: " + shape + "series 1 is not so"},
+		{"{kind: line, x: [a], series: [{name: a}]}", "d.yaml:3:5: " + shape + "series 1 is not so"},
+		{"{kind: line, x: [a, b], series: [{name: a, values: [1]}]}", `d.yaml:3:55: chart: series 1 "a" has 1 values for the 2 names of x; write a value for each name`},
+		{"{kind: line, x: [a, b], series: [{name: a, values: [1]}, {name: b, values: [1, 2, 3]}]}", `d.yaml:3:55: chart: series 1 "a" has 1 values for the 2 names of x; write a value for each name` + "\n" +
+			`d.yaml:3:79: chart: series 2 "b" has 3 values for the 2 names of x; write a value for each name`},
+		{"{kind: line, x: [a], series: [{name: a, values: [x]}]}", `d.yaml:3:5: chart: series 1 "a" takes a number, not "x"`},
+		{"{kind: line, min: x, x: [a], series: [{name: a, values: [1]}]}", `d.yaml:3:5: chart: min takes a number, not "x"`},
+		{"{kind: bar, min: x, title: T, x: [a], series: [{name: a, values: [1]}]}", ""},
+	} {
+		data := "lang: en\ntemplate: mine\nc: " + tt.value + "\n"
+		if got := drawn(t, k, data, none); got != tt.want {
+			t.Errorf("%s: told %q, want %q", tt.value, got, tt.want)
 		}
 	}
 }

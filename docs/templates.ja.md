@@ -174,6 +174,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 | `--font`・`--display`・`--mono` | 本文・見出し・等幅の書体。`--mono` は `monospace` の前に書体の名前を置く（ページは字の大きさを決めないので、ブラウザは `monospace` だけの字を 13px から測る） |
 | `--code-bg`・`--code-fg`・`--code-prompt` | コードとターミナルの地（いつも暗い）、その文字、プロンプト |
 | `--code-add`・`--code-del` | diff の足した行と消した行 |
+| `--chart-1`〜`--chart-4` | グラフの系列の色（順に）。部品の面に 3:1 以上 |
 | `--page-bg` | ページ全体の地。方眼のような模様も（既定は `--bg`） |
 | `--rule` | 節の間のような、ページを横切る線の `border` |
 | `--text-width` | 1 列のページの幅。テンプレートが `--column-width: var(--text-width)` で列をこの幅にする（`adr`・`runbook` のように）。部品 note の幅にも使う。文そのものは、入っている列か箱の幅まで使う |
