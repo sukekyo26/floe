@@ -738,6 +738,7 @@ func TestUIColumns(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.eval("[...document.querySelectorAll('#manage > .side-show')].filter((e) => e.getClientRects().length).map((e) => e.id + ':' + (e.title === e.getAttribute('aria-label'))).join(' ') + ' ' + document.activeElement.id + ' ' + Math.round(document.getElementById('reader').getBoundingClientRect().left)"))
 	// Kept across a reload.
 	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li[data-slug=a1]')")
 	out = append(out, b.eval("document.getElementById('manage').className"))
 	b.eval("document.getElementById('list-show').click()")
 	out = append(out, b.eval("document.activeElement.id + ' ' + document.getElementById('manage').className + ' ' + document.getElementById('shelf-what').parentElement.className"))

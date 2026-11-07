@@ -254,12 +254,16 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	const archiveRow = "document.querySelector('#list li:not(.group) .actions > .archive').click()"
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval(archiveRow)
-	out = append(out, b.until("the archive", "calls.splice(0).join(',')"), b.eval("document.querySelectorAll('#list .more[open]').length"),
+	out = append(out, b.until("the archive", "calls.splice(0).join(',')"))
+	// Sent, the list is read again after it: the rows drawn so are what the next steps press
+	b.until("the archive done", "archiving.size === 0")
+	out = append(out, b.eval("document.querySelectorAll('#list .more[open]').length"),
 		b.eval("document.getElementById('toasts').textContent.includes("+js(msg("ui_archive_done", "Beta"))+")"))
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
 	out = append(out, b.eval(counts), b.eval(archiveWords))
 	b.eval(archiveRow)
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
+	b.until("the give back done", "archiving.size === 0")
 	// The change failing, the row stays with the focus on its button.
 	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .actions > .archive').focus(); document.querySelector('#list li:not(.group) .actions > .archive').click()")
 	out = append(out, b.until("the give back to fail", "!document.getElementById('error').hidden && "+
@@ -512,6 +516,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	out = append(out, b.until("the frame's bar", "document.getElementById('frame-title').textContent && "+frame))
 	b.eval("document.querySelector('#frame-actions > .archive').click()")
 	out = append(out, b.until("the give back", "calls.splice(0).join(',')"))
+	b.until("the give back done", "archiving.size === 0")
 	// Given back, as the server now lists it: the menu says so.
 	b.eval("window.list = JSON.stringify(JSON.parse(window.list).map((a) => a.slug === 'z' ? { ...a, archived: false } : a)); load()")
 	out = append(out, b.until("the menu to say so", "document.getElementById('frame-archived').hidden && "+frame))

@@ -350,7 +350,8 @@ func TestUIFrameBackFocus(t *testing.T) { //nolint:paralleltest // the browser t
 	pressBack()
 	read("of a version", pages)
 	b.until("the version beside", "readLoaded.endsWith('v=1')")
-	out = append(out, "its version: "+b.eval("picked.v + ' ' + document.getElementById('read-version').value"))
+	// The versions to choose from are asked apart from the page
+	out = append(out, "its version: "+b.until("the versions", "document.getElementById('read-version').value && picked.v + ' ' + document.getElementById('read-version').value"))
 
 	// The list folded leaves when a row is open: the focus goes to what opens it.
 	b.navigate(task)
