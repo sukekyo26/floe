@@ -214,7 +214,7 @@ the way up: /tasks?project=proj&view=archived
 no page, given back: Archive the task | done | no word | rows  | task-archive
 said: Brought #none back from the archive
 pages, archived: Bring the archive back | no select | Archive | rows p1*,p2* | task-archive
-with #pages in the archive: done #forgot,#marked,#none,#part,#refused,#up | archive #kid2,#pages
+with #pages in the archive: done #forgot,#marked,#none,#part,#refused,#up | archive #kid2,#pages,#still
 pages, given back: Archive the task | done | no word | rows p1,p2 | task-archive
 pages archived by floe archive: Archive the task | done | no word | rows m1* | 
 those, archived: Bring the archive back | no select | Archive | rows m1* | task-archive
@@ -225,7 +225,7 @@ the parent archived: #kid In progress,#kid2 Archive
 a child added: #kid3 To do,#kid In progress,#kid2 Archive
 the child: doing
 its parent, from the child: #up
-with the parent in the archive: done #forgot,#none,#pages,#part,#refused | archive #kid2,#marked,#up
+with the parent in the archive: done #forgot,#none,#pages,#part,#refused | archive #kid2,#marked,#still,#up
 forgotten: Could not save: task #forgot is no longer there: the tasks are read again, so check and save again
 refused: Could not save: no
 refused, as it was: Archive the task | done | no word | rows f1 | 
