@@ -101,7 +101,7 @@ func TestWorkRefused(t *testing.T) {
 		ed            store.TaskEdit
 		want          string
 	}{
-		{"p", "#1", store.TaskEdit{State: ptr("WAITING")}, `unknown state "WAITING": use todo, doing, waiting, done`},
+		{"p", "#1", store.TaskEdit{State: ptr("WAITING")}, `unknown state "WAITING": use todo, doing, waiting, done, archived`},
 		{"p", "#1", store.TaskEdit{URL: ptr("javascript:alert(1)")}, `"javascript:alert(1)" is not an http or https URL`},
 		{"p", "#1", store.TaskEdit{URL: ptr("   ")}, `"   " is not an http or https URL`},
 		{"p", "#1", store.TaskEdit{URL: ptr("https:")}, `"https:" is not an http or https URL`},
@@ -328,7 +328,7 @@ func TestStates(t *testing.T) {
 	if len(fresh) != 1 {
 		t.Errorf("new tasks take %v", fresh)
 	}
-	if got := store.StateNames(); got != "todo, doing, waiting, done" {
+	if got := store.StateNames(); got != "todo, doing, waiting, done, archived" {
 		t.Errorf("StateNames = %q", got)
 	}
 }

@@ -188,7 +188,11 @@ func TestWorkCommand(t *testing.T) {
 	if tasks()["p"]["#4"].State != "waiting" || tasks()["shop"]["#5"].State != "todo" || tasks()["/"]["#6"].State != "todo" {
 		t.Errorf("tasks alone: %v", tasks())
 	}
-	if got := run(1, "work", "--task", "#4", "--state", "no"); got != "floe: unknown state \"no\": use todo, doing, waiting, done\n" {
+	run(0, "work", "--task", "#a", "--state", "archived")
+	if tasks()["p"]["#a"].State != "archived" {
+		t.Errorf("a task archived: %v", tasks()["p"]["#a"])
+	}
+	if got := run(1, "work", "--task", "#4", "--state", "no"); got != "floe: unknown state \"no\": use todo, doing, waiting, done, archived\n" {
 		t.Errorf("a state of none: %q", got)
 	}
 	if got := run(1, "work", "--task", "#4", "--url", "ftp://x/y"); got != "floe: \"ftp://x/y\" is not an http or https URL\n" {
@@ -269,7 +273,7 @@ func TestWorkCommand(t *testing.T) {
 			t.Errorf("--task \"\" %s: %q", flag, got)
 		}
 	}
-	if got := run(0, "work", "--help"); !strings.Contains(got, "the task's state: todo, doing, waiting, done") {
+	if got := run(0, "work", "--help"); !strings.Contains(got, "the task's state: todo, doing, waiting, done, archived") {
 		t.Errorf("help: %q", got)
 	}
 	if got := run(1, "work", "a", "--task", "  "); got != "floe: a task needs an ID\n" {

@@ -181,7 +181,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	want("not on a task's page", shown("task-add"), "false")
 
 	// One of pages alone, archived: there all the same, and said so.
-	s.floe(t, "work", "b2", "--task", "#20", "--title", "old", "--state", "done")
+	s.floe(t, "work", "b2", "--task", "#20", "--title", "old", "--state", "archived")
 	s.floe(t, "archive", "b2")
 	b.navigate("/tasks?project=beta")
 	open("task-add")
