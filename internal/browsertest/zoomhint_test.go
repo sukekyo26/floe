@@ -64,10 +64,12 @@ const zoomHintShown = `(() => {
   return b.top >= a.bottom && b.height > 0 && b.left >= a.left - 0.5 && b.right <= a.right + 0.5 && line.scrollWidth <= line.clientWidth ? 'shown' : 'not whole';
 })()`
 
-// atLeastColumns sizes the page so that its columns are as narrow as they go, five of 16rem.
+// atLeastColumns sizes the page so that its columns are as narrow as they go, five of 16rem, its scrollbars hidden, which
+// the page's height and Chrome's version would otherwise take out of the width or not; the caller shows them again.
 func atLeastColumns(t *testing.T, b *browser) {
 	t.Helper()
 
+	b.scrollbars(true)
 	wide := b.eval(`(() => { const c = document.querySelector('[data-floe-part=columns]'), g = parseFloat(getComputedStyle(c).columnGap),
 	  rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
 	  return String(Math.ceil(5 * 16 * rem + 4 * g + document.documentElement.clientWidth - c.getBoundingClientRect().width)); })()`)
@@ -143,6 +145,7 @@ func TestUIZoomHint(t *testing.T) { //nolint:paralleltest // the browser tests s
 		if got, want := b.eval(measure), "6 img 6 svg 2 not"; got != want {
 			t.Errorf("at the columns' least width: %s, want %s", got, want)
 		}
+		b.scrollbars(false)
 		b.size(1440, 900, false)
 
 		// Tab from the frame's last button reaches the frame; the line shows there and goes with the focus.
@@ -253,5 +256,6 @@ func TestUIZoomHintThemes(t *testing.T) { //nolint:paralleltest // the browser t
 			t.Errorf("%s: text that cannot be read:\n%s", th.Name(), low)
 		}
 		b.unsize()
+		b.scrollbars(false)
 	}
 }
