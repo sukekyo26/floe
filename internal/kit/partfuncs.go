@@ -282,8 +282,8 @@ var newlines = strings.NewReplacer("\r\n", "\n", "\r", "\n")
 // LIMIT: a number no line has marks nothing, and a start changed alone moves what mark names: the page shows both. Tell
 // them apart here, which counts the lines, if the page comes not to be looked at.
 // LIMIT: the mistakes are at the part's value, not at the number: codeOf knows not where in it the values are.
-// LIMIT: the range of a number is the schema's, as the part code's is. A part of one's own with no such schema may number
-// from 0, or past a CSS counter's end near 2^31, where its lines would all show one number: the page shows it.
+// LIMIT: the range of a number is the schema's, as the part code's is. A part of one's own with no such schema may
+// number from 0, or past a CSS counter's end near 2^31, where its lines would all show one number: the page shows it.
 func codeOf(text string, start, mark any) (codeText, error) {
 	c := codeText{Lines: nil, Before: 0, Digits: 0, Numbered: false}
 	first := 1
