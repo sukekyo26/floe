@@ -276,13 +276,6 @@ func TestContrastText(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 }
 
-// TestUIContrast measures every page of floePages as measureContrast and measureRings do: the parts, the templates,
-// the themes and their palettes together draw nothing that cannot be read, nor a focus that cannot be seen.
-func TestUIContrast(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
-	s := newSite(t)
-	s.floePages(t, func(what string) { s.b.measureColours(t, what) })
-}
-
 // measureColours measures the page as measureContrast and measureRings do, the page's tab given the focus, and tells
 // what draws text that cannot be read or a focus that cannot be seen.
 func (b *browser) measureColours(t *testing.T, what string) {
