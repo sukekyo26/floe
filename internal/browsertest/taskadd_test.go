@@ -139,8 +139,9 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Fatal(err)
 	}
 	open("task-add")
-	name("#1", "")
+	name("#", "")
 	want("nothing suggested", "document.querySelectorAll('.suggest:popover-open').length + ''", "0")
+	name("#1", "")
 	want("an ID there", said, "Add task | Project: beta | #1 one is already there (To do) | - | title false | Open the task")
 	b.eval("document.getElementById('kin').requestSubmit()")
 	b.until("the task's page", "location.search.includes('task=%231')")
