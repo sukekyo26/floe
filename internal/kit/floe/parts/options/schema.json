@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "options",
-  "description": "Options side by side, numbered cards each a title over Markdown text, its pros (+) and cons (−); the one to take is ringed under a badge",
+  "description": "Options side by side, numbered cards each a title over parts (a picture, a diagram or code of the option), Markdown text, its pros (+) and cons (−); the one to take is ringed under a badge. The cards on a line start their parts and their text at one height",
   "type": "array",
   "minItems": 1,
   "items": {
@@ -9,7 +9,8 @@
     "properties": {
       "title": { "type": "string", "minLength": 1 },
       "pick": { "type": "string", "minLength": 1, "description": "Marks the option to take, with this word as its badge, such as Recommended" },
-      "text": { "type": "string", "minLength": 1, "description": "Markdown" },
+      "parts": { "$ref": "floe:///parts/stack.json", "description": "Parts under the title, above the text, such as an image or a diagram of the option" },
+      "text": { "$ref": "floe:///parts/text.json", "minLength": 1 },
       "pros": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "A line of Markdown" } },
       "cons": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1, "description": "A line of Markdown" } }
     },

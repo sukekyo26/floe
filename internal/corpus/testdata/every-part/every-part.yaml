@@ -183,6 +183,8 @@ sections:
     parts:
       - options:
           - title: Copy in one go
+            parts:
+              - image: { file: shots/moved.png, alt: The old host's pages moved in one go }
             text: 'Two days of read-only, as [the plan](https://example.com/plan) says: `export --all`.'
             pros: [Simple]
             cons: [Longer freeze]

@@ -97,7 +97,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `stats` | 大きな数を横に並べます。`label`・`value`・`unit` と、`tone` の色の `note` を取ります。前の数 `from` を書くと `3.1 → 1.3` と描き、下に `-1.8` のような差と、良くなったか悪くなったかをその色で（同じなら数なしで）描きます。`from` には、どちらが良いかを言う `better: lower` か `higher` を必ず添え、`from` と `value` は引用符で囲んだ数字だけで書きます（`'-3.5'`。`1,234` は、誤りの文の pattern のとおり断ります）。差の桁は 2 つの数の小数の桁の多い方で、全部の桁を描きます。割合は描かないので、要るなら `note` に書きます。 |
 | `note`・`checklist` | 色の付いた注、済めば印の付く項目。 |
 | `steps` | 番号付きの手順。1 つが `title` と、その下の `tags`（それぞれ表のセルと同じく Markdown の 1 行か pill）、`text`（Markdown）、`state` です。札の中で何の値かを言い（`PR #428`）、手順を指すときは並べ替えても変わらないもので書きます（`1 の後` でなく `#428 の後`）。丸の番号は付け直されますが、札の字は書いたままです。 |
-| `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |
+| `compare`・`options`・`facts`・`diff`・`tree`・`links` | 前と後で変わるもの、利点と欠点を持つ案（案ごとに題の下へ、案の絵などの `parts` を置ける。同じ段に並んだ案は、部品と文の頭が揃う）、名前と値、diff（右上のボタンで、書いたままの diff をコピーできる）、ファイルとフォルダ、リンク。 |
 | `asks` | 読み手に判断を頼む問い。Q1、Q2 … と番号が付きます。`question`、案の `options`、勧めの `recommend` と理由の `why`、決める人の `by`、決まったら `decided`。`recommend`・`decided` と同じ字の案に枠と札が付き、どの案とも違えば別の行に出ます。決まった問いは右上に丸い ✓ が付き、枠は決定の案だけで、ほかの案は薄い字になります（勧めの案の札は残ります）。 |
 | `checks` | 調査やテストで確かめたことと実際の結果。書いた順に並び、上に結果ごとの数が出ます。1 件は、題の `title`、結果の `result`（`ok`・`ng`・`unchecked`。日本語のページでは OK・NG・未確認と描く）、実際の結果の `actual`（Markdown）、その下の `parts`（`details` が持てるもの。`code` など）、確かめ方の `how`。`unchecked` の `actual` には、確かめていない理由を書きます。これからやることは `checklist`、レビューの指摘は `findings` に書きます。 |
 | `chart` | 名前の並びの上の数を、移り変わりは線（`kind: line`）で、比べは縦の棒（`kind: bar`）で描き、数は畳んだ表にも置きます。`title`・`unit`、引用符で書く名前の並び `x`、4 つまでの `series`（`name` と、`x` の 1 つごとに数を 1 つ書く `values`）を取ります。目盛りは 0 から始まります。線は `min` でそこから始められ、`min` より小さい値があると `min` は使わず、0 とすべての値を含む目盛りになります。棒は `min` を取らず、書くと `false schema` で断ります。字はどの幅でもページの大きさのままで、`34rem` より狭い箱では線の右の字は値だけになります。`8rem` を超える `x` の名前は … で切り、9 桁を超える数は丸めるか指数で書きます。表と重ねたときの説明には全部あります。目盛りの字はその線の値で、5 桁で見分けられない、または言えない目盛りは字を描きません。凡例は系列が 1 つでも名前を出します。 |
@@ -125,13 +125,13 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 
 ## 画像
 
-`report` では、画像は部品 `image`（`- image: { file: shots/list.png, alt: ページの一覧 }`）で、節・小節・`details`・`tabs`・`columns`・`entries`・`checks` の項目の `parts` に置けます。`file` は画像のパス、`alt` は何を写すか（読み上げと、絵が出ない所のため）です。`caption` を書くと、絵の下に説明を出します（1 行の Markdown。`caption: 図 1：ページの一覧`）。列より大きく縮んで描かれた画像は、図と同じく、上の道具の並び、Ctrl / ⌘ + ホイール、ピンチ、`+ - 0` のキーで拡大し、拡大中はドラッグか矢印キーで動かせます。道具の並びはボタンだけで、この操作は、枠に重ねたときの説明と、キーボードで枠を選んでいる間に枠の下に出る文で伝えます。文は枠の説明（`aria-describedby`）でもあります。`viewBox` だけで `width`・`height` の無い SVG は大きさが分からないので、拡大できません。自分のテンプレートでは `"format": "image"` の項目で取り、その値が画像のパスです。パスは、データファイルのディレクトリからの相対パスで、その下だけです。名前の間は `/` 1 つで、`./`・`..`・両端の `/` を使いません。画像は data URI でページに入るので、ページは見せるものを全部持ちます。png・jpeg・gif・webp・svg のファイルを名前で見分け、1 MiB までです。`floe publish` は、ページが見せる画像をサーバーに送ります。
+`report` では、画像は部品 `image`（`- image: { file: shots/list.png, alt: ページの一覧 }`）で、節・小節・`details`・`tabs`・`columns`・`entries`・`checks`・`options` の項目の `parts` に置けます。`file` は画像のパス、`alt` は何を写すか（読み上げと、絵が出ない所のため）です。`caption` を書くと、絵の下に説明を出します（1 行の Markdown。`caption: 図 1：ページの一覧`）。列より大きく縮んで描かれた画像は、図と同じく、上の道具の並び、Ctrl / ⌘ + ホイール、ピンチ、`+ - 0` のキーで拡大し、拡大中はドラッグか矢印キーで動かせます。道具の並びはボタンだけで、この操作は、枠に重ねたときの説明と、キーボードで枠を選んでいる間に枠の下に出る文で伝えます。文は枠の説明（`aria-describedby`）でもあります。`viewBox` だけで `width`・`height` の無い SVG は大きさが分からないので、拡大できません。自分のテンプレートでは `"format": "image"` の項目で取り、その値が画像のパスです。パスは、データファイルのディレクトリからの相対パスで、その下だけです。名前の間は `/` 1 つで、`./`・`..`・両端の `/` を使いません。画像は data URI でページに入るので、ページは見せるものを全部持ちます。png・jpeg・gif・webp・svg のファイルを名前で見分け、1 MiB までです。`floe publish` は、ページが見せる画像をサーバーに送ります。
 
 Markdown で名指した画像のファイル（`![x](shots/list.png)`）は書いたまま描かれ、ページの CSP で出ません。出るのは、Markdown に直に書いた png・gif・jpeg・webp の data URI だけです。画像は `image` に書いてください。
 
 ## 図
 
-部品 `diagram` は、節や `details`・`tabs`・`columns`・`entries`・`checks` の項目の `parts` の中に書いた spec から図を描き、ページを描く前に確かめます。spec の書き方は [diagrams.ja.md](diagrams.ja.md) にあります。
+部品 `diagram` は、節や `details`・`tabs`・`columns`・`entries`・`checks`・`options` の項目の `parts` の中に書いた spec から図を描き、ページを描く前に確かめます。spec の書き方は [diagrams.ja.md](diagrams.ja.md) にあります。
 
 ## スクリプトと HTML
 
@@ -169,5 +169,5 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 plan.yaml:12:15: warning: this text holds a fenced block of code on its line 1, drawn as plain code: write code in a code part and commands in a terminal part, which show them under their file or prompt with a copy button
 ```
 
-- `text` の部品（report の節と小節、design・handoff・adr・postmortem・runbook の `more` の中、runbook の手順の `text`、slides の枚、`details`・`tabs`・`columns`・`entries`・`checks` の項目の `parts` の中も）、`entries` の項目の `text`、`checks` の項目の `actual` の、囲んだコードのブロックを警告します。コードは `code` に、コマンドは `terminal` に書きます。
+- `text` の部品（report の節と小節、design・handoff・adr・postmortem・runbook の `more` の中、runbook の手順の `text`、slides の枚、`details`・`tabs`・`columns`・`entries`・`checks`・`options` の項目の `parts` の中も）、`entries`・`options` の項目の `text`、`checks` の項目の `actual` の、囲んだコードのブロックを警告します。コードは `code` に、コマンドは `terminal` に書きます。
 - 誤りのあるファイルは描かないので、その警告は誤りを直した後に出ます。ほかの描けたファイルの警告は、誤りと一緒に出します。

@@ -165,6 +165,7 @@
   [div] Old server off
 ## h2 Choices
   [div] Copy in one go Recommended
+  [img] The old host's pages moved in one go
   [p] Two days of read-only, as the plan says: export --all.
   [li] Pro: Simple
   [li] Con: Longer freeze
