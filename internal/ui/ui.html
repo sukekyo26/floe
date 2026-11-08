@@ -5022,7 +5022,12 @@
       }
       if (!res.ok) throw new Error(res.text);
       const reason = await patchOne(page.slug, { work: { task, step } });
-      if (reason) throw new Error(reason);
+      // The task written, the dialog takes it as read again (rev, there), so that saving again writes the page
+      if (reason) {
+        await load();
+        setTaskKnown();
+        throw new Error(reason);
+      }
       if (task.trim() === setOpened.task) toast(t('ui_saved'));
       else {
         const to = tagged('a', 'toast-link', t('ui_task_put', task.trim(), t(VIEW_WORDS[state])));
