@@ -5192,12 +5192,12 @@
       if (!paged.has(name)) word.append(' ', tagged('small', '', t('ui_step_no_pages')));
       const upBtn = tagged('button', 'icon-btn step-up');
       upBtn.type = 'button';
-      upBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>';
+      upBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>';
       upBtn.setAttribute('aria-label', t('ui_step_up_named', name));
       upBtn.title = upBtn.getAttribute('aria-label');
       const downBtn = tagged('button', 'icon-btn step-down');
       downBtn.type = 'button';
-      downBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+      downBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
       downBtn.setAttribute('aria-label', t('ui_step_down_named', name));
       downBtn.title = downBtn.getAttribute('aria-label');
       li.append(grip, word, upBtn, downBtn);
