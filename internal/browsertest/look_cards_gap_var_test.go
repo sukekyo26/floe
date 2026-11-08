@@ -3,7 +3,7 @@ package browsertest_test
 import "testing"
 
 // measureCardsGap finds each card (.card) and each body of options' cards (.option > .body) whose gap is not
-// --cards-gap, read in it: a number copied, 0.4rem, as a gap a part chooses of its own. It returns {seen, amiss}: those
+// --cards-gap, read in it: a number copied, 0.4rem, as a gap a part chooses of its own, and one of no length (normal). It returns {seen, amiss}: those
 // it measured, and for each otherwise its part and its gap.
 const measureCardsGap = `(() => {
   ` + partOfJS + pxJS + `
@@ -13,7 +13,7 @@ const measureCardsGap = `(() => {
     if (!e.getClientRects().length) continue;
     seen++;
     const gap = parseFloat(getComputedStyle(e).rowGap), want = px(e, 'var(--cards-gap)');
-    if (Math.abs(gap - want) > 0.1) amiss.push({ at: partOf(e), text: (e.matches('.card') ? 'a card\'s' : 'an option\'s body\'s') + ' gap ' + gap + 'px against --cards-gap ' + want + 'px' });
+    if (!(Math.abs(gap - want) <= 0.1)) amiss.push({ at: partOf(e), text: (e.matches('.card') ? 'a card\'s' : 'an option\'s body\'s') + ' gap ' + gap + 'px against --cards-gap ' + want + 'px' });
   }
   return JSON.stringify({ seen, amiss });
 })()`
