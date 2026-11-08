@@ -151,9 +151,9 @@ func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) ta
 
 // workPages puts the pages slugs on a task and changes it: what the CLI can check (the pages listed, on a task) is
 // checked before anything is written, so that a page of no task, or none at all, leaves the rest as they were; the
-// store checks a parent as it writes each task. Flags of the pages alone ask nothing of tasks.json: an empty write would
-// make a row for a task that has none. A parent goes with --task alone, on the one task the pages go on: on each page's
-// own, a page of the parent itself would stop the writes halfway.
+// store checks a parent as it writes each task. Flags of the pages alone ask nothing of tasks.json: an empty write
+// would make a row for a task that has none. A parent goes with --task alone, on the one task the pages go on: on
+// each page's own, a page of the parent itself would stop the writes halfway.
 // LIMIT: --parent with pages of several projects writes the tasks before the one whose project lacks the parent; say
 // each project's parent apart if that comes to matter.
 func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
@@ -193,8 +193,20 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	if err != nil {
 		return err
 	}
+	if err = writeTasks(ctx, c, tasks, taskEdit(cmd, f)); err != nil {
+		return err
+	}
+	if len(onPages) == 0 {
+		return nil
+	}
+	return a.eachPage(cmd, slugs, http.MethodPatch, pageWorkEdit(cmd, f))
+}
+
+// writeTasks writes ed to each of tasks in turn, stopping at the first failure. A task of no row is not found when ed
+// takes its parent off alone, as floe work --task says it.
+func writeTasks(ctx context.Context, c client, tasks []taskOf, ed server.TaskEdit) error {
 	for _, t := range tasks {
-		err = c.do(ctx, http.MethodPatch, taskQuery(t), taskEdit(cmd, f), nil)
+		err := c.do(ctx, http.MethodPatch, taskQuery(t), ed, nil)
 		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
 			return usererr.New("cli_work_no_row", t.name, t.project)
 		}
@@ -202,10 +214,7 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 			return err
 		}
 	}
-	if len(onPages) == 0 {
-		return nil
-	}
-	return a.eachPage(cmd, slugs, http.MethodPatch, pageWorkEdit(cmd, f))
+	return nil
 }
 
 // tasksOfPages is the different tasks the pages slugs are on, the first of each first: of the name given, or each
