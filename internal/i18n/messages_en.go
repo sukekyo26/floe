@@ -155,6 +155,15 @@ var messagesEN = map[string]string{
 	// cli: the command line (English alone is told; the other languages hold the keys as every catalog does)
 	// LIMIT: the %s of cli_usage is cobra's English, as cobra words what it cannot read
 	"cli_usage":                "%s: run floe --help",
+	"cli_work_made":            "task %[1]s in %[2]s: made",
+	"cli_work_changed":         "task %[1]s in %[2]s: changed",
+	"cli_work_unchanged":       "task %[1]s in %[2]s: unchanged",
+	"cli_work_forgotten":       "task %[1]s in %[2]s: forgotten",
+	"cli_work_project":         "project %s",
+	"cli_work_no_project":      "no project",
+	"cli_work_page":            "page %[1]s: %[2]s",
+	"cli_work_page_task":       "task %[1]s in %[2]s",
+	"cli_work_page_off":        "no task",
 	"cli_work_no_task":         "name a task with --task, or pages by their slugs",
 	"cli_work_needs_pages":     "--%s changes pages: name them by their slugs",
 	"cli_work_no_pages":        "--%s goes with a task alone, not with pages: give it without slugs",

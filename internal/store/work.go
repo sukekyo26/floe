@@ -412,11 +412,14 @@ func pastedURL(raw *string) *string {
 }
 
 // TaskWritten is a task's row as EditTask left it, under the project (ProjectKey) and name tasks.json keys it by,
-// which a screen puts in place of the row it read.
+// which a screen puts in place of the row it read. Made is whether the task had no row before this write, and Wrote
+// whether tasks.json was written: not when the row came out as it was, unless a parent was made with it.
 type TaskWritten struct {
 	Project string `json:"project"`
 	Task    string `json:"task"`
 	Row     Task   `json:"row"`
+	Made    bool   `json:"made"`
+	Wrote   bool   `json:"wrote"`
 }
 
 // EditTask applies ed to the row of the task (project, name), making it of the state of a new one when there is none,
@@ -464,8 +467,8 @@ func (s *Store) EditTask(project, name string, ed TaskEdit) (TaskWritten, error)
 // screen.
 func (s *Store) writeRow(all Tasks, project, name string, ed TaskEdit) (TaskWritten, error) {
 	rows := all[project]
-	made := ed.ParentNew != nil && *ed.ParentNew
-	if made {
+	parentMade := ed.ParentNew != nil && *ed.ParentNew
+	if parentMade {
 		up := newTaskRow()
 		up.Title = strings.TrimSpace(*ed.ParentTitle)
 		up.Rev = 1
@@ -476,15 +479,15 @@ func (s *Store) writeRow(all Tasks, project, name string, ed TaskEdit) (TaskWrit
 		was = newTaskRow()
 	}
 	t := was.edited(ed)
-	if had && !made && reflect.DeepEqual(t, was) {
-		return TaskWritten{Project: project, Task: name, Row: was}, nil
+	if had && !parentMade && reflect.DeepEqual(t, was) {
+		return TaskWritten{Project: project, Task: name, Row: was, Made: false, Wrote: false}, nil
 	}
 	t.Rev++
 	rows[name] = t
 	if err := s.writeTasks(all); err != nil {
 		return TaskWritten{}, err
 	}
-	return TaskWritten{Project: project, Task: name, Row: t}, nil
+	return TaskWritten{Project: project, Task: name, Row: t, Made: !had, Wrote: true}, nil
 }
 
 // checkWrite refuses ed of the task name, rows being the project's now: whether it is there as said, what the screen

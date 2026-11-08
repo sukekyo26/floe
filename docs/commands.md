@@ -213,6 +213,16 @@ floe work design-notes --task "#131" --parent "#130" --step design   # the page 
 floe work --task "#130" --forget                                     # the task's row removed
 ```
 
+Each task and page written is told on a line of its own, in the order written, as the store left it: a task `made` (it had no row), `changed` or `unchanged` (the same values, not written), with the fields given; a page with its task, step and pin. A task of no project is `in no project`.
+
+```text
+$ floe work design-notes --task "#130" --step design --state waiting
+task #130 in project floe: changed; state waiting, step "design"
+page design-notes: task #130 in project floe, step "design"
+$ floe work --task "#130" --forget
+task #130 in project floe: forgotten
+```
+
 With slugs, the task's project is each page's: `--task` puts the pages on that name in their own projects, and without it each page's own task is changed. `--project` and `--forget` go with a task alone, not with pages, so they go without slugs. `--parent` with slugs goes with pages of one project. Without slugs, `--task` names the task, of `--project` (the working directory's project when left out; `""` for none).
 
 | Flag | Changes | |
