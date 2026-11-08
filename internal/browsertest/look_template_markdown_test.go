@@ -105,8 +105,9 @@ func headings(t *testing.T, s *site, template, slug, data string, fields int, wa
 	s.floe(t, "publish", s.write(t, slug+".yaml", data), "--slug", slug)
 	s.b.navigate("/a/" + slug + "/?raw")
 	got := strings.Split(s.b.eval(measureHeadings), "\n")
-	var wanted []string
-	for _, line := range strings.Split(want, "\n") {
+	lines := strings.Split(want, "\n")
+	wanted := make([]string, 0, len(lines)*fields)
+	for _, line := range lines {
 		for range fields {
 			wanted = append(wanted, line)
 		}
