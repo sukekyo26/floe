@@ -864,16 +864,14 @@
   .family-part { display: grid; gap: 0.1rem; }
   /* The rows share the columns of their part, so that the states are as wide as the widest and the names stand in line, whatever
      the face: state, name (cut past 20%), title, unread dot, the button that takes it off */
-  /* LIMIT: subgrid is in Chrome 117, Safari 16 and Firefox 71, older than the versions the README advises; a browser without it
-     piles a row's cells one under another */
   .family-rows { display: grid; grid-template-columns: max-content fit-content(20%) minmax(0, 1fr) max-content max-content; column-gap: 0.5rem; }
   .kin-line { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; min-height: 2.25rem; padding-inline: 0.5rem 0.25rem; border-radius: calc(var(--corner-menu) - var(--menu-pad)); }
-  .kin-row { grid-column: 1 / 5; display: grid; grid-template-columns: subgrid; align-items: center; align-self: stretch; color: var(--fg); font-size: var(--text-small); text-decoration: none; }
+  .kin-row { grid-column: 1 / -2; display: grid; grid-template-columns: subgrid; align-items: center; align-self: stretch; color: var(--fg); font-size: var(--text-small); text-decoration: none; }
   /* As a row of the list, reached by keyboard the row is outlined as a whole, inside it */
   .kin-row:focus-visible { outline: none; }
   .kin-line:has(.kin-row:focus-visible) { outline: var(--ring); outline-offset: -2px; }
   /* The ground is faint on the card, so a pointed row underlines its name and title too; --subtle would hide the grey states' ground.
-     Only what the keys reach is grounded: a press or a focus() from the script (the way back's) leaves none */
+     Only what the keys reach is grounded: a press leaves none, and a focus() from the script shows as the input before it did */
   .kin-line:has(:focus-visible) { background: var(--hover); }
   @media (hover: hover) {
     .kin-line:hover { background: var(--hover); }
@@ -3579,8 +3577,9 @@
     const link = tagged('a', 'kin-row');
     link.href = taskHref(x);
     link.dataset.task = x.name;
-    // Whole, as the row cuts a long name and title
+    // Whole, as the row cuts a long name and title; read name first, as the row is drawn state first
     link.title = [x.name, x.title].filter(Boolean).join('\n');
+    link.setAttribute('aria-label', t('ui_task_kin_row', [x.name, x.title].filter(Boolean).join(' '), t(VIEW_WORDS[x.state])));
     link.classList.toggle('unseen', unreadOf(x) > 0);
     link.append(tagged('span', `kid-state ${x.state}`, t(VIEW_WORDS[x.state])), tagged('span', 'tname', x.name), tagged('span', 'kin-title', x.title ?? ''), tagged('span', unreadOf(x) > 0 ? 'dot' : 'ring'));
     const off = tagged('button', 'icon-btn unlink');

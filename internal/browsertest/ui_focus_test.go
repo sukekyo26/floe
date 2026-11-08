@@ -13,8 +13,8 @@ import (
 // contrast of its color against the ground it is drawn on, the backgrounds around the element laid one over another on
 // the root's as measureContrast lays them; and what of another face its ring reaches. A ring off the element (offset 0 or
 // more) is drawn on the ground outside it, and must leave 1px of that ground before any face it would fade into (a
-// background, or an inset ring of a box it is in, less than 3:1 against it, a face under another left out); one inside it
-// (a row's), on its own. A row's
+// background, or an inset ring of a box it is in, less than 3:1 against it, a face under another left out), inside the
+// nearest box round it that paints a ground; one inside it (a row's), on its own. A row's
 // title is outlined on its row, a task's family row on its line, a tag box's hidden checkbox on its box.
 const ringOf = `(() => {
   // A computed colour, rgb(), rgba() or color(srgb …), as [r, g, b] of 255 and its alpha.
@@ -61,6 +61,14 @@ const ringOf = `(() => {
       const top = document.elementFromPoint((q.left + q.right) / 2, (q.top + q.bottom) / 2);
       if (!top || !x.contains(top)) continue;
       if (q.left < box.right && q.right > box.left && q.top < box.bottom && q.bottom > box.top) out.push('reaches ' + name(x));
+    }
+    // The ground it is drawn on ends where the nearest box painting one does: past that edge it would stand on another
+    const painted = [...chain].reverse().find((x) => rgba(getComputedStyle(x).backgroundColor)[3] > 0);
+    if (painted) {
+      const q = painted.getBoundingClientRect();
+      if (box.left < q.left - 0.5 || box.right > q.right + 0.5 || box.top < q.top - 0.5 || box.bottom > q.bottom + 0.5) {
+        out.push('leaves the ground of ' + name(painted));
+      }
     }
     for (const x of chain) {
       const inset = getComputedStyle(x).boxShadow.match(/inset ([\d.-]+)px ([\d.-]+)px ([\d.-]+)px ([\d.-]+)px/)
@@ -204,19 +212,15 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	s.floe(t, "work", "--project", "proj", "--task", "#2", "--title", "down", "--parent", "#1")
 	b.navigate("/tasks?project=proj&task=%232")
 	b.until("the family", "document.querySelector('#task-up-rows .kin-row')")
-	// The ground round a ring that ringOf does not see, as the rows have none of their own: the button's ring and 1px past it
-	// stay inside its row, and the add's above the first row.
-	const room = `((box) => { const e = document.activeElement, s = getComputedStyle(e), r = e.getBoundingClientRect();
-  const reach = parseFloat(s.outlineOffset) + parseFloat(s.outlineWidth) + 1;
-  return ' room ' + (r.top - reach >= box.top - 0.5 && r.bottom + reach <= box.bottom + 0.5 && r.right + reach <= box.right + 0.5); })`
-	out = append(out[:0], tabTo("#task-parent-change"), tabTo("#task-up-rows .kin-row"),
-		tabTo("#task-up-rows .unlink")+b.eval(room+"(document.activeElement.closest('.kin-line').getBoundingClientRect())"))
+	out = append(out[:0], tabTo("#task-parent-change"), tabTo("#task-up-rows .kin-row"), tabTo("#task-up-rows .unlink"))
+	// The row's link itself has none, so that the row shows one ring.
+	tabTo("#task-up-rows .kin-row")
+	out = append(out, "the link: "+b.eval("getComputedStyle(document.activeElement).outlineStyle"))
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the family", "document.querySelector('#task-family-rows .kin-row')")
-	out = append(out, tabTo("#task-child")+
-		b.eval(room+"({ top: -Infinity, right: Infinity, bottom: document.querySelector('#task-family-rows .kin-line').getBoundingClientRect().top })"))
+	out = append(out, tabTo("#task-child"))
 	check(t, "the family", out, strings.Join([]string{
-		"#task-parent-change: " + ring, "#task-up-rows .kin-row: solid 2px rgb(107, 105, 100) -2px seen",
-		"#task-up-rows .unlink: " + ring + " room true", "#task-child: " + ring + " room true",
+		"#task-parent-change: " + ring, "#task-up-rows .kin-row: solid 2px rgb(107, 105, 100) -2px seen", "#task-up-rows .unlink: " + ring,
+		"the link: none", "#task-child: " + ring,
 	}, "|"))
 }

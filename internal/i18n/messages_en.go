@@ -654,6 +654,7 @@ var messagesEN = map[string]string{
 	"ui_task_parent_moved": "Changed the parent from %s to %s",
 	"ui_task_unlinked":     "Took %[1]s out of the children of %[2]s",
 	"ui_task_unlink_kid":   "Take %s out of the children",
+	"ui_task_kin_row":      "%s, %s",
 	"ui_task_unlink_up":    "Take it out of the parent %s",
 	"ui_undo":              "Undo",
 	"ui_undone":            "Undone",

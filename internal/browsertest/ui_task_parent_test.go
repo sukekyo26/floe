@@ -7,7 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
+	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
 	"github.com/sukekyo26/floe/internal/store"
@@ -373,9 +375,10 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 }
 
-// A task's family stands in a card inside the head, apart from the steps of pages, wide and narrow: each row headed by its
-// state and ended by its unread dot, the states as wide as the widest with their words inside, the names in line, and a long
-// name cut so that its title shows, both whole in the link's title.
+// A task's family stands in a card inside the head, apart from the steps of pages, wide and narrow, by mouse and by touch:
+// each row headed by its state and ended by its unread dot; on the children's rows, the states as wide as the widest with
+// their words inside, the names in line, and a long name cut at a fifth so that its title shows, both whole in the link's
+// title and read name first.
 func TestUITaskFamilyCard(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -390,38 +393,55 @@ func TestUITaskFamilyCard(t *testing.T) { //nolint:paralleltest // the browser t
 	task("#2", "--title", "two", "--state", "doing", "--parent", "#1")
 	task(long, "--title", longTitle, "--state", "waiting", "--parent", "#1")
 	task("#4", "--title", "four", "--parent", "#1")
-	const look = `(() => {
+	touch := func(on bool) {
+		t.Helper()
+		if _, err := chromedp.Call(b.ctx, emulation.SetTouchEmulationEnabled, emulation.SetTouchEmulationEnabledParams{Enabled: on, MaxTouchPoints: 1}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// The card in the head's box, of its own ground and edge; each row headed and ended; the touch screen shows the buttons.
+	const card = `(() => {
   const head = document.getElementById('task-head'), card = document.getElementById('task-family');
   const hs = getComputedStyle(head), cs = getComputedStyle(card);
   const h = head.getBoundingClientRect(), c = card.getBoundingClientRect();
   const inside = c.left >= h.left + parseFloat(hs.paddingLeft) - 0.5 && c.right <= h.right - parseFloat(hs.paddingRight) + 0.5;
   const rows = [...card.querySelectorAll('.kin-row')];
   const ends = rows.every((r) => r.firstElementChild.matches('.kid-state') && r.lastElementChild.matches('.dot, .ring'));
+  const buttons = matchMedia('(hover: none)').matches ? 'touch ' + [...card.querySelectorAll('.unlink')].every((u) => getComputedStyle(u).opacity === '1') : 'mouse';
+  return [inside, cs.backgroundColor !== hs.backgroundColor && parseFloat(cs.borderTopWidth) > 0, ends, buttons].join(' ');
+})()`
+	// The children's rows: the states of one width, their words inside; the names in line; the long one cut at a fifth of
+	// the rows, its title seen and its row in the card; the link's title and name whole.
+	longRow := `(() => {
+  const rows = [...document.querySelectorAll('#task-family-rows .kin-row')];
   const states = rows.map((r) => r.querySelector('.kid-state'));
   const wide = new Set(states.map((e) => e.getBoundingClientRect().width.toFixed(1))).size === 1 && states.every((e) => e.scrollWidth <= e.clientWidth);
   const names = new Set(rows.map((r) => r.querySelector('.tname').getBoundingClientRect().left.toFixed(1))).size === 1;
-  return [inside, cs.backgroundColor !== hs.backgroundColor && parseFloat(cs.borderTopWidth) > 0, ends, wide, names].join(' ');
-})()`
-	longRow := `(() => {
-  const row = document.querySelector('#task-family .kin-row[data-task="` + long + `"]');
-  return [row.querySelector('.kin-title').getBoundingClientRect().width > 20,
+  const row = document.querySelector('#task-family .kin-row[data-task="` + long + `"]'), name = row.querySelector('.tname');
+  const cut = name.scrollWidth > name.clientWidth && name.getBoundingClientRect().width <= document.getElementById('task-family-rows').getBoundingClientRect().width / 5 + 0.5;
+  return [rows.length, wide, names, cut, row.querySelector('.kin-title').getBoundingClientRect().width > 20,
     row.closest('.kin-line').getBoundingClientRect().right <= document.getElementById('task-family').getBoundingClientRect().right,
-    row.title === ` + js(long+"\n"+longTitle) + `].join(' ')
+    row.title === ` + js(long+"\n"+longTitle) + `, row.getAttribute('aria-label') === ` + js(long+" "+longTitle+", Waiting") + `].join(' ')
 })()`
 	defer b.unsize()
 	out := make([]string, 0, 4)
 	for _, width := range []int64{1440, 400} {
 		b.size(width, 900, width == 400)
+		touch(width == 400)
 		for _, name := range []string{"%231", "%232"} {
 			b.navigate("/tasks?project=proj&task=" + name)
 			b.until("the family", "document.querySelector('#task-family .kin-row')")
 			b.still()
-			got := b.eval(look)
+			got := b.eval(card)
 			if name == "%231" {
 				got += " " + b.eval(longRow)
 			}
 			out = append(out, got)
 		}
 	}
-	check(t, "the card", out, "true true true true true true true true|true true true true true|true true true true true true true true|true true true true true")
+	touch(false)
+	check(t, "the card", out, strings.Join([]string{
+		"true true true mouse 3 true true true true true true true", "true true true mouse",
+		"true true true touch true 3 true true true true true true true", "true true true touch true",
+	}, "|"))
 }
