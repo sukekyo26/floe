@@ -148,6 +148,24 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	drag("リリース", "案", false)
 	drag("案", "実装", true)
 	say("dragged", steps)
+	// A grip pressed and let go without a drag leaves its row no drag from anywhere; a drag of words selected, from a text node, moves nothing
+	// and throws nothing.
+	b.eval(`(() => {
+		const li = document.querySelector('#edit-steps li');
+		li.querySelector('.step-grip').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+		li.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+	})()`)
+	say("let go", "[...document.querySelectorAll('#edit-steps li')].some((li) => li.draggable)")
+	b.eval(`(() => {
+		window.thrown = 0;
+		addEventListener('error', () => { thrown++; });
+		const word = document.querySelectorAll('#edit-steps .step-name')[1].firstChild;
+		const data = new DataTransfer();
+		word.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: data }));
+		const to = document.querySelector('#edit-steps li');
+		to.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: data, clientY: to.getBoundingClientRect().top + 2 }));
+	})()`)
+	say("words dragged", "thrown + ' / ' + "+steps)
 	save("saved the drag")
 	closed("closed")
 	out = append(out, "drag: "+row("S300"))
@@ -164,6 +182,16 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	save("saved empty")
 	closed("closed")
 	out = append(out, "emptied: "+row("S300"))
+	// Opened over the task drawn before the tasks were read again: its fields and rev are of the one read now, not of what was drawn.
+	b.eval("window.drawnTask = tasksOf().find((x) => x.name === 'S300')")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Later")
+	b.eval("window.reread = false; readTasks().then((r) => { tasksRead = r; window.reread = true; })")
+	b.until("the tasks read again", "window.reread")
+	b.eval("openTaskEdit(drawnTask)")
+	b.until("the dialog", "document.getElementById('edit-task-dialog').open")
+	say("opened over the drawn task", "document.getElementById('edit-task-title').value + ' / ' + taskEditing.rev")
+	b.pressKey(kb.Escape)
+	closed("closed")
 
 	// Stale: what was changed stays, the rest is read again, and the second save sends the change alone.
 	open("S300")
@@ -192,6 +220,8 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	field("edit-task-title", "Again")
 	save("gone")
 	say("gone", errorText+" + ' / ' + document.getElementById('edit-task-submit').disabled")
+	field("edit-task-title", "Again and again")
+	say("gone, typed", errorText)
 	out = append(out, "G1: "+row("G1"))
 
 	// A narrow screen: the dialog fits, and its buttons reorder.
@@ -219,16 +249,20 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		`sent the order: {"new":false,"rev":6,"steps":["案","設計","レビュー","実装","リリース"]}`,
 		"groups: 案,設計,レビュー,実装",
 		"dragged: リリース no page^,設計,レビュー,実装,案v",
+		"let go: false",
+		"words dragged: 0 / リリース no page^,設計,レビュー,実装,案v",
 		"drag: 8 New title https://example.com/489 [リリース,設計,レビュー,実装,案]",
 		"no grip without hover: true",
 		`refused: Could not save: "ftp://x" is not an http or https URL / true`,
 		"emptied: 9   [リリース,設計,レビュー,実装,案]",
+		"opened over the drawn task: Later / 10",
 		"stale: Typed / https://example.com/new / リリース no page^,設計,レビュー,実装,案v / task S300 has changed since it was read: the tasks are read again, so check and save again",
-		"again: 11 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
-		`sent stale and again: {"new":false,"rev":9,"title":"Typed"} ; {"new":false,"rev":10,"title":"Typed"}`,
+		"again: 12 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
+		`sent stale and again: {"new":false,"rev":10,"title":"Typed"} ; {"new":false,"rev":11,"title":"Typed"}`,
 		"stale order: 設計^,レビュー,案,実装v",
-		"order again: 13 Typed https://example.com/new [設計,レビュー,案,実装]",
+		"order again: 14 Typed https://example.com/new [設計,レビュー,案,実装]",
 		"gone: This task was removed elsewhere: close this and look at the task list / true",
+		"gone, typed: This task was removed elsewhere: close this and look at the task list",
 		"G1: none",
 		"narrow: true",
 		"narrow moved: レビュー^,設計,案,実装v",
