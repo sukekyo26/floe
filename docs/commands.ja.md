@@ -144,7 +144,7 @@ floe と自分のテンプレートを 1 行ずつ、タブで区切った 4 列
 
 floe のテンプレートの節に書ける部品（floe の `any.json` の鍵）を 1 行ずつ、タブで区切った 4 列で出します。名前、場所（`floe`）、形、説明です。`html` は HTML を字で取り、`schema.json` はありません。`floe part show html` は、鍵 `html` を持つ `any.json` の全体を出します。
 
-形は、その値の書き方です。鍵を名前の順に並べ、項目の並びなら頭に `[] `、どれか 1 つだけを書く鍵なら頭に `one of ` を付けます。字なら format の名前（`markdown`・`html`）、floe の部品そのものなら部品の名前です。`-` は、一覧が言わない形です。`floe part show <名前> schema.json`（テンプレートなら `floe template show <名前> schema.json`）を読みます。テンプレートの形には、どのデータファイルにも書ける `template`・`lang`・`theme`・`title` も入ります。
+形は、その値の書き方です。鍵を名前の順に並べ、項目の並びなら頭に `[] `、どれか 1 つだけを書く鍵なら頭に `one of ` を付けます。字なら format の名前（`markdown`・`html`）、floe の部品そのものなら部品の名前です。`-` は、一覧が言わない形です。`floe part show <名前>`（`template show`・`theme show`）の `files:` の行が読むファイルを名指し、`floe diagram example <種類>` が見本を出します。テンプレートの形には、どのデータファイルにも書ける `template`・`lang`・`theme`・`title` も入ります。
 
 `--all` を付けると、自分の schema が `$ref` で名指せる部品・見た目・共有の schema を、floe のものも自分のものも、同じ列で出します。場所は `floe` か、自分のもののディレクトリです。`floe:///parts/html.json` は無いので、`html` は入りません。
 

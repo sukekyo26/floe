@@ -144,7 +144,7 @@ Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own
 
 Print the parts a section of floe's templates takes (the keys of floe's `any.json`), one per line in four tab-separated columns: the name, where it is (`floe`), its shape and its description. `html` takes HTML as text and has no `schema.json`: `floe part show html` prints `any.json`, which holds the key `html`.
 
-The shape is what a value of it is written as: its keys, by name; `[] ` before those of a list's items; `one of ` before keys of which exactly one is written; the name of the format (`markdown`, `html`) or of the floe part it is; or `-`, which the list does not tell: read `floe part show <name> schema.json` (`floe template show <name> schema.json` for a template). A template's shape holds `template`, `lang`, `theme` and `title`, which every data file may write.
+The shape is what a value of it is written as: its keys, by name; `[] ` before those of a list's items; `one of ` before keys of which exactly one is written; the name of the format (`markdown`, `html`) or of the floe part it is; or `-`, which the list does not tell: `floe part show <name>` (`template show`, `theme show`) names in its `files:` line what to read, and `floe diagram example <kind>` prints an example. A template's shape holds `template`, `lang`, `theme` and `title`, which every data file may write.
 
 With `--all`, print every part, look and shared schema, floe's and your own, that a `$ref` of your own schema can name, in the same columns (where it is: `floe`, or the directory of one of your own). `html` is not among them, as there is no `floe:///parts/html.json`.
 
