@@ -73,7 +73,7 @@ type look struct {
 // looks are the rules TestLookRule measures, in the order of their names.
 var looks = []look{
 	{name: "band-face", fix: lookBandFaceFix, floe: lookBandFace, broken: brokenBandFace},
-	{name: "box-pad", old: lookBoxPad},
+	{name: "box-pad", fix: lookBoxPadFix, floe: lookBoxPad, broken: brokenBoxPad},
 	{name: "cards-gap", old: lookCardsGap},
 	{name: "contrast-ring", fix: lookContrastRingFix, floe: lookContrastRing, broken: brokenContrastRing},
 	{name: "contrast-text", fix: lookContrastTextFix, floe: lookContrastText, broken: brokenContrastText},
