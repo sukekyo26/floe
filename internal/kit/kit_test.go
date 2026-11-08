@@ -697,7 +697,7 @@ func TestWritable(t *testing.T) {
 	}
 	want := "asks bars chart checklist checks code columns compare decision details diagram diff entries facts fields " +
 		"findings html image keys links note options script stats steps table tabs terminal text timeline tree"
-	var named []string
+	named := make([]string, 0, len(got))
 	for _, e := range got {
 		named = append(named, e.Name)
 	}

@@ -106,7 +106,8 @@ func (k *Kit) Writable() ([]Entry, error) {
 				Name: name, About: props[name].Description, Dir: "", Looks: nil, Files: copied(anyOf.files),
 			})
 		default:
-			return nil, fmt.Errorf("kit: the key %s of any.json is neither a part of floe nor a format", name) //nolint:err113 // floe's failure
+			//nolint:err113 // floe's failure
+			return nil, fmt.Errorf("kit: the key %s of any.json is neither a part of floe nor a format", name)
 		}
 	}
 	return listed(all), nil
