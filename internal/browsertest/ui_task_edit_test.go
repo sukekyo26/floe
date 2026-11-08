@@ -57,6 +57,8 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Helper()
 		b.navigate("/tasks?project=proj&task=" + task)
 		b.until("the task's head", "!document.getElementById('task-head').hidden && document.getElementById('task-title').textContent.includes("+js(task)+")")
+		// The bodies of the task's writes, as sent
+		b.eval("window.sent = []; window.realFetch ??= window.fetch; window.fetch = (url, init) => { if (String(url).includes('/api/tasks') && init?.method === 'PATCH') sent.push(init.body); return window.realFetch(url, init); }")
 		b.eval("document.getElementById('task-edit').focus(); document.getElementById('task-edit').click()")
 		b.until("the dialog", "document.getElementById('edit-task-dialog').open")
 	}
@@ -110,6 +112,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	press("レビュー", "down")
 	save("closed moved back")
 	out = append(out, "moved back: "+row("S300"))
+	say("sent unchanged", "sent.length")
 	// Escape closes it, the focus back on its button.
 	b.eval("document.getElementById('task-edit').click()")
 	b.until("the dialog", "document.getElementById('edit-task-dialog').open")
@@ -130,6 +133,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	save("saved the title")
 	closed("closed")
 	out = append(out, "title: "+row("S300"))
+	say("sent the title", "sent.join(' ; ')")
 	// Reordered by buttons: the pages' steps follow, and a step of pages alone is written too.
 	open("S300")
 	press("レビュー", "up")
@@ -137,6 +141,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	save("saved the order")
 	closed("closed")
 	out = append(out, "order: "+row("S300"))
+	say("sent the order", "sent.join(' ; ')")
 	say("groups", "[...document.querySelectorAll('#list li.group')].map((li) => li.textContent.trim()).join(',')")
 	// Reordered by a drag: before a step in its upper half, after it in its lower one.
 	open("S300")
@@ -169,6 +174,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 	save("saved again")
 	closed("closed")
 	out = append(out, "again: "+row("S300"))
+	say("sent stale and again", "sent.join(' ; ')")
 	// Reordered while a step of no page was taken off: the order stays, without it.
 	open("S300")
 	press("実装", "down")
@@ -204,10 +210,13 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"unchanged: 5 Edit the task https://example.com/489 [案,設計,実装,リリース]",
 		"moved up: 案^,設計,実装,レビュー,リリース no pagev / Move レビュー up / Moved レビュー to 4 of 5",
 		"moved back: 5 Edit the task https://example.com/489 [案,設計,実装,リリース]",
+		"sent unchanged: 0",
 		"focus back: task-edit",
 		"at the top: 設計^,案,実装,リリース no page,レビューv / Move 設計 down",
 		"title: 6 New title https://example.com/489 [案,設計,実装,リリース]",
+		`sent the title: {"new":false,"rev":5,"title":"New title"}`,
 		"order: 7 New title https://example.com/489 [案,設計,レビュー,実装,リリース]",
+		`sent the order: {"new":false,"rev":6,"steps":["案","設計","レビュー","実装","リリース"]}`,
 		"groups: 案,設計,レビュー,実装",
 		"dragged: リリース no page^,設計,レビュー,実装,案v",
 		"drag: 8 New title https://example.com/489 [リリース,設計,レビュー,実装,案]",
@@ -216,6 +225,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"emptied: 9   [リリース,設計,レビュー,実装,案]",
 		"stale: Typed / https://example.com/new / リリース no page^,設計,レビュー,実装,案v / task S300 has changed since it was read: the tasks are read again, so check and save again",
 		"again: 11 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
+		`sent stale and again: {"new":false,"rev":9,"title":"Typed"} ; {"new":false,"rev":10,"title":"Typed"}`,
 		"stale order: 設計^,レビュー,案,実装v",
 		"order again: 13 Typed https://example.com/new [設計,レビュー,案,実装]",
 		"gone: This task was removed elsewhere: close this and look at the task list / true",
