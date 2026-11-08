@@ -5040,11 +5040,10 @@
       }
       if (!res.ok) throw new Error(res.text);
       const reason = await patchOne(page.slug, { work: { task, step } });
-      // The task written: the dialog shows it as written (a new one is there), so that saving again writes the page, and is refused when
-      // another wrote it since
+      // The task written: the dialog shows it as written, from the tasks read, which hold it and no read since, as a load waits for the
+      // page's write (a new one is there), so that saving again writes the page, and is refused when another wrote it since
       if (reason) {
         setTaskKnown();
-        if (setShown) setShown.rev = res.rev;
         throw new Error(reason);
       }
       if (task.trim() === setOpened.task) toast(t('ui_saved'));
