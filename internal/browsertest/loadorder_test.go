@@ -272,10 +272,11 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		load = (polled) => (polled ? Promise.resolve() : realLoad(polled));
 		await realLoad();
 		const real = window.fetch;
-		let tasksBroken = false, listBroken = false;
+		let tasksBroken = false, listBroken = false, markBroken = false;
 		window.fetch = (u, i) => {
 			if (tasksBroken && String(u) === '/api/tasks') return Promise.resolve(new Response('tasks broken', { status: 500 }));
 			if (listBroken && String(u) === '/api/artifacts') return Promise.resolve(new Response('', { status: 500 }));
+			if (markBroken && String(u) === '/api/artifacts/gone/read') return Promise.resolve(new Response('marks broken', { status: 500 }));
 			return real(u, i);
 		};
 		const realRender = render;
@@ -333,13 +334,38 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		showError('');
 		await load();
 		say('said once clear', tasks);
+		// An action that comes right clears its own only
+		showError('');
+		say('an action clears its own only', tasks);
+
+		// A read mark's mistake covers the load's, is taken back when a mark comes right (gone's, 404), and the load's is said again
+		const mark = () => tellRead('gone', { read: { n: 1, at: 'x' }, say: false });
+		const marked = t('ui_http_error', 'marks broken', 500);
+		markBroken = true;
+		await mark();
+		say('a mark over the load', marked);
+		markBroken = false;
+		await mark();
+		say('the mark taken back', 'none');
+		await load();
+		say('the load again', tasks);
 		tasksBroken = false;
 		await load();
+
+		// A mark neither covers an action's mistake nor clears it
+		showError('a delete failed');
+		markBroken = true;
+		await mark();
+		say('a mark under an action', 'a delete failed');
+		markBroken = false;
+		await mark();
+		say('a mark clears not an action', 'a delete failed');
+		showError('');
 
 		render = realRender;
 		load = realLoad;
 		window.fetch = real;
 		return out.join(', ');
 	})()`)
-	check(t, "load mistakes", []string{got}, "the draw: right, the read: right, the draw after the read: right, the tasks after the draw: right, then: right, held back: right, kept: right, not covered: right, said once clear: right")
+	check(t, "load mistakes", []string{got}, "the draw: right, the read: right, the draw after the read: right, the tasks after the draw: right, then: right, held back: right, kept: right, not covered: right, said once clear: right, an action clears its own only: right, a mark over the load: right, the mark taken back: right, the load again: right, a mark under an action: right, a mark clears not an action: right")
 }

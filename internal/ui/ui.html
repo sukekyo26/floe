@@ -1455,7 +1455,7 @@
           fail(value ? t('ui_http_error', why, res.status) : t('ui_unread_failed', why));
           continue;
         }
-        if (errorFrom === 'read') showError('');
+        showError('', 'read');
         if (res.status === 404) letGo();
         else if (!value) unreadDone(to);
         else if (value.say && (await res.json()).cleared && keptUnread !== to && to === shownSlug()) {
@@ -1585,11 +1585,12 @@
     return unit ? rtf.format(Math.round(s / sec), unit) : t('ui_just_now');
   }
 
-  // #error holds one mistake. from names who said it, 'load' or 'read' (a read mark), or '' for an action: the two take back only their
-  // own when they come right, and a load, said again at each look, never covers another's
-  // LIMIT: an action that comes right clears a read mark's mistake too, unread. Give each its own place if that comes to matter
+  // #error holds one mistake. from names who said it: '' an action, 'load' or 'read' (a read mark). Each takes back only its own, and
+  // only an action writes over an action's, so that one is never lost unread to a load or a mark said again and again
+  // LIMIT: one place: a load's or a mark's mistake waits behind an action's until the next action. Give each its own if that comes to matter
   let errorFrom = '';
   function showError(msg, from = '') {
+    if (msg ? from && errorFrom === '' && !$('error').hidden : errorFrom !== from) return;
     $('error').textContent = msg;
     $('error').hidden = !msg;
     errorFrom = msg ? from : '';
@@ -2993,7 +2994,8 @@
     try {
       l = await readListing(slug, dir);
     } catch (e) {
-      showError(t('ui_load_failed', e.message));
+      // The load's: it stays open, and the next look reads it again
+      showError(t('ui_load_failed', e.message), 'load');
       return;
     }
     // Closed while it was read
@@ -4209,7 +4211,8 @@
     try {
       l = await readListing(framed, path);
     } catch (e) {
-      showError(t('ui_load_failed', e.message));
+      // The load's: it stays open, and the next look reads it again
+      showError(t('ui_load_failed', e.message), 'load');
       return;
     }
     // Closed while it was read; one gone for now stays open, as readSide's
@@ -5049,7 +5052,7 @@
   let drawWhy = '';
   function sayLoad() {
     const why = readWhy || drawWhy || (TASKS && tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '');
-    if (errorFrom === 'load' || (why && $('error').hidden)) showError(why, 'load');
+    showError(why, 'load');
   }
 
   // A poll's answer does not redraw the rows from under a press: Chrome sends neither click nor dblclick for a row gone between press
@@ -5119,7 +5122,8 @@
         list = await res.text();
         entries = JSON.parse(list);
         read = tasks;
-        // Held back, but read: a read's mistake is said no more
+        // Held back, but read: the read's mistake is said no more
+        // LIMIT: the tasks' mistake stays that of the tasks drawn, as tasksRead goes in only with a draw, up to the next poll
         if (polled && performance.now() - pressedAt < PRESS_MS) {
           readWhy = '';
           sayLoad();
