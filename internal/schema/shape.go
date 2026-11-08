@@ -48,8 +48,8 @@ var shapeFields = map[string]fieldUse{
 // (with more, the keys floe reads itself, for a template), "one of " before them when exactly one is written, "[] "
 // before the shape of a list's items, the name of the format or of the part it is; or "-" when the list cannot tell
 // it right: a field shapeFields refuses, or an allowed one beyond its rules, on any schema Follow goes through.
-// LIMIT: whatever cannot be told right is "-", which floe part show <name> schema.json is read for: a branch, a key a
-// pattern or a schema takes, more than one type, a list's items in a list, and the like.
+// LIMIT: whatever cannot be told right is "-", for which the files floe part show <name> names are read: a branch, a
+// key a pattern or a schema takes, more than one type, a list's items in a list, and the like.
 func (c *Compiled) Shape(s *jsonschema.Schema, more ...string) string {
 	if c == nil || s == nil {
 		return "-"
@@ -67,12 +67,8 @@ func (c *Compiled) shapeAt(s *jsonschema.Schema, more []string, top bool) string
 		return PartName(st.Part)
 	case st.Format != "":
 		return st.Format
-	case len(st.Props) > 0 && st.Items == nil && typed(through, "object") && required(through, st.Props):
-		keys := strings.Join(slices.Sorted(slices.Values(slices.Concat(slices.Collect(maps.Keys(st.Props)), more))), ",")
-		if slices.ContainsFunc(through, func(n *jsonschema.Schema) bool { return n.MaxProperties != nil }) {
-			return "one of " + keys
-		}
-		return keys
+	case st.Items == nil && (len(st.Props) > 0 || len(more) > 0) && typed(through, "object"):
+		return keysShape(through, st.Props, more)
 	case len(st.Props) == 0 && st.Items != nil && typed(through, "array") && top:
 		if items := c.shapeAt(st.Items, nil, false); items != "-" {
 			return "[] " + items
@@ -130,6 +126,37 @@ func typed(through []*jsonschema.Schema, t string) bool {
 		}
 	}
 	return len(types) == 0 || len(types) == 1 && types[t]
+}
+
+// keysShape is the shape of an object of props, with more keys floe reads itself: its keys by name, "one of " before
+// them when exactly one is written; "-" when a key would be read wrong (a name holding a tab, a line break or a
+// comma, a key its schema forbids), a key is required that is not there, the keys come from more than one schema
+// and one of them closes the rest, or exactly one is written beside required keys or more.
+func keysShape(through []*jsonschema.Schema, props map[string]*jsonschema.Schema, more []string) string {
+	for name, p := range props {
+		if strings.ContainsAny(name, "\t\n\r,") || p.Bool != nil && !*p.Bool || p.Not != nil {
+			return "-"
+		}
+	}
+	if !required(through, props) || len(slices.DeleteFunc(slices.Clone(through), func(s *jsonschema.Schema) bool {
+		return len(s.Properties) == 0
+	})) > 1 && slices.ContainsFunc(through, closed) {
+		return "-"
+	}
+	keys := strings.Join(slices.Sorted(slices.Values(slices.Concat(slices.Collect(maps.Keys(props)), more))), ",")
+	if !slices.ContainsFunc(through, func(s *jsonschema.Schema) bool { return s.MaxProperties != nil }) {
+		return keys
+	}
+	if len(more) > 0 || slices.ContainsFunc(through, func(s *jsonschema.Schema) bool { return len(s.Required) > 0 }) {
+		return "-"
+	}
+	return "one of " + keys
+}
+
+// closed reports whether s takes no key but its own properties (additionalProperties: false).
+func closed(s *jsonschema.Schema) bool {
+	b, ok := s.AdditionalProperties.(bool)
+	return ok && !b
 }
 
 // required reports whether every key required on the schemas gone through is one of props.

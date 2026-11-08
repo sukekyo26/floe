@@ -39,6 +39,14 @@ func TestShape(t *testing.T) {
 		{"a key required but not there", `"type": "object", "required": ["z"], ` + a, "", "-"},
 		{"keys of a string", `"type": "string", ` + a, "", "-"},
 		{"items of an object", `"type": "object", "items": {"type": "object", ` + a + `}`, "", "-"},
+		{"a key with a comma", `"type": "object", "properties": {"a,b": {"type": "string"}}`, "", "-"},
+		{"a key with a tab", `"type": "object", "properties": {"a\tb": {"type": "string"}}`, "", "-"},
+		{"a key with a line break", `"type": "object", "properties": {"a\nb": {"type": "string"}}`, "", "-"},
+		{"a key forbidden by false", `"type": "object", "properties": {"a": {"type": "string"}, "b": false}`, "", "-"},
+		{"a key forbidden by not", `"type": "object", "properties": {"a": {"type": "string"}, "b": {"not": {}}}`, "", "-"},
+		{"keys beside a $ref to closed ones", `"$ref": "#/$defs/x", "properties": {"b": {"type": "string"}}, "$defs": {"x": {"type": "object", ` + a + `, "additionalProperties": false}}`, "", "-"},
+		{"keys beside a $ref to open ones", `"$ref": "#/$defs/x", "properties": {"b": {"type": "string"}}, "$defs": {"x": {"type": "object", ` + a + `}}`, "", "a,b"},
+		{"exactly one beside a required key", `"type": "object", "maxProperties": 1, "minProperties": 1, "required": ["a"], "properties": {"a": {}, "b": {}}`, "", "-"},
 	} {
 		c, err := schemaCompile(t, `{"$schema": "https://json-schema.org/draft/2020-12/schema", `+tt.body+`}`)
 		if c == nil {
@@ -59,6 +67,20 @@ func TestShape(t *testing.T) {
 	}
 	if got := c.Shape(c.Root, "title", "lang"); got != "a,lang,title" {
 		t.Errorf("Shape with more = %q, want the keys floe reads too, by name", got)
+	}
+	empty, err := compile(t, `"properties": {}`)
+	if empty == nil {
+		t.Fatal(told(err))
+	}
+	if got := empty.Shape(empty.Root, "title", "lang"); got != "lang,title" {
+		t.Errorf("Shape of no keys of its own, with more = %q, want the keys floe reads alone", got)
+	}
+	one, err := schemaCompile(t, `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "maxProperties": 1, "minProperties": 1, "properties": {"a": {}, "b": {}}}`)
+	if one == nil {
+		t.Fatal(told(err))
+	}
+	if got := one.Shape(one.Root, "title"); got != "-" {
+		t.Errorf("Shape of exactly one key, with more = %q, want -", got)
 	}
 	if got := (*schema.Compiled)(nil).Shape(nil); got != "-" {
 		t.Errorf("Shape of no schema = %q, want -", got)

@@ -208,7 +208,7 @@ func TestListShow(t *testing.T) {
 		{[]string{"part", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown part "nope"; use any, asks, band, bars, cards, cell, chart, checklist, checks, code, columns, compare, decision, details, diagram, diff, entries, facts, fields, findings, html, image, keys, links, marked, mine, note, numbered, options, panel, rows, script, stack, stats, steps, table, tabs, tags, terminal, text, timeline, toc, tone, tree, zoom` + "\n"},
 		{[]string{"template", "list"}, 0, func(out string) bool {
 			return strings.HasPrefix(out, "adr\tfloe\t-\tA decision record") &&
-				strings.Contains(out, "\nmemo\t"+filepath.Join(templates, "memo")+"\t-\ta b c\npostmortem\tfloe\t")
+				strings.Contains(out, "\nmemo\t"+filepath.Join(templates, "memo")+"\tlang,template,theme,title\ta b c\npostmortem\tfloe\t")
 		}, ""},
 		{[]string{"template", "show", "memo"}, 0, func(out string) bool {
 			return out == "memo: a b c\nwhere: "+filepath.Join(templates, "memo")+"\nthemes: "+allThemes+"\n"+

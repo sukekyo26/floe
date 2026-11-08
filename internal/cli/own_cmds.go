@@ -252,12 +252,11 @@ func shown(k *kit.Kit, name string) ([]kit.Entry, error) {
 	return entries, nil
 }
 
-// list prints each of entries: its name, where it is, and its description on one line.
 // shapeHelp is what the --help of each list says of the shape column.
 const shapeHelp = `The shape is what a value of it is written as: its keys, by name; "[] " before those of a list's
 items; "one of " before keys of which exactly one is written; the name of the format (markdown, html)
-or of the floe part it is; or -, which the list does not tell: read floe part show <name> schema.json
-(floe template show <name> schema.json for a template).`
+or of the floe part it is; or -, which the list does not tell: floe part show <name> (template show,
+theme show) names in its files: line what to read, and floe diagram example <kind> prints an example.`
 
 // list prints each of entries: its name, where it is, its shape, and its description on one line.
 func (a *app) list(entries []kit.Entry) {
