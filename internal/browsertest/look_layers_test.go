@@ -64,6 +64,20 @@ var layersKit = map[string]string{
 	"themes/column/base.css":        "body { margin: 5px; }\n.floe-column { padding-left: 3px; }\n",
 }
 
+// expect counts what is measured of a scene of one's own kit, got, against want: amiss at the scene when it differs.
+func (m *measured) expect(scene, got, want string) {
+	m.seen++
+	if got != want {
+		m.amiss = append(m.amiss, amiss{Page: scene, At: scene, Text: got + ", want " + want})
+	}
+}
+
+// lookLayersFloeOnly says why a writer cannot break layers: floe orders the layers (draw.pageStyle), and a writer's
+// CSS stands in them.
+const lookLayersFloeOnly = "floe orders the layers of a page's CSS (draw.pageStyle); a writer's CSS stands in its layer whatever its selectors"
+
+const lookLayersFix = "write CSS for its layer: a template's page.css, a theme's file, a part's or look's own; the layer, not the selector, decides"
+
 // lookLayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its
 // selectors are the more specific, loses to the part's style and to the theme's style of the part, and still styles
 // what neither of them does, such as where a part stands. It reaches the part's element but not what the part holds,
@@ -76,9 +90,11 @@ var layersKit = map[string]string{
 // outer look and the outer part win, as deep as they stand. floe's layout of the rows with a mark (floe.marks) is
 // under the template's page.css and over the looks' files. floe's start of every page (the body's margin, the column
 // .floe-column) is under the template's page.css and over the theme's base.css, and stops at a part's box.
-func lookLayers(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
-	s := newSite(t)
+func lookLayers(t *testing.T, s *site) measured {
+	t.Helper()
+
 	b := s.b
+	var m measured
 	s.own(t, layersKit)
 	open := func(slug, data, ready string) {
 		t.Helper()
@@ -94,7 +110,7 @@ func lookLayers(t *testing.T) { //nolint:paralleltest,thelper // a subtest of Te
 	open("column", "template: column\nlang: en\ntheme: column\n", "#held")
 	got := b.eval(`(() => { const m = getComputedStyle(document.querySelector('main')), h = getComputedStyle(document.getElementById('held'));
 		return [getComputedStyle(document.body).marginTop, m.maxWidth, m.paddingLeft, h.maxWidth, h.paddingLeft].join(' | ') })()`)
-	check(t, "column", []string{got}, "0px | 160px | 16px | none | 0px")
+	m.expect("column", got, "0px | 160px | 16px | none | 0px")
 
 	open("layers", "template: layers\nlang: en\nnote: { text: x, tone: warn }\n", "[data-floe-part=note]")
 	// The part's background, the theme's size of the mark (default's --floe-mark, 2.25rem, over the template's), the
@@ -105,12 +121,12 @@ func lookLayers(t *testing.T) { //nolint:paralleltest,thelper // a subtest of Te
 			getComputedStyle(document.getElementById('own')).color, getComputedStyle(n.querySelector('p')).color,
 			document.querySelector('header').getAnimations()[0]?.animationName,
 			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`)
-	check(t, "layers", []string{got}, "rgb(246, 232, 210) | 36px | 7px | rgb(255, 0, 0) | rgb(34, 33, 31) | held | true")
+	m.expect("layers", got, "rgb(246, 232, 210) | 36px | 7px | rgb(255, 0, 0) | rgb(34, 33, 31) | held | true")
 	// The template's own element that takes the panel's look has it under the template's CSS, which adjusts it by the
 	// layer, though it would lose by its selector (section), the less specific: its background, the corners of
 	// default's panel.
 	got = b.eval(`(() => { const s = getComputedStyle(document.querySelector('section')); return s.backgroundColor + ' ' + s.borderTopLeftRadius })()`)
-	check(t, "a look of the template's own", []string{got}, "rgb(0, 0, 4) 20px")
+	m.expect("a look of the template's own", got, "rgb(0, 0, 4) 20px")
 
 	// The theme's base.css: the template's paragraph wins over it, its selector (p) the less specific; it draws the
 	// quote of the template's own Markdown, in floe's box of it, but not the one in the note, whose paragraph floe's base draws in its quote's colour (default's
@@ -119,7 +135,7 @@ func lookLayers(t *testing.T) { //nolint:paralleltest,thelper // a subtest of Te
 	got = b.eval(`(() => { const c = (q, p) => getComputedStyle(document.querySelector(q))[p];
 		return [c('#own', 'color'), c('body > [data-floe-markdown] > blockquote', 'backgroundColor'), c('[data-floe-part=note] blockquote', 'backgroundColor'),
 			c('[data-floe-part=note] p', 'color'), c('.banded', 'color')].join(' | ') })()`)
-	check(t, "the theme's base.css", []string{got}, "rgb(255, 0, 0) | rgb(0, 0, 8) | rgba(0, 0, 0, 0) | rgb(97, 95, 90) | rgb(0, 0, 10)")
+	m.expect("the theme's base.css", got, "rgb(255, 0, 0) | rgb(0, 0, 8) | rgba(0, 0, 0, 0) | rgb(97, 95, 90) | rgb(0, 0, 10)")
 
 	// A text draws its Markdown in a box of no part: the template's page.css (p, h2) and the theme's base.css (body p,
 	// blockquote) stop at it, while they reach the template's own heading and the box of its own Markdown; the theme's markdown.css reaches every
@@ -130,7 +146,7 @@ func lookLayers(t *testing.T) { //nolint:paralleltest,thelper // a subtest of Te
 		return [c('[data-floe-text]:not([data-floe-part] *) > p', 'color'), c('[data-floe-text]:not([data-floe-part] *) h2', 'letterSpacing'), c('.banded', 'letterSpacing'),
 			c('[data-floe-text]:not([data-floe-part] *) blockquote', 'backgroundColor'), ...['body > [data-floe-markdown] > blockquote', '[data-floe-part=note] blockquote',
 			'[data-floe-text]:not([data-floe-part] *) blockquote'].map((q) => c(q, 'letterSpacing'))].join(' | ') })()`)
-	check(t, "a text", []string{got}, "rgb(34, 33, 31) | normal | 5px | rgba(0, 0, 0, 0) | 3px | 3px | 3px")
+	m.expect("a text", got, "rgb(34, 33, 31) | normal | 5px | rgba(0, 0, 0, 0) | 3px | 3px | 3px")
 
 	// A part's style stops at a part it holds: the note's code is on the surface, the code of the table in it on
 	// floe's base.
@@ -138,26 +154,26 @@ func lookLayers(t *testing.T) { //nolint:paralleltest,thelper // a subtest of Te
 		`          <div data-floe-part="note"><p><code id="own">a</code></p><div data-floe-part="table"><table><tbody><tr><td>`+
 		`<code id="held">b</code></td></tr></tbody></table></div></div>`+"\n", "#held")
 	got = b.eval(`['own', 'held'].map((id) => getComputedStyle(document.getElementById(id)).backgroundColor).join(' | ')`)
-	check(t, "nested", []string{got}, "rgb(255, 255, 255) | rgb(220, 235, 236)")
+	m.expect("nested", got, "rgb(255, 255, 255) | rgb(220, 235, 236)")
 
 	// floe's base draws the page's ground, colour and face in the theme's, under a template that draws none of them.
 	open("bare", "template: bare\nlang: en\ntheme: washi\n", "p")
 	ground := `(() => { const r = getComputedStyle(document.documentElement), s = getComputedStyle(document.querySelector('p'));
 		return [r.backgroundColor, getComputedStyle(document.body).backgroundColor, s.color, s.fontFamily.split(',')[0]].join(' | ') })()`
-	check(t, "bare", []string{b.eval(ground)}, `rgb(237, 228, 207) | rgba(0, 0, 0, 0) | rgb(29, 27, 24) | "Hiragino Mincho ProN"`)
+	m.expect("bare", b.eval(ground), `rgb(237, 228, 207) | rgba(0, 0, 0, 0) | rgb(29, 27, 24) | "Hiragino Mincho ProN"`)
 
 	// A ground of a pattern, blueprint's squares, is drawn whole: its layers, their size, the colour under them.
 	open("squares", "template: bare\nlang: en\ntheme: blueprint\n", "p")
 	got = b.eval(`(() => { const r = getComputedStyle(document.documentElement);
 		return [r.backgroundImage.split('linear-gradient').length - 1, r.backgroundSize, r.backgroundColor].join(' | ') })()`)
-	check(t, "squares", []string{got}, "2 | 16px 16px, 16px 16px, auto | rgb(238, 244, 252)")
+	m.expect("squares", got, "2 | 16px 16px, 16px 16px, auto | rgb(238, 244, 252)")
 
 	// The colours a template sets on :scope reach what the theme draws in the parts, the text on a filled face among
 	// them, which takes the surface the template set.
 	open("brand", "template: brand\nlang: en\ntheme: ink\nnote: { title: t, text: x }\n", "[data-floe-part=note] .title")
 	got = b.eval(`(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n.querySelector('.title'));
 		return [getComputedStyle(n).borderTopColor, s.backgroundColor, s.color].join(' | ') })()`)
-	check(t, "brand", []string{got}, "rgb(1, 2, 3) | rgb(1, 2, 3) | rgb(4, 5, 6)")
+	m.expect("brand", got, "rgb(1, 2, 3) | rgb(1, 2, 3) | rgb(4, 5, 6)")
 
 	// A part of one's own takes the panel's look by its part.yaml: floe's washi styles it by the panel's file (its
 	// surface and double rules).
@@ -165,7 +181,7 @@ func lookLayers(t *testing.T) { //nolint:paralleltest,thelper // a subtest of Te
 		"      - html: <div data-floe-part=\"sheet\">mine</div>\n", "[data-floe-part=sheet]")
 	got = b.eval(`(() => { const s = getComputedStyle(document.querySelector('[data-floe-part=sheet]'));
 		return s.backgroundColor + ' ' + s.borderTopStyle })()`)
-	check(t, "own sheet", []string{got}, "rgb(247, 241, 227) double")
+	m.expect("own sheet", got, "rgb(247, 241, 227) double")
 
 	// A card takes the panel's look without being a part's box, a layer under the parts': options and default's
 	// cards.css keep it a face of the surface on the panel of default, the nearer scope though.
@@ -173,7 +189,7 @@ func lookLayers(t *testing.T) { //nolint:paralleltest,thelper // a subtest of Te
 		"      - options: [{ title: a }]\n      - steps: [{ title: b }]\n", ".card")
 	got = b.eval(`['.card', '[data-floe-part=steps]'].map((at) => {
 		const s = getComputedStyle(document.querySelector(at)); return s.backgroundColor + ' ' + s.borderTopLeftRadius; }).join(' | ')`)
-	check(t, "cards", []string{got}, "rgb(255, 255, 255) 8px | color(srgb 0.91098 0.903529 0.884706) 20px")
+	m.expect("cards", got, "rgb(255, 255, 255) 8px | color(srgb 0.91098 0.903529 0.884706) 20px")
 
 	// Nested, the outer wins whatever the selectors: a look of one's own over the look a cell of it takes again,
 	// two deep, and a part of one's own over the box of another it holds.
@@ -182,10 +198,11 @@ func lookLayers(t *testing.T) { //nolint:paralleltest,thelper // a subtest of Te
 		`p</div></div></div><div data-floe-part="outer"><div id="inner" data-floe-part="inner"></div></div>`+"\n", "#inner")
 	got = b.eval(`(() => { const c = (q, p) => getComputedStyle(document.querySelector(q))[p];
 		return [c('.cell', 'backgroundColor'), c('#inner', 'paddingTop')].join(' | ') })()`)
-	check(t, "nested own", []string{got}, "rgb(0, 0, 12) | 3px")
+	m.expect("nested own", got, "rgb(0, 0, 12) | 3px")
 
 	// A row's gap: the template's page.css wins over floe.marks (its 0), which wins over the theme's file of the look.
 	open("rowed", "template: rowed\nlang: en\ntheme: mine\n", "#looked")
 	got = b.eval(`['#paged > li', '#looked > li'].map((q) => getComputedStyle(document.querySelector(q)).rowGap).join(' | ')`)
-	check(t, "rowed", []string{got}, "3px | 0px")
+	m.expect("rowed", got, "3px | 0px")
+	return m
 }
