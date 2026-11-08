@@ -120,7 +120,8 @@ func TestNewRefused(t *testing.T) {
 	}
 }
 
-// floe part list, template list and theme list print floe's and one's own a line each, the description on one line;
+// floe part list prints what a section of floe's templates takes, and with --all, as template list and theme list do,
+// floe's and one's own, a line each, the description on one line;
 // show prints the files it reads, as written, under a line naming them, or the file named after alone, as it is; and
 // refuses a name there is not.
 func TestListShow(t *testing.T) {
@@ -164,9 +165,15 @@ func TestListShow(t *testing.T) {
 		errs string
 	}{
 		{[]string{"part", "list"}, 0, func(out string) bool {
+			// The whole list is TestSectionParts's; here, that it is the one floe part list prints.
+			return strings.Contains(out, "\nhtml\tfloe\tHTML that goes in as it is\n") &&
+				!strings.Contains(out, "\nmine\t") && !strings.Contains(out, "\ncards\t") && !strings.Contains(out, "\ntone\t")
+		}, ""},
+		{[]string{"part", "list", "--all"}, 0, func(out string) bool {
 			return strings.HasPrefix(out, "any\tfloe\tOne key naming the kind of the part\n") &&
 				strings.Contains(out, "\nmine\t"+filepath.Join(parts, "mine")+"\ta b c\n") &&
-				strings.Contains(out, "\npanel\tfloe\tA box most parts are drawn in")
+				strings.Contains(out, "\npanel\tfloe\tA box most parts are drawn in") &&
+				!strings.Contains(out, "\nhtml\t")
 		}, ""},
 		{[]string{"part", "show", "mine"}, 0, func(out string) bool {
 			return out == "mine: a b c\nwhere: "+filepath.Join(parts, "mine")+"\nlooks: panel\n"+
@@ -188,7 +195,16 @@ func TestListShow(t *testing.T) {
 			return out == "rows: Rows in a panel, a rule between each and the next; take it by looks or data-floe-look\nwhere: floe\nlooks: panel\n"+
 				"files: part.yaml, part.css\n==> part.yaml <==\n"+floeFile("floe/parts/rows/part.yaml")+"\n==> part.css <==\n"+floeFile("floe/parts/rows/part.css")+"\n"
 		}, ""},
-		{[]string{"part", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown part "nope"; use any, asks, band, bars, cards, cell, chart, checklist, checks, code, columns, compare, decision, details, diagram, diff, entries, facts, fields, findings, image, keys, links, marked, mine, note, numbered, options, panel, rows, script, stack, stats, steps, table, tabs, tags, terminal, text, timeline, toc, tone, tree, zoom` + "\n"},
+		{[]string{"part", "show", "html"}, 0, func(out string) bool {
+			return out == "html: HTML that goes in as it is\nwhere: floe\nfiles: any.json\n==> any.json <==\n"+floeFile("floe/parts/any.json")+"\n"
+		}, ""},
+		{[]string{"part", "show", "html", "any.json"}, 0, func(out string) bool { return out == floeFile("floe/parts/any.json")+"\n" }, ""},
+		{
+			[]string{"part", "show", "html", "schema.json"},
+			1, func(out string) bool { return out == "" },
+			`floe: html has no file "schema.json" (its files: any.json)` + "\n",
+		},
+		{[]string{"part", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown part "nope"; use any, asks, band, bars, cards, cell, chart, checklist, checks, code, columns, compare, decision, details, diagram, diff, entries, facts, fields, findings, html, image, keys, links, marked, mine, note, numbered, options, panel, rows, script, stack, stats, steps, table, tabs, tags, terminal, text, timeline, toc, tone, tree, zoom` + "\n"},
 		{[]string{"template", "list"}, 0, func(out string) bool {
 			return strings.HasPrefix(out, "adr\tfloe\tA decision record") &&
 				strings.Contains(out, "\nmemo\t"+filepath.Join(templates, "memo")+"\ta b c\npostmortem\tfloe\tAn incident review")
@@ -215,6 +231,26 @@ func TestListShow(t *testing.T) {
 	} {
 		if code, stdout, stderr := runEnv(dir, env, tt.args...); code != tt.code || !tt.out(stdout) || stderr != tt.errs {
 			t.Errorf("floe %v = %d, %q, %q; want %d, %q", tt.args, code, stdout, stderr, tt.code, tt.errs)
+		}
+	}
+}
+
+// A part of one's own named html, a key a section of floe's templates takes, is refused as one named as floe's
+// parts are: floe part list and show would tell of floe's html and one's own apart.
+func TestPartListOwnHTML(t *testing.T) {
+	t.Parallel()
+
+	const schema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "description": "mine", "type": "object"}`
+	dir := write(t, map[string]string{
+		"parts/html/schema.json": schema,
+		"parts/html/part.html":   strings.ReplaceAll(ownPage, `"mine"`, `"html"`),
+		"parts/html/part.css":    "",
+	})
+	parts := filepath.Join(dir, "parts")
+	want := filepath.Join(parts, "html") + ": html is the name of floe's parts/any.json: give yours another name\n"
+	for _, args := range [][]string{{"part", "list"}, {"part", "show", "html"}} {
+		if code, stdout, stderr := runEnv(dir, map[string]string{"FLOE_PARTS_DIR": parts}, args...); code != 1 || stdout != "" || stderr != want {
+			t.Errorf("floe %v = %d, %q, %q; want 1 and %q", args, code, stdout, stderr, want)
 		}
 	}
 }

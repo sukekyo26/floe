@@ -69,7 +69,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 
 ## 部品
 
-部品は、種類を名指す鍵 1 つで書きます。`floe part list` が 1 行ずつ並べ、`floe part show <名前> schema.json` が取るもの（schema を書いたとおり）を出します。
+部品は、種類を名指す鍵 1 つで書きます。`floe part list` が 1 行ずつ並べ、`floe part show <名前> schema.json` が取るもの（schema を書いたとおり）を出します。`html` は HTML を字で取り、schema.json はありません。`floe part show html` で見ます。
 
 並べるものは、行が何かで部品を選びます。
 
@@ -107,7 +107,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `columns` | 部品を横に並べ、同時に見せます。前と後の画面、データと説明など。列は、省ける `title` とその下の `parts`（`details` と同じ部品）。列はどれも同じ幅で、幅は 16rem 以上なので、何列が横に並ぶかは本文の幅で決まり（`report` で最大 5 列、`adr`・`runbook` で 3 列）、残りは下に折り返します。 |
 | `diagram` | 確かめてから inline SVG で描く図（[diagrams.ja.md](diagrams.ja.md)）。 |
 | `script` | 動くもの（[スクリプトと HTML](#スクリプトと-html)）。 |
-| `html` | そのまま入る HTML。`any.json` の鍵で、部品そのものではないので、`floe part show` にはありません（[スクリプトと HTML](#スクリプトと-html)）。 |
+| `html` | そのまま入る HTML。`any.json` の鍵で、部品そのものではないので schema.json はありません。`floe part show html` は、その鍵を持つ `any.json` の全体を出します（[スクリプトと HTML](#スクリプトと-html)）。 |
 
 `tone` は `accent`・`good`・`warn`・`bad`・`muted` のどれかです。
 
