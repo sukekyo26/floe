@@ -74,7 +74,8 @@ type look struct {
 var looks = []look{
 	{name: "band-face", fix: lookBandFaceFix, floe: lookBandFace, broken: brokenBandFace},
 	{name: "box-pad", fix: lookBoxPadFix, floe: lookBoxPad, broken: brokenBoxPad},
-	{name: "cards-gap", old: lookCardsGap},
+	{name: "cards-gap", fix: lookCardsGapFix, floe: lookCardsGap, broken: brokenCardsGap},
+	{name: "cards-gap-var", fix: lookCardsGapVarFix, floe: lookCardsGapVar, broken: brokenCardsGapVar},
 	{name: "contrast-ring", fix: lookContrastRingFix, floe: lookContrastRing, broken: brokenContrastRing},
 	{name: "contrast-text", fix: lookContrastTextFix, floe: lookContrastText, broken: brokenContrastText},
 	{name: "fragment-root", old: lookFragmentRoot},
