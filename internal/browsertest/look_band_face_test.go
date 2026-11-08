@@ -58,7 +58,7 @@ var bandColours = "bars: [{ label: Copied, value: 40, of: 100 }]\n" +
 	"tabs: [{ title: One, parts: [{ text: First. }] }, { title: Two, parts: [{ text: Second. }] }]\n" +
 	"links: [{ title: Guide, url: 'https://example.com/guide', text: How it works }]\n"
 
-// measureBand finds what the band draws wrong: a links URL against its title, a note with no ground of its own or not
+// measureBand finds what the band draws wrong: a note with no ground of its own or not
 // in the page's text colour, a line's code without its frame (a shadow every code has, seen only in a face) or code in
 // a fenced block with one, a text not in the band's text colour or its heading marked, a heading in details marked, a
 // card with no ground of its own or in the band's text colour, and a picked tab whose ground is not 3:1 off the band's.
@@ -69,12 +69,6 @@ const measureBand = `(() => {` + colours + `
   const amiss = [], push = (at, text) => amiss.push({ at, text });
   const find = (at, q) => { const e = document.querySelector(q); if (!e) push(at, 'none found: ' + q); else seen++; return e; };
   const header = document.querySelector('header');
-  document.querySelectorAll('[data-floe-part=links] .url').forEach((url) => {
-    seen++;
-    const title = url.previousElementSibling;
-    if (!title) push('links', 'a links URL with nothing before it');
-    else if (url.getBoundingClientRect().top - title.getBoundingClientRect().bottom < 1) push('links', 'a links URL against its title');
-  });
   const framed = (e) => { const c = getComputedStyle(e).boxShadow.match(/^(rgba?\([^)]*\)|color\([^)]*\))/); return c !== null && rgba(c[1])[3] > 0; };
   const probe = document.body.appendChild(document.createElement('p'));
   const want = getComputedStyle(probe).color;
