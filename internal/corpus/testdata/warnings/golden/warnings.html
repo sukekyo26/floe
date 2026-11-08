@@ -294,6 +294,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 .sub { margin-top: 0.5rem; }
 .sub > h3 { font-size: 1.15rem; }
 .eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; color: var(--muted); }
+/* The eyebrow is small and mono already: its code keeps its size, not base.css's smaller one */
+.eyebrow code { font-size: inherit; }
 .lead { color: var(--muted); font-size: 1.05rem; }
 .muted { color: var(--muted); }
 /* The contents beside the sections on a wide screen, stuck in sight and scrolling within where they are longer; over the
