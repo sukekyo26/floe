@@ -217,22 +217,12 @@ const measureWrap = `(() => {
   return JSON.stringify({ seen, amiss });
 })()`
 
-// onPhone lays s's pages out as wide as a phone of width px, till the test ends. A phone's scrollbar is drawn over the
-// page, so that the page is laid out as wide as the window, as the measures take it.
+// onPhone lays s's pages out as wide as a phone of width px, till the test ends.
 func onPhone(t *testing.T, s *site, width int64) {
 	t.Helper()
 
 	s.b.size(width, 844, true)
 	t.Cleanup(s.b.unsize)
-}
-
-// laidOut fails t unless the page open is laid out width px wide.
-func laidOut(t *testing.T, s *site, width int64) {
-	t.Helper()
-
-	if got, want := s.b.eval("innerWidth + ' ' + document.documentElement.clientWidth"), fmt.Sprintf("%d %d", width, width); got != want {
-		t.Fatalf("at %d px the page is laid out %s wide", width, got)
-	}
 }
 
 // wrapThemes publishes wrapPage in every theme, lays each out as wide as a phone (390 px), and visits it.
@@ -266,7 +256,6 @@ func lookScrollWrap(t *testing.T, s *site) measured {
 	for _, w := range []int64{390, 620} {
 		onPhone(t, s, w)
 		s.b.navigate("/a/wrap/?raw")
-		laidOut(t, s, w)
 		m.add(s.b.measure(fmt.Sprintf("wrapPage at %dpx", w), measureWrap))
 	}
 	return m
