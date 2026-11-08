@@ -8,6 +8,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：`floe template list`・`part list`・`theme list`・`diagram example` の各行の、場所と説明の間に形を出す。値に書く鍵（項目の並びなら頭に `[] `、1 つだけ書くなら `one of `）、format か floe の部品の名前、一覧が正しく言えないときは `-`（`floe part show <名前> schema.json` を読む）。`floe diagram example` も同じ 4 列で並べる。
 - 追加：`floe tag <slug>... --add <名前> --remove <名前>`。コマンドからページにタグを付け、外す。ページは順に、無いページで止まる。名前は書いたとおりに 1 つでカンマでも分けず、外す名前を先に外すので、両方に書いた名前は付いたまま。管理ページのタグのモーダルは、そこで変えたタグだけを送るようにし、その間に `floe tag` やほかのタブが書いたタグは残る。
 - 追加：`details`・`tabs`・`columns` と、`entries`・`checks`・`options` の 1 件の `parts` に、`tabs`・`columns`・`html` のほかの全部の部品を置けるようにした（`options`・`steps`・`facts`・`stats`、`details` の中の `details` など）。`html` は、その `</form>` がまわりの `tabs` の form を閉じるので、置けないまま。
 - 追加：部品 `options` の案に `parts` を置けるようにした。題の下、文の上に、案の絵・図・コードなどの部品を並べる。同じ段に並んだカードは部品と文の頭が揃い、題から部品まで、部品から文までは `--floe-room` で、小さい絵は元の大きさのまま描く。紙ではそのカードを途中で切らずに次のページへ送る。案の `text` は部品 `text` になり、`entries` と同じく囲んだコードを警告する。`parts` の無い options の見た目は変わらない。テーマはカードの中の間を `--cards-gap` で変える。
