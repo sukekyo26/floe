@@ -165,10 +165,9 @@ func TestListShow(t *testing.T) {
 		errs string
 	}{
 		{[]string{"part", "list"}, 0, func(out string) bool {
-			return strings.Count(out, "\n") == 31 && strings.HasPrefix(out, "asks\tfloe\t") &&
-				strings.Contains(out, "\nfindings\tfloe\t") && strings.Contains(out, "\nhtml\tfloe\tHTML that goes in as it is\nimage\tfloe\t") &&
-				!strings.Contains(out, "\nmine\t") && !strings.Contains(out, "\ncards\t") &&
-				!strings.Contains(out, "\ntone\t") && !strings.Contains(out, "\ncell\t")
+			// The whole list is TestSectionParts's; here, that it is the one floe part list prints.
+			return strings.Contains(out, "\nhtml\tfloe\tHTML that goes in as it is\n") &&
+				!strings.Contains(out, "\nmine\t") && !strings.Contains(out, "\ncards\t") && !strings.Contains(out, "\ntone\t")
 		}, ""},
 		{[]string{"part", "list", "--all"}, 0, func(out string) bool {
 			return strings.HasPrefix(out, "any\tfloe\tOne key naming the kind of the part\n") &&

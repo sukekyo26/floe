@@ -24,8 +24,9 @@ func (a *app) partCmd() *cobra.Command {
 		Short: "List the parts a section of floe's templates takes (name, where, description; tab-separated)",
 		Long: `List the parts a section of floe's templates takes, one per line: its name, where it is (floe)
 and its description, tab-separated. html takes HTML as text and has no schema.json: floe part show
-html shows it. With --all, list every part, look and shared schema, floe's and your own, that a
-schema of your own can name with $ref, where it is (floe, or its directory of your own).`,
+html prints any.json, which holds the key html. With --all, list every part, look and shared schema,
+floe's and your own, that a schema of your own can name with $ref, where it is (floe, or its
+directory of your own).`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			k, err := a.kit(false)
@@ -36,31 +37,32 @@ schema of your own can name with $ref, where it is (floe, or its directory of yo
 				a.list(k.Parts())
 				return nil
 			}
-			writable, err := k.Writable()
+			section, err := k.SectionParts()
 			if err != nil {
 				return err //nolint:wrapcheck // floe's failure
 			}
-			a.list(writable)
+			a.list(section)
 			return nil
 		},
 	}
 	list.Flags().BoolVar(&all, "all", false, "list every part, look and shared schema a $ref can name, your own too")
 	cmd.AddCommand(list, &cobra.Command{
 		Use:   "show <name> [file]",
-		Short: "Show a part, look, shared schema or the key html and every file it reads, or one of them",
+		Short: "Show a part, look or shared schema (any.json for html) and every file it reads, or one of them",
 		Long: `Show a part, a look or a shared schema: its description, where it is, the looks it takes, the
 files it reads (files:), and each of them as written under ==> file <==: schema.json, checks.yaml,
 part.yaml, part.html, part.css and words.yaml of a part, part.yaml and part.css of a look, <name>.json
-of a shared schema. html, which has no part of its own, shows the key of any.json. With a file named
-after, print that file alone, as written but the byte order mark at its start. When the output is
-long, read the files: line first, then the file you need: floe part show code part.html.`,
+of a shared schema. html, which has no part of its own, prints any.json, which holds the key html.
+With a file named after, print that file alone, as written but the byte order mark at its start.
+When the output is long, read the files: line first, then the file you need: floe part show code
+part.html.`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			k, err := a.kit(false)
 			if err != nil {
 				return err
 			}
-			entries, err := shown(k)
+			entries, err := shown(k, args[0])
 			if err != nil {
 				return err
 			}
@@ -221,26 +223,33 @@ func (a *app) checkTemplates() error {
 	return found.Err()
 }
 
-// list prints each of entries: its name, where it is, and its description on one line.
-// shown is what floe part show finds a name in: the parts, looks and shared schemas, and what else a section of
-// floe's templates takes (html), by name.
+// shown is what floe part show finds name in: the parts, looks and shared schemas; for a name none of them has,
+// what a section of floe's templates takes too (html), by name, so that a name of neither is refused with both.
 // LIMIT: a part of one's own named html stands for it here, while floe part list lists floe's html: only a key of
 // any.json named so does that (refusedName refuses the names of floe's parts); rename such a part to see both.
-func shown(k *kit.Kit) ([]kit.Entry, error) {
+func shown(k *kit.Kit, name string) ([]kit.Entry, error) {
 	entries := k.Parts()
-	writable, err := k.Writable()
+	named := func(e kit.Entry) bool { return e.Name == name }
+	if slices.ContainsFunc(entries, named) {
+		return entries, nil
+	}
+	section, err := k.SectionParts()
 	if err != nil {
 		return nil, err //nolint:wrapcheck // floe's failure
 	}
-	for _, w := range writable {
-		if !slices.ContainsFunc(entries, func(e kit.Entry) bool { return e.Name == w.Name }) {
-			entries = append(entries, w)
+	if i := slices.IndexFunc(section, named); i >= 0 {
+		return section[i : i+1], nil
+	}
+	for _, e := range section {
+		if !slices.ContainsFunc(entries, func(p kit.Entry) bool { return p.Name == e.Name }) {
+			entries = append(entries, e)
 		}
 	}
 	slices.SortFunc(entries, func(a, b kit.Entry) int { return strings.Compare(a.Name, b.Name) })
 	return entries, nil
 }
 
+// list prints each of entries: its name, where it is, and its description on one line.
 func (a *app) list(entries []kit.Entry) {
 	for _, e := range entries {
 		a.print("%s\t%s\t%s", e.Name, where(e), e.About)

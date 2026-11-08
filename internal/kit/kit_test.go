@@ -685,13 +685,13 @@ func TestReadMarks(t *testing.T) {
 	}
 }
 
-// Writable lists the keys of floe's any.json, a section's parts: each the entry Parts gives it, and html, a key of
+// SectionParts lists the keys of floe's any.json, a section's parts: each the entry Parts gives it, and html, a key of
 // a format, of any.json itself. A Kit of one's own over floe's lists floe's alone, a part named html too.
-func TestWritable(t *testing.T) {
+func TestSectionParts(t *testing.T) {
 	t.Parallel()
 
 	k := floe(t)
-	got, err := k.Writable()
+	got, err := k.SectionParts()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -702,7 +702,7 @@ func TestWritable(t *testing.T) {
 		named = append(named, e.Name)
 	}
 	if strings.Join(named, " ") != want {
-		t.Fatalf("Writable lists %s, want %s", strings.Join(named, " "), want)
+		t.Fatalf("SectionParts lists %s, want %s", strings.Join(named, " "), want)
 	}
 	parts := k.Parts()
 	for _, e := range got {
@@ -726,7 +726,7 @@ func TestWritable(t *testing.T) {
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	if over, err := own.Writable(); err != nil || !reflect.DeepEqual(over, got) {
-		t.Errorf("Writable over one's own part html = %+v, %v; want floe's", over, err)
+	if over, err := own.SectionParts(); err != nil || !reflect.DeepEqual(over, got) {
+		t.Errorf("SectionParts over one's own part html = %+v, %v; want floe's", over, err)
 	}
 }

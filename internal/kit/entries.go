@@ -80,11 +80,11 @@ func (k *Kit) partEntry(p *Part) Entry {
 	return Entry{Name: p.name, About: about(p.schema), Dir: k.own(p.dir), Looks: p.Looks(), Files: copied(p.files)}
 }
 
-// Writable returns what a section of floe's templates takes, by name: a key of floe's shared schema any, each
+// SectionParts returns what a section of floe's templates takes, by name: a key of floe's shared schema any, each
 // the part it names or, for one of a format (html), the key itself, described by any.json. They are floe's, read
 // from floe's Kit under k, so that a part of one's own named as a key does not stand for it. A key that is
 // neither is floe's failure.
-func (k *Kit) Writable() ([]Entry, error) {
+func (k *Kit) SectionParts() ([]Entry, error) {
 	floe := k
 	for floe.base != nil {
 		floe = floe.base
