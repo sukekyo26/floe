@@ -171,7 +171,7 @@ func (c *Compiled) checkNode(n *jsonschema.Schema, r reached) usererr.List {
 func (c *Compiled) refMistake(n *jsonschema.Schema, r reached) *usererr.Error {
 	if name, isRoot := c.partRoot(n.Ref); isRoot {
 		if !r.atPart[n] {
-			return c.mistake(n, "schema_part_unreached", partName(name))
+			return c.mistake(n, "schema_part_unreached", PartName(name))
 		}
 		return nil
 	}
@@ -259,8 +259,8 @@ func (c *Compiled) CheckPart() error {
 	return c.checkOwn().Sorted().Err()
 }
 
-// partName returns the name of the part at u, floe:///parts/<name>.json.
-func partName(u string) string {
+// PartName returns the name of the part at u, floe:///parts/<name>.json: the Part of a Step.
+func PartName(u string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(u, "floe:///parts/"), ".json")
 }
 

@@ -161,7 +161,7 @@ func (w *walk) step(st Step, v any, at []string, inPart bool) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return w.fn(Item{At: at, Part: partName(st.Part), Format: "", InPart: false, Value: v}, ready)
+		return w.fn(Item{At: at, Part: PartName(st.Part), Format: "", InPart: false, Value: v}, ready)
 	case st.Format != "":
 		return w.fn(Item{At: at, Part: "", Format: st.Format, InPart: inPart, Value: v}, v)
 	}
