@@ -154,7 +154,6 @@ type part struct {
 	css    string
 }
 
-// readParts reads floe's parts by their names.
 // stack takes every part any.json names, in its order, but tabs, whose form a form in it would be dropped from, columns,
 // whose columns would hold columns, and html, whose </form> would close tabs' form (stack's $comment).
 func TestStackTakesAny(t *testing.T) {
@@ -211,6 +210,7 @@ func orderedKeys(t *testing.T, file string, path ...string) []string {
 	return keysAt(path)
 }
 
+// readParts reads floe's parts by their names.
 func readParts(t *testing.T) map[string]*part {
 	t.Helper()
 
