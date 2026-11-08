@@ -156,7 +156,7 @@ func (s *sharing) straightenEdge(e *edge, moving []*edge, bands []rule, now map[
 		}
 		l.shares[end0], l.shares[end1] = shared{sides[0], at}, shared{sides[1], at}
 		pts, _, _, _, ok := l.edgePoints(e, "")
-		if !ok || len(pts) != 2 || runLength(pts) < iconArrow {
+		if !ok || len(pts) != 2 || runLength(pts) < arrowRun {
 			continue
 		}
 		if s.clear(e, segsOf(pts)[0], moving, bands, now) {

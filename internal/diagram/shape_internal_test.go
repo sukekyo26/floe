@@ -195,3 +195,24 @@ func TestTableCellsOneSize(t *testing.T) {
 		t.Errorf("the cells of a table's row are %v and %v: rowWidth counts them at one size", name, typ)
 	}
 }
+
+// A frame's corners are round, of 10 at most and of half its shorter side, as a box's are: a frame 16 high has
+// corners of 8, not ellipses of 10 by 8; one with an icon or written square has none.
+func TestFrameOutline(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		name string
+		f    frame
+		want float64
+	}{
+		{"a frame", frame{W: 200, H: 80}, 10},
+		{"a frame 16 high", frame{W: 200, H: 16}, 8},
+		{"a frame with an icon", frame{W: 200, H: 80, Icon: "aws/aws-lambda"}, 0},
+		{"a square frame", frame{W: 200, H: 80, Square: true}, 0},
+	} {
+		if got := frameOutline(&c.f).radius; got != c.want {
+			t.Errorf("%s: corners of %v, want %v", c.name, got, c.want)
+		}
+	}
+}
