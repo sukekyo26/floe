@@ -82,7 +82,7 @@ var looks = []look{
 	{name: "layers", old: lookLayers},
 	{name: "lists-marked", fix: lookListsMarkedFix, floe: lookListsMarked, broken: brokenListsMarked},
 	{name: "lists-off", old: lookListsOff},
-	{name: "marks", old: lookMarks},
+	{name: "marks", fix: lookMarksFix, floe: lookMarks, broken: brokenMarks},
 	{name: "nesting", old: lookNesting},
 	{name: "paper-ground", fix: lookPaperGroundFix, floe: lookPaperGround, broken: brokenPaperGround},
 	{name: "paper-wrap", fix: lookPaperWrapFix, floe: lookPaperWrap, broken: brokenPaperWrap},
