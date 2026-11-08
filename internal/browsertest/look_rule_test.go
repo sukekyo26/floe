@@ -75,10 +75,14 @@ var looks = []look{
 	{name: "lists-off", old: lookListsOff},
 	{name: "marks", old: lookMarks},
 	{name: "nesting", old: lookNesting},
-	{name: "paper", old: lookPaper},
+	{name: "paper-ground", fix: lookPaperGroundFix, floe: lookPaperGround, broken: brokenPaperGround},
+	{name: "paper-wrap", fix: lookPaperWrapFix, floe: lookPaperWrap, broken: brokenPaperWrap},
+	{name: "print-tabs", fix: lookPrintTabsFix, floe: lookPrintTabs, broken: brokenPrintTabs},
 	{name: "room", fix: lookRoomFix, floe: lookRoom, broken: brokenRoom},
 	{name: "row-pad", old: lookRowPad},
-	{name: "scroll-box", old: lookScrollBox},
+	{name: "scroll-contain", fix: lookScrollContainFix, floe: lookScrollContain, broken: brokenScrollContain},
+	{name: "scroll-ground", fix: lookScrollGroundFix, floe: lookScrollGround, broken: brokenScrollGround},
+	{name: "scroll-wrap", fix: lookScrollWrapFix, floe: lookScrollWrap, broken: brokenScrollWrap},
 	{name: "shadows", old: lookShadows},
 	{name: "speech-read", old: lookSpeechRead},
 	{name: "template-markdown", old: lookTemplateMarkdown},
@@ -197,6 +201,14 @@ func ownPart(name, html, css string) map[string]string {
 		"parts/" + name + "/part.css":    css,
 	}
 }
+
+// themePage is a page of report in theme that holds parts, a YAML list.
+func themePage(theme, parts string) string {
+	return "template: report\nlang: en\ntitle: Broken\ntheme: " + theme + "\nsections:\n  - heading: Broken\n    parts:\n" + indent(parts, "      ")
+}
+
+// longWord is a word too long for a phone's line, or for paper's.
+const longWord = "a_very_long_word_that_goes_on_and_on_and_on_and_on_and_on_and_on_and_on_and_on_and_on_and_on_and_on_and_on_and_on_and_on_and_on_and_on_and_on_and_on"
 
 // htmlPage is a page of report that holds html in the part html, between two texts.
 func htmlPage(html string) string {
