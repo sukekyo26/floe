@@ -271,7 +271,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   parts and then subsections, one level of a heading (an `<h3>`) over parts (a
   heading, when written, is not empty, and a section with subsections has
   one); and twenty-eight parts a template refers to as
-  `floe:///parts/<name>.json` (`floe part list` lists them): twenty-six that a
+  `floe:///parts/<name>.json` (`floe part list --all` lists them): twenty-six that a
   section of report takes beside Markdown `text` and `html`, from `code`,
   `terminal`, `table` and `image` (an image of the data file's directory,
   such as a screenshot) to `findings`, `decision`, `entries`, `timeline`,
@@ -301,7 +301,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   `page.html` with a viewport for phones) and `check`.
 - Add parts, looks, shared schemas and themes of your own in `FLOE_PARTS_DIR`
   and `FLOE_THEMES_DIR`, beside floe's and never named as one of them; and
-  `floe part list`, `show`, `new` (the smallest part, to fill in) and `check`.
+  `floe part list` (what a section of floe's templates takes, `html` too; with
+  `--all`, every part, look and shared schema a `$ref` can name, your own too),
+  `show` (`floe part show html` shows the key of `any.json`), `new` (the
+  smallest part, to fill in) and `check`.
   A part's schema takes floe's formats (`html`, `markdown`, `image`) as a
   template's does, and a shared schema holding them. A shared schema is
   checked from its root, whether a schema names it or not. A part's

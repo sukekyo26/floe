@@ -14,8 +14,8 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe template show <name> [file]` | Show a template: its themes and every file it reads as written, or one of them |
 | `floe template new <name>` | Make a template of your own to fill in: the smallest floe takes, with a viewport |
 | `floe template check` | Check the templates of your own |
-| `floe part list` | List the parts, looks and shared schemas |
-| `floe part show <name> [file]` | Show a part, look or shared schema and every file it reads as written, or one of them |
+| `floe part list [--all]` | List the parts a section of floe's templates takes; `--all` every part, look and shared schema |
+| `floe part show <name> [file]` | Show a part, look or shared schema, or the key html of any.json, and every file it reads as written, or one of them |
 | `floe part new <name>` | Make the smallest part of your own, to fill in |
 | `floe part check` | Check the parts, looks, shared schemas and themes of your own |
 | `floe theme list` | List the themes |
@@ -142,7 +142,9 @@ Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own
 
 ## `floe part list`
 
-Print the parts, looks and shared schemas, floe's and your own, one per line in three tab-separated columns: the name, where it is (`floe`, or the directory of one of your own) and its description.
+Print the parts a section of floe's templates takes (the keys of floe's `any.json`), one per line in three tab-separated columns: the name, where it is (`floe`) and its description. `html` takes HTML as text and has no `schema.json`: `floe part show html` shows the key of `any.json`.
+
+With `--all`, print every part, look and shared schema, floe's and your own, that a `$ref` of your own schema can name, in the same columns (where it is: `floe`, or the directory of one of your own). `html` is not among them, as there is no `floe:///parts/html.json`.
 
 ## `floe part new <name>`
 
@@ -158,7 +160,7 @@ Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `
 
 ## `floe theme list`
 
-Print the themes, floe's and your own, one per line in the three tab-separated columns of `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own) and an empty description, as a theme has none.
+Print the themes, floe's and your own, one per line in the same three tab-separated columns as `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own) and an empty description, as a theme has none.
 
 ## `floe template show <name> [file]` / `floe part show <name> [file]` / `floe theme show <name> [file]`
 
