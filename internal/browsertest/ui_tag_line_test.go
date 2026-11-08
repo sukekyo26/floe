@@ -9,6 +9,7 @@ import (
 	"github.com/chromedp/chromedp/kb"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/servetest"
 	"github.com/sukekyo26/floe/internal/store"
 )
 
@@ -16,9 +17,15 @@ import (
 // dialog its button, the row's menu and the selection open: what each sends, where the focus goes back, and where the line is
 // not drawn.
 func TestUITagLine(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
-	s := newSite(t)
+	inEveryLanguage(t, uiTagLine)
+}
+
+func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
+	t.Helper()
+
+	srv := servetest.Start(t, nil)
+	s := &site{Site: srv, b: newBrowser(t, srv.Base, lang)}
 	b := s.b
-	msg := i18n.New(i18n.English).Msg
 	st := store.New(s.Env["FLOE_DIR"])
 	s.floe(t, "publish", s.page(t, "tl/none.yaml", "None", ""), "--slug", "none")
 	s.floe(t, "publish", s.page(t, "tl/one.yaml", "One", "<p>1</p>"), "--slug", "one")
@@ -140,6 +147,35 @@ func TestUITagLine(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, "sent from the menu: "+tags("one"))
 	say("the focus", "document.activeElement === document.querySelector('#list li[data-slug=one] .more > summary')")
 
+	// While the tags are sent, held back here, the dialog holds still: Escape and cancel leave it open and the tags are sent;
+	// a chip, Enter in the find field and apply again change nothing and send no second time.
+	pick("one", "")
+	b.eval(`window.patches = 0; window.held = new Promise((r) => { window.release = r; }); window.realFetch = window.fetch;
+		window.fetch = async (u, i) => { if (i?.method === 'PATCH') { window.patches++; await window.held; } return window.realFetch(u, i); }`)
+	b.eval("document.querySelector('#read-tags .tag-edit').click()")
+	b.until("the dialog", "document.getElementById('tag-dialog').open")
+	b.eval(box("a4") + ".click(); document.getElementById('tag-apply').click()")
+	b.until("the tags sent", "window.patches === 1")
+	b.pressKey(kb.Escape)
+	b.eval("document.querySelector('#tag-dialog [data-close]').click()")
+	say("cancelled while sent", "document.getElementById('tag-dialog').open")
+	b.eval(box("a5") + ".click(); document.getElementById('tag-apply').click(); document.getElementById('tag-form').requestSubmit()")
+	say("held still", "[document.getElementById('tag-apply').disabled, "+box("a5")+".checked, document.getElementById('tag-find').disabled, "+
+		"document.querySelector('#tag-dialog [data-close]').disabled, window.patches].join(' ')")
+	b.eval("document.getElementById('toasts').replaceChildren(); window.release()")
+	b.until("closed", "!document.getElementById('tag-dialog').open")
+	b.eval("window.fetch = window.realFetch")
+	out = append(out, "sent once: "+tags("one"))
+	say("one toast", "[...document.querySelectorAll('.toast')].length + ' ' + window.patches")
+	// Opened again, it is free.
+	b.eval("document.querySelector('#read-tags .tag-edit').click()")
+	b.until("the dialog", "document.getElementById('tag-dialog').open")
+	say("free again", "[document.getElementById('tag-find').disabled, document.querySelector('#tag-dialog [data-close]').disabled, "+box("a5")+".disabled].join(' ')")
+	b.pressKey(kb.Escape)
+	// A page gone from the list opens no dialog: none of its tags would be known.
+	b.eval("openPageTags({ slug: 'nowhere', title: 'Nowhere' }, null)")
+	say("of a page gone", "document.getElementById('tag-dialog').open")
+
 	// Enter in the find field takes the one tag it leaves, and makes a name that leaves none or several.
 	pick("one", "")
 	b.eval("document.querySelector('#read-tags .tag-edit').click()")
@@ -206,13 +242,19 @@ func TestUITagLine(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"the menu's item: " + changed("One"),
 		"sent from the menu: plan,a2",
 		"the focus: true",
-		"the one left: a2:all,plan:all,a long name that the line cuts at its end:all,a1:none,a3:none,a4:none,a5:none,a6:none,a7:none / ",
+		"cancelled while sent: true",
+		"held still: true false true true 1",
+		"sent once: plan,a2,a4",
+		"one toast: 1 1",
+		"free again: false false false",
+		"of a page gone: false",
+		"the one left: a2:all,a4:all,plan:all,a long name that the line cuts at its end:all,a1:none,a3:none,a5:none,a6:none,a7:none / ",
 		"none or several left: true true",
-		"a task's page: plan,a2 / true / " + changed("One") + " / true / true",
-		"the frame: plan,a2 / true / " + changed("One") + " / true / true",
+		"a task's page: plan,a2,a4 / true / " + changed("One") + " / true / true",
+		"the frame: plan,a2,a4 / true / " + changed("One") + " / true / true",
 		"the frame's menu: true",
-		"sent from the frame: plan,a2,a3",
-		"redrawn: plan,a2,a3 / true / " + changed("One") + " / true / true",
+		"sent from the frame: plan,a2,a4,a3",
+		"redrawn: plan,a2,a4,a3 / true / " + changed("One") + " / true / true",
 		"in print: none",
 		"the diff: hidden",
 		"narrow: true",
