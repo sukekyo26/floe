@@ -42,7 +42,7 @@ paths:
 - **番号と線の手順は見た目 `numbered` 1 つ** [numbered]：丸い番号と線を part.css・page.css に書かず、`numbered` を借りる。丸の色は tone と `data-floe-mark` で決め、`::before`・`::after` の色を上書きしない。（判断）
 - **項目に添える短い値の並びは見た目 `tags`** [tags]：部品の 1 つの項目に、cell の書き方の値の配列を並べるときは、間・折り返し・字の形を part.css に書かず `data-floe-look="tags"` を借り、値を 1 つずつ `<span>` に包む（pill は cell の箱のまま）。表の行、floe が組み立てる並び、配列でない値の組は外。（判断）
 - **カードの中の並びは `--cards-gap` と `--floe-room`** [cards-gap]：テーマは `.card` に gap を書かず、`--cards-gap` で変える（options のカードの中の並びは、この変数と `--floe-room` で決まる）。`TestLookRule/cards-gap`
-- **カードの中の既定の間は `var(--cards-gap)`** [cards-gap-var]：見た目 cards の既定の間がほしいときは `var(--cards-gap)` で書き、0.4rem を写さない（テーマが変数を変えても付いて来ない）。`TestLookRule/cards-gap-var`
+- **カードの中の間は `var(--cards-gap)`** [cards-gap-var]：見た目 cards のカード（それを借りる部品のカードも）の中の間は `var(--cards-gap)` で書き、0.4rem を写さず、部品ごとの間も決めない。`TestLookRule/cards-gap-var`
 - **テーマが変える部品の変数は根に置く** [part-variables]：部品・見た目は変数を `:scope` に置き、テーマはその変数を置くか読む部品・見た目のファイルの `:scope` に置く。どちらも `!important` にしない。`TestLintRule/part-variables`
 - **行の印は floe が floe.marks に 1 つ並べる** [marks]：左に印のある行は part.yaml の `marks:` 1 つ（`box`・`items`・`joined`）で言い、HTML に class を書かない。floe が書くのは置き場所と大きさだけで、色・丸さ・中身は部品・見た目・テンプレートが書く。上の層で行の `display`・`gap`・`grid-template` を書かない（黙って勝つ）。中身の間は `> * + *` の `margin-top`。テーマは印を `content: none` で消し、大きさと間は `--floe-mark`・`--floe-mark-gap` で変える。1 つの字・題の前の飾り、`::marker`、code の行の番号と線（floe が選ぶ行は部品の根か `> li` で、`<code>` の中に届かない）、中に部品を持つ行の左の線は外。`TestLookRule/marks`
 - **横に流れる箱は、画面で中身の幅を外へ言わない** [scroll-contain]：画面で横に流れる箱は `contain: inline-size` を持つ（`overflow-x: auto` と一緒に `@media screen` に書く。例は base.css）。`TestLookRule/scroll-contain`
