@@ -45,7 +45,8 @@ paths:
 - **行の印は floe が floe.marks に 1 つ並べる** [marks]：左に印のある行は part.yaml の `marks:` 1 つ（`box`・`items`・`joined`）で言い、HTML に class を書かない。floe が書くのは置き場所と大きさだけで、色・丸さ・中身は部品・見た目・テンプレートが書く。上の層で行の `display`・`gap`・`grid-template` を書かない（黙って勝つ）。中身の間は `> * + *` の `margin-top`。テーマは印を `content: none` で消し、大きさと間は `--floe-mark`・`--floe-mark-gap` で変える。1 つの字・題の前の飾り、`::marker`、code の行の番号と線（floe が選ぶ行は部品の根か `> li` で、`<code>` の中に届かない）、中に部品を持つ行の左の線は外。`TestLookRule/marks`
 - **横に流れる箱は、画面で中身の幅を外へ言わない** [scroll-contain]：画面で横に流れる箱は `contain: inline-size` を持つ（`overflow-x: auto` と一緒に `@media screen` に書く。例は base.css）。`TestLookRule/scroll-contain`
 - **横に流れる箱の地は中身の端まで** [scroll-ground]：横に流れる箱の中で地を塗る要素は、中身の端まで伸びる。`TestLookRule/scroll-ground`
-- **部品は狭い画面でも自分の場所に収まる** [scroll-wrap]：幅 390 と 620 で、部品の箱は自分の場所からはみ出さず、狭い列の語は折れない。横に流れる箱は、中身で幅が決まる所に置かない（画面で潰れる。例は base.css）。`TestLookRule/scroll-wrap`
+- **部品は狭い画面でも自分の場所に収まる** [scroll-wrap]：狭い画面で、部品の箱は自分の場所からはみ出さず、狭い列の語は途中で折れない。`TestLookRule/scroll-wrap`
+- **横に流れる箱は幅の決まった所に置く** [scroll-place]：横に流れる箱を、中身で幅が決まる所（inline-block・fit-content・flex の auto など）に置かない。置くと画面で潰れる（例は base.css）。（判断）
 - **紙では中身を折り返す** [paper-wrap]：紙では横に流れる箱も中身を折り返し、紙の幅からはみ出さない。`TestLookRule/paper-wrap`
 - **印刷で地を落とさない** [paper-ground]：印刷の地は base.css の `print-color-adjust` 1 か所が残し、ほかで替えない。`TestLookRule/paper-ground`
 - **紙ではタブの札を同じに描く** [print-tabs]：紙ではどのタブも札の下に出るので、選んだ札だけを違う形に描かない（画面だけの形は `@media screen` に）。`TestLookRule/print-tabs`
