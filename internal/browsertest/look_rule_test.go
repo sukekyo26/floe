@@ -87,7 +87,7 @@ var looks = []look{
 	{name: "paper-wrap", fix: lookPaperWrapFix, floe: lookPaperWrap, broken: brokenPaperWrap},
 	{name: "print-tabs", fix: lookPrintTabsFix, floe: lookPrintTabs, broken: brokenPrintTabs},
 	{name: "room", fix: lookRoomFix, floe: lookRoom, broken: brokenRoom},
-	{name: "row-pad", old: lookRowPad},
+	{name: "row-pad", fix: lookRowPadFix, floe: lookRowPad, broken: brokenRowPad},
 	{name: "scroll-contain", fix: lookScrollContainFix, floe: lookScrollContain, broken: brokenScrollContain},
 	{name: "scroll-ground", fix: lookScrollGroundFix, floe: lookScrollGround, broken: brokenScrollGround},
 	{name: "scroll-wrap", fix: lookScrollWrapFix, floe: lookScrollWrap, broken: brokenScrollWrap},
@@ -229,6 +229,12 @@ const textRightJS = `const textRight = (n) => { const r = document.createRange()
 
 // groundedJS defines grounded, which tells a computed style that paints a ground: a colour or an image.
 const groundedJS = `const grounded = (s) => s.backgroundColor !== 'rgba(0, 0, 0, 0)' || s.backgroundImage !== 'none';`
+
+// pxJS defines px, the width in px of the length v (a variable too) read in the element e: a probe in a box of its own,
+// so that no rule for e's children (a list's rows) reaches it.
+const pxJS = `const px = (e, v) => { const b = document.createElement('div'), d = b.appendChild(document.createElement('i'));
+    b.style.cssText = 'position:absolute'; d.style.cssText = 'display:block;width:' + v; e.append(b);
+    const w = parseFloat(getComputedStyle(d).width); b.remove(); return w; };`
 
 // themePage is a page of report in theme that holds parts, a YAML list.
 func themePage(theme, parts string) string {

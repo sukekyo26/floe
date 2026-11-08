@@ -73,7 +73,7 @@ func measureBoxPad(want string) string {
     details: '[data-floe-part=details] > summary', 'details body': '[data-floe-part=details] > div',
     runbook: '.needs, .rollback', handoff: '.board section',
   };
-  const px = (e, v) => { const d = document.createElement('i'); d.style.cssText = 'display:block;position:absolute;width:' + v; e.append(d); const w = d.getBoundingClientRect().width; d.remove(); return w; };
+  ` + pxJS + `
   const ground = (e) => { const c = getComputedStyle(e); return c.backgroundColor !== 'rgba(0, 0, 0, 0)' || c.backgroundImage !== 'none'; };
   let seen = 0;
   const amiss = [], off = (a, b) => Math.abs(a - b) > 0.1;
