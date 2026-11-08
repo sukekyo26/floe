@@ -48,7 +48,9 @@ func line(md goldmark.Markdown, name, text string) (template.HTML, error) {
 }
 
 // markdown is GFM, as extension.GFM lists its extensions, but its strikethrough of two tildes alone.
-var markdown = goldmark.New(goldmark.WithExtensions(extension.Linkify, extension.Table, strikethrough, extension.TaskList))
+var markdown = goldmark.New(
+	goldmark.WithExtensions(extension.Linkify, extension.Table, strikethrough, extension.TaskList),
+)
 
 // markdownLine reads paragraphs alone, without the paragraph transformers that make a line a table or a link
 // reference definition, so that a line like "-", "1." or "# x" stays text.
