@@ -204,12 +204,19 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	s.floe(t, "work", "--project", "proj", "--task", "#2", "--title", "down", "--parent", "#1")
 	b.navigate("/tasks?project=proj&task=%232")
 	b.until("the family", "document.querySelector('#task-up-rows .kin-row')")
-	out = append(out[:0], tabTo("#task-parent-change"), tabTo("#task-up-rows .kin-row"), tabTo("#task-up-rows .unlink"))
+	// The ground round a ring that ringOf does not see, as the rows have none of their own: the button's ring and 1px past it
+	// stay inside its row, and the add's above the first row.
+	const room = `((box) => { const e = document.activeElement, s = getComputedStyle(e), r = e.getBoundingClientRect();
+  const reach = parseFloat(s.outlineOffset) + parseFloat(s.outlineWidth) + 1;
+  return ' room ' + (r.top - reach >= box.top - 0.5 && r.bottom + reach <= box.bottom + 0.5 && r.right + reach <= box.right + 0.5); })`
+	out = append(out[:0], tabTo("#task-parent-change"), tabTo("#task-up-rows .kin-row"),
+		tabTo("#task-up-rows .unlink")+b.eval(room+"(document.activeElement.closest('.kin-line').getBoundingClientRect())"))
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the family", "document.querySelector('#task-family-rows .kin-row')")
-	out = append(out, tabTo("#task-child"))
+	out = append(out, tabTo("#task-child")+
+		b.eval(room+"({ top: -Infinity, right: Infinity, bottom: document.querySelector('#task-family-rows .kin-line').getBoundingClientRect().top })"))
 	check(t, "the family", out, strings.Join([]string{
-		"#task-parent-change: " + ring, "#task-up-rows .kin-row: solid 2px rgb(107, 105, 100) -2px seen", "#task-up-rows .unlink: " + ring,
-		"#task-child: " + ring,
+		"#task-parent-change: " + ring, "#task-up-rows .kin-row: solid 2px rgb(107, 105, 100) -2px seen",
+		"#task-up-rows .unlink: " + ring + " room true", "#task-child: " + ring + " room true",
 	}, "|"))
 }
