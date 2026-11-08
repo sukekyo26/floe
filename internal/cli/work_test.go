@@ -264,6 +264,17 @@ func TestWorkCommand(t *testing.T) {
 		t.Errorf(`--parent "" and --state with a page: %v, %v`, row, ok)
 	}
 	run(0, "work", "b", "--clear")
+	// Pages of two projects (c is of q) take no parent: refused before anything is written.
+	if got := run(2, "work", "b", "c", "--task", "#34", "--parent", "#30"); got != "floe: --parent with slugs goes with pages of one project: "+
+		"give the pages of each project in their own command: run floe --help\n" {
+		t.Errorf("--parent with pages of two projects: %q", got)
+	}
+	if _, ok := tasks()["p"]["#34"]; ok {
+		t.Errorf("--parent with pages of two projects wrote #34: %v", tasks()["p"]["#34"])
+	}
+	if got := workOf(t, env, "b"); got != "null" {
+		t.Errorf("--parent with pages of two projects moved b: %s", got)
+	}
 
 	// The command line that cannot mean anything.
 	for _, c := range []struct {

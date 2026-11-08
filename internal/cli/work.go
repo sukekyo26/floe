@@ -36,7 +36,7 @@ func (a *app) workCmd() *cobra.Command {
 --project (the project of the working directory when left out; "" for none).
 
 The tasks are written first, once for each different task the pages are on, and the pages then, in order, stopping at
-the first failure. The same command given again finishes what a failure left, but for a parent a project lacks.
+the first failure. The same command given again finishes what a failure left.
 
   floe work design-notes --task "#130" --step design --state waiting
   floe work --task "#130" --url https://example.com/issues/482
@@ -149,13 +149,11 @@ func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) ta
 	return taskOf{project: store.ProjectKey(name), name: f.task}
 }
 
-// workPages puts the pages slugs on a task and changes it: what the CLI can check (the pages listed, on a task) is
-// checked before anything is written, so that a page of no task, or none at all, leaves the rest as they were; the
-// store checks a parent as it writes each task. Flags of the pages alone ask nothing of tasks.json: an empty write
+// workPages puts the pages slugs on a task and changes it: what the CLI can check (the pages listed, on a task, of one
+// project for a parent) is checked before anything is written, so that a page of no task, or none at all, leaves the
+// rest as they were; the store checks a parent as it writes the task. Flags of the pages alone ask nothing of tasks.json: an empty write
 // would make a row for a task that has none. A parent goes with --task alone, on the one task the pages go on: on
 // each page's own, a page of the parent itself would stop the writes halfway.
-// LIMIT: --parent with pages of several projects writes the tasks before the one whose project lacks the parent; say
-// each project's parent apart if that comes to matter.
 func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	ctx := cmd.Context()
 	if off := changed(cmd, "forget", "project"); len(off) > 0 {
@@ -193,6 +191,10 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	if err != nil {
 		return err
 	}
+	if cmd.Flags().Changed("parent") && len(tasks) > 1 {
+		// --task names one task, so that tasks differ by their projects alone
+		return usageOf(usererr.New("cli_work_parent_projects"))
+	}
 	if err = writeTasks(ctx, c, tasks, taskEdit(cmd, f)); err != nil {
 		return err
 	}
@@ -202,12 +204,15 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	return a.eachPage(cmd, slugs, http.MethodPatch, pageWorkEdit(cmd, f))
 }
 
-// writeTasks writes ed to each of tasks in turn, stopping at the first failure. A task of no row is not found when ed
-// takes its parent off alone: it has no parent to take off, and the pages going on it make it, so it is passed.
+// writeTasks writes ed to each of tasks in turn, stopping at the first failure. One case of not found is passed: ed
+// taking the parent off alone, of a task of no row, which has no parent to take off and is made by the pages going on.
 func writeTasks(ctx context.Context, c client, tasks []taskOf, ed server.TaskEdit) error {
+	rest := ed
+	rest.Parent = nil
+	parentOff := ed.Parent != nil && *ed.Parent == "" && rest == server.TaskEdit{}
 	for _, t := range tasks {
 		err := c.do(ctx, http.MethodPatch, taskQuery(t), ed, nil)
-		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
+		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound && parentOff {
 			continue
 		}
 		if err != nil {

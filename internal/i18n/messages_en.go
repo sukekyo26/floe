@@ -158,6 +158,7 @@ var messagesEN = map[string]string{
 	"cli_work_no_task":         "name a task with --task, or pages by their slugs",
 	"cli_work_needs_pages":     "--%s changes pages: name them by their slugs",
 	"cli_work_no_pages":        "--%s goes with a task alone, not with pages: give it without slugs",
+	"cli_work_parent_projects": "--parent with slugs goes with pages of one project: give the pages of each project in their own command",
 	"cli_work_parent_task":     "--parent with slugs goes with --task: name the one task the pages go on",
 	"cli_work_nothing":         "say what to change of the pages: --task, --step, --state, --url, --title, --steps, --parent, --pin, --unpin or --clear",
 	"cli_work_page_no_task":    `page "%s" is on no task: name one with --task`,
