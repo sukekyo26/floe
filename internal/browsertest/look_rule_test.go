@@ -73,21 +73,22 @@ type look struct {
 // looks are the rules TestLookRule measures, in the order of their names.
 var looks = []look{
 	{name: "band-face", fix: lookBandFaceFix, floe: lookBandFace, broken: brokenBandFace},
-	{name: "box-pad", old: lookBoxPad},
-	{name: "cards-gap", old: lookCardsGap},
+	{name: "box-pad", fix: lookBoxPadFix, floe: lookBoxPad, broken: brokenBoxPad},
+	{name: "cards-gap", fix: lookCardsGapFix, floe: lookCardsGap, broken: brokenCardsGap},
+	{name: "cards-gap-var", fix: lookCardsGapVarFix, floe: lookCardsGapVar, broken: brokenCardsGapVar},
 	{name: "contrast-ring", fix: lookContrastRingFix, floe: lookContrastRing, broken: brokenContrastRing},
 	{name: "contrast-text", fix: lookContrastTextFix, floe: lookContrastText, broken: brokenContrastText},
 	{name: "fragment-root", old: lookFragmentRoot},
 	{name: "layers", old: lookLayers},
 	{name: "lists-marked", fix: lookListsMarkedFix, floe: lookListsMarked, broken: brokenListsMarked},
 	{name: "lists-off", old: lookListsOff},
-	{name: "marks", old: lookMarks},
+	{name: "marks", fix: lookMarksFix, floe: lookMarks, broken: brokenMarks},
 	{name: "nesting", old: lookNesting},
 	{name: "paper-ground", fix: lookPaperGroundFix, floe: lookPaperGround, broken: brokenPaperGround},
 	{name: "paper-wrap", fix: lookPaperWrapFix, floe: lookPaperWrap, broken: brokenPaperWrap},
 	{name: "print-tabs", fix: lookPrintTabsFix, floe: lookPrintTabs, broken: brokenPrintTabs},
 	{name: "room", fix: lookRoomFix, floe: lookRoom, broken: brokenRoom},
-	{name: "row-pad", old: lookRowPad},
+	{name: "row-pad", fix: lookRowPadFix, floe: lookRowPad, broken: brokenRowPad},
 	{name: "scroll-contain", fix: lookScrollContainFix, floe: lookScrollContain, broken: brokenScrollContain},
 	{name: "scroll-ground", fix: lookScrollGroundFix, floe: lookScrollGround, broken: brokenScrollGround},
 	{name: "scroll-wrap", fix: lookScrollWrapFix, floe: lookScrollWrap, broken: brokenScrollWrap},
@@ -229,6 +230,41 @@ const textRightJS = `const textRight = (n) => { const r = document.createRange()
 
 // groundedJS defines grounded, which tells a computed style that paints a ground: a colour or an image.
 const groundedJS = `const grounded = (s) => s.backgroundColor !== 'rgba(0, 0, 0, 0)' || s.backgroundImage !== 'none';`
+
+// pxJS defines px, the width in px of the length v (a variable too) read in the element e: a probe in a box of its own,
+// so that no rule for e's children (a list's rows) reaches it.
+const pxJS = `const px = (e, v) => { const b = document.createElement('div'), d = b.appendChild(document.createElement('i'));
+    b.style.cssText = 'position:absolute'; d.style.cssText = 'display:block;width:' + v; e.append(b);
+    const w = parseFloat(getComputedStyle(d).width); b.remove(); return w; };`
+
+// pads are the lengths of the variables of a row's and a box's padding, in px: --floe-row-pad, --floe-pad-block and
+// --floe-pad-inline.
+type pads struct{ Row, Block, Inline float64 }
+
+// padsJS defines pads, the variables of padding read in the element e, as pads.
+const padsJS = pxJS + `
+  const pads = (e) => ({ Row: px(e, 'var(--floe-row-pad)'), Block: px(e, 'var(--floe-pad-block)'), Inline: px(e, 'var(--floe-pad-inline)') });`
+
+// padsOn returns the variables of padding the body of the page open reads.
+func padsOn(t *testing.T, s *site) pads {
+	t.Helper()
+
+	var p pads
+	if err := json.Unmarshal([]byte(s.b.eval(`(() => { `+padsJS+` return JSON.stringify(pads(document.body)); })()`)), &p); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// basePads returns base.css's variables of padding, read on a page in a theme of one's own that sets nothing.
+func basePads(t *testing.T, s *site) pads {
+	t.Helper()
+
+	s.own(t, map[string]string{"themes/plain/base.css": "/* no rules */\n"})
+	s.floe(t, "publish", s.write(t, "plain.yaml", themePage("plain", "- text: x\n")), "--slug", "plain")
+	s.b.navigate("/a/plain/?raw")
+	return padsOn(t, s)
+}
 
 // themePage is a page of report in theme that holds parts, a YAML list.
 func themePage(theme, parts string) string {

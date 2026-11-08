@@ -323,7 +323,6 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, unnumbered; a card without a tone notes in --muted */
 :scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); --tone: var(--muted); --tone-soft: var(--muted-soft); }
-:scope > div { gap: 0.15rem; }
 .stat dt { font-size: var(--floe-text-small); color: var(--muted); }
 .stat dd { margin: 0; }
 .stat .value {
