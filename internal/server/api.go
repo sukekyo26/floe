@@ -75,12 +75,6 @@ func refuse(w http.ResponseWriter, r *http.Request, err error) {
 	sendJSON(w, status, report)
 }
 
-// Edited answers an edit of a page: its slug after it, and its work as written, for floe work to tell.
-type Edited struct {
-	Slug string      `json:"slug"`
-	Work *store.Work `json:"work,omitzero"`
-}
-
 // Link is a link to add, as the management page and floe publish --link send it: a field sent is given,
 // empty or not, and one left out or null is not.
 type Link struct {
@@ -378,7 +372,7 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	to, err := s.cfg.Store.Edit(slug, store.Edit(*in))
+	edited, err := s.cfg.Store.Edit(slug, store.Edit(*in))
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
 		return
@@ -387,11 +381,7 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		refuse(w, r, err)
 		return
 	}
-	var work *store.Work
-	if m := s.cfg.Store.ReadMeta(to); m != nil {
-		work = m.Work
-	}
-	sendJSON(w, http.StatusOK, Edited{Slug: to, Work: work})
+	sendJSON(w, http.StatusOK, edited)
 }
 
 // remove deletes a page: 404 for none, its mistake for one that cannot be removed. Other sites and the sandboxed

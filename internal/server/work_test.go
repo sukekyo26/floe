@@ -152,8 +152,8 @@ func TestWorkAPI(t *testing.T) {
 		}
 		return strings.TrimSpace(w.Body.String())
 	}
-	// The answer of a page's edit is its slug and its work as written
-	if got := edit(`{"project":"shop","work":{"task":"#1","step":" s "}}`); got != `{"slug":"d","work":{"task":"#1","step":"s"}}` {
+	// The answer of a page's edit is its slug, project and work as written
+	if got := edit(`{"project":"shop","work":{"task":"#1","step":" s "}}`); got != `{"slug":"d","taskProject":"shop","work":{"task":"#1","step":"s"}}` {
 		t.Errorf("the answer of an edit: %s", got)
 	}
 	forget := func(project, name string) (int, string) {
@@ -175,7 +175,7 @@ func TestWorkAPI(t *testing.T) {
 	if code, _ := forget("shop", "#2"); code != http.StatusNotFound {
 		t.Errorf("no task = %d", code)
 	}
-	if got := edit(`{"work":{"task":""}}`); got != `{"slug":"d"}` {
+	if got := edit(`{"work":{"task":""}}`); got != `{"slug":"d","taskProject":"shop"}` {
 		t.Errorf("the answer of an edit taking the page off its task: %s", got)
 	}
 	if code, _ := forget("shop", "#1"); code != http.StatusNoContent {

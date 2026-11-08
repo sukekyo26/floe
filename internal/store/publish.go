@@ -897,61 +897,69 @@ type TagsEdit struct {
 	Remove []string `json:"remove,omitzero"`
 }
 
-// Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
+// Edited is a page as an edit left it: its slug afterwards, and its project (ProjectKey) and work as written under the
+// lock, for floe work to tell.
+type Edited struct {
+	Slug        string `json:"slug"`
+	TaskProject string `json:"taskProject"`
+	Work        *Work  `json:"work,omitzero"`
+}
+
+// Edit applies ed to slug and returns the page as it left it. updatedAt stays, so neither the order of
 // the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
 // data file's title: when published (a stored page), else to the slug; clearing the project drops it.
 // Tags are changed under the lock, so that writers who send only their change keep each other's.
 // The page drawn stays as it is, its title and slug as when it was drawn.
-func (s *Store) Edit(slug string, ed Edit) (string, error) {
+func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 	from, ok := s.dir(slug)
 	if !ok {
-		return "", ErrNotFound
+		return Edited{}, ErrNotFound
 	}
 	unlock, err := s.lock(false)
 	if errors.Is(err, fs.ErrNotExist) {
-		return "", ErrNotFound
+		return Edited{}, ErrNotFound
 	}
 	if err != nil {
-		return "", err
+		return Edited{}, err
 	}
 	defer unlock()
 	m := s.ReadMeta(slug)
 	if m == nil {
-		return "", ErrNotFound
+		return Edited{}, ErrNotFound
 	}
 	if ed.Work != nil && ed.Work.Task != nil {
 		if _, err = TaskName(*ed.Work.Task); err != nil {
-			return "", err
+			return Edited{}, err
 		}
 	}
 	setMarks(m, ed)
 	if ed.Project != nil {
 		// "/" is the management page's value for "no project".
 		if strings.TrimSpace(*ed.Project) == "/" {
-			return "", usererr.New("store_project_slash")
+			return Edited{}, usererr.New("store_project_slash")
 		}
 		m.Project = strings.TrimSpace(*ed.Project)
 		m.ProjectEdited = m.Project != ""
 	}
 	to, err := s.renameTo(slug, ed.Slug)
 	if err != nil {
-		return "", err
+		return Edited{}, err
 	}
 	if ed.Title != nil {
 		setTitle(to, m, *ed.Title)
 	}
 	if err := s.WriteMeta(slug, m); err != nil {
-		return "", err
+		return Edited{}, err
 	}
 	// Renaming moves the directory only; tabs open on the old URL show "not found".
 	if to != slug {
 		dest, _ := s.dir(to)
 		if err := os.Rename(from, dest); err != nil {
-			return "", usererr.CannotWrite(dest, err) //nolint:wrapcheck // the system's words, at the new name
+			return Edited{}, usererr.CannotWrite(dest, err) //nolint:wrapcheck // the system's words, at the new name
 		}
 		s.moveRead(slug, to)
 	}
-	return to, nil
+	return Edited{Slug: to, TaskProject: ProjectKey(m.Project), Work: m.Work}, nil
 }
 
 // setMarks sets what ed changes of m that nothing refuses: its description, favourite, archived and tags.

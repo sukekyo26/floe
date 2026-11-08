@@ -133,12 +133,16 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	if err != nil {
 		return err
 	}
-	t := a.namedTask(ctx, cmd, f)
+	t, err := a.namedTask(ctx, cmd, f)
+	if err != nil {
+		return err
+	}
+	ed := taskEdit(cmd, f)
 	var written store.TaskWritten
 	if f.forget {
 		err = c.do(ctx, http.MethodDelete, taskQuery(t), nil, nil)
 	} else {
-		err = c.do(ctx, http.MethodPatch, taskQuery(t), taskEdit(cmd, f), &written)
+		err = c.do(ctx, http.MethodPatch, taskQuery(t), ed, &written)
 	}
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
 		return usererr.New("cli_work_no_row", t.name, t.project)
@@ -150,7 +154,7 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 		a.print("%s", english.Msg("cli_work_forgotten", t.name, projectOf(t.project)))
 		return nil
 	}
-	a.tellTask(written, taskEdit(cmd, f))
+	a.tellTask(written, ed)
 	return nil
 }
 
@@ -189,11 +193,11 @@ func taskFields(row store.Task, ed server.TaskEdit) string {
 		fields = append(fields, fmt.Sprintf("steps %q", strings.Join(row.Steps, ",")))
 	}
 	if ed.Parent != nil {
-		parent := row.Parent
-		if parent == "" {
-			parent = "none"
+		parent := "no parent"
+		if row.Parent != "" {
+			parent = fmt.Sprintf("parent %q", row.Parent)
 		}
-		fields = append(fields, "parent "+parent)
+		fields = append(fields, parent)
 	}
 	return strings.Join(fields, ", ")
 }
@@ -206,13 +210,14 @@ func projectOf(key string) string {
 	return english.Msg("cli_work_project", key)
 }
 
-// tellPage says the page slug as it was written: its task and project, step and pin, project being the page's.
-func (a *app) tellPage(slug, project string, work *store.Work) {
+// tellPage says the page as it was written: its task and project, step and pin.
+func (a *app) tellPage(page store.Edited) {
+	work := page.Work
 	var parts []string
 	if work == nil || work.Task == "" {
 		parts = append(parts, english.Msg("cli_work_page_off"))
 	} else {
-		parts = append(parts, english.Msg("cli_work_page_task", work.Task, projectOf(project)))
+		parts = append(parts, english.Msg("cli_work_page_task", work.Task, projectOf(page.TaskProject)))
 	}
 	if work != nil && work.Step != "" {
 		parts = append(parts, fmt.Sprintf("step %q", work.Step))
@@ -220,16 +225,21 @@ func (a *app) tellPage(slug, project string, work *store.Work) {
 	if work != nil && work.Pin {
 		parts = append(parts, "pinned")
 	}
-	a.print("%s", english.Msg("cli_work_page", slug, strings.Join(parts, ", ")))
+	a.print("%s", english.Msg("cli_work_page", page.Slug, strings.Join(parts, ", ")))
 }
 
-// namedTask is the task of --task and --project, whose project is the working directory's when left out.
-func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) taskOf {
-	name := f.project
-	if !cmd.Flags().Changed("project") {
-		name = project.Name(ctx, a.env.Dir)
+// namedTask is the task of --task and --project, whose project is the working directory's when left out, its name
+// as the store keeps it.
+func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) (taskOf, error) {
+	name, err := store.TaskName(f.task)
+	if err != nil {
+		return taskOf{}, err //nolint:wrapcheck // the store's words
 	}
-	return taskOf{project: store.ProjectKey(name), name: f.task}
+	projectName := f.project
+	if !cmd.Flags().Changed("project") {
+		projectName = project.Name(ctx, a.env.Dir)
+	}
+	return taskOf{project: store.ProjectKey(projectName), name: name}, nil
 }
 
 // workPages puts the pages slugs on a task and changes it: what the CLI can check (the pages listed, on a task, of one
@@ -266,13 +276,7 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	if len(onPages) == 0 {
 		return nil
 	}
-	projects := map[string]string{}
-	for _, l := range list {
-		projects[l.Slug] = l.TaskProject
-	}
-	return a.eachPage(cmd, slugs, http.MethodPatch, pageWorkEdit(cmd, f), func(got server.Edited) {
-		a.tellPage(got.Slug, projects[got.Slug], got.Work)
-	})
+	return a.eachPage(cmd, slugs, http.MethodPatch, pageWorkEdit(cmd, f), a.tellPage)
 }
 
 // pageFlags refuses the flags of a floe work with slugs that cannot go together, and returns those that change the

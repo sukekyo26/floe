@@ -322,7 +322,6 @@ func TestWorkCommand(t *testing.T) {
 	}
 }
 
-// A page that cannot be written leaves its task written, and the same command given again finishes it.
 // floe work says each task and page it wrote on a line of its own, in the order written: a task made, changed or as it
 // was with the fields asked for as the store left them, and a page with its task, step and pin after the write.
 func TestWorkSays(t *testing.T) {
@@ -342,16 +341,18 @@ func TestWorkSays(t *testing.T) {
 	say("task t1 in project p: unchanged; title \"the task\"\n", "work", "--task", "t1", "--title", "the task")
 	say("task t1 in project p: changed; state doing, steps \"design,build\"\n",
 		"work", "--task", "t1", "--state", "doing", "--steps", "design, build, design")
-	say("task t2 in no project: made; url \"https://example.com/2\", parent none\n",
+	say("task t2 in no project: made; url \"https://example.com/2\", no parent\n",
 		"work", "--task", "t2", "--project", "", "--url", " https://example.com/2 ", "--parent", "")
 	say("task t1 in project p: changed; step \"design\"\npage a: task t1 in project p, step \"design\"\n",
 		"work", "a", "--task", "t1", "--step", "design")
 	say("page a: task t1 in project p, step \"design\", pinned\n", "work", "a", "--pin")
 	say("page a: no task, pinned\n", "work", "a", "--task", "")
-	say("task t1 in project p: forgotten\n", "work", "--task", "t1", "--forget")
+	say("task t1 in project p: forgotten\n", "work", "--task", " t1 ", "--forget")
 	say("task t3 in project p: made\npage a: task t3 in project p, pinned\n", "work", "a", "--task", "t3")
+	say("task t4 in project p: made; parent \"t3\"\n", "work", "--task", "t4", "--parent", "t3")
 }
 
+// A page that cannot be written leaves its task written, and the same command given again finishes it.
 func TestWorkCommandOrder(t *testing.T) {
 	t.Parallel()
 

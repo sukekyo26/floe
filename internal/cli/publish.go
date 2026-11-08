@@ -312,7 +312,7 @@ are taken off first, then those given to --add are put on, so a name given to bo
 
 // eachPage sends method with body to each page of slugs in order, stopping at the first failure, a page not there
 // told by its slug; done, when given, is called with each answer as the page is written.
-func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body any, done func(server.Edited)) error {
+func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body any, done func(store.Edited)) error {
 	// Encoded once, before the server is asked or started: a text given that is no UTF-8 is refused first.
 	var sent any
 	if body != nil {
@@ -327,7 +327,7 @@ func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body a
 		return err
 	}
 	for _, slug := range slugs {
-		var got server.Edited
+		var got store.Edited
 		var out any
 		if done != nil {
 			out = &got
