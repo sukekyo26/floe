@@ -42,6 +42,7 @@ the first failure. The same command given again finishes what a failure left.
   floe work --task "#130" --url https://example.com/issues/482
   floe work --task "#130" --steps design,build,review
   floe work --task "#130" --parent "#123"
+  floe work design-notes --task "#131" --parent "#130" --step design
   floe work design-notes --pin
   floe work --task "#130" --forget`,
 		PreRunE: flagGroups,
@@ -62,7 +63,7 @@ the first failure. The same command given again finishes what a failure left.
 	flags.StringVar(&f.url, "url", "", `the task's one outside link, http or https; "" takes it off`)
 	flags.StringVar(&f.title, "title", "", `the task's title; "" takes it off`)
 	flags.StringVar(&f.steps, "steps", "", `the order of the task's steps, separated by commas; "" takes it off`)
-	flags.StringVar(&f.parent, "parent", "", `the task's parent, of its project, without slugs; "" takes it off`)
+	flags.StringVar(&f.parent, "parent", "", `the task's parent, of its project; with slugs, with --task; "" takes it off`)
 	flags.BoolVar(&f.pin, "pin", false, "pin the pages to the top of the task list")
 	flags.BoolVar(&f.unpin, "unpin", false, "take the pages' pin off")
 	flags.BoolVar(&f.clear, "clear", false, "take the pages off their task and take their pin off; the task stays")
@@ -148,30 +149,17 @@ func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) ta
 	return taskOf{project: store.ProjectKey(name), name: f.task}
 }
 
-// workPages puts the pages slugs on a task and changes it: all checked before anything is written, so that a page of
-// no task, or none at all, leaves the rest as they were. Flags of the pages alone ask nothing of tasks.json: an empty
-// write would make a row for a task that has none.
+// workPages puts the pages slugs on a task and changes it: what the CLI can check (the pages listed, on a task, of one
+// project for a parent) is checked before anything is written, so that a page of no task, or none at all, leaves the
+// rest as they were; the store checks a parent as it writes the task. Flags of the pages alone ask nothing of
+// tasks.json: an empty write would make a row for a task that has none. A parent goes with --task alone, on the one
+// task the pages go on: on each page's own, a page of the parent itself would stop the writes halfway.
 func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	ctx := cmd.Context()
-	if off := changed(cmd, "forget", "project", "parent"); len(off) > 0 {
-		return usageOf(usererr.New("cli_work_no_pages", off[0]))
-	}
-	onPages := changed(cmd, "task", "step", "pin", "unpin", "clear")
-	onTasks := changed(cmd, "state", "url", "title", "steps")
-	if len(onPages)+len(onTasks) == 0 {
-		return usageOf(usererr.New("cli_work_nothing"))
-	}
 	named := cmd.Flags().Changed("task")
-	name, err := store.TaskName(f.task)
+	onPages, onTask, name, err := pageFlags(cmd, f)
 	if err != nil {
-		return err //nolint:wrapcheck // the store's words
-	}
-	onTask := onTasks
-	if f.step != "" {
-		onTask = append(onTask, "step")
-	}
-	if named && name == "" && len(onTask) > 0 {
-		return usageOf(usererr.New("cli_work_task_off", onTask[0]))
+		return err
 	}
 	c, err := a.client(ctx, true)
 	if err != nil {
@@ -185,15 +173,63 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	if err != nil {
 		return err
 	}
-	for _, t := range tasks {
-		if err = c.do(ctx, http.MethodPatch, taskQuery(t), taskEdit(cmd, f), nil); err != nil {
-			return err
-		}
+	if cmd.Flags().Changed("parent") && len(tasks) > 1 {
+		// --task names one task, so that tasks differ by their projects alone
+		return usageOf(usererr.New("cli_work_parent_projects"))
+	}
+	if err = writeTasks(ctx, c, tasks, taskEdit(cmd, f)); err != nil {
+		return err
 	}
 	if len(onPages) == 0 {
 		return nil
 	}
 	return a.eachPage(cmd, slugs, http.MethodPatch, pageWorkEdit(cmd, f))
+}
+
+// pageFlags refuses the flags of a floe work with slugs that cannot go together, and returns those that change the
+// pages, those that change their task, and the task's name --task gives.
+func pageFlags(cmd *cobra.Command, f workFlags) (onPages, onTask []string, name string, err error) {
+	if off := changed(cmd, "forget", "project"); len(off) > 0 {
+		return nil, nil, "", usageOf(usererr.New("cli_work_no_pages", off[0]))
+	}
+	named := cmd.Flags().Changed("task")
+	if cmd.Flags().Changed("parent") && !named {
+		return nil, nil, "", usageOf(usererr.New("cli_work_parent_task"))
+	}
+	onPages = changed(cmd, "task", "step", "pin", "unpin", "clear")
+	onTask = changed(cmd, "state", "url", "title", "steps", "parent")
+	if len(onPages)+len(onTask) == 0 {
+		return nil, nil, "", usageOf(usererr.New("cli_work_nothing"))
+	}
+	if name, err = store.TaskName(f.task); err != nil {
+		return nil, nil, "", err //nolint:wrapcheck // the store's words
+	}
+	if f.step != "" {
+		onTask = append(onTask, "step")
+	}
+	if named && name == "" && len(onTask) > 0 {
+		return nil, nil, "", usageOf(usererr.New("cli_work_task_off", onTask[0]))
+	}
+	return onPages, onTask, name, nil
+}
+
+// writeTasks writes ed to each of tasks in turn, stopping at the first failure. One case of not found is passed: ed
+// taking the parent off alone, of a task of no row, which has no parent to take off and is made by the pages going on.
+func writeTasks(ctx context.Context, c client, tasks []taskOf, ed server.TaskEdit) error {
+	var none server.TaskEdit
+	rest := ed
+	rest.Parent = nil
+	parentOff := ed.Parent != nil && *ed.Parent == "" && rest == none
+	for _, t := range tasks {
+		err := c.do(ctx, http.MethodPatch, taskQuery(t), ed, nil)
+		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound && parentOff {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // tasksOfPages is the different tasks the pages slugs are on, the first of each first: of the name given, or each
