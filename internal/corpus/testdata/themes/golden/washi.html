@@ -516,8 +516,8 @@ blockquote {
 /* Options holding parts: the cards on a line share four rows (the number, the title, the parts, the words), so that
    the parts and the words of each start at one height, --cards-gap apart as in any card. The number takes no row by
    name, so that a theme laying it out of the rows (position: absolute) keeps it placed against the card. The parts
-   keep --floe-room from the title and the words by their margins, less the gap between their rows; options of no words
-   keep none and no row for them, ending a card at its parts.
+   keep the more of --floe-room and --cards-gap from the title and from the words: their margins, less the gap between
+   their rows, never below 0; options of no words keep none and no row for them, ending a card at its parts.
    LIMIT: a row no card on a line fills still takes its gaps: a line of no parts (one card a line, a line wrapped) holds
    --cards-gap more between the title and the words, and a theme that takes the number out of the rows (content: none
    or position: absolute) --cards-gap more above the title; --floe-room more under a line of parts alone in options
