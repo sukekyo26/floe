@@ -430,7 +430,7 @@
   /* A day's heading: no row, and not pressed */
   li.group { display: block; padding: 0.7rem 1rem 0.25rem; font: 700 var(--text-small)/1.2 var(--body); color: var(--muted); border-bottom: 0; animation: none; }
   /* A step's heading on a task's page: its way to add a page on the right, and under it, when it has none, that it has none */
-  li.group.adds { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.25rem 0.5rem; }
+  li.group.adds { display: grid; grid-template: none / minmax(0, 1fr) auto; align-items: center; gap: 0.25rem 0.5rem; }
   li.group .step-empty { grid-column: 1 / -1; margin: 0; padding-bottom: 0.5rem; font-weight: 400; }
   /* The first column holds what the row is: a dot, a ring, a link's or a folder's mark; while rows are selected, the check box */
   li > .lead { grid-area: lead; display: grid; place-items: center; height: 1.4em; color: var(--muted); }
