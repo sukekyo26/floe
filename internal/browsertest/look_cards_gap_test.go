@@ -62,10 +62,17 @@ func optionsAt(t *testing.T, s *site, slug string, visit func(width string)) {
 	}
 }
 
+// cardsLook is an element of html that takes the look cards, its own cards holding two paragraphs and one.
+const cardsLook = `<div data-floe-look="cards"><div class="card"><p>a</p><p>b</p></div><div class="card"><p>c</p></div></div>`
+
+// measureLookCards is cardsGapIn of the cards of an element of no part that takes the look cards: the look's own,
+// which a theme alone draws otherwise; a part's are cards-gap-var's.
+var measureLookCards = cardsGapIn(`[data-floe-look~="cards"]:not([data-floe-part]) > .card`)
+
 const lookCardsGapFix = "write no gap on .card in a theme: set --cards-gap, which every card's gap reads"
 
-// lookCardsGap draws every part (everyPart) and optionsPage in every theme, as measureCardsGap measures: a theme writes
-// no gap on a card, and so every card's gap is --cards-gap.
+// lookCardsGap draws cardsLook in every theme, as measureLookCards measures: a theme writes no gap on a card, and so
+// the look's cards keep --cards-gap.
 func lookCardsGap(t *testing.T, s *site) measured {
 	t.Helper()
 
@@ -74,23 +81,20 @@ func lookCardsGap(t *testing.T, s *site) measured {
 		t.Fatal(err)
 	}
 	_, _, themes, _ := k.Names()
-	optionsFiles(t, s)
-	pages := map[string]string{"every-part": s.write(t, "every-part.yaml", s.everyPart(t)), "options": s.write(t, "options.yaml", optionsPage)}
+	page := s.write(t, "cards.yaml", htmlPage(cardsLook))
 	var m measured
 	for _, theme := range themes {
-		for name, file := range pages {
-			s.floe(t, "publish", file, "--slug", name+"-"+theme, "--theme", theme)
-			s.b.navigate("/a/" + name + "-" + theme + "/?raw")
-			m.add(s.b.measure(name+" in "+theme, measureCardsGap))
-		}
+		s.floe(t, "publish", page, "--slug", "cards-"+theme, "--theme", theme)
+		s.b.navigate("/a/cards-" + theme + "/?raw")
+		m.add(s.b.measure("cardsLook in "+theme, measureLookCards))
 	}
 	return m
 }
 
-// brokenCardsGap draws stats in a theme of one's own whose cards.css writes a gap on .card.
+// brokenCardsGap draws cardsLook in a theme of one's own whose cards.css writes a gap on .card.
 func brokenCardsGap(t *testing.T, s *site) (string, measured) {
 	t.Helper()
 
-	s.brokenPage(t, map[string]string{"themes/gappy/cards.css": ":scope .card { gap: 3px; }\n"}, themePage("gappy", "- stats: [{ label: Pages, value: '1' }]\n"))
-	return "stats", s.b.measure("broken", measureCardsGap)
+	s.brokenPage(t, map[string]string{"themes/gappy/cards.css": ":scope .card { gap: 3px; }\n"}, htmlPage(cardsLook)+"theme: gappy\n")
+	return "look cards", s.b.measure("broken", measureLookCards)
 }

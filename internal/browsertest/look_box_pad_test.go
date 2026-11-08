@@ -55,13 +55,14 @@ var boxPadKit = map[string]string{
 // but facts' cards, rows padded --floe-row-pad above and below, details' title, as tall as a row of its own (0.8rem)
 // and so measured at the sides alone, and details' body, of no padding above. A tree whose list paints a ground of its
 // own sits in a frame a theme draws around the box (default's): the list is measured as the box. The variables read in
-// each box must be want's (pads, as JSON), those of the page.
+// each box must be want's (pads, as JSON), those of the page. Each of drawn, the names of the boxes the page draws,
+// that the page draws none of is amiss too.
 // LIMIT: the padding of a theme's frame around a tree, and details' title above and below, are not measured: the one is
 // the theme's decoration, as its border is, the other a row's height of details' own.
 // It returns {seen, amiss}: the boxes it measured, and for each padded otherwise its part (or the template's box, or
 // "theme" for variables set otherwise) and how.
-func measureBoxPad(want pads) string {
-	return `((want) => {
+func measureBoxPad(want pads, drawn []string) string {
+	return `((want, drawn) => {
   const boxes = {
     options: '[data-floe-part=options] .card', asks: '[data-floe-part=asks] .card', checks: '[data-floe-part=checks]', chart: '[data-floe-part=chart]', stats: '[data-floe-part=stats] .card', facts: '[data-floe-part=facts] .card',
     decision: '[data-floe-part=decision] .card',
@@ -74,6 +75,7 @@ func measureBoxPad(want pads) string {
   const ground = (e) => { const c = getComputedStyle(e); return c.backgroundColor !== 'rgba(0, 0, 0, 0)' || c.backgroundImage !== 'none'; };
   let seen = 0;
   const amiss = [], off = (a, b) => Math.abs(a - b) > 0.1;
+  for (const name of drawn) if (!document.querySelector(boxes[name])) amiss.push({ at: name, text: 'no box of it drawn' });
   for (const [name, sel] of Object.entries(boxes)) {
     for (let e of document.querySelectorAll(sel)) {
       seen++;
@@ -91,8 +93,11 @@ func measureBoxPad(want pads) string {
     }
   }
   return JSON.stringify({ seen, amiss });
-})(` + mustJSON(want) + `)`
+})(` + mustJSON(want) + `, ` + mustJSON(drawn) + `)`
 }
+
+// partBoxes are the names of measureBoxPad's boxes boxParts draws.
+var partBoxes = []string{"options", "asks", "checks", "chart", "stats", "facts", "decision", "steps", "timeline", "bars", "tree", "note", "details", "details body"}
 
 const lookBoxPadFix = "pad a box between parts by --floe-pad-block and --floe-pad-inline, not by numbers; a theme sets neither and pads no box"
 
@@ -119,16 +124,16 @@ func lookBoxPad(t *testing.T, s *site) measured {
 	}
 	base := basePads(t, s)
 	var m measured
-	open := func(what, file, slug, theme string) {
+	open := func(what, file, slug, theme string, drawn []string) {
 		s.floe(t, "publish", file, "--slug", slug, "--theme", theme)
 		s.b.navigate("/a/" + slug + "/?raw")
-		m.add(s.b.measure(what, measureBoxPad(base)))
+		m.add(s.b.measure(what, measureBoxPad(base, drawn)))
 	}
 	for _, theme := range themes {
 		name := theme.Name()
-		open("boxParts in "+name, page, "boxes-"+name, name)
+		open("boxParts in "+name, page, "boxes-"+name, name, partBoxes)
 		for _, sample := range []string{"runbook", "handoff"} {
-			open(sample+" in "+name, files[sample], "boxes-"+sample+"-"+name, name)
+			open(sample+" in "+name, files[sample], "boxes-"+sample+"-"+name, name, []string{sample})
 		}
 	}
 	s.own(t, boxPadKit)
@@ -138,7 +143,7 @@ func lookBoxPad(t *testing.T, s *site) measured {
 	if own.Block == base.Block || own.Inline == base.Inline {
 		m.amiss = append(m.amiss, amiss{Page: "boxParts in boxpad", At: "boxpad", Text: fmt.Sprintf("its page.css's variables reach not the page: %+v, base.css's %+v", own, base)})
 	}
-	m.add(s.b.measure("boxParts in boxpad", measureBoxPad(own)))
+	m.add(s.b.measure("boxParts in boxpad", measureBoxPad(own, partBoxes)))
 	return m
 }
 
@@ -148,5 +153,5 @@ func brokenBoxPad(t *testing.T, s *site) (string, measured) {
 
 	base := basePads(t, s)
 	s.brokenPage(t, map[string]string{"themes/thin/note.css": ":scope { padding: 3px; }\n"}, themePage("thin", "- note: { text: Ready. }\n"))
-	return "note", s.b.measure("broken", measureBoxPad(base))
+	return "note", s.b.measure("broken", measureBoxPad(base, []string{"note"}))
 }

@@ -2,21 +2,27 @@ package browsertest_test
 
 import "testing"
 
-// measureCardsGap finds each card (.card) and each body of options' cards (.option > .body) whose gap is not
-// --cards-gap, read in it: a number copied, 0.4rem, as a gap a part chooses of its own, and one of no length (normal). It returns {seen, amiss}: those
-// it measured, and for each otherwise its part and its gap.
-const measureCardsGap = `(() => {
+// cardsGapIn returns a measure that finds each element sel finds whose gap is not --cards-gap, read in it: a number
+// copied, 0.4rem, as a gap a part chooses of its own, and one of no length (normal). It returns {seen, amiss}: those it
+// measured, and for each otherwise its part ("look cards" for an element of no part that takes the look) and its gap.
+func cardsGapIn(sel string) string {
+	return `((sel) => {
   ` + partOfJS + pxJS + `
   let seen = 0;
   const amiss = [];
-  for (const e of document.querySelectorAll('.card, .option > .body')) {
+  for (const e of document.querySelectorAll(sel)) {
     if (!e.getClientRects().length) continue;
     seen++;
     const gap = parseFloat(getComputedStyle(e).rowGap), want = px(e, 'var(--cards-gap)');
-    if (!(Math.abs(gap - want) <= 0.1)) amiss.push({ at: partOf(e), text: (e.matches('.card') ? 'a card\'s' : 'an option\'s body\'s') + ' gap ' + gap + 'px against --cards-gap ' + want + 'px' });
+    const at = e.closest('[data-floe-look~="cards"]:not([data-floe-part])') ? 'look cards' : partOf(e);
+    if (!(Math.abs(gap - want) <= 0.1)) amiss.push({ at, text: (e.matches('.card') ? 'a card\'s' : 'an option\'s body\'s') + ' gap ' + gap + 'px against --cards-gap ' + want + 'px' });
   }
   return JSON.stringify({ seen, amiss });
-})()`
+})(` + mustJSON(sel) + `)`
+}
+
+// measureCardsGap is cardsGapIn of every card (.card) and every body of options' cards (.option > .body).
+var measureCardsGap = cardsGapIn(".card, .option > .body")
 
 // gappedTheme is a theme of one's own that sets --cards-gap on its cards.css's :scope, as a theme changes the gaps in
 // a card.
