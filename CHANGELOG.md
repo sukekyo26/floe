@@ -347,6 +347,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change a diagram's `graph` so that an edge with both ends outside a group goes round the group's frame, a column off it, instead of running through it, back against the ranks if it must: it runs longer and may cross more edges. It still runs through where floe finds no way round or gives up looking in a crowded graph, a lane is not gone round, and a level edge stays straight. The ends moved to the equal parts of a side no longer take an edge into a frame that holds neither end, so a few graphs keep an end off its equal part. A way round that runs into an edge or part written by hand is told at that one, written by hand: add `crossing: true` to the edge, or move it.
+
 - Change where a part sets a variable a theme may change: on its root (`:scope`), so that a theme of one's own setting it on the `:scope` of the part's or look's file, as floe's themes do, wins (`--floe-mark` and `--floe-mark-gap` of numbered, marked, timeline and links, `--floe-mark-gap` of checklist, the number of cards on `:scope.numbered`, `--checks-gap`, `--entries-row-gap`). floe's pages look as before.
 
 - The docs and the diagram's schema tell how raw SVG takes the theme's colours: the palette's variables (`fill="var(--accent)"`), and `var(--tone)` under `data-floe-tone`. A part's classes are not for raw, and the class `band`, which only the example `sequence` drew with, is gone: raw that wrote it draws black.
