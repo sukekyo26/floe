@@ -114,7 +114,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ## Parts in a template
 
-A part draws an item of the data: `floe part list --all` lists every part, look and shared schema a `$ref` can name, and `floe part show <name>` lists on its `files:` line the files one reads, which `floe part show <name> <file>` prints: what one takes is a part's `schema.json` or a shared schema's `<name>.json`, and a look has none. The schema names it with `$ref`, under `properties`, `additionalProperties` (not the root's) or `items`:
+A part draws an item of the data: `floe part list --all` lists every part, look and shared schema a `$ref` can name, with its shape, and `floe part show <name>` lists on its `files:` line the files one reads, which `floe part show <name> <file>` prints: what one takes is a part's `schema.json` or a shared schema's `<name>.json`, and a look has none. The schema names it with `$ref`, under `properties`, `additionalProperties` (not the root's) or `items`:
 
 ```json
 "findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }

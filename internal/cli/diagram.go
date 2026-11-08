@@ -242,10 +242,12 @@ func placedAt(file string, pos yamlpos.Pos, got string) string {
 func (a *app) diagramExampleCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "example [kind]",
-		Short: "List the built-in example specs, or print the one of a kind",
+		Short: "List the built-in example specs (name, where, shape, description; tab-separated), or print the one of a kind",
 		Long: `Without a kind, list the built-in examples: one per kind of diagram, each a spec that passes
-the checks. With a kind, print its spec, whose comments explain its grid. Its text is written in
-each language it has ({en: …, ja: …}), as a spec may write it.`,
+the checks, one per line in the four tab-separated columns of floe part list: its name, where it is
+(floe), its shape, -, as an example is copied rather than written as a value, and the first line of
+its spec's opening comment. With a kind, print its spec, whose comments explain its grid. Its text is
+written in each language it has ({en: …, ja: …}), as a spec may write it.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -253,9 +255,11 @@ each language it has ({en: …, ja: …}), as a spec may write it.`,
 				if err != nil {
 					return err //nolint:wrapcheck // floe's own, which its tests check
 				}
-				for _, e := range examples {
-					a.print("%s\t%s", e.Name, e.Summary)
+				entries := make([]kit.Entry, len(examples))
+				for i, e := range examples {
+					entries[i] = kit.Entry{Name: e.Name, About: e.Summary, Shape: "-", Dir: "", Looks: nil, Files: nil}
 				}
+				a.list(kit.Listed(entries))
 				return nil
 			}
 			e, err := diagram.ExampleOf(args[0])
