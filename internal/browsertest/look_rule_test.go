@@ -72,10 +72,11 @@ type look struct {
 
 // looks are the rules TestLookRule measures, in the order of their names.
 var looks = []look{
-	{name: "band-face", old: lookBandFace},
+	{name: "band-face", fix: lookBandFaceFix, floe: lookBandFace, broken: brokenBandFace},
 	{name: "box-pad", old: lookBoxPad},
 	{name: "cards-gap", old: lookCardsGap},
-	{name: "contrast", old: lookContrast},
+	{name: "contrast-ring", fix: lookContrastRingFix, floe: lookContrastRing, broken: brokenContrastRing},
+	{name: "contrast-text", fix: lookContrastTextFix, floe: lookContrastText, broken: brokenContrastText},
 	{name: "fragment-root", old: lookFragmentRoot},
 	{name: "layers", old: lookLayers},
 	{name: "lists-marked", fix: lookListsMarkedFix, floe: lookListsMarked, broken: brokenListsMarked},
@@ -91,8 +92,8 @@ var looks = []look{
 	{name: "scroll-ground", fix: lookScrollGroundFix, floe: lookScrollGround, broken: brokenScrollGround},
 	{name: "scroll-wrap", fix: lookScrollWrapFix, floe: lookScrollWrap, broken: brokenScrollWrap},
 	{name: "shadows", old: lookShadows},
-	{name: "speech-read", old: lookSpeechRead},
-	{name: "template-markdown", old: lookTemplateMarkdown},
+	{name: "speech-read", fix: lookSpeechReadFix, floe: lookSpeechRead, broken: brokenSpeechRead},
+	{name: "template-markdown", fix: lookTemplateMarkdownFix, floe: lookTemplateMarkdown, broken: brokenTemplateMarkdown},
 	{name: "tone", fix: lookToneFix, floe: lookTone, broken: brokenTone},
 	{name: "wrapped-alike", fix: lookWrappedAlikeFix, floe: lookWrappedAlike, broken: brokenWrappedAlike},
 }

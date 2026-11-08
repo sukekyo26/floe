@@ -85,29 +85,70 @@ func prepend(t *testing.T, v any, at []string, text string) {
 	}
 }
 
+// textHeadings returns measureHeadings of headingsMarkdown in a text, in theme.
+func textHeadings(t *testing.T, s *site, theme string) string {
+	t.Helper()
+
+	text := "template: report\nlang: en\ntitle: T\nsections:\n  - heading: S\n    parts:\n      - text: |\n" +
+		"          " + strings.ReplaceAll(strings.TrimSuffix(headingsMarkdown, "\n"), "\n", "\n          ") + "\n          said\n"
+	s.floe(t, "publish", s.write(t, "text-"+theme+".yaml", text+"theme: "+theme+"\n"), "--slug", "text-"+theme)
+	s.b.navigate("/a/text-" + theme + "/?raw")
+	return s.b.eval(measureHeadings)
+}
+
+// headings publishes data, a page of template whose fields fields of format markdown each begin with headingsMarkdown,
+// as slug, and measures each heading drawn against want, the same in a text: the page holds them once a field, in the
+// order of the fields. It returns the headings it compared and each drawn otherwise, at template.
+func headings(t *testing.T, s *site, template, slug, data string, fields int, want string) measured {
+	t.Helper()
+
+	s.floe(t, "publish", s.write(t, slug+".yaml", data), "--slug", slug)
+	s.b.navigate("/a/" + slug + "/?raw")
+	got := strings.Split(s.b.eval(measureHeadings), "\n")
+	var wanted []string
+	for _, line := range strings.Split(want, "\n") {
+		for range fields {
+			wanted = append(wanted, line)
+		}
+	}
+	m := measured{seen: len(wanted)}
+	for i, w := range wanted {
+		g := "none"
+		if i < len(got) {
+			g = got[i]
+		}
+		if g != w {
+			m.amiss = append(m.amiss, amiss{Page: slug, At: template, Text: g + ", in a text " + w})
+		}
+	}
+	for _, g := range got[min(len(got), len(wanted)):] {
+		m.amiss = append(m.amiss, amiss{Page: slug, At: template, Text: g + ", in a text none"})
+	}
+	return m
+}
+
+const lookTemplateMarkdownFix = "name the template's own headings in page.css by where they stand (header h1, section > h2), " +
+	"not by the element alone, which reaches the headings of its Markdown"
+
 // lookTemplateMarkdown draws the example of each floe template with headings at the head of each of its own fields
 // of format markdown, in every theme: each heading is drawn as the same Markdown is in a text, its size, weight,
 // frame and padding, not as the template's own headings, its title's and its sections'. A rule of the template's
 // page.css that names its headings by the element alone reaches the author's too.
 // LIMIT: a field the example leaves out goes unmeasured, and the look but of headings (a rule of page.css that
 // reaches a paragraph in a field arranges the template's own Markdown, as it may).
-func lookTemplateMarkdown(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
-	s := newSite(t)
-	b := s.b
+func lookTemplateMarkdown(t *testing.T, s *site) measured {
+	t.Helper()
+
 	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, _, themes, templates := k.Names()
-	text := "template: report\nlang: en\ntitle: T\nsections:\n  - heading: S\n    parts:\n      - text: |\n" +
-		"          " + strings.ReplaceAll(strings.TrimSuffix(headingsMarkdown, "\n"), "\n", "\n          ") + "\n          said\n"
 	want := map[string]string{}
 	for _, theme := range themes {
-		s.floe(t, "publish", s.write(t, "text-"+theme+".yaml", text+"theme: "+theme+"\n"), "--slug", "text-"+theme)
-		b.navigate("/a/text-" + theme + "/?raw")
-		want[theme] = b.eval(measureHeadings)
+		want[theme] = textHeadings(t, s, theme)
 	}
-	fields := 0
+	var m measured
 	for _, name := range templates {
 		tpl, ok := k.Template(name)
 		if !ok {
@@ -118,14 +159,13 @@ func lookTemplateMarkdown(t *testing.T) { //nolint:paralleltest,thelper // a sub
 			t.Fatal(err)
 		}
 		at := markdownFields(t, tpl.Schema(), values)
-		if len(at) == 0 {
-			continue
-		}
-		fields += len(at)
 		for _, a := range at {
 			prepend(t, values, a, headingsMarkdown)
 		}
 		for _, theme := range themes {
+			if len(at) == 0 {
+				break
+			}
 			values["theme"] = theme
 			// JSON is YAML, written with no HTML escaped.
 			var data bytes.Buffer
@@ -134,24 +174,26 @@ func lookTemplateMarkdown(t *testing.T) { //nolint:paralleltest,thelper // a sub
 			if err := enc.Encode(values); err != nil {
 				t.Fatal(err)
 			}
-			slug := "md-" + name + "-" + theme
-			s.floe(t, "publish", s.write(t, slug+".yaml", data.String()), "--slug", slug)
-			b.navigate("/a/" + slug + "/?raw")
-			// Each field draws the three headings: the page holds them once a field, in the order of the fields.
-			got := strings.Split(b.eval(measureHeadings), "\n")
-			wanted := make([]string, 0, len(got))
-			for _, line := range strings.Split(want[theme], "\n") {
-				for range at {
-					wanted = append(wanted, line)
-				}
-			}
-			if strings.Join(got, "\n") != strings.Join(wanted, "\n") {
-				t.Errorf("%s in %s: a heading in its Markdown is not drawn as in a text:\n  got  %s\n  want %s", name, theme,
-					strings.Join(got, "\n       "), strings.Join(wanted, "\n       "))
-			}
+			m.add(headings(t, s, name, "md-"+name+"-"+theme, data.String(), len(at), want[theme]))
 		}
 	}
-	if fields == 0 {
-		t.Fatal("no floe template has a field of format markdown in its example: nothing measured")
-	}
+	return m
+}
+
+// brokenTemplateMarkdown draws a template of one's own whose one field is of format markdown and whose page.css spaces
+// every h2, its Markdown's too.
+func brokenTemplateMarkdown(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	want := textHeadings(t, s, "default")
+	s.own(t, map[string]string{
+		"templates/tm/page.html": "<!doctype html>\n<html lang=\"{{.Lang}}\"><head><meta charset=\"utf-8\"><title>{{.Title}}</title></head>\n" +
+			"<body><main>{{.Data.intro}}</main></body></html>\n",
+		"templates/tm/page.css": "h2 { letter-spacing: 3px; }\n",
+		"templates/tm/schema.json": `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", ` +
+			`"properties": {"intro": {"type": "string", "format": "markdown"}}}`,
+		"templates/tm/example.yaml": "lang: en\ntemplate: tm\nintro: x\n",
+	})
+	data := "template: tm\nlang: en\ntitle: T\nintro: |\n  " + strings.ReplaceAll(strings.TrimSuffix(headingsMarkdown, "\n"), "\n", "\n  ") + "\n  said\n"
+	return "tm", headings(t, s, "tm", "broken", data, 1, want)
 }

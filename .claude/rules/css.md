@@ -31,7 +31,8 @@ paths:
 - **部品と見た目は並びの見た目を外す規則を書かない** [lists-unwritten]：部品の箱と見た目の並びの印・左の余白・項目の間を外す規則は、部品と見た目に書かない（floe が外す）。（判断）
 - **色で塗った帯は見た目 `band` 1 つ** [band]：テンプレートは、`--accent` で塗った帯を page.css に書かず、`data-floe-look="band"` で借りる。page.css が書くのは帯の余白と中の並びだけ。（判断）
 - **塗った面は `--face` と `--on-face`** [face]：地と字の色を自分で決め、中にリンク・行の code・フォーカスの輪が来る面は、2 つの変数を置いて `background: var(--face); color: var(--on-face)` で塗る。中の色は base.css 1 か所が決め、面ごとに書かない。部品の中身は base.css が変数を外すので、部品の根を面にするときは根と根の子に置く。自分の地を塗る見た目・部品は、地と一緒に `color: var(--fg)` を書き、面の変数を外す。地を塗らずに字や輪の色を書くときは、面の中に来うるなら `var(--on-face, …)` で書く。部品の箱の字の色を外から直す規則は書かない。（判断）
-- **字と輪は読める** [contrast]：floe のページの字は WCAG AA で、フォーカスの輪は 3:1 で、下の地から読める。`TestLookRule/contrast`
+- **字は読める** [contrast-text]：floe のページ（帯の中も）の字は WCAG AA で、下の地から読める。`TestLookRule/contrast-text`
+- **フォーカスの輪は見える** [contrast-ring]：floe のページ（帯の中も）のフォーカスの輪は 3:1 で下の地から見える。`TestLookRule/contrast-ring`
 - **帯の中の部品は面の色で描く** [band-face]：帯の中に置いた部品・見た目・Markdown は、面の色の中で字と地が読め、行の code の枠と選んだタブが見える。`TestLookRule/band-face`
 - **CSS の勝ち負けは層で決まる** [layers]：セレクタの詳しさでなく、floe が並べる層で決まる（順は `draw.pageStyle` のコメント）。部品・見た目の名前に `base`・`palette`・`markdown` は使えない。`TestLookRule/layers`
 - **入れ子では外が勝つ** [nesting]：部品や見た目の中の部品の箱は、入れ子の外の規則に負け、同じ形に描く。`TestLookRule/nesting`
