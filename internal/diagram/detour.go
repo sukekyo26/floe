@@ -36,7 +36,8 @@ type frameRun struct {
 	sides []seg
 }
 
-// round is what the detours of one drawing share: its frames, the blocks every way keeps off, and each edge's runs.
+// round is what the detours of one drawing share: its frames, the blocks every way keeps off (boxes, headings and
+// the loops' rooms), and each edge's runs.
 type round struct {
 	frames []frameRun
 	blocks []rect
@@ -44,7 +45,7 @@ type round struct {
 	edges  []int // the keys of runs, in order
 }
 
-func newRound(d *drawing) *round {
+func (o *graphOut) newRound(d *drawing) *round {
 	rd := &round{runs: map[int][]seg{}} //nolint:exhaustruct_v5 // filled below
 	for _, c := range slices.Sorted(maps.Keys(d.frames)) {
 		f := d.frames[c]
@@ -60,6 +61,9 @@ func newRound(d *drawing) *round {
 	}
 	for _, c := range slices.Sorted(maps.Keys(d.heads)) {
 		rd.blocks = append(rd.blocks, grow(headRect(d.frames[c], d.heads[c]), keepApart))
+	}
+	for _, r := range o.loopRooms(d) { // made after: a way through one would leave the loops no clear room
+		rd.blocks = append(rd.blocks, grow(r, keepApart))
 	}
 	rd.edges = slices.Sorted(maps.Keys(d.routes))
 	for _, k := range rd.edges {
@@ -81,7 +85,8 @@ func (o *graphOut) foreign(d *drawing, k int) []rect {
 	return out
 }
 
-// within reports whether run s passes inside frame f.
+// within reports whether run s, across or down, passes inside frame f: a run on a side is outside, one anywhere in is
+// in. crossedBy keeps a box's outline and 1 in it out, as an edge may run along an outline; a frame has no such edge.
 func within(s seg, f rect) bool {
 	return min(s[0], s[2]) < f.x+f.w && max(s[0], s[2]) > f.x && min(s[1], s[3]) < f.y+f.h && max(s[1], s[3]) > f.y
 }
@@ -133,7 +138,7 @@ func (o *graphOut) detours(d *drawing, edges []int) {
 	for axis := range 2 {
 		was[axis], _ = d.span(axis)
 	}
-	rd := newRound(d)
+	rd := o.newRound(d)
 	sh := &search{work: detourWork, dist: nil, prev: nil, q: nil, tables: [12][]int32{}}
 	for _, k := range edges {
 		if !o.strayed(d, rd, k) {
@@ -162,7 +167,7 @@ func (o *graphOut) detours(d *drawing, edges []int) {
 	}
 	for axis := range 2 {
 		if lo, _ := d.span(axis); lo > was[axis] {
-			d.stretch(axis, math.Inf(-1), was[axis]-lo)
+			d.stretch(axis, math.Inf(-1), onGrid(was[axis]-lo, column, math.Ceil)) // back by whole columns, not past
 		}
 	}
 }
@@ -294,6 +299,9 @@ func (o *graphOut) detour(d *drawing, rd *round, k int, sh *search, beside bool)
 	ko := o.keptFor(rd, k)
 	r0, _ := ownBox(0)
 	r1, _ := ownBox(1)
+	// LIMIT: the exits are checked where the ends stand before settleEnds moves them to their sides' equal parts, so
+	// an edge among ends packed on a side may stay through as no way out (stayExits) though it could leave once they
+	// part. Check them where they will stand if that comes to show.
 	if !ko.clear(p0, s, r0) || !ko.clear(t, pn, r1) {
 		return nil, stayExits
 	}
@@ -325,6 +333,11 @@ type dgrid struct {
 // stepSpan are the steps along lines that meet the open span lo–hi.
 func stepSpan(steps []float64, lo, hi float64) (first, past int) {
 	return max(sort.SearchFloat64s(steps, lo+eps)-1, 0), sort.SearchFloat64s(steps, hi-eps)
+}
+
+// closedSpan are the lines within lo–hi, its ends' too.
+func closedSpan(vs []float64, lo, hi float64) (first, past int) {
+	return sort.SearchFloat64s(vs, lo-eps), sort.SearchFloat64s(vs, hi+eps)
 }
 
 // lineSpan are the lines strictly within lo–hi.
@@ -436,12 +449,8 @@ func (m marks) keep(ko keptOff, t [6][]int32) {
 		m.across(b.y, b.y+b.h, b.x, b.x+b.w, right, rightEnd)
 		m.along(b.x, b.x+b.w, b.y, b.y+b.h, down, downEnd)
 	}
-	for _, w := range ko.walls { // a step across a wall, or to a point on it
-		if isDown(w) {
-			m.across(min(w[1], w[3])-eps, max(w[1], w[3])+eps, w[0]-1, w[0]+1, right, rightEnd)
-		} else {
-			m.along(min(w[0], w[2])-eps, max(w[0], w[2])+eps, w[1]-1, w[1]+1, down, downEnd)
-		}
+	for _, w := range ko.walls {
+		m.wall(w, right, down, rightEnd, downEnd)
 	}
 	for _, q := range ko.sides {
 		if isDown(q) {
@@ -461,6 +470,21 @@ func (m marks) keep(ko keptOff, t [6][]int32) {
 			m.along(min(q[0], q[2]), max(q[0], q[2]), q[1]-eps, q[1]+eps, downX)
 		}
 	}
+}
+
+// wall marks the steps across wall w, or to a point on it, its ends' lines in.
+func (m marks) wall(w seg, right, down, rightEnd, downEnd []int32) {
+	if isDown(w) {
+		j0, j1 := closedSpan(m.g.ys, min(w[1], w[3]), max(w[1], w[3]))
+		i0, i1 := stepSpan(m.g.xs, w[0]-1, w[0]+1)
+		m.add(right, i0, i1, j0, j1)
+		m.add(rightEnd, i0, i1, j0, j1)
+		return
+	}
+	i0, i1 := closedSpan(m.g.xs, min(w[0], w[2]), max(w[0], w[2]))
+	j0, j1 := stepSpan(m.g.ys, w[1]-1, w[1]+1)
+	m.add(down, i0, i1, j0, j1)
+	m.add(downEnd, i0, i1, j0, j1)
 }
 
 // sum is out, tb summed over i and j.

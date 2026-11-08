@@ -392,9 +392,8 @@ func runThrough(g *graph, l *layout) []int {
 			if in[name] || lanes[name] || !ok || nm.kind != "frame" {
 				continue
 			}
-			f := nm.r
 			for _, s := range l.paths[k].segs {
-				if min(s[0], s[2]) < f.x+f.w && max(s[0], s[2]) > f.x && min(s[1], s[3]) < f.y+f.h && max(s[1], s[3]) > f.y {
+				if within(s, nm.r) {
 					out = append(out, k)
 					break frames
 				}
