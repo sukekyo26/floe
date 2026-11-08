@@ -2,14 +2,12 @@
 package cli
 
 import (
-	"cmp"
 	"errors"
 	"fmt"
 	"io"
 	"slices"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -56,7 +54,7 @@ func Run(args []string, env Env) int {
 	root.SetArgs(args)
 	root.SetOut(out)
 	root.SetErr(env.Stderr)
-	err := readable(root, args)
+	err := readable(env, args)
 	if err == nil {
 		err = root.Execute()
 	}
@@ -179,11 +177,13 @@ func newRoot(env Env, out io.Writer) (*cobra.Command, *app) {
 // error, so that a misspelt command would end well. Its flags are read, and such a command is refused the
 // arguments it does not take (help takes the topics it has). One that runs is checked by cobra as it runs
 // it. cobra's own request for completions, which it adds as it runs, is its own command line, not one to
-// refuse.
-func readable(root *cobra.Command, args []string) error {
+// refuse. It reads them with floe's commands of its own, so that those that run read their flags once: a flag that
+// gathers (a slice) or counts would else hold what it was given twice.
+func readable(env Env, args []string) error {
 	if len(args) > 0 && slices.Contains([]string{cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd}, args[0]) {
 		return nil
 	}
+	root, _ := newRoot(env, io.Discard)
 	cmd, rest, err := root.Find(args)
 	if err != nil {
 		return usageOf(err)
@@ -199,28 +199,9 @@ func readable(root *cobra.Command, args []string) error {
 		}
 	}
 	if !asked {
-		return unread(cmd.Flags())
+		return nil
 	}
 	return given(cmd, cmd.Flags().Args())
-}
-
-// unread gives the flags read back their first values, as cobra reads them again as it runs: a flag that gathers (a
-// slice) or counts would else hold what it was given twice. A slice is emptied, as pflag's first value given replaces
-// its default.
-func unread(flags *pflag.FlagSet) error {
-	var err error
-	flags.Visit(func(f *pflag.Flag) {
-		if sv, ok := f.Value.(pflag.SliceValue); ok {
-			err = cmp.Or(err, sv.Replace(nil))
-		} else {
-			err = cmp.Or(err, f.Value.Set(f.DefValue))
-		}
-		f.Changed = false
-	})
-	if err != nil {
-		return fmt.Errorf("give the flags back their first values: %w", err)
-	}
-	return nil
 }
 
 // topic refuses args, the words the help command was given, that name no command of root.

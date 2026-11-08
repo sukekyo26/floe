@@ -79,7 +79,8 @@ func TestEncode(t *testing.T) {
 	}
 }
 
-// A flag readable read is read once more as the command runs: one that gathers holds each value given once.
+// readable reads the flags on commands of its own, so that the command that runs reads them once: one that gathers
+// holds each value given once.
 func TestFlagsReadOnce(t *testing.T) {
 	t.Parallel()
 
@@ -89,7 +90,7 @@ func TestFlagsReadOnce(t *testing.T) {
 	root, _ := newRoot(env, io.Discard)
 	args := []string{"tag", "d", "--add", "a", "--add", "b", "--remove", "c"}
 	root.SetArgs(args)
-	if err := readable(root, args); err != nil {
+	if err := readable(env, args); err != nil {
 		t.Fatal(err)
 	}
 	if err := root.Execute(); err == nil {
