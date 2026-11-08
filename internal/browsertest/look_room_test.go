@@ -72,6 +72,7 @@ func lookRoom(t *testing.T, s *site) measured {
 
 	var m measured
 	markdown := 0
+	defer s.b.unsize()
 	s.floePages(t, func(what string) {
 		s.b.eval("document.querySelectorAll('details').forEach((d) => { d.open = true; })")
 		for _, w := range []int64{480, 1100} {
