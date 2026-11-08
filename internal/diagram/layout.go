@@ -29,7 +29,8 @@ const (
 	tableHead = 30
 	rowHeight = 22
 	tableSep  = 9
-	cornerR   = 8 // the corner radius of a box and a table
+	cornerR   = 8  // the corner radius of a box and a table
+	frameR    = 10 // the corner radius of a frame
 	labelH    = 18
 	labelTop  = 9 // how far a label's box stands above the y of its text
 	// canvasPad is the room right of and below what is drawn on a canvas whose width or height is left out: for
@@ -777,15 +778,15 @@ func headArea(g *graphGroup) rect {
 	return words
 }
 
-// addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 // frameOutline is the outline frame f is drawn in: of round corners, or square with an icon or written so.
 func frameOutline(f *frame) outline {
 	if f.Icon != "" || f.Square {
-		return outline{hex: 0, radius: 0}
+		return outlineOf(f.W, f.H, "frame square")
 	}
-	return outline{hex: 0, radius: 10}
+	return outlineOf(f.W, f.H, "frame")
 }
 
+// addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
 	class := frameClass(f.Icon)
 	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named(

@@ -90,11 +90,27 @@ type Compiled struct {
 // Enum returns the strings of the enum at c's root, in its order, nil for none: a shared schema's list of names, such
 // as tone.json's.
 func (c *Compiled) Enum() []string {
-	if c.Root.Enum == nil {
+	return c.EnumAt(c.Root.Location)
+}
+
+// EnumAt returns the strings of the enum of the schema at location, its URL and JSON pointer as the library places it
+// (floe:///parts/diagram.json#/$defs/box/…), in its order: nil for none, or for no schema there in the files c holds.
+func (c *Compiled) EnumAt(location string) []string {
+	var at *jsonschema.Schema
+	enter := func(base string) bool {
+		_, held := c.res[base]
+		return held || base == c.url
+	}
+	c.every(c.Root, enter, func(s *jsonschema.Schema) {
+		if s.Location == location {
+			at = s
+		}
+	}, func(_, _ *jsonschema.Schema) {})
+	if at == nil || at.Enum == nil {
 		return nil
 	}
 	var out []string
-	for _, v := range c.Root.Enum.Values {
+	for _, v := range at.Enum.Values {
 		if s, ok := v.(string); ok {
 			out = append(out, s)
 		}
