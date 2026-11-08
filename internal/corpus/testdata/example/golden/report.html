@@ -578,7 +578,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
 /* --cards-gap is the room between what a card holds, which a part laying out its cards' rows (options) reads too; a
    theme sets it on the :scope of its cards.css */
-:scope { --cards-gap: 0.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
+:scope { --cards-gap: 0.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
 .card {
   padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--cards-gap); align-content: start; min-width: 0;
 }
@@ -605,7 +605,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="stats"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, unnumbered; a card without a tone notes in --muted */
-:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); --tone: var(--muted); --tone-soft: var(--muted-soft); }
+:scope { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); --tone: var(--muted); --tone-soft: var(--muted-soft); }
 .stat dt { font-size: var(--floe-text-small); color: var(--muted); }
 .stat dd { margin: 0; }
 .stat .value {

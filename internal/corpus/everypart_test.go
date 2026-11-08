@@ -82,7 +82,8 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 	}
 	parts := readParts(t)
 	// Every part stack takes is drawn in one of every-part's stacks, so that its part.html leaves none out: but text,
-	// which draws its Markdown in a box of no part, and the diagram, whose samples are diagram/'s.
+	// which draws its Markdown in a box of no part, the diagram, whose samples are diagram/'s, and script, which draws
+	// an element of no part.
 	inStack := map[string]bool{}
 	for n := range doc.Descendants() {
 		if nodeAttr(n, "data-floe-part") == "stack" {
@@ -97,7 +98,7 @@ func TestEveryPartDrawsEveryPart(t *testing.T) {
 		t.Fatal("stack's schema names no part under items.properties")
 	}
 	for _, name := range slices.Sorted(maps.Keys(takes)) {
-		if name != kit.TextPart && name != "diagram" && !inStack[name] {
+		if name != kit.TextPart && name != "diagram" && name != "script" && !inStack[name] {
 			t.Errorf("every-part draws no %s in a stack", name)
 		}
 	}
@@ -154,6 +155,62 @@ type part struct {
 }
 
 // readParts reads floe's parts by their names.
+// stack takes every part any.json names, in its order, but tabs, whose form a form in it would be dropped from, columns,
+// whose columns would hold columns, and html, whose </form> would close tabs' form (stack's $comment).
+func TestStackTakesAny(t *testing.T) {
+	t.Parallel()
+
+	anyKeys := orderedKeys(t, filepath.Join(floeParts, "any.json"), "properties")
+	want := slices.DeleteFunc(anyKeys, func(k string) bool { return k == "tabs" || k == "columns" || k == "html" })
+	if got := orderedKeys(t, filepath.Join(floeParts, "stack", "schema.json"), "items", "properties"); !slices.Equal(got, want) {
+		t.Errorf("stack takes %v, want any.json's but tabs, columns and html, in its order: %v", got, want)
+	}
+}
+
+// orderedKeys returns the keys of the object at path in the JSON file, in the order written, as a map would not.
+func orderedKeys(t *testing.T, file string, path ...string) []string {
+	t.Helper()
+
+	b, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dec := json.NewDecoder(bytes.NewReader(b))
+	var keysAt func(path []string) []string
+	keysAt = func(path []string) []string {
+		if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
+			t.Fatalf("%s: want an object at %v, got %v, %v", file, path, tok, err)
+		}
+		var keys []string
+		for dec.More() {
+			tok, err := dec.Token()
+			if err != nil {
+				t.Fatal(err)
+			}
+			k, ok := tok.(string)
+			if !ok {
+				t.Fatalf("%s: want a key at %v, got %v", file, path, tok)
+			}
+			if len(path) > 0 && k == path[0] {
+				keys = keysAt(path[1:])
+				continue
+			}
+			if len(path) == 0 {
+				keys = append(keys, k)
+			}
+			var skip json.RawMessage
+			if err := dec.Decode(&skip); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := dec.Token(); err != nil {
+			t.Fatal(err)
+		}
+		return keys
+	}
+	return keysAt(path)
+}
+
 func readParts(t *testing.T) map[string]*part {
 	t.Helper()
 

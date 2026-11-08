@@ -225,7 +225,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
 /* --cards-gap is the room between what a card holds, which a part laying out its cards' rows (options) reads too; a
    theme sets it on the :scope of its cards.css */
-:scope { --cards-gap: 0.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
+:scope { --cards-gap: 0.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
 .card {
   padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--cards-gap); align-content: start; min-width: 0;
 }
@@ -266,6 +266,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 :scope .check svg { display: block; width: 1.3em; height: 1.3em; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 :scope .choices { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: var(--floe-room); font-size: inherit; }
 :scope .choices > li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.4rem; padding: var(--floe-row-pad) var(--floe-pad-inline); border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface); color: var(--fg); }
+:scope .choices > li > span { min-width: 0; --floe-pill-wrap: normal; }
 :scope .choices > li.marked { outline: 2px solid var(--tone); outline-offset: -1px; }
 :scope .choices > li.other { color: var(--muted); }
 :scope .line { color: var(--fg); font-size: inherit; }

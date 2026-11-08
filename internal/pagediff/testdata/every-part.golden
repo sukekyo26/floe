@@ -170,6 +170,11 @@
   [li] Pro: Simple
   [li] Con: Longer freeze
   [div] Copy by space
+  [div] Docs first
+  [p] The most read space.
+  [div] By size
+  [p] The smallest space first.
+  [div] Docs 400 / 1,840
   [p] Each space is copied apart:
   [li] Docs first
   [li] Then the rest, as the plan says: export --space
@@ -209,6 +214,12 @@
   [pre] mode = read-only
   [figcaption] bash
   [pre] Command: wiki freeze
+  [div] The freeze What it stops
+  [li] https://example.com/freeze
+  [tr] should | wiki.conf:1 The mode is not said in the banner
+  [summary] The whole command
+  [figcaption] sh
+  [pre] wiki freeze --all --banner
   [dt] Parts alone, in the last row
   [p] Text among parts, as tall as an item's.
   [figcaption] sh
@@ -260,6 +271,12 @@
   [p] Every page but the drafts.
   [img] The wiki after the move
   [figcaption] Figure 1: the wiki on the new host, at wiki.example.com
+  [dt] Copied
+  [dd] Before 1200 → After 1840
+  [dd] +640 better
+  [li] Done: Export
+  [li] Import
+  [li] Done: Count the pages
   [div] Q Copy in one go?
   [li] One go Recommended
   [li] By space, with sync --space
@@ -292,6 +309,15 @@
   [p] The export of 2023 reads, its dates converted.
   [figcaption] sh
   [pre] wiki import old.zip --date-format legacy
+  [dt] Ctrl + I
+  [dd] Import again
+  [div] Q Keep the old dates?
+  [li] As they are
+  [li] Converted Recommended
+  [p] 1 Pass 0 Fail 0 Not checked
+  [div] Pass
+  [div] Do the dates read?
+  [p] All of them.
   [div] Fail
   [div] Does a wrong password stop after five?
   [p] After four; >= is written for >.
@@ -309,6 +335,12 @@
   [div] After
   [div] Good: Done
   [p] The list after.
+  [p] decided
+  [div] Keep the list
+  [p] It reads well.
+  [tr] list bool | Default: true
+  [li] 2030-04-07
+  [div] Listed
   [label] bash
   [figcaption] bash
   [pre] export WIKI=new
@@ -322,5 +354,10 @@
   [p] Run it in a new window; the steps and run.sh.
   [tr] Shell | Lines
   [tr] PowerShell | 1
+  [tr]  | bash | PowerShell
+  [tr] Variable | export | $env
+  [dt] Shell
+  [dd] PowerShell 7
+  [li] profile.ps1 (changed)
   [summary] What the freeze covers
   [p] Edits, comments and uploads.
