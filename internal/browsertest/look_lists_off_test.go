@@ -78,90 +78,63 @@ func listsKit(t *testing.T, name, mine string) map[string]string {
 	return files
 }
 
-// lookListsOff draws the lists that are parts' boxes or take looks. A template's page.css or a theme's base.css that
-// writes a rule for every list does not change a part's box's display, marks, padding or room between items, nor the
-// theme's those of an element that takes a look; the template's own page.css does adjust an element that takes a look. The part's own arrangement is set over
-// such lists, and a list of Markdown in a part keeps its marks; that no such list draws marks is lists-marked's.
-func lookListsOff(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
-	s := newSite(t)
-	b := s.b
+// listsApart returns {seen, amiss} of got against want, lines of listsOf (linesApart): each part's box (or look) drawn
+// otherwise is amiss at it.
+func listsApart(page, got, want string) measured {
+	return linesApart(page, got, want, "as without the rule", func(line string) string {
+		at, _, _ := strings.Cut(line, ":")
+		return at
+	})
+}
+
+// listsKitAll is the templates, themes and look of one's own that lists-off and TestRenderedLists draw.
+func listsKitAll(t *testing.T) map[string]string {
+	t.Helper()
+
 	own := map[string]string{"themes/lists/base.css": listsGeneral, "themes/plain/base.css": "/* no rules */\n"}
-	for k, v := range listsKit(t, "report", "lists-report") {
-		own[k] = v
+	for _, k := range []map[string]string{listsKit(t, "report", "lists-report"), listsKit(t, "design", "lists-design"), listsLook} {
+		for name, text := range k {
+			own[name] = text
+		}
 	}
-	for k, v := range listsKit(t, "design", "lists-design") {
-		own[k] = v
-	}
-	for k, v := range listsLook {
-		own[k] = v
-	}
-	s.own(t, own)
+	return own
+}
+
+const lookListsOffFix = "let floe's boxes lay out a part's list: set a part's own arrangement in its part.css, not for every list, " +
+	"and write no !important that puts a list's marks, padding or room back"
+
+// lookListsOff draws every part (everyPart) as listsOf reads its lists that are parts' boxes or take looks: a
+// template's page.css or a theme's base.css that writes a rule for every list (listsGeneral) changes nothing of a
+// part's box, its display, marks, padding or room between items.
+func lookListsOff(t *testing.T, s *site) measured {
+	t.Helper()
+
+	s.own(t, listsKitAll(t))
 	everyPart := s.everyPart(t)
-	design, err := os.ReadFile("../kit/floe/templates/design/example.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
 	read := func(slug, file string, args ...string) string {
 		t.Helper()
 		s.floe(t, append([]string{"publish", file, "--slug", slug}, args...)...)
-		b.navigate("/a/" + slug + "/?raw")
-		return b.eval(listsOf)
+		s.b.navigate("/a/" + slug + "/?raw")
+		return s.b.eval(listsOf)
 	}
-
-	// A part's box: the page's and the theme's rule for lists change nothing of it.
 	plain := s.write(t, "every.yaml", everyPart)
 	mine := s.write(t, "every-mine.yaml", strings.Replace(everyPart, "template: report\n", "template: lists-report\n", 1))
-	want := read("lists-plain", plain)
-	if got := read("lists-page", mine); got != want {
-		t.Errorf("parts' boxes under the page's rule for lists:\n%s\nwant, as without it:\n%s", got, want)
-	}
-	want = read("lists-theme-plain", plain, "--theme", "plain")
-	if got := read("lists-theme", plain, "--theme", "lists"); got != want {
-		t.Errorf("parts' boxes under the theme's rule for lists:\n%s\nwant, as without it:\n%s", got, want)
-	}
+	m := listsApart("every-part under the page's rule for lists", read("lists-page", mine), read("lists-plain", plain))
+	m.add(listsApart("every-part under the theme's rule for lists", read("lists-theme", plain, "--theme", "lists"), read("lists-theme-plain", plain, "--theme", "plain")))
+	return m
+}
 
-	// An element that takes a look: the theme's rule does not reach it, the template's own page.css does.
-	decided := `(() => { const c = getComputedStyle(document.querySelector('.decided'));
-  return [c.display, c.listStyleType, c.paddingInlineStart, c.rowGap].join(' '); })()`
-	designFile := s.write(t, "design.yaml", string(design))
-	s.floe(t, "publish", designFile, "--slug", "lists-design-plain", "--theme", "plain")
-	b.navigate("/a/lists-design-plain/?raw")
-	wantDecided := b.eval(decided)
-	s.floe(t, "publish", designFile, "--slug", "lists-design-theme", "--theme", "lists")
-	b.navigate("/a/lists-design-theme/?raw")
-	if got := b.eval(decided); got != wantDecided {
-		t.Errorf("a look's list under the theme's rule for lists: %s, want %s, as without it", got, wantDecided)
-	}
-	designMine := s.write(t, "design-mine.yaml", strings.Replace(string(design), "template: design\n", "template: lists-design\n", 1))
-	s.floe(t, "publish", designMine, "--slug", "lists-design-page", "--theme", "plain")
-	b.navigate("/a/lists-design-page/?raw")
-	if got := b.eval(decided); got != "flex upper-roman 32px 16px" {
-		t.Errorf("a look's list under its template's rule for lists: %s, want flex upper-roman 32px 16px, the template's", got)
-	}
+// brokenListsOff draws steps in a theme of one's own whose base.css puts a list's padding back by !important, which
+// wins over floe's boxes, against steps in the default theme.
+func brokenListsOff(t *testing.T, s *site) (string, measured) {
+	t.Helper()
 
-	// The part's own arrangement over floe's.
-	s.floe(t, "publish", s.write(t, "look.yaml", "lang: en\ntemplate: lists-look\ntitle: Look\n"), "--slug", "lists-look")
-	b.navigate("/a/lists-look/?raw")
-	look := `(() => { const c = getComputedStyle(document.querySelector('[data-floe-look=lists-gap]')); return c.rowGap + ' ' + c.paddingInlineStart; })()`
-	if got := b.eval(look); got != "7px 9px" {
-		t.Errorf("a look's own room and padding: %s, want 7px 9px, over floe's", got)
-	}
-
-	b.navigate("/a/lists-plain/?raw")
-	ownWay := `(() => [getComputedStyle(document.querySelector('[data-floe-part=timeline]')).paddingInlineStart,
-  getComputedStyle(document.querySelector('[data-floe-part=options]')).columnGap].join(' '))()`
-	if got := b.eval(ownWay); got != "20.8px 12px" {
-		t.Errorf("timeline's padding and options' gap: %s, want 20.8px 12px, the parts' own", got)
-	}
-
-	s.floe(t, "publish", s.write(t, "decision.yaml", listsDecision), "--slug", "lists-decision")
-	b.navigate("/a/lists-decision/?raw")
-	marks := `(() => ['[data-floe-part=decision] ul:not(.rejected)', '[data-floe-part=decision] .rejected']
-  .map((q) => getComputedStyle(document.querySelector(q)).listStyleType + ' ' +
-    getComputedStyle(document.querySelector(q + ' > li'), '::before').content).join(', '))()`
-	if got := b.eval(marks); got != `disc none, none "×" / ""` {
-		t.Errorf("decision's list in its text and the options set aside: %s, want disc none, none \"×\" / \"\"", got)
-	}
+	steps := "- steps:\n    - { title: One, text: first }\n    - { title: Two, text: second }\n"
+	s.floe(t, "publish", s.write(t, "steps.yaml", themePage("default", steps)), "--slug", "steps")
+	s.b.navigate("/a/steps/?raw")
+	want := s.b.eval(listsOf)
+	s.brokenPage(t, map[string]string{"themes/padded/base.css": "ol { padding-inline-start: 3em !important; }\n"}, themePage("padded", steps))
+	return "steps", listsApart("broken", s.b.eval(listsOf), want)
 }
 
 const lookListsMarkedFix = "leave a list that is a part's box or a look unmarked: floe's boxes take its marks off, and no rule puts them back"

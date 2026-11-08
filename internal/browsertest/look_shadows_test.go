@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/kit"
 )
 
 // shadowsExtra is a section added to every-part: panels one after another in a note's box, between its text, cards
@@ -59,6 +61,11 @@ const markProbed = `(() => { const probed = [...document.querySelectorAll('[data
     ['::before', '::after'].some((p) => ['absolute', 'fixed'].includes(getComputedStyle(e, p).position))));
   probed.forEach((e, i) => { e.dataset.shadowProbe = i; }); return probed.length; })()`
 
+// shadowAtJS defines shadowAt, the place a box's shadow is told at: its part, its look, or else the part it is in (a
+// quote) or its tag.
+const shadowAtJS = `const shadowAt = (e) => e.dataset.floePart || (e.dataset.floeLook ? 'look ' + e.dataset.floeLook.split(' ')[0] : '') ||
+    (e.closest('[data-floe-part]')?.dataset.floePart ?? e.tagName.toLowerCase());`
+
 // measureShadows returns, one to a line, what a box draws outside itself reaching what it must not: past the page's
 // edge or the sides of the column's padding (.floe-column); out of a box around it that is framed or filled (its padding box); onto
 // any other element (not one around it nor in it): onto its border box when it is framed or filled, else onto its
@@ -66,8 +73,10 @@ const markProbed = `(() => { const probed = [...document.querySelectorAll('[data
 // lengths alone, whatever form its colour takes: moved by its offset, grown by its spread, fading out over its blur),
 // its outline (its width and offset), its box itself when transformed (its bounding box, where it is moved to), and the
 // ::before and ::after of a box markProbed marks, given as extra by its index. Boxes inside a line (inline) are not measured.
+// It returns {seen, amiss}: the boxes it measured, and what each reaches, at its part (or its look).
 const measureShadows = `((extra) => {
-  const out = new Set();
+  const out = new Map();
+  ` + shadowAtJS + `
   const canvas = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
   const shows = (colour) => { canvas.clearRect(0, 0, 1, 1); canvas.fillStyle = 'transparent'; canvas.fillStyle = colour;
     canvas.fillRect(0, 0, 1, 1); return canvas.getImageData(0, 0, 1, 1).data[3] > 0; };
@@ -92,7 +101,7 @@ const measureShadows = `((extra) => {
     .map((o) => { const r = painted(o) ? o.getBoundingClientRect() : inner(o, true); return { o, r: { l: r.left ?? r.l, t: r.top ?? r.t, r: r.right ?? r.r, b: r.bottom ?? r.b } }; })
     .filter(({ r }) => r.r - r.l > 0.5 && r.b - r.t > 0.5);
   for (const e of boxes) {
-    const s = getComputedStyle(e), r = e.getBoundingClientRect();
+    const s = getComputedStyle(e), r = e.getBoundingClientRect(), where = shadowAt(e);
     let ink = null;
     for (const shadow of s.boxShadow === 'none' ? [] : s.boxShadow.split(/,(?![^(]*\))/)) {
       if (/\binset\b/.test(shadow)) continue;
@@ -111,21 +120,21 @@ const measureShadows = `((extra) => {
       const c = inner(h, false), col = isColumn(h);
       const over = { right: ink.r - c.r, left: c.l - ink.l, bottom: col ? 0 : ink.b - c.b, top: col ? 0 : c.t - ink.t };
       const sides = Object.entries(over).filter(([, v]) => v > 0.5).map(([k, v]) => k + ' ' + v.toFixed(1));
-      if (sides.length) out.add(what + ' out of ' + name(h) + ': ' + sides.join(', '));
+      if (sides.length) out.set(what + ' out of ' + name(h) + ': ' + sides.join(', '), where);
     }
-    if (ink.l < -0.5 || ink.r > document.documentElement.clientWidth + 0.5) out.add(what + ' past the page edge');
+    if (ink.l < -0.5 || ink.r > document.documentElement.clientWidth + 0.5) out.set(what + ' past the page edge', where);
     for (const { o: b, r: q } of others) {
       if (b === e || b.contains(e) || e.contains(b) || q.r <= ink.l || q.l >= ink.r || q.b <= ink.t || q.t >= ink.b) continue;
       const w = Math.min(ink.r, q.r) - Math.max(ink.l, q.l), v = Math.min(ink.b, q.b) - Math.max(ink.t, q.t);
-      if (w > 0.5 && v > 0.5) out.add(what + ' onto ' + name(b) + ' by ' + Math.min(w, v).toFixed(1));
+      if (w > 0.5 && v > 0.5) out.set(what + ' onto ' + name(b) + ' by ' + Math.min(w, v).toFixed(1), where);
     }
   }
-  return [...out].sort().join('\n');
+  return JSON.stringify({ seen: boxes.length, amiss: [...out].sort().map(([text, at]) => ({ at, text })) });
 })`
 
 // shadowsIn measures the page open at width as measureShadows does, after taking the ::before and ::after of each
 // box markProbed marks from DevTools.
-func (b *browser) shadowsIn(where string, width int64) []string {
+func (b *browser) shadowsIn(where string, width int64) measured {
 	b.t.Helper()
 
 	b.size(width, 900, false)
@@ -145,15 +154,7 @@ func (b *browser) shadowsIn(where string, width int64) []string {
 			}
 		}
 	}
-	got := b.eval(measureShadows + "(" + mustJSON(extra) + ")")
-	if got == "" {
-		return nil
-	}
-	lines := strings.Split(got, "\n")
-	for i, l := range lines {
-		lines[i] = fmt.Sprintf("%s at %dpx: %s", where, width, l)
-	}
-	return lines
+	return b.measure(fmt.Sprintf("%s at %dpx", where, width), measureShadows+"("+mustJSON(extra)+")")
 }
 
 // measureCellShadows returns the shadow colour of every cell drawn in a box that casts a shadow, and of that box, as
@@ -163,12 +164,23 @@ const measureCellShadows = `[...document.querySelectorAll('[data-floe-part=cell]
   return box && !/^rgba\(.*, 0\)$|^transparent$/.test(colour(box)) ? colour(c) + ' in ' + colour(box) : '';
 }).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' | ')`
 
-// measureCast returns each box that sets a shadow's colour but casts no shadow of that colour, as a box-shadow written
-// on it elsewhere wins over base.css's.
-const measureCast = `[...document.querySelectorAll('[data-floe-part], [data-floe-look], blockquote')].filter((e) => {
-  const s = getComputedStyle(e), c = s.getPropertyValue('--floe-shadow-color').trim();
-  return !/^rgba\(.*, 0\)$|^transparent$/.test(c) && !s.boxShadow.split(/,(?![^(]*\))/).some((x) => x.trim().startsWith(c) && !x.includes('inset'));
-}).map((e) => e.tagName.toLowerCase() + '[' + (e.dataset.floePart || e.dataset.floeLook) + ']').filter((v, i, a) => a.indexOf(v) === i).join(' | ')`
+// measureCast finds each box that sets a shadow's colour but casts no shadow of that colour, as a box-shadow written
+// on it elsewhere wins over base.css's. It returns {seen, amiss}: the boxes that set a colour, and each casting none,
+// at its part (or look).
+const measureCast = `(() => {
+  ` + shadowAtJS + `
+  let seen = 0;
+  const out = new Set();
+  for (const e of document.querySelectorAll('[data-floe-part], [data-floe-look], blockquote')) {
+    const s = getComputedStyle(e), c = s.getPropertyValue('--floe-shadow-color').trim();
+    if (/^rgba\(.*, 0\)$|^transparent$/.test(c) || !c) continue;
+    seen++;
+    if (!s.boxShadow.split(/,(?![^(]*\))/).some((x) => x.trim().startsWith(c) && !x.includes('inset'))) {
+      out.add(JSON.stringify({ at: shadowAt(e), text: e.tagName.toLowerCase() + '[' + (e.dataset.floePart || e.dataset.floeLook || '') + '] casts no shadow of ' + c + ': ' + s.boxShadow }));
+    }
+  }
+  return JSON.stringify({ seen, amiss: [...out].map((l) => JSON.parse(l)) });
+})()`
 
 // exampleWidths are the widths a template's example is measured at: a phone's and the column at its widest, and a wide
 // screen for slides, whose content grows with the screen.
@@ -179,45 +191,33 @@ func exampleWidths(tmpl string) []int64 {
 	return []int64{480, 1600}
 }
 
-// lookShadows draws every part, and floe's templates with their parts one after another at the least room floe
-// leaves between parts, in every theme and in one of one's own whose shadow reaches that room on every side, at the
-// widths of a phone, a laptop, the column at its widest and slides on a wide screen: nothing a box draws outside
-// itself (a shadow, a strip of tape, an outline) reaches the page's edge, another box or the box it stands in;
-// every box that sets a shadow's colour casts it.
-// A box in one that casts a shadow casts none (the colour is the box's alone), and retro's cards keep the stripes
-// they draw inside themselves with --floe-inset.
-func lookShadows(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
-	s := newSite(t)
-	b := s.b
+// shadowPages visits every-part with shadowsExtra in every theme and in shadowsKit, and floe's templates' examples with
+// their parts one after another at the least room floe leaves between parts (shadowsQuote, shadowsMore) too when
+// examples, telling each page and the widths to measure it at.
+func shadowPages(t *testing.T, s *site, examples bool, visit func(what string, widths []int64)) {
+	t.Helper()
+
 	s.own(t, shadowsKit)
-	themes, err := os.ReadDir("../kit/floe/themes")
+	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := make([]string, 0, len(themes)+1)
-	for _, th := range themes {
-		names = append(names, th.Name())
-	}
+	_, _, names, _ := k.Names()
 	names = append(names, "edge")
-	everyPart := s.everyPart(t)
-	file := s.write(t, "every.yaml", everyPart+shadowsExtra)
-	widths := []int64{480, 1100, 1600, 2560}
-	amiss := make([]string, 0, len(names))
+	file := s.write(t, "every.yaml", s.everyPart(t)+shadowsExtra)
 	for _, name := range names {
 		s.floe(t, "publish", file, "--slug", "shadows-"+name, "--theme", name)
-		b.navigate("/a/shadows-" + name + "/?raw")
-		for _, w := range widths {
-			amiss = append(amiss, b.shadowsIn("every-part in "+name, w)...)
-		}
-		if lost := b.eval(measureCast); lost != "" {
-			amiss = append(amiss, "every-part in "+name+": no shadow cast by "+lost)
-		}
+		s.b.navigate("/a/shadows-" + name + "/?raw")
+		visit("every-part in "+name, []int64{480, 1100, 1600, 2560})
 	}
-	examples, err := filepath.Glob("../corpus/testdata/example/*.yaml")
+	if !examples {
+		return
+	}
+	files, err := filepath.Glob("../corpus/testdata/example/*.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, ex := range examples {
+	for _, ex := range files {
 		data, err := os.ReadFile(ex)
 		if err != nil {
 			t.Fatal(err)
@@ -231,17 +231,59 @@ func lookShadows(t *testing.T) { //nolint:paralleltest,thelper // a subtest of T
 		for _, name := range names {
 			slug := "shadows-" + tmpl + "-" + name
 			s.floe(t, "publish", f, "--slug", slug, "--theme", name)
-			b.navigate("/a/" + slug + "/?raw")
-			for _, w := range exampleWidths(tmpl) {
-				amiss = append(amiss, b.shadowsIn(tmpl+" in "+name, w)...)
-			}
+			s.b.navigate("/a/" + slug + "/?raw")
+			visit(tmpl+" in "+name, exampleWidths(tmpl))
 		}
 	}
-	check(t, "outside", amiss, "")
+}
 
-	b.navigate("/a/shadows-brutal/?raw")
-	check(t, "held", []string{b.eval(measureCellShadows)}, "rgba(0, 0, 0, 0) in rgb(10, 10, 10)")
-	b.navigate("/a/shadows-retro/?raw")
-	got := b.eval(`(() => { const s = getComputedStyle(document.querySelector('.card')).boxShadow; return (s.match(/inset/g) || []).length; })()`)
-	check(t, "retro's stripes", []string{got}, "3")
+const lookShadowsFix = "keep what a box draws outside itself (its shadow by --floe-shadow-*, an outline, a pseudo-element) within " +
+	"--floe-room on every side, with no transform or scale and taking no room"
+
+// lookShadows draws shadowPages at their widths, as shadowsIn measures: nothing a box draws outside itself (a shadow, a
+// strip of tape, an outline) reaches the page's edge, another box or the box it stands in.
+func lookShadows(t *testing.T, s *site) measured {
+	t.Helper()
+
+	var m measured
+	shadowPages(t, s, true, func(what string, widths []int64) {
+		for _, w := range widths {
+			m.add(s.b.shadowsIn(what, w))
+		}
+	})
+	return m
+}
+
+// brokenShadows draws a note in a theme of one's own whose palette spreads the shadow 40px, which base.css casts in the
+// colour its note.css sets.
+func brokenShadows(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	s.brokenPage(t, map[string]string{
+		"themes/loud/palette.css": ":root { --floe-shadow-spread: 40px; }\n",
+		"themes/loud/note.css":    ":scope { --floe-shadow-color: rgb(0 0 0 / 0.4); }\n",
+	}, themePage("loud", "- note: { text: loud }\n"))
+	return "note", s.b.shadowsIn("broken", 1100)
+}
+
+const lookShadowCastFix = "write no box-shadow on a box, part, look or quote: set --floe-shadow-color, and base.css's one rule casts it"
+
+// lookShadowCast draws every-part in every theme and in shadowsKit, as measureCast measures: every box that sets a
+// shadow's colour casts it, as base.css's one rule does.
+func lookShadowCast(t *testing.T, s *site) measured {
+	t.Helper()
+
+	var m measured
+	shadowPages(t, s, false, func(what string, _ []int64) { m.add(s.b.measure(what, measureCast)) })
+	return m
+}
+
+// brokenShadowCast draws a note in a theme of one's own whose note.css sets a shadow's colour and writes a box-shadow of
+// its own, which wins over base.css's.
+func brokenShadowCast(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	s.brokenPage(t, map[string]string{"themes/cast/note.css": ":scope { --floe-shadow-color: rgb(0 0 0 / .4); box-shadow: 0 1px 0 red; }\n"},
+		themePage("cast", "- note: { text: cast }\n"))
+	return "note", s.b.measure("broken", measureCast)
 }
