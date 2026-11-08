@@ -3,6 +3,7 @@ package browsertest_test
 import (
 	"bytes"
 	"encoding/json"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -220,5 +221,13 @@ func brokenTemplateMarkdown(t *testing.T, s *site) (string, measured) {
 		"templates/tm/example.yaml": "lang: en\ntemplate: tm\nintro: x\n",
 	})
 	data := "template: tm\nlang: en\ntitle: T\nintro: |\n  " + strings.ReplaceAll(strings.TrimSuffix(headingsMarkdown, "\n"), "\n", "\n  ") + "\n  said\n"
-	return "tm", headings(t, s, "tm", "broken", data, 1, want)
+	m := headings(t, s, "tm", "broken", data, 1, want)
+	// A heading not drawn is amiss at the template too: the page must draw them, and one drawn otherwise.
+	if m.seen == 0 {
+		t.Fatal("tm's page draws no heading to measure")
+	}
+	if !slices.ContainsFunc(m.amiss, func(a amiss) bool { return !strings.HasPrefix(a.Text, "none,") }) {
+		t.Error("tm's page draws no heading otherwise than a text: the measure no longer sees letter-spacing")
+	}
+	return "tm", m
 }
