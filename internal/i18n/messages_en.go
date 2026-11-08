@@ -479,7 +479,11 @@ var messagesEN = map[string]string{
 	"ui_unarchive_bulk_failed": "%d could not be restored (%s) and stay selected.",
 
 	"ui_tags":             "Tags",
-	"ui_tags_hint":        "separated by commas",
+	"ui_tag_one_title":    "Tags of “%s”",
+	"ui_tag_add_named":    "Tag %s",
+	"ui_tag_change_named": "Change the tags of %s",
+	"ui_tag_done":         "Changed the tags of “%s”",
+	"ui_tag_failed":       "Failed to change the tags of “%s”: %s",
 	"ui_tag_filter_named": "Show the pages tagged %s",
 	"ui_tag_bulk_title":   "Tags of the %d selected",
 	"ui_tag_find":         "Find or make a tag",
