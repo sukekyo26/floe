@@ -62,9 +62,11 @@ const ringOf = `(() => {
       if (!top || !x.contains(top)) continue;
       if (q.left < box.right && q.right > box.left && q.top < box.bottom && q.bottom > box.top) out.push('reaches ' + name(x));
     }
-    // The ground it is drawn on ends where the nearest box painting one does: past that edge it would stand on another
+    // The ground it is drawn on ends where the nearest box painting one does: past that edge it would stand on another. The
+    // root's and the body's paint the whole window, past their boxes
+    // LIMIT: a ground is told by background-color alone; one of a background-image, a gradient or a ::before is not seen
     const painted = [...chain].reverse().find((x) => rgba(getComputedStyle(x).backgroundColor)[3] > 0);
-    if (painted) {
+    if (painted && painted !== document.documentElement && painted !== document.body) {
       const q = painted.getBoundingClientRect();
       if (box.left < q.left - 0.5 || box.right > q.right + 0.5 || box.top < q.top - 0.5 || box.bottom > q.bottom + 0.5) {
         out.push('leaves the ground of ' + name(painted));
