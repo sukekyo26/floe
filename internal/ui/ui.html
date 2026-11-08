@@ -734,6 +734,18 @@
   .field { display: grid; gap: 0.35rem; font-size: var(--text-small); font-weight: 600; }
   .field small { font-weight: 400; color: var(--faint); }
   .field .path { font-family: var(--mono); }
+  /* The steps of the task edit dialog, reordered by their buttons, or by a drag from the grip where there is a pointer that hovers */
+  .step-order { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: var(--corner-small); overflow: hidden; }
+  .step-order li { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0.4rem 0.2rem 0.6rem; font-weight: 600; background: var(--panel); }
+  .step-order li + li { border-top: 1px solid var(--line); }
+  .step-order .step-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .step-order .step-grip { display: inline-flex; color: var(--faint); cursor: grab; touch-action: none; }
+  .step-order .step-grip svg { width: 14px; height: 14px; }
+  .step-order .icon-btn:disabled { opacity: 0.35; }
+  .step-order li.drop-before { box-shadow: inset 0 2px 0 var(--ink); }
+  .step-order li.drop-after { box-shadow: inset 0 -2px 0 var(--ink); }
+  @media (hover: none) { .step-order .step-grip { display: none; } }
+  .step-none { margin: 0; font-weight: 400; color: var(--muted); }
   .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; padding-top: 1rem; margin-top: 0.25rem; border-top: 1px solid var(--line); }
   /* Only the rows of the filters scroll, their foot in sight: the height a dialog may have, of its own rule in the browser */
   #filter-box { grid-template-rows: auto minmax(0, 1fr) auto; max-height: calc(100dvh - 6px - 2rem); }
@@ -833,6 +845,7 @@
   .shell.task-missing .reader, .shell.task-missing #list-grip, .shell.task-missing .listcol > .col-foot { display: none; }
   .thead { flex: none; display: grid; gap: 0.35rem; padding: 0.5rem 1rem 0.65rem; background: var(--panel); border-bottom: 1px solid var(--line); }
   .ttop { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .tacts { display: flex; gap: 0.5rem; }
   /* A press's height: it stands right under the bar's tabs, which a small one sends the press to */
   .up { justify-self: start; display: inline-flex; align-items: center; gap: 0.15rem; height: 2.25rem; margin-left: -0.25rem; font-size: var(--text-small); color: var(--muted); text-decoration: none; }
   .up:hover { color: var(--fg); text-decoration: underline; }
@@ -1022,7 +1035,10 @@
       <div class="thead" id="task-head" hidden>
         <div class="ttop">
           <a class="up" id="task-up" href="/tasks" title="{{.Msg "ui_tasks_back"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>{{.Msg "ui_screen_tasks"}}</a>
-          <button type="button" class="btn" id="task-archive" hidden></button>
+          <span class="tacts">
+            <button type="button" class="btn" id="task-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>{{.Msg "ui_edit"}}</button>
+            <button type="button" class="btn" id="task-archive" hidden></button>
+          </span>
         </div>
         <h2 id="task-title"></h2>
         <div class="tstate">
@@ -1262,17 +1278,40 @@
     <label class="field"><span>{{.Msg "ui_task_step"}} <small>{{.Msg "ui_optional"}}</small></span>
       <input class="text" id="set-step" autocomplete="off" placeholder="{{.Msg "ui_task_step_example"}}">
     </label>
-    <label class="field"><span>{{.Msg "ui_task_parent"}} <small>{{.Msg "ui_optional"}}</small></span>
-      <input class="text" id="set-parent" autocomplete="off" spellcheck="false" placeholder="{{.Msg "ui_task_id_example"}}">
-    </label>
-    <label class="field"><span>{{.Msg "ui_task_url"}} <small>{{.Msg "ui_optional"}}</small></span>
-      <input class="text path" id="set-url" autocomplete="off" spellcheck="false" placeholder="https://">
-    </label>
     <p class="error" id="set-error" hidden></p>
     <div class="dialog-actions set-foot">
       <button type="button" class="btn set-out" id="set-out">{{.Msg "ui_task_out"}}</button>
       <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
       <button type="submit" class="btn primary" id="set-submit">{{.Msg "ui_save"}}</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="edit-task-dialog" aria-labelledby="edit-task-heading">
+  <form class="modal-body" id="edit-task">
+    <div class="modal-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg>
+      <div>
+        <h2 id="edit-task-heading">{{.Msg "ui_task_edit"}}</h2>
+        <p class="lead" id="edit-task-target"></p>
+      </div>
+    </div>
+    <label class="field">{{.Msg "ui_task_title"}}
+      <input class="text" id="edit-task-title" autocomplete="off">
+    </label>
+    <label class="field"><span>{{.Msg "ui_task_url"}} <small>{{.Msg "ui_optional"}}</small></span>
+      <input class="text path" id="edit-task-url" autocomplete="off" spellcheck="false" placeholder="https://">
+    </label>
+    <div class="field">
+      <span id="edit-steps-head">{{.Msg "ui_task_steps"}}</span>
+      <ol class="step-order" id="edit-steps" aria-labelledby="edit-steps-head" aria-describedby="edit-steps-hint"></ol>
+      <p class="step-none" id="edit-steps-none" hidden>{{.Msg "ui_task_steps_none"}}</p>
+      <small id="edit-steps-hint">{{.Msg "ui_task_steps_hint"}}</small>
+      <p class="sr-only" id="edit-steps-said" aria-live="polite"></p>
+    </div>
+    <p class="error" id="edit-task-error" role="alert" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close>{{.Msg "ui_close"}}</button>
+      <button type="submit" class="btn primary" id="edit-task-submit">{{.Msg "ui_save"}}</button>
     </div>
   </form>
 </dialog>
@@ -3529,18 +3568,27 @@
   // and last what is archived. Within each, as first published
   // LIMIT: when a step first came is not kept: a step's oldest page says it, so that a new step on an old page comes earlier. --steps orders it
   function taskGroups(task) {
-    const made = (a) => Date.parse(a.createdAt || a.updatedAt);
     const steps = new Map();
     const none = [];
-    for (const a of [...task.pages].sort((x, y) => made(x) - made(y))) {
+    for (const a of [...task.pages].sort((x, y) => madeAt(x) - madeAt(y))) {
       if (!a.work.step) none.push(a);
       else steps.set(a.work.step, [...(steps.get(a.work.step) ?? []), a]);
     }
-    const written = (task.steps ?? []).filter((step) => steps.has(step));
     const groups = [{ entries: none }];
-    for (const heading of [...written, ...[...steps.keys()].filter((step) => !written.includes(step))]) groups.push({ heading, entries: steps.get(heading) });
-    if (task.archived.length > 0) groups.push({ heading: t('ui_state_archived'), entries: [...task.archived].sort((x, y) => made(x) - made(y)) });
+    for (const heading of stepOrder(task).filter((step) => steps.has(step))) groups.push({ heading, entries: steps.get(heading) });
+    if (task.archived.length > 0) groups.push({ heading: t('ui_state_archived'), entries: [...task.archived].sort((x, y) => madeAt(x) - madeAt(y)) });
     return groups;
+  }
+  const madeAt = (a) => Date.parse(a.createdAt || a.updatedAt);
+  // A task's steps in order, as its page groups its pages and its edit dialog orders them: the steps written, in their order, those of no page
+  // too, then those of its pages alone, by the oldest page of each. The archived pages are not counted, as they are grouped apart
+  function stepOrder(task) {
+    const written = task.steps ?? [];
+    const rest = [];
+    for (const a of [...task.pages].sort((x, y) => madeAt(x) - madeAt(y))) {
+      if (a.work.step && !written.includes(a.work.step) && !rest.includes(a.work.step)) rest.push(a.work.step);
+    }
+    return [...written, ...rest];
   }
 
   // A browser without base-select has no :open, and its own list goes on over what is drawn
@@ -3573,6 +3621,9 @@
     drawProject($('task-project'), projectWord(task.project), taskProjectColor(task.project));
     $('task-up').href = taskListHref(task);
     drawTaskFamily(task);
+    $('task-edit').setAttribute('aria-label', t('ui_task_edit_named', task.name));
+    $('task-edit').title = t('ui_task_edit_named', task.name);
+    $('task-edit').onclick = () => openTaskEdit(task);
     const archive = $('task-archive');
     const back = task.state === 'archived';
     archive.hidden = !back && task.state !== 'done';
@@ -3799,7 +3850,7 @@
     openKin({ project: chosen }, 'add', true);
   }
   // The dialog's task as the tasks read now have it, its parent written above all, and what it says of it: as it opens, and refused as
-  // stale, as the set dialog's setTaskChanged
+  // stale
   function kinTaskChanged() {
     const { task, form, ask } = kinOf;
     kinOf.task = tasksOf().find((y) => y.project === task.project && y.name === task.name) ?? task;
@@ -4982,42 +5033,27 @@
   let setOpened;
   // The task the dialog last showed for the name, which saving sends as new or not, as the child's dialog does
   let setShown;
-  let setUrlTouched = false;
   let setBack;
   const setTaskOf = (name) => tasksOf().find((task) => task.project === setPage.taskProject && task.name === name.trim());
   // The tasks are read as it opens: a page whole does not read them
   async function openTaskSet(a) {
     setPage = a;
-    setUrlTouched = false;
     if (framed) tasksRead = await readTasks();
     resetTaskForm($('set'));
     $('set-target').textContent = a.title;
     $('set-task').value = a.work?.task ?? '';
     $('set-step').value = a.work?.step ?? '';
     setOpened = { task: $('set-task').value, step: $('set-step').value };
-    setTaskChanged();
+    setTaskKnown();
     $('set-out').hidden = !a.work?.task;
     $('set-error').textContent = tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '';
     $('set-error').hidden = !tasksRead.error;
     $('set-dialog').showModal();
   }
-  // Each name written shows that task's URL, or none for a new one; one changed by hand was of the name before, and would take that task's away unseen
-  function setTaskChanged() {
-    setUrlTouched = false;
-    $('set-url').value = setTaskOf($('set-task').value)?.url ?? '';
-    fillTaskParent();
-    setTaskKnown();
-  }
   // Whether the name is of a task there, which asks no title, as the store checks it (new): of the fields, only the title's
   function setTaskKnown() {
     setShown = setTaskOf($('set-task').value);
     titleField($('set-task-title'), !setShown);
-  }
-  // What the field was given, which saving compares with: a parent another session wrote meanwhile is not taken off by a field left alone, nor is an
-  // empty parent sent for a new name, which has no row to take it off
-  function fillTaskParent() {
-    setOpened.parent = setTaskOf($('set-task').value)?.parent ?? '';
-    $('set-parent').value = setOpened.parent;
   }
   // A task's fields as they open: none of what was typed before, nor a field's blank mark
   function resetTaskForm(form) {
@@ -5074,8 +5110,9 @@
     $('set-error').textContent = t('ui_save_failed', reason);
     $('set-error').hidden = false;
   };
-  // The task first and the page then, as floe work writes them.
-  // LIMIT: the page refused, the dialog closed, what was written of the task stays: the URL changed, a new name's row of no page, which --forget removes
+  // The task first and the page then, as floe work writes them. The task's own fields are its page's to write (openTaskEdit): this writes the
+  // page's step on it, and a new name's title.
+  // LIMIT: the page refused, the dialog closed, what was written of the task stays: a new name's row of no page, which --forget removes
   async function saveTaskSet(e) {
     e.preventDefault();
     const btn = $('set-submit');
@@ -5086,23 +5123,19 @@
     // The state it comes to be under stays what it was: said, as it may not be the list the person has in mind
     const state = setShown?.state ?? STATES.find((x) => x.new).name;
     const step = $('set-step').value.trim();
-    const parent = $('set-parent').value.trim();
     const moved = task.trim() !== setOpened.task || step !== setOpened.step;
     const fresh = !setShown;
     const body = {
       // A task there is written as the dialog shows it (rev)
       new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : { rev: setShown.rev }),
-      ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}),
-      // The parent sent only as changed. Whether the one named is there is said only when it is known: a name not known may be mistyped,
-      // which the store refuses as no parent
-      ...(parent !== setOpened.parent.trim() ? { parent, ...(parent && setTaskOf(parent) ? { parentNew: false } : {}) } : {}),
+      ...(step && moved ? { step } : {}),
     };
     try {
       if (!taskFormReady($('set'), $('set-error'))) return;
       const res = await writeTask(page.taskProject, task, body);
-      // Each field as it opens for the name, as the URL and parent shown were of what is no longer so
+      // Whether the name is of a task there, as read again: a title asked of a new one alone
       if (res.status === 409) {
-        setTaskChanged();
+        setTaskKnown();
         throw new Error(res.stale);
       }
       if (!res.ok) throw new Error(res.text);
@@ -5127,6 +5160,130 @@
       btn.disabled = false;
     }
   }
+  // The task edit dialog: an existing task's own fields, its title, URL and the order of its steps, as its page alone writes them; the
+  // parent is the family card's. What it was opened over (base) is what saving compares with, and the rev it was read at
+  let taskEditing;
+  const sameSteps = (x, y) => x.join('\n') === y.join('\n');
+  const editStepsNow = () => [...$('edit-steps').children].map((li) => li.dataset.step);
+  // What the dialog shows of task, read now: the tasks read hold it as the page draws it
+  const editBase = (task) => ({ title: task.title ?? '', url: task.url ?? '', steps: stepOrder(task) });
+  function openTaskEdit(task) {
+    taskEditing = { project: task.project, name: task.name, rev: readRev(task.project, task.name), had: hasRow(task), base: editBase(task) };
+    $('edit-task-target').textContent = task.name;
+    $('edit-task-title').value = taskEditing.base.title;
+    $('edit-task-url').value = taskEditing.base.url;
+    drawEditSteps(task, taskEditing.base.steps);
+    $('edit-task-error').hidden = true;
+    $('edit-task-submit').disabled = false;
+    $('edit-steps-said').textContent = '';
+    $('edit-task-dialog').showModal();
+  }
+  // The steps as rows, each with its name, whether no page is under it, and its buttons up and down; the grip drags it
+  function drawEditSteps(task, order) {
+    const paged = new Set(task.pages.map((a) => a.work.step).filter(Boolean));
+    $('edit-steps').replaceChildren(...order.map((name) => {
+      const li = document.createElement('li');
+      li.dataset.step = name;
+      const grip = tagged('span', 'step-grip');
+      grip.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
+      const word = tagged('span', 'step-name', name);
+      if (!paged.has(name)) word.append(' ', tagged('small', '', t('ui_step_no_pages')));
+      const upBtn = tagged('button', 'icon-btn step-up');
+      upBtn.type = 'button';
+      upBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>';
+      upBtn.setAttribute('aria-label', t('ui_step_up_named', name));
+      upBtn.title = upBtn.getAttribute('aria-label');
+      const downBtn = tagged('button', 'icon-btn step-down');
+      downBtn.type = 'button';
+      downBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+      downBtn.setAttribute('aria-label', t('ui_step_down_named', name));
+      downBtn.title = downBtn.getAttribute('aria-label');
+      li.append(grip, word, upBtn, downBtn);
+      return li;
+    }));
+    $('edit-steps').hidden = order.length === 0;
+    $('edit-steps-none').hidden = order.length > 0;
+    $('edit-steps-hint').hidden = order.length === 0;
+    markStepEnds();
+  }
+  // The first row's up and the last row's down move nothing
+  function markStepEnds() {
+    const rows = [...$('edit-steps').children];
+    rows.forEach((li, i) => {
+      li.querySelector('.step-up').disabled = i === 0;
+      li.querySelector('.step-down').disabled = i === rows.length - 1;
+    });
+  }
+  // Moves the row li before ref (null: last), says where it went, and gives the focus back to the button pressed, as moving the row drops it:
+  // or to the row's other button, the one pressed moving nothing more
+  function moveStep(li, ref, pressed) {
+    if (ref === li) return;
+    $('edit-steps').insertBefore(li, ref);
+    markStepEnds();
+    const rows = [...$('edit-steps').children];
+    $('edit-steps-said').textContent = t('ui_step_moved', li.dataset.step, rows.indexOf(li) + 1, rows.length);
+    if (!pressed) return;
+    const on = li.querySelector(pressed);
+    (on.disabled ? li.querySelector(pressed === '.step-up' ? '.step-down' : '.step-up') : on).focus();
+  }
+  // The dialog over the task as read again: refused as stale, what was changed in it stays, and the rest is as read now. The steps reordered
+  // keep their order, without those gone and with those come after. A row removed meanwhile is not made again: the dialog says so
+  function refillTaskEdit() {
+    const task = tasksOf().find((x) => x.project === taskEditing.project && x.name === taskEditing.name);
+    if (!task || (taskEditing.had && !hasRow(task))) {
+      $('edit-task-error').textContent = t('ui_task_gone_edit');
+      $('edit-task-error').hidden = false;
+      $('edit-task-submit').disabled = true;
+      return false;
+    }
+    const was = taskEditing.base;
+    const now = editBase(task);
+    if ($('edit-task-title').value.trim() === was.title) $('edit-task-title').value = now.title;
+    if ($('edit-task-url').value.trim() === was.url) $('edit-task-url').value = now.url;
+    const order = editStepsNow();
+    const steps = sameSteps(order, was.steps) ? now.steps : [...order.filter((x) => now.steps.includes(x)), ...now.steps.filter((x) => !order.includes(x))];
+    drawEditSteps(task, steps);
+    taskEditing = { ...taskEditing, rev: readRev(task.project, task.name), had: hasRow(task), base: now };
+    return true;
+  }
+  // Sends what was changed since it opened, nothing when nothing was, with the rev it showed
+  async function saveTaskEdit(e) {
+    e.preventDefault();
+    if (!taskFormReady($('edit-task'), $('edit-task-error'))) return;
+    const { base } = taskEditing;
+    const title = $('edit-task-title').value.trim();
+    const url = $('edit-task-url').value.trim();
+    const steps = editStepsNow();
+    const body = {
+      new: false, rev: taskEditing.rev,
+      ...(title !== base.title ? { title } : {}), ...(url !== base.url ? { url } : {}), ...(!sameSteps(steps, base.steps) ? { steps } : {}),
+    };
+    if (Object.keys(body).length === 2) {
+      $('edit-task-dialog').close();
+      return;
+    }
+    const btn = $('edit-task-submit');
+    btn.disabled = true;
+    let gone = false;
+    try {
+      const res = await writeTask(taskEditing.project, taskEditing.name, body);
+      if (res.status === 409) {
+        gone = !refillTaskEdit();
+        if (!gone) throw new Error(res.stale);
+        return;
+      }
+      if (!res.ok) throw new Error(t('ui_save_failed', res.text));
+      toast(t('ui_saved'));
+      await load();
+      $('edit-task-dialog').close();
+    } catch (err) {
+      $('edit-task-error').textContent = err.message;
+      $('edit-task-error').hidden = false;
+    } finally {
+      if (!gone) btn.disabled = false;
+    }
+  }
+
   // The page alone: its pin stays, and the task's row
   async function takeOffTask() {
     const reason = await patchOne(setPage.slug, { work: { task: '', step: '' } });
@@ -5483,7 +5640,52 @@
   $('task-delete').addEventListener('blur', disarmForget);
   $('set-out').addEventListener('click', takeOffTask);
   $('set-dialog').addEventListener('close', () => setBack?.()?.focus());
-  $('set-task').addEventListener('input', setTaskChanged);
+  $('edit-task').addEventListener('submit', saveTaskEdit);
+  $('edit-task').addEventListener('input', () => { $('edit-task-error').hidden = true; });
+  $('edit-steps').addEventListener('click', (e) => {
+    const btn = e.target.closest('.step-up, .step-down');
+    if (!btn || btn.disabled) return;
+    const li = btn.closest('li');
+    moveStep(li, btn.classList.contains('step-up') ? li.previousElementSibling : li.nextElementSibling?.nextElementSibling ?? null, btn.classList.contains('step-up') ? '.step-up' : '.step-down');
+  });
+  // A drag of a step's grip: the row goes before the row it is dropped on, or after it in its lower half. Only the grip makes a row draggable,
+  // and a screen without a pointer that hovers shows none
+  let dragged = null;
+  const dropMarks = () => { for (const li of $('edit-steps').children) li.classList.remove('drop-before', 'drop-after'); };
+  const dropAt = (e) => {
+    const li = e.target.closest?.('#edit-steps > li');
+    if (!li || li === dragged) return null;
+    const box = li.getBoundingClientRect();
+    return { li, after: e.clientY > box.top + box.height / 2 };
+  };
+  $('edit-steps').addEventListener('pointerdown', (e) => {
+    const li = e.target.closest('.step-grip')?.closest('li');
+    if (li) li.draggable = true;
+  });
+  $('edit-steps').addEventListener('dragstart', (e) => {
+    dragged = e.target.closest('li');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragged.dataset.step);
+  });
+  $('edit-steps').addEventListener('dragover', (e) => {
+    if (!dragged) return;
+    e.preventDefault();
+    dropMarks();
+    const at = dropAt(e);
+    at?.li.classList.add(at.after ? 'drop-after' : 'drop-before');
+  });
+  $('edit-steps').addEventListener('drop', (e) => {
+    if (!dragged) return;
+    e.preventDefault();
+    const at = dropAt(e);
+    if (at) moveStep(dragged, at.after ? at.li.nextElementSibling : at.li, null);
+  });
+  $('edit-steps').addEventListener('dragend', () => {
+    if (dragged) dragged.draggable = false;
+    dragged = null;
+    dropMarks();
+  });
+  $('set-task').addEventListener('input', setTaskKnown);
   // Offers tasks of a project by name, as the fields that name a task do: what each is in, which a long title does not cut (a task done is
   // under another view than the list's first, and looked for there), and its parent
   function suggestTasks(input, projectOf, offered, put, more) {
@@ -5504,12 +5706,10 @@
       ...more,
     });
   }
-  $('set-url').addEventListener('input', () => { setUrlTouched = true; });
   suggestTasks($('set-task'), () => setPage.taskProject, () => true, (name) => {
     $('set-task').value = name;
-    setTaskChanged();
+    setTaskKnown();
   }, { fresh: (name) => ({ name, label: t('ui_task_new', name) }) });
-  suggestTasks($('set-parent'), () => setPage.taskProject, (x) => mayParent(x, $('set-task').value.trim()), (name) => { $('set-parent').value = name; }, { onFocus: true });
   suggestTasks($('kin-task'), () => kinOf.task.project, (x) => kinOf.form.offered(kinOf.task, x), (name) => {
     $('kin-task').value = name;
     kinNameChanged();

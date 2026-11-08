@@ -461,9 +461,9 @@ func TestUITaskUpRoom(t *testing.T) { //nolint:paralleltest // the browser tests
 	}
 }
 
-// The field of a parent: given the task's, changed by the name, sent only when it differs from what it was given; what
-// may be a parent is offered; a refusal keeps the dialog and the page as they were.
-func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+// The set dialog's fields and a new task's title: asked of a new name alone, of more than spaces; stale either way, refused and read again;
+// unreadable, nothing is sent. It has no field of the task's parent or URL, which its page writes.
+func TestUITaskSetTitle(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
 	st := store.New(s.Env["FLOE_DIR"])
@@ -482,14 +482,6 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 	s.floe(t, "work", "--project", "proj", "--task", "#AB")
 	b.size(1400, 800, false)
 	defer b.unsize()
-	parents := func() string {
-		t.Helper()
-		all, err := st.ReadTasks()
-		if err != nil {
-			t.Fatal(err)
-		}
-		return all["proj"]["#1"].Parent + "|" + all["proj"]["#2"].Parent + "|" + all["proj"]["#3"].Parent
-	}
 	dialog := func(slug string) {
 		t.Helper()
 		b.navigate("/?project=proj")
@@ -509,105 +501,17 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 		b.eval("document.getElementById('set').requestSubmit()")
 		b.until("saved", "!document.getElementById('set-dialog').open")
 	}
-	value := func(id string) string {
-		t.Helper()
-		return b.eval("document.getElementById(" + js(id) + ").value")
-	}
-
-	// What the task has, and on the name changing what that one has, and of a new name nothing.
-	dialog("c")
-	if got := value("set-parent"); got != "#1" {
-		t.Errorf("as it opens: %q", got)
-	}
-	field("set-task", "#2")
-	if got := value("set-parent"); got != "" {
-		t.Errorf("of #2: %q", got)
-	}
-	field("set-task", "#3")
-	if got := value("set-parent"); got != "#1" {
-		t.Errorf("back on #3: %q", got)
-	}
-
-	// Offered: of a row, of no parent, not itself; no new name.
-	field("set-parent", "#")
-	if got := b.eval("[...document.getElementById('set-parent-names').children].map((e) => e.textContent.split('·')[0].trim()).join(', ')"); got != "#1 one, #12, #2, #AB" {
-		t.Errorf("offered: %q", got)
-	}
-	open := func(value string) string {
-		t.Helper()
-		field("set-parent", value)
-		return b.eval("document.getElementById('set-parent-names').matches(':popover-open') + ''")
-	}
-	// Closed on a whole name, in any case, but one that goes on to another.
-	if got := open("#1"); got != "true" {
-		t.Errorf("#1, of which #12 goes on: %s", got)
-	}
-	if got := open("#12"); got != "false" {
-		t.Errorf("#12: %s", got)
-	}
-	if got := open("#ab"); got != "false" {
-		t.Errorf("#ab: %s", got)
-	}
-	field("set-parent", "#9")
-	if got := b.eval("document.getElementById('set-parent-names').matches(':popover-open') + ''"); got != "false" {
-		t.Errorf("offered of #9: %s", got)
-	}
-	b.eval("document.getElementById('set-dialog').close()")
-
-	// Set, and refused with the dialog open and nothing written.
-	dialog("b")
-	field("set-parent", " #1 ")
-	save()
-	if got := parents(); got != "|#1|#1" {
-		t.Errorf("set: %q", got)
-	}
-	dialog("a")
-	field("set-parent", "#2")
-	b.eval("document.getElementById('set').requestSubmit()")
-	b.until("refused", "!document.getElementById('set-error').hidden")
-	if got := b.eval("document.getElementById('set-error').textContent"); !strings.Contains(got, "task #2 has a parent itself (#1)") {
-		t.Errorf("refused: %q", got)
-	}
-	if got := parents(); got != "|#1|#1" {
-		t.Errorf("after the refusal: %q", got)
-	}
-	b.eval("document.getElementById('set-dialog').close()")
-
-	// Emptied, it comes off.
-	dialog("b")
-	field("set-parent", "")
-	save()
-	if got := parents(); got != "||#1" {
-		t.Errorf("emptied: %q", got)
-	}
-
-	// A task written meanwhile, its parent set: refused, the fields opened again of it; a field left alone then sends nothing, and the parent
-	// stays.
-	dialog("b")
-	s.floe(t, "work", "--project", "proj", "--task", "#2", "--parent", "#1")
-	field("set-step", "later")
-	b.eval("document.getElementById('set').requestSubmit()")
-	b.until("refused", "!document.getElementById('set-error').hidden")
-	if got := b.eval("document.getElementById('set-parent').value"); got != "#1" {
-		t.Errorf("the parent opened again: %q", got)
-	}
-	save()
-	if got := parents(); got != "|#1|#1" {
-		t.Errorf("written meanwhile: %q", got)
-	}
 
 	// The fields' words, and the example the catalog gives.
 	dialog("a")
-	if got := b.eval("[document.getElementById('set-task').placeholder, document.getElementById('set-parent').placeholder, document.getElementById('set-task').closest('label').textContent.trim(), document.getElementById('set-task-title').closest('label').textContent.trim(), document.getElementById('set-step').placeholder].join('|')"); got != "e.g. #128|e.g. #128|Task ID|Title|e.g. design, build, review" {
+	if got := b.eval("[document.getElementById('set-task').placeholder, document.getElementById('set-task').closest('label').textContent.trim(), document.getElementById('set-task-title').closest('label').textContent.trim(), document.getElementById('set-step').placeholder, document.querySelectorAll('#set-dialog input').length].join('|')"); got != "e.g. #128|Task ID|Title|e.g. design, build, review|3" {
 		t.Errorf("the fields: %q", got)
 	}
 	b.eval("document.getElementById('set-dialog').close()")
 
-	// A new name, its parent typed and emptied, is refused nothing.
+	// A new name is made, its title given.
 	dialog("a")
 	field("set-task", "#7")
-	field("set-parent", "#1")
-	field("set-parent", "")
 	save()
 	if got := st.ReadMeta("a").Work.Task; got != "#7" {
 		t.Errorf("a new name: %q", got)
@@ -672,8 +576,7 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 		t.Errorf("after the stale: %+v %+v", all["proj"]["#90"], all["proj"]["#91"])
 	}
 	// Shown new, then made and read before the press: sent as new, as shown, and refused, not put on theirs unseen.
-	// Refused, every field is as it opens for the name: the URL and the parent are theirs.
-	s.floe(t, "work", "--project", project, "--task", "#1", "--url", "https://example.com/one")
+	// Refused, the title is not asked of it any more.
 	dialog("c")
 	field("set-task", "#93")
 	field("set-task-title", "mine")
@@ -682,7 +585,7 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 	b.until("#93 read", "tasksOf().some((x) => x.name === '#93')")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("refused", "!document.getElementById('set-error').hidden")
-	if got := b.eval("document.getElementById('set-error').textContent.includes('task #93 is there already') + '|' + " + shown + " + '|' + document.getElementById('set-url').value + '|' + document.getElementById('set-parent').value"); got != "true|false|https://example.com/theirs|#1" {
+	if got := b.eval("document.getElementById('set-error').textContent.includes('task #93 is there already') + '|' + " + shown); got != "true|false" {
 		t.Errorf("made meanwhile: %q", got)
 	}
 	b.eval("document.getElementById('set-dialog').close()")

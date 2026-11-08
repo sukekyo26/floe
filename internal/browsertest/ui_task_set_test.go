@@ -10,9 +10,9 @@ import (
 	"github.com/sukekyo26/floe/internal/store"
 )
 
-// A page's menu pins it and sets its task, in the order floe work writes; what a person did not change of the URL is not sent, so that one
-// set since stays; a name of no task is a new one, and takes no URL; what is refused keeps the dialog open; off a task, the pin stays. The page
-// list's rows lead to the task and the task list.
+// A page's menu pins it and sets its task and step, in the order floe work writes; the task's own fields are its page's (TestUITaskEdit), so
+// the dialog has none of its parent or URL; a name of no task is a new one; what is refused keeps the dialog open; off a task, the pin stays.
+// The page list's rows lead to the task and the task list.
 func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -71,7 +71,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Helper()
 		b.eval("document.getElementById(" + js(id) + ").value = " + js(value) + "; document.getElementById(" + js(id) + ").dispatchEvent(new Event('input', { bubbles: true }))")
 	}
-	const fields = "['set-task', 'set-step', 'set-url'].map((id) => document.getElementById(id).value).join(' / ') + ' / out ' + !document.getElementById('set-out').hidden"
+	const fields = "['set-task', 'set-step'].map((id) => document.getElementById(id).value).join(' / ') + ' / out ' + !document.getElementById('set-out').hidden"
 	save := func() {
 		t.Helper()
 		// A new task asks a title: one is given where none is typed, the asking itself tested apart
@@ -100,43 +100,34 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("pinned", "document.querySelector('#list li[data-slug=a] .task-tag').textContent + ' ' + document.querySelector('#list li[data-slug=a] .task-tag').getAttribute('href') + ' ' + document.querySelector('#list li[data-slug=a] .pin-item').textContent")
 	out = append(out, "pinned: "+work("a"))
 
-	// A name of no task: new, doing, with no URL though the page before showed one; the suggestions name what there is, and say it is new.
+	// A name of no task: new, doing; the suggestions name what there is, and say it is new. The dialog has no field of a task's parent or URL.
 	dialog("a")
 	say("a page of none", fields)
-	field("set-task", "#1")
-	say("the name of a task brings its URL", fields)
+	say("no parent nor URL", "String(document.querySelector('#set-dialog #set-parent, #set-dialog #set-url'))")
 	field("set-task", "#3")
-	say("a new name takes it away", fields)
 	b.until("the suggestions", "document.getElementById('set-task-names').matches(':popover-open') || (document.getElementById('set-task').focus(), false)")
 	say("offered", "[...document.getElementById('set-task-names').children].map((e) => e.textContent).join(', ')")
 	field("set-step", "first")
 	save()
 	out = append(out, "new task: "+work("a"), tasks())
 
-	// A task written since the dialog opened, its URL set: refused, the fields opened again of it, and saved then; a URL changed is.
+	// A task written since the dialog opened: refused, and saved then, as the dialog shows it read again.
 	dialog("b")
 	say("a page of a task", fields)
 	s.floe(t, "work", "--task", "#1", "--project", "proj", "--url", "https://example.com/later")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("refused", "!document.getElementById('set-error').hidden")
-	say("written meanwhile", "document.getElementById('set-error').textContent + ' / ' + document.getElementById('set-url').value")
+	say("written meanwhile", "document.getElementById('set-error').textContent")
 	save()
-	out = append(out, "a URL set meanwhile: "+tasks())
-	dialog("b")
-	field("set-url", "https://example.com/mine")
-	save()
-	out = append(out, "a URL changed: "+tasks())
-	dialog("b")
-	field("set-url", "")
-	save()
-	out = append(out, "a URL emptied: "+tasks())
+	out = append(out, "written meanwhile, saved: "+tasks())
 
 	// What is refused keeps the dialog open, says why; nothing of the page changes.
 	was := work("b")
 	dialog("b")
-	field("set-url", "javascript:alert(1)")
+	b.eval(`window.realFetch = window.fetch; window.fetch = (url, init) => (String(url).includes('/api/tasks') && init?.method === 'PATCH' ? Promise.resolve(new Response('no', { status: 400 })) : window.realFetch(url, init))`)
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("the refusal", "!document.getElementById('set-error').hidden")
+	b.eval("window.fetch = window.realFetch")
 	say("refused", "document.getElementById('set-dialog').open + ' ' + document.getElementById('set-error').textContent")
 	if got := work("b"); got != was {
 		t.Errorf("a refusal changed the page: %s", got)
@@ -238,11 +229,6 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		"const f = document.getElementById('set-task').getBoundingClientRect(), r = document.getElementById('set-task-names').getBoundingClientRect(); "+
 		"return Math.abs(r.top - f.bottom - 4) < 0.5 && Math.abs(r.left - f.left) < 0.5 && 'yes'; })()"))
 	b.pressKey(kb.Escape)
-	field("set-task", "#2")
-	// A URL changed, the name then changed: the URL is that task's, and nothing of it is sent.
-	field("set-url", "https://example.com/mine")
-	field("set-task", "#2")
-	say("a URL changed, then the name", fields)
 	field("set-task", "#1")
 	save()
 	out = append(out, "saved: "+tasks())
@@ -252,9 +238,8 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Read before the dialog opens, which writes the task as read
 	b.until("read", "tasksRead.tasks.proj['#1'].step === 'later'")
 	dialog("b")
-	field("set-url", "https://example.com/a/url-only")
 	save()
-	out = append(out, "the URL alone: "+tasks()+" | "+work("b"))
+	out = append(out, "nothing changed: "+tasks()+" | "+work("b"))
 	// While saving, what is typed next goes nowhere.
 	dialog("b")
 	b.eval(`window.realFetch = window.fetch; window.fetch = async (url, init) => { const res = await window.realFetch(url, init); if (String(url).includes('/api/tasks') && init?.method === 'PATCH') document.getElementById('set-task').value = '#2'; return res; }`)
@@ -262,12 +247,6 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("saved", "!document.getElementById('set-dialog').open")
 	b.eval("window.fetch = window.realFetch")
 	out = append(out, "typed while saving: "+work("b"))
-
-	// A URL with spaces round it, as pasted, is that URL.
-	dialog("b")
-	field("set-url", "  https://example.com/a/pasted  ")
-	save()
-	out = append(out, "pasted: "+tasks())
 
 	// An archived page has no pin to give: the shelf of pins leaves it out.
 	s.floe(t, "archive", "a")
@@ -292,8 +271,8 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("window.fetch = window.realFetch; showError('')")
 	s.floe(t, "work", "b", "--unpin")
 
-	// From a page whole, which reads the tasks as it opens.
-	s.floe(t, "work", "--task", "#1", "--project", "proj", "--url", "https://example.com/a/whole")
+	// From a page whole, which reads the tasks as it opens: a task written since is that task as written.
+	s.floe(t, "work", "b", "--task", "#1", "--step", "whole")
 	b.navigate("/a/b/")
 	b.until("the bar", "document.querySelector('#frame-actions .task-set')")
 	b.eval("document.querySelector('#frame-actions .more').open = true; document.querySelector('#frame-actions .task-set').click()")
@@ -337,7 +316,6 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("its state as it was", "tasksRead.tasks.proj['#5'].state")
 	out = append(out, "the state written: "+tasks())
 	dialog("c")
-	field("set-url", "https://example.com/a/same")
 	save()
 	b.until("the toast", "[...document.querySelectorAll('.toast')].at(-1).textContent === 'Saved'")
 	say("the same task", "[...document.querySelectorAll('.toast')].at(-1).textContent")
@@ -367,27 +345,24 @@ open the task: Open task #1 /tasks?project=proj&task=%231
 the items' looks: 1
 pinned: Pinned /tasks?project=proj Take the pin off
 pinned: {"pin":true}
-a page of none:  /  /  / out false
-the name of a task brings its URL: #1 /  / https://example.com/a/one / out false
-a new name takes it away: #3 /  /  / out false
+a page of none:  /  / out false
+no parent nor URL: null
 offered: Make #3 a new task
 new task: {"task":"#3","step":"first","pin":true}
 #1 todo design https://example.com/a/one; #2 todo build ; #3 todo first 
-a page of a task: #1 / design / https://example.com/a/one / out true
-written meanwhile: Could not save: task #1 has changed since it was read: the tasks are read again, so check and save again / https://example.com/later
-a URL set meanwhile: #1 todo design https://example.com/later; #2 todo build ; #3 todo first 
-a URL changed: #1 todo design https://example.com/mine; #2 todo build ; #3 todo first 
-a URL emptied: #1 todo design ; #2 todo build ; #3 todo first 
-refused: true Could not save: "javascript:alert(1)" is not an http or https URL
+a page of a task: #1 / design / out true
+written meanwhile: Could not save: task #1 has changed since it was read: the tasks are read again, so check and save again
+written meanwhile, saved: #1 todo design https://example.com/later; #2 todo build ; #3 todo first 
+refused: true Could not save: no
 an empty name: true true 0
 a name of spaces: true Write more than spaces 3 0
-the page refused: #1 todo design ; #2 todo review ; #3 todo first  | {"task":"#2","step":"build"}
+the page refused: #1 todo design https://example.com/later; #2 todo review ; #3 todo first  | {"task":"#2","step":"build"}
 saved again: {"task":"#2","step":"review"}
 off: {"pin":true}
-#1 todo design ; #2 todo review ; #3 todo first 
+#1 todo design https://example.com/later; #2 todo review ; #3 todo first 
 off, no pin: null
 as it opens: false
-a suggestion pressed: #2 / design / https://example.com/a/two / out true
+a suggestion pressed: #2 / design / out true
 the field keeps the focus: set-task
 it stays closed: false
 offered of #9: Make #9 a new task
@@ -398,20 +373,18 @@ reached: #1
 escape: false true
 read again: true #2
 under the field once still: yes
-a URL changed, then the name: #2 / design / https://example.com/a/two / out true
 saved: #1 todo design https://example.com/a/one; #2 todo review https://example.com/a/two; #3 todo first 
-the URL alone: #1 todo later https://example.com/a/url-only; #2 todo review https://example.com/a/two; #3 todo first  | {"task":"#1","step":"design"}
+nothing changed: #1 todo later https://example.com/a/one; #2 todo review https://example.com/a/two; #3 todo first  | {"task":"#1","step":"design"}
 typed while saving: {"task":"#1","step":"design"}
-pasted: #1 todo later https://example.com/a/pasted; #2 todo review https://example.com/a/two; #3 todo first 
 an archived page: true 0
 pinned, told: Pinned “T b” to the task list
 refused, told: Could not save: HTTP 500: no
-whole: #1 / design / https://example.com/a/whole / out true
+whole: #1 / whole / out true
 on its own task: true 0
 #1· To do, #2· To do, #3 a title· To do, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
 #1· To do, #2· To do, #3 a title· To do, #5 A very long title A very long title A very long title A very long title A very long title A very long title· Done
 put on a task: Put on #5 (Done) /tasks?project=proj&task=%235
 its state as it was: done
-the state written: #1 todo later https://example.com/a/whole; #2 todo review https://example.com/a/two; #3 todo first 
+the state written: #1 todo whole https://example.com/a/one; #2 todo review https://example.com/a/two; #3 todo first 
 the same task: Saved
 up, come by the toast: /tasks?project=proj&view=todo`
