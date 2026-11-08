@@ -3585,7 +3585,7 @@
     if (unlinking.has(child.name)) return;
     unlinking.add(child.name);
     try {
-      const res = await writeTask(child.project, child.name, { new: false, rev: child.rev, parent: '' });
+      const res = await writeTask(child.project, child.name, { new: false, rev: readRev(child.project, child.name), parent: '' });
       if (!res.ok) {
         showError(t('ui_save_failed', res.text));
         return;
@@ -3598,7 +3598,9 @@
     }
   }
   // The toast of a change to a parent, and its way back: the parent before written again, over the one written now, of the rev that write
-  // answered. Pressed, a refusal (written meanwhile, or the parent before has come to be a child, say) is said as the store says it
+  // answered, as it is decided over what the screen showed then. Pressed, a refusal (written meanwhile, or the parent before has come to be a
+  // child, say) is said as the store says it
+  // LIMIT: a write of the screen's own since, its state say, refuses it too. Take back the screen's own writes too if that comes to trouble someone
   function undoToast(said, back, fromKeys) {
     const button = tagged('button', 'btn undo', t('ui_undo'));
     button.type = 'button';
@@ -3650,7 +3652,7 @@
       },
       back: () => partButton(false)?.focus(),
       // LIMIT: this task's row gone meanwhile, its pages left, it is there still: refused as no parent (400), not read again, as a parent not known
-      write: (task, name, x, title) => writeTask(task.project, name, { new: !x, ...(x ? { rev: x.rev } : { title }), parent: task.name, parentNew: false }),
+      write: (task, name, x, title) => writeTask(task.project, name, { new: !x, ...(x ? { rev: readRev(task.project, name) } : { title }), parent: task.name, parentNew: false }),
       done: (task, name, x) => linkToast(t(x ? 'ui_task_child_took' : 'ui_task_child_made', name), task.project, name),
     },
     // A task named comes to be the parent, the one before said; any other is made with it, in the same write (parentTitle)
@@ -3668,7 +3670,7 @@
       back: () => partButton(true)?.focus(),
       // LIMIT: whether the one named has come to have a parent or children meanwhile is not said: the store refuses it as it is now (400),
       // and the words say so, with nothing read again
-      write: (task, name, x, title) => writeTask(task.project, task.name, { new: false, rev: task.rev, parent: name, parentNew: !x, ...(x ? {} : { parentTitle: title }) }),
+      write: (task, name, x, title) => writeTask(task.project, task.name, { new: false, rev: readRev(task.project, task.name), parent: name, parentNew: !x, ...(x ? {} : { parentTitle: title }) }),
       // Changed, the way back is offered while the parent before makes a family: one written by hand that makes none the store would refuse
       done: (task, name, x, res) => {
         if (task.parent) {
@@ -3800,7 +3802,7 @@
     if (e.detail > 1 || archivingTask) return;
     archivingTask = true;
     try {
-      const res = await writeTask(task.project, task.name, { new: false, rev: task.rev, state: archived ? 'archived' : 'done' });
+      const res = await writeTask(task.project, task.name, { new: false, rev: readRev(task.project, task.name), state: archived ? 'archived' : 'done' });
       if (!res.ok) {
         if (res.status !== 409) await load();
         showError(t('ui_save_failed', res.text));
@@ -3825,6 +3827,11 @@
     try {
       // The rev drawn with the value it was chosen over, which drawTaskHead holds while the choices are open
       const res = await writeTask(project, TASK_NAME, { new: false, rev: Number(sel.dataset.rev), state: sel.value });
+      // The value chosen is drawn, of the rev written, whether the read after it comes or not
+      if (res.ok) {
+        sel.dataset.state = sel.value;
+        sel.dataset.rev = res.rev;
+      }
       if (!res.ok) {
         why = res.text;
         readAgain = res.status !== 409;
@@ -4974,7 +4981,7 @@
   // A task's write from the screen, a modal, the state's choices or the archive button, which says whether it takes the task to be new, and
   // of one there the rev read: one of no rev is not sent, as JSON would drop it and the store write it unchecked. Refused as stale (409), the
   // tasks are read again, a page whole too, whose load reads none; stale is the refusal with what to do next in a modal, which can save again.
-  // rev is the row's as written
+  // Written, the row as the store answers it goes in the tasks read, so that the next write is of its rev, a read failing too; rev is its rev
   async function writeTask(project, name, body) {
     if (body.new === false && !Number.isInteger(body.rev)) return { ok: false, status: 0, text: t('ui_task_no_rev'), rev: null, stale: '' };
     const res = await api(`/api/tasks?${new URLSearchParams({ project, task: name })}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -4983,7 +4990,17 @@
       if (framed) tasksRead = await readTasks();
       await load();
     }
-    return { ok: res.ok, status: res.status, text, rev: res.ok ? (await res.json()).rev : null, stale: t('ui_task_stale', text) };
+    let rev = null;
+    if (res.ok) {
+      const written = await res.json();
+      (tasksRead.tasks[written.project] ??= {})[written.task] = written.row;
+      rev = written.row.rev;
+    }
+    return { ok: res.ok, status: res.status, text, rev, stale: t('ui_task_stale', text) };
+  }
+  // The rev of a task as this screen knows it: as read, or as it wrote it since; 0 of no row
+  function readRev(project, name) {
+    return tasksRead.tasks[project]?.[name]?.rev ?? 0;
   }
   const setFailed = (reason) => {
     $('set-error').textContent = t('ui_save_failed', reason);
@@ -5006,7 +5023,7 @@
     const fresh = !setShown;
     const body = {
       // A task there is written as the dialog shows it (rev)
-      new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : { rev: setShown.rev }),
+      new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : { rev: readRev(setShown.project, setShown.name) }),
       ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}),
       // The parent sent only as changed. Whether the one named is there is said only when it is known: a name not known may be mistyped,
       // which the store refuses as no parent
@@ -5022,9 +5039,8 @@
       }
       if (!res.ok) throw new Error(res.text);
       const reason = await patchOne(page.slug, { work: { task, step } });
-      // The task written, the dialog takes it as read again (rev, there), so that saving again writes the page
+      // The task written, as the tasks read now hold it: a new one is there, so that saving again writes the page
       if (reason) {
-        await load();
         setTaskKnown();
         throw new Error(reason);
       }
