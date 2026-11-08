@@ -387,7 +387,25 @@ func (k *Kit) baseDir(name string) (string, bool) {
 	if r, ok := k.base.resources[partURL(name)]; ok {
 		return r.File, true
 	}
+	// A key a section of floe's templates takes (html, which no part has) is floe's name too: one's own named so
+	// would stand for floe's key in floe part show, while a section reads floe's.
+	if r, ok := k.base.resources[partURL("any")]; ok && sectionKey(k.base, name) {
+		return r.File, true
+	}
 	return "", false
+}
+
+// sectionKey reports whether name is a key of floe's shared schema any, under k.
+func sectionKey(k *Kit, name string) bool {
+	for k.base != nil {
+		k = k.base
+	}
+	s := k.shared["any"]
+	if s == nil {
+		return false
+	}
+	_, ok := s.schema.Follow(s.schema.Root).Props[name]
+	return ok
 }
 
 // readPages parses the HTML file of the directory dir of d with fns and the words w, and returns it with its
