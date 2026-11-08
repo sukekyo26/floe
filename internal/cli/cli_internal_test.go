@@ -38,17 +38,30 @@ func TestEncode(t *testing.T) {
 	if err != nil || !strings.Contains(string(b), `"images":null`) {
 		t.Errorf("encoded %s, %v", b, err)
 	}
-	for _, typ := range []reflect.Type{reflect.TypeFor[server.Link](), reflect.TypeFor[server.Upload]()} {
-		for field := range typ.Fields() {
-			name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
-			if t := field.Type; t.Kind() == reflect.Pointer {
-				field.Type = t.Elem()
+	// Every text a command line gives, a string or strings, by its JSON pointer: the bodies of publish and link, and the
+	// tags of floe tag, down through their JSON names.
+	var texts func(typ reflect.Type, at string)
+	texts = func(typ reflect.Type, at string) {
+		if typ.Kind() == reflect.Pointer {
+			typ = typ.Elem()
+		}
+		switch {
+		case typ.Kind() == reflect.String || typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.String:
+			if sentAt[at] == "" {
+				t.Errorf("%s: no place in sentAt", at)
 			}
-			if field.Type.Kind() == reflect.String && sentAt["/"+name] == "" {
-				t.Errorf("%s.%s: no place in sentAt", typ.Name(), name)
+		case typ.Kind() == reflect.Struct:
+			for field := range typ.Fields() {
+				name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+				texts(field.Type, at+"/"+name)
 			}
 		}
 	}
+	texts(reflect.TypeFor[server.Link](), "")
+	texts(reflect.TypeFor[server.Upload](), "")
+	tags, _ := reflect.TypeFor[server.Edit]().FieldByName("Tags")
+	name, _, _ := strings.Cut(tags.Tag.Get("json"), ",")
+	texts(tags.Type, "/"+name)
 	// v2 still tells bytes no UTF-8 as notUTF8 matches them.
 	if _, err := jsonv2.Marshal("a\xffb"); !notUTF8(err) {
 		t.Errorf("encoding/json/v2 tells bytes no UTF-8 by %v, which notUTF8 does not match", err)

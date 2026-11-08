@@ -38,10 +38,18 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	}
 	s.write(t, "tl/docs/index.html", "<!doctype html><title>t</title><p>page</p>")
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "tl/docs"), "--slug", "docs")
+	meta := func(slug string) *store.Meta {
+		t.Helper()
+		m := st.ReadMeta(slug)
+		if m == nil {
+			t.Fatalf("no page %q", slug)
+		}
+		return m
+	}
 	tag := func(slug string, tags ...string) {
 		t.Helper()
 		// The page's tags become tags, as written elsewhere: those it has taken off, then these put on.
-		if _, err := st.Edit(slug, store.Edit{Tags: &store.TagsEdit{Remove: st.ReadMeta(slug).Tags, Add: tags}}); err != nil {
+		if _, err := st.Edit(slug, store.Edit{Tags: &store.TagsEdit{Remove: meta(slug).Tags, Add: tags}}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -49,7 +57,7 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	tag("many", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a long name that the line cuts at its end")
 	tags := func(slug string) string {
 		t.Helper()
-		return strings.Join(st.ReadMeta(slug).Tags, ",")
+		return strings.Join(meta(slug).Tags, ",")
 	}
 	b.size(1440, 900, false)
 	defer b.unsize()

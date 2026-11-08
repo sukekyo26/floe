@@ -973,11 +973,10 @@ func setMarks(m *Meta, ed Edit) {
 	}
 }
 
-// without returns tags but those named in names, each name trimmed; an empty name names none.
+// without returns tags but those named in names, each name as tagged keeps it.
 func without(tags, names []string) []string {
-	return slices.DeleteFunc(slices.Clone(tags), func(tag string) bool {
-		return slices.ContainsFunc(names, func(name string) bool { return strings.TrimSpace(name) == tag })
-	})
+	off := tagged(names)
+	return slices.DeleteFunc(slices.Clone(tags), func(tag string) bool { return slices.Contains(off, tag) })
 }
 
 // tagged is tags as a page keeps them: each trimmed, without the empty and a name the second time, in the
