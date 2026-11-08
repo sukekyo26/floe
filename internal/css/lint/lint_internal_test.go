@@ -228,10 +228,9 @@ func TestLintRule(t *testing.T) {
 }
 
 // TestRules keeps the lines of the rules files and Rules to one another: each line of css.md names itself, [name], and no
-// two lines one name; each rule of Rules is named by one line of a rules file alone, which ends in TestLintRule/<name>;
-// and a line that ends so names that rule.
-// LIMIT: a line of a look's rule (TestLookRule/<name>) is held to having a name alone, till those rules are brought into
-// a list of their own.
+// two lines one name, and ends in its test, `TestLintRule/<name>` or `TestLookRule/<name>`, or in （判断）, a judgement no
+// test keeps; each rule of Rules is named by one line of a rules file alone, which ends in TestLintRule/<name>; and a line
+// that ends so names that rule. TestLookRule holds its own list, looks, to the lines that name it.
 func TestRules(t *testing.T) {
 	t.Parallel()
 
@@ -261,6 +260,10 @@ func TestRules(t *testing.T) {
 				t.Errorf("%s: names %s, as %s does: give each rule a name of its own", at, name, prev)
 			}
 			ruled[name] = at
+			if filepath.Base(file) == "css.md" && !strings.HasSuffix(line, "（判断）") &&
+				!strings.HasSuffix(line, "`TestLintRule/"+name+"`") && !strings.HasSuffix(line, "`TestLookRule/"+name+"`") {
+				t.Errorf("%s: ends in neither its test, `TestLintRule/%s` or `TestLookRule/%s`, nor （判断）: end it in one", at, name, name)
+			}
 			end, lints := lintEnd(line)
 			switch {
 			case !lints:
