@@ -116,7 +116,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 データファイルは、鍵と値の YAML の文書 1 つです。文書の間の `---` や、アンカー・エイリアス・マージキー（`<<`）・タグがあれば断ります。
 
 - Markdown では、`~~字~~` は取り消し線になり、`~` 1 つは字のままです（`2026-11-01~11-08`、`~/work`）。部品 text、表のセル、見出し、lead など、floe が Markdown として描くどの鍵でも同じです。
-- `: `、` #`、`{ }` や `[ ]` の中の `,` を含む文は、引用符（`"…"`）で囲むかブロック（`|-`）で書きます。YAML はそれを、鍵と値、コメントの始まり、文の終わりと読みます。
+- `: `、` #`、`{ }` や `[ ]` の中の `,` を含む文は、引用符（`"…"`）で囲むかブロック（`|-`）で書きます。YAML はそれを、鍵と値、コメントの始まり、文の終わりと読みます。引用符の無いまま書くと、YAML の言葉で断られます。文は `: ` の後ろの字で変わり（`mapping value is not allowed in this context`、``'`' is a reserved character``）、場所は値の始まりを指すので、その値の中の `: ` を探します。
 - 引用符の無い値の行のコメントは、floe が読むどの YAML でも断ります。値を途中で切ったかもしれないからです（`lead: PR #100` は `PR` と読む）。コメントは `{ }` や `[ ]` の外の、別の行に書きます。
 - `{ }` や `[ ]` の中には、別の行のものも含めて、コメントを書けません（floe が読むどの YAML でも）。コメントは、その外の行に書きます。
 - `|` や `>` の文で、空白だけでない最初の行が空白の後にタブで始まるものは、floe が読むどの YAML でも断ります。YAML 1.2 ではタブは文の字ですが、floe の YAML のライブラリは字下げと読み、後の行を落としたり短くしたりするからです。行をタブで始めないか、`|` や `>` の後に文の字下げの数を書きます（キーから 2 つ右の文なら `|2`）。
@@ -156,6 +156,7 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 ```
 
 - `file:line:column:` が誤りの場所です。変える値か、それを持つ鍵を指します。行の無い `file:` だけの誤りは、ファイル全体の誤りです。根に足りない鍵（`design.yaml: missing properties 'background', 'goals'`）や、テンプレートのデータファイル全体にかける検査がこう出ます。言われた誤りを全部直してから、`floe check` をもう一度走らせます。次の段の誤りが出ることがあります。
+- YAML そのものの誤り（`mapping value is not allowed in this context`）は、floe の YAML ライブラリの言葉で、ライブラリが名指す場所に出ます。引用符の無い値の中の `: ` なら、場所は値の始まりです（[文の書き方](#文の書き方)）。
 - 形の誤り（`additional properties 'x' not allowed`・`missing property 'x'`・`got string, want array`）は、テンプレートか部品の schema がデータを断ったものです。`floe template show <テンプレート> schema.json` と `floe part show <部品> schema.json` が、取るものを出します。
 - 自分の部品・見た目・共有の schema・テーマ・テンプレートの誤りは、使うかどうかによらず、どのページも止めます。誤りはそのファイルの所で言います（`~/.config/floe/parts/quote/schema.json:2:1: …`）。`floe part check` と `floe template check` が並べます。
 - 同じ誤りは、何か所から指されても 1 回だけ言います。
