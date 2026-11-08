@@ -23,6 +23,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe archive <slug>...` | Take pages off the lists, keeping them (`--undo` gives them back) |
+| `floe tag <slug>... --add <name> --remove <name>` | Put tags on pages and take them off |
 | `floe work [<slug>...]` | Put pages on a task of the task list, pin them, or change a task |
 | `floe serve` | Run the server in the foreground |
 | `floe stop` | Stop the background server |
@@ -188,6 +189,15 @@ Delete the pages in order through the server (it is started when it is not runni
 
 Archive the pages in order through the server (it is started when it is not running), stopping at the first failure (such as a page that does not exist). An archived page is left off `floe list` and the management page's list, which shows it under "Archive" on its shelf; it is still served at its URL, downloaded and drawn again by `floe rebuild`. Archiving one again changes nothing. `--undo` gives the pages back to the lists, and so does publishing a page again. This moves the pages alone: a task goes to the archive by its state, `floe work --task X --state archived`.
 
+## `floe tag <slug>... --add <name> --remove <name>`
+
+Put tags on the pages and take tags off them in order through the server (it is started when it is not running), stopping at the first failure (such as a page that does not exist). Give `--add` and `--remove` once for each name, at least one of them. A name is taken as written, trimmed of spaces at its ends, commas and all; one a page has already is kept once, and one it does not have is taken off as nothing. The names given to `--remove` are taken off first, then those given to `--add` are put on, so a name given to both stays on the page, last. Only the names given change: tags written meanwhile from the management page or another `floe tag` stay.
+
+```sh
+floe tag design-notes plan --add design --add "cli, api"   # two tags on two pages
+floe tag design-notes --remove draft                       # one taken off
+```
+
 ## `floe work [<slug>...]`
 
 Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its ID; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `tasks.json` in the store holds each task's title, state, last step, outside link and order of steps, and how many times it was changed (`rev`), which a screen sends back so that a task written since is refused.
@@ -302,12 +312,12 @@ List the fetched icons whose name contains every word (case does not matter), on
 
 ## The server
 
-- `floe publish`, `floe rebuild`, `floe list`, `floe rm`, `floe archive` and `floe work` start the server when it is not running, and keep using it otherwise.
+- `floe publish`, `floe rebuild`, `floe list`, `floe rm`, `floe archive`, `floe tag` and `floe work` start the server when it is not running, and keep using it otherwise.
 - They ask the server to check, save, draw, list and delete pages: the server is the only one that writes the store. A publish sends the data file (and the images the server asks for), and the server checks and draws it with its own templates, parts, themes and icons.
 - After floe is reinstalled (another version, or a rebuilt binary), the next of them replaces the running server.
 - The server keeps running until `floe stop`, logout or reboot.
 - The server draws with the `FLOE_TEMPLATES_DIR`, `FLOE_PARTS_DIR`, `FLOE_THEMES_DIR` and `FLOE_ICONS_DIR` of the command that started it: set them in the shell's environment, where every command takes them, rather than on one command.
-- A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`. `floe list`, `floe rm`, `floe archive` and `floe work` do not draw and take any, but the one that replaces the server after floe is reinstalled is refused with other ones too, as the new server would draw with them.
+- A `floe publish` or `floe rebuild` with other ones is refused until `floe stop`. `floe list`, `floe rm`, `floe archive`, `floe tag` and `floe work` do not draw and take any, but the one that replaces the server after floe is reinstalled is refused with other ones too, as the new server would draw with them.
 - A server serves one store (`FLOE_DIR`) on its port: while it runs, a command for another store is refused. Give that store another `FLOE_PORT`.
 - It listens on `127.0.0.1` only. It refuses other host names (against DNS rebinding) and writes from other sites.
 - A stored page is served as it was drawn; its CSP and sandbox are sent with it. Pages run in the sandbox, so their scripts cannot reach the management page's API. The frame takes from a page only that it was read and the keys that move on or open a modal.

@@ -31,6 +31,7 @@ floe publish --link out/index.html   # show an HTML file as it is
 floe publish --link docs             # list the HTML files under a folder
 floe list                   # pages, newest first
 floe archive old-plan       # take a page off the lists, keeping it
+floe tag old-plan --add design   # put a tag on a page
 floe stop                   # stop the background server
 ```
 

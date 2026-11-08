@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add `floe tag <slug>... --add <name> --remove <name>`, which puts tags on pages and takes them off from the command line, in order, stopping at the first page not there. A name is one as written, commas and all; the names to remove are taken off first, so a name given to both stays on. The management page's tag dialog now sends only the tags changed in it, so that tags written meanwhile by `floe tag` or another tab stay.
 - Add every part but `tabs`, `columns` and `html` to what `details`, `tabs`, `columns` and the `parts` of an item of `entries`, `checks` or `options` hold: `options`, `steps`, `facts`, `stats`, `details` in `details` and the rest. An `html` part stays out, as its `</form>` would close the form of `tabs` around it.
 - Add `parts` to an option of `options`: parts under its title, above its text, such as a picture, a diagram or code of the option. The cards on a line start their parts and their text at one height, the parts `--floe-room` from the title and from the text, a small picture kept at its size; on paper such a card goes to the next page whole. An option's `text` is a `text` part now, its fenced code warned of as in `entries`. Options without `parts` look as before. A theme changes the room in a card by `--cards-gap`.
 
@@ -262,7 +263,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   row's menu holds its edit, opening, download, archive and delete, and the bar
   over an open page stars and archives it with buttons of icons alone, filled in
   while on. Tags are given in a page's edit dialog, to those selected,
-  or as `tags` in `PATCH /api/artifacts/{slug}`; they show under a page's
+  or as the names to `add` and `remove` in `tags` of `PATCH /api/artifacts/{slug}`; they show under a page's
   title, are searched, and stay when the page is published again. What is
   reached by keyboard shows one thin grey ring, and a button pressed with the
   mouse shows none.
