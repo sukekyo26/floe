@@ -147,7 +147,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		pressedAt = -Infinity;
 		out.push('joined, e there: ' + has('e'));
 
-		// A draw that throws: the error goes to its caller and is said, and the next load draws the same list again. No poll meanwhile, so
+		// A draw that throws: said, not thrown to the caller, and the next load draws the same list again. No poll meanwhile, so
 		// that the loads drawn are the step's own
 		const realLoad = load;
 		load = (polled) => (polled ? Promise.resolve() : realLoad(polled));
@@ -161,7 +161,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		};
 		drawn = '';
 		const thrown = await load().then(() => 'none', (e) => e.message);
-		const toldDraw = document.getElementById('error').textContent === t('ui_draw_failed', 'broken draw');
+		const toldDraw = document.getElementById('error').textContent === t('ui_draw_failed', 'Error: broken draw');
 		const after = await Promise.race([load().then(() => 'went on', () => 'stopped'), new Promise((r) => setTimeout(() => r('stuck'), 2000))]);
 		render = realRender;
 		load = realLoad;
@@ -253,7 +253,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"folder open: true",
 		"folder there: false",
 		"joined, e there: false",
-		"thrown: broken draw, said: true, the next: went on, drawn again: true, cleared: true",
+		"thrown: none, said: true, the next: went on, drawn again: true, cleared: true",
 		"read with a time limit: true",
 		"cut off: returned, error: false then true, the next: returned, said why: true",
 		"under read marks: drawn",
@@ -263,7 +263,8 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"a read outside a load limited: false",
 	}, "|"))
 
-	// The load's mistakes are said in one place: a draw's, then the tasks' when the draw comes right, then none.
+	// The load's mistakes are said in one place, the read's before the draw's before the tasks', each taken back when it comes right; a
+	// load's never covers another's, nor clears it
 	b.navigate("/tasks")
 	b.until("the task list", "document.getElementById('list') && tasksRead.raw !== undefined")
 	got = b.eval(`(async () => {
@@ -271,41 +272,74 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		load = (polled) => (polled ? Promise.resolve() : realLoad(polled));
 		await realLoad();
 		const real = window.fetch;
-		let tasksBroken = false;
-		window.fetch = (u, i) => (tasksBroken && String(u) === '/api/tasks' ? Promise.resolve(new Response('tasks broken', { status: 500 })) : real(u, i));
+		let tasksBroken = false, listBroken = false;
+		window.fetch = (u, i) => {
+			if (tasksBroken && String(u) === '/api/tasks') return Promise.resolve(new Response('tasks broken', { status: 500 }));
+			if (listBroken && String(u) === '/api/artifacts') return Promise.resolve(new Response('', { status: 500 }));
+			return real(u, i);
+		};
 		const realRender = render;
-		let renders = 0;
+		let broken = 0;
 		render = () => {
-			renders++;
-			if (renders === 1) throw new Error('broken draw');
+			if (broken > 0) {
+				broken--;
+				throw new Error('broken draw');
+			}
 			realRender();
 		};
 		const error = () => (document.getElementById('error').hidden ? 'none' : document.getElementById('error').textContent);
-		drawn = '';
-		await load().catch(() => {});
-		const draw = error() === t('ui_draw_failed', 'broken draw');
+		const out = [];
+		const say = (what, want) => out.push(what + ': ' + (error() === want ? 'right' : error()));
+		const draw = t('ui_draw_failed', 'Error: broken draw');
+		const read = t('ui_load_failed', 'HTTP 500');
+		const tasks = t('ui_tasks_failed', 'tasks broken');
+
+		// The draw's, all three at once
+		broken = 9;
 		tasksBroken = true;
+		drawn = '';
 		await load();
-		const tasks = error() === t('ui_tasks_failed', 'tasks broken');
+		say('the draw', draw);
+		// The read's over it; when the read comes right, the draw's again, then the tasks', then none
+		listBroken = true;
+		await load();
+		say('the read', read);
+		listBroken = false;
+		await load();
+		say('the draw after the read', draw);
+		broken = 0;
+		await load();
+		say('the tasks after the draw', tasks);
 		tasksBroken = false;
 		await load();
-		const none = error();
-		// Both at once: the draw's goes first
-		tasksBroken = true;
-		renders = 0;
-		drawn = '';
-		await load().catch(() => {});
-		const first = error() === t('ui_draw_failed', 'broken draw');
-		tasksBroken = false;
+		say('then', 'none');
+
+		// A read held back by a press takes back the read's mistake
+		listBroken = true;
 		await load();
-		// Another's mistake (a failed delete) stays through a load that says none
+		listBroken = false;
+		pressedAt = performance.now();
+		await realLoad(true);
+		pressedAt = -Infinity;
+		say('held back', 'none');
+
+		// An action's mistake stays through a load that says none, and a load's does not cover it
 		showError('a delete failed');
 		await load();
-		const kept = error();
+		say('kept', 'a delete failed');
+		tasksBroken = true;
+		await load();
+		say('not covered', 'a delete failed');
+		showError('');
+		await load();
+		say('said once clear', tasks);
+		tasksBroken = false;
+		await load();
+
 		render = realRender;
 		load = realLoad;
 		window.fetch = real;
-		return 'the draw: ' + draw + ', then the tasks: ' + tasks + ', then: ' + none + ', both: the draw first ' + first + ', kept: ' + kept;
+		return out.join(', ');
 	})()`)
-	check(t, "load mistakes", []string{got}, "the draw: true, then the tasks: true, then: none, both: the draw first true, kept: a delete failed")
+	check(t, "load mistakes", []string{got}, "the draw: right, the read: right, the draw after the read: right, the tasks after the draw: right, then: right, held back: right, kept: right, not covered: right, said once clear: right")
 }
