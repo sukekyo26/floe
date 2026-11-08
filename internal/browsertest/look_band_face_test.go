@@ -71,7 +71,9 @@ const measureBand = `(() => {` + colours + `
   const header = document.querySelector('header');
   document.querySelectorAll('[data-floe-part=links] .url').forEach((url) => {
     seen++;
-    if (url.getBoundingClientRect().top - url.previousElementSibling.getBoundingClientRect().bottom < 1) push('links', 'a links URL against its title');
+    const title = url.previousElementSibling;
+    if (!title) push('links', 'a links URL with nothing before it');
+    else if (url.getBoundingClientRect().top - title.getBoundingClientRect().bottom < 1) push('links', 'a links URL against its title');
   });
   const framed = (e) => { const c = getComputedStyle(e).boxShadow.match(/^(rgba?\([^)]*\)|color\([^)]*\))/); return c !== null && rgba(c[1])[3] > 0; };
   const probe = document.body.appendChild(document.createElement('p'));
@@ -101,7 +103,9 @@ const measureBand = `(() => {` + colours + `
   const card = find('cards', 'header [data-floe-look~="cards"] > .card');
   if (card) {
     if (rgba(getComputedStyle(card).backgroundColor)[3] === 0) push('cards', 'a card: no ground of its own');
-    if (getComputedStyle(card.querySelector('p')).color === band) push('cards', 'a card: in the band\'s text colour');
+    const p = card.querySelector('p');
+    if (!p) push('cards', 'none found: a card\'s p');
+    else if (getComputedStyle(p).color === band) push('cards', 'a card: in the band\'s text colour');
   }
   // The picked tab is told from the others and from the band: its ground stands 3:1 off the band's.
   const picked = find('tabs', 'header [data-floe-part="tabs"] > label:has(:checked)');

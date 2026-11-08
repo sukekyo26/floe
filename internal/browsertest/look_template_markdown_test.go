@@ -16,17 +16,33 @@ import (
 const headingsMarkdown = "# Heading one\n\n## Heading two\n\n### Heading three\n\n"
 
 // measureHeadings returns, for each heading headingsMarkdown writes, the look of every one drawn: its size, weight,
-// spacing, case, style, frame and padding, one heading to a line. The size of h1 and h2, which base.css gives in em, is
-// read against the box around them, so that a page.css may size the text of a field; h3's is in rem there, read as it is.
-const measureHeadings = `(() => ['Heading one', 'Heading two', 'Heading three'].map((t) =>
+// spacing, case, style, frame and padding (line), and what drew it (at): the part it is in, "" in a template's own
+// Markdown (data-floe-markdown), else its tag. The size of h1 and h2, which base.css gives in em, is read against the
+// box around them, so that a page.css may size the text of a field; h3's is in rem there, read as it is.
+const measureHeadings = `(() => JSON.stringify(['Heading one', 'Heading two', 'Heading three'].flatMap((t) =>
   [...document.querySelectorAll('h1, h2, h3, h4, h5, h6')].filter((h) => h.textContent.trim() === t).map((h) => {
-    const s = getComputedStyle(h), size = parseFloat(s.fontSize);
+    const s = getComputedStyle(h), size = parseFloat(s.fontSize), part = h.closest('[data-floe-part]');
     const ems = (v) => (parseFloat(v) / size).toFixed(3) + 'em';
-    return t + ': ' + [h.matches('h1, h2') ? (size / parseFloat(getComputedStyle(h.parentElement).fontSize)).toFixed(3) + 'em' : s.fontSize,
+    return { at: part ? part.dataset.floePart : h.closest('[data-floe-markdown]') ? '' : h.tagName.toLowerCase(),
+      line: t + ': ' + [h.matches('h1, h2') ? (size / parseFloat(getComputedStyle(h.parentElement).fontSize)).toFixed(3) + 'em' : s.fontSize,
       s.fontWeight, s.letterSpacing === 'normal' ? 'normal' : ems(s.letterSpacing), s.textTransform, s.fontStyle,
       ...['borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'paddingTop', 'paddingRight', 'paddingBottom',
-        'paddingLeft'].map((p) => s[p])].join(' ');
-  }).join('\n')).join('\n'))()`
+        'paddingLeft'].map((p) => s[p])].join(' ') };
+  }))))()`
+
+// heading is a heading measureHeadings measured.
+type heading struct{ At, Line string }
+
+// headingsOn returns measureHeadings of the page open.
+func headingsOn(t *testing.T, s *site) []heading {
+	t.Helper()
+
+	var got []heading
+	if err := json.Unmarshal([]byte(s.b.eval(measureHeadings)), &got); err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
 
 // markdownFields returns where the template's own fields of format markdown stand in values, as the schema's Walk
 // finds them; not those a part's value holds.
@@ -85,45 +101,53 @@ func prepend(t *testing.T, v any, at []string, text string) {
 	}
 }
 
-// textHeadings returns measureHeadings of headingsMarkdown in a text, in theme.
-func textHeadings(t *testing.T, s *site, theme string) string {
+// textHeadings returns the look of each heading of headingsMarkdown in a text, in theme, as measureHeadings reads it.
+func textHeadings(t *testing.T, s *site, theme string) []string {
 	t.Helper()
 
 	text := "template: report\nlang: en\ntitle: T\nsections:\n  - heading: S\n    parts:\n      - text: |\n" +
 		"          " + strings.ReplaceAll(strings.TrimSuffix(headingsMarkdown, "\n"), "\n", "\n          ") + "\n          said\n"
 	s.floe(t, "publish", s.write(t, "text-"+theme+".yaml", text+"theme: "+theme+"\n"), "--slug", "text-"+theme)
 	s.b.navigate("/a/text-" + theme + "/?raw")
-	return s.b.eval(measureHeadings)
+	got := headingsOn(t, s)
+	lines := make([]string, 0, len(got))
+	for _, h := range got {
+		lines = append(lines, h.Line)
+	}
+	return lines
 }
 
 // headings publishes data, a page of template whose fields fields of format markdown each begin with headingsMarkdown,
 // as slug, and measures each heading drawn against want, the same in a text: the page holds them once a field, in the
-// order of the fields. It returns the headings it compared and each drawn otherwise, at template.
-func headings(t *testing.T, s *site, template, slug, data string, fields int, want string) measured {
+// order of the fields. It returns the headings it measured and each drawn otherwise at what drew it, the template for
+// its own Markdown; one missing is at the template.
+func headings(t *testing.T, s *site, template, slug, data string, fields int, want []string) measured {
 	t.Helper()
 
 	s.floe(t, "publish", s.write(t, slug+".yaml", data), "--slug", slug)
 	s.b.navigate("/a/" + slug + "/?raw")
-	got := strings.Split(s.b.eval(measureHeadings), "\n")
-	lines := strings.Split(want, "\n")
-	wanted := make([]string, 0, len(lines)*fields)
-	for _, line := range lines {
+	got := headingsOn(t, s)
+	wanted := make([]string, 0, len(want)*fields)
+	for _, line := range want {
 		for range fields {
 			wanted = append(wanted, line)
 		}
 	}
-	m := measured{seen: len(wanted)}
-	for i, w := range wanted {
-		g := "none"
+	m := measured{seen: len(got)}
+	for i := range max(len(got), len(wanted)) {
+		g, w := heading{At: template, Line: "none"}, "none"
 		if i < len(got) {
 			g = got[i]
+			if g.At == "" {
+				g.At = template
+			}
 		}
-		if g != w {
-			m.amiss = append(m.amiss, amiss{Page: slug, At: template, Text: g + ", in a text " + w})
+		if i < len(wanted) {
+			w = wanted[i]
 		}
-	}
-	for _, g := range got[min(len(got), len(wanted)):] {
-		m.amiss = append(m.amiss, amiss{Page: slug, At: template, Text: g + ", in a text none"})
+		if g.Line != w {
+			m.amiss = append(m.amiss, amiss{Page: slug, At: g.At, Text: g.Line + ", in a text " + w})
+		}
 	}
 	return m
 }
@@ -145,7 +169,7 @@ func lookTemplateMarkdown(t *testing.T, s *site) measured {
 		t.Fatal(err)
 	}
 	_, _, themes, templates := k.Names()
-	want := map[string]string{}
+	want := map[string][]string{}
 	for _, theme := range themes {
 		want[theme] = textHeadings(t, s, theme)
 	}

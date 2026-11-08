@@ -71,7 +71,7 @@ const marked = `(() => {
   const told = (e) => { const h = e.matches('.run, .mark') ? e.previousElementSibling : e.querySelector(':scope > .floe-hidden'); return h?.matches('.floe-hidden') ? h : null; };
   const shown = [...document.querySelectorAll(worded)].filter((e) => e.checkVisibility());
   const unworded = shown.filter((e) => !(told(e)?.textContent.trim()))
-    .map((e) => ({ at: partOf(e), text: e.closest('[data-floe-part]').dataset.floePart + ' ' + e.tagName.toLowerCase() + [...(e.closest('li') || e).classList].map((c) => '.' + c).join('') }));
+    .map((e) => ({ at: partOf(e), text: partOf(e) + ' ' + e.tagName.toLowerCase() + [...(e.closest('li') || e).classList].map((c) => '.' + c).join('') }));
   return JSON.stringify({ out, rows, unworded, worded: shown.length });
 })()`
 
@@ -200,11 +200,12 @@ func lookSpeechRead(t *testing.T, s *site) measured {
 	return m
 }
 
-// brokenSpeechRead draws a part of one's own whose rows' mark is read, written with no reading after /.
+// brokenSpeechRead draws a part of one's own whose mark after its word, no row's mark, is read, written with no
+// reading after /.
 func brokenSpeechRead(t *testing.T, s *site) (string, measured) {
 	t.Helper()
 
-	html := `<ul data-floe-part="marky"><li>Done</li></ul>`
-	s.brokenPage(t, ownPart("marky", html, ":scope li::before { content: \"✓\"; }\n"), htmlPage(html))
+	html := `<p data-floe-part="marky">Done<span class="m"></span></p>`
+	s.brokenPage(t, ownPart("marky", html, ":scope .m::after { content: \"✓\"; }\n"), htmlPage(html))
 	return "marky", speechRead(t, s, "broken")
 }
