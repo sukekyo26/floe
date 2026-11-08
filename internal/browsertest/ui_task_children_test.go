@@ -111,7 +111,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.until("the child's page", "new URLSearchParams(location.search).get('task') === '#2' && !document.getElementById('task-family').hidden")
 
 	// A child leads up to its parent, and its way back is to its own state.
-	if got := b.eval("document.querySelector('#task-family h3').textContent + ' ' + document.querySelector('#task-family .kin-row').textContent + ' ' + document.querySelector('#task-family .kin-row').getAttribute('href') + ' ' + document.getElementById('task-up').getAttribute('href')"); got != "Parent task #1the parentIn progress /tasks?project=proj&task=%231 /tasks?project=proj" {
+	if got := b.eval("document.querySelector('#task-family h3').textContent + ' ' + document.querySelector('#task-family .kin-row').textContent + ' ' + document.querySelector('#task-family .kin-row').getAttribute('href') + ' ' + document.getElementById('task-up').getAttribute('href')"); got != "Parent task In progress#1the parent /tasks?project=proj&task=%231 /tasks?project=proj" {
 		t.Errorf("a child's head: %q", got)
 	}
 

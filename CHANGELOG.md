@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add every part but `tabs`, `columns` and `html` to what `details`, `tabs`, `columns` and the `parts` of an item of `entries`, `checks` or `options` hold: `options`, `steps`, `facts`, `stats`, `details` in `details` and the rest. An `html` part stays out, as its `</form>` would close the form of `tabs` around it.
 - Add `parts` to an option of `options`: parts under its title, above its text, such as a picture, a diagram or code of the option. The cards on a line start their parts and their text at one height, the parts `--floe-room` from the title and from the text, a small picture kept at its size; on paper such a card goes to the next page whole. An option's `text` is a `text` part now, its fenced code warned of as in `entries`. Options without `parts` look as before. A theme changes the room in a card by `--cards-gap`.
 
 - Add contents to `report`: on a page of 4 sections with a heading or more, or as its new key `toc` says, the sections and their subsections stand beside them on a screen 1000px wide or more, where the page takes the whole window, the section being read marked as the page scrolls; on a narrower screen the sections alone stand over them, and paper holds none. A template of your own takes them by the look `toc` and the function `contents`, and `markdownLabel` writes a line of Markdown with its links as their words.
@@ -346,6 +347,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   both.
 
 ### Changed
+
+- Change `options`, `facts`, `stats`, `bars`, `keys`, `timeline` and `asks` to lay out by the width of their place, so that they stay within a narrow one, such as an option's card: a card's column is never wider than its place, `keys` and `timeline` turn to their narrow layout by their own width (so in a window up to about 640px wide, where they turned at 576px), a pill of `asks` wraps, and the label and the value of `bars` take up to 40% each, wrapping, so that a long label no longer leaves its bar a sliver. The narrow layout of `timeline` keeps the room of the wide one between its dot and its text, 4px less than before.
+- Change a task's page so that its parent or its children stand in a card, each row headed by its state, apart from the steps of pages under it: the states are as wide as the widest, the IDs stand in line, a long ID is cut at a fifth of the card, a long title at what is left, and pointing at a row shows both whole.
 
 - Change a diagram's `graph` so that an edge with both ends outside a group goes round the group's frame, a column off it, instead of running through it, back against the ranks if it must: it runs longer and may cross more edges. It still runs through where floe finds no way round, where many edges end on one side of a box, or where floe gives up looking in a crowded graph, a lane is not gone round, and a level edge stays straight. The ends moved to the equal parts of a side no longer take an edge into a frame that holds neither end, so a few graphs keep an end off its equal part. A way round that runs into an edge or part written by hand is told at that one, written by hand: add `crossing: true` to the edge, or move it.
 

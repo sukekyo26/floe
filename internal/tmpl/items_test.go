@@ -721,8 +721,9 @@ func TestPartStatsRefused(t *testing.T) {
 	}
 }
 
-// The parts of an item of entries are stack's and walked as they are: what stack does not take is refused, tabs above
-// all, whose form would stand in tabs' form around it, and a mistake in a part's value is told at its line and column.
+// The parts of an item of entries are stack's and walked as they are: what stack does not take is refused (tabs, whose
+// form would stand in tabs' form around it, columns and html), and a mistake in a part's value is told at its line and
+// column.
 func TestEntriesParts(t *testing.T) {
 	t.Parallel()
 
@@ -732,7 +733,10 @@ func TestEntriesParts(t *testing.T) {
 		{"text: ''", "d.yaml:4:41: minLength: got 0, want 1"},
 		{"parts: []", "d.yaml:4:42: minItems: got 0, want 1"},
 		{"parts: [{tabs: [{title: a, parts: [{text: x}]}, {title: b, parts: [{text: y}]}]}]", "d.yaml:4:44: additional properties 'tabs' not allowed"},
-		{"parts: [{details: {title: a, parts: [{text: x}]}}]", "d.yaml:4:44: additional properties 'details' not allowed"},
+		{"parts: [{details: {title: a, parts: [{text: x}]}}]", ""},
+		{"parts: [{options: [{title: a, parts: [{options: [{title: b}]}]}]}]", ""},
+		{"parts: [{columns: [{parts: [{text: x}]}]}]", "d.yaml:4:44: additional properties 'columns' not allowed"},
+		{"parts: [{html: '</form>'}]", "d.yaml:4:44: additional properties 'html' not allowed"},
 		{"parts: [{table: {columns: [c], rows: [[1]]}}]", "d.yaml:4:74: got number, want string or object"},
 	} {
 		data := "lang: en\ntemplate: report\nsections:\n  - parts: [{entries: [{title: e, " + c.item + "}]}]\n"

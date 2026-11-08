@@ -77,7 +77,8 @@ code { font-family: var(--mono); font-size: 0.86em; background: var(--face, var(
    Such places: an inline-block, a float, an absolute or other shrink-to-fit box, a width of min-content, max-content
    or fit-content, a table's cell of auto width, justify-items or justify-self start in a grid, an item of a flex row
    on flex-basis auto, a grid's auto column sized by its content. No part or template of floe's places one so: tree's list
-   is fit-content on screen but holds no box that scrolls */
+   is fit-content on screen but holds no box that scrolls. chart, keys and timeline (container-type: inline-size, to lay
+   out by their own width) shrink so in such a place too, to their padding */
 pre {
   margin: 0; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: var(--radius-small);
   padding: 0.9rem 1rem; font-family: var(--mono); font-size: 0.875rem; line-height: 1.65;
@@ -485,7 +486,7 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
    LIMIT: a theme's cards.css that writes a gap on its root wins over it unseen; a theme writes no room between parts */
 /* --cards-gap is the room between what a card holds, which a part laying out its cards' rows (options) reads too; a
    theme sets it on the :scope of its cards.css */
-:scope { --cards-gap: 0.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
+:scope { --cards-gap: 0.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--floe-room); counter-reset: floe-card; }
 .card {
   padding: var(--floe-pad-block) var(--floe-pad-inline); display: grid; gap: var(--cards-gap); align-content: start; min-width: 0;
 }
@@ -554,7 +555,9 @@ blockquote > p { display: inline; background: linear-gradient(transparent 62%, v
 <style>
 @layer floe.parts.depth1 {
 @scope ([data-floe-part="stack"]:where(:is([data-floe-part], [data-floe-look]) *):where(:not(:is([data-floe-part], [data-floe-look]) :is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-/* What details, tabs, columns and an item of entries, checks or options hold */
+/* What details, tabs, columns and an item of entries, checks or options hold.
+   LIMIT: kept within its place one stack deep and two (an option of options in an option), but for options and bars
+   two deep; deeper, a part comes to want more room than it has, and overflows. Measure it in wrapPage if it comes to matter */
 :scope { display: grid; gap: var(--floe-room); }
 /* A word kept whole (a table's on paper) overflows the stack's column instead of widening it */
 :scope > * { min-width: 0; }

@@ -1,5 +1,5 @@
 /* In the faces of cards, unnumbered; a card without a tone notes in --muted */
-:scope { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); --tone: var(--muted); --tone-soft: var(--muted-soft); }
+:scope { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); --tone: var(--muted); --tone-soft: var(--muted-soft); }
 .stat dt { font-size: var(--floe-text-small); color: var(--muted); }
 .stat dd { margin: 0; }
 .stat .value {
