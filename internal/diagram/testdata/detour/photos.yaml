@@ -1,0 +1,107 @@
+title: detour photos down
+parts:
+  - graph:
+      x: 16
+      y: 16
+      direction: down
+      nodes:
+        - icon: { name: users, icon: aws/res/users, label: 利用者 }
+        - box: { name: pay, rows: [決済サービス, 外部の API], tone: muted }
+        - group:
+            name: cloud
+            label: AWS Cloud
+            icon: aws/group/aws-cloud-logo
+            nodes:
+              - icon: { name: dns, icon: aws/amazon-route-53, label: Route 53 }
+              - icon: { name: waf, icon: aws/aws-waf, label: WAF }
+              - icon: { name: cdn, icon: aws/amazon-cloudfront, label: CloudFront }
+              - icon: { name: site, icon: aws/amazon-simple-storage-service, label: S3 画面 }
+              - group:
+                  name: region
+                  label: 東京リージョン
+                  icon: aws/group/region
+                  nodes:
+                    - icon: { name: ecr, icon: aws/amazon-elastic-container-registry, label: ECR }
+                    - icon: { name: secrets, icon: aws/aws-secrets-manager, label: Secrets Manager }
+                    - group:
+                        name: vpc
+                        label: VPC 10.0.0.0/16
+                        icon: aws/group/virtual-private-cloud-vpc
+                        nodes:
+                          - icon: { name: alb, icon: aws/res/elastic-load-balancing-application-load-balancer, label: ALB }
+                          - group:
+                              name: az-a
+                              label: AZ a
+                              nodes:
+                                - group:
+                                    name: pub-a
+                                    label: パブリック
+                                    icon: aws/group/public-subnet
+                                    nodes:
+                                      - icon: { name: nat-a, icon: aws/res/amazon-vpc-nat-gateway, label: NAT }
+                                - group:
+                                    name: app-a
+                                    label: アプリ
+                                    icon: aws/group/private-subnet
+                                    nodes:
+                                      - icon: { name: api-a, icon: aws/aws-fargate, label: API }
+                                - group:
+                                    name: data-a
+                                    label: データ
+                                    icon: aws/group/private-subnet
+                                    nodes:
+                                      - icon: { name: writer, icon: aws/amazon-aurora, label: Aurora 書き込み }
+                                      - icon: { name: redis-a, icon: aws/amazon-elasticache, label: ElastiCache }
+                          - group:
+                              name: az-c
+                              label: AZ c
+                              nodes:
+                                - group:
+                                    name: pub-c
+                                    label: パブリック
+                                    icon: aws/group/public-subnet
+                                    nodes:
+                                      - icon: { name: nat-c, icon: aws/res/amazon-vpc-nat-gateway, label: NAT }
+                                - group:
+                                    name: app-c
+                                    label: アプリ
+                                    icon: aws/group/private-subnet
+                                    nodes:
+                                      - icon: { name: api-c, icon: aws/aws-fargate, label: API }
+                                - group:
+                                    name: data-c
+                                    label: データ
+                                    icon: aws/group/private-subnet
+                                    nodes:
+                                      - icon: { name: reader, icon: aws/amazon-aurora, label: Aurora 読み取り }
+                                      - icon: { name: redis-c, icon: aws/amazon-elasticache, label: ElastiCache }
+                    - icon: { name: queue, icon: aws/amazon-simple-queue-service, label: SQS }
+                    - icon: { name: thumb, icon: aws/aws-lambda, label: 縮小 Lambda }
+                    - icon: { name: photos, icon: aws/amazon-simple-storage-service, label: S3 写真 }
+                    - icon: { name: watch, icon: aws/amazon-cloudwatch, label: CloudWatch }
+      edges:
+        - { from: users, to: dns, label: DNS, dashed: true }
+        - { from: users, to: cdn, label: HTTPS, bold: true }
+        - { from: waf, to: cdn, dashed: true, end: none }
+        - { from: cdn, to: site }
+        - { from: cdn, to: alb, bold: true }
+        - { from: cdn, to: photos, label: 画像 }
+        - { from: alb, to: api-a, bold: true }
+        - { from: alb, to: api-c, bold: true }
+        - { from: api-a, to: writer, label: SQL }
+        - { from: api-c, to: writer }
+        - { from: api-c, to: reader }
+        - { from: api-a, to: redis-a }
+        - { from: api-c, to: redis-c }
+        - { from: api-a, to: queue, label: ジョブ }
+        - { from: api-c, to: queue }
+        - { from: queue, to: thumb }
+        - { from: thumb, to: photos }
+        - { from: nat-a, to: api-a, dashed: true, start: arrow, end: none }
+        - { from: nat-c, to: api-c, dashed: true, start: arrow, end: none }
+        - { from: pay, to: nat-a, dashed: true, label: 決済, start: arrow, end: none }
+        - { from: pay, to: nat-c, dashed: true, start: arrow, end: none }
+        - { from: ecr, to: vpc, dashed: true }
+        - { from: secrets, to: vpc, dashed: true }
+        - { from: vpc, to: watch, dashed: true, label: ログ }
+  - edge: { from: writer, to: reader, label: 複製, tone: good, crossing: true }

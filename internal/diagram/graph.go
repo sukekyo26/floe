@@ -63,7 +63,7 @@ type group struct {
 // graphOut is a graph read and ranked: its boxes and groups read flat, its groups of connected boxes, and the ranks
 // its edges pass between their ends.
 type graphOut struct {
-	settle   func(*drawing) // what moves the ends once all is placed
+	way      graphWay // what moves the ends once all is placed, and whether edges go round frames
 	g        *graph
 	at       string
 	boxes    []gbox
@@ -80,16 +80,18 @@ type graphOut struct {
 	withed   map[int]bool   // the boxes of a with that names a box: edges from boxes into them decide no rank
 	facing   map[[2]int]int // where each block stands in its lane (faces)
 	drawn    []drawnBox     // where each box stands, drawn
+	detoured map[int]bool   // the edges gone round frames (detours)
+	stayed   map[int]string // the edges left through a frame that holds neither end, and why (detours)
 }
 
 // readGraph reads g's boxes and groups, resolves the names of its edges against them, and splits it into groups of
 // connected boxes, each ranked. An edge naming nothing of it, or between a group and what the group holds, is dropped
 // and told; one from a box to itself is a loop, kept out of the groups (drawLoops).
-func readGraph(g *graph, at string, settle func(*drawing)) (*graphOut, usererr.List) {
+func readGraph(g *graph, at string, way graphWay) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
 		loops: nil, skip: false, levels: nil, row: nil, ranked: nil, withed: nil, facing: nil, drawn: nil,
-		settle: settle,
+		way: way,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)
 	if n := len(out.boxes) + len(out.clusters); n > maxNodes {
@@ -424,6 +426,9 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 		}
 	}
 	d.growLevels(gr)
+	if !o.way.straight {
+		o.detours(d, edges)
+	}
 	if err := o.drawLoops(d); err != nil {
 		return nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
 	}
@@ -437,7 +442,8 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 			}
 		}
 	}
-	o.settle(d)
+	d.kept = o.keptOut(d)
+	o.way.settle(d)
 	d.reseat(slices.Sorted(slices.Values(slices.Concat(edges, gr.levels))))
 	return d, nil
 }
@@ -500,6 +506,7 @@ type drawing struct {
 	places   map[endAt]endPlace      // where the ends at its icons and boxes go
 	slid     map[endAt]bool          // the ends slide has moved
 	settling settling                // what the ends moved keep off
+	kept     map[int][]rect          // the frames each edge keeps out of as its ends move (keptOut)
 	moved    map[int]float64         // how far each icon has moved across the ranks in its rectangle
 	settled  map[int]bool            // the icons straighten has placed
 	off      bool                    // whether settleEnds runs offPoint

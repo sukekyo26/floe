@@ -543,8 +543,8 @@ func (d *drawing) crossesBelow(k int, runs []seg) bool {
 	return count(runs) <= count(d.settling.runs[k])
 }
 
-// clear is whether runs, of edge k, keep off what does not move, the other edges' labels and what lies between them and
-// their runs, and the other edges' runs: wire leaves no two edges touching, and check does not compare two edges of a
+// clear is whether runs, of edge k, keep off what does not move, the frames it keeps out of (kept), the other edges'
+// labels and what lies between them and their runs, and the other edges' runs: wire leaves no two edges touching, and check does not compare two edges of a
 // graph, so a run landing on another would be drawn unsaid.
 // LIMIT: only runs moved here are compared, so edges may touch where gathered bends them by a rectangle's side. Part
 // them along the side if that shows.
@@ -553,7 +553,8 @@ func (d *drawing) crossesBelow(k int, runs []seg) bool {
 func (d *drawing) clear(k int, runs []seg) bool {
 	for _, s := range runs {
 		through := func(r rect) bool { return crossedBy(s, r) }
-		if slices.ContainsFunc(d.settling.things, through) {
+		if slices.ContainsFunc(d.settling.things, through) ||
+			slices.ContainsFunc(d.kept[k], func(f rect) bool { return within(s, f) }) {
 			return false
 		}
 		for e, r := range d.settling.labels {
