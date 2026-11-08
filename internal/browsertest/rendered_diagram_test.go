@@ -170,7 +170,7 @@ parts:
   - box: { x: 160, y: 120, w: 100, h: 40, rows: [plain] }
   - edge: { from: [120, 40], to: [160, 40], tone: accent }
   - edge: { from: [260, 140], to: [300, 140] }
-  - raw: { svg: '<rect x="300" y="120" width="30" height="40" fill="var(--accent-soft)" stroke="var(--accent)"/><g data-floe-tone="bad"><rect x="340" y="120" width="30" height="40" fill="var(--tone)"/></g><text x="380" y="140" font-size="12" fill="currentColor">r</text>' }
+  - raw: { svg: '<rect x="300" y="120" width="30" height="40" fill="var(--accent-soft)" stroke="var(--accent)"/><g data-floe-tone="bad"><rect x="340" y="120" width="30" height="40" fill="var(--tone)"/><rect x="340" y="165" width="30" height="10" fill="var(--tone-soft)"/></g><text x="380" y="140" font-size="12" fill="currentColor">r</text>' }
 `
 
 // diagramColours lists, in the tree root names (document, or a shadow root), what the diagram's CSS paints:
@@ -192,10 +192,13 @@ func diagramColours(root string) string {
 }
 
 // rawOff lists the raw SVG whose colours are not those its fill and stroke attributes write, each read as a colour in
-// the page's body, outside the diagrams: var(--x) as --x; var(--tone) as the tone the nearest data-floe-tone around
-// it names (--bad under bad); currentColor as --fg, as the docs say. floe draws no fill or stroke attribute, so every
-// one is raw's. It lists that it measured none, when none is drawn.
-// LIMIT: a colour written as itself (red, #f00) is not measured: the rule is of the palette's variables.
+// the page's body, outside the diagrams: var(--x) as --x; var(--tone…) as the same of the tone the nearest
+// data-floe-tone around it in the diagram names (var(--tone-soft) as --bad-soft under bad), and nothing under none,
+// as the diagram's root clears a tone from outside; currentColor as --fg, as the docs say. floe draws no fill or
+// stroke attribute, so every one is raw's. It lists that it measured none, when none is drawn.
+// LIMIT: only var(--x) whole is read: a colour written as itself (red, #f00), a variable with a fallback
+// (var(--good, green)) or with spaces inside is not measured, as the rule is of the palette's variables as the docs
+// write them.
 const rawOff = `(() => {
   const out = [];
   let seen = 0;
@@ -207,7 +210,10 @@ const rawOff = `(() => {
       const written = (e.getAttribute(prop) || '').trim();
       const v = /^var\((--[\w-]+)\)$/.exec(written);
       let name = v ? v[1] : written === 'currentColor' ? '--fg' : '';
-      if (name === '--tone') name = '--' + e.closest('[data-floe-tone]')?.dataset.floeTone;
+      if (name.startsWith('--tone')) {
+        const tone = e.closest('svg.dg [data-floe-tone]')?.dataset.floeTone;
+        name = tone ? '--' + tone + name.slice('--tone'.length) : '';
+      }
       if (!name) continue;
       seen++;
       const want = colour(name);
@@ -448,7 +454,7 @@ func TestRenderedDiagramGround(t *testing.T) { //nolint:paralleltest // the brow
 
 // measureFaces tells, as JSON, each class of classes as part.css draws a diagram's text in it, as faceOf in
 // internal/diagram measures it: [its size in px, the units of its narrow characters], 31 in code, else 32 in bold
-// (600 or more), else 30, as faceOf's doc says. A frame's heading takes its class from its group (onGroup).
+// (600 or more), else 30, as faceOf's doc says. A frame's heading takes its class from its group (onGroup, facesFile's Group).
 const measureFaces = `((classes, onGroup) => {
   const svg = document.querySelector('svg.dg'), plain = getComputedStyle(svg).fontFamily, out = {};
   for (const cls of classes) {
@@ -478,12 +484,14 @@ func TestRenderedDiagramFaces(t *testing.T) { //nolint:paralleltest // the brows
 	if err != nil {
 		t.Fatal(err)
 	}
-	var want map[string][2]float64
-	if err := json.Unmarshal(src, &want); err != nil {
+	var faces struct{ Text, Group map[string][2]float64 }
+	if err := json.Unmarshal(src, &faces); err != nil {
 		t.Fatal(err)
 	}
+	want := maps.Clone(faces.Text)
+	maps.Copy(want, faces.Group)
 	classes := slices.Sorted(maps.Keys(want))
-	measure := measureFaces + "(" + mustJSON(classes) + ", " + mustJSON([]string{"frame", "frame grouped"}) + ")"
+	measure := measureFaces + "(" + mustJSON(classes) + ", " + mustJSON(slices.Sorted(maps.Keys(faces.Group))) + ")"
 	for _, theme := range themes {
 		slug := "faces-" + theme
 		page := "template: report\nlang: en\ntheme: " + theme + "\ntitle: Faces\nsections:\n  - heading: Section\n    parts:\n" +

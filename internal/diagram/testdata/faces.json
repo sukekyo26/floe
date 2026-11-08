@@ -1,42 +1,46 @@
 {
-  "cell code": [
-    12,
-    31
-  ],
-  "frame": [
-    12,
-    32
-  ],
-  "frame grouped": [
-    13,
-    32
-  ],
-  "label": [
-    12,
-    30
-  ],
-  "label strong": [
-    13,
-    32
-  ],
-  "main": [
-    13,
-    32
-  ],
-  "main code": [
-    12,
-    31
-  ],
-  "sub": [
-    12,
-    30
-  ],
-  "sub code": [
-    12,
-    31
-  ],
-  "type": [
-    12,
-    30
-  ]
+  "Text": {
+    "cell code": [
+      12,
+      31
+    ],
+    "label": [
+      12,
+      30
+    ],
+    "label strong": [
+      13,
+      32
+    ],
+    "main": [
+      13,
+      32
+    ],
+    "main code": [
+      12,
+      31
+    ],
+    "sub": [
+      12,
+      30
+    ],
+    "sub code": [
+      12,
+      31
+    ],
+    "type": [
+      12,
+      30
+    ]
+  },
+  "Group": {
+    "frame": [
+      12,
+      32
+    ],
+    "frame grouped": [
+      13,
+      32
+    ]
+  }
 }
