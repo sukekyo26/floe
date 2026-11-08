@@ -7,49 +7,41 @@ import (
 	"github.com/sukekyo26/floe/internal/kit"
 )
 
-// measurePrint returns a line for each element with a ground (a colour or an image) that print would leave out: one
-// whose print-color-adjust is not exact, read with the page drawn for print.
-const measurePrint = `(() => {
-  const out = new Set();
-  for (const e of [document.documentElement, ...document.querySelectorAll('*')]) {
-    const s = getComputedStyle(e);
-    if (s.backgroundColor === 'rgba(0, 0, 0, 0)' && s.backgroundImage === 'none') continue;
-    if (s.printColorAdjust !== 'exact') out.add(e.tagName.toLowerCase() + [...e.classList].map((c) => '.' + c).join('') + ': ' + s.printColorAdjust);
-  }
-  return [...out].join('\n');
-})()`
-
-// measureTabs returns a line for each tabs whose titles are not drawn alike, read with the page drawn for print: on
-// paper every tab shows under its title, so that the one picked on the screen is no more than the others.
-const measureTabs = `(() => {
-  const out = [];
-  const look = (e) => { const s = getComputedStyle(e);
-    return [s.backgroundColor, s.backgroundImage, s.color, s.borderTop, s.borderBottom, s.boxShadow, s.borderRadius].join(' / '); };
-  for (const tabs of document.querySelectorAll('[data-floe-part="tabs"]')) {
-    const titles = [...tabs.querySelectorAll(':scope > label')].map(look);
-    if (new Set(titles).size > 1) out.push('tabs: ' + titles.join(' | '));
-  }
-  return out.join('\n');
-})()`
-
-// measurePaper returns, read with the page drawn for print, a line for a page wider than the paper, one for each
-// element that reaches past it, one for each that scrolls sideways (paper shows no scrolled part), and one for each
-// that clips what it holds sideways (overflow hidden or clip, as code's box rounds its corners) wider than itself.
+// measurePaper finds, read with the page drawn for print, each element that scrolls sideways (paper shows no scrolled
+// part), that clips what it holds sideways (overflow hidden or clip, as code's box rounds its corners) wider than
+// itself, or whose own content (its text, or itself if an image, a drawing or a control) reaches past the paper. It
+// tells every element that scrolls or clips, the cause, and of those whose content reaches past the paper, the
+// innermost alone and none in an element told to scroll or clip (not the boxes that what reaches past widens around
+// it), and the page wider than the paper only when no element is told.
+// LIMIT: a box with no text of its own (a bar, a frame, an hr) and the text a display: contents element holds are told by
+// the page's line alone, with no place; measure their boxes too if a part comes to draw one past the paper.
 // A box's scrollWidth is not read where nothing clips: a decoration drawn out of a box (washi's seal on a card) is
 // within --floe-room by the rules, and reaches no further than the paper. A word hidden to the eye (base.css's
 // .floe-hidden) is clipped to a pixel by design.
+// It returns {seen, amiss}: the elements it measured, and for each told its part and what is amiss.
 const measurePaper = `(() => {
-  const out = [], w = innerWidth;
-  if (document.documentElement.scrollWidth > w) out.push('the page is ' + document.documentElement.scrollWidth + ' px wide on ' + w);
+  ` + partOfJS + textRightJS + `
+  let seen = 0;
+  const w = innerWidth, cause = [], past = [];
   const name = (e) => e.tagName.toLowerCase() + ' ' + e.textContent.trim().slice(0, 40);
+  const reach = (e) => {
+    if (e.matches('img, svg, video, canvas, iframe, input, textarea, select')) return e.getBoundingClientRect().right;
+    return Math.max(-Infinity, ...[...e.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE && n.data.trim()).map(textRight));
+  };
   for (const e of document.querySelectorAll('body *')) {
     if (e.matches('.floe-hidden, .floe-copy-status') || !e.getClientRects().length) continue;
+    seen++;
     const x = getComputedStyle(e).overflowX;
-    if (['auto', 'scroll'].includes(x)) out.push('scrolls: ' + name(e));
-    else if (['hidden', 'clip'].includes(x) && e.scrollWidth > e.clientWidth + 1) out.push('clips: ' + name(e));
-    else if (e.getBoundingClientRect().right > w + 1) out.push('past the paper: ' + name(e));
+    if (['auto', 'scroll'].includes(x)) cause.push({ e, text: 'scrolls: ' + name(e) });
+    else if (['hidden', 'clip'].includes(x) && e.scrollWidth > e.clientWidth + 1) cause.push({ e, text: 'clips: ' + name(e) });
+    else if (reach(e) > w + 1) past.push({ e, text: 'past the paper: ' + name(e) });
   }
-  return out.join('\n');
+  const free = past.filter((a) => !cause.some((c) => c.e.contains(a.e)));
+  const inner = free.filter((a) => !free.some((b) => b !== a && a.e.contains(b.e)));
+  const amiss = [...cause, ...inner].map((a) => ({ at: partOf(a.e), text: a.text }));
+  const page = document.documentElement.scrollWidth;
+  if (!amiss.length && page > w) amiss.push({ at: 'page', text: 'the page is ' + page + ' px wide on ' + w });
+  return JSON.stringify({ seen, amiss });
 })()`
 
 // printPage holds what scrolls sideways on screen, to be folded on paper: long lines in code, a diff, a terminal,
@@ -104,48 +96,59 @@ const paperWidth = 718
 // slidesWidth is an A4 sheet's length, in CSS px: slides prints on a landscape sheet with no margin (its @page).
 const slidesWidth = 1122
 
-// lookPaper draws every page of floePages, and printPage, for print as wide as an A4 sheet's text (slides as wide
-// as its landscape sheet), and finds each on paper (measurePaper): nothing scrolls sideways there, as what scrolls is
-// not read on paper, and folds onto lines within it, but what folds no word there (LIMIT: a table's heads and cells, a
-// column of numbers or of pills, a tree's note and its depth, a field's name, a finding's level) may still reach past
-// it, or past a card it is in, which nothing measures. It finds every ground kept on paper: print leaves a ground
-// out unless asked, as a browser's print does by default, and a light text on a fill would be lost on white paper.
-// It finds tabs whose picked title is drawn apart from the others, as tabs paints the picked one on the screen alone.
-// LIMIT: tabs is the only part whose state print draws otherwise; check a part's that comes to do so too.
-// LIMIT: it tells the picked title drawn apart alone, not a ground a theme gives every title alike outside @media screen.
-func lookPaper(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
-	s := newSite(t)
+// onPaper draws s's pages for print, as wide as an A4 sheet's text, till the test ends.
+func onPaper(t *testing.T, s *site) {
+	t.Helper()
+
 	s.b.size(paperWidth, 1000, false)
-	defer s.b.unsize()
 	s.b.scrollbars(true)
-	defer s.b.scrollbars(false)
 	s.b.media("print")
+	t.Cleanup(func() {
+		s.b.media("")
+		s.b.scrollbars(false)
+		s.b.unsize()
+	})
+}
+
+const lookPaperWrapFix = "fold what a box holds on paper (print), where nothing scrolls sideways, within the paper's width"
+
+// lookPaperWrap measures, on paper (measurePaper), printPage in every theme and every page of floePages (slides as
+// wide as its landscape sheet).
+// LIMIT: what folds no word there (a table's heads and cells, a column of numbers or of pills, a tree's note and its
+// depth, a field's name, a finding's level) may still reach past the paper, or past a card it is in, which nothing
+// measures.
+func lookPaperWrap(t *testing.T, s *site) measured {
+	t.Helper()
+
+	onPaper(t, s)
 	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, _, themes, _ := k.Names()
+	var m measured
 	page := s.write(t, "print.yaml", printPage)
 	for _, theme := range themes {
 		s.floe(t, "publish", page, "--slug", "print-"+theme, "--theme", theme)
 		s.b.navigate("/a/print-" + theme + "/?raw")
-		if wide := s.b.eval(measurePaper); wide != "" {
-			t.Errorf("printPage in %s on paper:\n  %s", theme, strings.ReplaceAll(wide, "\n", "\n  "))
-		}
+		m.add(s.b.measure("printPage in "+theme, measurePaper))
 	}
 	s.floePages(t, func(what string) {
 		if strings.HasPrefix(what, "slides in ") {
 			s.b.size(slidesWidth, 1000, false)
 			defer s.b.size(paperWidth, 1000, false)
 		}
-		if wide := s.b.eval(measurePaper); wide != "" {
-			t.Errorf("%s on paper:\n  %s", what, strings.ReplaceAll(wide, "\n", "\n  "))
-		}
-		if lost := s.b.eval(measurePrint); lost != "" {
-			t.Errorf("%s draws a ground print leaves out:\n  %s", what, strings.ReplaceAll(lost, "\n", "\n  "))
-		}
-		if apart := s.b.eval(measureTabs); apart != "" {
-			t.Errorf("%s draws a tab's title apart on paper:\n  %s", what, strings.ReplaceAll(apart, "\n", "\n  "))
-		}
+		m.add(s.b.measure(what, measurePaper))
 	})
+	return m
+}
+
+// brokenPaperWrap draws a part of one's own whose pre keeps a long line whole on paper.
+func brokenPaperWrap(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	html := `<pre data-floe-part="wide">` + longWord + `</pre>`
+	onPaper(t, s)
+	s.brokenPage(t, ownPart("wide", html, ":scope { white-space: pre; margin: 0; }\n"), htmlPage(html))
+	return "wide", s.b.measure("broken", measurePaper)
 }

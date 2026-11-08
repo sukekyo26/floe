@@ -43,8 +43,13 @@ paths:
 - **カードの中の間は `--cards-gap`** [cards-gap]：見た目 cards のカードの中の間は `--cards-gap` で書き、0.4rem を写さない。テーマは `.card` に gap を書かず、この変数で変える。`TestLookRule/cards-gap`
 - **テーマが変える部品の変数は根に置く** [part-variables]：部品・見た目は変数を `:scope` に置き、テーマはその変数を置くか読む部品・見た目のファイルの `:scope` に置く。どちらも `!important` にしない。`TestLintRule/part-variables`
 - **行の印は floe が floe.marks に 1 つ並べる** [marks]：左に印のある行は part.yaml の `marks:` 1 つ（`box`・`items`・`joined`）で言い、HTML に class を書かない。floe が書くのは置き場所と大きさだけで、色・丸さ・中身は部品・見た目・テンプレートが書く。上の層で行の `display`・`gap`・`grid-template` を書かない（黙って勝つ）。中身の間は `> * + *` の `margin-top`。テーマは印を `content: none` で消し、大きさと間は `--floe-mark`・`--floe-mark-gap` で変える。1 つの字・題の前の飾り、`::marker`、code の行の番号と線（floe が選ぶ行は部品の根か `> li` で、`<code>` の中に届かない）、中に部品を持つ行の左の線は外。`TestLookRule/marks`
-- **横に流れる箱は、画面で中身の幅を外へ言わない** [scroll-box]：横に流れる箱は `overflow-x: auto` と `contain: inline-size` を `@media screen` の中の 1 つの規則に書く。中で地を塗る要素は中身の端まで伸ばす。中身で幅が決まる所には置かない（画面で潰れる。例は base.css）。`TestLookRule/scroll-box`
-- **紙では中身を折り返し、地を落とさない** [paper]：横に流れる箱は紙では中身を折り返す。印刷の地は base.css の `print-color-adjust` 1 か所。`TestLookRule/paper`
+- **横に流れる箱は、画面で中身の幅を外へ言わない** [scroll-contain]：画面で横に流れる箱は `contain: inline-size` を持つ（`overflow-x: auto` と一緒に `@media screen` に書く。例は base.css）。`TestLookRule/scroll-contain`
+- **横に流れる箱の地は中身の端まで** [scroll-ground]：横に流れる箱の中で地を塗る要素は、中身の端まで伸びる。`TestLookRule/scroll-ground`
+- **部品は狭い画面でも自分の場所に収まる** [scroll-wrap]：狭い画面で、部品の箱は自分の場所からはみ出さず、狭い列の語は途中で折れない。`TestLookRule/scroll-wrap`
+- **横に流れる箱は幅の決まった所に置く** [scroll-place]：横に流れる箱を、中身で幅が決まる所（inline-block・fit-content・flex の auto など）に置かない。置くと画面で潰れる（例は base.css）。（判断）
+- **紙では中身を折り返す** [paper-wrap]：紙では横に流れる箱も中身を折り返し、紙の幅からはみ出さない。`TestLookRule/paper-wrap`
+- **印刷で地を落とさない** [paper-ground]：印刷の地は base.css の `print-color-adjust` 1 か所が残し、ほかで替えない。`TestLookRule/paper-ground`
+- **紙ではタブの札を同じに描く** [print-tabs]：紙ではどのタブも札の下に出るので、選んだ札だけを違う形に描かない（画面だけの形は `@media screen` に）。`TestLookRule/print-tabs`
 - **部品の間は `--floe-room`** [room]：部品が並ぶ所と Markdown のブロックの間は `var(--floe-room)` で、数で書かない。部品の根は margin を書かない。部品の中の Markdown は `MarkdownFlow`、テンプレート自身のものは `kit.Markdown` が包むので、部品は流れの中の間を書かない。`TestLookRule/room`
 - **箱の外へ出る飾りは `--floe-room` 以下** [shadows]：箱の外へ描く飾りは四方とも `--floe-room` 以下で、傾きや拡大を使わず、場所を空けない。部品の箱・見た目の要素・引用の `box-shadow` は base.css の 1 つの規則だけが書き（ほかで書くと影が黙って消える）、テーマはパレットの `--floe-shadow-*` と箱の `--floe-shadow-color`・`--floe-inset` で描く。中に部品を持つ行の左の線を枠で描かない（行が箱になり、中の部品の影が外へ出る）。`TestLookRule/shadows`
 - **テンプレートの見出しは包みの外の形で指す** [template-markdown]：page.css は自分の見出しの規則を包みの外の形（`header h1`・`section > h2`）で指し、テンプレートの Markdown の見出しは text の中と同じに描く。`TestLookRule/template-markdown`
