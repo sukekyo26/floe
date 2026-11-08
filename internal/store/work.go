@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -368,6 +369,8 @@ func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed 
 	if parent == "" {
 		return nil
 	}
+	// LIMIT: a parent named that is there is taken as it is now, its rev not compared: only the task's own row is what the
+	// screen says it read
 	if parent == name {
 		return usererr.New("store_parent_self", name)
 	}
@@ -408,63 +411,92 @@ func pastedURL(raw *string) *string {
 	return &trimmed
 }
 
+// TaskWritten is a task's row as EditTask left it, under the project (ProjectKey) and name tasks.json keys it by,
+// which a screen puts in place of the row it read.
+type TaskWritten struct {
+	Project string `json:"project"`
+	Task    string `json:"task"`
+	Row     Task   `json:"row"`
+}
+
 // EditTask applies ed to the row of the task (project, name), making it of the state of a new one when there is none,
-// but for checkParent's ErrNotFound, and returns the row's Rev as written.
+// but for checkParent's ErrNotFound, and returns the row as it left it: a write that changes nothing writes nothing.
 // LIMIT: a row written by hand keeps its Rev, and one forgotten and made again starts it again: a screen that read it
 // before may write over it. Count them apart if hand edits come to be done while screens are open
-func (s *Store) EditTask(project, name string, ed TaskEdit) (int, error) {
+func (s *Store) EditTask(project, name string, ed TaskEdit) (TaskWritten, error) {
 	project, name, err := taskKey(project, name)
 	if err != nil {
-		return 0, err
+		return TaskWritten{}, err
 	}
 	ed.URL = pastedURL(ed.URL)
 	if err = checkTaskEdit(ed); err != nil {
-		return 0, err
+		return TaskWritten{}, err
 	}
 	if ed.Parent != nil {
 		var parent string
 		if parent, err = TaskName(*ed.Parent); err != nil {
-			return 0, err
+			return TaskWritten{}, err
 		}
 		ed.Parent = &parent
 	}
 	unlock, err := s.lock(true)
 	if err != nil {
-		return 0, err
+		return TaskWritten{}, err
 	}
 	defer unlock()
 	all, err := s.ReadTasks()
 	if err != nil {
-		return 0, err
+		return TaskWritten{}, err
 	}
 	// Made first: a parent made goes in it before checkParent, though the project has no row yet. Refused, none is written
 	if all[project] == nil {
 		all[project] = map[string]Task{}
 	}
 	rows := all[project]
-	if err = s.checkThere(project, rows, name, ed.New); err != nil {
-		return 0, err
+	if err = s.checkWrite(project, rows, name, ed); err != nil {
+		return TaskWritten{}, err
 	}
-	if err = s.checkSeen(project, rows, name, ed); err != nil {
-		return 0, err
+	return s.writeRow(all, project, name, ed)
+}
+
+// writeRow writes ed, checked, to the task name of the project in all: a parent made with it, of rev 1, and the row one
+// rev more. A write that changes nothing writes nothing, so that the writes of every step (floe work) do not refuse a
+// screen.
+func (s *Store) writeRow(all Tasks, project, name string, ed TaskEdit) (TaskWritten, error) {
+	rows := all[project]
+	made := ed.ParentNew != nil && *ed.ParentNew
+	if made {
+		up := newTaskRow()
+		up.Title = strings.TrimSpace(*ed.ParentTitle)
+		up.Rev = 1
+		rows[*ed.Parent] = up
 	}
-	if err = checkParent(project, rows, name, ed); err != nil {
-		return 0, err
-	}
-	if ed.ParentNew != nil && *ed.ParentNew {
-		made := newTaskRow()
-		made.Title = strings.TrimSpace(*ed.ParentTitle)
-		made.Rev = 1
-		rows[*ed.Parent] = made
-	}
-	t, had := rows[name]
+	was, had := rows[name]
 	if !had {
-		t = newTaskRow()
+		was = newTaskRow()
 	}
-	t = t.edited(ed)
+	t := was.edited(ed)
+	if had && !made && reflect.DeepEqual(t, was) {
+		return TaskWritten{Project: project, Task: name, Row: was}, nil
+	}
 	t.Rev++
 	rows[name] = t
-	return t.Rev, s.writeTasks(all)
+	if err := s.writeTasks(all); err != nil {
+		return TaskWritten{}, err
+	}
+	return TaskWritten{Project: project, Task: name, Row: t}, nil
+}
+
+// checkWrite refuses ed of the task name, rows being the project's now: whether it is there as said, what the screen
+// saw, and the parent.
+func (s *Store) checkWrite(project string, rows map[string]Task, name string, ed TaskEdit) error {
+	if err := s.checkThere(project, rows, name, ed.New); err != nil {
+		return err
+	}
+	if err := s.checkSeen(project, rows, name, ed); err != nil {
+		return err
+	}
+	return checkParent(project, rows, name, ed)
 }
 
 // edited is t as ed changes it, which has been checked.

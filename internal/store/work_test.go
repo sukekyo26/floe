@@ -748,7 +748,8 @@ func TestWorkRevByHand(t *testing.T) {
 }
 
 // A write from a screen sends the rev it read, 0 of no row: refused as Conflict when the row has been written since, of
-// any field, and else written, its rev one more, which EditTask returns. A parent made is of rev 1.
+// any field, and else written, its rev one more, which EditTask returns with the row. A write that changes nothing
+// writes nothing, and keeps the rev. A parent made is of rev 1.
 func TestWorkRev(t *testing.T) {
 	t.Parallel()
 
@@ -771,6 +772,8 @@ func TestWorkRev(t *testing.T) {
 		{name: "new, 0", task: "#140", ed: store.TaskEdit{New: &yes, Rev: ptr(0), Title: ptr("x")}, rev: 1},
 		{name: "new, 2", task: "#140", ed: store.TaskEdit{New: &yes, Rev: ptr(2)}, want: "task #140 has changed since it was read"},
 		{name: "negative", task: "#130", ed: store.TaskEdit{Rev: ptr(-1), State: ptr("done")}, want: "task #130 has changed since it was read"},
+		{name: "no change", task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(2), State: ptr("doing")}, rev: 2},
+		{name: "no change, no rev", task: "#130", ed: store.TaskEdit{Step: ptr(" ")}, rev: 2},
 		{name: "a parent made", task: "#130", ed: store.TaskEdit{New: &no, Rev: ptr(2), Parent: ptr("#200"), ParentNew: &yes, ParentTitle: ptr("pay")}, rev: 3, parent: 1},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -791,7 +794,8 @@ func TestWorkRev(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			rev, err := s.EditTask("p", c.task, c.ed)
+			written, err := s.EditTask("p", c.task, c.ed)
+			rev := written.Row.Rev
 			all, readErr := s.ReadTasks()
 			if readErr != nil {
 				t.Fatal(readErr)

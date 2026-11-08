@@ -33,7 +33,7 @@ func (s *Server) tasks(w http.ResponseWriter, r *http.Request) {
 }
 
 // editTask changes the task the query names, as the management page's URLs name it: a name holds any character, and
-// no project is "/". It makes one that is not there, and answers the row's rev as written.
+// no project is "/". It makes one that is not there, and answers the row as written, with the keys it is under.
 func (s *Server) editTask(w http.ResponseWriter, r *http.Request) {
 	body, ok := s.readBody(w, r, maxBody)
 	if !ok {
@@ -44,7 +44,7 @@ func (s *Server) editTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
-	rev, err := s.cfg.Store.EditTask(q.Get("project"), q.Get("task"), store.TaskEdit(*in))
+	written, err := s.cfg.Store.EditTask(q.Get("project"), q.Get("task"), store.TaskEdit(*in))
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
 		return
@@ -54,7 +54,7 @@ func (s *Server) editTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	sendJSON(w, http.StatusOK, map[string]int{"rev": rev})
+	sendJSON(w, http.StatusOK, written)
 }
 
 // forgetTask removes the task the query names: not found for none, refused while a page or a child is on it.
