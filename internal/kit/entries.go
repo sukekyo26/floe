@@ -2,6 +2,9 @@ package kit
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -58,9 +61,7 @@ func (k *Kit) Parts() []Entry {
 	var all []Entry
 	for at := k; at != nil; at = at.base {
 		for _, p := range at.parts {
-			all = append(all, Entry{
-				Name: p.name, About: about(p.schema), Dir: at.own(p.dir), Looks: p.Looks(), Files: copied(p.files),
-			})
+			all = append(all, at.partEntry(p))
 		}
 		for _, l := range at.looks {
 			all = append(all, Entry{Name: l.name, About: l.about, Dir: at.own(l.dir), Looks: l.Looks(), Files: copied(l.files)})
@@ -72,6 +73,43 @@ func (k *Kit) Parts() []Entry {
 		}
 	}
 	return listed(all)
+}
+
+// partEntry is the entry of p, a part of k.
+func (k *Kit) partEntry(p *Part) Entry {
+	return Entry{Name: p.name, About: about(p.schema), Dir: k.own(p.dir), Looks: p.Looks(), Files: copied(p.files)}
+}
+
+// Writable returns what a section of floe's templates takes, by name: a key of floe's shared schema any, each
+// the part it names or, for one of a format (html), the key itself, described by any.json. They are floe's, read
+// from floe's Kit under k, so that a part of one's own named as a key does not stand for it. A key that is
+// neither is floe's failure.
+func (k *Kit) Writable() ([]Entry, error) {
+	floe := k
+	for floe.base != nil {
+		floe = floe.base
+	}
+	anyOf := floe.shared["any"]
+	if anyOf == nil {
+		return nil, errors.New("kit: floe has no shared schema any") //nolint:err113 // floe's failure
+	}
+	c := anyOf.schema
+	props := c.Follow(c.Root).Props
+	all := make([]Entry, 0, len(props))
+	for _, name := range slices.Sorted(maps.Keys(props)) {
+		step := c.Follow(props[name])
+		switch p, ok := floe.parts[schema.PartName(step.Part)]; {
+		case step.Part != "" && ok:
+			all = append(all, floe.partEntry(p))
+		case step.Format != "":
+			all = append(all, Entry{
+				Name: name, About: props[name].Description, Dir: "", Looks: nil, Files: copied(anyOf.files),
+			})
+		default:
+			return nil, fmt.Errorf("kit: the key %s of any.json is neither a part of floe nor a format", name) //nolint:err113 // floe's failure
+		}
+	}
+	return listed(all), nil
 }
 
 // Templates returns the templates of k and its base, by name: of a name both have, k's own, which hides the

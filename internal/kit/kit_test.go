@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"maps"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -681,5 +682,51 @@ func TestReadMarks(t *testing.T) {
 				t.Errorf("%s shows %s with a mark: %q", e.Name, f.Name, f.Text)
 			}
 		}
+	}
+}
+
+// Writable lists the keys of floe's any.json, a section's parts: each the entry Parts gives it, and html, a key of
+// a format, of any.json itself. A Kit of one's own over floe's lists floe's alone, a part named html too.
+func TestWritable(t *testing.T) {
+	t.Parallel()
+
+	k := floe(t)
+	got, err := k.Writable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "asks bars chart checklist checks code columns compare decision details diagram diff entries facts fields " +
+		"findings html image keys links note options script stats steps table tabs terminal text timeline tree"
+	var named []string
+	for _, e := range got {
+		named = append(named, e.Name)
+	}
+	if strings.Join(named, " ") != want {
+		t.Fatalf("Writable lists %s, want %s", strings.Join(named, " "), want)
+	}
+	parts := k.Parts()
+	for _, e := range got {
+		if e.Name == "html" {
+			if e.About != "HTML that goes in as it is" || e.Dir != "" || len(e.Files) != 1 || e.Files[0].Name != "any.json" {
+				t.Errorf("html is %+v, want any.json's key, floe's", e)
+			}
+			continue
+		}
+		i := slices.IndexFunc(parts, func(p kit.Entry) bool { return p.Name == e.Name })
+		if i < 0 || !reflect.DeepEqual(parts[i], e) {
+			t.Errorf("%s is %+v, want the entry of Parts", e.Name, e)
+		}
+	}
+
+	own, err := kit.Load(k, kit.Sources{Parts: kit.Dir{FS: fstest.MapFS{
+		"html/schema.json": {Data: []byte(partSchema)},
+		"html/part.html":   {Data: []byte(`<div data-floe-part="html">{{.t}}</div>`)},
+		"html/part.css":    {Data: []byte{}},
+	}, Name: "own/parts"}})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if over, err := own.Writable(); err != nil || !reflect.DeepEqual(over, got) {
+		t.Errorf("Writable over one's own part html = %+v, %v; want floe's", over, err)
 	}
 }
