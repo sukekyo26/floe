@@ -409,7 +409,7 @@ func TestUITaskFamilyCard(t *testing.T) { //nolint:paralleltest // the browser t
     row.title === ` + js(long+"\n"+longTitle) + `].join(' ')
 })()`
 	defer b.unsize()
-	out := []string{}
+	out := make([]string, 0, 4)
 	for _, width := range []int64{1440, 400} {
 		b.size(width, 900, width == 400)
 		for _, name := range []string{"%231", "%232"} {
