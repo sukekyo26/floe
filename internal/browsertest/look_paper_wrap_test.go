@@ -36,7 +36,8 @@ const measurePaper = `(() => {
     else if (['hidden', 'clip'].includes(x) && e.scrollWidth > e.clientWidth + 1) cause.push({ e, text: 'clips: ' + name(e) });
     else if (reach(e) > w + 1) past.push({ e, text: 'past the paper: ' + name(e) });
   }
-  const inner = past.filter((a) => !cause.some((c) => c.e.contains(a.e)) && !past.some((b) => b !== a && a.e.contains(b.e)));
+  const free = past.filter((a) => !cause.some((c) => c.e.contains(a.e)));
+  const inner = free.filter((a) => !free.some((b) => b !== a && a.e.contains(b.e)));
   const amiss = [...cause, ...inner].map((a) => ({ at: partOf(a.e), text: a.text }));
   const page = document.documentElement.scrollWidth;
   if (!amiss.length && page > w) amiss.push({ at: 'page', text: 'the page is ' + page + ' px wide on ' + w });
