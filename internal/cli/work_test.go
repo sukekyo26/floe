@@ -236,7 +236,8 @@ func TestWorkCommand(t *testing.T) {
 	run(0, "work", "--task", "#21", "--forget")
 
 	// A parent with pages and --task: the task and the page in one command, refused in the store's words with the page
-	// as it was. --parent "" alone of a task of no row is not found, as without pages; with --state it makes the row.
+	// as it was. --parent "" alone of a task of no row has nothing to take off: the page goes on it, which makes it, as
+	// --task alone does; with --state it makes the row.
 	run(0, "work", "--task", "#30", "--title", "parent")
 	run(0, "work", "b", "--task", "#31", "--parent", "#30")
 	if got := tasks()["p"]["#31"].Parent; got != "#30" {
@@ -251,8 +252,12 @@ func TestWorkCommand(t *testing.T) {
 	if got := workOf(t, env, "b"); got != `{"task":"#31"}` {
 		t.Errorf("a parent refused moved the page: %s", got)
 	}
-	if got := run(1, "work", "b", "--task", "#33", "--parent", ""); got != "floe: no task #33 in project p: --project names another\n" {
-		t.Errorf(`--parent "" of no row with a page: %q`, got)
+	run(0, "work", "b", "--task", "#33", "--parent", "")
+	if got := workOf(t, env, "b"); got != `{"task":"#33"}` {
+		t.Errorf(`--parent "" of no row with a page put it on: %s`, got)
+	}
+	if _, ok := tasks()["p"]["#33"]; ok {
+		t.Errorf(`--parent "" of no row with a page made a row: %v`, tasks()["p"]["#33"])
 	}
 	run(0, "work", "b", "--task", "#33", "--parent", "", "--state", "doing")
 	if row, ok := tasks()["p"]["#33"]; !ok || row.State != "doing" || row.Parent != "" {
@@ -269,8 +274,8 @@ func TestWorkCommand(t *testing.T) {
 		{[]string{"work", "--state", "done"}, "floe: name a task with --task, or pages by their slugs: run floe --help\n"},
 		{[]string{"work", "--task", "#1", "--pin"}, "floe: --pin changes pages: name them by their slugs: run floe --help\n"},
 		{[]string{"work", "--task", "#1", "--step", "s"}, "floe: --step changes pages: name them by their slugs: run floe --help\n"},
-		{[]string{"work", "a", "--forget"}, "floe: --forget changes a task, not pages: give it without slugs: run floe --help\n"},
-		{[]string{"work", "a", "--project", "p"}, "floe: --project changes a task, not pages: give it without slugs: run floe --help\n"},
+		{[]string{"work", "a", "--forget"}, "floe: --forget goes with a task alone, not with pages: give it without slugs: run floe --help\n"},
+		{[]string{"work", "a", "--project", "p"}, "floe: --project goes with a task alone, not with pages: give it without slugs: run floe --help\n"},
 		// Not a flag of the task, --parent would be dropped here and say nothing.
 		{[]string{"work", "a", "--task", "", "--parent", "x"}, "floe: --task \"\" takes the pages off their task, so it cannot go with --parent: run floe --help\n"},
 		{[]string{"work", "a", "--parent", "x"}, "floe: --parent with slugs goes with --task: name the one task the pages go on: run floe --help\n"},

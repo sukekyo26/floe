@@ -211,7 +211,7 @@ floe work design-notes --task "#131" --parent "#130" --step design   # the page 
 floe work --task "#130" --forget                                     # the task's row removed
 ```
 
-With slugs, the task's project is each page's: `--task` puts the pages on that name in their own projects, and without it each page's own task is changed. `--project` and `--forget` change a task, not pages, so they go without slugs. Pages of several projects with `--parent` have it written to each project's task in turn, and a project without the parent stops the rest there. Without slugs, `--task` names the task, of `--project` (the working directory's project when left out; `""` for none).
+With slugs, the task's project is each page's: `--task` puts the pages on that name in their own projects, and without it each page's own task is changed. `--project` and `--forget` go with a task alone, not with pages, so they go without slugs. Pages of several projects with `--parent` have it written to each project's task in turn, and a project without the parent stops the rest there. Without slugs, `--task` names the task, of `--project` (the working directory's project when left out; `""` for none).
 
 | Flag | Changes | |
 | --- | --- | --- |

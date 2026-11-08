@@ -150,7 +150,7 @@ var messagesJA = map[string]string{
 	"cli_usage":                "%s: floe --help を見てください",
 	"cli_work_no_task":         "--task でタスクを、または slug でページを名指してください",
 	"cli_work_needs_pages":     "--%s はページを変えます。slug で名指してください",
-	"cli_work_no_pages":        "--%s はページでなくタスクを変えるので、slug を付けずに使います",
+	"cli_work_no_pages":        "--%s はページでなくタスクだけと使います。slug を付けずに使います",
 	"cli_work_parent_task":     "slug と一緒の --parent には --task が要ります：ページを付ける 1 つのタスクを名指してください",
 	"cli_work_nothing":         "ページの何を変えるかを書いてください（--task、--step、--state、--url、--title、--steps、--parent、--pin、--unpin、--clear）",
 	"cli_work_page_no_task":    "ページ「%s」はタスクにありません。--task で名指してください",

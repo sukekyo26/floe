@@ -203,12 +203,12 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 }
 
 // writeTasks writes ed to each of tasks in turn, stopping at the first failure. A task of no row is not found when ed
-// takes its parent off alone, as floe work --task says it.
+// takes its parent off alone: it has no parent to take off, and the pages going on it make it, so it is passed.
 func writeTasks(ctx context.Context, c client, tasks []taskOf, ed server.TaskEdit) error {
 	for _, t := range tasks {
 		err := c.do(ctx, http.MethodPatch, taskQuery(t), ed, nil)
 		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
-			return usererr.New("cli_work_no_row", t.name, t.project)
+			continue
 		}
 		if err != nil {
 			return err
