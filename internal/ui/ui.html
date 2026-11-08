@@ -1622,7 +1622,10 @@
     try {
       const res = await fetch(url, init);
       setServer(true);
-      return res;
+      if (!write) return res;
+      // A write ends once its answer is read, as a load waits for it: what the answer says is not put over what a load read since
+      const body = [101, 204, 205, 304].includes(res.status) ? null : await res.text();
+      return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
     } catch (e) {
       // One cut off by its own time limit (the store's lock held long) tells nothing of the server
       // One called off by its own caller, likewise
@@ -3544,7 +3547,7 @@
     $('task-family').hidden = !ups && kids.length === 0 && !adds;
     $('task-family-word').textContent = kids.length > 0 ? t('ui_task_kids_head', kids.length) : t('ui_task_kids_word');
     const up = task.parentTask;
-    // Of the revs too, so that a row's button sends the rev drawn
+    // Of the revs too, so that the rows are drawn again when the tasks read change
     const said = JSON.stringify([task.name, task.parent, task.rev, [up, ...kids].map((x) => x && [x.name, x.title, x.parent, x.state, x.rev, unreadOf(x) > 0])]);
     if (said === familyDrawn) return;
     familyDrawn = said;
@@ -4994,7 +4997,7 @@
     if (res.ok) {
       const written = await res.json();
       (tasksRead.tasks[written.project] ??= {})[written.task] = written.row;
-      rev = written.row.rev;
+      rev = written.row.rev ?? 0;
     }
     return { ok: res.ok, status: res.status, text, rev, stale: t('ui_task_stale', text) };
   }

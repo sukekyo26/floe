@@ -190,7 +190,7 @@ Archive the pages in order through the server (it is started when it is not runn
 
 ## `floe work [<slug>...]`
 
-Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its ID; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `tasks.json` in the store holds each task's title, state, last step, outside link and order of steps, and how many times it was written (`rev`), which a screen sends back so that a task written since is refused.
+Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its ID; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `tasks.json` in the store holds each task's title, state, last step, outside link and order of steps, and how many times it was changed (`rev`), which a screen sends back so that a task written since is refused.
 
 ```sh
 floe work design-notes --task "#130" --step design --state waiting   # the page on the task, and the task's state
