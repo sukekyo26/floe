@@ -29,8 +29,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Add one form to the buttons of words on the management page: square corners, a thin edge, 2rem high and 2.25rem at a modal's foot; round stays for the buttons of an icon. The Set the task and child task dialogs name their fields Task ID and Title, with an example, as the step field has too, and a new task needs a title; a task saved from a screen read before another change is refused, and the tasks are read again.
 - Add the part `columns`: parts side by side, to see at once, such as a screen before and after. Each column is an optional `title` over `parts`, which hold what `details` holds; they are of one width, and fold under one another where they don't fit.
 - Add the task state `todo`. A new task starts in it, whichever way it is made. The list's column goes in the order of the work, To do, In progress, Waiting, Done, Archive, opening on Waiting as before, and To do lists the latest to come to it first.
-- Add child tasks. `floe work --task "#130" --parent "#123"`, or the parent field of the Set task dialog, makes a task the child of another of its project, one level deep, and "+ Add" on a task's page makes a new one under it or takes one that is there; `--parent ""` takes it off, and `--forget` is refused while a task has children. On the task list a child's row names its parent and a parent's row says how many children it has; a task's page lists its children, or its parent, over its pages. A parent with no page of its own moves to the archive by its children's pages.
-- Add the task screens. `floe work` says which task a page is on, its step and pin, and a task's state, outside link, title and order of steps, held in `tasks.json` in the store; pages keep it when published again, renamed or drawn again. The task list at `/tasks` shows one project's tasks by state, longest waiting first, with their step, pages, unread and link, that project's pinned pages over them, and a switch to it beside the logo once a page is on a task or pinned. A row opens the task's page: its pages under their steps, its state to change, and a button that archives the task once it is done. A page's `…` menu pins it, opens its task and sets its task, step and URL, and the page list's rows show a page's task and pin. A task written from a screen, its state, archive, parent or the Set task dialog, is refused when it was written after the screen read it, and the tasks are read again.
+- Add child tasks. `floe work --task "#130" --parent "#123"` (with pages too: `floe work design-notes --task "#130" --parent "#123"`) makes a task the child of another of its project, one level deep, and "+ Add" on a task's page makes a new one under it or takes one that is there; `--parent ""` takes it off, and `--forget` is refused while a task has children. On the task list a child's row names its parent and a parent's row says how many children it has; a task's page lists its children, or its parent, over its pages. A parent with no page of its own moves to the archive by its children's pages.
+- Add the task screens. `floe work` says which task a page is on, its step and pin, and a task's state, outside link, title and order of steps, held in `tasks.json` in the store; pages keep it when published again, renamed or drawn again. The task list at `/tasks` shows one project's tasks by state, longest waiting first, with their step, pages, unread and link, that project's pinned pages over them, and a switch to it beside the logo once a page is on a task or pinned. A row opens the task's page: its pages under their steps, its state to change, and a button that archives the task once it is done. A page's `…` menu pins it, opens its task and sets its task and step, a task's page edits the task's title, URL and order of steps (reordered, the names kept, by a drag of a step's grip or its up and down buttons), and the page list's rows show a page's task and pin. A task written from a screen, its state, archive, parent, Edit or the Set task dialog, is refused when it was written after the screen read it, and the tasks are read again.
 - Add one axis to the points of an edge's `via` in a diagram: `{ x: 710 }` or `{ y: 218 }`, the other axis being the point before's, or that of the centre of the edge's start, so that the point does not copy where a part stands. The docs now tell to write only the turns you choose, and which points cannot be left out.
 - Add `parts` to the items of the part `entries`: the parts `details` holds, under the item's `text`, so that code in an item is drawn by `code` and `terminal`, under its file or prompt with a copy button.
 - Add `with: <name>` to the boxes and icons of a diagram's `graph`: it stands one in the rank of the box or icon named, with no edge drawn, of another group too, and takes the edges from boxes into it out of the ranks, so that an edge runs the way it means, up from the servers to their gateway. An AWS diagram of 25 edges goes from 2136×1440 to 1704×1407 with it, as boxes outside a group's frame no longer stand beside it.
@@ -156,11 +156,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   its ground and its text's colour, for floe's base to draw the links, a line's
   code and the focus ring in it in that colour.
 - Add `floe theme list` and `floe theme show`. `floe part show`,
-  `floe template show` and `floe theme show` print every file a part, a look,
-  a shared schema, a template or a theme reads, as written, each under
-  `==> name <==` after a `files:` line naming them; with a file named after,
-  that file alone, as written but the byte order mark at its start
-  (`floe part show code part.html`).
+  `floe template show` and `floe theme show` list on a `files:` line the files
+  a part, a look, a shared schema, a template or a theme reads; with a file
+  named after, they print that file alone, as written but the byte order mark
+  at its start (`floe part show code part.html`).
 - Add floe's template `slides`, slides to show one at a time: a cover of the
   title on a band, then slides as tall as the screen, each a heading over
   parts as in `report`, where the scroll stops at each one, numbered in the
@@ -304,7 +303,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   and `FLOE_THEMES_DIR`, beside floe's and never named as one of them; and
   `floe part list` (what a section of floe's templates takes, `html` too; with
   `--all`, every part, look and shared schema a `$ref` can name, your own too),
-  `show` (`floe part show html` prints `any.json`, which holds `html`), `new` (the
+  `show` (`floe part show html any.json` prints `any.json`, which holds `html`), `new` (the
   smallest part, to fill in) and `check`.
   A part's schema takes floe's formats (`html`, `markdown`, `image`) as a
   template's does, and a shared schema holding them. A shared schema is
@@ -596,7 +595,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   color-scheme from the page around them, its `:root` or an element holding them;
   they draw in floe's fonts, and in a shadow root too. They take their colours
   through `@scope`, which a browser that does not read it drops. The diagram
-  part's CSS has no colours of its own, so the CSS of `floe part show diagram`
+  part's CSS has no colours of its own, so the CSS of `floe part show diagram part.css`
   alone draws black diagrams in a page without a palette. floe's palettes are
   written on `:scope`.
 

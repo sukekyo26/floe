@@ -9,7 +9,7 @@ A template of your own is a directory in `FLOE_TEMPLATES_DIR` (default `$XDG_CON
 ```sh
 floe template new memo     # makes a template, memo, to fill in
 floe template check        # checks every template of your own, drawing its example.yaml
-floe template show memo    # prints its themes and every file it reads, its schema and example first
+floe template show memo    # lists its themes and the files it reads, its schema and example first
 ```
 
 A mistake of a template, part, look, shared schema or theme of your own stops every page, whether it is drawn with that one or not (a page of `report` too), until it is fixed: `floe check`, `floe render`, and the server's publishes and linked pages alike. `floe part check` and `floe template check` list them all. A published page is drawn with the server's templates ([commands.md](commands.md#the-server)); after you change one, `floe rebuild` draws the stored pages again with it.
@@ -114,7 +114,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ## Parts in a template
 
-A part draws an item of the data: `floe part list --all` lists every part, look and shared schema a `$ref` can name, with its shape, and `floe part show <name>` prints what one takes. The schema names it with `$ref`, under `properties`, `additionalProperties` (not the root's) or `items`:
+A part draws an item of the data: `floe part list --all` lists every part, look and shared schema a `$ref` can name, with its shape, and `floe part show <name>` lists on its `files:` line the files one reads, which `floe part show <name> <file>` prints: what one takes is a part's `schema.json` or a shared schema's `<name>.json`, and a look has none. The schema names it with `$ref`, under `properties`, `additionalProperties` (not the root's) or `items`:
 
 ```json
 "findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }
@@ -249,7 +249,7 @@ storage_gb: item_bytes * records.in_1_year / 1e9
 
 ## example.yaml
 
-A data file of the template, to start one from: `floe template show` prints it, and `floe template check` draws it as `floe check` draws a data file. Write every item the template takes, so that the check reaches every part of `page.html`.
+A data file of the template, to start one from: `floe template show <name> example.yaml` prints it, and `floe template check` draws it as `floe check` draws a data file. Write every item the template takes, so that the check reaches every part of `page.html`.
 
 ## Images
 
