@@ -95,10 +95,13 @@ func TestFlagsReadOnce(t *testing.T) {
 	if err := root.Execute(); err == nil {
 		t.Fatal("floe tag ran without a server")
 	}
-	cmd, _, _ := root.Find(args)
-	add, _ := cmd.Flags().GetStringArray("add")
-	remove, _ := cmd.Flags().GetStringArray("remove")
-	if !slices.Equal(add, []string{"a", "b"}) || !slices.Equal(remove, []string{"c"}) {
-		t.Errorf("--add %q, --remove %q", add, remove)
+	cmd, _, err := root.Find(args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	add, addErr := cmd.Flags().GetStringArray("add")
+	remove, removeErr := cmd.Flags().GetStringArray("remove")
+	if addErr != nil || removeErr != nil || !slices.Equal(add, []string{"a", "b"}) || !slices.Equal(remove, []string{"c"}) {
+		t.Errorf("--add %q, %v, --remove %q, %v", add, addErr, remove, removeErr)
 	}
 }

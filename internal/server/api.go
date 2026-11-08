@@ -342,8 +342,8 @@ func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
 	s.halt()
 }
 
-// Edit is a change of a page, as the management page, floe archive and floe tag send it: store.Edit with its keys, which
-// edit converts to it (a field the two do not share fails the build). A field left out or null is not changed.
+// Edit is a change of a page, as the management page, floe archive and floe tag send it: store.Edit with its keys,
+// which edit converts to it (a field the two do not share fails the build). A field left out or null is not changed.
 type Edit struct {
 	Title       *string         `json:"title,omitzero"`
 	Description *string         `json:"description,omitzero"`
