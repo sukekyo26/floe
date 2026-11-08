@@ -170,18 +170,13 @@ sections:
               | export | nightly | wiki.conf | writes pages | running | platform |
 `
 
-// scrollsJS defines scrolls, which tells an element that scrolls sideways, for the measures of scroll-wrap,
-// scroll-contain and scroll-ground.
-const scrollsJS = `const scrolls = (e) => ['auto', 'scroll'].includes(getComputedStyle(e).overflowX);`
-
 // measureWrap finds each part's box, or a box in it, out of those that scroll sideways, that is wider than its place
 // or reaches past the window, and tells the innermost of them alone, as what overflows widens the boxes around it; the
 // page wider than the window only when no box is told. It finds each word that breaks across lines in keys' text,
 // code's language, a diff's counts, a table and a tree's note.
 // It returns {seen, amiss}: the boxes and words it measured, and for each told its part and what is amiss.
 const measureWrap = `(() => {
-  ` + scrollsJS + `
-  ` + partOfJS + `
+  ` + scrollsJS + partOfJS + `
   let seen = 0;
   const w = document.documentElement.clientWidth, wide = [], amiss = [];
   // What is in a box that scrolls sideways may be wider than it.
@@ -225,6 +220,17 @@ func onPhone(t *testing.T, s *site, width int64) {
 	t.Cleanup(s.b.unsize)
 }
 
+// laidOut fails t unless the page open is laid out width px wide, as a phone lays out a page whose viewport is the
+// device's: with none, it lays the page out 980 px wide and finds nothing overflow. A page wider than the phone widens
+// innerWidth alone, and the measures tell where.
+func laidOut(t *testing.T, s *site, width int64) {
+	t.Helper()
+
+	if got := s.b.eval("String(document.documentElement.clientWidth)"); got != fmt.Sprint(width) {
+		t.Fatalf("at %d px the page is laid out %s wide: its viewport is not the device's", width, got)
+	}
+}
+
 // wrapThemes publishes wrapPage in every theme, lays each out as wide as a phone (390 px), and visits it.
 func wrapThemes(t *testing.T, s *site, visit func(theme string)) {
 	t.Helper()
@@ -238,6 +244,7 @@ func wrapThemes(t *testing.T, s *site, visit func(theme string)) {
 	for _, theme := range themes {
 		s.floe(t, "publish", s.write(t, "wrap-"+theme+".yaml", wrapPage+"theme: "+theme+"\n"), "--slug", "wrap-"+theme)
 		s.b.navigate("/a/wrap-" + theme + "/?raw")
+		laidOut(t, s, 390)
 		visit(theme)
 	}
 }
@@ -256,6 +263,7 @@ func lookScrollWrap(t *testing.T, s *site) measured {
 	for _, w := range []int64{390, 620} {
 		onPhone(t, s, w)
 		s.b.navigate("/a/wrap/?raw")
+		laidOut(t, s, w)
 		m.add(s.b.measure(fmt.Sprintf("wrapPage at %dpx", w), measureWrap))
 	}
 	return m
@@ -267,6 +275,7 @@ func brokenScrollWrap(t *testing.T, s *site) (string, measured) {
 
 	html := `<p data-floe-part="nowrap">` + longWord + `</p>`
 	onPhone(t, s, 390)
-	s.brokenPage(t, ownPart("nowrap", html, ":scope { white-space: nowrap; }\n"), htmlPage(html))
+	s.brokenPage(t, ownPart("nowrap", html, "@media screen { :scope { white-space: nowrap; } }\n"), htmlPage(html))
+	laidOut(t, s, 390)
 	return "nowrap", s.b.measure("broken", measureWrap)
 }

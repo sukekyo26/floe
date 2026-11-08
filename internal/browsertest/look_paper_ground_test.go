@@ -6,12 +6,12 @@ import "testing"
 // print-color-adjust is not exact, read with the page drawn for print. It returns {seen, amiss}: the elements with a
 // ground, and for each left out its part and its print-color-adjust.
 const measurePrint = `(() => {
-  ` + partOfJS + `
+  ` + partOfJS + groundedJS + `
   let seen = 0;
   const out = new Set();
   for (const e of [document.documentElement, ...document.querySelectorAll('*')]) {
     const s = getComputedStyle(e);
-    if (s.backgroundColor === 'rgba(0, 0, 0, 0)' && s.backgroundImage === 'none') continue;
+    if (!grounded(s)) continue;
     seen++;
     if (s.printColorAdjust !== 'exact') out.add(JSON.stringify({ at: partOf(e), text: e.tagName.toLowerCase() + [...e.classList].map((c) => '.' + c).join('') + ': ' + s.printColorAdjust }));
   }

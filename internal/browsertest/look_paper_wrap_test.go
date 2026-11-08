@@ -7,43 +7,37 @@ import (
 	"github.com/sukekyo26/floe/internal/kit"
 )
 
-// partOfJS defines partOf, which names the part an element is in (its own part, if a part's box), else its tag.
-const partOfJS = `const partOf = (e) => { const p = e.closest('[data-floe-part]'); return p ? p.dataset.floePart : e.tagName.toLowerCase(); };`
-
 // measurePaper finds, read with the page drawn for print, each element that scrolls sideways (paper shows no scrolled
 // part), that clips what it holds sideways (overflow hidden or clip, as code's box rounds its corners) wider than
 // itself, or whose own content (its text, or itself if an image, a drawing or a control) reaches past the paper. It
-// tells the innermost of them alone, not the boxes that what reaches past widens around it, and the page wider than
-// the paper only when no element is told.
+// tells every element that scrolls or clips, the cause, and of those whose content reaches past the paper, the
+// innermost alone and none in an element told to scroll or clip (not the boxes that what reaches past widens around
+// it), and the page wider than the paper only when no element is told.
+// LIMIT: a box with no text of its own (a bar, a frame, an hr) and the text a display: contents element holds are told by
+// the page's line alone, with no place; measure their boxes too if a part comes to draw one past the paper.
 // A box's scrollWidth is not read where nothing clips: a decoration drawn out of a box (washi's seal on a card) is
 // within --floe-room by the rules, and reaches no further than the paper. A word hidden to the eye (base.css's
 // .floe-hidden) is clipped to a pixel by design.
 // It returns {seen, amiss}: the elements it measured, and for each told its part and what is amiss.
 const measurePaper = `(() => {
-  ` + partOfJS + `
+  ` + partOfJS + textRightJS + `
   let seen = 0;
-  const w = innerWidth, bad = [];
+  const w = innerWidth, cause = [], past = [];
   const name = (e) => e.tagName.toLowerCase() + ' ' + e.textContent.trim().slice(0, 40);
   const reach = (e) => {
     if (e.matches('img, svg, video, canvas, iframe, input, textarea, select')) return e.getBoundingClientRect().right;
-    let far = -Infinity;
-    for (const n of e.childNodes) {
-      if (n.nodeType !== Node.TEXT_NODE || !n.data.trim()) continue;
-      const r = document.createRange();
-      r.selectNodeContents(n);
-      for (const c of r.getClientRects()) far = Math.max(far, c.right);
-    }
-    return far;
+    return Math.max(-Infinity, ...[...e.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE && n.data.trim()).map(textRight));
   };
   for (const e of document.querySelectorAll('body *')) {
     if (e.matches('.floe-hidden, .floe-copy-status') || !e.getClientRects().length) continue;
     seen++;
     const x = getComputedStyle(e).overflowX;
-    if (['auto', 'scroll'].includes(x)) bad.push({ e, text: 'scrolls: ' + name(e) });
-    else if (['hidden', 'clip'].includes(x) && e.scrollWidth > e.clientWidth + 1) bad.push({ e, text: 'clips: ' + name(e) });
-    else if (reach(e) > w + 1) bad.push({ e, text: 'past the paper: ' + name(e) });
+    if (['auto', 'scroll'].includes(x)) cause.push({ e, text: 'scrolls: ' + name(e) });
+    else if (['hidden', 'clip'].includes(x) && e.scrollWidth > e.clientWidth + 1) cause.push({ e, text: 'clips: ' + name(e) });
+    else if (reach(e) > w + 1) past.push({ e, text: 'past the paper: ' + name(e) });
   }
-  const amiss = bad.filter((a) => !bad.some((b) => b !== a && a.e.contains(b.e))).map((a) => ({ at: partOf(a.e), text: a.text }));
+  const inner = past.filter((a) => !cause.some((c) => c.e.contains(a.e)) && !past.some((b) => b !== a && a.e.contains(b.e)));
+  const amiss = [...cause, ...inner].map((a) => ({ at: partOf(a.e), text: a.text }));
   const page = document.documentElement.scrollWidth;
   if (!amiss.length && page > w) amiss.push({ at: 'page', text: 'the page is ' + page + ' px wide on ' + w });
   return JSON.stringify({ seen, amiss });

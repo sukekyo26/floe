@@ -216,6 +216,19 @@ func ownPart(name, html, css string) map[string]string {
 	}
 }
 
+// partOfJS defines partOf, which names the part an element is in (its own part, if a part's box), else its tag.
+const partOfJS = `const partOf = (e) => { const p = e.closest('[data-floe-part]'); return p ? p.dataset.floePart : e.tagName.toLowerCase(); };`
+
+// scrollsJS defines scrolls, which tells an element that scrolls sideways.
+const scrollsJS = `const scrolls = (e) => ['auto', 'scroll'].includes(getComputedStyle(e).overflowX);`
+
+// textRightJS defines textRight, the farthest right a text node's lines reach (-Infinity for none laid out).
+const textRightJS = `const textRight = (n) => { const r = document.createRange(); r.selectNodeContents(n);
+    return Math.max(-Infinity, ...[...r.getClientRects()].map((c) => c.right)); };`
+
+// groundedJS defines grounded, which tells a computed style that paints a ground: a colour or an image.
+const groundedJS = `const grounded = (s) => s.backgroundColor !== 'rgba(0, 0, 0, 0)' || s.backgroundImage !== 'none';`
+
 // themePage is a page of report in theme that holds parts, a YAML list.
 func themePage(theme, parts string) string {
 	return "template: report\nlang: en\ntitle: Broken\ntheme: " + theme + "\nsections:\n  - heading: Broken\n    parts:\n" + indent(parts, "      ")

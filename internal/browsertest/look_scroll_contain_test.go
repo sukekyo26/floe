@@ -6,8 +6,7 @@ import "testing"
 // inline-size (size and strict hold it); a form's control scrolls by the browser's own sheet. It returns {seen,
 // amiss}: the elements that scroll sideways, and for each with no such contain its part and its text.
 const measureContain = `(() => {
-  ` + scrollsJS + `
-  ` + partOfJS + `
+  ` + scrollsJS + partOfJS + `
   let seen = 0;
   const amiss = [];
   for (const e of document.querySelectorAll('*')) {
@@ -35,6 +34,7 @@ func brokenScrollContain(t *testing.T, s *site) (string, measured) {
 
 	html := `<div data-floe-part="scroller"><p>` + longWord + `</p></div>`
 	onPhone(t, s, 390)
-	s.brokenPage(t, ownPart("scroller", html, "@media screen { :scope { overflow-x: auto; } }\n:scope p { white-space: nowrap; }\n"), htmlPage(html))
+	s.brokenPage(t, ownPart("scroller", html, "@media screen { :scope { overflow-x: auto; } :scope p { white-space: nowrap; } }\n"), htmlPage(html))
+	laidOut(t, s, 390)
 	return "scroller", s.b.measure("broken", measureContain)
 }

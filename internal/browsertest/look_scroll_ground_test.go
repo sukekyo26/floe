@@ -10,8 +10,7 @@ import "testing"
 // LIMIT: a frame (a border, --floe-inset's shadow), a ground of ::before or ::after and the ground of an element laid in
 // a line (inline, inline-block and the like) are not measured; measure them too if a theme comes to paint them inside a box that scrolls.
 const measureScrollGround = `(() => {
-  ` + scrollsJS + `
-  ` + partOfJS + `
+  ` + scrollsJS + partOfJS + textRightJS + groundedJS + `
   let seen = 0;
   const out = new Set();
   const reach = (e) => {
@@ -29,13 +28,7 @@ const measureScrollGround = `(() => {
       return NodeFilter.FILTER_ACCEPT;
     });
     for (let n; (n = walk.nextNode()); ) {
-      if (n.nodeType === Node.TEXT_NODE) {
-        const r = document.createRange();
-        r.selectNodeContents(n);
-        for (const c of r.getClientRects()) far = Math.max(far, c.right);
-      } else {
-        far = Math.max(far, n.getBoundingClientRect().right);
-      }
+      far = Math.max(far, n.nodeType === Node.TEXT_NODE ? textRight(n) : n.getBoundingClientRect().right);
     }
     return far;
   };
@@ -44,7 +37,7 @@ const measureScrollGround = `(() => {
     seen++;
     for (const e of box.querySelectorAll('*')) {
       const s = getComputedStyle(e);
-      if ((s.backgroundColor === 'rgba(0, 0, 0, 0)' && s.backgroundImage === 'none') || s.display.startsWith('inline')) continue;
+      if (!grounded(s) || s.display.startsWith('inline')) continue;
       const right = e.getBoundingClientRect().right, far = reach(e);
       if (far > right + 1) out.add(JSON.stringify({ at: partOf(box), text: e.tagName.toLowerCase() + ' in ' + (box.dataset.floePart || box.tagName.toLowerCase()) + ' ends ' + Math.round(far - right) + ' px short' }));
     }
@@ -62,7 +55,8 @@ func lookScrollGround(t *testing.T, s *site) measured {
 	var m measured
 	wrapThemes(t, s, func(theme string) {
 		if got := s.b.eval("(() => { const trees = [...document.querySelectorAll('[data-floe-part=tree]')]; return trees.length > 0 && trees.every((e) => e.scrollWidth > e.clientWidth); })()"); got != "true" {
-			t.Fatalf("%s: wrapPage has no tree, or one that does not scroll sideways", theme)
+			t.Errorf("%s: wrapPage has no tree, or one that does not scroll sideways", theme)
+			return
 		}
 		m.add(s.b.measure("wrapPage in "+theme, measureScrollGround))
 	})
@@ -76,6 +70,7 @@ func brokenScrollGround(t *testing.T, s *site) (string, measured) {
 
 	html := `<div data-floe-part="groundy"><p class="g">` + longWord + `</p></div>`
 	onPhone(t, s, 390)
-	s.brokenPage(t, ownPart("groundy", html, "@media screen { :scope { overflow-x: auto; contain: inline-size; } }\n:scope .g { background: #ddd; white-space: nowrap; }\n"), htmlPage(html))
+	s.brokenPage(t, ownPart("groundy", html, "@media screen { :scope { overflow-x: auto; contain: inline-size; } :scope .g { background: #ddd; white-space: nowrap; } }\n"), htmlPage(html))
+	laidOut(t, s, 390)
 	return "groundy", s.b.measure("broken", measureScrollGround)
 }
