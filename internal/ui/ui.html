@@ -3652,7 +3652,7 @@
       },
       back: () => partButton(false)?.focus(),
       // LIMIT: this task's row gone meanwhile, its pages left, it is there still: refused as no parent (400), not read again, as a parent not known
-      write: (task, name, x, title) => writeTask(task.project, name, { new: !x, ...(x ? { rev: readRev(task.project, name) } : { title }), parent: task.name, parentNew: false }),
+      write: (task, name, x, title) => writeTask(task.project, name, { new: !x, ...(x ? { rev: x.rev } : { title }), parent: task.name, parentNew: false }),
       done: (task, name, x) => linkToast(t(x ? 'ui_task_child_took' : 'ui_task_child_made', name), task.project, name),
     },
     // A task named comes to be the parent, the one before said; any other is made with it, in the same write (parentTitle)
@@ -3670,7 +3670,7 @@
       back: () => partButton(true)?.focus(),
       // LIMIT: whether the one named has come to have a parent or children meanwhile is not said: the store refuses it as it is now (400),
       // and the words say so, with nothing read again
-      write: (task, name, x, title) => writeTask(task.project, task.name, { new: false, rev: readRev(task.project, task.name), parent: name, parentNew: !x, ...(x ? {} : { parentTitle: title }) }),
+      write: (task, name, x, title) => writeTask(task.project, task.name, { new: false, rev: task.rev, parent: name, parentNew: !x, ...(x ? {} : { parentTitle: title }) }),
       // Changed, the way back is offered while the parent before makes a family: one written by hand that makes none the store would refuse
       done: (task, name, x, res) => {
         if (task.parent) {
@@ -4998,7 +4998,8 @@
     }
     return { ok: res.ok, status: res.status, text, rev, stale: t('ui_task_stale', text) };
   }
-  // The rev of a task as this screen knows it: as read, or as it wrote it since; 0 of no row
+  // The rev of a task as this screen knows it: as read, or as it wrote it since; 0 of no row. A button drawn on the page sends it; what
+  // shows a task held apart (the open choices, a dialog, a toast) sends the rev of what it shows, which its own write moves on
   function readRev(project, name) {
     return tasksRead.tasks[project]?.[name]?.rev ?? 0;
   }
@@ -5023,7 +5024,7 @@
     const fresh = !setShown;
     const body = {
       // A task there is written as the dialog shows it (rev)
-      new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : { rev: readRev(setShown.project, setShown.name) }),
+      new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : { rev: setShown.rev }),
       ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}),
       // The parent sent only as changed. Whether the one named is there is said only when it is known: a name not known may be mistyped,
       // which the store refuses as no parent
@@ -5039,9 +5040,11 @@
       }
       if (!res.ok) throw new Error(res.text);
       const reason = await patchOne(page.slug, { work: { task, step } });
-      // The task written, as the tasks read now hold it: a new one is there, so that saving again writes the page
+      // The task written: the dialog shows it as written (a new one is there), so that saving again writes the page, and is refused when
+      // another wrote it since
       if (reason) {
         setTaskKnown();
+        if (setShown) setShown.rev = res.rev;
         throw new Error(reason);
       }
       if (task.trim() === setOpened.task) toast(t('ui_saved'));
