@@ -209,18 +209,19 @@ floe work design-notes --task "#130" --step design --state waiting   # the page 
 floe work --task "#130" --url https://example.com/issues/482         # the task alone
 floe work --task "#130" --steps design,build,review                  # the order its steps are shown in
 floe work design-notes --pin                                         # pinned, whatever its task
+floe work design-notes --task "#131" --parent "#130" --step design   # the page on a child task of #130
 floe work --task "#130" --forget                                     # the task's row removed
 ```
 
-With slugs, the task's project is each page's: `--task` puts the pages on that name in their own projects, and without it each page's own task is changed. Without slugs, `--task` names the task, of `--project` (the working directory's project when left out; `""` for none).
+With slugs, the task's project is each page's: `--task` puts the pages on that name in their own projects, and without it each page's own task is changed. `--project` and `--forget` go with a task alone, not with pages, so they go without slugs. `--parent` with slugs goes with pages of one project. Without slugs, `--task` names the task, of `--project` (the working directory's project when left out; `""` for none).
 
 | Flag | Changes | |
 | --- | --- | --- |
-| `--task <ID>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their step off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--steps`, a step). A page moved to another task leaves its step, unless `--step` gives it one there. A new ID is a task in the state `todo` |
+| `--task <ID>` | pages or the task named | With slugs, `""` takes the pages off their task and takes their step off, and cannot go with what changes a task (`--state`, `--url`, `--title`, `--steps`, `--parent`, a step). A page moved to another task leaves its step, unless `--step` gives it one there. A new ID is a task in the state `todo` |
 | `--step <step>` | pages, and the task's last step | With slugs only. `""` takes it off the pages and leaves the task's |
 | `--state <state>` | the task | `todo`, `doing`, `waiting`, `done` or `archived` |
 | `--url <url>` | the task | Its one outside link, `http` or `https`; `""` takes it off |
-| `--parent <task ID>` | the task | Without slugs. A task of its project with a row and no parent of its own; a task with children takes none: one level only. `""` takes it off |
+| `--parent <task ID>` | the task | With slugs, with `--task`: of the one task the pages go on. A task of its project with a row and no parent of its own; a task with children takes none: one level only. `""` takes it off |
 | `--title <title>` | the task | `""` takes it off |
 | `--steps a,b,c` | the task | The order of its steps; a step not named comes after them. A step's name cannot hold a comma here. `""` takes it off |
 | `--pin`, `--unpin` | pages | With slugs only |
