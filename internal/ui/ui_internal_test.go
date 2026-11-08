@@ -214,3 +214,33 @@ func TestPageMessages(t *testing.T) {
 		t.Error("the Japanese catalog is not registered")
 	}
 }
+
+// The tasks' rows are asked of the server in one place each: read by readTasks, written by writeTask (as every screen's write of a task goes,
+// its rev with it), removed by forgetTask; the methods are the browser tests'. The set dialog has no field of a task's own, which its page
+// writes.
+func TestTaskRequests(t *testing.T) {
+	t.Parallel()
+
+	funcRe := regexp.MustCompile(`(?:async\s+)?function\s+(\w+)\(`)
+	starts := funcRe.FindAllStringSubmatchIndex(pageSource, -1)
+	named := regexp.MustCompile("['`]/api/tasks").FindAllStringIndex(pageSource, -1)
+	got := make([]string, 0, len(named))
+	for _, at := range named {
+		in := ""
+		for _, f := range starts {
+			if f[0] < at[0] {
+				in = pageSource[f[2]:f[3]]
+			}
+		}
+		got = append(got, in)
+	}
+	slices.Sort(got)
+	if want := []string{"forgetTask", "readTasks", "writeTask"}; !slices.Equal(got, want) {
+		t.Errorf("/api/tasks is named in %v, want %v once each", got, want)
+	}
+	for _, id := range []string{`id="set-parent"`, `id="set-url"`} {
+		if strings.Contains(pageSource, id) {
+			t.Errorf("the set dialog has %s, a task's own field, which its page writes", id)
+		}
+	}
+}
