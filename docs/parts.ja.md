@@ -12,7 +12,7 @@
 ```sh
 floe part new quote     # 埋めて使う最小の部品 quote を作る
 floe part check         # 自分の部品・見た目・共有の schema・テーマを全部確かめる
-floe part show quote    # 見た目と、読むファイルを全部出す
+floe part show quote    # 見た目と、読むファイルの並びを出す
 ```
 
 誤りが 1 つあると、[templates.ja.md](templates.ja.md#テンプレートの置き場所) のとおり、どのページも止めます。`floe part check` が並べます。書いている間は、別の置き場所で作り、確かめてから移してください（[templates.ja.md](templates.ja.md#別の置き場所で作る)）。`FLOE_PARTS_DIR` か `FLOE_THEMES_DIR` をそこに向け、`floe part check` で確かめます。
@@ -41,7 +41,7 @@ quote/
 - floe の部品が描くのに使う関数も使えます（[part.html の関数](#parthtml-の関数)）。
 - 部品の schema は、テンプレートと同じく floe の `format`（`html`・`markdown`・`image`）を取ります。floe が辿る `properties`・`additionalProperties`・`items` の下か、根で宣言します。format を持つ共有の schema も取ります。その項目は `part.html` に描いたものが来ます（`html` は書いたとおり、`markdown` は HTML に、`image` は data URI に。`<img src="{{.file}}" alt="{{.alt}}">`）。`{{.h}}` と書き、関数（`markdown`・`markdownLine`・`printf`・`slice`・`eq` など）に渡したり、`<script>` の中に置いたりしません（書いた字でなく HTML なので、そこでは正しく動きません）。`html` の項目は、テンプレートの項目と同じく描いたページで確かめます（[templates.ja.md](templates.ja.md)）。format の無い文字を Markdown で描くのは `{{markdown .text}}` です。`any.json` の値は、描いた 1 つでなく、全部の種類の map で来ます（[見た目と共有の schema](#見た目と共有の-schema)）。
 - 行が縦に並ぶ部品は、見た目 `rows` を借り（`looks: [rows]`）、行の余白を書かずに `rows` に任せます（上下は `--floe-row-pad`、左右は `--floe-pad-inline`）。`rows` を借りられない行は `var(--floe-row-pad)` を読みます。テーマはこれらの変数を替えません。詳しくは[見た目を借りる](#見た目を借りる)にあります。
-- `floe part show <名前>` は、floe の部品も含めて、読むファイルを全部、並べた `files:` の行の後に出し、`floe part show <名前> <ファイル>` はそのファイルだけを出します。合うものを floe の部品から写してください。
+- `floe part show <名前>` は、floe の部品も含めて、読むファイルの並びを `files:` の行に出し、`floe part show <名前> <ファイル>` はそのファイルを出します。合うものを floe の部品から写してください。
 
 ## part.html の関数
 
@@ -129,7 +129,7 @@ floe はページの CSS を `</head>` の前の `<style>` に、6 つのカス�
 
 部品の箱か、見た目を借りる並び（`ul`・`ol`・`menu`）は、印・余白・項目の間を持たず、grid で並びます。floe が `floe.parts` と `floe.looks` の一番下の層（`floe.parts.boxes`・`floe.looks.boxes`）でそうするので、どの部品と見た目の自分の規則も、その上に書けます。部品は、並びの見た目を外す規則を書きません。テンプレートの `page.css` やテーマの `base.css` が並び全部への規則を書いても、部品の箱のこの 4 つは変わりません（margin と、項目（`li`・`::marker`）への規則は届きます）。見た目を借りる要素の 4 つも、テーマのそうした規則では変わらず、借りるテンプレートの `page.css` が整えられます。箱を印のある並びにしたい部品は、`part.css` に `list-style` と余白を書くか、箱の中に並びを置きます。印の無い並びを読み上げで並びとして読ませたいときは（Safari は読まない）、`role="list"` を書きます。
 
-部品は、色をパレットの変数からそのまま取り（`var(--accent)`）、自分の既定の値を持ちません。floe のページは、どれもパレットを持つためです。そのため、`floe part show <名前>` が出す CSS は、パレットの無いページでは色が付きません。そうしたページに図を置くときは、`default` のパレットを持つ `floe diagram render` の断片のスタイルを使います（[commands.ja.md](commands.ja.md#floe-diagram-render-specyaml)）。また、箱が並びの部品（checklist・links・steps・timeline）の印と余白は、floe がページを描くときに外すので（上のとおり）、その CSS だけでは外れません。floe の外で描くページは、自分で書きます。
+部品は、色をパレットの変数からそのまま取り（`var(--accent)`）、自分の既定の値を持ちません。floe のページは、どれもパレットを持つためです。そのため、部品や見た目が読む CSS（`floe part show <名前>` の `files:` の行にあり、名前を足すと出る）は、パレットの無いページでは色が付きません。そうしたページに図を置くときは、`default` のパレットを持つ `floe diagram render` の断片のスタイルを使います（[commands.ja.md](commands.ja.md#floe-diagram-render-specyaml)）。また、箱が並びの部品（checklist・links・steps・timeline）の印と余白は、floe がページを描くときに外すので（上のとおり）、その CSS だけでは外れません。floe の外で描くページは、自分で書きます。
 
 tone（`tone.json` のどれか）は、class でなく、その色で描く要素の `data-floe-tone` で付けます（`<span data-floe-tone="good" data-floe-part="cell">`）。floe は、その要素と、その中の部品の箱でないものに、tone の色を `--tone`・`--tone-soft` で置きます（パレットの `--good`・`--good-soft` から）。部品の箱とページは accent の色を持つので、部品は外の tone を継ぎません（部品の箱でない text の外枠は、外の tone を継ぎます）。テンプレートや見た目の要素に付けても同じです。部品は 2 つを 1 つの規則で読み（`background: var(--tone-soft); color: var(--tone)`）、tone ごとの規則は、tone の色でないもの（note の印、diagram の bad の箱の字）にだけ書きます。tone の無いものを別の色で描く部品は、根に 2 つを置きます（stats は `--muted`・`--muted-soft`）。形ごとに別の色で描く部品（diagram）は、根で 2 つを `initial` にし、形の色を `var()` の後ろに書きます（`var(--tone, var(--line))`）。tone に無い値の `data-floe-tone` は、付けないのと同じで、部品の箱なら accent の色、ほかの要素なら外の tone で描かれます。
 
@@ -164,7 +164,7 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 
 ## テーマ
 
-自分のテーマは、次のファイルのディレクトリです。要らないものは省きます。`floe theme list` がテーマを並べ、`floe theme show <名前>` が、floe のものも含めて、読むファイルを出します（`floe theme show ink palette.css`）。
+自分のテーマは、次のファイルのディレクトリです。要らないものは省きます。`floe theme list` がテーマを並べ、`floe theme show <名前>` が、floe のものも含めて、読むファイルの並びを出し、名前を足すとそのファイルを出します（`floe theme show ink palette.css`）。
 
 | ファイル | 中身 |
 |---|---|

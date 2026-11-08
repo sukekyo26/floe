@@ -23,7 +23,8 @@ curl -fsSL https://raw.githubusercontent.com/sukekyo26/floe/main/install.sh | sh
 
 ```sh
 floe template list          # floe のテンプレート（report・design・handoff・adr・postmortem・runbook・slides）と自分のもの
-floe template show report   # report のファイル。データファイルに書けるものと見本が先
+floe template show report   # report のファイルの並び。データファイルに書けるものが先
+floe template show report example.yaml   # 書き始めの見本
 floe check plan.yaml        # データファイルを確かめる（誤りと警告を出すか、何も出さない）
 floe publish plan.yaml      # ページを保存し、URL を出して開く
 floe publish --link out/index.html   # HTML のファイルをそのまま見せる

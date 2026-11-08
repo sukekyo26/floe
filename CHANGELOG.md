@@ -155,11 +155,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   its ground and its text's colour, for floe's base to draw the links, a line's
   code and the focus ring in it in that colour.
 - Add `floe theme list` and `floe theme show`. `floe part show`,
-  `floe template show` and `floe theme show` print every file a part, a look,
-  a shared schema, a template or a theme reads, as written, each under
-  `==> name <==` after a `files:` line naming them; with a file named after,
-  that file alone, as written but the byte order mark at its start
-  (`floe part show code part.html`).
+  `floe template show` and `floe theme show` list on a `files:` line the files
+  a part, a look, a shared schema, a template or a theme reads; with a file
+  named after, they print that file alone, as written but the byte order mark
+  at its start (`floe part show code part.html`).
 - Add floe's template `slides`, slides to show one at a time: a cover of the
   title on a band, then slides as tall as the screen, each a heading over
   parts as in `report`, where the scroll stops at each one, numbered in the
@@ -303,7 +302,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   and `FLOE_THEMES_DIR`, beside floe's and never named as one of them; and
   `floe part list` (what a section of floe's templates takes, `html` too; with
   `--all`, every part, look and shared schema a `$ref` can name, your own too),
-  `show` (`floe part show html` prints `any.json`, which holds `html`), `new` (the
+  `show` (`floe part show html any.json` prints `any.json`, which holds `html`), `new` (the
   smallest part, to fill in) and `check`.
   A part's schema takes floe's formats (`html`, `markdown`, `image`) as a
   template's does, and a shared schema holding them. A shared schema is
@@ -595,7 +594,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   color-scheme from the page around them, its `:root` or an element holding them;
   they draw in floe's fonts, and in a shadow root too. They take their colours
   through `@scope`, which a browser that does not read it drops. The diagram
-  part's CSS has no colours of its own, so the CSS of `floe part show diagram`
+  part's CSS has no colours of its own, so the CSS of `floe part show diagram part.css`
   alone draws black diagrams in a page without a palette. floe's palettes are
   written on `:scope`.
 
