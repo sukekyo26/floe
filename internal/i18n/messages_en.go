@@ -443,6 +443,7 @@ var messagesEN = map[string]string{
 	"ui_unread_done":          "Marked as unread. It is marked as read when you open it again.",
 	"ui_unread_failed":        "Could not mark as unread (%s).",
 	"ui_load_failed":          "Could not load the list (%s). If the server has stopped, start it with floe serve.",
+	"ui_draw_failed":          "Could not show the list (%s). It is shown again at the next read.",
 	"ui_load_slow":            "The server did not answer the list in %d seconds. It is read again in %d seconds.",
 	"ui_delete":               "Delete",
 	"ui_delete_named":         "Delete %s",

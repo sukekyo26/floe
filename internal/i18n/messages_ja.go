@@ -432,6 +432,7 @@ var messagesJA = map[string]string{
 	"ui_unread_done":          "未読に戻しました。もう一度開くと既読になります",
 	"ui_unread_failed":        "未読に戻せませんでした（%s）。",
 	"ui_load_failed":          "一覧を読み込めませんでした（%s）。サーバーが止まっていれば floe serve で起動してください。",
+	"ui_draw_failed":          "一覧の表示に失敗しました（%s）。次に読み直すときにもう一度表示します。",
 	"ui_load_slow":            "サーバーが %d 秒のうちに一覧を返しませんでした。%d 秒後に読み直します。",
 	"ui_delete":               "削除",
 	"ui_delete_named":         "%s を削除",

@@ -147,18 +147,25 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		pressedAt = -Infinity;
 		out.push('joined, e there: ' + has('e'));
 
-		// A draw that throws, of this load or of a poll going: the loads after it go on
+		// A draw that throws: said, not thrown to the caller, and the next load draws the same list again. No poll meanwhile, so
+		// that the loads drawn are the step's own
+		const realLoad = load;
+		load = (polled) => (polled ? Promise.resolve() : realLoad(polled));
+		await realLoad();
 		const realRender = render;
-		let thrown = 'none';
+		let renders = 0;
 		render = () => {
-			render = realRender;
-			thrown = 'broken draw';
-			throw new Error(thrown);
+			renders++;
+			if (renders === 1) throw new Error('broken draw');
+			realRender();
 		};
 		drawn = '';
-		await load().catch(() => {});
+		const thrown = await load().then(() => 'none', (e) => e.message);
+		const toldDraw = document.getElementById('error').textContent === t('ui_draw_failed', 'Error: broken draw');
 		const after = await Promise.race([load().then(() => 'went on', () => 'stopped'), new Promise((r) => setTimeout(() => r('stuck'), 2000))]);
-		out.push('thrown: ' + thrown + ', the next: ' + after);
+		render = realRender;
+		load = realLoad;
+		out.push('thrown: ' + thrown + ', said: ' + toldDraw + ', the next: ' + after + ', drawn again: ' + (renders === 2) + ', cleared: ' + document.getElementById('error').hidden);
 		out.push('read with a time limit: ' + limited);
 
 		// A read that never answers: cut off, the load fails and says so, and the next goes on
@@ -246,7 +253,7 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"folder open: true",
 		"folder there: false",
 		"joined, e there: false",
-		"thrown: broken draw, the next: went on",
+		"thrown: none, said: true, the next: went on, drawn again: true, cleared: true",
 		"read with a time limit: true",
 		"cut off: returned, error: false then true, the next: returned, said why: true",
 		"under read marks: drawn",
@@ -255,4 +262,110 @@ func TestUILoadOrder(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"held in the second round, folder open: true",
 		"a read outside a load limited: false",
 	}, "|"))
+
+	// The load's mistakes are said in one place, the read's before the draw's before the tasks', each taken back when it comes right; a
+	// load's never covers another's, nor clears it
+	b.navigate("/tasks")
+	b.until("the task list", "document.getElementById('list') && tasksRead.raw !== undefined")
+	got = b.eval(`(async () => {
+		const realLoad = load;
+		load = (polled) => (polled ? Promise.resolve() : realLoad(polled));
+		await realLoad();
+		const real = window.fetch;
+		let tasksBroken = false, listBroken = false, markBroken = false;
+		window.fetch = (u, i) => {
+			if (tasksBroken && String(u) === '/api/tasks') return Promise.resolve(new Response('tasks broken', { status: 500 }));
+			if (listBroken && String(u) === '/api/artifacts') return Promise.resolve(new Response('', { status: 500 }));
+			if (markBroken && String(u) === '/api/artifacts/gone/read') return Promise.resolve(new Response('marks broken', { status: 500 }));
+			return real(u, i);
+		};
+		const realRender = render;
+		let broken = 0;
+		render = () => {
+			if (broken > 0) {
+				broken--;
+				throw new Error('broken draw');
+			}
+			realRender();
+		};
+		const error = () => (document.getElementById('error').hidden ? 'none' : document.getElementById('error').textContent);
+		const out = [];
+		const say = (what, want) => out.push(what + ': ' + (error() === want ? 'right' : error()));
+		const draw = t('ui_draw_failed', 'Error: broken draw');
+		const read = t('ui_load_failed', 'HTTP 500');
+		const tasks = t('ui_tasks_failed', 'tasks broken');
+
+		// The draw's, all three at once
+		broken = 9;
+		tasksBroken = true;
+		drawn = '';
+		await load();
+		say('the draw', draw);
+		// The read's over it; when the read comes right, the draw's again, then the tasks', then none
+		listBroken = true;
+		await load();
+		say('the read', read);
+		listBroken = false;
+		await load();
+		say('the draw after the read', draw);
+		broken = 0;
+		await load();
+		say('the tasks after the draw', tasks);
+		tasksBroken = false;
+		await load();
+		say('then', 'none');
+
+		// A read held back by a press takes back the read's mistake
+		listBroken = true;
+		await load();
+		listBroken = false;
+		pressedAt = performance.now();
+		await realLoad(true);
+		pressedAt = -Infinity;
+		say('held back', 'none');
+
+		// An action's mistake stays through a load that says none, and a load's does not cover it
+		showError('a delete failed');
+		await load();
+		say('kept', 'a delete failed');
+		tasksBroken = true;
+		await load();
+		say('not covered', 'a delete failed');
+		showError('');
+		await load();
+		say('said once clear', tasks);
+		// An action that comes right clears its own only
+		showError('');
+		say('an action clears its own only', tasks);
+
+		// A read mark's mistake covers the load's, is taken back when a mark comes right (gone's, 404), and the load's is said again
+		const mark = () => tellRead('gone', { read: { n: 1, at: 'x' }, say: false });
+		const marked = t('ui_http_error', 'marks broken', 500);
+		markBroken = true;
+		await mark();
+		say('a mark over the load', marked);
+		markBroken = false;
+		await mark();
+		say('the mark taken back', 'none');
+		await load();
+		say('the load again', tasks);
+		tasksBroken = false;
+		await load();
+
+		// A mark neither covers an action's mistake nor clears it
+		showError('a delete failed');
+		markBroken = true;
+		await mark();
+		say('a mark under an action', 'a delete failed');
+		markBroken = false;
+		await mark();
+		say('a mark clears not an action', 'a delete failed');
+		showError('');
+
+		render = realRender;
+		load = realLoad;
+		window.fetch = real;
+		return out.join(', ');
+	})()`)
+	check(t, "load mistakes", []string{got}, "the draw: right, the read: right, the draw after the read: right, the tasks after the draw: right, then: right, held back: right, kept: right, not covered: right, said once clear: right, an action clears its own only: right, a mark over the load: right, the mark taken back: right, the load again: right, a mark under an action: right, a mark clears not an action: right")
 }
