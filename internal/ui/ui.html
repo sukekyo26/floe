@@ -306,7 +306,7 @@
      a new tab outside it: print the page from a browser */
   .print-alone { display: none; }
   @media print {
-    .framed :is(.bar, .frame, .diff, .dnote, .toasts, .side, .grip) { display: none; }
+    .framed :is(.bar, .tagline, .frame, .diff, .dnote, .toasts, .side, .grip) { display: none; }
     .framed:has(#notfound[hidden]) .print-alone { display: block; margin: 2rem; color: var(--fg); font: 1rem/1.7 var(--body); }
   }
 
@@ -477,7 +477,16 @@
     font-size: var(--text-label); color: var(--fg); background: var(--subtle); border: 0; border-radius: 999px;
   }
   button.tagpill:hover { box-shadow: inset 0 0 0 1px var(--fg); }
-  /* A tags field's names, as the row's menu looks: a popover in the top layer, so that no dialog or box cuts it off */
+  /* The tags of a page open, under the bar over it: outside the bar, its button none of the bar's */
+  .tagline {
+    flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; min-height: var(--icon-btn); padding: 0.25rem 1rem;
+    font-size: var(--text-small); color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .tagline > svg { flex: none; width: 14px; height: 14px; }
+  .tagline-word { margin-right: 0.2rem; }
+  .tagline-names { display: contents; }
+  .tag-edit.some .tag-add-icon, .tag-edit:not(.some) .tag-change-icon { display: none; }
+  /* A field's suggested names, as the row's menu looks: a popover in the top layer, so that no dialog or box cuts it off */
   .suggest {
     position: fixed; inset: auto; margin: 0; display: grid; gap: 1px; max-height: 14rem; overflow-y: auto; padding: var(--menu-pad);
     color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-menu); box-shadow: var(--shadow);
@@ -489,7 +498,7 @@
   .names-note { flex: none; color: var(--muted); }
   .suggest [role="option"]:hover, .suggest [aria-selected="true"] { background: var(--subtle); }
   .suggest [aria-selected="true"] { color: var(--fg); box-shadow: inset 2px 0 0 var(--ink); }
-  /* The bulk dialog's tags, a chip each, wrapping: on all the selected (filled), on some (dashed) or on none, told by the chip's
+  /* The tag dialog's tags, a chip each, wrapping: on all its pages (filled), on some (dashed) or on none, told by the chip's
      mark (✓, −, +) and its look, not by its color alone. The checkbox is the chip's own, out of sight, so keys and screen readers
      use it as any. No transition: a chip seen between two marks reads as neither */
   .tag-boxes { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 0.4rem; max-height: 16rem; overflow-y: auto; padding: 0.2rem; }
@@ -1090,6 +1099,7 @@
       <select class="ver-pick" id="read-version" aria-label="{{.Msg "ui_version"}}" hidden><button><selectedcontent></selectedcontent></button></select>
       <span class="frame-actions" id="read-actions"></span>
     </div>
+    <div class="tagline" id="read-tags" hidden></div>
     <iframe class="read-frame" id="read-frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
     <p class="read-blank" id="read-blank">{{.Msg "ui_read_blank"}}</p>
   </section>
@@ -1107,6 +1117,8 @@
 </nav>
 <div class="grip" id="side-grip" role="separator" aria-orientation="vertical" aria-controls="side" aria-label="{{.Msg "ui_side_width"}}" tabindex="0" hidden></div>
 <button type="button" class="icon-btn side-show" id="side-show" aria-expanded="false" aria-controls="side" title="{{.Msg "ui_side_show"}}" aria-label="{{.Msg "ui_side_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+<!-- The tags of the page framed, between the bar and the frame -->
+<div class="tagline" id="frame-tags" hidden></div>
 <!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
 <iframe class="frame" id="frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
 <!-- What changed between two versions, in words the server read from them: never the page's HTML, which runs in the sandbox alone -->
@@ -1225,9 +1237,6 @@
     <label class="field"><span>{{.Msg "ui_description"}} <small>{{.Msg "ui_optional"}}</small></span>
       <input class="text" id="edit-desc" autocomplete="off">
     </label>
-    <label class="field"><span>{{.Msg "ui_tags"}} <small>{{.Msg "ui_tags_hint"}}</small></span>
-      <input class="text" id="edit-tags" autocomplete="off">
-    </label>
     <p class="error" id="edit-error" hidden></p>
     <div class="dialog-actions">
       <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
@@ -1345,6 +1354,7 @@
           <button type="button" class="icon-btn fav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span class="label"></span></button>
           <button type="button" class="icon-btn mark-unread"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/></svg><span class="label">{{.Msg "ui_mark_unread"}}</span></button>
           <button type="button" class="icon-btn select" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span class="label">{{.Msg "ui_select"}}</span></button>
+          <button type="button" class="icon-btn tag-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>{{.Msg "ui_tags"}}</button>
           <button type="button" class="icon-btn pin-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4zM12 16v5"/></svg><span class="label"></span></button>
           <button type="button" class="icon-btn task-set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>{{.Msg "ui_task_set"}}</button>
           <a class="icon-btn task-open" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><span class="label"></span></a>
@@ -1356,6 +1366,11 @@
           <button type="button" class="icon-btn delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg><span class="label"></span></button>
         </div>
       </details>
+</template>
+<!-- The tags of a page open, under its bar beside the list and in the frame: outside the bar, of which its button is none -->
+<template id="tag-line">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg><span class="tagline-word">{{.Msg "ui_tags"}}</span><span class="tagline-names"></span>
+  <button type="button" class="icon-btn tag-edit"><svg class="tag-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><svg class="tag-change-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4"/></svg></button>
 </template>
 <!-- The bar over a page, beside the list and in the frame -->
 <template id="page-actions">
@@ -1883,15 +1898,19 @@
   const deleteOne = (slug) => writeOne(slug, { method: 'DELETE' }, true);
   const patchOne = (slug, body) => writeOne(slug, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
-  // Acts on the selected entries (all, or the slugs of them given) and tells how many it did, done(n), and how many failed,
-  // failed(n, the first reason). Those that failed stay selected
-  async function actOnSelected(act, done, failed, slugs = [...selected]) {
+  // Acts on the entries of slugs and tells how many it did, done(n), and how many failed, failed(n, the first reason); settled(reasons)
+  // comes before the list is read again
+  async function actOn(act, done, failed, slugs, settled) {
     const reasons = await Promise.all(slugs.map(act));
-    slugs.forEach((slug, i) => { if (!reasons[i]) selected.delete(slug); });
+    settled?.(reasons);
     const why = reasons.filter(Boolean);
     if (done && why.length < slugs.length) toast(done(slugs.length - why.length));
     showError(why.length ? failed(why.length, why[0]) : '');
     await load();
+  }
+  // As actOn, of the selected entries (all, or the slugs of them given): those that failed stay selected
+  async function actOnSelected(act, done, failed, slugs = [...selected]) {
+    await actOn(act, done, failed, slugs, (reasons) => slugs.forEach((slug, i) => { if (!reasons[i]) selected.delete(slug); }));
     renderBulk();
   }
 
@@ -1910,10 +1929,6 @@
       (n, why) => t(to ? 'ui_archive_bulk_failed' : 'ui_unarchive_bulk_failed', n, why),
     );
   }
-
-  // The names of a tags field: split at commas (Japanese ones too), trimmed, without the empty; the server drops a name the second time.
-  // LIMIT: a name with a comma in it, which the API can give, splits when the field is edited
-  const splitTags = (text) => text.split(/[,、]/).map((name) => name.trim()).filter(Boolean);
 
   // Every page's tag names, by name
   const tagNames = () => [...new Set(items.flatMap((a) => a.tags ?? []))].sort((x, y) => x.localeCompare(y, LANG));
@@ -2032,39 +2047,6 @@
     input.addEventListener('blur', close);
   }
 
-  // A tags field: the names that hold what is written between the commas around the caret, those that start with it first, but none the
-  // field has already
-  function suggestTags(input) {
-    // Where a name picked goes: from start to end, after lead
-    let spot;
-    // Where the name at the caret starts and ends, between the commas around it
-    const word = () => {
-      const at = input.selectionStart ?? input.value.length;
-      const start = Math.max(input.value.lastIndexOf(',', at - 1), input.value.lastIndexOf('、', at - 1)) + 1;
-      const end = input.value.slice(at).search(/[,、]/);
-      return { start, end: end === -1 ? input.value.length : at + end };
-    };
-    suggestNames(input, () => {
-      const { start, end } = word();
-      const written = input.value.slice(start, end).trim();
-      // A whole name at the caret, as when the field is pressed on it, is one written: the names offered are the next
-      const whole = tagNames().includes(written);
-      spot = whole ? { start: end, end, lead: ', ' } : { start, end, lead: start ? ' ' : '' };
-      const typed = whole ? '' : written.toLowerCase();
-      const have = splitTags(whole ? input.value : input.value.slice(0, start) + input.value.slice(end));
-      const starts = (name) => name.toLowerCase().startsWith(typed);
-      const names = tagNames().filter((name) => !have.includes(name) && name.toLowerCase().includes(typed));
-      return [...names.filter(starts), ...names.filter((name) => !starts(name))];
-    }, (name) => {
-      const before = input.value.slice(0, spot.start);
-      const after = input.value.slice(spot.end);
-      // A name put in last is followed by a comma, for the next
-      const put = `${before}${spot.lead}${name}`;
-      input.value = put + (after || ', ');
-      input.setSelectionRange(put.length + (after ? 0 : 2), put.length + (after ? 0 : 2));
-    });
-  }
-
   // A field of one name: those that hold what is written, those that start with it first; a name written whole offers them all, to change
   // to. fresh, when given, is what one that no name is offers, as the last
   function suggestOne(input, all, put, { fresh, onFocus, detail = (name) => ({ name, label: name }) } = {}) {
@@ -2086,27 +2068,70 @@
     }, put, onFocus);
   }
 
-  // The bulk dialog's tags: how many of the selected each is on as the dialog opened (on), the mark that makes each chip
+  // The tag dialog's tags: how many of its pages each is on as the dialog opened (on), the mark that makes each chip
   // (start) and the mark it has (want): all, some or none. A chip of a tag on some goes some → all → none → some, so that it
-  // can leave the pages as they are; the others all ⇄ none
+  // can leave the pages as they are; the others all ⇄ none. With them, the pages and what is done with them, as openTags was given
   let tagMarks;
+  // Where the focus goes as the tag dialog closes, as editBack; none, where the browser takes it
+  let tagBack;
 
-  // Apply is for a change: none while every chip has the mark it started with
-  const tagsUnchanged = () => [...tagMarks.want].every(([name, w]) => w === tagMarks.start.get(name));
-
-  function openTags() {
-    const pages = [...selected].map((slug) => items.find((a) => a.slug === slug)).filter(Boolean);
-    const on = new Map(tagNames().map((name) => [name, pages.filter((a) => a.tags?.includes(name)).length]));
-    const start = new Map([...on].map(([name, n]) => [name, n === pages.length ? 'all' : n ? 'some' : 'none']));
-    tagMarks = { total: pages.length, on, start, want: new Map(start) };
-    $('tag-title').textContent = t('ui_tag_bulk_title', pages.length);
-    $('tag-find').value = '';
-    $('tag-apply').disabled = true;
-    drawTagBoxes();
-    $('tag-dialog').showModal();
+  // Apply is for a change, and not while one is sent: none while every chip has the mark it started with
+  const showApply = () => {
+    $('tag-apply').disabled = tagMarks.sending || [...tagMarks.want].every(([name, w]) => w === tagMarks.start.get(name));
+  };
+  // While the tags are sent the dialog holds still, till it closes: no chip, find, cancel or apply, nor Escape. Escape is closedby's,
+  // as Chrome lets a cancel event be stopped only after a press in the dialog
+  function holdTags(sending) {
+    tagMarks.sending = sending;
+    $('tag-dialog').setAttribute('closedby', sending ? 'none' : 'closerequest');
+    for (const e of $('tag-form').querySelectorAll('input, button')) e.disabled = sending;
+    showApply();
   }
 
-  // The chips, the tags on the selected first, then by name; those that hold what the find field has
+  // The one dialog that changes tags, of the pages of slugs, under title(n of them): done(n) and failed(n, why) tell what came of it,
+  // send writes them (actOn, or actOnSelected of the selected) and after(the pages to change) tidies what opened it, before
+  function openTags(slugs, { title, done, failed, send = actOn, after }) {
+    const pages = slugs.map((slug) => items.find((a) => a.slug === slug)).filter(Boolean);
+    // None left, every tag would be on all of none
+    if (!pages.length) return;
+    const on = new Map(tagNames().map((name) => [name, pages.filter((a) => a.tags?.includes(name)).length]));
+    const start = new Map([...on].map(([name, n]) => [name, n === pages.length ? 'all' : n ? 'some' : 'none']));
+    tagMarks = { slugs, total: pages.length, on, start, want: new Map(start), done, failed, send, after };
+    $('tag-title').textContent = title(pages.length);
+    $('tag-find').value = '';
+    drawTagBoxes();
+    holdTags(false);
+    $('tag-dialog').showModal();
+  }
+  function openSelectedTags() {
+    tagBack = null;
+    openTags([...selected], {
+      title: (n) => t('ui_tag_bulk_title', n),
+      done: (n) => t('ui_tag_bulk_done', n),
+      failed: (n, why) => t('ui_tag_bulk_failed', n, why),
+      send: actOnSelected,
+      // The rest leave the selection unsent, their boxes unticked here: a list that does not change is not drawn again
+      after: (next) => {
+        for (const slug of [...selected].filter((s) => !next.has(s))) {
+          selected.delete(slug);
+          const row = [...$('list').querySelectorAll(':scope > li:not(.group, .tree)')].find((li) => li.dataset.slug === slug);
+          if (row) row.querySelector('.sel').checked = false;
+        }
+        if (next.size === 0) renderBulk();
+      },
+    });
+  }
+  // The tags of a alone, the focus going back where back() says
+  function openPageTags(a, back) {
+    tagBack = back;
+    openTags([a.slug], {
+      title: () => t('ui_tag_one_title', a.title),
+      done: () => t('ui_tag_done', a.title),
+      failed: (n, why) => t('ui_tag_failed', a.title, why),
+    });
+  }
+
+  // The chips, the tags on its pages first, then by name; those that hold what the find field has
   function drawTagBoxes() {
     const { on, want, total } = tagMarks;
     const find = $('tag-find').value.trim();
@@ -2126,7 +2151,7 @@
         const now = want.get(name);
         want.set(name, now === 'all' ? 'none' : now === 'none' && tagMarks.start.get(name) === 'some' ? 'some' : 'all');
         show();
-        $('tag-apply').disabled = tagsUnchanged();
+        showApply();
       });
       const mark = document.createElement('span');
       mark.className = 'mark';
@@ -2144,7 +2169,7 @@
       }
       return label;
     });
-    // A name no tag has yet can be made one, on all the selected
+    // A name no tag has yet can be made one, on all its pages
     const fresh = find && !want.has(find);
     $('tag-new').hidden = !fresh;
     if (fresh) $('tag-new').textContent = t('ui_tag_create', find);
@@ -2159,42 +2184,46 @@
     tagMarks.want.set(name, 'all');
     $('tag-find').value = '';
     drawTagBoxes();
-    $('tag-apply').disabled = tagsUnchanged();
+    showApply();
   }
 
-  // Gives the selected the tags as the boxes have them, sending each page whose tags change them so; one that would not
-  // change is not sent and leaves the selection, as done. A tag left on some is left as each page has it.
+  // The one tag the find field leaves, as the name typed: on all the pages, the field emptied for the next
+  function takeTag(name) {
+    tagMarks.want.set(name, 'all');
+    $('tag-find').value = '';
+    drawTagBoxes();
+    showApply();
+  }
+
+  // Gives the pages the tags as the boxes have them, sending each page whose tags change them so; one that would not change,
+  // or is gone, is not sent. A tag left on some is left as each page has it. The dialog closes once the list is read again, so
+  // that the focus goes back to a row's menu as drawn anew
   // LIMIT: the tags sent are those of the list read just before, as the boxes change them, so a change made elsewhere in
   // between is lost. Only this page writes tags now; give the API adding and removing if another comes to
   async function applyTags() {
-    const { want } = tagMarks;
-    $('tag-dialog').close();
-    // Read again first: a page removed since leaves the selection, rather than be sent and not found
-    await load();
-    const next = new Map();
-    for (const slug of selected) {
-      const now = items.find((a) => a.slug === slug)?.tags ?? [];
-      const tags = [...now.filter((name) => want.get(name) !== 'none'),
-        ...[...want].filter(([name, w]) => w === 'all' && !now.includes(name)).map(([name]) => name)];
-      if (tags.join('\n') !== now.join('\n')) next.set(slug, tags);
+    if (tagMarks.sending) return;
+    const { want, slugs, send, done, failed, after } = tagMarks;
+    holdTags(true);
+    // Whatever throws, the dialog is let go and closed
+    try {
+      // Read again first: a page removed since is not sent, rather than be sent and not found
+      await load();
+      const next = new Map();
+      for (const slug of slugs) {
+        const a = items.find((x) => x.slug === slug);
+        if (!a) continue;
+        const now = a.tags ?? [];
+        const tags = [...now.filter((name) => want.get(name) !== 'none'),
+          ...[...want].filter(([name, w]) => w === 'all' && !now.includes(name)).map(([name]) => name)];
+        if (tags.join('\n') !== now.join('\n')) next.set(slug, tags);
+      }
+      after?.(next);
+      if (next.size === 0) toast(t('ui_tag_bulk_none'));
+      else await send((slug) => patchOne(slug, { tags: next.get(slug) }), done, failed, [...next.keys()]);
+    } finally {
+      holdTags(false);
+      $('tag-dialog').close();
     }
-    // The rest leave the selection unsent, their boxes unticked here: a list that does not change is not drawn again
-    for (const slug of [...selected].filter((s) => !next.has(s))) {
-      selected.delete(slug);
-      const row = [...$('list').querySelectorAll(':scope > li:not(.group, .tree)')].find((li) => li.dataset.slug === slug);
-      if (row) row.querySelector('.sel').checked = false;
-    }
-    if (next.size === 0) {
-      toast(t('ui_tag_bulk_none'));
-      renderBulk();
-      return;
-    }
-    await actOnSelected(
-      (slug) => patchOne(slug, { tags: next.get(slug) }),
-      (n) => t('ui_tag_bulk_done', n),
-      (n, why) => t('ui_tag_bulk_failed', n, why),
-      [...next.keys()],
-    );
   }
 
   // Relative times ("3 minutes ago") advance without redrawing the list; a new day moves the days' headings
@@ -2413,6 +2442,9 @@
       taskOpen.href = taskHref({ project: a.taskProject, name });
       taskOpen.querySelector('.label').textContent = t('ui_task_open', name);
     }
+    const tagItem = box.querySelector('.tag-item');
+    tagItem.setAttribute('aria-label', t('ui_tag_change_named', a.title));
+    tagItem.addEventListener('click', () => openPageTags(a, menuBack(box, () => a.slug)));
     const edit = box.querySelector('.edit');
     edit.setAttribute('aria-label', t('ui_edit_named', a.title));
     edit.addEventListener('click', () => {
@@ -2521,6 +2553,24 @@
     if (focused) box.querySelector('summary')?.focus();
   }
 
+  // The tags of a under the bar over its page, x what of a is open: none for a folder's page, a link whose file is gone, or a diff.
+  // The button stays the one element through redraws, keeping the focus a press or a key gave it
+  function drawTagLine(line, a, x) {
+    line.hidden = !a || Boolean(a.missing || x.file) || DIFF;
+    if (line.hidden) return;
+    const tags = a.tags ?? [];
+    line.querySelector('.tagline-names').replaceChildren(...tags.map((name) => {
+      const pill = tagged('span', 'tagpill', name);
+      pill.title = name;
+      return pill;
+    }));
+    const edit = line.querySelector('.tag-edit');
+    edit.classList.toggle('some', tags.length > 0);
+    edit.title = t(tags.length ? 'ui_tag_change_named' : 'ui_tag_add_named', a.title);
+    edit.setAttribute('aria-label', edit.title);
+    edit.onclick = () => openPageTags(a, () => edit);
+  }
+
   // Loads href in the iframe beside the list, in place of its history entry: moved through by j and k, Back is the tab's, and
   // does not leave the rows on one page and the iframe on another. Nothing else alive there tells that it is read
   let readLoaded = 'about:blank';
@@ -2559,6 +2609,7 @@
     $('read-blank').hidden = Boolean(a && !a.missing);
     $('read-blank').textContent = a?.missing ? t('ui_link_missing', a.path) : t('ui_read_blank');
     $('read-title').hidden = !a;
+    drawTagLine($('read-tags'), a, picked ?? {});
     if (!a) return;
     const name = picked.file || a.title;
     $('read-title').textContent = name;
@@ -3126,7 +3177,6 @@
     editing = a;
     $('edit-target').textContent = a.path ?? pageHref({ slug: a.slug });
     for (const [key, id] of Object.entries(EDIT_FIELDS)) $(id).value = a[key] ?? '';
-    $('edit-tags').value = (a.tags ?? []).join(', ');
     $('edit-name').placeholder = t(a.path ? 'ui_title_from_file' : 'ui_title_from_html');
     $('edit-error').hidden = true;
     $('edit-dialog').showModal();
@@ -3139,8 +3189,6 @@
     const changes = Object.fromEntries(Object.entries(EDIT_FIELDS)
       .filter(([key, id]) => $(id).value.trim() !== (editing[key] ?? ''))
       .map(([key, id]) => [key, $(id).value]));
-    // As opened, the tags are not sent: a name with a comma in it stays whole
-    if ($('edit-tags').value !== (editing.tags ?? []).join(', ')) changes.tags = splitTags($('edit-tags').value);
     const reason = await patchOne(editing.slug, changes);
     btn.disabled = false;
     if (reason) {
@@ -4878,6 +4926,7 @@
       document.documentElement.style.setProperty('--side', '0px');
     }
     if (found) drawActions($('frame-actions'), a, frameAt);
+    drawTagLine($('frame-tags'), found ? a : null, frameAt);
     drawVersion(found ? frameAt : null, a);
     const list = `/${savedList()}`;
     $('notfound-back').href = list;
@@ -5412,9 +5461,24 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(null); });
   addEventListener('blur', () => closeMenus(null));
   $('edit').addEventListener('submit', saveEdit);
+  $('tag-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    applyTags();
+  });
+  $('tag-dialog').addEventListener('close', () => tagBack?.()?.focus());
+  $('tag-find').addEventListener('input', drawTagBoxes);
+  // Enter in the find field takes the one tag it leaves, as a field's suggestions did; else it makes the name a tag, rather than apply
+  $('tag-find').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || composing(e)) return;
+    e.preventDefault();
+    const left = $('tag-boxes').querySelectorAll('.tag-box');
+    if ($('tag-find').value.trim() && left.length === 1) takeTag(left[0].querySelector('.name').textContent);
+    else createTag();
+  });
+  $('tag-new').addEventListener('click', createTag);
+  for (const id of ['read-tags', 'frame-tags']) $(id).append($('tag-line').content.cloneNode(true));
   // The edit dialog closed, focus goes back to the menu's button it was opened from rather than to the closed menu's item
   $('edit-dialog').addEventListener('close', () => editBack?.()?.focus());
-  suggestTags($('edit-tags'));
   $('set').addEventListener('submit', saveTaskSet);
   // A field marked blank is free again as it is typed in
   for (const form of [$('set'), $('kin')]) form.addEventListener('input', (e) => e.target.setCustomValidity?.(''));
@@ -5466,10 +5530,11 @@
     return [...new Set(steps)];
   }, (name) => { $('set-step').value = name; });
   for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
-  // A click on the backdrop (the dialog itself) closes it; the form fills the dialog, so clicks inside never land here
+  // A click on the backdrop (the dialog itself) closes it, as Escape does: not one closedby none holds; the form fills the dialog, so
+  // clicks inside never land here
   for (const d of document.querySelectorAll('dialog')) {
     d.addEventListener('click', (e) => {
-      if (e.target === d) d.close();
+      if (e.target === d && d.getAttribute('closedby') !== 'none') d.close();
     });
   }
   // Not while typing or with a dialog open
@@ -5648,19 +5713,7 @@
       for (const sel of $('list').querySelectorAll('.sel')) sel.checked = false;
       renderBulk();
     });
-    $('bulk-tag').addEventListener('click', openTags);
-    $('tag-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      applyTags();
-    });
-    $('tag-find').addEventListener('input', drawTagBoxes);
-    // Enter in the find field makes the name a tag, rather than apply
-    $('tag-find').addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' || composing(e)) return;
-      e.preventDefault();
-      createTag();
-    });
-    $('tag-new').addEventListener('click', createTag);
+    $('bulk-tag').addEventListener('click', openSelectedTags);
     $('bulk-archive').addEventListener('click', archiveSelected);
     $('bulk-delete').addEventListener('click', removeSelected);
     $('bulk-delete').addEventListener('blur', disarmBulk);

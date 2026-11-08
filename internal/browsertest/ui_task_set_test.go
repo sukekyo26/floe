@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/chromedp/chromedp/kb"
+
 	"github.com/sukekyo26/floe/internal/store"
 )
 
@@ -195,6 +197,7 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.click(option.X+10, option.Y+option.Height/2)
 	b.until("it closed", "!document.getElementById('set-task-names').matches(':popover-open')")
 	say("a suggestion pressed", fields)
+	say("the field keeps the focus", "document.activeElement.id")
 	b.still()
 	say("it stays closed", "document.getElementById('set-task-names').matches(':popover-open')")
 	// What is offered holds what is written.
@@ -202,6 +205,40 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	say("offered of #9", "[...document.getElementById('set-task-names').children].map((e) => e.textContent).join(', ')")
 	field("set-task", "#")
 	say("offered of #", "[...document.getElementById('set-task-names').children].map((e) => e.textContent).join(', ')")
+	// The suggestions are a listbox the field controls as a combobox, under the field: ↓ reaches one, which the field names, and
+	// Escape closes them, not the dialog.
+	say("roles", "(() => { const f = document.getElementById('set-task'), n = document.getElementById('set-task-names'); "+
+		"return [f.getAttribute('role'), f.getAttribute('aria-autocomplete'), f.getAttribute('aria-controls') === n.id, n.getAttribute('role')].join(' '); })()")
+	b.eval("document.getElementById('set-task').focus()")
+	out = append(out, "under the field: "+b.until("the suggestions under the field", "document.getElementById('set-task-names').matches(':popover-open') && (() => { "+
+		"const f = document.getElementById('set-task').getBoundingClientRect(), r = document.getElementById('set-task-names').getBoundingClientRect(); "+
+		"return Math.abs(r.top - f.bottom - 4) < 0.5 && Math.abs(r.left - f.left) < 0.5 && 'yes'; })()"))
+	b.pressKey(kb.ArrowDown)
+	say("reached", "(() => { const o = document.querySelector('#set-task-names [aria-selected=true]'); "+
+		"return document.getElementById('set-task').getAttribute('aria-activedescendant') === o?.id && o.querySelector('.names-word').textContent; })()")
+	b.pressKey(kb.Escape)
+	say("escape", "document.getElementById('set-task-names').matches(':popover-open') + ' ' + document.getElementById('set-dialog').open")
+	// The list read again leaves the suggestions open, the one reached as it is.
+	field("set-task", "#")
+	b.until("the suggestions", "document.getElementById('set-task-names').matches(':popover-open')")
+	b.pressKey(kb.ArrowDown)
+	b.pressKey(kb.ArrowDown)
+	b.eval("window.reread = false; drawn = ''; load().then(() => { window.reread = true; })")
+	b.until("the list read again", "window.reread")
+	say("read again", "document.getElementById('set-task-names').matches(':popover-open') + ' ' + "+
+		"document.querySelector('#set-task-names [aria-selected=true] .names-word')?.textContent")
+	b.pressKey(kb.Escape)
+	// Opened as its dialog opens, the suggestions go under the field once the dialog stops moving.
+	b.eval("document.getElementById('set-dialog').close()")
+	dialog("b")
+	b.eval("document.getElementById('set-task').focus()")
+	field("set-task", "#")
+	b.still()
+	out = append(out, "under the field once still: "+b.eval("document.getElementById('set-task-names').matches(':popover-open') && (() => { "+
+		"const f = document.getElementById('set-task').getBoundingClientRect(), r = document.getElementById('set-task-names').getBoundingClientRect(); "+
+		"return Math.abs(r.top - f.bottom - 4) < 0.5 && Math.abs(r.left - f.left) < 0.5 && 'yes'; })() || 'no'"))
+	b.pressKey(kb.Escape)
+	field("set-task", "#2")
 	// A URL changed, the name then changed: the URL is that task's, and nothing of it is sent.
 	field("set-url", "https://example.com/mine")
 	field("set-task", "#2")
@@ -324,8 +361,8 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 // taskSetWant is what TestUITaskSet reads, in the order it does things.
 const taskSetWant = `tags: Task #2 /tasks?project=proj&task=%232, Task #1 /tasks?project=proj&task=%231
-items of a page on a task: fav-item select pin-item task-set task-open edit open download archive delete
-items of a page on none: fav-item select pin-item task-set edit open download archive delete
+items of a page on a task: fav-item select tag-item pin-item task-set task-open edit open download archive delete
+items of a page on none: fav-item select tag-item pin-item task-set edit open download archive delete
 open the task: Open task #1 /tasks?project=proj&task=%231
 the items' looks: 1
 pinned: Pinned /tasks?project=proj Take the pin off
@@ -351,9 +388,16 @@ off: {"pin":true}
 off, no pin: null
 as it opens: false
 a suggestion pressed: #2 / design / https://example.com/a/two / out true
+the field keeps the focus: set-task
 it stays closed: false
 offered of #9: Make #9 a new task
 offered of #: #1· To do, #2· To do, #3 a title· To do, Make # a new task
+roles: combobox list true listbox
+under the field: yes
+reached: #1
+escape: false true
+read again: true #2
+under the field once still: yes
 a URL changed, then the name: #2 / design / https://example.com/a/two / out true
 saved: #1 todo design https://example.com/a/one; #2 todo review https://example.com/a/two; #3 todo first 
 the URL alone: #1 todo later https://example.com/a/url-only; #2 todo review https://example.com/a/two; #3 todo first  | {"task":"#1","step":"design"}
