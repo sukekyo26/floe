@@ -21,13 +21,13 @@ const treeGapX, treeGapY = 24.0, 40.0
 // It reads the nodes read into their types, and walks no value along the schema. Its error is floe's failure.
 // LIMIT: trees grow down alone, and a subtree's span is not shared with its neighbours' (a wide row of leaves
 // widens every span above it); pack them if wide trees waste room.
-func expand(parts []part, settle func(*drawing)) ([]item, usererr.List, error) {
+func expand(parts []part, way graphWay) ([]item, usererr.List, error) {
 	var problems usererr.List
 	graphs := map[int]*graphOut{}
 	passed := 0
 	for i, p := range parts {
 		if p.Graph != nil {
-			o, found := readGraph(p.Graph, pointer(i)+"/graph", settle)
+			o, found := readGraph(p.Graph, pointer(i)+"/graph", way)
 			problems = append(problems, found...)
 			graphs[i] = o
 			passed += o.passed

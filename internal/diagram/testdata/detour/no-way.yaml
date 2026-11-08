@@ -1,0 +1,29 @@
+title: detour no way
+parts:
+  - graph:
+      x: 20
+      y: 20
+      lanes:
+        - name: team
+          nodes:
+            - group:
+                name: web
+                label: web
+                nodes:
+                  - box: { name: page, rows: [page] }
+                  - box: { name: form, rows: [form] }
+            - group:
+                name: jobs
+                label: jobs
+                nodes:
+                  - box: { name: queue, rows: [queue] }
+                  - box: { name: worker, rows: [worker] }
+            - box: { name: admin, rows: [admin] }
+            - box: { name: audit, rows: [audit] }
+            - box: { name: log, rows: [log] }
+      edges:
+        - { from: page, to: form }
+        - { from: queue, to: worker }
+        - { from: admin, to: audit }
+        - { from: admin, to: log }
+        - { from: admin, to: form }

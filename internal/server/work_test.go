@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -27,6 +28,15 @@ func TestWorkAPI(t *testing.T) {
 		w := e.do(t, http.MethodPatch, path, body, "Origin", origin, "Content-Type", jsonType)
 		return w.Code, w.Body.String()
 	}
+	// The answer of a write: the keys the row is under, and its rev
+	answer := func(body string) string {
+		t.Helper()
+		var w store.TaskWritten
+		if err := json.Unmarshal([]byte(body), &w); err != nil {
+			t.Fatalf("the answer %q: %v", body, err)
+		}
+		return fmt.Sprintf("%s %s %d", w.Project, w.Task, w.Row.Rev)
+	}
 	tasks := func() store.Tasks {
 		t.Helper()
 		w := e.do(t, http.MethodGet, "/api/tasks", "")
@@ -39,19 +49,20 @@ func TestWorkAPI(t *testing.T) {
 	if got := tasks(); len(got) != 0 {
 		t.Errorf("no tasks = %v", got)
 	}
-	if code, body := patch(task("/", "#a/b"), `{"state":"waiting","step":"s"}`); code != http.StatusNoContent || body != "" {
+	// The answer is the row as written, under its keys
+	if code, body := patch(task("/", "#a/b"), `{"state":"waiting","step":"s"}`); code != http.StatusOK || answer(body) != "/ #a/b 1" {
 		t.Errorf("a name of / = %d, %s", code, body)
 	}
 	if got := tasks()["/"]["#a/b"]; got.State != "waiting" || got.Step != "s" {
 		t.Errorf("no project's task: %+v", got)
 	}
-	if code, _ := patch(task(" shop ", " #1 "), `{}`); code != http.StatusNoContent {
-		t.Errorf("an empty write = %d", code)
+	if code, body := patch(task(" shop ", " #1 "), `{}`); code != http.StatusOK || answer(body) != "shop #1 1" {
+		t.Errorf("an empty write = %d, %s", code, body)
 	}
 	if got := tasks()["shop"]["#1"]; got.State != "todo" {
 		t.Errorf("trimmed, made todo: %+v", tasks())
 	}
-	if code, body := patch(task("shop", "#c"), `{"parent":"#1"}`); code != http.StatusNoContent {
+	if code, body := patch(task("shop", "#c"), `{"parent":"#1"}`); code != http.StatusOK {
 		t.Errorf("a parent = %d, %s", code, body)
 	}
 	if got := tasks()["shop"]["#c"].Parent; got != "#1" {
@@ -66,26 +77,29 @@ func TestWorkAPI(t *testing.T) {
 	if code, body := patch(task("shop", "#fresh"), `{"new":false}`); code != http.StatusConflict || body != "task #fresh is no longer there" {
 		t.Errorf("there, of none = %d, %q", code, body)
 	}
-	if code, _ := patch(task("shop", "#fresh"), `{"new":true,"title":"t"}`); code != http.StatusNoContent {
+	if code, _ := patch(task("shop", "#fresh"), `{"new":true,"title":"t"}`); code != http.StatusOK {
 		t.Errorf("new = %d", code)
 	}
-	// What the screen saw of the parent: a parent made with the child, one moved meanwhile, and the fields alone.
-	if code, body := patch(task("shop", "#fresh"), `{"new":false,"parent":"#made","parentWas":"","parentNew":true,"parentTitle":"m"}`); code != http.StatusNoContent || tasks()["shop"]["#made"].Title != "m" || tasks()["shop"]["#fresh"].Parent != "#made" {
+	// What the screen read (rev): a parent made with the child, a row written since, and the fields alone.
+	if code, body := patch(task("shop", "#fresh"), `{"new":false,"rev":1,"parent":"#made","parentNew":true,"parentTitle":"m"}`); code != http.StatusOK || answer(body) != "shop #fresh 2" || tasks()["shop"]["#made"].Title != "m" || tasks()["shop"]["#fresh"].Parent != "#made" {
 		t.Errorf("a parent made = %d, %s", code, body)
 	}
-	if code, body := patch(task("shop", "#fresh"), `{"parent":"","parentWas":"#1"}`); code != http.StatusConflict || body != "the parent of task #fresh has changed since it was read" {
-		t.Errorf("a parent moved meanwhile = %d, %q", code, body)
+	if code, body := patch(task("shop", "#fresh"), `{"parent":"","rev":1}`); code != http.StatusConflict || body != "task #fresh has changed since it was read" {
+		t.Errorf("written since = %d, %q", code, body)
+	}
+	if code, body := patch(task("shop", "#fresh"), `{"parent":"","parentWas":"#made"}`); code != http.StatusBadRequest || !strings.Contains(body, `unknown object member name "parentWas"`) {
+		t.Errorf("parentWas = %d, %q", code, body)
 	}
 	if code, body := patch(task("shop", "#fresh"), `{"parentTitle":"m"}`); code != http.StatusBadRequest || !strings.Contains(body, "go with a parent") {
 		t.Errorf("a title alone = %d, %q", code, body)
 	}
-	if code, _ := patch(task("shop", "#fresh"), `{"parent":"","parentWas":"#made"}`); code != http.StatusNoContent {
-		t.Errorf("taken off = %d", code)
+	if code, body := patch(task("shop", "#fresh"), `{"parent":"","rev":2}`); code != http.StatusOK || answer(body) != "shop #fresh 3" {
+		t.Errorf("taken off = %d, %s", code, body)
 	}
 	if code, _ := patch(task("shop", "#none"), `{"parent":""}`); code != http.StatusNotFound {
 		t.Errorf("a parent off no row = %d", code)
 	}
-	if code, body := patch(task("shop", "#c"), `{"parent":""}`); code != http.StatusNoContent || tasks()["shop"]["#c"].Parent != "" {
+	if code, body := patch(task("shop", "#c"), `{"parent":""}`); code != http.StatusOK || tasks()["shop"]["#c"].Parent != "" {
 		t.Errorf("off = %d, %s, %v", code, body, tasks()["shop"]["#c"])
 	}
 	for _, c := range []struct {

@@ -143,11 +143,16 @@ func pointer(i int) string {
 // if a diagram comes to show it; a place written for the label lets the edges move.
 // LIMIT: what keeps its moves is checked here and again by the caller. Keep the first result if that comes to show.
 func newLayout(s *spec, opts Options) *layout {
+	return layoutWay(s, opts, false)
+}
+
+// layoutWay is newLayout, a graph's edges keeping the ways its ranks lay if straight.
+func layoutWay(s *spec, opts Options, straight bool) *layout {
 	offs := 0
-	l := layoutWith(s, opts, placing{(*layout).shareStraight, func(d *drawing) {
+	l := layoutWith(s, opts, placing{(*layout).shareStraight, graphWay{func(d *drawing) {
 		d.settleOff()
 		offs += d.offs
-	}})
+	}, straight}})
 	if l.straightened+offs == 0 {
 		return l
 	}
@@ -155,14 +160,21 @@ func newLayout(s *spec, opts Options) *layout {
 	if l.failure == nil && len(l.problems) == 0 {
 		return l
 	}
-	return layoutWith(s, opts, placing{(*layout).shareEnds, (*drawing).settleEnds})
+	return layoutWith(s, opts, placing{(*layout).shareEnds, graphWay{(*drawing).settleEnds, straight}})
 }
 
 // placing is what places the ends of edges on the sides of parts: share those written by hand before they are added,
 // settle those of a graph once all of it is placed.
 type placing struct {
-	share  func(*layout, []item)
-	settle func(*drawing)
+	share func(*layout, []item)
+	graph graphWay
+}
+
+// graphWay is how a graph is laid out past its ranks: settle moves its ends once all is placed, and straight keeps its
+// edges on the ways the ranks lay, through the frames that hold neither end (a test's measure; detours goes round).
+type graphWay struct {
+	settle   func(*drawing)
+	straight bool
 }
 
 // layoutWith is newLayout with how.
@@ -172,7 +184,7 @@ func layoutWith(s *spec, opts Options, how placing) *layout {
 	b, _ := json.Marshal(s) //nolint:errcheck,errchkjson // read from JSON, it writes as JSON
 	sum := sha256.Sum256(b)
 	l.id = "dg" + strconv.Itoa(opts.Seq) + "-" + hex.EncodeToString(sum[:3])
-	items, found, err := expand(s.Parts, how.settle)
+	items, found, err := expand(s.Parts, how.graph)
 	l.problems = append(l.problems, found...)
 	l.failure = err
 	for _, it := range items {

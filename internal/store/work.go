@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -102,6 +103,8 @@ type Task struct {
 	URL    string   `json:"url,omitempty"`
 	Steps  []string `json:"steps,omitempty"`
 	Parent string   `json:"parent,omitempty"`
+	// Rev counts the writes of the row, which a screen sends back as what it read: 0 of no row.
+	Rev int `json:"rev,omitempty"`
 }
 
 // Tasks is tasks.json: the tasks by project (ProjectKey), then by name.
@@ -138,10 +141,10 @@ type TaskEdit struct {
 	Parent *string
 	// New, when said, is whether the writer takes the task to be new: refused, as Conflict, when it is there, or not.
 	New *bool
-	// ParentWas, ParentNew and ParentTitle go with Parent, as a screen says what it saw: ParentWas is the task's parent as
-	// read, as tasks.json has it; ParentNew whether the parent named is taken to be new, as New is of the task; and
-	// ParentTitle, with ParentNew true, the title of the parent made in the same write.
-	ParentWas   *string
+	// Rev, when said, is the row's Rev as the writer read it: refused, as Conflict, when the row has been written since.
+	Rev *int
+	// ParentNew and ParentTitle go with Parent: ParentNew whether the parent named is taken to be new, as New is of the
+	// task; and ParentTitle, with ParentNew true, the title of the parent made in the same write.
 	ParentNew   *bool
 	ParentTitle *string
 }
@@ -258,11 +261,11 @@ func checkTaskEdit(ed TaskEdit) error {
 	return nil
 }
 
-// parentFieldsMatch tells whether ParentWas, ParentNew and ParentTitle go with ed's Parent: none without one, but
-// ParentWas when it is taken off, and a title of more than spaces exactly when the parent is to be made.
+// parentFieldsMatch tells whether ParentNew and ParentTitle go with ed's Parent: neither without one or when it is
+// taken off, and a title of more than spaces exactly when the parent is to be made.
 func parentFieldsMatch(ed TaskEdit) bool {
 	if ed.Parent == nil {
-		return ed.ParentWas == nil && ed.ParentNew == nil && ed.ParentTitle == nil
+		return ed.ParentNew == nil && ed.ParentTitle == nil
 	}
 	if strings.TrimSpace(*ed.Parent) == "" {
 		return ed.ParentNew == nil && ed.ParentTitle == nil
@@ -300,7 +303,7 @@ func checkParent(project string, rows map[string]Task, name string, ed TaskEdit)
 	if parent == "" {
 		// What the screen saw is no change: a task of no row taken off its parent, and nothing else, is not found still
 		var nothing TaskEdit
-		ed.Parent, ed.ParentWas, ed.ParentNew, ed.ParentTitle = nil, nil, nil, nil
+		ed.Parent, ed.Rev, ed.ParentNew, ed.ParentTitle = nil, nil, nil, nil
 		if _, had := rows[name]; !had && ed == nothing {
 			return ErrNotFound
 		}
@@ -349,21 +352,25 @@ func (s *Store) checkThere(project string, rows map[string]Task, name string, ta
 	return nil
 }
 
-// checkSeen refuses, before checkParent, a parent ed names that is not as the screen saw it: the task's parent read
-// (ParentWas, compared as written, as a screen sends what it read), the parent named there or new (ParentNew). A parent
-// of itself is refused first, which would else be said to be there; one taken to be there of no row next, as it can be
-// no parent, before its pages are read.
+// checkSeen refuses, before checkParent, what ed says the screen saw that is no longer so: the task's row written since
+// (Rev), whatever it wrote, and a parent named there or new (ParentNew). A parent of itself is refused first, which
+// would else be said to be there; one taken to be there of no row next, as it can be no parent, before its pages are
+// read.
+// LIMIT: a write of another field, or of the state the row is in already, is refused as well: the screen reads the
+// tasks again. Compare by field if refusals come to be many
 func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed TaskEdit) error {
+	if ed.Rev != nil && *ed.Rev != rows[name].Rev {
+		return conflict(usererr.New("store_task_was", name))
+	}
 	if ed.Parent == nil {
 		return nil
-	}
-	if ed.ParentWas != nil && *ed.ParentWas != rows[name].Parent {
-		return conflict(usererr.New("store_parent_was", name))
 	}
 	parent := *ed.Parent
 	if parent == "" {
 		return nil
 	}
+	// LIMIT: a parent named that is there is taken as it is now, its rev not compared: only the task's own row is what the
+	// screen says it read
 	if parent == name {
 		return usererr.New("store_parent_self", name)
 	}
@@ -378,7 +385,7 @@ func (s *Store) checkSeen(project string, rows map[string]Task, name string, ed 
 // newTaskRow is the row a task starts with: of the state New, from now.
 func newTaskRow() Task {
 	fresh := States[slices.IndexFunc(States, func(s State) bool { return s.New })]
-	return Task{Title: "", State: fresh.Name, Step: "", At: Now(), URL: "", Steps: nil, Parent: ""}
+	return Task{Title: "", State: fresh.Name, Step: "", At: Now(), URL: "", Steps: nil, Parent: "", Rev: 0}
 }
 
 // stepsOf is steps as a task keeps them: each trimmed, without the empty and a name twice, in the order given; nil for
@@ -404,58 +411,92 @@ func pastedURL(raw *string) *string {
 	return &trimmed
 }
 
+// TaskWritten is a task's row as EditTask left it, under the project (ProjectKey) and name tasks.json keys it by,
+// which a screen puts in place of the row it read.
+type TaskWritten struct {
+	Project string `json:"project"`
+	Task    string `json:"task"`
+	Row     Task   `json:"row"`
+}
+
 // EditTask applies ed to the row of the task (project, name), making it of the state of a new one when there is none,
-// but for checkParent's ErrNotFound.
-func (s *Store) EditTask(project, name string, ed TaskEdit) error {
+// but for checkParent's ErrNotFound, and returns the row as it left it: a write that changes nothing writes nothing.
+// LIMIT: a row written by hand keeps its Rev, and one forgotten and made again starts it again: a screen that read it
+// before may write over it. Count them apart if hand edits come to be done while screens are open
+func (s *Store) EditTask(project, name string, ed TaskEdit) (TaskWritten, error) {
 	project, name, err := taskKey(project, name)
 	if err != nil {
-		return err
+		return TaskWritten{}, err
 	}
 	ed.URL = pastedURL(ed.URL)
 	if err = checkTaskEdit(ed); err != nil {
-		return err
+		return TaskWritten{}, err
 	}
 	if ed.Parent != nil {
 		var parent string
 		if parent, err = TaskName(*ed.Parent); err != nil {
-			return err
+			return TaskWritten{}, err
 		}
 		ed.Parent = &parent
 	}
 	unlock, err := s.lock(true)
 	if err != nil {
-		return err
+		return TaskWritten{}, err
 	}
 	defer unlock()
 	all, err := s.ReadTasks()
 	if err != nil {
-		return err
+		return TaskWritten{}, err
 	}
 	// Made first: a parent made goes in it before checkParent, though the project has no row yet. Refused, none is written
 	if all[project] == nil {
 		all[project] = map[string]Task{}
 	}
 	rows := all[project]
-	if err = s.checkThere(project, rows, name, ed.New); err != nil {
-		return err
+	if err = s.checkWrite(project, rows, name, ed); err != nil {
+		return TaskWritten{}, err
 	}
-	if err = s.checkSeen(project, rows, name, ed); err != nil {
-		return err
+	return s.writeRow(all, project, name, ed)
+}
+
+// writeRow writes ed, checked, to the task name of the project in all: a parent made with it, of rev 1, and the row one
+// rev more. A write that changes nothing writes nothing, so that the writes of every step (floe work) do not refuse a
+// screen.
+func (s *Store) writeRow(all Tasks, project, name string, ed TaskEdit) (TaskWritten, error) {
+	rows := all[project]
+	made := ed.ParentNew != nil && *ed.ParentNew
+	if made {
+		up := newTaskRow()
+		up.Title = strings.TrimSpace(*ed.ParentTitle)
+		up.Rev = 1
+		rows[*ed.Parent] = up
 	}
-	if err = checkParent(project, rows, name, ed); err != nil {
-		return err
-	}
-	if ed.ParentNew != nil && *ed.ParentNew {
-		made := newTaskRow()
-		made.Title = strings.TrimSpace(*ed.ParentTitle)
-		rows[*ed.Parent] = made
-	}
-	t, had := rows[name]
+	was, had := rows[name]
 	if !had {
-		t = newTaskRow()
+		was = newTaskRow()
 	}
-	rows[name] = t.edited(ed)
-	return s.writeTasks(all)
+	t := was.edited(ed)
+	if had && !made && reflect.DeepEqual(t, was) {
+		return TaskWritten{Project: project, Task: name, Row: was}, nil
+	}
+	t.Rev++
+	rows[name] = t
+	if err := s.writeTasks(all); err != nil {
+		return TaskWritten{}, err
+	}
+	return TaskWritten{Project: project, Task: name, Row: t}, nil
+}
+
+// checkWrite refuses ed of the task name, rows being the project's now: whether it is there as said, what the screen
+// saw, and the parent.
+func (s *Store) checkWrite(project string, rows map[string]Task, name string, ed TaskEdit) error {
+	if err := s.checkThere(project, rows, name, ed.New); err != nil {
+		return err
+	}
+	if err := s.checkSeen(project, rows, name, ed); err != nil {
+		return err
+	}
+	return checkParent(project, rows, name, ed)
 }
 
 // edited is t as ed changes it, which has been checked.

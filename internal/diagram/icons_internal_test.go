@@ -1,6 +1,7 @@
 package diagram
 
 import (
+	"cmp"
 	"fmt"
 	"math"
 	"math/rand/v2"
@@ -187,8 +188,8 @@ func labelsOn(g *graph, l *layout) string {
 
 // reachFault is the first icon of g moved past what it may, or "".
 func reachFault(g *graph) string {
-	o, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // its mistakes are iconFault's
-	if _, _, err := o.items(); err != nil {                        //nolint:errcheck // its mistakes are iconFault's
+	o, _ := readGraph(g, "#/parts/0/graph", graphWay{(*drawing).settleEnds, false}) //nolint:errcheck // its mistakes are iconFault's
+	if _, _, err := o.items(); err != nil {                                         //nolint:errcheck // its mistakes are iconFault's
 		return ""
 	}
 	axis := 0
@@ -217,8 +218,8 @@ func reachFault(g *graph) string {
 
 // touchesOutside counts the pairs of edges of g laid out as l touching outside every icon's rectangle.
 func touchesOutside(g *graph, l *layout) int {
-	o, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // its mistakes are iconFault's
-	if _, _, err := o.items(); err != nil {                        //nolint:errcheck // its mistakes are iconFault's
+	o, _ := readGraph(g, "#/parts/0/graph", graphWay{(*drawing).settleEnds, false}) //nolint:errcheck // its mistakes are iconFault's
+	if _, _, err := o.items(); err != nil {                                         //nolint:errcheck // its mistakes are iconFault's
 		return 0
 	}
 	inside := func(p [2]float64) bool {
@@ -270,24 +271,25 @@ func TestGraphIconsRandom(t *testing.T) {
 		lanes     bool
 		level     bool
 		touching  int
+		through   int   // the most edges left through a frame that holds neither end (throughFault), measured + 2
 		only      []int // the graphs to lay out, when any: the rest only take their turn of the random numbers
 	}{
-		{"", [2]uint64{31, 2}, 800, false, false, false, touchesPlain, nil},
-		{"right", [2]uint64{33, 4}, 800, false, false, false, touchesPlain, nil},
-		{"", [2]uint64{35, 6}, 150, true, false, false, touchesPlain, nil},
-		{"right", [2]uint64{37, 8}, 150, true, false, false, touchesPlain, nil},
+		{"", [2]uint64{31, 2}, 800, false, false, false, touchesPlain, 8, nil},
+		{"right", [2]uint64{33, 4}, 800, false, false, false, touchesPlain, 6, nil},
+		{"", [2]uint64{35, 6}, 150, true, false, false, touchesPlain, 3, nil},
+		{"right", [2]uint64{37, 8}, 150, true, false, false, touchesPlain, 0, nil},
 		// 717 has a label where a run stands once its ends settle, 54 a run a rounding off straight.
-		{"right", [2]uint64{777, 1517}, 720, true, false, false, touchesPlain, []int{54, 717}},
-		{"", [2]uint64{39, 10}, 300, false, true, false, touchesPlain, nil},
-		{"right", [2]uint64{41, 12}, 300, false, true, false, touchesPlain, nil},
-		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain, nil},
-		{"right", [2]uint64{45, 16}, 150, false, false, true, touchesPlain, nil},
+		{"right", [2]uint64{777, 1517}, 720, true, false, false, touchesPlain, 0, []int{54, 717}},
+		{"", [2]uint64{39, 10}, 300, false, true, false, touchesPlain, 0, nil},
+		{"right", [2]uint64{41, 12}, 300, false, true, false, touchesPlain, 14, nil},
+		{"", [2]uint64{43, 14}, 150, false, false, true, touchesPlain, 0, nil},
+		{"right", [2]uint64{45, 16}, 150, false, false, true, touchesPlain, 0, nil},
 	} {
 		t.Run(fmt.Sprintf("%s-%d", cmpOr(c.direction, "down"), c.seed[0]), func(t *testing.T) {
 			t.Parallel()
 
 			rnd := rand.New(rand.NewPCG(c.seed[0], c.seed[1])) //nolint:gosec // G404: graphs to try, no secret
-			touching := 0
+			touching, left := 0, 0
 			graphs := c.graphs
 			if c.only == nil { // a graph named by only must be reached under race too
 				graphs = tries(graphs)
@@ -314,10 +316,15 @@ func TestGraphIconsRandom(t *testing.T) {
 					}
 				}
 				l := laid(g)
-				if fault := cmpOr(iconFault(g, l), reachFault(g)); fault != "" {
+				_, o, _ := groupedRound(g) //nolint:errcheck // iconFault tells the mistakes
+				if fault := cmp.Or(iconFault(g, l), reachFault(g), throughFault(g, l, o.stayed)); fault != "" {
 					t.Fatalf("seed %v, graph %d: %s", c.seed, i, fault)
 				}
 				touching += touchesOutside(g, l)
+				left += len(runThrough(g, l))
+			}
+			if left > c.through {
+				t.Errorf("seed %v: %d edges run through a frame that holds neither end, more than %d", c.seed, left, c.through)
 			}
 			if touching > c.touching {
 				t.Errorf("seed %v: %d pairs of edges touch outside the icons' rectangles, more than %d", c.seed, touching, c.touching)
@@ -514,8 +521,8 @@ func TestGraphIconsHands(t *testing.T) {
 
 	g := iconGraph([]string{"a"})
 	g.Nodes[0].Icon.Label = Text{"en": "a label wider than its icon"}
-	o, _ := readGraph(g, "#/parts/0/graph", (*drawing).settleEnds) //nolint:errcheck // none
-	if _, _, err := o.items(); err != nil {                        //nolint:errcheck // none but this
+	o, _ := readGraph(g, "#/parts/0/graph", graphWay{(*drawing).settleEnds, false}) //nolint:errcheck // none
+	if _, _, err := o.items(); err != nil {                                         //nolint:errcheck // none but this
 		t.Fatal(err)
 	}
 	d, err := o.draw(o.groups[0], false)

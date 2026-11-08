@@ -12,7 +12,7 @@ func noShares(*layout, []item) {}
 
 // asToday is what lays s out with no edge stood straight.
 func asToday(s *spec, opts Options) *layout {
-	l := layoutWith(s, opts, placing{(*layout).shareEnds, (*drawing).settleEnds})
+	l := layoutWith(s, opts, placing{(*layout).shareEnds, graphWay{(*drawing).settleEnds, false}})
 	l.check()
 	return l
 }
@@ -21,7 +21,7 @@ func asToday(s *spec, opts Options) *layout {
 // mistake, and for compared more turns or crossings. It says "" for a spec already told, and counts moved.
 func sharesFault(s *spec, compared bool, moved *int) string {
 	opts := Options{Lang: "en", Icons: anyIcon{}, Seq: 1}
-	plain := layoutWith(s, opts, placing{noShares, (*drawing).settleEnds})
+	plain := layoutWith(s, opts, placing{noShares, graphWay{(*drawing).settleEnds, false}})
 	plain.check()
 	if plain.failure != nil || len(plain.problems) > 0 {
 		return ""
@@ -376,7 +376,7 @@ func TestEdgeStraightKeeps(t *testing.T) {
 					}
 				}
 				moved += b.straightened
-				try := layoutWith(s, opts, placing{(*layout).shareStraight, (*drawing).settleOff})
+				try := layoutWith(s, opts, placing{(*layout).shareStraight, graphWay{(*drawing).settleOff, false}})
 				if try.straightened > 0 && b.straightened == 0 {
 					given++
 				}
