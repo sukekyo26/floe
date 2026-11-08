@@ -82,7 +82,7 @@ var looks = []look{
 	{name: "fragment-outside", fix: lookFragmentOutsideFix, floe: lookFragmentOutside, broken: brokenFragmentOutside},
 	{name: "layers", fix: lookLayersFix, floe: lookLayers, floeOnly: lookLayersFloeOnly},
 	{name: "lists-marked", fix: lookListsMarkedFix, floe: lookListsMarked, broken: brokenListsMarked},
-	{name: "lists-off", old: lookListsOff},
+	{name: "lists-off", fix: lookListsOffFix, floe: lookListsOff, floeOnly: lookListsOffFloeOnly},
 	{name: "marks", fix: lookMarksFix, floe: lookMarks, broken: brokenMarks},
 	{name: "nesting", fix: lookNestingFix, floe: lookNesting, floeOnly: lookNestingFloeOnly},
 	{name: "paper-ground", fix: lookPaperGroundFix, floe: lookPaperGround, broken: brokenPaperGround},
