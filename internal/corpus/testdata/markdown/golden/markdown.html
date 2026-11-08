@@ -441,6 +441,8 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 .sub { margin-top: 0.5rem; }
 .sub > h3 { font-size: 1.15rem; }
 .eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; color: var(--muted); }
+/* The eyebrow is small and mono already: its code keeps its size, not base.css's smaller one */
+.eyebrow code { font-size: inherit; }
 .lead { color: var(--muted); font-size: 1.05rem; }
 .muted { color: var(--muted); }
 /* The contents beside the sections on a wide screen, stuck in sight and scrolling within where they are longer; over the
@@ -469,6 +471,7 @@ main > .body, .body > .sections { display: grid; gap: 2.5rem; grid-template-colu
 <body>
 <main class="floe-column">
 <header>
+<p class="eyebrow">An eyebrow with <code>code</code>, a <a href="https://example.com/e">link</a>, <a href="https://example.com/bare">https://example.com/bare</a>, <a href="mailto:a@example.com">a@example.com</a>, http://127.0.0.1:7430 and 11-01<del>11-08 in 2</del>3 days.</p>
 <h1 id="markdown-and-html">Markdown and HTML</h1>
 <p class="lead">A lead with <strong>bold</strong> and <code>code</code>.</p>
 </header>
