@@ -643,6 +643,7 @@ var messagesJA = map[string]string{
 	"ui_task_parent_moved": "親を %s から %s に変更しました",
 	"ui_task_unlinked":     "%[1]s を %[2]s の子から外しました",
 	"ui_task_unlink_kid":   "%s を子から外す",
+	"ui_task_kin_row":      "%s、%s",
 	"ui_task_unlink_up":    "親の %s から外す",
 	"ui_undo":              "元に戻す",
 	"ui_undone":            "元に戻しました",
