@@ -739,6 +739,8 @@
   .step-order li { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0.4rem 0.2rem 0.6rem; font-weight: 600; background: var(--panel); }
   .step-order li + li { border-top: 1px solid var(--line); }
   .step-order .step-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  /* Up and down close together, as the frame's bar holds its icon buttons, each its whole size to press */
+  .step-order .step-moves { display: flex; gap: 0.15rem; }
   .step-order .step-grip { display: inline-flex; color: var(--faint); cursor: grab; touch-action: none; }
   .step-order .step-grip svg { width: 14px; height: 14px; }
   .step-order .icon-btn:disabled { opacity: 0.35; }
@@ -5200,7 +5202,8 @@
       downBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
       downBtn.setAttribute('aria-label', t('ui_step_down_named', name));
       downBtn.title = downBtn.getAttribute('aria-label');
-      li.append(grip, word, upBtn, downBtn);
+      li.append(grip, word, tagged('span', 'step-moves'));
+      li.lastChild.append(upBtn, downBtn);
       return li;
     }));
     $('edit-steps').hidden = order.length === 0;
