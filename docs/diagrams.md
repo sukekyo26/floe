@@ -100,7 +100,7 @@ A `graph` holds only how its boxes are joined; floe places them:
 
 ### Loops
 
-- An edge with the same box in `from` and `to` is a loop. Loops do not change how the graph is laid out: once its edges are drawn, a box's loops go out of the side the graph's edges between ranks do not use (the right side; with `right`, the bottom; a level edge may not take it), nested in the order written, the first innermost, and their labels stand one after another a column outside the outer loop. A box grows along that side for its loops and their labels, and floe makes room for them as for a label.
+- An edge with the same box in `from` and `to` is a loop. Loops do not change how the graph is laid out (but for a rare way round a frame that runs across where a box's loops go, which fails the diagram as floe's own mistake: take the loops or the group off): once its edges are drawn, a box's loops go out of the side the graph's edges between ranks do not use (the right side; with `right`, the bottom; a level edge may not take it), nested in the order written, the first innermost, and their labels stand one after another a column outside the outer loop. A box grows along that side for its loops and their labels, and floe makes room for them as for a label.
 
 ### With parts written by hand
 

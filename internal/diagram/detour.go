@@ -62,8 +62,10 @@ func newRound(d *drawing) *round {
 		rd.blocks = append(rd.blocks, grow(headRect(d.frames[c], d.heads[c]), keepApart))
 	}
 	// LIMIT: the rooms the loops make after (drawLoops) are not kept off, so that loops leave the other edges as with
-	// no loop: a way round running across one would fail the drawing (room made for the loops of box N is not clear),
-	// which no random graph of loops and groups does. Keep off them if one comes to.
+	// no loop. A way round running across one would refuse the whole diagram as floe's own failure, "room made for the
+	// loops of box N is not clear", N a number its writer cannot tell, who could only take the group or the loops off;
+	// none of 40000 random graphs of loops and groups, lanes in half, does, and no such graph is known. Draw the group
+	// with no way round where the loops fail (straight) once one is.
 	rd.edges = slices.Sorted(maps.Keys(d.routes))
 	for _, k := range rd.edges {
 		rd.runs[k] = segsOf(d.routes[k])
