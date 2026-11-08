@@ -15,7 +15,7 @@ import (
 // more) is drawn on the ground outside it, and must leave 1px of that ground before any face it would fade into (a
 // background, or an inset ring of a box it is in, less than 3:1 against it, a face under another left out); one inside it
 // (a row's), on its own. A row's
-// title is outlined on its row, a tag box's hidden checkbox on its box.
+// title is outlined on its row, a task's family row on its line, a tag box's hidden checkbox on its box.
 const ringOf = `(() => {
   // A computed colour, rgb(), rgba() or color(srgb …), as [r, g, b] of 255 and its alpha.
   const rgba = (colour) => {
@@ -36,6 +36,7 @@ const ringOf = `(() => {
   const ratio = (x, y) => { const [hi, lo] = [luminance(x), luminance(y)].sort((p, q) => q - p); return (hi + 0.05) / (lo + 0.05); };
   let e = document.activeElement;
   if (e.matches('a.title')) e = e.closest('li');
+  if (e.matches('.kin-row')) e = e.closest('.kin-line');
   if (e.matches('.tag-box input')) e = e.closest('.tag-box');
   const s = getComputedStyle(e);
   const ring = rgba(s.outlineColor);
@@ -194,5 +195,21 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	check(t, "the bar", []string{bar, barOn}, "#read-actions > .archive: "+ring+"|"+ring)
 	check(t, "the feet", out, strings.Join([]string{
 		"#shelf-hide: " + ring, "#list-hide: " + ring, "#shelf-show: " + ring, "#shelf-show: " + ring, "#list-show: " + ring,
+	}, "|"))
+
+	// A task's family, in its card: the parent's row, its button and the change over it on the child's page; the add over the
+	// children on the parent's.
+	b.unstub()
+	s.floe(t, "work", "--project", "proj", "--task", "#1", "--title", "up")
+	s.floe(t, "work", "--project", "proj", "--task", "#2", "--title", "down", "--parent", "#1")
+	b.navigate("/tasks?project=proj&task=%232")
+	b.until("the family", "document.querySelector('#task-up-rows .kin-row')")
+	out = append(out[:0], tabTo("#task-parent-change"), tabTo("#task-up-rows .kin-row"), tabTo("#task-up-rows .unlink"))
+	b.navigate("/tasks?project=proj&task=%231")
+	b.until("the family", "document.querySelector('#task-family-rows .kin-row')")
+	out = append(out, tabTo("#task-child"))
+	check(t, "the family", out, strings.Join([]string{
+		"#task-parent-change: " + ring, "#task-up-rows .kin-row: solid 2px rgb(107, 105, 100) -2px seen", "#task-up-rows .unlink: " + ring,
+		"#task-child: " + ring,
 	}, "|"))
 }
