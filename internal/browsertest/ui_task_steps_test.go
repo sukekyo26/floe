@@ -130,6 +130,9 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.eval("sent.length = 0")
 	add("リリース")
 	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Later")
+	// Read again meanwhile, as a look does: the modal still sends the rev it opened at
+	b.eval("window.reread = false; readTasks().then((r) => { tasksRead = r; window.reread = true; })")
+	b.until("the tasks read again", "window.reread")
 	query("memo")
 	b.pressKey(kb.ArrowDown)
 	b.pressKey(kb.Enter)
@@ -174,6 +177,16 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.until("back", "document.querySelector('#list li[data-slug=review-a]')")
 	say("back", "sent.join(' ; ')")
 	out = append(out, "back, written: "+row("S300")+" / "+work("review-a"))
+	// Written meanwhile, and read again: the way back sends the rev of when it was taken off, and is refused.
+	menu("review-a", "task-out", false)
+	b.until("off", "!document.querySelector('#list li[data-slug=review-a]')")
+	s.floe(t, "work", "--project", "proj", "--task", "S300", "--title", "Later still")
+	b.eval("window.reread = false; readTasks().then((r) => { tasksRead = r; window.reread = true; })")
+	b.until("the tasks read again", "window.reread")
+	b.eval("sent.length = 0; [...document.querySelectorAll('#toasts .undo')].at(-1).click()")
+	b.until("refused", "!document.getElementById('error').hidden")
+	say("back refused", "sent.join(' ; ') + ' / ' + document.getElementById('error').textContent")
+	out = append(out, "back refused, written: "+work("review-a"))
 	// From the keys: the focus on the way back; Escape leaves it on the row after the one taken off.
 	menu("plan-a", "task-out", true)
 	b.until("off", "!document.querySelector('#list li[data-slug=plan-a]')")
@@ -232,6 +245,8 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"off, groups: note-a [案+] plan-a other-a [実装+ none] [リリース+] build-a memo-a check-a [Archive] old-a",
 		`back: /api/tasks {"new":false,"rev":9,"step":"レビュー"} ; /api/artifacts/review-a {"work":{"task":"S300","step":"レビュー"}}`,
 		"back, written: 10 レビュー / S300/レビュー",
+		`back refused: /api/tasks {"new":false,"rev":10,"step":"レビュー"} / Could not save: task S300 has changed since it was read`,
+		"back refused, written: none",
 		"keys, focus: btn undo",
 		"keys, escape: other-a 0",
 		`made anew: /api/artifacts/g-a {"work":{"task":"","step":""}} ; /api/tasks {"new":true,"step":"x"} ; /api/artifacts/g-a {"work":{"task":"G2","step":"x"}}`,
