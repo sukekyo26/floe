@@ -897,8 +897,7 @@ type TagsEdit struct {
 	Remove []string `json:"remove,omitzero"`
 }
 
-// Edited is a page as an edit left it: its slug afterwards, and its project (ProjectKey) and work as written under the
-// lock, for floe work to tell.
+// Edited is a page as an edit wrote it: its slug afterwards, and its project (ProjectKey) and work, under the lock.
 type Edited struct {
 	Slug        string `json:"slug"`
 	TaskProject string `json:"taskProject"`

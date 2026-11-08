@@ -129,11 +129,11 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	if onPages := changed(cmd, "step", "pin", "unpin", "clear"); len(onPages) > 0 {
 		return usageOf(usererr.New("cli_work_needs_pages", onPages[0]))
 	}
-	c, err := a.client(ctx, true)
+	t, err := a.namedTask(ctx, cmd, f)
 	if err != nil {
 		return err
 	}
-	t, err := a.namedTask(ctx, cmd, f)
+	c, err := a.client(ctx, true)
 	if err != nil {
 		return err
 	}

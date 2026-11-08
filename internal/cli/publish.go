@@ -312,6 +312,7 @@ are taken off first, then those given to --add are put on, so a name given to bo
 
 // eachPage sends method with body to each page of slugs in order, stopping at the first failure, a page not there
 // told by its slug; done, when given, is called with each answer as the page is written.
+// done reads the answer of PATCH /api/artifacts/{slug} (store.Edited) alone: give it with that method only.
 func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body any, done func(store.Edited)) error {
 	// Encoded once, before the server is asked or started: a text given that is no UTF-8 is refused first.
 	var sent any

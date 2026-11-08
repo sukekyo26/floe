@@ -181,6 +181,11 @@ func TestWorkAPI(t *testing.T) {
 	if code, _ := forget("shop", "#1"); code != http.StatusNoContent {
 		t.Errorf("a task of no page = %d", code)
 	}
+	// A task of a page alone is there: its first row is not made
+	edit(`{"work":{"task":"#p"}}`)
+	if code, body := patch(task("shop", "#p"), `{"title":"t"}`); code != http.StatusOK || madeWrote(body) != "false true" {
+		t.Errorf("the first row of a task of a page = %d, %s", code, body)
+	}
 
 	// What it cannot read it says, and writes nothing over: a link of another scheme goes no further than here.
 	file := filepath.Join(e.root, "tasks.json")
