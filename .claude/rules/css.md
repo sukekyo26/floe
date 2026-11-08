@@ -31,8 +31,9 @@ paths:
 - **部品と見た目は並びの見た目を外す規則を書かない** [lists-unwritten]：部品の箱と見た目の並びの印・左の余白・項目の間を外す規則は、部品と見た目に書かない（floe が外す）。（判断）
 - **色で塗った帯は見た目 `band` 1 つ** [band]：テンプレートは、`--accent` で塗った帯を page.css に書かず、`data-floe-look="band"` で借りる。page.css が書くのは帯の余白と中の並びだけ。（判断）
 - **塗った面は `--face` と `--on-face`** [face]：地と字の色を自分で決め、中にリンク・行の code・フォーカスの輪が来る面は、2 つの変数を置いて `background: var(--face); color: var(--on-face)` で塗る。中の色は base.css 1 か所が決め、面ごとに書かない。部品の中身は base.css が変数を外すので、部品の根を面にするときは根と根の子に置く。自分の地を塗る見た目・部品は、地と一緒に `color: var(--fg)` を書き、面の変数を外す。地を塗らずに字や輪の色を書くときは、面の中に来うるなら `var(--on-face, …)` で書く。部品の箱の字の色を外から直す規則は書かない。（判断）
-- **字と輪は読める** [contrast]：floe のページの字は WCAG AA で、フォーカスの輪は 3:1 で、下の地から読める。`TestLookRule/contrast`
-- **帯の中の部品は面の色で描く** [band-face]：帯の中に置いた部品・見た目・Markdown は、面の色の中で字と地が読め、行の code の枠と選んだタブが見える。`TestLookRule/band-face`
+- **字は読める** [contrast-text]：floe のページ（帯の中も）の字は WCAG AA で、下の地から読める。`TestLookRule/contrast-text`
+- **フォーカスの輪は見える** [contrast-ring]：floe のページ（帯の中も）のフォーカスの輪は 3:1 で下の地から見える。`TestLookRule/contrast-ring`
+- **帯の中の部品は面の色で描く** [band-face]：帯の中に置いた部品・見た目・Markdown は帯の面の色で描く。地を持つもの（note・カード）は自分の地を持ち、持たないもの（text）は帯の字の色。行の code だけを枠で囲み、見出しに印を付けず、選んだタブの地は帯の地から 3:1 離す。`TestLookRule/band-face`
 - **CSS の勝ち負けは層で決まる** [layers]：セレクタの詳しさでなく、floe が並べる層で決まる（順は `draw.pageStyle` のコメント）。部品・見た目の名前に `base`・`palette`・`markdown` は使えない。`TestLookRule/layers`
 - **入れ子では外が勝つ** [nesting]：部品や見た目の中の部品の箱は、入れ子の外の規則に負け、同じ形に描く。`TestLookRule/nesting`
 - **Markdown の見た目は markdown.css** [markdown-css]：テーマの base.css はページの段で部品の箱と text の外枠で止まり、Markdown の見た目は markdown.css に書く（ページ全体に届くので、部品が描かない要素だけ）。（判断）
@@ -40,7 +41,8 @@ paths:
 - **テンプレートが部品の形で描くものは、部品の箱として置く** [template-boxes]：札や注意の囲みは見た目として借りず、page.html に部品の箱（`data-floe-part="cell"`・`"note"`）で置き、色は `data-floe-tone`。page.css は箱の置き場所だけを書く。書き手の自由な字は cell にしない（長さに上限が無い）。札の形は `TestRenderedPills` が測る。（判断）
 - **番号と線の手順は見た目 `numbered` 1 つ** [numbered]：丸い番号と線を part.css・page.css に書かず、`numbered` を借りる。丸の色は tone と `data-floe-mark` で決め、`::before`・`::after` の色を上書きしない。（判断）
 - **項目に添える短い値の並びは見た目 `tags`** [tags]：部品の 1 つの項目に、cell の書き方の値の配列を並べるときは、間・折り返し・字の形を part.css に書かず `data-floe-look="tags"` を借り、値を 1 つずつ `<span>` に包む（pill は cell の箱のまま）。表の行、floe が組み立てる並び、配列でない値の組は外。（判断）
-- **カードの中の間は `--cards-gap`** [cards-gap]：見た目 cards のカードの中の間は `--cards-gap` で書き、0.4rem を写さない。テーマは `.card` に gap を書かず、この変数で変える。`TestLookRule/cards-gap`
+- **テーマはカードの中の間を `--cards-gap` で変える** [cards-gap]：テーマは `.card` に gap を書かず、`--cards-gap` で変える。`TestLookRule/cards-gap`
+- **カードの中の間は `var(--cards-gap)`** [cards-gap-var]：見た目 cards のカード（それを借りる部品のカードも）の中の間は `var(--cards-gap)` で書き、0.4rem を写さず、部品ごとの間も決めない。`TestLookRule/cards-gap-var`
 - **テーマが変える部品の変数は根に置く** [part-variables]：部品・見た目は変数を `:scope` に置き、テーマはその変数を置くか読む部品・見た目のファイルの `:scope` に置く。どちらも `!important` にしない。`TestLintRule/part-variables`
 - **行の印は floe が floe.marks に 1 つ並べる** [marks]：左に印のある行は part.yaml の `marks:` 1 つ（`box`・`items`・`joined`）で言い、HTML に class を書かない。floe が書くのは置き場所と大きさだけで、色・丸さ・中身は部品・見た目・テンプレートが書く。上の層で行の `display`・`gap`・`grid-template` を書かない（黙って勝つ）。中身の間は `> * + *` の `margin-top`。テーマは印を `content: none` で消し、大きさと間は `--floe-mark`・`--floe-mark-gap` で変える。1 つの字・題の前の飾り、`::marker`、code の行の番号と線（floe が選ぶ行は部品の根か `> li` で、`<code>` の中に届かない）、中に部品を持つ行の左の線は外。`TestLookRule/marks`
 - **横に流れる箱は、画面で中身の幅を外へ言わない** [scroll-contain]：画面で横に流れる箱は `contain: inline-size` を持つ（`overflow-x: auto` と一緒に `@media screen` に書く。例は base.css）。`TestLookRule/scroll-contain`

@@ -1,8 +1,8 @@
 package browsertest_test
 
 import (
+	"fmt"
 	"os"
-	"strings"
 	"testing"
 )
 
@@ -50,98 +50,108 @@ var boxPadKit = map[string]string{
 	"templates/boxpad/example.yaml": "lang: en\ntemplate: boxpad\nparts:\n  - text: x\n",
 }
 
-// measureBoxPad returns, for each of the boxes named (the parts' or a built-in template's), its padding (top right
-// bottom left), the first element its selector finds. A tree whose list paints a ground of its own is a frame a theme
-// draws around the box (default's): it returns the frame's padding too ("frame"), and the list's as the box's.
-func measureBoxPad(names string) string {
-	return `((names) => {
+// measureBoxPad measures the padding of each box the page draws of those it names (a part's, or a built-in template's),
+// every one its selector finds: above and below --floe-pad-block and at the sides --floe-pad-inline, read in the box,
+// but facts' cards, rows padded --floe-row-pad above and below, details' title, as tall as a row of its own (0.8rem)
+// and so measured at the sides alone, and details' body, of no padding above. A tree whose list paints a ground of its
+// own sits in a frame a theme draws around the box (default's): the list is measured as the box. The variables read in
+// each box must be want's (pads, as JSON), those of the page. Each of drawn, the names of the boxes the page draws,
+// that the page draws none of is amiss too.
+// LIMIT: the padding of a theme's frame around a tree, and details' title above and below, are not measured: the one is
+// the theme's decoration, as its border is, the other a row's height of details' own.
+// It returns {seen, amiss}: the boxes it measured, and for each padded otherwise its part (or the template's box, or
+// "theme" for variables set otherwise) and how.
+func measureBoxPad(want pads, drawn []string) string {
+	return `((want, drawn) => {
   const boxes = {
     options: '[data-floe-part=options] .card', asks: '[data-floe-part=asks] .card', checks: '[data-floe-part=checks]', chart: '[data-floe-part=chart]', stats: '[data-floe-part=stats] .card', facts: '[data-floe-part=facts] .card',
     decision: '[data-floe-part=decision] .card',
     steps: '[data-floe-part=steps]', timeline: '[data-floe-part=timeline]',
     bars: '[data-floe-part=bars]', tree: '[data-floe-part=tree]', note: '[data-floe-part=note]',
-    'details title': '[data-floe-part=details] > summary', 'details body': '[data-floe-part=details] > div',
-    'runbook needs': '.needs', 'runbook rollback': '.rollback',
-    'handoff board': '.board section',
+    details: '[data-floe-part=details] > summary', 'details body': '[data-floe-part=details] > div',
+    runbook: '.needs, .rollback', handoff: '.board section',
   };
+  ` + padsJS + `
   const ground = (e) => { const c = getComputedStyle(e); return c.backgroundColor !== 'rgba(0, 0, 0, 0)' || c.backgroundImage !== 'none'; };
-  const out = [];
-  for (const name of names.split(', ')) {
-    let e = document.querySelector(boxes[name]);
-    const pad = (e) => { const s = getComputedStyle(e); return [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' '); };
-    const list = name === 'tree' && e.querySelector(':scope > ul');
-    if (list && ground(list)) { out.push(name + ' frame ' + pad(e) + ', ' + pad(list)); continue; }
-    const s = getComputedStyle(e);
-    out.push(name + ' ' + [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' '));
+  let seen = 0;
+  const amiss = [], off = (a, b) => Math.abs(a - b) > 0.1;
+  for (const name of drawn) if (!document.querySelector(boxes[name])) amiss.push({ at: name, text: 'no box of it drawn' });
+  for (const [name, sel] of Object.entries(boxes)) {
+    for (let e of document.querySelectorAll(sel)) {
+      seen++;
+      const list = name === 'tree' && e.querySelector(':scope > ul');
+      if (list && ground(list)) e = list;
+      const { Row: row, Block: block, Inline: inline } = pads(e);
+      if (off(row, want.Row) || off(block, want.Block) || off(inline, want.Inline)) amiss.push({ at: 'theme', text: name + ' reads --floe-row-pad, --floe-pad-block, --floe-pad-inline ' + [row, block, inline].join(' ') + ', not the page\'s ' + [want.Row, want.Block, want.Inline].join(' ') });
+      const s = getComputedStyle(e);
+      const top = name === 'facts' ? row : name === 'details body' ? 0 : block, bottom = name === 'facts' ? row : block;
+      const got = [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].map(parseFloat);
+      const sides = [[got[0], top, 'above'], [got[1], inline, 'right'], [got[2], bottom, 'below'], [got[3], inline, 'left']]
+        .filter(([, , side]) => name !== 'details' || side === 'right' || side === 'left');
+      const wrong = sides.filter(([g, w]) => off(g, w));
+      if (wrong.length) amiss.push({ at: e.closest('[data-floe-part]')?.dataset.floePart || name, text: name + ' padded ' + wrong.map(([g, w, side]) => side + ' ' + g + ', not ' + w).join(', ') });
+    }
   }
-  return out.join(', ');
-})('` + names + `')`
+  return JSON.stringify({ seen, amiss });
+})(` + mustJSON(want) + `, ` + mustJSON(drawn) + `)`
 }
 
-// partBoxes are the boxes boxParts draw.
-const partBoxes = "options, asks, checks, chart, stats, facts, decision, steps, timeline, bars, tree, note, details title, details body"
+// partBoxes are the names of measureBoxPad's boxes boxParts draws.
+var partBoxes = []string{"options", "asks", "checks", "chart", "stats", "facts", "decision", "steps", "timeline", "bars", "tree", "note", "details", "details body"}
 
-// boxPadWant is what measureBoxPad returns for boxParts, each box padded block above and below and inline at the
-// left and the right: facts' cards are rows (TestLookRule/row-pad), details' title is as tall as a row of its own, and frame
-// is the padding of the frame a theme draws around the tree, as measureBoxPad returns it ("" when it draws none).
-func boxPadWant(block, inline, frame string) string {
-	box := block + " " + inline + " " + block + " " + inline
-	return strings.Join([]string{
-		"options " + box, "asks " + box, "checks " + box, "chart " + box, "stats " + box, "facts 6.4px " + inline + " 6.4px " + inline, "decision " + box,
-		"steps " + box, "timeline " + box, "bars " + box, "tree " + frame + box, "note " + box,
-		"details title 12.8px " + inline + " 12.8px " + inline, "details body 0px " + inline + " " + block + " " + inline,
-	}, ", ")
-}
+const lookBoxPadFix = "pad a box between parts by --floe-pad-block and --floe-pad-inline, not by numbers; a theme sets neither and pads no box"
 
-// lookBoxPad measures the padding of the box of every part that draws one, in every theme: it is the variables'
-// of floe's base.css (1.1rem above and below, 1.3rem at the sides), which a theme leaves as they are and writes no
-// padding over (a theme's decorations lie over it), so a theme that set either variable or padded a box fails. The
-// built-in templates' boxes are padded the same in every theme, and a template of one's own setting the variables in its
-// page.css pads every part's box by them.
-func lookBoxPad(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
-	s := newSite(t)
-	b := s.b
+// lookBoxPad measures the box of every part that draws one (boxParts), and runbook's and handoff's examples, in every
+// theme (measureBoxPad): padded by base.css's variables (basePads), which a theme leaves as they are and writes no
+// padding over (a theme's decorations lie over it). A template of one's own (boxPadKit) whose page.css sets both
+// variables otherwise pads every part's box by them.
+func lookBoxPad(t *testing.T, s *site) measured {
+	t.Helper()
+
 	themes, err := os.ReadDir("../kit/floe/themes")
 	if err != nil {
 		t.Fatal(err)
 	}
 	page := s.write(t, "boxes.yaml", "template: report\nlang: en\ntitle: Boxes\nsections:\n  - heading: Boxes\n    parts:\n"+
 		indent(boxParts, "    "))
-	samples := map[string]string{"runbook": "runbook needs, runbook rollback", "handoff": "handoff board"}
 	files := map[string]string{}
-	for name := range samples {
+	for _, name := range []string{"runbook", "handoff"} {
 		data, err := os.ReadFile("../corpus/testdata/example/" + name + ".yaml")
 		if err != nil {
 			t.Fatal(err)
 		}
 		files[name] = s.write(t, name+".yaml", string(data))
 	}
-	// frames are the themes that frame the tree, by the padding of the frame: default's grey, --default-pad.
-	frames := map[string]string{"default": "frame 6px 6px 6px 6px, "}
-	out, want := make([]string, 0, 4*len(themes)+1), make([]string, 0, 4*len(themes)+1)
+	base := basePads(t, s)
+	var m measured
+	open := func(what, file, slug, theme string, drawn []string) {
+		s.floe(t, "publish", file, "--slug", slug, "--theme", theme)
+		s.b.navigate("/a/" + slug + "/?raw")
+		m.add(s.b.measure(what, measureBoxPad(base, drawn)))
+	}
 	for _, theme := range themes {
 		name := theme.Name()
-		s.floe(t, "publish", page, "--slug", "boxes-"+name, "--theme", name)
-		b.navigate("/a/boxes-" + name + "/?raw")
-		out = append(out, name+": "+b.eval(measureBoxPad(partBoxes)))
-		want = append(want, name+": "+boxPadWant("17.6px", "20.8px", frames[name]))
+		open("boxParts in "+name, page, "boxes-"+name, name, partBoxes)
 		for _, sample := range []string{"runbook", "handoff"} {
-			slug := "boxes-" + sample + "-" + name
-			s.floe(t, "publish", files[sample], "--slug", slug, "--theme", name)
-			b.navigate("/a/" + slug + "/?raw")
-			out = append(out, name+" "+sample+": "+b.eval(measureBoxPad(samples[sample])))
-			boxes := strings.Split(samples[sample], ", ")
-			for i := range boxes {
-				boxes[i] += " 17.6px 20.8px 17.6px 20.8px"
-			}
-			want = append(want, name+" "+sample+": "+strings.Join(boxes, ", "))
+			open(sample+" in "+name, files[sample], "boxes-"+sample+"-"+name, name, []string{sample})
 		}
 	}
-
 	s.own(t, boxPadKit)
 	s.floe(t, "publish", s.write(t, "own.yaml", "template: boxpad\nlang: en\ntitle: Boxes\nparts:\n"+boxParts), "--slug", "boxes-own")
-	b.navigate("/a/boxes-own/?raw")
-	out = append(out, "own: "+b.eval(measureBoxPad(partBoxes)))
-	want = append(want, "own: "+boxPadWant("16px", "32px", frames["default"]))
-	check(t, "boxes", out, strings.Join(want, "|"))
+	s.b.navigate("/a/boxes-own/?raw")
+	own := padsOn(t, s)
+	if own.Block == base.Block || own.Inline == base.Inline {
+		m.amiss = append(m.amiss, amiss{Page: "boxParts in boxpad", At: "boxpad", Text: fmt.Sprintf("its page.css's variables reach not the page: %+v, base.css's %+v", own, base)})
+	}
+	m.add(s.b.measure("boxParts in boxpad", measureBoxPad(own, partBoxes)))
+	return m
+}
+
+// brokenBoxPad draws a note in a theme of one's own whose note.css pads it by a number.
+func brokenBoxPad(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	base := basePads(t, s)
+	s.brokenPage(t, map[string]string{"themes/thin/note.css": ":scope { padding: 3px; }\n"}, themePage("thin", "- note: { text: Ready. }\n"))
+	return "note", s.b.measure("broken", measureBoxPad(base, []string{"note"}))
 }

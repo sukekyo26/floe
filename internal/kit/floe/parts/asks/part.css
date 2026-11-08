@@ -4,7 +4,7 @@
    in words, and the others are quiet, a ring alone telling nothing without colour.
    LIMIT: words.yaml keeps Q in Japanese too, on purpose, and a screen reader reads the letter as it is */
 :scope { grid-template-columns: minmax(0, 1fr); counter-reset: floe-asks; }
-:scope > .card { counter-increment: floe-asks; gap: var(--floe-room); }
+:scope > .card { counter-increment: floe-asks; }
 :scope .no { font-family: var(--mono); color: var(--accent); }
 :scope .no::after { content: counter(floe-asks); content: counter(floe-asks) / counter(floe-asks); }
 :scope .head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--floe-room); }

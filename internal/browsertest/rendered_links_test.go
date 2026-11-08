@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -78,8 +79,18 @@ const measureLinks = `(() => {
   return out.join('\n');
 })()`
 
+// linksApart returns {seen, out}: how many URLs of links the page holds, and a line for each that stands against its
+// title, or with nothing before it.
+const linksApart = `(() => { const urls = [...document.querySelectorAll('[data-floe-part=links] .url')];
+  return JSON.stringify({ seen: urls.length, out: urls.map((url) => {
+    const title = url.previousElementSibling;
+    if (!title) return 'a URL with nothing before it: ' + url.textContent;
+    return url.getBoundingClientRect().top - title.getBoundingClientRect().bottom < 1 ? 'a URL against its title: ' + url.textContent : '';
+  }).filter((l) => l) }); })()`
+
 // TestRenderedLinksPart draws a row to each link in every theme: across the box, holding what cannot fold, the words on the
-// title's line when they fit and under it when not, the URL whole under them, and the link's reach its own words.
+// title's line when they fit and under it when not, the URL whole under them, and the link's reach its own words. In
+// the band of a template (bandPages) too, in every theme, each URL stands under its title, not against it.
 func TestRenderedLinksPart(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	entries, err := os.ReadDir("../kit/floe/themes")
@@ -106,6 +117,21 @@ func TestRenderedLinksPart(t *testing.T) { //nolint:paralleltest // the browser 
 	if got, want := s.b.eval(colours), strings.TrimSuffix(strings.Repeat("rgb(255, 255, 255), ", 4), ", "); got != want {
 		t.Errorf("words, URL, title and sign on a painted face in swiss = %s, want %s", got, want)
 	}
+	bandPages(t, s, func(what string) {
+		var apart struct {
+			Seen int
+			Out  []string
+		}
+		if err := json.Unmarshal([]byte(s.b.eval(linksApart)), &apart); err != nil {
+			t.Fatal(err)
+		}
+		if apart.Seen == 0 {
+			t.Errorf("%s: no URL of links measured: the band holds no links, or its URL is renamed", what)
+		}
+		for _, l := range apart.Out {
+			t.Errorf("%s: %s", what, l)
+		}
+	})
 	s.floe(t, "publish", file, "--slug", "links-low", "--theme", "low")
 	s.b.navigate("/a/links-low/?raw")
 	signs := `[...document.querySelectorAll('[data-floe-part=links] > li')].map((row) => getComputedStyle(row, '::before'))

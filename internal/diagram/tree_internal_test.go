@@ -10,7 +10,7 @@ func TestTreeStraightDown(t *testing.T) {
 	rows := []row{{Text: Text{"en": "A"}, Style: ""}}
 	leaf := node{Name: "", Rows: rows, Tone: "", Shape: "", Children: nil}
 	root := node{Name: "", Rows: rows, Tone: "", Shape: "", Children: []node{leaf}}
-	items, found, err := expand([]part{{Tree: &tree{X: 0.3, Y: 10, Root: root}}}, (*drawing).settleEnds) //nolint:exhaustruct_v5 // one kind of part
+	items, found, err := expand([]part{{Tree: &tree{X: 0.3, Y: 10, Root: root}}}, graphWay{(*drawing).settleEnds, false}) //nolint:exhaustruct_v5 // one kind of part
 	if err != nil || len(found) > 0 {
 		t.Fatal(err, found)
 	}

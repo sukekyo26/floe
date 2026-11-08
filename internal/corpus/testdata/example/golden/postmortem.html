@@ -281,7 +281,7 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
 @scope ([data-floe-part="facts"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
 /* In the faces of cards, unnumbered */
 :scope { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
-:scope > div { gap: 0.1rem; padding-block: var(--floe-row-pad); }
+:scope > div { padding-block: var(--floe-row-pad); }
 :scope dt { font-size: var(--floe-text-small); color: var(--muted); }
 :scope dd { margin: 0; font-weight: 600; }
 }

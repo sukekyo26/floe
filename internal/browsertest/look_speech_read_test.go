@@ -12,16 +12,19 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
-// marked marks each element shown whose ::before or ::after draws content with data-speech (one in a tab not picked
-// is given a screen reader no more than it is shown), and returns, for each, its
-// name, whether a pseudo-element's reading (after its /) has a counter, and its text with the hidden words, but
-// what a script or style holds; then each hidden word whose parent is a row (li), and each element whose mark means
-// what the HTML must tell in hidden words, which has none. A numbered row and a numbered card read their number
+// marked opens every details, marks each element shown whose ::before or ::after draws content with data-speech (one
+// in a tab not picked is given a screen reader no more than it is shown), and returns, for each, its part (or its
+// tag), its name, whether a pseudo-element's reading (after its /) has a counter, and its text with the hidden words,
+// but what a script or style holds; then each hidden word whose parent is a row (li), and each element whose mark
+// means what the HTML must tell in hidden words, which has none, both with the part they are in; and how many such
+// elements it looked at (worded). A numbered row and a numbered card read their number
 // whatever their CSS writes after /; a slide's number and a checklist's count, which no word tells from what is
 // around them, are not read.
 // LIMIT: worded, numbered and unnumbered list by hand the marks that mean what the HTML must tell, as tokens do not tell a mark
 // that means from one that adorns; add a part's or template's to them when it draws one
 const marked = `(() => {
+  ` + partOfJS + `
+  document.querySelectorAll('details').forEach((d) => { d.open = true; });
   const numbered = '[data-floe-look~="numbered"] > li:not(.done), .numbered > .card';
   const unnumbered = '.slides > li, [data-floe-part=checklist]';
   const worded = '[data-floe-part=steps] > li.done > strong, [data-floe-part=checklist] > li > span, .option li > span, ' +
@@ -61,14 +64,15 @@ const marked = `(() => {
     e.querySelectorAll(zoom).forEach((k, j) => { if (getComputedStyle(k).display === 'none') hidden[j].remove(); });
     copy.querySelectorAll('script, style').forEach((s) => s.remove());
     const part = e.closest('[data-floe-part]');
-    out.push({ name: (part ? part.dataset.floePart + ' ' : '') + e.tagName.toLowerCase() + [...e.classList].map((c) => '.' + c).join(''), counted, text: copy.textContent, e });
+    out.push({ at: partOf(e), name: (part ? part.dataset.floePart + ' ' : '') + e.tagName.toLowerCase() + [...e.classList].map((c) => '.' + c).join(''), counted, text: copy.textContent, e });
   }
   for (const o of out) { o.inner = !!o.e.querySelector('[data-speech-counted]'); delete o.e; }
-  const rows = [...document.querySelectorAll('li > .floe-hidden')].map((e) => e.textContent);
+  const rows = [...document.querySelectorAll('li > .floe-hidden')].map((e) => ({ at: partOf(e), text: e.textContent }));
   const told = (e) => { const h = e.matches('.run, .mark') ? e.previousElementSibling : e.querySelector(':scope > .floe-hidden'); return h?.matches('.floe-hidden') ? h : null; };
-  const unworded = [...document.querySelectorAll(worded)].filter((e) => e.checkVisibility() && !(told(e)?.textContent.trim()))
-    .map((e) => e.closest('[data-floe-part]').dataset.floePart + ' ' + e.tagName.toLowerCase() + [...(e.closest('li') || e).classList].map((c) => '.' + c).join(''));
-  return JSON.stringify({ out, rows, unworded });
+  const shown = [...document.querySelectorAll(worded)].filter((e) => e.checkVisibility());
+  const unworded = shown.filter((e) => !(told(e)?.textContent.trim()))
+    .map((e) => ({ at: partOf(e), text: partOf(e) + ' ' + e.tagName.toLowerCase() + [...(e.closest('li') || e).classList].map((c) => '.' + c).join('') }));
+  return JSON.stringify({ out, rows, unworded, worded: shown.length });
 })()`
 
 // spoken returns, by each element's backend node, the text a screen reader is given in it: the text nodes of the
@@ -116,67 +120,92 @@ func bare(s string) string {
 	return strings.ToLower(strings.Join(strings.Fields(s), ""))
 }
 
-// lookSpeechRead reads, in every page of floe's parts and templates in every theme, what a screen reader is given in
-// each element CSS draws content in: a mark is not read and a hidden word is, so that it is the element's text;
-// where the reading after / is a counter, its number is read too (and in what holds such an element, a number may be
-// read that its text does not have). A hidden word stands in a row's text, not in the
-// row.
-func lookSpeechRead(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
-	s := newSite(t)
+// speechRead reads, in the page open, told as what, what a screen reader is given in each element CSS draws content in
+// (marked): a mark is not read and a hidden word is, so that it is the element's text; where the reading after / is a
+// counter, its number is read too (and in what holds such an element, a number may be read that its text does not
+// have). A hidden word stands in a row's text, not in the row. It returns the elements it read and the worded ones it
+// looked at (seen), and each read amiss by its part.
+func speechRead(t *testing.T, s *site, what string) measured {
+	t.Helper()
+
 	b := s.b
-	var amiss []string
-	s.floePages(t, func(what string) {
-		var found struct {
-			Out []struct {
-				Name    string
-				Counted bool
-				Inner   bool
-				Text    string
+	type told struct{ At, Text string }
+	var found struct {
+		Out []struct {
+			At      string
+			Name    string
+			Counted bool
+			Inner   bool
+			Text    string
+		}
+		Rows     []told
+		Unworded []told
+		Worded   int
+	}
+	if err := json.Unmarshal([]byte(b.eval(marked)), &found); err != nil {
+		t.Fatal(err)
+	}
+	m := measured{seen: len(found.Out) + found.Worded}
+	add := func(at, text string) { m.amiss = append(m.amiss, amiss{Page: what, At: at, Text: text}) }
+	for _, e := range found.Unworded {
+		add(e.At, e.Text+" tells no hidden word")
+	}
+	for _, row := range found.Rows {
+		add(row.At, "hidden "+row.Text+" in a row")
+	}
+	read := b.spoken(t)
+	doc, err := chromedp.Call(b.ctx, dom.GetDocument, dom.GetDocumentParams{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	q, err := chromedp.Call(b.ctx, dom.QuerySelectorAll, dom.QuerySelectorAllParams{NodeID: doc.Root.NodeID, Selector: "[data-speech]"})
+	if err != nil || len(q.NodeIDs) != len(found.Out) {
+		t.Fatalf("%s: %d marked, %d found: %v", what, len(found.Out), len(q.NodeIDs), err)
+	}
+	strip := func(s string) string {
+		return strings.Map(func(r rune) rune {
+			if unicode.IsDigit(r) {
+				return -1
 			}
-			Rows     []string
-			Unworded []string
-		}
-		if err := json.Unmarshal([]byte(b.eval(marked)), &found); err != nil {
-			t.Fatal(err)
-		}
-		for _, e := range found.Unworded {
-			amiss = append(amiss, what+": "+e+" tells no hidden word")
-		}
-		for _, row := range found.Rows {
-			amiss = append(amiss, what+": hidden "+row+" in a row")
-		}
-		read := b.spoken(t)
-		doc, err := chromedp.Call(b.ctx, dom.GetDocument, dom.GetDocumentParams{})
+			return r
+		}, s)
+	}
+	for i, id := range q.NodeIDs {
+		d, err := chromedp.Call(b.ctx, dom.DescribeNode, dom.DescribeNodeParams{NodeID: id})
 		if err != nil {
 			t.Fatal(err)
 		}
-		q, err := chromedp.Call(b.ctx, dom.QuerySelectorAll, dom.QuerySelectorAllParams{NodeID: doc.Root.NodeID, Selector: "[data-speech]"})
-		if err != nil || len(q.NodeIDs) != len(found.Out) {
-			t.Fatalf("%s: %d marked, %d found: %v", what, len(found.Out), len(q.NodeIDs), err)
-		}
-		for i, id := range q.NodeIDs {
-			d, err := chromedp.Call(b.ctx, dom.DescribeNode, dom.DescribeNodeParams{NodeID: id})
-			if err != nil {
-				t.Fatal(err)
+		e := found.Out[i]
+		got, want := bare(read[d.Node.BackendNodeID]), bare(e.Text)
+		if e.Counted || e.Inner {
+			if strip(got) != strip(want) || e.Counted && len(got)-len(strip(got)) <= len(want)-len(strip(want)) {
+				add(e.At, e.Name+" reads "+got+", want its number and "+want)
 			}
-			e := found.Out[i]
-			got, want := bare(read[d.Node.BackendNodeID]), bare(e.Text)
-			if e.Counted || e.Inner {
-				strip := func(s string) string {
-					return strings.Map(func(r rune) rune {
-						if unicode.IsDigit(r) {
-							return -1
-						}
-						return r
-					}, s)
-				}
-				if strip(got) != strip(want) || e.Counted && len(got)-len(strip(got)) <= len(want)-len(strip(want)) {
-					amiss = append(amiss, what+": "+e.Name+" reads "+got+", want its number and "+want)
-				}
-			} else if got != want {
-				amiss = append(amiss, what+": "+e.Name+" reads "+got+", want "+want)
-			}
+		} else if got != want {
+			add(e.At, e.Name+" reads "+got+", want "+want)
 		}
-	})
-	check(t, "speech", amiss, "")
+	}
+	return m
+}
+
+const lookSpeechReadFix = "write what a mark means as a hidden word (.floe-hidden, its words in words.yaml), and give a mark drawn " +
+	"by CSS an empty reading after / (content: \"✓\" / \"\")"
+
+// lookSpeechRead reads every page of floePages, its details open, as speechRead does.
+func lookSpeechRead(t *testing.T, s *site) measured {
+	t.Helper()
+
+	var m measured
+	s.floePages(t, func(what string) { m.add(speechRead(t, s, what)) })
+	return m
+}
+
+// brokenSpeechRead draws a part of one's own whose mark after its word, no row's mark, is read, written with no
+// reading after /.
+func brokenSpeechRead(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	html := `<p data-floe-part="marky">Done<span class="m"></span></p>`
+	s.brokenPage(t, ownPart("marky", html, ":scope .m::after { content: \"✓\"; }\n"), htmlPage(html))
+	return "marky", speechRead(t, s, "broken")
 }
