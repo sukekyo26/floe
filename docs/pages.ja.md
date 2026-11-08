@@ -61,7 +61,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 
 `floe template list` が各テンプレートの説明を出し、`floe template show <テンプレート>` が、取る鍵（説明は `schema.json` に）と、書き始めの `example.yaml` を出します。`"format": "markdown"` の項目と、説明が Markdown と言う項目が Markdown です。鍵のほかにページが見せるもの:
 
-- `report` は `eyebrow`（題の上の短い行）、`lead`（題の下の 1〜2 文）、`sections`（`heading` と `parts` の組の並び）を取ります。`eyebrow` と `lead` はどちらも Markdown の 1 行で、タグに見える字（`<prefix>`、`Vec<u8>` など）は除き、`*`・`_`・`~` などの記号は読む（`~` は 1 つでも組になり、`2026-11-01~11-08` は間が取り消し線になる）ので、字として書くならバッククォートで囲みます。裸の URL とメールのアドレスはリンクになります（IP や localhost の URL（`http://127.0.0.1:7325`）はなりません）。中で名指した画像のファイルは出ません（出るのは png・gif・jpeg・webp の data URI だけ）。節は、部品の後に自分の `sections`（小節。`heading`（`<h3>`）と `parts` の組の並び。1 段だけ）を持てます。小節のある節には見出しが要り、見出しは空の字にできないので、見出しの無い節は鍵を書きません。見出しは `lead` と同じく Markdown の 1 行で、タグに見える字（`Vec<u8>`）は除くのでバッククォートで囲み、タグだけの見出しは目次に載りません。id は描いた字から作ります。除いたタグ、読んだ記号（`__init__`）、バックスラッシュ、文字参照（`&copy;`）、リンクの URL の分だけ、書いた字から作る id と変わります。`toc` は、ページに目次（見出しのある節とその小節）を置くかを決めます。幅 1000px 以上の画面では節の横に置き（ページは窓の幅いっぱいになる）、狭い画面では節の前に節だけを置きます。省くと、見出しのある節が 4 つ以上のページに置きます。紙には出ません。目次のリンク先は節の順の `#section.0`・`#section.0.1` などです。ほかから節へリンクするときは、今までどおりの見出しの id（`#1-what-happens`）を使います。CSS でこの id を指すときは、`#section.0` だと `.0` を class と読むので、`[id="section.0"]` と書きます。
+- `report` は `eyebrow`（題の上の短い行）、`lead`（題の下の 1〜2 文）、`sections`（`heading` と `parts` の組の並び）を取ります。`eyebrow` と `lead` はどちらも Markdown の 1 行で、タグに見える字（`<prefix>`、`Vec<u8>` など）は除き、`*` や `_` などの記号は読むので、字として書くならバッククォートで囲みます（取り消し線は[文の書き方](#文の書き方)）。裸の URL とメールのアドレスはリンクになります（IP や localhost の URL（`http://127.0.0.1:7325`）はなりません）。中で名指した画像のファイルは出ません（出るのは png・gif・jpeg・webp の data URI だけ）。節は、部品の後に自分の `sections`（小節。`heading`（`<h3>`）と `parts` の組の並び。1 段だけ）を持てます。小節のある節には見出しが要り、見出しは空の字にできないので、見出しの無い節は鍵を書きません。見出しは `lead` と同じく Markdown の 1 行で、タグに見える字（`Vec<u8>`）は除くのでバッククォートで囲み、タグだけの見出しは目次に載りません。id は描いた字から作ります。除いたタグ、読んだ記号（`__init__`）、バックスラッシュ、文字参照（`&copy;`）、リンクの URL の分だけ、書いた字から作る id と変わります。`toc` は、ページに目次（見出しのある節とその小節）を置くかを決めます。幅 1000px 以上の画面では節の横に置き（ページは窓の幅いっぱいになる）、狭い画面では節の前に節だけを置きます。省くと、見出しのある節が 4 つ以上のページに置きます。紙には出ません。目次のリンク先は節の順の `#section.0`・`#section.0.1` などです。ほかから節へリンクするときは、今までどおりの見出しの id（`#1-what-happens`）を使います。CSS でこの id を指すときは、`#section.0` だと `.0` を class と読むので、`[id="section.0"]` と書きます。
 - Markdown でない鍵は、書いたとおりの字で描きます。design の `status`・`owner`・`date`、handoff の `date`・`from`・`to`・`ref`・`who`、部品 `asks` の `by`、adr の `number`・`date`・`deciders`、postmortem の `date`・`authors`・`owner`・`ref`、runbook の `owner`・`updated` と手順の `who`、`more` の節の見出しです。
 - `handoff` は、済んだもの・進行中・決めること（`decided` の無い問い）・次の数をページの頭に出し、`asks` を部品 `asks` で描きます。
 - `runbook` は、手順の `who` を題の横の札に、`run` を `terminal` のコピーのボタン付きで描き、`rollback` を別の枠に入れます。
@@ -69,7 +69,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 
 ## 部品
 
-部品は、種類を名指す鍵 1 つで書きます。`floe part list` が 1 行ずつ並べ、`floe part show <名前> schema.json` が取るもの（schema を書いたとおり）を出します。
+部品は、種類を名指す鍵 1 つで書きます。`floe part list` が 1 行ずつ並べ、`floe part show <名前> schema.json` が取るもの（schema を書いたとおり）を出します。`html` は HTML を字で取り、schema.json はありません。`floe part show html` で見ます。
 
 並べるものは、行が何かで部品を選びます。
 
@@ -88,7 +88,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 
 | 部品 | 描くもの |
 |---|---|
-| `text` | Markdown（表も）。中の生の HTML は除く。囲んだコードのブロック（```` ``` ````）はただのコードとして描き、警告する：コードは `code`、コマンドは `terminal` に書く。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ）ので、画像は `image` に書く。 |
+| `text` | Markdown（表も）。中の生の HTML は除く。取り消し線は[文の書き方](#文の書き方)のとおり。囲んだコードのブロック（```` ``` ````）はただのコードとして描き、警告する：コードは `code`、コマンドは `terminal` に書く。中で名指した画像のファイルは出ない（出るのは png・gif・jpeg・webp の data URI だけ）ので、画像は `image` に書く。 |
 | `code` | コードをそのまま、`title`（何のコードかを言葉で）と `file`（どのファイルか）と `lang` の下に。`start` はその番号から行に番号を出す。`mark` はその番号の行に印を付ける（`start` が無ければ 1 から数える）。どの行にも当たらない番号は何もしない。右上のボタンでコードをコピーできる（番号は入らない）。図や表を文字で描かず、`diagram`・`table`・`tree` で書く。 |
 | `terminal` | コマンド（`run`）と出力（`out`）を、`shell`（`bash`・`sh`・`zsh`・`powershell`・`cmd`）のプロンプトで。プロンプトは floe が描くので、プロンプトで始まる `run`（`$ ls`）は断る。右上のボタンで、コマンドを 1 行ずつ、プロンプトと出力を除いてコピーできる。 |
 | `table` | 行でも列でも見比べる、升の短い並び。`columns` と `rows`。列は題の字か `{ id, title, num, pills }`。`num: true` は数の列、`pills` は言葉とその色（`{ 済: good }`）で、その列の升が言葉と丸ごと同じなら、その pill で描く。行は、列の順に並べたセルか、列の `id` を鍵にしたセル（`{ state: 済, who: walter }`）。書かなかった列は空で、どの列の `id` でもない鍵は断る。1 つの表で混ぜてよい。セルは Markdown の 1 行、引用符で囲んだ数（そのまま描く）、または pill `{ pill, tone }`（引用符で囲まず、オブジェクトのまま書く）。 |
@@ -107,7 +107,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `columns` | 部品を横に並べ、同時に見せます。前と後の画面、データと説明など。列は、省ける `title` とその下の `parts`（`details` と同じ部品）。列はどれも同じ幅で、幅は 16rem 以上なので、何列が横に並ぶかは本文の幅で決まり（`report` で最大 5 列、`adr`・`runbook` で 3 列）、残りは下に折り返します。 |
 | `diagram` | 確かめてから inline SVG で描く図（[diagrams.ja.md](diagrams.ja.md)）。 |
 | `script` | 動くもの（[スクリプトと HTML](#スクリプトと-html)）。 |
-| `html` | そのまま入る HTML。`any.json` の鍵で、部品そのものではないので、`floe part show` にはありません（[スクリプトと HTML](#スクリプトと-html)）。 |
+| `html` | そのまま入る HTML。`any.json` の鍵で、部品そのものではないので schema.json はありません。`floe part show html` は、その鍵を持つ `any.json` の全体を出します（[スクリプトと HTML](#スクリプトと-html)）。 |
 
 `tone` は `accent`・`good`・`warn`・`bad`・`muted` のどれかです。
 
@@ -115,6 +115,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 
 データファイルは、鍵と値の YAML の文書 1 つです。文書の間の `---` や、アンカー・エイリアス・マージキー（`<<`）・タグがあれば断ります。
 
+- Markdown では、`~~字~~` は取り消し線になり、`~` 1 つは字のままです（`2026-11-01~11-08`、`~/work`）。部品 text、表のセル、見出し、lead など、floe が Markdown として描くどの鍵でも同じです。
 - `: `、` #`、`{ }` や `[ ]` の中の `,` を含む文は、引用符（`"…"`）で囲むかブロック（`|-`）で書きます。YAML はそれを、鍵と値、コメントの始まり、文の終わりと読みます。
 - 引用符の無い値の行のコメントは、floe が読むどの YAML でも断ります。値を途中で切ったかもしれないからです（`lead: PR #100` は `PR` と読む）。コメントは `{ }` や `[ ]` の外の、別の行に書きます。
 - `{ }` や `[ ]` の中には、別の行のものも含めて、コメントを書けません（floe が読むどの YAML でも）。コメントは、その外の行に書きます。
