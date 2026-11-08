@@ -1,9 +1,13 @@
 package kit
 
 import (
+	"bytes"
 	"html/template"
 	"strings"
 	"testing"
+
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 )
 
 // markdown leaves raw HTML out and puts each table in the table part's box; markdownLine draws one line
@@ -100,6 +104,33 @@ func TestStrikethrough(t *testing.T) {
 	} {
 		if got, err := markdownHTML(src); err != nil || got != want {
 			t.Errorf("markdown(%q) = %q, %v; want %q", src, got, err, want)
+		}
+	}
+}
+
+// markdown is goldmark's GFM but its strikethrough: Markdown with no tilde draws the same, so that an extension goldmark
+// adds to extension.GFM is missed here no longer.
+func TestMarkdownIsGFM(t *testing.T) {
+	t.Parallel()
+
+	gfm := goldmark.New(goldmark.WithExtensions(extension.GFM))
+	for _, src := range []string{
+		"| a | b |\n|:--|--:|\n| 1 | **2** |\n",
+		"- [ ] todo\n- [x] done\n",
+		"See https://example.com/a?b=1, www.example.com and a@example.com.\n",
+		"A note[^1].\n\n[^1]: The note.\n",
+		"# Head\n\n> quote\n\n1. one\n2. two\n\n```go\nx := 1\n```\n",
+		"*em* **strong** `code` [link](https://example.com) ![img](data:image/png;base64,AA==)\n",
+	} {
+		var want, got bytes.Buffer
+		if err := gfm.Convert([]byte(src), &want); err != nil {
+			t.Fatal(err)
+		}
+		if err := markdown.Convert([]byte(src), &got); err != nil {
+			t.Fatal(err)
+		}
+		if got.String() != want.String() {
+			t.Errorf("markdown(%q) = %q; GFM draws %q", src, got.String(), want.String())
 		}
 	}
 }

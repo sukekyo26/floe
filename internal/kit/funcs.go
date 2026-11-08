@@ -48,7 +48,7 @@ func line(md goldmark.Markdown, name, text string) (template.HTML, error) {
 }
 
 // markdown is GFM, as extension.GFM lists its extensions, but its strikethrough of two tildes alone.
-// LIMIT: when extension.GFM takes another extension, add it here too: read gfm.go when goldmark is upgraded.
+// LIMIT: GFM's extensions are listed by hand; TestMarkdownIsGFM fails when goldmark adds one to extension.GFM.
 var markdown = goldmark.New(
 	goldmark.WithExtensions(extension.Linkify, extension.Table, strikethrough, extension.TaskList),
 )

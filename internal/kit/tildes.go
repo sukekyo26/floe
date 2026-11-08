@@ -13,6 +13,7 @@ import (
 // strikethrough is goldmark's Strikethrough of two tildes alone, as cmark-gfm's CMARK_OPT_STRIKETHROUGH_DOUBLE_TILDE
 // reads it: the GFM spec takes one too, which strikes through a range (2026-11-01~11-08) or a path (~/work) unasked.
 // LIMIT: when goldmark has a setting of two tildes alone, take it for this.
+// LIMIT: two tildes beside an escaped one (\~~~a~~) stay text, as in goldmark, which reads the escaped one as a tilde.
 var strikethrough goldmark.Extender = tildesExtension{}
 
 type tildesExtension struct{}
