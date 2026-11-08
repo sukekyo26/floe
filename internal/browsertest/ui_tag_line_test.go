@@ -75,6 +75,18 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	box := func(name string) string {
 		return "[...document.querySelectorAll('#tag-boxes .tag-box')].find((l) => l.querySelector('.name').textContent === " + js(name) + ").querySelector('input')"
 	}
+	// The buttons under within that show an icon, and any whose icon is off its middle by more than half a pixel.
+	centered := func(within string) string {
+		return `(() => { const off = [], seen = [];
+			for (const e of document.querySelectorAll(` + js(within) + `)) for (const btn of e.querySelectorAll('.icon-btn')) {
+				const icon = [...btn.querySelectorAll('svg')].find((g) => g.getClientRects().length);
+				if (!btn.getClientRects().length || !icon) continue;
+				const b = btn.getBoundingClientRect(), i = icon.getBoundingClientRect();
+				seen.push(btn);
+				if (Math.abs((i.top - b.top) - (b.bottom - i.bottom)) > 0.5) off.push(btn.className);
+			}
+			return seen.length > 3 && (off.join(',') || 'all'); })()`
+	}
 	toast := func(words string) string {
 		return "document.getElementById('toasts').textContent.includes(" + js(words) + ")"
 	}
@@ -89,10 +101,14 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// None, one and many tags; none where the page is not its own or is gone.
 	pick("none", "")
 	say("none", line("read-tags"))
+	out = append(out, "centered with none: "+b.eval(centered("#read-tags, #read-actions")))
 	pick("one", "")
 	say("one", line("read-tags"))
 	pick("many", "")
 	say("many", line("read-tags"))
+	// Every icon of a button beside the list, the tag line's and the bar's, stands in the middle of its button, as much room over it
+	// as under it.
+	out = append(out, "centered: "+b.eval(centered("#read-tags, #read-actions")))
 	pick("gone", "")
 	say("a link whose file is gone", line("read-tags"))
 	pick("docs", "index.html")
@@ -214,6 +230,7 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.navigate("/a/one/")
 	b.until("the frame", "!document.getElementById('frame-tags').hidden")
 	say("the frame", line("frame-tags"))
+	out = append(out, "centered in the frame: "+b.eval(centered("#frame-tags, #frame-actions")))
 	say("the frame's menu", "!!document.querySelector('#frame-actions .tag-item')")
 	b.eval("document.querySelector('#frame-tags .tag-edit').click()")
 	b.until("the dialog", "document.getElementById('tag-dialog').open")
@@ -237,8 +254,10 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	added, changed := func(n string) string { return msg("ui_tag_add_named", n) }, func(n string) string { return msg("ui_tag_change_named", n) }
 	check(t, "tag line", out, strings.Join([]string{
 		"none:  / false / " + added("None") + " / true / true",
+		"centered with none: all",
 		"one: plan / true / " + changed("One") + " / true / true",
 		"many: a1,a2,a3,a4,a5,a6,a7,a long name that the line cuts at its end / true / " + changed("Many") + " / true / true",
+		"centered: all",
 		"a link whose file is gone: hidden",
 		"a folder's page: hidden",
 		"its dialog: " + msg("ui_tag_one_title", "One") + " / plan:all,a long name that the line cuts at its end:none,a1:none,a2:none,a3:none,a4:none,a5:none,a6:none,a7:none",
@@ -264,6 +283,7 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"none or several left: true true",
 		"a task's page: plan,a2,a4 / true / " + changed("One") + " / true / true",
 		"the frame: plan,a2,a4 / true / " + changed("One") + " / true / true",
+		"centered in the frame: all",
 		"the frame's menu: true",
 		"sent from the frame: plan,a2,a4,a3",
 		"redrawn: plan,a2,a4,a3 / true / " + changed("One") + " / true / true",
