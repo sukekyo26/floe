@@ -3354,3 +3354,31 @@ func TestGraphDetour(t *testing.T) {
 		})
 	}
 }
+
+// A way on a grid does not step across a wall at either end of it: the only step from s to t meets a wall, down or
+// across, at its first or its last point, and no way is found (a wall's ends' lines are marked in, closedSpan).
+func TestDetourWallEnds(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range []struct {
+		name       string
+		wall       seg
+		s, t       [2]float64
+		start, end int
+	}{
+		{"down, at its top", seg{50, 0, 50, 100}, [2]float64{0, 0}, [2]float64{100, 0}, 0, 0},
+		{"down, at its bottom", seg{50, 0, 50, 100}, [2]float64{0, 100}, [2]float64{100, 100}, 0, 0},
+		{"across, at its left", seg{0, 50, 100, 50}, [2]float64{0, 0}, [2]float64{0, 100}, 2, 2},
+		{"across, at its right", seg{0, 50, 100, 50}, [2]float64{100, 0}, [2]float64{100, 100}, 2, 2},
+	} {
+		sh := &search{work: detourWork, dist: nil, prev: nil, q: nil, tables: [12][]int32{}}
+		ko := keptOff{blocks: nil, walls: []seg{c.wall}, sides: nil, others: nil}
+		g, ok := newDgrid(sh, ko, c.s, c.t, false)
+		if !ok {
+			t.Fatalf("%s: no grid", c.name)
+		}
+		if way, found, done := g.search(sh, c.s, c.t, c.start, c.end); found || !done {
+			t.Errorf("%s: way %v, found %v, done %v; want none found", c.name, way, found, done)
+		}
+	}
+}
