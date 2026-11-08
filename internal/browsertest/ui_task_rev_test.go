@@ -23,10 +23,15 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	s.floe(t, "work", "--project", project, "--task", "#up", "--state", "doing")
 	s.floe(t, "work", "--project", project, "--task", "#kid", "--state", "doing", "--parent", "#up")
 
-	// The page's script: the looks stopped, and every write to the store kept as sent
+	// The page's script: the looks stopped, every write to the store kept as sent; down fails every read, pageDown a page's write
 	const watch = `window.realLoad = load; load = (polled) => (polled ? Promise.resolve() : realLoad(polled));
-		window.sent = []; window.realFetch = fetch;
-		fetch = (u, o) => { if (o?.method === 'PATCH') sent.push(String(u).split('?')[0] + ' ' + o.body); return realFetch(u, o); }; 'watched'`
+		window.sent = []; window.realFetch = fetch; window.down = false; window.pageDown = false;
+		fetch = (u, o) => {
+			if (!o?.method && down) return Promise.reject(new TypeError('down'));
+			if (o?.method === 'PATCH' && pageDown && String(u).startsWith('/api/artifacts/')) return Promise.resolve(new Response('no', { status: 500 }));
+			if (o?.method === 'PATCH') sent.push(String(u).split('?')[0] + ' ' + o.body);
+			return realFetch(u, o);
+		}; 'watched'`
 	open := func(name string) {
 		t.Helper()
 		b.navigate("/tasks?project=proj&task=" + strings.ReplaceAll(name, "#", "%23"))
@@ -68,11 +73,70 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		await new Promise((r) => { const look = () => (unlinking.size ? setTimeout(look, 10) : r()); setTimeout(look, 10); });
 		return [sent.join(' ; '), tasksOf().find((x) => x.name === '#kid').parent || 'no parent', document.getElementById('error').hidden ? 'no error' : document.getElementById('error').textContent].join(' | '); })()`)
 
+	// The reads failing: each write is of the rev the one before it answered. The state twice, then the child off, back, and off again
+	s.floe(t, "work", "--project", project, "--task", "#kid", "--parent", "#up")
+	open("#kid")
+	b.eval("down = true")
+	const twice = `(async () => { sent.length = 0; const sel = document.getElementById('task-state');
+		for (const to of ['done', 'doing']) { sel.value = to; await changeTaskState(); }
+		return sent.join(' ; ') + ' | ' + tasksRead.tasks.proj['#kid'].state; })()`
+	say("reads failing, the state twice", twice)
+	const offBackOff = `(async () => { sent.length = 0; showError('');
+		const off = async () => { await unlinkTask(tasksOf().find((x) => x.name === '#kid'), '#up', false); };
+		await off();
+		document.querySelector('#toasts .undo').click();
+		await new Promise((r) => { const look = () => (sent.length < 2 ? setTimeout(look, 10) : setTimeout(r, 50)); look(); });
+		await off();
+		return sent.join(' ; ') + ' | ' + (tasksRead.tasks.proj['#kid'].parent || 'no parent'); })()`
+	say("reads failing, off, back, off", offBackOff)
+	b.eval("down = false; document.getElementById('toasts').replaceChildren()")
+
+	// The way back is of the screen as it was when taken off: a write since, its own state too, refuses it
+	s.floe(t, "work", "--project", project, "--task", "#kid", "--parent", "#up")
+	open("#kid")
+	say("off, the state, back", `(async () => { sent.length = 0; showError('');
+		await unlinkTask(tasksOf().find((x) => x.name === '#kid'), '#up', false);
+		const sel = document.getElementById('task-state'); sel.value = 'waiting'; await changeTaskState();
+		document.querySelector('#toasts .undo').click();
+		await new Promise((r) => { const look = () => (document.getElementById('error').hidden ? setTimeout(look, 10) : r()); look(); });
+		return document.getElementById('error').textContent; })()`)
+
+	// Set the task, its page's write refused: saving again is of the rev written, refused when another wrote it since, and else saved; a page
+	// whole, which reads the tasks only as the dialog opens, too
+	const setSave = `(async () => { const at = document.getElementById('set-error').textContent; document.getElementById('set').requestSubmit();
+		await new Promise((r) => { const look = () => (document.getElementById('set-dialog').open && document.getElementById('set-error').textContent === at ? setTimeout(look, 10) : r()); setTimeout(look, 10); });
+		return document.getElementById('set-dialog').open ? document.getElementById('set-error').textContent : 'saved'; })()`
+	setOnce := func(where string) {
+		t.Helper()
+		b.eval(watch)
+		b.eval("openTaskSet(items.find((a) => a.slug === 'pa'))")
+		b.until("the dialog", "document.getElementById('set-dialog').open")
+		b.eval("document.getElementById('set-step').value = 'next " + where + "'; pageDown = true")
+		say(where+", the page refused", setSave)
+		b.eval("pageDown = false")
+	}
+	b.navigate("/?project=proj")
+	b.until("the list", "items.some((a) => a.slug === 'pa')")
+	setOnce("the list")
+	s.floe(t, "work", "--project", project, "--task", "#130", "--title", "another's")
+	say("the list, written since", setSave)
+	b.navigate("/a/pa/")
+	b.until("the page", "items.some((a) => a.slug === 'pa')")
+	setOnce("whole")
+	say("whole, again", setSave)
+
 	check(t, "task revs", out, strings.Join([]string{
 		`written since: /api/tasks {"new":false,"rev":1,"state":"waiting"} | done | done | The state could not be changed: task #130 has changed since it was read`,
 		`archived: /api/tasks {"new":false,"rev":2,"state":"archived"} | archived | pa as it was`,
 		`given back: /api/tasks {"new":false,"rev":3,"state":"done"} | done | pa as it was`,
 		`no rev: none | The state could not be changed: the task shown could not be read; load the page again`,
 		`then off its parent: /api/tasks {"new":false,"rev":2,"parent":""} | no parent | no error`,
+		`reads failing, the state twice: /api/tasks {"new":false,"rev":4,"state":"done"} ; /api/tasks {"new":false,"rev":5,"state":"doing"} | doing`,
+		`reads failing, off, back, off: /api/tasks {"new":false,"rev":6,"parent":""} ; /api/tasks {"new":false,"rev":7,"parent":"#up","parentNew":false} ; /api/tasks {"new":false,"rev":8,"parent":""} | no parent`,
+		`off, the state, back: Could not save: task #kid has changed since it was read`,
+		`the list, the page refused: Could not save: HTTP 500: no`,
+		`the list, written since: Could not save: task #130 has changed since it was read: the tasks are read again, so check and save again`,
+		`whole, the page refused: Could not save: HTTP 500: no`,
+		`whole, again: saved`,
 	}, "|"))
 }
