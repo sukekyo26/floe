@@ -114,7 +114,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ## テンプレートの中の部品
 
-部品はデータの項目を描きます。`$ref` で名指せる部品・見た目・共有の schema は `floe part list --all` が並べ、`floe part show <名前> schema.json` が取るものを出します。schema は `properties`・`additionalProperties`（根のものを除く）・`items` の下で、`$ref` で名指します。
+部品はデータの項目を描きます。`$ref` で名指せる部品・見た目・共有の schema は `floe part list --all` が並べ、`floe part show <名前>` が `files:` の行に読むファイルを並べ、`floe part show <名前> <ファイル>` がそれを出します。取るものは、部品なら `schema.json`、共有の schema なら `<名前>.json` で、見た目にはありません。schema は `properties`・`additionalProperties`（根のものを除く）・`items` の下で、`$ref` で名指します。
 
 ```json
 "findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }

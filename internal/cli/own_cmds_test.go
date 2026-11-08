@@ -241,19 +241,25 @@ func TestShowEachFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	section, err := k.SectionParts()
+	if err != nil {
+		t.Fatal(err)
+	}
 	dir := t.TempDir()
 	env := map[string]string{"HOME": dir}
 	for _, kind := range []struct {
 		name    string
 		entries []kit.Entry
-	}{{"part", k.Parts()}, {"template", k.Templates()}, {"theme", k.Themes()}} {
+	}{{"part", k.Parts()}, {"part", section}, {"template", k.Templates()}, {"theme", k.Themes()}} {
 		for _, e := range kind.entries {
 			names := make([]string, len(e.Files))
 			for i, f := range e.Files {
 				names[i] = f.Name
 			}
-			if code, stdout, stderr := runEnv(dir, env, kind.name, "show", e.Name); code != 0 ||
-				!strings.HasSuffix(stdout, "\nfiles: "+strings.Join(names, ", ")+"\n") || stderr != "" {
+			// show writes no files: line for an entry of no file.
+			if code, stdout, stderr := runEnv(dir, env, kind.name, "show", e.Name); code != 0 || stderr != "" ||
+				(len(names) > 0 && !strings.HasSuffix(stdout, "\nfiles: "+strings.Join(names, ", ")+"\n")) ||
+				(len(names) == 0 && strings.Contains(stdout, "\nfiles:")) {
 				t.Errorf("floe %s show %s = %d, %q, %q; want its files: %v", kind.name, e.Name, code, stdout, stderr, names)
 			}
 			for _, f := range e.Files {
