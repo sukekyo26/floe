@@ -196,7 +196,7 @@ floe の主要な変更を記録します。フォーマットは
   細い灰色の輪を 1 つ出し、マウスで押したボタンには出さない。
 - 追加：floe のテンプレート `report`（見出しの下に節を並べ、節ごとに見出しと部品と、その後に 1 段だけの
   小節（見出し `<h3>` と部品）を置く。見出しは、書くなら空の字にできず、小節のある節には要る）と、
-  テンプレートが `floe:///parts/<name>.json` で指す 28 の部品（`floe part list` が並べる）。
+  テンプレートが `floe:///parts/<name>.json` で指す 28 の部品（`floe part list --all` が並べる）。
   そのうち 26 は report の節が Markdown の `text`・`html` と並べて取るもの（`code`・
   `terminal`・`table`・`image`（画面の写しなど、データファイルのディレクトリの画像）から
   `findings`・`decision`・`entries`・`timeline`・`tabs`・`diagram`・`script` まで）、`cell` と `stack` はほかの部品が中に持つもの。
@@ -216,7 +216,9 @@ floe の主要な変更を記録します。フォーマットは
   `assets/`）と、`floe template list`・`show`・`new`（埋めて使う最小のテンプレート。
   `page.html` はスマホのための viewport を持つ）・`check`。
 - 追加：`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` の自分の部品・見た目・共有の schema・テーマ
-  （floe のものと並べて置き、floe のものと同じ名前は付けない）と、`floe part list`・`show`・
+  （floe のものと並べて置き、floe のものと同じ名前は付けない）と、`floe part list`（floe の
+  テンプレートの節に書ける部品。`html` も。`--all` で `$ref` が名指せる部品・見た目・共有の
+  schema を自分のものも全部）・`show`（`floe part show html` は鍵 `html` を持つ `any.json` を出す）・
   `new`（埋めて使う最小の部品）・`check`。部品の schema は、テンプレートと同じく floe の
   format（`html`・`markdown`・`image`）と、それを持つ共有の schema を取れる。
   共有の schema は、どれかの schema が名指すかによらず、その根から確かめる。

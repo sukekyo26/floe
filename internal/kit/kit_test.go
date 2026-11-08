@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"maps"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -437,6 +438,7 @@ func TestNameMistake(t *testing.T) {
 		{"markdown", "own/parts/markdown: markdown names a file of every theme (markdown.css), which a theme's CSS for this part would be read as: give it another name"},
 		{"note", "own/parts/note: note is the name of floe's parts/note: give yours another name"},
 		{"any", "own/parts/any: any is the name of floe's parts/any.json: give yours another name"},
+		{"html", "own/parts/html: html is the name of floe's parts/any.json: give yours another name"},
 		{"shr", "own/parts/shr: shr names both own/parts/shr and own/parts/shr.json: give one of them another name"},
 	} {
 		if got := told(k.NameMistake("own/parts", kit.KindPart, tt.name)); got != tt.want {
@@ -681,5 +683,51 @@ func TestReadMarks(t *testing.T) {
 				t.Errorf("%s shows %s with a mark: %q", e.Name, f.Name, f.Text)
 			}
 		}
+	}
+}
+
+// SectionParts lists the keys of floe's any.json, a section's parts: each the entry Parts gives it, and html, a key of
+// a format, of any.json itself. A Kit of one's own over floe's lists floe's alone.
+func TestSectionParts(t *testing.T) {
+	t.Parallel()
+
+	k := floe(t)
+	got, err := k.SectionParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "asks bars chart checklist checks code columns compare decision details diagram diff entries facts fields " +
+		"findings html image keys links note options script stats steps table tabs terminal text timeline tree"
+	named := make([]string, 0, len(got))
+	for _, e := range got {
+		named = append(named, e.Name)
+	}
+	if strings.Join(named, " ") != want {
+		t.Fatalf("SectionParts lists %s, want %s", strings.Join(named, " "), want)
+	}
+	parts := k.Parts()
+	for _, e := range got {
+		if e.Name == "html" {
+			if e.About != "HTML that goes in as it is" || e.Dir != "" || len(e.Files) != 1 || e.Files[0].Name != "any.json" {
+				t.Errorf("html is %+v, want any.json's key, floe's", e)
+			}
+			continue
+		}
+		i := slices.IndexFunc(parts, func(p kit.Entry) bool { return p.Name == e.Name })
+		if i < 0 || !reflect.DeepEqual(parts[i], e) {
+			t.Errorf("%s is %+v, want the entry of Parts", e.Name, e)
+		}
+	}
+
+	own, err := kit.Load(k, kit.Sources{Parts: kit.Dir{FS: fstest.MapFS{
+		"mine/schema.json": {Data: []byte(partSchema)},
+		"mine/part.html":   {Data: []byte(`<div data-floe-part="mine">{{.t}}</div>`)},
+		"mine/part.css":    {Data: []byte{}},
+	}, Name: "own/parts"}})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if over, err := own.SectionParts(); err != nil || !reflect.DeepEqual(over, got) {
+		t.Errorf("SectionParts over one's own part = %+v, %v; want floe's", over, err)
 	}
 }
