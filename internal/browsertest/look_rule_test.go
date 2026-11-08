@@ -64,10 +64,6 @@ type look struct {
 	floe func(t *testing.T, s *site) measured
 	// broken draws a page that breaks this rule alone, at one place, measures it as floe does, and names the place (at).
 	broken func(t *testing.T, s *site) (at string, m measured)
-	// floeOnly says why a writer cannot break the rule (floe's own way keeps it): such a rule has no broken.
-	floeOnly string
-	// old is the test the rule had, run as it was till the rule is remade into floe and broken.
-	old func(t *testing.T)
 }
 
 // looks are the rules TestLookRule measures, in the order of their names.
@@ -78,12 +74,13 @@ var looks = []look{
 	{name: "cards-gap-var", fix: lookCardsGapVarFix, floe: lookCardsGapVar, broken: brokenCardsGapVar},
 	{name: "contrast-ring", fix: lookContrastRingFix, floe: lookContrastRing, broken: brokenContrastRing},
 	{name: "contrast-text", fix: lookContrastTextFix, floe: lookContrastText, broken: brokenContrastText},
-	{name: "fragment-root", old: lookFragmentRoot},
-	{name: "layers", old: lookLayers},
+	{name: "fragment-alone", fix: lookFragmentAloneFix, floe: lookFragmentAlone, broken: brokenFragmentAlone},
+	{name: "fragment-outside", fix: lookFragmentOutsideFix, floe: lookFragmentOutside, broken: brokenFragmentOutside},
+	{name: "layers", fix: lookLayersFix, floe: lookLayers, broken: brokenLayers},
 	{name: "lists-marked", fix: lookListsMarkedFix, floe: lookListsMarked, broken: brokenListsMarked},
-	{name: "lists-off", old: lookListsOff},
+	{name: "lists-off", fix: lookListsOffFix, floe: lookListsOff, broken: brokenListsOff},
 	{name: "marks", fix: lookMarksFix, floe: lookMarks, broken: brokenMarks},
-	{name: "nesting", old: lookNesting},
+	{name: "nesting", fix: lookNestingFix, floe: lookNesting, broken: brokenNesting},
 	{name: "paper-ground", fix: lookPaperGroundFix, floe: lookPaperGround, broken: brokenPaperGround},
 	{name: "paper-wrap", fix: lookPaperWrapFix, floe: lookPaperWrap, broken: brokenPaperWrap},
 	{name: "print-tabs", fix: lookPrintTabsFix, floe: lookPrintTabs, broken: brokenPrintTabs},
@@ -92,7 +89,8 @@ var looks = []look{
 	{name: "scroll-contain", fix: lookScrollContainFix, floe: lookScrollContain, broken: brokenScrollContain},
 	{name: "scroll-ground", fix: lookScrollGroundFix, floe: lookScrollGround, broken: brokenScrollGround},
 	{name: "scroll-wrap", fix: lookScrollWrapFix, floe: lookScrollWrap, broken: brokenScrollWrap},
-	{name: "shadows", old: lookShadows},
+	{name: "shadow-cast", fix: lookShadowCastFix, floe: lookShadowCast, broken: brokenShadowCast},
+	{name: "shadows", fix: lookShadowsFix, floe: lookShadows, broken: brokenShadows},
 	{name: "speech-read", fix: lookSpeechReadFix, floe: lookSpeechRead, broken: brokenSpeechRead},
 	{name: "template-markdown", fix: lookTemplateMarkdownFix, floe: lookTemplateMarkdown, broken: brokenTemplateMarkdown},
 	{name: "tone", fix: lookToneFix, floe: lookTone, broken: brokenTone},
@@ -128,10 +126,10 @@ func lookRuleLines(t *testing.T) []string {
 }
 
 // TestLookRule measures each rule of looks, a subtest each. Before Chrome is needed, it holds the lines of the rules
-// files that name TestLookRule/<name> and looks to one another, both ways, and each rule to one way of being measured:
-// the test it had (old), or floe's pages (floe) with a fix and either a page that breaks it (broken) or why a writer
-// cannot (floeOnly). A rule remade has two subtests: floe, which fails on what is amiss and on measuring nothing, and
-// broken, which fails unless every amiss names the place it broke, at least one.
+// files that name TestLookRule/<name> and looks to one another, both ways, and each rule to floe's pages (floe), a fix
+// and a page that breaks it (broken): a writer breaks every rule by CSS of one's own, by !important if no other way.
+// Each rule has two subtests: floe, which fails on what is amiss and on measuring nothing, and broken, which fails
+// unless every amiss names the place it broke, at least one.
 func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	named := lookRuleLines(t)
 	for i, l := range looks {
@@ -142,14 +140,12 @@ func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			t.Errorf("looks holds %s, which no line of .claude/rules names: end its line in `TestLookRule/%s`", l.name, l.name)
 		}
 		switch {
-		case (l.old == nil) == (l.floe == nil):
-			t.Errorf("%s has both a test as it was (old) and floe, or neither: keep one", l.name)
-		case l.old != nil && (l.fix != "" || l.broken != nil || l.floeOnly != ""):
-			t.Errorf("%s runs the test as it was (old), which takes no fix, broken page or floeOnly: drop them, or old", l.name)
-		case l.floe != nil && l.fix == "":
+		case l.floe == nil:
+			t.Errorf("%s measures nothing: write its floe", l.name)
+		case l.fix == "":
 			t.Errorf("%s says not how to keep it: write its fix", l.name)
-		case l.floe != nil && (l.broken == nil) == (l.floeOnly == ""):
-			t.Errorf("%s has both a broken page and why none (floeOnly), or neither: keep one", l.name)
+		case l.broken == nil:
+			t.Errorf("%s draws no page that breaks it: write its broken", l.name)
 		default:
 		}
 	}
@@ -162,10 +158,6 @@ func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		return
 	}
 	for _, l := range looks { //nolint:paralleltest // as above
-		if l.old != nil {
-			t.Run(l.name, l.old)
-			continue
-		}
 		t.Run(l.name, func(t *testing.T) {
 			// floe runs first, so that the files broken adds to the site draw none of floe's pages.
 			s := newSite(t)
@@ -178,9 +170,6 @@ func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests sha
 					t.Errorf("%s %s: %s: %s; %s", a.Page, a.At, l.name, a.Text, l.fix)
 				}
 			})
-			if l.broken == nil {
-				return
-			}
 			t.Run("broken", func(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome
 				at, m := l.broken(t, s)
 				if at == "" {
@@ -216,6 +205,40 @@ func ownPart(name, html, css string) map[string]string {
 		"parts/" + name + "/part.html":   html,
 		"parts/" + name + "/part.css":    css,
 	}
+}
+
+// linesApart returns {seen, amiss} of got against want, a line each of what a measure picked: seen is got's lines; each
+// line that differs from want's, or that one of them lacks (none), is amiss at at(the line, got's or else want's), told
+// as page, with want's line after against.
+func linesApart(page, got, want, against string, at func(line string) string) measured {
+	g, w := pickedLines(got), pickedLines(want)
+	m := measured{seen: len(g)}
+	for i := range max(len(g), len(w)) {
+		a, b := "none", "none"
+		if i < len(g) {
+			a = g[i]
+		}
+		if i < len(w) {
+			b = w[i]
+		}
+		if a == b {
+			continue
+		}
+		place := a
+		if i >= len(g) {
+			place = b
+		}
+		m.amiss = append(m.amiss, amiss{Page: page, At: at(place), Text: a + ", " + against + " " + b})
+	}
+	return m
+}
+
+// pickedLines is the lines of what a measure picked, none for "".
+func pickedLines(s string) []string {
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, "\n")
 }
 
 // partOfJS defines partOf, which names the part an element is in (its own part, if a part's box), else its tag.

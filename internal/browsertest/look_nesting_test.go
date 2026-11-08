@@ -1,9 +1,9 @@
 package browsertest_test
 
 import (
-	"os"
-	"strings"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/kit"
 )
 
 // nestingPage draws a card of stats and the cards HTML nests so: in cards, in a panel, in an element of an empty
@@ -62,18 +62,26 @@ const measureEntries = `(() => {
     ' | ' + [...texts].map((p) => getComputedStyle(p).lineHeight).join(' ');
 })()`
 
-// measureCards tells, of each card the HTML nests, the style that differs from the card of stats.
-const measureCards = `(() => {
+// measureCards finds, of the card each element of ids holds (nestingPage's: plain, in a panel, in an empty look, in
+// both, in a part's box), the style that differs from the card of stats. It returns {seen, amiss}: the cards, and each
+// drawn otherwise, at cards.
+const measureCards = `((ids) => {
   const props = ['background-color', 'background-image', 'border-top', 'border-right', 'border-bottom', 'border-left',
     'border-radius', 'box-shadow', 'outline', 'padding', 'margin', 'transform'];
   const style = (el) => { const s = getComputedStyle(el); return props.map((p) => p + ': ' + s.getPropertyValue(p)); };
   const part = style(document.querySelector('[data-floe-part=stats] .card'));
-  return ['plain', 'in-panel', 'in-empty', 'both', 'box'].map((id) => {
-    const got = style(document.querySelector('#' + id + ' > .card'));
-    const off = got.filter((p, i) => p !== part[i]);
-    return id + (off.length ? ' ' + off.join('; ') : ' as stats');
-  }).join(', ');
-})()`
+  const amiss = [];
+  for (const id of ids) {
+    const card = document.querySelector('#' + id + ' > .card');
+    if (!card) { amiss.push({ at: 'cards', text: '#' + id + ': no card' }); continue; }
+    const off = style(card).filter((p, i) => p !== part[i]);
+    if (off.length) amiss.push({ at: 'cards', text: '#' + id + ': ' + off.join('; ') });
+  }
+  return JSON.stringify({ seen: ids.length, amiss });
+})`
+
+// nestedCards are the elements of nestingPage that hold a card.
+var nestedCards = mustJSON([]string{"plain", "in-panel", "in-empty", "both", "box"})
 
 // measureHeld tells the margins of the boxes stack and a note hold.
 const measureHeld = `['#in-note', '[data-floe-part=details] [data-floe-part=note]', '[data-floe-part=tabs] [data-floe-part=code]']
@@ -83,38 +91,45 @@ const measureHeld = `['#in-note', '[data-floe-part=details] [data-floe-part=note
 const measureBlocks = `['[data-floe-part=note] h4', '[data-floe-part=note] hr', '[data-floe-part=stack] h4', '[data-floe-part=stack] hr', '#fig']
   .map((at) => getComputedStyle(document.querySelector(at)).margin).join(' | ')`
 
-// lookNesting checks, in the browser, that what nests the outer wins over what it holds, in every theme: the
-// cards a cards of the HTML holds are drawn as the cards of a part are, whatever looks nest around them and
-// whatever the depth; and a stack or a note gives the boxes it holds no margins of its own but the note's gap between
-// them, --floe-room next to a part's box, in brutal too, whose shadows take no room; the blocks a browser gives margins
-// of its own (h4, hr) have none in a part's Markdown, spaced by its text's box, nor a <figure> box but the note's.
-func lookNesting(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
-	s := newSite(t)
-	b := s.b
-	themes, err := os.ReadDir("../kit/floe/themes")
+// figPart is a part of one's own drawn as a <figure>, a box a browser gives margins of its own.
+var figPart = map[string]string{
+	"parts/fig/schema.json": `{"type": "object"}`,
+	"parts/fig/part.html":   `<figure data-floe-part="fig">f</figure>`,
+	"parts/fig/part.css":    "",
+}
+
+const lookNestingFix = "leave a box nested to the outer look's rules: floe's layers order them, a part's CSS stops at a part it holds, " +
+	"and write no !important that wins over them"
+
+// lookNesting draws nestingPage in every theme, as measureCards measures: the cards a cards of the HTML holds are drawn
+// as the cards of a part are, whatever looks nest around them and whatever the depth.
+func lookNesting(t *testing.T, s *site) measured {
+	t.Helper()
+
+	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.own(t, map[string]string{
-		"parts/fig/schema.json": `{"type": "object"}`,
-		"parts/fig/part.html":   `<figure data-floe-part="fig">f</figure>`,
-		"parts/fig/part.css":    "",
-	})
+	_, _, themes, _ := k.Names()
+	s.own(t, figPart)
 	file := s.write(t, "nesting.yaml", nestingPage)
-	out, want := make([]string, 0, len(themes)), make([]string, 0, len(themes))
+	var m measured
 	for _, theme := range themes {
-		name := theme.Name()
-		s.floe(t, "publish", file, "--slug", "nesting-"+name, "--theme", name)
-		b.navigate("/a/nesting-" + name + "/?raw")
-		b.until("#box", "!!document.querySelector('#box > .card')")
-		out = append(out, name+": "+b.eval(measureCards))
-		want = append(want, name+": plain as stats, in-panel as stats, in-empty as stats, both as stats, box as stats")
+		s.floe(t, "publish", file, "--slug", "nesting-"+theme, "--theme", theme)
+		s.b.navigate("/a/nesting-" + theme + "/?raw")
+		s.b.until("#box", "!!document.querySelector('#box > .card')")
+		m.add(s.b.measure("nestingPage in "+theme, measureCards+"("+nestedCards+")"))
 	}
-	check(t, "nesting", out, strings.Join(want, "|"))
+	return m
+}
 
-	b.navigate("/a/nesting-brutal/?raw")
-	check(t, "held", []string{b.eval(measureHeld)}, "12px 0px 0px | 0px | 0px")
-	b.navigate("/a/nesting-default/?raw")
-	check(t, "blocks", []string{b.eval(measureBlocks)}, "0px | 0px | 0px | 0px | 12px 0px 0px")
-	check(t, "entries", []string{b.eval(measureEntries)}, "12 12 12 | 26.4px 26.4px")
+// brokenNesting draws a card of html in cards in a panel, beside a card of stats, in a theme of one's own whose
+// base.css rounds that card's corners by !important, which wins over the outer cards' rules.
+func brokenNesting(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	s.brokenPage(t, map[string]string{"themes/rounded/base.css": "#own > .card { border-radius: var(--radius-small) !important; }\n"},
+		themePage("rounded", "- stats: [{ label: a, value: \"1\" }]\n- html: <section data-floe-look=\"panel\"><div id=\"own\" data-floe-look=\"cards\">"+
+			"<div class=\"card\" data-floe-look=\"panel\"><p class=\"title\">a</p></div></div></section>\n"))
+	return "cards", s.b.measure("broken", measureCards+"("+mustJSON([]string{"own"})+")")
 }

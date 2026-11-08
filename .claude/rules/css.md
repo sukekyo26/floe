@@ -8,7 +8,7 @@ paths:
 
 # CSS（変数の一覧と細かい形は docs/parts.md と docs/templates.md）
 
-- **CSS の決まりは一覧の 1 行** [rule-lists]：CSS の字で読む決まりは `internal/css/lint` の `Rules` に 1 行足し、`testdata/<名前>/bad`（違反の行に want）と `good` を置き、行の終わりに `TestLintRule/<名前>` を書く。見た目を測る決まりは `internal/browsertest` の `looks` に 1 行足し、floe のページを測る `floe` と、書き手が書ける CSS でその決まりを 1 か所だけ破るページを測る `broken`（書き手に破れないときは理由の `floeOnly`）を持たせ、行の終わりに `TestLookRule/<名前>` を書く。（判断）
+- **CSS の決まりは一覧の 1 行** [rule-lists]：CSS の字で読む決まりは `internal/css/lint` の `Rules` に 1 行足し、`testdata/<名前>/bad`（違反の行に want）と `good` を置き、行の終わりに `TestLintRule/<名前>` を書く。見た目を測る決まりは `internal/browsertest` の `looks` に 1 行足し、floe のページを測る `floe` と、書き手が書ける CSS（`!important` も）でその決まりを 1 か所だけ破るページを測る `broken` を持たせ、行の終わりに `TestLookRule/<名前>` を書く。（判断）
 - **行の余白は `--floe-row-pad` と `--floe-pad-inline`** [row-pad]：線で区切った行の上下と左右の余白はこの 2 つだけが決める。見た目 rows を借りる側は行の余白を書かず、テーマは替えない。`TestLookRule/row-pad`
 - **箱の中の余白は `--floe-pad-block` と `--floe-pad-inline`** [box-pad]：部品の間に地や枠を持つ箱を描くときは、縁から字までをこの 2 つで書き、数で書かない（箱の中の小さな升、行、code の行は外）。見た目 panel 自身は余白を持たない。テーマは置き直さず、箱の余白を書かない。`TestLookRule/box-pad`
 - **部品の小さい字は 2 つの段** [text-scale]：部品と見た目の、本文より小さい字は数で書かず、`--floe-text-small`（札・印と名前・付記）か `--floe-text-aside`（添えの文・小さな題）で書く。段を置くのは floe の base.css だけ。`TestLintRule/text-scale`
@@ -23,7 +23,8 @@ paths:
 - **記号だけが持つ意味は見えない字で** [speech-read]：記号だけが持つ意味は `.floe-hidden` の見えない字で書く（言葉は words.yaml）。描いた印の読み上げは、字と見えない字のとおりになる。`TestLookRule/speech-read`
 - **本文の列は `.floe-column`** [column]：テンプレートの本文の列は class で付け、列の字（max-width・margin-inline・padding-inline）を page.css に書かない。幅は `--column-width` で、置くのは page.css だけ（テーマは置かない）。`--page-width`・`--text-width`・`--page-pad` はパレット 1 か所だけ。字の大きさはページで決めない。列は見た目にしない。（判断）
 - **部品はパレットの変数をそのまま読む** [palette-vars]：部品・見た目の CSS は `var(--accent)` のように既定なしで読み、値を写さない。パレットの根は `:scope`。（判断）
-- **パレットの無いページへ出す CSS は自分の根だけに** [fragment-root]：パレットの無いページへ出す CSS は自分の根だけに当てる（`diagramAssets`）。`TestLookRule/fragment-root`
+- **パレットの無いページでも図は同じ色** [fragment-alone]：`floe diagram render` の切れ端は、パレットの無いページと shadow root でも、floe のページと同じ色で描く（図の根に置くパレットと tones だけで塗る）。`TestLookRule/fragment-alone`
+- **パレットの無いページへ出す CSS は自分の根だけに** [fragment-outside]：切れ端の CSS は自分の根だけに当て、まわりのページの見た目を変えない（`diagramAssets`）。`TestLookRule/fragment-outside`
 - **パレットの変数は docs の表に名前で書く** [palette-in-docs]：default の palette.css の変数は、docs/templates.md の「The palette」の表（英・日）に、まとめずに名前を字のまま書く（raw と自分のテーマが頼る約束なので）。`TestLintRule/palette-in-docs`
 - **tone は `data-floe-tone` と、floe が tone.json から組み立てる変数** [tone]：tone の印は class でなく `data-floe-tone`。名前を色に写すのは style.go の `Tones` だけで、部品・テーマ・テンプレートは `--tone`・`--tone-soft`・`--tone-fill` を読む。tone ごとのセレクタは tone の色でないものにだけ書く。テーマが自分の色で塗るときはパレットに `--<tone>-fill` を置く。`TestLookRule/tone`
 - **部品の箱と見た目の並びは floe が外す** [lists-off]：`ul`・`ol`・`menu` の印・左の余白・項目の間は style.go の `boxes` が外し、grid で並べる。`TestLookRule/lists-off`
@@ -53,7 +54,8 @@ paths:
 - **印刷で地を落とさない** [paper-ground]：印刷の地は base.css の `print-color-adjust` 1 か所が残し、ほかで替えない。`TestLookRule/paper-ground`
 - **紙ではタブの札を同じに描く** [print-tabs]：紙ではどのタブも札の下に出るので、選んだ札だけを違う形に描かない（画面だけの形は `@media screen` に）。`TestLookRule/print-tabs`
 - **部品の間は `--floe-room`** [room]：部品が並ぶ所と Markdown のブロックの間は `var(--floe-room)` で、数で書かない。部品の根は margin を書かない。部品の中の Markdown は `MarkdownFlow`、テンプレート自身のものは `kit.Markdown` が包むので、部品は流れの中の間を書かない。`TestLookRule/room`
-- **箱の外へ出る飾りは `--floe-room` 以下** [shadows]：箱の外へ描く飾りは四方とも `--floe-room` 以下で、傾きや拡大を使わず、場所を空けない。部品の箱・見た目の要素・引用の `box-shadow` は base.css の 1 つの規則だけが書き（ほかで書くと影が黙って消える）、テーマはパレットの `--floe-shadow-*` と箱の `--floe-shadow-color`・`--floe-inset` で描く。中に部品を持つ行の左の線を枠で描かない（行が箱になり、中の部品の影が外へ出る）。`TestLookRule/shadows`
+- **箱の外へ出る飾りは `--floe-room` 以下** [shadows]：箱の外へ描く飾りは四方とも `--floe-room` 以下で、傾きや拡大を使わず、場所を空けない。中に部品を持つ行の左の線を枠で描かない（行が箱になり、中の部品の影が外へ出る）。`TestLookRule/shadows`
+- **影は base.css の 1 つの規則が描く** [shadow-cast]：部品の箱・見た目の要素・引用の `box-shadow` は base.css の 1 つの規則だけが書き（ほかで書くと影が黙って消える）、テーマはパレットの `--floe-shadow-*` と箱の `--floe-shadow-color`・`--floe-inset` で描く。`TestLookRule/shadow-cast`
 - **テンプレートの見出しは包みの外の形で指す** [template-markdown]：page.css は自分の見出しの規則を包みの外の形（`header h1`・`section > h2`）で指し、テンプレートの Markdown の見出しは text の中と同じに描く。`TestLookRule/template-markdown`
 - **角の丸さはパレットの 3 つの変数** [radius]：角は `--radius`・`--radius-small`・`--radius-pill` を読むか、形（`0`・`50%`・`999px`）だけを書く。縁に沿う内の箱は `calc(var(--radius) - 間)`。3 つの値はどれもパレットが置く 1 つの長さで、4 つの角が違う形はテーマの自分の変数に置く。角が読むほかの変数はパレットか base.css の根だけが置く。`TestLintRule/radius`
 - **静かな地は `--quiet`** [quiet]：箱の中の静かな地はパレットの `--quiet` を読み、部品が割合を混ぜない。テーマだけの変数はパレットか base.css の `:scope` に置く（default の palette.css はどのテーマの下にも入るので、default だけのものは base.css に）。（判断）
