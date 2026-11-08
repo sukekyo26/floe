@@ -235,8 +235,8 @@ func TestListShow(t *testing.T) {
 	}
 }
 
-// A part of one's own named html, a key of any.json: floe part list lists floe's html, --all one's own alone, and
-// floe part show shows one's own, as Kit.Part finds it (a LIMIT of shown).
+// A part of one's own named html, a key a section of floe's templates takes, is refused as one named as floe's
+// parts are: floe part list and show would tell of floe's html and one's own apart.
 func TestPartListOwnHTML(t *testing.T) {
 	t.Parallel()
 
@@ -247,24 +247,10 @@ func TestPartListOwnHTML(t *testing.T) {
 		"parts/html/part.css":    "",
 	})
 	parts := filepath.Join(dir, "parts")
-	env := map[string]string{"FLOE_PARTS_DIR": parts}
-	own := "html\t" + filepath.Join(parts, "html") + "\tmine\n"
-	for _, tt := range []struct {
-		args []string
-		out  func(string) bool
-	}{
-		{[]string{"part", "list"}, func(out string) bool {
-			return strings.Contains(out, "\nhtml\tfloe\tHTML that goes in as it is\n") && !strings.Contains(out, own)
-		}},
-		{[]string{"part", "list", "--all"}, func(out string) bool {
-			return strings.Contains(out, "\n"+own) && strings.Count(out, "\nhtml\t") == 1
-		}},
-		{[]string{"part", "show", "html"}, func(out string) bool {
-			return strings.HasPrefix(out, "html: mine\nwhere: "+filepath.Join(parts, "html")+"\n")
-		}},
-	} {
-		if code, stdout, stderr := runEnv(dir, env, tt.args...); code != 0 || !tt.out(stdout) || stderr != "" {
-			t.Errorf("floe %v = %d, %q, %q", tt.args, code, stdout, stderr)
+	want := filepath.Join(parts, "html") + ": html is the name of floe's parts/any.json: give yours another name\n"
+	for _, args := range [][]string{{"part", "list"}, {"part", "show", "html"}} {
+		if code, stdout, stderr := runEnv(dir, map[string]string{"FLOE_PARTS_DIR": parts}, args...); code != 1 || stdout != "" || stderr != want {
+			t.Errorf("floe %v = %d, %q, %q; want 1 and %q", args, code, stdout, stderr, want)
 		}
 	}
 }

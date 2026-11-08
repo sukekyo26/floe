@@ -438,6 +438,7 @@ func TestNameMistake(t *testing.T) {
 		{"markdown", "own/parts/markdown: markdown names a file of every theme (markdown.css), which a theme's CSS for this part would be read as: give it another name"},
 		{"note", "own/parts/note: note is the name of floe's parts/note: give yours another name"},
 		{"any", "own/parts/any: any is the name of floe's parts/any.json: give yours another name"},
+		{"html", "own/parts/html: html is the name of floe's parts/any.json: give yours another name"},
 		{"shr", "own/parts/shr: shr names both own/parts/shr and own/parts/shr.json: give one of them another name"},
 	} {
 		if got := told(k.NameMistake("own/parts", kit.KindPart, tt.name)); got != tt.want {
@@ -686,7 +687,7 @@ func TestReadMarks(t *testing.T) {
 }
 
 // SectionParts lists the keys of floe's any.json, a section's parts: each the entry Parts gives it, and html, a key of
-// a format, of any.json itself. A Kit of one's own over floe's lists floe's alone, a part named html too.
+// a format, of any.json itself. A Kit of one's own over floe's lists floe's alone.
 func TestSectionParts(t *testing.T) {
 	t.Parallel()
 
@@ -719,14 +720,14 @@ func TestSectionParts(t *testing.T) {
 	}
 
 	own, err := kit.Load(k, kit.Sources{Parts: kit.Dir{FS: fstest.MapFS{
-		"html/schema.json": {Data: []byte(partSchema)},
-		"html/part.html":   {Data: []byte(`<div data-floe-part="html">{{.t}}</div>`)},
-		"html/part.css":    {Data: []byte{}},
+		"mine/schema.json": {Data: []byte(partSchema)},
+		"mine/part.html":   {Data: []byte(`<div data-floe-part="mine">{{.t}}</div>`)},
+		"mine/part.css":    {Data: []byte{}},
 	}, Name: "own/parts"}})
 	if err != nil {
 		t.Fatal(told(err))
 	}
 	if over, err := own.SectionParts(); err != nil || !reflect.DeepEqual(over, got) {
-		t.Errorf("SectionParts over one's own part html = %+v, %v; want floe's", over, err)
+		t.Errorf("SectionParts over one's own part = %+v, %v; want floe's", over, err)
 	}
 }

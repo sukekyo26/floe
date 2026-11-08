@@ -225,8 +225,6 @@ func (a *app) checkTemplates() error {
 
 // shown is what floe part show finds name in: the parts, looks and shared schemas; for a name none of them has,
 // what a section of floe's templates takes too (html), by name, so that a name of neither is refused with both.
-// LIMIT: a part of one's own named html stands for it here, while floe part list lists floe's html: only a key of
-// any.json named so does that (refusedName refuses the names of floe's parts); rename such a part to see both.
 func shown(k *kit.Kit, name string) ([]kit.Entry, error) {
 	entries := k.Parts()
 	named := func(e kit.Entry) bool { return e.Name == name }
