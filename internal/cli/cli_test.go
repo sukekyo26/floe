@@ -115,6 +115,9 @@ func TestHelp(t *testing.T) {
 		{{"help", "render"}, {"render", "--help"}},
 		{{"--help", "render"}, {"render", "--help"}},
 		{{"-h", "render"}, {"render", "--help"}},
+		// Help is answered before the flags' groups are asked of: a page and none of tag's flags, work's flags that conflict.
+		{{"help", "tag"}, {"tag", "d", "--help"}},
+		{{"help", "work"}, {"work", "p", "--pin", "--unpin", "--help"}},
 	} {
 		code, got, errs := run("", same[0]...)
 		_, want, _ := run("", same[1]...)
@@ -140,6 +143,7 @@ func TestHelp(t *testing.T) {
 		"rm\tDelete pages in order, stopping at the first failure (a linked file itself is left alone)\n" +
 		"serve\tRun the server in the foreground\n" +
 		"stop\tStop the background server\n" +
+		"tag\tAdd tags to pages and remove tags from them, in order, stopping at the first failure\n" +
 		"template\tList the templates, show one, make one of your own, and check yours\n" +
 		"theme\tList the themes and show one\n" +
 		"version\tPrint the floe version\n" +

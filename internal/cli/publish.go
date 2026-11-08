@@ -130,7 +130,7 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 		// The path sent is under the working directory: a name of UTF-8 has it in the directory.
 		if readable {
 			at = maps.Clone(sentAt)
-			at["path"] = "the working directory"
+			at["/path"] = "the working directory"
 		}
 		body = server.Link{
 			Path: p.abs, Slug: opts.Slug, Title: opts.Title, Description: opts.Description, Theme: opts.Theme,
@@ -286,15 +286,48 @@ func (a *app) archiveCmd() *cobra.Command {
 	return cmd
 }
 
+func (a *app) tagCmd() *cobra.Command {
+	var add, remove []string
+	cmd := &cobra.Command{
+		Use:   "tag <slug>... --add <name> --remove <name>",
+		Short: "Add tags to pages and remove tags from them, in order, stopping at the first failure",
+		Long: `Add tags to pages and remove tags from them, in order, stopping at the first failure. A name is taken
+as written, trimmed, commas and all; one on a page already is kept once. The names given to --remove
+are taken off first, then those given to --add are put on, so a name given to both stays on the page.`,
+		Args:    usage(cobra.MinimumNArgs(1)),
+		PreRunE: flagGroups,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			body := server.Edit{
+				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: nil,
+				Tags: &store.TagsEdit{Add: add, Remove: remove}, Work: nil,
+			}
+			return a.eachPage(cmd, args, http.MethodPatch, body)
+		},
+	}
+	cmd.Flags().StringArrayVar(&add, "add", nil, "a tag to put on the pages; give it again for more")
+	cmd.Flags().StringArrayVar(&remove, "remove", nil, "a tag to take off the pages; give it again for more")
+	cmd.MarkFlagsOneRequired("add", "remove")
+	return cmd
+}
+
 // eachPage sends method with body to each page of slugs in order, stopping at the first failure, a page not there
 // told by its slug.
 func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body any) error {
+	// Encoded once, before the server is asked or started: a text given that is no UTF-8 is refused first.
+	var sent any
+	if body != nil {
+		b, err := encode(body, sentAt)
+		if err != nil {
+			return err
+		}
+		sent = jsontext.Value(b)
+	}
 	c, err := a.client(cmd.Context(), true)
 	if err != nil {
 		return err
 	}
 	for _, slug := range slugs {
-		err = c.do(cmd.Context(), method, "/api/artifacts/"+url.PathEscape(slug), body, nil)
+		err = c.do(cmd.Context(), method, "/api/artifacts/"+url.PathEscape(slug), sent, nil)
 		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
 			return usererr.New("store_no_page", slug)
 		}

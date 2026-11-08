@@ -44,8 +44,7 @@ the first failure. The same command given again finishes what a failure left.
   floe work --task "#130" --parent "#123"
   floe work design-notes --pin
   floe work --task "#130" --forget`,
-		// Asked here, as the flags are read by now: cobra's own asking comes after, unmarked as a usage error.
-		Args: usage(func(cmd *cobra.Command, _ []string) error { return cmd.ValidateFlagGroups() }),
+		PreRunE: flagGroups,
 		RunE: func(cmd *cobra.Command, slugs []string) error {
 			// A step of spaces is the empty one from here on, as the server reads it.
 			f.step = strings.TrimSpace(f.step)

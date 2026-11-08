@@ -224,7 +224,7 @@ func TestRebuildMeanwhile(t *testing.T) {
 	}{
 		{"edited", func(t *testing.T, s *store.Store, _ store.Drawing) {
 			t.Helper()
-			edit := store.Edit{Title: ptr("Kept"), Favorite: ptr(true), Archived: ptr(true), Description: ptr("about"), Tags: ptr([]string{"a"})}
+			edit := store.Edit{Title: ptr("Kept"), Favorite: ptr(true), Archived: ptr(true), Description: ptr("about"), Tags: &store.TagsEdit{Add: []string{"a"}}}
 			if _, err := s.Edit("d", edit); err != nil {
 				t.Fatal(err)
 			}

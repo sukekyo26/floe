@@ -30,6 +30,7 @@ floe publish --link out/index.html   # HTML のファイルをそのまま見せ
 floe publish --link docs             # フォルダの下の HTML を並べる
 floe list                   # ページの一覧（新しい順）
 floe archive old-plan       # ページを消さずに一覧から外す
+floe tag old-plan --add 設計     # ページにタグを付ける
 floe stop                   # 裏で動くサーバーを止める
 ```
 

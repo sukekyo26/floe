@@ -116,11 +116,11 @@ func readImages(dir, file string, names []string) (map[string][]byte, error) {
 	return images, nil
 }
 
-// sentAt names where each field of a body was given: a text in it that is no UTF-8 is told there.
+// sentAt names where each field of a body was given, by its JSON pointer: a text in it that is no UTF-8 is told there.
 var sentAt = map[string]string{
-	"path": "argument 1", "file": "argument 1", "slug": "--slug", "title": "--title", "description": "--description",
-	"theme":   "--theme",
-	"project": "the project name (of the git remote, the repository's directory or the working directory)",
+	"/path": "argument 1", "/file": "argument 1", "/slug": "--slug", "/title": "--title", "/description": "--description",
+	"/theme": "--theme", "/tags/add": "--add", "/tags/remove": "--remove",
+	"/project": "the project name (of the git remote, the repository's directory or the working directory)",
 }
 
 // notUTF8 reports whether err is encoding/json/v2's for a string's bytes that are no UTF-8, as it tells them now.
@@ -133,13 +133,18 @@ func notUTF8(err error) bool {
 }
 
 // encode is body as the server reads it, with encoding/json/v2: nil maps as null (a jsontext.Value as it is). A
-// text in it that is no UTF-8 is the user's mistake, named by where it was given (at), else by its field.
+// text in it that is no UTF-8 is the user's mistake, named by where it was given (at, the longest pointer that holds
+// it), else by its field at the top.
 func encode(body any, at map[string]string) ([]byte, error) {
 	b, err := jsonv2.Marshal(body, jsonv2.FormatNilMapAsNull(true))
 	if syntax, ok := errors.AsType[*jsontext.SyntacticError](err); ok && notUTF8(err) {
-		field := strings.TrimPrefix(string(syntax.JSONPointer), "/")
-		field, _, _ = strings.Cut(field, "/")
-		return nil, usererr.New("cli_not_utf8", cmp.Or(at[field], fmt.Sprintf("the request's %q", field)))
+		for p := string(syntax.JSONPointer); p != ""; p = p[:strings.LastIndex(p, "/")] {
+			if name, ok := at[p]; ok {
+				return nil, usererr.New("cli_not_utf8", name)
+			}
+		}
+		field, _, _ := strings.Cut(strings.TrimPrefix(string(syntax.JSONPointer), "/"), "/")
+		return nil, usererr.New("cli_not_utf8", fmt.Sprintf("the request's %q", field))
 	}
 	// Refused before sending, as the server would: it stops reading at its limit, which may break the sending off
 	// before its answer comes.

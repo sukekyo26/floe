@@ -878,7 +878,7 @@ func removePage(dir string) error {
 	return nil
 }
 
-// Edit is a change from the management page. A nil field is left as it is.
+// Edit is a change from the management page or the command line. A nil field is left as it is.
 type Edit struct {
 	Title       *string
 	Description *string
@@ -886,14 +886,21 @@ type Edit struct {
 	Slug        *string
 	Favorite    *bool
 	Archived    *bool
-	Tags        *[]string
+	Tags        *TagsEdit
 	Work        *WorkEdit
+}
+
+// TagsEdit changes a page's tags: the names in Remove are taken off, then those in Add put on, so that a name in both
+// stays on. Only the names a writer changed are sent, so that a tag another wrote since it read the page stays.
+type TagsEdit struct {
+	Add    []string `json:"add,omitzero"`
+	Remove []string `json:"remove,omitzero"`
 }
 
 // Edit applies ed to slug and returns its slug afterwards. updatedAt stays, so neither the order of
 // the list nor the open tabs move. Clearing the title hands it back to the file (a link) or to the
 // data file's title: when published (a stored page), else to the slug; clearing the project drops it.
-// Tags are kept as tagged makes them.
+// Tags are changed under the lock, so that writers who send only their change keep each other's.
 // The page drawn stays as it is, its title and slug as when it was drawn.
 func (s *Store) Edit(slug string, ed Edit) (string, error) {
 	from, ok := s.dir(slug)
@@ -959,11 +966,17 @@ func setMarks(m *Meta, ed Edit) {
 		m.Archived = *ed.Archived
 	}
 	if ed.Tags != nil {
-		m.Tags = tagged(*ed.Tags)
+		m.Tags = tagged(append(without(m.Tags, ed.Tags.Remove), ed.Tags.Add...))
 	}
 	if ed.Work != nil {
 		setWork(m, ed.Work)
 	}
+}
+
+// without returns tags but those named in names, each name as tagged keeps it.
+func without(tags, names []string) []string {
+	off := tagged(names)
+	return slices.DeleteFunc(slices.Clone(tags), func(tag string) bool { return slices.Contains(off, tag) })
 }
 
 // tagged is tags as a page keeps them: each trimmed, without the empty and a name the second time, in the
