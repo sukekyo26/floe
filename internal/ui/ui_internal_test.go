@@ -223,8 +223,9 @@ func TestTaskRequests(t *testing.T) {
 
 	funcRe := regexp.MustCompile(`(?:async\s+)?function\s+(\w+)\(`)
 	starts := funcRe.FindAllStringSubmatchIndex(pageSource, -1)
-	var got []string
-	for _, at := range regexp.MustCompile("['`]/api/tasks").FindAllStringIndex(pageSource, -1) {
+	named := regexp.MustCompile("['`]/api/tasks").FindAllStringIndex(pageSource, -1)
+	got := make([]string, 0, len(named))
+	for _, at := range named {
 		in := ""
 		for _, f := range starts {
 			if f[0] < at[0] {
