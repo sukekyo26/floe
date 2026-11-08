@@ -37,8 +37,8 @@ sections:
 // tops of their words and their parts, apart (tops that differ), the room from each title to its parts and from
 // the lowest parts of the line to the words, a parts box taller than what it holds, a card ending not at the parts it
 // ends with, and the words of a card of no parts not the cards' gap (--cards-gap, as the options' box reads it) under
-// its title in options of no parts, not --floe-room under it on a line of no parts in options holding some (the row
-// of the parts left empty). A theme's number in the rows is the cards' gap above its title, and so are the pros below
+// its title in options of no parts, not --floe-room and the cards' gap under it on a line of no parts in options holding
+// some (the row of the parts left empty, its gaps kept). A theme's number in the rows is the cards' gap above its title, and so are the pros below
 // the words. It returns {seen, amiss}: the cards it measured, and what is amiss, at options.
 const measureOptions = `(() => {
   const px = (v) => { const d = document.body.appendChild(document.createElement('div')); d.style.width = v; const w = d.getBoundingClientRect().width; d.remove(); return w; };
@@ -78,7 +78,7 @@ const measureOptions = `(() => {
           const cs = getComputedStyle(c), end = c.getBoundingClientRect().bottom - parseFloat(cs.borderBottomWidth) - parseFloat(cs.paddingBottom);
           if (!b && !o.querySelector('.body') && off(end, r.bottom)) out.push(where + ': card ends ' + (end - r.bottom).toFixed(1) + ' under its parts');
         } else if (b) {
-          const d = b.getBoundingClientRect().top - t.bottom, want = !o.querySelector('.parts') ? small : !parts.length ? room : null;
+          const d = b.getBoundingClientRect().top - t.bottom, want = !o.querySelector('.parts') ? small : !parts.length ? room + small : null;
           if (want !== null && off(d, want)) out.push(where + ': words ' + d.toFixed(1) + ' under the title');
         }
       }
