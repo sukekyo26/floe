@@ -1422,10 +1422,8 @@
   });
   // The versions read go to the server one request at a time: while one is out, each page's last one waits, its earlier ones dropped.
   // One lost is told again the next time the page is loaded. The slug is the caller's own, never one a page's message names
-  // LIMIT: #error is one place, so that clearing a read's mistake also clears another's shown since, unread. Only while a broken reads.json is mended, or after a mark unread failed, whose words go with the next read of any page; as load's loadFailed. Give each its own place if that comes to matter
   const readsWaiting = new Map();
   let readsGoing = false;
-  let readFailed = false;
   // told is a version read and whether to say so, or null to mark the page unread, which waits in the same line: a read on its way
   // ends first, and one waiting gives way
   // LIMIT: a read cut off at 5 seconds, or a mark so, may still be written by the server after what follows it, while the store's lock is
@@ -1445,8 +1443,7 @@
       // The mark that did not reach the server holds nothing back
       const letGo = () => { if (!value && keptUnread === to && !readsWaiting.has(to)) keptUnread = null; };
       const fail = (why) => {
-        readFailed = true;
-        showError(why);
+        showError(why, 'read');
         letGo();
       };
       try {
@@ -1458,10 +1455,7 @@
           fail(value ? t('ui_http_error', why, res.status) : t('ui_unread_failed', why));
           continue;
         }
-        if (readFailed) {
-          readFailed = false;
-          showError('');
-        }
+        showError('', 'read');
         if (res.status === 404) letGo();
         else if (!value) unreadDone(to);
         else if (value.say && (await res.json()).cleared && keptUnread !== to && to === shownSlug()) {
@@ -1591,9 +1585,15 @@
     return unit ? rtf.format(Math.round(s / sec), unit) : t('ui_just_now');
   }
 
-  function showError(msg) {
+  // #error holds one mistake. from names who said it: '' an action, 'load' or 'read' (a read mark). Each takes back only its own, and
+  // only an action writes over an action's, so that one is never lost unread to a load or a mark said again and again
+  // LIMIT: one place: a load's or a mark's mistake waits behind an action's until the next action. Give each its own if that comes to matter
+  let errorFrom = '';
+  function showError(msg, from = '') {
+    if (msg ? from && errorFrom === '' && !$('error').hidden : errorFrom !== from) return;
     $('error').textContent = msg;
     $('error').hidden = !msg;
+    errorFrom = msg ? from : '';
   }
 
   // Only a dot while connected, and words only when the connection is lost. The address is the one in the address bar, so it is not shown
@@ -2994,7 +2994,8 @@
     try {
       l = await readListing(slug, dir);
     } catch (e) {
-      showError(t('ui_load_failed', e.message));
+      // The load's: it stays open, and the next look reads it again
+      showError(t('ui_load_failed', e.message), 'load');
       return;
     }
     // Closed while it was read
@@ -4210,7 +4211,8 @@
     try {
       l = await readListing(framed, path);
     } catch (e) {
-      showError(t('ui_load_failed', e.message));
+      // The load's: it stays open, and the next look reads it again
+      showError(t('ui_load_failed', e.message), 'load');
       return;
     }
     // Closed while it was read; one gone for now stays open, as readSide's
@@ -5042,9 +5044,16 @@
     $('set-dialog').close();
   }
 
-  // The list response last drawn. An unchanged one is not redrawn, keeping armed delete buttons and focus
+  // The list response last drawn, or '' for one to draw again at the next look: a draw that threw, or one that left a part for later. An
+  // unchanged one is not redrawn, keeping armed delete buttons and focus
   let drawn = '';
-  let loadFailed = false;
+  // The load's mistakes, its read's and its draw's (one that threw), said with the tasks' by sayLoad alone: the first of them
+  let readWhy = '';
+  let drawWhy = '';
+  function sayLoad() {
+    const why = readWhy || drawWhy || (TASKS && tasksRead.error ? t('ui_tasks_failed', tasksRead.error) : '');
+    showError(why, 'load');
+  }
 
   // A poll's answer does not redraw the rows from under a press: Chrome sends neither click nor dblclick for a row gone between press
   // and release. Only for a while, as a press may never tell its release (a context menu, a drag, a release over the iframe)
@@ -5068,7 +5077,6 @@
     }
   }
 
-  let tasksFailed = false;
   // One load at a time: one asked while another goes waits for it, and every ask meanwhile joins the one waiting, so no answer
   // overtakes another. await load() returns once a load begun after the call has drawn, failed, or, a poll's, given way to a press
   let loadWaiting = null;
@@ -5114,15 +5122,21 @@
         list = await res.text();
         entries = JSON.parse(list);
         read = tasks;
-        if (polled && performance.now() - pressedAt < PRESS_MS) return;
+        // Held back, but read: the read's mistake is said no more
+        // LIMIT: the tasks' mistake stays that of the tasks drawn, as tasksRead goes in only with a draw, up to the next poll
+        if (polled && performance.now() - pressedAt < PRESS_MS) {
+          readWhy = '';
+          sayLoad();
+          return;
+        }
         // What is open of the folders, or the frame's tree, kept only as this list is drawn
         if (framed && FILE) keep = await readSide(signal);
         else if (!framed && !TASK_LIST) keep = await readOpen(entries, signal);
         if (writesSent === sent) break;
       }
     } catch (e) {
-      loadFailed = true;
-      showError(e.name === 'TimeoutError' ? t('ui_load_slow', READ_MS / 1000, POLL_MS / 1000) : t('ui_load_failed', e.message));
+      readWhy = e.name === 'TimeoutError' ? t('ui_load_slow', READ_MS / 1000, POLL_MS / 1000) : t('ui_load_failed', e.message);
+      sayLoad();
       return;
     } finally {
       reading = null;
@@ -5135,26 +5149,32 @@
     if (read) tasksRead = read;
     // The list redrawn when what is open of the folders changed, the frame when the directory of its page did
     if (keep?.()) drawn = '';
-    // Only a load failure is cleared here; a failed delete and the like stays until the next action
-    if (loadFailed) {
-      loadFailed = false;
-      showError('');
+    readWhy = '';
+    if (text === drawn) {
+      sayLoad();
+      return;
     }
-    if (TASKS && tasksRead.error) {
-      tasksFailed = true;
-      showError(t('ui_tasks_failed', tasksRead.error));
-    } else if (tasksFailed) {
-      tasksFailed = false;
-      showError('');
-    }
-    if (text === drawn) return;
     drawn = text;
-    if (framed) renderFrame();
-    else {
-      render();
-      backToRow();
+    try {
+      if (framed) renderFrame();
+      else {
+        render();
+        backToRow();
+      }
+      if ($('find').open) drawFind();
+    } catch (e) {
+      // Said, not thrown, so that await load() goes on as after a read that failed; drawn again at each look until it draws
+      // LIMIT: a draw that always throws is tried and said again at every look, every POLL_MS
+      // LIMIT: one draw for the list and the search modal: a search modal that throws redraws the list too at every look, losing an armed
+      // delete button and the focus. Give the modal its own if that comes to trouble someone
+      // LIMIT: backToRow has let its row go before it focuses or picks it: one that throws there is not taken back to the row again
+      drawn = '';
+      drawWhy = t('ui_draw_failed', String(e));
+      sayLoad();
+      return;
     }
-    if ($('find').open) drawFind();
+    drawWhy = '';
+    sayLoad();
   }
 
   // The search modal: of every entry, the archived after the rest, as they would drown what is in use
