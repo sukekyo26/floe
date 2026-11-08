@@ -66,8 +66,6 @@ type look struct {
 	broken func(t *testing.T, s *site) (at string, m measured)
 	// floeOnly says why a writer cannot break the rule (floe's own way keeps it): such a rule has no broken.
 	floeOnly string
-	// old is the test the rule had, run as it was till the rule is remade into floe and broken.
-	old func(t *testing.T)
 }
 
 // looks are the rules TestLookRule measures, in the order of their names.
@@ -130,10 +128,10 @@ func lookRuleLines(t *testing.T) []string {
 }
 
 // TestLookRule measures each rule of looks, a subtest each. Before Chrome is needed, it holds the lines of the rules
-// files that name TestLookRule/<name> and looks to one another, both ways, and each rule to one way of being measured:
-// the test it had (old), or floe's pages (floe) with a fix and either a page that breaks it (broken) or why a writer
-// cannot (floeOnly). A rule remade has two subtests: floe, which fails on what is amiss and on measuring nothing, and
-// broken, which fails unless every amiss names the place it broke, at least one.
+// files that name TestLookRule/<name> and looks to one another, both ways, and each rule to floe's pages (floe) with a
+// fix and either a page that breaks it (broken) or why a writer cannot (floeOnly). Each rule has two subtests: floe,
+// which fails on what is amiss and on measuring nothing, and broken, which fails unless every amiss names the place it
+// broke, at least one.
 func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	named := lookRuleLines(t)
 	for i, l := range looks {
@@ -144,13 +142,11 @@ func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			t.Errorf("looks holds %s, which no line of .claude/rules names: end its line in `TestLookRule/%s`", l.name, l.name)
 		}
 		switch {
-		case (l.old == nil) == (l.floe == nil):
-			t.Errorf("%s has both a test as it was (old) and floe, or neither: keep one", l.name)
-		case l.old != nil && (l.fix != "" || l.broken != nil || l.floeOnly != ""):
-			t.Errorf("%s runs the test as it was (old), which takes no fix, broken page or floeOnly: drop them, or old", l.name)
-		case l.floe != nil && l.fix == "":
+		case l.floe == nil:
+			t.Errorf("%s measures nothing: write its floe", l.name)
+		case l.fix == "":
 			t.Errorf("%s says not how to keep it: write its fix", l.name)
-		case l.floe != nil && (l.broken == nil) == (l.floeOnly == ""):
+		case (l.broken == nil) == (l.floeOnly == ""):
 			t.Errorf("%s has both a broken page and why none (floeOnly), or neither: keep one", l.name)
 		default:
 		}
@@ -164,10 +160,6 @@ func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests sha
 		return
 	}
 	for _, l := range looks { //nolint:paralleltest // as above
-		if l.old != nil {
-			t.Run(l.name, l.old)
-			continue
-		}
 		t.Run(l.name, func(t *testing.T) {
 			// floe runs first, so that the files broken adds to the site draw none of floe's pages.
 			s := newSite(t)
