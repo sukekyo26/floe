@@ -120,7 +120,7 @@ blockquote > * + * { margin-top: 0.6rem; }
    --floe-shadow-color set on that box alone, and draws within itself --floe-inset, set on it alone (initial clears it;
    none is no shadow and voids them both). box-shadow on a part's box, a look's element and a quote is written here alone.
    LIMIT: a box-shadow written on such a box elsewhere wins over this and silently drops its shadow and --floe-inset; a
-   length in em scales with the box's font, and a percentage leaves it no shadow. TestUIShadows measures, no rule refuses.
+   length in em scales with the box's font, and a percentage leaves it no shadow. TestLookRule/shadows measures, no rule refuses.
    LIMIT: a part spaces its Markdown's box from its own elements and edge (a title above, its padding below) under
    --floe-room, so a theme's quote shadowed as far as that, first or last in a part's Markdown, may reach the title or
    leave the part's box */
