@@ -19,8 +19,15 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 	st := store.New(s.Env["FLOE_DIR"])
 	yes := true
 	for _, p := range [][3]string{
-		{"plan-a", "proj", "S300 案"}, {"build-a", "proj", "S300 実装"}, {"review-a", "proj", "S300 レビュー"}, {"note-a", "proj", "S300 "},
-		{"old-a", "proj", "S300 案"}, {"memo-a", "proj", ""}, {"check-a", "proj", ""}, {"other-a", "proj", "S301 設計"}, {"g-a", "proj", ""},
+		{"plan-a", "proj", "S300 案"},
+		{"build-a", "proj", "S300 実装"},
+		{"review-a", "proj", "S300 レビュー"},
+		{"note-a", "proj", "S300 "},
+		{"old-a", "proj", "S300 案"},
+		{"memo-a", "proj", ""},
+		{"check-a", "proj", ""},
+		{"other-a", "proj", "S301 設計"},
+		{"g-a", "proj", ""},
 		{"far-a", "else", ""},
 	} {
 		s.floe(t, "publish", s.page(t, p[0]+".yaml", "T "+p[0], ""), "--slug", p[0])
