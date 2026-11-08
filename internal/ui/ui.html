@@ -2195,31 +2195,27 @@
     showApply();
   }
 
-  // Gives the pages the tags as the boxes have them, sending each page whose tags change them so; one that would not change,
-  // or is gone, is not sent. A tag left on some is left as each page has it. The dialog closes once the list is read again, so
-  // that the focus goes back to a row's menu as drawn anew
-  // LIMIT: the tags sent are those of the list read just before, as the boxes change them, so a change made elsewhere in
-  // between is lost. Only this page writes tags now; give the API adding and removing if another comes to
+  // Sends the pages only the tags whose boxes were changed since the dialog opened, to add or to remove, so that a tag
+  // written elsewhere meanwhile stays; a page these would not change, or one gone, is not sent. A tag left on some is left as
+  // each page has it. The dialog closes once the list is read again, so that the focus goes back to a row's menu as drawn anew
   async function applyTags() {
     if (tagMarks.sending) return;
-    const { want, slugs, send, done, failed, after } = tagMarks;
+    const { start, want, slugs, send, done, failed, after } = tagMarks;
+    const changed = (mark) => [...want].filter(([name, w]) => w === mark && start.get(name) !== mark).map(([name]) => name);
+    const add = changed('all');
+    const remove = changed('none');
     holdTags(true);
     // Whatever throws, the dialog is let go and closed
     try {
       // Read again first: a page removed since is not sent, rather than be sent and not found
       await load();
-      const next = new Map();
-      for (const slug of slugs) {
-        const a = items.find((x) => x.slug === slug);
-        if (!a) continue;
-        const now = a.tags ?? [];
-        const tags = [...now.filter((name) => want.get(name) !== 'none'),
-          ...[...want].filter(([name, w]) => w === 'all' && !now.includes(name)).map(([name]) => name)];
-        if (tags.join('\n') !== now.join('\n')) next.set(slug, tags);
-      }
+      const next = new Set(slugs.filter((slug) => {
+        const now = items.find((x) => x.slug === slug)?.tags;
+        return now && (add.some((name) => !now.includes(name)) || remove.some((name) => now.includes(name)));
+      }));
       after?.(next);
       if (next.size === 0) toast(t('ui_tag_bulk_none'));
-      else await send((slug) => patchOne(slug, { tags: next.get(slug) }), done, failed, [...next.keys()]);
+      else await send((slug) => patchOne(slug, { tags: { add, remove } }), done, failed, [...next]);
     } finally {
       holdTags(false);
       $('tag-dialog').close();

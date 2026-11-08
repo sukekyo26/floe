@@ -231,7 +231,7 @@ func TestUITaskPage(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 
 	// A tag on a task's page has nothing to narrow.
-	if _, err := st.Edit("y1", store.Edit{Tags: &[]string{"t"}}); err != nil {
+	if _, err := st.Edit("y1", store.Edit{Tags: &store.TagsEdit{Add: []string{"t"}}}); err != nil {
 		t.Fatal(err)
 	}
 	opened("#142", "/tasks?project=proj&task=%23142")

@@ -40,7 +40,7 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "tl/docs"), "--slug", "docs")
 	tag := func(slug string, tags ...string) {
 		t.Helper()
-		if _, err := st.Edit(slug, store.Edit{Tags: &tags}); err != nil {
+		if _, err := st.Edit(slug, store.Edit{Tags: &store.TagsEdit{Add: tags}}); err != nil {
 			t.Fatal(err)
 		}
 	}

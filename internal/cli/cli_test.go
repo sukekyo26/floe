@@ -140,6 +140,7 @@ func TestHelp(t *testing.T) {
 		"rm\tDelete pages in order, stopping at the first failure (a linked file itself is left alone)\n" +
 		"serve\tRun the server in the foreground\n" +
 		"stop\tStop the background server\n" +
+		"tag\tAdd tags to pages and remove tags from them, in order, stopping at the first failure\n" +
 		"template\tList the templates, show one, make one of your own, and check yours\n" +
 		"theme\tList the themes and show one\n" +
 		"version\tPrint the floe version\n" +

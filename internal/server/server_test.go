@@ -465,15 +465,17 @@ func TestEditKeys(t *testing.T) {
 		{`{"favorite":true}`, func(f *fields) { f.favorite = true }},
 		{`{"archived":true}`, func(f *fields) { f.archived = true }},
 		{`{"archived":null}`, func(*fields) {}},
-		{`{"tags":["b"," a ","b",""]}`, func(f *fields) { f.tags = "b\x00a" }},
-		{`{"tags":["a,b"]}`, func(f *fields) { f.tags = "a,b" }},
+		{`{"tags":{"add":["b"," a ","b",""]}}`, func(f *fields) { f.tags = "b\x00a" }},
+		{`{"tags":{"remove":["b"],"add":["a,b"]}}`, func(f *fields) { f.tags = "a\x00a,b" }},
 		{`{"tags":null}`, func(*fields) {}},
-		{`{"tags":[]}`, func(f *fields) { f.tags = "" }},
+		{`{"tags":{}}`, func(*fields) {}},
+		{`{"tags":{"add":null}}`, func(*fields) {}},
+		{`{"tags":{"remove":["a","a,b"]}}`, func(f *fields) { f.tags = "" }},
 		// Cleared, the title is the data file's again and the project is dropped.
 		{`{"title":""}`, func(f *fields) { f.title = "T" }},
 		{`{"project":""}`, func(f *fields) { f.project = "" }},
 		// Kept on, for the rename below to keep.
-		{`{"tags":["k"]}`, func(f *fields) { f.tags = "k" }},
+		{`{"tags":{"add":["k"]}}`, func(f *fields) { f.tags = "k" }},
 	} {
 		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(c.body)), http.StatusOK, `{"slug":"d"}`)
 		c.change(&now)
@@ -489,8 +491,10 @@ func TestEditKeys(t *testing.T) {
 		}
 	}
 	for body, told := range map[string]string{
-		`{"tags":"a"}`: `unmarshal JSON string into Go []string within "/tags"`,
-		`{"tags":[1]}`: `unmarshal JSON number into Go string within "/tags/0"`,
+		`{"tags":["a"]}`:         `unmarshal JSON array into Go store.TagsEdit within "/tags"`,
+		`{"tags":{"add":"a"}}`:   `unmarshal JSON string into Go []string within "/tags/add"`,
+		`{"tags":{"add":[1]}}`:   `unmarshal JSON number into Go string within "/tags/add/0"`,
+		`{"tags":{"put":["a"]}}`: `unknown object member name "put" within "/tags"`,
 	} {
 		want(t, e.write(t, http.MethodPatch, "/api/artifacts/d", json.RawMessage(body)), http.StatusBadRequest, told)
 	}
@@ -505,9 +509,12 @@ func TestEditKeys(t *testing.T) {
 	if b, err := json.Marshal(server.Edit{Archived: &yes}); err != nil || string(b) != `{"archived":true}` {
 		t.Errorf("floe archive sends %s, %v", b, err)
 	}
-	// Tags none is sent as such, which clears them.
-	if b, err := json.Marshal(server.Edit{Tags: &[]string{}}); err != nil || string(b) != `{"tags":[]}` {
-		t.Errorf("no tags sent as %s, %v", b, err)
+	// floe tag sends only the names given, none of them as nothing.
+	if b, err := json.Marshal(server.Edit{Tags: &store.TagsEdit{Add: []string{"a"}}}); err != nil || string(b) != `{"tags":{"add":["a"]}}` {
+		t.Errorf("a tag added sent as %s, %v", b, err)
+	}
+	if b, err := json.Marshal(server.Edit{Tags: &store.TagsEdit{}}); err != nil || string(b) != `{"tags":{}}` {
+		t.Errorf("no names sent as %s, %v", b, err)
 	}
 }
 

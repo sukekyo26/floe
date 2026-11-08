@@ -2,12 +2,14 @@
 package cli
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
 	"slices"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -142,7 +144,7 @@ func newRoot(env Env, out io.Writer) (*cobra.Command, *app) {
 	a := &app{env: env, out: out, warnings: nil, told: nil}
 	root.AddCommand(
 		a.archiveCmd(), a.checkCmd(), a.diagramCmd(), a.iconsCmd(), a.listCmd(), a.partCmd(), a.publishCmd(), a.rebuildCmd(),
-		a.renderCmd(), a.rmCmd(), a.serveCmd(), a.stopCmd(), a.templateCmd(), a.themeCmd(), a.workCmd(),
+		a.renderCmd(), a.rmCmd(), a.serveCmd(), a.stopCmd(), a.tagCmd(), a.templateCmd(), a.themeCmd(), a.workCmd(),
 	)
 	// cobra adds these as it runs: here, so that readable finds them, and their arguments are wrapped below.
 	root.InitDefaultHelpCmd()
@@ -186,7 +188,6 @@ func readable(root *cobra.Command, args []string) error {
 	if err != nil {
 		return usageOf(err)
 	}
-	// LIMIT: cobra reads the flags again as it runs; a flag that counts or gathers (a slice) would count twice.
 	if err := cmd.ParseFlags(rest); err != nil {
 		return usageOf(err)
 	}
@@ -198,9 +199,28 @@ func readable(root *cobra.Command, args []string) error {
 		}
 	}
 	if !asked {
-		return nil
+		return unread(cmd.Flags())
 	}
 	return given(cmd, cmd.Flags().Args())
+}
+
+// unread gives the flags read back their first values, as cobra reads them again as it runs: a flag that gathers (a
+// slice) or counts would else hold what it was given twice. A slice is emptied, as pflag's first value given replaces
+// its default.
+func unread(flags *pflag.FlagSet) error {
+	var err error
+	flags.Visit(func(f *pflag.Flag) {
+		if sv, ok := f.Value.(pflag.SliceValue); ok {
+			err = cmp.Or(err, sv.Replace(nil))
+		} else {
+			err = cmp.Or(err, f.Value.Set(f.DefValue))
+		}
+		f.Changed = false
+	})
+	if err != nil {
+		return fmt.Errorf("give the flags back their first values: %w", err)
+	}
+	return nil
 }
 
 // topic refuses args, the words the help command was given, that name no command of root.

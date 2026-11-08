@@ -5,10 +5,12 @@ import (
 	jsonv2 "encoding/json/v2"
 	"io"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/server"
+	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -42,7 +44,7 @@ func TestEncode(t *testing.T) {
 			if t := field.Type; t.Kind() == reflect.Pointer {
 				field.Type = t.Elem()
 			}
-			if field.Type.Kind() == reflect.String && sentAt[name] == "" {
+			if field.Type.Kind() == reflect.String && sentAt["/"+name] == "" {
 				t.Errorf("%s.%s: no place in sentAt", typ.Name(), name)
 			}
 		}
@@ -56,15 +58,47 @@ func TestEncode(t *testing.T) {
 		t.Errorf("a key twice told %v, want floe's failure", err)
 	}
 	bad := "a\xffb"
-	for body, at := range map[any]string{
-		server.Link{Path: "/x", Title: &bad}: "--title", //nolint:exhaustruct // the rest not given
-		struct {
+	// Each text is told by the longest pointer of sentAt that holds it, else by its field at the top.
+	for _, c := range []struct {
+		body any
+		at   string
+	}{
+		{server.Link{Path: "/x", Title: &bad}, "--title"},                                              //nolint:exhaustruct // the rest not given
+		{server.Edit{Tags: &store.TagsEdit{Add: []string{"a", bad}}}, "--add"},                         //nolint:exhaustruct // the rest not given
+		{server.Edit{Tags: &store.TagsEdit{Remove: []string{bad}}}, "--remove"},                        //nolint:exhaustruct // the rest not given
+		{server.Upload{File: "d.yaml", Images: map[string][]byte{bad: nil}}, `the request's "images"`}, //nolint:exhaustruct // the rest not given
+		{struct {
 			X string `json:"x"`
-		}{bad}: `the request's "x"`,
+		}{bad}, `the request's "x"`},
 	} {
+		body, at := c.body, c.at
 		_, err := encode(body, sentAt)
 		if got := usererr.Tell(english, err).Render(""); got != at+" is not UTF-8; the server takes only UTF-8: rename it, or give it in UTF-8" {
 			t.Errorf("%+v told %q", body, got)
 		}
+	}
+}
+
+// A flag readable read is read once more as the command runs: one that gathers holds each value given once.
+func TestFlagsReadOnce(t *testing.T) {
+	t.Parallel()
+
+	env := Env{Stdout: io.Discard, Stderr: io.Discard, Dir: "/", Getenv: func(k string) string {
+		return map[string]string{"HOME": "/h", "FLOE_PORT": "0x10"}[k]
+	}}
+	root, _ := newRoot(env, io.Discard)
+	args := []string{"tag", "d", "--add", "a", "--add", "b", "--remove", "c"}
+	root.SetArgs(args)
+	if err := readable(root, args); err != nil {
+		t.Fatal(err)
+	}
+	if err := root.Execute(); err == nil {
+		t.Fatal("floe tag ran without a server")
+	}
+	cmd, _, _ := root.Find(args)
+	add, _ := cmd.Flags().GetStringArray("add")
+	remove, _ := cmd.Flags().GetStringArray("remove")
+	if !slices.Equal(add, []string{"a", "b"}) || !slices.Equal(remove, []string{"c"}) {
+		t.Errorf("--add %q, --remove %q", add, remove)
 	}
 }
