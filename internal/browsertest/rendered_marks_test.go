@@ -75,7 +75,7 @@ func TestRenderedMarks(t *testing.T) { //nolint:paralleltest // the browser test
 		t.Fatal(err)
 	}
 	runbook := s.write(t, "runbook.yaml", string(example))
-	var amiss []string
+	amiss := make([]string, 0, len(themes))
 	for _, theme := range themes {
 		s.floe(t, "publish", file, "--slug", "marks-"+theme, "--theme", theme)
 		s.b.navigate("/a/marks-" + theme + "/?raw")

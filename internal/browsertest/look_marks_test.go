@@ -80,8 +80,12 @@ var markRows = []struct {
 
 // lineRows are the first rows of each list whose line runs to the next mark, with the part or look they are of.
 var lineRows = []struct{ at, row string }{
-	{"steps", "[data-floe-part=steps] > li"}, {"timeline", "[data-floe-part=timeline] > li"}, {"numbered", "#plain > li"},
-	{"numbered", "#big > li"}, {"numbered", "#block > li"}, {"numbered", "#sized > li"},
+	{"steps", "[data-floe-part=steps] > li"},
+	{"timeline", "[data-floe-part=timeline] > li"},
+	{"numbered", "#plain > li"},
+	{"numbered", "#big > li"},
+	{"numbered", "#block > li"},
+	{"numbered", "#sized > li"},
 }
 
 // measureMarks returns, as JSON, for each of markRows: the baseline of its first line, how far below its top a box
