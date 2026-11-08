@@ -71,6 +71,12 @@ func (st Step) of(key string) *jsonschema.Schema {
 // LIMIT: what floe draws under allOf and the like, and under the array form of items and additionalItems
 // (2019-09), is refused as unreached, not drawn.
 func (c *Compiled) Follow(s *jsonschema.Schema) Step {
+	st, _ := c.stepClosed(s)
+	return st
+}
+
+// stepClosed is Follow, with the schemas it went through.
+func (c *Compiled) stepClosed(s *jsonschema.Schema) (Step, []*jsonschema.Schema) {
 	st, through := c.step(s, map[*jsonschema.Schema]bool{})
 	if st.Part == "" && st.Format == "" {
 		for _, s := range through {
@@ -79,7 +85,7 @@ func (c *Compiled) Follow(s *jsonschema.Schema) Step {
 			}
 		}
 	}
-	return st
+	return st, through
 }
 
 // step returns the step of s and the schemas it went through to it: s, and those its $refs name.
