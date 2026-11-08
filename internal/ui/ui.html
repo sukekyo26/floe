@@ -2204,21 +2204,26 @@
     if (tagMarks.sending) return;
     const { want, slugs, send, done, failed, after } = tagMarks;
     holdTags(true);
-    // Read again first: a page removed since is not sent, rather than be sent and not found
-    await load();
-    const next = new Map();
-    for (const slug of slugs) {
-      const a = items.find((x) => x.slug === slug);
-      if (!a) continue;
-      const now = a.tags ?? [];
-      const tags = [...now.filter((name) => want.get(name) !== 'none'),
-        ...[...want].filter(([name, w]) => w === 'all' && !now.includes(name)).map(([name]) => name)];
-      if (tags.join('\n') !== now.join('\n')) next.set(slug, tags);
+    // Whatever throws, the dialog is let go and closed
+    try {
+      // Read again first: a page removed since is not sent, rather than be sent and not found
+      await load();
+      const next = new Map();
+      for (const slug of slugs) {
+        const a = items.find((x) => x.slug === slug);
+        if (!a) continue;
+        const now = a.tags ?? [];
+        const tags = [...now.filter((name) => want.get(name) !== 'none'),
+          ...[...want].filter(([name, w]) => w === 'all' && !now.includes(name)).map(([name]) => name)];
+        if (tags.join('\n') !== now.join('\n')) next.set(slug, tags);
+      }
+      after?.(next);
+      if (next.size === 0) toast(t('ui_tag_bulk_none'));
+      else await send((slug) => patchOne(slug, { tags: next.get(slug) }), done, failed, [...next.keys()]);
+    } finally {
+      holdTags(false);
+      $('tag-dialog').close();
     }
-    after?.(next);
-    if (next.size === 0) toast(t('ui_tag_bulk_none'));
-    else await send((slug) => patchOne(slug, { tags: next.get(slug) }), done, failed, [...next.keys()]);
-    $('tag-dialog').close();
   }
 
   // Relative times ("3 minutes ago") advance without redrawing the list; a new day moves the days' headings
@@ -5525,10 +5530,11 @@
     return [...new Set(steps)];
   }, (name) => { $('set-step').value = name; });
   for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
-  // A click on the backdrop (the dialog itself) closes it; the form fills the dialog, so clicks inside never land here
+  // A click on the backdrop (the dialog itself) closes it, as Escape does: not one closedby none holds; the form fills the dialog, so
+  // clicks inside never land here
   for (const d of document.querySelectorAll('dialog')) {
     d.addEventListener('click', (e) => {
-      if (e.target === d) d.close();
+      if (e.target === d && d.getAttribute('closedby') !== 'none') d.close();
     });
   }
   // Not while typing or with a dialog open
