@@ -720,6 +720,9 @@ type loosePath struct {
 // ruleGap is how far a loose run keeps off a rule beside it, and the step it moves by.
 const ruleGap = 4
 
+// arrowRun is the least length of an edge's last run, which its arrow takes.
+const arrowRun = 8.0
+
 // rule is where a loose run across (or down) keeps out of: lo < y < hi (x) where it is beside from to to in x (y).
 type rule struct {
 	across   bool

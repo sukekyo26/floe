@@ -10,22 +10,21 @@ import (
 // An icon of a graph is laid out as an unseen rectangle round the icon and its label, and only when all is placed do
 // its edges' ends move onto the icon (settleEnds), so that what chooses ranks, routes, loops, level edges and labels
 // knows no icons. Along the ranks it keeps iconRing past the icon and its label, where an edge's last run needs its
-// arrow's length; across them iconMove+iconArrow, where the icon moves onto a straight edge and keeps an arrow's length
+// arrow's length; across them iconMove+arrowRun, where the icon moves onto a straight edge and keeps an arrow's length
 // from the side. Laid out down the icon stands in its middle, a label's room above it too, so that the icons of a rank
 // stand level with one another, labelled or not, and with the boxes.
 const (
 	iconRing      = 12.0
 	iconMove      = 12.0
-	iconArrow     = 8.0
 	iconSpareMost = 12.0
 )
 
 // iconCell is the size of the rectangle of icon i, right as laid out right.
 func iconCell(i *icon, right bool) (w, h float64) {
 	if right {
-		return onGrid(iconWidest(i)+2*iconRing, 8, math.Ceil), iconSize(i) + iconUnder(i) + 2*(iconMove+iconArrow)
+		return onGrid(iconWidest(i)+2*iconRing, 8, math.Ceil), iconSize(i) + iconUnder(i) + 2*(iconMove+arrowRun)
 	}
-	return onGrid(iconWidest(i)+2*(iconMove+iconArrow), 8, math.Ceil), iconSize(i) + 2*(labelRoom+iconRing)
+	return onGrid(iconWidest(i)+2*(iconMove+arrowRun), 8, math.Ceil), iconSize(i) + 2*(labelRoom+iconRing)
 }
 
 // iconWidest is how wide icon i stands with its label.
@@ -267,7 +266,7 @@ func (d *drawing) iconReach(i int) float64 {
 	if across == 1 {
 		stands = iconSize(ic) + iconUnder(ic)
 	}
-	return (r.size(across)-stands)/2 - iconArrow
+	return (r.size(across)-stands)/2 - arrowRun
 }
 
 // inLine is how many of pts, from the first, stand on one line, on the axis the line does not run on.
