@@ -15,8 +15,9 @@
 <h1>{{.Title}}</h1>
 {{- /* LIMIT: a lead is a line of Markdown, so that, with no mistake, what looks like a tag (<prefix>, Vec<u8>) is left out
    as raw HTML, marks pair up ("*" and "*", __init__, and a single "~": 2026-11-01~11-08 is struck through), a backslash
-   before a mark goes (C:\_x), a bare URL or email address becomes a link and an image file named in it is not shown, only
-   a data URI. Tell of it where Markdown is read if writers keep losing words */}}
+   before a mark goes (C:\_x), a bare URL or email address becomes a link (not one of an IP address or localhost) and
+   an image file named in it is not shown, only a data URI. Tell of it where Markdown is read if writers keep losing
+   words */}}
 {{- with .Data.lead}}
 <p class="lead">{{markdownLine .}}</p>
 {{- end}}
