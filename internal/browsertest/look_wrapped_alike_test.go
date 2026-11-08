@@ -13,9 +13,9 @@ import (
 // A child in a state marked by a class (options' pick) is of its siblings' kind, so that a class does not set the
 // first child apart: a state is drawn by an outline, a ground or --floe-inset, not by a border or room, as a theme's
 // decoration is. A disabled child is left out, and a side without a line is not read for its colour (a picked tab's).
-// It returns {seen, amiss}: the lists that wrap it measured, and for each kind of child drawn apart, the part (or the element) it is in and how.
+// It returns {seen, amiss}: the lists that wrap it measured, each once in all the states, and for each kind of child drawn apart, the part (or the element) it is in and how.
 const measureWrappedAlike = `(() => {
-  let seen = 0
+  const wrapping = new Set()
   const cols = (e) => new Set([...e.children].filter((c) => c.getClientRects().length).map((c) => Math.round(c.getBoundingClientRect().left))).size
   const at = (e, width) => {
     const was = e.style.cssText
@@ -40,7 +40,7 @@ const measureWrappedAlike = `(() => {
     const s = getComputedStyle(e)
     return /flex/.test(s.display) ? s.flexWrap !== 'nowrap' : /grid/.test(s.display) && at(e, '1px') < at(e, '100000px')
   }).flatMap((e) => {
-    seen++
+    wrapping.add(e)
     const kinds = new Map(), add = (key, look) => kinds.set(key, (kinds.get(key) || new Set()).add(look))
     for (const c of e.children) {
       if (!c.getClientRects().length || c.matches(':disabled')) continue
@@ -60,7 +60,7 @@ const measureWrappedAlike = `(() => {
     if (tab) tab.checked = true
     rows().forEach((l) => out.add(l))
   }
-  return JSON.stringify({ seen, amiss: [...out].map((l) => JSON.parse(l)) })
+  return JSON.stringify({ seen: wrapping.size, amiss: [...out].map((l) => JSON.parse(l)) })
 })()`
 
 const lookWrappedAlikeFix = "draw a wrapping list's children of one kind alike wherever they wrap (:first-child, :nth-child); " +

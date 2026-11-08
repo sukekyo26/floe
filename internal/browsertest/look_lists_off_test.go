@@ -80,8 +80,8 @@ func listsKit(t *testing.T, name, mine string) map[string]string {
 
 // lookListsOff draws the lists that are parts' boxes or take looks. A template's page.css or a theme's base.css that
 // writes a rule for every list does not change a part's box's display, marks, padding or room between items, nor the
-// theme's those of an element that takes a look; the template's own page.css does adjust an element that takes a look. Such lists draw no marks, the part's
-// own arrangement set over them, in every theme and template; a list of Markdown in a part keeps its marks.
+// theme's those of an element that takes a look; the template's own page.css does adjust an element that takes a look. The part's own arrangement is set over
+// such lists, and a list of Markdown in a part keeps its marks; that no such list draws marks is lists-marked's.
 func lookListsOff(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
 	s := newSite(t)
 	b := s.b

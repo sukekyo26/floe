@@ -88,16 +88,8 @@ func lookTone(t *testing.T, s *site) measured {
 	t.Helper()
 
 	b := s.b
-	k, err := kit.Floe()
-	if err != nil {
-		t.Fatal(err)
-	}
+	k, measure := toneMeasure(t)
 	_, _, themes, _ := k.Names()
-	tones, err := k.Tones()
-	if err != nil {
-		t.Fatal(err)
-	}
-	measure := measureToneAt + "(" + mustJSON(tones) + ")"
 	file := s.write(t, "every.yaml", s.everyPart(t)+toneExtra)
 	var m measured
 	for _, name := range themes {
@@ -118,6 +110,16 @@ func lookTone(t *testing.T, s *site) measured {
 func brokenTone(t *testing.T, s *site) (string, measured) {
 	t.Helper()
 
+	_, measure := toneMeasure(t)
+	html := `<p data-floe-part="tonal" data-floe-tone="good">ok</p>`
+	s.brokenPage(t, ownPart("tonal", html, ":scope { color: var(--good); }\n"), htmlPage(html))
+	return "tonal", s.b.measure("broken", measure)
+}
+
+// toneMeasure returns floe's kit and measureToneAt called with its tones.
+func toneMeasure(t *testing.T) (*kit.Kit, string) {
+	t.Helper()
+
 	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
@@ -126,7 +128,5 @@ func brokenTone(t *testing.T, s *site) (string, measured) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	html := `<p data-floe-part="tonal" data-floe-tone="good">ok</p>`
-	s.brokenPage(t, ownPart("tonal", html, ":scope { color: var(--good); }\n"), htmlPage(html))
-	return "tonal", s.b.measure("broken", measureToneAt+"("+mustJSON(tones)+")")
+	return k, measureToneAt + "(" + mustJSON(tones) + ")"
 }

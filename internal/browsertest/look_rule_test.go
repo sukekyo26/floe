@@ -30,6 +30,13 @@ func (m *measured) add(o measured) {
 func (b *browser) measure(page, expr string) measured {
 	b.t.Helper()
 
+	return b.measuredOf(page, b.eval(expr))
+}
+
+// measuredOf reads what a measure returned, raw, on the page told as page.
+func (b *browser) measuredOf(page, raw string) measured {
+	b.t.Helper()
+
 	var got struct {
 		Seen  int `json:"seen"`
 		Amiss []struct {
@@ -37,7 +44,7 @@ func (b *browser) measure(page, expr string) measured {
 			Text string `json:"text"`
 		} `json:"amiss"`
 	}
-	if err := json.Unmarshal([]byte(b.eval(expr)), &got); err != nil {
+	if err := json.Unmarshal([]byte(raw), &got); err != nil {
 		b.t.Fatalf("%s: the measure returns no {seen, amiss}: %v", page, err)
 	}
 	m := measured{seen: got.Seen, amiss: make([]amiss, 0, len(got.Amiss))}
@@ -125,13 +132,18 @@ func lookRuleLines(t *testing.T) []string {
 // broken, which fails unless every amiss names the place it broke, at least one.
 func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	named := lookRuleLines(t)
-	for _, l := range looks {
+	for i, l := range looks {
+		if slices.ContainsFunc(looks[:i], func(o look) bool { return o.name == l.name }) {
+			t.Errorf("looks holds %s twice: keep one", l.name)
+		}
 		if !slices.Contains(named, l.name) {
 			t.Errorf("looks holds %s, which no line of .claude/rules names: end its line in `TestLookRule/%s`", l.name, l.name)
 		}
 		switch {
 		case (l.old == nil) == (l.floe == nil):
 			t.Errorf("%s has both a test as it was (old) and floe, or neither: keep one", l.name)
+		case l.old != nil && (l.fix != "" || l.broken != nil || l.floeOnly != ""):
+			t.Errorf("%s runs the test as it was (old), which takes no fix, broken page or floeOnly: drop them, or old", l.name)
 		case l.floe != nil && l.fix == "":
 			t.Errorf("%s says not how to keep it: write its fix", l.name)
 		case l.floe != nil && (l.broken == nil) == (l.floeOnly == ""):
@@ -153,8 +165,10 @@ func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests sha
 			continue
 		}
 		t.Run(l.name, func(t *testing.T) {
+			// floe runs first, so that the files broken adds to the site draw none of floe's pages.
+			s := newSite(t)
 			t.Run("floe", func(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome
-				m := l.floe(t, newSite(t))
+				m := l.floe(t, s)
 				if m.seen == 0 {
 					t.Fatalf("%s measured nothing on floe's pages: what it measures is renamed or gone", l.name)
 				}
@@ -166,7 +180,7 @@ func TestLookRule(t *testing.T) { //nolint:paralleltest // the browser tests sha
 				return
 			}
 			t.Run("broken", func(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome
-				at, m := l.broken(t, newSite(t))
+				at, m := l.broken(t, s)
 				if at == "" {
 					t.Fatalf("%s's broken page names no place it broke", l.name)
 				}
