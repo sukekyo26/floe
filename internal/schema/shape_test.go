@@ -25,6 +25,7 @@ func TestShape(t *testing.T) {
 		{"a list of itself", `"$ref": "#/$defs/n", "$defs": {"n": {"type": "array", "items": {"$ref": "#/$defs/n"}}}`, "", "-"},
 		{"no keys", `"type": "object", "properties": {}`, "", "-"},
 		{"two types", `"type": ["object", "array"], ` + a + `, "items": {"type": "string"}`, "", "-"},
+		{"a branch through a $ref", `"$ref": "#/$defs/x", "$defs": {"x": {"type": "object", ` + a + `, "oneOf": [{"required": ["a"]}, {}]}}`, "", "-"},
 		{"a branch", `"oneOf": [{"type": "object", ` + a + `}, {"type": "string"}]`, "", "-"},
 		{"a schema of the rest", `"type": "object", ` + a + `, "additionalProperties": {"type": "string"}`, "", "-"},
 		{"prefixItems", `"type": "array", "prefixItems": [{"type": "string"}], "items": {"type": "object", ` + a + `}`, "", "-"},

@@ -54,38 +54,27 @@ func (c *Compiled) Shape(s *jsonschema.Schema, more ...string) string {
 	if c == nil || s == nil {
 		return "-"
 	}
-	return c.shape(s, more, true)
+	return c.shapeAt(s, more, true)
 }
 
-func (c *Compiled) shape(s *jsonschema.Schema, more []string, top bool) string {
+func (c *Compiled) shapeAt(s *jsonschema.Schema, more []string, top bool) string {
 	st, through := c.step(s, map[*jsonschema.Schema]bool{})
-	types := map[string]bool{}
-	one := false
-	for _, n := range through {
-		if !c.plain(n) {
-			return "-"
-		}
-		if n.Types != nil {
-			for _, t := range n.Types.ToStrings() {
-				types[t] = true
-			}
-		}
-		one = one || n.MaxProperties != nil
+	if slices.ContainsFunc(through, func(n *jsonschema.Schema) bool { return !c.plain(n) }) {
+		return "-"
 	}
-	typed := func(t string) bool { return len(types) == 0 || len(types) == 1 && types[t] }
 	switch {
 	case st.Part != "":
 		return PartName(st.Part)
 	case st.Format != "":
 		return st.Format
-	case len(st.Props) > 0 && st.Items == nil && typed("object") && required(through, st.Props):
+	case len(st.Props) > 0 && st.Items == nil && typed(through, "object") && required(through, st.Props):
 		keys := strings.Join(slices.Sorted(slices.Values(slices.Concat(slices.Collect(maps.Keys(st.Props)), more))), ",")
-		if one {
+		if slices.ContainsFunc(through, func(n *jsonschema.Schema) bool { return n.MaxProperties != nil }) {
 			return "one of " + keys
 		}
 		return keys
-	case len(st.Props) == 0 && st.Items != nil && typed("array") && top:
-		if items := c.shape(st.Items, nil, false); items != "-" {
+	case len(st.Props) == 0 && st.Items != nil && typed(through, "array") && top:
+		if items := c.shapeAt(st.Items, nil, false); items != "-" {
 			return "[] " + items
 		}
 	}
@@ -95,6 +84,11 @@ func (c *Compiled) shape(s *jsonschema.Schema, more []string, top bool) string {
 // plain reports whether s keeps to what Shape takes: no field shapeFields refuses or lacks, and its allowed ones
 // within their rules. Its required keys are matched against the properties later, as a $ref may hold them.
 func (c *Compiled) plain(s *jsonschema.Schema) bool {
+	return !refused(s) && withinRules(s) && (s.Ref == nil || c.reached(s))
+}
+
+// refused reports whether s has a field shapeFields refuses or does not sort.
+func refused(s *jsonschema.Schema) bool {
 	v := reflect.ValueOf(s).Elem()
 	for i := range v.NumField() {
 		f := v.Type().Field(i)
@@ -102,31 +96,40 @@ func (c *Compiled) plain(s *jsonschema.Schema) bool {
 			continue
 		}
 		if use, ok := shapeFields[f.Name]; !ok || use == fieldRefused {
-			return false
+			return true
 		}
 	}
-	if s.Types != nil && len(s.Types.ToStrings()) > 1 {
-		return false
-	}
-	if _, ok := s.AdditionalProperties.(*jsonschema.Schema); ok {
-		return false
-	}
-	if _, ok := s.Items.([]*jsonschema.Schema); ok {
-		return false
-	}
-	if s.MaxItems != nil && *s.MaxItems == 0 {
-		return false
-	}
+	return false
+}
+
+// withinRules reports whether the allowed fields of s keep to what Shape can tell: one type, additionalProperties
+// true or false, items of one schema, a list that may hold an item, and exactly one key or no bound on the keys.
+func withinRules(s *jsonschema.Schema) bool {
+	_, rest := s.AdditionalProperties.(*jsonschema.Schema)
+	_, tuple := s.Items.([]*jsonschema.Schema)
 	one := func(n *int) bool { return n != nil && *n == 1 }
-	if (s.MaxProperties != nil || s.MinProperties != nil) && !(one(s.MaxProperties) && one(s.MinProperties)) {
-		return false
-	}
-	if s.Ref != nil {
-		if _, part := c.partRoot(s.Ref); !part && !c.followed(s, s.Ref) {
-			return false
+	bounded := s.MaxProperties != nil || s.MinProperties != nil
+	return (s.Types == nil || len(s.Types.ToStrings()) <= 1) && !rest && !tuple &&
+		(s.MaxItems == nil || *s.MaxItems != 0) && (!bounded || one(s.MaxProperties) && one(s.MinProperties))
+}
+
+// reached reports whether the $ref of s names a part's root or what Follow goes on to.
+func (c *Compiled) reached(s *jsonschema.Schema) bool {
+	_, part := c.partRoot(s.Ref)
+	return part || c.followed(s, s.Ref)
+}
+
+// typed reports whether the schemas gone through name no type, or t alone.
+func typed(through []*jsonschema.Schema, t string) bool {
+	types := map[string]bool{}
+	for _, s := range through {
+		if s.Types != nil {
+			for _, name := range s.Types.ToStrings() {
+				types[name] = true
+			}
 		}
 	}
-	return true
+	return len(types) == 0 || len(types) == 1 && types[t]
 }
 
 // required reports whether every key required on the schemas gone through is one of props.
