@@ -479,14 +479,14 @@
   button.tagpill:hover { box-shadow: inset 0 0 0 1px var(--fg); }
   /* The tags of a page open, under the bar over it: outside the bar, its button none of the bar's */
   .tagline {
-    flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; min-height: var(--icon-btn); padding: 0.2rem 1rem;
+    flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; min-height: var(--icon-btn); padding: 0.25rem 1rem;
     font-size: var(--text-small); color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line);
   }
   .tagline > svg { flex: none; width: 14px; height: 14px; }
   .tagline-word { margin-right: 0.2rem; }
   .tagline-names { display: contents; }
   .tag-edit.some .tag-add-icon, .tag-edit:not(.some) .tag-change-icon { display: none; }
-  /* A tags field's names, as the row's menu looks: a popover in the top layer, so that no dialog or box cuts it off */
+  /* A field's suggested names, as the row's menu looks: a popover in the top layer, so that no dialog or box cuts it off */
   .suggest {
     position: fixed; inset: auto; margin: 0; display: grid; gap: 1px; max-height: 14rem; overflow-y: auto; padding: var(--menu-pad);
     color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: var(--corner-menu); box-shadow: var(--shadow);
@@ -498,7 +498,7 @@
   .names-note { flex: none; color: var(--muted); }
   .suggest [role="option"]:hover, .suggest [aria-selected="true"] { background: var(--subtle); }
   .suggest [aria-selected="true"] { color: var(--fg); box-shadow: inset 2px 0 0 var(--ink); }
-  /* The bulk dialog's tags, a chip each, wrapping: on all the selected (filled), on some (dashed) or on none, told by the chip's
+  /* The tag dialog's tags, a chip each, wrapping: on all its pages (filled), on some (dashed) or on none, told by the chip's
      mark (✓, −, +) and its look, not by its color alone. The checkbox is the chip's own, out of sight, so keys and screen readers
      use it as any. No transition: a chip seen between two marks reads as neither */
   .tag-boxes { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 0.4rem; max-height: 16rem; overflow-y: auto; padding: 0.2rem; }
@@ -1117,9 +1117,9 @@
 </nav>
 <div class="grip" id="side-grip" role="separator" aria-orientation="vertical" aria-controls="side" aria-label="{{.Msg "ui_side_width"}}" tabindex="0" hidden></div>
 <button type="button" class="icon-btn side-show" id="side-show" aria-expanded="false" aria-controls="side" title="{{.Msg "ui_side_show"}}" aria-label="{{.Msg "ui_side_show"}}" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
-<!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
 <!-- The tags of the page framed, between the bar and the frame -->
 <div class="tagline" id="frame-tags" hidden></div>
+<!-- Lets copy and fullscreen buttons in the page work. The sandboxed page has an opaque origin, which the default 'src' does not match, hence * -->
 <iframe class="frame" id="frame" allow="clipboard-write *; fullscreen *" hidden></iframe>
 <!-- What changed between two versions, in words the server read from them: never the page's HTML, which runs in the sandbox alone -->
 <main class="diff" id="diff" hidden>
@@ -2075,20 +2075,32 @@
   // Where the focus goes as the tag dialog closes, as editBack; none, where the browser takes it
   let tagBack;
 
-  // Apply is for a change: none while every chip has the mark it started with
-  const tagsUnchanged = () => [...tagMarks.want].every(([name, w]) => w === tagMarks.start.get(name));
+  // Apply is for a change, and not while one is sent: none while every chip has the mark it started with
+  const showApply = () => {
+    $('tag-apply').disabled = tagMarks.sending || [...tagMarks.want].every(([name, w]) => w === tagMarks.start.get(name));
+  };
+  // While the tags are sent the dialog holds still, till it closes: no chip, find, cancel or apply, nor Escape. Escape is closedby's,
+  // as Chrome lets a cancel event be stopped only after a press in the dialog
+  function holdTags(sending) {
+    tagMarks.sending = sending;
+    $('tag-dialog').setAttribute('closedby', sending ? 'none' : 'closerequest');
+    for (const e of $('tag-form').querySelectorAll('input, button')) e.disabled = sending;
+    showApply();
+  }
 
   // The one dialog that changes tags, of the pages of slugs, under title(n of them): done(n) and failed(n, why) tell what came of it,
   // send writes them (actOn, or actOnSelected of the selected) and after(the pages to change) tidies what opened it, before
   function openTags(slugs, { title, done, failed, send = actOn, after }) {
     const pages = slugs.map((slug) => items.find((a) => a.slug === slug)).filter(Boolean);
+    // None left, every tag would be on all of none
+    if (!pages.length) return;
     const on = new Map(tagNames().map((name) => [name, pages.filter((a) => a.tags?.includes(name)).length]));
     const start = new Map([...on].map(([name, n]) => [name, n === pages.length ? 'all' : n ? 'some' : 'none']));
     tagMarks = { slugs, total: pages.length, on, start, want: new Map(start), done, failed, send, after };
     $('tag-title').textContent = title(pages.length);
     $('tag-find').value = '';
-    $('tag-apply').disabled = true;
     drawTagBoxes();
+    holdTags(false);
     $('tag-dialog').showModal();
   }
   function openSelectedTags() {
@@ -2119,7 +2131,7 @@
     });
   }
 
-  // The chips, the tags on the selected first, then by name; those that hold what the find field has
+  // The chips, the tags on its pages first, then by name; those that hold what the find field has
   function drawTagBoxes() {
     const { on, want, total } = tagMarks;
     const find = $('tag-find').value.trim();
@@ -2139,7 +2151,7 @@
         const now = want.get(name);
         want.set(name, now === 'all' ? 'none' : now === 'none' && tagMarks.start.get(name) === 'some' ? 'some' : 'all');
         show();
-        $('tag-apply').disabled = tagsUnchanged();
+        showApply();
       });
       const mark = document.createElement('span');
       mark.className = 'mark';
@@ -2157,7 +2169,7 @@
       }
       return label;
     });
-    // A name no tag has yet can be made one, on all the selected
+    // A name no tag has yet can be made one, on all its pages
     const fresh = find && !want.has(find);
     $('tag-new').hidden = !fresh;
     if (fresh) $('tag-new').textContent = t('ui_tag_create', find);
@@ -2172,7 +2184,7 @@
     tagMarks.want.set(name, 'all');
     $('tag-find').value = '';
     drawTagBoxes();
-    $('tag-apply').disabled = tagsUnchanged();
+    showApply();
   }
 
   // The one tag the find field leaves, as the name typed: on all the pages, the field emptied for the next
@@ -2180,7 +2192,7 @@
     tagMarks.want.set(name, 'all');
     $('tag-find').value = '';
     drawTagBoxes();
-    $('tag-apply').disabled = tagsUnchanged();
+    showApply();
   }
 
   // Gives the pages the tags as the boxes have them, sending each page whose tags change them so; one that would not change,
@@ -2189,8 +2201,9 @@
   // LIMIT: the tags sent are those of the list read just before, as the boxes change them, so a change made elsewhere in
   // between is lost. Only this page writes tags now; give the API adding and removing if another comes to
   async function applyTags() {
+    if (tagMarks.sending) return;
     const { want, slugs, send, done, failed, after } = tagMarks;
-    $('tag-apply').disabled = true;
+    holdTags(true);
     // Read again first: a page removed since is not sent, rather than be sent and not found
     await load();
     const next = new Map();
