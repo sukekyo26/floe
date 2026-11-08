@@ -2210,8 +2210,9 @@
       // Read again first: a page removed since is not sent, rather than be sent and not found
       await load();
       const next = new Set(slugs.filter((slug) => {
-        const now = items.find((x) => x.slug === slug)?.tags;
-        return now && (add.some((name) => !now.includes(name)) || remove.some((name) => now.includes(name)));
+        const a = items.find((x) => x.slug === slug);
+        const now = a?.tags ?? [];
+        return a && (add.some((name) => !now.includes(name)) || remove.some((name) => now.includes(name)));
       }));
       after?.(next);
       if (next.size === 0) toast(t('ui_tag_bulk_none'));

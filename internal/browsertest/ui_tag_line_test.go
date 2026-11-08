@@ -40,7 +40,8 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	s.floe(t, "publish", "--link", filepath.Join(s.Env["HOME"], "tl/docs"), "--slug", "docs")
 	tag := func(slug string, tags ...string) {
 		t.Helper()
-		if _, err := st.Edit(slug, store.Edit{Tags: &store.TagsEdit{Add: tags}}); err != nil {
+		// The page's tags become tags, as written elsewhere: those it has taken off, then these put on.
+		if _, err := st.Edit(slug, store.Edit{Tags: &store.TagsEdit{Remove: st.ReadMeta(slug).Tags, Add: tags}}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -152,6 +153,33 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	s.floe(t, "rm", "none")
 	apply("applied to a page gone")
 	say("a page gone", toast(msg("ui_tag_bulk_none"))+" + ' / ' + document.getElementById('error').hidden")
+
+	// Only the names whose boxes changed are sent: a tag written elsewhere while the dialog is open stays, put on (a1) or taken
+	// off (plan) alike.
+	write := func(slug string, ed store.TagsEdit) {
+		t.Helper()
+		if _, err := st.Edit(slug, store.Edit{Tags: &ed}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, c := range []struct {
+		elsewhere store.TagsEdit
+		box       string
+	}{
+		{store.TagsEdit{Add: []string{"a1"}}, "a2"},
+		{store.TagsEdit{Remove: []string{"plan"}}, "a3"},
+	} {
+		pick("one", "")
+		b.eval("document.querySelector('#read-tags .tag-edit').click()")
+		b.until("the dialog", "document.getElementById('tag-dialog').open")
+		write("one", c.elsewhere)
+		b.eval(box(c.box) + ".click()")
+		apply("applied after a write elsewhere")
+		out = append(out, "written elsewhere, then "+c.box+": "+tags("one"))
+	}
+	tag("one", "plan")
+	b.eval("load()")
+	b.until("the list read again", "items.find((a) => a.slug === 'one')?.tags?.join(',') === 'plan'")
 
 	// A row's menu: the item named, the dialog of its page, and the focus back on the menu's button of the row drawn anew.
 	b.eval("document.querySelector('#list li[data-slug=one] .more').open = true")
@@ -268,6 +296,8 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"its focus back: bulk-tag",
 		"nothing to change: true / false",
 		"a page gone: true / true",
+		"written elsewhere, then a2: plan,a1,a2",
+		"written elsewhere, then a3: a1,a2,a3",
 		"the menu's item: " + changed("One"),
 		"sent from the menu: plan,a2",
 		"the focus: true",
