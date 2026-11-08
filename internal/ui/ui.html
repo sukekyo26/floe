@@ -5664,12 +5664,12 @@
     const li = e.target.closest('.step-grip')?.closest('li');
     if (li) li.draggable = true;
   });
-  // A press let go without a drag leaves no row draggable from anywhere but its grip; the row dragged is let go by dragend
-  for (const type of ['pointerup', 'pointercancel']) {
-    $('edit-steps').addEventListener(type, () => {
-      for (const li of $('edit-steps').children) if (li !== dragged) li.draggable = false;
-    });
-  }
+  // A press let go without a drag leaves no row draggable from anywhere but its grip; the row dragged is let go by dragend. Not on
+  // pointercancel, which a browser may send before dragstart, and the drag would not start
+  // LIMIT: a press cancelled without a drag (pointercancel alone) leaves its row draggable till the next press is let go or the dialog is drawn again
+  $('edit-steps').addEventListener('pointerup', () => {
+    for (const li of $('edit-steps').children) if (li !== dragged) li.draggable = false;
+  });
   $('edit-steps').addEventListener('dragstart', (e) => {
     // A drag of words selected starts at a text node; a row's own drag only from its grip
     const li = e.target instanceof Element ? e.target.closest('#edit-steps > li') : null;

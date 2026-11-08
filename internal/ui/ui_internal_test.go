@@ -215,37 +215,27 @@ func TestPageMessages(t *testing.T) {
 	}
 }
 
-// The tasks' rows are asked of the server in one place each: read by readTasks, written by writeTask (PATCH, as every screen's write of a
-// task goes, its rev with it), removed by forgetTask (DELETE). The set dialog has no field of a task's own, which its page writes.
+// The tasks' rows are asked of the server in one place each: read by readTasks, written by writeTask (as every screen's write of a task goes,
+// its rev with it), removed by forgetTask; the methods are the browser tests'. The set dialog has no field of a task's own, which its page
+// writes.
 func TestTaskRequests(t *testing.T) {
 	t.Parallel()
 
-	funcRe := regexp.MustCompile(`^\s*(?:async\s+)?function\s+(\w+)\(`)
-	callRe := regexp.MustCompile("api\\(['`]/api/tasks")
-	methodRe := regexp.MustCompile(`method:\s*'(\w+)'`)
-	want := map[string]string{"GET": "readTasks", "PATCH": "writeTask", "DELETE": "forgetTask"}
-	got := map[string][]string{}
-	in := ""
-	for line := range strings.Lines(pageSource) {
-		if m := funcRe.FindStringSubmatch(line); m != nil {
-			in = m[1]
+	funcRe := regexp.MustCompile(`(?:async\s+)?function\s+(\w+)\(`)
+	starts := funcRe.FindAllStringSubmatchIndex(pageSource, -1)
+	var got []string
+	for _, at := range regexp.MustCompile("['`]/api/tasks").FindAllStringIndex(pageSource, -1) {
+		in := ""
+		for _, f := range starts {
+			if f[0] < at[0] {
+				in = pageSource[f[2]:f[3]]
+			}
 		}
-		if !callRe.MatchString(line) {
-			continue
-		}
-		method := "GET"
-		if m := methodRe.FindStringSubmatch(line); m != nil {
-			method = m[1]
-		}
-		got[method] = append(got[method], in)
+		got = append(got, in)
 	}
-	for method, fn := range want {
-		if !slices.Equal(got[method], []string{fn}) {
-			t.Errorf("%s /api/tasks is asked by %v, want %s alone", method, got[method], fn)
-		}
-	}
-	if len(got) != len(want) {
-		t.Errorf("/api/tasks is asked by %v", got)
+	slices.Sort(got)
+	if want := []string{"forgetTask", "readTasks", "writeTask"}; !slices.Equal(got, want) {
+		t.Errorf("/api/tasks is named in %v, want %v once each", got, want)
 	}
 	for _, id := range []string{`id="set-parent"`, `id="set-url"`} {
 		if strings.Contains(pageSource, id) {
