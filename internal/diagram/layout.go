@@ -778,7 +778,6 @@ func headArea(g *graphGroup) rect {
 	return words
 }
 
-// addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 // frameOutline is the outline frame f is drawn in: of round corners, or square with an icon or written so.
 func frameOutline(f *frame) outline {
 	if f.Icon != "" || f.Square {
@@ -787,6 +786,7 @@ func frameOutline(f *frame) outline {
 	return outlineOf(f.W, f.H, "frame")
 }
 
+// addFrame keeps the frame's heading too: inside the top left corner, or right of the corner icon.
 func (l *layout) addFrame(f *frame, at string) {
 	class := frameClass(f.Icon)
 	fr := rect{x: f.X, y: f.Y, w: f.W, h: f.H, what: "", at: at, graph: f.graph}.named(

@@ -192,13 +192,14 @@ func diagramColours(root string) string {
 }
 
 // rawOff lists the raw SVG whose colours are not those its fill and stroke attributes write, each read as a colour in
-// the page's body, outside the diagrams: var(--x) as --x; var(--tone…) as the same of the tone the nearest
-// data-floe-tone around it in the diagram names (var(--tone-soft) as --bad-soft under bad), and nothing under none,
+// the page's body, outside the diagrams: var(--x) as --x; var(--tone) and var(--tone-soft), which the docs give raw,
+// as the same of the tone the nearest data-floe-tone around it in the diagram names (--bad-soft under bad), and
+// nothing under none,
 // as the diagram's root clears a tone from outside; currentColor as --fg, as the docs say. floe draws no fill or
 // stroke attribute, so every one is raw's. It lists that it measured none, when none is drawn.
 // LIMIT: only var(--x) whole is read: a colour written as itself (red, #f00), a variable with a fallback
-// (var(--good, green)) or with spaces inside is not measured, as the rule is of the palette's variables as the docs
-// write them.
+// (var(--good, green)), one with spaces inside, and the other variables of a tone (--tone-fill) are not measured, as
+// the rule is of the palette's variables and the tone's the docs give raw.
 const rawOff = `(() => {
   const out = [];
   let seen = 0;
@@ -210,7 +211,7 @@ const rawOff = `(() => {
       const written = (e.getAttribute(prop) || '').trim();
       const v = /^var\((--[\w-]+)\)$/.exec(written);
       let name = v ? v[1] : written === 'currentColor' ? '--fg' : '';
-      if (name.startsWith('--tone')) {
+      if (name === '--tone' || name === '--tone-soft') {
         const tone = e.closest('svg.dg [data-floe-tone]')?.dataset.floeTone;
         name = tone ? '--' + tone + name.slice('--tone'.length) : '';
       }
