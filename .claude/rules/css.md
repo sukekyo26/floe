@@ -37,7 +37,7 @@ paths:
 - **入れ子では外が勝つ** [nesting]：部品や見た目の中の部品の箱は、入れ子の外の規則に負け、同じ形に描く。`TestLookRule/nesting`
 - **Markdown の見た目は markdown.css** [markdown-css]：テーマの base.css はページの段で部品の箱と text の外枠で止まり、Markdown の見た目は markdown.css に書く（ページ全体に届くので、部品が描かない要素だけ）。（判断）
 - **状態と頭はテーマが変数で塗る** [states]：表の頭、選んだタブ、code の頭は、部品が `var(--x, 既定)` で読む変数をテーマが塗る。テーマは状態（`:checked`）と印刷を知る規則を書かない。画面だけの状態は部品が `@media screen` で塗る。（判断）
-- **テンプレートが部品の形で描くものは、部品の箱として置く** [template-boxes]：札や注意の囲みは見た目として借りず、page.html に部品の箱（`data-floe-part="cell"`・`"note"`）で置き、色は `data-floe-tone`。page.css は箱の置き場所だけを書く。書き手の自由な字は cell にしない（長さに上限が無い）。（判断）
+- **テンプレートが部品の形で描くものは、部品の箱として置く** [template-boxes]：札や注意の囲みは見た目として借りず、page.html に部品の箱（`data-floe-part="cell"`・`"note"`）で置き、色は `data-floe-tone`。page.css は箱の置き場所だけを書く。書き手の自由な字は cell にしない（長さに上限が無い）。札の形は `TestRenderedPills` が測る。（判断）
 - **番号と線の手順は見た目 `numbered` 1 つ** [numbered]：丸い番号と線を part.css・page.css に書かず、`numbered` を借りる。丸の色は tone と `data-floe-mark` で決め、`::before`・`::after` の色を上書きしない。（判断）
 - **項目に添える短い値の並びは見た目 `tags`** [tags]：部品の 1 つの項目に、cell の書き方の値の配列を並べるときは、間・折り返し・字の形を part.css に書かず `data-floe-look="tags"` を借り、値を 1 つずつ `<span>` に包む（pill は cell の箱のまま）。表の行、floe が組み立てる並び、配列でない値の組は外。（判断）
 - **カードの中の間は `--cards-gap`** [cards-gap]：見た目 cards のカードの中の間は `--cards-gap` で書き、0.4rem を写さない。テーマは `.card` に gap を書かず、この変数で変える。`TestLookRule/cards-gap`

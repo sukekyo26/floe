@@ -76,11 +76,12 @@ func lookRoom(t *testing.T, s *site) measured {
 		s.b.eval("document.querySelectorAll('details').forEach((d) => { d.open = true; })")
 		for _, w := range []int64{480, 1100} {
 			s.b.size(w, 900, false)
-			m.add(s.b.measure(fmt.Sprintf("%s at %dpx", what, w), measurePartRoomAt))
+			raw := s.b.eval(measurePartRoomAt)
+			m.add(s.b.measuredOf(fmt.Sprintf("%s at %dpx", what, w), raw))
 			var got struct {
 				Markdown int `json:"markdown"`
 			}
-			if err := json.Unmarshal([]byte(s.b.eval(measurePartRoomAt)), &got); err != nil {
+			if err := json.Unmarshal([]byte(raw), &got); err != nil {
 				t.Fatal(err)
 			}
 			markdown += got.Markdown
