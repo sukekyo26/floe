@@ -42,9 +42,8 @@ func (b *browser) numbersIn(where string) []string {
 	var amiss []string
 	for _, card := range []string{"[data-floe-part=options] > .card", "#sizedcards > .card"} {
 		mark, _ := b.pseudoBoxes(card)
-		size := b.eval(`((card) => { const e = document.querySelector(card), v = getComputedStyle(e, '::before').getPropertyValue('--floe-mark').trim();
-  if (v === 'auto' || !getComputedStyle(e, '::before').content.includes('counter')) return 'auto'; const d = document.createElement('i'); d.style.cssText = 'display:block;position:absolute;width:' + v;
-  e.append(d); const w = d.getBoundingClientRect().width; d.remove(); return String(w); })(` + mustJSON(card) + `)`)
+		size := b.eval(`((card) => { ` + pxJS + ` const e = document.querySelector(card), v = getComputedStyle(e, '::before').getPropertyValue('--floe-mark').trim();
+  if (v === 'auto' || !getComputedStyle(e, '::before').content.includes('counter')) return 'auto'; return String(px(e, v)); })(` + mustJSON(card) + `)`)
 		if mark == nil || size == "auto" {
 			continue
 		}
@@ -60,8 +59,42 @@ func (b *browser) numbersIn(where string) []string {
 	return amiss
 }
 
+// marksLookIn measures the page open and returns what is amiss in it: timeline's date off its title's baseline, the
+// paragraph of #wrapped broken into lines or not right of its mark, and a step done whose line is not in its mark's
+// colour.
+func (b *browser) marksLookIn(where string) []string {
+	b.t.Helper()
+
+	var got struct {
+		Date, WrappedLeft float64
+		Wrapped           int
+		Done              []string
+	}
+	if err := json.Unmarshal([]byte(b.eval(`(() => {
+  const base = (el) => { const z = document.createElement('i'); z.style.cssText = 'display:inline-block;width:0;height:0'; el.prepend(z); const y = z.getBoundingClientRect().bottom; z.remove(); return y; };
+  const p = document.querySelector('#wrapped p'), done = document.querySelector('[data-floe-part=steps] > li.done');
+  return JSON.stringify({ date: base(document.querySelector('[data-floe-part=timeline] > li .date')) - base(document.querySelector('[data-floe-part=timeline] > li strong')),
+    wrapped: Math.round(p.getBoundingClientRect().height / parseFloat(getComputedStyle(p).lineHeight)), wrappedLeft: p.getBoundingClientRect().left,
+    done: [getComputedStyle(done, '::before').backgroundColor, getComputedStyle(done, '::after').backgroundColor] });
+})()`)), &got); err != nil {
+		b.t.Fatal(err)
+	}
+	var amiss []string
+	if math.Abs(got.Date) > 0.5 {
+		amiss = append(amiss, fmt.Sprintf("%s: timeline's date %.1f px off its title's baseline", where, got.Date))
+	}
+	if mark, _ := b.pseudoBoxes("#wrapped > li"); got.Wrapped != 1 || mark == nil || got.WrappedLeft <= mark[2] {
+		amiss = append(amiss, fmt.Sprintf("%s: #wrapped's text in %d lines, from %.1f, its mark %v", where, got.Wrapped, got.WrappedLeft, mark))
+	}
+	if got.Done[0] != got.Done[1] {
+		amiss = append(amiss, fmt.Sprintf("%s: a step done has its mark %s and its line %s", where, got.Done[0], got.Done[1]))
+	}
+	return amiss
+}
+
 // TestRenderedMarks draws marksPage and runbook's example in every theme: a card's number is as big as --floe-mark
-// (numbersIn), and the runbook's rollback rings and lines its steps in bad (rollbackIn).
+// (numbersIn), timeline's date, #wrapped and a step done are drawn as marksLookIn says, and the runbook's rollback rings
+// and lines its steps in bad (rollbackIn).
 func TestRenderedMarks(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	k, err := kit.Floe()
@@ -80,6 +113,7 @@ func TestRenderedMarks(t *testing.T) { //nolint:paralleltest // the browser test
 		s.floe(t, "publish", file, "--slug", "marks-"+theme, "--theme", theme)
 		s.b.navigate("/a/marks-" + theme + "/?raw")
 		amiss = append(amiss, s.b.numbersIn(theme)...)
+		amiss = append(amiss, s.b.marksLookIn(theme)...)
 		s.floe(t, "publish", runbook, "--slug", "runbook-"+theme, "--theme", theme)
 		s.b.navigate("/a/runbook-" + theme + "/?raw")
 		amiss = append(amiss, s.b.rollbackIn(theme)...)

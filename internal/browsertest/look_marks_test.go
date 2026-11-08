@@ -90,12 +90,11 @@ var lineRows = []struct{ at, row string }{
 
 // measureMarks returns, as JSON, for each of markRows: the baseline of its first line, how far below its top a box
 // drawn as its mark (its ::before's size, frame, font and text, a counter's as "1") has its baseline, the left of the
-// element of its first line, the row's --floe-mark-gap and the left of the row's content box; the box of each of lineRows, the
-// baselines of timeline's date and title, the lines the paragraph of #wrapped takes (its height in its line height)
-// and its left, the root's font size, and the colours of steps' mark and line of a step done. Each is null where the
-// page does not draw what it measures. A script reads no box of a pseudo-element, the mark's own place, which DevTools
-// gives (pseudoBoxes).
+// element of its first line, the row's --floe-mark-gap and the left of the row's content box; the box of each of
+// lineRows, and 0.35rem in px. Each is null where the page does not draw what it measures. A script reads no box of a
+// pseudo-element, the mark's own place, which DevTools gives (pseudoBoxes).
 const measureMarks = `((marks, rows) => {
+  ` + pxJS + `
   const zero = () => { const z = document.createElement('i'); z.style.cssText = 'display:inline-block;width:0;height:0'; return z; };
   const base = (el) => { const z = zero(); el.prepend(z); const y = z.getBoundingClientRect().bottom; z.remove(); return y; };
   const ascent = (row) => {
@@ -114,26 +113,17 @@ const measureMarks = `((marks, rows) => {
     box.remove();
     return a;
   };
-  const length = (el, v) => { const d = document.createElement('i'); d.style.cssText = 'display:block;position:absolute;width:' + v;
-    el.append(d); const w = d.getBoundingClientRect().width; d.remove(); return w; };
   const box = (sel) => { const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; };
-  const p = document.querySelector('#wrapped p');
-  const done = document.querySelector('[data-floe-part=steps] > li.done');
-  const date = document.querySelector('[data-floe-part=timeline] > li .date'), title = document.querySelector('[data-floe-part=timeline] > li strong');
   return JSON.stringify({
     marks: marks.map(([row, line]) => {
       const r = document.querySelector(row), l = document.querySelector(line);
       if (!r || !l) return null;
       const s = getComputedStyle(r), size = getComputedStyle(r, '::before').getPropertyValue('--floe-mark').trim();
-      return { base: base(l), ascent: ascent(r), left: l.getBoundingClientRect().left, gap: length(r, 'var(--floe-mark-gap)'),
-        size: size === 'auto' ? null : length(r, 'var(--floe-mark)'),
+      return { base: base(l), ascent: ascent(r), left: l.getBoundingClientRect().left, gap: px(r, 'var(--floe-mark-gap)'),
+        size: size === 'auto' ? null : px(r, 'var(--floe-mark)'),
         content: r.getBoundingClientRect().left + parseFloat(s.borderLeftWidth) + parseFloat(s.paddingLeft) };
     }),
-    rows: rows.map(box),
-    date: date && title ? base(date) - base(title) : null,
-    wrapped: p ? Math.round(p.getBoundingClientRect().height / parseFloat(getComputedStyle(p).lineHeight)) : null, wrappedLeft: p ? p.getBoundingClientRect().left : 0,
-    rem: parseFloat(getComputedStyle(document.documentElement).fontSize),
-    done: done ? [getComputedStyle(done, '::before').backgroundColor, getComputedStyle(done, '::after').backgroundColor] : null });
+    rows: rows.map(box), gap: px(document.body, '0.35rem') });
 })`
 
 // pseudoBoxes returns the border boxes of the ::before and ::after of the first element sel matches, which a
@@ -199,11 +189,9 @@ func (b *browser) tryPseudoBoxes(sel string) (before, after []float64, err error
 // a mark whose baseline is more than 0.6 px off that of the first line beside it, or whose text does not stand its
 // --floe-mark-gap from it (within 0.5 px), or not as wide as its --floe-mark; a row with no mark (but a note, whose mark
 // a theme may leave out) and one with none whose text does not start at its content box, as the mark's column takes no
-// room; a line that does not start 0.35rem below its mark and end 0.35rem above its row's end, under its mark's middle;
-// timeline's date off its title's baseline, unless narrow puts the date in a row of its own; the paragraph of #wrapped
-// broken into lines or not right of its mark; a step done whose line is not in its mark's colour. It measures what the
-// page draws of markRows and lineRows; whole tells each the page does not draw as amiss too.
-func (b *browser) marksIn(where string, narrow, whole bool) measured {
+// room; a line that does not start 0.35rem below its mark and end 0.35rem above its row's end, under its mark's middle.
+// It measures what the page draws of markRows and lineRows; whole tells each the page does not draw as amiss too.
+func (b *browser) marksIn(where string, whole bool) measured {
 	b.t.Helper()
 
 	sels := make([][2]string, len(markRows))
@@ -219,12 +207,8 @@ func (b *browser) marksIn(where string, narrow, whole bool) measured {
 			Base, Left, Gap, Content float64
 			Ascent, Size             *float64
 		}
-		Rows        [][]float64
-		WrappedLeft float64
-		Rem         float64
-		Date        *float64
-		Wrapped     *int
-		Done        []string
+		Rows [][]float64
+		Gap  float64
 	}
 	if err := json.Unmarshal([]byte(b.eval(measureMarks+"("+mustJSON(sels)+", "+mustJSON(lines)+")")), &got); err != nil {
 		b.t.Fatal(err)
@@ -262,7 +246,7 @@ func (b *browser) marksIn(where string, narrow, whole bool) measured {
 			}
 		}
 	}
-	gap := 0.35 * got.Rem
+	gap := got.Gap
 	for i, r := range lineRows {
 		if got.Rows[i] == nil {
 			if whole {
@@ -280,24 +264,6 @@ func (b *browser) marksIn(where string, narrow, whole bool) measured {
 		mid := (line[0]+line[2])/2 - (mark[0]+mark[2])/2
 		if math.Abs(start-gap) > 0.5 || math.Abs(end-gap) > 0.5 || math.Abs(mid) > 0.5 {
 			add(r.at, "%s's line starts %.1f px below its mark, ends %.1f px above its end, %.1f px off its middle", r.row, start, end, mid)
-		}
-	}
-	if got.Date != nil && !narrow {
-		m.seen++
-		if math.Abs(*got.Date) > 0.5 {
-			add("timeline", "timeline's date %.1f px off its title's baseline", *got.Date)
-		}
-	}
-	if got.Wrapped != nil {
-		m.seen++
-		if mark, _ := b.pseudoBoxes("#wrapped > li"); *got.Wrapped != 1 || mark == nil || got.WrappedLeft <= mark[2] {
-			add("numbered", "#wrapped's text in %d lines, from %.1f, its mark %v", *got.Wrapped, got.WrappedLeft, mark)
-		}
-	}
-	if got.Done != nil {
-		m.seen++
-		if got.Done[0] != got.Done[1] {
-			add("steps", "a step done has its mark %s and its line %s", got.Done[0], got.Done[1])
 		}
 	}
 	return m
@@ -327,7 +293,7 @@ var tallTheme = map[string]string{
 const lookMarksFix = "say a row's mark by part.yaml's marks: and let floe place it; space the text from it by --floe-mark-gap " +
 	"and size it by --floe-mark, and write no display, gap or grid-template on a marked row"
 
-// lookMarks measures marksPage (marksIn) in every theme, in tallTheme, and, for timeline, on a narrow screen too: each
+// lookMarks measures marksPage (marksIn) in every theme, in tallTheme, and on a narrow screen too: each
 // mark stands on its first line's baseline, wherever a theme or the row's padding puts that line, its --floe-mark-gap
 // from the text, or takes no room when a theme leaves it out, and each line to the next mark runs from 0.35rem below
 // its mark to 0.35rem above its row's end, however big the mark or the title and whatever the row starts with. A theme
@@ -346,7 +312,7 @@ func lookMarks(t *testing.T, s *site) measured {
 	for _, theme := range append(themes, "tall") {
 		s.floe(t, "publish", file, "--slug", "marks-"+theme, "--theme", theme)
 		s.b.navigate("/a/marks-" + theme + "/?raw")
-		m.add(s.b.marksIn("marksPage in "+theme, false, true))
+		m.add(s.b.marksIn("marksPage in "+theme, true))
 	}
 	s.floe(t, "publish", file, "--slug", "marks-bare", "--theme", "bare")
 	s.b.navigate("/a/marks-bare/?raw")
@@ -357,7 +323,7 @@ func lookMarks(t *testing.T, s *site) measured {
 	s.b.size(500, 900, false)
 	defer s.b.unsize()
 	s.b.navigate("/a/marks-default/?raw")
-	m.add(s.b.marksIn("marksPage at 500px", true, true))
+	m.add(s.b.marksIn("marksPage at 500px", true))
 	return m
 }
 
@@ -367,5 +333,5 @@ func brokenMarks(t *testing.T, s *site) (string, measured) {
 
 	s.brokenPage(t, map[string]string{"themes/spread/numbered.css": ":scope > li { column-gap: 30px; }\n"},
 		themePage("spread", "- steps:\n    - { title: One, text: first, state: done }\n    - { title: Two, text: second }\n"))
-	return "steps", s.b.marksIn("broken", false, false)
+	return "steps", s.b.marksIn("broken", false)
 }
