@@ -1279,7 +1279,22 @@ func (d *drawing) at(a, c float64) [2]float64 {
 // right, a loop's labels stand side by side along the bottom, so a long one widens its box. Cut around the box alone,
 // or stack the labels, if it comes to matter.
 func (o *graphOut) drawLoops(d *drawing) error {
-	order, onBox, widths := o.loopsOn(d)
+	onBox := map[int][]int{}
+	var order []int
+	widths := map[int]float64{}
+	for _, l := range o.loops {
+		k, i := l[0], l[1]
+		if _, ok := d.boxes[i]; !ok {
+			continue
+		}
+		if onBox[i] == nil {
+			order = append(order, i)
+		}
+		onBox[i] = append(onBox[i], k)
+		if t := o.g.Edges[k].Label; t != nil {
+			widths[k] = labelWidth(t, false)
+		}
+	}
 	_, along := d.axes()
 	for _, i := range order {
 		b := d.boxes[i]
@@ -1302,43 +1317,6 @@ func (o *graphOut) drawLoops(d *drawing) error {
 		}
 	}
 	return nil
-}
-
-// loopsOn are the boxes of d with loops, in the order of the loops, the loops on each, and their labels' widths.
-func (o *graphOut) loopsOn(d *drawing) (order []int, onBox map[int][]int, widths map[int]float64) {
-	onBox, widths = map[int][]int{}, map[int]float64{}
-	for _, l := range o.loops {
-		k, i := l[0], l[1]
-		if _, ok := d.boxes[i]; !ok {
-			continue
-		}
-		if onBox[i] == nil {
-			order = append(order, i)
-		}
-		onBox[i] = append(onBox[i], k)
-		if t := o.g.Edges[k].Label; t != nil {
-			widths[k] = labelWidth(t, false)
-		}
-	}
-	return order, onBox, widths
-}
-
-// loopRooms are the rooms the loops of d's boxes will take (drawLoops), before they make it: beside each box on its
-// loop side as far out as its loops and their labels and a column more reach (loop's area), along the box. The box
-// grows along for its loops about its middle, all past it moving on, so its length now holds them.
-func (o *graphOut) loopRooms(d *drawing) []rect {
-	order, onBox, widths := o.loopsOn(d)
-	across, along := d.axes()
-	var out []rect
-	for _, i := range order {
-		b := d.boxes[i]
-		n := float64(len(onBox[i]))
-		var r rect
-		r.set(across, b.lo(across)+b.size(across), column*(n+3)+d.loopFit(i, onBox[i], widths, b.size(along)).broad)
-		r.set(along, b.lo(along), b.size(along))
-		out = append(out, r)
-	}
-	return out
 }
 
 // fit is where the loops of a box stand on its side: their ends part apart, out from the middle, and their labels,

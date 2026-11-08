@@ -36,8 +36,7 @@ type frameRun struct {
 	sides []seg
 }
 
-// round is what the detours of one drawing share: its frames, the blocks every way keeps off (boxes, headings and
-// the loops' rooms), and each edge's runs.
+// round is what the detours of one drawing share: its frames, the blocks every way keeps off, and each edge's runs.
 type round struct {
 	frames []frameRun
 	blocks []rect
@@ -45,7 +44,7 @@ type round struct {
 	edges  []int // the keys of runs, in order
 }
 
-func (o *graphOut) newRound(d *drawing) *round {
+func newRound(d *drawing) *round {
 	rd := &round{runs: map[int][]seg{}} //nolint:exhaustruct_v5 // filled below
 	for _, c := range slices.Sorted(maps.Keys(d.frames)) {
 		f := d.frames[c]
@@ -62,9 +61,9 @@ func (o *graphOut) newRound(d *drawing) *round {
 	for _, c := range slices.Sorted(maps.Keys(d.heads)) {
 		rd.blocks = append(rd.blocks, grow(headRect(d.frames[c], d.heads[c]), keepApart))
 	}
-	for _, r := range o.loopRooms(d) { // made after: a way through one would leave the loops no clear room
-		rd.blocks = append(rd.blocks, grow(r, keepApart))
-	}
+	// LIMIT: the rooms the loops make after (drawLoops) are not kept off, so that loops leave the other edges as with
+	// no loop: a way round running across one would fail the drawing (room made for the loops of box N is not clear),
+	// which no random graph of loops and groups does. Keep off them if one comes to.
 	rd.edges = slices.Sorted(maps.Keys(d.routes))
 	for _, k := range rd.edges {
 		rd.runs[k] = segsOf(d.routes[k])
@@ -138,7 +137,7 @@ func (o *graphOut) detours(d *drawing, edges []int) {
 	for axis := range 2 {
 		was[axis], _ = d.span(axis)
 	}
-	rd := o.newRound(d)
+	rd := newRound(d)
 	sh := &search{work: detourWork, dist: nil, prev: nil, q: nil, tables: [12][]int32{}}
 	for _, k := range edges {
 		if !o.strayed(d, rd, k) {
@@ -167,7 +166,7 @@ func (o *graphOut) detours(d *drawing, edges []int) {
 	}
 	for axis := range 2 {
 		if lo, _ := d.span(axis); lo > was[axis] {
-			d.stretch(axis, math.Inf(-1), onGrid(was[axis]-lo, column, math.Ceil)) // back by whole columns, not past
+			d.stretch(axis, math.Inf(-1), was[axis]-lo) // all alike, so the boxes and frames keep their grid
 		}
 	}
 }
