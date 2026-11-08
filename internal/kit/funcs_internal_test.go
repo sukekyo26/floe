@@ -55,6 +55,52 @@ func TestMarkdownLabel(t *testing.T) {
 	}
 }
 
+// Two tildes strike through and one stays text, in each of floe's Markdown: a range or a path is not struck unasked.
+func TestStrikethrough(t *testing.T) {
+	t.Parallel()
+
+	line, okLine := funcs["markdownLine"].(func(string) (template.HTML, error))
+	label, okLabel := funcs["markdownLabel"].(func(string) (template.HTML, error))
+	if !okLine || !okLabel {
+		t.Fatal("markdownLine or markdownLabel is not a func(string) (template.HTML, error)")
+	}
+	for src, want := range map[string]template.HTML{
+		"2026-11-01~11-08 · 見積 2~3 日":      "2026-11-01~11-08 · 見積 2~3 日",
+		"コメント「~/work・Docker・~/.gitconfig」": "コメント「~/work・Docker・~/.gitconfig」",
+		"~~消す~~ と ~消さない~":                  "<del>消す</del> と ~消さない~",
+		"~~a~ b~":                          "~~a~ b~",
+		"~a~~":                             "~a~~",
+		"x ~~~three~~~":                    "x ~~~three~~~",
+		"~~a~~~~b~~":                       "<del>a~~~~b</del>",
+		`\~~a~~`:                           "~~a~~",
+		"`~~code~~`":                       "<code>~~code~~</code>",
+		"~~**太字**~~":                       "<del><strong>太字</strong></del>",
+		"[~~link~~](http://x)":             `<a href="http://x"><del>link</del></a>`,
+		"~https://example.com~":            `~<a href="https://example.com">https://example.com</a>~`,
+		"~~https://example.com~~":          `<del><a href="https://example.com">https://example.com</a></del>`,
+	} {
+		if got, err := line(src); err != nil || got != want {
+			t.Errorf("markdownLine(%q) = %q, %v; want %q", src, got, err, want)
+		}
+	}
+	for src, want := range map[string]template.HTML{"~x~ and ~~y~~": "~x~ and <del>y</del>"} {
+		if got, err := label(src); err != nil || got != want {
+			t.Errorf("markdownLabel(%q) = %q, %v; want %q", src, got, err, want)
+		}
+	}
+	for src, want := range map[string]template.HTML{
+		"~x~ and ~~y~~": "<p>~x~ and <del>y</del></p>",
+		"| a | b |\n|---|---|\n| ~x~ | ~~y~~ |\n": `<div data-floe-part="table"><table>` + "\n<thead>\n<tr>\n<th>a</th>\n<th>b</th>\n</tr>\n</thead>\n" +
+			"<tbody>\n<tr>\n<td>~x~</td>\n<td><del>y</del></td>\n</tr>\n</tbody>\n</table></div>",
+		"- [x] ~~done~~ ~not~\n": "<ul>\n<li><input checked=\"\" disabled=\"\" type=\"checkbox\"> <del>done</del> ~not~</li>\n</ul>",
+		"~~~three~~~\n":          `<pre><code class="language-three~~~"></code></pre>`,
+	} {
+		if got, err := markdownHTML(src); err != nil || got != want {
+			t.Errorf("markdown(%q) = %q, %v; want %q", src, got, err, want)
+		}
+	}
+}
+
 // MarkdownFlow draws Markdown in a text's box and Markdown in the box of a template's own Markdown, and what draws no
 // block (empty, raw HTML alone, once or twice) as it is, with no box; part.html's markdown is MarkdownFlow, page.html's
 // Markdown.

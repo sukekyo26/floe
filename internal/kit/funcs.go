@@ -47,7 +47,8 @@ func line(md goldmark.Markdown, name, text string) (template.HTML, error) {
 	return template.HTML(html), nil //nolint:gosec // G203: goldmark leaves raw HTML out
 }
 
-var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
+// markdown is GFM, as extension.GFM lists its extensions, but its strikethrough of two tildes alone.
+var markdown = goldmark.New(goldmark.WithExtensions(extension.Linkify, extension.Table, strikethrough, extension.TaskList))
 
 // markdownLine reads paragraphs alone, without the paragraph transformers that make a line a table or a link
 // reference definition, so that a line like "-", "1." or "# x" stays text.
@@ -56,7 +57,7 @@ var markdownLine = goldmark.New(
 		parser.WithBlockParsers(util.Prioritized(parser.NewParagraphParser(), 1000)),
 		parser.WithInlineParsers(parser.DefaultInlineParsers()...),
 	)),
-	goldmark.WithExtensions(extension.Strikethrough, extension.Linkify),
+	goldmark.WithExtensions(strikethrough, extension.Linkify),
 )
 
 // markdownLabel reads as markdownLine does and writes a link, one written or one Linkify finds, as its words alone, and
@@ -66,7 +67,7 @@ var markdownLabel = goldmark.New(
 		parser.WithBlockParsers(util.Prioritized(parser.NewParagraphParser(), 1000)),
 		parser.WithInlineParsers(parser.DefaultInlineParsers()...),
 	)),
-	goldmark.WithExtensions(extension.Strikethrough, extension.Linkify),
+	goldmark.WithExtensions(strikethrough, extension.Linkify),
 	goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(wordsOfLinks{}, 0))),
 )
 
