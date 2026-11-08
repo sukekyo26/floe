@@ -347,6 +347,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Change the room between what a card holds in `stats`, `facts`, `decision` and `asks` to the look `cards`' gap (`--cards-gap`, 0.4rem): stats' lines and facts' name and value stand a little further apart, decision's and asks' rows a little closer, and a theme's `--cards-gap` changes them too.
 - Change where a part sets a variable a theme may change: on its root (`:scope`), so that a theme of one's own setting it on the `:scope` of the part's or look's file, as floe's themes do, wins (`--floe-mark` and `--floe-mark-gap` of numbered, marked, timeline and links, `--floe-mark-gap` of checklist, the number of cards on `:scope.numbered`, `--checks-gap`, `--entries-row-gap`). floe's pages look as before.
 
 - The docs and the diagram's schema tell how raw SVG takes the theme's colours: the palette's variables (`fill="var(--accent)"`), and `var(--tone)` under `data-floe-tone`. A part's classes are not for raw, and the class `band`, which only the example `sequence` drew with, is gone: raw that wrote it draws black.
