@@ -91,7 +91,7 @@ func readGraph(g *graph, at string, way graphWay) (*graphOut, usererr.List) {
 	out := &graphOut{
 		g: g, at: at, boxes: nil, clusters: nil, top: nil, ends: map[int][2]gref{}, groups: nil, passed: 0,
 		loops: nil, skip: false, levels: nil, row: nil, ranked: nil, withed: nil, facing: nil, drawn: nil,
-		way: way,
+		way: way, detoured: nil, stayed: nil,
 	}
 	out.boxes, out.clusters, out.top = flatten(g, at)
 	if n := len(out.boxes) + len(out.clusters); n > maxNodes {
@@ -388,7 +388,7 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 		slid:  map[endAt]bool{},
 		moved: map[int]float64{}, settled: map[int]bool{}, off: false, offs: 0,
 		settling: settling{things: nil, sides: nil, runs: nil, labels: nil},
-		level:    map[int][2]string{}, taken: map[int]map[string]bool{},
+		level:    map[int][2]string{}, taken: map[int]map[string]bool{}, kept: nil,
 	}
 	sides := map[int][2]float64{} // each group's left and right, as laid out down
 	for _, n := range gr.nodes {
@@ -426,9 +426,7 @@ func (o *graphOut) draw(gr *group, right bool) (*drawing, error) {
 		}
 	}
 	d.growLevels(gr)
-	if !o.way.straight {
-		o.detours(d, edges)
-	}
+	o.detours(d, edges)
 	if err := o.drawLoops(d); err != nil {
 		return nil, fmt.Errorf("diagram: the graph at %s: %w", o.at, err)
 	}

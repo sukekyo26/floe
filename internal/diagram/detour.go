@@ -44,13 +44,15 @@ type round struct {
 	edges  []int // the keys of runs, in order
 }
 
-func (o *graphOut) newRound(d *drawing) *round {
+func newRound(d *drawing) *round {
 	rd := &round{runs: map[int][]seg{}} //nolint:exhaustruct_v5 // filled below
 	for _, c := range slices.Sorted(maps.Keys(d.frames)) {
 		f := d.frames[c]
 		rd.frames = append(rd.frames, frameRun{c, f, []seg{
-			{f.x, f.y, f.x + f.w, f.y}, {f.x + f.w, f.y, f.x + f.w, f.y + f.h},
-			{f.x, f.y + f.h, f.x + f.w, f.y + f.h}, {f.x, f.y, f.x, f.y + f.h},
+			{f.x, f.y, f.x + f.w, f.y},
+			{f.x + f.w, f.y, f.x + f.w, f.y + f.h},
+			{f.x, f.y + f.h, f.x + f.w, f.y + f.h},
+			{f.x, f.y, f.x, f.y + f.h},
 		}})
 	}
 	for _, i := range slices.Sorted(maps.Keys(d.boxes)) {
@@ -114,9 +116,9 @@ func (o *graphOut) strayed(d *drawing, rd *round, k int) bool {
 }
 
 // detours takes each edge of edges, in order, passing a frame that holds neither end round it where a way is found,
-// and keeps it in o.detoured; an edge left through, in o.stayed with why. A run gone round leaves the room the ranks
-// kept for it: where that was the drawing's start, the drawing moves back to start where it did, so that the graph's x
-// and y stay its top left.
+// and keeps it in o.detoured; an edge left through, in o.stayed with why; none where the way is straight. A run gone
+// round leaves the room the ranks kept for it: where that was the drawing's start, the drawing moves back to start
+// where it did, so that the graph's x and y stay its top left.
 // LIMIT: a way round crosses what it must: no check bounds the crossings of a graph drawn with ways round (the user
 // took that), only those of it drawn with none (laidFault). Bound them if graphs come to look crossed.
 // LIMIT: the level edges, drawn later (drawLevels, after the loops make room), are not minded: a way round may run
@@ -124,12 +126,15 @@ func (o *graphOut) strayed(d *drawing, rd *round, k int) bool {
 // LIMIT: each edge is looked at once, in order, against the ways taken before it, and none past the drawing's work:
 // which edges are left through a frame in a large graph hangs on their order. Look again if that comes to show.
 func (o *graphOut) detours(d *drawing, edges []int) {
+	if o.way.straight {
+		return
+	}
 	var was [2]float64
 	for axis := range 2 {
 		was[axis], _ = d.span(axis)
 	}
-	rd := o.newRound(d)
-	sh := &search{work: detourWork}
+	rd := newRound(d)
+	sh := &search{work: detourWork, dist: nil, prev: nil, q: nil, tables: [12][]int32{}}
 	for _, k := range edges {
 		if !o.strayed(d, rd, k) {
 			continue
@@ -217,36 +222,40 @@ func (o *graphOut) keptFor(rd *round, k int) keptOff {
 // box it leaves: it enters no other block, crosses or meets no wall, and runs within half a column of no frame's side
 // or other run, nor meets one end to end.
 func (ko keptOff) clear(a, b [2]float64, own rect) bool {
-	lo, hi := [2]float64{min(a[0], b[0]), min(a[1], b[1])}, [2]float64{max(a[0], b[0]), max(a[1], b[1])}
+	run := seg{a[0], a[1], b[0], b[1]}
+	near := func(q seg) bool { return alongside(run, q) }
+	return !ko.enters(run, own) && !slices.ContainsFunc(ko.walls, func(w seg) bool { return meets(run, w) }) &&
+		!slices.ContainsFunc(ko.sides, near) && !slices.ContainsFunc(ko.others, near)
+}
+
+// enters reports whether run enters a block of ko but own's.
+func (ko keptOff) enters(run seg, own rect) bool {
+	lo, hi := [2]float64{min(run[0], run[2]), min(run[1], run[3])}, [2]float64{max(run[0], run[2]), max(run[1], run[3])}
 	mine := grow(own, keepApart)
 	for _, r := range ko.blocks {
 		if r.x == mine.x && r.y == mine.y && r.w == mine.w && r.h == mine.h {
 			continue
 		}
 		if lo[0] < r.x+r.w-eps && hi[0] > r.x+eps && lo[1] < r.y+r.h-eps && hi[1] > r.y+eps {
-			return false
+			return true
 		}
 	}
-	run := seg{a[0], a[1], b[0], b[1]}
-	for _, w := range ko.walls {
-		if meets(run, w) {
-			return false
-		}
+	return false
+}
+
+// alongside reports whether run s runs along q within half a column, or meets it end to end.
+func alongside(s, q seg) bool {
+	if isDown(s) != isDown(q) {
+		return false
 	}
-	close := func(q seg) bool {
-		if isDown(run) != isDown(q) {
-			return false
-		}
-		across := 0
-		if !isDown(run) {
-			across = 1
-		}
-		along := 1 - across
-		return math.Abs(run[across]-q[across]) < keepApart-eps &&
-			min(run[along], run[along+2]) < max(q[along], q[along+2])+keepApart &&
-			max(run[along], run[along+2]) > min(q[along], q[along+2])-keepApart
+	across := 0
+	if !isDown(s) {
+		across = 1
 	}
-	return !slices.ContainsFunc(ko.sides, close) && !slices.ContainsFunc(ko.others, close)
+	along := 1 - across
+	return math.Abs(s[across]-q[across]) < keepApart-eps &&
+		min(s[along], s[along+2]) < max(q[along], q[along+2])+keepApart &&
+		max(s[along], s[along+2]) > min(q[along], q[along+2])-keepApart
 }
 
 // detour is a way for edge k round the frames it passes that hold neither end, on the lines of what it keeps off and
@@ -314,38 +323,44 @@ type dgrid struct {
 }
 
 // stepSpan are the steps along lines that meet the open span lo–hi.
-func stepSpan(steps []float64, lo, hi float64) (int, int) {
+func stepSpan(steps []float64, lo, hi float64) (first, past int) {
 	return max(sort.SearchFloat64s(steps, lo+eps)-1, 0), sort.SearchFloat64s(steps, hi-eps)
 }
 
 // lineSpan are the lines strictly within lo–hi.
-func lineSpan(vs []float64, lo, hi float64) (int, int) {
+func lineSpan(vs []float64, lo, hi float64) (first, past int) {
 	return sort.SearchFloat64s(vs, lo+eps), sort.SearchFloat64s(vs, hi-eps)
 }
 
-// newDgrid is the grid for a way from s to t keeping off ko, or false past detourCells points.
-func newDgrid(sh *search, ko keptOff, s, t [2]float64, beside bool) (*dgrid, bool) {
+// gridLines are the lines a way from s to t keeping off ko runs on: those of s and t, of the blocks' sides, a column
+// either side of the frames' sides, and, beside, half a column either side of the other runs.
+func gridLines(ko keptOff, s, t [2]float64, beside bool) (xs, ys []float64) {
 	xset, yset := map[float64]bool{s[0]: true, t[0]: true}, map[float64]bool{s[1]: true, t[1]: true}
+	off := func(q seg, by float64) {
+		if isDown(q) {
+			xset[q[0]-by], xset[q[0]+by] = true, true
+		} else {
+			yset[q[1]-by], yset[q[1]+by] = true, true
+		}
+	}
 	for _, b := range ko.blocks {
 		xset[b.x], xset[b.x+b.w], yset[b.y], yset[b.y+b.h] = true, true, true, true
 	}
 	for _, q := range ko.sides {
-		if isDown(q) {
-			xset[q[0]-detourFrameGap], xset[q[0]+detourFrameGap] = true, true
-		} else {
-			yset[q[1]-detourFrameGap], yset[q[1]+detourFrameGap] = true, true
+		off(q, detourFrameGap)
+	}
+	for _, q := range ko.others {
+		if beside {
+			off(q, keepApart)
 		}
 	}
-	if beside {
-		for _, q := range ko.others {
-			if isDown(q) {
-				xset[q[0]-keepApart], xset[q[0]+keepApart] = true, true
-			} else {
-				yset[q[1]-keepApart], yset[q[1]+keepApart] = true, true
-			}
-		}
-	}
-	g := &dgrid{xs: slices.Sorted(maps.Keys(xset)), ys: slices.Sorted(maps.Keys(yset))} //nolint:exhaustruct_v5 // filled below
+	return slices.Sorted(maps.Keys(xset)), slices.Sorted(maps.Keys(yset))
+}
+
+// newDgrid is the grid for a way from s to t keeping off ko, or false past detourCells points or the drawing's work.
+func newDgrid(sh *search, ko keptOff, s, t [2]float64, beside bool) (*dgrid, bool) {
+	g := &dgrid{} //nolint:exhaustruct_v5 // filled below
+	g.xs, g.ys = gridLines(ko, s, t, beside)
 	nx, ny := len(g.xs), len(g.ys)
 	// The work of a grid: its points, and its marks, each a few searches of its lines.
 	work := nx*ny + 8*(len(ko.blocks)+len(ko.walls)+len(ko.sides)+2*len(ko.others))
@@ -356,194 +371,242 @@ func newDgrid(sh *search, ko keptOff, s, t [2]float64, beside bool) (*dgrid, boo
 		return nil, false
 	}
 	sh.work -= work
-	// Each mark adds over a rectangle of steps in a table of differences, summed once: O(points + marks).
-	made := 0
-	mk := func() []int32 { made++; return sh.table(made-1, nx*(ny+1)) }
-	add := func(tb []int32, i0, i1, j0, j1 int) { // over i in [i0,i1), j in [j0,j1)
-		if i0 >= i1 || j0 >= j1 {
-			return
-		}
-		tb[i0*(ny+1)+j0]++
-		tb[i0*(ny+1)+j1]--
-		if i1 < nx {
-			tb[i1*(ny+1)+j0]--
-			tb[i1*(ny+1)+j1]++
-		}
+	var diffs [6][]int32
+	for i := range diffs {
+		diffs[i] = sh.table(i, nx*(ny+1))
 	}
-	sum := func(tb []int32) []int32 {
-		made++
-		out := sh.table(made-1, nx*ny)
-		for i := range nx {
-			run := int32(0)
-			for j := range ny {
-				run += tb[i*(ny+1)+j]
-				out[i*ny+j] = run
-				if i > 0 {
-					out[i*ny+j] += out[(i-1)*ny+j]
-				}
-			}
-		}
-		return out
+	m := marks{g: g, nx: nx, ny: ny}
+	m.keep(ko, diffs)
+	for i, out := range []*[]int32{&g.right, &g.down, &g.rightEnd, &g.downEnd, &g.rightX, &g.downX} {
+		*out = m.sum(diffs[i], sh.table(6+i, nx*ny))
 	}
-	right, down, rightEnd, downEnd, rightX, downX := mk(), mk(), mk(), mk(), mk(), mk()
-	// across marks the steps across (i, an x step) on the lines y within ylo–yhi, meeting xlo–xhi; along, the steps
-	// down (j, a y step) on the lines x within xlo–xhi, meeting ylo–yhi.
-	across := func(ylo, yhi, xlo, xhi float64, tbs ...[]int32) {
-		j0, j1 := lineSpan(g.ys, ylo, yhi)
-		i0, i1 := stepSpan(g.xs, xlo, xhi)
-		for _, tb := range tbs {
-			add(tb, i0, i1, j0, j1)
-		}
+	return g, true
+}
+
+// marks adds over rectangles of the steps of g in tables of differences, each summed once: O(points + marks).
+type marks struct {
+	g      *dgrid
+	nx, ny int
+}
+
+// add adds 1 over i in [i0,i1), j in [j0,j1) of tb.
+func (m marks) add(tb []int32, i0, i1, j0, j1 int) {
+	if i0 >= i1 || j0 >= j1 {
+		return
 	}
-	along := func(xlo, xhi, ylo, yhi float64, tbs ...[]int32) {
-		i0, i1 := lineSpan(g.xs, xlo, xhi)
-		j0, j1 := stepSpan(g.ys, ylo, yhi)
-		for _, tb := range tbs {
-			add(tb, i0, i1, j0, j1)
-		}
+	tb[i0*(m.ny+1)+j0]++
+	tb[i0*(m.ny+1)+j1]--
+	if i1 < m.nx {
+		tb[i1*(m.ny+1)+j0]--
+		tb[i1*(m.ny+1)+j1]++
 	}
+}
+
+// across marks the steps across (i, an x step) on the lines y within ylo–yhi, meeting xlo–xhi.
+func (m marks) across(ylo, yhi, xlo, xhi float64, tbs ...[]int32) {
+	j0, j1 := lineSpan(m.g.ys, ylo, yhi)
+	i0, i1 := stepSpan(m.g.xs, xlo, xhi)
+	for _, tb := range tbs {
+		m.add(tb, i0, i1, j0, j1)
+	}
+}
+
+// along marks the steps down (j, a y step) on the lines x within xlo–xhi, meeting ylo–yhi.
+func (m marks) along(xlo, xhi, ylo, yhi float64, tbs ...[]int32) {
+	i0, i1 := lineSpan(m.g.xs, xlo, xhi)
+	j0, j1 := stepSpan(m.g.ys, ylo, yhi)
+	for _, tb := range tbs {
+		m.add(tb, i0, i1, j0, j1)
+	}
+}
+
+// beside marks the steps within gap of run q, and half a column past its ends: runs meeting end to end touch.
+func (m marks) beside(q seg, gap float64, tbs ...[]int32) {
+	if isDown(q) {
+		m.along(q[0]-gap, q[0]+gap, min(q[1], q[3])-keepApart, max(q[1], q[3])+keepApart, tbs...)
+	} else {
+		m.across(q[1]-gap, q[1]+gap, min(q[0], q[2])-keepApart, max(q[0], q[2])+keepApart, tbs...)
+	}
+}
+
+// keep marks what ko keeps a way off in t, the tables right, down, rightEnd, downEnd, rightX and downX of dgrid.
+func (m marks) keep(ko keptOff, t [6][]int32) {
+	right, down, rightEnd, downEnd, rightX, downX := t[0], t[1], t[2], t[3], t[4], t[5]
 	for _, b := range ko.blocks {
-		across(b.y, b.y+b.h, b.x, b.x+b.w, right, rightEnd)
-		along(b.x, b.x+b.w, b.y, b.y+b.h, down, downEnd)
+		m.across(b.y, b.y+b.h, b.x, b.x+b.w, right, rightEnd)
+		m.along(b.x, b.x+b.w, b.y, b.y+b.h, down, downEnd)
 	}
 	for _, w := range ko.walls { // a step across a wall, or to a point on it
 		if isDown(w) {
-			across(min(w[1], w[3])-eps, max(w[1], w[3])+eps, w[0]-1, w[0]+1, right, rightEnd)
+			m.across(min(w[1], w[3])-eps, max(w[1], w[3])+eps, w[0]-1, w[0]+1, right, rightEnd)
 		} else {
-			along(min(w[0], w[2])-eps, max(w[0], w[2])+eps, w[1]-1, w[1]+1, down, downEnd)
-		}
-	}
-	// keepBeside keeps steps within gap of run q, and half a column past its ends, off it: runs meeting end to end
-	// touch.
-	keepBeside := func(q seg, gap float64, tbs ...[]int32) {
-		if isDown(q) {
-			along(q[0]-gap, q[0]+gap, min(q[1], q[3])-keepApart, max(q[1], q[3])+keepApart, tbs...)
-		} else {
-			across(q[1]-gap, q[1]+gap, min(q[0], q[2])-keepApart, max(q[0], q[2])+keepApart, tbs...)
+			m.along(min(w[0], w[2])-eps, max(w[0], w[2])+eps, w[1]-1, w[1]+1, down, downEnd)
 		}
 	}
 	for _, q := range ko.sides {
 		if isDown(q) {
-			keepBeside(q, detourFrameGap, down)
-			keepBeside(q, keepApart, downEnd)
+			m.beside(q, detourFrameGap, down)
+			m.beside(q, keepApart, downEnd)
 		} else {
-			keepBeside(q, detourFrameGap, right)
-			keepBeside(q, keepApart, rightEnd)
+			m.beside(q, detourFrameGap, right)
+			m.beside(q, keepApart, rightEnd)
 		}
 	}
 	for _, q := range ko.others {
 		if isDown(q) {
-			keepBeside(q, keepApart, down, downEnd)
-			across(min(q[1], q[3]), max(q[1], q[3]), q[0]-eps, q[0]+eps, rightX)
+			m.beside(q, keepApart, down, downEnd)
+			m.across(min(q[1], q[3]), max(q[1], q[3]), q[0]-eps, q[0]+eps, rightX)
 		} else {
-			keepBeside(q, keepApart, right, rightEnd)
-			along(min(q[0], q[2]), max(q[0], q[2]), q[1]-eps, q[1]+eps, downX)
+			m.beside(q, keepApart, right, rightEnd)
+			m.along(min(q[0], q[2]), max(q[0], q[2]), q[1]-eps, q[1]+eps, downX)
 		}
 	}
-	g.right, g.down, g.rightEnd, g.downEnd, g.rightX, g.downX = sum(right), sum(down), sum(rightEnd), sum(downEnd), sum(rightX), sum(downX)
-	return g, true
 }
 
-// search is the least costly way on g from s, leaving the way start goes, to t and on the way end goes (A*: length,
-// a bend 24, the one at t too, a run crossed 48; the bound, the distance left and a bend where neither axis is t's). It reports
-// whether it found one, and whether it ran to its end rather than to detourPops or the drawing's work.
-func (g *dgrid) search(sh *search, s, t [2]float64, start, end int) ([][2]float64, bool, bool) {
-	nx, ny := len(g.xs), len(g.ys)
-	si, sj := slices.Index(g.xs, s[0]), slices.Index(g.ys, s[1])
-	ti, tj := slices.Index(g.xs, t[0]), slices.Index(g.ys, t[1])
-	size := nx * ny * 4
+// sum is out, tb summed over i and j.
+func (m marks) sum(tb, out []int32) []int32 {
+	for i := range m.nx {
+		run := int32(0)
+		for j := range m.ny {
+			run += tb[i*(m.ny+1)+j]
+			out[i*m.ny+j] = run
+			if i > 0 {
+				out[i*m.ny+j] += out[(i-1)*m.ny+j]
+			}
+		}
+	}
+	return out
+}
+
+// walk is a search's ends on a grid: from point si,sj leaving the way start goes, to ti,tj and on the way end goes.
+type walk struct {
+	g                  *dgrid
+	si, sj, ti, tj, ny int
+	end                int
+}
+
+// bound is the least a way from point i,j to the end costs: the distance, and a bend where neither axis is the end's.
+func (w walk) bound(i, j int) float64 {
+	b := 0.0
+	if i != w.ti && j != w.tj {
+		b = detourBend
+	}
+	return math.Abs(w.g.xs[i]-w.g.xs[w.ti]) + math.Abs(w.g.ys[j]-w.g.ys[w.tj]) + b
+}
+
+// step is what the step from point i,j, come the way dir goes, to its neighbour the way di goes costs, or false where
+// it may not be taken: its length, a bend, a bend at the end unless the way goes on the end's way, and the runs it
+// crosses.
+func (w walk) step(i, j, dir, di int) (float64, bool) {
+	g := w.g
+	ni, nj := i+dirs[di][0], j+dirs[di][1]
+	if di == dir^1 || ni < 0 || nj < 0 || ni >= len(g.xs) || nj >= w.ny {
+		return 0, false
+	}
+	at := ni == w.ti && nj == w.tj
+	bad, cross := w.meets(i, j, ni, nj, i == w.si && j == w.sj || at)
+	if bad > 0 || at && di == w.end^1 {
+		return 0, false
+	}
+	cost := math.Abs(g.xs[ni]-g.xs[i]) + math.Abs(g.ys[nj]-g.ys[j]) + detourCross*float64(cross)
+	if di != dir {
+		cost += detourBend
+	}
+	if at && di != w.end {
+		cost += detourBend
+	}
+	return cost, true
+}
+
+// meets are what keeps the step from point i,j to its neighbour ni,nj off (a frame's side half a column off where
+// the step leaves the start or enters the end, ends) and the runs it crosses.
+func (w walk) meets(i, j, ni, nj int, ends bool) (bad, cross int32) {
+	g := w.g
+	if j == nj {
+		c := min(i, ni)*w.ny + j
+		if ends {
+			return g.rightEnd[c], g.rightX[c]
+		}
+		return g.right[c], g.rightX[c]
+	}
+	c := i*w.ny + min(j, nj)
+	if ends {
+		return g.downEnd[c], g.downX[c]
+	}
+	return g.down[c], g.downX[c]
+}
+
+// room is the search's distances and steps back for size points, the distances unknown.
+func (sh *search) room(size int) (dist []float64, prev []int32) {
 	if cap(sh.dist) < size {
 		sh.dist, sh.prev = make([]float64, size), make([]int32, size)
 	}
-	dist, prev := sh.dist[:size], sh.prev[:size]
+	dist, prev = sh.dist[:size], sh.prev[:size]
 	for i := range dist {
 		dist[i] = math.Inf(1)
 	}
-	h := func(i, j int) float64 {
-		b := 0.0
-		if i != ti && j != tj {
-			b = detourBend
-		}
-		return math.Abs(g.xs[i]-g.xs[ti]) + math.Abs(g.ys[j]-g.ys[tj]) + b
+	return dist, prev
+}
+
+// trace is the way to point goal of g, by the steps back of prev, from the start.
+func (g *dgrid) trace(prev []int32, goal int) [][2]float64 {
+	ny := len(g.ys)
+	var way [][2]float64
+	for c := goal; c >= 0; c = int(prev[c]) {
+		way = append(way, [2]float64{g.xs[c/4/ny], g.ys[c/4%ny]})
 	}
+	slices.Reverse(way)
+	return way
+}
+
+// search is the least costly way on g from s, leaving the way start goes, to t and on the way end goes (A*: length,
+// a bend 24, the one at t too, a run crossed 48; bound). It reports whether it found one, and whether it ran to its
+// end rather than to detourPops or the drawing's work.
+// The points of a grid number at most detourCells times four ways, within int32 (see the conversions below).
+func (g *dgrid) search(sh *search, s, t [2]float64, start, end int) (way [][2]float64, found, done bool) {
+	ny := len(g.ys)
+	w := walk{
+		g: g, si: slices.Index(g.xs, s[0]), sj: slices.Index(g.ys, s[1]), ti: slices.Index(g.xs, t[0]),
+		tj: slices.Index(g.ys, t[1]), ny: ny, end: end,
+	}
+	dist, prev := sh.room(len(g.xs) * ny * 4)
 	at := func(i, j, d int) int { return (i*ny+j)*4 + d }
-	first := at(si, sj, start)
+	first := at(w.si, w.sj, start)
 	dist[first], prev[first] = 0, -1
-	q := sh.q[:0]
-	seq := int32(0)
-	q = q.push(qitem{h(si, sj), seq, int32(first)})
+	q, seq := sh.q[:0], int32(0)
+	q = q.push(qitem{w.bound(w.si, w.sj), seq, int32(first)}) //nolint:gosec // G115: within detourCells*4
 	defer func() { sh.q = q }()
 	goal, pops := -1, 0
-	for len(q) > 0 {
+	for len(q) > 0 && goal < 0 {
 		var it qitem
 		q, it = q.pop()
 		ci := int(it.n)
 		i, j, dir := ci/4/ny, ci/4%ny, ci%4
-		if it.cost-h(i, j) > dist[ci]+eps {
+		if it.cost-w.bound(i, j) > dist[ci]+eps {
 			continue
 		}
 		if pops++; pops > detourPops || sh.work <= 0 {
 			return nil, false, false
 		}
 		sh.work--
-		if i == ti && j == tj && dir != end^1 {
+		if i == w.ti && j == w.tj && dir != end^1 {
 			goal = ci
-			break
+			continue
 		}
-		for di, dv := range dirs {
-			if di == dir^1 {
-				continue
-			}
-			ni, nj := i+dv[0], j+dv[1]
-			if ni < 0 || nj < 0 || ni >= nx || nj >= ny {
-				continue
-			}
-			ends := i == si && j == sj || ni == ti && nj == tj
-			var bad, cross int32
-			if di < 2 {
-				c := min(i, ni)*ny + j
-				bad, cross = g.right[c], g.rightX[c]
-				if ends {
-					bad = g.rightEnd[c]
-				}
-			} else {
-				c := i*ny + min(j, nj)
-				bad, cross = g.down[c], g.downX[c]
-				if ends {
-					bad = g.downEnd[c]
-				}
-			}
-			if bad > 0 {
-				continue
-			}
-			cost := dist[ci] + math.Abs(g.xs[ni]-g.xs[i]) + math.Abs(g.ys[nj]-g.ys[j]) + detourCross*float64(cross)
-			if di != dir {
-				cost += detourBend
-			}
-			if ni == ti && nj == tj { // the way on to the end turns at t unless it goes the end's way
-				if di == end^1 {
-					continue
-				}
-				if di != end {
-					cost += detourBend
-				}
-			}
-			if nn := at(ni, nj, di); cost < dist[nn]-eps {
-				dist[nn], prev[nn] = cost, int32(ci)
+		for di := range dirs {
+			c, ok := w.step(i, j, dir, di)
+			ni, nj := i+dirs[di][0], j+dirs[di][1]
+			if nn := at(ni, nj, di); ok && dist[ci]+c < dist[nn]-eps {
+				dist[nn], prev[nn] = dist[ci]+c, int32(ci) //nolint:gosec // G115: within detourCells*4
 				seq++
-				q = q.push(qitem{cost + h(ni, nj), seq, int32(nn)})
+				q = q.push(qitem{dist[nn] + w.bound(ni, nj), seq, int32(nn)}) //nolint:gosec // G115: within detourCells*4
 			}
 		}
 	}
 	if goal < 0 {
 		return nil, false, true
 	}
-	var way [][2]float64
-	for c := goal; c >= 0; c = int(prev[c]) {
-		way = append(way, [2]float64{g.xs[c/4/ny], g.ys[c/4%ny]})
-	}
-	slices.Reverse(way)
-	return way, true, true
+	return g.trace(prev, goal), true, true
 }
 
 // qitem is a point of a search waiting, by its cost and bound, then the order it came in.
@@ -608,6 +671,7 @@ func dirOf(u [2]float64) int {
 	return 0
 }
 
+// grow is r grown by m on every side, of no part.
 func grow(r rect, m float64) rect {
-	return rect{x: r.x - m, y: r.y - m, w: r.w + 2*m, h: r.h + 2*m, what: "", at: ""} //nolint:exhaustruct_v5 // a rectangle grown, of no part
+	return rect{x: r.x - m, y: r.y - m, w: r.w + 2*m, h: r.h + 2*m, what: "", at: ""} //nolint:exhaustruct_v5 // no part
 }

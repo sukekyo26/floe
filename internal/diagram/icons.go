@@ -544,8 +544,8 @@ func (d *drawing) crossesBelow(k int, runs []seg) bool {
 }
 
 // clear is whether runs, of edge k, keep off what does not move, the frames it keeps out of (kept), the other edges'
-// labels and what lies between them and their runs, and the other edges' runs: wire leaves no two edges touching, and check does not compare two edges of a
-// graph, so a run landing on another would be drawn unsaid.
+// labels and what lies between them and their runs, and the other edges' runs: wire leaves no two edges touching, and
+// check does not compare two edges of a graph, so a run landing on another would be drawn unsaid.
 // LIMIT: only runs moved here are compared, so edges may touch where gathered bends them by a rectangle's side. Part
 // them along the side if that shows.
 // LIMIT: the parts written by hand are not compared: where the graph's x and y put them is known only once all has
