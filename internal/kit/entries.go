@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/bom"
+	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/schema"
 )
 
@@ -46,11 +47,12 @@ type shared struct {
 	files      []Source
 }
 
-// Entry is a part, a look, a shared schema or a template as floe part list and show and floe template list
-// and show tell of it.
+// Entry is a part, a look, a shared schema, a template, a theme or a diagram example as floe's lists and shows tell
+// of it.
 type Entry struct {
 	Name  string
 	About string   // its description, on one line
+	Shape string   // what a value of it is written as (schema.Shape), "-" when the list cannot tell it
 	Dir   string   // its directory (a shared schema's file) when it is one's own, "" for floe's
 	Looks []string // the looks it takes
 	Files []Source // the files it reads, as written, in the order show prints them
@@ -64,20 +66,26 @@ func (k *Kit) Parts() []Entry {
 			all = append(all, at.partEntry(p))
 		}
 		for _, l := range at.looks {
-			all = append(all, Entry{Name: l.name, About: l.about, Dir: at.own(l.dir), Looks: l.Looks(), Files: copied(l.files)})
+			all = append(all, Entry{
+				Name: l.name, About: l.about, Shape: "-", Dir: at.own(l.dir), Looks: l.Looks(), Files: copied(l.files),
+			})
 		}
 		for _, s := range at.shared {
 			all = append(all, Entry{
-				Name: s.name, About: about(s.schema), Dir: at.own(s.file), Looks: nil, Files: copied(s.files),
+				Name: s.name, About: about(s.schema), Shape: rootShape(s.schema), Dir: at.own(s.file), Looks: nil,
+				Files: copied(s.files),
 			})
 		}
 	}
-	return listed(all)
+	return Listed(all)
 }
 
 // partEntry is the entry of p, a part of k.
 func (k *Kit) partEntry(p *Part) Entry {
-	return Entry{Name: p.name, About: about(p.schema), Dir: k.own(p.dir), Looks: p.Looks(), Files: copied(p.files)}
+	return Entry{
+		Name: p.name, About: about(p.schema), Shape: rootShape(p.schema), Dir: k.own(p.dir), Looks: p.Looks(),
+		Files: copied(p.files),
+	}
 }
 
 // SectionParts returns what a section of floe's templates takes, by name: a key of floe's shared schema any, each
@@ -103,14 +111,15 @@ func (k *Kit) SectionParts() ([]Entry, error) {
 			all = append(all, floe.partEntry(p))
 		case step.Format != "":
 			all = append(all, Entry{
-				Name: name, About: props[name].Description, Dir: "", Looks: nil, Files: copied(anyOf.files),
+				Name: name, About: props[name].Description, Shape: c.Shape(props[name]), Dir: "", Looks: nil,
+				Files: copied(anyOf.files),
 			})
 		default:
 			//nolint:err113 // floe's failure
 			return nil, fmt.Errorf("kit: the key %s of any.json is neither a part of floe nor a format", name)
 		}
 	}
-	return listed(all), nil
+	return Listed(all), nil
 }
 
 // Templates returns the templates of k and its base, by name: of a name both have, k's own, which hides the
@@ -121,12 +130,13 @@ func (k *Kit) Templates() []Entry {
 		for _, t := range at.templates {
 			if !slices.ContainsFunc(all, func(e Entry) bool { return e.Name == t.name }) {
 				all = append(all, Entry{
-					Name: t.name, About: about(t.schema), Dir: at.own(t.dir), Looks: nil, Files: copied(t.files),
+					Name: t.name, About: about(t.schema), Shape: rootShape(t.schema, doc.Shared...), Dir: at.own(t.dir),
+					Looks: nil, Files: copied(t.files),
 				})
 			}
 		}
 	}
-	return listed(all)
+	return Listed(all)
 }
 
 // Themes returns the themes of k and its base, by name. One's own never has a name of the base's.
@@ -134,10 +144,12 @@ func (k *Kit) Themes() []Entry {
 	var all []Entry
 	for at := k; at != nil; at = at.base {
 		for _, t := range at.themes {
-			all = append(all, Entry{Name: t.name, About: "", Dir: at.own(t.dir), Looks: nil, Files: copied(t.files)})
+			all = append(all, Entry{
+				Name: t.name, About: "", Shape: "-", Dir: at.own(t.dir), Looks: nil, Files: copied(t.files),
+			})
 		}
 	}
-	return listed(all)
+	return Listed(all)
 }
 
 // own returns dir when k reads one's own over a base, "" when k is floe's.
@@ -148,6 +160,15 @@ func (k *Kit) own(dir string) string {
 	return dir
 }
 
+// rootShape is the shape of the root of c (schema.Shape), with more keys floe reads itself in a template; "-" for
+// none.
+func rootShape(c *schema.Compiled, more ...string) string {
+	if c == nil {
+		return "-"
+	}
+	return c.Shape(c.Root, more...)
+}
+
 func about(c *schema.Compiled) string {
 	if c == nil {
 		return ""
@@ -155,9 +176,9 @@ func about(c *schema.Compiled) string {
 	return c.Root.Description
 }
 
-// listed returns all by name, each description on one line, its line breaks, tabs and runs of spaces one
-// space: floe part list and template list print one entry a line, in columns.
-func listed(all []Entry) []Entry {
+// Listed returns all by name, each description on one line, its line breaks, tabs and runs of spaces one
+// space: floe's lists print one entry a line, in columns.
+func Listed(all []Entry) []Entry {
 	for i := range all {
 		all[i].About = strings.Join(strings.Fields(all[i].About), " ")
 	}
