@@ -3332,11 +3332,11 @@
     const focusedOn = $('list').contains(document.activeElement) ? ['.title', 'summary', '.star', '.actions > .archive', '.step-add'].find((on) => document.activeElement.matches(on)) : null;
     const focused = focusedOn ? document.activeElement.closest('li').dataset.key : null;
     let i = 0;
-    for (const { heading, entries, add } of groups) {
+    for (const { heading, key, entries, add } of groups) {
       if (heading) {
         const li = document.createElement('li');
         li.className = 'group';
-        li.dataset.key = `group:${heading}`;
+        li.dataset.key = key ?? `group:${heading}`;
         li.setAttribute('role', 'none');
         const words = document.createElement('div');
         words.setAttribute('role', 'heading');
@@ -3642,7 +3642,8 @@
     }
     const groups = [{ entries: none }];
     for (const heading of stepOrder(task)) groups.push({ heading, entries: steps.get(heading) ?? [], add: () => openAddPage(task, heading) });
-    if (task.archived.length > 0) groups.push({ heading: t('ui_state_archived'), entries: [...task.archived].sort((x, y) => madeAt(x) - madeAt(y)) });
+    // Its key apart from a step's, which may have the same name
+    if (task.archived.length > 0) groups.push({ heading: t('ui_state_archived'), key: 'archived', entries: [...task.archived].sort((x, y) => madeAt(x) - madeAt(y)) });
     return groups;
   }
   const madeAt = (a) => Date.parse(a.createdAt || a.updatedAt);
@@ -3782,7 +3783,7 @@
       unlinking.delete(child.name);
     }
   }
-  // A toast with a way back: how.undo writes what was there before, of the rev it holds, and answers as writeTask does; how.done is where
+  // A toast with a way back: how.undo writes what was there before (of the rev it holds, if a task's row) and answers { ok, text }; how.done is where
   // the focus goes once it is back, how.away where Escape on it leaves the focus. Pressed, a refusal (written meanwhile, say) is said as the
   // store says it. The button, for the caller to focus when the change was made from the keys
   function undoToast(said, how) {
@@ -5220,7 +5221,7 @@
       // written, from the tasks read, which hold it and no read since, as a load waits for the page's write, so that saving again writes the
       // page, and is refused when another wrote it since
       if (!res.ok) {
-        setTaskKnown();
+        if (res.status === 409 || res.rev !== null) setTaskKnown();
         throw new Error(res.status === 409 ? res.stale : res.text);
       }
       if (task.trim() === setOpened.task) toast(t('ui_saved'));
@@ -5441,16 +5442,12 @@
   }
   // The add button of a step's heading, as drawn now
   const stepAdd = (step) => [...$('list').children].find((li) => li.dataset.key === `group:${step}`)?.querySelector('.step-add');
-  // The page alone off its task: its pin stays, and the task's row. Its way back is held as the page was taken off: the task's rev as read,
-  // and whether the task is there without it (a row, or another page), else it is made anew; and where Escape on it leaves the focus: back
-  // (the menu it came from), the row after it, its step's add button, or the task's edit button
+  // The page alone off its task: its pin stays, and the task's row, which nothing here writes. Its way back writes the page's work back as it
+  // was, and nothing else, so that a task of pages alone is back as it was; Escape on it leaves the focus on back (the menu it came from),
+  // the row after it, its step's add button, or the task's edit button
   async function takePageOff(a, back) {
-    const project = a.taskProject;
     const name = a.work.task;
     const step = a.work.step ?? '';
-    const task = tasksOf().find((x) => x.project === project && x.name === name);
-    const stays = Boolean(task && (hasRow(task) || [...task.pages, ...task.archived].some((x) => x.slug !== a.slug)));
-    const rev = readRev(project, name);
     const rows = [...$('list').children].filter((li) => !li.classList.contains('group') && li.querySelector('.title'));
     const at = rows.findIndex((li) => li.dataset.key === `entry:${a.slug}`);
     const next = at === -1 ? null : (rows[at + 1] ?? rows[at - 1])?.dataset.key;
@@ -5459,7 +5456,10 @@
     const rowOf = (key) => [...$('list').children].find((li) => li.dataset.key === key)?.querySelector('.title');
     const edit = () => ($('task-edit').closest('[hidden]') ? null : $('task-edit'));
     const button = undoToast(t('ui_task_out_done', a.title, name), {
-      undo: () => putPageOn(a, project, name, { new: !stays, ...(stays ? { rev } : {}), ...(step ? { step } : {}) }, step),
+      undo: async () => {
+        const reason = await patchOne(a.slug, { work: { task: name, step } });
+        return { ok: !reason, text: reason };
+      },
       done: () => rowOf(`entry:${a.slug}`) ?? back?.(),
       away: () => back?.() ?? rowOf(next) ?? stepAdd(step) ?? edit(),
     });
@@ -5472,9 +5472,8 @@
   let addShown = [];
   let addSlug = null;
   const addHits = () => {
-    const q = $('add-page-q').value.trim().toLowerCase();
     const all = items.filter((a) => a.taskProject === addTo.project && !a.archived && !(a.work?.task === addTo.name && (a.work?.step ?? '') === addTo.step));
-    return { all, hits: all.filter((a) => matches(a, q)) };
+    return { all, hits: searched($('add-page-q'), all) };
   };
   // Where a page comes from, as said of it: this task's other step, another task's, or none
   const pageFrom = (a) => {
@@ -5487,21 +5486,10 @@
     const { all, hits } = addHits();
     const ranks = projectOrder();
     addShown = hits.slice(0, FIND_ROWS);
-    $('add-page-list').replaceChildren(...addShown.map((a, i) => {
-      const li = $('add-page-row').content.firstElementChild.cloneNode(true);
-      li.id = `add-page-${i}`;
-      li.querySelector('.lead').innerHTML = leadOf(a);
-      li.querySelector('.title').textContent = a.title;
-      li.querySelector('.title').title = a.title;
-      const time = li.querySelector('time');
-      time.dateTime = a.updatedAt;
-      time.textContent = ago(a.updatedAt);
-      drawSub(li.querySelector('.sub'), a, ranks, (put) => {
-        if (!a.work?.task) return;
-        put('badge', a.work.task === addTo.name ? t('ui_page_here_step', a.work.step || t('ui_page_from_no_step')) : [a.work.task, a.work.step].filter(Boolean).join(' · '));
-      });
-      return li;
-    }));
+    $('add-page-list').replaceChildren(...addShown.map((a, i) => hitRow($('add-page-row'), `add-page-${i}`, a, ranks, (put) => {
+      if (!a.work?.task) return;
+      put('badge', a.work.task === addTo.name ? t('ui_page_here_step', a.work.step || t('ui_page_from_no_step')) : [a.work.task, a.work.step].filter(Boolean).join(' · '));
+    })));
     const none = hits.length === 0;
     $('add-page-list').hidden = none;
     $('add-page-none').hidden = !none;
@@ -5540,6 +5528,8 @@
     const from = pageFrom(a);
     try {
       const res = await putPageOn(a, to.project, to.name, { new: false, rev: to.rev, step: to.step }, to.step);
+      // The task's row written, the page refused, the row's rev is the one written; refused as stale, the one read again
+      if (res.rev !== null) to.rev = res.rev;
       if (!res.ok) {
         if (res.status === 409) {
           to.rev = readRev(to.project, to.name);
@@ -5695,10 +5685,31 @@
   // LIMIT: the first FIND_ROWS rows only, which it says. Words narrow them; show more if a search comes to need them
   // LIMIT: the files in a folder are not searched, as what is in a folder is read only where it is open
   const FIND_ROWS = 50;
-  const findHits = () => {
-    const q = $('find-q').value.trim().toLowerCase();
-    return items.filter((a) => matches(a, q)).sort((x, y) => Boolean(x.archived) - Boolean(y.archived));
+  const findHits = () => searched($('find-q'), items).sort((x, y) => Boolean(x.archived) - Boolean(y.archived));
+  // The entries of among the words of a search field match
+  const searched = (input, among) => {
+    const q = input.value.trim().toLowerCase();
+    return among.filter((a) => matches(a, q));
   };
+  // A row of entry a in a search modal's list, of its template's: its title a link to it where the template's is one, and middle what drawSub
+  // puts after its kind
+  function hitRow(template, id, a, ranks, middle) {
+    const li = template.content.firstElementChild.cloneNode(true);
+    li.id = id;
+    li.classList.toggle('unseen', Boolean(a.news));
+    li.classList.toggle('archived', Boolean(a.archived));
+    li.querySelector('.lead').innerHTML = leadOf(a);
+    const title = li.querySelector('.title');
+    if (title instanceof HTMLAnchorElement) title.href = pageHref(a);
+    title.textContent = a.title;
+    title.title = a.title;
+    if (a.favorite) li.querySelector('.time').insertAdjacentHTML('afterbegin', STAR_MARK);
+    const time = li.querySelector('time');
+    time.dateTime = a.updatedAt;
+    time.textContent = ago(a.updatedAt);
+    drawSub(li.querySelector('.sub'), a, ranks, middle);
+    return li;
+  }
   // The row reached, by slug as the rows are drawn anew, and by its place for when it is gone
   let findSlug = null;
   let findAt = 0;
@@ -5748,23 +5759,7 @@
     const hits = findHits();
     const ranks = projectOrder();
     findShown = hits.slice(0, FIND_ROWS);
-    $('find-list').replaceChildren(...findShown.map((a, i) => {
-      const li = $('find-row').content.firstElementChild.cloneNode(true);
-      li.id = `find-${i}`;
-      li.classList.toggle('unseen', Boolean(a.news));
-      li.classList.toggle('archived', Boolean(a.archived));
-      li.querySelector('.lead').innerHTML = leadOf(a);
-      const link = li.querySelector('.title');
-      link.href = pageHref(a);
-      link.textContent = a.title;
-      link.title = a.title;
-      if (a.favorite) li.querySelector('.time').insertAdjacentHTML('afterbegin', STAR_MARK);
-      const time = li.querySelector('time');
-      time.dateTime = a.updatedAt;
-      time.textContent = ago(a.updatedAt);
-      drawSub(li.querySelector('.sub'), a, ranks, (put) => { if (a.archived) put('badge', t('ui_archived_badge')); });
-      return li;
-    }));
+    $('find-list').replaceChildren(...findShown.map((a, i) => hitRow($('find-row'), `find-${i}`, a, ranks, (put) => { if (a.archived) put('badge', t('ui_archived_badge')); })));
     const none = hits.length === 0;
     $('find-list').hidden = none;
     $('find-none').hidden = !none;
