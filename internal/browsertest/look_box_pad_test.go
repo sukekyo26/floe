@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
@@ -49,21 +50,17 @@ var boxPadKit = map[string]string{
 	"templates/boxpad/example.yaml": "lang: en\ntemplate: boxpad\nparts:\n  - text: x\n",
 }
 
-// basePad is base.css's --floe-row-pad, --floe-pad-block and --floe-pad-inline in px (0.4rem, 1.1rem, 1.3rem), which
-// floe's themes leave as they are: a theme that sets one draws every box otherwise, which a page measured by its own
-// variables would not tell.
-const basePad = "[6.4, 17.6, 20.8]"
-
 // measureBoxPad measures the padding of each box the page draws of those it names (a part's, or a built-in template's),
 // every one its selector finds: above and below --floe-pad-block and at the sides --floe-pad-inline, read in the box,
 // but facts' cards, rows padded --floe-row-pad above and below, details' title, as tall as a row of its own (0.8rem)
 // and so measured at the sides alone, and details' body, of no padding above. A tree whose list paints a ground of its
-// own sits in a frame a theme draws around the box (default's): the list is measured as the box. When want ([row,
-// block, inline] in px, else null) is given, the variables read in each box must be those.
-// LIMIT: the padding of a theme's frame around a tree is not measured: it is the theme's decoration, as its border is.
+// own sits in a frame a theme draws around the box (default's): the list is measured as the box. The variables read in
+// each box must be want's (pads, as JSON), those of the page.
+// LIMIT: the padding of a theme's frame around a tree, and details' title above and below, are not measured: the one is
+// the theme's decoration, as its border is, the other a row's height of details' own.
 // It returns {seen, amiss}: the boxes it measured, and for each padded otherwise its part (or the template's box, or
 // "theme" for variables set otherwise) and how.
-func measureBoxPad(want string) string {
+func measureBoxPad(want pads) string {
 	return `((want) => {
   const boxes = {
     options: '[data-floe-part=options] .card', asks: '[data-floe-part=asks] .card', checks: '[data-floe-part=checks]', chart: '[data-floe-part=chart]', stats: '[data-floe-part=stats] .card', facts: '[data-floe-part=facts] .card',
@@ -73,7 +70,7 @@ func measureBoxPad(want string) string {
     details: '[data-floe-part=details] > summary', 'details body': '[data-floe-part=details] > div',
     runbook: '.needs, .rollback', handoff: '.board section',
   };
-  ` + pxJS + `
+  ` + padsJS + `
   const ground = (e) => { const c = getComputedStyle(e); return c.backgroundColor !== 'rgba(0, 0, 0, 0)' || c.backgroundImage !== 'none'; };
   let seen = 0;
   const amiss = [], off = (a, b) => Math.abs(a - b) > 0.1;
@@ -82,9 +79,9 @@ func measureBoxPad(want string) string {
       seen++;
       const list = name === 'tree' && e.querySelector(':scope > ul');
       if (list && ground(list)) e = list;
-      const vars = [px(e, 'var(--floe-row-pad)'), px(e, 'var(--floe-pad-block)'), px(e, 'var(--floe-pad-inline)')];
-      if (want && vars.some((v, i) => off(v, want[i]))) amiss.push({ at: 'theme', text: name + ' reads --floe-row-pad, --floe-pad-block, --floe-pad-inline ' + vars.join(' ') + ', not base.css\'s ' + want.join(' ') });
-      const [row, block, inline] = vars, s = getComputedStyle(e);
+      const { Row: row, Block: block, Inline: inline } = pads(e);
+      if (off(row, want.Row) || off(block, want.Block) || off(inline, want.Inline)) amiss.push({ at: 'theme', text: name + ' reads --floe-row-pad, --floe-pad-block, --floe-pad-inline ' + [row, block, inline].join(' ') + ', not the page\'s ' + [want.Row, want.Block, want.Inline].join(' ') });
+      const s = getComputedStyle(e);
       const top = name === 'facts' ? row : name === 'details body' ? 0 : block, bottom = name === 'facts' ? row : block;
       const got = [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].map(parseFloat);
       const sides = [[got[0], top, 'above'], [got[1], inline, 'right'], [got[2], bottom, 'below'], [got[3], inline, 'left']]
@@ -94,15 +91,15 @@ func measureBoxPad(want string) string {
     }
   }
   return JSON.stringify({ seen, amiss });
-})(` + want + `)`
+})(` + mustJSON(want) + `)`
 }
 
 const lookBoxPadFix = "pad a box between parts by --floe-pad-block and --floe-pad-inline, not by numbers; a theme sets neither and pads no box"
 
 // lookBoxPad measures the box of every part that draws one (boxParts), and runbook's and handoff's examples, in every
-// theme (measureBoxPad): padded by base.css's variables, which a theme leaves as they are and writes no padding over (a
-// theme's decorations lie over it). A template of one's own setting the variables in its page.css pads every part's
-// box by them.
+// theme (measureBoxPad): padded by base.css's variables (basePads), which a theme leaves as they are and writes no
+// padding over (a theme's decorations lie over it). A template of one's own (boxPadKit) whose page.css sets both
+// variables otherwise pads every part's box by them.
 func lookBoxPad(t *testing.T, s *site) measured {
 	t.Helper()
 
@@ -120,11 +117,12 @@ func lookBoxPad(t *testing.T, s *site) measured {
 		}
 		files[name] = s.write(t, name+".yaml", string(data))
 	}
+	base := basePads(t, s)
 	var m measured
 	open := func(what, file, slug, theme string) {
 		s.floe(t, "publish", file, "--slug", slug, "--theme", theme)
 		s.b.navigate("/a/" + slug + "/?raw")
-		m.add(s.b.measure(what, measureBoxPad(basePad)))
+		m.add(s.b.measure(what, measureBoxPad(base)))
 	}
 	for _, theme := range themes {
 		name := theme.Name()
@@ -136,7 +134,11 @@ func lookBoxPad(t *testing.T, s *site) measured {
 	s.own(t, boxPadKit)
 	s.floe(t, "publish", s.write(t, "own.yaml", "template: boxpad\nlang: en\ntitle: Boxes\nparts:\n"+boxParts), "--slug", "boxes-own")
 	s.b.navigate("/a/boxes-own/?raw")
-	m.add(s.b.measure("boxParts in boxpad", measureBoxPad("null")))
+	own := padsOn(t, s)
+	if own.Block == base.Block || own.Inline == base.Inline {
+		m.amiss = append(m.amiss, amiss{Page: "boxParts in boxpad", At: "boxpad", Text: fmt.Sprintf("its page.css's variables reach not the page: %+v, base.css's %+v", own, base)})
+	}
+	m.add(s.b.measure("boxParts in boxpad", measureBoxPad(own)))
 	return m
 }
 
@@ -144,6 +146,7 @@ func lookBoxPad(t *testing.T, s *site) measured {
 func brokenBoxPad(t *testing.T, s *site) (string, measured) {
 	t.Helper()
 
+	base := basePads(t, s)
 	s.brokenPage(t, map[string]string{"themes/thin/note.css": ":scope { padding: 3px; }\n"}, themePage("thin", "- note: { text: Ready. }\n"))
-	return "note", s.b.measure("broken", measureBoxPad(basePad))
+	return "note", s.b.measure("broken", measureBoxPad(base))
 }

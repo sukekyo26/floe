@@ -237,6 +237,35 @@ const pxJS = `const px = (e, v) => { const b = document.createElement('div'), d 
     b.style.cssText = 'position:absolute'; d.style.cssText = 'display:block;width:' + v; e.append(b);
     const w = parseFloat(getComputedStyle(d).width); b.remove(); return w; };`
 
+// pads are the lengths of the variables of a row's and a box's padding, in px: --floe-row-pad, --floe-pad-block and
+// --floe-pad-inline.
+type pads struct{ Row, Block, Inline float64 }
+
+// padsJS defines pads, the variables of padding read in the element e, as pads.
+const padsJS = pxJS + `
+  const pads = (e) => ({ Row: px(e, 'var(--floe-row-pad)'), Block: px(e, 'var(--floe-pad-block)'), Inline: px(e, 'var(--floe-pad-inline)') });`
+
+// padsOn returns the variables of padding the body of the page open reads.
+func padsOn(t *testing.T, s *site) pads {
+	t.Helper()
+
+	var p pads
+	if err := json.Unmarshal([]byte(s.b.eval(`(() => { `+padsJS+` return JSON.stringify(pads(document.body)); })()`)), &p); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// basePads returns base.css's variables of padding, read on a page in a theme of one's own that sets nothing.
+func basePads(t *testing.T, s *site) pads {
+	t.Helper()
+
+	s.own(t, map[string]string{"themes/plain/base.css": "/* no rules */\n"})
+	s.floe(t, "publish", s.write(t, "plain.yaml", themePage("plain", "- text: x\n")), "--slug", "plain")
+	s.b.navigate("/a/plain/?raw")
+	return padsOn(t, s)
+}
+
 // themePage is a page of report in theme that holds parts, a YAML list.
 func themePage(theme, parts string) string {
 	return "template: report\nlang: en\ntitle: Broken\ntheme: " + theme + "\nsections:\n  - heading: Broken\n    parts:\n" + indent(parts, "      ")

@@ -2,6 +2,7 @@ package browsertest_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"slices"
 	"strings"
@@ -72,60 +73,48 @@ var rowPadKit = map[string]string{
 	"templates/rowpad/example.yaml": "lang: en\ntemplate: rowpad\nparts:\n  - text: x\n",
 }
 
-// measureRowPad measures each row of every part and look drawn as rows: a table's cells, its head's and its body's,
-// but not its number columns, whose font a theme may change (swiss); the rows of the look rows (TestLookRule/marks
-// measures checklist's mark on its first line); and checklist's count, a row its box draws as ::after. Each is padded
+// rowsSel finds the rows of every part and look drawn as rows: a table's cells, its head's and its body's, but not
+// its number columns, whose font a theme may change (swiss); the rows of the look rows; and facts' cards.
+const rowsSel = `':is([data-floe-part], [data-floe-look~="table"]) :is(thead th, tbody td):not(.num), ' +
+    '[data-floe-look~="rows"] > *, :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], [data-floe-part="links"]) > *, ' +
+    '[data-floe-part="facts"] > .card'`
+
+// rowOwnerJS defines owner, the part (or "look rows", "look table") a row is of.
+const rowOwnerJS = `const owner = (e) => { const p = e.parentElement.closest('[data-floe-part], [data-floe-look]'); return p.dataset.floePart || 'look ' + p.dataset.floeLook; };`
+
+// measureRowPad measures each row (rowsSel), and checklist's count, a row its box draws as ::after: each is padded
 // --floe-row-pad above and below and, but a table's cell, whose sides are its columns' gaps a theme may change,
-// --floe-pad-inline at the left and the right, read in the row, in the page's line height. The box of every part and
-// element drawn as rows is padded as that of an element of html's rows on the page, when there is one. When want
-// ([row, block, inline] in px, else null) is given, the variables read in each row must be those.
+// --floe-pad-inline at the left and the right, read in the row, and those read there are want's (pads, as JSON), the
+// page's.
 // It returns {seen, amiss, drawn}: the rows it measured, for each padded otherwise its part (or "look rows", "look
 // table", or "theme" for variables set otherwise) and how, and the parts and looks it found rows of.
-func measureRowPad(want string) string {
+func measureRowPad(want pads) string {
 	return `((want) => {
-  const ratio = (e) => { const c = getComputedStyle(e); return parseFloat(c.lineHeight) / parseFloat(c.fontSize); };
-  const page = ratio(document.body);
-  ` + pxJS + `
+  ` + padsJS + rowOwnerJS + `
   const off = (a, b) => Math.abs(a - b) > 0.1;
-  const owner = (e) => { const p = e.parentElement.closest('[data-floe-part], [data-floe-look]'); return p.dataset.floePart || 'look ' + p.dataset.floeLook; };
   let seen = 0;
   const amiss = [], drawn = new Set();
   const measure = (at, e, s, cell) => {
     seen++;
     drawn.add(at);
-    const vars = [px(e, 'var(--floe-row-pad)'), px(e, 'var(--floe-pad-block)'), px(e, 'var(--floe-pad-inline)')];
-    if (want && vars.some((v, i) => off(v, want[i]))) amiss.push({ at: 'theme', text: at + ' reads --floe-row-pad, --floe-pad-block, --floe-pad-inline ' + vars.join(' ') + ', not base.css\'s ' + want.join(' ') });
-    const [row, , inline] = vars;
+    const { Row: row, Inline: inline } = pads(e);
+    if (off(row, want.Row) || off(inline, want.Inline)) amiss.push({ at: 'theme', text: at + ' reads --floe-row-pad, --floe-pad-inline ' + row + ' ' + inline + ', not the page\'s ' + want.Row + ' ' + want.Inline });
     const sides = [[s.paddingTop, row, 'above'], [s.paddingBottom, row, 'below']];
     if (!cell) sides.push([s.paddingLeft, inline, 'left'], [s.paddingRight, inline, 'right']);
     const wrong = sides.filter(([g, w]) => off(parseFloat(g), w));
     if (wrong.length) amiss.push({ at, text: (e.matches('thead th') ? 'head ' : '') + 'padded ' + wrong.map(([g, w, side]) => side + ' ' + g + ', not ' + w + 'px').join(', ') });
   };
-  const rows = document.querySelectorAll(':is([data-floe-part], [data-floe-look~="table"]) :is(thead th, tbody td):not(.num), ' +
-    '[data-floe-look~="rows"] > *, :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], [data-floe-part="links"]) > *, ' +
-    '[data-floe-part="facts"] > .card');
-  for (const e of rows) {
-    const at = owner(e);
-    measure(at, e, getComputedStyle(e), e.matches('th, td'));
-    if (off(ratio(e), page)) amiss.push({ at, text: 'line height ' + ratio(e).toFixed(2) + ', the page\'s ' + page.toFixed(2) });
-  }
+  for (const e of document.querySelectorAll(` + rowsSel + `)) measure(owner(e), e, getComputedStyle(e), e.matches('th, td'));
   for (const list of document.querySelectorAll('[data-floe-part="checklist"]')) measure('checklist', list, getComputedStyle(list, '::after'), false);
-  const html = document.querySelector('div[data-floe-look="rows"]'), box = (e) => getComputedStyle(e).padding;
-  if (html) {
-    for (const e of document.querySelectorAll('[data-floe-look~="rows"], :is([data-floe-part="entries"], [data-floe-part="keys"], [data-floe-part="checklist"], [data-floe-part="links"])')) {
-      seen++;
-      if (box(e) !== box(html)) amiss.push({ at: e.dataset.floePart || 'look rows', text: 'its box padded ' + box(e) + ', html\'s rows ' + box(html) });
-    }
-  }
   return JSON.stringify({ seen, amiss, drawn: [...drawn] });
-})(` + want + `)`
+})(` + mustJSON(want) + `)`
 }
 
 // rowsSection is a section of design's and postmortem's more holding an element of html that takes the look rows.
 const rowsSection = "  - heading: Rows\n    parts:\n      - html: |\n          <div data-floe-look=\"rows\"><p>One</p><p>Two</p></div>\n"
 
 // rowsOn measures the page open, told as what, as measureRowPad does, and returns what it found rows of too.
-func rowsOn(t *testing.T, s *site, what, want string) (measured, []string) {
+func rowsOn(t *testing.T, s *site, what string, want pads) (measured, []string) {
 	t.Helper()
 
 	raw := s.b.eval(measureRowPad(want))
@@ -139,9 +128,9 @@ func rowsOn(t *testing.T, s *site, what, want string) (measured, []string) {
 const lookRowPadFix = "pad a row by --floe-row-pad above and below and --floe-pad-inline at the sides: take the look rows or table, " +
 	"and write no padding of a row; a theme sets neither"
 
-// lookRowPad measures rowParts in every theme, on the screen and printed, design's and postmortem's examples (their
-// pages' line heights are not report's) and rowParts in a template of one's own setting the variables in its page.css,
-// as measureRowPad does. Every part that takes the look rows or table, and table and facts, must be drawn as rows in
+// lookRowPad measures rowParts in every theme, on the screen and printed, and design's and postmortem's examples, by
+// base.css's variables (basePads), and rowParts in a template of one's own (rowPadKit) whose page.css sets them
+// otherwise, by those, as measureRowPad does. Every part that takes the look rows or table, and table and facts, must be drawn as rows in
 // rowParts.
 func lookRowPad(t *testing.T, s *site) measured {
 	t.Helper()
@@ -157,6 +146,7 @@ func lookRowPad(t *testing.T, s *site) measured {
 			rowed = append(rowed, name)
 		}
 	}
+	base := basePads(t, s)
 	file := s.write(t, "rows.yaml", rowPadPage)
 	var m measured
 	for _, theme := range themes {
@@ -164,7 +154,7 @@ func lookRowPad(t *testing.T, s *site) measured {
 		s.b.navigate("/a/rows-" + theme + "/?raw")
 		for _, media := range []string{"screen", "print"} {
 			s.b.media(media)
-			got, drawn := rowsOn(t, s, "rowParts in "+theme+" on "+media, basePad)
+			got, drawn := rowsOn(t, s, "rowParts in "+theme+" on "+media, base)
 			m.add(got)
 			for _, name := range rowed {
 				if !slices.Contains(drawn, name) {
@@ -181,13 +171,17 @@ func lookRowPad(t *testing.T, s *site) measured {
 		}
 		s.floe(t, "publish", s.write(t, sample+".yaml", string(data)+rowsSection), "--slug", "rows-"+sample)
 		s.b.navigate("/a/rows-" + sample + "/?raw")
-		got, _ := rowsOn(t, s, sample, basePad)
+		got, _ := rowsOn(t, s, sample, base)
 		m.add(got)
 	}
 	s.own(t, rowPadKit)
 	s.floe(t, "publish", s.write(t, "own.yaml", "template: rowpad\nlang: en\ntitle: Rows\nparts:\n"+rowParts), "--slug", "rows-own")
 	s.b.navigate("/a/rows-own/?raw")
-	got, _ := rowsOn(t, s, "rowParts in rowpad", "null")
+	own := padsOn(t, s)
+	if own.Row == base.Row || own.Inline == base.Inline {
+		m.amiss = append(m.amiss, amiss{Page: "rowParts in rowpad", At: "rowpad", Text: fmt.Sprintf("its page.css's variables reach not the page: %+v, base.css's %+v", own, base)})
+	}
+	got, _ := rowsOn(t, s, "rowParts in rowpad", own)
 	m.add(got)
 	return m
 }
@@ -196,8 +190,9 @@ func lookRowPad(t *testing.T, s *site) measured {
 func brokenRowPad(t *testing.T, s *site) (string, measured) {
 	t.Helper()
 
+	base := basePads(t, s)
 	s.brokenPage(t, map[string]string{"themes/thin/links.css": ":scope > * { padding-block: 3px; }\n"},
 		themePage("thin", "- links: [{ title: Docs, url: 'https://example.com/docs', text: read }]\n"))
-	got, _ := rowsOn(t, s, "broken", basePad)
+	got, _ := rowsOn(t, s, "broken", base)
 	return "links", got
 }
