@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -178,6 +179,19 @@ func TestTagThroughServer(t *testing.T) {
 		if got := run(1, "tag", "d", flag, "a\xffb"); got != notUTF8(flag) {
 			t.Errorf("floe tag d %s of no UTF-8: %q", flag, got)
 		}
+	}
+}
+
+// A tag that is no UTF-8 is refused before the server is started.
+func TestTagNotUTF8NoServer(t *testing.T) {
+	t.Parallel()
+
+	env := map[string]string{"HOME": t.TempDir(), "FLOE_PORT": strconv.Itoa(freePort(t))}
+	if code, _, errs := runIn("", env, "tag", "d", "--add", "a\xffb"); code != 1 || errs != notUTF8("--add") {
+		t.Errorf("floe tag d --add of no UTF-8 = %d, %q", code, errs)
+	}
+	if code, out, _ := runIn("", env, "stop"); code != 0 || out != "server is not running\n" {
+		t.Errorf("floe stop after = %d, %q", code, out)
 	}
 }
 

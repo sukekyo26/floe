@@ -294,12 +294,8 @@ func (a *app) tagCmd() *cobra.Command {
 		Long: `Add tags to pages and remove tags from them, in order, stopping at the first failure. A name is taken
 as written, trimmed, commas and all; one on a page already is kept once. The names given to --remove
 are taken off first, then those given to --add are put on, so a name given to both stays on the page.`,
-		Args: usage(func(cmd *cobra.Command, args []string) error {
-			if err := cobra.MinimumNArgs(1)(cmd, args); err != nil {
-				return err //nolint:wrapcheck // cobra's words, which usage tells
-			}
-			return cmd.ValidateFlagGroups()
-		}),
+		Args:    usage(cobra.MinimumNArgs(1)),
+		PreRunE: flagGroups,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			body := server.Edit{
 				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: nil,
@@ -317,12 +313,21 @@ are taken off first, then those given to --add are put on, so a name given to bo
 // eachPage sends method with body to each page of slugs in order, stopping at the first failure, a page not there
 // told by its slug.
 func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body any) error {
+	// Encoded once, before the server is asked or started: a text given that is no UTF-8 is refused first.
+	var sent any
+	if body != nil {
+		b, err := encode(body, sentAt)
+		if err != nil {
+			return err
+		}
+		sent = jsontext.Value(b)
+	}
 	c, err := a.client(cmd.Context(), true)
 	if err != nil {
 		return err
 	}
 	for _, slug := range slugs {
-		err = c.do(cmd.Context(), method, "/api/artifacts/"+url.PathEscape(slug), body, nil)
+		err = c.do(cmd.Context(), method, "/api/artifacts/"+url.PathEscape(slug), sent, nil)
 		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
 			return usererr.New("store_no_page", slug)
 		}

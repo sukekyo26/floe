@@ -99,6 +99,10 @@ func (o *written) Write(p []byte) (int, error) {
 	return n, err //nolint:wrapcheck // kept as it is, for Run to tell
 }
 
+// flagGroups refuses flags given together that the command's groups do not take, as a usage error: a PreRunE, so that
+// cobra answers --help first, and asks before its own asking, which is unmarked as a usage error.
+var flagGroups = usage(func(cmd *cobra.Command, _ []string) error { return cmd.ValidateFlagGroups() })
+
 // usage marks the errors of an argument validator as usage errors, once.
 func usage(validate cobra.PositionalArgs) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
