@@ -984,7 +984,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	defer b.unsize()
 
 	// The bar of the box and its menu, opened and closed, by what each thing is: only what is seen.
-	const named = `const name = (e) => ['diff-open', 'fav-item', 'mark-unread', 'select', 'pin-item', 'task-set', 'task-open', 'edit', 'copy', 'download', 'open', 'archive', 'star', 'delete'].find((c) => e.classList.contains(c));`
+	const named = `const name = (e) => ['diff-open', 'fav-item', 'mark-unread', 'select', 'tag-item', 'pin-item', 'task-set', 'task-open', 'edit', 'copy', 'download', 'open', 'archive', 'star', 'delete'].find((c) => e.classList.contains(c));`
 	shown := func(box string) string {
 		t.Helper()
 
