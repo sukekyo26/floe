@@ -392,9 +392,9 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	for name, parent := range map[string]string{
 		"lost": "gone", "self": "self", "gp": "", "pa": "gp", "ch": "pa", "x": "y", "y": "x", "pagesonly": "t-pages",
 	} {
-		all["proj"][name] = store.Task{Title: "", State: "waiting", Step: "", At: at, URL: "", Steps: nil, Parent: parent}
+		all["proj"][name] = store.Task{Title: "", State: "waiting", Step: "", At: at, URL: "", Steps: nil, Parent: parent, Rev: 0}
 	}
-	all["proj"]["proto"] = store.Task{Title: "", State: "waiting", Step: "", At: at, URL: "", Steps: nil, Parent: "constructor"}
+	all["proj"]["proto"] = store.Task{Title: "", State: "waiting", Step: "", At: at, URL: "", Steps: nil, Parent: "constructor", Rev: 0}
 	text, err = json.Marshal(all)
 	if err != nil {
 		t.Fatal(err)
@@ -581,10 +581,16 @@ func TestUITaskSetParent(t *testing.T) { //nolint:paralleltest // the browser te
 		t.Errorf("emptied: %q", got)
 	}
 
-	// A field left alone sends nothing: a parent written meanwhile stays, as a parent left in it does.
+	// A task written meanwhile, its parent set: refused, the fields opened again of it; a field left alone then sends nothing, and the parent
+	// stays.
 	dialog("b")
 	s.floe(t, "work", "--project", "proj", "--task", "#2", "--parent", "#1")
 	field("set-step", "later")
+	b.eval("document.getElementById('set').requestSubmit()")
+	b.until("refused", "!document.getElementById('set-error').hidden")
+	if got := b.eval("document.getElementById('set-parent').value"); got != "#1" {
+		t.Errorf("the parent opened again: %q", got)
+	}
 	save()
 	if got := parents(); got != "|#1|#1" {
 		t.Errorf("written meanwhile: %q", got)

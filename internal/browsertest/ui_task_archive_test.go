@@ -14,8 +14,8 @@ import (
 )
 
 // A task archived by its own button, of no page, of pages or of pages archived already: its state moves it, whatever its pages, and the same
-// button gives it back to done with its pages. Its head says so where its state was. Of a parent, it is the parent's alone. A task forgotten
-// elsewhere is refused and does not come back; a refused write leaves the pages; a page refused leaves the task as written, and the page on its row.
+// button gives it back to done. Its pages are not touched either way. Its head says so where its state was. Of a parent, it is the parent's
+// alone. A task forgotten elsewhere is refused and does not come back; a refused write leaves the pages.
 func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -45,8 +45,6 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	task("#kid2", "--state", "archived", "--parent", "#up")
 	task("#forgot", "--state", "done")
 	page("f1", "--task", "#refused", "--state", "done")
-	page("f2", "--task", "#part", "--state", "done")
-	page("f3", "--task", "#part")
 	defer b.unsize()
 	b.size(1440, 900, false)
 
@@ -111,25 +109,13 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	b.until("no press more", "!archivingTask")
 	out = append(out, "a double press: "+b.eval(button+".textContent + ' ' + tasksOf().find((x) => x.name === '#double').state"))
 
-	// A page put on it since it was drawn goes with it, the pages read after the task is written.
-	page("l1", "--task", "#late", "--state", "done")
-	open("#late")
-	b.eval("pressedAt = performance.now() + 1e9")
-	page("l2", "--task", "#late")
-	b.eval(button + ".click()")
-	b.until("the pages", "!archivingTask && items.filter((a) => a.work?.task === '#late').length === 2")
-	out = append(out, "a page since: "+b.eval("items.filter((a) => a.work?.task === '#late').map((a) => a.slug + (a.archived ? '*' : '')).sort().join()"))
-	b.eval("pressedAt = -Infinity")
-
-	// Of pages: the pages go with it, and come back with it.
+	// Of pages: the task alone, its pages left as they are, either way.
 	open("#pages")
 	pressTaskArchive(b, "Bring the archive back")
-	b.until("the pages", "items.filter((a) => a.work?.task === '#pages' && a.archived).length === 2")
 	head("pages, archived")
 	shelf("with #pages in the archive")
 	open("#pages")
 	pressTaskArchive(b, "Archive the task")
-	b.until("the pages back", "items.filter((a) => a.work?.task === '#pages' && !a.archived).length === 2")
 	head("pages, given back")
 
 	// Its pages archived do not move it: it is done, and archived by its button.
@@ -191,24 +177,6 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	out = append(out, "not reached: "+b.eval("document.getElementById('error').textContent + ' | ' + tasksOf().find((x) => x.name === '#refused').state"))
 	b.eval("fetch = realFetch; showError('')")
 
-	// Every page refused: the task as written, said so, and each page on its row.
-	page("f4", "--task", "#allpages", "--state", "done")
-	open("#allpages")
-	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' && String(u).startsWith('/api/artifacts') ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); ` + button + `.click()`)
-	b.until("the refusal", "!archivingTask && !document.getElementById('error').hidden")
-	out = append(out, "every page refused: "+b.eval("[...document.querySelectorAll('.toast')].at(-1).textContent + ' | ' + document.getElementById('error').textContent + ' | ' + tasksOf().find((x) => x.name === '#allpages').state"))
-	b.eval("fetch = realFetch; showError('')")
-
-	// A page refused: the task as written, and the page on its row.
-	open("#part")
-	b.eval(`window.realFetch = fetch; fetch = (u, o) => (o?.method === 'PATCH' && String(u).startsWith('/api/artifacts/f3') ? Promise.resolve(new Response('no', { status: 500 })) : realFetch(u, o)); ` + button + `.click()`)
-	b.until("the refusal", "!archivingTask && !document.getElementById('error').hidden")
-	b.until("the other page", "items.find((a) => a.slug === 'f2').archived")
-	out = append(out, "a page refused: "+b.eval("document.getElementById('error').textContent"))
-	b.until("the head", button+".textContent === 'Bring the archive back'")
-	head("a page refused, the task archived")
-	b.eval("fetch = realFetch")
-
 	// Archived elsewhere with the choices open: they stay until closed, and the word takes their place then.
 	task("#open", "--state", "done")
 	open("#open")
@@ -268,7 +236,7 @@ func TestUITaskArchive(t *testing.T) { //nolint:paralleltest // the browser test
 	}
 }
 
-const taskArchiveWant = `at first: done #forgot,#marked,#none,#pages,#part,#refused,#up | archive #kid2
+const taskArchiveWant = `at first: done #forgot,#marked,#none,#pages,#refused,#up | archive #kid2
 no page: Archive the task | done | no word | rows  | 
 no page, archived: Bring the archive back | no select | Archive | rows  | task-archive
 said: Archived #none
@@ -276,9 +244,8 @@ the way up: /tasks?project=proj&view=archived
 no page, given back: Archive the task | done | no word | rows  | task-archive
 said: Brought #none back from the archive
 a double press: Bring the archive back archived
-a page since: l1*,l2*
-pages, archived: Bring the archive back | no select | Archive | rows p1*,p2* | task-archive
-with #pages in the archive: done #forgot,#marked,#none,#part,#refused,#up | archive #double,#kid2,#late,#pages,#still
+pages, archived: Bring the archive back | no select | Archive | rows p1,p2 | task-archive
+with #pages in the archive: done #forgot,#marked,#none,#refused,#up | archive #double,#kid2,#pages,#still
 pages, given back: Archive the task | done | no word | rows p1,p2 | task-archive
 pages archived by floe archive: Archive the task | done | no word | rows m1* | 
 those, archived: Bring the archive back | no select | Archive | rows m1* | task-archive
@@ -289,14 +256,11 @@ the parent archived: #kid In progress,#kid2 Archive
 a child added: #kid3 To do,#kid In progress,#kid2 Archive
 the child: doing
 its parent, from the child: #up
-with the parent in the archive: done #forgot,#none,#pages,#part,#refused | archive #double,#kid2,#late,#marked,#still,#up
+with the parent in the archive: done #forgot,#none,#pages,#refused | archive #double,#kid2,#marked,#still,#up
 forgotten: Could not save: task #forgot is no longer there
 refused: Could not save: no
 refused, as it was: Archive the task | done | no word | rows f1 | 
 not reached: Could not save: no server | done
-every page refused: Archived #allpages | 1 could not be changed (HTTP 500: no). | archived
-a page refused: 1 could not be changed (HTTP 500: no).
-a page refused, the task archived: Bring the archive back | no select | Archive | rows f3,f2* | 
 archived elsewhere, open: false true
 closed: true false
 the focus on the choices: task-archive
