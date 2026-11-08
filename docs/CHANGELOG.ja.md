@@ -251,6 +251,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 変更
 
+- 変更：`stats`・`facts`・`decision`・`asks`・`options` のカードの中の間を、見た目 `cards` の間（`--cards-gap`、0.4rem）にそろえた。stats の行どうしと facts の名前と値は少し離れ、decision と asks の行どうしは少し近づく。テーマの `--cards-gap` でも変わる。部品を持つ options では、1 行に 1 枚の部品の無いカードと、番号を行の外に描くテーマのカードが 0.4rem 高くなる。
 - 変更：テーマが変えられる部品の変数を、部品の根（`:scope`）に置くようにした。自分のテーマが、floe のテーマと同じく部品・見た目のファイルの `:scope` に置いた値が効く（numbered・marked・timeline・links の `--floe-mark`・`--floe-mark-gap`、checklist の `--floe-mark-gap`、cards の番号の `:scope.numbered`、`--checks-gap`、`--entries-row-gap`）。floe のページの見た目は変わらない。
 
 - 変更：docs と図の schema が、raw の SVG をテーマの色に合わせる書き方を言う。パレットの変数（`fill="var(--accent)"`）と、`data-floe-tone` の下の `var(--tone)` で書く。部品の class は raw に使わず、例 `sequence` だけが使っていた class `band` は無くなった（書いた raw は黒になる）。
