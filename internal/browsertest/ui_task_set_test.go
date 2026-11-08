@@ -234,9 +234,9 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval("document.getElementById('set-task').focus()")
 	field("set-task", "#")
 	b.still()
-	out = append(out, "under the field once still: "+b.eval("document.getElementById('set-task-names').matches(':popover-open') && (() => { "+
+	out = append(out, "under the field once still: "+b.until("the suggestions under the field once still", "document.getElementById('set-task-names').matches(':popover-open') && (() => { "+
 		"const f = document.getElementById('set-task').getBoundingClientRect(), r = document.getElementById('set-task-names').getBoundingClientRect(); "+
-		"return Math.abs(r.top - f.bottom - 4) < 0.5 && Math.abs(r.left - f.left) < 0.5 && 'yes'; })() || 'no'"))
+		"return Math.abs(r.top - f.bottom - 4) < 0.5 && Math.abs(r.left - f.left) < 0.5 && 'yes'; })()"))
 	b.pressKey(kb.Escape)
 	field("set-task", "#2")
 	// A URL changed, the name then changed: the URL is that task's, and nothing of it is sent.
