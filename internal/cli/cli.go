@@ -54,7 +54,7 @@ func Run(args []string, env Env) int {
 	root.SetArgs(args)
 	root.SetOut(out)
 	root.SetErr(env.Stderr)
-	err := readable(root, args)
+	err := readable(env, args)
 	if err == nil {
 		err = root.Execute()
 	}
@@ -99,6 +99,10 @@ func (o *written) Write(p []byte) (int, error) {
 	return n, err //nolint:wrapcheck // kept as it is, for Run to tell
 }
 
+// flagGroups refuses flags given together that the command's groups do not take, as a usage error: a PreRunE, so that
+// cobra answers --help first, and asks before its own asking, which is unmarked as a usage error.
+var flagGroups = usage(func(cmd *cobra.Command, _ []string) error { return cmd.ValidateFlagGroups() })
+
 // usage marks the errors of an argument validator as usage errors, once.
 func usage(validate cobra.PositionalArgs) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
@@ -142,7 +146,7 @@ func newRoot(env Env, out io.Writer) (*cobra.Command, *app) {
 	a := &app{env: env, out: out, warnings: nil, told: nil}
 	root.AddCommand(
 		a.archiveCmd(), a.checkCmd(), a.diagramCmd(), a.iconsCmd(), a.listCmd(), a.partCmd(), a.publishCmd(), a.rebuildCmd(),
-		a.renderCmd(), a.rmCmd(), a.serveCmd(), a.stopCmd(), a.templateCmd(), a.themeCmd(), a.workCmd(),
+		a.renderCmd(), a.rmCmd(), a.serveCmd(), a.stopCmd(), a.tagCmd(), a.templateCmd(), a.themeCmd(), a.workCmd(),
 	)
 	// cobra adds these as it runs: here, so that readable finds them, and their arguments are wrapped below.
 	root.InitDefaultHelpCmd()
@@ -177,16 +181,17 @@ func newRoot(env Env, out io.Writer) (*cobra.Command, *app) {
 // error, so that a misspelt command would end well. Its flags are read, and such a command is refused the
 // arguments it does not take (help takes the topics it has). One that runs is checked by cobra as it runs
 // it. cobra's own request for completions, which it adds as it runs, is its own command line, not one to
-// refuse.
-func readable(root *cobra.Command, args []string) error {
+// refuse. It reads them with floe's commands of its own, so that those that run read their flags once: a flag that
+// gathers (a slice) or counts would else hold what it was given twice.
+func readable(env Env, args []string) error {
 	if len(args) > 0 && slices.Contains([]string{cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd}, args[0]) {
 		return nil
 	}
+	root, _ := newRoot(env, io.Discard)
 	cmd, rest, err := root.Find(args)
 	if err != nil {
 		return usageOf(err)
 	}
-	// LIMIT: cobra reads the flags again as it runs; a flag that counts or gathers (a slice) would count twice.
 	if err := cmd.ParseFlags(rest); err != nil {
 		return usageOf(err)
 	}

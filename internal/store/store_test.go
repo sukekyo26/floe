@@ -282,7 +282,7 @@ func TestPublishKeepsTitle(t *testing.T) {
 }
 
 // An edit keeps tags trimmed, without the empty and the second of a name, in the order sent; an edit without them
-// (archiving too) leaves them, publishing again and renaming keep them, and none sent clears them off meta.json.
+// (archiving too) leaves them, publishing again and renaming keep them, and removing every one clears them off meta.json.
 func TestEditTags(t *testing.T) {
 	t.Parallel()
 
@@ -290,7 +290,7 @@ func TestEditTags(t *testing.T) {
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 	want := []string{"設計", "計画"}
-	edits := []store.Edit{{Tags: ptr([]string{"設計", " 計画 ", "設計", ""})}, {Favorite: ptr(true)}, {Archived: ptr(true)}}
+	edits := []store.Edit{{Tags: &store.TagsEdit{Add: []string{"設計", " 計画 ", "設計", ""}}}, {Favorite: ptr(true)}, {Archived: ptr(true)}}
 	for _, ed := range edits {
 		if _, err := s.Edit("d", ed); err != nil {
 			t.Fatal(err)
@@ -309,11 +309,60 @@ func TestEditTags(t *testing.T) {
 	if m := s.ReadMeta("e"); m == nil || !slices.Equal(m.Tags, want) {
 		t.Errorf("renamed: %+v", m)
 	}
-	if _, err := s.Edit("e", store.Edit{Tags: ptr([]string{" "})}); err != nil {
+	if _, err := s.Edit("e", store.Edit{Tags: &store.TagsEdit{Remove: []string{"設計", " 計画"}}}); err != nil {
 		t.Fatal(err)
 	}
 	if meta := read(t, filepath.Join(root, "e", "meta.json")); strings.Contains(meta, "tags") {
 		t.Errorf("cleared, meta.json still has tags: %s", meta)
+	}
+}
+
+// An edit takes the names to remove off the page's tags, trimmed and as written, then puts those to add on, so that each
+// writer's change keeps the others'.
+func TestEditTagsAddRemove(t *testing.T) {
+	t.Parallel()
+
+	s, _ := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	for _, c := range []struct {
+		add, remove, want []string
+	}{
+		{[]string{"CLI"}, nil, []string{"設計", "図", "CLI"}},
+		{[]string{"設計"}, nil, []string{"設計", "図"}},
+		{[]string{" 設計 "}, nil, []string{"設計", "図"}},
+		{[]string{"Design"}, nil, []string{"設計", "図", "Design"}},
+		{nil, []string{"図"}, []string{"設計"}},
+		{nil, []string{"無い"}, []string{"設計", "図"}},
+		{nil, []string{" 図 "}, []string{"設計"}},
+		{nil, []string{""}, []string{"設計", "図"}},
+		{[]string{"設計"}, []string{"設計"}, []string{"図", "設計"}},
+		{[]string{"設計、実装"}, nil, []string{"設計", "図", "設計、実装"}},
+		{[]string{""}, nil, []string{"設計", "図"}},
+		{nil, nil, []string{"設計", "図"}},
+	} {
+		if _, err := s.Edit("d", store.Edit{Tags: &store.TagsEdit{Remove: []string{"設計", "図", "CLI", "Design", "設計、実装"}}}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.Edit("d", store.Edit{Tags: &store.TagsEdit{Add: []string{"設計", "図"}}}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.Edit("d", store.Edit{Tags: &store.TagsEdit{Add: c.add, Remove: c.remove}}); err != nil {
+			t.Fatal(err)
+		}
+		if got := s.ReadMeta("d").Tags; !slices.Equal(got, c.want) {
+			t.Errorf("add %q, remove %q: %q, want %q", c.add, c.remove, got, c.want)
+		}
+	}
+	// Two writers, each sending its own change, keep both.
+	if _, err := s.Edit("d", store.Edit{Tags: &store.TagsEdit{Add: []string{"a"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Edit("d", store.Edit{Tags: &store.TagsEdit{Add: []string{"b"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := s.ReadMeta("d").Tags; !slices.Equal(got, []string{"設計", "図", "a", "b"}) {
+		t.Errorf("two writers: %q", got)
 	}
 }
 
@@ -474,7 +523,7 @@ func TestOwners(t *testing.T) {
 	s, root := newStore(t)
 	dw := picKit(t, "", "")
 	publish(t, s, dw, "same.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
-	if _, err := s.Edit("same", store.Edit{Tags: ptr([]string{"a"})}); err != nil {
+	if _, err := s.Edit("same", store.Edit{Tags: &store.TagsEdit{Add: []string{"a"}}}); err != nil {
 		t.Fatal(err)
 	}
 	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q"}, store.Options{})

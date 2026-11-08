@@ -16,4 +16,5 @@ paths:
 - **描くものはまとまり 1 つ**：サーバーは `Config.Drawing` で読んだ Kit とアイコン集を 1 つ持ち、自分の 3 つの根とアイコン集を 1 つのタイマーで毎秒見張り、変われば丸ごと読み直す。見張りが後で直せない描き（ストアに書くものと download）は、描く前に同じ見張りをその場で 1 回走らせる（`latest`）。読めなければ `store.Drawing.Err` で描く出力を全部止める
 - **API の誤りは `refuse` 1 つ**：usererr の Report を返し、409 は `store.Conflict` で見分ける。プロトコルの断り（forbidden host・origin・not found、`/api/stop` が名指す pid が自分でないときの 409 など。floe のコマンドが読み、ユーザーに見せない）は英語の固定の文
 - **書き込みの本文は `decodeStrict` 1 つで読む**：API の書き込みの本文は、送る形の型に `decodeStrict` が encoding/json/v2 だけで読み（v1 で読み直さない）、誤りは v2 の言葉のまま 400 で断る。受ける鍵は型の欄にだけ書き、map で読んで鍵を拾わない。floe のコマンドの要求は `daemon.Request` 1 つで組み、本文は v2 の `Marshal` で作り、CLI はユーザーの値を `encode` で確かめる。送る型のポインタの欄は `omitempty` でなく `omitzero`
+- **タグは足す・外すで書く**：残すページのタグを変えるのは `Edit` の `tags` の `add`・`remove` だけ。送るのはユーザーが変えた名前だけで、タグ全部も、読んだまま触っていない名前も送らない（ほかの書き手が後から書いた分を消さないため）
 - **前に読んだ版は `ReadBefore` 1 つ**：差分の起点と知らせの条件を決めるのは store の `ReadBefore` だけで、記録の `n` が最新の版でなければその版、最新の版なら `before`。どちらも今の版に無ければ 0

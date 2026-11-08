@@ -7,10 +7,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/servetest"
+	"github.com/sukekyo26/floe/internal/store"
 )
 
 // served is a server of floe with a template of its own that reads images, and data files in home/p for it:
@@ -126,6 +129,69 @@ func TestArchiveThroughServer(t *testing.T) {
 	}
 	if got := run(2, "archive"); got != "floe: requires at least 1 arg(s), only received 0: run floe --help\n" {
 		t.Errorf("floe archive: %q", got)
+	}
+}
+
+// floe tag puts tags on pages and takes them off in order, stopping at the first page not there; a name is one as
+// written, commas and all, and a name to remove and to add stays on.
+func TestTagThroughServer(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	run := func(want int, args ...string) string {
+		t.Helper()
+		code, out, errs := runIn(dir, env, args...)
+		if code != want {
+			t.Fatalf("floe %v = %d, %q, %q", args, code, out, errs)
+		}
+		return out + errs
+	}
+	tags := func(slug string) []string {
+		t.Helper()
+		return store.New(env["FLOE_DIR"]).ReadMeta(slug).Tags
+	}
+	run(0, "publish", "d.yaml")
+	run(0, "publish", "--link", "h.html")
+	run(0, "tag", "d", "h", "--add", "設計", "--add", "a,b")
+	if !slices.Equal(tags("d"), []string{"設計", "a,b"}) || !slices.Equal(tags("h"), []string{"設計", "a,b"}) {
+		t.Errorf("added: %q, %q", tags("d"), tags("h"))
+	}
+	run(0, "tag", "d", "--remove", "設計", "--add", "設計", "--remove", "a,b")
+	if !slices.Equal(tags("d"), []string{"設計"}) {
+		t.Errorf("removed and added: %q", tags("d"))
+	}
+	if got := run(1, "tag", "h", "none", "d", "--add", "x"); got != "floe: no page \"none\" (see floe list)\n" {
+		t.Errorf("floe tag h none d: %q", got)
+	}
+	if !slices.Contains(tags("h"), "x") || slices.Contains(tags("d"), "x") {
+		t.Errorf("floe tag went on past none, or stopped before it: %q, %q", tags("h"), tags("d"))
+	}
+	if got := run(1, "tag", "\xff", "--add", "x"); got != "floe: no page \"\xff\" (see floe list)\n" {
+		t.Errorf("floe tag of a slug no UTF-8: %q", got)
+	}
+	if got := run(2, "tag", "d"); got != "floe: at least one of the flags in the group [add remove] is required: run floe --help\n" {
+		t.Errorf("floe tag d: %q", got)
+	}
+	if got := run(2, "tag", "--add", "x"); got != "floe: requires at least 1 arg(s), only received 0: run floe --help\n" {
+		t.Errorf("floe tag --add x: %q", got)
+	}
+	for _, flag := range []string{"--add", "--remove"} {
+		if got := run(1, "tag", "d", flag, "a\xffb"); got != notUTF8(flag) {
+			t.Errorf("floe tag d %s of no UTF-8: %q", flag, got)
+		}
+	}
+}
+
+// A tag that is no UTF-8 is refused before the server is started.
+func TestTagNotUTF8NoServer(t *testing.T) {
+	t.Parallel()
+
+	env := map[string]string{"HOME": t.TempDir(), "FLOE_PORT": strconv.Itoa(freePort(t))}
+	if code, _, errs := runIn("", env, "tag", "d", "--add", "a\xffb"); code != 1 || errs != notUTF8("--add") {
+		t.Errorf("floe tag d --add of no UTF-8 = %d, %q", code, errs)
+	}
+	if code, out, _ := runIn("", env, "stop"); code != 0 || out != "server is not running\n" {
+		t.Errorf("floe stop after = %d, %q", code, out)
 	}
 }
 

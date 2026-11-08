@@ -676,7 +676,8 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	press(kb.Tab)
 	press(" ")
 	out = append(out, b.eval(boxes), b.eval(applies))
-	// Applied, each page whose tags change is sent them so, drawn once by the list read again before (changed since).
+	// Applied, each page the change would change is sent the names changed alone, drawn once by the list read again before
+	// (changed since).
 	b.eval("window.renders = 0; window.draw = render; render = () => { renders++; draw(); }; list = list.replace('Delta', 'Delta 1')")
 	b.eval("document.getElementById('tag-apply').click()")
 	out = append(out, b.until("the tags to be applied", "document.getElementById('bulk').hidden && calls.splice(0).sort().join(',')"),
@@ -738,12 +739,12 @@ func uiTags(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"ab plan", "plan2:true,設計1:false,設計、実装1:false false", "ab plan", "abcd -",
 		"old1:false,plan1:false false", "c 設計、実装", msg("ui_selected_n", 1) + msg("ui_selected_more"), "ac -",
 		"other2:false,plan0:true,設計1:false,設計、実装1:false false", "false", "abcd -",
-		msg("ui_tag_one_title", "Gamma"), "設計、実装:all:✓:,old:none:+:,plan:none:+:,設計:none:+:", `PATCH /api/artifacts/c {"tags":["設計、実装","old"]}`, "true",
+		msg("ui_tag_one_title", "Gamma"), "設計、実装:all:✓:,old:none:+:,plan:none:+:,設計:none:+:", `PATCH /api/artifacts/c {"tags":{"add":["old"],"remove":[]}}`, "true",
 		`PATCH /api/artifacts/c {"title":"G2"}`,
 		msg("ui_tag_bulk_title", 3), "plan:some:−:2/3,設計:some:−:1/3,old:none:+:,設計、実装:none:+:", "false", "plan solid",
 		"all:true none:true some:false all:true", "plan:all:✓:2/3,設計:none:+:1/3,old:all:✓:,設計、実装:none:+:", "true",
-		`PATCH /api/artifacts/a {"tags":["plan","old"]},PATCH /api/artifacts/b {"tags":["plan","old"]},PATCH /api/artifacts/d {"tags":["old","plan"]}`, "true", "1",
-		`PATCH /api/artifacts/a {"tags":["設計","plan","old"]},PATCH /api/artifacts/c {"tags":["設計、実装","old"]}`,
+		`PATCH /api/artifacts/a {"tags":{"add":["old","plan"],"remove":["設計"]}},PATCH /api/artifacts/b {"tags":{"add":["old","plan"],"remove":["設計"]}},PATCH /api/artifacts/d {"tags":{"add":["old","plan"],"remove":["設計"]}}`, "true", "1",
+		`PATCH /api/artifacts/a {"tags":{"add":["old"],"remove":[]}},PATCH /api/artifacts/c {"tags":{"add":["old"],"remove":[]}}`,
 		"plan:all:✓: false", msg("ui_tag_create", "new"), "plan:all:✓:,new:all:✓:,old:none:+:,設計:none:+:,設計、実装:none:+:", "true 0 true", "false",
 		"true 0",
 		"plan,設計,設計、実装", "ab plan", "true", msg("ui_narrow_n", 1), "abcd -", "shelf",

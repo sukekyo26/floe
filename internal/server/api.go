@@ -342,8 +342,8 @@ func (s *Server) stop(w http.ResponseWriter, r *http.Request) {
 	s.halt()
 }
 
-// Edit is a change of a page, as the management page and floe archive send it: store.Edit with its keys, which
-// edit converts to it (a field the two do not share fails the build). A field left out or null is not changed.
+// Edit is a change of a page, as the management page, floe archive and floe tag send it: store.Edit with its keys,
+// which edit converts to it (a field the two do not share fails the build). A field left out or null is not changed.
 type Edit struct {
 	Title       *string         `json:"title,omitzero"`
 	Description *string         `json:"description,omitzero"`
@@ -351,12 +351,12 @@ type Edit struct {
 	Slug        *string         `json:"slug,omitzero"`
 	Favorite    *bool           `json:"favorite,omitzero"`
 	Archived    *bool           `json:"archived,omitzero"`
-	Tags        *[]string       `json:"tags,omitzero"`
+	Tags        *store.TagsEdit `json:"tags,omitzero"`
 	Work        *store.WorkEdit `json:"work,omitzero"`
 }
 
-// edit changes a page as Edit, from the management page or floe archive, sends: its title, description, project, URL
-// name, favourite, archived or tags.
+// edit changes a page as Edit, from the management page, floe archive or floe tag, sends: its title, description,
+// project, URL name, favourite, archived, or the tags it adds and removes.
 func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 	slug := r.PathValue("slug")
 	if !store.ValidSlug(slug) {
