@@ -24,14 +24,14 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	s.floe(t, "work", "--project", project, "--task", "#kid", "--state", "doing", "--parent", "#up")
 
 	// The page's script: the looks stopped, every write to the store kept as sent; down fails every read, pageDown a page's write
-	const watch = `window.realLoad = load; load = (polled) => (polled ? Promise.resolve() : realLoad(polled));
+	const watch = `if (!window.realLoad) { window.realLoad = load; load = (polled) => (polled ? Promise.resolve() : realLoad(polled));
 		window.sent = []; window.realFetch = fetch; window.down = false; window.pageDown = false;
 		fetch = (u, o) => {
 			if (!o?.method && down) return Promise.reject(new TypeError('down'));
 			if (o?.method === 'PATCH' && pageDown && String(u).startsWith('/api/artifacts/')) return Promise.resolve(new Response('no', { status: 500 }));
 			if (o?.method === 'PATCH') sent.push(String(u).split('?')[0] + ' ' + o.body);
 			return realFetch(u, o);
-		}; 'watched'`
+		}; } 'watched'`
 	open := func(name string) {
 		t.Helper()
 		b.navigate("/tasks?project=proj&task=" + strings.ReplaceAll(name, "#", "%23"))
@@ -82,7 +82,12 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		return sent.join(' ; ') + ' | ' + tasksRead.tasks.proj['#kid'].state; })()`
 	say("reads failing, the state twice", twice)
 	const offBackOff = `(async () => { sent.length = 0; showError('');
-		const off = async () => { await unlinkTask(tasksOf().find((x) => x.name === '#kid'), '#up', false); };
+		// The button drawn before the reads failed, which the page cannot draw again
+		const off = async () => {
+			const n = sent.length;
+			document.querySelector('#task-up-rows .unlink').click();
+			await new Promise((r) => { const look = () => (sent.length === n || unlinking.size ? setTimeout(look, 10) : r()); look(); });
+		};
 		await off();
 		document.querySelector('#toasts .undo').click();
 		await new Promise((r) => { const look = () => (sent.length < 2 ? setTimeout(look, 10) : setTimeout(r, 50)); look(); });
@@ -103,9 +108,10 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// Set the task, its page's write refused: saving again is of the rev written, refused when another wrote it since, and else saved; a page
 	// whole, which reads the tasks only as the dialog opens, too
-	const setSave = `(async () => { const at = document.getElementById('set-error').textContent; document.getElementById('set').requestSubmit();
-		await new Promise((r) => { const look = () => (document.getElementById('set-dialog').open && document.getElementById('set-error').textContent === at ? setTimeout(look, 10) : r()); setTimeout(look, 10); });
-		return document.getElementById('set-dialog').open ? document.getElementById('set-error').textContent : 'saved'; })()`
+	const setSave = `(async () => { const at = document.getElementById('set-error').textContent; const n = sent.length; document.getElementById('set').requestSubmit();
+		const end = Date.now() + 5000;
+		await new Promise((r) => { const look = () => (Date.now() < end && document.getElementById('set-dialog').open && document.getElementById('set-error').textContent === at ? setTimeout(look, 10) : r()); setTimeout(look, 10); });
+		return document.getElementById('set-dialog').open ? document.getElementById('set-error').textContent + (Date.now() >= end ? ' (stuck: ' + sent.slice(n).join(' ; ') + ')' : '') : 'saved'; })()`
 	setOnce := func(where string) {
 		t.Helper()
 		b.eval(watch)
@@ -118,8 +124,18 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.navigate("/?project=proj")
 	b.until("the list", "items.some((a) => a.slug === 'pa')")
 	setOnce("the list")
+	// Written since and read by the page, the dialog showing what it wrote: refused
 	s.floe(t, "work", "--project", project, "--task", "#130", "--title", "another's")
+	b.eval("(async () => { await realLoad(); return 'read'; })()")
 	say("the list, written since", setSave)
+	b.eval("document.getElementById('set-dialog').close()")
+	// A new task, made by the save whose page's write is refused: saved again as there
+	b.eval("openTaskSet(items.find((a) => a.slug === 'pa'))")
+	b.until("the dialog", "document.getElementById('set-dialog').open")
+	b.eval("document.getElementById('set-task').value = '#new'; document.getElementById('set-task').dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('set-task-title').value = 'made'; pageDown = true")
+	say("a new task, the page refused", setSave)
+	b.eval("pageDown = false")
+	say("a new task, again", setSave)
 	b.navigate("/a/pa/")
 	b.until("the page", "items.some((a) => a.slug === 'pa')")
 	setOnce("whole")
@@ -136,6 +152,8 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		`off, the state, back: Could not save: task #kid has changed since it was read`,
 		`the list, the page refused: Could not save: HTTP 500: no`,
 		`the list, written since: Could not save: task #130 has changed since it was read: the tasks are read again, so check and save again`,
+		`a new task, the page refused: Could not save: HTTP 500: no`,
+		`a new task, again: saved`,
 		`whole, the page refused: Could not save: HTTP 500: no`,
 		`whole, again: saved`,
 	}, "|"))
