@@ -175,13 +175,13 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	say("free again", "[document.getElementById('tag-find').disabled, document.querySelector('#tag-dialog [data-close]').disabled, "+box("a5")+".disabled].join(' ')")
 	b.pressKey(kb.Escape)
 	// Whatever throws while they are sent, the dialog closes and is free again.
-	b.eval("window.realToast = toast; toast = () => { toast = window.realToast; throw new Error('thrown'); }")
+	b.eval("window.realActOn = actOn; actOn = () => { actOn = window.realActOn; throw new Error('thrown'); }")
 	b.eval("document.querySelector('#read-tags .tag-edit').click()")
 	b.until("the dialog", "document.getElementById('tag-dialog').open")
 	b.eval(box("a6") + ".click(); document.getElementById('tag-apply').click()")
 	out = append(out, "a throw: "+b.until("the dialog closed", "!document.getElementById('tag-dialog').open && "+
 		"[document.getElementById('tag-dialog').getAttribute('closedby'), document.getElementById('tag-find').disabled].join(' ')"))
-	b.eval("toast = window.realToast")
+	out = append(out, "nothing sent: "+tags("one"))
 	// A page gone from the list opens no dialog: none of its tags would be known.
 	b.eval("openPageTags({ slug: 'nowhere', title: 'Nowhere' }, null)")
 	say("of a page gone", "document.getElementById('tag-dialog').open")
@@ -258,14 +258,15 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"one toast: 1 1",
 		"free again: false false false",
 		"a throw: closerequest false",
+		"nothing sent: plan,a2,a4",
 		"of a page gone: false",
-		"the one left: a2:all,a4:all,a6:all,plan:all,a long name that the line cuts at its end:all,a1:none,a3:none,a5:none,a7:none / ",
+		"the one left: a2:all,a4:all,plan:all,a long name that the line cuts at its end:all,a1:none,a3:none,a5:none,a6:none,a7:none / ",
 		"none or several left: true true",
-		"a task's page: plan,a2,a4,a6 / true / " + changed("One") + " / true / true",
-		"the frame: plan,a2,a4,a6 / true / " + changed("One") + " / true / true",
+		"a task's page: plan,a2,a4 / true / " + changed("One") + " / true / true",
+		"the frame: plan,a2,a4 / true / " + changed("One") + " / true / true",
 		"the frame's menu: true",
-		"sent from the frame: plan,a2,a4,a6,a3",
-		"redrawn: plan,a2,a4,a6,a3 / true / " + changed("One") + " / true / true",
+		"sent from the frame: plan,a2,a4,a3",
+		"redrawn: plan,a2,a4,a3 / true / " + changed("One") + " / true / true",
 		"in print: none",
 		"the diff: hidden",
 		"narrow: true",
