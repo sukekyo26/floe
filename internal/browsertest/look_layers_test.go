@@ -1,6 +1,7 @@
 package browsertest_test
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -72,11 +73,20 @@ func (m *measured) expect(scene, got, want string) {
 	}
 }
 
-// lookLayersFloeOnly says why a writer cannot break layers: floe orders the layers (draw.pageStyle), and a writer's
-// CSS stands in them.
-const lookLayersFloeOnly = "floe orders the layers of a page's CSS (draw.pageStyle); a writer's CSS stands in its layer whatever its selectors"
+const lookLayersFix = "write CSS for its layer: a template's page.css, a theme's file, a part's or look's own; the layer, not the selector, " +
+	"decides, and write no !important, which turns the layers' order over"
 
-const lookLayersFix = "write CSS for its layer: a template's page.css, a theme's file, a part's or look's own; the layer, not the selector, decides"
+// layersNote tells, of the page of the template layers, the note's background, the theme's size of the mark (default's
+// --floe-mark, 2.25rem, over the template's), the template's margin; the template's own paragraph and the note's, in
+// the palette's colour on its ground; the animation and the face. layersNoteWant is what floe draws.
+const (
+	layersNote = `(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n);
+		return [s.backgroundColor, getComputedStyle(n, '::before').width, s.marginTop,
+			getComputedStyle(document.getElementById('own')).color, getComputedStyle(n.querySelector('p')).color,
+			document.querySelector('header').getAnimations()[0]?.animationName,
+			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`
+	layersNoteWant = "rgb(246, 232, 210) | 36px | 7px | rgb(255, 0, 0) | rgb(34, 33, 31) | held | true"
+)
 
 // lookLayers checks, in the browser, how floe puts a page's CSS together. The template's page.css, though its
 // selectors are the more specific, loses to the part's style and to the theme's style of the part, and still styles
@@ -85,11 +95,11 @@ const lookLayersFix = "write CSS for its layer: a template's page.css, a theme's
 // sets its text's colour with it, the palette's. Its @keyframes and @font-face, in floe's @scope, work. The theme's
 // base.css is under the template's page.css and the looks, and reaches the page but not what a part holds. A part's
 // style stops at a part it holds. floe's theme does not style a part of one's own that took the place of
-// floe's, but does those drawn in its look. floe's base draws the page's ground, colour and face in the theme's,
-// under a template that draws none of them, and the theme the parts in the colours a template sets. Nested, the
+// floe's, but does those drawn in its look, and draws the parts in the colours a template sets. Nested, the
 // outer look and the outer part win, as deep as they stand. floe's layout of the rows with a mark (floe.marks) is
 // under the template's page.css and over the looks' files. floe's start of every page (the body's margin, the column
 // .floe-column) is under the template's page.css and over the theme's base.css, and stops at a part's box.
+// (TestRenderedLayers measures what floe's base and a theme draw of a page's ground, which no layer decides.)
 func lookLayers(t *testing.T, s *site) measured {
 	t.Helper()
 
@@ -112,16 +122,8 @@ func lookLayers(t *testing.T, s *site) measured {
 		return [getComputedStyle(document.body).marginTop, m.maxWidth, m.paddingLeft, h.maxWidth, h.paddingLeft].join(' | ') })()`)
 	m.expect("column", got, "0px | 160px | 16px | none | 0px")
 
-	open("layers", "template: layers\nlang: en\nnote: { text: x, tone: warn }\n", "[data-floe-part=note]")
-	// The part's background, the theme's size of the mark (default's --floe-mark, 2.25rem, over the template's), the
-	// template's margin; the template's own paragraph and the note's, in the palette's colour on its ground; the animation
-	// and the face.
-	got = b.eval(`(() => { const n = document.querySelector('[data-floe-part=note]'), s = getComputedStyle(n);
-		return [s.backgroundColor, getComputedStyle(n, '::before').width, s.marginTop,
-			getComputedStyle(document.getElementById('own')).color, getComputedStyle(n.querySelector('p')).color,
-			document.querySelector('header').getAnimations()[0]?.animationName,
-			[...document.fonts].some((f) => f.family.replaceAll('"', '') === 'own face')].join(' | ') })()`)
-	m.expect("layers", got, "rgb(246, 232, 210) | 36px | 7px | rgb(255, 0, 0) | rgb(34, 33, 31) | held | true")
+	open("layers", layersData, "[data-floe-part=note]")
+	m.expect("layers", b.eval(layersNote), layersNoteWant)
 	// The template's own element that takes the panel's look has it under the template's CSS, which adjusts it by the
 	// layer, though it would lose by its selector (section), the less specific: its background, the corners of
 	// default's panel.
@@ -155,18 +157,6 @@ func lookLayers(t *testing.T, s *site) measured {
 		`<code id="held">b</code></td></tr></tbody></table></div></div>`+"\n", "#held")
 	got = b.eval(`['own', 'held'].map((id) => getComputedStyle(document.getElementById(id)).backgroundColor).join(' | ')`)
 	m.expect("nested", got, "rgb(255, 255, 255) | rgb(220, 235, 236)")
-
-	// floe's base draws the page's ground, colour and face in the theme's, under a template that draws none of them.
-	open("bare", "template: bare\nlang: en\ntheme: washi\n", "p")
-	ground := `(() => { const r = getComputedStyle(document.documentElement), s = getComputedStyle(document.querySelector('p'));
-		return [r.backgroundColor, getComputedStyle(document.body).backgroundColor, s.color, s.fontFamily.split(',')[0]].join(' | ') })()`
-	m.expect("bare", b.eval(ground), `rgb(237, 228, 207) | rgba(0, 0, 0, 0) | rgb(29, 27, 24) | "Hiragino Mincho ProN"`)
-
-	// A ground of a pattern, blueprint's squares, is drawn whole: its layers, their size, the colour under them.
-	open("squares", "template: bare\nlang: en\ntheme: blueprint\n", "p")
-	got = b.eval(`(() => { const r = getComputedStyle(document.documentElement);
-		return [r.backgroundImage.split('linear-gradient').length - 1, r.backgroundSize, r.backgroundColor].join(' | ') })()`)
-	m.expect("squares", got, "2 | 16px 16px, 16px 16px, auto | rgb(238, 244, 252)")
 
 	// The colours a template sets on :scope reach what the theme draws in the parts, the text on a filled face among
 	// them, which takes the surface the template set.
@@ -205,4 +195,24 @@ func lookLayers(t *testing.T, s *site) measured {
 	got = b.eval(`['#paged > li', '#looked > li'].map((q) => getComputedStyle(document.querySelector(q)).rowGap).join(' | ')`)
 	m.expect("rowed", got, "3px | 0px")
 	return m
+}
+
+// layersData is the page of the template layers: a note of the tone warn.
+const layersData = "template: layers\nlang: en\nnote: { text: x, tone: warn }\n"
+
+// brokenLayers draws the page of a template like layers whose page.css paints the note's background by !important,
+// which wins over the part's style.
+func brokenLayers(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	own := map[string]string{}
+	for _, f := range []string{"schema.json", "page.html", "example.yaml"} {
+		own["templates/loud/"+f] = layersKit["templates/layers/"+f]
+	}
+	own["templates/loud/example.yaml"] = "lang: en\ntemplate: loud\n"
+	own["templates/loud/page.css"] = layersKit["templates/layers/page.css"] + "[data-floe-part=note] { background-color: rgb(9, 9, 9) !important; }\n"
+	s.brokenPage(t, own, strings.Replace(layersData, "template: layers", "template: loud", 1))
+	var m measured
+	m.expect("layers", s.b.eval(layersNote), layersNoteWant)
+	return "layers", m
 }

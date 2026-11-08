@@ -8,7 +8,7 @@ paths:
 
 # CSS（変数の一覧と細かい形は docs/parts.md と docs/templates.md）
 
-- **CSS の決まりは一覧の 1 行** [rule-lists]：CSS の字で読む決まりは `internal/css/lint` の `Rules` に 1 行足し、`testdata/<名前>/bad`（違反の行に want）と `good` を置き、行の終わりに `TestLintRule/<名前>` を書く。見た目を測る決まりは `internal/browsertest` の `looks` に 1 行足し、floe のページを測る `floe` と、書き手が書ける CSS でその決まりを 1 か所だけ破るページを測る `broken`（書き手に破れないときは理由の `floeOnly`）を持たせ、行の終わりに `TestLookRule/<名前>` を書く。（判断）
+- **CSS の決まりは一覧の 1 行** [rule-lists]：CSS の字で読む決まりは `internal/css/lint` の `Rules` に 1 行足し、`testdata/<名前>/bad`（違反の行に want）と `good` を置き、行の終わりに `TestLintRule/<名前>` を書く。見た目を測る決まりは `internal/browsertest` の `looks` に 1 行足し、floe のページを測る `floe` と、書き手が書ける CSS（`!important` も）でその決まりを 1 か所だけ破るページを測る `broken` を持たせ、行の終わりに `TestLookRule/<名前>` を書く。（判断）
 - **行の余白は `--floe-row-pad` と `--floe-pad-inline`** [row-pad]：線で区切った行の上下と左右の余白はこの 2 つだけが決める。見た目 rows を借りる側は行の余白を書かず、テーマは替えない。`TestLookRule/row-pad`
 - **箱の中の余白は `--floe-pad-block` と `--floe-pad-inline`** [box-pad]：部品の間に地や枠を持つ箱を描くときは、縁から字までをこの 2 つで書き、数で書かない（箱の中の小さな升、行、code の行は外）。見た目 panel 自身は余白を持たない。テーマは置き直さず、箱の余白を書かない。`TestLookRule/box-pad`
 - **部品の小さい字は 2 つの段** [text-scale]：部品と見た目の、本文より小さい字は数で書かず、`--floe-text-small`（札・印と名前・付記）か `--floe-text-aside`（添えの文・小さな題）で書く。段を置くのは floe の base.css だけ。`TestLintRule/text-scale`

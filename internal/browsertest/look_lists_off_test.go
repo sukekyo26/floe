@@ -78,19 +78,13 @@ func listsKit(t *testing.T, name, mine string) map[string]string {
 	return files
 }
 
-// listsApart returns {seen, amiss} of got against want, lines of listsOf: each part's box (or look) drawn otherwise is
-// amiss at it, told as page.
+// listsApart returns {seen, amiss} of got against want, lines of listsOf (linesApart): each part's box (or look) drawn
+// otherwise is amiss at it.
 func listsApart(page, got, want string) measured {
-	w := strings.Split(want, "\n")
-	m := measured{seen: len(w)}
-	for i, g := range strings.Split(got, "\n") {
-		if i < len(w) && g == w[i] {
-			continue
-		}
-		at, _, _ := strings.Cut(g, ":")
-		m.amiss = append(m.amiss, amiss{Page: page, At: at, Text: g + ", as without the rule " + strings.Join(w, " / ")})
-	}
-	return m
+	return linesApart(page, got, want, "as without the rule", func(line string) string {
+		at, _, _ := strings.Cut(line, ":")
+		return at
+	})
 }
 
 // listsKitAll is the templates, themes and look of one's own that lists-off and TestRenderedLists draw.
@@ -106,11 +100,8 @@ func listsKitAll(t *testing.T) map[string]string {
 	return own
 }
 
-// lookListsOffFloeOnly says why a writer cannot break lists-off: floe's boxes (style.go) take a list's marks, padding
-// and room off a part's box over every page's and theme's rule.
-const lookListsOffFloeOnly = "floe's boxes (style.go) take the marks, the padding and the room of a part's box's list off, over a page's and a theme's rules"
-
-const lookListsOffFix = "let floe's boxes lay out a part's list: set a part's own arrangement in its part.css, not for every list"
+const lookListsOffFix = "let floe's boxes lay out a part's list: set a part's own arrangement in its part.css, not for every list, " +
+	"and write no !important that puts a list's marks, padding or room back"
 
 // lookListsOff draws every part (everyPart) as listsOf reads its lists that are parts' boxes or take looks: a
 // template's page.css or a theme's base.css that writes a rule for every list (listsGeneral) changes nothing of a
@@ -131,6 +122,19 @@ func lookListsOff(t *testing.T, s *site) measured {
 	m := listsApart("every-part under the page's rule for lists", read("lists-page", mine), read("lists-plain", plain))
 	m.add(listsApart("every-part under the theme's rule for lists", read("lists-theme", plain, "--theme", "lists"), read("lists-theme-plain", plain, "--theme", "plain")))
 	return m
+}
+
+// brokenListsOff draws steps in a theme of one's own whose base.css puts a list's padding back by !important, which
+// wins over floe's boxes, against steps in the default theme.
+func brokenListsOff(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	steps := "- steps:\n    - { title: One, text: first }\n    - { title: Two, text: second }\n"
+	s.floe(t, "publish", s.write(t, "steps.yaml", themePage("default", steps)), "--slug", "steps")
+	s.b.navigate("/a/steps/?raw")
+	want := s.b.eval(listsOf)
+	s.brokenPage(t, map[string]string{"themes/padded/base.css": "ol { padding-inline-start: 3em !important; }\n"}, themePage("padded", steps))
+	return "steps", listsApart("broken", s.b.eval(listsOf), want)
 }
 
 const lookListsMarkedFix = "leave a list that is a part's box or a look unmarked: floe's boxes take its marks off, and no rule puts them back"

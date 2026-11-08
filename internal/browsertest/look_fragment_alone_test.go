@@ -48,24 +48,9 @@ func openOwn(t *testing.T, s *site, name, head, body string) {
 	s.b.navigate("file://" + file)
 }
 
-// coloursApart returns {seen, amiss} of got against want, lines of diagramColours: each line that differs is amiss at
-// diagram, told as page.
+// coloursApart returns {seen, amiss} of got against want, lines of diagramColours (linesApart), each amiss at diagram.
 func coloursApart(page, got, want string) measured {
-	g, w := strings.Split(got, "\n"), strings.Split(want, "\n")
-	m := measured{seen: len(w)}
-	for i := range max(len(g), len(w)) {
-		a, b := "none", "none"
-		if i < len(g) {
-			a = g[i]
-		}
-		if i < len(w) {
-			b = w[i]
-		}
-		if a != b {
-			m.amiss = append(m.amiss, amiss{Page: page, At: "diagram", Text: a + ", in floe's page " + b})
-		}
-	}
-	return m
+	return linesApart(page, got, want, "in floe's page", func(string) string { return "diagram" })
 }
 
 const lookFragmentAloneFix = "paint a diagram by the palette and the tones its root holds, and read no theme's variable in it"

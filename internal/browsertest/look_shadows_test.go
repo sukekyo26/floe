@@ -61,6 +61,11 @@ const markProbed = `(() => { const probed = [...document.querySelectorAll('[data
     ['::before', '::after'].some((p) => ['absolute', 'fixed'].includes(getComputedStyle(e, p).position))));
   probed.forEach((e, i) => { e.dataset.shadowProbe = i; }); return probed.length; })()`
 
+// shadowAtJS defines shadowAt, the place a box's shadow is told at: its part, its look, or else the part it is in (a
+// quote) or its tag.
+const shadowAtJS = `const shadowAt = (e) => e.dataset.floePart || (e.dataset.floeLook ? 'look ' + e.dataset.floeLook.split(' ')[0] : '') ||
+    (e.closest('[data-floe-part]')?.dataset.floePart ?? e.tagName.toLowerCase());`
+
 // measureShadows returns, one to a line, what a box draws outside itself reaching what it must not: past the page's
 // edge or the sides of the column's padding (.floe-column); out of a box around it that is framed or filled (its padding box); onto
 // any other element (not one around it nor in it): onto its border box when it is framed or filled, else onto its
@@ -71,7 +76,7 @@ const markProbed = `(() => { const probed = [...document.querySelectorAll('[data
 // It returns {seen, amiss}: the boxes it measured, and what each reaches, at its part (or its look).
 const measureShadows = `((extra) => {
   const out = new Map();
-  const at = (e) => e.dataset.floePart || (e.dataset.floeLook ? 'look ' + e.dataset.floeLook.split(' ')[0] : '') || (e.closest('[data-floe-part]')?.dataset.floePart ?? e.tagName.toLowerCase());
+  ` + shadowAtJS + `
   const canvas = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
   const shows = (colour) => { canvas.clearRect(0, 0, 1, 1); canvas.fillStyle = 'transparent'; canvas.fillStyle = colour;
     canvas.fillRect(0, 0, 1, 1); return canvas.getImageData(0, 0, 1, 1).data[3] > 0; };
@@ -96,7 +101,7 @@ const measureShadows = `((extra) => {
     .map((o) => { const r = painted(o) ? o.getBoundingClientRect() : inner(o, true); return { o, r: { l: r.left ?? r.l, t: r.top ?? r.t, r: r.right ?? r.r, b: r.bottom ?? r.b } }; })
     .filter(({ r }) => r.r - r.l > 0.5 && r.b - r.t > 0.5);
   for (const e of boxes) {
-    const s = getComputedStyle(e), r = e.getBoundingClientRect(), where = at(e);
+    const s = getComputedStyle(e), r = e.getBoundingClientRect(), where = shadowAt(e);
     let ink = null;
     for (const shadow of s.boxShadow === 'none' ? [] : s.boxShadow.split(/,(?![^(]*\))/)) {
       if (/\binset\b/.test(shadow)) continue;
@@ -163,6 +168,7 @@ const measureCellShadows = `[...document.querySelectorAll('[data-floe-part=cell]
 // on it elsewhere wins over base.css's. It returns {seen, amiss}: the boxes that set a colour, and each casting none,
 // at its part (or look).
 const measureCast = `(() => {
+  ` + shadowAtJS + `
   let seen = 0;
   const out = new Set();
   for (const e of document.querySelectorAll('[data-floe-part], [data-floe-look], blockquote')) {
@@ -170,8 +176,7 @@ const measureCast = `(() => {
     if (/^rgba\(.*, 0\)$|^transparent$/.test(c) || !c) continue;
     seen++;
     if (!s.boxShadow.split(/,(?![^(]*\))/).some((x) => x.trim().startsWith(c) && !x.includes('inset'))) {
-      const at = e.dataset.floePart || (e.dataset.floeLook ? 'look ' + e.dataset.floeLook.split(' ')[0] : e.closest('[data-floe-part]')?.dataset.floePart ?? e.tagName.toLowerCase());
-      out.add(JSON.stringify({ at, text: e.tagName.toLowerCase() + '[' + (e.dataset.floePart || e.dataset.floeLook || '') + '] casts no shadow of ' + c + ': ' + s.boxShadow }));
+      out.add(JSON.stringify({ at: shadowAt(e), text: e.tagName.toLowerCase() + '[' + (e.dataset.floePart || e.dataset.floeLook || '') + '] casts no shadow of ' + c + ': ' + s.boxShadow }));
     }
   }
   return JSON.stringify({ seen, amiss: [...out].map((l) => JSON.parse(l)) });
@@ -232,8 +237,8 @@ func shadowPages(t *testing.T, s *site, examples bool, visit func(what string, w
 	}
 }
 
-const lookShadowsFix = "keep what a box draws outside itself within --floe-room, with no transform or scale and taking no room: " +
-	"draw a box's shadow by --floe-shadow-* and --floe-shadow-color, which base.css casts"
+const lookShadowsFix = "keep what a box draws outside itself (its shadow by --floe-shadow-*, an outline, a pseudo-element) within " +
+	"--floe-room on every side, with no transform or scale and taking no room"
 
 // lookShadows draws shadowPages at their widths, as shadowsIn measures: nothing a box draws outside itself (a shadow, a
 // strip of tape, an outline) reaches the page's edge, another box or the box it stands in.
@@ -249,11 +254,15 @@ func lookShadows(t *testing.T, s *site) measured {
 	return m
 }
 
-// brokenShadows draws a note in a theme of one's own whose note.css casts a shadow 40px wide.
+// brokenShadows draws a note in a theme of one's own whose palette spreads the shadow 40px, which base.css casts in the
+// colour its note.css sets.
 func brokenShadows(t *testing.T, s *site) (string, measured) {
 	t.Helper()
 
-	s.brokenPage(t, map[string]string{"themes/loud/note.css": ":scope { box-shadow: 0 0 0 40px red; }\n"}, themePage("loud", "- note: { text: loud }\n"))
+	s.brokenPage(t, map[string]string{
+		"themes/loud/palette.css": ":root { --floe-shadow-spread: 40px; }\n",
+		"themes/loud/note.css":    ":scope { --floe-shadow-color: rgb(0 0 0 / 0.4); }\n",
+	}, themePage("loud", "- note: { text: loud }\n"))
 	return "note", s.b.shadowsIn("broken", 1100)
 }
 

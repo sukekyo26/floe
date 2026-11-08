@@ -62,14 +62,15 @@ const measureEntries = `(() => {
     ' | ' + [...texts].map((p) => getComputedStyle(p).lineHeight).join(' ');
 })()`
 
-// measureCards finds, of each card the HTML nests (plain, in a panel, in an empty look, in both, in a part's box), the
-// style that differs from the card of stats. It returns {seen, amiss}: the cards, and each drawn otherwise, at cards.
-const measureCards = `(() => {
+// measureCards finds, of the card each element of ids holds (nestingPage's: plain, in a panel, in an empty look, in
+// both, in a part's box), the style that differs from the card of stats. It returns {seen, amiss}: the cards, and each
+// drawn otherwise, at cards.
+const measureCards = `((ids) => {
   const props = ['background-color', 'background-image', 'border-top', 'border-right', 'border-bottom', 'border-left',
     'border-radius', 'box-shadow', 'outline', 'padding', 'margin', 'transform'];
   const style = (el) => { const s = getComputedStyle(el); return props.map((p) => p + ': ' + s.getPropertyValue(p)); };
   const part = style(document.querySelector('[data-floe-part=stats] .card'));
-  const ids = ['plain', 'in-panel', 'in-empty', 'both', 'box'], amiss = [];
+  const amiss = [];
   for (const id of ids) {
     const card = document.querySelector('#' + id + ' > .card');
     if (!card) { amiss.push({ at: 'cards', text: '#' + id + ': no card' }); continue; }
@@ -77,7 +78,10 @@ const measureCards = `(() => {
     if (off.length) amiss.push({ at: 'cards', text: '#' + id + ': ' + off.join('; ') });
   }
   return JSON.stringify({ seen: ids.length, amiss });
-})()`
+})`
+
+// nestedCards are the elements of nestingPage that hold a card.
+var nestedCards = mustJSON([]string{"plain", "in-panel", "in-empty", "both", "box"})
 
 // measureHeld tells the margins of the boxes stack and a note hold.
 const measureHeld = `['#in-note', '[data-floe-part=details] [data-floe-part=note]', '[data-floe-part=tabs] [data-floe-part=code]']
@@ -94,11 +98,8 @@ var figPart = map[string]string{
 	"parts/fig/part.css":    "",
 }
 
-// lookNestingFloeOnly says why a writer cannot break nesting: floe's layers set an outer look and part over what they
-// hold, whatever a writer's CSS of the inner one says.
-const lookNestingFloeOnly = "floe's layers (draw.pageStyle) put the outer look and part over what they hold, as deep as they stand"
-
-const lookNestingFix = "leave a box nested to the outer look's rules: floe's layers order them, and a part's CSS stops at a part it holds"
+const lookNestingFix = "leave a box nested to the outer look's rules: floe's layers order them, a part's CSS stops at a part it holds, " +
+	"and no !important wins over them"
 
 // lookNesting draws nestingPage in every theme, as measureCards measures: the cards a cards of the HTML holds are drawn
 // as the cards of a part are, whatever looks nest around them and whatever the depth.
@@ -117,7 +118,18 @@ func lookNesting(t *testing.T, s *site) measured {
 		s.floe(t, "publish", file, "--slug", "nesting-"+theme, "--theme", theme)
 		s.b.navigate("/a/nesting-" + theme + "/?raw")
 		s.b.until("#box", "!!document.querySelector('#box > .card')")
-		m.add(s.b.measure("nestingPage in "+theme, measureCards))
+		m.add(s.b.measure("nestingPage in "+theme, measureCards+"("+nestedCards+")"))
 	}
 	return m
+}
+
+// brokenNesting draws a card of cards that is a part of one's own, whose part.css pads it by !important, which wins
+// over the outer cards' rules, beside a card of stats.
+func brokenNesting(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	s.brokenPage(t, ownPart("tile", `<div class="card" data-floe-part="tile" data-floe-look="panel"></div>`, ":scope { padding: 3px !important; }\n"),
+		"template: report\nlang: en\ntitle: Broken\nsections:\n  - parts:\n      - stats: [{ label: a, value: \"1\" }]\n"+
+			"      - html: <div id=\"own\" data-floe-look=\"cards\"><div class=\"card\" data-floe-part=\"tile\" data-floe-look=\"panel\"><p class=\"title\">a</p></div></div>\n")
+	return "cards", s.b.measure("broken", measureCards+"("+mustJSON([]string{"own"})+")")
 }
