@@ -9,7 +9,7 @@
 ```sh
 floe template new memo     # 埋めて使うテンプレート memo を作る
 floe template check        # 自分のテンプレートを全部、example.yaml を描いて確かめる
-floe template show memo    # テーマと、読むファイルを全部出す（schema と見本が先）
+floe template show memo    # テーマと、読むファイルの並びを出す（schema と見本が先）
 ```
 
 自分のテンプレート・部品・見た目・共有の schema・テーマに誤りが 1 つあると、そのテンプレートで描くかどうかによらず（`report` のページも）、直すまでどのページも止めます。`floe check`・`floe render` も、サーバーの publish とリンクしたページもです。`floe part check` と `floe template check` が全部を並べます。公開したページはサーバーのテンプレートで描きます（[commands.ja.md](commands.ja.md#サーバー)）。テンプレートを変えたら、`floe rebuild` が保存したページを描き直します。
@@ -114,7 +114,7 @@ section > h2 { border-top: var(--rule); padding-top: 1.3rem; }
 
 ## テンプレートの中の部品
 
-部品はデータの項目を描きます。`$ref` で名指せる部品・見た目・共有の schema は `floe part list --all` が並べ、`floe part show <名前>` が取るものを出します。schema は `properties`・`additionalProperties`（根のものを除く）・`items` の下で、`$ref` で名指します。
+部品はデータの項目を描きます。`$ref` で名指せる部品・見た目・共有の schema は `floe part list --all` が並べ、`floe part show <名前> schema.json` が取るものを出します。schema は `properties`・`additionalProperties`（根のものを除く）・`items` の下で、`$ref` で名指します。
 
 ```json
 "findings": { "$ref": "floe:///parts/findings.json", "description": "What the review found" }
@@ -249,7 +249,7 @@ storage_gb: item_bytes * records.in_1_year / 1e9
 
 ## example.yaml
 
-書き始めのデータファイルです。`floe template show` が出し、`floe template check` が `floe check` と同じに描きます。`page.html` の全部に届くように、テンプレートが取る項目を全部書きます。
+書き始めのデータファイルです。`floe template show <名前> example.yaml` が出し、`floe template check` が `floe check` と同じに描きます。`page.html` の全部に届くように、テンプレートが取る項目を全部書きます。
 
 ## 画像
 

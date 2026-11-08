@@ -7,6 +7,8 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+
+	"github.com/sukekyo26/floe/internal/kit"
 )
 
 // floe part new and template new write a part and a template to fill in, which part check and template check take,
@@ -122,8 +124,8 @@ func TestNewRefused(t *testing.T) {
 
 // floe part list prints what a section of floe's templates takes, and with --all, as template list and theme list do,
 // floe's and one's own, a line each, the description on one line;
-// show prints the files it reads, as written, under a line naming them, or the file named after alone, as it is; and
-// refuses a name there is not.
+// show lists the files it reads on a line, or prints the file named after alone, as it is; and refuses a name there
+// is not.
 func TestListShow(t *testing.T) {
 	t.Parallel()
 
@@ -177,9 +179,7 @@ func TestListShow(t *testing.T) {
 		}, ""},
 		{[]string{"part", "show", "mine"}, 0, func(out string) bool {
 			return out == "mine: a b c\nwhere: "+filepath.Join(parts, "mine")+"\nlooks: panel\n"+
-				"files: schema.json, checks.yaml, part.yaml, part.html, part.css, words.yaml\n"+
-				"==> schema.json <==\n"+schema+"\n==> checks.yaml <==\n- expr: true\n  message: m\n==> part.yaml <==\nlooks: [panel]\n"+
-				"==> part.html <==\n"+ownPage+"\n==> part.css <==\n\n==> words.yaml <==\nen: {w: x}\n"
+				"files: schema.json, checks.yaml, part.yaml, part.html, part.css, words.yaml\n"
 		}, ""},
 		{[]string{"part", "show", "mine", "part.html"}, 0, func(out string) bool { return out == ownPage }, ""},
 		{[]string{"part", "show", "mine", "part.css"}, 0, func(out string) bool { return out == "" }, ""},
@@ -189,14 +189,14 @@ func TestListShow(t *testing.T) {
 			`floe: mine has no file "nope.css" (its files: schema.json, checks.yaml, part.yaml, part.html, part.css, words.yaml)` + "\n",
 		},
 		{[]string{"part", "show", "tone"}, 0, func(out string) bool {
-			return strings.HasPrefix(out, "tone: The colour of a part: accent, good, warn, bad or muted (quiet), from the theme's colour variables\nwhere: floe\nfiles: tone.json\n==> tone.json <==\n{\n")
+			return out == "tone: The colour of a part: accent, good, warn, bad or muted (quiet), from the theme's colour variables\nwhere: floe\nfiles: tone.json\n"
 		}, ""},
 		{[]string{"part", "show", "rows"}, 0, func(out string) bool {
 			return out == "rows: Rows in a panel, a rule between each and the next; take it by looks or data-floe-look\nwhere: floe\nlooks: panel\n"+
-				"files: part.yaml, part.css\n==> part.yaml <==\n"+floeFile("floe/parts/rows/part.yaml")+"\n==> part.css <==\n"+floeFile("floe/parts/rows/part.css")+"\n"
+				"files: part.yaml, part.css\n"
 		}, ""},
 		{[]string{"part", "show", "html"}, 0, func(out string) bool {
-			return out == "html: HTML that goes in as it is\nwhere: floe\nfiles: any.json\n==> any.json <==\n"+floeFile("floe/parts/any.json")+"\n"
+			return out == "html: HTML that goes in as it is\nwhere: floe\nfiles: any.json\n"
 		}, ""},
 		{[]string{"part", "show", "html", "any.json"}, 0, func(out string) bool { return out == floeFile("floe/parts/any.json")+"\n" }, ""},
 		{
@@ -211,9 +211,7 @@ func TestListShow(t *testing.T) {
 		}, ""},
 		{[]string{"template", "show", "memo"}, 0, func(out string) bool {
 			return out == "memo: a b c\nwhere: "+filepath.Join(templates, "memo")+"\nthemes: "+allThemes+"\n"+
-				"files: schema.json, computed.yaml, example.yaml, page.html, page.css\n"+
-				"==> schema.json <==\n"+schema+"\n==> computed.yaml <==\nn: 1\n==> example.yaml <==\ntemplate: memo\nlang: en\n"+
-				"==> page.html <==\n"+page+"\n==> page.css <==\np { color: red; }\n"
+				"files: schema.json, computed.yaml, example.yaml, page.html, page.css\n"
 		}, ""},
 		{[]string{"template", "show", "memo", "computed.yaml"}, 0, func(out string) bool { return out == "n: 1\n" }, ""},
 		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, memo, postmortem, report, runbook, slides` + "\n"},
@@ -221,8 +219,7 @@ func TestListShow(t *testing.T) {
 			return strings.HasPrefix(out, "app\tfloe\t\n") && strings.Contains(out, "\nmine\t"+filepath.Join(themes, "mine")+"\t\n")
 		}, ""},
 		{[]string{"theme", "show", "mine"}, 0, func(out string) bool {
-			return out == "mine\nwhere: "+filepath.Join(themes, "mine")+"\nfiles: palette.css, base.css, code.css\n"+
-				"==> palette.css <==\n:root { --accent: red; }\n==> base.css <==\nbody { margin: 0; }\n==> code.css <==\n:scope { color: red; }\n"
+			return out == "mine\nwhere: "+filepath.Join(themes, "mine")+"\nfiles: palette.css, base.css, code.css\n"
 		}, ""},
 		{[]string{"theme", "show", "mine", "code.css"}, 0, func(out string) bool { return out == ":scope { color: red; }\n" }, ""},
 		{[]string{"theme", "show", "empty"}, 0, func(out string) bool { return out == "empty\nwhere: "+filepath.Join(themes, "empty")+"\n" }, ""},
@@ -231,6 +228,40 @@ func TestListShow(t *testing.T) {
 	} {
 		if code, stdout, stderr := runEnv(dir, env, tt.args...); code != tt.code || !tt.out(stdout) || stderr != tt.errs {
 			t.Errorf("floe %v = %d, %q, %q; want %d, %q", tt.args, code, stdout, stderr, tt.code, tt.errs)
+		}
+	}
+}
+
+// Each of floe's parts, looks, shared schemas, templates and themes lists on its files: line the files it reads, and
+// each of them named after prints it as it reads it.
+func TestShowEachFile(t *testing.T) {
+	t.Parallel()
+
+	k, err := kit.Floe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	env := map[string]string{"HOME": dir}
+	for _, kind := range []struct {
+		name    string
+		entries []kit.Entry
+	}{{"part", k.Parts()}, {"template", k.Templates()}, {"theme", k.Themes()}} {
+		for _, e := range kind.entries {
+			names := make([]string, len(e.Files))
+			for i, f := range e.Files {
+				names[i] = f.Name
+			}
+			if code, stdout, stderr := runEnv(dir, env, kind.name, "show", e.Name); code != 0 ||
+				!strings.HasSuffix(stdout, "\nfiles: "+strings.Join(names, ", ")+"\n") || stderr != "" {
+				t.Errorf("floe %s show %s = %d, %q, %q; want its files: %v", kind.name, e.Name, code, stdout, stderr, names)
+			}
+			for _, f := range e.Files {
+				if code, stdout, stderr := runEnv(dir, env, kind.name, "show", e.Name, f.Name); code != 0 || stdout != string(f.Text) || stderr != "" {
+					t.Errorf("floe %s show %s %s = %d, %d bytes, %q; want 0 and the %d bytes it reads",
+						kind.name, e.Name, f.Name, code, len(stdout), stderr, len(f.Text))
+				}
+			}
 		}
 	}
 }

@@ -59,7 +59,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `runbook` | 走らせるコマンドを添えた、繰り返す手順 | `steps` |
 | `slides` | 1 枚ずつ見せるスライド | `slides` |
 
-`floe template list` が各テンプレートの説明を出し、`floe template show <テンプレート>` が、取る鍵（説明は `schema.json` に）と、書き始めの `example.yaml` を出します。`"format": "markdown"` の項目と、説明が Markdown と言う項目が Markdown です。鍵のほかにページが見せるもの:
+`floe template list` が各テンプレートの説明を出し、`floe template show <テンプレート> schema.json` が取る鍵とその説明を、`floe template show <テンプレート> example.yaml` が書き始めの見本を出します。`"format": "markdown"` の項目と、説明が Markdown と言う項目が Markdown です。鍵のほかにページが見せるもの:
 
 - `report` は `eyebrow`（題の上の短い行）、`lead`（題の下の 1〜2 文）、`sections`（`heading` と `parts` の組の並び）を取ります。`eyebrow` と `lead` はどちらも Markdown の 1 行で、タグに見える字（`<prefix>`、`Vec<u8>` など）は除き、`*`・`_`・`~` などの記号は読む（`~` は 1 つでも組になり、`2026-11-01~11-08` は間が取り消し線になる）ので、字として書くならバッククォートで囲みます。裸の URL とメールのアドレスはリンクになります（IP や localhost の URL（`http://127.0.0.1:7325`）はなりません）。中で名指した画像のファイルは出ません（出るのは png・gif・jpeg・webp の data URI だけ）。節は、部品の後に自分の `sections`（小節。`heading`（`<h3>`）と `parts` の組の並び。1 段だけ）を持てます。小節のある節には見出しが要り、見出しは空の字にできないので、見出しの無い節は鍵を書きません。見出しは `lead` と同じく Markdown の 1 行で、タグに見える字（`Vec<u8>`）は除くのでバッククォートで囲み、タグだけの見出しは目次に載りません。id は描いた字から作ります。除いたタグ、読んだ記号（`__init__`）、バックスラッシュ、文字参照（`&copy;`）、リンクの URL の分だけ、書いた字から作る id と変わります。`toc` は、ページに目次（見出しのある節とその小節）を置くかを決めます。幅 1000px 以上の画面では節の横に置き（ページは窓の幅いっぱいになる）、狭い画面では節の前に節だけを置きます。省くと、見出しのある節が 4 つ以上のページに置きます。紙には出ません。目次のリンク先は節の順の `#section.0`・`#section.0.1` などです。ほかから節へリンクするときは、今までどおりの見出しの id（`#1-what-happens`）を使います。CSS でこの id を指すときは、`#section.0` だと `.0` を class と読むので、`[id="section.0"]` と書きます。
 - Markdown でない鍵は、書いたとおりの字で描きます。design の `status`・`owner`・`date`、handoff の `date`・`from`・`to`・`ref`・`who`、部品 `asks` の `by`、adr の `number`・`date`・`deciders`、postmortem の `date`・`authors`・`owner`・`ref`、runbook の `owner`・`updated` と手順の `who`、`more` の節の見出しです。
@@ -69,7 +69,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 
 ## 部品
 
-部品は、種類を名指す鍵 1 つで書きます。`floe part list` が 1 行ずつ並べ、`floe part show <名前> schema.json` が取るもの（schema を書いたとおり）を出します。`html` は HTML を字で取り、schema.json はありません。`floe part show html` で見ます。
+部品は、種類を名指す鍵 1 つで書きます。`floe part list` が 1 行ずつ並べ、`floe part show <名前> schema.json` が取るもの（schema を書いたとおり）を出します。`html` は HTML を字で取り、schema.json はありません。`floe part show html any.json` で見ます。
 
 並べるものは、行が何かで部品を選びます。
 
@@ -107,7 +107,7 @@ floe render plan.yaml           # floe 無しで開ける plan.html を隣に書
 | `columns` | 部品を横に並べ、同時に見せます。前と後の画面、データと説明など。列は、省ける `title` とその下の `parts`（`details` と同じ部品）。列はどれも同じ幅で、幅は 16rem 以上なので、何列が横に並ぶかは本文の幅で決まり（`report` で最大 5 列、`adr`・`runbook` で 3 列）、残りは下に折り返します。 |
 | `diagram` | 確かめてから inline SVG で描く図（[diagrams.ja.md](diagrams.ja.md)）。 |
 | `script` | 動くもの（[スクリプトと HTML](#スクリプトと-html)）。 |
-| `html` | そのまま入る HTML。`any.json` の鍵で、部品そのものではないので schema.json はありません。`floe part show html` は、その鍵を持つ `any.json` の全体を出します（[スクリプトと HTML](#スクリプトと-html)）。 |
+| `html` | そのまま入る HTML。`any.json` の鍵で、部品そのものではないので schema.json はありません。`floe part show html any.json` が、その鍵を持つ `any.json` の全体を出します（[スクリプトと HTML](#スクリプトと-html)）。 |
 
 `tone` は `accent`・`good`・`warn`・`bad`・`muted` のどれかです。
 
