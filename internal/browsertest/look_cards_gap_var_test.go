@@ -2,21 +2,18 @@ package browsertest_test
 
 import "testing"
 
-// measureCardsGap finds, on a page whose --cards-gap is not 0.4rem, each card (.card) and each body of options' cards
-// (.option > .body) whose gap is 0.4rem, cards' gap copied as a number that does not follow the variable. A gap a part
-// chooses for itself, of another length, is its own.
-// LIMIT: a gap a part chooses of 0.4rem is told as a copy; writing it var(--cards-gap) mends it, as it is the same.
-// It returns {seen, amiss}: those it measured where --cards-gap is not 0.4rem, and for each copy its part and its gap.
+// measureCardsGap finds each card (.card) and each body of options' cards (.option > .body) whose gap is not
+// --cards-gap, read in it: a number copied, 0.4rem, as a gap a part chooses of its own. It returns {seen, amiss}: those
+// it measured, and for each otherwise its part and its gap.
 const measureCardsGap = `(() => {
   ` + partOfJS + pxJS + `
   let seen = 0;
-  const amiss = [], off = (a, b) => Math.abs(a - b) > 0.1;
+  const amiss = [];
   for (const e of document.querySelectorAll('.card, .option > .body')) {
     if (!e.getClientRects().length) continue;
-    const gap = parseFloat(getComputedStyle(e).rowGap), copy = px(e, '0.4rem'), want = px(e, 'var(--cards-gap)');
-    if (!off(want, copy)) continue;
     seen++;
-    if (!off(gap, copy)) amiss.push({ at: partOf(e), text: (e.matches('.card') ? 'a card\'s' : 'an option\'s body\'s') + ' gap ' + gap + 'px, 0.4rem, against --cards-gap ' + want + 'px' });
+    const gap = parseFloat(getComputedStyle(e).rowGap), want = px(e, 'var(--cards-gap)');
+    if (Math.abs(gap - want) > 0.1) amiss.push({ at: partOf(e), text: (e.matches('.card') ? 'a card\'s' : 'an option\'s body\'s') + ' gap ' + gap + 'px against --cards-gap ' + want + 'px' });
   }
   return JSON.stringify({ seen, amiss });
 })()`
@@ -25,10 +22,10 @@ const measureCardsGap = `(() => {
 // a card.
 var gappedTheme = map[string]string{"themes/gapped/cards.css": ":scope { --cards-gap: 1rem; }\n"}
 
-const lookCardsGapVarFix = "space what a card holds by var(--cards-gap), not by 0.4rem copied; a theme changes it by --cards-gap"
+const lookCardsGapVarFix = "space what a card holds by var(--cards-gap), as the look cards does: copy no 0.4rem, and choose no gap of your own"
 
 // lookCardsGapVar draws every part (everyPart) and optionsPage in gappedTheme, whose --cards-gap is 1rem, as
-// measureCardsGap measures: no gap in a card stays 0.4rem when the variable is otherwise.
+// measureCardsGap measures: every gap in a card follows the variable, there a gap left 0.4rem tells a copy.
 func lookCardsGapVar(t *testing.T, s *site) measured {
 	t.Helper()
 
