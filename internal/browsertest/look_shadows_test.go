@@ -197,8 +197,8 @@ func shadowPages(t *testing.T, s *site, examples bool, visit func(what string, w
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _, themes, _ := k.Names()
-	names := append(themes, "edge")
+	_, _, names, _ := k.Names()
+	names = append(names, "edge")
 	file := s.write(t, "every.yaml", s.everyPart(t)+shadowsExtra)
 	for _, name := range names {
 		s.floe(t, "publish", file, "--slug", "shadows-"+name, "--theme", name)
