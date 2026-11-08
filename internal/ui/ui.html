@@ -1622,7 +1622,10 @@
     try {
       const res = await fetch(url, init);
       setServer(true);
-      return res;
+      if (!write) return res;
+      // A write ends once its answer is read, as a load waits for it: what the answer says is not put over what a load read since
+      const body = [101, 204, 205, 304].includes(res.status) ? null : await res.text();
+      return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
     } catch (e) {
       // One cut off by its own time limit (the store's lock held long) tells nothing of the server
       // One called off by its own caller, likewise
@@ -3212,7 +3215,8 @@
     const tasks = new Map();
     const taskAt = (project, name) => {
       const key = JSON.stringify([project, name]);
-      if (!tasks.has(key)) tasks.set(key, { project, name, state: STATES.find((s) => s.new).name, at: '', pages: [], archived: [], children: [] });
+      // Of no row, or a row of no rev, rev 0, as the store counts it
+      if (!tasks.has(key)) tasks.set(key, { project, name, state: STATES.find((s) => s.new).name, at: '', rev: 0, pages: [], archived: [], children: [] });
       return tasks.get(key);
     };
     for (const [project, rows] of Object.entries(tasksRead.tasks)) {
@@ -3487,13 +3491,17 @@
     $('task-title').replaceChildren(tagged('span', 'tname', task.name), task.title ?? '');
     const sel = $('task-state');
     const onState = document.activeElement === sel;
-    // Drawn again at the next look, which may find them closed
+    // Drawn again at the next look, which may find them closed. The value and the rev it is of are drawn together, and a change is sent at
+    // once, so that what is chosen goes with the rev it was chosen over
+    // LIMIT: a browser without :open redraws them while its list is open: what is chosen goes with the rev drawn last, refused or written as of
+    // then. Hold them some other way if such a browser comes to matter
     if (selectOpen(sel)) drawn = '';
     else {
       sel.hidden = task.state === 'archived';
       $('task-archived').hidden = !sel.hidden;
       sel.value = task.state;
       sel.dataset.state = task.state;
+      sel.dataset.rev = task.rev;
       sel.className = `ver-pick st ${task.state}`;
     }
     $('task-at').hidden = !task.at;
@@ -3539,7 +3547,8 @@
     $('task-family').hidden = !ups && kids.length === 0 && !adds;
     $('task-family-word').textContent = kids.length > 0 ? t('ui_task_kids_head', kids.length) : t('ui_task_kids_word');
     const up = task.parentTask;
-    const said = JSON.stringify([task.name, task.parent, [up, ...kids].map((x) => x && [x.name, x.title, x.parent, x.state, unreadOf(x) > 0])]);
+    // Of the revs too, so that the rows are drawn again when the tasks read change
+    const said = JSON.stringify([task.name, task.parent, task.rev, [up, ...kids].map((x) => x && [x.name, x.title, x.parent, x.state, x.rev, unreadOf(x) > 0])]);
     if (said === familyDrawn) return;
     familyDrawn = said;
     const on = $('task-family').contains(document.activeElement) ? document.activeElement : null;
@@ -3572,33 +3581,35 @@
   // Where the focus goes once a row is gone from under it, or a dialog is done: the button of its part, the parent's (up) or the children's,
   // as drawn now
   const partButton = (up) => (up ? [$('task-parent-change'), $('task-parent-add')] : [$('task-child')]).find((b) => !b.hidden && !b.closest('[hidden]'));
-  // The child taken off its parent, as the screen saw them (parentWas): one moved meanwhile is refused, not taken off another
+  // The child taken off its parent, as the screen read it (rev): one written meanwhile is refused, not taken off another
   // Pressed again while it goes, nothing more is asked: the second, of what is no longer so, would be refused
   const unlinking = new Set();
   async function unlinkTask(child, parent, fromKeys) {
     if (unlinking.has(child.name)) return;
     unlinking.add(child.name);
     try {
-      const res = await writeTask(child.project, child.name, { new: false, parent: '', parentWas: child.parent });
+      const res = await writeTask(child.project, child.name, { new: false, rev: readRev(child.project, child.name), parent: '' });
       if (!res.ok) {
         showError(t('ui_save_failed', res.text));
         return;
       }
-      undoToast(t('ui_task_unlinked', child.name, parent), { project: child.project, name: child.name, parent, was: '' }, fromKeys);
+      undoToast(t('ui_task_unlinked', child.name, parent), { project: child.project, name: child.name, parent, rev: res.rev }, fromKeys);
       await load();
       if (!fromKeys && !document.activeElement?.closest('#task-family')) partButton(child.name === TASK_NAME)?.focus();
     } finally {
       unlinking.delete(child.name);
     }
   }
-  // The toast of a change to a parent, and its way back: the parent before written again, over the one written now. Pressed, a refusal (the
-  // parent before has come to be a child, say) is said as the store says it
+  // The toast of a change to a parent, and its way back: the parent before written again, over the one written now, of the rev that write
+  // answered, as it is decided over what the screen showed then. Pressed, a refusal (written meanwhile, or the parent before has come to be a
+  // child, say) is said as the store says it
+  // LIMIT: a write of the screen's own since, its state say, refuses it too. Take back the screen's own writes too if that comes to trouble someone
   function undoToast(said, back, fromKeys) {
     const button = tagged('button', 'btn undo', t('ui_undo'));
     button.type = 'button';
     button.addEventListener('click', async () => {
       button.disabled = true;
-      const res = await writeTask(back.project, back.name, { new: false, parent: back.parent, parentWas: back.was, parentNew: false });
+      const res = await writeTask(back.project, back.name, { new: false, rev: back.rev, parent: back.parent, parentNew: false });
       button.closest('.toast')?.remove();
       if (!res.ok) {
         showError(t('ui_save_failed', res.text));
@@ -3619,7 +3630,7 @@
   }
 
   // The dialog of a task's family: a child of the task of the page, or its parent, of one form of fields; KIN_FORMS says what differs.
-  // Each write says what the dialog showed (new, parentWas, parentNew): what has changed since is refused, and read again. A task named that
+  // Each write says what the dialog showed (new, rev, parentNew): what has changed since is refused, and read again. A task named that
   // may be what is asked (offered, as the suggestions are) is said before; one that may not is not, and pressed, the store refuses it
   const named = (x) => [x.name, x.title].filter(Boolean).join(' ');
   const isOwnChild = (x) => x?.parentTask?.name === TASK_NAME;
@@ -3644,7 +3655,7 @@
       },
       back: () => partButton(false)?.focus(),
       // LIMIT: this task's row gone meanwhile, its pages left, it is there still: refused as no parent (400), not read again, as a parent not known
-      write: (task, name, x, title) => writeTask(task.project, name, { new: !x, ...(x ? {} : { title }), parent: task.name, parentWas: x?.parent ?? '', parentNew: false }),
+      write: (task, name, x, title) => writeTask(task.project, name, { new: !x, ...(x ? { rev: x.rev } : { title }), parent: task.name, parentNew: false }),
       done: (task, name, x) => linkToast(t(x ? 'ui_task_child_took' : 'ui_task_child_made', name), task.project, name),
     },
     // A task named comes to be the parent, the one before said; any other is made with it, in the same write (parentTitle)
@@ -3662,11 +3673,11 @@
       back: () => partButton(true)?.focus(),
       // LIMIT: whether the one named has come to have a parent or children meanwhile is not said: the store refuses it as it is now (400),
       // and the words say so, with nothing read again
-      write: (task, name, x, title) => writeTask(task.project, task.name, { new: false, parent: name, parentWas: task.parent ?? '', parentNew: !x, ...(x ? {} : { parentTitle: title }) }),
+      write: (task, name, x, title) => writeTask(task.project, task.name, { new: false, rev: task.rev, parent: name, parentNew: !x, ...(x ? {} : { parentTitle: title }) }),
       // Changed, the way back is offered while the parent before makes a family: one written by hand that makes none the store would refuse
-      done: (task, name) => {
+      done: (task, name, x, res) => {
         if (task.parent) {
-          if (task.parentTask?.name === task.parent) undoToast(t('ui_task_parent_moved', task.parent, name), { project: task.project, name: task.name, parent: task.parent, was: name }, false);
+          if (task.parentTask?.name === task.parent) undoToast(t('ui_task_parent_moved', task.parent, name), { project: task.project, name: task.name, parent: task.parent, rev: res.rev }, false);
           else toast(t('ui_task_parent_moved', task.parent, name), { ms: 8000 });
           return;
         }
@@ -3774,7 +3785,7 @@
         throw new Error(res.stale);
       }
       if (!res.ok) throw new Error(res.text);
-      form.done(task, name, x);
+      form.done(task, name, x, res);
       await load();
       $('kin-dialog').close();
       form.back(task, name);
@@ -3786,18 +3797,15 @@
     }
   }
 
-  // Archives the task, or gives it back, with its pages: the task first and its pages then, as floe work and floe archive write them. Its
-  // pages are read after the task is written, for one put on it since it was drawn. A second press of a double one would land on the button
-  // turned the other way
+  // Archives the task, or gives it back, as drawn (rev): the task alone, as floe work --state writes it, its pages archived on their own. A
+  // second press of a double one would land on the button turned the other way
   // LIMIT: given back it is done, whatever it was: what it was before would be a state more to keep
-  // LIMIT: given back, all its pages come back, those archived one by one before too. Tell them apart if that comes to trouble someone
-  // LIMIT: a page refused leaves the task as written, its button the other way round, and the page on its row to press. Offer the rest on the button if that comes to trouble someone
   let archivingTask = false;
   async function archiveTask(e, task, archived) {
     if (e.detail > 1 || archivingTask) return;
     archivingTask = true;
     try {
-      const res = await writeTask(task.project, task.name, { new: false, state: archived ? 'archived' : 'done' });
+      const res = await writeTask(task.project, task.name, { new: false, rev: readRev(task.project, task.name), state: archived ? 'archived' : 'done' });
       if (!res.ok) {
         if (res.status !== 409) await load();
         showError(t('ui_save_failed', res.text));
@@ -3805,9 +3813,6 @@
       }
       toast(t(archived ? 'ui_task_arc_done' : 'ui_task_unarc_done', task.name));
       await load();
-      const now = tasksOf().find((x) => x.project === task.project && x.name === task.name);
-      const slugs = ((archived ? now?.pages : now?.archived) ?? []).map((a) => a.slug);
-      await actOnSelected((slug) => patchOne(slug, { archived }), null, (n, why) => t('ui_task_arc_failed', n, why), slugs);
     } catch (err) {
       await load();
       showError(t('ui_save_failed', err.message));
@@ -3823,7 +3828,13 @@
     let why = null;
     let readAgain = true;
     try {
-      const res = await writeTask(project, TASK_NAME, { new: false, state: sel.value });
+      // The rev drawn with the value it was chosen over, which drawTaskHead holds while the choices are open
+      const res = await writeTask(project, TASK_NAME, { new: false, rev: Number(sel.dataset.rev), state: sel.value });
+      // The value chosen is drawn, of the rev written, whether the read after it comes or not
+      if (res.ok) {
+        sel.dataset.state = sel.value;
+        sel.dataset.rev = res.rev;
+      }
       if (!res.ok) {
         why = res.text;
         readAgain = res.status !== 409;
@@ -4970,16 +4981,30 @@
     blank.reportValidity();
     return false;
   }
-  // A task's write from the screen, a modal, the state's choices or the archive button, which says whether it takes the task to be new. Refused
-  // as stale (409), the tasks are read again, a page whole too, whose load reads none; stale is the refusal with what to do next in a modal, which can save again
+  // A task's write from the screen, a modal, the state's choices or the archive button, which says whether it takes the task to be new, and
+  // of one there the rev read: one of no rev is not sent, as JSON would drop it and the store write it unchecked. Refused as stale (409), the
+  // tasks are read again, a page whole too, whose load reads none; stale is the refusal with what to do next in a modal, which can save again.
+  // Written, the row as the store answers it goes in the tasks read, so that the next write is of its rev, a read failing too; rev is its rev
   async function writeTask(project, name, body) {
+    if (body.new === false && !Number.isInteger(body.rev)) return { ok: false, status: 0, text: t('ui_task_no_rev'), rev: null, stale: '' };
     const res = await api(`/api/tasks?${new URLSearchParams({ project, task: name })}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     const text = res.ok ? '' : await res.text();
     if (res.status === 409) {
       if (framed) tasksRead = await readTasks();
       await load();
     }
-    return { ok: res.ok, status: res.status, text, stale: t('ui_task_stale', text) };
+    let rev = null;
+    if (res.ok) {
+      const written = await res.json();
+      (tasksRead.tasks[written.project] ??= {})[written.task] = written.row;
+      rev = written.row.rev ?? 0;
+    }
+    return { ok: res.ok, status: res.status, text, rev, stale: t('ui_task_stale', text) };
+  }
+  // The rev of a task as this screen knows it: as read, or as it wrote it since; 0 of no row. A button drawn on the page sends it; what
+  // shows a task held apart (the open choices, a dialog, a toast) sends the rev of what it shows, which its own write moves on
+  function readRev(project, name) {
+    return tasksRead.tasks[project]?.[name]?.rev ?? 0;
   }
   const setFailed = (reason) => {
     $('set-error').textContent = t('ui_save_failed', reason);
@@ -5001,11 +5026,12 @@
     const moved = task.trim() !== setOpened.task || step !== setOpened.step;
     const fresh = !setShown;
     const body = {
-      new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : {}),
+      // A task there is written as the dialog shows it (rev)
+      new: fresh, ...(fresh ? { title: $('set-task-title').value.trim() } : { rev: setShown.rev }),
       ...(step && moved ? { step } : {}), ...(setUrlTouched ? { url: $('set-url').value } : {}),
-      // The parent sent only as changed, with what was seen of it. Whether the one named is there is said only when it is known: a name not
-      // known may be mistyped, which the store refuses as no parent
-      ...(parent !== setOpened.parent.trim() ? { parent, parentWas: setOpened.parent, ...(parent && setTaskOf(parent) ? { parentNew: false } : {}) } : {}),
+      // The parent sent only as changed. Whether the one named is there is said only when it is known: a name not known may be mistyped,
+      // which the store refuses as no parent
+      ...(parent !== setOpened.parent.trim() ? { parent, ...(parent && setTaskOf(parent) ? { parentNew: false } : {}) } : {}),
     };
     try {
       if (!taskFormReady($('set'), $('set-error'))) return;
@@ -5017,7 +5043,12 @@
       }
       if (!res.ok) throw new Error(res.text);
       const reason = await patchOne(page.slug, { work: { task, step } });
-      if (reason) throw new Error(reason);
+      // The task written: the dialog shows it as written, from the tasks read, which hold it and no read since, as a load waits for the
+      // page's write (a new one is there), so that saving again writes the page, and is refused when another wrote it since
+      if (reason) {
+        setTaskKnown();
+        throw new Error(reason);
+      }
       if (task.trim() === setOpened.task) toast(t('ui_saved'));
       else {
         const to = tagged('a', 'toast-link', t('ui_task_put', task.trim(), t(VIEW_WORDS[state])));

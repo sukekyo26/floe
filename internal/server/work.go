@@ -16,8 +16,8 @@ type TaskEdit struct {
 	Steps  *[]string `json:"steps,omitzero"`
 	Parent *string   `json:"parent,omitzero"`
 	New    *bool     `json:"new,omitzero"`
-	// What the screen saw of the parent: store.TaskEdit says each.
-	ParentWas   *string `json:"parentWas,omitzero"`
+	// What the screen read: store.TaskEdit says each.
+	Rev         *int    `json:"rev,omitzero"`
 	ParentNew   *bool   `json:"parentNew,omitzero"`
 	ParentTitle *string `json:"parentTitle,omitzero"`
 }
@@ -33,7 +33,7 @@ func (s *Server) tasks(w http.ResponseWriter, r *http.Request) {
 }
 
 // editTask changes the task the query names, as the management page's URLs name it: a name holds any character, and
-// no project is "/". It makes one that is not there.
+// no project is "/". It makes one that is not there, and answers the row as written, with the keys it is under.
 func (s *Server) editTask(w http.ResponseWriter, r *http.Request) {
 	body, ok := s.readBody(w, r, maxBody)
 	if !ok {
@@ -44,7 +44,7 @@ func (s *Server) editTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
-	err := s.cfg.Store.EditTask(q.Get("project"), q.Get("task"), store.TaskEdit(*in))
+	written, err := s.cfg.Store.EditTask(q.Get("project"), q.Get("task"), store.TaskEdit(*in))
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
 		return
@@ -54,7 +54,7 @@ func (s *Server) editTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusNoContent)
+	sendJSON(w, http.StatusOK, written)
 }
 
 // forgetTask removes the task the query names: not found for none, refused while a page or a child is on it.

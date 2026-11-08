@@ -205,6 +205,9 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	if parentOf("#1") != "#3" {
 		t.Errorf("given back with the reading failing: parent %q", parentOf("#1"))
 	}
+	// The page read again: its row is of the rev the way back wrote, which a page that cannot read does not know, and would send refused
+	open("#1")
+	b.eval(unread)
 	byKeys()
 	b.until("the reading failed", "!document.getElementById('error').hidden")
 	b.pressKey(kb.Escape)
@@ -246,7 +249,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	task("#2", "--parent", "#4")
 	press("document.querySelector('#task-up-rows .unlink')")
 	b.until("refused", "!document.getElementById('error').hidden")
-	if got := b.eval("document.getElementById('error').textContent"); got != "Could not save: the parent of task #2 has changed since it was read" || parentOf("#2") != "#4" {
+	if got := b.eval("document.getElementById('error').textContent"); got != "Could not save: task #2 has changed since it was read" || parentOf("#2") != "#4" {
 		t.Errorf("moved meanwhile: %q, %q", got, parentOf("#2"))
 	}
 	b.until("read again", "document.querySelector('#task-up-rows .kin-row[data-task=\"#4\"]')")
@@ -335,7 +338,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 		t.Errorf("by hand, changed: %q, %q", got, parentOf("#7"))
 	}
 
-	// Set the task: the parent sent with what was seen of it; one changed meanwhile is refused, and a step alone saves.
+	// Set the task: the task sent as it was read (rev); one changed meanwhile is refused, and a step alone saves.
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=p7]')")
 	setDialog := func() {
@@ -348,7 +351,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	task("#7", "--parent", "")
 	b.eval("document.getElementById('set').requestSubmit()")
 	b.until("refused", "!document.getElementById('set-error').hidden")
-	if got := b.eval("document.getElementById('set-error').textContent"); !strings.Contains(got, "the parent of task #7 has changed") || parentOf("#7") != "" {
+	if got := b.eval("document.getElementById('set-error').textContent"); !strings.Contains(got, "task #7 has changed since it was read") || parentOf("#7") != "" {
 		t.Errorf("set, moved meanwhile: %q, %q", got, parentOf("#7"))
 	}
 	b.eval("document.getElementById('set-dialog').close()")

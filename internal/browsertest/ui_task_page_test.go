@@ -327,7 +327,7 @@ in the folder: /tasks?project=proj&task=%231 / {"order":[],"shown":["fold"],"bac
 renamed whole: /tasks?project=proj&task=%23128 / {"order":["c2"],"shown":["c2"],"back":"/tasks?project=proj&task=%23128","at":{"slug":"c2","file":"","v":0}}
 of no rows: / / null
 done: Archive the task
-archived: [Archive] | T x1
+archived: T x1
 the shelf's archive: #120
 folded, none chosen: true true
 while open: waiting

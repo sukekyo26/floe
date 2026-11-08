@@ -111,10 +111,13 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	save()
 	out = append(out, "new task: "+work("a"), tasks())
 
-	// The URL set since the dialog opened stays, as what was shown is not sent; a URL changed is.
+	// A task written since the dialog opened, its URL set: refused, the fields opened again of it, and saved then; a URL changed is.
 	dialog("b")
 	say("a page of a task", fields)
 	s.floe(t, "work", "--task", "#1", "--project", "proj", "--url", "https://example.com/later")
+	b.eval("document.getElementById('set').requestSubmit()")
+	b.until("refused", "!document.getElementById('set-error').hidden")
+	say("written meanwhile", "document.getElementById('set-error').textContent + ' / ' + document.getElementById('set-url').value")
 	save()
 	out = append(out, "a URL set meanwhile: "+tasks())
 	dialog("b")
@@ -209,6 +212,8 @@ func TestUITaskSet(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// Saved with nothing of the step changed, the task's last step stays: the page's own is older.
 	s.floe(t, "work", "c", "--task", "#1", "--step", "later")
+	// Read before the dialog opens, which writes the task as read
+	b.until("read", "tasksRead.tasks.proj['#1'].step === 'later'")
 	dialog("b")
 	field("set-url", "https://example.com/a/url-only")
 	save()
@@ -332,6 +337,7 @@ offered: Make #3 a new task
 new task: {"task":"#3","step":"first","pin":true}
 #1 todo design https://example.com/a/one; #2 todo build ; #3 todo first 
 a page of a task: #1 / design / https://example.com/a/one / out true
+written meanwhile: Could not save: task #1 has changed since it was read: the tasks are read again, so check and save again / https://example.com/later
 a URL set meanwhile: #1 todo design https://example.com/later; #2 todo build ; #3 todo first 
 a URL changed: #1 todo design https://example.com/mine; #2 todo build ; #3 todo first 
 a URL emptied: #1 todo design ; #2 todo build ; #3 todo first 
