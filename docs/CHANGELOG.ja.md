@@ -118,9 +118,9 @@ floe の主要な変更を記録します。フォーマットは
   CSS の変数 `--face`・`--on-face`。色で自分を塗る面（帯、swiss の危険の注意と灰色の注意、ink の引用、
   コード）が地と字の色を置くと、floe の土台が中のリンク・行の code・フォーカスの輪をその字の色で描く。
 - 追加：`floe theme list` と `floe theme show`。`floe part show`・`floe template show`・
-  `floe theme show` は、部品・見た目・共有の schema・テンプレート・テーマが読むファイルを全部、
-  並べた `files:` の行の後に、1 つずつ `==> 名前 <==` の下に書いたとおりに出す。ファイル名を足すと、
-  そのファイルだけを、先頭の BOM を除いて書いたとおりに出す（`floe part show code part.html`）。
+  `floe theme show` は、部品・見た目・共有の schema・テンプレート・テーマが読むファイルの並びを
+  `files:` の行に出す。ファイル名を足すと、そのファイルだけを、先頭の BOM を除いて書いたとおりに
+  出す（`floe part show code part.html`）。
 - 追加：floe のテンプレート `slides`。1 枚ずつ見せるスライドで、帯の表紙の後に、画面の高さの枚
   （見出しと report と同じ部品）を並べ、スクロールで 1 枚ずつ止めて右下に何枚目かを出す。見出しだけの枚は
   話の区切りになり、印刷すると 1 枚が 1 ページになる。`direction: across` と書くと枚を横に並べ、← → のキーや
@@ -218,7 +218,7 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` の自分の部品・見た目・共有の schema・テーマ
   （floe のものと並べて置き、floe のものと同じ名前は付けない）と、`floe part list`（floe の
   テンプレートの節に書ける部品。`html` も。`--all` で `$ref` が名指せる部品・見た目・共有の
-  schema を自分のものも全部）・`show`（`floe part show html` は鍵 `html` を持つ `any.json` を出す）・
+  schema を自分のものも全部）・`show`（`floe part show html any.json` が鍵 `html` を持つ `any.json` を出す）・
   `new`（埋めて使う最小の部品）・`check`。部品の schema は、テンプレートと同じく floe の
   format（`html`・`markdown`・`image`）と、それを持つ共有の schema を取れる。
   共有の schema は、どれかの schema が名指すかによらず、その根から確かめる。
@@ -434,7 +434,7 @@ floe の主要な変更を記録します。フォーマットは
 - 変更：`floe diagram render` の断片の図は、まわりのページ（`:root` や図を包む要素）
   の変数と color-scheme を読まない。floe の字体で描き、shadow root の中でも色が付く。
   色は `@scope` で当てるので、`@scope` を読まないブラウザでは色が付かない。図の部品
-  の CSS は自分の色を持たないので、`floe part show diagram` の CSS だけをパレットの
+  の CSS は自分の色を持たないので、`floe part show diagram part.css` の CSS だけをパレットの
   無いページに写すと、図が黒くなる。floe のパレットは `:scope` に書く。
 
 ### 修正

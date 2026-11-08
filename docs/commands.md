@@ -11,15 +11,15 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe render <data.yaml>...` | Write the page of each data file to an HTML file, to keep in a repository |
 | `floe rebuild` | Draw every stored page again with the templates, parts and themes of now |
 | `floe template list` | List the templates |
-| `floe template show <name> [file]` | Show a template: its themes and every file it reads as written, or one of them |
+| `floe template show <name> [file]` | Show a template: its themes and the files it reads, or one of them as written |
 | `floe template new <name>` | Make a template of your own to fill in: the smallest floe takes, with a viewport |
 | `floe template check` | Check the templates of your own |
 | `floe part list [--all]` | List the parts a section of floe's templates takes; `--all` every part, look and shared schema |
-| `floe part show <name> [file]` | Show a part, look or shared schema, or, for `html`, `any.json`, and every file it reads as written, or one of them |
+| `floe part show <name> [file]` | Show a part, look or shared schema, or, for `html`, `any.json`, and the files it reads, or one of them as written |
 | `floe part new <name>` | Make the smallest part of your own, to fill in |
 | `floe part check` | Check the parts, looks, shared schemas and themes of your own |
 | `floe theme list` | List the themes |
-| `floe theme show <name> [file]` | Show a theme and every file it reads as written, or one of them |
+| `floe theme show <name> [file]` | Show a theme and the files it reads, or one of them as written |
 | `floe list` | List pages, newest first |
 | `floe rm <slug>...` | Delete pages |
 | `floe archive <slug>...` | Take pages off the lists, keeping them (`--undo` gives them back) |
@@ -142,7 +142,7 @@ Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own
 
 ## `floe part list`
 
-Print the parts a section of floe's templates takes (the keys of floe's `any.json`), one per line in three tab-separated columns: the name, where it is (`floe`) and its description. `html` takes HTML as text and has no `schema.json`: `floe part show html` prints `any.json`, which holds the key `html`.
+Print the parts a section of floe's templates takes (the keys of floe's `any.json`), one per line in three tab-separated columns: the name, where it is (`floe`) and its description. `html` takes HTML as text and has no `schema.json`: `floe part show html any.json` prints `any.json`, which holds the key `html`.
 
 With `--all`, print every part, look and shared schema, floe's and your own, that a `$ref` of your own schema can name, in the same columns (where it is: `floe`, or the directory of one of your own). `html` is not among them, as there is no `floe:///parts/html.json`.
 
@@ -164,15 +164,14 @@ Print the themes, floe's and your own, one per line in the same three tab-separa
 
 ## `floe template show <name> [file]` / `floe part show <name> [file]` / `floe theme show <name> [file]`
 
-Print a template, a part (a look or a shared schema too) or a theme, floe's or your own, to read before writing with it or copying from it: its name and description (a theme's name alone, as it has none), where it is, the files it reads (`files:`), and each of them as written under `==> file <==`.
+Print a template, a part (a look or a shared schema too) or a theme, floe's or your own, to read before writing with it or copying from it: its name and description (a theme's name alone, as it has none), where it is and the files it reads (`files:`), not what they hold.
 
 - With a file named after (`floe part show code part.html`), print that file alone, as written but the byte order mark at its start: floe's parts show how `part.html` uses `{{copyButton}}` and the other functions. A file it does not read is refused with the files it does.
-- When the output is long, read the `files:` line first, then the file you need.
 
-| Of | Also prints | The files, in order |
+| Of | Also prints | The files, in the order of `files:` |
 |---|---|---|
 | A template | The themes a data file may pick (`themes:`) | What a data file may hold (`schema.json`, `checks.yaml`, `computed.yaml`) and `example.yaml`, then `page.html`, `page.css` and `words.yaml`. Not `assets/`, its images |
-| A part | The looks it takes | `schema.json`, `checks.yaml`, `part.yaml`, `part.html`, `part.css`, `words.yaml`. The CSS of the looks it takes is the looks' own: `floe part show panel` prints it |
+| A part | The looks it takes | `schema.json`, `checks.yaml`, `part.yaml`, `part.html`, `part.css`, `words.yaml`. The CSS of the looks it takes is the looks' own: `floe part show panel part.css` prints it |
 | A look | The looks it takes | `part.yaml`, `part.css` |
 | A shared schema | — | `<name>.json` |
 | A theme | — | `palette.css`, `base.css`, `markdown.css`, then the CSS it gives each part or look, by name |
@@ -261,7 +260,7 @@ Check each diagram spec and print the diagrams, in order, as one HTML fragment o
 - A spec is checked against the diagram's schema, then laid out once for every language its text is written in, and checked: text that overflows, parts that overlap or stick out of the canvas, edges through boxes, crossings … ([diagrams.md](diagrams.md) lists the checks).
 - Every mistake of every spec is printed as `file:line:column: message` (`file: message` for one of the whole spec), in the order the specs were given, and nothing is drawn until all are fixed (exit code 1).
 - The text is written in the language of `--lang` (`en` when left out). A language a text does not have falls back to English.
-- The fragment starts with the assets: `default`'s palette on the diagrams alone, the diagrams' style, which takes its colours from the palette's CSS variables, and the script that zooms them. The page around the diagrams keeps its own colours and variables, and the diagrams take none of the page's: the palette and `color-scheme: light` are set on the diagrams' roots, so a variable or a color-scheme on the page's `:root`, or on an element holding them (a dark panel), does not reach them. Each diagram paints its own ground, the palette's `--bg` (`default`'s, `#f4f3f0`): on a dark page it stands as a light box, unless you set `--bg` on its roots as below. To draw the diagrams in the page's colours, set the palette's variables on their roots, outside any cascade layer (`.floe-zoom-tools, .floe-zoom { --accent: …; }`): the fragment's palette is in the layer `floe.palette`, which comes after the layers the page names first, so a rule in one of the page's layers (Tailwind's `@layer components`) loses to it, and a rule outside layers wins. Keep the assets in the same tree as the diagrams (the document, or one shadow root). In a shadow root the diagrams take their colours, but not the toolbar or the zoom: the script looks for diagrams in the document only. Read the page in a browser the README names: one that does not read `@scope` draws the diagrams without colours. The CSS that `floe part show diagram` prints takes the palette's variables and has none of its own, so a page without a palette takes the fragment's assets, not that CSS. Readers zoom a diagram drawn smaller than its actual size with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. A page needs the assets once; holding them more than once does no harm.
+- The fragment starts with the assets: `default`'s palette on the diagrams alone, the diagrams' style, which takes its colours from the palette's CSS variables, and the script that zooms them. The page around the diagrams keeps its own colours and variables, and the diagrams take none of the page's: the palette and `color-scheme: light` are set on the diagrams' roots, so a variable or a color-scheme on the page's `:root`, or on an element holding them (a dark panel), does not reach them. Each diagram paints its own ground, the palette's `--bg` (`default`'s, `#f4f3f0`): on a dark page it stands as a light box, unless you set `--bg` on its roots as below. To draw the diagrams in the page's colours, set the palette's variables on their roots, outside any cascade layer (`.floe-zoom-tools, .floe-zoom { --accent: …; }`): the fragment's palette is in the layer `floe.palette`, which comes after the layers the page names first, so a rule in one of the page's layers (Tailwind's `@layer components`) loses to it, and a rule outside layers wins. Keep the assets in the same tree as the diagrams (the document, or one shadow root). In a shadow root the diagrams take their colours, but not the toolbar or the zoom: the script looks for diagrams in the document only. Read the page in a browser the README names: one that does not read `@scope` draws the diagrams without colours. The CSS that `floe part show diagram part.css` prints takes the palette's variables and has none of its own, so a page without a palette takes the fragment's assets, not that CSS. Readers zoom a diagram drawn smaller than its actual size with the buttons, Ctrl / ⌘ + wheel or a pinch, and drag or use the arrow keys to move while zoomed. A page needs the assets once; holding them more than once does no harm.
 
 | Flag | Description |
 |---|---|

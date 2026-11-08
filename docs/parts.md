@@ -12,7 +12,7 @@ How to make a part, a look or a theme of your own. A part draws an item of a dat
 ```sh
 floe part new quote     # makes the smallest part, quote, to fill in
 floe part check         # checks every part, look, shared schema and theme of your own
-floe part show quote    # prints its looks and every file it reads
+floe part show quote    # lists its looks and the files it reads
 ```
 
 A mistake of one stops every page, as [templates.md](templates.md#where-templates-are) tells: `floe part check` lists them. While you write one, make it in another directory and move it in once it is checked, as [templates.md](templates.md#make-one-in-another-directory) tells: set `FLOE_PARTS_DIR` or `FLOE_THEMES_DIR` to it and run `floe part check`.
@@ -41,7 +41,7 @@ quote/
 - `part.html` has the functions floe's parts draw with too ([Functions of part.html](#functions-of-parthtml)).
 - Its schema takes floe's `format`s as a template's does (`html`, `markdown`, `image`), declared under `properties`, `additionalProperties` or `items`, where floe follows, or as the root, and a shared schema that holds them. Such an item comes to `part.html` drawn: `html` as written, `markdown` as HTML, `image` as a data URI (`<img src="{{.file}}" alt="{{.alt}}">`). Write it as `{{.h}}`: do not pass it to a function (`markdown`, `markdownLine`, `printf`, `slice`, `eq`, …) nor put it in a `<script>`, as it is HTML, not the text written, and does not work there. An item of `html` is checked in the page drawn as a template's is ([templates.md](templates.md)). A plain string drawn as Markdown is `{{markdown .text}}`. A value of `any.json` does not come drawn as one item but as a map of every kind ([Looks and shared schemas](#looks-and-shared-schemas)).
 - A part of rows one under another takes the look `rows` (`looks: [rows]`) and writes no padding of its rows, which `rows` gives (`--floe-row-pad` above and below, `--floe-pad-inline` at the sides); rows that cannot take it read `var(--floe-row-pad)`. A theme leaves those variables as they are. [Borrowing a look](#borrowing-a-look) tells more.
-- `floe part show <name>` prints every file one reads, floe's too, under a `files:` line naming them; `floe part show <name> <file>` prints one of them alone: copy from floe's parts what fits.
+- `floe part show <name>` lists on a `files:` line the files one reads, floe's too; `floe part show <name> <file>` prints one of them: copy from floe's parts what fits.
 
 ## Functions of part.html
 
@@ -130,7 +130,7 @@ A part's `part.css`, and a theme's file of it, are scoped to the elements that h
 
 A list (`ul`, `ol` or `menu`) that is a part's box or takes a look has no marks, padding or room between its items, and is laid out in a grid: floe sets so in the lowest layer of `floe.parts` and of `floe.looks` (`floe.parts.boxes`, `floe.looks.boxes`), under every part's and look's own rules. So a part writes none of that to leave a list's look out, and a template's `page.css` or a theme's `base.css` that writes a rule for every list changes none of these four of a part's box (its margin and a rule for the items, `li` or `::marker`, still reach it); an element that takes a look keeps them from a theme's such rule, and its template's `page.css` adjusts them. A part whose box is a list it wants marked sets `list-style` and the padding in its `part.css`, or holds the list in its box; for a list without marks to be read out as a list, as Safari does not, it writes `role="list"` on it.
 
-A part takes its colours from the palette's variables as they are (`var(--accent)`), with no value of its own to fall back on: every page of floe holds the palette. So the CSS that `floe part show <name>` prints draws without colours in a page without a palette; for diagrams in such a page, take the assets of `floe diagram render`'s fragment, which carry `default`'s palette ([commands.md](commands.md#floe-diagram-render-specyaml)). Nor does that CSS leave a list's marks and padding out of a part whose box is a list (checklist, links, steps, timeline): floe does so as it draws the page, as above; a page drawn without floe writes it.
+A part takes its colours from the palette's variables as they are (`var(--accent)`), with no value of its own to fall back on: every page of floe holds the palette. So the CSS a part or look reads (on the `files:` line of `floe part show <name>`, printed by naming it after) draws without colours in a page without a palette; for diagrams in such a page, take the assets of `floe diagram render`'s fragment, which carry `default`'s palette ([commands.md](commands.md#floe-diagram-render-specyaml)). Nor does that CSS leave a list's marks and padding out of a part whose box is a list (checklist, links, steps, timeline): floe does so as it draws the page, as above; a page drawn without floe writes it.
 
 A tone (one of `tone.json`'s) is marked by `data-floe-tone` on the element drawn in it, not by a class: `<span data-floe-tone="good" data-floe-part="cell">`. floe gives that element, and what it holds short of a part's box, the tone's colours as `--tone` and `--tone-soft` (from the palette's `--good` and `--good-soft`); a part's box, and the page, take accent's, so that a part takes no tone from one around it (a text's box, which is no part's, takes the tone around it), wherever the mark stands (a template's or a look's element too). A part draws in the two with one rule (`background: var(--tone-soft); color: var(--tone)`), and writes a rule of a tone only for what is no colour of it (note's marks, a diagram's bad box's text). A part whose things without a tone take other colours sets the two on its root (stats: `--muted` and `--muted-soft`); one that draws them in each shape's own colours, as the diagram does, sets both to `initial` on its root and writes each shape's colour after `var()` (`var(--tone, var(--line))`). A `data-floe-tone` of no tone is as if not written: a part's box draws in accent's colours, another element in the tone around it.
 
@@ -164,7 +164,7 @@ As in `page.css`, a `}` that closes no block and an `@import` are refused at the
 
 ## Themes
 
-A theme of your own is a directory of these files, each left out if not needed. `floe theme list` lists the themes, and `floe theme show <name>` prints the files one reads, floe's too (`floe theme show ink palette.css`):
+A theme of your own is a directory of these files, each left out if not needed. `floe theme list` lists the themes, and `floe theme show <name>` lists the files one reads, floe's too, and prints one named after (`floe theme show ink palette.css`):
 
 | File | What it holds |
 |---|---|
