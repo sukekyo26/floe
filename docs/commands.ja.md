@@ -15,7 +15,7 @@
 | `floe template new <名前>` | 埋めて使う自分のテンプレートを作る（floe が受ける最小のものに、viewport を足したもの） |
 | `floe template check` | 自分のテンプレートを確かめる |
 | `floe part list [--all]` | floe のテンプレートの節に書ける部品を並べる。`--all` は部品・見た目・共有の schema を全部 |
-| `floe part show <名前> [ファイル]` | 部品・見た目・共有の schema か、any.json の鍵 html と、読むファイルを全部、書いたとおりに出す。ファイル名を足すとそれだけ |
+| `floe part show <名前> [ファイル]` | 部品・見た目・共有の schema（`html` なら `any.json`）と、読むファイルを全部、書いたとおりに出す。ファイル名を足すとそれだけ |
 | `floe part new <名前>` | 埋めて使う最小の自分の部品を作る |
 | `floe part check` | 自分の部品・見た目・共有の schema・テーマを確かめる |
 | `floe theme list` | テーマを並べる |
@@ -142,7 +142,7 @@ floe と自分のテンプレートを 1 行ずつ、タブで区切った 3 列
 
 ## `floe part list`
 
-floe のテンプレートの節に書ける部品（floe の `any.json` の鍵）を 1 行ずつ、タブで区切った 3 列で出します。名前、場所（`floe`）、説明です。`html` は HTML を字で取り、`schema.json` はありません。`floe part show html` が `any.json` の鍵を出します。
+floe のテンプレートの節に書ける部品（floe の `any.json` の鍵）を 1 行ずつ、タブで区切った 3 列で出します。名前、場所（`floe`）、説明です。`html` は HTML を字で取り、`schema.json` はありません。`floe part show html` は、鍵 `html` を持つ `any.json` の全体を出します。
 
 `--all` を付けると、自分の schema が `$ref` で名指せる部品・見た目・共有の schema を、floe のものも自分のものも、同じ列で出します。場所は `floe` か、自分のもののディレクトリです。`floe:///parts/html.json` は無いので、`html` は入りません。
 

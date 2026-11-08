@@ -218,7 +218,7 @@ floe の主要な変更を記録します。フォーマットは
 - 追加：`FLOE_PARTS_DIR`・`FLOE_THEMES_DIR` の自分の部品・見た目・共有の schema・テーマ
   （floe のものと並べて置き、floe のものと同じ名前は付けない）と、`floe part list`（floe の
   テンプレートの節に書ける部品。`html` も。`--all` で `$ref` が名指せる部品・見た目・共有の
-  schema を自分のものも全部）・`show`（`floe part show html` は `any.json` の鍵を出す）・
+  schema を自分のものも全部）・`show`（`floe part show html` は鍵 `html` を持つ `any.json` を出す）・
   `new`（埋めて使う最小の部品）・`check`。部品の schema は、テンプレートと同じく floe の
   format（`html`・`markdown`・`image`）と、それを持つ共有の schema を取れる。
   共有の schema は、どれかの schema が名指すかによらず、その根から確かめる。

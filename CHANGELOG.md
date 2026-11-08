@@ -303,7 +303,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   and `FLOE_THEMES_DIR`, beside floe's and never named as one of them; and
   `floe part list` (what a section of floe's templates takes, `html` too; with
   `--all`, every part, look and shared schema a `$ref` can name, your own too),
-  `show` (`floe part show html` shows the key of `any.json`), `new` (the
+  `show` (`floe part show html` prints `any.json`, which holds `html`), `new` (the
   smallest part, to fill in) and `check`.
   A part's schema takes floe's formats (`html`, `markdown`, `image`) as a
   template's does, and a shared schema holding them. A shared schema is

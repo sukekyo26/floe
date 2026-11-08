@@ -107,7 +107,7 @@ The parts `report` takes in a section:
 | `columns` | Parts side by side, to see at once: a screen before and after, data beside its reading. Each column is an optional `title` over `parts`, which hold what `details` holds. Columns are of one width, 16rem at the least, so that how many stand side by side follows the width of the page's text (five at most in `report`, three in `adr` and `runbook`), and the rest fold under them. |
 | `diagram` | A diagram, checked and drawn as inline SVG ([diagrams.md](diagrams.md)). |
 | `script` | Something that moves ([Scripts and HTML](#scripts-and-html)). |
-| `html` | HTML that goes in as it is: a key of `any.json`, not a part of its own, so it has no schema.json; `floe part show html` shows the key ([Scripts and HTML](#scripts-and-html)). |
+| `html` | HTML that goes in as it is: a key of `any.json`, not a part of its own, so it has no schema.json; `floe part show html` prints `any.json`, which holds it ([Scripts and HTML](#scripts-and-html)). |
 
 A `tone` is `accent`, `good`, `warn`, `bad` or `muted`.
 

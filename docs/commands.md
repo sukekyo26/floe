@@ -15,7 +15,7 @@ Reference for every command of the `floe` binary. How to write a data file is in
 | `floe template new <name>` | Make a template of your own to fill in: the smallest floe takes, with a viewport |
 | `floe template check` | Check the templates of your own |
 | `floe part list [--all]` | List the parts a section of floe's templates takes; `--all` every part, look and shared schema |
-| `floe part show <name> [file]` | Show a part, look or shared schema, or the key html of any.json, and every file it reads as written, or one of them |
+| `floe part show <name> [file]` | Show a part, look or shared schema, or, for `html`, `any.json`, and every file it reads as written, or one of them |
 | `floe part new <name>` | Make the smallest part of your own, to fill in |
 | `floe part check` | Check the parts, looks, shared schemas and themes of your own |
 | `floe theme list` | List the themes |
@@ -142,7 +142,7 @@ Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own
 
 ## `floe part list`
 
-Print the parts a section of floe's templates takes (the keys of floe's `any.json`), one per line in three tab-separated columns: the name, where it is (`floe`) and its description. `html` takes HTML as text and has no `schema.json`: `floe part show html` shows the key of `any.json`.
+Print the parts a section of floe's templates takes (the keys of floe's `any.json`), one per line in three tab-separated columns: the name, where it is (`floe`) and its description. `html` takes HTML as text and has no `schema.json`: `floe part show html` prints `any.json`, which holds the key `html`.
 
 With `--all`, print every part, look and shared schema, floe's and your own, that a `$ref` of your own schema can name, in the same columns (where it is: `floe`, or the directory of one of your own). `html` is not among them, as there is no `floe:///parts/html.json`.
 
