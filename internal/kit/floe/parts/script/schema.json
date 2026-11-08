@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "script",
-  "description": "Something that moves: js, a function (el, data) { … } the page calls with an empty element in its place and data, any value. It runs in the page's sandbox, where fetch, XHR, images from elsewhere and forms are blocked",
+  "description": "Something that moves: js, a function (el, data) { … } the page calls with an empty element in its place and data, any value. It runs in the page's sandbox, where fetch, XHR, images from elsewhere and forms are blocked. In a closed details or a tab not shown, the element has no width when it runs",
   "type": "object",
   "properties": {
     "js": { "type": "string", "description": "The function, function (el, data) { … }" },

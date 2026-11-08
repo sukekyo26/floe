@@ -1,4 +1,6 @@
-/* What details, tabs, columns and an item of entries, checks or options hold */
+/* What details, tabs, columns and an item of entries, checks or options hold.
+   LIMIT: kept within its place one stack deep and two (an option of options in an option), but for options and bars
+   two deep; deeper, a part comes to want more room than it has, and overflows. Measure it in wrapPage if it comes to matter */
 :scope { display: grid; gap: var(--floe-room); }
 /* A word kept whole (a table's on paper) overflows the stack's column instead of widening it */
 :scope > * { min-width: 0; }

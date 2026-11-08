@@ -190,6 +190,12 @@ sections:
             cons: [Longer freeze]
             pick: Recommended
           - title: Copy by space
+            parts:
+              - options:
+                  - { title: Docs first, text: The most read space. }
+                  - { title: By size, text: The smallest space first. }
+              - bars:
+                  - { label: Docs, value: 400, of: 1840 }
             text: |
               Each space is copied apart:
 
@@ -231,6 +237,14 @@ sections:
             parts:
               - code: { file: wiki.conf, lang: ini, text: "mode = read-only" }
               - terminal: { shell: bash, steps: [{ run: wiki freeze }] }
+              - links:
+                  - { title: The freeze, url: 'https://example.com/freeze', text: What it stops }
+              - findings:
+                  - { level: should, at: wiki.conf:1, text: The mode is not said in the banner }
+              - details:
+                  title: The whole command
+                  parts:
+                    - code: { lang: sh, text: "wiki freeze --all --banner" }
           - title: Parts alone, in the last row
             parts:
               - text: Text among parts, as tall as an item's.
@@ -281,6 +295,13 @@ sections:
             - entries:
                 - { title: Copied, tags: [412 pages], text: Every page but the drafts. }
             - image: { file: shots/moved.png, alt: The wiki after the move, caption: "Figure 1: the wiki on the new host, at `wiki.example.com`" }
+            - stats:
+                - { label: Copied, value: '1840', from: '1200', better: higher }
+            - steps:
+                - { title: Export, state: done }
+                - { title: Import, state: doing }
+            - checklist:
+                - { text: Count the pages, done: true }
       - asks:
           - question: Copy in one go?
             options: [One go, 'By space, with `sync --space`']
@@ -312,6 +333,12 @@ sections:
             actual: The export of 2023 reads, its dates converted.
             parts:
               - code: { lang: sh, text: "wiki import old.zip --date-format legacy\n" }
+              - keys:
+                  - { keys: [Ctrl, I], text: Import again }
+              - asks:
+                  - { question: Keep the old dates?, options: [As they are, Converted], recommend: Converted }
+              - checks:
+                  - { title: Do the dates read?, result: ok, actual: All of them. }
           - title: Does a wrong password stop after five?
             result: ng
             actual: After four; `>=` is written for `>`.
@@ -331,6 +358,11 @@ sections:
           - title: After
             parts:
               - note: { tone: good, title: Done, text: The list after. }
+              - decision: { title: Keep the list, status: { pill: decided, tone: good }, text: It reads well. }
+              - fields:
+                  - { name: list, type: bool, default: 'true' }
+              - timeline:
+                  - { date: 2030-04-07, title: Listed }
       - tabs:
           - title: bash
             parts:
@@ -344,6 +376,15 @@ sections:
               - table:
                   columns: [Shell, { title: Lines, num: true }]
                   rows: [[PowerShell, '1']]
+              - compare:
+                  before: bash
+                  after: PowerShell
+                  rows:
+                    - { what: Variable, before: export, after: $env }
+              - facts:
+                  - { name: Shell, value: PowerShell 7 }
+              - tree:
+                  - { path: profile.ps1, change: changed }
       - html: <details><summary>What the freeze covers</summary><p>Edits, <span data-floe-tone="good" data-floe-part="cell">comments</span> and uploads.</p></details>
       - script:
           data: { pages: 1840, "__proto__": "<b>" }

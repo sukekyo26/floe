@@ -1,5 +1,7 @@
-/* A bar's length is set on it, as a share of its of or of the longest */
-:scope { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.6rem 1rem; align-items: center; padding: var(--floe-pad-block) var(--floe-pad-inline); }
+/* A bar's length is set on it, as a share of its of or of the longest. The label and the value take up to 40% each,
+   wrapping, so that the bar keeps the rest less the two gaps.
+   LIMIT: no word breaks, so a word wider than 40% widens its column, and in a place under 10rem the bar is none */
+:scope { display: grid; grid-template-columns: fit-content(40%) minmax(0, 1fr) fit-content(40%); gap: 0.6rem 1rem; align-items: center; padding: var(--floe-pad-block) var(--floe-pad-inline); }
 :scope > div { display: contents; color: var(--tone); }
 :scope .label { color: var(--fg); font-size: var(--floe-text-small); }
 /* The track is the quiet ground (--quiet), as a table's head and a keycap's.

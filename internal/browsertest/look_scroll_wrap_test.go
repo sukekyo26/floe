@@ -13,6 +13,8 @@ import (
 // long path, a long pill and a long line of code in its text. A long block and a table also stand in an item of a
 // list and in a quote, in a text, a text in details, a card of options and of a decision, a step and a tab, where an
 // item of a grid or a flex row around them takes their width unless the box that scrolls tells nothing of it.
+// A bar of a long name stands in details, and facts, stats, keys, a timeline and asks in an option of options in an
+// option, the narrowest place measured, where a part lays out by its place's width, not the window's.
 const wrapPage = `template: report
 lang: en
 title: Wrap
@@ -151,6 +153,30 @@ sections:
           - title: B
             parts:
               - text: b
+      - details:
+          title: A bar of a long name
+          open: true
+          parts:
+            - bars:
+                - { label: Pages copied to the new host, value: 1200, of: 1840 }
+      - options:
+          - title: An option holding options
+            parts:
+              - options:
+                  - title: An option holding parts
+                    parts:
+                      - facts:
+                          - { name: Owner, value: The platform team }
+                      - stats:
+                          - { label: Pages, value: '1840', from: '1900', better: lower }
+                      - keys:
+                          - { keys: [Ctrl, K], text: Search the wiki }
+                      - timeline:
+                          - { date: 2030-04-05, title: Freeze }
+                      - asks:
+                          - { question: Copy in one go?, options: [One go, By space], recommend: One go }
+                  - title: Another
+          - title: Another
       - tree:
           - { path: internal/kit/floe/parts/, note: internal/kit/floe/parts/findings/part_internal_test.go }
       - tree:
@@ -170,7 +196,8 @@ sections:
               | export | nightly | wiki.conf | writes pages | running | platform |
 `
 
-// measureWrap finds each part's box, or a box in it, out of those that scroll sideways, that is wider than its place
+// measureWrap finds each part's box, or a box in it, out of those that scroll sideways and the words only a screen reader
+// reads (.floe-hidden, a 1px box their text overflows), that is wider than its place
 // or reaches past the window, and tells the innermost of them alone, as what overflows widens the boxes around it; the
 // page wider than the window only when no box is told. It finds each word that breaks across lines in keys' text,
 // code's language, a diff's counts, a table and a tree's note.
@@ -188,7 +215,7 @@ const measureWrap = `(() => {
   };
   for (const e of document.querySelectorAll('[data-floe-part], [data-floe-part] *')) {
     const s = getComputedStyle(e);
-    if (scrolled(e) || scrolls(e) || s.display === 'inline') continue;
+    if (scrolled(e) || scrolls(e) || s.display === 'inline' || e.closest('.floe-hidden, .floe-copy-status')) continue;
     seen++;
     if (e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > w + 1) wide.push(e);
   }
