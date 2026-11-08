@@ -115,7 +115,7 @@ A `tone` is `accent`, `good`, `warn`, `bad` or `muted`.
 
 A data file is one YAML document of keys and values. One with `---` between documents, or with anchors, aliases, merge keys (`<<`) or tags, is refused.
 
-- Write text with a `: `, a ` #` or, in `{ }` or `[ ]`, a `,` in it in quotes (`"…"`) or as a block (`|-`): YAML reads them as a key and its value, the start of a comment, or the end of the text.
+- Write text with a `: `, a ` #` or, in `{ }` or `[ ]`, a `,` in it in quotes (`"…"`) or as a block (`|-`): YAML reads them as a key and its value, the start of a comment, or the end of the text. Unquoted, such text is refused in YAML's own words, which change with what follows the `: ` (`mapping value is not allowed in this context`, ``'`' is a reserved character``), at the start of the value: look in that value for a `: ` or a ` #`.
 - A comment on the line of a value not in quotes is refused, in every YAML file floe reads, as it may have cut the value short (`lead: PR #100` reads as `PR`): write the comment on a line of its own, outside any `{ }` or `[ ]`.
 - A comment can't be written in `{ }` or `[ ]`, even on a line of its own, in any YAML file floe reads: write it on a line outside them.
 - A `|` or `>` text whose first line (not of spaces alone) begins with spaces and a tab is refused, in every YAML file floe reads: YAML 1.2 reads the tab as text, but floe's YAML library as indentation, and it drops or shortens the lines after it. Begin the line without the tab, or write the text's indentation after the `|` or `>` (`|2` for text two spaces past its key).
@@ -155,6 +155,7 @@ plan.yaml:8:36: write the command without its prompt, which floe draws from the 
 ```
 
 - `file:line:column:` is where the mistake is: the value to change, or the key that holds it. A mistake told with `file:` alone, no line, is one of the whole file: what it lacks at the top (`design.yaml: missing properties 'background', 'goals'`), or a check of the template's on the whole data file. Fix every mistake told, then run `floe check` again: it may tell those of the next stage.
+- A mistake of YAML itself (`mapping value is not allowed in this context`) is told in the words of floe's YAML library, at the place it names, which for a `: ` in a value not in quotes is the start of the value: see [Writing text](#writing-text).
 - A mistake of the shape (`additional properties 'x' not allowed`, `missing property 'x'`, `got string, want array`) is the template's or the part's schema refusing the data: `floe template show <template> schema.json` and `floe part show <part> schema.json` print what they take.
 - A mistake of a part, look, shared schema, theme or template of your own stops every page, whether it uses that one or not: the mistake is told at its own file (`~/.config/floe/parts/quote/schema.json:2:1: …`). `floe part check` and `floe template check` list them.
 - A mistake told once is not told again, even if many places name it.
