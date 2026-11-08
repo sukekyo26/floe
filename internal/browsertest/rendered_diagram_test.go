@@ -1,8 +1,11 @@
 package browsertest_test
 
 import (
+	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -167,7 +170,7 @@ parts:
   - box: { x: 160, y: 120, w: 100, h: 40, rows: [plain] }
   - edge: { from: [120, 40], to: [160, 40], tone: accent }
   - edge: { from: [260, 140], to: [300, 140] }
-  - raw: { svg: '<rect x="300" y="120" width="30" height="40" fill="var(--accent-soft)" stroke="var(--accent)" data-want="fill=--accent-soft stroke=--accent"/><g data-floe-tone="bad"><rect x="340" y="120" width="30" height="40" fill="var(--tone)" data-want="fill=--bad"/></g><text x="380" y="140" font-size="12" fill="currentColor" data-want="fill=--fg">r</text>' }
+  - raw: { svg: '<rect x="300" y="120" width="30" height="40" fill="var(--accent-soft)" stroke="var(--accent)"/><g data-floe-tone="bad"><rect x="340" y="120" width="30" height="40" fill="var(--tone)"/></g><text x="380" y="140" font-size="12" fill="currentColor">r</text>' }
 `
 
 // diagramColours lists, in the tree root names (document, or a shadow root), what the diagram's CSS paints:
@@ -188,21 +191,30 @@ func diagramColours(root string) string {
 })(` + root + `)`
 }
 
-// rawOff lists the raw SVG whose colours are not the palette's that its data-want names (fill=--bad), each variable
-// read as a colour in the page's body, outside the diagrams.
+// rawOff lists the raw SVG whose colours are not those its fill and stroke attributes write, each read as a colour in
+// the page's body, outside the diagrams: var(--x) as --x; var(--tone) as the tone the nearest data-floe-tone around
+// it names (--bad under bad); currentColor as --fg, as the docs say. floe draws no fill or stroke attribute, so every
+// one is raw's. It lists that it measured none, when none is drawn.
+// LIMIT: a colour written as itself (red, #f00) is not measured: the rule is of the palette's variables.
 const rawOff = `(() => {
   const out = [];
-  for (const e of document.querySelectorAll('svg.dg [data-want]')) {
+  let seen = 0;
+  const colour = (name) => { const probe = document.body.appendChild(document.createElement('span'));
+    probe.style.color = 'var(' + name + ')'; const c = getComputedStyle(probe).color; probe.remove(); return c; };
+  for (const e of document.querySelectorAll('svg.dg :is([fill], [stroke])')) {
     const c = getComputedStyle(e);
-    for (const pair of e.dataset.want.split(' ')) {
-      const [prop, name] = pair.split('=');
-      const probe = document.body.appendChild(document.createElement('span'));
-      probe.style.color = 'var(' + name + ')';
-      const want = getComputedStyle(probe).color;
-      probe.remove();
-      if (c.getPropertyValue(prop) !== want) out.push(e.tagName + ' ' + prop + ': ' + c.getPropertyValue(prop) + ', want ' + name + ' ' + want);
+    for (const prop of ['fill', 'stroke']) {
+      const written = (e.getAttribute(prop) || '').trim();
+      const v = /^var\((--[\w-]+)\)$/.exec(written);
+      let name = v ? v[1] : written === 'currentColor' ? '--fg' : '';
+      if (name === '--tone') name = '--' + e.closest('[data-floe-tone]')?.dataset.floeTone;
+      if (!name) continue;
+      seen++;
+      const want = colour(name);
+      if (c.getPropertyValue(prop) !== want) out.push(e.tagName + ' ' + prop + ' ' + written + ': ' + c.getPropertyValue(prop) + ', want ' + name + ' ' + want);
     }
   }
+  if (!seen) out.push('no raw colour measured');
   return out.join('\n');
 })()`
 
@@ -434,34 +446,27 @@ func TestRenderedDiagramGround(t *testing.T) { //nolint:paralleltest // the brow
 	}
 }
 
-// faceOf in internal/diagram tells each class as part.css draws it: its size, weight and whether in code.
-const measureFaces = `(() => {
-  const svg = document.querySelector('svg.dg');
-  const text = (parent, cls) => {
-    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    if (cls) t.setAttribute('class', cls);
+// measureFaces tells, as JSON, each class of classes as part.css draws a diagram's text in it, as faceOf in
+// internal/diagram measures it: [its size in px, the units of its narrow characters], 31 in code, else 32 in bold
+// (600 or more), else 30, as faceOf's doc says. A frame's heading takes its class from its group (onGroup).
+const measureFaces = `((classes, onGroup) => {
+  const svg = document.querySelector('svg.dg'), plain = getComputedStyle(svg).fontFamily, out = {};
+  for (const cls of classes) {
+    const parent = onGroup.includes(cls) ? svg.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'g')) : svg;
+    const t = parent.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'text'));
+    (onGroup.includes(cls) ? parent : t).setAttribute('class', cls);
     t.textContent = 'x';
-    parent.append(t);
-    return t;
-  };
-  const plain = getComputedStyle(svg).fontFamily;
-  const face = (t) => {
     const s = getComputedStyle(t);
-    return s.fontSize + ' ' + s.fontWeight + (s.fontFamily === plain ? '' : ' code');
-  };
-  const out = {};
-  for (const cls of ['main', 'sub', 'main code', 'sub code', 'cell code', 'type', 'label', 'label strong']) {
-    out[cls] = face(text(svg, cls));
-  }
-  for (const cls of ['frame', 'frame grouped']) {
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.setAttribute('class', cls);
-    svg.append(g);
-    out[cls] = face(text(g));
+    out[cls] = [parseFloat(s.fontSize), s.fontFamily !== plain ? 31 : Number(s.fontWeight) >= 600 ? 32 : 30];
   }
   return JSON.stringify(out);
-})()`
+})`
 
+// facesFile is what faceOf gives each class a diagram draws text in, which internal/diagram's TestFaceOfGolden keeps.
+const facesFile = "../diagram/testdata/faces.json"
+
+// TestRenderedDiagramFaces draws a diagram in every theme: part.css draws each class of facesFile as faceOf measures
+// it, so that a change to one of them without the other fails here.
 func TestRenderedDiagramFaces(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	k, err := kit.Floe()
@@ -469,9 +474,16 @@ func TestRenderedDiagramFaces(t *testing.T) { //nolint:paralleltest // the brows
 		t.Fatal(err)
 	}
 	_, _, themes, _ := k.Names()
-	const want = `{"main":"13px 700","sub":"12px 400","main code":"12px 700 code","sub code":"12px 400 code",` +
-		`"cell code":"12px 400 code","type":"12px 400","label":"12px 400","label strong":"13px 700",` +
-		`"frame":"12px 700","frame grouped":"13px 700"}`
+	src, err := os.ReadFile(facesFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want map[string][2]float64
+	if err := json.Unmarshal(src, &want); err != nil {
+		t.Fatal(err)
+	}
+	classes := slices.Sorted(maps.Keys(want))
+	measure := measureFaces + "(" + mustJSON(classes) + ", " + mustJSON([]string{"frame", "frame grouped"}) + ")"
 	for _, theme := range themes {
 		slug := "faces-" + theme
 		page := "template: report\nlang: en\ntheme: " + theme + "\ntitle: Faces\nsections:\n  - heading: Section\n    parts:\n" +
@@ -479,8 +491,14 @@ func TestRenderedDiagramFaces(t *testing.T) { //nolint:paralleltest // the brows
 		s.floe(t, "publish", s.write(t, slug+".yaml", page), "--slug", slug)
 		s.b.navigate("/a/" + slug + "/?raw")
 		s.b.until("the diagram", "document.querySelectorAll('svg.dg').length === 1")
-		if got := s.b.eval(measureFaces); got != want {
-			t.Errorf("in %s, part.css draws the classes of a diagram as\n  %s\nand internal/diagram's faceOf measures them as\n  %s\nchange them together", theme, got, want)
+		var got map[string][2]float64
+		if err := json.Unmarshal([]byte(s.b.eval(measure)), &got); err != nil {
+			t.Fatal(err)
+		}
+		for _, c := range classes {
+			if got[c] != want[c] {
+				t.Errorf("in %s, part.css draws %q as %v, and internal/diagram's faceOf measures it as %v: change them together", theme, c, got[c], want[c])
+			}
 		}
 	}
 }
