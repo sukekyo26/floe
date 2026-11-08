@@ -65,3 +65,31 @@ func checkPart(url string, res map[string]schema.Resource) error {
 	}
 	return c.CheckPart() //nolint:wrapcheck // as above
 }
+
+// EnumAt reads the enum of the schema at a location of the file compiled, in its order, and of one it reaches in a
+// shared schema; nil where no schema is, or one with no enum. Enum reads the root's.
+func TestEnumAt(t *testing.T) {
+	t.Parallel()
+
+	c, err := compile(t, `"properties": {"kind": {"$ref": "#/$defs/kind"}, "tone": {"$ref": "floe:///parts/tone.json"}},
+"$defs": {"kind": {"enum": ["b", "a"]}}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range []struct {
+		at   string
+		want []string
+	}{
+		{template + "#/$defs/kind", []string{"b", "a"}},
+		{template + "#/$defs/none", nil},
+		{template + "#/properties/kind", nil},
+		{"floe:///parts/tone.json#", []string{"accent", "good", "warn", "bad"}},
+	} {
+		if got := c.EnumAt(e.at); strings.Join(got, " ") != strings.Join(e.want, " ") {
+			t.Errorf("EnumAt(%s) = %q, want %q", e.at, got, e.want)
+		}
+	}
+	if got := c.Enum(); got != nil {
+		t.Errorf("Enum of a root of no enum = %q, want none", got)
+	}
+}

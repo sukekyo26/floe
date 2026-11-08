@@ -468,7 +468,11 @@ var messagesJA = map[string]string{
 	"ui_unarchive_bulk_failed": "%d 件を一覧に戻せませんでした（%s）。選択したままにしています。",
 
 	"ui_tags":             "タグ",
-	"ui_tags_hint":        "カンマまたは読点で区切ります",
+	"ui_tag_one_title":    "「%s」のタグ",
+	"ui_tag_add_named":    "%s にタグを付ける",
+	"ui_tag_change_named": "%s のタグを変更",
+	"ui_tag_done":         "「%s」のタグを変更しました",
+	"ui_tag_failed":       "「%s」のタグの変更に失敗しました：%s",
 	"ui_tag_filter_named": "「%s」のページのみ表示",
 	"ui_tag_bulk_title":   "選択した %d 件のタグ",
 	"ui_tag_find":         "タグを検索・作成",

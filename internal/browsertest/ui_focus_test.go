@@ -202,7 +202,18 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.eval("document.querySelector('#read-actions > .archive').classList.add('on')")
 	barOn := b.settled(ringOf)
 	b.eval("document.querySelector('#read-actions > .archive').classList.remove('on')")
-	check(t, "the bar", []string{bar, barOn}, "#read-actions > .archive: "+ring+"|"+ring)
+	// The button of the tags under the bar, reached on from the bar, its ring within the line's ground.
+	b.eval("document.querySelector('#read-actions > .archive').focus()")
+	for range 6 {
+		if b.eval("String(document.activeElement.matches('#read-tags .tag-edit'))") == "true" {
+			break
+		}
+		if err := chromedp.Do(b.ctx, chromedp.KeyEvent(kb.Tab)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tagLine := "#read-tags .tag-edit: " + b.settled(ringOf)
+	check(t, "the bar", []string{bar, barOn, tagLine}, "#read-actions > .archive: "+ring+"|"+ring+"|#read-tags .tag-edit: "+ring)
 	check(t, "the feet", out, strings.Join([]string{
 		"#shelf-hide: " + ring, "#list-hide: " + ring, "#shelf-show: " + ring, "#shelf-show: " + ring, "#list-show: " + ring,
 	}, "|"))
@@ -221,8 +232,13 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the family", "document.querySelector('#task-family-rows .kin-row')")
 	out = append(out, tabTo("#task-child"))
+	// The frame's line of tags, its button's ring within the line's ground.
+	s.floe(t, "publish", s.page(t, "ring/whole.yaml", "Whole", ""), "--slug", "whole")
+	b.navigate("/a/whole/")
+	b.until("the frame's tags", "!document.getElementById('frame-tags').hidden")
+	out = append(out, tabTo("#frame-tags .tag-edit"))
 	check(t, "the family", out, strings.Join([]string{
 		"#task-parent-change: " + ring, "#task-up-rows .kin-row: solid 2px rgb(107, 105, 100) -2px seen", "#task-up-rows .unlink: " + ring,
-		"the link: none", "#task-child: " + ring,
+		"the link: none", "#task-child: " + ring, "#frame-tags .tag-edit: " + ring,
 	}, "|"))
 }

@@ -103,7 +103,7 @@ test-browser part:
 # Write every golden file anew from what floe prints and draws now; read the change in git diff
 golden:
     go test ./internal/corpus -run TestCorpus -update
-    go test ./internal/diagram -run TestExamples -update
+    go test ./internal/diagram -run 'TestExamples|TestFaceOfGolden' -update
     go test ./internal/pagediff -run TestReadEveryPart -update
 
 # Fail when total coverage of internal/ is below MIN_COVERAGE (default 90)

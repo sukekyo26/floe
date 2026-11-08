@@ -104,7 +104,7 @@ func iconFault(g *graph, l *layout) string {
 			if side == "" {
 				return fmt.Sprintf("end %d of %s at %v is off icon %s at %v", j, p.what, e.pt, e.name, t.r)
 			}
-			if math.Abs(e.run[0]-e.run[2])+math.Abs(e.run[1]-e.run[3]) < iconArrow {
+			if math.Abs(e.run[0]-e.run[2])+math.Abs(e.run[1]-e.run[3]) < arrowRun {
 				return fmt.Sprintf("end %d of %s runs %v, too short for an arrow", j, p.what, e.run)
 			}
 			on[place{e.name, side}] = append(on[place{e.name, side}], along)
@@ -209,7 +209,7 @@ func reachFault(g *graph) string {
 		if axis == 1 {
 			moved = at.y + (iconSize(ic)+iconUnder(ic))/2 - (r.y + r.h/2)
 		}
-		if math.Abs(moved) > (r.size(axis)-stands)/2-iconArrow+1e-6 {
+		if math.Abs(moved) > (r.size(axis)-stands)/2-arrowRun+1e-6 {
 			return fmt.Sprintf("icon %s moved %v in %v", ic.Name, moved, r)
 		}
 	}
