@@ -1,13 +1,5 @@
 package browsertest_test
 
-import (
-	"strings"
-	"testing"
-
-	"github.com/chromedp/cdproto/emulation"
-	"github.com/chromedp/chromedp"
-)
-
 // colours begins the scripts that measure colours on the page: a computed colour read, laid over another, and
 // the contrast of two; the ground of an element; the name of an element, its part's first, to tell it by; and a
 // walk of the page with every details open and each tab picked in turn.
@@ -63,7 +55,7 @@ const colours = `
 // alone, a counter() or an attr()) and its list ::marker, as the page is drawn, then with every details open and each tab picked in turn, but a control that is
 // disabled, which WCAG leaves out, and a progress bar's text, which is not shown. The ground is the
 // background colours of the element and those around it laid one over another on the root's, each faded by
-// the opacity over it, as the text is. It returns one line for each below 4.5:1, 3:1 for large text (24px,
+// the opacity over it, as the text is. It tells a line for each below 4.5:1, 3:1 for large text (24px,
 // or 18.66px bold), as WCAG AA asks.
 // LIMIT: a ground of an image or a gradient (blueprint's squares, aurora's wash) counts as the colour under it, the
 // ground is that of the elements around in the document, not of one positioned under the text, an opacity fades
@@ -73,15 +65,18 @@ const colours = `
 // so) and the layers of one element laid over one another and over its own background-color, and would take the
 // lines of a pattern (notebook's rules) as a ground of the text over them. Measure them if a theme comes to put
 // text on such a ground darker than its palette allows for.
-const measureContrast = `(() => {` + colours + `
-  const low = new Set();
+// It leaves low, each line by the part (or the element) it is in, and seen, the texts it measured.
+const contrastBody = colours + partOfJS + `
+  const low = new Map();
+  let seen = 0;
   const measure = (e, s, under, what, text) => {
     const opacity = under.opacity * (what ? Number(s.opacity) : 1), fg = faded(s.color, opacity);
     if (fg[3] === 0) return;
     const bg = what ? over(faded(s.backgroundColor, opacity), under.colour) : under.colour, shown = over(fg, bg);
     const size = parseFloat(s.fontSize), large = size >= 24 || (size >= 18.66 && Number(s.fontWeight) >= 700);
     const r = ratio(shown, bg);
-    if (r < (large ? 3 : 4.5)) low.add(name(e) + what + ' ' + hex(shown) + ' on ' + hex(bg) + ' ' + r.toFixed(2) + ' "' + text.trim().slice(0, 16) + '"');
+    seen++;
+    if (r < (large ? 3 : 4.5)) low.set(name(e) + what + ' ' + hex(shown) + ' on ' + hex(bg) + ' ' + r.toFixed(2) + ' "' + text.trim().slice(0, 16) + '"', partOf(e));
   };
   // A string of a zero-width space alone, which a mark that is no letter holds for its baseline, shows no text.
   const text = (content) => !/^(["'])\u200b\1(\s*\/|$)/.test(content) &&
@@ -103,8 +98,13 @@ const measureContrast = `(() => {` + colours + `
   };
   measureAll();
   eachTab(measureAll);
-  return [...low].join('\n');
-})()`
+`
+
+// measureContrast returns contrastBody's lines, one to a line.
+const measureContrast = `(() => {` + contrastBody + `return [...low.keys()].join('\n'); })()`
+
+// measureContrastAt returns contrastBody's {seen, amiss}.
+const measureContrastAt = `(() => {` + contrastBody + `return JSON.stringify({ seen, amiss: [...low].map(([text, at]) => ({ at, text })) }); })()`
 
 // measureRings is the script that measures, on the page, the contrast of every focus ring against the ground under
 // it: it focuses in turn each element a key reaches (a link, a summary, a button, an input, one with a tabindex not
@@ -113,7 +113,7 @@ const measureContrast = `(() => {` + colours + `
 // focus changes, on the element or around it. Under it is the ground of the element on top at 12 points along the
 // middle of its line (a quarter, a half and three quarters of each side), the colour of that element's border where
 // the point is on one; a point off the screen is left out, and one that a box around clips (at its padding box, as
-// overflow clips; a box of its own, not an inline element's or one inside an svg). It returns one line for each ring
+// overflow clips; a box of its own, not an inline element's or one inside an svg). It tells a line for each ring
 // below 3:1, as WCAG asks of what is not text, at more than half of its points on the screen: a ring that crosses what
 // lies beside it (the frame of a line's code next to a link) is still seen on the rest; one for each ring that boxes
 // around clip at more than half of its points on the screen, and each with none on it; and one for each element whose
@@ -124,8 +124,10 @@ const measureContrast = `(() => {` + colours + `
 // corners of a box clipping a ring are not seen, nor a scrollbar under a ring, which the test's Chrome hides. A box
 // with overflow counts as clipping what is in it though it is not the containing block of one placed absolutely, and an
 // outline an element draws without the focus (washi's .card) counts as its ring.
-const measureRings = `(() => {` + colours + `
-  const low = new Set();
+// It leaves low, each line by the part (or the element) it is in, and seen, the elements it focused.
+const ringsBody = colours + partOfJS + `
+  const low = new Map();
+  let seen = 0;
   const outline = (e) => { const s = getComputedStyle(e); return s.outlineStyle + s.outlineWidth + s.outlineColor + s.outlineOffset; };
   const scrolls = (e) => {
     const s = getComputedStyle(e);
@@ -165,17 +167,17 @@ const measureRings = `(() => {` + colours + `
     }
     const which = name(e) + (r === e ? '' : ' (its ring on ' + name(r) + ')');
     if (shown === 0) {
-      low.add(which + ': ring off the screen at every point');
+      low.set(which + ': ring off the screen at every point', partOf(e));
       return;
     }
     if (clipped * 2 > shown) {
-      low.add(which + ': ring clipped at ' + clipped + ' of ' + shown + ' points');
+      low.set(which + ': ring clipped at ' + clipped + ' of ' + shown + ' points', partOf(e));
       return;
     }
     const lows = read.filter((p) => p.q < 3).sort((p, q) => p.q - q.q);
     if (lows.length * 2 > read.length) {
       const p = lows[0];
-      low.add(which + ': ring ' + hex(p.ring) + ' on ' + hex(p.bg) + ' ' + p.q.toFixed(2) + ', ' + lows.length + ' of ' + read.length + ' points');
+      low.set(which + ': ring ' + hex(p.ring) + ' on ' + hex(p.bg) + ' ' + p.q.toFixed(2) + ', ' + lows.length + ' of ' + read.length + ' points', partOf(e));
     }
   };
   eachTab(() => {
@@ -186,27 +188,17 @@ const measureRings = `(() => {` + colours + `
       for (let r = e; r && r !== document.documentElement; r = r.parentElement) before.push([r, outline(r)]);
       e.focus({ preventScroll: true });
       if (document.activeElement !== e) continue;
+      seen++;
       const rings = before.filter(([r, was]) => (r === e || outline(r) !== was) && draws(r));
-      if (rings.length === 0) low.add(name(e) + ': no ring');
+      if (rings.length === 0) low.set(name(e) + ': no ring', partOf(e));
       for (const [r] of rings) measure(e, r);
       e.blur();
     }
   });
-  return [...low].join('\n');
-})()`
+`
 
-// measureColours measures the page as measureContrast and measureRings do, the page's tab given the focus, and tells
-// what draws text that cannot be read or a focus that cannot be seen.
-func (b *browser) measureColours(t *testing.T, what string) {
-	t.Helper()
+// measureRings returns ringsBody's lines, one to a line.
+const measureRings = `(() => {` + ringsBody + `return [...low.keys()].join('\n'); })()`
 
-	if _, err := chromedp.Call(b.ctx, emulation.SetFocusEmulationEnabled, emulation.SetFocusEmulationEnabledParams{Enabled: true}); err != nil {
-		t.Fatal(err)
-	}
-	if low := b.eval(measureContrast); low != "" {
-		t.Errorf("%s draws text that cannot be read:\n  %s", what, strings.ReplaceAll(low, "\n", "\n  "))
-	}
-	if low := b.eval(measureRings); low != "" {
-		t.Errorf("%s draws a focus ring that cannot be seen:\n  %s", what, strings.ReplaceAll(low, "\n", "\n  "))
-	}
-}
+// measureRingsAt returns ringsBody's {seen, amiss}.
+const measureRingsAt = `(() => {` + ringsBody + `return JSON.stringify({ seen, amiss: [...low].map(([text, at]) => ({ at, text })) }); })()`

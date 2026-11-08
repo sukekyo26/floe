@@ -58,79 +58,106 @@ var bandColours = "bars: [{ label: Copied, value: 40, of: 100 }]\n" +
 	"tabs: [{ title: One, parts: [{ text: First. }] }, { title: Two, parts: [{ text: Second. }] }]\n" +
 	"links: [{ title: Guide, url: 'https://example.com/guide', text: How it works }]\n"
 
-// measureBand returns a line for each thing the band draws wrong: a part in it not in the page's text colour, a
-// line's code without its frame (a shadow every code has, seen only in a face), or code in a fenced block with one.
+// measureBand finds what the band draws wrong: a note with no ground of its own or not
+// in the page's text colour, a line's code without its frame (a shadow every code has, seen only in a face) or code in
+// a fenced block with one, a text not in the band's text colour or its heading marked, a heading in details marked, a
+// card with no ground of its own or in the band's text colour, and a picked tab whose ground is not 3:1 off the band's.
+// What it looks for and does not find is amiss too, so that a change of the page's shape fails rather than passes.
+// It returns {seen, amiss}: the things it measured, and for each wrong the part (or what is missing) and how.
 const measureBand = `(() => {` + colours + `
-  const out = [];
-  document.querySelectorAll('[data-floe-part=links] .url').forEach((url) => {
-    if (url.getBoundingClientRect().top - url.previousElementSibling.getBoundingClientRect().bottom < 1) out.push('a links URL against its title');
-  });
+  let seen = 0;
+  const amiss = [], push = (at, text) => amiss.push({ at, text });
+  const find = (at, q) => { const e = document.querySelector(q); if (!e) push(at, 'none found: ' + q); else seen++; return e; };
+  const header = document.querySelector('header');
   const framed = (e) => { const c = getComputedStyle(e).boxShadow.match(/^(rgba?\([^)]*\)|color\([^)]*\))/); return c !== null && rgba(c[1])[3] > 0; };
   const probe = document.body.appendChild(document.createElement('p'));
   const want = getComputedStyle(probe).color;
   probe.remove();
   // A note is on a ground of its own in a band (swiss's too, on the surface there), in the page's text colour.
   for (const note of document.querySelectorAll('[data-floe-part="note"]')) {
+    seen++;
     const s = getComputedStyle(note);
-    if (rgba(s.backgroundColor)[3] === 0) out.push('note: no ground of its own');
-    if (s.color !== want) out.push('note: colour ' + s.color + ', want ' + want);
+    if (rgba(s.backgroundColor)[3] === 0) push('note', 'no ground of its own');
+    if (s.color !== want) push('note', 'colour ' + s.color + ', want ' + want);
   }
-  const line = document.querySelector('header > [data-floe-markdown] > p > code');
-  if (!framed(line)) out.push('a line\'s code: no frame, ' + getComputedStyle(line).boxShadow);
-  const fenced = document.querySelector('header > [data-floe-markdown] > pre > code');
-  if (framed(fenced)) out.push('fenced code: frame ' + getComputedStyle(fenced).boxShadow);
+  const line = find('markdown', 'header > [data-floe-markdown] > p > code');
+  if (line && !framed(line)) push('markdown', 'a line\'s code: no frame, ' + getComputedStyle(line).boxShadow);
+  const fenced = find('markdown', 'header > [data-floe-markdown] > pre > code');
+  if (fenced && framed(fenced)) push('markdown', 'fenced code: frame ' + getComputedStyle(fenced).boxShadow);
   // A text has no ground of its own: its Markdown is in the band's text colour, and its heading takes no mark of the
   // page's (retro's stripes, which its band.css leaves out).
-  const text = document.querySelector('header > [data-floe-text]');
-  if (text) {
-    const band = getComputedStyle(document.querySelector('header')).color, said = text.querySelector('p');
-    if (getComputedStyle(said).color !== band) out.push('a text: colour ' + getComputedStyle(said).color + ', want the band\'s ' + band);
-    if (getComputedStyle(text.querySelector('h2'), '::after').content !== 'none') out.push('a text\'s heading: a mark after it');
-  }
+  const said = find('text', 'header > [data-floe-text] p'), heading = find('text', 'header > [data-floe-text] h2');
+  const band = getComputedStyle(header).color;
+  if (said && getComputedStyle(said).color !== band) push('text', 'colour ' + getComputedStyle(said).color + ', want the band\'s ' + band);
+  if (heading && getComputedStyle(heading, '::after').content !== 'none') push('text', 'its heading: a mark after it');
   // A heading held in a part in the band takes no mark either. A card is on a ground of its own in a band (swiss's
   // too, on the surface there), its text off the band's face.
-  const held = document.querySelector('header [data-floe-part="details"] h2');
-  if (held && getComputedStyle(held, '::after').content !== 'none') out.push('a heading in details: a mark after it');
-  const card = document.querySelector('header [data-floe-look~="cards"] > .card');
+  const held = find('details', 'header [data-floe-part="details"] h2');
+  if (held && getComputedStyle(held, '::after').content !== 'none') push('details', 'its heading: a mark after it');
+  const card = find('cards', 'header [data-floe-look~="cards"] > .card');
   if (card) {
-    if (rgba(getComputedStyle(card).backgroundColor)[3] === 0) out.push('a card: no ground of its own');
-    if (getComputedStyle(card.querySelector('p')).color === getComputedStyle(document.querySelector('header')).color) out.push('a card: in the band\'s text colour');
+    if (rgba(getComputedStyle(card).backgroundColor)[3] === 0) push('cards', 'a card: no ground of its own');
+    const p = card.querySelector('p');
+    if (!p) push('cards', 'none found: a card\'s p');
+    else if (getComputedStyle(p).color === band) push('cards', 'a card: in the band\'s text colour');
   }
   // The picked tab is told from the others and from the band: its ground stands 3:1 off the band's.
-  const picked = document.querySelector('header [data-floe-part="tabs"] > label:has(:checked)');
+  const picked = find('tabs', 'header [data-floe-part="tabs"] > label:has(:checked)');
   if (picked) {
-    const band = rgba(getComputedStyle(document.querySelector('header')).backgroundColor), r = ratio(over(rgba(getComputedStyle(picked).backgroundColor), band), band);
-    if (r < 3) out.push('the picked tab: its ground ' + r.toFixed(2) + ':1 off the band\'s');
+    const ground = rgba(getComputedStyle(header).backgroundColor), r = ratio(over(rgba(getComputedStyle(picked).backgroundColor), ground), ground);
+    if (r < 3) push('tabs', 'the picked tab: its ground ' + r.toFixed(2) + ':1 off the band\'s');
   }
-  return out.join('\n');
+  return JSON.stringify({ seen, amiss });
 })()`
 
-// lookBandFace draws Markdown, pills and parts a template places in the look band, in every theme: a part on a ground
-// of its own is in the page's text colour (swiss's boxes, of no ground elsewhere, are on the surface in a band) and one
-// of none in the band's, only a line's code is framed,
-// and every text and focus ring in the band reads on the ground under it, as measureContrast and measureRings measure;
-// a text there is in the band's text colour, its heading unmarked, pills of a theme that gives them no ground too. The
-// template places a panel and a table of its own too, as looks on elements that are no part's box.
-// Aurora's glass would let the band through but for its band.css.
-func lookBandFace(t *testing.T) { //nolint:paralleltest,thelper // a subtest of TestLookRule; the browser tests share one Chrome
-	s := newSite(t)
+// bandPages publishes bandParts and bandColours in the band of bandKit's template, in every theme, and visits each.
+func bandPages(t *testing.T, s *site, visit func(what string)) {
+	t.Helper()
+
 	s.own(t, bandKit)
 	k, err := kit.Floe()
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, _, themes, _ := k.Names()
-	pages := map[string]string{}
 	for _, theme := range themes {
-		pages["parts-"+theme] = bandParts + bandColours + "theme: " + theme + "\n"
+		bandPage(t, s, "band-"+theme, bandParts+bandColours+"theme: "+theme+"\n")
+		visit("the band in " + theme)
 	}
-	for slug, page := range pages {
-		s.floe(t, "publish", s.write(t, slug+".yaml", page), "--slug", slug)
-		s.b.navigate("/a/" + slug + "/?raw")
-		s.b.until("the band", "document.querySelector('header > [data-floe-markdown] > pre') !== null")
-		if got := s.b.eval(measureBand); got != "" {
-			t.Errorf("in the band of %s:\n  %s", slug, strings.ReplaceAll(got, "\n", "\n  "))
-		}
-		s.b.measureColours(t, "the band of "+slug)
-	}
+}
+
+// bandPage publishes data, a page of bandKit's template, as slug and opens it once its band is drawn.
+func bandPage(t *testing.T, s *site, slug, data string) {
+	t.Helper()
+
+	s.floe(t, "publish", s.write(t, slug+".yaml", data), "--slug", slug)
+	s.b.navigate("/a/" + slug + "/?raw")
+	s.b.until("the band", "document.querySelector('header > [data-floe-markdown] > pre') !== null")
+}
+
+const lookBandFaceFix = "draw a part in a band in the colours of the band's face: a part on a ground of its own in the page's " +
+	"text colour, one of none in the band's; frame a line's code alone; mark no heading; set the picked tab 3:1 off the band"
+
+// lookBandFace draws Markdown, pills and parts a template places in the look band, in every theme (bandPages), as
+// measureBand measures: a part on a ground of its own is in the page's text colour (swiss's boxes, of no ground
+// elsewhere, are on the surface in a band) and one of none in the band's, only a line's code is framed, a text there
+// is in the band's text colour, its heading unmarked. Aurora's glass would let the band through but for its band.css.
+// That what is in the band reads on the ground under it is contrast-text's and contrast-ring's, which draw these pages
+// too.
+func lookBandFace(t *testing.T, s *site) measured {
+	t.Helper()
+
+	var m measured
+	bandPages(t, s, func(what string) { m.add(s.b.measure(what, measureBand)) })
+	return m
+}
+
+// brokenBandFace draws the band in a theme of one's own whose note.css paints a note's text in a colour of its own.
+func brokenBandFace(t *testing.T, s *site) (string, measured) {
+	t.Helper()
+
+	s.own(t, bandKit)
+	s.own(t, map[string]string{"themes/drab/note.css": ":scope { color: rgb(1, 2, 3); }\n"})
+	bandPage(t, s, "broken", bandParts+bandColours+"theme: drab\n")
+	return "note", s.b.measure("broken", measureBand)
 }
