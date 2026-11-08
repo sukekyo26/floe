@@ -210,7 +210,7 @@ func brokenLayers(t *testing.T, s *site) (string, measured) {
 		own["templates/loud/"+f] = layersKit["templates/layers/"+f]
 	}
 	own["templates/loud/example.yaml"] = "lang: en\ntemplate: loud\n"
-	own["templates/loud/page.css"] = layersKit["templates/layers/page.css"] + "[data-floe-part=note] { background-color: rgb(9, 9, 9) !important; }\n"
+	own["templates/loud/page.css"] = layersKit["templates/layers/page.css"] + "[data-floe-part=note] { background-color: rgb(250, 250, 250) !important; }\n"
 	s.brokenPage(t, own, strings.Replace(layersData, "template: layers", "template: loud", 1))
 	var m measured
 	m.expect("layers", s.b.eval(layersNote), layersNoteWant)

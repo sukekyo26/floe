@@ -99,7 +99,7 @@ var figPart = map[string]string{
 }
 
 const lookNestingFix = "leave a box nested to the outer look's rules: floe's layers order them, a part's CSS stops at a part it holds, " +
-	"and no !important wins over them"
+	"and write no !important that wins over them"
 
 // lookNesting draws nestingPage in every theme, as measureCards measures: the cards a cards of the HTML holds are drawn
 // as the cards of a part are, whatever looks nest around them and whatever the depth.
@@ -123,13 +123,13 @@ func lookNesting(t *testing.T, s *site) measured {
 	return m
 }
 
-// brokenNesting draws a card of cards that is a part of one's own, whose part.css pads it by !important, which wins
-// over the outer cards' rules, beside a card of stats.
+// brokenNesting draws a card of html in cards in a panel, beside a card of stats, in a theme of one's own whose
+// base.css rounds that card's corners by !important, which wins over the outer cards' rules.
 func brokenNesting(t *testing.T, s *site) (string, measured) {
 	t.Helper()
 
-	s.brokenPage(t, ownPart("tile", `<div class="card" data-floe-part="tile" data-floe-look="panel"></div>`, ":scope { padding: 3px !important; }\n"),
-		"template: report\nlang: en\ntitle: Broken\nsections:\n  - parts:\n      - stats: [{ label: a, value: \"1\" }]\n"+
-			"      - html: <div id=\"own\" data-floe-look=\"cards\"><div class=\"card\" data-floe-part=\"tile\" data-floe-look=\"panel\"><p class=\"title\">a</p></div></div>\n")
+	s.brokenPage(t, map[string]string{"themes/rounded/base.css": "#own > .card { border-radius: var(--radius-small) !important; }\n"},
+		themePage("rounded", "- stats: [{ label: a, value: \"1\" }]\n- html: <section data-floe-look=\"panel\"><div id=\"own\" data-floe-look=\"cards\">"+
+			"<div class=\"card\" data-floe-look=\"panel\"><p class=\"title\">a</p></div></div></section>\n"))
 	return "cards", s.b.measure("broken", measureCards+"("+mustJSON([]string{"own"})+")")
 }
