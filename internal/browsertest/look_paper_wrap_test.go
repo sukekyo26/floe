@@ -12,8 +12,9 @@ const partOfJS = `const partOf = (e) => { const p = e.closest('[data-floe-part]'
 
 // measurePaper finds, read with the page drawn for print, each element that scrolls sideways (paper shows no scrolled
 // part), that clips what it holds sideways (overflow hidden or clip, as code's box rounds its corners) wider than
-// itself, or that reaches past the paper. It tells the innermost of them alone, as what reaches past widens the boxes
-// around it, and the page wider than the paper only when no element is told.
+// itself, or whose own content (its text, or itself if an image, a drawing or a control) reaches past the paper. It
+// tells the innermost of them alone, not the boxes that what reaches past widens around it, and the page wider than
+// the paper only when no element is told.
 // A box's scrollWidth is not read where nothing clips: a decoration drawn out of a box (washi's seal on a card) is
 // within --floe-room by the rules, and reaches no further than the paper. A word hidden to the eye (base.css's
 // .floe-hidden) is clipped to a pixel by design.
@@ -23,13 +24,24 @@ const measurePaper = `(() => {
   let seen = 0;
   const w = innerWidth, bad = [];
   const name = (e) => e.tagName.toLowerCase() + ' ' + e.textContent.trim().slice(0, 40);
+  const reach = (e) => {
+    if (e.matches('img, svg, video, canvas, iframe, input, textarea, select')) return e.getBoundingClientRect().right;
+    let far = -Infinity;
+    for (const n of e.childNodes) {
+      if (n.nodeType !== Node.TEXT_NODE || !n.data.trim()) continue;
+      const r = document.createRange();
+      r.selectNodeContents(n);
+      for (const c of r.getClientRects()) far = Math.max(far, c.right);
+    }
+    return far;
+  };
   for (const e of document.querySelectorAll('body *')) {
     if (e.matches('.floe-hidden, .floe-copy-status') || !e.getClientRects().length) continue;
     seen++;
     const x = getComputedStyle(e).overflowX;
     if (['auto', 'scroll'].includes(x)) bad.push({ e, text: 'scrolls: ' + name(e) });
     else if (['hidden', 'clip'].includes(x) && e.scrollWidth > e.clientWidth + 1) bad.push({ e, text: 'clips: ' + name(e) });
-    else if (e.getBoundingClientRect().right > w + 1) bad.push({ e, text: 'past the paper: ' + name(e) });
+    else if (reach(e) > w + 1) bad.push({ e, text: 'past the paper: ' + name(e) });
   }
   const amiss = bad.filter((a) => !bad.some((b) => b !== a && a.e.contains(b.e))).map((a) => ({ at: partOf(a.e), text: a.text }));
   const page = document.documentElement.scrollWidth;

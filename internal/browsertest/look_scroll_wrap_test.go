@@ -183,7 +183,7 @@ const measureWrap = `(() => {
   ` + scrollsJS + `
   ` + partOfJS + `
   let seen = 0;
-  const w = innerWidth, wide = [], amiss = [];
+  const w = document.documentElement.clientWidth, wide = [], amiss = [];
   // What is in a box that scrolls sideways may be wider than it.
   const scrolled = (e) => {
     for (let a = e.parentElement; a; a = a.parentElement) {
@@ -279,6 +279,5 @@ func brokenScrollWrap(t *testing.T, s *site) (string, measured) {
 	html := `<p data-floe-part="nowrap">` + longWord + `</p>`
 	onPhone(t, s, 390)
 	s.brokenPage(t, ownPart("nowrap", html, ":scope { white-space: nowrap; }\n"), htmlPage(html))
-	laidOut(t, s, 390)
 	return "nowrap", s.b.measure("broken", measureWrap)
 }
