@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	cjkfriendly "github.com/tats-u/goldmark-cjk-friendly/v2"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 )
@@ -218,6 +219,38 @@ func TestFenced(t *testing.T) {
 	} {
 		if got := Fenced(src); got != want {
 			t.Errorf("Fenced(%q) = %d, want %d", src, got, want)
+		}
+	}
+}
+
+// goldmark-cjk-friendly reads *, _ and ~~ beside letters and marks of no CJK as goldmark does: it copies goldmark's
+// ScanDelimiter, so that a change of goldmark's parser/delimiter.go the copy misses fails here.
+func TestCJKFriendlyKeepsCommonMark(t *testing.T) {
+	t.Parallel()
+
+	plain := goldmark.New(goldmark.WithExtensions(extension.Strikethrough))
+	cjk := goldmark.New(goldmark.WithExtensions(cjkfriendly.CJKFriendlyEmphasisAndStrikethrough))
+	// Letters, marks, spaces and none, of no CJK: what decides whether a mark opens or closes.
+	beside := []string{"", "a", " ", "(", ")", ".", "!", "é", "—", "“", "”", "«", " ", "á", "😀", "→"}
+	for _, mark := range []string{"*", "**", "_", "__", "~~"} {
+		for _, a := range beside {
+			for _, b := range beside {
+				for _, c := range beside {
+					for _, d := range beside {
+						src := []byte(a + mark + b + "x" + c + mark + d)
+						var want, got bytes.Buffer
+						if err := plain.Convert(src, &want); err != nil {
+							t.Fatal(err)
+						}
+						if err := cjk.Convert(src, &got); err != nil {
+							t.Fatal(err)
+						}
+						if got.String() != want.String() {
+							t.Errorf("%q: goldmark-cjk-friendly draws %q, goldmark %q", src, got.String(), want.String())
+						}
+					}
+				}
+			}
 		}
 	}
 }
