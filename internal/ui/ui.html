@@ -743,6 +743,7 @@
   .theme-shot { position: relative; aspect-ratio: 900 / 640; overflow: hidden; border: 1px solid var(--line); border-radius: var(--corner-small); background: var(--subtle); }
   /* Drawn at 900px wide and shrunk to the card (--shrink, set by its width), never to be used */
   .theme-shot.none { display: grid; place-items: center; padding: 1rem; text-align: center; color: var(--muted); font-size: var(--text-small); line-height: 1.6; }
+  @media (max-width: 40rem) { .theme-shot.none { padding: 0.4rem; font-size: var(--text-label); line-height: 1.4; } }
   .theme-shot iframe { position: absolute; inset: 0 auto auto 0; width: 900px; height: 640px; border: 0; transform: scale(var(--shrink, 0.25)); transform-origin: 0 0; pointer-events: none; }
   .theme-card .nm { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-weight: 600; font-size: var(--text); }
   .theme-card .pill { font-size: var(--text-label); font-weight: 600; padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--sel); color: var(--muted); }
