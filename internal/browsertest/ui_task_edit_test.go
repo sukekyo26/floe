@@ -262,7 +262,7 @@ func TestUITaskEdit(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"not reached: Failed to save: Failed to fetch / true",
 		"emptied: 9   [リリース,設計,レビュー,実装,案]",
 		"opened over the drawn task: Later / 10",
-		"stale: Typed / https://example.com/new / リリース no page^,設計,レビュー,実装,案v / Failed to save: task S300 has changed since it was read: the tasks are read again, so check and save again",
+		"stale: Typed / https://example.com/new / リリース no page^,設計,レビュー,実装,案v / Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again",
 		"again: 12 Typed https://example.com/new [リリース,設計,レビュー,実装,案]",
 		`sent stale and again: {"new":false,"rev":10,"title":"Typed"} ; {"new":false,"rev":11,"title":"Typed"}`,
 		"stale order: 設計^,レビュー,案,実装v",

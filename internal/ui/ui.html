@@ -1575,8 +1575,7 @@
           ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value.read), signal }
           : { method: 'DELETE', signal });
         if (!res.ok && res.status !== 404) {
-          const why = await res.text();
-          fail(value ? t('ui_read_failed', t('ui_http_error', why, res.status)) : t('ui_unread_failed', why));
+          fail(t(value ? 'ui_read_failed' : 'ui_unread_failed', t('ui_http_error', await res.text(), res.status)));
           continue;
         }
         showError('', 'read');

@@ -151,7 +151,7 @@ func TestUITaskRev(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		`reads failing, off, back, off: /api/tasks {"new":false,"rev":6,"parent":""} ; /api/tasks {"new":false,"rev":7,"parent":"#up","parentNew":false} ; /api/tasks {"new":false,"rev":8,"parent":""} | no parent`,
 		`off, the state, back: Failed to save: task #kid has changed since it was read`,
 		`the list, the page refused: Failed to save: HTTP 500: no`,
-		`the list, written since: Failed to save: task #130 has changed since it was read: the tasks are read again, so check and save again`,
+		`the list, written since: Failed to save: task #130 has changed since it was read; the tasks are read again, so check and save again`,
 		`a new task, the page refused: Failed to save: HTTP 500: no`,
 		`a new task, again: saved`,
 		`whole, the page refused: Failed to save: HTTP 500: no`,

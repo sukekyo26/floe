@@ -351,7 +351,7 @@ offered: Make #3 a new task
 new task: {"task":"#3","step":"first","pin":true}
 #1 todo design https://example.com/a/one; #2 todo build ; #3 todo first 
 a page of a task: #1 / design / out true
-written meanwhile: Failed to save: task #1 has changed since it was read: the tasks are read again, so check and save again
+written meanwhile: Failed to save: task #1 has changed since it was read; the tasks are read again, so check and save again
 written meanwhile, saved: #1 todo design https://example.com/later; #2 todo build ; #3 todo first 
 refused: true Failed to save: no
 an empty name: true true 0

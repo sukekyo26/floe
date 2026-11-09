@@ -262,7 +262,7 @@ func TestUITaskSteps(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"put, focus: Add a page to リリース",
 		"put, written: 6 リリース / S300/リリース",
 		"put, groups: note-a [案+] plan-a old-a [実装+] build-a [リリース+] check-a [レビュー+] review-a",
-		"stale: Failed to save: task S300 has changed since it was read: the tasks are read again, so check and save again / true / memo-a",
+		"stale: Failed to save: task S300 has changed since it was read; the tasks are read again, so check and save again / true / memo-a",
 		"stale, typed: true",
 		`stale, then: /api/tasks {"new":false,"rev":6,"step":"リリース"} ; /api/tasks {"new":false,"rev":7,"step":"リリース"} ; /api/artifacts/memo-a {"work":{"task":"S300","step":"リリース"}}`,
 		"stale, written: 7 リリース / S300/リリース",

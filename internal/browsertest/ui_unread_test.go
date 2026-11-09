@@ -182,7 +182,7 @@ func TestUIUnreadKept(t *testing.T) { //nolint:paralleltest // the browser tests
 	out = append(out, posts("p1"))
 	b.eval("window.plan.DELETE = [500]; markUnread('p3')")
 	sentAll(b)
-	out = append(out, b.eval("document.getElementById('error').textContent.includes('Failed to mark as unread') + ' ' + keptUnread"))
+	out = append(out, b.eval("(document.getElementById('error').textContent === 'Failed to mark as unread: HTTP 500: no') + ' ' + keptUnread"))
 	anew()
 	out = append(out, posts("p1"))
 	isUnseen(b, "p1", true)
