@@ -190,7 +190,7 @@ An element that fills itself with a colour and holds text, as a band or a filled
 
 ## schema.json
 
-A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused: the `schema.json` that `floe template new` makes has none, so add it yourself.
+A [JSON Schema](https://json-schema.org/) (2020-12) of the data file's items. Write `"additionalProperties": false` so that a misspelt key is refused: the `schema.json` that `floe template new` makes has none, so add it yourself. With it, and the keys written under `properties` alone, refuse a key under a condition not by `false` for it, which is told only as `false schema`, but by `then` listing the keys it takes as `true` with `"additionalProperties": false`, which names the key: the list copies `properties`, so add a key to both.
 
 - `lang`, `template`, `theme` and `title` are read by floe and are not declared, nor required.
 - A `format` that tells floe how to draw a text: `markdown`, `html` or `image`. Declare it under `properties`, `additionalProperties` or `items`, where floe follows; the `additionalProperties` of the root holds neither (it would draw the keys floe reads itself, `lang` and `title` too).
