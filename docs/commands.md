@@ -162,11 +162,11 @@ Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `
 
 ## `floe theme list`
 
-Print the themes, floe's and your own, one per line in the same four tab-separated columns as `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own), its shape, `-`, as nothing is written as a theme's value, and an empty description, as a theme has none.
+Print the themes, floe's and your own, one per line in the same four tab-separated columns as `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own), its shape, `-`, as nothing is written as a theme's value, and its description, its `theme.yaml`'s `description:`, empty without one.
 
 ## `floe template show <name> [file]` / `floe part show <name> [file]` / `floe theme show <name> [file]`
 
-Print a template, a part (a look or a shared schema too) or a theme, floe's or your own, to read before writing with it or copying from it: its name and description (a theme's name alone, as it has none), where it is and the files it reads (`files:`), not what they hold.
+Print a template, a part (a look or a shared schema too) or a theme, floe's or your own, to read before writing with it or copying from it: its name and description, where it is and the files it reads (`files:`), not what they hold.
 
 - With a file named after (`floe part show code part.html`), print that file alone, as written but the byte order mark at its start: floe's parts show how `part.html` uses `{{copyButton}}` and the other functions. A file it does not read is refused with the files it does.
 
@@ -176,7 +176,7 @@ Print a template, a part (a look or a shared schema too) or a theme, floe's or y
 | A part | The looks it takes | `schema.json`, `checks.yaml`, `part.yaml`, `part.html`, `part.css`, `words.yaml`. The CSS of the looks it takes is the looks' own: `floe part show panel part.css` prints it |
 | A look | The looks it takes | `part.yaml`, `part.css` |
 | A shared schema | — | `<name>.json` |
-| A theme | — | `palette.css`, `base.css`, `markdown.css`, then the CSS it gives each part or look, by name |
+| A theme | — | `theme.yaml`, `palette.css`, `base.css`, `markdown.css`, then the CSS it gives each part or look, by name |
 
 ---
 

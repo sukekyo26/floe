@@ -168,6 +168,7 @@ tone（`tone.json` のどれか）は、class でなく、その色で描く要�
 
 | ファイル | 中身 |
 |---|---|
+| `theme.yaml` | `description:` に、そのテーマが何かを 1 行の文字列で書く。`floe theme list` と `floe theme show` が出す（`description: "Black on cream, flat primaries"`）。無ければ説明は空。ほかのキーは持たない。 |
 | `palette.css` | [パレット](templates.ja.md#パレット)の変数と、テーマ自身の名前の変数を `:scope` に（ページの根。`:root` も同じ要素に当たる）。floe の `default` のパレットの上に重なるので、変えるものだけを書く。 |
 | `base.css` | 部品の周りのページのルール。ページに当たり、部品の中と text の Markdown には当たらず、テンプレートの `page.css` と見た目の下に入る。根は `:root` や `html`（scope の外）でなく `:scope` と書き、部品の中はその部品のファイルに書く。テーマ自身の名前の変数は、ここの `:scope` に置いてもよい。 |
 | `markdown.css` | Markdown の見た目（引用、見出し）。ページの上、text の中、部品の中の、どこの Markdown にも当たる。部品・見た目・テンプレートの CSS はどれもそれに勝つ。引用や見出しのように部品が描かない要素に書く。`p` や `ul` に書くと、部品が描く同じ要素にも当たる。 |

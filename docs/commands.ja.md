@@ -162,11 +162,11 @@ floe のテンプレートの節に書ける部品（floe の `any.json` の鍵�
 
 ## `floe theme list`
 
-テーマを、floe のものも自分のものも 1 行に 1 つずつ、`floe part list` と同じタブ区切りの 4 列で出します。名前、場所（`floe` か、自分のテーマのディレクトリ）、形（テーマは値に書かないので `-`）と、空の説明（テーマは説明を持ちません）です。
+テーマを、floe のものも自分のものも 1 行に 1 つずつ、`floe part list` と同じタブ区切りの 4 列で出します。名前、場所（`floe` か、自分のテーマのディレクトリ）、形（テーマは値に書かないので `-`）と、説明（`theme.yaml` の `description:`。無ければ空）です。
 
 ## `floe template show <名前> [ファイル]` / `floe part show <名前> [ファイル]` / `floe theme show <名前> [ファイル]`
 
-floe のものか自分のものの、テンプレート・部品（見た目と共有の schema も）・テーマを出します。それで書く前や、写す前に読むためのものです。名前と説明（テーマは説明を持たないので名前だけ）、場所、読むファイルの並び（`files:`）を出します。ファイルの中身は出しません。
+floe のものか自分のものの、テンプレート・部品（見た目と共有の schema も）・テーマを出します。それで書く前や、写す前に読むためのものです。名前と説明、場所、読むファイルの並び（`files:`）を出します。ファイルの中身は出しません。
 
 - ファイル名を足すと（`floe part show code part.html`）、そのファイルだけを、先頭の BOM を除いて書いたとおりに出します。floe の部品の `part.html` で、`{{copyButton}}` などの関数の使い方が分かります。読まないファイルの名前は、読むファイルの並びを言って断ります。
 
@@ -176,7 +176,7 @@ floe のものか自分のものの、テンプレート・部品（見た目と
 | 部品 | 借りる見た目 | `schema.json`・`checks.yaml`・`part.yaml`・`part.html`・`part.css`・`words.yaml`。借りる見た目の CSS は、その見た目のもので、`floe part show panel part.css` が出す |
 | 見た目 | 借りる見た目 | `part.yaml`・`part.css` |
 | 共有の schema | — | `<名前>.json` |
-| テーマ | — | `palette.css`・`base.css`・`markdown.css`、その後に部品か見た目ごとの CSS を名前の順で |
+| テーマ | — | `theme.yaml`・`palette.css`・`base.css`・`markdown.css`、その後に部品か見た目ごとの CSS を名前の順で |
 
 ---
 
