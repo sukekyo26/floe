@@ -169,7 +169,7 @@ func TestWorkAPI(t *testing.T) {
 	if w.Code != http.StatusBadRequest || w.Body.String() != "a task's project and ID must be UTF-8" {
 		t.Errorf("forget of no UTF-8 = %d, %s", w.Code, w.Body)
 	}
-	if code, body := forget("shop", "#1"); code != http.StatusBadRequest || body != "task #1 of project shop still has 1 page(s), such as d: take them off it or remove them first" {
+	if code, body := forget("shop", "#1"); code != http.StatusBadRequest || body != "task #1 of project shop still has 1 page(s), such as d: take them off it or delete them first" {
 		t.Errorf("a task with a page = %d, %q", code, body)
 	}
 	if code, _ := forget("shop", "#2"); code != http.StatusNotFound {

@@ -347,7 +347,7 @@ pinned: Pinned /tasks?project=proj Take the pin off
 pinned: {"pin":true}
 a page of none:  /  / out false
 no parent nor URL: null
-offered: Make #3 a new task
+offered: Create #3 as a new task
 new task: {"task":"#3","step":"first","pin":true}
 #1 todo design https://example.com/a/one; #2 todo build ; #3 todo first 
 a page of a task: #1 / design / out true
@@ -365,8 +365,8 @@ as it opens: false
 a suggestion pressed: #2 / design / out true
 the field keeps the focus: set-task
 it stays closed: false
-offered of #9: Make #9 a new task
-offered of #: #1· To do, #2· To do, #3 a title· To do, Make # a new task
+offered of #9: Create #9 as a new task
+offered of #: #1· To do, #2· To do, #3 a title· To do, Create # as a new task
 roles: combobox list true listbox
 under the field: yes
 reached: #1

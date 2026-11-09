@@ -124,7 +124,7 @@ func TestUITaskParent(t *testing.T) { //nolint:paralleltest // the browser tests
 	saved()
 	b.eval("document.getElementById('task-parent-change').click()")
 	kin("#40", "made")
-	if got := b.eval(said); got != "Change the parent task|Child: #1 free||false|Make" {
+	if got := b.eval(said); got != "Change the parent task|Child: #1 free||false|Create" {
 		t.Errorf("a new parent: %q", got)
 	}
 	saved()

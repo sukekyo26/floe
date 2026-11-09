@@ -467,7 +467,7 @@ func TestWorkForgetParent(t *testing.T) {
 	}
 	for _, want := range []string{
 		"task #1 of project p still has 1 page(s), such as kept",
-		"task #1 of project p still has 2 child task(s), such as #2: take them off it or remove them first",
+		"task #1 of project p still has 2 child task(s), such as #2: take them off it or delete them first",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("forget a parent = %q, want %s", got, want)
