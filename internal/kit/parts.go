@@ -476,7 +476,7 @@ func readKeys(d Dir, dir, name, notMap string) (*ast.MappingNode, error) {
 	body, err := yamlpos.Parse(file, src)
 	switch {
 	case errors.Is(err, yamlpos.ErrEmpty):
-		return nil, nil
+		return nil, nil //nolint:nilnil // an empty file writes nothing, as a missing one
 	case err != nil:
 		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
 	}

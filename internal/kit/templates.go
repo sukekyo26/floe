@@ -31,7 +31,7 @@ type Theme struct {
 	palette  []byte            // palette.css, nil for none
 	partsCSS map[string][]byte // <part or look>.css by its name
 	unread   []string          // the files of its directory it does not read: of no part or look of the Kit
-	files    []Source          // the files it read, theme.yaml, palette.css, base.css and markdown.css first, for floe theme show
+	files    []Source          // the files it read, theme.yaml, palette.css, base.css and markdown.css first, for show
 }
 
 // Name returns the name of t.
@@ -81,8 +81,8 @@ func (k *Kit) readThemes(d Dir) error {
 // readTheme reads the theme of d named name, its directory.
 func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 	t := &Theme{
-		name: name, dir: path.Join(d.Name, name), about: "", base: nil, markdown: nil, palette: nil, partsCSS: map[string][]byte{},
-		unread: nil, files: nil,
+		name: name, dir: path.Join(d.Name, name), about: "", base: nil, markdown: nil, palette: nil,
+		partsCSS: map[string][]byte{}, unread: nil, files: nil,
 	}
 	d = d.recording()
 	all, err := entries(d, name, false)
