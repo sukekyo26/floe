@@ -84,7 +84,9 @@ func TestPickThemeMeanwhile(t *testing.T) {
 	dw := picKit(t, "", "")
 	dw.Icons = icons
 	publish(t, s, dw, "d.yaml", iconPage, nil, store.Options{})
-	icons.then = func() { publish(t, s, dw, "d.yaml", strings.Replace(iconPage, "title: T", "title: Again", 1), nil, store.Options{}) }
+	icons.then = func() {
+		publish(t, s, dw, "d.yaml", strings.Replace(iconPage, "title: T", "title: Again", 1), nil, store.Options{})
+	}
 	err := s.PickTheme(dw, "d", "ink")
 	var conflict *store.Conflict
 	if !errors.As(err, &conflict) || told(err, root) != "floe: page d has changed while it was drawn in the theme picked: pick it again" {
@@ -128,11 +130,20 @@ func TestPickThemeLinks(t *testing.T) {
 			t.Errorf("%s: told %s", name, told(err, root))
 		}
 	}
+	list, err := s.List("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, l := range list {
+		if want := l.Slug == slugs["page.yaml"]; l.Themed != want {
+			t.Errorf("%s listed themed %v", l.Slug, l.Themed)
+		}
+	}
 	data := slugs["page.yaml"]
-	if err := s.PickTheme(dw, data, "gone"); !strings.HasPrefix(told(err, root), `floe: there is no theme "gone"`) {
+	if err = s.PickTheme(dw, data, "gone"); !strings.HasPrefix(told(err, root), `floe: there is no theme "gone"`) {
 		t.Errorf("a theme gone: told %s", told(err, root))
 	}
-	if err := s.PickTheme(dw, data, "ink"); err != nil {
+	if err = s.PickTheme(dw, data, "ink"); err != nil {
 		t.Fatal(told(err, root))
 	}
 	m := s.ReadMeta(data)

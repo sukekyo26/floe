@@ -119,7 +119,8 @@ func (s *Server) content(
 	if rest == "" && m.IsData() {
 		page, err := store.DrawLink(drawing(), slug, m, file, cut)
 		if err != nil {
-			return served{body: io.NopCloser(bytes.NewReader(mistakesPage(c, slug, err))), typ: htmlType, drawn: true}, err
+			told := served{body: io.NopCloser(bytes.NewReader(mistakesPage(c, slug, err))), typ: htmlType, drawn: true}
+			return told, err //nolint:wrapcheck // its mistakes, which the page of them tells
 		}
 		return served{body: io.NopCloser(bytes.NewReader(page)), typ: htmlType, drawn: true}, nil
 	}

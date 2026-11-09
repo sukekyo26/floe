@@ -52,3 +52,61 @@ func TestUISettings(t *testing.T) { //nolint:paralleltest // the browser tests s
 	out = append(out, strings.TrimSpace(s.floe(t, "theme", "default")))
 	check(t, "settings", out, "true true|false true|true|Default now: default. Pages stored from now on are drawn in this theme. The pages there are now do not change.|default|true|Ink on paper: near black, an indigo ink for emphasis, its sections ruled in the ink|false|ink|true|Failed to read the settings. Choosing a theme writes them again|washi")
 }
+
+// TestUIPageTheme opens a page's themes from its row's menu, none chosen first and checked, picks one, which draws the
+// page in it and stays checked, the focus back on the menu; a refusal is said in the modal's words, and a theme picked
+// that is gone is told.
+func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "p.yaml", "P", ""))
+	b.size(1440, 900, false)
+	defer b.unsize()
+	b.navigate("/")
+	b.until("the row", "document.querySelector('#list li[data-slug=p] .theme-item')")
+	open := func() {
+		t.Helper()
+		b.eval("document.querySelector('#list li[data-slug=p] .more').open = true; document.querySelector('#list li[data-slug=p] .theme-item').click()")
+		b.until("the cards", "document.getElementById('settings').open && document.querySelectorAll('#theme-grid .theme-card').length >= 13")
+	}
+	open()
+	out := make([]string, 0, 13)
+	out = append(out,
+		b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').textContent, document.getElementById('theme-now').textContent].join(' / ')"),
+		b.eval("[...document.querySelector('#theme-grid .theme-card').querySelectorAll('.theme-shot, .nm')].map((e) => e.textContent).join(' / ')"),
+		b.eval("JSON.stringify(document.querySelector('#theme-grid input:checked').value)"),
+	)
+	b.eval("document.querySelector('#theme-grid input[value=ink]').click(); document.getElementById('theme-choose').click()")
+	b.until("the toast", "[...document.querySelectorAll('.toast')].some((e) => e.textContent.includes(\"Changed this page's theme to ink\"))")
+	b.until("listed", "items.find((a) => a.slug === 'p').pickedTheme === 'ink'")
+	out = append(out,
+		b.eval("document.getElementById('settings').open"),
+		b.eval("document.activeElement.matches('#list li[data-slug=p] summary')"),
+		b.eval("fetch('/a/p/?raw').then((r) => r.text()).then((t) => t.includes('--accent: #2b3a67'))"),
+	)
+	open()
+	out = append(out, b.eval("document.querySelector('#theme-grid input:checked').value"))
+	// Refused: changed meanwhile, or not drawn; the modal stays open
+	for _, code := range []string{"409", "400"} {
+		b.eval(`window.realFetch ??= window.fetch; window.fetch = (u, i) => (i?.method === 'PUT' ? Promise.resolve(new Response('{}', { status: ` + code + ` })) : window.realFetch(u, i));
+			document.querySelector('#theme-grid input[value=washi]').click(); document.getElementById('theme-choose').click()`)
+		out = append(out, b.until("the refusal", "[...document.querySelectorAll('.toast')].map((e) => e.textContent).find((x) => x.startsWith(\"Failed to change this page's theme\") && x.length > 40 && !window.seen?.includes(x)) ?? ''"))
+		b.eval("window.seen = [...(window.seen ?? []), " + js(out[len(out)-1]) + "]")
+		out = append(out, b.eval("document.getElementById('settings').open"))
+	}
+	b.eval("window.fetch = window.realFetch; document.getElementById('settings').close()")
+	// A theme picked that is gone
+	b.eval("openThemes({ ...items.find((a) => a.slug === 'p'), pickedTheme: 'acme' })")
+	b.until("the cards", "document.querySelectorAll('#theme-grid .theme-card').length >= 13")
+	out = append(out, b.eval("document.getElementById('theme-now').textContent"), b.eval("String(document.querySelector('#theme-grid input:checked'))"))
+	check(t, "page theme", out, strings.Join([]string{
+		"This page's theme / P / Choosing draws this page alone again. The theme chosen stays when the page is updated.",
+		"The theme written in the page, or the default theme when it was first stored / None chosen",
+		`""`,
+		"false", "true", "true",
+		"ink",
+		"Failed to change this page's theme: the page changed meanwhile. Choose again", "true",
+		"Failed to change this page's theme: the page is not drawn in this theme, and keeps its look", "true",
+		"Chosen: acme (not found). Choose another theme.", "null",
+	}, "|"))
+}

@@ -23,25 +23,14 @@ func (s *Store) PickTheme(dw Drawing, slug, theme string) error {
 	if m == nil {
 		return ErrNotFound
 	}
-	if !m.Themed() {
+	if !m.TakesTheme() {
 		return usererr.New("store_theme_link")
 	}
 	picked := *m
 	picked.PickedTheme = theme
-	var got *drawn
-	var drawErr error
-	if m.IsLink() {
-		file, ok := s.File(slug, m, "")
-		if !ok {
-			return ErrNotFound
-		}
-		_, drawErr = DrawLink(dw, slug, &picked, file, false)
-	} else {
-		dir, ok := s.copyDir(slug, m)
-		if !ok {
-			return ErrNotFound
-		}
-		got, drawErr = redraw(dw, slug, &picked, dir)
+	got, drawErr := s.drawPicked(dw, slug, &picked)
+	if errors.Is(drawErr, ErrNotFound) {
+		return drawErr
 	}
 	unlock, err := s.lock(false)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -71,6 +60,24 @@ func (s *Store) PickTheme(dw Drawing, slug, theme string) error {
 		now.Template = got.template
 	}
 	return s.keepCopy(slug, now, got.src, got.page, got.images, nil)
+}
+
+// drawPicked draws the page slug, whose meta.json is m: a stored page from its copy (what redraw returns), a linked
+// data file only to be checked (nil). ErrNotFound for a page whose file or copy is not there.
+func (s *Store) drawPicked(dw Drawing, slug string, m *Meta) (*drawn, error) {
+	if m.IsLink() {
+		file, ok := s.File(slug, m, "")
+		if !ok {
+			return nil, ErrNotFound
+		}
+		_, err := DrawLink(dw, slug, m, file, false)
+		return nil, err
+	}
+	dir, ok := s.copyDir(slug, m)
+	if !ok {
+		return nil, ErrNotFound
+	}
+	return redraw(dw, slug, m, dir)
 }
 
 // DrawLink draws the linked data file file of slug, whose meta.json is m, with dw: in its theme, under slug for a page

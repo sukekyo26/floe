@@ -742,6 +742,7 @@
   .theme-card:has(input:checked)::after { content: ""; position: absolute; top: 0.9rem; right: 0.9rem; width: 26px; height: 26px; border-radius: 50%; background: var(--ink) var(--tick) center / 16px no-repeat; }
   .theme-shot { position: relative; aspect-ratio: 900 / 640; overflow: hidden; border: 1px solid var(--line); border-radius: var(--corner-small); background: var(--subtle); }
   /* Drawn at 900px wide and shrunk to the card (--shrink, set by its width), never to be used */
+  .theme-shot.none { display: grid; place-items: center; padding: 1rem; text-align: center; color: var(--muted); font-size: var(--text-small); line-height: 1.6; }
   .theme-shot iframe { position: absolute; inset: 0 auto auto 0; width: 900px; height: 640px; border: 0; transform: scale(var(--shrink, 0.25)); transform-origin: 0 0; pointer-events: none; }
   .theme-card .nm { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-weight: 600; font-size: var(--text); }
   .theme-card .pill { font-size: var(--text-label); font-weight: 600; padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--sel); color: var(--muted); }
@@ -1280,7 +1281,7 @@
 <template id="add-page-row"><li role="option"><span class="lead"></span><span class="title"></span><span class="time"><time></time></span><span class="sub"></span></li></template>
 <dialog id="settings" aria-labelledby="settings-title">
   <form class="modal-body" id="settings-form">
-    <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><div><h2 id="settings-title">{{.Msg "ui_settings"}}</h2></div></div>
+    <div class="modal-head"><svg class="page-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg><svg class="settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><div><h2 id="settings-title">{{.Msg "ui_settings"}}</h2><p class="lead" id="theme-page" hidden></p></div></div>
     <h3 id="theme-title">{{.Msg "ui_theme_default"}}</h3>
     <p class="theme-now" id="theme-now"></p>
     <div class="theme-grid" id="theme-grid" role="radiogroup" aria-labelledby="theme-title"></div>
@@ -1510,6 +1511,7 @@
           <button type="button" class="icon-btn mark-unread"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/></svg><span class="label">{{.Msg "ui_mark_unread"}}</span></button>
           <button type="button" class="icon-btn select" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span class="label">{{.Msg "ui_select"}}</span></button>
           <button type="button" class="icon-btn tag-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8-9-9Z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>{{.Msg "ui_tags"}}</button>
+          <button type="button" class="icon-btn theme-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.6-9-7.6Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>{{.Msg "ui_theme_item"}}</button>
           <button type="button" class="icon-btn pin-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4zM12 16v5"/></svg><span class="label"></span></button>
           <button type="button" class="icon-btn task-set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>{{.Msg "ui_task_set"}}</button>
           <button type="button" class="icon-btn task-out" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M4 6h.01M4 12h.01M14 18h6"/></svg>{{.Msg "ui_task_out"}}</button>
@@ -2618,6 +2620,11 @@
     const tagItem = box.querySelector('.tag-item');
     tagItem.setAttribute('aria-label', t('ui_tag_change_named', a.title));
     tagItem.addEventListener('click', () => openPageTags(a, menuBack(box, () => a.slug)));
+    // Of a page drawn from a data file, stored or linked, as the server tells it
+    const themeItem = box.querySelector('.theme-item');
+    themeItem.hidden = !a.themed;
+    themeItem.setAttribute('aria-label', t('ui_theme_item_named', a.title));
+    themeItem.addEventListener('click', () => openThemes(a, menuBack(box, () => a.slug)));
     const edit = box.querySelector('.edit');
     edit.setAttribute('aria-label', t('ui_edit_named', a.title));
     edit.addEventListener('click', () => {
@@ -5915,11 +5922,24 @@
     $('find-q').focus();
   }
 
-  // The settings: GET /api/themes lists the themes and the default chosen, or the mistake that keeps them from being read
-  // (one's own parts, themes or templates, which stop every drawing, or settings.json, which choosing writes whole)
+  // The themes, of the settings (the default of new pages) or of the page a, a row of the list, opened from its menu, whose
+  // focus goes back by back: GET /api/themes lists the themes and the default chosen, or the mistake that keeps them from being
+  // read (one's own parts, themes or templates, which stop every drawing, or settings.json, which choosing writes whole)
   let themesRead = null;
-  async function openSettings() {
+  let themesPage = null;
+  let themesBack = null;
+  async function openThemes(a = null, back = null) {
     if (document.querySelector('dialog[open]')) return;
+    themesPage = a;
+    themesBack = back;
+    $('settings-title').textContent = t(a ? 'ui_theme_page' : 'ui_settings');
+    $('theme-page').hidden = !a;
+    $('theme-page').textContent = a?.title ?? '';
+    $('settings').querySelector('.page-icon').hidden = !a;
+    $('settings').querySelector('.settings-icon').hidden = Boolean(a);
+    // A page's modal is headed by its own title, which labels the cards
+    $('theme-title').hidden = Boolean(a);
+    $('theme-grid').setAttribute('aria-labelledby', a ? 'settings-title' : 'theme-title');
     const grid = $('theme-grid');
     grid.replaceChildren();
     $('theme-now').textContent = '';
@@ -5956,6 +5976,10 @@
       grid.replaceChildren(err);
       return;
     }
+    if (themesPage) {
+      drawPageThemes(got);
+      return;
+    }
     const chosen = got.default || '';
     const shown = chosen || 'default';
     const there = got.themes.some((th) => th.name === shown);
@@ -5974,19 +5998,46 @@
     shrinkShots();
   }
 
+  // A page's themes: first none chosen, which gives the page back to its own; the one chosen checked, or told gone
+  function drawPageThemes(got) {
+    const chosen = themesPage.pickedTheme || '';
+    const there = !chosen || got.themes.some((th) => th.name === chosen);
+    const now = $('theme-now');
+    if (there) now.textContent = t('ui_theme_page_more');
+    else {
+      const b = Object.assign(document.createElement('b'), { textContent: chosen });
+      const gone = Object.assign(document.createElement('span'), { className: 'gone', textContent: t('ui_theme_gone') });
+      now.replaceChildren(t('ui_theme_picked_label'), b, ' ', gone, t('ui_theme_picked_gone_more'));
+    }
+    const none = themeCard({ name: '', about: t('ui_theme_none_about'), dir: '' }, false);
+    $('theme-grid').replaceChildren(none, ...got.themes.map((th) => themeCard(th, false)));
+    const checked = there && $('theme-grid').querySelector(`input[value="${CSS.escape(chosen)}"]`);
+    if (checked) checked.checked = true;
+    $('theme-choose').disabled = false;
+    shrinkShots();
+  }
+
   function themeCard(th, isNow) {
     const label = document.createElement('label');
     label.className = 'theme-card';
     const input = Object.assign(document.createElement('input'), { type: 'radio', name: 'theme', value: th.name, checked: isNow });
     const shot = document.createElement('span');
     shot.className = 'theme-shot';
+    const nm = document.createElement('span');
+    nm.className = 'nm';
+    if (th.name === '') {
+      // None chosen: no sample, what it means in its place
+      shot.classList.add('none');
+      shot.textContent = th.about;
+      nm.append(t('ui_theme_none'));
+      label.append(input, shot, nm);
+      return label;
+    }
     // The sample, drawn by the server in the sandbox: no script runs in it, and it is not used
     const frame = Object.assign(document.createElement('iframe'), { src: `/api/themes/${encodeURIComponent(th.name)}/sample`, loading: 'lazy', tabIndex: -1, title: '' });
     frame.setAttribute('sandbox', '');
     frame.setAttribute('aria-hidden', 'true');
     shot.append(frame);
-    const nm = document.createElement('span');
-    nm.className = 'nm';
     nm.append(th.name);
     if (isNow) nm.append(Object.assign(document.createElement('span'), { className: 'pill now', textContent: t('ui_theme_now') }));
     if (th.dir) nm.append(Object.assign(document.createElement('span'), { className: 'pill', textContent: t('ui_theme_own') }));
@@ -6010,21 +6061,31 @@
     const picked = $('theme-grid').querySelector('input:checked');
     if (!picked) return;
     const theme = picked.value;
+    const a = themesPage;
     $('theme-choose').disabled = true;
     let why = '';
     try {
-      const res = await api('/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ theme }) });
-      if (!res.ok) why = t('ui_http_error', await res.text(), res.status);
+      const at = a ? `/api/artifacts/${encodeURIComponent(a.slug)}/theme` : '/api/settings';
+      const res = await api(at, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ theme }) });
+      // A page's: changed meanwhile (409), or not drawn in it, its look kept (400); the server's words are of the command line
+      if (a && res.status === 409) why = t('ui_theme_page_changed');
+      else if (a && res.status === 400) why = t('ui_theme_page_undrawn');
+      else if (!res.ok) why = t('ui_http_error', await res.text(), res.status);
     } catch (e) {
       why = e.message;
     }
     $('theme-choose').disabled = false;
     if (why) {
-      toast(t('ui_theme_set_failed', why));
+      toast(t(a ? 'ui_theme_page_failed' : 'ui_theme_set_failed', why));
       return;
     }
     $('settings').close();
-    toast(t('ui_theme_set', theme));
+    if (!a) {
+      toast(t('ui_theme_set', theme));
+      return;
+    }
+    toast(theme ? t('ui_theme_page_set', theme) : t('ui_theme_page_none'));
+    await load();
   }
 
   function openKeys() {
@@ -6545,7 +6606,8 @@
   });
   $('find-open').addEventListener('click', openFind);
   $('keys-open').addEventListener('click', openKeys);
-  $('settings-open').addEventListener('click', openSettings);
+  $('settings-open').addEventListener('click', () => openThemes());
+  $('settings').addEventListener('close', () => themesBack?.()?.focus());
   $('settings-form').addEventListener('submit', chooseTheme);
   // On a Mac the key that goes with k is written as there
   if (/Mac/.test(navigator.platform)) {

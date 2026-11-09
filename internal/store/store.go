@@ -119,8 +119,8 @@ func (m *Meta) GivenTheme() string {
 	return cmp.Or(m.PickedTheme, m.Theme)
 }
 
-// Themed reports whether a theme can be picked for the entry: a page drawn from a data file, stored or linked.
-func (m *Meta) Themed() bool {
+// TakesTheme reports whether a theme can be picked for the entry: a page drawn from a data file, stored or linked.
+func (m *Meta) TakesTheme() bool {
 	return !m.IsLink() || m.IsData()
 }
 
@@ -370,6 +370,8 @@ type Listed struct {
 	// VersionCount tells whether there are versions to compare, the versions themselves left out of the list.
 	VersionCount int   `json:"versionCount,omitempty"`
 	Missing      *bool `json:"missing,omitempty"`
+	// Themed tells a page a theme can be picked for (Meta.TakesTheme).
+	Themed bool `json:"themed,omitempty"`
 }
 
 // slugs returns the slugs of the store, in their order: the names under it that can be one.
@@ -417,6 +419,7 @@ func (s *Store) List(viewer string) ([]Listed, error) {
 func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
 	l := Listed{
 		Slug: slug, Meta: *m, TaskProject: ProjectKey(m.Project), News: "", Version: 0, VersionCount: 0, Missing: nil,
+		Themed: m.TakesTheme(),
 	}
 	// The list is read every few seconds: versions are asked for a page at a time.
 	l.Versions = nil

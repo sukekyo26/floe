@@ -132,7 +132,7 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	// a publish checked by the same rule. Have draw name it by ImagesDir too if the rule comes to change.
 	o := tmpl.Options{
 		Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: imagesDir,
-		Icons: dw.Icons,
+		Icons:  dw.Icons,
 		CutOff: false,
 	}
 	// Its warnings are of the copy, which no one mends: a publish of the data file tells them.

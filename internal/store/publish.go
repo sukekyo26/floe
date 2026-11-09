@@ -216,8 +216,8 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 		return nil, err
 	}
 	o := tmpl.Options{
-		Theme: cmp.Or(picked, opts.theme()), Default: created, Untitled: *opts.Slug, Images: images, ImagesDir: "", Icons: dw.Icons,
-		CutOff: false,
+		Theme: cmp.Or(picked, opts.theme()), Default: created, Untitled: *opts.Slug, Images: images, ImagesDir: "",
+		Icons: dw.Icons, CutOff: false,
 	}
 	page, warnings, drawErr := tmpl.Draw(dw.Kit, up.File, up.Source, o)
 	var mistakes usererr.List
@@ -331,8 +331,8 @@ func (s *Store) PrepareLink(
 		data = src
 		images := files.NewRoot(filepath.Dir(path))
 		o := tmpl.Options{
-			Theme: cmp.Or(picked, opts.theme()), Default: created, Untitled: slug, Images: images, ImagesDir: "", Icons: dw.Icons,
-			CutOff: false,
+			Theme: cmp.Or(picked, opts.theme()), Default: created, Untitled: slug, Images: images, ImagesDir: "",
+			Icons: dw.Icons, CutOff: false,
 		}
 		_, warnings, err = tmpl.Draw(dw.Kit, path, src, o)
 		_ = images.Close() //nolint:errcheck // only read from
@@ -447,7 +447,7 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, bool
 // default it had, the one it was drawn with; refuse it at Save if that comes to matter.
 // LIMIT: a theme picked between the look and Save is kept, the page drawn in the one before it: the next publish or
 // pick mends it. Refuse it at Save as PickTheme does if that comes to matter.
-func (s *Store) themesFor(slug, path, from, place string, force bool) (string, string, error) {
+func (s *Store) themesFor(slug, path, from, place string, force bool) (picked, created string, err error) {
 	prev := s.ReadMeta(slug)
 	replacing, _ := checkOwner(slug, prev, path, from, place, force) //nolint:errcheck // told by settle, as above
 	if prev != nil && !replacing {
