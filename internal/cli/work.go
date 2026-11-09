@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"net/http"
@@ -133,16 +134,20 @@ func (a *app) workTask(cmd *cobra.Command, f workFlags) error {
 	if err != nil {
 		return err
 	}
+	ed := taskEdit(cmd, f)
+	sent, err := encodeSent(ed)
+	if err != nil {
+		return err
+	}
 	c, err := a.client(ctx, true)
 	if err != nil {
 		return err
 	}
-	ed := taskEdit(cmd, f)
 	var written store.TaskWritten
 	if f.forget {
 		err = c.do(ctx, http.MethodDelete, taskQuery(t), nil, nil)
 	} else {
-		err = c.do(ctx, http.MethodPatch, taskQuery(t), ed, &written)
+		err = c.do(ctx, http.MethodPatch, taskQuery(t), sent, &written)
 	}
 	if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
 		return usererr.New("cli_work_no_row", t.name, t.project)
@@ -233,13 +238,26 @@ func (a *app) tellPage(page store.Edited) {
 func (a *app) namedTask(ctx context.Context, cmd *cobra.Command, f workFlags) (taskOf, error) {
 	name, err := store.TaskName(f.task)
 	if err != nil {
-		return taskOf{}, err //nolint:wrapcheck // the store's words
+		return taskOf{}, flagOf(err, "--task")
 	}
-	projectName := f.project
+	projectName, from := f.project, "--project"
 	if !cmd.Flags().Changed("project") {
-		projectName = project.Name(ctx, a.env.Dir)
+		projectName, from = project.Name(ctx, a.env.Dir), sentAt["/project"]
 	}
-	return taskOf{project: store.ProjectKey(projectName), name: name}, nil
+	key, err := store.TaskProject(projectName)
+	if err != nil {
+		return taskOf{}, flagOf(err, from)
+	}
+	return taskOf{project: key, name: name}, nil
+}
+
+// flagOf is err of the store's check of a value from (a flag, or where it was given): one that is no UTF-8 is told
+// by from, as encode tells a body's.
+func flagOf(err error, from string) error {
+	if e, ok := errors.AsType[*usererr.Error](err); ok && e.Key == "store_task_utf8" {
+		return usererr.New("cli_not_utf8", from)
+	}
+	return err //nolint:wrapcheck // the store's words
 }
 
 // workPages puts the pages slugs on a task and changes it: what the CLI can check (the pages listed, on a task, of one
@@ -251,6 +269,11 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 	ctx := cmd.Context()
 	named := cmd.Flags().Changed("task")
 	onPages, onTask, name, err := pageFlags(cmd, f)
+	if err != nil {
+		return err
+	}
+	ed := taskEdit(cmd, f)
+	sent, err := encodeSent(ed)
 	if err != nil {
 		return err
 	}
@@ -270,7 +293,7 @@ func (a *app) workPages(cmd *cobra.Command, f workFlags, slugs []string) error {
 		// --task names one task, so that tasks differ by their projects alone
 		return usageOf(usererr.New("cli_work_parent_projects"))
 	}
-	if err = a.writeTasks(ctx, c, tasks, taskEdit(cmd, f)); err != nil {
+	if err = a.writeTasks(ctx, c, tasks, ed, sent); err != nil {
 		return err
 	}
 	if len(onPages) == 0 {
@@ -295,7 +318,7 @@ func pageFlags(cmd *cobra.Command, f workFlags) (onPages, onTask []string, name 
 		return nil, nil, "", usageOf(usererr.New("cli_work_nothing"))
 	}
 	if name, err = store.TaskName(f.task); err != nil {
-		return nil, nil, "", err //nolint:wrapcheck // the store's words
+		return nil, nil, "", flagOf(err, "--task")
 	}
 	if f.step != "" {
 		onTask = append(onTask, "step")
@@ -306,16 +329,17 @@ func pageFlags(cmd *cobra.Command, f workFlags) (onPages, onTask []string, name 
 	return onPages, onTask, name, nil
 }
 
-// writeTasks writes ed to each of tasks in turn, stopping at the first failure. One case of not found is passed: ed
-// taking the parent off alone, of a task of no row, which has no parent to take off and is made by the pages going on.
-func (a *app) writeTasks(ctx context.Context, c client, tasks []taskOf, ed server.TaskEdit) error {
+// writeTasks writes ed, sent as encodeSent made it, to each of tasks in turn, stopping at the first failure. One case
+// of not found is passed: ed taking the parent off alone, of a task of no row, which has no parent to take off and is
+// made by the pages going on.
+func (a *app) writeTasks(ctx context.Context, c client, tasks []taskOf, ed server.TaskEdit, sent jsontext.Value) error {
 	var none server.TaskEdit
 	rest := ed
 	rest.Parent = nil
 	parentOff := ed.Parent != nil && *ed.Parent == "" && rest == none
 	for _, t := range tasks {
 		var written store.TaskWritten
-		err := c.do(ctx, http.MethodPatch, taskQuery(t), ed, &written)
+		err := c.do(ctx, http.MethodPatch, taskQuery(t), sent, &written)
 		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound && parentOff {
 			continue
 		}
