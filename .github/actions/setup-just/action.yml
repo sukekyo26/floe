@@ -1,0 +1,24 @@
+name: Set up just
+description: Puts the pinned just on PATH, from the cache when it holds that version, else from its GitHub release.
+runs:
+  using: composite
+  steps:
+    # LIMIT: just is pinned and raised by hand: change the number below. The cache keeps CI off GitHub's release
+    # downloads, which failed with 504; a miss (a new number, or the cache gone after 7 unused days) downloads again.
+    - id: version
+      shell: bash
+      run: echo "just=1.59.0" >> "$GITHUB_OUTPUT"
+    - id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.floe-tools/just
+        key: just-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.just }}
+    - if: steps.cache.outputs.cache-hit != 'true'
+      uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      with:
+        tool: just@${{ steps.version.outputs.just }}
+    - if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: mkdir -p ~/.floe-tools/just && cp "$(command -v just)" ~/.floe-tools/just/
+    - shell: bash
+      run: echo "$HOME/.floe-tools/just" >> "$GITHUB_PATH"
