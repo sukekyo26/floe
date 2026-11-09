@@ -44,3 +44,18 @@ func Page(c *i18n.Catalog, framed string, served bool, version string) ([]byte, 
 	}
 	return b.Bytes(), nil
 }
+
+//go:embed sample/ja.yaml
+var sampleJa []byte
+
+//go:embed sample/en.yaml
+var sampleEn []byte
+
+// Sample is the data file the management page's theme cards are drawn from, in lang (English for one it has none in),
+// and the name its mistakes are told under.
+func Sample(lang i18n.Lang) (string, []byte) {
+	if lang == "ja" {
+		return "sample/ja.yaml", bytes.Clone(sampleJa)
+	}
+	return "sample/en.yaml", bytes.Clone(sampleEn)
+}
