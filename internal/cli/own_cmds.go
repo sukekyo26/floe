@@ -21,12 +21,14 @@ func (a *app) partCmd() *cobra.Command {
 	var all bool
 	list := &cobra.Command{
 		Use:   "list",
-		Short: "List the parts a section of floe's templates takes (name, where, description; tab-separated)",
-		Long: `List the parts a section of floe's templates takes, one per line: its name, where it is (floe)
-and its description, tab-separated. html takes HTML as text and has no schema.json: floe part show
+		Short: "List the parts a section of floe's templates takes (name, where, shape, description; tab-separated)",
+		Long: `List the parts a section of floe's templates takes, one per line: its name, where it is (floe),
+its shape and its description, tab-separated. html takes HTML as text and has no schema.json: floe part show
 html any.json prints any.json, which holds the key html. With --all, list every part, look and shared schema,
 floe's and your own, that a schema of your own can name with $ref, where it is (floe, or its
-directory of your own).`,
+directory of your own).
+
+` + shapeHelp,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			k, err := a.kit(false)
@@ -100,9 +102,12 @@ func (a *app) templateCmd() *cobra.Command {
 	}
 	cmd.AddCommand(&cobra.Command{
 		Use:   "list",
-		Short: "List the templates (name, where, description; tab-separated)",
+		Short: "List the templates (name, where, shape, description; tab-separated)",
 		Long: `List the templates, floe's and your own, one per line: its name, where it is (floe, or its
-directory of your own) and its description, tab-separated. One of your own hides floe's of its name.`,
+directory of your own), its shape (the keys of its data file) and its description, tab-separated. One of
+your own hides floe's of its name.
+
+` + shapeHelp,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			k, err := a.kit(true)
@@ -164,10 +169,10 @@ func (a *app) themeCmd() *cobra.Command {
 	}
 	cmd.AddCommand(&cobra.Command{
 		Use:   "list",
-		Short: "List the themes (name, where, and an empty description; tab-separated)",
-		Long: `List the themes, floe's and your own, one per line in the same three tab-separated columns as
-floe part list: its name, where it is (floe, or its directory of your own) and an empty description,
-as a theme has none.`,
+		Short: "List the themes (name, where, shape, and an empty description; tab-separated)",
+		Long: `List the themes, floe's and your own, one per line in the same four tab-separated columns as
+floe part list: its name, where it is (floe, or its directory of your own), its shape, -, as nothing is
+written as a theme's value, and an empty description, as a theme has none.`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			k, err := a.kit(false)
@@ -243,10 +248,16 @@ func shown(k *kit.Kit, name string) ([]kit.Entry, error) {
 	return entries, nil
 }
 
-// list prints each of entries: its name, where it is, and its description on one line.
+// shapeHelp is what the --help of each list says of the shape column.
+const shapeHelp = `The shape is what a value of it is written as: its keys, by name; "[] " before those of a list's
+items; "one of " before keys of which exactly one is written; the name of the format (markdown, html)
+or of the floe part it is; or -, which the list does not tell: floe part show <name> (template show,
+theme show) names in its files: line what to read, and floe diagram example <kind> prints an example.`
+
+// list prints each of entries: its name, where it is, its shape, and its description on one line.
 func (a *app) list(entries []kit.Entry) {
 	for _, e := range entries {
-		a.print("%s\t%s\t%s", e.Name, where(e), e.About)
+		a.print("%s\t%s\t%s\t%s", e.Name, where(e), e.Shape, e.About)
 	}
 }
 

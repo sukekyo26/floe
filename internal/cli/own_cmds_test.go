@@ -4,6 +4,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -168,13 +169,13 @@ func TestListShow(t *testing.T) {
 	}{
 		{[]string{"part", "list"}, 0, func(out string) bool {
 			// The whole list is TestSectionParts's; here, that it is the one floe part list prints.
-			return strings.Contains(out, "\nhtml\tfloe\tHTML that goes in as it is\n") &&
+			return strings.Contains(out, "\nhtml\tfloe\thtml\tHTML that goes in as it is\n") &&
 				!strings.Contains(out, "\nmine\t") && !strings.Contains(out, "\ncards\t") && !strings.Contains(out, "\ntone\t")
 		}, ""},
 		{[]string{"part", "list", "--all"}, 0, func(out string) bool {
-			return strings.HasPrefix(out, "any\tfloe\tOne key naming the kind of the part\n") &&
-				strings.Contains(out, "\nmine\t"+filepath.Join(parts, "mine")+"\ta b c\n") &&
-				strings.Contains(out, "\npanel\tfloe\tA box most parts are drawn in") &&
+			return strings.HasPrefix(out, "any\tfloe\tone of asks,bars,") && strings.Contains(out, ",tree\tOne key naming the kind of the part\n") &&
+				strings.Contains(out, "\nmine\t"+filepath.Join(parts, "mine")+"\t-\ta b c\n") &&
+				strings.Contains(out, "\npanel\tfloe\t-\tA box most parts are drawn in") &&
 				!strings.Contains(out, "\nhtml\t")
 		}, ""},
 		{[]string{"part", "show", "mine"}, 0, func(out string) bool {
@@ -206,8 +207,8 @@ func TestListShow(t *testing.T) {
 		},
 		{[]string{"part", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown part "nope"; use any, asks, band, bars, cards, cell, chart, checklist, checks, code, columns, compare, decision, details, diagram, diff, entries, facts, fields, findings, html, image, keys, links, marked, mine, note, numbered, options, panel, rows, script, stack, stats, steps, table, tabs, tags, terminal, text, timeline, toc, tone, tree, zoom` + "\n"},
 		{[]string{"template", "list"}, 0, func(out string) bool {
-			return strings.HasPrefix(out, "adr\tfloe\tA decision record") &&
-				strings.Contains(out, "\nmemo\t"+filepath.Join(templates, "memo")+"\ta b c\npostmortem\tfloe\tAn incident review")
+			return strings.HasPrefix(out, "adr\tfloe\t-\tA decision record") &&
+				strings.Contains(out, "\nmemo\t"+filepath.Join(templates, "memo")+"\tlang,template,theme,title\ta b c\npostmortem\tfloe\t")
 		}, ""},
 		{[]string{"template", "show", "memo"}, 0, func(out string) bool {
 			return out == "memo: a b c\nwhere: "+filepath.Join(templates, "memo")+"\nthemes: "+allThemes+"\n"+
@@ -216,7 +217,7 @@ func TestListShow(t *testing.T) {
 		{[]string{"template", "show", "memo", "computed.yaml"}, 0, func(out string) bool { return out == "n: 1\n" }, ""},
 		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, memo, postmortem, report, runbook, slides` + "\n"},
 		{[]string{"theme", "list"}, 0, func(out string) bool {
-			return strings.HasPrefix(out, "app\tfloe\t\n") && strings.Contains(out, "\nmine\t"+filepath.Join(themes, "mine")+"\t\n")
+			return strings.HasPrefix(out, "app\tfloe\t-\t\n") && strings.Contains(out, "\nmine\t"+filepath.Join(themes, "mine")+"\t-\t\n")
 		}, ""},
 		{[]string{"theme", "show", "mine"}, 0, func(out string) bool {
 			return out == "mine\nwhere: "+filepath.Join(themes, "mine")+"\nfiles: palette.css, base.css, code.css\n"
@@ -288,6 +289,60 @@ func TestPartListOwnHTML(t *testing.T) {
 	for _, args := range [][]string{{"part", "list"}, {"part", "show", "html"}} {
 		if code, stdout, stderr := runEnv(dir, map[string]string{"FLOE_PARTS_DIR": parts}, args...); code != 1 || stdout != "" || stderr != want {
 			t.Errorf("floe %v = %d, %q, %q; want 1 and %q", args, code, stdout, stderr, want)
+		}
+	}
+}
+
+// The four lists print each line as name, where, shape and description, tab-separated, by a.list alone: floe's
+// entries and one's own, and diagram example's too.
+func TestListShape(t *testing.T) {
+	t.Parallel()
+
+	const schema = `{"$schema": "https://json-schema.org/draft/2020-12/schema", "description": "mine", "type": "object", "properties": {"b": {"type": "string"}, "a": {"type": "string"}}}`
+	dir := write(t, map[string]string{
+		"parts/mine/schema.json":      schema,
+		"parts/mine/part.html":        ownPage,
+		"parts/mine/part.css":         "",
+		"templates/memo/page.html":    "<!doctype html><html lang=\"{{.Lang}}\"><head><title>{{.Title}}</title></head><body></body></html>",
+		"templates/memo/schema.json":  `{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"note": {"type": "string"}}}`,
+		"templates/memo/example.yaml": "template: memo\nlang: en\n",
+		"themes/mine/palette.css":     ":root { --accent: red; }\n",
+	})
+	env := map[string]string{
+		"FLOE_PARTS_DIR": filepath.Join(dir, "parts"), "FLOE_TEMPLATES_DIR": filepath.Join(dir, "templates"),
+		"FLOE_THEMES_DIR": filepath.Join(dir, "themes"),
+	}
+	shapes := map[string]map[string]string{
+		"part list":       {"table": "columns,rows", "chart": "-", "html": "html", "facts": "[] name,value", "text": "markdown"},
+		"part list --all": {"cards": "-", "mine": "a,b", "tone": "-"},
+		"template list":   {"report": "eyebrow,lang,lead,sections,template,theme,title,toc", "adr": "-", "memo": "lang,note,template,theme,title"},
+		"theme list":      {"app": "-", "mine": "-"},
+		"diagram example": {"architecture": "-", "flow": "-"},
+	}
+	for _, args := range []string{"part list", "part list --all", "template list", "theme list", "diagram example"} {
+		code, stdout, stderr := runEnv(dir, env, strings.Fields(args)...)
+		if code != 0 || stderr != "" {
+			t.Fatalf("floe %s = %d, %q", args, code, stderr)
+		}
+		var names []string
+		for line := range strings.Lines(stdout) {
+			cols := strings.Split(strings.TrimSuffix(line, "\n"), "\t")
+			if len(cols) != 4 {
+				t.Errorf("floe %s printed %q: the four lists are printed by a.list alone, as name, where, shape and description", args, line)
+				continue
+			}
+			names = append(names, cols[0])
+			if want, ok := shapes[args][cols[0]]; ok && cols[2] != want {
+				t.Errorf("floe %s: %s has the shape %q, want %q", args, cols[0], cols[2], want)
+			}
+		}
+		if !slices.IsSorted(names) {
+			t.Errorf("floe %s lists %v, not by name", args, names)
+		}
+		for name := range shapes[args] {
+			if !slices.Contains(names, name) {
+				t.Errorf("floe %s lists no %s", args, name)
+			}
 		}
 	}
 }
