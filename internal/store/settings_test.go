@@ -117,7 +117,7 @@ func TestPublishCreatedTheme(t *testing.T) {
 	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
 	publish(t, s, dw, "b.yaml", report(""), nil, store.Options{})
 	// Drawn, then the default changed, then saved: kept as drawn.
-	e, err := s.PrepareData(dw, store.Upload{File: "c.yaml", Source: []byte(report("")), Images: nil, Project: "p"}, store.Options{})
+	e, err := s.PrepareData(dw, store.Upload{File: "c.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p"}, store.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestPublishCreatedTheme(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Replacing another project's page with --force: new, in the default of now.
-	up := store.Upload{File: "b.yaml", Source: []byte(report("")), Images: nil, Project: "q"}
+	up := store.Upload{File: "b.yaml", Source: []byte(report("")), Images: nil, Project: "q", Repo: "q"}
 	if e, err = s.PrepareData(dw, up, store.Options{Force: true}); err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestPublishCreatedTheme(t *testing.T) {
 	if err = s.SetTheme("gone"); err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(report("")), Images: nil, Project: "p"}, store.Options{})
+	_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p"}, store.Options{})
 	if got := told(err, root); !strings.HasPrefix(got, `floe: there is no theme "gone"; use app, aurora,`) {
 		t.Errorf("a new page in a default gone: told %s", got)
 	}
@@ -167,7 +167,7 @@ func TestSettingsBrokenLinks(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "settings.json"), []byte(`{`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := s.PrepareData(dw, store.Upload{File: "b.yaml", Source: []byte(report("")), Images: nil, Project: "p"}, store.Options{})
+	_, err := s.PrepareData(dw, store.Upload{File: "b.yaml", Source: []byte(report("")), Images: nil, Project: "p", Repo: "p"}, store.Options{})
 	if got := told(err, root); !strings.HasPrefix(got, "S/settings.json: ") {
 		t.Errorf("a new page: told %s", got)
 	}
@@ -221,12 +221,12 @@ func TestPublishOrderKept(t *testing.T) {
 	s, root := newStore(t)
 	dw := floeDrawing(t)
 	publish(t, s, dw, "a.yaml", report(""), nil, store.Options{})
-	_, err := s.PrepareData(dw, store.Upload{File: "a.yaml", Source: []byte("title: a: b\n"), Images: nil, Project: "q"}, store.Options{})
+	_, err := s.PrepareData(dw, store.Upload{File: "a.yaml", Source: []byte("title: a: b\n"), Images: nil, Project: "q", Repo: "q"}, store.Options{})
 	if got := told(err, root); got != "a.yaml:1:8: mapping value is not allowed in this context" {
 		t.Errorf("a mistake of the data first: told %s", got)
 	}
 	fenced := strings.Replace(report(""), "text: x", "text: \"```\\nx\\n```\"", 1)
-	_, err = s.PrepareData(dw, store.Upload{File: "a.yaml", Source: []byte(fenced), Images: nil, Project: "q"}, store.Options{})
+	_, err = s.PrepareData(dw, store.Upload{File: "a.yaml", Source: []byte(fenced), Images: nil, Project: "q", Repo: "q"}, store.Options{})
 	var conflict *store.Conflict
 	report := usererr.Tell(i18n.EnglishCatalog(), err)
 	if !errors.As(err, &conflict) || len(report.Warnings) != 1 {

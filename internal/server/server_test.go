@@ -124,7 +124,7 @@ func (e env) publish(t *testing.T, slug, src string, images map[string][]byte) *
 	t.Helper()
 
 	return e.write(t, http.MethodPost, "/api/artifacts/data",
-		server.Upload{File: slug + ".yaml", Source: []byte(src), Images: images, Project: "p", Place: slug + ".yaml", Slug: &slug}) //nolint:exhaustruct // the rest not given
+		server.Upload{File: slug + ".yaml", Source: []byte(src), Images: images, Project: "p", Repo: "p", Place: slug + ".yaml", Slug: &slug}) //nolint:exhaustruct // the rest not given
 }
 
 func want(t *testing.T, w *httptest.ResponseRecorder, status int, body string) {
@@ -179,8 +179,8 @@ func TestPublish(t *testing.T) {
 	e := newEnv(t)
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusCreated, `"slug":"d"`)
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusOK, `"prev":{"title":"T"`)
-	other := e.write(t, http.MethodPost, "/api/artifacts/data", server.Upload{File: "d.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Project: "q", Place: "d.yaml"}) //nolint:exhaustruct // the rest not given
-	want(t, other, http.StatusConflict, `{"mistakes":[{"text":"slug \"d\" was published from project p: choose another slug"}]}`)
+	other := e.write(t, http.MethodPost, "/api/artifacts/data", server.Upload{File: "d.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Project: "q", Repo: "q", Place: "d.yaml"}) //nolint:exhaustruct // the rest not given
+	want(t, other, http.StatusConflict, `{"mistakes":[{"text":"slug \"d\" was published from d.yaml in project p: choose another slug"}]}`)
 	want(t, e.publish(t, "e", "lang: en\ntemplate: nope\n", nil), http.StatusBadRequest, `unknown template \"nope\"`)
 	asText := e.do(t, http.MethodPost, "/api/artifacts", `{"path": "rel.html"}`, "Origin", origin, "Content-Type", "application/json",
 		"Accept", "application/json, text/plain")
@@ -194,7 +194,7 @@ func TestPublish(t *testing.T) {
 	want(t, e.publish(t, "f", "lang: en\ntemplate: pic\ni: [img/a.png]\n", map[string][]byte{"img/a.png": png}), http.StatusCreated, `"slug":"f"`)
 	// Renamed, f.yaml's page is found without a slug, the images asked for and sent again.
 	want(t, e.write(t, http.MethodPatch, "/api/artifacts/f", map[string]any{"slug": "f-b"}), http.StatusOK, `"slug":"f-b"`)
-	up := server.Upload{File: "f.yaml", Source: []byte("lang: en\ntemplate: pic\ni: [img/a.png]\ntitle: two\n"), Project: "p", Place: "f.yaml"} //nolint:exhaustruct // the rest not given
+	up := server.Upload{File: "f.yaml", Source: []byte("lang: en\ntemplate: pic\ni: [img/a.png]\ntitle: two\n"), Project: "p", Repo: "p", Place: "f.yaml"} //nolint:exhaustruct // the rest not given
 	want(t, e.write(t, http.MethodPost, "/api/artifacts/data", up), http.StatusUnprocessableEntity, `{"images":["img/a.png"]}`)
 	up.Images = map[string][]byte{"img/a.png": png}
 	want(t, e.write(t, http.MethodPost, "/api/artifacts/data", up), http.StatusOK, `"slug":"f-b"`)

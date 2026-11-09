@@ -200,7 +200,7 @@ func TestNewsPublished(t *testing.T) {
 	if _, err := s.MarkRead(viewer, "r", 1, rm.Versions[0].At); err != nil {
 		t.Fatal(err)
 	}
-	up := store.Upload{File: "r.yaml", Source: []byte(titled("r")), Images: images, Project: "q"}
+	up := store.Upload{File: "r.yaml", Source: []byte(titled("r")), Images: images, Project: "q", Repo: "q"}
 	e, err := s.PrepareData(dw, up, store.Options{Force: true})
 	if err != nil {
 		t.Fatal(err)

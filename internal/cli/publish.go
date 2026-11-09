@@ -148,7 +148,7 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 		}
 	} else {
 		up = server.Upload{
-			File: p.name, Source: nil, Images: nil, Project: "", Place: "", Slug: opts.Slug, Title: opts.Title,
+			File: p.name, Source: nil, Images: nil, Project: "", Repo: "", Place: "", Slug: opts.Slug, Title: opts.Title,
 			Description: opts.Description, Theme: opts.Theme, Force: opts.Force,
 		}
 		if p.err == nil && files.IsDataFile(p.name) {
@@ -158,7 +158,7 @@ func (a *app) sent(ctx context.Context, p arg, link bool, opts store.Options) (s
 			up.Source, err = p.read()
 			// Placed once read, so that a file not there is told once, by the read.
 			if err == nil {
-				up.Place = project.Place(ctx, a.env.Dir, p.abs)
+				up.Repo, up.Place = project.Place(ctx, p.abs)
 			}
 		}
 		body = up

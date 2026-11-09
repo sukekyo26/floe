@@ -140,6 +140,7 @@ type Upload struct {
 	Source      []byte            `json:"source"`
 	Images      map[string][]byte `json:"images"`
 	Project     string            `json:"project"`
+	Repo        string            `json:"repo"`
 	Place       string            `json:"place"`
 	Slug        *string           `json:"slug,omitzero"`
 	Title       *string           `json:"title"`
@@ -207,7 +208,7 @@ func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// A slug not given is the store's to pick, the page of the file sent if it has one.
-	up := store.Upload{File: in.File, Source: in.Source, Images: in.Images, Project: in.Project, Place: in.Place}
+	up := store.Upload{File: in.File, Source: in.Source, Images: in.Images, Project: in.Project, Repo: in.Repo, Place: in.Place}
 	opts := store.Options{Slug: in.Slug, Title: in.Title, Description: in.Description, Theme: in.Theme, Force: in.Force}
 	drawing := s.latest()
 	entry, err := s.cfg.Store.PrepareData(drawing, up, opts)

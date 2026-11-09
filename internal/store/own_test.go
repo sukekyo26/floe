@@ -18,7 +18,7 @@ const ownSrc = "lang: en\ntemplate: pic\n"
 func put(t *testing.T, s *store.Store, dw store.Drawing, file, place, src string, o store.Options) (*store.Entry, error) {
 	t.Helper()
 
-	up := store.Upload{File: file, Source: []byte(src), Images: map[string][]byte{}, Project: "p", Place: place}
+	up := store.Upload{File: file, Source: []byte(src), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: place}
 	e, err := s.PrepareData(dw, up, o)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func TestPublishRenamedInBetween(t *testing.T) {
 			if _, err := put(t, s, dw, c.file, c.file, ownSrc, store.Options{Slug: ptr(c.slug)}); err != nil {
 				t.Fatal(told(err, root))
 			}
-			up := store.Upload{File: c.file, Source: []byte(ownSrc + "title: two\n"), Images: map[string][]byte{}, Project: "p", Place: c.file}
+			up := store.Upload{File: c.file, Source: []byte(ownSrc + "title: two\n"), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: c.file}
 			e, err := s.PrepareData(dw, up, store.Options{})
 			if err != nil {
 				t.Fatal(told(err, root))
@@ -125,7 +125,7 @@ func TestOwnSlugOrder(t *testing.T) {
 			s, root := newStore(t)
 			dw := picKit(t, "", "")
 			for _, p := range c.pages {
-				up := store.Upload{File: "x.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: p.project, Place: p.place}
+				up := store.Upload{File: "x.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: p.project, Repo: p.project, Place: p.place}
 				e, err := s.PrepareData(dw, up, store.Options{Slug: ptr(p.slug)})
 				if err == nil {
 					err = s.Save(e)
@@ -264,4 +264,99 @@ func TestEditRenameTitle(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A stored page is its data file's from whatever project it is published: by the file's repository and place, else its
+// real path alone, which a page published before keys were the file's alone holds with its project. Published again
+// from another project, the page is written, renamed or not, and stays in its project; a new page is in the project
+// published from, not the file's repository's. A page that kept no file is compared by the project published from,
+// once, and by the file's key from then on.
+func TestSameFileAnyProject(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	real := filepath.Join(filepath.Dir(root), "plans", "db.yaml")
+	pub := func(project, repo, place string, o store.Options) string {
+		t.Helper()
+		up := store.Upload{File: "db.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: project, Repo: repo, Place: place}
+		e, err := s.PrepareData(dw, up, o)
+		if err != nil {
+			t.Fatalf("from %s: %s", project, told(err, root))
+		}
+		if err = s.Save(e); err != nil {
+			t.Fatal(err)
+		}
+		return e.Slug
+	}
+	pages := func() []string {
+		t.Helper()
+		list, err := s.List("")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var slugs []string
+		for _, a := range list {
+			slugs = append(slugs, a.Slug)
+		}
+		slices.Sort(slugs)
+		return slugs
+	}
+	check := func(what, slug, project string, want []string) {
+		t.Helper()
+		if m := s.ReadMeta(slug); m == nil || m.Project != project {
+			t.Errorf("%s: %s in %+v, want project %s", what, slug, m, project)
+		}
+		if got := pages(); !slices.Equal(got, want) {
+			t.Errorf("%s: pages %v, want %v", what, got, want)
+		}
+	}
+
+	// A real path: a file outside a repository.
+	pub("a", "", real, store.Options{})
+	if got := pub("b", "", real, store.Options{}); got != "db" {
+		t.Errorf("from another project: wrote %s, want db", got)
+	}
+	check("from another project", "db", "a", []string{"db"})
+	rename(t, s, "db", "wiki")
+	if got := pub("b", "", real, store.Options{}); got != "wiki" {
+		t.Errorf("renamed, from another project: wrote %s, want wiki", got)
+	}
+	check("renamed, from another project", "wiki", "a", []string{"wiki"})
+
+	// A path in a repository, the same from outside it.
+	if got := pub("r", "r", "docs/x.yaml", store.Options{Slug: ptr("x")}); got != "x" {
+		t.Fatalf("wrote %s, want x", got)
+	}
+	rename(t, s, "x", "xr")
+	if got := pub("a", "r", "docs/x.yaml", store.Options{}); got != "xr" {
+		t.Errorf("renamed, from outside the repository: wrote %s, want xr", got)
+	}
+	check("renamed, from outside the repository", "xr", "r", []string{"wiki", "xr"})
+
+	// A real path kept with the project published from, before keys were the file's alone, renamed.
+	old := filepath.Join(filepath.Dir(root), "plans", "old.yaml")
+	pub("floe", "floe", old, store.Options{Slug: ptr("old")})
+	rename(t, s, "old", "older")
+	if got := pub("b", "", old, store.Options{}); got != "older" {
+		t.Errorf("a real path kept with its project, renamed: wrote %s, want older", got)
+	}
+
+	// A new page is in the project published from.
+	pub("w", "r", "docs/new.yaml", store.Options{Slug: ptr("new")})
+	if m := s.ReadMeta("new"); m.Project != "w" || m.PublishedFrom != "r" {
+		t.Errorf("a new page: project %q, file's repository %q, want w and r", m.Project, m.PublishedFrom)
+	}
+
+	// A page that kept no file: compared by the project published from, then keyed.
+	pub("p", "p", "", store.Options{Slug: ptr("nofile")})
+	up := store.Upload{File: "n.yaml", Source: []byte(ownSrc), Images: map[string][]byte{}, Project: "q", Repo: "", Place: real + "2"}
+	if _, err := s.PrepareData(dw, up, store.Options{Slug: ptr("nofile")}); err == nil {
+		t.Error("a page that kept no file, from another project: no refusal")
+	}
+	pub("p", "", real+"2", store.Options{Slug: ptr("nofile")})
+	if m := s.ReadMeta("nofile"); m.PublishedFrom != "" || m.PublishedFile != real+"2" {
+		t.Errorf("a page that kept no file, published again: keyed %q %q", m.PublishedFrom, m.PublishedFile)
+	}
+	pub("q", "", real+"2", store.Options{Slug: ptr("nofile")})
 }
