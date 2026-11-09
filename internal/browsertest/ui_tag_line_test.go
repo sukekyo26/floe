@@ -257,7 +257,8 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// On a task's page, the page beside its list has the line too.
 	s.floe(t, "work", "one", "--task", "#1")
 	b.until("the page on its task", "items.find((a) => a.slug === 'one')?.work?.task === '#1'")
-	b.eval("location.href = taskHref({ project: items.find((a) => a.slug === 'one').taskProject, name: '#1' })")
+	// By navigate, which waits for the new page: the rows waited for are on the list left too
+	b.navigate(b.eval("taskHref({ project: items.find((a) => a.slug === 'one').taskProject, name: '#1' })"))
 	b.until("the task's rows", "document.querySelector('#list li[data-slug=one]')")
 	pick("one", "")
 	say("a task's page", line("read-tags"))
@@ -277,7 +278,7 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.media("print")
 	say("in print", "getComputedStyle(document.getElementById('frame-tags')).display")
 	b.media("")
-	b.eval("location.href = document.querySelector('#frame-actions .diff-open').href")
+	b.navigate(b.eval("document.querySelector('#frame-actions .diff-open').href"))
 	b.until("the diff", "!document.getElementById('diff').hidden")
 	say("the diff", line("frame-tags"))
 	b.size(390, 844, true)
