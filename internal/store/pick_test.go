@@ -75,7 +75,7 @@ func TestPickTheme(t *testing.T) {
 	}
 }
 
-// A page published while it is drawn in the theme picked is refused, nothing written.
+// A page published, or a link put on another file, while it is drawn in the theme picked is refused, nothing written.
 func TestPickThemeMeanwhile(t *testing.T) {
 	t.Parallel()
 
@@ -93,6 +93,36 @@ func TestPickThemeMeanwhile(t *testing.T) {
 		t.Errorf("published meanwhile: told %s", told(err, root))
 	}
 	if m := s.ReadMeta("d"); m.PickedTheme != "" || m.Title != "Again" {
+		t.Errorf("written: %+v", m)
+	}
+	// A link put on another file meanwhile, which has no copy to tell it
+	home := filepath.Dir(root)
+	dir := filepath.Join(home, "proj")
+	if err = os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	link := func(name string, o store.Options) {
+		t.Helper()
+		path := filepath.Join(dir, name)
+		if werr := os.WriteFile(path, []byte(iconPage), 0o600); werr != nil {
+			t.Fatal(werr)
+		}
+		e, lerr := s.PrepareLink(t.Context(), dw, path, o, "", home)
+		if lerr != nil {
+			t.Fatal(told(lerr, root))
+		}
+		if lerr = s.Save(e); lerr != nil {
+			t.Fatal(lerr)
+		}
+	}
+	icons.then = nil
+	link("a.yaml", store.Options{Slug: ptr("l")})
+	icons.then = func() { link("b.yaml", store.Options{Slug: ptr("l"), Force: true}) }
+	err = s.PickTheme(dw, "l", "ink")
+	if !errors.As(err, &conflict) {
+		t.Errorf("linked to another file meanwhile: told %s", told(err, root))
+	}
+	if m := s.ReadMeta("l"); m.PickedTheme != "" || filepath.Base(m.Path) != "b.yaml" {
 		t.Errorf("written: %+v", m)
 	}
 }

@@ -40,26 +40,23 @@ func (s *Store) PickTheme(dw Drawing, slug, theme string) error {
 		return err
 	}
 	defer unlock()
-	// Compared before the drawing's mistakes: a publish meanwhile may have taken the copy drawn from.
+	// Compared before the drawing's mistakes: a publish meanwhile may have taken the copy drawn from. A link has no copy:
+	// linked to another file, its path tells it (published again from the same one, it keeps the pick and is drawn when
+	// opened).
 	now := s.ReadMeta(slug)
 	if now == nil {
 		return ErrNotFound
 	}
-	if now.Source != m.Source || now.PickedTheme != m.PickedTheme {
+	if now.Source != m.Source || now.Path != m.Path || now.PickedTheme != m.PickedTheme {
 		return conflict(usererr.New("store_theme_changed", slug))
 	}
 	if drawErr != nil {
 		return drawErr
 	}
 	now.PickedTheme = theme
-	// The page drawn the same as the one it has (nil): the pick alone is written, as it is kept for later drawings.
-	if got == nil || got.page == nil {
-		return s.WriteMeta(slug, now)
-	}
-	if got.template != "" {
-		now.Template = got.template
-	}
-	return s.keepCopy(slug, now, got.src, got.page, got.images, nil)
+	// Written though the page drawn is the one it has (or a link's, drawn when opened): the pick is kept for later
+	// drawings.
+	return s.keepDrawn(slug, now, got, nil, true)
 }
 
 // drawPicked draws the page slug, whose meta.json is m: a stored page from its copy (what redraw returns), a linked

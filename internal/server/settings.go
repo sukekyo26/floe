@@ -94,10 +94,6 @@ func (s *Server) pickTheme(w http.ResponseWriter, r *http.Request) {
 	if in == nil {
 		return
 	}
-	if s.cfg.Store.ReadMeta(slug) == nil {
-		notFound(w)
-		return
-	}
 	drawing := s.latest()
 	err := drawing.Err
 	if err == nil && in.Theme != "" {

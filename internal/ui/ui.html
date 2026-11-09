@@ -6069,7 +6069,8 @@
     try {
       const at = a ? `/api/artifacts/${encodeURIComponent(a.slug)}/theme` : '/api/settings';
       const res = await api(at, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ theme }) });
-      // A page's: changed meanwhile (409), or not drawn in it, its look kept (400); the server's words are of the command line
+      // A page's: changed meanwhile (409), or not drawn, its look kept (400: the theme, one's own things or the data); the
+      // server's words are of the command line
       if (a && res.status === 409) why = t('ui_theme_page_changed');
       else if (a && res.status === 400) why = t('ui_theme_page_undrawn');
       else if (!res.ok) why = t('ui_http_error', await res.text(), res.status);

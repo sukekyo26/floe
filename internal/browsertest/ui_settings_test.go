@@ -84,7 +84,7 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.until("listed", "items.find((a) => a.slug === 'p').pickedTheme === 'ink'")
 	out = append(out,
 		b.eval("document.getElementById('settings').open"),
-		b.eval("document.activeElement.matches('#list li[data-slug=p] summary')"),
+		b.until("the focus back", "document.activeElement.matches('#list li[data-slug=p] summary')"),
 		b.eval("fetch('/a/p/?raw').then((r) => r.text()).then((t) => t.includes('--accent: #2b3a67'))"),
 	)
 	open()
@@ -108,12 +108,12 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	out = append(out, b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').hidden, document.getElementById('theme-title').hidden].join(' / ')"), b.eval(icon))
 	check(t, "page theme", out, strings.Join([]string{
 		"This page's theme / P / Choosing draws this page alone again. The theme chosen stays when the page is updated.",
-		"The theme written in the page, or the default theme when it was first stored / None chosen",
+		"The theme the page was stored with (the one written for it, or the default) / None chosen",
 		`""`, "page-icon",
 		"false", "true", "true",
 		"ink",
 		"Failed to change this page's theme: the page changed meanwhile. Choose again", "true",
-		"Failed to change this page's theme: the page is not drawn in this theme, and keeps its look", "true",
+		"Failed to change this page's theme: it was not drawn, and the page keeps its look", "true",
 		"Chosen: acme (not found). Choose another theme.", "null",
 		"Settings / true / false", "settings-icon",
 	}, "|"))
