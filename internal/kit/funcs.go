@@ -61,20 +61,22 @@ func newMarkdown(opts ...goldmark.Option) goldmark.Markdown {
 }
 
 // rawAsText writes raw HTML as the text it was written as: an HTML block as a paragraph of its lines.
-// LIMIT: an HTML block runs as CommonMark reads it: one of a tag alone or of <div> and the like to a blank line, and one
-// of <style>, <script>, <pre>, <textarea>, <!--, <?, <!X or <![CDATA[ to its closing mark, or to the end of the text
-// when it has none; the Markdown in it shows as written. Write the tag in backticks, or a blank line after it, if writers trip on it.
+// LIMIT: an HTML block runs as CommonMark reads it: one of a tag alone or of <div> and the like to a blank line, and
+// one of <style>, <script>, <pre>, <textarea>, <!--, <?, <!X or <![CDATA[ to its closing mark, or to the end of the
+// text when it has none; the Markdown in it shows as written. Write the tag in backticks, or a blank line after it, if
+// writers trip on it.
 // LIMIT: an HTML block in an item of a tight list is a paragraph there, spaced apart unlike the other items: plain on
 // the page.
 type rawAsText struct{}
 
 func (rawAsText) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
 	r.Register(ast.KindRawHTML, func(w util.BufWriter, src []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
-		if !entering {
+		raw, ok := n.(*ast.RawHTML)
+		if !ok || !entering {
 			return ast.WalkSkipChildren, nil
 		}
 		var b []byte
-		segs := n.(*ast.RawHTML).Segments
+		segs := raw.Segments
 		for i := range segs.Len() {
 			seg := segs.At(i)
 			b = append(b, seg.Value(src)...)
@@ -82,10 +84,10 @@ func (rawAsText) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
 		return ast.WalkSkipChildren, writeText(w, b)
 	})
 	r.Register(ast.KindHTMLBlock, func(w util.BufWriter, src []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
-		if !entering {
+		block, ok := n.(*ast.HTMLBlock)
+		if !ok || !entering {
 			return ast.WalkContinue, nil
 		}
-		block := n.(*ast.HTMLBlock)
 		var b []byte
 		lines := block.Lines()
 		for i := range lines.Len() {
