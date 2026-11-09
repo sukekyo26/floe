@@ -214,7 +214,7 @@ floe tag design-notes --remove 下書き                    # 1 つ外す
 ページがどのタスクにあるかと、タスクの状態を、サーバーを通して書きます（動いていなければ起こす）。タスクはプロジェクトとタスク ID で名指し、floe はどちらの意味も読みません。どのタスクかはページが持ち（各 `meta.json` の `work`）、タスクのタイトル・状態・最後の段階・外のリンク・段階の順と、変えた回数（`rev`。画面が送り返し、その後に書かれたタスクへの書き込みは断られます）は保存先の `tasks.json` が持ちます。
 
 ```sh
-floe work design-notes --task "#130" --step design --state doing   # ページをタスクに載せ、タスクの状態も変える
+floe work design-notes --task "#130" --step design --state doing     # ページをタスクに載せ、タスクの状態も変える
 floe work --task "#130" --url https://example.com/issues/482         # タスクだけ
 floe work --task "#130" --steps design,build,review                  # 段階を見せる順
 floe work design-notes --pin                                         # タスクによらずピン止め

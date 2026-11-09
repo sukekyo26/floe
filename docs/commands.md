@@ -214,7 +214,7 @@ floe tag design-notes --remove draft                       # one taken off
 Say which task a page is on, and what a task's state is, through the server (it is started when it is not running). A task is named by its project and its ID; floe does not read what either means. The pages say which task they are on (`work` in each `meta.json`), and `tasks.json` in the store holds each task's title, state, last step, outside link and order of steps, and how many times it was changed (`rev`), which a screen sends back so that a task written since is refused.
 
 ```sh
-floe work design-notes --task "#130" --step design --state doing   # the page on the task, and the task's state
+floe work design-notes --task "#130" --step design --state doing     # the page on the task, and the task's state
 floe work --task "#130" --url https://example.com/issues/482         # the task alone
 floe work --task "#130" --steps design,build,review                  # the order its steps are shown in
 floe work design-notes --pin                                         # pinned, whatever its task
