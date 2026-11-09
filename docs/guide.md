@@ -27,9 +27,8 @@ floe shows the user a page you write as a YAML file: it checks the file, draws i
 
 ## Publishing again
 
-- Run `floe publish` again in the same project. floe takes the project from the directory you run it in (its git repository, from anywhere inside; outside one, the directory's name), not from where the file is. Without `--slug`, it replaces the page, even after the user renamed it on the management page.
-- From another project, floe takes the file as another page: it refuses the name, or, for a renamed page, makes a second page. So when the name of a page you published is refused, run `floe publish` where you ran it before.
-- Rename the file or pass another `--slug` only when you know the page is not yours, not merely because you do not remember publishing it.
+- Publish the same file again, from any directory, without `--slug`: it replaces its page, even after the user renamed the page on the management page.
+- If floe refuses the name, a page of another file has it: rename your file (`db-choice-2.yaml`) or pass another `--slug`, and publish it again.
 
 ## Themes
 
