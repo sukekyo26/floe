@@ -227,7 +227,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('#list li[data-slug=l] .sel').click()")
 	out = append(out, b.eval("document.getElementById('bulk-delete').textContent"))
 	// The shelf's add button stays while rows are selected.
-	check(t, "selected", []string{b.eval("document.getElementById('add-link').hidden + ''")}, "false")
+	check(t, "selected", []string{b.eval("(document.getElementById('add-link').closest('[hidden]') === null) + ''")}, "true")
 	b.eval("document.getElementById('bulk-clear').click()")
 	// The pencil opens a modal with the current description; saving sends the new one.
 	b.eval("document.querySelector('#list li[data-slug=a] .edit').click()")
@@ -291,7 +291,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	out = append(out, b.eval("document.getElementById('add-link').hidden"))
 	// One kind, its group hidden: the button stays, under the group before it.
-	check(t, "one kind", []string{b.eval("[document.getElementById('shelf-kinds').hidden, document.getElementById('add-link').hidden].join(' ')")}, "true false")
+	check(t, "one kind", []string{b.eval("[document.getElementById('shelf-kinds').hidden, document.getElementById('add-link').closest('[hidden]') === null].join(' ')")}, "true true")
 	// A change that succeeds clears the error of one that failed before, a favourite's as an archive's.
 	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .star').click()")
 	out = append(out, b.until("the favourite to fail", "!document.getElementById('error').hidden && document.getElementById('error').textContent"))
