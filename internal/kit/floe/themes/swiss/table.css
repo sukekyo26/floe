@@ -1,11 +1,12 @@
 /* A frame of black, the head black with white text, black rules between rows; in a face, the face's text colour in
-   place of the black and its ground in place of the white */
-:scope { border: 2px solid var(--on-face, var(--fg)); --table-rule: 1px solid var(--on-face, var(--fg)); --table-head-bg: var(--on-face, var(--fg)); --table-head-fg: var(--face, var(--surface)); }
+   place of the black and its ground in place of the white. The frame and the rules take the head's ground, so that a
+   band sets the two colours alone */
+:scope { --table-head-bg: var(--on-face, var(--fg)); --table-head-fg: var(--face, var(--surface)); border: 2px solid var(--table-head-bg); --table-rule: 1px solid var(--table-head-bg); }
 :scope thead th { font-weight: 800; --face: var(--table-head-bg); --on-face: var(--table-head-fg); }
 :scope td.num { font-size: 1.35rem; font-weight: 300; }
 /* In a band (band.css) the table is on the surface (panel.css), its root still in the band's face, read here: its frame,
    rules and head are the page's black again.
    LIMIT: a browser that reads no container style query draws it in a band as in any face */
 @container style(--swiss-band: on) {
-  :scope { border-color: var(--fg); --table-rule: 1px solid var(--fg); --table-head-bg: var(--fg); --table-head-fg: var(--surface); }
+  :scope { --table-head-bg: var(--fg); --table-head-fg: var(--surface); }
 }
