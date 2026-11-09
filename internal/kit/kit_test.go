@@ -137,7 +137,10 @@ func TestEntryFiles(t *testing.T) {
 func TestFloeReport(t *testing.T) {
 	t.Parallel()
 
-	r, ok := floe(t).Template("report")
+	r, ok, err := floe(t).Template("report")
+	if err != nil {
+		t.Fatal(err)
+	}
 	// report has no checks.yaml: a fence in a text part is warned of as it is drawn.
 	if !ok || r.Schema() == nil || r.Checks() != nil || page(t, r, "en") == nil || r.Example() == nil {
 		t.Fatalf("report = %+v", r)
@@ -386,7 +389,10 @@ func TestWordUnknown(t *testing.T) {
 		if err != nil {
 			t.Fatal(told(err))
 		}
-		tm, _ := k.Template("t")
+		tm, _, err := k.Template("t")
+		if err != nil {
+			t.Fatal(err)
+		}
 		err = page(t, tm, tt.lang).Execute(&strings.Builder{}, nil)
 		if err == nil || !strings.Contains(err.Error(), tt.want) {
 			t.Errorf("%q: %v, want %s", tt.words, err, tt.want)
@@ -406,7 +412,10 @@ func TestWordsAsWritten(t *testing.T) {
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	tm, _ := k.Template("t")
+	tm, _, err := k.Template("t")
+	if err != nil {
+		t.Fatal(err)
+	}
 	var b strings.Builder
 	if err := page(t, tm, "en").Execute(&b, nil); err != nil || b.String() != "[x\n][y z]" {
 		t.Errorf("drew %q, %v; want %q", b.String(), err, "[x\n][y z]")
@@ -566,7 +575,10 @@ func TestUnread(t *testing.T) {
 	l, _ := k.Look("lk")
 	p, _ := k.Part("p")
 	th, _ := k.Theme("t")
-	tm, _ := k.Template("t")
+	tm, _, err := k.Template("t")
+	if err != nil {
+		t.Fatal(err)
+	}
 	got := fmt.Sprint(l.Unread(), p.Unread(), th.Unread(), tm.Unread())
 	if got != "[checks.yaml part.html] [notes.txt] [tabel.css] [computed.yml pgae.html]" {
 		t.Errorf("Unread = %s", got)
@@ -740,7 +752,10 @@ func TestReadMarks(t *testing.T) {
 		t.Fatal(told(err))
 	}
 	p, _ := k.Part("mine")
-	m, _ := k.Template("memo")
+	m, _, err := k.Template("memo")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if bytes.HasPrefix(p.PageSource(), []byte(mark)) || !bytes.HasPrefix(m.Example(), []byte(mark)) {
 		t.Errorf("part.html %q, example.yaml %q: want the one without its mark, the other as written", p.PageSource(), m.Example())
 	}

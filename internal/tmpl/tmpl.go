@@ -84,7 +84,10 @@ func checked(k *kit.Kit, file string, src []byte, given string) (*doc.Data, *kit
 	if d == nil {
 		return nil, nil, "", err //nolint:wrapcheck // mistakes of the YAML
 	}
-	t, theme := pick(k, d, &found)
+	t, theme, err := pick(k, d, &found)
+	if err != nil {
+		return nil, nil, "", err
+	}
 	if t == nil {
 		return nil, nil, "", found.Sorted().Err()
 	}
@@ -103,8 +106,8 @@ func checked(k *kit.Kit, file string, src []byte, given string) (*doc.Data, *kit
 // pick returns the template of k that d names and the name of the theme it is drawn with, as doc.Read read
 // them: the theme given or written, else the default. It adds to found a template left out, empty or naming
 // none, but one doc.Read refused, which it told; and a theme that is none: at d's theme:, or, given, at no
-// place, as no line of d names it. The template is nil when it is none.
-func pick(k *kit.Kit, d *doc.Data, found *usererr.List) (*kit.Template, string) {
+// place, as no line of d names it. The template is nil when it is none; the error is floe's failure to compile it.
+func pick(k *kit.Kit, d *doc.Data, found *usererr.List) (*kit.Template, string, error) {
 	_, _, themes, templates := k.Names()
 	theme := cmp.Or(d.Theme, kit.DefaultTheme)
 	if _, ok := k.Theme(theme); !ok {
@@ -121,13 +124,17 @@ func pick(k *kit.Kit, d *doc.Data, found *usererr.List) (*kit.Template, string) 
 	case d.Template == "":
 		*found = append(*found, yamlpos.New(d.File, d.Where["template"], "tmpl_no_template", strings.Join(templates, ", ")))
 	default:
-		if t, ok := k.Template(d.Template); ok {
-			return t, theme
+		t, ok, err := k.Template(d.Template)
+		if err != nil {
+			return nil, theme, err //nolint:wrapcheck // floe's failure, which says what failed
+		}
+		if ok {
+			return t, theme, nil
 		}
 		bad := yamlpos.New(d.File, d.Where["template"], "tmpl_unknown", d.Template, strings.Join(templates, ", "))
 		*found = append(*found, bad)
 	}
-	return nil, theme
+	return nil, theme, nil
 }
 
 // run runs, on d, the checks of t, those of each part for each item of d it draws, and the computed values of
