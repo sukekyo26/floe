@@ -98,7 +98,10 @@ func lookTone(t *testing.T, s *site) measured {
 		m.add(b.measure("every-part in "+name, measure))
 	}
 	for _, tmpl := range []string{"adr", "postmortem"} {
-		tpl, _ := k.Template(tmpl)
+		tpl, _, err := k.Template(tmpl)
+		if err != nil {
+			t.Fatal(err)
+		}
 		s.floe(t, "publish", s.write(t, tmpl+".yaml", string(tpl.Example())), "--slug", "tone-"+tmpl)
 		b.navigate("/a/tone-" + tmpl + "/?raw")
 		m.add(b.measure(tmpl, measure))

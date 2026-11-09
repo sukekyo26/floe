@@ -62,7 +62,10 @@ func TestFloeExamplesWarnNot(t *testing.T) {
 	k := floeKit(t)
 	_, _, _, templates := k.Names()
 	for _, name := range templates {
-		tp, _ := k.Template(name)
+		tp, _, err := k.Template(name)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if _, warnings, err := tmpl.Draw(k, name+"/example.yaml", tp.Example(), none); err != nil || warnings != nil {
 			t.Errorf("%s: %s\n%s", name, laid(warnings), told(err))
 		}
@@ -77,7 +80,10 @@ func TestWarnFenceInMore(t *testing.T) {
 	_, _, _, templates := k.Names()
 	checked := 0
 	for _, name := range templates {
-		tp, _ := k.Template(name)
+		tp, _, err := k.Template(name)
+		if err != nil {
+			t.Fatal(err)
+		}
 		lines := strings.Split(string(tp.Example()), "\n")
 		at := slices.Index(lines, "more:")
 		if at < 0 {
@@ -100,7 +106,10 @@ func TestWarnFenceInSteps(t *testing.T) {
 	t.Parallel()
 
 	k := floeKit(t)
-	tp, _ := k.Template("runbook")
+	tp, _, err := k.Template("runbook")
+	if err != nil {
+		t.Fatal(err)
+	}
 	lines := strings.Split(string(tp.Example()), "\n")
 	step := "  - { title: t, text: \"```\\nls\\n```\" }"
 	steps, back := slices.Index(lines, "steps:"), slices.Index(lines, "rollback:")
@@ -122,7 +131,10 @@ func TestWarnFenceInSlides(t *testing.T) {
 	t.Parallel()
 
 	k := floeKit(t)
-	tp, ok := k.Template("slides")
+	tp, ok, err := k.Template("slides")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !ok {
 		t.Fatal("floe has no template slides")
 	}
