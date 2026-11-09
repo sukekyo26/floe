@@ -480,6 +480,9 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, bool
 // default it had, the one it was drawn with; refuse it at Save if that comes to matter.
 // LIMIT: a theme picked between the look and Save is kept, the page drawn in the one before it: the next publish or
 // pick mends it. Refuse it at Save as PickTheme does if that comes to matter.
+// LIMIT: a slug Save picks again (pickAgain: the file's page renamed, or the slug taken, meanwhile) is drawn in the
+// themes of the one looked at here, its meta.json taking those of the page picked, as the title in storedPage's LIMIT.
+// Publish again if that shows.
 func (s *Store) themesFor(slug, path, from, place string, force bool) (picked, created string, err error) {
 	prev := s.ReadMeta(slug)
 	replacing, _ := checkOwner(slug, prev, path, from, place, force) //nolint:errcheck // told by settle, as above
