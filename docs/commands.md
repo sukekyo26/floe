@@ -162,11 +162,11 @@ Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `
 
 ## `floe theme list`
 
-Print the themes, floe's and your own, one per line in the same four tab-separated columns as `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own), its shape, `-`, as nothing is written as a theme's value, and an empty description, as a theme has none.
+Print the themes, floe's and your own, one per line in the same four tab-separated columns as `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own), its shape, `-`, as nothing is written as a theme's value, and its description, its `theme.yaml`'s `description:`, empty without one.
 
 ## `floe template show <name> [file]` / `floe part show <name> [file]` / `floe theme show <name> [file]`
 
-Print a template, a part (a look or a shared schema too) or a theme, floe's or your own, to read before writing with it or copying from it: its name and description (a theme's name alone, as it has none), where it is and the files it reads (`files:`), not what they hold.
+Print a template, a part (a look or a shared schema too) or a theme, floe's or your own, to read before writing with it or copying from it: its name and description, where it is and the files it reads (`files:`), not what they hold.
 
 - With a file named after (`floe part show code part.html`), print that file alone, as written but the byte order mark at its start: floe's parts show how `part.html` uses `{{copyButton}}` and the other functions. A file it does not read is refused with the files it does.
 
