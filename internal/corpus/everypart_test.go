@@ -182,15 +182,19 @@ func TestPartKeysUndescribed(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var v any
-		if err := json.Unmarshal(b, &v); err != nil {
+		for _, k := range at.path {
+			var obj map[string]json.RawMessage
+			if err := json.Unmarshal(b, &obj); err != nil {
+				t.Fatal(err)
+			}
+			b = obj[k]
+		}
+		var keys map[string]map[string]json.RawMessage
+		if err := json.Unmarshal(b, &keys); err != nil {
 			t.Fatal(err)
 		}
-		for _, k := range at.path {
-			v = v.(map[string]any)[k]
-		}
-		for name, key := range v.(map[string]any) {
-			if _, ok := key.(map[string]any)["description"]; ok && name != "html" {
+		for name, key := range keys {
+			if _, ok := key["description"]; ok && name != "html" {
 				t.Errorf("%s: %s has a description: write the part's description in its schema.json, not beside its key in any.json or stack", at.file, name)
 			}
 		}
