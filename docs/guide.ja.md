@@ -23,7 +23,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
          - text: Freeze edits on **Friday evening**, then copy the pages.
    ```
 
-3. [部品を選ぶ](#部品を選ぶ)の表で部品を選ぶ。見本に無い部品は、書く前に `floe part list` で鍵を見る。推した鍵は断られます。
+3. [部品を選ぶ](#部品を選ぶ)の表で部品を選ぶ。見本に無い部品は、書く前に、その節のとおりに鍵を調べる。推した鍵は断られます。
 4. `floe check db-choice.yaml` を走らせ、誤りを全部直して、誤りを出さなくなるまで走らせ直す。`warning:` の行だけが残ったら済みです（勧めなので）。
 5. `floe publish db-choice.yaml` を走らせ、出た URL をユーザーに渡す。ページを自分で取りに行かなくてよい。
 
@@ -39,7 +39,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 
 ## 部品を選ぶ
 
-`parts` の各項目は、部品を名指す鍵 1 つです。`floe part list` が各部品の鍵と使い道を出します。部品はほかの鍵を取りません。鍵の型と詳しいことは `floe part show <part> schema.json` を読む。自分のテンプレートなら、その `schema.json` を読む。
+`parts` の各項目は、部品を名指す鍵 1 つです。`floe part list` が各部品の鍵と使い道を出します。鍵を名指さない部品（`chart`・`stats`・`diagram` など）は `floe part show <part> schema.json` を読む。鍵の型と詳しいことも、そこにあります。テンプレートの鍵と、自分のテンプレートが取る部品は `floe template show <template> schema.json` にあります。
 
 中身で部品を選ぶ：
 
@@ -52,7 +52,7 @@ floe は、あなたが YAML のファイルで書いたページをユーザー
 | 理由の付いた 1 つの決定 | `decision` |
 | 読み手に決めてほしい問い | `asks` |
 | 確かめた結果、テストの結果 | `checks`（各項目に `result: ok`・`ng`・`unchecked`。上に数を出す）。選ぶ条件（`table`・`options`）やまだすること（`checklist`）には使わない |
-| 日付のある出来事 | `timeline`。日付の無いこれからの段は `steps` |
+| 日付のある出来事 | `timeline`。日付の無い段は `steps` |
 | 縦にも横にも比べる行、短い升 | `table` |
 | 頭に置く少しの値 | `facts` |
 | 前と後 | `compare` |
@@ -130,14 +130,14 @@ t.yaml:10:16: got number, want string or object
 
 ## 誤りを読む
 
-`floe check` は誤りを 1 行に 1 つ、`file:line:column:` の所に（ファイル全体の誤りは `file:` だけで）出し、1 で終わります。検査は段ごとで、出た誤りを全部直したら走らせ直す。次の段の誤りが出ることがあります。
+`floe check` は誤りを 1 行に 1 つ、`file:line:column:` の所に（ファイル全体の誤りは `file:` だけで）出し、1 で終わります。検査は段ごとなので、誤りを直すと、次の段の誤りが出ることがあります。
 
-- 部品が取らない鍵、足りない鍵、型の違う値は、schema が断ったもの：`floe part show <part> schema.json` か、テンプレートの `schema.json` を読む。
+- 部品が取らない鍵、足りない鍵、型の違う値は、schema が断ったもの：[部品を選ぶ](#部品を選ぶ)のとおりに schema を読む。
 - YAML の誤り：上の節を見る。
 
 ```text
-plan.yaml:5:5: additional properties 'colour' not allowed
-plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
+plan.yaml:8:11: additional properties 'colour' not allowed
+plan.yaml:9:17: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 ```
 
 ## ほかに

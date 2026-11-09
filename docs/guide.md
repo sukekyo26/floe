@@ -21,7 +21,7 @@ floe shows the user a page you write as a YAML file: it checks the file, draws i
          - text: Freeze edits on **Friday evening**, then copy the pages.
    ```
 
-3. Pick the parts by the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys in `floe part list` before writing it: a guessed key is refused.
+3. Pick the parts by the table in [Picking parts](#picking-parts). For each part the example does not show, look up its keys before writing it, as that section says: a guessed key is refused.
 4. Run `floe check db-choice.yaml`, fix every mistake, and run it again until it prints no mistake; when only `warning:` lines are left, you are done (they are advice).
 5. Run `floe publish db-choice.yaml` and give the user the URL it prints. You need not fetch the page.
 
@@ -37,7 +37,7 @@ floe shows the user a page you write as a YAML file: it checks the file, draws i
 
 ## Picking parts
 
-Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for; a part takes no other key. Read `floe part show <part> schema.json` for the keys' types and details. A template of your own: its `schema.json`.
+Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for; where it names no keys (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json`, which also gives the keys' types and details. A template's keys, and the parts a template of your own takes, are in `floe template show <template> schema.json`.
 
 Pick the part by what the content is:
 
@@ -128,14 +128,14 @@ t.yaml:10:16: got number, want string or object
 
 ## Reading mistakes
 
-`floe check` prints one mistake to a line, at `file:line:column:` (one of the whole file at `file:` alone), and exits 1. It checks in stages: after fixing all it printed, run it again, as the next stage may print more.
+`floe check` prints one mistake to a line, at `file:line:column:` (one of the whole file at `file:` alone), and exits 1. It checks in stages, so fixing the mistakes may bring out those of the next stage.
 
-- A key a part does not take, a key it lacks, or a value of another type is the schema refusing it: read `floe part show <part> schema.json`, or the template's `schema.json`.
+- A key a part does not take, a key it lacks, or a value of another type is the schema refusing it: read the schema, as [Picking parts](#picking-parts) says.
 - A mistake of YAML: see the section above.
 
 ```text
-plan.yaml:5:5: additional properties 'colour' not allowed
-plan.yaml:8:23: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
+plan.yaml:8:11: additional properties 'colour' not allowed
+plan.yaml:9:17: value must be one of 'accent', 'good', 'warn', 'bad', 'muted'
 ```
 
 ## More

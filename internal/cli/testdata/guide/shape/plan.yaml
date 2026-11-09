@@ -2,7 +2,9 @@ template: report
 lang: en
 title: T
 sections:
-  - colour: red
-    heading: H
+  - heading: H
     parts:
-      - note: { tone: x, text: hi }
+      - note:
+          colour: red
+          tone: x
+          text: Edits during the freeze are lost.
