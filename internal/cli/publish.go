@@ -263,7 +263,7 @@ func (a *app) rmCmd() *cobra.Command {
 		Short: "Delete pages in order, stopping at the first failure (a linked file itself is left alone)",
 		Args:  usage(cobra.MinimumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.eachPage(cmd, args, http.MethodDelete, nil)
+			return a.eachPage(cmd, args, http.MethodDelete, nil, nil)
 		},
 	}
 }
@@ -279,7 +279,7 @@ func (a *app) archiveCmd() *cobra.Command {
 			body := server.Edit{
 				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: &archived, Tags: nil, Work: nil,
 			}
-			return a.eachPage(cmd, args, http.MethodPatch, body)
+			return a.eachPage(cmd, args, http.MethodPatch, body, nil)
 		},
 	}
 	cmd.Flags().BoolVar(&undo, "undo", false, "give the pages back to the list")
@@ -301,7 +301,7 @@ are taken off first, then those given to --add are put on, so a name given to bo
 				Title: nil, Description: nil, Project: nil, Slug: nil, Favorite: nil, Archived: nil,
 				Tags: &store.TagsEdit{Add: add, Remove: remove}, Work: nil,
 			}
-			return a.eachPage(cmd, args, http.MethodPatch, body)
+			return a.eachPage(cmd, args, http.MethodPatch, body, nil)
 		},
 	}
 	cmd.Flags().StringArrayVar(&add, "add", nil, "a tag to put on the pages; give it again for more")
@@ -311,8 +311,9 @@ are taken off first, then those given to --add are put on, so a name given to bo
 }
 
 // eachPage sends method with body to each page of slugs in order, stopping at the first failure, a page not there
-// told by its slug.
-func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body any) error {
+// told by its slug; done, when given, is called with each answer as the page is written.
+// done reads the answer of PATCH /api/artifacts/{slug} (store.Edited) alone: give it with that method only.
+func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body any, done func(store.Edited)) error {
 	// Encoded once, before the server is asked or started: a text given that is no UTF-8 is refused first.
 	var sent any
 	if body != nil {
@@ -327,12 +328,20 @@ func (a *app) eachPage(cmd *cobra.Command, slugs []string, method string, body a
 		return err
 	}
 	for _, slug := range slugs {
-		err = c.do(cmd.Context(), method, "/api/artifacts/"+url.PathEscape(slug), sent, nil)
+		var got store.Edited
+		var out any
+		if done != nil {
+			out = &got
+		}
+		err = c.do(cmd.Context(), method, "/api/artifacts/"+url.PathEscape(slug), sent, out)
 		if re, ok := errors.AsType[*remoteError](err); ok && re.status == http.StatusNotFound {
 			return usererr.New("store_no_page", slug)
 		}
 		if err != nil {
 			return err
+		}
+		if done != nil {
+			done(got)
 		}
 	}
 	return nil

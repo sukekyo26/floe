@@ -75,10 +75,6 @@ func refuse(w http.ResponseWriter, r *http.Request, err error) {
 	sendJSON(w, status, report)
 }
 
-type slugBody struct {
-	Slug string `json:"slug"`
-}
-
 // Link is a link to add, as the management page and floe publish --link send it: a field sent is given,
 // empty or not, and one left out or null is not.
 type Link struct {
@@ -376,7 +372,7 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	to, err := s.cfg.Store.Edit(slug, store.Edit(*in))
+	edited, err := s.cfg.Store.Edit(slug, store.Edit(*in))
 	if errors.Is(err, store.ErrNotFound) {
 		notFound(w)
 		return
@@ -385,7 +381,7 @@ func (s *Server) edit(w http.ResponseWriter, r *http.Request) {
 		refuse(w, r, err)
 		return
 	}
-	sendJSON(w, http.StatusOK, slugBody{Slug: to})
+	sendJSON(w, http.StatusOK, edited)
 }
 
 // remove deletes a page: 404 for none, its mistake for one that cannot be removed. Other sites and the sandboxed

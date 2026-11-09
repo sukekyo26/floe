@@ -322,6 +322,36 @@ func TestWorkCommand(t *testing.T) {
 	}
 }
 
+// floe work says each task and page it wrote on a line of its own, in the order written: a task made, changed or as it
+// was with the fields asked for as the store left them, and a page with its task, step and pin after the write.
+func TestWorkSays(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	say := func(want string, args ...string) {
+		t.Helper()
+		if code, out, errs := runIn(dir, env, args...); code != 0 || out != want || errs != "" {
+			t.Errorf("floe %v = %d, %q, %q; want %q", args, code, out, errs, want)
+		}
+	}
+	if code, out, errs := runIn(dir, env, "publish", "d.yaml", "--slug", "a"); code != 0 {
+		t.Fatalf("publish = %d, %q, %q", code, out, errs)
+	}
+	say("task t1 in project p: made; title \"the task\"\n", "work", "--task", "t1", "--title", "the task")
+	say("task t1 in project p: unchanged; title \"the task\"\n", "work", "--task", "t1", "--title", "the task")
+	say("task t1 in project p: changed; state doing, steps \"design,build\"\n",
+		"work", "--task", "t1", "--state", "doing", "--steps", "design, build, design")
+	say("task t2 in no project: made; url \"https://example.com/2\", no parent\n",
+		"work", "--task", "t2", "--project", "", "--url", " https://example.com/2 ", "--parent", "")
+	say("task t1 in project p: changed; step \"design\"\npage a: task t1 in project p, step \"design\"\n",
+		"work", "a", "--task", "t1", "--step", "design")
+	say("page a: task t1 in project p, step \"design\", pinned\n", "work", "a", "--pin")
+	say("page a: no task, pinned\n", "work", "a", "--task", "")
+	say("task t1 in project p: forgotten\n", "work", "--task", " t1 ", "--forget")
+	say("task t3 in project p: made\npage a: task t3 in project p, pinned\n", "work", "a", "--task", "t3")
+	say("task t4 in project p: made; parent \"t3\"\n", "work", "--task", "t4", "--parent", "t3")
+}
+
 // A page that cannot be written leaves its task written, and the same command given again finishes it.
 func TestWorkCommandOrder(t *testing.T) {
 	t.Parallel()
@@ -338,8 +368,9 @@ func TestWorkCommandOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(page, 0o700) }) //nolint:errcheck // for the temporary directory's removal
-	if code, out, errs := runIn(dir, env, "work", "a", "--task", "#1", "--state", "waiting"); code != 1 {
-		t.Fatalf("work on a page that cannot be written = %d, %q, %q", code, out, errs)
+	if code, out, errs := runIn(dir, env, "work", "a", "--task", "#1", "--state", "waiting"); code != 1 ||
+		out != "task #1 in project p: made; state waiting\n" {
+		t.Fatalf("work on a page that cannot be written = %d, %q, %q; want the task told, as written", code, out, errs)
 	}
 	s := store.New(env["FLOE_DIR"])
 	all, err := s.ReadTasks()
@@ -355,7 +386,8 @@ func TestWorkCommandOrder(t *testing.T) {
 	if err := os.Chmod(page, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if code, out, errs := runIn(dir, env, "work", "a", "--task", "#1", "--state", "waiting"); code != 0 {
+	if code, out, errs := runIn(dir, env, "work", "a", "--task", "#1", "--state", "waiting"); code != 0 ||
+		out != "task #1 in project p: unchanged; state waiting\npage a: task #1 in project p\n" {
 		t.Fatalf("given again = %d, %q, %q", code, out, errs)
 	}
 	if got := workOf(t, env, "a"); got != `{"task":"#1"}` {

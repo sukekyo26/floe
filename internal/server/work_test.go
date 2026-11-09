@@ -62,6 +62,22 @@ func TestWorkAPI(t *testing.T) {
 	if got := tasks()["shop"]["#1"]; got.State != "todo" {
 		t.Errorf("trimmed, made todo: %+v", tasks())
 	}
+	// Whether the write made the row, and whether it wrote tasks.json: not for the row as it was
+	madeWrote := func(body string) string {
+		t.Helper()
+		var w store.TaskWritten
+		if err := json.Unmarshal([]byte(body), &w); err != nil {
+			t.Fatalf("the answer %q: %v", body, err)
+		}
+		return fmt.Sprintf("%t %t", w.Made, w.Wrote)
+	}
+	for _, c := range []struct{ body, want string }{
+		{`{"title":"t"}`, "true true"}, {`{"title":"t"}`, "false false"}, {`{"title":"u"}`, "false true"},
+	} {
+		if code, body := patch(task("shop", "#m"), c.body); code != http.StatusOK || madeWrote(body) != c.want {
+			t.Errorf("made and wrote of %s = %d, %s; want %s", c.body, code, body, c.want)
+		}
+	}
 	if code, body := patch(task("shop", "#c"), `{"parent":"#1"}`); code != http.StatusOK {
 		t.Errorf("a parent = %d, %s", code, body)
 	}
@@ -128,13 +144,18 @@ func TestWorkAPI(t *testing.T) {
 	want(t, e.do(t, http.MethodDelete, task("shop", "#1"), "", "Origin", "null"), http.StatusForbidden, "forbidden origin")
 
 	e.publish(t, "d", noted("one"), nil)
-	edit := func(body string) {
+	edit := func(body string) string {
 		t.Helper()
-		if w := e.do(t, http.MethodPatch, "/api/artifacts/d", body, "Origin", origin, "Content-Type", jsonType); w.Code != http.StatusOK {
+		w := e.do(t, http.MethodPatch, "/api/artifacts/d", body, "Origin", origin, "Content-Type", jsonType)
+		if w.Code != http.StatusOK {
 			t.Fatalf("PATCH d %s = %d, %s", body, w.Code, w.Body)
 		}
+		return strings.TrimSpace(w.Body.String())
 	}
-	edit(`{"project":"shop","work":{"task":"#1","step":"s"}}`)
+	// The answer of a page's edit is its slug, project and work as written
+	if got := edit(`{"project":"shop","work":{"task":"#1","step":" s "}}`); got != `{"slug":"d","taskProject":"shop","work":{"task":"#1","step":"s"}}` {
+		t.Errorf("the answer of an edit: %s", got)
+	}
 	forget := func(project, name string) (int, string) {
 		t.Helper()
 		w := e.do(t, http.MethodDelete, task(project, name), "", "Origin", origin)
@@ -154,9 +175,16 @@ func TestWorkAPI(t *testing.T) {
 	if code, _ := forget("shop", "#2"); code != http.StatusNotFound {
 		t.Errorf("no task = %d", code)
 	}
-	edit(`{"work":{"task":""}}`)
+	if got := edit(`{"work":{"task":""}}`); got != `{"slug":"d","taskProject":"shop"}` {
+		t.Errorf("the answer of an edit taking the page off its task: %s", got)
+	}
 	if code, _ := forget("shop", "#1"); code != http.StatusNoContent {
 		t.Errorf("a task of no page = %d", code)
+	}
+	// A task of a page alone is there: its first row is not made
+	edit(`{"work":{"task":"#p"}}`)
+	if code, body := patch(task("shop", "#p"), `{"title":"t"}`); code != http.StatusOK || madeWrote(body) != "false true" {
+		t.Errorf("the first row of a task of a page = %d, %s", code, body)
 	}
 
 	// What it cannot read it says, and writes nothing over: a link of another scheme goes no further than here.

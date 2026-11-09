@@ -214,6 +214,16 @@ floe work design-notes --task "#131" --parent "#130" --step design   # #130 の�
 floe work --task "#130" --forget                                     # タスクの行を消す
 ```
 
+書いたタスクとページを、書いた順に 1 行ずつ、store が残した値で言います。タスクは `made`（行が無かった）・`changed`・`unchanged`（同じ値で書かなかった）と書いた欄、ページはタスク・段・ピンです。プロジェクトの無いタスクは `in no project` です。
+
+```text
+$ floe work design-notes --task "#130" --step design --state waiting
+task #130 in project floe: changed; state waiting, step "design"
+page design-notes: task #130 in project floe, step "design"
+$ floe work --task "#130" --forget
+task #130 in project floe: forgotten
+```
+
 slug を書くと、タスクのプロジェクトは各ページのものです。`--task` は各ページをそれぞれのプロジェクトのその名前に載せ、書かなければ各ページのタスクを変えます。`--project` と `--forget` はタスクだけを名指すので、slug を付けずに使います。slug と一緒の `--parent` は、1 つのプロジェクトのページとだけ使えます。slug を書かないと、`--task` がタスクを名指し、プロジェクトは `--project` です（省くとカレントディレクトリのプロジェクト、`""` は無し）。
 
 | フラグ | 変えるもの | |
