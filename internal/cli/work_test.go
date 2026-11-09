@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -392,5 +393,61 @@ func TestWorkCommandOrder(t *testing.T) {
 	}
 	if got := workOf(t, env, "a"); got != `{"task":"#1"}` {
 		t.Errorf("given again, the page: %s", got)
+	}
+}
+
+// A value of floe work's flags that is no UTF-8 is told by its flag, before anything is asked of the server: a task's
+// body and its name and project alike, and a page not there is not looked for.
+func TestWorkNotUTF8(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	if code, out, errs := runIn(dir, env, "publish", "d.yaml", "--slug", "a"); code != 0 {
+		t.Fatalf("publish = %d, %q, %q", code, out, errs)
+	}
+	bad := "a\xffb"
+	// darwin's APFS names no file so, and the project of the working directory is not tried there.
+	elsewhere := filepath.Join(filepath.Dir(dir), bad)
+	if err := os.Mkdir(elsewhere, 0o700); err != nil {
+		if runtime.GOOS != "darwin" {
+			t.Fatal(err)
+		}
+		elsewhere = ""
+	}
+	for _, c := range []struct {
+		at   string
+		args []string
+		told string
+	}{
+		{dir, []string{"work", "a", "--task", "t1", "--step", bad}, "--step"},
+		{dir, []string{"work", "a", "--task", "t1", "--url", bad}, "--url"},
+		{dir, []string{"work", "a", "--task", "t1", "--steps", "x," + bad}, "--steps"},
+		{dir, []string{"work", "--task", "t1", "--parent", bad}, "--parent"},
+		{dir, []string{"work", "--task", "t1", "--state", bad}, "--state"},
+		{dir, []string{"work", "--task", "t1", "--title", bad}, "--title"},
+		{dir, []string{"work", "--task", bad}, "--task"},
+		{dir, []string{"work", "a", "--task", bad}, "--task"},
+		{dir, []string{"work", "--task", "t1", "--project", bad}, "--project"},
+		{dir, []string{"work", "--task", "t1", "--project", bad, "--forget"}, "--project"},
+		{dir, []string{"work", "nosuch", "--task", "t1", "--url", bad}, "--url"},
+		{
+			elsewhere,
+			[]string{"work", "--task", "t1"},
+			"the project name (of the git remote, the repository's directory or the working directory)",
+		},
+	} {
+		if c.at == "" {
+			continue
+		}
+		want := "floe: " + c.told + " is not UTF-8; the server takes only UTF-8: rename it, or give it in UTF-8\n"
+		if code, out, errs := runIn(c.at, env, c.args...); code != 1 || out+errs != want {
+			t.Errorf("floe %q = %d, %q, %q; want %q", c.args, code, out, errs, want)
+		}
+	}
+	if all, err := store.New(env["FLOE_DIR"]).ReadTasks(); err != nil || len(all) != 0 {
+		t.Errorf("tasks written: %v, %v", all, err)
+	}
+	if got := workOf(t, env, "a"); got != "null" {
+		t.Errorf("the page written: %s", got)
 	}
 }
