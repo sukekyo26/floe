@@ -28,7 +28,7 @@ var contentsPage = func() string {
 }()
 
 // measureContents returns a line for each thing the contents draw wrong at a width of 1000 or more: not beside the
-// sections, out of the window, a page narrower than the window, a lead wider than a text, a link of another page in
+// sections, out of the window, a page narrower than the window, a lead not as wide as the title or the page, a link of another page in
 // them, a link that holds a link.
 const measureContents = `(() => {
   const out = [], nav = document.querySelector('[data-floe-look~=toc]'), r = nav.getBoundingClientRect();
@@ -36,10 +36,10 @@ const measureContents = `(() => {
   if (r.right > sections.left) out.push('the contents not beside the sections');
   if (r.top < 0 || r.top > innerHeight) out.push('the contents out of the window at ' + r.top);
   if (Math.abs(document.querySelector('main').getBoundingClientRect().width - document.documentElement.clientWidth) > 1) out.push('the page narrower than the window');
-  const lead = document.querySelector('.lead'), probe = document.createElement('div');
-  probe.style.width = 'var(--text-width)'; document.body.append(probe);
-  if (lead.getBoundingClientRect().width > probe.getBoundingClientRect().width + 1) out.push('the lead wider than a text');
-  probe.remove();
+  const lead = document.querySelector('.lead'), title = document.querySelector('h1'), main = document.querySelector('main'), mainStyle = getComputedStyle(main);
+  const room = main.clientWidth - parseFloat(mainStyle.paddingLeft) - parseFloat(mainStyle.paddingRight);
+  if (Math.abs(lead.getBoundingClientRect().width - title.getBoundingClientRect().width) > 1) out.push('the lead not as wide as the title');
+  if (Math.abs(lead.getBoundingClientRect().width - room) > 1) out.push('the lead not as wide as the page');
   if (nav.querySelector('a a, a[href^=http]')) out.push('a link of another page in the contents');
   if ([...nav.querySelectorAll('a')].some((a) => a.textContent.trim() === '')) out.push('a link of no words in the contents');
   const under = [...nav.querySelectorAll('a')].find((a) => a.textContent === 'Under a tag');
