@@ -400,7 +400,10 @@ func TestExamplesAreFloes(t *testing.T) {
 	}
 	_, _, _, templates := k.Names()
 	for _, name := range templates {
-		tpl, _ := k.Template(name)
+		tpl, _, takeErr := k.Template(name)
+		if takeErr != nil {
+			t.Fatal(takeErr)
+		}
 		b, readErr := os.ReadFile(filepath.Join("testdata", "example", name+".yaml"))
 		if readErr != nil || !bytes.Equal(b, tpl.Example()) {
 			t.Errorf("testdata/example/%s.yaml is not %s's example.yaml (%v): copy it again", name, name, readErr)

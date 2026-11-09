@@ -1,13 +1,16 @@
 package kit_test
 
 import (
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 
 	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/kit"
+	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -46,7 +49,10 @@ func section(part string) string {
 func valid(t *testing.T, k *kit.Kit, data string) string {
 	t.Helper()
 
-	r, ok := k.Template("report")
+	r, ok, err := k.Template("report")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !ok {
 		t.Fatal("no report")
 	}
@@ -104,7 +110,11 @@ func TestOwnPartRebuilt(t *testing.T) {
 	if err != nil {
 		t.Fatal(told(err))
 	}
-	if r, ok := mine.Template("report"); !ok || r.File("schema.json") != "own/templates/report/schema.json" {
+	r, ok, err := mine.Template("report")
+	if err != nil || !ok {
+		t.Fatalf("report: %v, %v", ok, err)
+	}
+	if r.File("schema.json") != "own/templates/report/schema.json" {
 		t.Errorf("report is %v, want one's own", r.File("schema.json"))
 	}
 }
@@ -126,5 +136,148 @@ func TestOwnPartMistake(t *testing.T) {
 	r = usererr.Tell(i18n.EnglishCatalog(), kit.FloeFailure("report", mistake))
 	if r.Mistakes != nil || !strings.HasPrefix(r.Failure, "kit: floe's template report does not compile with your own parts: floe/report.json:1:2: ") {
 		t.Errorf("floeFailure told %+v, want floe's failure with the mistake's place", r)
+	}
+}
+
+// withSchema returns the names of floe's templates with a schema: those a Kit with parts of its own compiles again.
+func withSchema(t *testing.T) []string {
+	t.Helper()
+
+	var names []string
+	_, _, _, templates := floe(t).Names()
+	for _, name := range templates {
+		tm, _, err := floe(t).Template(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tm.Schema() != nil {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
+// ownKit returns floe's Kit with the parts of ownParts over it.
+func ownKit(t *testing.T) *kit.Kit {
+	t.Helper()
+
+	k, err := kit.Load(floe(t), kit.Sources{Parts: ownParts(nil)})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	return k
+}
+
+// Every template of floe's with a schema compiles again with one's own parts: Load no longer compiles them, so that
+// a failure of floe's to would show here first.
+func TestOwnPartEveryTemplate(t *testing.T) {
+	t.Parallel()
+
+	k := ownKit(t)
+	for _, name := range withSchema(t) {
+		again, ok, err := k.Template(name)
+		if err != nil || !ok {
+			t.Fatalf("%s: %v, %v", name, ok, err)
+		}
+		base, _, err := floe(t).Template(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if again.Schema() == base.Schema() {
+			t.Errorf("%s is floe's own, not compiled again", name)
+		}
+	}
+}
+
+// A template is compiled again when first taken, not when the Kit is read, and once.
+func TestOwnPartCompiledWhenTaken(t *testing.T) {
+	t.Parallel()
+
+	k := ownKit(t)
+	if n := kit.Compiled(k); n != 0 {
+		t.Errorf("compiled %d when read, want 0", n)
+	}
+	for range 2 {
+		if _, _, err := k.Template("report"); err != nil {
+			t.Fatal(err)
+		}
+		if n := kit.Compiled(k); n != 1 {
+			t.Errorf("compiled %d once report was taken, want 1", n)
+		}
+	}
+}
+
+// Goroutines taking every template of one Kit at once each get the same one, compiled once.
+func TestOwnPartTakenOnce(t *testing.T) {
+	t.Parallel()
+
+	k := ownKit(t)
+	names := withSchema(t)
+	const takers = 8
+	got := make([][]*kit.Template, takers)
+	var wg sync.WaitGroup
+	for i := range takers {
+		wg.Go(func() {
+			for _, name := range names {
+				tm, _, err := k.Template(name)
+				if err != nil {
+					t.Error(err)
+				}
+				got[i] = append(got[i], tm)
+			}
+		})
+	}
+	wg.Wait()
+	for i := range takers {
+		if !slices.Equal(got[i], got[0]) {
+			t.Errorf("taker %d got other templates than taker 0", i)
+		}
+	}
+	if n := kit.Compiled(k); n != len(names) {
+		t.Errorf("compiled %d, want %d", n, len(names))
+	}
+}
+
+// floe's failure to compile a template again stops what draws with it, as floe's failure, not a mistake of the data;
+// the other templates draw.
+func TestOwnPartRebuildFails(t *testing.T) {
+	t.Parallel()
+
+	k := ownKit(t)
+	kit.FailRebuilt(k, "report")
+	_, _, err := tmpl.Draw(k, "x.yaml", []byte(section("quote: { text: a }")), tmpl.Options{})
+	r := usererr.Tell(i18n.EnglishCatalog(), err)
+	if r.Mistakes != nil || !strings.HasPrefix(r.Failure, "kit: floe's template report does not compile with your own parts: ") {
+		t.Errorf("report told %+v, want floe's failure", r)
+	}
+	adr, _, err := k.Template("adr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := tmpl.Draw(k, "adr.yaml", adr.Example(), tmpl.Options{}); err != nil {
+		t.Errorf("adr: %s", told(err))
+	}
+}
+
+// CompileAgain, which floe part check runs, compiles every template again and tells floe's first failure; with no
+// part of one's own, it compiles none.
+func TestOwnPartCompileAgain(t *testing.T) {
+	t.Parallel()
+
+	k := ownKit(t)
+	if err := k.CompileAgain(); err != nil || kit.Compiled(k) != len(withSchema(t)) {
+		t.Errorf("CompileAgain: %v, compiled %d of %d", err, kit.Compiled(k), len(withSchema(t)))
+	}
+	broken := ownKit(t)
+	kit.FailRebuilt(broken, "report")
+	if r := usererr.Tell(i18n.EnglishCatalog(), broken.CompileAgain()); !strings.HasPrefix(r.Failure, "kit: floe's template report ") {
+		t.Errorf("CompileAgain with report broken told %+v, want floe's failure", r)
+	}
+	none, err := kit.Load(floe(t), kit.Sources{})
+	if err != nil {
+		t.Fatal(told(err))
+	}
+	if err := none.CompileAgain(); err != nil || kit.Compiled(none) != 0 {
+		t.Errorf("CompileAgain with no part of one's own: %v, compiled %d", err, kit.Compiled(none))
 	}
 }

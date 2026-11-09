@@ -122,7 +122,10 @@ func (in *Input) Sheets() []Sheet {
 		}
 	}
 	for _, name := range templates {
-		tm, _ := in.kit.Template(name)
+		tm, _, err := in.kit.Template(name)
+		if err != nil {
+			panic(err)
+		}
 		if src := tm.CSS(); src != nil {
 			out = append(out, Sheet{Kind: kindTemplate, Owner: name, File: "templates/" + name + "/page.css", Src: src})
 		}

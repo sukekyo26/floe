@@ -191,7 +191,10 @@ func TestCheckAfterDrawing(t *testing.T) {
 		pages = append(pages, p)
 	}
 	for _, name := range templates {
-		tm, _ := k.Template(name)
+		tm, _, err := k.Template(name)
+		if err != nil {
+			t.Fatal(err)
+		}
 		pages = append(pages, tm)
 	}
 	for _, p := range pages {

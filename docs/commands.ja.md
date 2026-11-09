@@ -159,7 +159,7 @@ floe のテンプレートの節に書ける部品（floe の `any.json` の鍵�
 
 ## `floe part check`
 
-`FLOE_PARTS_DIR` の部品・見た目・共有の schema と `FLOE_THEMES_DIR` のテーマを floe のものの上で読み、すべての誤りを出します（終了コード 1）。共有の schema は、どれかの schema が名指すかによらず、その根から確かめます。正しければ何も出しません（終了コード 0）。
+`FLOE_PARTS_DIR` の部品・見た目・共有の schema と `FLOE_THEMES_DIR` のテーマを floe のものの上で読み、すべての誤りを出します（終了コード 1）。共有の schema は、どれかの schema が名指すかによらず、その根から確かめます。自分の部品があれば、floe のテンプレートもそれとともにコンパイルします。正しければ何も出しません（終了コード 0）。
 
 部品とテーマの中身は [parts.ja.md](parts.ja.md) にあります。
 

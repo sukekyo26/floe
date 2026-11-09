@@ -86,11 +86,15 @@ written over: with anything of that name there, nothing is made.`,
 		Long: `Read the parts, looks and shared schemas under FLOE_PARTS_DIR and the themes under
 FLOE_THEMES_DIR (else floe/parts and floe/themes under XDG_CONFIG_HOME, or ~/.config), over
 floe's own, and print every mistake of them. The exit code is 1 when there is one; nothing is
-printed when they are right. A mistake of one of your own stops floe check and floe render too.`,
+printed when they are right. A mistake of one of your own stops floe check and floe render too.
+With parts of your own, it compiles floe's templates with them too.`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			_, err := a.kit(false)
-			return err
+			k, err := a.kit(false)
+			if err != nil {
+				return err
+			}
+			return k.CompileAgain() //nolint:wrapcheck // floe's failure, which says what failed
 		},
 	})
 	return cmd
@@ -212,7 +216,10 @@ func (a *app) checkTemplates() error {
 	store := a.iconStore()
 	var found usererr.List
 	for _, name := range k.OwnTemplates() {
-		t, _ := k.Template(name)
+		t, _, err := k.Template(name)
+		if err != nil {
+			return err //nolint:wrapcheck // floe's failure, which says what failed
+		}
 		file := t.File("example.yaml")
 		images := files.NewRoot(t.File("."))
 		o := tmpl.Options{Theme: "", Untitled: name, Images: images, ImagesDir: "", Icons: store, CutOff: false}
