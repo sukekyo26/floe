@@ -226,6 +226,8 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// Links alone say they are unregistered.
 	b.eval("document.querySelector('#list li[data-slug=l] .sel').click()")
 	out = append(out, b.eval("document.getElementById('bulk-delete').textContent"))
+	// The shelf's add button stays while rows are selected.
+	check(t, "selected", []string{b.eval("document.getElementById('add-link').getClientRects().length > 0 + ''")}, "true")
 	b.eval("document.getElementById('bulk-clear').click()")
 	// The pencil opens a modal with the current description; saving sends the new one.
 	b.eval("document.querySelector('#list li[data-slug=a] .edit').click()")
@@ -247,7 +249,7 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// The add form sends only the fields filled in, trimmed: a field sent is given, empty or not.
 	b.eval(`(() => {
 		calls.length = 0;
-		document.getElementById('add-open').click();
+		document.getElementById('add-link').click();
 		document.getElementById('add-path').value = ' /tmp/x/n.html ';
 		document.getElementById('add-desc').value = ' a link ';
 		document.getElementById('add').requestSubmit();
@@ -285,9 +287,11 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// Empty lists: nothing archived; all archived, which leads to them; nothing at all; no new page.
 	b.stub(`[{ slug: 'l', title: 'Linked', description: '', path: '/tmp/x/l.html', createdAt: at(1), updatedAt: at(1) }]`)
 	// A link is added from the lists it goes on, not from the archived.
-	out = append(out, b.eval(empties)+" "+b.eval("document.getElementById('add-open').hidden"))
+	out = append(out, b.eval(empties)+" "+b.eval("document.getElementById('add-link').hidden"))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
-	out = append(out, b.eval("document.getElementById('add-open').hidden"))
+	out = append(out, b.eval("document.getElementById('add-link').hidden"))
+	// One kind, its group hidden: the button stays, under the group before it.
+	check(t, "one kind", []string{b.eval("[document.getElementById('shelf-kinds').hidden, document.getElementById('add-link').getClientRects().length > 0].join(' ')")}, "true true")
 	// A change that succeeds clears the error of one that failed before, a favourite's as an archive's.
 	b.eval("window.failWrites = true; document.querySelector('#list li:not(.group) .star').click()")
 	out = append(out, b.until("the favourite to fail", "!document.getElementById('error').hidden && document.getElementById('error').textContent"))
@@ -302,6 +306,8 @@ func uiExtras(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	b.stub("[]")
 	out = append(out, b.eval(empties), b.eval("document.getElementById('add-empty').offsetParent !== null"))
+	// Nothing at all: the middle's button alone, not the shelf's too.
+	check(t, "nothing at all", []string{b.eval("document.getElementById('add-link').hidden + ''")}, "true")
 
 	// The time's tooltip lines start with the label of their format ("Created %s").
 	label := func(key string) string { return strings.Fields(msg(key, ""))[0] }
@@ -479,7 +485,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	// may not match, drawn once.
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	b.stub(`[{ slug: 'a', title: 'Alpha', description: '', project: 'p', createdAt: at(1), updatedAt: at(8) }]`)
-	out = append(out, b.eval("document.getElementById('add-open').hidden"))
+	out = append(out, b.eval("document.getElementById('add-link').hidden"))
 	b.eval("toggleProject('p'); (() => { const q = document.getElementById('q'); q.value = 'Al'; q.dispatchEvent(new Event('input')); })()")
 	b.eval(`(() => {
 		window.renders = 0;
@@ -491,7 +497,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 			if (init.method === 'POST') list = JSON.stringify([{ slug: 'n', title: 'New', description: '', path: '/tmp/x/n.html', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-09T00:00:00.000Z' }, ...JSON.parse(list)]);
 			return post(url, init);
 		};
-		document.getElementById('add-open').click();
+		document.getElementById('add-link').click();
 		document.getElementById('add-path').value = '/tmp/x/n.html';
 		document.getElementById('add').requestSubmit();
 	})()`)
@@ -501,7 +507,7 @@ func uiShelf(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 		"[...document.querySelectorAll('#list .title')].map((a) => a.textContent)].join(' ')"))
 	b.eval("render = draw")
 	b.eval("document.querySelector('.views [data-view=archived]').click()")
-	out = append(out, b.eval("document.getElementById('add-open').hidden"))
+	out = append(out, b.eval("document.getElementById('add-link').hidden"))
 	b.eval("document.querySelector('.views [data-view=all]').click()")
 	// An open menu passes under the head stuck at the top as the list scrolls, not over it.
 	b.stub(manyPages(60))

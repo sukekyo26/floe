@@ -71,7 +71,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	want("the words", "document.querySelector('#tasks-empty strong').textContent + ' | ' + document.querySelector('#tasks-empty p').textContent",
 		"No tasks yet | Make one with Add task.")
 	want("no command on the screens", "document.querySelectorAll('.state code').length + ''", "0")
-	want("the head's button with no task", shown("task-add"), "false")
+	want("the head's button with no task", shown("add-task"), "false")
 	want("the icon, the size of the others", "document.querySelector('#task-add-empty svg').getBoundingClientRect().width + ''", "13")
 
 	// The screen of no task has the whole width, wide and narrow, the shelf folded or not, its words at the middle.
@@ -135,21 +135,25 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 		t.Errorf("the row in the project chosen: %v", rows())
 	}
 
-	// The button on the head of the list, at its right, wide and narrow; its dialog says the project and asks none.
-	for _, c := range []struct {
-		width  int64
-		mobile bool
-	}{{1440, false}, {400, true}} {
-		b.size(c.width, 800, c.mobile)
-		b.navigate("/tasks?project=beta&view=doing")
-		b.until("the button", shown("task-add")+" === 'true'")
-		b.still()
-		want("the button at the head's right", "(() => { const r = document.getElementById('task-add').getBoundingClientRect(); const h = document.querySelector('.lhead').getBoundingClientRect(); return (r.top >= h.top && r.bottom <= h.bottom && Math.abs(h.right - r.right) < 24) + ''; })()", "true")
-		want("the bar's switch fits", "document.documentElement.scrollWidth <= innerWidth ? 'true' : 'false'", "true")
-	}
+	// The button under the projects of the shelf, wide; narrow, in the filter dialog, which closes for its dialog, the focus then
+	// going back to the filter's button.
+	b.size(1440, 800, false)
+	b.navigate("/tasks?project=beta&view=doing")
+	b.until("the button", shown("add-task")+" === 'true'")
+	want("under the projects", "(document.getElementById('shelf-projects').nextElementSibling === document.getElementById('add-task').parentElement) + ''", "true")
+	b.size(400, 800, true)
+	b.navigate("/tasks?project=beta&view=doing")
+	b.until("the filter's button", shown("narrow-filter")+" === 'true'")
+	want("narrow, out of sight", shown("add-task"), "false")
+	press("#narrow-filter")
+	open("add-task")
+	want("the filter closed", "document.getElementById('filter-dialog').open + ''", "false")
+	want("the bar's switch fits", "document.documentElement.scrollWidth <= innerWidth ? 'true' : 'false'", "true")
+	b.eval(dialog + ".close()")
+	want("the focus back", "document.activeElement.id", "narrow-filter")
 	b.unsize()
 	b.navigate("/tasks?project=beta&view=doing")
-	open("task-add")
+	open("add-task")
 	want("the dialog", said, "Add task | Project: beta | - | - | title true | Make")
 	want("the project field hidden", shown("kin-project"), "false")
 	name("#2", "two")
@@ -167,7 +171,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	if err != nil {
 		t.Fatal(err)
 	}
-	open("task-add")
+	open("add-task")
 	name("#", "")
 	want("nothing suggested", "document.querySelectorAll('.suggest:popover-open').length + ''", "0")
 	name("#1", "")
@@ -178,13 +182,13 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	if after, err := os.ReadFile(tasksFile); err != nil || string(after) != string(before) {
 		t.Errorf("opening wrote: %s (%v)", after, err)
 	}
-	want("not on a task's page", shown("task-add"), "false")
+	want("not on a task's page", shown("add-task"), "false")
 
 	// One of pages alone, archived: there all the same, and said so.
 	s.floe(t, "work", "b2", "--task", "#20", "--title", "old", "--state", "archived")
 	s.floe(t, "archive", "b2")
 	b.navigate("/tasks?project=beta")
-	open("task-add")
+	open("add-task")
 	name("#20", "")
 	want("an archived ID", "document.getElementById('kin-note').textContent", "#20 old is already there (Archive)")
 	b.eval(dialog + ".close()")
@@ -192,7 +196,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// The same ID in another project is another task: the store's rows say so.
 	s.floe(t, "work", "--project", "alpha", "--task", "#7")
 	b.navigate("/tasks?project=alpha")
-	open("task-add")
+	open("add-task")
 	name("#1", "alpha's one")
 	want("the same ID in another project", said, "Add task | Project: alpha | - | - | title true | Make")
 	saved()
@@ -202,7 +206,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	}
 
 	// A screen gone stale: made meanwhile, refused, read again, and the dialog stays with what is there now.
-	open("task-add")
+	open("add-task")
 	name("#9", "mine")
 	s.floe(t, "work", "--project", "alpha", "--task", "#9", "--title", "theirs")
 	b.eval("document.getElementById('kin').requestSubmit()")
@@ -219,7 +223,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Drawn once, with the new task: never the words of a list with none, from the tasks before.
 	s.floe(t, "work", "--project", "gamma", "--task", "#40", "--state", "waiting")
 	b.navigate("/tasks?project=gamma&view=waiting")
-	open("task-add")
+	open("add-task")
 	b.eval("window.noneShown = false; new MutationObserver(() => { window.noneShown ||= !document.getElementById('tasks-none').hidden; }).observe(document.getElementById('tasks-none'), { attributes: true })")
 	name("#41", "new")
 	saved()
@@ -230,7 +234,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	const holdWrite = "window.realFetch ??= window.fetch; window.fetch = (u, o) => (o?.method === 'PATCH' ? window.realFetch(u, o).then((r) => new Promise((go) => { window.letWrite = () => go(r); })) : window.realFetch(u, o))"
 	s.floe(t, "work", "--project", "delta", "--task", "#50", "--state", "waiting")
 	b.navigate("/tasks?project=delta&view=waiting")
-	open("task-add")
+	open("add-task")
 	b.eval(holdWrite)
 	name("#51", "polled")
 	b.eval("document.getElementById('kin').requestSubmit()")
@@ -247,7 +251,7 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	const holdReads = "window.realFetch ??= window.fetch; window.held = []; window.fetch = (u, o) => (o?.method ? window.realFetch(u, o) : window.realFetch(u, o).then((r) => new Promise((go) => { window.held.push(() => go(r)); })))"
 	s.floe(t, "work", "--project", "epsilon", "--task", "#60", "--state", "waiting")
 	b.navigate("/tasks?project=epsilon&view=waiting")
-	open("task-add")
+	open("add-task")
 	b.eval("window.noneShown = false; new MutationObserver(() => { window.noneShown ||= !document.getElementById('tasks-none').hidden; }).observe(document.getElementById('tasks-none'), { attributes: true })")
 	b.eval(holdReads)
 	b.until("a poll held", "window.held.length >= 2")
@@ -271,27 +275,39 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	s.floe(t, "work", "p1", "--pin")
 	b.navigate("/tasks?project=pinned")
 	b.until("the words", "!document.getElementById('tasks-none').hidden")
-	want("a project of a pin alone", shown("task-add"), "true")
+	want("a project of a pin alone", shown("add-task"), "true")
 	b.navigate("/tasks?project=typo")
 	b.until("the words", "!document.getElementById('tasks-none').hidden")
-	want("a project not there", shown("task-add"), "false")
+	want("a project not there", shown("add-task"), "false")
 
 	// Not where a task made would not show, nor on the page list.
 	b.navigate("/tasks?project=alpha&view=archived")
 	b.until("the archived list", "document.querySelector('.views button[data-view=archived]').getAttribute('aria-pressed') === 'true'")
-	want("on the archived list", shown("task-add"), "false")
+	want("on the archived list", shown("add-task"), "false")
 	b.navigate("/")
 	b.until("the rows", "document.querySelector('#list li[data-slug]')")
-	want("on the page list", shown("task-add"), "false")
-	want("the page list's own", shown("add-open"), "true")
+	want("on the page list", shown("add-task"), "false")
+	want("the page list's own", shown("add-link"), "true")
+	// Narrow, in the filter dialog, which closes for the add dialog, the focus then going back to the filter's button.
+	b.size(400, 800, true)
+	b.navigate("/")
+	b.until("the rows", "document.querySelector('#list li[data-slug]')")
+	press("#narrow-filter")
+	b.until("the button", shown("add-link")+" === 'true'")
+	press("#add-link")
+	b.until("the add dialog", "document.getElementById('add-dialog').open")
+	want("the page list: the filter closed", "document.getElementById('filter-dialog').open + ''", "false")
+	b.eval("document.getElementById('add-dialog').close()")
+	want("the page list: the focus back", "document.activeElement.id", "narrow-filter")
+	b.unsize()
 	b.navigate("/tasks?project=alpha")
-	b.until("the button", shown("task-add")+" === 'true'")
-	want("the task list has not the page list's", shown("add-open"), "false")
+	b.until("the button", shown("add-task")+" === 'true'")
+	want("the task list has not the page list's", shown("add-link"), "false")
 	if err := os.WriteFile(tasksFile, []byte("{ broken"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	b.navigate("/tasks?project=alpha")
 	b.until("the failure", "!document.getElementById('tasks-failed').hidden")
-	want("unreadable", shown("task-add"), "false")
+	want("unreadable", shown("add-task"), "false")
 	want("unreadable: the switch stays", shown("to-list"), "true")
 }
