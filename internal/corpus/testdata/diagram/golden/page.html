@@ -468,10 +468,9 @@ blockquote::before { content: "“"; content: "“" / ""; display: block; font: 
   /* A num column's heading wraps as long as it needs, but not a character a line */
   :scope th.num { min-width: 6em; }
 }
-:scope thead th {
-  font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted));
-  background: var(--table-head-bg, var(--quiet));
-}
+:scope thead th { font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted)); }
+/* The head's ground is its row's, so that a gradient runs once across it, not once in each cell */
+:scope thead tr { background: var(--table-head-bg, var(--quiet)); }
 /* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
    --table-rule (none for no rule) */
 :scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }

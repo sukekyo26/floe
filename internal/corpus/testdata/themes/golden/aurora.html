@@ -190,11 +190,13 @@ blockquote > * + * { margin-top: 0.6rem; }
   --good: #156a42; --good-soft: #daf3e6; --warn: #844f00; --warn-soft: #fbead0; --bad: #ab2146; --bad-soft: #fde1e8;
   --code-bg: #241c3d; --code-fg: #ece8fb; --code-prompt: #c6a8ff;
   /* The wash, placed on the whole document: lavender at its top, peach at a fifth of its height, mint at its foot.
-     Its colours keep --muted, --accent and the tones at 4.5:1 on them, which the tests measure on --bg alone */
+     Its colours keep --muted, --accent and the tones at 4.5:1 on them, which the tests measure on --bg alone. Its three
+     colours are named, for table.css to draw from them too */
+  --aurora-lavender: #e0d2ff; --aurora-peach: #ffd3c2; --aurora-mint: #c5f0de;
   --page-bg:
-    radial-gradient(60rem 40rem at 0% 0%, #e0d2ff 0, transparent 70%),
-    radial-gradient(50rem 36rem at 100% 20%, #ffd3c2 0, transparent 70%),
-    radial-gradient(60rem 40rem at 40% 100%, #c5f0de 0, transparent 70%),
+    radial-gradient(60rem 40rem at 0% 0%, var(--aurora-lavender) 0, transparent 70%),
+    radial-gradient(50rem 36rem at 100% 20%, var(--aurora-peach) 0, transparent 70%),
+    radial-gradient(60rem 40rem at 40% 100%, var(--aurora-mint) 0, transparent 70%),
     var(--bg);
   --rule: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
   --shadow: rgb(80 50 160 / 0.18);
@@ -405,10 +407,9 @@ blockquote { border: 1px solid var(--aurora-edge); border-radius: var(--radius);
   /* A num column's heading wraps as long as it needs, but not a character a line */
   :scope th.num { min-width: 6em; }
 }
-:scope thead th {
-  font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted));
-  background: var(--table-head-bg, var(--quiet));
-}
+:scope thead th { font-size: var(--floe-text-small); font-weight: 600; color: var(--table-head-fg, var(--muted)); }
+/* The head's ground is its row's, so that a gradient runs once across it, not once in each cell */
+:scope thead tr { background: var(--table-head-bg, var(--quiet)); }
 /* A theme sets the head's ground and colour by --table-head-bg and --table-head-fg, and the rule between rows by
    --table-rule (none for no rule) */
 :scope tbody tr + tr td { border-top: var(--table-rule, 1px solid var(--line)); }
@@ -636,8 +637,12 @@ blockquote { border: 1px solid var(--aurora-edge); border-radius: var(--radius);
 <style>
 @layer floe.parts.depth0 {
 @scope ([data-floe-part="findings"]:where(:not(:is([data-floe-part], [data-floe-look]) *)), [data-floe-part="table"]:where(:not(:is([data-floe-part], [data-floe-look]) *))) to (:scope [data-floe-part] > *) {
-:scope { --table-head-bg: none; --table-head-fg: var(--accent); --table-rule: none; }
-:scope tbody tr:nth-child(even) td { background: rgb(255 255 255 / 0.45); }
+/* Clear glass: the head on no ground in the violet over a line of the wash's three colours, each deepened toward the
+   chart colour of its hue; lines of light between rows */
+:scope {
+  --table-head-bg: linear-gradient(90deg, color-mix(in srgb, var(--aurora-lavender), var(--chart-1) 45%), color-mix(in srgb, var(--aurora-peach), var(--chart-3) 40%), color-mix(in srgb, var(--aurora-mint), var(--chart-2) 45%)) bottom / 100% 3px no-repeat;
+  --table-head-fg: var(--accent); --table-rule: 1px solid color-mix(in srgb, var(--accent) 10%, var(--aurora-edge));
+}
 }
 }
 </style>

@@ -1,2 +1,4 @@
-:scope { --table-head-bg: var(--surface); }
-:scope thead th { border-bottom: 1px solid var(--line); }
+/* A dark head, as a dashboard's: the head on the code's ink, its text light; the rows striped with the ground */
+:scope { --table-head-bg: var(--code-bg); --table-head-fg: var(--code-fg); --table-rule: none; }
+:scope thead th { --face: var(--table-head-bg); --on-face: var(--table-head-fg); }
+:scope tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--bg) 60%, var(--surface)); }
