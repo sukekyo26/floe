@@ -80,7 +80,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	out = append(out, b.until("the tree again", rows+".includes('odd.html') && "+rows),
 		b.until("the keys gone", "!localStorage.getItem('list.open').includes('nope') && "+opens), b.eval(read))
 	// Closed and opened again, the rows under guide go and come, the others the same elements, the focus where it was;
-	// only the rows added rise in, in no set order, and a redraw raises none.
+	// the rows added do not rise in, as they are part of the folder's card, and a redraw raises none.
 	b.still()
 	b.eval(`window.marked = [...document.querySelectorAll('#list > li')]; window.rose = [];
 		document.getElementById('list').addEventListener('animationstart', (e) => rose.push(e.target.dataset.key));
@@ -89,7 +89,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.until("guide closed", "!"+rows+".includes('setup')")
 	out = append(out, b.eval("marked.filter((li) => !li.isConnected).map((li) => li.dataset.key).join(',') + ' gone, focus ' + document.activeElement.textContent"))
 	click("guide")
-	b.until("guide open", "rose.length > 0")
+	b.until("guide open", rows+".includes('setup')")
 	b.still()
 	out = append(out, b.eval("[...document.querySelectorAll('#list > li')].filter((li) => !marked.includes(li)).map((li) => li.dataset.key).join(',') + ' new, rose ' + rose.sort().join(',')"))
 	b.eval("rose = []; render()")
@@ -162,7 +162,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	guide := "dir:docs:guide/deep,page:docs:guide/setup.html,page:docs:guide/start.html"
 	check(t, "folders", out, `["docs"] ?kind=folder|a,b:c+,assets+,big+,guide+,index.html|1 groups, 1 folder|["docs","docs:guide","docs:a,b:c"] ?kind=folder|`+
 		"a,b:c-,odd.html,assets+,big+,guide-,deep+,setup.html,start.html,index.html|"+`["docs","docs:guide","docs:a,b:c"] ?kind=folder|.,a,b:c,guide|`+
-		guide+" gone, focus guide|"+guide+" new, rose "+guide+"|redrawn, rose 0|"+
+		guide+" gone, focus guide|"+guide+" new, rose |redrawn, rose 0|"+
 		`a,b:c-,odd.html,assets+,big+,guide+,index.html|["docs","docs:a,b:c"] ?kind=folder|big|`+"a,b:c-,odd.html,assets+,big+,guide+,index.html,new.html|"+
 		"docs / guide/setup.html|/a/docs/guide/setup.html#end|true,false,0,/a/docs/guide/setup.html|"+
 		"?file=guide%2Fsetup.html#top|the page at #end|?file=guide%2Fstart.html|rgb(1, 2, 3)|docs / big/p1000.html|tree rows 0|"+

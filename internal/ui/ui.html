@@ -399,7 +399,7 @@
 
   /* The list: its head stuck over its rows */
   .listcol { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
-  .list-body { flex: 1; min-height: 0; overflow-y: auto; }
+  .list-body { flex: 1; min-height: 0; overflow-y: auto; background: var(--bg); }
   /* With the filters folded, what opens them stands in this foot, plain as its button */
   .shell.shelf-closed .listcol > .col-foot { padding-left: var(--foot-next); }
   .shell.shelf-closed:not(.list-closed) #shelf-show { background: transparent; box-shadow: none; }
@@ -424,7 +424,7 @@
   li.kept { animation: none; }
   li:not(.group):hover { background: var(--hover); }
   /* The row chosen, whose page is open on the right */
-  li.picked, li.picked:hover { background: var(--new-soft); box-shadow: inset 3px 0 var(--new); }
+  li.picked, li.picked:hover { background: var(--new-soft); }
   /* The task just made, until the rows are drawn anew */
   li.fresh, li.fresh:hover { background: var(--sel); }
   /* A day's heading: no row, and not pressed */
@@ -432,6 +432,23 @@
   /* A step's heading on a task's page: its way to add a page on the right, and under it, when it has none, that it has none */
   li.group.adds { display: grid; grid-template: none / minmax(0, 1fr) auto; align-items: center; gap: 0.25rem 0.5rem; }
   li.group .step-empty { grid-column: 1 / -1; margin: 0; padding-bottom: 0.5rem; font-weight: 400; }
+  /* The list's rows are cards on its ground, apart by a margin and not a gap, which would part a heading and a folder's rows too.
+     A folder open is one card: its row loses its foot, its rows have the sides, and the last of them the foot, the corners and the
+     shadow (by :has, the DOM as it is). A folder open and its rows do not rise in, which would part the card for a moment */
+  /* LIMIT: the last row's shadow is not along the sides of the rows above it, a gap too faint to see */
+  #list { padding: 0.4rem 0.4rem 1rem; }
+  #list:empty { padding: 0; }
+  #list > li:not(.group, .tree) { border: 1px solid var(--line); border-radius: var(--corner-menu); box-shadow: var(--shadow-sm); transition: background-color 0.15s, box-shadow 0.15s; }
+  #list > li:not(.group, .tree):not(:first-child) { margin-top: 0.4rem; }
+  #list > li.group + li:not(.group, .tree) { margin-top: 0; }
+  #list > li:not(.group, .tree).picked, #list > li:not(.group, .tree).picked:hover { border-color: var(--new); }
+  #list > li:not(.group, .tree):has(+ li.tree) { border-bottom-width: 0; border-end-start-radius: 0; border-end-end-radius: 0; animation: none; }
+  #list > li.tree { border: 1px solid var(--line); border-block-width: 0; animation: none; }
+  #list > li.tree:not(:has(+ li.tree)) { border-bottom-width: 1px; border-end-start-radius: var(--corner-menu); border-end-end-radius: var(--corner-menu); box-shadow: var(--shadow-sm); }
+  @media (hover: hover) { #list > li:not(.group, .tree):not(:has(+ li.tree)):hover { box-shadow: var(--shadow); } }
+  /* The headings' words start where a card's mark does (the list's room, the card's edge and its own), the step's add button ends
+     where the card does */
+  #list > li.group { padding-inline: calc(1rem + 1px) 0; background: transparent; }
   /* The first column holds what the row is: a dot, a ring, a link's or a folder's mark; while rows are selected, the check box */
   li > .lead { grid-area: lead; display: grid; place-items: center; height: 1.4em; color: var(--muted); }
   li > .lead svg { width: 14px; height: 14px; }
