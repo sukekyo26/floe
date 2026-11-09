@@ -726,7 +726,11 @@
   /* LIMIT: no room for it in a bar of 40rem or less, as the shortcuts' button above 56rem: the settings open from a wider window. Give them a way there if they come to be needed on a phone */
   @media (max-width: 40rem) { #settings-open { display: none; } }
   #settings { width: min(64rem, calc(100% - 32px)); max-height: calc(100dvh - 32px); }
-  #settings .modal-body { grid-template-rows: auto auto auto minmax(0, 1fr) auto; max-height: calc(100dvh - 34px); }
+  /* Only the cards scroll, the head and the buttons in sight: a column, so that a line hidden (the default's title in a page's
+     modal) moves no row */
+  #settings .modal-body { display: flex; flex-direction: column; max-height: calc(100dvh - 34px); }
+  #settings .modal-body > * { flex: none; }
+  #settings .theme-grid { flex: 0 1 auto; min-height: 0; }
   #settings h3 { margin: 0; font-size: var(--text); }
   .theme-now { margin: 0; font-size: var(--text-small); color: var(--muted); }
   .theme-now b { color: var(--fg); }

@@ -118,3 +118,31 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 		"Settings / true / false", "settings-icon",
 	}, "|"))
 }
+
+// TestUIThemesFit: the themes modal, of the settings and of a page, keeps its head and its buttons in the window, wide and
+// narrow, tall and low, and only its cards scroll.
+func TestUIThemesFit(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
+	s := newSite(t)
+	b := s.b
+	s.floe(t, "publish", s.page(t, "p.yaml", "P", ""))
+	defer b.unsize()
+	const fits = `(() => {
+		const m = document.getElementById('settings').getBoundingClientRect(), grid = document.getElementById('theme-grid');
+		const seen = (e) => { const r = e.getBoundingClientRect(); return r.top >= m.top && r.bottom <= m.bottom && r.top >= 0 && r.bottom <= innerHeight; };
+		return [seen(document.querySelector('#settings .modal-head')), seen(document.getElementById('theme-choose')),
+			seen(document.querySelector('#settings [data-close]')), grid.scrollHeight > grid.clientHeight].join(' ');
+	})()`
+	out := make([]string, 0, 8)
+	for _, size := range [][2]int64{{1440, 900}, {1440, 700}, {390, 844}, {390, 640}} {
+		b.navigate("/")
+		b.size(size[0], size[1], size[0] < 600)
+		b.until("the row", "items.find((a) => a.slug === 'p')")
+		for _, open := range []string{"openThemes()", "openThemes(items.find((a) => a.slug === 'p'))"} {
+			b.eval(open)
+			b.until("the cards", "document.querySelectorAll('#theme-grid .theme-card').length >= 12")
+			out = append(out, b.settled(fits))
+			b.eval("document.getElementById('settings').close()")
+		}
+	}
+	check(t, "themes fit", out, strings.Repeat("true true true true|", 7)+"true true true true")
+}
