@@ -37,7 +37,7 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 		const btn = li.querySelector('.actions > .archive'); btn.focus();
 		const ring = btn.matches(':focus-visible') && r(btn).top - 3 >= r(li.querySelector('.title')).bottom && r(btn).bottom + 3 <= r(li).bottom - 1;
 		return [r(li).height.toFixed(1), buttons.join(','), items.length > 0 && tall && wrapped, within, ring].join(' '); })()`
-	var out []string
+	out := make([]string, 0, 6)
 	for _, width := range []int64{1440, 390} {
 		b.size(width, 900, width < 600)
 		got := map[string]string{}
