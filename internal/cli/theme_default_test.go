@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	jsonv2 "encoding/json/v2"
 	"os"
 	"path/filepath"
 	"testing"
@@ -31,10 +32,15 @@ func TestThemeDefaultCommand(t *testing.T) {
 			t.Errorf("%s: %d %q %q", written, code, out, errs)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(store, "settings.json"), []byte(`{"theme": 1}`), 0o600); err != nil {
+	broken := []byte(`{"theme": 1}`)
+	if err := os.WriteFile(filepath.Join(store, "settings.json"), broken, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	want := filepath.Join(store, "settings.json") + `: json: cannot unmarshal JSON number into Go string within "/theme"` + "\n"
+	// v2's own words: it says "cannot" or "unable to", whichever this process drew.
+	v2 := jsonv2.Unmarshal(broken, new(struct {
+		Theme string `json:"theme"`
+	}))
+	want := filepath.Join(store, "settings.json") + ": " + v2.Error() + "\n"
 	if code, out, errs := runEnv(tmp, env, "theme", "default"); code != 1 || out != "" || errs != want {
 		t.Errorf("broken: %d %q %q", code, out, errs)
 	}
