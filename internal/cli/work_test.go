@@ -426,8 +426,11 @@ func TestWorkNotUTF8(t *testing.T) {
 		{dir, []string{"work", "--task", "t1", "--project", bad}, "--project"},
 		{dir, []string{"work", "--task", "t1", "--project", bad, "--forget"}, "--project"},
 		{dir, []string{"work", "nosuch", "--task", "t1", "--url", bad}, "--url"},
-		{elsewhere, []string{"work", "--task", "t1"},
-			"the project name (of the git remote, the repository's directory or the working directory)"},
+		{
+			elsewhere,
+			[]string{"work", "--task", "t1"},
+			"the project name (of the git remote, the repository's directory or the working directory)",
+		},
 	} {
 		if c.at == "" {
 			continue
