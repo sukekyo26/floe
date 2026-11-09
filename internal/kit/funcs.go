@@ -67,6 +67,7 @@ func newMarkdown(opts ...goldmark.Option) goldmark.Markdown {
 // writers trip on it.
 // LIMIT: an HTML block in an item of a tight list is a paragraph there, spaced apart unlike the other items: plain on
 // the page.
+// LIMIT: an HTML block is one paragraph, so its line breaks and indents fold into spaces on the page: plain there.
 type rawAsText struct{}
 
 func (rawAsText) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
@@ -75,25 +76,14 @@ func (rawAsText) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
 		if !ok || !entering {
 			return ast.WalkSkipChildren, nil
 		}
-		var b []byte
-		segs := raw.Segments
-		for i := range segs.Len() {
-			seg := segs.At(i)
-			b = append(b, seg.Value(src)...)
-		}
-		return ast.WalkSkipChildren, writeText(w, b)
+		return ast.WalkSkipChildren, writeText(w, raw.Segments.Value(src))
 	})
 	r.Register(ast.KindHTMLBlock, func(w util.BufWriter, src []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
 		block, ok := n.(*ast.HTMLBlock)
 		if !ok || !entering {
 			return ast.WalkContinue, nil
 		}
-		var b []byte
-		lines := block.Lines()
-		for i := range lines.Len() {
-			seg := lines.At(i)
-			b = append(b, seg.Value(src)...)
-		}
+		b := block.Lines().Value(src)
 		if block.HasClosure() {
 			b = append(b, block.ClosureLine.Value(src)...)
 		}
@@ -108,7 +98,7 @@ func (rawAsText) RegisterFuncs(r renderer.NodeRendererFuncRegisterer) {
 	})
 }
 
-// writeText writes b as text, escaped. goldmark has made a NUL U+FFFD as it read it.
+// writeText writes b as text, escaped: util.EscapeHTML makes a NUL U+FFFD too.
 func writeText(w util.BufWriter, b []byte) error {
 	_, err := w.Write(util.EscapeHTML(b))
 	return err //nolint:wrapcheck // convert says which function failed
