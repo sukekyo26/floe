@@ -293,9 +293,13 @@
       "type": "object",
       "description": "Boxes and the edges between them, which floe lays out in ranks, the top left of all of it at x and y; the edges of one graph may cross one another",
       "required": ["x", "y"],
-      "$comment": "LIMIT: neither nodes nor lanes is told only as missing nodes, both (or lanes: true with nodes) only as nodes' false schema, naming no lanes: the library tells one rule's words, and oneOf or anyOf tell none of theirs",
+      "$comment": "LIMIT: neither nodes nor lanes is told only as missing nodes, both (or lanes: true with nodes) only as an additional property nodes, naming no lanes: the library tells one rule's words, and oneOf or anyOf tell none of theirs",
       "if": { "required": ["lanes"] },
-      "then": { "properties": { "nodes": false } },
+      "then": {
+        "$comment": "LIMIT: the keys every graph takes but nodes, copied: add a key to properties here too, or a graph of lanes refuses it as an additional property. A mistake is told at the graph, not at its nodes, and a misspelt key beside nodes is told twice, here and by the graph's own additionalProperties",
+        "properties": { "x": true, "y": true, "direction": true, "lanes": true, "edges": true },
+        "additionalProperties": false
+      },
       "else": { "required": ["nodes"] },
       "additionalProperties": false,
       "properties": {

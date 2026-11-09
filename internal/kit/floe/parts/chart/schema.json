@@ -24,7 +24,11 @@
     }
   },
   "if": { "properties": { "kind": { "const": "bar" } }, "required": ["kind"] },
-  "then": { "properties": { "min": false } },
+  "then": {
+    "$comment": "LIMIT: the keys every chart takes but min, copied: add a key to properties here too, or a bar chart refuses it as an additional property. A mistake is told at the chart, not at its min, and a misspelt key beside min is told twice, here and by the chart's own additionalProperties",
+    "properties": { "kind": true, "title": true, "unit": true, "x": true, "series": true },
+    "additionalProperties": false
+  },
   "required": ["kind", "title", "x", "series"],
   "additionalProperties": false
 }
