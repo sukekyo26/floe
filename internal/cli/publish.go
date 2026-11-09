@@ -69,7 +69,8 @@ a dot), each shown as a linked HTML file is. The same slug for another file is r
 	f.StringVar(&description, "description", "", "a description shown in the list")
 	f.StringVar(&theme, "theme", "",
 		"the theme to draw with: its palette and the parts' shape (default: the data file's theme:, else default)")
-	f.BoolVar(&opts.Force, "force", false, "replace a page published from another project, or a link to another file, keeping nothing of the old one, not even a page's earlier versions")
+	f.BoolVar(&opts.Force, "force", false, "replace a page published from another project, or a link to another file, "+
+		"keeping nothing of the old one, not even a page's earlier versions")
 	return cmd
 }
 
