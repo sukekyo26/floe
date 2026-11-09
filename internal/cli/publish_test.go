@@ -108,7 +108,8 @@ func TestPublishRenamed(t *testing.T) {
 		}
 		code, out, errs := runIn(dir, env, "publish", c.file)
 		told := strings.Split(en.Msg("cli_updated_titled", c.slug+"-b", "\x00", c.title), "\x00")
-		if code != 0 || out != url+"/a/"+c.slug+"-b/\n" || !strings.HasPrefix(errs, told[0]) || errs[strings.Index(errs, ","):] != told[1]+"\n" {
+		_, tail, _ := strings.Cut(errs, ",")
+		if code != 0 || out != url+"/a/"+c.slug+"-b/\n" || !strings.HasPrefix(errs, told[0]) || ","+tail != told[1]+"\n" {
 			t.Errorf("floe publish %s again = %d, %q, %q; want %s-b, told %q", c.file, code, out, errs, c.slug, told)
 		}
 	}

@@ -185,8 +185,8 @@ func sendSaved(w http.ResponseWriter, r *http.Request, entry *store.Entry) {
 	})
 }
 
-// save stores the data file the CLI sends as a page, at the slug sent or the one the store picks: 201 for a new slug, 200 for one replaced,
-// and 422 with the images to send when it reads some and sent none.
+// save stores the data file the CLI sends as a page, at the slug sent or the one the store picks: 201 for a new slug,
+// 200 for one replaced, and 422 with the images to send when it reads some and sent none.
 func (s *Server) save(w http.ResponseWriter, r *http.Request) {
 	body, ok := s.readBody(w, r, MaxUpload)
 	if !ok {

@@ -221,14 +221,9 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 	if dw.Err != nil {
 		return nil, dw.Err
 	}
-	slug, named := "", ""
-	if opts.Slug != nil {
-		slug = *opts.Slug
-	} else {
-		named = files.SlugFromFile(up.File)
-		if slug, err = s.ownSlug(named, owns("", up.Project, up.Place), false); err != nil {
-			return nil, err
-		}
+	slug, named, err := s.dataSlug(up, opts)
+	if err != nil {
+		return nil, err
 	}
 	sent := fstest.MapFS{}
 	for name, b := range up.Images {
@@ -276,6 +271,17 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 		return nil, usererr.WithWarnings(err, warnings) //nolint:wrapcheck // as above
 	}
 	return e, nil
+}
+
+// dataSlug is the slug a publish of up writes to: the one given, else its file's (ownSlug), with the name it is
+// picked by ("" for one given).
+func (s *Store) dataSlug(up Upload, opts Options) (slug, named string, err error) {
+	if opts.Slug != nil {
+		return *opts.Slug, "", nil
+	}
+	named = files.SlugFromFile(up.File)
+	slug, err = s.ownSlug(named, owns("", up.Project, up.Place), false)
+	return slug, named, err
 }
 
 // imagesApart refuses images of the data file file one of which is under another, as a.png and a.png/b.png:
@@ -1023,14 +1029,7 @@ func (s *Store) Edit(slug string, ed Edit) (Edited, error) {
 	if err != nil {
 		return Edited{}, err
 	}
-	switch {
-	case ed.Title != nil:
-		setTitle(to, m, *ed.Title)
-	// A title made of the slug follows it, as publishing the page again makes it: else that publish would tell the title
-	// changed. A --title equal to the old slug, of a page without title:, is followed too.
-	case to != slug && !m.TitleEdited && m.DataTitle == "" && m.Title == slug:
-		m.Title = to
-	}
+	editTitle(slug, to, m, ed.Title)
 	if err := s.WriteMeta(slug, m); err != nil {
 		return Edited{}, err
 	}
@@ -1081,6 +1080,18 @@ func tagged(tags []string) []string {
 		}
 	}
 	return kept
+}
+
+// editTitle sets the title of m, renamed from slug to to, as t says (nil for none given). A title made of the slug
+// follows it, as publishing the page again makes it: else that publish would tell the title changed. A --title equal to
+// the old slug, of a page without title:, is followed too.
+func editTitle(slug, to string, m *Meta, t *string) {
+	switch {
+	case t != nil:
+		setTitle(to, m, *t)
+	case to != slug && !m.TitleEdited && m.DataTitle == "" && m.Title == slug:
+		m.Title = to
+	}
 }
 
 // setTitle sets the title of m, whose slug the edit renames to: an empty one gives back the page's
