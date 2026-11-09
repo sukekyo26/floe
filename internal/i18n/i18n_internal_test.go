@@ -2,6 +2,8 @@ package i18n
 
 import (
 	"maps"
+	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -206,6 +208,23 @@ func TestMarkWords(t *testing.T) {
 		words := messages["text_bom"]
 		if !strings.Contains(words, `\ufeff`) || strings.ContainsRune(words, 0xFEFF) {
 			t.Errorf("%s: text_bom = %q, want the escape \\ufeff and no mark", lang, words)
+		}
+	}
+}
+
+// Each theme_about_ key describes one of floe's themes, a directory of internal/kit/floe/themes: none is left of a theme
+// gone. That each theme has its key, in English as its theme.yaml has it, the server's TestThemeAbouts tells (kit reads
+// this package).
+//
+//nolint:paralleltest // reads the global catalogs, which other tests swap
+func TestThemeAboutKeys(t *testing.T) {
+	for key := range catalogs[English] {
+		name, ok := strings.CutPrefix(key, "theme_about_")
+		if !ok {
+			continue
+		}
+		if info, err := os.Stat(filepath.Join("..", "kit", "floe", "themes", name)); err != nil || !info.IsDir() {
+			t.Errorf("%s describes no theme of floe's: %v", key, err)
 		}
 	}
 }

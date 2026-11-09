@@ -160,6 +160,12 @@ func TestNames(t *testing.T) {
 		{"a theme given with spaces", "lang: ja\ntemplate: report\n", tmpl.Options{Theme: " ink ", Untitled: "", ImagesDir: ""}, ""},
 		{"spaces given", "lang: ja\ntemplate: report\ntheme: nope\n", tmpl.Options{Theme: " ", Untitled: "", ImagesDir: ""}, `d.yaml:3:8: there is no theme "nope"; use ` + themes},
 		{"a theme given that is none", "lang: ja\ntemplate: report\ntheme: ink\n", tmpl.Options{Theme: "nope", Untitled: "", ImagesDir: ""}, `floe: there is no theme "nope"; use ` + themes},
+		// The default, the store's for a page, is drawn with only where neither is, a theme it is none told at no place.
+		{"a default", "lang: ja\ntemplate: report\n", tmpl.Options{Default: "ink"}, ""},
+		{"a default that is none", "lang: ja\ntemplate: report\n", tmpl.Options{Default: "nope"}, `floe: there is no theme "nope"; use ` + themes},
+		{"a default under the data's", "lang: ja\ntemplate: report\ntheme: ink\n", tmpl.Options{Default: "nope"}, ""},
+		{"a default under one given", "lang: ja\ntemplate: report\n", tmpl.Options{Theme: "ink", Default: "nope"}, ""},
+		{"the data's that is none over a default", "lang: ja\ntemplate: report\ntheme: nope\n", tmpl.Options{Default: "ink"}, `d.yaml:3:8: there is no theme "nope"; use ` + themes},
 	} {
 		if got := drawn(t, k, tt.data, tt.o); got != tt.want {
 			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)

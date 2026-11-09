@@ -5905,8 +5905,9 @@
     drawThemes(got);
   }
 
-  // Told mistakes, one a line, as the CLI words them
-  const toldText = (report) => [...(report.mistakes ?? []).map((m) => m.text), report.failure ?? ''].filter(Boolean).join('\n');
+  // Told mistakes, one a line, at their places as the CLI words them
+  const toldAt = (m) => (m.file ? [m.file, m.line, m.line && m.column].filter(Boolean).join(':') + ': ' : '') + m.text;
+  const toldText = (report) => [...(report.mistakes ?? []).map(toldAt), report.failure ?? ''].filter(Boolean).join('\n');
 
   function drawThemes(got) {
     const grid = $('theme-grid');
