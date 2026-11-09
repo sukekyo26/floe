@@ -213,7 +213,7 @@ func (m *meanwhile) Lookup(string) ([]byte, error) {
 const iconPage = "lang: en\ntemplate: pic\ntitle: T\nd: {width: 300, height: 100, title: i, parts: [{icon: {icon: aws/res/aws-lambda, x: 10, y: 10}}]}\n"
 
 // What happens to a page while it is drawn again stays: an edit on the management page is kept, and a page
-// published again, removed or renamed is not written.
+// published again, removed, renamed or its theme picked is not written.
 func TestRebuildMeanwhile(t *testing.T) {
 	t.Parallel()
 
@@ -245,6 +245,17 @@ func TestRebuildMeanwhile(t *testing.T) {
 			t.Helper()
 			if page := read(t, filepath.Join(copyOf(t, s, root, "d"), "page.html")); !strings.Contains(page, "<title>Again</title>") {
 				t.Errorf("the page published again was written over:\n%s", page)
+			}
+		}},
+		{"theme picked", func(t *testing.T, s *store.Store, dw store.Drawing) {
+			t.Helper()
+			if err := s.PickTheme(dw, "d", "ink"); err != nil {
+				t.Fatal(err)
+			}
+		}, func(t *testing.T, s *store.Store, root, _ string) {
+			t.Helper()
+			if m := s.ReadMeta("d"); m.PickedTheme != "ink" || drawnIn(t, s, root, "d") != "ink" {
+				t.Errorf("the pick was written over: %q, drawn in %q", m.PickedTheme, drawnIn(t, s, root, "d"))
 			}
 		}},
 		{"removed", func(t *testing.T, s *store.Store, _ store.Drawing) {

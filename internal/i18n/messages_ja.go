@@ -217,6 +217,7 @@ var messagesJA = map[string]string{
 	"store_parent_nested":     "タスク %[1]s には親（%[2]s）があるので、親にできません。親子は 1 段だけです",
 	"store_parent_kids":       "タスク %[1]s には子のタスク（%[2]s など）があるので、親を付けられません。親子は 1 段だけです",
 	"store_not_data":          "%s はデータファイルではありません。ページは report などのテンプレートのデータファイル（.yaml か .yml）で公開するか、HTML は --link でそのまま表示してください",
+	"store_theme_changed":     "テーマを選んで描いている間に、ページ %s が変わりました。もう一度選択してください",
 	"store_theme_link":        "--theme はデータファイルから描くページのテーマです。リンクしたファイルは中身のまま表示します",
 	"store_no_page":           "ページ「%s」はありません（floe list で確かめられます）",
 	"store_link_relative":     "%s は絶対パスではありません。HTML かデータファイルの、/ で始まるパスにしてください",

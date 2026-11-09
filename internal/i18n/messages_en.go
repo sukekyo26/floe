@@ -226,6 +226,7 @@ var messagesEN = map[string]string{
 	"store_parent_nested":     `task %[1]s has a parent itself (%[2]s), so it cannot be a parent: tasks have one level of children`,
 	"store_parent_kids":       `task %[1]s has child tasks, such as %[2]s, so it cannot have a parent: tasks have one level of children`,
 	"store_not_data":          "%s is not a data file: publish a page as a data file (.yaml or .yml) for a template such as report, or show HTML as it is with --link",
+	"store_theme_changed":     `page %s has changed while it was drawn in the theme picked: pick it again`,
 	"store_theme_link":        "--theme picks the theme of a page drawn from a data file: a linked file is shown as it is",
 	"store_no_page":           `no page "%s" (see floe list)`,
 	"store_link_relative":     "%s is not an absolute path: give the path of an HTML or data file starting with /",

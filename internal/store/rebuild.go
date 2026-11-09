@@ -73,9 +73,9 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 		return lockErr
 	}
 	defer unlock()
-	// Published again, removed or renamed since it was read: what it is now is not what was drawn.
+	// Published again, removed, renamed or its theme picked since it was read: what it is now is not what was drawn.
 	now := s.ReadMeta(slug)
-	if now == nil || now.Source != m.Source {
+	if now == nil || now.Source != m.Source || now.PickedTheme != m.PickedTheme {
 		return nil
 	}
 	err = s.keepDrawn(slug, now, got, err)
@@ -131,7 +131,8 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	// LIMIT: kit_image_path names the directory of data, not images/, for a name floe no longer reads, which
 	// a publish checked by the same rule. Have draw name it by ImagesDir too if the rule comes to change.
 	o := tmpl.Options{
-		Theme: m.Theme, Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: imagesDir, Icons: dw.Icons,
+		Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: imagesDir,
+		Icons: dw.Icons,
 		CutOff: false,
 	}
 	// Its warnings are of the copy, which no one mends: a publish of the data file tells them.

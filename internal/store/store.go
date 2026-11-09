@@ -72,6 +72,9 @@ type Meta struct {
 	// CreatedTheme is the default theme of settings.json when a page drawn from a data file was first stored, or
 	// replaced by another file's: the default it is drawn with for good, under --theme and the data's theme:.
 	CreatedTheme string `json:"createdTheme,omitempty"`
+	// PickedTheme is the theme picked for the page on the management page (PickTheme), over --theme: kept across
+	// republishes and rebuilds, dropped when another file's page replaces it.
+	PickedTheme string `json:"pickedTheme,omitempty"`
 	// Template is the template a stored page is drawn with, read from its data file at each publish and rebuild.
 	Template string `json:"template,omitempty"`
 	// Source is the directory of a stored page's copy, under its own; a new one each publish and rebuild.
@@ -108,6 +111,17 @@ type Version struct {
 // IsLink reports whether the entry is a linked file or folder.
 func (m *Meta) IsLink() bool {
 	return m.Path != ""
+}
+
+// GivenTheme is the theme the page is drawn in over its data's theme:, "" for none: the one picked on the management
+// page, else --theme.
+func (m *Meta) GivenTheme() string {
+	return cmp.Or(m.PickedTheme, m.Theme)
+}
+
+// Themed reports whether a theme can be picked for the entry: a page drawn from a data file, stored or linked.
+func (m *Meta) Themed() bool {
+	return !m.IsLink() || m.IsData()
 }
 
 // IsData reports whether the entry is a linked data file, drawn each time it is opened: by what it is, so that a

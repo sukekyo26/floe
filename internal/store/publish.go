@@ -211,12 +211,12 @@ func (s *Store) PrepareData(dw Drawing, up Upload, opts Options) (*Entry, error)
 		sent[name] = &fstest.MapFile{Data: b, Mode: 0, ModTime: time.Time{}, Sys: nil}
 	}
 	images := &recorder{fsys: sent, names: nil, seen: map[string]bool{}}
-	created, err := s.createdFor(*opts.Slug, "", up.Project, up.Place, opts.Force)
+	picked, created, err := s.themesFor(*opts.Slug, "", up.Project, up.Place, opts.Force)
 	if err != nil {
 		return nil, err
 	}
 	o := tmpl.Options{
-		Theme: opts.theme(), Default: created, Untitled: *opts.Slug, Images: images, ImagesDir: "", Icons: dw.Icons,
+		Theme: cmp.Or(picked, opts.theme()), Default: created, Untitled: *opts.Slug, Images: images, ImagesDir: "", Icons: dw.Icons,
 		CutOff: false,
 	}
 	page, warnings, drawErr := tmpl.Draw(dw.Kit, up.File, up.Source, o)
@@ -320,18 +320,18 @@ func (s *Store) PrepareLink(
 	}
 	var data []byte
 	var warnings []*usererr.Error
-	created := ""
+	picked, created := "", ""
 	if !folder && files.IsDataFile(path) {
 		if dw.Err != nil {
 			return nil, dw.Err
 		}
-		if created, err = s.createdFor(slug, path, from, "", opts.Force); err != nil {
+		if picked, created, err = s.themesFor(slug, path, from, "", opts.Force); err != nil {
 			return nil, err
 		}
 		data = src
 		images := files.NewRoot(filepath.Dir(path))
 		o := tmpl.Options{
-			Theme: opts.theme(), Default: created, Untitled: slug, Images: images, ImagesDir: "", Icons: dw.Icons,
+			Theme: cmp.Or(picked, opts.theme()), Default: created, Untitled: slug, Images: images, ImagesDir: "", Icons: dw.Icons,
 			CutOff: false,
 		}
 		_, warnings, err = tmpl.Draw(dw.Kit, path, src, o)
@@ -438,20 +438,23 @@ func readLink(file string, opts Options, cwd, home string) (string, []byte, bool
 	return path, b, false, nil
 }
 
-// createdFor returns the default theme a page drawn from a data file at slug is drawn with: the one settings.json
-// chooses for a new page, or one replacing another file's (checkOwner), else the one the page has. It looks at
-// meta.json without the lock, before the drawing: settle keeps the value returned (Entry.created), so that the page
-// drawn and its meta.json agree. A mistake of the owner is told by settle, after the drawing, as without it.
+// themesFor returns the themes a page drawn from a data file at slug is drawn with: the one picked for it and the
+// default, none picked and the one settings.json chooses for a new page, or one replacing another file's (checkOwner),
+// else the page's own. It looks at meta.json without the lock, before the drawing: settle keeps the default returned
+// (Entry.created), so that the page drawn and its meta.json agree. A mistake of the owner is told by settle, after the
+// drawing, as without it.
 // LIMIT: a page there when it is read, but replaced by another publish before Save, is kept as replacing with the
 // default it had, the one it was drawn with; refuse it at Save if that comes to matter.
-func (s *Store) createdFor(slug, path, from, place string, force bool) (string, error) {
+// LIMIT: a theme picked between the look and Save is kept, the page drawn in the one before it: the next publish or
+// pick mends it. Refuse it at Save as PickTheme does if that comes to matter.
+func (s *Store) themesFor(slug, path, from, place string, force bool) (string, string, error) {
 	prev := s.ReadMeta(slug)
 	replacing, _ := checkOwner(slug, prev, path, from, place, force) //nolint:errcheck // told by settle, as above
 	if prev != nil && !replacing {
-		return prev.CreatedTheme, nil
+		return prev.PickedTheme, prev.CreatedTheme, nil
 	}
 	set, err := s.ReadSettings()
-	return set.Theme, err
+	return "", set.Theme, err
 }
 
 // newMeta keeps what was set on the management page (favourite, title, project, tags), the description and
@@ -468,6 +471,7 @@ func newMeta(opts Options, path, from, place string, base *Meta, own, slug strin
 		Description:   base.Description,
 		Theme:         "",
 		CreatedTheme:  base.CreatedTheme,
+		PickedTheme:   base.PickedTheme,
 		DataTitle:     own,
 		Template:      "",
 		Source:        "",
