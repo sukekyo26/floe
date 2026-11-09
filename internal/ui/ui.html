@@ -537,6 +537,9 @@
   li.tree button.title { max-width: 100%; padding: 0; border: 0; background: none; color: var(--fg); font-weight: 500; text-align: left; cursor: pointer; }
   li.tree button.title::after { content: ""; position: absolute; inset: 0; }
   li.tree button.title:focus-visible { outline: none; }
+  /* After li.tree button.title, of as many classes and elements, so that a directory's row of an archived folder is dimmed too */
+  li.archived :is(a, button).title { color: var(--muted); }
+  :is(.find-list, li.archived) .badge { padding: 0 0.3rem; font-weight: 400; }
   li:has(button.title:focus-visible) { outline: var(--ring); outline-offset: -2px; }
   /* Under the names of its directory: past the fold's room */
   li.tree.note .body { padding-left: calc(14px + 0.35rem); color: var(--muted); }
@@ -677,12 +680,10 @@
   /* The whole row is the link */
   .find-list .title::after { content: ""; position: absolute; inset: 0; }
   .find-list .unseen .title { font-weight: 700; }
-  .find-list .archived .title { color: var(--muted); }
   .find-list .time { grid-area: time; display: flex; align-items: center; gap: 0.35rem; font: var(--text-label)/1 var(--mono); color: var(--muted); white-space: nowrap; }
   .find-list .time svg { width: 12px; height: 12px; color: var(--star); }
   .find-list .sub { grid-area: sub; flex-wrap: nowrap; }
   .find-list .sub > :not(.path) { flex: none; }
-  .find-list .badge { padding: 0 0.3rem; font-weight: 400; }
   .find-none { display: grid; place-content: center; padding: 0 1.5rem; text-align: center; color: var(--muted); }
   .find-none[hidden] { display: none; }
   .find-none strong { display: block; margin-bottom: 0.25rem; font-size: 1rem; color: var(--fg); }
@@ -1564,7 +1565,8 @@
         if (res.status === 404) letGo();
         else if (!value) unreadDone(to);
         else if (value.say && (await res.json()).cleared && keptUnread !== to && to === shownSlug()) {
-          readDone(to);
+          // Archived, it is never unseen: its way back to unread would change nothing
+          if (!items.find((a) => a.slug === to)?.archived) readDone(to);
           // Not waited for: it holds up the reads of other pages
           showNotice(to, value.read.n);
         }
@@ -1862,6 +1864,8 @@
   // Whether the next read told is of a page a person opened: the toast says so of no other
   let opening = true;
   function markUnread(slug) {
+    // Archived, it is never unseen: from a toast shown before it was archived too
+    if (items.find((a) => a.slug === slug)?.archived) return;
     if (slug === shownSlug()) {
       keptUnread = slug;
       clearNotice();
@@ -2404,7 +2408,7 @@
   }
 
   // How many pages are unseen, of those not archived
-  const newCount = () => items.filter((a) => a.news && !a.archived).length;
+  const newCount = () => items.filter(unseen).length;
 
   // The bar's count of new pages, the way to them; in the list and on a missing page's frame
   function renderNews() {
@@ -2485,7 +2489,8 @@
     box.querySelector('summary').title = t('ui_more_named', a.title);
     // What is read of a stored page alone; the menu is drawn anew as the list changes
     const unread = box.querySelector('.mark-unread');
-    unread.hidden = Boolean(a.path || a.folder || a.news);
+    // Archived, it is never unseen: marked unread, nothing would change
+    unread.hidden = Boolean(a.path || a.folder || a.news || a.archived);
     unread.setAttribute('aria-label', t('ui_mark_unread_named', a.title));
     unread.addEventListener('click', () => markUnread(a.slug));
     if (a.path) {
@@ -2873,8 +2878,10 @@
     (document.querySelector('.dnote.page-note') ?? $(framed ? 'frame' : 'read-frame')).before(note);
   }
 
+  // What is unseen, as the count and the marks of a row have it: an archived page is not, as nothing counts it
+  const unseen = (a) => Boolean(a.news) && !a.archived;
   // What a row's first column shows of a
-  const leadOf = (a) => (a.folder ? FOLDER_MARK : a.path ? LINK_MARK : `<span class="${a.news ? 'dot' : 'ring'}"></span>`);
+  const leadOf = (a) => (a.folder ? FOLDER_MARK : a.path ? LINK_MARK : `<span class="${unseen(a) ? 'dot' : 'ring'}"></span>`);
 
   // A row's second line of a, in sub; middle puts what the place it is in adds before the path
   function drawSub(sub, a, ranks, middle) {
@@ -2885,7 +2892,7 @@
       sub.append(span);
       return span;
     };
-    if (a.news === 'version') put('ver', t('ui_new_version', a.version));
+    if (unseen(a) && a.news === 'version') put('ver', t('ui_new_version', a.version));
     if (a.folder) put('kindof', t('ui_kind_folder'));
     else if (a.path) put('kindof', t('ui_kind_of_link', a.template ?? 'HTML'));
     else if (a.template) put('kindof', a.template);
@@ -2913,8 +2920,9 @@
     li.style.setProperty('--i', Math.min(i, 30));
     li.dataset.key = `entry:${a.slug}`;
     li.dataset.slug = a.slug;
-    li.classList.toggle('unseen', Boolean(a.news));
+    li.classList.toggle('unseen', unseen(a));
     li.classList.toggle('gone', Boolean(a.missing));
+    li.classList.toggle('archived', TASK_PAGE && Boolean(a.archived));
     li.classList.toggle('picked', isPicked(a));
     li.querySelector('.lead').innerHTML = leadOf(a);
     const sel = li.querySelector('.sel');
@@ -2935,6 +2943,7 @@
     drawSub(sub, a, ranks, (put) => {
       // On the page list, the way to the task it is on, or to the task list it is pinned on
       if (!TASKS && a.work?.task) sub.append(taskTag(taskHref({ project: a.taskProject, name: a.work.task }), t('ui_task_badge', a.work.task)));
+      if (TASK_PAGE && a.archived) put('badge', t('ui_archived_badge'));
       if (!TASKS && a.work?.pin && !a.archived) sub.append(taskTag(`${TASKS_PATH}?${new URLSearchParams({ project: a.taskProject })}`, t('ui_pin_badge')));
       if (!a.tags?.length) return;
       const tags = put('tags', '');
@@ -3013,6 +3022,7 @@
     const tree = (cls, key) => {
       const li = $('tree-row').content.firstElementChild.cloneNode(true);
       li.classList.add(...cls);
+      li.classList.toggle('archived', TASK_PAGE && Boolean(a.archived));
       li.style.setProperty('--d', d);
       li.dataset.d = d;
       li.dataset.slug = a.slug;
@@ -3184,8 +3194,9 @@
     await load();
   }
 
-  // The row gone from under the pointer, and the next one's button there: the way back is at hand, long enough to read and reach.
-  // From the keys it has the focus, as #toasts is the far end of the page from a row; it stays while it does, and Escape leaves it
+  // The row gone from under the pointer, or moved, or left dimmed on a task's page: the way back is at hand, long enough to read and reach.
+  // From the keys it has the focus, as #toasts is the far end of the page from a row; it stays while it does, and Escape leaves it on the
+  // row on a task's page, which keeps it dimmed (drawn anew, it keeps its key), else on the one after it
   function archivedDone(a, focus) {
     const after = rowAfter(a)?.dataset.key;
     const button = tagged('button', 'btn undo', t('ui_unarchive'));
@@ -3197,7 +3208,7 @@
       if (e.key !== 'Escape') return;
       e.stopPropagation();
       button.closest('.toast').remove();
-      (rowAt(after) ?? lastRow([...($('list')?.children ?? [])]))?.querySelector('.title')?.focus();
+      ((TASK_PAGE ? entryRow(a) : null) ?? rowAt(after) ?? lastRow([...($('list')?.children ?? [])]))?.querySelector('.title')?.focus();
     });
     toast(t('ui_archive_done', a.title), { ms: 8000, button });
     if (focus) button.focus();
@@ -3332,11 +3343,11 @@
     const focusedOn = $('list').contains(document.activeElement) ? ['.title', 'summary', '.star', '.actions > .archive', '.step-add'].find((on) => document.activeElement.matches(on)) : null;
     const focused = focusedOn ? document.activeElement.closest('li').dataset.key : null;
     let i = 0;
-    for (const { heading, key, entries, add } of groups) {
+    for (const { heading, entries, add } of groups) {
       if (heading) {
         const li = document.createElement('li');
         li.className = 'group';
-        li.dataset.key = key ?? `group:${heading}`;
+        li.dataset.key = `group:${heading}`;
         li.setAttribute('role', 'none');
         const words = document.createElement('div');
         words.setAttribute('role', 'heading');
@@ -3374,6 +3385,8 @@
     $('to-tasks').href = `${TASKS_PATH}${savedTasks()}`;
   }
 
+  // A task's pages, archived or not
+  const everyPage = (task) => [...task.pages, ...task.archived];
   // Each task of tasks.json and of the pages that name it. A page whose project changed may
   // name a task with no row: it shows in the state of a new one, from its last page's time, and nothing is written.
   function tasksOf() {
@@ -3393,7 +3406,7 @@
       task[a.archived ? 'archived' : 'pages'].push(a);
     }
     for (const task of tasks.values()) {
-      if (!task.at) task.at = [...task.pages, ...task.archived].map((a) => a.updatedAt).sort().at(-1);
+      if (!task.at) task.at = everyPage(task).map((a) => a.updatedAt).sort().at(-1);
     }
     // A child, as the store's childrenOfTask says: of a parent with a row of the same project and no parent itself. The rows are
     // looked at, as tasks holds tasks of pages alone too
@@ -3631,28 +3644,26 @@
   let cameBack = false;
 
   // The rows of a task's page, under their steps: every step, those of no page too, with its way to add one; the steps written, then those
-  // not, as they first came; before them what has no step, and last what is archived. Within each, as first published
+  // not, as they first came; before them what has no step. Within each, what is archived after the rest, and each as first published
   // LIMIT: when a step first came is not kept: a step's oldest page says it, so that a new step on an old page comes earlier. --steps orders it
   function taskGroups(task) {
     const steps = new Map();
     const none = [];
-    for (const a of [...task.pages].sort((x, y) => madeAt(x) - madeAt(y))) {
+    for (const a of everyPage(task).sort((x, y) => Boolean(x.archived) - Boolean(y.archived) || madeAt(x) - madeAt(y))) {
       if (!a.work.step) none.push(a);
       else steps.set(a.work.step, [...(steps.get(a.work.step) ?? []), a]);
     }
     const groups = [{ entries: none }];
     for (const heading of stepOrder(task)) groups.push({ heading, entries: steps.get(heading) ?? [], add: () => openAddPage(task, heading) });
-    // Its key apart from a step's, which may have the same name
-    if (task.archived.length > 0) groups.push({ heading: t('ui_state_archived'), key: 'archived', entries: [...task.archived].sort((x, y) => madeAt(x) - madeAt(y)) });
     return groups;
   }
   const madeAt = (a) => Date.parse(a.createdAt || a.updatedAt);
   // A task's steps in order, as its page groups its pages and its edit dialog orders them: the steps written, in their order, those of no page
-  // too, then those of its pages alone, by the oldest page of each. The archived pages are not counted, as they are grouped apart
+  // too, then those of its pages alone, by the oldest page of each, archived or not
   function stepOrder(task) {
     const written = task.steps ?? [];
     const rest = [];
-    for (const a of [...task.pages].sort((x, y) => madeAt(x) - madeAt(y))) {
+    for (const a of everyPage(task).sort((x, y) => madeAt(x) - madeAt(y))) {
       if (a.work.step && !written.includes(a.work.step) && !rest.includes(a.work.step)) rest.push(a.work.step);
     }
     return [...written, ...rest];
@@ -4101,7 +4112,7 @@
 
   function renderList() {
     const state = current();
-    if (view === 'new') for (const a of items) if (a.news && !a.archived) newSeen.add(a.slug);
+    if (view === 'new') for (const a of items) if (unseen(a)) newSeen.add(a.slug);
     const list = items.filter((a) => inView(a, state));
     const ranks = projectOrder();
     renderChips(list, ranks);
@@ -4204,7 +4215,7 @@
     const li = focusRow(at.file ? `page:${openKey(at.slug, at.file)}` : `entry:${at.slug}`);
     if (!li) return;
     const a = items.find((x) => x.slug === at.slug);
-    if (rowOpens(li, a) && !a.news) pickRow(at);
+    if (rowOpens(li, a) && !unseen(a)) pickRow(at);
     if (!li.offsetParent) $('list-show').focus();
   }
   // Where a page whole goes back to: the screen that opened it, or the page list
@@ -5260,7 +5271,7 @@
     $('edit-task-dialog').showModal();
   }
   // The steps as rows, each with its name, whether no page is under it, and its buttons up, down and to remove it; the grip drags it
-  const pagedOf = (task) => new Set(task.pages.map((a) => a.work.step).filter(Boolean));
+  const pagedOf = (task) => new Set(everyPage(task).map((a) => a.work.step).filter(Boolean));
   function drawEditSteps(task, order) {
     const paged = pagedOf(task);
     $('edit-steps').replaceChildren(...order.map((name) => stepRow(name, paged.has(name))));
@@ -5700,7 +5711,7 @@
   function hitRow(template, id, a, ranks, middle) {
     const li = template.content.firstElementChild.cloneNode(true);
     li.id = id;
-    li.classList.toggle('unseen', Boolean(a.news));
+    li.classList.toggle('unseen', unseen(a));
     li.classList.toggle('archived', Boolean(a.archived));
     li.querySelector('.lead').innerHTML = leadOf(a);
     const title = li.querySelector('.title');
@@ -6033,8 +6044,7 @@
   $('task-add-empty').addEventListener('click', openTaskAdd);
   suggestOne($('set-step'), () => {
     const task = setTaskOf($('set-task').value);
-    const steps = [...(task?.steps ?? []), ...[...(task?.pages ?? []), ...(task?.archived ?? [])].map((a) => a.work.step)].filter(Boolean);
-    return [...new Set(steps)];
+    return task ? stepOrder(task) : [];
   }, (name) => { $('set-step').value = name; });
   for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', () => b.closest('dialog').close());
   // A click on the backdrop (the dialog itself) closes it, as Escape does: not one closedby none holds; the form fills the dialog, so
