@@ -166,6 +166,7 @@ func TestParse(t *testing.T) {
 		{"title: Plan\n  draft\n  #2\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "Plan draft")},
 		{"title: Plan\r  draft #1\rb: 1\r", "a.yaml:2:9: " + fmt.Sprintf(cutAt, "Plan draft")},
 		{"? Plan #1\n: x\n", "a.yaml:1:8: " + fmt.Sprintf(cutAt, "Plan")},
+		{"? a\n: x\n  # c\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "x")},
 		// A comment no deeper than the key or - cuts nothing, nor a # line a text holds.
 		{"t: |\n  a\n# real\nb: 1\n", ""},
 		{"m:\n  t: |\n    a\n  # real\n  b: 1\n", ""},

@@ -461,10 +461,10 @@ func (w *walk) wrapper(n ast.Node) bool {
 	return false
 }
 
+// node walks n, whose owner is the column of the key or - it is the value of, 0 for the body.
 // LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
 // is an item as right as any. Nor is a , in { } before a rest with ": " in it ({ label: 1,500 words: many }
 // reads a key 500 words of the value many). Catch them if a schema comes to take such text.
-// owner is the column of the key or - that n is the value of, 0 for the body.
 func (w *walk) node(n ast.Node, owner int) {
 	if w.wrapper(n) {
 		return
@@ -476,7 +476,7 @@ func (w *walk) node(n ast.Node, owner int) {
 		}
 	case *ast.SequenceNode:
 		for i, v := range n.Values {
-			// A flow's items have no -, nor a comment after them: flowComments refuses one.
+			// A flow item's Start is a , or nil, and no comment comes after it: flowComments refuses one first.
 			item := owner
 			if i < len(n.Entries) && n.Entries[i].Start != nil {
 				item = n.Entries[i].Start.Position.Column
@@ -547,6 +547,8 @@ func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 // LIMIT: the caller gives it text, and a number it refused, not a number, true or ~ it takes, after which a
 // comment is not judged: an item that takes text refuses such a value by its type.
 // LIMIT: text cut to a number both read alike (title: 2024 #1) passes; catch it if a schema takes such text.
+// LIMIT: a body of text alone (x, then "# c") has no key, so the comment cannot be written shallower as told,
+// only left out; the files floe reads have keys at their top.
 func (w *walk) cut(n ast.Node, owner int) bool {
 	tk := n.GetToken()
 	if QuoteOf(n) != Plain || tk.Next == nil || tk.Next.Type != token.CommentType ||
