@@ -731,3 +731,87 @@ func TestSectionParts(t *testing.T) {
 		t.Errorf("SectionParts over one's own part = %+v, %v; want floe's", over, err)
 	}
 }
+
+// Every part, look, shared schema and template of floe, and the section's html, has the shape the lists print: a
+// name it lacks here fails, so that one added is looked at.
+func TestShapes(t *testing.T) {
+	t.Parallel()
+
+	want := map[string]string{
+		"part any":            "one of asks,bars,chart,checklist,checks,code,columns,compare,decision,details,diagram,diff,entries,facts,fields,findings,html,image,keys,links,note,options,script,stats,steps,table,tabs,terminal,text,timeline,tree",
+		"part asks":           "[] by,decided,options,question,recommend,why",
+		"part band":           "-",
+		"part bars":           "[] label,of,tone,value",
+		"part cards":          "-",
+		"part cell":           "-",
+		"part chart":          "-",
+		"part checklist":      "[] done,text",
+		"part checks":         "[] actual,how,parts,result,title",
+		"part code":           "file,lang,mark,start,text,title",
+		"part columns":        "[] parts,title",
+		"part compare":        "after,before,rows",
+		"part decision":       "date,rejected,status,text,title",
+		"part details":        "open,parts,title",
+		"part diagram":        "-",
+		"part diff":           "file,lang,text",
+		"part entries":        "[] parts,tags,text,title",
+		"part facts":          "[] name,value",
+		"part fields":         "[] default,name,required,text,type",
+		"part findings":       "[] at,level,status,text,why",
+		"part image":          "alt,caption,file",
+		"part keys":           "[] keys,text",
+		"part links":          "[] text,title,url",
+		"part marked":         "-",
+		"part note":           "text,title,tone",
+		"part numbered":       "-",
+		"part options":        "[] cons,parts,pick,pros,text,title",
+		"part panel":          "-",
+		"part rows":           "-",
+		"part script":         "data,js",
+		"part stack":          "[] one of asks,bars,chart,checklist,checks,code,compare,decision,details,diagram,diff,entries,facts,fields,findings,image,keys,links,note,options,script,stats,steps,table,terminal,text,timeline,tree",
+		"part stats":          "-",
+		"part steps":          "[] state,tags,text,title",
+		"part table":          "columns,rows",
+		"part tabs":           "[] parts,title",
+		"part tags":           "-",
+		"part terminal":       "shell,steps",
+		"part text":           "markdown",
+		"part timeline":       "[] date,text,title,tone",
+		"part toc":            "-",
+		"part tone":           "-",
+		"part tree":           "[] change,note,path",
+		"part zoom":           "-",
+		"template adr":        "-",
+		"template design":     "background,date,decided,decisions,goals,impact,lang,more,non_goals,owner,status,summary,template,theme,title",
+		"template handoff":    "asks,date,doing,done,from,lang,more,next,notes,summary,template,theme,title,to",
+		"template postmortem": "actions,authors,cause,date,effects,lang,lessons,more,severity,summary,template,theme,timeline,title",
+		"template report":     "eyebrow,lang,lead,sections,template,theme,title,toc",
+		"template runbook":    "caution,lang,more,needs,owner,rollback,steps,summary,template,theme,title,updated",
+		"template slides":     "direction,lang,slides,subtitle,template,theme,title",
+		"section html":        "html",
+	}
+	k := floe(t)
+	section, err := k.SectionParts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, e := range k.Parts() {
+		got["part "+e.Name] = e.Shape
+	}
+	for _, e := range k.Templates() {
+		got["template "+e.Name] = e.Shape
+	}
+	for _, e := range section {
+		if e.Name == "html" {
+			got["section html"] = e.Shape
+		}
+	}
+	names := maps.Clone(want)
+	maps.Copy(names, got)
+	for _, name := range slices.Sorted(maps.Keys(names)) {
+		if got[name] != want[name] {
+			t.Errorf("%s has the shape %q, want %q", name, got[name], want[name])
+		}
+	}
+}

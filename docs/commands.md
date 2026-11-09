@@ -122,7 +122,7 @@ Have the server draw every stored page again from the copy of its data file and 
 
 ## `floe template list`
 
-Print the templates, floe's and your own, one per line in three tab-separated columns: the name, where it is (`floe`, or the directory of a template of your own) and the description of its `schema.json`. A template of your own hides floe's of its name. [templates.md](templates.md) tells how templates are written.
+Print the templates, floe's and your own, one per line in four tab-separated columns: the name, where it is (`floe`, or the directory of a template of your own), its shape (the keys of its data file, below) and the description of its `schema.json`. A template of your own hides floe's of its name. [templates.md](templates.md) tells how templates are written.
 
 ## `floe template new <name>`
 
@@ -142,7 +142,9 @@ Read the templates in `FLOE_TEMPLATES_DIR` with the parts and themes of your own
 
 ## `floe part list`
 
-Print the parts a section of floe's templates takes (the keys of floe's `any.json`), one per line in three tab-separated columns: the name, where it is (`floe`) and its description. `html` takes HTML as text and has no `schema.json`: `floe part show html any.json` prints `any.json`, which holds the key `html`.
+Print the parts a section of floe's templates takes (the keys of floe's `any.json`), one per line in four tab-separated columns: the name, where it is (`floe`), its shape and its description. `html` takes HTML as text and has no `schema.json`: `floe part show html any.json` prints `any.json`, which holds the key `html`.
+
+The shape is what a value of it is written as: its keys, by name; `[] ` before those of a list's items; `one of ` before keys of which exactly one is written; the name of the format (`markdown`, `html`) or of the floe part it is; or `-`, which the list does not tell: `floe part show <name>` (`template show`, `theme show`) names in its `files:` line what to read, and `floe diagram example <kind>` prints an example. A template's shape holds `template`, `lang`, `theme` and `title`, which every data file may write.
 
 With `--all`, print every part, look and shared schema, floe's and your own, that a `$ref` of your own schema can name, in the same columns (where it is: `floe`, or the directory of one of your own). `html` is not among them, as there is no `floe:///parts/html.json`.
 
@@ -160,7 +162,7 @@ Read the parts, looks and shared schemas in `FLOE_PARTS_DIR` and the themes in `
 
 ## `floe theme list`
 
-Print the themes, floe's and your own, one per line in the same three tab-separated columns as `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own) and an empty description, as a theme has none.
+Print the themes, floe's and your own, one per line in the same four tab-separated columns as `floe part list`: the name, where it is (`floe`, or the directory of a theme of your own), its shape, `-`, as nothing is written as a theme's value, and an empty description, as a theme has none.
 
 ## `floe template show <name> [file]` / `floe part show <name> [file]` / `floe theme show <name> [file]`
 
@@ -296,7 +298,7 @@ edge [60,10]→[60,120] M60,10 V120
 
 ## `floe diagram example [kind]`
 
-Without a kind, list the built-in examples, one per kind of diagram (architecture, AWS architecture, AWS architecture laid out by floe, class, ER, flow, Gantt chart, Git branches, organisation chart, quadrant, sequence, state, swimlane, timeline, Venn): each line holds the kind and a summary, tab-separated. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks. Its text is written in English and Japanese (`{en: …, ja: …}`), as a spec may write it. The AWS examples draw AWS icons, so render them after `floe icons fetch aws`.
+Without a kind, list the built-in examples, one per kind of diagram (architecture, AWS architecture, AWS architecture laid out by floe, class, ER, flow, Gantt chart, Git branches, organisation chart, quadrant, sequence, state, swimlane, timeline, Venn): each line holds the kind, where it is (`floe`), its shape, `-`, as an example is copied rather than written as a value, and a summary, tab-separated, as `floe part list` prints them. With a kind, print its spec; its comments explain the grid it was laid out on. Every example passes the checks. Its text is written in English and Japanese (`{en: …, ja: …}`), as a spec may write it. The AWS examples draw AWS icons, so render them after `floe icons fetch aws`.
 
 ---
 
