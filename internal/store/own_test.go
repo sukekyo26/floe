@@ -214,11 +214,11 @@ func TestEditRenameTitle(t *testing.T) {
 		edit      store.Edit
 		want      string
 	}{
-		{"made of the slug", ownSrc, store.Options{}, store.Edit{}, "plan-b"},                                             //nolint:exhaustruct // none
-		{"title:", ownSrc + "title: Plan\n", store.Options{}, store.Edit{}, "Plan"},                                       //nolint:exhaustruct // none
-		{"--title", ownSrc, store.Options{Title: ptr("Mine")}, store.Edit{}, "Mine"},                                      //nolint:exhaustruct // none
-		{"pinned", ownSrc, store.Options{}, store.Edit{Title: ptr("plan")}, "plan"},                                       //nolint:exhaustruct // none
-		{"given with the rename", ownSrc, store.Options{}, store.Edit{Title: ptr("New")}, "New"},                          //nolint:exhaustruct // none
+		{"made of the slug", ownSrc, store.Options{}, store.Edit{}, "plan-b"},                    //nolint:exhaustruct // none
+		{"title:", ownSrc + "title: Plan\n", store.Options{}, store.Edit{}, "Plan"},              //nolint:exhaustruct // none
+		{"--title", ownSrc, store.Options{Title: ptr("Mine")}, store.Edit{}, "Mine"},             //nolint:exhaustruct // none
+		{"pinned", ownSrc, store.Options{}, store.Edit{Title: ptr("plan")}, "plan"},              //nolint:exhaustruct // none
+		{"given with the rename", ownSrc, store.Options{}, store.Edit{Title: ptr("New")}, "New"}, //nolint:exhaustruct // none
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()

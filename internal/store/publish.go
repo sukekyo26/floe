@@ -47,7 +47,9 @@ func owns(path, from, place string) func(*Meta) bool {
 	if path != "" {
 		return func(m *Meta) bool { return m.Path == path }
 	}
-	return func(m *Meta) bool { return m.PublishedFile != "" && m.PublishedFrom == from && m.PublishedFile == place }
+	return func(m *Meta) bool {
+		return m.PublishedFile != "" && m.PublishedFrom == from && m.PublishedFile == place
+	}
 }
 
 // ownSlug is the slug of a publish without --slug, of the file whose entries own tells, named base: base when its entry
