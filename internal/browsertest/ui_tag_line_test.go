@@ -278,7 +278,7 @@ func uiTagLine(t *testing.T, lang i18n.Lang, msg func(string, ...any) string) {
 	b.media("print")
 	say("in print", "getComputedStyle(document.getElementById('frame-tags')).display")
 	b.media("")
-	b.eval("location.href = document.querySelector('#frame-actions .diff-open').href")
+	b.navigate(b.eval("document.querySelector('#frame-actions .diff-open').href"))
 	b.until("the diff", "!document.getElementById('diff').hidden")
 	say("the diff", line("frame-tags"))
 	b.size(390, 844, true)
