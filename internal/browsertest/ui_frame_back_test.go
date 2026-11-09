@@ -28,7 +28,7 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 			t.Fatal(err)
 		}
 	}
-	s.floe(t, "work", "a", "b", "--task", "#128", "--state", "waiting")
+	s.floe(t, "work", "a", "b", "--task", "#128", "--state", "doing")
 	s.floe(t, "work", "pin", "--pin")
 	b.size(1400, 800, false)
 	defer b.unsize()
@@ -171,8 +171,8 @@ func TestUIFrameBack(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.eval("document.querySelector('#list li[data-slug=none] .title').focus()")
 	b.pressKey("\r")
 	wholeAt("a task of no project", "/a/none/")
-	opened("/tasks?view=doing&project=proj&task=%23128")
-	b.navigate("/tasks?view=doing&project=proj")
+	opened("/tasks?view=done&project=proj&task=%23128")
+	b.navigate("/tasks?view=done&project=proj")
 	b.until("the pin", "document.querySelector('.pin')")
 	b.moving("document.querySelector('.pin').click()")
 	wholeAt("a pin of a list at a view", "/a/pin/")
@@ -216,7 +216,7 @@ renamed: /a/a2/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back t
 named back: /a/a/ | /tasks?project=proj&task=%23128 | #128 | Back to #128 | Back to #128 | Back to #128 | /
 from the browser's memory: /a/a/ | /tasks?project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /
 a task of no project: /a/none/ | /tasks?project=%2F&task=%237 | #7 | Back to #7 | Back to #7 | Back to #7 | /
-a pin of a list at a view: /a/pin/ | /tasks?view=doing&project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /`
+a pin of a list at a view: /a/pin/ | /tasks?view=done&project=proj | Task list | Back to the task list | Back to the task list | Back to the task list | /`
 
 // A page opened whole and gone back from has its row picked and focused on the list that opened it, by the back button, by h and by the
 // browser's own way back, on a task's page and on the page list. Moved on by j, the row is the page last read. A row no longer there, or

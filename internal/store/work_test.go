@@ -66,12 +66,12 @@ func TestWorkWrite(t *testing.T) {
 		t.Errorf("after an empty step: %+v", row)
 	}
 	if _, err := s.EditTask("p", "#1", store.TaskEdit{
-		State: ptr("waiting"), URL: ptr("HTTPS://example.com/a"), Steps: ptr([]string{" 設計", "実装", "", "設計"}),
+		State: ptr("done"), URL: ptr("HTTPS://example.com/a"), Steps: ptr([]string{" 設計", "実装", "", "設計"}),
 	}); err != nil {
 		t.Fatal(err)
 	}
 	row = taskIn(t, s, "p")
-	if row.State != "waiting" || row.Parent != "#0" || row.URL != "HTTPS://example.com/a" || !slices.Equal(row.Steps, []string{"設計", "実装"}) {
+	if row.State != "done" || row.Parent != "#0" || row.URL != "HTTPS://example.com/a" || !slices.Equal(row.Steps, []string{"設計", "実装"}) {
 		t.Errorf("after the state: %+v", row)
 	}
 	if row.At == long {
@@ -123,7 +123,8 @@ func TestWorkRefused(t *testing.T) {
 		ed            store.TaskEdit
 		want          string
 	}{
-		{"p", "#1", store.TaskEdit{State: ptr("WAITING")}, `unknown state "WAITING": use todo, doing, waiting, done, archived`},
+		{"p", "#1", store.TaskEdit{State: ptr("DOING")}, `unknown state "DOING": use todo, doing, done, archived`},
+		{"p", "#1", store.TaskEdit{State: ptr("waiting")}, `unknown state "waiting": use todo, doing, done, archived`},
 		{"p", "#1", store.TaskEdit{URL: ptr("javascript:alert(1)")}, `"javascript:alert(1)" is not an http or https URL`},
 		{"p", "#1", store.TaskEdit{URL: ptr("   ")}, `"   " is not an http or https URL`},
 		{"p", "#1", store.TaskEdit{URL: ptr("https:")}, `"https:" is not an http or https URL`},
@@ -159,6 +160,7 @@ func TestWorkBroken(t *testing.T) {
 
 	for _, text := range []string{
 		"{ broken", "null", `{"p": null}`, `{"p": {"#1": {"state": "paused", "at": "2026-01-02T00:00:00Z"}}}`,
+		`{"p": {"#1": {"state": "waiting", "at": "2026-01-02T00:00:00Z"}}}`,
 		`{"p": {"#1": {"state": "doing", "at": "2026-01-02T00:00:00Z", "url": "javascript:alert(1)"}}}`,
 		`{"p": {"#1": {"state": "doing"}}}`, `{"p": {"#1": {"state": "doing", "at": "soon"}}}`,
 	} {
@@ -344,13 +346,13 @@ func TestStates(t *testing.T) {
 	t.Parallel()
 
 	fresh := slices.DeleteFunc(slices.Clone(store.States), func(s store.State) bool { return !s.New })
-	if first := slices.DeleteFunc(slices.Clone(store.States), func(s store.State) bool { return !s.First }); len(first) != 1 || first[0].Name != "waiting" {
+	if first := slices.DeleteFunc(slices.Clone(store.States), func(s store.State) bool { return !s.First }); len(first) != 1 || first[0].Name != "doing" {
 		t.Errorf("the list opens on %v", first)
 	}
 	if len(fresh) != 1 {
 		t.Errorf("new tasks take %v", fresh)
 	}
-	if got := store.StateNames(); got != "todo, doing, waiting, done, archived" {
+	if got := store.StateNames(); got != "todo, doing, done, archived" {
 		t.Errorf("StateNames = %q", got)
 	}
 }

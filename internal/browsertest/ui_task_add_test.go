@@ -223,8 +223,8 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	b.eval(dialog + ".close()")
 
 	// Drawn once, with the new task: never the words of a list with none, from the tasks before.
-	s.floe(t, "work", "--project", "gamma", "--task", "#40", "--state", "waiting")
-	b.navigate("/tasks?project=gamma&view=waiting")
+	s.floe(t, "work", "--project", "gamma", "--task", "#40", "--state", "done")
+	b.navigate("/tasks?project=gamma&view=done")
 	open("add-task")
 	b.eval("window.noneShown = false; new MutationObserver(() => { window.noneShown ||= !document.getElementById('tasks-none').hidden; }).observe(document.getElementById('tasks-none'), { attributes: true })")
 	name("#41", "new")
@@ -234,8 +234,8 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	// A poll asked while the write's answer is on its way waits for it: drawn after, the list still goes to the new row.
 	const holdWrite = "window.realFetch ??= window.fetch; window.fetch = (u, o) => (o?.method === 'PATCH' ? window.realFetch(u, o).then((r) => new Promise((go) => { window.letWrite = () => go(r); })) : window.realFetch(u, o))"
-	s.floe(t, "work", "--project", "delta", "--task", "#50", "--state", "waiting")
-	b.navigate("/tasks?project=delta&view=waiting")
+	s.floe(t, "work", "--project", "delta", "--task", "#50", "--state", "done")
+	b.navigate("/tasks?project=delta&view=done")
 	open("add-task")
 	b.eval(holdWrite)
 	name("#51", "polled")
@@ -251,8 +251,8 @@ func TestUITaskAdd(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// A poll asked before the write and answered after it is of the tasks before: it draws neither the words of a list with none nor over the row.
 	// The save's load waits for it, so it is let go once the write is answered.
 	const holdReads = "window.realFetch ??= window.fetch; window.held = []; window.fetch = (u, o) => (o?.method ? window.realFetch(u, o) : window.realFetch(u, o).then((r) => new Promise((go) => { window.held.push(() => go(r)); })))"
-	s.floe(t, "work", "--project", "epsilon", "--task", "#60", "--state", "waiting")
-	b.navigate("/tasks?project=epsilon&view=waiting")
+	s.floe(t, "work", "--project", "epsilon", "--task", "#60", "--state", "done")
+	b.navigate("/tasks?project=epsilon&view=done")
 	open("add-task")
 	b.eval("window.noneShown = false; new MutationObserver(() => { window.noneShown ||= !document.getElementById('tasks-none').hidden; }).observe(document.getElementById('tasks-none'), { attributes: true })")
 	b.eval(holdReads)

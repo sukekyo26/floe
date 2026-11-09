@@ -13,20 +13,20 @@ import (
 )
 
 // taskWork is tasks.json of TestUITaskList: each state's order by its times, tasks of no page, one project of no page, and
-// the project of none. #6 is archived, #3 waiting with archived pages alone, and #8 done with one page left.
+// the project of none. #6 is archived, #3 in progress with archived pages alone, and #8 done with one page left.
 const taskWork = `{
   "shop": {
-    "#1": {"title": "One", "state": "waiting", "step": "design", "at": "2026-01-02T00:00:00Z", "url": "https://example.com/a/b/c"},
-    "#2": {"title": "Two", "state": "waiting", "at": "2026-01-01T00:00:00Z"},
-    "#4": {"state": "doing", "at": "2026-01-01T00:00:00Z"},
-    "#5": {"state": "doing", "at": "2026-01-02T00:00:00Z"},
+    "#1": {"title": "One", "state": "doing", "step": "design", "at": "2026-01-02T00:00:00Z", "url": "https://example.com/a/b/c"},
+    "#2": {"title": "Two", "state": "doing", "at": "2026-01-01T00:00:00Z"},
+    "#4": {"state": "todo", "at": "2026-01-01T00:00:00Z"},
+    "#5": {"state": "todo", "at": "2026-01-02T00:00:00Z"},
     "#6": {"state": "archived", "at": "2026-01-01T00:00:00Z"},
     "#7": {"state": "done", "at": "2026-01-02T00:00:00Z"},
     "#8": {"state": "done", "at": "2026-01-03T00:00:00Z"}
   },
-  "blog": {"#3": {"state": "waiting", "at": "2026-01-03T00:00:00Z"}},
-  "solo": {"#9": {"state": "waiting", "at": "2026-01-04T00:00:00Z"}},
-  "/": {"#10": {"state": "waiting", "at": "2026-01-05T00:00:00Z"}}
+  "blog": {"#3": {"state": "doing", "at": "2025-12-03T00:00:00Z"}},
+  "solo": {"#9": {"state": "doing", "at": "2025-12-04T00:00:00Z"}},
+  "/": {"#10": {"state": "doing", "at": "2025-12-05T00:00:00Z"}}
 }
 `
 
@@ -109,7 +109,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	taskPages(t, s)
 	writeTasks(taskWork)
 
-	// Opened with no project: the one where a task has waited longest, written in the URL with no entry of its own, and kept.
+	// Opened with no project: the one where a task in progress changed last, written in the URL with no entry of its own, and kept.
 	b.navigate("/")
 	b.until("the page list", rowsDrawn)
 	before := b.eval("history.length")
@@ -119,7 +119,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	if got := b.eval("history.length"); got != fmt.Sprint(mustInt(t, before)+1) {
 		t.Errorf("history went from %s to %s", before, got)
 	}
-	say("waiting", taskRows)
+	say("doing", taskRows)
 	say("views", "[...document.querySelectorAll('.views button[data-view]')].map((v) => v.dataset.view + ' ' + v.querySelector('.n').textContent).join(', ')")
 	say("head", "document.getElementById('count').textContent")
 	say("pins", "[...document.querySelectorAll('.pin')].map((p) => p.textContent + ' ' + p.getAttribute('href')).join(', ')")
@@ -144,7 +144,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 
 	// The other states in their order, the URL and what the tab keeps of them, and the way back to each screen.
-	for _, view := range []string{"doing", "done", "archived"} {
+	for _, view := range []string{"todo", "done", "archived"} {
 		b.eval("document.querySelector('.views [data-view=" + view + "]').click()")
 		say(view, taskRows)
 		say(view+" head", "document.getElementById('count').textContent")
@@ -153,7 +153,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	}
 	say("the list's own key untouched", "sessionStorage.getItem('artifacts.list')")
 	say("switch hrefs", "document.getElementById('to-list').getAttribute('href') + ' ' + document.getElementById('to-tasks').getAttribute('href')")
-	b.eval("document.querySelector('.views [data-view=waiting]').click()")
+	b.eval("document.querySelector('.views [data-view=doing]').click()")
 	say("the first view is left out", "location.search")
 
 	// A project pressed: to it, the view kept; again, nothing; and it is what opens next.
@@ -161,7 +161,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("to blog", "location.search + ' ' + localStorage.getItem('artifacts.taskProject')")
 	b.eval("document.querySelector('.chip[data-project=blog]').click()")
 	say("blog again", "location.search + ' ' + document.querySelector('.chip[data-project=blog]').getAttribute('aria-pressed')")
-	b.navigate("/tasks?view=doing")
+	b.navigate("/tasks?view=done")
 	b.until("kept", "location.search.includes('project=')")
 	say("the one kept, the view kept", "location.search")
 
@@ -195,28 +195,28 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	say("folded", "document.getElementById('shelf-what').hidden + ' ' + document.getElementById('shelf-what').textContent")
 	b.eval("localStorage.removeItem('list.columns')")
 
-	// One kept that is gone is passed over; with no task waiting, the shelf's first.
+	// One kept that is gone is passed over; with no task in progress, the shelf's first.
 	b.eval("localStorage.setItem('artifacts.taskProject', 'gone')")
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
 	say("the kept gone", "location.search")
 	b.eval("localStorage.removeItem('artifacts.taskProject')")
-	writeTasks(strings.ReplaceAll(taskWork, `"waiting"`, `"doing"`))
+	writeTasks(strings.ReplaceAll(taskWork, `"doing"`, `"todo"`))
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
-	say("none waiting", "location.search")
-	// With the longest wait in another project than the shelf's first, that one.
+	say("none in progress", "location.search")
+	// With the latest change in progress in another project than the shelf's first, that one.
 	b.eval("localStorage.removeItem('artifacts.taskProject')")
-	writeTasks(strings.ReplaceAll(taskWork, "2026-01-03T00:00:00Z\"}},", "2025-01-03T00:00:00Z\"}},"))
+	writeTasks(strings.ReplaceAll(taskWork, "2025-12-03T00:00:00Z\"}},", "2027-01-03T00:00:00Z\"}},"))
 	b.navigate("/tasks")
 	b.until("a project", "location.search.includes('project=')")
-	say("waited longest", "location.search")
+	say("changed last", "location.search")
 	writeTasks(taskWork)
 
 	// The way up of a task's page opened by its URL: its project's list, at the task's view, whatever list was last seen.
 	const up = "document.getElementById('task-up').getAttribute('href')"
 	for _, c := range []struct{ list, task string }{
-		{"?view=doing&project=shop", "?project=shop&task=%231"},
+		{"?view=done&project=shop", "?project=shop&task=%231"},
 		{"?project=blog", "?project=shop&task=%231"},
 		{"?project=blog", "?project=shop&task=%235"},
 		{"?project=blog", "?project=shop&task=%236"},
@@ -328,7 +328,7 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 	b.navigate("/tasks")
 	b.until("the guide", "!document.getElementById('tasks-empty').hidden")
 	s.floe(t, "publish", s.page(t, "p1.yaml", "p1", ""), "--slug", "p1")
-	s.floe(t, "work", "p1", "--task", "#1", "--state", "waiting")
+	s.floe(t, "work", "p1", "--task", "#1", "--state", "done")
 	writeTasks(taskWork)
 
 	if got, want := strings.Join(out, "\n"), taskListWant; got != want {
@@ -383,24 +383,24 @@ func TestUITaskList(t *testing.T) { //nolint:paralleltest // the browser tests s
 // taskListWant is what TestUITaskList reads of the list, in the order it reads it.
 const taskListWant = `no work, tasks: shelf shown: false
 opened: ?project=shop shop
-waiting: #2Two [0 page(s)]; #1One [design, 2 page(s), 2 unread, b/c]
-views: todo 1, doing 2, waiting 2, done 2, archived 1
-head: 2 · longest in Waiting first
+doing: #1One [design, 2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
+views: todo 3, doing 2, done 2, archived 1
+head: 2 · latest change first
 pins: pinned /a/pinned/
-hrefs: /tasks?project=shop&task=%232 /tasks?project=shop&task=%231
-a row's project, in its title alone: #2 / Two / shop
+hrefs: /tasks?project=shop&task=%231 /tasks?project=shop&task=%232
+a row's project, in its title alone: #1 / One / shop / https://example.com/a/b/c
 link: b/c https://example.com/a/b/c _blank noopener https://example.com/a/b/c
 current: page
 search shown: true true
 chips: shop2 true var(--pc0), blog1 false var(--pc1), pin0 false var(--pc2), solo1 false var(--pc3), Not set1 false var(--faint)
-j: #2Two
-j j: #1One
-j j k: #2Two
+j: #1One
+j j: #2Two
+j j k: #1One
 nothing picked: true
-doing: #5 [0 page(s)]; #4 [0 page(s)]
-doing head: 2 · latest change first
-doing url: ?view=doing&project=shop ?view=doing&project=shop
-doing chips: 2 0 0 0 0
+todo: #11 [1 page(s), 1 unread]; #5 [0 page(s)]; #4 [0 page(s)]
+todo head: 3 · latest change first
+todo url: ?view=todo&project=shop ?view=todo&project=shop
+todo chips: 3 0 0 0 0
 done: #8 [1 page(s), 1 archived, 1 unread]; #7 [0 page(s)]
 done head: 2 · latest change first
 done url: ?view=done&project=shop ?view=done&project=shop
@@ -414,8 +414,8 @@ switch hrefs: / /tasks?view=archived&project=shop
 the first view is left out: ?project=shop
 to blog: ?project=blog blog
 blog again: ?project=blog true
-the one kept, the view kept: ?view=doing&project=blog
-?project=shop: #2Two [0 page(s)]; #1One [design, 2 page(s), 2 unread, b/c]
+the one kept, the view kept: ?view=done&project=blog
+?project=shop: #1One [design, 2 page(s), 2 unread, b/c]; #2Two [0 page(s)]
 ?project=shop none: 
 ?project=shop pins: pinned | undefined
 ?project=shop kept: shop
@@ -424,7 +424,7 @@ the one kept, the view kept: ?view=doing&project=blog
 ?project=%2F pins:  | None
 ?project=%2F kept: /
 ?project=pin: 
-?project=pin none: No tasks: Waiting / false
+?project=pin none: No tasks: In progress / false
 ?project=pin pins: pinonly | undefined
 ?project=pin kept: pin
 ?project=shop&view=archived: #6 [0 page(s), 1 archived]
@@ -440,11 +440,11 @@ another window's: blog
 pressed, it is kept: shop
 folded: false shop
 the kept gone: ?project=shop
-none waiting: ?project=shop
-waited longest: ?project=blog
-up ?view=doing&project=shop ?project=shop&task=%231: /tasks?project=shop
+none in progress: ?project=shop
+changed last: ?project=blog
+up ?view=done&project=shop ?project=shop&task=%231: /tasks?project=shop
 up ?project=blog ?project=shop&task=%231: /tasks?project=shop
-up ?project=blog ?project=shop&task=%235: /tasks?project=shop&view=doing
+up ?project=blog ?project=shop&task=%235: /tasks?project=shop&view=todo
 up ?project=blog ?project=shop&task=%236: /tasks?project=shop&view=archived
 up ?project=blog ?project=%2F&task=%2310: /tasks?project=%2F
 page list chips: shop5 var(--pc0), pin1 var(--pc2), Not set1 var(--faint)
@@ -453,7 +453,7 @@ page list, let go:
 help: Pinned pagesKeep pages you open again and again, such as an overview or a runbook, here. Only this project's pages are listed. To add one, choose "Pin to the task list" in a page's "…" menu; the × on a pin takes it off.
 broken, list: error hidden: true
 broken, tasks: failed shown: true true
-broken, tasks: ?project=shop blog todo,doing,waiting,done,archived pins 1 rows 0
+broken, tasks: ?project=shop blog todo,doing,done,archived pins 1 rows 0
 broken, tasks: says why: true
 broken, the one kept:  blog
 broken, none kept:  true
