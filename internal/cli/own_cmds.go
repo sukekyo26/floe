@@ -185,9 +185,9 @@ written as a theme's value, and its description, from its theme.yaml (empty with
 	}, &cobra.Command{
 		Use:   "show <name> [file]",
 		Short: "Show a theme and the files it reads, or one of them",
-		Long: `Show a theme: its name, where it is and the files it reads (files:): theme.yaml, palette.css,
-base.css, markdown.css, then the CSS of each part or look it gives. With a file named after, print that file
-alone, as written but the byte order mark at its start: floe theme show ink note.css.`,
+		Long: `Show a theme: its name and description, where it is and the files it reads (files:): theme.yaml,
+palette.css, base.css, markdown.css, then the CSS of each part or look it gives. With a file named after,
+print that file alone, as written but the byte order mark at its start: floe theme show ink note.css.`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			k, err := a.kit(false)

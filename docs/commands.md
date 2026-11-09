@@ -176,7 +176,7 @@ Print a template, a part (a look or a shared schema too) or a theme, floe's or y
 | A part | The looks it takes | `schema.json`, `checks.yaml`, `part.yaml`, `part.html`, `part.css`, `words.yaml`. The CSS of the looks it takes is the looks' own: `floe part show panel part.css` prints it |
 | A look | The looks it takes | `part.yaml`, `part.css` |
 | A shared schema | — | `<name>.json` |
-| A theme | — | `palette.css`, `base.css`, `markdown.css`, then the CSS it gives each part or look, by name |
+| A theme | — | `theme.yaml`, `palette.css`, `base.css`, `markdown.css`, then the CSS it gives each part or look, by name |
 
 ---
 
