@@ -21,19 +21,22 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 	}
 	s.floe(t, "work", "plan", "--task", "S1", "--step", "design")
 
-	// The row of plan: its height; its buttons' heights; the items of its menu, open, each with its height and whether its words overflow
-	// it; and the room the ring of its archive button, reached, leaves to the title above and to the row's foot below (3px: --ring past
+	// The row of plan: its height; its buttons' heights; the items of its menu, open and narrowed so that some wrap, each at least 36px
+	// and none with its words overflowing it; and the room the ring of its archive button, reached, leaves to the title above and to the row's foot below (3px: --ring past
 	// its 1px offset)
 	const row = "document.querySelector('#list li[data-slug=plan]')"
 	const measure = `(() => { const li = ` + row + `, r = (e) => e.getBoundingClientRect();
 		const buttons = [...li.querySelectorAll(':scope > .actions > .icon-btn, :scope > .actions > .more > summary')].map((e) => r(e).height);
 		const more = li.querySelector('.more'); more.open = true;
+		// Narrowed, so that its items' words wrap to two lines
+		const menu = more.querySelector('.menu'); menu.style.minWidth = '0'; menu.style.width = '8rem';
 		const items = [...li.querySelectorAll('.menu > *')].filter((e) => e.getClientRects().length);
 		const tall = items.every((e) => r(e).height >= 36), within = items.every((e) => e.scrollHeight <= e.clientHeight);
-		more.open = false;
+		const wrapped = items.some((e) => r(e).height > 40);
+		menu.style.minWidth = ''; menu.style.width = ''; more.open = false;
 		const btn = li.querySelector('.actions > .archive'); btn.focus();
 		const ring = btn.matches(':focus-visible') && r(btn).top - 3 >= r(li.querySelector('.title')).bottom && r(btn).bottom + 3 <= r(li).bottom - 1;
-		return [r(li).height.toFixed(1), buttons.join(','), items.length > 0 && tall, within, ring].join(' '); })()`
+		return [r(li).height.toFixed(1), buttons.join(','), items.length > 0 && tall && wrapped, within, ring].join(' '); })()`
 	var out []string
 	for _, width := range []int64{1440, 390} {
 		b.size(width, 900, width < 600)
