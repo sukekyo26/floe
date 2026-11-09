@@ -210,7 +210,7 @@ func TestNeedImages(t *testing.T) {
 	}
 	publish(t, s, dw, "d.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
 	_, err = s.PrepareData(dw, store.Upload{File: "d.yaml", Source: []byte(two), Images: nil, Project: "q"}, store.Options{})
-	if got, want := told(err, root), `floe: slug "d" was published from project p; use another --slug, or add --force to replace that page`; got != want {
+	if got, want := told(err, root), `floe: slug "d" was published from project p: choose another slug`; got != want {
 		t.Errorf("told\n%s\nwant\n%s", got, want)
 	}
 }
@@ -527,7 +527,7 @@ func TestOwners(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q"}, store.Options{})
-	if got := told(err, root); got != `floe: slug "same" was published from project p; use another --slug, or add --force to replace that page` {
+	if got := told(err, root); got != `floe: slug "same" was published from project p: choose another slug` {
 		t.Errorf("told %s", got)
 	}
 	up := store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: "q"}
@@ -551,8 +551,87 @@ func TestOwners(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = s.PrepareLink(t.Context(), dw, html, store.Options{Slug: ptr("same")}, "", home)
-	if got := told(err, root); got != `floe: slug "same" is used by a stored page; choose another slug, or remove that page first (floe rm same)` {
+	if got := told(err, root); got != `floe: slug "same" is used by a stored page: choose another slug` {
 		t.Errorf("told %s", got)
+	}
+}
+
+// A slug in use is refused saying what uses it and to choose another slug, never to remove or replace it, in each
+// language: --force and floe rm would drop another's page and its versions. A page and a link do not take each
+// other's slug even with --force.
+func TestSlugRefusals(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	publish(t, s, dw, "pg.yaml", "lang: en\ntemplate: pic\n", nil, store.Options{})
+	home := filepath.Dir(root)
+	html := func(name string) string {
+		file := filepath.Join(home, "proj", name)
+		if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte("<title>x</title>"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return file
+	}
+	z, y := html("z.html"), html("y.html")
+	e, err := s.PrepareLink(t.Context(), dw, z, store.Options{Slug: ptr("lk")}, "", home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Save(e); err != nil {
+		t.Fatal(err)
+	}
+	data := func(slug, project string, force bool) error {
+		up := store.Upload{File: slug + ".yaml", Source: []byte("lang: en\ntemplate: pic\n"), Images: map[string][]byte{}, Project: project}
+		_, err := s.PrepareData(dw, up, store.Options{Force: force})
+		return err
+	}
+	link := func(file, slug string, force bool) error {
+		_, err := s.PrepareLink(t.Context(), dw, file, store.Options{Slug: ptr(slug), Force: force}, "", home)
+		return err
+	}
+	_, taken := s.Edit("lk", store.Edit{Slug: ptr("pg")})
+	ja := i18n.New("ja")
+	for _, tt := range []struct {
+		name   string
+		err    error
+		en, ja string
+	}{
+		{
+			"owned", data("pg", "q", false),
+			`slug "pg" was published from project p: choose another slug`,
+			`URL 名「pg」はプロジェクト p から公開されています。別の URL 名にしてください`,
+		},
+		{
+			"linked", link(y, "lk", false),
+			`slug "lk" is linked to H/proj/z.html: choose another slug`,
+			`URL 名「lk」は H/proj/z.html のリンクで使われています。別の URL 名にしてください`,
+		},
+		{
+			"is_page, --force too", link(z, "pg", true),
+			`slug "pg" is used by a stored page: choose another slug`,
+			`URL 名「pg」は保存したページで使われています。別の URL 名にしてください`,
+		},
+		{
+			"is_link, --force too", data("lk", "p", true),
+			`slug "lk" is used by a linked file: choose another slug`,
+			`URL 名「lk」はリンクで使われています。別の URL 名にしてください`,
+		},
+		{
+			"taken", taken,
+			`slug "pg" is already in use: choose another slug`,
+			`URL 名「pg」は使われています。別の URL 名にしてください`,
+		},
+	} {
+		if got := strings.ReplaceAll(told(tt.err, root), home, "H"); got != "floe: "+tt.en {
+			t.Errorf("%s: told %s, want %s", tt.name, got, tt.en)
+		}
+		if got := strings.ReplaceAll(usererr.Tell(ja, tt.err).Render(""), home, "H"); got != tt.ja {
+			t.Errorf("%s in ja: told %s, want %s", tt.name, got, tt.ja)
+		}
 	}
 }
 
@@ -640,7 +719,7 @@ func TestConflict(t *testing.T) {
 	if _, ok := errors.AsType[*store.Conflict](err); !ok {
 		t.Errorf("PrepareData = %v, want a Conflict", err)
 	}
-	if got := told(err, root); got != `floe: slug "same" was published from project p; use another --slug, or add --force to replace that page` {
+	if got := told(err, root); got != `floe: slug "same" was published from project p: choose another slug` {
 		t.Errorf("told %s", got)
 	}
 	_, err = s.PrepareData(dw, store.Upload{File: "same.yaml", Source: []byte("lang: en\ntemplate: nope\n"), Images: nil, Project: "p"}, store.Options{})
