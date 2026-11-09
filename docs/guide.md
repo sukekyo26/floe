@@ -1,6 +1,6 @@
 # Using floe: a guide for agents
 
-floe shows the user a page you write as a YAML file: it checks the file, draws it with a template and serves it at the URL `floe publish` prints. This guide, `floe <command> --help` and the `list` and `show` commands tell all you need.
+floe turns a YAML file you write into a page for the user: it checks the file, renders it with a template, and serves it at the URL printed by `floe publish`. This guide, `floe <command> --help`, and the `list` and `show` commands tell you all you need to know.
 
 ## Writing a page
 
@@ -27,7 +27,7 @@ floe shows the user a page you write as a YAML file: it checks the file, draws i
 
 ## Publishing again
 
-- floe knows a page by its file, not by where you run floe: publish the same file again, from any directory, without `--slug`, and it replaces its page, even after the user renamed the page on the management page.
+- floe identifies a page by its source file, not by the directory you run floe from: publish the same file again, from any directory, without `--slug`, and it replaces its page, even after the user renamed the page on the management page.
 - If floe refuses the name, a page of another file has it: rename your file (`db-choice-2.yaml`) or pass another `--slug`, and publish it again.
 
 ## Themes
@@ -45,7 +45,7 @@ Pick the part by what the content is:
 |---|---|
 | Prose, or a short list | `text` (Markdown) |
 | Steps in order, to do or done | `steps`; floe numbers them, so write no number in a title |
-| Items with longer explanations, such as risks, requirements or terms | `entries`; short states or labels go in its `tags` (`tags: [done]`) |
+| Items with longer explanations, such as risks, requirements or terms | `entries`; put short states or labels in each item's `tags` (`tags: [done]`) |
 | Options weighed with pros and cons | `options` |
 | One decision with its reasons | `decision` |
 | Questions for the reader to decide | `asks` |
