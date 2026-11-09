@@ -1,11 +1,13 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 	"slices"
 	"strings"
 
 	"github.com/sukekyo26/floe/internal/i18n"
+	"github.com/sukekyo26/floe/internal/store"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/ui"
 	"github.com/sukekyo26/floe/internal/usererr"
@@ -50,9 +52,8 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		refuse(w, r, drawing.Err)
 		return
 	}
-	if _, ok := drawing.Kit.Theme(in.Theme); !ok {
-		_, _, themes, _ := drawing.Kit.Names()
-		refuse(w, r, usererr.New("tmpl_unknown_theme", in.Theme, strings.Join(themes, ", ")))
+	if err := knownTheme(drawing, in.Theme); err != nil {
+		refuse(w, r, err)
 		return
 	}
 	if err := s.cfg.Store.SetTheme(in.Theme); err != nil {
@@ -60,6 +61,56 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, SettingsPut{Theme: in.Theme})
+}
+
+// knownTheme refuses name when it is no theme of drawing, read without a mistake.
+func knownTheme(drawing store.Drawing, name string) error {
+	if _, ok := drawing.Kit.Theme(name); ok {
+		return nil
+	}
+	_, _, themes, _ := drawing.Kit.Names()
+	return usererr.New("tmpl_unknown_theme", name, strings.Join(themes, ", "))
+}
+
+// ThemePick is the theme picked for a page, as the management page sends it: "" takes the pick off.
+type ThemePick struct {
+	Theme string `json:"theme"`
+}
+
+// pickTheme picks the theme ThemePick names, a theme of the drawing of now, for the page slug drawn from a data file,
+// drawing the page in it (store.PickTheme): refused as drawn, nothing written, when it cannot be, and 409 when the page
+// changed meanwhile.
+func (s *Server) pickTheme(w http.ResponseWriter, r *http.Request) {
+	slug := r.PathValue("slug")
+	if !store.ValidSlug(slug) {
+		notFound(w)
+		return
+	}
+	body, ok := s.readBody(w, r, maxBody)
+	if !ok {
+		return
+	}
+	in := decodeStrict[ThemePick](w, body)
+	if in == nil {
+		return
+	}
+	drawing := s.latest()
+	err := drawing.Err
+	if err == nil && in.Theme != "" {
+		err = knownTheme(drawing, in.Theme)
+	}
+	if err == nil {
+		err = s.cfg.Store.PickTheme(drawing, slug, in.Theme)
+	}
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, ThemePick{Theme: in.Theme})
 }
 
 // themes answers Themes. A settings.json that cannot be read still lists the themes, for one to be chosen, which
@@ -118,4 +169,25 @@ func (s *Server) themeSample(w http.ResponseWriter, r *http.Request) {
 	}
 	pageHeaders(w, r, true)
 	sendBytes(w, http.StatusOK, htmlType, page)
+}
+
+// OwnTheme is the theme a page is drawn in without the theme picked for it, which the management page names on the card
+// that removes the pick.
+type OwnTheme struct {
+	Own string `json:"own"`
+}
+
+// ownTheme answers OwnTheme of the page slug drawn from a data file (store.OwnTheme): 404 for a page that takes no
+// theme.
+func (s *Server) ownTheme(w http.ResponseWriter, r *http.Request) {
+	own, err := s.cfg.Store.OwnTheme(r.PathValue("slug"))
+	if errors.Is(err, store.ErrNotFound) {
+		notFound(w)
+		return
+	}
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, OwnTheme{Own: own})
 }

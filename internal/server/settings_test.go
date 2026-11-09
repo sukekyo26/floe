@@ -51,6 +51,30 @@ func TestAPISettings(t *testing.T) {
 	}
 }
 
+// A page's theme is picked by name, a theme of the drawing of now or "" for none, and listed; the page is drawn in it,
+// its original theme told apart.
+func TestAPIPickTheme(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	want(t, e.publish(t, "d", report, nil), http.StatusCreated, `"slug":"d"`)
+	const path = "/api/artifacts/d/theme"
+	want(t, e.write(t, http.MethodPut, path, server.ThemePick{Theme: "nope"}), http.StatusBadRequest, `there is no theme \"nope\"; use app, aurora,`)
+	unknown := e.do(t, http.MethodPut, path, `{"theme": "ink", "x": 1}`, "Origin", origin, "Content-Type", "application/json")
+	want(t, unknown, http.StatusBadRequest, `unknown object member name "x"`)
+	want(t, e.write(t, http.MethodPut, "/api/artifacts/none/theme", server.ThemePick{Theme: "ink"}), http.StatusNotFound, "not found")
+	want(t, e.write(t, http.MethodPut, path, server.ThemePick{Theme: "ink"}), http.StatusOK, `{"theme":"ink"}`)
+	// Its original theme, without the pick
+	want(t, e.do(t, http.MethodGet, path, ""), http.StatusOK, `{"own":"default"}`)
+	want(t, e.do(t, http.MethodGet, "/api/artifacts/none/theme", ""), http.StatusNotFound, "not found")
+	want(t, e.do(t, http.MethodGet, "/api/artifacts", ""), http.StatusOK, `"pickedTheme":"ink"`)
+	want(t, e.do(t, http.MethodGet, "/a/d/?raw", ""), http.StatusOK, inkAccent)
+	want(t, e.write(t, http.MethodPut, path, server.ThemePick{Theme: ""}), http.StatusOK, `{"theme":""}`)
+	if w := e.do(t, http.MethodGet, "/a/d/?raw", ""); strings.Contains(w.Body.String(), inkAccent) {
+		t.Error("taken off, still in ink")
+	}
+}
+
 // The themes listed are those of the drawing, one's own with its directory and its description as written, floe's
 // described in the reader's language; a settings.json that cannot be read is told beside them.
 func TestAPIThemes(t *testing.T) {

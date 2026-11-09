@@ -72,6 +72,9 @@ type Meta struct {
 	// CreatedTheme is the default theme of settings.json when a page drawn from a data file was first stored, or
 	// replaced by another file's: the default it is drawn with for good, under --theme and the data's theme:.
 	CreatedTheme string `json:"createdTheme,omitempty"`
+	// PickedTheme is the theme picked for the page on the management page (PickTheme), over --theme: kept across
+	// republishes and rebuilds, dropped when another file's page replaces it.
+	PickedTheme string `json:"pickedTheme,omitempty"`
 	// Template is the template a stored page is drawn with, read from its data file at each publish and rebuild.
 	Template string `json:"template,omitempty"`
 	// Source is the directory of a stored page's copy, under its own; a new one each publish and rebuild.
@@ -108,6 +111,17 @@ type Version struct {
 // IsLink reports whether the entry is a linked file or folder.
 func (m *Meta) IsLink() bool {
 	return m.Path != ""
+}
+
+// GivenTheme is the theme the page is drawn in over its data's theme:, "" for none: the one picked on the management
+// page, else --theme.
+func (m *Meta) GivenTheme() string {
+	return cmp.Or(m.PickedTheme, m.Theme)
+}
+
+// TakesTheme reports whether a theme can be picked for the entry: a page drawn from a data file, stored or linked.
+func (m *Meta) TakesTheme() bool {
+	return !m.IsLink() || m.IsData()
 }
 
 // IsData reports whether the entry is a linked data file, drawn each time it is opened: by what it is, so that a
@@ -356,6 +370,8 @@ type Listed struct {
 	// VersionCount tells whether there are versions to compare, the versions themselves left out of the list.
 	VersionCount int   `json:"versionCount,omitempty"`
 	Missing      *bool `json:"missing,omitempty"`
+	// Themed tells a page a theme can be picked for (Meta.TakesTheme).
+	Themed bool `json:"themed,omitempty"`
 }
 
 // slugs returns the slugs of the store, in their order: the names under it that can be one.
@@ -403,6 +419,7 @@ func (s *Store) List(viewer string) ([]Listed, error) {
 func (s *Store) listed(slug string, m *Meta, r *reader) Listed {
 	l := Listed{
 		Slug: slug, Meta: *m, TaskProject: ProjectKey(m.Project), News: "", Version: 0, VersionCount: 0, Missing: nil,
+		Themed: m.TakesTheme(),
 	}
 	// The list is read every few seconds: versions are asked for a page at a time.
 	l.Versions = nil

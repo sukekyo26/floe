@@ -170,8 +170,8 @@ func TestLookBroken(t *testing.T) {
 	}
 }
 
-// A version changes with a publish, a linked data file saved, the drawing read again and a restart; not with
-// nothing.
+// A version changes with a publish, a linked data file saved, the drawing read again, a theme picked and a restart;
+// not with nothing.
 func TestVersion(t *testing.T) {
 	t.Parallel()
 
@@ -203,6 +203,14 @@ func TestVersion(t *testing.T) {
 	s.look()
 	if s.version("d", s.cfg.Store.ReadMeta("d"), "", 0) == v {
 		t.Error("the drawing read again, the version is the same")
+	}
+	v = s.version("d", s.cfg.Store.ReadMeta("d"), "", 0)
+	d, _ = s.now()
+	if err := s.cfg.Store.PickTheme(d, "d", "ink"); err != nil {
+		t.Fatal(err)
+	}
+	if s.version("d", s.cfg.Store.ReadMeta("d"), "", 0) == v {
+		t.Error("a theme picked, the version is the same")
 	}
 	again, _ := watched(t, false)
 	if again.id == s.id {

@@ -984,7 +984,7 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	defer b.unsize()
 
 	// The bar of the box and its menu, opened and closed, by what each thing is: only what is seen.
-	const named = `const name = (e) => ['diff-open', 'fav-item', 'mark-unread', 'select', 'tag-item', 'pin-item', 'task-set', 'task-open', 'edit', 'copy', 'download', 'open', 'archive', 'star', 'delete'].find((c) => e.classList.contains(c));`
+	const named = `const name = (e) => ['diff-open', 'fav-item', 'mark-unread', 'select', 'tag-item', 'theme-item', 'pin-item', 'task-set', 'task-open', 'edit', 'copy', 'download', 'open', 'archive', 'star', 'delete'].find((c) => e.classList.contains(c));`
 	shown := func(box string) string {
 		t.Helper()
 
@@ -1127,14 +1127,14 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 	})()`))
 
 	check(t, "bar", out, strings.Join([]string{
-		"diff-open download open archive star more | mark-unread tag-item pin-item task-set edit delete",
-		"download open archive star more | mark-unread tag-item pin-item task-set edit delete",
+		"diff-open download open archive star more | mark-unread tag-item theme-item pin-item task-set edit delete",
+		"download open archive star more | mark-unread tag-item theme-item pin-item task-set edit delete",
 		"download open archive star more | tag-item pin-item task-set edit copy delete",
 		"archive star more | tag-item pin-item task-set edit copy delete",
-		"mark-unread select tag-item pin-item task-set edit open download delete",
+		"mark-unread select tag-item theme-item pin-item task-set edit open download delete",
 		"archive star more | tag-item pin-item task-set edit copy delete",
-		"diff-open download open archive star more | mark-unread tag-item pin-item task-set edit delete",
-		"download open archive star more | tag-item task-set edit delete",
+		"diff-open download open archive star more | mark-unread tag-item theme-item pin-item task-set edit delete",
+		"download open archive star more | tag-item theme-item task-set edit delete",
 		"Restore / Restore Kept to the list /  / true / false",
 		"Archive / Archive Kept /  / false / true", "true",
 		"/api/artifacts/two/download ",
@@ -1142,16 +1142,16 @@ func TestUIBarActions(t *testing.T) { //nolint:paralleltest // the browser tests
 		"Restore / Restore One to the list /  / true / false",
 		"1 / Archived “One”Restore / true",
 		"true",
-		"diff-open download open archive star more | mark-unread tag-item pin-item task-set edit delete",
-		"diff-open more | fav-item mark-unread tag-item pin-item task-set edit open download archive delete",
+		"diff-open download open archive star more | mark-unread tag-item theme-item pin-item task-set edit delete",
+		"diff-open more | fav-item mark-unread tag-item theme-item pin-item task-set edit open download archive delete",
 		"1 1 true",
 		"Add to favorites / Add Two to favorites",
 		"Remove from favorites / Remove Two from favorites",
 		"Add to favorites / Add Two to favorites",
 		"true", "true",
-		"more | fav-item mark-unread tag-item pin-item task-set edit open download archive delete",
+		"more | fav-item mark-unread tag-item theme-item pin-item task-set edit open download archive delete",
 		"more | fav-item tag-item pin-item task-set edit copy open download archive delete",
-		"more | fav-item tag-item task-set edit open download archive delete",
+		"more | fav-item tag-item theme-item task-set edit open download archive delete",
 		"on the menu",
 		"copy open | ",
 		"true true",

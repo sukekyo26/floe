@@ -17,7 +17,6 @@ import (
 	"github.com/sukekyo26/floe/internal/files"
 	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/store"
-	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
 
@@ -91,7 +90,7 @@ func (s *Server) version(slug string, m *store.Meta, rest string, v int) string 
 	}
 	if rest == "" && m.IsData() {
 		_, gen := s.now()
-		return s.id + "." + strconv.Itoa(gen) + "." + files.Mark(file) + "." + m.UpdatedAt
+		return s.id + "." + strconv.Itoa(gen) + "." + files.Mark(file) + "." + m.UpdatedAt + "." + m.PickedTheme
 	}
 	return s.id + "." + files.Mark(file)
 }
@@ -118,9 +117,10 @@ func (s *Server) content(
 		return none, errNoPage
 	}
 	if rest == "" && m.IsData() {
-		page, err := drawLink(slug, m, file, drawing(), cut)
+		page, err := store.DrawLink(drawing(), slug, m, file, cut)
 		if err != nil {
-			return served{body: io.NopCloser(bytes.NewReader(mistakesPage(c, slug, err))), typ: htmlType, drawn: true}, err
+			told := served{body: io.NopCloser(bytes.NewReader(mistakesPage(c, slug, err))), typ: htmlType, drawn: true}
+			return told, err //nolint:wrapcheck // its mistakes, which the page of them tells
 		}
 		return served{body: io.NopCloser(bytes.NewReader(page)), typ: htmlType, drawn: true}, nil
 	}
@@ -164,27 +164,6 @@ type served struct {
 	body  io.ReadCloser
 	typ   string
 	drawn bool
-}
-
-// drawLink draws the linked data file file of slug, whose meta.json is m, with drawing: in its theme, under slug
-// for a page of no title, its images under its real directory.
-func drawLink(slug string, m *store.Meta, file string, drawing store.Drawing, cut bool) ([]byte, error) {
-	if drawing.Err != nil {
-		return nil, drawing.Err
-	}
-	src, _, err := files.Read(file)
-	if err != nil {
-		return nil, usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
-	}
-	images := files.NewRoot(filepath.Dir(file))
-	defer images.Close() //nolint:errcheck // only read from
-	o := tmpl.Options{
-		Theme: m.Theme, Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: "", Icons: drawing.Icons,
-		CutOff: cut,
-	}
-	// Its warnings are the writer's, whom publish and check tell; one who opens the page cannot mend them.
-	page, _, err := tmpl.Draw(drawing.Kit, file, src, o)
-	return page, err //nolint:wrapcheck // its mistakes, or what failed
 }
 
 // pageHeaders sets the headers of what a page serves, in the sandbox: of a page floe drew (drawn), cut off but the

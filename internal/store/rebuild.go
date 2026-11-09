@@ -73,12 +73,13 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 		return lockErr
 	}
 	defer unlock()
-	// Published again, removed or renamed since it was read: what it is now is not what was drawn.
+	// Published again, removed or renamed since it was read: what it is now is not what was drawn. A theme picked
+	// meanwhile is in a new copy, or the pick alone where the page drawn in it is the one it has, as this one is then.
 	now := s.ReadMeta(slug)
 	if now == nil || now.Source != m.Source {
 		return nil
 	}
-	err = s.keepDrawn(slug, now, got, err)
+	err = s.keepDrawn(slug, now, got, err, false)
 	if err == nil {
 		return nil
 	}
@@ -89,17 +90,18 @@ func (s *Store) rebuildPage(dw Drawing, slug string) error {
 	return append(told, usererr.NewAt(filepath.Join(dir, dataName), 0, 0, "store_rebuild_kept", slug))
 }
 
-// keepDrawn writes what redraw returned, got and err, of the page slug, under the lock: of now, meta.json as it is, so
-// that an edit made while the page was drawn stays. It returns err, or what could not be written.
-func (s *Store) keepDrawn(slug string, now *Meta, got *drawn, err error) error {
+// keepDrawn writes what redraw returned, got (nil for a link, which has no copy) and err, of the page slug, under the
+// lock: of now, meta.json as it is, so that an edit made while the page was drawn stays, and changed by the caller when
+// changed. It returns err, or what could not be written.
+func (s *Store) keepDrawn(slug string, now *Meta, got *drawn, err error, changed bool) error {
 	named := got != nil && got.template != "" && got.template != now.Template
 	if named {
 		now.Template = got.template
 	}
 	switch {
-	case err == nil && got.page != nil:
+	case err == nil && got != nil && got.page != nil:
 		err = s.keepCopy(slug, now, got.src, got.page, got.images, nil)
-	case named:
+	case named || changed:
 		err = usererr.Collect(err, s.WriteMeta(slug, now))
 	}
 	return err
@@ -131,7 +133,8 @@ func redraw(dw Drawing, slug string, m *Meta, dir string) (*drawn, error) {
 	// LIMIT: kit_image_path names the directory of data, not images/, for a name floe no longer reads, which
 	// a publish checked by the same rule. Have draw name it by ImagesDir too if the rule comes to change.
 	o := tmpl.Options{
-		Theme: m.Theme, Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: imagesDir, Icons: dw.Icons,
+		Theme: m.GivenTheme(), Default: m.CreatedTheme, Untitled: slug, Images: images, ImagesDir: imagesDir,
+		Icons:  dw.Icons,
 		CutOff: false,
 	}
 	// Its warnings are of the copy, which no one mends: a publish of the data file tells them.
