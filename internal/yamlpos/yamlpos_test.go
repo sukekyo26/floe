@@ -15,7 +15,7 @@ import (
 
 const (
 	anchors = "anchors, aliases, merge keys (<<) and tags are not supported; write the value out"
-	cutAt   = "a # after a space began a YAML comment, which may have cut the value short, to %s: put the value in quotes if the # is part of it, or write the comment on a line of its own"
+	cutAt   = "a # began a YAML comment, which may have cut the value short, to %s: if the # is part of the value, put the value in quotes, or, in a | or > text, indent all its lines alike, the # line too, or write its indentation after the | or > (like |2); else write the comment on a line of its own, no deeper than the value's key (or the - of an item)"
 	bom     = "\xef\xbb\xbf"
 )
 
@@ -57,6 +57,9 @@ func TestParse(t *testing.T) {
 		{"title: a: b\n", "a.yaml:1:8: mapping value is not allowed in this context"},
 		{"title: `x`\n", "a.yaml:1:8: '`' is a reserved character"},
 		{"lang: en\nlang: ja\n", `a.yaml:2:1: mapping key "lang" already defined at [1:1]`},
+		// A | text whose first line is deeper ends before a shallower line, which goccy/go-yaml refuses as
+		// YAML 1.2 does: were it read silently, it would be a misreading to refuse.
+		{"t: |\n    a\n  b\n", "a.yaml:3:3: value is not allowed in this context. map key-value is pre-defined"},
 		// One document.
 		{"lang: en\n---\ntitle: x\n", "a.yaml:2:1: a YAML file holds one document: write it as one, without --- between parts"},
 		{"lang: en\n---\nx: &a 1\n", "a.yaml:2:1: a YAML file holds one document: write it as one, without --- between parts"},
@@ -112,7 +115,7 @@ func TestParse(t *testing.T) {
 		{bom + "title: Plan #1 draft\n", "a.yaml:1:13: " + fmt.Sprintf(cutAt, "Plan")},
 		{bom + "%YAML 1.2\n---\nlang: en\n", ""},
 		{bom + "---\n---\n", "a.yaml:2:1: a YAML file holds one document: write it as one, without --- between parts"},
-		// LIMIT: text a , or a comment line cut, as the LIMITs of cut tell.
+		// LIMIT: text a , cut, as the LIMIT of node tells.
 		{"x: [1,500 words]\n", ""},
 		// A plain value YAML 1.2 reads otherwise than goccy/go-yaml, told with a way both read alike.
 		{"x: 017\n", "a.yaml:1:4: " + octal("017", "15", "17", "0o17")},
@@ -150,7 +153,32 @@ func TestParse(t *testing.T) {
 		// A comment after a number, true or ~ cuts no text; text cut to a number is the schema's, by its type.
 		{"enabled: true  # turn on\nx: 3 #c\ny: ~ #c\n", ""},
 		{"title: 2024 #1\n", ""},
-		{"title: Plan\n  #1 draft\n", ""},
+		// A comment right after a value, deeper than its key or -, on a line of its own: a # line shallower than a
+		// | or > text's indentation, the first line deeper or not, or a line of a plain value over lines.
+		{"t: |\n    a\n  # h\nb: 1\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "a")},
+		{"t: |\n  a\n # h\nb: 1\n", "a.yaml:3:2: " + fmt.Sprintf(cutAt, "a")},
+		{"t: >\n    a\n  # h\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "a")},
+		{"t: |+\n    a\n\n  # h\nb: 1\n", "a.yaml:4:3: " + fmt.Sprintf(cutAt, "a")},
+		{"- |\n    a\n  # h\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "a")},
+		{"m:\n  t: |\n      a\n    # h\n    # i\n  b: 1\n", "a.yaml:4:5: " + fmt.Sprintf(cutAt, "a")},
+		{"a:\n  - x\n    # c\n", "a.yaml:3:5: " + fmt.Sprintf(cutAt, "x")},
+		{"title: Plan\n  #1 draft\nb: 1\n", "a.yaml:2:3: " + fmt.Sprintf(cutAt, "Plan")},
+		{"title: Plan\n  draft\n  #2\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "Plan draft")},
+		{"title: Plan\r  draft #1\rb: 1\r", "a.yaml:2:9: " + fmt.Sprintf(cutAt, "Plan draft")},
+		{"? Plan #1\n: x\n", "a.yaml:1:8: " + fmt.Sprintf(cutAt, "Plan")},
+		{"? a\n: x\n  # c\n", "a.yaml:3:3: " + fmt.Sprintf(cutAt, "x")},
+		// A comment no deeper than the key or - cuts nothing, nor a # line a text holds.
+		{"t: |\n  a\n# real\nb: 1\n", ""},
+		{"m:\n  t: |\n    a\n  # real\n  b: 1\n", ""},
+		{"a:\n  - x\n  # c\n", ""},
+		{"t: |\n  a\n  # in text\n", ""},
+		{"t: |2\n    a\n  # in text\n", ""},
+		{"t: |+\n\n\n  # h\n", ""},
+		{"q: \"a\"\n  # after\n", ""},
+		{"n: 3\n  # after\n", ""},
+		{"t: |\n", ""},
+		// LIMIT: only the comment right after the value, as the LIMIT of cut tells.
+		{"t: |\n    a\n# real\n  # h\n", ""},
 	} {
 		_, err := yamlpos.Parse("a.yaml", []byte(tt.src))
 		if got := told(err); got != tt.want {

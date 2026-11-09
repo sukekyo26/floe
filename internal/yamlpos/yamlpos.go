@@ -203,7 +203,7 @@ func Parse(file string, src []byte) (ast.Node, error) {
 		return nil, err
 	}
 	w := &walk{file: file, found: nil, failed: nil}
-	w.node(body)
+	w.node(body, 0)
 	if w.failed != nil {
 		return nil, w.failed
 	}
@@ -461,10 +461,11 @@ func (w *walk) wrapper(n ast.Node) bool {
 	return false
 }
 
+// node walks n, whose owner is the column of the key or - it is the value of, 0 for the body.
 // LIMIT: a , in [ ] ends a plain text too, [1,500 words] being two items, which is not caught: either half
 // is an item as right as any. Nor is a , in { } before a rest with ": " in it ({ label: 1,500 words: many }
 // reads a key 500 words of the value many). Catch them if a schema comes to take such text.
-func (w *walk) node(n ast.Node) {
+func (w *walk) node(n ast.Node, owner int) {
 	if w.wrapper(n) {
 		return
 	}
@@ -474,14 +475,21 @@ func (w *walk) node(n ast.Node) {
 			w.pair(v, n.IsFlowStyle)
 		}
 	case *ast.SequenceNode:
-		for _, v := range n.Values {
-			w.node(v)
+		for i, v := range n.Values {
+			// A flow item's Start is a , or nil, and no comment comes after it: flowComments refuses one first.
+			item := owner
+			if i < len(n.Entries) && n.Entries[i].Start != nil {
+				item = n.Entries[i].Start.Position.Column
+			}
+			w.node(v, item)
 		}
+	case *ast.LiteralNode:
+		w.cut(n.Value, owner)
 	case *ast.IntegerNode, *ast.FloatNode, *ast.InfinityNode, *ast.NanNode, *ast.StringNode:
 		// A number refused may have been cut short too: quoting it as told would drop the comment unseen.
 		refused := w.number(n)
 		if _, isText := n.(*ast.StringNode); isText || refused {
-			w.cut(n)
+			w.cut(n, owner)
 		}
 	}
 }
@@ -511,47 +519,45 @@ func (w *walk) pair(v *ast.MappingValueNode, flow bool) {
 		return
 	}
 	key := KeyOf(v)
+	owner := v.Key.GetToken().Position.Column
 	text, isText := key.(*ast.StringNode)
 	switch {
 	case w.wrapper(key):
 	case !isText || number12(text):
 		w.found = append(w.found, New(w.file, Of(key), "yaml_key_not_text", key.GetToken().Value))
-	case w.cut(text):
+	case w.cut(text, owner):
 	default:
 		if flow && v.Start.Type != token.MappingValueType {
 			w.found = append(w.found, New(w.file, Of(key), "yaml_flow_key_alone", Head(key.GetToken().Value)))
 		}
 	}
-	w.node(v.Value)
+	w.node(v.Value, owner)
 }
 
-// cut refuses n, a text, and reports it, when a comment on its last line may have cut it short. YAML reads
-// " #" in a plain value as the start of a comment, and the value as what is before it, which no later check
-// sees is short. The comment may be the author's, which floe cannot tell from text cut short, so either is
-// refused. A comment after a quoted value cuts nothing. The caller gives it text, and a number it refused,
-// not a number, true or ~ it takes, which the text cut short would not read as: an item that takes text
-// refuses such a number by its type, and one that takes a number gets one. A value in { } or [ ] has no comment
-// after it here: flowComments refuses one before the parser.
+// cut refuses n, a text, and reports it, when the comment right after it is deeper than owner, the column of
+// its key (its ? when written with one) or -, which may have cut it short. YAML reads " #" in a plain value as
+// the start of a comment, ending the value, and a # line shallower than a | or > text's indentation as a
+// comment after it, ending the text; no later check sees either is short. A line deeper than owner is one YAML
+// 1.2 could have read as part of the value, so the rule needs no context. The comment may be the author's, on
+// the value's line or indented deeper on one of its own, which floe cannot tell from text cut short, so either
+// is refused. A comment after a quoted value cuts nothing. A value in { } or [ ] has no comment after it here:
+// flowComments refuses one before the parser.
+// LIMIT: only the comment right after the value is judged: one after a comment no deeper than owner
+// (t: |, "    a", "# real", "  # h") passes; judge the comments after it too if text is lost so.
+// LIMIT: the caller gives it text, and a number it refused, not a number, true or ~ it takes, after which a
+// comment is not judged: an item that takes text refuses such a value by its type.
 // LIMIT: text cut to a number both read alike (title: 2024 #1) passes; catch it if a schema takes such text.
-// LIMIT: a line of a plain value over lines that begins with # is a comment, and the value ends before it
-// (title: Plan, then "  #1 draft"), which is not caught: the comment is not after the value's text.
-func (w *walk) cut(n ast.Node) bool {
+// LIMIT: a body of text alone (x, then "# c") has no key, so the comment cannot be written shallower as told,
+// only left out; the files floe reads have keys at their top.
+func (w *walk) cut(n ast.Node, owner int) bool {
 	tk := n.GetToken()
 	if QuoteOf(n) != Plain || tk.Next == nil || tk.Next.Type != token.CommentType ||
-		tk.Next.Position.Line != lastLine(tk) {
+		tk.Next.Position.Column <= owner {
 		return false
 	}
 	c := tk.Next.Position
 	w.found = append(w.found, usererr.NewAt(w.file, c.Line, c.Column, "yaml_comment_cut", endOf(tk.Value)))
 	return true
-}
-
-// lastLine returns the line the text of tk ends on, which a plain value written over lines does after
-// the line it begins on.
-// LIMIT: a CR alone ending a line is not counted, so a comment cutting such a value is not caught; count the
-// lines as textpos does if one comes to matter.
-func lastLine(tk *token.Token) int {
-	return tk.Position.Line + strings.Count(strings.TrimSpace(tk.Origin), "\n")
 }
 
 // shownEnd is how many characters of a value cut short its mistake shows: its end, where the cut is.
@@ -571,7 +577,7 @@ func Head(text string) string {
 // which a blank line in a value over lines makes, as a space, and only the last shownEnd characters
 // after "…" of a longer one.
 func endOf(value string) string {
-	r := []rune(strings.ReplaceAll(value, "\n", " "))
+	r := []rune(strings.ReplaceAll(strings.TrimRight(value, "\n"), "\n", " "))
 	if len(r) <= shownEnd {
 		return string(r)
 	}
