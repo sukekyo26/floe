@@ -34,7 +34,7 @@ sections:
           | Day | What |
           | --- | --- |
           | Saturday | copy the pages |
-      - text: <div>Raw HTML alone, which a text draws nothing of</div>
+      - text: <div>Raw HTML, drawn as the text written</div>
       - steps:
           - { title: Freeze edits on the old wiki, text: "On **Friday evening**.\n\n| Day | Pages |\n| --- | --- |\n| Friday | 1,840 |\n\nNothing is edited after.", state: done, tags: ['[PR #428](https://example.com/428)', { pill: merged, tone: good }] }
           - { title: Copy the pages and check the links, text: '> Broken links first: [the report](https://example.com/report).', state: doing, tags: ['[PR #431](https://example.com/431)', 'after #428', '`linkcheck`', { pill: waiting }] }

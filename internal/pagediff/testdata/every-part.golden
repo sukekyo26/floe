@@ -38,6 +38,7 @@
   [p] Read-only means read-only: the freeze covers comments too.
   [tr] Day | What
   [tr] Saturday | copy the pages
+  [p] <div>Raw HTML, drawn as the text written</div>
   [li] Done: Freeze edits on the old wiki
   [div] PR #428 merged
   [p] On Friday evening.

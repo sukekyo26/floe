@@ -47,7 +47,7 @@ ul, ol { padding-left: 1.3rem; display: grid; gap: 0.3rem; }
 :where([data-floe-part]) > * { --face: initial; --on-face: initial; --floe-pill-wrap: initial; }
 /* Markdown a part holds, a text's too, in a box of no part (MarkdownFlow), and a template's own Markdown in a box of
    its own (Markdown): its blocks stand --floe-room apart, as parts do, and what places the box spaces it alone, not
-   its blocks; Markdown of raw HTML alone draws no box. page.css reaches in a template's box, to arrange it, not in a
+   its blocks; empty Markdown draws no box. page.css reaches in a template's box, to arrange it, not in a
    text's. What a quote or a list holds is spaced below.
    LIMIT: a template's Markdown placed in a part's box (a note of its own) is spaced so too, not as the part spaces
    what it holds, and page.css stops at the part's box there; floe's templates place none so */
@@ -510,13 +510,13 @@ over two lines.</p>
 <td style="text-align:right">1</td>
 </tr>
 <tr>
-<td><!-- raw HTML omitted --></td>
+<td>&lt;b&gt;</td>
 <td style="text-align:right">2 &amp; 3</td>
 </tr>
 </tbody>
 </table></div>
 <hr/>
-<p>Text with <!-- raw HTML omitted -->Ctrl<!-- raw HTML omitted --> and an escaped *star*, &amp; &lt; &gt; &#34; &#39;.</p></div>
+<p>Text with &lt;kbd&gt;Ctrl&lt;/kbd&gt; and an escaped *star*, &amp; &lt; &gt; &#34; &#39;.</p></div>
 <figure data-floe-part="code"><figcaption><span class="lang">go</span></figcaption><pre><code class="lines"><span data-floe-copy="">func main() { fmt.Println(&#34;&lt;hi&gt;&#34;) }
 </span></code></pre><script>(function copyButton(words) {
   const part = document.currentScript.closest('[data-floe-part]');
