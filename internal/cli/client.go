@@ -120,6 +120,7 @@ func readImages(dir, file string, names []string) (map[string][]byte, error) {
 var sentAt = map[string]string{
 	"/path": "argument 1", "/file": "argument 1", "/slug": "--slug", "/title": "--title", "/description": "--description",
 	"/theme": "--theme", "/tags/add": "--add", "/tags/remove": "--remove",
+	"/state": "--state", "/step": "--step", "/url": "--url", "/steps": "--steps", "/parent": "--parent",
 	"/project": "the project name (of the git remote, the repository's directory or the working directory)",
 }
 
@@ -130,6 +131,16 @@ func notUTF8(err error) bool {
 	want, known := errors.AsType[*jsontext.SyntacticError](probe)
 	got, syntax := errors.AsType[*jsontext.SyntacticError](err)
 	return known && syntax && errors.Is(got.Err, want.Err)
+}
+
+// encodeSent is body encoded once, before the server is asked or started, for c.do to send as it is: a text given
+// that is no UTF-8 is refused first, by where it was given (sentAt).
+func encodeSent(body any) (jsontext.Value, error) {
+	b, err := encode(body, sentAt)
+	if err != nil {
+		return nil, err
+	}
+	return jsontext.Value(b), nil
 }
 
 // encode is body as the server reads it, with encoding/json/v2: nil maps as null (a jsontext.Value as it is). A
