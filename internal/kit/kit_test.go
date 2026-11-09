@@ -111,8 +111,8 @@ func TestEntryFiles(t *testing.T) {
 		{k.Parts, "panel", "part.yaml, part.css"},
 		{k.Parts, "tone", "tone.json"},
 		{k.Templates, "design", "schema.json, computed.yaml, example.yaml, page.html, page.css, words.yaml"},
-		{k.Themes, "retro", "palette.css, base.css, markdown.css, cards.css, cell.css, chart.css, note.css, panel.css, table.css"},
-		{k.Themes, "ink", "palette.css, markdown.css, cards.css, cell.css, code.css, note.css, panel.css, table.css"},
+		{k.Themes, "retro", "theme.yaml, palette.css, base.css, markdown.css, cards.css, cell.css, chart.css, note.css, panel.css, table.css"},
+		{k.Themes, "ink", "theme.yaml, palette.css, markdown.css, cards.css, cell.css, code.css, note.css, panel.css, table.css"},
 	} {
 		if got := names(tt.entries(), tt.name); got != tt.want {
 			t.Errorf("%s shows %s, want %s", tt.name, got, tt.want)
@@ -294,6 +294,73 @@ func TestReadMistakes(t *testing.T) {
 		k, err := kit.Read(nil, kit.Sources{Parts: kit.Dir{FS: tt.parts, Name: "parts"}})
 		if got := told(err); got != tt.want || k != nil {
 			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+	}
+}
+
+// A theme's theme.yaml gives its description, on one line, and none without one; any other key or shape, or a
+// description not text, is refused at its line and column, the mistakes of every theme together.
+func TestThemeAbout(t *testing.T) {
+	t.Parallel()
+
+	read := func(files map[string]string) (*kit.Kit, error) {
+		fsys := fstest.MapFS{}
+		for name, src := range files {
+			fsys[name] = &fstest.MapFile{Data: []byte(src)}
+		}
+		return kit.Read(nil, kit.Sources{Themes: kit.Dir{FS: fsys, Name: "themes"}})
+	}
+	for _, tt := range []struct{ name, yaml, want string }{
+		{"text", "description: Dark ink on grey\n", "Dark ink on grey"},
+		{"empty file", "", ""},
+		{"empty text", "description: \"\"\n", ""},
+		{"digits in quotes", "description: \"1\"\n", "1"},
+		{"lines", "description: |\n  Ink on paper,\n  near black\n", "Ink on paper, near black"},
+	} {
+		k, err := read(map[string]string{"t/palette.css": "", "t/theme.yaml": tt.yaml, "u/palette.css": ""})
+		if err != nil {
+			t.Fatalf("%s: %s", tt.name, told(err))
+		}
+		got := map[string]string{}
+		for _, e := range k.Themes() {
+			got[e.Name] = e.About
+		}
+		if got["t"] != tt.want || got["u"] != "" {
+			t.Errorf("%s: described %q, and one without theme.yaml %q; want %q and none", tt.name, got["t"], got["u"], tt.want)
+		}
+	}
+	const notMap = "write theme.yaml as keys and values: description:, what the theme is"
+	const notText = "write description: as text, what the theme is"
+	for _, tt := range []struct{ name, yaml, want string }{
+		{"another key", "looks: [panel]\n", "themes/t/theme.yaml:1:1: looks is not a key of theme.yaml; write description:, what the theme is"},
+		{"a list", "- a\n", "themes/t/theme.yaml:1:1: " + notMap},
+		{"text alone", "abc\n", "themes/t/theme.yaml:1:1: " + notMap},
+		{"a list for text", "description: [x]\n", "themes/t/theme.yaml:1:14: " + notText},
+		{"a number", "description: 1\n", "themes/t/theme.yaml:1:14: " + notText},
+		{"null", "description: ~\n", "themes/t/theme.yaml:1:14: " + notText},
+		{"no value", "description:\n", "themes/t/theme.yaml:1:1: " + notText},
+	} {
+		k, err := read(map[string]string{"t/theme.yaml": tt.yaml})
+		if got := told(err); got != tt.want || k != nil {
+			t.Errorf("%s: told\n%s\nwant\n%s", tt.name, got, tt.want)
+		}
+	}
+	_, err := read(map[string]string{"a/theme.yaml": "looks: [panel]\n", "b/theme.yaml": "description: [x]\n"})
+	if want := lines(
+		"themes/a/theme.yaml:1:1: looks is not a key of theme.yaml; write description:, what the theme is",
+		"themes/b/theme.yaml:1:14: "+notText,
+	); told(err) != want {
+		t.Errorf("two themes: told\n%s\nwant\n%s", told(err), want)
+	}
+}
+
+// Each of floe's themes has a description, which floe theme list prints.
+func TestFloeThemesDescribed(t *testing.T) {
+	t.Parallel()
+
+	for _, e := range floe(t).Themes() {
+		if e.About == "" {
+			t.Errorf("floe's theme %s has no description: write the theme's description: in its theme.yaml", e.Name)
 		}
 	}
 }

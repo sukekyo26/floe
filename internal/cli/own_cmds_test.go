@@ -217,7 +217,7 @@ func TestListShow(t *testing.T) {
 		{[]string{"template", "show", "memo", "computed.yaml"}, 0, func(out string) bool { return out == "n: 1\n" }, ""},
 		{[]string{"template", "show", "nope"}, 1, func(out string) bool { return out == "" }, `floe: unknown template "nope"; use adr, design, handoff, memo, postmortem, report, runbook, slides` + "\n"},
 		{[]string{"theme", "list"}, 0, func(out string) bool {
-			return strings.HasPrefix(out, "app\tfloe\t-\t\n") && strings.Contains(out, "\nmine\t"+filepath.Join(themes, "mine")+"\t-\t\n")
+			return strings.HasPrefix(out, "app\tfloe\t-\tAn app's screen: cool grey ground, white cards raised by soft shadows, a raspberry accent\n") && strings.Contains(out, "\nmine\t"+filepath.Join(themes, "mine")+"\t-\t\n")
 		}, ""},
 		{[]string{"theme", "show", "mine"}, 0, func(out string) bool {
 			return out == "mine\nwhere: "+filepath.Join(themes, "mine")+"\nfiles: palette.css, base.css, code.css\n"

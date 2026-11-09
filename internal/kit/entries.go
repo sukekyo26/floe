@@ -145,7 +145,7 @@ func (k *Kit) Themes() []Entry {
 	for at := k; at != nil; at = at.base {
 		for _, t := range at.themes {
 			all = append(all, Entry{
-				Name: t.name, About: "", Shape: "-", Dir: at.own(t.dir), Looks: nil, Files: copied(t.files),
+				Name: t.name, About: t.about, Shape: "-", Dir: at.own(t.dir), Looks: nil, Files: copied(t.files),
 			})
 		}
 	}

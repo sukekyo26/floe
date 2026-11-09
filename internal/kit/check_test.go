@@ -71,7 +71,7 @@ func TestCheckMistakes(t *testing.T) {
 			"a file a theme does not read", part,
 			map[string]string{"t/tabel.css": "a{}"},
 			nil,
-			"own/themes/t/tabel.css: floe reads no file of this name in a theme: a theme holds base.css, markdown.css, palette.css and a <part>.css for each part or look it styles; rename it after one, or remove it",
+			"own/themes/t/tabel.css: floe reads no file of this name in a theme: a theme holds theme.yaml (its description:), base.css, markdown.css, palette.css and a <part>.css for each part or look it styles; rename it after one, or remove it",
 		},
 		{"part.css", with(map[string]string{"p/part.css": "}\n@import \"x\";\n"}), nil, nil, lines(
 			"own/parts/p/part.css:1:1: "+braceTold,

@@ -8,6 +8,7 @@ floe の主要な変更を記録します。フォーマットは
 
 ### 追加
 
+- 追加：テーマに説明を持たせる。テーマのディレクトリの `theme.yaml` に `description:` を書き、`floe theme list` と `floe theme show` が出す。floe のテーマはどれも説明を持つ。
 - 追加：`floe template list`・`part list`・`theme list`・`diagram example` の各行の、場所と説明の間に形を出す。値に書く鍵（項目の並びなら頭に `[] `、1 つだけ書くなら `one of `）、format か floe の部品の名前、一覧が正しく言えないときは `-`（`floe part show <名前>` の `files:` の行が読むファイルを名指す）。`floe diagram example` も同じ 4 列で並べる。
 - 追加：`floe tag <slug>... --add <名前> --remove <名前>`。コマンドからページにタグを付け、外す。ページは順に、無いページで止まる。名前は書いたとおりに 1 つでカンマでも分けず、外す名前を先に外すので、両方に書いた名前は付いたまま。管理ページのタグのモーダルは、そこで変えたタグだけを送るようにし、その間に `floe tag` やほかのタブが書いたタグは残る。
 - 追加：`details`・`tabs`・`columns` と、`entries`・`checks`・`options` の 1 件の `parts` に、`tabs`・`columns`・`html` のほかの全部の部品を置けるようにした（`options`・`steps`・`facts`・`stats`、`details` の中の `details` など）。`html` は、その `</form>` がまわりの `tabs` の form を閉じるので、置けないまま。
