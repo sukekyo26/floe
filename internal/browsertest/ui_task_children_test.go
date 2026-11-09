@@ -357,7 +357,7 @@ func TestUITaskChildren(t *testing.T) { //nolint:paralleltest // the browser tes
 	b.eval("window.realFetch = window.fetch; window.fetch = (url, init) => (init?.method === 'DELETE' ? Promise.resolve(new Response('it has a page', { status: 400 })) : window.realFetch(url, init))")
 	pressForget()
 	b.until("refused", "!document.getElementById('task-delete-error').hidden")
-	if got := b.eval("document.getElementById('task-delete-error').textContent + ' | ' + document.getElementById('task-delete').textContent"); got != "Failed to remove the task: it has a page | Remove the task" {
+	if got := b.eval("document.getElementById('task-delete-error').textContent + ' | ' + document.getElementById('task-delete').textContent"); got != "Failed to delete the task: it has a page | Delete the task" {
 		t.Errorf("refused: %q", got)
 	}
 	// The connection lost says so too, and the next press takes the words off.
