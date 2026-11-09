@@ -20,7 +20,7 @@ func TestUITaskTodo(t *testing.T) { //nolint:paralleltest // the browser tests s
 	for _, name := range []string{"#a", "#b"} {
 		s.floe(t, "work", "--project", long, "--task", name)
 	}
-	s.floe(t, "work", "--project", long, "--task", "#w", "--state", "waiting")
+	s.floe(t, "work", "--project", long, "--task", "#w", "--state", "done")
 	// Times apart, which two writes in a row may not be: tied, the names would give the order looked for
 	file := filepath.Join(s.Env["FLOE_DIR"], "tasks.json")
 	text, err := os.ReadFile(file) //nolint:gosec // G304: a path the test names
@@ -58,7 +58,7 @@ func TestUITaskTodo(t *testing.T) { //nolint:paralleltest // the browser tests s
 			}
 			return [all.length, out, over, document.documentElement.scrollWidth > innerWidth].join(' ');
 		})()`)
-		if want := fmt.Sprintf("%d 0 0 false", 6); got != want {
+		if want := fmt.Sprintf("%d 0 0 false", 5); got != want {
 			t.Errorf("width %d: shown, off the screen, overlapping, wider = %s, want %s", width, got, want)
 		}
 	}

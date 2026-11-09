@@ -22,7 +22,7 @@ paths:
 - **字のあるボタンは `.btn` 1 つ**：角は `--corner-small`。丸い形はアイコンのボタンと、ボタンでない部品に残す。例外：左の列の行（その下の追加のボタンも）は行の形にし、`.btn` にしない。`TestUIButtons`
 - **管理ページの角と字は `:root` の目盛り** [manage-corners]：ui.html の角は `--corner`・`--corner-menu`・`--corner-small` か形（`0`・`50%`・`999px`）で、字の大きさは `--text-label`・`--text-small`・`--text` で書き、目盛りを置くのは `:root` だけ。変数の名前はパレットの変数と分け、default から写さない。`TestLintRule/manage-corners`
 - **版の差分はページの字だけを持ち出す**：版を比べるのは `pagediff.Compare` 1 つで、答えは字だけ。管理ページは `textContent` で描き、ページの HTML を管理ページへ入れない。go-diff を import できるのは `internal/pagediff` だけ（depguard の規則 `go-diff-in-pagediff`）
-- **一覧の並びは `arrange` 1 つ、色の順は `projectOrder` 1 つ**：一覧も右のページの `j` `k` も `arrange` の順。全面の `j` `k` は `keepOrder` が覚えた順。色の順は全部の項目を数えた `projectOrder` だけが決め、絞り込みで変わらない。タスク一覧の並びは `renderTaskList` 1 つで、状態の表の `oldest` で決める
+- **一覧の並びは `arrange` 1 つ、色の順は `projectOrder` 1 つ**：一覧も右のページの `j` `k` も `arrange` の順。全面の `j` `k` は `keepOrder` が覚えた順。色の順は全部の項目を数えた `projectOrder` だけが決め、絞り込みで変わらない。タスク一覧の並びは `renderTaskList` 1 つで、どの状態も状態が変わった新しい順
 - **行は drawRows 1 つで描く**：どの画面の行も `drawRows` で描く。`moveRow` は描いた行を読み、画面ごとに分岐を足さない。タスク一覧の問い合わせは `TASKS_KEY`、`LIST_KEY` はページ一覧だけ。`keepOrder` も描いた行を読む。全面の順と戻り先は `keepOrder` 1 つで持ち、一覧の行を選び直すのは `backToRow` 1 か所だけ
 - **タスクのページの親と子の並びは `#list` の外**：`drawRows` の決まりに入らない
 - **タスク一覧は 1 つのプロジェクトだけ**：`/tasks` は `project` を持ち、無ければ `openingProject` 1 か所が選んで URL に書く。あるプロジェクトは `taskProjects` 1 か所が決め、`projectOrder` は色と順にだけ使う。読めない間は選び直さず、覚えも書かない

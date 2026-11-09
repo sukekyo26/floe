@@ -159,8 +159,8 @@ func TestWorkCommand(t *testing.T) {
 	if _, err := s.Edit("b", store.Edit{Project: ptr("")}); err != nil {
 		t.Fatal(err)
 	}
-	run(0, "work", "b", "--task", "#9", "--state", "waiting")
-	if got := tasks()["/"]["#9"].State; got != "waiting" {
+	run(0, "work", "b", "--task", "#9", "--state", "done")
+	if got := tasks()["/"]["#9"].State; got != "done" {
 		t.Errorf("a page of no project: %v", tasks())
 	}
 	run(0, "work", "b", "--task", "#2")
@@ -183,17 +183,17 @@ func TestWorkCommand(t *testing.T) {
 	}
 
 	// The task alone: of the working directory, of --project, of none.
-	run(0, "work", "--task", "#4", "--state", "waiting")
+	run(0, "work", "--task", "#4", "--state", "done")
 	run(0, "work", "--task", "#5", "--project", "shop")
 	run(0, "work", "--task", "#6", "--project", "")
-	if tasks()["p"]["#4"].State != "waiting" || tasks()["shop"]["#5"].State != "todo" || tasks()["/"]["#6"].State != "todo" {
+	if tasks()["p"]["#4"].State != "done" || tasks()["shop"]["#5"].State != "todo" || tasks()["/"]["#6"].State != "todo" {
 		t.Errorf("tasks alone: %v", tasks())
 	}
 	run(0, "work", "--task", "#a", "--state", "archived")
 	if tasks()["p"]["#a"].State != "archived" {
 		t.Errorf("a task archived: %v", tasks()["p"]["#a"])
 	}
-	if got := run(1, "work", "--task", "#4", "--state", "no"); got != "floe: unknown state \"no\": use todo, doing, waiting, done, archived\n" {
+	if got := run(1, "work", "--task", "#4", "--state", "no"); got != "floe: unknown state \"no\": use todo, doing, done, archived\n" {
 		t.Errorf("a state of none: %q", got)
 	}
 	if got := run(1, "work", "--task", "#4", "--url", "ftp://x/y"); got != "floe: \"ftp://x/y\" is not an http or https URL\n" {
@@ -315,7 +315,7 @@ func TestWorkCommand(t *testing.T) {
 			t.Errorf("--task \"\" %s: %q", flag, got)
 		}
 	}
-	if got := run(0, "work", "--help"); !strings.Contains(got, "the task's state: todo, doing, waiting, done, archived") {
+	if got := run(0, "work", "--help"); !strings.Contains(got, "the task's state: todo, doing, done, archived") {
 		t.Errorf("help: %q", got)
 	}
 	if got := run(1, "work", "a", "--task", "  "); got != "floe: a task needs an ID\n" {
@@ -369,8 +369,8 @@ func TestWorkCommandOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(page, 0o700) }) //nolint:errcheck // for the temporary directory's removal
-	if code, out, errs := runIn(dir, env, "work", "a", "--task", "#1", "--state", "waiting"); code != 1 ||
-		out != "task #1 in project p: made; state waiting\n" {
+	if code, out, errs := runIn(dir, env, "work", "a", "--task", "#1", "--state", "done"); code != 1 ||
+		out != "task #1 in project p: made; state done\n" {
 		t.Fatalf("work on a page that cannot be written = %d, %q, %q; want the task told, as written", code, out, errs)
 	}
 	s := store.New(env["FLOE_DIR"])
@@ -378,7 +378,7 @@ func TestWorkCommandOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := all["p"]["#1"].State; got != "waiting" {
+	if got := all["p"]["#1"].State; got != "done" {
 		t.Errorf("the task was not written first: %v", all)
 	}
 	if got := workOf(t, env, "a"); got != "null" {
@@ -387,8 +387,8 @@ func TestWorkCommandOrder(t *testing.T) {
 	if err := os.Chmod(page, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if code, out, errs := runIn(dir, env, "work", "a", "--task", "#1", "--state", "waiting"); code != 0 ||
-		out != "task #1 in project p: unchanged; state waiting\npage a: task #1 in project p\n" {
+	if code, out, errs := runIn(dir, env, "work", "a", "--task", "#1", "--state", "done"); code != 0 ||
+		out != "task #1 in project p: unchanged; state done\npage a: task #1 in project p\n" {
 		t.Fatalf("given again = %d, %q, %q", code, out, errs)
 	}
 	if got := workOf(t, env, "a"); got != `{"task":"#1"}` {

@@ -50,10 +50,10 @@ func TestWorkAPI(t *testing.T) {
 		t.Errorf("no tasks = %v", got)
 	}
 	// The answer is the row as written, under its keys
-	if code, body := patch(task("/", "#a/b"), `{"state":"waiting","step":"s"}`); code != http.StatusOK || answer(body) != "/ #a/b 1" {
+	if code, body := patch(task("/", "#a/b"), `{"state":"done","step":"s"}`); code != http.StatusOK || answer(body) != "/ #a/b 1" {
 		t.Errorf("a name of / = %d, %s", code, body)
 	}
-	if got := tasks()["/"]["#a/b"]; got.State != "waiting" || got.Step != "s" {
+	if got := tasks()["/"]["#a/b"]; got.State != "done" || got.Step != "s" {
 		t.Errorf("no project's task: %+v", got)
 	}
 	if code, body := patch(task(" shop ", " #1 "), `{}`); code != http.StatusOK || answer(body) != "shop #1 1" {
@@ -124,7 +124,7 @@ func TestWorkAPI(t *testing.T) {
 		{"/api/tasks?task=x", `{}`, `a task needs its project: "/" for none`},
 		{task("  ", "x"), `{}`, `a task needs its project: "/" for none`},
 		{"/api/tasks?project=p", `{}`, "a task needs an ID"},
-		{task("p", "x"), `{"state":"nope"}`, `unknown state "nope": use todo, doing, waiting, done, archived`},
+		{task("p", "x"), `{"state":"nope"}`, `unknown state "nope": use todo, doing, done, archived`},
 		{task("p", "x"), `{"url":"javascript:alert(1)"}`, `"javascript:alert(1)" is not an http or https URL`},
 		{"/api/tasks?project=p&task=%FF", `{}`, "a task's project and ID must be UTF-8"},
 		{"/api/tasks?project=%FF&task=x", `{}`, "a task's project and ID must be UTF-8"},
