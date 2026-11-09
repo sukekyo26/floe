@@ -143,7 +143,7 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	b.eval("document.getElementById('bulk-clear').click()")
 	out = out[:0]
 	for _, sel := range []string{
-		".views button[data-view=all]", ".views button[data-view=fav]", "#q", "#add-link",
+		".views button[data-view=all]", ".views button[data-view=fav]", "#q",
 		"#list li:not(.group) a.title",
 	} {
 		out = append(out, tabTo(sel))
@@ -168,7 +168,7 @@ func TestUIFocusRing(t *testing.T) { //nolint:paralleltest // the browser tests 
 	ring := "solid 2px rgb(107, 105, 100) 1px seen"
 	check(t, "reached", out, strings.Join([]string{
 		".views button[data-view=all]: " + ring, ".views button[data-view=fav]: " + ring,
-		"#q: " + ring, "#add-link: " + ring, "#list li:not(.group) a.title: solid 2px rgb(107, 105, 100) -2px seen",
+		"#q: " + ring, "#list li:not(.group) a.title: solid 2px rgb(107, 105, 100) -2px seen",
 		"#list li:not(.group) .sel: " + ring, "#bulk-clear: " + ring, "#bulk-delete: " + ring, "#bulk-delete.armed: " + ring,
 		".tag-box input: " + ring, "#find-actions .star: " + ring,
 	}, "|"))

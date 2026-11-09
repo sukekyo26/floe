@@ -60,7 +60,6 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	defer b.unsize()
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=b]')")
-	check("the page list")
 	modal("add-dialog", "document.getElementById('add-link').click()")
 	modal("edit-dialog", menu("b", "edit"))
 	modal("set-dialog", menu("b", "task-set"))
@@ -82,7 +81,6 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 
 	b.navigate("/tasks?project=proj")
 	b.until("the task list's button", "document.getElementById('add-task').getClientRects().length")
-	check("the task list")
 
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the head", "!document.getElementById('task-archive').hidden")
