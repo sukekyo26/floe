@@ -5933,6 +5933,7 @@
   let themesRead = null;
   let themesPage = null;
   let themesBack = null;
+  let themesOwn = '';
   async function openThemes(a = null, back = null) {
     if (document.querySelector('dialog[open]')) return;
     themesPage = a;
@@ -5951,6 +5952,8 @@
     $('theme-now').textContent = '';
     $('theme-choose').disabled = true;
     $('settings').showModal();
+    // The theme a page shows in without its own setting, told on its first card: none when it cannot be read
+    const own = a ? api(`/api/artifacts/${encodeURIComponent(a.slug)}/theme`).then((r) => (r.ok ? r.json() : {})).then((o) => o.own ?? '', () => '') : '';
     let got;
     try {
       const res = await api('/api/themes');
@@ -5961,6 +5964,7 @@
       return;
     }
     themesRead = got;
+    themesOwn = await own;
     drawThemes(got);
   }
 
@@ -6004,7 +6008,8 @@
     shrinkShots();
   }
 
-  // A page's themes: first none chosen, which gives the page back to its own; the one chosen checked, or told gone
+  // A page's themes: first the card that removes its setting, checked when it has none; the one chosen checked, or told
+  // gone
   function drawPageThemes(got) {
     const chosen = themesPage.pickedTheme || '';
     const there = !chosen || got.themes.some((th) => th.name === chosen);
@@ -6015,7 +6020,7 @@
       const gone = Object.assign(document.createElement('span'), { className: 'gone', textContent: t('ui_theme_gone') });
       now.replaceChildren(t('ui_theme_picked_label'), b, ' ', gone, t('ui_theme_picked_more'));
     }
-    const none = themeCard({ name: '', about: t('ui_theme_none_about'), dir: '' }, false);
+    const none = themeCard({ name: '', about: themesOwn ? t('ui_theme_unset_named', themesOwn) : t('ui_theme_unset_about'), dir: '' }, false);
     $('theme-grid').replaceChildren(none, ...got.themes.map((th) => themeCard(th, false)));
     const checked = there && $('theme-grid').querySelector(`input[value="${CSS.escape(chosen)}"]`);
     if (checked) checked.checked = true;
@@ -6032,10 +6037,10 @@
     const nm = document.createElement('span');
     nm.className = 'nm';
     if (th.name === '') {
-      // None chosen: no sample, what it means in its place
+      // Removing the page's setting: no sample, what it shows in its place
       shot.classList.add('none');
       shot.textContent = th.about;
-      nm.append(t('ui_theme_none'));
+      nm.append(t('ui_theme_unset'));
       label.append(input, shot, nm);
       return label;
     }
@@ -6091,7 +6096,7 @@
       toast(t('ui_theme_set', theme));
       return;
     }
-    toast(theme ? t('ui_theme_page_set', theme) : t('ui_theme_page_none'));
+    toast(theme ? t('ui_theme_page_set', theme) : t('ui_theme_page_unset'));
     await load();
   }
 

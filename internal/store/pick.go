@@ -1,11 +1,14 @@
 package store
 
 import (
+	"cmp"
 	"errors"
 	"io/fs"
 	"path/filepath"
 
+	"github.com/sukekyo26/floe/internal/doc"
 	"github.com/sukekyo26/floe/internal/files"
+	"github.com/sukekyo26/floe/internal/kit"
 	"github.com/sukekyo26/floe/internal/tmpl"
 	"github.com/sukekyo26/floe/internal/usererr"
 )
@@ -96,4 +99,35 @@ func DrawLink(dw Drawing, slug string, m *Meta, file string, cut bool) ([]byte, 
 	// Its warnings are the writer's, whom publish and check tell; one who opens the page cannot mend them.
 	page, _, err := tmpl.Draw(dw.Kit, file, src, o)
 	return page, err //nolint:wrapcheck // its mistakes, or what failed
+}
+
+// OwnTheme is the theme the page slug drawn from a data file is drawn in without the theme picked for it: --theme, else
+// its data's theme:, else the default it took when first stored, else default, as the drawing picks it. It reads what
+// the page is drawn from, its copy's data file or the linked one. ErrNotFound for a page that takes no theme.
+func (s *Store) OwnTheme(slug string) (string, error) {
+	m := s.ReadMeta(slug)
+	if m == nil || !m.TakesTheme() {
+		return "", ErrNotFound
+	}
+	var file string
+	var ok bool
+	if m.IsLink() {
+		file, ok = s.File(slug, m, "")
+	} else {
+		var dir string
+		dir, ok = s.copyDir(slug, m)
+		file = filepath.Join(dir, dataName)
+	}
+	if !ok {
+		return "", ErrNotFound
+	}
+	src, _, err := files.Read(file)
+	if err != nil {
+		return "", usererr.CannotRead(file, err) //nolint:wrapcheck // the system's words, at the file
+	}
+	d, err := doc.Read(file, src, m.Theme)
+	if d == nil {
+		return "", err //nolint:wrapcheck // its mistakes, at their places
+	}
+	return cmp.Or(d.Theme, m.CreatedTheme, kit.DefaultTheme), nil
 }

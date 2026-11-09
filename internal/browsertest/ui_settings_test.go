@@ -108,7 +108,7 @@ func TestUIPageTheme(t *testing.T) { //nolint:paralleltest // the browser tests 
 	out = append(out, b.eval("[document.getElementById('settings-title').textContent, document.getElementById('theme-page').hidden, document.getElementById('theme-title').hidden].join(' / ')"), b.eval(icon))
 	check(t, "page theme", out, strings.Join([]string{
 		"This page's theme / P / Choosing draws this page alone again. The theme chosen stays when the page is updated.",
-		"The theme the page was stored with (the one written for it, or the default) / None chosen",
+		"The page then shows in default / Remove this page's setting",
 		`""`, "page-icon",
 		"false", "true", "true",
 		"ink",

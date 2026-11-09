@@ -196,3 +196,53 @@ func TestPickThemeLinks(t *testing.T) {
 		t.Errorf("a data file linked: %q, %v", m.PickedTheme, err)
 	}
 }
+
+// A page's own theme is the one it is drawn in without the pick: --theme, the data's theme:, the default it took when
+// first stored, default; of a linked data file too, and none for a page that takes no theme.
+func TestOwnTheme(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := floeDrawing(t)
+	own := func(slug string) string {
+		t.Helper()
+		got, err := s.OwnTheme(slug)
+		if err != nil {
+			return "error " + told(err, root)
+		}
+		return got
+	}
+	publish(t, s, dw, "none.yaml", report(""), nil, store.Options{})
+	publish(t, s, dw, "data.yaml", report("washi"), nil, store.Options{})
+	publish(t, s, dw, "given.yaml", report("washi"), nil, store.Options{Theme: ptr("app")})
+	if err := s.SetTheme("ink"); err != nil {
+		t.Fatal(err)
+	}
+	publish(t, s, dw, "created.yaml", report(""), nil, store.Options{})
+	if err := s.PickTheme(dw, "data", "brutal"); err != nil {
+		t.Fatal(told(err, root))
+	}
+	home := filepath.Dir(root)
+	dir := filepath.Join(home, "proj")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, src := range map[string]string{"z.html": "<title>z</title>", "linked.yaml": report("retro")} {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		e, err := s.PrepareLink(t.Context(), dw, path, store.Options{}, "", home)
+		if err != nil {
+			t.Fatal(told(err, root))
+		}
+		if err = s.Save(e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got := []string{own("none"), own("data"), own("given"), own("created"), own("linked"), own("z"), own("gone")}
+	_, err := s.OwnTheme("z")
+	if want := "default washi app ink retro error floe: no such page error floe: no such page"; strings.Join(got, " ") != want || !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("own themes %q, want %q", strings.Join(got, " "), want)
+	}
+}
