@@ -177,7 +177,7 @@ linters:
             - "!**/internal/kit/**"
           deny:
             - pkg: "github.com/yuin/goldmark"
-              desc: "write Markdown as HTML through internal/kit's markdown, which leaves raw HTML out"
+              desc: "write Markdown as HTML through internal/kit's markdown, which draws raw HTML as the text written"
     wrapcheck:
       ignore-sigs:
         - .Errorf(
