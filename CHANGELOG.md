@@ -8,6 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Add lower rows to the page list, a task's page and the task list: less room above and below each row, and the row's buttons 26px (the room between the title and the line under it is kept, for the ring of a button reached by the keys).
 - Add a description to a theme: `description:` in a `theme.yaml` in its directory, which `floe theme list` and `floe theme show` print. Each of floe's themes has one.
 - Add the shape to the lines of `floe template list`, `part list`, `theme list` and `diagram example`, between where an entry is and its description: the keys a value of it takes, `[] ` before those of a list's items, `one of ` when exactly one is written, the name of its format or floe part, or `-` where the list cannot tell it right (`floe part show <name>` names in its `files:` line what to read). `floe diagram example` lists its examples in the same four columns.
 - Add `floe tag <slug>... --add <name> --remove <name>`, which puts tags on pages and takes them off from the command line, in order, stopping at the first page not there. A name is one as written, commas and all; the names to remove are taken off first, so a name given to both stays on. The management page's tag dialog now sends only the tags changed in it, so that tags written meanwhile by `floe tag` or another tab stay.
