@@ -426,20 +426,9 @@ func readPages(d Dir, dir, file string, fns template.FuncMap, w words) (pages, [
 func readPartYAML(d Dir, dir string, look bool) ([]taken, string, taken, error) {
 	var marks taken
 	file := path.Join(d.Name, dir, "part.yaml")
-	src, ok, err := readFile(d, dir, "part.yaml")
-	if !ok || err != nil {
+	m, err := readKeys(d, dir, "part.yaml", "kit_part_yaml")
+	if m == nil || err != nil {
 		return nil, "", marks, err
-	}
-	body, err := yamlpos.Parse(file, src)
-	switch {
-	case errors.Is(err, yamlpos.ErrEmpty):
-		return nil, "", marks, nil
-	case err != nil:
-		return nil, "", marks, err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
-	}
-	m, ok := body.(*ast.MappingNode)
-	if !ok {
-		return nil, "", marks, yamlpos.New(file, yamlpos.Of(body), "kit_part_yaml")
 	}
 	var looks []taken
 	var about string
@@ -454,8 +443,12 @@ func readPartYAML(d Dir, dir string, look bool) ([]taken, string, taken, error) 
 			}
 			found = append(found, more...)
 		case "description":
+			if !look {
+				found = append(found, yamlpos.New(file, yamlpos.Of(k), "kit_part_yaml_description"))
+				continue
+			}
 			var more usererr.List
-			if about, more, err = readAbout(file, k, kv.Value, look); err != nil {
+			if about, more, err = readAbout(file, k, kv.Value, "kit_part_yaml_about"); err != nil {
 				return nil, "", marks, err
 			}
 			found = append(found, more...)
@@ -472,17 +465,36 @@ func readPartYAML(d Dir, dir string, look bool) ([]taken, string, taken, error) 
 	return looks, about, marks, found.Sorted().Err()
 }
 
-// readAbout reads the description: part.yaml, file, gives the key k: text, a look's alone (look).
-func readAbout(file string, k, value ast.Node, look bool) (string, usererr.List, error) {
-	if !look {
-		return "", usererr.List{yamlpos.New(file, yamlpos.Of(k), "kit_part_yaml_description")}, nil
+// readKeys reads the YAML file name of the directory dir of d as keys and values: nil when it is missing or empty,
+// refused with the key notMap when it is not a mapping.
+func readKeys(d Dir, dir, name, notMap string) (*ast.MappingNode, error) {
+	file := path.Join(d.Name, dir, name)
+	src, ok, err := readFile(d, dir, name)
+	if !ok || err != nil {
+		return nil, err
 	}
+	body, err := yamlpos.Parse(file, src)
+	switch {
+	case errors.Is(err, yamlpos.ErrEmpty):
+		return nil, nil //nolint:nilnil // an empty file writes nothing, as a missing one
+	case err != nil:
+		return nil, err //nolint:wrapcheck // mistakes at their lines and columns, or floe's failure
+	}
+	m, ok := body.(*ast.MappingNode)
+	if !ok {
+		return nil, yamlpos.New(file, yamlpos.Of(body), notMap)
+	}
+	return m, nil
+}
+
+// readAbout reads the description: the YAML file, file, gives the key k: text, refused with the key notText.
+func readAbout(file string, k, value ast.Node, notText string) (string, usererr.List, error) {
 	about, ok, err := yamlpos.Text(value)
 	if err != nil {
 		return "", nil, err //nolint:wrapcheck // floe's failure, which says what failed
 	}
 	if !ok {
-		return "", usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), "kit_part_yaml_about")}, nil
+		return "", usererr.List{yamlpos.New(file, yamlpos.OfValue(k, value), notText)}, nil
 	}
 	return about, nil, nil
 }

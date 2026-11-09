@@ -14,6 +14,7 @@ import (
 	"github.com/sukekyo26/floe/internal/rules"
 	"github.com/sukekyo26/floe/internal/schema"
 	"github.com/sukekyo26/floe/internal/usererr"
+	"github.com/sukekyo26/floe/internal/yamlpos"
 )
 
 // DefaultTheme is the theme of a page whose data names none, whose palette defines every variable, under any
@@ -24,12 +25,13 @@ const DefaultTheme = "default"
 type Theme struct {
 	name     string
 	dir      string
+	about    string            // the description: of its theme.yaml, "" for none
 	base     []byte            // base.css, nil for none
 	markdown []byte            // markdown.css, nil for none
 	palette  []byte            // palette.css, nil for none
 	partsCSS map[string][]byte // <part or look>.css by its name
 	unread   []string          // the files of its directory it does not read: of no part or look of the Kit
-	files    []Source          // the files it read, palette.css, base.css and markdown.css first, for floe theme show
+	files    []Source          // the files it read, theme.yaml, palette.css, base.css and markdown.css first, for show
 }
 
 // Name returns the name of t.
@@ -50,8 +52,8 @@ func (t *Theme) CSS(name string) []byte { return bytes.Clone(t.partsCSS[name]) }
 // Unread returns the files of the directory of t it does not read.
 func (t *Theme) Unread() []string { return slices.Clone(t.unread) }
 
-// readThemes reads into k the themes of d, each a directory: base.css, palette.css, and a file of CSS for a
-// part or a look of k, named so. A file of another name is not read.
+// readThemes reads into k the themes of d, each a directory: theme.yaml, base.css, palette.css, and a file of CSS
+// for a part or a look of k, named so. A file of another name is not read. The mistakes of all are told together.
 func (k *Kit) readThemes(d Dir) error {
 	// LIMIT: a file right in the directory of themes is not read, and nothing says so; refuse one if a theme's files
 	// put there come to go unseen.
@@ -66,26 +68,31 @@ func (k *Kit) readThemes(d Dir) error {
 			continue
 		}
 		t, err := k.readTheme(d, name)
-		if err != nil {
-			return err
+		if failed := found.Add(err); failed != nil {
+			return failed
 		}
-		k.themes[name] = t
+		if err == nil {
+			k.themes[name] = t
+		}
 	}
-	return found.Err()
+	return found.Sorted().Err()
 }
 
 // readTheme reads the theme of d named name, its directory.
 func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 	t := &Theme{
-		name: name, dir: path.Join(d.Name, name), base: nil, markdown: nil, palette: nil, partsCSS: map[string][]byte{},
-		unread: nil, files: nil,
+		name: name, dir: path.Join(d.Name, name), about: "", base: nil, markdown: nil, palette: nil,
+		partsCSS: map[string][]byte{}, unread: nil, files: nil,
 	}
 	d = d.recording()
 	all, err := entries(d, name, false)
 	if err != nil {
 		return nil, err
 	}
-	var read []string
+	if t.about, err = readThemeYAML(d, name); err != nil {
+		return nil, err
+	}
+	read := []string{themeYAML}
 	for _, file := range all {
 		stem, ok := strings.CutSuffix(file, ".css")
 		if !ok || stem != "base" && stem != "palette" && stem != "markdown" && !k.isPartOrLook(stem) {
@@ -115,17 +122,47 @@ func (k *Kit) readTheme(d Dir, name string) (*Theme, error) {
 	return t, nil
 }
 
-// themeRank places palette.css, base.css and markdown.css before the CSS of the parts, as floe theme show prints them.
+// themeYAML is the file of a theme's description.
+const themeYAML = "theme.yaml"
+
+// readThemeYAML reads the theme.yaml of the theme dir of d: its description, "" without one.
+func readThemeYAML(d Dir, dir string) (string, error) {
+	file := path.Join(d.Name, dir, themeYAML)
+	m, err := readKeys(d, dir, themeYAML, "kit_theme_yaml")
+	if m == nil || err != nil {
+		return "", err
+	}
+	var about string
+	var found usererr.List
+	for _, kv := range m.Values {
+		k := yamlpos.KeyOf(kv)
+		if key := k.GetToken().Value; key != "description" {
+			found = append(found, yamlpos.New(file, yamlpos.Of(k), "kit_theme_yaml_key", key))
+			continue
+		}
+		var more usererr.List
+		if about, more, err = readAbout(file, k, kv.Value, "kit_theme_yaml_about"); err != nil {
+			return "", err
+		}
+		found = append(found, more...)
+	}
+	return about, found.Sorted().Err()
+}
+
+// themeRank places theme.yaml, palette.css, base.css and markdown.css before the CSS of the parts, as floe theme
+// show prints them.
 func themeRank(file string) int {
 	switch file {
-	case "palette.css":
+	case themeYAML:
 		return 0
-	case "base.css":
+	case "palette.css":
 		return 1
-	case "markdown.css":
+	case "base.css":
 		return 2
+	case "markdown.css":
+		return 3
 	}
-	return 3
+	return 4
 }
 
 // Template is a template read: page.html and the schema of its data, and what goes with them.

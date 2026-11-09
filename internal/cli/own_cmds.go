@@ -169,10 +169,10 @@ func (a *app) themeCmd() *cobra.Command {
 	}
 	cmd.AddCommand(&cobra.Command{
 		Use:   "list",
-		Short: "List the themes (name, where, shape, and an empty description; tab-separated)",
+		Short: "List the themes (name, where, shape, description; tab-separated)",
 		Long: `List the themes, floe's and your own, one per line in the same four tab-separated columns as
 floe part list: its name, where it is (floe, or its directory of your own), its shape, -, as nothing is
-written as a theme's value, and an empty description, as a theme has none.`,
+written as a theme's value, and its description, from its theme.yaml (empty without one).`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			k, err := a.kit(false)
@@ -185,9 +185,9 @@ written as a theme's value, and an empty description, as a theme has none.`,
 	}, &cobra.Command{
 		Use:   "show <name> [file]",
 		Short: "Show a theme and the files it reads, or one of them",
-		Long: `Show a theme: its name, where it is and the files it reads (files:): palette.css, base.css,
-markdown.css, then the CSS of each part or look it gives. With a file named after, print that file
-alone, as written but the byte order mark at its start: floe theme show ink note.css.`,
+		Long: `Show a theme: its name and description, where it is and the files it reads (files:): theme.yaml,
+palette.css, base.css, markdown.css, then the CSS of each part or look it gives. With a file named after,
+print that file alone, as written but the byte order mark at its start: floe theme show ink note.css.`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			k, err := a.kit(false)
