@@ -96,3 +96,53 @@ func TestNameOfNoDir(t *testing.T) {
 		t.Errorf(`Name(ctx, "") = %q, want ""`, got)
 	}
 }
+
+// A file's place is its path from its repository's root when that repository is the one dir is in, a worktree
+// under the main checkout too, wherever in it dir is; else its actual path, through a symlink too.
+func TestPlace(t *testing.T) {
+	t.Parallel()
+
+	tmp, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, b, out := filepath.Join(tmp, "a"), filepath.Join(tmp, "b"), filepath.Join(tmp, "out")
+	for _, f := range []string{"a/docs/plan.yaml", "a/plan.yaml", "b/docs/plan.yaml"} {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(tmp, f)), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tmp, f), []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, repo := range []string{a, b} {
+		run(t, repo, "init", "-q")
+		run(t, repo, "add", ".")
+		run(t, repo, "-c", "user.email=a@b", "-c", "user.name=a", "commit", "-qm", "i")
+	}
+	wt := filepath.Join(a, ".claude", "worktrees", "w")
+	run(t, a, "worktree", "add", "-q", wt)
+	if err := os.MkdirAll(out, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(a, "docs"), filepath.Join(out, "linked")); err != nil {
+		t.Fatal(err)
+	}
+	actual := filepath.Join(a, "docs", "plan.yaml")
+	for _, tt := range []struct{ dir, file, want string }{
+		{a, "a/docs/plan.yaml", "docs/plan.yaml"},
+		{filepath.Join(a, "docs"), "a/docs/plan.yaml", "docs/plan.yaml"},
+		{a, "a/plan.yaml", "plan.yaml"},
+		{wt, "a/.claude/worktrees/w/plan.yaml", "plan.yaml"},
+		{wt, "a/.claude/worktrees/w/docs/plan.yaml", "docs/plan.yaml"},
+		{a, "a/.claude/worktrees/w/docs/plan.yaml", "docs/plan.yaml"},
+		{a, "b/docs/plan.yaml", filepath.Join(b, "docs", "plan.yaml")},
+		{a, "out/linked/plan.yaml", "docs/plan.yaml"},
+		{out, "out/linked/plan.yaml", actual},
+		{out, "a/docs/plan.yaml", actual},
+	} {
+		if got := project.Place(t.Context(), tt.dir, filepath.Join(tmp, tt.file)); got != tt.want {
+			t.Errorf("Place(%s, %s) = %q, want %q", tt.dir, tt.file, got, tt.want)
+		}
+	}
+}
