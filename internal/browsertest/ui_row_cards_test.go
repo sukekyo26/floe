@@ -80,7 +80,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		t.Fatal(err)
 	}
 	b.still()
-	say("within", "(() => { const bg = (e) => getComputedStyle(e).backgroundColor; return [bg(document.querySelector('#list li.tree.picked')) === "+as+"('backgroundColor', 'var(--new-soft)'), bg(document.querySelector('#list li.tree:not(.picked)')) === "+as+"('backgroundColor', 'var(--hover)'), getComputedStyle(document.querySelector('#list li[data-slug=fold]')).borderColor === "+as+"('borderColor', 'var(--line)')].join(' '); })()")
+	say("within", "(() => { const bg = (e) => getComputedStyle(e).backgroundColor; return [bg(document.querySelector('#list li.tree.picked')) === "+as+"('backgroundColor', 'var(--new-soft)'), bg(document.querySelector('#list li.tree:not(.picked)')) === "+as+"('backgroundColor', 'var(--hover)'), getComputedStyle(document.querySelector('#list li[data-slug=fold]')).borderColor === "+as+"('borderColor', 'var(--line)'), getComputedStyle(document.querySelector('#list li.tree.picked')).boxShadow.includes('inset')].join(' '); })()")
 
 	// Folded, the folder is a card as any.
 	b.eval("localStorage.setItem('list.open', '[]')")
@@ -103,7 +103,7 @@ func TestUIRowCards(t *testing.T) { //nolint:paralleltest // the browser tests s
 		"gaps: C0 T0 T0 C6 G0 C0 C6",
 		"headings: true true 0px none",
 		"folder: 0px 0px 1px 0px 1px true 0 0 0",
-		"within: true true true",
+		"within: true true true false",
 		"folded: 1px true true 1px",
 		"empty: 0px true",
 		"task list: 1px true true",
