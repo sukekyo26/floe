@@ -721,6 +721,36 @@
   #find-open { display: none; flex: none; }
   #keys-open svg, #find-open svg { width: 16px; height: 16px; }
   @media (max-width: 56rem) { #keys-open { display: none; } }
+  /* The settings: the default theme, chosen from cards of a sample page drawn in each theme */
+  #settings-open svg { width: 16px; height: 16px; }
+  #settings { width: min(64rem, calc(100% - 32px)); max-height: calc(100dvh - 32px); }
+  #settings .modal-body { grid-template-rows: auto auto auto minmax(0, 1fr) auto; max-height: calc(100dvh - 34px); }
+  #settings h3 { margin: 0; font-size: var(--text); }
+  .theme-now { margin: 0; font-size: var(--text-small); color: var(--muted); }
+  .theme-now b { color: var(--fg); }
+  .theme-now .gone, .theme-broken { color: var(--danger); font-weight: 600; }
+  .theme-broken { margin: 0; font-size: var(--text-small); }
+  .theme-err { margin: 0; padding: 0.8rem 1rem; border-radius: var(--corner-small); background: var(--danger-soft); color: var(--danger); font-size: var(--text-small); font-family: var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: 0.9rem; overflow: auto; padding: 4px; margin: -4px; }
+  .theme-card { display: grid; gap: 0.35rem; align-content: start; padding: 0.55rem 0.55rem 0.7rem; border: 1px solid var(--line); border-radius: var(--corner-menu); background: var(--frame-bg); cursor: pointer; position: relative; }
+  .theme-card:hover { background: var(--hover); }
+  .theme-card input { position: absolute; opacity: 0; }
+  .theme-card:has(input:focus-visible) { outline: var(--ring); outline-offset: 2px; }
+  .theme-card:has(input:checked) { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .theme-card:has(input:checked)::after { content: ""; position: absolute; top: 0.9rem; right: 0.9rem; width: 26px; height: 26px; border-radius: 50%; background: var(--ink) var(--tick) center / 16px no-repeat; }
+  .theme-shot { position: relative; aspect-ratio: 900 / 640; overflow: hidden; border: 1px solid var(--line); border-radius: var(--corner-small); background: var(--subtle); }
+  /* Drawn at 900px wide and shrunk to the card (--shrink, set by its width), never to be used */
+  .theme-shot iframe { position: absolute; inset: 0 auto auto 0; width: 900px; height: 640px; border: 0; transform: scale(var(--shrink, 0.25)); transform-origin: 0 0; pointer-events: none; }
+  .theme-card .nm { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-weight: 600; font-size: var(--text); }
+  .theme-card .pill { font-size: var(--text-label); font-weight: 600; padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--sel); color: var(--muted); }
+  .theme-card .pill.now { background: var(--ink); color: var(--on-ink); }
+  .theme-card .ds { font-size: var(--text-label); color: var(--muted); line-height: 1.45; }
+  .theme-card .wh { font-size: var(--text-label); color: var(--faint); font-family: var(--mono); overflow-wrap: anywhere; }
+  @media (max-width: 600px) {
+    .theme-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .theme-card .ds { display: none; }
+    #settings .modal-body { padding: 1.1rem 1rem 1rem; }
+  }
   @media (max-width: 40rem) {
     .framed #find-open { display: inline-flex; }
     #find { margin-top: 16px; }
@@ -1020,6 +1050,7 @@
       <span class="frame-actions" id="frame-actions" hidden></span>
       <a class="news" id="news" href="/?view=new" hidden><span class="dot"></span><span id="news-n"></span></a>
       <button type="button" class="icon-btn" id="find-open" aria-label="{{.Msg "ui_find"}}" title="{{.Msg "ui_find"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+      <button type="button" class="icon-btn" id="settings-open" aria-label="{{.Msg "ui_settings"}}" title="{{.Msg "ui_settings"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
       <button type="button" class="icon-btn" id="keys-open" aria-label="{{.Msg "ui_keys"}}" title="{{.Msg "ui_keys_title"}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.8c0 1.7-2.4 2-2.4 3.6"/><path d="M12 17.2v.01"/></svg></button>
       <span class="server" id="server" role="status"></span>
     </div>
@@ -1233,6 +1264,18 @@
 </dialog>
 <!-- A page to add: an option, no link, as choosing it adds it -->
 <template id="add-page-row"><li role="option"><span class="lead"></span><span class="title"></span><span class="time"><time></time></span><span class="sub"></span></li></template>
+<dialog id="settings" aria-labelledby="settings-title">
+  <form class="modal-body" id="settings-form">
+    <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><div><h2 id="settings-title">{{.Msg "ui_settings"}}</h2></div></div>
+    <h3 id="theme-title">{{.Msg "ui_theme_default"}}</h3>
+    <p class="theme-now" id="theme-now"></p>
+    <div class="theme-grid" id="theme-grid" role="radiogroup" aria-labelledby="theme-title"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn" data-close>{{.Msg "ui_cancel"}}</button>
+      <button type="submit" class="btn primary" id="theme-choose">{{.Msg "ui_select"}}</button>
+    </div>
+  </form>
+</dialog>
 <dialog id="keys" aria-labelledby="keys-title">
   <div class="modal-body keys-body">
     <div class="modal-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></svg><div><h2 id="keys-title">{{.Msg "ui_keys"}}</h2><p class="lead keys-note" id="keys-note-list">{{.Msg "ui_keys_note_list"}}</p><p class="lead keys-note" id="keys-note-frame">{{.Msg "ui_keys_note_frame"}}</p></div></div>
@@ -5839,6 +5882,117 @@
     $('find-q').focus();
   }
 
+  // The settings: GET /api/themes lists the themes and the default chosen, or the mistake that keeps them from being read
+  // (one's own parts, themes or templates, which stop every drawing, or settings.json, which choosing writes whole)
+  let themesRead = null;
+  async function openSettings() {
+    if (document.querySelector('dialog[open]')) return;
+    const grid = $('theme-grid');
+    grid.replaceChildren();
+    $('theme-now').textContent = '';
+    $('theme-choose').disabled = true;
+    $('settings').showModal();
+    let got;
+    try {
+      const res = await api('/api/themes');
+      if (!res.ok) throw new Error(t('ui_http_error', await res.text(), res.status));
+      got = await res.json();
+    } catch (e) {
+      $('theme-now').textContent = t('ui_theme_load_failed', e.message);
+      return;
+    }
+    themesRead = got;
+    drawThemes(got);
+  }
+
+  // Told mistakes, one a line, as the CLI words them
+  const toldText = (report) => [...(report.mistakes ?? []).map((m) => m.text), report.failure ?? ''].filter(Boolean).join('\n');
+
+  function drawThemes(got) {
+    const grid = $('theme-grid');
+    const now = $('theme-now');
+    if (got.drawing) {
+      const err = document.createElement('p');
+      err.className = 'theme-err';
+      err.textContent = toldText(got.drawing);
+      const why = document.createElement('p');
+      why.className = 'theme-broken';
+      why.textContent = t('ui_theme_own_broken');
+      now.replaceChildren(why);
+      grid.replaceChildren(err);
+      return;
+    }
+    const chosen = got.default || '';
+    const shown = chosen || 'default';
+    const there = got.themes.some((th) => th.name === shown);
+    const b = document.createElement('b');
+    b.textContent = shown;
+    if (got.settings) now.replaceChildren(Object.assign(document.createElement('span'), { className: 'gone', textContent: t('ui_theme_settings_broken') }));
+    else if (!there) {
+      const gone = Object.assign(document.createElement('span'), { className: 'gone', textContent: t('ui_theme_gone') });
+      now.replaceChildren(t('ui_theme_now_label'), b, ' ', gone, t('ui_theme_gone_more'));
+    } else now.replaceChildren(t('ui_theme_now_label'), b, t('ui_theme_now_more'));
+    const cards = got.themes.map((th) => themeCard(th, th.name === shown && there && !got.settings));
+    grid.replaceChildren(...cards);
+    const picked = grid.querySelector('input:checked') ?? grid.querySelector('input');
+    if (picked) picked.checked = true;
+    $('theme-choose').disabled = !picked;
+    shrinkShots();
+  }
+
+  function themeCard(th, isNow) {
+    const label = document.createElement('label');
+    label.className = 'theme-card';
+    const input = Object.assign(document.createElement('input'), { type: 'radio', name: 'theme', value: th.name, checked: isNow });
+    const shot = document.createElement('span');
+    shot.className = 'theme-shot';
+    // The sample, drawn by the server in the sandbox: no script runs in it, and it is not used
+    const frame = Object.assign(document.createElement('iframe'), { src: `/api/themes/${encodeURIComponent(th.name)}/sample`, loading: 'lazy', tabIndex: -1, title: '' });
+    frame.setAttribute('sandbox', '');
+    frame.setAttribute('aria-hidden', 'true');
+    shot.append(frame);
+    const nm = document.createElement('span');
+    nm.className = 'nm';
+    nm.append(th.name);
+    if (isNow) nm.append(Object.assign(document.createElement('span'), { className: 'pill now', textContent: t('ui_theme_now') }));
+    if (th.dir) nm.append(Object.assign(document.createElement('span'), { className: 'pill', textContent: t('ui_theme_own') }));
+    label.append(input, shot, nm);
+    if (th.about) label.append(Object.assign(document.createElement('span'), { className: 'ds', textContent: th.about }));
+    if (th.dir) label.append(Object.assign(document.createElement('span'), { className: 'wh', textContent: th.dir }));
+    return label;
+  }
+
+  // Each sample is drawn 900px wide and shrunk to its card
+  const shotSizes = new ResizeObserver((seen) => {
+    for (const e of seen) e.target.style.setProperty('--shrink', String(e.contentRect.width / 900));
+  });
+  function shrinkShots() {
+    shotSizes.disconnect();
+    for (const shot of $('theme-grid').querySelectorAll('.theme-shot')) shotSizes.observe(shot);
+  }
+
+  async function chooseTheme(ev) {
+    ev.preventDefault();
+    const picked = $('theme-grid').querySelector('input:checked');
+    if (!picked) return;
+    const theme = picked.value;
+    $('theme-choose').disabled = true;
+    let why = '';
+    try {
+      const res = await api('/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ theme }) });
+      if (!res.ok) why = t('ui_http_error', await res.text(), res.status);
+    } catch (e) {
+      why = e.message;
+    }
+    $('theme-choose').disabled = false;
+    if (why) {
+      toast(t('ui_theme_set_failed', why));
+      return;
+    }
+    $('settings').close();
+    toast(t('ui_theme_set', theme));
+  }
+
   function openKeys() {
     // d, only where it goes somewhere: the same as the button it presses
     const open = framed ? $('frame-actions') : $('read-actions');
@@ -6350,6 +6504,8 @@
   });
   $('find-open').addEventListener('click', openFind);
   $('keys-open').addEventListener('click', openKeys);
+  $('settings-open').addEventListener('click', openSettings);
+  $('settings-form').addEventListener('submit', chooseTheme);
   // On a Mac the key that goes with k is written as there
   if (/Mac/.test(navigator.platform)) {
     for (const e of $('keys').querySelectorAll('.mod')) e.textContent = '⌘';

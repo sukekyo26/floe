@@ -258,7 +258,7 @@ func TestDialogCloseWords(t *testing.T) {
 	t.Parallel()
 
 	want := []string{
-		"filter-dialog", "find", "add-page-dialog", "keys", "add-dialog", "edit-dialog", "set-dialog", "edit-task-dialog", "kin-dialog",
+		"filter-dialog", "find", "add-page-dialog", "settings", "keys", "add-dialog", "edit-dialog", "set-dialog", "edit-task-dialog", "kin-dialog",
 		"tag-dialog",
 	}
 	for _, lang := range i18n.Langs() {

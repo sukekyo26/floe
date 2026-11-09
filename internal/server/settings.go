@@ -18,7 +18,8 @@ type SettingsPut struct {
 	Theme string `json:"theme"`
 }
 
-// Theme is a theme of the drawing of now, as the management page's settings list it.
+// Theme is a theme of the drawing of now, as the management page's settings list it: About in the reader's language
+// for floe's.
 type Theme struct {
 	Name  string `json:"name"`
 	About string `json:"about"`
@@ -91,7 +92,12 @@ func (s *Server) themes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, e := range drawing.Kit.Themes() {
-		out.Themes = append(out.Themes, Theme{Name: e.Name, About: e.About, Dir: e.Dir})
+		about := e.About
+		if e.Dir == "" {
+			// floe's own, described in the reader's language; one's own as its theme.yaml has it
+			about = c.Msg("theme_about_" + e.Name)
+		}
+		out.Themes = append(out.Themes, Theme{Name: e.Name, About: about, Dir: e.Dir})
 	}
 	sendJSON(w, http.StatusOK, out)
 }
