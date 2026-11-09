@@ -434,7 +434,7 @@
   li.group .step-empty { grid-column: 1 / -1; margin: 0; padding-bottom: 0.5rem; font-weight: 400; }
   /* The list's rows are cards on its ground, apart by a margin and not a gap, which would part a heading and a folder's rows too.
      A folder open is one card: its row loses its foot, its rows have the sides, and the last of them the foot, the corners and the
-     shadow (by :has, the DOM as it is). The rows of a folder do not rise in, which would open the card for a moment */
+     shadow (by :has, the DOM as it is). A folder open and its rows do not rise in, which would part the card for a moment */
   /* LIMIT: the last row's shadow is not along the sides of the rows above it, a gap too faint to see */
   #list { padding: 0.4rem 0.4rem 1rem; }
   #list:empty { padding: 0; }
@@ -442,11 +442,9 @@
   #list > li:not(.group, .tree):not(:first-child) { margin-top: 0.4rem; }
   #list > li.group + li:not(.group, .tree) { margin-top: 0; }
   #list > li:not(.group, .tree).picked, #list > li:not(.group, .tree).picked:hover { border-color: var(--new); }
-  #list > li:not(.group, .tree):has(+ li.tree) { border-bottom-width: 0; border-end-start-radius: 0; border-end-end-radius: 0; }
-  #list > li.tree { background: var(--panel); border: 1px solid var(--line); border-block-width: 0; animation: none; }
+  #list > li:not(.group, .tree):has(+ li.tree) { border-bottom-width: 0; border-end-start-radius: 0; border-end-end-radius: 0; animation: none; }
+  #list > li.tree { border: 1px solid var(--line); border-block-width: 0; animation: none; }
   #list > li.tree:not(:has(+ li.tree)) { border-bottom-width: 1px; border-end-start-radius: var(--corner-menu); border-end-end-radius: var(--corner-menu); box-shadow: var(--shadow-sm); }
-  #list > li.tree:hover { background: var(--hover); }
-  #list > li.tree.picked, #list > li.tree.picked:hover { background: var(--new-soft); }
   @media (hover: hover) { #list > li:not(.group, .tree):not(:has(+ li.tree)):hover { box-shadow: var(--shadow); } }
   /* The headings' words start where a card's mark does (the list's room, the card's edge and its own), the step's add button ends
      where the card does */
