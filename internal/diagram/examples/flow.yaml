@@ -25,8 +25,8 @@ parts:
         - box: { name: whole, tone: bad, shape: pill, rows: [[{ en: The whole directory would be served, ja: "ディレクトリ全体が公開されてしまう" }, sub]] }
         - box: { name: mistakes, tone: bad, shape: pill, rows: [[{ en: Each mistake at its line and column, ja: "誤りをすべて行と列で示す" }, sub]] }
         - box: { name: badSlug, tone: bad, shape: pill, rows: [[{ en: Not usable in a URL, ja: "URL に使えない" }, sub]] }
-        - box: { name: otherKind, tone: bad, shape: pill, rows: [[{ en: "Remove it first, or use another slug", ja: "先に消すか、別の slug にする" }, sub]] }
-        - box: { name: otherOwner, tone: bad, shape: pill, rows: [[{ en: "Use another slug, or add --force", ja: "別の slug にするか、--force を付ける" }, sub]] }
+        - box: { name: otherKind, tone: bad, shape: pill, rows: [[{ en: Use another slug, ja: "別の slug にする" }, sub]] }
+        - box: { name: otherOwner, tone: bad, shape: pill, rows: [[{ en: Use another slug, ja: "別の slug にする" }, sub]] }
       edges:
         - { from: publish, to: resolve }
         - { from: resolve, to: kind }

@@ -45,7 +45,7 @@ its page is opened, and saving it, a part, theme or template of one's own, or fe
 reloads the open tab; saving an image it shows does not. A folder is listed on the management page,
 a directory at a time as it is opened, with the HTML files under it (none under a name starting with
 a dot), each shown as a linked HTML file is. The same slug for another file is refused unless
---force.`,
+--force. A page and a link cannot take each other's slug, even with --force: floe rm it first.`,
 		Args: usage(cobra.ExactArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()
@@ -69,7 +69,8 @@ a dot), each shown as a linked HTML file is. The same slug for another file is r
 	f.StringVar(&description, "description", "", "a description shown in the list")
 	f.StringVar(&theme, "theme", "",
 		"the theme to draw with: its palette and the parts' shape (default: the data file's theme:, else default)")
-	f.BoolVar(&opts.Force, "force", false, "replace a page of another project, or a link to another file")
+	f.BoolVar(&opts.Force, "force", false, "replace a page published from another project, or a link to another file, "+
+		"keeping nothing of the old one, not even a page's earlier versions")
 	return cmd
 }
 
@@ -203,8 +204,10 @@ func (a *app) noticeUpdate(saved server.Saved) {
 		return
 	}
 	a.warn("cli_updated_titled", saved.Slug, localTime(prev.UpdatedAt), prev.Title)
+	// LIMIT: the titles of the list are compared, so a page whose title was pinned on the management page, or of the
+	// same title, is overwritten without the warning; compare the data files' title: if that comes to matter (S291).
 	if saved.Title != prev.Title {
-		a.warn("cli_title_changed")
+		a.warn("cli_title_changed", prev.Title, saved.Title)
 	}
 }
 

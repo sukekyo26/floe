@@ -50,7 +50,7 @@ func TestPublishThroughServer(t *testing.T) {
 		out, errs string
 	}{
 		{[]string{"publish", "d.yaml"}, 0, url + "/a/d/\n", ""},
-		{[]string{"publish", "d.yaml", "--title", "Kept"}, 0, url + "/a/d/\n", `updated "d" (last updated `},
+		{[]string{"publish", "d.yaml", "--title", "Kept"}, 0, url + "/a/d/\n", `, title "D")` + "\n" + `warning: the title changed from "D" to "Kept"` + "\n"},
 		{[]string{"publish", "gone.yaml"}, 1, "", "img/none.png: no such file or directory\n"},
 		{[]string{"publish", "--link", "h.html"}, 0, url + "/a/h/\n", ""},
 		{[]string{"publish", "w.yaml"}, 0, url + "/a/w/\n", "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1"},

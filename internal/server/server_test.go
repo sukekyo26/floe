@@ -180,7 +180,7 @@ func TestPublish(t *testing.T) {
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusCreated, `"slug":"d"`)
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusOK, `"prev":{"title":"T"`)
 	other := e.write(t, http.MethodPut, "/api/artifacts/d", server.Upload{File: "d.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Project: "q"}) //nolint:exhaustruct // the rest not given
-	want(t, other, http.StatusConflict, `{"mistakes":[{"text":"slug \"d\" was published from project p; use another --slug, or add --force to replace that page"}]}`)
+	want(t, other, http.StatusConflict, `{"mistakes":[{"text":"slug \"d\" was published from project p: choose another slug"}]}`)
 	want(t, e.publish(t, "e", "lang: en\ntemplate: nope\n", nil), http.StatusBadRequest, `unknown template \"nope\"`)
 	asText := e.do(t, http.MethodPost, "/api/artifacts", `{"path": "rel.html"}`, "Origin", origin, "Content-Type", "application/json",
 		"Accept", "application/json, text/plain")

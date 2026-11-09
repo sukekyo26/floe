@@ -1,4 +1,4 @@
-diagram "What floe publish checks" 1092x901
+diagram "What floe publish checks" 1072x901
 box "publish" 566,20 176x29
 box "resolve" 506,73 296x29
 box "kind" 494,126 320x29
@@ -17,8 +17,8 @@ box "secret" 344,339 240x29
 box "whole" 374,436.5 288x29
 box "mistakes" 764,516 288x29
 box "badSlug" 764,587 176x29
-box "otherKind" 776,658 296x29
-box "otherOwner" 776,729 272x29
+box "otherKind" 776,658 152x29
+box "otherOwner" 776,729 152x29
 edge "publish"→"resolve" M654,49 V73
 edge "resolve"→"kind" M654,102 V126
 edge "kind"→"linked" M600.67,155 V197
@@ -34,9 +34,9 @@ edge "data"→"mistakes" M899.33,474 V516
 edge "slug"→"taken" M532,545 V587
 edge "slug"→"badSlug" M636,545 V563 H852 V587
 edge "taken"→"owner" M532,616 V658
-edge "taken"→"otherKind" M636,616 V634 H924 V658
+edge "taken"→"otherKind" M636,616 V634 H852 V658
 edge "owner"→"server" M531.33,687 V729
-edge "owner"→"otherOwner" M640.67,687 V705 H912 V729
+edge "owner"→"otherOwner" M640.67,687 V705 H852 V729
 edge "server"→"save" M584,758 V782
 edge "save"→"url" M584,828 V852
 label "はい" 583.67,167 34x18
@@ -51,6 +51,6 @@ label "mistakes" 865.53,486 67.6x18
 label "はい" 515,557 34x18
 label "いいえ" 721,554 46x18
 label "いいえ" 509,628 46x18
-label "はい" 763,625 34x18
+label "はい" 727,625 34x18
 label "いいえ" 508.33,699 46x18
-label "はい" 759.33,696 34x18
+label "はい" 729.33,696 34x18
