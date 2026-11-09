@@ -120,6 +120,7 @@ func readImages(dir, file string, names []string) (map[string][]byte, error) {
 var sentAt = map[string]string{
 	"/path": "argument 1", "/file": "argument 1", "/slug": "--slug", "/title": "--title", "/description": "--description",
 	"/theme": "--theme", "/tags/add": "--add", "/tags/remove": "--remove",
+	"/state": "--state", "/step": "--step", "/url": "--url", "/steps": "--steps", "/parent": "--parent",
 	"/project": "the project name (of the git remote, the repository's directory or the working directory)",
 }
 

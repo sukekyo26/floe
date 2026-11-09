@@ -47,6 +47,14 @@ func TaskName(name string) (string, error) {
 	return trimmed, nil
 }
 
+// TaskProject is the project of a task as given, as tasks.json has it (ProjectKey); it must be UTF-8.
+func TaskProject(project string) (string, error) {
+	if !utf8.ValidString(project) {
+		return "", usererr.New("store_task_utf8")
+	}
+	return ProjectKey(project), nil
+}
+
 // Work is what a page holds of its place on the task list: the task it is on, its step there, whether it is pinned.
 type Work struct {
 	Task string `json:"task,omitempty"`
@@ -235,8 +243,8 @@ func taskKey(project, raw string) (key, name string, err error) {
 	if strings.TrimSpace(project) == "" {
 		return "", "", usererr.New("store_task_project")
 	}
-	if !utf8.ValidString(project) {
-		return "", "", usererr.New("store_task_utf8")
+	if key, err = TaskProject(project); err != nil {
+		return "", "", err
 	}
 	if name, err = TaskName(raw); err != nil {
 		return "", "", err
@@ -244,7 +252,7 @@ func taskKey(project, raw string) (key, name string, err error) {
 	if name == "" {
 		return "", "", usererr.New("store_task_name")
 	}
-	return ProjectKey(project), name, nil
+	return key, name, nil
 }
 
 // checkTaskEdit refuses what no row may hold.
