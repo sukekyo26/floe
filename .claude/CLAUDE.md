@@ -34,6 +34,7 @@ floe が入力を断る検査は、次の 4 つのどれかに当たるものだ
 - **floe の script は `page.Script` 1 つで組み立てる**：ページに入れる floe の script（図の拡大、写すボタン、目次の今の節）は、`page.Script` が関数と JSON の引数から組み立て、コメントだけの行を落とす
 - **CSS は字句と括弧の入れ子だけで読む**：CSS は tdewolff の字句と、CSS Syntax の括弧の入れ子（`{`・`(`・関数・`[`）だけで読み、セレクタや値の意味を自前で読まない（`css.Parser` も使わない）。文字列・url・コメントの外のエスケープ（`\`）は断り、解かない。tdewolff を import できるのは `internal/css` だけ（depguard の規則 `tdewolff-in-css`）
 - **保存先を書くのはサーバーだけ**：CLI は API で頼む。publish・link・rm・rebuild・管理ページの変更はどれも API
+- エージェントの手引き docs/guide.md は docs の要約で、`floe guide` が出す。docs の決まり・コマンド・鍵を変える PR は手引きも直す。部品やテンプレートの品揃えは書き写さず、list・show を教える。スキルは `floe guide` を指すだけ。
 
 ## floe の不具合や困ったこと
 
