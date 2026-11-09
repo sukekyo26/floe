@@ -23,7 +23,7 @@ func TestSaveVersionRace(t *testing.T) {
 	slug := "d"
 	prepare := func(n int) *Entry {
 		src := "lang: en\ntemplate: report\ntitle: T" + strconv.Itoa(n) + "\nsections:\n  - heading: H\n    parts:\n      - text: x\n"
-		e, err := s.PrepareData(dw, Upload{File: "d.yaml", Source: []byte(src), Images: map[string][]byte{}, Project: "p"}, Options{Slug: &slug})
+		e, err := s.PrepareData(dw, Upload{File: "d.yaml", Source: []byte(src), Images: map[string][]byte{}, Project: "p", Repo: "p", Place: "d.yaml"}, Options{Slug: &slug})
 		if err != nil {
 			t.Fatal(err)
 		}

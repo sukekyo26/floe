@@ -62,7 +62,7 @@ func TestPickTheme(t *testing.T) {
 	}
 	at("drawn the same", "washi", "washi")
 	// Replaced by another project's file: the pick goes.
-	up := store.Upload{File: "a.yaml", Source: []byte(report("")), Images: nil, Project: "q"}
+	up := store.Upload{File: "a.yaml", Source: []byte(report("")), Images: nil, Project: "q", Repo: "q", Place: "a.yaml"}
 	e, err := s.PrepareData(dw, up, store.Options{Force: true})
 	if err != nil {
 		t.Fatal(told(err, root))

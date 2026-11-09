@@ -61,7 +61,7 @@ type Meta struct {
 	// Path is the real path of a linked file; a stored page has none.
 	Path  string `json:"path,omitempty"`
 	Title string `json:"title,omitempty"`
-	// TitleEdited and ProjectEdited mark values set on the management page, kept across republishes.
+	// TitleEdited marks a title set on the management page, kept across republishes.
 	TitleEdited bool   `json:"titleEdited,omitempty"`
 	Description string `json:"description"`
 	// Theme is the theme a data file is drawn with over the data's (floe publish --theme), and DataTitle
@@ -78,11 +78,13 @@ type Meta struct {
 	// Template is the template a stored page is drawn with, read from its data file at each publish and rebuild.
 	Template string `json:"template,omitempty"`
 	// Source is the directory of a stored page's copy, under its own; a new one each publish and rebuild.
-	Source        string `json:"source,omitempty"`
-	Project       string `json:"project,omitempty"`
-	ProjectEdited bool   `json:"projectEdited,omitempty"`
-	// PublishedFrom is the project that owns a stored page; Project is only what the list shows. PublishedFile is the
-	// place of the data file in it that owns the page too: from its repository's root, else its real path.
+	Source string `json:"source,omitempty"`
+	// Project is the page's project on the lists and the task list: the one a new page is published from, kept when it
+	// is published again from anywhere, and set on the management page.
+	Project string `json:"project,omitempty"`
+	// PublishedFrom and PublishedFile are the key of the data file that owns a stored page (project.Place): the file's
+	// repository and its path from the repository's root, else "" and its real path. A page published before keys
+	// were the file's alone holds the project it was published from in PublishedFrom.
 	PublishedFrom string `json:"publishedFrom,omitempty"`
 	PublishedFile string `json:"publishedFile,omitempty"`
 	Favorite      bool   `json:"favorite,omitempty"`
