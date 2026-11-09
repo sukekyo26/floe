@@ -56,7 +56,8 @@ func owns(path, from, place string) func(*Meta) bool {
 // is the file's, else the first of the file's entries by slug, else base, which a link takes when free, else base-2,
 // base-3 … so that two index.html files never take over each other. base is checked only then: a file whose name
 // makes no slug still finds its page.
-// LIMIT: unless base is the file's, every meta.json is read. Keep the slugs of the files apart if publishing slows.
+// LIMIT: unless base is the file's, every meta.json is read, under the store's lock too when Save picks again. Keep the
+// slugs of the files apart if publishing slows.
 // LIMIT: of two pages of one file (a publish with --slug, or one before publishes found the file's page), base's is
 // written and the other is left as it was, to be floe rm'd.
 func (s *Store) ownSlug(base string, own func(*Meta) bool, link bool) (string, error) {
@@ -155,7 +156,8 @@ type Entry struct {
 	opts  Options
 	from  string
 	place string // the place of a stored page's data file in from, "" for a link
-	// named is what a publish without --slug is named after, for Save to pick its slug again: "" else.
+	// named is what a publish without --slug is named after, for Save to pick its slug again ("" for a name that makes
+	// none).
 	named string
 	// created is the default theme the page was drawn with, which settle keeps for a new page, or one replacing
 	// another file's, as its CreatedTheme: read before the drawing, not at Save, so that the two agree.
@@ -655,11 +657,14 @@ func (s *Store) commit(e *Entry, mark string, pre *pressed) error {
 		return err
 	}
 	defer unlock()
-	// Picked again unless still the file's, as another publish may have taken the slug, or the file's own been renamed,
-	// since. A save picking another stored page gets its version before gzipped under the lock (nextVersion).
-	if e.named != "" {
+	// A slug not given is kept as Prepare picked it while it holds what it held then: nothing, or the file's entry. Else
+	// it is picked again, as another publish may have taken it, or the file's own been renamed, since. A save picking
+	// another stored page gets its version before gzipped under the lock (nextVersion).
+	if e.opts.Slug == nil {
 		own := owns(e.Meta.Path, e.from, e.place)
-		if m := s.ReadMeta(e.Slug); m == nil || !own(m) {
+		m := s.ReadMeta(e.Slug)
+		kept := (e.Prev == nil && m == nil) || (e.Prev != nil && own(e.Prev) && m != nil && own(m))
+		if !kept {
 			if e.Slug, err = s.ownSlug(e.named, own, e.Meta.IsLink()); err != nil {
 				return err
 			}

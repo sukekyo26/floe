@@ -1,11 +1,14 @@
 package store_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/sukekyo26/floe/internal/store"
+	"github.com/sukekyo26/floe/internal/usererr"
 )
 
 const ownSrc = "lang: en\ntemplate: pic\n"
@@ -57,26 +60,32 @@ func TestPublishFindsRenamedPage(t *testing.T) {
 	}
 }
 
-// Renamed between Prepare and Save, the page is written under its new slug.
+// Renamed between Prepare and Save, the page is written under its new slug, that of a file whose name makes no slug too.
 func TestPublishRenamedInBetween(t *testing.T) {
 	t.Parallel()
 
-	s, root := newStore(t)
-	dw := picKit(t, "", "")
-	if _, err := put(t, s, dw, "plan.yaml", "plan.yaml", ownSrc, store.Options{}); err != nil {
-		t.Fatal(told(err, root))
-	}
-	up := store.Upload{File: "plan.yaml", Source: []byte(ownSrc + "title: two\n"), Images: map[string][]byte{}, Project: "p", Place: "plan.yaml"}
-	e, err := s.PrepareData(dw, up, store.Options{})
-	if err != nil {
-		t.Fatal(told(err, root))
-	}
-	rename(t, s, "plan", "plan-b")
-	if err = s.Save(e); err != nil || e.Slug != "plan-b" {
-		t.Fatalf("saved to %s, %v; want plan-b", e.Slug, told(err, root))
-	}
-	if m := s.ReadMeta("plan-b"); len(m.Versions) != 2 || s.ReadMeta("plan") != nil {
-		t.Errorf("plan-b has %d versions, plan %v; want 2, none", len(m.Versions), s.ReadMeta("plan"))
+	for _, c := range []struct{ file, slug string }{{"plan.yaml", "plan"}, {"日本語.yaml", "notes"}} {
+		t.Run(c.slug, func(t *testing.T) {
+			t.Parallel()
+
+			s, root := newStore(t)
+			dw := picKit(t, "", "")
+			if _, err := put(t, s, dw, c.file, c.file, ownSrc, store.Options{Slug: ptr(c.slug)}); err != nil {
+				t.Fatal(told(err, root))
+			}
+			up := store.Upload{File: c.file, Source: []byte(ownSrc + "title: two\n"), Images: map[string][]byte{}, Project: "p", Place: c.file}
+			e, err := s.PrepareData(dw, up, store.Options{})
+			if err != nil {
+				t.Fatal(told(err, root))
+			}
+			rename(t, s, c.slug, c.slug+"-b")
+			if err = s.Save(e); err != nil || e.Slug != c.slug+"-b" {
+				t.Fatalf("saved to %s, %v; want %s-b", e.Slug, told(err, root), c.slug)
+			}
+			if m := s.ReadMeta(c.slug + "-b"); len(m.Versions) != 2 || s.ReadMeta(c.slug) != nil {
+				t.Errorf("%s-b has %d versions, %s %v; want 2, none", c.slug, len(m.Versions), c.slug, s.ReadMeta(c.slug))
+			}
+		})
 	}
 }
 
@@ -90,7 +99,7 @@ func TestOwnSlugOrder(t *testing.T) {
 		// pages are published first, each as slug from place, of project p unless other
 		pages []struct{ slug, place, project string }
 		file  string
-		want  string // the slug written to, or the refusal told
+		want  string // the slug written to, "" for the name refused as no slug
 	}{
 		{"its name's", []struct{ slug, place, project string }{{"aa", "plan.yaml", "p"}, {"plan", "plan.yaml", "p"}}, "plan.yaml", "plan"},
 		{"the first of its own", []struct{ slug, place, project string }{{"plan", "docs/plan.yaml", "p"}, {"plan-c", "plan.yaml", "p"}, {"plan-b", "plan.yaml", "p"}}, "plan.yaml", "plan-b"},
@@ -98,7 +107,7 @@ func TestOwnSlugOrder(t *testing.T) {
 		{"another place's", []struct{ slug, place, project string }{{"other", "docs/plan.yaml", "p"}}, "plan.yaml", "plan"},
 		{"of no place", []struct{ slug, place, project string }{{"other", "", "p"}}, "plan.yaml", "plan"},
 		{"a name of no slug, its page", []struct{ slug, place, project string }{{"notes", "日本語.yaml", "p"}}, "日本語.yaml", "notes"},
-		{"a name of no slug, no page", nil, "日本語.yaml", `floe: invalid slug "": use 1 to 64 lowercase letters, digits and hyphens, starting and ending with a letter or digit`},
+		{"a name of no slug, no page", nil, "日本語.yaml", ""},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -116,12 +125,14 @@ func TestOwnSlugOrder(t *testing.T) {
 				}
 			}
 			e, err := put(t, s, dw, c.file, c.file, ownSrc, store.Options{})
-			got := told(err, root)
-			if err == nil {
-				got = e.Slug
+			if c.want == "" {
+				if u, ok := errors.AsType[*usererr.Error](err); !ok || u.Key != "store_invalid_slug" || !slices.Equal(u.Args, []any{""}) {
+					t.Errorf("refused %v, want store_invalid_slug of \"\"", err)
+				}
+				return
 			}
-			if got != c.want {
-				t.Errorf("got %s, want %s", got, c.want)
+			if err != nil || e.Slug != c.want {
+				t.Errorf("wrote %v, %s; want %s", e, told(err, root), c.want)
 			}
 		})
 	}
@@ -150,8 +161,8 @@ func TestOwnSlugUnreadable(t *testing.T) {
 	_, dataErr := put(t, s, dw, "plan.yaml", "plan.yaml", ownSrc, store.Options{})
 	_, linkErr := s.PrepareLink(t.Context(), dw, html, store.Options{}, "", filepath.Dir(filepath.Dir(root)))
 	for _, err := range []error{dataErr, linkErr} {
-		if want := "S: permission denied"; told(err, root) != want {
-			t.Errorf("told %s, want %s", told(err, root), want)
+		if u, ok := errors.AsType[*usererr.Error](err); !ok || u.File() != root {
+			t.Errorf("refused %v, want the store unread", err)
 		}
 	}
 }

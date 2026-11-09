@@ -35,8 +35,8 @@ func (a *app) publishCmd() *cobra.Command {
 store it as drawn and print its URL. The same slug from the same file of the same project overwrites it
 (the file's place: from its repository's root, else its real path), and a slug published from another
 project or another file is refused unless --force, which drops its history (versions, pinned title, tags,
-favourite). A page renamed on the management page is its file's still: publish that file with --slug to keep
-its history (floe publish o.yaml --slug d). A page is in the language its data names
+favourite). A page renamed on the management page is its file's still: publishing that file again without --slug
+writes to its new slug. A page is in the language its data names
 (lang:), and in the theme its data names (theme:, else default), unless --theme names another. A new
 slug is also opened in the browser ($BROWSER, open, wslview, xdg-open). The page stays as it was
 drawn: floe rebuild draws the stored pages again with the templates of now. The warnings of the page
