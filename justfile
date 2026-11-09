@@ -18,9 +18,11 @@ targets    := "linux-amd64 linux-arm64 darwin-amd64 darwin-arm64"
 default:
     @just --list
 
-# Install golangci-lint into $(go env GOBIN) or GOPATH/bin. CI runs this recipe, so the
-# version below is the only pin. govulncheck and shfmt are pinned as tools in go.mod;
-# shellcheck comes from the OS package manager.
+# The only pin of golangci-lint, raised by hand; CI also keys its cache of the binary on it.
+golangci_version := "v2.15.0"
+
+# Install golangci-lint into $(go env GOBIN) or GOPATH/bin. CI runs this recipe on a cache miss.
+# govulncheck and shfmt are pinned as tools in go.mod; shellcheck comes from the OS package manager.
 setup:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -30,7 +32,7 @@ setup:
     # The pinned install.sh SHA256-verifies the downloaded golangci-lint binary.
     curl -sSfL --proto '=https' --tlsv1.2 \
         https://raw.githubusercontent.com/golangci/golangci-lint/114493f9b3e7257d29e4130f2b4a4aadefbb6845/install.sh \
-        | sh -s -- -b "${bindir}" v2.15.0
+        | sh -s -- -b "${bindir}" {{golangci_version}}
     command -v shellcheck >/dev/null 2>&1 \
         || echo >&2 "NOTE: shellcheck not found — install via 'apt-get install shellcheck' or 'brew install shellcheck'"
     echo "Done. Ensure ${bindir} is on your PATH, then run 'just ci'."

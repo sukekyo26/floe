@@ -290,7 +290,7 @@ func TestVersionOfContent(t *testing.T) {
 	s, _ := watched(t, false)
 	d, _ := s.now()
 	publish := func() *store.Meta {
-		e, err := s.cfg.Store.PrepareData(d, store.Upload{File: "p.yaml", Source: []byte("lang: en\ntemplate: mine\nn: 1\n"), Images: nil, Project: "p"}, store.Options{}) //nolint:exhaustruct // none given
+		e, err := s.cfg.Store.PrepareData(d, store.Upload{File: "p.yaml", Source: []byte("lang: en\ntemplate: mine\nn: 1\n"), Images: nil, Project: "p", Place: "p.yaml"}, store.Options{}) //nolint:exhaustruct // none given
 		if err != nil {
 			t.Fatal(err)
 		}

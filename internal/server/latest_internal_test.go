@@ -40,7 +40,7 @@ func api(ctx context.Context, t *testing.T, h http.Handler, method, path, body s
 func publish(ctx context.Context, t *testing.T, h http.Handler) *httptest.ResponseRecorder {
 	t.Helper()
 
-	b, err := json.Marshal(Upload{File: "m.yaml", Source: []byte(mineData), Project: "p"}) //nolint:exhaustruct // none else
+	b, err := json.Marshal(Upload{File: "m.yaml", Source: []byte(mineData), Project: "p", Place: "m.yaml"}) //nolint:exhaustruct // none else
 	if err != nil {
 		t.Fatal(err)
 	}
