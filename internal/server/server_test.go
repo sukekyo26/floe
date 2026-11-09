@@ -124,7 +124,7 @@ func (e env) publish(t *testing.T, slug, src string, images map[string][]byte) *
 	t.Helper()
 
 	return e.write(t, http.MethodPut, "/api/artifacts/"+slug,
-		server.Upload{File: slug + ".yaml", Source: []byte(src), Images: images, Project: "p"}) //nolint:exhaustruct // the rest not given
+		server.Upload{File: slug + ".yaml", Source: []byte(src), Images: images, Project: "p", Place: slug + ".yaml"}) //nolint:exhaustruct // the rest not given
 }
 
 func want(t *testing.T, w *httptest.ResponseRecorder, status int, body string) {
@@ -166,7 +166,7 @@ func TestProtocol(t *testing.T) {
 	want(t, e.write(t, http.MethodPost, "/api/artifacts", map[string]any{"path": "/x", "bogus": 1}), http.StatusBadRequest,
 		`unknown object member name "bogus"`)
 	want(t, e.write(t, http.MethodPut, "/api/artifacts/x", map[string]any{
-		"file": "x.yaml", "source": []byte("a"),
+		"file": "x.yaml", "source": []byte("a"), "place": "x.yaml",
 		"images": map[string][]byte{"../e.png": nil},
 	}), http.StatusBadRequest, "send each image by a slash-separated path")
 }
@@ -179,7 +179,7 @@ func TestPublish(t *testing.T) {
 	e := newEnv(t)
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusCreated, `"slug":"d"`)
 	want(t, e.publish(t, "d", "lang: en\ntemplate: pic\ntitle: T\n", nil), http.StatusOK, `"prev":{"title":"T"`)
-	other := e.write(t, http.MethodPut, "/api/artifacts/d", server.Upload{File: "d.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Project: "q"}) //nolint:exhaustruct // the rest not given
+	other := e.write(t, http.MethodPut, "/api/artifacts/d", server.Upload{File: "d.yaml", Source: []byte("lang: en\ntemplate: pic\n"), Project: "q", Place: "d.yaml"}) //nolint:exhaustruct // the rest not given
 	want(t, other, http.StatusConflict, `{"mistakes":[{"text":"slug \"d\" was published from project p: choose another slug"}]}`)
 	want(t, e.publish(t, "e", "lang: en\ntemplate: nope\n", nil), http.StatusBadRequest, `unknown template \"nope\"`)
 	asText := e.do(t, http.MethodPost, "/api/artifacts", `{"path": "rel.html"}`, "Origin", origin, "Content-Type", "application/json",

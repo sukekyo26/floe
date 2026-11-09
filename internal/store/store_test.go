@@ -635,6 +635,70 @@ func TestSlugRefusals(t *testing.T) {
 	}
 }
 
+// A stored page is its file's too: another file of the same project is refused unless --force, in each language, an
+// empty place too, before the images are asked for; the same file passes. A page that kept no file takes the next.
+func TestPagePlace(t *testing.T) {
+	t.Parallel()
+
+	s, root := newStore(t)
+	dw := picKit(t, "", "")
+	const src = "lang: en\ntemplate: pic\n"
+	put := func(project, place string, force bool, data string) error {
+		e, err := s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(data), Images: map[string][]byte{}, Project: project, Place: place}, store.Options{Slug: ptr("plan"), Force: force})
+		if err != nil {
+			return err
+		}
+		return s.Save(e)
+	}
+	ja := i18n.New("ja")
+	if err := put("p", "", false, src); err != nil {
+		t.Fatal(told(err, root))
+	}
+	if err := put("p", "docs/plan.yaml", false, src); err != nil {
+		t.Errorf("a page that kept no file: %s", told(err, root))
+	}
+	if got := s.ReadMeta("plan").PublishedFile; got != "docs/plan.yaml" {
+		t.Errorf("kept %q, want docs/plan.yaml", got)
+	}
+	for _, place := range []string{"notes/plan.yaml", ""} {
+		err := put("p", place, false, src)
+		if got, want := told(err, root), `floe: slug "plan" was published from docs/plan.yaml in project p: choose another slug`; got != want {
+			t.Errorf("from %q: told %s, want %s", place, got, want)
+		}
+		if got, want := usererr.Tell(ja, err).Render(""), "URL 名「plan」はプロジェクト p の docs/plan.yaml から公開されています。別の URL 名にしてください"; got != want {
+			t.Errorf("from %q in ja: told %s, want %s", place, got, want)
+		}
+	}
+	_, err := s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "p", Place: "notes/plan.yaml"}, store.Options{Slug: ptr("plan")})
+	if _, asked := errors.AsType[*store.NeedImages](err); asked || !strings.Contains(told(err, root), "was published from docs/plan.yaml") {
+		t.Errorf("before the images: %v, want the refusal", err)
+	}
+	_, err = s.PrepareData(dw, store.Upload{File: "plan.yaml", Source: []byte(src + "i: [a.png]\n"), Images: nil, Project: "p", Place: "docs/plan.yaml"}, store.Options{Slug: ptr("plan")})
+	if _, asked := errors.AsType[*store.NeedImages](err); !asked {
+		t.Errorf("the same file before the images: %v, want them asked for", err)
+	}
+	if err = put("p", "docs/plan.yaml", false, src+"title: again\n"); err != nil {
+		t.Errorf("the same file: %s", told(err, root))
+	}
+	if err = put("p", "notes/plan.yaml", true, src); err != nil {
+		t.Errorf("--force: %s", told(err, root))
+	}
+	if got := s.ReadMeta("plan").PublishedFile; got != "notes/plan.yaml" {
+		t.Errorf("--force kept %q, want notes/plan.yaml", got)
+	}
+	// Of no project, the place is compared all the same.
+	if err = put("", "x.yaml", true, src); err != nil {
+		t.Fatal(told(err, root))
+	}
+	err = put("", "y.yaml", false, src)
+	if got, want := told(err, root), `floe: slug "plan" was published from x.yaml: choose another slug`; got != want {
+		t.Errorf("a page of no project from another file: told %s, want %s", got, want)
+	}
+	if got, want := usererr.Tell(ja, err).Render(""), "URL 名「plan」は x.yaml から公開されています。別の URL 名にしてください"; got != want {
+		t.Errorf("a page of no project in ja: told %s, want %s", got, want)
+	}
+}
+
 // Images sent one under another, which a disk cannot hold, are refused before they are saved, at the data file.
 func TestImageUnderImage(t *testing.T) {
 	t.Parallel()

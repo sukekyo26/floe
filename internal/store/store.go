@@ -75,8 +75,10 @@ type Meta struct {
 	Source        string `json:"source,omitempty"`
 	Project       string `json:"project,omitempty"`
 	ProjectEdited bool   `json:"projectEdited,omitempty"`
-	// PublishedFrom is the project that owns a stored page; Project is only what the list shows.
+	// PublishedFrom is the project that owns a stored page; Project is only what the list shows. PublishedFile is the
+	// place of the data file in it that owns the page too: from its repository's root, else its real path.
 	PublishedFrom string `json:"publishedFrom,omitempty"`
+	PublishedFile string `json:"publishedFile,omitempty"`
 	Favorite      bool   `json:"favorite,omitempty"`
 	// Folder marks a link of a folder, which serves the files under it and lists its pages a directory at a time.
 	Folder bool `json:"folder,omitempty"`
