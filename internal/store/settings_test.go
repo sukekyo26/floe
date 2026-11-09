@@ -193,6 +193,24 @@ func TestSettingsBrokenLinks(t *testing.T) {
 			t.Errorf("link %s took %q", path, e.Meta.CreatedTheme)
 		}
 	}
+	// A data file linked is drawn from a data file: it reads the default as a stored page does.
+	data := filepath.Join(home, "proj", "page.yaml")
+	if err := os.WriteFile(data, []byte(report("")), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.PrepareLink(t.Context(), dw, data, store.Options{}, "", home); !strings.HasPrefix(told(err, root), "S/settings.json: ") {
+		t.Errorf("a data file linked: told %s", told(err, root))
+	}
+	if err := s.SetTheme("ink"); err != nil {
+		t.Fatal(err)
+	}
+	e, err := s.PrepareLink(t.Context(), dw, data, store.Options{}, "", home)
+	if err != nil {
+		t.Fatal(told(err, root))
+	}
+	if e.Meta.CreatedTheme != "ink" {
+		t.Errorf("a data file linked took %q", e.Meta.CreatedTheme)
+	}
 }
 
 // A publish to another project's page is told its drawing's mistakes before the owner, and the owner's refusal (409)
