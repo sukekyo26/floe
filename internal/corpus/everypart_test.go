@@ -166,6 +166,37 @@ func TestStackTakesAny(t *testing.T) {
 	}
 }
 
+// A part's description is its schema.json's alone: the keys of any.json and stack name the parts and describe
+// none, but html, which has no schema.json to hold one.
+func TestPartKeysUndescribed(t *testing.T) {
+	t.Parallel()
+
+	for _, at := range []struct {
+		file string
+		path []string
+	}{
+		{filepath.Join(floeParts, "any.json"), []string{"properties"}},
+		{filepath.Join(floeParts, "stack", "schema.json"), []string{"items", "properties"}},
+	} {
+		b, err := os.ReadFile(at.file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var v any
+		if err := json.Unmarshal(b, &v); err != nil {
+			t.Fatal(err)
+		}
+		for _, k := range at.path {
+			v = v.(map[string]any)[k]
+		}
+		for name, key := range v.(map[string]any) {
+			if _, ok := key.(map[string]any)["description"]; ok && name != "html" {
+				t.Errorf("%s: %s has a description: write the part's description in its schema.json, not beside its key in any.json or stack", at.file, name)
+			}
+		}
+	}
+}
+
 // orderedKeys returns the keys of the object at path in the JSON file, in the order written, as a map would not.
 func orderedKeys(t *testing.T, file string, path ...string) []string {
 	t.Helper()
