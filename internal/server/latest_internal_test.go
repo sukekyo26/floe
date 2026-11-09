@@ -44,7 +44,7 @@ func publish(ctx context.Context, t *testing.T, h http.Handler) *httptest.Respon
 	if err != nil {
 		t.Fatal(err)
 	}
-	return api(ctx, t, h, http.MethodPut, "/api/artifacts/m", string(b))
+	return api(ctx, t, h, http.MethodPost, "/api/artifacts/data", string(b))
 }
 
 // told is the report of w, laid out.

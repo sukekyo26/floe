@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sukekyo26/floe/internal/i18n"
 	"github.com/sukekyo26/floe/internal/servetest"
 	"github.com/sukekyo26/floe/internal/store"
 )
@@ -76,6 +77,41 @@ func TestPublishThroughServer(t *testing.T) {
 	code, _, errs := runIn(filepath.Join(filepath.Dir(dir), "q"), env, "publish", "w.yaml")
 	if code != 1 || !strings.Contains(errs, "w.yaml:5:15: warning: this text holds a fenced block of code on its line 1") {
 		t.Errorf("floe publish of another project's slug = %d, %q", code, errs)
+	}
+}
+
+// A page renamed on the management page is published again from its file without --slug at its new slug, its images
+// sent when asked for; a title made of the slug follows the rename, so that no title is told changed.
+func TestPublishRenamed(t *testing.T) {
+	t.Parallel()
+
+	env, dir := served(t)
+	url := "http://127.0.0.1:" + env["FLOE_PORT"]
+	if err := os.WriteFile(filepath.Join(dir, "u.yaml"), []byte("lang: en\ntemplate: pic\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	en := i18n.EnglishCatalog()
+	for _, c := range []struct{ file, slug, title string }{{"d.yaml", "d", "D"}, {"u.yaml", "u", "u-b"}} {
+		if code, _, errs := runIn(dir, env, "publish", c.file); code != 0 {
+			t.Fatalf("floe publish %s = %d, %q", c.file, code, errs)
+		}
+		body := `{"slug":"` + c.slug + `-b"}`
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPatch, url+"/api/artifacts/"+c.slug, strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Origin", url)
+		req.Header.Set("Content-Type", "application/json")
+		res, err := http.DefaultClient.Do(req)
+		if err != nil || res.Body.Close() != nil || res.StatusCode != http.StatusOK {
+			t.Fatalf("rename %s: %v, %v", c.slug, res, err)
+		}
+		code, out, errs := runIn(dir, env, "publish", c.file)
+		told := strings.Split(en.Msg("cli_updated_titled", c.slug+"-b", "\x00", c.title), "\x00")
+		_, tail, _ := strings.Cut(errs, ",")
+		if code != 0 || out != url+"/a/"+c.slug+"-b/\n" || !strings.HasPrefix(errs, told[0]) || ","+tail != told[1]+"\n" {
+			t.Errorf("floe publish %s again = %d, %q, %q; want %s-b, told %q", c.file, code, out, errs, c.slug, told)
+		}
 	}
 }
 
