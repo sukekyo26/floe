@@ -10,7 +10,9 @@ import (
 
 // Every button of words is of one form, as drawn: 2rem high, 2.25rem at a modal's foot, its corners --corner-small. They
 // are gathered by their class, .btn, in each place they show, every modal of the management page among them.
-// LIMIT: a button of words that does not have .btn is not found: the rule in .claude/rules/ui.md tells its writer.
+// LIMIT: a button of words that does not have .btn is not found: the rule in .claude/rules/ui.md tells its writer. The
+// shelf's rows (its views and picks, and the add buttons under them) are such buttons, in the shape of a row, not .btn: the
+// page list and the task list have no .btn to measure, but in their modals.
 func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests share one Chrome, one at a time
 	s := newSite(t)
 	b := s.b
@@ -60,8 +62,7 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	defer b.unsize()
 	b.navigate("/?project=proj")
 	b.until("the rows", "document.querySelector('#list li[data-slug=b]')")
-	check("the page list")
-	modal("add-dialog", "document.getElementById('add-open').click()")
+	modal("add-dialog", "document.getElementById('add-link').click()")
 	modal("edit-dialog", menu("b", "edit"))
 	modal("set-dialog", menu("b", "task-set"))
 	modal("find", "openFind()")
@@ -79,10 +80,6 @@ func TestUIButtons(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// The toast comes before the list is read again, which draws the rows anew
 	b.untilActed("the archive done", "true")
 	check("the toast")
-
-	b.navigate("/tasks?project=proj")
-	b.until("the task list's button", "document.getElementById('task-add').getClientRects().length")
-	check("the task list")
 
 	b.navigate("/tasks?project=proj&task=%231")
 	b.until("the head", "!document.getElementById('task-archive').hidden")

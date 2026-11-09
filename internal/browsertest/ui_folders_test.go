@@ -150,7 +150,7 @@ func TestUIFolders(t *testing.T) { //nolint:paralleltest // the browser tests sh
 	// Added from the dialog, a folder is opened.
 	s.write(t, "more/m.html", "<title>m</title>")
 	b.navigate("/?kind=link")
-	b.eval("document.getElementById('add-open').click()")
+	b.eval("document.getElementById('add-link').click()")
 	b.eval(`document.getElementById('add-path').value = ` + js(filepath.Join(s.Env["HOME"], "more")) + `;
 		document.getElementById('add').requestSubmit()`)
 	out = append(out, b.until("the folder added", rows+".includes('m.html') && "+opens),
