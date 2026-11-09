@@ -37,7 +37,7 @@ floe shows the user a page you write as a YAML file: it checks the file, draws i
 
 ## Picking parts
 
-Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for; where it names no keys (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json`, which also gives the keys' types and details. A template's keys, and the parts a template of your own takes, are in `floe template show <template> schema.json`.
+Each item of `parts` is one key naming the part. `floe part list` lists each part's keys and what it is for; where it names no keys (`chart`, `stats`, `diagram`, …), read `floe part show <part> schema.json`, which also gives the keys' types and details. For a template of your own, read its `schema.json` too (`floe template show <template> schema.json`): it says which parts a section takes.
 
 Pick the part by what the content is:
 
@@ -45,7 +45,7 @@ Pick the part by what the content is:
 |---|---|
 | Prose, or a short list | `text` (Markdown) |
 | Steps in order, to do or done | `steps`; floe numbers them, so write no number in a title |
-| Items, each with a longer explanation: risks, requirements, terms | `entries`, a state in a tag |
+| Items with longer explanations, such as risks, requirements or terms | `entries`; a short state or label of each goes in its `tags` (`tags: [done]`) |
 | Options weighed with pros and cons | `options` |
 | One decision with its reasons | `decision` |
 | Questions for the reader to decide | `asks` |
@@ -82,7 +82,7 @@ For anything else (review findings, large numbers, files, fields, links, …) re
 
 ## Diagrams
 
-Write a `graph`: the boxes and what joins what. floe places the boxes; do not work out their positions. `x` and `y` only say where the graph starts.
+Write a `graph`: the boxes and what joins what. floe places the boxes; do not work out their positions. `x` and `y` (required) only say where the graph starts.
 
 ```yaml
 - diagram:
@@ -116,7 +116,7 @@ First:
 Then:
 
 - Beside Japanese, Chinese or Korean letters, `**`, `*` and `~~` are read across a mark too (`**「題」**に` is bold): write a `*` meant as a mark there as `\*` or in backticks.
-- Begin a `|` or `>` text without a tab after its spaces.
+- In a `|` or `>` text, indent with spaces only: a tab right after the spaces of its first line is refused.
 
 `heading: Step 1: plan`, `lead: PR #100` and `42` in a table's cell are refused so:
 
