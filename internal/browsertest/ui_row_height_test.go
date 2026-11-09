@@ -22,8 +22,8 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 	s.floe(t, "work", "plan", "--task", "S1", "--step", "design")
 
 	// The row of plan: its height; its buttons' heights; the items of its menu, open and narrowed so that some wrap, each at least 36px
-	// and none with its words overflowing it; and the room the ring of its archive button, reached, leaves to the title above and to the row's foot below (3px: --ring past
-	// its 1px offset)
+	// and none with its words overflowing it; and the room the ring of its archive button, reached, leaves to the title above and to the
+	// row's foot below (its outline's width past its offset)
 	const row = "document.querySelector('#list li[data-slug=plan]')"
 	const measure = `(() => { const li = ` + row + `, r = (e) => e.getBoundingClientRect();
 		const buttons = [...li.querySelectorAll(':scope > .actions > .icon-btn, :scope > .actions > .more > summary')].map((e) => r(e).height);
@@ -35,8 +35,9 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 		const wrapped = items.some((e) => r(e).height > 40);
 		menu.style.minWidth = ''; menu.style.width = ''; more.open = false;
 		const btn = li.querySelector('.actions > .archive'); btn.focus();
-		const ring = btn.matches(':focus-visible') && r(btn).top - 3 >= r(li.querySelector('.title')).bottom && r(btn).bottom + 3 <= r(li).bottom - 1;
-		return [r(li).height.toFixed(1), buttons.join(','), items.length > 0 && tall && wrapped, within, ring].join(' '); })()`
+		const st = getComputedStyle(btn), out = parseFloat(st.outlineWidth) + parseFloat(st.outlineOffset);
+		const ring = btn.matches(':focus-visible') && r(btn).top - out >= r(li.querySelector('.title')).bottom && r(btn).bottom + out <= r(li).bottom - 1;
+		return [r(li).height.toFixed(1), buttons.join(','), items.length > 0 && tall, wrapped, within, ring].join(' '); })()`
 	out := make([]string, 0, 6)
 	for _, width := range []int64{1440, 390} {
 		b.size(width, 900, width < 600)
@@ -53,7 +54,7 @@ func TestUIRowHeight(t *testing.T) { //nolint:paralleltest // the browser tests 
 		out = append(out, "same height: "+strconv.FormatBool(height == taskHeight), rest, strings.SplitN(got["task"], " ", 2)[1])
 	}
 	check(t, "row height", out, strings.Join([]string{
-		"same height: true", "26,26,26 true true true", "26,26,26 true true true",
-		"same height: true", "26,26,26 true true true", "26,26,26 true true true",
+		"same height: true", "26,26,26 true true true true", "26,26,26 true true true true",
+		"same height: true", "26,26,26 true true true true", "26,26,26 true true true true",
 	}, "|"))
 }
